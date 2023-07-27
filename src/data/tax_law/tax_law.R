@@ -38,7 +38,7 @@ build_tax_law = function(config_path, years, indexes) {
          years   = years,
          indexes = indexes) %>% 
     bind_rows() %>% 
-    
+
     # Split subparameters into scalars and vectors 
     filter(!is.na(Value)) %>% 
     group_by(Parameter, Subparameter) %>% 
@@ -94,9 +94,14 @@ parse_param = function(raw_input, name, years, indexes) {
   # Parses raw input for a given tax law parameter.
   # 
   # Parameters:
-  #   - TODO
+  #   - raw_input (list) : contents of tax parameter's YAML file
+  #   - name (str)       : name of tax parameter
+  #   - years (int[])    : years for which to generate tax law parameters
+  #   - indexes (df)     : long-format dataframe containing growth rates of 
+  #                        index measures
   #
-  # Returns: tibble indexed on ... TODO
+  # Returns: dataframe long in subparameter name, year, filing status, and 
+  #          subparameter(df).
   #----------------------------------------------------------------------------
   
   # If specified, remove indexation defaults and filing status aggregator
@@ -160,7 +165,7 @@ generate_time_series = function(value, years, name, long = T) {
   # Returns: dataframe containing time series for subparameter element (df). 
   #----------------------------------------------------------------------------
   
-  # More-involved case: time-invariant policy
+  # More-involved case: time-variant policy
   if (is.list(value)) {
     
     # Create vector of specified years
@@ -176,8 +181,14 @@ generate_time_series = function(value, years, name, long = T) {
       fill(Value)
   } 
   
-  # Otherwise, simple case: time-invariant scalar
+  # Otherwise, simple case: time-invariant policy
   else {
+    
+    # Convert to list if value is a vector
+    if (length(value) > 1) {
+      value = list(value)
+    }
+    
     df = tibble(Year = years, Value = value)
   }
   
@@ -493,7 +504,7 @@ replace_defaults = function(supplied, default) {
   # Returns: indexation info (list | any atomic).
   #----------------------------------------------------------------------------
   
-  if (!is.list(supplied) && supplied == 'default') {
+  if (!is.list(supplied) && length(supplied) == 1 && supplied == 'default') {
     return(default)
   } 
   return(supplied)
