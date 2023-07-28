@@ -119,7 +119,7 @@ parse_param = function(raw_input, name, years, indexes) {
                 values_from = Value) %>% 
     arrange(Year, Element) 
   
-  # Map sub parameters to filing status
+  # Map subparameters to filing status
   unmapped_vars = get_unmapped_subparams(raw_input, filing_status_mapper)
   subparams %>%
     agg_by_filing_status(filing_status_mapper) %>% 
@@ -283,10 +283,13 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
     return(base_values)
   }
   
-  # Replace 'default' indexation parameters with actual default values
-  i_info = raw_input %>% 
-    remove_by_name('value') %>% 
-    map2(indexation_defaults, replace_defaults)
+  # Replace 'default' indexation parameters with actual default value
+  i_info = raw_input %<>% 
+    remove_by_name('value')
+  if (!is.null(indexation_defaults)) {
+    i_info = raw_input %>% 
+      map2(indexation_defaults, replace_defaults)
+  }
   
   # Convert elements of raw subparam input to time series dataframes
   # First, determine range of years by indexation param
@@ -365,14 +368,24 @@ agg_by_filing_status = function(subparams, filing_status_mapper) {
   #          version of the subparams" input argument (df). 
   #----------------------------------------------------------------------------
   
-  pmap(.f = apply_mapper_fns, 
-       .l = list(name       = names(filing_status_mapper), 
-                 mapper_fns = filing_status_mapper), 
-       subparams = subparams) %>% 
-    bind_rows() %>% 
-    pivot_wider(names_from  = Subparameter, 
-                values_from = Value) %>% 
-    return()
+  # If there is no mapping function, return an empty year-element-filing status df
+  if (is.null(filing_status_mapper)) {
+    subparams %>% 
+      select(Year, Element) %>% 
+      expand_grid(FilingStatus = 1:4) %>% 
+      return()
+  
+  # Otherwise apply mapper functions
+  } else {
+    pmap(.f = apply_mapper_fns, 
+         .l = list(name       = names(filing_status_mapper), 
+                   mapper_fns = filing_status_mapper), 
+         subparams = subparams) %>% 
+      bind_rows() %>% 
+      pivot_wider(names_from  = Subparameter, 
+                  values_from = Value) %>% 
+      return()
+  }
 }
 
 
@@ -449,6 +462,11 @@ get_unmapped_subparams = function(raw_input, filing_status_mapper) {
   # Returns: vector of names of subparameters unused in grouped subparameter 
   #          construction (str[]).
   #----------------------------------------------------------------------------
+  
+  # If no filing status mapper, return all names
+  if (!is.null(filing_status_mapper)) {
+    return(names(raw_input))
+  }
   
   # Get symbols used in mapper expressions
   symbols = filing_status_mapper %>% 

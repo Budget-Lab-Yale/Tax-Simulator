@@ -16,6 +16,11 @@ filing_status_mapper:
     '2': value_single * 2
     '3': value_single
     '4': value_head
+  old_blind_bonus:
+    '1': old_blind_bonus_single
+    '2': old_blind_bonus_married
+    '3': old_blind_bonus_single
+    '4': old_blind_bonus_single
 
 value_single:
   value:
@@ -34,5 +39,33 @@ value_head:
     '2026': 4400
   i_measure: default
   i_base_year: default
+  i_direction: default
+  i_increment: default
+
+old_blind_bonus_single:
+  value: 750
+  i_measure: default
+  i_base_year: 1987
+  i_direction: default
+  i_increment: default
+  
+old_blind_bonus_married:
+  value: 600
+  i_measure: default
+  i_base_year: 1987
+  i_direction: default
+  i_increment: default
+  
+dep_floor:
+  value: 500
+  i_measure: default
+  i_base_year: 1987
+  i_direction: default
+  i_increment: default
+  
+dep_earned_bonus:
+  value: 250
+  i_measure: default
+  i_base_year: 1997
   i_direction: default
   i_increment: default
