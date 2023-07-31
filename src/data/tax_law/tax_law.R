@@ -273,7 +273,9 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
   #----------------------------------------------------------------------------
   
   # Extract base values and convert to time series
-  base_values = generate_time_series(raw_input$value, years, 'Value', F) %>% 
+  base_values = raw_input$value %>% 
+    parse_inf() %>%
+    generate_time_series(years, 'Value', F) %>% 
     unnest_if_nested() %>% 
     mutate(Subparameter = name) %>% 
     select(Subparameter, Year, Element, Value)
@@ -464,7 +466,7 @@ get_unmapped_subparams = function(raw_input, filing_status_mapper) {
   #----------------------------------------------------------------------------
   
   # If no filing status mapper, return all names
-  if (!is.null(filing_status_mapper)) {
+  if (is.null(filing_status_mapper)) {
     return(names(raw_input))
   }
   
@@ -549,4 +551,31 @@ replace_by_name = function(host, donor) {
   }
   return(host)
 }
+
+
+
+parse_inf = function(raw_input) {
+  
+  #----------------------------------------------------------------------------
+  # Helper function to replace string "Inf" with R's infinity (Inf) object
+  #
+  # Parameters:
+  #   - raw_input (list | any atomic) : value of raw input variables
+  #
+  # Returns: updated input object with instances of "Inf" replaced with Inf 
+  #          (list | any atomic).
+  #----------------------------------------------------------------------------
+  
+  if (is.list(raw_input)) {
+    raw_input %>% 
+      map(~ if (length(.) == 1 && . == 'Inf') { Inf } else { . }) %>% 
+      return()
+  } else {
+    if (raw_input == 'Inf') {
+      return(Inf)
+    }
+    return(raw_input)
+  }
+}
+  
 
