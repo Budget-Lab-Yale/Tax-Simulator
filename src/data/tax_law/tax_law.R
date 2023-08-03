@@ -5,7 +5,6 @@
 #------------------------------------------------------------------
 
 
-
 build_tax_law = function(config_path, years, indexes) {
   
   #----------------------------------------------------------------------------
@@ -111,10 +110,23 @@ parse_param = function(raw_input, name, years, indexes) {
   raw_input$indexation_defaults  = NULL
   raw_input$filing_status_mapper = NULL
   
-  # Parse subparameters, bind together, and reshape wide
+  # Parse subparameters and bind together
   subparams = raw_input %>% 
     parse_subparams(indexation_defaults, years, indexes) %>% 
     bind_rows() %>% 
+    
+    # Apply indexation rules, keeping only final values in wide format
+    pivot_wider(names_from  = Variable, 
+                values_from = Value) %>% 
+    mutate(
+      Value = case_when(
+        is.na(i_direction) ~ BaseValue,
+        i_direction == -1  ~ floor(BaseValue   * i_index / i_increment) * i_increment,
+        i_direction ==  1  ~ ceiling(BaseValue * i_index / i_increment) * i_increment,
+        i_direction ==  0  ~ round(BaseValue   * i_index / i_increment) * i_increment, 
+        T                  ~ -1
+    )) %>%
+    select(Subparameter, Year, Element, Value) %>% 
     pivot_wider(names_from  = Subparameter, 
                 values_from = Value) %>% 
     arrange(Year, Element) 
@@ -141,7 +153,7 @@ parse_param = function(raw_input, name, years, indexes) {
 
 
 
-generate_time_series = function(value, years, name, long = T) {
+generate_time_series = function(value, years, name) {
   
   #----------------------------------------------------------------------------
   # For a subparameter element, takes minimally-specified set of values and
@@ -158,11 +170,9 @@ generate_time_series = function(value, years, name, long = T) {
   #   - years (int[])             : years for which create time series
   #   - name (str)                : name of subparameter element in resulting
   #                                 dataframe
-  #   - long (bool)               : whether resulting dataframe is reshaped 
-  #                                 long such that the name is stored in rows
-  #                                 rather than as a column name
   #
-  # Returns: dataframe containing time series for subparameter element (df). 
+  # Returns: long-format dataframe containing time series for subparameter 
+  #          element (df). 
   #----------------------------------------------------------------------------
   
   # More-involved case: time-variant policy
@@ -198,18 +208,11 @@ generate_time_series = function(value, years, name, long = T) {
       unnest(Value)
   }
   
-  # Rename value column
-  df %<>% 
-    rename(!!name := Value)
-  
-  # Pivot longer if specified
-  if (long) {
-    df %<>%
-      pivot_longer(cols      = -Year, 
-                   names_to  = 'Variable', 
-                   values_to = 'Value') 
-  }
-  return(df)
+  # Clean and return
+  df %>% 
+    mutate(Variable = name) %>% 
+    select(Variable, Year, Value) %>% 
+    return()
 }
 
 
@@ -229,8 +232,8 @@ parse_subparams = function(raw_input, indexation_defaults, years, indexes) {
   #   - years (int[])              : see parse_subparam()
   #   - indexes (df)               : see parse_subparam() 
   #
-  # Returns: list of long-format dataframes with final subparameter values 
-  #          (list).
+  # Returns: list of long-format dataframes with time series for each component
+  #          of a subparameter, including indexation info if required (list).
   #----------------------------------------------------------------------------
   
   pmap(.f = parse_subparam, 
@@ -248,8 +251,9 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
   
   #----------------------------------------------------------------------------
   # Takes list of raw subparameter input and generates time series of 
-  # subparameter values, also indexing values to inflation if specified.  
-  # 
+  # subparameter values and indexation rules. (Does not actually apply 
+  # indexation rules, which happens higher in stack for performance reasons.)
+  #
   # Parameters:
   #   - raw_input (list)           : list representation of subparameter, i.e. 
   #                                  a top-level element of YAML specification. 
@@ -269,16 +273,16 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
   #                                  rates of index measures
   #   - name (str)                 : name of subparameter
   #
-  # Returns: TODO
+  # Returns: dataframe long in year and element (df).
   #----------------------------------------------------------------------------
   
   # Extract base values and convert to time series
   base_values = raw_input$value %>% 
     parse_inf() %>%
-    generate_time_series(years, 'Value', F) %>% 
+    generate_time_series(years, 'BaseValue') %>% 
     unnest_if_nested() %>% 
     mutate(Subparameter = name) %>% 
-    select(Subparameter, Year, Element, Value)
+    select(Subparameter, Variable, Year, Element, Value)
   
   # Return base values if subparam is unindexed
   if (is.null(raw_input$i_measure)) {
@@ -336,18 +340,11 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
     remove_by_name('i_measure') %>% 
     map(unnest_if_nested) %>% 
     bind_rows() %>% 
-    pivot_wider(names_from  = Variable, 
-                values_from = Value) %>% 
     
-    # Join base values and do indexation
-    left_join(base_values, by = c('Year', 'Element')) %>%
-    mutate(
-      Value = case_when(
-        i_direction == -1 ~ floor(Value   * i_index / i_increment) * i_increment,
-        i_direction ==  1 ~ ceiling(Value * i_index / i_increment) * i_increment,
-        T                 ~ round(Value   * i_index / i_increment) * i_increment
-      )) %>%
-    select(Subparameter, Year, Element, Value) %>%
+    # Join base values, clean up, and return
+    bind_rows(base_values) %>% 
+    mutate(Subparameter = name) %>%
+    select(Subparameter, everything()) %>%
     return()
 }
 
