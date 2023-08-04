@@ -551,27 +551,28 @@ replace_by_name = function(host, donor) {
 
 
 
-parse_inf = function(raw_input) {
+parse_inf = function(value) {
   
   #----------------------------------------------------------------------------
-  # Helper function to replace string "Inf" with R's infinity (Inf) object
+  # Helper function to replace string "Inf" with R's infinity (Inf) object in 
+  # a potentially multi-level nested list
   #
   # Parameters:
-  #   - raw_input (list | any atomic) : value of raw input variables
+  #   - value (list | any atomic) : value of raw input variables
   #
   # Returns: updated input object with instances of "Inf" replaced with Inf 
   #          (list | any atomic).
   #----------------------------------------------------------------------------
   
-  if (is.list(raw_input)) {
-    raw_input %>% 
-      map(~ if (length(.) == 1 && . == 'Inf') { Inf } else { . }) %>% 
+  if (is.list(value)) {
+    value %>% 
+      map(~ if (any(. == 'Inf')) { as.numeric(.) } else { . }) %>% 
       return()
   } else {
-    if (raw_input == 'Inf') {
-      return(Inf)
+    if (any(value == 'Inf')) { 
+      return(as.numeric(value))
     }
-    return(raw_input)
+    return(value)
   }
 }
   
