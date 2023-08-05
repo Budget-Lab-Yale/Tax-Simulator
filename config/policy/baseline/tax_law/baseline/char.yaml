@@ -1,0 +1,30 @@
+---
+filing_status_mapper:
+  above_limit:
+    '1': above_limit_single
+    '2': above_limit_single * 2
+    '3': above_limit_single
+    '4': above_limit_single
+
+item_floor_agi:
+  value: 0
+
+item_limit:
+  value: Inf
+
+item_cash_limit_agi:
+  value:
+    '2014': 0.5
+    '2018': 0.6
+    '2020': 1
+    '2022': 0.6
+
+item_noncash_limit_agi:
+  value:
+    '2014': 0.3
+    
+above_limit_single:
+  value:
+    '2014': 0
+    '2020': 300
+    '2022': 0

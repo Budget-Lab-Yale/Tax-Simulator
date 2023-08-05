@@ -118,14 +118,7 @@ parse_param = function(raw_input, name, years, indexes) {
     # Apply indexation rules, keeping only final values in wide format
     pivot_wider(names_from  = Variable, 
                 values_from = Value) %>% 
-    mutate(
-      Value = case_when(
-        is.na(i_direction) ~ BaseValue,
-        i_direction == -1  ~ floor(BaseValue   * i_index / i_increment) * i_increment,
-        i_direction ==  1  ~ ceiling(BaseValue * i_index / i_increment) * i_increment,
-        i_direction ==  0  ~ round(BaseValue   * i_index / i_increment) * i_increment, 
-        T                  ~ -1
-    )) %>%
+    apply_indexation() %>% 
     select(Subparameter, Year, Element, Value) %>% 
     pivot_wider(names_from  = Subparameter, 
                 values_from = Value) %>% 
@@ -346,6 +339,40 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
     mutate(Subparameter = name) %>%
     select(Subparameter, everything()) %>%
     return()
+}
+
+
+
+apply_indexation = function(df) {
+  
+  #----------------------------------------------------------------------------
+  # Creates indexed value series by combining base value, index, direction, 
+  # and increment info if it exists; otherwise, for unindexed parameters, 
+  # simply sets final value to the base value.  
+  #
+  # Parameters:
+  #   - df (df) : dataframe with BaseValue column, plus, optionally, i_index, 
+  #               i_direction, and i_increment
+  #
+  # Returns: dataframe with Value column (df).
+  #----------------------------------------------------------------------------
+  
+  if ('i_index' %in% colnames(df)) {
+    df %>% 
+      mutate(
+        Value = case_when(
+          is.na(i_direction) ~ BaseValue,
+          i_direction == -1  ~ floor(BaseValue   * i_index / i_increment) * i_increment,
+          i_direction ==  1  ~ ceiling(BaseValue * i_index / i_increment) * i_increment,
+          i_direction ==  0  ~ round(BaseValue   * i_index / i_increment) * i_increment, 
+          T                  ~ -1
+        )) %>%
+      return()
+  } else { 
+    df %>% 
+      mutate(Value = BaseValue) %>%
+      return()
+  }
 }
 
 
@@ -575,5 +602,5 @@ parse_inf = function(value) {
     return(value)
   }
 }
-  
 
+  

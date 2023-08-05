@@ -95,23 +95,6 @@ mort_bal_limit_mfs:
     '2018': 375000
     '2026': 500000
 
-char_floor_agi:
-  value: 0
-
-char_limit:
-  value: Inf
-
-char_cash_limit_agi:
-  value:
-    '2014': 0.5
-    '2018': 0.6
-    '2020': 1
-    '2022': 0.6
-
-char_noncash_limit_agi:
-  value:
-    '2014': 0.3
-
 casualty_limit:
   value: Inf
 
