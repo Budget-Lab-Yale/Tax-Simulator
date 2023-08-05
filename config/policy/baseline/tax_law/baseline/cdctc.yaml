@@ -1,0 +1,36 @@
+---
+exp_limit:
+  value: 
+    '2014': 3000
+    '2021': 8000
+    '2022': 3000
+  
+n_dep_limit:
+  value: 2
+
+credit_rate:
+  value: 
+    '2014': [0.2, 0.15]
+    '2021': [0.2, 0.3]
+    '2022': [0.2, 0.15]
+
+po_thresh:
+  value:
+    '2014': [Inf, 15000]
+    '2021': [400000, 125000]
+    '2022': [Inf, 15000]
+
+po_rate:
+  value: [0.000005, 0.000005]
+  
+discrete_step:
+  value: 2000
+  
+refundable:
+  value:
+    '2014': False
+    '2021': True
+    '2022': False
+
+ei_limit:
+  value: True
