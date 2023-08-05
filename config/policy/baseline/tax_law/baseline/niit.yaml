@@ -1,0 +1,19 @@
+---
+filing_status_mapper:
+  po_thresh:
+    '1': brackets_single
+    '2': brackets_married
+    '3': brackets_married / 2
+    '4': brackets_single
+
+rates:
+  value:
+    '2014': [0.0, 0.038]
+
+brackets_single:
+  value:
+    '2014': [0, 200000]
+    
+brackets_married:
+  value:
+    '2014': [0, 250000]
