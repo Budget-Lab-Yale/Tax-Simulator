@@ -361,7 +361,7 @@ apply_indexation = function(df) {
     df %>% 
       mutate(
         Value = case_when(
-          is.na(i_direction) ~ BaseValue,
+          is.na(i_direction) | is.na(i_index) ~ BaseValue,
           i_direction == -1  ~ floor(BaseValue   * i_index / i_increment) * i_increment,
           i_direction ==  1  ~ ceiling(BaseValue * i_index / i_increment) * i_increment,
           i_direction ==  0  ~ round(BaseValue   * i_index / i_increment) * i_increment, 
