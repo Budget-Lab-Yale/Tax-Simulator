@@ -26,7 +26,12 @@ parse_calc_fn_input = function(tax_unit, req_vars) {
     tax_unit = as_tibble(tax_unit) 
   } 
   
-  # Check that required variable names are supplied
+  # Check that required variable names are supplied. First, replace "[]" key, 
+  # which indicates a vector variable, with the minimum index. In other words, 
+  # we are demanding at least one element of the vector variable 
+  req_vars = str_replace(req_vars, fixed('[]'), '1')
+  
+  # Check for all required variables, throwing exception if not
   given_vars = names(tax_unit)
   if (!all(req_vars %in% given_vars)) {
     missing_vars = req_vars[!(req_vars %in% given_vars)]

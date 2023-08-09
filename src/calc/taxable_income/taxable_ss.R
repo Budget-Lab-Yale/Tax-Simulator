@@ -6,56 +6,74 @@
 calc_taxable_ss = function(tax_unit) {
   
   #----------------------------------------------------------------------------
-  # TODO
+  # Calculates taxable OASI benefits, i.e. the amount includable in AGI 
   # 
   # Parameters:
   #   - tax_unit (df | list) : either a dataframe or list containing required
   #                            variables (listed below)
   #
-  # Returns: TODO
+  # Returns: dataframe of following variables:
+  #          - taxable_ss (dbl) : taxable OASI benefits
   #----------------------------------------------------------------------------
   
   req_vars = c(
-    'gross_ss',        # (numeric, tax unit) TODO
-    'other_inc',     # (numeric, tax unit) TODO
-    'exempt_int',    # 
-    'above_ded',     # 
-    'ss.rates',     # (numeric, tax law)
-    'ss.brackets'   # 
+    'gross_ss',        # (dbl, self)  gross OASI benefits
+    'other_inc',       # (dbl, self)  gross income less OASI benefits 
+    'exempt_int',      # (dbl, self)  tax-exempt interest income
+    'above_ded',       # (dbl, self)  above-the-line deductions
+    'ss.magi_ss_rate', # (dbl, law)   rate at which benefits are included in the 
+                       #              definition of modified AGI 
+    'ss.rates[]',      # (dbl[], law) benefit inclusion rates
+    'ss.brackets[]'    # (int[], law) benefit inclusion rate brackets
   )
   
-  tax_unit %>% 
-    parse_calc_fn_input(req_vars) %>% 
+  # Parse tax unit object passed as argument
+  tax_unit = parse_calc_fn_input(tax_unit, req_vars) 
+  
+  # Determine number of inclusion rates/brackets
+  n = tax_unit %>% 
+    select(starts_with('ss.brackets')) %>% 
+    names() %>% 
+    str_sub(-1) %>% 
+    as.integer() %>% 
+    max()
+  
+  # Add a few variables required for SS benefit inclusion calculation
+  tax_unit %<>%
     mutate(
       
+      # (N+1)th bracket, used to calculate taxable benefits in excess of top bracket
+      !!paste0('ss.brackets', n + 1) := Inf, 
+  
+      # Modified AGI per SS rules
+      magi = pmax(0, (gross_ss * ss.magi_ss_rate) + other_inc + exempt_int - above_ded)
+  )
+  
+  # Iterate over brackets, stored with associated output prefix
+  1:n %>% 
+    set_names(paste0('taxable_ss', 1:n)) %>% 
+    
+    # For each bracket...
+    map_df(function(i) {
       
-      # modified AGI
-      magi = pmax(0, (gross_ss * ss.rates2) + other_inc + exempt_int - above_ded),
+      # Limit income to next bracket
+      inc = pmin(tax_unit$magi, tax_unit[[paste0('ss.brackets', i + 1)]])
       
+      # Calculate taxable excess over this bracket
+      excess = pmax(0, inc - tax_unit[[paste0('ss.brackets', i)]])
       
-      # magi in excess of 0% bracket 
-      line9 = pmax(0, magi - ss.brackets2),
+      # Limit to gross benefits
+      taxable_benefits = pmin(tax_unit$gross_ss, excess)
       
-      line10 = ss.brackets3 - ss.brackets2,
-      
-      # magi in excess of 85% bracket
-      line11 = pmax(0, line9 - line10),
-      
-      line12 = pmin(line9, line10),
-      
-      # benefits included at 50% rate 
-      line13 = ss.rates2 * line12, 
-      
-      # 50%-rate benefits -- which could be based on MAGI -- are limited to 50% of ss benefits 
-      line14 = pmin(gross_ss * ss.rates2, line13),
-      
-      # benefits included at 85% rate
-      line15 = line11 * ss.rates3,
-      
-      # limit taxable benefits to top rate applied to raw gross SS
-      taxable_ss = pmin(line14 + line15, gross_ss * ss.rate3)
-      
-      # .maybe just keep this one explicit. it's kinda weird with the brackets. or copy integrate_...logic !
-      
-    ) 
+      # Apply rate
+      return(taxable_benefits * tax_unit[[paste0('ss.rates', i)]])
+    
+    }) %>% 
+    
+    # Calculate total, limit to highest inclusion rate, and return
+    mutate(taxable_ss = rowSums(.), 
+           taxable_ss = pmin(taxable_ss, tax_unit$gross_ss * tax_unit[[paste0('ss.rates', n)]])) %>% 
+    select(taxable_ss) %>% 
+    return()
 }
+
