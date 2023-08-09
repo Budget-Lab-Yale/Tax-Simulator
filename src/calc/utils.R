@@ -72,16 +72,10 @@ integrate_rates_brackets = function(df, n_brackets, brackets_prefix, rates_prefi
   # Returns: dataframe representation of tax unit input (df). 
   #----------------------------------------------------------------------------
   
-  # Shorten variable names for readability below
-  b = brackets_prefix
-  r = rates_prefix
-  y = inc_name
-  p = paste0
-  
   # If number of brackets isn't supplied by user, ascertain it
   if (is.null(n_brackets)) {
     n_brackets = df %>% 
-      select(starts_with(b)) %>% 
+      select(starts_with(brackets_prefix)) %>% 
       names() %>% 
       str_sub(-1) %>% 
       as.integer() %>% 
@@ -89,17 +83,28 @@ integrate_rates_brackets = function(df, n_brackets, brackets_prefix, rates_prefi
   }
   
   # Add (n+1)th bracket, used to calculate taxable income in excess of top bracket
-  df[[paste0(b, n_brackets + 1)]] = Inf
+  df[[paste0(brackets_prefix, n_brackets + 1)]] = Inf
   
   # Generate bracket-specific output names
   bracket_output_names = paste0(output_name, 1:n_brackets) 
   
   # Iterate over brackets, stored with associated output prefix
-  tax = 1:n_brackets %>% 
+  1:n_brackets %>% 
     set_names(bracket_output_names) %>% 
     
-    # Calculate extent to which taxable income exceeds this bracket, and apply rate
-    map_df(~ pmax(0, pmin(df[[p(b, . + 1)]], df$y) - df[[p(b, .)]]) * df[[p(r, .)]]) %>% 
+    # For each bracket...
+    map_df(function(i) {
+      
+      # Determine lesser of next bracket or income
+      inc = pmin(df[[paste0(brackets_prefix, i + 1)]], df[[inc_name]])
+      
+      # Calculate as excess over this bracket
+      excess = pmax(0, inc - df[[paste0(brackets_prefix, i)]])
+      
+      # Apply rate and return
+      return(excess * df[[paste0(rates_prefix, i)]])
+      
+    }) %>%
     
     # Generate total output column
     mutate(!!output_name := rowSums(.)) %>% 
