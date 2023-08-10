@@ -6,7 +6,7 @@ filing_status_mapper:
     '3': brackets_single
     '4': brackets_single
 
-# Rate at which benefits are included in the defintion of modified AGI
+# Rate at which benefits are added to modified AGI
 magi_ss_rate:
   value: 0.5
   
