@@ -23,8 +23,9 @@ calc_kg = function(tax_unit) {
     'agi.kg_excl_rate'   # (dbl, law) share of capital gains excluded from AGI 
   )
   
-  # Parse tax unit object passed as argument
   tax_unit %>% 
+    
+    # Parse tax unit object passed as argument
     parse_calc_fn_input(req_vars) %>% 
     mutate(
       
