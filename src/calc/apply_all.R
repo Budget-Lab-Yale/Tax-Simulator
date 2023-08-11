@@ -20,8 +20,8 @@ tax_units %>%
   # Itemized deductions
   bind_cols(calc_item_ded(.)) %>% 
   
-  # Charity deduction determination
-  bind_cols(calc_char(.)) %>% 
+  # Deduction determination
+  bind_cols(calc_optimized_ded(.)) %>% 
   
   # Personal exemptions
   bind_cols(calc_pe(.)) %>% 
@@ -29,10 +29,7 @@ tax_units %>%
   # QBI deduction
   bind_cols(calc_qbi_ded(.)) %>% 
   
-  # Taxable income
-  bind_cols(calc_ti(.)) %>% 
-  
-  # Tax liability
+  # Taxable income and tax liability
   bind_cols(calc_tax(.)) %>%
   
   # Alternative minimum tax
@@ -48,27 +45,20 @@ tax_units %>%
   bind_cols(calc_ed_cred(.)) %>% 
   
   # Savers credit
-  bind_cols(calc_savers(.)) %>% 
-  
-  # Energy credits
-  bind_cols(calc_energy_cred(.)) %>% 
-  
-  # Other nonrefundable credits 
-  bind_cols(calc_other_cred(.)) %>% 
+  bind_cols(calc_savers_cred(.)) %>% 
   
   # EITC
   bind_cols(calc_eitc(.)) %>% 
-
+  
   # Rebates / UBI
   bind_cols(calc_rebate(.)) %>% 
-
+  
   # NIIT
   bind_cols(calc_niit(.)) %>% 
-
+  
   # Liability
   bind_cols(calc_liab(.))  
 
-  
-  
-  
-  
+
+
+
