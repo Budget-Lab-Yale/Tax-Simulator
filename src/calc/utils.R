@@ -3,6 +3,40 @@
 #---------------------------------------------
 
 
+derive_vars = function(tax_unit) { 
+  
+  #----------------------------------------------------------------------------
+  # Adds derived, policy-indepenent variables used elsewhere, either in tax
+  # calculation or just for reporting convenience.
+  # 
+  # Parameters:
+  #   - tax_unit (df) : dataframe of tax units
+  #
+  # Returns: dataframe containing new variables derived within (df). 
+  #----------------------------------------------------------------------------
+  
+  tax_unit %>% 
+    mutate(
+      
+      # Pass through net income variables
+      part       = part_active + part_passive - part_active_loss - 
+                   part_passive_loss - part_179,
+      scorp      = scorp_active + scorp_passive - scorp_active_loss - 
+                   scorp_passive_loss - scorp_179,
+      part_scorp = part + scorp,
+      pt         = part + scorp + sole_prop,
+      sch_e      = part_scorp + rent + rent_loss + estate + estate_loss,    
+      
+      # Self employment income and earned income 
+      se_inc = sole_prop + farm + part_se,  # TODO look at E30400?? Need to impute. Model the variables on schedule SE
+      ei     = wages + se_inc
+      
+    ) %>% 
+    return()
+}
+
+
+
 parse_calc_fn_input = function(tax_unit, req_vars) {
   
   #----------------------------------------------------------------------------

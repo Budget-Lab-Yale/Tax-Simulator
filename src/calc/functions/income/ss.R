@@ -17,13 +17,18 @@ calc_ss = function(tax_unit) {
   #----------------------------------------------------------------------------
   
   req_vars = c(
-    'gross_ss',        # (dbl, self)  gross OASI benefits
-    'magi_ss',         # (dbl, self)  AGI less OASI benefits plus tax-exempt
-                       #              interest
-    'ss.magi_ss_rate', # (dbl, law)   rate at which benefits are added to MAGI
-                       #              when determining inclusion rate
-    'ss.rates[]',      # (dbl[], law) benefit inclusion rates
-    'ss.brackets[]'    # (int[], law) benefit inclusion rate brackets
+    
+    # Tax unit attributes
+    
+    'gross_ss',        # (dbl)  gross OASI benefits
+    'magi_ss',         # (dbl)  AGI less OASI benefits plus tax-exempt interest
+    
+    # Tax law attributes
+    
+    'ss.magi_ss_rate', # (dbl)   rate at which benefits are added to MAGI when
+                       #         determining inclusion rate
+    'ss.rates[]',      # (dbl[]) benefit inclusion rates
+    'ss.brackets[]'    # (int[]) benefit inclusion rate brackets
   )
   
   # Parse tax unit object passed as argument
@@ -43,10 +48,10 @@ calc_ss = function(tax_unit) {
       
       # (N+1)th bracket, used to calculate taxable benefits in excess of top bracket
       !!paste0('ss.brackets', n + 1) := Inf, 
-  
+      
       # Modified AGI plus some share of benefits
       magi_plus_ss = pmax(0, (gross_ss * ss.magi_ss_rate) + magi_ss)
-  )
+    )
   
   # For each bracket...
   1:n %>% 
@@ -61,7 +66,7 @@ calc_ss = function(tax_unit) {
       
       # Limit to gross benefits and apply rate
       return(pmin(excess, tax_unit$gross_ss) * tax_unit[[paste0('ss.rates', i)]])
-    
+      
     }) %>% 
     
     # Calculate total, limit to highest inclusion rate, and return
