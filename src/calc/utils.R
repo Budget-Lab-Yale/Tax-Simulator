@@ -29,6 +29,7 @@ derive_vars = function(tax_unit) {
       
       # Self employment income and earned income 
       se_inc = sole_prop + farm + part_se,  # TODO look at E30400?? Need to impute. Model the variables on schedule SE
+                                            # Also this should go in payroll taxes I think 
       ei     = wages + se_inc
       
     ) %>% 
@@ -60,13 +61,16 @@ parse_calc_fn_input = function(tax_unit, req_vars) {
     tax_unit = as_tibble(tax_unit) 
   } 
   
-  # Check that required variable names are supplied. First, replace "[]" key, 
-  # which indicates a vector variable, with the minimum index. In other words, 
-  # we are demanding at least one element of the vector variable 
-  req_vars = str_replace(req_vars, fixed('[]'), '1')
+  # Check that required variable names are supplied. First, remove the "[]" key, 
+  # which indicates a vector variable.
+  req_vars = str_replace(req_vars, fixed('[]'), '')
   
+  # Remove index number from vector variables 
+  given_vars = tax_unit %>% 
+    names() %>% 
+    ifelse(str_sub(., -1) %in% 1:9, str_sub(., end = -2), .)
+    
   # Check for all required variables, throwing exception if not
-  given_vars = names(tax_unit)
   if (!all(req_vars %in% given_vars)) {
     missing_vars = req_vars[!(req_vars %in% given_vars)]
     stop('The following required variables were not supplied: ', paste0(missing_vars, ' '))
@@ -96,7 +100,9 @@ integrate_rates_brackets = function(df, n_brackets, brackets_prefix, rates_prefi
   #                             by parsing max integer from df's bracket cols
   #   - brackets_prefix (str) : string uniquely identifying bracket columns. 
   #                             Integers, corresponding to bracket number, 
-  #                             follow the prefix
+  #                             follow the prefix -- unless there is just one
+  #                             bracket, in which case specifying just the 
+  #                             prefix is allowed
   #   - rates_prefix (str)    : string uniquely identifying rate column
   #   - inc_name (str)        : column name for income fed to rates/brackets 
   #   - output_name (str)     : name for function output variables 
@@ -111,14 +117,23 @@ integrate_rates_brackets = function(df, n_brackets, brackets_prefix, rates_prefi
     n_brackets = df %>% 
       select(starts_with(brackets_prefix)) %>% 
       names() %>% 
-      str_sub(-1) %>% 
-      as.integer() %>% 
-      max()
+      length()
+    
+    # Add integer index if not specified under single-bracket case
+    if (n_brackets == 1 & brackets_prefix %in% names(df)) {
+      df %<>% 
+        rename_with(.cols = all_of(brackets_prefix), 
+                    .fn   = ~ paste0(brackets_prefix, 1)) %>% 
+        rename_with(.cols = all_of(rates_prefix), 
+                    .fn   = ~ paste0(rates_prefix, 1))
+    }
   }
   
   # Add (n+1)th bracket, used to calculate taxable income in excess of top bracket
   df[[paste0(brackets_prefix, n_brackets + 1)]] = Inf
   
+  print(df)
+
   # Generate bracket-specific output names
   bracket_output_names = paste0(output_name, 1:n_brackets) 
   

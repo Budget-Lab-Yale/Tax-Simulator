@@ -37,10 +37,14 @@ calc_ss = function(tax_unit) {
   # Determine number of inclusion rates/brackets
   n = tax_unit %>% 
     select(starts_with('ss.brackets')) %>% 
-    names() %>% 
-    str_sub(-1) %>% 
-    as.integer() %>% 
-    max()
+    names() %>%
+    length()
+  
+  # Add integer index if not specified under single-bracket case
+  if (n == 1 & 'ss.brackets' %in% names(tax_unit)) {
+    tax_unit %<>% 
+      rename(ss.brackets1 = ss.brackets, ss.rates1 = ss.rates)
+  }
   
   # Add a few variables required for SS benefit inclusion calculation
   tax_unit %<>%
@@ -52,7 +56,7 @@ calc_ss = function(tax_unit) {
       # Modified AGI plus some share of benefits
       magi_plus_ss = pmax(0, (gross_ss * ss.magi_ss_rate) + magi_ss)
     )
-  
+
   # For each bracket...
   1:n %>% 
     set_names(paste0('taxable_ss', .)) %>% 
@@ -71,7 +75,7 @@ calc_ss = function(tax_unit) {
     
     # Calculate total, limit to highest inclusion rate, and return
     mutate(txbl_ss = rowSums(.), 
-           txbl_ss = pmin(txbl, tax_unit$gross_ss * tax_unit[[paste0('ss.rates', n)]])) %>% 
+           txbl_ss = pmin(txbl_ss, tax_unit$gross_ss * tax_unit[[paste0('ss.rates', n)]])) %>% 
     select(txbl_ss) %>% 
     return()
 }

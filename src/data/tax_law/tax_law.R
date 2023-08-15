@@ -290,12 +290,18 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
       map2(indexation_defaults, replace_defaults)
   }
   
+  # Parse NAs in numeric indexation params
+  for (i_name in c('i_base_year', 'i_direction', 'i_increment')) {
+    i_info[[i_name]] %<>% 
+      parse_na()
+  }
+  
   # Convert elements of raw subparam input to time series dataframes
   # First, determine range of years by indexation param
   i_years = i_info %>% 
     names() %>% 
     map(.f = ~ if (. != 'i_measure') { years } 
-        else { min(as.integer(names(i_info$i_measure))):max(years) })
+               else { min(as.integer(names(i_info$i_measure))):max(years) })
   
   # Then, generate time series for each element
   i_info = pmap(.f = generate_time_series,
@@ -585,22 +591,75 @@ parse_inf = function(value) {
   # a potentially multi-level nested list
   #
   # Parameters:
-  #   - value (list | any atomic) : value of raw input variables
+  #   - value (list | any atomic) : value of raw input 
   #
   # Returns: updated input object with instances of "Inf" replaced with Inf 
   #          (list | any atomic).
   #----------------------------------------------------------------------------
   
   if (is.list(value)) {
-    value %>% 
-      map(~ if (any(. == 'Inf')) { as.numeric(.) } else { . }) %>% 
-      return()
+    
+    # Named lists indicate year-value specification 
+    if (!is.null(names(value))) {
+      value %>% 
+        map(~ if (any(. == 'Inf')) { as.numeric(.) } else { . }) %>% 
+        return()
+    
+    # Unnamed lists indicate heterogeneous list YAML parsing  
+    } else { 
+      if (any(value == 'Inf')) {
+        return(as.numeric(value))
+      }
+      return(value)
+    }
+  
+  # Scalars
   } else {
     if (any(value == 'Inf')) { 
       return(as.numeric(value))
     }
     return(value)
   }
+}
+
+
+
+parse_na = function(value) {
+  
+  #----------------------------------------------------------------------------
+  # Helper function to parse string "NA" in a specified numeric indexation rule
+  # array, which indicates that value corresponding to that element should not
+  # be indexed. For example, we might specify a "donut hole" policy for
+  # payroll taxes as follows:
+  # 
+  # oasdi_er_brackets:
+  #   value: [0, 60600, 400000]
+  #   i_measure: default
+  #   i_base_year: [1991, 1991, NA]
+  #   i_direction: [1, 1, NA]
+  #   i_increment: [300, 300, NA]
+  #
+  # The 60600 bracket would be indexed, but not the 400000 bracket. 
+  #
+  #
+  # Parameters:
+  #   - value (list | any atomic) : a vector/atomic value, or a list of vectors/
+  #                                 atomic values, that can be parsed to numeric
+  #
+  # Returns: updated input object with instances of "NA" replaced with NA 
+  #          (list | any atomic).
+  #----------------------------------------------------------------------------
+  
+  if (is.list(value)) {
+    
+    # Named lists indicate year-value specification 
+    if (!is.null(names(value))) {
+      value %<>% 
+        map(.f = ~ suppressWarnings(as.numeric(.))) 
+      return(value)
+    }
+  }
+  return(suppressWarnings(as.numeric(value)))
 }
 
   

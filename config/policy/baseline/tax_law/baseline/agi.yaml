@@ -15,16 +15,16 @@ filing_status_mapper:
     '3': kg_loss_limit_married / 2
     '4': kg_loss_limit_married
   bus_loss_limit:
-    '1': bus_loss_limit_married
-    '2': kg_loss_limit_married
-    '3': kg_loss_limit_married / 2
-    '4': kg_loss_limit_married
+    '1': bus_loss_limit_married / 2
+    '2': bus_loss_limit_married
+    '3': bus_loss_limit_married / 2
+    '4': bus_loss_limit_married / 2
 
 # Maxmimum deductible capital loss
 kg_loss_limit_married:
   value: 3000
   
-# Share of capital gains excluded from AGI
+  # Share of capital gains excluded from AGI
 kg_excl_rate:
   value: 0
   

@@ -1,0 +1,70 @@
+---
+indexation_defaults:
+  i_measure:
+    '2013': awi
+  i_base_year: [1991, 1991, NA]
+  i_direction: [1, 1, NA]
+  i_increment: [300, 300, NA]
+
+filing_status_mapper:
+  brackets:
+    '1': add_med_brackets_single
+    '2': add_med_brackets_married
+    '3': add_med_brackets_married / 2
+    '4': add_med_brackets_single
+
+# OASDI rates, employee side 
+oasdi_ee_rates:
+  value: [0.062, 0.0, 0.062]
+  
+# OASDI brackets, employee side 
+oasdi_ee_brackets:
+  value: [0, 60600, 400000]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+  
+# OASDI rates, employer side 
+oasdi_er_rates:
+  value: [0.062, 0.0]
+  
+# OASDI brackets, employer side 
+oasdi_er_brackets:
+  value: [0, 60600, 400000]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+  
+# Hospital Insurance rates, employee side 
+hi_ee_rates:
+  value: 0.0145
+
+# Hospital Insurance brackets, employee side
+hi_ee_brackets:
+  value: 0
+  
+# Hospital Insurance rates, employer side 
+hi_er_rates:
+  value: 0.0145
+  
+# Hospital Insurance brackets, employer side
+hi_er_brackets:
+  value: 0
+
+# Additional Medicare Tax rates
+add_med_rates:
+  value: [0.0, 0.009]
+
+# Additional Medicare Tax brackets for single filers
+add_med_brackets_single:
+  value: [0, 200000]
+
+# Additional Medicare Tax brackets for joint filers
+add_med_brackets_married:
+  value: [0, 250000]
+
+# Threshold above which total self-employment income must be reported
+se_thresh:
+  value: 400
