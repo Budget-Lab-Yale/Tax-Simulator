@@ -83,5 +83,3 @@ add_med_brackets_single:
 # Additional Medicare Tax brackets for joint filers
 add_med_brackets_married:
   value: [0, 250000]
-
-

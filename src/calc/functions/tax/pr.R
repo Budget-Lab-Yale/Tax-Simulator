@@ -19,6 +19,7 @@ calc_pr = function(tax_unit) {
   #          - ei           (dbl) : earned income           
   #          - liab_fica    (dbl) : FICA tax liability
   #          - liab_seca    (dbl) : SECA tax liability 
+  #          - liab_seca    (dbl) : employer-side SECA tax liability 
   #          - liab_oasdi   (dbl) : OASDI tax liability
   #          - liab_hi      (dbl) : Medicare tax liability
   #          - liab_add_med (dbl) : Additional Medicare Tax liability 
@@ -31,22 +32,22 @@ calc_pr = function(tax_unit) {
     
     # Tax unit attributes
     
-    'wages1',        # (dbl) W2 wages (box 1 on W2), primary earner 
-    'wages2',        # (dbl) W2 wages (box 1 on W2), secondary earner
-    'pretax_contr1', # (dbl) pretax contributions to a tax-preferred savings 
-                     #       account, primary earner
-    'pretax_contr2', # (dbl) pretax contributions to a tax-preferred savings 
-                     #       account, secondary earner
-    'sole_prop1',    # (dbl) Schedule C net income, primary earner 
-    'sole_prop2',    # (dbl) Schedule C net income, secondary earner 
-    'farm1',         # (dbl) Schedule F net income, primary earner 
-    'farm2',         # (dbl) Schedule F net income, secondary earner 
-    'part_se1',      # (dbl) partnership income subject to employment tax, 
-                     #       primary earner
-    'part_se2',      # (dbl) partnership income subject to employment tax, 
-                     #       secondary earner
-    'filing_status', # (int) filing status (1 = single, 2 = joint, 3 = married 
-                     #       filing separately, 4 = head of household) 
+    'wages1',          # (dbl) W2 wages (box 1 on W2), primary earner 
+    'wages2',          # (dbl) W2 wages (box 1 on W2), secondary earner
+    'trad_contr_er_1', # (dbl) pretax contributions to an employer-sponsored  
+                       #       tax-preferred savings account, primary earner
+    'trad_contr_er2',  # (dbl) pretax contributions to an employer-sponsored 
+                       #       tax-preferred savings account, secondary earner
+    'sole_prop1',      # (dbl) Schedule C net income, primary earner 
+    'sole_prop2',      # (dbl) Schedule C net income, secondary earner 
+    'farm1',           # (dbl) Schedule F net income, primary earner 
+    'farm2',           # (dbl) Schedule F net income, secondary earner 
+    'part_se1',        # (dbl) partnership income subject to employment tax, 
+                       #       primary earner
+    'part_se2',        # (dbl) partnership income subject to employment tax, 
+                       #       secondary earner
+    'filing_status',   # (int) filing status (1 = single, 2 = joint, 3 = married 
+                       #       filing separately, 4 = head of household) 
     
     # Tax law attributes
     
@@ -111,8 +112,8 @@ calc_pr = function(tax_unit) {
              .fns  = ~ replace_na(., 0)), 
       
       # Calculate FICA-eligible wages
-      gross_wages1 = wages1 + pretax_contr1, 
-      gross_wages2 = wages2 + pretax_contr2, 
+      gross_wages1 = wages1 + trad_contr_er1, 
+      gross_wages2 = wages2 + trad_contr_er2, 
       gross_wages  = gross_wages1 + gross_wages2, 
       
       # Calculate SECA-eligible earnings
@@ -184,25 +185,36 @@ calc_pr = function(tax_unit) {
                                by_bracket      = F)
     ) %>%
     
-    
     mutate(
       
       # Aggregate payroll tax variables
-      liab_fica  = liab_fica_oasdi_ee1 + liab_fica_oasdi_ee2 + 
-                   liab_fica_hi_ee1 + liab_fica_hi_ee2, 
-      liab_seca  = liab_seca_oasdi_ee1 + liab_seca_oasdi_ee2 + 
-                   liab_seca_hi_ee1 + liab_seca_hi_ee2,
-      liab_oasdi = liab_fica_oasdi_ee1 + liab_fica_oasdi_ee2 + 
-                   liab_seca_oasdi_ee1 + liab_seca_oasdi_ee2,
-      liab_hi    = liab_fica_hi_ee1 + liab_fica_hi_ee2 + liab_seca_hi_ee1 +
-                   liab_seca_hi_ee2 + liab_add_med,
-      liab_pr_ee = liab_fica_oasdi_ee1 + liab_fica_oasdi_ee2 + liab_fica_hi_ee1 + 
-                   liab_fica_hi_ee2 + liab_seca_oasdi_ee1 + liab_seca_oasdi_ee2 + 
-                   liab_seca_hi_ee1 + liab_seca_hi_ee2,
-      liab_pr_er = liab_fica_oasdi_er1 + liab_fica_oasdi_er2 + liab_fica_hi_er1 + 
-                   liab_fica_hi_er2 + liab_seca_oasdi_er1 + liab_seca_oasdi_er2 + 
-                   liab_seca_hi_er1 + liab_seca_hi_er2,
-      liab_pr    = liab_oasdi + liab_hi + liab_add_med,     
+      liab_fica    = liab_fica_oasdi_ee1 + liab_fica_oasdi_ee2 + 
+                     liab_fica_hi_ee1    + liab_fica_hi_ee2 + 
+                     liab_fica_oasdi_er1 + liab_fica_oasdi_er2 + 
+                     liab_fica_hi_er1    + liab_fica_hi_er2, 
+      liab_seca    = liab_seca_oasdi_ee1 + liab_seca_oasdi_ee2 + 
+                     liab_seca_hi_ee1    + liab_seca_hi_ee2 +
+                     liab_seca_oasdi_er1 + liab_seca_oasdi_er2 + 
+                     liab_seca_hi_er1    + liab_seca_hi_er2,
+      liab_seca_er = liab_seca_oasdi_er1 + liab_seca_oasdi_er2 +
+                     liab_seca_hi_er1    + liab_seca_hi_er2, 
+      liab_oasdi   = liab_fica_oasdi_ee1 + liab_fica_oasdi_ee2 + 
+                     liab_seca_oasdi_ee1 + liab_seca_oasdi_ee2 +
+                     liab_fica_oasdi_er1 + liab_fica_oasdi_er2 + 
+                     liab_seca_oasdi_er1 + liab_seca_oasdi_er2,
+      liab_hi      = liab_fica_hi_ee1 + liab_fica_hi_ee2 + 
+                     liab_seca_hi_ee1 + liab_seca_hi_ee2 + 
+                     liab_fica_hi_er1 + liab_fica_hi_er2 + 
+                     liab_seca_hi_er1 + liab_seca_hi_er2 + liab_add_med,
+      liab_pr_ee   = liab_fica_oasdi_ee1 + liab_fica_oasdi_ee2 + 
+                     liab_fica_hi_ee1    + liab_fica_hi_ee2 + 
+                     liab_seca_oasdi_ee1 + liab_seca_oasdi_ee2 + 
+                     liab_seca_hi_ee1    + liab_seca_hi_ee2,
+      liab_pr_er   = liab_fica_oasdi_er1 + liab_fica_oasdi_er2 + 
+                     liab_fica_hi_er1    + liab_fica_hi_er2 + 
+                     liab_seca_oasdi_er1 + liab_seca_oasdi_er2 + 
+                     liab_seca_hi_er1    + liab_seca_hi_er2,
+      liab_pr      = liab_oasdi + liab_hi,     
       
       # Set secondary-earner output variables to NA for non-joint tax units
       se2 = if_else(filing_status != 2, NA, se2)
@@ -210,8 +222,8 @@ calc_pr = function(tax_unit) {
     ) %>%
 
     # Keep variables to return
-    select(se1, se2, se, ei, liab_fica, liab_seca, liab_oasdi, liab_hi, 
-           liab_add_med, liab_pr_ee, liab_pr_er, liab_pr) %>%
+    select(se1, se2, se, ei, liab_fica, liab_seca, liab_seca_er, liab_oasdi, 
+           liab_hi, liab_add_med, liab_pr_ee, liab_pr_er, liab_pr) %>%
     return()
 }
 
