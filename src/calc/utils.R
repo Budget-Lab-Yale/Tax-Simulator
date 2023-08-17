@@ -61,19 +61,28 @@ parse_calc_fn_input = function(tax_unit, req_vars) {
     tax_unit = as_tibble(tax_unit) 
   } 
   
-  # Check that required variable names are supplied. First, remove the "[]" key, 
-  # which indicates a vector variable.
-  req_vars = str_replace(req_vars, fixed('[]'), '')
-  
-  # Remove index number from vector variables 
-  given_vars = tax_unit %>% 
-    names() %>% 
-    ifelse(str_sub(., -1) %in% 1:9, str_sub(., end = -2), .)
-    
-  # Check for all required variables, throwing exception if not
-  if (!all(req_vars %in% given_vars)) {
-    missing_vars = req_vars[!(req_vars %in% given_vars)]
-    stop('The following required variables were not supplied: ', paste0(missing_vars, ' '))
+  # Check that required variable names are supplied
+  # TODO gotta be a cleaner vectorized way to do this
+  missing = c()
+  given_vars = names(tax_unit) 
+  for (var in req_vars) {
+    if (!(var %in% given_vars)) {
+      
+      # For vector variables, check for either the prefix or an integer-indexed
+      # version of the prefix (e.g. 'pref.brackets1')
+      if (str_sub(var, -2) == '[]') {
+        prefix = str_sub(var, end = -3)
+        if ((prefix %in% given_vars) | paste0(prefix, 1) %in% given_vars) {
+          next
+        }
+      }
+      missing %<>% c(var)
+    }
+  }
+
+  # Throw exemption if some required variables are missing
+  if (length(missing) > 0) {
+    stop('The following required variables were not supplied: ', paste0(missing, ' '))
   }
   
   return(tax_unit)
@@ -132,8 +141,6 @@ integrate_rates_brackets = function(df, n_brackets, brackets_prefix, rates_prefi
   # Add (n+1)th bracket, used to calculate taxable income in excess of top bracket
   df[[paste0(brackets_prefix, n_brackets + 1)]] = Inf
   
-  print(df)
-
   # Generate bracket-specific output names
   bracket_output_names = paste0(output_name, 1:n_brackets) 
   

@@ -29,6 +29,7 @@ indexes = read_csv('C:/Users/jar335/Downloads/CPIAUCNS.csv') %>%
                values_to = 'Value') %>% 
   group_by(Series, Year = FY) %>% 
   summarise(Value = mean(Value)) %>% 
+  bind_rows(read_csv('C:/Users/jar335/Downloads/awi.csv')) %>%
   group_by(Series) %>% 
   mutate(Growth = Value / lag(Value) - 1) %>% 
   select(-Value) %>% 
