@@ -15,11 +15,12 @@ calc_agi = function(tax_unit, fill_missings = F) {
   #                            with 0s (used in testing, not in simulation)
   #
   # Returns: dataframe of following variables:
-  #          - txbl_ss    (dbl) Social Security benefits included in AGI
-  #          - sl_int_ded (dbl) student loan interest deduction
-  #          - gross_inc  (dbl) gross income
-  #          - above_ded  (dbl) above-the-line deductions
-  #          - agi        (dbl) Adjusted Gross Income
+  #          - txbl_ss        (dbl) Social Security benefits included in AGI
+  #          - sl_int_ded     (dbl) student loan interest deduction
+  #          - char_above_ded (dbl) above-the-line charitable deduction
+  #          - gross_inc      (dbl) gross income
+  #          - above_ded      (dbl) above-the-line deductions
+  #          - agi            (dbl) Adjusted Gross Income
   #----------------------------------------------------------------------------
   
   req_vars = c(
@@ -53,6 +54,8 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'alimony_exp',     # (dbl) alimony paid
     'tuition_ded',     # (dbl) deductible tuition and fees (pre-2021 definition)
     'dpad',            # (dbl) domestic production activities deduction
+    'char_cash',       # (dbl) charitable contributions made in cash
+    'char_noncash',    # (dbl) noncash charitable contributions 
     'other_above_ded', # (dbl) other deductions per Schedule 1 line 24
     
     # Tax law attributes
@@ -72,31 +75,39 @@ calc_agi = function(tax_unit, fill_missings = F) {
       
       # Calculate gross income excluding OASI benefits
       inc_ex_ss = wages + 
-        txbl_int + 
-        div + 
-        txbl_ira_dist + 
-        txbl_pens_dist + 
-        txbl_kg + 
-        alimony * (divorce_year < agi.alimony_repeal_year) + 
-        sole_prop + 
-        sch_e + 
-        farm +
-        ui - 
-        nols + 
-        other_inc,
+                  txbl_int + 
+                  div + 
+                  txbl_ira_dist + 
+                  txbl_pens_dist + 
+                  txbl_kg + 
+                  alimony * (divorce_year < agi.alimony_repeal_year) + 
+                  sole_prop + 
+                  sch_e + 
+                  farm +
+                  ui - 
+                  nols + 
+                  other_inc,
+      
+      # Calculate above-the-line charitable contribution deduction here if
+      # itemized deduction is eliminated. Otherwise, if they are both available,
+      # we determine which to take later in code
+      char_above_ded = if_else(char.above_limit > 0 & char.item_limit == 0, 
+                               pmin(char.above_limit, char_cash + char_noncash), 
+                               0),
       
       # Calculate above-the-line deductions, excluding student loan interest deduction 
       above_ded_ex_sl = ed_exp + 
-        hsa_contr + 
-        liab_seca_er + 
-        keogh_contr + 
-        se_health + 
-        early_penalty + 
-        alimony_exp * (divorce_year < agi.alimony_repeal_year) + 
-        trad_contr_ira +
-        pmin(tuition_ded, agi.tuition_ded_limit) + 
-        pmin(dpad, agi.dpad_limit), 
-      
+                        hsa_contr + 
+                        liab_seca_er + 
+                        keogh_contr + 
+                        se_health + 
+                        early_penalty + 
+                        alimony_exp * (divorce_year < agi.alimony_repeal_year) + 
+                        trad_contr_ira +
+                        pmin(tuition_ded, agi.tuition_ded_limit) + 
+                        pmin(dpad, agi.dpad_limit) + 
+                        char_above_ded, 
+                      
       # Calculate MAGI for taxable Social Security benefits calculation
       magi_ss = inc_ex_ss - above_ded_ex_sl
       
@@ -120,7 +131,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
     ) %>% 
     
     # Keep variables to return
-    select(txbl_ss, sl_int_ded, gross_inc, above_ded, agi) %>% 
+    select(txbl_ss, sl_int_ded, char_above_ded, gross_inc, above_ded, agi) %>% 
     return()
 }
 
