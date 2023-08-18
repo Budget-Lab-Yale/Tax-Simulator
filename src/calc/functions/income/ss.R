@@ -3,7 +3,7 @@
 #--------------------------------------------------------
 
 
-calc_ss = function(tax_unit) {
+calc_ss = function(tax_unit, fill_missings = F) {
   
   #----------------------------------------------------------------------------
   # Calculates taxable OASI benefits, i.e. the amount includable in AGI 
@@ -11,6 +11,8 @@ calc_ss = function(tax_unit) {
   # Parameters:
   #   - tax_unit (df | list) : either a dataframe or list containing required
   #                            variables (listed below)
+  #   - fill_missings (bool) : whether to populate any unsupplied variables 
+  #                            with 0s (used in testing, not in simulation)
   #
   # Returns: dataframe of following variables:
   #          - txbl_ss (dbl) : taxable OASI benefits
@@ -26,13 +28,13 @@ calc_ss = function(tax_unit) {
     # Tax law attributes
     
     'ss.magi_ss_rate', # (dbl)   rate at which benefits are added to MAGI when
-                       #         determining inclusion rate
+    #         determining inclusion rate
     'ss.rates[]',      # (dbl[]) benefit inclusion rates
     'ss.brackets[]'    # (int[]) benefit inclusion rate brackets
   )
   
   # Parse tax unit object passed as argument
-  tax_unit = parse_calc_fn_input(tax_unit, req_vars) 
+  tax_unit = parse_calc_fn_input(tax_unit, req_vars, fill_missings) 
   
   # Determine number of inclusion rates/brackets
   n = tax_unit %>% 
@@ -56,7 +58,7 @@ calc_ss = function(tax_unit) {
       # Modified AGI plus some share of benefits
       magi_plus_ss = pmax(0, (gross_ss * ss.magi_ss_rate) + magi_ss)
     )
-
+  
   # For each bracket...
   1:n %>% 
     set_names(paste0('taxable_ss', .)) %>% 

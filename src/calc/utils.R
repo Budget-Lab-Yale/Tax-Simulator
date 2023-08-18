@@ -38,7 +38,7 @@ derive_vars = function(tax_unit) {
 
 
 
-parse_calc_fn_input = function(tax_unit, req_vars) {
+parse_calc_fn_input = function(tax_unit, req_vars, fill_missings = F) {
   
   #----------------------------------------------------------------------------
   # Checks whether tax unit(s) representation is in the proper format --
@@ -51,6 +51,8 @@ parse_calc_fn_input = function(tax_unit, req_vars) {
   #                            variables for tax calculation
   #   - req_vars (str[])     : string vector of variable names required for 
   #                            tax calculation
+  #   - fill_missings (bool) : whether to populate any unsupplied variables
+  #                            with 0s (used in testing, not in simulation)
   #
   # Returns: dataframe representation of tax unit input (df). 
   #----------------------------------------------------------------------------
@@ -80,9 +82,22 @@ parse_calc_fn_input = function(tax_unit, req_vars) {
     }
   }
 
-  # Throw exemption if some required variables are missing
   if (length(missing) > 0) {
-    stop('The following required variables were not supplied: ', paste0(missing, ' '))
+    
+    # Populate missing variables with 0s if specified
+    if (fill_missings) { 
+      tax_unit %<>% 
+        bind_cols(
+          missing %>% 
+            map(.f = ~ rep(0, nrow(tax_unit))) %>% 
+            set_names(missing) %>% 
+            as_tibble()
+        )
+      
+    # Throw exception otherwise  
+    } else {
+      stop('The following required variables were not supplied: ', paste0(missing, ' '))
+    }
   }
   
   return(tax_unit)
