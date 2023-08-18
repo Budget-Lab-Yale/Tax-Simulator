@@ -19,6 +19,21 @@ filing_status_mapper:
     '2': bus_loss_limit_married
     '3': bus_loss_limit_married / 2
     '4': bus_loss_limit_married / 2
+  sl_limit:
+    '1': sl_limit_single
+    '2': sl_limit_single
+    '3': sl_limit_single * 0
+    '4': sl_limit_single
+  sl_po_thresh:
+    '1': sl_po_thresh_single
+    '2': sl_po_thresh_married
+    '3': sl_po_thresh_single
+    '4': sl_po_thresh_single
+  sl_po_range:
+    '1': sl_po_range_single
+    '2': sl_po_range_single * 2
+    '3': sl_po_range_single
+    '4': sl_po_range_single
 
 # Maxmimum deductible capital loss
 kg_loss_limit_married:
@@ -49,7 +64,43 @@ bus_loss_limit_married:
   
 # Year during and after which a divorce does not generate taxable/deductible alimony
 alimony_repeal_year:
-    value: 2018
+  value: 
+    '2014': Inf
+    '2018': 2018
+    '2025': Inf
 
+# Maximum deductible student loan interest
+sl_limit_single:
+  value: 2500
+
+# MAGI phaseout threshold for student loan interest deduction, single filers
+sl_po_thresh_single:
+  value: 50000
+  i_measure: default
+  i_base_year: 2001
+  i_direction: -1
+  i_increment: 5000
   
+# MAGI phaseout threshold for student loan interest deduction, joint returns
+sl_po_thresh_married:
+  value: 100000
+  i_measure: default
+  i_base_year: 2001
+  i_direction: -1
+  i_increment: 5000
 
+# MAGI phaseout range for student loan interest deduction
+sl_po_range_single:
+  value: 15000
+  
+# Maximum tuition and fees deduction
+tuition_ded_limit:
+  value: 
+    '2014': Inf
+    '2021': 0
+    
+# Maximum domestic production activities deduction
+dpad_limit:
+  value:
+    '2014': Inf
+    '2018': 0
