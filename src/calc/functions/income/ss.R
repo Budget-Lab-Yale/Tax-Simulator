@@ -21,14 +21,11 @@ calc_ss = function(tax_unit, fill_missings = F) {
   req_vars = c(
     
     # Tax unit attributes
-    
     'gross_ss',        # (dbl)  gross OASI benefits
     'magi_ss',         # (dbl)  AGI less OASI benefits plus tax-exempt interest
     
     # Tax law attributes
-    
-    'ss.magi_ss_rate', # (dbl)   rate at which benefits are added to MAGI when
-    #         determining inclusion rate
+    'ss.magi_ss_rate', # (dbl)   rate at which benefits are added to MAGI when determining inclusion rate
     'ss.rates[]',      # (dbl[]) benefit inclusion rates
     'ss.brackets[]'    # (int[]) benefit inclusion rate brackets
   )

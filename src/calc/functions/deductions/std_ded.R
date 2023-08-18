@@ -21,7 +21,6 @@ calc_std_ded = function(tax_unit, fill_missings = F) {
   req_vars = c(
     
     # Tax unit attributes
-    
     'dep_status', # (bool) whether tax filer is a dependent
     'ei',         # (dbl)  earned income of tax unit
     'age1',       # (int)  age of primary filer
@@ -30,13 +29,10 @@ calc_std_ded = function(tax_unit, fill_missings = F) {
     'blind2',     # (bool) whether secondary filer is blind
     
     # Tax law attributes
-    
     'std.value',           # (int) base value of standard deduction
-    'std.bonus',           # (int) bonus value per instances of nondependent 
-                           #       adults who are either aged 65+ or blind
+    'std.bonus',           # (int) bonus value per instances of nondependent adults who are either aged 65+ or blind
     'std.dep_floor',       # (int) Minimum standard deduction for dependents
-    'std.dep_earned_bonus' # (int) Amount of bonus deduction added to
-                           #       dependent's earned income
+    'std.dep_earned_bonus' # (int) Amount of bonus deduction added to dependent's earned income
   )
   
   tax_unit %>% 

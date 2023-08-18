@@ -33,30 +33,21 @@ calc_pr = function(tax_unit, fill_missings = F) {
   req_vars = c(
     
     # Tax unit attributes
-    
     'wages1',          # (dbl) W2 wages (box 1 on W2), primary earner 
     'wages2',          # (dbl) W2 wages (box 1 on W2), secondary earner
-    'trad_contr_er_1', # (dbl) pretax contributions to an employer-sponsored  
-                       #       tax-preferred savings account, primary earner
-    'trad_contr_er2',  # (dbl) pretax contributions to an employer-sponsored 
-                       #       tax-preferred savings account, secondary earner
+    'trad_contr_er_1', # (dbl) pretax contributions to an employer-sponsored tax-preferred savings account, primary earner
+    'trad_contr_er2',  # (dbl) pretax contributions to an employer-sponsored tax-preferred savings account, secondary earner
     'sole_prop1',      # (dbl) Schedule C net income, primary earner 
     'sole_prop2',      # (dbl) Schedule C net income, secondary earner 
     'farm1',           # (dbl) Schedule F net income, primary earner 
     'farm2',           # (dbl) Schedule F net income, secondary earner 
-    'part_se1',        # (dbl) partnership income subject to employment tax, 
-                       #       primary earner
-    'part_se2',        # (dbl) partnership income subject to employment tax, 
-                       #       secondary earner
-    'filing_status',   # (int) filing status (1 = single, 2 = joint, 3 = married 
-                       #       filing separately, 4 = head of household) 
+    'part_se1',        # (dbl) partnership income subject to employment tax, primary earner
+    'part_se2',        # (dbl) partnership income subject to employment tax, secondary earner
+    'filing_status',   # (int) filing status (1 = single, 2 = joint, 3 = married, filing separately, 4 = head of household) 
     
     # Tax law attributes
-    
-    'pr.seca_taxable_rate',   # (dbl)   Share of self-employment earnings  
-                              #         subject to SECA tax
-    'pr.se_thresh',           # (int)   Threshold above which total self-
-                              #         employment income must be reported
+    'pr.seca_taxable_rate',   # (dbl)   Share of self-employment earnings subject to SECA tax
+    'pr.se_thresh',           # (int)   Threshold above which total self-employment income must be reported
     'pr.oasdi_ee_rates[]',    # (dbl[]) OASDI rates, employee side 
     'pr.oasdi_ee_brackets[]', # (int[]) OASDI brackets, employee side
     'pr.oasdi_er_rates[]',    # (dbl[]) OASDI rates, employer side 
@@ -67,7 +58,6 @@ calc_pr = function(tax_unit, fill_missings = F) {
     'pr.hi_er_brackets[]',    # (int[]) HI brackets, employer side
     'pr.add_med_rates[]',     # (dbl[]) Additional Medicare Tax rates
     'pr.add_med_brackets[]'   # (int[]) Additional Medicare Tax brackets
-
   )
   
   

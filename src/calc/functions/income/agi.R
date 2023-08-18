@@ -25,27 +25,23 @@ calc_agi = function(tax_unit, fill_missings = F) {
   req_vars = c(
     
     # Tax unit attributes
-    
     'wages',           # (dbl) W2 wages after pre-tax deductions
     'txbl_int',        # (dbl) taxable interest income 
     'exempt_int',      # (dbl) tax-exempt interest income
     'div',             # (dbl) total dividend income
     'txbl_ira_dist',   # (dbl) taxable IRA distributions
-    'txbl_pens_dist',  # (dbl) taxable DB and DC pension distributions plus
-                       #       annuity payments
+    'txbl_pens_dist',  # (dbl) taxable DB and DC pension distributions plus annuity payments
     'gross_ss',        # (dbl) gross OASI benefits
     'txbl_kg',         # (dbl) net capital gain includable in AGI
     'state_ref',       # (dbl) taxable refunds/credits/offsets of SALT
     'alimony',         # (dbl) alimony income
     'divorce_year',    # (int) year of divorce if applicable
     'sole_prop',       # (dbl) sole proprietor's net income (Sch. C)
-    'sch_e',           # (dbl) net partnership, S corp, rental, royalty, estate,
-                       #       and trust income (Sch E.)
+    'sch_e',           # (dbl) net partnership, S corp, rental, royalty, estate, and trust income (Sch E.)
     'farm',            # (dbl) net farm income (Sch. F)
     'ui',              # (dbl) gross unemployment benefits
     'nols',            # (dbl) net operating losses
-    'other_inc',       # (dbl) all other income sources: gambling, debt 
-                       #       cancellation, etc. See Sch. 1
+    'other_inc',       # (dbl) all other income sources: gambling, debt cancellation, etc. See Sch. 1
     'ed_exp',          # (dbl) educator expenses
     'hsa_contr',       # (dbl) pretax contributions to an HSA
     'liab_seca_er',    # (dbl) "employer"-side SECA liability
@@ -60,17 +56,12 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'other_above_ded', # (dbl) other deductions per Schedule 1 line 24
     
     # Tax law attributes
-    
-    'agi.alimony_repeal_year', # (int) year during and after which a divorce does 
-                               #       not generate taxable/deductible alimony
+    'agi.alimony_repeal_year', # (int) year during and after which a divorce does not generate taxable/deductible alimony
     'agi.sl_limit',            # (int) maximum deductible student loan interest
-    'agi.sl_po_thresh',        # (int) MAGI phaseout threshold for student loan
-                               #       interest deduction
-    'agi.sl_po_range',         # (int) MAGI phaseout range for student loan
-                               #       interest deduction
+    'agi.sl_po_thresh',        # (int) MAGI phaseout threshold for student loan interest deduction
+    'agi.sl_po_range',         # (int) MAGI phaseout range for student loan interest deduction
     'agi.tuition_ded_limit',   # (int) limit on tuition and feeds deduction 
-    'agi.dpad_limit'           # (int) limit on domestic production activities
-                               #       deduction
+    'agi.dpad_limit'           # (int) limit on domestic production activities deduction
   )
   
   tax_unit %>% 
