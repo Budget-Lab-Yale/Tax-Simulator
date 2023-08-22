@@ -14,10 +14,16 @@ lapply(readLines('requirements.txt'), library, character.only = T)
 # Configure settings
 years = 2014:2024
 
-indexes = read_csv('C:/Users/jar335/Downloads/CPIAUCNS.csv') %>% 
+
+#-----------
+# Load data 
+#-----------
+
+# Placeholder! Reads historical inflation series for tax law generation
+indexes = read_csv('./resources/CPIAUCNS.csv') %>% 
   mutate(Year = year(DATE), Month = month(DATE)) %>% 
   select(Year, Month, cpi = CPIAUCNS) %>% 
-  left_join(read_csv('C:/Users/jar335/Downloads/SUUR0000SA0.csv') %>% 
+  left_join(read_csv('./resources/SUUR0000SA0.csv') %>% 
               mutate(Year = year(DATE), Month = month(DATE)) %>% 
               select(Year, Month, chained_cpi = SUUR0000SA0), 
             by = c('Year', 'Month')) %>% 
@@ -29,23 +35,25 @@ indexes = read_csv('C:/Users/jar335/Downloads/CPIAUCNS.csv') %>%
                values_to = 'Value') %>% 
   group_by(Series, Year = FY) %>% 
   summarise(Value = mean(Value)) %>% 
-  bind_rows(read_csv('C:/Users/jar335/Downloads/awi.csv')) %>%
+  bind_rows(read_csv('./resources/awi.csv')) %>%
   group_by(Series) %>% 
   mutate(Growth = Value / lag(Value) - 1) %>% 
   select(-Value) %>% 
   filter(!is.na(Growth))
 
 
-#-----------
-# Load data 
-#-----------
-
-
-
 #---------------
 # Run scenarios
 #---------------
 
+# Load tax law functions
+source('./src/misc/utils.R')
+source('./src/data/tax_law/tax_law.R')
+
+# Build baseline tax law 
+tax_law = build_tax_law(config_path = './config/policy/baseline/tax_law/baseline', 
+                        years       = years, 
+                        indexes     = indexes)
 
 
 #----------------------
