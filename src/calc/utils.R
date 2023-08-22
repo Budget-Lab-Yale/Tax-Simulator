@@ -133,15 +133,13 @@ integrate_rates_brackets = function(df, n_brackets, brackets_prefix, rates_prefi
   #   - by_bracket (bool)     : whether to include bracket-specific output
   #                             columns
   #
-  # Returns: dataframe representation of tax unit input (df). 
+  # Returns: a dataframe containing either a single liability column or one 
+  #          column for each bracket (df).
   #----------------------------------------------------------------------------
   
   # If number of brackets isn't supplied by user, ascertain it
   if (is.null(n_brackets)) {
-    n_brackets = df %>% 
-      select(starts_with(brackets_prefix)) %>% 
-      names() %>% 
-      length()
+    n_brackets = get_n_cols(df, brackets_prefix)
     
     # Add integer index if not specified under single-bracket case
     if (n_brackets == 1 & brackets_prefix %in% names(df)) {
@@ -185,4 +183,29 @@ integrate_rates_brackets = function(df, n_brackets, brackets_prefix, rates_prefi
            if (by_bracket) all_of(bracket_output_names) else c()) %>% 
     return()
 }
+
+
+
+get_n_cols = function(df, prefix) {
+  
+  #----------------------------------------------------------------------------
+  # Finds the number of columns in a dataframe with names matching a prefix
+  # 
+  # Parameters:
+  #   - df (df)      : a tibble
+  #   - prefix (str) : string uniquely prefixing the columns we want to count 
+  #
+  # Returns: number of columns in df matching prefix (int).
+  #----------------------------------------------------------------------------
+  
+  df %>% 
+    select(starts_with(prefix)) %>% 
+    names() %>% 
+    length() %>% 
+    return()
+}
+
+
+
+
 
