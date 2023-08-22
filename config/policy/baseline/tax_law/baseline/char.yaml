@@ -6,7 +6,7 @@ filing_status_mapper:
     '3': above_limit_single
     '4': above_limit_single
 
-# AGI floor for itemized chariable deduction
+# AGI floor for itemized charitable deduction
 item_floor_agi:
   value: 0
 
