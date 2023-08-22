@@ -15,7 +15,7 @@ calc_ss = function(tax_unit, fill_missings = F) {
   #                            with 0s (used in testing, not in simulation)
   #
   # Returns: dataframe of following variables:
-  #          - txbl_ss (dbl) : taxable OASI benefits
+  #   - txbl_ss (dbl) : taxable OASI benefits
   #----------------------------------------------------------------------------
   
   req_vars = c(

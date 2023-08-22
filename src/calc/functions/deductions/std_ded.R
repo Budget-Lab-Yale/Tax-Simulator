@@ -15,7 +15,7 @@ calc_std_ded = function(tax_unit, fill_missings = F) {
   #                            with 0s (used in testing, not in simulation)
   #
   # Returns: dataframe of following variables:
-  #          - std_ded (dbl) : value of standard deduction (even if itemizing)
+  #   - std_ded (dbl) : value of standard deduction (even if itemizing)
   #----------------------------------------------------------------------------
   
   req_vars = c(

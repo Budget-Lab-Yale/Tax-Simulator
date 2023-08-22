@@ -15,19 +15,19 @@ calc_pr = function(tax_unit, fill_missings = F) {
   #                            with 0s (used in testing, not in simulation)
   #
   # Returns: dataframe of following variables:
-  #          - se1          (dbl) : self-employment income for primary earner
-  #          - se2          (dbl) : self-employment income for secondary earner
-  #          - se           (dbl) : self-employment income for tax unit
-  #          - ei           (dbl) : earned income           
-  #          - liab_fica    (dbl) : FICA tax liability
-  #          - liab_seca    (dbl) : SECA tax liability 
-  #          - liab_seca    (dbl) : employer-side SECA tax liability 
-  #          - liab_oasdi   (dbl) : OASDI tax liability
-  #          - liab_hi      (dbl) : Medicare tax liability
-  #          - liab_add_med (dbl) : Additional Medicare Tax liability 
-  #          - liab_pr_ee   (dbl) : employees' share of payroll tax liability
-  #          - liab_pr_er   (dbl) : employers' share of payroll tax liability
-  #          - liab_pr      (dbl) : payroll tax liability for tax unit 
+  #   - se1          (dbl) : self-employment income for primary earner
+  #   - se2          (dbl) : self-employment income for secondary earner
+  #   - se           (dbl) : self-employment income for tax unit
+  #   - ei           (dbl) : earned income           
+  #   - liab_fica    (dbl) : FICA tax liability
+  #   - liab_seca    (dbl) : SECA tax liability 
+  #   - liab_seca    (dbl) : employer-side SECA tax liability 
+  #   - liab_oasdi   (dbl) : OASDI tax liability
+  #   - liab_hi      (dbl) : Medicare tax liability
+  #   - liab_add_med (dbl) : Additional Medicare Tax liability 
+  #   - liab_pr_ee   (dbl) : employees' share of payroll tax liability
+  #   - liab_pr_er   (dbl) : employers' share of payroll tax liability
+  #   - liab_pr      (dbl) : payroll tax liability for tax unit 
   #----------------------------------------------------------------------------
   
   req_vars = c(

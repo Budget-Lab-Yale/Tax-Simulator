@@ -16,7 +16,7 @@ calc_kg = function(tax_unit, fill_missings = F) {
   #                            with 0s (used in testing, not in simulation)
   #
   # Returns: dataframe of following variables:
-  #          - txbl_kg (dbl) : net capital gain includable in AGI
+  #   - txbl_kg (dbl) : net capital gain includable in AGI
   #----------------------------------------------------------------------------
   
   req_vars = c(

@@ -15,12 +15,12 @@ calc_agi = function(tax_unit, fill_missings = F) {
   #                            with 0s (used in testing, not in simulation)
   #
   # Returns: dataframe of following variables:
-  #          - txbl_ss        (dbl) Social Security benefits included in AGI
-  #          - sl_int_ded     (dbl) student loan interest deduction
-  #          - char_above_ded (dbl) above-the-line charitable deduction
-  #          - gross_inc      (dbl) gross income
-  #          - above_ded      (dbl) above-the-line deductions
-  #          - agi            (dbl) Adjusted Gross Income
+  #   - txbl_ss        (dbl) Social Security benefits included in AGI
+  #   - sl_int_ded     (dbl) student loan interest deduction
+  #   - char_above_ded (dbl) above-the-line charitable deduction
+  #   - gross_inc      (dbl) gross income
+  #   - above_ded      (dbl) above-the-line deductions
+  #   - agi            (dbl) Adjusted Gross Income
   #----------------------------------------------------------------------------
   
   req_vars = c(
