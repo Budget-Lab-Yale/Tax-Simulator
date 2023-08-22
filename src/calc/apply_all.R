@@ -5,6 +5,9 @@
 
 tax_units %>% 
   
+  # Derive useful policy-independent variables
+  derive_vars() %>%
+  
   # Employment taxes
   bind_cols(calc_pr(.)) %>%
   

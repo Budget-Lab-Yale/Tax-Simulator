@@ -6,12 +6,15 @@ filing_status_mapper:
     '3': above_limit_single
     '4': above_limit_single
 
+# AGI floor for itemized charitable deduction
 item_floor_agi:
   value: 0
 
+# Dollar-amount limit for itemized charitable deduction -- set to 0 for repeal
 item_limit:
   value: Inf
 
+# AGI limit for cash contributions, itemized deduction
 item_cash_limit_agi:
   value:
     '2014': 0.5
@@ -19,10 +22,12 @@ item_cash_limit_agi:
     '2020': 1
     '2022': 0.6
 
+# AGI limit for noncash contributions, itemized deduction
 item_noncash_limit_agi:
   value:
     '2014': 0.3
     
+# Maximum deductible above-the-line charitable contributions -- set to 0 for repeal
 above_limit_single:
   value:
     '2014': 0
