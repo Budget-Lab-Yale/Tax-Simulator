@@ -184,7 +184,6 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
       # Total and limitations
       #-----------------------
       
-      
       # Calculate tentative total itemized deductions
       item_ded = med_item_ded + salt_item_ded + int_item_ded + char_item_ded + 
                  casualty_item_ded + misc_item_ded + other_item_ded,
