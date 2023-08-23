@@ -18,14 +18,19 @@ derive_vars = function(tax_unit) {
   tax_unit %>% 
     mutate(
       
-      # Pass through net income variables
+      # TODO kg variables
+      
+      
+      # Schedule E related variables
       part       = part_active + part_passive - part_active_loss - 
                    part_passive_loss - part_179,
       scorp      = scorp_active + scorp_passive - scorp_active_loss - 
                    scorp_passive_loss - scorp_179,
       part_scorp = part + scorp,
       pt         = part + scorp + sole_prop,
-      sch_e      = part_scorp + rent + rent_loss + estate + estate_loss,    
+      net_rent   = rent - rent_loss,
+      net_estate = estate - estate_loss,
+      sch_e      = part_scorp + net_rent + net_estate,    
       
       # Self employment income and earned income 
       se_inc = sole_prop + farm + part_se,  # TODO look at E30400?? Need to impute. Model the variables on schedule SE
