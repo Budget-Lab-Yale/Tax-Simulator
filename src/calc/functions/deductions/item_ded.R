@@ -18,6 +18,7 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
   #   - med_item_ded (dbl)       : deductible medical expenses
   #   - salt_item_ded (dbl)      : deductible state/local taxes
   #   - mort_int_item_ded (dbl)  : deductible mortgage interest
+  #   - inv_int_item_ded (dbl)   : deductible investment interest expense
   #   - int_item_ded (dbl)       : deductible interest
   #   - char_item_ded (dbl)      : deductible charitable contributions
   #   - casualty_item_ded (dbl)  : deductible casualty/loss expense
@@ -143,8 +144,11 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
       # Then, apply overall limit
       mort_int_item_ded = pmin(item.mort_int_limit, mort_int_item_ded),
       
+      # Calculate deductible investment interest expense
+      inv_int_item_ded = inv_int_exp,
+      
       # Calculate total interest deduction
-      int_item_ded = inv_int_exp + mort_int_item_ded,
+      int_item_ded = inv_int_item_ded + mort_int_item_ded,
       
       
       #---------
@@ -208,9 +212,9 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
     ) %>% 
     
     # Keep variables to return
-    select(med_item_ded, salt_item_ded, mort_int_item_ded, int_item_ded, 
-           char_item_ded, casualty_item_ded, misc_item_ded, other_item_ded, 
-           item_ded_ex_limits, item_ded) %>% 
+    select(med_item_ded, salt_item_ded, mort_int_item_ded, inv_int_item_ded, 
+           int_item_ded, char_item_ded, casualty_item_ded, misc_item_ded, 
+           other_item_ded, item_ded_ex_limits, item_ded) %>% 
     return()
 }
 

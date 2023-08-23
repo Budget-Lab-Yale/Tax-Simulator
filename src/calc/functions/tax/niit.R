@@ -32,6 +32,7 @@ calc_niit = function(tax_unit, fill_missings = FALSE) {
     'part_active',       # (dbl) active partnership income 
     'part_active_loss',  # (dbl) active partnership loss 
     'part_179',          # (dbl) partnership section 179 deduction
+    'inv_int_item_ded',  # (dbl) itemized deduction for investment interest expense
     'agi',               # (dbl) Adjusted Gross Income
     
     # Tax law attributes
@@ -60,7 +61,7 @@ calc_niit = function(tax_unit, fill_missings = FALSE) {
       net_active_ded = if_else(niit.include_active == 1, 0, net_active_bus),
       
       # Calculate net investment income
-      nii = pmax(0, txbl_int + div  + txbl_kg +  sch_e - net_active_ded)
+      nii = pmax(0, txbl_int + div  + txbl_kg + sch_e - net_active_ded - inv_int_item_ded)
     
     ) %>%
     
