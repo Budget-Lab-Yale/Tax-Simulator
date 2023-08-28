@@ -1,2 +1,2 @@
 # Tax-Simulator
-Microsimulation model of US federal tax system 
+Microsimulation model of the US federal tax system 
