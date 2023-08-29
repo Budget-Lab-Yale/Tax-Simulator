@@ -28,9 +28,9 @@ discrete_step:
   
 refundable:
   value:
-    '2014': False
-    '2021': True
-    '2022': False
+    '2014': 0
+    '2021': 1
+    '2022': 0
 
 ei_limit:
   value: True

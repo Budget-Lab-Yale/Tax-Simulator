@@ -35,7 +35,7 @@ filing_status_mapper:
     '3': sl_po_range_single
     '4': sl_po_range_single
 
-# Maxmimum deductible capital loss
+# Maxmimum deductible capital loss, joint returns
 kg_loss_limit_married:
   value: 3000
   

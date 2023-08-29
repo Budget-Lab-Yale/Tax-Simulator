@@ -27,7 +27,7 @@ tax_units %>%
   bind_cols(calc_optimized_ded(.)) %>% 
   
   # Personal exemptions
-  bind_cols(calc_pe(.)) %>% 
+  bind_cols(calc_pe_ded(.)) %>% 
   
   # QBI deduction
   bind_cols(calc_qbi_ded(.)) %>% 
