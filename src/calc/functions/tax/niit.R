@@ -3,10 +3,11 @@
 #--------------------------------------------------------
 
 
-calc_niit = function(tax_unit, fill_missings = F) {
+
+calc_niit = function(tax_unit, fill_missings = FALSE) {
   
   #----------------------------------------------------------------------------
-  # Calculates Net Investment Income Tax (NIIT) liabilty.
+  # Calculates Net Investment Income Tax (NIIT).
   # 
   # Parameters:
   #   - tax_unit (df | list) : either a dataframe or list containing required
@@ -14,26 +15,72 @@ calc_niit = function(tax_unit, fill_missings = F) {
   #   - fill_missings (bool) : whether to populate any unsupplied variables
   #                            with 0s (used in testing, not in simulation)
   #
-  # Returns: dataframe of following variables:
-  #          - liab_niit (dbl) : NIIT liability
+  # Returns: dataframe with the following variables:
+  #   - liab_niit (dbl) : amount of Net Investment Income Tax liability
   #----------------------------------------------------------------------------
   
   req_vars = c(
-    'TODO',        # (dbl, self)  TODO: List required variables here
+    
+    # Tax unit attributes
+    'txbl_int',          # (dbl) interest income
+    'div',               # (dbl) dividend income
+    'txbl_kg',           # (dbl) net capital gain included in AGI
+    'sch_e',             # (dbl) Schedule E net income
+    'scorp_active',      # (dbl) active S corp income
+    'scorp_active_loss', # (dbl) active S corp loss 
+    'scorp_179',         # (dbl) S corp section 179 deduction
+    'part_active',       # (dbl) active partnership income 
+    'part_active_loss',  # (dbl) active partnership loss 
+    'part_179',          # (dbl) partnership section 179 deduction
+    'inv_int_item_ded',  # (dbl) itemized deduction for investment interest expense
+    'agi',               # (dbl) Adjusted Gross Income
+    
+    # Tax law attributes
+    'niit.include_active', # (int)   whether active earnings of pass-through 
+                           #         businesses are subject to the NIIT
+    'niit.rates[]',        # (dbl[]) NIIT rate schedule
+    'niit.brackets[]'      # (int[]) NIIT brackets
   )
   
-  tax_unit %>% 
+  tax_unit %>%
     
     # Parse tax unit object passed as argument
-    parse_calc_fn_input(req_vars, fill_missings) %>% 
+    parse_calc_fn_input(req_vars, fill_missings) %>%
+    
     mutate(
       
-      # TODO: Calculate NIIT logic
+      # Floor AGI at 0
+      agi = pmax(0, agi),
       
+      # Calculate net active earnings of pass-through income included on
+      # Schedule E, which are netted out under current law (line 4b of Form 8960)
+      net_active_bus = scorp_active - scorp_active_loss - scorp_179 +
+                       part_active  - part_active_loss  - part_179,
       
-    ) %>% 
+      # Determine whether active business earnings are deductible
+      net_active_ded = if_else(niit.include_active == 1, 0, net_active_bus),
+      
+      # Calculate net investment income
+      nii = pmax(0, txbl_int + div  + txbl_kg + sch_e - net_active_ded - inv_int_item_ded)
+    
+    ) %>%
+    
+    # Calculate NIIT liability
+    bind_cols(
+      integrate_conditional_rates_brackets(
+        df              = .,
+        n_brackets      = NULL, 
+        prefix_brackets = 'niit.brackets', 
+        prefix_rates    = 'niit.rates', 
+        y               = 'agi', 
+        x               = 'nii', 
+        inclusive       = T,
+        output_name     = 'liab_niit', 
+        by_bracket      = F
+      )
+    ) %>%
     
     # Keep variables to return
-    select(liab_niit) %>% 
+    select(liab_niit) %>%
     return()
 }

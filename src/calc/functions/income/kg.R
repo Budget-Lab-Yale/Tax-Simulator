@@ -20,9 +20,16 @@ calc_kg = function(tax_unit, fill_missings = F) {
   #----------------------------------------------------------------------------
   
   req_vars = c(
-    '...',               # TODO
-    'agi.kg_loss_limit', # (int, law) maximum deductible capital loss
-    'agi.kg_excl_rate'   # (dbl, law) share of capital gains excluded from AGI 
+    
+    # Tax unit attributes
+    'kg_st',       # (dbl) net short term capital gain ex carryover
+    'kg_lt',       # (dbl) net long term capital gain ex carryover
+    'kg_st_carry', # (dbl) short term capital loss carryover (positive number)
+    'kg_lt_carry', # (dbl) long term capital loss carryover (positive number)
+    
+    # Tax law attributes
+    'agi.kg_loss_limit', # (int) maximum deductible capital loss (positive number)
+    'agi.kg_excl_rate'   # (dbl) share of capital gains excluded from AGI 
   )
   
   tax_unit %>% 
@@ -31,8 +38,11 @@ calc_kg = function(tax_unit, fill_missings = F) {
     parse_calc_fn_input(req_vars, fill_missings) %>% 
     mutate(
       
-      # TODO form logic
+      # Calculate taxable capital gain, limiting to maximum deductible loss
+      txbl_kg = pmax(kg_st + kg_lt - kg_st_carry - kg_lt_carry, -agi.kg_loss_limit),
       
+      # Exclude a policy-supplied fraction of capital gains from AGI 
+      txbl_kg = txbl_kg * (1 - agi.kg_excl_rate)
       
     ) %>% 
     
