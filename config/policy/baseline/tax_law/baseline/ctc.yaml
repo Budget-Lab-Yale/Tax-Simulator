@@ -6,6 +6,7 @@ filing_status_mapper:
     '3': po_thresh_married / 2
     '4': po_thresh_single
 
+# Maximum credit value per "young" child
 value_young:
   value: 
     '2014': [1000, 0]
@@ -14,6 +15,7 @@ value_young:
     '2022': [2000, 0]
     '2026': [1000, 0]
 
+# Maximum credit value per "old" child
 value_old:
   value:
     '2014': [1000, 0]
@@ -22,15 +24,18 @@ value_old:
     '2022': [2000, 0]
     '2026': [1000, 0] 
 
+# Maximum age to qualify as "young" child
 young_age_limit:
   value: 5
   
+# Maximum age to qualify as an "old" child
 old_age_limit:
   value:
-    '2014': 17
-    '2021': 18
-    '2022': 17
+    '2014': 16
+    '2021': 17
+    '2022': 16
 
+# AGI threshold above which credit value phases out, single filers
 po_thresh_single:
   value:
     '2014': [75000, Inf]
@@ -39,6 +44,7 @@ po_thresh_single:
     '2022': [200000, Inf]
     '2026': [75000, Inf]
     
+# AGI threshold above which credit value phases out, joint filers
 po_thresh_married:
   value:
     '2014': [110000, Inf] 
@@ -47,9 +53,11 @@ po_thresh_married:
     '2022': [400000, Inf]
     '2026': [110000, Inf]
 
+# Phaseout rate
 po_rate:
   value: [0.05, 0.05]
 
+# Maximum credit value per nonqualifying dependent (assumed to phaseout per po_thresh1 and po_rate1)
 value_other:
   value:
     '2014': 0
