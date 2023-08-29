@@ -22,10 +22,10 @@ data_root = '/gpfs/gibbs/project/sarin/shared/'
 #-----------
 
 # Placeholder! Reads historical inflation series for tax law generation
-indexes = read_csv(file.path(data_root, 'inflation_data/CPIAUCNS.csv')) %>% 
+indexes = read_csv(file.path(data_root, 'raw_data/inflation_data/CPIAUCNS.csv')) %>% 
   mutate(Year = year(DATE), Month = month(DATE)) %>% 
   select(Year, Month, cpi = CPIAUCNS) %>% 
-  left_join(read_csv(file.path(data_root, 'inflation_data/SUUR0000SA0.csv')) %>% 
+  left_join(read_csv(file.path(data_root, 'raw_data/inflation_data/SUUR0000SA0.csv')) %>% 
               mutate(Year = year(DATE), Month = month(DATE)) %>% 
               select(Year, Month, chained_cpi = SUUR0000SA0), 
             by = c('Year', 'Month')) %>% 
@@ -37,7 +37,7 @@ indexes = read_csv(file.path(data_root, 'inflation_data/CPIAUCNS.csv')) %>%
                values_to = 'Value') %>% 
   group_by(Series, Year = FY) %>% 
   summarise(Value = mean(Value)) %>% 
-  bind_rows(read_csv(file.path(data_root, 'inflation_data/awi.csv'))) %>%
+  bind_rows(read_csv(file.path(data_root, 'raw_data/inflation_data/awi.csv'))) %>%
   group_by(Series) %>% 
   mutate(Growth = Value / lag(Value) - 1) %>% 
   select(-Value) %>% 
