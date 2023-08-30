@@ -1,36 +1,51 @@
 ---
+# Maximum credit-eligible expenses per qualifying dependent 
 exp_limit:
   value: 
     '2014': 3000
     '2021': 8000
     '2022': 3000
-  
+
+# Maximum number of qualifying dependents 
 n_dep_limit:
   value: 2
 
-credit_rate:
-  value: 
-    '2014': [0.2, 0.15]
-    '2021': [0.2, 0.3]
-    '2022': [0.2, 0.15]
+# Whether to limit eligible expenses to adult-minimum earned income
+ei_limit:
+  value: 1
 
+# Minimum credit rate (share of eligible expenses)
+min_rate: 
+  value: 
+    '2014': 0.2
+    '2021': 0.0
+    '2022': 0.2
+    
+# Maximum credit rate (share of eligible expenses)
+max_rate:
+  value: 
+    '2014': 0.35
+    '2021': 0.5
+    '2022': 0.35
+
+# AGI threshold above which credit rate begins phasing out from max to min
 po_thresh:
   value:
-    '2014': [Inf, 15000]
-    '2021': [400000, 125000]
-    '2022': [Inf, 15000]
+    '2014': 15000
+    '2021': 125000
+    '2022': 15000
 
+# Rate at which credit rate phases out with AGI
 po_rate:
-  value: [0.000005, 0.000005]
+  value: 0.000005
   
+# Rounding step for descretized phaseout function
 discrete_step:
   value: 2000
-  
+
+# Whether credit is refundable
 refundable:
   value:
     '2014': 0
     '2021': 1
     '2022': 0
-
-ei_limit:
-  value: True
