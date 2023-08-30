@@ -35,13 +35,6 @@ taxsim_check = function(tax_units) {
   #   - liab_add_med_dif  (dbl) : Medicare Tax on Earned Income
   #----------------------------------------------------------------------------
   
-  # Install and load library as needed
-  if(system.file(package='usincometaxes')=="") {
-    install.packages("usincometaxes")
-  }
-  
-  library(usincometaxes)
-  
   # Convert to Taxsim readable
   taxsim_crosswalk(tax_units) %>%
  
