@@ -17,8 +17,8 @@ calc_ctc = function(tax_unit, fill_missings = F) {
   #                            with 0s (used in testing, not in simulation)
   #
   # Returns: dataframe of following variables:
-  #          - ctc (dbl)  : value of CTC including credit for other dependents
-  #          - actc (dbl) : ACTC, i.e. refundable component of the CTC
+  # - ctc (dbl)  : value of CTC including credit for other dependents
+  # - actc (dbl) : ACTC, i.e. refundable component of the CTC
   #----------------------------------------------------------------------------
   
   req_vars = c(

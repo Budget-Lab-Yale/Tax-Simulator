@@ -18,7 +18,9 @@ calc_pr = function(tax_unit, fill_missings = F) {
   #   - se1          (dbl) : self-employment income for primary earner
   #   - se2          (dbl) : self-employment income for secondary earner
   #   - se           (dbl) : self-employment income for tax unit
-  #   - ei           (dbl) : earned income           
+  #   - ei1          (dbl) : earned income for primary earner     
+  #   - ei2          (dbl) : earned income for secondary earner 
+  #   - ei           (dbl) : earned income     
   #   - liab_fica    (dbl) : FICA tax liability
   #   - liab_seca    (dbl) : SECA tax liability 
   #   - liab_seca    (dbl) : employer-side SECA tax liability 
@@ -209,13 +211,14 @@ calc_pr = function(tax_unit, fill_missings = F) {
       liab_pr      = liab_oasdi + liab_hi,     
       
       # Set secondary-earner output variables to NA for non-joint tax units
-      se2 = if_else(filing_status != 2, NA, se2)
+      across(.cols = c(se2, ei2), 
+             .fns  = if_else(filing_status != 2, NA, .))
   
     ) %>%
 
     # Keep variables to return
-    select(se1, se2, se, ei, liab_fica, liab_seca, liab_seca_er, liab_oasdi, 
-           liab_hi, liab_add_med, liab_pr_ee, liab_pr_er, liab_pr) %>%
+    select(se1, se2, se, ei1, ei2, ei, liab_fica, liab_seca, liab_seca_er, 
+           liab_oasdi, liab_hi, liab_add_med, liab_pr_ee, liab_pr_er, liab_pr) %>%
     return()
 }
 
