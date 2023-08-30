@@ -56,6 +56,14 @@ po_thresh_married:
 # Phaseout rate
 po_rate:
   value: [0.05, 0.05]
+  
+# Whether phaseout is discretized, as per pre-TCJA law
+po_discrete:
+  value: 1
+  
+# Rounding step for discretized phaseout
+po_discrete_step:
+  value: 1000
 
 # Maximum credit value per nonqualifying dependent (assumed to phaseout per po_thresh1 and po_rate1)
 value_other:
@@ -64,21 +72,25 @@ value_other:
     '2018': 500
     '2026': 0
 
+# Whether CTC (exlcluding Credit for Other Dependent) is fully refundable
 fully_refundable:
   value:
     '2014': 0
     '2021': 1 
     '2022': 0
-    
+
+# ACTC phase-in rate 
 pi_rate:
   value: 0.15
-  
+
+# Earned income threshold above which ACTC phases in
 pi_thresh:
   value:
     '2014': 3000
     '2018': 2500
     '2026': 3000
 
+# Maximum refundable CTC per qualifying child
 max_refund:
   value:
     '2014': Inf
