@@ -185,8 +185,9 @@ taxsim_check_against = function(test_cases, tax_units) {
   # Produces dollar difference between YBL Tax Simulator and NBER Taxsim
   #
   # Parameters:
-  #   - tax_units (df) : dataframe of tax units after passing through the calculator
-  #                      and taxsim_check.
+  #   - test_cases (df) : test cases with NBER taxsim output variables   
+  #   - tax_units (df)  : dataframe of tax units after passing through the calculator
+  #                       and taxsim_check.
   #
   # Returns: dataframe with dollar differences on comparable variables.
   # Variables consist of:
