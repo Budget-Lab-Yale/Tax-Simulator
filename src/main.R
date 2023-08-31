@@ -22,7 +22,7 @@ globals = parse_globals(runscript_path)
 # TODO loop logic that proceeds by scenario ID....first, parse scenario params
 #------------------------------------------------------------------------------
 
-id = 1
+id = 'baseline'
 
 scenario = get_scenario_info(globals, id)
 

@@ -1,8 +1,8 @@
-#-----------------
-# globals.R
+#-----------------------------------------------------------------------
+# config_parser.R 
 # 
-# TODO
-#----------------------
+# Contains functions to parse runtime options and build interface paths
+#-----------------------------------------------------------------------
 
 
 
@@ -40,13 +40,17 @@ parse_globals = function(runscript_path) {
   
   # Create filepaths for data interfaces
   interface_paths = runtime_args %>% 
-    select(ID, starts_with('data.')) %>% 
-    pivot_longer(cols         = -ID,
-                 names_to     = 'interface', 
-                 names_prefix = 'data.', 
-                 values_to    = 'vintage') %>% 
+    select(TaxSimulatorID = ID, starts_with('dep.')) %>% 
+    mutate(across(.fns = as.character)) %>% 
+    pivot_longer(cols         = -TaxSimulatorID, 
+                 names_prefix = 'dep.', 
+                 names_sep    = '[.]', 
+                 names_to     = c('interface', 'series')) %>% 
+    pivot_wider(names_from  = series, 
+                values_from = value) %>%     
     left_join(interface_versions, by = 'interface') %>% 
-    mutate(path = file.path(path, vintage))
+    mutate(path = file.path(path, vintage, ID)) %>% 
+    select(-vintage, -ID, ID = TaxSimulatorID, interface, path)
 
   # Confirm that each path exists, throwing exception if not
   for (path in interface_paths$path) {
