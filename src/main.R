@@ -11,26 +11,31 @@
 # Load required packages
 lapply(readLines('requirements.txt'), library, character.only = T)
 
-# Configure settings
-years     = 2014:2024
-data_root = '/gpfs/gibbs/project/sarin/shared/'
 
-# Read and parse data dependency interface file paths
-interfaces = read_yaml('./interfaces.yaml') %>% 
-  map2(.x = ., 
-       .y = names(.), 
-       .f = ~ file.path(data_root, .x$type, .y, .x$version))
+# Set global (scenario-independent) variables
+source('./src/misc/config_parser.R')
+runscript_path = './config/runscripts/baseline.csv' # TODO take as cmd line arg
+globals = parse_globals(runscript_path)
+
+
+#------------------------------------------------------------------------------
+# TODO loop logic that proceeds by scenario ID....first, parse scenario params
+#------------------------------------------------------------------------------
+
+id = 1
+
+scenario = get_scenario_info(globals, id)
 
 
 #-----------
 # Load data 
 #-----------
 
-# Placeholder! Reads historical inflation series for tax law generation
-indexes = read_csv(file.path(interfaces$inflation_data, 'CPIAUCNS.csv')) %>% 
+# Placeholder! Ugly! Reads historical inflation series for tax law generation
+indexes = read_csv(file.path(scenario$interface_paths$inflation_data, 'CPIAUCNS.csv')) %>% 
   mutate(Year = year(DATE), Month = month(DATE)) %>% 
   select(Year, Month, cpi = CPIAUCNS) %>% 
-  left_join(read_csv(file.path(interfaces$inflation_data, 'SUUR0000SA0.csv')) %>% 
+  left_join(read_csv(file.path(scenario$interface_paths$inflation_data, 'SUUR0000SA0.csv')) %>% 
               mutate(Year = year(DATE), Month = month(DATE)) %>% 
               select(Year, Month, chained_cpi = SUUR0000SA0), 
             by = c('Year', 'Month')) %>% 
@@ -42,7 +47,7 @@ indexes = read_csv(file.path(interfaces$inflation_data, 'CPIAUCNS.csv')) %>%
                values_to = 'Value') %>% 
   group_by(Series, Year = FY) %>% 
   summarise(Value = mean(Value)) %>% 
-  bind_rows(read_csv(file.path(interfaces$inflation_data, 'awi.csv'))) %>%
+  bind_rows(read_csv(file.path(scenario$interface_paths$inflation_data, 'awi.csv'))) %>%
   group_by(Series) %>% 
   mutate(Growth = Value / lag(Value) - 1) %>% 
   select(-Value) %>% 
@@ -50,7 +55,7 @@ indexes = read_csv(file.path(interfaces$inflation_data, 'CPIAUCNS.csv')) %>%
 
 
 #---------------
-# Run scenarios
+# Build tax law
 #---------------
 
 # Load tax law functions
@@ -58,8 +63,8 @@ source('./src/misc/utils.R')
 source('./src/data/tax_law/tax_law.R')
 
 # Build baseline tax law 
-tax_law = build_tax_law(config_path = './config/policy/baseline/tax_law/baseline', 
-                        years       = years, 
+tax_law = build_tax_law(config_path = './config/tax_law/baseline/tax_law/baseline', 
+                        years       = scenario$years, 
                         indexes     = indexes)
 
 

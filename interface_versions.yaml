@@ -1,5 +1,4 @@
 ---
 inflation_data: 
   type: raw_data 
-  version: 2023082515
-
+  version: 1

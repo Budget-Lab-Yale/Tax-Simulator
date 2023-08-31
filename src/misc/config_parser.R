@@ -1,0 +1,107 @@
+#-----------------
+# globals.R
+# 
+# TODO
+#----------------------
+
+
+
+
+parse_globals = function(runscript_path) {
+  
+  #----------------------------------------------------------------------------
+  # Parses data interface versioning requirements and runscript; generates 
+  # scenario-specific, version-consistent filepaths for data interfaces. 
+  # Confirms that these filepaths exist. 
+  # 
+  # Parameters:
+  #   - runscript_path (str) : filepath for runscript CSV file 
+  #
+  # Returns: list of 2: runtime_args (df), a tibble representation of the 
+  #          runscripts CSV; and interface_paths (df), a tibble with ID-
+  #          interface-filepath info in rows 
+  #----------------------------------------------------------------------------
+  
+  # Set directory for shared data folder
+  data_root = '/gpfs/gibbs/project/sarin/shared/'
+  
+  # Read and parse data dependency interface file paths
+  interface_versions = read_yaml('./interface_versions.yaml') %>% 
+    map2(.x = ., 
+         .y = names(.), 
+         .f = ~ file.path(data_root, .x$type, .y, paste0('v', .x$version))) %>% 
+    as_tibble() %>% 
+    pivot_longer(cols      = everything(), 
+                 names_to  = 'interface', 
+                 values_to = 'path')
+  
+  # Read runtime arguments 
+  runtime_args = read_csv(runscript_path)
+  
+  # Create filepaths for data interfaces
+  interface_paths = runtime_args %>% 
+    select(ID, starts_with('data.')) %>% 
+    pivot_longer(cols         = -ID,
+                 names_to     = 'interface', 
+                 names_prefix = 'data.', 
+                 values_to    = 'vintage') %>% 
+    left_join(interface_versions, by = 'interface') %>% 
+    mutate(path = file.path(path, vintage))
+
+  # Confirm that each path exists, throwing exception if not
+  for (path in interface_paths$path) {
+    if (!dir.exists(path)) {
+      shorter_path = str_remove(interface_paths$path, data_root)
+      paste0("Error: can't find directory '", shorter_path, "'. Confirm that ",
+             "the interface version is correct, and that the vintage exists.")
+      stop(msg)
+    }
+  }
+  
+  # Return runtime args and interface paths  
+  return(list(runtime_args    = runtime_args,
+              interface_paths = interface_paths))
+}
+
+
+
+get_scenario_info = function(globals, id) {
+  
+  #----------------------------------------------------------------------------
+  # Given a scenario ID, retrieves and transforms scenario-specific runtime
+  # argments and interface file paths.
+  # 
+  # Parameters:
+  #   - globals (list) : globals object, as return by parse_globals()
+  #   - id (int)       : scenario ID 
+  #
+  # Returns: list of 3: 
+  #   - ID (int)               : scenario ID
+  #   - interface_paths (list) : list of scenario-specific interface paths
+  #   - years (int[])          : vector of years to run
+  #----------------------------------------------------------------------------
+  
+  # List of interface paths, named by interface
+  interface_paths = globals$interface_paths %>% 
+    filter(ID == id) %>% 
+    distinct(interface, path) %>% 
+    pivot_wider(names_from  = interface, 
+                values_from = path) %>% 
+    as.list()
+  
+  # List of scenario-specific runtime args, named by column name
+  runtime_args = globals$runtime_args %>% 
+    filter(ID == id) %>% 
+    as.list()
+  
+  # Vector of years to run
+  years = runtime_args$first_year:runtime_args$last_year
+  
+  # Return as named list
+  return(list(ID              = id,
+              interface_paths = interface_paths,
+              years           = years))
+}
+
+
+
