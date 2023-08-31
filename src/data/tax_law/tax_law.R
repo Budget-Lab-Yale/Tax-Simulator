@@ -25,7 +25,7 @@ build_tax_law = function(config_path, years, indexes) {
   #----------------------------------------------------------------------------
   
   # Read baseline YAML files
-  load_tax_law_input('./config/policy/baseline/tax_law/baseline') %>% 
+  load_tax_law_input('./config/tax_law/baseline/tax_law/baseline') %>% 
     
     # Overwrite baseline subparams with specified changes
     map2(.f = replace_by_name, 
