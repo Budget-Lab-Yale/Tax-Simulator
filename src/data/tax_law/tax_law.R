@@ -1,5 +1,5 @@
 #------------------------------------------------------------------
-# tax-law.R
+# tax_law.R
 # 
 # Contains functions to read and parse tax law configuration files
 #------------------------------------------------------------------
