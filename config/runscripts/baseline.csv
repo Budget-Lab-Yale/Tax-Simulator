@@ -1,2 +1,2 @@
-ID,Description,tax_law,data.inflation_data,first_year,last_year
-1,baseline,baseline,2023082515,2014,2024
+ID,dep.inflation_data.vintage,dep.inflation_data.ID,tax_law,first_year,last_year
+baseline,2023082515,historical,baseline,2014,2024
