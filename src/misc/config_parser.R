@@ -41,7 +41,8 @@ parse_globals = function(runscript_path) {
   # Create filepaths for data interfaces
   interface_paths = runtime_args %>% 
     select(TaxSimulatorID = ID, starts_with('dep.')) %>% 
-    mutate(across(.fns = as.character)) %>% 
+    mutate(across(.cols = everything()
+                  .fns  = as.character)) %>% 
     pivot_longer(cols         = -TaxSimulatorID, 
                  names_prefix = 'dep.', 
                  names_sep    = '[.]', 
