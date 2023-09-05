@@ -2,7 +2,9 @@
 # Functions to compare YBL Tax Simulator's Output to NBER's Taxsim
 #---------------------------------------------------------------
 
+
 taxsim_check = function(tax_units) {
+  
   #----------------------------------------------------------------------------
   # Compares results from YBL tax microsimulator to NBER's Taxsim.
   #
@@ -33,30 +35,25 @@ taxsim_check = function(tax_units) {
   #   - liab_add_med_dif  (dbl) : Medicare Tax on Earned Income
   #----------------------------------------------------------------------------
   
-  #Install and load library as needed
-  if(system.file(package='usincometaxes')=="") {
-    install.packages("usincometaxes")
-  }
-  
-  library(usincometaxes)
-  
-  #Convert to Taxsim readable
+  # Convert to Taxsim readable
   taxsim_crosswalk(tax_units) %>%
  
-    #Run Taxsim
+    # Run Taxsim
     taxsim_calculate_taxes(
       .data = .,
       marginal_tax_rates = 'Wages',
       return_all_information = T
-    )%>%
-      #Compare the two simulators
+    ) %>%
+    
+      # Compare the two simulators
       taxsim_check_against(., tax_units) %>%
       
-      #Return the differences
+      # Return the differences
       return()
 }
 
 taxsim_crosswalk = function(tax_units) {
+  
   #----------------------------------------------------------------------------
   # Converts YBL Tax Simulator inputs and outputs into NBER Taxsim readable
   # format. 
@@ -66,6 +63,7 @@ taxsim_crosswalk = function(tax_units) {
   #
   # Returns: dataframe populated with the variables converted to Taxsim input
   #----------------------------------------------------------------------------
+  
   tax_units %>% 
     
     # Rename existing variables
@@ -182,12 +180,14 @@ taxsim_crosswalk = function(tax_units) {
 }
 
 taxsim_check_against = function(test_cases, tax_units) {
+  
   #----------------------------------------------------------------------------
   # Produces dollar difference between YBL Tax Simulator and NBER Taxsim
   #
   # Parameters:
-  #   - tax_units (df) : dataframe of tax units after passing through the calculator
-  #                      and taxsim_check.
+  #   - test_cases (df) : test cases with NBER taxsim output variables   
+  #   - tax_units (df)  : dataframe of tax units after passing through the calculator
+  #                       and taxsim_check.
   #
   # Returns: dataframe with dollar differences on comparable variables.
   # Variables consist of:
@@ -248,6 +248,7 @@ taxsim_check_against = function(test_cases, tax_units) {
       #medicare tax unearned income  capital income (niit) NOT INCLUDED IN FICA
       liab_add_med_dif = v44_medicare_tax_earned_income - liab_add_med
     ) %>%
+    
     #Select differences to return
     select(
       #ADD: liab_fed_dif, txbl_dif, amt_dif, se_dif
@@ -261,7 +262,8 @@ taxsim_check_against = function(test_cases, tax_units) {
     return()
 }
 
-taxsim_pct_dif = function(tax_units, tol=.05) {
+taxsim_pct_dif = function(tax_units, tol = .05) {
+  
   #----------------------------------------------------------------------------
   # Checks differences to see if they are within an acceptable error tolerance
   #
@@ -292,6 +294,7 @@ taxsim_pct_dif = function(tax_units, tol=.05) {
   #   - se_off            (dbl) : Self Employment Income
   #   - liab_add_med_off  (dbl) : Medicare Tax on Earned Income
   #----------------------------------------------------------------------------
+  
   tax_units %>%
       mutate(
       #LIABILITIES
@@ -322,6 +325,7 @@ taxsim_pct_dif = function(tax_units, tol=.05) {
       #se_off = abs(se_dif)/se>=tol,
       liab_add_med_off = abs(liab_add_med_diff)/liab_add_med>=tol
     ) %>%
+    
     #Select percent changes to return
     select(
       #ADD: liab_fed_off, txbl_off, amt_off, se_off
