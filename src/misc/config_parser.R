@@ -41,7 +41,7 @@ parse_globals = function(runscript_path) {
   # Create filepaths for data interfaces
   interface_paths = runtime_args %>% 
     select(TaxSimulatorID = ID, starts_with('dep.')) %>% 
-    mutate(across(.cols = everything()
+    mutate(across(.cols = everything(),
                   .fns  = as.character)) %>% 
     pivot_longer(cols         = -TaxSimulatorID, 
                  names_prefix = 'dep.', 
@@ -57,8 +57,8 @@ parse_globals = function(runscript_path) {
   for (path in interface_paths$path) {
     if (!dir.exists(path)) {
       shorter_path = str_remove(interface_paths$path, data_root)
-      paste0("Error: can't find directory '", shorter_path, "'. Confirm that ",
-             "the interface version is correct, and that the vintage exists.")
+      msg = paste0("Error: can't find directory '", shorter_path, "'. Confirm ",
+                   "the interface version is correct and that the vintage exists.")
       stop(msg)
     }
   }
