@@ -87,14 +87,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
                   ui - 
                   nols + 
                   other_inc,
-      
-      # Calculate above-the-line charitable contribution deduction here if
-      # itemized deduction is eliminated. Otherwise, if they are both available,
-      # we determine which to take later in code
-      char_above_ded = if_else(char.above_limit > 0 & char.item_limit == 0, 
-                               pmin(char.above_limit, char_cash + char_noncash), 
-                               0),
-      
+
       # Calculate above-the-line deductions, excluding student loan interest deduction 
       above_ded_ex_sl = ed_exp + 
                         hsa_contr + 
@@ -106,7 +99,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
                         trad_contr_ira +
                         pmin(tuition_ded, agi.tuition_ded_limit) + 
                         pmin(dpad, agi.dpad_limit) + 
-                        char_above_ded, 
+                        pmin(char.above_limit, char_cash + char_noncash), 
                       
       # Calculate MAGI for taxable Social Security benefits calculation
       magi_ss = inc_ex_ss - above_ded_ex_sl
