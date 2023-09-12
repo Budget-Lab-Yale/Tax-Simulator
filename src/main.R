@@ -32,10 +32,10 @@ scenario = get_scenario_info(globals, id)
 #-----------
 
 # Placeholder! Ugly! Reads historical inflation series for tax law generation
-indexes = read_csv(file.path(scenario$interface_paths$inflation_data, 'CPIAUCNS.csv')) %>% 
+indexes = read_csv(file.path(scenario$interface_paths$`Inflation-Data`, 'CPIAUCNS.csv')) %>% 
   mutate(Year = year(DATE), Month = month(DATE)) %>% 
   select(Year, Month, cpi = CPIAUCNS) %>% 
-  left_join(read_csv(file.path(scenario$interface_paths$inflation_data, 'SUUR0000SA0.csv')) %>% 
+  left_join(read_csv(file.path(scenario$interface_paths$`Inflation-Data`, 'SUUR0000SA0.csv')) %>% 
               mutate(Year = year(DATE), Month = month(DATE)) %>% 
               select(Year, Month, chained_cpi = SUUR0000SA0), 
             by = c('Year', 'Month')) %>% 
@@ -47,7 +47,7 @@ indexes = read_csv(file.path(scenario$interface_paths$inflation_data, 'CPIAUCNS.
                values_to = 'Value') %>% 
   group_by(Series, Year = FY) %>% 
   summarise(Value = mean(Value)) %>% 
-  bind_rows(read_csv(file.path(scenario$interface_paths$inflation_data, 'awi.csv'))) %>%
+  bind_rows(read_csv(file.path(scenario$interface_paths$`Inflation-Data`, 'awi.csv'))) %>%
   group_by(Series) %>% 
   mutate(Growth = Value / lag(Value) - 1) %>% 
   select(-Value) %>% 
