@@ -28,8 +28,8 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
     
     # Tax unit attributes
     'agi',      # (dbl) Adjusted Gross Income
-    'std_ded',  # (dbl) value of standard deduction value 
-    'item_ded', # (dbl) value of itemized deductions value
+    'std_ded',  # (dbl) value of standard deduction 
+    'item_ded', # (dbl) value of itemized deductions
     'pe_ded',   # (dbl) value of deduction for personal exemptions 
     'qbi_ded'   # (dbl) value of deduction for Qualified Business Income
   )
