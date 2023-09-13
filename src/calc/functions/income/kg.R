@@ -16,6 +16,8 @@ calc_kg = function(tax_unit, fill_missings = F) {
   #                            with 0s (used in testing, not in simulation)
   #
   # Returns: dataframe of following variables:
+  #   - kg_pref (dbl) : preferred-rate capital gains ("net capital gain" in the 
+  #                     internal revenue code)
   #   - txbl_kg (dbl) : net capital gain includable in AGI
   #----------------------------------------------------------------------------
   
@@ -38,16 +40,22 @@ calc_kg = function(tax_unit, fill_missings = F) {
     parse_calc_fn_input(req_vars, fill_missings) %>% 
     mutate(
       
+      # Calculate preferred-rate capital gain ("net capital gain" in the code, 
+      # i.e. the non-negative smaller of line 15 or 16 on Sch. D)
+      net_st  = kg_st - kg_st_carry,
+      net_lt  = kg_lt - kg_lt_carry,
+      kg_pref = pmax(0, pmin(net_lt, net_st + net_lt)),
+      
       # Calculate taxable capital gain, limiting to maximum deductible loss
-      txbl_kg = pmax(kg_st + kg_lt - kg_st_carry - kg_lt_carry, -agi.kg_loss_limit),
+      txbl_kg = pmax(net_st + net_lt, -agi.kg_loss_limit),
       
       # Exclude a policy-supplied fraction of capital gains from AGI 
-      txbl_kg = txbl_kg * (1 - agi.kg_excl_rate)
+      txbl_kg = if_else(txbl_kg > 0, txbl_kg * (1 - agi.kg_excl_rate), txbl_kg)
       
     ) %>% 
     
     # Keep variables to return
-    select(txbl_kg) %>% 
+    select(kg_pref, txbl_kg) %>% 
     return()
 }
 
