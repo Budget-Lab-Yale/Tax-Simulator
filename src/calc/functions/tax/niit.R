@@ -22,7 +22,7 @@ calc_niit = function(tax_unit, fill_missings = FALSE) {
   req_vars = c(
     
     # Tax unit attributes
-    'txbl_int',          # (dbl) interest income
+    'txbl_int',          # (dbl) taxable interest income
     'div',               # (dbl) dividend income
     'txbl_kg',           # (dbl) net capital gain included in AGI
     'sch_e',             # (dbl) Schedule E net income
@@ -61,7 +61,7 @@ calc_niit = function(tax_unit, fill_missings = FALSE) {
       net_active_ded = if_else(niit.include_active == 1, 0, net_active_bus),
       
       # Calculate net investment income
-      nii = pmax(0, txbl_int + div  + txbl_kg + sch_e - net_active_ded - inv_int_item_ded)
+      nii = pmax(0, txbl_int + div + txbl_kg + sch_e - net_active_ded - inv_int_item_ded)
     
     ) %>%
     
