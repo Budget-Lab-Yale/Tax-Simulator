@@ -157,7 +157,7 @@ calc_stacked = function() {
       version, 
       VINTAGE, 
       run,
-      paste0("receipts_", run, ".csv"))
+      paste0("revenue_estimates_", run, ".csv"))
     )
     
     # Organize into year -> revenue format
