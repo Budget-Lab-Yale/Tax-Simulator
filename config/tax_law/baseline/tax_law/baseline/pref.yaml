@@ -14,9 +14,11 @@ filing_status_mapper:
     '3': brackets_married / 2
     '4': brackets_head
 
+# Preferred tax rate schedule 
 rates:
   value: [0.0, 0.15, 0.20]
 
+# Brackets for preferred-rate income, single filers
 brackets_single:
   value: [0, 22100, 400000]
   i_measure: default
@@ -24,6 +26,7 @@ brackets_single:
   i_direction: default
   i_increment: [25, 25, 25]
 
+# Brackets for preferred-rate income, joint filers
 brackets_married:
   value: [0, 44200, 450000]
   i_measure: default
@@ -31,15 +34,18 @@ brackets_married:
   i_direction: default
   i_increment: default
   
+# Brackets for preferred-rate income, head of household filers
 brackets_head:
   value: [0, 29600, 425000]
   i_measure: default
   i_base_year: default
   i_direction: default
   i_increment: default
-  
+
+# Tax rate on Section 1250 unrecapture gain
 unrecapture_rate: 
   value: 0.25
 
+# Tax rate on collectibles gain
 collectibles_rate:
   value: 0.28

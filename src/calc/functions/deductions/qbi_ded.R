@@ -37,12 +37,12 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     'sstb_scorp',         # (dbl) whether net S corporation income is derived from an SSTB 
     'sstb_farm',          # (dbl) whether net farm income is derived from an SSTB 
     'sstb_farm_rent',     # (dbl) whether net farm rental income is derived from an SSTB
-    'qual_div',             # (dbl) qualified dividends
-    'kg_pref',              # (dbl) net capital gain eligible for preferred rates
-    'agi',                  # (dbl) Adjusted Gross Income
-    'std_ded',              # (dbl) value of standard deduction (even if eventually itemizing)
-    'item_ded',             # (dbl) value of itemized deductions
-    'pe_ded',               # (dbl) value of deduction for personal exemptions 
+    'qual_div',           # (dbl) qualified dividends
+    'kg_pref',            # (dbl) net capital gain eligible for preferred rates
+    'agi',                # (dbl) Adjusted Gross Income
+    'std_ded',            # (dbl) value of standard deduction (even if eventually itemizing)
+    'item_ded',           # (dbl) value of itemized deductions
+    'pe_ded',             # (dbl) value of deduction for personal exemptions 
     
     # Tax law attributes
     'qbi.rate',       # (dbl) deduction rate

@@ -156,7 +156,7 @@ integrate_rates_brackets = function(df, n_brackets, prefix_brackets,
                     .fn   = ~ paste0(prefix_rates, 1))
     }
   }
-  
+
   # Add (n+1)th bracket, used to calculate taxable income in excess of top bracket
   df[[paste0(prefix_brackets, n_brackets + 1)]] = Inf
   
