@@ -22,7 +22,12 @@ calc_tax = function(tax_unit, fill_missings = F) {
   #                            with 0s (used in testing, not in simulation)
   #
   # Returns: dataframe of following variables:
-  #  - TODO
+  #  - liab_ord (dbl)     : ordinary-rate liability (excluding special gains
+  #                         taxed at ordinary rates)
+  #  - liab_pref (dbl)    : preferred-rate liability (excluding special gains)
+  #  - liab_1250 (dbl)    : liability on section 1250 gains 
+  #  - liab_collect (dbl) : liability on collectibles gains
+  #  - liab (dbl)         : total liability
   #----------------------------------------------------------------------------
   
   req_vars = c(
@@ -64,8 +69,11 @@ calc_tax = function(tax_unit, fill_missings = F) {
       # Taxable income
       txbl_ord_inc      = pmax(0, txbl_inc - pref_inc),
       txbl_adj_pref_inc = pmax(0, pmin(txbl_inc, adj_pref_inc)),
-      txbl_1250         = pmax(0, pmin(pref_kg, kg_1250)),
-      txbl_collect      = pmax(0, pmin(pref_kg, kg_collect)),
+      txbl_1250         = pmax(0, pmin(txbl_ord_inc - txbl_adj_pref_inc, 
+                                       pmin(pref_kg, kg_1250))),
+      txbl_ord_1250     = pmax(0, txbl_ord_inc + txbl_1250),
+      txbl_collect      = pmax(0, pmin(txbl_ord_inc - txbl_adj_pref_inc - txbl_1250,  
+                                       pmin(pref_kg, kg_collect))),
       
     ) %>% 
     
@@ -91,17 +99,23 @@ calc_tax = function(tax_unit, fill_missings = F) {
     # Calculate tax on special gains
     #--------------------------------
     
+    # Calculate rate schedule, capped at maximum, for each type of special gain 
+    mutate(across(.cols  = starts_with('ord.rates'),
+                  .fns   = list(unrecapture = ~ pmin(., pref.unrecapture_rate), 
+                                collect     = ~ pmin(., pref.collectibles_rate)), 
+                  .names = '{fn}.{col}')) %>% 
+  
     # Calculate tax at ordinary rates
     bind_cols(
       pmap(.f = integrate_conditional_rates_brackets, 
-           .l = list(x           = c('txbl_1250', 'txbl_collect'),
-                     output_name = c('liab_1250', 'liab_collect')),
+           .l = list(prefix_rates = c('unrecapture.ord.rates', 'collect.ord.rates'),
+                     x            = c('txbl_1250',             'txbl_collect'),
+                     y            = c('txbl_ord_inc',          'txbl_ord_1250'),
+                     output_name  = c('liab_1250',             'liab_collect')),
            df              = ., 
            n_brackets      = NULL, 
-           prefix_brackets = 'ord.brackets', 
-           prefix_rates    = 'ord.rates', 
-           y               = 'txbl_inc',
-           inclusive       = T,
+           prefix_brackets = 'ord.brackets',
+           inclusive       = F,
            by_bracket      = F) %>% 
         bind_cols()
     ) %>% 
@@ -147,7 +161,7 @@ calc_tax = function(tax_unit, fill_missings = F) {
     mutate(liab = pmin(liab_max, liab_pref + liab_1250 + liab_collect + liab_ord)) %>% 
   
     # Keep variables to return
-    select(txbl_ord_inc, txbl_adj_pref_inc, liab_pref, liab_ord, liab_1250, liab_collect, 
-           liab) %>% 
+    select(liab_ord, liab_pref, liab_1250, liab_collect, liab) %>% 
     return()
 }
+
