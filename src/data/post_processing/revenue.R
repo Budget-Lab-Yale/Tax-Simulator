@@ -21,17 +21,6 @@ calc_receipts = function(totals) {
   #   
   #----------------------------------------------------------------------------
   
-  #DELETE IF THE DIRECTORY ALREADY EXISTS AND OUT_DIR IS IN MEMORY
-  t = Sys.time()
-  out_dir = file.path(data_root,
-                      'model_data',
-                      'Tax-Simulator',
-                      paste0('v', version),
-                      paste0(year(t), month(t), day(t), hour(t)), #CHECK W/JOHN
-                      runscript$ID
-                      )
-  dir.create(out_dir, recursive = T)
-  
   totals %>%
     mutate(
       
@@ -43,12 +32,12 @@ calc_receipts = function(totals) {
       RefundableCreditOutlays = nonwithheld_refund
     ) %>%
     #Drop incomplete year
-    filter(Year!=min(Year)) %>%
+    filter(Year != min(Year)) %>%
     
     select(Year, PayrollTax, IndividualIncomeTax, RefundableCreditOutlays) %>%
     write.csv(., 
-              file=file.path(out_dir, paste0("receipts_",ID,".csv")), 
-              row.names=F)  
+              file = file.path(out_dir, paste0("receipts_",ID,".csv")), 
+              row.names = F)  
 
 }
 
@@ -73,7 +62,15 @@ calc_rev_est = function() {
                                    VINTAGE,
                                    "baseline/receipts_baseline.csv"))
   
-  base <- base %>% mutate(total = PayrollTax + IndividualIncomeTax - RefundableCreditOutlays)
+  base <- base %>% 
+    
+    # Create and rename variables with b for baseline
+    mutate(total_b = PayrollTax + IndividualIncomeTax - RefundableCreditOutlays) %>%
+    rename(
+      PayrollTax_b = PayrollTax,
+      IndividualIncomeTax_b = IndividualIncomeTax,
+      RefundableCreditOutlays_b = RefundableCreditOutlays
+    )
   
   scenarios <- runscript$id
   
@@ -109,18 +106,25 @@ calc_rev_delta = function(base, sim) {
   #----------------------------------------------------------------------------
   
   #Sim total
-  sim <- sim %>% mutate(total = PayrollTax + IndividualIncomeTax - RefundableCreditOutlays)
+  sim <- sim %>% 
+    # Create and rename variables with s for simulation
+    mutate(total_s = PayrollTax + IndividualIncomeTax - RefundableCreditOutlays) %>%
+    rename(
+      PayrollTax_s = PayrollTax,
+      IndividualIncomeTax_s = IndividualIncomeTax,
+      RefundableCreditOutlays_s = RefundableCreditOutlays
+    )
   
   # merge, variables have the same name so are split x/y
-  base <- left_join(base, sim, by="Year")
+  base <- left_join(base, sim, by = "Year")
 
   # mutate deltas
   base %>%
     mutate(
-      Total = total.y - total.x,
-      PayrollTax = PayrollTax.y - PayrollTax.x,
-      IndividualIncomeTax = IndividualIncomeTax.y - IndividualIncomeTax.x,
-      RefundableCreditOutlays = RefundableCreditOutlays.y - RefundableCreditOutlays.x
+      Total = total_s - total_b,
+      PayrollTax = PayrollTax_s - PayrollTax_b,
+      IndividualIncomeTax = IndividualIncomeTax_s - IndividualIncomeTax_b,
+      RefundableCreditOutlays = RefundableCreditOutlays_s - RefundableCreditOutlays_b
     ) %>%
     
     select(Year, Total, PayrollTax, IndividualIncomeTax, RefundableCreditOutlays) %>%
@@ -145,7 +149,7 @@ calc_stacked = function() {
   
   # Initialize output
   stack <- data.frame(matrix(ncol=4, nrow=1))
-  colnames(stack) = c("...1", "Year", "Series", "receipts")
+  colnames(stack) = c("Scenario", "Year", "Series", "receipts")
   
   # Collect scenario names
   scenarios <- runscript$id
@@ -157,7 +161,7 @@ calc_stacked = function() {
       version, 
       VINTAGE, 
       run,
-      paste0("receipts_", run, ".csv"))
+      paste0("revenue_estimates_", run, ".csv"))
     )
     
     # Organize into year -> revenue format
@@ -166,21 +170,18 @@ calc_stacked = function() {
         cols = !Year,
         names_to = "Series",
         values_to = "receipts"
-      )
+      ) %>%
+      mutate(Scenario = run)
     
-    # Add column with scenario name
-    sim <- bind_cols(rep(run, nrow(sim)), sim)
-    stack <- bind_rows(stack, sim)
   }
   
   # Drop initial row used to merge tidily, rename scenario column
   stack <- stack[-1,]
-  colnames(stack)[1] <- "Scenario" 
   
   
   stack <- stack %>%
     group_by(Year, Series) %>%
-    mutate(delta= receipts - lag(receipts)) %>%
+    mutate(delta = receipts - lag(receipts)) %>%
     select(Year, Scenario, Series, delta) %>%
     pivot_wider(
       names_from = Year,
@@ -188,7 +189,7 @@ calc_stacked = function() {
     ) %>%
     
     # Drop baseline full of zeros or NA
-    filter(Scenario!="baseline")
+    filter(Scenario != "baseline")
   
   # Unnecessary for analysis, but it made the loop tidier
   unlink("revenue_estimates_base.csv")
