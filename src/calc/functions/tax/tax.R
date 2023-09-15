@@ -44,7 +44,7 @@ calc_tax = function(tax_unit, fill_missings = F) {
     'ord.brackets[]',         # (int[]) brackets for ordinary-rate income
     'pref.rates[]',           # (dbl[]) preferred tax rate schedule
     'pref.brackets[]',        # (int[]) brackets for preferred-rate income
-    'pref.unrecapture_rate',  # (dbl)   tax rate on Section 1250 unrecapture gain 
+    'pref.unrecapture_rate',  # (dbl)   tax rate on Section 1250 unrecaptured gain 
     'pref.collectibles_rate'  # (dbl)   tax rate on collectibles gain
   )
   
