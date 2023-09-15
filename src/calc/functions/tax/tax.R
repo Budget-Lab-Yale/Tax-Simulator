@@ -40,12 +40,12 @@ calc_tax = function(tax_unit, fill_missings = F) {
     'kg_collect',  # (dbl) collectibles gain
     
     # Tax law attributes
-    'ord.rates[]',       # (dbl[]) ordinary tax rate schedule
-    'ord.brackets[]',    # (int[]) brackets for ordinary-rate income
-    'pref.rates[]',      # (dbl[]) preferred tax rate schedule
-    'pref.brackets[]',   # (int[]) brackets for preferred-rate income
-    'unrecapture_rate',  # (dbl)   tax rate on Section 1250 unrecapture gain 
-    'collectibles_rate'  # (dbl)   tax rate on collectibles gain
+    'ord.rates[]',            # (dbl[]) ordinary tax rate schedule
+    'ord.brackets[]',         # (int[]) brackets for ordinary-rate income
+    'pref.rates[]',           # (dbl[]) preferred tax rate schedule
+    'pref.brackets[]',        # (int[]) brackets for preferred-rate income
+    'pref.unrecapture_rate',  # (dbl)   tax rate on Section 1250 unrecapture gain 
+    'pref.collectibles_rate'  # (dbl)   tax rate on collectibles gain
   )
   
   tax_unit %>% 
