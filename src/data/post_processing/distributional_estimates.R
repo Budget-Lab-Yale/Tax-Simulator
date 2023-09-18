@@ -56,7 +56,7 @@ calc_distro = function(sim, pcts) {
     # Bucket
     cut_var(pcts = pcts, 'expanded_income', 'perwt') %>%
     
-    group_by(base, group) %>%
+    group_by(., group) %>%
       summarize(
         group_delta = sum(delta),
         group_perwt = sum(perwt),
@@ -72,7 +72,7 @@ calc_distro = function(sim, pcts) {
       ) %>%
       mutate(TotalTaxChangeShare = (group_delta * group_perwt) / sum(group_delta * group_perwt)) %>%
     
-      select(inc_group, group_delta, 
+      select(group, group_delta, 
              AverageTaxDelta, AverageTaxCut, AverageTaxRaise, 
              ShareWithCut, ShareWithRaise, 
              PercentChangeInAfterTaxIncome, TotalTaxChangeShare) %>%
