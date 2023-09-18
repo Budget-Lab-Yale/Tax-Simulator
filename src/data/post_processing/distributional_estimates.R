@@ -58,16 +58,16 @@ calc_distro = function(sim, pcts) {
     
     group_by(base, group) %>%
       summarise(
-        group_delta = sum(delta * perwt),
+        group_delta = sum(delta * weight),
       
-        AverageTaxDelta = weighted.mean(delta, perwt),
-        AverageTaxCut = weighted.mean(delta, (perwt * cut)),
-        AverageTaxRaise = weighted.mean(delta, (perwt * raise)),
+        AverageTaxDelta = weighted.mean(delta, weight),
+        AverageTaxCut = weighted.mean(delta, (weight * cut)),
+        AverageTaxRaise = weighted.mean(delta, (weight * raise)),
       
-        ShareWithCut = sum(cut * perwt) / sum(perwt),
-        ShareWithRaise = sum(raise * perwt) / sum(perwt),
+        ShareWithCut = sum(cut * weight) / sum(weight),
+        ShareWithRaise = sum(raise * weight) / sum(weight),
       
-        PercentChangeInAfterTaxIncome = sum((expanded_income - liab_sim) * perwt) / sum((expanded_income - liab_base) * 100)  
+        PercentChangeInAfterTaxIncome = sum((expanded_income - liab_sim) * weight) / sum((expanded_income - liab_base) * 100)  
       ) %>%
       mutate(TotalTaxChangeShare = group_delta / sum(group_delta)) %>%
     
