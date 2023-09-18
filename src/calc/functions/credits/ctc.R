@@ -114,7 +114,7 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       # Additional Child Tax Credit
       #-----------------------------
       
-      # Calculate unused CTC 
+      # Calculate unused CTC
       remaining_ctc = value1 + value2 + value_other - ctc, 
       
       # Limit to max per-child refundable credit value
