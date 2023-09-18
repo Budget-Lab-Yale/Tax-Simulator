@@ -23,13 +23,13 @@ calc_ed_credits = function(tax_unit, fill_missings = F) {
   req_vars = c(
     
     # Tax unit attributes
-    'agi',      # (dbl) Adjusted Gross Income
-    'aoc_exp',  # (dbl) AOC-qualifying education expenses 
-    'llc_exp',  # (dbl) LLC-qualifying education expenses
-    'liab_bc',  # (dbl) income tax liability before credits (including AMT)
-    'ftc',      # (dbl) value of foreign tax credit value
-    'cdctc',    # (dbl) Child and Dependent Care Tax Credit
-    'old_cred', # (dbl) value of Elderly and Disabled Credit
+    'agi',          # (dbl) Adjusted Gross Income
+    'aoc_exp',      # (dbl) AOC-qualifying education expenses 
+    'llc_exp',      # (dbl) LLC-qualifying education expenses
+    'liab_bc',      # (dbl) income tax liability before credits (including AMT)
+    'ftc',          # (dbl) value of foreign tax credit value
+    'cdctc_nonref', # (dbl) Child and Dependent Care Tax Credit
+    'old_cred',     # (dbl) value of Elderly and Disabled Credit
     
     # Tax law attributes
     'ed.aoc_rates[]',      # (dbl[]) AOC credit rate per dollar of qualifying expenses
@@ -85,7 +85,7 @@ calc_ed_credits = function(tax_unit, fill_missings = F) {
       llc          = llc * (1 - po_share_llc),
       
       # Limit nonrefundable credit to positive liability
-      liab      = pmax(0, liab_bc - ftc - cdctc - old_cred),
+      liab      = pmax(0, liab_bc - ftc - cdctc_nonref - old_cred),
       ed_nonref = pmin(liab, aoc_nonref + llc)
     
     ) %>% 
