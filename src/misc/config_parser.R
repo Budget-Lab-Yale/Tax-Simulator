@@ -6,7 +6,6 @@
 
 
 
-
 parse_globals = function(runscript_path) {
   
   #----------------------------------------------------------------------------
@@ -74,7 +73,7 @@ get_scenario_info = function(globals, id) {
   
   #----------------------------------------------------------------------------
   # Given a scenario ID, retrieves and transforms scenario-specific runtime
-  # argments and interface file paths.
+  # arguments and interface file paths.
   # 
   # Parameters:
   #   - globals (list) : globals object, as return by parse_globals()
@@ -82,9 +81,17 @@ get_scenario_info = function(globals, id) {
   #
   # Returns: list of 3: 
   #   - ID (int)               : scenario ID
+  #   - config_path (str)      : path to scenario config folder
   #   - interface_paths (list) : list of scenario-specific interface paths
   #   - years (int[])          : vector of years to run
   #----------------------------------------------------------------------------
+  
+  # Scenario-specific configuration path
+  subfolder = 'counterfactuals'
+  if (id == 'baseline') {
+    subfolder = ''
+  }
+  config_path = file.path('./config/scenarios', subfolder, id)
   
   # List of interface paths, named by interface
   interface_paths = globals$interface_paths %>% 
@@ -104,6 +111,7 @@ get_scenario_info = function(globals, id) {
   
   # Return as named list
   return(list(ID              = id,
+              config_path     = config_path, 
               interface_paths = interface_paths,
               years           = years))
 }

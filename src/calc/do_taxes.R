@@ -231,7 +231,6 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
 
 
 
-
 remit_taxes = function(tax_units) { 
   
   #----------------------------------------------------------------------------
