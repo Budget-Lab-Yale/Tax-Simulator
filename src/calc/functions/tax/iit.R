@@ -23,8 +23,8 @@ calc_liab = function(tax_unit, fill_missings = F) {
   #  - ref_other (dbl)    : refundable credits used to offset other taxes
   #  - refund (dbl)       : refundable portion of refundable credit
   #  - liab_iit (dbl)     : individual income tax liability
-  #  - liab_iit_net (dbl) : individual income tax liability less refund
-  #  
+  #  - liab_iit_net (dbl) : individual income tax liability net of refundable
+  #                         credits
   #----------------------------------------------------------------------------
   
   req_vars = c(
