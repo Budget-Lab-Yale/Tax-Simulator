@@ -87,8 +87,8 @@ calc_rev_est = function() {
     # Create and rename variables with b for baseline
     mutate(total_b = PayrollTax + IndividualIncomeTax - RefundableCreditOutlays) %>%
     rename(
-      PayrollTax_b = PayrollTax,
-      IndividualIncomeTax_b = IndividualIncomeTax,
+      PayrollTax_b              = PayrollTax,
+      IndividualIncomeTax_b     = IndividualIncomeTax,
       RefundableCreditOutlays_b = RefundableCreditOutlays
     )
   
@@ -135,8 +135,8 @@ calc_rev_delta = function(base, sim) {
     # Create and rename variables with s for simulation
     mutate(total_s = PayrollTax + IndividualIncomeTax - RefundableCreditOutlays) %>%
     rename(
-      PayrollTax_s = PayrollTax,
-      IndividualIncomeTax_s = IndividualIncomeTax,
+      PayrollTax_s              = PayrollTax,
+      IndividualIncomeTax_s     = IndividualIncomeTax,
       RefundableCreditOutlays_s = RefundableCreditOutlays
     )
   
@@ -146,9 +146,9 @@ calc_rev_delta = function(base, sim) {
   # Mutate deltas
   base %>%
     mutate(
-      Total = total_s - total_b,
-      PayrollTax = PayrollTax_s - PayrollTax_b,
-      IndividualIncomeTax = IndividualIncomeTax_s - IndividualIncomeTax_b,
+      Total                   = total_s                   - total_b,
+      PayrollTax              = PayrollTax_s              - PayrollTax_b,
+      IndividualIncomeTax     = IndividualIncomeTax_s     - IndividualIncomeTax_b,
       RefundableCreditOutlays = RefundableCreditOutlays_s - RefundableCreditOutlays_b
     ) %>%
     
@@ -197,8 +197,8 @@ calc_stacked = function() {
     # Organize into year -> revenue format
     sim = sim %>%
       pivot_longer(
-        cols = !Year,
-        names_to = "Series",
+        cols      = !Year,
+        names_to  = "Series",
         values_to = "receipts"
       ) %>%
       mutate(Scenario = run)
@@ -214,7 +214,7 @@ calc_stacked = function() {
     mutate(delta = receipts - lag(receipts)) %>%
     select(Year, Scenario, Series, delta) %>%
     pivot_wider(
-      names_from = Year,
+      names_from  = Year,
       values_from = delta
     ) %>%
     
