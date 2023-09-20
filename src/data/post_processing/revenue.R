@@ -45,7 +45,7 @@ calc_receipts = function(totals) {
     
     ) %>%
     
-    #Drop incomplete year
+    # Drop incomplete year
     filter(Year != min(Year)) %>%
     
     select(Year, PayrollTax, IndividualIncomeTax, RefundableCreditOutlays) %>%
@@ -72,7 +72,7 @@ calc_rev_est = function() {
   #   
   #----------------------------------------------------------------------------
   
-  #read in base
+  # Read in base
   base = read.csv(file.path("/gpfs/gibbs/project/sarin/shared/model_data/v", 
                                    version, 
                                    VINTAGE,
@@ -124,8 +124,9 @@ calc_rev_delta = function(base, sim) {
   #   
   #----------------------------------------------------------------------------
   
-  #Sim total
+  # Sim total
   sim <- sim %>% 
+    
     # Create and rename variables with s for simulation
     mutate(total_s = PayrollTax + IndividualIncomeTax - RefundableCreditOutlays) %>%
     rename(
@@ -134,10 +135,10 @@ calc_rev_delta = function(base, sim) {
       RefundableCreditOutlays_s = RefundableCreditOutlays
     )
   
-  # merge, variables have the same name so are split x/y
+  # Merge, variables have the same name so are split x/y
   base <- left_join(base, sim, by = "Year")
 
-  # mutate deltas
+  # Mutate deltas
   base %>%
     mutate(
       Total = total_s - total_b,
