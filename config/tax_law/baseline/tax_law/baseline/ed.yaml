@@ -15,31 +15,43 @@ filing_status_mapper:
     '2': llc_po_thresh_single * 2
     '3': llc_po_thresh_single
     '4': llc_po_thresh_single
+  llc_po_range:
+    '1': llc_po_range_single
+    '2': llc_po_range_single * 2
+    '3': llc_po_range_single
+    '4': llc_po_range_single
 
+# AOC credit rate per dollar of qualifying expenses
 aoc_rates:
   value: [1.0, 0.25, 0.0]
 
+# Expense brackets for AOC credit rates
 aoc_brackets:
   value: [0, 2000, 4000]
-  
+
+# AGI threshold above which AOC phases out, single filers
 aoc_po_thresh_single:
   value: 80000
-
+  
+# AGI range over which AOC phases out
 aoc_po_range_single:
   value: 10000
   
 # Share of credit available as refundable credit
 aoc_refund_rate:
   value: 0.4
-  
+
+# LLC credit rate per dollar of qualifying expenses
 llc_rates:
   value: [0.2, 0.0]
-  
+
+# Expense brackets for LLC credit rates
 llc_brackets:
   value: [0, 10000]
 
+# AGI threshold above which LLC phases out
 llc_po_thresh_single:
-  value: 
+  value:
     '2014': 40000
     '2021': 80000
   i_measure:
@@ -50,6 +62,7 @@ llc_po_thresh_single:
   i_direction: -1
   i_increment: 1000
 
+# AGI range over which LLC phases out
 llc_po_range_single:
   value: 10000
   

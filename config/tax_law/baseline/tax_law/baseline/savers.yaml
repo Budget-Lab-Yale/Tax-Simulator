@@ -1,0 +1,7 @@
+---
+
+# Whether credit is refundable
+refundable:
+  value:
+    '2014': 0
+    '2027': 1

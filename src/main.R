@@ -68,6 +68,12 @@ tax_law = build_tax_law(config_path = './config/tax_law/baseline/tax_law/baselin
                         indexes     = indexes)
 
 
+#-----------------
+# Calculate taxes
+#-----------------
+
+source('./src/calc/utils.R')
+
 #----------------------
 # Produce output files
 #----------------------

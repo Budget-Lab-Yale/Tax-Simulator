@@ -17,29 +17,29 @@ calc_ctc = function(tax_unit, fill_missings = F) {
   #                            with 0s (used in testing, not in simulation)
   #
   # Returns: dataframe of following variables:
-  # - ctc (dbl)  : value of CTC including credit for other dependents
-  # - actc (dbl) : ACTC, i.e. refundable component of the CTC
+  #  - ctc_nonref (dbl) : value of CTC including credit for other dependents
+  #  - ctc_ref (dbl)    : ACTC, i.e. refundable component of the CTC
   #----------------------------------------------------------------------------
   
   req_vars = c(
     
     # Tax unit attributes
-    'dep_age1',  # (int) age of youngest dependent (NA for tax units without a dependent)
-    'dep_age2',  # (int) age of second youngest dependent (NA for tax units without a second dependent)
-    'dep_age3',  # (int) age of oldest dependent (NA for tax units without a third dependent)
-    'dep_ssn1',  # (int) whether youngest dependent has a Social Security number (NA for tax units without a dependent)
-    'dep_ssn2',  # (int) whether second youngest dependent has a Social Security number (NA for tax units without a second dependent)
-    'dep_ssn3',  # (int) whether oldest dependent has a Social Security number (NA for tax units without a third dependent)
-    'n_dep',     # (int) number of dependents
-    'agi',       # (dbl) Adjusted Gross Income
-    'liab_bc',   # (dbl) liability before credits, including AMT   
-    'ftc',       # (dbl) value of foreign tax credit 
-    'cdctc',     # (dbl) value of Child and Dependent Care Credit 
-    'ed_nonref', # (dbl) value of nonrefundable education credit
-    'savers',    # (dbl) value of Saver's Credit
-    'old_cred',  # (dbl) value of Elderly and Disabled Credit
-    'car_cred',  # (dbl) value of nonrefundable vehicle credits
-    'ei',        # (dbl) earned income
+    'dep_age1',      # (int) age of youngest dependent (NA for tax units without a dependent)
+    'dep_age2',      # (int) age of second youngest dependent (NA for tax units without a second dependent)
+    'dep_age3',      # (int) age of oldest dependent (NA for tax units without a third dependent)
+    'dep_ssn1',      # (bool) whether youngest dependent has a Social Security number (NA for tax units without a dependent)
+    'dep_ssn2',      # (bool) whether second youngest dependent has a Social Security number (NA for tax units without a second dependent)
+    'dep_ssn3',      # (bool) whether oldest dependent has a Social Security number (NA for tax units without a third dependent)
+    'n_dep',         # (int) number of dependents
+    'agi',           # (dbl) Adjusted Gross Income
+    'liab_bc',       # (dbl) liability before credits, including AMT   
+    'ftc',           # (dbl) value of foreign tax credit 
+    'cdctc_nonref',  # (dbl) value of nonrefundable Child and Dependent Care Credit 
+    'ed_nonref',     # (dbl) value of nonrefundable education credit
+    'savers_nonref', # (dbl) value of nonrefundable Saver's Credit
+    'old_cred',      # (dbl) value of Elderly and Disabled Credit
+    'car_cred',      # (dbl) value of nonrefundable vehicle credits
+    'ei',            # (dbl) earned income
     
     # Tax law attributes
     'ctc.young_age_limit',  # (int) maximum age to qualify as "young" child
@@ -73,12 +73,13 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       #------------------
       
       # Determine number of qualifying dependents by age, checking for SSNs
+      need_ssn = ctc.need_ssn == 1,
       across(.cols = starts_with('dep_age'), 
              .fns  = ~ replace_na(as.numeric(.), Inf)),
       across(.cols  = c(ctc.young_age_limit, ctc.old_age_limit), 
-             .fns   = list('1' = ~ (dep_age1 <= .) & (dep_ssn1 | ctc.need_ssn == 0), 
-                           '2' = ~ (dep_age2 <= .) & (dep_ssn2 | ctc.need_ssn == 0), 
-                           '3' = ~ (dep_age3 <= .) & (dep_ssn3 | ctc.need_ssn == 0)), 
+             .fns   = list('1' = ~ (dep_age1 <= .) & (dep_ssn1 | !need_ssn), 
+                           '2' = ~ (dep_age2 <= .) & (dep_ssn2 | !need_ssn), 
+                           '3' = ~ (dep_age3 <= .) & (dep_ssn3 | !need_ssn)), 
              .names = '{str_sub(col, 5, 5)}{fn}'),
       
       n_young = y1 + y2 + y3,
@@ -104,32 +105,40 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       value_other = pmax(0, max_value_other - excess1 * ctc.po_rate1),
       
       # Allocate against liability after select nonrefundable credits
-      nonref = ftc - cdctc - ed_nonref - savers - old_cred - car_cred,
-      liab   = pmax(0, liab_bc - nonref),
-      ctc    = pmin(liab, value1 + value2 + value_other),
+      nonref     = ftc - cdctc_nonref - ed_nonref - savers_nonref - old_cred - car_cred,
+      liab       = pmax(0, liab_bc - nonref),
+      ctc_nonref = pmin(liab, value1 + value2 + value_other),
       
       
       #-----------------------------
       # Additional Child Tax Credit
       #-----------------------------
       
-      # Calculate unused CTC 
-      remaining_ctc = value1 + value2 + value_other - ctc, 
+      # Calculate unused CTC
+      remaining_ctc = value1 + value2 + value_other - ctc_nonref, 
       
       # Limit to max per-child refundable credit value
-      actc = pmin(remaining_ctc, (n_young + n_old) * ctc.max_refund),
+      ctc_ref = pmin(remaining_ctc, (n_young + n_old) * ctc.max_refund),
       
       # Phase in with earned income
-      actc = pmin(pmax(0, ei - ctc.pi_thresh) * ctc.pi_rate, actc),
+      ctc_ref = pmin(pmax(0, ei - ctc.pi_thresh) * ctc.pi_rate, ctc_ref),
       
-      # Ignore all the previous restrictions if CTC is fully refundable, 
-      # instead limiting unused CTC to max value (excluding other dependents)
-      actc = if_else(ctc.fully_refundable == 1, 
-                     pmin(remaining_ctc, max_value1 + max_value2),
-                     actc)
+      
+      #-------------------------------------
+      # Allocation for fully refundable CTC
+      #-------------------------------------
+      
+      # Ignore all the previous restrictions if CTC (excluding credit for 
+      # other dependents) is fully refundable
+      ctc_nonref = if_else(ctc.fully_refundable == 1, 
+                           pmin(liab, value_other),
+                           ctc_nonref),
+      ctc_ref    = if_else(ctc.fully_refundable == 1, 
+                           value1 + value2,
+                           ctc_ref)
     ) %>% 
     
     # Keep variables to return
-    select(ctc, actc) %>% 
+    select(ctc_nonref, ctc_ref) %>% 
     return()
 }

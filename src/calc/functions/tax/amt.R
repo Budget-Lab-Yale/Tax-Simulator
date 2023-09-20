@@ -6,7 +6,8 @@
 calc_amt = function(tax_unit, fill_missings = F) {
   
   #----------------------------------------------------------------------------
-  # Calculates Alternative Minimum Tax (AMT) liability.
+  # Calculates Alternative Minimum Tax (AMT) liability. Also calculates 
+  # income liability before credits. 
   # 
   # Parameters:
   #   - tax_unit (df | list) : either a dataframe or list containing required
@@ -16,7 +17,8 @@ calc_amt = function(tax_unit, fill_missings = F) {
   #
   # Returns: dataframe of following variables:
   #   - liab_amt (dbl) : AMT liability
-  #   - liab_bc (dbl)  : normal income liability tax plus AMT liability 
+  #   - liab_bc (dbl)  : normal income tax liability (including repayment of 
+  #                      excess Premium Tax Credit) plus AMT liability 
   #----------------------------------------------------------------------------
   
   req_vars = c(
@@ -38,6 +40,7 @@ calc_amt = function(tax_unit, fill_missings = F) {
     'kg_1250',        # (dbl)  section 1250 unrecaptured gain
     'kg_collect',     # (dbl)  collectibles gain
     'liab',           # (dbl)  normal income tax liability
+    'excess_ptc',     # (dbl)  repayment of excess advance Premium Tax Credit
     
     # Tax law attributes
     'amt.exempt',             # (int)   AMT exemption
@@ -101,7 +104,7 @@ calc_amt = function(tax_unit, fill_missings = F) {
     
     # Apply FTC and determine excess over normal liability
     mutate(liab_amt = pmax(0, liab_amt_gross - amt_ftc - liab), 
-           liab_bc  = liab + liab_amt) %>% 
+           liab_bc  = liab + liab_amt + excess_ptc) %>% 
     
     # Keep variables to return
     select(liab_amt, liab_bc) %>% 

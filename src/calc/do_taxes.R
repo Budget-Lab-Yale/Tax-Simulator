@@ -78,7 +78,13 @@ do_taxes = function(tax_units) {
   }
   
   
-  return(tax_units)
+  #----------------
+  # Model payments
+  #----------------
+  
+  tax_units %>% 
+    remit_taxes() %>% 
+    return()
 }
 
 
@@ -108,7 +114,7 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
   # Calculates individual income taxes for all tax units. 
   # 
   # Parameters:
-  #   - tax_units (df)      : tibble of tax unita
+  #   - tax_units (df)      : tibble of tax units
   #   - return_vars (str[]) : vector of (calculated) names of variables to 
   #                           return  
   #   - force_char (bool)   : whether the calculator forces filers to report 
@@ -118,7 +124,7 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
   #                           whether to report as an above-the-line deduction 
   #                           (F indicates reporting as itemized deduction)
   #
-  # Returns: tibble of tax units with
+  # Returns: tibble of tax units with columns for all calculated variables. 
   #----------------------------------------------------------------------------
   
   
@@ -194,17 +200,17 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # Education credits
     bind_cols(calc_ed_cred(.)) %>% 
     
-    # Savers credit
+    # Saver's credit
     bind_cols(calc_savers_cred(.)) %>% 
     
     # CTC
     bind_cols(calc_ctc(.)) %>% 
-      
+    
     # EITC
     bind_cols(calc_eitc(.)) %>% 
     
     # Rebates / UBI
-    bind_cols(calc_rebate(.)) %>% 
+    bind_cols(calc_rebate(.)) %>%
     
     
     #----------------------
@@ -224,6 +230,71 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
 } 
 
 
+
+
+remit_taxes = function(tax_units) { 
+  
+  #----------------------------------------------------------------------------
+  # Models tax payments as a function of liability and income composition.
+  # Splits payments into withheld or paid quarterly vs nonwithheld. Assumes 
+  # tax on interest, dividends, and capital gains are paid during filing 
+  # season. A simple heuristic that we can improve if intra-year receipts 
+  # dynamics are ever a focus of analysis.
+  # 
+  # Note: the end-purpose of this function is to generate a level projection 
+  # of aggregate receipts. For that reason, individual-level variables may not 
+  # have an obvious interpretation. For example, refundable credits used to 
+  # reduce "other taxes" are credited to individual income tax here, meaning
+  # that a taxpayer's income tax payment might be negative. The reason for
+  # this treatment is to reflect, at the aggregate level, general revenue
+  # transfers from individual income taxes to OASI/HI trust funds -- even 
+  # though, at the individual level, IRS treats refundable credits as reducing 
+  # SECA.
+  # 
+  # Parameters:
+  #   - tax_units (df) : tibble of tax units
+  #
+  # Returns: tibble of tax units with the following new columns:
+  #   - pmt_iit_nonwithheld (dbl)    : income tax paid at time of filing
+  #   - pmt_iit_withheld (dbl)       : income tax withheld or paid quarterly
+  #   - pmt_refund_nonwithheld (dbl) : payments for refundable credits paid 
+  #                                    during filing season
+  #   - pmt_refund_withheld (dbl)    : advance credits paid throughout year
+  #   - pmt_pr_nonwithheld (dbl)     : payroll tax paid at time of filing
+  #   - pmt_pr_withheld (dbl)        : payroll tax withheld (FICA) or paid 
+  #                                    quarterly (SECA) 
+  #----------------------------------------------------------------------------
+  
+  tax_units %>% 
+    mutate(
+      
+      # Calculate non-withheld share of AGI
+      inc_nonwithheld       = txbl_int + div + txbl_kg, 
+      iit_share_nonwithheld = pmin(1, pmax(0, inc_nonwithheld / agi)),
+      
+      # Calculate income tax liability net of general revenue transfers 
+      # (see function documentation) 
+      pmt_iit = liab_iit - ref_other, 
+      
+      # Allocate income tax payments 
+      pmt_iit_nonwithheld = pmt_iit * iit_share_nonwithheld,
+      pmt_iit_withheld    = pmt_iit - pmt_iit_nonwithheld,
+      
+      # Allocate refund payments. Can use withheld to model advance credits
+      # (a la 2021 CTC) in the future
+      pmt_refund_nonwithheld = refund,
+      pmt_refund_withheld    = 0,
+      
+      # Allocate payroll tax payments
+      pmt_pr_nonwithheld = 0, 
+      pmt_pr_withheld    = liab_pr
+      
+    ) %>% 
+    
+    # Remove intermediate calculation variables
+    select(-inc_nonwithheld, -iit_share_nonwithheld, -pmt_iit) %>%
+    return()
+}
 
 
 
