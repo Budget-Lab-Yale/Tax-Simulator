@@ -51,8 +51,7 @@ calc_receipts = function(totals) {
     filter(Year != min(Year)) %>%
     
     select(Year, PayrollTax, IndividualIncomeTax, RefundableCreditOutlays) %>%
-    write.csv(file = file.path(out_dir, paste0("receipts_",ID,".csv")), 
-              row.names = F)  
+    write_csv(file = file.path(out_dir, paste0("receipts_",ID,".csv")))  
 
 }
 
@@ -77,10 +76,10 @@ calc_rev_est = function() {
   #----------------------------------------------------------------------------
   
   # Read in base
-  base = read.csv(file.path("/gpfs/gibbs/project/sarin/shared/model_data/v", 
-                                   version, 
-                                   VINTAGE,
-                                   "baseline/receipts_baseline.csv"))
+  base = read_csv(file.path("/gpfs/gibbs/project/sarin/shared/model_data/v", 
+                            version, 
+                            VINTAGE,
+                            "baseline/receipts_baseline.csv"))
   
   base = base %>% 
     
@@ -99,12 +98,11 @@ calc_rev_est = function() {
                             version, 
                             VINTAGE, 
                             run)
-    sim = read.csv(paste0(path,"receipts_", run, ".csv"))
+    sim = read_csv(paste0(path,"receipts_", run, ".csv"))
     
-    write.csv(
-      calc_rev_delta(base, sim),
-      paste0(path,"revenue_estimates",run,".csv"),
-      row.names = F
+    write_csv(
+      x    = calc_rev_delta(base, sim),
+      file = paste0(path,"revenue_estimates", run,".csv")
     )
   }
 }
@@ -186,7 +184,7 @@ calc_stacked = function() {
   
   # Loop through scenarios including baseline (makes it tidier)
   for (run in scenarios) {
-    sim = read.csv(file.path(
+    sim = read_csv(file.path(
       "/gpfs/gibbs/project/sarin/shared/model_data/v", 
       version, 
       VINTAGE, 
@@ -225,7 +223,7 @@ calc_stacked = function() {
   unlink("revenue_estimates_base.csv")
   
   # Don't know what path to send this down
-  write.csv(stack, "stacked_revenue_estimates.csv", row.names = F)
+  write_csv(stack, "stacked_revenue_estimates.csv")
 }
 
 
