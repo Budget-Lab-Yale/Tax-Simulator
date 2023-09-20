@@ -8,10 +8,14 @@ calc_receipts = function(totals) {
   # 
   # Parameters:
   #   - totals (df) :  a dataframe containing columns for calendar year totals of
-  #       - withheld_pr        : Payroll taxes withheld
-  #       - withheld_iit       : Individual income taxes withheld
-  #       - nonwithheld_iit    : Individual income taxes paid at time of filing
-  #       - nonwithheld_refund : Refunds issued
+  #        - pmt_iit_nonwithheld (dbl)    : income tax paid at time of filing
+  #        - pmt_iit_withheld (dbl)       : income tax withheld or paid quarterly
+  #        - pmt_refund_nonwithheld (dbl) : payments for refundable credits paid 
+  #                                         during filing season
+  #        - pmt_refund_withheld (dbl)    : advance credits paid throughout year
+  #        - pmt_pr_nonwithheld (dbl)     : payroll tax paid at time of filing
+  #        - pmt_pr_withheld (dbl)        : payroll tax withheld (FICA) or paid 
+  #                                         quarterly (SECA) 
   #
   # Returns:  void, writes a dataframe for the scenario containing values for:
   #   - Fiscal Year
@@ -24,13 +28,22 @@ calc_receipts = function(totals) {
   totals %>%
     mutate(
       
-      # 75% of current year + 25% of previous year
-      PayrollTax = (.75 * withheld_pr) + (.25 * lag(withheld_pr)),
-      IndividualIncomeTax = (.75 * withheld_iit) + (.25 * lag(withheld_iit)) + nonwithheld_iit,
+      # FY receipts: nonwithheld tax plus 75% of current CY withheld tax plus 
+      # 25% of previous CY withheld 
+      RefundableCreditOutlays = 0.75 * pmt_iit_withheld + 
+                                0.25 * lag(pmt_iit_withheld) + 
+                                pmt_refund_nonwithheld,
       
-      #Simple rename
-      RefundableCreditOutlays = nonwithheld_refund
+      IndividualIncomeTax = 0.75 * pmt_iit_withheld + 
+                            0.25 * lag(pmt_iit_withheld) + 
+                            pmt_iit_nonwithheld,
+      
+      PayrollTax = 0.75 * pmt_pr_withheld + 
+                   0.25 * lag(pmt_pr_withheld) + 
+                   pmt_pr_nonwithheld
+    
     ) %>%
+    
     #Drop incomplete year
     filter(Year != min(Year)) %>%
     
