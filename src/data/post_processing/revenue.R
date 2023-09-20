@@ -178,14 +178,14 @@ calc_stacked = function() {
   
   
   # Initialize output
-  stack <- data.frame(matrix(ncol=4, nrow=1))
+  stack <- data.frame(matrix(ncol = 4, nrow = 1))
   colnames(stack) = c("Scenario", "Year", "Series", "receipts")
   
   # Collect scenario names
   scenarios <- runscript$id
   
   # Loop through scenarios including baseline (makes it tidier)
-  for(run in scenarios) {
+  for (run in scenarios) {
     sim = read.csv(file.path(
       "/gpfs/gibbs/project/sarin/shared/model_data/v", 
       version, 
