@@ -8,12 +8,14 @@ calc_receipts = function(totals) {
   # Calculates a scenario's receipts 
   # 
   # Parameters:
-  #   - totals (df) :  a dataframe containing columns for calendar year totals of
+  #   - totals (df) : dataframe containing columns for calendar year totals of
   #        - pmt_iit_nonwithheld (dbl)    : income tax paid at time of filing
-  #        - pmt_iit_withheld (dbl)       : income tax withheld or paid quarterly
-  #        - pmt_refund_nonwithheld (dbl) : payments for refundable credits paid 
-  #                                         during filing season
-  #        - pmt_refund_withheld (dbl)    : advance credits paid throughout year
+  #        - pmt_iit_withheld (dbl)       : income tax withheld or paid 
+  #                                         quarterly
+  #        - pmt_refund_nonwithheld (dbl) : payments for refundable credits 
+  #                                         paid during filing season
+  #        - pmt_refund_withheld (dbl)    : advance credits paid throughout 
+  #                                         year
   #        - pmt_pr_nonwithheld (dbl)     : payroll tax paid at time of filing
   #        - pmt_pr_withheld (dbl)        : payroll tax withheld (FICA) or paid 
   #                                         quarterly (SECA) 
@@ -59,11 +61,14 @@ calc_receipts = function(totals) {
 calc_rev_est = function() {
   
   #----------------------------------------------------------------------------
-  # Calculates all scenario revenue estimate deltas when compared to the baseline
+  # Calculates all scenario revenue estimate deltas when compared to the 
+  # baseline.
   # 
-  # Parameters: Void, reads in receipts from all scenarios including the baseline
+  # Parameters: Void; reads in receipts from all scenarios including the 
+  #             baseline.
   #
-  # Returns: Void, writes dataframes containing, for each scenario, fiscal year deltas for
+  # Returns: Void, writes dataframes containing, for each scenario, fiscal year 
+  # deltas for:
   #   - Total revenue
   #   - Payroll Tax
   #   - Individual Income Tax
@@ -109,11 +114,12 @@ calc_rev_est = function() {
 calc_rev_delta = function(base, sim) {
   
   #----------------------------------------------------------------------------
-  # Calculates a single scenario's revenue estimate delta when compared to the baseline
+  # Calculates a single scenario's revenue estimate delta when compared to the 
+  # baseline.
   # 
   # Parameters: 
-  #   - base    (df) : dataframe containing baseline receipts
-  #   - sim     (df) : dataframe containing one scenario's receipts
+  #   - base (df) : dataframe containing baseline receipts
+  #   - sim  (df) : dataframe containing one scenario's receipts
   #
   # Returns: dataframe containing, for each fiscal year, deltas for
   #   - Total revenue
@@ -155,12 +161,14 @@ calc_rev_delta = function(base, sim) {
 calc_stacked = function() {
   
   #----------------------------------------------------------------------------
-  # Calculates stacked revenue deltas. Usable if scenarios build off of one another
+  # Calculates stacked revenue deltas. Usable if scenarios build off of one 
+  # another.
   # 
-  # Parameters: Void, reads in receipts from all scenarios including the baseline
+  # Parameters: Void, reads in receipts from all scenarios including the 
+  # baseline.
   #
   # Returns: Void, writes dataframe with fiscal year columns stacking 
-  #          scenario revenue deltas for
+  #          scenario revenue deltas for:
   #   - Total revenue
   #   - Payroll Tax
   #   - Individual Income Tax
