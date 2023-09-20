@@ -3,6 +3,7 @@
 #-----------------------------------------------------------------------
 
 calc_receipts = function(totals) {
+  
   #----------------------------------------------------------------------------
   # Calculates a scenario's receipts 
   # 
@@ -57,6 +58,7 @@ calc_receipts = function(totals) {
 
 
 calc_rev_est = function() {
+  
   #----------------------------------------------------------------------------
   # Calculates all scenario revenue estimate deltas when compared to the baseline
   # 
@@ -69,7 +71,6 @@ calc_rev_est = function() {
   #   - Refundable Credit Outlays
   #   
   #----------------------------------------------------------------------------
-  
   
   #read in base
   base = read.csv(file.path("/gpfs/gibbs/project/sarin/shared/model_data/v", 
@@ -107,6 +108,7 @@ calc_rev_est = function() {
 
 
 calc_rev_delta = function(base, sim) {
+  
   #----------------------------------------------------------------------------
   # Calculates a single scenario's revenue estimate delta when compared to the baseline
   # 
@@ -151,6 +153,7 @@ calc_rev_delta = function(base, sim) {
 
 
 calc_stacked = function() {
+  
   #----------------------------------------------------------------------------
   # Calculates stacked revenue deltas. Usable if scenarios build off of one another
   # 
