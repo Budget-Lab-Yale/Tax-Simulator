@@ -33,8 +33,8 @@ calc_receipts = function(totals) {
       
       # FY receipts: nonwithheld tax plus 75% of current CY withheld tax plus 
       # 25% of previous CY withheld 
-      RefundableCreditOutlays = 0.75 * pmt_iit_withheld + 
-                                0.25 * lag(pmt_iit_withheld) + 
+      RefundableCreditOutlays = 0.75 * pmt_refund_withheld + 
+                                0.25 * lag(pmt_refund_withheld) + 
                                 pmt_refund_nonwithheld,
       
       IndividualIncomeTax = 0.75 * pmt_iit_withheld + 
