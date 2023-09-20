@@ -82,7 +82,7 @@ calc_rev_est = function() {
                                    VINTAGE,
                                    "baseline/receipts_baseline.csv"))
   
-  base <- base %>% 
+  base = base %>% 
     
     # Create and rename variables with b for baseline
     mutate(total_b = PayrollTax + IndividualIncomeTax - RefundableCreditOutlays) %>%
@@ -92,9 +92,9 @@ calc_rev_est = function() {
       RefundableCreditOutlays_b = RefundableCreditOutlays
     )
   
-  scenarios <- runscript$id
+  scenarios = runscript$id
   
-  for(run in scenarios) {
+  for (run in scenarios) {
     path = file.path("/gpfs/gibbs/project/sarin/shared/model_data/v", 
                             version, 
                             VINTAGE, 
@@ -130,7 +130,7 @@ calc_rev_delta = function(base, sim) {
   #----------------------------------------------------------------------------
   
   # Sim total
-  sim <- sim %>% 
+  sim = sim %>% 
     
     # Create and rename variables with s for simulation
     mutate(total_s = PayrollTax + IndividualIncomeTax - RefundableCreditOutlays) %>%
@@ -141,7 +141,7 @@ calc_rev_delta = function(base, sim) {
     )
   
   # Merge, variables have the same name so are split x/y
-  base <- left_join(base, sim, by = "Year")
+  base = left_join(base, sim, by = "Year")
 
   # Mutate deltas
   base %>%
@@ -178,11 +178,11 @@ calc_stacked = function() {
   
   
   # Initialize output
-  stack <- data.frame(matrix(ncol = 4, nrow = 1))
+  stack = data.frame(matrix(ncol = 4, nrow = 1))
   colnames(stack) = c("Scenario", "Year", "Series", "receipts")
   
   # Collect scenario names
-  scenarios <- runscript$id
+  scenarios = runscript$id
   
   # Loop through scenarios including baseline (makes it tidier)
   for (run in scenarios) {
@@ -195,7 +195,7 @@ calc_stacked = function() {
     )
     
     # Organize into year -> revenue format
-    sim <- sim %>%
+    sim = sim %>%
       pivot_longer(
         cols = !Year,
         names_to = "Series",
@@ -206,10 +206,10 @@ calc_stacked = function() {
   }
   
   # Drop initial row used to merge tidily, rename scenario column
-  stack <- stack[-1,]
+  stack = stack[-1,]
   
   
-  stack <- stack %>%
+  stack = stack %>%
     group_by(Year, Series) %>%
     mutate(delta = receipts - lag(receipts)) %>%
     select(Year, Scenario, Series, delta) %>%
