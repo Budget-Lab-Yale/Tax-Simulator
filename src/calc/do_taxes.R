@@ -194,18 +194,17 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # Education credits
     bind_cols(calc_ed_cred(.)) %>% 
     
-    # Savers credit
+    # Saver's credit
     bind_cols(calc_savers_cred(.)) %>% 
     
     # CTC
     bind_cols(calc_ctc(.)) %>% 
-      
+    
     # EITC
     bind_cols(calc_eitc(.)) %>% 
     
     # Rebates / UBI
-    bind_cols(calc_rebate(.)) %>% 
-    
+    bind_cols(calc_rebate(.)) %>%
     
     #----------------------
     # Liability allocation
