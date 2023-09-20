@@ -49,8 +49,7 @@ calc_receipts = function(totals) {
     filter(Year != min(Year)) %>%
     
     select(Year, PayrollTax, IndividualIncomeTax, RefundableCreditOutlays) %>%
-    write.csv(., 
-              file = file.path(out_dir, paste0("receipts_",ID,".csv")), 
+    write.csv(file = file.path(out_dir, paste0("receipts_",ID,".csv")), 
               row.names = F)  
 
 }
