@@ -26,28 +26,10 @@ do_scenario = function(id) {
   
   economy = list()
   
-  # Placeholder! Ugly! Reads historical inflation series for tax law generation
-  economy$indexes = read_csv(file.path(scenario_info$interface_paths$`Inflation-Data`, 'CPIAUCNS.csv')) %>% 
-    mutate(Year = year(DATE), Month = month(DATE)) %>% 
-    select(Year, Month, cpi = CPIAUCNS) %>% 
-    left_join(read_csv(file.path(scenario_info$interface_paths$`Inflation-Data`, 'SUUR0000SA0.csv')) %>% 
-                mutate(Year = year(DATE), Month = month(DATE)) %>% 
-                select(Year, Month, chained_cpi = SUUR0000SA0), 
-              by = c('Year', 'Month')) %>% 
-    mutate(FY = if_else(Month < 9, Year, Year + 1)) %>% 
-    filter(FY > min(FY) + 1) %>% 
-    select(-Year) %>% 
-    pivot_longer(cols      = -c(FY, Month), 
-                 names_to  = 'Series', 
-                 values_to = 'Value') %>% 
-    group_by(Series, Year = FY) %>% 
-    summarise(Value = mean(Value)) %>% 
-    bind_rows(read_csv(file.path(scenario_info$interface_paths$`Inflation-Data`, 'awi.csv'))) %>%
-    group_by(Series) %>% 
-    mutate(Growth = Value / lag(Value) - 1) %>% 
-    select(-Value) %>% 
-    filter(!is.na(Growth))
+  # Get macro data
+  indexes = generate_indexes(scenario_info)
   
+  # 
   
   #---------------
   # Build tax law
@@ -60,7 +42,7 @@ do_scenario = function(id) {
   # Build tax law
   tax_law = build_tax_law(config_path = file.path(scenario_info$config_path, 'tax_law'),
                           years       = scenario_info$years,
-                          indexes     = economy$indexes)
+                          indexes     = indexes)
   
   #----------------
   # Run simulation
@@ -101,11 +83,12 @@ run_sim = function(scenario_info, economy, tax_law, static_mtrs) {
   # TODO 
   # calc_receipts(economy$totals)
   
+  
 }
 
 
 
-run_one_year = function(scenario_info, static_mtrs) {
+run_one_year = function(year, scenario_info, static_mtrs) {
   
   #----------------------------------------------------------------------------
   # Runs a single year of tax simulation. TODO
@@ -116,11 +99,19 @@ run_one_year = function(scenario_info, static_mtrs) {
   # Returns: TODO
   #----------------------------------------------------------------------------
   
+  # Load tax unit data
+  # tax_units = read_puf(scenario_info, year)
 
   # Do behavioral feedback TODO
+  # economy$tax_units %<>% 
+  #   do_behavioral_feedback(scenario_info) 
+  #     (which itself calls apply_elasticities())
   
   # Do taxes TODO
+  # economy$tax_units %<>%
+  #   do_taxes()
   
   # Get totals TODO
-  
+  # economy$totals %<>% 
+  #  update_totals()
 } 
