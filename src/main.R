@@ -28,10 +28,10 @@ counterfactual_ids = globals$runtime_args %>%
 #---------------
 
 # Run baseline
-baseline_mtrs = run_scenario('baseline')
+baseline_mtrs = do_scenario('baseline')
 
 # Run counterfactuals 
-walk(.f = run_scenario, 
+walk(.f = do_scenario, 
      .x = counterfactual_ids, 
      baseline_mtrs = baseline_mtrs)
 
