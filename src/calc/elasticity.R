@@ -1,55 +1,54 @@
-calc_mtr_elastic = function(df, var) {
+apply_mtr_elasticity = function(df, name, vars) {
   
   #----------------------------------------------------------------------------
-  # Adjusts a variable based on its elasticity with respect to the Marginal 
-  # Tax Rate (MTR)
+  # Adjusts a category of variable based on their elasticity with respect to the 
+  # Marginal Tax Rate (MTR)
   # 
   # Parameters:
-  #   - var (str)   : Name of the variable to be adjusted
-  #   - df (df) : dataframe containing the following columns
-  #        - {var} (dbl)               : the variable to be adjusted
-  #        - mtr_{var} (dbl)           : counterfactual (static) MTR with  
-  #                                      respect to the variable
-  #        - mtr_{var}_baseline (dbl)  : baseline MTR with respect to
-  #                                      the variable
-  #        - e_{var} (dbl)             : the elasticity value
-  #        - e_{var}_type (str)        : the type of elasticity, must be either
-  #                                      'semi', 'arc', 'netoftax', 'taxprice'
-  # Returns:  the dataframe df with the addition of the following column
-  #        - new_{var} (dbl)           : the post-adjustment value of var
+  #   - name (str)  : Name of the 
+  #   - df (df)     : dataframe containing the following columns
+  #        - {name} (dbl)               : the variable to be adjusted
+  #        - mtr_{name} (dbl)           : counterfactual (static) MTR with  
+  #                                       respect to the variable
+  #        - mtr_{name}_baseline (dbl)  : baseline MTR with respect to
+  #                                       the variable
+  #        - e_{name} (dbl)             : the elasticity value
+  #        - e_{name}_type (str)        : the type of elasticity, must be either
+  #                                       'semi', 'arc', 'netoftax', 'taxprice'
+  #   - vars (str)  : 
+  #
+  # Returns:  the following columns
+  #        - ID (dbl)         : Identification number
+  #        - new_{vars} (dbl) : the post-adjustment values of vars
   #----------------------------------------------------------------------------
   
   
   df %>%
-    mutate("factor_{var}" := case_when(
-      !!sym(paste0("e_", var, "_type")) == "semi"     ~ exp((!!sym(paste0("mtr_", var)) - 
-                                  !!sym(paste0("mtr_", var, "_baseline"))) *
-                              !!sym(paste0("e_", var))),
+    # Rename variables to legibility and ease of use
+    rename(
+      el = !!sym(paste0("e_", name)),
+      e_type = !!sym(paste0("e_", name, "_type")),
+      mtr = !!sym(paste0("mtr_", name)),
+      mtr_baseline = !!sym(paste0("mtr_", name, "_baseline"))
+    ) %>%
+    # Calculate elasticity factor based on type
+    mutate(factor_v = case_when(
+      e_type == "semi"     ~ exp((mtr - mtr_baseline) * el) - 1,
       
-      !!sym(paste0("e_", var, "_type")) == "arc"      ~ (!!sym(paste0("e_", var)) * 
-                                                           ( !!sym(paste0("mtr_", var)) / 
-                              ((!!sym(paste0("mtr_", var)) + 
-                                  !!sym(paste0("mtr_", var, "_baseline"))) / 2)
-                            - 1)),
+      e_type == "arc"      ~ (el * (mtr / ((mtr + mtr_baseline) / 2) - 1)),
       
-      !!sym(paste0("e_", var, "_type")) == "netoftax" ~ (!!sym(paste0("e_", var)) * (
-                              (1 - !!sym(paste0("mtr_", var))) / 
-                                (1 - !!sym(paste0("mtr_", var, "_baseline")))
-                            - 1)),
+      e_type == "netoftax" ~ (el * ((1 - mtr) / (1 - mtr_baseline) - 1)),
       
-      !!sym(paste0("e_", var, "_type")) == "taxprice" ~ (!!sym(paste0("e_", var)) * 
-                              ((1 + !!sym(paste0("mtr_", var))) / 
-                                 (1 + !!sym(paste0("mtr_", var, "_baseline")))
-                            - 1)),
+      e_type == "taxprice" ~ (el * ((1 + mtr) / (1 + mtr_baseline) - 1)),
       
-      # Can drop if we want to turn Tax Price into the TRUE
-      TRUE               ~ 0 
+      TRUE                 ~ NA 
       ),
-      "new_{var}" := !!sym(paste0("factor_", var)) * !!sym(var) 
+    # Apply elasticity factor to columns of concern
+      across(vars, ~ .x * (factor_v + 1))
         ) %>%
-    select(!!sym(paste0("new_", var))) %>%
+    # Rename for later use and return
+    rename_with(~ paste0("new_", .x, recycle0 = T), vars) %>%
+    select(ID, starts_with("new_")) %>%
     return()
 }
-
-
 
