@@ -316,7 +316,7 @@ calc_mtrs = function(tax_units, liab_baseline, name, vars) {
   #   - tax_units (df)        : tibble of tax units, exogenous variables only
   #   - liab_baseline (dbl[]) : vector of net income tax liability plus
   #                             payroll tax liability
-  #   - alias (str)           : name used to represent variables we're  
+  #   - name (str)            : name used to represent variables we're  
   #                             incrementing (e.g. "dividends" or "kg")
   #   - vars (str[])          : vector of names of variables to increment
   #
@@ -338,7 +338,7 @@ calc_mtrs = function(tax_units, liab_baseline, name, vars) {
     
     # Calculate MTR and return
     mutate(!!mtr_name := liab_pr + liab_iit_net - liab_baseline) %>% 
-    select(all_of(mtr_name)) %>% 
+    select(id, all_of(mtr_name)) %>% 
     return()
 }
 

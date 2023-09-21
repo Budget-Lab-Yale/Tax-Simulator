@@ -4,7 +4,7 @@
 
 
 
-do_scenario = function(id) {
+do_scenario = function(id, baseline_mtrs) {
   
   #----------------------------------------------------------------------------
   # Executes full simulation for a given scenario. TODO
@@ -15,33 +15,22 @@ do_scenario = function(id) {
   # Returns: TODO
   #----------------------------------------------------------------------------
   
-
   # Get scenario info
   scenario_info = get_scenario_info(globals, id)
   
   
-  #--------------------
-  # Load economic data
-  #--------------------
-  
+  #-----------------
+  # Initialize data
+  #-----------------
   
   # Get macro data
   indexes = generate_indexes(scenario_info)
-  
-  # 
-  
-  #---------------
-  # Build tax law
-  #---------------
-  
-  # Load tax law functions
-  source('./src/misc/utils.R')
-  source('./src/data/tax_law/tax_law.R')
   
   # Build tax law
   tax_law = build_tax_law(config_path = file.path(scenario_info$config_path, 'tax_law'),
                           years       = scenario_info$years,
                           indexes     = indexes)
+  
   
   #----------------
   # Run simulation
@@ -51,21 +40,26 @@ do_scenario = function(id) {
   static_mtrs = run_sim(scenario_info = scenario_info,
                         economy       = economy, 
                         tax_law       = tax_law, 
+                        baseline_mtrs = NULL, 
                         static_mtrs   = NULL)
   
   # Run simulation with behavioral feedback 
   run_sim(scenario_info = scenario_info,
           economy       = economy, 
           tax_law       = tax_law, 
+          baseline_mtrs = baseline_mtrs, 
           static_mtrs   = static_mtrs)
   
-  return(NULL)
+  # Return MTRs if running baseline
+  if (id == 'baseline') {
+    return(static_mtrs)
+  }
   
 }
 
 
 
-run_sim = function(scenario_info, economy, tax_law, static_mtrs) {
+run_sim = function(scenario_info, economy, tax_law, baseline_mtrs, static_mtrs) {
   
   #----------------------------------------------------------------------------
   # Runs simulation instance for a given scenario, either static or 
@@ -77,17 +71,27 @@ run_sim = function(scenario_info, economy, tax_law, static_mtrs) {
   # Returns: TODO
   #----------------------------------------------------------------------------
   
-  # TODO walk(scenario_info$years, run_one_year)
+  # Run simulation for all years
+  output = scenario_info$years %>% 
+    map(.f            = run_one_year,
+        scenario_info = scenario_info, 
+        baseline_mtrs = baseline_mtrs, 
+        static_mtrs   = static_mtrs)
   
-  # TODO 
-  # calc_receipts(economy$totals)
+  # Calculate and write receipts
+  output$totals %>% 
+    bind_rows() %>% 
+    calc_receipts() 
   
-  
+  # Return MTRs
+  output$mtrs %>% 
+    bind_rows() %>% 
+    return()
 }
 
 
 
-run_one_year = function(year, scenario_info, static_mtrs) {
+run_one_year = function(year, scenario_info, baseline_mtrs, static_mtrs) {
   
   #----------------------------------------------------------------------------
   # Runs a single year of tax simulation. TODO
@@ -99,45 +103,66 @@ run_one_year = function(year, scenario_info, static_mtrs) {
   #----------------------------------------------------------------------------
   
   # Load tax unit data
-  # tax_units = read_puf(scenario_info, year)
+  tax_units = read_puf(scenario_info, year)
 
+  
   #---------------------------
-  # Model behavioral feedback TODO
+  # Model behavioral feedback
   #---------------------------
   
-  # tax_units %<>% 
-  #   do_behavioral_feedback(scenario_info, static_mtrs) 
-  #     (which itself calls apply_elasticities())
+  # Only simulate if we have the requisite information
+  run_behavioral_feedback = !is.null(baseline_mtrs) & !is.null(static_mtrs) 
+  if (run_behavioral_feedback) {
+    
+    # Calculate new values for specified variables
+    updated_vars = tax_units %>% 
+      left_join(baseline_mtrs, by = c('id', 'year')) %>%
+      left_join(static_mtrs,   by = c('id', 'year')) %>% 
+      do_behavioral_feedback(scenario_info$mtr_vars)
+    
+    # Update variables
+    tax_units %<>% 
+      select(-all_of(names(scenario_info$mtr_vars))) %>% 
+      bind_cols(updated_vars)
+  }
+  
   
   #----------
   # Do taxes
   #----------
   
   # Calculate taxes
-  tax_units %<>%
-    do_taxes(vars_1040    = vars_1040, 
+  tax_units %<>% 
+    do_taxes(vars_1040    = vars_1040,
              vars_payroll = vars_payroll)
   
-  # Calculate marginal tax rates TODO make prettier
-  tax_units %<>% 
-    bind_cols(
-      pmap(
-        .f = calc_mtrs, 
-        .l = list(alias = names(scenario_info$mtr_names), 
-                  vars  = scenario_info$mtr_vars),
-        tax_units = tax_units %>% 
-                      select(-all_of(c(vars_1040, vars_payroll))),
-        liab_baseline = tax_units$liab_pr + tax_units$liab_iit_net
-      )
-    )
-  
-  # TODO store MTRs somehow
+  # Calculate marginal tax rates
+  mtrs = tax_units %>% 
+    select(-all_of(c(vars_1040, vars_payroll))) %>%
+    pmap(
+      .f = calc_mtrs, 
+      .l = list(alias = names(scenario_info$mtr_vars), 
+                vars  = scenario_info$mtr_vars),
+      tax_units     = (.),
+      liab_baseline = tax_units$liab_pr + tax_units$liab_iit_net
+    ) %>% 
+    bind_cols() %>% 
+    mutate(year = year) %>% 
+    relocate(year)
+    
   
   #-----------------
   # Post-processing
   #-----------------
   
-  # Get totals TODO
-  # totals %<>% 
-  #  update_totals()
+  # Write microdata
+  tax_units %>%  
+    left_join(mtrs, by = 'id')
+  
+  # Get totals from microdata
+  totals = -1 # TODO
+  
+  # Return required data
+  return(list(mtrs   = mtrs, 
+              totals = totals))
 } 
