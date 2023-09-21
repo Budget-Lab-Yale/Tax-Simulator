@@ -3,7 +3,7 @@
 #----------------------------------------------------------------
 
 
-do_taxes = function(tax_units) { 
+do_taxes = function(tax_units, vars_1040, vars_payroll) { 
 
   #----------------------------------------------------------------------------
   # Calculates payroll and individual income taxes for all tax units. Form-
@@ -13,14 +13,16 @@ do_taxes = function(tax_units) {
   # a deduction is available both above the line and on Schedule A.
   # 
   # Parameters:
-  #   - tax_units (df) : tibble of tax units
-  #
+  #   - tax_units (df)       : tibble of tax units, exogenous variables only
+  #   - vars_1040 (str[])    : vector of (calculated) names of 1040 variables  
+  #                            to return
+  #   - vars_payroll (str[]) : vector of (calculated) names of payroll tax  
+  #                            variables to return
+  # 
   # Returns: tibble of tax units with new columns for calculated tax variables
   #          (df).  
   #----------------------------------------------------------------------------
       
-  # Set 1040 return variables
-  vars_1040 = c('') # TODO during reporting
   
   # Derive useful policy-independent variables
   tax_units %<>% 
@@ -33,7 +35,7 @@ do_taxes = function(tax_units) {
     
   # Do payroll taxes
   tax_units %<>%
-    bind_cols(do_payroll_taxes(.)) 
+    bind_cols(do_payroll_taxes(., vars_payroll)) 
     
   
   #-------------------------
@@ -74,7 +76,7 @@ do_taxes = function(tax_units) {
   # Standard case: just calculate the 1040 once  
   } else {
     tax_units %<>% 
-      bind_cols(do_1040(., return_vars))
+      bind_cols(do_1040(., vars_1040))
   }
   
   
@@ -89,20 +91,23 @@ do_taxes = function(tax_units) {
 
 
 
-do_payroll_taxes = function(tax_units) {
+do_payroll_taxes = function(tax_units, return_vars) {
   
   #----------------------------------------------------------------------------
   # Calculates payroll taxes for all tax units. Currently just a wrapper for 
   # calc_pr(), but written this way for consistency with do_1040().
   # 
   # Parameters:
-  #   - tax_units (df) : tibble of tax units
+  #   - tax_units (df)      : tibble of tax units
+  #   - return_vars (str[]) : vector of (calculated) names of variables to 
+  #                           return
   #
-  # Returns: tibble of tax units with return variables from calc_pr().
+  # Returns: tibble of tax units with selected calculate variables to return.
   #----------------------------------------------------------------------------
   
   tax_units %>% 
     calc_pr() %>%
+    select(all_of(return_vars)) %>% 
     return()
 }
 
@@ -116,7 +121,7 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
   # Parameters:
   #   - tax_units (df)      : tibble of tax units
   #   - return_vars (str[]) : vector of (calculated) names of variables to 
-  #                           return  
+  #                           return
   #   - force_char (bool)   : whether the calculator forces filers to report 
   #                           their charitable contribution in a specific,
   #                           mutally exclusive place on the 1040
@@ -296,4 +301,44 @@ remit_taxes = function(tax_units) {
 }
 
 
+
+calc_mtrs = function(tax_units, liab_baseline, name, vars) {
+  
+  #----------------------------------------------------------------------------
+  # Calculates next-dollar MTR with respect to given variable, as represented 
+  # by a vector of variables. Allows for several variables to be incremented 
+  # because some variables on the PUF aggregate to other variables. For 
+  # example, the PUF includes "div" (dividends), of which "qual_div" is a
+  # a part. So if we wanted to calculate the MTR with respect to "qual_div",
+  # we also have to increment "div".
+  # 
+  # Parameters:
+  #   - tax_units (df)        : tibble of tax units, exogenous variables only
+  #   - liab_baseline (dbl[]) : vector of net income tax liability plus
+  #                             payroll tax liability
+  #   - alias (str)           : name used to represent variables we're  
+  #                             incrementing (e.g. "dividends" or "kg")
+  #   - vars (str[])          : vector of names of variables to increment
+  #
+  # Returns: TODO
+  #----------------------------------------------------------------------------
+  
+  # Set output variable name
+  mtr_name = paste0('mtr_', name)
+  
+  
+  tax_units %>% 
+    
+    # Increment variable values
+    mutate(across(.cols = all_of(vars),
+                  .fns  = ~ . + 1)) %>%
+    
+    # Re-calculate taxes
+    do_taxes(return_vars = c('liab_pr', 'liab_iit_net')) %>% 
+    
+    # Calculate MTR and return
+    mutate(!!mtr_name := liab_pr + liab_iit_net - liab_baseline) %>% 
+    select(all_of(mtr_name)) %>% 
+    return()
+}
 

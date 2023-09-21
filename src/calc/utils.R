@@ -69,7 +69,6 @@ parse_calc_fn_input = function(tax_unit, req_vars, fill_missings = F) {
   } 
   
   # Check that required variable names are supplied
-  # TODO gotta be a cleaner vectorized way to do this
   missing = c()
   given_vars = names(tax_unit) 
   for (var in req_vars) {
@@ -318,6 +317,8 @@ get_n_cols = function(df, prefix) {
     length() %>% 
     return()
 }
+
+
 
 
 

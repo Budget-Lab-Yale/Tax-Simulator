@@ -20,11 +20,10 @@ do_scenario = function(id) {
   scenario_info = get_scenario_info(globals, id)
   
   
-  #---------------
-  # Build economy
-  #---------------
+  #--------------------
+  # Load economic data
+  #--------------------
   
-  economy = list()
   
   # Get macro data
   indexes = generate_indexes(scenario_info)
@@ -102,16 +101,43 @@ run_one_year = function(year, scenario_info, static_mtrs) {
   # Load tax unit data
   # tax_units = read_puf(scenario_info, year)
 
-  # Do behavioral feedback TODO
-  # economy$tax_units %<>% 
-  #   do_behavioral_feedback(scenario_info) 
+  #---------------------------
+  # Model behavioral feedback TODO
+  #---------------------------
+  
+  # tax_units %<>% 
+  #   do_behavioral_feedback(scenario_info, static_mtrs) 
   #     (which itself calls apply_elasticities())
   
-  # Do taxes TODO
-  # economy$tax_units %<>%
-  #   do_taxes()
+  #----------
+  # Do taxes
+  #----------
+  
+  # Calculate taxes
+  tax_units %<>%
+    do_taxes(vars_1040    = vars_1040, 
+             vars_payroll = vars_payroll)
+  
+  # Calculate marginal tax rates TODO make prettier
+  tax_units %<>% 
+    bind_cols(
+      pmap(
+        .f = calc_mtrs, 
+        .l = list(alias = names(scenario_info$mtr_names), 
+                  vars  = scenario_info$mtr_vars),
+        tax_units = tax_units %>% 
+                      select(-all_of(c(vars_1040, vars_payroll))),
+        liab_baseline = tax_units$liab_pr + tax_units$liab_iit_net
+      )
+    )
+  
+  # TODO store MTRs somehow
+  
+  #-----------------
+  # Post-processing
+  #-----------------
   
   # Get totals TODO
-  # economy$totals %<>% 
+  # totals %<>% 
   #  update_totals()
 } 
