@@ -35,7 +35,7 @@ calc_amt = function(tax_unit, fill_missings = F) {
     'amt_other_adj',  # (dbl)  other adjustments to AMT income
     'amt_ftc',        # (dbl)  foreign tax credit for AMT purposes
     'txbl_inc',       # (dbl)  taxable income
-    'qual_div',       # (dbl)  qualified dividends
+    'div_qual',       # (dbl)  qualified dividend income
     'kg_pref',        # (dbl)  preferred-rate capital gains ("net capital gain" in the internal revenue code)  
     'kg_1250',        # (dbl)  section 1250 unrecaptured gain
     'kg_collect',     # (dbl)  collectibles gain

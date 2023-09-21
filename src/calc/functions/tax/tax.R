@@ -34,7 +34,7 @@ calc_tax = function(tax_unit, fill_missings = F) {
     
     # Tax unit attributes
     'txbl_inc',    # (dbl) taxable income
-    'qual_div',    # (dbl) qualified dividends
+    'div_qual',    # (dbl) qualified dividends
     'kg_pref',     # (dbl) preferred-rate capital gains ("net capital gain" in the internal revenue code)  
     'kg_1250',     # (dbl) section 1250 unrecaptured gain
     'kg_collect',  # (dbl) collectibles gain

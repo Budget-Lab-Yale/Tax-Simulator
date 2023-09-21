@@ -32,16 +32,16 @@ do_taxes = function(tax_units, vars_1040, vars_payroll) {
   #---------------
   # Payroll taxes
   #---------------
-    
+  
   # Do payroll taxes
   tax_units %<>%
     bind_cols(do_payroll_taxes(., vars_payroll)) 
-    
+  
   
   #-------------------------
   # Individual income taxes
   #-------------------------
-
+  
   # Check whether individual income taxes need to be calculated more than once.
   # If both an above-the-line and an itemized charitable deduction are available,
   # the taxpayer chooses between the two by calculating their taxes twice
@@ -71,9 +71,9 @@ do_taxes = function(tax_units, vars_1040, vars_payroll) {
     tax_units %<>%
       bind_cols(opt) %>%
       left_join(bind_rows(above, item), by = c('ID', 'char_ded_type'))
-  
     
-  # Standard case: just calculate the 1040 once  
+    
+    # Standard case: just calculate the 1040 once  
   } else {
     tax_units %<>% 
       bind_cols(do_1040(., vars_1040))
@@ -146,11 +146,11 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
                   .names = '{col}_')) %>%  
     
     #-----------------------
-    # Adjusted gross income
-    #-----------------------
-    
-    # Net capital gain includable in AGI
-    bind_cols(calc_kg(.)) %>% 
+  # Adjusted gross income
+  #-----------------------
+  
+  # Net capital gain includable in AGI
+  bind_cols(calc_kg(.)) %>% 
     
     # AGI, including taxable OASI benefits
     mutate(across(.cols = c(char_cash, char_noncash), 
@@ -161,11 +161,11 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     
     
     #----------------
-    # Taxable income 
-    #----------------
-    
-    # Standard deduction
-    bind_cols(calc_std_ded(.)) %>% 
+  # Taxable income 
+  #----------------
+  
+  # Standard deduction
+  bind_cols(calc_std_ded(.)) %>% 
     
     # Itemized deductions
     mutate(across(.cols = c(char_cash, char_noncash), 
@@ -185,22 +185,22 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     
     
     #--------------------------
-    # Liability before credits
-    #--------------------------
+  # Liability before credits
+  #--------------------------
   
-    # Liability
-    bind_cols(calc_tax(.)) %>%
+  # Liability
+  bind_cols(calc_tax(.)) %>%
     
     # Alternative minimum tax
     bind_cols(calc_amt(.)) %>% 
     
     
     #---------
-    # Credits
-    #---------
-    
-    # CDCTC
-    bind_cols(calc_cdctc(.)) %>% 
+  # Credits
+  #---------
+  
+  # CDCTC
+  bind_cols(calc_cdctc(.)) %>% 
     
     # Education credits
     bind_cols(calc_ed_cred(.)) %>% 
@@ -219,11 +219,11 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     
     
     #----------------------
-    # Liability allocation
-    #----------------------
-    
-    # NIIT
-    bind_cols(calc_niit(.)) %>% 
+  # Liability allocation
+  #----------------------
+  
+  # NIIT
+  bind_cols(calc_niit(.)) %>% 
     
     # Liability
     bind_cols(calc_liab(.)) %>% 
@@ -231,7 +231,7 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # Select variables and return
     select(all_of(return_vars)) %>%
     return()
-
+  
 } 
 
 

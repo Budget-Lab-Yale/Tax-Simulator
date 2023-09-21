@@ -84,7 +84,7 @@ taxsim_crosswalk = function(tax_units) {
       ssemp  = se2,
       
       # Capital income
-      dividends = qual_div,
+      dividends = div_qual,
       stcg      = kg_st, 
       ltcg      = lg_lt, 
       
@@ -115,7 +115,7 @@ taxsim_crosswalk = function(tax_units) {
       state = 'No state',
       
       # Taxable interest and ordinary dividends 
-      intrec = txbl_int + div - qual_div,
+      intrec = txbl_int + div_ord,
       
       # Taxable retirement income distributions
       pensions = txbl_ira_dist + txbl_pens_dist,

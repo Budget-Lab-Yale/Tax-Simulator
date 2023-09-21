@@ -23,6 +23,8 @@ do_scenario = function(id, baseline_mtrs) {
   # Initialize data
   #-----------------
   
+  # TODO other macro data
+  
   # Get macro data
   indexes = generate_indexes(scenario_info)
   
@@ -105,6 +107,9 @@ run_one_year = function(year, scenario_info, baseline_mtrs, static_mtrs) {
   # Load tax unit data
   tax_units = read_puf(scenario_info, year)
 
+  # Adjust for economic differences from baseline
+  
+  
   
   #---------------------------
   # Model behavioral feedback
@@ -123,7 +128,7 @@ run_one_year = function(year, scenario_info, baseline_mtrs, static_mtrs) {
     # Update variables
     tax_units %<>% 
       select(-all_of(names(scenario_info$mtr_vars))) %>% 
-      bind_cols(updated_vars)
+      left_join(updated_vars, by = 'id')
   }
   
   
@@ -157,7 +162,8 @@ run_one_year = function(year, scenario_info, baseline_mtrs, static_mtrs) {
   
   # Write microdata
   tax_units %>%  
-    left_join(mtrs, by = 'id')
+    left_join(mtrs, by = 'id') %>% 
+    write_csv(...)
   
   # Get totals from microdata
   totals = -1 # TODO

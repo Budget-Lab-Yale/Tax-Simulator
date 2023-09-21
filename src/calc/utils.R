@@ -18,9 +18,6 @@ derive_vars = function(tax_unit) {
   tax_unit %>% 
     mutate(
       
-      # TODO kg variables
-      
-      
       # Schedule E related variables
       part       = part_active + part_passive - part_active_loss - 
                    part_passive_loss - part_179,
