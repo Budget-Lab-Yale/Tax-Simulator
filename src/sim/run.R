@@ -123,7 +123,7 @@ run_one_year = function(year, scenario_info, baseline_mtrs, static_mtrs) {
     updated_vars = tax_units %>% 
       left_join(baseline_mtrs, by = c('id', 'year')) %>%
       left_join(static_mtrs,   by = c('id', 'year')) %>% 
-      do_behavioral_feedback(scenario_info$mtr_vars)
+      do_behavioral_feedback(scenario_info)
     
     # Update variables
     tax_units %<>% 

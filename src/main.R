@@ -13,7 +13,7 @@ lapply(readLines('requirements.txt'), library, character.only = T)
 
 # Set global (scenario-independent) variables
 source('./src/misc/config_parser.R')
-runscript_path = './config/runscripts/baseline.csv' # TODO take as cmd line arg
+runscript_path = './config/runscripts/test.csv' # TODO take as cmd line arg
 globals = parse_globals(runscript_path)
 
 # Get list of non-baseline scenarios 

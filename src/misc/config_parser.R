@@ -83,8 +83,9 @@ get_scenario_info = function(globals, id) {
   #   - ID (int)               : scenario ID
   #   - config_path (str)      : path to scenario config folder
   #   - interface_paths (list) : list of scenario-specific interface paths
-  #   - years (int[])          : vector of years to run
-  #----------------------------------------------------------------------------
+  #   - years (int[])          : years to run
+  #   - mtr_vars (str[])       : variables to calculate MTRs for
+  #---------------------------------------------------------------------------
   
   # Scenario-specific configuration path
   subfolder = 'counterfactuals'
@@ -109,11 +110,16 @@ get_scenario_info = function(globals, id) {
   # Vector of years to run
   years = runtime_args$first_year:runtime_args$last_year
   
+  # Vector of names of variables for which to calculate marginal tax rates
+  mtr_vars = runtime_args$mtr_vars %>%
+    str_split_1(' ')
+  
   # Return as named list
   return(list(ID              = id,
               config_path     = config_path, 
               interface_paths = interface_paths,
-              years           = years))
+              years           = years, 
+              mtr_vars        = mtr_vars))
 }
 
 
