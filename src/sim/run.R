@@ -42,15 +42,19 @@ do_scenario = function(id, baseline_mtrs) {
   static_mtrs = run_sim(scenario_info = scenario_info,
                         economy       = economy, 
                         tax_law       = tax_law, 
+                        static        = T,
                         baseline_mtrs = NULL, 
                         static_mtrs   = NULL)
   
-  # Run simulation with behavioral feedback 
-  run_sim(scenario_info = scenario_info,
-          economy       = economy, 
-          tax_law       = tax_law, 
-          baseline_mtrs = baseline_mtrs, 
-          static_mtrs   = static_mtrs)
+  # Run simulation with behavioral feedback if modules are specified
+  if (length(scenario_info$behavior_modules) > 0) {
+    run_sim(scenario_info = scenario_info,
+            economy       = economy, 
+            tax_law       = tax_law, 
+            static        = F,
+            baseline_mtrs = baseline_mtrs, 
+            static_mtrs   = static_mtrs)
+  }
   
   # Return MTRs if running baseline
   if (id == 'baseline') {
@@ -61,7 +65,8 @@ do_scenario = function(id, baseline_mtrs) {
 
 
 
-run_sim = function(scenario_info, economy, tax_law, baseline_mtrs, static_mtrs) {
+run_sim = function(scenario_info, economy, tax_law, static, 
+                   baseline_mtrs, static_mtrs) {
   
   #----------------------------------------------------------------------------
   # Runs simulation instance for a given scenario, either static or 
@@ -77,6 +82,7 @@ run_sim = function(scenario_info, economy, tax_law, baseline_mtrs, static_mtrs) 
   output = scenario_info$years %>% 
     map(.f            = run_one_year,
         scenario_info = scenario_info, 
+        static        = static,
         baseline_mtrs = baseline_mtrs, 
         static_mtrs   = static_mtrs)
   
@@ -93,7 +99,7 @@ run_sim = function(scenario_info, economy, tax_law, baseline_mtrs, static_mtrs) 
 
 
 
-run_one_year = function(year, scenario_info, baseline_mtrs, static_mtrs) {
+run_one_year = function(year, scenario_info, static, baseline_mtrs, static_mtrs) {
   
   #----------------------------------------------------------------------------
   # Runs a single year of tax simulation. TODO
@@ -107,24 +113,28 @@ run_one_year = function(year, scenario_info, baseline_mtrs, static_mtrs) {
   # Load tax unit data
   tax_units = read_puf(scenario_info, year)
 
-  # Adjust for economic differences from baseline
-  
+  # Adjust for economic differences from economic baseline
+  # TODO
   
   
   #---------------------------
   # Model behavioral feedback
   #---------------------------
   
-  # Only simulate if we have the requisite information
-  run_behavioral_feedback = !is.null(baseline_mtrs) & !is.null(static_mtrs) 
-  if (run_behavioral_feedback) {
+  # Only simulate for non-static (and by extension, non-baseline) runs
+  if (!static) {
     
-    # Calculate new values for specified variables
     tax_units %<>% 
-      left_join(baseline_mtrs, by = c('id', 'year')) %>%
+      
+      # Join MTRs, which might be required in behavioral feedback modules
+      left_join(baseline_mtrs %>% 
+                  rename_with(.cols = -c(id, year), 
+                              .fns  = ~ paste0(., '_baseline')), 
+                by = c('id', 'year')) %>%
       left_join(static_mtrs,   by = c('id', 'year')) %>% 
+      
+      # Run behavioral feedback modules
       do_behavioral_feedback(scenario_info)
-
   }
   
   

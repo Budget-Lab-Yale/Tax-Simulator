@@ -31,12 +31,13 @@ do_behavioral_feedback = function(tax_units, scenario_info) {
        .l    = list(what = fns), 
        args  = list(tax_units), 
        envir = environment()) %>% 
+    bind_cols() %>%
     return()
 }
 
 
 
-apply_mtr_elasticity = function(tax_units, name, max_adj) {
+apply_mtr_elasticity = function(tax_units, var, max_adj) {
   
   #----------------------------------------------------------------------------
   # Adjusts a category of variable based on their elasticity with respect to 
@@ -57,12 +58,10 @@ apply_mtr_elasticity = function(tax_units, name, max_adj) {
   #                     be limited to that max value. Helps catch implausible 
   #                     responses stemming from edge cases in MTR changes.
   #
-  # Returns:  the following columns
-  #        - id (dbl)         : tax unit ID
-  #        - new_{vars} (dbl) : the post-adjustment values of vars
+  # Returns: tibble with one columns for the post-adjustment variable
   #----------------------------------------------------------------------------
   
-  tax_unit  %>%
+  tax_units %>%
     
     # Rename variables for legibility and ease of use
     rename(
@@ -84,7 +83,7 @@ apply_mtr_elasticity = function(tax_units, name, max_adj) {
       ),
       
       # Limit adjustment to maximum allowed
-      pct_chg = pmax(-max_adj, pmin(pct, max_adj)),
+      pct_chg = pmax(-max_adj, pmin(pct_chg, max_adj)),
     
       # Apply elasticity factor to columns of concern
       across(.cols = all_of(var),
@@ -92,7 +91,7 @@ apply_mtr_elasticity = function(tax_units, name, max_adj) {
     ) %>%
     
     # Select post-adjustment variable and return
-    select(ID, all_of(var)) %>%
+    select(all_of(var)) %>%
     return()
 }
 
