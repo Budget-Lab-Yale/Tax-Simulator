@@ -6,7 +6,7 @@
 
 
 
-parse_globals = function(runscript_path) {
+parse_globals = function(runscript_path, user_id, local) {
   
   #----------------------------------------------------------------------------
   # Parses data interface versioning requirements and runscript; generates 
@@ -15,24 +15,44 @@ parse_globals = function(runscript_path) {
   # 
   # Parameters:
   #   - runscript_path (str) : filepath for runscript CSV file 
+  #   - user_id (str)        : Yale NetID, used for local runs in which output
+  #                            is stored on user-specific scratch folder
+  #   - local (int)          : whether this is a local run (1) or a production
+  #                            run (0)  
   #
-  # Returns: list of 2: runtime_args (df), a tibble representation of the 
-  #          runscripts CSV; and interface_paths (df), a tibble with ID-
-  #          interface-filepath info in rows 
+  # Returns: list of 3: 
+  #   - runtime_args (df)    : tibble representation of the runscripts CSV
+  #   - interface_paths (df) : tibble with ID-interface-filepath info in rows 
+  #   - output_root (str)    : path where output data is written
   #----------------------------------------------------------------------------
   
-  # Set directory for shared data folder
-  data_root = '/gpfs/gibbs/project/sarin/shared/'
-  
   # Read and parse data dependency interface file paths
+  output_roots       = read_yaml('./output_roots.yaml')
   interface_versions = read_yaml('./interface_versions.yaml') %>% 
     map2(.x = ., 
          .y = names(.), 
-         .f = ~ file.path(data_root, .x$type, .y, paste0('v', .x$version))) %>% 
+         .f = ~ file.path(output_roots$production, 
+                          .x$type, 
+                          .y, 
+                          paste0('v', .x$version))) %>% 
     as_tibble() %>% 
     pivot_longer(cols      = everything(), 
                  names_to  = 'interface', 
-                 values_to = 'path')
+                 values_to = 'path') %>% 
+    filter(interface != 'Tax-Simulator')
+  
+  # Set model version and vintage
+  version = read_yaml('./interface_versions.yaml')$`Tax-Simulator`$version
+  st      = Sys.time()
+  vintage = paste0(year(st), month(st), day(st), hour(st))
+  
+  # Determine and create directory for model output
+  output_branch = file.path('Tax-Simulator', paste0('v', version), vintage)
+  output_root   = file.path(output_roots$production, 'model_data ', output_branch)
+  if (local == 1) {
+    output_root = file.path(output_roots$local, user_id, output_branch)
+  }
+  dir.create(output_root, recursive = T)
   
   # Read runtime arguments 
   runtime_args = read_csv(runscript_path)
@@ -64,7 +84,8 @@ parse_globals = function(runscript_path) {
   
   # Return runtime args and interface paths  
   return(list(runtime_args    = runtime_args,
-              interface_paths = interface_paths))
+              interface_paths = interface_paths, 
+              output_root     = output_root))
 }
 
 

@@ -11,10 +11,15 @@
 # Load required packages
 lapply(readLines('requirements.txt'), library, character.only = T)
 
+# cmd line args TODO
+runscript_path = './config/runscripts/test.csv' 
+user_id = 'jar335'
+local = 1
+
 # Set global (scenario-independent) variables
 source('./src/misc/config_parser.R')
-runscript_path = './config/runscripts/test.csv' # TODO take as cmd line arg
 globals = parse_globals(runscript_path)
+
 
 # Get list of non-baseline scenarios 
 counterfactual_ids = globals$runtime_args %>% 

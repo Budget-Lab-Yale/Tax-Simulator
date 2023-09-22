@@ -1,4 +1,17 @@
 ---
+#---------------
+# Model version
+#---------------
+
+Tax-Simulator:
+  type: model_data
+  version: 1
+
+
+#---------------------
+# Dependency versions
+#---------------------
+
 Inflation-Data: 
   type: raw_data
   version: 1
