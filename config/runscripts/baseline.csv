@@ -1,2 +1,2 @@
-ID,dep.Inflation-Data.vintage,dep.Inflation-Data.ID,first_year,last_year,mtr_vars,behavior
-baseline,2023082515,historical,2014,2024,wages qual_div,0
+ID,dep.Inflation-Data.vintage,dep.Inflation-Data.ID,first_year,last_year,mtr_vars
+baseline,2023082515,historical,2014,2024,wages qual_div

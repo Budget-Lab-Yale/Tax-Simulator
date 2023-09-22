@@ -3,6 +3,37 @@
 #-----------------
 
 
+do_behavioral_feedback = function(tax_units, scenario_info) {
+  
+  #----------------------------------------------------------------------------
+  # TODO
+  # 
+  # Parameters: TODO
+  #
+  # Returns: TODO
+  #----------------------------------------------------------------------------
+  
+  # Get directory where behavioral feedback modules are located
+  root = file.path('./config/scenarios/counterfactuals/', 
+                   scenario_info$ID, 
+                  'behavior')  
+  
+  # Load modules for this scenario
+  modules = list.files(root)
+  walk(.x    = modules, 
+       .f    = load_behavior_module, 
+       id    = scenario_info$ID, 
+       envir = environment())
+  
+  # Apply behavioral feedback functions
+  fns = paste0('adjust_', str_sub(modules, end = -3))
+  pmap(.f    = do.call,
+       .l    = list(what = fns), 
+       args  = list(tax_units), 
+       envir = environment()) %>% 
+    return()
+}
+
 
 
 apply_mtr_elasticity = function(tax_units, name, max_adj) {
@@ -65,3 +96,28 @@ apply_mtr_elasticity = function(tax_units, name, max_adj) {
     return()
 }
 
+
+
+load_behavior_module = function(id, name, envir) { 
+  
+  #----------------------------------------------------------------------------
+  # Executes a given behavioral feedback module script for a given scenario,
+  # defining an "adjust_" function in a given environment.
+  # 
+  # Parameters: 
+  #   - id (str)    : scenario ID
+  #   - name (str)  : module name (e.g. "kg.R" containing "adjust_kg()")
+  #   - envir (env) : environment in which to execute the module code
+  #
+  # Returns: void.
+  #----------------------------------------------------------------------------
+
+  # Get directory where behavioral feedback modules are located
+  path = file.path('./config/scenarios/counterfactuals/', 
+                   scenario_info$ID, 
+                   'behavior', 
+                   name)
+  
+  # Execute function definition
+  sys.source(path, envir)
+}

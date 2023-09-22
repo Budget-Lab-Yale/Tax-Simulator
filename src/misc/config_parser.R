@@ -80,11 +80,12 @@ get_scenario_info = function(globals, id) {
   #   - id (int)       : scenario ID 
   #
   # Returns: list of 3: 
-  #   - ID (int)               : scenario ID
-  #   - config_path (str)      : path to scenario config folder
-  #   - interface_paths (list) : list of scenario-specific interface paths
-  #   - years (int[])          : years to run
-  #   - mtr_vars (str[])       : variables to calculate MTRs for
+  #   - ID (int)                 : scenario ID
+  #   - config_path (str)        : path to scenario config folder
+  #   - interface_paths (list)   : list of scenario-specific interface paths
+  #   - years (int[])            : years to run
+  #   - mtr_vars (str[])         : variables to calculate MTRs for
+  #   - behavior_modules (str[]) : names of behavioral feedback modules to run
   #---------------------------------------------------------------------------
   
   # Scenario-specific configuration path
@@ -107,19 +108,29 @@ get_scenario_info = function(globals, id) {
     filter(ID == id) %>% 
     as.list()
   
-  # Vector of years to run
+  # Years to run
   years = runtime_args$first_year:runtime_args$last_year
   
-  # Vector of names of variables for which to calculate marginal tax rates
+  # Names of variables for which to calculate marginal tax rates
   mtr_vars = runtime_args$mtr_vars %>%
     str_split_1(' ')
   
+  # Behavioral feedback function names
+  behavior_fns = NULL
+  if (id != 'baseline') {
+    behavior_modules = './config/scenarios/counterfactuals/' %>% 
+      file.path(id, 'behavior') %>% 
+      list.files() %>% 
+      str_sub(end = -3)
+  }
+  
   # Return as named list
-  return(list(ID              = id,
-              config_path     = config_path, 
-              interface_paths = interface_paths,
-              years           = years, 
-              mtr_vars        = mtr_vars))
+  return(list(ID               = id,
+              config_path      = config_path, 
+              interface_paths  = interface_paths,
+              years            = years, 
+              mtr_vars         = mtr_vars, 
+              behavior_modules = behavior_modules))
 }
 
 
