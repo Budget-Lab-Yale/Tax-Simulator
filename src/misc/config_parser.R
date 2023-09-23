@@ -107,7 +107,9 @@ get_scenario_info = function(globals, id) {
   #   - years (int[])            : years to run
   #   - mtr_vars (str[])         : variables to calculate MTRs for
   #   - behavior_modules (str[]) : names of behavioral feedback modules to run
-  #---------------------------------------------------------------------------
+  #   - sample_ids (int[])       : vector of tax unit IDs comprising the
+  #                                sample population (all IDs for 100%)
+  #----------------------------------------------------------------------------
   
   # Scenario-specific configuration path
   subfolder = 'counterfactuals'
@@ -145,13 +147,20 @@ get_scenario_info = function(globals, id) {
       str_sub(end = -3)
   }
   
+  # Tax unit ID in sample
+  set.seed(76)
+  sample_ids = tibble(id = 1:100) %>% # TODO read PUF and sample
+    sample_frac(size = runtime_args$pct_sample) %>% 
+    get_vector('id')
+    
   # Return as named list
   return(list(ID               = id,
               config_path      = config_path, 
               interface_paths  = interface_paths,
               years            = years, 
               mtr_vars         = mtr_vars, 
-              behavior_modules = behavior_modules))
+              behavior_modules = behavior_modules, 
+              sample_ids       = sample_ids))
 }
 
 

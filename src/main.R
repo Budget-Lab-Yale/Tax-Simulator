@@ -18,14 +18,12 @@ local = 1
 
 # Set global (scenario-independent) variables
 source('./src/misc/config_parser.R')
-globals = parse_globals(runscript_path)
-
+globals = parse_globals(runscript_path, user_id, local)
 
 # Get list of non-baseline scenarios 
 counterfactual_ids = globals$runtime_args %>% 
   filter(ID != 'baseline') %>% 
-  select(ID) %>% 
-  unlist()
+  get_vector('ID')
 
 
 #---------------
