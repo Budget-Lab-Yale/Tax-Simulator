@@ -17,6 +17,7 @@ user_id = 'jar335'
 local = 1
 
 # Set global (scenario-independent) variables
+source('./src/misc/utils.R')
 source('./src/misc/config_parser.R')
 globals = parse_globals(runscript_path, user_id, local)
 

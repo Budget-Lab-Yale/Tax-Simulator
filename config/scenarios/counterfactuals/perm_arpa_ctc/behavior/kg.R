@@ -1,11 +1,17 @@
-adjust_kg = function(tax_units) { 
+adjust_kg = function(tax_units, ...) { 
   
   #----------------------------------------------------------------------------
-  # TODO
+  # Adjusts capital gains at the intensive margin using an elasticity of 
+  # -0.5, converted to log-lin form after evaluation at the current-law 
+  # rate of 0.238.  
   # 
-  # Parameters: TODO
+  # Parameters: 
+  #   - tax_units (df)     : tibble of tax units with calculated variables
+  #   - baseline_mtrs (df) : year-id indexed tibble of MTRs under the baseline
+  #   - static_mtrs (df)   : year-id indexed tibble of MTRs under the static
+  #                          counterfactual scenario
   #
-  # Returns: TODO
+  # Returns: tibble of post-adjustment kg values. 
   #----------------------------------------------------------------------------
   
   # Set elasticity
@@ -14,6 +20,6 @@ adjust_kg = function(tax_units) {
   tax_units %>% 
     mutate(e_kg      = e, 
            e_kg_type = 'semi') %>% 
-    apply_mtr_elasticity('kg', 1) %>% 
+    apply_mtr_elasticity('kg', baseline_mtrs, static_mtrs, 1) %>% 
     return()
 }

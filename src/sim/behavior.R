@@ -3,7 +3,8 @@
 #-----------------
 
 
-do_behavioral_feedback = function(tax_units, scenario_info) {
+do_behavioral_feedback = function(tax_units, scenario_info, baseline_mtrs, 
+                                  static_mtrs) {
   
   #----------------------------------------------------------------------------
   # TODO
@@ -29,7 +30,7 @@ do_behavioral_feedback = function(tax_units, scenario_info) {
   fns = paste0('adjust_', str_sub(modules, end = -3))
   pmap(.f    = do.call,
        .l    = list(what = fns), 
-       args  = list(tax_units), 
+       args  = list(tax_units, baseline_mtrs, static_mtrs), 
        envir = environment()) %>% 
     bind_cols() %>%
     return()
@@ -37,7 +38,7 @@ do_behavioral_feedback = function(tax_units, scenario_info) {
 
 
 
-apply_mtr_elasticity = function(tax_units, var, max_adj) {
+apply_mtr_elasticity = function(tax_units, var, baseline_mtrs, static_mtrs, max_adj) {
   
   #----------------------------------------------------------------------------
   # Adjusts a category of variable based on their elasticity with respect to 
@@ -45,24 +46,33 @@ apply_mtr_elasticity = function(tax_units, var, max_adj) {
   # 
   # Parameters:
   #   - tax_units (df) : tibble of tax units containing the following columns
-  #      - mtr_{var} (dbl)           : counterfactual (static) MTR w/r/t the 
-  #                                    variable
-  #      - mtr_{var}_baseline (dbl)  : baseline MTR w/r/t the variable
-  #      - e_{var} (dbl)             : the elasticity value
-  #      - e_{var}_type (str)        : the type of elasticity, must be one of
-  #                                    ['semi', 'arc', 'netoftax', 'taxprice']
-  #   - var (str)     : name (i.e. alias) of the variable we're adjusting
-  #   - max_adj (dbl) : absolute value of maximum adjustment as measured by 
-  #                     percent change. For example, a value of 1 means any 
-  #                     adjustment greater than 100% or less than -100% will
-  #                     be limited to that max value. Helps catch implausible 
-  #                     responses stemming from edge cases in MTR changes.
+  #      - e_{var} (dbl)      : the elasticity value
+  #      - e_{var}_type (str) : the type of elasticity, must be one of
+  #                             ['semi', 'arc', 'netoftax', 'taxprice']
+  #   - var (str)          : name (i.e. alias) of the variable we're adjusting
+  #   - baseline_mtrs (df) : tibble of MTRs under the baseline, including the 
+  #                          column mtr_{var}
+  #   - static_mtrs (df)   : tibble of MTRs under the static counterfactual 
+  #                          scenario, including the column mtr_{var}
+  #   - max_adj (dbl)      : absolute value of maximum adjustment as measured  
+  #                          by percent change. For example, a value of 1 means 
+  #                          any adjustment greater than 100% or less than 
+  #                          -100% will be limited to that max value. Helps 
+  #                          catch implausible responses stemming from edge 
+  #                          cases in MTR changes.
   #
-  # Returns: tibble with one columns for the post-adjustment variable
+  # Returns: tibble with one column for the post-adjustment variable
   #----------------------------------------------------------------------------
   
   tax_units %>%
-    
+  
+    # Join MTRs
+    left_join(baseline_mtrs %>% 
+                 rename_with(.cols = -c(id, year), 
+                             .fn   = ~ paste0(., '_baseline')), 
+               by = c('id', 'year')) %>%
+    left_join(static_mtrs, by = c('id', 'year')) %>% 
+      
     # Rename variables for legibility and ease of use
     rename(
       e            = !!sym(paste0("e_", var)),
@@ -113,7 +123,7 @@ load_behavior_module = function(id, name, envir) {
 
   # Get directory where behavioral feedback modules are located
   path = file.path('./config/scenarios/counterfactuals/', 
-                   scenario_info$ID, 
+                   id, 
                    'behavior', 
                    name)
   

@@ -107,7 +107,11 @@ get_1040_totals = function(tax_units, year) {
     'ref_other', 
     'refund', 
     'liab_iit', 
-    'liab_iit_net'
+    'liab_iit_net', 
+    'pmt_iit_nonwithheld', 
+    'pmt_iit_withheld', 
+    'pmt_refund_nonwithheld', 
+    'pmt_refund_withheld'
   )
   
   
@@ -185,7 +189,9 @@ get_pr_totals = function(tax_units) {
     'liab_add_med', 
     'liab_pr_ee', 
     'liab_pr_er', 
-    'liab_pr'
+    'liab_pr', 
+    'pmt_pr_nonwithheld',
+    'pmt_pr_withheld'
   )
   
   

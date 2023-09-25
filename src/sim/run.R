@@ -86,9 +86,15 @@ run_sim = function(scenario_info, economy, tax_law, static,
         baseline_mtrs = baseline_mtrs, 
         static_mtrs   = static_mtrs)
   
+  # Write totals files
+  totals_pr   = bind_rows(output$pr)
+  totals_1040 = bind_rows(output$`1040`)
+  write_csv(...)
+  write_csv(...)
+    
   # Calculate and write receipts
-  output$totals %>% 
-    bind_rows() %>% 
+  totals_pr %>%  
+    left_join(totals_1040, by = 'year')
     calc_receipts() 
   
   # Return MTRs
@@ -123,18 +129,10 @@ run_one_year = function(year, scenario_info, static, baseline_mtrs, static_mtrs)
   
   # Only simulate for non-static (and by extension, non-baseline) runs
   if (!static) {
-    
     tax_units %<>% 
-      
-      # Join MTRs, which might be required in behavioral feedback modules
-      left_join(baseline_mtrs %>% 
-                  rename_with(.cols = -c(id, year), 
-                              .fns  = ~ paste0(., '_baseline')), 
-                by = c('id', 'year')) %>%
-      left_join(static_mtrs,   by = c('id', 'year')) %>% 
-      
-      # Run behavioral feedback modules
-      do_behavioral_feedback(scenario_info)
+      do_behavioral_feedback(scenario_info = scenario_info, 
+                             baseline_mtrs = baseline_mtrs, 
+                             static_mtrs   = static_mtrs)
   }
   
   
@@ -152,8 +150,8 @@ run_one_year = function(year, scenario_info, static, baseline_mtrs, static_mtrs)
     select(-all_of(c(vars_1040, vars_payroll))) %>%
     pmap(
       .f = calc_mtrs, 
-      .l = list(alias = names(scenario_info$mtr_vars), 
-                vars  = scenario_info$mtr_vars),
+      .l = list(name = names(scenario_info$mtr_vars), 
+                vars = scenario_info$mtr_vars),
       tax_units     = (.),
       liab_baseline = tax_units$liab_pr + tax_units$liab_iit_net
     ) %>% 
@@ -172,7 +170,8 @@ run_one_year = function(year, scenario_info, static, baseline_mtrs, static_mtrs)
     write_csv(...)
   
   # Get totals from microdata
-  totals = -1 # TODO
+  totals = list(pr     = get_pr_totals(tax_units), 
+                `1040` = get_1040_totals(tax_units))
   
   # Return required data
   return(list(mtrs   = mtrs, 
