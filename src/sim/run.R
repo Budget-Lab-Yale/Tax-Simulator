@@ -43,8 +43,7 @@ do_scenario = function(id, baseline_mtrs) {
   #----------------
   
   # Run static simulation
-  static_mtrs = run_sim(scenario_info = scenario_info,
-                        economy       = economy, 
+  static_mtrs = run_sim(scenario_info = scenario_info, 
                         tax_law       = tax_law, 
                         static        = T,
                         baseline_mtrs = NULL, 
@@ -53,7 +52,6 @@ do_scenario = function(id, baseline_mtrs) {
   # Run simulation with behavioral feedback if modules are specified
   if (length(scenario_info$behavior_modules) > 0) {
     run_sim(scenario_info = scenario_info,
-            economy       = economy, 
             tax_law       = tax_law, 
             static        = F,
             baseline_mtrs = baseline_mtrs, 
@@ -78,11 +76,16 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
   # Parameters:
   #   - scenario_info (list) : scenario info object; see get_scenario_info()
   #   - tax_law (df)         : tax law tibble; see build_tax_law()
-  #   - static 
-  #   - baseline_mtrs
-  #   - static_mtrs
+  #   - static (bool)        : whether to run the scenario in static mode
+  #   - baseline_mtrs        : tibble of baseline MTRs indexed by year/tax unit 
+  #                            ID; NULL if this scenario is the baseline or if 
+  #                            no MTR variables were specified 
+  #   - static_mtrs          : tibble of MTRs for the static counterfactual 
+  #                            scenario run, indexed by year/tax unit ID; NULL 
+  #                            if this run is in static mode or if no MTR 
+  #                            variables were specified 
   #
-  # Returns: TODO
+  # Returns: tibble of marginal tax rates (df).
   #----------------------------------------------------------------------------
   
   # Run simulation for all years
@@ -115,19 +118,35 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
 
 
 
-run_one_year = function(year, scenario_info, static, baseline_mtrs, static_mtrs) {
+run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
   
   #----------------------------------------------------------------------------
-  # Runs a single year of tax simulation. TODO
+  # Runs a single year of tax simulation. 
   # 
   # Parameters:
-  #   - TODO
+  #   - year (int)           : year to run
+  #   - scenario_info (list) : scenario info object; see get_scenario_info()
+  #   - tax_law (df)         : tax law tibble; see build_tax_law()
+  #   - static (bool)        : whether to run the scenario in static mode
+  #   - baseline_mtrs        : tibble of baseline MTRs indexed by year/tax unit 
+  #                            ID; NULL if this scenario is the baseline or if 
+  #                            no MTR variables were specified 
+  #   - static_mtrs          : tibble of MTRs for the static counterfactual 
+  #                            scenario run, indexed by year/tax unit ID; NULL 
+  #                            if this run is in static mode or if no MTR 
+  #                            variables were specified 
   #
-  # Returns: TODO
+  #
+  # Returns: list of:
+  #  - mtrs (df)     : tibble of marginal tax rates for this year
+  #  - totals (list) : list of tibbles for this year's tax aggregates (`pr` for
+  #                    payroll taxes, `1040` for individual income taxes)
   #----------------------------------------------------------------------------
   
-  # Load tax unit data
-  tax_units = read_puf(scenario_info, year)
+  # Load tax unit data and join tax law
+  tax_units = scenario_info %>%  
+    read_puf(year) %>% 
+    left_join(tax_law, by = c('year', 'filing_status'))
 
   # Adjust for economic differences from economic baseline
   # TODO
@@ -139,10 +158,18 @@ run_one_year = function(year, scenario_info, static, baseline_mtrs, static_mtrs)
   
   # Only simulate for non-static (and by extension, non-baseline) runs
   if (!static) {
-    tax_units %<>% 
+    
+    # Get updated variables after behavior feedback
+    updated_vars = tax_units %>%  
       do_behavioral_feedback(scenario_info = scenario_info, 
                              baseline_mtrs = baseline_mtrs, 
                              static_mtrs   = static_mtrs)
+    
+    # Update variable values in tax units tibble (updated_vars is guaranteed
+    # to align with tax_units records)
+    tax_units %<>% 
+      select(-all_of(colnames(updated_vars))) %>% 
+      bind_cols(updated_vars)
   }
   
   
