@@ -44,7 +44,10 @@ parse_globals = function(runscript_path, user_id, local) {
   # Set model version and vintage
   version = read_yaml('./interface_versions.yaml')$`Tax-Simulator`$version
   st      = Sys.time()
-  vintage = paste0(year(st), month(st), day(st), hour(st))
+  hour_   = hour(st) %>%
+              paste0('0', .) %>% 
+              str_sub(-2)
+  vintage = paste0(year(st), month(st), day(st), hour_)
   
   # Determine and create directory for model output
   output_branch = file.path('Tax-Simulator', paste0('v', version), vintage)
