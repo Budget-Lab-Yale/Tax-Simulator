@@ -1,85 +1,85 @@
-#-----------------------------------------------------------------------
-# Post-processing functions to generate distributional tables for a scenario run
-#-----------------------------------------------------------------------
+#----------------------------------------------------------------------------
+# distribution.R
+# 
+# Post-processing functions to generate distributional tables for a scenario
+#----------------------------------------------------------------------------
 
-calc_distro = function(sim, pcts) {
+
+
+calc_distribution = function(global_root, id, year, pcts) {
+  
   #----------------------------------------------------------------------------
-  # Produces a scenario's distributional table
+  # Calculates and writes a scenario's distributional table for a given year. 
   # 
   # Parameters:
-  #   - sim (df) :  a dataframe containing tax simulator's microdata output which must contain the following columns
-  #       - expanded_income        : Key income measurement
-  #       - liab_iit_net           : Individual Income Tax Liability
-  #       - liab_pr                : Payroll Tax Liability
-  #   - pcts (vec) : A vector of quantile thresholds used to split expanded_income into groups. Expressed in decimal form
+  #   - scenario_root (str) : vintage-level output folder 
+  #   - id (str)            : scenario ID 
+  #   - year (int)          : tax year for which to calculate distributional 
+  #                           metrics
+  #   - pcts (dbl[])        : A vector of percentiles used define income groups
   #
-  # Returns:  void, writes a dataframe for the scenario containing values, grouped by pcts, for:
-  #   - AverageTaxDelta (dbl) : The wighted average delta between baseline and scenario tax liability
-  #   - AverageTaxCut (dbl) : The weighted average tax cut for filers whose taxes were reduced
-  #   - AverageTaxRaise (dbl) : The weighted average tax raise for filers whose taxes were increased
-  #   - ShareWithCut (dbl) : The weighted percentage of filers whose taxes decreased (delta greater than -$5)
-  #   - ShareWithRaise (dbl) : The weighted percentage of filers whose taxes increased (delta greater than $5)
-  #   - PercentChangeInAfterTaxIncome (dbl) : Dollar weighted percentage change in filer's after tax income
-  #   - TotalTaxChangeSahre (dbl) : The percentage of the total tax change for 
-  #   
+  # Returns: void. Writes a dataframe for the scenario containing values, 
+  #          grouped by pcts, for: average tax change, share with tax cut, 
+  #          average tax cut, share with tax increase, average tax increase, 
+  #          percent change in after tax income, share of total tax change.
   #----------------------------------------------------------------------------
   
+  # Read microdata output
+  baseline = read_csv(file.path(global_root, 'baseline', 'detail', paste0(year, '.csv')))
+  scenario = read_csv(file.path(global_root, id, 'detail', paste0(year, '.csv')))
   
-  sim %<>% mutate(liab_sim = liab_iit_net + liab_pr)
-  
-  base <- read.csv(file.path("/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator",
-                             version,
-                             vintage,
-                            "baseline"))
-  
-  base %<>% mutate(liab_base = liab_iit_net + liab_pr)
-  
-  # Select and join only the variables we need
-  select(base, ID, liab_base, weight, expanded_income) %>% 
-    left_join(., select(sim, ID, liab_sim), 
-              by="ID") %>%
+  baseline %>% 
     
-    # Filter out dependent returns
-    filter(dep_status == 0) %>%
+    # Remove dependent returns
+    filter(dep_status == 0) %>% 
+    
+    # Pare down dataframe and join scenario liability 
+    mutate(liab_baseline = liab_iit_net + liab_pr) %>%
+    select(id, weight, expanded_income, liab_baseline) %>% 
+    left_join(sim %>% 
+                select(id, liab = liab_iit_net + liab_pr), 
+              by = 'id') %>%
+    
     mutate(
+      
       # Round deltas to the nearest $10 increment
-      delta = round(liab_sim - liab_base, -1),
+      delta = round(liab - liab_baseline, -1),
       
       # Binary dummies for if a tax unit received a meaningful raise or cut
-      cut = delta < -5,
-      raise = delta > 5,
+      cut   = delta <= -10,
+      raise = delta >= 10,
       
       # Create new person level weight for more representative income groups
-      perwt = weight * (1 + (filing_status == 2)) 
+      perwt = weight * (1 + (filing_status == 2))
+      
     ) %>%
     
-    # Bucket
+    # Assign income groups
     cut_var(pcts = pcts, 'expanded_income', 'perwt') %>%
     
-    group_by(base, group) %>%
+    # Calculate metrics by group
+    group_by(`Income group` = group) %>%
       summarise(
         group_delta = sum(delta * weight),
       
-        AverageTaxDelta = weighted.mean(delta, weight),
-        AverageTaxCut = weighted.mean(delta, (weight * cut)),
-        AverageTaxRaise = weighted.mean(delta, (weight * raise)),
+        `Average tax change`   = weighted.mean(delta, weight),
+        `Average tax cut`      = weighted.mean(delta, (weight * cut)),
+        `Average tax increase` = weighted.mean(delta, (weight * raise)),
       
-        ShareWithCut = sum(cut * weight) / sum(weight),
-        ShareWithRaise = sum(raise * weight) / sum(weight),
+        `Share with cut`   = sum(weight * cut)   / sum(weight),
+        `Share with raise` = sum(weight * raise) / sum(weight),
       
-        PercentChangeInAfterTaxIncome = sum((expanded_income - liab_sim) * weight) / sum((expanded_income - liab_base) * 100)  
+        `Percent change in after-tax income` = sum((expanded_income - liab) * weight) / sum((expanded_income - liab_baseline) * 100)  
       ) %>%
-      mutate(TotalTaxChangeShare = group_delta / sum(group_delta)) %>%
+      mutate(`Share of total tax change` = group_delta / sum(group_delta)) %>%
     
-      select(group, group_delta, 
-             AverageTaxDelta, AverageTaxCut, AverageTaxRaise, 
-             ShareWithCut, ShareWithRaise, 
-             PercentChangeInAfterTaxIncome, TotalTaxChangeShare) %>%
-    
-      write.csv(
-        .,
-        file.path(out_dir, paste0("distro_", ID, ".csv")),
-        row.names = F
-      )
+      # Clean and write to CSV
+      select(`Income group`, `Average tax change`, `Share with tax cut`, 
+             `Average tax cut`, `Share with tax increase`, `Average tax increase`,
+             `Percent change in after-tax income`, `Share of total tax change`) %>%
+      write_csv(file.path(global_root, 
+                          id, 
+                          'supplemental', 
+                          paste0('distribution_', year, '.csv')))
   
 }
