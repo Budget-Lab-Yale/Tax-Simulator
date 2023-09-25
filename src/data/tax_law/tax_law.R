@@ -6,7 +6,7 @@
 
 
 
-build_tax_law = function(config_path, years, indexes) {
+build_tax_law = function(scenario_info, indexes) {
   
   #----------------------------------------------------------------------------
   # Executes all tax law parsing functions, generating the final tax law
@@ -17,25 +17,25 @@ build_tax_law = function(config_path, years, indexes) {
   # are unnested wide. For example, "ord.rates1", "ord.rates2", etc. 
   # 
   # Parameters:
-  #   - config_path (str) : folder containing tax parameter YAML files
-  #   - years (int[])     : years for which to generate tax law parameters
-  #   - indexes (df)      : long-format dataframe containing growth rates of 
-  #                         index measures
+  #   - scenario_info (list) : scenario info object; see get_scenario_info() 
+  #                            in globals.R
+  #   - indexes (df)         : long-format dataframe containing growth rates 
+  #                            of index measures
   #
   # Returns: tibble wide in subparam, long in year and filing status (df).
   #----------------------------------------------------------------------------
   
   # Read baseline YAML files
-  load_tax_law_input('./config/scenarios/baseline/tax_law') %>% 
+  tax_law = load_tax_law_input('./config/scenarios/baseline/tax_law') %>% 
     
     # Overwrite baseline subparams with specified changes
     map2(.f = replace_by_name, 
-         .y = load_tax_law_input(config_path)) %>% 
+         .y = load_tax_law_input(file.path(scenario_info$config_path, 'tax_law'))) %>% 
   
     # Parse all parameters and concatenate
     map2(.f      = parse_param, 
          .y      = names(.), 
-         years   = years,
+         years   = scenario_info$years,
          indexes = indexes) %>% 
     bind_rows() %>% 
 
@@ -52,7 +52,11 @@ build_tax_law = function(config_path, years, indexes) {
              paste0(ifelse(scalar, '', element))) %>% 
     select(-contains('arameter'), -element, -scalar) %>% 
     pivot_wider(names_from  = name,
-                values_from = value) %>% 
+                values_from = value)
+
+  # Write tax law then return
+  tax_law %>% 
+    write_csv(file.path(scenario_info$output_path, 'supplemental', 'tax_law.csv')) %>% 
     return()
 }
 

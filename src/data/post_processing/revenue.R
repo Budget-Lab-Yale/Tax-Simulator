@@ -1,8 +1,12 @@
-#-----------------------------------------------------------------------
-# Post-processing functions to gather revenue estimates for fiscal years
-#-----------------------------------------------------------------------
+#-------------------------------------------------------------------------
+# revenue.R
+# 
+# Post-processing functions to produce revenue estimates for fiscal years
+#-------------------------------------------------------------------------
 
-calc_receipts = function(totals) {
+
+
+calc_receipts = function(totals, scenario_root) {
   
   #----------------------------------------------------------------------------
   # Calculates a scenario's receipts 
@@ -19,6 +23,7 @@ calc_receipts = function(totals) {
   #        - pmt_pr_nonwithheld (dbl)     : payroll tax paid at time of filing
   #        - pmt_pr_withheld (dbl)        : payroll tax withheld (FICA) or paid 
   #                                         quarterly (SECA) 
+  #   - scenario_root (str) : directory where scenario's data is written 
   #
   # Returns:  void, writes a dataframe for the scenario containing values for:
   #   - Fiscal Year
@@ -33,38 +38,41 @@ calc_receipts = function(totals) {
       
       # FY receipts: nonwithheld tax plus 75% of current CY withheld tax plus 
       # 25% of previous CY withheld 
-      RefundableCreditOutlays = 0.75 * pmt_refund_withheld + 
-                                0.25 * lag(pmt_refund_withheld) + 
-                                pmt_refund_nonwithheld,
+      outlays_tax_credits = 0.75 * pmt_refund_withheld + 
+                            0.25 * lag(pmt_refund_withheld) + 
+                            pmt_refund_nonwithheld,
       
-      IndividualIncomeTax = 0.75 * pmt_iit_withheld + 
+      revenues_income_tax = 0.75 * pmt_iit_withheld + 
                             0.25 * lag(pmt_iit_withheld) + 
                             pmt_iit_nonwithheld,
       
-      PayrollTax = 0.75 * pmt_pr_withheld + 
-                   0.25 * lag(pmt_pr_withheld) + 
-                   pmt_pr_nonwithheld
+      revenues_payroll_tax = 0.75 * pmt_pr_withheld + 
+                             0.25 * lag(pmt_pr_withheld) + 
+                             pmt_pr_nonwithheld
     
     ) %>%
     
     # Drop incomplete year
-    filter(Year != min(Year)) %>%
+    filter(year != min(year)) %>%
     
-    select(Year, PayrollTax, IndividualIncomeTax, RefundableCreditOutlays) %>%
-    write_csv(file = file.path(out_dir, paste0("receipts_",ID,".csv")))  
+    # Write CSV
+    select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits) %>%
+    write_csv(file.path(scenario_root, 'supplemental', 'receipts.csv'))
 
 }
 
 
 
-calc_rev_est = function() {
+calc_rev_est = function(counterfactual_ids, global_root) {
   
   #----------------------------------------------------------------------------
   # Calculates all scenario revenue estimate deltas when compared to the 
   # baseline.
   # 
-  # Parameters: Void; reads in receipts from all scenarios including the 
-  #             baseline.
+  # Parameters: 
+  #   - counterfactual_ids (str[]) : list of scenario names for counterfactual
+  #                                  scenarios
+  #   - global_root (str)          : version-level output root 
   #
   # Returns: Void, writes dataframes containing, for each scenario, fiscal year 
   # deltas for:
@@ -75,49 +83,46 @@ calc_rev_est = function() {
   #   
   #----------------------------------------------------------------------------
   
-  # Read in base
-  base = read_csv(file.path("/gpfs/gibbs/project/sarin/shared/model_data/v", 
-                            version, 
-                            VINTAGE,
-                            "baseline/receipts_baseline.csv"))
-  
-  base = base %>% 
+  # Read in baseline receipts
+  baseline = file.path(output_root, 'baseline', 'supplemental', 'receipts.csv') %>%
+    read_csv() %>%
     
     # Create and rename variables with b for baseline
-    mutate(total_b = PayrollTax + IndividualIncomeTax - RefundableCreditOutlays) %>%
-    rename(
-      PayrollTax_b              = PayrollTax,
-      IndividualIncomeTax_b     = IndividualIncomeTax,
-      RefundableCreditOutlays_b = RefundableCreditOutlays
-    )
+    mutate(total = revenues_payroll_tax + 
+                   revenues_income_tax - 
+                   outlays_tax_credits) %>%
+    rename_with(.cols = -year, 
+                .fn   = ~ paste0(., '_b')) 
   
-  scenarios = runscript$id
   
-  for (run in scenarios) {
-    path = file.path("/gpfs/gibbs/project/sarin/shared/model_data/v", 
-                            version, 
-                            VINTAGE, 
-                            run)
-    sim = read_csv(paste0(path,"receipts_", run, ".csv"))
+  for (scenario in counterfactual_ids) {
     
-    write_csv(
-      x    = calc_rev_delta(base, sim),
-      file = paste0(path,"revenue_estimates", run,".csv")
-    )
+    # Get scenario-specific supplemental filepath
+    scenario_path = file.path(global_root, scenario, 'supplemental')
+    file.path(scenario_path, 'receipts.csv') %>% 
+      
+      # Read receipts
+      read_csv() %>% 
+      
+      # Calculate difference from baseline 
+      calc_rev_delta(baseline) %>%
+      
+      # Write revenue estimates file
+      write_csv(file.path(scenario_path, 'revenue_estimates.csv'))
   }
 }
 
 
 
-calc_rev_delta = function(base, sim) {
+calc_rev_delta = function(sim, baseline) {
   
   #----------------------------------------------------------------------------
   # Calculates a single scenario's revenue estimate delta when compared to the 
   # baseline.
   # 
   # Parameters: 
-  #   - base (df) : dataframe containing baseline receipts
-  #   - sim  (df) : dataframe containing one scenario's receipts
+  #   - sim      (df) : tibble containing one scenario's receipts
+  #   - baseline (df) : tibble containing baseline receipts
   #
   # Returns: dataframe containing, for each fiscal year, deltas for
   #   - Total revenue
@@ -127,43 +132,40 @@ calc_rev_delta = function(base, sim) {
   #   
   #----------------------------------------------------------------------------
   
-  # Sim total
+  # Create and rename variables with s for simulation
   sim = sim %>% 
-    
-    # Create and rename variables with s for simulation
-    mutate(total_s = PayrollTax + IndividualIncomeTax - RefundableCreditOutlays) %>%
-    rename(
-      PayrollTax_s              = PayrollTax,
-      IndividualIncomeTax_s     = IndividualIncomeTax,
-      RefundableCreditOutlays_s = RefundableCreditOutlays
-    )
+    mutate(total = revenues_payroll_tax + 
+                   revenues_income_tax - 
+                   outlays_tax_credits) %>%
+    rename_with(.cols = -year, 
+                .fn   = ~ paste0(., '_s')) 
   
-  # Merge, variables have the same name so are split x/y
-  base = left_join(base, sim, by = "Year")
-
-  # Mutate deltas
-  base %>%
+  # Merge and calculate deltas
+  baseline %>%
+    left_join(sim, by = "year") %>% 
     mutate(
-      Total                   = total_s                   - total_b,
-      PayrollTax              = PayrollTax_s              - PayrollTax_b,
-      IndividualIncomeTax     = IndividualIncomeTax_s     - IndividualIncomeTax_b,
-      RefundableCreditOutlays = RefundableCreditOutlays_s - RefundableCreditOutlays_b
+      total                = total_s                - total_b,
+      revenues_payroll_tax = revenues_payroll_tax_s - revenues_payroll_tax_b,
+      revenues_income_tax  = revenues_income_tax_s  - revenues_income_tax_b,
+      outlays_tax_credits  = outlays_tax_credits_s  - outlays_tax_credits_b
     ) %>%
     
-    select(Year, Total, PayrollTax, IndividualIncomeTax, RefundableCreditOutlays) %>%
+    select(year, total, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits) %>%
     return()
 }
 
 
 
-calc_stacked = function() {
+calc_stacked = function(counterfactual_ids, global_root) {
   
   #----------------------------------------------------------------------------
   # Calculates stacked revenue deltas. Usable if scenarios build off of one 
   # another.
   # 
-  # Parameters: Void, reads in receipts from all scenarios including the 
-  # baseline.
+  # Parameters:
+  #   - counterfactual_ids (str[]) : list of scenario names for counterfactual
+  #                                  scenarios
+  #   - global_root (str)          : version-level output root 
   #
   # Returns: Void, writes dataframe with fiscal year columns stacking 
   #          scenario revenue deltas for:
@@ -175,55 +177,35 @@ calc_stacked = function() {
   #----------------------------------------------------------------------------
   
   
-  # Initialize output
-  stack = data.frame(matrix(ncol = 4, nrow = 1))
-  colnames(stack) = c("Scenario", "Year", "Series", "receipts")
-  
-  # Collect scenario names
-  scenarios = runscript$id
-  
-  # Loop through scenarios including baseline (makes it tidier)
-  for (run in scenarios) {
-    sim = read_csv(file.path(
-      "/gpfs/gibbs/project/sarin/shared/model_data/v", 
-      version, 
-      VINTAGE, 
-      run,
-      paste0("revenue_estimates_", run, ".csv"))
-    )
+  c('baseline', counterfactual_ids) %>% 
     
-    # Organize into year -> revenue format
-    sim = sim %>%
-      pivot_longer(
-        cols      = !Year,
-        names_to  = "Series",
-        values_to = "receipts"
-      ) %>%
-      mutate(Scenario = run)
+    # Read scenario receipts file and store 
+    map(.f = ~ file.path(global_root, scenario, 'supplemental', 'receipts.csv') %>% 
+                 read_csv() %>% 
+                 pivot_longer(cols      = -year, 
+                              names_to  = 'series', 
+                              values_to = 'receipts') %>%
+                 mutate(scenario = .x)) %>% 
     
-  }
-  
-  # Drop initial row used to merge tidily, rename scenario column
-  stack = stack[-1,]
-  
-  
-  stack = stack %>%
-    group_by(Year, Series) %>%
+    # Join into single dataframe and group by year-series so as to leave 
+    # scenarios ungrouped
+    bind_rows() %>% 
+    group_by(year, series) %>%
+    
+    # Calculate stacked difference
     mutate(delta = receipts - lag(receipts)) %>%
-    select(Year, Scenario, Series, delta) %>%
-    pivot_wider(
-      names_from  = Year,
-      values_from = delta
-    ) %>%
+    select(year, scenario, series, delta) %>%
+    pivot_wider(names_from  = year,
+                values_from = delta) %>%
     
     # Drop baseline full of zeros or NA
-    filter(Scenario != "baseline")
-  
-  # Unnecessary for analysis, but it made the loop tidier
-  unlink("revenue_estimates_base.csv")
-  
-  # Don't know what path to send this down
-  write_csv(stack, "stacked_revenue_estimates.csv")
+    filter(scenario != 'baseline') %>% 
+
+    # Write to supplemental folder for final scenario in stacking order 
+    write_csv(file.path(global_root, 
+                        counterfactual_ids[length(counterfactual_ids)],
+                        'supplemental',
+                        'stacked_revenue_estimates.csv'))
 }
 
 

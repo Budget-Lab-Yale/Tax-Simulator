@@ -36,7 +36,6 @@ generate_indexes = function(scenario_info) {
     select(-value) %>% 
     filter(!is.na(growth)) %>% 
     return()
-  
 }
 
 

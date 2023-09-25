@@ -103,6 +103,7 @@ get_scenario_info = function(globals, id) {
   # Returns: list of 3: 
   #   - ID (int)                 : scenario ID
   #   - config_path (str)        : path to scenario config folder
+  #   - output_path (str)        : path to root of output folder
   #   - interface_paths (list)   : list of scenario-specific interface paths
   #   - years (int[])            : years to run
   #   - mtr_vars (str[])         : variables to calculate MTRs for
@@ -117,6 +118,13 @@ get_scenario_info = function(globals, id) {
     subfolder = ''
   }
   config_path = file.path('./config/scenarios', subfolder, id)
+  
+  # Scenario-specific output path
+  output_root = file.path(globals$output_root, id)
+  dir.create(output_root,                            recursive = T)
+  dir.create(file.path(output_root, 'detail'),       recursive = T)
+  dir.create(file.path(output_root, 'totals'),       recursive = T)
+  dir.create(file.path(output_root, 'supplemental'), recursive = T)
   
   # List of interface paths, named by interface
   interface_paths = globals$interface_paths %>% 
@@ -156,6 +164,7 @@ get_scenario_info = function(globals, id) {
   # Return as named list
   return(list(ID               = id,
               config_path      = config_path, 
+              output_path      = output_root,
               interface_paths  = interface_paths,
               years            = years, 
               mtr_vars         = mtr_vars, 

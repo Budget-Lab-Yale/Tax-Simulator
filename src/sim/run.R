@@ -1,6 +1,8 @@
-#-----------
-# TODO
-#-----------
+#-----------------------------------------------
+# run.R
+#
+# Contains functions to execute full simulation
+#-----------------------------------------------
 
 
 
@@ -10,9 +12,13 @@ do_scenario = function(id, baseline_mtrs) {
   # Executes full simulation for a given scenario. TODO
   # 
   # Parameters:
-  #   - TODO
+  #   - id (str)           : scenario ID
+  #   - baseline_mtrs (df) : tibble of baseline MTRs indexed by year/tax unit 
+  #                          ID; NULL if this scenario is the baseline or if 
+  #                          no MTR variables were specified 
   #
-  # Returns: TODO
+  # Returns: tibble of baseline MTRs if this scenario is the baseline (df); 
+  #          NULL otherwise.
   #----------------------------------------------------------------------------
   
   # Get scenario info
@@ -28,10 +34,8 @@ do_scenario = function(id, baseline_mtrs) {
   # Get macro data
   indexes = generate_indexes(scenario_info)
   
-  # Build tax law
-  tax_law = build_tax_law(config_path = file.path(scenario_info$config_path, 'tax_law'),
-                          years       = scenario_info$years,
-                          indexes     = indexes)
+  # Build (and write) tax law
+  tax_law = build_tax_law(scenario_info, indexes)
   
   
   #----------------
@@ -65,15 +69,18 @@ do_scenario = function(id, baseline_mtrs) {
 
 
 
-run_sim = function(scenario_info, economy, tax_law, static, 
-                   baseline_mtrs, static_mtrs) {
+run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
   
   #----------------------------------------------------------------------------
   # Runs simulation instance for a given scenario, either static or 
   # conventional. TODO
   # 
   # Parameters:
-  #   - TODO
+  #   - scenario_info (list) : scenario info object; see get_scenario_info()
+  #   - tax_law (df)         : tax law tibble; see build_tax_law()
+  #   - static 
+  #   - baseline_mtrs
+  #   - static_mtrs
   #
   # Returns: TODO
   #----------------------------------------------------------------------------
@@ -87,15 +94,18 @@ run_sim = function(scenario_info, economy, tax_law, static,
         static_mtrs   = static_mtrs)
   
   # Write totals files
-  totals_pr   = bind_rows(output$pr)
-  totals_1040 = bind_rows(output$`1040`)
-  write_csv(...)
-  write_csv(...)
+  totals_pr = output$pr %>% 
+    bind_rows() %>% 
+    write_csv(file.path(scenario_info$output_path, 'totals', 'payroll.csv'))
+  
+  totals_1040 = output$`1040` %>% 
+    bind_rows() %>% 
+    write_csv(file.path(scenario_info$output_path, 'totals', '1040.csv'))
     
   # Calculate and write receipts
   totals_pr %>%  
     left_join(totals_1040, by = 'year')
-    calc_receipts() 
+    calc_receipts(scenario_info$output_path) 
   
   # Return MTRs
   output$mtrs %>% 
@@ -167,7 +177,7 @@ run_one_year = function(year, scenario_info, static, baseline_mtrs, static_mtrs)
   # Write microdata
   tax_units %>%  
     left_join(mtrs, by = 'id') %>% 
-    write_csv(...)
+    write_csv(file.path(scenario_info$output_path, 'detail', paste0(year, '.csv')))
   
   # Get totals from microdata
   totals = list(pr     = get_pr_totals(tax_units), 
