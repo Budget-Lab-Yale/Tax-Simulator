@@ -1,6 +1,8 @@
-#-----------
-# TODO
-#-----------
+#------------------------------------------------------------------
+# summary_stats.R
+# 
+# Contains functions to calculate various aggregates from microdata
+#-------------------------------------------------------------------
 
 
 get_1040_totals = function(tax_units, year) {
