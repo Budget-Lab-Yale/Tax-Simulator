@@ -25,8 +25,16 @@ calc_distribution = function(global_root, id, year, pcts) {
   #----------------------------------------------------------------------------
   
   # Read microdata output
-  baseline = read_csv(file.path(global_root, 'baseline', 'detail', paste0(year, '.csv')))
-  scenario = read_csv(file.path(global_root, id, 'detail', paste0(year, '.csv')))
+  baseline = read_csv(file.path(global_root, 
+                                'baseline',
+                                'static', 
+                                'detail', 
+                                paste0(year, '.csv')))
+  scenario = read_csv(file.path(global_root, 
+                                id, 
+                                'static',
+                                'detail', 
+                                paste0(year, '.csv')))
   
   baseline %>% 
     
@@ -78,7 +86,7 @@ calc_distribution = function(global_root, id, year, pcts) {
              `Average tax cut`, `Share with tax increase`, `Average tax increase`,
              `Percent change in after-tax income`, `Share of total tax change`) %>%
       write_csv(file.path(global_root, 
-                          id, 
+                          id,
                           'supplemental', 
                           paste0('distribution_', year, '.csv')))
   

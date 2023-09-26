@@ -43,6 +43,7 @@ get_vector = function(df, name) {
 }
 
 
+
 cut_var = function(df, pcts, var, weights, labels) {
   
   #----------------------------------------------------------------------------

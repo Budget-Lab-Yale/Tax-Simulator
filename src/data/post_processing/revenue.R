@@ -6,12 +6,14 @@
 
 
 
-calc_receipts = function(totals, scenario_root) {
+calc_receipts = function(scenario_root, static, totals) {
   
   #----------------------------------------------------------------------------
   # Calculates a scenario's receipts 
   # 
   # Parameters:
+  #   - scenario_root (str) : directory where scenario's data is written
+  #   - static (bool)       : whether scenario run is static
   #   - totals (df) : dataframe containing columns for calendar year totals of
   #        - pmt_iit_nonwithheld (dbl)    : income tax paid at time of filing
   #        - pmt_iit_withheld (dbl)       : income tax withheld or paid 
@@ -22,15 +24,13 @@ calc_receipts = function(totals, scenario_root) {
   #                                         year
   #        - pmt_pr_nonwithheld (dbl)     : payroll tax paid at time of filing
   #        - pmt_pr_withheld (dbl)        : payroll tax withheld (FICA) or paid 
-  #                                         quarterly (SECA) 
-  #   - scenario_root (str) : directory where scenario's data is written 
+  #                                         quarterly (SECA)  
   #
   # Returns:  void, writes a dataframe for the scenario containing values for:
   #   - Fiscal Year
   #   - Payroll Tax
   #   - Individual Income Tax
   #   - Refundable Credit Outlays
-  #   
   #----------------------------------------------------------------------------
   
   totals %>%
@@ -57,13 +57,16 @@ calc_receipts = function(totals, scenario_root) {
     
     # Write CSV
     select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits) %>%
-    write_csv(file.path(scenario_root, 'supplemental', 'receipts.csv'))
+    write_csv(file.path(scenario_root, 
+                        if_else(static, 'static', 'conventional'),
+                        'supplemental', 
+                        'receipts.csv'))
 
 }
 
 
 
-calc_rev_est = function(counterfactual_ids, global_root) {
+calc_rev_est = function(counterfactual_ids, global_root, static) {
   
   #----------------------------------------------------------------------------
   # Calculates all scenario revenue estimate deltas when compared to the 
@@ -73,6 +76,7 @@ calc_rev_est = function(counterfactual_ids, global_root) {
   #   - counterfactual_ids (str[]) : list of scenario names for counterfactual
   #                                  scenarios
   #   - global_root (str)          : version-level output root 
+  #   - static (bool)              : whether scenario run is static
   #
   # Returns: Void, writes dataframes containing, for each scenario, fiscal year 
   # deltas for:
@@ -80,11 +84,14 @@ calc_rev_est = function(counterfactual_ids, global_root) {
   #   - Payroll Tax
   #   - Individual Income Tax
   #   - Refundable Credit Outlays
-  #   
   #----------------------------------------------------------------------------
   
   # Read in baseline receipts
-  baseline = file.path(output_root, 'baseline', 'supplemental', 'receipts.csv') %>%
+  baseline = file.path(output_root, 
+                       'baseline', 
+                       'static', 
+                       'supplemental',
+                       'receipts.csv') %>%
     read_csv() %>%
     
     # Create and rename variables with b for baseline
@@ -98,10 +105,13 @@ calc_rev_est = function(counterfactual_ids, global_root) {
   for (scenario in counterfactual_ids) {
     
     # Get scenario-specific supplemental filepath
-    scenario_path = file.path(global_root, scenario, 'supplemental')
+    scenario_path = file.path(global_root, 
+                              scenario, 
+                              if_else(static, 'static', 'conventional'),
+                              'supplemental')
+    
+    # Read receipts
     file.path(scenario_path, 'receipts.csv') %>% 
-      
-      # Read receipts
       read_csv() %>% 
       
       # Calculate difference from baseline 
@@ -156,7 +166,7 @@ calc_rev_delta = function(sim, baseline) {
 
 
 
-calc_stacked = function(counterfactual_ids, global_root) {
+calc_stacked = function(counterfactual_ids, global_root, static) {
   
   #----------------------------------------------------------------------------
   # Calculates stacked revenue deltas. Usable if scenarios build off of one 
@@ -166,6 +176,7 @@ calc_stacked = function(counterfactual_ids, global_root) {
   #   - counterfactual_ids (str[]) : list of scenario names for counterfactual
   #                                  scenarios
   #   - global_root (str)          : version-level output root 
+  #   - static (bool)              : whether scenario run is stacked 
   #
   # Returns: Void, writes dataframe with fiscal year columns stacking 
   #          scenario revenue deltas for:
@@ -180,7 +191,11 @@ calc_stacked = function(counterfactual_ids, global_root) {
   c('baseline', counterfactual_ids) %>% 
     
     # Read scenario receipts file and store 
-    map(.f = ~ file.path(global_root, scenario, 'supplemental', 'receipts.csv') %>% 
+    map(.f = ~ file.path(global_root, 
+                         scenario, 
+                         if_else(static | .x == 'baseline', 'static', 'conventional'),
+                         'supplemental', 
+                         'receipts.csv') %>% 
                  read_csv() %>% 
                  pivot_longer(cols      = -year, 
                               names_to  = 'series', 
@@ -204,6 +219,7 @@ calc_stacked = function(counterfactual_ids, global_root) {
     # Write to supplemental folder for final scenario in stacking order 
     write_csv(file.path(global_root, 
                         counterfactual_ids[length(counterfactual_ids)],
+                        if_else(static, 'static', 'conventional'),
                         'supplemental',
                         'stacked_revenue_estimates.csv'))
 }

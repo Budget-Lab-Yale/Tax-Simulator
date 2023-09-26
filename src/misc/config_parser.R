@@ -122,12 +122,13 @@ get_scenario_info = function(globals, id) {
   }
   config_path = file.path('./config/scenarios', subfolder, id)
   
-  # Scenario-specific output path
+  # Scenario-specific output paths
   output_root = file.path(globals$output_root, id)
-  dir.create(output_root,                            recursive = T)
-  dir.create(file.path(output_root, 'detail'),       recursive = T)
-  dir.create(file.path(output_root, 'totals'),       recursive = T)
-  dir.create(file.path(output_root, 'supplemental'), recursive = T)
+  for (type in c('static', 'conventional')) {
+    dir.create(file.path(output_root, type, 'detail'),       recursive = T)
+    dir.create(file.path(output_root, type, 'totals'),       recursive = T)
+    dir.create(file.path(output_root, type, 'supplemental'), recursive = T)
+  }
   
   # List of interface paths, named by interface
   interface_paths = globals$interface_paths %>% 
