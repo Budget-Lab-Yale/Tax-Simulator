@@ -41,6 +41,7 @@ parse_globals = function(runscript_path, user_id, local) {
                  values_to = 'path') %>% 
     filter(interface != 'Tax-Simulator')
   
+  
   # Set model version and vintage
   version = read_yaml('./interface_versions.yaml')$`Tax-Simulator`$version
   st      = Sys.time()
@@ -57,11 +58,14 @@ parse_globals = function(runscript_path, user_id, local) {
   }
   dir.create(output_root, recursive = T)
   
+  
   # Read runtime arguments 
   runtime_args = read_csv(runscript_path)
   
-  # Create filepaths for data interfaces
-  interface_paths = runtime_args %>% 
+  
+  # Write dependencies CSV; this is a vintage-level file which lists all 
+  # other model vintages on which these Tax-Simmulator results are dependent
+  dependencies = runtime_args %>% 
     select(TaxSimulatorID = ID, starts_with('dep.')) %>% 
     mutate(across(.cols = everything(),
                   .fns  = as.character)) %>% 
@@ -70,20 +74,35 @@ parse_globals = function(runscript_path, user_id, local) {
                  names_sep    = '[.]', 
                  names_to     = c('interface', 'series')) %>% 
     pivot_wider(names_from  = series, 
-                values_from = value) %>%     
+                values_from = value) %>% 
+    left_join(read_yaml('./interface_versions.yaml') %>% 
+                map(~ .$version) %>% 
+                as_tibble() %>% 
+                pivot_longer(cols      = everything(), 
+                             names_to  = 'interface', 
+                             values_to = 'version'), 
+              by = 'interface') %>% 
+    rename(scenario = ID, ID = TaxSimulatorID) %>% 
+    relocate(version, .before = vintage) %>% 
+    write_csv(file.path(output_root, 'dependencies.csv'))
+  
+  
+  # Create filepaths for data interfaces
+  interface_paths = dependencies %>%     
     left_join(interface_versions, by = 'interface') %>% 
-    mutate(path = file.path(path, vintage, ID)) %>% 
-    select(-vintage, -ID, ID = TaxSimulatorID, interface, path)
+    mutate(path = file.path(path, vintage, scenario)) %>% 
+    select(ID, interface, path)
 
+  
   # Confirm that each path exists, throwing exception if not
   for (path in interface_paths$path) {
     if (!dir.exists(path)) {
-      shorter_path = str_remove(interface_paths$path, data_root)
-      msg = paste0("Error: can't find directory '", shorter_path, "'. Confirm ",
+      msg = paste0("Error: can't find directory '", path, "'. Confirm ",
                    "the interface version is correct and that the vintage exists.")
       stop(msg)
     }
   }
+  
   
   # Return runtime args and interface paths  
   return(list(runtime_args    = runtime_args,
@@ -151,7 +170,7 @@ get_scenario_info = function(globals, id) {
     str_split_1(' ')
   
   # Behavioral feedback function names
-  behavior_fns = NULL
+  behavior_modules = NULL
   if (id != 'baseline') {
     behavior_modules = './config/scenarios/counterfactuals/' %>% 
       file.path(id, 'behavior') %>% 
