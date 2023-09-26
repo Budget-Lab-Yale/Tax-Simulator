@@ -5,7 +5,8 @@
 #------------------------------------------------------------------
 
 
-build_tax_law = function(config_path, years, indexes) {
+
+build_tax_law = function(scenario_info, indexes) {
   
   #----------------------------------------------------------------------------
   # Executes all tax law parsing functions, generating the final tax law
@@ -16,42 +17,46 @@ build_tax_law = function(config_path, years, indexes) {
   # are unnested wide. For example, "ord.rates1", "ord.rates2", etc. 
   # 
   # Parameters:
-  #   - config_path (str) : folder containing tax parameter YAML files
-  #   - years (int[])     : years for which to generate tax law parameters
-  #   - indexes (df)      : long-format dataframe containing growth rates of 
-  #                         index measures
+  #   - scenario_info (list) : scenario info object; see get_scenario_info() 
+  #                            in globals.R
+  #   - indexes (df)         : long-format dataframe containing growth rates 
+  #                            of index measures
   #
-  # Returns: dataframe wide in subparam, long in year and filing status (df).
+  # Returns: tibble wide in subparam, long in year and filing status (df).
   #----------------------------------------------------------------------------
   
   # Read baseline YAML files
-  load_tax_law_input('./config/tax_law/baseline/tax_law/baseline') %>% 
+  tax_law = load_tax_law_input('./config/scenarios/baseline/tax_law') %>% 
     
     # Overwrite baseline subparams with specified changes
     map2(.f = replace_by_name, 
-         .y = load_tax_law_input(config_path)) %>% 
+         .y = load_tax_law_input(file.path(scenario_info$config_path, 'tax_law'))) %>% 
   
     # Parse all parameters and concatenate
     map2(.f      = parse_param, 
          .y      = names(.), 
-         years   = years,
+         years   = scenario_info$years,
          indexes = indexes) %>% 
     bind_rows() %>% 
 
     # Split subparameters into scalars and vectors 
-    filter(!is.na(Value)) %>% 
-    group_by(Parameter, Subparameter) %>% 
-    mutate(Scalar = max(Element) == 1) %>% 
+    filter(!is.na(value)) %>% 
+    group_by(parameter, subparameter) %>% 
+    mutate(scalar = max(element) == 1) %>% 
     ungroup() %>% 
     
     # Reshape wide
-    mutate(Name = Parameter %>% 
+    mutate(name = parameter %>% 
              paste0('.') %>% 
-             paste0(Subparameter) %>% 
-             paste0(ifelse(Scalar, '', Element))) %>% 
-    select(-contains('arameter'), -Element, -Scalar) %>% 
-    pivot_wider(names_from  = Name,
-                values_from = Value) %>% 
+             paste0(subparameter) %>% 
+             paste0(ifelse(scalar, '', element))) %>% 
+    select(-contains('arameter'), -element, -scalar) %>% 
+    pivot_wider(names_from  = name,
+                values_from = value)
+
+  # Write tax law then return
+  tax_law %>% 
+    write_csv(file.path(scenario_info$output_path, 'supplemental', 'tax_law.csv')) %>% 
     return()
 }
 
@@ -116,13 +121,13 @@ parse_param = function(raw_input, name, years, indexes) {
     bind_rows() %>% 
     
     # Apply indexation rules, keeping only final values in wide format
-    pivot_wider(names_from  = Variable, 
-                values_from = Value) %>% 
+    pivot_wider(names_from  = variable, 
+                values_from = value) %>% 
     apply_indexation() %>% 
-    select(Subparameter, Year, Element, Value) %>% 
-    pivot_wider(names_from  = Subparameter, 
-                values_from = Value) %>% 
-    arrange(Year, Element) 
+    select(subparameter, year, element, value) %>% 
+    pivot_wider(names_from  = subparameter, 
+                values_from = value) %>% 
+    arrange(year, element) 
   
   # Map subparameters to filing status
   unmapped_vars = get_unmapped_subparams(raw_input, filing_status_mapper)
@@ -131,16 +136,16 @@ parse_param = function(raw_input, name, years, indexes) {
     
     # Join unmapped vars
     left_join(subparams %>% 
-                select(Year, Element, all_of(unmapped_vars)), 
-              by = c('Year', 'Element')) %>% 
+                select(year, element, all_of(unmapped_vars)), 
+              by = c('year', 'element')) %>% 
     
     # Reshape long, clean up, and return
-    pivot_longer(cols      = -c(Year, FilingStatus, Element),
-                 names_to  = 'Subparameter',
-                 values_to = 'Value') %>%
-    mutate(Parameter = name) %>% 
-    select(Parameter, Subparameter, Year, FilingStatus, Element, Value) %>%
-    arrange(Subparameter, Year, FilingStatus, Element) %>%
+    pivot_longer(cols      = -c(year, filing_status, element),
+                 names_to  = 'subparameter',
+                 values_to = 'value') %>%
+    mutate(parameter = name) %>% 
+    select(parameter, subparameter, year, filing_status, element, value) %>%
+    arrange(subparameter, year, filing_status, element) %>%
     return()
 }
 
@@ -177,11 +182,11 @@ generate_time_series = function(value, years, name) {
       as.integer()
     
     # Convert to dataframe and populate unspecified values
-    df = tibble(Year = years) %>% 
-      left_join(tibble(Year  = specified_years, 
-                       Value = value),
-                by = 'Year') %>% 
-      fill(Value)
+    df = tibble(year = years) %>% 
+      left_join(tibble(year  = specified_years, 
+                       value = value),
+                by = 'year') %>% 
+      fill(value)
   } 
   
   # Otherwise, simple case: time-invariant policy
@@ -192,19 +197,19 @@ generate_time_series = function(value, years, name) {
       value = list(value)
     }
     
-    df = tibble(Year = years, Value = value)
+    df = tibble(year = years, value = value)
   }
   
   # Unnest list-cols if all values are scalars (otherwise, leave as list-cols)
   if (all(map(value, length) == 1)) {
     df %<>% 
-      unnest(Value)
+      unnest(value)
   }
   
   # Clean and return
   df %>% 
-    mutate(Variable = name) %>% 
-    select(Variable, Year, Value) %>% 
+    mutate(variable = name) %>% 
+    select(variable, year, value) %>% 
     return()
 }
 
@@ -272,10 +277,10 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
   # Extract base values and convert to time series
   base_values = raw_input$value %>% 
     parse_inf() %>%
-    generate_time_series(years, 'BaseValue') %>% 
+    generate_time_series(years, 'base_value') %>% 
     unnest_if_nested() %>% 
-    mutate(Subparameter = name) %>% 
-    select(Subparameter, Variable, Year, Element, Value)
+    mutate(subparameter = name) %>% 
+    select(subparameter, variable, year, element, value)
   
   # Return base values if subparam is unindexed
   if (is.null(raw_input$i_measure)) {
@@ -311,28 +316,28 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
   
   # Create unified index series 
   i_info$i_measure %<>%
-    left_join(indexes, by = c('Value' = 'Series', 'Year')) %>%
-    mutate(Index = cumprod(1 + Growth)) %>%
-    select(Year, Index)
+    left_join(indexes, by = c('value' = 'series', 'year')) %>%
+    mutate(index = cumprod(1 + growth)) %>%
+    select(year, index)
   
   # Create series of indexation scaling factors. First, unnest list-cols
   i_info$i_base_year %<>% 
-    rename(BaseYear = Value) %>%
-    unnest_longer(col        = BaseYear, 
-                  indices_to = 'Element') %>% 
+    rename(base_year = value) %>%
+    unnest_longer(col        = base_year, 
+                  indices_to = 'element') %>% 
     
     # Then, join index values for current year and base year
     left_join(i_info$i_measure %>% 
-                mutate(Index = lag(Index)), 
-              by = 'Year') %>% 
+                mutate(index = lag(index)), 
+              by = 'year') %>% 
     left_join(i_info$i_measure %>% 
-                rename(BaseYearIndex = Index), 
-              by = c('BaseYear' = 'Year')) %>% 
+                rename(base_year_index = index), 
+              by = c('base_year' = 'year')) %>% 
     
     # Calculate scaling factor by dividing current-year value by base-year value
-    mutate(Value    = Index / BaseYearIndex, 
-           Variable = 'i_index') %>% 
-    select(Year, Variable, Element, Value) 
+    mutate(value    = index / base_year_index, 
+           variable = 'i_index') %>% 
+    select(year, variable, element, value) 
   
   # Concatenate indexation info into single dataframe
   i_info %>% 
@@ -342,8 +347,8 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
     
     # Join base values, clean up, and return
     bind_rows(base_values) %>% 
-    mutate(Subparameter = name) %>%
-    select(Subparameter, everything()) %>%
+    mutate(subparameter = name) %>%
+    select(subparameter, everything()) %>%
     return()
 }
 
@@ -366,17 +371,17 @@ apply_indexation = function(df) {
   if ('i_index' %in% colnames(df)) {
     df %>% 
       mutate(
-        Value = case_when(
-          is.na(i_direction) | is.na(i_index) ~ BaseValue,
-          i_direction == -1  ~ floor(BaseValue   * i_index / i_increment) * i_increment,
-          i_direction ==  1  ~ ceiling(BaseValue * i_index / i_increment) * i_increment,
-          i_direction ==  0  ~ round(BaseValue   * i_index / i_increment) * i_increment, 
+        value = case_when(
+          is.na(i_direction) | is.na(i_index) ~ base_value,
+          i_direction == -1  ~ floor(base_value   * i_index / i_increment) * i_increment,
+          i_direction ==  1  ~ ceiling(base_value * i_index / i_increment) * i_increment,
+          i_direction ==  0  ~ round(base_value   * i_index / i_increment) * i_increment, 
           T                  ~ -1
         )) %>%
       return()
   } else { 
     df %>% 
-      mutate(Value = BaseValue) %>%
+      mutate(value = base_value) %>%
       return()
   }
 }
@@ -403,8 +408,8 @@ agg_by_filing_status = function(subparams, filing_status_mapper) {
   # If there is no mapping function, return an empty year-element-filing status df
   if (is.null(filing_status_mapper)) {
     subparams %>% 
-      select(Year, Element) %>% 
-      expand_grid(FilingStatus = 1:4) %>% 
+      select(year, element) %>% 
+      expand_grid(filing_status = 1:4) %>% 
       return()
   
   # Otherwise apply mapper functions
@@ -414,8 +419,8 @@ agg_by_filing_status = function(subparams, filing_status_mapper) {
                    mapper_fns = filing_status_mapper), 
          subparams = subparams) %>% 
       bind_rows() %>% 
-      pivot_wider(names_from  = Subparameter, 
-                  values_from = Value) %>% 
+      pivot_wider(names_from  = subparameter, 
+                  values_from = value) %>% 
       return()
   }
 }
@@ -442,7 +447,7 @@ apply_mapper_fns = function(subparams, name, mapper_fns) {
                  fn_expr       = mapper_fns), 
        data = subparams) %>% 
     bind_rows() %>% 
-    mutate(Subparameter = name) %>% 
+    mutate(subparameter = name) %>% 
     return()
 }
 
@@ -465,9 +470,9 @@ apply_mapper_fn = function(filing_status, fn_expr, data) {
   #----------------------------------------------------------------------------
   
   data %>% 
-    mutate(FilingStatus = as.integer(filing_status), 
-           Value        = !!parse_expr(fn_expr)) %>% 
-    select(Year, FilingStatus, Element, Value) %>%
+    mutate(filing_status = as.integer(filing_status), 
+           value        = !!parse_expr(fn_expr)) %>% 
+    select(year, filing_status, element, value) %>%
     return()
 }
 
@@ -529,11 +534,11 @@ unnest_if_nested = function(df) {
   # Returns: unnested dataframe (df).
   #----------------------------------------------------------------------------
   
-  nested = !any('Element' == colnames(df))
+  nested = !any('element' == colnames(df))
   if (nested) {
     df %<>% 
-      unnest_longer(col        = Value, 
-                    indices_to = 'Element')
+      unnest_longer(col        = value, 
+                    indices_to = 'element')
   }
   return(df)
 }

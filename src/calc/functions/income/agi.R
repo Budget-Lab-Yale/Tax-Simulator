@@ -29,7 +29,8 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'wages',           # (dbl) W2 wages after pre-tax deductions
     'txbl_int',        # (dbl) taxable interest income 
     'exempt_int',      # (dbl) tax-exempt interest income
-    'div',             # (dbl) total dividend income
+    'div_ord',         # (dbl) non-qualified dividend income
+    'div_qual',        # (dbl) qualified dividend income
     'txbl_ira_dist',   # (dbl) taxable IRA distributions
     'txbl_pens_dist',  # (dbl) taxable DB and DC pension distributions plus annuity payments
     'gross_ss',        # (dbl) gross OASI benefits
@@ -76,7 +77,8 @@ calc_agi = function(tax_unit, fill_missings = F) {
       # Calculate gross income excluding OASI benefits
       inc_ex_ss = wages + 
                   txbl_int + 
-                  div + 
+                  div_ord +
+                  div_qual + 
                   txbl_ira_dist + 
                   txbl_pens_dist + 
                   txbl_kg + 

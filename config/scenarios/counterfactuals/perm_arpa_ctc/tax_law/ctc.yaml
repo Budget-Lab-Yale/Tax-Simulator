@@ -1,0 +1,41 @@
+---
+# Maximum credit value per "young" child
+value_young:
+  value: 
+    '2014': [1000, 0]
+    '2018': [2000, 0]
+    '2021': [2000, 1600]
+
+# Maximum credit value per "old" child
+value_old:
+  value:
+    '2014': [1000, 0]
+    '2018': [2000, 0]
+    '2021': [2000, 1000]
+    
+# Maximum age to qualify as an "old" child
+old_age_limit:
+  value:
+    '2014': 16
+    '2021': 17
+
+# AGI threshold above which credit value phases out, single filers
+po_thresh_single:
+  value:
+    '2014': [75000, Inf]
+    '2018': [200000, Inf]
+    '2021': [200000, 112500]
+    
+# AGI threshold above which credit value phases out, joint filers
+po_thresh_married:
+  value:
+    '2014': [110000, Inf] 
+    '2018': [400000, Inf]
+    '2021': [400000, 150000]
+
+# Whether CTC (exlcluding Credit for Other Dependent) is fully refundable
+fully_refundable:
+  value:
+    '2014': 0
+    '2021': 1
+

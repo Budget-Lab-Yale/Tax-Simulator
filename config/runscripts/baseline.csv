@@ -1,2 +1,2 @@
-ID,dep.Inflation-Data.vintage,dep.Inflation-Data.ID,tax_law,first_year,last_year
-baseline,2023082515,historical,baseline,2014,2024
+ID,dep.Inflation-Data.vintage,dep.Inflation-Data.ID,first_year,last_year,mtr_vars,pct_sample
+baseline,2023082515,historical,2014,2024,wages qual_div,1

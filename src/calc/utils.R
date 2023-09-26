@@ -18,9 +18,6 @@ derive_vars = function(tax_unit) {
   tax_unit %>% 
     mutate(
       
-      # TODO kg variables
-      
-      
       # Schedule E related variables
       part       = part_active + part_passive - part_active_loss - 
                    part_passive_loss - part_179,
@@ -69,7 +66,6 @@ parse_calc_fn_input = function(tax_unit, req_vars, fill_missings = F) {
   } 
   
   # Check that required variable names are supplied
-  # TODO gotta be a cleaner vectorized way to do this
   missing = c()
   given_vars = names(tax_unit) 
   for (var in req_vars) {
@@ -318,6 +314,8 @@ get_n_cols = function(df, prefix) {
     length() %>% 
     return()
 }
+
+
 
 
 
