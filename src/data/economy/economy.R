@@ -3,40 +3,42 @@
 #---------
 
 
-generate_indexes = function(scenario_info) {
+generate_indexes = function(macro_root) {
   
   #----------------------------------------------------------------------------
-  # Generates
+  # Gets growth rates, both historical and projected for this economic 
+  # scenario, for indexation variables. Currently limited to CPIU, Chained
+  # CPIU, and Average Wage Index.
   # 
   # Parameters:
-  #   - TODO
+  #   - macro_root (str) : filepath for Macro-Projections scenario interface
   #
-  # Returns: TODO
+  # Returns: tibble of growth rates by series (df). 
   #----------------------------------------------------------------------------
   
-  # Placeholder! Ugly! Reads historical inflation series for tax law generation
-  read_csv(file.path(scenario_info$interface_paths$`Inflation-Data`, 'CPIAUCNS.csv')) %>% 
-    mutate(year = year(DATE), month = month(DATE)) %>% 
-    select(year, month, cpi = CPIAUCNS) %>% 
-    left_join(read_csv(file.path(scenario_info$interface_paths$`Inflation-Data`, 'SUUR0000SA0.csv')) %>% 
-                mutate(year = year(DATE), month = month(DATE)) %>% 
-                select(year, month, chained_cpi = SUUR0000SA0), 
-              by = c('year', 'month')) %>% 
-    mutate(FY = if_else(month < 9, year, year + 1)) %>% 
-    filter(FY > min(FY) + 1) %>% 
-    select(-year) %>% 
-    pivot_longer(cols      = -c(FY, month), 
+  
+  # Read and combine historical and projected macro data
+  c('historical.csv', 'projections.csv') %>% 
+    map(.f = ~ macro_root %>% 
+          file.path(.x) %>% 
+          read_csv()) %>% 
+    bind_rows() %>% 
+    
+    # Select indexation variables and reshape long
+    select(year, cpi = cpiu_irs, chained_cpi = ccpiu_irs, awi) %>% 
+    pivot_longer(cols      = -year, 
                  names_to  = 'series', 
                  values_to = 'value') %>% 
-    group_by(series, year = FY) %>% 
-    summarise(value = mean(value)) %>% 
-    bind_rows(read_csv(file.path(scenario_info$interface_paths$`Inflation-Data`, 'awi.csv'))) %>%
+    
+    # Express in growth rates
     group_by(series) %>% 
     mutate(growth = value / lag(value) - 1) %>% 
-    select(-value) %>% 
-    filter(!is.na(growth)) %>% 
+    ungroup() %>% 
+    select(series, year, growth) %>% 
+    arrange(series, year) %>% 
     return()
 }
+
 
 
 read_puf = function(scenario_info, year) { 

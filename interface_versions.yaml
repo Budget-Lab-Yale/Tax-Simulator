@@ -12,6 +12,6 @@ Tax-Simulator:
 # Dependency versions
 #---------------------
 
-Inflation-Data: 
-  type: raw_data
+Macro-Projections: 
+  type: model_data
   version: 1

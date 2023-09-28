@@ -55,9 +55,12 @@ build_tax_law = function(scenario_info, indexes) {
                 values_from = value)
 
   # Write tax law then return
-  tax_law %>% 
-    write_csv(file.path(scenario_info$output_path, 'supplemental', 'tax_law.csv')) %>% 
-    return()
+  c('static', 'conventional') %>% 
+    map(.f = ~ scenario_info$output_path %>% 
+          file.path(.x, 'supplemental', 'tax_law.csv') %>%
+          write_csv(x = tax_law, file = .))
+  
+  return(tax_law)
 }
 
 

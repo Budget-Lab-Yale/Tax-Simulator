@@ -48,7 +48,16 @@ parse_globals = function(runscript_path, user_id, local) {
   hour_   = hour(st) %>%
               paste0('0', .) %>% 
               str_sub(-2)
-  vintage = paste0(year(st), month(st), day(st), hour_)
+  vintage = paste0(year(st), 
+                   month(st) %>%
+                     paste0('0', .) %>% 
+                     str_sub(-2), 
+                   day(st) %>%
+                     paste0('0', .) %>% 
+                     str_sub(-2), 
+                   hour(st) %>%
+                     paste0('0', .) %>% 
+                     str_sub(-2))
   
   # Determine and create directory for model output
   output_branch = file.path('Tax-Simulator', paste0('v', version), vintage)

@@ -28,11 +28,9 @@ do_scenario = function(id, baseline_mtrs) {
   #-----------------
   # Initialize data
   #-----------------
-  
-  # TODO other macro data
-  
-  # Get macro data
-  indexes = generate_indexes(scenario_info)
+
+  # Get indexation data
+  indexes = generate_indexes(scenario_info$interface_paths$`Macro-Projections`)
   
   # Build (and write) tax law
   tax_law = build_tax_law(scenario_info, indexes)
