@@ -1,8 +1,8 @@
-adjust_kg = function(tax_units, ...) { 
+adjust_kg_lt = function(tax_units, ...) { 
   
   #----------------------------------------------------------------------------
   # Adjusts capital gains at the intensive margin using an elasticity of 
-  # -0.5, converted to log-lin form after evaluation at the current-law 
+  # -0.7, converted to log-lin form after evaluation at the current-law 
   # rate of 0.238.  
   # 
   # Parameters: 
@@ -15,11 +15,11 @@ adjust_kg = function(tax_units, ...) {
   #----------------------------------------------------------------------------
   
   # Set elasticity
-  e = -0.5 / 0.238
+  e = -0.7 / 0.238
   
   tax_units %>% 
-    mutate(e_kg      = e, 
-           e_kg_type = 'semi') %>% 
-    apply_mtr_elasticity('kg', baseline_mtrs, static_mtrs, 1) %>% 
+    mutate(e_kg_lt = e, 
+           e_kg_lt_type = 'semi') %>% 
+    apply_mtr_elasticity('kg_lt', baseline_mtrs, static_mtrs, 1) %>% 
     return()
 }

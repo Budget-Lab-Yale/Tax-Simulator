@@ -12,14 +12,14 @@
 lapply(readLines('requirements.txt'), library, character.only = T)
 
 # cmd line args TODO
-runscript_path = './config/runscripts/test.csv' 
+runscript_name = 'kg_28' 
 user_id = 'jar335'
 local = 1
 
 # Set global (scenario-independent) variables
 source('./src/misc/utils.R')
 source('./src/misc/config_parser.R')
-globals = parse_globals(runscript_path, user_id, local)
+globals = parse_globals(runscript_name, user_id, local)
 
 # Get list of non-baseline scenarios 
 counterfactual_ids = globals$runtime_args %>% 
@@ -45,7 +45,9 @@ walk(.f = do_scenario,
 #-----------------
 
 # Calculate revenue estimates
-# TODO calc_rev_est()
-# TODO calc_stacked()
+calc_rev_est()
+
+# Calculate stacked revenue estimates
+calc_stacked()
 
 

@@ -25,12 +25,17 @@ build_tax_law = function(scenario_info, indexes) {
   # Returns: tibble wide in subparam, long in year and filing status (df).
   #----------------------------------------------------------------------------
   
+  # Read counterfactual tax law parameter changes
+  changes_from_baseline = scenario_info$tax_law_id %>% 
+    file.path('./config/scenarios/tax_law', .) %>% 
+    load_tax_law_input()
+  
   # Read baseline YAML files
-  tax_law = load_tax_law_input('./config/scenarios/baseline/tax_law') %>% 
+  tax_law = load_tax_law_input('./config/scenarios/tax_law/baseline') %>% 
     
     # Overwrite baseline subparams with specified changes
     map2(.f = replace_by_name, 
-         .y = load_tax_law_input(file.path(scenario_info$config_path, 'tax_law'))) %>% 
+         .y = changes_from_baseline) %>% 
   
     # Parse all parameters and concatenate
     map2(.f      = parse_param, 

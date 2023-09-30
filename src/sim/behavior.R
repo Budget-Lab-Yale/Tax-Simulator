@@ -3,38 +3,39 @@
 #-----------------
 
 
-do_behavioral_feedback = function(tax_units, id, baseline_mtrs, static_mtrs) {
-  
+do_behavioral_feedback = function(tax_units, behavior_modules, baseline_mtrs, static_mtrs) {
+
   #----------------------------------------------------------------------------
   # Locates and executes all behavioral feedback modules for a given scenario.
   # Modules are stored as {var}.R in the /behavior root of a scenario's config
   # folder, and each module contains a function called adjust_{var}.
   # 
   # Parameters: 
-  #   - tax_units (df)     : tibble of tax unit data, pre tax calculation 
-  #   - id (str)           : scenario ID 
-  #   - baseline_mtrs (df) : tibble of MTRs under the baseline, indexed by 
-  #                          year/tax unit id 
-  #   - static_mtrs (df)   : tibble of MTRs under the static counterfactual 
-  #                          scenario, indexed by year/tax unit id
+  #   - tax_units (df)           : tibble of tax unit data, pre tax calculation 
+  #   - behavior_modules (str[]) : filepaths from runscript containing which 
+  #                                behavioral modules to run 
+  #   - baseline_mtrs (df)       : tibble of MTRs under the baseline, indexed 
+  #                                by year/tax unit id 
+  #   - static_mtrs (df)         : tibble of MTRs under the static 
+  #                                counterfactual scenario, indexed by year/tax 
+  #                                unit id
   #
   # Returns: tibble of tax units containing only the adjusted columns (df). 
   #----------------------------------------------------------------------------
   
-  # Get directory where behavioral feedback modules are located
-  root = file.path('./config/scenarios/counterfactuals/', 
-                   id,
-                  'behavior')  
   
   # Load modules for this scenario
-  modules = list.files(root)
-  walk(.x    = modules, 
+  walk(.x    = behavior_modules,
        .f    = load_behavior_module, 
-       id    = id,
        envir = environment())
-  
+    
   # Apply behavioral feedback functions
-  fns = paste0('adjust_', str_sub(modules, end = -3))
+  fns = behavior_modules %>% 
+    str_split('/') %>% 
+    map(.f = ~ .x[[1]]) %>%
+    unlist() %>% 
+    paste0('adjust_', .)
+  
   pmap(.f    = do.call,
        .l    = list(what = fns), 
        args  = list(tax_units, baseline_mtrs, static_mtrs), 
@@ -114,26 +115,21 @@ apply_mtr_elasticity = function(tax_units, var, baseline_mtrs, static_mtrs, max_
 
 
 
-load_behavior_module = function(id, name, envir) { 
+load_behavior_module = function(path, envir) { 
   
   #----------------------------------------------------------------------------
   # Executes a given behavioral feedback module script for a given scenario,
   # defining an "adjust_" function in a given environment.
   # 
   # Parameters: 
-  #   - id (str)    : scenario ID
-  #   - name (str)  : module name (e.g. "kg.R" containing "adjust_kg()")
+  #   - path (str)  : module path (e.g. "kg_lt/70.R" containing "adjust_kg()")
   #   - envir (env) : environment in which to execute the module code
   #
   # Returns: void.
   #----------------------------------------------------------------------------
 
-  # Get directory where behavioral feedback modules are located
-  path = file.path('./config/scenarios/counterfactuals/', 
-                   id, 
-                   'behavior', 
-                   name)
-  
-  # Execute function definition
-  sys.source(path, envir)
+  path %>% 
+    paste0('.R') %>% 
+    file.path('./config/scenarios/behavior/', .) %>% 
+    sys.source(envir)
 }

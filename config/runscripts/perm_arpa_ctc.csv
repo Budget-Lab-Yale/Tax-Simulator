@@ -1,0 +1,3 @@
+ID,dep.Macro-Projections.vintage,dep.Macro-Projections.ID,tax_law,behavior,first_year,last_year,mtr_vars,pct_sample
+baseline,2023092721,baseline,baseline,,2014,2033,wages qual_div kg_lt,0.5
+perm_arpa_ctc,2023092721,baseline,perm_arpa_ctc,,2014,2033,wages qual_div kg_lt,0.5

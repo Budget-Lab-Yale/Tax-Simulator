@@ -6,7 +6,7 @@
 
 
 
-parse_globals = function(runscript_path, user_id, local) {
+parse_globals = function(runscript_name, user_id, local) {
   
   #----------------------------------------------------------------------------
   # Parses data interface versioning requirements and runscript; generates 
@@ -14,7 +14,7 @@ parse_globals = function(runscript_path, user_id, local) {
   # Confirms that these filepaths exist. 
   # 
   # Parameters:
-  #   - runscript_path (str) : filepath for runscript CSV file 
+  #   - runscript_name (str) : name of runscript CSV file 
   #   - user_id (str)        : Yale NetID, used for local runs in which output
   #                            is stored on user-specific scratch folder
   #   - local (int)          : whether this is a local run (1) or a production
@@ -69,8 +69,11 @@ parse_globals = function(runscript_path, user_id, local) {
   
   
   # Read runtime arguments 
-  runtime_args = read_csv(runscript_path)
-  
+  runtime_args = runscript_name %>% 
+    paste0('.csv') %>%
+    file.path('./config/runscripts/', .) %>% 
+    read_csv()
+    
   
   # Write dependencies CSV; this is a vintage-level file which lists all 
   # other model vintages on which these Tax-Simmulator results are dependent
@@ -132,8 +135,8 @@ get_scenario_info = function(globals, id) {
   #   - id (int)       : scenario ID 
   #
   # Returns: list of 3: 
-  #   - ID (int)                 : scenario ID
-  #   - config_path (str)        : path to scenario config folder
+  #   - id (int)                 : scenario ID
+  #   - tax_law_id (str)         : str
   #   - output_path (str)        : path to root of output folder
   #   - interface_paths (list)   : list of scenario-specific interface paths
   #   - years (int[])            : years to run
@@ -142,13 +145,6 @@ get_scenario_info = function(globals, id) {
   #   - sample_ids (int[])       : vector of tax unit IDs comprising the
   #                                sample population (all IDs for 100%)
   #----------------------------------------------------------------------------
-  
-  # Scenario-specific configuration path
-  subfolder = 'counterfactuals'
-  if (id == 'baseline') {
-    subfolder = ''
-  }
-  config_path = file.path('./config/scenarios', subfolder, id)
   
   # Scenario-specific output paths
   output_root = file.path(globals$output_root, id)
@@ -171,21 +167,25 @@ get_scenario_info = function(globals, id) {
     filter(ID == id) %>% 
     as.list()
   
+  # Name of tax law scenario
+  tax_law_id = runtime_args$tax_law
+  
+  # Behavioral feedback module names (formatted as {var}/{module})
+  behavior_modules = NULL
+  if (!is.na(runtime_args$behavior)) {
+    behavior_modules = str_split_1(runtime_args$behavior, ' ')
+  }
+  
   # Years to run
   years = runtime_args$first_year:runtime_args$last_year
   
   # Names of variables for which to calculate marginal tax rates
+  mtr_vars = NULL
+  if (!is.na(runtime_args$mtr_vars)) {
+    mtr_vars = str_split_1(runtime_args$mtr_vars, ' ')
+  }
   mtr_vars = runtime_args$mtr_vars %>%
     str_split_1(' ')
-  
-  # Behavioral feedback function names
-  behavior_modules = NULL
-  if (id != 'baseline') {
-    behavior_modules = './config/scenarios/counterfactuals/' %>% 
-      file.path(id, 'behavior') %>% 
-      list.files() %>% 
-      str_sub(end = -3)
-  }
   
   # Tax unit ID in sample
   set.seed(76)
@@ -195,12 +195,12 @@ get_scenario_info = function(globals, id) {
     
   # Return as named list
   return(list(ID               = id,
-              config_path      = config_path, 
               output_path      = output_root,
               interface_paths  = interface_paths,
+              tax_law_id       = tax_law_id,
+              behavior_modules = behavior_modules, 
               years            = years, 
               mtr_vars         = mtr_vars, 
-              behavior_modules = behavior_modules, 
               sample_ids       = sample_ids))
 }
 
