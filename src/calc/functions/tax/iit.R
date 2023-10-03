@@ -37,7 +37,6 @@ calc_liab = function(tax_unit, fill_missings = F) {
     'savers_nonref',   # (dbl) value of nonrefundable Saver's Credit
     'res_energy_cred', # (dbl) value of nonrefundable residential energy credits
     'old_cred',        # (dbl) value of Elderly and Disabled Credit
-    'car_cred',        # (dbl) value of nonrefundable vehicle credits 
     'ctc_nonref',      # (dbl) value of nonrefundable CTC
     'gbc',             # (dbl) value of General Business Credit
     'prior_yr_cred',   # (dbl) value of credit for prior year minimum taxes
@@ -66,8 +65,8 @@ calc_liab = function(tax_unit, fill_missings = F) {
                              cdctc_nonref + 
                              ed_nonref + 
                              savers_nonref + 
-                             res_energy_cred + old_cred + 
-                             car_cred +  
+                             res_energy_cred + 
+                             old_cred + 
                              ctc_nonref + 
                              gbc +
                              prior_yr_cred + 
