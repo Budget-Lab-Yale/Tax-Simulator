@@ -45,9 +45,6 @@ parse_globals = function(runscript_name, user_id, local) {
   # Set model version and vintage
   version = read_yaml('./interface_versions.yaml')$`Tax-Simulator`$version
   st      = Sys.time()
-  hour_   = hour(st) %>%
-              paste0('0', .) %>% 
-              str_sub(-2)
   vintage = paste0(year(st), 
                    month(st) %>%
                      paste0('0', .) %>% 
