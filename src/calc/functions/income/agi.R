@@ -35,6 +35,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'txbl_pens_dist',  # (dbl) taxable DB and DC pension distributions plus annuity payments
     'gross_ss',        # (dbl) gross OASI benefits
     'txbl_kg',         # (dbl) net capital gain includable in AGI
+    'other_gains',     # (dbl) capital gain distributions
     'state_ref',       # (dbl) taxable refunds/credits/offsets of SALT
     'alimony',         # (dbl) alimony income
     'divorce_year',    # (int) year of divorce if applicable
@@ -82,6 +83,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
                   txbl_ira_dist + 
                   txbl_pens_dist + 
                   txbl_kg + 
+                  other_gains + 
                   alimony * (divorce_year < agi.alimony_repeal_year) + 
                   sole_prop + 
                   sch_e + 
