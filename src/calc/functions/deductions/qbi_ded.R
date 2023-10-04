@@ -26,17 +26,14 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     'part',               # (dbl) net partnership income
     'scorp',              # (dbl) net S corporation income
     'farm',               # (dbl) net farm income (Sch. F)
-    'farm_rent',          # (dbl) net farm rental income (Sch. E)
     'wagebill_sole_prop', # (dbl) W2 wages paid in sole proprietorship
     'wagebill_part',      # (dbl) owner's share of W2 wages paid in partnership
     'wagebill_scorp',     # (dbl) owner's share of W2 wages paid in S corporation
     'wagebill_farm',      # (dbl) owner's share of W2 wages paid in farm business
-    'wagebill_farm_rent', # (dbl) owner's share of W2 wages paid in farm rental business
     'sstb_sole_prop',     # (dbl) whether sole proprietor's net income is derived from an SSTB 
     'sstb_part',          # (dbl) whether net partnership income is derived from an SSTB 
     'sstb_scorp',         # (dbl) whether net S corporation income is derived from an SSTB 
     'sstb_farm',          # (dbl) whether net farm income is derived from an SSTB 
-    'sstb_farm_rent',     # (dbl) whether net farm rental income is derived from an SSTB
     'qual_div',           # (dbl) qualified dividends
     'kg_pref',            # (dbl) net capital gain eligible for preferred rates
     'agi',                # (dbl) Adjusted Gross Income
@@ -71,7 +68,7 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     select(all_of(req_vars), txbl_inc) %>% 
     rename_with(.cols = c(starts_with('wagebill_'), starts_with('sstb_')), 
                 .fn   = ~ str_replace(., '_', '.')) %>% 
-    rename_with(.cols = c(sole_prop, part, scorp, farm, farm_rent), 
+    rename_with(.cols = c(sole_prop, part, scorp, farm), 
                 .fn   = ~ paste0('inc.', .)) %>%
     pivot_longer(cols      = c(starts_with('inc.'), 
                                starts_with('wagebill.'), 
@@ -120,8 +117,7 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
       qbi_ded = qbi_ded_sole_prop + 
                 qbi_ded_part +
                 qbi_ded_scorp + 
-                qbi_ded_farm +
-                qbi_ded_farm_rent,
+                qbi_ded_farm,
       
       # Limit deduction to a share of ordinary taxable income
       # TODO revisit when we do pref rates form logic
