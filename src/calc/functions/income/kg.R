@@ -24,10 +24,8 @@ calc_kg = function(tax_unit, fill_missings = F) {
   req_vars = c(
     
     # Tax unit attributes
-    'kg_st',       # (dbl) net short term capital gain ex carryover
-    'kg_lt',       # (dbl) net long term capital gain ex carryover
-    'kg_st_carry', # (dbl) short term capital loss carryover (positive number)
-    'kg_lt_carry', # (dbl) long term capital loss carryover (positive number)
+    'kg_st',       # (dbl) net short term capital gain net of carryover
+    'kg_lt',       # (dbl) net long term capital gain net of carryover
     
     # Tax law attributes
     'agi.kg_loss_limit', # (int) maximum deductible capital loss (positive number)
@@ -42,12 +40,10 @@ calc_kg = function(tax_unit, fill_missings = F) {
       
       # Calculate preferred-rate capital gain ("net capital gain" in the code, 
       # i.e. the non-negative smaller of line 15 or 16 on Sch. D)
-      net_st  = kg_st - kg_st_carry,
-      net_lt  = kg_lt - kg_lt_carry,
-      kg_pref = pmax(0, pmin(net_lt, net_st + net_lt)),
+      kg_pref = pmax(0, pmin(kg_lt, kg_st + kg_lt)),
       
       # Calculate taxable capital gain, limiting to maximum deductible loss
-      txbl_kg = pmax(net_st + net_lt, -agi.kg_loss_limit),
+      txbl_kg = pmax(kg_st + kg_lt, -agi.kg_loss_limit),
       
       # Exclude a policy-supplied fraction of capital gains from AGI 
       txbl_kg = if_else(txbl_kg > 0, txbl_kg * (1 - agi.kg_excl_rate), txbl_kg)
