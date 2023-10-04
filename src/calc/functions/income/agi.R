@@ -43,8 +43,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'sch_e',           # (dbl) net partnership, S corp, rental, royalty, estate, and trust income (Sch E.)
     'farm',            # (dbl) net farm income (Sch. F)
     'ui',              # (dbl) gross unemployment benefits
-    'nols',            # (dbl) net operating losses
-    'other_inc',       # (dbl) all other income sources: gambling, debt cancellation, etc. See Sch. 1
+    'other_inc',       # (dbl) all other income sources: NOLs, gambling, debt cancellation, etc. See Sch. 1
     'ed_exp',          # (dbl) educator expenses
     'hsa_contr',       # (dbl) pretax contributions to an HSA
     'liab_seca_er',    # (dbl) "employer"-side SECA liability
@@ -88,8 +87,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
                   sole_prop + 
                   sch_e + 
                   farm +
-                  ui - 
-                  nols + 
+                  ui +
                   other_inc,
 
       # Calculate above-the-line deductions, excluding student loan interest deduction 
