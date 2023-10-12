@@ -37,7 +37,7 @@ calc_pr = function(tax_unit, fill_missings = F) {
     # Tax unit attributes
     'wages1',          # (dbl) W2 wages (box 1 on W2), primary earner 
     'wages2',          # (dbl) W2 wages (box 1 on W2), secondary earner
-    'trad_contr_er_1', # (dbl) pretax contributions to an employer-sponsored tax-preferred savings account, primary earner
+    'trad_contr_er1',  # (dbl) pretax contributions to an employer-sponsored tax-preferred savings account, primary earner
     'trad_contr_er2',  # (dbl) pretax contributions to an employer-sponsored tax-preferred savings account, secondary earner
     'sole_prop1',      # (dbl) Schedule C net income, primary earner 
     'sole_prop2',      # (dbl) Schedule C net income, secondary earner 

@@ -18,7 +18,7 @@ adjust_kg_lt = function(tax_units, ...) {
   e = -0.7 / 0.238
   
   tax_units %>% 
-    mutate(e_kg_lt = e, 
+    mutate(e_kg_lt      = e, 
            e_kg_lt_type = 'semi') %>% 
     apply_mtr_elasticity('kg_lt', baseline_mtrs, static_mtrs, 1) %>% 
     return()

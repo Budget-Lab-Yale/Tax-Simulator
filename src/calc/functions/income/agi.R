@@ -16,7 +16,6 @@ calc_agi = function(tax_unit, fill_missings = F) {
   #
   # Returns: dataframe of following variables:
   #   - txbl_ss        (dbl) Social Security benefits included in AGI
-  #   - sl_int_ded     (dbl) student loan interest deduction
   #   - char_above_ded (dbl) above-the-line charitable deduction
   #   - gross_inc      (dbl) gross income
   #   - above_ded      (dbl) above-the-line deductions
@@ -48,7 +47,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'hsa_contr',       # (dbl) pretax contributions to an HSA
     'liab_seca_er',    # (dbl) "employer"-side SECA liability
     'trad_contr_ira',  # (dbl) pretax contributions to an IRA
-    'sl_int_exp',      # (dbl) student loan interest paid
+    'sl_int_ded',      # (dbl) student loan interest deduction
     'keogh_contr',     # (dbl) contributions to SEP plans and KOEGH accounts
     'se_health',       # (dbl) self-employed health insurance premiums paid
     'early_penalty',   # (dbl) penalty on early withdrawal from retirement account
@@ -111,22 +110,13 @@ calc_agi = function(tax_unit, fill_missings = F) {
     # Calculate taxable social security benefits 
     bind_cols(calc_ss(.)) %>% 
     
-    mutate(
-      
-      # Calculate student loan interest deduction
-      magi_sl     = inc_ex_ss + txbl_ss - above_ded_ex_sl,
-      sl_po_share = pmin(1, pmax(0, magi_sl - agi.sl_po_thresh) / agi.sl_po_range),
-      sl_int_ded  = pmin(sl_int_exp, agi.sl_limit) * (1 - sl_po_share),
-      
-      # Put all the pieces together
-      gross_inc = inc_ex_ss + txbl_ss,
-      above_ded = above_ded_ex_sl + sl_int_ded,
-      agi       = gross_inc - above_ded
-      
-    ) %>% 
+    # Put all the pieces together
+    mutate(gross_inc = inc_ex_ss + txbl_ss,
+           above_ded = above_ded_ex_sl + sl_int_ded,
+           agi       = gross_inc - above_ded) %>% 
     
     # Keep variables to return
-    select(txbl_ss, sl_int_ded, char_above_ded, gross_inc, above_ded, agi) %>% 
+    select(txbl_ss, char_above_ded, gross_inc, above_ded, agi) %>% 
     return()
 }
 
