@@ -1,4 +1,0 @@
-ID,dep.Macro-Projections.vintage,dep.Macro-Projections.ID,tax_law,behavior,first_year,last_year,mtr_vars,pct_sample
-baseline,2023092721,baseline,baseline,,2014,2033,wages qual_div kg_lt,1
-baseline_hard_landing,2023092721,hard_landing,baseline,,2014,2033,wages qual_div kg_lt,1
-baseline_soft_landing,2023092721,soft_landing,baseline,,2014,2033,wages qual_div kg_lt,1

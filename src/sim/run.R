@@ -159,8 +159,8 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
   #----------------------------------------------------------------------------
   
   # Load tax unit data and join tax law
-  tax_units = scenario_info %>%  
-    read_puf(year) %>% 
+  tax_units = scenario_info$interface_paths$`Tax-Data` %>%  
+    read_microdata(year) %>% 
     left_join(tax_law, by = c('year', 'filing_status'))
 
   # Adjust for economic differences from economic baseline

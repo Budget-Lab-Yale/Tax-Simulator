@@ -41,18 +41,21 @@ generate_indexes = function(macro_root) {
 
 
 
-read_puf = function(scenario_info, year) { 
+read_microdata = function(root, year) { 
   
   #----------------------------------------------------------------------------
   # Loads tax microdata into memory for a given scenario-year
   # 
   # Parameters:
-  #   - TODO
+  #   - root (str) : filepath to scenario's microdata vintage
+  #   - year (int) : year of microdata
   #
-  # Returns: TODO
+  # Returns: tibble of tax microdata (df).
   #----------------------------------------------------------------------------
   
-  # TODO
-  
+  scenario_info$interface_paths$`Tax-Data` %>% 
+    file.path(paste0('tax_units_', year, '.csv')) %>% 
+    read_csv() %>% 
+    return()
 }
 

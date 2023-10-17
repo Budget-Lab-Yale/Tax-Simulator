@@ -12,6 +12,10 @@ Tax-Simulator:
 # Dependency versions
 #---------------------
 
+Tax-Data:
+  type: model_data
+  version: 1
+
 Macro-Projections: 
   type: model_data
   version: 1

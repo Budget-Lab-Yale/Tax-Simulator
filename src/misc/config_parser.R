@@ -186,7 +186,8 @@ get_scenario_info = function(globals, id) {
   
   # Tax unit ID in sample
   set.seed(76)
-  sample_ids = tibble(id = 1:100) %>% # TODO read PUF and sample
+  sample_ids = interface_paths$`Tax-Data` %>%
+    read_microdata(years[1]) %>%
     sample_frac(size = runtime_args$pct_sample) %>% 
     get_vector('id')
     
