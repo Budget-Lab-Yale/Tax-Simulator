@@ -23,7 +23,7 @@ do_scenario = function(id, baseline_mtrs) {
   
   # Get scenario info
   scenario_info = get_scenario_info(globals, id)
-  
+  print(1)
   
   #-----------------
   # Initialize data
@@ -108,6 +108,7 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
   output = scenario_info$years %>% 
     map(.f            = run_one_year,
         scenario_info = scenario_info, 
+        tax_law       = tax_law,
         static        = static,
         baseline_mtrs = baseline_mtrs, 
         static_mtrs   = static_mtrs)
@@ -161,6 +162,7 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
   # Load tax unit data and join tax law
   tax_units = scenario_info$interface_paths$`Tax-Data` %>%  
     read_microdata(year) %>% 
+    mutate(year = year) %>% 
     left_join(tax_law, by = c('year', 'filing_status'))
 
   # Adjust for economic differences from economic baseline

@@ -62,7 +62,7 @@ parse_globals = function(runscript_name, user_id, local) {
   if (local == 1) {
     output_root = file.path(output_roots$local, user_id, output_branch)
   }
-  dir.create(output_root, recursive = T)
+  dir.create(output_root, recursive = T, showWarnings = F)
   
   
   # Read runtime arguments 
@@ -146,9 +146,15 @@ get_scenario_info = function(globals, id) {
   # Scenario-specific output paths
   output_root = file.path(globals$output_root, id)
   for (type in c('static', 'conventional')) {
-    dir.create(file.path(output_root, type, 'detail'),       recursive = T)
-    dir.create(file.path(output_root, type, 'totals'),       recursive = T)
-    dir.create(file.path(output_root, type, 'supplemental'), recursive = T)
+    dir.create(file.path(output_root, type, 'detail'),       
+               recursive    = T, 
+               showWarnings = F)
+    dir.create(file.path(output_root, type, 'totals'),
+               recursive    = T, 
+               showWarnings = F)
+    dir.create(file.path(output_root, type, 'supplemental'),
+               recursive    = T, 
+               showWarnings = F)
   }
   
   # List of interface paths, named by interface

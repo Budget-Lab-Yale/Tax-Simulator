@@ -11,14 +11,16 @@
 # Load required packages
 lapply(readLines('requirements.txt'), library, character.only = T)
 
+# Source all function scripts
+list.files('./src', recursive = T) %>% 
+  map(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
+
 # cmd line args TODO
 runscript_name = 'kg_28' 
 user_id = 'jar335'
 local = 1
 
 # Set global (scenario-independent) variables
-source('./src/misc/utils.R')
-source('./src/misc/config_parser.R')
 globals = parse_globals(runscript_name, user_id, local)
 
 # Get list of non-baseline scenarios 

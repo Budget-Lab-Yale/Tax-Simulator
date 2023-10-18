@@ -53,7 +53,7 @@ read_microdata = function(root, year) {
   # Returns: tibble of tax microdata (df).
   #----------------------------------------------------------------------------
   
-  scenario_info$interface_paths$`Tax-Data` %>% 
+  root %>% 
     file.path(paste0('tax_units_', year, '.csv')) %>% 
     read_csv() %>% 
     return()

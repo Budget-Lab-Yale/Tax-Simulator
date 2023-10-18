@@ -70,8 +70,7 @@ mort_bal_limit_mfs:
 
 # Maximum deductible mortgage interest
 mort_int_limit:
-  value:
-    '2014': Inf
+  value: Inf
 
 # Maximum deductible casualty and loss expenses
 casualty_limit:

@@ -73,13 +73,13 @@ calc_pr = function(tax_unit, fill_missings = F) {
     expand_grid(fund  = c('oasdi', 'hi'),
                 side  = c('ee', 'er'),
                 filer = 1:2) %>% 
-    mutate(brackets_prefix = paste0(if_else(tax == 'fica', '',  
+    mutate(prefix_brackets = paste0(if_else(tax == 'fica', '',  
                                             if_else(filer == 1, 
                                                     'primary_', 
                                                     'secondary_')),
                                     'pr.', fund, '_', side, '_brackets'), 
-           rates_prefix = paste0('pr.', fund, '_', side, '_rates'), 
-           inc_name     = paste0(if_else(tax == 'fica', 'gross_wages', 'txbl_se'), 
+           prefix_rates = paste0('pr.', fund, '_', side, '_rates'), 
+           y            = paste0(if_else(tax == 'fica', 'gross_wages', 'txbl_se'), 
                                  filer), 
            output_name  = paste0('liab_', tax, '_', fund, '_', side, filer)) %>% 
     select(-fund, -side, -filer)
@@ -102,7 +102,7 @@ calc_pr = function(tax_unit, fill_missings = F) {
     mutate(
       
       # Temporarily set secondary-earner variables to 0 for non-joint tax units
-      across(.cols = c(wages2, pretax_contr2, sole_prop2, farm2, part_se2), 
+      across(.cols = c(wages2, trad_contr_er2, sole_prop2, farm2, part_se2), 
              .fns  = ~ replace_na(., 0)), 
       
       # Calculate FICA-eligible wages
@@ -172,9 +172,9 @@ calc_pr = function(tax_unit, fill_missings = F) {
     bind_cols(
       integrate_rates_brackets(df              = (.), 
                                n_brackets      = NULL, 
-                               brackets_prefix = 'pr.add_med_brackets', 
-                               rates_prefix    = 'pr.add_med_rates', 
-                               inc_name        = 'txbl_inc_add_med', 
+                               prefix_brackets = 'pr.add_med_brackets', 
+                               prefix_rates    = 'pr.add_med_rates', 
+                               y               = 'txbl_inc_add_med', 
                                output_name     = 'liab_add_med', 
                                by_bracket      = F)
     ) %>%
@@ -212,7 +212,7 @@ calc_pr = function(tax_unit, fill_missings = F) {
       
       # Set secondary-earner output variables to NA for non-joint tax units
       across(.cols = c(se2, ei2), 
-             .fns  = if_else(filing_status != 2, NA, .))
+             .fns  = ~ if_else(filing_status != 2, NA, .))
   
     ) %>%
 
