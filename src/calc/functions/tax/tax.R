@@ -38,7 +38,7 @@ calc_tax = function(tax_unit, fill_missings = F) {
     
     # Tax unit attributes
     'txbl_inc',    # (dbl) taxable income
-    'div_qual',    # (dbl) qualified dividends
+    'div_pref',    # (dbl) qualified dividends
     'kg_pref',     # (dbl) preferred-rate capital gains ("net capital gain" in the internal revenue code)  
     'kg_1250',     # (dbl) section 1250 unrecaptured gain
     'kg_collect',  # (dbl) collectibles gain
@@ -67,8 +67,8 @@ calc_tax = function(tax_unit, fill_missings = F) {
       adj_pref_kg = pmax(0, pref_kg - kg_1250 - kg_collect),
       
       # Preferred-rate income, both with and without special gains
-      pref_inc     = qual_div + pref_kg,
-      adj_pref_inc = qual_div + adj_pref_kg, 
+      pref_inc     = div_pref + pref_kg,
+      adj_pref_inc = div_pref + adj_pref_kg, 
       
       # Taxable income
       txbl_ord_inc      = pmax(0, txbl_inc - pref_inc),

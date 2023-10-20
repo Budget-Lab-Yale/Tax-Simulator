@@ -195,7 +195,7 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     bind_cols(calc_amt(.)) %>% 
     
     
-    #---------
+  #---------
   # Credits
   #---------
   

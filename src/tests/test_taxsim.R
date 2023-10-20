@@ -84,7 +84,7 @@ taxsim_crosswalk = function(tax_units) {
       ssemp  = se2,
       
       # Capital income
-      dividends = div_qual,
+      dividends = div_pref,
       stcg      = kg_st, 
       ltcg      = lg_lt, 
       
