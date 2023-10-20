@@ -2,6 +2,9 @@
 # Function to calculate Child and Dependent Care Tax Credit (CDCTC)
 #-------------------------------------------------------------------
 
+# Set return variables for function
+return_vars$calc_cdctc = c('cdctc_nonref', 'cdctc_ref')
+
 
 calc_cdctc = function(tax_unit, fill_missings = F) {
   
@@ -76,6 +79,6 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
     ) %>% 
     
     # Keep variables to return
-    select(cdctc_nonref, cdctc_ref) %>% 
+    select(all_of(return_vars$calc_cdctc)) %>% 
     return()
 }

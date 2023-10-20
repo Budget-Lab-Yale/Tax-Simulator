@@ -2,6 +2,10 @@
 # Function to calculate Saver's Credit 
 #--------------------------------------
 
+# Set return variables for function
+return_vars$calc_savers_cred = c('savers_nonref', 'savers_ref')
+
+
 calc_savers_cred = function(tax_unit, fill_missings = F) {
   
   #----------------------------------------------------------------------------
@@ -58,6 +62,6 @@ calc_savers_cred = function(tax_unit, fill_missings = F) {
     ) %>% 
     
     # Keep variables to return
-    select(savers_nonref, savers_ref) %>% 
+    select(all_of(return_vars$calc_savers_cred)) %>% 
     return()
 }

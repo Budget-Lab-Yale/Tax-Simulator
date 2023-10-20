@@ -2,6 +2,9 @@
 # Function to calculate standard deduction
 #------------------------------------------
 
+# Set return variables for function
+return_vars$calc_std_ded = c('std_ded')
+
 
 calc_std_ded = function(tax_unit, fill_missings = F) {
 
@@ -60,7 +63,7 @@ calc_std_ded = function(tax_unit, fill_missings = F) {
     ) %>% 
     
     # Keep variables to return
-    select(std_ded) %>% 
+    select(all_of(return_vars$calc_std_ded)) %>% 
     return()
 }
 

@@ -2,6 +2,12 @@
 # Function to calculate itemized deductions
 #-------------------------------------------
 
+# Set return variables for function
+return_vars$calc_item_ded = c('med_item_ded', 'salt_item_ded', 'mort_int_item_ded', 
+                              'inv_int_item_ded', 'int_item_ded', 'char_item_ded', 
+                              'casualty_item_ded', 'misc_item_ded', 'other_item_ded', 
+                              'item_ded_ex_limits', 'item_ded')
+
 
 calc_item_ded = function(tax_unit, fill_missings = F) {
   
@@ -212,9 +218,7 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
     ) %>% 
     
     # Keep variables to return
-    select(med_item_ded, salt_item_ded, mort_int_item_ded, inv_int_item_ded, 
-           int_item_ded, char_item_ded, casualty_item_ded, misc_item_ded, 
-           other_item_ded, item_ded_ex_limits, item_ded) %>% 
+    select(all_of(return_vars$calc_item_ded)) %>% 
     return()
 }
 

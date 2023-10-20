@@ -22,8 +22,8 @@ do_scenario = function(id, baseline_mtrs) {
   #----------------------------------------------------------------------------
   
   # Get scenario info
-  scenario_info = get_scenario_info(globals, id)
-  print(1)
+  scenario_info = get_scenario_info(id)
+
   
   #-----------------
   # Initialize data
@@ -194,14 +194,20 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
   # Do taxes
   #----------
   
+  # List calculated tax variables
+  vars_1040 = return_vars %>%
+    remove_by_name('calc_pr') %>%
+    unlist() %>% 
+    set_names(NULL)
+
   # Calculate taxes
   tax_units %<>% 
     do_taxes(vars_1040    = vars_1040,
-             vars_payroll = vars_payroll)
+             vars_payroll = return_vars$calc_pr)
   
   # Calculate marginal tax rates
   mtrs = tax_units %>% 
-    select(-all_of(c(vars_1040, vars_payroll))) %>%
+    select(-all_of(return_vars %>% unlist() %>% set_names(NULL))) %>%
     pmap(
       .f = calc_mtrs, 
       .l = list(name = names(scenario_info$mtr_vars), 

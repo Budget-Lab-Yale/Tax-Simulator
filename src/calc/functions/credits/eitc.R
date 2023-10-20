@@ -2,6 +2,9 @@
 # Function to calculate Earned Income Tax Credit (EITC)
 #-----------------------------------------------------------
 
+# Set return variables for function
+return_vars$eitc = c('eitc')
+
 
 calc_eitc = function(tax_unit, fill_missings = F) {
   
@@ -117,6 +120,6 @@ calc_eitc = function(tax_unit, fill_missings = F) {
     ) %>% 
     
     # Keep variables to return
-    select(eitc) %>% 
+    select(all_of(return_vars$eitc)) %>% 
     return()
 }

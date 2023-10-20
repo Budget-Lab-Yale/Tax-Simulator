@@ -2,6 +2,9 @@
 # Function to calculate Child Tax Credit (CTC)
 #----------------------------------------------
 
+# Set return variables for function
+return_vars$calc_ctc = c('ctc_nonref', 'ctc_ref')
+
 
 calc_ctc = function(tax_unit, fill_missings = F) {
   
@@ -138,6 +141,6 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     ) %>% 
     
     # Keep variables to return
-    select(ctc_nonref, ctc_ref) %>% 
+    select(all_of(return_vars$calc_ctc)) %>% 
     return()
 }

@@ -134,8 +134,8 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
   
   
   # Create tibble-length vectors for form-behavior booleans 
-  force_char = rep(force_char, nrow(tax_unit))
-  char_above = rep(char_above, nrow(tax_unit))
+  force_char = rep(force_char, nrow(tax_units))
+  char_above = rep(char_above, nrow(tax_units))
   
   
   tax_units %>% 
@@ -320,7 +320,7 @@ calc_mtrs = function(tax_units, liab_baseline, name, vars) {
   #                             incrementing (e.g. "dividends" or "kg")
   #   - vars (str[])          : vector of names of variables to increment
   #
-  # Returns: TODO
+  # Returns: tibble of ID-MTR pairs (df)
   #----------------------------------------------------------------------------
   
   # Set output variable name
@@ -334,7 +334,7 @@ calc_mtrs = function(tax_units, liab_baseline, name, vars) {
                   .fns  = ~ . + 1)) %>%
     
     # Re-calculate taxes
-    do_taxes(return_vars = c('liab_pr', 'liab_iit_net')) %>% 
+    do_taxes(vars_1040 = c('liab_iit_net'), vars_payroll = c('liab_pr')) %>% 
     
     # Calculate MTR and return
     mutate(!!mtr_name := liab_pr + liab_iit_net - liab_baseline) %>% 

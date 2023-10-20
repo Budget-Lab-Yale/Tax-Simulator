@@ -112,7 +112,6 @@ parse_globals = function(runscript_name, user_id, local) {
     }
   }
   
-  
   # Return runtime args and interface paths  
   return(list(runtime_args    = runtime_args,
               interface_paths = interface_paths, 
@@ -121,18 +120,17 @@ parse_globals = function(runscript_name, user_id, local) {
 
 
 
-get_scenario_info = function(globals, id) {
+get_scenario_info = function(id) {
   
   #----------------------------------------------------------------------------
   # Given a scenario ID, retrieves and transforms scenario-specific runtime
   # arguments and interface file paths.
   # 
   # Parameters:
-  #   - globals (list) : globals object, as return by parse_globals()
-  #   - id (int)       : scenario ID 
+  #   - id (str) : scenario ID 
   #
   # Returns: list of 3: 
-  #   - id (int)                 : scenario ID
+  #   - id (str)                 : scenario ID
   #   - tax_law_id (str)         : str
   #   - output_path (str)        : path to root of output folder
   #   - interface_paths (list)   : list of scenario-specific interface paths

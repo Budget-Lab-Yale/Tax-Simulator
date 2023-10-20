@@ -27,12 +27,7 @@ derive_vars = function(tax_unit) {
       pt         = part + scorp + sole_prop,
       net_rent   = rent - rent_loss,
       net_estate = estate - estate_loss,
-      sch_e      = part_scorp + net_rent + net_estate,    
-      
-      # Self employment income and earned income 
-      se_inc = sole_prop + farm + part_se,  # TODO look at E30400?? Need to impute. Model the variables on schedule SE
-                                            # Also this should go in payroll taxes I think 
-      ei     = wages + se_inc
+      sch_e      = part_scorp + net_rent + net_estate
       
     ) %>% 
     return()

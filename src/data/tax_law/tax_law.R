@@ -40,7 +40,7 @@ build_tax_law = function(scenario_info, indexes) {
     # Parse all parameters and concatenate
     map2(.f      = parse_param, 
          .y      = names(.), 
-         years   = scenario_info$years,
+         years   = 2014:max(scenario_info$years),
          indexes = indexes) %>% 
     bind_rows() %>% 
 
@@ -57,7 +57,8 @@ build_tax_law = function(scenario_info, indexes) {
              paste0(ifelse(scalar, '', element))) %>% 
     select(-contains('arameter'), -element, -scalar) %>% 
     pivot_wider(names_from  = name,
-                values_from = value)
+                values_from = value) %>% 
+    filter(year %in% scenario_info$years)
 
   # Write tax law then return
   c('static', 'conventional') %>% 

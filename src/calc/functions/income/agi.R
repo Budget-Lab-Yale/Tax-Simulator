@@ -2,6 +2,10 @@
 # Function to AGI and its derived intermediate components
 #---------------------------------------------------------
 
+# Set return variables for function
+return_vars$calc_agi = c('txbl_ss', 'char_above_ded', 'gross_inc', 'above_ded', 
+                         'agi')
+
 
 calc_agi = function(tax_unit, fill_missings = F) {
   
@@ -116,7 +120,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
            agi       = gross_inc - above_ded) %>% 
     
     # Keep variables to return
-    select(txbl_ss, char_above_ded, gross_inc, above_ded, agi) %>% 
+    select(all_of(return_vars$agi)) %>% 
     return()
 }
 

@@ -2,6 +2,9 @@
 # Function to calculate recovery rebates
 #----------------------------------------
 
+# Set return variables for function
+return_vars$calc_rebate = c('rebate')
+
 
 calc_rebate = function(tax_unit, fill_missings = F) {
   
@@ -75,6 +78,6 @@ calc_rebate = function(tax_unit, fill_missings = F) {
     ) %>% 
     
     # Keep variables to return
-    select(rebate) %>% 
+    select(all_of(return_vars$calc_rebate)) %>% 
     return()
 }

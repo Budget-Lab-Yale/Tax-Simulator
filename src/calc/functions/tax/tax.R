@@ -2,6 +2,10 @@
 # Function to calculate normal individual income tax liability before credits 
 #-----------------------------------------------------------------------------
 
+# Set return variables for function
+return_vars$calc_tax = c('liab_ord', 'liab_pref', 'liab_1250', 'liab_collect', 
+                         'liab')
+
 
 calc_tax = function(tax_unit, fill_missings = F) {
   
@@ -161,7 +165,7 @@ calc_tax = function(tax_unit, fill_missings = F) {
     mutate(liab = pmin(liab_max, liab_pref + liab_1250 + liab_collect + liab_ord)) %>% 
   
     # Keep variables to return
-    select(liab_ord, liab_pref, liab_1250, liab_collect, liab) %>% 
+    select(all_of(return_vars$calc_tax)) %>% 
     return()
 }
 

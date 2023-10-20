@@ -2,6 +2,9 @@
 # Function to calculate capital gains includable in AGI
 #-------------------------------------------------------
 
+# Set return variables for function
+return_vars$calc_kg = c('kg_pref', 'txbl_kg')
+
 
 calc_kg = function(tax_unit, fill_missings = F) {
   
@@ -51,7 +54,7 @@ calc_kg = function(tax_unit, fill_missings = F) {
     ) %>% 
     
     # Keep variables to return
-    select(kg_pref, txbl_kg) %>% 
+    select(all_of(return_vars$calc_kg)) %>% 
     return()
 }
 

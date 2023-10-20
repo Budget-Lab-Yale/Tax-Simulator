@@ -2,6 +2,9 @@
 # Function to calculate Qualified Business Income deduction
 #-----------------------------------------------------------
 
+# Set return variables for function
+return_vars$calc_qbi_ded = c('qbi_ded')
+
 
 calc_qbi_ded = function(tax_unit, fill_missings = F) {
   
@@ -126,13 +129,9 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     ) %>% 
     
     # Keep variables to return
-    select(qbi_ded) %>% 
+    select(all_of(return_vars$calc_qbi_ded)) %>% 
     return()
 }
-
-
-
-
 
 
 

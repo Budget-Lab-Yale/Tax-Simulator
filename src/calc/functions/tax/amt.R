@@ -2,6 +2,9 @@
 # Function to calculate Alternative Minimum Tax (AMT) liability
 #---------------------------------------------------------------
 
+# Set return variables for function
+return_vars$calc_amt = c('liab_amt', 'liab_bc')
+
 
 calc_amt = function(tax_unit, fill_missings = F) {
   
@@ -107,6 +110,6 @@ calc_amt = function(tax_unit, fill_missings = F) {
            liab_bc  = liab + liab_amt + excess_ptc) %>% 
     
     # Keep variables to return
-    select(liab_amt, liab_bc) %>% 
+    select(all_of(return_vars$calc_amt)) %>% 
     return()
 }

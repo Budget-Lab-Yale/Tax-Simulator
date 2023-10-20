@@ -3,6 +3,11 @@
 #---------------------------------------------------------------------
 
 
+# Set return variables for function
+return_vars$calc_liab = c('nonref', 'ref', 'ref_iit', 'ref_other', 'refund', 
+                          'liab_iit', 'liab_iit_net')
+
+
 calc_liab = function(tax_unit, fill_missings = F) {
   
   #----------------------------------------------------------------------------
@@ -112,6 +117,6 @@ calc_liab = function(tax_unit, fill_missings = F) {
     ) %>% 
     
     # Keep variables to return
-    select(nonref, ref, ref_iit, ref_other, refund, liab_iit, liab_iit_net) %>% 
+    select(all_of(return_vars$calc_liab)) %>% 
     return()
 }

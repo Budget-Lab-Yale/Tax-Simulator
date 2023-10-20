@@ -2,6 +2,8 @@
 # Function to calculate Net Investment Income Tax (NIIT)
 #--------------------------------------------------------
 
+# Set return variables for function
+return_vars$calc_niit = c('liab_niit')
 
 
 calc_niit = function(tax_unit, fill_missings = FALSE) {
@@ -83,6 +85,6 @@ calc_niit = function(tax_unit, fill_missings = FALSE) {
     ) %>%
     
     # Keep variables to return
-    select(liab_niit) %>%
+    select(all_of(return_vars$calc_niit)) %>%
     return()
 }
