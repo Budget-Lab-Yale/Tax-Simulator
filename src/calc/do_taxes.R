@@ -145,7 +145,7 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
                   .fns   = ~ ., 
                   .names = '{col}_')) %>%  
     
-    #-----------------------
+  #-----------------------
   # Adjusted gross income
   #-----------------------
   
@@ -156,11 +156,11 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     mutate(across(.cols = c(char_cash, char_noncash), 
                   .fns  = ~ if_else(force_char & !char_above, 0, .))) %>% 
     bind_cols(calc_agi(.)) %>% 
-    mutate(char_cash    = care_cash_, 
-           char_noncash = care_noncash_) %>% 
+    mutate(char_cash    = char_cash_, 
+           char_noncash = char_noncash_) %>% 
     
     
-    #----------------
+  #----------------
   # Taxable income 
   #----------------
   
@@ -171,8 +171,8 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     mutate(across(.cols = c(char_cash, char_noncash), 
                   .fns  = ~ if_else(force_char & char_above, 0, .))) %>%
     bind_cols(calc_item_ded(.)) %>% 
-    mutate(char_cash    = care_cash_, 
-           char_noncash = care_noncash_) %>% 
+    mutate(char_cash    = char_cash_, 
+           char_noncash = char_noncash_) %>% 
     
     # Personal exemptions
     bind_cols(calc_pe_ded(.)) %>% 
@@ -184,7 +184,7 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     bind_cols(calc_txbl_inc(.)) %>% 
     
     
-    #--------------------------
+  #--------------------------
   # Liability before credits
   #--------------------------
   
@@ -218,7 +218,7 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     bind_cols(calc_rebate(.)) %>%
     
     
-    #----------------------
+  #----------------------
   # Liability allocation
   #----------------------
   
