@@ -3,9 +3,10 @@
 #-------------------------------------
 
 # Set return variables for function
-return_vars$calc_pr = c('se1', 'se2', 'se', 'ei1', 'ei2', 'ei', 'liab_fica', 
-                        'liab_seca', 'liab_seca_er', 'liab_oasdi', 'liab_hi', 
-                        'liab_add_med', 'liab_pr_ee', 'liab_pr_er', 'liab_pr')
+return_vars$calc_pr = c('gross_wages1', 'gross_wages2', 'gross_wages', 'se1', 
+                        'se2', 'se', 'ei1', 'ei2', 'ei', 'liab_fica', 'liab_seca', 
+                        'liab_seca_er', 'liab_oasdi', 'liab_hi', 'liab_add_med', 
+                        'liab_pr_ee', 'liab_pr_er', 'liab_pr')
 
 
 calc_pr = function(tax_unit, fill_missings = F) {

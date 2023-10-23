@@ -3,19 +3,14 @@
 #--------------------------------------
 
 # Set return variables for function
-return_vars$calc_txbl_inc = c('itemizing', 'ded', 'med_item_ded', 'salt_item_ded', 
-                              'mort_int_item_ded', 'inv_int_item_ded', 'int_item_ded', 
-                              'char_item_ded', 'casualty_item_ded', 'misc_item_ded', 
-                              'other_item_ded', 'item_ded_ex_limits', 'item_ded', 
-                              'txbl_inc')
+return_vars$calc_txbl_inc = c('itemizing', 'ded', 'txbl_inc')
 
 
 calc_txbl_inc = function(tax_unit, fill_missings = F) {
   
   #----------------------------------------------------------------------------
   # Determines whether filer takes standard or itemized deductions, and 
-  # calculates taxable income. Sets itemized deduction variables to zero for 
-  # nonitemizers.
+  # calculates taxable income. 
   # 
   # Parameters:
   #   - tax_unit (df | list) : either a dataframe or list containing required
@@ -27,7 +22,6 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
   #          - itemizing (bool) : whether filer itemizes deductions
   #          - ded       (dbl)  : standard deduction or itemized deduction if 
   #                               itemizing
-  #          - item_ded* (dbl)  : all itemized deduction variables
   #          - txbl_inc (dbl)   : taxable income 
   #----------------------------------------------------------------------------
   
@@ -50,10 +44,6 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
       # Determine itemizing status
       itemizing = item_ded > std_ded,
       ded       = pmax(std_ded, item_ded), 
-      
-      # Set itemized deduction variables to 0 for nonitemizers
-      across(.cols = contains('item_ded'), 
-             .fns  = ~ if_else(itemizing, ., 0)),
       
       # Calculate taxable income
       txbl_inc = pmax(0, agi - ded - pe_ded - qbi_ded)

@@ -3,10 +3,10 @@
 #-----------------------------------------
 
 # Set return variables for function
-return_vars$calc_ed_credits = c('ed_nonref', 'ed_ref')
+return_vars$calc_ed_cred = c('ed_nonref', 'ed_ref')
 
 
-calc_ed_credits = function(tax_unit, fill_missings = F) {
+calc_ed_cred = function(tax_unit, fill_missings = F) {
   
   #----------------------------------------------------------------------------
   # Calculates value of the American Opportunity Credit (AOC) and the Lifetime 
@@ -89,12 +89,13 @@ calc_ed_credits = function(tax_unit, fill_missings = F) {
       
       # Limit nonrefundable credit to positive liability
       liab      = pmax(0, liab_bc - ftc - cdctc_nonref - old_cred),
-      ed_nonref = pmin(liab, aoc_nonref + llc)
+      ed_nonref = pmin(liab, aoc_nonref + llc),
+      ed_ref    = aoc_ref
     
     ) %>% 
     
     # Keep variables to return
-    select(all_of(return_vars$calc_ed_credits)) %>% 
+    select(all_of(return_vars$calc_ed_cred)) %>% 
     return()
 }
 

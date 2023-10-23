@@ -101,7 +101,9 @@ calc_amt = function(tax_unit, fill_missings = F) {
     
     # Calculate tax on taxable income 
     bind_cols(
-      calc_tax((.)) %>% 
+      (.) %>% 
+        select(-all_of(return_vars$calc_tax)) %>% 
+        calc_tax() %>% 
         select(liab_amt_gross = liab)
     ) %>% 
     

@@ -206,18 +206,17 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
              vars_payroll = return_vars$calc_pr)
   
   # Calculate marginal tax rates
-  mtrs = tax_units %>% 
-    select(-all_of(return_vars %>% unlist() %>% set_names(NULL))) %>%
-    pmap(
-      .f = calc_mtrs, 
-      .l = list(name = names(scenario_info$mtr_vars), 
-                vars = scenario_info$mtr_vars),
-      tax_units     = (.),
-      liab_baseline = tax_units$liab_pr + tax_units$liab_iit_net
-    ) %>% 
+  mtrs = scenario_info$mtr_vars %>%
+    map(.f = ~ calc_mtrs(tax_units = tax_units %>% 
+                                       select(-all_of(return_vars %>% 
+                                                      unlist() %>% 
+                                                      set_names(NULL))), 
+                         liab_baseline = tax_units$liab_pr + tax_units$liab_iit_net,
+                         var           = .x)) %>% 
     bind_cols() %>% 
-    mutate(year = year) %>% 
-    relocate(year)
+    mutate(id   = tax_units$id,
+           year = year) %>% 
+    relocate(id, year)
     
   
   #-----------------
@@ -233,8 +232,8 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
                         paste0(year, '.csv')))
   
   # Get totals from microdata
-  totals = list(pr     = get_pr_totals(tax_units), 
-                `1040` = get_1040_totals(tax_units))
+  totals = list(pr     = get_pr_totals(tax_units, year), 
+                `1040` = get_1040_totals(tax_units, year))
   
   # Return required data
   return(list(mtrs   = mtrs, 

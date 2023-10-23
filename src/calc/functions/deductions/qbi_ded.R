@@ -37,7 +37,7 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     'sstb_part',          # (dbl) whether net partnership income is derived from an SSTB 
     'sstb_scorp',         # (dbl) whether net S corporation income is derived from an SSTB 
     'sstb_farm',          # (dbl) whether net farm income is derived from an SSTB 
-    'qual_div',           # (dbl) qualified dividends
+    'div_pref',           # (dbl) qualified dividends
     'kg_pref',            # (dbl) net capital gain eligible for preferred rates
     'agi',                # (dbl) Adjusted Gross Income
     'std_ded',            # (dbl) value of standard deduction (even if eventually itemizing)
@@ -123,8 +123,7 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
                 qbi_ded_farm,
       
       # Limit deduction to a share of ordinary taxable income
-      # TODO revisit when we do pref rates form logic
-      qbi_ded = pmin(qbi_ded, pmax(0, txbl_inc - qual_div - kg_pref) * qbi.rate)
+      qbi_ded = pmin(qbi_ded, pmax(0, txbl_inc - div_pref - kg_pref) * qbi.rate)
       
     ) %>% 
     

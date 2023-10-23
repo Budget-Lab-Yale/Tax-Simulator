@@ -59,10 +59,10 @@ do_taxes = function(tax_units, vars_1040, vars_payroll) {
     
     # Determine which is better
     opt = above %>% 
-      select(ID, above = liab_iit_net) %>% 
+      select(id, above = liab_iit_net) %>% 
       bind_cols(
         item %>% 
-          select(ID, item = liab_iit_net)
+          select(id, item = liab_iit_net)
       ) %>% 
       mutate(char_ded_type = if_else(above <= item), 'above', 'item') %>% 
       select(char_ded_type)
@@ -70,7 +70,7 @@ do_taxes = function(tax_units, vars_1040, vars_payroll) {
     # Select optimized answer
     tax_units %<>%
       bind_cols(opt) %>%
-      left_join(bind_rows(above, item), by = c('ID', 'char_ded_type'))
+      left_join(bind_rows(above, item), by = c('id', 'char_ded_type'))
     
     
     # Standard case: just calculate the 1040 once  
@@ -145,28 +145,28 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
                   .fns   = ~ ., 
                   .names = '{col}_')) %>%  
     
-  #-----------------------
-  # Adjusted gross income
-  #-----------------------
-  
-  # Net capital gain includable in AGI
-  bind_cols(calc_kg(.)) %>% 
+    #-----------------------
+    # Adjusted gross income
+    #-----------------------
     
+    # Net capital gain includable in AGI
+    bind_cols(calc_kg(.)) %>% 
+      
     # AGI, including taxable OASI benefits
     mutate(across(.cols = c(char_cash, char_noncash), 
                   .fns  = ~ if_else(force_char & !char_above, 0, .))) %>% 
     bind_cols(calc_agi(.)) %>% 
     mutate(char_cash    = char_cash_, 
            char_noncash = char_noncash_) %>% 
+      
+      
+    #----------------
+    # Taxable income 
+    #----------------
     
-    
-  #----------------
-  # Taxable income 
-  #----------------
-  
-  # Standard deduction
-  bind_cols(calc_std_ded(.)) %>% 
-    
+    # Standard deduction
+    bind_cols(calc_std_ded(.)) %>% 
+      
     # Itemized deductions
     mutate(across(.cols = c(char_cash, char_noncash), 
                   .fns  = ~ if_else(force_char & char_above, 0, .))) %>%
@@ -180,27 +180,34 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # QBI deduction
     bind_cols(calc_qbi_ded(.)) %>% 
     
-    # Taxable income
+    # Taxable income and itemizer status
     bind_cols(calc_txbl_inc(.)) %>% 
     
+    # Set itemized deduction variables to 0 for nonitemizers
+    mutate(across(.cols = c('med_item_ded', 'salt_item_ded', 'mort_int_item_ded', 
+                            'inv_int_item_ded', 'int_item_ded', 'char_item_ded', 
+                            'casualty_item_ded', 'misc_item_ded', 'other_item_ded', 
+                            'item_ded_ex_limits', 'item_ded'), 
+                  .fns  = ~ if_else(itemizing, ., 0))) %>% 
+      
+      
+    #--------------------------
+    # Liability before credits
+    #--------------------------
     
-  #--------------------------
-  # Liability before credits
-  #--------------------------
-  
-  # Liability
-  bind_cols(calc_tax(.)) %>%
+    # Liability
+    bind_cols(calc_tax(.)) %>%
     
     # Alternative minimum tax
     bind_cols(calc_amt(.)) %>% 
     
+      
+    #---------
+    # Credits
+    #---------
     
-  #---------
-  # Credits
-  #---------
-  
-  # CDCTC
-  bind_cols(calc_cdctc(.)) %>% 
+    # CDCTC
+    bind_cols(calc_cdctc(.)) %>% 
     
     # Education credits
     bind_cols(calc_ed_cred(.)) %>% 
@@ -217,14 +224,14 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # Rebates / UBI
     bind_cols(calc_rebate(.)) %>%
     
+      
+    #----------------------
+    # Liability allocation
+    #----------------------
     
-  #----------------------
-  # Liability allocation
-  #----------------------
-  
-  # NIIT
-  bind_cols(calc_niit(.)) %>% 
-    
+    # NIIT
+    bind_cols(calc_niit(.)) %>% 
+      
     # Liability
     bind_cols(calc_liab(.)) %>% 
     
@@ -273,7 +280,7 @@ remit_taxes = function(tax_units) {
     mutate(
       
       # Calculate non-withheld share of AGI
-      inc_nonwithheld       = txbl_int + div + txbl_kg, 
+      inc_nonwithheld       = txbl_int + div_ord + div_pref + txbl_kg, 
       iit_share_nonwithheld = pmin(1, pmax(0, inc_nonwithheld / agi)),
       
       # Calculate income tax liability net of general revenue transfers 
@@ -302,7 +309,7 @@ remit_taxes = function(tax_units) {
 
 
 
-calc_mtrs = function(tax_units, liab_baseline, name, vars) {
+calc_mtrs = function(tax_units, liab_baseline, var) {
   
   #----------------------------------------------------------------------------
   # Calculates next-dollar MTR with respect to given variable, as represented 
@@ -316,29 +323,31 @@ calc_mtrs = function(tax_units, liab_baseline, name, vars) {
   #   - tax_units (df)        : tibble of tax units, exogenous variables only
   #   - liab_baseline (dbl[]) : vector of net income tax liability plus
   #                             payroll tax liability
-  #   - name (str)            : name used to represent variables we're  
-  #                             incrementing (e.g. "dividends" or "kg")
-  #   - vars (str[])          : vector of names of variables to increment
+  #   - var (str)             : name of variable to increment
   #
-  # Returns: tibble of ID-MTR pairs (df)
+  # Returns: tibble of MTRs (df).
   #----------------------------------------------------------------------------
   
   # Set output variable name
-  mtr_name = paste0('mtr_', name)
+  mtr_name = paste0('mtr_', var)
   
   
   tax_units %>% 
     
     # Increment variable values
-    mutate(across(.cols = all_of(vars),
+    mutate(across(.cols = all_of(var),
                   .fns  = ~ . + 1)) %>%
     
     # Re-calculate taxes
-    do_taxes(vars_1040 = c('liab_iit_net'), vars_payroll = c('liab_pr')) %>% 
+    do_taxes(vars_payroll = return_vars$calc_pr,
+             vars_1040    = return_vars %>%
+                              remove_by_name('calc_pr') %>%
+                              unlist() %>% 
+                              set_names(NULL)) %>% 
     
     # Calculate MTR and return
     mutate(!!mtr_name := liab_pr + liab_iit_net - liab_baseline) %>% 
-    select(id, all_of(mtr_name)) %>% 
+    select(all_of(mtr_name)) %>% 
     return()
 }
 

@@ -82,13 +82,8 @@ calc_liab = function(tax_unit, fill_missings = F) {
       
       # Apply refundable credits to remaining (non-NIIT) individual income tax
       # (equiavlent to E11601 on the 2015 PUF) 
-      ref_iit = pmin(liab_ac_nonref, ctc_ref +
-                                     ed_ref + 
-                                     net_ptc + 
-                                     eitc + 
-                                     rebate + 
-                                     cdctc_ref + 
-                                     savers_ref), 
+      ref     = ctc_ref + ed_ref + net_ptc + eitc + rebate + cdctc_ref + savers_ref,
+      ref_iit = pmin(liab_ac_nonref, ref), 
       
       # Calculate individual income tax liability after credits 
       # (equivalent to E08800 on the 2015 PUF)  

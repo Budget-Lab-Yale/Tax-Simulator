@@ -94,6 +94,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
                   other_inc,
 
       # Calculate above-the-line deductions, excluding student loan interest deduction 
+      char_above_ded  = pmin(char.above_limit, char_cash + char_noncash),
       above_ded_ex_sl = ed_exp + 
                         hsa_contr + 
                         liab_seca_er + 
@@ -103,8 +104,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
                         alimony_exp * (divorce_year < agi.alimony_repeal_year) + 
                         trad_contr_ira +
                         pmin(tuition_ded, agi.tuition_ded_limit) + 
-                        pmin(dpad, agi.dpad_limit) + 
-                        pmin(char.above_limit, char_cash + char_noncash), 
+                        pmin(dpad, agi.dpad_limit), 
                       
       # Calculate MAGI for taxable Social Security benefits calculation
       magi_ss = inc_ex_ss - above_ded_ex_sl
@@ -120,7 +120,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
            agi       = gross_inc - above_ded) %>% 
     
     # Keep variables to return
-    select(all_of(return_vars$agi)) %>% 
+    select(all_of(return_vars$calc_agi)) %>% 
     return()
 }
 

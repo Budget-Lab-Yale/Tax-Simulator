@@ -5,7 +5,7 @@
 #-------------------------------------------------------------------
 
 
-get_1040_totals = function(tax_units, year) {
+get_1040_totals = function(tax_units, yr) {
   
   #----------------------------------------------------------------------------
   # Aggregates individual income tax microdata. Reports both counts (number of 
@@ -13,7 +13,7 @@ get_1040_totals = function(tax_units, year) {
   # 
   # Parameters:
   #   - tax_units (df) : tibble of tax units including calculated variables
-  #   - year (int)     : year corresponding to tax unit data
+  #   - yr (int)       : year corresponding to tax unit data
   #
   # Returns: tibble of aggregate tax unit statistics (df).
   #----------------------------------------------------------------------------
@@ -34,11 +34,11 @@ get_1040_totals = function(tax_units, year) {
     'txbl_int',        
     'exempt_int',      
     'div_ord',         
-    'div_qual',        
+    'div_pref',        
     'txbl_ira_dist',   
     'txbl_pens_dist',
     'txbl_kg',
-    'pref_kg',
+    'kg_pref',
     'state_ref',       
     'alimony',    
     'sole_prop',  
@@ -120,8 +120,7 @@ get_1040_totals = function(tax_units, year) {
   tax_units %>% 
 
     # Derive reporting variables
-    mutate(year           = year,
-           n_tax_units    = 1, 
+    mutate(n_tax_units    = 1, 
            n_returns      = filer,
            n_returns_dep  = filer * dep_status,
            n_nonfilers    = !filer,
@@ -142,13 +141,14 @@ get_1040_totals = function(tax_units, year) {
       
       # Restrict tax variables to 1040 filers
       across(.cols = all_of(tax_vars), 
-             .fns  = ~ list(n   = sum((. != 0) * weight * filer) / 1e6,
-                            amt = sum(.        * weight * filer) / 1e9))
+             .fns  = ~ list(n   = ~ sum((. != 0) * weight * filer) / 1e6,
+                            amt = ~ sum(.        * weight * filer) / 1e9))
     ) %>% 
     
     # Clean up names and return
     rename_with(.cols = starts_with('amt_'), 
                 .fn   = ~ str_replace(., 'amt_', '')) %>% 
+    mutate(year = yr) %>% 
     select(-itemizing, year, everything()) %>% 
     return()
 } 
@@ -156,7 +156,7 @@ get_1040_totals = function(tax_units, year) {
 
 
 
-get_pr_totals = function(tax_units) {
+get_pr_totals = function(tax_units, yr) {
   
   #----------------------------------------------------------------------------
   # Aggregates payroll tax microdata. Reports both counts (number of returns 
@@ -164,7 +164,7 @@ get_pr_totals = function(tax_units) {
   # 
   # Parameters:
   #   - tax_units (df) : tibble of tax units including calculated variables
-  #   - year (int)     : year corresponding to tax unit data
+  #   - yr (int)       : year corresponding to tax unit data
   #
   # Returns: tibble of aggregate tax unit statistics (df).
   #----------------------------------------------------------------------------
@@ -200,8 +200,7 @@ get_pr_totals = function(tax_units) {
   tax_units %>% 
     
     # Derive reporting variables
-    mutate(year        = year,
-           n_tax_units = 1) %>% 
+    mutate(n_tax_units = 1) %>% 
     
     summarise(
       
@@ -211,13 +210,14 @@ get_pr_totals = function(tax_units) {
       
       # Restrict tax variables to 1040 filers
       across(.cols = all_of(tax_vars), 
-             .fns  = ~ list(n   = sum((. != 0) * weight * filer) / 1e6,
-                            amt = sum(.        * weight * filer) / 1e9))
+             .fns  = ~ list(n   = ~ sum((. != 0) * weight * filer) / 1e6,
+                            amt = ~ sum(.        * weight * filer) / 1e9))
     ) %>% 
     
     # Clean up names and return
     rename_with(.cols = starts_with('amt_'), 
                 .fn   = ~ str_replace(., 'amt_', '')) %>% 
+    mutate(year = yr) %>% 
     relocate(year) %>% 
-  return()
+    return()
 } 

@@ -3,7 +3,7 @@
 #-----------------------------------------------------------
 
 # Set return variables for function
-return_vars$eitc = c('eitc')
+return_vars$calc_eitc = c('eitc')
 
 
 calc_eitc = function(tax_unit, fill_missings = F) {
@@ -31,13 +31,13 @@ calc_eitc = function(tax_unit, fill_missings = F) {
     'age2',          # (int)  age of secondary filer
     'ei1',           # (dbl)  earned income of primary filer
     'ei2',           # (dbl)  earned income of secondary filer
-
-    'txbl_int',          # (dbl) taxable interest income 
-    'exempt_int',        # (dbl) tax-exempt interest income
-    'div',               # (dbl) dividend income
-    'txbl_kg',           # (dbl) net capital gain included in AGI
-    'sch_e',             # (dbl) Schedule E net income
-    'part_scorp',        # (dbl) net partnership and S corporation income
+    'txbl_int',      # (dbl) taxable interest income 
+    'exempt_int',    # (dbl) tax-exempt interest income
+    'div_ord',       # (dbl) non-qualified dividend income
+    'div_pref',      # (dbl) qualified dividend income
+    'txbl_kg',       # (dbl) net capital gain included in AGI
+    'sch_e',         # (dbl) Schedule E net income
+    'part_scorp',    # (dbl) net partnership and S corporation income
     
     # Tax law attributes
     'eitc.pi_rate_0',     # (dbl) credit phase-in rate for filers with no qualifying children
@@ -79,7 +79,8 @@ calc_eitc = function(tax_unit, fill_missings = F) {
       # Potentially deny eligibility based on investment income
       inv_inc = txbl_int + 
                 exempt_int + 
-                div + 
+                div_ord + 
+                div_pref + 
                 pmax(0, txbl_kg) + 
                 pmax(0, (sch_e - part_scorp)),
       ei = ei * (inv_inc <= eitc.inv_inc_limit),
@@ -120,6 +121,6 @@ calc_eitc = function(tax_unit, fill_missings = F) {
     ) %>% 
     
     # Keep variables to return
-    select(all_of(return_vars$eitc)) %>% 
+    select(all_of(return_vars$calc_eitc)) %>% 
     return()
 }
