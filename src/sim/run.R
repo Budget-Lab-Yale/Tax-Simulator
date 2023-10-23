@@ -159,6 +159,9 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
   #                    payroll taxes, `1040` for individual income taxes)
   #----------------------------------------------------------------------------
   
+  print(paste0('Running ', year, ' for scenario ', "'", scenario_info$id, "'",
+               if_else(static, '(static)', '')))
+  
   # Load tax unit data and join tax law
   tax_units = scenario_info$interface_paths$`Tax-Data` %>%  
     read_microdata(year) %>% 

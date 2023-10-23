@@ -49,28 +49,42 @@ do_taxes = function(tax_units, vars_1040, vars_payroll) {
     
     # Force filers to take the above-the-line deduction
     above = tax_units %>% 
-      do_1040('liab_iit_net', force_char = T, char_above = T) %>% 
-      mutate(char_ded_type = 'above')
+      do_1040(return_vars = vars_1040,
+              force_char  = T, 
+              char_above  = T) %>% 
+      mutate(id            = tax_units$id, 
+             char_ded_type = 'above')
+    
+    print(colnames(above))
     
     # Force filers to take the itemized deduction
     item = tax_units %>% 
-      do_1040('liab_iit_net', force_char = T, char_above = F) %>% 
-      mutate(char_ded_type = 'item')
+      do_1040(return_vars = vars_1040, 
+              force_char  = T, 
+              char_above  = F) %>% 
+      mutate(id            = tax_units$id,
+             char_ded_type = 'item')
+    
+    print(colnames(above))
     
     # Determine which is better
     opt = above %>% 
-      select(id, above = liab_iit_net) %>% 
+      select(above = liab_iit_net) %>% 
       bind_cols(
         item %>% 
-          select(id, item = liab_iit_net)
+          select(item = liab_iit_net)
       ) %>% 
-      mutate(char_ded_type = if_else(above <= item), 'above', 'item') %>% 
+      mutate(char_ded_type = if_else(above <= item, 'above', 'item')) %>% 
       select(char_ded_type)
+    
+    
+    print(colnames(opt))
     
     # Select optimized answer
     tax_units %<>%
       bind_cols(opt) %>%
-      left_join(bind_rows(above, item), by = c('id', 'char_ded_type'))
+      left_join(bind_rows(above, item), by = c('id', 'char_ded_type')) %>% 
+      select(-char_ded_type)
     
     
     # Standard case: just calculate the 1040 once  
