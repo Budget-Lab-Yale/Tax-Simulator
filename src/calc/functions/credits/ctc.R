@@ -33,6 +33,9 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'dep_ssn1',      # (bool) whether youngest dependent has a Social Security number (NA for tax units without a dependent)
     'dep_ssn2',      # (bool) whether second youngest dependent has a Social Security number (NA for tax units without a second dependent)
     'dep_ssn3',      # (bool) whether oldest dependent has a Social Security number (NA for tax units without a third dependent)
+    'dep_ctc1',      # (bool) whether youngest dependent qualifies for CTC status based on non-age and non-SSN criteria (NA for tax units without a dependent)
+    'dep_ctc2',      # (bool) whether second youngest dependent qualifies for CTC status based on non-age and non-SSN criteria (NA for tax units without a second dependent)
+    'dep_ctc3',      # (bool) whether oldest dependent qualifies for CTC status based on non-age and non-SSN criteria (NA for tax units without a third dependent)
     'n_dep',         # (int) number of dependents
     'agi',           # (dbl) Adjusted Gross Income
     'liab_bc',       # (dbl) liability before credits, including AMT   
@@ -78,10 +81,12 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       need_ssn = ctc.need_ssn == 1,
       across(.cols = starts_with('dep_age'), 
              .fns  = ~ replace_na(as.numeric(.), Inf)),
+      across(.cols = c(starts_with('dep_ssn'), starts_with('dep_ctc')), 
+             .fns  = ~ !is.na(.) & .),
       across(.cols  = c(ctc.young_age_limit, ctc.old_age_limit), 
-             .fns   = list('1' = ~ (dep_age1 <= .) & (dep_ssn1 | !need_ssn), 
-                           '2' = ~ (dep_age2 <= .) & (dep_ssn2 | !need_ssn), 
-                           '3' = ~ (dep_age3 <= .) & (dep_ssn3 | !need_ssn)), 
+             .fns   = list('1' = ~ dep_ctc1 & (dep_age1 <= .) & (dep_ssn1 | !need_ssn), 
+                           '2' = ~ dep_ctc2 & (dep_age2 <= .) & (dep_ssn2 | !need_ssn), 
+                           '3' = ~ dep_ctc3 & (dep_age3 <= .) & (dep_ssn3 | !need_ssn)), 
              .names = '{str_sub(col, 5, 5)}{fn}'),
       
       n_young = y1 + y2 + y3,

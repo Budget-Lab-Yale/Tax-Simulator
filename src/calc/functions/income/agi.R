@@ -78,6 +78,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
     mutate(
       
       # Calculate gross income excluding OASI benefits
+      alimony_qualifies = !is.na(divorce_year) & (divorce_year < agi.alimony_repeal_year),
       inc_ex_ss = wages + 
                   txbl_int + 
                   div_ord +
@@ -86,7 +87,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
                   txbl_pens_dist + 
                   txbl_kg + 
                   other_gains + 
-                  alimony * (divorce_year < agi.alimony_repeal_year) + 
+                  alimony * alimony_qualifies + 
                   sole_prop + 
                   sch_e + 
                   farm +
@@ -101,7 +102,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
                         keogh_contr + 
                         se_health + 
                         early_penalty + 
-                        alimony_exp * (divorce_year < agi.alimony_repeal_year) + 
+                        alimony_exp * alimony_qualifies + 
                         trad_contr_ira +
                         pmin(tuition_ded, agi.tuition_ded_limit) + 
                         pmin(dpad, agi.dpad_limit), 

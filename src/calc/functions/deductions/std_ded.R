@@ -45,7 +45,9 @@ calc_std_ded = function(tax_unit, fill_missings = F) {
     mutate(
       
       # For nondependents, calculate standard deduction bonus value
-      n_bonuses   = (age1 >= 65) + (age2 >= 65) + blind1 + blind2,
+      age_bonus1  = age1 >= 65,
+      age_bonus2  = !is.na(age2) & (age2 >= 65),
+      n_bonuses   = age_bonus1 + age_bonus2 + blind1 + (!is.na(blind2) & blind2),
       bonus_value = std.bonus * n_bonuses,
       
       # Calculate nondependent total standard deduction

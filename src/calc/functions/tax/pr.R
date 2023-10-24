@@ -107,10 +107,6 @@ calc_pr = function(tax_unit, fill_missings = F) {
     parse_calc_fn_input(req_vars, fill_missings) %>% 
     mutate(
       
-      # Temporarily set secondary-earner variables to 0 for non-joint tax units
-      across(.cols = c(wages2, trad_contr_er2, sole_prop2, farm2, part_se2), 
-             .fns  = ~ replace_na(., 0)), 
-      
       # Calculate FICA-eligible wages
       gross_wages1 = wages1 + trad_contr_er1, 
       gross_wages2 = wages2 + trad_contr_er2, 
@@ -214,11 +210,7 @@ calc_pr = function(tax_unit, fill_missings = F) {
                      liab_fica_hi_er1    + liab_fica_hi_er2 + 
                      liab_seca_oasdi_er1 + liab_seca_oasdi_er2 + 
                      liab_seca_hi_er1    + liab_seca_hi_er2,
-      liab_pr      = liab_oasdi + liab_hi,     
-      
-      # Set secondary-earner output variables to NA for non-joint tax units
-      across(.cols = c(se2, ei2), 
-             .fns  = ~ if_else(filing_status != 2, NA, .))
+      liab_pr      = liab_oasdi + liab_hi
   
     ) %>%
 

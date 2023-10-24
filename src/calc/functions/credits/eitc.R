@@ -70,8 +70,12 @@ calc_eitc = function(tax_unit, fill_missings = F) {
       
       # Determine qualifying earned income based on age
       qual1 = (n_dep_eitc > 0) | (age1 >= eitc.min_age & age1 <= eitc.max_age),
-      qual2 = (n_dep_eitc > 0) | (age2 >= eitc.min_age & age2 <= eitc.max_age),
-      ei    = (ei1 * qual1) + if_else(filing_status == 2, ei2 * qual2, 0),
+      qual2 = if_else(
+        !is.na(age2),
+        (n_dep_eitc > 0) | (age2 >= eitc.min_age & age2 <= eitc.max_age),
+        F
+      ),
+      ei = (ei1 * qual1) + if_else(filing_status == 2, ei2 * qual2, 0),
 
       # Potentially deny eligibility based on dependent and filing status
       ei = ei * (!dep_status & (eitc.mfs_eligible == 1 | filing_status != 3)),

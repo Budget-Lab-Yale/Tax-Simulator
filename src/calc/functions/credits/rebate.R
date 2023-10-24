@@ -56,6 +56,8 @@ calc_rebate = function(tax_unit, fill_missings = F) {
       across(.cols  = c(dep_age1, dep_age2, dep_age3), 
              .fns   = ~ if_else(!is.na(.), . <= rebate.dep_age_limit, F),
              .names = 'age_qual{str_sub(col, -1)}'),
+      across(.cols = c(dep_ssn1, dep_ssn2, dep_ssn3), 
+             .fns  = ~ !is.na(.) & .),
       
       n_dep = (age_qual1 & (dep_ssn1 | rebate.dep_ssn_req == 0)) + 
               (age_qual2 & (dep_ssn2 | rebate.dep_ssn_req == 0)) + 

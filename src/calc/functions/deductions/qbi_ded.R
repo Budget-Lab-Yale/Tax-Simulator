@@ -65,6 +65,10 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
   # Calculate QBI deduction for each business 
   qbi_ded = tax_unit %>% 
     
+    # Replace NAs with 0s 
+    mutate(across(.cols = c(starts_with('wagebill_'), starts_with('sstb_')), 
+                  .fns  = ~ replace_na(., 0))) %>% 
+    
     # Reshape long in business type (data limitations require that business
     # aggregation happens at the business type level) such that we have three 
     # QBI-related variables per business type: income, wage bill, and SSTB status

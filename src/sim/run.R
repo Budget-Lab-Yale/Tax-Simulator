@@ -72,7 +72,7 @@ do_scenario = function(ID, baseline_mtrs) {
   }
   
   # Return MTRs if running baseline
-  if (id == 'baseline') {
+  if (ID == 'baseline') {
     return(static_mtrs)
   }
 }
