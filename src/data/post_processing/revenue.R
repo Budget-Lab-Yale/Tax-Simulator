@@ -6,14 +6,12 @@
 
 
 
-calc_receipts = function(scenario_root, static, totals) {
+calc_receipts = function(totals, scenario_root) {
   
   #----------------------------------------------------------------------------
   # Calculates a scenario's receipts 
   # 
   # Parameters:
-  #   - scenario_root (str) : directory where scenario's data is written
-  #   - static (bool)       : whether scenario run is static
   #   - totals (df) : dataframe containing columns for calendar year totals of
   #        - pmt_iit_nonwithheld (dbl)    : income tax paid at time of filing
   #        - pmt_iit_withheld (dbl)       : income tax withheld or paid 
@@ -25,6 +23,7 @@ calc_receipts = function(scenario_root, static, totals) {
   #        - pmt_pr_nonwithheld (dbl)     : payroll tax paid at time of filing
   #        - pmt_pr_withheld (dbl)        : payroll tax withheld (FICA) or paid 
   #                                         quarterly (SECA)  
+  #   - scenario_root (str) : directory where scenario's data is written
   #
   # Returns:  void, writes a dataframe for the scenario containing values for:
   #   - Fiscal Year
@@ -57,10 +56,7 @@ calc_receipts = function(scenario_root, static, totals) {
     
     # Write CSV
     select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits) %>%
-    write_csv(file.path(scenario_root, 
-                        if_else(static, 'static', 'conventional'),
-                        'supplemental', 
-                        'receipts.csv'))
+    write_csv(file.path(scenario_root, 'supplemental', 'receipts.csv'))
 
 }
 

@@ -6,13 +6,13 @@
 
 
 
-do_scenario = function(id, baseline_mtrs) {
+do_scenario = function(ID, baseline_mtrs) {
   
   #----------------------------------------------------------------------------
   # Executes full simulation for a given scenario. TODO
   # 
   # Parameters:
-  #   - id (str)           : scenario ID
+  #   - ID (str)           : scenario ID
   #   - baseline_mtrs (df) : tibble of baseline MTRs indexed by year/tax unit 
   #                          ID; NULL if this scenario is the baseline or if 
   #                          no MTR variables were specified 
@@ -22,7 +22,7 @@ do_scenario = function(id, baseline_mtrs) {
   #----------------------------------------------------------------------------
   
   # Get scenario info
-  scenario_info = get_scenario_info(id)
+  scenario_info = get_scenario_info(ID)
 
   
   #-----------------
@@ -58,7 +58,7 @@ do_scenario = function(id, baseline_mtrs) {
   
   # Else, for static-only counterfactual runs, copy static runs to scenario's  
   # conventional folder (baseline only has a static subfolder by definition)
-  } else if (id != 'baseline') {
+  } else if (ID != 'baseline') {
     
     # Set root variables
     static_path = file.path(scenario_info$output_path, 'static')
@@ -83,7 +83,7 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
   
   #----------------------------------------------------------------------------
   # Runs simulation instance for a given scenario, either static or 
-  # conventional. TODO
+  # conventional. 
   # 
   # Parameters:
   #   - scenario_info (list) : scenario info object; see get_scenario_info()
@@ -113,18 +113,21 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
         baseline_mtrs = baseline_mtrs, 
         static_mtrs   = static_mtrs)
   
+  
   # Write totals files
-  totals_pr = output$pr %>% 
+  totals_pr = output %>%
+    map(.f = ~.x$totals$pr) %>% 
     bind_rows() %>% 
     write_csv(file.path(output_root, 'totals', 'payroll.csv'))
   
-  totals_1040 = output$`1040` %>% 
+  totals_1040 = output %>% 
+    map(.f = ~.x$totals$`1040`) %>% 
     bind_rows() %>% 
     write_csv(file.path(output_root, 'totals', '1040.csv'))
     
   # Calculate and write receipts
   totals_pr %>%  
-    left_join(totals_1040, by = 'year')
+    left_join(totals_1040, by = 'year') %>% 
     calc_receipts(output_root) 
   
   # Return MTRs
@@ -159,8 +162,8 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
   #                    payroll taxes, `1040` for individual income taxes)
   #----------------------------------------------------------------------------
   
-  print(paste0('Running ', year, ' for scenario ', "'", scenario_info$id, "'",
-               if_else(static, '(static)', '')))
+  print(paste0('Running ', year, ' for scenario ', "'", scenario_info$ID, "'",
+               if_else(static & scenario_info$ID != 'baseline', '(static)', '')))
   
   # Load tax unit data and join tax law
   tax_units = scenario_info$interface_paths$`Tax-Data` %>%  

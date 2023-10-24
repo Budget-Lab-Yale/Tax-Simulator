@@ -1,6 +1,6 @@
-#------------------
-# TODO
-#-----------------
+#--------------------------------------------
+# Functions for modeling behavioral feedback
+#--------------------------------------------
 
 
 do_behavioral_feedback = function(tax_units, behavior_modules, baseline_mtrs, static_mtrs) {

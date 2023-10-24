@@ -55,8 +55,6 @@ do_taxes = function(tax_units, vars_1040, vars_payroll) {
       mutate(id            = tax_units$id, 
              char_ded_type = 'above')
     
-    print(colnames(above))
-    
     # Force filers to take the itemized deduction
     item = tax_units %>% 
       do_1040(return_vars = vars_1040, 
@@ -64,8 +62,6 @@ do_taxes = function(tax_units, vars_1040, vars_payroll) {
               char_above  = F) %>% 
       mutate(id            = tax_units$id,
              char_ded_type = 'item')
-    
-    print(colnames(above))
     
     # Determine which is better
     opt = above %>% 
@@ -76,9 +72,6 @@ do_taxes = function(tax_units, vars_1040, vars_payroll) {
       ) %>% 
       mutate(char_ded_type = if_else(above <= item, 'above', 'item')) %>% 
       select(char_ded_type)
-    
-    
-    print(colnames(opt))
     
     # Select optimized answer
     tax_units %<>%

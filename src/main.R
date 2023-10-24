@@ -17,7 +17,7 @@ list.files('./src', recursive = T) %>%
   map(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
 
 # cmd line args TODO
-runscript_name = 'kg_28' 
+runscript_name = 'baseline' 
 user_id = 'jar335'
 local = 1
 

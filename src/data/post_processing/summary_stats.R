@@ -140,14 +140,15 @@ get_1040_totals = function(tax_units, yr) {
              .fns  = ~ sum(. * weight) / 1e6), 
       
       # Restrict tax variables to 1040 filers
-      across(.cols = all_of(tax_vars), 
-             .fns  = list(n   = ~ sum((. != 0) * weight * filer) / 1e6,
-                          amt = ~ sum(.        * weight * filer) / 1e9))
+      across(.cols  = all_of(tax_vars), 
+             .fns   = list(n      = ~ sum((. != 0) * weight * filer) / 1e6,
+                           amount = ~ sum(.        * weight * filer) / 1e9),
+             .names = '{fn}_{col}')
     ) %>%
     
     # Clean up names and return
-    rename_with(.cols = starts_with('amt_'), 
-                .fn   = ~ str_replace(., 'amt_', '')) %>% 
+    rename_with(.cols = starts_with('amount_'), 
+                .fn   = ~ str_replace(., 'amount_', '')) %>% 
     mutate(year = yr) %>% 
     select(year, everything()) %>% 
     return()
@@ -209,14 +210,15 @@ get_pr_totals = function(tax_units, yr) {
              .fns  = ~ sum(. * weight) / 1e6), 
       
       # Restrict tax variables to 1040 filers
-      across(.cols = all_of(tax_vars), 
-             .fns  = list(n   = ~ sum((. != 0) * weight * filer) / 1e6,
-                          amt = ~ sum(.        * weight * filer) / 1e9))
+      across(.cols  = all_of(tax_vars), 
+             .fns   = list(n     = ~ sum((. != 0) * weight * filer) / 1e6,
+                           amount = ~ sum(.        * weight * filer) / 1e9), 
+             .names = '{fn}_{col}')
     ) %>% 
     
     # Clean up names and return
-    rename_with(.cols = starts_with('amt_'), 
-                .fn   = ~ str_replace(., 'amt_', '')) %>% 
+    rename_with(.cols = starts_with('amount_'), 
+                .fn   = ~ str_replace(., 'amount_', '')) %>% 
     mutate(year = yr) %>% 
     relocate(year) %>% 
     return()
