@@ -69,8 +69,10 @@ calc_rebate = function(tax_unit, fill_missings = F) {
       
       # Apply phaseout
       po_range = if_else(rebate.po_type == 1, 
-                         rebate / rebate.po_rate, # Rate-based phaseout 
-                         rebate.po_range),        # Range-based phaseout
+                         if_else(rebate == 0,  # Rate-based phaseout
+                                 Inf, 
+                                 rebate / rebate.po_rate),  
+                         rebate.po_range),     # Range-based phaseout
       po_share = pmin(1, pmax(0, agi - rebate.po_thresh) / po_range),
       rebate   = rebate * (1 - po_share),
       
