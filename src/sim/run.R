@@ -237,6 +237,7 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
     left_join(mtrs %>% 
                 select(-year), 
               by = 'id') %>% 
+    select(all_of(globals$detail_vars), starts_with('mtr_')) %>% 
     write_csv(file.path(scenario_info$output_path, 
                         if_else(static, 'static', 'conventional'),
                         'detail', 

@@ -25,13 +25,14 @@ parse_globals = function(runscript_name, user_id, local, vintage, pct_sample) {
   #                            YYYYMMDDHH.
   #   - pct_sample (dbl)     : share of records used in simulation 
   #
-  # Returns: list of 4: 
+  # Returns: list of 5: 
   #   - runtime_args (df)    : tibble representation of the runscripts CSV
   #   - interface_paths (df) : tibble with ID-interface-filepath info in rows 
   #   - output_root (str)    : path where output data is written
   #   - pct_sample (dbl)     : share of records used in simulation 
   #   - sample_ids (int[])   : vector of tax unit IDs comprising the
   #                            sample population (all IDs for 100%)
+  #   - detail_vars (str[])  : vector of microdata output column names
   #----------------------------------------------------------------------------
   
   # Read and parse data dependency interface file paths
@@ -130,12 +131,27 @@ parse_globals = function(runscript_name, user_id, local, vintage, pct_sample) {
     sample_frac(size = pct_sample) %>% 
     get_vector('id')
   
+  
+  # Specifiy microdata output variable
+  detail_vars = c(
+    'id', 'weight', 'filer', 'dep_status', 'filing_status', 'age1', 'age2', 
+    'n_dep','n_dep_ctc', 'dep_age1', 'dep_age2', 'dep_age3', 'wages', 'se', 
+    'div_ord', 'div_pref', 'txbl_kg', 'kg_st', 'kg_lt', 'sole_prop', 'sch_e', 
+    'part_scorp', 'gross_ss', 'txbl_ss', 'above_ded', 'agi', 'std_ded', 
+    'item_ded', 'itemizing', 'pe_ded', 'qbi_ded', 'txbl_inc', 'liab_ord', 
+    'liab_pref', 'liab_amt', 'liab_bc', 'cdctc_nonref', 'ctc_nonref',
+    'ed_nonref', 'nonref',  'ed_ref', 'eitc', 'cdctc_ref', 'ctc_ref', 'rebate', 
+    'ref', 'liab_niit', 'liab_iit', 'liab_iit_net', 'liab_seca', 'liab_pr'
+  )
+  
+  
   # Return runtime args and interface paths  
   return(list(runtime_args    = runtime_args,
               interface_paths = interface_paths, 
               output_root     = output_root, 
               pct_sample      = pct_sample,
-              sample_ids      = sample_ids))
+              sample_ids      = sample_ids, 
+              detail_vars     = detail_vars))
 }
 
 
