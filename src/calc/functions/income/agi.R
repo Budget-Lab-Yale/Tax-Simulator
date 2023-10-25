@@ -2,6 +2,10 @@
 # Function to AGI and its derived intermediate components
 #---------------------------------------------------------
 
+# Set return variables for function
+return_vars$calc_agi = c('txbl_ss', 'char_above_ded', 'gross_inc', 'above_ded', 
+                         'agi')
+
 
 calc_agi = function(tax_unit, fill_missings = F) {
   
@@ -16,7 +20,6 @@ calc_agi = function(tax_unit, fill_missings = F) {
   #
   # Returns: dataframe of following variables:
   #   - txbl_ss        (dbl) Social Security benefits included in AGI
-  #   - sl_int_ded     (dbl) student loan interest deduction
   #   - char_above_ded (dbl) above-the-line charitable deduction
   #   - gross_inc      (dbl) gross income
   #   - above_ded      (dbl) above-the-line deductions
@@ -30,11 +33,12 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'txbl_int',        # (dbl) taxable interest income 
     'exempt_int',      # (dbl) tax-exempt interest income
     'div_ord',         # (dbl) non-qualified dividend income
-    'div_qual',        # (dbl) qualified dividend income
+    'div_pref',        # (dbl) qualified dividend income
     'txbl_ira_dist',   # (dbl) taxable IRA distributions
     'txbl_pens_dist',  # (dbl) taxable DB and DC pension distributions plus annuity payments
     'gross_ss',        # (dbl) gross OASI benefits
     'txbl_kg',         # (dbl) net capital gain includable in AGI
+    'other_gains',     # (dbl) capital gain distributions
     'state_ref',       # (dbl) taxable refunds/credits/offsets of SALT
     'alimony',         # (dbl) alimony income
     'divorce_year',    # (int) year of divorce if applicable
@@ -42,13 +46,12 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'sch_e',           # (dbl) net partnership, S corp, rental, royalty, estate, and trust income (Sch E.)
     'farm',            # (dbl) net farm income (Sch. F)
     'ui',              # (dbl) gross unemployment benefits
-    'nols',            # (dbl) net operating losses
-    'other_inc',       # (dbl) all other income sources: gambling, debt cancellation, etc. See Sch. 1
+    'other_inc',       # (dbl) all other income sources: NOLs, gambling, debt cancellation, etc. See Sch. 1
     'ed_exp',          # (dbl) educator expenses
     'hsa_contr',       # (dbl) pretax contributions to an HSA
     'liab_seca_er',    # (dbl) "employer"-side SECA liability
     'trad_contr_ira',  # (dbl) pretax contributions to an IRA
-    'sl_int_exp',      # (dbl) student loan interest paid
+    'sl_int_ded',      # (dbl) student loan interest deduction
     'keogh_contr',     # (dbl) contributions to SEP plans and KOEGH accounts
     'se_health',       # (dbl) self-employed health insurance premiums paid
     'early_penalty',   # (dbl) penalty on early withdrawal from retirement account
@@ -75,33 +78,34 @@ calc_agi = function(tax_unit, fill_missings = F) {
     mutate(
       
       # Calculate gross income excluding OASI benefits
+      alimony_qualifies = !is.na(divorce_year) & (divorce_year < agi.alimony_repeal_year),
       inc_ex_ss = wages + 
                   txbl_int + 
                   div_ord +
-                  div_qual + 
+                  div_pref + 
                   txbl_ira_dist + 
                   txbl_pens_dist + 
                   txbl_kg + 
-                  alimony * (divorce_year < agi.alimony_repeal_year) + 
+                  other_gains + 
+                  alimony * alimony_qualifies + 
                   sole_prop + 
                   sch_e + 
                   farm +
-                  ui - 
-                  nols + 
+                  ui +
                   other_inc,
 
       # Calculate above-the-line deductions, excluding student loan interest deduction 
+      char_above_ded  = pmin(char.above_limit, char_cash + char_noncash),
       above_ded_ex_sl = ed_exp + 
                         hsa_contr + 
                         liab_seca_er + 
                         keogh_contr + 
                         se_health + 
                         early_penalty + 
-                        alimony_exp * (divorce_year < agi.alimony_repeal_year) + 
+                        alimony_exp * alimony_qualifies + 
                         trad_contr_ira +
                         pmin(tuition_ded, agi.tuition_ded_limit) + 
-                        pmin(dpad, agi.dpad_limit) + 
-                        pmin(char.above_limit, char_cash + char_noncash), 
+                        pmin(dpad, agi.dpad_limit), 
                       
       # Calculate MAGI for taxable Social Security benefits calculation
       magi_ss = inc_ex_ss - above_ded_ex_sl
@@ -111,22 +115,13 @@ calc_agi = function(tax_unit, fill_missings = F) {
     # Calculate taxable social security benefits 
     bind_cols(calc_ss(.)) %>% 
     
-    mutate(
-      
-      # Calculate student loan interest deduction
-      magi_sl     = inc_ex_ss + txbl_ss - above_ded_ex_sl,
-      sl_po_share = pmin(1, pmax(0, magi_sl - agi.sl_po_thresh) / agi.sl_po_range),
-      sl_int_ded  = pmin(sl_int_exp, agi.sl_limit) * (1 - sl_po_share),
-      
-      # Put all the pieces together
-      gross_inc = inc_ex_ss + txbl_ss,
-      above_ded = above_ded_ex_sl + sl_int_ded,
-      agi       = gross_inc - above_ded
-      
-    ) %>% 
+    # Put all the pieces together
+    mutate(gross_inc = inc_ex_ss + txbl_ss,
+           above_ded = above_ded_ex_sl + sl_int_ded,
+           agi       = gross_inc - above_ded) %>% 
     
     # Keep variables to return
-    select(txbl_ss, sl_int_ded, char_above_ded, gross_inc, above_ded, agi) %>% 
+    select(all_of(return_vars$calc_agi)) %>% 
     return()
 }
 

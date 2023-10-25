@@ -2,6 +2,9 @@
 # Function to calculate Alternative Minimum Tax (AMT) liability
 #---------------------------------------------------------------
 
+# Set return variables for function
+return_vars$calc_amt = c('liab_amt', 'liab_bc')
+
 
 calc_amt = function(tax_unit, fill_missings = F) {
   
@@ -35,7 +38,7 @@ calc_amt = function(tax_unit, fill_missings = F) {
     'amt_other_adj',  # (dbl)  other adjustments to AMT income
     'amt_ftc',        # (dbl)  foreign tax credit for AMT purposes
     'txbl_inc',       # (dbl)  taxable income
-    'div_qual',       # (dbl)  qualified dividend income
+    'div_pref',       # (dbl)  qualified dividend income
     'kg_pref',        # (dbl)  preferred-rate capital gains ("net capital gain" in the internal revenue code)  
     'kg_1250',        # (dbl)  section 1250 unrecaptured gain
     'kg_collect',     # (dbl)  collectibles gain
@@ -98,7 +101,9 @@ calc_amt = function(tax_unit, fill_missings = F) {
     
     # Calculate tax on taxable income 
     bind_cols(
-      calc_tax((.)) %>% 
+      (.) %>% 
+        select(-all_of(return_vars$calc_tax)) %>% 
+        calc_tax() %>% 
         select(liab_amt_gross = liab)
     ) %>% 
     
@@ -107,6 +112,6 @@ calc_amt = function(tax_unit, fill_missings = F) {
            liab_bc  = liab + liab_amt + excess_ptc) %>% 
     
     # Keep variables to return
-    select(liab_amt, liab_bc) %>% 
+    select(all_of(return_vars$calc_amt)) %>% 
     return()
 }

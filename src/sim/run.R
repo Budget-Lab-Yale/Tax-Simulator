@@ -6,13 +6,13 @@
 
 
 
-do_scenario = function(id, baseline_mtrs) {
+do_scenario = function(ID, baseline_mtrs) {
   
   #----------------------------------------------------------------------------
   # Executes full simulation for a given scenario. TODO
   # 
   # Parameters:
-  #   - id (str)           : scenario ID
+  #   - ID (str)           : scenario ID
   #   - baseline_mtrs (df) : tibble of baseline MTRs indexed by year/tax unit 
   #                          ID; NULL if this scenario is the baseline or if 
   #                          no MTR variables were specified 
@@ -22,8 +22,8 @@ do_scenario = function(id, baseline_mtrs) {
   #----------------------------------------------------------------------------
   
   # Get scenario info
-  scenario_info = get_scenario_info(globals, id)
-  
+  scenario_info = get_scenario_info(ID)
+
   
   #-----------------
   # Initialize data
@@ -58,7 +58,7 @@ do_scenario = function(id, baseline_mtrs) {
   
   # Else, for static-only counterfactual runs, copy static runs to scenario's  
   # conventional folder (baseline only has a static subfolder by definition)
-  } else if (id != 'baseline') {
+  } else if (ID != 'baseline') {
     
     # Set root variables
     static_path = file.path(scenario_info$output_path, 'static')
@@ -72,7 +72,7 @@ do_scenario = function(id, baseline_mtrs) {
   }
   
   # Return MTRs if running baseline
-  if (id == 'baseline') {
+  if (ID == 'baseline') {
     return(static_mtrs)
   }
 }
@@ -83,7 +83,7 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
   
   #----------------------------------------------------------------------------
   # Runs simulation instance for a given scenario, either static or 
-  # conventional. TODO
+  # conventional. 
   # 
   # Parameters:
   #   - scenario_info (list) : scenario info object; see get_scenario_info()
@@ -108,26 +108,31 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
   output = scenario_info$years %>% 
     map(.f            = run_one_year,
         scenario_info = scenario_info, 
+        tax_law       = tax_law,
         static        = static,
         baseline_mtrs = baseline_mtrs, 
         static_mtrs   = static_mtrs)
   
+  
   # Write totals files
-  totals_pr = output$pr %>% 
+  totals_pr = output %>%
+    map(.f = ~.x$totals$pr) %>% 
     bind_rows() %>% 
     write_csv(file.path(output_root, 'totals', 'payroll.csv'))
   
-  totals_1040 = output$`1040` %>% 
+  totals_1040 = output %>% 
+    map(.f = ~.x$totals$`1040`) %>% 
     bind_rows() %>% 
     write_csv(file.path(output_root, 'totals', '1040.csv'))
     
   # Calculate and write receipts
   totals_pr %>%  
-    left_join(totals_1040, by = 'year')
+    left_join(totals_1040, by = 'year') %>% 
     calc_receipts(output_root) 
   
   # Return MTRs
-  output$mtrs %>% 
+  output %>% 
+    map(.f = ~ .x$mtrs) %>% 
     bind_rows() %>% 
     return()
 }
@@ -158,9 +163,15 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
   #                    payroll taxes, `1040` for individual income taxes)
   #----------------------------------------------------------------------------
   
+  print(paste0('Running ', year, ' for scenario ', "'", scenario_info$ID, "'",
+               if_else(static & scenario_info$ID != 'baseline', '(static)', '')))
+  
   # Load tax unit data and join tax law
-  tax_units = scenario_info %>%  
-    read_puf(year) %>% 
+  tax_units = scenario_info$interface_paths$`Tax-Data` %>%  
+    read_microdata(year) %>%
+    filter(id %in% globals$sample_ids) %>% 
+    mutate(weight = weight / globals$pct_sample, 
+           year   = year) %>% 
     left_join(tax_law, by = c('year', 'filing_status'))
 
   # Adjust for economic differences from economic baseline
@@ -192,24 +203,29 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
   # Do taxes
   #----------
   
+  # List calculated tax variables
+  vars_1040 = return_vars %>%
+    remove_by_name('calc_pr') %>%
+    unlist() %>% 
+    set_names(NULL)
+
   # Calculate taxes
   tax_units %<>% 
     do_taxes(vars_1040    = vars_1040,
-             vars_payroll = vars_payroll)
+             vars_payroll = return_vars$calc_pr)
   
   # Calculate marginal tax rates
-  mtrs = tax_units %>% 
-    select(-all_of(c(vars_1040, vars_payroll))) %>%
-    pmap(
-      .f = calc_mtrs, 
-      .l = list(name = names(scenario_info$mtr_vars), 
-                vars = scenario_info$mtr_vars),
-      tax_units     = (.),
-      liab_baseline = tax_units$liab_pr + tax_units$liab_iit_net
-    ) %>% 
+  mtrs = scenario_info$mtr_vars %>%
+    map(.f = ~ calc_mtrs(tax_units = tax_units %>% 
+                                       select(-all_of(return_vars %>% 
+                                                        unlist() %>% 
+                                                        set_names(NULL))), 
+                         liab_baseline = tax_units$liab_pr + tax_units$liab_iit_net,
+                         var           = .x)) %>% 
     bind_cols() %>% 
-    mutate(year = year) %>% 
-    relocate(year)
+    mutate(id   = tax_units$id,
+           year = year) %>% 
+    relocate(id, year)
     
   
   #-----------------
@@ -218,15 +234,18 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
   
   # Write microdata
   tax_units %>%  
-    left_join(mtrs, by = 'id') %>% 
+    left_join(mtrs %>% 
+                select(-year), 
+              by = 'id') %>% 
+    select(all_of(globals$detail_vars), starts_with('mtr_')) %>% 
     write_csv(file.path(scenario_info$output_path, 
                         if_else(static, 'static', 'conventional'),
                         'detail', 
                         paste0(year, '.csv')))
   
   # Get totals from microdata
-  totals = list(pr     = get_pr_totals(tax_units), 
-                `1040` = get_1040_totals(tax_units))
+  totals = list(pr     = get_pr_totals(tax_units, year), 
+                `1040` = get_1040_totals(tax_units, year))
   
   # Return required data
   return(list(mtrs   = mtrs, 

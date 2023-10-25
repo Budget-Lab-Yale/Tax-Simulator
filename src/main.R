@@ -11,15 +11,21 @@
 # Load required packages
 lapply(readLines('requirements.txt'), library, character.only = T)
 
+# Source all function scripts
+return_vars = list()
+list.files('./src', recursive = T) %>% 
+  map(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
+
 # cmd line args TODO
 runscript_name = 'kg_28' 
-user_id = 'jar335'
-local = 1
+user_id    = 'jar335'
+local      = 1
+vintage    = NULL
+pct_sample = 0.02
+
 
 # Set global (scenario-independent) variables
-source('./src/misc/utils.R')
-source('./src/misc/config_parser.R')
-globals = parse_globals(runscript_name, user_id, local)
+globals = parse_globals(runscript_name, user_id, local, vintage, pct_sample)
 
 # Get list of non-baseline scenarios 
 counterfactual_ids = globals$runtime_args %>% 

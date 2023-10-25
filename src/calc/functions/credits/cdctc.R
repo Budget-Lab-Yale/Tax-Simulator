@@ -2,6 +2,9 @@
 # Function to calculate Child and Dependent Care Tax Credit (CDCTC)
 #-------------------------------------------------------------------
 
+# Set return variables for function
+return_vars$calc_cdctc = c('cdctc_nonref', 'cdctc_ref')
+
 
 calc_cdctc = function(tax_unit, fill_missings = F) {
   
@@ -57,7 +60,7 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
       qual_exp = pmin(care_exp, n_qual_dep * cdctc.exp_limit),
       
       # Limit credit-eligible expenses to adult-minimum earned income, if law requires
-      min_ei   = pmin(ei1, replace_na(as.numeric(ei2), Inf)),
+      min_ei   = pmax(0, pmin(ei1, replace_na(as.numeric(ei2), Inf))),
       qual_exp = pmin(qual_exp, if_else(cdctc.ei_limit == 1, min_ei, Inf)),
       
       # Calculate credit rate: a descretized linear negative function of AGI, 
@@ -76,6 +79,6 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
     ) %>% 
     
     # Keep variables to return
-    select(cdctc_nonref, cdctc_ref) %>% 
+    select(all_of(return_vars$calc_cdctc)) %>% 
     return()
 }

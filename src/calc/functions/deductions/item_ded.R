@@ -2,6 +2,12 @@
 # Function to calculate itemized deductions
 #-------------------------------------------
 
+# Set return variables for function
+return_vars$calc_item_ded = c('med_item_ded', 'salt_item_ded', 'mort_int_item_ded', 
+                              'inv_int_item_ded', 'int_item_ded', 'char_item_ded', 
+                              'casualty_item_ded', 'misc_item_ded', 'other_item_ded', 
+                              'item_ded_ex_limits', 'item_ded')
+
 
 calc_item_ded = function(tax_unit, fill_missings = F) {
   
@@ -52,23 +58,23 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
     'other_item_exp',   # (dbl) other historically itemizable deductions
     
     # Tax law attributes
-    'item.med_floor_agi',          # (dbl)   AGI floor above which medical expenses are deductible
-    'item.med_limit',              # (int)   maximum deductible medical expenses 
-    'item.salt_limit',             # (int)   maximum deductible state and local taxes
-    'item_mort_bal_limit_year[]',  # (int[]) year ranges mapping to mortgage balance limitations, specified in increasing order
-    'item.mort_bal_limit[]',       # (int[]) limitations on deductible mortgage interest based on mortgage balance
-    'item.mort_int_limit',         # (int)   maximum deductible mortgage interest
-    'item.casualty_limit',         # (int)   maximum deductible casualty and loss expenses
-    'item.misc_floor_agi',         # (dbl)   AGI floor for "miscellaneous" itemized deductions
-    'item.misc_limit',             # (int)   maximum deductible "miscellaneous" itemized deductions
-    'char.item_floor_agi',         # (dbl)   AGI floor for charitable deduction
-    'char.item_limit',             # (int)   dollar-amount limit for itemized charitable deduction (0 reflects repeal)
-    'char.item_cash_limit_agi',    # (dbl)   AGI limit for noncash contributions, itemized deduction
-    'char.item_noncash_limit_agi', # (dbl)   maximum deductible above-the-line charitable contributions
-    'item.pease_thresh',           # (int)   AGI threshold above which itemized deductions are limited under Pease
-    'item.pease_rate',             # (dbl)   Pease limitation phaseout rate with respect to AGI
-    'item.pease_max_share',        # (dbl)   maximum Pease phaseout, expressed as percent of tentative total deductions
-    'item.limit'                   # (int)   maximum value of itemized deductions
+    'item.med_floor_agi',           # (dbl)   AGI floor above which medical expenses are deductible
+    'item.med_limit',               # (int)   maximum deductible medical expenses 
+    'item.salt_limit',              # (int)   maximum deductible state and local taxes
+    'item.mort_bal_limit_years[]',  # (int[]) year ranges mapping to mortgage balance limitations, specified in increasing order
+    'item.mort_bal_limit[]',        # (int[]) limitations on deductible mortgage interest based on mortgage balance
+    'item.mort_int_limit',          # (int)   maximum deductible mortgage interest
+    'item.casualty_limit',          # (int)   maximum deductible casualty and loss expenses
+    'item.misc_floor_agi',          # (dbl)   AGI floor for "miscellaneous" itemized deductions
+    'item.misc_limit',              # (int)   maximum deductible "miscellaneous" itemized deductions
+    'char.item_floor_agi',          # (dbl)   AGI floor for charitable deduction
+    'char.item_limit',              # (int)   dollar-amount limit for itemized charitable deduction (0 reflects repeal)
+    'char.item_cash_limit_agi',     # (dbl)   AGI limit for noncash contributions, itemized deduction
+    'char.item_noncash_limit_agi',  # (dbl)   maximum deductible above-the-line charitable contributions
+    'item.pease_thresh',            # (int)   AGI threshold above which itemized deductions are limited under Pease
+    'item.pease_rate',              # (dbl)   Pease limitation phaseout rate with respect to AGI
+    'item.pease_max_share',         # (dbl)   maximum Pease phaseout, expressed as percent of tentative total deductions
+    'item.limit'                    # (int)   maximum value of itemized deductions
   )
   
   
@@ -212,9 +218,7 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
     ) %>% 
     
     # Keep variables to return
-    select(med_item_ded, salt_item_ded, mort_int_item_ded, inv_int_item_ded, 
-           int_item_ded, char_item_ded, casualty_item_ded, misc_item_ded, 
-           other_item_ded, item_ded_ex_limits, item_ded) %>% 
+    select(all_of(return_vars$calc_item_ded)) %>% 
     return()
 }
 

@@ -24,8 +24,7 @@ item_cash_limit_agi:
 
 # AGI limit for noncash contributions, itemized deduction
 item_noncash_limit_agi:
-  value:
-    '2014': 0.3
+  value: 0.3
     
 # Maximum deductible above-the-line charitable contributions -- set to 0 for repeal
 above_limit_single:

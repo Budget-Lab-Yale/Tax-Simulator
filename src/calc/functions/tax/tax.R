@@ -2,6 +2,10 @@
 # Function to calculate normal individual income tax liability before credits 
 #-----------------------------------------------------------------------------
 
+# Set return variables for function
+return_vars$calc_tax = c('liab_ord', 'liab_pref', 'liab_1250', 'liab_collect', 
+                         'liab')
+
 
 calc_tax = function(tax_unit, fill_missings = F) {
   
@@ -34,7 +38,7 @@ calc_tax = function(tax_unit, fill_missings = F) {
     
     # Tax unit attributes
     'txbl_inc',    # (dbl) taxable income
-    'div_qual',    # (dbl) qualified dividends
+    'div_pref',    # (dbl) qualified dividends
     'kg_pref',     # (dbl) preferred-rate capital gains ("net capital gain" in the internal revenue code)  
     'kg_1250',     # (dbl) section 1250 unrecaptured gain
     'kg_collect',  # (dbl) collectibles gain
@@ -60,20 +64,20 @@ calc_tax = function(tax_unit, fill_missings = F) {
     mutate(
       
       # Adjusted preferred-rate capital gain: remove special gains from total
-      adj_pref_kg = pmax(0, pref_kg - kg_1250 - kg_collect),
+      adj_kg_pref = pmax(0, kg_pref - kg_1250 - kg_collect),
       
       # Preferred-rate income, both with and without special gains
-      pref_inc     = qual_div + pref_kg,
-      adj_pref_inc = qual_div + adj_pref_kg, 
+      pref_inc     = div_pref + kg_pref,
+      adj_pref_inc = div_pref + adj_kg_pref, 
       
       # Taxable income
       txbl_ord_inc      = pmax(0, txbl_inc - pref_inc),
       txbl_adj_pref_inc = pmax(0, pmin(txbl_inc, adj_pref_inc)),
       txbl_1250         = pmax(0, pmin(txbl_ord_inc - txbl_adj_pref_inc, 
-                                       pmin(pref_kg, kg_1250))),
+                                       pmin(kg_pref, kg_1250))),
       txbl_ord_1250     = pmax(0, txbl_ord_inc + txbl_1250),
       txbl_collect      = pmax(0, pmin(txbl_ord_inc - txbl_adj_pref_inc - txbl_1250,  
-                                       pmin(pref_kg, kg_collect))),
+                                       pmin(kg_pref, kg_collect))),
       
     ) %>% 
     
@@ -161,7 +165,7 @@ calc_tax = function(tax_unit, fill_missings = F) {
     mutate(liab = pmin(liab_max, liab_pref + liab_1250 + liab_collect + liab_ord)) %>% 
   
     # Keep variables to return
-    select(liab_ord, liab_pref, liab_1250, liab_collect, liab) %>% 
+    select(all_of(return_vars$calc_tax)) %>% 
     return()
 }
 

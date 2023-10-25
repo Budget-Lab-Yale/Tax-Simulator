@@ -21,7 +21,7 @@ generate_indexes = function(macro_root) {
   c('historical.csv', 'projections.csv') %>% 
     map(.f = ~ macro_root %>% 
           file.path(.x) %>% 
-          read_csv()) %>% 
+          read_csv(show_col_types = F)) %>% 
     bind_rows() %>% 
     
     # Select indexation variables and reshape long
@@ -41,18 +41,22 @@ generate_indexes = function(macro_root) {
 
 
 
-read_puf = function(scenario_info, year) { 
+read_microdata = function(root, year) { 
   
   #----------------------------------------------------------------------------
   # Loads tax microdata into memory for a given scenario-year
   # 
   # Parameters:
-  #   - TODO
+  #   - root (str) : filepath to scenario's microdata vintage
+  #   - year (int) : year of microdata
   #
-  # Returns: TODO
+  # Returns: tibble of tax microdata (df).
   #----------------------------------------------------------------------------
   
-  # TODO
-  
+  root %>% 
+    file.path(paste0('tax_units_', year, '.csv')) %>% 
+    fread() %>%
+    tibble() %>% 
+    return()
 }
 

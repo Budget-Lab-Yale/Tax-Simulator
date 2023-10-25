@@ -37,8 +37,7 @@ get_vector = function(df, name) {
   
   df %>% 
     select(all_of(name)) %>% 
-    unlist() %>% 
-    set_names(NULL) %>% 
+    deframe() %>% 
     return()
 }
 

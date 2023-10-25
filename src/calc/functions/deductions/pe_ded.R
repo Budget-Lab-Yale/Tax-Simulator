@@ -3,6 +3,10 @@
 #----------------------------------------------------
 
 
+# Set return variables for function
+return_vars$calc_pe_ded = c('pe_ded')
+
+
 calc_pe_ded = function(tax_unit, fill_missings = F) {
   
   #----------------------------------------------------------------------------
@@ -58,7 +62,7 @@ calc_pe_ded = function(tax_unit, fill_missings = F) {
     ) %>%
     
     # Keep variables to return
-    select(pe_ded) %>%
+    select(all_of(return_vars$calc_pe_ded)) %>%
     return()
 }
 

@@ -2,6 +2,12 @@
 # Function to calculate payroll taxes
 #-------------------------------------
 
+# Set return variables for function
+return_vars$calc_pr = c('gross_wages1', 'gross_wages2', 'gross_wages', 'se1', 
+                        'se2', 'se', 'ei1', 'ei2', 'ei', 'liab_fica', 'liab_seca', 
+                        'liab_seca_er', 'liab_oasdi', 'liab_hi', 'liab_add_med', 
+                        'liab_pr_ee', 'liab_pr_er', 'liab_pr')
+
 
 calc_pr = function(tax_unit, fill_missings = F) {
   
@@ -37,7 +43,7 @@ calc_pr = function(tax_unit, fill_missings = F) {
     # Tax unit attributes
     'wages1',          # (dbl) W2 wages (box 1 on W2), primary earner 
     'wages2',          # (dbl) W2 wages (box 1 on W2), secondary earner
-    'trad_contr_er_1', # (dbl) pretax contributions to an employer-sponsored tax-preferred savings account, primary earner
+    'trad_contr_er1',  # (dbl) pretax contributions to an employer-sponsored tax-preferred savings account, primary earner
     'trad_contr_er2',  # (dbl) pretax contributions to an employer-sponsored tax-preferred savings account, secondary earner
     'sole_prop1',      # (dbl) Schedule C net income, primary earner 
     'sole_prop2',      # (dbl) Schedule C net income, secondary earner 
@@ -73,13 +79,13 @@ calc_pr = function(tax_unit, fill_missings = F) {
     expand_grid(fund  = c('oasdi', 'hi'),
                 side  = c('ee', 'er'),
                 filer = 1:2) %>% 
-    mutate(brackets_prefix = paste0(if_else(tax == 'fica', '',  
+    mutate(prefix_brackets = paste0(if_else(tax == 'fica', '',  
                                             if_else(filer == 1, 
                                                     'primary_', 
                                                     'secondary_')),
                                     'pr.', fund, '_', side, '_brackets'), 
-           rates_prefix = paste0('pr.', fund, '_', side, '_rates'), 
-           inc_name     = paste0(if_else(tax == 'fica', 'gross_wages', 'txbl_se'), 
+           prefix_rates = paste0('pr.', fund, '_', side, '_rates'), 
+           y            = paste0(if_else(tax == 'fica', 'gross_wages', 'txbl_se'), 
                                  filer), 
            output_name  = paste0('liab_', tax, '_', fund, '_', side, filer)) %>% 
     select(-fund, -side, -filer)
@@ -100,10 +106,6 @@ calc_pr = function(tax_unit, fill_missings = F) {
     # Parse tax unit object passed as argument
     parse_calc_fn_input(req_vars, fill_missings) %>% 
     mutate(
-      
-      # Temporarily set secondary-earner variables to 0 for non-joint tax units
-      across(.cols = c(wages2, pretax_contr2, sole_prop2, farm2, part_se2), 
-             .fns  = ~ replace_na(., 0)), 
       
       # Calculate FICA-eligible wages
       gross_wages1 = wages1 + trad_contr_er1, 
@@ -172,9 +174,9 @@ calc_pr = function(tax_unit, fill_missings = F) {
     bind_cols(
       integrate_rates_brackets(df              = (.), 
                                n_brackets      = NULL, 
-                               brackets_prefix = 'pr.add_med_brackets', 
-                               rates_prefix    = 'pr.add_med_rates', 
-                               inc_name        = 'txbl_inc_add_med', 
+                               prefix_brackets = 'pr.add_med_brackets', 
+                               prefix_rates    = 'pr.add_med_rates', 
+                               y               = 'txbl_inc_add_med', 
                                output_name     = 'liab_add_med', 
                                by_bracket      = F)
     ) %>%
@@ -208,18 +210,12 @@ calc_pr = function(tax_unit, fill_missings = F) {
                      liab_fica_hi_er1    + liab_fica_hi_er2 + 
                      liab_seca_oasdi_er1 + liab_seca_oasdi_er2 + 
                      liab_seca_hi_er1    + liab_seca_hi_er2,
-      liab_pr      = liab_oasdi + liab_hi,     
-      
-      # Set secondary-earner output variables to NA for non-joint tax units
-      across(.cols = c(se2, ei2), 
-             .fns  = if_else(filing_status != 2, NA, .))
+      liab_pr      = liab_oasdi + liab_hi
   
     ) %>%
 
     # Keep variables to return
-    select(gross_wages1, gross_wages2, gross_wages, se1, se2, se, ei1, ei2, ei, 
-           liab_fica, liab_seca, liab_seca_er, liab_oasdi, liab_hi, liab_add_med, 
-           liab_pr_ee, liab_pr_er, liab_pr) %>%
+    select(all_of(return_vars$calc_pr)) %>%
     return()
 }
 

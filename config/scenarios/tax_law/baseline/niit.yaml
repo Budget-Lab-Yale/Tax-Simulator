@@ -12,15 +12,12 @@ include_active:
 
 # Rate schedule
 rates:
-  value:
-    '2014': [0.0, 0.038]
+  value: [0.0, 0.038]
 
 # Brackets, single filers
 brackets_single:
-  value:
-    '2014': [0, 200000]
+  value: [0, 200000]
 
 # Brackets, joint filers
 brackets_married:
-  value:
-    '2014': [0, 250000]
+  value: [0, 250000]

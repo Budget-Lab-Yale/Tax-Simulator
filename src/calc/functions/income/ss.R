@@ -2,6 +2,9 @@
 # Function to calculate taxable portion of OASI benefits
 #--------------------------------------------------------
 
+# Set return variables for function
+return_vars$calc_ss = c('txbl_ss')
+
 
 calc_ss = function(tax_unit, fill_missings = F) {
   
@@ -75,7 +78,7 @@ calc_ss = function(tax_unit, fill_missings = F) {
     # Calculate total, limit to highest inclusion rate, and return
     mutate(txbl_ss = rowSums(.), 
            txbl_ss = pmin(txbl_ss, tax_unit$gross_ss * tax_unit[[paste0('ss.rates', n)]])) %>% 
-    select(txbl_ss) %>% 
+    select(all_of(return_vars$calc_ss)) %>% 
     return()
 }
 

@@ -2,13 +2,15 @@
 # Function to determine taxable income
 #--------------------------------------
 
+# Set return variables for function
+return_vars$calc_txbl_inc = c('itemizing', 'ded', 'txbl_inc')
+
 
 calc_txbl_inc = function(tax_unit, fill_missings = F) {
   
   #----------------------------------------------------------------------------
   # Determines whether filer takes standard or itemized deductions, and 
-  # calculates taxable income. Sets itemized deduction variables to zero for 
-  # nonitemizers.
+  # calculates taxable income. 
   # 
   # Parameters:
   #   - tax_unit (df | list) : either a dataframe or list containing required
@@ -20,7 +22,6 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
   #          - itemizing (bool) : whether filer itemizes deductions
   #          - ded       (dbl)  : standard deduction or itemized deduction if 
   #                               itemizing
-  #          - item_ded* (dbl)  : all itemized deduction variables
   #          - txbl_inc (dbl)   : taxable income 
   #----------------------------------------------------------------------------
   
@@ -44,16 +45,12 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
       itemizing = item_ded > std_ded,
       ded       = pmax(std_ded, item_ded), 
       
-      # Set itemized deduction variables to 0 for nonitemizers
-      across(.cols = contains('item_ded'), 
-             .fns  = ~ if_else(itemizing, ., 0)),
-      
       # Calculate taxable income
       txbl_inc = pmax(0, agi - ded - pe_ded - qbi_ded)
       
     ) %>% 
     
     # Keep variables to return
-    select(itemizing, ded, contains('item_ded'), txbl_inc) %>% 
+    select(all_of(return_vars$calc_txbl_inc)) %>% 
     return()
 }

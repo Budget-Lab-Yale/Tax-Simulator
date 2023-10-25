@@ -2,6 +2,9 @@
 # Function to calculate recovery rebates
 #----------------------------------------
 
+# Set return variables for function
+return_vars$calc_rebate = c('rebate')
+
 
 calc_rebate = function(tax_unit, fill_missings = F) {
   
@@ -53,6 +56,8 @@ calc_rebate = function(tax_unit, fill_missings = F) {
       across(.cols  = c(dep_age1, dep_age2, dep_age3), 
              .fns   = ~ if_else(!is.na(.), . <= rebate.dep_age_limit, F),
              .names = 'age_qual{str_sub(col, -1)}'),
+      across(.cols = c(dep_ssn1, dep_ssn2, dep_ssn3), 
+             .fns  = ~ !is.na(.) & .),
       
       n_dep = (age_qual1 & (dep_ssn1 | rebate.dep_ssn_req == 0)) + 
               (age_qual2 & (dep_ssn2 | rebate.dep_ssn_req == 0)) + 
@@ -64,8 +69,10 @@ calc_rebate = function(tax_unit, fill_missings = F) {
       
       # Apply phaseout
       po_range = if_else(rebate.po_type == 1, 
-                         rebate / rebate.po_rate, # Rate-based phaseout 
-                         rebate.po_range),        # Range-based phaseout
+                         if_else(rebate == 0,  # Rate-based phaseout
+                                 Inf, 
+                                 rebate / rebate.po_rate),  
+                         rebate.po_range),     # Range-based phaseout
       po_share = pmin(1, pmax(0, agi - rebate.po_thresh) / po_range),
       rebate   = rebate * (1 - po_share),
       
@@ -75,6 +82,6 @@ calc_rebate = function(tax_unit, fill_missings = F) {
     ) %>% 
     
     # Keep variables to return
-    select(rebate) %>% 
+    select(all_of(return_vars$calc_rebate)) %>% 
     return()
 }

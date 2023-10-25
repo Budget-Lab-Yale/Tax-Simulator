@@ -49,28 +49,35 @@ do_taxes = function(tax_units, vars_1040, vars_payroll) {
     
     # Force filers to take the above-the-line deduction
     above = tax_units %>% 
-      do_1040('liab_iit_net', force_char = T, char_above = T) %>% 
-      mutate(char_ded_type = 'above')
+      do_1040(return_vars = vars_1040,
+              force_char  = T, 
+              char_above  = T) %>% 
+      mutate(id            = tax_units$id, 
+             char_ded_type = 'above')
     
     # Force filers to take the itemized deduction
     item = tax_units %>% 
-      do_1040('liab_iit_net', force_char = T, char_above = F) %>% 
-      mutate(char_ded_type = 'item')
+      do_1040(return_vars = vars_1040, 
+              force_char  = T, 
+              char_above  = F) %>% 
+      mutate(id            = tax_units$id,
+             char_ded_type = 'item')
     
     # Determine which is better
     opt = above %>% 
-      select(ID, above = liab_iit_net) %>% 
+      select(above = liab_iit_net) %>% 
       bind_cols(
         item %>% 
-          select(ID, item = liab_iit_net)
+          select(item = liab_iit_net)
       ) %>% 
-      mutate(char_ded_type = if_else(above <= item), 'above', 'item') %>% 
+      mutate(char_ded_type = if_else(above <= item, 'above', 'item')) %>% 
       select(char_ded_type)
     
     # Select optimized answer
     tax_units %<>%
       bind_cols(opt) %>%
-      left_join(bind_rows(above, item), by = c('ID', 'char_ded_type'))
+      left_join(bind_rows(above, item), by = c('id', 'char_ded_type')) %>% 
+      select(-char_ded_type)
     
     
     # Standard case: just calculate the 1040 once  
@@ -134,8 +141,8 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
   
   
   # Create tibble-length vectors for form-behavior booleans 
-  force_char = rep(force_char, nrow(tax_unit))
-  char_above = rep(char_above, nrow(tax_unit))
+  force_char = rep(force_char, nrow(tax_units))
+  char_above = rep(char_above, nrow(tax_units))
   
   
   tax_units %>% 
@@ -146,33 +153,33 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
                   .names = '{col}_')) %>%  
     
     #-----------------------
-  # Adjusted gross income
-  #-----------------------
-  
-  # Net capital gain includable in AGI
-  bind_cols(calc_kg(.)) %>% 
+    # Adjusted gross income
+    #-----------------------
     
+    # Net capital gain includable in AGI
+    bind_cols(calc_kg(.)) %>% 
+      
     # AGI, including taxable OASI benefits
     mutate(across(.cols = c(char_cash, char_noncash), 
                   .fns  = ~ if_else(force_char & !char_above, 0, .))) %>% 
     bind_cols(calc_agi(.)) %>% 
-    mutate(char_cash    = care_cash_, 
-           char_noncash = care_noncash_) %>% 
-    
-    
+    mutate(char_cash    = char_cash_, 
+           char_noncash = char_noncash_) %>% 
+      
+      
     #----------------
-  # Taxable income 
-  #----------------
-  
-  # Standard deduction
-  bind_cols(calc_std_ded(.)) %>% 
+    # Taxable income 
+    #----------------
     
+    # Standard deduction
+    bind_cols(calc_std_ded(.)) %>% 
+      
     # Itemized deductions
     mutate(across(.cols = c(char_cash, char_noncash), 
                   .fns  = ~ if_else(force_char & char_above, 0, .))) %>%
     bind_cols(calc_item_ded(.)) %>% 
-    mutate(char_cash    = care_cash_, 
-           char_noncash = care_noncash_) %>% 
+    mutate(char_cash    = char_cash_, 
+           char_noncash = char_noncash_) %>% 
     
     # Personal exemptions
     bind_cols(calc_pe_ded(.)) %>% 
@@ -180,27 +187,34 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # QBI deduction
     bind_cols(calc_qbi_ded(.)) %>% 
     
-    # Taxable income
+    # Taxable income and itemizer status
     bind_cols(calc_txbl_inc(.)) %>% 
     
-    
+    # Set itemized deduction variables to 0 for nonitemizers
+    mutate(across(.cols = c('med_item_ded', 'salt_item_ded', 'mort_int_item_ded', 
+                            'inv_int_item_ded', 'int_item_ded', 'char_item_ded', 
+                            'casualty_item_ded', 'misc_item_ded', 'other_item_ded', 
+                            'item_ded_ex_limits', 'item_ded'), 
+                  .fns  = ~ if_else(itemizing, ., 0))) %>% 
+      
+      
     #--------------------------
-  # Liability before credits
-  #--------------------------
-  
-  # Liability
-  bind_cols(calc_tax(.)) %>%
+    # Liability before credits
+    #--------------------------
+    
+    # Liability
+    bind_cols(calc_tax(.)) %>%
     
     # Alternative minimum tax
     bind_cols(calc_amt(.)) %>% 
     
-    
+      
     #---------
-  # Credits
-  #---------
-  
-  # CDCTC
-  bind_cols(calc_cdctc(.)) %>% 
+    # Credits
+    #---------
+    
+    # CDCTC
+    bind_cols(calc_cdctc(.)) %>% 
     
     # Education credits
     bind_cols(calc_ed_cred(.)) %>% 
@@ -217,14 +231,14 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # Rebates / UBI
     bind_cols(calc_rebate(.)) %>%
     
-    
+      
     #----------------------
-  # Liability allocation
-  #----------------------
-  
-  # NIIT
-  bind_cols(calc_niit(.)) %>% 
+    # Liability allocation
+    #----------------------
     
+    # NIIT
+    bind_cols(calc_niit(.)) %>% 
+      
     # Liability
     bind_cols(calc_liab(.)) %>% 
     
@@ -273,7 +287,7 @@ remit_taxes = function(tax_units) {
     mutate(
       
       # Calculate non-withheld share of AGI
-      inc_nonwithheld       = txbl_int + div + txbl_kg, 
+      inc_nonwithheld       = txbl_int + div_ord + div_pref + txbl_kg, 
       iit_share_nonwithheld = pmin(1, pmax(0, inc_nonwithheld / agi)),
       
       # Calculate income tax liability net of general revenue transfers 
@@ -302,7 +316,7 @@ remit_taxes = function(tax_units) {
 
 
 
-calc_mtrs = function(tax_units, liab_baseline, name, vars) {
+calc_mtrs = function(tax_units, liab_baseline, var) {
   
   #----------------------------------------------------------------------------
   # Calculates next-dollar MTR with respect to given variable, as represented 
@@ -316,29 +330,31 @@ calc_mtrs = function(tax_units, liab_baseline, name, vars) {
   #   - tax_units (df)        : tibble of tax units, exogenous variables only
   #   - liab_baseline (dbl[]) : vector of net income tax liability plus
   #                             payroll tax liability
-  #   - name (str)            : name used to represent variables we're  
-  #                             incrementing (e.g. "dividends" or "kg")
-  #   - vars (str[])          : vector of names of variables to increment
+  #   - var (str)             : name of variable to increment
   #
-  # Returns: TODO
+  # Returns: tibble of MTRs (df).
   #----------------------------------------------------------------------------
   
   # Set output variable name
-  mtr_name = paste0('mtr_', name)
+  mtr_name = paste0('mtr_', var)
   
   
   tax_units %>% 
     
     # Increment variable values
-    mutate(across(.cols = all_of(vars),
+    mutate(across(.cols = all_of(var),
                   .fns  = ~ . + 1)) %>%
     
     # Re-calculate taxes
-    do_taxes(return_vars = c('liab_pr', 'liab_iit_net')) %>% 
+    do_taxes(vars_payroll = return_vars$calc_pr,
+             vars_1040    = return_vars %>%
+                              remove_by_name('calc_pr') %>%
+                              unlist() %>% 
+                              set_names(NULL)) %>% 
     
     # Calculate MTR and return
     mutate(!!mtr_name := liab_pr + liab_iit_net - liab_baseline) %>% 
-    select(id, all_of(mtr_name)) %>% 
+    select(all_of(mtr_name)) %>% 
     return()
 }
 
