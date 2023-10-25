@@ -25,18 +25,14 @@ calc_distribution = function(global_root, id, year, pcts) {
   #----------------------------------------------------------------------------
   
   # Read microdata output
-  baseline = read_csv(file.path(global_root, 
-                                'baseline',
-                                'static', 
-                                'detail', 
-                                paste0(year, '.csv')), 
-                      show_col_types = F)
-  scenario = read_csv(file.path(global_root, 
-                                id, 
-                                'static',
-                                'detail', 
-                                paste0(year, '.csv')), 
-                      show_col_types = F)
+  baseline = file.path(global_root, 'baseline', 'static', 'detail', paste0(year, '.csv')) %>% 
+    fread() %>% 
+    tibble()
+  
+  scenario = file.path(global_root, id, 'static', 'detail', paste0(year, '.csv')) %>% 
+    fread() %>% 
+    tibble()
+  
   
   baseline %>% 
     

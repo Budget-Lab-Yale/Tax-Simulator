@@ -55,7 +55,8 @@ read_microdata = function(root, year) {
   
   root %>% 
     file.path(paste0('tax_units_', year, '.csv')) %>% 
-    read_csv(show_col_types = F) %>% 
+    fread() %>%
+    tibble() %>% 
     return()
 }
 
