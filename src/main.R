@@ -8,6 +8,9 @@
 # Configure simulator
 #---------------------
 
+# Set random number generator seed
+set.seed(76)
+
 # Load required packages
 lapply(readLines('requirements.txt'), library, character.only = T)
 
