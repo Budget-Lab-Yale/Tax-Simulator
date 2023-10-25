@@ -6,7 +6,7 @@
 
 
 
-parse_globals = function(runscript_name, user_id, local) {
+parse_globals = function(runscript_name, user_id, local, vintage, pct_sample) {
   
   #----------------------------------------------------------------------------
   # Parses data interface versioning requirements and runscript; generates 
@@ -19,11 +19,19 @@ parse_globals = function(runscript_name, user_id, local) {
   #                            is stored on user-specific scratch folder
   #   - local (int)          : whether this is a local run (1) or a production
   #                            run (0)  
+  #   - vintage (str)        : optional argument (NULL if not provided) to 
+  #                            manually supply output vintage folder rather 
+  #                            than being dynamically generated. Of the format
+  #                            YYYYMMDDHH.
+  #   - pct_sample (dbl)     : share of records used in simulation 
   #
-  # Returns: list of 3: 
+  # Returns: list of 4: 
   #   - runtime_args (df)    : tibble representation of the runscripts CSV
   #   - interface_paths (df) : tibble with ID-interface-filepath info in rows 
   #   - output_root (str)    : path where output data is written
+  #   - pct_sample (dbl)     : share of records used in simulation 
+  #   - sample_ids (int[])   : vector of tax unit IDs comprising the
+  #                            sample population (all IDs for 100%)
   #----------------------------------------------------------------------------
   
   # Read and parse data dependency interface file paths
@@ -45,17 +53,19 @@ parse_globals = function(runscript_name, user_id, local) {
   # Set model version and vintage
   version = read_yaml('./interface_versions.yaml')$`Tax-Simulator`$version
   st      = Sys.time()
-  vintage = paste0(year(st), 
-                   month(st) %>%
-                     paste0('0', .) %>% 
-                     str_sub(-2), 
-                   day(st) %>%
-                     paste0('0', .) %>% 
-                     str_sub(-2), 
-                   hour(st) %>%
-                     paste0('0', .) %>% 
-                     str_sub(-2))
-  
+  if (is.null(vintage)) {
+    vintage = paste0(year(st), 
+                     month(st) %>%
+                       paste0('0', .) %>% 
+                       str_sub(-2), 
+                     day(st) %>%
+                       paste0('0', .) %>% 
+                       str_sub(-2), 
+                     hour(st) %>%
+                       paste0('0', .) %>% 
+                       str_sub(-2))
+  }
+
   # Determine and create directory for model output
   output_branch = file.path('Tax-Simulator', paste0('v', version), vintage)
   output_root   = file.path(output_roots$production, 'model_data ', output_branch)
@@ -69,7 +79,7 @@ parse_globals = function(runscript_name, user_id, local) {
   runtime_args = runscript_name %>% 
     paste0('.csv') %>%
     file.path('./config/runscripts/', .) %>% 
-    read_csv()
+    read_csv(show_col_types = F)
     
   
   # Write dependencies CSV; this is a vintage-level file which lists all 
@@ -112,10 +122,20 @@ parse_globals = function(runscript_name, user_id, local) {
     }
   }
   
+  # Tax unit ID in sample
+  sample_ids = interface_paths %>% 
+    filter(ID == 'baseline', interface == 'Tax-Data') %>% 
+    get_vector('path') %>% 
+    read_microdata(2017) %>%
+    sample_frac(size = pct_sample) %>% 
+    get_vector('id')
+  
   # Return runtime args and interface paths  
   return(list(runtime_args    = runtime_args,
               interface_paths = interface_paths, 
-              output_root     = output_root))
+              output_root     = output_root, 
+              pct_sample      = pct_sample,
+              sample_ids      = sample_ids))
 }
 
 
@@ -137,8 +157,6 @@ get_scenario_info = function(id) {
   #   - years (int[])            : years to run
   #   - mtr_vars (str[])         : variables to calculate MTRs for
   #   - behavior_modules (str[]) : names of behavioral feedback modules to run
-  #   - sample_ids (int[])       : vector of tax unit IDs comprising the
-  #                                sample population (all IDs for 100%)
   #----------------------------------------------------------------------------
   
   # Scenario-specific output paths
@@ -187,13 +205,6 @@ get_scenario_info = function(id) {
   }
   mtr_vars = runtime_args$mtr_vars %>%
     str_split_1(' ')
-  
-  # Tax unit ID in sample
-  set.seed(76)
-  sample_ids = interface_paths$`Tax-Data` %>%
-    read_microdata(years[1]) %>%
-    sample_frac(size = runtime_args$pct_sample) %>% 
-    get_vector('id')
     
   # Return as named list
   return(list(ID               = id,
@@ -202,8 +213,7 @@ get_scenario_info = function(id) {
               tax_law_id       = tax_law_id,
               behavior_modules = behavior_modules, 
               years            = years, 
-              mtr_vars         = mtr_vars, 
-              sample_ids       = sample_ids))
+              mtr_vars         = mtr_vars))
 }
 
 

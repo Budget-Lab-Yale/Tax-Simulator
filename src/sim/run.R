@@ -131,7 +131,8 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
     calc_receipts(output_root) 
   
   # Return MTRs
-  output$mtrs %>% 
+  output %>% 
+    map(.f = ~ .x$mtrs) %>% 
     bind_rows() %>% 
     return()
 }
@@ -167,8 +168,10 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
   
   # Load tax unit data and join tax law
   tax_units = scenario_info$interface_paths$`Tax-Data` %>%  
-    read_microdata(year) %>% 
-    mutate(year = year) %>% 
+    read_microdata(year) %>%
+    filter(id %in% globals$sample_ids) %>% 
+    mutate(weight = weight / globals$pct_sample, 
+           year   = year) %>% 
     left_join(tax_law, by = c('year', 'filing_status'))
 
   # Adjust for economic differences from economic baseline
@@ -215,8 +218,8 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
   mtrs = scenario_info$mtr_vars %>%
     map(.f = ~ calc_mtrs(tax_units = tax_units %>% 
                                        select(-all_of(return_vars %>% 
-                                                      unlist() %>% 
-                                                      set_names(NULL))), 
+                                                        unlist() %>% 
+                                                        set_names(NULL))), 
                          liab_baseline = tax_units$liab_pr + tax_units$liab_iit_net,
                          var           = .x)) %>% 
     bind_cols() %>% 
@@ -231,7 +234,9 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
   
   # Write microdata
   tax_units %>%  
-    left_join(mtrs, by = 'id') %>% 
+    left_join(mtrs %>% 
+                select(-year), 
+              by = 'id') %>% 
     write_csv(file.path(scenario_info$output_path, 
                         if_else(static, 'static', 'conventional'),
                         'detail', 

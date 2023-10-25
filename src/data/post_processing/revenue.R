@@ -88,7 +88,7 @@ calc_rev_est = function(counterfactual_ids, global_root, static) {
                        'static', 
                        'supplemental',
                        'receipts.csv') %>%
-    read_csv() %>%
+    read_csv(show_col_types = F) %>%
     
     # Create and rename variables with b for baseline
     mutate(total = revenues_payroll_tax + 
@@ -108,7 +108,7 @@ calc_rev_est = function(counterfactual_ids, global_root, static) {
     
     # Read receipts
     file.path(scenario_path, 'receipts.csv') %>% 
-      read_csv() %>% 
+      read_csv(show_col_types = F) %>% 
       
       # Calculate difference from baseline 
       calc_rev_delta(baseline) %>%
@@ -192,7 +192,7 @@ calc_stacked = function(counterfactual_ids, global_root, static) {
                          if_else(static | .x == 'baseline', 'static', 'conventional'),
                          'supplemental', 
                          'receipts.csv') %>% 
-                 read_csv() %>% 
+                 read_csv(show_col_types = F) %>% 
                  pivot_longer(cols      = -year, 
                               names_to  = 'series', 
                               values_to = 'receipts') %>%

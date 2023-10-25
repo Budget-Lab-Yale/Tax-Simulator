@@ -1,3 +1,3 @@
-ID,dep.Tax-Data.vintage,dep.Tax-Data.ID,dep.Macro-Projections.vintage,dep.Macro-Projections.ID,tax_law,behavior,first_year,last_year,mtr_vars,pct_sample
-baseline,2023101711,baseline,2023092721,baseline,baseline,,2017,2033,wages kg_lt,1
-kg_28_70,2023101711,baseline,2023092721,baseline,kg_28,kg_lt/70,2017,2033,wages kg_lt,1
+ID,dep.Tax-Data.vintage,dep.Tax-Data.ID,dep.Macro-Projections.vintage,dep.Macro-Projections.ID,tax_law,behavior,first_year,last_year,mtr_vars
+baseline,2023101711,baseline,2023092721,baseline,baseline,,2017,2033,wages kg_lt
+kg_28_70,2023101711,baseline,2023092721,baseline,kg_28,kg_lt/70,2017,2033,wages kg_lt

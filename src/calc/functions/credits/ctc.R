@@ -124,8 +124,9 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       # Calculate unused CTC
       remaining_ctc = value1 + value2 + value_other - ctc_nonref, 
       
-      # Limit to max per-child refundable credit value
-      ctc_ref = pmin(remaining_ctc, (n_young + n_old) * ctc.max_refund),
+      # Limit to max per-child refundable credit value\
+      max_refund = if_else(is.infinite(ctc.max_refund), Inf, (n_young + n_old) * ctc.max_refund),
+      ctc_ref    = pmin(remaining_ctc, max_refund),
       
       # Phase in with earned income
       ctc_ref = pmin(pmax(0, ei - ctc.pi_thresh) * ctc.pi_rate, ctc_ref),

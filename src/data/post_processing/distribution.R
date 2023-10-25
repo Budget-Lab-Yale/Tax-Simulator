@@ -29,12 +29,14 @@ calc_distribution = function(global_root, id, year, pcts) {
                                 'baseline',
                                 'static', 
                                 'detail', 
-                                paste0(year, '.csv')))
+                                paste0(year, '.csv')), 
+                      show_col_types = F)
   scenario = read_csv(file.path(global_root, 
                                 id, 
                                 'static',
                                 'detail', 
-                                paste0(year, '.csv')))
+                                paste0(year, '.csv')), 
+                      show_col_types = F)
   
   baseline %>% 
     

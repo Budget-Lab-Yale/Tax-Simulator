@@ -21,7 +21,7 @@ generate_indexes = function(macro_root) {
   c('historical.csv', 'projections.csv') %>% 
     map(.f = ~ macro_root %>% 
           file.path(.x) %>% 
-          read_csv()) %>% 
+          read_csv(show_col_types = F)) %>% 
     bind_rows() %>% 
     
     # Select indexation variables and reshape long
@@ -55,7 +55,7 @@ read_microdata = function(root, year) {
   
   root %>% 
     file.path(paste0('tax_units_', year, '.csv')) %>% 
-    read_csv() %>% 
+    read_csv(show_col_types = F) %>% 
     return()
 }
 
