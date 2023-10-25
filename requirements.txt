@@ -3,3 +3,4 @@ magrittr
 rlang
 yaml
 usincometaxes
+data.table
