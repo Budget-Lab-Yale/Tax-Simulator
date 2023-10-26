@@ -6,7 +6,8 @@
 
 
 
-parse_globals = function(runscript_name, user_id, local, vintage, pct_sample) {
+parse_globals = function(runscript_name, user_id, local, vintage, 
+                         baseline_vintage, pct_sample) {
   
   #----------------------------------------------------------------------------
   # Parses data interface versioning requirements and runscript; generates 
@@ -14,21 +15,26 @@ parse_globals = function(runscript_name, user_id, local, vintage, pct_sample) {
   # Confirms that these filepaths exist. 
   # 
   # Parameters:
-  #   - runscript_name (str) : name of runscript CSV file 
-  #   - user_id (str)        : Yale NetID, used for local runs in which output
-  #                            is stored on user-specific scratch folder
-  #   - local (int)          : whether this is a local run (1) or a production
-  #                            run (0)  
-  #   - vintage (str)        : optional argument (NULL if not provided) to 
-  #                            manually supply output vintage folder rather 
-  #                            than being dynamically generated. Of the format
-  #                            YYYYMMDDHH.
-  #   - pct_sample (dbl)     : share of records used in simulation 
+  #   - runscript_name (str)   : name of runscript CSV file 
+  #   - user_id (str)          : Yale NetID, used for local runs in which output
+  #                              is stored on user-specific scratch folder
+  #   - local (int)            : whether this is a local run (1) or a production
+  #                              run (0)  
+  #   - vintage (str)          : optional argument (NULL if not provided) to 
+  #                              manually supply output vintage folder rather 
+  #                              than being dynamically generated. Of the format
+  #                              YYYYMMDDHH.
+  #   - baseline_vintage (str) : optional argument (NULL if not provided) to 
+  #                              skip the baseline run and instead use an existing
+  #                              baseline run for MTRs and revenue estimates. Of 
+  #                              the format YYYYMMDDHH. 
+  #   - pct_sample (dbl)       : share of records used in simulation 
   #
   # Returns: list of 5: 
   #   - runtime_args (df)    : tibble representation of the runscripts CSV
   #   - interface_paths (df) : tibble with ID-interface-filepath info in rows 
   #   - output_root (str)    : path where output data is written
+  #   - baseline_root (str)  : path where baseline data is written/read from
   #   - pct_sample (dbl)     : share of records used in simulation 
   #   - sample_ids (int[])   : vector of tax unit IDs comprising the
   #                            sample population (all IDs for 100%)
@@ -55,14 +61,14 @@ parse_globals = function(runscript_name, user_id, local, vintage, pct_sample) {
   version = read_yaml('./interface_versions.yaml')$`Tax-Simulator`$version
   st      = Sys.time()
   if (is.null(vintage)) {
-    vintage = paste0(year(st), 
-                     month(st) %>%
+    vintage = paste0(lubridate::year(st), 
+                     lubridate::month(st) %>%
                        paste0('0', .) %>% 
                        str_sub(-2), 
-                     day(st) %>%
+                     lubridate::day(st) %>%
                        paste0('0', .) %>% 
                        str_sub(-2), 
-                     hour(st) %>%
+                     lubridate::hour(st) %>%
                        paste0('0', .) %>% 
                        str_sub(-2))
   }
@@ -75,6 +81,17 @@ parse_globals = function(runscript_name, user_id, local, vintage, pct_sample) {
   }
   dir.create(output_root, recursive = T, showWarnings = F)
   
+  # Determine baseline output path 
+  if (is.null(baseline_vintage)) {
+    baseline_root = output_root
+  } else {
+    baseline_root = output_root %>% 
+      str_remove(vintage) %>% 
+      file.path(baseline_vintage)
+    if (!dir.exists(baseline_root)) {
+      stop('User-supplied vintage for baseline does not exist!')
+    }
+  }
   
   # Read runtime arguments 
   runtime_args = runscript_name %>% 
@@ -137,18 +154,20 @@ parse_globals = function(runscript_name, user_id, local, vintage, pct_sample) {
     'id', 'weight', 'filer', 'dep_status', 'filing_status', 'age1', 'age2', 
     'n_dep','n_dep_ctc', 'dep_age1', 'dep_age2', 'dep_age3', 'wages', 'se', 
     'div_ord', 'div_pref', 'txbl_kg', 'kg_st', 'kg_lt', 'sole_prop', 'sch_e', 
-    'part_scorp', 'gross_ss', 'txbl_ss', 'above_ded', 'agi', 'std_ded', 
-    'item_ded', 'itemizing', 'pe_ded', 'qbi_ded', 'txbl_inc', 'liab_ord', 
-    'liab_pref', 'liab_amt', 'liab_bc', 'cdctc_nonref', 'ctc_nonref',
+    'part_scorp', 'gross_ss', 'txbl_ss', 'above_ded', 'agi', 'expanded_inc', 
+    'std_ded', 'item_ded', 'itemizing', 'pe_ded', 'qbi_ded', 'txbl_inc', 
+    'liab_ord', 'liab_pref', 'liab_amt', 'liab_bc', 'cdctc_nonref', 'ctc_nonref',
     'ed_nonref', 'nonref',  'ed_ref', 'eitc', 'cdctc_ref', 'ctc_ref', 'rebate', 
-    'ref', 'liab_niit', 'liab_iit', 'liab_iit_net', 'liab_seca', 'liab_pr'
+    'ref', 'liab_niit', 'liab_iit', 'liab_iit_net', 'liab_seca', 'liab_pr', 
+    'liab_pr_ee'
   )
   
   
   # Return runtime args and interface paths  
   return(list(runtime_args    = runtime_args,
               interface_paths = interface_paths, 
-              output_root     = output_root, 
+              output_root     = output_root,
+              baseline_root   = baseline_root,
               pct_sample      = pct_sample,
               sample_ids      = sample_ids, 
               detail_vars     = detail_vars))
@@ -176,7 +195,10 @@ get_scenario_info = function(id) {
   #----------------------------------------------------------------------------
   
   # Scenario-specific output paths
-  output_root = file.path(globals$output_root, id)
+  output_root = file.path(ifelse(id == 'baseline', 
+                                 globals$baseline_root, 
+                                 globals$output_root), 
+                          id)
   for (type in c('static', 'conventional')) {
     dir.create(file.path(output_root, type, 'detail'),       
                recursive    = T, 

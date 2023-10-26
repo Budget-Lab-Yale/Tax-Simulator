@@ -83,6 +83,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
                   txbl_int + 
                   div_ord +
                   div_pref + 
+                  state_ref + 
                   txbl_ira_dist + 
                   txbl_pens_dist + 
                   txbl_kg + 

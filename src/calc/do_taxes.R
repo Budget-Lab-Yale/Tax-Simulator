@@ -85,6 +85,20 @@ do_taxes = function(tax_units, vars_1040, vars_payroll) {
     tax_units %<>% 
       bind_cols(do_1040(., vars_1040))
   }
+
+
+  #--------------------
+  # Add reporting vars 
+  #--------------------
+  
+  # Expanded income metric for distributional tables: gross realized income 
+  # plus employer's share of payroll taxes
+  tax_units %<>%
+    mutate(expanded_inc = wages + trad_contr_er1 + trad_contr_er2 + txbl_int + 
+                          exempt_int + div_ord + div_pref + state_ref + 
+                          txbl_ira_dist + gross_pens_dist + kg_st + kg_lt + 
+                          other_gains + alimony + sole_prop + sch_e + farm + 
+                          gross_ss + ui + other_inc + liab_pr_er)
   
   
   #----------------
