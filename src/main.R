@@ -25,10 +25,14 @@ user_id    = 'jar335'
 local      = 1
 vintage    = NULL
 pct_sample = 0.02
-
+stacked    = 1
 
 # Set global (scenario-independent) variables
-globals = parse_globals(runscript_name, user_id, local, vintage, pct_sample)
+globals = parse_globals(runscript_name = runscript_name, 
+                        user_id        = user_id, 
+                        local          = local, 
+                        vintage        = vintage, 
+                        pct_sample     = pct_sample)
 
 # Get list of non-baseline scenarios 
 counterfactual_ids = globals$runtime_args %>% 
@@ -54,9 +58,12 @@ walk(.f = do_scenario,
 #-----------------
 
 # Calculate revenue estimates
-calc_rev_est()
+calc_rev_est(counterfactual_ids = counterfactual_ids, 
+             global_root        = globals$output_root)
 
 # Calculate stacked revenue estimates
-calc_stacked()
-
+if (stacked == 1) {
+  calc_stacked(counterfactual_ids = counterfactual_ids, 
+               global_root        = globals$output_root)
+}
 

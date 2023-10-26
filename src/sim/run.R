@@ -187,9 +187,9 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
     
     # Get updated variables after behavior feedback
     updated_vars = tax_units %>%  
-      do_behavioral_feedback(scenario_info = scenario_info, 
-                             baseline_mtrs = baseline_mtrs, 
-                             static_mtrs   = static_mtrs)
+      do_behavioral_feedback(behavior_modules = scenario_info$behavior_modules, 
+                             baseline_mtrs    = baseline_mtrs, 
+                             static_mtrs      = static_mtrs)
     
     # Update variable values in tax units tibble (updated_vars is guaranteed
     # to align with tax_units records)

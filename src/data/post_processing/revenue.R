@@ -62,7 +62,7 @@ calc_receipts = function(totals, scenario_root) {
 
 
 
-calc_rev_est = function(counterfactual_ids, global_root, static) {
+calc_rev_est = function(counterfactual_ids, global_root) {
   
   #----------------------------------------------------------------------------
   # Calculates all scenario revenue estimate deltas when compared to the 
@@ -71,8 +71,7 @@ calc_rev_est = function(counterfactual_ids, global_root, static) {
   # Parameters: 
   #   - counterfactual_ids (str[]) : list of scenario names for counterfactual
   #                                  scenarios
-  #   - global_root (str)          : version-level output root 
-  #   - static (bool)              : whether scenario run is static
+  #   - global_root (str)          : version-level output root
   #
   # Returns: Void, writes dataframes containing, for each scenario, fiscal year 
   # deltas for:
@@ -83,7 +82,7 @@ calc_rev_est = function(counterfactual_ids, global_root, static) {
   #----------------------------------------------------------------------------
   
   # Read in baseline receipts
-  baseline = file.path(output_root, 
+  baseline = file.path(global_root, 
                        'baseline', 
                        'static', 
                        'supplemental',
@@ -98,23 +97,26 @@ calc_rev_est = function(counterfactual_ids, global_root, static) {
                 .fn   = ~ paste0(., '_b')) 
   
   
-  for (scenario in counterfactual_ids) {
+  for (static in c(T, F)) {
     
-    # Get scenario-specific supplemental filepath
-    scenario_path = file.path(global_root, 
-                              scenario, 
-                              if_else(static, 'static', 'conventional'),
-                              'supplemental')
-    
-    # Read receipts
-    file.path(scenario_path, 'receipts.csv') %>% 
-      read_csv(show_col_types = F) %>% 
+    for (scenario in counterfactual_ids) {
       
-      # Calculate difference from baseline 
-      calc_rev_delta(baseline) %>%
+      # Get scenario-specific supplemental filepath
+      scenario_path = file.path(global_root, 
+                                scenario, 
+                                if_else(static, 'static', 'conventional'),
+                                'supplemental')
       
-      # Write revenue estimates file
-      write_csv(file.path(scenario_path, 'revenue_estimates.csv'))
+      # Read receipts
+      file.path(scenario_path, 'receipts.csv') %>% 
+        read_csv(show_col_types = F) %>% 
+        
+        # Calculate difference from baseline 
+        calc_rev_delta(baseline) %>%
+        
+        # Write revenue estimates file
+        write_csv(file.path(scenario_path, 'revenue_estimates.csv'))
+    }
   }
 }
 
@@ -162,7 +164,7 @@ calc_rev_delta = function(sim, baseline) {
 
 
 
-calc_stacked = function(counterfactual_ids, global_root, static) {
+calc_stacked = function(counterfactual_ids, global_root) {
   
   #----------------------------------------------------------------------------
   # Calculates stacked revenue deltas. Usable if scenarios build off of one 
@@ -172,7 +174,6 @@ calc_stacked = function(counterfactual_ids, global_root, static) {
   #   - counterfactual_ids (str[]) : list of scenario names for counterfactual
   #                                  scenarios
   #   - global_root (str)          : version-level output root 
-  #   - static (bool)              : whether scenario run is stacked 
   #
   # Returns: Void, writes dataframe with fiscal year columns stacking 
   #          scenario revenue deltas for:
@@ -183,41 +184,45 @@ calc_stacked = function(counterfactual_ids, global_root, static) {
   #   
   #----------------------------------------------------------------------------
   
+  for (static in c(T, F)) {
+    
+    c('baseline', counterfactual_ids) %>% 
+      
+      # Read scenario receipts file and store 
+      map(.f = ~ file.path(global_root, 
+                           .x, 
+                           if_else(static | .x == 'baseline', 'static', 'conventional'),
+                           'supplemental', 
+                           'receipts.csv') %>% 
+            read_csv(show_col_types = F) %>% 
+            pivot_longer(cols      = -year, 
+                         names_to  = 'series', 
+                         values_to = 'receipts') %>%
+            mutate(scenario = .x)) %>% 
+      
+      # Join into single dataframe and group by year-series so as to leave 
+      # scenarios ungrouped
+      bind_rows() %>% 
+      group_by(year, series) %>%
+      
+      # Calculate stacked difference
+      mutate(delta = receipts - lag(receipts)) %>%
+      select(year, scenario, series, delta) %>%
+      pivot_wider(names_from  = year,
+                  values_from = delta) %>%
+      
+      # Drop baseline full of zeros or NA
+      filter(scenario != 'baseline') %>% 
+      
+      # Write to supplemental folder for final scenario in stacking order 
+      write_csv(file.path(global_root, 
+                          counterfactual_ids[length(counterfactual_ids)],
+                          if_else(static, 'static', 'conventional'),
+                          'supplemental',
+                          'stacked_revenue_estimates.csv'))
+    
+  }
   
-  c('baseline', counterfactual_ids) %>% 
-    
-    # Read scenario receipts file and store 
-    map(.f = ~ file.path(global_root, 
-                         scenario, 
-                         if_else(static | .x == 'baseline', 'static', 'conventional'),
-                         'supplemental', 
-                         'receipts.csv') %>% 
-                 read_csv(show_col_types = F) %>% 
-                 pivot_longer(cols      = -year, 
-                              names_to  = 'series', 
-                              values_to = 'receipts') %>%
-                 mutate(scenario = .x)) %>% 
-    
-    # Join into single dataframe and group by year-series so as to leave 
-    # scenarios ungrouped
-    bind_rows() %>% 
-    group_by(year, series) %>%
-    
-    # Calculate stacked difference
-    mutate(delta = receipts - lag(receipts)) %>%
-    select(year, scenario, series, delta) %>%
-    pivot_wider(names_from  = year,
-                values_from = delta) %>%
-    
-    # Drop baseline full of zeros or NA
-    filter(scenario != 'baseline') %>% 
-
-    # Write to supplemental folder for final scenario in stacking order 
-    write_csv(file.path(global_root, 
-                        counterfactual_ids[length(counterfactual_ids)],
-                        if_else(static, 'static', 'conventional'),
-                        'supplemental',
-                        'stacked_revenue_estimates.csv'))
 }
 
 

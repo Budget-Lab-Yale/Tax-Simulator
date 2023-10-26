@@ -41,8 +41,8 @@ build_tax_law = function(scenario_info, indexes) {
   }
   
   # Parse all parameters and concatenate
-  tax_law %>%   
-      map2(.f      = parse_param, 
+  tax_law %<>%   
+    map2(.f      = parse_param, 
          .y      = names(.), 
          years   = 2014:max(scenario_info$years),
          indexes = indexes) %>% 

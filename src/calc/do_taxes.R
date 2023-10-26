@@ -287,8 +287,10 @@ remit_taxes = function(tax_units) {
     mutate(
       
       # Calculate non-withheld share of AGI
-      inc_nonwithheld       = txbl_int + div_ord + div_pref + txbl_kg, 
-      iit_share_nonwithheld = pmin(1, pmax(0, inc_nonwithheld / agi)),
+      inc_nonwithheld       = txbl_int + div_ord + div_pref + txbl_kg,
+      iit_share_nonwithheld = if_else(agi == 0, 
+                                      0,  
+                                      pmin(1, pmax(0, inc_nonwithheld / agi))),
       
       # Calculate income tax liability net of general revenue transfers 
       # (see function documentation) 
