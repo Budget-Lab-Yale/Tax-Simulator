@@ -20,13 +20,13 @@ list.files('./src', recursive = T) %>%
   map(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
 
 # cmd line args TODO
-runscript_name   = 'kg_28' 
+runscript_name   = 'kg_2pp' 
 user_id          = 'jar335'
 local            = 1
-vintage          = NULL
-pct_sample       = 0.02
+vintage          = '2023102714'
+pct_sample       = 1
 stacked          = 1
-baseline_vintage = '2023102610'
+baseline_vintage = '2023102714'
 
 # Set global (scenario-independent) variables
 globals = parse_globals(runscript_name   = runscript_name, 
@@ -83,5 +83,6 @@ if (stacked == 1) {
 }
 
 # Calculate distributional estimates
-# TODO
+counterfactual_ids %>% 
+  map(calc_distribution)
 

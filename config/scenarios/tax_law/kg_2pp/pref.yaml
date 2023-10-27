@@ -1,0 +1,7 @@
+---
+
+# Preferred tax rate schedule 
+rates:
+  value: 
+    '2014': [0.0, 0.15, 0.20]
+    '2023': [0.02, 0.17, 0.22]
