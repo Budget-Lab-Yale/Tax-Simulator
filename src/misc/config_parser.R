@@ -123,6 +123,7 @@ parse_globals = function(runscript_name, user_id, local, vintage,
     relocate(version, .before = vintage) %>% 
     write_csv(file.path(output_root, 'dependencies.csv'))
   
+  
   # Write Tax-Simulator-specific behavioral assumptions
   runtime_args %>% 
     select(ID, tax_law, behavior) %>%
