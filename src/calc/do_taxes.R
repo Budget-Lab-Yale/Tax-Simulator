@@ -354,11 +354,27 @@ calc_mtrs = function(tax_units, liab_baseline, var) {
   # Set output variable name
   mtr_name = paste0('mtr_', var)
   
+  # Set variables to increment. Add variables here to ensure that sub-components
+  # of a variable, namely earnings-split variables, are kept internally consistent.
+  # The assumption is that MTRs are calculated with respect to primary earner's income
+  vars = c(var) 
   
+  # Wages, sole prop, or farm income
+  if (var %in% c('wages', 'sole_prop', 'farm')) {
+    vars = c(var, paste0(var, '1'))
+  }
+  
+  # Active partnership income
+  if (var %in% c('part_active', 'part_active_loss')) {
+    vars = c(var, 'part_se1')
+  }
+  
+  
+  # OK, now calculate MTRs
   tax_units %>% 
     
     # Increment variable values
-    mutate(across(.cols = all_of(var),
+    mutate(across(.cols = all_of(vars),
                   .fns  = ~ . + 1)) %>%
     
     # Re-calculate taxes
