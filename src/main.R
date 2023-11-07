@@ -20,12 +20,12 @@ list.files('./src', recursive = T) %>%
   map(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
 
 # cmd line args TODO
-runscript_name   = 'kg_2pp' 
+runscript_name   = 'baseline' 
 user_id          = 'jar335'
 local            = 1
 vintage          = NULL
 pct_sample       = 1
-stacked          = 1
+stacked          = 0
 baseline_vintage = NULL
 
 # Set global (scenario-independent) variables

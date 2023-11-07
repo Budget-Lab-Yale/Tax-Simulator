@@ -158,14 +158,16 @@ parse_globals = function(runscript_name, user_id, local, vintage,
   # Specifiy microdata output variable
   detail_vars = c(
     'id', 'weight', 'filer', 'dep_status', 'filing_status', 'age1', 'age2', 
-    'n_dep','n_dep_ctc', 'dep_age1', 'dep_age2', 'dep_age3', 'wages', 'se', 
-    'div_ord', 'div_pref', 'txbl_kg', 'kg_st', 'kg_lt', 'sole_prop', 'sch_e', 
-    'part_scorp', 'gross_ss', 'txbl_ss', 'above_ded', 'agi', 'expanded_inc', 
-    'std_ded', 'item_ded', 'itemizing', 'pe_ded', 'qbi_ded', 'txbl_inc', 
-    'liab_ord', 'liab_pref', 'liab_amt', 'liab_bc', 'cdctc_nonref', 'ctc_nonref',
-    'ed_nonref', 'nonref',  'ed_ref', 'eitc', 'cdctc_ref', 'ctc_ref', 'rebate', 
-    'ref', 'liab_niit', 'liab_iit', 'liab_iit_net', 'liab_seca', 'liab_pr', 
-    'liab_pr_ee'
+    'n_dep','n_dep_ctc', 'dep_age1', 'dep_age2', 'dep_age3', 'wages', 'txbl_int',
+    'se', 'div_ord', 'div_pref', 'txbl_kg', 'kg_st', 'kg_lt', 'sole_prop', 'sch_e',
+    'farm', 'part_scorp', 'gross_ss', 'txbl_ss', 'above_ded', 'agi', 'expanded_inc', 
+    'std_ded', 'item_ded', 'med_item_ded', 'salt_item_ded', 'mort_int_item_ded', 
+    'inv_int_item_ded', 'int_item_ded', 'char_item_ded', 'casualty_item_ded', 
+    'misc_item_ded', 'other_item_ded', 'item_ded_ex_limits', 'itemizing', 
+    'pe_ded', 'qbi_ded', 'txbl_inc', 'liab_ord', 'liab_pref', 'liab_amt', 
+    'liab_bc', 'cdctc_nonref', 'ctc_nonref', 'ed_nonref', 'nonref',  'ed_ref', 
+    'eitc', 'cdctc_ref', 'ctc_ref', 'rebate', 'ref', 'liab_niit', 'liab_iit', 
+    'liab_iit_net', 'liab_seca', 'liab_pr', 'liab_pr_ee'
   )
   
   
