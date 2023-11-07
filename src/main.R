@@ -12,7 +12,7 @@
 set.seed(76)
 
 # Load required packages
-lapply(readLines('requirements.txt'), library, character.only = T)
+lapply(readLines('./requirements.txt'), library, character.only = T)
 
 # Source all function scripts
 return_vars = list()
@@ -23,10 +23,10 @@ list.files('./src', recursive = T) %>%
 runscript_name   = 'kg_2pp' 
 user_id          = 'jar335'
 local            = 1
-vintage          = '2023102714'
+vintage          = NULL
 pct_sample       = 1
 stacked          = 1
-baseline_vintage = '2023102714'
+baseline_vintage = NULL
 
 # Set global (scenario-independent) variables
 globals = parse_globals(runscript_name   = runscript_name, 
