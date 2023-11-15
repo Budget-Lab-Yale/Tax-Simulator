@@ -249,8 +249,6 @@ get_scenario_info = function(id) {
   if (!is.na(runtime_args$mtr_vars)) {
     mtr_vars = str_split_1(runtime_args$mtr_vars, ' ')
   }
-  mtr_vars = runtime_args$mtr_vars %>%
-    str_split_1(' ')
     
   # Return as named list
   return(list(ID               = id,

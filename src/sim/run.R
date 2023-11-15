@@ -220,18 +220,21 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
              vars_payroll = return_vars$calc_pr)
   
   # Calculate marginal tax rates
-  mtrs = scenario_info$mtr_vars %>%
-    map(.f = ~ calc_mtrs(tax_units = tax_units %>% 
-                                       select(-all_of(return_vars %>% 
-                                                        unlist() %>% 
-                                                        set_names(NULL))), 
-                         liab_baseline = tax_units$liab_pr + tax_units$liab_iit_net,
-                         var           = .x)) %>% 
-    bind_cols() %>% 
-    mutate(id   = tax_units$id,
-           year = year) %>% 
-    relocate(id, year)
-    
+  mtrs = NULL
+  if (!is.null(scenario_info$mtr_vars)) {
+    mtrs = scenario_info$mtr_vars %>%
+      map(.f = ~ calc_mtrs(tax_units = tax_units %>% 
+                                         select(-all_of(return_vars %>% 
+                                                          unlist() %>% 
+                                                          set_names(NULL))), 
+                           liab_baseline = tax_units$liab_pr + tax_units$liab_iit_net,
+                           var           = .x)) %>% 
+      bind_cols() %>% 
+      mutate(id   = tax_units$id,
+             year = year) %>% 
+      relocate(id, year)
+  }
+  
   
   #-----------------
   # Post-processing

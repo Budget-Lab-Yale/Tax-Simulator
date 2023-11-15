@@ -24,7 +24,7 @@ calc_distribution = function(id) {
   # Create new Excel workbook
   wb = createWorkbook()
   
-  for (year in 2024:2025) {
+  for (year in get_scenario_info(id)$years) {
 
     # Read microdata output
     baseline = file.path(globals$baseline_root, 
@@ -132,7 +132,7 @@ calc_distribution = function(id) {
     writeData(wb = wb, sheet = as.character(year), startRow = 1, 
               x = paste0('Distributional impact of policy change, ', year))
     writeData(wb = wb, sheet = as.character(year), startRow = 12, 
-              x = paste0('Table includes all nondependent tax units, including nonfilers.', 
+              x = paste0('Estimate universe is nondependent tax units, including nonfilers.', 
                          '"Income" is measured as AGI plus: above-the-line deductions, ', 
                          'nontaxable interest, nontaxable pension income (including OASI ',
                          'benefits), and employer-side payroll taxes. Income percentile ', 
@@ -177,6 +177,20 @@ calc_distribution = function(id) {
              gridExpand = T, 
              style      = createStyle(halign = 'center'), 
              stack      = T)
+    addStyle(wb         = wb, 
+             sheet      = as.character(year), 
+             rows       = 12, 
+             cols       = 1:9, 
+             gridExpand = T, 
+             style      = createStyle(fontSize       = 9, 
+                                      textDecoration = 'italic',
+                                      valign         = 'center',
+                                      wrapText       = T), 
+             stack      = T)
+    mergeCells(wb    = wb, 
+               sheet = as.character(year), 
+               rows  = 12:13, 
+               cols  = 1:9)
     setColWidths(wb    = wb, 
                  sheet  = as.character(year), 
                  cols   = 1:9, 
