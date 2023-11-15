@@ -8,8 +8,11 @@
 # Configure simulator
 #---------------------
 
+# Set random number generator seed
+set.seed(76)
+
 # Load required packages
-lapply(readLines('requirements.txt'), library, character.only = T)
+lapply(readLines('./requirements.txt'), library, character.only = T)
 
 # Source all function scripts
 return_vars = list()
@@ -17,15 +20,21 @@ list.files('./src', recursive = T) %>%
   map(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
 
 # cmd line args TODO
-runscript_name = 'kg_28' 
-user_id    = 'jar335'
-local      = 1
-vintage    = NULL
-pct_sample = 0.02
-
+runscript_name   = 'perm_arpa_ctc' 
+user_id          = 'jar335'
+local            = 1
+vintage          = NULL
+pct_sample       = 1
+stacked          = 0
+baseline_vintage = NULL
 
 # Set global (scenario-independent) variables
-globals = parse_globals(runscript_name, user_id, local, vintage, pct_sample)
+globals = parse_globals(runscript_name   = runscript_name, 
+                        user_id          = user_id, 
+                        local            = local, 
+                        vintage          = vintage, 
+                        baseline_vintage = baseline_vintage,
+                        pct_sample       = pct_sample)
 
 # Get list of non-baseline scenarios 
 counterfactual_ids = globals$runtime_args %>% 
@@ -37,8 +46,23 @@ counterfactual_ids = globals$runtime_args %>%
 # Run scenarios
 #---------------
 
-# Run baseline
-baseline_mtrs = do_scenario('baseline')
+# Run baseline if specified
+if (is.null(baseline_vintage)) {
+  baseline_mtrs = do_scenario('baseline')  
+  
+# Otherwise, load baseline marginal tax rates 
+} else{
+  baseline_mtrs = get_scenario_info(counterfactual_ids[1])$years %>% 
+    map(.f = ~ globals$baseline_root %>%  
+          file.path('baseline/static/detail', paste0(.x, '.csv')) %>%
+          fread() %>% 
+          tibble() %>% 
+          mutate(year = .x) %>% 
+          return()) %>%
+    bind_rows() %>% 
+    select(id, year, starts_with('mtr_'))
+}
+
 
 # Run counterfactuals 
 walk(.f = do_scenario, 
@@ -51,9 +75,14 @@ walk(.f = do_scenario,
 #-----------------
 
 # Calculate revenue estimates
-calc_rev_est()
+calc_rev_est(counterfactual_ids)
 
 # Calculate stacked revenue estimates
-calc_stacked()
+if (stacked == 1) {
+  calc_stacked(counterfactual_ids)
+}
 
+# Calculate distributional estimates
+counterfactual_ids %>% 
+  map(calc_distribution)
 

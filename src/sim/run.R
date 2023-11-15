@@ -124,6 +124,11 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
     map(.f = ~.x$totals$`1040`) %>% 
     bind_rows() %>% 
     write_csv(file.path(output_root, 'totals', '1040.csv'))
+  
+  output %>% 
+    map(.f = ~.x$totals$`1040_by_agi`) %>% 
+    bind_rows() %>% 
+    write_csv(file.path(output_root, 'totals', '1040_by_agi.csv'))
     
   # Calculate and write receipts
   totals_pr %>%  
@@ -187,9 +192,9 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
     
     # Get updated variables after behavior feedback
     updated_vars = tax_units %>%  
-      do_behavioral_feedback(scenario_info = scenario_info, 
-                             baseline_mtrs = baseline_mtrs, 
-                             static_mtrs   = static_mtrs)
+      do_behavioral_feedback(behavior_modules = scenario_info$behavior_modules, 
+                             baseline_mtrs    = baseline_mtrs, 
+                             static_mtrs      = static_mtrs)
     
     # Update variable values in tax units tibble (updated_vars is guaranteed
     # to align with tax_units records)
@@ -244,8 +249,9 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
                         paste0(year, '.csv')))
   
   # Get totals from microdata
-  totals = list(pr     = get_pr_totals(tax_units, year), 
-                `1040` = get_1040_totals(tax_units, year))
+  totals = list(pr            = get_pr_totals(tax_units, year), 
+                `1040`        = get_1040_totals(tax_units, year), 
+                `1040_by_agi` = get_1040_totals(tax_units, year, T))
   
   # Return required data
   return(list(mtrs   = mtrs, 

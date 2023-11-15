@@ -19,16 +19,17 @@ derive_vars = function(tax_unit) {
     mutate(
       
       # Schedule E related variables
-      part       = part_active + part_passive - part_active_loss - 
-                   part_passive_loss - part_179,
-      scorp      = scorp_active + scorp_passive - scorp_active_loss - 
-                   scorp_passive_loss - scorp_179,
-      part_scorp = part + scorp,
-      pt         = part + scorp + sole_prop,
-      net_rent   = rent - rent_loss,
-      net_estate = estate - estate_loss,
-      sch_e      = part_scorp + net_rent + net_estate
-      
+      part            = part_active + part_passive - part_active_loss - 
+                        part_passive_loss - part_179,
+      scorp           = scorp_active + scorp_passive - scorp_active_loss - 
+                        scorp_passive_loss - scorp_179,
+      part_scorp      = if_else(part + scorp > 0, part + scorp, 0),
+      part_scorp_loss = if_else(part + scorp < 0, - (part + scorp), 0),
+      pt              = part + scorp + sole_prop,
+      net_rent        = rent - rent_loss,
+      net_estate      = estate - estate_loss,
+      sch_e           = part_scorp + net_rent + net_estate
+    
     ) %>% 
     return()
 }

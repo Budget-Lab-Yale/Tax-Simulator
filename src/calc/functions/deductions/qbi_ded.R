@@ -103,7 +103,7 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
       # applies. Note that for SSTBs, this expression evaluates to 0, effectively 
       # applying the phaseout without regard to wages paid. 
       wage_credit = wagebill * qbi.wage_rate * sstb,
-      reduction   = po_share * pmax(0, qbi_ded - wage_credit),
+      reduction   = pmin(qbi_ded, po_share * pmax(0, qbi_ded - wage_credit)),
       qbi_ded     = qbi_ded - reduction,
       
     ) %>% 

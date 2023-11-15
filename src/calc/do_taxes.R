@@ -85,6 +85,20 @@ do_taxes = function(tax_units, vars_1040, vars_payroll) {
     tax_units %<>% 
       bind_cols(do_1040(., vars_1040))
   }
+
+
+  #--------------------
+  # Add reporting vars 
+  #--------------------
+  
+  # Expanded income metric for distributional tables: gross realized income 
+  # plus employer's share of payroll taxes
+  tax_units %<>%
+    mutate(expanded_inc = wages + trad_contr_er1 + trad_contr_er2 + txbl_int + 
+                          exempt_int + div_ord + div_pref + state_ref + 
+                          txbl_ira_dist + gross_pens_dist + kg_st + kg_lt + 
+                          other_gains + alimony + sole_prop + sch_e + farm + 
+                          gross_ss + ui + other_inc + liab_pr_er)
   
   
   #----------------
@@ -287,8 +301,10 @@ remit_taxes = function(tax_units) {
     mutate(
       
       # Calculate non-withheld share of AGI
-      inc_nonwithheld       = txbl_int + div_ord + div_pref + txbl_kg, 
-      iit_share_nonwithheld = pmin(1, pmax(0, inc_nonwithheld / agi)),
+      inc_nonwithheld       = txbl_int + div_ord + div_pref + txbl_kg,
+      iit_share_nonwithheld = if_else(agi == 0, 
+                                      0,  
+                                      pmin(1, pmax(0, inc_nonwithheld / agi))),
       
       # Calculate income tax liability net of general revenue transfers 
       # (see function documentation) 
@@ -338,11 +354,27 @@ calc_mtrs = function(tax_units, liab_baseline, var) {
   # Set output variable name
   mtr_name = paste0('mtr_', var)
   
+  # Set variables to increment. Add variables here to ensure that sub-components
+  # of a variable, namely earnings-split variables, are kept internally consistent.
+  # The assumption is that MTRs are calculated with respect to primary earner's income
+  vars = c(var) 
   
+  # Wages, sole prop, or farm income
+  if (var %in% c('wages', 'sole_prop', 'farm')) {
+    vars = c(var, paste0(var, '1'))
+  }
+  
+  # Active partnership income
+  if (var %in% c('part_active', 'part_active_loss')) {
+    vars = c(var, 'part_se1')
+  }
+  
+  
+  # OK, now calculate MTRs
   tax_units %>% 
     
     # Increment variable values
-    mutate(across(.cols = all_of(var),
+    mutate(across(.cols = all_of(vars),
                   .fns  = ~ . + 1)) %>%
     
     # Re-calculate taxes

@@ -31,13 +31,17 @@ build_tax_law = function(scenario_info, indexes) {
     load_tax_law_input()
   
   # Read baseline YAML files
-  tax_law = load_tax_law_input('./config/scenarios/tax_law/baseline') %>% 
-    
-    # Overwrite baseline subparams with specified changes
-    map2(.f = replace_by_name, 
-         .y = changes_from_baseline) %>% 
+  tax_law = load_tax_law_input('./config/scenarios/tax_law/baseline') 
   
-    # Parse all parameters and concatenate
+  # Overwrite baseline subparams with specified changes
+  for (param in names(changes_from_baseline)) {
+    for (subparam in names(changes_from_baseline[[param]])) {
+      tax_law[[param]][[subparam]] = changes_from_baseline[[param]][[subparam]]
+    }
+  }
+  
+  # Parse all parameters and concatenate
+  tax_law %<>%   
     map2(.f      = parse_param, 
          .y      = names(.), 
          years   = 2014:max(scenario_info$years),
@@ -572,28 +576,6 @@ replace_defaults = function(supplied, default) {
     return(default)
   } 
   return(supplied)
-}
-
-
-
-replace_by_name = function(host, donor) {
-  
-  #----------------------------------------------------------------------------
-  # Helper function to overwrite elements in a "host" list with identically 
-  # names elements from a "donor" list. 
-  #
-  # Parameters:
-  #   - host (list)  : named list for which to overwrite values 
-  #   - donor (list) : names list containing values which will overwrite those
-  #                    in host based on name index
-  #
-  # Returns: updated host list (list.)
-  #----------------------------------------------------------------------------
-  
-  for (name in names(donor)) {
-    host[[name]] = donor[[name]]
-  }
-  return(host)
 }
 
 

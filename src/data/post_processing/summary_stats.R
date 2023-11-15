@@ -5,7 +5,7 @@
 #-------------------------------------------------------------------
 
 
-get_1040_totals = function(tax_units, yr) {
+get_1040_totals = function(tax_units, yr, by_agi = F) {
   
   #----------------------------------------------------------------------------
   # Aggregates individual income tax microdata. Reports both counts (number of 
@@ -14,6 +14,7 @@ get_1040_totals = function(tax_units, yr) {
   # Parameters:
   #   - tax_units (df) : tibble of tax units including calculated variables
   #   - yr (int)       : year corresponding to tax unit data
+  #   - by_agi (bool)  : whether to group output by AGI
   #
   # Returns: tibble of aggregate tax unit statistics (df).
   #----------------------------------------------------------------------------
@@ -42,6 +43,8 @@ get_1040_totals = function(tax_units, yr) {
     'state_ref',       
     'alimony',    
     'sole_prop',  
+    'part_scorp',
+    'part_scorp_loss',
     'part_active',
     'part_passive',
     'part_active_loss',
@@ -108,6 +111,7 @@ get_1040_totals = function(tax_units, yr) {
     'ref_iit', 
     'ref_other', 
     'refund', 
+    'liab_niit',
     'liab_iit', 
     'liab_iit_net', 
     'pmt_iit_nonwithheld', 
@@ -117,9 +121,8 @@ get_1040_totals = function(tax_units, yr) {
   )
   
   
-  tax_units %>% 
-
-    # Derive reporting variables
+  # Derive reporting variables
+  tax_units %<>% 
     mutate(n_tax_units    = 1, 
            n_returns      = filer,
            n_returns_dep  = filer * dep_status,
@@ -131,8 +134,41 @@ get_1040_totals = function(tax_units, yr) {
            n_hoh          = filer * (filing_status == 4),
            n_dep          = filer * n_dep,
            n_dep_nonfiler = n_dep,
-           n_with_dep     = filer * (n_dep > 0)) %>% 
+           n_with_dep     = filer * (n_dep > 0))
+  
+  # Group data by AGI if specified
+  if (by_agi) {
+    agi_groups = c('Negative AGI'           = -1e9, 
+                   '$1-$10,000'             = 1, 
+                   '$10,000-$20,000'        = 1e4,
+                   '$20,000-$30,000'        = 2e4,
+                   '$30,000-$40,000'        = 3e4,
+                   '$40,000-$50,000'        = 4e4,
+                   '$50,000-$75,000'        = 5e4,
+                   '$75,000-$100,000'       = 7.5e4,
+                   '$100,000-$200,000'      = 1e5,
+                   '$200,000-$500,000'      = 2e5,
+                   '$500,000-$1,000,000'    = 5e5,
+                   '$1,000,000-$1,500,000' = 1e6,
+                   '$1,500,000-$2,000,000'  = 1.5e6,
+                   '$2,000,000-$5,000,000'  = 2e6,
+                   '$5,000,000-$10,000,000' = 5e6,
+                   'Over $10,000,000'       = 1e7, 
+                   'NA'                     = 1e99)
     
+    tax_units %<>% 
+      mutate(
+        agi_group = cut(x              = agi, 
+                        breaks         = agi_groups, 
+                        right          = F, 
+                        include.lowest = T, 
+                        labels         = head(names(agi_groups), -1))
+      ) %>% 
+      group_by(agi_group)
+  }
+  
+  
+  tax_units %>%
     summarise(
       
       # Add up all records for demographic variables
