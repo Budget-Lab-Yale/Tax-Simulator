@@ -43,6 +43,8 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
     'state_ref',       
     'alimony',    
     'sole_prop',  
+    'part_scorp',
+    'part_scorp_loss',
     'part_active',
     'part_passive',
     'part_active_loss',
