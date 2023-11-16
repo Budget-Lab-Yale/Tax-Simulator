@@ -5,3 +5,4 @@ yaml
 usincometaxes
 data.table
 openxlsx
+Hmisc

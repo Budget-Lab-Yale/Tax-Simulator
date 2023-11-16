@@ -112,7 +112,7 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       value_other = pmax(0, max_value_other - excess1 * ctc.po_rate1),
       
       # Allocate against liability after select nonrefundable credits
-      nonref     = ftc - cdctc_nonref - ed_nonref - savers_nonref - old_cred,
+      nonref     = ftc + cdctc_nonref + ed_nonref + savers_nonref + old_cred,
       liab       = pmax(0, liab_bc - nonref),
       ctc_nonref = pmin(liab, value1 + value2 + value_other),
       
@@ -124,7 +124,7 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       # Calculate unused CTC
       remaining_ctc = value1 + value2 + value_other - ctc_nonref, 
       
-      # Limit to max per-child refundable credit value\
+      # Limit to max per-child refundable credit value
       max_refund = if_else(is.infinite(ctc.max_refund), Inf, (n_young + n_old) * ctc.max_refund),
       ctc_ref    = pmin(remaining_ctc, max_refund),
       

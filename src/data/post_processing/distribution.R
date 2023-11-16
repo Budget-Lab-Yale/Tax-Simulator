@@ -24,7 +24,7 @@ calc_distribution = function(id) {
   # Create new Excel workbook
   wb = createWorkbook()
   
-  for (year in 2024:2025) {
+  for (year in get_scenario_info(id)$years) {
 
     # Read microdata output
     baseline = file.path(globals$baseline_root, 
@@ -118,8 +118,19 @@ calc_distribution = function(id) {
       
       mutate(`Share of total tax change` = group_delta / sum(group_delta)) %>% 
        
-      # Clean and write 
-      mutate(`Income cutoff` = if_else(row_number() == 1, NA, `Income cutoff`)) %>% 
+      # Clean up
+      mutate(
+        `Income cutoff` = if_else(row_number() == 1, NA, `Income cutoff`), 
+        `Percent change in after-tax income` = if_else(row_number() == 1, 
+                                                       NA,
+                                                       `Percent change in after-tax income`), 
+        `Average tax cut` = if_else(is.nan(`Average tax cut`) | round(`Share with tax cut`, 4) == 0, 
+                                    NA,
+                                    `Average tax cut`),
+        `Average tax increase` = if_else(is.nan(`Average tax increase`) | round(`Share with tax increase`, 4) == 0, 
+                                         NA,
+                                         `Average tax increase`)
+      ) %>% 
       select(`Income group`, `Income cutoff`, `Average tax change`, `Share with tax cut`, 
              `Average tax cut`, `Share with tax increase`, `Average tax increase`,
              `Percent change in after-tax income`, `Share of total tax change`)
@@ -132,7 +143,7 @@ calc_distribution = function(id) {
     writeData(wb = wb, sheet = as.character(year), startRow = 1, 
               x = paste0('Distributional impact of policy change, ', year))
     writeData(wb = wb, sheet = as.character(year), startRow = 12, 
-              x = paste0('Table includes all nondependent tax units, including nonfilers.', 
+              x = paste0('Estimate universe is nondependent tax units, including nonfilers.', 
                          '"Income" is measured as AGI plus: above-the-line deductions, ', 
                          'nontaxable interest, nontaxable pension income (including OASI ',
                          'benefits), and employer-side payroll taxes. Income percentile ', 
@@ -177,16 +188,26 @@ calc_distribution = function(id) {
              gridExpand = T, 
              style      = createStyle(halign = 'center'), 
              stack      = T)
+    addStyle(wb         = wb, 
+             sheet      = as.character(year), 
+             rows       = 12, 
+             cols       = 1:9, 
+             gridExpand = T, 
+             style      = createStyle(fontSize       = 8, 
+                                      textDecoration = 'italic',
+                                      valign         = 'center',
+                                      wrapText       = T), 
+             stack      = T)
+    mergeCells(wb    = wb, 
+               sheet = as.character(year), 
+               rows  = 12:13, 
+               cols  = 1:9)
     setColWidths(wb    = wb, 
                  sheet  = as.character(year), 
                  cols   = 1:9, 
                  widths = c(15, 8, 11, 11, 11, 11, 11, 15, 12))
     
   }
-  
-  # TODO bolding title
-  # TODO merging footnote
-  # TODO !num error
   
   
   # Write workbook 
