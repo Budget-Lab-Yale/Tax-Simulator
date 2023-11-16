@@ -17,6 +17,12 @@ value_old:
     '2022': [2000, 0]
     '2024': [2000, 1000]
     
+# Maximum credit value per nonqualifying dependent (assumed to phaseout per po_thresh1 and po_rate1)
+value_other:
+  value:
+    '2014': 0
+    '2018': 500
+    
 # Maximum age to qualify as an "old" child
 old_age_limit:
   value:
@@ -30,9 +36,9 @@ po_thresh_single:
   value:
     '2014': [75000, Inf]
     '2018': [200000, Inf]
-    '2021': [200000, 112500]
+    '2021': [200000, 75000]
     '2022': [200000, Inf]
-    '2024': [200000, 112500]
+    '2024': [200000, 75000]
     
 # AGI threshold above which credit value phases out, joint filers
 po_thresh_married:
@@ -42,6 +48,15 @@ po_thresh_married:
     '2021': [400000, 150000]
     '2022': [400000, Inf]
     '2024': [400000, 150000]
+    
+# AGI threshold above which credit value phases out, HoH filers
+po_thresh_head:
+  value:
+    '2014': [75000, Inf]
+    '2018': [200000, Inf]
+    '2021': [200000, 112500]
+    '2022': [200000, Inf]
+    '2024': [200000, 112500]
 
 # Whether CTC (exlcluding Credit for Other Dependent) is fully refundable
 fully_refundable:
@@ -59,4 +74,19 @@ need_ssn:
     '2021': 0
     '2022': 1
     '2024': 0
+    
+# Maximum refundable CTC per qualifying child
+max_refund:
+  value:
+    '2014': Inf
+    '2018': 1400
+    '2021': Inf
+    '2022': 1400
+    '2024': Inf
+  i_measure:
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year: 2017
+  i_direction: -1
+  i_increment: 100
 

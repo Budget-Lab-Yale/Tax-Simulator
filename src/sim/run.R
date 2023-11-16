@@ -67,8 +67,9 @@ do_scenario = function(ID, baseline_mtrs) {
     # Copy all files
     static_path %>% 
       list.files(recursive = T) %>% 
-      map(.f = ~ file.copy(from = file.path(static_path, .x), 
-                           to   = file.path(conv_path,   .x)))  
+      map(.f = ~ file.copy(from      = file.path(static_path, .x), 
+                           to        = file.path(conv_path,   .x), 
+                           overwrite = T))  
   }
   
   # Return MTRs if running baseline
@@ -233,6 +234,12 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
       mutate(id   = tax_units$id,
              year = year) %>% 
       relocate(id, year)
+    
+    # Add to tax units dataframe 
+    tax_units %<>% 
+      left_join(mtrs %>% 
+                  select(-year), 
+                by = 'id')
   }
   
   
@@ -242,9 +249,6 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
   
   # Write microdata
   tax_units %>%  
-    left_join(mtrs %>% 
-                select(-year), 
-              by = 'id') %>% 
     select(all_of(globals$detail_vars), starts_with('mtr_')) %>% 
     write_csv(file.path(scenario_info$output_path, 
                         if_else(static, 'static', 'conventional'),

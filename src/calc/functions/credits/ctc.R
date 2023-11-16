@@ -112,7 +112,7 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       value_other = pmax(0, max_value_other - excess1 * ctc.po_rate1),
       
       # Allocate against liability after select nonrefundable credits
-      nonref     = ftc - cdctc_nonref - ed_nonref - savers_nonref - old_cred,
+      nonref     = ftc + cdctc_nonref + ed_nonref + savers_nonref + old_cred,
       liab       = pmax(0, liab_bc - nonref),
       ctc_nonref = pmin(liab, value1 + value2 + value_other),
       

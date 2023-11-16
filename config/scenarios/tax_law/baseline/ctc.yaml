@@ -4,7 +4,7 @@ filing_status_mapper:
     '1': po_thresh_single
     '2': po_thresh_married
     '3': po_thresh_married / 2
-    '4': po_thresh_single
+    '4': po_thresh_head
 
 # Whether SSN is required to qualify for CTC
 need_ssn:
@@ -49,7 +49,7 @@ po_thresh_single:
   value:
     '2014': [75000, Inf]
     '2018': [200000, Inf]
-    '2021': [200000, 112500]
+    '2021': [200000, 75000]
     '2022': [200000, Inf]
     '2026': [75000, Inf]
     
@@ -61,6 +61,15 @@ po_thresh_married:
     '2021': [400000, 150000]
     '2022': [400000, Inf]
     '2026': [110000, Inf]
+    
+# AGI threshold above which credit value phases out, HoH filers
+po_thresh_head:
+  value:
+    '2014': [75000, Inf]
+    '2018': [200000, Inf]
+    '2021': [200000, 112500]
+    '2022': [200000, Inf]
+    '2026': [75000, Inf]
 
 # Phaseout rate
 po_rate:
@@ -104,6 +113,8 @@ max_refund:
   value:
     '2014': Inf
     '2018': 1400
+    '2021': Inf
+    '2022': 1400
     '2026': Inf
   i_measure:
     '1987': cpi

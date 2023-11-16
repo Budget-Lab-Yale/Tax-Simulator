@@ -119,7 +119,12 @@ calc_distribution = function(id) {
       mutate(`Share of total tax change` = group_delta / sum(group_delta)) %>% 
        
       # Clean and write 
-      mutate(`Income cutoff` = if_else(row_number() == 1, NA, `Income cutoff`)) %>% 
+      mutate(`Income cutoff` = if_else(row_number() == 1, NA, `Income cutoff`), 
+             `Percent change in after-tax income` = if_else(
+               row_number() == 1, 
+               NA,
+               `Percent change in after-tax income`
+             )) %>% 
       select(`Income group`, `Income cutoff`, `Average tax change`, `Share with tax cut`, 
              `Average tax cut`, `Share with tax increase`, `Average tax increase`,
              `Percent change in after-tax income`, `Share of total tax change`)
@@ -182,7 +187,7 @@ calc_distribution = function(id) {
              rows       = 12, 
              cols       = 1:9, 
              gridExpand = T, 
-             style      = createStyle(fontSize       = 9, 
+             style      = createStyle(fontSize       = 8, 
                                       textDecoration = 'italic',
                                       valign         = 'center',
                                       wrapText       = T), 
@@ -199,7 +204,7 @@ calc_distribution = function(id) {
   }
   
   # TODO bolding title
-  # TODO merging footnote
+  # TODO pct change in ATI for negatve 
   # TODO !num error
   
   
