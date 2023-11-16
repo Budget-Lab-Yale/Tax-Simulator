@@ -56,7 +56,7 @@ calc_receipts = function(totals, scenario_root) {
     
     # Write CSV
     select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits) %>%
-    write_csv(file.path(scenario_root, 'supplemental', 'receipts.csv'))
+    write_csv(file.path(scenario_root, 'totals', 'receipts.csv'))
 
 }
 
@@ -84,82 +84,107 @@ calc_rev_est = function(counterfactual_ids) {
   baseline = file.path(globals$baseline_root, 
                        'baseline', 
                        'static', 
-                       'supplemental',
+                       'totals',
                        'receipts.csv') %>%
     read_csv(show_col_types = F) %>%
     
-    # Create and rename variables with b for baseline
-    mutate(total = revenues_payroll_tax + 
-                   revenues_income_tax - 
-                   outlays_tax_credits) %>%
-    rename_with(.cols = -year, 
-                .fn   = ~ paste0(., '_b')) 
+    # Pivot long in variable type
+    mutate(total = revenues_payroll_tax + revenues_income_tax - outlays_tax_credits) %>% 
+    pivot_longer(cols      = -year, 
+                 names_to  = 'series', 
+                 values_to = 'baseline')
+  
   
   
   for (static in c(T, F)) {
     
-    for (scenario in counterfactual_ids) {
+    for (scenario_id in counterfactual_ids) {
       
-      # Get scenario-specific supplemental filepath
-      scenario_path = file.path(globals$output_root, 
-                                scenario, 
-                                if_else(static, 'static', 'conventional'),
-                                'supplemental')
+      # Read in counterfactual scenario receipts 
+      scenario = file.path(globals$output_root, 
+                           scenario_id, 
+                           if_else(static, 'static', 'conventional'),
+                           'totals', 
+                           'receipts.csv') %>%
+        read_csv(show_col_types = F) %>%
+        
+        # Pivot long in variable type
+        mutate(total = revenues_payroll_tax + revenues_income_tax - outlays_tax_credits) %>% 
+        pivot_longer(cols      = -year, 
+                     names_to  = 'series', 
+                     values_to = 'counterfactual')
       
-      # Read receipts
-      file.path(scenario_path, 'receipts.csv') %>% 
-        read_csv(show_col_types = F) %>% 
+      # Join together
+      rev_est = baseline %>% 
+        left_join(scenario, by = c('year', 'series')) %>% 
+        mutate(delta = counterfactual - baseline) %>% 
+        select(year, Series = series, delta) %>% 
+        pivot_wider(names_from  = `year`, 
+                    values_from = delta) %>% 
+        mutate(Series = case_when(
+          Series == 'total' ~ 'Total budget effect', 
+          Series == 'revenues_payroll_tax' ~ '  Revenues, payroll tax', 
+          Series == 'revenues_income_tax' ~ '  Revenues, individual income tax', 
+          Series == 'outlays_tax_credits' ~ '  Outlays, refundable tax credits'
+        )) %>%
+        arrange(desc(Series))
+      
+      # Create workbook
+      wb = createWorkbook()
+      addWorksheet(wb, scenario_id)
+      
+      # Add titles and notes 
+      writeData(wb = wb, sheet = scenario_id, x = rev_est, startRow = 2)
+      writeData(wb = wb, sheet = scenario_id, startRow = 1, 
+                x = 'Budget effects of policy change, fiscal year receipts')
+      
+      # Format numbers and cells 
+      addStyle(wb         = wb, 
+               sheet      = scenario_id, 
+               rows       = 2:6, 
+               cols       = 2:ncol(rev_est), 
+               gridExpand = T, 
+               style      = createStyle(numFmt = 'COMMA'), 
+               stack      = T)
+      addStyle(wb         = wb, 
+               sheet      = scenario_id, 
+               rows       = c(1, 2, 6), 
+               cols       = 1:ncol(rev_est), 
+               gridExpand = T, 
+               style      = createStyle(border = 'bottom'), 
+               stack      = T)
+      addStyle(wb         = wb, 
+               sheet      = scenario_id, 
+               rows       = 2, 
+               cols       = 1:ncol(rev_est), 
+               gridExpand = T, 
+               style      = createStyle(textDecoration = 'bold'), 
+               stack      = T)
+      addStyle(wb         = wb, 
+               sheet      = scenario_id, 
+               rows       = 2:6, 
+               cols       = 2:ncol(rev_est), 
+               gridExpand = T, 
+               style      = createStyle(halign = 'center'), 
+               stack      = T)
+      setColWidths(wb     = wb,
+                   sheet  = scenario_id,
+                   cols   = 1:ncol(rev_est),
+                   widths = c(29, rep(6, ncol(rev_est) - 1)))
         
-        # Calculate difference from baseline 
-        calc_rev_delta(baseline) %>%
-        
-        # Write revenue estimates file
-        write_csv(file.path(scenario_path, 'revenue_estimates.csv'))
+
+      # Write revenue estimates file
+      saveWorkbook(wb   = wb, 
+                   file = file.path(globals$output_root, 
+                                    scenario_id, 
+                                    if_else(static, 'static', 'conventional'),
+                                    'supplemental', 
+                                    'revenue_estimates.xlsx'), 
+                   overwrite = T)
     }
   }
 }
 
-
-
-calc_rev_delta = function(sim, baseline) {
-  
-  #----------------------------------------------------------------------------
-  # Calculates a single scenario's revenue estimate delta when compared to the 
-  # baseline.
-  # 
-  # Parameters: 
-  #   - sim      (df) : tibble containing one scenario's receipts
-  #   - baseline (df) : tibble containing baseline receipts
-  #
-  # Returns: dataframe containing, for each fiscal year, deltas for
-  #   - Total revenue
-  #   - Payroll Tax
-  #   - Individual Income Tax
-  #   - Refundable Credit Outlays
-  #   
-  #----------------------------------------------------------------------------
-  
-  # Create and rename variables with s for simulation
-  sim = sim %>% 
-    mutate(total = revenues_payroll_tax + 
-                   revenues_income_tax - 
-                   outlays_tax_credits) %>%
-    rename_with(.cols = -year, 
-                .fn   = ~ paste0(., '_s')) 
-  
-  # Merge and calculate deltas
-  baseline %>%
-    left_join(sim, by = "year") %>% 
-    mutate(
-      total                = total_s                - total_b,
-      revenues_payroll_tax = revenues_payroll_tax_s - revenues_payroll_tax_b,
-      revenues_income_tax  = revenues_income_tax_s  - revenues_income_tax_b,
-      outlays_tax_credits  = outlays_tax_credits_s  - outlays_tax_credits_b
-    ) %>%
-    
-    select(year, total, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits) %>%
-    return()
-}
 
 
 
