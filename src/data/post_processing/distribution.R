@@ -118,13 +118,19 @@ calc_distribution = function(id) {
       
       mutate(`Share of total tax change` = group_delta / sum(group_delta)) %>% 
        
-      # Clean and write 
-      mutate(`Income cutoff` = if_else(row_number() == 1, NA, `Income cutoff`), 
-             `Percent change in after-tax income` = if_else(
-               row_number() == 1, 
-               NA,
-               `Percent change in after-tax income`
-             )) %>% 
+      # Clean up
+      mutate(
+        `Income cutoff` = if_else(row_number() == 1, NA, `Income cutoff`), 
+        `Percent change in after-tax income` = if_else(row_number() == 1, 
+                                                       NA,
+                                                       `Percent change in after-tax income`), 
+        `Average tax cut` = if_else(is.nan(`Average tax cut`) | round(`Share with tax cut`, 4) == 0, 
+                                    NA,
+                                    `Average tax cut`),
+        `Average tax increase` = if_else(is.nan(`Average tax increase`) | round(`Share with tax increase`, 4) == 0, 
+                                         NA,
+                                         `Average tax increase`)
+      ) %>% 
       select(`Income group`, `Income cutoff`, `Average tax change`, `Share with tax cut`, 
              `Average tax cut`, `Share with tax increase`, `Average tax increase`,
              `Percent change in after-tax income`, `Share of total tax change`)
@@ -202,10 +208,6 @@ calc_distribution = function(id) {
                  widths = c(15, 8, 11, 11, 11, 11, 11, 15, 12))
     
   }
-  
-  # TODO bolding title
-  # TODO pct change in ATI for negatve 
-  # TODO !num error
   
   
   # Write workbook 
