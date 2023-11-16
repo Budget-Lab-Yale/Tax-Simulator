@@ -23,10 +23,10 @@ list.files('./src', recursive = T) %>%
 runscript_name   = 'perm_arpa_ctc' 
 user_id          = 'jar335'
 local            = 1
-vintage          = '2023111609'
+vintage          = NULL
 pct_sample       = 1
 stacked          = 1
-baseline_vintage = '2023111609'
+baseline_vintage = NULL
 
 # Set global (scenario-independent) variables
 globals = parse_globals(runscript_name   = runscript_name, 
@@ -70,9 +70,12 @@ walk(.f = do_scenario,
      baseline_mtrs = baseline_mtrs)
 
 
-#-----------------
-# Post-processing
-#-----------------
+#-------------------------------
+# Post-processing and reporting
+#-------------------------------
+
+# Create 1040 reports
+create_1040_reports(counterfactual_ids)
 
 # Calculate revenue estimates
 calc_rev_est(counterfactual_ids)
