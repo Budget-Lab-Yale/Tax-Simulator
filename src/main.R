@@ -25,7 +25,7 @@ user_id          = 'jar335'
 local            = 1
 vintage          = NULL
 pct_sample       = 1
-stacked          = 0
+stacked          = 1
 baseline_vintage = NULL
 
 # Set global (scenario-independent) variables
