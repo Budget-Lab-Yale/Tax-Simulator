@@ -188,7 +188,7 @@ calc_rev_est = function(counterfactual_ids) {
 
 
 
-calc_stacked = function(counterfactual_ids) {
+calc_stacked_rev_est = function(counterfactual_ids) {
   
   #----------------------------------------------------------------------------
   # Calculates stacked revenue deltas. Usable if scenarios build off of one 
@@ -209,43 +209,94 @@ calc_stacked = function(counterfactual_ids) {
   
   for (static in c(T, F)) {
     
-    c('baseline', counterfactual_ids) %>% 
+    stacked_rev_est = c('baseline', counterfactual_ids) %>% 
       
       # Read scenario receipts file and store 
       map(.f = ~ file.path(if_else(.x == 'baseline', globals$baseline_root, globals$output_root),
                            .x, 
                            if_else(static | .x == 'baseline', 'static', 'conventional'),
-                           'supplemental', 
+                           'totals', 
                            'receipts.csv') %>% 
             read_csv(show_col_types = F) %>% 
-            pivot_longer(cols      = -year, 
-                         names_to  = 'series', 
-                         values_to = 'receipts') %>%
-            mutate(scenario = .x)) %>% 
+            mutate(scenario_id = .x,
+                   total = revenues_payroll_tax + revenues_income_tax - outlays_tax_credits) %>% 
+            select(scenario_id, year, total)) %>% 
       
       # Join into single dataframe and group by year-series so as to leave 
       # scenarios ungrouped
       bind_rows() %>% 
-      group_by(year, series) %>%
+      group_by(year) %>%
       
       # Calculate stacked difference
-      mutate(delta = receipts - lag(receipts)) %>%
-      select(year, scenario, series, delta) %>%
+      mutate(total = total - lag(total)) %>%
       pivot_wider(names_from  = year,
-                  values_from = delta) %>%
+                  values_from = total) %>%
       
       # Drop baseline full of zeros or NA
-      filter(scenario != 'baseline') %>% 
+      filter(scenario_id != 'baseline') %>% 
       
-      # Write to supplemental folder for final scenario in stacking order 
-      write_csv(file.path(globals$output_root, 
-                          counterfactual_ids[length(counterfactual_ids)],
-                          if_else(static, 'static', 'conventional'),
-                          'supplemental',
-                          'stacked_revenue_estimates.csv'))
+      # Add totals row
+      bind_rows(
+        (.) %>%
+          summarise(across(.cols = -scenario_id, 
+                           .fns  = sum)) %>% 
+          mutate(scenario_id = 'Total')
+      ) %>% 
+      rename(Scenario = scenario_id)
     
+    # Create workbook
+    wb = createWorkbook()
+    addWorksheet(wb, 'Stacked revenue estimates')
+    
+    # Add titles and notes 
+    writeData(wb = wb, sheet = 'Stacked revenue estimates', x = stacked_rev_est, startRow = 2)
+    writeData(wb = wb, sheet = 'Stacked revenue estimates', startRow = 1, 
+              x = 'Stacked budget effects of policy changes, fiscal year receipts')
+    
+    # Format numbers and cells 
+    addStyle(wb         = wb, 
+             sheet      = 'Stacked revenue estimates', 
+             rows       = 2:(nrow(stacked_rev_est) + 2), 
+             cols       = 2:ncol(stacked_rev_est), 
+             gridExpand = T, 
+             style      = createStyle(numFmt = 'COMMA'), 
+             stack      = T)
+    addStyle(wb         = wb, 
+             sheet      = 'Stacked revenue estimates', 
+             rows       = c(1, 2, nrow(stacked_rev_est) + 1, nrow(stacked_rev_est) + 2), 
+             cols       = 1:ncol(stacked_rev_est), 
+             gridExpand = T, 
+             style      = createStyle(border = 'bottom'), 
+             stack      = T)
+    addStyle(wb         = wb, 
+             sheet      = 'Stacked revenue estimates', 
+             rows       = 2, 
+             cols       = 1:ncol(stacked_rev_est), 
+             gridExpand = T, 
+             style      = createStyle(textDecoration = 'bold'), 
+             stack      = T)
+    addStyle(wb         = wb, 
+             sheet      = 'Stacked revenue estimates', 
+             rows       = 2:(ncol(stacked_rev_est) + 2), 
+             cols       = 2:(ncol(stacked_rev_est)), 
+             gridExpand = T, 
+             style      = createStyle(halign = 'center'), 
+             stack      = T)
+    setColWidths(wb     = wb,
+                 sheet  = 'Stacked revenue estimates',
+                 cols   = 1:ncol(stacked_rev_est),
+                 widths = c(29, rep(6, ncol(stacked_rev_est) - 1)))
+    
+    
+    # Write revenue estimates file
+    saveWorkbook(wb   = wb, 
+                 file = file.path(globals$output_root, 
+                                  counterfactual_ids[length(counterfactual_ids)], 
+                                  if_else(static, 'static', 'conventional'),
+                                  'supplemental', 
+                                  'stacked_revenue_estimates.xlsx'), 
+                 overwrite = T)
   }
-  
 }
 
 

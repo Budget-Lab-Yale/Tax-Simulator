@@ -23,10 +23,10 @@ list.files('./src', recursive = T) %>%
 runscript_name   = 'perm_arpa_ctc' 
 user_id          = 'jar335'
 local            = 1
-vintage          = NULL
+vintage          = '2023111609'
 pct_sample       = 1
 stacked          = 1
-baseline_vintage = NULL
+baseline_vintage = '2023111609'
 
 # Set global (scenario-independent) variables
 globals = parse_globals(runscript_name   = runscript_name, 
@@ -79,7 +79,7 @@ calc_rev_est(counterfactual_ids)
 
 # Calculate stacked revenue estimates
 if (stacked == 1) {
-  calc_stacked(counterfactual_ids)
+  calc_stacked_rev_est(counterfactual_ids)
 }
 
 # Calculate distributional estimates
