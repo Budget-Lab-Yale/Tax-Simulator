@@ -79,7 +79,7 @@ calc_rev_est = function(counterfactual_ids) {
   #   - Individual Income Tax
   #   - Refundable Credit Outlays
   #----------------------------------------------------------------------------
-  
+
   # Read in baseline receipts
   baseline = file.path(globals$baseline_root, 
                        'baseline', 
@@ -114,11 +114,26 @@ calc_rev_est = function(counterfactual_ids) {
                      names_to  = 'series', 
                      values_to = 'counterfactual')
       
-      # Join together
+      # Read scenario GDP 
+      gdp = globals$interface_paths %>% 
+        filter(ID == 'baseline', interface == 'Macro-Projections') %>% 
+        get_vector('path') %>% 
+        file.path(c('historical.csv', 'projections.csv')) %>% 
+        map(~ read_csv(.x, show_col_types = F)) %>% 
+        bind_rows() %>% 
+        select(year, gdp_fy)
+      
+      # Join together and calculate estimates, both nominal and share-of-GDP
       rev_est = baseline %>% 
         left_join(scenario, by = c('year', 'series')) %>% 
-        mutate(delta = counterfactual - baseline) %>% 
-        select(year, Series = series, delta) %>% 
+        mutate(Dollars = counterfactual - baseline) %>% 
+        select(year, Series = series, Dollars) %>%
+        left_join(gdp, by = 'year') %>% 
+        mutate(`Share of GDP` = Dollars / gdp_fy) %>%
+        select(-gdp_fy) %>% 
+        pivot_longer(cols      = c(Dollars, `Share of GDP`), 
+                     names_to  = 'Measure', 
+                     values_to = 'delta') %>% 
         pivot_wider(names_from  = `year`, 
                     values_from = delta) %>% 
         mutate(Series = case_when(
@@ -127,50 +142,68 @@ calc_rev_est = function(counterfactual_ids) {
           Series == 'revenues_income_tax' ~ '  Revenues, individual income tax', 
           Series == 'outlays_tax_credits' ~ '  Outlays, refundable tax credits'
         )) %>%
-        arrange(desc(Series))
+        arrange(Measure, desc(Series)) 
       
+      # Convert to measure-indexed list
+      rev_est = c('Dollars', 'Share of GDP') %>% 
+        map(.f = ~ rev_est %>% 
+              filter(Measure == .x) %>% 
+              select(-Measure)) %>% 
+        set_names(c('Dollars', 'Share of GDP'))
+    
       # Create workbook
       wb = createWorkbook()
       addWorksheet(wb, scenario_id)
       
-      # Add titles and notes 
-      writeData(wb = wb, sheet = scenario_id, x = rev_est, startRow = 2)
+      # Write data
+      writeData(wb = wb, sheet = scenario_id, x = rev_est$Dollars, startRow = 2)
       writeData(wb = wb, sheet = scenario_id, startRow = 1, 
-                x = 'Budget effects of policy change, fiscal year receipts')
+                x = 'FY budget effects of policy change, nominal dollars')
+      
+      writeData(wb = wb, sheet = scenario_id, x = rev_est$`Share of GDP`, startRow = 9)
+      writeData(wb = wb, sheet = scenario_id, startRow = 8, 
+                x = 'FY budget effects of policy change, share of GDP')
       
       # Format numbers and cells 
       addStyle(wb         = wb, 
                sheet      = scenario_id, 
                rows       = 2:6, 
-               cols       = 2:ncol(rev_est), 
+               cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(numFmt = 'COMMA'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = scenario_id, 
-               rows       = c(1, 2, 6), 
-               cols       = 1:ncol(rev_est), 
+               rows       = 9:13, 
+               cols       = 2:ncol(rev_est$Dollars), 
+               gridExpand = T, 
+               style      = createStyle(numFmt = 'PERCENTAGE'), 
+               stack      = T)
+      addStyle(wb         = wb, 
+               sheet      = scenario_id, 
+               rows       = c(1, 2, 6, 8, 9, 13), 
+               cols       = 1:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(border = 'bottom'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = scenario_id, 
-               rows       = 2, 
-               cols       = 1:ncol(rev_est), 
+               rows       = c(2, 9), 
+               cols       = 1:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(textDecoration = 'bold'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = scenario_id, 
-               rows       = 2:6, 
-               cols       = 2:ncol(rev_est), 
+               rows       = 2:13, 
+               cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(halign = 'center'), 
                stack      = T)
       setColWidths(wb     = wb,
                    sheet  = scenario_id,
-                   cols   = 1:ncol(rev_est),
-                   widths = c(29, rep(6, ncol(rev_est) - 1)))
+                   cols   = 1:ncol(rev_est$Dollars),
+                   widths = c(29, rep(6, ncol(rev_est$Dollars) - 1)))
         
 
       # Write revenue estimates file
@@ -228,64 +261,104 @@ calc_stacked_rev_est = function(counterfactual_ids) {
       group_by(year) %>%
       
       # Calculate stacked difference
-      mutate(total = total - lag(total)) %>%
+      mutate(Dollars = total - lag(total)) %>%
+      
+      # Calculate share-of-GDP metric
+      left_join(
+        globals$interface_paths %>% 
+          filter(ID == 'baseline', interface == 'Macro-Projections') %>% 
+          get_vector('path') %>% 
+          file.path(c('historical.csv', 'projections.csv')) %>% 
+          map(~ read_csv(.x, show_col_types = F)) %>% 
+          bind_rows() %>% 
+          select(year, gdp_fy), 
+        by = 'year'
+      ) %>% 
+      mutate(`Share of GDP` = Dollars / gdp_fy) %>% 
+      select(-gdp_fy, -total) %>% 
+      
+      # Reshape wide in year
+      pivot_longer(cols      = c(Dollars, `Share of GDP`), 
+                   names_to  = 'Measure', 
+                   values_to = 'value') %>% 
       pivot_wider(names_from  = year,
-                  values_from = total) %>%
+                  values_from = value) %>%
       
       # Drop baseline full of zeros or NA
-      filter(scenario_id != 'baseline') %>% 
-      
-      # Add totals row
-      bind_rows(
-        (.) %>%
-          summarise(across(.cols = -scenario_id, 
-                           .fns  = sum)) %>% 
-          mutate(scenario_id = 'Total')
-      ) %>% 
-      rename(Scenario = scenario_id)
+      filter(scenario_id != 'baseline') 
+    
+    # Convert to measure-indexed list, adding totals row in the process
+    stacked_rev_est = c('Dollars', 'Share of GDP') %>% 
+      map(.f = ~ stacked_rev_est %>% 
+            filter(Measure == .x) %>% 
+            select(-Measure) %>% 
+            bind_rows(
+              (.) %>%
+                summarise(across(.cols = -scenario_id, 
+                                 .fns  = sum)) %>% 
+                mutate(scenario_id = 'Total')
+            ) %>% 
+            rename(Scenario = scenario_id)) %>% 
+      set_names(c('Dollars', 'Share of GDP'))
+    
     
     # Create workbook
     wb = createWorkbook()
     addWorksheet(wb, 'Stacked revenue estimates')
     
-    # Add titles and notes 
-    writeData(wb = wb, sheet = 'Stacked revenue estimates', x = stacked_rev_est, startRow = 2)
+    # Add data and titles
+    writeData(wb = wb, sheet = 'Stacked revenue estimates', 
+              x = stacked_rev_est$Dollars, startRow = 2)
     writeData(wb = wb, sheet = 'Stacked revenue estimates', startRow = 1, 
-              x = 'Stacked budget effects of policy changes, fiscal year receipts')
+              x = 'Stacked FY budget effects of policy changes, nominal dollars')
+    
+    writeData(wb = wb, sheet = 'Stacked revenue estimates', 
+              x = stacked_rev_est$`Share of GDP`, startRow = nrow(stacked_rev_est$Dollars) + 5)
+    writeData(wb = wb, sheet = 'Stacked revenue estimates', startRow = nrow(stacked_rev_est$Dollars) + 4, 
+              x = 'Stacked FY budget effects of policy changes, share of GDP')
+    
     
     # Format numbers and cells 
     addStyle(wb         = wb, 
              sheet      = 'Stacked revenue estimates', 
-             rows       = 2:(nrow(stacked_rev_est) + 2), 
-             cols       = 2:ncol(stacked_rev_est), 
+             rows       = 2:(nrow(stacked_rev_est$Dollars) + 2), 
+             cols       = 2:ncol(stacked_rev_est$Dollars), 
              gridExpand = T, 
              style      = createStyle(numFmt = 'COMMA'), 
              stack      = T)
     addStyle(wb         = wb, 
              sheet      = 'Stacked revenue estimates', 
-             rows       = c(1, 2, nrow(stacked_rev_est) + 1, nrow(stacked_rev_est) + 2), 
-             cols       = 1:ncol(stacked_rev_est), 
+             rows       = (nrow(stacked_rev_est$Dollars) + 6):(2 * nrow(stacked_rev_est$Dollars) + 6), 
+             cols       = 2:ncol(stacked_rev_est$Dollars), 
+             gridExpand = T, 
+             style      = createStyle(numFmt = 'PERCENTAGE'), 
+             stack      = T)
+    addStyle(wb         = wb, 
+             sheet      = 'Stacked revenue estimates', 
+             rows       = c(1, 2, nrow(stacked_rev_est$Dollars) + c(1, 2)) %>% 
+                             c((.) + nrow(stacked_rev_est$Dollars) + 3), 
+             cols       = 1:ncol(stacked_rev_est$Dollars), 
              gridExpand = T, 
              style      = createStyle(border = 'bottom'), 
              stack      = T)
     addStyle(wb         = wb, 
              sheet      = 'Stacked revenue estimates', 
-             rows       = 2, 
-             cols       = 1:ncol(stacked_rev_est), 
+             rows       = c(2, nrow(stacked_rev_est$Dollars) + 5), 
+             cols       = 1:ncol(stacked_rev_est$Dollars), 
              gridExpand = T, 
              style      = createStyle(textDecoration = 'bold'), 
              stack      = T)
     addStyle(wb         = wb, 
              sheet      = 'Stacked revenue estimates', 
-             rows       = 2:(ncol(stacked_rev_est) + 2), 
-             cols       = 2:(ncol(stacked_rev_est)), 
+             rows       = 2:(2 * (ncol(stacked_rev_est$Dollars) + 2)), 
+             cols       = 2:(ncol(stacked_rev_est$Dollars)), 
              gridExpand = T, 
              style      = createStyle(halign = 'center'), 
              stack      = T)
     setColWidths(wb     = wb,
                  sheet  = 'Stacked revenue estimates',
-                 cols   = 1:ncol(stacked_rev_est),
-                 widths = c(29, rep(6, ncol(stacked_rev_est) - 1)))
+                 cols   = 1:ncol(stacked_rev_est$Dollars),
+                 widths = c(29, rep(6, ncol(stacked_rev_est$Dollars) - 1)))
     
     
     # Write revenue estimates file

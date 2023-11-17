@@ -20,11 +20,11 @@ list.files('./src', recursive = T) %>%
   map(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
 
 # cmd line args TODO
-runscript_name   = 'perm_arpa_ctc' 
+runscript_name   = 'tcja_ext' 
 user_id          = 'jar335'
 local            = 1
 vintage          = NULL
-pct_sample       = 1
+pct_sample       = 0.25
 stacked          = 1
 baseline_vintage = NULL
 
