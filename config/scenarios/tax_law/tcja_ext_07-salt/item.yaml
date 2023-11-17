@@ -1,0 +1,7 @@
+---
+
+# Maximum deductible state and local taxes, joint returns
+salt_limit_married:
+  value:
+    '2014': Inf
+    '2018': 10000

@@ -24,8 +24,8 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
     'n_tax_units',
     'n_returns',
     'n_returns_dep',  
-    'n_nonfilers',
-    'n_adults',
+    'n_dep',
+    'n_dep_nonfiler',
     'n_people'
   )
   

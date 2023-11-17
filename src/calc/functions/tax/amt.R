@@ -33,6 +33,7 @@ calc_amt = function(tax_unit, fill_missings = F) {
     'qbi_ded',        # (dbl)  value of deduction for Qualified Business Income
     'itemizing',      # (bool) whether filer itemizes deductions
     'salt_item_ded',  # (dbl)  itemized deduction for state and local taxes
+    'misc_item_ded',  # (dbl)  miscellaneous itemized deductions
     'state_ref',      # (dbl)  taxable refunds/credits/offsets of SALT
     'amt_nols',       # (dbl)  NOLs includible in AMT income
     'amt_ftc',        # (dbl)  foreign tax credit for AMT purposes
@@ -72,7 +73,11 @@ calc_amt = function(tax_unit, fill_missings = F) {
       amt_gross_inc = agi -
                       ded - 
                       qbi_ded + 
-                      if_else(itemizing, salt_item_ded, std_ded) + 
+                      if_else(itemizing, 
+                              salt_item_ded + 
+                              misc_item_ded - 
+                              (item_ded_ex_limits - item_ded), 
+                              std_ded) - 
                       state_ref + 
                       amt_nols,
       
