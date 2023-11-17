@@ -44,6 +44,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'divorce_year',    # (int) year of divorce if applicable
     'sole_prop',       # (dbl) sole proprietor's net income (Sch. C)
     'sch_e',           # (dbl) net partnership, S corp, rental, royalty, estate, and trust income (Sch E.)
+    'pt',              # (dbl) pass-through net income
     'farm',            # (dbl) net farm income (Sch. F)
     'ui',              # (dbl) gross unemployment benefits
     'other_inc',       # (dbl) all other income sources: NOLs, gambling, debt cancellation, etc. See Sch. 1
@@ -64,6 +65,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
     
     # Tax law attributes
     'agi.alimony_repeal_year', # (int) year during and after which a divorce does not generate taxable/deductible alimony
+    'agi.bus_loss_limit',      # (int) maximum deductible business loss
     'agi.sl_limit',            # (int) maximum deductible student loan interest
     'agi.sl_po_thresh',        # (int) MAGI phaseout threshold for student loan interest deduction
     'agi.sl_po_range',         # (int) MAGI phaseout range for student loan interest deduction
@@ -94,6 +96,10 @@ calc_agi = function(tax_unit, fill_missings = F) {
                   farm +
                   ui +
                   other_inc,
+      
+      # Add back excess business losses
+      excess_bus_loss = pmax(0, -pt - agi.bus_loss_limit),
+      inc_ex_ss       = inc_ex_ss + excess_bus_loss, 
 
       # Calculate above-the-line deductions, excluding student loan interest deduction 
       char_above_ded  = pmin(char.above_limit, char_cash + char_noncash),

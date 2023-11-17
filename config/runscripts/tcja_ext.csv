@@ -1,0 +1,10 @@
+ID,dep.Tax-Data.vintage,dep.Tax-Data.ID,dep.Macro-Projections.vintage,dep.Macro-Projections.ID,tax_law,behavior,first_year,last_year,mtr_vars
+baseline,2023111621,baseline,2023092721,baseline,baseline,,2017,2033,
+tcja_ext_01-rates,2023111621,baseline,2023092721,baseline,tcja_ext_01-rates,,2017,2033,
+tcja_ext_02-std,2023111621,baseline,2023092721,baseline,tcja_ext_02-std,,2017,2033,
+tcja_ext_03-pe,2023111621,baseline,2023092721,baseline,tcja_ext_03-pe,,2017,2033,
+tcja_ext_04-qbi,2023111621,baseline,2023092721,baseline,tcja_ext_04-qbi,,2017,2033,
+tcja_ext_05-losses,2023111621,baseline,2023092721,baseline,tcja_ext_05-losses,,2017,2033,
+tcja_ext_06-ctc,2023111621,baseline,2023092721,baseline,tcja_ext_06-ctc,,2017,2033,
+tcja_ext_07-item,2023111621,baseline,2023092721,baseline,tcja_ext_07-item,,2017,2033,
+tcja_ext_08-amt,2023111621,baseline,2023092721,baseline,tcja_ext_08-amt,,2017,2033,
