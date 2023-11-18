@@ -97,7 +97,7 @@ parse_globals = function(runscript_name, user_id, local, vintage,
   runtime_args = runscript_name %>% 
     paste0('.csv') %>%
     file.path('./config/runscripts/', .) %>% 
-    read_csv(show_col_types = F)
+    read_csv()
     
   
   # Write dependencies CSV; this is a vintage-level file which lists all 

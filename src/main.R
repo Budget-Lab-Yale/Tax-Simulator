@@ -23,10 +23,10 @@ list.files('./src', recursive = T) %>%
 runscript_name   = 'tcja_ext' 
 user_id          = 'jar335'
 local            = 1
-vintage          = '2023111713'
+vintage          = NULL
 pct_sample       = 1
 stacked          = 1
-baseline_vintage = '2023111713'
+baseline_vintage = NULL
 
 # Set global (scenario-independent) variables
 globals = parse_globals(runscript_name   = runscript_name, 
