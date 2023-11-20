@@ -29,7 +29,13 @@ mort_bal_limit_mfs:
   value:
     '2014': [Inf, 500000]
     '2018': [Inf, 500000, 375000]
-
+    
+# Maximum deductible casualty and loss expenses
+casualty_limit:
+  value: 
+    '2014': Inf
+    '2018': 0
+    
 # Maximum deductible "miscellanous" itemized deductions
 misc_limit:
   value:

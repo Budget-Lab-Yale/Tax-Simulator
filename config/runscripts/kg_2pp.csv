@@ -1,5 +1,0 @@
-ID,dep.Tax-Data.vintage,dep.Tax-Data.ID,dep.Macro-Projections.vintage,dep.Macro-Projections.ID,tax_law,behavior,first_year,last_year,mtr_vars
-baseline,2023111621,baseline,2023092721,baseline,baseline,,2017,2033,kg_lt
-kg_2pp_70,2023111621,baseline,2023092721,baseline,kg_2pp,kg_lt/70_2024_withtrans,2017,2033,kg_lt
-kg_2pp_50,2023111621,baseline,2023092721,baseline,kg_2pp,kg_lt/50_2024_withtrans,2017,2033,kg_lt
-kg_2pp_30,2023111621,baseline,2023092721,baseline,kg_2pp,kg_lt/30_2024_withtrans,2017,2033,kg_lt

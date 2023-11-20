@@ -35,7 +35,6 @@ do_scenario = function(ID, baseline_mtrs) {
   # Build (and write) tax law
   tax_law = build_tax_law(scenario_info, indexes)
   
-  
   #----------------
   # Run simulation
   #----------------
@@ -96,7 +95,7 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
   #   - static_mtrs          : tibble of MTRs for the static counterfactual 
   #                            scenario run, indexed by year/tax unit ID; NULL 
   #                            if this run is in static mode or if no MTR 
-  #                            variables were specified 
+  #                            variables were specified
   #
   # Returns: tibble of marginal tax rates (df).
   #----------------------------------------------------------------------------
@@ -105,15 +104,34 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
   output_root = file.path(scenario_info$output_path, if_else(static, 
                                                              'static', 
                                                              'conventional'))
-  # Run simulation for all years
-  output = scenario_info$years %>% 
-    map(.f            = run_one_year,
-        scenario_info = scenario_info, 
-        tax_law       = tax_law,
-        static        = static,
-        baseline_mtrs = baseline_mtrs, 
-        static_mtrs   = static_mtrs)
   
+  # Initial table of NOLs
+  nols = initialize_nols(scenario_info$years)
+  
+  # Run simulation for all years
+  output = list() 
+  for (t in seq_along(scenario_info$years)) {
+    
+    year = scenario_info$years[t]
+    
+    # Run simulation of year 
+    output[[t]] = run_one_year(year          = year,
+                               scenario_info = scenario_info, 
+                               tax_law       = tax_law,
+                               static        = static,
+                               baseline_mtrs = baseline_mtrs, 
+                               static_mtrs   = static_mtrs, 
+                               nols          = nols)
+    
+    # Update table of NOLs and write 
+    nols = update_nols(nols   = nols, 
+                       year   = year,
+                       amount = output[[t]]$totals$`1040`$excess_bus_loss) 
+  }
+  
+  # Write NOLs file
+  nols %>% 
+    write_csv(file.path(output_root, 'totals', 'nols.csv'))
   
   # Write totals files
   totals_pr = output %>%
@@ -135,7 +153,7 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
   totals_pr %>%  
     left_join(totals_1040, by = 'year') %>% 
     calc_receipts(output_root) 
-  
+
   # Return MTRs
   output %>% 
     map(.f = ~ .x$mtrs) %>% 
@@ -145,7 +163,8 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
 
 
 
-run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
+run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, 
+                        static_mtrs, nols) {
   
   #----------------------------------------------------------------------------
   # Runs a single year of tax simulation. 
@@ -162,6 +181,8 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
   #                            scenario run, indexed by year/tax unit ID; NULL 
   #                            if this run is in static mode or if no MTR 
   #                            variables were specified 
+  #   - nols (df)            : tibble of endogeneously calculated net operating 
+  #                            losses to distribute 
   #
   # Returns: list of:
   #  - mtrs (df)     : tibble of marginal tax rates for this year
@@ -172,17 +193,24 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, sta
   print(paste0('Running ', year, ' for scenario ', "'", scenario_info$ID, "'",
                if_else(static & scenario_info$ID != 'baseline', '(static)', '')))
   
-  # Load tax unit data and join tax law
+  # Load tax unit data 
   tax_units = scenario_info$interface_paths$`Tax-Data` %>%  
     read_microdata(year) %>%
+    
+    # Subset records if running with a sample of full data
     filter(id %in% globals$sample_ids) %>% 
     mutate(weight = weight / globals$pct_sample, 
            year   = year) %>% 
-    left_join(tax_law, by = c('year', 'filing_status'))
-
-  # Adjust for economic differences from economic baseline
-  # TODO
+    
+    # Join tax law
+    left_join(tax_law, by = c('year', 'filing_status')) %>% 
   
+    # Adjust for economic differences from economic baseline
+    # TODO
+  
+    # Allocate net operating losses attributable to some prior-year modeled policy
+    distribute_nols(nols, year) 
+    
   
   #---------------------------
   # Model behavioral feedback
