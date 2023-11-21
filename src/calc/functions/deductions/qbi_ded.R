@@ -99,12 +99,10 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
       po_share = pmin(1, pmax(0, txbl_inc - qbi.po_thresh) / qbi.po_range),
       
       # Reduce deduction by the amount by which the QBI deduction exceeds wage
-      # credit, scaling by the extent to which the taxable income limitation 
-      # applies. Note that for SSTBs, this expression evaluates to 0, effectively 
-      # applying the phaseout without regard to wages paid. 
-      wage_credit = wagebill * qbi.wage_rate * sstb,
-      reduction   = pmin(qbi_ded, po_share * pmax(0, qbi_ded - wage_credit)),
-      qbi_ded     = qbi_ded - reduction,
+      # credit, scaling by the extent to which the taxable income limitation applies
+      wage_credit = wagebill * qbi.wage_rate,
+      reduction   = po_share * if_else(sstb == 1, qbi_ded, pmax(0, qbi_ded - wage_credit)),
+      qbi_ded     = pmax(0, qbi_ded - reduction)
       
     ) %>% 
       

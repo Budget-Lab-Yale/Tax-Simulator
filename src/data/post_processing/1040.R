@@ -431,7 +431,6 @@ recode_1040_vars = function(df) {
       Variable == 'returns'               ~ 'Number of returns filed', 
       Variable == 'returns_dep'           ~ 'Number of dependent returns filed', 
       Variable == 'dep'                   ~ 'Number of dependents claimed', 
-      Variable == 'dep_nonfiler'          ~ 'Number of would-be dependents in nonfiler tax units', 
       Variable == 'wages'                 ~ 'Wages and salaries', 
       Variable == 'exempt_int'            ~ 'Exempt interest income',
       Variable == 'div_ord'               ~ 'Ordinary-rate dividends',
