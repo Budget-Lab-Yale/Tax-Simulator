@@ -3,8 +3,8 @@
 #---------------------------------------------------------
 
 # Set return variables for function
-return_vars$calc_agi = c('txbl_ss', 'char_above_ded', 'gross_inc', 'above_ded', 
-                         'agi')
+return_vars$calc_agi = c('txbl_ss', 'excess_bus_loss', 'char_above_ded', 
+                         'gross_inc', 'above_ded', 'agi')
 
 
 calc_agi = function(tax_unit, fill_missings = F) {
@@ -48,6 +48,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'farm',            # (dbl) net farm income (Sch. F)
     'ui',              # (dbl) gross unemployment benefits
     'other_inc',       # (dbl) all other income sources: NOLs, gambling, debt cancellation, etc. See Sch. 1
+    'new_nols',        # (dbl) endogenously calculated, policy driven NOLs
     'ed_exp',          # (dbl) educator expenses
     'hsa_contr',       # (dbl) pretax contributions to an HSA
     'liab_seca_er',    # (dbl) "employer"-side SECA liability
@@ -95,7 +96,8 @@ calc_agi = function(tax_unit, fill_missings = F) {
                   sch_e + 
                   farm +
                   ui +
-                  other_inc,
+                  other_inc - 
+                  new_nols,
       
       # Add back excess business losses
       excess_bus_loss = pmax(0, -pt - agi.bus_loss_limit),

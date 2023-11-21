@@ -24,9 +24,7 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
     'n_tax_units',
     'n_returns',
     'n_returns_dep',  
-    'n_nonfilers',
-    'n_adults',
-    'n_people'
+    'n_dep'
   )
   
   # Choose tax variables to report
@@ -55,15 +53,15 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
     'scorp_active_loss',
     'scorp_passive_loss',
     'scorp_179',
+    'excess_bus_loss',
     'net_rent',
     'net_estate',
     'sch_e',           
     'farm',    
     'gross_ss',   
     'txbl_ss',
-    'ui',              
-    'nols',            
-    'other_inc', 
+    'ui',                  
+    'other_inc',
     'gross_inc',
     'sl_int_ded',
     'char_above_ded',
@@ -133,8 +131,7 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
            n_joint        = filer * (filing_status == 2),
            n_hoh          = filer * (filing_status == 4),
            n_dep          = filer * n_dep,
-           n_dep_nonfiler = n_dep,
-           n_with_dep     = filer * (n_dep > 0))
+           n_with_dep     = (n_dep > 0))
   
   # Group data by AGI if specified
   if (by_agi) {
@@ -149,7 +146,7 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
                    '$100,000-$200,000'      = 1e5,
                    '$200,000-$500,000'      = 2e5,
                    '$500,000-$1,000,000'    = 5e5,
-                   '$1,000,000-$1,500,000' = 1e6,
+                   '$1,000,000-$1,500,000'  = 1e6,
                    '$1,500,000-$2,000,000'  = 1.5e6,
                    '$2,000,000-$5,000,000'  = 2e6,
                    '$5,000,000-$10,000,000' = 5e6,

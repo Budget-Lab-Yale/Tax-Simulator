@@ -5,7 +5,6 @@
 #---------------------------------------------------
 
 
-
 create_1040_reports = function(counterfactual_ids) {
   
   #----------------------------------------------------------------------------
@@ -79,85 +78,7 @@ create_1040_reports = function(counterfactual_ids) {
                   values_from = c(count, diff_count, amount, diff_amount)) %>% 
       
       # Rename variables 
-      mutate(Variable = case_when(
-        Variable == 'tax_units'             ~ 'Number of tax units', 
-        Variable == 'returns'               ~ 'Number of returns filed', 
-        Variable == 'returns_dep'           ~ 'Number of dependent returns filed', 
-        Variable == 'wages'                 ~ 'Wages and salaries', 
-        Variable == 'exempt_int'            ~ 'Exempt interest income',
-        Variable == 'div_ord'               ~ 'Ordinary-rate dividends',
-        Variable == 'div_pref'              ~ 'Preferred-rate dividends',
-        Variable == 'txbl_ira_dist'         ~ 'Taxable IRA distributions',
-        Variable == 'txbl_pens_dist'        ~ 'Taxable pension distributions',
-        Variable == 'txbl_kg'               ~ 'Taxable net capital gain',
-        Variable == 'kg_pref'               ~ 'Preferred capital gains',
-        Variable == 'sole_prop'             ~ 'Schedule C net income',
-        Variable == 'part_scorp'            ~ 'Partnership and S corporation income',
-        Variable == 'part_scorp_loss'       ~ 'Partnership and S corporation loss',
-        Variable == 'part_active'           ~ 'Partnership income (non-active)',
-        Variable == 'part_passive'          ~ 'Partnership income (passive)',
-        Variable == 'part_active_loss'      ~ 'Partnership losses (non-active)',
-        Variable == 'part_passive_loss'     ~ 'Partnership losses (passive)',
-        Variable == 'part_179'              ~ 'Partnership Section 179 deduction',
-        Variable == 'scorp_active'          ~ 'S Corporation income (active)',
-        Variable == 'scorp_passive'         ~ 'S Corporation income (passive)',
-        Variable == 'scorp_active_loss'     ~ 'S Corporation losses (active)',
-        Variable == 'scorp_passive_loss'    ~ 'S Corporation losses (passive)',
-        Variable == 'scorp_179'             ~ 'S Corporation Section 179 deduction',
-        Variable == 'net_rent'              ~ 'Net rental income',
-        Variable == 'net_estate'            ~ 'Net income from estates and trusts',
-        Variable == 'sch_e'                 ~ 'Schedule E net income',
-        Variable == 'farm'                  ~ 'Farm income',
-        Variable == 'gross_ss'              ~ 'Gross Social Security benefits',
-        Variable == 'txbl_ss'               ~ 'Taxable Social Security benefits',
-        Variable == 'ui'                    ~ 'Unemployment compensation',
-        Variable == 'sl_int_ded'            ~ 'Student loan interest deduction',
-        Variable == 'char_above_ded'        ~ 'Charitable contributions deduction, above-the-line',
-        Variable == 'above_ded'             ~ 'Above-the-line deductions',
-        Variable == 'agi'                   ~ 'Adjusted gross income',
-        Variable == 'std_ded'               ~ 'Standard deduction',
-        Variable == 'med_item_ded'          ~ 'Medical expense itemized deduction',
-        Variable == 'salt_item_ded'         ~ 'State and local taxes itemized deduction',
-        Variable == 'mort_int_item_ded'     ~ 'Mortgage interest itemized deduction',
-        Variable == 'inv_int_item_ded'      ~ 'Investment interest itemized deduction',
-        Variable == 'int_item_ded'          ~ 'Total interest itemized deduction',
-        Variable == 'char_item_ded'         ~ 'Charitable contributions itemized deduction',
-        Variable == 'casualty_item_ded'     ~ 'Casualty and theft losses itemized deduction',
-        Variable == 'misc_item_ded'         ~ 'Miscellaneous AGI-limited itemized deductions',
-        Variable == 'other_item_ded'        ~ 'Other itemized deductions',
-        Variable == 'item_ded_ex_limits'    ~ 'Itemized deductions excluding limitations',
-        Variable == 'item_ded'              ~ 'Total itemized deductions',
-        Variable == 'pe_ded'                ~ 'Personal exemptions deduction',
-        Variable == 'qbi_ded'               ~ 'Qualified Business Income deduction',
-        Variable == 'txbl_inc'              ~ 'Taxable income',
-        Variable == 'liab_ord'              ~ 'Ordinary-rate tax liability',
-        Variable == 'liab_pref'             ~ 'Preferred-rate tax liability',
-        Variable == 'liab_1250'             ~ 'Tax liability on Section 1250 gains',
-        Variable == 'liab_collect'          ~ 'Tax liability on collectibles',
-        Variable == 'liab_amt'              ~ 'Alternative Minimum Tax liability',
-        Variable == 'excess_ptc'            ~ 'Excess Premium Tax Credit repayment',
-        Variable == 'liab_bc'               ~ 'Tax liability before credits',
-        Variable == 'ftc'                   ~ 'Foreign tax credit',
-        Variable == 'cdctc_nonref'          ~ 'Non-refundable Child and Dependent Care Tax Credit',
-        Variable == 'ed_nonref'             ~ 'Non-refundable education credits',
-        Variable == 'savers_nonref'         ~ 'Non-refundable Saver\'s credit',
-        Variable == 'old_cred'              ~ 'Elderly tax credit',
-        Variable == 'ctc_nonref'            ~ 'Non-refundable Child Tax Credit',
-        Variable == 'nonref'                ~ 'Total non-refundable credits',
-        Variable == 'ctc_ref'               ~ 'Refundable Child Tax Credit (Additional Child Tax Credit)',
-        Variable == 'ed_ref'                ~ 'Refundable education credits',
-        Variable == 'net_ptc'               ~ 'Net Premium Tax Credit',
-        Variable == 'eitc'                  ~ 'Earned Income Tax Credit',
-        Variable == 'rebate'                ~ 'Recovery rebate ("stimulus check")',
-        Variable == 'cdctc_ref'             ~ 'Refundable Child and Dependent Care Tax Credit',
-        Variable == 'savers_ref'            ~ 'Refundable Saver\'s credit',
-        Variable == 'ref'                   ~ 'Total refundable credits',
-        Variable == 'ref_iit'               ~ 'Refundable credits used to offset income tax',
-        Variable == 'ref_other'             ~ 'Refundable credits used to offset other taxes',
-        Variable == 'refund'                ~ 'Refundable credits in excess of all tax liability',
-        Variable == 'liab_niit'             ~ 'Net Investment Income Tax liability',
-        Variable == 'liab_iit'              ~ 'Income tax liability'
-      )) %>% 
+      recode_1040_vars() %>% 
       filter(!is.na(Variable)) %>% 
       select(year, Variable, baseline_count, baseline_amount, count_static, amount_static, 
              diff_count_static, diff_amount_static, count_conventional, amount_conventional, 
@@ -341,5 +262,237 @@ create_1040_reports = function(counterfactual_ids) {
                                 'supplemental', 
                                 '1040.xlsx'), 
                overwrite = T)
+}
+
+
+
+create_stacked_1040_reports = function(counterfactual_ids) {
+  
+  #----------------------------------------------------------------------------
+  # Builds stacked 1040 report.
+  # 
+  # Parameters:
+  #   - counterfactual_ids (str[]) : scenario IDs for which to generate report  
+  #
+  # Returns: void (writes the Excel file)
+  #----------------------------------------------------------------------------
+  
+  
+  # Read data
+  stacked_1040_data = list()
+  for (behavior in c('static', 'conventional')) { 
+    stacked_1040_data[[behavior]] = c('baseline', counterfactual_ids) %>% 
+      map(.f = ~ file.path(globals$output_root, 
+                           .x, 
+                           if_else(.x == 'baseline', 'static', behavior),
+                           'totals', 
+                           '1040.csv') %>%
+            read_csv(show_col_types = F) %>%
+            mutate(scenario_id = .x,
+                   run_type    = behavior)
+      ) %>% 
+      bind_rows() 
+  }  
+  
+  
+  # Join data together and reshape 
+  stacked_1040_data %<>% 
+    bind_rows() %>% 
+    relocate(run_type, scenario_id) %>% 
+    
+    # Calculate stacked deltas, leaving baseline in levels 
+    arrange(run_type, year) %>% 
+    group_by(run_type, year) %>% 
+    mutate(across(.cols = -scenario_id, 
+                  .fns  = ~ if_else(scenario_id == 'baseline', ., . - lag(.)))) %>% 
+    ungroup() %>%  
+  
+    # Reshape wide in scenario 
+    rename_with(.cols = starts_with('n_'), 
+                .fn   = ~ str_replace(., 'n_', 'count.')) %>% 
+    rename_with(.cols = -c(scenario_id, year, run_type, starts_with('count.')), 
+                .fn   = ~ paste0('amount.', .)) %>%
+    pivot_longer(cols      = -c(scenario_id, year, run_type), 
+                 names_to  = c('Series', 'Variable'), 
+                 names_sep = '[.]',
+                 values_to = 'value') %>% 
+    pivot_wider(names_from  = scenario_id, 
+                values_from = value) %>%
+    
+    # Clean up 
+    relocate(run_type, Variable, Series) %>% 
+    recode_1040_vars() %>% 
+    filter(!is.na(Variable)) %>% 
+    mutate(Series = if_else(Series == 'amount', 'Amount', 'Number of returns'))
+  
+  
+  # Convert to year-indexed list
+  stacked_1040_data = unique(stacked_1040_data$year) %>% 
+    map(.f = ~ stacked_1040_data %>% 
+          filter(year == .x) %>% 
+          select(-year)) %>% 
+    set_names(unique(stacked_1040_data$year))
+  
+
+  # Build Excel workbook
+  wb = createWorkbook()
+  for (i in 1:length(stacked_1040_data)) {
+    
+    yr = names(stacked_1040_data)[i]
+    
+    # Create worksheet
+    addWorksheet(wb = wb, sheetName = as.character(yr))
+    
+    # Precalculate some key coordinates
+    n_rows = stacked_1040_data[[i]] %>% 
+      filter(run_type == 'static') %>%
+      nrow()
+    conventional_row = 5 + n_rows
+    
+    # Write data
+    writeData(wb, i, 
+              x = stacked_1040_data[[i]] %>% 
+                filter(run_type == 'static') %>% 
+                select(-run_type), 
+              startRow = 2)
+    writeData(wb, i, 
+              x  = stacked_1040_data[[i]] %>% 
+                filter(run_type == 'conventional') %>% 
+                select(-run_type),
+              startRow = conventional_row)
+    writeData(wb, i, 
+              x  = 'Without behavioral feedback (static)', 
+              xy = c(1, 1))
+    writeData(wb, i, 
+              x  = 'With behavioral feedback (conventional)', 
+              xy = c(1, conventional_row - 1))
+    
+    
+    # Format numbers and cells 
+    addStyle(wb, i, 
+             rows       = c(2:(2 + n_rows), conventional_row + (1:n_rows)),
+             cols       = 3:(3 + length(counterfactual_ids)),
+             gridExpand = T,
+             style      = createStyle(numFmt = 'NUMBER', 
+                                      halign = 'center'),
+             stack      = T)
+    addStyle(wb, i, 
+             rows       = 1:(2 * (n_rows + 10)),
+             cols       = 1:(ncol(stacked_1040_data[[i]]) - 1),
+             gridExpand = T,
+             style      = createStyle(fontSize = 10), 
+             stack      = T)
+    addStyle(wb, i, 
+             rows       = 1:(2 * (n_rows + 10)),
+             cols       = 3:(ncol(stacked_1040_data[[i]]) - 1),
+             gridExpand = T,
+             style      = createStyle(wrapText = T), 
+             stack      = T)
+    addStyle(wb, i, 
+             rows       = c(1:2, conventional_row - 1, conventional_row),
+             cols       = 1:(ncol(stacked_1040_data[[i]]) - 1),
+             gridExpand = T,
+             style      = createStyle(border = 'bottom'),
+             stack      = T)
+    setColWidths(wb, i,
+                 cols   = 1:2,
+                 widths = c(45, 15))
+    
+  }
+  
+  saveWorkbook(wb   = wb, 
+               file = file.path(globals$output_root, 
+                                counterfactual_ids[length(counterfactual_ids)],
+                                'conventional',
+                                'supplemental', 
+                                'stacked_1040.xlsx'), 
+               overwrite = T)
+
+}
+
+
+
+
+recode_1040_vars = function(df) {
+  
+  #----------------------------------------------------------------------------
+  # Converts subset of variable names to human-readable descriptions. 
+  # Unspecified mappings are returned as NA.  
+  # 
+  # Parameters:
+  #   - df (df) : dataframe long in Variable with 1040.csv names 
+  #
+  # Returns: dataframe with recoded Variable column (df).
+  #----------------------------------------------------------------------------
+  
+  df %>% 
+    mutate(Variable = case_when(
+      Variable == 'tax_units'             ~ 'Number of tax units', 
+      Variable == 'returns'               ~ 'Number of returns filed', 
+      Variable == 'returns_dep'           ~ 'Number of dependent returns filed', 
+      Variable == 'dep'                   ~ 'Number of dependents claimed', 
+      Variable == 'wages'                 ~ 'Wages and salaries', 
+      Variable == 'exempt_int'            ~ 'Exempt interest income',
+      Variable == 'div_ord'               ~ 'Ordinary-rate dividends',
+      Variable == 'div_pref'              ~ 'Preferred-rate dividends',
+      Variable == 'txbl_ira_dist'         ~ 'Taxable IRA distributions',
+      Variable == 'txbl_pens_dist'        ~ 'Taxable pension distributions',
+      Variable == 'txbl_kg'               ~ 'Taxable net capital gain',
+      Variable == 'kg_pref'               ~ 'Preferred capital gains',
+      Variable == 'sole_prop'             ~ 'Schedule C net income',
+      Variable == 'part_scorp'            ~ 'Partnership and S corporation income',
+      Variable == 'net_rent'              ~ 'Net rental income',
+      Variable == 'net_estate'            ~ 'Net income from estates and trusts',
+      Variable == 'sch_e'                 ~ 'Schedule E net income',
+      Variable == 'farm'                  ~ 'Farm income',
+      Variable == 'gross_ss'              ~ 'Gross Social Security benefits',
+      Variable == 'txbl_ss'               ~ 'Taxable Social Security benefits',
+      Variable == 'ui'                    ~ 'Unemployment compensation',
+      Variable == 'sl_int_ded'            ~ 'Student loan interest deduction',
+      Variable == 'char_above_ded'        ~ 'Charitable contributions deduction, above-the-line',
+      Variable == 'above_ded'             ~ 'Above-the-line deductions',
+      Variable == 'agi'                   ~ 'Adjusted gross income',
+      Variable == 'std_ded'               ~ 'Standard deduction',
+      Variable == 'med_item_ded'          ~ 'Medical expense itemized deduction',
+      Variable == 'salt_item_ded'         ~ 'State and local taxes itemized deduction',
+      Variable == 'mort_int_item_ded'     ~ 'Mortgage interest itemized deduction',
+      Variable == 'inv_int_item_ded'      ~ 'Investment interest itemized deduction',
+      Variable == 'int_item_ded'          ~ 'Total interest itemized deduction',
+      Variable == 'char_item_ded'         ~ 'Charitable contributions itemized deduction',
+      Variable == 'casualty_item_ded'     ~ 'Casualty and theft losses itemized deduction',
+      Variable == 'misc_item_ded'         ~ 'Miscellaneous AGI-limited itemized deductions',
+      Variable == 'other_item_ded'        ~ 'Other itemized deductions',
+      Variable == 'item_ded_ex_limits'    ~ 'Itemized deductions excluding limitations',
+      Variable == 'item_ded'              ~ 'Total itemized deductions',
+      Variable == 'pe_ded'                ~ 'Personal exemptions deduction',
+      Variable == 'qbi_ded'               ~ 'Qualified Business Income deduction',
+      Variable == 'txbl_inc'              ~ 'Taxable income',
+      Variable == 'liab_ord'              ~ 'Ordinary-rate tax liability',
+      Variable == 'liab_pref'             ~ 'Preferred-rate tax liability',
+      Variable == 'liab_amt'              ~ 'Alternative Minimum Tax liability',
+      Variable == 'excess_ptc'            ~ 'Excess Premium Tax Credit repayment',
+      Variable == 'liab_bc'               ~ 'Tax liability before credits',
+      Variable == 'ftc'                   ~ 'Foreign tax credit',
+      Variable == 'cdctc_nonref'          ~ 'Non-refundable Child and Dependent Care Tax Credit',
+      Variable == 'ed_nonref'             ~ 'Non-refundable education credits',
+      Variable == 'savers_nonref'         ~ 'Non-refundable Saver\'s credit',
+      Variable == 'old_cred'              ~ 'Elderly tax credit',
+      Variable == 'ctc_nonref'            ~ 'Non-refundable Child Tax Credit',
+      Variable == 'nonref'                ~ 'Total non-refundable credits',
+      Variable == 'ctc_ref'               ~ 'Refundable Child Tax Credit (Additional Child Tax Credit)',
+      Variable == 'ed_ref'                ~ 'Refundable education credits',
+      Variable == 'net_ptc'               ~ 'Net Premium Tax Credit',
+      Variable == 'eitc'                  ~ 'Earned Income Tax Credit',
+      Variable == 'rebate'                ~ 'Recovery rebate ("stimulus check")',
+      Variable == 'cdctc_ref'             ~ 'Refundable Child and Dependent Care Tax Credit',
+      Variable == 'savers_ref'            ~ 'Refundable Saver\'s credit',
+      Variable == 'ref'                   ~ 'Total refundable credits',
+      Variable == 'ref_iit'               ~ 'Refundable credits used to offset income tax',
+      Variable == 'ref_other'             ~ 'Refundable credits used to offset other taxes',
+      Variable == 'refund'                ~ 'Refundable credits in excess of all tax liability',
+      Variable == 'liab_niit'             ~ 'Net Investment Income Tax liability',
+      Variable == 'liab_iit'              ~ 'Income tax liability'
+    )) %>% 
+    return()
 }
 

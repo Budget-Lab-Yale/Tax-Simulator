@@ -74,7 +74,10 @@ mort_int_limit:
 
 # Maximum deductible casualty and loss expenses
 casualty_limit:
-  value: Inf
+  value: 
+    '2014': Inf
+    '2018': 0
+    '2026': Inf
 
 # AGI floor for "miscellaneous" itemized deductions
 misc_floor_agi:

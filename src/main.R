@@ -1,7 +1,7 @@
 #-----------------------------------------
 # Main entry point into the tax simulator
 #-----------------------------------------
-
+  
 
 
 #---------------------
@@ -20,11 +20,11 @@ list.files('./src', recursive = T) %>%
   map(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
 
 # cmd line args TODO
-runscript_name   = 'tcja_ext' 
+runscript_name   = 'tcja_ext_cbo' 
 user_id          = 'jar335'
 local            = 1
 vintage          = NULL
-pct_sample       = 0.25
+pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
 
@@ -76,11 +76,12 @@ walk(.f = do_scenario,
 
 # Create 1040 reports
 create_1040_reports(counterfactual_ids)
+if (stacked == 1) {
+  create_stacked_1040_reports(counterfactual_ids)
+}
 
 # Calculate revenue estimates
 calc_rev_est(counterfactual_ids)
-
-# Calculate stacked revenue estimates
 if (stacked == 1) {
   calc_stacked_rev_est(counterfactual_ids)
 }
