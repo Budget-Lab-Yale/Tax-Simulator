@@ -33,10 +33,10 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     'wagebill_part',      # (dbl) owner's share of W2 wages paid in partnership
     'wagebill_scorp',     # (dbl) owner's share of W2 wages paid in S corporation
     'wagebill_farm',      # (dbl) owner's share of W2 wages paid in farm business
-    'sstb_sole_prop',     # (dbl) whether sole proprietor's net income is derived from an SSTB 
-    'sstb_part',          # (dbl) whether net partnership income is derived from an SSTB 
-    'sstb_scorp',         # (dbl) whether net S corporation income is derived from an SSTB 
-    'sstb_farm',          # (dbl) whether net farm income is derived from an SSTB 
+    'sstb_sole_prop',     # (int) whether sole proprietor's net income is derived from an SSTB 
+    'sstb_part',          # (int) whether net partnership income is derived from an SSTB 
+    'sstb_scorp',         # (int) whether net S corporation income is derived from an SSTB 
+    'sstb_farm',          # (int) whether net farm income is derived from an SSTB 
     'div_pref',           # (dbl) qualified dividends
     'kg_pref',            # (dbl) net capital gain eligible for preferred rates
     'agi',                # (dbl) Adjusted Gross Income
@@ -45,11 +45,15 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     'pe_ded',             # (dbl) value of deduction for personal exemptions 
     
     # Tax law attributes
-    'qbi.rate',       # (dbl) deduction rate
-    'qbi.po_thresh',  # (int) taxable income phaseout threshold
-    'qbi.po_range',   # (int) taxable income phaseout range
-    'qbi.wage_rate'   # (dbl) share of W2 wage bill required for full deduction after phase-out 
-    
+    'qbi.rate',                    # (dbl) deduction rate
+    'qbi.po_thresh_sstb',          # (int) taxable income phaseout threshold for SSTBs 
+    'qbi.po_thresh_non_sstb',      # (int) taxable income phaseout threshold for non-SSTBs
+    'qbi.po_range_sstb',           # (int) taxable income range for SSTBs 
+    'qbi.po_range_non_sstb',       # (int) taxable income range for non-SSTBs
+    'qbi.wage_exception_sstb',     # (int) for SSTBs, whether paying wages excepts taxpayer from taxable income phaseout 
+    'qbi.wage_exception_non_sstb', # (int) for non-SSTBs, whether paying wages excepts taxpayer from taxable income phaseout 
+    'qbi.wage_limit',              # (dbl) share of W2 wage bill required for full deduction after phase-out 
+    'qbi.txbl_inc_limit'           # (dbl) share of ordinary taxable income limit
   )
   
   
@@ -90,19 +94,29 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     mutate(
       
       # Calculate tentative deduction
-      qbi_ded = inc * qbi.rate,
+      qbi_ded_tent = inc * qbi.rate,
       
       # Determine and apply limitations based on taxable income, SSTB status, 
       # and wages paid. We calibrate the imputation of wages paid such that 
       # it also reflects the other 25% + 2.5% asset limitation. First, 
       # determine the extent to which the taxable income phaseout applies:
-      po_share = pmin(1, pmax(0, txbl_inc - qbi.po_thresh) / qbi.po_range),
+      po_thresh = if_else(sstb == 1, qbi.po_thresh_sstb, qbi.po_thresh_non_sstb),
+      po_range  = if_else(sstb == 1, qbi.po_range_sstb, qbi.po_range_non_sstb),
+      po_share  = pmin(1, pmax(0, txbl_inc - po_thresh) / po_range),
       
-      # Reduce deduction by the amount by which the QBI deduction exceeds wage
-      # credit, scaling by the extent to which the taxable income limitation applies
-      wage_credit = wagebill * qbi.wage_rate,
-      reduction   = po_share * if_else(sstb == 1, qbi_ded, pmax(0, qbi_ded - wage_credit)),
-      qbi_ded     = pmax(0, qbi_ded - reduction)
+      # Determine whether taxpayer is excepted from taxable income phaseout 
+      # conditional on paying sufficient wages
+      wage_exception = if_else(sstb == 1, 
+                               qbi.wage_exception_sstb,
+                               qbi.wage_exception_non_sstb),
+      
+      # Calculate reduction in deduction as a function of whether wage exception 
+      # applies and, if so, the degree to which taxpayer has sufficient wages. 
+      # (Note that if taxpayer does not have a wage exception per law, wage credit 
+      # evaluates to 0 and phaseout fully applies) 
+      wage_credit = wagebill * qbi.wage_limit * wage_exception,
+      reduction   = po_share * pmax(0, qbi_ded_tent - wage_credit),
+      qbi_ded     = pmax(0, qbi_ded_tent - reduction)
       
     ) %>% 
       
@@ -125,7 +139,7 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
                 qbi_ded_farm,
       
       # Limit deduction to a share of ordinary taxable income
-      qbi_ded = pmin(qbi_ded, pmax(0, txbl_inc - div_pref - kg_pref) * qbi.rate)
+      qbi_ded = pmin(qbi_ded, pmax(0, txbl_inc - div_pref - kg_pref) * qbi.txbl_inc_limit)
       
     ) %>% 
     

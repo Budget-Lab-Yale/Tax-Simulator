@@ -1,0 +1,37 @@
+---
+
+filing_status_mapper:
+  po_thresh_sstb:
+    '1': po_thresh_sstb_single
+    '2': po_thresh_sstb_single
+    '3': po_thresh_sstb_single
+    '4': po_thresh_sstb_single
+  po_thresh_non_sstb:
+    '1': po_thresh_non_sstb_single
+    '2': po_thresh_non_sstb_single
+    '3': po_thresh_non_sstb_single
+    '4': po_thresh_non_sstb_single
+  po_range_sstb:
+    '1': po_range_sstb_single
+    '2': po_range_sstb_single * 2
+    '3': po_range_sstb_single
+    '4': po_range_sstb_single
+  po_range_non_sstb:
+    '1': po_range_non_sstb_single
+    '2': po_range_non_sstb_single * 2
+    '3': po_range_non_sstb_single
+    '4': po_range_non_sstb_single
+  
+# Taxable income phaseout threshold for SSTBs, single filers
+po_thresh_sstb_single:
+  value: 0
+
+# Taxable income phaseout threshold for non-SSTBs, single filers
+po_thresh_non_sstb_single:
+  value: Inf
+
+# Taxable income phaseout range for SSTBs, single filers
+po_range_sstb_single:
+  value: 0.1
+
+  
