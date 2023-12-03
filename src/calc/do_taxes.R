@@ -158,8 +158,14 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
   force_char = rep(force_char, nrow(tax_units))
   char_above = rep(char_above, nrow(tax_units))
   
+
+  set.seed(76)
   
   tax_units %>% 
+    
+    mutate(sstb_sole_prop = as.integer(runif(nrow(.)) < 0.2), 
+           sstb_part      = as.integer(runif(nrow(.)) < 0.2), 
+           sstb_scorp     = as.integer(runif(nrow(.)) < 0.2)) %>% 
     
     # Create duplicates for variables affected by form-behavior optimization
     mutate(across(.cols  = c(char_cash, char_noncash), 

@@ -129,7 +129,10 @@ calc_distribution = function(id) {
                                     `Average tax cut`),
         `Average tax increase` = if_else(is.nan(`Average tax increase`) | round(`Share with tax increase`, 4) == 0, 
                                          NA,
-                                         `Average tax increase`)
+                                         `Average tax increase`),
+        `Share of total tax change` = if_else(is.nan(`Share of total tax change`), 
+                                         NA,
+                                         `Share of total tax change`)
       ) %>% 
       select(`Income group`, `Income cutoff`, `Average tax change`, `Share with tax cut`, 
              `Average tax cut`, `Share with tax increase`, `Average tax increase`,
