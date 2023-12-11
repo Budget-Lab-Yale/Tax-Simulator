@@ -1,0 +1,28 @@
+---
+filing_status_mapper:
+  po_range:
+    '1': po_range_single
+    '2': po_range_single
+    '3': po_range_single / 2
+    '4': po_range_single
+
+# Personal exemption value
+value:
+  value: 2000
+  i_measure: 
+    '1986': cpi
+  i_base_year: 1988
+  i_direction: -1
+  i_increment: 50
+
+# Phaseout range, single (phaseout threshold is a subparameter of itemized deductions, for tax-code-historical reasons)
+po_range_single:
+  value: 125000
+
+# Whether phaseout is discretized, as per pre-TCJA law
+po_discrete:
+  value: 1
+  
+# Rounding step for discretized phaseout
+po_discrete_step:
+  value: 0.02

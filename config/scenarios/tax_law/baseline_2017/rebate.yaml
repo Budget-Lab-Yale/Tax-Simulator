@@ -1,0 +1,55 @@
+---
+filing_status_mapper:
+  po_thresh:
+    '1': po_thresh_married / 2
+    '2': po_thresh_married
+    '3': po_thresh_married / 2
+    '4': po_thresh_head
+  po_range:
+    '1': po_range_married / 2
+    '2': po_range_married
+    '3': po_range_married / 2
+    '4': po_range_head
+
+# Maximum qualifying dependent age
+dep_age_limit:
+  value: 16
+
+# Whether dependents are required to have an SSN to qualify
+dep_ssn_req:
+  value: 1
+
+# Credit value per adult
+value:
+  value: 0
+
+# Credit value per qualifying dependent
+value_dep:
+  value: 0
+
+# AGI phaseout threshold, joint returns
+po_thresh_married:
+  value: 150000
+
+# AGI phaseout threshold, head of household returns
+po_thresh_head:
+  value: 112500
+
+# Whether phaseout type is a rate (0 means range)
+po_type:
+  value:
+    '2014': 1
+    '2021': 0
+    '2022': 1
+
+# Phaseout range, joint returns
+po_range_married:
+  value: 10000
+  
+# Phaseout range, head of household returns
+po_range_head:
+  value: 7500
+
+# Phaseout rate
+po_rate:
+  value: 0.05

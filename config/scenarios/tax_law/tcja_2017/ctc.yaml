@@ -1,0 +1,103 @@
+---
+filing_status_mapper:
+  po_thresh:
+    '1': po_thresh_single
+    '2': po_thresh_married
+    '3': po_thresh_married / 2
+    '4': po_thresh_head
+
+# Whether SSN is required to qualify for CTC
+need_ssn:
+  value:
+    '2014': 0
+    '2018': 1
+    '2026': 0
+
+# Maximum credit value per "young" child
+value_young:
+  value: 
+    '2014': [1000, 0]
+    '2018': [2000, 0]
+    '2026': [1000, 0]
+
+# Maximum credit value per "old" child
+value_old:
+  value:
+    '2014': [1000, 0]
+    '2018': [2000, 0]
+    '2026': [1000, 0] 
+
+# Maximum age to qualify as "young" child
+young_age_limit:
+  value: 5
+  
+# Maximum age to qualify as an "old" child
+old_age_limit:
+  value: 16
+
+# AGI threshold above which credit value phases out, single filers
+po_thresh_single:
+  value:
+    '2014': [75000, Inf]
+    '2018': [200000, Inf]
+    '2026': [75000, Inf]
+    
+# AGI threshold above which credit value phases out, joint filers
+po_thresh_married:
+  value:
+    '2014': [110000, Inf] 
+    '2026': [110000, Inf]
+    
+# AGI threshold above which credit value phases out, HoH filers
+po_thresh_head:
+  value:
+    '2014': [75000, Inf]
+    '2018': [200000, Inf]
+    '2026': [75000, Inf]
+
+# Phaseout rate
+po_rate:
+  value: [0.05, 0.05]
+  
+# Whether phaseout is discretized, as per pre-TCJA law
+po_discrete:
+  value: 1
+  
+# Rounding step for discretized phaseout
+po_discrete_step:
+  value: 1000
+
+# Maximum credit value per nonqualifying dependent (assumed to phaseout per po_thresh1 and po_rate1)
+value_other:
+  value:
+    '2014': 0
+    '2018': 500
+    '2026': 0
+
+# Whether CTC (exlcluding Credit for Other Dependent) is fully refundable
+fully_refundable:
+  value: 0
+
+# ACTC phase-in rate 
+pi_rate:
+  value: 0.15
+
+# Earned income threshold above which ACTC phases in
+pi_thresh:
+  value:
+    '2014': 3000
+    '2018': 2500
+    '2026': 3000
+
+# Maximum refundable CTC per qualifying child
+max_refund:
+  value:
+    '2014': Inf
+    '2018': 1400
+    '2026': Inf
+  i_measure:
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year: 2017
+  i_direction: -1
+  i_increment: 100

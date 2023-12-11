@@ -1,0 +1,36 @@
+---
+# Maximum credit-eligible expenses per qualifying dependent 
+exp_limit:
+  value: 3000
+
+# Maximum number of qualifying dependents 
+n_dep_limit:
+  value: 2
+
+# Whether to limit eligible expenses to adult-minimum earned income
+ei_limit:
+  value: 1
+
+# Minimum credit rate (share of eligible expenses)
+min_rate: 
+  value: 0.2
+    
+# Maximum credit rate (share of eligible expenses)
+max_rate:
+  value: 0.35
+
+# AGI threshold above which credit rate begins phasing out from max to min
+po_thresh:
+  value: 15000
+
+# Rate at which credit rate phases out with AGI
+po_rate:
+  value: 0.000005
+  
+# Rounding step for descretized phaseout function
+discrete_step:
+  value: 2000
+
+# Whether credit is refundable
+refundable:
+  value: 0
