@@ -1,21 +1,5 @@
 ---
-
-# Whether CTC (exlcluding Credit for Other Dependent) is fully refundable
-fully_refundable:
-  value:
-    '2014': 0
-    '2021': 1
-    '2022': 0 
-    '2024': 1
-    
-# Maximum refundable CTC per qualifying child
-max_refund:
-  value:
-    '2014': Inf
-    '2018': 1400
-    '2021': Inf
-    '2022': 1400
-    '2024': Inf
+indexation_defaults:
   i_measure:
     '1987': cpi
     '2017': chained_cpi
@@ -23,3 +7,116 @@ max_refund:
   i_direction: -1
   i_increment: 100
 
+filing_status_mapper:
+  po_thresh:
+    '1': po_thresh_single
+    '2': po_thresh_married
+    '3': po_thresh_married / 2
+    '4': po_thresh_head
+
+# Whether SSN is required to qualify for CTC
+need_ssn:
+  value:
+    '2014': 0
+    '2018': 1
+    '2021': 0
+    '2022': 1
+    '2026': 0
+
+# Maximum credit value per "young" child
+value_young:
+  value: 
+    '2014': [1000, 0]
+    '2018': [2000, 0]
+    '2021': [2000, 1600]
+    '2022': [2000, 0]
+    '2026': [1000, 0]
+
+# Maximum credit value per "old" child
+value_old:
+  value:
+    '2014': [1000, 0]
+    '2018': [2000, 0]
+    '2021': [2000, 1000]
+    '2022': [2000, 0]
+    '2026': [1000, 0] 
+
+# AGI threshold above which credit value phases out, single filers
+po_thresh_single:
+  value:
+    '2014': [75000, Inf]
+    '2018': [200000, Inf]
+    '2021': [200000, 75000]
+    '2022': [200000, Inf]
+    '2026': [75000, Inf]
+    
+# AGI threshold above which credit value phases out, joint filers
+po_thresh_married:
+  value:
+    '2014': [110000, Inf] 
+    '2018': [400000, Inf]
+    '2021': [400000, 150000]
+    '2022': [400000, Inf]
+    '2026': [110000, Inf]
+    
+# AGI threshold above which credit value phases out, HoH filers
+po_thresh_head:
+  value:
+    '2014': [75000, Inf]
+    '2018': [200000, Inf]
+    '2021': [200000, 112500]
+    '2022': [200000, Inf]
+    '2026': [75000, Inf]
+
+# Maximum credit value per nonqualifying dependent
+value_other:
+  value:
+    '2014': 0
+    '2018': 500
+    '2026': 0
+
+# Minimum refundable CTC per qualifying young child (i.e. y-intercept in trapezoid)
+min_refund_young:
+  value: 
+    '2014': 0
+    '2021': 3600
+    '2022': 0
+    '2025': 2000
+    '2026': 1000
+  
+# Minimum refundable CTC per qualifying old child (i.e. y-intercept in trapezoid)
+min_refund_old:
+  value: 
+    '2014': 0
+    '2021': 3000
+    '2022': 0
+    '2025': 2000
+    '2026': 1000
+
+# Maximum refundable CTC per young qualifying child (inf implies maximum refund 
+# is equal to the credit value)
+max_refund_young:
+  value:
+    '2014': Inf
+    '2018': 1400
+    '2021': Inf
+    '2022': 1400
+    '2025': Inf
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+  
+# Maximum refundable CTC per old qualifying child (inf implies maximum refund 
+# is equal to the credit value)
+max_refund_old:
+  value:
+    '2014': Inf
+    '2018': 1400
+    '2021': Inf
+    '2022': 1400
+    '2025': Inf
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default

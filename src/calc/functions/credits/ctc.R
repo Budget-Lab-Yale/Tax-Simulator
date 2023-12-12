@@ -55,16 +55,22 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'ctc.value_old1',       # (int) maximum credit value per "old" child corresponding to phaseout threshold 1
     'ctc.value_old2',       # (int) maximum credit value per "old" child corresponding to phaseout threshold 2
     'ctc.value_other',      # (int) maximum (nonrefundable) credit value per nonqualifying dependent (assumed to phase out with po_thresh1)
-    'ctc.po_thresh1',       # (int) AGI threshold above which value 1 phases out
+    'ctc.po_thresh1',       # (int) AGI threshold above which value 1 (and nonqualifying dependent credit) phases out
     'ctc.po_thresh2',       # (int) AGI threshold above which value 2 phases out
+    'ctc.po_type',          # (int) whether phaseout type is a rate (0 means range)
     'ctc.po_rate1',         # (dbl) phaseout rate for value 1
     'ctc.po_rate2',         # (dbl) phaseout rate for value 2 
+    'ctc.po_range1',        # (dbl) phaseout range for value 2
+    'ctc.po_range2',        # (dbl) phaseout range for value 1
+    'ctc.po_range_other',   # (dbl) non-child dependent credit phaseout range for married returns
     'ctc.po_discrete',      # (int) whether phaseout is discretized, as in current-law form
     'ctc.po_discrete_step', # (int) rounding step for discretized phaseout
-    'ctc.max_refund',       # (int) maximum refundable CTC per qualifying child
-    'ctc.pi_thresh',        # (int) earned income threshold above which ACTC phases in
-    'ctc.pi_rate',          # (dbl) ACTC phase-in rate
-    'ctc.fully_refundable'  # (int) whether CTC (exlcluding Credit for Other Dependent) is fully refundable
+    'ctc.min_refund_young', # (int) minimum refundable CTC per young qualifying child
+    'ctc.min_refund_old',   # (int) minimum refundable CTC per old qualifying child
+    'ctc.max_refund_young', # (int) maximum refundable CTC per young qualifying child
+    'ctc.max_refund_old',   # (int) maximum refundable CTC per old qualifying child
+    'ctc.pi_thresh',        # (int) earned income threshold above which CTC phases in
+    'ctc.pi_rate'           # (dbl) phase-in rate
   )
   
   tax_unit %>% 
@@ -99,17 +105,25 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       max_value2      = (ctc.value_young2 * n_young) + (ctc.value_old2 * n_old),
       max_value_other = ctc.value_other * n_other,
       
-      # Determine and apply phaseouts
+      # Determine amount by which income exceeds phaseout thresholds
       excess1 = agi - ctc.po_thresh1,
-      excess2 = agi - ctc.po_thresh2,
+      excess2 = agi - ctc.po_thresh2, 
       across(.cols = contains('excess'),
              .fns  = ~ if_else(ctc.po_discrete == 1, 
                                ceiling(pmax(0, .) / ctc.po_discrete_step) * ctc.po_discrete_step, 
                                pmax(0, .))),
       
-      value1      = pmax(0, max_value1      - excess1 * ctc.po_rate1),
-      value2      = pmax(0, max_value2      - excess2 * ctc.po_rate2),
-      value_other = pmax(0, max_value_other - excess1 * ctc.po_rate1),
+      # Convert range phaseout structure to
+      po_rate1      = if_else(ctc.po_type == 1, ctc.po_rate1, max_value1 / ctc.po_range1),
+      po_rate2      = if_else(ctc.po_type == 1, ctc.po_rate1, max_value2 / ctc.po_range2),
+      po_rate_other = if_else(ctc.po_type == 1, 
+                              ctc.po_rate_other, 
+                              max_value_other / ctc.po_range_other),
+      
+      # Apply phaseouts
+      value1      = pmax(0, max_value1      - excess1 * po_rate1),
+      value2      = pmax(0, max_value2      - excess2 * po_rate2),
+      value_other = pmax(0, max_value_other - excess1 * po_rate_other),
       
       # Allocate against liability after select nonrefundable credits
       nonref     = ftc + cdctc_nonref + ed_nonref + savers_nonref + old_cred,
@@ -124,26 +138,21 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       # Calculate unused CTC
       remaining_ctc = value1 + value2 + value_other - ctc_nonref, 
       
-      # Limit to max per-child refundable credit value
-      max_refund = if_else(is.infinite(ctc.max_refund), Inf, (n_young + n_old) * ctc.max_refund),
-      ctc_ref    = pmin(remaining_ctc, max_refund),
+      # Determine minimum refundable credit value
+      min_refund = (n_young * ctc.min_refund_young) + (n_old * ctc.min_refund_old),
       
-      # Phase in with earned income
-      ctc_ref = pmin(pmax(0, ei - ctc.pi_thresh) * ctc.pi_rate, ctc_ref),
+      # Determine maximum refundable credit value
+      max_refund_young = if_else(is.infinite(ctc.max_refund_young), 
+                                 Inf, 
+                                 n_young * ctc.max_refund_young),
+      max_refund_old   = if_else(is.infinite(ctc.max_refund_old), 
+                                 Inf, 
+                                 n_old * ctc.max_refund_old),
       
+      # Phase in with earned income above minimum refund value
+      ctc_ref = pmin(min_refund + (pmax(0, ei - ctc.pi_thresh) * ctc.pi_rate), 
+                     pmin(remaining_ctc, max_refund_young + max_refund_old))
       
-      #-------------------------------------
-      # Allocation for fully refundable CTC
-      #-------------------------------------
-      
-      # Ignore all the previous restrictions if CTC (excluding credit for 
-      # other dependents) is fully refundable
-      ctc_nonref = if_else(ctc.fully_refundable == 1, 
-                           pmin(liab, value_other),
-                           ctc_nonref),
-      ctc_ref    = if_else(ctc.fully_refundable == 1, 
-                           value1 + value2,
-                           ctc_ref)
     ) %>% 
     
     # Keep variables to return
