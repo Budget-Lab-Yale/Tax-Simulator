@@ -20,7 +20,7 @@ list.files('./src', recursive = T) %>%
   map(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
 
 # cmd line args TODO
-runscript_name   = 'edelberg_kearney_ctc' 
+runscript_name   = 'tcja_ext_400k' 
 user_id          = 'jar335'
 local            = 1
 vintage          = NULL
@@ -74,19 +74,21 @@ walk(.f = do_scenario,
 # Post-processing and reporting
 #-------------------------------
 
-# Create 1040 reports
+# Generate 1040 reports
 create_1040_reports(counterfactual_ids)
 if (stacked == 1) {
   create_stacked_1040_reports(counterfactual_ids)
 }
 
-# Calculate revenue estimates
+# Generate revenue estimates
 calc_rev_est(counterfactual_ids)
 if (stacked == 1) {
   calc_stacked_rev_est(counterfactual_ids)
 }
 
-# Calculate distributional estimates
-counterfactual_ids %>% 
-  map(calc_distribution)
+# Generate distributional estimates
+calc_distribution_tables(counterfactual_ids)
+if (stacked == 1) {
+  calc_stacked_distribution_tables(counterfactual_ids)
+}
 

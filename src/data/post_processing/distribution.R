@@ -6,14 +6,18 @@
 
 
 
-calc_distribution = function(id) {
+calc_distribution = function(id, baseline_id, file_name = 'distribution.xlsx') {
   
   #----------------------------------------------------------------------------
-  # Calculates and writes a scenario's distributional table for a given vector
-  # of years.
+  # Calculates distribution metrics relative to a specified baseline 
+  # and writes the results to an Excel file.
   # 
   # Parameters:
-  #   - id (str)     : scenario ID
+  #   - id          (str) : scenario ID
+  #   - baseline_id (str) : ID of scenario against which metrics are calculated. 
+  #                         For regular tables, this is the actual baseline; 
+  #                         for stacked tables, this is the precedeing scenario
+  #   - file_name (str)   : output file name
   # 
   # Returns: void. Writes a dataframe for the scenario containing values, 
   #          grouped by pcts, for: average tax change, share with tax cut, 
@@ -27,8 +31,13 @@ calc_distribution = function(id) {
   for (year in get_scenario_info(id)$years) {
 
     # Read microdata output
-    baseline = file.path(globals$baseline_root, 
-                         'baseline', 
+    if (baseline_id == 'baseline') {
+      baseline_root = file.path(globals$baseline_root, 'baseline')
+    } else {
+      baseline_root = file.path(globals$output_root, baseline_id)
+    }
+    
+    baseline = file.path(baseline_root,  
                          'static', 
                          'detail', 
                          paste0(year, '.csv')) %>% 
@@ -219,6 +228,45 @@ calc_distribution = function(id) {
                                 id,
                                 'static',
                                 'supplemental', 
-                                'distribution.xlsx'), 
+                                file_name), 
                overwrite = T)
+}
+
+
+
+
+calc_distribution_tables = function(counterfactual_ids) {
+  
+  #----------------------------------------------------------------------------
+  # Calculates standard distribution tables for all scenarios. 
+  # 
+  # Parameters:
+  #   - counterfactual_ids : (str) list of non-baseline scenario IDs
+  # 
+  # Returns: void. 
+  #----------------------------------------------------------------------------
+  
+  counterfactual_ids %>% 
+    walk(.f = ~ calc_distribution(.x, 'baseline'))
+}
+
+
+
+calc_stacked_distribution_tables = function(counterfactual_ids) {
+  
+  #----------------------------------------------------------------------------
+  # For all non-baseline scenarios, calculates distribution table relative to
+  # prior scenario in stacking order. 
+  # 
+  # Parameters:
+  #   - counterfactual_ids : (str) list of non-baseline scenario IDs
+  # 
+  # Returns: void.
+  #----------------------------------------------------------------------------
+  
+  for (i in 2:length(counterfactual_ids)) { 
+    calc_distribution(id          = counterfactual_ids[i], 
+                      baseline_id = counterfactual_ids[i - 1], 
+                      file_name   = 'stacked_distribution.xlsx')
+  }
 }
