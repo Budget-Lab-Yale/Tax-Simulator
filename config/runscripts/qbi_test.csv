@@ -1,6 +1,0 @@
-ID,dep.Tax-Data.vintage,dep.Tax-Data.ID,dep.Macro-Projections.vintage,dep.Macro-Projections.ID,tax_law,behavior,first_year,last_year,mtr_vars
-baseline,2023111913,baseline,2023092721,baseline,baseline,,2017,2019,
-remove_wage_limit,2023111913,baseline,2023092721,baseline,qbi_test-remove_wage_limit,,2017,2019,
-remove_sstb_income_exception,2023111913,baseline,2023092721,baseline,qbi_test-remove_sstb_income_exception,,2017,2019,
-remove_sstb_restriction,2023111913,baseline,2023092721,baseline,qbi_test-remove_sstb_restriction,,2017,2019,
-remove_ti_limit,2023111913,baseline,2023092721,baseline,qbi_test-remove_ti_limit,,2017,2019,
