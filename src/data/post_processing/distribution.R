@@ -264,9 +264,10 @@ calc_stacked_distribution_tables = function(counterfactual_ids) {
   # Returns: void.
   #----------------------------------------------------------------------------
   
-  for (i in 2:length(counterfactual_ids)) { 
-    calc_distribution(id          = counterfactual_ids[i], 
-                      baseline_id = counterfactual_ids[i - 1], 
+  scenario_ids = c('baseline', counterfactual_ids)
+  for (i in 2:length(scenario_ids)) { 
+    calc_distribution(id          = scenario_ids[i], 
+                      baseline_id = scenario_ids[i - 1], 
                       file_name   = 'stacked_distribution.xlsx')
   }
 }

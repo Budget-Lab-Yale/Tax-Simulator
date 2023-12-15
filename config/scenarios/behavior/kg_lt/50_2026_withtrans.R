@@ -16,11 +16,11 @@ adjust_kg_lt = function(tax_units, ...) {
   
   # Set elasticities
   e_transitory = -1 / 0.238
-  e_permanent  = -0.7 / 0.238
+  e_permanent  = -0.5 / 0.238
   
   
   tax_units %>% 
-    mutate(e_kg_lt = if_else(year == 2024, 
+    mutate(e_kg_lt = if_else(year == 2026, 
                              e_transitory, 
                              e_permanent), 
            e_kg_lt_type = 'semi') %>% 
