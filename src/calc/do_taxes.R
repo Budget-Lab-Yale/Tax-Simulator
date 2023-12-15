@@ -3,7 +3,7 @@
 #----------------------------------------------------------------
 
 
-do_taxes = function(tax_units, vars_1040, vars_payroll) { 
+do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) { 
 
   #----------------------------------------------------------------------------
   # Calculates payroll and individual income taxes for all tax units. Form-
@@ -14,6 +14,8 @@ do_taxes = function(tax_units, vars_1040, vars_payroll) {
   # 
   # Parameters:
   #   - tax_units (df)       : tibble of tax units, exogenous variables only
+  #   - baseline_pr_er (df)  : tibble of baseline emplyoer-side payroll 
+  #                            liabilities. NULL if baseline
   #   - vars_1040 (str[])    : vector of (calculated) names of 1040 variables  
   #                            to return
   #   - vars_payroll (str[]) : vector of (calculated) names of payroll tax  
@@ -33,10 +35,30 @@ do_taxes = function(tax_units, vars_1040, vars_payroll) {
   # Payroll taxes
   #---------------
   
-  # Do payroll taxes
-  tax_units %<>%
-    bind_cols(do_payroll_taxes(., vars_payroll)) 
+  if (!is.null(baseline_pr_er)) {
+    
+    # Calculate first-order change in employer-side payroll taxes
+    pr_changes = tax_units %>% 
+      bind_cols(do_payroll_taxes(., vars_payroll)) %>% 
+      left_join(baseline_pr_er, by = 'id') %>% 
+      select(id, baseline1, liab_fica_er1, baseline2, liab_fica_er2)
+    
+    # Adjust wages so as to hold total labor compensation fixed 
+    tax_units %<>%
+      left_join(pr_changes, by = 'id') %>% 
+      mutate(wages1 = if_else(wages1 != 0, 
+                              wages1 * (1 + baseline1 / wages1) / (1 + liab_fica_er1 / wages1), 
+                              0),
+             wages2 = if_else(wages2 != 0, 
+                              wages2 * (1 + baseline2 / wages2) / (1 + liab_fica_er2 / wages2), 
+                              0),
+             wages  = wages1 + wages2) %>% 
+      select(-baseline1, -liab_fica_er1, -baseline2, -liab_fica_er2)
+  }
   
+  # Do payroll taxes
+  tax_units %<>% 
+    bind_cols(do_payroll_taxes(., vars_payroll)) 
   
   #-------------------------
   # Individual income taxes
@@ -338,7 +360,7 @@ remit_taxes = function(tax_units) {
 
 
 
-calc_mtrs = function(tax_units, liab_baseline, var) {
+calc_mtrs = function(tax_units, baseline_pr_er, liab_baseline, var) {
   
   #----------------------------------------------------------------------------
   # Calculates next-dollar MTR with respect to given variable, as represented 
@@ -384,11 +406,12 @@ calc_mtrs = function(tax_units, liab_baseline, var) {
                   .fns  = ~ . + 1)) %>%
     
     # Re-calculate taxes
-    do_taxes(vars_payroll = return_vars$calc_pr,
-             vars_1040    = return_vars %>%
-                              remove_by_name('calc_pr') %>%
-                              unlist() %>% 
-                              set_names(NULL)) %>% 
+    do_taxes(baseline_pr_er = NULL,
+             vars_payroll   = return_vars$calc_pr,
+             vars_1040      = return_vars %>%
+                                remove_by_name('calc_pr') %>%
+                                unlist() %>% 
+                                set_names(NULL)) %>% 
     
     # Calculate MTR and return
     mutate(!!mtr_name := liab_pr + liab_iit_net - liab_baseline) %>% 

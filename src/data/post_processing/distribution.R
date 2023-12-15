@@ -37,18 +37,11 @@ calc_distribution = function(id, baseline_id, file_name = 'distribution.xlsx') {
       baseline_root = file.path(globals$output_root, baseline_id)
     }
     
-    baseline = file.path(baseline_root,  
-                         'static', 
-                         'detail', 
-                         paste0(year, '.csv')) %>% 
+    baseline = file.path(baseline_root, 'static/detail', paste0(year, '.csv')) %>% 
       fread() %>% 
       tibble()
     
-    scenario = file.path(globals$output_root, 
-                         id, 
-                         'static', 
-                         'detail', 
-                         paste0(year, '.csv')) %>% 
+    scenario = file.path(globals$output_root, id, 'static/detail', paste0(year, '.csv')) %>% 
       fread() %>% 
       tibble()
     
@@ -68,8 +61,8 @@ calc_distribution = function(id, baseline_id, file_name = 'distribution.xlsx') {
       
       mutate(
         
-        # Round deltas to the nearest $10 increment
-        delta = round(liab - liab_baseline, -1),
+        # Calculate change from baseline
+        delta = liab - liab_baseline,
         
         # Binary dummies for if a tax unit received a meaningful raise or cut
         cut   = delta <= -5,

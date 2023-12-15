@@ -1,0 +1,7 @@
+---
+
+# Hospital Insurance rates, employee side 
+hi_ee_rates:
+  value: 
+    '2014': 0.0145
+    '2022': 0.0245

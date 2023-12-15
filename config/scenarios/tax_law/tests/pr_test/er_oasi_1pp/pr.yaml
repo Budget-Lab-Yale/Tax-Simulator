@@ -1,0 +1,6 @@
+---
+# OASDI rates, employer side 
+oasdi_er_rates:
+  value: 
+    '2014': [0.062, 0.0]
+    '2022': [0.072, 0.0]

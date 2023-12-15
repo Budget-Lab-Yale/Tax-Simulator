@@ -237,6 +237,19 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
   # Do taxes
   #----------
   
+  # Read baseline payroll taxes
+  baseline_pr_er = NULL
+  if (scenario_info$ID != 'baseline') { 
+    baseline_pr_er = globals$baseline_root %>% 
+      file.path('baseline',
+                if_else(static, 'static', 'conventional'),
+                'detail', 
+                paste0(year, '.csv')) %>% 
+      fread() %>% 
+      tibble() %>% 
+      select(id, baseline1 = liab_fica_er1, baseline2 = liab_fica_er2)
+  }
+  
   # List calculated tax variables
   vars_1040 = return_vars %>%
     remove_by_name('calc_pr') %>%
@@ -245,8 +258,9 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
 
   # Calculate taxes
   tax_units %<>% 
-    do_taxes(vars_1040    = vars_1040,
-             vars_payroll = return_vars$calc_pr)
+    do_taxes(baseline_pr_er = baseline_pr_er,
+             vars_1040      = vars_1040,
+             vars_payroll   = return_vars$calc_pr)
   
   # Calculate marginal tax rates
   mtrs = NULL
