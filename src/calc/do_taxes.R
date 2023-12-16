@@ -43,15 +43,21 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
       left_join(baseline_pr_er, by = 'id') %>% 
       select(id, baseline1, liab_fica_er1, baseline2, liab_fica_er2)
     
-    # Adjust wages so as to hold total labor compensation fixed 
+    # Adjust wages so as to hold total labor compensation fixed. Assume that 85% 
+    # of the marginal non-payroll tax compensation is in nontaxable fringe benefits
     tax_units %<>%
       left_join(pr_changes, by = 'id') %>% 
-      mutate(wages1 = if_else(wages1 != 0, 
-                              wages1 * (1 + baseline1 / wages1) / (1 + liab_fica_er1 / wages1), 
-                              0),
-             wages2 = if_else(wages2 != 0, 
-                              wages2 * (1 + baseline2 / wages2) / (1 + liab_fica_er2 / wages2), 
-                              0),
+      mutate(
+        wages1 = wages1 * if_else(
+          wages1 != 0, 
+          1 + 0.85 * ((1 + baseline1 / wages1) / (1 + liab_fica_er1 / wages1) - 1), 
+          1
+        ),
+        wages2 = wages2 * if_else(
+          wages2 != 0, 
+          1 + 0.85 * ((1 + baseline2 / wages2) / (1 + liab_fica_er2 / wages2) - 1), 
+          1
+        ),
              wages  = wages1 + wages2) %>% 
       select(-baseline1, -liab_fica_er1, -baseline2, -liab_fica_er2)
   }
