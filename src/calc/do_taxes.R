@@ -426,3 +426,68 @@ calc_mtrs = function(tax_units, baseline_pr_er, liab_baseline, var) {
     return()
 }
 
+
+
+do_salt_workaround_baseline = function(tax_units) {
+  
+  #----------------------------------------------------------------------------
+  # Adjusts baseline projected tax data values for SALT and pass-through 
+  # income to reflect the so-called SALT cap workarounds in which pass-through
+  # entities can elect to pay state income taxes at the entity level, which 
+  # converts would-be SALT deductions into lower reported Schedule E net 
+  # income. Conceptually, this function is tax calculation, not behavioral 
+  # feedback. Whether states are allowed to offer this workaround is a policy
+  # choice enshrined in law and regulation. This policy operates through what
+  # ends up on tax returns. As such, it is applied to the baseline here rather
+  # than in Tax-Data, and is accounted for in static runs, not just 
+  # conventional runs.
+  # 
+  # Parameters: 
+  #   - tax_units (df) : tibble of tax unit data  
+  #
+  # Returns: tibble of updated tax unit data (df).
+  #----------------------------------------------------------------------------
+  
+  set.seed(76)
+  
+  
+  tax_units %>% 
+    mutate(
+      
+      # Determine SALT attributable to pass-through activities 
+      part  = part_active + part_passive - part_active_loss - 
+        part_passive_loss - part_179,
+      scorp = scorp_active + scorp_passive - scorp_active_loss - 
+        scorp_passive_loss - scorp_179,
+      inc = wages + trad_contr_er1 + trad_contr_er2 + txbl_int + exempt_int + 
+        div_ord + div_pref + state_ref + txbl_ira_dist + gross_pens_dist + 
+        kg_st + kg_lt + other_gains + alimony + sole_prop + part + scorp + 
+        farm + gross_ss + ui + other_inc,
+      
+      part_share  = if_else(inc > 0, pmin(1, pmax(0, part / inc)),  0),
+      scorp_share = if_else(inc > 0, pmin(1, pmax(0, scorp / inc)), 0),
+      
+      salt_part  = salt_inc_sales * part_share,
+      salt_scorp = pmin(salt_inc_sales - salt_part, salt_inc_sales * scorp_share),
+      
+      # Simulate amount moved in workaround. Probability calibrated to hit 
+      # $20B annual estimate from TPC 
+      salt_workaround_part  = salt_part * (!is.infinite(item.salt_limit) & 
+                                             item.salt_workaround_allowed & 
+                                             salt_part > 0 & 
+                                             runif(nrow(.)) < 0.75),
+      salt_workaround_scorp = salt_scorp * (!is.infinite(item.salt_limit) &
+                                              item.salt_workaround_allowed & 
+                                              salt_scorp > 0 & 
+                                              runif(nrow(.)) < 0.75),
+      
+      # Shift SALT
+      salt_inc_sales    = salt_inc_sales - salt_workaround_part - salt_workaround_scorp,
+      part_active_loss  = part_active_loss  + salt_workaround_part,
+      scorp_active_loss = scorp_active_loss + salt_workaround_scorp
+    ) %>%
+    
+    return()
+  
+}
+

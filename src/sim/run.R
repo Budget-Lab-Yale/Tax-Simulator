@@ -9,7 +9,7 @@
 do_scenario = function(ID, baseline_mtrs) {
   
   #----------------------------------------------------------------------------
-  # Executes full simulation for a given scenario. TODO
+  # Executes full simulation for a given scenario. 
   # 
   # Parameters:
   #   - ID (str)           : scenario ID
@@ -217,20 +217,12 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
   # Model behavioral feedback
   #---------------------------
   
-  # Only simulate for non-static (and by extension, non-baseline) runs
+  # Only apply behavioral feedback for non-static (and by extension, non-baseline) runs
   if (!static) {
-    
-    # Get updated variables after behavior feedback
-    updated_vars = tax_units %>%  
+    tax_units %<>%  
       do_behavioral_feedback(behavior_modules = scenario_info$behavior_modules, 
                              baseline_mtrs    = baseline_mtrs, 
                              static_mtrs      = static_mtrs)
-    
-    # Update variable values in tax units tibble (updated_vars is guaranteed
-    # to align with tax_units records)
-    tax_units %<>% 
-      select(-all_of(colnames(updated_vars))) %>% 
-      bind_cols(updated_vars)
   }
   
   

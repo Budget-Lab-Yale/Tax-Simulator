@@ -20,7 +20,7 @@ do_behavioral_feedback = function(tax_units, behavior_modules, baseline_mtrs, st
   #                                counterfactual scenario, indexed by year/tax 
   #                                unit id
   #
-  # Returns: tibble of tax units containing only the adjusted columns (df). 
+  # Returns: tibble of tax units with update values for specified columns (df).
   #----------------------------------------------------------------------------
   
   
@@ -34,14 +34,18 @@ do_behavioral_feedback = function(tax_units, behavior_modules, baseline_mtrs, st
     str_split('/') %>% 
     map(.f = ~ .x[[1]]) %>%
     unlist() %>% 
-    paste0('adjust_', .)
+    paste0('do_', .)
   
-  pmap(.f    = do.call,
-       .l    = list(what = fns), 
-       args  = list(tax_units, baseline_mtrs, static_mtrs), 
-       envir = environment()) %>% 
-    bind_cols() %>%
-    return()
+  # Execute behavioral feedback functions sequentially
+  for (fn in fns) {
+    tax_units = do.call(
+      what  = fn,
+      args  = list(tax_units, baseline_mtrs, static_mtrs),
+      envir = environment()
+    )
+  }
+  
+  return(tax_units)
 }
 
 
@@ -135,65 +139,3 @@ load_behavior_module = function(path, envir) {
 }
 
 
-
-do_salt_workaround_baseline = function(tax_units) {
-  
-  #----------------------------------------------------------------------------
-  # Adjusts baseline projected tax data values for SALT and pass-through 
-  # income to reflect the so-called SALT cap workarounds in which pass-through
-  # entities can elect to pay state income taxes at the entity level, which 
-  # converts would-be SALT deductions into lower reported Schedule E net 
-  # income. Note that this function is unique: it's not "behavioral feedback"
-  # in the traditional sense because it's being applied to the baseline, which 
-  # should in general reflect baseline tax policy. Despite this theoretical 
-  # awkwardness, it's easiest in practice to include this part of our 
-  # projections here, so we do. Nothing is ever perfectly clean :) 
-  # 
-  # Parameters: 
-  #   - tax_units (df) : tibble of tax unit data  
-  #
-  # Returns: tibble of updated tax unit data (df).
-  #----------------------------------------------------------------------------
-  
-  set.seed(76)
-  
-  
-  tax_units %>% 
-    mutate(
-      
-      # Determine SALT attributable to pass-through activities 
-      part  = part_active + part_passive - part_active_loss - 
-              part_passive_loss - part_179,
-      scorp = scorp_active + scorp_passive - scorp_active_loss - 
-              scorp_passive_loss - scorp_179,
-      inc = wages + trad_contr_er1 + trad_contr_er2 + txbl_int + exempt_int + 
-            div_ord + div_pref + state_ref + txbl_ira_dist + gross_pens_dist + 
-            kg_st + kg_lt + other_gains + alimony + sole_prop + part + scorp + 
-            farm + gross_ss + ui + other_inc,
-      
-      part_share  = if_else(inc > 0, pmin(1, pmax(0, part / inc)),  0),
-      scorp_share = if_else(inc > 0, pmin(1, pmax(0, scorp / inc)), 0),
-      
-      salt_part  = salt_inc_sales * part_share,
-      salt_scorp = pmin(salt_inc_sales - salt_part, salt_inc_sales * scorp_share),
-        
-      # Simulate amount moved in workaround. Probability calibrated to hit 
-      # $20B annual estimate from TPC 
-      salt_workaround_part  = salt_part * (!is.infinite(item.salt_limit) & 
-                                           item.salt_workaround_allowed & 
-                                           salt_part > 0 & 
-                                           runif(nrow(.)) < 0.75),
-      salt_workaround_scorp = salt_scorp * (!is.infinite(item.salt_limit) &
-                                            item.salt_workaround_allowed & 
-                                            salt_scorp > 0 & 
-                                            runif(nrow(.)) < 0.75),
-      
-      # Shift SALT
-      salt_inc_sales    = salt_inc_sales - salt_workaround_part - salt_workaround_scorp,
-      part_active_loss  = part_active_loss  + salt_workaround_part,
-      scorp_active_loss = scorp_active_loss + salt_workaround_scorp
-    ) %>%
-    
-    return()
-  
-}
