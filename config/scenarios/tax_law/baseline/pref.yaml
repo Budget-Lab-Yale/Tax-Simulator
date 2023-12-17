@@ -49,3 +49,9 @@ unrecapture_rate:
 # Tax rate on collectibles gain
 collectibles_rate:
   value: 0.28
+  
+# Whether basis on appreciated property is carried over to decedent 
+# (as opposed to stepped up to market value as per current law)
+carryover_basis:
+  value: 0
+

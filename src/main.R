@@ -20,7 +20,7 @@ list.files('./src', recursive = T) %>%
   map(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
 
 # cmd line args TODO
-runscript_name   = 'tcja_ext_cbo' 
+runscript_name   = 'carryover_basis' 
 user_id          = 'jar335'
 local            = 1
 vintage          = NULL
