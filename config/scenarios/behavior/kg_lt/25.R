@@ -2,7 +2,7 @@ adjust_kg_lt = function(tax_units, ...) {
   
   #----------------------------------------------------------------------------
   # Adjusts capital gains at the intensive margin using an elasticity of 
-  # -0.7, converted to log-lin form after evaluation at the current-law 
+  # -0.25, converted to log-lin form after evaluation at the current-law 
   # rate of 0.238.  
   # 
   # Parameters: 

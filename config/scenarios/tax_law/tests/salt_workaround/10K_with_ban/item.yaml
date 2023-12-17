@@ -1,0 +1,13 @@
+---
+
+# Maximum deductible state and local taxes, joint returns
+salt_limit_married:
+  value:
+    '2014': Inf
+    '2018': 10000
+    
+# Whether PTE SALT workarounds are allowed  
+salt_workaround_allowed:
+  value: 
+    '2014': 1
+    '2024': 0

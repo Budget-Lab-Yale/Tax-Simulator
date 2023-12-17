@@ -35,6 +35,7 @@ do_scenario = function(ID, baseline_mtrs) {
   # Build (and write) tax law
   tax_law = build_tax_law(scenario_info, indexes)
   
+  
   #----------------
   # Run simulation
   #----------------
@@ -205,12 +206,12 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
     # Join tax law
     left_join(tax_law, by = c('year', 'filing_status')) %>% 
   
-    # Adjust for economic differences from economic baseline
-    # TODO
-  
+    # Account for tax law-driven changes not in baseline
+    do_salt_workaround_baseline() %>% 
+
     # Allocate net operating losses attributable to some prior-year modeled policy
     distribute_nols(nols, year) 
-    
+  
   
   #---------------------------
   # Model behavioral feedback

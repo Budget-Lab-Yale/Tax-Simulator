@@ -61,6 +61,7 @@ read_microdata = function(root, year) {
 }
 
 
+
 initialize_nols = function(years) {
   
   #----------------------------------------------------------------------------
@@ -100,6 +101,7 @@ initialize_nols = function(years) {
 }
 
 
+
 update_nols = function(nols, year, amount) {
   
   #----------------------------------------------------------------------------
@@ -124,6 +126,7 @@ update_nols = function(nols, year, amount) {
     select(-amount) %>% 
     return()
 }
+
 
 
 distribute_nols = function(tax_units, nols, year) { 

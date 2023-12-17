@@ -58,7 +58,7 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
           1 + 0.85 * ((1 + baseline2 / wages2) / (1 + liab_fica_er2 / wages2) - 1), 
           1
         ),
-             wages  = wages1 + wages2) %>% 
+        wages  = wages1 + wages2) %>% 
       select(-baseline1, -liab_fica_er1, -baseline2, -liab_fica_er2)
   }
   
@@ -126,7 +126,8 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
                           exempt_int + div_ord + div_pref + state_ref + 
                           txbl_ira_dist + gross_pens_dist + kg_st + kg_lt + 
                           other_gains + alimony + sole_prop + sch_e + farm + 
-                          gross_ss + ui + other_inc + liab_pr_er)
+                          gross_ss + ui + other_inc + salt_workaround_part + 
+                          salt_workaround_scorp + liab_pr_er)
   
   
   #----------------

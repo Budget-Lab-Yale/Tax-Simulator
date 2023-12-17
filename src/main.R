@@ -20,11 +20,11 @@ list.files('./src', recursive = T) %>%
   map(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
 
 # cmd line args TODO
-runscript_name   = 'kg_5pp' 
+runscript_name   = 'tcja_ext_cbo' 
 user_id          = 'jar335'
 local            = 1
 vintage          = NULL
-pct_sample       = 1/3
+pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
 
