@@ -106,7 +106,7 @@ calc_distribution = function(id, baseline_id, file_name = 'distribution.xlsx') {
    
         `Income cutoff` = round(min(expanded_inc) / 5) * 5,
          
-        group_delta = sum(delta * weight),
+        group_delta = sum(round(delta) * weight),
       
         `Average tax change`   = round(weighted.mean(delta, weight) / 5) * 5,
         `Average tax cut`      = round(weighted.mean(delta, (weight * cut)) / 5) * 5,

@@ -9,7 +9,9 @@ return_vars$calc_cdctc = c('cdctc_nonref', 'cdctc_ref')
 calc_cdctc = function(tax_unit, fill_missings = F) {
   
   #----------------------------------------------------------------------------
-  # Calculates value of Child and Dependent Care Tax Credit (CDCTC).
+  # Calculates value of Child and Dependent Care Tax Credit (CDCTC). Note: we 
+  # don't model the earned income limitation since it's already mostly
+  # accounted for in selection  out gets use much close
   # 
   # Parameters:
   #   - tax_unit (df | list) : either a dataframe or list containing required
@@ -38,7 +40,6 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
     # Tax law attributes 
     'cdctc.exp_limit',     # (int) maximum credit-eligible expenses per qualifying dependent
     'cdctc.n_dep_limit',   # (int) maximum number of qualifying dependents 
-    'cdctc.ei_limit',      # (int) whether to limit eligible expenses to adult-minimum earned income
     'cdctc.min_rate',      # (dbl) minimum credit rate (share of eligible expenses)
     'cdctc.max_rate',      # (dbl) maximum credit rate (share of eligible expenses)
     'cdctc.po_thresh',     # (dbl) AGI threshold above which credit rate begins phasing out from max to min
@@ -58,10 +59,6 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
       
       # Limit credit-eligible expenses to per-qualifying-dependent maximum
       qual_exp = pmin(care_exp, n_qual_dep * cdctc.exp_limit),
-      
-      # Limit credit-eligible expenses to adult-minimum earned income, if law requires
-      min_ei   = pmax(0, pmin(ei1, replace_na(as.numeric(ei2), Inf))),
-      qual_exp = pmin(qual_exp, if_else(cdctc.ei_limit == 1, min_ei, Inf)),
       
       # Calculate credit rate: a descretized linear negative function of AGI, 
       # akin to a phaseout, with a floor and ceiling 

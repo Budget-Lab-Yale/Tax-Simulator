@@ -194,19 +194,32 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
   print(paste0('Running ', year, ' for scenario ', "'", scenario_info$ID, "'",
                if_else(static & scenario_info$ID != 'baseline', '(static)', '')))
   
-  # Load tax unit data 
+  
+  #--------------------------------
+  # Load and process tax unit data 
+  #--------------------------------
+  
+  # Read data
   tax_units = scenario_info$interface_paths$`Tax-Data` %>%  
-    read_microdata(year) %>%
-    
+    read_microdata(year) %>% 
+  
     # Subset records if running with a sample of full data
     filter(id %in% globals$sample_ids) %>% 
     mutate(weight = weight / globals$pct_sample, 
            year   = year) %>% 
-    
+  
+    # Recode filing status if tax law departs from traditional options
+    left_join(tax_law %>% 
+                distinct(year, filing.repeal_hoh), 
+              by = 'year') %>%
+    mutate(filing_status = if_else(filing.repeal_hoh == 1 & filing_status == 4, 
+                                   1, 
+                                   filing_status)) %>% 
+
     # Join tax law
     left_join(tax_law, by = c('year', 'filing_status')) %>% 
   
-    # Account for tax law-driven changes not in baseline
+    # Account for tax law changes manifesting as reporting changes
     do_salt_workaround_baseline() %>% 
 
     # Allocate net operating losses attributable to some prior-year modeled policy
