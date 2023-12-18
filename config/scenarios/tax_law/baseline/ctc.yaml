@@ -166,9 +166,17 @@ max_refund_old:
   i_direction: default
   i_increment: default
 
+# Whether phase-in type is a rate (0 means range)
+pi_type:
+  value: 1
+
 # Phase-in rate 
 pi_rate:
   value: 0.15
+  
+# Phase-in range
+pi_range: 
+  value: Inf  
 
 # Earned income threshold above which CTC phases in
 pi_thresh:
