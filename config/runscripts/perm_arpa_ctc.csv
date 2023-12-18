@@ -1,6 +1,4 @@
 ID,dep.Tax-Data.vintage,dep.Tax-Data.ID,dep.Macro-Projections.vintage,dep.Macro-Projections.ID,tax_law,behavior,first_year,last_year,mtr_vars
 baseline,2023121117,baseline,2023121116,baseline,baseline,,2017,2034,
-arpa_ctc_01-refundability,2023121117,baseline,2023121116,baseline,perm_arpa_ctc/01-refundability,,2017,2034,
-arpa_ctc_02-value,2023121117,baseline,2023121116,baseline,perm_arpa_ctc/02-value,,2017,2034,
-arpa_ctc_03-ssn,2023121117,baseline,2023121116,baseline,perm_arpa_ctc/03-ssn,,2017,2034,
-arpa_ctc_04-age,2023121117,baseline,2023121116,baseline,perm_arpa_ctc/04-age,,2017,2034,
+current_policy,2023121117,baseline,2023121116,baseline,policy_runs/tcja_ext/ctc_ext,,2017,2034,
+arpa_ctc,2023121117,baseline,2023121116,baseline,policy_runs/perm_arpa_ctc/04-age,,2017,2034,
