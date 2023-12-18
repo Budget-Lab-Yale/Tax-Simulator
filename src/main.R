@@ -17,7 +17,7 @@ list.files('./src', recursive = T) %>%
   walk(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
 
 # cmd line args TODO
-runscript_name   = 'hoh_test' 
+runscript_name   = 'fsa' 
 user_id          = 'jar335'
 local            = 1
 vintage          = NULL
