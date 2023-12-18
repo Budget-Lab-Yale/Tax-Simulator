@@ -147,6 +147,7 @@ parse_globals = function(runscript_name, user_id, local, vintage,
   }
   
   # Tax unit ID in sample
+  set.seed(76)
   sample_ids = interface_paths %>% 
     filter(ID == 'baseline', interface == 'Tax-Data') %>% 
     get_vector('path') %>% 

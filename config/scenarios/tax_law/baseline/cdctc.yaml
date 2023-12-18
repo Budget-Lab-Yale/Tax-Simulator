@@ -10,10 +10,6 @@ exp_limit:
 n_dep_limit:
   value: 2
 
-# Whether to limit eligible expenses to adult-minimum earned income
-ei_limit:
-  value: 1
-
 # Minimum credit rate (share of eligible expenses)
 min_rate: 
   value: 
