@@ -6,147 +6,318 @@
 
 
 
-calc_distribution = function(id, baseline_id, file_name = 'distribution.xlsx') {
+process_for_distribution = function(id, baseline_id, year) {
   
   #----------------------------------------------------------------------------
-  # Calculates distribution metrics relative to a specified baseline 
-  # and writes the results to an Excel file.
+  # Reads and cleans input data for a given scenario and a given "baseline", 
+  # calculating tax change variables at the record level.
   # 
   # Parameters:
   #   - id          (str) : scenario ID
   #   - baseline_id (str) : ID of scenario against which metrics are calculated. 
   #                         For regular tables, this is the actual baseline; 
   #                         for stacked tables, this is the precedeing scenario
-  #   - file_name (str)   : output file name
+  #   - year        (int) : year to calculate metrics for
   # 
-  # Returns: void. Writes a dataframe for the scenario containing values, 
-  #          grouped by pcts, for: average tax change, share with tax cut, 
-  #          average tax cut, share with tax increase, average tax increase, 
-  #          percent change in after tax income, share of total tax change.
+  # Returns: microdata with all record-level variables required to calculate
+  #          aggregate distributional metrics (df).
   #----------------------------------------------------------------------------
-
-  # Create new Excel workbook
-  wb = createWorkbook()
   
-  for (year in get_scenario_info(id)$years) {
-
-    # Read microdata output
-    if (baseline_id == 'baseline') {
-      baseline_root = file.path(globals$baseline_root, 'baseline')
-    } else {
-      baseline_root = file.path(globals$output_root, baseline_id)
-    }
+  
+  #-----------------------
+  # Read microdata output
+  #-----------------------
+  
+  if (baseline_id == 'baseline') {
+    baseline_root = file.path(globals$baseline_root, 'baseline')
+  } else {
+    baseline_root = file.path(globals$output_root, baseline_id)
+  }
+  
+  baseline = file.path(baseline_root, 'static/detail', paste0(year, '.csv')) %>% 
+    fread() %>% 
+    tibble()
+  
+  scenario = file.path(globals$output_root, id, 'static/detail', paste0(year, '.csv')) %>% 
+    fread() %>% 
+    tibble()
+  
+  
+  #------------------------------------
+  # Calculate record-level tax changes
+  #------------------------------------
+  
+  microdata = baseline %>% 
     
-    baseline = file.path(baseline_root, 'static/detail', paste0(year, '.csv')) %>% 
-      fread() %>% 
-      tibble()
+    # Remove dependent returns
+    filter(dep_status == 0) %>% 
     
-    scenario = file.path(globals$output_root, id, 'static/detail', paste0(year, '.csv')) %>% 
-      fread() %>% 
-      tibble()
-    
-    # Join data together
-    microdata = baseline %>% 
+    # Pare down dataframe and join scenario liability 
+    mutate(liab_baseline = liab_iit_net + liab_pr) %>%
+    select(id, weight, age1, age2, filing_status, expanded_inc, liab_baseline) %>% 
+    left_join(scenario %>% 
+                mutate(liab = liab_iit_net + liab_pr) %>% 
+                select(id, liab), 
+              by = 'id') %>%
+    mutate(
       
-      # Remove dependent returns
-      filter(dep_status == 0) %>% 
+      # Calculate change from baseline
+      delta = liab - liab_baseline,
       
-      # Pare down dataframe and join scenario liability 
-      mutate(liab_baseline = liab_iit_net + liab_pr) %>%
-      select(id, weight, filing_status, expanded_inc, liab_baseline) %>% 
-      left_join(scenario %>% 
-                  mutate(liab = liab_iit_net + liab_pr) %>% 
-                  select(id, liab), 
-                by = 'id') %>%
+      # Binary dummies for if a tax unit received a meaningful raise or cut
+      cut   = delta <= -5,
+      raise = delta >= 5,
       
-      mutate(
-        
-        # Calculate change from baseline
-        delta = liab - liab_baseline,
-        
-        # Binary dummies for if a tax unit received a meaningful raise or cut
-        cut   = delta <= -5,
-        raise = delta >= 5,
-        
-        # Create new person level weight for more representative income groups
-        weight_person = weight * (1 + (filing_status == 2))
-        
-      )
+      # Create new person level weight for more representative income groups
+      weight_person = weight * (1 + (filing_status == 2))
       
-    # Calculate income thresholds
-    income_groups = wtd.quantile(
-      x       = microdata %>% 
-                  filter(expanded_inc >= 0) %>%
-                  get_vector('expanded_inc'), 
-      probs   = c(0.2, 0.4, 0.6, 0.8, 0.9, 0.99, 0.999),
-      weights = microdata %>% 
-                  filter(expanded_inc >= 0) %>%
-                  get_vector('weight_person')
     )
-
-    
-    dist_table = microdata %>% 
+  
+  #------------------------
+  # Add grouping variables
+  #------------------------
+  
+  # Calculate income thresholds
+  income_groups = wtd.quantile(
+    x       = microdata %>% 
+      filter(expanded_inc >= 0) %>%
+      get_vector('expanded_inc'), 
+    probs   = c(0.2, 0.4, 0.6, 0.8, 0.9, 0.99, 0.999),
+    weights = microdata %>% 
+      filter(expanded_inc >= 0) %>%
+      get_vector('weight_person')
+  )
+  
+  
+  microdata %>%  
+    mutate(
       
       # Assign income groups
-      mutate(
-        `Income group` = cut(
-           x              = expanded_inc, 
-           breaks         = c(-Inf, 0, income_groups, Inf), 
-           labels         = c('Negative income', 'Bottom quintile', 'Second quintile', 
-                              'Middle quintile', 'Fourth quintile', '80% - 90%', 
-                              '90% - 99%', '99% - 99.9%', 'Top 0.1%'), 
-           right          = F, 
-           include.lowest = T
-        )
-      ) %>% 
-    
-      # Calculate metrics by group
-      group_by(`Income group`) %>%
-      summarise(
-   
-        `Income cutoff` = round(min(expanded_inc) / 5) * 5,
-         
-        group_delta = sum(round(delta) * weight),
+      income_group = cut(
+        x              = expanded_inc, 
+        breaks         = c(-Inf, 0, income_groups, Inf), 
+        labels         = c('Negative income', 'Bottom quintile', 'Second quintile', 
+                           'Middle quintile', 'Fourth quintile', '80% - 90%', 
+                           '90% - 99%', '99% - 99.9%', 'Top 0.1%'), 
+        right          = F, 
+        include.lowest = T
+      ),
       
-        `Average tax change`   = round(weighted.mean(delta, weight) / 5) * 5,
-        `Average tax cut`      = round(weighted.mean(delta, (weight * cut)) / 5) * 5,
-        `Average tax increase` = round(weighted.mean(delta, (weight * raise)) / 5) * 5,
-      
-        `Share with tax cut`      = sum(weight * cut) / sum(weight),
-        `Share with tax increase` = sum(weight * raise) / sum(weight),
-      
-        `Percent change in after-tax income` = sum((expanded_inc - liab) * weight) / sum((expanded_inc - liab_baseline) * weight) - 1 
-      ) %>%
-      
-      mutate(`Share of total tax change` = group_delta / sum(group_delta)) %>% 
-       
-      # Clean up
-      mutate(
-        `Income cutoff` = if_else(row_number() == 1, NA, `Income cutoff`), 
-        `Percent change in after-tax income` = if_else(row_number() == 1, 
-                                                       NA,
-                                                       `Percent change in after-tax income`), 
-        `Average tax cut` = if_else(is.nan(`Average tax cut`) | round(`Share with tax cut`, 4) == 0, 
-                                    NA,
-                                    `Average tax cut`),
-        `Average tax increase` = if_else(is.nan(`Average tax increase`) | round(`Share with tax increase`, 4) == 0, 
-                                         NA,
-                                         `Average tax increase`),
-        `Share of total tax change` = if_else(is.nan(`Share of total tax change`), 
-                                         NA,
-                                         `Share of total tax change`)
-      ) %>% 
-      select(`Income group`, `Income cutoff`, `Average tax change`, `Share with tax cut`, 
-             `Average tax cut`, `Share with tax increase`, `Average tax increase`,
-             `Percent change in after-tax income`, `Share of total tax change`)
+      # Assign age groups
+      oldest_adult = if_else(filing_status == 2, pmax(age1, age2), age1),
+      age_group = case_when(
+        oldest_adult < 25 ~ '24 and under', 
+        oldest_adult < 30 ~ '25 - 29', 
+        oldest_adult < 40 ~ '30 - 39', 
+        oldest_adult < 50 ~ '40 - 49',
+        oldest_adult < 65 ~ '50 - 64', 
+        T         ~ '65+'
+      ) 
+    ) %>%
+    return()
+}
+
+
+
+
+
+calc_dist_metrics = function(microdata, group_var) {
   
+  #----------------------------------------------------------------------------
+  # Aggregates record-level tax change microdata into summary stats, grouped
+  # either by income or age. 
+  # 
+  # Parameters: 
+  #  - microdata (df)  : tax unit data, ouput by process_for_distribution()
+  #  - group_var (str) : variable over which to calculate group summary stats, 
+  #                      either "income_group" or "age_group"
+  # 
+  # Returns: tibble of distributional metrics grouped by group_var (df).
+  #----------------------------------------------------------------------------
+  
+  # Calculate metrics by specified group
+  microdata %>% 
+    group_by(!!sym(group_var)) %>%
+    summarise(
+      
+      # Group-metric-specific summary stats
+      income_cutoff = round(min(expanded_inc) / 5) * 5,
+      n_tax_units   = sum(weight), 
+      
+      # Income group's total dollar amount tax change
+      group_delta = sum(round(delta) * weight),
+      
+      # Unconditional and conditional averages
+      avg       = round(weighted.mean(delta, weight) / 5) * 5,
+      avg_cut   = round(weighted.mean(delta, (weight * cut)) / 5) * 5,
+      avg_raise = round(weighted.mean(delta, (weight * raise)) / 5) * 5,
+      
+      # Counts
+      share_cut   = sum(weight * cut) / sum(weight),
+      share_raise = sum(weight * raise) / sum(weight),
+      
+      # Relative changes
+      pct_chg_ati = sum((expanded_inc - liab) * weight) / sum((expanded_inc - liab_baseline) * weight) - 1 
+      
+    ) %>%
+    
+    # Group's share of total change
+    mutate(share_total     = group_delta / sum(group_delta), 
+           share_tax_units = n_tax_units / sum(n_tax_units)) %>% 
+    return()
+}
+
+
+
+build_distribution_tables = function(counterfactual_ids) {
+  
+  #----------------------------------------------------------------------------
+  # Generates standard distribution tables for all scenarios. 
+  # 
+  # Parameters:
+  #   - counterfactual_ids : (str) list of non-baseline scenario IDs
+  # 
+  # Returns: void. 
+  #----------------------------------------------------------------------------
+  
+  # Scenario loop 
+  for (id in counterfactual_ids) {
+    
+    # Create new Excel workbook
+    wb = createWorkbook()
+    
+    # Year loop 
+    for (year in get_scenario_info(id)$years) {
+      
+      # Skip historical years, under the assumption we're scoring policy for the future...
+      if (year < year(Sys.time())) {
+        next
+      }
+      
+      # Grouping variable loop
+      for (group_var in c('income_group', 'age_group')) {
+      
+        # Calculate metrics and add formatted output to workbook obejct
+        process_for_distribution(id, 'baseline', year) %>% 
+          calc_dist_metrics(group_var) %>% 
+          format_table(wb, year, group_var) 
+      }
+      
+      # Write workbook 
+      saveWorkbook(wb   = wb, 
+                   file = file.path(globals$output_root, 
+                                    id,
+                                    'static',
+                                    'supplemental', 
+                                    'distribution.xlsx'), 
+                   overwrite = T)
+    }
+  }
+}
+
+
+
+build_stacked_distribution_tables = function(counterfactual_ids) {
+  
+  #----------------------------------------------------------------------------
+  # For all non-baseline scenarios, generates distribution table relative to
+  # prior scenario in stacking order. 
+  # 
+  # Parameters:
+  #   - counterfactual_ids : (str) list of non-baseline scenario IDs
+  # 
+  # Returns: void.
+  #----------------------------------------------------------------------------
+  
+  # Scenario loop
+  scenario_ids = c('baseline', counterfactual_ids)
+  for (i in 2:length(scenario_ids)) {
+  
+    # Create new Excel workbook
+    wb = createWorkbook()
+    
+    # Year loop 
+    for (year in get_scenario_info(scenario_ids[i])$years) {
+      
+      # Skip historical years, under the assumption we're scoring policy for the future...
+      if (year < year(Sys.time())) {
+        next
+      }
+      
+      # Grouping variable loop
+      for (group_var in c('income_group', 'age_group')) {
+      
+        # Calculate metrics and add formatted output to workbook obejct
+        process_for_distribution(scenario_ids[i], scenario_ids[i - 1], year) %>% 
+          calc_dist_metrics(group_var) %>% 
+          format_table(wb, year, group_var) 
+      }
+      
+      # Write workbook 
+      saveWorkbook(wb   = wb, 
+                   file = file.path(globals$output_root, 
+                                    scenario_ids[i],
+                                    'static',
+                                    'supplemental', 
+                                    'stacked_distribution.xlsx'), 
+                   overwrite = T)
+    }
+  }
+}
+
+
+
+format_table = function(dist_metrics, wb, year, group_var) {
+  
+  #----------------------------------------------------------------------------
+  # Given a tibble of distributional metrics calculated either by income or
+  # age, places the output in a WorkBook object and formats the sheet.
+  # 
+  # Parameters:
+  #   - dist_metrics (df)  : tibble of aggregated distributional metrics
+  #   - wb           (wb)  : destination WorkBook object for output
+  #   - year         (int) : year of distributional metrics
+  #   - group_var    (str) : either "income_group" or "age_group", representing
+  #                          the variable by which dist_metrics are grouped
+  # 
+  # Returns: void.
+  #----------------------------------------------------------------------------
+  
+  #---------------------------------
+  # Formatting for by-income tables
+  #---------------------------------
+  
+  if (group_var == 'income_group') {
+    
+    dist_table = dist_metrics %>% 
+      
+      # Clean up -- deal with missings, divide-by-zeros, things of that nature
+      mutate(
+        income_cutoff = if_else(row_number() == 1, NA, income_cutoff), 
+        pct_chg_ati   = if_else(row_number() == 1, NA, pct_chg_ati), 
+        avg_cut       = if_else(is.nan(avg_cut) | round(share_cut, 4) == 0, NA, avg_cut),
+        avg_raise     = if_else(is.nan(avg_raise) | round(avg_raise, 4) == 0, NA, avg_raise),
+        share_total   = if_else(is.nan(share_total), NA, share_total)
+      ) %>% 
+      
+      # Format names
+      select(`Income group`                       = income_group, 
+             `Income cutoff`                      = income_cutoff, 
+             `Average tax change`                 = avg, 
+             `Share with tax cut`                 = share_cut, 
+             `Average tax cut`                    = avg_cut, 
+             `Share with tax increase`            = share_raise, 
+             `Average tax increase`               = avg_raise, 
+             `Percent change in after-tax income` = pct_chg_ati, 
+             `Share of total tax change`          = share_total)
+    
     # Add worksheet and table to workbook
     addWorksheet(wb, year)
     writeData(wb = wb, sheet = as.character(year), x = dist_table, startRow = 2)
     
     # Add titles and notes 
     writeData(wb = wb, sheet = as.character(year), startRow = 1, 
-              x = paste0('Distributional impact of policy change, ', year))
+              x = paste0('Distributional impact of policy change by income group, ', year))
     writeData(wb = wb, sheet = as.character(year), startRow = 12, 
               x = paste0('Estimate universe is nondependent tax units, including nonfilers.', 
                          '"Income" is measured as AGI plus: above-the-line deductions, ', 
@@ -154,8 +325,8 @@ calc_distribution = function(id, baseline_id, file_name = 'distribution.xlsx') {
                          'benefits), and employer-side payroll taxes. Income percentile ', 
                          'thresholds are calculated with respect to positive income only ', 
                          'and are adult-weighted.' 
-                         )
               )
+    )
     
     # Format numbers and cells 
     addStyle(wb         = wb, 
@@ -211,56 +382,106 @@ calc_distribution = function(id, baseline_id, file_name = 'distribution.xlsx') {
                  sheet  = as.character(year), 
                  cols   = 1:9, 
                  widths = c(15, 8, 11, 11, 11, 11, 11, 15, 12))
+  
+  #---------------------------------
+  # Formatting for by-income tables
+  #---------------------------------
     
+  } else {
+
+    dist_table = dist_metrics %>%
+
+      # Clean up -- deal with missings, divide-by-zeros, things of that nature
+      mutate(
+        pct_chg_ati = if_else(row_number() == 1, NA, pct_chg_ati),
+        avg_cut     = if_else(is.nan(avg_cut) | round(share_cut, 4) == 0, NA, avg_cut),
+        avg_raise   = if_else(is.nan(avg_raise) | round(avg_raise, 4) == 0, NA, avg_raise),
+        share_total = if_else(is.nan(share_total), NA, share_total)
+      ) %>%
+
+      # Format names
+      select(`Age group`                          = age_group,
+             `Share of tax units`                 = share_tax_units,
+             `Average tax change`                 = avg,
+             `Share with tax cut`                 = share_cut,
+             `Average tax cut`                    = avg_cut,
+             `Share with tax increase`            = share_raise,
+             `Average tax increase`               = avg_raise,
+             `Percent change in after-tax income` = pct_chg_ati,
+             `Share of total tax change`          = share_total)
+
+    # Add worksheet and table to workbook
+    writeData(wb = wb, sheet = as.character(year), x = dist_table, startRow = 16)
+
+    # Add titles and notes
+    writeData(wb = wb, sheet = as.character(year), startRow = 15,
+              x = paste0('Distributional impact of policy change by age group, ', year))
+    writeData(wb = wb, sheet = as.character(year), startRow = 23,
+              x = paste0('Estimate universe is nondependent tax units, including nonfilers.',
+                         '"Income" is measured as AGI plus: above-the-line deductions, ',
+                         'nontaxable interest, nontaxable pension income (including OASI ',
+                         'benefits), and employer-side payroll taxes. Income percentile ',
+                         'thresholds are calculated with respect to positive income only ',
+                         'and are adult-weighted.'
+              )
+    )
+
+    # Format numbers and cells
+    addStyle(wb         = wb,
+             sheet      = as.character(year),
+             rows       = 17:22,
+             cols       = c(2, 4, 6, 8, 9),
+             gridExpand = T,
+             style      = createStyle(numFmt = 'PERCENTAGE'))
+    addStyle(wb         = wb,
+             sheet      = as.character(year),
+             rows       = 17:22,
+             cols       = c(3, 5, 7),
+             gridExpand = T,
+             style      = createStyle(numFmt = 'COMMA'),
+             stack      = T)
+    addStyle(wb         = wb,
+             sheet      = as.character(year),
+             rows       = c(15, 16, 22),
+             cols       = 1:9,
+             gridExpand = T,
+             style      = createStyle(border = 'bottom'),
+             stack      = T)
+    addStyle(wb         = wb,
+             sheet      = as.character(year),
+             rows       = 16,
+             cols       = 1:9,
+             gridExpand = T,
+             style      = createStyle(textDecoration = 'bold',
+                                      wrapText       = T),
+             stack      = T)
+    addStyle(wb         = wb,
+             sheet      = as.character(year),
+             rows       = 16:22,
+             cols       = 1:9,
+             gridExpand = T,
+             style      = createStyle(halign = 'center'),
+             stack      = T)
+    addStyle(wb         = wb,
+             sheet      = as.character(year),
+             rows       = 23,
+             cols       = 1:9,
+             gridExpand = T,
+             style      = createStyle(fontSize       = 8,
+                                      textDecoration = 'italic',
+                                      valign         = 'center',
+                                      wrapText       = T),
+             stack      = T)
+    mergeCells(wb    = wb,
+               sheet = as.character(year),
+               rows  = 23:24,
+               cols  = 1:9)
+    setColWidths(wb    = wb,
+                 sheet  = as.character(year),
+                 cols   = 1:9,
+                 widths = c(15, 8, 11, 11, 11, 11, 11, 15, 12))
   }
-  
-  
-  # Write workbook 
-  saveWorkbook(wb   = wb, 
-               file = file.path(globals$output_root, 
-                                id,
-                                'static',
-                                'supplemental', 
-                                file_name), 
-               overwrite = T)
 }
 
 
 
-
-calc_distribution_tables = function(counterfactual_ids) {
-  
-  #----------------------------------------------------------------------------
-  # Calculates standard distribution tables for all scenarios. 
-  # 
-  # Parameters:
-  #   - counterfactual_ids : (str) list of non-baseline scenario IDs
-  # 
-  # Returns: void. 
-  #----------------------------------------------------------------------------
-  
-  counterfactual_ids %>% 
-    walk(.f = ~ calc_distribution(.x, 'baseline'))
-}
-
-
-
-calc_stacked_distribution_tables = function(counterfactual_ids) {
-  
-  #----------------------------------------------------------------------------
-  # For all non-baseline scenarios, calculates distribution table relative to
-  # prior scenario in stacking order. 
-  # 
-  # Parameters:
-  #   - counterfactual_ids : (str) list of non-baseline scenario IDs
-  # 
-  # Returns: void.
-  #----------------------------------------------------------------------------
-  
-  scenario_ids = c('baseline', counterfactual_ids)
-  for (i in 2:length(scenario_ids)) { 
-    calc_distribution(id          = scenario_ids[i], 
-                      baseline_id = scenario_ids[i - 1], 
-                      file_name   = 'stacked_distribution.xlsx')
-  }
-}

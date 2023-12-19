@@ -17,7 +17,7 @@ list.files('./src', recursive = T) %>%
   walk(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
 
 # cmd line args TODO
-runscript_name   = 'fsa' 
+runscript_name   = 'hoh_test' 
 user_id          = 'jar335'
 local            = 1
 vintage          = NULL
@@ -84,8 +84,8 @@ if (stacked == 1) {
 }
 
 # Generate distributional estimates
-calc_distribution_tables(counterfactual_ids)
+build_distribution_tables(counterfactual_ids)
 if (stacked == 1) {
-  calc_stacked_distribution_tables(counterfactual_ids)
+  build_stacked_distribution_tables(counterfactual_ids)
 }
 
