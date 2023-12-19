@@ -6,7 +6,7 @@
 
 
 
-process_for_distribution = function(id, baseline_id, year) {
+process_for_distribution = function(id, baseline_id, year, financing = 'none') {
   
   #----------------------------------------------------------------------------
   # Reads and cleans input data for a given scenario and a given "baseline", 
@@ -18,6 +18,8 @@ process_for_distribution = function(id, baseline_id, year) {
   #                         For regular tables, this is the actual baseline; 
   #                         for stacked tables, this is the precedeing scenario
   #   - year        (int) : year to calculate metrics for
+  #   - financing   (str) : assumption for how any deficit effect is financed. 
+  #                         'none' for none, "head" for proportional tax...TODO
   # 
   # Returns: microdata with all record-level variables required to calculate
   #          aggregate distributional metrics (df).
@@ -61,15 +63,23 @@ process_for_distribution = function(id, baseline_id, year) {
               by = 'id') %>%
     mutate(
       
+      # Create adult-level weight
+      weight_person = weight * (1 + (filing_status == 2)),
+      
       # Calculate change from baseline
       delta = liab - liab_baseline,
+      
+      # Adjust for financing effects i.e. distributing deficit
+      delta = delta - sum(delta * weight) * case_when(
+        financing == 'none'      ~ 0,
+        financing == 'head'      ~ (1 + (filing_status == 2)) / sum(weight_person),
+        financing == 'income'    ~ pmax(0, expanded_inc) / sum(pmax(0, expanded_inc) * weight),
+        financing == 'liability' ~ pmax(0, liab_baseline) / sum(pmax(0, liab_baseline) * weight)
+      ),
       
       # Binary dummies for if a tax unit received a meaningful raise or cut
       cut   = delta <= -5,
       raise = delta >= 5,
-      
-      # Create new person level weight for more representative income groups
-      weight_person = weight * (1 + (filing_status == 2))
       
     )
   
@@ -80,12 +90,12 @@ process_for_distribution = function(id, baseline_id, year) {
   # Calculate income thresholds
   income_groups = wtd.quantile(
     x       = microdata %>% 
-      filter(expanded_inc >= 0) %>%
-      get_vector('expanded_inc'), 
+                filter(expanded_inc >= 0) %>%
+                get_vector('expanded_inc'), 
     probs   = c(0.2, 0.4, 0.6, 0.8, 0.9, 0.99, 0.999),
     weights = microdata %>% 
-      filter(expanded_inc >= 0) %>%
-      get_vector('weight_person')
+                filter(expanded_inc >= 0) %>%
+                get_vector('weight_person')
   )
   
   
@@ -111,7 +121,7 @@ process_for_distribution = function(id, baseline_id, year) {
         oldest_adult < 40 ~ '30 - 39', 
         oldest_adult < 50 ~ '40 - 49',
         oldest_adult < 65 ~ '50 - 64', 
-        T         ~ '65+'
+        T                 ~ '65+'
       ) 
     ) %>%
     return()
@@ -169,58 +179,106 @@ calc_dist_metrics = function(microdata, group_var) {
 
 
 
-build_distribution_tables = function(counterfactual_ids) {
+build_distribution_tables = function(id, baseline_id, file_name) {
   
   #----------------------------------------------------------------------------
-  # Generates standard distribution tables for all scenarios. 
+  # Generates distribution tables by year and financing assumption for a
+  # given scenario, both by income and age.
   # 
   # Parameters:
-  #   - counterfactual_ids : (str) list of non-baseline scenario IDs
+  #   - id (str)          : counterfactual scenario ID
+  #   - baseline_id (str) : ID of scenario against which changes are measured
+  #   - file_name (str)    : name of file to prepend .xlsx and .csv
   # 
   # Returns: void. 
   #----------------------------------------------------------------------------
   
-  # Scenario loop 
-  for (id in counterfactual_ids) {
+  # Initialize lists of unformatted tables
+  results = list('income' = list(), 
+                 'age'    = list())
     
-    # Create new Excel workbook
-    wb = createWorkbook()
+  # Create new Excel workbook
+  wb = createWorkbook()
+
+  # Year loop 
+  for (year in get_scenario_info(id)$years) {
     
-    # Year loop 
-    for (year in get_scenario_info(id)$years) {
-      
-      # Skip historical years, under the assumption we're scoring policy for the future...
-      if (year < year(Sys.time())) {
-        next
-      }
-      
-      # Grouping variable loop
-      for (group_var in c('income_group', 'age_group')) {
-      
-        # Calculate metrics and add formatted output to workbook obejct
-        process_for_distribution(id, 'baseline', year) %>% 
-          calc_dist_metrics(group_var) %>% 
-          format_table(wb, year, group_var) 
-      }
-      
-      # Write workbook 
-      saveWorkbook(wb   = wb, 
-                   file = file.path(globals$output_root, 
-                                    id,
-                                    'static',
-                                    'supplemental', 
-                                    'distribution.xlsx'), 
-                   overwrite = T)
+    # Skip historical years, under the assumption we're scoring policy for the future...
+    if (year < year(Sys.time())) {
+      next
     }
+    
+    # Grouping variable loop
+    for (group_var in c('income', 'age')) {
+      
+      # Financing assumption loop
+      for (financing in c('none', 'head', 'income', 'liability')) {
+        
+        # Calculate metrics
+        dist_metrics = id %>% 
+          process_for_distribution('baseline', year, financing) %>% 
+          calc_dist_metrics(paste0(group_var, '_group'))
+        
+        # Add to results 
+        results[[group_var]][[length(results[[group_var]]) + 1]] = dist_metrics %>% 
+          mutate(year = year, financing = financing) %>% 
+          relocate(year, financing) 
+        
+        # Add to Excel workbook and format
+        format_table(dist_metrics, wb, year, paste0(group_var, '_group'), financing)
+      }
+    }
+  }
+  
+  # Write CSVs
+  c('income', 'age') %>% 
+    walk(.f = ~ write_csv(
+      x    = bind_rows(results[[.x]]), 
+      file = file.path(globals$output_root, 
+                       id,
+                       'static',
+                       'supplemental', 
+                       paste0(file_name, '_', .x, '.csv'))
+      
+    ))
+  
+  # Write workbook 
+  saveWorkbook(wb   = wb, 
+               file = file.path(globals$output_root, 
+                                id,
+                                'static',
+                                'supplemental', 
+                                paste0(file_name, '.xlsx')), 
+               overwrite = T)
+
+}
+
+
+
+build_all_distribution_tables = function(counterfactual_ids) {
+  
+  #----------------------------------------------------------------------------
+  # For all non-baseline scenarios, generates distribution tables.
+  # 
+  # Parameters:
+  #   - counterfactual_ids : (str) list of non-baseline scenario IDs
+  # 
+  # Returns: void.
+  #----------------------------------------------------------------------------
+  
+  for (id in counterfactual_ids) { 
+    build_distribution_tables(id          = id, 
+                              baseline_id = 'baseline', 
+                              file_name   = 'distribution')
   }
 }
 
 
 
-build_stacked_distribution_tables = function(counterfactual_ids) {
+build_all_stacked_distribution_tables = function(counterfactual_ids) {
   
   #----------------------------------------------------------------------------
-  # For all non-baseline scenarios, generates distribution table relative to
+  # For all non-baseline scenarios, generates distribution tables relative to
   # prior scenario in stacking order. 
   # 
   # Parameters:
@@ -229,45 +287,16 @@ build_stacked_distribution_tables = function(counterfactual_ids) {
   # Returns: void.
   #----------------------------------------------------------------------------
   
-  # Scenario loop
   scenario_ids = c('baseline', counterfactual_ids)
-  for (i in 2:length(scenario_ids)) {
-  
-    # Create new Excel workbook
-    wb = createWorkbook()
-    
-    # Year loop 
-    for (year in get_scenario_info(scenario_ids[i])$years) {
-      
-      # Skip historical years, under the assumption we're scoring policy for the future...
-      if (year < year(Sys.time())) {
-        next
-      }
-      
-      # Grouping variable loop
-      for (group_var in c('income_group', 'age_group')) {
-      
-        # Calculate metrics and add formatted output to workbook obejct
-        process_for_distribution(scenario_ids[i], scenario_ids[i - 1], year) %>% 
-          calc_dist_metrics(group_var) %>% 
-          format_table(wb, year, group_var) 
-      }
-      
-      # Write workbook 
-      saveWorkbook(wb   = wb, 
-                   file = file.path(globals$output_root, 
-                                    scenario_ids[i],
-                                    'static',
-                                    'supplemental', 
-                                    'stacked_distribution.xlsx'), 
-                   overwrite = T)
-    }
+  for (i in 2:length(scenario_ids)) { 
+    build_distribution_tables(id          = scenario_ids[i], 
+                              baseline_id = scenario_ids[i - 1], 
+                              file_name   = 'stacked_distribution')
   }
 }
 
 
-
-format_table = function(dist_metrics, wb, year, group_var) {
+format_table = function(dist_metrics, wb, year, group_var, financing) {
   
   #----------------------------------------------------------------------------
   # Given a tibble of distributional metrics calculated either by income or
@@ -287,6 +316,17 @@ format_table = function(dist_metrics, wb, year, group_var) {
   # Formatting for by-income tables
   #---------------------------------
   
+  # Set worksheet name
+  sheet_name = paste0(year, if_else(financing == 'none', '', paste0('_', financing)))
+  
+  # Write out financing description
+  financing_description = case_when(
+    financing == 'none'      ~ 'no financing',
+    financing == 'head'      ~ 'per-person financing',
+    financing == 'income'    ~ 'financing proportional to income',
+    financing == 'liability' ~ 'financing proportional to income taxes'
+  )
+  
   if (group_var == 'income_group') {
     
     dist_table = dist_metrics %>% 
@@ -297,7 +337,7 @@ format_table = function(dist_metrics, wb, year, group_var) {
         pct_chg_ati   = if_else(row_number() == 1, NA, pct_chg_ati), 
         avg_cut       = if_else(is.nan(avg_cut) | round(share_cut, 4) == 0, NA, avg_cut),
         avg_raise     = if_else(is.nan(avg_raise) | round(avg_raise, 4) == 0, NA, avg_raise),
-        share_total   = if_else(is.nan(share_total), NA, share_total)
+        share_total   = if_else(is.nan(share_total) | financing != 'none', NA, share_total)
       ) %>% 
       
       # Format names
@@ -312,13 +352,15 @@ format_table = function(dist_metrics, wb, year, group_var) {
              `Share of total tax change`          = share_total)
     
     # Add worksheet and table to workbook
-    addWorksheet(wb, year)
-    writeData(wb = wb, sheet = as.character(year), x = dist_table, startRow = 2)
+    addWorksheet(wb, sheet_name)
+    writeData(wb = wb, sheet = sheet_name, x = dist_table, startRow = 2)
     
     # Add titles and notes 
-    writeData(wb = wb, sheet = as.character(year), startRow = 1, 
-              x = paste0('Distributional impact of policy change by income group, ', year))
-    writeData(wb = wb, sheet = as.character(year), startRow = 12, 
+    title = paste0('Distributional impact of policy change by income group, ', year, 
+                   ', assuming ', financing_description)
+    writeData(wb = wb, sheet = sheet_name, startRow = 1, 
+              x = title)
+    writeData(wb = wb, sheet = sheet_name, startRow = 12, 
               x = paste0('Estimate universe is nondependent tax units, including nonfilers.', 
                          '"Income" is measured as AGI plus: above-the-line deductions, ', 
                          'nontaxable interest, nontaxable pension income (including OASI ',
@@ -330,27 +372,27 @@ format_table = function(dist_metrics, wb, year, group_var) {
     
     # Format numbers and cells 
     addStyle(wb         = wb, 
-             sheet      = as.character(year), 
+             sheet      = sheet_name, 
              rows       = 3:11, 
              cols       = c(4, 6, 8, 9), 
              gridExpand = T, 
              style      = createStyle(numFmt = 'PERCENTAGE'))
     addStyle(wb         = wb, 
-             sheet      = as.character(year), 
+             sheet      = sheet_name, 
              rows       = 3:11, 
              cols       = c(2, 3, 5, 7), 
              gridExpand = T, 
              style      = createStyle(numFmt = 'COMMA'), 
              stack      = T)
     addStyle(wb         = wb, 
-             sheet      = as.character(year), 
+             sheet      = sheet_name, 
              rows       = c(1, 2, 11), 
              cols       = 1:9, 
              gridExpand = T, 
              style      = createStyle(border = 'bottom'), 
              stack      = T)
     addStyle(wb         = wb, 
-             sheet      = as.character(year), 
+             sheet      = sheet_name, 
              rows       = 2, 
              cols       = 1:9, 
              gridExpand = T, 
@@ -358,14 +400,14 @@ format_table = function(dist_metrics, wb, year, group_var) {
                                       wrapText       = T), 
              stack      = T)
     addStyle(wb         = wb, 
-             sheet      = as.character(year), 
+             sheet      = sheet_name, 
              rows       = 2:11, 
              cols       = 1:9, 
              gridExpand = T, 
              style      = createStyle(halign = 'center'), 
              stack      = T)
     addStyle(wb         = wb, 
-             sheet      = as.character(year), 
+             sheet      = sheet_name, 
              rows       = 12, 
              cols       = 1:9, 
              gridExpand = T, 
@@ -375,11 +417,11 @@ format_table = function(dist_metrics, wb, year, group_var) {
                                       wrapText       = T), 
              stack      = T)
     mergeCells(wb    = wb, 
-               sheet = as.character(year), 
+               sheet = sheet_name, 
                rows  = 12:13, 
                cols  = 1:9)
-    setColWidths(wb    = wb, 
-                 sheet  = as.character(year), 
+    setColWidths(wb     = wb, 
+                 sheet  = sheet_name, 
                  cols   = 1:9, 
                  widths = c(15, 8, 11, 11, 11, 11, 11, 15, 12))
   
@@ -396,7 +438,7 @@ format_table = function(dist_metrics, wb, year, group_var) {
         pct_chg_ati = if_else(row_number() == 1, NA, pct_chg_ati),
         avg_cut     = if_else(is.nan(avg_cut) | round(share_cut, 4) == 0, NA, avg_cut),
         avg_raise   = if_else(is.nan(avg_raise) | round(avg_raise, 4) == 0, NA, avg_raise),
-        share_total = if_else(is.nan(share_total), NA, share_total)
+        share_total = if_else(is.nan(share_total) | financing != 'none', NA, share_total)
       ) %>%
 
       # Format names
@@ -411,12 +453,14 @@ format_table = function(dist_metrics, wb, year, group_var) {
              `Share of total tax change`          = share_total)
 
     # Add worksheet and table to workbook
-    writeData(wb = wb, sheet = as.character(year), x = dist_table, startRow = 16)
+    writeData(wb = wb, sheet = sheet_name, x = dist_table, startRow = 16)
 
     # Add titles and notes
-    writeData(wb = wb, sheet = as.character(year), startRow = 15,
-              x = paste0('Distributional impact of policy change by age group, ', year))
-    writeData(wb = wb, sheet = as.character(year), startRow = 23,
+    title = paste0('Distributional impact of policy change by age group, ', year, 
+                   ', assuming ', financing_description)
+    writeData(wb = wb, sheet = sheet_name, startRow = 15,
+              x = title)
+    writeData(wb = wb, sheet = sheet_name, startRow = 23,
               x = paste0('Estimate universe is nondependent tax units, including nonfilers.',
                          '"Income" is measured as AGI plus: above-the-line deductions, ',
                          'nontaxable interest, nontaxable pension income (including OASI ',
@@ -428,27 +472,27 @@ format_table = function(dist_metrics, wb, year, group_var) {
 
     # Format numbers and cells
     addStyle(wb         = wb,
-             sheet      = as.character(year),
+             sheet      = sheet_name,
              rows       = 17:22,
              cols       = c(2, 4, 6, 8, 9),
              gridExpand = T,
              style      = createStyle(numFmt = 'PERCENTAGE'))
     addStyle(wb         = wb,
-             sheet      = as.character(year),
+             sheet      = sheet_name,
              rows       = 17:22,
              cols       = c(3, 5, 7),
              gridExpand = T,
              style      = createStyle(numFmt = 'COMMA'),
              stack      = T)
     addStyle(wb         = wb,
-             sheet      = as.character(year),
+             sheet      = sheet_name,
              rows       = c(15, 16, 22),
              cols       = 1:9,
              gridExpand = T,
              style      = createStyle(border = 'bottom'),
              stack      = T)
     addStyle(wb         = wb,
-             sheet      = as.character(year),
+             sheet      = sheet_name,
              rows       = 16,
              cols       = 1:9,
              gridExpand = T,
@@ -456,14 +500,14 @@ format_table = function(dist_metrics, wb, year, group_var) {
                                       wrapText       = T),
              stack      = T)
     addStyle(wb         = wb,
-             sheet      = as.character(year),
+             sheet      = sheet_name,
              rows       = 16:22,
              cols       = 1:9,
              gridExpand = T,
              style      = createStyle(halign = 'center'),
              stack      = T)
     addStyle(wb         = wb,
-             sheet      = as.character(year),
+             sheet      = sheet_name,
              rows       = 23,
              cols       = 1:9,
              gridExpand = T,
@@ -473,11 +517,11 @@ format_table = function(dist_metrics, wb, year, group_var) {
                                       wrapText       = T),
              stack      = T)
     mergeCells(wb    = wb,
-               sheet = as.character(year),
+               sheet = sheet_name,
                rows  = 23:24,
                cols  = 1:9)
     setColWidths(wb    = wb,
-                 sheet  = as.character(year),
+                 sheet  = sheet_name,
                  cols   = 1:9,
                  widths = c(15, 8, 11, 11, 11, 11, 11, 15, 12))
   }

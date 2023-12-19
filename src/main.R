@@ -84,8 +84,8 @@ if (stacked == 1) {
 }
 
 # Generate distributional estimates
-build_distribution_tables(counterfactual_ids)
+build_all_distribution_tables(counterfactual_ids)
 if (stacked == 1) {
-  build_stacked_distribution_tables(counterfactual_ids)
+  build_all_stacked_distribution_tables(counterfactual_ids)
 }
 
