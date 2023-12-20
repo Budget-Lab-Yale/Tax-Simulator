@@ -65,7 +65,12 @@ calc_niit = function(tax_unit, fill_missings = FALSE) {
       
       # Calculate net investment income
       nii = pmax(0, txbl_int + div_ord + div_pref + txbl_kg + sch_e - 
-                    net_active_ded - inv_int_item_ded)
+                    net_active_ded - inv_int_item_ded),
+      
+      # TEMP: scale down by a factor to match actuals. This is a rough
+      # calibration factor to reflect gaps in the tax base not easily extractable 
+      # from PUF data. A future version will model these differences more fundamentally.
+      nii = nii * 0.7
     
     ) %>%
     

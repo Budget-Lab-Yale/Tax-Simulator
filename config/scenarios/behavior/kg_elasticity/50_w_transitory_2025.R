@@ -20,7 +20,7 @@ do_kg_elasticity = function(tax_units, ...) {
   
   # Apply elasticities and calculate new values
   new_values = tax_units %>% 
-    mutate(e_kg_lt      = if_else(year == 2026, e_transitory, e_permanent), 
+    mutate(e_kg_lt      = if_else(year == 2025, e_transitory, e_permanent), 
            e_kg_lt_type = 'semi') %>% 
     apply_mtr_elasticity('kg_lt', baseline_mtrs, static_mtrs, 1)
 
