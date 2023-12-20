@@ -17,11 +17,11 @@ list.files('./src', recursive = T) %>%
   walk(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
 
 # cmd line args TODO
-runscript_name   = 'hoh_test' 
+runscript_name   = 'clausing_sarin' 
 user_id          = 'jar335'
 local            = 1
 vintage          = NULL
-pct_sample       = 1
+pct_sample       = 0.05
 stacked          = 1
 baseline_vintage = NULL
 

@@ -1,0 +1,7 @@
+---
+
+# Whether whether active earnings of pass-through businesses are subject to the NIIT
+include_active:
+  value: 
+    '2014': 0
+    '2025': 1

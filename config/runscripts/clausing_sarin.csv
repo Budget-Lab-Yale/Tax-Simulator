@@ -6,4 +6,8 @@ baseline,2023121117,baseline,2023121116,baseline,baseline,,2017,2034,kg_lt
 04-ctc,2023121117,baseline,2023121116,baseline,policy_runs/tcja_ext/clausing_sarin/04-ctc,,2017,2034,kg_lt
 05-item,2023121117,baseline,2023121116,baseline,policy_runs/tcja_ext/clausing_sarin/05-item,,2017,2034,kg_lt
 06-amt,2023121117,baseline,2023121116,baseline,policy_runs/tcja_ext/clausing_sarin/06-amt,,2017,2034,kg_lt
-07-kg,2023121117,baseline,2023121116,baseline,policy_runs/tcja_ext/clausing_sarin/07-kg,kg_lt/50_2026_withtrans,2017,2034,kg_lt
+07-carryover,2023121117,baseline,2023121116,baseline,policy_runs/tcja_ext/clausing_sarin/07-carryover,carryover_basis/5,2017,2034,kg_lt
+08-kg,2023121117,baseline,2023121116,baseline,policy_runs/tcja_ext/clausing_sarin/08-kg,carryover_basis/5 kg_elasticity/50_w_transitory_2025,2017,2034,kg_lt
+09-niit,2023121117,baseline,2023121116,baseline,policy_runs/tcja_ext/clausing_sarin/09-niit,carryover_basis/5 kg_elasticity/50_w_transitory_2025,2017,2034,kg_lt
+10-eitc,2023121117,baseline,2023121116,baseline,policy_runs/tcja_ext/clausing_sarin/10-eitc,carryover_basis/5 kg_elasticity/50_w_transitory_2025,2017,2034,kg_lt
+11-ctc,2023121117,baseline,2023121116,baseline,policy_runs/tcja_ext/clausing_sarin/11-ctc,carryover_basis/5 kg_elasticity/50_w_transitory_2025,2017,2034,kg_lt
