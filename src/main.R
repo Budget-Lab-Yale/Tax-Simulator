@@ -8,6 +8,7 @@
 # Configure simulator
 #---------------------
 
+
 # Load required packages
 lapply(readLines('./requirements.txt'), library, character.only = T)
 
@@ -16,14 +17,15 @@ return_vars = list()
 list.files('./src', recursive = T) %>% 
   walk(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
 
-# cmd line args TODO
-runscript_name   = 'clausing_sarin' 
-user_id          = 'jar335'
-local            = 1
-vintage          = NULL
-pct_sample       = 0.05
-stacked          = 1
-baseline_vintage = NULL
+# Parse command line arguments
+args             = commandArgs()
+runscript_name   = args[1] # 'baseline'
+user_id          = args[2] # 'jar335' 
+local            = args[3] # 0 
+vintage          = args[4] # NULL       
+pct_sample       = args[5] # 1
+stacked          = args[6] # 1
+baseline_vintage = args[7] # NULL
 
 # Set global (scenario-independent) variables
 globals = parse_globals(runscript_name   = runscript_name, 
