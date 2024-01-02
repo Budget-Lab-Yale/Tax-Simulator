@@ -8,14 +8,18 @@
 create_1040_reports = function(counterfactual_ids) {
   
   #----------------------------------------------------------------------------
-  # Builds human-readable 1040 output Excel files for baseline and 
-  # any counterfactual policies specified. 
+  # Builds human-readable 1040 output Excel files for any counterfactual 
+  # policies specified. 
   # 
   # Parameters:
   #   - counterfactual_ids (str[]) : scenario IDs for which to generate report  
   #
   # Returns: void (writes the Excel file)
   #----------------------------------------------------------------------------
+  
+  if (length(counterfactual_ids) == 0) { 
+    return()  
+  }
   
   # Read and process baseline 
   baseline = file.path(globals$output_root, 
@@ -277,6 +281,9 @@ create_stacked_1040_reports = function(counterfactual_ids) {
   # Returns: void (writes the Excel file)
   #----------------------------------------------------------------------------
   
+  if (length(counterfactual_ids) == 0) {
+    return()
+  }
   
   # Read data
   stacked_1040_data = list()
