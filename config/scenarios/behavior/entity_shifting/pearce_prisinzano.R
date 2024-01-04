@@ -1,17 +1,21 @@
 do_entity_shifting = function(tax_units, ...) { 
   
   #----------------------------------------------------------------------------
-  # TODO 
+  # Models business income shifting across entity type as a function of 
+  # the tax differential between corporate and pass-through taxation. Based on
+  # Pearce and Prisinzano (2018) working paper. Assumptions are detailed below.
   # 
   # Parameters: 
   #   - tax_units (df) : tibble of tax units with calculated variables
   #
-  # Returns: TODO
+  # Returns: tax units dataframe, with updated values for active partnership 
+  #          income and long-term capital gains, and with the implied 
+  #          corporate tax change attributable to shifting.
   #----------------------------------------------------------------------------
   
   # Set semi elasticity, starting with Pearce and Prisinzano's Table IV.B preferred 
   # results, evaluated at pass-through's share of business income 
-  e = -0.3788 / 0.6
+  e = 0.3788 / 0.6
   
   # Set other parameters -- assuming 45% of distributions are paid as 
   # dividends and the ETR on gains, reflecting the "benefit of deferral", is 
@@ -24,8 +28,9 @@ do_entity_shifting = function(tax_units, ...) {
   # Read baseline tax law and extract corporate rate
   corp.rate_baseline = globals$baseline_root %>% 
     file.path('baseline/static/supplemental/tax_law.csv') %>% 
-    read_csv() %>% 
-    select(year, corp.rate_baseline = corp.rate_baseline)
+    read_csv(show_col_types = F) %>% 
+    select(year, corp.rate_baseline = corp.rate) %>% 
+    distinct()
   
 
   new_values = tax_units %>% 
@@ -46,8 +51,8 @@ do_entity_shifting = function(tax_units, ...) {
       # on corporate distributions. For computational convenience we assume the 
       # tax rate faced by dividends and capital gains is the same; this 
       # formulation is not robust to a pre-Bush-style rate differential 
-      tau_dist_policy   = (alpha * mtr_kg_lt)          + ((1 - alpha) * beta * mtr_kg_lt),
-      tau_dist_baseline = (alpha * mtr_kg_lt_baseline) + ((1 - alpha) * beta * mtr_kg_lt_baseline),
+      tau_dist_policy   = mtr_kg_lt          * (alpha + (1 - alpha) * beta),
+      tau_dist_baseline = mtr_kg_lt_baseline * (alpha + (1 - alpha) * beta),
       
       # Next, the net corporate rate
       tau_corp_policy   = corp.rate          + (1 - corp.rate) * tau_dist_policy, 
@@ -62,7 +67,11 @@ do_entity_shifting = function(tax_units, ...) {
       delta_tau_tau = (tau_corp_policy - tau_pass_policy) - (tau_corp_baseline - tau_pass_baseline),
       
       # Calculate implied shifting of business income into pass-through
-      amount_shifted = part_active * e * delta_tau_tau,
+      percent_shifted = e * delta_tau_tau,
+      amount_shifted  = pmax(0, part_active + part_passive - part_active_loss - 
+                                part_passive_loss - part_179 + scorp_active + 
+                                scorp_passive - scorp_active_loss - scorp_passive_loss - 
+                                scorp_179 + sole_prop) * percent_shifted,
       
       # Adjust pass-through income
       part_active = part_active + amount_shifted,
@@ -74,10 +83,9 @@ do_entity_shifting = function(tax_units, ...) {
       kg_lt = kg_lt - (amount_shifted * (alpha + (1 - alpha) * beta)),
       
       # Calculate implied change in corporate tax revenue
-      corp_tax_change = -amount_shifted * (corp.rate - corp.rate_baseline)
+      corp_tax_change = -amount_shifted * corp.rate
       
     ) %>%
-    
     select(part_active, kg_lt, corp_tax_change)
   
   # Replace old values with new and return

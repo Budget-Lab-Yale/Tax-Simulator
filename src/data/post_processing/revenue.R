@@ -47,15 +47,18 @@ calc_receipts = function(totals, scenario_root) {
       
       revenues_payroll_tax = 0.75 * pmt_pr_withheld + 
                              0.25 * lag(pmt_pr_withheld) + 
-                             pmt_pr_nonwithheld
-    
+                             pmt_pr_nonwithheld,
+      
+      delta_revenues_corporate_tax = 0.75 * corp_tax_change +
+                                     0.25 * lag(corp_tax_change)
     ) %>%
     
     # Drop incomplete year
     filter(year != min(year)) %>%
     
     # Write CSV
-    select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits) %>%
+    select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits, 
+           delta_revenues_corporate_tax) %>%
     write_csv(file.path(scenario_root, 'totals', 'receipts.csv'))
 
 }
@@ -94,7 +97,10 @@ calc_rev_est = function(counterfactual_ids) {
     read_csv(show_col_types = F) %>%
     
     # Pivot long in variable type
-    mutate(total = revenues_payroll_tax + revenues_income_tax - outlays_tax_credits) %>% 
+    mutate(total = revenues_payroll_tax + 
+                   revenues_income_tax - 
+                   outlays_tax_credits + 
+                   delta_revenues_corporate_tax) %>% 
     pivot_longer(cols      = -year, 
                  names_to  = 'series', 
                  values_to = 'baseline')
@@ -114,7 +120,10 @@ calc_rev_est = function(counterfactual_ids) {
         read_csv(show_col_types = F) %>%
         
         # Pivot long in variable type
-        mutate(total = revenues_payroll_tax + revenues_income_tax - outlays_tax_credits) %>% 
+        mutate(total = revenues_payroll_tax + 
+                       revenues_income_tax - 
+                       outlays_tax_credits + 
+                       delta_revenues_corporate_tax) %>% 
         pivot_longer(cols      = -year, 
                      names_to  = 'series', 
                      values_to = 'counterfactual')
@@ -145,7 +154,8 @@ calc_rev_est = function(counterfactual_ids) {
           Series == 'total' ~ 'Total budget effect', 
           Series == 'revenues_payroll_tax' ~ '  Revenues, payroll tax', 
           Series == 'revenues_income_tax' ~ '  Revenues, individual income tax', 
-          Series == 'outlays_tax_credits' ~ '  Outlays, refundable tax credits'
+          Series == 'outlays_tax_credits' ~ '  Outlays, refundable tax credits',
+          Series == 'delta_revenues_corporate_tax' ~ '  Revenues, corporate income tax'
         )) %>%
         arrange(Measure, desc(Series)) 
       
@@ -165,42 +175,42 @@ calc_rev_est = function(counterfactual_ids) {
       writeData(wb = wb, sheet = scenario_id, startRow = 1, 
                 x = 'FY budget effects of policy change, nominal dollars')
       
-      writeData(wb = wb, sheet = scenario_id, x = rev_est$`Share of GDP`, startRow = 9)
-      writeData(wb = wb, sheet = scenario_id, startRow = 8, 
+      writeData(wb = wb, sheet = scenario_id, x = rev_est$`Share of GDP`, startRow = 10)
+      writeData(wb = wb, sheet = scenario_id, startRow = 9, 
                 x = 'FY budget effects of policy change, share of GDP')
       
       # Format numbers and cells 
       addStyle(wb         = wb, 
                sheet      = scenario_id, 
-               rows       = 2:6, 
+               rows       = 2:7, 
                cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(numFmt = 'COMMA'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = scenario_id, 
-               rows       = 9:13, 
+               rows       = 9:15, 
                cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(numFmt = 'PERCENTAGE'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = scenario_id, 
-               rows       = c(1, 2, 6, 8, 9, 13), 
+               rows       = c(1, 2, 7, 9, 10, 15), 
                cols       = 1:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(border = 'bottom'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = scenario_id, 
-               rows       = c(2, 9), 
+               rows       = c(2, 10), 
                cols       = 1:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(textDecoration = 'bold'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = scenario_id, 
-               rows       = 2:13, 
+               rows       = 2:15, 
                cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(halign = 'center'), 
@@ -261,7 +271,10 @@ calc_stacked_rev_est = function(counterfactual_ids) {
                            'receipts.csv') %>% 
             read_csv(show_col_types = F) %>% 
             mutate(scenario_id = .x,
-                   total = revenues_payroll_tax + revenues_income_tax - outlays_tax_credits) %>% 
+                   total = revenues_payroll_tax + 
+                           revenues_income_tax - 
+                           outlays_tax_credits + 
+                           delta_revenues_corporate_tax) %>% 
             select(scenario_id, year, total)) %>% 
       
       # Join into single dataframe and group by year-series so as to leave 

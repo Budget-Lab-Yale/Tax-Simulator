@@ -115,7 +115,8 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
     'pmt_iit_nonwithheld', 
     'pmt_iit_withheld', 
     'pmt_refund_nonwithheld', 
-    'pmt_refund_withheld'
+    'pmt_refund_withheld', 
+    'corp_tax_change'
   )
   
   

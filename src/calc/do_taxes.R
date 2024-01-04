@@ -115,9 +115,9 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
   }
 
 
-  #--------------------
-  # Add reporting vars 
-  #--------------------
+  #----------------
+  # Add other vars 
+  #----------------
   
   # Expanded income metric for distributional tables: gross realized income 
   # plus employer's share of payroll taxes
@@ -128,6 +128,15 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
                           other_gains + alimony + sole_prop + sch_e + farm + 
                           gross_ss + ui + other_inc + salt_workaround_part + 
                           salt_workaround_scorp + liab_pr_er)
+  
+  # Set "corporate tax change", a variable used to measure the off-model 
+  # corporate tax revenue changes owing to business entity shifting, to 0 if 
+  # not running business entity shifting behavioral feedback
+  if (!('corp_tax_change' %in% colnames(tax_units))) {
+    tax_units %<>% 
+      mutate(corp_tax_change = 0)
+  }
+  
   
   
   #----------------
