@@ -80,6 +80,11 @@ calc_rev_est = function(counterfactual_ids) {
   #   - Refundable Credit Outlays
   #----------------------------------------------------------------------------
 
+  if (length(counterfactual_ids) == 0) {
+    return()
+  }
+  
+  
   # Read in baseline receipts
   baseline = file.path(globals$baseline_root, 
                        'baseline', 
@@ -239,6 +244,10 @@ calc_stacked_rev_est = function(counterfactual_ids) {
   #   - Refundable Credit Outlays
   #   
   #----------------------------------------------------------------------------
+  
+  if (length(counterfactual_ids) == 0) {
+    return()
+  }
   
   for (static in c(T, F)) {
     

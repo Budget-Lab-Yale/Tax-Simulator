@@ -1,0 +1,67 @@
+---
+
+# Years after which mortgage interest deduction is limited based on mortgage balance. Maps to mort_bal_limit 
+mort_bal_limit_years:
+  value: 
+    '2014': [1987, Inf]
+    '2018': [1987, 2017, Inf]
+
+# Limitations on deductible mortgage interest based on mortgage balance, single filers
+mort_bal_limit_single:
+  value:
+    '2014': [Inf, 1000000]
+    '2018': [Inf, 1000000, 375000]
+
+# Limitations on deductible mortgage interest based on mortgage balance, joint filers
+mort_bal_limit_married:
+  value:
+    '2014': [Inf, 1000000]
+    '2018': [Inf, 1000000, 750000]
+
+# Limitations on deductible mortgage interest based on mortgage balance, married filing separately filers
+mort_bal_limit_mfs:
+  value:
+    '2014': [Inf, 500000]
+    '2018': [Inf, 500000, 375000]
+
+# Maximum deductible casualty and loss expenses
+casualty_limit:
+  value: 
+    '2014': Inf
+    '2018': 0
+    
+# Maximum deductible "miscellanous" itemized deductions
+misc_limit:
+  value:
+    '2014': Inf
+    '2018': 0
+
+# AGI threshold above which itemized deductions are limited under Pease, single filers
+pease_thresh_single:
+  value:
+    '2014': 250000
+    '2018': Inf
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+
+# AGI threshold above which itemized deductions are limited under Pease, joint filers  
+pease_thresh_married:
+  value:
+    '2014': 300000
+    '2018': Inf
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default  
+ 
+# AGI threshold above which itemized deductions are limited under Pease, head-of-household filers
+pease_thresh_head:
+  value:
+    '2014': 275000
+    '2018': Inf
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default

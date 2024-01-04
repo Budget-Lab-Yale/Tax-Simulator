@@ -287,6 +287,10 @@ build_all_stacked_distribution_tables = function(counterfactual_ids) {
   # Returns: void.
   #----------------------------------------------------------------------------
   
+  if (length(counterfactual_ids) == 0) {
+    return()
+  }
+  
   scenario_ids = c('baseline', counterfactual_ids)
   for (i in 2:length(scenario_ids)) { 
     build_distribution_tables(id          = scenario_ids[i], 
