@@ -1,7 +1,10 @@
 #-----------------------------------------------------
 # generate_params.R 
 #
+# Generates combinations of tax law parameter files
 # TODO 
+# - actually do all combos
+# - figure out what to do with behavior and other runscript options
 #-----------------------------------------------------
 
 library(tidyverse)
@@ -14,7 +17,15 @@ library(yaml)
 # Project name 
 project_name = 'tcja_simulator'
 
-# 
+# Run script defaults
+tax_data_vintage          = 2023121117
+tax_data_id               = 'baseline'
+macro_projections_vintage = 2023121116 
+macro_projections_id      = 'baseline'
+behavior                  = NA
+first_year                = 2023 
+last_year                 = 2033
+mtr_vars                  = NA
 
 
 #---------------------
@@ -69,7 +80,7 @@ param_map %>%
 
 
 #--------------------------
-# Build sets of parameters
+# Build tax law parameters
 #--------------------------
 
 # Define helper function to add YAML to master list 
@@ -108,8 +119,8 @@ for (i in 1:length(param_map_list)) {
     )
   }
   
-  # Write all files to 
-  scenario_root = file.path(project_root_output, i)
+  # Write all files 
+  scenario_root = file.path(project_root_output, 'tax_law', i)
   dir.create(scenario_root, showWarnings = F)
   for (file_name in names(yaml_files)) {
     write_yaml(
@@ -119,5 +130,30 @@ for (i in 1:length(param_map_list)) {
   }
 }
 
+
+#------------------
+# Build runscripts
+#------------------
+
+# Initialize template
+runscript_template = tibble(
+  ID                              = NA, 
+  `dep.Tax-Data.vintage`          = tax_data_vintage, 
+  `dep.Tax-Data.ID`               = tax_data_id,
+  `dep.Macro-Projections.version` = macro_projections_vintage,
+  `dep.Macro-Projections.ID`      = macro_projections_id,
+  tax_law                         = NA,
+  behavior                        = behavior,
+  first_year                      = first_year, 
+  last_year                       = last_year, 
+  mtr_vars                        = mtr_vars
+)
+
+# Loop over scenarios, create runscript, and write
+for (i in 1:length(param_map_list)) {
+  runscript_template %>% 
+    mutate(ID = i, tax_law = i) %>% 
+    write_csv(file.path(project_root_output, 'runscripts', paste0(i, '.csv')))
+}
 
 
