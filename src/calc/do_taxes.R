@@ -115,9 +115,9 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
   }
 
 
-  #--------------------
-  # Add reporting vars 
-  #--------------------
+  #----------------
+  # Add other vars 
+  #----------------
   
   # Expanded income metric for distributional tables: gross realized income 
   # plus employer's share of payroll taxes
@@ -128,6 +128,15 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
                           other_gains + alimony + sole_prop + sch_e + farm + 
                           gross_ss + ui + other_inc + salt_workaround_part + 
                           salt_workaround_scorp + liab_pr_er)
+  
+  # Set "corporate tax change", a variable used to measure the off-model 
+  # corporate tax revenue changes owing to business entity shifting, to 0 if 
+  # not running business entity shifting behavioral feedback
+  if (!('corp_tax_change' %in% colnames(tax_units))) {
+    tax_units %<>% 
+      mutate(corp_tax_change = 0)
+  }
+  
   
   
   #----------------
@@ -370,12 +379,7 @@ remit_taxes = function(tax_units) {
 calc_mtrs = function(tax_units, baseline_pr_er, liab_baseline, var) {
   
   #----------------------------------------------------------------------------
-  # Calculates next-dollar MTR with respect to given variable, as represented 
-  # by a vector of variables. Allows for several variables to be incremented 
-  # because some variables on the PUF aggregate to other variables. For 
-  # example, the PUF includes "div" (dividends), of which "qual_div" is a
-  # a part. So if we wanted to calculate the MTR with respect to "qual_div",
-  # we also have to increment "div".
+  # Calculates next-dollar MTR with respect to given variable.
   # 
   # Parameters:
   #   - tax_units (df)        : tibble of tax units, exogenous variables only
@@ -403,7 +407,6 @@ calc_mtrs = function(tax_units, baseline_pr_er, liab_baseline, var) {
   if (var %in% c('part_active', 'part_active_loss')) {
     vars = c(var, 'part_se1')
   }
-  
   
   # OK, now calculate MTRs
   tax_units %>% 

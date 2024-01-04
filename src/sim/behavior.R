@@ -76,6 +76,7 @@ apply_mtr_elasticity = function(tax_units, var, baseline_mtrs, static_mtrs, max_
   # Returns: tibble with one column for the post-adjustment variable
   #----------------------------------------------------------------------------
   
+  
   tax_units %>%
   
     # Join MTRs

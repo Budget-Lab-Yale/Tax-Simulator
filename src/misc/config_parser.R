@@ -75,7 +75,7 @@ parse_globals = function(runscript_name, user_id, local, vintage,
 
   # Determine and create directory for model output
   output_branch = file.path('Tax-Simulator', paste0('v', version), vintage)
-  output_root   = file.path(output_roots$production, 'model_data ', output_branch)
+  output_root   = file.path(output_roots$production, 'model_data', output_branch)
   if (local == 1) {
     output_root = file.path(output_roots$local, user_id, output_branch)
   }

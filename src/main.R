@@ -19,7 +19,7 @@ list.files('./src', recursive = T) %>%
 
 # Parse command line arguments
 args             = commandArgs()
-runscript_name   = 'baseline/baseline'
+runscript_name   = 'tests/entity_shifting'
 user_id          = 'jar335' 
 local            = 0 
 vintage          = NULL       
