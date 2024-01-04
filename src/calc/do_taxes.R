@@ -370,12 +370,7 @@ remit_taxes = function(tax_units) {
 calc_mtrs = function(tax_units, baseline_pr_er, liab_baseline, var) {
   
   #----------------------------------------------------------------------------
-  # Calculates next-dollar MTR with respect to given variable, as represented 
-  # by a vector of variables. Allows for several variables to be incremented 
-  # because some variables on the PUF aggregate to other variables. For 
-  # example, the PUF includes "div" (dividends), of which "qual_div" is a
-  # a part. So if we wanted to calculate the MTR with respect to "qual_div",
-  # we also have to increment "div".
+  # Calculates next-dollar MTR with respect to given variable.
   # 
   # Parameters:
   #   - tax_units (df)        : tibble of tax units, exogenous variables only
@@ -403,7 +398,6 @@ calc_mtrs = function(tax_units, baseline_pr_er, liab_baseline, var) {
   if (var %in% c('part_active', 'part_active_loss')) {
     vars = c(var, 'part_se1')
   }
-  
   
   # OK, now calculate MTRs
   tax_units %>% 

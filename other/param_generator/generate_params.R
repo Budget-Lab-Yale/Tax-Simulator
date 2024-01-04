@@ -2,9 +2,6 @@
 # generate_params.R 
 #
 # Generates combinations of tax law parameter files
-# TODO 
-# - actually do all combos
-# - figure out what to do with behavior and other runscript options
 #-----------------------------------------------------
 
 library(tidyverse)
