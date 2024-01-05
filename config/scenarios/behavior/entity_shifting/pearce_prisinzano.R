@@ -7,6 +7,9 @@ do_entity_shifting = function(tax_units, ...) {
   # 
   # Parameters: 
   #   - tax_units (df) : tibble of tax units with calculated variables
+  #   - baseline_mtrs (df) : year-id indexed tibble of MTRs under the baseline
+  #   - static_mtrs (df)   : year-id indexed tibble of MTRs under the static
+  #                          counterfactual scenario
   #
   # Returns: tax units dataframe, with updated values for active partnership 
   #          income and long-term capital gains, and with the implied 

@@ -1,4 +1,4 @@
-do_kg_elasticity = function(tax_units, ...) { 
+do_kg = function(tax_units, ...) { 
   
   #----------------------------------------------------------------------------
   # Adjusts capital gains at the intensive margin using an elasticity of 

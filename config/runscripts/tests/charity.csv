@@ -1,0 +1,3 @@
+ID,dep.Tax-Data.vintage,dep.Tax-Data.ID,dep.Macro-Projections.vintage,dep.Macro-Projections.ID,tax_law,behavior,first_year,last_year,mtr_vars
+baseline,2023121117,baseline,2023121116,baseline,baseline,,2023,2033,char_cash wages
+2_pp,2023121117,baseline,2023121116,baseline,tests/charity,charity/20,2023,2033,char_cash wages
