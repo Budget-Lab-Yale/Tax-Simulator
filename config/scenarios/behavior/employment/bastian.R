@@ -50,8 +50,11 @@ do_employment = function(tax_units, ...) {
         # All other mothers with family income below $80,000 
         (gender1 == 1) & (n_dep_ctc > 0) & (income < 80000) ~ e_mothers_other, 
         
+        # Others below $80,000
+        (income < 80000 & n_dep_ctc > 0) ~ e_else
+        
         # Everyone else
-        TRUE ~ e_else
+        TRUE ~ 0
       ),
       
       # Second earner
@@ -63,8 +66,11 @@ do_employment = function(tax_units, ...) {
         # All other mothers with family income below $80,000 
         (gender2 == 1) & (n_dep_ctc > 0) & (income < 80000) ~ e_mothers_other, 
         
+        # Others below $80,000
+        (income < 80000 & n_dep_ctc > 0) ~ e_else
+        
         # Everyone else
-        TRUE ~ e_else
+        TRUE ~ 0
       ),
       
       
@@ -76,8 +82,8 @@ do_employment = function(tax_units, ...) {
       delta_rtw1 = ((1 - mtr_wages1) - (1 - mtr_wages1_baseline)) / (1 - mtr_wages1_baseline),
       delta_rtw2 = ((1 - mtr_wages2) - (1 - mtr_wages2_baseline)) / (1 - mtr_wages2_baseline),
       
-      # Calculate probability of remaining employed defined as 1 
-      # plus the implied percent change in employment 
+      # Calculate probability of remaining employed defined as 1 plus the 
+      # implied percent change in employment 
       pr_emp1 = 1 + (e1 * delta_rtw1),
       pr_emp2 = 1 + (e2 * delta_rtw2),
       

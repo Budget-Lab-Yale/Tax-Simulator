@@ -44,12 +44,12 @@ One column is called "behavior". This is where you list the names of behavioral 
 
 For example, let's say I wanted to run a policy experiment where I raised ordinary tax rates by 2 percentage points, a policy which increases the implicit tax subsidy for charitable contributions, and account for the reforms' impact on contributions. I want to assume an elasticity of -1 under the functional form contained in the */charity/100.R* module. I would specify the following runscript (extraneous columns are left hidden):
 
-| ID       | ... | tax_law            | behavior    | ... | mtr_vars  |
-|----------|-----|--------------------|-------------|-----|-----------|
-| baseline | ... | baseline           |             | ... | char_cash |
-| 2_pp     | ... | tests/charity/2_pp | charity/100 | ... | char_cash |
+| ID       | ... | tax_law            | behavior    | ... | mtr_vars  | mtr_type   |
+|----------|-----|--------------------|-------------|-----|-----------|------------|
+| baseline | ... | baseline           |             | ... | char_cash | nextdollar |
+| 2_pp     | ... | tests/charity/2_pp | charity/100 | ... | char_cash | nextdollar |
 
-The "behavior" attribute is left blank for the baseline scenario, since behavioral feedback is a concept that applies only to counterfactual reforms. For the reform scenario, titled "2_pp", I specify *charity/100* which tells Tax-Simulator to execute the code contained in the 100.R module when running this scenario. Because the code contained in 100.R module depends on knowing the marginal tax rate on cash contributions (variable "char_cash" in the data) current current law and under the reform, I include *char_cash* as in column "mtr_vars", which tells Tax-Simulator to compute the EMTR on whatever variables are specified. If my behavioral feedback module did not depend on any EMTR calculations, I could leave this column blank.
+The "behavior" attribute is left blank for the baseline scenario, since behavioral feedback is a concept that applies only to counterfactual reforms. For the reform scenario, titled "2_pp", I specify *charity/100* which tells Tax-Simulator to execute the code contained in the 100.R module when running this scenario. Because the code contained in 100.R module depends on knowing the marginal tax rate on cash contributions (variable "char_cash" in the data) current current law and under the reform, I include *char_cash* as in column "mtr_vars" and in the column "mtr_type", which tells Tax-Simulator to compute the next-dollar EMTR on whatever variables are specified. (The other option for "mtr_type" is *extensive*, in which the average effective tax rate over the realized value is calculated by setting the value to \$0.) If my behavioral feedback module did not depend on any EMTR calculations, I could leave this column blank.
 
 ## Module structure
 
@@ -90,7 +90,7 @@ Let's make things concrete by reviewing three examples of behavioral feedback mo
 
 By offering an itemized charitable deduction, the tax code subsidizes donations for those who itemize. There is a large body of empirical research measuring the responsiveness of charitable activity to the "tax price" of giving, i.e. the after-tax cost to the taxpayer of a marginal dollar of giving. Let's say we believe the tax price elasticity of charitable giving -- that is, the percent change in charitable contributions for a one percent increase in the tax price --- takes a value of -1. We wish to account the revenue implications of increased giving, and thus increased deductions, as a result of an increase in ordinary tax rates (which lower the tax price of giving). We can write a behavioral feedback module to model this behavior.
 
-One major benefit of microsimulation as a methodological approach is the ability to precisely measure EMTRs on any activity via computation. By adding \$1 to some variable Y for each record, re-calculating taxes, and looking at the change in tax liability, we obtain the EMTR on activity Y. For example, if we add \$1 to an itemizer's charitable contributions, re-calculate their taxes, and their taxes fall by 37 cents, the EMTR on charitable contributions is 0.37 and the tax price of giving is 1 + -0.37 = 0.63. We can calculate this EMTR for all filers under baseline and under the policy reform then use this information in our behavioral feedback calculation.
+One major benefit of microsimulation as a methodological approach is the ability to precisely measure EMTRs on any activity via computation. By adding \$1 to some variable Y for each record, re-calculating taxes, and looking at the change in tax liability, we obtain the *next-dollar* EMTR on activity Y. For example, if we add \$1 to an itemizer's charitable contributions, re-calculate their taxes, and their taxes fall by 37 cents, the next-dollar EMTR on charitable contributions is 0.37 and the tax price of giving is 1 + -0.37 = 0.63. We can calculate this EMTR for all filers under baseline and under the policy reform then use this information in our behavioral feedback calculation.
 
 Here is what a behavior feedback module that leverages EMTRs on charitable contributions looks like:
 
@@ -175,5 +175,25 @@ And we're done! The module has applied the logic in our behavioral feedback modu
 One last note on EMTR elasticity-based behavioral feedback modules. This example was a comparatively crude one: We are applying the same elasticity to all tax units in all years. In real life, elasticities may vary with observative attributes like income (rich people are more concerned with tax optimization). We could just as easily have assigned specific elasticities to different types of records in the `mutate()` call, and the logic afterwards would be unchanged.
 
 ### Employment
+
+The prior module assumed that behavioral responses occur only at the intensive margin: charitable giving was increased or decreased only among those who already gave under the baseline. But many behavioral responses we wish to model are extensive-margin phenomena, in which nonzero values can become zeros and vice versa. Low-income employment and its relationship to tax policy is one such example.
+
+In 2021, the Child Tax Credit (CTC) was expanded such that the credit no longer phased in with earnings --- meaning that the reform increased EMTRs on low-income workers. This reduction in the "return to work" may, via substitution effects, cause some employment loss among marginally attached low-income workers. A partial dynamic budget cost estimate will reflect the budgetary impact of this change in employment, which should reduce payroll taxes and income taxes. We can write a behavioral feedback module to account for this effect in our cost estimate.
+
+Below is a behavioral feedback module implementing the logic and parameters of [Bastian (2023)](file:///C:/Users/jar335/Downloads/Bastian_CTCexpansion_2023.pdf), which simuluates employment loss caused by the 2021 CTC expansion. Bastian calculates a "return-to-work" metric, defined as 1 minus the average effective tax rate on working. By demographic group, he calculates the change in return-to-work caused by the CTC reform and then applies demographic-specific labor supply elasticities to obtain employment loss estimates.
+
+TODO show module
+
+In terms of function inputs, this module uses extensive-margin tax rates --- i.e., average effective tax rates --- on primary-earner wages ("wages1") and, in the case of joint returns, secondary-earner wages ("wages2"). These variables are calculated earlier in Tax-Simulator's execution and are passed to our function in `baseline_mtrs` and `static_mtrs`.
+
+First, we record elasticity values at the top. Then we join our EMTR dataframes into tax units, making sure to distinguish baseline from policy reform variables by renaming the former.
+
+Next, we assign labor supply elasticities to each nondependent adult. As per Tax-Simulator naming convention, primary earner variables are appended with "1" and secondary variables are appended with "2". Before assignment, we calculate a helper variable, income, since elasticities are heterogeneous by demographic and income. The `case_when()` function calls implement Bastian's logic: EITC-qualifying single mothers have an elasticity of 0.4; other mothers with income below \$80K have an elasticity of 0.2; others below \$80K have an elasticity of 0.05; those above \$80K are assumed not to be responsive. The important takeaway from these lines is that we can build highly detailed heterogeneity into our behavioral feedback assumptions.
+
+The next step is to calculate the policy reforms's effect on the return to work, again defined as 1 minus the average effective tax rate (somewhat confusingly stored with an "mtr" prefix per Tax-Simulator convention). We calculate the percent change in this metric for primary and secondary earners.
+
+Applying the labor supply elasticity to this quantity gets us the percent change in employment, which is uninterpretable at the micro level. Instead, we convert the result into a *probability of remaining employed* by adding 1. For example, if the reform reduces someone's return to work by 10%, and we assume a 0.4 labor supply elasticity, we'd say that the percent change in employment is -4%, but the probability of remaining employed is 96%, i.e. $$1 + (-0.1 * 0.4) = 1 - 0.04 = 0.96$$.
+
+At this point, we have employment probabilities for all workers in our data. The final step is to simulate labor force exit using a random number generator. Wages are set to 0 for those who drop out of the labor force, and *viola* --- we're done.
 
 ### Business entity type reclassification
