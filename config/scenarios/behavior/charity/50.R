@@ -15,7 +15,7 @@ do_charity = function(tax_units, ...) {
   #----------------------------------------------------------------------------
   
   # Set elasticity
-  e = -1
+  e = -0.5
   
   # Apply elasticities and calculate new values
   new_values = tax_units %>% 
