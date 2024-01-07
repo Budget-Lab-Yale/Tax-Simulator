@@ -36,7 +36,7 @@ Let's take */charity* as an example. This subfolder contains modules that modify
 
 Critically, both modules contain a functional called `do_charity()`; "charity" in "do_charity" is a keyword which communicates specific information to Tax-Simulator when it looks for functions to execute. A behavioral feedback module in the subfolder */config/scenarios/behavior/X* must contain a function called `do_X()`.
 
-**Configuring the model to execute with specific behavioral feedback modules**
+#### Configuring the model to execute with specific behavioral feedback modules
 
 A *runscript* is a CSV file that defines scenarios for Tax-Simulator to run. Runscripts are located in */config/runscripts*. Every row represents a scenario to run; columns reflect parameter values defining each scenario.
 
@@ -86,7 +86,7 @@ That's not to say there are no out-of-the-box helper functions. Many behavioral 
 
 Let's make things concrete by reviewing three examples of behavioral feedback modules.
 
-#### Charitable giving
+### Charitable giving
 
 By offering an itemized charitable deduction, the tax code subsidizes donations for those who itemize. There is a large body of empirical research measuring the responsiveness of charitable activity to the "tax price" of giving, i.e. the after-tax cost to the taxpayer of a marginal dollar of giving. Let's say we believe the tax price elasticity of charitable giving -- that is, the percent change in charitable contributions for a one percent increase in the tax price --- takes a value of -1. We wish to account the revenue implications of increased giving, and thus increased deductions, as a result of an increase in ordinary tax rates (which lower the tax price of giving). We can write a behavioral feedback module to model this behavior.
 
@@ -174,6 +174,6 @@ And we're done! The module has applied the logic in our behavioral feedback modu
 
 One last note on EMTR elasticity-based behavioral feedback modules. This example was a comparatively crude one: We are applying the same elasticity to all tax units in all years. In real life, elasticities may vary with observative attributes like income (rich people are more concerned with tax optimization). We could just as easily have assigned specific elasticities to different types of records in the `mutate()` call, and the logic afterwards would be unchanged.
 
-#### Employment
+### Employment
 
-#### Business entity type reclassification
+### Business entity type reclassification

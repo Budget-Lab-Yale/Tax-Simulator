@@ -201,6 +201,7 @@ get_scenario_info = function(id) {
   #   - interface_paths (list)   : list of scenario-specific interface paths
   #   - years (int[])            : years to run
   #   - mtr_vars (str[])         : variables to calculate MTRs for
+  #   - mtr_vars (str[])         : MTR types (same index as mtr_vars)
   #   - behavior_modules (str[]) : names of behavioral feedback modules to run
   #----------------------------------------------------------------------------
   
@@ -251,7 +252,13 @@ get_scenario_info = function(id) {
   if (!is.na(runtime_args$mtr_vars)) {
     mtr_vars = str_split_1(runtime_args$mtr_vars, ' ')
   }
-    
+   
+  # Types of MTRs, with same index as MTR vars above
+  mtr_types = NULL
+  if (!is.na(runtime_args$mtr_types)) {
+    mtr_types = str_split_1(runtime_args$mtr_types, ' ')
+  }
+   
   # Return as named list
   return(list(ID               = id,
               output_path      = output_root,
@@ -259,7 +266,8 @@ get_scenario_info = function(id) {
               tax_law_id       = tax_law_id,
               behavior_modules = behavior_modules, 
               years            = years, 
-              mtr_vars         = mtr_vars))
+              mtr_vars         = mtr_vars, 
+              mtr_types        = mtr_types))
 }
 
 
