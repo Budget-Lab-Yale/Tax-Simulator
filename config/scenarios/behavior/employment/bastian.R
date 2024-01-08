@@ -34,8 +34,12 @@ do_employment = function(tax_units, ...) {
 
       # Calculate tax unit-level income (roughly AGI)
       income = wages + txbl_int + div_ord + div_pref + state_ref + 
-               txbl_ira_dist + txbl_pens_dist + txbl_kg + other_gains + 
-               sole_prop + sch_e + farm + ui + gross_ss + other_inc,
+               txbl_ira_dist + txbl_pens_dist + kg_lt + kg_st + other_gains + 
+               sole_prop + part_active + part_passive - part_active_loss - 
+               part_passive_loss - part_179 + scorp + scorp_active + 
+               scorp_passive - scorp_active_loss - scorp_passive_loss - 
+               scorp_179 + rent - rent_loss + estate - estate_loss + farm + ui + 
+               gross_ss + other_inc,
       
       #------------------
       # Set elasticities
@@ -45,13 +49,13 @@ do_employment = function(tax_units, ...) {
       e1 = case_when(
         
         # Low-income single mothers
-        (gender1 == 1) & (n_dep_ctc > 0) & (wages1 < eitc.po_thresh_1) & (filing_status != 2) ~ e_mothers_poor, 
+        (male1 == 0) & (n_dep_ctc > 0) & (wages1 < eitc.po_thresh_1) & (filing_status != 2) ~ e_mothers_poor, 
         
         # All other mothers with family income below $80,000 
-        (gender1 == 1) & (n_dep_ctc > 0) & (income < 80000) ~ e_mothers_other, 
+        (male1 == 0) & (n_dep_ctc > 0) & (income < 80000) ~ e_mothers_other, 
         
         # Others below $80,000
-        (income < 80000 & n_dep_ctc > 0) ~ e_else
+        (income < 80000 & n_dep_ctc > 0) ~ e_else,
         
         # Everyone else
         TRUE ~ 0
@@ -61,13 +65,13 @@ do_employment = function(tax_units, ...) {
       e2 = case_when(
         
         # Low-income single mothers
-        (gender2 == 1) & (n_dep_ctc > 0) & (wages1 < eitc.po_thresh_1) & (filing_status != 2) ~ e_mothers_poor, 
+        (male1 == 0) & (n_dep_ctc > 0) & (wages1 < eitc.po_thresh_1) & (filing_status != 2) ~ e_mothers_poor, 
         
         # All other mothers with family income below $80,000 
-        (gender2 == 1) & (n_dep_ctc > 0) & (income < 80000) ~ e_mothers_other, 
+        (male1 == 0) & (n_dep_ctc > 0) & (income < 80000) ~ e_mothers_other, 
         
         # Others below $80,000
-        (income < 80000 & n_dep_ctc > 0) ~ e_else
+        (income < 80000 & n_dep_ctc > 0) ~ e_else,
         
         # Everyone else
         TRUE ~ 0
