@@ -6,7 +6,7 @@
 
 
 
-calc_receipts = function(totals, scenario_root) {
+calc_receipts = function(totals, scenario_root, corp_tax_root) {
   
   #----------------------------------------------------------------------------
   # Calculates a scenario's receipts 
@@ -24,13 +24,23 @@ calc_receipts = function(totals, scenario_root) {
   #        - pmt_pr_withheld (dbl)        : payroll tax withheld (FICA) or paid 
   #                                         quarterly (SECA)  
   #   - scenario_root (str) : directory where scenario's data is written
+  #   - corp_tax_root (str) : directory where corporate tax revenue for this 
+  #                           scenario is stored
   #
   # Returns:  void, writes a dataframe for the scenario containing values for:
   #   - Fiscal Year
   #   - Payroll Tax
   #   - Individual Income Tax
   #   - Refundable Credit Outlays
+  #   - Corporate Income tax
   #----------------------------------------------------------------------------
+  
+  # Read corporate tax receipts
+  revenues_corp_tax = corp_tax_root %>%
+    file.path('revenues.csv') %>% 
+    read_csv(show_col_types = F) %>% 
+    select(year, revenues_corp_tax = receipts_fy)
+  
   
   totals %>%
     mutate(
@@ -49,18 +59,21 @@ calc_receipts = function(totals, scenario_root) {
                              0.25 * lag(pmt_pr_withheld) + 
                              pmt_pr_nonwithheld,
       
-      delta_revenues_corporate_tax = 0.75 * corp_tax_change +
-                                     0.25 * lag(corp_tax_change)
+      delta_revenues_corp_tax = 0.75 * corp_tax_change +
+                                0.25 * lag(corp_tax_change)
     ) %>%
+    
+    # Join corporate tax levels and net out changes owning to behavior
+    left_join(revenues_corp_tax, by = 'year') %>% 
+    mutate(revenues_corp_tax = revenues_corp_tax + delta_revenues_corp_tax) %>%
     
     # Drop incomplete year
     filter(year != min(year)) %>%
     
     # Write CSV
     select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits, 
-           delta_revenues_corporate_tax) %>%
+           revenues_corp_tax) %>%
     write_csv(file.path(scenario_root, 'totals', 'receipts.csv'))
-
 }
 
 
@@ -81,6 +94,7 @@ calc_rev_est = function(counterfactual_ids) {
   #   - Payroll Tax
   #   - Individual Income Tax
   #   - Refundable Credit Outlays
+  #   - Corporate Income Tax
   #----------------------------------------------------------------------------
 
   if (length(counterfactual_ids) == 0) {
@@ -100,7 +114,7 @@ calc_rev_est = function(counterfactual_ids) {
     mutate(total = revenues_payroll_tax + 
                    revenues_income_tax - 
                    outlays_tax_credits + 
-                   delta_revenues_corporate_tax) %>% 
+                   revenues_corp_tax) %>% 
     pivot_longer(cols      = -year, 
                  names_to  = 'series', 
                  values_to = 'baseline')
@@ -123,7 +137,7 @@ calc_rev_est = function(counterfactual_ids) {
         mutate(total = revenues_payroll_tax + 
                        revenues_income_tax - 
                        outlays_tax_credits + 
-                       delta_revenues_corporate_tax) %>% 
+                       revenues_corp_tax) %>% 
         pivot_longer(cols      = -year, 
                      names_to  = 'series', 
                      values_to = 'counterfactual')
@@ -151,11 +165,11 @@ calc_rev_est = function(counterfactual_ids) {
         pivot_wider(names_from  = `year`, 
                     values_from = delta) %>% 
         mutate(Series = case_when(
-          Series == 'total' ~ 'Total budget effect', 
+          Series == 'total'                ~ 'Total budget effect', 
           Series == 'revenues_payroll_tax' ~ '  Revenues, payroll tax', 
-          Series == 'revenues_income_tax' ~ '  Revenues, individual income tax', 
-          Series == 'outlays_tax_credits' ~ '  Outlays, refundable tax credits',
-          Series == 'delta_revenues_corporate_tax' ~ '  Revenues, corporate income tax'
+          Series == 'revenues_income_tax'  ~ '  Revenues, individual income tax', 
+          Series == 'outlays_tax_credits'  ~ '  Outlays, refundable tax credits',
+          Series == 'revenues_corp_tax'    ~ '  Revenues, corporate income tax'
         )) %>%
         arrange(Measure, desc(Series)) 
       
@@ -252,7 +266,7 @@ calc_stacked_rev_est = function(counterfactual_ids) {
   #   - Payroll Tax
   #   - Individual Income Tax
   #   - Refundable Credit Outlays
-  #   
+  #   - Corporate Income Tax
   #----------------------------------------------------------------------------
   
   if (length(counterfactual_ids) == 0) {
@@ -274,7 +288,7 @@ calc_stacked_rev_est = function(counterfactual_ids) {
                    total = revenues_payroll_tax + 
                            revenues_income_tax - 
                            outlays_tax_credits + 
-                           delta_revenues_corporate_tax) %>% 
+                           revenues_corporate_tax) %>% 
             select(scenario_id, year, total)) %>% 
       
       # Join into single dataframe and group by year-series so as to leave 

@@ -20,7 +20,7 @@ runscript_name   = 'tests/corp_taxes'
 user_id          = 'jar335' 
 local            = 1
 vintage          = NULL       
-pct_sample       = 1
+pct_sample       = 0.1
 stacked          = 0
 baseline_vintage = NULL
 
