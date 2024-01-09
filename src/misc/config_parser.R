@@ -30,7 +30,8 @@ parse_globals = function(runscript_name, user_id, local, vintage,
   #                              the format YYYYMMDDHH. 
   #   - pct_sample (dbl)       : share of records used in simulation 
   #
-  # Returns: list of 5: 
+  # Returns: list of 8:
+  #   - random_seed (int)    :seed for random number generation 
   #   - runtime_args (df)    : tibble representation of the runscripts CSV
   #   - interface_paths (df) : tibble with ID-interface-filepath info in rows 
   #   - output_root (str)    : path where output data is written
@@ -40,6 +41,9 @@ parse_globals = function(runscript_name, user_id, local, vintage,
   #                            sample population (all IDs for 100%)
   #   - detail_vars (str[])  : vector of microdata output column names
   #----------------------------------------------------------------------------
+  
+  # Set random seed 
+  random_seed = 76
   
   # Read and parse data dependency interface file paths
   output_roots       = read_yaml('./output_roots.yaml')
@@ -147,7 +151,7 @@ parse_globals = function(runscript_name, user_id, local, vintage,
   }
   
   # Tax unit ID in sample
-  set.seed(76)
+  set.seed(random_seed)
   sample_ids = interface_paths %>% 
     filter(ID == 'baseline', interface == 'Tax-Data') %>% 
     get_vector('path') %>% 
@@ -175,7 +179,8 @@ parse_globals = function(runscript_name, user_id, local, vintage,
   
   
   # Return runtime args and interface paths  
-  return(list(runtime_args    = runtime_args,
+  return(list(random_seed     = random_seed,
+              runtime_args    = runtime_args,
               interface_paths = interface_paths, 
               output_root     = output_root,
               baseline_root   = baseline_root,

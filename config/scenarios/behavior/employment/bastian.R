@@ -1,26 +1,31 @@
 do_employment = function(tax_units, ...) { 
   
   #----------------------------------------------------------------------------
-  # Adjusts wage earnings at the extensive margin, per Bastian (2023). TODO 
+  # Adjusts wage earnings at the extensive margin, per Bastian (2023). Only
+  # suitable to analyze an *increase* in EMTRs at the low end -- there is no
+  # symmetric effect in which nonworkers become workers in response to a cut in
+  # EMTRs. Used in our analysis of the employment effects of the 2021 CTC. 
   # 
   # Parameters: 
   #   - tax_units (df)     : tibble of tax units with calculated variables
-  #   - baseline_mtrs (df) : year-id indexed tibble of MTRs under the baseline
-  #   - static_mtrs (df)   : year-id indexed tibble of MTRs under the static
-  #                          counterfactual scenario
+  #   - baseline_mtrs (df) : year-id indexed tibble of extensive-margin MTRs on 
+  #                          wages1 and wages2 under the baseline
+  #   - static_mtrs (df)   : year-id indexed tibble of extensive-margin MTRs on 
+  #                          wages1 and wages2 under the static counterfactual
   #
   # Returns: tibble of tax units with post-adjustment wage earnings values.
   #----------------------------------------------------------------------------
+  
+  
+  # Set random seed 
+  set.seed(globals$random_seed)
   
   # Set elasticities
   e_mothers_poor  = 0.4
   e_mothers_other = 0.2
   e_else          = 0.05
   
-  # Set random seed 
-  set.seed(76)
   
-
   tax_units %>% 
     
     # Join MTRs
@@ -101,5 +106,9 @@ do_employment = function(tax_units, ...) {
       wages  = wages1 + wages2 
     
     ) %>% 
+    
+    # Remove intermediate calculation variables and return 
+    select(-income, -e1, -e2, -delta_rtw1, -delta_rtw2, 
+           -pr_emp1, -pre_emp2, -emp1, -emp2) %>% 
     return()
 }

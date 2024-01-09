@@ -379,8 +379,8 @@ write your own.</p>
 <h2>Some architecture basics</h2>
 <p>This section describes where behavioral feedback fits into
 Tax-Simulator.</p>
-<div id="types-of-functions" class="section level4">
-<h4>Types of functions</h4>
+<div id="types-of-functions" class="section level3">
+<h3>Types of functions</h3>
 <p>Tax-Simulator can be thought of as one big function mapping
 <em>input</em> attributes of tax microdata (variables like number of
 children, income, and expenses) to <em>output</em> attributes (variables
@@ -401,8 +401,8 @@ marginal effective tax rate on capital gains). When tax policy changes,
 these modules are called and update the input attributes of tax
 microdata to reflect behavioral feedback.</p>
 </div>
-<div id="static-mode" class="section level4">
-<h4>Static mode</h4>
+<div id="static-mode" class="section level3">
+<h3>Static mode</h3>
 <p>At runtime, if told to execute a behavioral feedback module as part
 of a simulation of a policy reform, Tax-Simulator will run non-baseline
 scenarios twice. First, it runs in <em>static mode.</em> This means all
@@ -417,8 +417,8 @@ modify input attributes according to their specific logic, then
 Tax-Simulator re-calculates taxes. The result is a policy reform
 simulation which accounts for behavioral feedback.</p>
 </div>
-<div id="organization-and-naming-conventions" class="section level4">
-<h4>Organization and naming conventions</h4>
+<div id="organization-and-naming-conventions" class="section level3">
+<h3>Organization and naming conventions</h3>
 <p>In the Tax-Simulator repository, code and data are organized into one
 of two folders. The <em>/src</em> folder contains scenario-invariant
 model code — which is to say, most of it. The <em>/config</em> folder
@@ -446,9 +446,9 @@ functions to execute. A behavioral feedback module in the subfolder
 <em>/config/scenarios/behavior/X</em> must contain a function called
 <code>do_X()</code>.</p>
 </div>
-<div id="configuring-the-model-to-execute-with-specific-behavioral-feedback-modules" class="section level4">
-<h4>Configuring the model to execute with specific behavioral feedback
-modules</h4>
+<div id="configuring-the-model-to-execute-with-specific-behavioral-feedback-modules" class="section level3">
+<h3>Configuring the model to execute with specific behavioral feedback
+modules</h3>
 <p>A <em>runscript</em> is a CSV file that defines scenarios for
 Tax-Simulator to run. Runscripts are located in
 <em>/config/runscripts</em>. Every row represents a scenario to run;
@@ -466,6 +466,15 @@ elasticity of -1 under the functional form contained in the
 <em>/charity/100.R</em> module. I would specify the following runscript
 (extraneous columns are left hidden):</p>
 <table>
+<colgroup>
+<col width="13%" />
+<col width="6%" />
+<col width="26%" />
+<col width="17%" />
+<col width="6%" />
+<col width="14%" />
+<col width="15%" />
+</colgroup>
 <thead>
 <tr class="header">
 <th>ID</th>
@@ -474,6 +483,7 @@ elasticity of -1 under the functional form contained in the
 <th>behavior</th>
 <th>…</th>
 <th>mtr_vars</th>
+<th>mtr_type</th>
 </tr>
 </thead>
 <tbody>
@@ -484,6 +494,7 @@ elasticity of -1 under the functional form contained in the
 <td></td>
 <td>…</td>
 <td>char_cash</td>
+<td>nextdollar</td>
 </tr>
 <tr class="even">
 <td>2_pp</td>
@@ -492,6 +503,7 @@ elasticity of -1 under the functional form contained in the
 <td>charity/100</td>
 <td>…</td>
 <td>char_cash</td>
+<td>nextdollar</td>
 </tr>
 </tbody>
 </table>
@@ -503,10 +515,13 @@ code contained in the 100.R module when running this scenario. Because
 the code contained in 100.R module depends on knowing the marginal tax
 rate on cash contributions (variable “char_cash” in the data) current
 current law and under the reform, I include <em>char_cash</em> as in
-column “mtr_vars”, which tells Tax-Simulator to compute the EMTR on
-whatever variables are specified. If my behavioral feedback module did
-not depend on any EMTR calculations, I could leave this column
-blank.</p>
+column “mtr_vars” and <em>nextdollar</em> in the column “mtr_type”,
+which tells Tax-Simulator to compute the next-dollar EMTR on whatever
+variables are specified. (The other option for “mtr_type” is
+<em>extensive</em>, in which the average effective tax rate over the
+realized value is calculated by setting the value to $0.) If my
+behavioral feedback module did not depend on any EMTR calculations, I
+could leave this column blank.</p>
 </div>
 </div>
 <div id="module-structure" class="section level2">
@@ -587,7 +602,7 @@ disposal. We will look at an example of its use below.</p>
 </div>
 <div id="example-modules" class="section level2">
 <h2>Example modules</h2>
-<p>Let’s make things concrete by reviewing three examples of behavioral
+<p>Let’s make things concrete by reviewing two examples of behavioral
 feedback modules.</p>
 <div id="charitable-giving" class="section level3">
 <h3>Charitable giving</h3>
@@ -605,13 +620,14 @@ behavioral feedback module to model this behavior.</p>
 <p>One major benefit of microsimulation as a methodological approach is
 the ability to precisely measure EMTRs on any activity via computation.
 By adding $1 to some variable Y for each record, re-calculating taxes,
-and looking at the change in tax liability, we obtain the EMTR on
-activity Y. For example, if we add $1 to an itemizer’s charitable
-contributions, re-calculate their taxes, and their taxes fall by 37
-cents, the EMTR on charitable contributions is 0.37 and the tax price of
-giving is 1 + -0.37 = 0.63. We can calculate this EMTR for all filers
-under baseline and under the policy reform then use this information in
-our behavioral feedback calculation.</p>
+and looking at the change in tax liability, we obtain the
+<em>next-dollar</em> EMTR on activity Y. For example, if we add $1 to an
+itemizer’s charitable contributions, re-calculate their taxes, and their
+taxes fall by 37 cents, the next-dollar EMTR on charitable contributions
+is 0.37 and the tax price of giving is 1 + -0.37 = 0.63. We can
+calculate this EMTR for all filers under baseline and under the policy
+reform then use this information in our behavioral feedback
+calculation.</p>
 <p>Here is what a behavior feedback module that leverages EMTRs on
 charitable contributions looks like:</p>
 <pre class="r R"><code>do_charity = function(tax_units, ...) { 
@@ -658,8 +674,8 @@ Next we feed the result into a function called
 adjusts a specific variable in a dataframe based on specified elasticity
 information, returning a one-column dataframe of the post-adjustment
 variable. For a full look at this function, please see the
-/src/sim/behavior.R file. But here’s a rundown on what each argument in
-our function call does:</p>
+<em>/src/sim/behavior.R</em> file. But here’s a rundown on what each
+argument in our function call does:</p>
 <ul>
 <li><p><code>tax_units = (.)</code> … This argument, omitted by
 convention in the dplyr chain, is the dataframe of tax units. Crucially,
@@ -731,9 +747,9 @@ feedback module to the simulated tax records. Tax-Simulator will go on
 to calculate taxes based on this adjusted data, and our end results will
 reflect our assumptions about behavioral responses.</p>
 <p>One last note on EMTR elasticity-based behavioral feedback modules.
-This example was a comparatively crude one: We are applying the same
+This example was a comparatively crude example: We are applying the same
 elasticity to all tax units in all years. In real life, elasticities may
-vary with observative attributes like income (rich people are more
+vary with observable attributes like income (rich people are more
 concerned with tax optimization). We could just as easily have assigned
 specific elasticities to different types of records in the
 <code>mutate()</code> call, and the logic afterwards would be
@@ -741,9 +757,182 @@ unchanged.</p>
 </div>
 <div id="employment" class="section level3">
 <h3>Employment</h3>
-</div>
-<div id="business-entity-type-reclassification" class="section level3">
-<h3>Business entity type reclassification</h3>
+<p>The prior module assumed that behavioral responses occur only at the
+intensive margin: charitable giving was increased or decreased only
+among those who already gave under the baseline. But many behavioral
+responses we wish to model are extensive-margin phenomena, in which
+nonzero values can become zeros and vice versa. Low-income employment
+and its relationship to tax policy is one such example.</p>
+<p>In 2021, the Child Tax Credit (CTC) was expanded such that the credit
+no longer phased in with earnings — meaning that the reform increased
+EMTRs on low-income workers. This reduction in the “return to work” may,
+via substitution effects, cause some employment loss among marginally
+attached low-income workers. A partial dynamic budget cost estimate will
+reflect the budgetary impact of this change in employment, which should
+reduce payroll taxes and income taxes. We can write a behavioral
+feedback module to account for this effect in our cost estimate.</p>
+<p>Below is a behavioral feedback module implementing the logic and
+parameters of <a href="file:///C:/Users/jar335/Downloads/Bastian_CTCexpansion_2023.pdf">Bastian
+(2023)</a>, a paper which estimates employment loss caused by the 2021
+CTC expansion. Bastian calculates a “return-to-work” metric, defined as
+1 minus the average effective tax rate on working. By demographic group,
+he calculates the change in return-to-work caused by the CTC reform and
+then applies demographic-specific labor supply elasticities to obtain
+employment loss estimates.</p>
+<pre class="r"><code>do_employment = function(tax_units, ...) { 
+  
+  #----------------------------------------------------------------------------
+  # Adjusts wage earnings at the extensive margin, per Bastian (2023). Only
+  # suitable to analyze an *increase* in EMTRs at the low end -- there is no
+  # symmetric effect in which nonworkers become workers in response to a cut in
+  # EMTRs. Used in our analysis of the employment effects of the 2021 CTC. 
+  # 
+  # Parameters: 
+  #   - tax_units (df)     : tibble of tax units with calculated variables
+  #   - baseline_mtrs (df) : year-id indexed tibble of extensive-margin MTRs on 
+  #                          wages1 and wages2 under the baseline
+  #   - static_mtrs (df)   : year-id indexed tibble of extensive-margin MTRs on 
+  #                          wages1 and wages2 under the static counterfactual
+  #
+  # Returns: tibble of tax units with post-adjustment wage earnings values.
+  #----------------------------------------------------------------------------
+  
+  # Set random seed 
+  set.seed(globals$random_seed)
+  
+  # Set elasticities
+  e_mothers_poor  = 0.4
+  e_mothers_other = 0.2
+  e_else          = 0.05
+  
+  
+  tax_units %&gt;% 
+    
+    # Join MTRs
+    left_join(baseline_mtrs %&gt;% 
+                rename_with(.cols = -c(id, year), 
+                            .fn   = ~ paste0(., &#39;_baseline&#39;)), 
+              by = c(&#39;id&#39;, &#39;year&#39;)) %&gt;%
+    left_join(static_mtrs, by = c(&#39;id&#39;, &#39;year&#39;)) %&gt;% 
+    
+    mutate(
+
+      # Calculate tax unit-level income (roughly AGI)
+      income = wages + txbl_int + div_ord + div_pref + state_ref + 
+               txbl_ira_dist + txbl_pens_dist + kg_lt + kg_st + other_gains + 
+               sole_prop + part_active + part_passive - part_active_loss - 
+               part_passive_loss - part_179 + scorp + scorp_active + 
+               scorp_passive - scorp_active_loss - scorp_passive_loss - 
+               scorp_179 + rent - rent_loss + estate - estate_loss + farm + ui + 
+               gross_ss + other_inc,
+      
+      #------------------
+      # Set elasticities
+      #------------------
+      
+      # First earner
+      e1 = case_when(
+        
+        # Low-income single mothers
+        (male1 == 0) &amp; (n_dep_ctc &gt; 0) &amp; (wages1 &lt; eitc.po_thresh_1) &amp; (filing_status != 2) ~ e_mothers_poor, 
+        
+        # All other mothers with family income below $80,000 
+        (male1 == 0) &amp; (n_dep_ctc &gt; 0) &amp; (income &lt; 80000) ~ e_mothers_other, 
+        
+        # Others below $80,000
+        (income &lt; 80000 &amp; n_dep_ctc &gt; 0) ~ e_else,
+        
+        # Everyone else
+        TRUE ~ 0
+      ),
+      
+      # Second earner
+      e2 = case_when(
+        
+        # Low-income single mothers
+        (male1 == 0) &amp; (n_dep_ctc &gt; 0) &amp; (wages1 &lt; eitc.po_thresh_1) &amp; (filing_status != 2) ~ e_mothers_poor, 
+        
+        # All other mothers with family income below $80,000 
+        (male1 == 0) &amp; (n_dep_ctc &gt; 0) &amp; (income &lt; 80000) ~ e_mothers_other, 
+        
+        # Others below $80,000
+        (income &lt; 80000 &amp; n_dep_ctc &gt; 0) ~ e_else,
+        
+        # Everyone else
+        TRUE ~ 0
+      ),
+      
+      
+      #---------------------------
+      # Simulate labor force exit
+      #---------------------------
+      
+      # Calculate percent change in return-to-work
+      delta_rtw1 = ((1 - mtr_wages1) - (1 - mtr_wages1_baseline)) / (1 - mtr_wages1_baseline),
+      delta_rtw2 = ((1 - mtr_wages2) - (1 - mtr_wages2_baseline)) / (1 - mtr_wages2_baseline),
+      
+      # Calculate probability of remaining employed defined as 1 plus the 
+      # implied percent change in employment 
+      pr_emp1 = 1 + (e1 * delta_rtw1),
+      pr_emp2 = 1 + (e2 * delta_rtw2),
+      
+      # Simulate outcomes
+      emp1 = runif(nrow(.)) &lt; pr_emp1,
+      emp2 = runif(nrow(.)) &lt; pr_emp2,
+      
+      # Adjust wages
+      wages1 = if_else(wages1 == 0, 0, wages1 * emp1),
+      wages2 = if_else(wages2 == 0, 0, wages2 * emp2),
+      wages  = wages1 + wages2 
+      
+    ) %&gt;% 
+    
+    # Remove intermediate calculation variables and return 
+    select(-income, -e1, -e2, -delta_rtw1, -delta_rtw2, 
+           -pr_emp1, -pre_emp2, -emp1, -emp2) %&gt;% 
+    return()
+}</code></pre>
+<p>In terms of function inputs, this module uses extensive-margin tax
+rates — i.e., average effective tax rates — on primary-earner wages
+(“wages1”) and, in the case of joint returns, secondary-earner wages
+(“wages2”). These variables are calculated earlier in Tax-Simulator’s
+execution and are passed to our function in <code>baseline_mtrs</code>
+and <code>static_mtrs</code>.</p>
+<p>At the top, because this module involves stochastic simulation, we
+reset the random number generator seed — a requirement in Tax-Simulator
+before any call to a random number generator. We also list our
+elasticity assumptions at the top per convention.</p>
+<p>Then we join our EMTR dataframes into tax units, making sure to
+distinguish baseline from policy reform variables by renaming the
+former.</p>
+<p>Next, we assign labor supply elasticities to each nondependent adult.
+As per Tax-Simulator naming convention, primary earner variables are
+appended with “1” and secondary variables are appended with “2”. Before
+assignment, we calculate a helper variable, income, since elasticities
+are heterogeneous by demographic and income. The
+<code>case_when()</code> function calls implement Bastian’s logic:
+EITC-qualifying single mothers have an elasticity of 0.4; other mothers
+with income below $80K have an elasticity of 0.2; others below $80K have
+an elasticity of 0.05; those above $80K are assumed not to be
+responsive. The important takeaway from these lines is that we can build
+highly detailed heterogeneity into our behavioral feedback
+assumptions.</p>
+<p>The next step is to calculate the policy reforms’s effect on the
+return to work, again defined as 1 minus the average effective tax rate
+(somewhat confusingly stored with an “mtr” prefix per Tax-Simulator
+convention). We calculate the percent change in this metric for primary
+and secondary earners.</p>
+<p>Applying the labor supply elasticity to this quantity gets us the
+percent change in employment, which is uninterpretable at the micro
+level. Instead, we convert the result into a <em>probability of
+remaining employed</em> by adding 1. For example, if the reform reduces
+someone’s return to work by 10%, and we assume a 0.4 labor supply
+elasticity, we’d say that the percent change in employment is -4%, but
+the probability of remaining employed is 96%, i.e. <span class="math display">\[1 + (-0.1 * 0.4) = 1 - 0.04 = 0.96\]</span>.</p>
+<p>At this point, we have employment probabilities for all workers in
+our data. The final step is to simulate labor force exit using a random
+number generator. Wages are set to 0 for those who drop out of the labor
+force, and <em>viola</em> — we’re done.</p>
 </div>
 </div>
 </div>

@@ -197,7 +197,7 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
   char_above = rep(char_above, nrow(tax_units))
   
 
-  set.seed(76)
+  set.seed(globals$random_seed)
   
   tax_units %>% 
     
@@ -489,7 +489,7 @@ do_salt_workaround_baseline = function(tax_units) {
   # Returns: tibble of updated tax unit data (df).
   #----------------------------------------------------------------------------
   
-  set.seed(76)
+  set.seed(globals$random_seed)
   
   
   tax_units %>% 
