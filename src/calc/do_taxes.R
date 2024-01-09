@@ -197,7 +197,7 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
   char_above = rep(char_above, nrow(tax_units))
   
 
-  set.seed(76)
+  set.seed(globals$random_seed)
   
   tax_units %>% 
     
@@ -376,16 +376,19 @@ remit_taxes = function(tax_units) {
 
 
 
-calc_mtrs = function(tax_units, baseline_pr_er, liab_baseline, var) {
+calc_mtrs = function(tax_units, liab_baseline, var, type = 'nextdollar') {
   
   #----------------------------------------------------------------------------
-  # Calculates next-dollar MTR with respect to given variable.
+  # Calculates MTR, either at the next-dollar or 0-actual extensive margin, 
+  # with respect to given variable. Includes employee-side payroll taxes.
   # 
   # Parameters:
   #   - tax_units (df)        : tibble of tax units, exogenous variables only
   #   - liab_baseline (dbl[]) : vector of net income tax liability plus
-  #                             payroll tax liability
+  #                             employee's share of payroll tax liability
   #   - var (str)             : name of variable to increment
+  #   - type (str)            : "nextdollar" for next-dollar MTR, "extensive"
+  #                             for delta in taxes when reducing the value to 0
   #
   # Returns: tibble of MTRs (df).
   #----------------------------------------------------------------------------
@@ -395,12 +398,17 @@ calc_mtrs = function(tax_units, baseline_pr_er, liab_baseline, var) {
   
   # Set variables to increment. Add variables here to ensure that sub-components
   # of a variable, namely earnings-split variables, are kept internally consistent.
-  # The assumption is that MTRs are calculated with respect to primary earner's income
-  vars = c(var) 
+  vars = c(var)
   
-  # Wages, sole prop, or farm income
-  if (var %in% c('wages', 'sole_prop', 'farm')) {
-    vars = c(var, paste0(var, '1'))
+  # Earnings split between joint filers
+  if (var %in% c('wages1', 'wages2')) {
+    vars = c(var, 'wages')
+  }
+  if (var %in% c('sole_prop1', 'sole_prop2')) {
+    vars = c(var, 'sole_prop')
+  }
+  if (var %in% c('farm1', 'farm2')) {
+    vars = c(var, 'farm')
   }
   
   # Active partnership income
@@ -410,10 +418,25 @@ calc_mtrs = function(tax_units, baseline_pr_er, liab_baseline, var) {
   
   # OK, now calculate MTRs
   tax_units %>% 
+    mutate(
     
-    # Increment variable values
-    mutate(across(.cols = all_of(vars),
-                  .fns  = ~ . + 1)) %>%
+      # Record initial values
+      across(
+        .cols  = all_of(var), 
+        .fns   = ~ ., 
+        .names = 'original_var'
+      ),
+      
+      # Increment variable values
+      across(
+        .cols = all_of(vars),
+        .fns  = ~ case_when(
+          type == 'nextdollar' ~ . + 1, 
+          type == 'extensive'  ~ if_else(!is.na(.), 0, NA), 
+          TRUE                 ~ NA
+        )
+      )
+    ) %>%
     
     # Re-calculate taxes
     do_taxes(baseline_pr_er = NULL,
@@ -424,7 +447,22 @@ calc_mtrs = function(tax_units, baseline_pr_er, liab_baseline, var) {
                                 set_names(NULL)) %>% 
     
     # Calculate MTR and return
-    mutate(!!mtr_name := liab_pr + liab_iit_net - liab_baseline) %>% 
+    mutate(
+      
+      # Calculate numerator: change in taxes 
+      delta_taxes = liab_pr_ee + liab_iit_net - liab_baseline,
+      
+      # Calculate denominator: change in variable value
+      delta_var = case_when(
+        type == 'nextdollar' ~ 1,
+        type == 'extensive'  ~ if_else(original_var == 0, NA, -original_var), 
+        TRUE                 ~ NA
+      ), 
+      
+      # Calculate MTR
+      !!mtr_name := delta_taxes / delta_var
+      
+    ) %>% 
     select(all_of(mtr_name)) %>% 
     return()
 }
@@ -451,7 +489,7 @@ do_salt_workaround_baseline = function(tax_units) {
   # Returns: tibble of updated tax unit data (df).
   #----------------------------------------------------------------------------
   
-  set.seed(76)
+  set.seed(globals$random_seed)
   
   
   tax_units %>% 
@@ -459,13 +497,13 @@ do_salt_workaround_baseline = function(tax_units) {
       
       # Determine SALT attributable to pass-through activities 
       part  = part_active + part_passive - part_active_loss - 
-        part_passive_loss - part_179,
+              part_passive_loss - part_179,
       scorp = scorp_active + scorp_passive - scorp_active_loss - 
-        scorp_passive_loss - scorp_179,
+              scorp_passive_loss - scorp_179,
       inc = wages + trad_contr_er1 + trad_contr_er2 + txbl_int + exempt_int + 
-        div_ord + div_pref + state_ref + txbl_ira_dist + gross_pens_dist + 
-        kg_st + kg_lt + other_gains + alimony + sole_prop + part + scorp + 
-        farm + gross_ss + ui + other_inc,
+            div_ord + div_pref + state_ref + txbl_ira_dist + gross_pens_dist + 
+            kg_st + kg_lt + other_gains + alimony + sole_prop + part + scorp + 
+            farm + gross_ss + ui + other_inc,
       
       part_share  = if_else(inc > 0, pmin(1, pmax(0, part / inc)),  0),
       scorp_share = if_else(inc > 0, pmin(1, pmax(0, scorp / inc)), 0),

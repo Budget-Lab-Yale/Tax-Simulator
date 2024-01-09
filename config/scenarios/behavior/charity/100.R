@@ -1,9 +1,8 @@
-do_kg_elasticity = function(tax_units, ...) { 
+do_charity = function(tax_units, ...) { 
   
   #----------------------------------------------------------------------------
-  # Adjusts capital gains at the intensive margin using an elasticity of 
-  # -0.22, converted to log-lin form after evaluation at the current-law 
-  # rate of 0.238.  
+  # Adjusts cash charitable contributions along the intensive margin with a 
+  # tax price elasticity of -1.
   # 
   # Parameters: 
   #   - tax_units (df)     : tibble of tax units with calculated variables
@@ -11,21 +10,22 @@ do_kg_elasticity = function(tax_units, ...) {
   #   - static_mtrs (df)   : year-id indexed tibble of MTRs under the static
   #                          counterfactual scenario
   #
-  # Returns: tibble of tax units with post-adjustment kg values. 
+  # Returns: tibble of tax units with post-adjustment cash charitable 
+  #          contribution values. 
   #----------------------------------------------------------------------------
   
-  # Set elasticities
-  e_permanent  = -0.22 / 0.238
+  # Set elasticity
+  e = -1
   
   # Apply elasticities and calculate new values
   new_values = tax_units %>% 
-    mutate(e_kg_lt = e_permanent, 
-           e_kg_lt_type = 'semi') %>% 
-    apply_mtr_elasticity('kg_lt', baseline_mtrs, static_mtrs, 1)
+    mutate(e_char_cash      = e, 
+           e_char_cash_type = 'taxprice') %>% 
+    apply_mtr_elasticity('char_cash', baseline_mtrs, static_mtrs, 1)
 
   # Replace old values with new and return
   tax_units %>% 
-    select(-kg_lt) %>% 
+    select(-char_cash) %>% 
     bind_cols(new_values) %>% 
     return()
 }

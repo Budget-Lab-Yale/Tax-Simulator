@@ -30,7 +30,8 @@ parse_globals = function(runscript_name, user_id, local, vintage,
   #                              the format YYYYMMDDHH. 
   #   - pct_sample (dbl)       : share of records used in simulation 
   #
-  # Returns: list of 5: 
+  # Returns: list of 8:
+  #   - random_seed (int)    :seed for random number generation 
   #   - runtime_args (df)    : tibble representation of the runscripts CSV
   #   - interface_paths (df) : tibble with ID-interface-filepath info in rows 
   #   - output_root (str)    : path where output data is written
@@ -40,6 +41,9 @@ parse_globals = function(runscript_name, user_id, local, vintage,
   #                            sample population (all IDs for 100%)
   #   - detail_vars (str[])  : vector of microdata output column names
   #----------------------------------------------------------------------------
+  
+  # Set random seed 
+  random_seed = 76
   
   # Read and parse data dependency interface file paths
   output_roots       = read_yaml('./output_roots.yaml')
@@ -147,7 +151,7 @@ parse_globals = function(runscript_name, user_id, local, vintage,
   }
   
   # Tax unit ID in sample
-  set.seed(76)
+  set.seed(random_seed)
   sample_ids = interface_paths %>% 
     filter(ID == 'baseline', interface == 'Tax-Data') %>% 
     get_vector('path') %>% 
@@ -158,23 +162,25 @@ parse_globals = function(runscript_name, user_id, local, vintage,
   
   # Specifiy microdata output variable
   detail_vars = c(
-    'id', 'weight', 'filer', 'dep_status', 'filing_status', 'age1', 'age2', 
-    'n_dep','n_dep_ctc', 'dep_age1', 'dep_age2', 'dep_age3', 'wages', 'txbl_int',
-    'se', 'div_ord', 'div_pref', 'txbl_kg', 'kg_st', 'kg_lt', 'sole_prop', 'sch_e',
-    'farm', 'part_scorp', 'gross_ss', 'txbl_ss', 'above_ded', 'agi', 'expanded_inc', 
-    'std_ded', 'item_ded', 'med_item_ded', 'salt_item_ded', 'first_mort_int', 
+    'id', 'weight', 'filer', 'dep_status', 'filing_status', 'male1', 'male2', 
+    'age1', 'age2', 'n_dep','n_dep_ctc', 'dep_age1', 'dep_age2', 'dep_age3', 
+    'wages1', 'wages2', 'wages', 'txbl_int', 'se', 'div_ord', 'div_pref', 
+    'txbl_kg', 'kg_st', 'kg_lt', 'sole_prop', 'sch_e', 'farm', 'part_scorp', 
+    'gross_ss', 'txbl_ss', 'above_ded', 'agi', 'expanded_inc', 'std_ded', 
+    'item_ded', 'med_item_ded', 'salt_item_ded', 'first_mort_int', 
     'mort_int_item_ded', 'inv_int_item_ded', 'int_item_ded', 'char_item_ded', 
     'casualty_item_ded', 'misc_item_ded', 'other_item_ded', 'item_ded_ex_limits', 
-    'itemizing', 'pe_ded', 'qbi_ded', 'txbl_inc', 'liab_ord', 'liab_pref', 'liab_amt', 
-    'liab_bc', 'cdctc_nonref', 'ctc_nonref', 'ed_nonref', 'nonref',  'ed_ref', 
-    'eitc', 'cdctc_ref', 'ctc_ref', 'rebate', 'ref', 'liab_niit', 'liab_iit', 
-    'liab_iit_net', 'liab_fica_er1', 'liab_fica_er2', 'liab_seca', 'liab_pr_ee', 
-    'liab_pr'
+    'itemizing', 'pe_ded', 'qbi_ded', 'txbl_inc', 'liab_ord', 'liab_pref', 
+    'liab_amt', 'liab_bc', 'cdctc_nonref', 'ctc_nonref', 'ed_nonref', 'nonref', 
+    'ed_ref', 'eitc', 'cdctc_ref', 'ctc_ref', 'rebate', 'ref', 'liab_niit', 
+    'liab_iit', 'liab_iit_net', 'liab_fica_er1', 'liab_fica_er2', 'liab_seca', 
+    'liab_pr_ee', 'liab_pr'
   )
   
   
   # Return runtime args and interface paths  
-  return(list(runtime_args    = runtime_args,
+  return(list(random_seed     = random_seed,
+              runtime_args    = runtime_args,
               interface_paths = interface_paths, 
               output_root     = output_root,
               baseline_root   = baseline_root,
@@ -201,6 +207,7 @@ get_scenario_info = function(id) {
   #   - interface_paths (list)   : list of scenario-specific interface paths
   #   - years (int[])            : years to run
   #   - mtr_vars (str[])         : variables to calculate MTRs for
+  #   - mtr_vars (str[])         : MTR types (same index as mtr_vars)
   #   - behavior_modules (str[]) : names of behavioral feedback modules to run
   #----------------------------------------------------------------------------
   
@@ -251,7 +258,13 @@ get_scenario_info = function(id) {
   if (!is.na(runtime_args$mtr_vars)) {
     mtr_vars = str_split_1(runtime_args$mtr_vars, ' ')
   }
-    
+   
+  # Types of MTRs, with same index as MTR vars above
+  mtr_types = NULL
+  if (!is.na(runtime_args$mtr_types)) {
+    mtr_types = str_split_1(runtime_args$mtr_types, ' ')
+  }
+   
   # Return as named list
   return(list(ID               = id,
               output_path      = output_root,
@@ -259,7 +272,8 @@ get_scenario_info = function(id) {
               tax_law_id       = tax_law_id,
               behavior_modules = behavior_modules, 
               years            = years, 
-              mtr_vars         = mtr_vars))
+              mtr_vars         = mtr_vars, 
+              mtr_types        = mtr_types))
 }
 
 
