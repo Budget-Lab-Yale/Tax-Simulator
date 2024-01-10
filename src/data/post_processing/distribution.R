@@ -268,19 +268,29 @@ build_distribution_tables = function(id, baseline_id, file_name) {
     for (group_var in c('income', 'age')) {
       
       # Financing assumption loop
-      for (financing in c('none', 'head', 'income', 'liability')) {
+      for (financing in c('none', 'liability')) {
         
-        # Calculate metrics
-        dist_metrics = id %>% 
-          process_for_distribution('baseline', yr, financing, this_corp_delta, this_corp_labor_share) %>% 
-          calc_dist_metrics(paste0(group_var, '_group'))
+        # Corporate tax assumption loop
+        for (include_corp in c(F, T)) {
         
-        # Add to results 
-        results[[group_var]][[length(results[[group_var]]) + 1]] = dist_metrics %>% 
-          mutate(year = yr, financing = financing, .before = year)
-        
-        # Add to Excel workbook and format
-        format_table(dist_metrics, wb, yr, paste0(group_var, '_group'), financing)
+          # Calculate metrics
+          dist_metrics = id %>% 
+            process_for_distribution(
+              baseline_id = 'baseline', 
+              year        = yr, 
+              financing   = financing, 
+              corp_delta  = if_else(include_corp, this_corp_delta, 0), 
+              labor_share = this_corp_labor_share
+            ) %>% 
+            calc_dist_metrics(paste0(group_var, '_group'))
+          
+          # Add to results 
+          results[[group_var]][[length(results[[group_var]]) + 1]] = dist_metrics %>% 
+            mutate(year = yr, financing = financing, .before = year)
+          
+          # Add to Excel workbook and format
+          format_table(dist_metrics, wb, yr, paste0(group_var, '_group'), financing, include_corp)
+        }
       }
     }
   }
@@ -355,18 +365,20 @@ build_all_stacked_distribution_tables = function(counterfactual_ids) {
 }
 
 
-format_table = function(dist_metrics, wb, year, group_var, financing) {
+format_table = function(dist_metrics, wb, year, group_var, financing, corp) {
   
   #----------------------------------------------------------------------------
   # Given a tibble of distributional metrics calculated either by income or
   # age, places the output in a WorkBook object and formats the sheet.
   # 
   # Parameters:
-  #   - dist_metrics (df)  : tibble of aggregated distributional metrics
-  #   - wb           (wb)  : destination WorkBook object for output
-  #   - year         (int) : year of distributional metrics
-  #   - group_var    (str) : either "income_group" or "age_group", representing
-  #                          the variable by which dist_metrics are grouped
+  #   - dist_metrics (df)   : tibble of aggregated distributional metrics
+  #   - wb           (wb)   : destination WorkBook object for output
+  #   - year         (int)  : year of distributional metrics
+  #   - group_var    (str)  : either "income_group" or "age_group", representing
+  #                           the variable by which dist_metrics are grouped
+  #   - financing    (str)  : financing assumption
+  #   - corp         (bool) : whether estimates include corporate taxes
   # 
   # Returns: void.
   #----------------------------------------------------------------------------
@@ -376,7 +388,11 @@ format_table = function(dist_metrics, wb, year, group_var, financing) {
   #---------------------------------
   
   # Set worksheet name
-  sheet_name = paste0(year, if_else(financing == 'none', '', paste0('_', financing)))
+  sheet_name = paste0(
+    year, ', ',
+    if_else(corp, 'with corp', 'no corp'), ', ',
+    if_else(financing != 'none', 'with financing', 'no financing')
+  )
   
   # Write out financing description
   financing_description = case_when(
@@ -384,6 +400,12 @@ format_table = function(dist_metrics, wb, year, group_var, financing) {
     financing == 'head'      ~ 'per-person financing',
     financing == 'income'    ~ 'financing proportional to income',
     financing == 'liability' ~ 'financing proportional to income taxes'
+  )
+  
+  # Write out corporate tax assumption
+  corporate_tax_description = if_else(corp,
+    'including incidence of corporate tax changes',
+    'individual income taxes and payroll taxes only'
   )
   
   if (group_var == 'income_group') {
@@ -415,8 +437,8 @@ format_table = function(dist_metrics, wb, year, group_var, financing) {
     writeData(wb = wb, sheet = sheet_name, x = dist_table, startRow = 2)
     
     # Add titles and notes 
-    title = paste0('Distributional impact of policy change by income group, ', year, 
-                   ', assuming ', financing_description)
+    title = paste0('Distributional impact by income group in ', year, ', ', 
+                   corporate_tax_description, ', ', financing_description)
     writeData(wb = wb, sheet = sheet_name, startRow = 1, 
               x = title)
     writeData(wb = wb, sheet = sheet_name, startRow = 12, 
@@ -484,6 +506,7 @@ format_table = function(dist_metrics, wb, year, group_var, financing) {
                  cols   = 1:9, 
                  widths = c(15, 8, 11, 11, 11, 11, 11, 15, 12))
   
+  
   #---------------------------------
   # Formatting for by-income tables
   #---------------------------------
@@ -515,8 +538,8 @@ format_table = function(dist_metrics, wb, year, group_var, financing) {
     writeData(wb = wb, sheet = sheet_name, x = dist_table, startRow = 16)
 
     # Add titles and notes
-    title = paste0('Distributional impact of policy change by age group, ', year, 
-                   ', assuming ', financing_description)
+    title = paste0('Distributional impact by age group in ', year, ', ', 
+                   corporate_tax_description, ', ', financing_description)
     writeData(wb = wb, sheet = sheet_name, startRow = 15,
               x = title)
     writeData(wb = wb, sheet = sheet_name, startRow = 23,
