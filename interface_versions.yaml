@@ -19,3 +19,7 @@ Tax-Data:
 Macro-Projections: 
   type: model_data
   version: 2
+
+Corporate-Tax-Model:
+  type: model_data
+  version: 1

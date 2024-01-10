@@ -153,7 +153,7 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
   # Calculate and write receipts
   totals_pr %>%  
     left_join(totals_1040, by = 'year') %>% 
-    calc_receipts(output_root) 
+    calc_receipts(output_root, scenario_info$interface_paths$`Corporate-Tax-Model`) 
 
   # Return MTRs
   output %>% 

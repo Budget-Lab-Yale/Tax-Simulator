@@ -2,12 +2,9 @@
 # Main entry point into the tax simulator
 #-----------------------------------------
   
-
-
 #---------------------
 # Configure simulator
 #---------------------
-
 
 # Load required packages
 lapply(readLines('./requirements.txt'), library, character.only = T)
@@ -19,10 +16,10 @@ list.files('./src', recursive = T) %>%
 
 # Parse command line arguments
 args             = commandArgs()
-runscript_name   = 'tests/bastian'
+runscript_name   = 'baseline/baseline'
 user_id          = 'jar335' 
 local            = 1
-vintage          = NULL       
+vintage          = NULL    
 pct_sample       = 1
 stacked          = 0
 baseline_vintage = NULL
