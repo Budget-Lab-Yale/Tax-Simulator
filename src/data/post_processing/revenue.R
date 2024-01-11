@@ -288,7 +288,7 @@ calc_stacked_rev_est = function(counterfactual_ids) {
                    total = revenues_payroll_tax + 
                            revenues_income_tax - 
                            outlays_tax_credits + 
-                           revenues_corporate_tax) %>% 
+                           revenues_corp_tax) %>% 
             select(scenario_id, year, total)) %>% 
       
       # Join into single dataframe and group by year-series so as to leave 
