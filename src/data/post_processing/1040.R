@@ -82,7 +82,7 @@ create_1040_reports = function(counterfactual_ids) {
                   values_from = c(count, diff_count, amount, diff_amount)) %>% 
       
       # Rename variables 
-      recode_1040_vars() %>% 
+      recode_1040_vars(scenario_id) %>% 
       filter(!is.na(Variable)) %>% 
       select(year, Variable, baseline_count, baseline_amount, count_static, amount_static, 
              diff_count_static, diff_amount_static, count_conventional, amount_conventional, 
@@ -328,7 +328,7 @@ create_stacked_1040_reports = function(counterfactual_ids) {
     
     # Clean up 
     relocate(run_type, Variable, Series) %>% 
-    recode_1040_vars() %>% 
+    recode_1040_vars('baseline') %>% 
     filter(!is.na(Variable)) %>% 
     mutate(Series = if_else(Series == 'amount', 'Amount', 'Number of returns'))
   
@@ -420,25 +420,54 @@ create_stacked_1040_reports = function(counterfactual_ids) {
 
 
 
-recode_1040_vars = function(df) {
+recode_1040_vars = function(df, scenario_id) {
   
   #----------------------------------------------------------------------------
   # Converts subset of variable names to human-readable descriptions. 
   # Unspecified mappings are returned as NA.  
   # 
   # Parameters:
-  #   - df (df) : dataframe long in Variable with 1040.csv names 
+  #   - df (df)           : dataframe long in Variable with 1040.csv names 
+  #   - scenario_id (str) : scenario ID
   #
   # Returns: dataframe with recoded Variable column (df).
   #----------------------------------------------------------------------------
+
+  # Create labels for tax rate variables
+  runtime_args = globals$runtime_args %>% 
+    filter(ID == scenario_id)
   
+  tax_rate_types = ifelse(str_split_1(runtime_args$mtr_types, ' ') == 'nextdollar', 
+                          'Marginal', 
+                          'Average') %>% 
+                     set_names(str_split_1(runtime_args$mtr_vars, ' '))
+  
+  # Rename tax rate variables
+  for (tax_rate_var in names(tax_rate_types)) {
+    df %<>%
+      mutate(
+        Variable = if_else(
+          Variable == paste0('mtr_', tax_rate_var),
+          paste0(tax_rate_types[tax_rate_var], ' tax rate on ', tax_rate_var),
+          Variable
+        )
+      )    
+  }
+
+  # Other variables
   df %>% 
     mutate(Variable = case_when(
+      
+      str_sub(Variable, 1, 8) == 'Marginal' ~ Variable, 
+      str_sub(Variable, 1, 7) == 'Average'  ~ Variable, 
+      
       Variable == 'tax_units'             ~ 'Number of tax units', 
       Variable == 'returns'               ~ 'Number of returns filed', 
       Variable == 'returns_dep'           ~ 'Number of dependent returns filed', 
       Variable == 'dep'                   ~ 'Number of dependents claimed', 
       Variable == 'wages'                 ~ 'Wages and salaries', 
+      Variable == 'wages1'                ~ 'Wages and salaries, primary earner', 
+      Variable == 'wages2'                ~ 'Wages and salaries, secondary earner', 
       Variable == 'exempt_int'            ~ 'Exempt interest income',
       Variable == 'div_ord'               ~ 'Ordinary-rate dividends',
       Variable == 'div_pref'              ~ 'Preferred-rate dividends',
@@ -498,7 +527,8 @@ recode_1040_vars = function(df) {
       Variable == 'ref_other'             ~ 'Refundable credits used to offset other taxes',
       Variable == 'refund'                ~ 'Refundable credits in excess of all tax liability',
       Variable == 'liab_niit'             ~ 'Net Investment Income Tax liability',
-      Variable == 'liab_iit'              ~ 'Income tax liability'
+      Variable == 'liab_iit'              ~ 'Income tax liability', 
+      Variable == 'corp_tax_change'       ~ 'Change in corporate tax attributable to income shifting'
     )) %>% 
     return()
 }

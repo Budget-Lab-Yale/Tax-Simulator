@@ -29,7 +29,9 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
   
   # Choose tax variables to report
   tax_vars = c(
-    'wages',           
+    'wages',
+    'wages1',
+    'wages2',
     'txbl_int',        
     'exempt_int',      
     'div_ord',         
@@ -177,7 +179,11 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
       across(.cols  = all_of(tax_vars), 
              .fns   = list(n      = ~ sum((. != 0) * weight * filer) / 1e6,
                            amount = ~ sum(.        * weight * filer) / 1e9),
-             .names = '{fn}_{col}')
+             .names = '{fn}_{col}'), 
+      
+      # MTR vars
+      across(.cols  = starts_with('mtr_'), 
+             .fns   = ~ weighted.mean(., weight, na.rm = T))
     ) %>%
     
     # Clean up names and return

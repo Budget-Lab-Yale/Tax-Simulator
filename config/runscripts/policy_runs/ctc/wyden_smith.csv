@@ -1,4 +1,3 @@
 ID,dep.Tax-Data.vintage,dep.Tax-Data.ID,dep.Macro-Projections.vintage,dep.Macro-Projections.ID,dep.Corporate-Tax-Model.vintage,dep.Corporate-Tax-Model.ID,tax_law,behavior,first_year,last_year,mtr_vars,mtr_types
-baseline,2024010800,baseline,2023121116,baseline,2024010916,baseline,baseline,,2022,2026,,
-phase_in_rate,2024010800,baseline,2023121116,baseline,2024010916,baseline,policy_runs/ctc/wyden_smith/phase_in_rate,,2022,2026,,
-refund_amount,2024010800,baseline,2023121116,baseline,2024010916,baseline,policy_runs/ctc/wyden_smith/refund_amount,,2022,2026,,
+baseline,2024010800,baseline,2023121116,baseline,2024010916,baseline,baseline,,2022,2026,wages wages1 wages2,nextdollar extensive extensive
+refund_amount,2024010800,baseline,2023121116,baseline,2024010916,baseline,policy_runs/ctc/wyden_smith/refund_amount,,2022,2026,wages wages1 wages2,nextdollar extensive extensive
