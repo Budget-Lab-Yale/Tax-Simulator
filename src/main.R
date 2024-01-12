@@ -16,13 +16,13 @@ list.files('./src', recursive = T) %>%
 
 # Parse command line arguments
 args             = commandArgs()
-runscript_name   = 'policy_runs/ctc/wyden_smith'
-user_id          = 'jar335' 
-local            = 1
-vintage          = NULL    
-pct_sample       = 1
-stacked          = 1
-baseline_vintage = NULL
+runscript_name   = args[1] # 'baseline/baseline'
+user_id          = args[2] # 'jar335' 
+local            = args[3] # 1
+vintage          = args[4] # NULL    
+pct_sample       = args[5] # 1
+stacked          = args[6] # 1
+baseline_vintage = args[7] # NULL
 
 # Set global (scenario-independent) variables
 globals = parse_globals(runscript_name   = runscript_name, 

@@ -19,10 +19,14 @@ tax_data_vintage          = 2023121117
 tax_data_id               = 'baseline'
 macro_projections_vintage = 2023121116 
 macro_projections_id      = 'baseline'
+corp_tax_vintage          = 2024010916
+corp_tax_id               = 'baseline'
+tax_law_root              = 'policy_runs/tcja_ext/interactive/'
 behavior                  = NA
 first_year                = 2023 
 last_year                 = 2033
-mtr_vars                  = NA
+mtr_vars                  = 'part_active wages1'
+mtr_types                 = 'nextdollar extensive'
 
 
 #---------------------
@@ -73,6 +77,7 @@ param_map_list = 1:nrow(param_map) %>%
 # Write map file
 project_root_output = file.path('other/param_generator/output/', project_name) 
 param_map %>% 
+  filter(id != 1) %>% 
   write_csv(file.path(project_root_output, 'map.csv'))
 
 
@@ -117,6 +122,9 @@ for (i in 1:length(param_map_list)) {
   }
   
   # Write all files 
+  if (i == 1) {
+    i = 'baseline'
+  }
   scenario_root = file.path(project_root_output, 'tax_law', i)
   dir.create(scenario_root, showWarnings = F)
   for (file_name in names(yaml_files)) {
@@ -134,22 +142,28 @@ for (i in 1:length(param_map_list)) {
 
 # Initialize template
 runscript_template = tibble(
-  ID                              = NA, 
-  `dep.Tax-Data.vintage`          = tax_data_vintage, 
-  `dep.Tax-Data.ID`               = tax_data_id,
-  `dep.Macro-Projections.version` = macro_projections_vintage,
-  `dep.Macro-Projections.ID`      = macro_projections_id,
-  tax_law                         = NA,
-  behavior                        = behavior,
-  first_year                      = first_year, 
-  last_year                       = last_year, 
-  mtr_vars                        = mtr_vars
+  ID                                = NA, 
+  `dep.Tax-Data.vintage`            = tax_data_vintage, 
+  `dep.Tax-Data.ID`                 = tax_data_id,
+  `dep.Macro-Projections.version`   = macro_projections_vintage,
+  `dep.Macro-Projections.ID`        = macro_projections_id,
+  `dep.Corporate-Tax-Model.vintage` = corp_tax_vintage,
+  `dep.Corporate-Tax-Model.ID`      = corp_tax_id,
+  tax_law                           = tax_law_root,
+  behavior                          = behavior,
+  first_year                        = first_year, 
+  last_year                         = last_year, 
+  mtr_vars                          = mtr_vars,
+  mtr_types                         = mtr_types
 )
 
 # Loop over scenarios, create runscript, and write
 for (i in 1:length(param_map_list)) {
+  if (i == 1) {
+    i = 'baseline'
+  }
   runscript_template %>% 
-    mutate(ID = i, tax_law = i) %>% 
+    mutate(ID = i, tax_law = paste0(tax_law, i)) %>% 
     write_csv(file.path(project_root_output, 'runscripts', paste0(i, '.csv')))
 }
 
