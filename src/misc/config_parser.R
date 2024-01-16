@@ -153,7 +153,8 @@ parse_globals = function(runscript_name, user_id, local, vintage,
   # Tax unit ID in sample
   set.seed(random_seed)
   sample_ids = interface_paths %>% 
-    filter(ID == 'baseline', interface == 'Tax-Data') %>% 
+    filter(interface == 'Tax-Data') %>%
+    slice(1) %>% 
     get_vector('path') %>% 
     read_microdata(2017) %>%
     sample_frac(size = pct_sample) %>% 

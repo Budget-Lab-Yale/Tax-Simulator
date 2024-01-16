@@ -14,8 +14,12 @@ library(yaml)
 # Project name 
 project_name = 'tcja_simulator'
 
+# output folders
+output_runscripts = './config/runscripts/policy_runs/tcja/simulator'
+output_taxlaw     = './config/scenarios/tax_law/policy_runs/tcja_ext/interactive'
+
 # Run script defaults
-tax_data_vintage          = 2023121117
+tax_data_vintage          = 2024010800
 tax_data_id               = 'baseline'
 macro_projections_vintage = 2023121116 
 macro_projections_id      = 'baseline'
@@ -23,7 +27,7 @@ corp_tax_vintage          = 2024010916
 corp_tax_id               = 'baseline'
 tax_law_root              = 'policy_runs/tcja_ext/interactive/'
 behavior                  = NA
-first_year                = 2023 
+first_year                = 2023
 last_year                 = 2033
 mtr_vars                  = 'part_active wages1'
 mtr_types                 = 'nextdollar extensive'
@@ -75,10 +79,9 @@ param_map_list = 1:nrow(param_map) %>%
         as.list())
 
 # Write map file
-project_root_output = file.path('other/param_generator/output/', project_name) 
 param_map %>% 
   filter(id != 1) %>% 
-  write_csv(file.path(project_root_output, 'map.csv'))
+  write_csv(file.path(output_taxlaw, 'map.csv'))
 
 
 #--------------------------
@@ -125,7 +128,7 @@ for (i in 1:length(param_map_list)) {
   if (i == 1) {
     i = 'baseline'
   }
-  scenario_root = file.path(project_root_output, 'tax_law', i)
+  scenario_root = file.path(output_taxlaw, i)
   dir.create(scenario_root, showWarnings = F)
   for (file_name in names(yaml_files)) {
     write_yaml(
@@ -145,7 +148,7 @@ runscript_template = tibble(
   ID                                = NA, 
   `dep.Tax-Data.vintage`            = tax_data_vintage, 
   `dep.Tax-Data.ID`                 = tax_data_id,
-  `dep.Macro-Projections.version`   = macro_projections_vintage,
+  `dep.Macro-Projections.vintage`   = macro_projections_vintage,
   `dep.Macro-Projections.ID`        = macro_projections_id,
   `dep.Corporate-Tax-Model.vintage` = corp_tax_vintage,
   `dep.Corporate-Tax-Model.ID`      = corp_tax_id,
@@ -164,7 +167,7 @@ for (i in 1:length(param_map_list)) {
   }
   runscript_template %>% 
     mutate(ID = i, tax_law = paste0(tax_law, i)) %>% 
-    write_csv(file.path(project_root_output, 'runscripts', paste0(i, '.csv')))
+    write_csv(file.path(output_runscripts, paste0(i, '.csv')))
 }
 
 
