@@ -437,10 +437,14 @@ recode_1040_vars = function(df, scenario_id) {
   runtime_args = globals$runtime_args %>% 
     filter(ID == scenario_id)
   
-  tax_rate_types = ifelse(str_split_1(runtime_args$mtr_types, ' ') == 'nextdollar', 
-                          'Marginal', 
-                          'Average') %>% 
-                     set_names(str_split_1(runtime_args$mtr_vars, ' '))
+  if (is.na(runtime_args$mtr_types)) {
+    tax_rate_types = c()  
+  } else {
+    tax_rate_types = ifelse(str_split_1(runtime_args$mtr_types, ' ') == 'nextdollar', 
+                            'Marginal', 
+                            'Average') %>% 
+                       set_names(str_split_1(runtime_args$mtr_vars, ' '))
+  }
   
   # Rename tax rate variables
   for (tax_rate_var in names(tax_rate_types)) {
