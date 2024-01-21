@@ -194,7 +194,21 @@ calc_rev_est = function(counterfactual_ids) {
               filter(Measure == .x) %>% 
               select(-Measure)) %>% 
         set_names(c('Dollars', 'Share of GDP'))
-    
+      
+      # Write machine-readable version
+      rev_est$Dollars %>% 
+        filter(Series == 'Total budget effect') %>% 
+        select(-Series) %>% 
+        pivot_longer(cols      = everything(), 
+                     names_to  = 'year',
+                     values_to = 'total') %>% 
+        mutate(year = as.integer(year)) %>% 
+        write_csv(file.path(globals$output_root, 
+                            scenario_id, 
+                            if_else(static, 'static', 'conventional'),
+                            'supplemental', 
+                            'revenue_estimates.csv'))
+
       # Create workbook
       wb = createWorkbook()
       addWorksheet(wb, scenario_id)
