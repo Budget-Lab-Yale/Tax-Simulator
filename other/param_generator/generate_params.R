@@ -33,7 +33,6 @@ last_year                 = 2033
 mtr_vars                  = NA
 mtr_types                 = NA
 
-
 # Corporate tax policy mapping to scenario folders 
 corp_map = expand_grid(
   corp_rate = c('21', '15', '25', '28'), 
@@ -47,12 +46,12 @@ corp_map = expand_grid(
     )
   )
    
-
 # Estate tax policy mapping to scenario folders
 estate_map = tibble(
   estate        = c('current_law', 'current_policy'),
   estate_tax_id = c('baseline', 'tcja_extension')
 )
+
 
 #---------------------
 # Read raw YAML files
@@ -120,7 +119,7 @@ add_yaml = function(to_add, dest) {
     return(dest)
   }
   
-  # Add # Skip if no YAML files (i.e. current law)
+  # Skip if no YAML files (i.e. current law)
   for (file_name in names(to_add)) {
     if (file_name %in% names(dest)) {
       dest[[file_name]] = append(dest[[file_name]], to_add[[file_name]]
@@ -142,11 +141,12 @@ for (i in 1:length(param_map_list)) {
   
   # Loop over dimensions 
   for (dim_name in names(param_map_list[[i]])) {
-    if (!(dim_name %in% c('corp_rate', 'corp_base', 'estate')))
-    yaml_files = add_yaml(
-      to_add = raw_yaml[[dim_name]][[param_map_list[[i]][[dim_name]]]], 
-      dest   = yaml_files 
-    )
+    if (!(dim_name %in% c('corp_rate', 'corp_base', 'estate'))) {
+      yaml_files = add_yaml(
+        to_add = raw_yaml[[dim_name]][[param_map_list[[i]][[dim_name]]]], 
+        dest   = yaml_files 
+      )
+    }
   }
   
   # Write all files 
@@ -189,7 +189,7 @@ runscript_template = tibble(
 for (id in param_map$id) {
   
   runscript_template %>% 
-    mutate(ID = id, tax_law = paste0(tax_law, id)) %>% 
+    mutate(ID = id, tax_law = if_else(id == 'baseline', id, paste0(tax_law, id))) %>% 
     left_join(param_map %>% 
                 select(ID = id, 
                        `dep.Corporate-Tax-Model.ID` = corp_tax_id,
