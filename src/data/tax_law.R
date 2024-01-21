@@ -94,13 +94,20 @@ load_tax_law_input = function(config_path) {
     list.files(pattern = '.yaml') %>% 
     str_sub(end = -6)
   
+  # If empty, return empty
+  if (length(param_names) == 0) {
+    return(c())
+  
   # Read YAML into list
-  param_names %>% 
-    paste0('.yaml') %>% 
-    file.path(config_path, .) %>% 
-    map(read_yaml) %>% 
-    set_names(param_names) %>% 
-    return()
+  } else {
+    param_names %>% 
+      paste0('.yaml') %>% 
+      file.path(config_path, .) %>% 
+      map(read_yaml) %>% 
+      set_names(param_names) %>% 
+      return()
+  }
+  
 }
 
 
