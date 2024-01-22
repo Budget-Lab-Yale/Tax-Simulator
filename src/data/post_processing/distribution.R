@@ -70,9 +70,6 @@ process_for_distribution = function(id, baseline_id, year, financing = 'none',
       # Create adult-level weight
       weight_person = weight * (1 + (filing_status == 2)),
       
-      # Calculate change from baseline
-      delta = liab - liab_baseline,
-      
       # Adjust for corporate tax changes. Calculate factor incomes
       labor   = pmax(0, wages + (sole_prop + part_scorp + farm) * 0.8), 
       capital = pmax(0, (sole_prop + part_scorp + farm) * 0.2 + txbl_int + 
@@ -81,15 +78,17 @@ process_for_distribution = function(id, baseline_id, year, financing = 'none',
       # The allocate corporate tax change in accordance with assumed labor incidence  
       corp_tax_labor   = corp_delta * 1e9 * labor_share       * (labor / sum(labor * weight)),
       corp_tax_capital = corp_delta * 1e9 * (1 - labor_share) * (capital / sum(capital * weight)),
-      delta            = delta + corp_tax_labor + corp_tax_capital,
       
       # Adjust for financing effects i.e. distributing deficit
-      delta = delta - sum(delta * weight) * case_when(
+      financing_cost = sum(delta * weight) * case_when(
         financing == 'none'      ~ 0,
         financing == 'head'      ~ (1 + (filing_status == 2)) / sum(weight_person),
         financing == 'income'    ~ pmax(0, expanded_inc) / sum(pmax(0, expanded_inc) * weight),
         financing == 'liability' ~ pmax(0, liab_baseline) / sum(pmax(0, liab_baseline) * weight)
       ),
+      
+      # Calculate change from baseline
+      delta = (liab - liab_baseline) + corp_tax_labor + corp_tax_capital - financing_cost,
       
       # Binary dummies for if a tax unit received a meaningful raise or cut
       cut   = delta <= -5,
@@ -181,8 +180,8 @@ calc_dist_metrics = function(microdata, group_var) {
       share_raise = sum(weight * raise) / sum(weight),
       
       # Relative changes
-      pct_chg_ati = sum((expanded_inc - liab) * weight) / sum((expanded_inc - liab_baseline) * weight) - 1 
-      
+      pct_chg_ati = sum((expanded_inc - liab_baseline - delta) * weight) /
+                    sum((expanded_inc - liab_baseline) * weight) - 1
     ) %>%
     
     # Group's share of total change
