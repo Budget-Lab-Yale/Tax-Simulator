@@ -80,7 +80,7 @@ process_for_distribution = function(id, baseline_id, year, financing = 'none',
       corp_tax_capital = corp_delta * 1e9 * (1 - labor_share) * (capital / sum(capital * weight)),
       
       # Adjust for financing effects i.e. distributing deficit
-      financing_cost = sum(delta * weight) * case_when(
+      financing_cost = sum((liab - liab_baseline + corp_tax_labor + corp_tax_capital) * weight) * case_when(
         financing == 'none'      ~ 0,
         financing == 'head'      ~ (1 + (filing_status == 2)) / sum(weight_person),
         financing == 'income'    ~ pmax(0, expanded_inc) / sum(pmax(0, expanded_inc) * weight),
