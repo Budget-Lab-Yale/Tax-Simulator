@@ -286,7 +286,8 @@ build_distribution_tables = function(id, baseline_id, file_name) {
           
           # Add to results 
           results[[group_var]][[length(results[[group_var]]) + 1]] = dist_metrics %>% 
-            mutate(year = yr, financing = financing, .before = year)
+            mutate(year = yr, .before = everything()) %>%
+            mutate(includes_corp = include_corp, financing = financing, .after = year)
           
           # Add to Excel workbook and format
           format_table(dist_metrics, wb, yr, paste0(group_var, '_group'), financing, include_corp)
@@ -315,7 +316,6 @@ build_distribution_tables = function(id, baseline_id, file_name) {
                                 'supplemental', 
                                 paste0(file_name, '.xlsx')), 
                overwrite = T)
-
 }
 
 
