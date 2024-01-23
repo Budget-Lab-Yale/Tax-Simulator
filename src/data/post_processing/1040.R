@@ -22,7 +22,7 @@ create_1040_reports = function(counterfactual_ids) {
   }
   
   # Read and process baseline 
-  baseline = file.path(globals$output_root, 
+  baseline = file.path(globals$baseline_root, 
                        'baseline', 
                        'static',
                        'totals', 
@@ -244,29 +244,32 @@ create_1040_reports = function(counterfactual_ids) {
   }
   
   # Create baseline workbook by removing non-baseline info
-  for (i in 1:length(scenario)) {
-    deleteData(wb         = wb, 
+  if('baseline' %in% globals$runtime_args$ID){
+    for (i in 1:length(scenario)) {
+      deleteData(wb         = wb, 
+                 sheet      = i, 
+                 rows       = 1:(nrow(scenario[[i]]) + 4),
+                 cols       = 4:13, 
+                 gridExpand = T)
+      addStyle(wb         = wb, 
                sheet      = i, 
                rows       = 1:(nrow(scenario[[i]]) + 4),
-               cols       = 4:13, 
+               cols       = 4:13,
+               style      = createStyle(), 
                gridExpand = T)
-    addStyle(wb         = wb, 
-             sheet      = i, 
-             rows       = 1:(nrow(scenario[[i]]) + 4),
-             cols       = 4:13,
-             style      = createStyle(), 
-             gridExpand = T)
+    }
+    
+    # Write baseline workbook
+    saveWorkbook(wb   = wb, 
+                 file = file.path(globals$output_root, 
+                                  'baseline',
+                                  'static',
+                                  'supplemental', 
+                                  '1040.xlsx'), 
+                 overwrite = T)
+    }
   }
   
-  # Write baseline workbook
-  saveWorkbook(wb   = wb, 
-               file = file.path(globals$output_root, 
-                                'baseline',
-                                'static',
-                                'supplemental', 
-                                '1040.xlsx'), 
-               overwrite = T)
-}
 
 
 
@@ -289,7 +292,7 @@ create_stacked_1040_reports = function(counterfactual_ids) {
   stacked_1040_data = list()
   for (behavior in c('static', 'conventional')) { 
     stacked_1040_data[[behavior]] = c('baseline', counterfactual_ids) %>% 
-      map(.f = ~ file.path(globals$output_root, 
+      map(.f = ~ file.path(if_else(.x == 'baseline', globals$baseline_root, globals$output_root), 
                            .x, 
                            if_else(.x == 'baseline', 'static', behavior),
                            'totals', 
@@ -329,6 +332,7 @@ create_stacked_1040_reports = function(counterfactual_ids) {
     # Clean up 
     relocate(run_type, Variable, Series) %>% 
     recode_1040_vars('baseline') %>% 
+    #recode_1040_vars(globals$runtime_args$ID) %>%
     filter(!is.na(Variable)) %>% 
     mutate(Series = if_else(Series == 'amount', 'Amount', 'Number of returns'))
   
@@ -435,7 +439,8 @@ recode_1040_vars = function(df, scenario_id) {
 
   # Create labels for tax rate variables
   runtime_args = globals$runtime_args %>% 
-    filter(ID == scenario_id)
+    slice(1)
+    #filter(ID == scenario_id)
   
   if (is.na(runtime_args$mtr_types)) {
     tax_rate_types = c()  

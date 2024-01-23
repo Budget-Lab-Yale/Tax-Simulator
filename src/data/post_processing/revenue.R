@@ -158,7 +158,7 @@ calc_rev_est = function(counterfactual_ids) {
       
       # Read scenario GDP 
       gdp = globals$interface_paths %>% 
-        filter(ID == 'baseline', interface == 'Macro-Projections') %>% 
+        filter(interface == 'Macro-Projections') %>% 
         get_vector('path') %>% 
         file.path(c('historical.csv', 'projections.csv')) %>% 
         map(~ read_csv(.x, show_col_types = F)) %>% 
@@ -231,7 +231,7 @@ calc_rev_est = function(counterfactual_ids) {
                style      = createStyle(numFmt = 'COMMA'), 
                stack      = T)
       addStyle(wb         = wb, 
-               sheet      = as.character(scenario_id), 
+               sheet      = as.character(scenario_id),
                rows       = 12:17, 
                cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
@@ -253,7 +253,7 @@ calc_rev_est = function(counterfactual_ids) {
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = as.character(scenario_id), 
-               rows       = 2:17, 
+               rows       = 2:17,
                cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(halign = 'center'), 
