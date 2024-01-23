@@ -23,3 +23,7 @@ Macro-Projections:
 Corporate-Tax-Model:
   type: model_data
   version: 1
+
+Estate-Tax-Model:
+  type: model_data
+  version: 1

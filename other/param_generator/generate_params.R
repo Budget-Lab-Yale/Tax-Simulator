@@ -1,8 +1,9 @@
-#-----------------------------------------------------
+#------------------------------------------------------------
 # generate_params.R 
 #
-# Generates combinations of tax law parameter files
-#-----------------------------------------------------
+# Generates combinations of tax law parameter files for 2024
+# launch interactive simulator tool
+#------------------------------------------------------------
 
 library(tidyverse)
 library(yaml)
@@ -24,13 +25,32 @@ tax_data_id               = 'baseline'
 macro_projections_vintage = 2023121116 
 macro_projections_id      = 'baseline'
 corp_tax_vintage          = 2024010916
-corp_tax_id               = 'baseline'
+estate_tax_vintage        = 2024011917
 tax_law_root              = 'policy_runs/tcja_ext/interactive/'
 behavior                  = NA
 first_year                = 2023
 last_year                 = 2033
-mtr_vars                  = 'part_active wages1'
-mtr_types                 = 'nextdollar extensive'
+mtr_vars                  = NA
+mtr_types                 = NA
+
+# Corporate tax policy mapping to scenario folders 
+corp_map = expand_grid(
+  corp_rate = c('21', '15', '25', '28'), 
+  corp_base = c('current_law', 'current_policy')
+) %>% 
+  mutate(
+    corp_tax_id = paste0( 
+      if_else(corp_rate == '21', 'baseline', corp_rate), 
+      '_', 
+      if_else(corp_base == 'current_law', 'baseline', 'extenders')
+    )
+  )
+   
+# Estate tax policy mapping to scenario folders
+estate_map = tibble(
+  estate        = c('current_law', 'current_policy'),
+  estate_tax_id = c('baseline', 'tcja_extension')
+)
 
 
 #---------------------
@@ -40,9 +60,9 @@ mtr_types                 = 'nextdollar extensive'
 # Get root containing parameters
 project_root_input = file.path('./other/param_generator/input/', project_name)
 
-# Parse dimensions
-dim_names = list.dirs(project_root_input, full.names = F, recursive = F)
-
+# Parse on-model dimensions
+dim_names = list.dirs(project_root_input, full.names = F, recursive = F) 
+  
 # Parse dimension values
 dims = dim_names %>% 
   map(.f = ~ file.path(project_root_input, .x) %>% 
@@ -70,17 +90,20 @@ for (dim_name in dim_names) {
 
 # Build parameter map
 param_map = do.call(expand_grid, dims) %>% 
-  mutate(id = row_number(), .before = everything()) 
+  expand_grid(corp_map, estate_map) %>% 
+  mutate(id = as.character(row_number()), .before = everything(), 
+         id = if_else(id == 1, 'baseline', id)) 
 
 # List version
 param_map_list = 1:nrow(param_map) %>% 
   map(.f = ~ param_map %>% 
         slice(.x) %>% 
+        select(-ends_with('_id')) %>%  
         as.list())
 
 # Write map file
 param_map %>% 
-  filter(id != 1) %>% 
+  select(-ends_with('_id')) %>% 
   write_csv(file.path(output_taxlaw, 'map.csv'))
 
 
@@ -96,7 +119,7 @@ add_yaml = function(to_add, dest) {
     return(dest)
   }
   
-  # Add # Skip if no YAML files (i.e. current law)
+  # Skip if no YAML files (i.e. current law)
   for (file_name in names(to_add)) {
     if (file_name %in% names(dest)) {
       dest[[file_name]] = append(dest[[file_name]], to_add[[file_name]]
@@ -118,10 +141,12 @@ for (i in 1:length(param_map_list)) {
   
   # Loop over dimensions 
   for (dim_name in names(param_map_list[[i]])) {
-    yaml_files = add_yaml(
-      to_add = raw_yaml[[dim_name]][[param_map_list[[i]][[dim_name]]]], 
-      dest   = yaml_files 
-    )
+    if (!(dim_name %in% c('corp_rate', 'corp_base', 'estate'))) {
+      yaml_files = add_yaml(
+        to_add = raw_yaml[[dim_name]][[param_map_list[[i]][[dim_name]]]], 
+        dest   = yaml_files 
+      )
+    }
   }
   
   # Write all files 
@@ -151,7 +176,7 @@ runscript_template = tibble(
   `dep.Macro-Projections.vintage`   = macro_projections_vintage,
   `dep.Macro-Projections.ID`        = macro_projections_id,
   `dep.Corporate-Tax-Model.vintage` = corp_tax_vintage,
-  `dep.Corporate-Tax-Model.ID`      = corp_tax_id,
+  `dep.Estate-Tax-Model.vintage`    = estate_tax_vintage,
   tax_law                           = tax_law_root,
   behavior                          = behavior,
   first_year                        = first_year, 
@@ -161,13 +186,18 @@ runscript_template = tibble(
 )
 
 # Loop over scenarios, create runscript, and write
-for (i in 1:length(param_map_list)) {
-  if (i == 1) {
-    i = 'baseline'
-  }
+for (id in param_map$id) {
+  
   runscript_template %>% 
-    mutate(ID = i, tax_law = paste0(tax_law, i)) %>% 
-    write_csv(file.path(output_runscripts, paste0(i, '.csv')))
+    mutate(ID = id, tax_law = if_else(id == 'baseline', id, paste0(tax_law, id))) %>% 
+    left_join(param_map %>% 
+                select(ID = id, 
+                       `dep.Corporate-Tax-Model.ID` = corp_tax_id,
+                       `dep.Estate-Tax-Model.ID`    = estate_tax_id), 
+              by = 'ID') %>% 
+    relocate(`dep.Corporate-Tax-Model.ID`, .after = `dep.Corporate-Tax-Model.vintage`) %>% 
+    relocate(`dep.Estate-Tax-Model.ID`,    .after = `dep.Estate-Tax-Model.vintage`) %>% 
+    write_csv(file.path(output_runscripts, paste0(id, '.csv')))
 }
 
 

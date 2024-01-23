@@ -6,7 +6,7 @@
 
 
 
-calc_receipts = function(totals, scenario_root, corp_tax_root) {
+calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root) {
   
   #----------------------------------------------------------------------------
   # Calculates a scenario's receipts 
@@ -26,6 +26,8 @@ calc_receipts = function(totals, scenario_root, corp_tax_root) {
   #   - scenario_root (str) : directory where scenario's data is written
   #   - corp_tax_root (str) : directory where corporate tax revenue for this 
   #                           scenario is stored
+  #   - estate_tax_root (str) : directory where estate tax revenue for this 
+  #                             scenario is stored
   #
   # Returns:  void, writes a dataframe for the scenario containing values for:
   #   - Fiscal Year
@@ -33,6 +35,7 @@ calc_receipts = function(totals, scenario_root, corp_tax_root) {
   #   - Individual Income Tax
   #   - Refundable Credit Outlays
   #   - Corporate Income tax
+  #   - Estate and Gift Taxes
   #----------------------------------------------------------------------------
   
   # Read corporate tax receipts
@@ -40,6 +43,12 @@ calc_receipts = function(totals, scenario_root, corp_tax_root) {
     file.path('revenues.csv') %>% 
     read_csv(show_col_types = F) %>% 
     select(year, revenues_corp_tax = receipts_fy)
+  
+  # Read estate tax receipts
+  revenues_estate_tax = estate_tax_root %>%
+    file.path('revenues.csv') %>% 
+    read_csv(show_col_types = F) %>% 
+    select(year, revenues_estate_tax = receipts_fy)
   
   
   totals %>%
@@ -67,12 +76,15 @@ calc_receipts = function(totals, scenario_root, corp_tax_root) {
     left_join(revenues_corp_tax, by = 'year') %>% 
     mutate(revenues_corp_tax = revenues_corp_tax + delta_revenues_corp_tax) %>%
     
+    # Join estate tax levels and net out changes owning to behavior
+    left_join(revenues_estate_tax, by = 'year') %>% 
+    
     # Drop incomplete year
     filter(year != min(year)) %>%
     
     # Write CSV
     select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits, 
-           revenues_corp_tax) %>%
+           revenues_corp_tax, revenues_estate_tax) %>%
     write_csv(file.path(scenario_root, 'totals', 'receipts.csv'))
 }
 
@@ -114,7 +126,8 @@ calc_rev_est = function(counterfactual_ids) {
     mutate(total = revenues_payroll_tax + 
                    revenues_income_tax - 
                    outlays_tax_credits + 
-                   revenues_corp_tax) %>% 
+                   revenues_corp_tax + 
+                   revenues_estate_tax) %>% 
     pivot_longer(cols      = -year, 
                  names_to  = 'series', 
                  values_to = 'baseline')
@@ -137,7 +150,8 @@ calc_rev_est = function(counterfactual_ids) {
         mutate(total = revenues_payroll_tax + 
                        revenues_income_tax - 
                        outlays_tax_credits + 
-                       revenues_corp_tax) %>% 
+                       revenues_corp_tax + 
+                       revenues_estate_tax) %>% 
         pivot_longer(cols      = -year, 
                      names_to  = 'series', 
                      values_to = 'counterfactual')
@@ -169,7 +183,8 @@ calc_rev_est = function(counterfactual_ids) {
           Series == 'revenues_payroll_tax' ~ '  Revenues, payroll tax', 
           Series == 'revenues_income_tax'  ~ '  Revenues, individual income tax', 
           Series == 'outlays_tax_credits'  ~ '  Outlays, refundable tax credits',
-          Series == 'revenues_corp_tax'    ~ '  Revenues, corporate income tax'
+          Series == 'revenues_corp_tax'    ~ '  Revenues, corporate income tax',
+          Series == 'revenues_estate_tax'  ~ '  Revenues, estate tax'
         )) %>%
         arrange(Measure, desc(Series)) 
       
@@ -179,7 +194,21 @@ calc_rev_est = function(counterfactual_ids) {
               filter(Measure == .x) %>% 
               select(-Measure)) %>% 
         set_names(c('Dollars', 'Share of GDP'))
-    
+      
+      # Write machine-readable version
+      rev_est$Dollars %>% 
+        filter(Series == 'Total budget effect') %>% 
+        select(-Series) %>% 
+        pivot_longer(cols      = everything(), 
+                     names_to  = 'year',
+                     values_to = 'total') %>% 
+        mutate(year = as.integer(year)) %>% 
+        write_csv(file.path(globals$output_root, 
+                            scenario_id, 
+                            if_else(static, 'static', 'conventional'),
+                            'supplemental', 
+                            'revenue_estimates.csv'))
+
       # Create workbook
       wb = createWorkbook()
       addWorksheet(wb, as.character(scenario_id))
@@ -189,42 +218,42 @@ calc_rev_est = function(counterfactual_ids) {
       writeData(wb = wb, sheet = as.character(scenario_id), startRow = 1, 
                 x = 'FY budget effects of policy change, nominal dollars')
       
-      writeData(wb = wb, sheet = as.character(scenario_id), x = rev_est$`Share of GDP`, startRow = 10)
-      writeData(wb = wb, sheet = as.character(scenario_id), startRow = 9, 
+      writeData(wb = wb, sheet = as.character(scenario_id), x = rev_est$`Share of GDP`, startRow = 11)
+      writeData(wb = wb, sheet = as.character(scenario_id), startRow = 10, 
                 x = 'FY budget effects of policy change, share of GDP')
       
       # Format numbers and cells 
       addStyle(wb         = wb, 
                sheet      = as.character(scenario_id), 
-               rows       = 2:7, 
+               rows       = 2:8, 
                cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(numFmt = 'COMMA'), 
                stack      = T)
       addStyle(wb         = wb, 
-               sheet      = as.character(scenario_id), 
-               rows       = 9:15, 
+               sheet      = as.character(scenario_id),
+               rows       = 12:17, 
                cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(numFmt = 'PERCENTAGE'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = as.character(scenario_id), 
-               rows       = c(1, 2, 7, 9, 10, 15), 
+               rows       = c(1, 2, 8, 10, 11, 17), 
                cols       = 1:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(border = 'bottom'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = as.character(scenario_id), 
-               rows       = c(2, 10), 
+               rows       = c(2, 11), 
                cols       = 1:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(textDecoration = 'bold'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = as.character(scenario_id), 
-               rows       = 2:15, 
+               rows       = 2:17,
                cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(halign = 'center'), 
@@ -238,7 +267,7 @@ calc_rev_est = function(counterfactual_ids) {
       # Write revenue estimates file
       saveWorkbook(wb   = wb, 
                    file = file.path(globals$output_root, 
-                                    scenario_id, 
+                                    as.character(scenario_id), 
                                     if_else(static, 'static', 'conventional'),
                                     'supplemental', 
                                     'revenue_estimates.xlsx'), 
@@ -288,7 +317,8 @@ calc_stacked_rev_est = function(counterfactual_ids) {
                    total = revenues_payroll_tax + 
                            revenues_income_tax - 
                            outlays_tax_credits + 
-                           revenues_corp_tax) %>% 
+                           revenues_corp_tax + 
+                           revenues_estate_tax) %>% 
             select(scenario_id, year, total)) %>% 
       
       # Join into single dataframe and group by year-series so as to leave 
