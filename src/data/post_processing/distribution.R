@@ -212,17 +212,17 @@ build_distribution_tables = function(id, baseline_id, file_name) {
   # Read and process corporate tax data
   #-------------------------------------
   
-  # Read baseline liability
-  corp_baseline = get_scenario_info(baseline_id)$interface_paths$`Corporate-Tax-Model` %>%
-    file.path('revenues.csv') %>% 
-    read_csv(show_col_types = F) %>%
-    select(year, baseline = liability_cy)
-  
-  # Read counterfactual scenario liability
-  corp_scenario = get_scenario_info(id)$interface_paths$`Corporate-Tax-Model` %>%
-    file.path('revenues.csv') %>% 
+  # Read baseline revenues 
+  corp_baseline = globals$baseline_root %>% 
+    file.path('baseline/static/totals/receipts.csv') %>% 
     read_csv(show_col_types = F) %>% 
-    select(year, scenario = liability_cy)
+    select(year, baseline = revenues_corp_tax)
+  
+  # Read counterfactual scenario revenues 
+  corp_scenario = globals$output_root %>% 
+    file.path(id, '/static/totals/receipts.csv') %>% 
+    read_csv(show_col_types = F) %>% 
+    select(year, scenario = revenues_corp_tax)
   
   # Calculate change in liability by year
   corp_delta = corp_scenario %>% 

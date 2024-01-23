@@ -90,7 +90,7 @@ parse_globals = function(runscript_name, user_id, local, vintage,
     baseline_root = output_root
   } else {
     baseline_root = output_root %>% 
-      str_remove(vintage) %>% 
+      str_remove(paste0('/',vintage)) %>% 
       file.path(baseline_vintage)
     if (!dir.exists(baseline_root)) {
       stop('User-supplied vintage for baseline does not exist!')

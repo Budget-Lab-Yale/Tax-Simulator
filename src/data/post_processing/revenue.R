@@ -144,7 +144,7 @@ calc_rev_est = function(counterfactual_ids) {
       
       # Read scenario GDP 
       gdp = globals$interface_paths %>% 
-        filter(ID == 'baseline', interface == 'Macro-Projections') %>% 
+        filter(interface == 'Macro-Projections') %>% 
         get_vector('path') %>% 
         file.path(c('historical.csv', 'projections.csv')) %>% 
         map(~ read_csv(.x, show_col_types = F)) %>% 
@@ -182,55 +182,55 @@ calc_rev_est = function(counterfactual_ids) {
     
       # Create workbook
       wb = createWorkbook()
-      addWorksheet(wb, scenario_id)
+      addWorksheet(wb, as.character(scenario_id))
       
       # Write data
-      writeData(wb = wb, sheet = scenario_id, x = rev_est$Dollars, startRow = 2)
-      writeData(wb = wb, sheet = scenario_id, startRow = 1, 
+      writeData(wb = wb, sheet = as.character(scenario_id), x = rev_est$Dollars, startRow = 2)
+      writeData(wb = wb, sheet = as.character(scenario_id), startRow = 1, 
                 x = 'FY budget effects of policy change, nominal dollars')
       
-      writeData(wb = wb, sheet = scenario_id, x = rev_est$`Share of GDP`, startRow = 10)
-      writeData(wb = wb, sheet = scenario_id, startRow = 9, 
+      writeData(wb = wb, sheet = as.character(scenario_id), x = rev_est$`Share of GDP`, startRow = 10)
+      writeData(wb = wb, sheet = as.character(scenario_id), startRow = 9, 
                 x = 'FY budget effects of policy change, share of GDP')
       
       # Format numbers and cells 
       addStyle(wb         = wb, 
-               sheet      = scenario_id, 
+               sheet      = as.character(scenario_id), 
                rows       = 2:7, 
                cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(numFmt = 'COMMA'), 
                stack      = T)
       addStyle(wb         = wb, 
-               sheet      = scenario_id, 
+               sheet      = as.character(scenario_id), 
                rows       = 9:15, 
                cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(numFmt = 'PERCENTAGE'), 
                stack      = T)
       addStyle(wb         = wb, 
-               sheet      = scenario_id, 
+               sheet      = as.character(scenario_id), 
                rows       = c(1, 2, 7, 9, 10, 15), 
                cols       = 1:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(border = 'bottom'), 
                stack      = T)
       addStyle(wb         = wb, 
-               sheet      = scenario_id, 
+               sheet      = as.character(scenario_id), 
                rows       = c(2, 10), 
                cols       = 1:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(textDecoration = 'bold'), 
                stack      = T)
       addStyle(wb         = wb, 
-               sheet      = scenario_id, 
+               sheet      = as.character(scenario_id), 
                rows       = 2:15, 
                cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(halign = 'center'), 
                stack      = T)
       setColWidths(wb     = wb,
-                   sheet  = scenario_id,
+                   sheet  = as.character(scenario_id),
                    cols   = 1:ncol(rev_est$Dollars),
                    widths = c(29, rep(6, ncol(rev_est$Dollars) - 1)))
         
