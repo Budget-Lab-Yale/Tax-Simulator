@@ -62,6 +62,7 @@ max_refund_young:
     '2018': 1400
     '2021': Inf
     '2022': 1400
+    '2026': Inf
   i_measure: default
   i_base_year: default
   i_direction: default
@@ -75,13 +76,24 @@ max_refund_old:
     '2018': 1400
     '2021': Inf
     '2022': 1400
+    '2026': Inf
   i_measure: default
   i_base_year: default
   i_direction: default
   i_increment: default
 
-# Earned income threshold above which CTC phases in
-pi_thresh:
-  value:
-    '2014': 3000
-    '2018': 2500
+# Minimum refundable CTC per qualifying young child (i.e. y-intercept in trapezoid)
+min_refund_young:
+  value: 
+    '2014': 0
+    '2021': 3600
+    '2022': 0
+    '2026': 2000
+  
+# Minimum refundable CTC per qualifying old child (i.e. y-intercept in trapezoid)
+min_refund_old:
+  value: 
+    '2014': 0
+    '2021': 3000
+    '2022': 0
+    '2026': 2000

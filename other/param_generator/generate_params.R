@@ -35,7 +35,7 @@ mtr_types                 = NA
 
 # Corporate tax policy mapping to scenario folders 
 corp_map = expand_grid(
-  corp_rate = c('21', '15', '25', '28'), 
+  corp_rate = c('21', '15', '28'), 
   corp_base = c('current_law', 'current_policy')
 ) %>% 
   mutate(
