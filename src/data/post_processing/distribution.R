@@ -248,7 +248,7 @@ build_distribution_tables = function(id, baseline_id, file_name) {
   wb = createWorkbook()
 
   # Year loop 
-  for (yr in get_scenario_info(id)$years) {
+  for (yr in get_scenario_info(id)$dist_years) {
   
     # Get corporate tax info for this year
     this_corp_delta = corp_delta %>% 
