@@ -46,5 +46,5 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
-# Output files from param generator
-other/param_generator/output
+# Enormous number of interactive simulator tax law folders
+config/scenarios/tax_law/policy_runs/tcja_ext/interactive/

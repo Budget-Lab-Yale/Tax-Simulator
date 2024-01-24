@@ -171,14 +171,7 @@ runscripts = expand_grid(
                                                '_', 
                                                str_sub(ID, start = -1)), 
          .after = `dep.Corporate-Tax-Model.vintage`) %>% 
-  mutate(ID = if_else(row_number() == 1, 'baseline', ID))
-
-
-walk(
-  .x = 1:nrow(runscripts),
-  .f = ~ runscripts %>% 
-    slice(.x) %>% 
-    write_csv(file.path(output_runscripts, paste0(runscripts$ID[.x], '.csv')))
-)
+  mutate(ID = if_else(row_number() == 1, 'baseline', ID)) %>% 
+  write_csv(file.path(output_runscripts, 'interactive_simulator_runs.csv'))
 
 
