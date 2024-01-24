@@ -269,11 +269,12 @@ get_scenario_info = function(id) {
   # Distribution table and microdata output years
   if (is.na(runtime_args$dist_years)) {
     dist_years = years
-  } else if (str_detect(runtime_args$dist_years, ':')) {
-    dist_years_input = str_split_1(dist_years_input, ':')
+  } else if (str_detect(as.character(runtime_args$dist_years), ':')) {
+    dist_years_input = str_split_1(as.character(runtime_args$dist_years), ':')
     dist_years = as.integer(dist_years_input[1]):as.integer(dist_years_input[2]) 
   } else {
-    dist_years = runtime_args$dist_years %>% 
+    dist_years = runtime_args$dist_years %>%
+      as.character() %>%
       str_split_1(' ') %>% 
       as.integer()
   }

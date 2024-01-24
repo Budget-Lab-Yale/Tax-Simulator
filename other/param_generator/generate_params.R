@@ -29,8 +29,8 @@ estate_tax_vintage        = 2024011917
 estate_tax_id             = 'baseline'
 tax_law_root              = 'policy_runs/tcja_ext/interactive/'
 behavior                  = NA
-first_year                = 2023
-last_year                 = 2033
+years                     = '2023 2053'
+dist_years                = '2026'
 mtr_vars                  = NA
 mtr_types                 = NA
 
@@ -160,12 +160,13 @@ runscripts = expand_grid(
   `dep.Estate-Tax-Model.ID`         = estate_tax_id,
   tax_law                           = tax_law_root,
   behavior                          = behavior,
-  first_year                        = first_year, 
-  last_year                         = last_year, 
+  years                             = years, 
+  dist_year                         = dist_years, 
   mtr_vars                          = mtr_vars,
   mtr_types                         = mtr_types
 ) %>% 
-  mutate(tax_law = if_else(row_number() == 1, 'baseline', paste0(tax_law, ID))) %>% 
+  mutate(tax_law    = if_else(row_number() == 1, 'baseline', paste0(tax_law, ID)), 
+         dist_years = if_else(row_number() == 1, years, dist_years)) %>% 
   mutate(`dep.Corporate-Tax-Model.ID` = paste0(str_sub(ID , start = -3, end = -2), 
                                                '_', 
                                                str_sub(ID, start = -1)), 
