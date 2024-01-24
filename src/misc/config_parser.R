@@ -6,7 +6,7 @@
 
 
 
-parse_globals = function(runscript_name, user_id, local, vintage, 
+parse_globals = function(runscript_name, scenario_id, user_id, local, vintage, 
                          baseline_vintage, pct_sample) {
   
   #----------------------------------------------------------------------------
@@ -16,6 +16,8 @@ parse_globals = function(runscript_name, user_id, local, vintage,
   # 
   # Parameters:
   #   - runscript_name (str)   : name of runscript CSV file 
+  #   - scenario_id (str)      : optional name of scenario ID contained in 
+  #                              the runscript; "NULL" indicates all 
   #   - user_id (str)          : Yale NetID, used for local runs in which output
   #                              is stored on user-specific scratch folder
   #   - local (int)            : whether this is a local run (1) or a production
@@ -102,7 +104,12 @@ parse_globals = function(runscript_name, user_id, local, vintage,
     paste0('.csv') %>%
     file.path('./config/runscripts/', .) %>% 
     read_csv()
-    
+  
+  # Subset runtime arguments
+  if (!is.null(scenario_id)) {
+    runtime_args %<>% 
+      filter(ID == scenario_id)
+  }
   
   # Write dependencies CSV; this is a vintage-level file which lists all 
   # other model vintages on which these Tax-Simmulator results are dependent

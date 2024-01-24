@@ -16,13 +16,14 @@ list.files('./src', recursive = T) %>%
 
 # Parse command line arguments
 args             = commandArgs()
-runscript_name   = args[6] # 'baseline/baseline'
-user_id          = args[7] # 'jar335'
-local            = as.integer(args[8]) # 1
-if(args[9] == "NULL") vintage = NULL else vintage = args[9]
-pct_sample       = as.integer(args[10]) # 1
-stacked          = as.integer(args[11]) # 1
-if(args[12] == "NULL") baseline_vintage = NULL else baseline_vintage = as.integer(args[12])
+runscript_name   = 'tests/interactive_test'
+scenario_id      = '000000000150'
+user_id          = NULL
+local            = 1
+vintage          = NULL
+pct_sample       = 0.05
+stacked          = 0
+baseline_vintage = NULL
 
 # args             = commandArgs()
 # runscript_name   = args[1] # 'baseline/baseline'
@@ -34,7 +35,8 @@ if(args[12] == "NULL") baseline_vintage = NULL else baseline_vintage = as.intege
 # if(args[7] == "NULL") baseline_vintage = NULL else baseline_vintage = as.integer(args[7])
 
 # Set global (scenario-independent) variables
-globals = parse_globals(runscript_name   = runscript_name, 
+globals = parse_globals(runscript_name   = runscript_name,
+                        scenario_id      = scenario_id,
                         user_id          = user_id, 
                         local            = local, 
                         vintage          = vintage, 
@@ -45,6 +47,7 @@ globals = parse_globals(runscript_name   = runscript_name,
 counterfactual_ids = globals$runtime_args %>% 
   filter(ID != 'baseline') %>% 
   get_vector('ID')
+
 
 #---------------
 # Run scenarios
