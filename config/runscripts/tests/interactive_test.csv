@@ -1,9 +1,9 @@
 ID,dep.Tax-Data.vintage,dep.Tax-Data.ID,dep.Macro-Projections.vintage,dep.Macro-Projections.ID,dep.Corporate-Tax-Model.vintage,dep.Corporate-Tax-Model.ID,dep.Estate-Tax-Model.vintage,dep.Estate-Tax-Model.ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,2024010800,baseline,2023121116,baseline,2024010916,baseline,2024011917,baseline,baseline,,2023:2053,,,
-000000000150,2024010800,baseline,2023121116,baseline,2024010916,15_0,2024011917,baseline,policy_runs/tcja_ext/interactive/000000000150,NA,2023:2053,2026,NA,NA,2026
-000000001150,2024010800,baseline,2023121116,baseline,2024010916,15_0,2024011917,baseline,policy_runs/tcja_ext/interactive/000000001150,NA,2023:2053,2026,NA,NA,2026
-000000001210,2024010800,baseline,2023121116,baseline,2024010916,21_0,2024011917,baseline,policy_runs/tcja_ext/interactive/000000001210,NA,2023:2053,2026,NA,NA,2026
-010000000150,2024010800,baseline,2023121116,baseline,2024010916,15_0,2024011917,baseline,policy_runs/tcja_ext/interactive/010000000150,NA,2023:2053,2026,NA,NA,2026
-010000000210,2024010800,baseline,2023121116,baseline,2024010916,21_0,2024011917,baseline,policy_runs/tcja_ext/interactive/010000000210,NA,2023:2053,2026,NA,NA,2026
-010000001150,2024010800,baseline,2023121116,baseline,2024010916,15_0,2024011917,baseline,policy_runs/tcja_ext/interactive/010000001150,NA,2023:2053,2026,NA,NA,2026
-010000001210,2024010800,baseline,2023121116,baseline,2024010916,21_0,2024011917,baseline,policy_runs/tcja_ext/interactive/010000001210,NA,2023:2053,2026,NA,NA,2026
+baseline,2024010800,baseline,2023121116,baseline,2024010916,baseline,2024011917,baseline,baseline,,2023:2033,,,
+000000000150,2024010800,baseline,2023121116,baseline,2024010916,15_0,2024011917,baseline,policy_runs/tcja_ext/interactive/000000000150,NA,2023:2033,2026,NA,NA
+000000001150,2024010800,baseline,2023121116,baseline,2024010916,15_0,2024011917,baseline,policy_runs/tcja_ext/interactive/000000001150,NA,2023:2033,2026,NA,NA
+000000001210,2024010800,baseline,2023121116,baseline,2024010916,21_0,2024011917,baseline,policy_runs/tcja_ext/interactive/000000001210,NA,2023:2033,2026,NA,NA
+010000000150,2024010800,baseline,2023121116,baseline,2024010916,15_0,2024011917,baseline,policy_runs/tcja_ext/interactive/010000000150,NA,2023:2033,2026,NA,NA
+010000000210,2024010800,baseline,2023121116,baseline,2024010916,21_0,2024011917,baseline,policy_runs/tcja_ext/interactive/010000000210,NA,2023:2033,2026,NA,NA
+010000001150,2024010800,baseline,2023121116,baseline,2024010916,15_0,2024011917,baseline,policy_runs/tcja_ext/interactive/010000001150,NA,2023:2033,2026,NA,NA
+010000001210,2024010800,baseline,2023121116,baseline,2024010916,21_0,2024011917,baseline,policy_runs/tcja_ext/interactive/010000001210,NA,2023:2033,2026,NA,NA

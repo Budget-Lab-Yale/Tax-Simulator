@@ -156,9 +156,9 @@ calc_rev_est = function(counterfactual_ids) {
                      names_to  = 'series', 
                      values_to = 'counterfactual')
       
-      # Read scenario GDP 
+      # Read GDP 
       gdp = globals$interface_paths %>% 
-        filter(interface == 'Macro-Projections') %>% 
+        filter(ID == globals$interface_path$ID[1], interface == 'Macro-Projections') %>% 
         get_vector('path') %>% 
         file.path(c('historical.csv', 'projections.csv')) %>% 
         map(~ read_csv(.x, show_col_types = F)) %>% 
@@ -332,7 +332,7 @@ calc_stacked_rev_est = function(counterfactual_ids) {
       # Calculate share-of-GDP metric
       left_join(
         globals$interface_paths %>% 
-          filter(ID == 'baseline', interface == 'Macro-Projections') %>% 
+          filter(ID == globals$interface_path$ID[1], interface == 'Macro-Projections') %>% 
           get_vector('path') %>% 
           file.path(c('historical.csv', 'projections.csv')) %>% 
           map(~ read_csv(.x, show_col_types = F)) %>% 

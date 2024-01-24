@@ -115,7 +115,7 @@ add_yaml = function(to_add, dest) {
 for (i in 1:nrow(combo_ids)) {
 
   # Extract scenario parameters in list form
-  scenario_info = as.list(combo_ids[1, 2:ncol(combo_ids)])
+  scenario_info = as.list(combo_ids[i, 2:ncol(combo_ids)])
   
   # Initialize list of yaml files for this scenario 
   yaml_files = list()
@@ -133,7 +133,7 @@ for (i in 1:nrow(combo_ids)) {
   if (i == 1) {
     id = 'baseline'
   }
-  scenario_root = file.path(output_taxlaw, i)
+  scenario_root = file.path(output_taxlaw, id)
   dir.create(scenario_root, showWarnings = F)
   for (file_name in names(yaml_files)) {
     write_yaml(
