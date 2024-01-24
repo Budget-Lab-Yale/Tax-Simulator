@@ -253,10 +253,11 @@ get_scenario_info = function(id) {
     behavior_modules = str_split_1(runtime_args$behavior, ' ')
   }
   
-  # Years to run
-  years_input = runtime_args$years %>% 
-    as.character() %>%
-    str_split_1() 
+  # Years to run. Parse based on format supplied
+  years_input = as.character(runtime_args$years)
+  if (str_detect(years_input, ':')) {
+    years_input = str_split_1(years_input, ':') 
+  }
   if (length(years_input) == 1) {
     years = c(as.integer(years_input))
   } else if (length(years_input) == 2) {
@@ -266,15 +267,15 @@ get_scenario_info = function(id) {
   }
   
   # Distribution table and microdata output years
-  dist_years_input = runtime_args$years %>% 
-    as.character() %>%
-    str_split_1() 
-  if (length(dist_years_input) == 1) {
-    years = c(as.integer(dist_years_input))
-  } else if (length(years_input) == 2) {
-    years = as.integer(dist_years_input[1]):as.integer(dist_years_input[2])
+  if (is.na(runtime_args$dist_years)) {
+    dist_years = years
+  } else if (str_detect(runtime_args$dist_years, ':')) {
+    dist_years_input = str_split_1(dist_years_input, ':')
+    dist_years = as.integer(dist_years_input[1]):as.integer(dist_years_input[2]) 
   } else {
-    stop('Invalid input for dist_years column in runscript')
+    dist_years = runtime_args$dist_years %>% 
+      str_split_1(' ') %>% 
+      as.integer()
   }
   
   # Names of variables for which to calculate marginal tax rates
