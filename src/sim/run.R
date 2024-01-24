@@ -300,12 +300,14 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
   #-----------------
   
   # Write microdata
-  tax_units %>%  
-    select(all_of(globals$detail_vars), starts_with('mtr_')) %>% 
-    write_csv(file.path(scenario_info$output_path, 
-                        if_else(static, 'static', 'conventional'),
-                        'detail', 
-                        paste0(year, '.csv')))
+  if (year %in% scenario_info$dist_years) {
+    tax_units %>%  
+      select(all_of(globals$detail_vars), starts_with('mtr_')) %>% 
+      write_csv(file.path(scenario_info$output_path, 
+                          if_else(static, 'static', 'conventional'),
+                          'detail', 
+                          paste0(year, '.csv')))
+  }
   
   # Get totals from microdata
   totals = list(pr            = get_pr_totals(tax_units, year), 

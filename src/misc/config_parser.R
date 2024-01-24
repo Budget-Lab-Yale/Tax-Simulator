@@ -207,6 +207,8 @@ get_scenario_info = function(id) {
   #   - output_path (str)        : path to root of output folder
   #   - interface_paths (list)   : list of scenario-specific interface paths
   #   - years (int[])            : years to run
+  #   - dist_years (int[])       : years for which to generate microdata output
+  #                                and distribution tables 
   #   - mtr_vars (str[])         : variables to calculate MTRs for
   #   - mtr_vars (str[])         : MTR types (same index as mtr_vars)
   #   - behavior_modules (str[]) : names of behavioral feedback modules to run
@@ -252,7 +254,28 @@ get_scenario_info = function(id) {
   }
   
   # Years to run
-  years = runtime_args$first_year:runtime_args$last_year
+  years_input = runtime_args$years %>% 
+    as.character() %>%
+    str_split_1() 
+  if (length(years_input) == 1) {
+    years = c(as.integer(years_input))
+  } else if (length(years_input) == 2) {
+    years = as.integer(years_input[1]):as.integer(years_input[2])
+  } else {
+    stop('Invalid input for years column in runscript')
+  }
+  
+  # Distribution table and microdata output years
+  dist_years_input = runtime_args$years %>% 
+    as.character() %>%
+    str_split_1() 
+  if (length(dist_years_input) == 1) {
+    years = c(as.integer(dist_years_input))
+  } else if (length(years_input) == 2) {
+    years = as.integer(dist_years_input[1]):as.integer(dist_years_input[2])
+  } else {
+    stop('Invalid input for dist_years column in runscript')
+  }
   
   # Names of variables for which to calculate marginal tax rates
   mtr_vars = NULL
@@ -273,6 +296,7 @@ get_scenario_info = function(id) {
               tax_law_id       = tax_law_id,
               behavior_modules = behavior_modules, 
               years            = years, 
+              dist_years       = dist_years,
               mtr_vars         = mtr_vars, 
               mtr_types        = mtr_types))
 }
