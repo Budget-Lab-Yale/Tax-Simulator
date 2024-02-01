@@ -1,11 +1,11 @@
-ID,dep.Tax-Data.vintage,dep.Tax-Data.ID,dep.Macro-Projections.vintage,dep.Macro-Projections.ID,dep.Corporate-Tax-Model.vintage,dep.Corporate-Tax-Model.ID,dep.Estate-Tax-Model.vintage,dep.Estate-Tax-Model.ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,2024013021,baseline,2023121116,baseline,2024010916,baseline,2024011917,baseline,baseline,,2024:2035,,kg_lt part_active,nextdollar nexdollar
-01-rates,2024013021,baseline,2023121116,baseline,2024010916,baseline,2024011917,baseline,policy_runs/tcja_ext/cbo_stacking/01-rates,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar
-02-ctc,2024013021,baseline,2023121116,baseline,2024010916,baseline,2024011917,baseline,policy_runs/tcja_ext/cbo_stacking/02-ctc,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar
-03-amt,2024013021,baseline,2023121116,baseline,2024010916,baseline,2024011917,baseline,policy_runs/tcja_ext/cbo_stacking/03-amt,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar
-04-std,2024013021,baseline,2023121116,baseline,2024010916,baseline,2024011917,baseline,policy_runs/tcja_ext/cbo_stacking/04-std,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar
-05-item,2024013021,baseline,2023121116,baseline,2024010916,baseline,2024011917,baseline,policy_runs/tcja_ext/cbo_stacking/05-item,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar
-06-pe,2024013021,baseline,2023121116,baseline,2024010916,baseline,2024011917,baseline,policy_runs/tcja_ext/cbo_stacking/06-pe,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar
-07-qbi,2024013021,baseline,2023121116,baseline,2024010916,baseline,2024011917,baseline,policy_runs/tcja_ext/cbo_stacking/07-qbi,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar
-08-losses,2024013021,baseline,2023121116,baseline,2024010916,baseline,2024011917,baseline,policy_runs/tcja_ext/cbo_stacking/08-losses,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar
-09-estate,2024013021,baseline,2023121116,baseline,2024010916,baseline,2024011917,tcja_extension,policy_runs/tcja_ext/cbo_stacking/08-losses,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Estate-Tax-Model.vintage,dep.Estate-Tax-Model.ID
+baseline,baseline,,2024:2035,,kg_lt part_active,nextdollar nexdollar,2024011917,baseline
+01-rates,policy_runs/tcja_ext/cbo_stacking/01-rates,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar,2024011917,baseline
+02-ctc,policy_runs/tcja_ext/cbo_stacking/02-ctc,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar,2024011917,baseline
+03-amt,policy_runs/tcja_ext/cbo_stacking/03-amt,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar,2024011917,baseline
+04-std,policy_runs/tcja_ext/cbo_stacking/04-std,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar,2024011917,baseline
+05-item,policy_runs/tcja_ext/cbo_stacking/05-item,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar,2024011917,baseline
+06-pe,policy_runs/tcja_ext/cbo_stacking/06-pe,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar,2024011917,baseline
+07-qbi,policy_runs/tcja_ext/cbo_stacking/07-qbi,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar,2024011917,baseline
+08-losses,policy_runs/tcja_ext/cbo_stacking/08-losses,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar,2024011917,baseline
+09-estate,policy_runs/tcja_ext/cbo_stacking/08-losses,entity_shifting/pearce_prisinzano,2024:2035,2026,kg_lt part_active,nextdollar nexdollar,2024011917,tcja_extension
