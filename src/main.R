@@ -73,7 +73,7 @@ if (is.null(baseline_vintage)) {
     select(id, year, starts_with('mtr_'))
 }
 
-
+# Run counterfactual scenarios
 walk(.f = do_scenario, 
      .x = counterfactual_ids, 
      baseline_mtrs = baseline_mtrs)
