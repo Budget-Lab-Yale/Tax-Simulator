@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Estate-Tax-Model.vintage,dep.Estate-Tax-Model.ID
+baseline,baseline,,2017:2053,,first_mort_int,nextdollar,2024011917,baseline
+full_extension,policy_runs/tcja_ext/cbo_stacking/08-losses,,2017:2053,,first_mort_int,nextdollar,2024011917,tcja_extension
+partial_extension,policy_runs/tcja_ext/400k/03-pease,,2017:2053,,first_mort_int,nextdollar,2024011917,baseline

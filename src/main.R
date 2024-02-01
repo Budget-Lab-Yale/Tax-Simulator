@@ -7,9 +7,8 @@
 #---------------------
 
 # Load required packages
-
 lapply(readLines('./requirements.txt'), library, character.only = T, 
-      warn.conflicts = F, quietly = T)
+       warn.conflicts = F, quietly = T)
 
 # Source all function scripts
 return_vars = list()
@@ -28,13 +27,13 @@ if (length(args) > 0) {
   stacked          = as.integer(args[7])
   baseline_vintage = if_else(args[8] == "NULL", NULL, args[8])
 } else {
-  runscript_name   = 'policy_runs/tcja/simulator/interactive_simulator_runs'
-  scenario_id      = "baseline"
-  user_id          = "jmk263"
+  runscript_name   = 'policy_runs/tcja/frbus_runs'
+  scenario_id      = NULL
+  user_id          = 'jar335'
   local            = 1
   vintage          = NULL
   pct_sample       = 1
-  stacked          = 0
+  stacked          = 1
   baseline_vintage = NULL
 }
 

@@ -27,7 +27,7 @@ Macro-Projections:
 Corporate-Tax-Model:
   type: model_data
   version: 1
-  default_vintage: 2024010916
+  default_vintage: 2024020114
   default_id: baseline
 
 Estate-Tax-Model:
