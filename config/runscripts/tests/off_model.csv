@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Off-Model-Estimates.vintage,dep.Off-Model-Estimates.ID
+baseline,baseline,,2021:2022,,,,2024020100,baseline
+should_be_baseline,baseline,,2021:2022,2022,,,2024020100,baseline
+with_off_model,baseline,,2021:2022,2022,,,2024020100,test

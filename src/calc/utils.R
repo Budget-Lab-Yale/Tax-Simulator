@@ -29,7 +29,7 @@ derive_vars = function(tax_unit) {
       net_rent        = rent - rent_loss,
       net_estate      = estate - estate_loss,
       sch_e           = part_scorp + net_rent + net_estate
-    
+      
     ) %>% 
     return()
 }

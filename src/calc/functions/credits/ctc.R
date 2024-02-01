@@ -45,6 +45,7 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'savers_nonref', # (dbl) value of nonrefundable Saver's Credit
     'old_cred',      # (dbl) value of Elderly and Disabled Credit
     'ei',            # (dbl) earned income
+    'ei_prior_yr',   # (dbl) earned income last year            
     
     # Tax law attributes
     'ctc.young_age_limit',  # (int) maximum age to qualify as "young" child
@@ -69,6 +70,7 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'ctc.min_refund_old',   # (int) minimum refundable CTC per old qualifying child
     'ctc.max_refund_young', # (int) maximum refundable CTC per young qualifying child
     'ctc.max_refund_old',   # (int) maximum refundable CTC per old qualifying child
+    'ctc.ei_prior_yr',      # (int) whether prior year earned income qualifies for phase-in
     'ctc.pi_thresh',        # (int) earned income threshold above which CTC phases in
     'ctc.pi_type',          # (int) whether phase-in type is a rate (0 means range)
     'ctc.pi_rate',          # (dbl) phase-in rate
@@ -151,13 +153,19 @@ calc_ctc = function(tax_unit, fill_missings = F) {
                                  Inf, 
                                  n_old * ctc.max_refund_old),
       
+      # If allowed, use larger of this year's and last year's earned income
+      # for purposes of phase-in
+      qual_ei = if_else(ctc.ei_prior_yr == 1, 
+                        pmax(ei, ei_prior_yr), 
+                        ei),
+      
       # Determine phase-in rate 
       pi_rate = if_else(ctc.pi_type == 1, 
                         ctc.pi_rate, 
                         (max_value1 + max_value2) / ctc.pi_range), 
       
       # Phase in with earned income above minimum refund value
-      ctc_ref = pmin(min_refund + (pmax(0, ei - ctc.pi_thresh) * pi_rate), 
+      ctc_ref = pmin(min_refund + (pmax(0, qual_ei - ctc.pi_thresh) * pi_rate), 
                      pmin(remaining_ctc, max_refund_young + max_refund_old))
       
     ) %>% 

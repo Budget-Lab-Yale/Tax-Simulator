@@ -62,6 +62,9 @@ parse_globals = function(runscript_name, scenario_id, user_id, local, vintage,
                  values_to = 'path') %>% 
     filter(interface != 'Tax-Simulator')
   
+  # Get default vintages/scenario IDs
+  interface_defaults = read_yaml('./interface_versions.yaml') %>% 
+    map(.f = ~ .x[c('default_vintage', 'default_id')])
   
   # Set model version and vintage
   version = read_yaml('./interface_versions.yaml')$`Tax-Simulator`$version
@@ -104,6 +107,19 @@ parse_globals = function(runscript_name, scenario_id, user_id, local, vintage,
     paste0('.csv') %>%
     file.path('./config/runscripts/', .) %>% 
     read_csv()
+  
+  # Add nonspecified default vintages and scenario IDs to runscript
+  for (dep in names(interface_defaults)) {
+    
+    # Skip specified interfaces
+    if (dep == 'Tax-Simulator' | (paste0('dep.', dep, '.vintage') %in% colnames(runtime_args))) {
+      next
+    }
+    
+    # Add columns
+    runtime_args[[paste0('dep.', dep, '.vintage')]] = interface_defaults[[dep]]$default_vintage
+    runtime_args[[paste0('dep.', dep, '.ID')]]      = interface_defaults[[dep]]$default_id
+  }
   
   # Subset runtime arguments
   if (!is.null(scenario_id)) {
