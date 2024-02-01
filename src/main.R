@@ -16,13 +16,13 @@ list.files('./src', recursive = T) %>%
 
 # Parse command line arguments
 args             = commandArgs()
-runscript_name   = 'tests/interactive_test'
-scenario_id      = '000000000150'
-user_id          = NULL
+runscript_name   = 'tests/new_data'
+scenario_id      = NULL
+user_id          = 'jar335'
 local            = 1
 vintage          = NULL
-pct_sample       = 0.05
-stacked          = 0
+pct_sample       = 1
+stacked          = 1
 baseline_vintage = NULL
 
 # args             = commandArgs()

@@ -18,6 +18,13 @@ indexation_defaults:
     '2023': NA
     '2026': 100
 
+# Whether prior year earned income qualifies for phase-in
+ei_prior_yr:
+  value: 
+    '2014': 0
+    '2024': 1
+    '2026': 0
+
 # Whether phase-in type is a rate (0 means range)
 pi_type:
   value:
@@ -25,7 +32,6 @@ pi_type:
     '2023': 0
     '2026': 1
 
-  
 # Phase-in range
 pi_range: 
   value: 
@@ -82,12 +88,15 @@ value_young:
   i_base_year: 
     '2014': NA
     '2024': [2022, 2022]
+    '2026': NA
   i_direction: 
     '2014': NA
     '2024': [-1, -1]
+    '2026': NA
   i_increment: 
     '2014': NA
     '2024': [100, 100]
+    '2026': NA
 
 # Maximum credit value per "old" child
 value_old:
@@ -103,9 +112,12 @@ value_old:
   i_base_year: 
     '2014': NA
     '2024': [2022, 2022]
+    '2026': NA
   i_direction: 
     '2014': NA
     '2024': [-1, -1]
+    '2026': NA
   i_increment: 
     '2014': NA
     '2024': [100, 100]
+    '2026': NA

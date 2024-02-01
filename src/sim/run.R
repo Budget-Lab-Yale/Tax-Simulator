@@ -227,7 +227,7 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
     # Allocate net operating losses attributable to some prior-year modeled policy
     distribute_nols(nols, year) 
   
-  
+
   #---------------------------
   # Model behavioral feedback
   #---------------------------
