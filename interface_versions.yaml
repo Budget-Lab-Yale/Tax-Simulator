@@ -15,15 +15,29 @@ Tax-Simulator:
 Tax-Data:
   type: model_data
   version: 1
+  default_vintage: 2024013119
+  default_id: baseline
 
 Macro-Projections: 
   type: model_data
   version: 2
+  default_vintage: 2023121116
+  default_id: baseline
 
 Corporate-Tax-Model:
   type: model_data
   version: 1
+  default_vintage: 2024010916
+  default_id: baseline
 
 Estate-Tax-Model:
   type: model_data
   version: 1
+  default_vintage: 2024011917
+  default_id: baseline
+
+Off-Model-Estimates:
+  type: model_data
+  version: 1
+  default_vintage: 2024020100
+  default_id: baseline

@@ -6,7 +6,8 @@
 
 
 
-calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root) {
+calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root, 
+                         off_model_root) {
   
   #----------------------------------------------------------------------------
   # Calculates a scenario's receipts 
@@ -27,7 +28,9 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root) 
   #   - corp_tax_root (str) : directory where corporate tax revenue for this 
   #                           scenario is stored
   #   - estate_tax_root (str) : directory where estate tax revenue for this 
-  #                             scenario is stored
+  #                             scenario is stored 
+  #   - off_model_root (str) : directory where off-model estimates for this
+  #                            scenario are stored
   #
   # Returns:  void, writes a dataframe for the scenario containing values for:
   #   - Fiscal Year
@@ -50,6 +53,10 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root) 
     read_csv(show_col_types = F) %>% 
     select(year, revenues_estate_tax = receipts_fy)
   
+  # Read other off-model receipts 
+  off_model = off_model_root %>%
+    file.path('revenues.csv') %>% 
+    read_csv(show_col_types = F)
   
   totals %>%
     mutate(
@@ -72,12 +79,18 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root) 
                                 0.25 * lag(corp_tax_change)
     ) %>%
     
-    # Join corporate tax levels and net out changes owning to behavior
+    # Join corporate tax levels and net out changes owing to behavior
     left_join(revenues_corp_tax, by = 'year') %>% 
     mutate(revenues_corp_tax = revenues_corp_tax + delta_revenues_corp_tax) %>%
     
-    # Join estate tax levels and net out changes owning to behavior
+    # Join estate tax levels 
     left_join(revenues_estate_tax, by = 'year') %>% 
+    
+    # Join off-model estimates
+    left_join(off_model, by = 'year') %>% 
+    mutate(revenues_income_tax = revenues_income_tax + individual,  
+           revenues_corp_tax   = revenues_corp_tax + corporate) %>% 
+    select(-individual, -corporate) %>% 
     
     # Drop incomplete year
     filter(year != min(year)) %>%

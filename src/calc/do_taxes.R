@@ -66,6 +66,7 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
   tax_units %<>% 
     bind_cols(do_payroll_taxes(., vars_payroll)) 
   
+  
   #-------------------------
   # Individual income taxes
   #-------------------------
