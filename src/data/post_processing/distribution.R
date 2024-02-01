@@ -248,8 +248,15 @@ build_distribution_tables = function(id, baseline_id, file_name) {
   wb = createWorkbook()
 
   # Year loop 
+  first_year = get_scenario_info(id)$years[1]
   for (yr in get_scenario_info(id)$dist_years) {
   
+    # Skip year if it's the first year in the run -- we wont have corporate 
+    # receipts data for this year 
+    if (yr == first_year) {
+      next
+    }
+    
     # Get corporate tax info for this year
     this_corp_delta = corp_delta %>% 
       filter(year == yr) %>% 
