@@ -1,11 +1,16 @@
 
-commandArgs = function() {
-  return(c("policy_runs/tcja/simulator/10", "jmk263", "1", "NULL", "1", "0", "2024011614"))
-}
+scripts = read_csv("config/runscripts/policy_runs/tcja/simulator/interactive_simulator_runs.csv") %>%
+  select(ID) %>%
+  unlist()
 
-commandArgs = function() {
-  return(c("policy_runs/tcja/simulator/baseline", "jmk263", "1", "NULL", "1", "0", "NULL"))
-}
+runscript_name   = "policy_runs/tcja/simulator/interactive_simulator_runs"
+scenario_id      = "baseline"
+user_id          = "jmk263"
+local            = 1
+vintage          = NULL
+pct_sample       = 1
+baseline_vintage = NULL
+parsed           = T
 
 start = Sys.time()
 
@@ -28,13 +33,6 @@ runtime_m = as.numeric(end - start) * 2
 
 wide = ceiling(15 / runtime_m)
 
-scripts = list.files(path = "config/runscripts/policy_runs/tcja/simulator")
-scripts = scripts[!grepl("baseline", scripts)]
-
-# Calculate wall time based on jobs, cores, and partition
-walltime = ((runtime_m * length(scripts)) / 4) * 1.25
-walltime = signif(walltime, digits = -1)
-
 batch_path = file.path("config/batch-submissions", stamp)
 
 if(!file.exists(batch_path)){
@@ -48,7 +46,7 @@ line = "module load miniconda; conda activate ybl-rbash; "
 wide_l = 0
 
 while(index <= length(scripts)) {
-  line = paste0(line, "Rscript src/main.R", " policy_runs/tcja/simulator/", str_sub(scripts[index], 1, -5), " jmk263", " 1 ", stamp, " 1", " 0 ", stamp, "; ") 
+  line = paste0(line, "Rscript src/main.R", " policy_runs/tcja/simulator/interactive_simulator_runs.csv ", scripts[index], " jmk263", " 1 ", stamp, " 1", " 0 ", stamp, "; ") 
   index = index + 1
   wide_l = wide_l + 1
 
@@ -62,9 +60,3 @@ while(index <= length(scripts)) {
   }
 }
 
-print("Enter the following commands in the grace terminal:")
-print("module load dSQ")
-print(paste0("dsq --job-file batchlist.txt -c 4 --mem-per-cpu 4g -t ", walltime, ":00 --mail-type ALL --partition scavenge --requeue"))
-
-#system("source /etc/profile.d/modules.sh")
-#system("module load dSQ")

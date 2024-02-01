@@ -15,24 +15,26 @@ list.files('./src', recursive = T) %>%
   walk(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
 
 # Parse command line arguments
-args             = commandArgs()
-runscript_name   = 'tests/new_data'
-scenario_id      = NULL
-user_id          = 'jar335'
-local            = 1
-vintage          = NULL
-pct_sample       = 1
-stacked          = 1
-baseline_vintage = NULL
-
-# args             = commandArgs()
-# runscript_name   = args[1] # 'baseline/baseline'
-# user_id          = args[2] # 'jar335'
-# local            = as.integer(args[3]) # 1
-# if(args[4] == "NULL") vintage = NULL else vintage = args[4]
-# pct_sample       = as.integer(args[5]) # 1
-# stacked          = as.integer(args[6]) # 1
-# if(args[7] == "NULL") baseline_vintage = NULL else baseline_vintage = as.integer(args[7])
+args = commandArgs(trailingOnly = T)
+if (length(args) > 0) {
+  runscript_name   = args[1]
+  scenario_id      = if_else(args[2] == "NULL", NULL, args[2])
+  user_id          = args[3]
+  local            = as.integer(args[4])
+  vintage          = if_else(args[5] == "NULL", NULL, args[5])
+  pct_sample       = as.integer(args[6])
+  stacked          = as.integer(args[7])
+  baseline_vintage = if_else(args[8] == "NULL", NULL, args[8])
+} else {
+  runscript_name   = 'tests/off_model'
+  scenario_id      = NULL
+  user_id          = 'jar335'
+  local            = 1
+  vintage          = NULL
+  pct_sample       = 0.05
+  stacked          = 1
+  baseline_vintage = NULL
+}
 
 # Set global (scenario-independent) variables
 globals = parse_globals(runscript_name   = runscript_name,
