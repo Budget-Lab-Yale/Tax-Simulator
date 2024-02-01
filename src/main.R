@@ -7,7 +7,9 @@
 #---------------------
 
 # Load required packages
-lapply(readLines('./requirements.txt'), library, character.only = T)
+
+lapply(readLines('./requirements.txt'), library, character.only = T, 
+      warn.conflicts = F, quietly = T)
 
 # Source all function scripts
 return_vars = list()
@@ -26,13 +28,13 @@ if (length(args) > 0) {
   stacked          = as.integer(args[7])
   baseline_vintage = if_else(args[8] == "NULL", NULL, args[8])
 } else {
-  runscript_name   = 'tests/off_model'
-  scenario_id      = NULL
-  user_id          = 'jar335'
+  runscript_name   = 'policy_runs/tcja/simulator/interactive_simulator_runs'
+  scenario_id      = "baseline"
+  user_id          = "jmk263"
   local            = 1
   vintage          = NULL
-  pct_sample       = 0.05
-  stacked          = 1
+  pct_sample       = 1
+  stacked          = 0
   baseline_vintage = NULL
 }
 
@@ -73,7 +75,6 @@ if (is.null(baseline_vintage)) {
 }
 
 
-# Run counterfactuals 
 walk(.f = do_scenario, 
      .x = counterfactual_ids, 
      baseline_mtrs = baseline_mtrs)
