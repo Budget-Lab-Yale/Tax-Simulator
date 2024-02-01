@@ -4,14 +4,15 @@ scenario_id      = "baseline"
 user_id          = "jmk263"
 local            = 1
 vintage          = NULL
-pct_sample       = .05
+pct_sample       = 1
 stacked          = 0
 baseline_vintage = NULL
-
 
 start = Sys.time()
 source("src/main.R")
 end = Sys.time()
+
+runtime = as.numeric(end - start)
 
 stamp = paste0(lubridate::year(end), 
                lubridate::month(end) %>%
@@ -40,7 +41,7 @@ batch_path = file.path(batch_path, paste0("batchjob-",stamp,".sh"))
 file.create(batch_path)
 
 cat(paste0('#!/bin/bash',
-           '\n#SBATCH --array=1-', nrow(scripts)/2,
+           '\n#SBATCH --array=1-200', #nrow(scripts)/2,
            '\n#SBATCH --job-name batch-',stamp,
            #'\n#SBATCH --ntasks',
            '\n#SBATCH --output=/gpfs/gibbs/project/sarin/jmk263/Repositories/Tax-Simulator/config/batch-submissions/',stamp,'/output/slurm-%A_%a.out',
@@ -54,9 +55,9 @@ cat(paste0('#!/bin/bash',
            '\n  Rscript /gpfs/gibbs/project/sarin/jmk263/Repositories/Tax-Simulator/src/main.R ', runscript_name, ' "${scenario_id}" ', user_id, ' ',
            local, ' ', stamp, ' ', pct_sample,' ', stacked, ' ', stamp,
            '\ndone'
-           )#,
-    #file = batch_path,
-    #append = T
+           ),
+    file = batch_path,
+    append = T
     )
 
 
