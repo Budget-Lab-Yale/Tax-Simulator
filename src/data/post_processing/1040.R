@@ -57,6 +57,7 @@ create_1040_reports = function(counterfactual_ids) {
       bind_rows() %>% 
       
       # Pivot long in variable 
+      select(-starts_with('mtr_')) %>% 
       rename_with(.cols = starts_with('n_'), 
                   .fn   = ~ str_replace(., 'n_', 'count.')) %>% 
       rename_with(.cols = -c(year, run_type, starts_with('count.')), 

@@ -109,6 +109,6 @@ do_employment = function(tax_units, ...) {
     
     # Remove intermediate calculation variables and return 
     select(-income, -e1, -e2, -delta_rtw1, -delta_rtw2, 
-           -pr_emp1, -pre_emp2, -emp1, -emp2) %>% 
+           -pr_emp1, -pr_emp2, -emp1, -emp2) %>% 
     return()
 }
