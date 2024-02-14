@@ -27,14 +27,14 @@ if (length(args) > 0) {
   stacked          = as.integer(args[7])
   baseline_vintage = if_else(args[8] == "NULL", NULL, args[8])
 } else {
-  runscript_name   = 'policy_runs/tcja/clausing_sarin'
+  runscript_name   = 'tests/interactive_simulator_runs'
   scenario_id      = NULL
-  user_id          = 'jar335'
-  local            = 1
-  vintage          = '2024020200'
+  user_id          = '115112413281'
+  local            = 0
+  vintage          = NULL
   pct_sample       = 1
-  stacked          = 1
-  baseline_vintage = '2024020200'  
+  stacked          = 0
+  baseline_vintage = NULL  
 }
 
 # Set global (scenario-independent) variables
