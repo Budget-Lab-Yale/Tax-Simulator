@@ -248,8 +248,15 @@ build_distribution_tables = function(id, baseline_id, file_name) {
   wb = createWorkbook()
 
   # Year loop 
+  first_year = get_scenario_info(id)$years[1]
   for (yr in get_scenario_info(id)$dist_years) {
   
+    # Skip year if it's the first year in the run -- we wont have corporate 
+    # receipts data for this year 
+    if (yr == first_year) {
+      next
+    }
+    
     # Get corporate tax info for this year
     this_corp_delta = corp_delta %>% 
       filter(year == yr) %>% 
@@ -608,5 +615,74 @@ format_table = function(dist_metrics, wb, year, group_var, financing, corp) {
   }
 }
 
-
-
+# 
+# 
+# 
+# test = counterfactual_ids %>%
+#   map(.f = ~ '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1/2024020413' %>%
+#         file.path(.x, '/static/supplemental/distribution_income.csv') %>%
+#         fread() %>%
+#         tibble() %>%
+#         mutate(scenario = .x, .before = everything())) %>%
+#   bind_rows()
+# 
+# test %>%
+#   filter(!includes_corp, financing == 'none',
+#          income_group != 'Negative income',
+#          scenario != 'estate') %>%
+#   mutate(income_group = factor(income_group, levels = unique(test$income_group))) %>%
+#   mutate(scenario = case_when(
+#     scenario == 'tcja_extension' ~ '1) Full TCJA extension', 
+#     scenario == 'rates' ~ '2) Higher top rates', 
+#     scenario == 'qbi' ~ '3) Limited QBI deduction', 
+#     scenario == 'pease' ~ '4) Limited itemized deductions'
+#   )) %>% 
+#   select(scenario, income_group, share_cut, share_raise, pct_chg_ati) %>%
+#   pivot_longer(cols     = -c(scenario, income_group),
+#                names_to = 'metric') %>%
+#   group_by(income_group, metric) %>%
+#   mutate(contribution = value - replace_na(lag(value), 0),
+#          total        = value[scenario == '4) Limited itemized deductions']) %>%
+#   filter(metric == 'pct_chg_ati') %>%
+#   ggplot(aes(x = income_group, y = contribution, fill = scenario)) +
+#   geom_col() +
+#   geom_point(aes(y = total), size = 5, show.legend = F) +
+#   geom_hline(yintercept = 0) +
+#   theme_bw() +
+#   scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+#   scale_y_continuous(breaks = seq(-.1, 0.1, 0.01)) +
+#   labs(x = 'Income group', y = 'Contribution', fill = 'Provision')+
+#   ggtitle("Decomposition of reform's impact on after-tax income",
+#           subtitle = 'Percent change from current law, 2026')
+# 
+# 
+# 
+# test %>%
+#   mutate(scenario = case_when(
+#     scenario == 'tcja_extension' ~ '1) Full TCJA extension', 
+#     scenario == 'rates' ~ '2) Higher top rates', 
+#     scenario == 'qbi' ~ '3) Limited QBI deduction', 
+#     scenario == 'pease' ~ '4) Limited itemized deductions'
+#   )) %>% 
+#   filter(income_group != 'Negative income',
+#          !includes_corp,
+#          scenario == '7) QBI deduction') %>% 
+#   mutate(income_group = factor(income_group, levels = unique(test$income_group))) %>%
+#   select(financing, income_group, pct_chg_ati) %>%
+#   pivot_wider(names_from = financing,
+#               values_from = pct_chg_ati) %>%
+#   rename(Direct = none, total = liability) %>%
+#   mutate(Financing = total - Direct) %>%
+#   pivot_longer(cols = c(Direct, Financing),
+#                names_to = 'source') %>%
+#   ggplot(aes(x = income_group, y = value, fill = source)) +
+#   geom_col() +
+#   geom_point(aes(y = total), size = 5, show.legend = F) +
+#   geom_hline(yintercept = 0) +
+#   theme_bw() +
+#   scale_x_discrete(guide = guide_axis(n.dodge=2)) +
+#   labs(x = 'Income group', y = 'Contribution', fill = 'Source')+
+#   ggtitle("Decomposition of reform's impact on after-tax income",
+#           subtitle = 'Direct effects of reform vs financing costs')
+# 
+# 

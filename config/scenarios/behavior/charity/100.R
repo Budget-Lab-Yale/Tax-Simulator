@@ -11,7 +11,7 @@ do_charity = function(tax_units, ...) {
   #                          counterfactual scenario
   #
   # Returns: tibble of tax units with post-adjustment cash charitable 
-  #          contribution values. 
+  #          contribution values.
   #----------------------------------------------------------------------------
   
   # Set elasticity

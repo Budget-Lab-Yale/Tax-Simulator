@@ -1,0 +1,57 @@
+---
+# Credit phase-in rate for filers with no qualifying children 
+pi_rate_0:
+  value: 
+    '2014': 0.0765
+    '2021': 0.153
+    '2022': 0.0765
+    '2026': 0.153
+
+# Earned income threshold at which credit is maximized for filers with no children 
+pi_end_0:
+  value:
+    '2014': 4220
+    '2021': 9820
+    '2022': 4220
+    '2026': 9820
+  i_measure: default
+  i_base_year:
+    '2014': 1995
+    '2021': 2020
+    '2022': 1995
+    '2026': 2020
+  i_direction: default
+  i_increment: default
+
+# AGI threshold at which credit begins phasing out for filers with no children
+po_thresh_0:
+  value: 
+    '2014': 5280
+    '2021': 11610
+    '2022': 5280
+    '2026': 11610
+  i_measure: 
+  i_base_year:
+    '2014': 1995
+    '2021': 2020
+    '2022': 1995
+    '2026': 2020
+  i_direction: default
+  i_increment: default
+
+# Minimum age for credit eligibility
+min_age:
+  value: 
+    '2014': 25
+    '2021': 19
+    '2022': 25
+    '2026': 19
+
+# Maximum age for credit eligibility
+max_age:
+  value:
+    '2014': 64
+    '2021': Inf
+    '2022': 64
+    '2026': Inf
+    

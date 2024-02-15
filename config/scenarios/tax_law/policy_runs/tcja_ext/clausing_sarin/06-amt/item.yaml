@@ -10,7 +10,7 @@ salt_limit_married:
 salt_workaround_allowed:
   value:
     '2014': 1
-    '2025': 0
+    '2026': 0
     
 # Years after which mortgage interest deduction is limited based on mortgage balance. Maps to mort_bal_limit 
 mort_bal_limit_years:

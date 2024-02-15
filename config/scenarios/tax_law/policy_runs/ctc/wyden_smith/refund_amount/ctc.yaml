@@ -18,6 +18,13 @@ indexation_defaults:
     '2023': NA
     '2026': 100
 
+# Whether prior year earned income qualifies for phase-in
+ei_prior_yr:
+  value: 
+    '2014': 0
+    '2024': 1
+    '2026': 0
+
 # Whether phase-in type is a rate (0 means range)
 pi_type:
   value:
@@ -25,7 +32,6 @@ pi_type:
     '2023': 0
     '2026': 1
 
-  
 # Phase-in range
 pi_range: 
   value: 
@@ -45,8 +51,7 @@ max_refund_young:
     '2022': 1400
     '2023': 1800
     '2024': 1900
-    '2025': 2000
-    '2026': Inf
+    '2025': Inf
   i_measure: default
   i_base_year: default
   i_direction: default
@@ -62,8 +67,7 @@ max_refund_old:
     '2022': 1400
     '2023': 1800
     '2024': 1900
-    '2025': 2000
-    '2026': Inf
+    '2025': Inf
   i_measure: default
   i_base_year: default
   i_direction: default

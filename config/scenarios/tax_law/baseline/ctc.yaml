@@ -166,6 +166,10 @@ max_refund_old:
   i_direction: default
   i_increment: default
 
+# Whether prior year earned income qualifies for phase-in
+ei_prior_yr:
+  value: 0
+
 # Whether phase-in type is a rate (0 means range)
 pi_type:
   value: 1

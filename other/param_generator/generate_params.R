@@ -20,13 +20,7 @@ output_runscripts = './config/runscripts/policy_runs/tcja/simulator'
 output_taxlaw     = './config/scenarios/tax_law/policy_runs/tcja_ext/interactive'
 
 # Run script defaults
-tax_data_vintage          = 2024010800
-tax_data_id               = 'baseline'
-macro_projections_vintage = 2023121116 
-macro_projections_id      = 'baseline'
-corp_tax_vintage          = 2024010916
-estate_tax_vintage        = 2024011917
-estate_tax_id             = 'baseline'
+corp_tax_vintage          = 2024020114
 tax_law_root              = 'policy_runs/tcja_ext/interactive/'
 behavior                  = NA
 years                     = '2023:2053'
@@ -151,19 +145,13 @@ for (i in 1:nrow(combo_ids)) {
 # Initialize template
 runscripts = expand_grid(
   ID                                = combo_ids$id, 
-  `dep.Tax-Data.vintage`            = tax_data_vintage, 
-  `dep.Tax-Data.ID`                 = tax_data_id,
-  `dep.Macro-Projections.vintage`   = macro_projections_vintage,
-  `dep.Macro-Projections.ID`        = macro_projections_id,
-  `dep.Corporate-Tax-Model.vintage` = corp_tax_vintage,
-  `dep.Estate-Tax-Model.vintage`    = estate_tax_vintage,
-  `dep.Estate-Tax-Model.ID`         = estate_tax_id,
   tax_law                           = tax_law_root,
   behavior                          = behavior,
   years                             = years, 
   dist_years                        = dist_years, 
   mtr_vars                          = mtr_vars,
-  mtr_types                         = mtr_types
+  mtr_types                         = mtr_types,
+  `dep.Corporate-Tax-Model.vintage` = corp_tax_vintage
 ) %>% 
   mutate(tax_law    = if_else(row_number() == 1, 'baseline', paste0(tax_law, ID)),
          dist_years = if_else(row_number() == 1, years, dist_years)) %>% 

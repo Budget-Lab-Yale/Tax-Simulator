@@ -153,9 +153,12 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
   # Calculate and write receipts
   totals_pr %>%  
     left_join(totals_1040, by = 'year') %>% 
-    calc_receipts(output_root, 
-                  scenario_info$interface_paths$`Corporate-Tax-Model`, 
-                  scenario_info$interface_paths$`Estate-Tax-Model`) 
+    calc_receipts(
+      scenario_root   = output_root, 
+      corp_tax_root   = scenario_info$interface_paths$`Corporate-Tax-Model`, 
+      estate_tax_root = scenario_info$interface_paths$`Estate-Tax-Model`, 
+      off_model_root  = scenario_info$interface_paths$`Off-Model-Estimates`
+    ) 
 
   # Return MTRs
   output %>% 
@@ -227,7 +230,7 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
     # Allocate net operating losses attributable to some prior-year modeled policy
     distribute_nols(nols, year) 
   
-  
+
   #---------------------------
   # Model behavioral feedback
   #---------------------------
