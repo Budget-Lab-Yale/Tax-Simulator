@@ -63,4 +63,18 @@ get_vector = function(df, name) {
     return()
 }
 
+purge_detail = function() {
+  for(behavior in c("static", "conventional")){
+    unlink(
+      file.path(globals$output_root,
+                scenario_id,
+                behavior,
+                "detail/*"
+      )
+    )
+  }
+}
 
+  
+  
+  

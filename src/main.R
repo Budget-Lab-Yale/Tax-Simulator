@@ -7,8 +7,11 @@
 #---------------------
 
 # Load required packages
-lapply(readLines('./requirements.txt'), library, character.only = T, 
-       warn.conflicts = F, quietly = T)
+suppressPackageStartupMessages(
+  invisible(capture.output(
+    lapply(readLines('./requirements.txt'), library, character.only = T)    
+  ))
+)
 
 # Source all function scripts
 return_vars = list()
@@ -26,6 +29,7 @@ if (length(args) > 0) {
   pct_sample       = as.integer(args[6])
   stacked          = as.integer(args[7])
   baseline_vintage = if_else(args[8] == "NULL", NULL, args[8])
+  delete_detail    = args[9]
 } else {
   runscript_name   = 'policy_runs/tcja/frbus_runs'
   scenario_id      = NULL
@@ -34,7 +38,8 @@ if (length(args) > 0) {
   vintage          = NULL
   pct_sample       = 1
   stacked          = 1
-  baseline_vintage = NULL  
+  baseline_vintage = NULL
+  delete_detail    = 0 
 }
 
 # Set global (scenario-independent) variables
@@ -101,3 +106,7 @@ if (stacked == 1) {
   build_all_stacked_distribution_tables(counterfactual_ids)
 }
 
+# Delete detailed microdata files
+if (delete_detail == 1) {
+  purge_detail()
+}
