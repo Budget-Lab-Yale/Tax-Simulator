@@ -135,6 +135,20 @@ integrate_rates_brackets = function(df, n_brackets, prefix_brackets,
   #          column for each bracket (df).
   #----------------------------------------------------------------------------
   
+  # Remove all-NA rate/bracket columns -- indicates that in a prior or future 
+  # year there are more brackets
+  defunct_brackets = df %>% 
+    summarise(across(.cols = c(starts_with(prefix_brackets), starts_with(prefix_rates)), 
+                     .fns = ~ sum(is.na(.)) / n())) %>% 
+    pivot_longer(cols = everything()) %>% 
+    filter(value == 1) %>% 
+    select(name) %>% 
+    deframe()
+  
+  df %<>% 
+    select(-all_of(defunct_brackets))
+  
+  
   # If number of brackets isn't supplied by user, ascertain it
   if (is.null(n_brackets)) {
     n_brackets = get_n_cols(df, prefix_brackets)
@@ -228,6 +242,20 @@ integrate_conditional_rates_brackets = function(df, n_brackets, prefix_brackets,
   # Returns: a dataframe containing either a single liability column or one 
   #          column for each bracket (df).
   #----------------------------------------------------------------------------
+  
+  # Remove all-NA rate/bracket columns -- indicates that in a prior or future 
+  # year there are more brackets
+  defunct_brackets = df %>% 
+    summarise(across(.cols = c(starts_with(prefix_brackets), starts_with(prefix_rates)), 
+                     .fns = ~ sum(is.na(.)) / n())) %>% 
+    pivot_longer(cols = everything()) %>% 
+    filter(value == 1) %>% 
+    select(name) %>% 
+    deframe()
+  
+  df %<>% 
+    select(-all_of(defunct_brackets))
+  
   
   # If number of brackets isn't supplied by user, ascertain it
   if (is.null(n_brackets)) {
