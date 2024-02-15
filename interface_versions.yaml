@@ -15,13 +15,13 @@ Tax-Simulator:
 Tax-Data:
   type: model_data
   version: 1
-  default_vintage: 2024020100
+  default_vintage: 2024021509
   default_id: baseline
 
 Macro-Projections: 
   type: model_data
-  version: 2
-  default_vintage: 2023121116
+  version: 3
+  default_vintage: 2024021509
   default_id: baseline
 
 Corporate-Tax-Model:
