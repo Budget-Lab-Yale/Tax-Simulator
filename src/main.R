@@ -31,15 +31,15 @@ if (length(args) > 0) {
   baseline_vintage = if_else(args[8] == "NULL", NULL, args[8])
   delete_detail    = args[9]
 } else {
-  runscript_name   = 'policy_runs/tcja/frbus_runs'
+  runscript_name   = 'policy_runs/tcja/tcja_ext'
   scenario_id      = NULL
   user_id          = 'jar335'
   local            = 0
   vintage          = NULL
   pct_sample       = 1
-  stacked          = 1
+  stacked          = 0
   baseline_vintage = NULL
-  delete_detail    = 0 
+  delete_detail    = 1
 }
 
 # Set global (scenario-independent) variables
