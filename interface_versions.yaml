@@ -39,5 +39,5 @@ Estate-Tax-Model:
 Off-Model-Estimates:
   type: model_data
   version: 1
-  default_vintage: 2024020100
+  default_vintage: 2024021911
   default_id: baseline
