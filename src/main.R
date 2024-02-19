@@ -30,8 +30,9 @@ if (length(args) > 0) {
   stacked          = as.integer(args[7])
   baseline_vintage = if_else(args[8] == "NULL", NULL, args[8])
   delete_detail    = args[9]
+  multicore        = args[10]
 } else {
-  runscript_name   = 'policy_runs/tcja/tcja_ext'
+  runscript_name   = 'policy_runs/tcja/frbus_runs'
   scenario_id      = NULL
   user_id          = 'jar335'
   local            = 0
@@ -39,7 +40,8 @@ if (length(args) > 0) {
   pct_sample       = 1
   stacked          = 0
   baseline_vintage = NULL
-  delete_detail    = 1
+  delete_detail    = 0
+  multicore        = 1
 }
 
 # Set global (scenario-independent) variables
@@ -79,9 +81,15 @@ if (is.null(baseline_vintage)) {
 }
 
 # Run counterfactual scenarios
-walk(.f = do_scenario, 
-     .x = counterfactual_ids, 
-     baseline_mtrs = baseline_mtrs)
+if (multicore == 1) {
+  mc_out = mclapply(X        = counterfactual_ids, 
+                    FUN      = do_scenario, baseline_mtrs, 
+                    mc.cores = min(8, detectCores(logical = F)))
+} else {
+  walk(.x = counterfactual_ids, 
+       .f = ~ do_scenario(.x, baseline_mtrs)) 
+}
+
 
 
 #-------------------------------

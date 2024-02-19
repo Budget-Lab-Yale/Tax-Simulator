@@ -6,3 +6,4 @@ usincometaxes
 data.table
 openxlsx
 Hmisc
+parallel
