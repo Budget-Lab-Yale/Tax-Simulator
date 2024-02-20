@@ -475,6 +475,7 @@ recode_1040_vars = function(df, scenario_id) {
       Variable == 'returns'               ~ 'Number of returns filed', 
       Variable == 'returns_dep'           ~ 'Number of dependent returns filed', 
       Variable == 'dep'                   ~ 'Number of dependents claimed', 
+      Variable == 'simple_filers'         ~ 'Number of potential pre-filed returns',
       Variable == 'wages'                 ~ 'Wages and salaries', 
       Variable == 'wages1'                ~ 'Wages and salaries, primary earner', 
       Variable == 'wages2'                ~ 'Wages and salaries, secondary earner', 
