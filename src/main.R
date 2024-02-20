@@ -22,20 +22,20 @@ list.files('./src', recursive = T) %>%
 args = commandArgs(trailingOnly = T)
 if (length(args) > 0) {
   runscript_name   = args[1]
-  scenario_id      = if_else(args[2] == "NULL", NULL, args[2])
+  if(args[2] == "NULL") scenario_id = NULL else scenario_id = args[2]
   user_id          = args[3]
   local            = as.integer(args[4])
-  vintage          = if_else(args[5] == "NULL", NULL, args[5])
+  if(args[5] == "NULL") vintage = NULL else vintage = args[5]
   pct_sample       = as.integer(args[6])
   stacked          = as.integer(args[7])
-  baseline_vintage = if_else(args[8] == "NULL", NULL, args[8])
+  if(args[8] == "NULL") baseline_vintage = NULL else baseline_vintage = args[8]
   delete_detail    = args[9]
   multicore        = args[10]
 } else {
-  runscript_name   = 'policy_runs/tcja/frbus_runs'
-  scenario_id      = NULL
-  user_id          = 'jar335'
-  local            = 0
+  runscript_name   = "policy_runs/tcja/simulator/interactive_simulator_runs"
+  scenario_id      = 'baseline'
+  user_id          = 'jmk263'
+  local            = 1
   vintage          = NULL
   pct_sample       = 1
   stacked          = 0
