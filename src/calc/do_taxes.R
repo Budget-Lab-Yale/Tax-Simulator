@@ -120,15 +120,41 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
   # Add other vars 
   #----------------
   
-  # Expanded income metric for distributional tables: gross realized income 
-  # plus employer's share of payroll taxes
+
   tax_units %<>%
-    mutate(expanded_inc = wages + trad_contr_er1 + trad_contr_er2 + txbl_int + 
-                          exempt_int + div_ord + div_pref + state_ref + 
-                          txbl_ira_dist + gross_pens_dist + kg_st + kg_lt + 
-                          other_gains + alimony + sole_prop + sch_e + farm + 
-                          gross_ss + ui + other_inc + salt_workaround_part + 
-                          salt_workaround_scorp + liab_pr_er)
+    mutate(
+      
+      # Expanded income metric for distributional tables: gross realized income 
+      # plus employer's share of payroll taxes
+      expanded_inc = wages + trad_contr_er1 + trad_contr_er2 + txbl_int + 
+                     exempt_int + div_ord + div_pref + state_ref + 
+                     txbl_ira_dist + gross_pens_dist + kg_st + kg_lt + 
+                     other_gains + alimony + sole_prop + sch_e + farm + 
+                     gross_ss + ui + other_inc + salt_workaround_part + 
+                     salt_workaround_scorp + liab_pr_er, 
+      
+      # Whether taxpayer is a "simple filer" -- one in which the IRS could 
+      # plausibly pre-file a return on behalf of the tax unit. Criteria is:
+      # non-itemizers whose income is derived solely from wages or OASDI
+      simple_filer = as.integer(
+        filer & 
+        !itemizing &
+        txbl_int        == 0 & 
+        div_ord         == 0 & 
+        div_pref        == 0 & 
+        state_ref       == 0 &  
+        txbl_ira_dist   == 0 & 
+        gross_pens_dist == 0 & 
+        kg_st           == 0 & 
+        kg_lt           == 0 &  
+        other_gains     == 0 &
+        alimony         == 0 & 
+        sole_prop       == 0 & 
+        sch_e           == 0 & 
+        farm            == 0 & 
+        ui              == 0
+      )
+    )
   
   # Set "corporate tax change", a variable used to measure the off-model 
   # corporate tax revenue changes owing to business entity shifting, to 0 if 
