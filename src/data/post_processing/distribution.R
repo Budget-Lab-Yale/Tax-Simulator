@@ -142,8 +142,6 @@ process_for_distribution = function(id, baseline_id, year, financing = 'none',
 
 
 
-
-
 calc_dist_metrics = function(microdata, group_var) {
   
   #----------------------------------------------------------------------------
@@ -189,6 +187,40 @@ calc_dist_metrics = function(microdata, group_var) {
            share_tax_units = n_tax_units / sum(n_tax_units)) %>% 
     return()
 }
+
+
+
+calc_pledge_metrics = function(microdata) {
+  
+  #----------------------------------------------------------------------------
+  # Calculates share of tax units below a series of AGI thresholds which 
+  # experience a tax hike of at least $X.
+  # 
+  # Parameters: 
+  #  - microdata (df)  : tax unit data, output by process_for_distribution()
+  # 
+  # Returns: tibble of pledge metrics. 
+  #----------------------------------------------------------------------------
+  
+  seq(0, 1e6, 50e3) %>% 
+    map(.f = ~ microdata %>%
+          filter(agi < .x) %>% 
+          summarise(
+            threshold = .x,
+            across(
+              .cols  = delta,  
+              .fns   = list('5'   = ~ round(sum(((. > 5)   * weight) / sum(weight)), 4), 
+                            '50'  = ~ round(sum(((. > 50)  * weight) / sum(weight)), 4), 
+                            '100' = ~ round(sum(((. > 100) * weight) / sum(weight)), 4), 
+                            '500' = ~ round(sum(((. > 500) * weight) / sum(weight)), 4)), 
+              .names = '{fn}'
+            ) 
+          )
+    ) %>% 
+    bind_rows() %>% 
+    return()
+}
+
 
 
 
@@ -243,6 +275,8 @@ build_distribution_tables = function(id, baseline_id, file_name) {
   # Initialize lists of unformatted tables
   results = list('income' = list(), 
                  'age'    = list())
+  
+  pledge_results = list()
     
   # Create new Excel workbook
   wb = createWorkbook()
@@ -279,16 +313,18 @@ build_distribution_tables = function(id, baseline_id, file_name) {
         # Corporate tax assumption loop
         for (include_corp in c(F, T)) {
         
-          # Calculate metrics
-          dist_metrics = id %>% 
-            process_for_distribution(
-              baseline_id = 'baseline', 
-              year        = yr, 
-              financing   = financing, 
-              corp_delta  = if_else(include_corp, this_corp_delta, 0), 
-              labor_share = this_corp_labor_share
-            ) %>% 
-            calc_dist_metrics(paste0(group_var, '_group'))
+          # Process microdata
+          microdata = process_for_distribution(
+            id          = id, 
+            baseline_id = 'baseline', 
+            year        = yr, 
+            financing   = financing, 
+            corp_delta  = if_else(include_corp, this_corp_delta, 0), 
+            labor_share = this_corp_labor_share
+          )
+          
+          # Calculate standard metrics and add to results 
+          dist_metrics = calc_dist_metrics(microdata, paste0(group_var, '_group'))
           
           # Add to results 
           results[[group_var]][[length(results[[group_var]]) + 1]] = dist_metrics %>% 
@@ -297,6 +333,12 @@ build_distribution_tables = function(id, baseline_id, file_name) {
           
           # Add to Excel workbook and format
           format_table(dist_metrics, wb, yr, paste0(group_var, '_group'), financing, include_corp)
+          
+          # Calculate pledge metrics (separate product from metrics above)
+          pledge_results[[length(pledge_results) + 1]] = microdata %>% 
+            calc_pledge_metrics() %>%
+            mutate(year = yr, .before = everything()) %>%
+            mutate(includes_corp = include_corp, financing = financing, .after = year)
         }
       }
     }
@@ -322,6 +364,14 @@ build_distribution_tables = function(id, baseline_id, file_name) {
                                 'supplemental', 
                                 paste0(file_name, '.xlsx')), 
                overwrite = T)
+  
+  
+  # Write pledge output 
+  if (file_name != 'stacked_distribution') {
+    pledge_results %>% 
+      bind_rows() %>%
+      write_csv(file.path(globals$output_root, id, 'static/supplemental/pledge_metrics.csv'))
+  }
 }
 
 
