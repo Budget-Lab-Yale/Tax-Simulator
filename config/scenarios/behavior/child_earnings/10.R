@@ -24,23 +24,6 @@ do_child_earnings = function(tax_units, ...) {
   # Returns: TODO
   #----------------------------------------------------------------------------
   
-  # exposure = pmax(0, pmin(1, (year - start_year) / 18))
-  # .. where exposure is an effect size scaling factor.
-  # .. and maybe we add +10 somewhere to get it closer to age 30 kicking in. 
-  
-  # effect showing up in year t is: 
-  #  for each age of worker in t:
-  #     find p(poor) at age 15 and simulate
-  #        get this by calc $$$ threshold today and under baseline
-  #     if poor, scale up earnings by implied effect, which is given by: 
-  #        at t - 15, calculate $$$ thresholds today and under baseline
-  #        for percentile below X, calculate slope: dollars in adulthood per dollar today (earnings only?)
-  #        add up % new liability change below X
-  #        year t effect for any poor worker in t is slope * causal_share * exposure * (liability_change / income)    
-  #        
-
-
-  
 
   
   #----------------------------------------------------
