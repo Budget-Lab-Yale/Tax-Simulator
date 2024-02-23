@@ -106,7 +106,7 @@ parse_globals = function(runscript_name, scenario_id, user_id, local, vintage,
   runtime_args = runscript_name %>% 
     paste0('.csv') %>%
     file.path('./config/runscripts/', .) %>% 
-    read_csv()
+    read_csv(show_col_types = F)
   
   # Add nonspecified default vintages and scenario IDs to runscript
   for (dep in names(interface_defaults)) {

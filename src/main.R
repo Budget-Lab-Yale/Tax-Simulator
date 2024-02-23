@@ -7,8 +7,11 @@
 #---------------------
 
 # Load required packages
-lapply(readLines('./requirements.txt'), library, character.only = T, 
-       warn.conflicts = F, quietly = T)
+suppressPackageStartupMessages(
+  invisible(capture.output(
+    lapply(readLines('./requirements.txt'), library, character.only = T)    
+  ))
+)
 
 # Source all function scripts
 return_vars = list()
@@ -19,22 +22,26 @@ list.files('./src', recursive = T) %>%
 args = commandArgs(trailingOnly = T)
 if (length(args) > 0) {
   runscript_name   = args[1]
-  scenario_id      = if_else(args[2] == "NULL", NULL, args[2])
+  if(args[2] == "NULL") scenario_id = NULL else scenario_id = args[2]
   user_id          = args[3]
   local            = as.integer(args[4])
-  vintage          = if_else(args[5] == "NULL", NULL, args[5])
+  if(args[5] == "NULL") vintage = NULL else vintage = args[5]
   pct_sample       = as.integer(args[6])
   stacked          = as.integer(args[7])
-  baseline_vintage = if_else(args[8] == "NULL", NULL, args[8])
+  if(args[8] == "NULL") baseline_vintage = NULL else baseline_vintage = args[8]
+  delete_detail    = args[9]
+  multicore        = args[10]
 } else {
-  runscript_name   = 'tests/interactive_simulator_runs'
-  scenario_id      = NULL
-  user_id          = '115112413281'
-  local            = 0
+  runscript_name   = "policy_runs/tcja/simulator/interactive_simulator_runs"
+  scenario_id      = 'baseline'
+  user_id          = 'jmk263'
+  local            = 1
   vintage          = NULL
   pct_sample       = 1
-  stacked          = 0
-  baseline_vintage = NULL  
+  stacked          = 1
+  baseline_vintage = NULL
+  delete_detail    = 0
+  multicore        = 1
 }
 
 # Set global (scenario-independent) variables
@@ -74,9 +81,15 @@ if (is.null(baseline_vintage)) {
 }
 
 # Run counterfactual scenarios
-walk(.f = do_scenario, 
-     .x = counterfactual_ids, 
-     baseline_mtrs = baseline_mtrs)
+if (multicore == 1) {
+  mc_out = mclapply(X        = counterfactual_ids, 
+                    FUN      = do_scenario, baseline_mtrs, 
+                    mc.cores = min(8, detectCores(logical = F)))
+} else {
+  walk(.x = counterfactual_ids, 
+       .f = ~ do_scenario(.x, baseline_mtrs)) 
+}
+
 
 
 #-------------------------------
@@ -101,3 +114,7 @@ if (stacked == 1) {
   build_all_stacked_distribution_tables(counterfactual_ids)
 }
 
+# Delete detailed microdata files
+if (delete_detail == 1) {
+  purge_detail()
+}

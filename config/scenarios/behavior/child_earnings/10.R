@@ -38,51 +38,7 @@ do_child_earnings = function(tax_units, ...) {
                  values_to       = 'pdf') %>%
     relocate(parent_rank, .before = everything()) %>% 
     arrange(parent_rank, child_rank) 
-  
-  # Add income variable
-  tax_units %<>% 
-    mutate(income = wages + trad_contr_er1 + trad_contr_er2 + txbl_int + 
-                    exempt_int + div_ord + div_pref + state_ref + txbl_ira_dist + 
-                    gross_pens_dist + kg_st + kg_lt + other_gains + alimony + 
-                    sole_prop + part_active + part_passive - part_active_loss - 
-                    part_passive_loss - part_179 + scorp_active + scorp_passive - 
-                    scorp_active_loss - scorp_passive_loss - scorp_179 + farm + 
-                    gross_ss + ui + other_inc + salt_workaround_part + salt_workaround_scorp)
-  
-  # Calculate parent income percentiles for each child age group 
-  get_parent_income_thresholds = function(age) {
-    
-    # Filter to parents of this age group
-    parents = tax_units %>% 
-      filter(dep_age1 == age | dep_age2 == age | dep_age3 == age)
-    
-    # Determine thresholds
-    thresholds = wtd.quantile(
-      x       = parents$income, 
-      weights = parents$weight, 
-      p       = seq(0, 1, 0.01)
-    )
-    return(thresholds)
-  }
-  
-  parent_income_thresholds = 0:17 %>% 
-    map(get_parent_income_thresholds) %>% 
-    bind_rows() %>%
-    mutate(child_age = 0:17) %>% 
-    pivot_longer(cols            = -child_age, 
-                 names_to        = 'parent_rank', 
-                 names_transform = ~ as.integer(str_extract(., "[0-9]+")), 
-                 values_to       = 'parent_threshold') %>% 
-    expand_grid(child_rank = 1:100) %>% 
-    relocate(child_rank, .after = parent_rank) %>% 
-    left_join(mobility_matrix, by = c('parent_rank', 'child_rank'))
-  
 
-  
-  #------------------------------------------------------------------------
-  # Apply changes to current year owing to policy changes from prior years 
-  #------------------------------------------------------------------------
-  
   
   # Set parameter: first year of policy
   start_year = 2025

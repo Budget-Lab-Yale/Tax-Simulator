@@ -20,10 +20,10 @@ output_runscripts = './config/runscripts/policy_runs/tcja/simulator'
 output_taxlaw     = './config/scenarios/tax_law/policy_runs/tcja_ext/interactive'
 
 # Run script defaults
-corp_tax_vintage          = 2024020114
+corp_tax_vintage          = 2024021816
 tax_law_root              = 'policy_runs/tcja_ext/interactive/'
 behavior                  = NA
-years                     = '2023:2053'
+years                     = '2023:2054'
 dist_years                = '2026'
 mtr_vars                  = NA
 mtr_types                 = NA

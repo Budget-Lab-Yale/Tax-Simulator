@@ -24,7 +24,8 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
     'n_tax_units',
     'n_returns',
     'n_returns_dep',  
-    'n_dep'
+    'n_dep', 
+    'n_simple_filers'
   )
   
   # Choose tax variables to report
@@ -124,17 +125,18 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
   
   # Derive reporting variables
   tax_units %<>% 
-    mutate(n_tax_units    = 1, 
-           n_returns      = filer,
-           n_returns_dep  = filer * dep_status,
-           n_nonfilers    = !filer,
-           n_adults       = filer * (1 * (filing_status == 2)),
-           n_people       = filer * (n_adults + n_dep),
-           n_single       = filer * (filing_status == 1),
-           n_joint        = filer * (filing_status == 2),
-           n_hoh          = filer * (filing_status == 4),
-           n_dep          = filer * n_dep,
-           n_with_dep     = (n_dep > 0))
+    mutate(n_tax_units     = 1, 
+           n_returns       = filer,
+           n_returns_dep   = filer * dep_status,
+           n_nonfilers     = !filer,
+           n_adults        = filer * (1 * (filing_status == 2)),
+           n_people        = filer * (n_adults + n_dep),
+           n_single        = filer * (filing_status == 1),
+           n_joint         = filer * (filing_status == 2),
+           n_hoh           = filer * (filing_status == 4),
+           n_dep           = filer * n_dep,
+           n_with_dep      = (n_dep > 0), 
+           n_simple_filers = simple_filer)
   
   # Group data by AGI if specified
   if (by_agi) {

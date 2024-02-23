@@ -64,3 +64,31 @@ get_vector = function(df, name) {
 }
 
 
+
+purge_detail = function() {
+  
+  #----------------------------------------------------------------------------
+  # Deletes all output stored in /detail, which contains tax unit microdata 
+  # detail files.
+  # 
+  # Parameters: none
+  #
+  # Returns: void
+  #----------------------------------------------------------------------------
+  
+  for (scenario_id in globals$runtime_args$ID) {
+    for (behavior in c("static", "conventional")) {
+      unlink(
+        file.path(globals$output_root,
+                  scenario_id,
+                  behavior,
+                  "detail/*"
+        )
+      )
+    }
+  }
+}
+
+  
+  
+  
