@@ -174,3 +174,30 @@ tibble(
        fill = 'Source') +
   ggtitle('Comparing implied IGE in our simulations to that of Chetty et al.')
 
+
+# Get local IGE estimates at each parent rank
+ige_by_rank = 5:96 %>% 
+  map(.f = ~ (child_outcomes %>% 
+        filter(agi > 0, parent_agi > 0, parent_rank %in% (.x - 4):(.x + 4)) %>%  
+        lm(formula = log(agi) ~ log(parent_agi), 
+           data    = ., 
+           weights = .$parent_weight))$coeff['log(parent_agi)'] %>% 
+        set_names(NULL)
+  ) %>% 
+  unlist() %>%
+  tibble(
+    parent_rank = 5:96, 
+    ige         = .
+  )
+  
+# Plot IGE by rank
+ige_by_rank %>% 
+  ggplot(aes(x = parent_rank, y = ige)) + 
+  geom_line() + 
+  geom_point() + 
+  theme_bw() + 
+  scale_x_continuous(breaks = seq(0, 100, 10)) + 
+  scale_y_continuous(breaks = seq(0, 0.8, 0.1)) + 
+  labs(x = 'Parent rank', y = 'IGE') +
+  ggtitle("Local IGE by parent's rank", 
+          subtitle = "Estimated on parent's rank +- 4 percentiles")
