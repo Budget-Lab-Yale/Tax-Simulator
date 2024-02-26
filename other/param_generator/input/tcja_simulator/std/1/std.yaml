@@ -18,3 +18,13 @@ value_single:
   i_base_year: default
   i_direction: default
   i_increment: default
+
+# Base value for HOH filers
+value_head:
+  value:
+    '2014': 4400
+    '2018': 18000
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
