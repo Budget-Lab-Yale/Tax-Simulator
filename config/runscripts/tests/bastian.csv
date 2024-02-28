@@ -1,3 +1,9 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2023:2027,,wages1 wages2,extensive extensive 
-arpa_ctc,policy_runs/ctc/perm_arpa_ctc/04-age,employment/bastian,2023:2027,,wages1 wages2,extensive extensive
+baseline,baseline,,2025:2026,,wages1 wages2,extensive extensive 
+arpa_ctc,policy_runs/ctc/perm_arpa_ctc/04-age,employment/bastian,2025:2026,,wages1 wages2,extensive extensive
+edelberg_kearney,policy_runs/ctc/edelberg_kearney,employment/bastian,2025:2026,,wages1 wages2,extensive extensive
+romney_ctc,policy_runs/ctc/fsa_2.0/ctc,employment/bastian,2025:2026,,wages1 wages2,extensive extensive
+romney,policy_runs/ctc/fsa_2.0/salt,employment/bastian,2025:2026,,wages1 wages2,extensive extensive
+full,policy_runs/tcja_ext/cbo_stacking/08-losses,employment/bastian,2025:2026,,wages1 wages2,extensive extensive
+partial,policy_runs/tcja_ext/400k/03-pease,employment/bastian,2025:2026,,wages1 wages2,extensive extensive
+clausing_sarin,policy_runs/tcja_ext/clausing_sarin/14-ctc,employment/bastian,2025:2026,,wages1 wages2,extensive extensive
