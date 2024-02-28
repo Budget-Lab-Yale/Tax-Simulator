@@ -105,7 +105,6 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
   output_root = file.path(scenario_info$output_path, if_else(static, 
                                                              'static', 
                                                              'conventional'))
-  
   # Initial table of NOLs
   nols = initialize_nols(scenario_info$years)
   
