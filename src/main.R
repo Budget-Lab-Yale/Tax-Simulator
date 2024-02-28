@@ -32,16 +32,16 @@ if (length(args) > 0) {
   delete_detail    = args[9]
   multicore        = args[10]
 } else {
-  runscript_name   = "policy_runs/tcja/simulator/interactive_simulator_runs"
-  scenario_id      = 'baseline'
-  user_id          = 'jmk263'
+  runscript_name   = "tests/bastian"
+  scenario_id      = NULL
+  user_id          = 'jar335'
   local            = 1
   vintage          = NULL
   pct_sample       = 1
   stacked          = 1
   baseline_vintage = NULL
   delete_detail    = 0
-  multicore        = 1
+  multicore        = 0
 }
 
 # Set global (scenario-independent) variables
