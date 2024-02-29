@@ -39,7 +39,7 @@ if (length(args) > 0) {
   vintage          = NULL
   pct_sample       = 1
   stacked          = 1
-  baseline_vintage = NULL
+  baseline_vintage = NULL 
   delete_detail    = 0
   multicore        = 0
 }
