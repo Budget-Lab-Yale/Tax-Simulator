@@ -3,7 +3,8 @@
 #--------------------------------------------
 
 
-do_behavioral_feedback = function(tax_units, behavior_modules, baseline_mtrs, static_mtrs) {
+do_behavioral_feedback = function(tax_units, behavior_modules, baseline_mtrs, 
+                                  static_mtrs, scenario_info) {
 
   #----------------------------------------------------------------------------
   # Locates and executes all behavioral feedback modules for a given scenario.
@@ -19,7 +20,7 @@ do_behavioral_feedback = function(tax_units, behavior_modules, baseline_mtrs, st
   #   - static_mtrs (df)         : tibble of MTRs under the static 
   #                                counterfactual scenario, indexed by year/tax 
   #                                unit id
-  #
+  #   - scenario_info (list)     : get_scenario_info() object
   # Returns: tibble of tax units with update values for specified columns (df).
   #----------------------------------------------------------------------------
   
@@ -40,7 +41,7 @@ do_behavioral_feedback = function(tax_units, behavior_modules, baseline_mtrs, st
   for (fn in fns) {
     tax_units = do.call(
       what  = fn,
-      args  = list(tax_units, baseline_mtrs, static_mtrs),
+      args  = list(tax_units, baseline_mtrs, static_mtrs, scenario_info),
       envir = environment()
     )
   }

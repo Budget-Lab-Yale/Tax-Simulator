@@ -59,10 +59,9 @@ do_employment = function(tax_units, ...) {
       income = wages + txbl_int + div_ord + div_pref + state_ref + 
                txbl_ira_dist + txbl_pens_dist + kg_lt + kg_st + other_gains + 
                sole_prop + part_active + part_passive - part_active_loss - 
-               part_passive_loss - part_179 + scorp + scorp_active + 
-               scorp_passive - scorp_active_loss - scorp_passive_loss - 
-               scorp_179 + rent - rent_loss + estate - estate_loss + farm + ui + 
-               gross_ss + other_inc,
+               part_passive_loss - part_179 + scorp_active + scorp_passive - 
+               scorp_active_loss - scorp_passive_loss - scorp_179 + rent - 
+               rent_loss + estate - estate_loss + farm + ui +  gross_ss + other_inc,
       
       #------------------
       # Set elasticities
