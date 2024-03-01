@@ -1,0 +1,7 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Estate-Tax-Model.vintage,dep.Estate-Tax-Model.ID
+baseline,baseline,,2024:2054,,char_cash kg_lt part_active wages1 wages2,nextdollar nextdollar nextdollar extensive extensive,2024021614,baseline
+tcja_extension,policy_runs/tcja_ext/cbo_stacking/08-losses,charity/50 entity_shifting/pearce_prisinzano employment/bastian child_earnings/34,2024:2054,,char_cash kg_lt part_active wages1 wages2,nextdollar nextdollar nextdollar extensive extensive,2024021614,tcja_extension
+rates,policy_runs/tcja_ext/400k/01-rates,charity/50 entity_shifting/pearce_prisinzano employment/bastian child_earnings/34,2024:2054,,char_cash kg_lt part_active wages1 wages2,nextdollar nextdollar nextdollar extensive extensive,2024021614,tcja_extension
+qbi,policy_runs/tcja_ext/400k/02-qbi,charity/50 entity_shifting/pearce_prisinzano employment/bastian child_earnings/34,2024:2054,,char_cash kg_lt part_active wages1 wages2,nextdollar nextdollar nextdollar extensive extensive,2024021614,tcja_extension
+pease,policy_runs/tcja_ext/400k/03-pease,charity/50 entity_shifting/pearce_prisinzano employment/bastian child_earnings/34,2024:2054,,char_cash kg_lt part_active wages1 wages2,nextdollar nextdollar nextdollar extensive extensive,2024021614,tcja_extension
+estate,policy_runs/tcja_ext/400k/03-pease,charity/50 entity_shifting/pearce_prisinzano employment/bastian child_earnings/34,2024:2054,,char_cash kg_lt part_active wages1 wages2,nextdollar nextdollar nextdollar extensive extensive =,2024021614,baseline

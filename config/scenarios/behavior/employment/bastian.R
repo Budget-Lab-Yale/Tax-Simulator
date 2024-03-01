@@ -198,7 +198,7 @@ do_employment = function(tax_units, ...) {
       # assumed to be identical to that of this elasticity group's workers 
       potential_wages = worker_info %>% 
         filter(e == e_value, wages > 0) %>% 
-        reframe(wages = wtd.quantile(wages, weight, probs = 0:100/100)) %>% 
+        reframe(wages = wtd.quantile(wages, weight, probs = 0:99/100)) %>% 
         select(wages) %>% 
         deframe() %>% 
         set_names(NULL) %>% 
