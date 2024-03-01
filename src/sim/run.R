@@ -239,7 +239,8 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
     tax_units %<>%  
       do_behavioral_feedback(behavior_modules = scenario_info$behavior_modules, 
                              baseline_mtrs    = baseline_mtrs, 
-                             static_mtrs      = static_mtrs)
+                             static_mtrs      = static_mtrs, 
+                             scenario_info    = scenario_info)
   }
   
   
