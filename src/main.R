@@ -32,14 +32,14 @@ if (length(args) > 0) {
   delete_detail    = args[9]
   multicore        = args[10]
 } else {
-  runscript_name   = "tests/"
+  runscript_name   = "policy_runs/tcja/full_ext"
   scenario_id      = NULL
   user_id          = 'jar335'
-  local            = 1
-  vintage          = '2024022921' 
-  pct_sample       = 1/10
+  local            = 0
+  vintage          = NULL
+  pct_sample       = 1
   stacked          = 1
-  baseline_vintage = '2024022921' 
+  baseline_vintage = NULL 
   delete_detail    = 0
   multicore        = 1
 }
@@ -84,7 +84,7 @@ if (is.null(baseline_vintage)) {
 if (multicore == 1) {
   mc_out = mclapply(X        = counterfactual_ids, 
                     FUN      = do_scenario, baseline_mtrs, 
-                    mc.cores = min(16, detectCores(logical = F)))
+                    mc.cores = min(8, detectCores(logical = F)))
 } else {
   walk(.x = counterfactual_ids, 
        .f = ~ do_scenario(.x, baseline_mtrs)) 
@@ -109,9 +109,10 @@ if (stacked == 1) {
 }
 
 # Generate distributional estimates
+globals$runtime_args$years = 2026
 build_all_distribution_tables(counterfactual_ids)
 if (stacked == 1) {
-  build_all_stacked_distribution_tables(counterfactual_ids)
+  #build_all_stacked_distribution_tables(counterfactual_ids)
 }
 
 # Delete detailed microdata files
