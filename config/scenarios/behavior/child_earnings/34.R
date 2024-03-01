@@ -1,13 +1,26 @@
 do_child_earnings = function(tax_units, ...) { 
   
   #----------------------------------------------------------------------------
-  # TODO
+  # Assuming a rank-rank IGE value, adjusts earnings based on childhood 
+  # exposure to an increase in family income. For each year, we look at all 
+  # adults workers to determine how much their parent's after-tax income 
+  # changed during childhood. We convert this value into rank-equivalent
+  # units. Then, assuming a 0.34 rank-rank IGE and multiplying by 20% to 
+  # reflect that 20% of the observed IGE reflects the causal mechanism of 
+  # of income (the rest being selection, education, discrimination, etc), we 
+  # we convert this value (year-weighted childhood exposure to additional 
+  # income) into rank-units of adult earnings. Finally we convert this value
+  # into dollars and rescale wages.
+  # 
+  # Parent income rank is imputed in Tax-Data based on the mobility matrix 
+  # from Chetty et al. (2014). This paper is also where the 0.34 elasticity
+  # value comes from. The causal share is assumed.
   # 
   # Parameters: 
   #   - tax_units (df) : tibble of tax units with calculated variables
-  #   - scenario_info (list) : TODO
+  #   - scenario_info (list) : get_scenario_info() object
   #
-  # Returns: TODO
+  # Returns: tax units tibble with adjusted wages (df).
   #----------------------------------------------------------------------------
   
   #----------------
