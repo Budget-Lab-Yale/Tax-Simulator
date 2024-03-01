@@ -32,14 +32,14 @@ if (length(args) > 0) {
   delete_detail    = args[9]
   multicore        = args[10]
 } else {
-  runscript_name   = "policy_runs/tcja/full_ext"
+  runscript_name   = "policy_runs/tcja/launch_runs/stacking/full_ext"
   scenario_id      = NULL
   user_id          = 'jar335'
   local            = 0
   vintage          = NULL
   pct_sample       = 1
   stacked          = 1
-  baseline_vintage = NULL 
+  baseline_vintage = NULL
   delete_detail    = 0
   multicore        = 1
 }
@@ -84,7 +84,7 @@ if (is.null(baseline_vintage)) {
 if (multicore == 1) {
   mc_out = mclapply(X        = counterfactual_ids, 
                     FUN      = do_scenario, baseline_mtrs, 
-                    mc.cores = min(8, detectCores(logical = F)))
+                    mc.cores = min(16, detectCores(logical = F)))
 } else {
   walk(.x = counterfactual_ids, 
        .f = ~ do_scenario(.x, baseline_mtrs)) 
