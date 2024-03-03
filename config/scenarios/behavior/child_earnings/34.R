@@ -136,8 +136,8 @@ do_child_earnings = function(tax_units, ...) {
       file.path(
         globals$output_root, 
         scenario_info$ID, 
-        'static/supplemental/', 
-        paste0('child_future_earnings_', current_year, '.csv')
+        'static/supplemental/child_earnings', 
+        paste0('exposure_', current_year, '.csv')
       )
     )
   
@@ -151,7 +151,7 @@ do_child_earnings = function(tax_units, ...) {
     # Read historical policy effects 
     policy_effect = start_year:(current_year - 1) %>% 
       map(.f = ~ globals$output_root %>% 
-            file.path(scenario_info$ID, 'static/supplemental', paste0('child_future_earnings_', .x, '.csv')) %>% 
+            file.path(scenario_info$ID, 'static/supplemental/child_earnings', paste0('exposure_', .x, '.csv')) %>% 
             read_csv(show_col_types = F) %>% 
             mutate(source_year = .x, .before = everything())) %>% 
       bind_rows() %>% 
@@ -248,8 +248,8 @@ do_child_earnings = function(tax_units, ...) {
         file.path(
           globals$output_root, 
           scenario_info$ID, 
-          'static/supplemental/', 
-          paste0('realized_earnings_effects_', current_year, '.csv')
+          'static/supplemental/child_earnings', 
+          paste0('outcomes_', current_year, '.csv')
         )
       )
       

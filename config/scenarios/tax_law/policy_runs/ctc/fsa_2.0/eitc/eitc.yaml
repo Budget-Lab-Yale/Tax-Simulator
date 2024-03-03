@@ -55,49 +55,49 @@ pi_rate_0:
     '2014': 0.0765
     '2021': 0.153
     '2022': 0.0765
-    '2025': 0.125
+    '2026': 0.125
 
 # Credit phase-in rate for filers with 1 child  
 pi_rate_1:
   value: 
     '2014': 0.34
-    '2025': 0.1666667
+    '2026': 0.1666667
 
 # Credit phase-in rate for filers with 2 children
 pi_rate_2:
   value: 
     '2014': 0.4
-    '2025': 0.1666667
+    '2026': 0.1666667
 
 # Credit phase-in rate for filers with 3+ children  
 pi_rate_3:
   value:
     '2014': 0.45
-    '2025': 0.1666667
+    '2026': 0.1666667
 
 # Credit phase-out rate for filers with no children  
 po_rate_0:
   value: 
     '2014': 0.0765
-    '2025': 0.1429
+    '2026': 0.1429
 
 # Credit phase-out rate for filers with 1 child  
 po_rate_1:
   value: 
     '2014': 0.1598
-    '2025': 0.1429
+    '2026': 0.1429
   
 # Credit phase-out rate for filers with 2 children  
 po_rate_2:
   value: 
     '2014': 0.2106
-    '2025': 0.1429
+    '2026': 0.1429
 
 # Credit phase-out rate for filers with 3+ children  
 po_rate_3:
   value: 
     '2014': 0.2106
-    '2025': 0.1429
+    '2026': 0.1429
 
 # Earned income threshold at which credit is maximized for filers with no children 
 pi_end_0:
@@ -105,13 +105,13 @@ pi_end_0:
     '2014': 4220
     '2021': 9820
     '2022': 4220
-    '2025': 8000
+    '2026': 8000
   i_measure: default
   i_base_year:
     '2014': 1995
     '2021': 2020
     '2022': 1995
-    '2025': 2024
+    '2026': 2025
   i_direction: default
   i_increment: default
 
@@ -119,11 +119,11 @@ pi_end_0:
 pi_end_1:
   value: 
     '2014': 6330
-    '2025': 12000
+    '2026': 12000
   i_measure: default
   i_base_year: 
     '2014': 1995
-    '2025': 2024
+    '2026': 2025
   i_direction: default
   i_increment: default
 
@@ -131,11 +131,11 @@ pi_end_1:
 pi_end_2:
   value: 
     '2014': 8890
-    '2025': 12000
+    '2026': 12000
   i_measure: default
   i_base_year: 
     '2014': 1995
-    '2025': 2024
+    '2026': 2025
   i_direction: default
   i_increment: default
 
@@ -143,11 +143,11 @@ pi_end_2:
 pi_end_3:
   value: 
     '2014': 8890
-    '2025': 12000
+    '2026': 12000
   i_measure: default
   i_base_year: 
     '2014': 1995
-    '2025': 2024
+    '2026': 2025
   i_direction: default
   i_increment: default
 
@@ -157,7 +157,7 @@ pi_end_3:
 pi_end_marriage_adj_0:
   value: 
     '2014': 1
-    '2025': 2
+    '2026': 2
 
 # Phase-in threshold multiplicative-factor for joint returns, filers with 1+ children
 # (Note that this param does not exist under the baseline! It is used only used in
@@ -165,7 +165,7 @@ pi_end_marriage_adj_0:
 pi_end_marriage_adj_1:
   value: 
     '2014': 1
-    '2025': 1.5
+    '2026': 1.5
 
 # AGI threshold at which credit begins phasing out for filers with no children
 po_thresh_0:
@@ -173,13 +173,13 @@ po_thresh_0:
     '2014': 5280
     '2021': 11610
     '2022': 5280
-    '2025': 10000
+    '2026': 10000
   i_measure: 
   i_base_year:
     '2014': 1995
     '2021': 2020
     '2022': 1995
-    '2025': 2024
+    '2026': 2025
   i_direction: default
   i_increment: default
 
@@ -187,11 +187,11 @@ po_thresh_0:
 po_thresh_1:
   value: 
     '2014': 11610
-    '2025': 23000
+    '2026': 23000
   i_measure: default
   i_base_year: 
     '2014': 1995
-    '2025': 2024
+    '2026': 2025
   i_direction: default
   i_increment: default
 
@@ -199,11 +199,11 @@ po_thresh_1:
 po_thresh_2:
   value: 
     '2014': 11610
-    '2025': 23000
+    '2026': 23000
   i_measure: default
   i_base_year: 
     '2014': 1995
-    '2025': 2024
+    '2026': 2025
   i_direction: default
   i_increment: default
 
@@ -211,11 +211,11 @@ po_thresh_2:
 po_thresh_3:
   value: 
     '2014': 11610
-    '2025': 23000
+    '2026': 23000
   i_measure: default
   i_base_year: 
     '2014': 1995
-    '2025': 2024
+    '2026': 2025
   i_direction: default
   i_increment: default
 
@@ -223,10 +223,10 @@ po_thresh_3:
 po_thresh_marriage_adj:
   value: 
     '2014': 5000
-    '2025': 10000
+    '2026': 10000
   i_measure: default
   i_base_year: 
     '2014': 2008
-    '2025': 2024
+    '2026': 2025
   i_direction: default
   i_increment: default

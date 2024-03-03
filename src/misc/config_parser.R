@@ -25,11 +25,11 @@ parse_globals = function(runscript_name, scenario_id, user_id, local, vintage,
   #   - vintage (str)          : optional argument (NULL if not provided) to 
   #                              manually supply output vintage folder rather 
   #                              than being dynamically generated. Of the format
-  #                              YYYYMMDDHH.
+  #                              YYYYMMDDHHMM.
   #   - baseline_vintage (str) : optional argument (NULL if not provided) to 
   #                              skip the baseline run and instead use an existing
   #                              baseline run for MTRs and revenue estimates. Of 
-  #                              the format YYYYMMDDHH. 
+  #                              the format YYYYMMDDHHMM. 
   #   - pct_sample (dbl)       : share of records used in simulation 
   #
   # Returns: list of 8:
@@ -71,15 +71,10 @@ parse_globals = function(runscript_name, scenario_id, user_id, local, vintage,
   st      = Sys.time()
   if (is.null(vintage)) {
     vintage = paste0(lubridate::year(st), 
-                     lubridate::month(st) %>%
-                       paste0('0', .) %>% 
-                       str_sub(-2), 
-                     lubridate::day(st) %>%
-                       paste0('0', .) %>% 
-                       str_sub(-2), 
-                     lubridate::hour(st) %>%
-                       paste0('0', .) %>% 
-                       str_sub(-2))
+                     lubridate::month(st)  %>% paste0('0', .) %>% str_sub(-2), 
+                     lubridate::day(st)    %>% paste0('0', .) %>% str_sub(-2), 
+                     lubridate::hour(st)   %>% paste0('0', .) %>% str_sub(-2), 
+                     lubridate::minute(st) %>% paste0('0', .) %>% str_sub(-2))
   }
 
   # Determine and create directory for model output
@@ -253,6 +248,7 @@ get_scenario_info = function(id) {
                recursive    = T, 
                showWarnings = F)
   }
+  dir.create(file.path(output_root, 'static/supplemental/child_earnings'))
   
   # List of interface paths, named by interface
   interface_paths = globals$interface_paths %>% 

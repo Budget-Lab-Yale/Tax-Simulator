@@ -1,0 +1,62 @@
+---
+
+# Whether SSN is required to qualify for CTC
+need_ssn:
+  value:
+    '2014': 0
+    '2018': 1
+    '2021': 0
+    '2022': 1
+    '2026': 0
+
+# Maximum age to qualify as an "old" child
+old_age_limit:
+  value:
+    '2014': 16
+    '2021': 17
+    '2022': 16
+    '2026': 17
+
+# Minimum refundable CTC per qualifying young child (i.e. y-intercept in trapezoid)
+min_refund_young:
+  value: 
+    '2014': 0
+    '2021': 3600
+    '2022': 0
+    '2026': 1000
+  
+# Minimum refundable CTC per qualifying old child (i.e. y-intercept in trapezoid)
+min_refund_old:
+  value: 
+    '2014': 0
+    '2021': 3000
+    '2022': 0
+    '2026': 1000
+
+# Maximum refundable CTC per young qualifying child (inf implies maximum refund 
+# is equal to the credit value)
+max_refund_young:
+  value:
+    '2014': Inf
+    '2018': 1400
+    '2021': Inf
+    '2022': 1400
+    '2026': Inf
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+  
+# Maximum refundable CTC per old qualifying child (inf implies maximum refund 
+# is equal to the credit value)
+max_refund_old:
+  value:
+    '2014': Inf
+    '2018': 1400
+    '2021': Inf
+    '2022': 1400
+    '2026': Inf
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
