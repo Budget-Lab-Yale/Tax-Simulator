@@ -1,21 +1,23 @@
 
-ids = c('arpa_ctc', 'romney_ctc', 'clausing_sarin', 'partial')
+output_root = '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1/202403031731'
+
+ids = c('arpa_ctc', 'tcja')
 
 revenue_estimates = ids %>% 
-  map(~read_csv(file.path(globals$output_root, .x, 'conventional/totals/receipts.csv')) %>% 
+  map(~read_csv(file.path(output_root, .x, 'conventional/totals/receipts.csv')) %>% 
         mutate(scenario = .x)) %>% 
   bind_rows() %>% 
   mutate(type = 'partially_dynamic') %>% 
   bind_rows(
     ids %>% 
-      map(~read_csv(file.path(globals$output_root, .x, 'static/totals/receipts.csv')) %>% 
+      map(~read_csv(file.path(output_root, .x, 'static/totals/receipts.csv')) %>% 
             mutate(scenario = .x)) %>% 
       bind_rows() %>% 
       mutate(type = 'static')
   ) %>% 
   pivot_longer(cols = -c(year, type, scenario)) %>% 
   left_join(
-    read_csv(file.path(globals$output_root, 'baseline/static/totals/receipts.csv')) %>% 
+    read_csv(file.path(output_root, 'baseline/static/totals/receipts.csv')) %>% 
       pivot_longer(cols = -year, values_to = 'baseline'), 
     by = c('year', 'name')
   ) %>% 
@@ -41,6 +43,8 @@ revenue_estimates %>%
   geom_point(aes(y = net)) +
   theme_bw() + 
   facet_wrap(~scenario, scales = 'free') + 
+  scale_x_continuous(breaks = seq(2030, 2100, 10)) + 
+  labs(x = 'Year', y = 'Billions of dollars') + 
   ggtitle('Annual direct cost and offset')
 
 revenue_estimates %>% 
@@ -58,4 +62,6 @@ revenue_estimates %>%
   geom_point() +
   theme_bw() + 
   ggtitle('Offset share of cumulative direct cost')
-  
+
+
+

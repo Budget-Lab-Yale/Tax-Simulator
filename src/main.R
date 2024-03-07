@@ -34,12 +34,12 @@ if (length(args) > 0) {
   delete_detail    = args[9]
   multicore        = args[10]
 } else {
-  runscript_names  = 'policy_runs/tcja/launch_runs/stacking/clausing_sarin____policy_runs/ctc/launch_runs/perm_arpa____policy_runs/ctc/launch_runs/edelberg_kearney____policy_runs/ctc/launch_runs/fsa'
+  runscript_names  = 'tests/long_run_child_earnings'
   scenario_id      = NULL
   user_id          = 'jar335'
   local            = 0
   vintage          = NULL
-  pct_sample       = 1
+  pct_sample       = 1/10
   stacked          = 1
   baseline_vintage = NULL
   delete_detail    = 1

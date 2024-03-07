@@ -214,9 +214,6 @@ do_child_earnings = function(tax_units, ...) {
       left_join(policy_effect, by = c('parent_rank' = 'parent_rank', 
                                       'age1'        = 'current_age')) %>% 
       
-      # Limit implied post-effect rank to 100
-      mutate(delta_rank = pmin(100 - child_rank, delta_rank)) %>%
-      
       # No match for policy effect implies worker was too old to be exposed to policy
       mutate(delta_rank = replace_na(delta_rank, 0)) %>% 
  
@@ -229,7 +226,7 @@ do_child_earnings = function(tax_units, ...) {
         # Express in terms of percent change
         pct_change = if_else(
           wages > 0, 
-          (ige * causal_share * delta_rank * rank_slope) / wages, 
+          rank_slope * pmin(100 - child_rank, ige * causal_share * delta_rank) / wages, 
           0
         ), 
         

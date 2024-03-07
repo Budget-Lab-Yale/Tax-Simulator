@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2024:2095,,wages1 wages2,extensive extensive
+arpa_ctc,policy_runs/ctc/perm_arpa_ctc/04-value,child_earnings/34,2024:2095,,,
+tcja,policy_runs/tcja_ext/cbo_stacking/08-losses,child_earnings/34,2024:2095,,,
