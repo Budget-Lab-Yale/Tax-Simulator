@@ -56,7 +56,7 @@ bus_loss_limit_married:
   value:
     '2014': Inf
     '2022': 500000
-    '2027': Inf
+    '2029': Inf
   i_measure: default
   i_base_year: default
   i_direction: default
