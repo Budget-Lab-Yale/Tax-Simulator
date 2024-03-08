@@ -2,7 +2,7 @@ do_kg = function(tax_units, ...) {
   
   #----------------------------------------------------------------------------
   # Adjusts capital gains at the intensive margin using an elasticity of 
-  # -0.6, converted to log-lin form after evaluation at the current-law 
+  # -0.62, converted to log-lin form after evaluation at the current-law 
   # rate of 0.238.  
   # 
   # Parameters: 
@@ -15,7 +15,7 @@ do_kg = function(tax_units, ...) {
   #----------------------------------------------------------------------------
   
   # Set elasticities
-  e_permanent  = -0.6 / 0.238
+  e_permanent  = -0.62 / 0.238
   
   # Apply elasticities and calculate new values
   new_values = tax_units %>% 
