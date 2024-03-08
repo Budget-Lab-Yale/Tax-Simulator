@@ -83,16 +83,16 @@ initialize_nols = function(years) {
     # from this paper https://www.journals.uchicago.edu/doi/epdf/10.17310/ntj.2018.4.04
     mutate(
       share_claimed = case_when(
-        t == 1  ~ 0.13, 
-        t == 2  ~ 0.08,
-        t == 3  ~ 0.05, 
-        t == 4  ~ 0.04, 
-        t == 5  ~ 0.04,
-        t == 6  ~ 0.03,
-        t == 7  ~ 0.02,
-        t == 8  ~ 0.02,
-        t == 9  ~ 0.01, 
-        t == 10 ~ 0.01
+        t == 1  ~ 0.26, 
+        t == 2  ~ 0.16,
+        t == 3  ~ 0.10, 
+        t == 4  ~ 0.08, 
+        t == 5  ~ 0.08,
+        t == 6  ~ 0.06,
+        t == 7  ~ 0.04,
+        t == 8  ~ 0.04,
+        t == 9  ~ 0.02, 
+        t == 10 ~ 0.02
       ), 
       amount_claimed = 0
     ) %>% 
