@@ -34,12 +34,12 @@ if (length(args) > 0) {
   delete_detail    = args[9]
   multicore        = args[10]
 } else {
-  runscript_names  = 'tests/long_run_child_earnings'
+  runscript_names  = 'tests/new_dist'
   scenario_id      = NULL
   user_id          = 'jar335'
-  local            = 0
+  local            = 1
   vintage          = NULL
-  pct_sample       = 1/10
+  pct_sample       = 0.5
   stacked          = 1
   baseline_vintage = NULL
   delete_detail    = 1

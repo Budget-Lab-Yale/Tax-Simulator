@@ -223,9 +223,9 @@ do_child_earnings = function(tax_units, ...) {
       # Apply effect to wages
       mutate(
         
-        # Express in terms of percent change
+        # Express in terms of percent change, limiting post-adjustment to existing highest group 
         pct_change = if_else(
-          wages > 0, 
+          wages > 0 & !is.na(child_rank), 
           rank_slope * pmin(100 - child_rank, ige * causal_share * delta_rank) / wages, 
           0
         ), 
