@@ -31,11 +31,10 @@ calc_pe_ded = function(tax_unit, fill_missings = F) {
     
     # Tax law attributes
     'pe.value',           # (int) personal exemption value
-    'item.pease_thresh',  # (int) phaseout start 
+    'pe.po_thresh',       # (int) phaseout threshold 
     'pe.po_range',        # (int) range over which phaseout occurs
     'pe.po_discrete',     # (dbl) whether phaseout is discretized, as per pre-TCJA law
     'pe.po_discrete_step' # (dbl) rounding step for discretized phaseout
-    
   )
   
   tax_unit %>%
@@ -48,7 +47,7 @@ calc_pe_ded = function(tax_unit, fill_missings = F) {
       pe_ded = (1 + (filing_status == 2) + n_dep) * pe.value,
       
       # Calculate extent to which deduction is phased out 
-      po_share = pmin(1, pmax(0, agi - item.pease_thresh) / pe.po_range),
+      po_share = pmin(1, pmax(0, agi - pe.po_thresh) / pe.po_range),
       
       # Round if phaseout is discretized, as per pre-TCJA law. Rounds up. Add 
       # new parameters if we want to round down or to closest.
