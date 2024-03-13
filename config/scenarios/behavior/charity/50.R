@@ -2,7 +2,7 @@ do_charity = function(tax_units, ...) {
   
   #----------------------------------------------------------------------------
   # Adjusts cash charitable contributions along the intensive margin with a 
-  # tax price elasticity of -1.
+  # tax price elasticity of -0.5.
   # 
   # Parameters: 
   #   - tax_units (df)     : tibble of tax units with calculated variables
