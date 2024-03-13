@@ -1,7 +1,0 @@
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2024:2054,,wages1 wages2,extensive extensive
-01-eligibility,policy_runs/ctc/perm_arpa_ctc/01-eligibility,,2024:2054,,,
-02-phasein,policy_runs/ctc/perm_arpa_ctc/02-phasein,,2024:2054,,,
-03-phaseout,policy_runs/ctc/perm_arpa_ctc/03-phaseout,,2024:2054,,,
-04-value,policy_runs/ctc/perm_arpa_ctc/04-value,,2024:2054,,,
-partially_dynamic,policy_runs/ctc/perm_arpa_ctc/04-value,employment/bastian child_earnings/34,2024:2054,,wages1 wages2,extensive extensive

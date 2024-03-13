@@ -34,14 +34,14 @@ if (length(args) > 0) {
   delete_detail    = args[9]
   multicore        = args[10]
 } else {
-  runscript_names  = 'tests/new_dist'
+  runscript_names  = 'policy_runs/ctc/launch_runs/frbus/frbus_runs'
   scenario_id      = NULL
   user_id          = 'jar335'
-  local            = 1
-  vintage          = NULL
-  pct_sample       = 0.5
+  local            = 0
+  vintage          = '202403130110'
+  pct_sample       = 1
   stacked          = 1
-  baseline_vintage = NULL
+  baseline_vintage = '202403130110'
   delete_detail    = 1
   multicore        = 1
 }
@@ -84,10 +84,10 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
             file.path('baseline/static/detail', paste0(.x, '.csv')) %>%
             fread() %>% 
             tibble() %>% 
-            mutate(year = .x) %>% 
+            mutate(year = .x) %>%
+            select(id, year, starts_with('mtr_')) %>% 
             return()) %>%
-      bind_rows() %>% 
-      select(id, year, starts_with('mtr_'))
+      bind_rows() 
   }
   
   # Run counterfactual scenarios

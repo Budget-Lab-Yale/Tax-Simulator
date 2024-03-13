@@ -26,7 +26,7 @@ do_child_earnings = function(tax_units, ...) {
   #----------------
   # Set parameters
   #----------------
-
+  
   # First year of policy
   start_year = 2026
   
@@ -34,13 +34,13 @@ do_child_earnings = function(tax_units, ...) {
   current_year = tax_units %>% 
     distinct(year) %>% 
     deframe()
-
+  
   # Unconditional rank-rank IGE  
   ige = 0.34
   
   # Causal share of IGE
   causal_share = 0.2
-
+  
   
   #-----------
   # Read data 
@@ -141,7 +141,7 @@ do_child_earnings = function(tax_units, ...) {
       )
     )
   
-
+  
   if (current_year > start_year) {
     
     #------------------------------------------------------------
@@ -156,7 +156,7 @@ do_child_earnings = function(tax_units, ...) {
             mutate(source_year = .x, .before = everything())) %>% 
       bind_rows() %>% 
       select(source_year, parent_rank, delta_rank) %>% 
-    
+      
       # Add ages for adults who were a child during a given year
       expand_grid(current_age = 18:100) %>% 
       mutate(source_year_age = current_age - (current_year - source_year)) %>% 
@@ -216,7 +216,7 @@ do_child_earnings = function(tax_units, ...) {
       
       # No match for policy effect implies worker was too old to be exposed to policy
       mutate(delta_rank = replace_na(delta_rank, 0)) %>% 
- 
+      
       # Merge info on rank-wage conversion factor
       left_join(rank_wage_loopkup, by = 'child_rank') %>% 
       
@@ -236,9 +236,12 @@ do_child_earnings = function(tax_units, ...) {
       ) 
     
     # Write summary file
-    tax_units %>% 
+    tax_units %>%
+      filter(!is.na(delta_rank)) %>% 
+      filter(delta_rank > 0) %>% 
       group_by(parent_rank, child_rank) %>% 
-      summarise(rank_slope = weighted.mean(rank_slope, weight), 
+      summarise(n          = sum(weight),
+                wages      = sum(wages * weight),
                 pct_change = weighted.mean(pct_change, weight), 
                 .groups = 'drop') %>% 
       write_csv(
