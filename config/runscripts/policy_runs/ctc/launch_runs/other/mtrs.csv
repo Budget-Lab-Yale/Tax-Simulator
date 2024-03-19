@@ -1,0 +1,7 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2025:2026,,wages wages1 wages2,nextdollar nextdollar nextdollar
+perm_tcja_ctc,policy_runs/ctc/perm_tcja_ctc/04-phaseout,,2025:2026,,wages wages1 wages2,nextdollar nextdollar nextdollar
+perm_arpa_ctc,policy_runs/ctc/perm_arpa_ctc/04-phaseout,,2025:2026,,wages wages1 wages2,nextdollar nextdollar nextdollar
+edelberg_kearney,policy_runs/ctc/edelberg_kearney/04-phaseout,,2025:2026,,wages wages1 wages2,nextdollar nextdollar nextdollar
+fsa_ctc,policy_runs/ctc/fsa_2.0/ctc-04-phaseout,,2025:2026,,wages wages1 wages2,nextdollar nextdollar nextdollar
+fsa,policy_runs/ctc/fsa_2.0/salt,,2025:2026,,wages wages1 wages2,nextdollar nextdollar nextdollar
