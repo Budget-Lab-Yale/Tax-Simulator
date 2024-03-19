@@ -5,42 +5,54 @@
 
 library(tidyverse)
 library(data.table)
+library(Hmisc)
 
+
+output_root = 'C:/Users/jar335/Downloads/ctc_runs' # '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1'
 
 #-----------------------------
 # Stacked distribution charts
 #-----------------------------
 
 stacked_dist_scenarios = list(
-  arpa_ctc = list(
-    vintage = '202403112354', 
+  `Current policy` = list(
+    vintage = '202403122228', 
     provisions = c(
-      '1) Increase age limit and remove SSN requirement' = '01-eligibility',
-      '2) Eliminate the phase-in' = '02-phasein',
-      '3) Increase the phase-out threshold' = '03-phaseout',
-      '4) Increase the maximum value' = '04-value'
+      '1) Impose SSN requirement' = '01-eligibility',
+      '2) Increase maximum value' = '02-value',
+      '3) Limit refund' = '03-phasein',
+      '4) Increase the phase-out threshold' = '04-phaseout'
+    )
+  ),
+  `2021 law` = list(
+    vintage = '202403122306', 
+    provisions = c(
+      '1) Increase age limit' = '01-eligibility',
+      '2) Increase maximum value' = '02-value',
+      '3) Eliminate phase-in' = '03-phasein',
+      '4) Increase phase-out threshold' = '04-phaseout'
     )
   ), 
-  edelberg_kearney = list(
-    vintage = '202403120033', 
+  `Edelberg-Kearney` = list(
+    vintage = '202403122344', 
     provisions = c(
-      '1) Increase age limit and remove SSN requirement' = '01-eligibility',
-      '2) Allow partial refundability and increse phase-in rate' = '02-phasein',
-      '3) Reduce the phase-out rate' = '03-phaseout',
-      '4) Increase the maximum value' = '04-value'
+      '1) Increase age limit' = '01-eligibility',
+      '2) Increase maximum value' = '02-value',
+      '3) Allow half of credit at $0 of earnings and increase phase-in rate' = '03-phasein',
+      '4) Reduce phase-out rate' = '04-phaseout'
     )
   ), 
-  romney = list(
-    vintage = '202403120112', 
+  `FSA` = list(
+    vintage = '202403130022', 
     provisions = c(
-      '1) Raise the age limit' = 'ctc-01-eligibility',
-      '2) Increase the phase-in rate' = 'ctc-02-phasein',
-      '3) Increase the phase-out threshold' = 'ctc-03-phaseout', 
-      '4) Increase the maximum value' = 'ctc-04-value', 
-      '5) EITC payfor' = 'eitc',
-      '6) HOH payfor' = 'hoh',
-      '7) CDCTC payfor' = 'cdctc',
-      '8) SALT payfor' = 'salt'
+      '1) Raise age limit' = 'ctc-01-eligibility',
+      '2) Increase maximum value' = 'ctc-02-value',
+      '3) Increase phase-in rate' = 'ctc-03-phasein',
+      '4) Increase phase-out threshold' = 'ctc-04-phaseout', 
+      '5) Reform the EITC' = 'eitc',
+      '6) Eliminate Head Of Household filing status' = 'hoh',
+      '7) Eliminate Child and Dependent Care Tax Credut' = 'cdctc',
+      '8) Eliminate deduction for state and local taxes' = 'salt'
     )
   )
 )
@@ -51,7 +63,7 @@ get_stacked_chart_data = function(type, scenario) {
     names() %>% 
     map(
       ~ file.path(
-        '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1',
+        output_root,
         stacked_dist_scenarios[[scenario]]$vintage,
         stacked_dist_scenarios[[scenario]]$provisions[.x],
         'static/supplemental', 
@@ -107,68 +119,30 @@ for (type in c('age', 'income')) {
 
 
 
-
-
-get_stacked_chart_data = function(type, scenario) { 
-  
-  stacked_dist_scenarios[[scenario]]$provisions %>%
-    names() %>% 
-    map(
-      ~ file.path(
-        '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1',
-        stacked_dist_scenarios[[scenario]]$vintage,
-        stacked_dist_scenarios[[scenario]]$provisions[.x],
-        'static/supplemental', 
-        paste0('distribution_', type, '.csv') 
-      ) %>% 
-        read_csv() %>% 
-        mutate(provision = .x)
-    ) %>% 
-    bind_rows() %>% 
-    
-    # Rename group variable
-    rename_with(.cols = any_of(c('income_group', 'age_group')), 
-                .fn   = ~ 'group') %>% 
-    
-    # Remove extraneous rows and columns
-    filter(group != 'Negative income', 
-           financing == 'none', 
-           !includes_corp) %>% 
-    select(provision, group, pct_chg_ati) %>% 
-    
-    # Get contributions
-    group_by(group) %>% 
-    mutate(contribution = 100 * (pct_chg_ati - lag(pct_chg_ati, default = 0))) %>% 
-    ungroup()  
-    
-}
-
-
-for (type in c('age', 'income')) {
-  stacked_dist_scenarios %>% 
-    names() %>% 
-    map(~get_stacked_chart_data(type, .x) %>% 
-          ggplot(aes(x = group, y = contribution, fill = provision)) + 
-          geom_col())
-}
-
-
 #-----------------------
 # ATI comparison charts
 #-----------------------
 
 ati_scenarios = list(
-  `Full Extension` = list(
-    vintage   = '202403072232', 
-    provision = '07-qbi'
+  `Current policy` = list(
+    vintage    = '202403122228', 
+    provisions = '04-phaseout'
+  ),
+  `2021 law` = list(
+    vintage   = '202403122306', 
+    provision = '04-phaseout'
   ), 
-  `Partial Extension` = list(
-    vintage   = '202403072336', 
-    provision = 'qbi'
+  `Edelberg-Kearney` = list(
+    vintage   = '202403122344', 
+    provision = '04-phaseout'
   ), 
-  `Clausing-Sarin` = list(
-    vintage   = '202403080033',
-    provision = '14-ctc'
+  `Family Security Act 2.0 CTC` = list(
+    vintage   = '202403130022', 
+    provision = 'ctc-04-phaseout'
+  ), 
+  `Family Security Act 2.0` = list(
+    vintage   = '202403130022', 
+    provision = 'salt'
   )
 )
 
@@ -179,7 +153,7 @@ get_ati_data = function(type) {
     names() %>% 
     map(
       ~ file.path(
-        '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1',
+        output_root,
         ati_scenarios[[.x]]$vintage,
         ati_scenarios[[.x]]$provision,
         'static/supplemental', 
@@ -196,15 +170,15 @@ get_ati_data = function(type) {
     
     # Remove extraneous rows and columns
     filter(group != 'Negative income', 
-           financing == 'none') %>% 
-    select(scenario, includes_corp, group, pct_chg_ati) %>% 
+           financing == 'none', 
+           !includes_corp) %>% 
+    select(scenario, group, pct_chg_ati) %>% 
     
     # Express in percentage points
     mutate(pct_chg_ati = pct_chg_ati * 100) %>%
     
-    # Reshape wide in scenario-corp 
-    mutate(includes_corp = if_else(includes_corp, ', including corporate taxes', '')) %>%
-    pivot_wider(names_from   = c(scenario, includes_corp), 
+    # Reshape wide in scenario
+    pivot_wider(names_from  = scenario, 
                 names_sep   = '', 
                 values_from = 'pct_chg_ati') %>%
     # Write 
@@ -226,19 +200,28 @@ c('age', 'income') %>%
 #--------------------------
 
 winners_losers_scenarios = list(
-  `Full Extension` = list(
-    vintage   = '202403072232', 
-    provision = '07-qbi'
+  `Current policy` = list(
+    vintage    = '202403122228', 
+    provisions = '04-phaseout'
+  ),
+  `2021 law` = list(
+    vintage   = '202403122306', 
+    provision = '04-phaseout'
   ), 
-  `Partial Extension` = list(
-    vintage   = '202403072336', 
-    provision = 'qbi'
+  `Edelberg-Kearney` = list(
+    vintage   = '202403122344', 
+    provision = '04-phaseout'
   ), 
-  `Clausing-Sarin` = list(
-    vintage   = '202403080033',
-    provision = '14-ctc'
+  `Family Security Act 2.0 CTC` = list(
+    vintage   = '202403130022', 
+    provision = 'ctc-04-phaseout'
+  ), 
+  `Family Security Act 2.0` = list(
+    vintage   = '202403130022', 
+    provision = 'salt'
   )
 )
+
 
 get_winners_losers_data = function(type) {
   
@@ -247,7 +230,7 @@ get_winners_losers_data = function(type) {
     names() %>% 
     map(
       ~ file.path(
-        '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1',
+        output_root,
         winners_losers_scenarios[[.x]]$vintage,
         winners_losers_scenarios[[.x]]$provision,
         'static/supplemental', 
@@ -292,10 +275,12 @@ c('age', 'income') %>%
 
 
 # Read data
-c('baseline', 'full_extension', 'sarin_clausing') %>% 
+c('baseline', 'perm_tcja_ctc', 'perm_arpa_ctc', 
+  'edelberg_kearney', 'fsa_ctc', 'fsa') %>% 
   map(
     ~ file.path(
-      '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1/202403101543/',
+      output_root,
+      'mtrs',
       .x,
       'static/detail/2026.csv'  
     ) %>% 
@@ -323,9 +308,12 @@ c('baseline', 'full_extension', 'sarin_clausing') %>%
   # Clean up and reshape
   filter(!is.na(wage_bin)) %>% 
   mutate(scenario = case_when(
-    scenario == 'baseline'       ~ 'Current law', 
-    scenario == 'full_extension' ~ 'Full and Partial Extension', 
-    scenario == 'sarin_clausing' ~ 'Clausing-Sarin'
+    scenario == 'baseline'         ~ 'Current law', 
+    scenario == 'perm_tcja_ctc'    ~ 'Current policy', 
+    scenario == 'perm_arpa_ctc'    ~ '2021 law', 
+    scenario == 'edelberg_kearney' ~ 'Edelberg-Kearney', 
+    scenario == 'fsa_ctc'          ~ 'Family Security Act 2.0 CTC', 
+    scenario == 'fsa'              ~ 'Family Security Act 2.0 full proposal'
   )) %>%
   pivot_wider(names_from = scenario, values_from = mtr_wages) %>% 
   
@@ -337,12 +325,39 @@ c('baseline', 'full_extension', 'sarin_clausing') %>%
 # Child earnings
 #----------------
 
+
+child_earnings_scenarios = list(
+  `Current policy` = list(
+    vintage    = '202403122228', 
+    provisions = 'partially_dynamic'
+  ),
+  `2021 law` = list(
+    vintage   = '202403122306', 
+    provision = 'partially_dynamic'
+  ), 
+  `Edelberg-Kearney` = list(
+    vintage   = '202403122344', 
+    provision = 'partially_dynamic'
+  ), 
+  `Family Security Act 2.0 CTC` = list(
+    vintage   = '202403130022', 
+    provision = 'partially_dynamic_ctc_only'
+  ), 
+  `Family Security Act 2.0` = list(
+    vintage   = '202403130022', 
+    provision = 'partially_dynamic'
+  )
+)
+
+
 # Read data
-c('full_extension', 'partial_extension', 'sarin_clausing') %>% 
+child_earnings_scenarios %>% 
+  names() %>% 
   map(
     ~ file.path(
-      '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1/202403102353',
-      .x,
+      output_root,
+      child_earnings_scenarios[[.x]]$vintage,
+      child_earnings_scenarios[[.x]]$provision,
       '/static/supplemental/child_earnings/outcomes_2050.csv') %>% 
       read_csv() %>% 
       mutate(scenario = .x)  
@@ -358,11 +373,6 @@ c('full_extension', 'partial_extension', 'sarin_clausing') %>%
   
   # Clean, reshape, and write
   filter(!is.na(child_rank), child_rank %in% c(1, 5)) %>% 
-  mutate(scenario = case_when(
-    scenario == 'full_extension'    ~ 'Full Extension', 
-    scenario == 'partial_extension' ~ 'Partial Extension', 
-    scenario == 'sarin_clausing'    ~ 'Clausing-Sarin'
-  )) %>% 
   arrange(parent_rank) %>%
   mutate(across(.cols = c(parent_rank, child_rank), 
                 .fns  = ~ case_when(
@@ -375,4 +385,87 @@ c('full_extension', 'partial_extension', 'sarin_clausing') %>%
   pivot_wider(names_from = scenario, values_from = pct_change) %>% 
   arrange(child_rank) %>% 
   write_csv('./other/analysis_scripts/child_earnings.csv')
-  
+
+
+
+#------------------
+# Child income CDF
+#------------------
+
+# Read data
+microdata = c('baseline', 'perm_tcja_ctc', 'perm_arpa_ctc', 
+              'edelberg_kearney', 'fsa_ctc', 'fsa') %>%
+  map(
+    ~ file.path(
+      output_root,
+      'mtrs',
+      .x,
+      '/static/detail/2026.csv') %>% 
+      read_csv() %>% 
+      mutate(scenario = .x, 
+             ati      = expanded_inc - liab_iit_net - liab_pr_ee) %>%
+      select(scenario, id, n_dep_ctc, weight, expanded_inc, ati)
+  ) %>% 
+  bind_rows() %>%
+  left_join(
+    (.) %>%
+      filter(scenario == 'baseline') %>%
+      select(id, baseline_ati = ati), 
+    by = 'id'
+  )
+
+child_income_distribution = seq(0, 500e3, 5e3) %>%
+  map(~ microdata %>% 
+        mutate(change = ati - baseline_ati) %>%
+        group_by(scenario) %>% 
+        summarise(threshold = .x, 
+                  share_kids = sum((expanded_inc < .x) * n_dep_ctc * weight) / sum(n_dep_ctc * weight),
+                  cdf_change = sum((expanded_inc < .x) * change * weight) / sum(change * weight))
+  ) %>% 
+  bind_rows() %>%
+  group_by(scenario) %>%
+  mutate(pdf_change = cdf_change - lag(cdf_change, default = 0), 
+         ratio = cdf_change / share_kids) %>% 
+  ungroup()
+
+
+child_income_distribution %>% 
+  filter(scenario != 'baseline', 
+         scenario != 'fsa') %>% 
+  ggplot(aes(x = share_kids, y = ratio, colour = scenario)) + 
+  geom_line(size = 0.8) +
+  #geom_abline(slope = 1, intercept = 0) +
+  geom_hline(yintercept = 0) + 
+  theme_bw() 
+
+
+share_change = microdata %>% 
+  mutate(change = ati - baseline_ati) %>%
+  mutate(pctile = cut(
+    x = expanded_inc, 
+    breaks = wtd.quantile(
+      x = expanded_inc, 
+      weights = weight * n_dep_ctc, 
+      probs = seq(0, 1, 0.1)
+    ),
+    labels = F
+    )
+  ) %>% 
+  group_by(pctile, scenario) %>% 
+  summarise(change = sum(change * weight), 
+            .groups = 'drop') %>% 
+  group_by(scenario) %>% 
+  mutate(ratio = change * 10 / sum(change), 
+         excess = ratio - 1) %>% 
+  ungroup()
+
+share_change %>% 
+  filter(scenario != 'baseline', 
+         scenario != 'fsa') %>% 
+  ggplot(aes(x = pctile, y = ratio, colour = scenario)) + 
+  geom_line() + 
+  geom_point() + 
+  geom_hline(yintercept = 1) +
+  scale_x_continuous(breaks = 1:10) + 
+  labs(x = 'Decile') + 
+  theme_bw()
