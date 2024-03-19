@@ -51,8 +51,11 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'ctc.young_age_limit',  # (int) maximum age to qualify as "young" child
     'ctc.old_age_limit',    # (int) maximum age to qualify as "old" child
     'ctc.need_ssn',         # (int) whether SSN is required to qualify for CTC
+    'ctc.young_level',      # (int) whether to express value for young children in levels (in which case the calculator uses value_young) or in terms of difference from old (in which case the calculator adds bonus_young to value_old) 
     'ctc.value_young1',     # (int) maximum credit value per "young" child corresponding to phaseout threshold 1 
     'ctc.value_young2',     # (int) maximum credit value per "young" child corresponding to phaseout threshold 2
+    'ctc.bonus_young1',     # (int) maximum additional value per "young" child corresponding to phaseout threshold 1 
+    'ctc.bonus_young2',     # (int) maximum additional value per "young" child corresponding to phaseout threshold 2
     'ctc.value_old1',       # (int) maximum credit value per "old" child corresponding to phaseout threshold 1
     'ctc.value_old2',       # (int) maximum credit value per "old" child corresponding to phaseout threshold 2
     'ctc.value_other',      # (int) maximum (nonrefundable) credit value per nonqualifying dependent (assumed to phase out with po_thresh1)
@@ -66,8 +69,10 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'ctc.po_range_other',   # (dbl) non-child dependent credit phaseout range for married returns
     'ctc.po_discrete',      # (int) whether phaseout is discretized, as in current-law form
     'ctc.po_discrete_step', # (int) rounding step for discretized phaseout
+    'ctc.min_refund_level', # (int) whether to express minimum refundable CTC in dollar terms (in which case the calculator uses min_refund) or share of maximum value (in which case it uses min_refund_share)
     'ctc.min_refund_young', # (int) minimum refundable CTC per young qualifying child
     'ctc.min_refund_old',   # (int) minimum refundable CTC per old qualifying child
+    'ctc.min_refund_share', # (int) minimum refundable CTC as a share of total maximum credit
     'ctc.max_refund_young', # (int) maximum refundable CTC per young qualifying child
     'ctc.max_refund_old',   # (int) maximum refundable CTC per old qualifying child
     'ctc.ei_prior_yr',      # (int) whether prior year earned income qualifies for phase-in
@@ -103,10 +108,14 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       n_old   = o1 + o2 + o3 - n_young,
       n_other = n_dep - n_young - n_old,
       
+      # Determine value for young children
+      value_young1 = if_else(ctc.young_level == 1, ctc.value_young1, ctc.value_old1 + ctc.bonus_young1),
+      value_young2 = if_else(ctc.young_level == 1, ctc.value_young2, ctc.value_old2 + ctc.bonus_young2),
+      
       # Calculate value before phase-in/out, including nonrefundable credit
       # for other dependents
-      max_value1      = (ctc.value_young1 * n_young) + (ctc.value_old1 * n_old),
-      max_value2      = (ctc.value_young2 * n_young) + (ctc.value_old2 * n_old),
+      max_value1      = (value_young1 * n_young) + (ctc.value_old1 * n_old),
+      max_value2      = (value_young2 * n_young) + (ctc.value_old2 * n_old),
       max_value_other = ctc.value_other * n_other,
       
       # Determine amount by which income exceeds phaseout thresholds
@@ -143,7 +152,9 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       remaining_ctc = value1 + value2 + value_other - ctc_nonref, 
       
       # Determine minimum refundable credit value
-      min_refund = (n_young * ctc.min_refund_young) + (n_old * ctc.min_refund_old),
+      min_refund = if_else(ctc.min_refund_level == 1, 
+                           (n_young * ctc.min_refund_young) + (n_old * ctc.min_refund_old),
+                           ctc.min_refund_share * (max_value1 + max_value2)),
       
       # Determine maximum refundable credit value
       max_refund_young = if_else(is.infinite(ctc.max_refund_young), 

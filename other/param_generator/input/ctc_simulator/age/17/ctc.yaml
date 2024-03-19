@@ -1,0 +1,9 @@
+---
+
+# Maximum age to qualify as an "old" child
+old_age_limit:
+  value:
+    '2014': 16
+    '2021': 17
+    '2022': 16
+    '2026': 17

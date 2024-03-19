@@ -1,0 +1,7 @@
+---
+
+# Maximum credit value per nonqualifying dependent (assumed to phaseout per po_thresh1)
+value_other:
+  value:
+    '2014': 0
+    '2018': 500

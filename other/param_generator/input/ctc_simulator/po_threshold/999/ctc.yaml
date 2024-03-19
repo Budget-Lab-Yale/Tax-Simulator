@@ -1,0 +1,28 @@
+---
+
+# AGI threshold above which credit value phases out, single filers
+po_thresh_single:
+  value:
+    '2014': [75000, Inf]
+    '2018': [200000, Inf]
+    '2021': [200000, 75000]
+    '2022': [200000, Inf]
+    '2026': [Inf, Inf]
+    
+# AGI threshold above which credit value phases out, joint filers
+po_thresh_married:
+  value:
+    '2014': [110000, Inf] 
+    '2018': [400000, Inf]
+    '2021': [400000, 150000]
+    '2022': [400000, Inf]
+    '2026': [Inf, Inf]
+    
+# AGI threshold above which credit value phases out, HoH filers
+po_thresh_head:
+  value:
+    '2014': [75000, Inf]
+    '2018': [200000, Inf]
+    '2021': [200000, 112500]
+    '2022': [200000, Inf]
+    '2026': [Inf, Inf]

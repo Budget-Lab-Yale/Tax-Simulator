@@ -1,0 +1,15 @@
+---
+
+# Whether phaseout type is a rate (0 means range)
+po_type:
+  value:
+    '2014': 1
+    '2026': 0
+
+# CTC phaseout range for joint returns
+po_range_married:
+  value: [200000, Inf]
+  
+# Non-child dependent credit phaseout range for married returns
+po_range_other_married:
+  value: 200000

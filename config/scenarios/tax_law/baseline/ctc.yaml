@@ -3,9 +3,9 @@ indexation_defaults:
   i_measure:
     '1987': cpi
     '2017': chained_cpi
-  i_base_year: 2017
-  i_direction: -1
-  i_increment: 100
+  i_base_year: NA
+  i_direction: NA
+  i_increment: NA
 
 filing_status_mapper:
   po_thresh:
@@ -33,6 +33,12 @@ need_ssn:
     '2022': 1
     '2026': 0
 
+# Whether to express value for young children in levels (in which case the calculator
+# uses value_young) or in terms of difference from old (in which case the calculator
+# adds bonus_young to value_old) 
+young_level:
+  value: 1
+
 # Maximum credit value per "young" child
 value_young:
   value: 
@@ -41,6 +47,10 @@ value_young:
     '2021': [2000, 1600]
     '2022': [2000, 0]
     '2026': [1000, 0]
+
+# Maximum additional credit value per "young" child
+bonus_young:
+  value: [0, 0]
 
 # Maximum credit value per "old" child
 value_old:
@@ -124,6 +134,12 @@ value_other:
     '2018': 500
     '2026': 0
 
+# Whether to express minimum refundable CTC in dollar terms (in which case the 
+# calculator uses min_refund) or share of maximum value (in which case it 
+# uses min_refund_share)
+min_refund_level:
+  value: 1
+
 # Minimum refundable CTC per qualifying young child (i.e. y-intercept in trapezoid)
 min_refund_young:
   value: 
@@ -138,6 +154,10 @@ min_refund_old:
     '2021': 3000
     '2022': 0
 
+# Minimum refundable CTC as a share of total credit
+min_refund_share:
+  value: 0
+
 # Maximum refundable CTC per young qualifying child (inf implies maximum refund 
 # is equal to the credit value)
 max_refund_young:
@@ -147,10 +167,12 @@ max_refund_young:
     '2021': Inf
     '2022': 1400
     '2026': Inf
-  i_measure: default
-  i_base_year: default
-  i_direction: default
-  i_increment: default
+  i_measure: 
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year: 2017
+  i_direction: -1
+  i_increment: 100
   
 # Maximum refundable CTC per old qualifying child (inf implies maximum refund 
 # is equal to the credit value)
@@ -161,10 +183,12 @@ max_refund_old:
     '2021': Inf
     '2022': 1400
     '2026': Inf
-  i_measure: default
-  i_base_year: default
-  i_direction: default
-  i_increment: default
+  i_measure: 
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year: 2017
+  i_direction: -1
+  i_increment: 100
 
 # Whether prior year earned income qualifies for phase-in
 ei_prior_yr:

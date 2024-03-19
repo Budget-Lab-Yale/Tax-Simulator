@@ -1,0 +1,19 @@
+---
+
+# Whether to express value for young children in levels (in which case the calculator
+# uses value_young) or in terms of difference from old (in which case the calculator
+# adds bonus_young to value_old) 
+young_level:
+  value: 
+    '2014': 1
+    '2026': 0
+
+# Maximum additional credit value per "young" child
+bonus_young:
+  value: 
+    '2014': [0, 0],
+    '2026': [1200, 0]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default

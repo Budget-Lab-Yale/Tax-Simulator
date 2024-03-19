@@ -1,0 +1,101 @@
+---
+value:
+  id_position: [1, 4]
+  description: 'Credit value'
+  on_model:
+    1000: '$1,000 (current law)'
+    2000: '$2,000 (current policy)'
+    3000: '$3,000'
+    4000: '$4,000'
+  interpolated:
+    1:
+      start: '2000'
+      end: '3000'
+      new_ids: 
+        2500: '$2,500'
+    2:
+      start: '3000'
+      end: '4000'
+      new_ids: 
+        3500: '$3,500'
+        
+bonus_young:
+  id_position: [5, 8]
+  description: 'Additional credit value for children aged 5 and younger'
+  on_model:
+    0000: '$0 (current law)'
+    0600: '$600'
+    1200: '$1,200'
+  interpolated:
+    1:
+      start: '0000'
+      end: '0600'
+      new_ids: 
+        0300: '$300'
+    2:
+      start: '0600'
+      end: '1200'
+      new_ids: 
+        0900: '$900'
+
+refund_share: 
+  id_position: [9, 11]
+  description: 'Share of credit available at $0 of earnings'
+  on_model:
+    000: '0% (current law)'
+    050: '50%'
+    100: '100%'
+
+pi:
+  description: 'Phase-in design'
+  id_position: [12, 12]
+  on_model:
+    0: '15% rate above $3K of earnings (current law)'
+    1: '15% rate starting at first dollar of earnings'
+    2: '30% rate starting at first dollar of earnings'
+    3: 'Phase in over first $10K of earnings'
+    
+po_thresh:
+  description: 'Phase-out threshold'
+  id_position: [13, 15]
+  on_model:
+    110: '$110K married / $75K unmarried (current law)'
+    200: '$200K married / $100K unmarried'
+    300: '$300K married / $150K unmarried'
+    400: '$400K married / $200K unmarried (current policy)'
+    999: 'No phaseout threshold'
+    
+po_design:
+  description: 'Phase-out design'
+  id_position: [16, 16]
+  on_model:
+    0: '5% rate above threshold (current law)'
+    1: 'Phase out over a range of $200K married / $100K unmarried above threshold'
+
+ssn:
+  description: 'Social Security Number requirement'
+  id_position: [17, 17]
+  on_model:
+    0: 'No (current law)'
+    1: 'Yes (current policy)'
+  
+age:
+  id_position: [18, 19]
+  description: 'Maximum qualifying age'
+  on_model:
+    16: '16 (current law)'
+    17: '17'
+
+odc:
+  id_position: [20, 20]
+  description: 'Extend expiring $500 nonrefundable credit for other dependents'
+  on_model:
+    0: 'No (current law)'
+    1: 'Yes (current policy)'
+
+index:  
+  id_position: [21, 21]
+  description: 'Index all parameters to inflation'
+  on_model:
+    0: 'No (current law)'
+    1: 'Yes' 

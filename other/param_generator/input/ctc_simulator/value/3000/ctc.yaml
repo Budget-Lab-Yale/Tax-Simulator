@@ -1,0 +1,14 @@
+---
+
+# Maximum credit value per "old" child
+value_old:
+  value:
+    '2014': [1000, 0]
+    '2018': [2000, 0]
+    '2021': [2000, 1000]
+    '2022': [2000, 0]
+    '2026': [3000, 0]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default

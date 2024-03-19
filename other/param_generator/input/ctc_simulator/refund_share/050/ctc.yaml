@@ -1,0 +1,13 @@
+---
+
+# Whether to express minimum refundable CTC in dollar terms (in which case the 
+# calculator uses min_refund) or share of maximum value (in which case it 
+# uses min_refund_share)
+min_refund_level:
+  value: 
+    '2014': 1
+    '2026': 0
+
+# Minimum refundable CTC as a share of total credit
+min_refund_share:
+  value: 0.5

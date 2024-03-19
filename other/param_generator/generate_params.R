@@ -2,7 +2,7 @@
 # generate_params.R 
 #
 # Generates combinations of tax law parameter files for 2024
-# launch interactive simulator tool
+# launch interactive simulator tools
 #------------------------------------------------------------
 
 library(tidyverse)
@@ -13,15 +13,15 @@ library(yaml)
 #------------------------
 
 # Project name 
-project_name = 'tcja_simulator'
+project_name = 'ctc_simulator'
 
 # output folders
-output_runscripts = './config/runscripts/policy_runs/tcja/simulator'
-output_taxlaw     = './config/scenarios/tax_law/policy_runs/tcja_ext/interactive'
+output_runscripts = './config/runscripts/policy_runs/ctc/simulator'
+output_taxlaw     = './config/scenarios/tax_law/policy_runs/ctc/interactive'
 
 # Run script defaults
 corp_tax_vintage          = 2024021816
-tax_law_root              = 'policy_runs/tcja_ext/interactive/'
+tax_law_root              = 'policy_runs/ctc/interactive/'
 behavior                  = NA
 years                     = '2023:2054'
 dist_years                = '2026'
