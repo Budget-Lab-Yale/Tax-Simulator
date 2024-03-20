@@ -27,7 +27,6 @@ stamp = paste0(lubridate::year(end),
                  paste0('0', .) %>% 
                  str_sub(-2))
 
-
 scripts = read_csv("config/runscripts/policy_runs/tcja/simulator/interactive_simulator_runs.csv") %>%
   select(ID)
 
@@ -51,7 +50,7 @@ for(i in 1:splits){
              '\n#SBATCH --job-name batch-',stamp,
              '\n#SBATCH --output=/gpfs/gibbs/project/sarin/jmk263/Repositories/Tax-Simulator/config/batch-submissions/',stamp,'/output/slurm-%A_%a.out',
              '\n#SBATCH --error=/gpfs/gibbs/project/sarin/jmk263/Repositories/Tax-Simulator/config/batch-submissions/',stamp,'/output/slurm-%A_%a.err',
-             '\n#SBATCH --mem-per-cpu 10g \n#SBATCH --time=1:00:00', 
+             '\n#SBATCH --mem-per-cpu 10g \n#SBATCH --time=',splits,':30:00', 
              '\n#SBATCH --partition scavenge \n#SBATCH --requeue',
              '\nmodule load miniconda \nconda activate ybl-rbash',
              '\nfile=/gpfs/gibbs/project/sarin/jmk263/Repositories/Tax-Simulator/config/batch-submissions/',stamp,'/batch_array.txt',
