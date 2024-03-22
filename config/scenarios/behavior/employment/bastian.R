@@ -61,7 +61,7 @@ do_employment = function(tax_units, ...) {
                sole_prop + part_active + part_passive - part_active_loss - 
                part_passive_loss - part_179 + scorp_active + scorp_passive - 
                scorp_active_loss - scorp_passive_loss - scorp_179 + rent - 
-               rent_loss + estate - estate_loss + farm + ui +  gross_ss + other_inc,
+               rent_loss + estate - estate_loss + farm + ui + gross_ss + other_inc,
       
       #------------------
       # Set elasticities
@@ -120,22 +120,40 @@ do_employment = function(tax_units, ...) {
   # Estimate elasticity-group-level net employment change 
   #-------------------------------------------------------
   
+  # Calculate implied changes for primary earners
   delta_emp = list()
   delta_emp[[1]] = worker_info %>% 
     group_by(e = e1) %>% 
-    summarise(n_records = sum(!is.na(delta_rtw1)), 
+    summarise(n_records = sum(!is.na(delta_rtw1) & wages1 > 0), 
               delta_rtw = weighted.mean(delta_rtw1,      weight * (wages1 > 0), na.rm = T), 
               delta_emp = weighted.mean(delta_rtw1 * e1, weight * (wages1 > 0), na.rm = T) * 
                           sum(weight * (wages1 > 0), na.rm = T)) %>% 
     filter(e > 0, n_records > 0)
   
+  # Calculate implied changes for secondary earners
   delta_emp[[2]] = worker_info %>% 
     group_by(e = e2) %>% 
-    summarise(n_records = sum(!is.na(delta_rtw2)),
+    summarise(n_records = sum(!is.na(delta_rtw2) & wages2 > 0),
               delta_rtw = weighted.mean(delta_rtw2,      weight * (wages2 > 0), na.rm = T), 
               delta_emp = weighted.mean(delta_rtw2 * e2, weight * (wages2 > 0), na.rm = T) * 
                            sum(weight * (wages2 > 0), na.rm = T)) %>% 
     filter(e > 0, n_records > 0)
+  
+  # Write summary file
+  output_folder = file.path(scenario_info$output_path, 'conventional/supplemental/employment')
+  if (!dir.exists(output_folder)) {
+    dir.create(output_folder)
+  }
+  
+  current_year = tax_units %>% 
+    distinct(year) %>% 
+    deframe()
+  
+  bind_rows(
+    delta_emp[[1]] %>% mutate(earner = 'primary', .before = everything()),
+    delta_emp[[2]] %>% mutate(earner = 'secondary')
+  ) %>% 
+    write_csv(file.path(output_folder, paste0('employment_effects_', current_year, '.csv')))
   
   
   #-------------------------------------------------------------------------------------
@@ -146,7 +164,7 @@ do_employment = function(tax_units, ...) {
     
     # Recode person-index-specific variable names
     worker_info %<>%
-      select(id, weight, all_of(c(paste0(c('wages', 'delta_rtw', 'e'), person_index)))) %>% 
+      select(id, weight, all_of(c(paste0(c('wages', 'sole_prop', 'delta_rtw', 'e'), person_index)))) %>% 
       rename_with(.cols = -c(id, weight), .fn = ~ str_sub(., end = -2))
      
     # Extract group-level change in RTW
@@ -217,7 +235,12 @@ do_employment = function(tax_units, ...) {
             deframe(),
           
           # Calculate probability of employment: implied net change over eligible nonworkers 
-          pr_emp = if_else(wages == 0, delta_emp / sum(weight * (wages == 0)), 1), 
+          # Note that self-employed are excluded from being chosen to start W2 employment
+          pr_emp = case_when(
+            wages == 0 & sole_prop == 0 ~ delta_emp / sum(weight * (wages == 0)),
+            wages == 0 & sole_prop != 0 ~ as.integer(wages > 0), 
+            wages > 0                   ~ 1
+          ),
           
           # Simulate transition into employment 
           emp = runif(nrow(.)) < pr_emp, 
