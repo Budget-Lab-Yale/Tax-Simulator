@@ -34,16 +34,16 @@ if (length(args) > 0) {
   delete_detail    = args[9]
   multicore        = args[10]
 } else {
-  runscript_names  = 'policy_runs/ctc/launch_runs/other/mtrs'
-  scenario_id      = NULL
+  runscript_names  = 'policy_runs/ctc/simulator/interactive_simulator_runs'
+  scenario_id      = 'baseline'
   user_id          = 'jar335'
-  local            = 0
-  vintage          = NULL
+  local            = 1
+  vintage          = '202403220906'
   pct_sample       = 1
-  stacked          = 1
-  baseline_vintage = NULL
+  stacked          = 0
+  baseline_vintage = NULL 
   delete_detail    = 0
-  multicore        = 1
+  multicore        = 0
 }
 
 

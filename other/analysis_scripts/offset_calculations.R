@@ -1,7 +1,8 @@
+library(tidyverse)
 
-output_root = '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1/202403031731'
+output_root = '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1/202403211024/'
 
-ids = c('arpa_ctc', 'tcja')
+ids = c('perm_tcja_ctc', 'perm_arpa_ctc', 'perm_arpa_ctc_indexed', 'edelberg_kearney', 'fsa_ctc', 'fsa')
 
 revenue_estimates = ids %>% 
   map(~read_csv(file.path(output_root, .x, 'conventional/totals/receipts.csv')) %>% 
@@ -30,6 +31,28 @@ revenue_estimates = ids %>%
                names_to = 'source') %>% 
   mutate(value = replace_na(value, 0))
 
+revenue_estimates %>% 
+  filter(source == 'offset') %>% 
+  group_by(scenario, 
+           period = case_when(
+             year < 2035 ~ 1, 
+             year > 2044 ~ 3, 
+             T           ~ 2
+           ), 
+           source) %>% 
+  summarise(value = sum(if_else(name == 'outlays_tax_credits', -value, value)), 
+            .groups = 'drop') %>% 
+  pivot_wider(names_from = period) %>% 
+  write.csv()
+  
+revenue_estimates %>% 
+  filter(year == 2054) %>% 
+  group_by(scenario, source) %>% 
+  summarise(value = sum(if_else(name == 'outlays_tax_credits', -value, value)), 
+            .groups = 'drop') %>% 
+  pivot_wider(names_from = source) %>% 
+  mutate(value = offset / static)
+  
 
 revenue_estimates %>% 
   group_by(scenario, year, source) %>% 

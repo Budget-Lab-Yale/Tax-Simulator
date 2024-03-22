@@ -1,12 +1,14 @@
 
-runscript_name   = "policy_runs/tcja/simulator/interactive_simulator_runs"
+stamp = '202403220906'
+
+runscript_name   = "policy_runs/ctc/simulator/interactive_simulator_runs"
 scenario_id      = "baseline"
-user_id          = "jmk263"
+user_id          = "jar335"
 local            = 1
-vintage          = NULL
+vintage          = stamp
 pct_sample       = 1
 stacked          = 0
-baseline_vintage = NULL
+baseline_vintage = stamp
 delete_detail    = 1
 multicore        = 0
 
@@ -16,19 +18,10 @@ end = Sys.time()
 
 runtime = as.numeric(end - start)
 
-stamp = paste0(lubridate::year(end), 
-               lubridate::month(end) %>%
-                 paste0('0', .) %>% 
-                 str_sub(-2), 
-               lubridate::day(end) %>%
-                 paste0('0', .) %>% 
-                 str_sub(-2), 
-               lubridate::hour(end) %>%
-                 paste0('0', .) %>% 
-                 str_sub(-2))
 
 
-scripts = read_csv("config/runscripts/policy_runs/tcja/simulator/interactive_simulator_runs.csv") %>%
+
+scripts = read_csv("config/runscripts/policy_runs/ctc/simulator/interactive_simulator_runs.csv") %>%
   select(ID)
 
 batch_path = file.path("config/batch-submissions", stamp)
@@ -49,15 +42,15 @@ for(i in 1:splits){
   cat(paste0('#!/bin/bash',
              '\n#SBATCH --array=',(10000*(i-1))+1,'-', ifelse(i==splits, nrow(scripts)/2, 10000*i),
              '\n#SBATCH --job-name batch-',stamp,
-             '\n#SBATCH --output=/gpfs/gibbs/project/sarin/jmk263/Repositories/Tax-Simulator/config/batch-submissions/',stamp,'/output/slurm-%A_%a.out',
-             '\n#SBATCH --error=/gpfs/gibbs/project/sarin/jmk263/Repositories/Tax-Simulator/config/batch-submissions/',stamp,'/output/slurm-%A_%a.err',
-             '\n#SBATCH --mem-per-cpu 10g \n#SBATCH --time=1:00:00', 
+             '\n#SBATCH --output=/gpfs/gibbs/project/sarin/', user_id, '/Repositories/Tax-Simulator/config/batch-submissions/',stamp,'/output/slurm-%A_%a.out',
+             '\n#SBATCH --error=/gpfs/gibbs/project/sarin/', user_id, '/Repositories/Tax-Simulator/config/batch-submissions/',stamp,'/output/slurm-%A_%a.err',
+             '\n#SBATCH --mem-per-cpu 10g \n#SBATCH --time=',splits,':30:00', 
              '\n#SBATCH --partition scavenge \n#SBATCH --requeue',
              '\nmodule load miniconda \nconda activate ybl-rbash',
-             '\nfile=/gpfs/gibbs/project/sarin/jmk263/Repositories/Tax-Simulator/config/batch-submissions/',stamp,'/batch_array.txt',
+             '\nfile=/gpfs/gibbs/project/sarin/', user_id, '/Repositories/Tax-Simulator/config/batch-submissions/',stamp,'/batch_array.txt',
              '\nfor i in 0 1; do\n  index=$((2*SLURM_ARRAY_TASK_ID + i))',
              '\n  scenario_id=$(awk "NR=="${index}"{print}" $file)',
-             '\n  Rscript /gpfs/gibbs/project/sarin/jmk263/Repositories/Tax-Simulator/src/main.R ', runscript_name, ' "${scenario_id}" ', user_id, ' ',
+             '\n  Rscript /gpfs/gibbs/project/sarin/', user_id, '/Repositories/Tax-Simulator/src/main.R ', runscript_name, ' "${scenario_id}" ', user_id, ' ',
              local, ' ', stamp, ' ', pct_sample,' ', stacked, ' ', stamp,' 1 0',
              '\ndone'
   ),

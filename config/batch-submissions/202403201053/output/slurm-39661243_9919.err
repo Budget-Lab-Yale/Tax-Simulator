@@ -1,0 +1,14 @@
+Warning messages:
+1: In dir.create(file.path(output_root, "static/supplemental/child_earnings")) :
+  '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202403201053/400038403999111701/static/supplemental/child_earnings' already exists
+2: In dir.create(file.path(output_root, "static/supplemental/child_earnings")) :
+  '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202403201053/400038403999111701/static/supplemental/child_earnings' already exists
+3: In dir.create(file.path(output_root, "static/supplemental/child_earnings")) :
+  '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202403201053/400038403999111701/static/supplemental/child_earnings' already exists
+Warning messages:
+1: In dir.create(file.path(output_root, "static/supplemental/child_earnings")) :
+  '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202403201053/400038403999111710/static/supplemental/child_earnings' already exists
+2: In dir.create(file.path(output_root, "static/supplemental/child_earnings")) :
+  '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202403201053/400038403999111710/static/supplemental/child_earnings' already exists
+3: In dir.create(file.path(output_root, "static/supplemental/child_earnings")) :
+  '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202403201053/400038403999111710/static/supplemental/child_earnings' already exists

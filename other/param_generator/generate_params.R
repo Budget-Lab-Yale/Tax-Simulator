@@ -23,7 +23,7 @@ output_taxlaw     = './config/scenarios/tax_law/policy_runs/ctc/interactive'
 corp_tax_vintage          = 2024021816
 tax_law_root              = 'policy_runs/ctc/interactive/'
 behavior                  = NA
-years                     = '2023:2054'
+years                     = '2024:2054'
 dist_years                = '2026'
 mtr_vars                  = NA
 mtr_types                 = NA
@@ -78,6 +78,7 @@ combo_ids = scenario_map %>%
   mutate(id = do.call(what = paste0, 
                       args = .), 
          .before = everything())
+
 
 #--------------------------
 # Build tax law parameters
@@ -144,21 +145,16 @@ for (i in 1:nrow(combo_ids)) {
 
 # Initialize template
 runscripts = expand_grid(
-  ID                                = combo_ids$id, 
-  tax_law                           = tax_law_root,
-  behavior                          = behavior,
-  years                             = years, 
-  dist_years                        = dist_years, 
-  mtr_vars                          = mtr_vars,
-  mtr_types                         = mtr_types,
-  `dep.Corporate-Tax-Model.vintage` = corp_tax_vintage
+  ID         = combo_ids$id, 
+  tax_law    = tax_law_root,
+  behavior   = behavior,
+  years      = years, 
+  dist_years = dist_years, 
+  mtr_vars   = mtr_vars,
+  mtr_types  = mtr_types
 ) %>% 
   mutate(tax_law    = if_else(row_number() == 1, 'baseline', paste0(tax_law, ID)),
          dist_years = if_else(row_number() == 1, years, dist_years)) %>% 
-  mutate(`dep.Corporate-Tax-Model.ID` = paste0(str_sub(ID , start = -3, end = -2), 
-                                               '_', 
-                                               str_sub(ID, start = -1)), 
-         .after = `dep.Corporate-Tax-Model.vintage`) %>% 
   mutate(ID = if_else(row_number() == 1, 'baseline', ID)) %>% 
   write_csv(file.path(output_runscripts, 'interactive_simulator_runs.csv'))
 

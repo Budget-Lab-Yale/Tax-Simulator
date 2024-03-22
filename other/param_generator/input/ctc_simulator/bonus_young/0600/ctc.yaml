@@ -11,7 +11,7 @@ young_level:
 # Maximum additional credit value per "young" child
 bonus_young:
   value: 
-    '2014': [0, 0],
+    '2014': [0, 0]
     '2026': [600, 0]
   i_measure: default
   i_base_year: default

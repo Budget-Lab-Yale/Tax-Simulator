@@ -1,0 +1,7 @@
+
+EnvironmentNameNotFound: Could not find conda environment: ybl-rbash
+You can list all discoverable environments with `conda info --envs`.
+
+
+/var/spool/slurmd/job39638203/slurm_script: line 16: Rscript: command not found
+/var/spool/slurmd/job39638203/slurm_script: line 16: Rscript: command not found
