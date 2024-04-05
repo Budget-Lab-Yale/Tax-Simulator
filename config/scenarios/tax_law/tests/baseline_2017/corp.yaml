@@ -1,0 +1,6 @@
+---
+
+# Top corporate tax rate (used only in calculating business income shifting
+# across entity type, currently)
+rate:
+  value: 0.35

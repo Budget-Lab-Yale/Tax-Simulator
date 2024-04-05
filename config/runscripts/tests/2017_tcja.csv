@@ -1,0 +1,3 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Macro-Projections.vintage,dep.Macro-Projections.ID,dep.Estate-Tax-Model.vintage,dep.Estate-Tax-Model.ID,dep.Tax-Data.vintage,dep.Tax-Data.ID
+baseline,tests/baseline_2017,charity/50 entity_shifting/pearce_prisinzano,2017:2054,,first_mort_int char_cash kg_lt part_active,nextdollar nextdollar nextdollar nextdollar,2017123100,baseline,2024021614,baseline_2017,2024040210,baseline_2017
+tcja_2017,tests/tcja_2017,charity/50 entity_shifting/pearce_prisinzano,2017:2054,,first_mort_int char_cash kg_lt part_active,nextdollar nextdollar nextdollar nextdollar,2017123100,baseline,2024021614,tcja_2017,2024040210,baseline_2017

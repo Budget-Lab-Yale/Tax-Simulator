@@ -5,6 +5,16 @@ filing_status_mapper:
     '2': po_thresh_married
     '3': po_thresh_married / 2
     '4': po_thresh_head
+  po_range:
+    '1': po_range_married / 2
+    '2': po_range_married
+    '3': po_range_married / 2
+    '4': po_range_married / 2
+  po_range_other:
+    '1': po_range_other_married / 2
+    '2': po_range_other_married
+    '3': po_range_other_married / 2
+    '4': po_range_other_married / 2
 
 # Whether SSN is required to qualify for CTC
 need_ssn:
@@ -38,9 +48,25 @@ po_thresh_married:
 po_thresh_head:
   value: [75000, Inf]
 
+# Whether phaseout type is a rate (0 means range)
+po_type:
+  value: 1
+
 # Phaseout rate
 po_rate:
   value: [0.05, 0.05]
+  
+# Phaseout rate for non-child dependent credit
+po_rate_other:
+  value: 0.05
+
+# CTC phaseout range for joint returns
+po_range_married:
+  value: [Inf, Inf]
+  
+# Non-child dependent credit phaseout range for married returns
+po_range_other_married:
+  value: Inf
   
 # Whether phaseout is discretized, as per pre-TCJA law
 po_discrete:

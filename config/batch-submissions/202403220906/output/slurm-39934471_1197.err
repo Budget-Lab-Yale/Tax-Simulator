@@ -5,4 +5,14 @@ Warning messages:
   '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202403220906/100006000002999111601/static/supplemental/child_earnings' already exists
 3: In dir.create(file.path(output_root, "static/supplemental/child_earnings")) :
   '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202403220906/100006000002999111601/static/supplemental/child_earnings' already exists
-slurmstepd: error: *** JOB 39935964 ON r802u23n03 CANCELLED AT 2024-03-22T09:53:44 DUE TO PREEMPTION ***
+4: In dir.create(file.path(output_root, "static/supplemental/child_earnings")) :
+  '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202403220906/100006000002999111601/static/supplemental/child_earnings' already exists
+Warning messages:
+1: In dir.create(file.path(output_root, "static/supplemental/child_earnings")) :
+  '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202403220906/100006000002999111610/static/supplemental/child_earnings' already exists
+2: In dir.create(file.path(output_root, "static/supplemental/child_earnings")) :
+  '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202403220906/100006000002999111610/static/supplemental/child_earnings' already exists
+3: In dir.create(file.path(output_root, "static/supplemental/child_earnings")) :
+  '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202403220906/100006000002999111610/static/supplemental/child_earnings' already exists
+4: In dir.create(file.path(output_root, "static/supplemental/child_earnings")) :
+  '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202403220906/100006000002999111610/static/supplemental/child_earnings' already exists

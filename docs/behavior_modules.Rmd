@@ -1,3 +1,8 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
 # Writing behavioral feedback modules in Tax-Simulator
 
 Tax-Simulator allows users to write custom behavioral feedback modules. These modules can be called in Tax-Simulator to simulate micro-level responses to policy changes --- that is, to account for behavioral feedback in revenue estimates. This document describes how Tax-Simulator's behavioral modules work.

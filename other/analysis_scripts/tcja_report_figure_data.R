@@ -303,19 +303,18 @@ c('full_extension', 'partial_extension', 'sarin_clausing') %>%
   # Get averages by quintile
   mutate(across(.cols = c(child_rank, parent_rank), 
                 .fns  = ~ floor((. - 1) / 20) + 1)) %>% 
-  group_by(scenario, parent_rank, child_rank) %>% 
+  group_by(scenario, parent_rank) %>% 
   summarise(pct_change = weighted.mean(pct_change, n), 
             .groups = 'drop') %>% 
   
-  # Clean, reshape, and write
-  filter(!is.na(child_rank), child_rank %in% c(1, 5)) %>% 
+  # Clean, reshape, and write %>% 
   mutate(scenario = case_when(
     scenario == 'full_extension'    ~ 'Full Extension', 
     scenario == 'partial_extension' ~ 'Partial Extension', 
     scenario == 'sarin_clausing'    ~ 'Clausing-Sarin'
   )) %>% 
   arrange(parent_rank) %>%
-  mutate(across(.cols = c(parent_rank, child_rank), 
+  mutate(across(.cols = parent_rank, 
                 .fns  = ~ case_when(
                             . == 1 ~ 'Bottom quintile',
                             . == 2 ~ 'Second quintile',
@@ -324,6 +323,5 @@ c('full_extension', 'partial_extension', 'sarin_clausing') %>%
                             . == 5 ~ 'Top quintile')
                 )) %>% 
   pivot_wider(names_from = scenario, values_from = pct_change) %>% 
-  arrange(child_rank) %>% 
   write_csv('./other/analysis_scripts/child_earnings.csv')
   

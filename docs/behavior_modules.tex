@@ -1,0 +1,754 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\author{}
+\date{\vspace{-2.5em}}
+
+\begin{document}
+
+\hypertarget{writing-behavioral-feedback-modules-in-tax-simulator}{%
+\section{Writing behavioral feedback modules in
+Tax-Simulator}\label{writing-behavioral-feedback-modules-in-tax-simulator}}
+
+Tax-Simulator allows users to write custom behavioral feedback modules.
+These modules can be called in Tax-Simulator to simulate micro-level
+responses to policy changes --- that is, to account for behavioral
+feedback in revenue estimates. This document describes how
+Tax-Simulator's behavioral modules work.
+
+Quickly, a bit of terminology up front. \emph{Static} revenue estimates
+contain no behavioral feedback: taxpayer behavior is held fixed across
+policy scenarios. \emph{Conventional} revenue estimates allow for
+certain types of behavioral responses that reflect tax avoidance rather
+than a change of economic substance. Examples include business income
+shifting across legal entity form and the timing of capital gains
+realizations. \emph{Partial dynamic} estimates further expand the range
+of incorporated behaviors, allowing for first-order economic changes
+such as labor supply changes. \emph{Dynamic}, or full dynamic, refers to
+``true'' general equilibrium modeling in which macroeconomic factor
+prices like interest rates are allowed to vary. \textbf{Tax-Simulator
+can be used to generate conventional and partial dynamic estimates
+only.} Full dynamic requires a notion of general equilibrium available
+only in computational macro models.
+
+Below, I describe how behavioral feedback modules work and how to write
+your own.
+
+\hypertarget{some-architecture-basics}{%
+\subsection{Some architecture basics}\label{some-architecture-basics}}
+
+This section describes where behavioral feedback fits into
+Tax-Simulator.
+
+\hypertarget{types-of-functions}{%
+\subsubsection{Types of functions}\label{types-of-functions}}
+
+Tax-Simulator can be thought of as one big function mapping \emph{input}
+attributes of tax microdata (variables like number of children, income,
+and expenses) to \emph{output} attributes (variables like deductions,
+tax liability, and credits). It is made of many smaller functions. These
+smaller functions take one of two forms:
+
+\begin{itemize}
+\item
+  \textbf{Tax calculation functions.} These functions calculate output
+  attributes for an arbitrary set of inputs. For example,
+  \texttt{calc\_ctc()} returns the Child Tax Credit for a set of input
+  tax units. This is the TurboTax portion of the code.
+\item
+  \textbf{Economic functions.} These functions act on the input
+  attributes of tax microdata.
+\end{itemize}
+
+Behavioral feedback modules fall into the latter category. A behavioral
+feedback module is, literally, an R function expressing input attributes
+(e.g.~capital gains) as a function of tax policy (e.g.~the marginal
+effective tax rate on capital gains). When tax policy changes, these
+modules are called and update the input attributes of tax microdata to
+reflect behavioral feedback.
+
+\hypertarget{static-mode}{%
+\subsubsection{Static mode}\label{static-mode}}
+
+At runtime, if told to execute a behavioral feedback module as part of a
+simulation of a policy reform, Tax-Simulator will run non-baseline
+scenarios twice. First, it runs in \emph{static mode.} This means all
+input attributes are held fixed at their baseline levels when
+calculating taxes under the policy reform. Critically, this step allows
+us to assess the first-order effects of a policy --- for example,
+effective marginal tax rates (EMTRs) under the new policy regime.
+
+Then Tax-Simulator runs the policy reform scenario again, this time in
+\emph{non-static} mode. \textbf{Behavioral feedback modules are executed
+at the beginning of non-static mode.} These modules modify input
+attributes according to their specific logic, then Tax-Simulator
+re-calculates taxes. The result is a policy reform simulation which
+accounts for behavioral feedback.
+
+\hypertarget{organization-and-naming-conventions}{%
+\subsubsection{Organization and naming
+conventions}\label{organization-and-naming-conventions}}
+
+In the Tax-Simulator repository, code and data are organized into one of
+two folders. The \emph{/src} folder contains scenario-invariant model
+code --- which is to say, most of it. The \emph{/config} folder contains
+configuration files which are used to define tax policy scenarios,
+economic assumptions, and other specifications about execution. Despite
+being made of code, behavioral feedback modules fall into the
+\emph{/config} bucket: these modules \emph{configure} the assumptions
+about how taxpayers react to tax reforms. In other words, along with tax
+law, behavioral feedback assumptions \emph{define} a scenario.
+
+As such, behavioral feedback modules are .R files stored in
+\emph{/config/scenarios/behavior}. Within this directly, modules are
+organized into subfolders by the type of behavior modeled.
+
+Let's take \emph{/charity} as an example. This subfolder contains
+modules that modify charitable contributions in response to policy
+reforms that directly or indirectly affect the tax subsidy for giving.
+There are two modules in \emph{/charity}. 100.R simulates a tax-price
+elasticity of charitable giving of -1; 50.R assumes a value of -0.5.
+Module names should be brief and describe what the module does. We will
+look at the contents of these modules below.
+
+Critically, both modules contain a functional called
+\texttt{do\_charity()}; ``charity'' in ``do\_charity'' is a keyword
+which communicates specific information to Tax-Simulator when it looks
+for functions to execute. A behavioral feedback module in the subfolder
+\emph{/config/scenarios/behavior/X} must contain a function called
+\texttt{do\_X()}.
+
+\hypertarget{configuring-the-model-to-execute-with-specific-behavioral-feedback-modules}{%
+\subsubsection{Configuring the model to execute with specific behavioral
+feedback
+modules}\label{configuring-the-model-to-execute-with-specific-behavioral-feedback-modules}}
+
+A \emph{runscript} is a CSV file that defines scenarios for
+Tax-Simulator to run. Runscripts are located in
+\emph{/config/runscripts}. Every row represents a scenario to run;
+columns reflect parameter values defining each scenario.
+
+One column is called ``behavior''. This is where you list the names of
+behavioral feedback modules to run as part of a scenario. Modules are
+referred to by their filename relative to the \emph{/behavior}
+directory. If running more than one module in a single scenario,
+separate the filenames with a single space.
+
+For example, let's say I wanted to run a policy experiment where I
+raised ordinary tax rates by 2 percentage points, a policy which
+increases the implicit tax subsidy for charitable contributions, and
+account for the reforms' impact on contributions. I want to assume an
+elasticity of -1 under the functional form contained in the
+\emph{/charity/100.R} module. I would specify the following runscript
+(extraneous columns are left hidden):
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 12\tabcolsep) * \real{0.1316}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 12\tabcolsep) * \real{0.0658}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 12\tabcolsep) * \real{0.2632}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 12\tabcolsep) * \real{0.1711}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 12\tabcolsep) * \real{0.0658}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 12\tabcolsep) * \real{0.1447}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 12\tabcolsep) * \real{0.1579}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+ID
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\ldots{}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+tax\_law
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+behavior
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+\ldots{}
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+mtr\_vars
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+mtr\_type
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+baseline & \ldots{} & baseline & & \ldots{} & char\_cash & nextdollar \\
+2\_pp & \ldots{} & tests/charity/2\_pp & charity/100 & \ldots{} &
+char\_cash & nextdollar \\
+\end{longtable}
+
+The ``behavior'' attribute is left blank for the baseline scenario,
+since behavioral feedback is a concept that applies only to
+counterfactual reforms. For the reform scenario, titled ``2\_pp'', I
+specify \emph{charity/100} which tells Tax-Simulator to execute the code
+contained in the 100.R module when running this scenario. Because the
+code contained in 100.R module depends on knowing the marginal tax rate
+on cash contributions (variable ``char\_cash'' in the data) current
+current law and under the reform, I include \emph{char\_cash} as in
+column ``mtr\_vars'' and \emph{nextdollar} in the column ``mtr\_type'',
+which tells Tax-Simulator to compute the next-dollar EMTR on whatever
+variables are specified. (The other option for ``mtr\_type'' is
+\emph{extensive}, in which the average effective tax rate over the
+realized value is calculated by setting the value to \$0.) If my
+behavioral feedback module did not depend on any EMTR calculations, I
+could leave this column blank.
+
+\hypertarget{module-structure}{%
+\subsection{Module structure}\label{module-structure}}
+
+A behavioral feedback module contains a ``do'' function, as described
+above. This function must have the following signature:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{do\_some\_behavior }\OtherTok{=} \ControlFlowTok{function}\NormalTok{(tax\_units, ...) \{ }
+
+  \CommentTok{\# (function contents)}
+
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+The parameter \texttt{tax\_units} is the dataframe containing the tax
+microdata. It contains all tax records and their attributes, including
+all tax law attributes. For example, a record in \texttt{tax\_units}
+contains variables like marital status, capital gains, and the top tax
+bracket.
+
+The parameter \texttt{…} simply means that any number of other,
+arbitrary arguments can be passed to the function. The reason for this
+structure is beyond the scope of this how-to guide. But in practice,
+your function will also have access to two additional arguments:
+\texttt{baseline\_mtrs} and \texttt{static\_mtrs}. These are dataframes,
+equal in length to \texttt{tax\_units}, containing marginal tax rate
+variables requested at runtime. If your scenario does not calculate
+marginal tax rates, these arguments will be of type \texttt{NULL}.
+
+For example, if I submitted ``wages char\_cash'' as variables for which
+to calculate marginal tax rates in my runscripts CSV, the
+\texttt{baseline\_mtrs} dataframe will look something like this:
+
+\begin{longtable}[]{@{}llll@{}}
+\toprule\noalign{}
+year & id & mtr\_wages & mtr\_char\_cash \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+2024 & 1 & 0.24 & 0 \\
+2024 & 2 & 0.32 & -0.32 \\
+2024 & 3 & 0.408 & -0.408 \\
+\ldots{} & \ldots{} & \ldots{} & \ldots{} \\
+\end{longtable}
+
+\ldots and \texttt{static\_mtrs} will look identical, just with
+(potentially) different values.
+
+Then, the content of the function is completely arbitrary. \textbf{This
+is the key idea behind our design of behavioral feedback modules.}
+Rather than be confined to expressing behavior feedback as a specific
+instance of a single generic elasticity function, users are free to
+impose whatever logic you'd like.
+
+That's not to say there are no out-of-the-box helper functions. Many
+behavioral feedback functions will simply take the form of applying an
+elasticity to a change in EMTRs for all tax units. Rather than having to
+re-invent the wheel, users have \texttt{apply\_mtr\_elasticity()}, a
+helper function defined in \emph{/src/sim/behavior.R}, at their
+disposal. We will look at an example of its use below.
+
+\hypertarget{example-modules}{%
+\subsection{Example modules}\label{example-modules}}
+
+Let's make things concrete by reviewing two examples of behavioral
+feedback modules.
+
+\hypertarget{charitable-giving}{%
+\subsubsection{Charitable giving}\label{charitable-giving}}
+
+By offering an itemized charitable deduction, the tax code subsidizes
+donations for those who itemize. There is a large body of empirical
+research measuring the responsiveness of charitable activity to the
+``tax price'' of giving, i.e.~the after-tax cost to the taxpayer of a
+marginal dollar of giving. Let's say we believe the tax price elasticity
+of charitable giving -- that is, the percent change in charitable
+contributions for a one percent increase in the tax price --- takes a
+value of -1. We wish to account the revenue implications of increased
+giving, and thus increased deductions, as a result of an increase in
+ordinary tax rates (which lower the tax price of giving). We can write a
+behavioral feedback module to model this behavior.
+
+One major benefit of microsimulation as a methodological approach is the
+ability to precisely measure EMTRs on any activity via computation. By
+adding \$1 to some variable Y for each record, re-calculating taxes, and
+looking at the change in tax liability, we obtain the \emph{next-dollar}
+EMTR on activity Y. For example, if we add \$1 to an itemizer's
+charitable contributions, re-calculate their taxes, and their taxes fall
+by 37 cents, the next-dollar EMTR on charitable contributions is 0.37
+and the tax price of giving is 1 + -0.37 = 0.63. We can calculate this
+EMTR for all filers under baseline and under the policy reform then use
+this information in our behavioral feedback calculation.
+
+Here is what a behavior feedback module that leverages EMTRs on
+charitable contributions looks like:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{do\_charity }\OtherTok{=} \ControlFlowTok{function}\NormalTok{(tax\_units, ...) \{ }
+  
+  \CommentTok{\#{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
+  \CommentTok{\# Adjusts cash charitable contributions along the intensive margin with a }
+  \CommentTok{\# tax price elasticity of {-}1.}
+  \CommentTok{\# }
+  \CommentTok{\# Parameters: }
+  \CommentTok{\#   {-} tax\_units (df)     : tibble of tax units with calculated variables}
+  \CommentTok{\#   {-} baseline\_mtrs (df) : year{-}id indexed tibble of MTRs under the baseline}
+  \CommentTok{\#   {-} static\_mtrs (df)   : year{-}id indexed tibble of MTRs under the static}
+  \CommentTok{\#                          counterfactual scenario}
+  \CommentTok{\#}
+  \CommentTok{\# Returns: tibble of tax units with post{-}adjustment cash charitable }
+  \CommentTok{\#          contribution values. }
+  \CommentTok{\#{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
+  
+  \CommentTok{\# Set elasticity}
+\NormalTok{  e }\OtherTok{=} \SpecialCharTok{{-}}\DecValTok{1}
+  
+  \CommentTok{\# Apply elasticities and calculate new values}
+\NormalTok{  new\_values }\OtherTok{=}\NormalTok{ tax\_units }\SpecialCharTok{\%\textgreater{}\%} 
+    \FunctionTok{mutate}\NormalTok{(}\AttributeTok{e\_char\_cash      =}\NormalTok{ e, }
+           \AttributeTok{e\_char\_cash\_type =} \StringTok{\textquotesingle{}taxprice\textquotesingle{}}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%} 
+    \FunctionTok{apply\_mtr\_elasticity}\NormalTok{(}\StringTok{\textquotesingle{}char\_cash\textquotesingle{}}\NormalTok{, baseline\_mtrs, static\_mtrs, }\DecValTok{1}\NormalTok{)}
+
+  \CommentTok{\# Replace old values with new and return}
+\NormalTok{  tax\_units }\SpecialCharTok{\%\textgreater{}\%} 
+    \FunctionTok{select}\NormalTok{(}\SpecialCharTok{{-}}\NormalTok{char\_cash) }\SpecialCharTok{\%\textgreater{}\%} 
+    \FunctionTok{bind\_cols}\NormalTok{(new\_values) }\SpecialCharTok{\%\textgreater{}\%} 
+    \FunctionTok{return}\NormalTok{()}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+First: note the formatted function documentation. We require the author
+of a module follow the style laid out above. The idea is to describe in
+plain English which parameters the module depends on, what it does, and
+what it returns. It helps the reader orient themselves before diving
+into the code.
+
+The first thing we do is define a variable \texttt{e\ =\ -1} to be our
+elasticity. Then we assign this variable, as well as a string indicating
+its type, to each record in a copy of \texttt{tax\_units}. Next we feed
+the result into a function called \texttt{apply\_mtr\_elasticity()}.
+This is a helper function that adjusts a specific variable in a
+dataframe based on specified elasticity information, returning a
+one-column dataframe of the post-adjustment variable. For a full look at
+this function, please see the \emph{/src/sim/behavior.R} file. But
+here's a rundown on what each argument in our function call does:
+
+\begin{itemize}
+\item
+  \texttt{tax\_units\ =\ (.)} \ldots{} This argument, omitted by
+  convention in the dplyr chain, is the dataframe of tax units.
+  Crucially, it contains three columns with specific names:
+  ``char\_cash'', ``e\_char\_cash'', and ``e\_char\_cash\_type''. These
+  are required because the next argument is\ldots{}
+\item
+  \texttt{var\ =\ \textquotesingle{}char\_cash\textquotesingle{}}
+  \ldots{} This argument communicates that we wish to adjust the
+  variable called ``char\_cash''. It also tells the function that there
+  are two associated columns in the \texttt{tax\_units} dataframe:
+  ``e\_char\_cash'', which is a filer-level elasticity with respect to
+  ``char\_cash'', and ``e\_char\_cash\_type'', which describes the
+  functional form of the elasticity. Earlier in the module, we set
+  \texttt{e\_char\_cash\ =\ -1} and
+  \texttt{e\_char\_cash\_type\ =\ \textquotesingle{}taxprice\textquotesingle{}}.
+  Here, ``taxprice'' is a keyword. There are four possible options for
+  elasticity type:
+
+  \begin{itemize}
+  \item
+    ``semi'': a log-lin semi-elasticity, i.e.~it gives percent change in
+    Y for a percentage point change in the EMTR.
+  \item
+    ``arc'': a full log-log elasticity evaluated at the midpoint,
+    i.e.~it gives percent change in Y for a percent change in EMTR,
+    where the latter is calculated at the midpoint of the two EMTRs.
+  \item
+    ``netoftax'': a full log-log elasticity on 1 minus the EMTR.
+  \item
+    ``taxprice'': a full log-log elasticity on 1 plus the EMTR.
+  \end{itemize}
+\end{itemize}
+
+Here are the actual calculations for each option:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{      pct\_chg }\OtherTok{=} \FunctionTok{case\_when}\NormalTok{(}
+\NormalTok{        e\_type }\SpecialCharTok{==} \StringTok{"semi"}     \SpecialCharTok{\textasciitilde{}} \FunctionTok{exp}\NormalTok{((mtr }\SpecialCharTok{{-}}\NormalTok{ mtr\_baseline) }\SpecialCharTok{*}\NormalTok{ e) }\SpecialCharTok{{-}} \DecValTok{1}\NormalTok{,}
+\NormalTok{        e\_type }\SpecialCharTok{==} \StringTok{"arc"}      \SpecialCharTok{\textasciitilde{}}\NormalTok{ (e }\SpecialCharTok{*}\NormalTok{ (mtr }\SpecialCharTok{/}\NormalTok{ ((mtr }\SpecialCharTok{+}\NormalTok{ mtr\_baseline) }\SpecialCharTok{/} \DecValTok{2}\NormalTok{) }\SpecialCharTok{{-}} \DecValTok{1}\NormalTok{)),}
+\NormalTok{        e\_type }\SpecialCharTok{==} \StringTok{"netoftax"} \SpecialCharTok{\textasciitilde{}}\NormalTok{ (e }\SpecialCharTok{*}\NormalTok{ ((}\DecValTok{1} \SpecialCharTok{{-}}\NormalTok{ mtr) }\SpecialCharTok{/}\NormalTok{ (}\DecValTok{1} \SpecialCharTok{{-}}\NormalTok{ mtr\_baseline) }\SpecialCharTok{{-}} \DecValTok{1}\NormalTok{)),}
+\NormalTok{        e\_type }\SpecialCharTok{==} \StringTok{"taxprice"} \SpecialCharTok{\textasciitilde{}}\NormalTok{ (e }\SpecialCharTok{*}\NormalTok{ ((}\DecValTok{1} \SpecialCharTok{+}\NormalTok{ mtr) }\SpecialCharTok{/}\NormalTok{ (}\DecValTok{1} \SpecialCharTok{+}\NormalTok{ mtr\_baseline) }\SpecialCharTok{{-}} \DecValTok{1}\NormalTok{)),}
+        \ConstantTok{TRUE}                 \SpecialCharTok{\textasciitilde{}} \ConstantTok{NA} 
+\NormalTok{      ) }
+\end{Highlighting}
+\end{Shaded}
+
+\begin{itemize}
+\item
+  \texttt{baseline\_mtrs\ =\ baseline\_mtrs} \ldots{} This argument
+  supplies a dataframe of baseline EMTRs, which in this case must
+  contain a variable called ``mtr\_char\_cash''.
+\item
+  \texttt{static\_mtrs\ =\ static\_mtrs} \ldots{} This argument supplies
+  a dataframe of EMTRs under the static simulation of the policy reform,
+  which again in this case must contain a variable called
+  ``mtr\_char\_cash''.
+\item
+  \texttt{max\_adj\ =\ 1} \ldots{} This argument limits the absolute
+  value of the resulting percent change for any record to 100\%. It
+  prevents unreasonable adjustments resulting from edge cases in EMTRs,
+  which in rare cases can be extreme when a taxpayer is stuck at a notch
+  in the code.
+\end{itemize}
+
+To summarize, we set the tax-price charitable contributions elasticity
+to -1 for each record. Then we pass our data, including EMTRs on
+charitable contributions under the baseline and under the policy reform,
+to a helper function. This function multiplies the result of the
+following calculation to cash charitable contributions for each
+record\ldots{}
+
+\[
+1+e \left( \frac{1+EMTR_{policy}}{1+EMTR_{baseline}} \right)
+\]
+
+\ldots and returns the resulting new values of cash charitable
+contributions. We assign these values to an intermediate dataframe
+called \texttt{new\_values}. Finally, in the next block of code, we
+replace the old values of cash charitable contributions with these new
+values. (Note that we return the whole tax units dataframe, not just the
+new column. The result of a behavioral feedback module should always be
+the identical \texttt{tax\_units} dataframe input except with new values
+for the variable(s) we are simulating feedback for.)
+
+And we're done! The module has applied the logic in our behavioral
+feedback module to the simulated tax records. Tax-Simulator will go on
+to calculate taxes based on this adjusted data, and our end results will
+reflect our assumptions about behavioral responses.
+
+One last note on EMTR elasticity-based behavioral feedback modules. This
+example was a comparatively crude example: We are applying the same
+elasticity to all tax units in all years. In real life, elasticities may
+vary with observable attributes like income (rich people are more
+concerned with tax optimization). We could just as easily have assigned
+specific elasticities to different types of records in the
+\texttt{mutate()} call, and the logic afterwards would be unchanged.
+
+\hypertarget{employment}{%
+\subsubsection{Employment}\label{employment}}
+
+The prior module assumed that behavioral responses occur only at the
+intensive margin: charitable giving was increased or decreased only
+among those who already gave under the baseline. But many behavioral
+responses we wish to model are extensive-margin phenomena, in which
+nonzero values can become zeros and vice versa. Low-income employment
+and its relationship to tax policy is one such example.
+
+In 2021, the Child Tax Credit (CTC) was expanded such that the credit no
+longer phased in with earnings --- meaning that the reform increased
+EMTRs on low-income workers. This reduction in the ``return to work''
+may, via substitution effects, cause some employment loss among
+marginally attached low-income workers. A partial dynamic budget cost
+estimate will reflect the budgetary impact of this change in employment,
+which should reduce payroll taxes and income taxes. We can write a
+behavioral feedback module to account for this effect in our cost
+estimate.
+
+Below is a behavioral feedback module implementing the logic and
+parameters of
+\href{file:///C:/Users/jar335/Downloads/Bastian_CTCexpansion_2023.pdf}{Bastian
+(2023)}, a paper which estimates employment loss caused by the 2021 CTC
+expansion. Bastian calculates a ``return-to-work'' metric, defined as 1
+minus the average effective tax rate on working. By demographic group,
+he calculates the change in return-to-work caused by the CTC reform and
+then applies demographic-specific labor supply elasticities to obtain
+employment loss estimates.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{do\_employment }\OtherTok{=} \ControlFlowTok{function}\NormalTok{(tax\_units, ...) \{ }
+  
+  \CommentTok{\#{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
+  \CommentTok{\# Adjusts wage earnings at the extensive margin, per Bastian (2023). Only}
+  \CommentTok{\# suitable to analyze an *increase* in EMTRs at the low end {-}{-} there is no}
+  \CommentTok{\# symmetric effect in which nonworkers become workers in response to a cut in}
+  \CommentTok{\# EMTRs. Used in our analysis of the employment effects of the 2021 CTC. }
+  \CommentTok{\# }
+  \CommentTok{\# Parameters: }
+  \CommentTok{\#   {-} tax\_units (df)     : tibble of tax units with calculated variables}
+  \CommentTok{\#   {-} baseline\_mtrs (df) : year{-}id indexed tibble of extensive{-}margin MTRs on }
+  \CommentTok{\#                          wages1 and wages2 under the baseline}
+  \CommentTok{\#   {-} static\_mtrs (df)   : year{-}id indexed tibble of extensive{-}margin MTRs on }
+  \CommentTok{\#                          wages1 and wages2 under the static counterfactual}
+  \CommentTok{\#}
+  \CommentTok{\# Returns: tibble of tax units with post{-}adjustment wage earnings values.}
+  \CommentTok{\#{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
+  
+  \CommentTok{\# Set random seed }
+  \FunctionTok{set.seed}\NormalTok{(globals}\SpecialCharTok{$}\NormalTok{random\_seed)}
+  
+  \CommentTok{\# Set elasticities}
+\NormalTok{  e\_mothers\_poor  }\OtherTok{=} \FloatTok{0.4}
+\NormalTok{  e\_mothers\_other }\OtherTok{=} \FloatTok{0.2}
+\NormalTok{  e\_else          }\OtherTok{=} \FloatTok{0.05}
+  
+  
+\NormalTok{  tax\_units }\SpecialCharTok{\%\textgreater{}\%} 
+    
+    \CommentTok{\# Join MTRs}
+    \FunctionTok{left\_join}\NormalTok{(baseline\_mtrs }\SpecialCharTok{\%\textgreater{}\%} 
+                \FunctionTok{rename\_with}\NormalTok{(}\AttributeTok{.cols =} \SpecialCharTok{{-}}\FunctionTok{c}\NormalTok{(id, year), }
+                            \AttributeTok{.fn   =} \SpecialCharTok{\textasciitilde{}} \FunctionTok{paste0}\NormalTok{(., }\StringTok{\textquotesingle{}\_baseline\textquotesingle{}}\NormalTok{)), }
+              \AttributeTok{by =} \FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}id\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}year\textquotesingle{}}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%}
+    \FunctionTok{left\_join}\NormalTok{(static\_mtrs, }\AttributeTok{by =} \FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}id\textquotesingle{}}\NormalTok{, }\StringTok{\textquotesingle{}year\textquotesingle{}}\NormalTok{)) }\SpecialCharTok{\%\textgreater{}\%} 
+    
+    \FunctionTok{mutate}\NormalTok{(}
+
+      \CommentTok{\# Calculate tax unit{-}level income (roughly AGI)}
+      \AttributeTok{income =}\NormalTok{ wages }\SpecialCharTok{+}\NormalTok{ txbl\_int }\SpecialCharTok{+}\NormalTok{ div\_ord }\SpecialCharTok{+}\NormalTok{ div\_pref }\SpecialCharTok{+}\NormalTok{ state\_ref }\SpecialCharTok{+} 
+\NormalTok{               txbl\_ira\_dist }\SpecialCharTok{+}\NormalTok{ txbl\_pens\_dist }\SpecialCharTok{+}\NormalTok{ kg\_lt }\SpecialCharTok{+}\NormalTok{ kg\_st }\SpecialCharTok{+}\NormalTok{ other\_gains }\SpecialCharTok{+} 
+\NormalTok{               sole\_prop }\SpecialCharTok{+}\NormalTok{ part\_active }\SpecialCharTok{+}\NormalTok{ part\_passive }\SpecialCharTok{{-}}\NormalTok{ part\_active\_loss }\SpecialCharTok{{-}} 
+\NormalTok{               part\_passive\_loss }\SpecialCharTok{{-}}\NormalTok{ part\_179 }\SpecialCharTok{+}\NormalTok{ scorp }\SpecialCharTok{+}\NormalTok{ scorp\_active }\SpecialCharTok{+} 
+\NormalTok{               scorp\_passive }\SpecialCharTok{{-}}\NormalTok{ scorp\_active\_loss }\SpecialCharTok{{-}}\NormalTok{ scorp\_passive\_loss }\SpecialCharTok{{-}} 
+\NormalTok{               scorp\_179 }\SpecialCharTok{+}\NormalTok{ rent }\SpecialCharTok{{-}}\NormalTok{ rent\_loss }\SpecialCharTok{+}\NormalTok{ estate }\SpecialCharTok{{-}}\NormalTok{ estate\_loss }\SpecialCharTok{+}\NormalTok{ farm }\SpecialCharTok{+}\NormalTok{ ui }\SpecialCharTok{+} 
+\NormalTok{               gross\_ss }\SpecialCharTok{+}\NormalTok{ other\_inc,}
+      
+      \CommentTok{\#{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
+      \CommentTok{\# Set elasticities}
+      \CommentTok{\#{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
+      
+      \CommentTok{\# First earner}
+      \AttributeTok{e1 =} \FunctionTok{case\_when}\NormalTok{(}
+        
+        \CommentTok{\# Low{-}income single mothers}
+\NormalTok{        (male1 }\SpecialCharTok{==} \DecValTok{0}\NormalTok{) }\SpecialCharTok{\&}\NormalTok{ (n\_dep\_ctc }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{) }\SpecialCharTok{\&}\NormalTok{ (wages1 }\SpecialCharTok{\textless{}}\NormalTok{ eitc.po\_thresh\_1) }\SpecialCharTok{\&}\NormalTok{ (filing\_status }\SpecialCharTok{!=} \DecValTok{2}\NormalTok{) }\SpecialCharTok{\textasciitilde{}}\NormalTok{ e\_mothers\_poor, }
+        
+        \CommentTok{\# All other mothers with family income below $80,000 }
+\NormalTok{        (male1 }\SpecialCharTok{==} \DecValTok{0}\NormalTok{) }\SpecialCharTok{\&}\NormalTok{ (n\_dep\_ctc }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{) }\SpecialCharTok{\&}\NormalTok{ (income }\SpecialCharTok{\textless{}} \DecValTok{80000}\NormalTok{) }\SpecialCharTok{\textasciitilde{}}\NormalTok{ e\_mothers\_other, }
+        
+        \CommentTok{\# Others below $80,000}
+\NormalTok{        (income }\SpecialCharTok{\textless{}} \DecValTok{80000} \SpecialCharTok{\&}\NormalTok{ n\_dep\_ctc }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{) }\SpecialCharTok{\textasciitilde{}}\NormalTok{ e\_else,}
+        
+        \CommentTok{\# Everyone else}
+        \ConstantTok{TRUE} \SpecialCharTok{\textasciitilde{}} \DecValTok{0}
+\NormalTok{      ),}
+      
+      \CommentTok{\# Second earner}
+      \AttributeTok{e2 =} \FunctionTok{case\_when}\NormalTok{(}
+        
+        \CommentTok{\# Low{-}income single mothers}
+\NormalTok{        (male1 }\SpecialCharTok{==} \DecValTok{0}\NormalTok{) }\SpecialCharTok{\&}\NormalTok{ (n\_dep\_ctc }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{) }\SpecialCharTok{\&}\NormalTok{ (wages1 }\SpecialCharTok{\textless{}}\NormalTok{ eitc.po\_thresh\_1) }\SpecialCharTok{\&}\NormalTok{ (filing\_status }\SpecialCharTok{!=} \DecValTok{2}\NormalTok{) }\SpecialCharTok{\textasciitilde{}}\NormalTok{ e\_mothers\_poor, }
+        
+        \CommentTok{\# All other mothers with family income below $80,000 }
+\NormalTok{        (male1 }\SpecialCharTok{==} \DecValTok{0}\NormalTok{) }\SpecialCharTok{\&}\NormalTok{ (n\_dep\_ctc }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{) }\SpecialCharTok{\&}\NormalTok{ (income }\SpecialCharTok{\textless{}} \DecValTok{80000}\NormalTok{) }\SpecialCharTok{\textasciitilde{}}\NormalTok{ e\_mothers\_other, }
+        
+        \CommentTok{\# Others below $80,000}
+\NormalTok{        (income }\SpecialCharTok{\textless{}} \DecValTok{80000} \SpecialCharTok{\&}\NormalTok{ n\_dep\_ctc }\SpecialCharTok{\textgreater{}} \DecValTok{0}\NormalTok{) }\SpecialCharTok{\textasciitilde{}}\NormalTok{ e\_else,}
+        
+        \CommentTok{\# Everyone else}
+        \ConstantTok{TRUE} \SpecialCharTok{\textasciitilde{}} \DecValTok{0}
+\NormalTok{      ),}
+      
+      
+      \CommentTok{\#{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
+      \CommentTok{\# Simulate labor force exit}
+      \CommentTok{\#{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}{-}}
+      
+      \CommentTok{\# Calculate percent change in return{-}to{-}work}
+      \AttributeTok{delta\_rtw1 =}\NormalTok{ ((}\DecValTok{1} \SpecialCharTok{{-}}\NormalTok{ mtr\_wages1) }\SpecialCharTok{{-}}\NormalTok{ (}\DecValTok{1} \SpecialCharTok{{-}}\NormalTok{ mtr\_wages1\_baseline)) }\SpecialCharTok{/}\NormalTok{ (}\DecValTok{1} \SpecialCharTok{{-}}\NormalTok{ mtr\_wages1\_baseline),}
+      \AttributeTok{delta\_rtw2 =}\NormalTok{ ((}\DecValTok{1} \SpecialCharTok{{-}}\NormalTok{ mtr\_wages2) }\SpecialCharTok{{-}}\NormalTok{ (}\DecValTok{1} \SpecialCharTok{{-}}\NormalTok{ mtr\_wages2\_baseline)) }\SpecialCharTok{/}\NormalTok{ (}\DecValTok{1} \SpecialCharTok{{-}}\NormalTok{ mtr\_wages2\_baseline),}
+      
+      \CommentTok{\# Calculate probability of remaining employed defined as 1 plus the }
+      \CommentTok{\# implied percent change in employment }
+      \AttributeTok{pr\_emp1 =} \DecValTok{1} \SpecialCharTok{+}\NormalTok{ (e1 }\SpecialCharTok{*}\NormalTok{ delta\_rtw1),}
+      \AttributeTok{pr\_emp2 =} \DecValTok{1} \SpecialCharTok{+}\NormalTok{ (e2 }\SpecialCharTok{*}\NormalTok{ delta\_rtw2),}
+      
+      \CommentTok{\# Simulate outcomes}
+      \AttributeTok{emp1 =} \FunctionTok{runif}\NormalTok{(}\FunctionTok{nrow}\NormalTok{(.)) }\SpecialCharTok{\textless{}}\NormalTok{ pr\_emp1,}
+      \AttributeTok{emp2 =} \FunctionTok{runif}\NormalTok{(}\FunctionTok{nrow}\NormalTok{(.)) }\SpecialCharTok{\textless{}}\NormalTok{ pr\_emp2,}
+      
+      \CommentTok{\# Adjust wages}
+      \AttributeTok{wages1 =} \FunctionTok{if\_else}\NormalTok{(wages1 }\SpecialCharTok{==} \DecValTok{0}\NormalTok{, }\DecValTok{0}\NormalTok{, wages1 }\SpecialCharTok{*}\NormalTok{ emp1),}
+      \AttributeTok{wages2 =} \FunctionTok{if\_else}\NormalTok{(wages2 }\SpecialCharTok{==} \DecValTok{0}\NormalTok{, }\DecValTok{0}\NormalTok{, wages2 }\SpecialCharTok{*}\NormalTok{ emp2),}
+      \AttributeTok{wages  =}\NormalTok{ wages1 }\SpecialCharTok{+}\NormalTok{ wages2 }
+      
+\NormalTok{    ) }\SpecialCharTok{\%\textgreater{}\%} 
+    
+    \CommentTok{\# Remove intermediate calculation variables and return }
+    \FunctionTok{select}\NormalTok{(}\SpecialCharTok{{-}}\NormalTok{income, }\SpecialCharTok{{-}}\NormalTok{e1, }\SpecialCharTok{{-}}\NormalTok{e2, }\SpecialCharTok{{-}}\NormalTok{delta\_rtw1, }\SpecialCharTok{{-}}\NormalTok{delta\_rtw2, }
+           \SpecialCharTok{{-}}\NormalTok{pr\_emp1, }\SpecialCharTok{{-}}\NormalTok{pre\_emp2, }\SpecialCharTok{{-}}\NormalTok{emp1, }\SpecialCharTok{{-}}\NormalTok{emp2) }\SpecialCharTok{\%\textgreater{}\%} 
+    \FunctionTok{return}\NormalTok{()}
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+In terms of function inputs, this module uses extensive-margin tax rates
+--- i.e., average effective tax rates --- on primary-earner wages
+(``wages1'') and, in the case of joint returns, secondary-earner wages
+(``wages2''). These variables are calculated earlier in Tax-Simulator's
+execution and are passed to our function in \texttt{baseline\_mtrs} and
+\texttt{static\_mtrs}.
+
+At the top, because this module involves stochastic simulation, we reset
+the random number generator seed --- a requirement in Tax-Simulator
+before any call to a random number generator. We also list our
+elasticity assumptions at the top per convention.
+
+Then we join our EMTR dataframes into tax units, making sure to
+distinguish baseline from policy reform variables by renaming the
+former.
+
+Next, we assign labor supply elasticities to each nondependent adult. As
+per Tax-Simulator naming convention, primary earner variables are
+appended with ``1'' and secondary variables are appended with ``2''.
+Before assignment, we calculate a helper variable, income, since
+elasticities are heterogeneous by demographic group and income. The
+\texttt{case\_when()} function calls implement Bastian's logic:
+EITC-qualifying single mothers have an elasticity of 0.4; other mothers
+with income below \$80K have an elasticity of 0.2; others below \$80K
+have an elasticity of 0.05; those above \$80K are assumed not to be
+responsive. The important takeaway from these lines is that we can build
+highly detailed heterogeneity into our behavioral feedback assumptions.
+
+The next step is to calculate the policy reforms's effect on the return
+to work, again defined as 1 minus the average effective tax rate
+(somewhat confusingly stored with an ``mtr'' prefix per Tax-Simulator
+convention). We calculate the percent change in this metric for primary
+and secondary earners.
+
+Applying the labor supply elasticity to this quantity gets us the
+percent change in employment, which is uninterpretable at the micro
+level. Instead, we convert the result into a \emph{probability of
+remaining employed} by adding 1. For example, if the reform reduces
+someone's return to work by 10\%, and we assume a 0.4 labor supply
+elasticity, we'd say that the percent change in employment is -4\%, and
+thus the probability of remaining employed is 96\%,
+i.e.~\[1 + (-0.1 * 0.4) = 1 - 0.04 = 0.96\].
+
+At this point, we have employment probabilities for all workers in our
+data. The final step is to simulate labor force exit using a random
+number generator. Wages are set to 0 for those who drop out of the labor
+force, and \emph{viola} --- we're done.
+
+\end{document}

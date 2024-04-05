@@ -34,16 +34,16 @@ if (length(args) > 0) {
   delete_detail    = args[9]
   multicore        = args[10]
 } else {
-  runscript_names  = 'policy_runs/ctc/simulator/interactive_simulator_runs'
-  scenario_id      = 'baseline'
+  runscript_names  = 'tests/2017_tcja'
+  scenario_id      = NULL
   user_id          = 'jar335'
-  local            = 1
-  vintage          = '202403220906'
+  local            = 0
+  vintage          = NULL
   pct_sample       = 1
   stacked          = 0
   baseline_vintage = NULL 
   delete_detail    = 0
-  multicore        = 0
+  multicore        = 1
 }
 
 
@@ -119,8 +119,7 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   }
   
   # Generate distributional estimates
-  globals$runtime_args$dist_years = 2026
-  build_all_distribution_tables(counterfactual_ids)
+  #build_all_distribution_tables(counterfactual_ids)
   if (stacked == 1) {
     #build_all_stacked_distribution_tables(counterfactual_ids)
   }

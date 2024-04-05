@@ -12,3 +12,17 @@ value_old:
   i_base_year: default
   i_direction: default
   i_increment: default
+  
+# Maximum credit value per "young" child
+value_young:
+  value:
+    '2014': [1000, 0]
+    '2018': [2000, 0]
+    '2021': [2000, 1000]
+    '2022': [2000, 0]
+    '2026': [4000, 0]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+
