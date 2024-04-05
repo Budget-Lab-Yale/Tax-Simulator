@@ -23,16 +23,16 @@ list.files('./src', recursive = T) %>%
 # Parse command line arguments
 args = commandArgs(trailingOnly = T)
 if (length(args) > 0) {
-  runscript_names  = args[1]
-  if(args[2] == "NULL") scenario_id = NULL else scenario_id = args[2]
-  user_id          = args[3]
-  local            = as.integer(args[4])
-  if(args[5] == "NULL") vintage = NULL else vintage = args[5]
-  pct_sample       = as.integer(args[6])
-  stacked          = as.integer(args[7])
-  if(args[8] == "NULL") baseline_vintage = NULL else baseline_vintage = args[8]
-  delete_detail    = args[9]
-  multicore        = args[10]
+  runscript_names                         = args[1]
+  if (args[2] == 'NULL') scenario_id      = NULL else scenario_id = args[2]
+  user_id                                 = args[3]
+  local                                   = as.integer(args[4])
+  if (args[5] == 'NULL') vintage          = NULL else vintage = args[5]
+  pct_sample                              = as.integer(args[6])
+  stacked                                 = as.integer(args[7])
+  if (args[8] == 'NULL') baseline_vintage = NULL else baseline_vintage = args[8]
+  delete_detail                           = args[9]
+  multicore                               = args[10]
 } else {
   runscript_names  = 'tests/2017_tcja'
   scenario_id      = NULL
@@ -119,9 +119,9 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   }
   
   # Generate distributional estimates
-  #build_all_distribution_tables(counterfactual_ids)
+  build_all_distribution_tables(counterfactual_ids)
   if (stacked == 1) {
-    #build_all_stacked_distribution_tables(counterfactual_ids)
+    build_all_stacked_distribution_tables(counterfactual_ids)
   }
   
   # Delete detailed microdata files
