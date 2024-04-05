@@ -20,7 +20,6 @@ runtime = as.numeric(end - start)
 
 
 
-
 scripts = read_csv("config/runscripts/policy_runs/ctc/simulator/interactive_simulator_runs.csv") %>%
   select(ID)
 
