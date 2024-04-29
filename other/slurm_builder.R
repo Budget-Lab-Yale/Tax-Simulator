@@ -1,5 +1,5 @@
 
-stamp = '202403220906'
+stamp = '202404080754'
 
 runscript_name   = "policy_runs/ctc/simulator/interactive_simulator_runs"
 scenario_id      = "baseline"
