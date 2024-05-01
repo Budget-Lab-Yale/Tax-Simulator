@@ -105,6 +105,8 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
     'ed_ref', 
     'net_ptc', 
     'eitc',
+    'wage_subsidy1',
+    'wage_subsidy2',
     'rebate',
     'cdctc_ref',
     'savers_ref',
