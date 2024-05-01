@@ -56,7 +56,14 @@ calc_liab = function(tax_unit, fill_missings = F) {
     'liab_niit',       # (dbl) Net Investment Income Tax liability
     'liab_seca',       # (dbl) self-employment tax liability
     'recapture_tax',   # (dbl) credit recapture
-    'ira_penalty'      # (dbl) penalty paid for early withdraw from retirement account
+    'ira_penalty',     # (dbl) penalty paid for early withdraw from retirement account
+    
+    # Tax law attributes
+    'credits.repeal_ftc',        # (dbl) whether to repeal Foreign Tax Credit
+    'credits.repeal_res_energy', # (dbl) whether to repeal residential energy credits
+    'credits.repeal_old',        # (dbl) whether to repeal credit for the elderly/disabled
+    'credits.repeal_gbc',        # (dbl) whether to repeal general business credits
+    'credits.repeal_other'       # (dbl) whether to repeal all other nonrefundable credits
   )
   
   tax_unit %>% 
@@ -64,6 +71,13 @@ calc_liab = function(tax_unit, fill_missings = F) {
     # Parse tax unit object passed as argument
     parse_calc_fn_input(req_vars, fill_missings) %>% 
     mutate(
+      
+      # Remove any repealed credits
+      ftc             = if_else(credits.repeal_ftc == 0,        ftc,             0),
+      res_energy_cred = if_else(credits.repeal_res_energy == 0, res_energy_cred, 0),
+      old_cred        = if_else(credits.repeal_old == 0,        old_cred,        0),
+      gbc             = if_else(credits.repeal_gbc == 0,        gbc,             0),
+      other_nonref    = if_else(credits.repeal_other == 0,      other_nonref,    0),
       
       # Limit nonrefundable credits to liability before credits
       nonref = pmin(liab_bc, ftc + 
