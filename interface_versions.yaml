@@ -35,9 +35,15 @@ Estate-Tax-Model:
   version: 1
   default_vintage: 2024021614
   default_id: baseline
+  
+Value-Added-Tax-Model:
+  type: model_data
+  version: 1
+  default_vintage: 2024050121
+  default_id: baseline
 
 Off-Model-Estimates:
   type: model_data
-  version: 1
-  default_vintage: 2024021911
+  version: 2
+  default_vintage: 2024050122
   default_id: baseline

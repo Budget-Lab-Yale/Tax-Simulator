@@ -316,6 +316,9 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # Rebates / UBI
     bind_cols(calc_rebate(.)) %>%
     
+    # Wage subsidy
+    bind_cols(calc_wage_subsidy(.)) %>%
+    
       
     #----------------------
     # Liability allocation

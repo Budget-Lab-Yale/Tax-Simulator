@@ -156,6 +156,7 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
       scenario_root   = output_root, 
       corp_tax_root   = scenario_info$interface_paths$`Corporate-Tax-Model`, 
       estate_tax_root = scenario_info$interface_paths$`Estate-Tax-Model`, 
+      vat_root        = scenario_info$interface_paths$`Value-Added-Tax-Model`,
       off_model_root  = scenario_info$interface_paths$`Off-Model-Estimates`
     ) 
 

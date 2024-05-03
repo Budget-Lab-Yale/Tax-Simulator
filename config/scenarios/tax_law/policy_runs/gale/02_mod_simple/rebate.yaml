@@ -1,0 +1,51 @@
+---
+
+# Maximum qualifying dependent age
+dep_age_limit:
+  value:
+    '2014': 16
+    '2021': Inf
+    '2022': 16
+    '2024': Inf
+
+# Whether dependents are required to have an SSN to qualify
+dep_ssn_req:
+  value: 
+    '2014': 1
+    '2024': 0
+
+# Credit value per adult
+value:
+  value: 
+    '2014': 0
+    '2020': 1800 
+    '2021': 1400
+    '2022': 0
+    '2024': 2000
+
+# Credit value per qualifying dependent
+value_dep:
+  value:
+    '2014': 0
+    '2020': 1100
+    '2021': 1400
+    '2022': 0
+    '2024': 2000
+
+# AGI phaseout threshold, joint returns
+po_thresh_married:
+  value: 
+    '2014': 150000 
+    '2024': 72000
+
+# AGI phaseout threshold, head of household returns
+po_thresh_head:
+  value: 
+    '2014': 112500
+    '2024': 36000
+
+# Phaseout rate
+po_rate:
+  value: 
+    '2014': 0.05
+    '2024': 0.4

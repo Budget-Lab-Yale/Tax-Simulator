@@ -34,16 +34,16 @@ if (length(args) > 0) {
   delete_detail                           = args[9]
   multicore                               = args[10]
 } else {
-  runscript_names  = 'tests/2017_tcja'
+  runscript_names  = 'tests/vat'
   scenario_id      = NULL
   user_id          = 'jar335'
-  local            = 0
+  local            = 1
   vintage          = NULL
-  pct_sample       = 1
+  pct_sample       = 0.1
   stacked          = 0
-  baseline_vintage = NULL 
+  baseline_vintage = NULL
   delete_detail    = 0
-  multicore        = 1
+  multicore        = 0
 }
 
 

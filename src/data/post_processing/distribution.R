@@ -7,7 +7,7 @@
 
 
 process_for_distribution = function(id, baseline_id, year, financing = 'none', 
-                                    corp_delta = 0, labor_share = 0) {
+                                    corp_delta = 0, labor_share = 0, vat_delta = 0) {
   
   #----------------------------------------------------------------------------
   # Reads and cleans input data for a given scenario and a given "baseline", 
@@ -20,11 +20,12 @@ process_for_distribution = function(id, baseline_id, year, financing = 'none',
   #                         for stacked tables, this is the precedeing scenario
   #   - year        (int) : year to calculate metrics for
   #   - financing   (str) : assumption for how any deficit effect is financed. 
-  #                         'none' for none, "head" for proportional tax, 
+  #                         "none" for none, "head" for proportional tax, 
   #                         "income" for flat income tax, "liability" for 
-  #                         income tax 
+  #                         current-law income tax 
   #   - corp_delta  (dbl) : corporate tax change under scenario, billions
   #   - labor_share (dbl) : labor's share of the burden of the corporate tax
+  #   - vat_delta   (dbl) : VAT revenue change under scenario, billions 
   # 
   # Returns: microdata with all record-level variables required to calculate
   #          aggregate distributional metrics (df).
@@ -45,7 +46,7 @@ process_for_distribution = function(id, baseline_id, year, financing = 'none',
     fread() %>% 
     tibble()
   
-  scenario = file.path(globals$output_root, id, 'static/detail', paste0(year, '.csv')) %>% 
+  reform = file.path(globals$output_root, id, 'static/detail', paste0(year, '.csv')) %>% 
     fread() %>% 
     tibble()
   
@@ -59,9 +60,9 @@ process_for_distribution = function(id, baseline_id, year, financing = 'none',
     # Remove dependent returns
     filter(dep_status == 0) %>% 
     
-    # Join scenario liability 
+    # Join counterfactual scenario liability 
     mutate(liab_baseline = liab_iit_net + liab_pr) %>% 
-    left_join(scenario %>% 
+    left_join(reform %>% 
                 mutate(liab = liab_iit_net + liab_pr) %>% 
                 select(id, liab), 
               by = 'id') %>%
@@ -70,25 +71,56 @@ process_for_distribution = function(id, baseline_id, year, financing = 'none',
       # Create adult-level weight
       weight_person = weight * (1 + (filing_status == 2)),
       
-      # Adjust for corporate tax changes. Calculate factor incomes
+      
+      #--------------------------
+      # Corporate tax allocation 
+      #--------------------------
+      
+      # Calculate factor incomes
       labor   = pmax(0, wages + (sole_prop + part_scorp + farm) * 0.8), 
       capital = pmax(0, (sole_prop + part_scorp + farm) * 0.2 + txbl_int + 
                         exempt_int + div_ord + div_pref + kg_st + kg_lt),
       
-      # The allocate corporate tax change in accordance with assumed labor incidence  
+      # Then allocate corporate tax change in accordance with assumed labor incidence  
       corp_tax_labor   = corp_delta * 1e9 * labor_share       * (labor / sum(labor * weight)),
       corp_tax_capital = corp_delta * 1e9 * (1 - labor_share) * (capital / sum(capital * weight)),
       
-      # Adjust for financing effects i.e. distributing deficit
-      financing_cost = sum((liab - liab_baseline + corp_tax_labor + corp_tax_capital) * weight) * case_when(
+      
+      #----------------
+      # VAT allocation
+      #----------------
+      
+      # Because Y = wl + rK + T and Y = C + S, C = wL + rK - S + T. If we assume 
+      # transfers are indexed to inflation, then we can distribute the VAT in 
+      # proportion to earnings (wL), supernormal returns to capital (rK - S) 
+      # (assumed to be 20% of the return on equity), and Social Security 
+      # benefits (linked to wL). This is a long-run incidence concept. 
+      supernormal = capital * 0.2, 
+      vat_income  = labor + supernormal + gross_ss,
+      vat_burden  = vat_delta * 1e9 * (vat_income / sum(vat_income * weight)),
+      
+      # Add to non-individual or payroll taxes 
+      other_taxes = corp_tax_labor + corp_tax_capital + vat_burden,
+      
+      
+      #--------------------
+      # Deficit allocation
+      #--------------------
+      
+      financing_cost = sum((liab - liab_baseline + other_taxes) * weight) * case_when(
         financing == 'none'      ~ 0,
         financing == 'head'      ~ (1 + (filing_status == 2)) / sum(weight_person),
         financing == 'income'    ~ pmax(0, expanded_inc) / sum(pmax(0, expanded_inc) * weight),
         financing == 'liability' ~ pmax(0, liab_baseline) / sum(pmax(0, liab_baseline) * weight)
       ),
       
-      # Calculate change from baseline
-      delta = (liab - liab_baseline) + corp_tax_labor + corp_tax_capital - financing_cost,
+      
+      #----------------
+      # Overall change
+      #----------------
+      
+      # Calculate total change from baseline
+      delta = (liab - liab_baseline) + other_taxes - financing_cost,
       
       # Binary dummies for if a tax unit received a meaningful raise or cut
       cut   = delta <= -5,
@@ -243,34 +275,45 @@ build_distribution_tables = function(id, baseline_id, file_name) {
   # Read and process corporate tax data
   #-------------------------------------
   
-  # Read baseline revenues 
-  corp_baseline = globals$baseline_root %>% 
+  # Read baseline off-model revenues 
+  rev_baseline = globals$baseline_root %>% 
     file.path('baseline/static/totals/receipts.csv') %>% 
     read_csv(show_col_types = F) %>% 
-    select(year, baseline = revenues_corp_tax)
+    select(year, corp_tax = revenues_corp_tax, vat = revenues_vat) %>% 
+    pivot_longer(cols      = -year, 
+                 names_to  = 'source', 
+                 values_to = 'baseline') 
   
-  # Read counterfactual scenario revenues 
-  corp_scenario = globals$output_root %>% 
+  # Read counterfactual scenario off-model revenues 
+  rev_reform = globals$output_root %>% 
     file.path(id, '/static/totals/receipts.csv') %>% 
     read_csv(show_col_types = F) %>% 
-    select(year, scenario = revenues_corp_tax)
+    select(year, corp_tax = revenues_corp_tax, vat = revenues_vat) %>% 
+    pivot_longer(cols      = -year, 
+                 names_to  = 'source', 
+                 values_to = 'reform') 
   
-  # Calculate change in liability by year
-  corp_delta = corp_scenario %>% 
-    left_join(corp_baseline, by = 'year') %>% 
-    mutate(corp_delta = scenario - baseline) %>% 
+  # Calculate change in other tax liability by year
+  other_delta = rev_reform %>% 
+    left_join(rev_baseline, by = c('source', 'year')) %>% 
+    mutate(delta = reform - baseline) %>% 
+    select(-reform, -baseline) %>% 
+    pivot_wider(names_from   = 'source',
+                names_prefix = 'delta_',
+                values_from  = 'delta') %>% 
   
     # Determine first year of policy reform, if any, and allocate labor
     # share of new corporate burden over time
-    mutate(first_year = ifelse(sum(corp_delta) > 0, 
-                               min(year[cumsum(corp_delta) > 0 & lag(corp_delta) == 0]), 
+    mutate(first_year = ifelse(sum(delta_corp_tax) > 0, 
+                               min(year[cumsum(delta_corp_tax) > 0 & lag(delta_corp_tax) == 0]), 
                                Inf), 
            labor_share = 0.2 * pmax(0, pmin(1, (year - first_year) / 10))) %>% 
-    select(year, corp_delta, labor_share) 
+    select(year, delta_vat, delta_corp_tax, labor_share) 
 
-  #-----------------------------------
-  # Loop over year-grouping-financing
-  #-----------------------------------
+  
+  #---------------------------------------------------------------
+  # Loop over year X grouping X financing X incidence assumptions
+  #---------------------------------------------------------------
   
   # Initialize lists of unformatted tables
   results = list('income' = list(), 
@@ -292,12 +335,17 @@ build_distribution_tables = function(id, baseline_id, file_name) {
     }
     
     # Get corporate tax info for this year
-    this_corp_delta = corp_delta %>% 
+    this_corp_delta = other_delta %>% 
       filter(year == yr) %>% 
-      get_vector('corp_delta')
-    this_corp_labor_share = corp_delta %>% 
+      get_vector('delta_corp_tax')
+    this_corp_labor_share = other_delta %>% 
       filter(year == yr) %>% 
       get_vector('labor_share')
+    
+    # Get vat info for this year
+    this_vat_delta = other_delta %>% 
+      filter(year == yr) %>% 
+      get_vector('delta_vat')
     
     # Skip historical years, under the assumption we're scoring policy for the future...
     if (yr < year(Sys.time())) {
@@ -310,8 +358,8 @@ build_distribution_tables = function(id, baseline_id, file_name) {
       # Financing assumption loop
       for (financing in c('none', 'liability')) {
         
-        # Corporate tax assumption loop
-        for (include_corp in c(F, T)) {
+        # Corporate tax and VAT inclusion loop
+        for (include_other in c(F, T)) {
         
           # Process microdata
           microdata = process_for_distribution(
@@ -319,8 +367,9 @@ build_distribution_tables = function(id, baseline_id, file_name) {
             baseline_id = 'baseline', 
             year        = yr, 
             financing   = financing, 
-            corp_delta  = if_else(include_corp, this_corp_delta, 0), 
-            labor_share = this_corp_labor_share
+            corp_delta  = if_else(include_other, this_corp_delta, 0), 
+            labor_share = this_corp_labor_share, 
+            vat_delta   = if_else(include_other, this_vat_delta, 0)
           )
           
           # Calculate standard metrics and add to results 
@@ -329,16 +378,16 @@ build_distribution_tables = function(id, baseline_id, file_name) {
           # Add to results 
           results[[group_var]][[length(results[[group_var]]) + 1]] = dist_metrics %>% 
             mutate(year = yr, .before = everything()) %>%
-            mutate(includes_corp = include_corp, financing = financing, .after = year)
+            mutate(includes_other = include_other, financing = financing, .after = year)
           
           # Add to Excel workbook and format
-          format_table(dist_metrics, wb, yr, paste0(group_var, '_group'), financing, include_corp)
+          format_table(dist_metrics, wb, yr, paste0(group_var, '_group'), financing, include_other)
           
           # Calculate pledge metrics (separate product from metrics above)
           pledge_results[[length(pledge_results) + 1]] = microdata %>% 
             calc_pledge_metrics() %>%
             mutate(year = yr, .before = everything()) %>%
-            mutate(includes_corp = include_corp, financing = financing, .after = year)
+            mutate(includes_other = include_other, financing = financing, .after = year)
         }
       }
     }
@@ -421,7 +470,7 @@ build_all_stacked_distribution_tables = function(counterfactual_ids) {
 }
 
 
-format_table = function(dist_metrics, wb, year, group_var, financing, corp) {
+format_table = function(dist_metrics, wb, year, group_var, financing, other) {
   
   #----------------------------------------------------------------------------
   # Given a tibble of distributional metrics calculated either by income or
@@ -434,7 +483,8 @@ format_table = function(dist_metrics, wb, year, group_var, financing, corp) {
   #   - group_var    (str)  : either "income_group" or "age_group", representing
   #                           the variable by which dist_metrics are grouped
   #   - financing    (str)  : financing assumption
-  #   - corp         (bool) : whether estimates include corporate taxes
+  #   - other        (bool) : whether estimates includes burden of corporate 
+  #                           tax and VAT
   # 
   # Returns: void.
   #----------------------------------------------------------------------------
@@ -446,8 +496,8 @@ format_table = function(dist_metrics, wb, year, group_var, financing, corp) {
   # Set worksheet name
   sheet_name = paste0(
     year, ', ',
-    if_else(corp, 'with corp', 'no corp'), ', ',
-    if_else(financing != 'none', 'with financing', 'no financing')
+    if_else(other, 'all', 'direct only'), ', ',
+    if_else(financing != 'none', 'financing', 'no financing')
   )
   
   # Write out financing description
@@ -458,9 +508,9 @@ format_table = function(dist_metrics, wb, year, group_var, financing, corp) {
     financing == 'liability' ~ 'financing proportional to income taxes'
   )
   
-  # Write out corporate tax assumption
-  corporate_tax_description = if_else(corp,
-    'including incidence of corporate tax changes',
+  # Write out other tax incidence assumption
+  incidence_description = if_else(other,
+    'including incidence of corporate tax and VAT changes',
     'individual income taxes and payroll taxes only'
   )
   
@@ -494,7 +544,7 @@ format_table = function(dist_metrics, wb, year, group_var, financing, corp) {
     
     # Add titles and notes 
     title = paste0('Distributional impact by income group in ', year, ', ', 
-                   corporate_tax_description, ', ', financing_description)
+                   incidence_description, ', ', financing_description)
     writeData(wb = wb, sheet = sheet_name, startRow = 1, 
               x = title)
     writeData(wb = wb, sheet = sheet_name, startRow = 12, 
@@ -594,7 +644,7 @@ format_table = function(dist_metrics, wb, year, group_var, financing, corp) {
 
     # Add titles and notes
     title = paste0('Distributional impact by age group in ', year, ', ', 
-                   corporate_tax_description, ', ', financing_description)
+                   incidence_description, ', ', financing_description)
     writeData(wb = wb, sheet = sheet_name, startRow = 15,
               x = title)
     writeData(wb = wb, sheet = sheet_name, startRow = 23,

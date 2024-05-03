@@ -1,0 +1,7 @@
+---
+
+# Maximum value of itemized deductions
+limit:
+  value: 
+    '2014': Inf
+    '2024': 0

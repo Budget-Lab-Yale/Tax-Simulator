@@ -51,6 +51,8 @@ calc_liab = function(tax_unit, fill_missings = F) {
     'net_ptc',         # (dbl) value of Premium Tax Credit, net of advance credit paid
     'eitc',            # (dbl) value of EITC
     'rebate',          # (dbl) value of rebate credit
+    'wage_subsidy1',   # (dbl) value of individual wage subsidy, primary earner
+    'wage_subsidy2',   # (dbl) value of individual wage subsidy, primary earner
     'cdctc_ref',       # (dbl) value of refundable Child and Dependent Care Tax Credit
     'savers_ref',      # (dbl) value of refundable Saver's credit
     'liab_niit',       # (dbl) Net Investment Income Tax liability

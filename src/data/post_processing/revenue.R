@@ -7,7 +7,7 @@
 
 
 calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root, 
-                         off_model_root) {
+                         vat_root, off_model_root) {
   
   #----------------------------------------------------------------------------
   # Calculates a scenario's receipts 
@@ -24,21 +24,24 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root,
   #        - pmt_pr_nonwithheld (dbl)     : payroll tax paid at time of filing
   #        - pmt_pr_withheld (dbl)        : payroll tax withheld (FICA) or paid 
   #                                         quarterly (SECA)  
-  #   - scenario_root (str) : directory where scenario's data is written
-  #   - corp_tax_root (str) : directory where corporate tax revenue for this 
-  #                           scenario is stored
+  #   - scenario_root (str)   : directory where scenario's data is written
+  #   - corp_tax_root (str)   : directory where corporate tax revenue for this 
+  #                             scenario is stored
   #   - estate_tax_root (str) : directory where estate tax revenue for this 
   #                             scenario is stored 
-  #   - off_model_root (str) : directory where off-model estimates for this
-  #                            scenario are stored
+  #   - vat_root (str)        : directory where value added tax revenue for
+  #                             this scenario is stored
+  #   - off_model_root (str)  : directory where off-model estimates for this
+  #                             scenario are stored
   #
   # Returns:  void, writes a dataframe for the scenario containing values for:
-  #   - Fiscal Year
-  #   - Payroll Tax
-  #   - Individual Income Tax
-  #   - Refundable Credit Outlays
-  #   - Corporate Income tax
-  #   - Estate and Gift Taxes
+  #   - Fiscal year
+  #   - Payroll tax revenues
+  #   - Individual income tax revenues
+  #   - Refundable credit outlays
+  #   - Corporate income tax revenues
+  #   - Estate and gift tax revenues
+  #   - Value added tax revenues
   #----------------------------------------------------------------------------
   
   # Read corporate tax receipts
@@ -52,6 +55,12 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root,
     file.path('revenues.csv') %>% 
     read_csv(show_col_types = F) %>% 
     select(year, revenues_estate_tax = receipts_fy)
+  
+  # Read VAT receipts
+  revenues_vat = vat_root %>%
+    file.path('revenues.csv') %>% 
+    read_csv(show_col_types = F) %>% 
+    select(year, revenues_vat = receipts_fy)
   
   # Read other off-model receipts 
   off_model = off_model_root %>%
@@ -86,18 +95,22 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root,
     # Join estate tax levels 
     left_join(revenues_estate_tax, by = 'year') %>% 
     
+    # Join VAT levels 
+    left_join(revenues_vat, by = 'year') %>% 
+    
     # Join off-model estimates
     left_join(off_model, by = 'year') %>% 
     mutate(revenues_income_tax = revenues_income_tax + individual,  
-           revenues_corp_tax   = revenues_corp_tax + corporate) %>% 
-    select(-individual, -corporate) %>% 
+           revenues_corp_tax   = revenues_corp_tax + corporate, 
+           revenues_vat        = revenues_vat + vat) %>% 
+    select(-individual, -corporate, -vat) %>% 
     
     # Drop incomplete year
     filter(year != min(year)) %>%
     
     # Write CSV
     select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits, 
-           revenues_corp_tax, revenues_estate_tax) %>%
+           revenues_corp_tax, revenues_estate_tax, revenues_vat) %>%
     write_csv(file.path(scenario_root, 'totals', 'receipts.csv'))
 }
 
@@ -106,8 +119,8 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root,
 calc_rev_est = function(counterfactual_ids) {
   
   #----------------------------------------------------------------------------
-  # Calculates all scenario revenue estimate deltas when compared to the 
-  # baseline.
+  # Calculates revenue deltas against baseline for each counterfactual 
+  # scenario.
   # 
   # Parameters: 
   #   - counterfactual_ids (str[]) : list of scenario names for counterfactual
@@ -115,11 +128,13 @@ calc_rev_est = function(counterfactual_ids) {
   #
   # Returns: Void, writes dataframes containing, for each scenario, fiscal year 
   # deltas for:
-  #   - Total revenue
-  #   - Payroll Tax
-  #   - Individual Income Tax
-  #   - Refundable Credit Outlays
-  #   - Corporate Income Tax
+  #   - Total revenues
+  #   - Payroll tax revenues
+  #   - Individual income tax revenues
+  #   - Refundable credit outlays
+  #   - Corporate income tax revenues
+  #   - Estate and gift tax revenues
+  #   - Value added tax revenues
   #----------------------------------------------------------------------------
 
   if (length(counterfactual_ids) == 0) {
@@ -140,7 +155,8 @@ calc_rev_est = function(counterfactual_ids) {
                    revenues_income_tax - 
                    outlays_tax_credits + 
                    revenues_corp_tax + 
-                   revenues_estate_tax) %>% 
+                   revenues_estate_tax + 
+                   revenues_vat) %>% 
     pivot_longer(cols      = -year, 
                  names_to  = 'series', 
                  values_to = 'baseline')
@@ -164,7 +180,8 @@ calc_rev_est = function(counterfactual_ids) {
                        revenues_income_tax - 
                        outlays_tax_credits + 
                        revenues_corp_tax + 
-                       revenues_estate_tax) %>% 
+                       revenues_estate_tax + 
+                       revenues_vat) %>% 
         pivot_longer(cols      = -year, 
                      names_to  = 'series', 
                      values_to = 'counterfactual')
@@ -197,7 +214,8 @@ calc_rev_est = function(counterfactual_ids) {
           Series == 'revenues_income_tax'  ~ '  Revenues, individual income tax', 
           Series == 'outlays_tax_credits'  ~ '  Outlays, refundable tax credits',
           Series == 'revenues_corp_tax'    ~ '  Revenues, corporate income tax',
-          Series == 'revenues_estate_tax'  ~ '  Revenues, estate tax'
+          Series == 'revenues_estate_tax'  ~ '  Revenues, estate tax',
+          Series == 'revenues_vat'         ~ '  Revenues, value added tax'
         )) %>%
         arrange(Measure, desc(Series)) 
       
@@ -231,42 +249,42 @@ calc_rev_est = function(counterfactual_ids) {
       writeData(wb = wb, sheet = as.character(scenario_id), startRow = 1, 
                 x = 'FY budget effects of policy change, nominal dollars')
       
-      writeData(wb = wb, sheet = as.character(scenario_id), x = rev_est$`Share of GDP`, startRow = 11)
-      writeData(wb = wb, sheet = as.character(scenario_id), startRow = 10, 
+      writeData(wb = wb, sheet = as.character(scenario_id), x = rev_est$`Share of GDP`, startRow = 12)
+      writeData(wb = wb, sheet = as.character(scenario_id), startRow = 11, 
                 x = 'FY budget effects of policy change, share of GDP')
       
       # Format numbers and cells 
       addStyle(wb         = wb, 
                sheet      = as.character(scenario_id), 
-               rows       = 2:8, 
+               rows       = 2:9, 
                cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(numFmt = 'COMMA'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = as.character(scenario_id),
-               rows       = 12:17, 
+               rows       = 13:19, 
                cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(numFmt = 'PERCENTAGE'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = as.character(scenario_id), 
-               rows       = c(1, 2, 8, 10, 11, 17), 
+               rows       = c(1, 2, 9, 11, 12, 19), 
                cols       = 1:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(border = 'bottom'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = as.character(scenario_id), 
-               rows       = c(2, 11), 
+               rows       = c(2, 12), 
                cols       = 1:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(textDecoration = 'bold'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = as.character(scenario_id), 
-               rows       = 2:17,
+               rows       = 2:19,
                cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(halign = 'center'), 
@@ -295,20 +313,14 @@ calc_rev_est = function(counterfactual_ids) {
 calc_stacked_rev_est = function(counterfactual_ids) {
   
   #----------------------------------------------------------------------------
-  # Calculates stacked revenue deltas. Usable if scenarios build off of one 
-  # another.
+  # Calculates stacked revenue deltas.
   # 
   # Parameters:
   #   - counterfactual_ids (str[]) : list of scenario names for counterfactual
   #                                  scenarios
   #
   # Returns: Void, writes dataframe with fiscal year columns stacking 
-  #          scenario revenue deltas for:
-  #   - Total revenue
-  #   - Payroll Tax
-  #   - Individual Income Tax
-  #   - Refundable Credit Outlays
-  #   - Corporate Income Tax
+  #          scenario revenue deltas for total receipts. 
   #----------------------------------------------------------------------------
   
   if (length(counterfactual_ids) == 0) {
@@ -331,7 +343,8 @@ calc_stacked_rev_est = function(counterfactual_ids) {
                            revenues_income_tax - 
                            outlays_tax_credits + 
                            revenues_corp_tax + 
-                           revenues_estate_tax) %>% 
+                           revenues_estate_tax + 
+                           revenues_vat) %>% 
             select(scenario_id, year, total)) %>% 
       
       # Join into single dataframe and group by year-series so as to leave 
