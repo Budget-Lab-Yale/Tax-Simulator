@@ -5,7 +5,7 @@
 
 # Set return variables for function
 return_vars$calc_liab = c('nonref', 'ref', 'ref_iit', 'ref_other', 'refund', 
-                          'liab_iit', 'liab_iit_net')
+                          'liab_iit', 'liab_iit_net', 'number_of_credits')
 
 
 calc_liab = function(tax_unit, fill_missings = F) {
@@ -98,8 +98,15 @@ calc_liab = function(tax_unit, fill_missings = F) {
       
       # Apply refundable credits to remaining (non-NIIT) individual income tax
       # (equivalent to E11601 on the 2015 PUF) 
-      ref     = ctc_ref + ed_ref + net_ptc + eitc + rebate + 
-                wage_subsidy1 + wage_subsidy2 + cdctc_ref + savers_ref,
+      ref = ctc_ref + 
+            ed_ref + 
+            net_ptc + 
+            eitc + 
+            rebate + 
+            wage_subsidy1 + 
+            wage_subsidy2 + 
+            cdctc_ref + 
+            savers_ref,
       ref_iit = pmin(liab_ac_nonref, ref), 
       
       # Calculate individual income tax liability after credits 
@@ -124,8 +131,24 @@ calc_liab = function(tax_unit, fill_missings = F) {
       
       # Define a "net income tax liability" variable, which applies all refundable
       # credits against income tax liability, possibly going negative 
-      liab_iit_net = liab_iit - (ref_other + refund)
+      liab_iit_net = liab_iit - (ref_other + refund),
       
+      # Reporting variable: number of credits claimed. Used for estimating the
+      # time burden of filing taxes
+      number_of_credits = (ftc != 0) + 
+                          (cdctc_nonref + cdctc_ref != 0)  + 
+                          (ed_nonref + ed_ref != 0) + 
+                          (savers_nonref + savers_ref != 0) + 
+                          (res_energy_cred != 0) + 
+                          (old_cred != 0) + 
+                          (ctc_nonref + ctc_ref != 0) + 
+                          (gbc != 0) +
+                          (prior_yr_cred != 0) + 
+                          (other_nonref != 0) + 
+                          (net_ptc != 0) + 
+                          (eitc != 0) + 
+                          (rebate != 0) + 
+                          (wage_subsidy1 + wage_subsidy2 != 0)
     ) %>% 
     
     # Keep variables to return
