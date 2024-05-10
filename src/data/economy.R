@@ -3,7 +3,7 @@
 #---------
 
 
-generate_indexes = function(macro_root) {
+generate_indexes = function(macro_root, vat_price_offset) {
   
   #----------------------------------------------------------------------------
   # Gets growth rates, both historical and projected for this economic 
@@ -11,7 +11,9 @@ generate_indexes = function(macro_root) {
   # CPIU, and Average Wage Index.
   # 
   # Parameters:
-  #   - macro_root (str) : filepath for Macro-Projections scenario interface
+  #   - macro_root (str)      : path for Macro-Projections scenario interface
+  #   - vat_price_offset (df) : series of price level adjustment factors to 
+  #                             reflect introduction of a VAT
   #
   # Returns: tibble of growth rates by series (df). 
   #----------------------------------------------------------------------------
@@ -30,6 +32,13 @@ generate_indexes = function(macro_root) {
                  names_to  = 'series', 
                  values_to = 'value') %>% 
     
+    # Adjust price level for VAT
+    left_join(vat_price_offset, by = 'year') %>% 
+    mutate(value = if_else(series %in% c('cpi', 'chained_cpi'), 
+                           value * replace_na(cpi_factor, 1), 
+                           value)) %>% 
+    select(-cpi_factor, -gdp_deflator_factor) %>% 
+    
     # Express in growth rates
     group_by(series) %>% 
     mutate(growth = value / lag(value) - 1) %>% 
@@ -38,6 +47,127 @@ generate_indexes = function(macro_root) {
     arrange(series, year) %>% 
     return()
 }
+
+
+
+get_vat_price_offset = function(macro_root, vat_root, years) {
+
+  #----------------------------------------------------------------------------
+  # Calculates the amount by which prices rise in response to the intro-
+  # duction of a VAT. 
+  # 
+  # Parameters:
+  #   - macro_root (str) : path for Macro-Projections scenario interface
+  #   - vat_root (str)   : path for Value-Added-Tax-Model scenario interface
+  #   - years (int[])    : years for which to run simulation
+  #
+  # Returns: tibble of price level adjustment factors over time (df). 
+  #----------------------------------------------------------------------------
+  
+  # Read projected macro aggregates
+  macro = macro_root %>% 
+    file.path('projections.csv') %>% 
+    read_csv(show_col_types = F) %>% 
+    select(year, gdp, c = gdp_c)
+  
+  # Read VAT revenues under counterfactual scenario. If a VAT ever becomes law 
+  # (lol) or if we add other indirect taxes to the model then this bit needs 
+  # to be expressed as difference from baseline
+  vat = vat_root %>% 
+    file.path('revenues.csv') %>% 
+    read_csv(show_col_types = F) %>% 
+    select(year, vat = receipts_fy)
+  
+  # Calculate price level multiplier as revenue over baseline consumption
+  tibble(year = years) %>% 
+    left_join(macro, by = 'year') %>% 
+    left_join(vat, by = 'year') %>% 
+    mutate(cpi_factor          = replace_na(1 + vat / c, 1), 
+           gdp_deflator_factor = replace_na(1 + vat / gdp, 1)) %>% 
+    select(year, cpi_factor, gdp_deflator_factor) %>% 
+    return()
+}
+
+
+
+do_ss_cola = function(tax_units, yr, vat_price_offset) {
+  
+  #----------------------------------------------------------------------------
+  # Adjusted Social Security benefits for price increased caused by the 
+  # introduction of a VAT. (Note: the imputations here should at some point be
+  # folded into Tax-Data.)
+  # 
+  # Parameters:
+  #   - tax_units (df)        : tibble of tax units
+  #   - yr (str)              : simulation year 
+  #   - vat_price_offset (df) : series of price level adjustment factors to 
+  #                             reflect introduction of a VAT
+  # 
+  # Returns: tax units tibble with updated values for gross_ss (df). 
+  #----------------------------------------------------------------------------
+
+  # Set random seed
+  set.seed(globals$random_seed)
+  
+  
+  # Get relevant Social Security information
+  ss = tax_units %>% 
+    filter(gross_ss > 0) %>% 
+    mutate(
+      
+      # Young ages indicate disability
+      di   = if_else(age1 < 62 & (is.na(age2) | age2 < 62), gross_ss, 0),
+      oasi = gross_ss - di, 
+      
+      # For married couples, perform retirement year calculation based on 
+      # older earner. Ages are top-coded at 80 so impute above that using 
+      # exponential distribution. Assume retirement at age 62. Pretty rough. 
+      age = pmax(age1, replace_na(age2, -1)),
+      age = if_else(age == 80, 80 + round(rexp(nrow(.), 1 / 4)), age),  
+      claiming_year = yr - (age - 62),
+      
+      # For DI recipients, impute claiming year as exponential distribution
+      claiming_year = if_else(di > 0, yr - round(rexp(nrow(.), 1 / 4)) - 1, claiming_year)
+      
+    ) %>% 
+    select(id, claiming_year, di, oasi)
+  
+  
+  # Determine cumulative inflation in excess of baseline by retirement year
+  colas = ss %>% 
+    filter(claiming_year < yr) %>% 
+    distinct(claiming_year) %>% 
+    arrange(claiming_year) %>% 
+    
+    # Create time series by benefit claiming year
+    expand_grid(year = min(ss$claiming_year):(yr - 1)) %>% 
+    filter(year >= claiming_year) %>% 
+    
+    # Add VAT and calculate cumulative excess inflation since retirement 
+    left_join(vat_price_offset %>% 
+                mutate(excess_inflation = cpi_factor / lag(cpi_factor, default = 1) - 1) %>% 
+                select(year, excess_inflation), 
+              by = 'year') %>% 
+    group_by(claiming_year) %>% 
+    mutate(cola = cumprod(1 + replace_na(excess_inflation, 0))) %>% 
+    ungroup() %>% 
+    filter(year == yr - 1) %>% 
+    select(claiming_year, cola)
+  
+  
+  # Join and overwrite COLA-adjusted benefits 
+  tax_units %>% 
+    left_join(
+      ss %>%  
+        left_join(colas, by = 'claiming_year') %>% 
+        mutate(new_gross_ss = (di + oasi) * cola) %>%
+        select(id, new_gross_ss), 
+      by = 'id'
+    ) %>% 
+    mutate(gross_ss = if_else(is.na(new_gross_ss), gross_ss, new_gross_ss)) %>% 
+    select(-new_gross_ss) %>% 
+    return()
+} 
 
 
 

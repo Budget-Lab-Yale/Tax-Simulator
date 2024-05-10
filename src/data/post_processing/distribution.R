@@ -7,25 +7,27 @@
 
 
 process_for_distribution = function(id, baseline_id, year, financing = 'none', 
-                                    corp_delta = 0, labor_share = 0, vat_delta = 0) {
+                                    corp_delta, labor_share, vat_delta, 
+                                    vat_price_offset) {
   
   #----------------------------------------------------------------------------
   # Reads and cleans input data for a given scenario and a given "baseline", 
   # calculating tax change variables at the record level.
   # 
   # Parameters:
-  #   - id          (str) : scenario ID
-  #   - baseline_id (str) : ID of scenario against which metrics are calculated. 
-  #                         For regular tables, this is the actual baseline; 
-  #                         for stacked tables, this is the precedeing scenario
-  #   - year        (int) : year to calculate metrics for
-  #   - financing   (str) : assumption for how any deficit effect is financed. 
-  #                         "none" for none, "head" for proportional tax, 
-  #                         "income" for flat income tax, "liability" for 
-  #                         current-law income tax 
-  #   - corp_delta  (dbl) : corporate tax change under scenario, billions
-  #   - labor_share (dbl) : labor's share of the burden of the corporate tax
-  #   - vat_delta   (dbl) : VAT revenue change under scenario, billions 
+  #   - id          (str)     : scenario ID
+  #   - baseline_id (str)     : ID of scenario against which metrics are 
+  #                             calculated. For regular tables, this is the 
+  #                             actual baseline; for stacked tables, this is 
+  #                             the precedeing scenario
+  #   - year        (int)     : year to calculate metrics for
+  #   - financing   (str)     : assumption for how any deficit effect is 
+  #                             financed. "none" for none, "head" for 
+  #                             proportional tax, "income" for flat income tax, 
+  #                             "liability" for current-law income tax 
+  #   - corp_delta  (dbl)     : corporate tax change under scenario, billions
+  #   - labor_share (dbl)     : labor's share of the burden of corporate tax
+  #   - vat_price_offset (df) : CPI change attributable to introduction of VAT
   # 
   # Returns: microdata with all record-level variables required to calculate
   #          aggregate distributional metrics (df).
@@ -60,11 +62,13 @@ process_for_distribution = function(id, baseline_id, year, financing = 'none',
     # Remove dependent returns
     filter(dep_status == 0) %>% 
     
-    # Join counterfactual scenario liability 
+    # Join counterfactual scenario liability, expressed in baseline dollars.
+    # Also calculate VAT burden as loss of real income.
     mutate(liab_baseline = liab_iit_net + liab_pr) %>% 
     left_join(reform %>% 
-                mutate(liab = liab_iit_net + liab_pr) %>% 
-                select(id, liab), 
+                mutate(liab       = (liab_iit_net + liab_pr) / vat_price_offset, 
+                       vat_burden = expanded_inc * (vat_price_offset - 1)) %>% 
+                select(id, liab, vat_burden), 
               by = 'id') %>%
     mutate(
       
@@ -85,22 +89,8 @@ process_for_distribution = function(id, baseline_id, year, financing = 'none',
       corp_tax_labor   = corp_delta * 1e9 * labor_share       * (labor / sum(labor * weight)),
       corp_tax_capital = corp_delta * 1e9 * (1 - labor_share) * (capital / sum(capital * weight)),
       
-      
-      #----------------
-      # VAT allocation
-      #----------------
-      
-      # Because Y = wl + rK + T and Y = C + S, C = wL + rK - S + T. If we assume 
-      # transfers are indexed to inflation, then we can distribute the VAT in 
-      # proportion to earnings (wL), supernormal returns to capital (rK - S) 
-      # (assumed to be 20% of the return on equity), and Social Security 
-      # benefits (linked to wL). This is a long-run incidence concept. 
-      supernormal = capital * 0.2, 
-      vat_income  = labor + supernormal + gross_ss,
-      vat_burden  = vat_delta * 1e9 * (vat_income / sum(vat_income * weight)),
-      
-      # Add to non-individual or payroll taxes 
-      other_taxes = corp_tax_labor + corp_tax_capital + vat_burden,
+  
+      other_taxes = corp_tax_labor + corp_tax_capital + vat_burden, 
       
       
       #--------------------
@@ -271,44 +261,44 @@ build_distribution_tables = function(id, baseline_id, file_name) {
   #----------------------------------------------------------------------------
   
   
-  #-------------------------------------
-  # Read and process corporate tax data
-  #-------------------------------------
+  #------------------------------------------
+  # Read and process non-individual tax data
+  #------------------------------------------
+  
+  # Read VAT price offset for deflating other taxes
+  vat_price_offset = globals$output_root %>% 
+    file.path(id, '/static/supplemental/vat_price_offset.csv') %>% 
+    read_csv(show_col_types = F)
   
   # Read baseline off-model revenues 
   rev_baseline = globals$baseline_root %>% 
     file.path('baseline/static/totals/receipts.csv') %>% 
     read_csv(show_col_types = F) %>% 
-    select(year, corp_tax = revenues_corp_tax, vat = revenues_vat) %>% 
-    pivot_longer(cols      = -year, 
-                 names_to  = 'source', 
-                 values_to = 'baseline') 
+    select(year, baseline = revenues_corp_tax)
   
   # Read counterfactual scenario off-model revenues 
   rev_reform = globals$output_root %>% 
     file.path(id, '/static/totals/receipts.csv') %>% 
     read_csv(show_col_types = F) %>% 
-    select(year, corp_tax = revenues_corp_tax, vat = revenues_vat) %>% 
-    pivot_longer(cols      = -year, 
-                 names_to  = 'source', 
-                 values_to = 'reform') 
+    select(year, reform = revenues_corp_tax) %>% 
+
+    # Express corporate tax in baseline (consumer) dollars
+    left_join(vat_price_offset, by = 'year') %>%
+    mutate(reform = reform / cpi_factor) %>% 
+    select(-ends_with('_factor'))
   
   # Calculate change in other tax liability by year
   other_delta = rev_reform %>% 
-    left_join(rev_baseline, by = c('source', 'year')) %>% 
-    mutate(delta = reform - baseline) %>% 
-    select(-reform, -baseline) %>% 
-    pivot_wider(names_from   = 'source',
-                names_prefix = 'delta_',
-                values_from  = 'delta') %>% 
+    left_join(rev_baseline, by = 'year') %>% 
+    mutate(delta = reform - baseline) %>%  
   
     # Determine first year of policy reform, if any, and allocate labor
-    # share of new corporate burden over time
-    mutate(first_year = ifelse(sum(delta_corp_tax) > 0, 
-                               min(year[cumsum(delta_corp_tax) > 0 & lag(delta_corp_tax) == 0]), 
+    # share of changed corporate burden over time
+    mutate(first_year = ifelse(sum(delta) > 0, 
+                               min(year[cumsum(delta) > 0 & lag(delta) == 0]), 
                                Inf), 
            labor_share = 0.2 * pmax(0, pmin(1, (year - first_year) / 10))) %>% 
-    select(year, delta_vat, delta_corp_tax, labor_share) 
+    select(year, delta, labor_share) 
 
   
   #---------------------------------------------------------------
@@ -337,15 +327,15 @@ build_distribution_tables = function(id, baseline_id, file_name) {
     # Get corporate tax info for this year
     this_corp_delta = other_delta %>% 
       filter(year == yr) %>% 
-      get_vector('delta_corp_tax')
+      get_vector('delta')
     this_corp_labor_share = other_delta %>% 
       filter(year == yr) %>% 
       get_vector('labor_share')
     
     # Get vat info for this year
-    this_vat_delta = other_delta %>% 
+    this_vat_price_offset = vat_price_offset %>% 
       filter(year == yr) %>% 
-      get_vector('delta_vat')
+      get_vector('cpi_factor')
     
     # Skip historical years, under the assumption we're scoring policy for the future...
     if (yr < year(Sys.time())) {
@@ -363,13 +353,13 @@ build_distribution_tables = function(id, baseline_id, file_name) {
         
           # Process microdata
           microdata = process_for_distribution(
-            id          = id, 
-            baseline_id = 'baseline', 
-            year        = yr, 
-            financing   = financing, 
-            corp_delta  = if_else(include_other, this_corp_delta, 0), 
-            labor_share = this_corp_labor_share, 
-            vat_delta   = if_else(include_other, this_vat_delta, 0)
+            id               = id, 
+            baseline_id      = 'baseline', 
+            year             = yr, 
+            financing        = financing, 
+            corp_delta       = if_else(include_other, this_corp_delta, 0), 
+            labor_share      = this_corp_labor_share, 
+            vat_price_offset = if_else(include_other, this_vat_price_offset, 0),
           )
           
           # Calculate standard metrics and add to results 

@@ -141,8 +141,7 @@ calc_rev_est = function(counterfactual_ids) {
     return()
   }
   
-  
-  # Read in baseline receipts
+  # Read baseline receipts
   baseline = file.path(globals$baseline_root, 
                        'baseline', 
                        'static', 
@@ -161,11 +160,15 @@ calc_rev_est = function(counterfactual_ids) {
                  names_to  = 'series', 
                  values_to = 'baseline')
   
-  
-  
   for (static in c(T, F)) {
     
     for (scenario_id in counterfactual_ids) {
+
+      
+      # Read VAT price offset for baseline dollars calculation
+      vat_price_offset = globals$output_root %>% 
+        file.path(scenario_id, 'static/supplemental/vat_price_offset.csv') %>% 
+        read_csv(show_col_types = F)
       
       # Read in counterfactual scenario receipts 
       scenario = file.path(globals$output_root, 
@@ -186,24 +189,33 @@ calc_rev_est = function(counterfactual_ids) {
                      names_to  = 'series', 
                      values_to = 'counterfactual')
       
-      # Read GDP 
+      # Read GDP and adjust for VAT (i.e. price level rises)
       gdp = globals$interface_paths %>% 
         filter(ID == globals$interface_path$ID[1], interface == 'Macro-Projections') %>% 
         get_vector('path') %>% 
         file.path(c('historical.csv', 'projections.csv')) %>% 
         map(~ read_csv(.x, show_col_types = F)) %>% 
         bind_rows() %>% 
-        select(year, gdp_fy)
+        left_join(scenario %>% 
+                    filter(series == 'revenues_vat') %>% 
+                    select(year, vat = counterfactual), 
+                  by = 'year') %>% 
+        mutate(gdp_counterfactual = gdp_fy + vat) %>% 
+        select(year, gdp_baseline = gdp_fy, gdp_counterfactual)
       
-      # Join together and calculate estimates, both nominal and share-of-GDP
+      # Join together and calculate estimates: nominal, baseline dollars (for
+      # scenarios with a VAT), and share-of-GDP
       rev_est = baseline %>% 
         left_join(scenario, by = c('year', 'series')) %>% 
-        mutate(Dollars = counterfactual - baseline) %>% 
-        select(year, Series = series, Dollars) %>%
         left_join(gdp, by = 'year') %>% 
-        mutate(`Share of GDP` = Dollars / gdp_fy) %>%
-        select(-gdp_fy) %>% 
-        pivot_longer(cols      = c(Dollars, `Share of GDP`), 
+        left_join(vat_price_offset, by = 'year') %>%
+        mutate(
+          Dollars            = counterfactual - baseline, 
+          `Baseline dollars` = (counterfactual / gdp_deflator_factor) - baseline,
+          `Share of GDP`     = (counterfactual / gdp_counterfactual) - (baseline / gdp_baseline)
+        ) %>% 
+        select(year, Series = series, Dollars, `Baseline dollars`, `Share of GDP`) %>%
+        pivot_longer(cols      = c(Dollars, `Baseline dollars`, `Share of GDP`), 
                      names_to  = 'Measure', 
                      values_to = 'delta') %>% 
         pivot_wider(names_from  = `year`, 
@@ -220,11 +232,11 @@ calc_rev_est = function(counterfactual_ids) {
         arrange(Measure, desc(Series)) 
       
       # Convert to measure-indexed list
-      rev_est = c('Dollars', 'Share of GDP') %>% 
+      rev_est = c('Dollars', 'Baseline dollars', 'Share of GDP') %>% 
         map(.f = ~ rev_est %>% 
               filter(Measure == .x) %>% 
               select(-Measure)) %>% 
-        set_names(c('Dollars', 'Share of GDP'))
+        set_names(c('Dollars', 'Baseline dollars', 'Share of GDP'))
       
       # Write machine-readable version
       rev_est$Dollars %>% 
@@ -249,42 +261,46 @@ calc_rev_est = function(counterfactual_ids) {
       writeData(wb = wb, sheet = as.character(scenario_id), startRow = 1, 
                 x = 'FY budget effects of policy change, nominal dollars')
       
-      writeData(wb = wb, sheet = as.character(scenario_id), x = rev_est$`Share of GDP`, startRow = 12)
+      writeData(wb = wb, sheet = as.character(scenario_id), x = rev_est$`Baseline dollars`, startRow = 12)
       writeData(wb = wb, sheet = as.character(scenario_id), startRow = 11, 
+                x = 'FY budget effects of policy change, baseline dollars')
+      
+      writeData(wb = wb, sheet = as.character(scenario_id), x = rev_est$`Share of GDP`, startRow = 22)
+      writeData(wb = wb, sheet = as.character(scenario_id), startRow = 21, 
                 x = 'FY budget effects of policy change, share of GDP')
       
       # Format numbers and cells 
       addStyle(wb         = wb, 
                sheet      = as.character(scenario_id), 
-               rows       = 2:9, 
+               rows       = c(2:9, 13:19), 
                cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(numFmt = 'COMMA'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = as.character(scenario_id),
-               rows       = 13:19, 
+               rows       = 23:29, 
                cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(numFmt = 'PERCENTAGE'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = as.character(scenario_id), 
-               rows       = c(1, 2, 9, 11, 12, 19), 
+               rows       = c(1, 2, 9, 11, 12, 19, 21, 22, 29), 
                cols       = 1:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(border = 'bottom'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = as.character(scenario_id), 
-               rows       = c(2, 12), 
+               rows       = c(2, 12, 22), 
                cols       = 1:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(textDecoration = 'bold'), 
                stack      = T)
       addStyle(wb         = wb, 
                sheet      = as.character(scenario_id), 
-               rows       = 2:19,
+               rows       = 2:29,
                cols       = 2:ncol(rev_est$Dollars), 
                gridExpand = T, 
                style      = createStyle(halign = 'center'), 
@@ -339,23 +355,16 @@ calc_stacked_rev_est = function(counterfactual_ids) {
                            'receipts.csv') %>% 
             read_csv(show_col_types = F) %>% 
             mutate(scenario_id = .x,
-                   total = revenues_payroll_tax + 
-                           revenues_income_tax - 
-                           outlays_tax_credits + 
-                           revenues_corp_tax + 
-                           revenues_estate_tax + 
-                           revenues_vat) %>% 
-            select(scenario_id, year, total)) %>% 
-      
-      # Join into single dataframe and group by year-series so as to leave 
-      # scenarios ungrouped
+                   Dollars = revenues_payroll_tax + 
+                             revenues_income_tax - 
+                             outlays_tax_credits + 
+                             revenues_corp_tax + 
+                             revenues_estate_tax + 
+                             revenues_vat) %>% 
+            select(scenario_id, year, Dollars, vat = revenues_vat)) %>% 
       bind_rows() %>% 
-      group_by(year) %>%
       
-      # Calculate stacked difference
-      mutate(Dollars = total - lag(total)) %>%
-      
-      # Calculate share-of-GDP metric
+      # Calculate share-of-GDP metric, account for introduction of a VAT
       left_join(
         globals$interface_paths %>% 
           filter(ID == globals$interface_path$ID[1], interface == 'Macro-Projections') %>% 
@@ -365,14 +374,19 @@ calc_stacked_rev_est = function(counterfactual_ids) {
           bind_rows() %>% 
           select(year, gdp_fy), 
         by = 'year'
-      ) %>% 
-      mutate(`Share of GDP` = Dollars / gdp_fy) %>% 
-      select(-gdp_fy, -total) %>% 
-      
-      # Reshape wide in year
+      ) %>%
+      mutate(`Share of GDP` = Dollars / (gdp_fy + vat))  %>% 
+      select(-gdp_fy, -vat) %>%
+    
+      # Pivot long in metric and calculate stacked deltas
       pivot_longer(cols      = c(Dollars, `Share of GDP`), 
                    names_to  = 'Measure', 
                    values_to = 'value') %>% 
+      group_by(Measure, year) %>%
+      mutate(value = value - lag(value)) %>%
+      ungroup() %>% 
+      
+      # Reshape wide in year
       pivot_wider(names_from  = year,
                   values_from = value) %>%
       

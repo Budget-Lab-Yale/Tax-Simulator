@@ -39,7 +39,7 @@ if (length(args) > 0) {
   user_id          = 'jar335'
   local            = 1
   vintage          = NULL
-  pct_sample       = 0.1
+  pct_sample       = 1
   stacked          = 0
   baseline_vintage = NULL
   delete_detail    = 0
@@ -99,7 +99,6 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
     walk(.x = counterfactual_ids, 
          .f = ~ do_scenario(.x, baseline_mtrs)) 
   }
-  
   
   
   #-------------------------------
