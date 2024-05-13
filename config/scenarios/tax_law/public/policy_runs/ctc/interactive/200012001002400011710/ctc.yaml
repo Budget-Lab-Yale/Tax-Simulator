@@ -1,0 +1,141 @@
+value_old:
+  value:
+    '2014':
+    - 1000
+    - 0
+    '2018':
+    - 2000
+    - 0
+    '2021':
+    - 2000
+    - 1000
+    '2022':
+    - 2000
+    - 0
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+value_young:
+  value:
+    '2014':
+    - 1000
+    - 0
+    '2018':
+    - 2000
+    - 0
+    '2021':
+    - 2000
+    - 1000
+    '2022':
+    - 2000
+    - 0
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+young_level:
+  value:
+    '2014': 1
+    '2026': 0
+bonus_young:
+  value:
+    '2014':
+    - 0
+    - 0
+    '2026':
+    - 1200
+    - 0
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+min_refund_level:
+  value:
+    '2014': 1
+    '2026': 0
+min_refund_share:
+  value: 1
+pi_type:
+  value: 1
+pi_rate:
+  value:
+    '2014': 0.15
+    '2026': 0.3
+pi_range:
+  value: Inf
+pi_thresh:
+  value:
+    '2014': 3000
+    '2018': 2500
+    '2026': 0
+po_thresh_single:
+  value:
+    '2014':
+    - 75000
+    - Inf
+    '2018':
+    - 200000
+    - Inf
+    '2021':
+    - 200000
+    - 75000
+    '2022':
+    - 200000
+    - Inf
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+po_thresh_married:
+  value:
+    '2014':
+    - 110000
+    - Inf
+    '2018':
+    - 400000
+    - Inf
+    '2021':
+    - 400000
+    - 150000
+    '2022':
+    - 400000
+    - Inf
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+po_thresh_head:
+  value:
+    '2014':
+    - 75000
+    - Inf
+    '2018':
+    - 200000
+    - Inf
+    '2021':
+    - 200000
+    - 112500
+    '2022':
+    - 200000
+    - Inf
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+need_ssn:
+  value:
+    '2014': 0
+    '2018': 1
+    '2021': 0
+    '2022': 1
+old_age_limit:
+  value:
+    '2014': 16
+    '2021': 17
+    '2022': 16
+    '2026': 17
+value_other:
+  value:
+    '2014': 0
+    '2018': 500
