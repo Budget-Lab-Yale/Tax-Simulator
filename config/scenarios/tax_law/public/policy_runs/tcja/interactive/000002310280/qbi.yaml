@@ -1,0 +1,8 @@
+rate:
+  value:
+    '2014': 0.0
+    '2018': 0.2
+wage_exception_non_sstb:
+  value:
+    '2014': 1
+    '2026': 0

@@ -30,11 +30,12 @@ calc_pe_ded = function(tax_unit, fill_missings = F) {
     'agi',            # (dbl) Adjusted Gross Income
     
     # Tax law attributes
-    'pe.value',           # (int) personal exemption value
-    'pe.po_thresh',       # (int) phaseout threshold 
-    'pe.po_range',        # (int) range over which phaseout occurs
-    'pe.po_discrete',     # (dbl) whether phaseout is discretized, as per pre-TCJA law
-    'pe.po_discrete_step' # (dbl) rounding step for discretized phaseout
+    'pe.value',            # (int) personal exemption value
+    'pe.po_thresh',        # (int) phaseout threshold 
+    'pe.po_range',         # (int) range over which phaseout occurs
+    'pe.po_discrete',      # (int) whether phaseout is discretized, as per pre-TCJA law
+    'pe.po_discrete_step', # (dbl) rounding step for discretized phaseout
+    'pe.dep_qualify'       # (int) whether dependents qualify for exemptions
   )
   
   tax_unit %>%
@@ -44,7 +45,7 @@ calc_pe_ded = function(tax_unit, fill_missings = F) {
     mutate(
       
       # Calculate value of personal exemptions
-      pe_ded = (1 + (filing_status == 2) + n_dep) * pe.value,
+      pe_ded = (1 + (filing_status == 2) + (n_dep * (pe.dep_qualify == 1))) * pe.value,
       
       # Calculate extent to which deduction is phased out 
       po_share = pmin(1, pmax(0, agi - pe.po_thresh) / pe.po_range),

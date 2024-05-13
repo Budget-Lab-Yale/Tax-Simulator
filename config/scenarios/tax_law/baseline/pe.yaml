@@ -77,3 +77,7 @@ po_discrete:
 # Rounding step for discretized phaseout
 po_discrete_step:
   value: 0.02
+  
+# Whether dependents qualify for exemptions
+dep_qualify:
+  value: 1

@@ -47,8 +47,12 @@ po/*~
 rsconnect/
 
 # Enormous number of interactive simulator tax law folders
-config/scenarios/tax_law/policy_runs/tcja_ext/interactive/
-config/scenarios/tax_law/policy_runs/ctc/interactive/
+config/scenarios/tax_law/public/tcja/interactive/
+config/scenarios/tax_law/public/ctc/interactive/
+
+# Scripts used to configre private analyses
+config/runscripts/private/
+config/scenarios/tax_law/private/
 
 # Batch submission script logs
 config/batch-submissions
