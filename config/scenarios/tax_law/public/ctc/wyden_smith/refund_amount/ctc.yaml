@@ -1,0 +1,74 @@
+---
+indexation_defaults:
+  i_measure:
+    '1987': cpi
+    '2017': chained_cpi
+    '2023': NA
+    '2026': chained_cpi
+  i_base_year: 
+    '2014': 2017
+    '2023': NA
+    '2026': 2017
+  i_direction: 
+    '2014': -1
+    '2023': NA
+    '2026': -1
+  i_increment: 
+    '2014': 100
+    '2023': NA
+    '2026': 100
+
+# Whether prior year earned income qualifies for phase-in
+ei_prior_yr:
+  value: 
+    '2014': 0
+    '2024': 1
+    '2026': 0
+
+# Whether phase-in type is a rate (0 means range)
+pi_type:
+  value:
+    '2014': 1
+    '2023': 0
+    '2026': 1
+
+# Phase-in range
+pi_range: 
+  value: 
+    '2014': Inf
+    '2023': 12000
+    '2024': 12666
+    '2025': 13333
+    '2026': Inf
+
+# Maximum refundable CTC per young qualifying child (inf implies maximum refund 
+# is equal to the credit value)
+max_refund_young:
+  value:
+    '2014': Inf
+    '2018': 1400
+    '2021': Inf
+    '2022': 1400
+    '2023': 1800
+    '2024': 1900
+    '2025': Inf
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+  
+# Maximum refundable CTC per old qualifying child (inf implies maximum refund 
+# is equal to the credit value)
+max_refund_old:
+  value:
+    '2014': Inf
+    '2018': 1400
+    '2021': Inf
+    '2022': 1400
+    '2023': 1800
+    '2024': 1900
+    '2025': Inf
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
