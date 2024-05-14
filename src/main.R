@@ -119,10 +119,7 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   
   # Generate distributional estimates
   build_all_distribution_tables(counterfactual_ids)
-  if (stacked == 1) {
-    build_all_stacked_distribution_tables(counterfactual_ids)
-  }
-  
+
   # Delete detailed microdata files
   if (delete_detail == 1) {
     purge_detail()

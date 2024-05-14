@@ -435,31 +435,6 @@ build_all_distribution_tables = function(counterfactual_ids) {
 
 
 
-build_all_stacked_distribution_tables = function(counterfactual_ids) {
-  
-  #----------------------------------------------------------------------------
-  # For all non-baseline scenarios, generates distribution tables relative to
-  # prior scenario in stacking order. 
-  # 
-  # Parameters:
-  #   - counterfactual_ids : (str) list of non-baseline scenario IDs
-  # 
-  # Returns: void.
-  #----------------------------------------------------------------------------
-  
-  if (length(counterfactual_ids) == 0) {
-    return()
-  }
-  
-  scenario_ids = c('baseline', counterfactual_ids)
-  for (i in 2:length(scenario_ids)) { 
-    build_distribution_tables(id          = scenario_ids[i], 
-                              baseline_id = scenario_ids[i - 1], 
-                              file_name   = 'stacked_distribution')
-  }
-}
-
-
 format_table = function(dist_metrics, wb, year, group_var, financing, other) {
   
   #----------------------------------------------------------------------------
