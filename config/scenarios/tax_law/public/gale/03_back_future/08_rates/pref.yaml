@@ -1,0 +1,7 @@
+---
+
+# Whether to tax long-term capital gains and qualified dividends at ordinary rates
+tax_at_ord:
+  value:
+    '2014': 0
+    '2024': 1

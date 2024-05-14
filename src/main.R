@@ -34,7 +34,7 @@ if (length(args) > 0) {
   delete_detail                           = args[9]
   multicore                               = args[10]
 } else {
-  runscript_names  = 'tests/vat'
+  runscript_names  = 'public/gale/gale'
   scenario_id      = NULL
   user_id          = 'jar335'
   local            = 1
@@ -42,7 +42,7 @@ if (length(args) > 0) {
   pct_sample       = 1
   stacked          = 1
   baseline_vintage = NULL 
-  delete_detail    = 1
+  delete_detail    = 0
   multicore        = 1
 }
 
