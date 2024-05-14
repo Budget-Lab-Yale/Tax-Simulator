@@ -40,10 +40,10 @@ if (length(args) > 0) {
   local            = 1
   vintage          = NULL
   pct_sample       = 1
-  stacked          = 0
-  baseline_vintage = NULL
-  delete_detail    = 0
-  multicore        = 0
+  stacked          = 1
+  baseline_vintage = NULL 
+  delete_detail    = 1
+  multicore        = 1
 }
 
 
