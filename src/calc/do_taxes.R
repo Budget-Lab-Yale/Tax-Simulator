@@ -14,7 +14,7 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
   # 
   # Parameters:
   #   - tax_units (df)       : tibble of tax units, exogenous variables only
-  #   - baseline_pr_er (df)  : tibble of baseline emplyoer-side payroll 
+  #   - baseline_pr_er (df)  : tibble of baseline employer-side payroll 
   #                            liabilities. NULL if baseline
   #   - vars_1040 (str[])    : vector of (calculated) names of 1040 variables  
   #                            to return
@@ -108,8 +108,7 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
       left_join(bind_rows(above, item), by = c('id', 'char_ded_type')) %>% 
       select(-char_ded_type)
     
-    
-    # Standard case: just calculate the 1040 once  
+  # Standard case: just calculate the 1040 once  
   } else {
     tax_units %<>% 
       bind_cols(do_1040(., vars_1040))
@@ -123,6 +122,9 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
 
   tax_units %<>%
     mutate(
+      
+      # Update filer status
+      filer = filer + (become_filer_ctc == 1 | become_filer_rebate == 1),
       
       # Expanded income metric for distributional tables: gross realized income 
       # plus employer's share of payroll taxes
@@ -333,7 +335,6 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # Select variables and return
     select(all_of(return_vars)) %>%
     return()
-  
 } 
 
 

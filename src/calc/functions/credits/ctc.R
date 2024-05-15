@@ -3,7 +3,7 @@
 #----------------------------------------------
 
 # Set return variables for function
-return_vars$calc_ctc = c('ctc_nonref', 'ctc_ref')
+return_vars$calc_ctc = c('ctc_nonref', 'ctc_ref', 'become_filer_ctc')
 
 
 calc_ctc = function(tax_unit, fill_missings = F) {
@@ -20,8 +20,9 @@ calc_ctc = function(tax_unit, fill_missings = F) {
   #                            with 0s (used in testing, not in simulation)
   #
   # Returns: dataframe of following variables:
-  #  - ctc_nonref (dbl) : value of CTC including credit for other dependents
-  #  - ctc_ref (dbl)    : ACTC, i.e. refundable component of the CTC
+  #  - ctc_nonref       (dbl) : value of CTC including other dependent credit
+  #  - ctc_ref          (dbl) : ACTC, i.e. refundable component of the CTC
+  #  - become_filer_ctc (int) : for nonfilers, whether induced to file 
   #----------------------------------------------------------------------------
   
   req_vars = c(
@@ -45,7 +46,8 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'savers_nonref', # (dbl) value of nonrefundable Saver's Credit
     'old_cred',      # (dbl) value of Elderly and Disabled Credit
     'ei',            # (dbl) earned income
-    'ei_prior_yr',   # (dbl) earned income last year            
+    'ei_prior_yr',   # (dbl) earned income last year       
+    'filer',         # (int) whether tax unit files a tax return
     
     # Tax law attributes
     'ctc.young_age_limit',  # (int) maximum age to qualify as "young" child
@@ -177,7 +179,10 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       
       # Phase in with earned income above minimum refund value
       ctc_ref = pmin(min_refund + (pmax(0, qual_ei - ctc.pi_thresh) * pi_rate), 
-                     pmin(remaining_ctc, max_refund_young + max_refund_old))
+                     pmin(remaining_ctc, max_refund_young + max_refund_old)),
+      
+      # For $0-earning nonfilers, switch filing status if policy offers a refund
+      become_filer_ctc = as.integer(filer == 0 & qual_ei == 0 & ctc_ref > 0)
       
     ) %>% 
     
