@@ -252,8 +252,11 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
     # Allocate net operating losses attributable to some prior-year modeled policy
     distribute_nols(nols, year) %>% 
     
-    # Adjust Social Security benefits for VAT-driven price increases
-    do_ss_cola(year, vat_price_offset)
+    # Adjust Social Security benefits for VAT-driven price level increase
+    do_ss_cola(year, vat_price_offset) %>% 
+    
+    # Adjust capital income for VAT-drive price level increase
+    do_capital_adjustment(year, vat_price_offset) 
   
 
   #---------------------------

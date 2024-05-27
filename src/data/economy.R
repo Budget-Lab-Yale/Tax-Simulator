@@ -1,6 +1,9 @@
-#---------
-# TODO
-#---------
+#---------------------------------------------------------
+# economy.R 
+# 
+# Contains helper functions which either read and process  
+# economic data or perform economic modeling operations
+#---------------------------------------------------------
 
 
 generate_indexes = function(macro_root, vat_price_offset) {
@@ -93,7 +96,7 @@ get_vat_price_offset = function(macro_root, vat_root, years) {
 do_ss_cola = function(tax_units, yr, vat_price_offset) {
   
   #----------------------------------------------------------------------------
-  # Adjusted Social Security benefits for price increased caused by the 
+  # Adjusts Social Security benefits for price increased caused by the 
   # introduction of a VAT. (Note: the imputations here should at some point be
   # folded into Tax-Data.)
   # 
@@ -168,6 +171,111 @@ do_ss_cola = function(tax_units, yr, vat_price_offset) {
     select(-new_gross_ss) %>% 
     return()
 } 
+
+
+
+do_capital_adjustment = function(tax_units, yr, vat_price_offset) {
+  
+  #----------------------------------------------------------------------------
+  # Adjusts capital income to reflect the introduction of a VAT. The basic 
+  # idea is that a VAT burdens returns to pre-enactment ("old") capital while
+  # exempting the normal return to post-enactment ("new") capital. Here, 
+  # because we assume prices rise in response to a VAT, we implement this
+  # logic by 1) crudely imputing the share of returns that are attributable to
+  # new capital 2) scaling up the normal share of those returns (assumed to be
+  # 80%).
+  #
+  # (Note: the imputations here should at some point be folded into Tax-Data.)
+  # 
+  # Parameters:
+  #   - tax_units (df)        : tibble of tax units
+  #   - yr (str)              : simulation year 
+  #   - vat_price_offset (df) : series of price level adjustment factors to 
+  #                             reflect introduction of a VAT
+  # 
+  # Returns: tax units tibble with updated values for gross_ss (df). 
+  #----------------------------------------------------------------------------
+  
+  # Read info on distribution of debt maturities and calculate cumulative share
+  # of debt matured after (tenor) years
+  new_debt = read_csv('./resources/debt_maturities.csv', show_col_types = F) %>% 
+    mutate(share_new_debt = cumsum(share)) %>% 
+    select(-share)
+  
+  # Assuming an economic depreciation rate of 5.7% (NIPA average over 2015-2022
+  # for private fixed assets), construct series tracking the share of returns 
+  # attributable to new capital (i.e. one minus cumulative depreciation)
+  new_capital = tibble(year = 1:100) %>% 
+    mutate(share_new_capital = 1 - round((1 - 0.057) ^ year, 2)) 
+  
+  # Determine years when VAT changed, requiring that vintages be tracked
+  vat_change_years = vat_price_offset %>% 
+    mutate(excess_inflation = cpi_factor / lag(cpi_factor, default = 1) - 1) %>% 
+    select(source_year = year, excess_inflation) %>% 
+    filter(excess_inflation != 0, source_year < yr)
+  
+  # Skip if no VAT-driven changes in prices
+  if (nrow(vat_change_years) == 0) {
+    return(tax_units)
+  }
+  
+  
+  # Calculate capital income adjustment factors
+  adjustment_factors = vat_change_years %>% 
+    
+    # Create vintaging series for each source year of price changes
+    expand_grid(year = min(vat_change_years$source_year):yr) %>% 
+    mutate(t = year - source_year) %>% 
+    filter(t > 0) %>% 
+    
+    # Join schedules for new debt and capital
+    left_join(new_debt, by = c('t' = 'tenor')) %>% 
+    mutate(share_new_debt = replace_na(share_new_debt, 1)) %>% 
+    left_join(new_capital, by = c('t' = 'year')) %>% 
+    
+    # Calculate vintage-specific adjustment factors (i.e. share of income to 
+    # be scaled up to reflect renegotiated returns after VAT, or in other words
+    # the share of returns attributable to post-enactment investment) by source 
+    # year and year, scaling by normal share of total return in the case of capital
+    mutate(debt_factor    = 1 + excess_inflation * share_new_debt, 
+           capital_factor = 1 + excess_inflation * share_new_capital * 0.8) %>% 
+    
+    # Aggregate effects by year
+    group_by(year) %>% 
+    summarise(debt_factor    = prod(debt_factor), 
+              capital_factor = prod(capital_factor)) %>% 
+    
+    # Subset to this specific year
+    filter(year == yr) 
+    
+  
+  # Apply adjustment and return
+  tax_units %>% 
+    mutate(
+      
+      # Debt
+      across(
+        .cols = c(txbl_int, exempt_int, mort_int, first_mort_int, 
+                  second_mort_int, inv_int_exp), 
+        .fns  = ~ . * adjustment_factors$debt_factor
+      ), 
+      
+      # Equity 
+      across(
+        .cols = c(div_ord, div_pref, kg_st, kg_lt, kg_1250, kg_collect),  
+        .fns  = . * adjustment_factors$capital_factor
+      ), 
+      
+      # Mixed income (assumes 20% of pass-through business is the return to capital)
+      across(
+        .cols = c(sole_prop, part_active, part_passive, part_active_loss, 
+                  part_passive_loss, part_179, scorp_active, scorp_passive, 
+                  scorp_active_loss, scorp_passive_loss, scorp_179, farm),
+        .fns  = ~ . * (1 + (adjustment_factors$capital_factor - 1) * 0.2), 
+      )
+    ) %>% 
+    return()
+}
 
 
 
