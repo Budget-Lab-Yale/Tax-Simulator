@@ -18,8 +18,6 @@ end = Sys.time()
 
 runtime = as.numeric(end - start)
 
-
-
 scripts = read_csv("config/runscripts/policy_runs/ctc/simulator/interactive_simulator_runs.csv") %>%
   select(ID)
 
@@ -50,7 +48,7 @@ for(i in 1:splits){
              '\nfor i in 0 1; do\n  index=$((2*SLURM_ARRAY_TASK_ID + i))',
              '\n  scenario_id=$(awk "NR=="${index}"{print}" $file)',
              '\n  Rscript /gpfs/gibbs/project/sarin/', user_id, '/Repositories/Tax-Simulator/src/main.R ', runscript_name, ' "${scenario_id}" ', user_id, ' ',
-             local, ' ', stamp, ' ', pct_sample,' ', stacked, ' ', stamp,' 1 0',
+             local, ' ', stamp, ' ', pct_sample,' ', stacked, ' ', stamp,' 0 0',
              '\ndone'
   ),
   file = job_path,
