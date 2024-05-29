@@ -407,7 +407,7 @@ remit_taxes = function(tax_units) {
 
 
 
-calc_mtrs = function(tax_units, liab_baseline, var, type = 'nextdollar') {
+calc_mtrs = function(tax_units, liab, var, type = 'nextdollar') {
   
   #----------------------------------------------------------------------------
   # Calculates MTR, either at the next-dollar or 0-actual extensive margin, 
@@ -415,8 +415,9 @@ calc_mtrs = function(tax_units, liab_baseline, var, type = 'nextdollar') {
   # 
   # Parameters:
   #   - tax_units (df)        : tibble of tax units, exogenous variables only
-  #   - liab_baseline (dbl[]) : vector of net income tax liability plus
-  #                             employee's share of payroll tax liability
+  #   - liab (dbl[])          : vector of net tax liability plus employee's 
+  #                             share of payroll tax liability to compare 
+  #                             against
   #   - var (str)             : name of variable to increment
   #   - type (str)            : "nextdollar" for next-dollar MTR, "extensive"
   #                             for delta in taxes when reducing the value to 0

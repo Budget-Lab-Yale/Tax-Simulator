@@ -309,9 +309,9 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
                            select(-all_of(return_vars %>% 
                            unlist() %>% 
                            set_names(NULL))), 
-             liab_baseline = tax_units$liab_pr_ee + tax_units$liab_iit_net,
-             var           = .x,
-             type          = .y
+             liab      = tax_units$liab_pr_ee + tax_units$liab_iit_net,
+             var       = .x,
+             type      = .y
           )
       ) %>% 
       bind_cols() %>% 
