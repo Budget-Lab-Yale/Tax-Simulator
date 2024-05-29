@@ -1,8 +1,8 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Value-Added-Tax-Model.vintage,dep.Value-Added-Tax-Model.ID
-baseline,baseline,,2024:2054,,char_cash kg_lt part_active,nextdollar nextdollar nextdollar,2024050121,baseline
-06-amt,public/gale/00_shared/06_amt,kg/62 charity/50 entity_shifting/pearce_prisinzano,2024:2054,,char_cash kg_lt part_active,nextdollar nextdollar nextdollar,2024050121,baseline
-07-std,public/gale/03_back_future/07_std,kg/62 charity/50 entity_shifting/pearce_prisinzano,2024:2054,,char_cash kg_lt part_active,nextdollar nextdollar nextdollar,2024050121,baseline
-08-rates,public/gale/03_back_future/08_rates,kg/62 charity/50 entity_shifting/pearce_prisinzano,2024:2054,,char_cash kg_lt part_active,nextdollar nextdollar nextdollar,2024050121,baseline
-back_future-09-ubi,public/gale/03_back_future/09_ubi,kg/62 charity/50 entity_shifting/pearce_prisinzano,2024:2054,,char_cash kg_lt part_active,nextdollar nextdollar nextdollar,2024050121,baseline
-back_future-10-wagesub,public/gale/03_back_future/10_wagesub,kg/62 charity/50 entity_shifting/pearce_prisinzano,2024:2054,,char_cash kg_lt part_active,nextdollar nextdollar nextdollar,2024050121,baseline
-back_future-vat,public/gale/03_back_future/10_wagesub,kg/62 charity/50 entity_shifting/pearce_prisinzano,2024:2054,,char_cash kg_lt part_active,nextdollar nextdollar nextdollar,2024050121,gale
+baseline,baseline,,2024:2054,2024 2025 2054,char_cash kg_lt part_active,nextdollar nextdollar nextdollar,2024050121,baseline
+06-amt,public/gale/00_shared/06_amt,kg/62 charity/50 entity_shifting/pearce_prisinzano,2024:2054,2024 2025 2054,char_cash kg_lt part_active,nextdollar nextdollar nextdollar,2024050121,baseline
+07-std,public/gale/03_back_future/07_std,kg/62 charity/50 entity_shifting/pearce_prisinzano,2024:2054,2024 2025 2054,char_cash kg_lt part_active,nextdollar nextdollar nextdollar,2024050121,baseline
+08-rates,public/gale/03_back_future/08_rates,kg/62 charity/50 entity_shifting/pearce_prisinzano,2024:2054,2024 2025 2054,char_cash kg_lt part_active,nextdollar nextdollar nextdollar,2024050121,baseline
+back_future-09-ubi,public/gale/03_back_future/09_ubi,kg/62 charity/50 entity_shifting/pearce_prisinzano,2024:2054,2024 2025 2054,char_cash kg_lt part_active,nextdollar nextdollar nextdollar,2024050121,baseline
+back_future-10-wagesub,public/gale/03_back_future/10_wagesub,kg/62 charity/50 entity_shifting/pearce_prisinzano,2024:2054,2024 2025 2054,char_cash kg_lt part_active,nextdollar nextdollar nextdollar,2024050121,baseline
+back_future-vat,public/gale/03_back_future/10_wagesub,kg/62 charity/50 entity_shifting/pearce_prisinzano,2024:2054,2024 2025 2054,char_cash kg_lt part_active,nextdollar nextdollar nextdollar,2024050121,gale
