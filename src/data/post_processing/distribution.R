@@ -394,7 +394,7 @@ build_all_distribution_tables = function(counterfactual_ids) {
   }
 }
 
-build_horizontal_table = function(counterfactual_ids, year) {
+build_horizontal_tables = function(counterfactual_ids, year) {
   
   #----------------------------------------------------------------------------
   # This function constructs tables to analyze horizontal equity within expanded
@@ -407,7 +407,7 @@ build_horizontal_table = function(counterfactual_ids, year) {
   # Returns: void, writes two csv's per scenario. One horizontal distribution table,
   #            one summary table for simplified A-B univariate comparison
   #----------------------------------------------------------------------------
-  calibrators = read_csv('resources/calibrate10.csv')
+  calibrators = read_csv('resources/calibrate.csv')
   
   ids = c("baseline", counterfactual_ids)
   
@@ -416,12 +416,12 @@ build_horizontal_table = function(counterfactual_ids, year) {
       fread() %>% 
       tibble()
     
-    print(id)
-    
     1:nrow(calibrators) %>%
       map(.f = ~ get_horizontal_dist(micro, id, calibrators[.x,])) %>%
       bind_rows() %>%
       write_csv(., file = file.path(globals$output_root, id, 'static/totals/horizontal.csv'))
+    
+    construct_horizontal_comparison_figures(micro, id)
       
   }
 }

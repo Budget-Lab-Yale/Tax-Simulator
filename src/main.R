@@ -124,8 +124,7 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
     build_all_stacked_distribution_tables(counterfactual_ids)
   }
   
-  build_horizontal_table(counterfactual_ids, 2026)
-
+  build_horizontal_tables(counterfactual_ids, 2026)
   
   # Delete detailed microdata files
   if (delete_detail == 1) {
