@@ -34,16 +34,16 @@ if (length(args) > 0) {
   delete_detail                           = args[9]
   multicore                               = args[10]
 } else {
-  runscript_names  = 'policy_runs/romney/dependent_exemptions'
+  runscript_names  = 'tests/horizontal_equity_test'
   scenario_id      = NULL
-  user_id          = 'jar335'
+  user_id          = 'jmk263'
   local            = 1
   vintage          = NULL
   pct_sample       = 1
   stacked          = 1
   baseline_vintage = NULL 
-  delete_detail    = 1
-  multicore        = 1
+  delete_detail    = 0
+  multicore        = 0
 }
 
 
@@ -123,6 +123,8 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   if (stacked == 1) {
     build_all_stacked_distribution_tables(counterfactual_ids)
   }
+  
+  build_horizontal_tables(counterfactual_ids, 2026)
   
   # Delete detailed microdata files
   if (delete_detail == 1) {

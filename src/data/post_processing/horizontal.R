@@ -1,0 +1,126 @@
+
+
+get_horizontal_dist = function(tax_units, scen_id, calibrators) {
+  
+  #----------------------------------------------------------------------------
+  # This helper function constructs tables to analyze horizontal equity within 
+  #    expanded income deciles for a single scenario based on the normalizing
+  #    income equation found in Gravelle & Gravelle (2006).
+  # 
+  # Parameters:
+  #   - tax_units  : (DataFrame) tax filers after having passed through the simulator
+  #   - scen_id : (str) scenario or baseline ID for given test
+  #   - calibrators : (vec) values used to tune the income normalization equation
+  # 
+  # Returns: void, writes a csv of the horizontal distribution table.
+  #----------------------------------------------------------------------------
+  
+  p = calibrators$P
+  e = calibrators$e
+
+  negative = tax_units %>% filter(expanded_inc <= 0) %>%
+    mutate(
+      jitter = 0,
+      inc_eq = (expanded_inc / ((1 + int(!is.na(male2)) + p * n_dep)^e)) * 2^e,
+      etr = case_when(
+        expanded_inc == 0                   ~ 0,
+        expanded_inc < 0 & liab_iit_net < 0 ~ -1 * liab_iit_net / inc_eq,
+        T                                   ~ liab_iit_net / inc_eq
+      ),
+      tile = ifelse(inc_eq == 0, 0, -1)
+    ) 
+  
+  sub_units = tax_units %>%
+    filter(expanded_inc > 0) %>%
+    mutate(
+      jitter = runif(nrow(.), 0, 1) / 1000,
+      inc_eq = ((expanded_inc / ((1 + int(!is.na(male2)) + p * n_dep)^e)) * 2^e) + jitter,
+      etr = liab_iit_net / inc_eq,
+      tile = ntiles.wtd(inc_eq, 1000, weight)
+    ) %>%
+    rbind(negative) %>%
+    mutate(
+    inc_cat = factor(case_when(
+        tile == -1        ~ 'Negative',
+        inc_eq == 0       ~ 'No Income',
+        tile %in% 1:99    ~ '1-9',
+        tile %in% 100:199 ~ "'10-19",
+        tile %in% 200:299 ~ '20-29',
+        tile %in% 300:399 ~ '30-39',
+        tile %in% 400:499 ~ '40-49',
+        tile %in% 500:599 ~ '50-59',
+        tile %in% 600:699 ~ '60-69',
+        tile %in% 700:799 ~ '70-79',
+        tile %in% 800:899 ~ '80-89',
+        tile %in% 900:999 ~ '90-90',
+        T                 ~ 'Top'
+      ), levels = c('Negative', 'No Income', '1-9', "'10-19", '20-29', '30-39', '40-49',
+                    '50-59', '60-69', '70-79', '80-89', '90-99', 'Top'))
+    )   %>%
+    mutate(inc_eq = inc_eq - jitter) %>%
+    filter(! tile %in% c(1:10))
+  
+  sub_units %>% group_by(inc_cat) %>%
+    summarise(
+      `id` = scen_id,
+      `P` = p,
+      `e` = e,
+      `Average Equalized Income` = wtd.mean(inc_eq, weight),
+      `Average Tax Rate` = sum(liab_iit_net) / sum(inc_eq),
+      `Lowest Tax Rate` = min(etr),
+      `Highest Tax Rate` = max(etr),
+      `Standard Deviation of Tax Rate` = sqrt(weighted.var(etr, weight, na.rm = T)),
+      `Interquartile Range` = IQR(etr)
+    ) %>%
+    return()
+}
+
+construct_horizontal_comparison_figures = function(tax_units, scen_id) {
+  
+  #----------------------------------------------------------------------------
+  # This helper function constructs a simple dataframe to compare figures to
+  #     facilitate easier comprehension of horizontal equity. Figures are identical
+  #     except for a single characteristic which affects horizontal equity.
+  # 
+  # Parameters:
+  #   - tax_units  : (DataFrame) tax filers after having passed through the simulator
+  #   - scen_id : (str) scenario or baseline ID for given test
+  # 
+  # Returns: void, writes a csv summary table for simplified A-B univariate comparison
+  #----------------------------------------------------------------------------
+  
+  tax_units %>%
+    mutate(
+      etr_b = liab_iit_net / expanded_inc,
+      bucket = round(expanded_inc, -2)
+    ) %>%
+    filter(
+      ((bucket %in% c(22500:27500)) & (n_dep_ctc < 2)) |
+        (bucket %in% c(70e3:77500)) |
+        (bucket %in% c(185e3:215e3)),
+      between(etr_b, -1, 1), filing_status < 2
+    ) %>%
+    mutate(bucket = case_when(
+      (bucket %in% c(22500:27500)) & (n_dep_ctc == 0) ~ "Figure 1.1",
+      (bucket %in% c(22500:27500)) & (n_dep_ctc == 1) ~ "Figure 1.2",
+      (bucket %in% c(70e3:77500))  & (liab_seca == 0) ~ "Figure 2.1",
+      (bucket %in% c(70e3:77500))  & (liab_seca > 0)  ~ "Figure 2.2",
+      (bucket %in% c(185e3:215e3)) & (sch_e == 0)     ~ "Figure 3.1",
+      (bucket %in% c(185e3:215e3)) & (sch_e > 0)      ~ "Figure 3.2",
+      T                                               ~ "err"
+    )) %>%
+    filter(bucket != "err") %>%
+    group_by(bucket) %>%
+      summarise(
+        #case = ifelse(grepl('.2', bucket), 2, 1),
+        inc = sum(expanded_inc),
+        liab = sum(liab_iit_net)
+      ) %>%
+      mutate(etr = liab / inc) %>%
+      select(bucket, etr) %>%
+      write_csv(., file = file.path(globals$output_root, scen_id, 'static/totals/horizontal_figures.csv'))
+}
+
+
+
+
