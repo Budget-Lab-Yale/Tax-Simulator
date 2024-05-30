@@ -394,38 +394,6 @@ build_all_distribution_tables = function(counterfactual_ids) {
   }
 }
 
-build_horizontal_tables = function(counterfactual_ids, year) {
-  
-  #----------------------------------------------------------------------------
-  # This function constructs tables to analyze horizontal equity within expanded
-  #    income deciles for all scenarios in the current batch. 
-  # 
-  # Parameters:
-  #   - counterfactual_ids : (str) list of non-baseline scenario IDs
-  #   - year : (int) year of microdata to be processed
-  # 
-  # Returns: void, writes two csv's per scenario. One horizontal distribution table,
-  #            one summary table for simplified A-B univariate comparison
-  #----------------------------------------------------------------------------
-  calibrators = read_csv('resources/calibrate.csv')
-  
-  ids = c("baseline", counterfactual_ids)
-  
-  for (id in ids){
-    micro = file.path(globals$output_root, id, 'static/detail', paste0(year, '.csv')) %>% 
-      fread() %>% 
-      tibble()
-    
-    1:nrow(calibrators) %>%
-      map(.f = ~ get_horizontal_dist(micro, id, calibrators[.x,])) %>%
-      bind_rows() %>%
-      write_csv(., file = file.path(globals$output_root, id, 'static/totals/horizontal.csv'))
-    
-    construct_horizontal_comparison_figures(micro, id)
-      
-  }
-}
-
 
 build_all_stacked_distribution_tables = function(counterfactual_ids) {
   

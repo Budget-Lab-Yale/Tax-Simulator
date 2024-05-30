@@ -1,4 +1,0 @@
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2025:2054,,,
-perm_arpa_ctc,policy_runs/ctc/perm_arpa_ctc/04-phaseout,child_earnings/34,2025:2054,,,
-perm_arpa_ctc_indexed,policy_runs/ctc/perm_arpa_ctc/indexation,child_earnings/34,2025:2054,,,

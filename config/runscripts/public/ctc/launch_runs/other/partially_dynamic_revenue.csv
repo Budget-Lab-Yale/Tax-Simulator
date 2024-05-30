@@ -1,8 +1,0 @@
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2025:2054,,wages1 wages2,extensive extensive
-perm_tcja_ctc,policy_runs/ctc/perm_tcja_ctc/04-phaseout,employment/bastian child_earnings/34,2025:2054,,wages1 wages2,extensive extensive
-perm_arpa_ctc,policy_runs/ctc/perm_arpa_ctc/04-phaseout,employment/bastian child_earnings/34,2025:2054,,wages1 wages2,extensive extensive
-perm_arpa_ctc_indexed,policy_runs/ctc/perm_arpa_ctc/indexation,employment/bastian child_earnings/34,2025:2054,,wages1 wages2,extensive extensive
-edelberg_kearney,policy_runs/ctc/edelberg_kearney/04-phaseout,employment/bastian child_earnings/34,2025:2054,,wages1 wages2,extensive extensive
-fsa_ctc,policy_runs/ctc/fsa_2.0/ctc-04-phaseout,employment/bastian child_earnings/34,2025:2054,,wages1 wages2,extensive extensive
-fsa,policy_runs/ctc/fsa_2.0/salt,employment/bastian child_earnings/34,2025:2054,,wages1 wages2,extensive extensive

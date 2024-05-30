@@ -1,4 +1,35 @@
 
+build_horizontal_tables = function(counterfactual_ids, year) {
+  
+  #----------------------------------------------------------------------------
+  # This function constructs tables to analyze horizontal equity within expanded
+  #    income deciles for all scenarios in the current batch. 
+  # 
+  # Parameters:
+  #   - counterfactual_ids : (str) list of non-baseline scenario IDs
+  #   - year : (int) year of microdata to be processed
+  # 
+  # Returns: void, writes two csv's per scenario. One horizontal distribution table,
+  #            one summary table for simplified A-B univariate comparison
+  #----------------------------------------------------------------------------
+  calibrators = expand_grid(P = seq(0,1,0.25), e = seq(0,1,0.25))
+  
+  ids = c("baseline", counterfactual_ids)
+  
+  for (id in ids){
+    micro = file.path(globals$output_root, id, 'static/detail', paste0(year, '.csv')) %>% 
+      fread() %>% 
+      tibble()
+    
+    1:nrow(calibrators) %>%
+      map(.f = ~ get_horizontal_dist(micro, id, calibrators[.x,])) %>%
+      bind_rows() %>%
+      write_csv(., file = file.path(globals$output_root, id, 'static/totals/horizontal.csv'))
+    
+    construct_horizontal_comparison_figures(micro, id)
+    
+  }
+}
 
 get_horizontal_dist = function(tax_units, scen_id, calibrators) {
   
@@ -41,24 +72,24 @@ get_horizontal_dist = function(tax_units, scen_id, calibrators) {
     rbind(negative) %>%
     mutate(
     inc_cat = factor(case_when(
-        tile == -1        ~ 'Negative',
-        inc_eq == 0       ~ 'No Income',
-        tile %in% 1:99    ~ '1-9',
-        tile %in% 100:199 ~ "'10-19",
-        tile %in% 200:299 ~ '20-29',
-        tile %in% 300:399 ~ '30-39',
-        tile %in% 400:499 ~ '40-49',
-        tile %in% 500:599 ~ '50-59',
-        tile %in% 600:699 ~ '60-69',
-        tile %in% 700:799 ~ '70-79',
-        tile %in% 800:899 ~ '80-89',
-        tile %in% 900:999 ~ '90-90',
-        T                 ~ 'Top'
+        tile == -1              ~ 'Negative',
+        inc_eq == 0             ~ 'No Income',
+        between(tile, 1, 99)    ~ '1-9',
+        between(tile, 100, 199) ~ "'10-19",
+        between(tile, 200, 299) ~ '20-29',
+        between(tile, 300, 399) ~ '30-39',
+        between(tile, 400, 499) ~ '40-49',
+        between(tile, 500, 599) ~ '50-59',
+        between(tile, 600, 699) ~ '60-69',
+        between(tile, 700, 799) ~ '70-79',
+        between(tile, 800, 899) ~ '80-89',
+        between(tile, 900, 990) ~ '90-99',
+        T                       ~ 'Top'
       ), levels = c('Negative', 'No Income', '1-9', "'10-19", '20-29', '30-39', '40-49',
                     '50-59', '60-69', '70-79', '80-89', '90-99', 'Top'))
     )   %>%
     mutate(inc_eq = inc_eq - jitter) %>%
-    filter(! tile %in% c(1:10))
+    filter(! between(tile, 1, 10))
   
   sub_units %>% group_by(inc_cat) %>%
     summarise(
@@ -66,9 +97,7 @@ get_horizontal_dist = function(tax_units, scen_id, calibrators) {
       `P` = p,
       `e` = e,
       `Average Equalized Income` = wtd.mean(inc_eq, weight),
-      `Average Tax Rate` = sum(liab_iit_net) / sum(inc_eq),
-      `Lowest Tax Rate` = min(etr),
-      `Highest Tax Rate` = max(etr),
+      `Average Tax Rate` = sum(liab_iit_net * weight) / sum(inc_eq * weight),
       `Standard Deviation of Tax Rate` = sqrt(weighted.var(etr, weight, na.rm = T)),
       `Interquartile Range` = IQR(etr)
     ) %>%
@@ -95,24 +124,23 @@ construct_horizontal_comparison_figures = function(tax_units, scen_id) {
       bucket = round(expanded_inc, -2)
     ) %>%
     filter(
-      ((bucket %in% c(22500:27500)) & (n_dep_ctc < 2)) |
-        (bucket %in% c(70e3:77500)) |
-        (bucket %in% c(185e3:215e3)),
-      between(etr_b, -1, 1), filing_status < 2
+      (between(bucket, 22500, 27500) & n_dep_ctc < 2) |
+        (between(bucket, 70e3, 77500)) |
+        (between(bucket, 185e3, 215e3)),
+      between(etr_b, -1, 1), filing_status < 3
     ) %>%
     mutate(bucket = case_when(
-      (bucket %in% c(22500:27500)) & (n_dep_ctc == 0) ~ "Figure 1.1",
-      (bucket %in% c(22500:27500)) & (n_dep_ctc == 1) ~ "Figure 1.2",
-      (bucket %in% c(70e3:77500))  & (liab_seca == 0) ~ "Figure 2.1",
-      (bucket %in% c(70e3:77500))  & (liab_seca > 0)  ~ "Figure 2.2",
-      (bucket %in% c(185e3:215e3)) & (sch_e == 0)     ~ "Figure 3.1",
-      (bucket %in% c(185e3:215e3)) & (sch_e > 0)      ~ "Figure 3.2",
-      T                                               ~ "err"
+      between(bucket, 22500, 27500) & (n_dep_ctc == 0) ~ "Figure 1.1",
+      between(bucket, 22500, 27500) & (n_dep_ctc == 1) ~ "Figure 1.2",
+      between(bucket, 70e3, 77500)  & (liab_seca == 0) ~ "Figure 2.1",
+      between(bucket, 70e3, 77500)  & (liab_seca > 0)  ~ "Figure 2.2",
+      between(bucket, 185e3, 215e3) & (sch_e == 0)     ~ "Figure 3.1",
+      between(bucket, 185e3, 215e3) & (sch_e > 0)      ~ "Figure 3.2",
+      T                                                ~ "err"
     )) %>%
     filter(bucket != "err") %>%
     group_by(bucket) %>%
       summarise(
-        #case = ifelse(grepl('.2', bucket), 2, 1),
         inc = sum(expanded_inc),
         liab = sum(liab_iit_net)
       ) %>%

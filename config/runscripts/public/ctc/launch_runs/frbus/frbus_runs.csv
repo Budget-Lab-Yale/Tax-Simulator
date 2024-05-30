@@ -1,7 +1,0 @@
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2017:2054,,first_mort_int,nextdollar
-perm_tcja_ctc,policy_runs/ctc/perm_tcja_ctc/04-phaseout,,2017:2054,,first_mort_int,nextdollar
-perm_arpa_ctc,policy_runs/ctc/perm_arpa_ctc/04-phaseout,,2017:2054,,first_mort_int,nextdollar
-edelberg_kearney,policy_runs/ctc/edelberg_kearney/04-phaseout,,2017:2054,,first_mort_int,nextdollar
-fsa_ctc,policy_runs/ctc/fsa_2.0/ctc-04-phaseout,,2017:2054,,first_mort_int,nextdollar
-fsa,policy_runs/ctc/fsa_2.0/salt,,2017:2054,,first_mort_int,nextdollar
