@@ -39,7 +39,7 @@ do_employment = function(tax_units, ...) {
     # Adjust for VAT-driven price level change
     left_join(
       globals$output_root %>% 
-        file.path(id, '/static/supplemental/vat_price_offset.csv') %>% 
+        file.path(scenario_info$ID, '/static/supplemental/vat_price_offset.csv') %>% 
         read_csv(show_col_types = F) %>% 
         select(year, cpi_factor), 
       by = 'year'

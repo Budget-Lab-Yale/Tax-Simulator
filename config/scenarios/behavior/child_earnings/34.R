@@ -64,7 +64,7 @@ do_child_earnings = function(tax_units, ...) {
   
   # Read VAT price offset so that we can calculate income deltas in real terms
   vat_price_offset = globals$output_root %>% 
-    file.path(id, '/static/supplemental/vat_price_offset.csv') %>% 
+    file.path(scenario_info$ID, '/static/supplemental/vat_price_offset.csv') %>% 
     read_csv(show_col_types = F) %>% 
     filter(year == current_year) %>%
     select(cpi_factor) %>% 
@@ -82,7 +82,7 @@ do_child_earnings = function(tax_units, ...) {
         fread() %>% 
         tibble() %>%
         mutate(ati_reform = (expanded_inc - liab_iit_net - liab_pr_ee) / vat_price_offset) %>% 
-        select(liab_policy)
+        select(ati_reform)
     ) %>% 
     mutate(delta_income = ati_reform - ati) %>% 
     select(id, expanded_inc, delta_income)

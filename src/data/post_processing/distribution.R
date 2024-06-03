@@ -7,8 +7,7 @@
 
 
 process_for_distribution = function(id, baseline_id, year, financing = 'none', 
-                                    corp_delta, labor_share, vat_delta, 
-                                    vat_price_offset) {
+                                    corp_delta, labor_share, vat_price_offset) {
   
   #----------------------------------------------------------------------------
   # Reads and cleans input data for a given scenario and a given "baseline", 
@@ -63,12 +62,18 @@ process_for_distribution = function(id, baseline_id, year, financing = 'none',
     filter(dep_status == 0) %>% 
     
     # Join counterfactual scenario liability, expressed in baseline dollars.
-    # Also calculate VAT burden as loss of real income.
+    # Calculate helper information for VAT breakdown supplemental file.  
     mutate(liab_baseline = liab_iit_net + liab_pr) %>% 
     left_join(reform %>% 
-                mutate(liab       = (liab_iit_net + liab_pr) / vat_price_offset, 
-                       vat_burden = expanded_inc * (vat_price_offset - 1)) %>% 
-                select(id, liab, vat_burden), 
+                mutate(
+                  liab       = (liab_iit_net + liab_pr)                 / vat_price_offset, 
+                  ss_new     = gross_ss                                 / vat_price_offset, 
+                  debt_new   = (txbl_int + exempt_int - first_mort_int) / vat_price_offset, 
+                  equity_new = (div_ord + div_pref + kg_st + kg_lt)     / vat_price_offset,
+                  mixed_new  = (sole_prop + part_scorp + farm)          / vat_price_offset,
+                  inc_new    = expanded_inc                             / vat_price_offset, 
+                  other_new  = inc_new - ss_new - debt_new - equity_new - mixed_new) %>% 
+                select(id, liab, ends_with('_new')), 
               by = 'id') %>%
     mutate(
       
@@ -76,6 +81,16 @@ process_for_distribution = function(id, baseline_id, year, financing = 'none',
       weight_person = weight * (1 + (filing_status == 2)),
       
       
+      #--------------------------
+      # VAT burden determination
+      #--------------------------
+      
+      # VAT burden is the loss of real income from higher prices. Some components 
+      # of expanded income will rise with prices (e.g. OASDI or capital income), 
+      # others won't; compositional differences determine distributional impact 
+      vat_burden = expanded_inc - inc_new, 
+      
+
       #--------------------------
       # Corporate tax allocation 
       #--------------------------
@@ -245,6 +260,76 @@ calc_pledge_metrics = function(microdata) {
 
 
 
+calc_vat_decomp = function(microdata) {
+
+  data = c(2025, 2034, 2054) %>% 
+    map(.f = ~
+          process_for_distribution(
+            id               = id, 
+            baseline_id      = 'baseline', 
+            year             = .x, 
+            financing        = 'none', 
+            corp_delta       = corp_delta %>% filter(year == .x) %>% get_vector('delta'),
+            labor_share      = corp_delta %>% filter(year == .x) %>% get_vector('labor_share'), 
+            vat_price_offset = vat_price_offset %>% filter(year == .x) %>% get_vector('cpi_factor')
+          ) %>% 
+        mutate(Year = paste0('Year: ', .x - 2024))
+    ) %>% 
+    bind_rows() %>% 
+    mutate(
+      
+      # Calculate components of gross VAT burden
+      `Income: OASDI benefits`         = gross_ss                                 - ss_new, 
+      `Income: Net interest`    = (txbl_int + exempt_int - first_mort_int) - debt_new, 
+      `Income: Equity returns`         = (div_ord + div_pref + kg_st + kg_lt)     - equity_new, 
+      `Income: Pass-through returns`   = (sole_prop + part_scorp + farm)          - mixed_new,
+      `Income: Other`           = vat_burden - `Income: OASDI benefits` - `Income: Net interest` - `Income: Equity returns` - `Income: Pass-through returns`,
+      `Tax: Individual income`  = liab - liab_baseline, 
+      `Tax: Corporate income`   = corp_tax_labor + corp_tax_capital
+      
+    ) %>% 
+    
+    # Calculate contribution to percent change in ATI
+    filter(income_group != 'Negative income') %>% 
+    group_by(Year, income_group) %>% 
+    summarise(
+      across(
+        .cols = c(contains(' '), delta), 
+        .fns  = ~ sum(-. * weight) / sum((expanded_inc - liab_baseline) * weight)
+      ), 
+      .groups = 'drop'
+    )
+  
+  data %>% 
+    select(income_group, Year, delta) %>% 
+    ggplot(aes(x = as.integer(income_group), y = delta * 100, colour = Year)) + 
+    geom_point() + 
+    geom_line() + 
+    geom_hline(yintercept = 0) + 
+    theme_bw() + 
+    labs(x = 'Income group', y = 'Percent change') + 
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5)) + 
+    ggtitle('Percent change in ATI from 10% VAT')
+  
+  data %>% 
+    pivot_longer(-c(income_group, Year, delta)) %>% 
+    ggplot(aes(x = income_group, y = value * 100, fill = name)) + 
+    geom_col() + 
+    geom_point(aes(y = delta * 100), size = 3) + 
+    geom_hline(yintercept = 0) + 
+    facet_wrap(~Year, ncol = 3) + 
+    theme_bw() + 
+    scale_y_continuous(breaks = seq(-8, 4, 2)) + 
+    labs(x = 'Income group', y = 'Percent change') + 
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5)) + 
+    ggtitle('Contribution to percent change in ATI from 10% VAT')
+  
+  
+  
+}
+
+
+
 
 build_distribution_tables = function(id, baseline_id, file_name) {
   
@@ -287,15 +372,15 @@ build_distribution_tables = function(id, baseline_id, file_name) {
     mutate(reform = reform / cpi_factor) %>% 
     select(-ends_with('_factor'))
   
-  # Calculate change in other tax liability by year
-  other_delta = rev_reform %>% 
+  # Calculate change in corporate tax liability by year
+  corp_delta = rev_reform %>% 
     left_join(rev_baseline, by = 'year') %>% 
     mutate(delta = reform - baseline) %>%  
   
     # Determine first year of policy reform, if any, and allocate labor
     # share of changed corporate burden over time
-    mutate(first_year = ifelse(sum(delta) > 0, 
-                               min(year[cumsum(delta) > 0 & lag(delta) == 0]), 
+    mutate(first_year = ifelse(sum(delta) != 0, 
+                               min(year[cumsum(delta) != 0 & lag(delta, default = 0) == 0]), 
                                Inf), 
            labor_share = 0.2 * pmax(0, pmin(1, (year - first_year) / 10))) %>% 
     select(year, delta, labor_share) 
@@ -325,10 +410,10 @@ build_distribution_tables = function(id, baseline_id, file_name) {
     }
     
     # Get corporate tax info for this year
-    this_corp_delta = other_delta %>% 
+    this_corp_delta = corp_delta %>% 
       filter(year == yr) %>% 
       get_vector('delta')
-    this_corp_labor_share = other_delta %>% 
+    this_corp_labor_share = corp_delta %>% 
       filter(year == yr) %>% 
       get_vector('labor_share')
     
@@ -359,7 +444,7 @@ build_distribution_tables = function(id, baseline_id, file_name) {
             financing        = financing, 
             corp_delta       = if_else(include_other, this_corp_delta, 0), 
             labor_share      = this_corp_labor_share, 
-            vat_price_offset = if_else(include_other, this_vat_price_offset, 0),
+            vat_price_offset = if_else(include_other, this_vat_price_offset, 0)
           )
           
           # Calculate standard metrics and add to results 

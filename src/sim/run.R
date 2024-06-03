@@ -177,6 +177,7 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
       corp_tax_root   = scenario_info$interface_paths$`Corporate-Tax-Model`, 
       estate_tax_root = scenario_info$interface_paths$`Estate-Tax-Model`, 
       vat_root        = scenario_info$interface_paths$`Value-Added-Tax-Model`,
+      other_root      = scenario_info$interface_paths$`Macro-Projections`,
       off_model_root  = scenario_info$interface_paths$`Off-Model-Estimates`
     ) 
 
@@ -305,13 +306,13 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
     mtrs = scenario_info$mtr_vars %>%
       map2(.y = scenario_info$mtr_types, 
            .f = ~ calc_mtrs(
-             tax_units = tax_units %>% 
-                           select(-all_of(return_vars %>% 
-                           unlist() %>% 
-                           set_names(NULL))), 
-             liab      = tax_units$liab_pr_ee + tax_units$liab_iit_net,
-             var       = .x,
-             type      = .y
+             tax_units   = tax_units %>% 
+                             select(-all_of(return_vars %>% 
+                             unlist() %>% 
+                             set_names(NULL))), 
+             liab_actual = tax_units$liab_pr_ee + tax_units$liab_iit_net,
+             var         = .x,
+             type        = .y
           )
       ) %>% 
       bind_cols() %>% 
@@ -332,14 +333,13 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
   #-----------------
   
   # Write microdata
-  if (year %in% scenario_info$dist_years) {
-    tax_units %>%  
-      select(all_of(globals$detail_vars), starts_with('mtr_')) %>% 
-      write_csv(file.path(scenario_info$output_path, 
-                          if_else(static, 'static', 'conventional'),
-                          'detail', 
-                          paste0(year, '.csv')))
-  }
+  tax_units %>%  
+    select(all_of(globals$detail_vars), starts_with('mtr_')) %>% 
+    write_csv(file.path(scenario_info$output_path, 
+                        if_else(static, 'static', 'conventional'),
+                        'detail', 
+                        paste0(year, '.csv')))
+
   
   # Get totals from microdata
   totals = list(pr            = get_pr_totals(tax_units, year), 

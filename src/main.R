@@ -34,12 +34,12 @@ if (length(args) > 0) {
   delete_detail                           = args[9]
   multicore                               = args[10]
 } else {
-  runscript_names  = 'public/gale/gale'
+  runscript_names  = paste('tests/bastian')
   scenario_id      = NULL
   user_id          = 'jar335'
   local            = 1
   vintage          = NULL
-  pct_sample       = 1
+  pct_sample       = 1/8
   stacked          = 1
   baseline_vintage = NULL 
   delete_detail    = 0
@@ -104,6 +104,8 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   #-------------------------------
   # Post-processing and reporting
   #-------------------------------
+  
+  print('Running post-processing routines')
   
   # Generate 1040 reports
   create_1040_reports(counterfactual_ids)

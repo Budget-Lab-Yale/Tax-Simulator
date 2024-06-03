@@ -237,8 +237,9 @@ do_capital_adjustment = function(tax_units, yr, vat_price_offset) {
     # be scaled up to reflect renegotiated returns after VAT, or in other words
     # the share of returns attributable to post-enactment investment) by source 
     # year and year, scaling by normal share of total return in the case of capital
+    # (50% assumption is from Auerbach via Toder)
     mutate(debt_factor    = 1 + excess_inflation * share_new_debt, 
-           capital_factor = 1 + excess_inflation * share_new_capital * 0.8) %>% 
+           capital_factor = 1 + excess_inflation * share_new_capital * 0.5) %>% 
     
     # Aggregate effects by year
     group_by(year) %>% 
@@ -255,15 +256,14 @@ do_capital_adjustment = function(tax_units, yr, vat_price_offset) {
       
       # Debt
       across(
-        .cols = c(txbl_int, exempt_int, mort_int, first_mort_int, 
-                  second_mort_int, inv_int_exp), 
+        .cols = c(txbl_int, exempt_int, first_mort_int, second_mort_int, inv_int_exp), 
         .fns  = ~ . * adjustment_factors$debt_factor
       ), 
       
       # Equity 
       across(
         .cols = c(div_ord, div_pref, kg_st, kg_lt, kg_1250, kg_collect),  
-        .fns  = . * adjustment_factors$capital_factor
+        .fns  = ~ . * adjustment_factors$capital_factor
       ), 
       
       # Mixed income (assumes 20% of pass-through business is the return to capital)
@@ -271,7 +271,7 @@ do_capital_adjustment = function(tax_units, yr, vat_price_offset) {
         .cols = c(sole_prop, part_active, part_passive, part_active_loss, 
                   part_passive_loss, part_179, scorp_active, scorp_passive, 
                   scorp_active_loss, scorp_passive_loss, scorp_179, farm),
-        .fns  = ~ . * (1 + (adjustment_factors$capital_factor - 1) * 0.2), 
+        .fns  = ~ . * (1 + (adjustment_factors$capital_factor - 1) * 0.2) 
       )
     ) %>% 
     return()

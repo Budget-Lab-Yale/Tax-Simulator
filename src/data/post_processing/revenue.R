@@ -7,7 +7,7 @@
 
 
 calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root, 
-                         vat_root, off_model_root) {
+                         vat_root, other_root, off_model_root) {
   
   #----------------------------------------------------------------------------
   # Calculates a scenario's receipts 
@@ -31,6 +31,7 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root,
   #                             scenario is stored 
   #   - vat_root (str)        : directory where value added tax revenue for
   #                             this scenario is stored
+  #   - other_root (str)      : Macro-Projections root (for other taxes)
   #   - off_model_root (str)  : directory where off-model estimates for this
   #                             scenario are stored
   #
@@ -62,7 +63,14 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root,
     read_csv(show_col_types = F) %>% 
     select(year, revenues_vat = receipts_fy)
   
-  # Read other off-model receipts 
+  # Read other receipts 
+  revenues_other = other_root %>% 
+    file.path('revenues.csv') %>% 
+    read_csv(show_col_types = F) %>%
+    mutate(revenues_other = rev_excise + rev_customs + rev_misc) %>% 
+    select(year, revenues_other)
+  
+  # Read off-model receipts 
   off_model = off_model_root %>%
     file.path('revenues.csv') %>% 
     read_csv(show_col_types = F)
@@ -98,6 +106,9 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root,
     # Join VAT levels 
     left_join(revenues_vat, by = 'year') %>% 
     
+    # Join other revenues levels
+    left_join(revenues_other, by = 'year') %>% 
+    
     # Join off-model estimates
     left_join(off_model, by = 'year') %>% 
     mutate(revenues_income_tax = revenues_income_tax + individual,  
@@ -110,7 +121,7 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root,
     
     # Write CSV
     select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits, 
-           revenues_corp_tax, revenues_estate_tax, revenues_vat) %>%
+           revenues_corp_tax, revenues_estate_tax, revenues_vat, revenues_other) %>%
     write_csv(file.path(scenario_root, 'totals', 'receipts.csv'))
 }
 
@@ -155,7 +166,8 @@ calc_rev_est = function(counterfactual_ids) {
                    outlays_tax_credits + 
                    revenues_corp_tax + 
                    revenues_estate_tax + 
-                   revenues_vat) %>% 
+                   revenues_vat + 
+                   revenues_other) %>% 
     pivot_longer(cols      = -year, 
                  names_to  = 'series', 
                  values_to = 'baseline')
@@ -210,7 +222,7 @@ calc_rev_est = function(counterfactual_ids) {
         left_join(vat_price_offset, by = 'year') %>%
         mutate(
           Dollars            = counterfactual - baseline, 
-          `Baseline dollars` = (counterfactual / gdp_deflator_factor) - baseline,
+          `Baseline dollars` = (counterfactual / cpi_factor) - baseline,
           `Share of GDP`     = (counterfactual / gdp_counterfactual) - (baseline / gdp_baseline)
         ) %>% 
         select(year, Series = series, Dollars, `Baseline dollars`, `Share of GDP`) %>%
@@ -390,8 +402,8 @@ calc_stacked_rev_est = function(counterfactual_ids) {
       # Calculate revenues in baseline dollars
       left_join(vat_price_offsets, by = c('year', 'scenario_id')) %>%
       mutate(
-        gdp_deflator_factor = if_else(scenario_id == 'baseline', 1, gdp_deflator_factor),
-        `Baseline dollars`  = Dollars / gdp_deflator_factor
+        cpi_factor = if_else(scenario_id == 'baseline', 1, cpi_factor),
+        `Baseline dollars`  = Dollars / cpi_factor
       ) %>%
         
       # Pivot long in metric and calculate stacked deltas
