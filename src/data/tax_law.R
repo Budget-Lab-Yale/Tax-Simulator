@@ -88,6 +88,11 @@ load_tax_law_input = function(config_path) {
   # Returns: list of raw tax parameter inputs, indexed by tax parameter name 
   #          (list).
   #----------------------------------------------------------------------------
+
+  # Throw exception if path doesn't exist
+  if (!dir.exists(config_path)) {
+    stop('Cannot find the user-supplied tax law configuration directory')
+  }
   
   # Get list of YAML files
   param_names = config_path %>% 
