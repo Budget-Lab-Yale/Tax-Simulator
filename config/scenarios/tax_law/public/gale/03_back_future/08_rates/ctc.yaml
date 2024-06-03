@@ -7,7 +7,7 @@ value_young:
     '2018': [2000, 0]
     '2021': [2000, 1600]
     '2022': [2000, 0]
-    '2024': [0, 0]
+    '2025': [0, 0]
 
 # Maximum credit value per "old" child
 value_old:
@@ -16,11 +16,11 @@ value_old:
     '2018': [2000, 0]
     '2021': [2000, 1000]
     '2022': [2000, 0]
-    '2024': [0, 0] 
+    '2025': [0, 0] 
 
 # Maximum credit value per nonqualifying dependent (assumed to phaseout per po_thresh1)
 value_other:
   value:
     '2014': 0
     '2018': 500
-    '2024': 0
+    '2025': 0

@@ -6,22 +6,22 @@ pi_rate_0:
     '2014': 0.0765
     '2021': 0.153
     '2022': 0.0765
-    '2024': 0
+    '2025': 0
 
 # Credit phase-in rate for filers with 1 child  
 pi_rate_1:
   value: 
     '2014': 0.34
-    '2024': 0
+    '2025': 0
 
 # Credit phase-in rate for filers with 2 children
 pi_rate_2:
   value:
     '2014': 0.4
-    '2024': 0
+    '2025': 0
 
 # Credit phase-in rate for filers with 3+ children  
 pi_rate_3:
   value:
     '2014': 0.45
-    '2024': 0
+    '2025': 0

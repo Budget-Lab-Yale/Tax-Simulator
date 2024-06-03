@@ -3,7 +3,7 @@ indexation_defaults:
   i_measure:
     '1986': cpi
     '2017': chained_cpi
-  i_base_year: 2023
+  i_base_year: 2024
   i_direction: -1
   i_increment: 100
 
@@ -11,7 +11,7 @@ indexation_defaults:
 pi_rate: 
   value: 
     '2014': 0
-    '2024': 0.2
+    '2025': 0.2
 
 # Earnings amount at which phase-in ends
 pi_end: 
