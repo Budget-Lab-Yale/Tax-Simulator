@@ -245,7 +245,7 @@ do_child_earnings = function(tax_units, ...) {
     # Write summary file
     tax_units %>%
       filter(!is.na(delta_rank)) %>% 
-      filter(delta_rank > 0) %>% 
+      filter(delta_rank != 0) %>% 
       group_by(parent_rank, child_rank) %>% 
       summarise(n          = sum(weight),
                 wages      = sum(wages * weight),

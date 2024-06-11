@@ -34,16 +34,23 @@ if (length(args) > 0) {
   delete_detail                           = args[9]
   multicore                               = args[10]
 } else {
-  runscript_names  = paste('tests/vat')
+  runscript_names  = paste('public/gale/mtrs',
+                           'public/gale/partial_dynamic',
+                           'public/gale/common',
+                           'public/gale/simple', 
+                           'public/gale/mod_simple', 
+                           'public/gale/back_future', 
+                           'public/gale/ubi',
+                           sep = '____')
   scenario_id      = NULL
   user_id          = 'jar335'
   local            = 1
   vintage          = NULL
-  pct_sample       = 1/20
+  pct_sample       = 1
   stacked          = 1
-  baseline_vintage = NULL 
-  delete_detail    = 1
-  multicore        = 0
+  baseline_vintage = NULL
+  delete_detail    = 0
+  multicore        = 1
 }
 
 
