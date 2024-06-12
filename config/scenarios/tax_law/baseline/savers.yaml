@@ -1,5 +1,9 @@
 ---
 
+# Whether credit is repealed
+repeal:
+  value: 0
+
 # Whether credit is refundable
 refundable:
   value:

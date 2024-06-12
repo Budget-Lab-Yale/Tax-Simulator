@@ -29,8 +29,18 @@ do_scenario = function(ID, baseline_mtrs) {
   # Initialize data
   #-----------------
 
-  # Get indexation data
-  indexes = generate_indexes(scenario_info$interface_paths$`Macro-Projections`)
+  # Calculate VAT price offset 
+  vat_price_offset = get_vat_price_offset(
+    macro_root = scenario_info$interface_paths$`Macro-Projections`, 
+    vat_root   = scenario_info$interface_paths$`Value-Added-Tax-Model`, 
+    years      = scenario_info$years
+  )
+  
+  # Get price and wage index series
+  indexes = generate_indexes(
+    macro_root       = scenario_info$interface_paths$`Macro-Projections`, 
+    vat_price_offset = vat_price_offset
+  )
   
   # Build (and write) tax law
   tax_law = build_tax_law(scenario_info, indexes)
@@ -41,20 +51,22 @@ do_scenario = function(ID, baseline_mtrs) {
   #----------------
   
   # Run static simulation
-  static_mtrs = run_sim(scenario_info = scenario_info, 
-                        tax_law       = tax_law, 
-                        static        = T,
-                        baseline_mtrs = NULL, 
-                        static_mtrs   = NULL)
+  static_mtrs = run_sim(scenario_info    = scenario_info, 
+                        tax_law          = tax_law, 
+                        static           = T,
+                        baseline_mtrs    = NULL, 
+                        static_mtrs      = NULL, 
+                        vat_price_offset = vat_price_offset)
   
   # Run simulation with behavioral feedback if modules are specified
   static_only = length(scenario_info$behavior_modules) == 0
   if (!static_only) {
-    run_sim(scenario_info = scenario_info,
-            tax_law       = tax_law, 
-            static        = F,
-            baseline_mtrs = baseline_mtrs, 
-            static_mtrs   = static_mtrs)
+    run_sim(scenario_info    = scenario_info,
+            tax_law          = tax_law, 
+            static           = F,
+            baseline_mtrs    = baseline_mtrs, 
+            static_mtrs      = static_mtrs, 
+            vat_price_offset = vat_price_offset)
   
   # Else, for static-only counterfactual runs, copy static runs to scenario's  
   # conventional folder (baseline only has a static subfolder by definition)
@@ -80,7 +92,8 @@ do_scenario = function(ID, baseline_mtrs) {
 
 
 
-run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
+run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs, 
+                   vat_price_offset) {
   
   #----------------------------------------------------------------------------
   # Runs simulation instance for a given scenario, either static or 
@@ -97,11 +110,13 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
   #                            scenario run, indexed by year/tax unit ID; NULL 
   #                            if this run is in static mode or if no MTR 
   #                            variables were specified
+  #   - vat_price_offset (df): series of price level adjustment factors to 
+  #                            reflect introduction of a VAT
   #
   # Returns: tibble of marginal tax rates (df).
   #----------------------------------------------------------------------------
   
-  # Get output root for this scenario and behvioral feedback assumptions
+  # Get output root for this scenario and behavioral feedback assumptions
   output_root = file.path(scenario_info$output_path, if_else(static, 
                                                              'static', 
                                                              'conventional'))
@@ -115,13 +130,14 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
     year = scenario_info$years[t]
     
     # Run simulation of year 
-    output[[t]] = run_one_year(year          = year,
-                               scenario_info = scenario_info, 
-                               tax_law       = tax_law,
-                               static        = static,
-                               baseline_mtrs = baseline_mtrs, 
-                               static_mtrs   = static_mtrs, 
-                               nols          = nols)
+    output[[t]] = run_one_year(year             = year,
+                               scenario_info    = scenario_info, 
+                               tax_law          = tax_law,
+                               static           = static,
+                               baseline_mtrs    = baseline_mtrs, 
+                               static_mtrs      = static_mtrs, 
+                               vat_price_offset = vat_price_offset,
+                               nols             = nols)
     
     # Update table of NOLs and write 
     nols = update_nols(nols   = nols, 
@@ -132,6 +148,10 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
   # Write NOLs file
   nols %>% 
     write_csv(file.path(output_root, 'totals', 'nols.csv'))
+  
+  # Write VAT price offset info
+  vat_price_offset %>% 
+    write_csv(file.path(output_root, 'supplemental', 'vat_price_offset.csv'))
   
   # Write totals files
   totals_pr = output %>%
@@ -156,6 +176,8 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
       scenario_root   = output_root, 
       corp_tax_root   = scenario_info$interface_paths$`Corporate-Tax-Model`, 
       estate_tax_root = scenario_info$interface_paths$`Estate-Tax-Model`, 
+      vat_root        = scenario_info$interface_paths$`Value-Added-Tax-Model`,
+      other_root      = scenario_info$interface_paths$`Macro-Projections`,
       off_model_root  = scenario_info$interface_paths$`Off-Model-Estimates`
     ) 
 
@@ -169,7 +191,7 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs) {
 
 
 run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, 
-                        static_mtrs, nols) {
+                        static_mtrs, vat_price_offset, nols) {
   
   #----------------------------------------------------------------------------
   # Runs a single year of tax simulation. 
@@ -186,6 +208,8 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
   #                            scenario run, indexed by year/tax unit ID; NULL 
   #                            if this run is in static mode or if no MTR 
   #                            variables were specified 
+  #   - vat_price_offset (df): series of price level adjustment factors to 
+  #                            reflect introduction of a VAT
   #   - nols (df)            : tibble of endogeneously calculated net operating 
   #                            losses to distribute 
   #
@@ -227,7 +251,13 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
     do_salt_workaround_baseline() %>% 
 
     # Allocate net operating losses attributable to some prior-year modeled policy
-    distribute_nols(nols, year) 
+    distribute_nols(nols, year) %>% 
+    
+    # Adjust Social Security benefits for VAT-driven price level increase
+    do_ss_cola(year, vat_price_offset) %>% 
+    
+    # Adjust capital income for VAT-drive price level increase
+    do_capital_adjustment(year, vat_price_offset) 
   
 
   #---------------------------
@@ -276,13 +306,13 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
     mtrs = scenario_info$mtr_vars %>%
       map2(.y = scenario_info$mtr_types, 
            .f = ~ calc_mtrs(
-             tax_units = tax_units %>% 
-                           select(-all_of(return_vars %>% 
-                           unlist() %>% 
-                           set_names(NULL))), 
-             liab_baseline = tax_units$liab_pr_ee + tax_units$liab_iit_net,
-             var           = .x,
-             type          = .y
+             tax_units   = tax_units %>% 
+                             select(-all_of(return_vars %>% 
+                             unlist() %>% 
+                             set_names(NULL))), 
+             liab_actual = tax_units$liab_pr_ee + tax_units$liab_iit_net,
+             var         = .x,
+             type        = .y
           )
       ) %>% 
       bind_cols() %>% 
@@ -303,14 +333,13 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
   #-----------------
   
   # Write microdata
-  if (year %in% scenario_info$dist_years) {
-    tax_units %>%  
-      select(all_of(globals$detail_vars), starts_with('mtr_')) %>% 
-      write_csv(file.path(scenario_info$output_path, 
-                          if_else(static, 'static', 'conventional'),
-                          'detail', 
-                          paste0(year, '.csv')))
-  }
+  tax_units %>%  
+    select(all_of(globals$detail_vars), starts_with('mtr_')) %>% 
+    write_csv(file.path(scenario_info$output_path, 
+                        if_else(static, 'static', 'conventional'),
+                        'detail', 
+                        paste0(year, '.csv')))
+
   
   # Get totals from microdata
   totals = list(pr            = get_pr_totals(tax_units, year), 

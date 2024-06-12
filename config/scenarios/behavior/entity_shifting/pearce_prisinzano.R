@@ -58,7 +58,7 @@ do_entity_shifting = function(tax_units, ...) {
       tau_dist_baseline = mtr_kg_lt_baseline * (alpha + (1 - alpha) * beta),
       
       # Next, the net corporate rate
-      tau_corp_policy   = corp.rate          + (1 - corp.rate) * tau_dist_policy, 
+      tau_corp_policy   = corp.rate          + (1 - corp.rate)          * tau_dist_policy, 
       tau_corp_baseline = corp.rate_baseline + (1 - corp.rate_baseline) * tau_dist_baseline,
       
       # Finally, the pass-through rate. Assumed to be equal for all types of 

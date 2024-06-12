@@ -1,0 +1,6 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Value-Added-Tax-Model.vintage,dep.Value-Added-Tax-Model.ID
+baseline,baseline,,2024:2026,,wages1 wages2,nextdollar nextdollar,2024050121,baseline
+partial-simple,public/gale/01_simple/10_wagesub,,2024:2026,,wages1 wages2,nextdollar nextdollar,2024050121,baseline
+partial-mod_simple,public/gale/02_mod_simple/10_wagesub,,2024:2026,,wages1 wages2,nextdollar nextdollar,2024050121,baseline
+partial-back_future,public/gale/03_back_future/10_wagesub,,2024:2026,,wages1 wages2,nextdollar nextdollar,2024050121,gale
+partial-ubi,public/gale/04_ubi/10_wagesub,,2024:2026,,wages1 wages2,nextdollar nextdollar,2024050121,gale

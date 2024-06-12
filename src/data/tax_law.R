@@ -88,7 +88,7 @@ load_tax_law_input = function(config_path) {
   # Returns: list of raw tax parameter inputs, indexed by tax parameter name 
   #          (list).
   #----------------------------------------------------------------------------
-  
+
   # Get list of YAML files
   param_names = config_path %>% 
     list.files(pattern = '.yaml') %>% 

@@ -3,7 +3,7 @@
 #----------------------------------------
 
 # Set return variables for function
-return_vars$calc_rebate = c('rebate')
+return_vars$calc_rebate = c('rebate', 'become_filer_rebate')
 
 
 calc_rebate = function(tax_unit, fill_missings = F) {
@@ -19,7 +19,9 @@ calc_rebate = function(tax_unit, fill_missings = F) {
   #                            with 0s (used in testing, not in simulation)
   #
   # Returns: dataframe of following variables:
-  #          - rebate (dbl) : value of rebate
+  #   - rebate              (dbl) : value of rebate
+  #   - filer               (int) : whether tax unit files a tax return  
+  #   - become_filer_rebate (int) : for nonfilers, whether induced to file
   #----------------------------------------------------------------------------
   
   req_vars = c(
@@ -34,6 +36,7 @@ calc_rebate = function(tax_unit, fill_missings = F) {
     'dep_ssn2',      # (bool) whether second youngest dependent has a Social Security number (NA for tax units without a second dependent)
     'dep_ssn3',      # (bool) whether oldest dependent has a Social Security number (NA for tax units without a third dependent)
     'agi',           # (dbl)  Adjusted Gross Income
+    'filer',         # (int)  whether tax unit files a tax return
     
     # Tax law attributes
     'rebate.dep_age_limit',  # (int) maximum qualifying dependent age
@@ -76,9 +79,12 @@ calc_rebate = function(tax_unit, fill_missings = F) {
       po_share = pmin(1, pmax(0, agi - rebate.po_thresh) / po_range),
       rebate   = rebate * (1 - po_share),
       
-      # Apply dependent restriction
-      rebate = rebate * !dep_status
+      # Apply dependent return restriction, to avoid double-counting
+      rebate = rebate * !dep_status,
 
+      # Change filing status for nonfilers if rebate is in effect
+      become_filer_rebate = as.integer(filer == 0 & rebate > 0)
+      
     ) %>% 
     
     # Keep variables to return

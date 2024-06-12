@@ -34,15 +34,22 @@ if (length(args) > 0) {
   delete_detail                           = args[9]
   multicore                               = args[10]
 } else {
-  runscript_names  = 'policy_runs/romney/dependent_exemptions'
+  runscript_names  = paste('public/gale/mtrs',
+                           'public/gale/partial_dynamic',
+                           'public/gale/common',
+                           'public/gale/simple', 
+                           'public/gale/mod_simple', 
+                           'public/gale/back_future', 
+                           'public/gale/ubi',
+                           sep = '____')
   scenario_id      = NULL
   user_id          = 'jar335'
   local            = 1
   vintage          = NULL
   pct_sample       = 1
   stacked          = 1
-  baseline_vintage = NULL 
-  delete_detail    = 1
+  baseline_vintage = NULL
+  delete_detail    = 0
   multicore        = 1
 }
 
@@ -101,10 +108,11 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   }
   
   
-  
   #-------------------------------
   # Post-processing and reporting
   #-------------------------------
+  
+  print('Running post-processing routines')
   
   # Generate 1040 reports
   create_1040_reports(counterfactual_ids)
@@ -120,10 +128,7 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   
   # Generate distributional estimates
   build_all_distribution_tables(counterfactual_ids)
-  if (stacked == 1) {
-    build_all_stacked_distribution_tables(counterfactual_ids)
-  }
-  
+
   # Delete detailed microdata files
   if (delete_detail == 1) {
     purge_detail()
