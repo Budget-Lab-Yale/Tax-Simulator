@@ -62,22 +62,29 @@ do_child_earnings = function(tax_units, ...) {
     summarise(pdf = sum(pdf), 
               .groups = 'drop')
   
+  # Read VAT price offset so that we can calculate income deltas in real terms
+  vat_price_offset = globals$output_root %>% 
+    file.path(scenario_info$ID, '/static/supplemental/vat_price_offset.csv') %>% 
+    read_csv(show_col_types = F) %>% 
+    filter(year == current_year) %>%
+    select(cpi_factor) %>% 
+    deframe()
   
   # Read baseline and static input; calculate change in income for this year 
   policy_effect_current_year = globals$output_root %>% 
     file.path('baseline/static/detail', paste0(current_year, '.csv')) %>% 
     fread() %>% 
     tibble() %>%
-    mutate(liab_baseline = liab_iit_net + liab_pr_ee) %>% 
+    mutate(ati = expanded_inc - liab_iit_net - liab_pr_ee) %>% 
     bind_cols(
       globals$output_root %>% 
         file.path(scenario_info$ID, '/static/detail', paste0(current_year, '.csv')) %>% 
         fread() %>% 
         tibble() %>%
-        mutate(liab_policy = liab_iit_net + liab_pr_ee) %>% 
-        select(liab_policy)
+        mutate(ati_reform = (expanded_inc - liab_iit_net - liab_pr_ee) / vat_price_offset) %>% 
+        select(ati_reform)
     ) %>% 
-    mutate(delta_income = liab_baseline - liab_policy) %>% 
+    mutate(delta_income = ati_reform - ati) %>% 
     select(id, expanded_inc, delta_income)
   
   # Get parent rank
@@ -124,7 +131,7 @@ do_child_earnings = function(tax_units, ...) {
     # Calculate average effect by parent rank
     group_by(parent_rank) %>% 
     summarise(delta_income = weighted.mean(delta_income, weight), 
-              expanded_inc = weighted.mean(pmax(0, expanded_inc), weight)) %>% 
+              expanded_inc = weighted.mean(pmax(0, expanded_inc), weight) / vat_price_offset) %>% 
     
     # Convert change in income to rank-space equivalent
     mutate(rank_slope = expanded_inc - lag(expanded_inc), 
@@ -238,7 +245,7 @@ do_child_earnings = function(tax_units, ...) {
     # Write summary file
     tax_units %>%
       filter(!is.na(delta_rank)) %>% 
-      filter(delta_rank > 0) %>% 
+      filter(delta_rank != 0) %>% 
       group_by(parent_rank, child_rank) %>% 
       summarise(n          = sum(weight),
                 wages      = sum(wages * weight),

@@ -5,7 +5,7 @@
 
 # Set return variables for function
 return_vars$calc_liab = c('nonref', 'ref', 'ref_iit', 'ref_other', 'refund', 
-                          'liab_iit', 'liab_iit_net')
+                          'liab_iit', 'liab_iit_net', 'number_of_credits')
 
 
 calc_liab = function(tax_unit, fill_missings = F) {
@@ -51,12 +51,21 @@ calc_liab = function(tax_unit, fill_missings = F) {
     'net_ptc',         # (dbl) value of Premium Tax Credit, net of advance credit paid
     'eitc',            # (dbl) value of EITC
     'rebate',          # (dbl) value of rebate credit
+    'wage_subsidy1',   # (dbl) value of individual wage subsidy, primary earner
+    'wage_subsidy2',   # (dbl) value of individual wage subsidy, primary earner
     'cdctc_ref',       # (dbl) value of refundable Child and Dependent Care Tax Credit
     'savers_ref',      # (dbl) value of refundable Saver's credit
     'liab_niit',       # (dbl) Net Investment Income Tax liability
     'liab_seca',       # (dbl) self-employment tax liability
     'recapture_tax',   # (dbl) credit recapture
-    'ira_penalty'      # (dbl) penalty paid for early withdraw from retirement account
+    'ira_penalty',     # (dbl) penalty paid for early withdraw from retirement account
+    
+    # Tax law attributes
+    'credits.repeal_ftc',        # (dbl) whether to repeal Foreign Tax Credit
+    'credits.repeal_res_energy', # (dbl) whether to repeal residential energy credits
+    'credits.repeal_old',        # (dbl) whether to repeal credit for the elderly/disabled
+    'credits.repeal_gbc',        # (dbl) whether to repeal general business credits
+    'credits.repeal_other'       # (dbl) whether to repeal all other nonrefundable credits
   )
   
   tax_unit %>% 
@@ -64,6 +73,13 @@ calc_liab = function(tax_unit, fill_missings = F) {
     # Parse tax unit object passed as argument
     parse_calc_fn_input(req_vars, fill_missings) %>% 
     mutate(
+      
+      # Remove any repealed credits
+      ftc             = if_else(credits.repeal_ftc == 0,        ftc,             0),
+      res_energy_cred = if_else(credits.repeal_res_energy == 0, res_energy_cred, 0),
+      old_cred        = if_else(credits.repeal_old == 0,        old_cred,        0),
+      gbc             = if_else(credits.repeal_gbc == 0,        gbc,             0),
+      other_nonref    = if_else(credits.repeal_other == 0,      other_nonref,    0),
       
       # Limit nonrefundable credits to liability before credits
       nonref = pmin(liab_bc, ftc + 
@@ -81,8 +97,16 @@ calc_liab = function(tax_unit, fill_missings = F) {
       liab_ac_nonref = liab_bc - nonref, 
       
       # Apply refundable credits to remaining (non-NIIT) individual income tax
-      # (equiavlent to E11601 on the 2015 PUF) 
-      ref     = ctc_ref + ed_ref + net_ptc + eitc + rebate + cdctc_ref + savers_ref,
+      # (equivalent to E11601 on the 2015 PUF) 
+      ref = ctc_ref + 
+            ed_ref + 
+            net_ptc + 
+            eitc + 
+            rebate + 
+            wage_subsidy1 + 
+            wage_subsidy2 + 
+            cdctc_ref + 
+            savers_ref,
       ref_iit = pmin(liab_ac_nonref, ref), 
       
       # Calculate individual income tax liability after credits 
@@ -107,8 +131,24 @@ calc_liab = function(tax_unit, fill_missings = F) {
       
       # Define a "net income tax liability" variable, which applies all refundable
       # credits against income tax liability, possibly going negative 
-      liab_iit_net = liab_iit - (ref_other + refund)
+      liab_iit_net = liab_iit - (ref_other + refund),
       
+      # Reporting variable: number of credits claimed. Used for estimating the
+      # time burden of filing taxes
+      number_of_credits = (ftc != 0) + 
+                          (cdctc_nonref + cdctc_ref != 0)  + 
+                          (ed_nonref + ed_ref != 0) + 
+                          (savers_nonref + savers_ref != 0) + 
+                          (res_energy_cred != 0) + 
+                          (old_cred != 0) + 
+                          (ctc_nonref + ctc_ref != 0) + 
+                          (gbc != 0) +
+                          (prior_yr_cred != 0) + 
+                          (other_nonref != 0) + 
+                          (net_ptc != 0) + 
+                          (eitc != 0) + 
+                          (rebate != 0) + 
+                          (wage_subsidy1 + wage_subsidy2 != 0)
     ) %>% 
     
     # Keep variables to return

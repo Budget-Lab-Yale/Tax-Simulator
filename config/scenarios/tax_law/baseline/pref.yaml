@@ -14,6 +14,10 @@ filing_status_mapper:
     '3': brackets_married / 2
     '4': brackets_head
 
+# Whether to tax long-term capital gains and qualified dividends at ordinary rates
+tax_at_ord:
+  value: 0
+
 # Preferred tax rate schedule 
 rates:
   value: [0.0, 0.15, 0.20]
@@ -54,4 +58,5 @@ collectibles_rate:
 # (as opposed to stepped up to market value as per current law)
 carryover_basis:
   value: 0
+
 

@@ -530,6 +530,8 @@ recode_1040_vars = function(df, scenario_id) {
       Variable == 'ed_ref'                ~ 'Refundable education credits',
       Variable == 'net_ptc'               ~ 'Net Premium Tax Credit',
       Variable == 'eitc'                  ~ 'Earned Income Tax Credit',
+      Variable == 'wage_subsidy1'         ~ 'Wage subsidy credit, primary earner',
+      Variable == 'wage_subsidy2'         ~ 'Wage subsidy credit, secondary earner',
       Variable == 'rebate'                ~ 'Recovery rebate ("stimulus check")',
       Variable == 'cdctc_ref'             ~ 'Refundable Child and Dependent Care Tax Credit',
       Variable == 'savers_ref'            ~ 'Refundable Saver\'s credit',

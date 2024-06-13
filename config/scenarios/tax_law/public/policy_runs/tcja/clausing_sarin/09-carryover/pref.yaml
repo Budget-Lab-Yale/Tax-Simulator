@@ -1,8 +1,0 @@
----
-
-# Whether basis on appreciated property is carried over to decedent 
-# (as opposed to stepped up to market value as per current law)
-carryover_basis:
-  value: 
-    '2014': 0
-    '2026': 1

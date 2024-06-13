@@ -105,6 +105,8 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
     'ed_ref', 
     'net_ptc', 
     'eitc',
+    'wage_subsidy1',
+    'wage_subsidy2',
     'rebate',
     'cdctc_ref',
     'savers_ref',
@@ -177,7 +179,7 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
       across(.cols = all_of(demographic_vars), 
              .fns  = ~ sum(. * weight) / 1e6), 
       
-      # Restrict tax variables to 1040 filers
+      # Get tax variable totals, restricted to filers only
       across(.cols  = all_of(tax_vars), 
              .fns   = list(n      = ~ sum((. != 0) * weight * filer) / 1e6,
                            amount = ~ sum(.        * weight * filer) / 1e9),
@@ -251,10 +253,10 @@ get_pr_totals = function(tax_units, yr) {
       across(.cols = all_of(demographic_vars), 
              .fns  = ~ sum(. * weight) / 1e6), 
       
-      # Restrict tax variables to 1040 filers
+      # Get totals for tax variables
       across(.cols  = all_of(tax_vars), 
-             .fns   = list(n     = ~ sum((. != 0) * weight * filer) / 1e6,
-                           amount = ~ sum(.        * weight * filer) / 1e9), 
+             .fns   = list(n      = ~ sum((. != 0) * weight) / 1e6,
+                           amount = ~ sum(.        * weight) / 1e9), 
              .names = '{fn}_{col}')
     ) %>% 
     

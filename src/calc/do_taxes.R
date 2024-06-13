@@ -14,7 +14,7 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
   # 
   # Parameters:
   #   - tax_units (df)       : tibble of tax units, exogenous variables only
-  #   - baseline_pr_er (df)  : tibble of baseline emplyoer-side payroll 
+  #   - baseline_pr_er (df)  : tibble of baseline employer-side payroll 
   #                            liabilities. NULL if baseline
   #   - vars_1040 (str[])    : vector of (calculated) names of 1040 variables  
   #                            to return
@@ -108,8 +108,7 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
       left_join(bind_rows(above, item), by = c('id', 'char_ded_type')) %>% 
       select(-char_ded_type)
     
-    
-    # Standard case: just calculate the 1040 once  
+  # Standard case: just calculate the 1040 once  
   } else {
     tax_units %<>% 
       bind_cols(do_1040(., vars_1040))
@@ -123,6 +122,9 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
 
   tax_units %<>%
     mutate(
+      
+      # Update filer status
+      filer = filer + (become_filer_ctc == 1 | become_filer_rebate == 1),
       
       # Expanded income metric for distributional tables: gross realized income 
       # plus employer's share of payroll taxes
@@ -316,6 +318,9 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # Rebates / UBI
     bind_cols(calc_rebate(.)) %>%
     
+    # Wage subsidy
+    bind_cols(calc_wage_subsidy(.)) %>%
+    
       
     #----------------------
     # Liability allocation
@@ -330,7 +335,6 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # Select variables and return
     select(all_of(return_vars)) %>%
     return()
-  
 } 
 
 
@@ -403,7 +407,7 @@ remit_taxes = function(tax_units) {
 
 
 
-calc_mtrs = function(tax_units, liab_baseline, var, type = 'nextdollar') {
+calc_mtrs = function(tax_units, liab_actual, var, type = 'nextdollar') {
   
   #----------------------------------------------------------------------------
   # Calculates MTR, either at the next-dollar or 0-actual extensive margin, 
@@ -411,8 +415,9 @@ calc_mtrs = function(tax_units, liab_baseline, var, type = 'nextdollar') {
   # 
   # Parameters:
   #   - tax_units (df)        : tibble of tax units, exogenous variables only
-  #   - liab_baseline (dbl[]) : vector of net income tax liability plus
-  #                             employee's share of payroll tax liability
+  #   - liab_actual (dbl[])   : vector of net tax liability plus employee's 
+  #                             share of payroll tax liability to compare 
+  #                             against
   #   - var (str)             : name of variable to increment
   #   - type (str)            : "nextdollar" for next-dollar MTR, "extensive"
   #                             for delta in taxes when reducing the value to 0
@@ -477,7 +482,7 @@ calc_mtrs = function(tax_units, liab_baseline, var, type = 'nextdollar') {
     mutate(
       
       # Calculate numerator: change in taxes 
-      delta_taxes = liab_pr_ee + liab_iit_net - liab_baseline,
+      delta_taxes = liab_pr_ee + liab_iit_net - liab_actual,
       
       # Calculate denominator: change in variable value
       delta_var = case_when(

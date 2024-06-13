@@ -40,6 +40,7 @@ calc_savers_cred = function(tax_unit, fill_missings = F) {
     'savers_cred',  # (dbl) PUF-abstracted value of Saver's Credit
     
     # Tax law attributes
+    'savers.repeal',     # (int) whether Saver's Credit is repealed
     'savers.refundable'  # (int) whether Saver's Credit is refundable
   )
   
@@ -48,6 +49,9 @@ calc_savers_cred = function(tax_unit, fill_missings = F) {
     # Parse tax unit object passed as argument
     parse_calc_fn_input(req_vars, fill_missings) %>% 
     mutate(
+      
+      # Check for repeal
+      savers_cred = if_else(savers.repeal == 0, savers_cred, 0),
       
       # Limit to liability if nonrefundable
       liab          = pmax(0, liab_bc - ftc - cdctc_nonref - ed_nonref),

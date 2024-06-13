@@ -49,7 +49,8 @@ calc_tax = function(tax_unit, fill_missings = F) {
     'pref.rates[]',           # (dbl[]) preferred tax rate schedule
     'pref.brackets[]',        # (int[]) brackets for preferred-rate income
     'pref.unrecapture_rate',  # (dbl)   tax rate on Section 1250 unrecaptured gain 
-    'pref.collectibles_rate'  # (dbl)   tax rate on collectibles gain
+    'pref.collectibles_rate', # (dbl)   tax rate on collectibles gain
+    'pref.tax_at_ord'         # (dbl)   whether long-term capital gains and qualified dividends are taxed at ordinary rates 
   )
   
   tax_unit %>% 
@@ -148,7 +149,9 @@ calc_tax = function(tax_unit, fill_missings = F) {
     # Determine overall tax liability
     #---------------------------------
     
-    # Calculate ordinary-rate liability on all taxable income, as an upper bound
+    # Calculate ordinary-rate liability on all taxable income, as an upper bound 
+    # if preferred rates or in place or as actual liability if all income is 
+    # taxed at ordinary rates
     bind_cols(
       integrate_rates_brackets(
         df              = .,
@@ -161,8 +164,21 @@ calc_tax = function(tax_unit, fill_missings = F) {
       )
     ) %>%
   
-    # Calculate total liability 
-    mutate(liab = pmin(liab_max, liab_pref + liab_1250 + liab_collect + liab_ord)) %>% 
+    mutate(
+      
+      # Calculate total liability 
+      liab = if_else(pref.tax_at_ord == 0, 
+                     pmin(liab_max, liab_ord + liab_pref + liab_1250 + liab_collect), 
+                     liab_max), 
+      
+      # Update preferred-rate variables in the case where all income is taxed 
+      # at ordinary rates
+      liab_ord     = if_else(pref.tax_at_ord == 0, liab,         0),
+      liab_pref    = if_else(pref.tax_at_ord == 0, liab_pref,    0),
+      liab_1250    = if_else(pref.tax_at_ord == 0, liab_1250,    0),
+      liab_collect = if_else(pref.tax_at_ord == 0, liab_collect, 0)
+    
+    ) %>% 
   
     # Keep variables to return
     select(all_of(return_vars$calc_tax)) %>% 

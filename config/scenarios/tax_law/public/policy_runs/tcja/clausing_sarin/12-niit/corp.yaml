@@ -1,9 +1,0 @@
----
-
-# Top corporate tax rate (used only in calculating business income shifting
-# across entity type, currently)
-rate:
-  value:
-    '2014': 0.35
-    '2018': 0.21
-    '2026': 0.28
