@@ -31,7 +31,7 @@ build_horizontal_tables = function(counterfactual_ids) {
       1:nrow(calibrators) %>%
         map(.f = ~ get_horizontal_dist(micro, id, calibrators[.x,])) %>%
         bind_rows() %>%
-        write_csv(., file = file.path(globals$output_root, id, 'static/totals/horizontal.csv'))
+        write_csv(., file = file.path(globals$output_root, id, 'static/supplemental/horizontal.csv'))
     
       construct_horizontal_comparison_figures(micro, id)
     }
@@ -82,7 +82,7 @@ get_horizontal_dist = function(tax_units, scen_id, calibrators) {
     inc_cat = factor(case_when(
         tile == -1              ~ 'Negative',
         inc_eq == 0             ~ 'No Income',
-        between(tile, 1, 99)    ~ '1-9',
+        between(tile, 1, 99)    ~ "'1-9",
         between(tile, 100, 199) ~ "'10-19",
         between(tile, 200, 299) ~ '20-29',
         between(tile, 300, 399) ~ '30-39',
@@ -93,7 +93,7 @@ get_horizontal_dist = function(tax_units, scen_id, calibrators) {
         between(tile, 800, 899) ~ '80-89',
         between(tile, 900, 990) ~ '90-99',
         T                       ~ 'Top'
-      ), levels = c('Negative', 'No Income', '1-9', "'10-19", '20-29', '30-39', '40-49',
+      ), levels = c('Negative', 'No Income', "'1-9", "'10-19", '20-29', '30-39', '40-49',
                     '50-59', '60-69', '70-79', '80-89', '90-99', 'Top'))
     )   %>%
     mutate(inc_eq = inc_eq - jitter) %>%
