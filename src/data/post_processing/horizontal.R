@@ -1,5 +1,5 @@
 
-build_horizontal_tables = function(counterfactual_ids, year) {
+build_horizontal_tables = function(counterfactual_ids) {
   
   #----------------------------------------------------------------------------
   # This function constructs tables to analyze horizontal equity within expanded
@@ -7,7 +7,6 @@ build_horizontal_tables = function(counterfactual_ids, year) {
   # 
   # Parameters:
   #   - counterfactual_ids : (str) list of non-baseline scenario IDs
-  #   - year : (int) year of microdata to be processed
   # 
   # Returns: void, writes two csv's per scenario. One horizontal distribution table,
   #            one summary table for simplified A-B univariate comparison
@@ -17,17 +16,18 @@ build_horizontal_tables = function(counterfactual_ids, year) {
   ids = c("baseline", counterfactual_ids)
   
   for (id in ids){
-    micro = file.path(globals$output_root, id, 'static/detail', paste0(year, '.csv')) %>% 
-      fread() %>% 
-      tibble()
+    for (yr in get_scenario_info(id)$dist_years) {
+      micro = file.path(globals$output_root, id, 'static/detail', paste0(yr, '.csv')) %>% 
+        fread() %>% 
+        tibble()
     
-    1:nrow(calibrators) %>%
-      map(.f = ~ get_horizontal_dist(micro, id, calibrators[.x,])) %>%
-      bind_rows() %>%
-      write_csv(., file = file.path(globals$output_root, id, 'static/totals/horizontal.csv'))
+      1:nrow(calibrators) %>%
+        map(.f = ~ get_horizontal_dist(micro, id, calibrators[.x,])) %>%
+        bind_rows() %>%
+        write_csv(., file = file.path(globals$output_root, id, 'static/totals/horizontal.csv'))
     
-    construct_horizontal_comparison_figures(micro, id)
-    
+      construct_horizontal_comparison_figures(micro, id)
+    }
   }
 }
 
@@ -120,33 +120,41 @@ construct_horizontal_comparison_figures = function(tax_units, scen_id) {
   
   tax_units %>%
     mutate(
-      etr_b = liab_iit_net / expanded_inc,
-      bucket = round(expanded_inc, -2)
+      etr = liab_iit_net / expanded_inc
     ) %>%
     filter(
-      (between(bucket, 22500, 27500) & n_dep_ctc < 2) |
-        (between(bucket, 70e3, 77500)) |
-        (between(bucket, 185e3, 215e3)),
-      between(etr_b, -1, 1), filing_status < 3
+      (between(expandec_inc, 25e3 * .97, 25e3 * 1.03) & n_dep_ctc < 2 & filing_status ==2) |
+        (between(expandec_inc, 75e3 * .97, 75e3 * 1.03)) |
+        (between(expandec_inc, 2e5 * .97, 2e5 *1.03) & filing_status == 1),
+      between(etr, -1, 1)
     ) %>%
     mutate(bucket = case_when(
-      between(bucket, 22500, 27500) & (n_dep_ctc == 0) ~ "Figure 1.1",
-      between(bucket, 22500, 27500) & (n_dep_ctc == 1) ~ "Figure 1.2",
-      between(bucket, 70e3, 77500)  & (liab_seca == 0) ~ "Figure 2.1",
-      between(bucket, 70e3, 77500)  & (liab_seca > 0)  ~ "Figure 2.2",
-      between(bucket, 185e3, 215e3) & (sch_e == 0)     ~ "Figure 3.1",
-      between(bucket, 185e3, 215e3) & (sch_e > 0)      ~ "Figure 3.2",
-      T                                                ~ "err"
+      between(expandec_inc, 25e3 * .97, 25e3 * 1.03) & (n_dep_ctc == 0)      ~ "Figure 1.1",
+      between(expandec_inc, 25e3 * .97, 25e3 * 1.03) & (n_dep_ctc == 1)      ~ "Figure 1.2",
+      between(expandec_inc, 75e3 * .97, 75e3 * 1.03) & (filing_status == 1)  ~ "Figure 2.1",
+      between(expandec_inc, 75e3 * .97, 75e3 * 1.03) & (filing_status == 2)  ~ "Figure 2.2",
+      between(expandec_inc, 2e5 * .97, 2e5 *1.03)    & (liab_ == 0)          ~ "Figure 3.1",
+      between(expandec_inc, 2e5 * .97, 2e5 *1.03)    & (sch_e > 0)           ~ "Figure 3.2",
+      T                                                                      ~ "err"
     )) %>%
     filter(bucket != "err") %>%
     group_by(bucket) %>%
       summarise(
-        inc = sum(expanded_inc),
-        liab = sum(liab_iit_net)
+        inc = sum(expanded_inc * weight),
+        liab = sum(liab_iit_net * weight)
       ) %>%
-      mutate(etr = liab / inc) %>%
-      select(bucket, etr) %>%
-      write_csv(., file = file.path(globals$output_root, scen_id, 'static/totals/horizontal_figures.csv'))
+      mutate(
+        etr      = liab / inc,
+        scenario = scen_id,
+        figure   = substr(bucket, 1, 8),
+        dot      = substr(bucket, 10, 10)
+        ) %>%
+    select(scenario, figure, dot, etr) %>%
+    pivot_wider(names_from = dot, values_from = etr) %>%
+    mutate(
+      `2` = ifelse(is.na(`2`), `2`, `1`)
+    )%>%
+    write_csv(., file = file.path(globals$output_root, scen_id, 'static/totals/horizontal_figures.csv'))
 }
 
 

@@ -43,7 +43,7 @@ if (length(args) > 0) {
                            'public/gale/ubi',
                            sep = '____')
   scenario_id      = NULL
-  user_id          = 'jar335'
+  user_id          = get_user_id()
   local            = 1
   vintage          = NULL
   pct_sample       = 1
@@ -128,6 +128,9 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   
   # Generate distributional estimates
   build_all_distribution_tables(counterfactual_ids)
+  
+  # Generate horzontal estimates
+  build_horizontal_tables(counterfactual_ids)
   
   # Delete detailed microdata files
   if (delete_detail == 1) {
