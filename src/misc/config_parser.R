@@ -6,7 +6,8 @@
 
 
 
-parse_globals = function(runscript_name, scenario_id, user_id, local, vintage, 
+
+parse_globals = function(runscript_name, scenario_id, local, vintage, 
                          baseline_vintage, pct_sample) {
   
   #----------------------------------------------------------------------------
@@ -18,8 +19,6 @@ parse_globals = function(runscript_name, scenario_id, user_id, local, vintage,
   #   - runscript_name (str)   : name of runscript CSV file 
   #   - scenario_id (str)      : optional name of scenario ID contained in 
   #                              the runscript; "NULL" indicates all 
-  #   - user_id (str)          : Yale NetID, used for local runs in which output
-  #                              is stored on user-specific scratch folder
   #   - local (int)            : whether this is a local run (1) or a production
   #                              run (0)  
   #   - vintage (str)          : optional argument (NULL if not provided) to 
@@ -34,7 +33,7 @@ parse_globals = function(runscript_name, scenario_id, user_id, local, vintage,
   #
   # Returns: list of 8:
   #   - random_seed (int)    :seed for random number generation 
-  #   - runtime_args (df)    : tibble representation of the runscripts CSV
+  #   - runscript (df)       : tibble representation of the runscripts CSV
   #   - interface_paths (df) : tibble with ID-interface-filepath info in rows 
   #   - output_root (str)    : path where output data is written
   #   - baseline_root (str)  : path where baseline data is written/read from
@@ -97,8 +96,8 @@ parse_globals = function(runscript_name, scenario_id, user_id, local, vintage,
     }
   }
   
-  # Read runtime arguments 
-  runtime_args = runscript_name %>% 
+  # Read runscript
+  runscript = runscript_name %>% 
     paste0('.csv') %>%
     file.path('./config/runscripts/', .) %>% 
     read_csv(show_col_types = F)
@@ -107,24 +106,24 @@ parse_globals = function(runscript_name, scenario_id, user_id, local, vintage,
   for (dep in names(interface_defaults)) {
     
     # Skip specified interfaces
-    if (dep == 'Tax-Simulator' | (paste0('dep.', dep, '.vintage') %in% colnames(runtime_args))) {
+    if (dep == 'Tax-Simulator' | (paste0('dep.', dep, '.vintage') %in% colnames(runscript))) {
       next
     }
     
     # Add columns
-    runtime_args[[paste0('dep.', dep, '.vintage')]] = interface_defaults[[dep]]$default_vintage
-    runtime_args[[paste0('dep.', dep, '.ID')]]      = interface_defaults[[dep]]$default_id
+    runscript[[paste0('dep.', dep, '.vintage')]] = interface_defaults[[dep]]$default_vintage
+    runscript[[paste0('dep.', dep, '.ID')]]      = interface_defaults[[dep]]$default_id
   }
   
-  # Subset runtime arguments
+  # Subset runscript to specified ID, if supplied
   if (!is.null(scenario_id)) {
-    runtime_args %<>% 
+    runscript %<>% 
       filter(ID == scenario_id)
   }
   
   # Write dependencies CSV; this is a vintage-level file which lists all 
   # other model vintages on which these Tax-Simmulator results are dependent
-  dependencies = runtime_args %>% 
+  dependencies = runscript %>% 
     select(TaxSimulatorID = ID, starts_with('dep.')) %>% 
     mutate(across(.cols = everything(),
                   .fns  = as.character)) %>% 
@@ -147,7 +146,7 @@ parse_globals = function(runscript_name, scenario_id, user_id, local, vintage,
   
   
   # Write Tax-Simulator-specific behavioral assumptions
-  runtime_args %>% 
+  runscript %>% 
     select(ID, tax_law, behavior) %>%
     write_csv(file.path(output_root, 'behavioral_assumptions.csv'))
   
@@ -199,7 +198,7 @@ parse_globals = function(runscript_name, scenario_id, user_id, local, vintage,
   
   # Return runtime args and interface paths  
   return(list(random_seed     = random_seed,
-              runtime_args    = runtime_args,
+              runscript       = runscript,
               interface_paths = interface_paths, 
               output_root     = output_root,
               baseline_root   = baseline_root,
@@ -258,22 +257,22 @@ get_scenario_info = function(id) {
                 values_from = path) %>% 
     as.list()
   
-  # List of scenario-specific runtime args, named by column name
-  runtime_args = globals$runtime_args %>% 
+  # List of scenario-specific runscript, named by column name
+  runscript_items = globals$runscript %>% 
     filter(ID == id) %>% 
     as.list()
   
   # Name of tax law scenario
-  tax_law_id = runtime_args$tax_law
+  tax_law_id = runscript_items$tax_law
   
   # Behavioral feedback module names (formatted as {var}/{module})
   behavior_modules = NULL
-  if (!is.na(runtime_args$behavior)) {
-    behavior_modules = str_split_1(runtime_args$behavior, ' ')
+  if (!is.na(runscript_items$behavior)) {
+    behavior_modules = str_split_1(runscript_items$behavior, ' ')
   }
   
   # Years to run. Parse based on format supplied
-  years_input = as.character(runtime_args$years)
+  years_input = as.character(runscript_items$years)
   if (str_detect(years_input, ':')) {
     years_input = str_split_1(years_input, ':') 
   }
@@ -282,17 +281,17 @@ get_scenario_info = function(id) {
   } else if (length(years_input) == 2) {
     years = as.integer(years_input[1]):as.integer(years_input[2])
   } else {
-    stop('Invalid input for years column in runscript')
+    stop('Invalid input for years column in runscript_items')
   }
   
   # Distribution table and microdata output years
-  if (is.na(runtime_args$dist_years)) {
+  if (is.na(runscript_items$dist_years)) {
     dist_years = years
-  } else if (str_detect(as.character(runtime_args$dist_years), ':')) {
-    dist_years_input = str_split_1(as.character(runtime_args$dist_years), ':')
+  } else if (str_detect(as.character(runscript_items$dist_years), ':')) {
+    dist_years_input = str_split_1(as.character(runscript_items$dist_years), ':')
     dist_years = as.integer(dist_years_input[1]):as.integer(dist_years_input[2]) 
   } else {
-    dist_years = runtime_args$dist_years %>%
+    dist_years = runscript_items$dist_years %>%
       as.character() %>%
       str_split_1(' ') %>% 
       as.integer()
@@ -300,14 +299,14 @@ get_scenario_info = function(id) {
   
   # Names of variables for which to calculate marginal tax rates
   mtr_vars = NULL
-  if (!is.na(runtime_args$mtr_vars)) {
-    mtr_vars = str_split_1(runtime_args$mtr_vars, ' ')
+  if (!is.na(runscript_items$mtr_vars)) {
+    mtr_vars = str_split_1(runscript_items$mtr_vars, ' ')
   }
    
   # Types of MTRs, with same index as MTR vars above
   mtr_types = NULL
-  if (!is.na(runtime_args$mtr_types)) {
-    mtr_types = str_split_1(runtime_args$mtr_types, ' ')
+  if (!is.na(runscript_items$mtr_types)) {
+    mtr_types = str_split_1(runscript_items$mtr_types, ' ')
   }
    
   # Return as named list
@@ -318,7 +317,7 @@ get_scenario_info = function(id) {
               behavior_modules = behavior_modules, 
               years            = years, 
               dist_years       = dist_years,
-              mtr_vars         = mtr_vars, 
+              mtr_vars         = mtr_vars,
               mtr_types        = mtr_types))
 }
 

@@ -89,15 +89,23 @@ purge_detail = function() {
   }
 }
 
-getwd() %>% str_split_1(., '/') %>% getElement(., 6)
 
 
 get_user_id = function() {
-  return(
-    getwd() %>%
-      str_split_1(., '/') %>%
-      getElement(., 6)
-  )
+  
+  #----------------------------------------------------------------------------
+  # Gets user's Yale NetID in order to construct output paths. Assumes project 
+  # file is located in the user's personal drive in /gpfs/gibbs/project/sarin/
+  # 
+  # Parameters: none
+  #
+  # Returns: user ID (str)
+  #----------------------------------------------------------------------------
+  
+  getwd() %>%
+    str_split_1('/') %>%
+    getElement(6) %>% 
+    return()
 }
   
   

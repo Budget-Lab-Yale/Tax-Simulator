@@ -1,4 +1,6 @@
 #-----------------------------------------
+# main.R
+#
 # Main entry point into the tax simulator
 #-----------------------------------------
 
@@ -20,7 +22,26 @@ return_vars = list()
 list.files('./src', recursive = T) %>% 
   walk(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
 
-# Parse command line arguments
+# Get user id 
+user_id = get_user_id()
+
+
+#------------------------
+# Set runtime parameters
+#------------------------
+
+runscript_names  = 'public/gale/mtrs'
+scenario_id      = NULL
+local            = 1
+vintage          = NULL
+pct_sample       = 0.1
+stacked          = 1
+baseline_vintage = NULL
+delete_detail    = 0
+multicore        = 1
+
+
+# Override default runtime args if executed from the command line
 args = commandArgs(trailingOnly = T)
 if (length(args) > 0) {
   runscript_names                         = args[1]
@@ -33,45 +54,28 @@ if (length(args) > 0) {
   if (args[8] == 'NULL') baseline_vintage = NULL else baseline_vintage = args[8]
   delete_detail                           = args[9]
   multicore                               = args[10]
-} else {
-  runscript_names  = paste('public/gale/mtrs',
-                           'public/gale/partial_dynamic',
-                           'public/gale/common',
-                           'public/gale/simple', 
-                           'public/gale/mod_simple', 
-                           'public/gale/back_future', 
-                           'public/gale/ubi',
-                           sep = '____')
-  scenario_id      = NULL
-  user_id          = get_user_id()
-  local            = 1
-  vintage          = NULL
-  pct_sample       = 1
-  stacked          = 1
-  baseline_vintage = NULL
-  delete_detail    = 0
-  multicore        = 1
-}
+} 
 
 
 #----------------------
-# Loop over runscripts
+# Runscript-level loop
 #----------------------
 
 # Runscript names are separated by four underscores
 for (runscript_name in str_split_1(runscript_names, '____')) {
   
   # Set global (scenario-independent) variables
-  globals = parse_globals(runscript_name   = runscript_name,
-                          scenario_id      = scenario_id,
-                          user_id          = user_id, 
-                          local            = local, 
-                          vintage          = vintage, 
-                          baseline_vintage = baseline_vintage,
-                          pct_sample       = pct_sample)
+  globals = parse_globals(
+    runscript_name   = runscript_name,
+    scenario_id      = scenario_id,
+    local            = local, 
+    vintage          = vintage, 
+    baseline_vintage = baseline_vintage,
+    pct_sample       = pct_sample
+  )
   
   # Get list of non-baseline scenarios 
-  counterfactual_ids = globals$runtime_args %>% 
+  counterfactual_ids = globals$runscript %>% 
     filter(ID != 'baseline') %>% 
     get_vector('ID')
   
