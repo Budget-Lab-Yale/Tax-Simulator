@@ -7,3 +7,5 @@ data.table
 openxlsx
 Hmisc
 parallel
+dineq
+modi

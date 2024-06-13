@@ -1,0 +1,9 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2025:2026,,,
+ctc_tcja,policy_runs/ctc/perm_tcja_ctc/04-phaseout,,2025:2026,,,
+ctc_arpa,policy_runs/ctc/perm_arpa_ctc/04-phaseout,,2025:2026,,,
+ctc_fsa,policy_runs/ctc/fsa_2.0/ctc-04-phaseout,,2025:2026,,,
+fsa,policy_runs/ctc/fsa_2.0/salt,,2025:2026,,,
+tcja_full,policy_runs/tcja_ext/cbo_stacking/08-losses,,2025:2026,,,
+tcja_partial,policy_runs/tcja_ext/400k/02-qbi,,2025:2026,,,
+sarin_clausing,policy_runs/tcja_ext/clausing_sarin/14-ctc,,2025:2026,,,

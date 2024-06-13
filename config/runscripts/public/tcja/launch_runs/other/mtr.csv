@@ -1,5 +1,0 @@
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2026,,wages1 wages2,nextdollar nextdollar
-full_extension,policy_runs/tcja_ext/cbo_stacking/08-losses,,2026,,wages1 wages2,nextdollar nextdollar
-partial_extension,policy_runs/tcja_ext/400k/02-qbi,,2026,,wages1 wages2,nextdollar nextdollar
-sarin_clausing,policy_runs/tcja_ext/clausing_sarin/14-ctc,,2026,,wages1 wages2,nextdollar nextdollar

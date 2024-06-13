@@ -451,6 +451,7 @@ build_all_distribution_tables = function(counterfactual_ids) {
 
 
 format_table = function(dist_metrics, wb, year, group_var, financing, other) {
+
   
   #----------------------------------------------------------------------------
   # Given a tibble of distributional metrics calculated either by income or

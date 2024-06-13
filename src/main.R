@@ -43,7 +43,7 @@ if (length(args) > 0) {
                            'public/gale/ubi',
                            sep = '____')
   scenario_id      = NULL
-  user_id          = 'jar335'
+  user_id          = get_user_id()
   local            = 1
   vintage          = NULL
   pct_sample       = 1
@@ -60,7 +60,7 @@ if (length(args) > 0) {
 
 # Runscript names are separated by four underscores
 for (runscript_name in str_split_1(runscript_names, '____')) {
-
+  
   # Set global (scenario-independent) variables
   globals = parse_globals(runscript_name   = runscript_name,
                           scenario_id      = scenario_id,
@@ -84,7 +84,7 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   if (is.null(baseline_vintage)) {
     baseline_mtrs = do_scenario('baseline')  
     
-  # Otherwise, load baseline marginal tax rates 
+    # Otherwise, load baseline marginal tax rates 
   } else{
     baseline_mtrs = get_scenario_info(counterfactual_ids[1])$years %>% 
       map(.f = ~ globals$baseline_root %>%  
@@ -128,7 +128,8 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   
   # Generate distributional estimates
   build_all_distribution_tables(counterfactual_ids)
-
+  build_horizontal_tables(counterfactual_ids)
+  
   # Delete detailed microdata files
   if (delete_detail == 1) {
     purge_detail()
