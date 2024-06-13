@@ -108,7 +108,8 @@ get_horizontal_dist = function(tax_units, scen_id, calibrators) {
       `Average Equalized Income` = wtd.mean(inc_eq, weight),
       `Average Tax Rate` = sum(liab_iit_net * weight) / sum(inc_eq * weight),
       `Standard Deviation of Tax Rate` = sqrt(weighted.var(etr, weight, na.rm = T)),
-      `Interquartile Range` = IQR(etr), 
+      `Interquartile Range` = wtd.quantile(etr, weight, probs = 0.75) - 
+                              wtd.quantile(etr, weight, probs = 0.25),
       .groups = 'drop'
     ) %>%
     return()
