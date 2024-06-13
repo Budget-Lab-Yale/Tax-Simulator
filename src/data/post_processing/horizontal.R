@@ -107,7 +107,7 @@ get_horizontal_dist = function(tax_units, scen_id, calibrators) {
       `Average Equalized Income` = wtd.mean(inc_eq, weight),
       `Average Tax Rate` = sum(liab_iit_net * weight) / sum(inc_eq * weight),
       `Standard Deviation of Tax Rate` = sqrt(weighted.var(etr, weight, na.rm = T)),
-      `Interquartile Range` = IQR(etr)
+      `Interquartile Range` = weight
     ) %>%
     return()
 }
@@ -132,18 +132,18 @@ construct_horizontal_comparison_figures = function(tax_units, scen_id) {
       etr = liab_iit_net / expanded_inc
     ) %>%
     filter(
-      (between(expandec_inc, 25e3 * .97, 25e3 * 1.03) & n_dep_ctc < 2 & filing_status ==2) |
-        (between(expandec_inc, 75e3 * .97, 75e3 * 1.03)) |
-        (between(expandec_inc, 2e5 * .97, 2e5 *1.03) & filing_status == 1),
+      (between(expanded_inc, 25e3 * .97, 25e3 * 1.03) & n_dep_ctc < 2 & filing_status ==2) |
+        (between(expanded_inc, 75e3 * .97, 75e3 * 1.03)) |
+        (between(expanded_inc, 2e5 * .97, 2e5 *1.03) & filing_status == 1),
       between(etr, -1, 1)
     ) %>%
     mutate(bucket = case_when(
-      between(expandec_inc, 25e3 * .97, 25e3 * 1.03) & (n_dep_ctc == 0)      ~ "Figure 1.1",
-      between(expandec_inc, 25e3 * .97, 25e3 * 1.03) & (n_dep_ctc == 1)      ~ "Figure 1.2",
-      between(expandec_inc, 75e3 * .97, 75e3 * 1.03) & (filing_status == 1)  ~ "Figure 2.1",
-      between(expandec_inc, 75e3 * .97, 75e3 * 1.03) & (filing_status == 2)  ~ "Figure 2.2",
-      between(expandec_inc, 2e5 * .97, 2e5 *1.03)    & (liab_ == 0)          ~ "Figure 3.1",
-      between(expandec_inc, 2e5 * .97, 2e5 *1.03)    & (sch_e > 0)           ~ "Figure 3.2",
+      between(expanded_inc, 25e3 * .97, 25e3 * 1.03) & (n_dep_ctc == 0)      ~ "Figure 1.1",
+      between(expanded_inc, 25e3 * .97, 25e3 * 1.03) & (n_dep_ctc == 1)      ~ "Figure 1.2",
+      between(expanded_inc, 75e3 * .97, 75e3 * 1.03) & (filing_status == 1)  ~ "Figure 2.1",
+      between(expanded_inc, 75e3 * .97, 75e3 * 1.03) & (filing_status == 2)  ~ "Figure 2.2",
+      between(expanded_inc, 2e5 * .97, 2e5 *1.03)    & (liab_ == 0)          ~ "Figure 3.1",
+      between(expanded_inc, 2e5 * .97, 2e5 *1.03)    & (sch_e > 0)           ~ "Figure 3.2",
       T                                                                      ~ "err"
     )) %>%
     filter(bucket != "err") %>%
