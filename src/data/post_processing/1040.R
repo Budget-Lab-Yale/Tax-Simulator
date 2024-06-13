@@ -245,7 +245,7 @@ create_1040_reports = function(counterfactual_ids) {
   }
   
   # Create baseline workbook by removing non-baseline info
-  if('baseline' %in% globals$runtime_args$ID){
+  if('baseline' %in% globals$runscript$ID){
     for (i in 1:length(scenario)) {
       deleteData(wb         = wb, 
                  sheet      = i, 
@@ -332,8 +332,7 @@ create_stacked_1040_reports = function(counterfactual_ids) {
     
     # Clean up 
     relocate(run_type, Variable, Series) %>% 
-    recode_1040_vars('baseline') %>% 
-    #recode_1040_vars(globals$runtime_args$ID) %>%
+    recode_1040_vars('baseline') %>%
     filter(!is.na(Variable)) %>% 
     mutate(Series = if_else(Series == 'amount', 'Amount', 'Number of returns'))
   
@@ -439,17 +438,16 @@ recode_1040_vars = function(df, scenario_id) {
   #----------------------------------------------------------------------------
 
   # Create labels for tax rate variables
-  runtime_args = globals$runtime_args %>% 
+  runscript = globals$runscript %>% 
     slice(1)
-    #filter(ID == scenario_id)
   
-  if (is.na(runtime_args$mtr_types)) {
+  if (is.na(runscript$mtr_types)) {
     tax_rate_types = c()  
   } else {
-    tax_rate_types = ifelse(str_split_1(runtime_args$mtr_types, ' ') == 'nextdollar', 
+    tax_rate_types = ifelse(str_split_1(runscript$mtr_types, ' ') == 'nextdollar', 
                             'Marginal', 
                             'Average') %>% 
-                       set_names(str_split_1(runtime_args$mtr_vars, ' '))
+                       set_names(str_split_1(runscript$mtr_vars, ' '))
   }
   
   # Rename tax rate variables

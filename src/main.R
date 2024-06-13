@@ -34,7 +34,7 @@ runscript_names  = 'public/gale/mtrs'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
-pct_sample       = 0.01
+pct_sample       = 0.1
 stacked          = 1
 baseline_vintage = NULL
 delete_detail    = 0
@@ -75,7 +75,7 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   )
   
   # Get list of non-baseline scenarios 
-  counterfactual_ids = globals$runtime_args %>% 
+  counterfactual_ids = globals$runscript %>% 
     filter(ID != 'baseline') %>% 
     get_vector('ID')
   

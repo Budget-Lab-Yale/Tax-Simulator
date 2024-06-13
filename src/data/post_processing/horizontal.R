@@ -38,6 +38,7 @@ build_horizontal_tables = function(counterfactual_ids) {
   }
 }
 
+
 get_horizontal_dist = function(tax_units, scen_id, calibrators) {
   
   #----------------------------------------------------------------------------
