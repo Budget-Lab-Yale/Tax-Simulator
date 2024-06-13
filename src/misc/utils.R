@@ -89,7 +89,6 @@ purge_detail = function() {
   }
 }
 
-getwd() %>% str_split_1(., '/') %>% getElement(., 6)
 
 
 get_user_id = function() {
