@@ -1,3 +1,9 @@
+#----------------------------------------------------------------------------
+# horizontal.R
+# 
+# Calculates measures of horizontal equity 
+#----------------------------------------------------------------------------
+
 
 build_horizontal_tables = function(counterfactual_ids) {
   
@@ -11,6 +17,7 @@ build_horizontal_tables = function(counterfactual_ids) {
   # Returns: void, writes two csv's per scenario. One horizontal distribution table,
   #            one summary table for simplified A-B univariate comparison
   #----------------------------------------------------------------------------
+  
   calibrators = expand_grid(P = seq(0,1,0.25), e = seq(0,1,0.25))
   
   ids = c("baseline", counterfactual_ids)
@@ -103,6 +110,7 @@ get_horizontal_dist = function(tax_units, scen_id, calibrators) {
     ) %>%
     return()
 }
+
 
 construct_horizontal_comparison_figures = function(tax_units, scen_id) {
   
