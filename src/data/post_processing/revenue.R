@@ -130,18 +130,16 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root,
 
 
 
-calc_rev_est = function(counterfactual_ids) {
+calc_rev_est = function(id) {
   
   #----------------------------------------------------------------------------
   # Calculates revenue deltas against baseline for each counterfactual 
   # scenario.
   # 
   # Parameters: 
-  #   - counterfactual_ids (str[]) : list of scenario names for counterfactual
-  #                                  scenarios
+  #   - id : scenario ID
   #
-  # Returns: Void, writes dataframes containing, for each scenario, fiscal year 
-  # deltas for:
+  # Returns: Void, writes dataframe containing fiscal year deltas for:
   #   - Total revenues
   #   - Payroll tax revenues
   #   - Individual income tax revenues
@@ -177,171 +175,168 @@ calc_rev_est = function(counterfactual_ids) {
                  values_to = 'baseline')
   
   for (static in c(T, F)) {
+  
+    # Read VAT price offset for baseline dollars calculation
+    vat_price_offset = globals$output_root %>% 
+      file.path(id, 'static/supplemental/vat_price_offset.csv') %>% 
+      read_csv(show_col_types = F)
     
-    for (scenario_id in counterfactual_ids) {
+    # Read in counterfactual scenario receipts 
+    scenario = file.path(globals$output_root, 
+                         id, 
+                         if_else(static, 'static', 'conventional'),
+                         'totals', 
+                         'receipts.csv') %>%
+      read_csv(show_col_types = F) %>%
+      
+      # Pivot long in variable type
+      mutate(total = revenues_payroll_tax + 
+                     revenues_income_tax - 
+                     outlays_tax_credits + 
+                     revenues_corp_tax + 
+                     revenues_estate_tax + 
+                     revenues_vat +
+                     revenues_other) %>% 
+      pivot_longer(cols      = -year, 
+                   names_to  = 'series', 
+                   values_to = 'counterfactual')
+    
+    # Read GDP and adjust for VAT (i.e. price level rises)
+    gdp = globals$interface_paths %>% 
+      filter(ID == globals$interface_path$ID[1], interface == 'Macro-Projections') %>% 
+      get_vector('path') %>% 
+      file.path(c('historical.csv', 'projections.csv')) %>% 
+      map(~ read_csv(.x, show_col_types = F)) %>% 
+      bind_rows() %>% 
+      left_join(scenario %>% 
+                  filter(series == 'revenues_vat') %>% 
+                  select(year, vat = counterfactual), 
+                by = 'year') %>% 
+      mutate(gdp_counterfactual = gdp_fy + vat) %>% 
+      select(year, gdp_baseline = gdp_fy, gdp_counterfactual)
+    
+    # Join together and calculate estimates: nominal, baseline dollars (for
+    # scenarios with a VAT), and share-of-GDP
+    rev_est = baseline %>% 
+      left_join(scenario, by = c('year', 'series')) %>% 
+      left_join(gdp, by = 'year') %>% 
+      left_join(vat_price_offset, by = 'year') %>%
+      mutate(
+        Dollars            = counterfactual - baseline, 
+        `Baseline dollars` = (counterfactual / gdp_deflator_factor) - baseline,
+        `Share of GDP`     = (counterfactual / gdp_counterfactual) - (baseline / gdp_baseline)
+      ) %>% 
+      select(year, Series = series, Dollars, `Baseline dollars`, `Share of GDP`) %>%
+      pivot_longer(cols      = c(Dollars, `Baseline dollars`, `Share of GDP`), 
+                   names_to  = 'Measure', 
+                   values_to = 'delta') %>% 
+      pivot_wider(names_from  = `year`, 
+                  values_from = delta) %>% 
+      arrange(Measure, 
+              match(Series, c('total', 'revenues_income_tax', 
+                              'revenues_payroll_tax', 'revenues_corp_tax', 
+                              'revenues_estate_tax', 'revenues_other',
+                              'revenues_vat', 'outlays_tax_credits'))
+      ) %>% 
+      mutate(Series = case_when(
+        Series == 'total'                ~ 'Total budget effect', 
+        Series == 'revenues_payroll_tax' ~ '  Revenues, payroll tax', 
+        Series == 'revenues_income_tax'  ~ '  Revenues, individual income tax', 
+        Series == 'outlays_tax_credits'  ~ '  Outlays, refundable tax credits',
+        Series == 'revenues_corp_tax'    ~ '  Revenues, corporate income tax',
+        Series == 'revenues_estate_tax'  ~ '  Revenues, estate tax',
+        Series == 'revenues_vat'         ~ '  Revenues, value added tax',
+        Series == 'revenues_other'       ~ '  Revenues, other'
+      )) 
+    
+    # Convert to measure-indexed list
+    rev_est = c('Dollars', 'Baseline dollars', 'Share of GDP') %>% 
+      map(.f = ~ rev_est %>% 
+            filter(Measure == .x) %>% 
+            select(-Measure)) %>% 
+      set_names(c('Dollars', 'Baseline dollars', 'Share of GDP'))
+    
+    # Write machine-readable version
+    rev_est$Dollars %>% 
+      filter(Series == 'Total budget effect') %>% 
+      select(-Series) %>% 
+      pivot_longer(cols      = everything(), 
+                   names_to  = 'year',
+                   values_to = 'total') %>% 
+      mutate(year = as.integer(year)) %>% 
+      write_csv(file.path(globals$output_root, 
+                          id, 
+                          if_else(static, 'static', 'conventional'),
+                          'supplemental', 
+                          'revenue_estimates.csv'))
 
-      # Read VAT price offset for baseline dollars calculation
-      vat_price_offset = globals$output_root %>% 
-        file.path(scenario_id, 'static/supplemental/vat_price_offset.csv') %>% 
-        read_csv(show_col_types = F)
+    # Create workbook
+    wb = createWorkbook()
+    addWorksheet(wb, as.character(id))
+    
+    # Write data
+    writeData(wb = wb, sheet = as.character(id), x = rev_est$Dollars, startRow = 2)
+    writeData(wb = wb, sheet = as.character(id), startRow = 1, 
+              x = 'FY budget effects of policy change, nominal dollars')
+    
+    writeData(wb = wb, sheet = as.character(id), x = rev_est$`Baseline dollars`, startRow = 13)
+    writeData(wb = wb, sheet = as.character(id), startRow = 12, 
+              x = 'FY budget effects of policy change, baseline dollars')
+    
+    writeData(wb = wb, sheet = as.character(id), x = rev_est$`Share of GDP`, startRow = 24)
+    writeData(wb = wb, sheet = as.character(id), startRow = 23, 
+              x = 'FY budget effects of policy change, share of GDP')
+    
+    # Format numbers and cells 
+    addStyle(wb         = wb, 
+             sheet      = as.character(id), 
+             rows       = c(2:10, 14:21), 
+             cols       = 2:ncol(rev_est$Dollars), 
+             gridExpand = T, 
+             style      = createStyle(numFmt = 'COMMA'), 
+             stack      = T)
+    addStyle(wb         = wb, 
+             sheet      = as.character(id),
+             rows       = 25:31, 
+             cols       = 2:ncol(rev_est$Dollars), 
+             gridExpand = T, 
+             style      = createStyle(numFmt = 'PERCENTAGE'), 
+             stack      = T)
+    addStyle(wb         = wb, 
+             sheet      = as.character(id), 
+             rows       = c(1, 2, 10, 12, 13, 21, 23, 24, 32), 
+             cols       = 1:ncol(rev_est$Dollars), 
+             gridExpand = T, 
+             style      = createStyle(border = 'bottom'), 
+             stack      = T)
+    addStyle(wb         = wb, 
+             sheet      = as.character(id), 
+             rows       = c(2, 13, 24), 
+             cols       = 1:ncol(rev_est$Dollars), 
+             gridExpand = T, 
+             style      = createStyle(textDecoration = 'bold'), 
+             stack      = T)
+    addStyle(wb         = wb, 
+             sheet      = as.character(id), 
+             rows       = 2:31,
+             cols       = 2:ncol(rev_est$Dollars), 
+             gridExpand = T, 
+             style      = createStyle(halign = 'center'), 
+             stack      = T)
+    setColWidths(wb     = wb,
+                 sheet  = as.character(id),
+                 cols   = 1:ncol(rev_est$Dollars),
+                 widths = c(29, rep(6, ncol(rev_est$Dollars) - 1)))
       
-      # Read in counterfactual scenario receipts 
-      scenario = file.path(globals$output_root, 
-                           scenario_id, 
-                           if_else(static, 'static', 'conventional'),
-                           'totals', 
-                           'receipts.csv') %>%
-        read_csv(show_col_types = F) %>%
-        
-        # Pivot long in variable type
-        mutate(total = revenues_payroll_tax + 
-                       revenues_income_tax - 
-                       outlays_tax_credits + 
-                       revenues_corp_tax + 
-                       revenues_estate_tax + 
-                       revenues_vat +
-                       revenues_other) %>% 
-        pivot_longer(cols      = -year, 
-                     names_to  = 'series', 
-                     values_to = 'counterfactual')
-      
-      # Read GDP and adjust for VAT (i.e. price level rises)
-      gdp = globals$interface_paths %>% 
-        filter(ID == globals$interface_path$ID[1], interface == 'Macro-Projections') %>% 
-        get_vector('path') %>% 
-        file.path(c('historical.csv', 'projections.csv')) %>% 
-        map(~ read_csv(.x, show_col_types = F)) %>% 
-        bind_rows() %>% 
-        left_join(scenario %>% 
-                    filter(series == 'revenues_vat') %>% 
-                    select(year, vat = counterfactual), 
-                  by = 'year') %>% 
-        mutate(gdp_counterfactual = gdp_fy + vat) %>% 
-        select(year, gdp_baseline = gdp_fy, gdp_counterfactual)
-      
-      # Join together and calculate estimates: nominal, baseline dollars (for
-      # scenarios with a VAT), and share-of-GDP
-      rev_est = baseline %>% 
-        left_join(scenario, by = c('year', 'series')) %>% 
-        left_join(gdp, by = 'year') %>% 
-        left_join(vat_price_offset, by = 'year') %>%
-        mutate(
-          Dollars            = counterfactual - baseline, 
-          `Baseline dollars` = (counterfactual / gdp_deflator_factor) - baseline,
-          `Share of GDP`     = (counterfactual / gdp_counterfactual) - (baseline / gdp_baseline)
-        ) %>% 
-        select(year, Series = series, Dollars, `Baseline dollars`, `Share of GDP`) %>%
-        pivot_longer(cols      = c(Dollars, `Baseline dollars`, `Share of GDP`), 
-                     names_to  = 'Measure', 
-                     values_to = 'delta') %>% 
-        pivot_wider(names_from  = `year`, 
-                    values_from = delta) %>% 
-        arrange(Measure, 
-                match(Series, c('total', 'revenues_income_tax', 
-                                'revenues_payroll_tax', 'revenues_corp_tax', 
-                                'revenues_estate_tax', 'revenues_other',
-                                'revenues_vat', 'outlays_tax_credits'))
-        ) %>% 
-        mutate(Series = case_when(
-          Series == 'total'                ~ 'Total budget effect', 
-          Series == 'revenues_payroll_tax' ~ '  Revenues, payroll tax', 
-          Series == 'revenues_income_tax'  ~ '  Revenues, individual income tax', 
-          Series == 'outlays_tax_credits'  ~ '  Outlays, refundable tax credits',
-          Series == 'revenues_corp_tax'    ~ '  Revenues, corporate income tax',
-          Series == 'revenues_estate_tax'  ~ '  Revenues, estate tax',
-          Series == 'revenues_vat'         ~ '  Revenues, value added tax',
-          Series == 'revenues_other'       ~ '  Revenues, other'
-        )) 
-      
-      # Convert to measure-indexed list
-      rev_est = c('Dollars', 'Baseline dollars', 'Share of GDP') %>% 
-        map(.f = ~ rev_est %>% 
-              filter(Measure == .x) %>% 
-              select(-Measure)) %>% 
-        set_names(c('Dollars', 'Baseline dollars', 'Share of GDP'))
-      
-      # Write machine-readable version
-      rev_est$Dollars %>% 
-        filter(Series == 'Total budget effect') %>% 
-        select(-Series) %>% 
-        pivot_longer(cols      = everything(), 
-                     names_to  = 'year',
-                     values_to = 'total') %>% 
-        mutate(year = as.integer(year)) %>% 
-        write_csv(file.path(globals$output_root, 
-                            scenario_id, 
-                            if_else(static, 'static', 'conventional'),
-                            'supplemental', 
-                            'revenue_estimates.csv'))
 
-      # Create workbook
-      wb = createWorkbook()
-      addWorksheet(wb, as.character(scenario_id))
-      
-      # Write data
-      writeData(wb = wb, sheet = as.character(scenario_id), x = rev_est$Dollars, startRow = 2)
-      writeData(wb = wb, sheet = as.character(scenario_id), startRow = 1, 
-                x = 'FY budget effects of policy change, nominal dollars')
-      
-      writeData(wb = wb, sheet = as.character(scenario_id), x = rev_est$`Baseline dollars`, startRow = 13)
-      writeData(wb = wb, sheet = as.character(scenario_id), startRow = 12, 
-                x = 'FY budget effects of policy change, baseline dollars')
-      
-      writeData(wb = wb, sheet = as.character(scenario_id), x = rev_est$`Share of GDP`, startRow = 24)
-      writeData(wb = wb, sheet = as.character(scenario_id), startRow = 23, 
-                x = 'FY budget effects of policy change, share of GDP')
-      
-      # Format numbers and cells 
-      addStyle(wb         = wb, 
-               sheet      = as.character(scenario_id), 
-               rows       = c(2:10, 14:21), 
-               cols       = 2:ncol(rev_est$Dollars), 
-               gridExpand = T, 
-               style      = createStyle(numFmt = 'COMMA'), 
-               stack      = T)
-      addStyle(wb         = wb, 
-               sheet      = as.character(scenario_id),
-               rows       = 25:31, 
-               cols       = 2:ncol(rev_est$Dollars), 
-               gridExpand = T, 
-               style      = createStyle(numFmt = 'PERCENTAGE'), 
-               stack      = T)
-      addStyle(wb         = wb, 
-               sheet      = as.character(scenario_id), 
-               rows       = c(1, 2, 10, 12, 13, 21, 23, 24, 32), 
-               cols       = 1:ncol(rev_est$Dollars), 
-               gridExpand = T, 
-               style      = createStyle(border = 'bottom'), 
-               stack      = T)
-      addStyle(wb         = wb, 
-               sheet      = as.character(scenario_id), 
-               rows       = c(2, 13, 24), 
-               cols       = 1:ncol(rev_est$Dollars), 
-               gridExpand = T, 
-               style      = createStyle(textDecoration = 'bold'), 
-               stack      = T)
-      addStyle(wb         = wb, 
-               sheet      = as.character(scenario_id), 
-               rows       = 2:31,
-               cols       = 2:ncol(rev_est$Dollars), 
-               gridExpand = T, 
-               style      = createStyle(halign = 'center'), 
-               stack      = T)
-      setColWidths(wb     = wb,
-                   sheet  = as.character(scenario_id),
-                   cols   = 1:ncol(rev_est$Dollars),
-                   widths = c(29, rep(6, ncol(rev_est$Dollars) - 1)))
-        
-
-      # Write revenue estimates file
-      saveWorkbook(wb   = wb, 
-                   file = file.path(globals$output_root, 
-                                    as.character(scenario_id), 
-                                    if_else(static, 'static', 'conventional'),
-                                    'supplemental', 
-                                    'revenue_estimates.xlsx'), 
-                   overwrite = T)
-    }
+    # Write revenue estimates file
+    saveWorkbook(wb   = wb, 
+                 file = file.path(globals$output_root, 
+                                  as.character(id), 
+                                  if_else(static, 'static', 'conventional'),
+                                  'supplemental', 
+                                  'revenue_estimates.xlsx'), 
+                 overwrite = T)
   }
 }
 

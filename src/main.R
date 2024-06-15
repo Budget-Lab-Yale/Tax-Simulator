@@ -30,11 +30,13 @@ user_id = get_user_id()
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'public/gale/mtrs'
+runscript_names  = paste('public/tcja/ctc_pe_swap/2018', 
+                         'public/tcja/ctc_pe_swap/2026', 
+                         sep = '____')
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
-pct_sample       = 0.1
+pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
 delete_detail    = 0
@@ -112,29 +114,18 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   }
   
   
-  #-------------------------------
-  # Post-processing and reporting
-  #-------------------------------
+  #---------------------------------------
+  # Stacked post-processing and reporting
+  #---------------------------------------
   
-  print('Running post-processing routines')
+  print('Running stacked post-processing routines')
   
-  # Generate 1040 reports
-  create_1040_reports(counterfactual_ids)
   if (stacked == 1) {
-    create_stacked_1040_reports(counterfactual_ids)
-  }
-  
-  # Generate revenue estimates
-  calc_rev_est(counterfactual_ids)
-  if (stacked == 1) {
+    build_stacked_1040_reports(counterfactual_ids)
     calc_stacked_rev_est(counterfactual_ids)
   }
   
-  # Generate distributional estimates
-  build_all_distribution_tables(counterfactual_ids)
-  build_horizontal_tables(counterfactual_ids)
-  
-  # Delete detailed microdata files
+  # Delete microdata files
   if (delete_detail == 1) {
     purge_detail()
   }
