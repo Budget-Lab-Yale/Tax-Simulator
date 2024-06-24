@@ -30,16 +30,14 @@ user_id = get_user_id()
 # Set runtime parameters
 #------------------------
 
-runscript_names  = paste('public/tcja/ctc_pe_swap/2018', 
-                         'public/tcja/ctc_pe_swap/2026', 
-                         sep = '____')
+runscript_names  = 'private/loopholes'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
-delete_detail    = 0
+delete_detail    = 1
 multicore        = 1
 
 
