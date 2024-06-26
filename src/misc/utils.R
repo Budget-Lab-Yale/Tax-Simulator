@@ -109,3 +109,26 @@ get_user_id = function() {
 }
   
   
+knit_series = function(counterfactual_ids, path) {
+  
+  #----------------------------------------------------------------------------
+  # Reads in all variations of an output file across scenarios and combines them
+  # into a single file.
+  # 
+  # Parameters: 
+  #   - counterfactual_ids (str) : Non baseline scenarios
+  #   - path (file.path) : Path from scenario's main directory in output to the
+  #                        file to be knit.
+  #
+  # Returns: (df) combined files
+  #----------------------------------------------------------------------------
+  
+  c('baseline', counterfactual_ids) %>%
+    map(.f = ~ file.path(globals$output_root, .x, path) %>%
+          fread() %>%
+          tibble()) %>%
+    bind_rows() %>%
+    return()
+}
+
+

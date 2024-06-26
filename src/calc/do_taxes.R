@@ -158,6 +158,20 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
       )
     )
   
+  # Attach AGI bracketed liability variables for post-processing
+  tax_units %<>%
+      bind_cols(
+        integrate_rates_brackets(
+          df              = .,
+          n_brackets      = NULL, 
+          prefix_brackets = 'ord.brackets', 
+          prefix_rates    = 'ord.rates', 
+          y               = 'agi',
+          output_name     = 'liab_brac', 
+          by_bracket      = T
+        )
+    )
+  
   # Set "corporate tax change", a variable used to measure the off-model 
   # corporate tax revenue changes owing to business entity shifting, to 0 if 
   # not running business entity shifting behavioral feedback
