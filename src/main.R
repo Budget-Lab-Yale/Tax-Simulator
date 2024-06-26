@@ -30,11 +30,11 @@ user_id = get_user_id()
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'public/gale/mtrs'
+runscript_names  = 'private/loopholes'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
-pct_sample       = 0.1
+pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
 delete_detail    = 0
@@ -79,7 +79,7 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
     filter(ID != 'baseline') %>% 
     get_vector('ID')
   
-  
+
   #---------------
   # Run scenarios
   #---------------
@@ -132,10 +132,12 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   
   # Generate distributional estimates
   build_all_distribution_tables(counterfactual_ids)
-  build_horizontal_tables(counterfactual_ids)
+  #build_horizontal_tables(counterfactual_ids)
   
   # Delete detailed microdata files
   if (delete_detail == 1) {
     purge_detail()
   }
 }
+
+

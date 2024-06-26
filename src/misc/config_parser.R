@@ -192,7 +192,9 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     'liab_amt', 'liab_bc', 'cdctc_nonref', 'ctc_nonref', 'ed_nonref', 'nonref', 
     'ed_ref', 'eitc', 'cdctc_ref', 'ctc_ref', 'rebate', 'ref', 'liab_niit', 
     'liab_iit', 'liab_iit_net', 'liab_fica_er1', 'liab_fica_er2', 'liab_seca', 
-    'liab_pr_ee', 'liab_pr', 'simple_filer', 'number_of_credits'
+    'liab_pr_ee', 'liab_pr', 'simple_filer', 'number_of_credits',
+    'liab_brac1', 'liab_brac2', 'liab_brac3', 'liab_brac4', 'liab_brac5',
+    'liab_brac6', 'liab_brac7'
   )
   
   
