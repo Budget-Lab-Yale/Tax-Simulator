@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2017:2019,,,
+ctc,public/tcja/ctc_pe_swap/2018/ctc,,2017:2019,,,
+pe_dep,public/tcja/ctc_pe_swap/2018/pe_dep,,2017:2019,,,

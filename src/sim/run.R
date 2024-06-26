@@ -84,6 +84,29 @@ do_scenario = function(ID, baseline_mtrs) {
                            overwrite = T))  
   }
   
+  
+  #--------------------
+  # Do post-processing
+  #--------------------
+  
+  if (ID != 'baseline') {
+    
+    # Formatted 1040 report
+    build_1040_report(ID)
+    
+    # Revenue estimates
+    calc_rev_est(ID)
+    
+    # Distribution tables
+    build_distribution_tables(ID, baseline_id = 'baseline')
+  }
+  
+  # Horizontal equity report
+  # build_horizontal_tables(ID)
+  
+  
+  
+  
   # Return MTRs if running baseline
   if (ID == 'baseline') {
     return(static_mtrs)

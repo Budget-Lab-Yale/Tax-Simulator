@@ -5,36 +5,32 @@
 #----------------------------------------------------------------------------
 
 
-build_horizontal_tables = function(counterfactual_ids) {
+build_horizontal_tables = function(id) {
   
   #----------------------------------------------------------------------------
   # This function constructs tables to analyze horizontal equity within expanded
-  #    income deciles for all scenarios in the current batch. 
+  # income deciles for all scenarios in the current batch. 
   # 
   # Parameters:
-  #   - counterfactual_ids : (str) list of non-baseline scenario IDs
+  #   - id : (str) scenario ID
   # 
   # Returns: void, writes two csv's per scenario. One horizontal distribution table,
-  #            one summary table for simplified A-B univariate comparison
+  #          one summary table for simplified A-B univariate comparison
   #----------------------------------------------------------------------------
   
   calibrators = expand_grid(P = seq(0,1,0.25), e = seq(0,1,0.25))
   
-  ids = c("baseline", counterfactual_ids)
+  for (yr in get_scenario_info(id)$dist_years) {
+    micro = file.path(globals$output_root, id, 'static/detail', paste0(yr, '.csv')) %>% 
+      fread() %>% 
+      tibble()
   
-  for (id in ids){
-    for (yr in get_scenario_info(id)$dist_years) {
-      micro = file.path(globals$output_root, id, 'static/detail', paste0(yr, '.csv')) %>% 
-        fread() %>% 
-        tibble()
-    
-      1:nrow(calibrators) %>%
-        map(.f = ~ get_horizontal_dist(micro, id, calibrators[.x,])) %>%
-        bind_rows() %>%
-        write_csv(., file = file.path(globals$output_root, id, 'static/supplemental/horizontal.csv'))
-    
-      construct_horizontal_comparison_figures(micro, id)
-    }
+    1:nrow(calibrators) %>%
+      map(.f = ~ get_horizontal_dist(micro, id, calibrators[.x,])) %>%
+      bind_rows() %>%
+      write_csv(., file = file.path(globals$output_root, id, 'static/supplemental/horizontal.csv'))
+  
+    construct_horizontal_comparison_figures(micro, id)
   }
 }
 

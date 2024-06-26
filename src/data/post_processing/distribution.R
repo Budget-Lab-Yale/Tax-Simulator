@@ -261,7 +261,7 @@ calc_pledge_metrics = function(microdata) {
 
 
 
-build_distribution_tables = function(id, baseline_id, file_name) {
+build_distribution_tables = function(id, baseline_id) {
   
   #----------------------------------------------------------------------------
   # Generates distribution tables by year and financing assumption for a
@@ -270,7 +270,6 @@ build_distribution_tables = function(id, baseline_id, file_name) {
   # Parameters:
   #   - id (str)          : counterfactual scenario ID
   #   - baseline_id (str) : ID of scenario against which changes are measured
-  #   - file_name (str)   : name of file to prepend .xlsx and .csv
   # 
   # Returns: void. 
   #----------------------------------------------------------------------------
@@ -352,11 +351,6 @@ build_distribution_tables = function(id, baseline_id, file_name) {
       filter(year == yr) %>% 
       get_vector('cpi_factor')
     
-    # Skip historical years, under the assumption we're scoring policy for the future...
-    if (yr < year(Sys.time())) {
-      next
-    }
-    
     # Grouping variable loop
     for (group_var in c('income', 'age')) {
       
@@ -406,7 +400,7 @@ build_distribution_tables = function(id, baseline_id, file_name) {
                        id,
                        'static',
                        'supplemental', 
-                       paste0(file_name, '_', .x, '.csv'))
+                       paste0('distribution_', .x, '.csv'))
       
     ))
   
@@ -416,36 +410,14 @@ build_distribution_tables = function(id, baseline_id, file_name) {
                                 id,
                                 'static',
                                 'supplemental', 
-                                paste0(file_name, '.xlsx')), 
+                                'distribution.xlsx'), 
                overwrite = T)
   
   
   # Write pledge output 
-  if (file_name != 'stacked_distribution') {
-    pledge_results %>% 
-      bind_rows() %>%
-      write_csv(file.path(globals$output_root, id, 'static/supplemental/pledge_metrics.csv'))
-  }
-}
-
-
-
-build_all_distribution_tables = function(counterfactual_ids) {
-  
-  #----------------------------------------------------------------------------
-  # For all non-baseline scenarios, generates distribution tables.
-  # 
-  # Parameters:
-  #   - counterfactual_ids : (str) list of non-baseline scenario IDs
-  # 
-  # Returns: void.
-  #----------------------------------------------------------------------------
-  
-  for (id in counterfactual_ids) { 
-    build_distribution_tables(id          = id, 
-                              baseline_id = 'baseline', 
-                              file_name   = 'distribution')
-  }
+  pledge_results %>% 
+    bind_rows() %>%
+    write_csv(file.path(globals$output_root, id, 'static/supplemental/pledge_metrics.csv'))
 }
 
 

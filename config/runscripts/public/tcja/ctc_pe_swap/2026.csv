@@ -1,0 +1,6 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2025:2027,,,
+tcja_else,public/tcja/ctc_pe_swap/2026/tcja_else,,2025:2027,,,
+pe_nondep,public/tcja/ctc_pe_swap/2026/pe_nondep,,2025:2027,,,
+pe_dep,public/tcja/ctc_pe_swap/2026/pe_dep,,2025:2027,,,
+ctc,public/tcja/ctc_pe_swap/2026/ctc,,2025:2027,,,

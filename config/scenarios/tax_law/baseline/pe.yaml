@@ -81,3 +81,7 @@ po_discrete_step:
 # Whether dependents qualify for exemptions
 dep_qualify:
   value: 1
+  
+# Whether non-dependents qualify for exemptions
+nondep_qualify:
+  value: 1
