@@ -35,7 +35,8 @@ calc_pe_ded = function(tax_unit, fill_missings = F) {
     'pe.po_range',         # (int) range over which phaseout occurs
     'pe.po_discrete',      # (int) whether phaseout is discretized, as per pre-TCJA law
     'pe.po_discrete_step', # (dbl) rounding step for discretized phaseout
-    'pe.dep_qualify'       # (int) whether dependents qualify for exemptions
+    'pe.dep_qualify',      # (int) whether dependents qualify for exemptions
+    'pe.nondep_qualify'    # (int) whether non-dependents qualify for exemptions
   )
   
   tax_unit %>%
@@ -45,7 +46,9 @@ calc_pe_ded = function(tax_unit, fill_missings = F) {
     mutate(
       
       # Calculate value of personal exemptions
-      pe_ded = (1 + (filing_status == 2) + (n_dep * (pe.dep_qualify == 1))) * pe.value,
+      n_pe_nondep = (pe.nondep_qualify == 1) * (1 + (filing_status == 2)), 
+      n_pe_dep    = (pe.dep_qualify == 1)    * n_dep,
+      pe_ded      = (n_pe_nondep + n_pe_dep) * pe.value,
       
       # Calculate extent to which deduction is phased out 
       po_share = pmin(1, pmax(0, agi - pe.po_thresh) / pe.po_range),

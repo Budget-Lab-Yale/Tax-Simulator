@@ -247,7 +247,8 @@ get_scenario_info = function(id) {
                recursive    = T, 
                showWarnings = F)
   }
-  dir.create(file.path(output_root, 'static/supplemental/child_earnings'))
+  dir.create(file.path(output_root, 'static/supplemental/child_earnings'), 
+             showWarnings = F)
   
   # List of interface paths, named by interface
   interface_paths = globals$interface_paths %>% 

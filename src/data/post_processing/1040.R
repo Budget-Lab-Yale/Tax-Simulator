@@ -5,14 +5,14 @@
 #---------------------------------------------------
 
 
-create_1040_reports = function(counterfactual_ids) {
+build_1040_report = function(id) {
   
   #----------------------------------------------------------------------------
   # Builds human-readable 1040 output Excel files for any counterfactual 
   # policies specified. 
   # 
   # Parameters:
-  #   - counterfactual_ids (str[]) : scenario IDs for which to generate report  
+  #   - id (str[]) : scenario ID for which to generate report  
   #
   # Returns: void (writes the Excel file)
   #----------------------------------------------------------------------------
@@ -41,208 +41,205 @@ create_1040_reports = function(counterfactual_ids) {
     pivot_wider(names_from  = series, 
                 values_from = value) 
   
+  # Read in counterfactual scenario 1040 totals 
+  scenario = c('static', 'conventional') %>% 
+    map(.f = ~ file.path(globals$output_root, 
+                         id, 
+                         .x,
+                         'totals', 
+                         '1040.csv') %>%
+          read_csv(show_col_types = F) %>%
+          mutate(run_type = .x)
+    ) %>% 
+    bind_rows() %>% 
+    
+    # Pivot long in variable 
+    select(-starts_with('mtr_')) %>% 
+    rename_with(.cols = starts_with('n_'), 
+                .fn   = ~ str_replace(., 'n_', 'count.')) %>% 
+    rename_with(.cols = -c(year, run_type, starts_with('count.')), 
+                .fn   = ~ paste0('amount.', .)) %>%
+    pivot_longer(cols      = -c(year, run_type), 
+                 names_to  = c('series', 'Variable'), 
+                 names_sep = '[.]',
+                 values_to = 'value') %>% 
+    pivot_wider(names_from  = series, 
+                values_from = value) %>% 
+    
+    # Join baseline numbers 
+    left_join(baseline %>% 
+                rename(baseline_count  = count, 
+                       baseline_amount = amount), 
+              by = c('year', 'Variable')) %>% 
+    relocate(starts_with('baseline'), .after = Variable) %>% 
+    
+    # Calculate differences from baseline
+    mutate(diff_count  = count  - baseline_count, 
+           diff_amount = amount - baseline_amount) %>% 
+    pivot_wider(names_from  = run_type, 
+                values_from = c(count, diff_count, amount, diff_amount)) %>% 
+    
+    # Rename variables 
+    recode_1040_vars(id) %>% 
+    filter(!is.na(Variable)) %>% 
+    select(year, Variable, baseline_count, baseline_amount, count_static, 
+           amount_static, diff_count_static, diff_amount_static, 
+           count_conventional, amount_conventional, diff_count_conventional, 
+           diff_amount_conventional)
   
-  for (scenario_id in counterfactual_ids) {
-    
-    # Read in counterfactual scenario 1040 totals 
-    scenario = c('static', 'conventional') %>% 
-      map(.f = ~ file.path(globals$output_root, 
-                           scenario_id, 
-                           .x,
-                           'totals', 
-                           '1040.csv') %>%
-            read_csv(show_col_types = F) %>%
-            mutate(run_type = .x)
-      ) %>% 
-      bind_rows() %>% 
-      
-      # Pivot long in variable 
-      select(-starts_with('mtr_')) %>% 
-      rename_with(.cols = starts_with('n_'), 
-                  .fn   = ~ str_replace(., 'n_', 'count.')) %>% 
-      rename_with(.cols = -c(year, run_type, starts_with('count.')), 
-                  .fn   = ~ paste0('amount.', .)) %>%
-      pivot_longer(cols      = -c(year, run_type), 
-                   names_to  = c('series', 'Variable'), 
-                   names_sep = '[.]',
-                   values_to = 'value') %>% 
-      pivot_wider(names_from  = series, 
-                  values_from = value) %>% 
-      
-      # Join baseline numbers 
-      left_join(baseline %>% 
-                  rename(baseline_count  = count, 
-                         baseline_amount = amount), 
-                by = c('year', 'Variable')) %>% 
-      relocate(starts_with('baseline'), .after = Variable) %>% 
-      
-      # Calculate differences from baseline
-      mutate(diff_count  = count  - baseline_count, 
-             diff_amount = amount - baseline_amount) %>% 
-      pivot_wider(names_from  = run_type, 
-                  values_from = c(count, diff_count, amount, diff_amount)) %>% 
-      
-      # Rename variables 
-      recode_1040_vars(scenario_id) %>% 
-      filter(!is.na(Variable)) %>% 
-      select(year, Variable, baseline_count, baseline_amount, count_static, amount_static, 
-             diff_count_static, diff_amount_static, count_conventional, amount_conventional, 
-             diff_count_conventional, diff_amount_conventional)
-    
-    
-    # Convert to year-indexed list
-    scenario = unique(scenario$year) %>% 
-      map(.f = ~ scenario %>% 
-            filter(year == .x) %>% 
-            select(-year)) %>% 
-      set_names(unique(scenario$year))
+  
+  # Convert to year-indexed list
+  scenario = unique(scenario$year) %>% 
+    map(.f = ~ scenario %>% 
+          filter(year == .x) %>% 
+          select(-year)) %>% 
+    set_names(unique(scenario$year))
 
+  
+  # Build Excel workbook
+  wb = createWorkbook()
+  for (i in 1:length(scenario)) {
+  
+    yr = names(scenario)[i]
     
-    # Build Excel workbook
-    wb = createWorkbook()
-    for (i in 1:length(scenario)) {
+    # Create worksheet
+    addWorksheet(wb = wb, sheetName = as.character(yr))
     
-      yr = names(scenario)[i]
-      
-      # Create worksheet
-      addWorksheet(wb = wb, sheetName = as.character(yr))
-      
-      # Write data
-      writeData(wb       = wb, 
-                sheet    = as.character(yr), 
-                x        = scenario[[i]] %>% 
-                             select(Variable, baseline_count, baseline_amount), 
-                startRow = 3)
-      writeData(wb       = wb, 
-                sheet    = as.character(yr), 
-                x        = scenario[[i]] %>%
-                             select(count_static, amount_static, 
-                                    diff_count_static, diff_amount_static),
-                startRow = 3,
-                startCol = 5)
-      writeData(wb       = wb, 
-                sheet    = as.character(yr), 
-                x        = scenario[[i]] %>%
-                             select(count_conventional, amount_conventional, 
-                                    diff_count_conventional, diff_amount_conventional),
-                startRow = 3,
-                startCol = 10)
-      writeData(wb       = wb, 
-                sheet    = as.character(yr), 
-                x        = 'Baseline', 
-                xy       = c(2, 2))
-      writeData(wb       = wb, 
-                sheet    = as.character(yr), 
-                x        = 'Policy reform, static', 
-                xy       = c(5, 2))
-      writeData(wb       = wb, 
-                sheet    = as.character(yr), 
-                x        = 'Policy reform, conventional', 
-                xy       = c(10, 2))
-      writeData(wb       = wb, 
-                sheet    = as.character(yr), 
-                x        = 'Number of returns', 
-                xy       = c(2, 3))
-      writeData(wb       = wb, 
-                sheet    = as.character(yr), 
-                x        = 'Amount', 
-                xy       = c(3, 3))
-      writeData(wb       = wb, 
-                sheet    = as.character(yr), 
-                x        = 'Number of returns', 
-                xy       = c(5, 3))
-      writeData(wb       = wb, 
-                sheet    = as.character(yr), 
-                x        = 'Amount', 
-                xy       = c(6, 3))
-      writeData(wb       = wb, 
-                sheet    = as.character(yr), 
-                x        = 'Number of returns, difference from baseline', 
-                xy       = c(7, 3))
-      writeData(wb       = wb, 
-                sheet    = as.character(yr), 
-                x        = 'Amount, difference from baseline', 
-                xy       = c(8, 3))
-      writeData(wb       = wb, 
-                sheet    = as.character(yr), 
-                x        = 'Number of returns', 
-                xy       = c(10, 3))
-      writeData(wb       = wb, 
-                sheet    = as.character(yr), 
-                x        = 'Amount', 
-                xy       = c(11, 3))
-      writeData(wb       = wb, 
-                sheet    = as.character(yr), 
-                x        = 'Number of returns, difference from baseline', 
-                xy       = c(12, 3))
-      writeData(wb       = wb, 
-                sheet    = as.character(yr), 
-                x        = 'Amount, difference from baseline', 
-                xy       = c(13, 3))
+    # Write data
+    writeData(wb       = wb, 
+              sheet    = as.character(yr), 
+              x        = scenario[[i]] %>% 
+                           select(Variable, baseline_count, baseline_amount), 
+              startRow = 3)
+    writeData(wb       = wb, 
+              sheet    = as.character(yr), 
+              x        = scenario[[i]] %>%
+                           select(count_static, amount_static, 
+                                  diff_count_static, diff_amount_static),
+              startRow = 3,
+              startCol = 5)
+    writeData(wb       = wb, 
+              sheet    = as.character(yr), 
+              x        = scenario[[i]] %>%
+                           select(count_conventional, amount_conventional, 
+                                  diff_count_conventional, diff_amount_conventional),
+              startRow = 3,
+              startCol = 10)
+    writeData(wb       = wb, 
+              sheet    = as.character(yr), 
+              x        = 'Baseline', 
+              xy       = c(2, 2))
+    writeData(wb       = wb, 
+              sheet    = as.character(yr), 
+              x        = 'Policy reform, static', 
+              xy       = c(5, 2))
+    writeData(wb       = wb, 
+              sheet    = as.character(yr), 
+              x        = 'Policy reform, conventional', 
+              xy       = c(10, 2))
+    writeData(wb       = wb, 
+              sheet    = as.character(yr), 
+              x        = 'Number of returns', 
+              xy       = c(2, 3))
+    writeData(wb       = wb, 
+              sheet    = as.character(yr), 
+              x        = 'Amount', 
+              xy       = c(3, 3))
+    writeData(wb       = wb, 
+              sheet    = as.character(yr), 
+              x        = 'Number of returns', 
+              xy       = c(5, 3))
+    writeData(wb       = wb, 
+              sheet    = as.character(yr), 
+              x        = 'Amount', 
+              xy       = c(6, 3))
+    writeData(wb       = wb, 
+              sheet    = as.character(yr), 
+              x        = 'Number of returns, difference from baseline', 
+              xy       = c(7, 3))
+    writeData(wb       = wb, 
+              sheet    = as.character(yr), 
+              x        = 'Amount, difference from baseline', 
+              xy       = c(8, 3))
+    writeData(wb       = wb, 
+              sheet    = as.character(yr), 
+              x        = 'Number of returns', 
+              xy       = c(10, 3))
+    writeData(wb       = wb, 
+              sheet    = as.character(yr), 
+              x        = 'Amount', 
+              xy       = c(11, 3))
+    writeData(wb       = wb, 
+              sheet    = as.character(yr), 
+              x        = 'Number of returns, difference from baseline', 
+              xy       = c(12, 3))
+    writeData(wb       = wb, 
+              sheet    = as.character(yr), 
+              x        = 'Amount, difference from baseline', 
+              xy       = c(13, 3))
 
-      # Add title
-      writeData(wb = wb, sheet = as.character(yr), startRow = 1, 
-                x = paste0('Form 1040 line items, ', yr))
-      
-      
-      # Format numbers and cells 
-      addStyle(wb         = wb,
-               sheet      = as.character(yr),
-               rows       = 4:(nrow(scenario[[i]]) + 4),
-               cols       = 2:13,
-               gridExpand = T,
-               style      = createStyle(numFmt = 'NUMBER'),
-               stack      = T)
-      mergeCells(wb    = wb,
-                 sheet = as.character(yr),
-                 rows  = 2,
-                 cols  = 2:3)
-      mergeCells(wb    = wb,
-                 sheet = as.character(yr),
-                 rows  = 2,
-                 cols  = 5:8)
-      mergeCells(wb    = wb,
-                 sheet = as.character(yr),
-                 rows  = 2,
-                 cols  = 10:13)
-      addStyle(wb         = wb,
-               sheet      = as.character(yr),
-               rows       = 2:(nrow(scenario[[i]]) + 4),
-               cols       = 2:13,
-               gridExpand = T,
-               style      = createStyle(halign = 'center'),
-               stack      = T)
-      addStyle(wb         = wb,
-               sheet      = as.character(yr),
-               rows       = 1:100,
-               cols       = 1:13,
-               gridExpand = T,
-               style      = createStyle(fontSize = 10,
-                                        wrapText = T), 
-               stack      = T)
-      addStyle(wb         = wb,
-               sheet      = as.character(yr),
-               rows       = 2,
-               cols       = c(2:3, 5:8, 10:13),
-               gridExpand = T,
-               style      = createStyle(border = 'bottom'),
-               stack      = T)
-      setColWidths(wb     = wb,
-                   sheet  = as.character(yr),
-                   cols   = 1:13,
-                   widths = c(47, 10, 10, 2, 10, 10, 10, 10, 2, 10, 10, 10, 10))
-
-    }
+    # Add title
+    writeData(wb = wb, sheet = as.character(yr), startRow = 1, 
+              x = paste0('Form 1040 line items, ', yr))
     
-    # Write workbook 
-    saveWorkbook(wb   = wb, 
-                 file = file.path(globals$output_root, 
-                                  scenario_id,
-                                  'conventional',
-                                  'supplemental', 
-                                  '1040.xlsx'), 
-                 overwrite = T)
+    
+    # Format numbers and cells 
+    addStyle(wb         = wb,
+             sheet      = as.character(yr),
+             rows       = 4:(nrow(scenario[[i]]) + 4),
+             cols       = 2:13,
+             gridExpand = T,
+             style      = createStyle(numFmt = 'NUMBER'),
+             stack      = T)
+    mergeCells(wb    = wb,
+               sheet = as.character(yr),
+               rows  = 2,
+               cols  = 2:3)
+    mergeCells(wb    = wb,
+               sheet = as.character(yr),
+               rows  = 2,
+               cols  = 5:8)
+    mergeCells(wb    = wb,
+               sheet = as.character(yr),
+               rows  = 2,
+               cols  = 10:13)
+    addStyle(wb         = wb,
+             sheet      = as.character(yr),
+             rows       = 2:(nrow(scenario[[i]]) + 4),
+             cols       = 2:13,
+             gridExpand = T,
+             style      = createStyle(halign = 'center'),
+             stack      = T)
+    addStyle(wb         = wb,
+             sheet      = as.character(yr),
+             rows       = 1:100,
+             cols       = 1:13,
+             gridExpand = T,
+             style      = createStyle(fontSize = 10,
+                                      wrapText = T), 
+             stack      = T)
+    addStyle(wb         = wb,
+             sheet      = as.character(yr),
+             rows       = 2,
+             cols       = c(2:3, 5:8, 10:13),
+             gridExpand = T,
+             style      = createStyle(border = 'bottom'),
+             stack      = T)
+    setColWidths(wb     = wb,
+                 sheet  = as.character(yr),
+                 cols   = 1:13,
+                 widths = c(47, 10, 10, 2, 10, 10, 10, 10, 2, 10, 10, 10, 10))
+
   }
+  
+  # Write workbook 
+  saveWorkbook(wb   = wb, 
+               file = file.path(globals$output_root, 
+                                id,
+                                'conventional',
+                                'supplemental', 
+                                '1040.xlsx'), 
+               overwrite = T)
   
   # Create baseline workbook by removing non-baseline info
   if('baseline' %in% globals$runscript$ID){
@@ -268,13 +265,13 @@ create_1040_reports = function(counterfactual_ids) {
                                   'supplemental', 
                                   '1040.xlsx'), 
                  overwrite = T)
-    }
   }
+}
   
 
 
 
-create_stacked_1040_reports = function(counterfactual_ids) {
+build_stacked_1040_reports = function(counterfactual_ids) {
   
   #----------------------------------------------------------------------------
   # Builds stacked 1040 report.
