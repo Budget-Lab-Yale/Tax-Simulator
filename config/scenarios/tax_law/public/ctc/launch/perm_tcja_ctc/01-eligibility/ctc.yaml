@@ -1,0 +1,9 @@
+---
+
+# Whether SSN is required to qualify for CTC
+need_ssn:
+  value:
+    '2014': 0
+    '2018': 1
+    '2021': 0
+    '2022': 1

@@ -1,0 +1,17 @@
+---
+
+# Whether SSN is required to qualify for CTC
+need_ssn:
+  value:
+    '2014': 0
+    '2018': 1
+    '2021': 0
+    '2022': 1
+
+# Maximum age to qualify as an "old" child
+old_age_limit:
+  value:
+    '2014': 16
+    '2021': 17
+    '2022': 16
+    '2026': 17
