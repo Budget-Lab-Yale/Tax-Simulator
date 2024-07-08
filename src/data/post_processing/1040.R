@@ -474,6 +474,7 @@ recode_1040_vars = function(df, scenario_id) {
       Variable == 'wages'                 ~ 'Wages and salaries', 
       Variable == 'wages1'                ~ 'Wages and salaries, primary earner', 
       Variable == 'wages2'                ~ 'Wages and salaries, secondary earner', 
+      Variable == 'tips'                  ~ 'Tips ', 
       Variable == 'exempt_int'            ~ 'Exempt interest income',
       Variable == 'div_ord'               ~ 'Ordinary-rate dividends',
       Variable == 'div_pref'              ~ 'Preferred-rate dividends',

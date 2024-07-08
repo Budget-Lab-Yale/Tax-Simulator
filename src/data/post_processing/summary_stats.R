@@ -33,6 +33,7 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
     'wages',
     'wages1',
     'wages2',
+    'tips',
     'txbl_int',        
     'exempt_int',      
     'div_ord',         
