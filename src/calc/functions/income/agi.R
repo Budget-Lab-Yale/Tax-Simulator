@@ -30,6 +30,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
     
     # Tax unit attributes
     'wages',           # (dbl) W2 wages after pre-tax deductions
+    'tips',            # (dbl) tipped income included in wages
     'txbl_int',        # (dbl) taxable interest income 
     'exempt_int',      # (dbl) tax-exempt interest income
     'div_ord',         # (dbl) non-qualified dividend income
@@ -71,7 +72,8 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'agi.sl_po_thresh',        # (int) MAGI phaseout threshold for student loan interest deduction
     'agi.sl_po_range',         # (int) MAGI phaseout range for student loan interest deduction
     'agi.tuition_ded_limit',   # (int) limit on tuition and feeds deduction 
-    'agi.dpad_limit'           # (int) limit on domestic production activities deduction
+    'agi.dpad_limit',          # (int) limit on domestic production activities deduction
+    'agi.tip_deduction'        # (int) whether tips are deductible from gross income
   )
   
   tax_unit %>% 
@@ -114,7 +116,8 @@ calc_agi = function(tax_unit, fill_missings = F) {
                         alimony_exp * alimony_qualifies + 
                         trad_contr_ira +
                         pmin(tuition_ded, agi.tuition_ded_limit) + 
-                        pmin(dpad, agi.dpad_limit), 
+                        pmin(dpad, agi.dpad_limit) +
+                        tips * agi.tip_deduction, 
                       
       # Calculate MAGI for taxable Social Security benefits calculation
       magi_ss = inc_ex_ss - above_ded_ex_sl
