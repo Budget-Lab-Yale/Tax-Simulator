@@ -30,15 +30,15 @@ user_id = get_user_id()
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'tests/new_data'
+runscript_names  = 'private/new_fsa_current_law_options____private/new_fsa_current_policy_options'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
-delete_detail    = 1
-multicore        = 0
+delete_detail    = 0
+multicore        = 1
 
 
 # Override default runtime args if executed from the command line
