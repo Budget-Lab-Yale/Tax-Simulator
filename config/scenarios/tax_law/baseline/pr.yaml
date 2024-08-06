@@ -13,6 +13,10 @@ filing_status_mapper:
     '3': add_med_brackets_married / 2
     '4': add_med_brackets_single
 
+# Whether tips are exempt from payroll tax
+tips_exempt:
+  value: 0
+
 # Share of self-employment earnings subject to SECA tax. See code for 
 # explanation of why this is a separate parameter from sum of payroll tax rates
 seca_taxable_rate:
