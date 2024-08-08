@@ -368,7 +368,7 @@ build_timeburden_table = function(id) {
       # read and process data
       microdata  = process_for_time_burden(id, year)
       # calculate time burdens
-      fixed_cost = calc_fixed_cost()
+      fixed_cost = calc_fixed_cost(id)
       microdata  = calc_time_burden(microdata, fixed_cost)
       output     = calc_summary_stats(microdata)
       
@@ -411,8 +411,8 @@ build_timeburden_table = function(id) {
   }
   
   # write csv
-  file = file.path(globals$output_root, id, 'static/supplemental',
-                   paste0("timeburden-", id,".csv"))
+  file = file.path(globals$output_root, id,
+                   "static/supplemental/time_burden.csv")
   write_csv(results, file)
 }
 
