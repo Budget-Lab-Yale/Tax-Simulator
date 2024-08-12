@@ -18,6 +18,8 @@ build_horizontal_tables = function(id) {
   #          one summary table for simplified A-B univariate comparison
   #----------------------------------------------------------------------------
   
+  print("we're doing horizontal")
+  
   calibrators = expand_grid(P = seq(0,1,0.25), e = seq(0,1,0.25))
   
   for (yr in get_scenario_info(id)$dist_years) {
