@@ -99,6 +99,9 @@ do_scenario = function(ID, baseline_mtrs) {
     
     # Distribution tables
     build_distribution_tables(ID, baseline_id = 'baseline')
+    
+    # Time burden tables
+    build_timeburden_table(ID)
   }
   
   # Horizontal equity report
