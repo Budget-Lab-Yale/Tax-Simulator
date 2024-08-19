@@ -107,7 +107,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
       inc_ex_ss       = inc_ex_ss + excess_bus_loss, 
 
       # Calculate tip deduction
-      tips_lh    = tips1 * tip_industry_lh1 + tips2 * tip_industry_lh2, 
+      tips_lh    = tips1 * tips_lh1 + tips2 * tips_lh2, 
       tips_other = tips - tips_lh,
       tip_ded    = (tips - tips_other * agi.tip_deduction_lh) * agi.tip_deduction,
       

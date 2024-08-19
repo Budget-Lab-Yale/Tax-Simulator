@@ -110,13 +110,7 @@ sipp_industry %>%
 industries = sipp %>% 
   filter(year >= 2021) %>% 
   left_join(
-    read_csv('./resources/industry.csv', col_names = F) %>% 
-      mutate(
-        ind = as.integer(str_sub(X1, 1, 4)), 
-        description = str_sub(X1, 7)
-      ) %>% 
-      select(-X1), 
-    by = 'ind'
+    read_csv('../Tax-Data/resources/industry.csv'), by = c('ind_1' = '')
   ) %>% 
   group_by(ind, description) %>% 
   summarise(
@@ -136,15 +130,6 @@ industries = sipp %>%
     by = 'ind'
   ) 
 
-industries %>% 
-  
-  
-  mutate(
-    ind = case_when(
-      
-    ),
-    target_share = max(tipped_share)
-  )
 
 
 
