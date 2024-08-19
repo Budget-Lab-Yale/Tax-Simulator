@@ -109,4 +109,8 @@ dpad_limit:
 tip_deduction:
   value: 
     '2014': 0
-
+    
+# Whether tips deduction is limited to leisure and hospitality workers only
+tip_deduction_lh:
+  value:
+    '2014': 0

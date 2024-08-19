@@ -1,3 +1,5 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2024:2035,2024,,
-tips_deduction,public/tips,,2024:2035,2024,,
+baseline,baseline,,2024:2034,,,
+income_tax_lh,public/tips/income_tax_lh,,2024:2034,2025:2026,,
+income_tax,public/tips/income_tax,,2024:2034,2025:2026,,
+payroll_tax,public/tips/payroll_tax,,2024:2034,2025:2026,,
