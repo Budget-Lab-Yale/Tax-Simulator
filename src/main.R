@@ -37,8 +37,8 @@ vintage          = NULL
 pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
-delete_detail    = 1
-multicore        = 0
+delete_detail    = 0
+multicore        = 1 # something something as.integer(detectCores(logical=F) > whatever)
 
 
 # Override default runtime args if executed from the command line
