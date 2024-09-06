@@ -220,6 +220,11 @@ sipp %>%
   ) %>% 
   print(n = 100)
 
+sipp %>%
+  filter(tips > 0) %>% 
+  group_by(bottom_quintile = wage_decile <= 2) %>% 
+  summarise(median = wtd.quantile(tip_share, weight, 0.5))
+
 
 # Figure 2) Industry/occupation breakdown 
 data_files$fig2a = sipp_ind %>%
@@ -389,8 +394,8 @@ get_chart = function(yr, metric) {
     filter(year == yr) %>% 
     mutate(
       scenario = case_when(
-        scenario == 'income_tax_lh' ~ '1) Income tax deducion for tips earned in specified leisure and hospitality industries',
-        scenario == 'income_tax'    ~ '2) Income tax deduction', 
+        scenario == 'income_tax'    ~ '1) Income tax deducion ',
+        scenario == 'income_tax_lh' ~ '2) Income tax deduction for tips earned in specified leisure and hospitality industries', 
         scenario == 'payroll_tax'   ~ '3) Income tax deduction and payroll tax exemption'
       )
     ) %>% 
@@ -430,8 +435,9 @@ data_files$fig4 %>%
   guides(fill = guide_legend(ncol = 1)) + 
   scale_y_continuous(labels = scales::percent_format()) 
 
-# Figure 5) Share of tipped families with tax cut
-data_files$fig5 = quintile_metrics %>% 
+
+# Figure 5) Share of with tax cut
+data_files$fig5a = quintile_metrics %>% 
   filter(year == 2025) %>% 
   select(quintile, name = scenario, value = `Share of tipped families with tax cut`) %>% 
   pivot_wider()
@@ -441,7 +447,22 @@ get_chart(2025, 'Share of tipped families with tax cut') +
   geom_text(
     aes(label = paste0(round(value, 2) * 100, '%')), 
     vjust = 1.5, position = position_dodge(0.9), size = 3
-  )
+  ) +
+  ggtitle('Among those with tipped income')
+
+data_files$fig5b = quintile_metrics %>% 
+  filter(year == 2025) %>% 
+  select(quintile, name = scenario, value = `Share with tax cut`) %>% 
+  pivot_wider()
+
+get_chart(2025, 'Share with tax cut') +
+  scale_y_continuous(labels = scales::percent_format()) + 
+  geom_text(
+    aes(label = paste0(round(value, 2) * 100, '%')), 
+    vjust = 1.5, position = position_dodge(0.9), size = 3
+  ) + 
+  ggtitle('All tax units')
+
 
 # Figure 6) Average tax cut
 data_files$fig6 = quintile_metrics %>% 
