@@ -421,20 +421,24 @@ remit_taxes = function(tax_units) {
 
 
 
-calc_mtrs = function(tax_units, liab_actual, var, type = 'nextdollar') {
+calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T, 
+                     type = 'nextdollar') {
   
   #----------------------------------------------------------------------------
   # Calculates MTR, either at the next-dollar or 0-actual extensive margin, 
   # with respect to given variable. Includes employee-side payroll taxes.
   # 
   # Parameters:
-  #   - tax_units (df)        : tibble of tax units, exogenous variables only
-  #   - liab_actual (dbl[])   : vector of net tax liability plus employee's 
-  #                             share of payroll tax liability to compare 
-  #                             against
-  #   - var (str)             : name of variable to increment
-  #   - type (str)            : "nextdollar" for next-dollar MTR, "extensive"
-  #                             for delta in taxes when reducing the value to 0
+  #   - tax_units (df)          : tibble of tax units, exogenous variables only
+  #   - actual_liab_iit (dbl[]) : vector of net income tax liability to compare
+  #                               against
+  #   - actual_liab_pr (dbl[])  : vector of total payroll tax to compare 
+  #                               against
+  #   - var (str)               : name of variable to increment
+  #   - pr (bool)               : whether to include payroll taxes in the MTR
+  #                               calculation
+  #   - type (str)              : "nextdollar" for next-dollar MTR, "extensive"
+  #                               for delta in tax when reducing the value to 0
   #
   # Returns: tibble of MTRs (df).
   #----------------------------------------------------------------------------
@@ -455,6 +459,14 @@ calc_mtrs = function(tax_units, liab_actual, var, type = 'nextdollar') {
   }
   if (var %in% c('farm1', 'farm2')) {
     vars = c(var, 'farm')
+  }
+  
+  # Tipped income
+  if (var == 'tips1') {
+    vars = c('tips1', 'tips', 'wages1', 'wages')
+  }
+  if (var == 'tips2') {
+    vars = c('tips2', 'tips', 'wages2', 'wages')
   }
   
   # Active partnership income
@@ -496,7 +508,7 @@ calc_mtrs = function(tax_units, liab_actual, var, type = 'nextdollar') {
     mutate(
       
       # Calculate numerator: change in taxes 
-      delta_taxes = liab_pr_ee + liab_iit_net - liab_actual,
+      delta_taxes = liab_iit_net - actual_liab_iit + pr * (liab_pr - actual_liab_pr),
       
       # Calculate denominator: change in variable value
       delta_var = case_when(
