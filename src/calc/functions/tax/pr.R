@@ -55,6 +55,7 @@ calc_pr = function(tax_unit, fill_missings = F) {
     'filing_status',   # (int) filing status (1 = single, 2 = joint, 3 = married, filing separately, 4 = head of household) 
     
     # Tax law attributes
+    'pr.tips_exempt',         # (int)   whether tips are exempt from payroll tax
     'pr.seca_taxable_rate',   # (dbl)   Share of self-employment earnings subject to SECA tax
     'pr.se_thresh',           # (int)   Threshold above which total self-employment income must be reported
     'pr.oasdi_ee_rates[]',    # (dbl[]) OASDI rates, employee side 
@@ -109,8 +110,8 @@ calc_pr = function(tax_unit, fill_missings = F) {
     mutate(
       
       # Calculate FICA-eligible wages
-      gross_wages1 = wages1 + trad_contr_er1, 
-      gross_wages2 = wages2 + trad_contr_er2, 
+      gross_wages1 = wages1 + trad_contr_er1 - (tips1 * pr.tips_exempt), 
+      gross_wages2 = wages2 + trad_contr_er2 - (tips2 * pr.tips_exempt), 
       gross_wages  = gross_wages1 + gross_wages2, 
       
       # Calculate SECA-eligible earnings

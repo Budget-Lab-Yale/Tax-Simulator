@@ -1,0 +1,3 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2025:2027,,kg_lt part_active,nextdollar nextdollar
+tcja_ext,public/tcja/cbo_stacking/08-losses,entity_shifting/pearce_prisinzano,2025:2027,,kg_lt part_active,nextdollar nextdollar

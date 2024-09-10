@@ -103,7 +103,7 @@ get_horizontal_dist = function(tax_units, scen_id, calibrators) {
       `e` = e,
       `Average Equalized Income` = wtd.mean(inc_eq, weight),
       `Average Tax Rate` = sum(liab_iit_net * weight) / sum(inc_eq * weight),
-      `Standard Deviation of Tax Rate` = sqrt(weighted.var(etr, weight, na.rm = T)),
+      `Standard Deviation of Tax Rate` = sqrt(wtd.var(etr, weight, na.rm = T)),
       .groups = 'drop'
     ) %>%
     return()

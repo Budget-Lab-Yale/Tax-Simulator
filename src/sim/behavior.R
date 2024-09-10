@@ -4,7 +4,7 @@
 
 
 do_behavioral_feedback = function(tax_units, behavior_modules, baseline_mtrs, 
-                                  static_mtrs, scenario_info) {
+                                  static_mtrs, scenario_info, indexes) {
 
   #----------------------------------------------------------------------------
   # Locates and executes all behavioral feedback modules for a given scenario.
@@ -21,6 +21,7 @@ do_behavioral_feedback = function(tax_units, behavior_modules, baseline_mtrs,
   #                                counterfactual scenario, indexed by year/tax 
   #                                unit id
   #   - scenario_info (list)     : get_scenario_info() object
+  #   - indexes (df)             : generate_indexes() object (see economy.R)
   # Returns: tibble of tax units with update values for specified columns (df).
   #----------------------------------------------------------------------------
   
@@ -41,7 +42,7 @@ do_behavioral_feedback = function(tax_units, behavior_modules, baseline_mtrs,
   for (fn in fns) {
     tax_units = do.call(
       what  = fn,
-      args  = list(tax_units, baseline_mtrs, static_mtrs, scenario_info),
+      args  = list(tax_units, baseline_mtrs, static_mtrs, scenario_info, indexes),
       envir = environment()
     )
   }
