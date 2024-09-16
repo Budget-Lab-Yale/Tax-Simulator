@@ -44,6 +44,10 @@ calc_pr = function(tax_unit, fill_missings = F) {
     # Tax unit attributes
     'wages1',          # (dbl) W2 wages (box 1 on W2), primary earner 
     'wages2',          # (dbl) W2 wages (box 1 on W2), secondary earner
+    'tips1',           # (dbl) tipped income included in wages, primary earner
+    'tips2',           # (dbl) tipped income included in wages, secondary earner
+    'ot1',             # (dbl) FLSA-eligible overtime income included in wages, primary earner
+    'ot2',             # (dbl) FLSA-eligible overtime income included in wages, secondary earner
     'trad_contr_er1',  # (dbl) pretax contributions to an employer-sponsored tax-preferred savings account, primary earner
     'trad_contr_er2',  # (dbl) pretax contributions to an employer-sponsored tax-preferred savings account, secondary earner
     'sole_prop1',      # (dbl) Schedule C net income, primary earner 
@@ -110,8 +114,8 @@ calc_pr = function(tax_unit, fill_missings = F) {
     mutate(
       
       # Calculate FICA-eligible wages
-      gross_wages1 = wages1 + trad_contr_er1 - (tips1 * pr.tips_exempt), 
-      gross_wages2 = wages2 + trad_contr_er2 - (tips2 * pr.tips_exempt), 
+      gross_wages1 = wages1 + trad_contr_er1 - (tips1 * pr.tips_exempt) - (ot1 * pr.ot_exempt), 
+      gross_wages2 = wages2 + trad_contr_er2 - (tips2 * pr.tips_exempt) - (ot2 * pr.ot_exempt), 
       gross_wages  = gross_wages1 + gross_wages2, 
       
       # Calculate SECA-eligible earnings
