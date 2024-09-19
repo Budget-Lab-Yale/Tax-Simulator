@@ -75,7 +75,8 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'agi.tuition_ded_limit',   # (int) limit on tuition and feeds deduction 
     'agi.dpad_limit',          # (int) limit on domestic production activities deduction
     'agi.tip_deduction',       # (int) whether tips are deductible from gross income
-    'agi.tip_deduction_lh'     # (int) whether tips deduction is limited to leisure and hospitality workers only
+    'agi.tip_deduction_lh',    # (int) whether tips deduction is limited to leisure and hospitality workers only
+    'agi.ot_deduction'         # (int) whether FLSA-eligible overtime pay is deductible from gross income
   )
   
   tax_unit %>% 

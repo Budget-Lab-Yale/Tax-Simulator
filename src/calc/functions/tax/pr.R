@@ -60,6 +60,7 @@ calc_pr = function(tax_unit, fill_missings = F) {
     
     # Tax law attributes
     'pr.tips_exempt',         # (int)   whether tips are exempt from payroll tax
+    'pr.ot_exempt',           # (int)   whether FLSA-eligible overtime pay is exempt from payroll tax
     'pr.seca_taxable_rate',   # (dbl)   Share of self-employment earnings subject to SECA tax
     'pr.se_thresh',           # (int)   Threshold above which total self-employment income must be reported
     'pr.oasdi_ee_rates[]',    # (dbl[]) OASDI rates, employee side 
