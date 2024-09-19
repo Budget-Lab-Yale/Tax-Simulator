@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2024:2034,,,
+income_tax,public/ot/income_tax,,2024:2034,,,
+payroll_tax,public/ot/payroll_tax,,2024:2034,,,

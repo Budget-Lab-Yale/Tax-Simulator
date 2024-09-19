@@ -30,6 +30,8 @@ calc_agi = function(tax_unit, fill_missings = F) {
     
     # Tax unit attributes
     'wages',           # (dbl) W2 wages after pre-tax deductions
+    'tips',            # (dbl) tipped income included in wages
+    'ot',              # (dbl) FLSA-eligible overtime income included in wages
     'txbl_int',        # (dbl) taxable interest income 
     'exempt_int',      # (dbl) tax-exempt interest income
     'div_ord',         # (dbl) non-qualified dividend income
@@ -71,7 +73,10 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'agi.sl_po_thresh',        # (int) MAGI phaseout threshold for student loan interest deduction
     'agi.sl_po_range',         # (int) MAGI phaseout range for student loan interest deduction
     'agi.tuition_ded_limit',   # (int) limit on tuition and feeds deduction 
-    'agi.dpad_limit'           # (int) limit on domestic production activities deduction
+    'agi.dpad_limit',          # (int) limit on domestic production activities deduction
+    'agi.tip_deduction',       # (int) whether tips are deductible from gross income
+    'agi.tip_deduction_lh',    # (int) whether tips deduction is limited to leisure and hospitality workers only
+    'agi.ot_deduction'         # (int) whether FLSA-eligible overtime pay is deductible from gross income
   )
   
   tax_unit %>% 
@@ -103,6 +108,14 @@ calc_agi = function(tax_unit, fill_missings = F) {
       excess_bus_loss = pmax(0, -pt - agi.bus_loss_limit),
       inc_ex_ss       = inc_ex_ss + excess_bus_loss, 
 
+      # Calculate tip deduction
+      tips_lh    = tips1 * tips_lh1 + tips2 * tips_lh2, 
+      tips_other = tips - tips_lh,
+      tip_ded    = (tips - tips_other * agi.tip_deduction_lh) * agi.tip_deduction,
+      
+      # Calculate overtime deduction
+      ot_ded = ot * agi.ot_deduction, 
+      
       # Calculate above-the-line deductions, excluding student loan interest deduction 
       char_above_ded  = pmin(char.above_limit, char_cash + char_noncash),
       above_ded_ex_sl = ed_exp + 
@@ -114,7 +127,9 @@ calc_agi = function(tax_unit, fill_missings = F) {
                         alimony_exp * alimony_qualifies + 
                         trad_contr_ira +
                         pmin(tuition_ded, agi.tuition_ded_limit) + 
-                        pmin(dpad, agi.dpad_limit), 
+                        pmin(dpad, agi.dpad_limit) +
+                        tip_ded + 
+                        ot_ded, 
                       
       # Calculate MAGI for taxable Social Security benefits calculation
       magi_ss = inc_ex_ss - above_ded_ex_sl

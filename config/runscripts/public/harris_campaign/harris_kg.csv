@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2024:2034,2025,kg_lt,nextdollar
+kg_biden_budget,public/harris_campaign/kg_biden_budget,kg/62,2024:2034,2025,kg_lt,nextdollar
+kg_harris,public/harris_campaign/kg_harris,kg/62,2024:2034,2025,kg_lt,nextdollar

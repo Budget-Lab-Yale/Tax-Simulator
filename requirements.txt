@@ -8,4 +8,3 @@ openxlsx
 Hmisc
 parallel
 dineq
-modi

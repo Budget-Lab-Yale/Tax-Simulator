@@ -56,6 +56,7 @@ do_scenario = function(ID, baseline_mtrs) {
                         static           = T,
                         baseline_mtrs    = NULL, 
                         static_mtrs      = NULL, 
+                        indexes          = indexes,
                         vat_price_offset = vat_price_offset)
   
   # Run simulation with behavioral feedback if modules are specified
@@ -66,6 +67,7 @@ do_scenario = function(ID, baseline_mtrs) {
             static           = F,
             baseline_mtrs    = baseline_mtrs, 
             static_mtrs      = static_mtrs, 
+            indexes          = indexes,
             vat_price_offset = vat_price_offset)
   
   # Else, for static-only counterfactual runs, copy static runs to scenario's  
@@ -99,13 +101,13 @@ do_scenario = function(ID, baseline_mtrs) {
     
     # Distribution tables
     build_distribution_tables(ID, baseline_id = 'baseline')
+    
+    # Time burden tables
+    build_timeburden_table(ID)
   }
   
   # Horizontal equity report
   # build_horizontal_tables(ID)
-  
-  
-  
   
   # Return MTRs if running baseline
   if (ID == 'baseline') {
@@ -116,7 +118,7 @@ do_scenario = function(ID, baseline_mtrs) {
 
 
 run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs, 
-                   vat_price_offset) {
+                   indexes, vat_price_offset) {
   
   #----------------------------------------------------------------------------
   # Runs simulation instance for a given scenario, either static or 
@@ -133,6 +135,8 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
   #                            scenario run, indexed by year/tax unit ID; NULL 
   #                            if this run is in static mode or if no MTR 
   #                            variables were specified
+  #   - indexes (df)         : tibble of growth rates for various economic 
+  #                            indexes ; see generate_indexes() 
   #   - vat_price_offset (df): series of price level adjustment factors to 
   #                            reflect introduction of a VAT
   #
@@ -159,6 +163,7 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
                                static           = static,
                                baseline_mtrs    = baseline_mtrs, 
                                static_mtrs      = static_mtrs, 
+                               indexes          = indexes, 
                                vat_price_offset = vat_price_offset,
                                nols             = nols)
     
@@ -214,7 +219,7 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
 
 
 run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, 
-                        static_mtrs, vat_price_offset, nols) {
+                        static_mtrs, indexes, vat_price_offset, nols) {
   
   #----------------------------------------------------------------------------
   # Runs a single year of tax simulation. 
@@ -231,6 +236,8 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
   #                            scenario run, indexed by year/tax unit ID; NULL 
   #                            if this run is in static mode or if no MTR 
   #                            variables were specified 
+  #   - indexes (df)         : tibble of growth rates for various economic 
+  #                            indexes ; see generate_indexes() 
   #   - vat_price_offset (df): series of price level adjustment factors to 
   #                            reflect introduction of a VAT
   #   - nols (df)            : tibble of endogeneously calculated net operating 
@@ -293,7 +300,8 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
       do_behavioral_feedback(behavior_modules = scenario_info$behavior_modules, 
                              baseline_mtrs    = baseline_mtrs, 
                              static_mtrs      = static_mtrs, 
-                             scenario_info    = scenario_info)
+                             scenario_info    = scenario_info, 
+                             indexes          = indexes)
   }
   
   
@@ -329,13 +337,15 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
     mtrs = scenario_info$mtr_vars %>%
       map2(.y = scenario_info$mtr_types, 
            .f = ~ calc_mtrs(
-             tax_units   = tax_units %>% 
-                             select(-all_of(return_vars %>% 
-                             unlist() %>% 
-                             set_names(NULL))), 
-             liab_actual = tax_units$liab_pr_ee + tax_units$liab_iit_net,
-             var         = .x,
-             type        = .y
+             tax_units       = tax_units %>% 
+                                 select(-all_of(return_vars %>% 
+                                 unlist() %>% 
+                                 set_names(NULL))), 
+             actual_liab_iit = tax_units$liab_iit_net,
+             actual_liab_pr  = tax_units$liab_pr,
+             var             = .x,
+             pr              = T,
+             type            = .y
           )
       ) %>% 
       bind_cols() %>% 

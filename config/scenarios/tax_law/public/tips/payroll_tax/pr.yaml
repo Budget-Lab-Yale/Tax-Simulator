@@ -1,0 +1,7 @@
+---
+
+# Whether tips are exempt from payroll tax
+tips_exempt:
+  value:
+    '2014': 0
+    '2025': 1
