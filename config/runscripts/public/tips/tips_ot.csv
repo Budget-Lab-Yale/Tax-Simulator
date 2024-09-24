@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2025:2026,,wages,extensive
+tips,public/tips/income_tax,,2025:2026,2025:2026,wages,extensive
+tips_ot,public/tips/tips_ot,,2025:2026,2025:2026,wages,extensive

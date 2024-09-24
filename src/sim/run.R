@@ -107,7 +107,7 @@ do_scenario = function(ID, baseline_mtrs) {
   }
   
   # Horizontal equity report
-  # build_horizontal_tables(ID)
+  build_horizontal_tables(ID)
   
   # Return MTRs if running baseline
   if (ID == 'baseline') {
@@ -344,7 +344,7 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
              actual_liab_iit = tax_units$liab_iit_net,
              actual_liab_pr  = tax_units$liab_pr,
              var             = .x,
-             pr              = T,
+             pr              = F,
              type            = .y
           )
       ) %>% 

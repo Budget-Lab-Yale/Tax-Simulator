@@ -31,6 +31,8 @@ calc_agi = function(tax_unit, fill_missings = F) {
     # Tax unit attributes
     'wages',           # (dbl) W2 wages after pre-tax deductions
     'tips',            # (dbl) tipped income included in wages
+    'tips1',           # (dbl) tipped income included in wages, secondary earner
+    'tips2',           # (dbl) tipped income included in wages, primary earner
     'ot',              # (dbl) FLSA-eligible overtime income included in wages
     'txbl_int',        # (dbl) taxable interest income 
     'exempt_int',      # (dbl) tax-exempt interest income
