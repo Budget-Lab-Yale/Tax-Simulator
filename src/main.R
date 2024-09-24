@@ -30,7 +30,7 @@ user_id = get_user_id()
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'private/romney_0924/more_options_current_law____private/romney_0924/more_options_current_policy'
+runscript_names  = 'private/romney_0924/more_options_current_law'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
