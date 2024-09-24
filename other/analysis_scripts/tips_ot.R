@@ -153,6 +153,11 @@ test %>%
   geom_smooth(se = F)
 
 
+test %>%  
+  filter(year == 2025, eq_inc_pctile %in% 70:79, scenario != 'tips') %>%  
+  ggplot(aes(x = mtr_wages, colour = scenario)) + 
+  geom_density(bw = 0.01)
+
 
 
 # TODO
