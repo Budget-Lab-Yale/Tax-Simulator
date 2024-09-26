@@ -1,4 +1,4 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
 baseline,baseline,,2025:2034,2026,,
-tcja,public/ctc/romney/fsa_0924/current_policy/ctc,,2025:2034,2026,,
-fsa,public/ctc/romney/fsa_0924/current_law/fsa,,2025:2034,2026,,
+tcja,public/ctc/romney/fsa_0924/current_policy/tcja,,2025:2034,2026,,
+fsa,public/ctc/romney/fsa_0924/current_policy/fsa,,2025:2034,2026,,

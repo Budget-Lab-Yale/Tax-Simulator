@@ -30,7 +30,7 @@ user_id = get_user_id()
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'public/ctc/fsa_0924/current_law____public/ctc/fsa_0924/current_policy'
+runscript_names  = 'public/ctc/fsa_0924/current_policy'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
