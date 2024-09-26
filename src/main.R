@@ -30,9 +30,9 @@ user_id = get_user_id()
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'public/ot/baseline'
+runscript_names  = 'public/ctc/fsa_0924/current_policy'
 scenario_id      = NULL
-local            = 0
+local            = 1
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1

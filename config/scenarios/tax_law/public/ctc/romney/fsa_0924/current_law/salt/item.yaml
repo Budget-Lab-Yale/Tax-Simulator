@@ -1,0 +1,25 @@
+---
+
+filing_status_mapper:
+  pease_thresh:
+    '1': pease_thresh_single
+    '2': pease_thresh_married
+    '3': pease_thresh_married / 2
+    '4': pease_thresh_head
+  salt_limit:
+    '1': salt_limit_married
+    '2': salt_limit_married
+    '3': salt_limit_married / 2
+    '4': salt_limit_married
+  mort_bal_limit:
+    '1': mort_bal_limit_single
+    '2': mort_bal_limit_married
+    '3': mort_bal_limit_mfs
+    '4': mort_bal_limit_single
+
+# Maximum deductible state and local taxes, joint returns
+salt_limit_married:
+  value:
+    '2014': Inf
+    '2018': 10000
+    '2026': 30000
