@@ -30,7 +30,7 @@ user_id = get_user_id()
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'public/tips/tips_ot'
+runscript_names  = 'public/ctc/fsa_0924/current_law____public/ctc/fsa_0924/current_policy'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
@@ -38,7 +38,7 @@ pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
 delete_detail    = 0
-multicore        = 0
+multicore        = 1
 
 
 # Override default runtime args if executed from the command line
