@@ -1,5 +1,15 @@
 ---
 
+# Maximum deductible business loss
+bus_loss_limit_married:
+  value:
+    '2014': Inf
+    '2022': 500000
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+  
 # Whether tipped income is deductible from gross income
 tip_deduction:
   value: 

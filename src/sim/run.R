@@ -106,9 +106,6 @@ do_scenario = function(ID, baseline_mtrs) {
     build_timeburden_table(ID)
   }
   
-  # Horizontal equity report
-  build_horizontal_tables(ID)
-  
   # Return MTRs if running baseline
   if (ID == 'baseline') {
     return(static_mtrs)
