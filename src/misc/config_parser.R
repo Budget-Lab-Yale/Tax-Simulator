@@ -47,8 +47,8 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   random_seed = 76
   
   # Read and parse data dependency interface file paths
-  output_roots       = read_yaml('./output_roots.yaml')
-  interface_versions = read_yaml('./interface_versions.yaml') %>% 
+  output_roots       = read_yaml('./config/interfaces/output_roots.yaml')
+  interface_versions = read_yaml('./config/interfaces/interface_versions.yaml') %>% 
     map2(.x = ., 
          .y = names(.), 
          .f = ~ file.path(output_roots$production, 
@@ -62,11 +62,11 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     filter(interface != 'Tax-Simulator')
   
   # Get default vintages/scenario IDs
-  interface_defaults = read_yaml('./interface_versions.yaml') %>% 
+  interface_defaults = read_yaml('./config/interfaces/interface_versions.yaml') %>% 
     map(.f = ~ .x[c('default_vintage', 'default_id')])
   
   # Set model version and vintage
-  version = read_yaml('./interface_versions.yaml')$`Tax-Simulator`$version
+  version = read_yaml('./config/interfaces/interface_versions.yaml')$`Tax-Simulator`$version
   st      = Sys.time()
   if (is.null(vintage)) {
     vintage = paste0(lubridate::year(st), 
@@ -133,7 +133,7 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
                  names_to     = c('interface', 'series')) %>% 
     pivot_wider(names_from  = series, 
                 values_from = value) %>% 
-    left_join(read_yaml('./interface_versions.yaml') %>% 
+    left_join(read_yaml('./config/interfaces/interface_versions.yaml') %>% 
                 map(~ .$version) %>% 
                 as_tibble() %>% 
                 pivot_longer(cols      = everything(), 
