@@ -75,6 +75,11 @@ mort_bal_limit_mfs:
 # Maximum deductible mortgage interest
 mort_int_limit:
   value: Inf
+  
+# Whether auto loan interest is deductible from taxable income
+auto_int_deduction:
+  value: 
+    '2014': 0
 
 # Maximum deductible casualty and loss expenses
 casualty_limit:

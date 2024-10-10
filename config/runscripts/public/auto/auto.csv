@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2024:2034,,,
+above,public/auto/above,,2024:2034,,,
+item,public/auto/item,,2024:2034,,,
