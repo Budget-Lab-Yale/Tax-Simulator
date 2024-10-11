@@ -67,6 +67,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'char_cash',       # (dbl) charitable contributions made in cash
     'char_noncash',    # (dbl) noncash charitable contributions 
     'other_above_ded', # (dbl) other deductions per Schedule 1 line 24
+    'auto_int_exp',    # (dbl) auto loan interest expense
     
     # Tax law attributes
     'agi.alimony_repeal_year', # (int) year during and after which a divorce does not generate taxable/deductible alimony
@@ -78,7 +79,8 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'agi.dpad_limit',          # (int) limit on domestic production activities deduction
     'agi.tip_deduction',       # (int) whether tips are deductible from gross income
     'agi.tip_deduction_lh',    # (int) whether tips deduction is limited to leisure and hospitality workers only
-    'agi.ot_deduction'         # (int) whether FLSA-eligible overtime pay is deductible from gross income
+    'agi.ot_deduction',        # (int) whether FLSA-eligible overtime pay is deductible from gross income
+    'agi.auto_int_deduction'   # (int) whether auto loan interest is deductible from gross income
   )
   
   tax_unit %>% 
@@ -118,6 +120,9 @@ calc_agi = function(tax_unit, fill_missings = F) {
       # Calculate overtime deduction
       ot_ded = ot * agi.ot_deduction, 
       
+      # Calculate auto loan interest deduction
+      auto_int_ded = auto_int_exp * agi.auto_int_deduction,
+      
       # Calculate above-the-line deductions, excluding student loan interest deduction 
       char_above_ded  = pmin(char.above_limit, char_cash + char_noncash),
       above_ded_ex_sl = ed_exp + 
@@ -131,7 +136,8 @@ calc_agi = function(tax_unit, fill_missings = F) {
                         pmin(tuition_ded, agi.tuition_ded_limit) + 
                         pmin(dpad, agi.dpad_limit) +
                         tip_ded + 
-                        ot_ded, 
+                        ot_ded + 
+                        auto_int_ded, 
                       
       # Calculate MAGI for taxable Social Security benefits calculation
       magi_ss = inc_ex_ss - above_ded_ex_sl
