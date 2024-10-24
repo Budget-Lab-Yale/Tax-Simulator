@@ -56,3 +56,6 @@ config/scenarios/tax_law/private/
 
 # Batch submission script logs
 config/batch-submissions
+
+# Filepath roots
+config/interfaces/output_roots.yaml
