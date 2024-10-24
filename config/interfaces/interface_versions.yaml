@@ -21,7 +21,7 @@ Tax-Data:
 Macro-Projections: 
   type: model_data
   version: 3
-  default_vintage: 2024021509
+  default_vintage: 2024100910
   default_id: baseline
 
 Corporate-Tax-Model:
