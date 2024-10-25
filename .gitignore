@@ -57,3 +57,6 @@ other/analysis_scripts/private/
 
 # Batch submission script logs
 config/batch-submissions
+
+# Filepath roots
+config/interfaces/output_roots.yaml

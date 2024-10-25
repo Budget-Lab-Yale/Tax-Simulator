@@ -67,20 +67,15 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   
   # Set model version and vintage
   version = read_yaml('./config/interfaces/interface_versions.yaml')$`Tax-Simulator`$version
-  st      = Sys.time()
   if (is.null(vintage)) {
-    vintage = paste0(lubridate::year(st), 
-                     lubridate::month(st)  %>% paste0('0', .) %>% str_sub(-2), 
-                     lubridate::day(st)    %>% paste0('0', .) %>% str_sub(-2), 
-                     lubridate::hour(st)   %>% paste0('0', .) %>% str_sub(-2), 
-                     lubridate::minute(st) %>% paste0('0', .) %>% str_sub(-2))
+    vintage = format(Sys.time(), '%Y%m%d%H')
   }
 
   # Determine and create directory for model output
   output_branch = file.path('Tax-Simulator', paste0('v', version), vintage)
   output_root   = file.path(output_roots$production, 'model_data', output_branch)
   if (local == 1) {
-    output_root = file.path(output_roots$local, user_id, output_branch)
+    output_root = file.path(output_roots$local, 'model_data', output_branch)
   }
   dir.create(output_root, recursive = T, showWarnings = F)
   
