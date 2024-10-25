@@ -1,0 +1,5 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2024:2034,,tips1 tips2,nextdollar nextdollar
+income_tax_lh,public/tips/income_tax_lh,,2024:2034,2025:2026,tips1 tips2,nextdollar nextdollar
+income_tax,public/tips/income_tax,,2024:2034,2025:2026,tips1 tips2,nextdollar nextdollar
+payroll_tax,public/tips/payroll_tax,,2024:2034,2025:2026,tips1 tips2,nextdollar nextdollar

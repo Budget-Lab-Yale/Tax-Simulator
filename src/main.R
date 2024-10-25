@@ -30,14 +30,14 @@ user_id = get_user_id()
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'tests/new_data'
+runscript_names  = 'tests/pt_rates'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
-delete_detail    = 1
+delete_detail    = 0
 multicore        = 0
 
 
@@ -88,7 +88,7 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   if (is.null(baseline_vintage)) {
     baseline_mtrs = do_scenario('baseline')  
     
-    # Otherwise, load baseline marginal tax rates 
+  # Otherwise, load baseline marginal tax rates 
   } else{
     baseline_mtrs = get_scenario_info(counterfactual_ids[1])$years %>% 
       map(.f = ~ globals$baseline_root %>%  
@@ -108,7 +108,7 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
                       mc.cores = min(16, detectCores(logical = F)))
   } else {
     walk(.x = counterfactual_ids, 
-         .f = ~ do_scenario(.x, baseline_mtrs)) 
+         .f = ~ do_scenario(.x, baseline_mtrs))
   }
   
   

@@ -1,0 +1,8 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2025:2034,2026,,
+ctc,public/ctc/romney/fsa_0924/current_law/ctc,,2025:2034,2026,,
+eitc,public/ctc/romney/fsa_0924/current_law/eitc,,2025:2034,2026,,
+cdctc,public/ctc/romney/fsa_0924/current_law/cdctc,,2025:2034,2026,,
+pe,public/ctc/romney/fsa_0924/current_law/pe,,2025:2034,2026,,
+hoh,public/ctc/romney/fsa_0924/current_law/hoh,,2025:2034,2026,,
+salt,public/ctc/romney/fsa_0924/current_law/salt,,2025:2034,2026,,

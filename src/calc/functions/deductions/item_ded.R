@@ -49,6 +49,7 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
     'first_mort_int',   # (dbl) interest paid this year on first mortgage 
     'second_mort_int',  # (dbl) interest paid this year on second mortgage
     'inv_int_exp',      # (dbl) qualifying investment interest expense 
+    'auto_int_exp',     # (dbl) auto loan interest expense
     'char_cash',        # (dbl) charitable contributions made in cash
     'char_noncash',     # (dbl) noncash charitable contributions
     'casualty_exp',     # (dbl) casualty and theft losses
@@ -64,6 +65,7 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
     'item.mort_bal_limit_years[]',  # (int[]) year ranges mapping to mortgage balance limitations, specified in increasing order
     'item.mort_bal_limit[]',        # (int[]) limitations on deductible mortgage interest based on mortgage balance
     'item.mort_int_limit',          # (int)   maximum deductible mortgage interest
+    'item.auto_int_deduction',      # (int)   whether auto loan interest is deductible from taxable income
     'item.casualty_limit',          # (int)   maximum deductible casualty and loss expenses
     'item.misc_floor_agi',          # (dbl)   AGI floor for "miscellaneous" itemized deductions
     'item.misc_limit',              # (int)   maximum deductible "miscellaneous" itemized deductions
@@ -153,8 +155,11 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
       # Calculate deductible investment interest expense
       inv_int_item_ded = inv_int_exp,
       
+      # Calculate deductible auto loan interest expense
+      auto_loan_ded = item.auto_int_deduction * auto_int_exp,
+      
       # Calculate total interest deduction
-      int_item_ded = inv_int_item_ded + mort_int_item_ded,
+      int_item_ded = mort_int_item_ded + inv_int_item_ded + auto_loan_ded,
       
       
       #---------

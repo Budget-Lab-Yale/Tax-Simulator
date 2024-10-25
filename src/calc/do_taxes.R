@@ -421,20 +421,32 @@ remit_taxes = function(tax_units) {
 
 
 
-calc_mtrs = function(tax_units, liab_actual, var, type = 'nextdollar') {
+calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T, 
+                     type = 'nextdollar') {
   
   #----------------------------------------------------------------------------
   # Calculates MTR, either at the next-dollar or 0-actual extensive margin, 
-  # with respect to given variable. Includes employee-side payroll taxes.
+  # with respect to given variable. Includes employee-side payroll taxes. 
+  #
+  # Note: for next-dollar MTRs, variable "wages" means non-tip, non-OT wages.
+  # For extensive margin MTRs, variable "wages" means all wages, including 
+  # tips and OT.
+  # 
+  # Always double-check whether the variable you want a tax rate for is handled
+  # by the logic below!! It's not generalized to every variable due to 
+  # compositional issues (i.e. some variables are components of others).
   # 
   # Parameters:
-  #   - tax_units (df)        : tibble of tax units, exogenous variables only
-  #   - liab_actual (dbl[])   : vector of net tax liability plus employee's 
-  #                             share of payroll tax liability to compare 
-  #                             against
-  #   - var (str)             : name of variable to increment
-  #   - type (str)            : "nextdollar" for next-dollar MTR, "extensive"
-  #                             for delta in taxes when reducing the value to 0
+  #   - tax_units (df)          : tibble of tax units, exogenous variables only
+  #   - actual_liab_iit (dbl[]) : vector of net income tax liability to compare
+  #                               against
+  #   - actual_liab_pr (dbl[])  : vector of total payroll tax to compare 
+  #                               against
+  #   - var (str)               : name of variable to increment
+  #   - pr (bool)               : whether to include payroll taxes in the MTR
+  #                               calculation
+  #   - type (str)              : "nextdollar" for next-dollar MTR, "extensive"
+  #                               for delta in tax when reducing the value to 0
   #
   # Returns: tibble of MTRs (df).
   #----------------------------------------------------------------------------
@@ -442,66 +454,152 @@ calc_mtrs = function(tax_units, liab_actual, var, type = 'nextdollar') {
   # Set output variable name
   mtr_name = paste0('mtr_', var)
   
-  # Set variables to increment. Add variables here to ensure that sub-components
-  # of a variable, namely earnings-split variables, are kept internally consistent.
-  vars = c(var)
-  
-  # Earnings split between joint filers
-  if (var %in% c('wages1', 'wages2')) {
-    vars = c(var, 'wages')
-  }
-  if (var %in% c('sole_prop1', 'sole_prop2')) {
-    vars = c(var, 'sole_prop')
-  }
-  if (var %in% c('farm1', 'farm2')) {
-    vars = c(var, 'farm')
-  }
-  
-  # Active partnership income
-  if (var %in% c('part_active', 'part_active_loss')) {
-    vars = c(var, 'part_se1')
-  }
-  
-  # OK, now calculate MTRs
-  tax_units %>% 
-    mutate(
+  # Next-dollar calculation
+  if (type == 'nextdollar') {
     
-      # Record initial values
-      across(
-        .cols  = all_of(var), 
-        .fns   = ~ ., 
-        .names = 'original_var'
-      ),
-      
-      # Increment variable values
-      across(
-        .cols = all_of(vars),
-        .fns  = ~ case_when(
-          type == 'nextdollar' ~ . + 1, 
-          type == 'extensive'  ~ if_else(!is.na(.), 0, NA), 
-          TRUE                 ~ NA
+    # Deal with composite variables. Initialize list of variables to increment
+    vars = c(var)
+    
+    if (var %in% c('wages1', 'wages2')) {
+      vars = c(var, 'wages')
+    }
+    if (var %in% c('sole_prop1', 'sole_prop2')) {
+      vars = c(var, 'sole_prop')
+    }
+    if (var %in% c('farm1', 'farm2')) {
+      vars = c(var, 'farm')
+    }
+    if (var == 'tips1') {
+      vars = c('tips1', 'tips', 'wages1', 'wages')
+    }
+    if (var == 'tips2') {
+      vars = c('tips2', 'tips', 'wages2', 'wages')
+    }
+    if (var == 'ot1') {
+      vars = c('ot1', 'ot', 'wages1', 'wages')
+    }
+    if (var == 'ot2') {
+      vars = c('ot2', 'ot', 'wages2', 'wages')
+    }
+    if (var %in% c('part_active', 'part_active_loss')) {
+      vars = c(var, 'part_se1')
+    }
+    
+    # Set new values
+    new_values = tax_units %>% 
+      mutate(
+        across(.cols = all_of(vars), .fns  = ~ . + 1), 
+        original_value = NA
+      )
+  }
+  
+  # Extensive-margin
+  else if (type == 'extensive') {
+    
+    # Record initial value
+    new_values = tax_units %>% 
+      mutate(
+        across(
+          .cols  = all_of(var), 
+          .fns   = ~ ., 
+          .names = 'original_value'
         )
       )
-    ) %>%
     
-    # Re-calculate taxes
-    do_taxes(baseline_pr_er = NULL,
-             vars_payroll   = return_vars$calc_pr,
-             vars_1040      = return_vars %>%
-                                remove_by_name('calc_pr') %>%
-                                unlist() %>% 
-                                set_names(NULL)) %>% 
+    # Wages are funny because they contain sub-components
+    if (var == 'wages1') { 
+      new_values %<>%  
+        mutate(
+          wages  = wages - wages1,
+          tips   = tips - tips1, 
+          ot     = ot - ot1, 
+          wages1 = 0,
+          tips1  = 0, 
+          ot1    = 0
+        )
+    } else if (var == 'wages2') {
+      new_values %<>% 
+        mutate(
+          wages  = wages - wages2,
+          tips   = tips - tips2, 
+          ot     = ot - ot2, 
+          wages2 = 0,
+          tips2  = 0, 
+          ot2    = 0
+        )
+    } else if (var == 'wages') {
+      new_values %<>% 
+        mutate(
+          across(
+            .cols = c(wages, wages1, wages2, tips, tips1, tips2, ot, ot1, ot2), 
+            .fns  = ~ 0
+          )
+        )
+      
+    # For other variables that are subcomponents of other variables, record
+    # other variables that need to be decrement
+    } else {
+      
+      other_vars = c()
+      if (var %in% c('sole_prop1', 'sole_prop2')) {
+        other_vars = c('sole_prop')
+      }
+      if (var %in% c('farm1', 'farm2')) {
+        other_vars = c('farm')
+      }
+      if (var %in% c('tips1', 'ot1')) {
+        other_vars = c('wages1', 'wages')
+      }
+      if (var %in% c('tips2', 'ot2')) {
+        other_vars = c('wages2', 'wages')
+      }
+      if (var %in% c('part_active', 'part_active_loss')) {
+        other_vars = c('part_se1')
+      }
+      
+      new_values %<>% 
+        mutate(
+          
+          # Zero out variable
+          across(
+            .cols  = all_of(var), 
+            .fns   = ~ 0
+          ),
+          
+          # Decrement other variables
+          across(
+            .cols  = all_of(other_vars), 
+            .fns   = ~ . - original_value
+          )
+        )
+    }
+  }
+  
+  # Invalid type
+  else {
+    new_values = tax_units %>% 
+      mutate(across(.cols = all_of(vars), .fns  = ~ NA))
+  }
+  
+  
+  # Re-calculate taxes
+  new_values %>% 
+    do_taxes(
+      baseline_pr_er = NULL,
+      vars_payroll   = return_vars$calc_pr,
+      vars_1040      = return_vars %>% remove_by_name('calc_pr') %>% unlist() %>% set_names(NULL)
+    ) %>% 
     
     # Calculate MTR and return
     mutate(
       
       # Calculate numerator: change in taxes 
-      delta_taxes = liab_pr_ee + liab_iit_net - liab_actual,
+      delta_taxes = liab_iit_net - actual_liab_iit + pr * (liab_pr - actual_liab_pr),
       
       # Calculate denominator: change in variable value
       delta_var = case_when(
         type == 'nextdollar' ~ 1,
-        type == 'extensive'  ~ if_else(original_var == 0, NA, -original_var), 
+        type == 'extensive'  ~ if_else(original_value == 0, NA, -original_value), 
         TRUE                 ~ NA
       ), 
       
