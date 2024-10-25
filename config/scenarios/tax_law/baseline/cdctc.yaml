@@ -10,6 +10,31 @@ exp_limit:
 n_dep_limit:
   value: 2
 
+
+# TODO
+rates:
+  value:
+    '2014': [0.2, 0.15]
+    '2021': [0.2, 0.3]
+  
+# TODO
+po_thresh:
+  value:
+    '2014': [Inf, 15000]
+    '2021': [400000, 125000]
+    '2022': [Inf, 15000]
+  
+# TODO
+po_rate:
+  value: 
+    '2014': [0, 0.000005]
+    '2021': [0.000005, 0.000005]
+    '2022': [0, 0.000005]
+
+
+
+
+
 # Minimum credit rate (share of eligible expenses)
 min_rate: 
   value: 

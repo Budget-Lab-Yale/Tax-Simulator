@@ -9,9 +9,7 @@ return_vars$calc_cdctc = c('cdctc_nonref', 'cdctc_ref')
 calc_cdctc = function(tax_unit, fill_missings = F) {
   
   #----------------------------------------------------------------------------
-  # Calculates value of Child and Dependent Care Tax Credit (CDCTC). Note: we 
-  # don't model the earned income limitation since it's already mostly
-  # accounted for in selection  out gets use much close
+  # Calculates value of Child and Dependent Care Tax Credit (CDCTC).
   # 
   # Parameters:
   #   - tax_unit (df | list) : either a dataframe or list containing required
@@ -59,6 +57,20 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
       
       # Limit credit-eligible expenses to per-qualifying-dependent maximum
       qual_exp = pmin(care_exp, n_qual_dep * cdctc.exp_limit),
+      
+      
+      excess1 = pmax(0, agi - cdctc.po_thresh1),
+      excess2 = pmax(0, agi - cdctc.po_thresh2),
+      
+      excess1 = ceiling(excess1 / cdctc.discrete_step) * cdctc.discrete_step,
+      excess2 = ceiling(excess2 / cdctc.discrete_step) * cdctc.discrete_step,
+      
+      rate1 = pmax(0, pmax(0, cdctc.rate1 - excess * cdctc.po_rate1)),
+      rate2 = pmax(0, pmax(0, cdctc.rate2 - excess * cdctc.po_rate2)),
+      
+      
+      
+      # TODO OLD
       
       # Calculate credit rate: a descretized linear negative function of AGI, 
       # akin to a phaseout, with a floor and ceiling 
