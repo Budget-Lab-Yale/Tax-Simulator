@@ -15,6 +15,7 @@ rate:
   value:
     '2014': [0.2, 0.15]
     '2021': [0.2, 0.3]
+    '2022': [0.2, 0.15]
   
 # AGI threshold above which credit rate begins phasing out from max to min
 po_thresh:
