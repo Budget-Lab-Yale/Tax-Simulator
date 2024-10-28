@@ -30,7 +30,7 @@ user_id = get_user_id()
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'tests/pt_rates'
+runscript_names  = 'baseline/baseline'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
