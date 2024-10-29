@@ -323,6 +323,13 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # Saver's credit
     bind_cols(calc_savers_cred(.)) %>% 
     
+    # Caregiver credit
+    # bind_cols(calc_caregiver_cred(.)) %>% 
+    mutate(
+      caregiver_cred_nonref = 0, 
+      caregiver_cred_ref    = 0, 
+    ) %>%
+    
     # CTC
     bind_cols(calc_ctc(.)) %>% 
     

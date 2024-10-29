@@ -35,30 +35,32 @@ calc_liab = function(tax_unit, fill_missings = F) {
   req_vars = c(
     
     # Tax unit attributes
-    'liab_bc',         # (dbl) income tax liability before credits, including AMT and excess Premium Tax Credit repayment
-    'ftc',             # (dbl) value of foreign tax credit 
-    'cdctc_nonref',    # (dbl) value of nonrefundable Child and Dependent Care Credit
-    'ed_nonref',       # (dbl) value of nonrefundable education credit
-    'savers_nonref',   # (dbl) value of nonrefundable Saver's Credit
-    'res_energy_cred', # (dbl) value of nonrefundable residential energy credits
-    'old_cred',        # (dbl) value of Elderly and Disabled Credit
-    'ctc_nonref',      # (dbl) value of nonrefundable CTC
-    'gbc',             # (dbl) value of General Business Credit
-    'prior_yr_cred',   # (dbl) value of credit for prior year minimum taxes
-    'other_nonref',    # (dbl) value of other nonrefundable credits
-    'ctc_ref',         # (dbl) value of refundable CTC
-    'ed_ref',          # (dbl) value of refundable education credits (AOC)
-    'net_ptc',         # (dbl) value of Premium Tax Credit, net of advance credit paid
-    'eitc',            # (dbl) value of EITC
-    'rebate',          # (dbl) value of rebate credit
-    'wage_subsidy1',   # (dbl) value of individual wage subsidy, primary earner
-    'wage_subsidy2',   # (dbl) value of individual wage subsidy, primary earner
-    'cdctc_ref',       # (dbl) value of refundable Child and Dependent Care Tax Credit
-    'savers_ref',      # (dbl) value of refundable Saver's credit
-    'liab_niit',       # (dbl) Net Investment Income Tax liability
-    'liab_seca',       # (dbl) self-employment tax liability
-    'recapture_tax',   # (dbl) credit recapture
-    'ira_penalty',     # (dbl) penalty paid for early withdraw from retirement account
+    'liab_bc',               # (dbl) income tax liability before credits, including AMT and excess Premium Tax Credit repayment
+    'ftc',                   # (dbl) value of foreign tax credit 
+    'cdctc_nonref',          # (dbl) value of nonrefundable Child and Dependent Care Credit
+    'ed_nonref',             # (dbl) value of nonrefundable education credit
+    'savers_nonref',         # (dbl) value of nonrefundable Saver's Credit
+    'caregiver_cred_nonref', # (dbl) value of nonrefundable caregiver credit
+    'res_energy_cred',       # (dbl) value of nonrefundable residential energy credits
+    'old_cred',              # (dbl) value of Elderly and Disabled Credit
+    'ctc_nonref',            # (dbl) value of nonrefundable CTC
+    'gbc',                   # (dbl) value of General Business Credit
+    'prior_yr_cred',         # (dbl) value of credit for prior year minimum taxes
+    'other_nonref',          # (dbl) value of other nonrefundable credits
+    'ctc_ref',               # (dbl) value of refundable CTC
+    'ed_ref',                # (dbl) value of refundable education credits (AOC)
+    'caregiver_cred_ref',    # (dbl) value of refundable caregiver credit
+    'net_ptc',               # (dbl) value of Premium Tax Credit, net of advance credit paid
+    'eitc',                  # (dbl) value of EITC
+    'rebate',                # (dbl) value of rebate credit
+    'wage_subsidy1',         # (dbl) value of individual wage subsidy, primary earner
+    'wage_subsidy2',         # (dbl) value of individual wage subsidy, primary earner
+    'cdctc_ref',             # (dbl) value of refundable Child and Dependent Care Tax Credit
+    'savers_ref',            # (dbl) value of refundable Saver's credit
+    'liab_niit',             # (dbl) Net Investment Income Tax liability
+    'liab_seca',             # (dbl) self-employment tax liability
+    'recapture_tax',         # (dbl) credit recapture
+    'ira_penalty',           # (dbl) penalty paid for early withdraw from retirement account
     
     # Tax law attributes
     'credits.repeal_ftc',        # (dbl) whether to repeal Foreign Tax Credit
@@ -86,6 +88,7 @@ calc_liab = function(tax_unit, fill_missings = F) {
                              cdctc_nonref + 
                              ed_nonref + 
                              savers_nonref + 
+                             caregiver_cred_nonref + 
                              res_energy_cred + 
                              old_cred + 
                              ctc_nonref + 
@@ -106,7 +109,8 @@ calc_liab = function(tax_unit, fill_missings = F) {
             wage_subsidy1 + 
             wage_subsidy2 + 
             cdctc_ref + 
-            savers_ref,
+            savers_ref + 
+            caregiver_cred_ref,
       ref_iit = pmin(liab_ac_nonref, ref), 
       
       # Calculate individual income tax liability after credits 
