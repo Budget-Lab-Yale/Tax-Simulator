@@ -12,7 +12,7 @@ n_dep_limit:
 
 # Maximum age to be considered a young qualifying dependent
 young_age_limit:
-  value: 5
+  value: 4
   
 # Maximum age to be considered an old qualifying dependent
 old_age_limit:

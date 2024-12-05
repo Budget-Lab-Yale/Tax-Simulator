@@ -59,6 +59,8 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
     'cdctc.refundable'         # (int) whether credit is refundable
   )
   
+  set.seed(globals$random_seed)
+  
   tax_unit %>% 
     
     # Parse tax unit object passed as argument
@@ -101,8 +103,8 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
       young_excess2 = ceiling(young_excess2 / cdctc.discrete_step) * cdctc.discrete_step,
       
       # Calculate credit rate after phaseouts 
-      young_rate1 = pmax(0, pmax(0, cdctc.young_rate1 - young_excess1 * cdctc.young_po_rate1)),
-      young_rate2 = pmax(0, pmax(0, cdctc.young_rate2 - young_excess2 * cdctc.young_po_rate2)),
+      young_rate1 = pmax(0, cdctc.young_rate1 - young_excess1 * cdctc.young_po_rate1),
+      young_rate2 = pmax(0, cdctc.young_rate2 - young_excess2 * cdctc.young_po_rate2),
       young_rate  = young_rate1 + young_rate2,
       
       # Calculate credit value
@@ -144,7 +146,11 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
       
       # Allocate to refundable and nonrefundable components
       cdctc_nonref = if_else(cdctc.refundable == 1, 0, pmin(young_cdctc + old_cdctc, liab)),
-      cdctc_ref    = if_else(cdctc.refundable == 0, 0, young_cdctc + old_cdctc)
+      cdctc_ref    = if_else(cdctc.refundable == 0, 0, young_cdctc + old_cdctc),
+      
+      # Model take-up: 90% calibrated to target 2019 actual CDCTC
+      cdctc_nonref = cdctc_nonref * (runif(nrow(.)) < 0.9),
+      cdctc_ref    = cdctc_ref    * (runif(nrow(.)) < 0.9)
     
     ) %>% 
     

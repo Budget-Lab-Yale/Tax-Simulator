@@ -30,9 +30,9 @@ user_id = get_user_id()
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'baseline/baseline'
+runscript_names  = 'private/care_group/cdctc'
 scenario_id      = NULL
-local            = 1
+local            = 0
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1
