@@ -1,0 +1,13 @@
+---
+title: "Behavioral Feedback"
+output: 
+  html_document:
+    toc: FALSE
+---
+To this point, we’ve discussed two of the three dimensions which define a scenario in the tax model – economic projections and tax law. The third is behavioral feedback.
+
+Depending on the [type of revenue estimate we’re modeling](https://budgetlab.yale.edu/research/types-budget-estimates), the tax model incorporates certain types of expected behavioral feedback in response to a policy change. For example, investors may wait to realize capital gains if tax rates rise; owners of pass-through businesses might change legal form of organization when the corporate tax rate falls; low-income parents may drop out of the labor force if EMTRs rise. These kinds of responses are distinct from the baseline economic projections described above – these are *changes* to the baseline projections caused by changes in tax policy. For this reason, behavioral responses are incorporated within the simulation (where tax law is parameterized) rather than the tax data pre-processing stage.
+
+At runtime, the tax model admits a list of user-written behavioral feedback modules. These modules are functions expressing input attributes (e.g. capital gains) as a function of tax policy (e.g. the marginal effective tax rate on capital gains). When tax policy changes, these modules are called and update the input attributes of tax microdata to reflect behavioral feedback. While these functions are standardized in the structure of their input and output, the content of these functions can take any form. The idea is that model users can include behavioral feedback of any functional form in their simulation.
+
+When running a counterfactual policy scenario, the tax simulator runs twice. First, it runs in “static” mode, wherein all tax unit attributes are held fixed at their baseline levels when calculating taxes under the policy reform. This step allows us to assess the first-order effects of a policy — for example EMTRs under the new policy regime. Then, the model runs the policy reform scenario again, this time in non-static mode. Behavioral feedback modules are executed at the beginning of non-static mode. These modules modify input attributes according to their user-specific logic, then Tax-Simulator re-calculates taxes. The result is a policy reform simulation which accounts for behavioral feedback.

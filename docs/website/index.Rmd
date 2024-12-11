@@ -1,0 +1,21 @@
+---
+title: "TBL Tax Simulator"
+output: 
+  html_document:
+    toc: FALSE
+---
+
+
+## What is the Tax Simulator?
+The Budget Lab produces projections of the budgetary, distributional, and economic impacts of policy changes, including changes to tax policy. Our main approach to building these projections is *policy microsimulation*, a kind of model that simulates individual members of a population and calculates their policy-dependent outcomes, like tax liability or health insurance status, under different policy scenarios. We then aggregate these outcomes to project variables like tax revenues or the uninsured rate.
+
+Why microsimulation? There are two key reasons why it is a natural fit for tax policy analysis:
+
+- **Microsimulation is an ideal tool for analyzing policies with heterogeneous effects.** The tax code affects different people differently. Tax liability depends on individual- and family-level characteristics and includes countless interactions. Accurate tax calculation requires knowing the joint distribution of attributes like marital status, number of children, wage income, and homeownership, to name a few. Furthermore, we're interested in the distributional impact of policy changes per se. By focusing on the micro-level, our modeling lets us look at how policy impacts subsets of the population.
+- **Microsimulation is an ideal tool for scenario analysis.** The analytical framework for revenue estimation is scenario analysis, where the what-if can be about different topics like tax policy (“how much would TCJA extension cost?”), economic projections ("how much will payroll taxes fall if unemployment rises by 1 percentage point?”), or behavioral assumptions (“how does voluntary compliance affect tax revenues?”). A policy microsimulation allows users to examine model results under different assumptions for policy rules and economic scenarios.
+
+Policy microsimulation models consist of two components. The first is a *policy calculator* – a deterministic function representing the law, where inputs are individual characteristics (such as marital status and income), and the output is some policy-dependent variable (e.g. tax liability). The second component is a *population simulator*. This portion projects the population into the future, including its behavioral responses to policy changes. The output of the population simulator is the input to the policy calculator.
+
+To learn more about the **Tax Simulator**, the following pages, including a step by step user guide to installation and operation, will explore it in greater detail.
+
+[Data Processing and Population Projections](data.md)

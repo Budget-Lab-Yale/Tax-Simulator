@@ -1,0 +1,74 @@
+---
+title: "Technical Implementation"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Due to the data privacy constraints described above, we cannot allow readers to run the code directly. But our model code is freely available to view online at our [GitHub page](https://github.com/Budget-Lab-Yale/). This section offers an overview of the architecture of our model codebase, helping interested readers understand where to find certain model features and how each piece fits together.
+
+The calculations are split into two codebases, [Tax-Data](https://github.com/Budget-Lab-Yale/Tax-Data) and [Tax-Simulator](https://github.com/Budget-Lab-Yale/Tax-Simulator/). Both are written in R, a statistical programming language. Tax-Data processes and projects the tax microdata, which is then used as input to Tax-Simulator. Tax-Data is comparatively simple: it is a linear set of instructions, organized into thematic standalone scripts, each called sequentially in `main.R`.
+
+Tax-Simulator is the broader and larger codebase – it is “the model”. It is designed as a collection of functions which operate on simulated tax microdata (files contained in the `/src` folder) and configuration files which parameterize those functions (files contained in the `/config` folder). The remainder of this section describes major components in Tax-Simulator, mapping concepts to those described earlier in this document.
+
+## Scenario Configuration: Runscripts
+A configuration of Tax-Simulator parameters is called a *scenario*. As described above, three dimensions characterize a scenario: economic and demographic projections, tax law, and behavioral response assumptions. In English, a scenario might be: “TCJA extension against CBO’s economic baseline while assuming a labor supply elasticity of 0.2” or “assume immigration is doubled over the next decade but tax law is unchanged”.
+
+To run Tax-Simulator, we supply a list of scenarios. This list is called a *runscript* – a CSV file where records are scenarios and columns are configuration options. Runscripts can be found in `/config/runscripts`. Columns include:
+
+- **id:** name of scenario (“baseline” being a reserved word).
+
+- **tax_law:** file path to tax law configuration folder.
+
+- **behavior:** space-separated file paths to behavioral assumption configuration files.
+
+- Optional "**dep.**" arguments: alternative specifications for *dependencies*, which are data inputs characterizing economic projections. These dependencies are upstream in the Budget Lab data pipeline. Examples include projected tax microdata (*Tax-Data*) and economic and demographic aggregates (*Macro-Projections*). If left blank, defaults from `interface_versions.yaml` are used.
+
+- Other runtime configuration variables controlling forecast horizon, tax rate calculations, and more
+
+Because we are generally interested in comparing counterfactual reform scenarios to the baseline, most runscripts include the baseline. By definition, the baseline scenario is characterized by CBO’s economic baseline, current-law tax policy, and no behavioral feedback.
+
+## Scenario Configuration: Tax Law
+Tax law comprises of all rules which govern calculation of tax liability, such as rates, brackets, phase-out rules, definitions of income, and more. These rules might be scheduled to vary over time and may be indexed to inflation. We represent tax law as an instantiation of *tax parameters* – collections of thematically related tax provisions called *subparameters*. For example, the Child Tax Credit is a tax parameter, made of subparameters like the credit’s per-child value, the phase-out threshold, the phase-our rate, the maximum child age, whether a Social Security Number is required, and so forth.
+
+Subparameters are associated with two additional attributes: (1) the time series of its values, expressed as the set of year-value pairs for years when policy changes, and (2) and an optional collection of inflation indexation rules. The latter comprises of four parameters: the measure of inflation, the base year of indexation, the rounding step (e.g. nearest $100), and the rounding direction.
+
+Each tax parameter is stored in its own YAML file. Top-level elements correspond to subparameters. There are two additional, optional top-level elements. The first is `indexation_defaults`, which lets the user specify default values for indexation attributes when many subparameter share the same indexation rules. The second is `filing_status_mapper` – a dictionary which operates on and aggregates subparameters into a single subparameter which varies by filing status. For example, rather than having to specify individual subparameters for single vs joint returns, we can instead specify that, e.g., the married value is twice the value of the single parameter.
+
+An instance of tax law is represented by a folder containing subparameter YAML files, the filepath to which is supplied in a runscript. For baseline (current law), YAML files for all subparameters are specified. For counterfactual policy scenarios, only changes from baseline need to be specified. Folders can be found in the `/config/scenarios/tax_law`.
+
+## Scenario Configuration: Behavioral Assumptions
+The final dimension of scenario configuration is behavioral feedback: functions mapping changes in tax policy to change in some variable, like wages, capital gains, or pass-through income. Behavioral feedback is configured through the submission of behavior modules – R scripts which contains custom functions which operate on the model’s underlying tax data. In this sense, behavior modules provide a standardized interface through which users can impose behavioral feedback assumptions with no restriction on functional form.
+
+Behavioral feedback modules are stored in `/config/scenarios/tax_law`. File paths to modules are supplied to runscripts under the “behavior” column argument. This how-to guide gives further detail on behavior modules: interface requirements, how they integrate with the rest of Tax-Simulator, and some examples of existing modules.
+
+## Model Code: Organization
+Model code is organized into four subfolders of `/src`:
+
+- **`/data`.** This folder contains functions which define and build core data structures, including tax units and tax law. It also contains functions for post-processing operations like the construction of revenue estimates and distribution tables.
+
+- **`/calc`.** This folder contains tax calculation functions, including helper functions to calculate tax rates.
+
+- **`/sim`.** This folder contains functions governing the flow of scenario execution from reading input data all the way through writing output data. It also includes the functions which parse and execute behavioral feedback modules.
+
+- **`/misc`/** This folder contains helper functions which parse configuration files and generate lists of global variables.
+
+## Model Code: Data Structures
+Tax-Simulator is largely written using functions and data structures from the `tidyverse`, a collection of R packages designed for data science applications. At the core of Tax-Simulator is the dataframe of tax units: a tabular data structure where rows represent tax units and columns are attributes of those tax units. For a given year, tax unit microdata is loaded into memory as a dataframe. Over the course of a model run, three kinds of operations occur on the tax unit dataframe:
+
+1. **Merging of tax law attributes.** Tax parameters are represented as attributes of individual tax units – that is, columns in the tax units dataframe. For example, the column “ctc.po_thresh” contains values for the CTC phaseout threshold: under current law in 2024, the value will be $400K for joint return records, $200K for single returns, and so on. Tax parameters are merged onto the tax units dataframe at the beginning of a simulation year. This structure lets us efficiently calculate tax variables within calculator functions (more on this below).
+
+2. **Updating of values to reflect behavioral feedback.** Behavior modules directly operate on variables in the tax units dataframe.
+
+3. **Addition of derived tax calculation columns.**  Each tax calculator function adds new variables to the tax unit dataframe. For example, the `calc_agi()` function takes as input the tax units dataframe and adds a new variable (`agi`) to it. The final result of tax calculation is a tax units dataframe with all derived 1040 variables as additional columns.
+
+## Model Code: Tax Calculator
+Tax calculation – the process by which we derive all tax variables for a given scenario-year – is implemented as a sequence of function calls where each function handles a specific element of individual income (or payroll) taxes.
+
+Each calculator function takes as input the tax units dataframe, which, at the time of execution, contains all tax law attributes as well as. In For example, calculating itemized deductions requires knowing AGI, which itself is a calculated value. Therefore `calc_agi()` is called prior to `calc_item()`, and the latter function contains calculated values for AGI at the time of its execution. The return value of a calculator function is dataframe containing only the newly derived variables.
+
+Every calculator function lists its required input variables, which are categorized as either being attributes of the tax unit (such as wages, number of children, or itemized deductions) or attributes of tax law (such as). The function will check for the presence of these variables in the columns of the tax units dataframe. Then, custom tax calculation logic is carried out in the body of the function.
+
+To allow for the ability to model the broadest array of reforms in Tax-Simulator, functions are written with an eye towards parameterization and generalizability. For example, the system of preferred-rate brackets for investment income is expressed as a general function rather than the complicated conditional logic found in Schedule D. Nonetheless, some reforms will require the addition of new parameters or even entire functions.

@@ -1,0 +1,26 @@
+name: "Mywebsite"
+title: "My new website"
+type: inverse
+left:
+  - text: "User Guide"
+    href: ./user_guide.html
+  - text: "Model Documentation"
+    menu: 
+      - text: "Tax-Data"
+      - text: "Tax-Simulator"
+        menu:
+         - text: "Data Processing"
+           href: ./data.html
+         - text: "Tax Calculator"
+           href: ./tax_calculator.html
+         - text: "Behavioral Feedback"
+           href: ./behavioral.html
+         - text: "Post-Processing"
+           href: ./post_processing.html
+         - text: "Technical Implementation"
+           href: ./technical.html
+  - text: "Contact"
+    href: ./contact.html
+right:
+  - icon: fa-github fa-lg
+    href: https://github.com/Budget-Lab-Yale
