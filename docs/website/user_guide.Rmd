@@ -1,0 +1,102 @@
+---
+title: "Step by Step Guide"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data and Code Requirements for Operating Budget Lab Models
+
+The Budget Lab's **Tax-Data** and **Tax-Simulator** models are R-based tools used to create and simulate the US federal tax base and tax system. They rely on several auxiliary models using nonproprietary data. However, the core data used is the 2015 IRS Public Use File, which has restricted access, and which we cannot release. (Information about purchasing the file can be found on [this page](https://www.irs.gov/statistics/soi-tax-stats-individual-public-use-microdata-files)). These models are inoperable without it.
+
+## Model Installation and Data Pre-Processing
+
+1. Clone the [**Tax-Data**](https://github.com/Budget-Lab-Yale/Tax-Data) and [**Tax-Simulator**](https://github.com/Budget-Lab-Yale/Tax-Simulator) repositories from GitHub onto your computer. Note the location and path to the directory in which the repositories are stored.
+
+2. Download this [**data zip**](), and extract the files to a data directory which the models from the previous step can access.
+
+3. In the `raw_data` directory, create subdirectories stacked as `IRS-PUF/v1/YYYYMMDDHR/historical` and add the PUF and demographic supplement files, named `puf_2015.csv`. The YYYYMMDDHR code is, by Budget Lab convention, the year, month, day and hour of a file's creation.
+
+4. Copy the path to the directory in which your data is stored, and go to the `{MODEL-NAME}/config/interfaces/output_roots.yaml` file, and replace the paths found there.
+
+5. In `Tax-Data/config/runscripts/baseline.yaml`, replace the `vintage` field value under `IRS-PUF` with the YYYYMMDDHR code you created in step 3.
+
+6. Run **Tax-Data**. This model has a high compute time so account for such in your data planning. However, note that you should only need to run the model once. You can use the same **Tax-Data** output files for all of your simulations, and should only need to re-run the model if there is a change to your pre-processed data requirements.
+
+7. After running **Tax-Data**, note the YYYYMMDDHR stamp to which it writes in `model_data/Tax-Data`, and provide that as the `default_vintage` field under **Tax-Data** in `Tax-Simulator/config/interfaces/interface_versions.yaml`.
+
+The **Tax-Simulator** model should now be operable.
+
+## Baseline Run of the Tax-Simulator Model
+
+Running the **Tax-Simulator's** baseline configuration will test whether the models were correctly installed. On the `Tax-Simulator/src/main.R` script, note lines 30 to 38. They should look like this for a baseline run:
+
+``` {.r .R}
+runscript_names  = 'baseline/baseline'
+scenario_id      = NULL
+local            = 1
+vintage          = NULL
+pct_sample       = 1
+stacked          = 1
+baseline_vintage = NULL
+delete_detail    = 0
+multicore        = 0
+```
+
+- **`runscript_names`** refers to the policy parameters submitted to the **Tax-Simulator** for a given set of runs. This will be discussed in more detail on the [runscript page](./runscripts.html).
+
+- **`scenario_id`** is the name a given single scenario run. This parameter is optional, as it is also contained in the runscript.
+
+- **`local`** is a binary flag determining whether to write to the `local` or `production` paths specified in `Tax-Simulator/config/interfaces/output_roots.yaml`. These paths should have been determined in the previous installation section of this guide.
+
+- **`vintage`** is an optional parameter where the user can specify an existing vintage to which the **Tax-Simulator** will write. If left `NULL`, the model will create a new directory named YYYYMMDDHR, following the previously discussed convention.
+
+- **`pct_sample`** is a decimal value the user can determine to specify how much of the underlying PUF is sampled for this policy run. A value of 1 indicates that 100% of the filers are selected, and is the suggested value for this parameter.
+
+- **`stacked`** is a binary flag determining whether the policy runs in the runscript are stacked runs, in which each run adds an additional change to the simulated tax law. 
+
+- **`baseline_vintage`** is an optional parameter that can be used to specify an existing baseline run to which the policy simulations can be compared. Using this can (slightly) decrease your overall compute time. If left as `NULL`, the model will run a baseline scenario as specified in the first entry of the runscript.
+
+- **`delete_detail`** is a binary flag telling the model whether to delete all of the microdata files created during the run. Microdata output of this model can easily exceed a gigabyte *per year* of a set of runs, so if you are simulating many different scenarios consider how much space is available on your disc. The runscript parameter `Dist_Years` also addresses this problem, and will be discussed in more detail below.
+
+- **`multicore`** is a binary flag determining whether the model will utilize its multicore-threading functionality. If available, this can dramatically reduce run time, but be sure your technical configuration can support this parameter. Your IT staff or Budget Lab employees can provide more information if need be.
+
+To run the model, simply activate the `Tax-Simulator.Rproj` in the root directory of the repository and type `source(src/main.R)` into the console or highlight all of the code in the `main.R` file and run it. If, after a few seconds, the console begins to print `Running baseline scenario for year: {START_YEAR}` the model is likely running correctly. Once it has completed, check the output and ensure that it looks reasonable. If the model crashes or does not produce sensible output, revisit the previous section of this guide or contact Budget Lab staff for assistance.
+
+## Policy Simulation
+
+The **Tax-Simulator's** baseline is configured to the current law. Simulating a different policy scenario requires creating new parameter files and structuring them in a manner the model can interpret. The following steps guide users on how to create such files, and a more in depth explanation of each aspect is available on the [tax law configuration page](./tax_law.html).
+
+1. Create or note appropriate directories for this policy test. For the runscript parameter file, create the directory within the `config/runscripts` subdirectory. For the tax law files, create it within the `config/scenarios/tax_law` subdirectory.
+
+2. Navigate to `config/runscripts/baseline`, copy `baseline.csv`, and save it to the directory you create in the previous step. 
+
+3. Create a new line and enter an appropriate identifier in the `ID` column. Note the file path for the tax law file you created in step 1, and enter that in the `tax_law` column. The path should relative to the `config/scenarios/tax_law` directory. 
+
+4. Navigate to the `config/scenarios/tax_law/baseline` directory, and identify which `.yaml` file contains the tax law parameters you would like to change. If you would like to add an additional provision not currently configured in the **Tax-Simulator** baseline, you must add it to the baseline `.yaml` file in addition to the simulation file. **Policy simulations cannot create new tax law provisions, they can only modify existing ones**. Copy the appropriate file, and save it to the tax law directory created in step 1. 
+
+5. Modify the file to align with the policy you would like to simulate.
+
+6. Repeat steps 4 and 5 until all provisions you would like to simulate for this run are accounted for.
+
+7. If you are including a behavioral feedback module in this test, return to the runscript and, in the `behavior` column, provide the file path to the appropriate script relative to the `config/scenarios/behavior` directory. The file path here should include the name of the `.R` file containing the function, but not include the `.R` at the end of the name.
+
+8. In the `years` column, enter the years you would like to simulate in the format `{start_year}:{end_year}`. Do the same for the `dist_years` column, which indicates which years for which you would like to calculate the full distribution. 
+
+9. In the `mtr_vars` column, enter the names of the variables for which the model will calculate the marginal tax rates. You can include multiple space-delimited variable names here. 
+
+10. In the `mtr_types` column, enter the type of marginal tax rate to be calculated. The kinds of types include `nextdollar` (intensive margin) and `extensive` (extensive margin). 
+
+11. Repeat steps 3 to 10 for each additional policy scenario you would like to run. *NOTE*: If you are doing a stacked policy run, make sure that when doing steps 4 and 5, you only add one additional change to the new set of parameters, and copy the tax policy changes from the immediately proceeding run in the stack. Each run in the stack should have its own subdirectory within the folder you created in step 1. The `tax_law` path in the runscript should also be specific to each subdirectory of the aforementionned folder.
+
+12. Navigate to `src/main.R`, and on line 30 replace the `runscript_names` value with the path you created in step 1. The path should be relative to the `config/runscripts` directory, should include the name of the runscript, but omit the `.csv`.
+
+13. Check to make sure all of the `main.R` parameters are appropriately specified (see previous section for a description).
+
+13. Run `src/main.R`.
+
+Consult the other pages within the User Guide section for more in depth discussions of each element.
+
+
