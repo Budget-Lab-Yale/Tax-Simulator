@@ -1,0 +1,157 @@
+---
+title: "Tax Law Configuration"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The model's tax law exists as a series of `.yaml` files representing different provisions. When running a scenario, the model reads these files and constructs the according set of quantitative rules to be used in calculations. 
+
+- **`agi.yaml`**: Contains all the parameters for calculating Adjusted Gross Income.
+
+- **`amt.yaml`**: Parameters for calculating the Alternative Minimum Tax.
+
+- **`bubble.yaml`**: Parameters for a bubble rate tax.
+
+- **`cdctc.yaml`**: Child and Dependent Care Tax Credit parameters. Includes thresholds, numbers of qualifying dependents, and elligible expenses.
+
+- **`char.yaml`**: Charitable Deduction parameters for itemized deductions.
+
+- **`corp.yaml`**: Top corporate tax rate.
+
+- **`credits.yaml`**: Binary flags for repealing or enabling credits, including the Foreign Tax Credit, residential energy credits, and several other nonrefundable credits.
+
+- **`ctc.yaml`**: Parameters for the Child Tax Credit.
+
+- **`ed.yaml`**:
+
+- **`eitc.yaml`**: Parameters for the Earned Income Tax Credit.
+
+- **`filing.yaml`**: Binary flag for repealing the Head of Household filing status.
+
+- **`item.yaml`**: Parameters for Itemized Deductions.
+
+- **`niit.yaml`**: Parameters for the Net Investment Income Tax.
+
+- **`ord.yaml`**: Parameters for taxes on ordinary income. Includes brackets, rates, and inflation adjustments.
+
+- **`pe.yaml`**: Parameters for personal exemptions by filing status and phaseout thresholds.
+
+- **`pr.yaml`**: Parameters for the payroll tax. Also accounts for self employment income.
+
+- **`pref.yaml`**: Parameters for income taxed at preferred rates and flags for what forms of income qualify.
+
+- **`qbi`**: Parameters for Qualified Business Income, including specified configurations for SSTBs.
+
+- **`rebate.yaml`**: 
+
+- **`savers.yaml`**: Parameters for the Saver's Credit.
+
+- **`ss.yaml`**: Parameters for how Social Security income is included in AGI.
+
+- **`std.yaml`**: Parameters for the Standard Deduction.
+
+- **`wagesub.yaml`**: 
+
+## Constructing Reforms
+
+When a reform is run, the model reads new tax law `.yaml` files that overwrite the existing provision in the baseline configuration. For instance, the tax rates on ordinary income, brackets, and filing status mapper in the baseline are stored in `ord.yaml` as:
+
+``` {.r .yaml}
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_married
+    '3': brackets_married / 2
+    '4': brackets_head
+
+# Ordinary tax rate schedule
+rates:
+  value:
+    '2014': [0.1, 0.15, 0.25, 0.28, 0.33, 0.35, 0.396]
+    '2018': [0.1, 0.12, 0.22, 0.24, 0.32, 0.35, 0.37]
+    '2026': [0.1, 0.15, 0.25, 0.28, 0.33, 0.35, 0.396]
+
+# Brackets for ordinary-rate income, single filers
+brackets_single:
+  value:
+    '2014': [0, 7000, 22100, 53500, 115000, 250000, 400000]
+    '2018': [0, 9525, 38700, 82500, 157500, 200000, 500000]
+    '2026': [0, 7000, 22100, 53500, 115000, 250000, 400000]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: [25, 25, 25, 25, 25, 25, 25]
+```
+
+If you wanted to test a reform in which the Tax Cuts and Jobs Act (TCJA) is extended rather than expiring, you would only need to change the bottom two sections of the code block and could omit the `filing_status_mapper` portion entirely. The same block in the new reform `ord.yaml` file would then become:
+
+``` {.r .yaml}
+# Ordinary tax rate schedule
+rates:
+  value:
+    '2014': [0.1, 0.15, 0.25, 0.28, 0.33, 0.35, 0.396]
+    '2018': [0.1, 0.12, 0.22, 0.24, 0.32, 0.35, 0.37]
+
+# Brackets for ordinary-rate income, single filers
+brackets_single:
+  value:
+    '2014': [0, 7000, 22100, 53500, 115000, 250000, 400000]
+    '2018': [0, 9525, 38700, 82500, 157500, 200000, 500000]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: [25, 25, 25, 25, 25, 25, 25]
+```
+Since the filing status mapper is identical between scenarios, it does not need to be overwritten. 
+
+If instead, you wanted to test a policy in which TCJA would come *back* into effect after a few years, you would write it like this:
+
+``` {.r .yaml}
+# Ordinary tax rate schedule
+rates:
+  value:
+    '2014': [0.1, 0.15, 0.25, 0.28, 0.33, 0.35, 0.396]
+    '2018': [0.1, 0.12, 0.22, 0.24, 0.32, 0.35, 0.37]
+    '2026': [0.1, 0.15, 0.25, 0.28, 0.33, 0.35, 0.396]
+    '2030': [0.1, 0.12, 0.22, 0.24, 0.32, 0.35, 0.37]
+
+# Brackets for ordinary-rate income, single filers
+brackets_single:
+  value:
+    '2014': [0, 7000, 22100, 53500, 115000, 250000, 400000]
+    '2018': [0, 9525, 38700, 82500, 157500, 200000, 500000]
+    '2026': [0, 7000, 22100, 53500, 115000, 250000, 400000]
+    '2030': [0, 9525, 38700, 82500, 157500, 200000, 500000]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: [25, 25, 25, 25, 25, 25, 25]
+
+```
+
+A configuration like the one below would be **incorrect!**:
+
+``` {.r .yaml}
+# Ordinary tax rate schedule
+rates:
+  value:
+    '2030': [0.1, 0.12, 0.22, 0.24, 0.32, 0.35, 0.37]
+# Brackets for ordinary-rate income, single filers
+brackets_single:
+  value:
+    '2030': [0, 9525, 38700, 82500, 157500, 200000, 500000]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: [25, 25, 25, 25, 25, 25, 25]
+
+```
+
+As it would overwrite the 2014 through 2026 values found in the baseline, thus leaving the simulator with no rates to calculate liability before 2030. **The policy simulations do not add onto the baseline, they overwrite it**.
+
+## Creating Tax Laws Not Configured in the Model
+
+If, instead, you wanted to add a new aspect of tax law that is not currently represented in the baseline configuration, you would need to create a new file in the `config/scenarios/baseline` directory with those parameters. Then, you could modify them in policy reforms. If you would like the simulation to be the only point in which this aspect of tax law is included, you still need to include the `.yaml` file in the baseline, but should construct it in such a manner that, in the baseline, the parameters are turned off.

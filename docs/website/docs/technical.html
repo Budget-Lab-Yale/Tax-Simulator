@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>Technical Implementation</title>
+
+<script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/spacelab.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/font-awesome-6.4.2/css/all.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.4.2/css/v4-shims.min.css" rel="stylesheet" />
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+.tocify-subheader {
+  display: inline;
+}
+.tocify-subheader .tocify-item {
+  font-size: 0.95em;
+}
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-inverse  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">My new website</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="./user_guide.html">User Guide</a>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Model Documentation
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="./data.html">Data Processing</a>
+    </li>
+    <li>
+      <a href="./tax_calculator.html">Tax Calculator</a>
+    </li>
+    <li>
+      <a href="./behavioral.html">Behavioral Feedback</a>
+    </li>
+    <li>
+      <a href="./post_processing.html">Post-Processing</a>
+    </li>
+    <li>
+      <a href="./technical.html">Technical Implementation</a>
+    </li>
+  </ul>
+</li>
+<li>
+  <a href="./contact.html">Contact</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="https://github.com/githubusername/mywebsite">
+    <span class="fa fa-github fa-lg"></span>
+     
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Technical Implementation</h1>
+
+</div>
+
+
+<p>Due to the data privacy constraints described above, we cannot allow
+readers to run the code directly. But our model code is freely available
+to view online at our <a
+href="https://github.com/Budget-Lab-Yale/">GitHub page</a>. This section
+offers an overview of the architecture of our model codebase, helping
+interested readers understand where to find certain model features and
+how each piece fits together.</p>
+<p>The calculations are split into two codebases, <a
+href="https://github.com/Budget-Lab-Yale/Tax-Data">Tax-Data</a> and <a
+href="https://github.com/Budget-Lab-Yale/Tax-Simulator/">Tax-Simulator</a>.
+Both are written in R, a statistical programming language. Tax-Data
+processes and projects the tax microdata, which is then used as input to
+Tax-Simulator. Tax-Data is comparatively simple: it is a linear set of
+instructions, organized into thematic standalone scripts, each called
+sequentially in <code>main.R</code>.</p>
+<p>Tax-Simulator is the broader and larger codebase – it is “the model”.
+It is designed as a collection of functions which operate on simulated
+tax microdata (files contained in the <code>/src</code> folder) and
+configuration files which parameterize those functions (files contained
+in the <code>/config</code> folder). The remainder of this section
+describes major components in Tax-Simulator, mapping concepts to those
+described earlier in this document.</p>
+<div id="scenario-configuration-runscripts" class="section level2">
+<h2>Scenario Configuration: Runscripts</h2>
+<p>A configuration of Tax-Simulator parameters is called a
+<em>scenario</em>. As described above, three dimensions characterize a
+scenario: economic and demographic projections, tax law, and behavioral
+response assumptions. In English, a scenario might be: “TCJA extension
+against CBO’s economic baseline while assuming a labor supply elasticity
+of 0.2” or “assume immigration is doubled over the next decade but tax
+law is unchanged”.</p>
+<p>To run Tax-Simulator, we supply a list of scenarios. This list is
+called a <em>runscript</em> – a CSV file where records are scenarios and
+columns are configuration options. Runscripts can be found in
+<code>/config/runscripts</code>. Columns include:</p>
+<ul>
+<li><p><strong>id:</strong> name of scenario (“baseline” being a
+reserved word).</p></li>
+<li><p><strong>tax_law:</strong> file path to tax law configuration
+folder.</p></li>
+<li><p><strong>behavior:</strong> space-separated file paths to
+behavioral assumption configuration files.</p></li>
+<li><p>Optional “<strong>dep.</strong>” arguments: alternative
+specifications for <em>dependencies</em>, which are data inputs
+characterizing economic projections. These dependencies are upstream in
+the Budget Lab data pipeline. Examples include projected tax microdata
+(<em>Tax-Data</em>) and economic and demographic aggregates
+(<em>Macro-Projections</em>). If left blank, defaults from
+<code>interface_versions.yaml</code> are used.</p></li>
+<li><p>Other runtime configuration variables controlling forecast
+horizon, tax rate calculations, and more</p></li>
+</ul>
+<p>Because we are generally interested in comparing counterfactual
+reform scenarios to the baseline, most runscripts include the baseline.
+By definition, the baseline scenario is characterized by CBO’s economic
+baseline, current-law tax policy, and no behavioral feedback.</p>
+</div>
+<div id="scenario-configuration-tax-law" class="section level2">
+<h2>Scenario Configuration: Tax Law</h2>
+<p>Tax law comprises of all rules which govern calculation of tax
+liability, such as rates, brackets, phase-out rules, definitions of
+income, and more. These rules might be scheduled to vary over time and
+may be indexed to inflation. We represent tax law as an instantiation of
+<em>tax parameters</em> – collections of thematically related tax
+provisions called <em>subparameters</em>. For example, the Child Tax
+Credit is a tax parameter, made of subparameters like the credit’s
+per-child value, the phase-out threshold, the phase-our rate, the
+maximum child age, whether a Social Security Number is required, and so
+forth.</p>
+<p>Subparameters are associated with two additional attributes: (1) the
+time series of its values, expressed as the set of year-value pairs for
+years when policy changes, and (2) and an optional collection of
+inflation indexation rules. The latter comprises of four parameters: the
+measure of inflation, the base year of indexation, the rounding step
+(e.g. nearest $100), and the rounding direction.</p>
+<p>Each tax parameter is stored in its own YAML file. Top-level elements
+correspond to subparameters. There are two additional, optional
+top-level elements. The first is <code>indexation_defaults</code>, which
+lets the user specify default values for indexation attributes when many
+subparameter share the same indexation rules. The second is
+<code>filing_status_mapper</code> – a dictionary which operates on and
+aggregates subparameters into a single subparameter which varies by
+filing status. For example, rather than having to specify individual
+subparameters for single vs joint returns, we can instead specify that,
+e.g., the married value is twice the value of the single parameter.</p>
+<p>An instance of tax law is represented by a folder containing
+subparameter YAML files, the filepath to which is supplied in a
+runscript. For baseline (current law), YAML files for all subparameters
+are specified. For counterfactual policy scenarios, only changes from
+baseline need to be specified. Folders can be found in the
+<code>/config/scenarios/tax_law</code>.</p>
+</div>
+<div id="scenario-configuration-behavioral-assumptions"
+class="section level2">
+<h2>Scenario Configuration: Behavioral Assumptions</h2>
+<p>The final dimension of scenario configuration is behavioral feedback:
+functions mapping changes in tax policy to change in some variable, like
+wages, capital gains, or pass-through income. Behavioral feedback is
+configured through the submission of behavior modules – R scripts which
+contains custom functions which operate on the model’s underlying tax
+data. In this sense, behavior modules provide a standardized interface
+through which users can impose behavioral feedback assumptions with no
+restriction on functional form.</p>
+<p>Behavioral feedback modules are stored in
+<code>/config/scenarios/tax_law</code>. File paths to modules are
+supplied to runscripts under the “behavior” column argument. This how-to
+guide gives further detail on behavior modules: interface requirements,
+how they integrate with the rest of Tax-Simulator, and some examples of
+existing modules.</p>
+</div>
+<div id="model-code-organization" class="section level2">
+<h2>Model Code: Organization</h2>
+<p>Model code is organized into four subfolders of
+<code>/src</code>:</p>
+<ul>
+<li><p><strong><code>/data</code>.</strong> This folder contains
+functions which define and build core data structures, including tax
+units and tax law. It also contains functions for post-processing
+operations like the construction of revenue estimates and distribution
+tables.</p></li>
+<li><p><strong><code>/calc</code>.</strong> This folder contains tax
+calculation functions, including helper functions to calculate tax
+rates.</p></li>
+<li><p><strong><code>/sim</code>.</strong> This folder contains
+functions governing the flow of scenario execution from reading input
+data all the way through writing output data. It also includes the
+functions which parse and execute behavioral feedback modules.</p></li>
+<li><p><strong><code>/misc</code>/</strong> This folder contains helper
+functions which parse configuration files and generate lists of global
+variables.</p></li>
+</ul>
+</div>
+<div id="model-code-data-structures" class="section level2">
+<h2>Model Code: Data Structures</h2>
+<p>Tax-Simulator is largely written using functions and data structures
+from the <code>tidyverse</code>, a collection of R packages designed for
+data science applications. At the core of Tax-Simulator is the dataframe
+of tax units: a tabular data structure where rows represent tax units
+and columns are attributes of those tax units. For a given year, tax
+unit microdata is loaded into memory as a dataframe. Over the course of
+a model run, three kinds of operations occur on the tax unit
+dataframe:</p>
+<ol style="list-style-type: decimal">
+<li><p><strong>Merging of tax law attributes.</strong> Tax parameters
+are represented as attributes of individual tax units – that is, columns
+in the tax units dataframe. For example, the column “ctc.po_thresh”
+contains values for the CTC phaseout threshold: under current law in
+2024, the value will be $400K for joint return records, $200K for single
+returns, and so on. Tax parameters are merged onto the tax units
+dataframe at the beginning of a simulation year. This structure lets us
+efficiently calculate tax variables within calculator functions (more on
+this below).</p></li>
+<li><p><strong>Updating of values to reflect behavioral
+feedback.</strong> Behavior modules directly operate on variables in the
+tax units dataframe.</p></li>
+<li><p><strong>Addition of derived tax calculation columns.</strong>
+Each tax calculator function adds new variables to the tax unit
+dataframe. For example, the <code>calc_agi()</code> function takes as
+input the tax units dataframe and adds a new variable (<code>agi</code>)
+to it. The final result of tax calculation is a tax units dataframe with
+all derived 1040 variables as additional columns.</p></li>
+</ol>
+</div>
+<div id="model-code-tax-calculator" class="section level2">
+<h2>Model Code: Tax Calculator</h2>
+<p>Tax calculation – the process by which we derive all tax variables
+for a given scenario-year – is implemented as a sequence of function
+calls where each function handles a specific element of individual
+income (or payroll) taxes.</p>
+<p>Each calculator function takes as input the tax units dataframe,
+which, at the time of execution, contains all tax law attributes as well
+as. In For example, calculating itemized deductions requires knowing
+AGI, which itself is a calculated value. Therefore
+<code>calc_agi()</code> is called prior to <code>calc_item()</code>, and
+the latter function contains calculated values for AGI at the time of
+its execution. The return value of a calculator function is dataframe
+containing only the newly derived variables.</p>
+<p>Every calculator function lists its required input variables, which
+are categorized as either being attributes of the tax unit (such as
+wages, number of children, or itemized deductions) or attributes of tax
+law (such as). The function will check for the presence of these
+variables in the columns of the tax units dataframe. Then, custom tax
+calculation logic is carried out in the body of the function.</p>
+<p>To allow for the ability to model the broadest array of reforms in
+Tax-Simulator, functions are written with an eye towards
+parameterization and generalizability. For example, the system of
+preferred-rate brackets for investment income is expressed as a general
+function rather than the complicated conditional logic found in Schedule
+D. Nonetheless, some reforms will require the addition of new parameters
+or even entire functions.</p>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = false;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

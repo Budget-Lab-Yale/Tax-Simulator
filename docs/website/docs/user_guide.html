@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>Step by Step Guide</title>
+
+<script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/spacelab.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/font-awesome-6.4.2/css/all.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.4.2/css/v4-shims.min.css" rel="stylesheet" />
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+.tocify-subheader {
+  display: inline;
+}
+.tocify-subheader .tocify-item {
+  font-size: 0.95em;
+}
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-inverse  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">The Budget Lab at Yale Technical Documentation</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    User Guide
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="./user_guide.html">Step-by-Step Guide</a>
+    </li>
+    <li>
+      <a href="./runscripts.html">Runscript</a>
+    </li>
+    <li>
+      <a href="./tax_law.html">Tax Law Configuration</a>
+    </li>
+    <li>
+      <a href="./behavior_modules.html">Behavior Modules</a>
+    </li>
+  </ul>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Model Documentation
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li class="dropdown-header">Tax-Data</li>
+    <li class="dropdown-submenu">
+      <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Tax-Simulator</a>
+      <ul class="dropdown-menu" role="menu">
+        <li>
+          <a href="./data.html">Data Processing</a>
+        </li>
+        <li>
+          <a href="./tax_calculator.html">Tax Calculator</a>
+        </li>
+        <li>
+          <a href="./behavioral.html">Behavioral Feedback</a>
+        </li>
+        <li>
+          <a href="./post_processing.html">Post-Processing</a>
+        </li>
+        <li>
+          <a href="./technical.html">Technical Implementation</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</li>
+<li>
+  <a href="./contact.html">Contact</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="https://github.com/Budget-Lab-Yale">
+    <span class="fa fa-github fa-lg"></span>
+     
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Step by Step Guide</h1>
+
+</div>
+
+
+<div id="data-and-code-requirements-for-operating-budget-lab-models"
+class="section level2">
+<h2>Data and Code Requirements for Operating Budget Lab Models</h2>
+<p>The Budget Lab’s <strong>Tax-Data</strong> and
+<strong>Tax-Simulator</strong> models are R-based tools used to create
+and simulate the US federal tax base and tax system. They rely on
+several auxiliary models using nonproprietary data. However, the core
+data used is the 2015 IRS Public Use File, which has restricted access,
+and which we cannot release. (Information about purchasing the file can
+be found on <a
+href="https://www.irs.gov/statistics/soi-tax-stats-individual-public-use-microdata-files">this
+page</a>). These models are inoperable without it.</p>
+</div>
+<div id="model-installation-and-data-pre-processing"
+class="section level2">
+<h2>Model Installation and Data Pre-Processing</h2>
+<ol style="list-style-type: decimal">
+<li><p>Clone the <a
+href="https://github.com/Budget-Lab-Yale/Tax-Data"><strong>Tax-Data</strong></a>
+and <a
+href="https://github.com/Budget-Lab-Yale/Tax-Simulator"><strong>Tax-Simulator</strong></a>
+repositories from GitHub onto your computer. Note the location and path
+to the directory in which the repositories are stored.</p></li>
+<li><p>Download this <a href=""><strong>data zip</strong></a>, and
+extract the files to a data directory which the models from the previous
+step can access.</p></li>
+<li><p>In the <code>raw_data</code> directory, create subdirectories
+stacked as <code>IRS-PUF/v1/YYYYMMDDHR/historical</code> and add the PUF
+and demographic supplement files, named <code>puf_2015.csv</code>. The
+YYYYMMDDHR code is, by Budget Lab convention, the year, month, day and
+hour of a file’s creation.</p></li>
+<li><p>Copy the path to the directory in which your data is stored, and
+go to the <code>{MODEL-NAME}/config/interfaces/output_roots.yaml</code>
+file, and replace the paths found there.</p></li>
+<li><p>In <code>Tax-Data/config/runscripts/baseline.yaml</code>, replace
+the <code>vintage</code> field value under <code>IRS-PUF</code> with the
+YYYYMMDDHR code you created in step 3.</p></li>
+<li><p>Run <strong>Tax-Data</strong>. This model has a high compute time
+so account for such in your data planning. However, note that you should
+only need to run the model once. You can use the same
+<strong>Tax-Data</strong> output files for all of your simulations, and
+should only need to re-run the model if there is a change to your
+pre-processed data requirements.</p></li>
+<li><p>After running <strong>Tax-Data</strong>, note the YYYYMMDDHR
+stamp to which it writes in <code>model_data/Tax-Data</code>, and
+provide that as the <code>default_vintage</code> field under
+<strong>Tax-Data</strong> in
+<code>Tax-Simulator/config/interfaces/interface_versions.yaml</code>.</p></li>
+</ol>
+<p>The <strong>Tax-Simulator</strong> model should now be operable.</p>
+</div>
+<div id="baseline-run-of-the-tax-simulator-model"
+class="section level2">
+<h2>Baseline Run of the Tax-Simulator Model</h2>
+<p>Running the <strong>Tax-Simulator’s</strong> baseline configuration
+will test whether the models were correctly installed. On the
+<code>Tax-Simulator/src/main.R</code> script, note lines 30 to 38. They
+should look like this for a baseline run:</p>
+<pre><code>runscript_names  = &#39;baseline/baseline&#39;
+scenario_id      = NULL
+local            = 1
+vintage          = NULL
+pct_sample       = 1
+stacked          = 1
+baseline_vintage = NULL
+delete_detail    = 0
+multicore        = 0</code></pre>
+<ul>
+<li><p><strong><code>runscript_names</code></strong> refers to the
+policy parameters submitted to the <strong>Tax-Simulator</strong> for a
+given set of runs. This will be discussed in more detail on the <a
+href="./runscripts.html">runscript page</a>.</p></li>
+<li><p><strong><code>scenario_id</code></strong> is the name a given
+single scenario run. This parameter is optional, as it is also contained
+in the runscript.</p></li>
+<li><p><strong><code>local</code></strong> is a binary flag determining
+whether to write to the <code>local</code> or <code>production</code>
+paths specified in
+<code>Tax-Simulator/config/interfaces/output_roots.yaml</code>. These
+paths should have been determined in the previous installation section
+of this guide.</p></li>
+<li><p><strong><code>vintage</code></strong> is an optional parameter
+where the user can specify an existing vintage to which the
+<strong>Tax-Simulator</strong> will write. If left <code>NULL</code>,
+the model will create a new directory named YYYYMMDDHR, following the
+previously discussed convention.</p></li>
+<li><p><strong><code>pct_sample</code></strong> is a decimal value the
+user can determine to specify how much of the underlying PUF is sampled
+for this policy run. A value of 1 indicates that 100% of the filers are
+selected, and is the suggested value for this parameter.</p></li>
+<li><p><strong><code>stacked</code></strong> is a binary flag
+determining whether the policy runs in the runscript are stacked runs,
+in which each run adds an additional change to the simulated tax
+law.</p></li>
+<li><p><strong><code>baseline_vintage</code></strong> is an optional
+parameter that can be used to specify an existing baseline run to which
+the policy simulations can be compared. Using this can (slightly)
+decrease your overall compute time. If left as <code>NULL</code>, the
+model will run a baseline scenario as specified in the first entry of
+the runscript.</p></li>
+<li><p><strong><code>delete_detail</code></strong> is a binary flag
+telling the model whether to delete all of the microdata files created
+during the run. Microdata output of this model can easily exceed a
+gigabyte <em>per year</em> of a set of runs, so if you are simulating
+many different scenarios consider how much space is available on your
+disc. The runscript parameter <code>Dist_Years</code> also addresses
+this problem, and will be discussed in more detail below.</p></li>
+<li><p><strong><code>multicore</code></strong> is a binary flag
+determining whether the model will utilize its multicore-threading
+functionality. If available, this can dramatically reduce run time, but
+be sure your technical configuration can support this parameter. Your IT
+staff or Budget Lab employees can provide more information if need
+be.</p></li>
+</ul>
+<p>To run the model, simply activate the
+<code>Tax-Simulator.Rproj</code> in the root directory of the repository
+and type <code>source(src/main.R)</code> into the console or highlight
+all of the code in the <code>main.R</code> file and run it. If, after a
+few seconds, the console begins to print
+<code>Running baseline scenario for year: {START_YEAR}</code> the model
+is likely running correctly. Once it has completed, check the output and
+ensure that it looks reasonable. If the model crashes or does not
+produce sensible output, revisit the previous section of this guide or
+contact Budget Lab staff for assistance.</p>
+</div>
+<div id="policy-configuration" class="section level2">
+<h2>Policy Configuration</h2>
+<p>The <strong>Tax-Simulator’s</strong> baseline is configured to the
+current law. Simulating a different policy scenario requires creating
+new parameter files and structuring them in a manner the model can
+interpret. The following steps guide users on how to create such files,
+and a more in depth explanation of each aspect is available on the <a
+href="./tax_law.html">Tax Law Configuration page</a>.</p>
+<ol style="list-style-type: decimal">
+<li><p>Create or note appropriate directories for this policy test. For
+the runscript parameter file, create the directory within the
+<code>config/runscripts</code> subdirectory. For the tax law files,
+create it within the <code>config/scenarios/tax_law</code>
+subdirectory.</p></li>
+<li><p>Navigate to <code>config/runscripts/baseline</code>, copy
+<code>baseline.csv</code>, and save it to the directory you create in
+the previous step.</p></li>
+<li><p>Create a new line and enter an appropriate identifier in the
+<code>ID</code> column. Note the file path for the tax law file you
+created in step 1, and enter that in the <code>tax_law</code> column.
+The path should relative to the <code>config/scenarios/tax_law</code>
+directory.</p></li>
+<li><p>Navigate to the <code>config/scenarios/tax_law/baseline</code>
+directory, and identify which <code>.yaml</code> file contains the tax
+law parameters you would like to change. If you would like to add an
+additional provision not currently configured in the
+<strong>Tax-Simulator</strong> baseline, you must add it to the baseline
+<code>.yaml</code> file in addition to the simulation file.
+<strong>Policy simulations cannot create new tax law provisions, they
+can only modify existing ones</strong>. Copy the appropriate file, and
+save it to the tax law directory created in step 1.</p></li>
+<li><p>Modify the file to align with the policy you would like to
+simulate.</p></li>
+<li><p>Repeat steps 4 and 5 until all provisions you would like to
+simulate for this run are accounted for.</p></li>
+<li><p>If you are including a behavioral feedback module in this test,
+return to the runscript and, in the <code>behavior</code> column,
+provide the file path to the appropriate script relative to the
+<code>config/scenarios/behavior</code> directory. The file path here
+should include the name of the <code>.R</code> file containing the
+function, but not include the <code>.R</code> at the end of the
+name.</p></li>
+<li><p>In the <code>years</code> column, enter the years you would like
+to simulate in the format <code>{start_year}:{end_year}</code>. Do the
+same for the <code>dist_years</code> column, which indicates which years
+for which you would like to calculate the full distribution.</p></li>
+<li><p>In the <code>mtr_vars</code> column, enter the names of the
+variables for which the model will calculate the marginal tax rates. You
+can include multiple space-delimited variable names here.</p></li>
+<li><p>In the <code>mtr_types</code> column, enter the type of marginal
+tax rate to be calculated. The kinds of types include
+<code>nextdollar</code> (intensive margin) and <code>extensive</code>
+(extensive margin).</p></li>
+<li><p>Repeat steps 3 to 10 for each additional policy scenario you
+would like to run. <em>NOTE</em>: If you are doing a stacked policy run,
+make sure that when doing steps 4 and 5, you only add one additional
+change to the new set of parameters, and copy the tax policy changes
+from the immediately proceeding run in the stack. Each run in the stack
+should have its own subdirectory within the folder you created in step
+1. The <code>tax_law</code> path in the runscript should also be
+specific to each subdirectory of the aforementionned folder.</p></li>
+<li><p>Navigate to <code>src/main.R</code>, and on line 30 replace the
+<code>runscript_names</code> value with the path you created in step 1.
+The path should be relative to the <code>config/runscripts</code>
+directory, should include the name of the runscript, but omit the
+<code>.csv</code>.</p></li>
+<li><p>Check to make sure all of the <code>main.R</code> parameters are
+appropriately specified (see previous section for a
+description).</p></li>
+<li><p>Run <code>src/main.R</code>.</p></li>
+</ol>
+<p>Consult the other pages within the User Guide section for more in
+depth discussions of each element.</p>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = false;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,38 @@
+---
+title: "Runscripts"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The runscript is a simulation-specific `.csv` file that passes all the relevant metadata about the simulation to the model. If tax microsimulation was comparable to making a meal, the runscript would be the recipe. A standard runscript will always contain the following parameters:
+
+- **`ID`**: A simple identifying label that will be referenced during computation and used to create output directories. Typically, this name should indicated the kind of policy run that will be simulated. *'TCJA_full_extension'*, for example.
+
+- **`tax_law`**: The file path to the directory in which the tax law files are stored. This pathway is relative to the root path `config/behavior/tax_law/`. So, if you wanted to run the baseline tax law configuration, you would simply enter `baseline` for the `tax_law` column. The model will read all of the `.yaml` files within and adjust the configuration accordingly. 
+
+- **`behavior`**: The file path to the *file* containing the appropriate behavioral feedback function. The file path here is relative to the `config/scenarios/behavior/` directory. If you wanted to run the module in which business income is shifted across entity type as a function of the tax differential between corporate and pass-through taxation, you would enter `entity_shifting/pearce_prisinzano`. Note here that you provide the name of the file in which the function resides, but omit the `.R` file indicator at the end of the script's name. 
+
+- **`years`**: The years for which the Tax-Simulator will run calculations. This is a simple list in the format of `{start_year}:{end_year}`. These should be numeric, and are bounded by the years for which the previous Tax-Data model created input files.
+
+- **`dist_years`**: The years for which the Tax-Simulator will calculate the full micro distribution. This is a particularly intensive computation, so it is better to err on the side of caution if runtime is a concern. If a simulated policy comes into effect in a given year, it is Budget Lab convention to calculate the full distribution in the two years following the policy change. Note that to facilitate a direct comparison, you will need to add the `dist_years` parameter to the baseline row of the runscript as well.
+
+- **`mtr_vars`**: This indicates the variables for which the marginal tax rate will be calculated on a micro level. Entries here are delimited by a single space, and must be for a variable which exists in the tax data. Common examples include wages, long term capital gains, or certain forms of business income. These do not need to be identical across all policy scenarios. Many behavioral feedback modules reference the marginal tax rates of a pertinent variable, so it is good practice to check the behavioral script to discern which variables to include.
+
+- **`mtr_types`**: The types of marginal tax rates to be calculated for each `mtr_vars` entry. The types of marginal tax rates include: `nextdollar`, which calculates tax rates along the intensive margin, and `extensive`, which calculates tax rates on the first dollar earned. These are also space-delimited and are indexed in the same manner as the `mtr_vars`. The first entry in the `mtr_vars` list will be paired with the first entry in the `mtr_types` list.
+
+A completed runscript should look something like this, which was used to run our analysis of the "No Taxes on Tips" proposal:
+
+| ID            | tax_law                   | behavior  | years     | dist_years | mtr_vars    | mtr_type              | 
+|---------------|---------------------------|-----------|-----------|------------|-------------|-----------------------|
+| baseline      | baseline                  |           | 2024:2034 |            | tips1 tips2 | nextdollar nextdollar |
+| income_tax_lh | public/tips/income_tax_lh |           | 2024:2034 | 2025:2026  | tips1 tips2 | nextdollar nextdollar |
+| income_tax    | public/tips/income_tax_   |           | 2024:2034 | 2025:2026  | tips1 tips2 | nextdollar nextdollar |
+| payroll_tax   | public/tips/payroll_tax   |           | 2024:2034 | 2025:2026  | tips1 tips2 | nextdollar nextdollar |
+
+
+Runscripts may also contain additional columns indicating if a run should use a vintage of a dependent model other than the defaults which appear in `config/interfaces/interface_versions.yaml`. For instance, if you wanted to use a different vintage of the Value Added Tax Model, you would include an addition two columns: One for the vintage, written as `dep.Value-Added-Tax-Model.vintage`, and another for the scenario id, `dep.Value-Added-Tax-Model.ID`. Any of the subparameters found within a dependent moodel's entry of the `interface_versions.yaml` file can be replaced in this manner following the column naming convention `dep.{MODEL_NAME}.{PARAMETER}`. If you are using the dependent model defaults, then you may omit `dep.` columns altogether.
+
+Runscripts are not limited to the columns described above. Users are free to create their own columns should they modify the model in a manner that would require information to be stored in a similar manner. For example, if a user wanted to run the same behavioral feedback module in each scenario, but include a different parameter for each run, they could create a column to store that value, and modify the `get_scenario_info` function found in `src/misc/config_parser.R`. Actually implementing this feature would require further modification of the model, but it is used here as an illustrative example.

@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>Runscripts</title>
+
+<script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/spacelab.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/font-awesome-6.4.2/css/all.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.4.2/css/v4-shims.min.css" rel="stylesheet" />
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+.tocify-subheader {
+  display: inline;
+}
+.tocify-subheader .tocify-item {
+  font-size: 0.95em;
+}
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-inverse  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">The Budget Lab at Yale Technical Documentation</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    User Guide
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="./user_guide.html">Step-by-Step Guide</a>
+    </li>
+    <li>
+      <a href="./runscripts.html">Runscript</a>
+    </li>
+    <li>
+      <a href="./tax_law.html">Tax Law Configuration</a>
+    </li>
+    <li>
+      <a href="./behavior_modules.html">Behavior Modules</a>
+    </li>
+  </ul>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Model Documentation
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li class="dropdown-header">Tax-Data</li>
+    <li class="dropdown-submenu">
+      <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Tax-Simulator</a>
+      <ul class="dropdown-menu" role="menu">
+        <li>
+          <a href="./data.html">Data Processing</a>
+        </li>
+        <li>
+          <a href="./tax_calculator.html">Tax Calculator</a>
+        </li>
+        <li>
+          <a href="./behavioral.html">Behavioral Feedback</a>
+        </li>
+        <li>
+          <a href="./post_processing.html">Post-Processing</a>
+        </li>
+        <li>
+          <a href="./technical.html">Technical Implementation</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</li>
+<li>
+  <a href="./contact.html">Contact</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="https://github.com/Budget-Lab-Yale">
+    <span class="fa fa-github fa-lg"></span>
+     
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Runscripts</h1>
+
+</div>
+
+
+<p>The runscript is a simulation-specific <code>.csv</code> file that
+passes all the relevant meta-information about the simulation to the
+model. If tax microsimulation was comparable to making a meal, the
+runscript would be the recipe. A standard runscript will always contain
+the following parameters:</p>
+<ul>
+<li><p><strong><code>ID</code></strong>: A simple identifying label that
+will be referenced during computation and used to create output
+directories. Typically, this name should indicated the kind of policy
+run that will be simulated. <em>‘TCJA_full_extension’</em>, for
+example.</p></li>
+<li><p><strong><code>tax_law</code></strong>: The file path to the
+directory in which the tax law files are stored. This pathway is
+relative to the root path
+<code>Tax-Simulator/config/behavior/tax_law/</code>. So, if you wanted
+to run the baseline tax law configuration, you would simply enter
+<code>baseline</code> for the <code>tax_law</code> column. The model
+will read all of the <code>.yaml</code> files within and adjust the
+configuration accordingly.</p></li>
+<li><p><strong><code>behavior</code></strong>: The file path to the
+<em>file</em> containing the appropriate behavioral feedback function.
+The file path here is relative to the
+<code>Tax-Simulator/config/scenarios/behavior/</code> directory. If you
+wanted to run the module in which business income is shifted across
+entity type as a function the tax differential between corporate and
+pass-through taxation, you would enter
+<code>entity_shifting/pearce_prisinzano</code>. Note here that you
+provide the name of the file in which the function resides, but omit the
+<code>.R</code> file indicator at the end of the script’s name.</p></li>
+<li><p><strong><code>years</code></strong>: The years for which the
+<strong>Tax-Simulator</strong> will run calculations. This is a simple
+list in the format of <code>{start_year}:{end_year}</code>. These should
+be numeric, and are bounded by the years for which the previous
+<strong>Tax-Data</strong> model created input files.</p></li>
+<li><p><strong><code>dist_years</code></strong>: The years for which the
+<strong>Tax-Simulator</strong> will calculate the full micro
+distribution. This is a particularly intensive computation, so it is
+better to err on the side of caution if runtime is a concern. If a
+simulated policy comes into effect in a given year, it is Budget Lab
+convention to calculate the full distribution in the two years following
+the policy change. Note that to facilitate a direct comparison, you will
+need to add the <code>dist_years</code> parameter to the baseline row of
+the runscript as well.</p></li>
+<li><p><strong><code>mtr_vars</code></strong>: This indicates the
+variables for which the marginal tax rate will be calculated on a micro
+level. Entries here are delimited by a single space, and must be for a
+variable which exists in the tax data. Common examples include wages,
+long term capital gains, or certain forms of business income. These do
+not need to be identical across all policy scenarios. Many behavioral
+feedback modules reference the marginal tax rates of a pertinent
+variable, so it is good practice to check the behavioral script to
+discern which variables to include.</p></li>
+<li><p><strong><code>mtr_types</code></strong>: The types of marginal
+tax rates to be calculated for each <code>mtr_vars</code> entry. The
+types of marginal tax rates include: <code>nextdollar</code>, which
+calculates tax rates along the intensive margin, and
+<code>extensive</code>, which calculates tax rates on the first dollar
+earned. These are also space-delimited and are indexed in the same
+manner as the <code>mtr_vars</code>. The first entry in the
+<code>mtr_vars</code> list will be paired with the first entry in the
+<code>mtr_types</code> list.</p></li>
+</ul>
+<p>A completed runscript should look something like this, which was used
+to run our analysis of the “No Taxes on Tips” proposal:</p>
+<table>
+<colgroup>
+<col width="13%" />
+<col width="24%" />
+<col width="9%" />
+<col width="9%" />
+<col width="10%" />
+<col width="11%" />
+<col width="20%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>ID</th>
+<th>tax_law</th>
+<th>behavior</th>
+<th>years</th>
+<th>dist_years</th>
+<th>mtr_vars</th>
+<th>mtr_type</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>baseline</td>
+<td>baseline</td>
+<td></td>
+<td>2024:2034</td>
+<td></td>
+<td>tips1 tips2</td>
+<td>nextdollar nextdollar</td>
+</tr>
+<tr class="even">
+<td>income_tax_lh</td>
+<td>public/tips/income_tax_lh</td>
+<td></td>
+<td>2024:2034</td>
+<td>2025:2026</td>
+<td>tips1 tips2</td>
+<td>nextdollar nextdollar</td>
+</tr>
+<tr class="odd">
+<td>income_tax</td>
+<td>public/tips/income_tax_</td>
+<td></td>
+<td>2024:2034</td>
+<td>2025:2026</td>
+<td>tips1 tips2</td>
+<td>nextdollar nextdollar</td>
+</tr>
+<tr class="even">
+<td>payroll_tax</td>
+<td>public/tips/payroll_tax</td>
+<td></td>
+<td>2024:2034</td>
+<td>2025:2026</td>
+<td>tips1 tips2</td>
+<td>nextdollar nextdollar</td>
+</tr>
+</tbody>
+</table>
+<p>Runscripts may also contain additional columns indicating if a run
+should use a vintage of a dependent model other than the defaults which
+appear in
+<code>Tax-Simulator/config/interfaces/interface_versions.yaml</code>.
+For instance, if you wanted to use a different vintage of the Value
+Added Tax Model, you would include an addition two columns: One for the
+vintage, written as <code>dep.Value-Added-Tax-Model.vintage</code>, and
+another for the scenarios id, <code>dep.Value-Added-Tax-Model.ID</code>.
+Any of the subparameters found within a dependent moodel’s entry of the
+<code>interface_versions.yaml</code> file can be replaced in this manner
+following the column naming convention
+<code>dep.{MODEL_NAME}.{PARAMETER}</code>. If you are using the
+dependent model defaults, then you may omit <code>dep.</code> columns
+altogether.</p>
+<p>Runscripts are not limited to the columns described above. Users are
+free to create their own columns should they modify the model in a
+manner that would require information to be stored in a similar manner.
+For example, if a user wanted to run the same behavioral feedback module
+in each scenario, but include a different parameter for each run, they
+could create a column to store that value, and modify the
+<code>get_scenario_info</code> function found in
+<code>Tax-Simulator/src/misc/config_parser.R</code>. Actually
+implementing this feature would require further modification of the
+model, but it is used here as an illustrative example.</p>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = false;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
