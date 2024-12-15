@@ -9,9 +9,7 @@ return_vars$calc_cdctc = c('cdctc_nonref', 'cdctc_ref')
 calc_cdctc = function(tax_unit, fill_missings = F) {
   
   #----------------------------------------------------------------------------
-  # Calculates value of Child and Dependent Care Tax Credit (CDCTC). Note: we 
-  # don't model the earned income limitation since it's already mostly
-  # accounted for in selection  out gets use much close
+  # Calculates value of Child and Dependent Care Tax Credit (CDCTC).
   # 
   # Parameters:
   #   - tax_unit (df | list) : either a dataframe or list containing required
@@ -29,21 +27,24 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
   req_vars = c(
     
     # Tax unit attributes
-    'n_dep',    # (dbl) number of dependents
-    'care_exp', # (dbl) eligible dependent care expenses 
-    'ei1',      # (dbl) earned income of primary filer
-    'ei2',      # (dbl) earned income of secondary filer (NA for non-joint returns)
-    'agi',      # (dbl) Adjusted Gross Income
-    'liab_bc',  # (dbl) income tax liability before credits, including AMT
-    'ftc',      # (dbl) value of foreign tax credits
+    'n_dep',         # (dbl) number of dependents
+    'care_exp',      # (dbl) eligible dependent care expenses 
+    'filing_status', # (int) filing status of tax unit
+    'ei1',           # (dbl) earned income of primary filer
+    'ei2',           # (dbl) earned income of secondary filer (NA for non-joint returns)
+    'agi',           # (dbl) Adjusted Gross Income
+    'liab_bc',       # (dbl) income tax liability before credits, including AMT
+    'ftc',           # (dbl) value of foreign tax credits
     
     # Tax law attributes 
     'cdctc.exp_limit',     # (int) maximum credit-eligible expenses per qualifying dependent
     'cdctc.n_dep_limit',   # (int) maximum number of qualifying dependents 
-    'cdctc.min_rate',      # (dbl) minimum credit rate (share of eligible expenses)
-    'cdctc.max_rate',      # (dbl) maximum credit rate (share of eligible expenses)
-    'cdctc.po_thresh',     # (dbl) AGI threshold above which credit rate begins phasing out from max to min
-    'cdctc.po_rate',       # (dbl) rate at which credit rate phases out with AGI
+    'cdctc.rate1',         # (dbl) credit rate for base credit (share of eligible expenses)
+    'cdctc.rate2',         # (dbl) credit rate for additional credit (share of eligible expenses)
+    'cdctc.po_thresh1',    # (dbl) AGI threshold above which credit rate 1 begins phasing out
+    'cdctc.po_thresh2',    # (dbl) AGI threshold above which credit rate 2 begins phasing out
+    'cdctc.po_rate1',      # (dbl) rate at which credit rate 1 phases out with AGI
+    'cdctc.po_rate2',      # (dbl) rate at which credit rate 2 phases out with AGI
     'cdctc.discrete_step', # (int) rounding step for descretized phaseout function
     'cdctc.refundable'     # (int) whether credit is refundable
   )
@@ -60,11 +61,20 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
       # Limit credit-eligible expenses to per-qualifying-dependent maximum
       qual_exp = pmin(care_exp, n_qual_dep * cdctc.exp_limit),
       
-      # Calculate credit rate: a descretized linear negative function of AGI, 
-      # akin to a phaseout, with a floor and ceiling 
-      excess = pmax(0, agi - cdctc.po_thresh),
-      excess = ceiling(excess / cdctc.discrete_step) * cdctc.discrete_step, 
-      rate   = pmax(cdctc.min_rate, pmax(0, cdctc.max_rate - excess * cdctc.po_rate)),
+      # Limit credit-eligible expenses to earned income
+      qual_exp = pmin(qual_exp, pmax(0, if_else(filing_status == 2, pmin(ei1, ei2), ei1))),
+      
+      # Calculate AGI in excess of phaseout rates and adjust for discrete rounding steps 
+      excess1 = pmax(0, agi - cdctc.po_thresh1),
+      excess2 = pmax(0, agi - cdctc.po_thresh2),
+      
+      excess1 = ceiling(excess1 / cdctc.discrete_step) * cdctc.discrete_step,
+      excess2 = ceiling(excess2 / cdctc.discrete_step) * cdctc.discrete_step,
+      
+      # Calculate credit rate after phaseouts 
+      rate1 = pmax(0, pmax(0, cdctc.rate1 - excess1 * cdctc.po_rate1)),
+      rate2 = pmax(0, pmax(0, cdctc.rate2 - excess2 * cdctc.po_rate2)),
+      rate  = rate1 + rate2,
       
       # Calculate credit and allocate to refundable and nonrefundable components
       cdctc        = qual_exp * rate,
