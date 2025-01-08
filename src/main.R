@@ -22,9 +22,6 @@ return_vars = list()
 list.files('./src', recursive = T) %>% 
   walk(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
 
-# Get user id 
-user_id = get_user_id()
-
 
 #------------------------
 # Set runtime parameters
