@@ -58,6 +58,7 @@ calc_liab = function(tax_unit, fill_missings = F) {
     'cdctc_ref',             # (dbl) value of refundable Child and Dependent Care Tax Credit
     'savers_ref',            # (dbl) value of refundable Saver's credit
     'liab_niit',             # (dbl) Net Investment Income Tax liability
+    'liab_surtax',           # (dbl) AGI surtax liability
     'liab_seca',             # (dbl) self-employment tax liability
     'recapture_tax',         # (dbl) credit recapture
     'ira_penalty',           # (dbl) penalty paid for early withdraw from retirement account
@@ -119,7 +120,7 @@ calc_liab = function(tax_unit, fill_missings = F) {
       
       # Calculate final individual income tax liability
       # (equivalent to E06500 on the 2015 PUF)
-      liab_iit = liab_ac + liab_niit, 
+      liab_iit = liab_ac + liab_niit + liab_surtax, 
       
       # Calculate other taxes paid on the 1040
       liab_other = liab_seca + recapture_tax + ira_penalty,

@@ -68,7 +68,7 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   # Set model version and vintage
   version = read_yaml('./config/interfaces/interface_versions.yaml')$`Tax-Simulator`$version
   if (is.null(vintage)) {
-    vintage = format(Sys.time(), '%Y%m%d%H')
+    vintage = format(Sys.time(), '%Y%m%d%H%M')
   }
 
   # Determine and create directory for model output

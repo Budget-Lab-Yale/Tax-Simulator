@@ -39,8 +39,7 @@ calc_niit = function(tax_unit, fill_missings = FALSE) {
     'agi',               # (dbl) Adjusted Gross Income
     
     # Tax law attributes
-    'niit.include_active', # (int)   whether active earnings of pass-through 
-                           #         businesses are subject to the NIIT
+    'niit.include_active', # (int)   whether active earnings of pass-through businesses are subject to the NIIT
     'niit.rates[]',        # (dbl[]) NIIT rate schedule
     'niit.brackets[]'      # (int[]) NIIT brackets
   )

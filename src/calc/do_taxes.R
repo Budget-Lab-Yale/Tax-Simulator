@@ -349,6 +349,9 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     
     # NIIT
     bind_cols(calc_niit(.)) %>% 
+    
+    # AGI surtax
+    bind_cols(calc_agi_surtax(.)) %>%
       
     # Liability
     bind_cols(calc_liab(.)) %>% 
