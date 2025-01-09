@@ -10,22 +10,51 @@ exp_limit:
 n_dep_limit:
   value: 2
 
-# Credit rates 
-rate:
+# Maximum age to be considered a young qualifying dependent
+young_age_limit:
+  value: 4
+  
+# Maximum age to be considered an old qualifying dependent
+old_age_limit:
+  value: 12
+
+# Young dependents: credit rates 
+young_rate:
   value:
     '2014': [0.2, 0.15]
     '2021': [0.2, 0.3]
     '2022': [0.2, 0.15]
   
-# AGI threshold above which credit rate begins phasing out from max to min
-po_thresh:
+# Young dependents: AGI threshold above which credit rate begins phasing out from max to min
+young_po_thresh:
   value:
     '2014': [Inf, 15000]
     '2021': [400000, 125000]
     '2022': [Inf, 15000]
 
-# Rate at which credit rate phases out with AGI
-po_rate:
+# Young dependents: rate at which credit rate phases out with AGI
+young_po_rate:
+  value: 
+    '2014': [0.0, 0.000005]
+    '2021': [0.000005, 0.000005]
+    '2022': [0.0, 0.000005]
+    
+# Old dependents: credit rates 
+old_rate:
+  value:
+    '2014': [0.2, 0.15]
+    '2021': [0.2, 0.3]
+    '2022': [0.2, 0.15]
+  
+# Old dependents: AGI threshold above which credit rate begins phasing out from max to min
+old_po_thresh:
+  value:
+    '2014': [Inf, 15000]
+    '2021': [400000, 125000]
+    '2022': [Inf, 15000]
+
+# Old dependents: rate at which credit rate phases out with AGI
+old_po_rate:
   value: 
     '2014': [0.0, 0.000005]
     '2021': [0.000005, 0.000005]

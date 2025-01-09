@@ -28,26 +28,27 @@ calc_ctc = function(tax_unit, fill_missings = F) {
   req_vars = c(
     
     # Tax unit attributes
-    'dep_age1',      # (int) age of youngest dependent (NA for tax units without a dependent)
-    'dep_age2',      # (int) age of second youngest dependent (NA for tax units without a second dependent)
-    'dep_age3',      # (int) age of oldest dependent (NA for tax units without a third dependent)
-    'dep_ssn1',      # (bool) whether youngest dependent has a Social Security number (NA for tax units without a dependent)
-    'dep_ssn2',      # (bool) whether second youngest dependent has a Social Security number (NA for tax units without a second dependent)
-    'dep_ssn3',      # (bool) whether oldest dependent has a Social Security number (NA for tax units without a third dependent)
-    'dep_ctc1',      # (bool) whether youngest dependent qualifies for CTC status based on non-age and non-SSN criteria (NA for tax units without a dependent)
-    'dep_ctc2',      # (bool) whether second youngest dependent qualifies for CTC status based on non-age and non-SSN criteria (NA for tax units without a second dependent)
-    'dep_ctc3',      # (bool) whether oldest dependent qualifies for CTC status based on non-age and non-SSN criteria (NA for tax units without a third dependent)
-    'n_dep',         # (int) number of dependents
-    'agi',           # (dbl) Adjusted Gross Income
-    'liab_bc',       # (dbl) liability before credits, including AMT   
-    'ftc',           # (dbl) value of foreign tax credit 
-    'cdctc_nonref',  # (dbl) value of nonrefundable Child and Dependent Care Credit 
-    'ed_nonref',     # (dbl) value of nonrefundable education credit
-    'savers_nonref', # (dbl) value of nonrefundable Saver's Credit
-    'old_cred',      # (dbl) value of Elderly and Disabled Credit
-    'ei',            # (dbl) earned income
-    'ei_prior_yr',   # (dbl) earned income last year       
-    'filer',         # (int) whether tax unit files a tax return
+    'dep_age1',              # (int) age of youngest dependent (NA for tax units without a dependent)
+    'dep_age2',              # (int) age of second youngest dependent (NA for tax units without a second dependent)
+    'dep_age3',              # (int) age of oldest dependent (NA for tax units without a third dependent)
+    'dep_ssn1',              # (bool) whether youngest dependent has a Social Security number (NA for tax units without a dependent)
+    'dep_ssn2',              # (bool) whether second youngest dependent has a Social Security number (NA for tax units without a second dependent)
+    'dep_ssn3',              # (bool) whether oldest dependent has a Social Security number (NA for tax units without a third dependent)
+    'dep_ctc1',              # (bool) whether youngest dependent qualifies for CTC status based on non-age and non-SSN criteria (NA for tax units without a dependent)
+    'dep_ctc2',              # (bool) whether second youngest dependent qualifies for CTC status based on non-age and non-SSN criteria (NA for tax units without a second dependent)
+    'dep_ctc3',              # (bool) whether oldest dependent qualifies for CTC status based on non-age and non-SSN criteria (NA for tax units without a third dependent)
+    'n_dep',                 # (int) number of dependents
+    'agi',                   # (dbl) Adjusted Gross Income
+    'liab_bc',               # (dbl) liability before credits, including AMT   
+    'ftc',                   # (dbl) value of foreign tax credit 
+    'cdctc_nonref',          # (dbl) value of nonrefundable Child and Dependent Care Credit 
+    'ed_nonref',             # (dbl) value of nonrefundable education credit
+    'savers_nonref',         # (dbl) value of nonrefundable Saver's Credit
+    'old_cred',              # (dbl) value of Elderly and Disabled Credit
+    'caregiver_cred_nonref', # (dbl) value of nonrefundable caregiver credit
+    'ei',                    # (dbl) earned income
+    'ei_prior_yr',           # (dbl) earned income last year       
+    'filer',                 # (int) whether tax unit files a tax return
     
     # Tax law attributes
     'ctc.young_age_limit',  # (int) maximum age to qualify as "young" child
@@ -141,7 +142,7 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       value_other = pmax(0, max_value_other - excess1 * po_rate_other),
       
       # Allocate against liability after select nonrefundable credits
-      nonref     = ftc + cdctc_nonref + ed_nonref + savers_nonref + old_cred,
+      nonref     = ftc + cdctc_nonref + ed_nonref + savers_nonref + old_cred + caregiver_cred_nonref,
       liab       = pmax(0, liab_bc - nonref),
       ctc_nonref = pmin(liab, value1 + value2 + value_other),
       
