@@ -118,6 +118,7 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
     'ref_other', 
     'refund', 
     'liab_niit',
+    'liab_surtax',
     'liab_iit', 
     'liab_iit_net', 
     'pmt_iit_nonwithheld', 
