@@ -537,6 +537,7 @@ recode_1040_vars = function(df, scenario_id) {
       Variable == 'ref_other'             ~ 'Refundable credits used to offset other taxes',
       Variable == 'refund'                ~ 'Refundable credits in excess of all tax liability',
       Variable == 'liab_niit'             ~ 'Net Investment Income Tax liability',
+      Variable == 'liab_surtax'           ~ 'AGI surtax liability',
       Variable == 'liab_iit'              ~ 'Income tax liability', 
       Variable == 'corp_tax_change'       ~ 'Change in corporate tax attributable to income shifting'
     )) %>% 

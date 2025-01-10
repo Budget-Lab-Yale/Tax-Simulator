@@ -1,5 +1,5 @@
 #----------------------------------------------------------------------------
-# timeburden.R
+# time_burden.R
 # 
 # Post-processing functions to generate time burden tables for a scenario
 #----------------------------------------------------------------------------
@@ -330,8 +330,10 @@ calc_summary_stats = function(microdata) {
       
       # counts
       count        = sum(weight),
-      simple_filer = sum(simple_filer * weight)
-    ) %>% ungroup() %>%
+      simple_filer = sum(simple_filer * weight), 
+      
+      .groups = 'drop'
+    ) %>% 
   return()
 }
 
