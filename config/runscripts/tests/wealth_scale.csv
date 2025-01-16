@@ -1,4 +1,4 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
 baseline,baseline,,2026:2055,2026,kg_lt,nextdollar
 nickel_dime,baseline,wealth/scale_wealth,2026:2055,2026,kg_lt,nextdollar
-nickel_dime_surtax,tests/wealth_tax,wealth/scale_wealth kg/62,2026:2055,2026,kg_lt,nextdollar
+nickel_dime_perfect_mobility,tests/wealth_tax,wealth/scale_wealth kg/62,2026:2055,2026,kg_lt,nextdollar
