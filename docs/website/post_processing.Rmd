@@ -1,0 +1,16 @@
+---
+title: "Post-Processing"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Our typical workflow involves configuring one or more counterfactual policy scenarios then running the model for those scenarios (plus the baseline). The core model output comprises of scenario-specific microdata files for each year – in other words, the tax data files supplied as input are appended with derived variables the written as output. This microdata, in turn, is subject to further post-processing to produce the metrics seen in our analyses.[^1] Revenue estimates are one such example. Micro-level estimated tax payments are aggregated by year, scenario, and budget category to generate time series projections of fiscal receipts. The difference between this series for a reform scenario and the baseline series forms a revenue estimate. We can also decompose a policy reform scenario into its provision-level components. When this feature is activated, stacked revenue estimates, wherein provisions are given an order and each provision is scored relative to a baseline that includes all provisions “stacked” before it, are produced during the post-processing step.
+
+We also generate distribution metrics during post-processing. Using the microdata output files, we measure the tax change relative to baseline at the tax unit level for a given scenario. Then, we categorize tax units by some dimension – currently income or age – and calculate category-level averages for various measures of tax change.
+
+Other Budget Lab models also rely on the microdata files produced by the tax model. For example, we characterize tax policy scenarios in our use of FRB/US in part by measuring certain average and marginal tax rates based on tax model output.
+
+### Footnotes
+[^1]: Model code for post-processing can be found [here](https://github.com/Budget-Lab-Yale/Tax-Simulator/tree/main/src/data/post_processing).

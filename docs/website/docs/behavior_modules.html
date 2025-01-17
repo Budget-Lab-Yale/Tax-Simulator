@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+
+
+<title>Behavior Modules</title>
+
+<script src="site_libs/header-attrs-2.25/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/spacelab.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.13.2/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/font-awesome-6.4.2/css/all.min.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-6.4.2/css/v4-shims.min.css" rel="stylesheet" />
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+
+<style type="text/css">
+  code {
+    white-space: pre;
+  }
+  .sourceCode {
+    overflow: visible;
+  }
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  { color: #cccccc; background-color: #303030; }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ffcfaf; } /* Alert */
+code span.an { color: #7f9f7f; font-weight: bold; } /* Annotation */
+code span.at { } /* Attribute */
+code span.bn { color: #dca3a3; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #f0dfaf; } /* ControlFlow */
+code span.ch { color: #dca3a3; } /* Char */
+code span.cn { color: #dca3a3; font-weight: bold; } /* Constant */
+code span.co { color: #7f9f7f; } /* Comment */
+code span.cv { color: #7f9f7f; font-weight: bold; } /* CommentVar */
+code span.do { color: #7f9f7f; } /* Documentation */
+code span.dt { color: #dfdfbf; } /* DataType */
+code span.dv { color: #dcdccc; } /* DecVal */
+code span.er { color: #c3bf9f; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #c0bed1; } /* Float */
+code span.fu { color: #efef8f; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #7f9f7f; font-weight: bold; } /* Information */
+code span.kw { color: #f0dfaf; } /* Keyword */
+code span.op { color: #f0efd0; } /* Operator */
+code span.ot { color: #efef8f; } /* Other */
+code span.pp { color: #ffcfaf; font-weight: bold; } /* Preprocessor */
+code span.sc { color: #dca3a3; } /* SpecialChar */
+code span.ss { color: #cc9393; } /* SpecialString */
+code span.st { color: #cc9393; } /* String */
+code span.va { } /* Variable */
+code span.vs { color: #cc9393; } /* VerbatimString */
+code span.wa { color: #7f9f7f; font-weight: bold; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark the anchor link active (and if it's in a dropdown, also mark that active)
+  var dropdown = menuAnchor.closest('li.dropdown');
+  if (window.bootstrap) { // Bootstrap 4+
+    menuAnchor.addClass('active');
+    dropdown.find('> .dropdown-toggle').addClass('active');
+  } else { // Bootstrap 3
+    menuAnchor.parent().addClass('active');
+    dropdown.addClass('active');
+  }
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before, .tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "\e259";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "\e258";
+  font-family: 'Glyphicons Halflings';
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+.tocify-subheader {
+  display: inline;
+}
+.tocify-subheader .tocify-item {
+  font-size: 0.95em;
+}
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-inverse  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">The Budget Lab at Yale Technical Documentation</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    User Guide
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li>
+      <a href="./user_guide.html">Step-by-Step Guide</a>
+    </li>
+    <li>
+      <a href="./runscripts.html">Runscript</a>
+    </li>
+    <li>
+      <a href="./tax_law.html">Tax Law Configuration</a>
+    </li>
+    <li>
+      <a href="./behavior_modules.html">Behavior Modules</a>
+    </li>
+  </ul>
+</li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    Model Documentation
+     
+    <span class="caret"></span>
+  </a>
+  <ul class="dropdown-menu" role="menu">
+    <li class="dropdown-header">Tax-Data</li>
+    <li class="dropdown-submenu">
+      <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Tax-Simulator</a>
+      <ul class="dropdown-menu" role="menu">
+        <li>
+          <a href="./data.html">Data Processing</a>
+        </li>
+        <li>
+          <a href="./tax_calculator.html">Tax Calculator</a>
+        </li>
+        <li>
+          <a href="./behavioral.html">Behavioral Feedback</a>
+        </li>
+        <li>
+          <a href="./post_processing.html">Post-Processing</a>
+        </li>
+        <li>
+          <a href="./technical.html">Technical Implementation</a>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="https://github.com/Budget-Lab-Yale">
+    <span class="fa fa-github fa-lg"></span>
+     
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">Behavior Modules</h1>
+
+</div>
+
+
+<p>Tax-Simulator allows users to write custom behavioral feedback
+modules. These modules can be called in Tax-Simulator to simulate
+micro-level responses to policy changes — that is, to account for
+behavioral feedback in revenue estimates. This document describes how
+Tax-Simulator’s behavioral modules work.</p>
+<p>Quickly, a bit of terminology up front. <em>Static</em> revenue
+estimates contain no behavioral feedback: taxpayer behavior is held
+fixed across policy scenarios. <em>Conventional</em> revenue estimates
+allow for certain types of behavioral responses that reflect tax
+avoidance rather than a change of economic substance. Examples include
+business income shifting across legal entity form and the timing of
+capital gains realizations. <em>Partial dynamic</em> estimates further
+expand the range of incorporated behaviors, allowing for first-order
+economic changes such as labor supply changes. <em>Dynamic</em>, or full
+dynamic, refers to “true” general equilibrium modeling in which
+macroeconomic factor prices like interest rates are allowed to vary.
+<strong>Tax-Simulator can be used to generate conventional and partial
+dynamic estimates only.</strong> Full dynamic requires a notion of
+general equilibrium available only in computational macro models.</p>
+<div id="architecture-basics" class="section level2">
+<h2>Architecture basics</h2>
+<div id="static-mode" class="section level3">
+<h3>Static mode</h3>
+<p>At runtime, if told to execute a behavioral feedback module as part
+of a simulation of a policy reform, the Tax-Simulator model will run
+non-baseline scenarios twice. First, it runs in <em>static mode.</em>
+This means all input attributes are held fixed at their baseline levels
+when calculating taxes under the policy reform. Critically, this step
+allows us to assess the first-order effects of a policy — for example,
+effective marginal tax rates (EMTRs) under the new policy regime.</p>
+<p>Then Tax-Simulator runs the policy reform scenario again, this time
+in <em>non-static</em> mode. <strong>Behavioral feedback modules are
+executed at the beginning of non-static mode.</strong> These modules
+modify input attributes according to their specific logic, then
+Tax-Simulator re-calculates taxes. The result is a policy reform
+simulation which accounts for behavioral feedback.</p>
+</div>
+<div id="organization-and-naming-conventions" class="section level3">
+<h3>Organization and naming conventions</h3>
+<p>Behavioral feedback modules are .R files stored in
+<code>config/scenarios/behavior</code>. Within this directly, modules
+are organized into subfolders by the type of behavior modeled.</p>
+<p>Let’s take <code>/charity</code> as an example. This subfolder
+contains modules that modify charitable contributions in response to
+policy reforms that directly or indirectly affect the tax subsidy for
+giving. There are two modules in <code>/charity</code>. 100.R simulates
+a tax-price elasticity of charitable giving of -1; 50.R assumes a value
+of -0.5. Module names should be brief and describe what the module does.
+We will look at the contents of these modules below.</p>
+<p>Critically, both modules contain a functional called
+<code>do_charity()</code>; “charity” in “do_charity” is a keyword which
+communicates specific information to Tax-Simulator when it looks for
+functions to execute. A behavioral feedback module in the subfolder
+<code>/config/scenarios/behavior/X</code> must contain a function called
+<code>do_X()</code>.</p>
+</div>
+</div>
+<div id="module-structure" class="section level2">
+<h2>Module structure</h2>
+<p>A behavioral feedback module contains a “do” function, as described
+above. This function must have the following signature:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode r R"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>do_some_behavior <span class="ot">=</span> <span class="cf">function</span>(tax_units, ...) { </span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>  <span class="co"># (function contents)</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>}</span></code></pre></div>
+<p>The parameter <code>tax_units</code> is the dataframe containing the
+tax microdata. It contains all tax records and their attributes,
+including all tax law attributes. For example, a record in
+<code>tax_units</code> contains variables like marital status, capital
+gains, and the top tax bracket.</p>
+<p>The parameter <code>…</code> simply means that any number of other,
+arbitrary arguments can be passed to the function. The reason for this
+structure is beyond the scope of this how-to guide. But in practice,
+your function will also have access to two additional arguments:
+<code>baseline_mtrs</code> and <code>static_mtrs</code>. These are
+dataframes, equal in length to <code>tax_units</code>, containing
+marginal tax rate variables requested at runtime. If your scenario does
+not calculate marginal tax rates, these arguments will be of type
+<code>NULL</code>.</p>
+<p>For example, if a user submitted “wages char_cash” as variables for
+which to calculate marginal tax rates in their runscript, the
+<code>baseline_mtrs</code> dataframe will look something like this:</p>
+<table>
+<thead>
+<tr class="header">
+<th>year</th>
+<th>id</th>
+<th>mtr_wages</th>
+<th>mtr_char_cash</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>2024</td>
+<td>1</td>
+<td>0.24</td>
+<td>0</td>
+</tr>
+<tr class="even">
+<td>2024</td>
+<td>2</td>
+<td>0.32</td>
+<td>-0.32</td>
+</tr>
+<tr class="odd">
+<td>2024</td>
+<td>3</td>
+<td>0.408</td>
+<td>-0.408</td>
+</tr>
+<tr class="even">
+<td>…</td>
+<td>…</td>
+<td>…</td>
+<td>…</td>
+</tr>
+</tbody>
+</table>
+<p>…and <code>static_mtrs</code> will look identical, just with
+(potentially) different values.</p>
+<p>Then, the content of the function is completely arbitrary.
+<strong>This is the key idea behind the design of behavioral feedback
+modules.</strong> Rather than be confined to expressing behavior
+feedback as a specific instance of a single generic elasticity function,
+users are free to impose whatever logic they’d like.</p>
+<p>That’s not to say there are no out-of-the-box helper functions. Many
+behavioral feedback functions will simply take the form of applying an
+elasticity to a change in EMTRs for all tax units. Rather than having to
+re-invent the wheel, users have <code>apply_mtr_elasticity()</code>, a
+helper function defined in <em>/src/sim/behavior.R</em>, at their
+disposal. We will look at an example of its use below.</p>
+</div>
+<div id="example-modules" class="section level2">
+<h2>Example modules</h2>
+<p>Let’s make things concrete by reviewing two examples of behavioral
+feedback modules.</p>
+<div id="charitable-giving" class="section level3">
+<h3>Charitable giving</h3>
+<p>One major benefit of microsimulation as a methodological approach is
+the ability to precisely measure EMTRs on any activity via computation.
+By adding $1 to some variable Y for each record, re-calculating taxes,
+and looking at the change in tax liability, users obtain the
+<em>next-dollar</em> EMTR on activity Y. For example, if a user adds $1
+to an itemizer’s charitable contributions, re-calculate their taxes, and
+their taxes fall by 37 cents, the next-dollar EMTR on charitable
+contributions is 0.37 and the tax price of giving is 1 + -0.37 = 0.63.
+Users can calculate this EMTR for all filers under baseline and under
+the policy reform then use this information in the behavioral feedback
+calculation.</p>
+<p>Here is what a behavior feedback module that leverages EMTRs on
+charitable contributions looks like:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode r R"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>do_charity <span class="ot">=</span> <span class="cf">function</span>(tax_units, ...) { </span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>  </span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="co">#----------------------------------------------------------------------------</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="co"># Adjusts cash charitable contributions along the intensive margin with a </span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="co"># tax price elasticity of -1.</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="co"># </span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  <span class="co"># Parameters: </span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>  <span class="co">#   - tax_units (df)     : tibble of tax units with calculated variables</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  <span class="co">#   - baseline_mtrs (df) : year-id indexed tibble of MTRs under the baseline</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  <span class="co">#   - static_mtrs (df)   : year-id indexed tibble of MTRs under the static</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>  <span class="co">#                          counterfactual scenario</span></span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>  <span class="co">#</span></span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  <span class="co"># Returns: tibble of tax units with post-adjustment cash charitable </span></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>  <span class="co">#          contribution values. </span></span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>  <span class="co">#----------------------------------------------------------------------------</span></span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>  </span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>  <span class="co"># Set elasticity</span></span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>  e <span class="ot">=</span> <span class="sc">-</span><span class="dv">1</span></span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>  </span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>  <span class="co"># Apply elasticities and calculate new values</span></span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>  new_values <span class="ot">=</span> tax_units <span class="sc">%&gt;%</span> </span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">e_char_cash      =</span> e, </span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>           <span class="at">e_char_cash_type =</span> <span class="st">&#39;taxprice&#39;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a>    <span class="fu">apply_mtr_elasticity</span>(<span class="st">&#39;char_cash&#39;</span>, baseline_mtrs, static_mtrs, <span class="dv">1</span>)</span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a></span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a>  <span class="co"># Replace old values with new and return</span></span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a>  tax_units <span class="sc">%&gt;%</span> </span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a>    <span class="fu">select</span>(<span class="sc">-</span>char_cash) <span class="sc">%&gt;%</span> </span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a>    <span class="fu">bind_cols</span>(new_values) <span class="sc">%&gt;%</span> </span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a>    <span class="fu">return</span>()</span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a>}</span></code></pre></div>
+<p>First: note the formatted function documentation. The Budget Lab
+requires the author of a module follow the style laid out above. The
+idea is to describe in plain English which parameters the module depends
+on, what it does, and what it returns. It helps the reader orient
+themselves before diving into the code.</p>
+<p>The first thing we do is define a variable <code>e = -1</code> to be
+our elasticity. Then users assign this variable, as well as a string
+indicating its type, to each record in a copy of <code>tax_units</code>.
+Next the result is fed into a function called
+<code>apply_mtr_elasticity()</code>. This is a helper function that
+adjusts a specific variable in a dataframe based on specified elasticity
+information, returning a one-column dataframe of the post-adjustment
+variable. For a full look at this function, please see the
+<code>Tax-Simulator/src/sim/behavior.R</code> file. But here’s a rundown
+on what each argument in our function call does:</p>
+<ul>
+<li><p><code>tax_units = (.)</code> … This argument, omitted by
+convention in the dplyr chain, is the dataframe of tax units. Crucially,
+it contains three columns with specific names: “char_cash”,
+“e_char_cash”, and “e_char_cash_type”. These are required because the
+next argument is…</p></li>
+<li><p><code>var = 'char_cash'</code> … This argument communicates that
+we wish to adjust the variable called “char_cash”. It also tells the
+function that there are two associated columns in the
+<code>tax_units</code> dataframe: “e_char_cash”, which is a filer-level
+elasticity with respect to “char_cash”, and “e_char_cash_type”, which
+describes the functional form of the elasticity. Earlier in the module,
+we set <code>e_char_cash = -1</code> and
+<code>e_char_cash_type = 'taxprice'</code>. Here, “taxprice” is a
+keyword. There are four possible options for elasticity type:</p>
+<ul>
+<li><p>“semi”: a log-lin semi-elasticity, i.e. it gives percent change
+in Y for a percentage point change in the EMTR.</p></li>
+<li><p>“arc”: a full log-log elasticity evaluated at the midpoint,
+i.e. it gives percent change in Y for a percent change in EMTR, where
+the latter is calculated at the midpoint of the two EMTRs.</p></li>
+<li><p>“netoftax”: a full log-log elasticity on 1 minus the
+EMTR.</p></li>
+<li><p>“taxprice”: a full log-log elasticity on 1 plus the
+EMTR.</p></li>
+</ul></li>
+</ul>
+<p>Here are the actual calculations for each option:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>      pct_chg <span class="ot">=</span> <span class="fu">case_when</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>        e_type <span class="sc">==</span> <span class="st">&quot;semi&quot;</span>     <span class="sc">~</span> <span class="fu">exp</span>((mtr <span class="sc">-</span> mtr_baseline) <span class="sc">*</span> e) <span class="sc">-</span> <span class="dv">1</span>,</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>        e_type <span class="sc">==</span> <span class="st">&quot;arc&quot;</span>      <span class="sc">~</span> (e <span class="sc">*</span> (mtr <span class="sc">/</span> ((mtr <span class="sc">+</span> mtr_baseline) <span class="sc">/</span> <span class="dv">2</span>) <span class="sc">-</span> <span class="dv">1</span>)),</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>        e_type <span class="sc">==</span> <span class="st">&quot;netoftax&quot;</span> <span class="sc">~</span> (e <span class="sc">*</span> ((<span class="dv">1</span> <span class="sc">-</span> mtr) <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">-</span> mtr_baseline) <span class="sc">-</span> <span class="dv">1</span>)),</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>        e_type <span class="sc">==</span> <span class="st">&quot;taxprice&quot;</span> <span class="sc">~</span> (e <span class="sc">*</span> ((<span class="dv">1</span> <span class="sc">+</span> mtr) <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">+</span> mtr_baseline) <span class="sc">-</span> <span class="dv">1</span>)),</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>        <span class="cn">TRUE</span>                 <span class="sc">~</span> <span class="cn">NA</span> </span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>      ) </span></code></pre></div>
+<ul>
+<li><p><code>baseline_mtrs = baseline_mtrs</code> … This argument
+supplies a dataframe of baseline EMTRs, which in this case must contain
+a variable called “mtr_char_cash”.</p></li>
+<li><p><code>static_mtrs = static_mtrs</code> … This argument supplies a
+dataframe of EMTRs under the static simulation of the policy reform,
+which again in this case must contain a variable called
+“mtr_char_cash”.</p></li>
+<li><p><code>max_adj = 1</code> … This argument limits the absolute
+value of the resulting percent change for any record to 100%. It
+prevents unreasonable adjustments resulting from edge cases in EMTRs,
+which in rare cases can be extreme when a taxpayer is stuck at a notch
+in the code.</p></li>
+</ul>
+<p>To summarize, we set the tax-price charitable contributions
+elasticity to -1 for each record. Then we pass our data, including EMTRs
+on charitable contributions under the baseline and under the policy
+reform, to a helper function. This function multiplies the result of the
+following calculation to cash charitable contributions for each
+record…</p>
+<p><span class="math display">\[
+1+e \left( \frac{1+EMTR_{policy}}{1+EMTR_{baseline}} \right)
+\]</span></p>
+<p>…and returns the resulting new values of cash charitable
+contributions. We assign these values to an intermediate dataframe
+called <code>new_values</code>. Finally, in the next block of code, we
+replace the old values of cash charitable contributions with these new
+values. (Note that we return the whole tax units dataframe, not just the
+new column. The result of a behavioral feedback module should always be
+the identical <code>tax_units</code> dataframe input except with new
+values for the variable(s) we are simulating feedback for.)</p>
+<p>And we’re done! The module has applied the logic in our behavioral
+feedback module to the simulated tax records. Tax-Simulator will go on
+to calculate taxes based on this adjusted data, and our end results will
+reflect our assumptions about behavioral responses.</p>
+<p>One last note on EMTR elasticity-based behavioral feedback modules.
+This example was a comparatively crude example: We are applying the same
+elasticity to all tax units in all years. In real life, elasticities may
+vary with observable attributes like income (rich people are more
+concerned with tax optimization). We could just as easily have assigned
+specific elasticities to different types of records in the
+<code>mutate()</code> call, and the logic afterwards would be
+unchanged.</p>
+</div>
+<div id="employment" class="section level3">
+<h3>Employment</h3>
+<p>The prior module assumed that behavioral responses occur only at the
+intensive margin: charitable giving was increased or decreased only
+among those who already gave under the baseline. But many behavioral
+responses users may wish to model are extensive-margin phenomena, in
+which nonzero values can become zeros and vice versa. Low-income
+employment and its relationship to tax policy is one such example.</p>
+<p>In 2021, the Child Tax Credit (CTC) was expanded such that the credit
+no longer phased in with earnings — meaning that the reform increased
+EMTRs on low-income workers. This reduction in the “return to work” may,
+via substitution effects, cause some employment loss among marginally
+attached low-income workers. A partial dynamic budget cost estimate will
+reflect the budgetary impact of this change in employment, which should
+reduce payroll taxes and income taxes. We can write a behavioral
+feedback module to account for this effect in our cost estimate.</p>
+<p>Below is a behavioral feedback module implementing the logic and
+parameters of <a
+href="file:///C:/Users/jar335/Downloads/Bastian_CTCexpansion_2023.pdf">Bastian
+(2023)</a>, a paper which estimates employment loss caused by the 2021
+CTC expansion. Bastian calculates a “return-to-work” metric, defined as
+1 minus the average effective tax rate on working. By demographic group,
+he calculates the change in return-to-work caused by the CTC reform and
+then applies demographic-specific labor supply elasticities to obtain
+employment loss estimates.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>do_employment <span class="ot">=</span> <span class="cf">function</span>(tax_units, ...) { </span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  </span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  <span class="co">#----------------------------------------------------------------------------</span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="co"># Adjusts wage earnings at the extensive margin, per Bastian (2023). Only</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="co"># suitable to analyze an *increase* in EMTRs at the low end -- there is no</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="co"># symmetric effect in which nonworkers become workers in response to a cut in</span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="co"># EMTRs. Used in our analysis of the employment effects of the 2021 CTC. </span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>  <span class="co"># </span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="co"># Parameters: </span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  <span class="co">#   - tax_units (df)     : tibble of tax units with calculated variables</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  <span class="co">#   - baseline_mtrs (df) : year-id indexed tibble of extensive-margin MTRs on </span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  <span class="co">#                          wages1 and wages2 under the baseline</span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>  <span class="co">#   - static_mtrs (df)   : year-id indexed tibble of extensive-margin MTRs on </span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>  <span class="co">#                          wages1 and wages2 under the static counterfactual</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>  <span class="co">#</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>  <span class="co"># Returns: tibble of tax units with post-adjustment wage earnings values.</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>  <span class="co">#----------------------------------------------------------------------------</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>  </span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a>  <span class="co"># Set random seed </span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a>  <span class="fu">set.seed</span>(globals<span class="sc">$</span>random_seed)</span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a>  </span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a>  <span class="co"># Set elasticities</span></span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a>  e_mothers_poor  <span class="ot">=</span> <span class="fl">0.4</span></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a>  e_mothers_other <span class="ot">=</span> <span class="fl">0.2</span></span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a>  e_else          <span class="ot">=</span> <span class="fl">0.05</span></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a>  </span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a>  </span>
+<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a>  tax_units <span class="sc">%&gt;%</span> </span>
+<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a>    </span>
+<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a>    <span class="co"># Join MTRs</span></span>
+<span id="cb4-31"><a href="#cb4-31" tabindex="-1"></a>    <span class="fu">left_join</span>(baseline_mtrs <span class="sc">%&gt;%</span> </span>
+<span id="cb4-32"><a href="#cb4-32" tabindex="-1"></a>                <span class="fu">rename_with</span>(<span class="at">.cols =</span> <span class="sc">-</span><span class="fu">c</span>(id, year), </span>
+<span id="cb4-33"><a href="#cb4-33" tabindex="-1"></a>                            <span class="at">.fn   =</span> <span class="sc">~</span> <span class="fu">paste0</span>(., <span class="st">&#39;_baseline&#39;</span>)), </span>
+<span id="cb4-34"><a href="#cb4-34" tabindex="-1"></a>              <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&#39;id&#39;</span>, <span class="st">&#39;year&#39;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb4-35"><a href="#cb4-35" tabindex="-1"></a>    <span class="fu">left_join</span>(static_mtrs, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&#39;id&#39;</span>, <span class="st">&#39;year&#39;</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-36"><a href="#cb4-36" tabindex="-1"></a>    </span>
+<span id="cb4-37"><a href="#cb4-37" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb4-38"><a href="#cb4-38" tabindex="-1"></a></span>
+<span id="cb4-39"><a href="#cb4-39" tabindex="-1"></a>      <span class="co"># Calculate tax unit-level income (roughly AGI)</span></span>
+<span id="cb4-40"><a href="#cb4-40" tabindex="-1"></a>      <span class="at">income =</span> wages <span class="sc">+</span> txbl_int <span class="sc">+</span> div_ord <span class="sc">+</span> div_pref <span class="sc">+</span> state_ref <span class="sc">+</span> </span>
+<span id="cb4-41"><a href="#cb4-41" tabindex="-1"></a>               txbl_ira_dist <span class="sc">+</span> txbl_pens_dist <span class="sc">+</span> kg_lt <span class="sc">+</span> kg_st <span class="sc">+</span> other_gains <span class="sc">+</span> </span>
+<span id="cb4-42"><a href="#cb4-42" tabindex="-1"></a>               sole_prop <span class="sc">+</span> part_active <span class="sc">+</span> part_passive <span class="sc">-</span> part_active_loss <span class="sc">-</span> </span>
+<span id="cb4-43"><a href="#cb4-43" tabindex="-1"></a>               part_passive_loss <span class="sc">-</span> part_179 <span class="sc">+</span> scorp <span class="sc">+</span> scorp_active <span class="sc">+</span> </span>
+<span id="cb4-44"><a href="#cb4-44" tabindex="-1"></a>               scorp_passive <span class="sc">-</span> scorp_active_loss <span class="sc">-</span> scorp_passive_loss <span class="sc">-</span> </span>
+<span id="cb4-45"><a href="#cb4-45" tabindex="-1"></a>               scorp_179 <span class="sc">+</span> rent <span class="sc">-</span> rent_loss <span class="sc">+</span> estate <span class="sc">-</span> estate_loss <span class="sc">+</span> farm <span class="sc">+</span> ui <span class="sc">+</span> </span>
+<span id="cb4-46"><a href="#cb4-46" tabindex="-1"></a>               gross_ss <span class="sc">+</span> other_inc,</span>
+<span id="cb4-47"><a href="#cb4-47" tabindex="-1"></a>      </span>
+<span id="cb4-48"><a href="#cb4-48" tabindex="-1"></a>      <span class="co">#------------------</span></span>
+<span id="cb4-49"><a href="#cb4-49" tabindex="-1"></a>      <span class="co"># Set elasticities</span></span>
+<span id="cb4-50"><a href="#cb4-50" tabindex="-1"></a>      <span class="co">#------------------</span></span>
+<span id="cb4-51"><a href="#cb4-51" tabindex="-1"></a>      </span>
+<span id="cb4-52"><a href="#cb4-52" tabindex="-1"></a>      <span class="co"># First earner</span></span>
+<span id="cb4-53"><a href="#cb4-53" tabindex="-1"></a>      <span class="at">e1 =</span> <span class="fu">case_when</span>(</span>
+<span id="cb4-54"><a href="#cb4-54" tabindex="-1"></a>        </span>
+<span id="cb4-55"><a href="#cb4-55" tabindex="-1"></a>        <span class="co"># Low-income single mothers</span></span>
+<span id="cb4-56"><a href="#cb4-56" tabindex="-1"></a>        (male1 <span class="sc">==</span> <span class="dv">0</span>) <span class="sc">&amp;</span> (n_dep_ctc <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">&amp;</span> (wages1 <span class="sc">&lt;</span> eitc.po_thresh_1) <span class="sc">&amp;</span> (filing_status <span class="sc">!=</span> <span class="dv">2</span>) <span class="sc">~</span> e_mothers_poor, </span>
+<span id="cb4-57"><a href="#cb4-57" tabindex="-1"></a>        </span>
+<span id="cb4-58"><a href="#cb4-58" tabindex="-1"></a>        <span class="co"># All other mothers with family income below $80,000 </span></span>
+<span id="cb4-59"><a href="#cb4-59" tabindex="-1"></a>        (male1 <span class="sc">==</span> <span class="dv">0</span>) <span class="sc">&amp;</span> (n_dep_ctc <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">&amp;</span> (income <span class="sc">&lt;</span> <span class="dv">80000</span>) <span class="sc">~</span> e_mothers_other, </span>
+<span id="cb4-60"><a href="#cb4-60" tabindex="-1"></a>        </span>
+<span id="cb4-61"><a href="#cb4-61" tabindex="-1"></a>        <span class="co"># Others below $80,000</span></span>
+<span id="cb4-62"><a href="#cb4-62" tabindex="-1"></a>        (income <span class="sc">&lt;</span> <span class="dv">80000</span> <span class="sc">&amp;</span> n_dep_ctc <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">~</span> e_else,</span>
+<span id="cb4-63"><a href="#cb4-63" tabindex="-1"></a>        </span>
+<span id="cb4-64"><a href="#cb4-64" tabindex="-1"></a>        <span class="co"># Everyone else</span></span>
+<span id="cb4-65"><a href="#cb4-65" tabindex="-1"></a>        <span class="cn">TRUE</span> <span class="sc">~</span> <span class="dv">0</span></span>
+<span id="cb4-66"><a href="#cb4-66" tabindex="-1"></a>      ),</span>
+<span id="cb4-67"><a href="#cb4-67" tabindex="-1"></a>      </span>
+<span id="cb4-68"><a href="#cb4-68" tabindex="-1"></a>      <span class="co"># Second earner</span></span>
+<span id="cb4-69"><a href="#cb4-69" tabindex="-1"></a>      <span class="at">e2 =</span> <span class="fu">case_when</span>(</span>
+<span id="cb4-70"><a href="#cb4-70" tabindex="-1"></a>        </span>
+<span id="cb4-71"><a href="#cb4-71" tabindex="-1"></a>        <span class="co"># Low-income single mothers</span></span>
+<span id="cb4-72"><a href="#cb4-72" tabindex="-1"></a>        (male1 <span class="sc">==</span> <span class="dv">0</span>) <span class="sc">&amp;</span> (n_dep_ctc <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">&amp;</span> (wages1 <span class="sc">&lt;</span> eitc.po_thresh_1) <span class="sc">&amp;</span> (filing_status <span class="sc">!=</span> <span class="dv">2</span>) <span class="sc">~</span> e_mothers_poor, </span>
+<span id="cb4-73"><a href="#cb4-73" tabindex="-1"></a>        </span>
+<span id="cb4-74"><a href="#cb4-74" tabindex="-1"></a>        <span class="co"># All other mothers with family income below $80,000 </span></span>
+<span id="cb4-75"><a href="#cb4-75" tabindex="-1"></a>        (male1 <span class="sc">==</span> <span class="dv">0</span>) <span class="sc">&amp;</span> (n_dep_ctc <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">&amp;</span> (income <span class="sc">&lt;</span> <span class="dv">80000</span>) <span class="sc">~</span> e_mothers_other, </span>
+<span id="cb4-76"><a href="#cb4-76" tabindex="-1"></a>        </span>
+<span id="cb4-77"><a href="#cb4-77" tabindex="-1"></a>        <span class="co"># Others below $80,000</span></span>
+<span id="cb4-78"><a href="#cb4-78" tabindex="-1"></a>        (income <span class="sc">&lt;</span> <span class="dv">80000</span> <span class="sc">&amp;</span> n_dep_ctc <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">~</span> e_else,</span>
+<span id="cb4-79"><a href="#cb4-79" tabindex="-1"></a>        </span>
+<span id="cb4-80"><a href="#cb4-80" tabindex="-1"></a>        <span class="co"># Everyone else</span></span>
+<span id="cb4-81"><a href="#cb4-81" tabindex="-1"></a>        <span class="cn">TRUE</span> <span class="sc">~</span> <span class="dv">0</span></span>
+<span id="cb4-82"><a href="#cb4-82" tabindex="-1"></a>      ),</span>
+<span id="cb4-83"><a href="#cb4-83" tabindex="-1"></a>      </span>
+<span id="cb4-84"><a href="#cb4-84" tabindex="-1"></a>      </span>
+<span id="cb4-85"><a href="#cb4-85" tabindex="-1"></a>      <span class="co">#---------------------------</span></span>
+<span id="cb4-86"><a href="#cb4-86" tabindex="-1"></a>      <span class="co"># Simulate labor force exit</span></span>
+<span id="cb4-87"><a href="#cb4-87" tabindex="-1"></a>      <span class="co">#---------------------------</span></span>
+<span id="cb4-88"><a href="#cb4-88" tabindex="-1"></a>      </span>
+<span id="cb4-89"><a href="#cb4-89" tabindex="-1"></a>      <span class="co"># Calculate percent change in return-to-work</span></span>
+<span id="cb4-90"><a href="#cb4-90" tabindex="-1"></a>      <span class="at">delta_rtw1 =</span> ((<span class="dv">1</span> <span class="sc">-</span> mtr_wages1) <span class="sc">-</span> (<span class="dv">1</span> <span class="sc">-</span> mtr_wages1_baseline)) <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">-</span> mtr_wages1_baseline),</span>
+<span id="cb4-91"><a href="#cb4-91" tabindex="-1"></a>      <span class="at">delta_rtw2 =</span> ((<span class="dv">1</span> <span class="sc">-</span> mtr_wages2) <span class="sc">-</span> (<span class="dv">1</span> <span class="sc">-</span> mtr_wages2_baseline)) <span class="sc">/</span> (<span class="dv">1</span> <span class="sc">-</span> mtr_wages2_baseline),</span>
+<span id="cb4-92"><a href="#cb4-92" tabindex="-1"></a>      </span>
+<span id="cb4-93"><a href="#cb4-93" tabindex="-1"></a>      <span class="co"># Calculate probability of remaining employed defined as 1 plus the </span></span>
+<span id="cb4-94"><a href="#cb4-94" tabindex="-1"></a>      <span class="co"># implied percent change in employment </span></span>
+<span id="cb4-95"><a href="#cb4-95" tabindex="-1"></a>      <span class="at">pr_emp1 =</span> <span class="dv">1</span> <span class="sc">+</span> (e1 <span class="sc">*</span> delta_rtw1),</span>
+<span id="cb4-96"><a href="#cb4-96" tabindex="-1"></a>      <span class="at">pr_emp2 =</span> <span class="dv">1</span> <span class="sc">+</span> (e2 <span class="sc">*</span> delta_rtw2),</span>
+<span id="cb4-97"><a href="#cb4-97" tabindex="-1"></a>      </span>
+<span id="cb4-98"><a href="#cb4-98" tabindex="-1"></a>      <span class="co"># Simulate outcomes</span></span>
+<span id="cb4-99"><a href="#cb4-99" tabindex="-1"></a>      <span class="at">emp1 =</span> <span class="fu">runif</span>(<span class="fu">nrow</span>(.)) <span class="sc">&lt;</span> pr_emp1,</span>
+<span id="cb4-100"><a href="#cb4-100" tabindex="-1"></a>      <span class="at">emp2 =</span> <span class="fu">runif</span>(<span class="fu">nrow</span>(.)) <span class="sc">&lt;</span> pr_emp2,</span>
+<span id="cb4-101"><a href="#cb4-101" tabindex="-1"></a>      </span>
+<span id="cb4-102"><a href="#cb4-102" tabindex="-1"></a>      <span class="co"># Adjust wages</span></span>
+<span id="cb4-103"><a href="#cb4-103" tabindex="-1"></a>      <span class="at">wages1 =</span> <span class="fu">if_else</span>(wages1 <span class="sc">==</span> <span class="dv">0</span>, <span class="dv">0</span>, wages1 <span class="sc">*</span> emp1),</span>
+<span id="cb4-104"><a href="#cb4-104" tabindex="-1"></a>      <span class="at">wages2 =</span> <span class="fu">if_else</span>(wages2 <span class="sc">==</span> <span class="dv">0</span>, <span class="dv">0</span>, wages2 <span class="sc">*</span> emp2),</span>
+<span id="cb4-105"><a href="#cb4-105" tabindex="-1"></a>      <span class="at">wages  =</span> wages1 <span class="sc">+</span> wages2 </span>
+<span id="cb4-106"><a href="#cb4-106" tabindex="-1"></a>      </span>
+<span id="cb4-107"><a href="#cb4-107" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-108"><a href="#cb4-108" tabindex="-1"></a>    </span>
+<span id="cb4-109"><a href="#cb4-109" tabindex="-1"></a>    <span class="co"># Remove intermediate calculation variables and return </span></span>
+<span id="cb4-110"><a href="#cb4-110" tabindex="-1"></a>    <span class="fu">select</span>(<span class="sc">-</span>income, <span class="sc">-</span>e1, <span class="sc">-</span>e2, <span class="sc">-</span>delta_rtw1, <span class="sc">-</span>delta_rtw2, </span>
+<span id="cb4-111"><a href="#cb4-111" tabindex="-1"></a>           <span class="sc">-</span>pr_emp1, <span class="sc">-</span>pre_emp2, <span class="sc">-</span>emp1, <span class="sc">-</span>emp2) <span class="sc">%&gt;%</span> </span>
+<span id="cb4-112"><a href="#cb4-112" tabindex="-1"></a>    <span class="fu">return</span>()</span>
+<span id="cb4-113"><a href="#cb4-113" tabindex="-1"></a>}</span></code></pre></div>
+<p>In terms of function inputs, this module uses extensive-margin tax
+rates — i.e., average effective tax rates — on primary-earner wages
+(“wages1”) and, in the case of joint returns, secondary-earner wages
+(“wages2”). These variables are calculated earlier in Tax-Simulator’s
+execution and are passed to our function in <code>baseline_mtrs</code>
+and <code>static_mtrs</code>.</p>
+<p>At the top, because this module involves stochastic simulation, we
+reset the random number generator seed — a requirement in Tax-Simulator
+before any call to a random number generator. We also list our
+elasticity assumptions at the top per convention.</p>
+<p>Then we join our EMTR dataframes into tax units, making sure to
+distinguish baseline from policy reform variables by renaming the
+former.</p>
+<p>Next, we assign labor supply elasticities to each nondependent adult.
+As per Tax-Simulator naming convention, primary earner variables are
+appended with “1” and secondary variables are appended with “2”. Before
+assignment, we calculate a helper variable, income, since elasticities
+are heterogeneous by demographic group and income. The
+<code>case_when()</code> function calls implement Bastian’s logic:
+EITC-qualifying single mothers have an elasticity of 0.4; other mothers
+with income below $80K have an elasticity of 0.2; others below $80K have
+an elasticity of 0.05; those above $80K are assumed not to be
+responsive. The important takeaway from these lines is that we can build
+highly detailed heterogeneity into our behavioral feedback
+assumptions.</p>
+<p>The next step is to calculate the policy reforms’s effect on the
+return to work, again defined as 1 minus the average effective tax rate
+(somewhat confusingly stored with an “mtr” prefix per Tax-Simulator
+convention). We calculate the percent change in this metric for primary
+and secondary earners.</p>
+<p>Applying the labor supply elasticity to this quantity gets us the
+percent change in employment, which is uninterpretable at the micro
+level. Instead, we convert the result into a <em>probability of
+remaining employed</em> by adding 1. For example, if the reform reduces
+someone’s return to work by 10%, and we assume a 0.4 labor supply
+elasticity, we’d say that the percent change in employment is -4%, and
+thus the probability of remaining employed is 96%, i.e. <span
+class="math display">\[1 + (-0.1 * 0.4) = 1 - 0.04 = 0.96\]</span>.</p>
+<p>At this point, we have employment probabilities for all workers in
+our data. The final step is to simulate labor force exit using a random
+number generator. Wages are set to 0 for those who drop out of the labor
+force, and <em>viola</em> — we’re done.</p>
+</div>
+</div>
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = false;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,32 @@
+name: "Nav Bar"
+title: "The Budget Lab at Yale Technical Documentation"
+type: inverse
+left:
+  - text: "User Guide"
+    menu:
+      - text: "Step-by-Step Guide"
+        href: ./user_guide.html
+      - text: "Runscript"
+        href: ./runscripts.html
+      - text: "Tax Law Configuration"
+        href: ./tax_law.html
+      - text: "Behavior Modules"
+        href: ./behavior_modules.html
+  - text: "Model Documentation"
+    menu: 
+      - text: "Tax-Data"
+      - text: "Tax-Simulator"
+        menu:
+         - text: "Data Processing"
+           href: ./data.html
+         - text: "Tax Calculator"
+           href: ./tax_calculator.html
+         - text: "Behavioral Feedback"
+           href: ./behavioral.html
+         - text: "Post-Processing"
+           href: ./post_processing.html
+         - text: "Technical Implementation"
+           href: ./technical.html
+right:
+  - icon: fa-github fa-lg
+    href: https://github.com/Budget-Lab-Yale
