@@ -27,7 +27,7 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'baseline/baseline'
+runscript_names  = 'private/wealth_tax/nickel_dime_mtr'
 scenario_id      = NULL
 local            = 0
 vintage          = NULL
