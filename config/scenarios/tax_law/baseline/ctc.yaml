@@ -23,6 +23,11 @@ filing_status_mapper:
     '2': po_range_other_married
     '3': po_range_other_married / 2
     '4': po_range_other_married / 2
+  baby_bonus_po_thresh:
+    '1': baby_bonus_po_thresh_married / 2
+    '2': baby_bonus_po_thresh_married
+    '3': baby_bonus_po_thresh_married / 2
+    '4': baby_bonus_po_thresh_married / 2
 
 # Whether SSN is required to qualify for CTC
 need_ssn:
@@ -219,4 +224,12 @@ baby_bonus:
 
 # Phase in rate for baby bonus
 baby_bonus_pi_rate:
-  value: .15
+  value: 0.15
+
+# Phase out rate for baby bonus
+baby_bonus_po_rate:
+  value: 0.05
+  
+# Phase out threshold for baby bonus, joint returns
+baby_bonus_po_thresh_married:
+  value: 400000
