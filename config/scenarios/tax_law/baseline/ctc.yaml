@@ -212,3 +212,11 @@ pi_thresh:
     '2014': 3000
     '2018': 2500
     '2026': 3000
+
+# Bonus credit in the first month of a child's life
+baby_bonus:
+  value: 0
+
+# Phase in rate for baby bonus
+baby_bonus_pi_rate:
+  value: .15

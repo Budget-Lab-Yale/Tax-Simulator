@@ -82,7 +82,9 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'ctc.pi_thresh',        # (int) earned income threshold above which CTC phases in
     'ctc.pi_type',          # (int) whether phase-in type is a rate (0 means range)
     'ctc.pi_rate',          # (dbl) phase-in rate
-    'ctc.pi_range'          # (dbl) phase-in range for total CTC (excluding nonqualifying dependent credit) 
+    'ctc.pi_range',         # (dbl) phase-in range for total CTC (excluding nonqualifying dependent credit) 
+    'ctc.baby_bonus',       # (dbl) Amount new parents are given in first month of a child's life
+    'ctc.baby_bonus_pi_rate'# (dbl) Rate at which baby bonus phases in
   )
   
   tax_unit %>% 
@@ -106,9 +108,14 @@ calc_ctc = function(tax_unit, fill_missings = F) {
                            '2' = ~ dep_ctc2 & (dep_age2 <= .) & (dep_ssn2 | !need_ssn), 
                            '3' = ~ dep_ctc3 & (dep_age3 <= .) & (dep_ssn3 | !need_ssn)), 
              .names = '{str_sub(col, 5, 5)}{fn}'),
+      z1 = dep_ctc1 & (dep_age1 == 0) & (dep_ssn1 | !need_ssn),
+      z2 = dep_ctc2 & (dep_age2 == 0) & (dep_ssn2 | !need_ssn), 
+      z3 = dep_ctc3 & (dep_age3 == 0) & (dep_ssn3 | !need_ssn),
+      
       
       n_young = y1 + y2 + y3,
       n_old   = o1 + o2 + o3 - n_young,
+      n_0     = z1 + z2 + z3,
       n_other = n_dep - n_young - n_old,
       
       # Determine value for young children
@@ -120,6 +127,7 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       max_value1      = (value_young1 * n_young) + (ctc.value_old1 * n_old),
       max_value2      = (value_young2 * n_young) + (ctc.value_old2 * n_old),
       max_value_other = ctc.value_other * n_other,
+      max_value_baby  = n_0 * ctc.baby_bonus,
       
       # Determine amount by which income exceeds phaseout thresholds
       excess1 = agi - ctc.po_thresh1,
@@ -181,6 +189,9 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       # Phase in with earned income above minimum refund value
       ctc_ref = pmin(min_refund + (pmax(0, qual_ei - ctc.pi_thresh) * pi_rate), 
                      pmin(remaining_ctc, max_refund_young + max_refund_old)),
+      
+      # Phase in baby bonus
+      ctc_ref = ctc_ref + pmin(max_value_baby, pmax(0, qual_ei) * ctc.baby_bonus_pi_rate),
       
       # For $0-earning nonfilers, switch filing status if policy offers a refund
       become_filer_ctc = as.integer(filer == 0 & qual_ei == 0 & ctc_ref > 0)
