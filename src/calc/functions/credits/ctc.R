@@ -83,8 +83,8 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'ctc.pi_type',          # (int) whether phase-in type is a rate (0 means range)
     'ctc.pi_rate',          # (dbl) phase-in rate
     'ctc.pi_range',         # (dbl) phase-in range for total CTC (excluding nonqualifying dependent credit) 
-    'ctc.baby_bonus',       # (dbl) Amount new parents are given in first month of a child's life
-    'ctc.baby_bonus_pi_rate'# (dbl) Rate at which baby bonus phases in
+    'ctc.baby_bonus',       # (dbl) amount new parents are given in first month of a child's life
+    'ctc.baby_bonus_pi_rate'# (dbl) rate at which baby bonus phases in
   )
   
   tax_unit %>% 

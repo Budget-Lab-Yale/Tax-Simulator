@@ -27,7 +27,7 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'private/wealth_tax/nickel_dime_mtr'
+runscript_names  = 'private/moore/current_law'
 scenario_id      = NULL
 local            = 0
 vintage          = NULL
@@ -35,7 +35,7 @@ pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
 delete_detail    = 0
-multicore        = 0
+multicore        = 1
 
 
 # Override default runtime args if executed from the command line
