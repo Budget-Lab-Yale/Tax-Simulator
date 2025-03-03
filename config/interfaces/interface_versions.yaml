@@ -28,7 +28,7 @@ Corporate-Tax-Model:
   type: model_data
   version: 1
   default_vintage: 2024021816
-  default_id: test
+  default_id: baseline
 
 Estate-Tax-Model:
   type: model_data
