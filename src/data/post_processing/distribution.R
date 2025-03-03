@@ -51,6 +51,39 @@ process_for_distribution = function(id, baseline_id, year, financing = 'none',
     fread() %>% 
     tibble()
   
+  recovery_ratios = file.path(globals$interface_paths %>%
+                                         filter(ID == globals$interface_path$ID[1], interface == 'Cost-Recovery-Simulator') %>%
+                                         get_vector('path'),
+                                       'totals/recovery_ratios_form.csv') %>%
+    read_csv(.) %>%
+    rename(years = year) %>%
+    filter(years == year) %>%
+    rename(year = years) %>%
+    mutate(policy = "baseline") %>%
+    bind_rows(
+        file.path(get_scenario_info(id)$interface_paths$`Cost-Recovery-Simulator`,
+                  'totals/recovery_ratios_form.csv') %>%
+          read_csv(.) %>%
+          rename(years = year) %>%
+          filter(years == year) %>%
+          rename(year = years) %>%
+          mutate(policy = "scenario")
+    ) %>%
+    pivot_wider(names_from = c(policy, form), values_from = c(investment, real, pv))
+  
+  corp_rate = file.path(globals$output_root, id, 'static/supplemental/tax_law.csv') %>% 
+    fread() %>% 
+    tibble() %>%
+    rename(years = year) %>%
+    filter(years == year, filing_status == 1) %>%
+    get_vector('corp.rate')
+  
+  
+  cost_recovery_factor = recovery_ratios %>%
+    mutate(
+      cost_recovery_factor = -1 * investment_baseline_ccorp * (pv_scenario_ccorp - pv_baseline_ccorp) * corp_rate
+      ) %>%
+    get_vector('cost_recovery_factor')
   
   #------------------------------------
   # Calculate record-level tax changes
@@ -96,13 +129,14 @@ process_for_distribution = function(id, baseline_id, year, financing = 'none',
       #--------------------------
       
       # Calculate factor incomes
-      labor   = pmax(0, wages + (sole_prop + part_scorp + farm) * 0.8), 
-      capital = pmax(0, (sole_prop + part_scorp + farm) * 0.2 + txbl_int + 
+      labor   = pmax(0, wages + (sole_prop + part_scorp + farm) * 0.8),
+      capital = pmax(0, (sole_prop + part_scorp + farm) * 0.2 + txbl_int +
                         exempt_int + div_ord + div_pref + kg_st + kg_lt),
       
+      
       # Then allocate corporate tax change in accordance with assumed labor incidence  
-      corp_tax_labor   = corp_delta * 1e9 * labor_share       * (labor / sum(labor * weight)),
-      corp_tax_capital = corp_delta * 1e9 * (1 - labor_share) * (capital / sum(capital * weight)),
+      corp_tax_labor   = corp_delta * 1e9 * labor_share       * (labor / sum(labor * weight)) * cost_recovery_factor * .5,
+      corp_tax_capital = corp_delta * 1e9 * (1 - labor_share) * (capital / sum(capital * weight)) * cost_recovery_factor * .5,
       
   
       other_taxes = corp_tax_labor + corp_tax_capital + vat_burden, 
@@ -288,13 +322,13 @@ build_distribution_tables = function(id, baseline_id) {
   rev_baseline = globals$baseline_root %>% 
     file.path('baseline/static/totals/receipts.csv') %>% 
     read_csv(show_col_types = F) %>% 
-    select(year, baseline = revenues_corp_tax)
+    select(year, baseline = revenues_corp_rate)
   
   # Read counterfactual scenario off-model revenues 
   rev_reform = globals$output_root %>% 
     file.path(id, '/static/totals/receipts.csv') %>% 
     read_csv(show_col_types = F) %>% 
-    select(year, reform = revenues_corp_tax) %>% 
+    select(year, reform = revenues_corp_rate) %>% 
 
     # Express corporate tax in baseline (consumer) dollars
     left_join(vat_price_offset, by = 'year') %>%
@@ -302,7 +336,7 @@ build_distribution_tables = function(id, baseline_id) {
     select(-ends_with('_factor'))
   
   # Calculate change in corporate tax liability by year
-  corp_delta = rev_reform %>% 
+  corp_rate_delta = rev_reform %>% 
     left_join(rev_baseline, by = 'year') %>% 
     mutate(delta = reform - baseline) %>%  
   
@@ -311,7 +345,7 @@ build_distribution_tables = function(id, baseline_id) {
     mutate(first_year = ifelse(sum(delta) != 0, 
                                min(year[cumsum(delta) != 0 & lag(delta, default = 0) == 0]), 
                                Inf), 
-           labor_share = 0.2 * pmax(0, pmin(1, (year - first_year) / 10))) %>% 
+           labor_share = .5) %>% 
     select(year, delta, labor_share) 
 
   
@@ -339,10 +373,10 @@ build_distribution_tables = function(id, baseline_id) {
     }
     
     # Get corporate tax info for this year
-    this_corp_delta = corp_delta %>% 
+    this_corp_delta = corp_rate_delta %>% 
       filter(year == yr) %>% 
       get_vector('delta')
-    this_corp_labor_share = corp_delta %>% 
+    this_corp_labor_share = corp_rate_delta %>% 
       filter(year == yr) %>% 
       get_vector('labor_share')
     
