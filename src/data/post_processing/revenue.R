@@ -49,11 +49,9 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root,
   revenues_corp_tax = corp_tax_root %>%
     file.path('revenues.csv') %>% 
     read_csv(show_col_types = F) %>% 
-    rename(
-      revenues_corp_rate  = rate,
-      revenues_corp_other = other,
-    )
-  
+    mutate(revenues_corp_tax = rate + other) %>%
+    select(year, revenues_corp_tax)
+    
   # Read estate tax receipts
   revenues_estate_tax = estate_tax_root %>%
     file.path('revenues.csv') %>% 
@@ -117,7 +115,7 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root,
     # Join off-model estimates
     left_join(off_model, by = 'year') %>% 
     mutate(revenues_income_tax = revenues_income_tax + individual,  
-           revenues_corp_tax   = revenues_corp_other + corporate, 
+           revenues_corp_tax   = revenues_corp_tax + corporate, 
            revenues_vat        = revenues_vat + vat) %>% 
     select(-individual, -corporate, -vat) %>% 
     
@@ -126,7 +124,7 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root,
     
     # Write CSV
     select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits, 
-           revenues_corp_tax, revenues_corp_rate, revenues_estate_tax, 
+           revenues_corp_tax, revenues_estate_tax, 
            revenues_vat, revenues_other) %>%
     write_csv(file.path(scenario_root, 'totals', 'receipts.csv'))
 }
@@ -168,8 +166,7 @@ calc_rev_est = function(id) {
     # Pivot long in variable type
     mutate(total = revenues_payroll_tax + 
                    revenues_income_tax - 
-                   outlays_tax_credits + 
-                   revenues_corp_rate +
+                   outlays_tax_credits +
                    revenues_corp_tax + 
                    revenues_estate_tax + 
                    revenues_vat + 
@@ -196,8 +193,7 @@ calc_rev_est = function(id) {
       # Pivot long in variable type
       mutate(total = revenues_payroll_tax + 
                      revenues_income_tax - 
-                     outlays_tax_credits + 
-                     revenues_corp_rate +
+                     outlays_tax_credits +
                      revenues_corp_tax + 
                      revenues_estate_tax + 
                      revenues_vat +
