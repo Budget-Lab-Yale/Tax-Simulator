@@ -27,14 +27,14 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'private/moore/current_law'
+runscript_names  = 'public/tcja/extension_dist/extension_dist'
 scenario_id      = NULL
 local            = 0
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
-delete_detail    = 0
+delete_detail    = 1
 multicore        = 1
 
 
