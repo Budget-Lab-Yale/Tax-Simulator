@@ -102,7 +102,20 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     
     # Skip specified interfaces
     if (dep == 'Tax-Simulator' | (paste0('dep.', dep, '.vintage') %in% colnames(runscript))) {
-      next
+      if (dep == 'Tax-Simulator' | (paste0('dep.', dep, '.ID') %in% colnames(runscript))) {
+        next
+      } else {
+        stop('Users specifying which vintage to use must also supply an ID within that directory.')
+      }
+    } 
+    
+    if (dep == 'Tax-Simulator' | (paste0('dep.', dep, '.ID') %in% colnames(runscript))) {
+      if (dep == 'Tax-Simulator' | (paste0('dep.', dep, '.vintage') %in% colnames(runscript))) {
+        next
+      } else {
+        runscript[[paste0('dep.', dep, '.vintage')]] = interface_defaults[[dep]]$default_vintage
+        next
+      }
     }
     
     # Add columns

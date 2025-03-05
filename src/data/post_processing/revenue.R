@@ -49,8 +49,9 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root,
   revenues_corp_tax = corp_tax_root %>%
     file.path('revenues.csv') %>% 
     read_csv(show_col_types = F) %>% 
-    select(year, revenues_corp_tax = receipts_fy)
-  
+    mutate(revenues_corp_tax = rate + other) %>%
+    select(year, revenues_corp_tax)
+    
   # Read estate tax receipts
   revenues_estate_tax = estate_tax_root %>%
     file.path('revenues.csv') %>% 
@@ -100,8 +101,7 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root,
     ) %>%
     
     # Join corporate tax levels and net out changes owing to behavior
-    left_join(revenues_corp_tax, by = 'year') %>% 
-    mutate(revenues_corp_tax = revenues_corp_tax + delta_revenues_corp_tax) %>%
+    left_join(revenues_corp_tax, by = 'year') %>%
     
     # Join estate tax levels 
     left_join(revenues_estate_tax, by = 'year') %>% 
@@ -124,7 +124,8 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root,
     
     # Write CSV
     select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits, 
-           revenues_corp_tax, revenues_estate_tax, revenues_vat, revenues_other) %>%
+           revenues_corp_tax, revenues_estate_tax, 
+           revenues_vat, revenues_other) %>%
     write_csv(file.path(scenario_root, 'totals', 'receipts.csv'))
 }
 
@@ -165,7 +166,7 @@ calc_rev_est = function(id) {
     # Pivot long in variable type
     mutate(total = revenues_payroll_tax + 
                    revenues_income_tax - 
-                   outlays_tax_credits + 
+                   outlays_tax_credits +
                    revenues_corp_tax + 
                    revenues_estate_tax + 
                    revenues_vat + 
@@ -192,7 +193,7 @@ calc_rev_est = function(id) {
       # Pivot long in variable type
       mutate(total = revenues_payroll_tax + 
                      revenues_income_tax - 
-                     outlays_tax_credits + 
+                     outlays_tax_credits +
                      revenues_corp_tax + 
                      revenues_estate_tax + 
                      revenues_vat +
@@ -234,7 +235,7 @@ calc_rev_est = function(id) {
                   values_from = delta) %>% 
       arrange(Measure, 
               match(Series, c('total', 'revenues_income_tax', 
-                              'revenues_payroll_tax', 'revenues_corp_tax', 
+                              'revenues_payroll_tax', 'revenues_corp_rate', 'revenues_corp_tax', 
                               'revenues_estate_tax', 'revenues_other',
                               'revenues_vat', 'outlays_tax_credits'))
       ) %>% 
@@ -243,6 +244,7 @@ calc_rev_est = function(id) {
         Series == 'revenues_payroll_tax' ~ '  Revenues, payroll tax', 
         Series == 'revenues_income_tax'  ~ '  Revenues, individual income tax', 
         Series == 'outlays_tax_credits'  ~ '  Outlays, refundable tax credits',
+        Series == 'revenues_corp_rate'   ~ '  Revenues, corporate income tax (rate change)',
         Series == 'revenues_corp_tax'    ~ '  Revenues, corporate income tax',
         Series == 'revenues_estate_tax'  ~ '  Revenues, estate tax',
         Series == 'revenues_vat'         ~ '  Revenues, value added tax',
@@ -384,7 +386,8 @@ calc_stacked_rev_est = function(counterfactual_ids) {
             mutate(scenario_id = .x,
                    Dollars = revenues_payroll_tax + 
                              revenues_income_tax - 
-                             outlays_tax_credits + 
+                             outlays_tax_credits +
+                             revenues_corp_rate +
                              revenues_corp_tax + 
                              revenues_estate_tax + 
                              revenues_vat + 
