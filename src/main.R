@@ -13,7 +13,7 @@
 # Load required packages
 suppressPackageStartupMessages(
   invisible(capture.output(
-    lapply(readLines('./requirements.txt'), library, character.only = T)    
+    lapply(readLines('./requirements.txt'), library, character.only = T)
   ))
 )
 
