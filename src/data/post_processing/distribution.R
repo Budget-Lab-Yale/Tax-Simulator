@@ -47,22 +47,22 @@ build_distribution_tables = function(id, baseline_id) {
     }
     
     # Get corporate tax info for this year
-    this_corp_rate_delta = other_taxes$corp_rate_delta %>%
+    this_other_corp_delta = other_taxes$other_corp_delta %>%
       filter(year == yr) %>%
-      get_vector('delta')
-    this_corp_rate_labor_share = other_taxes$corp_rate_delta %>%
+      pull(delta)
+    this_other_corp_labor_share = other_taxes$other_corp_delta %>%
       filter(year == yr) %>%
-      get_vector('labor_share')
+      pull(labor_share)
     
     # Get cost recovery delta for this year
     this_cost_recovery_delta = other_taxes$cost_recovery_delta %>%
       filter(year == yr) %>%
-      get_vector('delta')
+      pull(cost_recovery_delta)
     
     # Get VAT info for this year
     this_vat_price_offset = other_taxes$vat_price_offset %>%
       filter(year == yr) %>%
-      get_vector('cpi_factor')
+      pull(cpi_factor)
     
     # Grouping variable loop
     for (group_var in c('income', 'age')) {
@@ -82,8 +82,8 @@ build_distribution_tables = function(id, baseline_id) {
           id                        = id,
           baseline_id               = 'baseline',
           yr                        = yr,
-          corp_rate_delta           = if_else(include_other, this_corp_rate_delta, 0),
-          corp_rate_labor_share     = this_corp_rate_labor_share,
+          other_corp_delta          = if_else(include_other, this_other_corp_delta, 0),
+          other_corp_labor_share    = this_other_corp_labor_share,
           cost_recovery_delta       = if_else(include_other, this_cost_recovery_delta, 0),
           cost_recovery_labor_share = 0.5,
           vat_price_offset          = if_else(include_other, this_vat_price_offset, 1),
@@ -132,8 +132,8 @@ build_distribution_tables = function(id, baseline_id) {
 
 
 
-process_for_distribution = function(id, baseline_id, yr, include_estate, corp_rate_delta, 
-                                    corp_rate_labor_share, cost_recovery_delta, 
+process_for_distribution = function(id, baseline_id, yr, include_estate, other_corp_delta, 
+                                    other_corp_labor_share, cost_recovery_delta, 
                                     cost_recovery_labor_share, vat_price_offset) {
   
   #----------------------------------------------------------------------------
@@ -150,10 +150,10 @@ process_for_distribution = function(id, baseline_id, yr, include_estate, corp_ra
   #   - yr                        (int) : year to calculate metrics for
   #   - include_estate           (bool) : whether to include estate tax in the
   #                                       distributional analysis
-  #   - corp_rate_delta           (dbl) : corporate tax change under scenario 
+  #   - other_corp_delt           (dbl) : corporate tax change under scenario 
   #                                       attributable to corporate tax rate, 
   #                                       billions
-  #   - corp_rate_labor_share     (dbl) : labor's share of the burden of 
+  #   - other_corp_labor_share    (dbl) : labor's share of the burden of 
   #                                       corporate rate changes
   #   - cost_recovery_delta       (dbl) : PV of corporate cost recovery change 
   #                                       tax burden, billions
@@ -167,55 +167,87 @@ process_for_distribution = function(id, baseline_id, yr, include_estate, corp_ra
   #----------------------------------------------------------------------------
   
   
-  #-----------------------
-  # Read microdata output
-  #-----------------------
+  set.seed(globals$random_seed)
   
-  # Tax-Simulator microdata
+  #-------------------------------------
+  # Read Tax-Simualtor microdata output
+  #-------------------------------------
+  
   if (baseline_id == 'baseline') {
     baseline_root = file.path(globals$baseline_root, 'baseline')
   } else {
     baseline_root = file.path(globals$output_root, baseline_id)
   }
   
+  # Read microdata
   baseline = file.path(baseline_root, 'static/detail', paste0(yr, '.csv')) %>%
     fread() %>%
     tibble()
-  
   reform = file.path(globals$output_root, id, 'static/detail', paste0(yr, '.csv')) %>%
     fread() %>%
     tibble()
   
-  # Estate tax microdata, if applicable
+  
+  #-----------------------------------
+  # Read and join estate tax micrdata
+  #-----------------------------------
+  
   if (include_estate) {
-    estate_tax_microdata = globals$interface_paths %>%
-      
-      # Baseline
-      filter(ID == globals$interface_path$ID[1], interface == 'Estate-Tax-Distribution') %>%
-      get_vector('path') %>% 
-      file.path(paste0('baseline/inheritances_', yr, '.csv')) %>% 
-      fread() %>% 
-      tibble() %>% 
-      mutate(name = 'baseline') %>% 
-      
-      # Reform
-      bind_rows(
-        get_scenario_info(id)$interface_paths$`Estate-Tax-Distribution` %>%
-          file.path(paste0('baseline/inheritances_', yr, '.csv')) %>% 
+    
+    # Read baseline
+    baseline %<>% 
+      left_join(
+        filter(ID == globals$interface_path$ID[1], interface == 'Estate-Tax-Distribution') %>%
+          pull(path) %>% 
+          file.path(paste0('estate_tax_detail_', yr, '.csv')) %>% 
           fread() %>% 
-          tibble() %>% 
-          mutate(name = 'reform')
+          tibble()  %>% 
+          rename(liab_estate = estate_tax_liability), 
+        by = 'id'
       ) %>% 
       
-      # Reshape wide in scenario
-      select(id, name, value = estate_tax_liability) %>% 
-      pivot_wider(names_prefix = 'estate_tax_')
+      # Split records based on probability of inheritance
+      expand_grid(copy_id = 1:2) %>% 
+      mutate(
+        weight      = weight * if_else(copy_id == 1, p_inheritance, 1 - p_inheritance), 
+        inheritance = inheritance * (copy_id == 1), 
+        liab_estate = liab_estate * (copy_id == 1), 
+      ) %>% 
+      filter(weight > 0)
+      
+    # Read counterfactual reform 
+    reform %<>% 
+      left_join(
+        get_scenario_info(id)$interface_paths$`Estate-Tax-Distribution` %>%
+          file.path(paste0('estate_tax_detail_', yr, '.csv')) %>% 
+          fread() %>% 
+          tibble() %>% 
+          rename(liab_estate = estate_tax_liability), 
+        by = 'id'
+      ) %>% 
+      
+      # Split records based on probability of inheritance
+      expand_grid(copy_id = 1:2) %>% 
+      mutate(
+        weight      = weight * if_else(copy_id == 1, p_inheritance, 1 - p_inheritance), 
+        inheritance = inheritance * (copy_id == 1), 
+        liab_estate = liab_estate * (copy_id == 1),
+      ) %>% 
+      filter(weight > 0)
+    
+  } else {
+    baseline %<>% mutate(copy_id = 1, inheritance = 0, liab_estate = 0)
+    reform   %<>% mutate(copy_id = 1, inheritance = 0, liab_estate = 0)
   }
   
+  # Add inheritances to expanded income
+  baseline %<>% mutate(expanded_inc = expanded_inc + inheritance)
+  reform   %<>% mutate(expanded_inc = expanded_inc + inheritance)
   
-  #------------------------------------
-  # Calculate record-level tax changes
-  #------------------------------------
+  
+  #--------------
+  # Process data
+  #--------------
   
   microdata = baseline %>%
     
@@ -224,41 +256,25 @@ process_for_distribution = function(id, baseline_id, yr, include_estate, corp_ra
     
     # Join counterfactual scenario liability, expressed in baseline dollars.
     # Calculate helper information for VAT breakdown supplemental file.
-    mutate(liab_baseline = liab_iit_net + liab_pr) %>%
+    mutate(liab_baseline = liab_iit_net + liab_pr + liab_estate) %>%
     left_join(
       reform %>%
         mutate(
-          liab       = (liab_iit_net + liab_pr)                 / vat_price_offset,
-          ss_new     = gross_ss                                 / vat_price_offset,
-          debt_new   = (txbl_int + exempt_int - first_mort_int) / vat_price_offset,
-          equity_new = (div_ord + div_pref + kg_st + kg_lt)     / vat_price_offset,
-          mixed_new  = (sole_prop + part_scorp + farm)          / vat_price_offset,
-          inc_new    = expanded_inc                             / vat_price_offset,
-          other_new  = inc_new - ss_new - debt_new - equity_new - mixed_new) %>%
-        select(id, liab, ends_with('_new')),
-      by = 'id')
-  
-  # Attach estate tax microdata, if applicatable
-  if (include_estate) {
-    microdata %<>% left_join(estate_tax_microdata, by = 'id')
-  }
-  
-  microdata %<>%
+          liab_reform = (liab_iit_net + liab_pr + liab_estate)   / vat_price_offset,
+          ss_new      = gross_ss                                 / vat_price_offset,
+          debt_new    = (txbl_int + exempt_int - first_mort_int) / vat_price_offset,
+          equity_new  = (div_ord + div_pref + kg_st + kg_lt)     / vat_price_offset,
+          mixed_new   = (sole_prop + part_scorp + farm)          / vat_price_offset,
+          inc_new     = expanded_inc                             / vat_price_offset,
+          other_new   = inc_new - ss_new - debt_new - equity_new - mixed_new) %>%
+        select(id, copy_id, liab_reform, ends_with('_new')),
+      by = c('id', 'copy_id')
+    ) %>% 
+    
     mutate(
       
       # Create adult-level weight
       weight_person = weight * (1 + (filing_status == 2)),
-      
-      #------------
-      # Estate tax
-      #------------
-      
-      # Add estate tax change if applicable
-      estate_tax_delta = if_else(
-        include_estate, 
-        estate_tax_reform / vat_price_offset - estate_tax_baseline, 
-        0
-      ),
       
       #--------------------------
       # VAT burden determination
@@ -276,32 +292,29 @@ process_for_distribution = function(id, baseline_id, yr, include_estate, corp_ra
       # Calculate factor incomes
       labor   = pmax(0, wages + (sole_prop + part_scorp + farm) * 0.8),
       capital = pmax(0, (sole_prop + part_scorp + farm) * 0.2 + txbl_int +
-                       exempt_int + div_ord + div_pref + kg_st + kg_lt),
+                        exempt_int + div_ord + div_pref + kg_st + kg_lt),
       
-      # Then allocate corporate tax change in accordance with assumed labor incidence
-      corp_rate_labor   = corp_rate_delta * 1e9 * corp_rate_labor_share       * (labor / sum(labor * weight)),
-      corp_rate_capital = corp_rate_delta * 1e9 * (1 - corp_rate_labor_share) * (capital / sum(capital * weight)),
-      
+      # Then allocate corporate tax changes in accordance with assumed labor incidence
+      other_corp_labor      = other_corp_delta    * 1e9 * corp_rate_labor_share           * (labor / sum(labor * weight)),
+      other_corp_capital    = other_corp_delta    * 1e9 * (1 - corp_rate_labor_share)     * (capital / sum(capital * weight)),
       cost_recovery_labor   = cost_recovery_delta * 1e9 * cost_recovery_labor_share       * (labor / sum(labor * weight)),
       cost_recovery_capital = cost_recovery_delta * 1e9 * (1 - cost_recovery_labor_share) * (capital / sum(capital * weight)),
       
-      other_tax_delta = corp_rate_labor + corp_rate_capital +
-                        cost_recovery_labor + cost_recovery_capital +
-                        vat_burden,
+      other_tax_delta = other_corp_labor + other_corp_capital + cost_recovery_labor + cost_recovery_capital + vat_burden,
 
       #----------------
       # Overall change
       #----------------
       
       # Calculate total change from baseline
-      delta = (liab - liab_baseline) + estate_tax_delta + other_tax_delta,
+      delta = (liab_reform - liab_baseline) + other_tax_delta,
       
       # Binary dummies for if a tax unit received a meaningful raise or cut
       cut   = delta <= -5,
       raise = delta >= 5,
     )
   
-  
+ 
   #------------------------
   # Add grouping variables
   #------------------------
@@ -310,11 +323,11 @@ process_for_distribution = function(id, baseline_id, yr, include_estate, corp_ra
   income_groups = wtd.quantile(
     x = microdata %>%
       filter(expanded_inc >= 0) %>%
-      get_vector('expanded_inc'),
+      pull(expanded_inc),
     probs = c(0.2, 0.4, 0.6, 0.8, 0.9, 0.99, 0.999),
     weights = microdata %>%
       filter(expanded_inc >= 0) %>%
-      get_vector('weight_person')
+      pull(weight_person)
   )
   
   
@@ -380,12 +393,12 @@ calc_dist_metrics = function(microdata, group_var) {
       avg_raise = round(weighted.mean(delta, (weight * raise)) / 5) * 5,
       
       # Counts
-      share_cut   = sum(weight * cut) / sum(weight),
+      share_cut   = sum(weight * cut)   / sum(weight),
       share_raise = sum(weight * raise) / sum(weight),
       
       # Relative changes
       pct_chg_ati = sum((expanded_inc - liab_baseline - delta) * weight) /
-        sum((expanded_inc - liab_baseline) * weight) - 1
+                    sum((expanded_inc - liab_baseline) * weight) - 1
     ) %>%
     
     # Group's share of total change
@@ -426,65 +439,6 @@ get_other_taxes = function(id, baseline_id) {
     read_csv(show_col_types = F)
   
   
-  #------------------------
-  # Corporate rate changes
-  #------------------------
-  
-  # Read baseline off-model revenues
-  corp_rate_baseline = globals$interface_paths %>% 
-    filter(ID == baseline_id, interface == 'Corporate-Tax-Model') %>%
-    get_vector('path') %>%
-    file.path('revenues.csv') %>%
-    read_csv(show_col_types = F) %>%
-    filter(between(year, first_year, last_year)) %>%
-    left_join(
-      globals$interface_paths %>%
-        filter(ID == baseline_id, interface == 'Off-Model-Estimates') %>%
-        get_vector('path') %>% 
-        file.path('revenues.csv') %>%
-        read_csv(show_col_types = F) %>%
-        filter(between(year, first_year, last_year))
-    ) %>%
-    mutate(baseline = rate + corporate) %>%
-    select(year, baseline)
-  
-  # Read counterfactual scenario off-model revenues
-  corp_rate_reform = globals$interface_paths %>% 
-    filter(ID == baseline_id, interface == 'Corporate-Tax-Model') %>%
-    get_vector('path') %>%
-    file.path('revenues.csv') %>%
-    read_csv(show_col_types = F) %>%
-    filter(between(year, first_year, last_year)) %>%
-    left_join(
-      globals$interface_paths %>%
-        filter(ID == baseline_id, interface == 'Off-Model-Estimates') %>%
-        get_vector('path') %>% 
-        file.path('revenues.csv') %>%
-        read_csv(show_col_types = F) %>%
-        filter(between(year, first_year, last_year))
-    ) %>%
-    mutate(baseline = rate + corporate) %>%
-    select(year, baseline)
-  
-  # Express corporate tax in baseline (consumer) dollars
-  left_join(vat_price_offset, by = 'year') %>%
-    mutate(reform = reform / cpi_factor) %>%
-    select(-ends_with('_factor'))
-  
-  # Calculate change in corporate tax liability attributable to rate changes by year
-  corp_rate_delta = corp_rate_reform %>%
-    left_join(corp_rate_baseline, by = 'year') %>%
-    mutate(delta = reform - baseline) %>%
-    
-    # Determine first year of policy reform, if any, and allocate labor
-    # share of changed corporate burden over time
-    mutate(first_year = ifelse(sum(delta) != 0,
-                               min(year[cumsum(delta) != 0 & lag(delta, default = 0) == 0]),
-                               Inf),
-           labor_share =  0.2 * pmax(0, pmin(1, (year - first_year) / 10))) %>%
-    select(year, delta, labor_share)
-  
-  
   #-----------------------
   # Cost recovery changes
   #-----------------------
@@ -497,7 +451,7 @@ get_other_taxes = function(id, baseline_id) {
   # Read recovery ratios by legal form
   cost_recovery_delta = globals$interface_paths %>%
     filter(ID == globals$interface_path$ID[1], interface == 'Cost-Recovery-Simulator') %>%
-    get_vector('path') %>% 
+    pull(path) %>% 
     file.path('totals/recovery_ratios_form.csv') %>%
     read_csv(show_col_types = F) %>%
     mutate(policy = 'baseline') %>%
@@ -507,6 +461,7 @@ get_other_taxes = function(id, baseline_id) {
         read_csv(show_col_types = F) %>%
         mutate(policy = 'scenario')
     ) %>%
+    filter(year >= first_year, year <= last_year) %>% 
     pivot_wider(
       names_from  = c(policy, form), 
       values_from = c(investment, real, pv)
@@ -516,13 +471,53 @@ get_other_taxes = function(id, baseline_id) {
     left_join(corp_rate, by = 'year') %>% 
     mutate(
       cost_recovery_delta = investment_baseline_ccorp * (pv_scenario_ccorp - pv_baseline_ccorp) * -corp_rate
-    )
+    ) %>% 
+    select(year, cost_recovery_delta)
   
+  
+  #-----------------------------
+  # Other corporate tax changes
+  #-----------------------------
+
+  # Read baseline off-model revenue deltas (0 if actual baseline)
+  other_corp_delta = globals$interface_paths %>%
+    filter(ID == baseline_id, interface == 'Off-Model-Estimates') %>%
+    pull(path) %>% 
+    file.path('revenues.csv') %>%
+    read_csv(show_col_types = F) %>%
+    select(year, baseline = corporate) %>% 
+    
+    # Read counterfactual scenario off-model revenues
+    left_join(
+      scenario_info$interface_paths$`Off-Model-Estimates` %>% 
+        file.path('revenues.csv') %>%
+        read_csv(show_col_types = F) %>%
+        select(year, reform = corporate), 
+      by = 'year'
+    ) %>% 
+    
+    # Express corporate tax in baseline (consumer) dollars
+    left_join(vat_price_offset, by = 'year') %>%
+      mutate(
+        reform = reform / cpi_factor, 
+        delta  = reform - baseline
+      ) %>%
+      select(-ends_with('_factor')) %>% 
+      
+      # Determine first year of policy reform, if any, and allocate labor
+      # share of changed corporate burden over time
+      mutate(
+        first_year = ifelse(sum(delta) != 0,
+                            min(year[cumsum(delta) != 0 & lag(delta, default = 0) == 0]),
+                            Inf),
+        labor_share =  0.2 * pmax(0, pmin(1, (year - first_year) / 10))) %>%
+      select(year, delta, labor_share)
+    
   return(
     list(
       vat_price_offset.   = vat_price_offset, 
-      corp_rate_delta     = corp_rate_delta,
-      cost_recovery_delta = cost_recovery_delta
+      cost_recovery_delta = cost_recovery_delta,
+      other_corp_delta    = other_corp_delta
     )
   )
 }

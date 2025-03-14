@@ -1,3 +1,3 @@
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2023:2035,,,
-tcja,public/tcja/extension,,2023:2035,,,
+ID,tax_law,dep.Estate-Tax-Distribution.vintage,dep.Estate-Tax-Distribution.ID,dep.Cost-Recovery-Simulator.vintage,dep.Cost-Recovery-Simulator.ID,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,2025031317,baseline,2025031418,baseline,,2025:2027,,,
+tcja,public/tcja/extension,2025031317,tcja_ext,2025031418,r&d,,2025:2027,,,

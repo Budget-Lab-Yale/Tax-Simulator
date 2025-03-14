@@ -57,11 +57,11 @@ Wealth-Tax-Simulator:
 Cost-Recovery-Simulator:
   type: model_data
   version: 1
-  default_vintage: 2025030309
+  default_vintage: 2025031418
   default_id: baseline
   
 Estate-Tax-Distribution:
   type: model_data
   version: 1
-  default_vintage: 2025030517
+  default_vintage: 2025031317
   default_id: baseline

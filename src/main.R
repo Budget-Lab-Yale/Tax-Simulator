@@ -29,7 +29,7 @@ list.files('./src', recursive = T) %>%
 
 runscript_names  = 'public/tcja/extension_dist/extension_dist'
 scenario_id      = NULL
-local            = 0
+local            = 1
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1
