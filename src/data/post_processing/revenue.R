@@ -390,7 +390,6 @@ calc_stacked_rev_est = function(counterfactual_ids) {
                    Dollars = revenues_payroll_tax + 
                              revenues_income_tax - 
                              outlays_tax_credits +
-                             revenues_corp_rate +
                              revenues_corp_tax + 
                              revenues_estate_tax + 
                              revenues_vat + 

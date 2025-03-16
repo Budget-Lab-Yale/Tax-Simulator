@@ -22,388 +22,271 @@ build_distribution_tables = function(id, baseline_id) {
   
   # Get info on VAT, corporate rate, and cost recovery changes
   other_taxes = get_other_taxes(id, baseline_id)
-  
-  #---------------------------------------------------------------
-  # Loop over year X grouping X incidence assumptions
-  #---------------------------------------------------------------
-  
-  # Initialize lists of unformatted tables
-  results = list('income' = list(),
-                 'age'    = list())
-  
-  pledge_results = list()
-  
-  # Create new Excel workbook
-  # wb = createWorkbook()
-  
-  # Year loop
-  first_year = get_scenario_info(id)$years[1]
+
+  # Loop over years 
+  dist_tables = list()
   for (yr in get_scenario_info(id)$dist_years) {
     
-    # Skip year if it's the first year in the run -- we wont have corporate
-    # receipts data for this year
-    if (yr == first_year) {
-      next
-    }
+    # Process microdata 
+    microdata = process_for_distribution(id, baseline_id, yr, other_taxes)
     
-    # Get corporate tax info for this year
-    this_other_corp_delta = other_taxes$other_corp_delta %>%
-      filter(year == yr) %>%
-      pull(delta)
-    this_other_corp_labor_share = other_taxes$other_corp_delta %>%
-      filter(year == yr) %>%
-      pull(labor_share)
-    
-    # Get cost recovery delta for this year
-    this_cost_recovery_delta = other_taxes$cost_recovery_delta %>%
-      filter(year == yr) %>%
-      pull(cost_recovery_delta)
-    
-    # Get VAT info for this year
-    this_vat_price_offset = other_taxes$vat_price_offset %>%
-      filter(year == yr) %>%
-      pull(cpi_factor)
-    
-    # Grouping variable loop
-    for (group_var in c('income', 'age')) {
+    # Calculate overall averages
+    dist_tables[[as.character(yr)]] = microdata %>% 
+      group_by(taxes_included, group = 'Overall') %>% 
+      calc_dist_metrics() %>% 
+      mutate(group_dimension = 'Overall') %>% 
       
-      # Tax types inclusion loop 
-      # 1. "iit_payroll" -- individual income tax and payroll tax only
-      # 2. "iit_payroll_estate" -- individual income tax, payroll tax, and estate tax
-      # 3. "all" -- all taxes (individual income, payroll, estate, corporate, VAT)
-      for (tax_type in c('iit_payroll', 'iit_payroll_estate', 'all')) {
-        
-        # Determine tax inclusion flags based on tax_type
-        include_estate = tax_type %in% c('iit_payroll_estate', 'all')
-        include_other  = tax_type == 'all'
-        
-        # Process microdata
-        microdata = process_for_distribution(
-          id                        = id,
-          baseline_id               = 'baseline',
-          yr                        = yr,
-          other_corp_delta          = if_else(include_other, this_other_corp_delta, 0),
-          other_corp_labor_share    = this_other_corp_labor_share,
-          cost_recovery_delta       = if_else(include_other, this_cost_recovery_delta, 0),
-          cost_recovery_labor_share = 0.5,
-          vat_price_offset          = if_else(include_other, this_vat_price_offset, 1),
-          include_estate            = include_estate
-        )
-        
-        # Calculate standard metrics and add to results
-        dist_metrics = calc_dist_metrics(microdata, paste0(group_var, '_group'))
-        
-        # Add to results
-        results[[group_var]][[length(results[[group_var]]) + 1]] = dist_metrics %>%
-          mutate(year = yr, .before = everything()) %>%
-          mutate(tax_type = tax_type, .after = year)
-        
-        # Add to Excel workbook and format
-        # format_table(dist_metrics, wb, yr, paste0(group_var, '_group'), tax_type)
-        
-        # Calculate pledge metrics (separate product from metrics above)
-        pledge_results[[length(pledge_results) + 1]] = microdata %>%
-          calc_pledge_metrics() %>%
-          mutate(year = yr, .before = everything()) %>%
-          mutate(tax_type = tax_type, .after = year)
-      }
-    }
+      # Add age cuts 
+      bind_rows(
+        microdata %>% 
+          group_by(taxes_included, group = age_group) %>% 
+          calc_dist_metrics() %>% 
+          mutate(group_dimension = 'Age') 
+      ) %>%
+      
+      # Add income quintile cuts  
+      bind_rows(
+        microdata %>% 
+          group_by(taxes_included, group = replace_na(quintile, 'Negative income')) %>%
+          calc_dist_metrics() %>%
+          mutate(group_dimension = 'Income')
+      ) %>% 
+      
+      # Add top income cuts
+      bind_rows(
+        microdata %>% group_by(taxes_included, group = top_10) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income'), 
+        microdata %>% group_by(taxes_included, group = top_5)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income'), 
+        microdata %>% group_by(taxes_included, group = top_1)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income'), 
+        microdata %>% group_by(taxes_included, group = top_01) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income')
+      ) %>% 
+      
+      # Add year indicator
+      mutate(year = yr, .before = everything())
   }
+
   
-  # Write CSVs
-  c('income', 'age') %>%
-    walk(.f = ~ write_csv(
-      x    = bind_rows(results[[.x]]),
-      file = file.path(globals$output_root, id, 'static/supplemental', paste0('distribution_', .x, '.csv'))
-    ))
-  
-  # Write workbook
-  # saveWorkbook(
-  #   wb = wb,
-  #   file = file.path(globals$output_root, id,'static/supplemental/distribution.xlsx'),
-  #   overwrite = T
-  # )
-  
-  # Write pledge output
-  pledge_results %>%
-    bind_rows() %>%
-    write_csv(file.path(globals$output_root, id, 'static/supplemental/pledge_metrics.csv'))
+  # Combine and write results
+  dist_tables %>% 
+    bind_rows() %>% 
+    arrange(year, taxes_included) %>% 
+    select(year, taxes_included, group_dimension, everything()) %>% 
+    write_csv(file.path(globals$output_root, id, 'static/supplemental', paste0('distribution.csv')))
 }
+  
 
 
-
-process_for_distribution = function(id, baseline_id, yr, include_estate, other_corp_delta, 
-                                    other_corp_labor_share, cost_recovery_delta, 
-                                    cost_recovery_labor_share, vat_price_offset) {
+process_for_distribution = function(id, baseline_id, yr, other_taxes) {
   
   #----------------------------------------------------------------------------
   # Reads and cleans input data for a given scenario and a given "baseline",
   # calculating tax change variables at the record level.
   #
   # Parameters:
-  #   - id                        (str) : scenario ID
-  #   - baseline_id               (str) : ID of scenario against which metrics 
-  #                                       are calculated. For regular tables, 
-  #                                       this is the actual baseline; for 
-  #                                       stacked tables, this is the precedeing 
-  #                                       scenario
-  #   - yr                        (int) : year to calculate metrics for
-  #   - include_estate           (bool) : whether to include estate tax in the
-  #                                       distributional analysis
-  #   - other_corp_delt           (dbl) : corporate tax change under scenario 
-  #                                       attributable to corporate tax rate, 
-  #                                       billions
-  #   - other_corp_labor_share    (dbl) : labor's share of the burden of 
-  #                                       corporate rate changes
-  #   - cost_recovery_delta       (dbl) : PV of corporate cost recovery change 
-  #                                       tax burden, billions
-  #   - cost_recovery_labor_share (dbl) : labor's share of the burden of cost 
-  #                                       recovery changes
-  #   - vat_price_offset           (df) : CPI change attributable to 
-  #                                       introduction of VAT
+  #   - id          (str) : scenario ID
+  #   - baseline_id (str) : ID of scenario against which metrics are calculated. 
+  #                         For regular tables, this is the actual baseline; for 
+  #                         stacked tables, this is the precedeing scenario
+  #   - yr          (int) : year to calculate metrics for
+  #   - other_taxes (df)  : tibble of metrics for CIT and VAT (see 
+  #                         get_other_taxes())
   #
   # Returns: microdata with all record-level variables required to calculate
   #          aggregate distributional metrics (df).
   #----------------------------------------------------------------------------
   
-  
-  set.seed(globals$random_seed)
-  
-  #-------------------------------------
-  # Read Tax-Simualtor microdata output
-  #-------------------------------------
-  
+
+  # Get file path for baseline 
   if (baseline_id == 'baseline') {
     baseline_root = file.path(globals$baseline_root, 'baseline')
   } else {
     baseline_root = file.path(globals$output_root, baseline_id)
   }
   
-  # Read microdata
-  baseline = file.path(baseline_root, 'static/detail', paste0(yr, '.csv')) %>%
+  # Read baseline microdata
+  file.path(baseline_root, 'static/detail', paste0(yr, '.csv')) %>%
     fread() %>%
-    tibble()
-  reform = file.path(globals$output_root, id, 'static/detail', paste0(yr, '.csv')) %>%
-    fread() %>%
-    tibble()
-  
-  
-  #-----------------------------------
-  # Read and join estate tax micrdata
-  #-----------------------------------
-  
-  if (include_estate) {
+    tibble() %>% 
     
-    # Read baseline
-    baseline %<>% 
-      left_join(
-        filter(ID == globals$interface_path$ID[1], interface == 'Estate-Tax-Distribution') %>%
-          pull(path) %>% 
-          file.path(paste0('estate_tax_detail_', yr, '.csv')) %>% 
-          fread() %>% 
-          tibble()  %>% 
-          rename(liab_estate = estate_tax_liability), 
-        by = 'id'
-      ) %>% 
-      
-      # Split records based on probability of inheritance
-      expand_grid(copy_id = 1:2) %>% 
-      mutate(
-        weight      = weight * if_else(copy_id == 1, p_inheritance, 1 - p_inheritance), 
-        inheritance = inheritance * (copy_id == 1), 
-        liab_estate = liab_estate * (copy_id == 1), 
-      ) %>% 
-      filter(weight > 0)
-      
-    # Read counterfactual reform 
-    reform %<>% 
-      left_join(
-        get_scenario_info(id)$interface_paths$`Estate-Tax-Distribution` %>%
-          file.path(paste0('estate_tax_detail_', yr, '.csv')) %>% 
-          fread() %>% 
-          tibble() %>% 
-          rename(liab_estate = estate_tax_liability), 
-        by = 'id'
-      ) %>% 
-      
-      # Split records based on probability of inheritance
-      expand_grid(copy_id = 1:2) %>% 
-      mutate(
-        weight      = weight * if_else(copy_id == 1, p_inheritance, 1 - p_inheritance), 
-        inheritance = inheritance * (copy_id == 1), 
-        liab_estate = liab_estate * (copy_id == 1),
-      ) %>% 
-      filter(weight > 0)
-    
-  } else {
-    baseline %<>% mutate(copy_id = 1, inheritance = 0, liab_estate = 0)
-    reform   %<>% mutate(copy_id = 1, inheritance = 0, liab_estate = 0)
-  }
-  
-  # Add inheritances to expanded income
-  baseline %<>% mutate(expanded_inc = expanded_inc + inheritance)
-  reform   %<>% mutate(expanded_inc = expanded_inc + inheritance)
-  
-  
-  #--------------
-  # Process data
-  #--------------
-  
-  microdata = baseline %>%
-    
-    # Remove dependent returns
+    # Remove dependent returns and extraneous variables for distribution calculation
     filter(dep_status == 0) %>%
+    mutate(
+      year          = yr,
+      weight_person = weight * (1 + (filing_status == 2)),
+      age           = if_else(filing_status == 2, pmax(age1, age2), age1),
+      labor         = pmax(0, wages + (sole_prop + part_scorp + farm) * 0.8),
+      capital       = pmax(0, (sole_prop + part_scorp + farm) * 0.2 + txbl_int + exempt_int + div_ord + div_pref + kg_st + kg_lt),
+      liab_iit_pr   = liab_iit_net + liab_pr
+    ) %>% 
+    select(year, id, weight, weight_person, filing_status, age, labor, capital, income = expanded_inc, liab_iit_pr) %>% 
     
-    # Join counterfactual scenario liability, expressed in baseline dollars.
-    # Calculate helper information for VAT breakdown supplemental file.
-    mutate(liab_baseline = liab_iit_net + liab_pr + liab_estate) %>%
+    # Make 3 copies for tax-type inclusion assumptions 
+    expand_grid(taxes_included = c('iit_pr', 'iit_pr_estate', 'iit_pr_estate_cit_vat')) %>% 
+    
+    # Join counterfactual reform scenario tax microdata
     left_join(
-      reform %>%
-        mutate(
-          liab_reform = (liab_iit_net + liab_pr + liab_estate)   / vat_price_offset,
-          ss_new      = gross_ss                                 / vat_price_offset,
-          debt_new    = (txbl_int + exempt_int - first_mort_int) / vat_price_offset,
-          equity_new  = (div_ord + div_pref + kg_st + kg_lt)     / vat_price_offset,
-          mixed_new   = (sole_prop + part_scorp + farm)          / vat_price_offset,
-          inc_new     = expanded_inc                             / vat_price_offset,
-          other_new   = inc_new - ss_new - debt_new - equity_new - mixed_new) %>%
-        select(id, copy_id, liab_reform, ends_with('_new')),
-      by = c('id', 'copy_id')
+      file.path(globals$output_root, id, 'static/detail', paste0(yr, '.csv')) %>%
+        fread() %>%
+        tibble() %>% 
+        mutate(liab_iit_pr_reform  = liab_iit_net + liab_pr) %>%
+        select(id, income_reform = expanded_inc, liab_iit_pr_reform),
+      by = 'id'
     ) %>% 
     
+    # Join estate tax data
+    left_join(
+      globals$interface_paths %>% 
+        filter(ID == globals$interface_path$ID[1], interface == 'Estate-Tax-Distribution') %>%
+        pull(path) %>% 
+        file.path(paste0('estate_tax_detail_', yr, '.csv')) %>% 
+        fread() %>% 
+        tibble() %>% 
+        rename(liab_estate = estate_tax_liability), 
+      by = 'id'
+    ) %>% 
+    left_join(
+      get_scenario_info(id)$interface_paths$`Estate-Tax-Distribution` %>%
+        file.path(paste0('estate_tax_detail_', yr, '.csv')) %>% 
+        fread() %>% 
+        tibble() %>% 
+        select(id, inheritance_reform = inheritance, liab_estate_reform = estate_tax_liability), 
+      by = 'id'
+    ) %>% 
+    
+    # Split records based on probability of inheritance
+    expand_grid(copy_id = 1:2) %>% 
+    mutate(
+      weight = weight * if_else(copy_id == 1, p_inheritance, 1 - p_inheritance), 
+      across(
+        .cols = c(starts_with('inheritance'), starts_with('liab_estate')), 
+        .fns  = ~ . * (copy_id == 1)
+      ) 
+    ) %>% 
+    filter(weight > 0) %>% 
+    select(-p_inheritance) %>% 
+    
+    # Join other taxes 
+    left_join(other_taxes, by = 'year') %>%
+    group_by(taxes_included) %>% 
     mutate(
       
-      # Create adult-level weight
-      weight_person = weight * (1 + (filing_status == 2)),
+      # Express counterfactual reform variables in baseline dollars to account for VAT
+      across(.cols = ends_with('_reform'), .fns  = ~ . / vat_price_offset),
       
-      #--------------------------
-      # VAT burden determination
-      #--------------------------
+      # Add inheritance to income for estate tax-inclusive assumption scenarios
+      income        = income        + inheritance        * (taxes_included %in% c('iit_pr_estate', 'iit_pr_estate_cit_vat')),
+      income_reform = income_reform + inheritance_reform * (taxes_included %in% c('iit_pr_estate', 'iit_pr_estate_cit_vat')),
       
       # VAT burden is the loss of real income from higher prices. Some components
       # of expanded income will rise with prices (e.g. OASDI or capital income),
       # others won't; compositional differences determine distributional impact
-      vat_burden = expanded_inc - inc_new,
+      liab_vat = income - income_reform,
+    
+      # Allocate corporate tax changes in accordance with assumed labor incidence
+      liab_other_corp_labor      = other_corp_delta    * 1e9 * other_corp_labor_share       * (labor / sum(labor * weight)),
+      liab_other_corp_capital    = other_corp_delta    * 1e9 * (1 - other_corp_labor_share) * (capital / sum(capital * weight)),
+      liab_cost_recovery_labor   = cost_recovery_delta * 1e9 * 0.5                          * (labor / sum(labor * weight)),
+      liab_cost_recovery_capital = cost_recovery_delta * 1e9 * 0.5                          * (capital / sum(capital * weight)),
+      liab_corp                  = liab_other_corp_labor + liab_other_corp_capital + liab_cost_recovery_labor + liab_cost_recovery_capital, 
       
-      #--------------------------
-      # Corporate tax allocation
-      #--------------------------
+      # Calculate liability under each scenario
+      liab = case_when(
+        taxes_included == 'iit_pr'                ~ liab_iit_pr,
+        taxes_included == 'iit_pr_estate'         ~ liab_iit_pr + liab_estate,
+        taxes_included == 'iit_pr_estate_cit_vat' ~ liab_iit_pr + liab_estate
+      ), 
+      liab_reform = case_when(
+        taxes_included == 'iit_pr'                ~ liab_iit_pr_reform,
+        taxes_included == 'iit_pr_estate'         ~ liab_iit_pr_reform + liab_estate_reform,
+        taxes_included == 'iit_pr_estate_cit_vat' ~ liab_iit_pr_reform + liab_estate_reform + liab_corp + liab_vat
+      ), 
       
-      # Calculate factor incomes
-      labor   = pmax(0, wages + (sole_prop + part_scorp + farm) * 0.8),
-      capital = pmax(0, (sole_prop + part_scorp + farm) * 0.2 + txbl_int +
-                        exempt_int + div_ord + div_pref + kg_st + kg_lt),
+      # Calculate change in tax liability
+      liab_delta = liab_reform - liab, 
       
-      # Then allocate corporate tax changes in accordance with assumed labor incidence
-      other_corp_labor      = other_corp_delta    * 1e9 * corp_rate_labor_share           * (labor / sum(labor * weight)),
-      other_corp_capital    = other_corp_delta    * 1e9 * (1 - corp_rate_labor_share)     * (capital / sum(capital * weight)),
-      cost_recovery_labor   = cost_recovery_delta * 1e9 * cost_recovery_labor_share       * (labor / sum(labor * weight)),
-      cost_recovery_capital = cost_recovery_delta * 1e9 * (1 - cost_recovery_labor_share) * (capital / sum(capital * weight)),
+      # Calculate after-tax income in both scenarios
+      ati        = income        - liab,
+      ati_reform = income_reform - liab_reform, 
       
-      other_tax_delta = other_corp_labor + other_corp_capital + cost_recovery_labor + cost_recovery_capital + vat_burden,
-
-      #----------------
-      # Overall change
-      #----------------
-      
-      # Calculate total change from baseline
-      delta = (liab_reform - liab_baseline) + other_tax_delta,
-      
-      # Binary dummies for if a tax unit received a meaningful raise or cut
-      cut   = delta <= -5,
-      raise = delta >= 5,
-    )
-  
- 
-  #------------------------
-  # Add grouping variables
-  #------------------------
-  
-  # Calculate income thresholds
-  income_groups = wtd.quantile(
-    x = microdata %>%
-      filter(expanded_inc >= 0) %>%
-      pull(expanded_inc),
-    probs = c(0.2, 0.4, 0.6, 0.8, 0.9, 0.99, 0.999),
-    weights = microdata %>%
-      filter(expanded_inc >= 0) %>%
-      pull(weight_person)
-  )
-  
-  
-  microdata %>%
+    ) %>% 
+    
+    # Add grouping variables
+    arrange(income, .by_group = T) %>% 
     mutate(
       
-      # Assign income groups
-      income_group = cut(
-        x              = expanded_inc,
-        breaks         = c(-Inf, 0, income_groups, Inf),
-        labels         = c('Negative income', 'Bottom quintile', 'Second quintile',
-                           'Middle quintile', 'Fourth quintile', '80% - 90%',
-                           '90% - 99%', '99% - 99.9%', 'Top 0.1%'),
-        right          = F,
-        include.lowest = T
-      ),
+      # Income percentile
+      income_pctile = cumsum(weight * (income >= 0)) / sum(weight * (income >= 0)), 
+      income_pctile = if_else(income < 0, NA, income_pctile), 
       
-      # Assign age groups
-      oldest_adult = if_else(filing_status == 2, pmax(age1, age2), age1),
+      # Quintiles and top shares
+      quintile = case_when(
+        income_pctile <= 0.2 ~ 'Quintile 1',
+        income_pctile <= 0.4 ~ 'Quintile 2',
+        income_pctile <= 0.6 ~ 'Quintile 3',
+        income_pctile <= 0.8 ~ 'Quintile 4',
+        income_pctile <= 1   ~ 'Quintile 5',
+      ), 
+      top_10 = if_else(income_pctile > 0.9,   'Top 10%',   NA), 
+      top_5  = if_else(income_pctile > 0.95,  'Top 5%',    NA), 
+      top_1  = if_else(income_pctile > 0.99,  'Top 1%',    NA), 
+      top_01 = if_else(income_pctile > 0.999, 'Top 0.1%',  NA),
+      
+      # Age group
       age_group = case_when(
-        oldest_adult < 25 ~ '24 and under',
-        oldest_adult < 30 ~ '25 - 29',
-        oldest_adult < 40 ~ '30 - 39',
-        oldest_adult < 50 ~ '40 - 49',
-        oldest_adult < 65 ~ '50 - 64',
-        T                 ~ '65+'
+        age < 25 ~ '24 and under',
+        age < 30 ~ '25 - 29',
+        age < 40 ~ '30 - 39',
+        age < 50 ~ '40 - 49',
+        age < 65 ~ '50 - 64',
+        T        ~ '65+'
       )
-    ) %>%
+    ) %>% 
+    ungroup() %>% 
     return()
 }
 
 
 
-calc_dist_metrics = function(microdata, group_var) {
+calc_dist_metrics = function(grouped_microdata) {
   
   #----------------------------------------------------------------------------
   # Aggregates record-level tax change microdata into summary stats, grouped
-  # either by income or age.
+  # by tax inclusion scenario and either income or age.
   #
   # Parameters:
-  #  - microdata (df)  : tax unit data, ouput by process_for_distribution()
-  #  - group_var (str) : variable over which to calculate group summary stats,
-  #                      either "income_group" or "age_group"
+  #  - grouped_microdata (df) : output of  process_for_distribution()
   #
-  # Returns: tibble of distributional metrics grouped by group_var (df).
+  # Returns: tibble of distributional metrics
   #----------------------------------------------------------------------------
   
   # Calculate metrics by specified group
-  microdata %>%
-    group_by(!!sym(group_var)) %>%
+  grouped_microdata %>%
     summarise(
       
       # Group-metric-specific summary stats
-      income_cutoff = round(min(expanded_inc) / 5) * 5,
+      income_cutoff = round(min(income) / 5) * 5,
       n_tax_units   = sum(weight),
       
-      # Income group's total dollar amount tax change
-      group_delta = sum(round(delta) * weight),
-      
       # Unconditional and conditional averages
-      avg       = round(weighted.mean(delta, weight) / 5) * 5,
-      avg_cut   = round(weighted.mean(delta, (weight * cut)) / 5) * 5,
-      avg_raise = round(weighted.mean(delta, (weight * raise)) / 5) * 5,
+      avg       = round(weighted.mean(liab_delta, weight) / 5) * 5,
+      avg_cut   = round(weighted.mean(liab_delta, (weight * (liab_delta <= -5))) / 5) * 5,
+      avg_raise = round(weighted.mean(liab_delta, (weight * (liab_delta >= 5)))  / 5) * 5,
       
       # Counts
-      share_cut   = sum(weight * cut)   / sum(weight),
-      share_raise = sum(weight * raise) / sum(weight),
+      share_cut   = sum(weight * (liab_delta <= -5)) / sum(weight),
+      share_raise = sum(weight * (liab_delta >= 5))  / sum(weight),
       
       # Relative changes
-      pct_chg_ati = sum((expanded_inc - liab_baseline - delta) * weight) /
-                    sum((expanded_inc - liab_baseline) * weight) - 1
+      pct_chg_ati = sum(ati_reform * weight) / sum(ati * weight) - 1, 
+      
+      # Income group's total dollar amount tax change
+      net_change = sum(round(liab_delta) * weight) / 1e9,
+      
+      .groups = 'drop_last'
     ) %>%
     
     # Group's share of total change
-    mutate(share_total     = group_delta / sum(group_delta),
-           share_tax_units = n_tax_units / sum(n_tax_units)) %>%
+    mutate(share_net_change = net_change / sum(net_change)) %>%
+    ungroup() %>%
     return()
 }
 
@@ -436,7 +319,8 @@ get_other_taxes = function(id, baseline_id) {
   # Read VAT price offset for deflating other taxes
   vat_price_offset = globals$output_root %>%
     file.path(id, '/static/supplemental/vat_price_offset.csv') %>%
-    read_csv(show_col_types = F)
+    read_csv(show_col_types = F) %>% 
+    select(year, vat_price_offset = cpi_factor)
   
   
   #-----------------------
@@ -470,7 +354,7 @@ get_other_taxes = function(id, baseline_id) {
     # Calculate implied long-run revenue loss
     left_join(corp_rate, by = 'year') %>% 
     mutate(
-      cost_recovery_delta = investment_baseline_ccorp * (pv_scenario_ccorp - pv_baseline_ccorp) * -corp_rate
+      cost_recovery_delta = investment_baseline_ccorp * (pv_scenario_ccorp - pv_baseline_ccorp) * -corp.rate
     ) %>% 
     select(year, cost_recovery_delta)
   
@@ -486,6 +370,7 @@ get_other_taxes = function(id, baseline_id) {
     file.path('revenues.csv') %>%
     read_csv(show_col_types = F) %>%
     select(year, baseline = corporate) %>% 
+    filter(year >= first_year, year <= last_year) %>% 
     
     # Read counterfactual scenario off-model revenues
     left_join(
@@ -499,296 +384,26 @@ get_other_taxes = function(id, baseline_id) {
     # Express corporate tax in baseline (consumer) dollars
     left_join(vat_price_offset, by = 'year') %>%
       mutate(
-        reform = reform / cpi_factor, 
-        delta  = reform - baseline
+        reform           = reform / vat_price_offset, 
+        other_corp_delta = reform - baseline
       ) %>%
       select(-ends_with('_factor')) %>% 
       
       # Determine first year of policy reform, if any, and allocate labor
       # share of changed corporate burden over time
       mutate(
-        first_year = ifelse(sum(delta) != 0,
-                            min(year[cumsum(delta) != 0 & lag(delta, default = 0) == 0]),
-                            Inf),
-        labor_share =  0.2 * pmax(0, pmin(1, (year - first_year) / 10))) %>%
-      select(year, delta, labor_share)
+        first_year = ifelse(
+          sum(other_corp_delta) != 0,
+          min(year[cumsum(other_corp_delta) != 0 & lag(other_corp_delta, default = 0) == 0]),
+          Inf
+        ),
+        other_corp_labor_share =  0.2 * pmax(0, pmin(1, (year - first_year) / 10))) %>%
+      select(year, other_corp_delta, other_corp_labor_share)
     
-  return(
-    list(
-      vat_price_offset.   = vat_price_offset, 
-      cost_recovery_delta = cost_recovery_delta,
-      other_corp_delta    = other_corp_delta
-    )
-  )
-}
-
-
-
-calc_pledge_metrics = function(microdata) {
-  
-  #----------------------------------------------------------------------------
-  # Calculates share of tax units below a series of AGI thresholds which
-  # experience a tax hike of at least $X.
-  #
-  # Parameters:
-  #  - microdata (df)  : tax unit data, output by process_for_distribution()
-  #
-  # Returns: tibble of pledge metrics.
-  #----------------------------------------------------------------------------
-  
-  seq(0, 1e6, 50e3) %>%
-    map(.f = ~ microdata %>%
-          filter(agi < .x) %>%
-          summarise(
-            threshold = .x,
-            across(
-              .cols  = delta,
-              .fns   = list('5'   = ~ round(sum(((. > 5)   * weight) / sum(weight)), 4),
-                            '50'  = ~ round(sum(((. > 50)  * weight) / sum(weight)), 4),
-                            '100' = ~ round(sum(((. > 100) * weight) / sum(weight)), 4),
-                            '500' = ~ round(sum(((. > 500) * weight) / sum(weight)), 4)),
-              .names = '{fn}'
-            )
-          )
-    ) %>%
-    bind_rows() %>%
+  # Combine and return
+  vat_price_offset %>% 
+    left_join(cost_recovery_delta, by = 'year') %>% 
+    left_join(other_corp_delta,    by = 'year') %>% 
     return()
 }
 
-
-
-
-# format_table = function(dist_metrics, wb, year, group_var, other) {
-#   
-#   
-#   #----------------------------------------------------------------------------
-#   # Given a tibble of distributional metrics calculated either by income or
-#   # age, places the output in a WorkBook object and formats the sheet.
-#   #
-#   # Parameters:
-#   #   - dist_metrics (df)   : tibble of aggregated distributional metrics
-#   #   - wb           (wb)   : destination WorkBook object for output
-#   #   - year         (int)  : year of distributional metrics
-#   #   - group_var    (str)  : either "income_group" or "age_group", representing
-#   #                           the variable by which dist_metrics are grouped
-#   #   - other        (bool) : whether estimates includes burden of corporate
-#   #                           tax and VAT
-#   #
-#   # Returns: void.
-#   #----------------------------------------------------------------------------
-#   
-#   #---------------------------------
-#   # Formatting for by-income tables
-#   #---------------------------------
-#   
-#   # Set worksheet name
-#   sheet_name = paste0(
-#     year, ', ',
-#     if_else(other, 'all', 'direct only')
-#   )
-#   
-#   # Write out other tax incidence assumption
-#   incidence_description = if_else(other,
-#                                   'including incidence of corporate tax and VAT changes',
-#                                   'individual income taxes and payroll taxes only'
-#   )
-#   
-#   if (group_var == 'income_group') {
-#     
-#     dist_table = dist_metrics %>%
-#       
-#       # Clean up -- deal with missings, divide-by-zeros, things of that nature
-#       mutate(
-#         income_cutoff = if_else(row_number() == 1, NA, income_cutoff),
-#         pct_chg_ati   = if_else(row_number() == 1, NA, pct_chg_ati),
-#         avg_cut       = if_else(is.nan(avg_cut) | round(share_cut, 4) == 0, NA, avg_cut),
-#         avg_raise     = if_else(is.nan(avg_raise) | round(avg_raise, 4) == 0, NA, avg_raise),
-#         share_total   = if_else(is.nan(share_total), NA, share_total)
-#       ) %>%
-#       
-#       # Format names
-#       select(`Income group`                       = income_group,
-#              `Income cutoff`                      = income_cutoff,
-#              `Average tax change`                 = avg,
-#              `Share with tax cut`                 = share_cut,
-#              `Average tax cut`                    = avg_cut,
-#              `Share with tax increase`            = share_raise,
-#              `Average tax increase`               = avg_raise,
-#              `Percent change in after-tax income` = pct_chg_ati,
-#              `Share of total tax change`          = share_total)
-#     
-#     # Add worksheet and table to workbook
-#     addWorksheet(wb, sheet_name)
-#     writeData(wb = wb, sheet = sheet_name, x = dist_table, startRow = 2)
-#     
-#     # Add titles and notes
-#     title = paste0('Distributional impact by income group in ', year, ', ',
-#                    incidence_description)
-#     writeData(wb = wb, sheet = sheet_name, startRow = 1,
-#               x = title)
-#     writeData(wb = wb, sheet = sheet_name, startRow = 12,
-#               x = paste0('Estimate universe is nondependent tax units, including nonfilers.',
-#                          '"Income" is measured as AGI plus: above-the-line deductions, ',
-#                          'nontaxable interest, nontaxable pension income (including OASI ',
-#                          'benefits), and employer-side payroll taxes. Income percentile ',
-#                          'thresholds are calculated with respect to positive income only ',
-#                          'and are adult-weighted.'
-#               )
-#     )
-#     
-#     # Format numbers and cells
-#     addStyle(wb         = wb,
-#              sheet      = sheet_name,
-#              rows       = 3:11,
-#              cols       = c(4, 6, 8, 9),
-#              gridExpand = T,
-#              style      = createStyle(numFmt = 'PERCENTAGE'))
-#     addStyle(wb         = wb,
-#              sheet      = sheet_name,
-#              rows       = 3:11,
-#              cols       = c(2, 3, 5, 7),
-#              gridExpand = T,
-#              style      = createStyle(numFmt = 'COMMA'),
-#              stack      = T)
-#     addStyle(wb         = wb,
-#              sheet      = sheet_name,
-#              rows       = c(1, 2, 11),
-#              cols       = 1:9,
-#              gridExpand = T,
-#              style      = createStyle(border = 'bottom'),
-#              stack      = T)
-#     addStyle(wb         = wb,
-#              sheet      = sheet_name,
-#              rows       = 2,
-#              cols       = 1:9,
-#              gridExpand = T,
-#              style      = createStyle(textDecoration = 'bold',
-#                                       wrapText       = T),
-#              stack      = T)
-#     addStyle(wb         = wb,
-#              sheet      = sheet_name,
-#              rows       = 2:11,
-#              cols       = 1:9,
-#              gridExpand = T,
-#              style      = createStyle(halign = 'center'),
-#              stack      = T)
-#     addStyle(wb         = wb,
-#              sheet      = sheet_name,
-#              rows       = 12,
-#              cols       = 1:9,
-#              gridExpand = T,
-#              style      = createStyle(fontSize       = 8,
-#                                       textDecoration = 'italic',
-#                                       valign         = 'center',
-#                                       wrapText       = T),
-#              stack      = T)
-#     mergeCells(wb    = wb,
-#                sheet = sheet_name,
-#                rows  = 12:13,
-#                cols  = 1:9)
-#     setColWidths(wb     = wb,
-#                  sheet  = sheet_name,
-#                  cols   = 1:9,
-#                  widths = c(15, 8, 11, 11, 11, 11, 11, 15, 12))
-#     
-#     
-#     #---------------------------------
-#     # Formatting for by-age tables
-#     #---------------------------------
-#     
-#   } else {
-#     
-#     dist_table = dist_metrics %>%
-#       
-#       # Clean up -- deal with missings, divide-by-zeros, things of that nature
-#       mutate(
-#         avg_cut     = if_else(is.nan(avg_cut) | round(share_cut, 4) == 0, NA, avg_cut),
-#         avg_raise   = if_else(is.nan(avg_raise) | round(avg_raise, 4) == 0, NA, avg_raise),
-#         share_total = if_else(is.nan(share_total), NA, share_total)
-#       ) %>%
-#       
-#       # Format names
-#       select(`Age group`                          = age_group,
-#              `Share of tax units`                 = share_tax_units,
-#              `Average tax change`                 = avg,
-#              `Share with tax cut`                 = share_cut,
-#              `Average tax cut`                    = avg_cut,
-#              `Share with tax increase`            = share_raise,
-#              `Average tax increase`               = avg_raise,
-#              `Percent change in after-tax income` = pct_chg_ati,
-#              `Share of total tax change`          = share_total)
-#     
-#     # Add worksheet and table to workbook
-#     writeData(wb = wb, sheet = sheet_name, x = dist_table, startRow = 16)
-#     
-#     # Add titles and notes
-#     title = paste0('Distributional impact by age group in ', year, ', ',
-#                    incidence_description)
-#     writeData(wb = wb, sheet = sheet_name, startRow = 15,
-#               x = title)
-#     writeData(wb = wb, sheet = sheet_name, startRow = 23,
-#               x = paste0('Estimate universe is nondependent tax units, including nonfilers.',
-#                          '"Income" is measured as AGI plus: above-the-line deductions, ',
-#                          'nontaxable interest, nontaxable pension income (including OASI ',
-#                          'benefits), and employer-side payroll taxes. Income percentile ',
-#                          'thresholds are calculated with respect to positive income only ',
-#                          'and are adult-weighted.'
-#               )
-#     )
-#     
-#     # Format numbers and cells
-#     addStyle(wb         = wb,
-#              sheet      = sheet_name,
-#              rows       = 17:22,
-#              cols       = c(2, 4, 6, 8, 9),
-#              gridExpand = T,
-#              style      = createStyle(numFmt = 'PERCENTAGE'))
-#     addStyle(wb         = wb,
-#              sheet      = sheet_name,
-#              rows       = 17:22,
-#              cols       = c(3, 5, 7),
-#              gridExpand = T,
-#              style      = createStyle(numFmt = 'COMMA'),
-#              stack      = T)
-#     addStyle(wb         = wb,
-#              sheet      = sheet_name,
-#              rows       = c(15, 16, 22),
-#              cols       = 1:9,
-#              gridExpand = T,
-#              style      = createStyle(border = 'bottom'),
-#              stack      = T)
-#     addStyle(wb         = wb,
-#              sheet      = sheet_name,
-#              rows       = 16,
-#              cols       = 1:9,
-#              gridExpand = T,
-#              style      = createStyle(textDecoration = 'bold',
-#                                       wrapText       = T),
-#              stack      = T)
-#     addStyle(wb         = wb,
-#              sheet      = sheet_name,
-#              rows       = 16:22,
-#              cols       = 1:9,
-#              gridExpand = T,
-#              style      = createStyle(halign = 'center'),
-#              stack      = T)
-#     addStyle(wb         = wb,
-#              sheet      = sheet_name,
-#              rows       = 23,
-#              cols       = 1:9,
-#              gridExpand = T,
-#              style      = createStyle(fontSize       = 8,
-#                                       textDecoration = 'italic',
-#                                       valign         = 'center',
-#                                       wrapText       = T),
-#              stack      = T)
-#     mergeCells(wb    = wb,
-#                sheet = sheet_name,
-#                rows  = 23:24,
-#                cols  = 1:9)
-#     setColWidths(wb    = wb,
-#                  sheet  = sheet_name,
-#                  cols   = 1:9,
-#                  widths = c(15, 8, 11, 11, 11, 11, 11, 15, 12))
-#   }
-# }
