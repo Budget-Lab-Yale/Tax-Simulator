@@ -199,8 +199,6 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
     left_join(totals_1040, by = 'year') %>% 
     calc_receipts(
       scenario_root      = output_root, 
-      corp_tax_root      = scenario_info$interface_paths$`Corporate-Tax-Model`, 
-      estate_tax_root    = scenario_info$interface_paths$`Estate-Tax-Model`, 
       vat_root           = scenario_info$interface_paths$`Value-Added-Tax-Model`,
       other_root         = scenario_info$interface_paths$`Macro-Projections`,
       cost_recovery_root = scenario_info$interface_paths$`Cost-Recovery-Simulator`,
