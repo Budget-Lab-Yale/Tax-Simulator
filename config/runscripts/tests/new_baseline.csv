@@ -1,0 +1,3 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Macro-Projections.vintage,dep.Macro-Projections.ID,dep.Tax-Data.vintage,dep.Tax-Data.ID
+baseline,baseline,,2017:2035,2026,,,2024100910,baseline,2024111117,baseline
+new_baseline,baseline,,2017:2035,2026,,,2025021319,baseline,2025031713,baseline

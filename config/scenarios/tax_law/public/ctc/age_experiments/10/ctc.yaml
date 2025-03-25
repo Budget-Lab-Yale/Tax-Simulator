@@ -1,0 +1,112 @@
+---
+
+# Whether SSN is required to qualify for CTC
+need_ssn:
+  value:
+    '2014': 0
+    '2018': 1
+    '2021': 0
+    '2022': 1
+
+# Maximum age to qualify as "young" child
+young_age_limit:
+  value: 
+    '2014': 5
+    '2026': 10
+
+# Maximum credit value per "young" child
+value_young:
+  value: 
+    '2014': [1000, 0]
+    '2018': [2000, 0]
+    '2021': [2000, 1600]
+    '2022': [2000, 0]
+    '2026': [2090, 0]
+
+# Maximum credit value per "old" child
+value_old:
+  value:
+    '2014': [1000, 0]
+    '2018': [2000, 0]
+    '2021': [2000, 1000]
+    '2022': [2000, 0] 
+
+# AGI threshold above which credit value phases out, single filers
+po_thresh_single:
+  value:
+    '2014': [75000, Inf]
+    '2018': [200000, Inf]
+    '2021': [200000, 75000]
+    '2022': [200000, Inf]
+    
+# AGI threshold above which credit value phases out, joint filers
+po_thresh_married:
+  value:
+    '2014': [110000, Inf] 
+    '2018': [400000, Inf]
+    '2021': [400000, 150000]
+    '2022': [400000, Inf]
+    
+# AGI threshold above which credit value phases out, HoH filers
+po_thresh_head:
+  value:
+    '2014': [75000, Inf]
+    '2018': [200000, Inf]
+    '2021': [200000, 112500]
+    '2022': [200000, Inf]
+    
+# Maximum credit value per nonqualifying dependent (assumed to phaseout per po_thresh1)
+value_other:
+  value:
+    '2014': 0
+    '2018': 500
+
+# Minimum refundable CTC per qualifying young child (i.e. y-intercept in trapezoid)
+min_refund_young:
+  value: 
+    '2014': 0
+    '2021': 3600
+    '2022': 0
+    '2026': 2090
+  
+# Minimum refundable CTC per qualifying old child (i.e. y-intercept in trapezoid)
+min_refund_old:
+  value: 
+    '2014': 0
+    '2021': 3000
+    '2022': 0
+    '2026': 2000
+
+# Maximum refundable CTC per young qualifying child (inf implies maximum refund 
+# is equal to the credit value)
+max_refund_young:
+  value:
+    '2014': Inf
+    '2018': 1400
+    '2021': Inf
+    '2022': 1400
+    '2026': Inf
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+  
+# Maximum refundable CTC per old qualifying child (inf implies maximum refund 
+# is equal to the credit value)
+max_refund_old:
+  value:
+    '2014': Inf
+    '2018': 1400
+    '2021': Inf
+    '2022': 1400
+    '2026': Inf
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+
+# Earned income threshold above which CTC phases in
+pi_thresh:
+  value:
+    '2014': 3000
+    '2018': 2500

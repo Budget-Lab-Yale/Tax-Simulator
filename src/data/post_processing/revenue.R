@@ -6,34 +6,25 @@
 
 
 
-calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root, 
-                         vat_root, other_root, off_model_root) {
+calc_receipts = function(totals, scenario_root, vat_root, other_root, 
+                         cost_recovery_root, off_model_root) {
   
   #----------------------------------------------------------------------------
   # Calculates a scenario's receipts 
   # 
   # Parameters:
   #   - totals (df) : dataframe containing columns for calendar year totals of
-  #        - pmt_iit_nonwithheld (dbl)    : income tax paid at time of filing
-  #        - pmt_iit_withheld (dbl)       : income tax withheld or paid 
-  #                                         quarterly
-  #        - pmt_refund_nonwithheld (dbl) : payments for refundable credits 
-  #                                         paid during filing season
-  #        - pmt_refund_withheld (dbl)    : advance credits paid throughout 
-  #                                         year
-  #        - pmt_pr_nonwithheld (dbl)     : payroll tax paid at time of filing
-  #        - pmt_pr_withheld (dbl)        : payroll tax withheld (FICA) or paid 
-  #                                         quarterly (SECA)  
-  #   - scenario_root (str)   : directory where scenario's data is written
-  #   - corp_tax_root (str)   : directory where corporate tax revenue for this 
-  #                             scenario is stored
-  #   - estate_tax_root (str) : directory where estate tax revenue for this 
-  #                             scenario is stored 
-  #   - vat_root (str)        : directory where value added tax revenue for
-  #                             this scenario is stored
-  #   - other_root (str)      : Macro-Projections root (for other taxes)
-  #   - off_model_root (str)  : directory where off-model estimates for this
-  #                             scenario are stored
+  #        - pmt_iit_nonwithheld    (dbl) : income tax paid at time of filing
+  #        - pmt_iit_withheld       (dbl) : income tax withheld or paid quarterly
+  #        - pmt_refund_nonwithheld (dbl) : payments for refundable credits paid during filing season
+  #        - pmt_refund_withheld    (dbl) : advance credits paid throughout year
+  #        - pmt_pr_nonwithheld     (dbl) : payroll tax paid at time of filing
+  #        - pmt_pr_withheld        (dbl) : payroll tax withheld (FICA) or paid quarterly (SECA)  
+  #   - scenario_root      (str) : directory where scenario's data is written
+  #   - vat_root           (str) : directory for VAT revenue for this scenario
+  #   - other_root         (str) : Macro-Projections root (for other taxes)
+  #   - cost_recovery_root (str) : Cost-Recovery-Simulator director for this scenario
+  #   - off_model_root     (str) : directory for miscellaneous off-model deltas for this scenario
   #
   # Returns:  void, writes a dataframe for the scenario containing values for:
   #   - Fiscal year
@@ -44,38 +35,31 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root,
   #   - Estate and gift tax revenues
   #   - Value added tax revenues
   #----------------------------------------------------------------------------
-  
-  # Read corporate tax receipts
-  revenues_corp_tax = corp_tax_root %>%
-    file.path('revenues.csv') %>% 
-    read_csv(show_col_types = F) %>% 
-    mutate(revenues_corp_tax = rate + other) %>%
-    select(year, revenues_corp_tax)
-    
-  # Read estate tax receipts
-  revenues_estate_tax = estate_tax_root %>%
-    file.path('revenues.csv') %>% 
-    read_csv(show_col_types = F) %>% 
-    select(year, revenues_estate_tax = receipts_fy)
-  
+
   # Read VAT receipts
   revenues_vat = vat_root %>%
     file.path('revenues.csv') %>% 
     read_csv(show_col_types = F) %>% 
     select(year, revenues_vat = receipts_fy)
   
-  # Read other receipts 
+  # Read other receipts (CBO projections)
   revenues_other = c('historical.csv', 'projections.csv') %>% 
     map(.f = ~ other_root %>% 
           file.path(.x) %>%
           read_csv(show_col_types = F) %>%
           mutate(revenues_other = rev_excise + rev_customs + rev_misc) %>% 
-          select(year, revenues_other)
+          select(year, revenues_corp_tax = rev_corp, revenues_estate_tax = rev_estate, revenues_other)
     ) %>% 
     bind_rows()
   
-  # Read off-model receipts 
-  off_model = off_model_root %>%
+  # Read deltas attributable to cost recovery changes
+  deltas_cost_recovery = cost_recovery_root %>% 
+    file.path('deltas/revenues.csv') %>% 
+    read_csv(show_col_types = F) %>% 
+    rename(delta_revenues_cost_recovery = delta)
+  
+  # Read off-model deltas 
+  deltas_off_model = off_model_root %>%
     file.path('revenues.csv') %>% 
     read_csv(show_col_types = F)
   
@@ -100,32 +84,31 @@ calc_receipts = function(totals, scenario_root, corp_tax_root, estate_tax_root,
                                 0.25 * lag(corp_tax_change)
     ) %>%
     
-    # Join corporate tax levels and net out changes owing to behavior
-    left_join(revenues_corp_tax, by = 'year') %>%
-    
-    # Join estate tax levels 
-    left_join(revenues_estate_tax, by = 'year') %>% 
     
     # Join VAT levels 
     left_join(revenues_vat, by = 'year') %>% 
     
-    # Join other revenues levels
+    # Join other revenue levels
     left_join(revenues_other, by = 'year') %>% 
+    mutate(revenues_corp_tax = revenues_corp_tax + delta_revenues_corp_tax) %>% 
     
-    # Join off-model estimates
-    left_join(off_model, by = 'year') %>% 
+    # Join deltas from cost recovery changes
+    left_join(deltas_cost_recovery, by = 'year') %>% 
+    mutate(revenues_corp_tax = revenues_corp_tax + delta_revenues_cost_recovery) %>% 
+    
+    # Join off-model estimates (deltas)
+    left_join(deltas_off_model, by = 'year') %>% 
     mutate(revenues_income_tax = revenues_income_tax + individual,  
            revenues_corp_tax   = revenues_corp_tax + corporate, 
+           revenues_estate_tax = revenues_estate_tax + estate, 
            revenues_vat        = revenues_vat + vat) %>% 
-    select(-individual, -corporate, -vat) %>% 
     
     # Drop incomplete year
     filter(year != min(year)) %>%
     
     # Write CSV
     select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits, 
-           revenues_corp_tax, revenues_estate_tax, 
-           revenues_vat, revenues_other) %>%
+           revenues_corp_tax, revenues_estate_tax, revenues_vat, revenues_other) %>%
     write_csv(file.path(scenario_root, 'totals', 'receipts.csv'))
 }
 
@@ -387,7 +370,6 @@ calc_stacked_rev_est = function(counterfactual_ids) {
                    Dollars = revenues_payroll_tax + 
                              revenues_income_tax - 
                              outlays_tax_credits +
-                             revenues_corp_rate +
                              revenues_corp_tax + 
                              revenues_estate_tax + 
                              revenues_vat + 

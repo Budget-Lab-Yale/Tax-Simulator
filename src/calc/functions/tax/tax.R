@@ -173,7 +173,7 @@ calc_tax = function(tax_unit, fill_missings = F) {
       
       # Update preferred-rate variables in the case where all income is taxed 
       # at ordinary rates
-      liab_ord     = if_else(pref.tax_at_ord == 0, liab,         0),
+      liab_ord     = if_else(pref.tax_at_ord == 0, liab_ord,  liab),
       liab_pref    = if_else(pref.tax_at_ord == 0, liab_pref,    0),
       liab_1250    = if_else(pref.tax_at_ord == 0, liab_1250,    0),
       liab_collect = if_else(pref.tax_at_ord == 0, liab_collect, 0)
