@@ -21,7 +21,7 @@ do_capital_income = function(tax_units, ...) {
   wealth_tax_scenario_id = 'nickel_dime'
   
   # Set wealth tax model output root 
-  wealth_tax_root = '/gpfs/gibbs/project/sarin/shared/model_data/Wealth-Tax-Simulator/v1/2025011521'
+  wealth_tax_root = '/gpfs/gibbs/project/sarin/shared/model_data/Wealth-Tax-Simulator/v1/2025032510'
   
   # List capital income variables potentially affected by a wealth tax 
   cap_inc_vars = c('txbl_int', 'exempt_int', "div_ord", "div_pref", "kg_st", 

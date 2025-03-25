@@ -27,14 +27,14 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'public/tcja/extension_dist/extension_dist'
+runscript_names  = 'private/wealth_tax/nickel_dime'
 scenario_id      = NULL
 local            = 0
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
-delete_detail    = 1
+delete_detail    = 0
 multicore        = 1
 
 
