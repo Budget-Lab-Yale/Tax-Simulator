@@ -13,7 +13,7 @@
 # Load required packages
 suppressPackageStartupMessages(
   invisible(capture.output(
-    lapply(readLines('./requirements.txt'), library, character.only = T)    
+    lapply(readLines('./requirements.txt'), library, character.only = T)
   ))
 )
 
@@ -27,9 +27,9 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'private/wealth_tax/nickel_dime'
+runscript_names  = 'public/ctc/ctc_age_experiments'
 scenario_id      = NULL
-local            = 0
+local            = 1
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1
@@ -88,24 +88,27 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   # Otherwise, load baseline marginal tax rates 
   } else{
     baseline_mtrs = get_scenario_info(counterfactual_ids[1])$years %>% 
-      map(.f = ~ globals$baseline_root %>%  
-            file.path('baseline/static/detail', paste0(.x, '.csv')) %>%
-            fread() %>% 
-            tibble() %>% 
-            mutate(year = .x) %>%
-            select(id, year, starts_with('mtr_')) %>% 
-            return()) %>%
+      map(
+        ~ globals$baseline_root %>%  
+          file.path('baseline/static/detail', paste0(.x, '.csv')) %>%
+          fread() %>% 
+          tibble() %>% 
+          mutate(year = .x) %>%
+          select(id, year, starts_with('mtr_')) %>% 
+          return()
+      ) %>%
       bind_rows() 
   }
   
   # Run counterfactual scenarios
   if (multicore == 1) {
-    mc_out = mclapply(X        = counterfactual_ids, 
-                      FUN      = do_scenario, baseline_mtrs, 
-                      mc.cores = min(16, detectCores(logical = F)))
+    mc_out = mclapply(
+      X        = counterfactual_ids, 
+      FUN      = do_scenario, baseline_mtrs, 
+      mc.cores = min(16, detectCores(logical = F))
+    )
   } else {
-    walk(.x = counterfactual_ids, 
-         .f = ~ do_scenario(.x, baseline_mtrs))
+    walk(.x = counterfactual_ids, .f = ~ do_scenario(.x, baseline_mtrs))
   }
   
   

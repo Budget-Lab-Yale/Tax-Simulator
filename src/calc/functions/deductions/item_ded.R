@@ -136,7 +136,7 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
       # very careful when modeling reforms to these parameters! First, we determine
       # the effective balance limitation for those with more than one mortgage:
       smaller_bal = pmin(first_mort_bal, second_mort_bal),
-      larger_bal  = pmin(first_mort_bal, second_mort_bal),
+      larger_bal  = pmax(first_mort_bal, second_mort_bal),
       smaller_bal_limit = if_else(first_mort_bal < second_mort_bal, 
                                   first_mort_bal_limit, 
                                   second_mort_bal_limit),
@@ -211,7 +211,7 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
   
       # ...then limit to some share of tentative deductions, adjusted to
       # reflect exempt categories: medical, investment interest, casualty and loss
-      pease_base       = pmax(0, item_ded - med_item_ded + inv_int_exp + casualty_item_ded),
+      pease_base       = pmax(0, item_ded - med_item_ded - inv_int_exp - casualty_item_ded),
       pease_limitation = pmin(item.pease_max_share * pease_base, pease_reduction),
       
       # Apply to itemized deductions
