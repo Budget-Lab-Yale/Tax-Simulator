@@ -15,7 +15,7 @@ Tax-Simulator:
 Tax-Data:
   type: model_data
   version: 1
-  default_vintage: 2025031713
+  default_vintage: 2025031907
   default_id: baseline
 
 Macro-Projections: 

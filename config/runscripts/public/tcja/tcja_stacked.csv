@@ -1,0 +1,10 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2025:2035,2026,part_active kg_lt,nextdollar nextdollar
+01-rates,public/tcja/extension/stacked/01-rates,entity_shifting/pearce_prisinzano,2025:2035,2026,part_active kg_lt,nextdollar nextdollar
+02-ctc,public/tcja/extension/stacked/02-ctc,entity_shifting/pearce_prisinzano,2025:2035,2026,part_active kg_lt,nextdollar nextdollar
+03-amt,public/tcja/extension/stacked/03-amt,entity_shifting/pearce_prisinzano,2025:2035,2026,part_active kg_lt,nextdollar nextdollar
+04-std,public/tcja/extension/stacked/04-std,entity_shifting/pearce_prisinzano,2025:2035,2026,part_active kg_lt,nextdollar nextdollar
+05-item,public/tcja/extension/stacked/05-item,entity_shifting/pearce_prisinzano,2025:2035,2026,part_active kg_lt,nextdollar nextdollar
+06-pe,public/tcja/extension/stacked/06-pe,entity_shifting/pearce_prisinzano,2025:2035,2026,part_active kg_lt,nextdollar nextdollar
+07-qbi,public/tcja/extension/stacked/07-qbi,entity_shifting/pearce_prisinzano,2025:2035,2026,part_active kg_lt,nextdollar nextdollar
+08-losses,public/tcja/extension/stacked/08-losses,entity_shifting/pearce_prisinzano,2025:2035,2026,part_active kg_lt,nextdollar nextdollar

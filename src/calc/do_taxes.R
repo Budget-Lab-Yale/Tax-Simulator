@@ -297,6 +297,9 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
                             'casualty_item_ded', 'misc_item_ded', 'other_item_ded', 
                             'item_ded_ex_limits', 'item_ded'), 
                   .fns  = ~ if_else(itemizing, ., 0))) %>% 
+    
+    # Set standard deduction to 0 for itemizers
+    mutate(std_ded = if_else(itemizing, 0, std_ded)) %>% 
       
       
     #--------------------------

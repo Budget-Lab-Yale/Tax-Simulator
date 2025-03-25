@@ -256,21 +256,28 @@ dist_table %>%
   theme(
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(), 
-    axis.text.x = element_text( size = 12), 
+    axis.text.x = element_text(size = 12), 
     axis.text.y = element_text(size = 12),
     axis.title.x = element_text(size = 14), 
     legend.text = element_text(size = 12), 
     legend.position = "top",
     plot.margin = unit(c(5, 5, 5, 5), "mm"),
-    text = element_text(size = 12) 
+    text = element_text(size = 12),
+    plot.title = element_text(face = "bold"),
+    plot.caption = element_text(hjust = 0)  # This aligns the caption to the left
   ) + 
   labs(
     x = 'AGI Group', 
     y = element_blank(), 
-    fill = element_blank()
+    fill = element_blank(),
+    caption = "Source: The Budget Lab calculations"
   ) + 
   scale_y_continuous(
     labels = scales::percent_format(), 
     breaks = seq(-0.05, 0.03, 0.01)
   ) +
-  scale_fill_brewer(palette = 'Set1')
+  scale_fill_brewer(palette = 'Set1') + 
+  ggtitle(
+    'Figure 1. Effects of Selected Policies Consistent with House Budget Resolution, 2026', 
+    subtitle = 'Percent Change in After-Tax-And-Transfer Income'
+  )
