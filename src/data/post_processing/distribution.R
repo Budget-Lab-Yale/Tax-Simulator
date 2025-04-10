@@ -103,7 +103,7 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
   }
   
   # Read baseline microdata
-  file.path(baseline_root, 'static/detail', paste0(yr, '.csv')) %>%
+  microdata = file.path(baseline_root, 'static/detail', paste0(yr, '.csv')) %>%
     fread() %>%
     tibble() %>% 
     
@@ -130,28 +130,45 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
         mutate(liab_iit_pr_reform  = liab_iit_net + liab_pr) %>%
         select(id, income_reform = expanded_inc, liab_iit_pr_reform),
       by = 'id'
-    ) %>% 
-    
-    # Join estate tax data
-    left_join(
-      globals$interface_paths %>% 
-        filter(ID == globals$interface_path$ID[1], interface == 'Estate-Tax-Distribution') %>%
-        pull(path) %>% 
-        file.path(paste0('estate_tax_detail_', yr, '.csv')) %>% 
-        fread() %>% 
-        tibble() %>% 
-        rename(liab_estate = estate_tax_liability), 
-      by = 'id'
-    ) %>% 
-    left_join(
-      get_scenario_info(id)$interface_paths$`Estate-Tax-Distribution` %>%
-        file.path(paste0('estate_tax_detail_', yr, '.csv')) %>% 
-        fread() %>% 
-        tibble() %>% 
-        select(id, inheritance_reform = inheritance, liab_estate_reform = estate_tax_liability), 
-      by = 'id'
-    ) %>% 
-    
+    )
+  
+  # Join estate tax data if it exists
+  baseline_estate_path = globals$interface_paths %>% 
+    filter(ID == globals$interface_path$ID[1], interface == 'Estate-Tax-Distribution') %>%
+    pull(path) %>% 
+    file.path(paste0('estate_tax_detail_', yr, '.csv')) 
+  scenario_estate_path = get_scenario_info(id)$interface_paths$`Estate-Tax-Distribution` %>%
+    file.path(paste0('estate_tax_detail_', yr, '.csv'))
+  
+  if (file.exists(baseline_estate_path) & file.exists(scenario_estate_path)) {
+    microdata %<>% 
+      left_join(
+        baseline_estate_path %>% 
+          fread() %>% 
+          tibble() %>% 
+          rename(liab_estate = estate_tax_liability), 
+        by = 'id'
+      ) %>% 
+      left_join(
+        scenario_estate_path %>% 
+          fread() %>% 
+          tibble() %>% 
+          select(id, inheritance_reform = inheritance, liab_estate_reform = estate_tax_liability), 
+        by = 'id'
+      )
+  } else {
+    microdata %<>%
+      mutate(
+        p_inheritance      = 0,
+        inheritance        = 0, 
+        inheritance_reform = 0, 
+        liab_estate        = 0, 
+        liab_estate_reform = 0
+      )
+  }
+  
+  microdata %<>%     
+      
     # Split records based on probability of inheritance
     expand_grid(copy_id = 1:2) %>% 
     mutate(

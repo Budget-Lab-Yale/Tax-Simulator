@@ -95,7 +95,7 @@ do_capital_income = function(tax_units, ...) {
       # Calculate income group-specific reduction in reported capital income
       group_by(income_group) %>%
       mutate(
-        delta_capital_income = min(0, ((avoidance_pass_through * (conventional - static) + (static - baseline)) / baseline) + baseline_evasion)
+        delta_capital_income = min(0, (avoidance_pass_through * (conventional - static)) / baseline + baseline_evasion) + (static - baseline) / baseline
       ) 
     
     # Write deltas as supplemental output

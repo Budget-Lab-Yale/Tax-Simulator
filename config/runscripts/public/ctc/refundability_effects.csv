@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2025:2026,2026,,
+tcja_ext,public/ctc/age_experiments/refundability_effects/tcja_ext,,2025:2026,2026,,
+refundability,public/ctc/age_experiments/refundability_effects/refundability,,2025:2026,2026,,

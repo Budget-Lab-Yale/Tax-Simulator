@@ -50,20 +50,12 @@ min_refund_old:
 max_refund_young:
   value:
     '2014': Inf
-  i_measure: default
-  i_base_year: default
-  i_direction: default
-  i_increment: default
   
 # Maximum refundable CTC per old qualifying child (inf implies maximum refund 
 # is equal to the credit value)
 max_refund_old:
   value:
     '2014': Inf
-  i_measure: default
-  i_base_year: default
-  i_direction: default
-  i_increment: default
 
 # Earned income threshold above which CTC phases in
 pi_thresh:

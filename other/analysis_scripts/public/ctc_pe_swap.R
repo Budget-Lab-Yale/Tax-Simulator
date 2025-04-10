@@ -1,6 +1,6 @@
 #------------------------------------------------------
 # Code used to produce the calculations and figures in 
-# the TBL June 2024 blog about CTC-exemption trade  
+# the TBL April 2025 blog about CTC-exemption trade  
 #------------------------------------------------------
 
 
@@ -16,30 +16,30 @@ library(Hmisc)
 
 # Read microdata 
 results = bind_rows(
-  fread('/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202406151559/baseline/static/detail/2018.csv') %>% 
+  fread('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202504081630/baseline/static/detail/2018.csv') %>% 
     tibble() %>% 
     mutate(year = 2018, scenario = 'tcja'), 
-  fread('/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202406151559/ctc/static/detail/2018.csv') %>% 
+  fread('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202504081630/ctc/static/detail/2018.csv') %>% 
     tibble(year = 2018, ) %>% 
     mutate(scenario = 'ctc'),
-  fread('/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202406151559/pe_dep/static/detail/2018.csv') %>% 
+  fread('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202504081630/pe_dep/static/detail/2018.csv') %>% 
     tibble() %>% 
     mutate(year = 2018, scenario = 'pe_dep'), 
-  fread('/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202406151551/ctc/static/detail/2026.csv') %>% 
+  fread('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202504081635/ctc/static/detail/2026.csv') %>% 
     tibble() %>% 
     mutate(year = 2026, scenario = 'tcja'),
-  fread('/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202406151551/pe_dep/static/detail/2026.csv') %>% 
+  fread('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202504081635/pe_dep/static/detail/2026.csv') %>% 
     tibble() %>% 
     mutate(year = 2026, scenario = 'ctc'),
-  fread('/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202406151551/pe_nondep/static/detail/2026.csv') %>% 
+  fread('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202504081635/pe_nondep/static/detail/2026.csv') %>% 
     tibble() %>% 
     mutate(year = 2026, scenario = 'pe_dep')
 )
 
 # Read inflation projections
 inflation = bind_rows(
-  read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Macro-Projections/v3/2024032115/baseline/historical.csv'), 
-  read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Macro-Projections/v3/2024032115/baseline/projections.csv')
+  read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Macro-Projections/v3/2025021319/baseline/historical.csv'), 
+  read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Macro-Projections/v3/2025021319/baseline/projections.csv')
 ) %>% 
   select(year, ccpiu_irs)
 
@@ -118,9 +118,9 @@ get_summary_metrics = function(...) {
     group_by(...) %>% 
     summarise(
       
-      avg_inc     = weighted.mean(expanded_inc, weight),
-      avg_nom_inc = weighted.mean(expanded_inc / inflation_factor, weight),
-      min_inc     = min(expanded_inc),
+      avg_inc     = weighted.mean(agi, weight),
+      avg_nom_inc = weighted.mean(agi / inflation_factor, weight),
+      min_inc     = min(agi),
       avg_wages   = weighted.mean(wages, weight),
       
       # Averages
@@ -141,10 +141,10 @@ get_summary_metrics = function(...) {
       
       # Percent change
       across(.cols  = starts_with('delta'), 
-             .fns   = ~ weighted.mean(. / expanded_inc, weight * expanded_inc), 
+             .fns   = ~ weighted.mean(. / agi, weight * agi), 
              .names = 'etr_{col}'),
       across(.cols  = starts_with('delta'), 
-             .fns   = ~ weighted.mean((. / n_kids) / expanded_inc, weight * expanded_inc), 
+             .fns   = ~ weighted.mean((. / n_kids) / agi, weight * agi), 
              .names = 'perkid_etr_{col}'),
       
       # Winners/losers
@@ -171,22 +171,10 @@ get_summary_metrics(pctile_weighted, year) %>%
   geom_point(aes(y = nom_perkid_avg_delta.net)) + 
   geom_hline(yintercept = 0) +
   scale_x_continuous(breaks = seq(0, 100, 10)) +
-  scale_y_continuous(breaks = seq(-1500, 2000, 500)) +  
+  scale_y_continuous(labels = scales::dollar_format(), breaks = seq(-1500, 2000, 500)) +
   theme_bw() + 
-  scale_fill_manual(values = c('#ffe7b1', '#009e73')) + 
-  labs(x = 'AGI percentile', y = 'Dollars', fill = 'Provision') + 
-  ggtitle('Absolute benefit from exemptions-for-CTC trade by income, 2018', 
-          subtitle = 'Contribution to net benefit per child')
-
-get_summary_metrics(pctile_weighted, year) %>% 
-  filter(year == 2018) %>%
-  ggplot(aes(x = pctile_weighted, y = perkid_etr_delta.net * 100)) + 
-  geom_col(fill = '#00356B', width = 0.5) +
-  scale_x_continuous(breaks = seq(0, 100, 10)) +  
-  theme_bw() + 
-  labs(x = 'AGI percentile', y = '', colour = 'Year') + 
-  ggtitle('Relative benefit from exemptions-for-CTC trade by income, 2018', 
-          subtitle = 'Percentage point decrease in ETR per child')
+  scale_fill_manual(values = c('#ffe7b1', '#009e73')) +
+  labs(x = 'AGI percentile', y = element_blank(), fill = 'Provision') 
 
 get_summary_metrics(pctile_weighted, year) %>% 
   ggplot(aes(x = pctile_weighted, y = perkid_avg_delta.net, colour = as.factor(year))) + 
@@ -194,28 +182,9 @@ get_summary_metrics(pctile_weighted, year) %>%
   geom_line() + 
   geom_hline(yintercept = 0) +
   scale_x_continuous(breaks = seq(0, 100, 10)) +  
-  scale_y_continuous(breaks = seq(-500, 1250, 250)) +  
+  scale_y_continuous(labels = scales::dollar_format(), breaks = seq(-500, 1250, 250)) +
   theme_bw() + 
-  labs(x = 'Income percentile', y = '2026 dollars', colour = 'Year') + 
-  ggtitle('Absolute benefit from exemptions-for-CTC trade by income and year', 
-          subtitle = 'Net benefit per child, 2026 dollars')
-
-
-get_summary_metrics(pctile_weighted, year) %>% 
-  rename(`Expand CTC`                  = nom_perkid_avg_delta.ctc, 
-         `Repeal dependent exemptions` = nom_perkid_avg_delta.pe_dep) %>% 
-  pivot_longer(c(`Expand CTC`, `Repeal dependent exemptions`)) %>% 
-  ggplot(aes(x = pctile_weighted, y = value, colour = as.factor(year))) + 
-  geom_point(width = 1) + 
-  geom_hline(yintercept = 0) +
-  scale_x_continuous(breaks = seq(0, 100, 10)) +
-  scale_y_continuous(breaks = seq(-1500, 2000, 500)) +  
-  facet_wrap(~name) +
-  theme_bw() + 
-  scale_fill_manual(values = c('#ffe7b1', '#009e73')) + 
-  labs(x = 'AGI percentile', y = 'Dollars', fill = 'Provision') + 
-  ggtitle('Absolute benefit from exemptions-for-CTC trade by income, 2018', 
-          subtitle = 'Contribution to net benefit per child')
+  labs(x = 'Income percentile', y = '2026 dollars', colour = 'Year')
 
 
 

@@ -76,6 +76,7 @@ max_refund_young:
     '2018': 1400
     '2021': Inf
     '2022': 1400
+    '2026': Inf
   i_measure: 
     '1987': cpi
     '2017': chained_cpi
@@ -91,6 +92,7 @@ max_refund_old:
     '2018': 1400
     '2021': Inf
     '2022': 1400
+    '2026': Inf
   i_measure: 
     '1987': cpi
     '2017': chained_cpi

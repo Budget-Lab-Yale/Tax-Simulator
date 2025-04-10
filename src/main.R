@@ -27,7 +27,7 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'public/ctc/ctc_age_experiments'
+runscript_names  = 'public/tcja/ctc_pe_swap/2018____public/tcja/ctc_pe_swap/2026'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
@@ -35,7 +35,7 @@ pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
 delete_detail    = 0
-multicore        = 1
+multicore        = 0
 
 
 # Override default runtime args if executed from the command line

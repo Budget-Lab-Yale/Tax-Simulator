@@ -8,6 +8,12 @@ need_ssn:
     '2021': 0
     '2022': 1
 
+# Maximum age to qualify as "young" child
+young_age_limit:
+  value: 
+    '2014': 5
+    '2026': 16
+
 # Maximum credit value per "young" child
 value_young:
   value: 
@@ -15,6 +21,7 @@ value_young:
     '2018': [2000, 0]
     '2021': [2000, 1600]
     '2022': [2000, 0]
+    '2026': [2059, 0]
 
 # Maximum credit value per "old" child
 value_old:
@@ -22,7 +29,7 @@ value_old:
     '2014': [1000, 0]
     '2018': [2000, 0]
     '2021': [2000, 1000]
-    '2022': [2000, 0] 
+    '2022': [2000, 0]
 
 # AGI threshold above which credit value phases out, single filers
 po_thresh_single:
@@ -76,6 +83,7 @@ max_refund_young:
     '2018': 1400
     '2021': Inf
     '2022': 1400
+    '2026': Inf
   i_measure: 
     '1987': cpi
     '2017': chained_cpi
@@ -91,6 +99,7 @@ max_refund_old:
     '2018': 1400
     '2021': Inf
     '2022': 1400
+    '2026': Inf
   i_measure: 
     '1987': cpi
     '2017': chained_cpi

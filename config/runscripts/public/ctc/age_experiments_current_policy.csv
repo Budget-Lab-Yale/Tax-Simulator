@@ -1,0 +1,7 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2025:2026,2026,,
+tcja_ext,public/ctc/age_experiments/current_policy/tcja_ext,,2025:2026,2026,,
+no_refund_limit,public/ctc/age_experiments/current_policy/no_refund_limit,,2025:2026,2026,,
+0,public/ctc/age_experiments/current_policy/0,,2025:2026,2026,,
+5,public/ctc/age_experiments/current_policy/5,,2025:2026,2026,,
+16,public/ctc/age_experiments/current_policy/16,,2025:2026,2026,,
