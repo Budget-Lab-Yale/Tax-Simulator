@@ -163,8 +163,8 @@ get_summary_metrics(year)
 
 get_summary_metrics(pctile_weighted, year) %>% 
   rename(`Expand CTC`                  = nom_perkid_avg_delta.ctc, 
-         `Repeal dependent exemptions` = nom_perkid_avg_delta.pe_dep) %>% 
-  pivot_longer(c(`Expand CTC`, `Repeal dependent exemptions`)) %>% 
+         `Repeal dependent\nexemptions` = nom_perkid_avg_delta.pe_dep) %>% 
+  pivot_longer(c(`Expand CTC`, `Repeal dependent\nexemptions`)) %>% 
   filter(year == 2018) %>% 
   ggplot(aes(x = pctile_weighted, y = value, fill = name)) + 
   geom_col(width = 1) + 
@@ -174,7 +174,13 @@ get_summary_metrics(pctile_weighted, year) %>%
   scale_y_continuous(labels = scales::dollar_format(), breaks = seq(-1500, 2000, 500)) +
   theme_bw() + 
   scale_fill_manual(values = c('#ffe7b1', '#009e73')) +
-  labs(x = 'AGI percentile', y = element_blank(), fill = 'Provision') 
+  labs(x = 'AGI percentile', y = element_blank(), fill = 'Provision', 
+       caption = 'Source: The Budget Lab calculations.') + 
+  theme(plot.caption = element_text(hjust = 0, size = 8)) +
+  ggtitle('Figure 1. Average Per-Child Benefit from the TCJA’s Exemptions-For-CTC Trade, 2018', 
+          subtitle = 'Contribution to Net Benefit')
+  
+  
 
 get_summary_metrics(pctile_weighted, year) %>% 
   ggplot(aes(x = pctile_weighted, y = perkid_avg_delta.net, colour = as.factor(year))) + 
@@ -184,7 +190,12 @@ get_summary_metrics(pctile_weighted, year) %>%
   scale_x_continuous(breaks = seq(0, 100, 10)) +  
   scale_y_continuous(labels = scales::dollar_format(), breaks = seq(-500, 1250, 250)) +
   theme_bw() + 
-  labs(x = 'Income percentile', y = '2026 dollars', colour = 'Year')
+  labs(x = 'Income percentile', y = '2026 dollars', colour = 'Year', 
+       caption = 'Source: The Budget Lab calculations.') + 
+  theme(plot.caption = element_text(hjust = 0, size = 8)) +
+  ggtitle('Figure 2. Average Per-Child Benefit from the TCJA’s Exemptions-For-CTC Trade, 2018 vs 2026', 
+          subtitle = '2026 Dollars')
+
 
 
 
