@@ -108,9 +108,9 @@ calc_agi = function(tax_unit, fill_missings = F) {
                   other_inc - 
                   new_nols,
       
-      # Add back excess business losses
-      excess_bus_loss = pmax(0, -pt - agi.bus_loss_limit),
-      inc_ex_ss       = inc_ex_ss + excess_bus_loss, 
+      # Add back excess business losses (10% is calibrated to JCT's score)
+      excess_bus_loss = (runif(n()) < 0.1) * pmax(0, -pt - agi.bus_loss_limit),
+      inc_ex_ss       = inc_ex_ss + excess_bus_loss,
 
       # Calculate tip deduction
       tips_lh    = tips1 * tips_lh1 + tips2 * tips_lh2, 
