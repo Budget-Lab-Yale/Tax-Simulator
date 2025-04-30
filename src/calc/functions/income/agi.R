@@ -68,6 +68,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'char_noncash',    # (dbl) noncash charitable contributions 
     'other_above_ded', # (dbl) other deductions per Schedule 1 line 24
     'auto_int_exp',    # (dbl) auto loan interest expense
+    'r.bus_loss',      # (dbl) random number for determining excess business loss limitation eligibility
     
     # Tax law attributes
     'agi.alimony_repeal_year', # (int) year during and after which a divorce does not generate taxable/deductible alimony
@@ -108,8 +109,8 @@ calc_agi = function(tax_unit, fill_missings = F) {
                   other_inc - 
                   new_nols,
       
-      # Add back excess business losses (10% is calibrated to JCT's score)
-      excess_bus_loss = (runif(n()) < 0.1) * pmax(0, -pt - agi.bus_loss_limit),
+      # Add back excess business losses (6% is calibrated to JCT's score)
+      excess_bus_loss = (r.bus_loss < 0.06) * pmax(0, -pt - agi.bus_loss_limit),
       inc_ex_ss       = inc_ex_ss + excess_bus_loss,
 
       # Calculate tip deduction

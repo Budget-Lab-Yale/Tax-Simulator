@@ -14,10 +14,7 @@ do_employment = function(tax_units, ...) {
   #
   # Returns: tibble of tax units with post-adjustment wage earnings values.
   #----------------------------------------------------------------------------
-  
-  
-  # Set random seed 
-  set.seed(globals$random_seed)
+
   
   # Set elasticities
   e_mothers_poor  = 0.4
@@ -211,7 +208,7 @@ do_employment = function(tax_units, ...) {
           pr_emp = 1 + (e * delta_rtw * scaling_factor), 
           
           # Simulate outcome
-          emp   = runif(nrow(.)) < pr_emp, 
+          emp   = r.behavior1 < pr_emp, 
           wages = if_else(wages == 0, 0, wages * emp),
         ) %>% 
         
@@ -254,7 +251,7 @@ do_employment = function(tax_units, ...) {
           ),
           
           # Simulate transition into employment 
-          emp = runif(nrow(.)) < pr_emp, 
+          emp = r.behavior1 < pr_emp, 
           
           # Assign wage TODO
           wages = if_else(wages == 0, emp * potential_wages, wages) 

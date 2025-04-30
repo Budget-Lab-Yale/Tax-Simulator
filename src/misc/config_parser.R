@@ -32,7 +32,7 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   #   - pct_sample (dbl)       : share of records used in simulation 
   #
   # Returns: list of 8:
-  #   - random_seed (int)    :seed for random number generation 
+  #   - random_numbers (df)  : tibble of random numbers used across simulations
   #   - runscript (df)       : tibble representation of the runscripts CSV
   #   - interface_paths (df) : tibble with ID-interface-filepath info in rows 
   #   - output_root (str)    : path where output data is written
@@ -44,7 +44,7 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   #----------------------------------------------------------------------------
   
   # Set random seed 
-  random_seed = 76
+  set.seed(76)
   
   # Read and parse data dependency interface file paths
   output_roots       = read_yaml('./config/interfaces/output_roots.yaml')
@@ -176,7 +176,6 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   }
   
   # Tax unit ID in sample
-  set.seed(random_seed)
   sample_ids = interface_paths %>% 
     filter(interface == 'Tax-Data') %>%
     slice(1) %>% 
@@ -185,6 +184,15 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     sample_frac(size = pct_sample) %>% 
     get_vector('id')
   
+  # Precalculate random numbers for consistency across scenarios 
+  random_numbers = tibble(
+    r.bus_loss        = runif(length(sample_ids)),  # Excess business loss limitation eligibility rate
+    r.cdctc_takeup    = runif(length(sample_ids)),  # CDCTC takeup rate
+    r.salt_workaround = runif(length(sample_ids)),  # SALT workaround participation rate
+    r.behavior1       = runif(length(sample_ids)),  # Spare random number for use in behavioral modules
+    r.behavior2       = runif(length(sample_ids)),  # Spare random number for use in behavioral modules
+    r.behavior3       = runif(length(sample_ids))   # Spare random number for use in behavioral modules
+  )
   
   # Specifiy microdata output variable
   detail_vars = c(
@@ -207,7 +215,7 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   
   
   # Return runtime args and interface paths  
-  return(list(random_seed     = random_seed,
+  return(list(random_numbers  = random_numbers,
               runscript       = runscript,
               interface_paths = interface_paths, 
               output_root     = output_root,

@@ -27,16 +27,17 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
   req_vars = c(
     
     # Tax unit attributes
-    'dep_age1',      # (int) age of youngest dependent (NA for tax units without a dependent)
-    'dep_age2',      # (int) age of second youngest dependent (NA for tax units without a second dependent)
-    'dep_age3',      # (int) age of oldest dependent (NA for tax units without a third dependent)
-    'care_exp',      # (dbl) eligible dependent care expenses 
-    'filing_status', # (int) filing status of tax unit
-    'ei1',           # (dbl) earned income of primary filer
-    'ei2',           # (dbl) earned income of secondary filer (NA for non-joint returns)
-    'agi',           # (dbl) Adjusted Gross Income
-    'liab_bc',       # (dbl) income tax liability before credits, including AMT
-    'ftc',           # (dbl) value of foreign tax credits
+    'dep_age1',       # (int) age of youngest dependent (NA for tax units without a dependent)
+    'dep_age2',       # (int) age of second youngest dependent (NA for tax units without a second dependent)
+    'dep_age3',       # (int) age of oldest dependent (NA for tax units without a third dependent)
+    'care_exp',       # (dbl) eligible dependent care expenses 
+    'filing_status',  # (int) filing status of tax unit
+    'ei1',            # (dbl) earned income of primary filer
+    'ei2',            # (dbl) earned income of secondary filer (NA for non-joint returns)
+    'agi',            # (dbl) Adjusted Gross Income
+    'liab_bc',        # (dbl) income tax liability before credits, including AMT
+    'ftc',            # (dbl) value of foreign tax credits
+    'r.cdctc_takeup', # (dbl) random number for determining takeup
     
     # Tax law attributes 
     'cdctc.exp_limit',         # (int) maximum credit-eligible expenses per qualifying dependent
@@ -58,8 +59,6 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
     'cdctc.discrete_step',     # (int) rounding step for descretized phaseout function
     'cdctc.refundable'         # (int) whether credit is refundable
   )
-  
-  set.seed(globals$random_seed)
   
   tax_unit %>% 
     
@@ -149,8 +148,8 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
       cdctc_ref    = if_else(cdctc.refundable == 0, 0, young_cdctc + old_cdctc),
       
       # Model take-up: 90% calibrated to target 2019 actual CDCTC
-      cdctc_nonref = cdctc_nonref * (runif(nrow(.)) < 0.9),
-      cdctc_ref    = cdctc_ref    * (runif(nrow(.)) < 0.9)
+      cdctc_nonref = cdctc_nonref * (r.cdctc_takeup < 0.9),
+      cdctc_ref    = cdctc_ref    * (r.cdctc_takeup < 0.9)
     
     ) %>% 
     
