@@ -10,4 +10,4 @@ salt_limit_married:
 salt_workaround_allowed:
   value: 
     '2014': 1
-    '2024': 0
+    '2026': 0

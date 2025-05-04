@@ -27,14 +27,14 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'public/tcja/tcja_stacked'
+runscript_names  = 'private/peterson/test'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
-delete_detail    = 0
+delete_detail    = 1
 multicore        = 1
 
 
@@ -66,7 +66,7 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
     runscript_name   = runscript_name,
     scenario_id      = scenario_id,
     local            = local, 
-    vintage          = vintage, 
+    vintage          = vintage,
     baseline_vintage = baseline_vintage,
     pct_sample       = pct_sample
   )

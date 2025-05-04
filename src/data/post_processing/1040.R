@@ -513,6 +513,8 @@ recode_1040_vars = function(df, scenario_id) {
       Variable == 'txbl_inc'              ~ 'Taxable income',
       Variable == 'liab_ord'              ~ 'Ordinary-rate tax liability',
       Variable == 'liab_pref'             ~ 'Preferred-rate tax liability',
+      Variable == 'amt_gross_inc'         ~ 'Alternative Minimum Tax, taxable income',
+      Variable == 'amt_txbl_inc'          ~ 'Alternative Minimum Tax, taxable income after exemption',
       Variable == 'liab_amt'              ~ 'Alternative Minimum Tax liability',
       Variable == 'excess_ptc'            ~ 'Excess Premium Tax Credit repayment',
       Variable == 'liab_bc'               ~ 'Tax liability before credits',
