@@ -1,0 +1,3 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2017:2035,,,
+amt_repeal,tests/amt_repeal,,2017:2035,,,

@@ -239,14 +239,8 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
   force_char = rep(force_char, nrow(tax_units))
   char_above = rep(char_above, nrow(tax_units))
   
-
-  set.seed(globals$random_seed)
   
   tax_units %>% 
-    
-    mutate(sstb_sole_prop = as.integer(runif(nrow(.)) < 0.2), 
-           sstb_part      = as.integer(runif(nrow(.)) < 0.2), 
-           sstb_scorp     = as.integer(runif(nrow(.)) < 0.2)) %>% 
     
     # Create duplicates for variables affected by form-behavior optimization
     mutate(across(.cols  = c(char_cash, char_noncash), 
@@ -646,9 +640,6 @@ do_salt_workaround_baseline = function(tax_units) {
   # Returns: tibble of updated tax unit data (df).
   #----------------------------------------------------------------------------
   
-  set.seed(globals$random_seed)
-  
-  
   tax_units %>% 
     mutate(
       
@@ -670,14 +661,9 @@ do_salt_workaround_baseline = function(tax_units) {
       
       # Simulate amount moved in workaround. Probability calibrated to hit 
       # $20B annual estimate from TPC 
-      salt_workaround_part  = salt_part * (!is.infinite(item.salt_limit) & 
-                                             item.salt_workaround_allowed & 
-                                             salt_part > 0 & 
-                                             runif(nrow(.)) < 0.75),
-      salt_workaround_scorp = salt_scorp * (!is.infinite(item.salt_limit) &
-                                              item.salt_workaround_allowed & 
-                                              salt_scorp > 0 & 
-                                              runif(nrow(.)) < 0.75),
+      incentive_for_workaround = (!is.infinite(item.salt_limit) | !is.infinite(amt.exempt)) & item.salt_workaround_allowed,
+      salt_workaround_part  = salt_part  * (incentive_for_workaround & (salt_part > 0)  & (r.salt_workaround < 0.75)),
+      salt_workaround_scorp = salt_scorp * (incentive_for_workaround & (salt_scorp > 0) & (r.salt_workaround < 0.75)),
       
       # Shift SALT
       salt_inc_sales    = salt_inc_sales - salt_workaround_part - salt_workaround_scorp,

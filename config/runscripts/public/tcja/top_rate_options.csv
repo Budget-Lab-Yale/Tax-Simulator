@@ -1,0 +1,6 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2025:2035,2026,,
+tcja,public/tcja/extension/stacked/08-amt,,2025:2035,2026,,
+tcja_396,public/tcja/top_rate_options/extension_396,,2025:2035,2026,,
+tcja_396_1m,public/tcja/top_rate_options/396_1m,,2025:2035,2026,,
+tcja_40_1m,public/tcja/top_rate_options/40_1m,,2025:2035,2026,,

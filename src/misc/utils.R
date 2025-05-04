@@ -76,7 +76,7 @@ purge_detail = function() {
   # Returns: void
   #----------------------------------------------------------------------------
   
-  for (scenario_id in globals$runtime_args$ID) {
+  for (scenario_id in globals$runscript$ID) {
     for (behavior in c("static", "conventional")) {
       unlink(
         file.path(globals$output_root,

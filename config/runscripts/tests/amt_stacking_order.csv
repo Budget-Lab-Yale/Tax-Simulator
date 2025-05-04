@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2025:2035,,,
+rates_ctc,tests/amt_stacking_order/rates_ctc,,2025:2035,,,
+amt,tests/amt_stacking_order/amt,,2025:2035,,,

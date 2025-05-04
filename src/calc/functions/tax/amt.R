@@ -3,7 +3,7 @@
 #---------------------------------------------------------------
 
 # Set return variables for function
-return_vars$calc_amt = c('liab_amt', 'liab_bc')
+return_vars$calc_amt = c('amt_gross_inc', 'amt_txbl_inc', 'liab_amt', 'liab_bc')
 
 
 calc_amt = function(tax_unit, fill_missings = F) {
@@ -19,33 +19,39 @@ calc_amt = function(tax_unit, fill_missings = F) {
   #                            with 0s (used in testing, not in simulation)
   #
   # Returns: dataframe of following variables:
-  #   - liab_amt (dbl) : AMT liability
-  #   - liab_bc (dbl)  : normal income tax liability (including repayment of 
-  #                      excess Premium Tax Credit) plus AMT liability 
+  #   - amt_gross_inc (dbl) : what 6251 calls AMT taxable income
+  #   - amt_txbl_inc (dbl)  : AMT taxable income after exemption
+  #   - liab_amt (dbl)      : AMT liability
+  #   - liab_bc (dbl)       : normal income tax liability (including repayment  
+  #                           of excess Premium Tax Credit) plus AMT liability 
   #----------------------------------------------------------------------------
   
   req_vars = c(
     
     # Tax unit attributes
-    'agi',            # (dbl)  Adjusted Gross Income
-    'ded',            # (dbl)  itemized deductions if itemizing, else standard deduction
-    'std_ded',        # (dbl)  value of standard deduction 
-    'qbi_ded',        # (dbl)  value of deduction for Qualified Business Income
-    'itemizing',      # (bool) whether filer itemizes deductions
-    'salt_item_ded',  # (dbl)  itemized deduction for state and local taxes
-    'misc_item_ded',  # (dbl)  miscellaneous itemized deductions
-    'state_ref',      # (dbl)  taxable refunds/credits/offsets of SALT
-    'amt_nols',       # (dbl)  NOLs includible in AMT income
-    'amt_ftc',        # (dbl)  foreign tax credit for AMT purposes
-    'txbl_inc',       # (dbl)  taxable income
-    'div_pref',       # (dbl)  qualified dividend income
-    'kg_pref',        # (dbl)  preferred-rate capital gains ("net capital gain" in the internal revenue code)  
-    'kg_1250',        # (dbl)  section 1250 unrecaptured gain
-    'kg_collect',     # (dbl)  collectibles gain
-    'liab',           # (dbl)  normal income tax liability
-    'excess_ptc',     # (dbl)  repayment of excess advance Premium Tax Credit
+    'agi',                # (dbl)  Adjusted Gross Income
+    'pe_ded',             # (dbl)  deduction for personal exemptions
+    'ded',                # (dbl)  itemized deductions if itemizing, else standard deduction
+    'std_ded',            # (dbl)  value of standard deduction 
+    'qbi_ded',            # (dbl)  value of deduction for Qualified Business Income
+    'itemizing',          # (bool) whether filer itemizes deductions
+    'salt_item_ded',      # (dbl)  itemized deduction for state and local taxes
+    'misc_item_ded',      # (dbl)  miscellaneous itemized deductions
+    'item_ded_ex_limits', # (dbl) itemized deductions before overall limitations
+    'item_ded',           # (dbl)  total itemized deductions
+    'state_ref',          # (dbl)  taxable refunds/credits/offsets of SALT
+    'amt_nols',           # (dbl)  NOLs includable in AMT income
+    'amt_ftc',            # (dbl)  foreign tax credit for AMT purposes
+    'txbl_inc',           # (dbl)  taxable income
+    'div_pref',           # (dbl)  qualified dividend income
+    'kg_pref',            # (dbl)  preferred-rate capital gains ("net capital gain" in the internal revenue code)  
+    'kg_1250',            # (dbl)  section 1250 unrecaptured gain
+    'kg_collect',         # (dbl)  collectibles gain
+    'liab',               # (dbl)  normal income tax liability
+    'excess_ptc',         # (dbl)  repayment of excess advance Premium Tax Credit
     
     # Tax law attributes
+    'amt.pe_pref',            # (int)   whether exemptions are a preference item (i.e. added back from taxable income)
     'amt.exempt',             # (int)   AMT exemption
     'amt.exempt_po_thresh',   # (int)   AMT taxable income threshold above which exemption phases out
     'amt.exempt_po_rate',     # (dbl)   exemption phaseout rate
@@ -71,7 +77,8 @@ calc_amt = function(tax_unit, fill_missings = F) {
       
       # Calculate AMT gross income (what the form calls "taxable income") 
       amt_gross_inc = agi -
-                      ded - 
+                      ded -
+                      (pe_ded * (amt.pe_pref == 0)) - 
                       qbi_ded + 
                       if_else(itemizing, 
                               salt_item_ded + 
@@ -115,6 +122,7 @@ calc_amt = function(tax_unit, fill_missings = F) {
            liab_bc  = liab + liab_amt + excess_ptc) %>% 
     
     # Keep variables to return
+    rename(amt_txbl_inc = txbl_inc) %>%
     select(all_of(return_vars$calc_amt)) %>% 
     return()
 }

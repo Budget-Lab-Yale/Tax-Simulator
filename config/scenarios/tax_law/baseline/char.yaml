@@ -21,6 +21,7 @@ item_cash_limit_agi:
     '2018': 0.6
     '2020': 1
     '2022': 0.6
+    '2026': 0.5
 
 # AGI limit for noncash contributions, itemized deduction
 item_noncash_limit_agi:

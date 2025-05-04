@@ -1,0 +1,3 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2025:2035,,,
+no_tax_on_ss,public/no_tax_on_X/ss,,2025:2035,,,

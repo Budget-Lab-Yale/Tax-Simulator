@@ -54,7 +54,7 @@ calc_std_ded = function(tax_unit, fill_missings = F) {
       std_ded = std.value + bonus_value,
       
       # Calculate dependent standard deduction
-      dep_std_ded = pmax(std.dep_floor, wages + std.dep_earned_bonus),
+      dep_std_ded = pmax(std.dep_floor, ei + std.dep_earned_bonus),
       
       # Limit dependent standard deduction to actual standard deduction
       dep_std_ded = pmin(std_ded, dep_std_ded),

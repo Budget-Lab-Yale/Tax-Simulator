@@ -261,7 +261,10 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
     filter(id %in% globals$sample_ids) %>% 
     mutate(weight = weight / globals$pct_sample, 
            year   = year) %>% 
-  
+    
+    # Assign random numbers 
+    bind_cols(globals$random_numbers) %>%
+    
     # Recode filing status if tax law departs from traditional options
     left_join(tax_law %>% 
                 distinct(year, filing.repeal_hoh), 

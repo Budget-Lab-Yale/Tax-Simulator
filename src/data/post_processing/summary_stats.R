@@ -94,6 +94,8 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
     'liab_pref', 
     'liab_1250', 
     'liab_collect',
+    'amt_gross_inc',
+    'amt_txbl_inc',
     'liab_amt',
     'excess_ptc',
     'liab_bc',
