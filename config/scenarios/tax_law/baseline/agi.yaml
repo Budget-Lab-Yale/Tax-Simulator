@@ -34,6 +34,16 @@ filing_status_mapper:
     '2': sl_po_range_single * 2
     '3': sl_po_range_single
     '4': sl_po_range_single
+  ot_deduction_cap:
+    '1': ot_deduction_cap_single
+    '2': ot_deduction_cap_single * 2
+    '3': ot_deduction_cap_single
+    '4': ot_deduction_cap_single
+  ot_deduction_po_thresh:
+    '1': ot_deduction_po_thresh_single
+    '2': ot_deduction_po_thresh_single * 2
+    '3': ot_deduction_po_thresh_single
+    '4': ot_deduction_po_thresh_single
 
 # Maxmimum deductible capital loss, joint returns
 kg_loss_limit_married:
@@ -118,6 +128,21 @@ tip_deduction_lh:
 # Whether FLSA-eligible overtime income is deductible from gross income
 ot_deduction:
   value: 
+    '2014': 0
+    
+# Maximum deductible OT, non-joint returns
+ot_deduction_cap_single:
+  value:
+    '2014': Inf
+    
+# AGI threshold for OT deduction phaseout, non-joint returns
+ot_deduction_po_thresh_single:
+  value:
+    '2014': Inf
+    
+# Phaseout rate for OT deduction
+ot_deduction_po_rate:
+  value:
     '2014': 0
     
 # Whether auto loan interest is deductible from gross income
