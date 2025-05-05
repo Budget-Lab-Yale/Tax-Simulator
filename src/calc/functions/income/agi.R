@@ -71,17 +71,20 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'r.bus_loss',      # (dbl) random number for determining excess business loss limitation eligibility
     
     # Tax law attributes
-    'agi.alimony_repeal_year', # (int) year during and after which a divorce does not generate taxable/deductible alimony
-    'agi.bus_loss_limit',      # (int) maximum deductible business loss
-    'agi.sl_limit',            # (int) maximum deductible student loan interest
-    'agi.sl_po_thresh',        # (int) MAGI phaseout threshold for student loan interest deduction
-    'agi.sl_po_range',         # (int) MAGI phaseout range for student loan interest deduction
-    'agi.tuition_ded_limit',   # (int) limit on tuition and feeds deduction 
-    'agi.dpad_limit',          # (int) limit on domestic production activities deduction
-    'agi.tip_deduction',       # (int) whether tips are deductible from gross income
-    'agi.tip_deduction_lh',    # (int) whether tips deduction is limited to leisure and hospitality workers only
-    'agi.ot_deduction',        # (int) whether FLSA-eligible overtime pay is deductible from gross income
-    'agi.auto_int_deduction'   # (int) whether auto loan interest is deductible from gross income
+    'agi.alimony_repeal_year',    # (int) year during and after which a divorce does not generate taxable/deductible alimony
+    'agi.bus_loss_limit',         # (int) maximum deductible business loss
+    'agi.sl_limit',               # (int) maximum deductible student loan interest
+    'agi.sl_po_thresh',           # (int) MAGI phaseout threshold for student loan interest deduction
+    'agi.sl_po_range',            # (int) MAGI phaseout range for student loan interest deduction
+    'agi.tuition_ded_limit',      # (int) limit on tuition and feeds deduction 
+    'agi.dpad_limit',             # (int) limit on domestic production activities deduction
+    'agi.tip_deduction',          # (int) whether tips are deductible from gross income
+    'agi.tip_deduction_lh',       # (int) whether tips deduction is limited to leisure and hospitality workers only
+    'agi.ot_deduction',           # (int) whether FLSA-eligible overtime pay is deductible from gross income
+    'agi.ot_deduction_cap',       # (int) maximum deductible OT
+    'agi.ot_deduction_po_thresh', # (int) AGI threshold for OT deduction phaseout
+    'agi.ot_deduction_po_rate',   # (int) phaseout rate for OT deduction
+    'agi.auto_int_deduction'      # (int) whether auto loan interest is deductible from gross income
   )
   
   tax_unit %>% 
@@ -118,9 +121,6 @@ calc_agi = function(tax_unit, fill_missings = F) {
       tips_other = tips - tips_lh,
       tip_ded    = (tips - tips_other * agi.tip_deduction_lh) * agi.tip_deduction,
       
-      # Calculate overtime deduction
-      ot_ded = ot * agi.ot_deduction, 
-      
       # Calculate auto loan interest deduction
       auto_int_ded = auto_int_exp * agi.auto_int_deduction,
       
@@ -137,8 +137,15 @@ calc_agi = function(tax_unit, fill_missings = F) {
                         pmin(tuition_ded, agi.tuition_ded_limit) + 
                         pmin(dpad, agi.dpad_limit) +
                         tip_ded + 
-                        ot_ded + 
                         auto_int_ded, 
+      
+      # Calculate overtime deduction
+      magi_ot = inc_ex_ss + gross_ss - above_ded_ex_sl, # Arbitrary stacking order in AGI determination!
+      ot_ded  = pmin(ot * agi.ot_deduction, agi.ot_deduction_cap),
+      ot_ded  = pmax(0, ot_ded - pmax(0, magi_ot - agi.ot_deduction_po_thresh) * agi.ot_deduction_po_rate),
+    
+      # Add overtime deduction to above-the-line deductions
+      above_ded_ex_sl = above_ded_ex_sl + ot_ded, 
                       
       # Calculate MAGI for taxable Social Security benefits calculation
       magi_ss = inc_ex_ss - above_ded_ex_sl
