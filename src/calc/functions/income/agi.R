@@ -84,6 +84,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'agi.ot_deduction_cap',       # (int) maximum deductible OT
     'agi.ot_deduction_po_thresh', # (int) AGI threshold for OT deduction phaseout
     'agi.ot_deduction_po_rate',   # (int) phaseout rate for OT deduction
+    'agi.ot_deduction_half',
     'agi.auto_int_deduction'      # (int) whether auto loan interest is deductible from gross income
   )
   
@@ -141,7 +142,7 @@ calc_agi = function(tax_unit, fill_missings = F) {
       
       # Calculate overtime deduction
       magi_ot = inc_ex_ss + gross_ss - above_ded_ex_sl, # Arbitrary stacking order in AGI determination!
-      ot_ded  = pmin(ot * agi.ot_deduction, agi.ot_deduction_cap),
+      ot_ded  = pmin(ot * agi.ot_deduction / (1 + (2 * agi.ot_deduction_half)), agi.ot_deduction_cap),
       ot_ded  = pmax(0, ot_ded - pmax(0, magi_ot - agi.ot_deduction_po_thresh) * agi.ot_deduction_po_rate),
     
       # Add overtime deduction to above-the-line deductions

@@ -75,3 +75,8 @@ wage_limit:
 # Share of ordinary taxable income limit
 txbl_inc_limit:
   value: 0.2
+
+# Whether QBI deduction doesn't have a set phase out
+no_po:
+  value: 0
+

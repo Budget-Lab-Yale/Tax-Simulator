@@ -21,6 +21,16 @@ filing_status_mapper:
     '2': bonus_married
     '3': bonus_single
     '4': bonus_single
+  bonus_other:
+    '1': bonus_other
+    '2': bonus_other * 2
+    '3': bonus_other
+    '4': bonus_other * 1.5
+  bonus_elderly_temp_thresh:
+    '1': bonus_elderly_temp_thresh
+    '2': bonus_elderly_temp_thresh * 2
+    '3': bonus_elderly_temp_thresh
+    '4': bonus_elderly_temp_thresh
 
 # Base value for single filers
 value_single:
@@ -75,3 +85,17 @@ dep_earned_bonus:
   i_base_year: 1997
   i_direction: default
   i_increment: default
+
+# Additional other bonus
+bonus_other:
+  value: 
+    '2014': 0
+
+# Elderly temporary bonus
+bonus_elderly_temp_value:
+  value: 0
+
+# Phasehout threshold of elderly temp bonus
+bonus_elderly_temp_thresh:
+  value: 75000
+

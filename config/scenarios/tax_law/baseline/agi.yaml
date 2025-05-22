@@ -144,6 +144,11 @@ ot_deduction_po_thresh_single:
 ot_deduction_po_rate:
   value:
     '2014': 0
+
+# OT deduction applying to only the "half" of "time and a half"
+ot_deduction_half:
+  value:
+    '2014': 0
     
 # Whether auto loan interest is deductible from gross income
 auto_int_deduction:
