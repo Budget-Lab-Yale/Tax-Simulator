@@ -147,7 +147,7 @@ limit_tax_value_thresh_single:
     '2026': 500000
   i_base_year:
     '2014': NA
-    '2026': 2016
+    '2026': 2017
   i_direction: -1
   i_increment: 25
     
@@ -158,7 +158,7 @@ limit_tax_value_thresh_married:
     '2026': 600000
   i_base_year:
     '2014': NA
-    '2026': 2016
+    '2026': 2017
   i_direction: -1
   i_increment: 50
   
