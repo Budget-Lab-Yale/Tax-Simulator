@@ -47,8 +47,6 @@ salt_limit_married:
     '2031': 42461
     '2032': 42885
     '2033': 43314
-    '2034': 43747
-    '2035': 44185
 
 # Minimum value of SALT deduction
 salt_floor:
@@ -69,8 +67,6 @@ salt_floor_thresh:
     '2031': 530760
     '2032': 536068
     '2033': 541428
-    '2034': 546843
-    '2035': 552311
 
 # Amount of SALT workaround that evades capture
 salt_workaround_share:
