@@ -27,7 +27,7 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'baseline/baseline'
+runscript_names  = 'tcja_macro'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL

@@ -1,4 +1,5 @@
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Off-Model-Estimates.vintage,dep.Off-Model-Estimates.ID
-baseline,baseline,,2024:2055,2026,part_active kg_lt char_cash wages div_pref txbl_int,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar,20250317,baseline
-tcja_ind,public/tcja/extension,entity_shifting/pearce_prisinzano charity/50,2024:2055,2026,part_active kg_lt char_cash wages div_pref txbl_int,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar,20250317,tcja_ind
-tcja_ind_estate,public/tcja/extension,entity_shifting/pearce_prisinzano charity/50,2024:2055,2026,part_active kg_lt char_cash wages div_pref txbl_int,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar,20250317,tcja_ind_estate
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Off-Model-Estimates.vintage,dep.Off-Model-Estimates.ID,dep.Cost-Recovery-Simulator.vintage,dep.Cost-Recovery-Simulator.ID
+baseline,baseline,,2024:2055,2026,part_active kg_lt char_cash wages div_pref txbl_int,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar,20250317,baseline,202505061709,baseline
+tcja_ind,public/tcja/extension,entity_shifting/pearce_prisinzano charity/50,2024:2055,2026,part_active kg_lt char_cash wages div_pref txbl_int,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar,20250317,tcja_ind,202505061709,baseline
+tcja_ind_estate,public/tcja/extension,entity_shifting/pearce_prisinzano charity/50,2024:2055,2026,part_active kg_lt char_cash wages div_pref txbl_int,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar,20250317,tcja_ind_estate,202505061709,baseline
+tcja_ind_estate_costrecovery,public/tcja/extension,entity_shifting/pearce_prisinzano charity/50,2024:2055,2026,part_active kg_lt char_cash wages div_pref txbl_int,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar,20250317,tcja_ind_estate,202505061709,perm_bonus_r&d_cprates

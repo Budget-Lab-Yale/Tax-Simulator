@@ -75,4 +75,44 @@ tax_data %>%
   mutate(tax_change = new_liab_iit_net - liab_iit_net, agi_change = new_agi - agi) %>% 
   arrange(tax_change) %>%
   select(id, filing_status, agi, agi_change, new_agi, ot, liab_iit_net, tax_change, starts_with('mtr_'))
+
+library(Hmisc)
+tax_data %>% 
+  filter(dep_status == 0, ot > 0) %>% 
+  mutate(agi_group = case_when(
+    agi < 20000 ~ "Under $20K",
+    agi < 50000 ~ "$20K-$50K",
+    agi < 100000 ~ "$50K-$100K",
+    agi < 200000 ~ "$100K-$200K",
+    agi < 400000 ~ "$200K-$400K",
+    TRUE ~ "Over $400K"
+  )) %>%
+  # Set as factor to maintain order
+  mutate(agi_group = factor(agi_group, levels = c(
+    "Under $20K", "$20K-$50K", "$50K-$100K", 
+    "$100K-$200K", "$200K-$400K", "Over $400K"
+  ))) %>%
+  # Group by AGI group
+  group_by(agi_group) %>% 
+  reframe(name = seq(0.1, 0.9, 0.1), value = wtd.quantile(ot, weight, seq(0.1, 0.9, 0.1))) %>% 
+  pivot_wider()
   
+
+
+library(haven) 
+
+raw_data = read_dta('/gpfs/gibbs/project/sarin/jar335/Repositories/Tax-Data/resources/otdata2023.dta')
+
+
+raw_data %>%
+  mutate(
+    wages    = total_weekly_earnings * wkswork1, 
+    ot       = ot_weekly_earnings * wkswork1 * (flsa_eligible > 0)
+  ) %>%
+  reframe(
+    p = seq(0, 0.99, 0.01),
+    all = wtd.quantile(hourly_wage, weight, p = seq(0, 0.99, 0.01)), 
+    ot = wtd.quantile(hourly_wage, weight * (ot > 0), p = seq(0, 0.99, 0.01))
+  ) %>% 
+  print(n = 100)
+
