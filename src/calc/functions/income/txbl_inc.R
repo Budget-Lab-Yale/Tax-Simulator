@@ -32,7 +32,11 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
     'std_ded',  # (dbl) value of standard deduction 
     'item_ded', # (dbl) value of itemized deductions
     'pe_ded',   # (dbl) value of deduction for personal exemptions 
-    'qbi_ded'   # (dbl) value of deduction for Qualified Business Income
+    'qbi_ded',  # (dbl) value of deduction for Qualified Business Income
+    
+    # Tax law attributes
+    'item.limit_tax_value_thresh', # (dbl) tax value limitation reduction threshold
+    'item.limit_tax_value_rate',   # (dbl) tax value limitation reduction rate
   )
   
   tax_unit %>% 
@@ -40,6 +44,12 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
     # Parse tax unit object passed as argument
     parse_calc_fn_input(req_vars, fill_missings) %>% 
     mutate(
+      
+      # Claw back itemized deductions based on tax value
+      txbl_inc_ex_item_ded = agi - std_ded - pe_ded - qbi_ded, 
+      excess               = pmax(0, txbl_inc_ex_item_ded - item.limit_tax_value_thresh),
+      reduction            = item.limit_tax_value_rate * pmin(item_ded, excess), 
+      item_ded             = item_ded - reduction,
       
       # Determine itemizing status
       itemizing = item_ded > std_ded,
