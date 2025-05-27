@@ -44,6 +44,11 @@ filing_status_mapper:
     '2': ot_deduction_po_thresh_single * 2
     '3': ot_deduction_po_thresh_single
     '4': ot_deduction_po_thresh_single
+  auto_int_po_thresh:
+    '1': auto_int_po_thresh
+    '2': auto_int_po_thresh * 2
+    '3': auto_int_po_thresh
+    '4': auto_int_po_thresh
 
 # Maxmimum deductible capital loss, joint returns
 kg_loss_limit_married:
@@ -154,3 +159,13 @@ ot_deduction_half:
 auto_int_deduction:
   value: 
     '2014': 0
+
+# Maximum amount of auto loan interest deductible from gross income
+auto_int_limit:
+  value:
+    '2014': Inf
+
+# Threshold above which auto loan interest deduction begins to phase out
+auto_int_po_thresh:
+  value:
+    '2014': Inf
