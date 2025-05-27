@@ -45,15 +45,16 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     'pe_ded',             # (dbl) value of deduction for personal exemptions 
     
     # Tax law attributes
-    'qbi.rate',                    # (dbl) deduction rate
-    'qbi.po_thresh_sstb',          # (int) taxable income phaseout threshold for SSTBs 
-    'qbi.po_thresh_non_sstb',      # (int) taxable income phaseout threshold for non-SSTBs
-    'qbi.po_range_sstb',           # (int) taxable income range for SSTBs 
-    'qbi.po_range_non_sstb',       # (int) taxable income range for non-SSTBs
-    'qbi.wage_exception_sstb',     # (int) for SSTBs, whether paying wages excepts taxpayer from taxable income phaseout 
-    'qbi.wage_exception_non_sstb', # (int) for non-SSTBs, whether paying wages excepts taxpayer from taxable income phaseout 
-    'qbi.wage_limit',              # (dbl) share of W2 wage bill required for full deduction after phase-out 
-    'qbi.txbl_inc_limit'           # (dbl) share of ordinary taxable income limit
+    'qbi.rate',                    # (dbl)  deduction rate
+    'qbi.po_thresh_sstb',          # (int)  taxable income phaseout threshold for SSTBs 
+    'qbi.po_thresh_non_sstb',      # (int)  taxable income phaseout threshold for non-SSTBs
+    'qbi.po_range_sstb',           # (int)  taxable income range for SSTBs 
+    'qbi.po_range_non_sstb',       # (int)  taxable income range for non-SSTBs
+    'qbi.wage_exception_sstb',     # (int)  for SSTBs, whether paying wages excepts taxpayer from taxable income phaseout 
+    'qbi.wage_exception_non_sstb', # (int)  for non-SSTBs, whether paying wages excepts taxpayer from taxable income phaseout 
+    'qbi.wage_limit',              # (dbl)  share of W2 wage bill required for full deduction after phase-out 
+    'qbi.txbl_inc_limit',          # (dbl)  share of ordinary taxable income limit
+    'qbi.no_po'                    # (bool) whether QBI deduction doesn't have a set phase out
   )
   
   
@@ -102,7 +103,10 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
       # determine the extent to which the taxable income phaseout applies:
       po_thresh = if_else(sstb == 1, qbi.po_thresh_sstb, qbi.po_thresh_non_sstb),
       po_range  = if_else(sstb == 1, qbi.po_range_sstb, qbi.po_range_non_sstb),
-      po_share  = pmin(1, pmax(0, txbl_inc - po_thresh) / po_range),
+      po_share  = if_else(qbi.no_po == 1, 
+                          .75,
+                          pmin(1, pmax(0, txbl_inc - po_thresh) / po_range)
+                          ),
       
       # Determine whether taxpayer is excepted from taxable income phaseout 
       # conditional on paying sufficient wages

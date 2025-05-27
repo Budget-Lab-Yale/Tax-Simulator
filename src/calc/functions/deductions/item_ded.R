@@ -57,6 +57,7 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
     'tax_prep_exp',     # (dbl) tax preparation fees
     'other_misc_exp',   # (dbl) other miscellaneous expenses (i.e. Sch A line 23, pre-TCJA)
     'other_item_exp',   # (dbl) other historically itemizable deductions
+    'age1', 'age2',
     
     # Tax law attributes
     'item.med_floor_agi',           # (dbl)   AGI floor above which medical expenses are deductible
@@ -76,7 +77,11 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
     'item.pease_thresh',            # (int)   AGI threshold above which itemized deductions are limited under Pease
     'item.pease_rate',              # (dbl)   Pease limitation phaseout rate with respect to AGI
     'item.pease_max_share',         # (dbl)   maximum Pease phaseout, expressed as percent of tentative total deductions
-    'item.limit'                    # (int)   maximum value of itemized deductions
+    'item.limit',                   # (int)   maximum value of itemized deductions,
+    'std.bonus_elderly_temp_value', # (int)   Bonus deduction for individuals 65+
+    'std.bonus_elderly_temp_thresh',# (int)   Income above which the elderly bonus begins to phase out
+    'item.salt_floor',              # (int)   Minimum value of SALT deduction
+    'item.salt_floor_thresh'        # (int)   Income above which SALT deduction phases out towards the floor
   )
   
   
@@ -111,7 +116,7 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
       
       # Calculate deduction for state and local taxes, limited if applicable
       salt_item_ded = pmin(item.salt_limit, salt_inc_sales + salt_prop + salt_pers),
-      
+      salt_item_ded = pmax(item.salt_floor, salt_item_ded - .3 * pmax(0, agi - item.salt_floor_thresh)),
       
       #----------
       # Interest 
@@ -194,6 +199,10 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
       # Other deductions
       other_item_ded = other_item_exp,
       
+      age_bonus1  = age1 >= 65,
+      age_bonus2  = !is.na(age2) & (age2 >= 65),
+      elderly_bonus = (age_bonus1 + age_bonus2) * std.bonus_elderly_temp_value,
+      elderly_bonus = pmax(0, elderly_bonus - (.04 * pmax(0, agi-std.bonus_elderly_temp_thresh))),
       
       #-----------------------
       # Total and limitations
@@ -201,7 +210,7 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
       
       # Calculate tentative total itemized deductions
       item_ded = med_item_ded + salt_item_ded + int_item_ded + char_item_ded + 
-                 casualty_item_ded + misc_item_ded + other_item_ded,
+                 casualty_item_ded + misc_item_ded + other_item_ded + elderly_bonus,
       
       # Record itemized deductions before limitations
       item_ded_ex_limits = item_ded,
