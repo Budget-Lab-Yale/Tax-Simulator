@@ -31,7 +31,6 @@ calc_std_ded = function(tax_unit, fill_missings = F) {
     'blind1',     # (bool) whether primary filer is blind
     'blind2',     # (bool) whether secondary filer is blind
     'agi',        # (dbl)  Adjusted Gross Income
-    'char_cash',  # (dbl)  Charitable deductions in cash
     
     # Tax law attributes
     'std.value',            # (int) base value of standard deduction
@@ -39,7 +38,6 @@ calc_std_ded = function(tax_unit, fill_missings = F) {
     'std.dep_floor',        # (int) Minimum standard deduction for dependents
     'std.dep_earned_bonus', # (int) Amount of bonus deduction added to dependent's earned income
     'std.bonus_other',      # (int) Amount of bonus deduction added for any other reason
-    'char.above_limit'      # (int) Maximum deductible above-the-line charitable contributions
   )
   
   tax_unit %>% 
@@ -57,7 +55,7 @@ calc_std_ded = function(tax_unit, fill_missings = F) {
       elderly_bonus = (age_bonus1 + age_bonus2) * std.bonus_elderly_temp_value,
       elderly_bonus = pmax(0, elderly_bonus - (.04 * pmax(0, agi-std.bonus_elderly_temp_thresh))),
       
-      bonus_value = std.bonus * n_bonuses + elderly_bonus + pmin(char.above_limit, char_cash),
+      bonus_value = std.bonus * n_bonuses + elderly_bonus,
       
       # Calculate nondependent total standard deduction
       std_ded = std.value + bonus_value + std.bonus_other,
