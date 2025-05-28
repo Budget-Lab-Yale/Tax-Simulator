@@ -39,6 +39,7 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'dep_ctc3',              # (bool) whether oldest dependent qualifies for CTC status based on non-age and non-SSN criteria (NA for tax units without a third dependent)
     'n_dep',                 # (int) number of dependents
     'agi',                   # (dbl) Adjusted Gross Income
+    'filing_status',         # (int) filing status of tax unit (1 = single, 2 = joint, 3 = MFS, 4 = HoH)
     'liab_bc',               # (dbl) liability before credits, including AMT   
     'ftc',                   # (dbl) value of foreign tax credit 
     'cdctc_nonref',          # (dbl) value of nonrefundable Child and Dependent Care Credit 
@@ -153,7 +154,8 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       value_other = pmax(0, max_value_other - excess1 * po_rate_other),
       
       # Apply filing status limitations
-      across(.cols = c(value1, value2, value_other), .fns = ~ . * ctc.mfs_eligible),
+      across(.cols = c(value1, value2, value_other), 
+             .fns = ~ . * (ctc.mfs_eligible != 3 | ctc.mfs_eligible == 1)),
       
       # Allocate against liability after select nonrefundable credits
       nonref     = ftc + cdctc_nonref + ed_nonref + savers_nonref + old_cred + caregiver_cred_nonref,
