@@ -18,7 +18,7 @@ do_tips = function(tax_units, ...) {
   #----------------------------------------------------------------------------
   
   # Define behavioral parameters and reform timing
-  first_year  = 2026
+  first_year  = 2025
   e_extensive = -0.357 / 0.91  
   e_intensive = -1.05
   
