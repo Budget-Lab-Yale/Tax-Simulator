@@ -155,7 +155,7 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       
       # Apply filing status limitations
       across(.cols = c(value1, value2, value_other), 
-             .fns = ~ . * (ctc.mfs_eligible != 3 | ctc.mfs_eligible == 1)),
+             .fns = ~ . * (filing_status != 3 | ctc.mfs_eligible == 1)),
       
       # Allocate against liability after select nonrefundable credits
       nonref     = ftc + cdctc_nonref + ed_nonref + savers_nonref + old_cred + caregiver_cred_nonref,
