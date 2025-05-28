@@ -38,7 +38,7 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
     # Tax law attributes
     'item.limit_tax_value_thresh',     # (dbl) tax value limitation reduction threshold
     'item.salt_limit_tax_value_rate',  # (dbl) tax value limitation reduction rate
-    'item.limit_tax_value_rate',       # (dbl) tax value limitation reduction rate, non-SALT deductions
+    'item.limit_tax_value_rate'        # (dbl) tax value limitation reduction rate, non-SALT deductions
   )
   
   tax_unit %>% 

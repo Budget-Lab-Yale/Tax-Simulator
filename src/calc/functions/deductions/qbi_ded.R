@@ -136,26 +136,25 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     pivot_wider(names_from  = business_type, 
                 names_sep   = '.',
                 values_from = c(inc, qbi_ded, obbb_step1))
-  
-  
+
   # Finally, join QBI deduction data back into main tax unit data
   tax_unit %>% 
     left_join(qbi_ded, by = 'id') %>%
     mutate(
       
       # Calculate total QBI deduction across businesses
-      qbi_ded = sole_prop.qbi_ded + part.qbi_ded + scorp.qbi_ded + farm.qbi_ded,
+      qbi_ded = qbi_ded.sole_prop + qbi_ded.part + qbi_ded.scorp + qbi_ded.farm,
       
       #-----------------------------------
       # OBBB-style calculation, continued
       #-----------------------------------
       
       # Aggregate step 1 calculations
-      obbb_step1 = sole_prop.obbb_step1 + part.obbb_step1 + scorp.obbb_step1 + farm.obbb_step1,
+      obbb_step1 = obbb_step1.sole_prop + obbb_step1.part + obbb_step1.scorp + obbb_step1.farm,
       
       # Step 2: Phase out based on taxable income for all income, including SSTB
-      inc = sole_prop.inc + part.inc + scorp.inc + farm.inc,
-      obbb_step2 = pmax(0, (inc * qbi.rate) - (0.75 * pmax(0, txbl_inc - po_thresh))),
+      inc = inc.sole_prop + inc.part + inc.scorp + inc.farm,
+      obbb_step2 = pmax(0, (inc * qbi.rate) - (0.75 * pmax(0, txbl_inc - qbi.po_thresh_sstb))), # Phaseout threshold should be the same for SSTB and non-SSTB for OBBB
       
       # Deduction is larger of step 1 or step 2
       obbb_qbi_ded = pmax(obbb_step1, obbb_step2),

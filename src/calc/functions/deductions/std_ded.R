@@ -37,7 +37,7 @@ calc_std_ded = function(tax_unit, fill_missings = F) {
     'std.bonus',            # (int) bonus value per instances of nondependent adults who are either aged 65+ or blind
     'std.dep_floor',        # (int) Minimum standard deduction for dependents
     'std.dep_earned_bonus', # (int) Amount of bonus deduction added to dependent's earned income
-    'std.bonus_other',      # (int) Amount of bonus deduction added for any other reason
+    'std.bonus_other'       # (int) Amount of bonus deduction added for any other reason
   )
   
   tax_unit %>% 

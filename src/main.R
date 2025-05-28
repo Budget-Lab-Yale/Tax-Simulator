@@ -27,15 +27,15 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'tcja_macro'
+runscript_names  = 'public/obbb/total_package'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
-delete_detail    = 0
-multicore        = 1
+delete_detail    = 1
+multicore        = 0
 
 
 # Override default runtime args if executed from the command line
