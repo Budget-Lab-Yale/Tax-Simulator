@@ -27,7 +27,7 @@ do_ot = function(tax_units, ...) {
   e_intensive = (delta_ot / mean_ot) / -france_mtr
   
   # Reform timing
-  first_year = 2026
+  first_year = 2025
   phase_in_years = 3  # full effect realized after 3 years
   
   # Get current year from the data
