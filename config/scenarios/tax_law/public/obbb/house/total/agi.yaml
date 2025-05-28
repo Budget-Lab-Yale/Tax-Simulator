@@ -45,8 +45,8 @@ auto_int_limit:
     '2025': 10000
     '2029': Inf
 
-# Threshold above which auto loan interest deduction begins to phase out
-auto_int_po_thresh:
+# Threshold above which auto loan interest deduction begins to phase out, non-joint returns
+auto_int_po_thresh_single:
   value:
     '2014': Inf
     '2025': 100000

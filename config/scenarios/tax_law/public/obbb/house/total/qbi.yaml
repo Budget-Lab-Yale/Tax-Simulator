@@ -13,7 +13,7 @@ po_thresh_sstb_single:
   i_measure: default
   i_base_year: 
     '2018': 2017
-    '2026': 2025
+    '2026': 2016
   i_direction: default
   i_increment: default
 
@@ -23,7 +23,7 @@ po_thresh_non_sstb_single:
   i_measure: default
   i_base_year: 
     '2018': 2017
-    '2026': 2025
+    '2026': 2016
   i_direction: default
   i_increment: default
 
@@ -31,7 +31,7 @@ po_thresh_non_sstb_single:
 txbl_inc_limit:
   value: 
     '2017': 0.2
-    '2026': 0.22
+    '2026': 0.23
 
 no_po:
   value: 
