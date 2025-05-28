@@ -19,11 +19,26 @@ filing_status_mapper:
     '2': salt_limit_married
     '3': salt_limit_married / 2
     '4': salt_limit_married
+  salt_floor:
+    '1': salt_floor
+    '2': salt_floor
+    '3': salt_floor / 2
+    '4': salt_floor
+  salt_floor_thresh:
+    '1': salt_floor_thresh
+    '2': salt_floor_thresh
+    '3': salt_floor_thresh / 2
+    '4': salt_floor_thresh
   mort_bal_limit:
     '1': mort_bal_limit_single
     '2': mort_bal_limit_married
     '3': mort_bal_limit_mfs
     '4': mort_bal_limit_single
+  limit_tax_value_thresh:
+    '1': limit_tax_value_thresh_single
+    '2': limit_tax_value_thresh_single
+    '3': limit_tax_value_thresh_single
+    '4': limit_tax_value_thresh_single
   
 # AGI floor above which medical expenses are deductible
 med_floor_agi:
@@ -39,9 +54,23 @@ salt_limit_married:
     '2014': Inf
     '2018': 10000
     '2026': Inf
+
+# Minimum value of SALT deduction
+salt_floor:
+  value:
+    '2014': 0
+    
+# Income above which SALT deduction phases out towards the floor
+salt_floor_thresh:
+  value:
+    '2014': Inf
     
 # Whether PTE SALT workarounds are allowed  
 salt_workaround_allowed:
+  value: 1
+
+# Amount of SALT workaround that evades capture
+salt_workaround_share:
   value: 1
 
 # Years after which mortgage interest deduction is limited based on mortgage balance. Maps to mort_bal_limit 
@@ -139,7 +168,20 @@ pease_rate:
 # Maximum Pease phaseout, expressed as percent of tentative total deductions
 pease_max_share:
   value: 0.8
-  
+
 # Maximum value of itemized deductions
 limit:
   value: Inf
+  
+# Tax value limitation reduction threshold, single returns (i.e. next bracket where rate corresponding to maximum tax value ends)
+limit_tax_value_thresh_single:
+  value: Inf
+  
+# Tax value limitation reduction rate, SALT (i.e. percentage point diference between maximum statutory tax value and target value) 
+salt_limit_tax_value_rate:
+  value: 0
+
+# Tax value limitation reduction rate, non-SALT (i.e. percentage point diference between maximum statutory tax value and target value) 
+limit_tax_value_rate:
+  value: 0
+  

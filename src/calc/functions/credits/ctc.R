@@ -39,6 +39,7 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'dep_ctc3',              # (bool) whether oldest dependent qualifies for CTC status based on non-age and non-SSN criteria (NA for tax units without a third dependent)
     'n_dep',                 # (int) number of dependents
     'agi',                   # (dbl) Adjusted Gross Income
+    'filing_status',         # (int) filing status of tax unit (1 = single, 2 = joint, 3 = MFS, 4 = HoH)
     'liab_bc',               # (dbl) liability before credits, including AMT   
     'ftc',                   # (dbl) value of foreign tax credit 
     'cdctc_nonref',          # (dbl) value of nonrefundable Child and Dependent Care Credit 
@@ -72,6 +73,7 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'ctc.po_range_other',      # (dbl) non-child dependent credit phaseout range for married returns
     'ctc.po_discrete',         # (int) whether phaseout is discretized, as in current-law form
     'ctc.po_discrete_step',    # (int) rounding step for discretized phaseout
+    'ctc.mfs_eligible',        # (int) whether married filing separate returns are eligible
     'ctc.min_refund_level',    # (int) whether to express minimum refundable CTC in dollar terms (in which case the calculator uses min_refund) or share of maximum value (in which case it uses min_refund_share)
     'ctc.min_refund_young',    # (int) minimum refundable CTC per young qualifying child
     'ctc.min_refund_old',      # (int) minimum refundable CTC per old qualifying child
@@ -150,6 +152,10 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       value1      = pmax(0, max_value1      - excess1 * po_rate1),
       value2      = pmax(0, max_value2      - excess2 * po_rate2),
       value_other = pmax(0, max_value_other - excess1 * po_rate_other),
+      
+      # Apply filing status limitations
+      across(.cols = c(value1, value2, value_other), 
+             .fns = ~ . * (filing_status != 3 | ctc.mfs_eligible == 1)),
       
       # Allocate against liability after select nonrefundable credits
       nonref     = ftc + cdctc_nonref + ed_nonref + savers_nonref + old_cred + caregiver_cred_nonref,

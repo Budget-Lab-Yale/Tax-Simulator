@@ -29,6 +29,10 @@ filing_status_mapper:
     '3': baby_bonus_po_thresh_married / 2
     '4': baby_bonus_po_thresh_married / 2
 
+# Whether married filing separate returns are eligible
+mfs_eligible:
+  value: 1
+
 # Whether SSN is required to qualify for CTC
 need_ssn:
   value:

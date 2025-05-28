@@ -75,3 +75,8 @@ wage_limit:
 # Share of ordinary taxable income limit
 txbl_inc_limit:
   value: 0.2
+
+# Phaseout type: 0 = TCJA design, 1 = May 2025 House-passed OBBB design
+po_type:
+  value: 0
+

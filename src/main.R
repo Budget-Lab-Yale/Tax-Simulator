@@ -27,14 +27,14 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'tcja_macro'
+runscript_names  = 'public/obbb/stacked'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
-delete_detail    = 0
+delete_detail    = 1
 multicore        = 1
 
 
@@ -105,7 +105,7 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
     mc_out = mclapply(
       X        = counterfactual_ids, 
       FUN      = do_scenario, baseline_mtrs, 
-      mc.cores = min(16, detectCores(logical = F))
+      mc.cores = min(32, detectCores(logical = F))
     )
   } else {
     walk(.x = counterfactual_ids, .f = ~ do_scenario(.x, baseline_mtrs))

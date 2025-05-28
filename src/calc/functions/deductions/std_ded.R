@@ -30,12 +30,14 @@ calc_std_ded = function(tax_unit, fill_missings = F) {
     'age2',       # (int)  age of secondary filer
     'blind1',     # (bool) whether primary filer is blind
     'blind2',     # (bool) whether secondary filer is blind
+    'agi',        # (dbl)  Adjusted Gross Income
     
     # Tax law attributes
-    'std.value',           # (int) base value of standard deduction
-    'std.bonus',           # (int) bonus value per instances of nondependent adults who are either aged 65+ or blind
-    'std.dep_floor',       # (int) Minimum standard deduction for dependents
-    'std.dep_earned_bonus' # (int) Amount of bonus deduction added to dependent's earned income
+    'std.value',            # (int) base value of standard deduction
+    'std.bonus',            # (int) bonus value per instances of nondependent adults who are either aged 65+ or blind
+    'std.dep_floor',        # (int) Minimum standard deduction for dependents
+    'std.dep_earned_bonus', # (int) Amount of bonus deduction added to dependent's earned income
+    'std.bonus_other'       # (int) Amount of bonus deduction added for any other reason
   )
   
   tax_unit %>% 
@@ -48,10 +50,15 @@ calc_std_ded = function(tax_unit, fill_missings = F) {
       age_bonus1  = age1 >= 65,
       age_bonus2  = !is.na(age2) & (age2 >= 65),
       n_bonuses   = age_bonus1 + age_bonus2 + blind1 + (!is.na(blind2) & blind2),
-      bonus_value = std.bonus * n_bonuses,
+      
+      # Temporary bonus for elderly filers only
+      elderly_bonus = (age_bonus1 + age_bonus2) * std.bonus_elderly_temp_value,
+      elderly_bonus = pmax(0, elderly_bonus - (.04 * pmax(0, agi-std.bonus_elderly_temp_thresh))),
+      
+      bonus_value = std.bonus * n_bonuses + elderly_bonus,
       
       # Calculate nondependent total standard deduction
-      std_ded = std.value + bonus_value,
+      std_ded = std.value + bonus_value + std.bonus_other,
       
       # Calculate dependent standard deduction
       dep_std_ded = pmax(std.dep_floor, ei + std.dep_earned_bonus),

@@ -53,7 +53,8 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     'qbi.wage_exception_sstb',     # (int) for SSTBs, whether paying wages excepts taxpayer from taxable income phaseout 
     'qbi.wage_exception_non_sstb', # (int) for non-SSTBs, whether paying wages excepts taxpayer from taxable income phaseout 
     'qbi.wage_limit',              # (dbl) share of W2 wage bill required for full deduction after phase-out 
-    'qbi.txbl_inc_limit'           # (dbl) share of ordinary taxable income limit
+    'qbi.txbl_inc_limit',          # (dbl) share of ordinary taxable income limit
+    'qbi.po_type'                  # (int) phaseout type: 0 = TCJA design, 1 = May 2025 House-passed OBBB design
   )
   
   
@@ -64,7 +65,6 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     
     # Derive taxable income without regard to QBI deduction 
     mutate(txbl_inc = pmax(0, agi - pmax(std_ded, item_ded) - pe_ded))
-  
   
   # Calculate QBI deduction for each business 
   qbi_ded = tax_unit %>% 
@@ -93,6 +93,10 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     # Now, tax calculation by business type
     mutate(
       
+      #-------------------------
+      # TCJA-style calculation
+      #------------------------
+      
       # Calculate tentative deduction
       qbi_ded_tent = inc * qbi.rate,
       
@@ -116,27 +120,51 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
       # evaluates to 0 and phaseout fully applies) 
       wage_credit = wagebill * qbi.wage_limit * wage_exception,
       reduction   = po_share * pmax(0, qbi_ded_tent - wage_credit),
-      qbi_ded     = pmax(0, qbi_ded_tent - reduction)
+      qbi_ded     = pmax(0, qbi_ded_tent - reduction),
+      
+      #------------------------
+      # OBBB-style calculation
+      #------------------------
+      
+      # Step 1: Non-SSTB QBI deduction limited to usual wage + asset test  
+      obbb_step1 = pmin(inc * qbi.rate * (sstb == 0), wagebill * qbi.wage_limit), 
       
     ) %>% 
       
     # Reshape wide again
-    select(id, qbi_ded, business_type) %>% 
+    select(id, business_type, inc, qbi_ded, obbb_step1) %>% 
     pivot_wider(names_from  = business_type, 
-                names_glue  = 'qbi_ded_{business_type}',
-                values_from = qbi_ded)
-  
-  
+                names_sep   = '.',
+                values_from = c(inc, qbi_ded, obbb_step1))
+
   # Finally, join QBI deduction data back into main tax unit data
   tax_unit %>% 
     left_join(qbi_ded, by = 'id') %>%
     mutate(
       
       # Calculate total QBI deduction across businesses
-      qbi_ded = qbi_ded_sole_prop + 
-                qbi_ded_part +
-                qbi_ded_scorp + 
-                qbi_ded_farm,
+      qbi_ded = qbi_ded.sole_prop + qbi_ded.part + qbi_ded.scorp + qbi_ded.farm,
+      
+      #-----------------------------------
+      # OBBB-style calculation, continued
+      #-----------------------------------
+      
+      # Aggregate step 1 calculations
+      obbb_step1 = obbb_step1.sole_prop + obbb_step1.part + obbb_step1.scorp + obbb_step1.farm,
+      
+      # Step 2: Phase out based on taxable income for all income, including SSTB
+      inc = inc.sole_prop + inc.part + inc.scorp + inc.farm,
+      obbb_step2 = pmax(0, (inc * qbi.rate) - (0.75 * pmax(0, txbl_inc - qbi.po_thresh_sstb))), # Phaseout threshold should be the same for SSTB and non-SSTB for OBBB
+      
+      # Deduction is larger of step 1 or step 2
+      obbb_qbi_ded = pmax(obbb_step1, obbb_step2),
+      
+      # Only use OBBB calculation if specified
+      qbi_ded = if_else(qbi.po_type == 0, qbi_ded, obbb_qbi_ded),
+      
+      #------------------
+      # Final limitation
+      #------------------
       
       # Limit deduction to a share of ordinary taxable income
       qbi_ded = pmin(qbi_ded, pmax(0, txbl_inc - div_pref - kg_pref) * qbi.txbl_inc_limit)
