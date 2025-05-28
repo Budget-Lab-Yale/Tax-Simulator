@@ -30,10 +30,11 @@ po_thresh_non_sstb_single:
 # Share of ordinary taxable income limit
 txbl_inc_limit:
   value: 
-    '2017': 0.2
+    '2014': 0.2
     '2026': 0.23
-
-no_po:
+    
+# Phaseout type: 0 = TCJA design, 1 = May 2025 House-passed OBBB design
+po_type:
   value: 
-    '2017': 0
+    '2014': 0
     '2026': 1

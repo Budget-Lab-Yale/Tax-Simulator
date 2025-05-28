@@ -76,7 +76,7 @@ wage_limit:
 txbl_inc_limit:
   value: 0.2
 
-# Whether QBI deduction doesn't have a set phase out
-no_po:
+# Phaseout type: 0 = TCJA design, 1 = May 2025 House-passed OBBB design
+po_type:
   value: 0
 
