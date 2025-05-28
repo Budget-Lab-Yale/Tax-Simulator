@@ -85,7 +85,6 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'agi.ot_deduction_po_thresh', # (int) AGI threshold for OT deduction phaseout
     'agi.ot_deduction_po_rate',   # (int) phaseout rate for OT deduction
     'agi.ot_deduction_half',      # (int) OT deduction applying to only the "half" of "time and a half"
-    'agi.auto_int_deduction',     # (int) whether auto loan interest is deductible from gross income
     'agi.auto_int_limit',         # (int) Maximum amount of auto loan interest deductible from gross income
     'agi.auto_int_po_thresh'      # (int) Threshold above which auto loan interest deduction begins to phase out
   )
@@ -144,8 +143,8 @@ calc_agi = function(tax_unit, fill_missings = F) {
       ot_ded  = pmax(0, ot_ded - pmax(0, magi_ot - agi.ot_deduction_po_thresh) * agi.ot_deduction_po_rate),
       
       # Calculate auto loan interest deduction
-      auto_int_ded = pmin(agi.auto_int_limit, auto_int_exp * agi.auto_int_deduction),
-      auto_int_ded = pmax(0, auto_int_ded - .2 * (magi_ot - agi.auto_int_po_thresh)),
+      auto_int_ded = pmin(agi.auto_int_limit, auto_int_exp),
+      auto_int_ded = pmax(0, auto_int_ded - 0.2 * pmax(0, magi_ot - agi.auto_int_po_thresh)),
       
       # Add overtime and auto loan interest deductions to above-the-line deductions
       above_ded_ex_sl = above_ded_ex_sl + ot_ded + auto_int_ded, 
