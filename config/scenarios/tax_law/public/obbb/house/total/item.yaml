@@ -72,7 +72,7 @@ salt_floor_thresh:
 salt_workaround_share:
   value:
     '2014': 1
-    '2025': .2
+    '2025': 0.2
 
 # Years after which mortgage interest deduction is limited based on mortgage balance. Maps to mort_bal_limit 
 mort_bal_limit_years:
@@ -162,7 +162,13 @@ limit_tax_value_thresh_married:
   i_direction: -1
   i_increment: 50
   
-# Tax value limitation reduction rate (i.e. percentage point diference between maximum statutory tax value and target value) 
+# Tax value limitation reduction rate, SALT (i.e. percentage point diference between maximum statutory tax value and target value) 
+salt_limit_tax_value_rate:
+  value:
+    '2014': 0
+    '2026': 0.1351351
+
+# Tax value limitation reduction rate, non-SALT (i.e. percentage point diference between maximum statutory tax value and target value) 
 limit_tax_value_rate:
   value:
     '2014': 0

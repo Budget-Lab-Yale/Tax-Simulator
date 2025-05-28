@@ -3,7 +3,7 @@
 #--------------------------------------
 
 # Set return variables for function
-return_vars$calc_txbl_inc = c('itemizing', 'ded', 'txbl_inc')
+return_vars$calc_txbl_inc = c('item_ded_limited', 'itemizing', 'ded', 'txbl_inc')
 
 
 calc_txbl_inc = function(tax_unit, fill_missings = F) {
@@ -28,15 +28,17 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
   req_vars = c(
     
     # Tax unit attributes
-    'agi',      # (dbl) Adjusted Gross Income
-    'std_ded',  # (dbl) value of standard deduction 
-    'item_ded', # (dbl) value of itemized deductions
-    'pe_ded',   # (dbl) value of deduction for personal exemptions 
-    'qbi_ded',  # (dbl) value of deduction for Qualified Business Income
+    'agi',           # (dbl) Adjusted Gross Income
+    'std_ded',       # (dbl) value of standard deduction 
+    'item_ded',      # (dbl) value of itemized deductions
+    'salt_item_ded', # (dbl) value of SALT deduction (post-limitation)
+    'pe_ded',        # (dbl) value of deduction for personal exemptions 
+    'qbi_ded',       # (dbl) value of deduction for Qualified Business Income
     
     # Tax law attributes
-    'item.limit_tax_value_thresh', # (dbl) tax value limitation reduction threshold
-    'item.limit_tax_value_rate',   # (dbl) tax value limitation reduction rate
+    'item.limit_tax_value_thresh',     # (dbl) tax value limitation reduction threshold
+    'item.salt_limit_tax_value_rate',  # (dbl) tax value limitation reduction rate
+    'item.limit_tax_value_rate',       # (dbl) tax value limitation reduction rate, non-SALT deductions
   )
   
   tax_unit %>% 
@@ -46,14 +48,16 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
     mutate(
       
       # Claw back itemized deductions based on tax value
-      txbl_inc_ex_item_ded = agi - std_ded - pe_ded - qbi_ded, 
-      excess               = pmax(0, txbl_inc_ex_item_ded - item.limit_tax_value_thresh),
-      reduction            = item.limit_tax_value_rate * pmin(item_ded, excess), 
-      item_ded             = item_ded - reduction,
+      txbl_inc_ex_item_ded = agi - pe_ded - qbi_ded,
+      salt_excess      = pmin(salt_item_ded, pmax(0, txbl_inc_ex_item_ded - item.limit_tax_value_thresh)),
+      other_excess     = pmin(pmax(0, item_ded - salt_item_ded), pmax(0, txbl_inc_ex_item_ded - salt_item_ded - item.limit_tax_value_thresh)),
+      salt_reduction   = salt_excess  * item.salt_limit_tax_value_rate,
+      other_reduction  = other_excess * item.limit_tax_value_rate,
+      item_ded_limited = item_ded - salt_reduction - other_reduction,
       
       # Determine itemizing status
-      itemizing = item_ded > std_ded,
-      ded       = pmax(std_ded, item_ded), 
+      itemizing = item_ded_limited > std_ded,
+      ded       = pmax(std_ded, item_ded_limited),
       
       # Calculate taxable income
       txbl_inc = pmax(0, agi - ded - pe_ded - qbi_ded)
