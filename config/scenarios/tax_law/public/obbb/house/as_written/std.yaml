@@ -36,10 +36,3 @@ bonus_other:
     '2014': 0
     '2025': 1000
     '2029': 0
-
-# Elderly temporary bonus
-bonus_elderly_temp_value:
-  value: 
-    '2024': 0
-    '2025': 4000
-    '2029': 0

@@ -11,6 +11,11 @@ filing_status_mapper:
     '2': ot_ded_po_thresh_single * 2
     '3': ot_ded_po_thresh_single
     '4': ot_ded_po_thresh_single
+  senior_ded_po_thresh:
+    '1': senior_ded_po_thresh
+    '2': senior_ded_po_thresh * 2
+    '3': senior_ded_po_thresh
+    '4': senior_ded_po_thresh
 
 
 # Whether tips deduction is limited to leisure and hospitality workers only
@@ -60,3 +65,11 @@ ot_ded_po_rate:
 # Phaseout range for OT deduction
 ot_ded_po_range:
   value: Inf
+
+# Senior bonus deduction value
+senior_ded_val:
+  value: 0
+
+# Phasehout threshold of senior bonus deduction
+senior_ded_po_thresh:
+  value: 75000
