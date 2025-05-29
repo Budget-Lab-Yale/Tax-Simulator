@@ -67,9 +67,13 @@ ot_ded_po_range:
   value: Inf
 
 # Senior bonus deduction value
-senior_ded_val:
+senior_ded_value:
   value: 0
 
-# Phasehout threshold of senior bonus deduction
+# AGI threshold for senior bonus deduction phaseout
 senior_ded_po_thresh:
   value: 75000
+
+# Phaseout rate for senior bonus deduction
+senior_ded_po_rate:
+  value: 0.04

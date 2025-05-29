@@ -21,3 +21,10 @@ ot_ded_limit:
     '2014': 0
     '2025': Inf
     '2029': 0
+    
+# Senior bonus deduction value
+senior_ded_value:
+  value: 
+    '2014': 0
+    '2025': 4000
+    '2029': 0
