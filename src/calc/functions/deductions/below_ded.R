@@ -29,8 +29,8 @@ calc_below_ded = function(tax_unit, fill_missings = F) {
     'tips',      # (dbl) tipped income included in wages
     'tips1',     # (dbl) tipped income included in wages, secondary earner
     'tips2',     # (dbl) tipped income included in wages, primary earner
-    'tips1_lh',  # (int) whether tips1 is earned in a leisure and hospitality business
-    'tips2_lh',  # (int) whether tips2 is earned in a leisure and hospitality business
+    'tips_lh1',  # (int) whether tips1 is earned in a leisure and hospitality business
+    'tips_lh2',  # (int) whether tips2 is earned in a leisure and hospitality business
     'ot',        # (dbl) FLSA-eligible overtime income included in wages
     'agi',       # (dbl) Adjusted Gross Income
 

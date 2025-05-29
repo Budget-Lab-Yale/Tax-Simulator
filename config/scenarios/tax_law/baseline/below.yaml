@@ -60,5 +60,3 @@ ot_ded_po_rate:
 # Phaseout range for OT deduction
 ot_ded_po_range:
   value: Inf
-  
-  
