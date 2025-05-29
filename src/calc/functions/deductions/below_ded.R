@@ -96,7 +96,7 @@ calc_below_ded = function(tax_unit, fill_missings = F) {
       age_senior1  = age1 >= 65,
       age_senior2  = !is.na(age2) & (age2 >= 65),
       senior_ded   = (age_senior1 + age_senior2) * below.senior_ded_val,
-      senior_ded   = pmax(0, senior_ded - .04 * pmax(0, agi - below.senior_ded_po_thresh))
+      senior_ded   = pmax(0, senior_ded - .04 * (age_senior1 + age_senior2) * pmax(0, agi - below.senior_ded_po_thresh))
       
     ) %>% 
     
