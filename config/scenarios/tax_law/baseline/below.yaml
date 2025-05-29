@@ -1,0 +1,64 @@
+---
+
+filing_status_mapper:
+  tip_ded_po_thresh:
+    '1': tip_ded_po_thresh_single
+    '2': tip_ded_po_thresh_single * 2
+    '3': tip_ded_po_thresh_single
+    '4': tip_ded_po_thresh_single
+  ot_ded_po_thresh:
+    '1': ot_ded_po_thresh_single
+    '2': ot_ded_po_thresh_single * 2
+    '3': ot_ded_po_thresh_single
+    '4': ot_ded_po_thresh_single
+
+
+# Whether tips deduction is limited to leisure and hospitality workers only
+tip_ded_lh:
+  value: 0
+    
+# Maximum deductible tips
+tip_ded_limit:
+  value: 0
+    
+# AGI threshold for tip deduction phaseout, non-joint returns
+tip_ded_po_thresh_single:
+  value: Inf
+    
+# Whether tip phaseout type is a rate (0 means range)
+tip_ded_po_type:
+  value: 1
+    
+# Phaseout rate for tip deduction
+tip_ded_po_rate:
+  value: 0
+
+# Phaseout range for tip deduction
+tip_ded_po_range:
+  value: Inf
+  
+# Whether OT deduction applies only to the "half" of "time and a half"
+ot_ded_half:
+  value: 0
+    
+# Maximum deductible OT
+ot_ded_limit:
+  value: 0
+    
+# AGI threshold for OT deduction phaseout, non-joint returns
+ot_ded_po_thresh_single:
+  value: Inf
+    
+# Whether OT phaseout type is a rate (0 means range)
+ot_ded_po_type:
+  value: 1
+    
+# Phaseout rate for OT deduction
+ot_ded_po_rate:
+  value: 0
+
+# Phaseout range for OT deduction
+ot_ded_po_range:
+  value: Inf
+  
+  

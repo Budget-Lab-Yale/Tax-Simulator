@@ -1,37 +1,22 @@
 ---
 
-
-# Whether tipped income is deductible from gross income
-tip_deduction:
-  value: 
-    '2014': 0
-    '2025': 1
-    '2029': 0
-
-# Whether FLSA-eligible overtime income is deductible from gross income
-ot_deduction:
-  value: 
-    '2014': 0
-    '2025': 1
-    '2029': 0
-
-# OT deduction applying to only the "half" of "time and a half"
-ot_deduction_half:
-  value:
-    '2014': 0
-    '2025': 1
-    '2029': 0
-    
 # Maximum amount of auto loan interest deductible from gross income
-auto_int_limit:
+auto_int_ded_limit:
   value:
     '2014': 0
     '2025': 10000
     '2029': 0
 
 # Threshold above which auto loan interest deduction begins to phase out, non-joint returns
-auto_int_po_thresh_single:
+auto_int_ded_po_thresh_single:
   value:
     '2014': Inf
     '2025': 100000
     '2029': Inf
+
+# Phaseout rate for auto loan interest deduction 
+auto_int_ded_po_rate:
+  value:
+    '2014': 0
+    '2025': 0.2
+    '2029': 0

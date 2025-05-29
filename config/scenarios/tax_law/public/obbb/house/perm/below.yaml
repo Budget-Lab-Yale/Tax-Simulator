@@ -1,0 +1,20 @@
+---
+
+
+# Maximum deductible tips
+tip_ded_limit:
+  value: 
+    '2014': 0
+    '2025': Inf
+    
+# Whether OT deduction applies only to the "half" of "time and a half"
+ot_ded_half:
+  value:
+    '2014': 0
+    '2025': 1
+    
+# Maximum deductible OT
+ot_ded_limit:
+  value:
+    '2014': 0
+    '2025': Inf
