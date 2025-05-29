@@ -38,7 +38,7 @@ do_ot = function(tax_units, ...) {
   phase_in_factor = min(1, years_since_reform / phase_in_years)
   
   # Skip if no income tax exemption for overtime this year
-  if (current_year < first_year | all(tax_units$agi.ot_deduction == 0)) {
+  if (current_year < first_year | all(tax_units$below.ot_ded_limit == 0)) {
     return(tax_units)
   } else {
     

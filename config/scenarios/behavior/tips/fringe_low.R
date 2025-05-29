@@ -27,7 +27,7 @@ do_tips = function(tax_units, ...) {
   years_since_reform = max(0, current_year - first_year)
 
   # Skip if no income tax exemption for tips this year
-  if (current_year < first_year | all(tax_units$agi.tip_deduction == 0)) {
+  if (current_year < first_year | all(tax_units$below.tip_ded_limit == 0)) {
     return(tax_units)
   } else {
     
