@@ -63,7 +63,8 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
       ded       = pmax(std_ded, item_ded_limited),
       
       # Allocate senior deduction depending on itemizing status
-      std_ded    = std_ded + (!itemizing * senior_ded), 
+      std_ded    = std_ded + if_else(!itemizing, senior_ded, 0), 
+      ded        = ded     + if_else(!itemizing, senior_ded, 0), 
       senior_ded = itemizing * senior_ded,
       
       # Calculate taxable income

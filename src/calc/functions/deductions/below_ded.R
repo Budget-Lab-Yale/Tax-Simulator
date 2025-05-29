@@ -37,20 +37,21 @@ calc_below_ded = function(tax_unit, fill_missings = F) {
     'age2',      # (int) age of secondary filer
 
     # Tax law attributes
-    'below.tip_ded_lh',          # (int) whether tips deduction is limited to leisure and hospitality workers only
-    'below.tip_ded_limit',       # (int) maximum deductible OT, non-joint returns
-    'below.tip_ded_po_thresh',   # (int) AGI threshold for OT deduction phaseout, non-joint returns
-    'below.tip_ded_po_type',     # (int) whether OT phaseout type is a rate (0 means range)
-    'below.tip_ded_po_rate',     # (int) phaseout rate for OT deduction
-    'below.tip_ded_po_range',    # (int) phaseout range for OT deduction
-    'below.ot_ded_half',         # (int) whether OT deduction applies only to the "half" of "time and a half"
-    'below.ot_ded_limit',        # (int) maximum deductible OT, non-joint returns
-    'below.ot_ded_po_thresh',    # (int) AGI threshold for OT deduction phaseout, non-joint returns
-    'below.ot_ded_po_type',      # (int) whether OT phaseout type is a rate (0 means range)
-    'below.ot_ded_po_rate',      # (int) phaseout rate for OT deduction
-    'below.ot_ded_po_range',     # (int) phaseout range for OT deduction
-    'below.senior_ded_val',      # (int) value of senior bonus deduction
-    'below.senior_ded_po_thresh' # (int) AGI threshold for phaseout of senior bonus deduction
+    'below.tip_ded_lh',           # (int) whether tips deduction is limited to leisure and hospitality workers only
+    'below.tip_ded_limit',        # (int) maximum deductible OT, non-joint returns
+    'below.tip_ded_po_thresh',    # (int) AGI threshold for OT deduction phaseout, non-joint returns
+    'below.tip_ded_po_type',      # (int) whether OT phaseout type is a rate (0 means range)
+    'below.tip_ded_po_rate',      # (int) phaseout rate for OT deduction
+    'below.tip_ded_po_range',     # (int) phaseout range for OT deduction
+    'below.ot_ded_half',          # (int) whether OT deduction applies only to the "half" of "time and a half"
+    'below.ot_ded_limit',         # (int) maximum deductible OT, non-joint returns
+    'below.ot_ded_po_thresh',     # (int) AGI threshold for OT deduction phaseout, non-joint returns
+    'below.ot_ded_po_type',       # (int) whether OT phaseout type is a rate (0 means range)
+    'below.ot_ded_po_rate',       # (int) phaseout rate for OT deduction
+    'below.ot_ded_po_range',      # (int) phaseout range for OT deduction
+    'below.senior_ded_value',     # (int) value of senior bonus deduction
+    'below.senior_ded_po_thresh', # (int) AGI threshold for phaseout of senior bonus deduction
+    'below.senior_ded_po_rate'    # (int) phaseout rate for senior bonus deduction
   )
   
   tax_unit %>% 
@@ -70,7 +71,7 @@ calc_below_ded = function(tax_unit, fill_missings = F) {
       # Limit to maximum value
       tip_ded = pmin(tip_ded, below.tip_ded_limit),
       
-      # Limit base on AGI phaseout
+      # Limit based on AGI phaseout
       po_rate = if_else(below.tip_ded_po_type == 1, below.tip_ded_po_rate, tip_ded / below.tip_ded_po_range),
       tip_ded = pmax(0, tip_ded - pmax(0, agi - below.tip_ded_po_thresh) * po_rate),
       
@@ -85,18 +86,24 @@ calc_below_ded = function(tax_unit, fill_missings = F) {
       # Limit to maximum value
       ot_ded = pmin(ot_ded, below.ot_ded_limit),
       
-      # Limit base on AGI phaseout
+      # Limit based on AGI phaseout
       po_rate = if_else(below.ot_ded_po_type == 1, below.ot_ded_po_rate, ot_ded / below.ot_ded_po_range),
       ot_ded  = pmax(0, ot_ded - pmax(0, agi - below.ot_ded_po_thresh) * po_rate),
 
       
-      #--------------------
+      #------------------
       # Senior deduction
-      #--------------------
-      age_senior1  = age1 >= 65,
-      age_senior2  = !is.na(age2) & (age2 >= 65),
-      senior_ded   = (age_senior1 + age_senior2) * below.senior_ded_val,
-      senior_ded   = pmax(0, senior_ded - .04 * pmax(0, agi - below.senior_ded_po_thresh))
+      #------------------
+      
+      # Count number of seniors
+      n_seniors = as.integer(age1 >= 65) + as.integer(!is.na(age2) & (age2 >= 65)),
+      
+      # Limit to maximum value
+      senior_ded = below.senior_ded_value * n_seniors,
+      
+      # Limit based on AGI phaseout
+      po_rate    = n_seniors * below.senior_ded_po_rate,
+      senior_ded = pmax(0, senior_ded - pmax(0, agi - below.senior_ded_po_thresh) * po_rate)
       
     ) %>% 
     
