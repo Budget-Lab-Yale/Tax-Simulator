@@ -1,12 +1,5 @@
 ---
-indexation_defaults:
-  i_measure:
-    '1987': cpi
-    '2017': chained_cpi
-  i_base_year:
-    '2014': 2012
-  i_direction: -1
-  i_increment: 50
+
 
 filing_status_mapper:
   pease_thresh:
@@ -36,111 +29,98 @@ filing_status_mapper:
     '4': mort_bal_limit_single
   limit_tax_value_thresh:
     '1': limit_tax_value_thresh_single
-    '2': limit_tax_value_thresh_single
+    '2': limit_tax_value_thresh_married
     '3': limit_tax_value_thresh_single
     '4': limit_tax_value_thresh_single
-  
-# AGI floor above which medical expenses are deductible
-med_floor_agi:
-  value: 0.075
-
-# Maximum medical expense deduction 
-med_limit:
-  value: Inf
 
 # Maximum deductible state and local taxes, joint returns
 salt_limit_married:
   value:
     '2014': Inf
     '2018': 10000
-    '2026': Inf
+    '2025': 40000
+    '2026': 40400
+    '2027': 40804
+    '2028': 41212
+    '2029': 41624
+    '2030': 42040
+    '2031': 42461
+    '2032': 42885
+    '2033': 43314
 
 # Minimum value of SALT deduction
 salt_floor:
   value:
     '2014': 0
-    
+    '2025': 10000
+
 # Income above which SALT deduction phases out towards the floor
 salt_floor_thresh:
   value:
     '2014': Inf
-    
-# Whether PTE SALT workarounds are allowed  
-salt_workaround_allowed:
-  value: 1
+    '2025': 500000
+    '2026': 505000
+    '2027': 510050
+    '2028': 515151
+    '2029': 520302
+    '2030': 525505
+    '2031': 530760
+    '2032': 536068
+    '2033': 541428
 
 # Amount of SALT workaround that evades capture
 salt_workaround_share:
-  value: 1
+  value:
+    '2014': 1
+    '2025': 0.2
 
 # Years after which mortgage interest deduction is limited based on mortgage balance. Maps to mort_bal_limit 
 mort_bal_limit_years:
   value: 
     '2014': [1987, Inf]
     '2018': [1987, 2017, Inf]
-    '2026': [1987, Inf]
 
 # Limitations on deductible mortgage interest based on mortgage balance, single filers
 mort_bal_limit_single:
   value:
     '2014': [Inf, 1000000]
     '2018': [Inf, 1000000, 375000]
-    '2026': [Inf, 1000000]
 
 # Limitations on deductible mortgage interest based on mortgage balance, joint filers
 mort_bal_limit_married:
   value:
     '2014': [Inf, 1000000]
     '2018': [Inf, 1000000, 750000]
-    '2026': [Inf, 1000000]
 
 # Limitations on deductible mortgage interest based on mortgage balance, married filing separately filers
 mort_bal_limit_mfs:
   value:
     '2014': [Inf, 500000]
     '2018': [Inf, 500000, 375000]
-    '2026': [Inf, 500000]
 
 # Maximum deductible mortgage interest
 mort_int_limit:
-  value: Inf
-
-# Whether deductions for non-primary residences are allowed
-mort_int_non_prim:
-  value: 1
-
-prim_mort_share:
-  value: 1
-  
-# Whether auto loan interest is deductible from taxable income
-auto_int_deduction:
   value: 
-    '2014': 0
+    '2014': Inf
+    '2025': 0
+
+# Maximum deductible "miscellanous" itemized deductions
+misc_limit:
+  value:
+    '2014': Inf
+    '2018': 0
 
 # Maximum deductible casualty and loss expenses
 casualty_limit:
   value: 
     '2014': Inf
     '2018': 0
-    '2026': Inf
-
-# AGI floor for "miscellaneous" itemized deductions
-misc_floor_agi:
-  value: 0.02
-  
-# Maximum deductible "miscellanous" itemized deductions
-misc_limit:
-  value:
-    '2014': Inf
-    '2018': 0
-    '2026': Inf
-
+    
 # AGI threshold above which itemized deductions are limited under Pease, single filers
 pease_thresh_single:
   value:
     '2014': 250000
     '2018': Inf
-    '2026': 250000
   i_measure: default
   i_base_year: default
   i_direction: default
@@ -151,7 +131,6 @@ pease_thresh_married:
   value:
     '2014': 300000
     '2018': Inf
-    '2026': 300000
   i_measure: default
   i_base_year: default
   i_direction: default
@@ -162,33 +141,41 @@ pease_thresh_head:
   value:
     '2014': 275000
     '2018': Inf
-    '2026': 275000
   i_measure: default
   i_base_year: default
   i_direction: default
   i_increment: default
   
-# Pease limitation phaseout rate with respect to AGI
-pease_rate:
-  value: 0.03
-
-# Maximum Pease phaseout, expressed as percent of tentative total deductions
-pease_max_share:
-  value: 0.8
-
-# Maximum value of itemized deductions
-limit:
-  value: Inf
-  
-# Tax value limitation reduction threshold, single returns (i.e. next bracket where rate corresponding to maximum tax value ends)
+# Tax value limitation reduction threshold, nonjoint returns (i.e. next bracket where rate corresponding to maximum tax value ends)
 limit_tax_value_thresh_single:
-  value: Inf
+  value:
+    '2014': Inf
+    '2026': 500000
+  i_base_year:
+    '2014': NA
+    '2026': 2017
+  i_direction: -1
+  i_increment: 25
+    
+# Tax value limitation reduction threshold, joint returns (i.e. next bracket where rate corresponding to maximum tax value ends)
+limit_tax_value_thresh_married:
+  value:
+    '2014': Inf
+    '2026': 600000
+  i_base_year:
+    '2014': NA
+    '2026': 2017
+  i_direction: -1
+  i_increment: 50
   
 # Tax value limitation reduction rate, SALT (i.e. percentage point diference between maximum statutory tax value and target value) 
 salt_limit_tax_value_rate:
-  value: 0
+  value:
+    '2014': 0
+    '2026': 0.1351351
 
 # Tax value limitation reduction rate, non-SALT (i.e. percentage point diference between maximum statutory tax value and target value) 
 limit_tax_value_rate:
-  value: 0
-  
+  value:
+    '2014': 0
+    '2026': 0.05405405
