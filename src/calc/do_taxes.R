@@ -282,6 +282,9 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # QBI deduction
     bind_cols(calc_qbi_ded(.)) %>% 
     
+    # Other below-the-line deductions 
+    bind_cols(calc_below_ded(.)) %>% 
+    
     # Taxable income and itemizer status
     bind_cols(calc_txbl_inc(.)) %>%
     mutate(item_ded = item_ded_limited) %>%  # Update value of itemized deductions to reflect any tax value limitation 

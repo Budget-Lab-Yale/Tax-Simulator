@@ -34,6 +34,9 @@ calc_amt = function(tax_unit, fill_missings = F) {
     'ded',                # (dbl)  itemized deductions if itemizing, else standard deduction
     'std_ded',            # (dbl)  value of standard deduction 
     'qbi_ded',            # (dbl)  value of deduction for Qualified Business Income
+    'tip_ded',            # (dbl) value of below-the-line tip deduction
+    'ot_ded',             # (dbl) value of below-the-line overtime deduction
+    'senior_ded',         # (dbl) value of below-the-line extra senior deduction
     'itemizing',          # (bool) whether filer itemizes deductions
     'salt_item_ded',      # (dbl)  itemized deduction for state and local taxes
     'misc_item_ded',      # (dbl)  miscellaneous itemized deductions
@@ -79,7 +82,10 @@ calc_amt = function(tax_unit, fill_missings = F) {
       amt_gross_inc = agi -
                       ded -
                       (pe_ded * (amt.pe_pref == 0)) - 
-                      qbi_ded + 
+                      qbi_ded - 
+                      tip_ded - 
+                      ot_ded - 
+                      senior_ded + 
                       if_else(itemizing, 
                               salt_item_ded + 
                               misc_item_ded - 

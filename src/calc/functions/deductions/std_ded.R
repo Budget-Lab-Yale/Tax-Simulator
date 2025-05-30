@@ -51,11 +51,7 @@ calc_std_ded = function(tax_unit, fill_missings = F) {
       age_bonus2  = !is.na(age2) & (age2 >= 65),
       n_bonuses   = age_bonus1 + age_bonus2 + blind1 + (!is.na(blind2) & blind2),
       
-      # Temporary bonus for elderly filers only
-      elderly_bonus = (age_bonus1 + age_bonus2) * std.bonus_elderly_temp_value,
-      elderly_bonus = pmax(0, elderly_bonus - (.04 * pmax(0, agi-std.bonus_elderly_temp_thresh))),
-      
-      bonus_value = std.bonus * n_bonuses + elderly_bonus,
+      bonus_value = std.bonus * n_bonuses,
       
       # Calculate nondependent total standard deduction
       std_ded = std.value + bonus_value + std.bonus_other,

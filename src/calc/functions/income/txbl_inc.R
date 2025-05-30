@@ -34,6 +34,9 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
     'salt_item_ded', # (dbl) value of SALT deduction (post-limitation)
     'pe_ded',        # (dbl) value of deduction for personal exemptions 
     'qbi_ded',       # (dbl) value of deduction for Qualified Business Income
+    'tip_ded',       # (dbl) value of below-the-line tip deduction
+    'ot_ded',        # (dbl) value of below-the-line overtime deduction
+    'senior_ded',    # (dbl) value of below-the-line extra senior deduction
     
     # Tax law attributes
     'item.limit_tax_value_thresh',     # (dbl) tax value limitation reduction threshold
@@ -59,8 +62,13 @@ calc_txbl_inc = function(tax_unit, fill_missings = F) {
       itemizing = item_ded_limited > std_ded,
       ded       = pmax(std_ded, item_ded_limited),
       
+      # Allocate senior deduction depending on itemizing status
+      std_ded    = std_ded + if_else(!itemizing, senior_ded, 0), 
+      ded        = ded     + if_else(!itemizing, senior_ded, 0), 
+      senior_ded = itemizing * senior_ded,
+      
       # Calculate taxable income
-      txbl_inc = pmax(0, agi - ded - pe_ded - qbi_ded)
+      txbl_inc = pmax(0, agi - ded - pe_ded - qbi_ded - tip_ded - ot_ded - senior_ded)
       
     ) %>% 
     

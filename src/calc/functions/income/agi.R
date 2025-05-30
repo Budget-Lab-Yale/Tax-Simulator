@@ -30,10 +30,6 @@ calc_agi = function(tax_unit, fill_missings = F) {
     
     # Tax unit attributes
     'wages',           # (dbl) W2 wages after pre-tax deductions
-    'tips',            # (dbl) tipped income included in wages
-    'tips1',           # (dbl) tipped income included in wages, secondary earner
-    'tips2',           # (dbl) tipped income included in wages, primary earner
-    'ot',              # (dbl) FLSA-eligible overtime income included in wages
     'txbl_int',        # (dbl) taxable interest income 
     'exempt_int',      # (dbl) tax-exempt interest income
     'div_ord',         # (dbl) non-qualified dividend income
@@ -78,15 +74,10 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'agi.sl_po_range',            # (int) MAGI phaseout range for student loan interest deduction
     'agi.tuition_ded_limit',      # (int) limit on tuition and feeds deduction 
     'agi.dpad_limit',             # (int) limit on domestic production activities deduction
-    'agi.tip_deduction',          # (int) whether tips are deductible from gross income
-    'agi.tip_deduction_lh',       # (int) whether tips deduction is limited to leisure and hospitality workers only
-    'agi.ot_deduction',           # (int) whether FLSA-eligible overtime pay is deductible from gross income
-    'agi.ot_deduction_cap',       # (int) maximum deductible OT
-    'agi.ot_deduction_po_thresh', # (int) AGI threshold for OT deduction phaseout
-    'agi.ot_deduction_po_rate',   # (int) phaseout rate for OT deduction
-    'agi.ot_deduction_half',      # (int) OT deduction applying to only the "half" of "time and a half"
-    'agi.auto_int_limit',         # (int) Maximum amount of auto loan interest deductible from gross income
-    'agi.auto_int_po_thresh'      # (int) Threshold above which auto loan interest deduction begins to phase out
+    'char.above_limit',           # (int) maximum deductible above-the-line charitable contributions
+    'agi.auto_int_ded_limit',     # (int) maximum amount of auto loan interest deductible from gross income
+    'agi.auto_int_ded_po_thresh', # (int) threshold above which auto loan interest deduction begins to phase out
+    'agi.auto_int_ded_po_rate'    # (int) phaseout rate for auto loan interest deduction
   )
   
   tax_unit %>% 
@@ -114,15 +105,10 @@ calc_agi = function(tax_unit, fill_missings = F) {
                   other_inc - 
                   new_nols,
       
-      # Add back excess business losses (6% is calibrated to JCT's score)
-      excess_bus_loss = (r.bus_loss < 0.06) * pmax(0, -pt - agi.bus_loss_limit),
+      # Add back excess business losses (10% is calibrated to JCT's score)
+      excess_bus_loss = (r.bus_loss < 0.1) * pmax(0, -pt - agi.bus_loss_limit),
       inc_ex_ss       = inc_ex_ss + excess_bus_loss,
 
-      # Calculate tip deduction
-      tips_lh    = tips1 * tips_lh1 + tips2 * tips_lh2, 
-      tips_other = tips - tips_lh,
-      tip_ded    = (tips - tips_other * agi.tip_deduction_lh) * agi.tip_deduction,
-      
       # Calculate above-the-line deductions, excluding student loan interest deduction 
       char_above_ded  = pmin(char.above_limit, char_cash + char_noncash),
       above_ded_ex_sl = ed_exp + 
@@ -134,20 +120,14 @@ calc_agi = function(tax_unit, fill_missings = F) {
                         alimony_exp * alimony_qualifies + 
                         trad_contr_ira +
                         pmin(tuition_ded, agi.tuition_ded_limit) + 
-                        pmin(dpad, agi.dpad_limit) +
-                        tip_ded, 
-      
-      # Calculate overtime deduction
-      magi_ot = inc_ex_ss + gross_ss - above_ded_ex_sl, # Arbitrary stacking order in AGI determination!
-      ot_ded  = pmin(ot * agi.ot_deduction / (1 + (2 * agi.ot_deduction_half)), agi.ot_deduction_cap),
-      ot_ded  = pmax(0, ot_ded - pmax(0, magi_ot - agi.ot_deduction_po_thresh) * agi.ot_deduction_po_rate),
-      
+                        pmin(dpad, agi.dpad_limit),
+
       # Calculate auto loan interest deduction
-      auto_int_ded = pmin(agi.auto_int_limit, auto_int_exp),
-      auto_int_ded = pmax(0, auto_int_ded - 0.2 * pmax(0, magi_ot - agi.auto_int_po_thresh)),
+      magi         = inc_ex_ss + gross_ss - above_ded_ex_sl,
+      auto_int_ded = pmin(agi.auto_int_ded_limit, auto_int_exp),
+      auto_int_ded = pmax(0, auto_int_ded - pmax(0, magi - agi.auto_int_ded_po_thresh) * agi.auto_int_ded_po_rate),
       
-      # Add overtime and auto loan interest deductions to above-the-line deductions
-      above_ded_ex_sl = above_ded_ex_sl + ot_ded + auto_int_ded, 
+      above_ded_ex_sl = above_ded_ex_sl + auto_int_ded,
                       
       # Calculate MAGI for taxable Social Security benefits calculation
       magi_ss = inc_ex_ss - above_ded_ex_sl

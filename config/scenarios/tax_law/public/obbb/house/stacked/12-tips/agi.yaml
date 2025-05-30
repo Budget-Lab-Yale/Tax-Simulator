@@ -1,8 +1,0 @@
----
-
-# Whether tipped income is deductible from gross income
-tip_deduction:
-  value: 
-    '2014': 0
-    '2025': 1
-    '2029': 0

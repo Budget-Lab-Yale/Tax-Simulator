@@ -1,0 +1,10 @@
+---
+
+
+# Maximum deductible tips
+tip_ded_limit:
+  value: 
+    '2014': 0
+    '2025': Inf
+    '2029': 0
+
