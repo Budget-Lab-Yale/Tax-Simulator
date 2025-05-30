@@ -1,0 +1,3 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,excess_growth
+baseline,baseline,,2024:2034,,,,0
+1pp,baseline,,2024:2034,,,,0.01

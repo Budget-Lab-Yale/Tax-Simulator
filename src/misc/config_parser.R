@@ -123,6 +123,11 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     runscript[[paste0('dep.', dep, '.ID')]]      = interface_defaults[[dep]]$default_id
   }
   
+  # Add nonspecified excess growth scenario
+  if (!('excess_growth' %in% colnames(runscript))) {
+    runscript$excess_growth = 0
+  }
+  
   # Subset runscript to specified ID, if supplied
   if (!is.null(scenario_id)) {
     runscript %<>% 
@@ -327,6 +332,9 @@ get_scenario_info = function(id) {
   if (!is.na(runscript_items$mtr_types)) {
     mtr_types = str_split_1(runscript_items$mtr_types, ' ')
   }
+  
+  # Excess growth scenario
+  excess_growth = runscript_items$excess_growth
    
   # Return as named list
   return(list(ID               = id,
@@ -337,7 +345,8 @@ get_scenario_info = function(id) {
               years            = years, 
               dist_years       = dist_years,
               mtr_vars         = mtr_vars,
-              mtr_types        = mtr_types))
+              mtr_types        = mtr_types, 
+              excess_growth    = excess_growth))
 }
 
 
