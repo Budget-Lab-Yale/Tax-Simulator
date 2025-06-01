@@ -144,8 +144,6 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
   output_root = file.path(scenario_info$output_path, if_else(static, 
                                                              'static', 
                                                              'conventional'))
-  # Initial table of NOLs
-  nols = initialize_nols(scenario_info$years)
   
   # Run simulation for all years
   output = list() 
@@ -161,18 +159,8 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
                                baseline_mtrs    = baseline_mtrs, 
                                static_mtrs      = static_mtrs, 
                                indexes          = indexes, 
-                               vat_price_offset = vat_price_offset,
-                               nols             = nols)
-    
-    # Update table of NOLs and write 
-    nols = update_nols(nols   = nols, 
-                       year   = year,
-                       amount = output[[t]]$totals$`1040`$excess_bus_loss) 
+                               vat_price_offset = vat_price_offset)
   }
-  
-  # Write NOLs file
-  nols %>% 
-    write_csv(file.path(output_root, 'totals', 'nols.csv'))
   
   # Write VAT price offset info
   vat_price_offset %>% 
@@ -215,7 +203,7 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
 
 
 run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, 
-                        static_mtrs, indexes, vat_price_offset, nols) {
+                        static_mtrs, indexes, vat_price_offset) {
   
   #----------------------------------------------------------------------------
   # Runs a single year of tax simulation. 
@@ -236,8 +224,6 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
   #                            indexes ; see generate_indexes() 
   #   - vat_price_offset (df): series of price level adjustment factors to 
   #                            reflect introduction of a VAT
-  #   - nols (df)            : tibble of endogeneously calculated net operating 
-  #                            losses to distribute 
   #
   # Returns: list of:
   #  - mtrs (df)     : tibble of marginal tax rates for this year
@@ -279,9 +265,6 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
     # Account for tax law changes manifesting as reporting changes
     do_salt_workaround_baseline() %>% 
 
-    # Allocate net operating losses attributable to some prior-year modeled policy
-    distribute_nols(nols, year) %>% 
-    
     # Adjust Social Security benefits for VAT-driven price level increase
     do_ss_cola(year, vat_price_offset) %>% 
     
