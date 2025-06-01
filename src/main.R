@@ -27,14 +27,14 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'public/obbb/stacked'
+runscript_names  = 'public/obbb/macro'
 scenario_id      = NULL
-local            = 1
+local            = 0
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
-delete_detail    = 1
+delete_detail    = 0
 multicore        = 1
 
 
