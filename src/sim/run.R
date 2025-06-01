@@ -21,6 +21,10 @@ do_scenario = function(ID, baseline_mtrs) {
   #          NULL otherwise.
   #----------------------------------------------------------------------------
   
+  if (globals$multicore != 'scenario') {
+    print(paste0("Running scenario ", "'", ID, "'"))
+  }
+  
   # Get scenario info
   scenario_info = get_scenario_info(ID)
 
@@ -145,21 +149,42 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
                                                              'static', 
                                                              'conventional'))
   
-  # Run simulation for all years
-  output = list() 
-  for (t in seq_along(scenario_info$years)) {
+  # Run simulation for all years (parallel or sequential depending on settings)
+  if (globals$multicore == 'year') {
     
-    year = scenario_info$years[t]
+    # Parallel execution of years
+    output = mclapply(
+      X = scenario_info$years,
+      FUN = function(year) {
+        run_one_year(year             = year,
+                     scenario_info    = scenario_info, 
+                     tax_law          = tax_law,
+                     static           = static,
+                     baseline_mtrs    = baseline_mtrs, 
+                     static_mtrs      = static_mtrs, 
+                     indexes          = indexes, 
+                     vat_price_offset = vat_price_offset)
+      },
+      mc.cores = min(32, detectCores(logical = F))
+    )
+  } else {
     
-    # Run simulation of year 
-    output[[t]] = run_one_year(year             = year,
-                               scenario_info    = scenario_info, 
-                               tax_law          = tax_law,
-                               static           = static,
-                               baseline_mtrs    = baseline_mtrs, 
-                               static_mtrs      = static_mtrs, 
-                               indexes          = indexes, 
-                               vat_price_offset = vat_price_offset)
+    # Sequential execution
+    output = list() 
+    for (t in seq_along(scenario_info$years)) {
+      
+      year = scenario_info$years[t]
+      
+      # Run simulation of year 
+      output[[t]] = run_one_year(year             = year,
+                                 scenario_info    = scenario_info, 
+                                 tax_law          = tax_law,
+                                 static           = static,
+                                 baseline_mtrs    = baseline_mtrs, 
+                                 static_mtrs      = static_mtrs, 
+                                 indexes          = indexes, 
+                                 vat_price_offset = vat_price_offset)
+    }
   }
   
   # Write VAT price offset info
@@ -231,8 +256,11 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
   #                    payroll taxes, `1040` for individual income taxes)
   #----------------------------------------------------------------------------
   
-  print(paste0('Running ', year, ' for scenario ', "'", scenario_info$ID, "'",
-               if_else(static & scenario_info$ID != 'baseline', '(static)', '')))
+  if (globals$multicore != 'year') {
+    print(paste0('Running ', year, ' for scenario ', "'", scenario_info$ID, "'",
+                 if_else(static & scenario_info$ID != 'baseline', '(static)', '')))
+  }
+
   
   
   #--------------------------------

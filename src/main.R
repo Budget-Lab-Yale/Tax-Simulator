@@ -27,15 +27,15 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'public/obbb/macro'
+runscript_names  = 'tests/parallel_years'
 scenario_id      = NULL
-local            = 0
+local            = 1
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
 delete_detail    = 0
-multicore        = 1
+multicore        = 'none'   # one of 'none', 'scenario', or 'year'
 
 
 # Override default runtime args if executed from the command line
@@ -68,7 +68,8 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
     local            = local, 
     vintage          = vintage,
     baseline_vintage = baseline_vintage,
-    pct_sample       = pct_sample
+    pct_sample       = pct_sample, 
+    multicore        = multicore
   )
   
   # Get list of non-baseline scenarios 
@@ -101,7 +102,7 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   }
   
   # Run counterfactual scenarios
-  if (multicore == 1) {
+  if (globals$multicore == 'scenario') {
     mc_out = mclapply(
       X        = counterfactual_ids, 
       FUN      = do_scenario, baseline_mtrs, 
