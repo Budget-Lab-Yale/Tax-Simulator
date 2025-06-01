@@ -35,11 +35,14 @@ generate_indexes = function(macro_root, vat_price_offset) {
                  names_to  = 'series', 
                  values_to = 'value') %>% 
     
-    # Adjust price level for VAT
+    # Adjust price level for VAT/excess growth
     left_join(vat_price_offset, by = 'year') %>% 
     mutate(value = if_else(series %in% c('cpi', 'chained_cpi'), 
                            value * replace_na(cpi_factor, 1), 
                            value)) %>% 
+    mutate(value = if_else(series == 'awi', 
+                           value *  (1 + excess_growth), 
+                           value)) %>%   
     select(-cpi_factor, -gdp_deflator_factor) %>% 
     
     # Express in growth rates
@@ -278,6 +281,59 @@ do_capital_adjustment = function(tax_units, yr, vat_price_offset) {
 }
 
 
+do_excess_growth = function(tax_units, yr, excess_growth) {
+  
+  #----------------------------------------------------------------------------
+  # Adjusts intensive-margin variables for excess real GDP growth
+  # 
+  # Parameters:
+  #   - tax_units (df)        : tibble of tax units
+  #   - yr (str)              : simulation year 
+  #   - excess_growth (float) : factor for increased GDP growth for macroeconomic
+  #                             scenarios
+  # 
+  # Returns: tax units tibble with updated values for intensive-margin variables (df). 
+  #----------------------------------------------------------------------------
+  
+  # Read info on variables and the growth factors used in projecting Tax-Data
+  variable_guide = read_csv('./config/variable_guide/baseline.csv')
+  
+  # Get list of variables that grow by GDP (or one of its components) and which grow by OASDI outlays
+  gdp_vars = variable_guide %>% 
+              filter(-is.na(grow_with) & grow_with!='ss' & grow_with!='pensions') %>%
+                select(variable) %>% 
+                  deframe() 
+  oasdi_vars = variable_guide %>% 
+                filter(grow_with=='ss' | grow_with=='pensions') %>%
+                  select(variable) %>% 
+                    deframe()
+
+  # For pensions/Social Security, need to get average age of tax unit to compute wedge factor
+  tax_units %>% 
+    mutate(age_avg = ceil(ifelse(!is.na(age2),((age1 + age2)/2), age1))) %>%
+      mutate(wedge_factor = case_when(
+                              avg_age < 62 ~ 1,
+                              avg_age >= 62 ~ FINISH THIS
+      ) )
+  
+  # Adjust variables
+  tax_units %>%
+    mutate(
+      # For GDP growth variables, multiply by 1 + excess growth
+      across(
+        .cols = gdp_vars, 
+        .fns  = ~ . * (1 + excess_growth)
+      ),
+      # For OASDI growth variables, multiply by wedge factor and 1 + excess_growth
+      across(
+        .cols = oasdi_vars, 
+        .fns  = ~ . * wedge_factor * (1 + excess_growth)
+      ),     
+      
+    ) %>%
+      select(-age) %>%
+        return()
+}
 
 read_microdata = function(root, year) { 
   

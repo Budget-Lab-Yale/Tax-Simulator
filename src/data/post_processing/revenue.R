@@ -47,7 +47,8 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     map(.f = ~ other_root %>% 
           file.path(.x) %>%
           read_csv(show_col_types = F) %>%
-          mutate(revenues_other = rev_excise + rev_customs + rev_misc) %>% 
+          mutate(revenues_other = rev_excise + rev_customs + rev_misc,
+                 rev_corp = (1 + excess_growth) * rev_corp) %>% 
           select(year, revenues_corp_tax = rev_corp, revenues_estate_tax = rev_estate, revenues_other)
     ) %>% 
     bind_rows()

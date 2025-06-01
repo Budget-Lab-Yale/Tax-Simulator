@@ -162,7 +162,8 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
                                static_mtrs      = static_mtrs, 
                                indexes          = indexes, 
                                vat_price_offset = vat_price_offset,
-                               nols             = nols)
+                               nols             = nols,
+                               excess_growth    = excess_growth)
     
     # Update table of NOLs and write 
     nols = update_nols(nols   = nols, 
@@ -215,7 +216,7 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
 
 
 run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, 
-                        static_mtrs, indexes, vat_price_offset, nols) {
+                        static_mtrs, indexes, vat_price_offset, nols, excess_growth) {
   
   #----------------------------------------------------------------------------
   # Runs a single year of tax simulation. 
@@ -238,6 +239,8 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
   #                            reflect introduction of a VAT
   #   - nols (df)            : tibble of endogeneously calculated net operating 
   #                            losses to distribute 
+  #   - excess_growth (float): factor for increased GDP growth for macroeconomic
+  #                            scenarios
   #
   # Returns: list of:
   #  - mtrs (df)     : tibble of marginal tax rates for this year
@@ -286,7 +289,10 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
     do_ss_cola(year, vat_price_offset) %>% 
     
     # Adjust capital income for VAT-drive price level increase
-    do_capital_adjustment(year, vat_price_offset) 
+    do_capital_adjustment(year, vat_price_offset) %>%
+    
+    # Adjust intensive-margin variables for excess real GDP growth %>%
+    do_excess_growth(year, excess_growth) %>%
   
 
   #---------------------------
