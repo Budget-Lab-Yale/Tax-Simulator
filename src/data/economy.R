@@ -112,10 +112,6 @@ do_ss_cola = function(tax_units, yr, vat_price_offset) {
   # Returns: tax units tibble with updated values for gross_ss (df). 
   #----------------------------------------------------------------------------
 
-  # Set random seed
-  set.seed(globals$random_seed)
-  
-  
   # Get relevant Social Security information
   ss = tax_units %>% 
     filter(gross_ss > 0) %>% 
@@ -129,11 +125,11 @@ do_ss_cola = function(tax_units, yr, vat_price_offset) {
       # older earner. Ages are top-coded at 80 so impute above that using 
       # exponential distribution. Assume retirement at age 62. Pretty rough. 
       age = pmax(age1, replace_na(age2, -1)),
-      age = if_else(age == 80, 80 + round(rexp(nrow(.), 1 / 4)), age),  
+      age = if_else(age == 80, 80 + r.oasdi_exp, age),  
       claiming_year = yr - (age - 62),
       
       # For DI recipients, impute claiming year as exponential distribution
-      claiming_year = if_else(di > 0, yr - round(rexp(nrow(.), 1 / 4)) - 1, claiming_year)
+      claiming_year = if_else(di > 0, yr - r.oasdi_exp - 1, claiming_year)
       
     ) %>% 
     select(id, claiming_year, di, oasi)
