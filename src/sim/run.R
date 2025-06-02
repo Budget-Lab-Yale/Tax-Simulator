@@ -165,14 +165,15 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
     output = mclapply(
       X = scenario_info$years,
       FUN = function(year) {
-        run_one_year(year             = year,
-                     scenario_info    = scenario_info, 
-                     tax_law          = tax_law,
-                     static           = static,
-                     baseline_mtrs    = baseline_mtrs, 
-                     static_mtrs      = static_mtrs, 
-                     indexes          = indexes, 
-                     vat_price_offset = vat_price_offset)
+        run_one_year(year                 = year,
+                     scenario_info        = scenario_info, 
+                     tax_law              = tax_law,
+                     static               = static,
+                     baseline_mtrs        = baseline_mtrs, 
+                     static_mtrs          = static_mtrs, 
+                     indexes              = indexes, 
+                     vat_price_offset     = vat_price_offset, 
+                     excess_growth_offset = excess_growth_offset) 
       },
       mc.cores = min(32, detectCores(logical = F))
     )
@@ -185,14 +186,15 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
       year = scenario_info$years[t]
       
       # Run simulation of year 
-      output[[t]] = run_one_year(year             = year,
-                                 scenario_info    = scenario_info, 
-                                 tax_law          = tax_law,
-                                 static           = static,
-                                 baseline_mtrs    = baseline_mtrs, 
-                                 static_mtrs      = static_mtrs, 
-                                 indexes          = indexes, 
-                                 vat_price_offset = vat_price_offset)
+      output[[t]] = run_one_year(year                 = year,
+                                 scenario_info        = scenario_info, 
+                                 tax_law              = tax_law,
+                                 static               = static,
+                                 baseline_mtrs        = baseline_mtrs, 
+                                 static_mtrs          = static_mtrs, 
+                                 indexes              = indexes, 
+                                 vat_price_offset     = vat_price_offset, 
+                                 excess_growth_offset = excess_growth_offset)
     }
   }
   

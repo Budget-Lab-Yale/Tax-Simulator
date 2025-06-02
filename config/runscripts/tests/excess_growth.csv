@@ -1,3 +1,8 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,excess_growth,excess_growth_start_year
 baseline,baseline,,2024:2034,,,,0,2026
 01pp,baseline,,2024:2034,,,,0.001,2026
+02pp,baseline,,2024:2034,,,,0.002,2026
+05pp,baseline,,2024:2034,,,,0.005,2026
+1pp,baseline,,2024:2034,,,,0.01,2026
+2pp,baseline,,2024:2034,,,,0.02,2026
+5pp,baseline,,2024:2034,,,,0.05,2026
