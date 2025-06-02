@@ -35,7 +35,7 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   #   - Estate and gift tax revenues
   #   - Value added tax revenues
   #----------------------------------------------------------------------------
-
+  
   # Read VAT receipts
   revenues_vat = vat_root %>%
     file.path('revenues.csv') %>% 
@@ -63,25 +63,30 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     file.path('revenues.csv') %>% 
     read_csv(show_col_types = F)
   
+  # Read excess growth offset used to adjust nonmodeled revenues 
+  excess_growth_offset = scenario_root %>% 
+    file.path('/supplemental/excess_growth_offset.csv') %>% 
+    read_csv(show_col_types = F)
+  
   totals %>%
     mutate(
       
       # FY receipts: nonwithheld tax plus 75% of current CY withheld tax plus 
       # 25% of previous CY withheld 
       outlays_tax_credits = 0.75 * pmt_refund_withheld + 
-                            0.25 * lag(pmt_refund_withheld) + 
-                            pmt_refund_nonwithheld,
+        0.25 * lag(pmt_refund_withheld) + 
+        pmt_refund_nonwithheld,
       
       revenues_income_tax = 0.75 * pmt_iit_withheld + 
-                            0.25 * lag(pmt_iit_withheld) + 
-                            pmt_iit_nonwithheld,
+        0.25 * lag(pmt_iit_withheld) + 
+        pmt_iit_nonwithheld,
       
       revenues_payroll_tax = 0.75 * pmt_pr_withheld + 
-                             0.25 * lag(pmt_pr_withheld) + 
-                             pmt_pr_nonwithheld,
+        0.25 * lag(pmt_pr_withheld) + 
+        pmt_pr_nonwithheld,
       
       delta_revenues_corp_tax = 0.75 * corp_tax_change +
-                                0.25 * lag(corp_tax_change)
+        0.25 * lag(corp_tax_change)
     ) %>%
     
     
@@ -102,6 +107,10 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
            revenues_corp_tax   = revenues_corp_tax + corporate, 
            revenues_estate_tax = revenues_estate_tax + estate, 
            revenues_vat        = revenues_vat + vat) %>% 
+    
+    # Adjust corporate taxes (assumes other nonmodeled taxes )
+    left_join(excess_growth_offset, by = 'year') %>% 
+    mutate(revenues_corp_tax = revenues_corp_tax * income_factor) %>%
     
     # Drop incomplete year
     filter(year != min(year)) %>%

@@ -6,7 +6,7 @@
 #---------------------------------------------------------
 
 
-generate_indexes = function(macro_root, vat_price_offset) {
+generate_indexes = function(macro_root, vat_price_offset, excess_growth_offset) {
   
   #----------------------------------------------------------------------------
   # Gets growth rates, both historical and projected for this economic 
@@ -14,9 +14,12 @@ generate_indexes = function(macro_root, vat_price_offset) {
   # CPIU, and Average Wage Index.
   # 
   # Parameters:
-  #   - macro_root (str)      : path for Macro-Projections scenario interface
-  #   - vat_price_offset (df) : series of price level adjustment factors to 
-  #                             reflect introduction of a VAT
+  #   - macro_root (str)          : path for Macro-Projections scenario 
+  #                                 interface
+  #   - vat_price_offset (df)     : series of price level adjustment factors to 
+  #                                 reflect introduction of a VAT
+  #   - excess_growth_offset (df) : income adjustment factors reflecting excess 
+  #                                 real GDP growth scenario
   #
   # Returns: tibble of growth rates by series (df). 
   #----------------------------------------------------------------------------
@@ -35,12 +38,16 @@ generate_indexes = function(macro_root, vat_price_offset) {
                  names_to  = 'series', 
                  values_to = 'value') %>% 
     
-    # Adjust price level for VAT
+    # Adjust price level for VAT/excess growth
     left_join(vat_price_offset, by = 'year') %>% 
     mutate(value = if_else(series %in% c('cpi', 'chained_cpi'), 
                            value * replace_na(cpi_factor, 1), 
                            value)) %>% 
-    select(-cpi_factor, -gdp_deflator_factor) %>% 
+    left_join(excess_growth_offset, by = 'year') %>% 
+    mutate(value = if_else(series == 'awi', 
+                           value * income_factor, 
+                           value)) %>%   
+    select(-cpi_factor, -gdp_deflator_factor, -income_factor) %>% 
     
     # Express in growth rates
     group_by(series) %>% 
@@ -102,17 +109,13 @@ do_ss_cola = function(tax_units, yr, vat_price_offset) {
   # 
   # Parameters:
   #   - tax_units (df)        : tibble of tax units
-  #   - yr (str)              : simulation year 
+  #   - yr (int)              : simulation year 
   #   - vat_price_offset (df) : series of price level adjustment factors to 
   #                             reflect introduction of a VAT
   # 
   # Returns: tax units tibble with updated values for gross_ss (df). 
   #----------------------------------------------------------------------------
 
-  # Set random seed
-  set.seed(globals$random_seed)
-  
-  
   # Get relevant Social Security information
   ss = tax_units %>% 
     filter(gross_ss > 0) %>% 
@@ -126,11 +129,11 @@ do_ss_cola = function(tax_units, yr, vat_price_offset) {
       # older earner. Ages are top-coded at 80 so impute above that using 
       # exponential distribution. Assume retirement at age 62. Pretty rough. 
       age = pmax(age1, replace_na(age2, -1)),
-      age = if_else(age == 80, 80 + round(rexp(nrow(.), 1 / 4)), age),  
+      age = if_else(age == 80, 80 + r.oasdi_exp, age),  
       claiming_year = yr - (age - 62),
       
       # For DI recipients, impute claiming year as exponential distribution
-      claiming_year = if_else(di > 0, yr - round(rexp(nrow(.), 1 / 4)) - 1, claiming_year)
+      claiming_year = if_else(di > 0, yr - r.oasdi_exp - 1, claiming_year)
       
     ) %>% 
     select(id, claiming_year, di, oasi)
@@ -189,7 +192,7 @@ do_capital_adjustment = function(tax_units, yr, vat_price_offset) {
   # 
   # Parameters:
   #   - tax_units (df)        : tibble of tax units
-  #   - yr (str)              : simulation year 
+  #   - yr (int)              : simulation year 
   #   - vat_price_offset (df) : series of price level adjustment factors to 
   #                             reflect introduction of a VAT
   # 
@@ -274,6 +277,97 @@ do_capital_adjustment = function(tax_units, yr, vat_price_offset) {
         .fns  = ~ . * (1 + (adjustment_factors$capital_factor - 1) * 0.2) 
       )
     ) %>% 
+    return()
+}
+
+
+
+get_excess_growth_offset = function(excess_growth, start_year, years) {
+  
+  #----------------------------------------------------------------------------
+  # Calculates the amount by which the level of real GDP exceeds its 
+  # baseline value in relative terms, given an excess growth rate and a start
+  # year. 
+  # 
+  # Parameters:
+  #   - excess_growth (dbl) : annual real growth rate in excess of baseline 
+  #   - start_year (int)    : year when excess growth starts
+  #   - years (int[])       : years for which to run simulation
+  #
+  # Returns: tibble of income adjustment factors over time (df). 
+  #----------------------------------------------------------------------------
+  
+  tibble(year = years) %>% 
+    mutate(income_factor = cumprod(1 + if_else(year >= start_year, excess_growth, 0))) %>% 
+    return()
+}
+
+
+
+do_excess_growth = function(tax_units, scenario_info, excess_growth_offset) {
+  
+  #----------------------------------------------------------------------------
+  # Adjusts intensive-margin variables for excess real GDP growth
+  # 
+  # Parameters:
+  #   - tax_units (df)             : tibble of tax units
+  #   - scenario_info (list)       : scenario info object; see get_scenario_info()
+  #   - excess_growth_offset (dbl) : income adjustment factors reflecting  
+  #                                  excess real GDP growth scenario
+  # 
+  # Returns: tax units tibble with updated values for intensive-margin 
+  #          variables (df). 
+  #----------------------------------------------------------------------------
+  
+  # Read info on variables and the growth factors used in projecting Tax-Data
+  variable_guide = scenario_info$interface_paths$`Tax-Data` %>% 
+    file.path('./variable_guide.csv') %>% 
+    read_csv(show_col_types = F)
+  
+  gdp_vars = variable_guide %>% 
+    filter(
+      (variable %in% colnames(tax_units)) & 
+      !is.na(grow_with) & 
+      grow_with != 'ss' & 
+      grow_with != 'pensions'
+    ) %>%
+    select(variable) %>% 
+    deframe()
+  
+  oasdi_vars = variable_guide %>% 
+    filter(
+      (variable %in% colnames(tax_units)) & 
+      (grow_with == 'ss' | grow_with == 'pensions')
+    ) %>%
+    select(variable) %>% 
+    deframe()
+
+  # Adjust variables
+  tax_units %>%
+    left_join(excess_growth_offset, by = 'year') %>% 
+    mutate(
+      
+      # For pensions/Social Security, need to get average age of tax unit to compute wedge factor
+      age_avg = ceil(ifelse(!is.na(age2),((age1 + age2)/2), age1)), 
+      wedge_factor = case_when(
+        age_avg < 62  ~ 1,
+        age_avg >= 62 ~ 1 # FINISH THIS
+      ),
+      
+      # For OASDI growth variables, multiply by wedge factor and adjustment factor
+      across(
+        .cols = all_of(oasdi_vars), 
+        .fns  = ~ . * wedge_factor * income_factor
+      ),   
+      
+      # For GDP growth variables, multiply by income adjustment factor
+      across(
+        .cols = all_of(gdp_vars), 
+        .fns  = ~ . * income_factor
+      )
+      
+    ) %>%
+    select(-age_avg, -wedge_factor, -income_factor) %>%
     return()
 }
 

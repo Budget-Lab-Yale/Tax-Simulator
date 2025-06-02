@@ -132,6 +132,14 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     runscript[[paste0('dep.', dep, '.ID')]]      = interface_defaults[[dep]]$default_id
   }
   
+  # Add nonspecified excess growth scenario
+  if (!('excess_growth' %in% colnames(runscript))) {
+    runscript$excess_growth = 0
+  }
+  if (!('excess_growth_start_year' %in% colnames(runscript))) {
+    runscript$excess_growth_start_year = Inf
+  }
+  
   # Subset runscript to specified ID, if supplied
   if (!is.null(scenario_id)) {
     runscript %<>% 
@@ -200,12 +208,13 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   
   # Precalculate random numbers for consistency across scenarios 
   random_numbers = tibble(
-    r.bus_loss        = runif(length(sample_ids)),  # Excess business loss limitation eligibility rate
-    r.cdctc_takeup    = runif(length(sample_ids)),  # CDCTC takeup rate
-    r.salt_workaround = runif(length(sample_ids)),  # SALT workaround participation rate
-    r.behavior1       = runif(length(sample_ids)),  # Spare random number for use in behavioral modules
-    r.behavior2       = runif(length(sample_ids)),  # Spare random number for use in behavioral modules
-    r.behavior3       = runif(length(sample_ids))   # Spare random number for use in behavioral modules
+    r.bus_loss        = runif(length(sample_ids)),       # Excess business loss limitation eligibility rate
+    r.cdctc_takeup    = runif(length(sample_ids)),       # CDCTC takeup rate
+    r.salt_workaround = runif(length(sample_ids)),       # SALT workaround participation rate
+    r.oasdi_exp       = round(length(sample_ids), 1/4),  # For OASDI claiming year imputation in do_ss_cola()  
+    r.behavior1       = runif(length(sample_ids)),       # Spare random number for use in behavioral modules
+    r.behavior2       = runif(length(sample_ids)),       # Spare random number for use in behavioral modules
+    r.behavior3       = runif(length(sample_ids))        # Spare random number for use in behavioral modules
   )
   
   # Specifiy microdata output variable
@@ -342,17 +351,23 @@ get_scenario_info = function(id) {
   if (!is.na(runscript_items$mtr_types)) {
     mtr_types = str_split_1(runscript_items$mtr_types, ' ')
   }
+  
+  # Excess growth scenario
+  excess_growth            = runscript_items$excess_growth
+  excess_growth_start_year = runscript_items$excess_growth_start_year
    
   # Return as named list
-  return(list(ID               = id,
-              output_path      = output_root,
-              interface_paths  = interface_paths,
-              tax_law_id       = tax_law_id,
-              behavior_modules = behavior_modules, 
-              years            = years, 
-              dist_years       = dist_years,
-              mtr_vars         = mtr_vars,
-              mtr_types        = mtr_types))
+  return(list(ID                       = id,
+              output_path              = output_root,
+              interface_paths          = interface_paths,
+              tax_law_id               = tax_law_id,
+              behavior_modules         = behavior_modules, 
+              years                    = years, 
+              dist_years               = dist_years,
+              mtr_vars                 = mtr_vars,
+              mtr_types                = mtr_types, 
+              excess_growth            = excess_growth, 
+              excess_growth_start_year = excess_growth_start_year))
 }
 
 

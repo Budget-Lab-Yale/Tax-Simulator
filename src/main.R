@@ -27,15 +27,15 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'tests/parallel_years'
+runscript_names  = 'tests/new_baseline'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
-delete_detail    = 0
-multicore        = 'none'   # one of 'none', 'scenario', or 'year'
+delete_detail    = 1
+multicore        = 'year'   # one of 'none', 'scenario', or 'year'
 
 
 # Override default runtime args if executed from the command line
