@@ -105,13 +105,10 @@ mort_bal_limit_mfs:
 mort_int_limit:
   value: Inf
 
-# Whether deductions for non-primary residences are allowed
+# Wwhether mortgage interest for non-primary residences is deductible
 mort_int_non_prim:
   value: 1
 
-prim_mort_share:
-  value: 1
-  
 # Whether auto loan interest is deductible from taxable income
 auto_int_deduction:
   value: 

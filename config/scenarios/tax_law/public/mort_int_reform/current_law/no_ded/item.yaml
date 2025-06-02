@@ -1,0 +1,7 @@
+---
+
+# Maximum deductible mortgage interest
+mort_int_limit:
+  value: 
+    '2014': Inf
+    '2026': 0

@@ -1,6 +1,0 @@
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2024:2035,2026,,
-tcja,private/mort_int_reform/tcja/ext,,2024:2035,2026,,
-no_ded,private/mort_int_reform/tcja/no_ded,,2024:2035,2026,,
-10k,private/mort_int_reform/tcja/10k,,2024:2035,2026,,
-20k,private/mort_int_reform/tcja/20k,,2024:2035,2026,,

@@ -1,0 +1,7 @@
+---
+
+# Whether mortgage interest for non-primary residences is deductible
+mort_int_non_prim:
+  value: 
+    '2014': 1
+    '2026': 0

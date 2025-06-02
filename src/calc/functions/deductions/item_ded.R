@@ -154,7 +154,7 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
       mort_int_item_ded = (first_mort_int + second_mort_int) * deductible_share,  
       
       # Apply limitation based on residence
-      mort_int_item_ded = mort_int_item_ded * if_else(item.mort_int_non_prim == 1, 1, item.prim_mort_share),
+      mort_int_item_ded = mort_int_item_ded * if_else(item.mort_int_non_prim == 1, 1, prim_mort_share),
       
       # Then, apply overall limit
       mort_int_item_ded = pmin(item.mort_int_limit, mort_int_item_ded),
