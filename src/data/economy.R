@@ -304,13 +304,14 @@ get_excess_growth_offset = function(excess_growth, start_year, years) {
 
 
 
-do_excess_growth = function(tax_units, excess_growth_offset) {
+do_excess_growth = function(tax_units, scenario_info, excess_growth_offset) {
   
   #----------------------------------------------------------------------------
   # Adjusts intensive-margin variables for excess real GDP growth
   # 
   # Parameters:
   #   - tax_units (df)             : tibble of tax units
+  #   - scenario_info (list)       : scenario info object; see get_scenario_info()
   #   - excess_growth_offset (dbl) : income adjustment factors reflecting  
   #                                  excess real GDP growth scenario
   # 
@@ -319,7 +320,9 @@ do_excess_growth = function(tax_units, excess_growth_offset) {
   #----------------------------------------------------------------------------
   
   # Read info on variables and the growth factors used in projecting Tax-Data
-  variable_guide = read_csv('./config/variable_guide/baseline.csv', show_col_types = F)
+  variable_guide = scenario_info$interface_paths$`Tax-Data` %>% 
+    file.path('./variable_guide.csv') %>% 
+    read_csv(show_col_types = F)
   
   gdp_vars = variable_guide %>% 
     filter(
