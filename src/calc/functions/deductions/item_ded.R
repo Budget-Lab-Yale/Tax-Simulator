@@ -48,6 +48,7 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
     'second_mort_year', # (dbl) year when incurred secondary mortgage
     'first_mort_int',   # (dbl) interest paid this year on first mortgage 
     'second_mort_int',  # (dbl) interest paid this year on second mortgage
+    'prim_mort_share',  # (dbl) share of mortgage interest attributable to primary residence mortgage
     'inv_int_exp',      # (dbl) qualifying investment interest expense 
     'auto_int_exp',     # (dbl) auto loan interest expense
     'char_cash',        # (dbl) charitable contributions made in cash
@@ -65,8 +66,7 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
     'item.mort_bal_limit_years[]',  # (int[]) year ranges mapping to mortgage balance limitations, specified in increasing order
     'item.mort_bal_limit[]',        # (int[]) limitations on deductible mortgage interest based on mortgage balance
     'item.mort_int_limit',          # (int)   maximum deductible mortgage interest
-    'item.mort_int_non_prim',       # (int)   whether deductions for non-primary residences are allowed
-    'item.prim_mort_share',         # (int)
+    'item.mort_int_non_prim',       # (int)   whether mortgage interest for non-primary residences is deductible
     'item.auto_int_deduction',      # (int)   whether auto loan interest is deductible from taxable income
     'item.casualty_limit',          # (int)   maximum deductible casualty and loss expenses
     'item.misc_floor_agi',          # (dbl)   AGI floor for "miscellaneous" itemized deductions
@@ -152,7 +152,9 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
       # Apply balance limit
       deductible_share  = pmin(1, bal_limit / (first_mort_bal + second_mort_bal)),
       mort_int_item_ded = (first_mort_int + second_mort_int) * deductible_share,  
-      mort_int_item_ded = if_else(item.mort_int_non_prim == 1, mort_int_item_ded, mort_int_item_ded * item.prim_mort_share),
+      
+      # Apply limitation based on residence
+      mort_int_item_ded = mort_int_item_ded * if_else(item.mort_int_non_prim == 1, 1, item.prim_mort_share),
       
       # Then, apply overall limit
       mort_int_item_ded = pmin(item.mort_int_limit, mort_int_item_ded),
