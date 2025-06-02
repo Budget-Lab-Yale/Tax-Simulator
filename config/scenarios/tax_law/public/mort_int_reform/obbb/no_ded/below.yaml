@@ -1,0 +1,30 @@
+---
+
+
+# Maximum deductible tips
+tip_ded_limit:
+  value: 
+    '2014': 0
+    '2025': Inf
+    '2029': 0
+    
+# Whether OT deduction applies only to the "half" of "time and a half"
+ot_ded_half:
+  value:
+    '2014': 0
+    '2025': 1
+    '2029': 0
+    
+# Maximum deductible OT
+ot_ded_limit:
+  value:
+    '2014': 0
+    '2025': Inf
+    '2029': 0
+
+# Senior bonus deduction value
+senior_ded_value:
+  value: 
+    '2014': 0
+    '2025': 4000
+    '2029': 0
