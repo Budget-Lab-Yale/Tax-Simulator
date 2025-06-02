@@ -184,6 +184,11 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     }
   }
   
+  # Confirm that user has supplied valid multicore argument
+  if (!(multicore %in% c('none', 'scenario', 'year'))) {
+    stop("Invalid argument for 'multicore' runtime parameter")
+  }
+  
   # Tax unit ID in sample
   sample_ids = interface_paths %>% 
     filter(interface == 'Tax-Data') %>%
