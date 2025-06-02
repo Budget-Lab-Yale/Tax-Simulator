@@ -48,7 +48,6 @@ calc_agi = function(tax_unit, fill_missings = F) {
     'farm',            # (dbl) net farm income (Sch. F)
     'ui',              # (dbl) gross unemployment benefits
     'other_inc',       # (dbl) all other income sources: NOLs, gambling, debt cancellation, etc. See Sch. 1
-    'new_nols',        # (dbl) endogenously calculated, policy driven NOLs
     'ed_exp',          # (dbl) educator expenses
     'hsa_contr',       # (dbl) pretax contributions to an HSA
     'liab_seca_er',    # (dbl) "employer"-side SECA liability
@@ -102,12 +101,12 @@ calc_agi = function(tax_unit, fill_missings = F) {
                   sch_e + 
                   farm +
                   ui +
-                  other_inc - 
-                  new_nols,
+                  other_inc,
       
-      # Add back excess business losses (10% is calibrated to JCT's score)
+      # Calcualte excess business losses. (10% is calibrated to JCT's score.)
+      # (Excess losses are NOT denied in this model. Rather, we calculate excess
+      # losses for use as input into off-model estimate.) 
       excess_bus_loss = (r.bus_loss < 0.1) * pmax(0, -pt - agi.bus_loss_limit),
-      inc_ex_ss       = inc_ex_ss + excess_bus_loss,
 
       # Calculate above-the-line deductions, excluding student loan interest deduction 
       char_above_ded  = pmin(char.above_limit, char_cash + char_noncash),

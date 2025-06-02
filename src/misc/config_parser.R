@@ -8,7 +8,7 @@
 
 
 parse_globals = function(runscript_name, scenario_id, local, vintage, 
-                         baseline_vintage, pct_sample) {
+                         baseline_vintage, pct_sample, multicore) {
   
   #----------------------------------------------------------------------------
   # Parses data interface versioning requirements and runscript; generates 
@@ -30,6 +30,14 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   #                              baseline run for MTRs and revenue estimates. Of 
   #                              the format YYYYMMDDHHMM. 
   #   - pct_sample (dbl)       : share of records used in simulation 
+  #   - multicore (str)        : dimension across which to parallelize code. One
+  #                              of three values: 'none', 'scenario', or 'year'. 
+  #                              Given enough cores, choose the dimension with 
+  #                              the largest N (generally 'year'). But note that
+  #                              some behavioral feedback modules require
+  #                              sequential calculation of year, in which case
+  #                              'year' is not a valid option and will result in
+  #                              a race condition. Always review before running!
   #
   # Returns: list of 8:
   #   - random_numbers (df)  : tibble of random numbers used across simulations
@@ -41,6 +49,7 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   #   - sample_ids (int[])   : vector of tax unit IDs comprising the
   #                            sample population (all IDs for 100%)
   #   - detail_vars (str[])  : vector of microdata output column names
+  #   - multicore (str)      : parallelization setting (see arguments)
   #----------------------------------------------------------------------------
   
   # Set random seed 
@@ -183,6 +192,11 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     }
   }
   
+  # Confirm that user has supplied valid multicore argument
+  if (!(multicore %in% c('none', 'scenario', 'year'))) {
+    stop("Invalid argument for 'multicore' runtime parameter")
+  }
+  
   # Tax unit ID in sample
   sample_ids = interface_paths %>% 
     filter(interface == 'Tax-Data') %>%
@@ -231,7 +245,8 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
               baseline_root   = baseline_root,
               pct_sample      = pct_sample,
               sample_ids      = sample_ids, 
-              detail_vars     = detail_vars))
+              detail_vars     = detail_vars,
+              multicore       = multicore))
 }
 
 
