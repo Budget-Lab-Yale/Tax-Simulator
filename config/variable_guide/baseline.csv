@@ -4,8 +4,8 @@ weight,record weight,imputed,NA,NA
 filer,whether tax unit filed tax return,imputed,NA,NA
 dep_status,whether filer is a dependent,puf,DSI,NA
 filing_status,filing status,puf,MARS,NA
-male1,whether primary filer is male	imputed,NA,NA
-male2,whether secondary filer is male	imputed,NA,NA
+male1,whether primary filer is male,imputed,NA,NA
+male2,whether secondary filer is male,imputed,NA,NA
 age1,age of primary filer,imputed,NA,NA
 age2,age of secondary filer,imputed,NA,NA
 blind1,whether primary filer is blind,imputed,NA,NA
