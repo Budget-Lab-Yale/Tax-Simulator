@@ -126,6 +126,8 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
       # pre-1988 mortgages are unlimited, 1988-2017 mortgages above $1M are limited,
       # and post-2017 mortgages above $750K are limited. First, we assign limitations
       # to mortgages based on year incurred:
+      first_mort_year = Inf,
+      second_mort_year = Inf,
       across(.cols  = c(first_mort_year, second_mort_year),
              .fns   = ~ case_when(
                           is.na(.)                        ~ Inf,
