@@ -1,7 +1,0 @@
----
-
-# Whether FLSA-eligible overtime income is exempt from payroll tax
-ot_exempt:
-  value:
-    '2014': 0
-    '2025': 1

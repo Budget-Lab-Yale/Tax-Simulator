@@ -27,7 +27,7 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'tests/new_baseline'
+runscript_names  = 'public/mort_int_reform/current_policy'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
