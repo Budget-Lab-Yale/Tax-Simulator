@@ -15,7 +15,10 @@ exempt_single:
     '2014': 50600
     '2018': 70300
   i_measure: default
-  i_base_year: default
+  i_base_year: 
+    '2014': 2011
+    '2018': 2017
+    '2026': 2025
   i_direction: default
   i_increment: default
 
@@ -25,7 +28,10 @@ exempt_married:
     '2014': 78750
     '2018': 109400
   i_measure: default
-  i_base_year: default
+  i_base_year: 
+    '2014': 2011
+    '2018': 2017
+    '2026': 2025
   i_direction: default
   i_increment: default
 
