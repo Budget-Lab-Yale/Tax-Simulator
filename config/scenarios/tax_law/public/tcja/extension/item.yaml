@@ -16,7 +16,7 @@ mort_bal_limit_years:
 mort_bal_limit_single:
   value:
     '2014': [Inf, 1000000]
-    '2018': [Inf, 1000000, 375000]
+    '2018': [Inf, 1000000, 750000]
 
 # Limitations on deductible mortgage interest based on mortgage balance, joint filers
 mort_bal_limit_married:

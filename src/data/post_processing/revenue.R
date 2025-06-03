@@ -63,10 +63,18 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     file.path('revenues.csv') %>% 
     read_csv(show_col_types = F)
   
-  # Read excess growth offset used to adjust nonmodeled revenues 
-  excess_growth_offset = scenario_root %>% 
+  # Read excess growth offset (on CY basis) and convert to FY basis
+  excess_growth_offset_cy = scenario_root %>% 
     file.path('/supplemental/excess_growth_offset.csv') %>% 
     read_csv(show_col_types = F)
+  
+  # Convert CY excess growth offset to FY basis using 75%/25% weighting
+  # FY factor = 75% of current CY factor + 25% of previous CY factor
+  excess_growth_offset_fy = excess_growth_offset_cy %>%
+    mutate(
+      income_factor_fy = 0.75 * income_factor + 0.25 * lag(income_factor, default = 1)
+    ) %>%
+    select(year, income_factor_fy)
   
   totals %>%
     mutate(
@@ -101,16 +109,14 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     left_join(deltas_cost_recovery, by = 'year') %>% 
     mutate(revenues_corp_tax = revenues_corp_tax + delta_revenues_cost_recovery) %>% 
     
-    # Join off-model estimates (deltas)
+    # Join off-model estimates (deltas) and aggregate, applying excess growth offset where necessary
     left_join(deltas_off_model, by = 'year') %>% 
-    mutate(revenues_income_tax = revenues_income_tax + individual,  
-           revenues_corp_tax   = revenues_corp_tax + corporate, 
+    left_join(excess_growth_offset_fy, by = 'year') %>% 
+    mutate(revenues_payroll_tax = revenues_payroll_tax + (payroll * income_factor_fy),
+           revenues_income_tax = revenues_income_tax + (individual * income_factor_fy),  
+           revenues_corp_tax   = (revenues_corp_tax + corporate) * income_factor_fy, 
            revenues_estate_tax = revenues_estate_tax + estate, 
            revenues_vat        = revenues_vat + vat) %>% 
-    
-    # Adjust corporate taxes (assumes other nonmodeled taxes )
-    left_join(excess_growth_offset, by = 'year') %>% 
-    mutate(revenues_corp_tax = revenues_corp_tax * income_factor) %>%
     
     # Drop incomplete year
     filter(year != min(year)) %>%
