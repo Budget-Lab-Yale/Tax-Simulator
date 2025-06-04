@@ -78,7 +78,8 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
     'item.pease_max_share',         # (dbl)   maximum Pease phaseout, expressed as percent of tentative total deductions
     'item.limit',                   # (int)   maximum value of itemized deductions,
     'item.salt_floor',              # (int)   Minimum value of SALT deduction
-    'item.salt_floor_thresh'        # (int)   Income above which SALT deduction phases out towards the floor
+    'item.salt_floor_thresh',       # (int)   Income above which SALT deduction phases out towards the floor
+    'item.salt_po_rate'             # (int)   Rate at which SALT deduction phases out towards the floor
   )
   
   
@@ -113,7 +114,7 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
       
       # Calculate deduction for state and local taxes, limited if applicable
       salt_item_ded = pmin(item.salt_limit, salt_inc_sales + salt_prop + salt_pers),
-      salt_item_ded = pmax(item.salt_floor, salt_item_ded - .3 * pmax(0, agi - item.salt_floor_thresh)),
+      salt_item_ded = pmax(item.salt_floor, salt_item_ded - item.salt_po_rate * pmax(0, agi - item.salt_floor_thresh)),
       
       #----------
       # Interest 

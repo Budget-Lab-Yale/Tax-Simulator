@@ -73,6 +73,10 @@ salt_workaround_allowed:
 salt_workaround_share:
   value: 1
 
+# Rate at which SALT deduction phases out towards the floor
+salt_po_rate:
+  value: 0.3
+
 # Years after which mortgage interest deduction is limited based on mortgage balance. Maps to mort_bal_limit 
 mort_bal_limit_years:
   value: 
