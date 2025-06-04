@@ -31,7 +31,7 @@ exempt_married:
   i_base_year: 
     '2014': 2011
     '2018': 2017
-    '2026': 2025default
+    '2026': 2025
   i_direction: default
   i_increment: default
 
