@@ -27,7 +27,7 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'public/mort_int_reform/current_policy'
+runscript_names  = 'public/obbb/house/stacked'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
@@ -35,7 +35,7 @@ pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
 delete_detail    = 1
-multicore        = 'year'   # one of 'none', 'scenario', or 'year'
+multicore        = 'scenario'   # one of 'none', 'scenario', or 'year'
 
 
 # Override default runtime args if executed from the command line
