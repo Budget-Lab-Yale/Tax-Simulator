@@ -1,0 +1,12 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2024:2035,2026,,
+10,public/mort_int_reform/salt/10,,2024:2035,2026,,
+10_repeal,public/mort_int_reform/salt/10_repeal,,2024:2035,2026,,
+20,public/mort_int_reform/salt/20,,2024:2035,2026,,
+20_repeal,public/mort_int_reform/salt/20_repeal,,2024:2035,2026,,
+30,public/mort_int_reform/salt/30,,2024:2035,2026,,
+30_repeal,public/mort_int_reform/salt/30_repeal,,2024:2035,2026,,
+40,public/mort_int_reform/salt/40,,2024:2035,2026,,
+40_repeal,public/mort_int_reform/salt/40_repeal,,2024:2035,2026,,
+50,public/mort_int_reform/salt/50,,2024:2035,2026,,
+50_repeal,public/mort_int_reform/salt/50_repeal,,2024:2035,2026,,

@@ -1,6 +1,5 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2024:2035,2026,,
-tcja_ext,public/mort_int_reform/current_policy/tcja_ext,,2024:2035,2026,,
+baseline,public/mort_int_reform/current_policy/tcja_ext,,2024:2035,2026,,
 primary,public/mort_int_reform/current_policy/primary,,2024:2035,2026,,
 20k,public/mort_int_reform/current_policy/20k,,2024:2035,2026,,
 10k,public/mort_int_reform/current_policy/10k,,2024:2035,2026,,
