@@ -75,13 +75,14 @@ do_scenario = function(ID, baseline_mtrs) {
   # Run simulation with behavioral feedback if modules are specified
   static_only = length(scenario_info$behavior_modules) == 0
   if (!static_only) {
-    run_sim(scenario_info    = scenario_info,
-            tax_law          = tax_law, 
-            static           = F,
-            baseline_mtrs    = baseline_mtrs, 
-            static_mtrs      = static_mtrs, 
-            indexes          = indexes,
-            vat_price_offset = vat_price_offset)
+    run_sim(scenario_info        = scenario_info,
+            tax_law              = tax_law, 
+            static               = F,
+            baseline_mtrs        = baseline_mtrs, 
+            static_mtrs          = static_mtrs, 
+            indexes              = indexes,
+            vat_price_offset     = vat_price_offset, 
+            excess_growth_offset = excess_growth_offset)
   
   # Else, for static-only counterfactual runs, copy static runs to scenario's  
   # conventional folder (baseline only has a static subfolder by definition)
