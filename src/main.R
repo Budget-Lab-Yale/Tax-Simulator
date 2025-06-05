@@ -27,7 +27,7 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'public/obbb/house/stacked'
+runscript_names  = 'public/growth_exercise/all_rev_test'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
@@ -35,7 +35,7 @@ pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
 delete_detail    = 1
-multicore        = 'scenario'   # one of 'none', 'scenario', or 'year'
+multicore        = 'year'   # one of 'none', 'scenario', or 'year'
 
 
 # Override default runtime args if executed from the command line

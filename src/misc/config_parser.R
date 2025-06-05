@@ -139,6 +139,9 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   if (!('excess_growth_start_year' %in% colnames(runscript))) {
     runscript$excess_growth_start_year = Inf
   }
+  if (!('excess_growth_all_rev' %in% colnames(runscript))) {
+    runscript$excess_growth_all_rev = 0
+  }
   
   # Subset runscript to specified ID, if supplied
   if (!is.null(scenario_id)) {
@@ -355,6 +358,7 @@ get_scenario_info = function(id) {
   # Excess growth scenario
   excess_growth            = runscript_items$excess_growth
   excess_growth_start_year = runscript_items$excess_growth_start_year
+  excess_growth_all_rev    = runscript_items$excess_growth_all_rev
    
   # Return as named list
   return(list(ID                       = id,
@@ -367,7 +371,8 @@ get_scenario_info = function(id) {
               mtr_vars                 = mtr_vars,
               mtr_types                = mtr_types, 
               excess_growth            = excess_growth, 
-              excess_growth_start_year = excess_growth_start_year))
+              excess_growth_start_year = excess_growth_start_year, 
+              excess_growth_all_rev    = excess_growth_all_rev))
 }
 
 

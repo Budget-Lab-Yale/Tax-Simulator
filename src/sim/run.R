@@ -225,11 +225,12 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
   totals_pr %>%  
     left_join(totals_1040, by = 'year') %>% 
     calc_receipts(
-      scenario_root      = output_root, 
-      vat_root           = scenario_info$interface_paths$`Value-Added-Tax-Model`,
-      other_root         = scenario_info$interface_paths$`Macro-Projections`,
-      cost_recovery_root = scenario_info$interface_paths$`Cost-Recovery-Simulator`,
-      off_model_root     = scenario_info$interface_paths$`Off-Model-Estimates`
+      scenario_root         = output_root, 
+      vat_root              = scenario_info$interface_paths$`Value-Added-Tax-Model`,
+      other_root            = scenario_info$interface_paths$`Macro-Projections`,
+      cost_recovery_root    = scenario_info$interface_paths$`Cost-Recovery-Simulator`,
+      off_model_root        = scenario_info$interface_paths$`Off-Model-Estimates`, 
+      excess_growth_all_rev = scenario_info$excess_growth_all_rev
     ) 
 
   # Return MTRs
