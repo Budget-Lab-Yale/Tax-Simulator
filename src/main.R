@@ -27,7 +27,7 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'public/growth_exercise/all_rev_test'
+runscript_names  = 'public/obbb/house/excess_growth'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL

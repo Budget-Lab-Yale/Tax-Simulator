@@ -364,13 +364,13 @@ do_excess_growth = function(tax_units, scenario_info, excess_growth_offset) {
       # -- For pensions, we make no adjustments.
       age_avg = ceil(ifelse(!is.na(age2),((age1 + age2)/2), age1)), 
       wedge_factor_oasdi = case_when(
-        age_avg < 60  ~ (1 + scenario_info$excess_growth)^(-min(year - scenario_info$start_year, 3))
-        age_avg >= 60 ~ (1 + scenario_info$excess_growth)^(60 - age_avg)
+        age_avg < 60  ~ (1 + scenario_info$excess_growth)^(-min(year - scenario_info$excess_growth_start_year, 3)),
+        age_avg >= 60 ~ (1 + scenario_info$excess_growth)^(60 - age_avg),
         TRUE ~ 1
       ),
       wedge_factor_pension = case_when(
-        age_avg < 60  ~ 1
-        age_avg >= 60 ~ (1 + scenario_info$excess_growth)^(60 - age_avg)
+        age_avg < 60  ~ 1,
+        age_avg >= 60 ~ (1 + scenario_info$excess_growth)^(60 - age_avg),
         TRUE ~ 1
       ),      
       
