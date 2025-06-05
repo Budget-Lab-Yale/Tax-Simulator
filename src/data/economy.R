@@ -364,7 +364,7 @@ do_excess_growth = function(tax_units, scenario_info, excess_growth_offset) {
       # -- For pensions, we make no adjustments.
       age_avg = ceil(ifelse(!is.na(age2),((age1 + age2)/2), age1)), 
       wedge_factor_oasdi = case_when(
-        age_avg < 60  ~ (1 + scenario_info$excess_growth)^(-min(year - scenario_info$excess_growth_start_year, 3)),
+        age_avg < 60  ~ (1 + scenario_info$excess_growth)^(-pmin(year - scenario_info$excess_growth_start_year, 3)),
         age_avg >= 60 ~ (1 + scenario_info$excess_growth)^(60 - age_avg),
         TRUE ~ 1
       ),
@@ -377,11 +377,11 @@ do_excess_growth = function(tax_units, scenario_info, excess_growth_offset) {
       # For OASDI and pension growth variables, multiply by wedge factor and adjustment factor
       across(
         .cols = all_of(oasdi_vars), 
-        .fns  = ~ . * wedge_factor_oasdi * income_factor
+        .fns  = ~ . * pmax(wedge_factor_oasdi * income_factor,1)
       ),   
       across(
         .cols = all_of(pension_vars), 
-        .fns  = ~ . * wedge_factor_pension * income_factor
+        .fns  = ~ . * pmax(wedge_factor_pension * income_factor,1)
       ),        
       
       # For GDP growth variables, multiply by income adjustment factor
