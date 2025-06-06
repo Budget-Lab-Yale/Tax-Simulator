@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,excess_growth,excess_growth_start_year,excess_growth_all_rev,dep.Off-Model-Estimates.vintage,dep.Off-Model-Estimates.ID
+baseline,baseline,,2024:2034,,,,0,2026,0,20250603,cbo_delta
+01pp,baseline,,2024:2034,,,,0.001,2026,0,20250603,cbo_delta
+01pp_all_rev,baseline,,2024:2034,,,,0.001,2026,1,20250603,cbo_delta
