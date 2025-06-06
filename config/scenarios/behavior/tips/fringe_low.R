@@ -58,7 +58,6 @@ do_tips = function(tax_units, ...) {
       ) %>% 
       pull(total_effect)
     
-    print(extensive_margin_increase)
     
     # Calculate the current share of tips to wages for tipped workers
     # This will be used to determine how much wage income converts to tips for newly tipped workers

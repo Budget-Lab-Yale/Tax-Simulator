@@ -159,8 +159,9 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
     )
   
   # Attach AGI bracketed liability variables for post-processing
-  tax_units %<>%
-      bind_cols(
+  
+  suppressMessages(tax_units %<>%
+    bind_cols(
         integrate_rates_brackets(
           df              = .,
           n_brackets      = NULL, 
@@ -170,6 +171,7 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
           output_name     = 'liab_brac', 
           by_bracket      = T
         )
+    )
     )
   
   # Set "corporate tax change", a variable used to measure the off-model 
