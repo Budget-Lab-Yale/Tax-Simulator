@@ -7,7 +7,7 @@
 
 
 calc_receipts = function(totals, scenario_root, vat_root, other_root, 
-                         cost_recovery_root, off_model_root) {
+                         cost_recovery_root, off_model_root, excess_growth_all_rev) {
   
   #----------------------------------------------------------------------------
   # Calculates a scenario's receipts 
@@ -20,11 +20,12 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   #        - pmt_refund_withheld    (dbl) : advance credits paid throughout year
   #        - pmt_pr_nonwithheld     (dbl) : payroll tax paid at time of filing
   #        - pmt_pr_withheld        (dbl) : payroll tax withheld (FICA) or paid quarterly (SECA)  
-  #   - scenario_root      (str) : directory where scenario's data is written
-  #   - vat_root           (str) : directory for VAT revenue for this scenario
-  #   - other_root         (str) : Macro-Projections root (for other taxes)
-  #   - cost_recovery_root (str) : Cost-Recovery-Simulator director for this scenario
-  #   - off_model_root     (str) : directory for miscellaneous off-model deltas for this scenario
+  #   - scenario_root         (str) : directory where scenario's data is written
+  #   - vat_root              (str) : directory for VAT revenue for this scenario
+  #   - other_root            (str) : Macro-Projections root (for other taxes)
+  #   - cost_recovery_root    (str) : Cost-Recovery-Simulator director for this scenario
+  #   - off_model_root        (str) : directory for miscellaneous off-model deltas for this scenario
+  #   - excess_growth_all_rev (int) : whether to apply excess growth to all revenue or just IIT/payroll/corporate taxes
   #
   # Returns:  void, writes a dataframe for the scenario containing values for:
   #   - Fiscal year
@@ -117,6 +118,15 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
            revenues_corp_tax   = (revenues_corp_tax + corporate) * income_factor_fy, 
            revenues_estate_tax = revenues_estate_tax + estate, 
            revenues_vat        = revenues_vat + vat) %>% 
+    
+    # Apply excess growth to non-IIT/payroll/corporate revenues if applicable 
+    mutate(
+      all_rev = excess_growth_all_rev,
+      across(
+        .cols = c(revenues_estate_tax, revenues_vat, revenues_other), 
+        .fns  = ~ . * if_else(all_rev == 1, income_factor_fy, 1)
+      )
+    ) %>% 
     
     # Drop incomplete year
     filter(year != min(year)) %>%

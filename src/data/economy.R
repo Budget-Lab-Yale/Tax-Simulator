@@ -327,9 +327,9 @@ do_excess_growth = function(tax_units, scenario_info, excess_growth_offset) {
   gdp_vars = variable_guide %>% 
     filter(
       (variable %in% colnames(tax_units)) & 
-      !is.na(grow_with) & 
-      grow_with != 'ss' & 
-      grow_with != 'pensions'
+        !is.na(grow_with) & 
+        grow_with != 'ss' & 
+        grow_with != 'pensions'
     ) %>%
     select(variable) %>% 
     deframe()
@@ -337,28 +337,52 @@ do_excess_growth = function(tax_units, scenario_info, excess_growth_offset) {
   oasdi_vars = variable_guide %>% 
     filter(
       (variable %in% colnames(tax_units)) & 
-      (grow_with == 'ss' | grow_with == 'pensions')
+        (grow_with == 'ss')
     ) %>%
     select(variable) %>% 
     deframe()
-
+  
+  pension_vars = variable_guide %>% 
+    filter(
+      (variable %in% colnames(tax_units)) & 
+        (grow_with == 'pensions')
+    ) %>%
+    select(variable) %>% 
+    deframe()
+  
   # Adjust variables
   tax_units %>%
     left_join(excess_growth_offset, by = 'year') %>% 
     mutate(
       
-      # For pensions/Social Security, need to get average age of tax unit to compute wedge factor
+      # For Social Security and pensions, getting cumulative income factor as of
+      # age 60 for the record (mimicking AIME computation) for all records 60 and
+      # over as of current year. If less than 60: 
+      # -- For Social Security, we assume this is SSDI income and that the claiming
+      #    year was 3 years prior (currently a placeholder for average vintage of current
+      #    SSDI claims).
+      # -- For pensions, we make no adjustments.
       age_avg = ceil(ifelse(!is.na(age2),((age1 + age2)/2), age1)), 
-      wedge_factor = case_when(
-        age_avg < 62  ~ 1,
-        age_avg >= 62 ~ 1 # FINISH THIS
+      wedge_factor_oasdi = case_when(
+        age_avg < 60  ~ (1 + scenario_info$excess_growth)^(-pmin(year - scenario_info$excess_growth_start_year, 3)),
+        age_avg >= 60 ~ (1 + scenario_info$excess_growth)^(60 - age_avg),
+        TRUE ~ 1
       ),
+      wedge_factor_pension = case_when(
+        age_avg < 60  ~ 1,
+        age_avg >= 60 ~ (1 + scenario_info$excess_growth)^(60 - age_avg),
+        TRUE ~ 1
+      ),      
       
-      # For OASDI growth variables, multiply by wedge factor and adjustment factor
+      # For OASDI and pension growth variables, multiply by wedge factor and adjustment factor
       across(
         .cols = all_of(oasdi_vars), 
-        .fns  = ~ . * wedge_factor * income_factor
+        .fns  = ~ . * pmax(wedge_factor_oasdi * income_factor,1)
       ),   
+      across(
+        .cols = all_of(pension_vars), 
+        .fns  = ~ . * pmax(wedge_factor_pension * income_factor,1)
+      ),        
       
       # For GDP growth variables, multiply by income adjustment factor
       across(
@@ -367,7 +391,7 @@ do_excess_growth = function(tax_units, scenario_info, excess_growth_offset) {
       )
       
     ) %>%
-    select(-age_avg, -wedge_factor, -income_factor) %>%
+    select(-age_avg, -wedge_factor_oasdi, -wedge_factor_pension, -income_factor) %>%
     return()
 }
 
