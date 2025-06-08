@@ -32,14 +32,14 @@ build_distribution_tables = function(id, baseline_id) {
     
     # Calculate overall averages
     dist_tables[[as.character(yr)]] = microdata %>% 
-      group_by(taxes_included, group = 'Overall') %>% 
+      group_by(indirect_tax_assumption, taxes_included, group = 'Overall') %>% 
       calc_dist_metrics() %>% 
       mutate(group_dimension = 'Overall') %>% 
       
       # Add age cuts 
       bind_rows(
         microdata %>% 
-          group_by(taxes_included, group = age_group) %>% 
+          group_by(indirect_tax_assumption, taxes_included, group = age_group) %>% 
           calc_dist_metrics() %>% 
           mutate(group_dimension = 'Age') 
       ) %>%
@@ -47,17 +47,17 @@ build_distribution_tables = function(id, baseline_id) {
       # Add income quintile cuts  
       bind_rows(
         microdata %>% 
-          group_by(taxes_included, group = replace_na(quintile, 'Negative income')) %>%
+          group_by(indirect_tax_assumption, taxes_included, group = replace_na(quintile, 'Negative income')) %>%
           calc_dist_metrics() %>%
           mutate(group_dimension = 'Income')
       ) %>% 
       
       # Add top income cuts
       bind_rows(
-        microdata %>% group_by(taxes_included, group = top_10) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income'), 
-        microdata %>% group_by(taxes_included, group = top_5)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income'), 
-        microdata %>% group_by(taxes_included, group = top_1)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income'), 
-        microdata %>% group_by(taxes_included, group = top_01) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income')
+        microdata %>% group_by(indirect_tax_assumption, taxes_included, group = top_10) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income'), 
+        microdata %>% group_by(indirect_tax_assumption, taxes_included, group = top_5)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income'), 
+        microdata %>% group_by(indirect_tax_assumption, taxes_included, group = top_1)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income'), 
+        microdata %>% group_by(indirect_tax_assumption, taxes_included, group = top_01) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income')
       ) %>% 
       
       # Add year indicator
@@ -69,7 +69,7 @@ build_distribution_tables = function(id, baseline_id) {
   dist_tables %>% 
     bind_rows() %>% 
     arrange(year, taxes_included) %>% 
-    select(year, taxes_included, group_dimension, everything()) %>% 
+    select(year, indirect_tax_assumption, taxes_included, group_dimension, everything()) %>% 
     write_csv(file.path(globals$output_root, id, 'static/supplemental', paste0('distribution.csv')))
 }
   
@@ -85,7 +85,7 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
   #   - id          (str) : scenario ID
   #   - baseline_id (str) : ID of scenario against which metrics are calculated. 
   #                         For regular tables, this is the actual baseline; for 
-  #                         stacked tables, this is the precedeing scenario
+  #                         stacked tables, this is the preceding scenario
   #   - yr          (int) : year to calculate metrics for
   #   - other_taxes (df)  : tibble of metrics for CIT and VAT (see 
   #                         get_other_taxes())
@@ -119,9 +119,6 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
     ) %>% 
     select(year, id, weight, weight_person, filing_status, age, labor, capital, income = expanded_inc, liab_iit_pr) %>% 
     
-    # Make 3 copies for tax-type inclusion assumptions 
-    expand_grid(taxes_included = c('iit_pr', 'iit_pr_estate', 'iit_pr_estate_cit_vat')) %>% 
-    
     # Join counterfactual reform scenario tax microdata
     left_join(
       file.path(globals$output_root, id, 'static/detail', paste0(yr, '.csv')) %>%
@@ -130,8 +127,14 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
         mutate(liab_iit_pr_reform  = liab_iit_net + liab_pr) %>%
         select(id, income_reform = expanded_inc, liab_iit_pr_reform),
       by = 'id'
+    ) %>% 
+    
+    # Make copies for tax-type inclusion assumptions 
+    expand_grid(
+      indirect_tax_assumption = c('consumption', 'income'), 
+      taxes_included          = c('indirect_iit_pr', 'indirect_iit_pr_estate', 'indirect_iit_pr_estate_cit')
     )
-  
+    
   # Join estate tax data if it exists
   baseline_estate_path = globals$interface_paths %>% 
     filter(ID == globals$interface_path$ID[1], interface == 'Estate-Tax-Distribution') %>%
@@ -180,53 +183,15 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
     ) %>% 
     filter(weight > 0) %>% 
     select(-p_inheritance) %>% 
-    
-    # Join other taxes 
-    left_join(other_taxes, by = 'year') %>%
-    group_by(taxes_included) %>% 
+  
+    # Add inheritance to income for estate tax-inclusive assumption scenarios
     mutate(
-      
-      # Express counterfactual reform variables in baseline dollars to account for VAT
-      across(.cols = ends_with('_reform'), .fns  = ~ . / vat_price_offset),
-      
-      # Add inheritance to income for estate tax-inclusive assumption scenarios
-      income        = income        + inheritance        * (taxes_included %in% c('iit_pr_estate', 'iit_pr_estate_cit_vat')),
-      income_reform = income_reform + inheritance_reform * (taxes_included %in% c('iit_pr_estate', 'iit_pr_estate_cit_vat')),
-      
-      # VAT burden is the loss of real income from higher prices. Some components
-      # of expanded income will rise with prices (e.g. OASDI or capital income),
-      # others won't; compositional differences determine distributional impact
-      liab_vat = income - income_reform,
-    
-      # Allocate corporate tax changes in accordance with assumed labor incidence
-      liab_other_corp_labor      = other_corp_delta    * 1e9 * other_corp_labor_share       * (labor / sum(labor * weight)),
-      liab_other_corp_capital    = other_corp_delta    * 1e9 * (1 - other_corp_labor_share) * (capital / sum(capital * weight)),
-      liab_cost_recovery_labor   = cost_recovery_delta * 1e9 * 0.5                          * (labor / sum(labor * weight)),
-      liab_cost_recovery_capital = cost_recovery_delta * 1e9 * 0.5                          * (capital / sum(capital * weight)),
-      liab_corp                  = liab_other_corp_labor + liab_other_corp_capital + liab_cost_recovery_labor + liab_cost_recovery_capital, 
-      
-      # Calculate liability under each scenario
-      liab = case_when(
-        taxes_included == 'iit_pr'                ~ liab_iit_pr,
-        taxes_included == 'iit_pr_estate'         ~ liab_iit_pr + liab_estate,
-        taxes_included == 'iit_pr_estate_cit_vat' ~ liab_iit_pr + liab_estate
-      ), 
-      liab_reform = case_when(
-        taxes_included == 'iit_pr'                ~ liab_iit_pr_reform,
-        taxes_included == 'iit_pr_estate'         ~ liab_iit_pr_reform + liab_estate_reform,
-        taxes_included == 'iit_pr_estate_cit_vat' ~ liab_iit_pr_reform + liab_estate_reform + liab_corp + liab_vat
-      ), 
-      
-      # Calculate change in tax liability
-      liab_delta = liab_reform - liab, 
-      
-      # Calculate after-tax income in both scenarios
-      ati        = income        - liab,
-      ati_reform = income_reform - liab_reform, 
-      
+      income        = income        + inheritance        * (taxes_included != 'indirect_iit_pr'),
+      income_reform = income_reform + inheritance_reform * (taxes_included != 'indirect_iit_pr')
     ) %>% 
     
     # Add grouping variables
+    group_by(indirect_tax_assumption, taxes_included) %>% 
     arrange(income, .by_group = T) %>% 
     mutate(
       
@@ -234,7 +199,7 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
       income_pctile = cumsum(weight * (income >= 0)) / sum(weight * (income >= 0)), 
       income_pctile = if_else(income < 0, NA, income_pctile), 
       
-      # Quintiles and top shares
+      # Quintiles and top shares (for reporting)
       quintile = case_when(
         income_pctile <= 0.2 ~ 'Quintile 1',
         income_pctile <= 0.4 ~ 'Quintile 2',
@@ -247,7 +212,7 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
       top_1  = if_else(income_pctile > 0.99,  'Top 1%',    NA), 
       top_01 = if_else(income_pctile > 0.999, 'Top 0.1%',  NA),
       
-      # Age group
+      # Age group (for reporting)
       age_group = case_when(
         age < 25 ~ '24 and under',
         age < 30 ~ '25 - 29',
@@ -255,7 +220,88 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
         age < 50 ~ '40 - 49',
         age < 65 ~ '50 - 64',
         T        ~ '65+'
-      )
+      ), 
+      
+      # Income decile (for joining decile-specific tariff adjustment factors)
+      decile = pmax(1, pmin(10, ceiling((income_pctile + 0.01) * 100 / 10))), 
+      decile = if_else(is.na(income_pctile), 1, decile)
+      
+    ) %>% 
+    
+    # Join other taxes 
+    left_join(
+      other_taxes %>% 
+        select(-starts_with('tariff_factor')), 
+      by = 'year'
+    ) %>%
+    
+    # Join decile-specific tariff price level effects
+    left_join(
+      other_taxes %>% 
+        select(year, starts_with('tariff_factor_d')) %>% 
+        pivot_longer(
+          cols            = -year, 
+          names_prefix    = 'tariff_factor_d', 
+          names_to        = 'decile', 
+          names_transform = as.integer, 
+          values_to       = 'tariff_factor'
+        ),
+      by = c('year', 'decile')
+    ) %>%
+    mutate(
+      
+      # Express counterfactual reform variables in baseline dollars to account for indirect tax increases
+      across(.cols = ends_with('_reform'), .fns  = ~ . / (vat_factor * tariff_factor)),
+      
+      # Indirect tax burden is the loss of real income from higher prices. Some components
+      # of expanded income will rise with prices (e.g. OASDI or capital income),
+      # others won't; compositional differences determine distributional impact
+      liab_indirect = income - income_reform,
+      
+      # Adjust indirect tax burden for consumption-to-income ratios if distributing
+      # indirect taxes by consumption rather than income
+      # (note: the entirety of second order effects, like the income/payroll 
+      # tax offset and OASDI colas, are distributed in full)
+      liab_indirect = liab_indirect * case_when(
+        indirect_tax_assumption == 'income' ~ 1,
+        decile == 1  ~ 2.0549, 
+        decile == 2  ~ 1.5746,
+        decile == 3  ~ 1.3315, 
+        decile == 4  ~ 1.1038, 
+        decile == 5  ~ 0.9815, 
+        decile == 6  ~ 0.8750, 
+        decile == 7  ~ 0.7823, 
+        decile == 8  ~ 0.7306, 
+        decile == 9  ~ 0.6804, 
+        decile == 10 ~ 0.5116
+      ), 
+      
+      # Allocate corporate tax changes in accordance with assumed labor incidence
+      liab_other_corp_labor      = other_corp_delta    * 1e9 * other_corp_labor_share       * (labor / sum(labor * weight)),
+      liab_other_corp_capital    = other_corp_delta    * 1e9 * (1 - other_corp_labor_share) * (capital / sum(capital * weight)),
+      liab_cost_recovery_labor   = cost_recovery_delta * 1e9 * 0.5                          * (labor / sum(labor * weight)),
+      liab_cost_recovery_capital = cost_recovery_delta * 1e9 * 0.5                          * (capital / sum(capital * weight)),
+      liab_corp                  = liab_other_corp_labor + liab_other_corp_capital + liab_cost_recovery_labor + liab_cost_recovery_capital, 
+      
+      # Calculate liability under each tax universe scenario
+      liab = case_when(
+        taxes_included == 'indirect_iit_pr'             ~ liab_iit_pr,
+        taxes_included == 'indirect_iit_pr_estate'      ~ liab_iit_pr + liab_estate,
+        taxes_included == 'indirect_iit_pr_estate_cit'  ~ liab_iit_pr + liab_estate
+      ), 
+      liab_reform = case_when(
+        taxes_included == 'indirect_iit_pr'             ~ liab_indirect + liab_iit_pr_reform,
+        taxes_included == 'indirect_iit_pr_estate'      ~ liab_indirect + liab_iit_pr_reform + liab_estate_reform,
+        taxes_included == 'indirect_iit_pr_estate_cit'  ~ liab_indirect + liab_iit_pr_reform + liab_estate_reform + liab_corp
+      ), 
+      
+      # Calculate change in tax liability
+      liab_delta = liab_reform - liab, 
+      
+      # Calculate after-tax income in both scenarios
+      ati        = income - liab,
+      ati_reform = income - liab_reform, 
+      
     ) %>% 
     ungroup() %>% 
     return()
@@ -312,15 +358,15 @@ calc_dist_metrics = function(grouped_microdata) {
 get_other_taxes = function(id, baseline_id) {
   
   #----------------------------------------------------------------------------
-  # Gets time series of aggregate effects for VAT changes, corporate tax rate
-  # changes, and changes to cost recovery rules.
+  # Gets time series of aggregate effects for VAT/tariff changes, corporate 
+  # tax rate changes, and changes to cost recovery rules.
   #
   # Parameters:
   #   - id (str)          : counterfactual scenario ID
   #   - baseline_id (str) : ID of scenario against which changes are measured
   #
-  # Returns: list of three dataframes: VAT price effecvt, corporate rate 
-  #.         delta, and cost recovery delta (lst).
+  # Returns: tibble with annual series for price level effect, corporate rate 
+  #.         delta, and cost recovery delta (df).
   #----------------------------------------------------------------------------
   
   # Get scenario info for counterfactual scenario
@@ -333,11 +379,19 @@ get_other_taxes = function(id, baseline_id) {
   # Value added tax
   #-----------------
   
-  # Read VAT price offset for deflating other taxes
-  vat_price_offset = globals$output_root %>%
-    file.path(id, '/static/supplemental/vat_price_offset.csv') %>%
+  # Read price level offsets for deflating other taxes
+  price_level_offset = globals$output_root %>%
+    file.path(id, '/static/supplemental/macro_offsets/vat.csv') %>%
     read_csv(show_col_types = F) %>% 
-    select(year, vat_price_offset = cpi_factor)
+    select(year, vat_factor = cpi_factor) %>% 
+    left_join(
+      globals$output_root %>%
+        file.path(id, '/static/supplemental/macro_offsets/tariffs.csv') %>%
+        read_csv(show_col_types = F) %>% 
+        select(year, tariff_factor = overall, everything()) %>% 
+        rename_with(.cols = starts_with('d'), .fn = ~ paste0('tariff_factor_', .)), 
+      by = 'year'
+    )
   
   
   #-----------------------
@@ -394,14 +448,14 @@ get_other_taxes = function(id, baseline_id) {
       scenario_info$interface_paths$`Off-Model-Estimates` %>% 
         file.path('revenues.csv') %>%
         read_csv(show_col_types = F) %>%
-        select(year, reform = corporate), 
+        select(year, reform = corporate),
       by = 'year'
     ) %>% 
     
     # Express corporate tax in baseline (consumer) dollars
-    left_join(vat_price_offset, by = 'year') %>%
+    left_join(price_level_offset, by = 'year') %>%
       mutate(
-        reform           = reform / vat_price_offset, 
+        reform           = reform / (vat_factor * tariff_factor), 
         other_corp_delta = reform - baseline
       ) %>%
       select(-ends_with('_factor')) %>% 
@@ -418,7 +472,7 @@ get_other_taxes = function(id, baseline_id) {
       select(year, other_corp_delta, other_corp_labor_share)
     
   # Combine and return
-  vat_price_offset %>% 
+  price_level_offset %>% 
     left_join(cost_recovery_delta, by = 'year') %>% 
     left_join(other_corp_delta,    by = 'year') %>% 
     return()

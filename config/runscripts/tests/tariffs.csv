@@ -1,0 +1,3 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Tariff-Model.vintage,dep.Tariff-Model.ID
+baseline,baseline,,2025:2027,2026 2027,,,2025060708,baseline
+tariffs,baseline,,2025:2027,2026 2027,,,2025060708,early_june_2025

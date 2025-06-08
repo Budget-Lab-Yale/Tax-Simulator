@@ -53,3 +53,10 @@ Estate-Tax-Distribution:
   version: 1
   default_vintage: '2025051420'
   default_id: baseline
+  
+Tariff-Model:
+  type: model_data
+  version: 1
+  default_vintage: '2025060708'
+  default_id: baseline
+

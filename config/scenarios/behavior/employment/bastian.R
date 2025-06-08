@@ -33,15 +33,22 @@ do_employment = function(tax_units, ...) {
     mutate(cpiu = cpiu_irs / cpiu_irs[year == 2023]) %>% 
     select(year, cpiu) %>% 
     
-    # Adjust for VAT-driven price level change
+    # Adjust for price level changes in scenario
     left_join(
       globals$output_root %>% 
-        file.path(scenario_info$ID, '/static/supplemental/vat_price_offset.csv') %>% 
+        file.path(scenario_info$ID, '/static/supplemental/macro_offsets/vat.csv') %>% 
         read_csv(show_col_types = F) %>% 
-        select(year, cpi_factor), 
+        select(year, vat_factor = cpi_factor), 
       by = 'year'
     ) %>% 
-    mutate(cpiu = cpiu * cpi_factor)
+    left_join(
+      globals$output_root %>% 
+        file.path(scenario_info$ID, '/static/supplemental/macro_offsets/tariffs.csv') %>% 
+        read_csv(show_col_types = F) %>% 
+        select(year, tariff_factor = cpi_factor), 
+      by = 'year'
+    ) %>% 
+    mutate(cpiu = cpiu * vat_factor * tariff_factor)
     
   
   

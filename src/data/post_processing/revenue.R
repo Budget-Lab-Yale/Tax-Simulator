@@ -66,7 +66,7 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   
   # Read excess growth offset (on CY basis) and convert to FY basis
   excess_growth_offset_cy = scenario_root %>% 
-    file.path('/supplemental/excess_growth_offset.csv') %>% 
+    file.path('/supplemental/macro_offsets/excess_growth.csv') %>% 
     read_csv(show_col_types = F)
   
   # Convert CY excess growth offset to FY basis using 75%/25% weighting
@@ -97,7 +97,6 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
       delta_revenues_corp_tax = 0.75 * corp_tax_change +
         0.25 * lag(corp_tax_change)
     ) %>%
-    
     
     # Join VAT levels 
     left_join(revenues_vat, by = 'year') %>% 
@@ -185,9 +184,17 @@ calc_rev_est = function(id) {
   
   for (static in c(T, F)) {
   
-    # Read VAT price offset for baseline dollars calculation
+    # Read macros offsets for baseline dollars calculation
     vat_price_offset = globals$output_root %>% 
-      file.path(id, 'static/supplemental/vat_price_offset.csv') %>% 
+      file.path(id, 'static/supplemental/macro_offsets/vat.csv') %>% 
+      read_csv(show_col_types = F)
+    
+    tariff_price_offset = globals$output_root %>% 
+      file.path(id, 'static/supplemental/macro_offsets/tariffs.csv') %>% 
+      read_csv(show_col_types = F)
+    
+    excess_growth_offset = globals$output_root %>% 
+      file.path(id, 'static/supplemental/macro_offsets/excess_growth.csv') %>% 
       read_csv(show_col_types = F)
     
     # Read in counterfactual scenario receipts 
@@ -210,29 +217,39 @@ calc_rev_est = function(id) {
                    names_to  = 'series', 
                    values_to = 'counterfactual')
     
-    # Read GDP and adjust for VAT (i.e. price level rises)
+    # Read GDP and adjust for macro changes
     gdp = globals$interface_paths %>% 
       filter(ID == globals$interface_path$ID[1], interface == 'Macro-Projections') %>% 
       get_vector('path') %>% 
       file.path(c('historical.csv', 'projections.csv')) %>% 
       map(~ read_csv(.x, show_col_types = F)) %>% 
       bind_rows() %>% 
-      left_join(scenario %>% 
-                  filter(series == 'revenues_vat') %>% 
-                  select(year, vat = counterfactual), 
-                by = 'year') %>% 
-      mutate(gdp_counterfactual = gdp_fy + vat) %>% 
-      select(year, gdp_baseline = gdp_fy, gdp_counterfactual)
+      left_join(
+        vat_price_offset %>% 
+          select(year, vat_factor = gdp_deflator_factor),
+        by = 'year'
+      ) %>% 
+      left_join(
+        tariff_price_offset %>% 
+          select(year, tariff_factor = overall),
+        by = 'year'
+      ) %>% 
+      left_join(
+        excess_growth_offset %>% 
+          select(year, excess_growth_factor = income_factor), 
+        by = 'year'
+      ) %>%
+      mutate(gdp_counterfactual = gdp_fy * vat_factor * tariff_factor * excess_growth_factor) %>% 
+      select(year, gdp_baseline = gdp_fy, gdp_counterfactual, vat_factor, tariff_factor, excess_growth_factor)
     
     # Join together and calculate estimates: nominal, baseline dollars (for
-    # scenarios with a VAT), and share-of-GDP
+    # scenarios with price level changes), and share-of-GDP
     rev_est = baseline %>% 
       left_join(scenario, by = c('year', 'series')) %>% 
       left_join(gdp, by = 'year') %>% 
-      left_join(vat_price_offset, by = 'year') %>%
       mutate(
         Dollars            = counterfactual - baseline, 
-        `Baseline dollars` = (counterfactual / gdp_deflator_factor) - baseline,
+        `Baseline dollars` = (counterfactual / (vat_factor * tariff_factor)) - baseline,
         `Share of GDP`     = (counterfactual / gdp_counterfactual) - (baseline / gdp_baseline)
       ) %>% 
       select(year, Series = series, Dollars, `Baseline dollars`, `Share of GDP`) %>%
@@ -372,16 +389,33 @@ calc_stacked_rev_est = function(counterfactual_ids) {
   
   for (static in c(T, F)) {
     
-    # Read VAT price offset for baseline dollars calculation
+    # Read macro offsets for baseline dollars calculation
     vat_price_offsets = counterfactual_ids %>% 
       map(.f = ~ globals$output_root %>% 
-            file.path(.x, 'static/supplemental/vat_price_offset.csv') %>% 
+            file.path(.x, 'static/supplemental/macro_offsets/vat.csv') %>% 
+            read_csv(show_col_types = F) %>% 
+            mutate(scenario_id = .x) 
+      ) %>% 
+      bind_rows()
+    
+    tariff_price_offsets = counterfactual_ids %>% 
+      map(.f = ~ globals$output_root %>% 
+            file.path(.x, 'static/supplemental/macro_offsets/tariffs.csv') %>% 
+            read_csv(show_col_types = F) %>% 
+            mutate(scenario_id = .x) 
+      ) %>% 
+      bind_rows()
+    
+    excess_growth_offsets = counterfactual_ids %>% 
+      map(.f = ~ globals$output_root %>% 
+            file.path(.x, 'static/supplemental/macro_offsets/excess_growth.csv') %>% 
             read_csv(show_col_types = F) %>% 
             mutate(scenario_id = .x) 
       ) %>% 
       bind_rows()
     
     
+    # Calculate stacked revenue estimates, starting with iteration over scenarios...
     stacked_rev_est = c('baseline', counterfactual_ids) %>% 
       
       # Read scenario receipts file and store 
@@ -399,10 +433,11 @@ calc_stacked_rev_est = function(counterfactual_ids) {
                              revenues_estate_tax + 
                              revenues_vat + 
                              revenues_other) %>% 
-            select(scenario_id, year, Dollars, vat = revenues_vat)) %>% 
+            select(scenario_id, year, Dollars)) %>% 
       bind_rows() %>% 
       
-      # Calculate share-of-GDP metric, accounting  for introduction of a VAT
+      # Calculate share-of-GDP metric, accounting for scenario-specific changes in NGDP
+      # due to VAT, tariffs, or excess growth
       left_join(
         globals$interface_paths %>% 
           filter(ID == globals$interface_path$ID[1], interface == 'Macro-Projections') %>% 
@@ -413,14 +448,29 @@ calc_stacked_rev_est = function(counterfactual_ids) {
           select(year, gdp_fy), 
         by = 'year'
       ) %>%
-      mutate(`Share of GDP` = Dollars / (gdp_fy + vat))  %>% 
-      select(-gdp_fy, -vat) %>%
-    
-      # Calculate revenues in baseline dollars
-      left_join(vat_price_offsets, by = c('year', 'scenario_id')) %>%
+      left_join(
+        vat_price_offsets %>% 
+          select(scenario_id, year, vat_factor = gdp_deflator_factor),
+        by = c('scenario_id', 'year')
+      ) %>% 
+      left_join(
+        tariff_price_offsets %>% 
+          select(scenario_id, year, tariff_factor = overall),
+        by = c('scenario_id', 'year')
+      ) %>% 
+      left_join(
+        excess_growth_offsets %>% 
+          select(scenario_id, year, excess_growth_factor = income_factor), 
+        by = c('scenario_id', 'year')
+      ) %>% 
       mutate(
-        gdp_deflator_factor = if_else(scenario_id == 'baseline', 1, gdp_deflator_factor),
-        `Baseline dollars`  = Dollars / gdp_deflator_factor
+        gdp_fy = gdp_fy * if_else(scenario_id == 'baseline', 1, vat_factor * tariff_factor * excess_growth_factor),
+        `Share of GDP` = Dollars / gdp_fy
+      ) %>% 
+      
+      # Calculate revenues in baseline dollars
+      mutate(
+        `Baseline dollars` = Dollars / if_else(scenario_id == 'baseline', 1, vat_factor * tariff_factor)
       ) %>%
         
       # Pivot long in metric and calculate stacked deltas

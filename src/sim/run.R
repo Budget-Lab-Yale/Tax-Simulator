@@ -33,25 +33,14 @@ do_scenario = function(ID, baseline_mtrs) {
   # Initialize data
   #-----------------
 
-  # Calculate VAT price offset 
-  vat_price_offset = get_vat_price_offset(
-    macro_root = scenario_info$interface_paths$`Macro-Projections`, 
-    vat_root   = scenario_info$interface_paths$`Value-Added-Tax-Model`, 
-    years      = scenario_info$years
-  )
-  
-  # Calculate excess growth offset
-  excess_growth_offset = get_excess_growth_offset(
-    excess_growth = scenario_info$excess_growth, 
-    start_year    = scenario_info$excess_growth_start_year, 
-    years         = scenario_info$years
-  )
+  # Calculate various adjustments to baseline macro variables: price level 
+  # offset from VAT or tariffs, and excess growth scenario
+  macro_offsets = get_macro_offsets(scenario_info)
   
   # Get price and wage index series
   indexes = generate_indexes(
-    macro_root           = scenario_info$interface_paths$`Macro-Projections`, 
-    vat_price_offset     = vat_price_offset, 
-    excess_growth_offset = excess_growth_offset
+    macro_root    = scenario_info$interface_paths$`Macro-Projections`, 
+    macro_offsets = macro_offsets
   )
   
   # Build (and write) tax law
@@ -63,26 +52,24 @@ do_scenario = function(ID, baseline_mtrs) {
   #----------------
   
   # Run static simulation
-  static_mtrs = run_sim(scenario_info        = scenario_info, 
-                        tax_law              = tax_law, 
-                        static               = T,
-                        baseline_mtrs        = NULL, 
-                        static_mtrs          = NULL, 
-                        indexes              = indexes,
-                        vat_price_offset     = vat_price_offset, 
-                        excess_growth_offset = excess_growth_offset)
+  static_mtrs = run_sim(scenario_info = scenario_info, 
+                        tax_law       = tax_law, 
+                        static        = T,
+                        baseline_mtrs = NULL, 
+                        static_mtrs   = NULL, 
+                        indexes       = indexes,
+                        macro_offsets = macro_offsets)
   
   # Run simulation with behavioral feedback if modules are specified
   static_only = length(scenario_info$behavior_modules) == 0
   if (!static_only) {
-    run_sim(scenario_info        = scenario_info,
-            tax_law              = tax_law, 
-            static               = F,
-            baseline_mtrs        = baseline_mtrs, 
-            static_mtrs          = static_mtrs, 
-            indexes              = indexes,
-            vat_price_offset     = vat_price_offset, 
-            excess_growth_offset = excess_growth_offset)
+    run_sim(scenario_info = scenario_info,
+            tax_law       = tax_law, 
+            static        = F,
+            baseline_mtrs = baseline_mtrs, 
+            static_mtrs   = static_mtrs, 
+            indexes       = indexes,
+            macro_offsets = macro_offsets)
   
   # Else, for static-only counterfactual runs, copy static runs to scenario's  
   # conventional folder (baseline only has a static subfolder by definition)
@@ -129,27 +116,24 @@ do_scenario = function(ID, baseline_mtrs) {
 
 
 run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs, 
-                   indexes, vat_price_offset, excess_growth_offset) {
+                   indexes, macro_offsets) {
   
   #----------------------------------------------------------------------------
   # Runs simulation instance for a given scenario, either static or 
   # conventional. 
   # 
   # Parameters:
-  #   - scenario_info (list)      : scenario info object; see get_scenario_info()
-  #   - tax_law (df)              : tax law tibble; see build_tax_law()
-  #   - static (bool)             : whether to run the scenario in static mode
-  #   - baseline_mtrs             : tibble of baseline MTRs indexed by year/tax 
-  #                                 unit  ID; NULL if this scenario is the  
-  #                                 baseline or if no MTR variables were specified 
-  #   - static_mtrs               : tibble of MTRs for the static counterfactual 
-  #                                 scenario run, indexed by year/tax unit ID;  
-  #                                 NULL if this run is in static mode or if no  
-  #                                 MTR variables were specified
-  #   - indexes (df)              : tibble of growth rates for various economic 
-  #                                 indexes ; see generate_indexes() 
-  #   - excess_growth_offset (df) : income adjustment factors reflecting excess 
-  #                                 real GDP growth scenario
+  #   - scenario_info (lst) : scenario info object; see get_scenario_info()
+  #   - tax_law (df)        : tax law tibble; see build_tax_law()
+  #   - static (bool)       : whether to run the scenario in static mode
+  #   - baseline_mtrs (df)  : tibble of baseline MTRs indexed by year/tax unit  
+  #                           ID; NULL if this scenario is the baseline or if 
+  #                           no MTR variables were specified 
+  #   - static_mtrs (df)    : tibble of MTRs for the static counterfactual 
+  #                           scenario run, indexed by year/tax unit ID; NULL 
+  #                           if this run is in static mode or if no MTR 
+  #                           variables were specified
+  #   - macro_offsets (lst) : macro_offsets object; see get_macro_offsets()
   #
   # Returns: tibble of marginal tax rates (df).
   #----------------------------------------------------------------------------
@@ -166,15 +150,14 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
     output = mclapply(
       X = scenario_info$years,
       FUN = function(year) {
-        run_one_year(year                 = year,
-                     scenario_info        = scenario_info, 
-                     tax_law              = tax_law,
-                     static               = static,
-                     baseline_mtrs        = baseline_mtrs, 
-                     static_mtrs          = static_mtrs, 
-                     indexes              = indexes, 
-                     vat_price_offset     = vat_price_offset, 
-                     excess_growth_offset = excess_growth_offset) 
+        run_one_year(year          = year,
+                     scenario_info = scenario_info, 
+                     tax_law       = tax_law,
+                     static        = static,
+                     baseline_mtrs = baseline_mtrs, 
+                     static_mtrs   = static_mtrs, 
+                     indexes       = indexes, 
+                     macro_offsets = macro_offsets) 
       },
       mc.cores = min(32, detectCores(logical = F))
     )
@@ -187,23 +170,24 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
       year = scenario_info$years[t]
       
       # Run simulation of year 
-      output[[t]] = run_one_year(year                 = year,
-                                 scenario_info        = scenario_info, 
-                                 tax_law              = tax_law,
-                                 static               = static,
-                                 baseline_mtrs        = baseline_mtrs, 
-                                 static_mtrs          = static_mtrs, 
-                                 indexes              = indexes, 
-                                 vat_price_offset     = vat_price_offset, 
-                                 excess_growth_offset = excess_growth_offset)
+      output[[t]] = run_one_year(year          = year,
+                                 scenario_info = scenario_info, 
+                                 tax_law       = tax_law,
+                                 static        = static,
+                                 baseline_mtrs = baseline_mtrs, 
+                                 static_mtrs   = static_mtrs, 
+                                 indexes       = indexes, 
+                                 macro_offsets = macro_offsets)
     }
   }
   
-  # Write VAT price offset info
-  vat_price_offset %>% 
-    write_csv(file.path(output_root, 'supplemental', 'vat_price_offset.csv'))
-  excess_growth_offset %>% 
-    write_csv(file.path(output_root, 'supplemental', 'excess_growth_offset.csv'))
+  # Write macro offset info
+  macro_offsets$vat %>% 
+    write_csv(file.path(output_root, 'supplemental/macro_offsets', 'vat.csv'))
+  macro_offsets$tariffs %>% 
+    write_csv(file.path(output_root, 'supplemental/macro_offsets', 'tariffs.csv'))
+  macro_offsets$excess_growth %>% 
+    write_csv(file.path(output_root, 'supplemental/macro_offsets', 'excess_growth.csv'))
   
   # Write totals files
   totals_pr = output %>%
@@ -243,29 +227,26 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
 
 
 run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs, 
-                        static_mtrs, indexes, vat_price_offset, excess_growth_offset) {
+                        static_mtrs, indexes, macro_offsets) {
   
   #----------------------------------------------------------------------------
   # Runs a single year of tax simulation. 
   # 
   # Parameters:
   #   - year (int)                : year to run
-  #   - scenario_info (list)      : scenario info object; see get_scenario_info()
-  #   - tax_law (df)              : tax law tibble; see build_tax_law()
-  #   - static (bool)             : whether to run the scenario in static mode
-  #   - baseline_mtrs             : tibble of baseline MTRs indexed by year/tax  
-  #                                 unit ID; NULL if this scenario is the baseline 
-  #                                 or if no MTR variables were specified 
-  #   - static_mtrs               : tibble of MTRs for the static counterfactual 
-  #                                 scenario run, indexed by year/tax unit ID; NULL 
-  #                                 if this run is in static mode or if no MTR 
-  #                                 variables were specified 
-  #   - indexes (df)              : tibble of growth rates for various economic 
-  #                                 indexes ; see generate_indexes() 
-  #   - vat_price_offset (df)     : series of price level adjustment factors to 
-  #                                 reflect introduction of a VAT
-  #   - excess_growth_offset (df) : income adjustment factors reflecting excess 
-  #                                 real GDP growth scenario
+  #   - scenario_info (lst) : scenario info object; see get_scenario_info()
+  #   - tax_law (df)        : tax law tibble; see build_tax_law()
+  #   - static (bool)       : whether to run the scenario in static mode
+  #   - baseline_mtrs (df)  : tibble of baseline MTRs indexed by year/tax unit 
+  #                           ID; NULL if this scenario is the baseline or if 
+  #                           no MTR variables were specified 
+  #   - static_mtrs (df)    : tibble of MTRs for the static counterfactual 
+  #                           scenario run, indexed by year/tax unit ID; NULL 
+  #                           if this run is in static mode or if no MTR 
+  #                           variables were specified 
+  #   - indexes (df)        : tibble of growth rates for various economic 
+  #                           indexes; see generate_indexes() 
+  #   - macro_offsets (lst) : macro_offsets object; see get_macro_offsets()
   #
   # Returns: list of:
   #  - mtrs (df)     : tibble of marginal tax rates for this year
@@ -310,14 +291,14 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
     # Account for tax law changes manifesting as reporting changes
     do_salt_workaround_baseline() %>% 
 
-    # Adjust Social Security benefits for VAT-driven price level increase
-    do_ss_cola(year, vat_price_offset) %>% 
+    # Adjust Social Security benefits for policy-driven price level changes
+    do_ss_cola(year, macro_offsets) %>% 
     
-    # Adjust capital income for VAT-drive price level increase
-    do_capital_adjustment(year, vat_price_offset) %>%
+    # Adjust capital income for policy-driven price level changes
+    do_capital_adjustment(year, macro_offsets) %>%
     
     # Adjust intensive-margin variables for excess real GDP growth
-    do_excess_growth(scenario_info, excess_growth_offset)
+    do_excess_growth(scenario_info, macro_offsets$excess_growth)
   
 
   #---------------------------

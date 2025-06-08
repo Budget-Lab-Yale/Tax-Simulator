@@ -6,7 +6,7 @@
 #---------------------------------------------------------
 
 
-generate_indexes = function(macro_root, vat_price_offset, excess_growth_offset) {
+generate_indexes = function(macro_root, macro_offsets) {
   
   #----------------------------------------------------------------------------
   # Gets growth rates, both historical and projected for this economic 
@@ -14,12 +14,8 @@ generate_indexes = function(macro_root, vat_price_offset, excess_growth_offset) 
   # CPIU, and Average Wage Index.
   # 
   # Parameters:
-  #   - macro_root (str)          : path for Macro-Projections scenario 
-  #                                 interface
-  #   - vat_price_offset (df)     : series of price level adjustment factors to 
-  #                                 reflect introduction of a VAT
-  #   - excess_growth_offset (df) : income adjustment factors reflecting excess 
-  #                                 real GDP growth scenario
+  #   - macro_root    (str) : path for Macro-Projections scenario interface
+  #   - macro_offsets (lst) : macro_offsets object, see get_macro_offsets()
   #
   # Returns: tibble of growth rates by series (df). 
   #----------------------------------------------------------------------------
@@ -38,16 +34,27 @@ generate_indexes = function(macro_root, vat_price_offset, excess_growth_offset) 
                  names_to  = 'series', 
                  values_to = 'value') %>% 
     
-    # Adjust price level for VAT/excess growth
-    left_join(vat_price_offset, by = 'year') %>% 
+    # Adjust price level for VAT and tariffs
+    left_join(
+      macro_offsets$vat %>% 
+        select(year, vat_factor = cpi_factor), 
+      by = 'year'
+    ) %>%
+    left_join(
+      macro_offsets$tariffs %>% 
+        select(year, tariff_factor = overall), 
+      by = 'year'
+    ) %>% 
     mutate(value = if_else(series %in% c('cpi', 'chained_cpi'), 
-                           value * replace_na(cpi_factor, 1), 
+                           value * replace_na(vat_factor * tariff_factor, 1), 
                            value)) %>% 
-    left_join(excess_growth_offset, by = 'year') %>% 
+    
+    # Adjust wage index for excess growth
+    left_join(macro_offsets$excess_growth, by = 'year') %>% 
     mutate(value = if_else(series == 'awi', 
                            value * income_factor, 
                            value)) %>%   
-    select(-cpi_factor, -gdp_deflator_factor, -income_factor) %>% 
+    select(-vat_factor, -tariff_factor, -income_factor) %>% 
     
     # Express in growth rates
     group_by(series) %>% 
@@ -60,22 +67,29 @@ generate_indexes = function(macro_root, vat_price_offset, excess_growth_offset) 
 
 
 
-get_vat_price_offset = function(macro_root, vat_root, years) {
+get_macro_offsets = function(scenario_info) {
 
   #----------------------------------------------------------------------------
-  # Calculates the amount by which prices rise in response to the intro-
-  # duction of a VAT. 
+  # Calculates and compiles different factors used to adjust the baseline
+  # macroeconomic forecast, reflecting either policy changes (VATs or tariffs, 
+  # which we asssume affects the price level through) or alternative economic
+  # scenarios (additional above-trend productivity growth)
   # 
   # Parameters:
-  #   - macro_root (str) : path for Macro-Projections scenario interface
-  #   - vat_root (str)   : path for Value-Added-Tax-Model scenario interface
-  #   - years (int[])    : years for which to run simulation
+  #   - scenario_info (list) : scenario_info object; see get_scenario_info()
   #
-  # Returns: tibble of price level adjustment factors over time (df). 
+  # Returns: list of three dataframes:
+  #   - vat           (df) : VAT adjustment factors by year
+  #   - tariffs       (df) : tariff adjustment factors by year
+  #   - excess_growth (df) : excess growth adjustment factors by year
   #----------------------------------------------------------------------------
+
+  #-----
+  # VAT 
+  #-----
   
   # Read projected macro aggregates
-  macro = macro_root %>% 
+  macro = scenario_info$interface_paths$`Macro-Projections`  %>% 
     file.path('projections.csv') %>% 
     read_csv(show_col_types = F) %>% 
     select(year, gdp, c = gdp_c)
@@ -83,35 +97,67 @@ get_vat_price_offset = function(macro_root, vat_root, years) {
   # Read VAT revenues under counterfactual scenario. If a VAT ever becomes law 
   # (lol) or if we add other indirect taxes to the model then this bit needs 
   # to be expressed as difference from baseline
-  vat = vat_root %>% 
+  vat = scenario_info$interface_paths$`Value-Added-Tax-Model` %>% 
     file.path('revenues.csv') %>% 
     read_csv(show_col_types = F) %>% 
     select(year, vat = receipts_fy)
   
   # Calculate price level multiplier as revenue over baseline consumption
-  tibble(year = years) %>% 
+  vat = tibble(year = scenario_info$years) %>% 
     left_join(macro, by = 'year') %>% 
     left_join(vat, by = 'year') %>% 
     mutate(cpi_factor          = replace_na(1 + vat / c, 1), 
            gdp_deflator_factor = replace_na(1 + vat / gdp, 1)) %>% 
-    select(year, cpi_factor, gdp_deflator_factor) %>% 
-    return()
+    select(year, cpi_factor, gdp_deflator_factor)
+  
+  
+  #---------
+  # Tariffs
+  #---------
+  
+  # Read price level adjustment factors and limit to simulation years
+  tariffs = scenario_info$interface_paths$`Tariff-Model` %>% 
+    file.path('price_effects.csv') %>% 
+    read_csv(show_col_types = F) %>% 
+    filter(year %in% scenario_info$years)
+  
+  
+  #---------------
+  # Excess growth
+  #---------------
+  
+  # Calculate amount by which the level of real GDP exceeds its baseline value in relative terms
+  excess_growth = tibble(year = scenario_info$years) %>% 
+    mutate(income_factor = cumprod(1 + if_else(year >= scenario_info$excess_growth_start_year, 
+                                               scenario_info$excess_growth, 
+                                               0)))
+  
+  # Store as list and return
+  return(
+    list(
+      vat           = vat, 
+      tariffs       = tariffs, 
+      excess_growth = excess_growth  
+    )
+  )
+  
 }
 
 
 
-do_ss_cola = function(tax_units, yr, vat_price_offset) {
+
+
+do_ss_cola = function(tax_units, yr, macro_offsets) {
   
   #----------------------------------------------------------------------------
   # Adjusts Social Security benefits for price increased caused by the 
-  # introduction of a VAT. (Note: the imputations here should at some point be
-  # folded into Tax-Data.)
+  # introduction of a VAT or new tariffs. (Note: the imputations here should 
+  # at some point be folded into Tax-Data.)
   # 
   # Parameters:
-  #   - tax_units (df)        : tibble of tax units
-  #   - yr (int)              : simulation year 
-  #   - vat_price_offset (df) : series of price level adjustment factors to 
-  #                             reflect introduction of a VAT
+  #   - tax_units (df)      : tibble of tax units
+  #   - yr (int)            : simulation year 
+  #   - macro_offsets (lst) : macro_offsets object; see get_macro_offsets()
   # 
   # Returns: tax units tibble with updated values for gross_ss (df). 
   #----------------------------------------------------------------------------
@@ -150,16 +196,26 @@ do_ss_cola = function(tax_units, yr, vat_price_offset) {
     filter(year >= claiming_year) %>% 
     
     # Add VAT and calculate cumulative excess inflation since retirement 
-    left_join(vat_price_offset %>% 
-                mutate(excess_inflation = cpi_factor / lag(cpi_factor, default = 1) - 1) %>% 
-                select(year, excess_inflation), 
-              by = 'year') %>% 
+    left_join(
+      macro_offsets$vat %>% 
+        select(year, vat_factor = cpi_factor) %>% 
+        left_join(
+          macro_offsets$tariffs %>% 
+            select(year, tariff_factor = overall), 
+          by = 'year'
+        ) %>% 
+        mutate(
+          price_level_factor = vat_factor * tariff_factor, 
+          excess_inflation   = price_level_factor / lag(price_level_factor, default = 1) - 1
+        ) %>% 
+        select(year, excess_inflation),
+      by = 'year'
+    ) %>% 
     group_by(claiming_year) %>% 
     mutate(cola = cumprod(1 + replace_na(excess_inflation, 0))) %>% 
     ungroup() %>% 
     filter(year == yr - 1) %>% 
     select(claiming_year, cola)
-  
   
   # Join and overwrite COLA-adjusted benefits 
   tax_units %>% 
@@ -177,24 +233,29 @@ do_ss_cola = function(tax_units, yr, vat_price_offset) {
 
 
 
-do_capital_adjustment = function(tax_units, yr, vat_price_offset) {
+do_capital_adjustment = function(tax_units, yr, macro_offsets) {
   
   #----------------------------------------------------------------------------
-  # Adjusts capital income to reflect the introduction of a VAT. The basic 
-  # idea is that a VAT burdens returns to pre-enactment ("old") capital while
+  # Adjusts capital income to reflect new indirect taxes. The basic idea for
+  # a VAT is that it burdens returns to pre-enactment ("old") capital while
   # exempting the normal return to post-enactment ("new") capital. Here, 
   # because we assume prices rise in response to a VAT, we implement this
   # logic by 1) crudely imputing the share of returns that are attributable to
   # new capital 2) scaling up the normal share of those returns (assumed to be
   # 80%).
+  # 
+  # Tariffs are a bit different because they apply to capital goods as well. 
+  # Therefore the normal return is not exempting for the component of tariff 
+  # revenue attributable to imports of capital goods. We assume that 30% of 
+  # the tariff base is capital goods, based on:  
+  # https://x.com/ernietedeschi/status/1931373635551285657
   #
   # (Note: the imputations here should at some point be folded into Tax-Data.)
   # 
   # Parameters:
-  #   - tax_units (df)        : tibble of tax units
-  #   - yr (int)              : simulation year 
-  #   - vat_price_offset (df) : series of price level adjustment factors to 
-  #                             reflect introduction of a VAT
+  #   - tax_units (df)      : tibble of tax units
+  #   - yr (int)            : simulation year 
+  #   - macro_offsets (lst) : macro_offsets object; see get_macro_offsets()
   # 
   # Returns: tax units tibble with updated values for gross_ss (df). 
   #----------------------------------------------------------------------------
@@ -212,61 +273,100 @@ do_capital_adjustment = function(tax_units, yr, vat_price_offset) {
     mutate(share_new_capital = 1 - round((1 - 0.057) ^ year, 2)) 
   
   # Determine years when VAT changed, requiring that vintages be tracked
-  vat_change_years = vat_price_offset %>% 
+  vat_change_years = macro_offsets$vat %>% 
     mutate(excess_inflation = cpi_factor / lag(cpi_factor, default = 1) - 1) %>% 
     select(source_year = year, excess_inflation) %>% 
     filter(excess_inflation != 0, source_year < yr)
   
-  # Skip if no VAT-driven changes in prices
-  if (nrow(vat_change_years) == 0) {
-    return(tax_units)
+  # Same for tariffs
+  tariff_change_years = macro_offsets$tariffs %>% 
+    mutate(excess_inflation = overall / lag(overall, default = 1) - 1) %>% 
+    select(source_year = year, excess_inflation) %>% 
+    filter(excess_inflation != 0, source_year < yr)
+  
+  # Calculate VAT adjustment factors 
+  if (nrow(vat_change_years) > 0) {
+    
+    # Calculate capital income adjustment factors
+    vat_factors = vat_change_years %>% 
+      
+      # Create vintaging series for each source year of price changes
+      expand_grid(year = min(vat_change_years$source_year):yr) %>% 
+      mutate(t = year - source_year) %>% 
+      filter(t > 0) %>% 
+      
+      # Join schedules for new debt and capital
+      left_join(new_debt, by = c('t' = 'tenor')) %>% 
+      mutate(share_new_debt = replace_na(share_new_debt, 1)) %>% 
+      left_join(new_capital, by = c('t' = 'year')) %>% 
+      
+      # Calculate vintage-specific adjustment factors (i.e. share of income to 
+      # be scaled up to reflect renegotiated returns after VAT, or in other words
+      # the share of returns attributable to post-enactment investment) by source 
+      # year and year, scaling by normal share of total return in the case of capital
+      # (50% assumption is from Auerbach via Toder)
+      mutate(debt_factor    = 1 + excess_inflation * share_new_debt, 
+             capital_factor = 1 + excess_inflation * share_new_capital * 0.5) %>% 
+      
+      # Aggregate effects by year
+      group_by(year) %>% 
+      summarise(debt_factor    = prod(debt_factor), 
+                capital_factor = prod(capital_factor)) %>% 
+      
+      # Subset to this specific year
+      filter(year == yr) 
+  } else {
+    vat_factors = tibble(year = yr, debt_factor = 1, capital_factor = 1)
+  }
+  
+  # Calculate tariff adjustment factors 
+  if (nrow(tariff_change_years) > 0) {
+    
+    # Calculate capital income adjustment factors
+    tariff_factors = tariff_change_years %>% 
+      
+      # Create vintaging series for each source year of price changes
+      expand_grid(year = min(tariff_change_years$source_year):yr) %>% 
+      mutate(t = year - source_year) %>% 
+      filter(t > 0) %>% 
+      
+      # Join schedules for new debt and capital
+      left_join(new_debt, by = c('t' = 'tenor')) %>% 
+      mutate(share_new_debt = replace_na(share_new_debt, 1)) %>% 
+      left_join(new_capital, by = c('t' = 'year')) %>% 
+      
+      # Calculate vintage-specific adjustment factors. See the VAT section 
+      # above for an explanation. This differs from the VAT case because
+      # 30% of imports are capital goods and thus the logic doesn't apply 
+      mutate(debt_factor    = 1 + excess_inflation * (1 - 0.3) * share_new_debt, 
+             capital_factor = 1 + excess_inflation * (1 - 0.3) * share_new_capital * 0.5) %>% 
+      
+      # Aggregate effects by year
+      group_by(year) %>% 
+      summarise(debt_factor    = prod(debt_factor), 
+                capital_factor = prod(capital_factor)) %>% 
+      
+      # Subset to this specific year
+      filter(year == yr) 
+  } else {
+    tariff_factors = tibble(year = yr, debt_factor = 1, capital_factor = 1)
   }
   
   
-  # Calculate capital income adjustment factors
-  adjustment_factors = vat_change_years %>% 
-    
-    # Create vintaging series for each source year of price changes
-    expand_grid(year = min(vat_change_years$source_year):yr) %>% 
-    mutate(t = year - source_year) %>% 
-    filter(t > 0) %>% 
-    
-    # Join schedules for new debt and capital
-    left_join(new_debt, by = c('t' = 'tenor')) %>% 
-    mutate(share_new_debt = replace_na(share_new_debt, 1)) %>% 
-    left_join(new_capital, by = c('t' = 'year')) %>% 
-    
-    # Calculate vintage-specific adjustment factors (i.e. share of income to 
-    # be scaled up to reflect renegotiated returns after VAT, or in other words
-    # the share of returns attributable to post-enactment investment) by source 
-    # year and year, scaling by normal share of total return in the case of capital
-    # (50% assumption is from Auerbach via Toder)
-    mutate(debt_factor    = 1 + excess_inflation * share_new_debt, 
-           capital_factor = 1 + excess_inflation * share_new_capital * 0.5) %>% 
-    
-    # Aggregate effects by year
-    group_by(year) %>% 
-    summarise(debt_factor    = prod(debt_factor), 
-              capital_factor = prod(capital_factor)) %>% 
-    
-    # Subset to this specific year
-    filter(year == yr) 
-    
-  
-  # Apply adjustment and return
+  # Apply adjustments and return
   tax_units %>% 
     mutate(
       
       # Debt
       across(
         .cols = c(txbl_int, exempt_int, first_mort_int, second_mort_int, inv_int_exp), 
-        .fns  = ~ . * adjustment_factors$debt_factor
+        .fns  = ~ . * vat_factors$debt_factor * tariff_factors$debt_factor
       ), 
       
       # Equity 
       across(
         .cols = c(div_ord, div_pref, kg_st, kg_lt, kg_1250, kg_collect),  
-        .fns  = ~ . * adjustment_factors$capital_factor
+        .fns  = ~ . * vat_factors$capital_factor * tariff_factors$capital_factor
       ), 
       
       # Mixed income (assumes 20% of pass-through business is the return to capital)
@@ -274,33 +374,13 @@ do_capital_adjustment = function(tax_units, yr, vat_price_offset) {
         .cols = c(sole_prop, part_active, part_passive, part_active_loss, 
                   part_passive_loss, part_179, scorp_active, scorp_passive, 
                   scorp_active_loss, scorp_passive_loss, scorp_179, farm),
-        .fns  = ~ . * (1 + (adjustment_factors$capital_factor - 1) * 0.2) 
+        .fns  = ~ . * (1 + (vat_factors$capital_factor * tariff_factors$capital_factor - 1) * 0.2) 
       )
     ) %>% 
     return()
 }
 
 
-
-get_excess_growth_offset = function(excess_growth, start_year, years) {
-  
-  #----------------------------------------------------------------------------
-  # Calculates the amount by which the level of real GDP exceeds its 
-  # baseline value in relative terms, given an excess growth rate and a start
-  # year. 
-  # 
-  # Parameters:
-  #   - excess_growth (dbl) : annual real growth rate in excess of baseline 
-  #   - start_year (int)    : year when excess growth starts
-  #   - years (int[])       : years for which to run simulation
-  #
-  # Returns: tibble of income adjustment factors over time (df). 
-  #----------------------------------------------------------------------------
-  
-  tibble(year = years) %>% 
-    mutate(income_factor = cumprod(1 + if_else(year >= start_year, excess_growth, 0))) %>% 
-    return()
-}
 
 
 
@@ -327,9 +407,9 @@ do_excess_growth = function(tax_units, scenario_info, excess_growth_offset) {
   gdp_vars = variable_guide %>% 
     filter(
       (variable %in% colnames(tax_units)) & 
-        !is.na(grow_with) & 
-        grow_with != 'ss' & 
-        grow_with != 'pensions'
+      !is.na(grow_with) & 
+      grow_with != 'ss' & 
+      grow_with != 'pensions'
     ) %>%
     select(variable) %>% 
     deframe()
@@ -337,7 +417,7 @@ do_excess_growth = function(tax_units, scenario_info, excess_growth_offset) {
   oasdi_vars = variable_guide %>% 
     filter(
       (variable %in% colnames(tax_units)) & 
-        (grow_with == 'ss')
+      (grow_with == 'ss')
     ) %>%
     select(variable) %>% 
     deframe()
@@ -345,7 +425,7 @@ do_excess_growth = function(tax_units, scenario_info, excess_growth_offset) {
   pension_vars = variable_guide %>% 
     filter(
       (variable %in% colnames(tax_units)) & 
-        (grow_with == 'pensions')
+      (grow_with == 'pensions')
     ) %>%
     select(variable) %>% 
     deframe()
@@ -377,11 +457,11 @@ do_excess_growth = function(tax_units, scenario_info, excess_growth_offset) {
       # For OASDI and pension growth variables, multiply by wedge factor and adjustment factor
       across(
         .cols = all_of(oasdi_vars), 
-        .fns  = ~ . * pmax(wedge_factor_oasdi * income_factor,1)
+        .fns  = ~ . * pmax(wedge_factor_oasdi * income_factor, 1)
       ),   
       across(
         .cols = all_of(pension_vars), 
-        .fns  = ~ . * pmax(wedge_factor_pension * income_factor,1)
+        .fns  = ~ . * pmax(wedge_factor_pension * income_factor, 1)
       ),        
       
       # For GDP growth variables, multiply by income adjustment factor
