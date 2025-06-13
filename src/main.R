@@ -99,12 +99,6 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
           return()
       ) %>%
       bind_rows() 
-    
-    file.copy(
-      list.files(file.path(globals$baseline_root, 'baseline'), full.names = T),
-      globals$output_root,
-      recursive = T
-    )
   }
   
   # Run counterfactual scenarios
