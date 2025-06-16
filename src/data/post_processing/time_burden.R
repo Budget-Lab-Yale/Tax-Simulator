@@ -36,8 +36,17 @@ process_for_time_burden = function(id, year) {
     tibble() %>%
     mutate(
       policy = !!id
-    )
+    ) 
   
+  precert  = file.path(globals$output_root, id, "static/supplemental",
+                       "tax_law.csv") %>% 
+    fread() %>%
+    tibble() %>%
+    rename(yr = year) %>%
+    filter(yr == year) %>%
+    select(eitc.parent_precert) %>%
+    unique() %>%
+    pull()
   
   #------------------------------------
   # create relevant record-level flags
@@ -53,6 +62,8 @@ process_for_time_burden = function(id, year) {
       across(.cols = c("sch_e",
                        "farm",
                        "sole_prop",
+                       "tip_ded",
+                       "ot_ded",
                        "se",
                        "txbl_int",
                        "eitc",
@@ -62,6 +73,8 @@ process_for_time_burden = function(id, year) {
         rename_with(~c("sch_e_flag",
                        "sch_farm_flag",
                        "sch_c_flag",
+                       "tips_flag",
+                       "ot_flag",
                        "sch_se_flag",
                        "int_flag",
                        "sch_eic_flag",
@@ -70,7 +83,8 @@ process_for_time_burden = function(id, year) {
       sch_d_flag   = as.integer(div_ord != 0 | div_pref !=0 | txbl_kg != 0 |
                                   kg_st != 0 | kg_lt != 0),
       itemize_flag = as.integer(itemizing),
-      ctc_flag     = as.integer(ctc_ref > 0 | ctc_nonref > 0)
+      ctc_flag     = as.integer(ctc_ref > 0 | ctc_nonref > 0),
+      eitc_precert = precert
     ) %>%
     
     # base filing status
@@ -128,6 +142,8 @@ calc_fixed_cost = function(id) {
                  "sch_d_flag",
                  "has_pref_inc",
                  "sch_e_flag",
+                 "tips_flag",
+                 "ot_flag",
                  "sch_farm_flag",
                  "itemize_flag",
                  "qbi_flag",
@@ -143,8 +159,10 @@ calc_fixed_cost = function(id) {
                  311,
                  59,
                  374,
+                 0, # tips,
+                 0, # ot,
                  350,
-                 556,
+                 556, 
                  155,
                  75,
                  87,
@@ -213,12 +231,13 @@ calc_time_burden = function(microdata, fixed_cost) {
   #--------------------------------
   # define relevant tax provisions
   #--------------------------------
-  
   provisions = c("int_flag",
                  "sch_c_flag",
                  "sch_d_flag",
                  "has_pref_inc",
                  "sch_e_flag",
+                 "tips_flag",
+                 "ot_flag",
                  "sch_farm_flag",
                  "itemize_flag",
                  "qbi_flag",
@@ -234,13 +253,15 @@ calc_time_burden = function(microdata, fixed_cost) {
                  311,
                  59,
                  374,
+                 34, # tips
+                 34, # ot
                  350,
-                 556,
+                 556, # increase for SALT?
                  155,
                  75,
                  87,
                  34,
-                 34,
+                 34 + unique(microdata$eitc_precert) * 156, #scalar for pct parents?
                  34)
   
   # HoH-contingent items
@@ -419,6 +440,8 @@ build_timeburden_table = function(id) {
 }
 
 
-#-----------
+#--------------------
 # all done!
-#-----------
+# (6/16/25) 
+# all done! (revised)
+#--------------------
