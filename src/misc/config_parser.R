@@ -95,9 +95,18 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     baseline_root = output_root %>% 
       str_remove(paste0('/',vintage)) %>% 
       file.path(baseline_vintage)
+    
     if (!dir.exists(baseline_root)) {
       stop('User-supplied vintage for baseline does not exist!')
     }
+    
+    dir.create(file.path(output_root, 'baseline'))
+    
+    file.copy(
+      list.files(file.path(baseline_root, 'baseline'), full.names = T),
+      file.path(output_root, 'baseline'),
+      recursive = T
+    )
   }
   
   # Read runscript
