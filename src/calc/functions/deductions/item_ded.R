@@ -176,7 +176,7 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
                       pmin(pmax(0, agi) * char.item_noncash_limit_agi, char_noncash),
       
       # Apply AGI-based floor
-      char_item_ded = pmax(0, char_item_ded - (max(0, agi) * char.item_floor_agi)),
+      char_item_ded = pmax(0, char_item_ded - pmax(0, agi) * char.item_floor_agi),
       
       # Apply dollar-amount limitation
       char_item_ded = pmin(char.item_limit, char_item_ded),

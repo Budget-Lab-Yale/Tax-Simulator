@@ -48,17 +48,3 @@ ot_ded_po_rate:
     '2014': 0
     '2025': 0.1
     '2029': 0
-
-# Senior bonus deduction value
-senior_ded_value:
-  value: 
-    '2014': 0
-    '2025': 6000
-    '2029': 0
-
-# Phaseout rate for senior bonus deduction
-senior_ded_po_rate:
-  value: 
-    '2014': 0
-    '2025': 0.06
-    '2029': 0
