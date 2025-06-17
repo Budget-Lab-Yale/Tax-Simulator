@@ -45,17 +45,23 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
     'cdctc.young_age_limit',   # (int) maximum age to be considered a young qualifying dependent
     'cdctc.old_age_limit',     # (int) maximum age to be considered an old qualifying dependent
     'cdctc.young_rate1',       # (dbl) young dependents: credit rate for base credit (share of eligible expenses)
-    'cdctc.young_rate2',       # (dbl) young dependents: credit rate for additional credit (share of eligible expenses)
+    'cdctc.young_rate2',       # (dbl) young dependents: credit rate for first additional credit (share of eligible expenses)
+    'cdctc.young_rate3',       # (dbl) young dependents: credit rate for second additional credit (share of eligible expenses)
     'cdctc.young_po_thresh1',  # (dbl) young dependents: AGI threshold above which credit rate 1 begins phasing out
     'cdctc.young_po_thresh2',  # (dbl) young dependents: AGI threshold above which credit rate 2 begins phasing out
+    'cdctc.young_po_thresh3',  # (dbl) young dependents: AGI threshold above which credit rate 3 begins phasing out
     'cdctc.young_po_rate1',    # (dbl) young dependents: rate at which credit rate 1 phases out with AGI
     'cdctc.young_po_rate2',    # (dbl) young dependents: rate at which credit rate 2 phases out with AGI
+    'cdctc.young_po_rate3',    # (dbl) young dependents: rate at which credit rate 3 phases out with AGI
     'cdctc.old_rate1',         # (dbl) old dependents: credit rate for base credit (share of eligible expenses)
-    'cdctc.old_rate2',         # (dbl) old dependents: credit rate for additional credit (share of eligible expenses)
+    'cdctc.old_rate2',         # (dbl) old dependents: credit rate for first additional credit (share of eligible expenses)
+    'cdctc.old_rate3',         # (dbl) old dependents: credit rate for second additional credit (share of eligible expenses)
     'cdctc.old_po_thresh1',    # (dbl) old dependents: AGI threshold above which credit rate 1 begins phasing out
     'cdctc.old_po_thresh2',    # (dbl) old dependents: AGI threshold above which credit rate 2 begins phasing out
+    'cdctc.old_po_thresh3',    # (dbl) old dependents: AGI threshold above which credit rate 3 begins phasing out
     'cdctc.old_po_rate1',      # (dbl) old dependents: rate at which credit rate 1 phases out with AGI
     'cdctc.old_po_rate2',      # (dbl) old dependents: rate at which credit rate 2 phases out with AGI
+    'cdctc.old_po_rate3',      # (dbl) old dependents: rate at which credit rate 3 phases out with AGI
     'cdctc.discrete_step',     # (int) rounding step for descretized phaseout function
     'cdctc.refundable'         # (int) whether credit is refundable
   )
@@ -97,14 +103,17 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
       # Calculate AGI in excess of phaseout rates and adjust for discrete rounding steps 
       young_excess1 = pmax(0, agi - cdctc.young_po_thresh1),
       young_excess2 = pmax(0, agi - cdctc.young_po_thresh2),
+      young_excess3 = pmax(0, agi - cdctc.young_po_thresh3),
       
       young_excess1 = ceiling(young_excess1 / cdctc.discrete_step) * cdctc.discrete_step,
       young_excess2 = ceiling(young_excess2 / cdctc.discrete_step) * cdctc.discrete_step,
+      young_excess3 = ceiling(young_excess3 / cdctc.discrete_step) * cdctc.discrete_step,
       
       # Calculate credit rate after phaseouts 
       young_rate1 = pmax(0, cdctc.young_rate1 - young_excess1 * cdctc.young_po_rate1),
       young_rate2 = pmax(0, cdctc.young_rate2 - young_excess2 * cdctc.young_po_rate2),
-      young_rate  = young_rate1 + young_rate2,
+      young_rate3 = pmax(0, cdctc.young_rate3 - young_excess2 * cdctc.young_po_rate3),
+      young_rate  = young_rate1 + young_rate2 + young_rate3,
       
       # Calculate credit value
       young_cdctc = young_qual_exp * young_rate,
@@ -123,14 +132,17 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
       # Calculate AGI in excess of phaseout rates and adjust for discrete rounding steps 
       old_excess1 = pmax(0, agi - cdctc.old_po_thresh1),
       old_excess2 = pmax(0, agi - cdctc.old_po_thresh2),
+      old_excess3 = pmax(0, agi - cdctc.old_po_thresh3),
       
       old_excess1 = ceiling(old_excess1 / cdctc.discrete_step) * cdctc.discrete_step,
       old_excess2 = ceiling(old_excess2 / cdctc.discrete_step) * cdctc.discrete_step,
+      old_excess3 = ceiling(old_excess3 / cdctc.discrete_step) * cdctc.discrete_step,
       
       # Calculate credit rate after phaseouts 
       old_rate1 = pmax(0, pmax(0, cdctc.old_rate1 - old_excess1 * cdctc.old_po_rate1)),
       old_rate2 = pmax(0, pmax(0, cdctc.old_rate2 - old_excess2 * cdctc.old_po_rate2)),
-      old_rate  = old_rate1 + old_rate2,
+      old_rate3 = pmax(0, pmax(0, cdctc.old_rate3 - old_excess3 * cdctc.old_po_rate3)),
+      old_rate  = old_rate1 + old_rate2 + old_rate3,
       
       # Calculate credit value
       old_cdctc = old_qual_exp * old_rate,
