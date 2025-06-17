@@ -100,13 +100,15 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
       stop('User-supplied vintage for baseline does not exist!')
     }
     
-    dir.create(file.path(output_root, 'baseline'))
-    
-    file.copy(
-      list.files(file.path(baseline_root, 'baseline'), full.names = T),
-      file.path(output_root, 'baseline'),
-      recursive = T
-    )
+    if(baseline_vintage != vintage) {
+      dir.create(file.path(output_root, 'baseline'), showWarnings = T)
+      
+      file.copy(
+        list.files(file.path(baseline_root, 'baseline'), full.names = T),
+        file.path(output_root, 'baseline'),
+        recursive = T
+      ) 
+    }
   }
   
   # Read runscript
@@ -226,7 +228,8 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     r.oasdi_exp       = round(rexp(length(sample_ids), 1/4)),  # For OASDI claiming year imputation in do_ss_cola()  
     r.behavior1       = runif(length(sample_ids)),             # Spare random number for use in behavioral modules
     r.behavior2       = runif(length(sample_ids)),             # Spare random number for use in behavioral modules
-    r.behavior3       = runif(length(sample_ids))              # Spare random number for use in behavioral modules
+    r.behavior3       = runif(length(sample_ids)),             # Spare random number for use in behavioral modules
+    r.eitc_precert    = runif(length(sample_ids))              # For EITC pre-certification check
   )
   
   # Specifiy microdata output variable
@@ -239,9 +242,9 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     'std_ded', 'item_ded', 'med_item_ded', 'salt_item_ded', 'first_mort_int', 
     'mort_int_item_ded', 'inv_int_item_ded', 'int_item_ded', 'char_item_ded', 
     'casualty_item_ded', 'misc_item_ded', 'other_item_ded', 'item_ded_ex_limits', 
-    'itemizing', 'pe_ded', 'qbi_ded', 'txbl_inc', 'liab_ord', 'liab_pref', 
-    'liab_amt', 'liab_bc', 'cdctc_nonref', 'ctc_nonref', 'ed_nonref', 'nonref', 
-    'ed_ref', 'eitc', 'cdctc_ref', 'ctc_ref', 'rebate', 'ref', 'liab_niit', 
+    'itemizing', 'pe_ded', 'qbi_ded', 'tip_ded', 'ot_ded', 'txbl_inc', 'liab_ord', 
+    'liab_pref', 'liab_amt', 'liab_bc', 'cdctc_nonref', 'ctc_nonref', 'ed_nonref',
+    'nonref', 'ed_ref', 'eitc', 'cdctc_ref', 'ctc_ref', 'rebate', 'ref', 'liab_niit', 
     'liab_iit', 'liab_iit_net', 'liab_fica_er1', 'liab_fica_er2', 'liab_seca', 
     'liab_pr_ee', 'liab_pr', 'simple_filer', 'number_of_credits',
     'liab_brac1', 'liab_brac2', 'liab_brac3', 'liab_brac4', 'liab_brac5',
