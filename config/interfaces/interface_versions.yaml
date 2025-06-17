@@ -51,7 +51,7 @@ Cost-Recovery-Simulator:
 Estate-Tax-Distribution:
   type: model_data
   version: 1
-  default_vintage: '2025051420'
+  default_vintage: '2025060917'
   default_id: baseline
   
 Tariff-Model:

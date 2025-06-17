@@ -44,27 +44,42 @@ build_distribution_tables = function(id, baseline_id) {
           mutate(group_dimension = 'Age') 
       ) %>%
       
-      # Add income quintile cuts  
+      # Add expanded income quintile cuts  
       bind_rows(
         microdata %>% 
           group_by(indirect_tax_assumption, taxes_included, group = replace_na(quintile, 'Negative income')) %>%
           calc_dist_metrics() %>%
-          mutate(group_dimension = 'Income')
+          mutate(group_dimension = 'Expanded income')
       ) %>% 
       
-      # Add top income cuts
+      # Add top expanded income cuts
       bind_rows(
-        microdata %>% group_by(indirect_tax_assumption, taxes_included, group = top_10) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income'), 
-        microdata %>% group_by(indirect_tax_assumption, taxes_included, group = top_5)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income'), 
-        microdata %>% group_by(indirect_tax_assumption, taxes_included, group = top_1)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income'), 
-        microdata %>% group_by(indirect_tax_assumption, taxes_included, group = top_01) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income')
+        microdata %>% group_by(indirect_tax_assumption, taxes_included, group = top_10) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Expanded income'), 
+        microdata %>% group_by(indirect_tax_assumption, taxes_included, group = top_5)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Expanded income'), 
+        microdata %>% group_by(indirect_tax_assumption, taxes_included, group = top_1)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Expanded income'), 
+        microdata %>% group_by(indirect_tax_assumption, taxes_included, group = top_01) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Expanded income')
+      ) %>% 
+      
+      # Add AGI quintile cuts  
+      bind_rows(
+        microdata %>% 
+          group_by(indirect_tax_assumption, taxes_included, group = replace_na(agi_quintile, 'Negative income')) %>%
+          calc_dist_metrics() %>%
+          mutate(group_dimension = 'AGI')
+      ) %>% 
+      
+      # Add top expanded income cuts
+      bind_rows(
+        microdata %>% group_by(indirect_tax_assumption, taxes_included, group = agi_top_10) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI'), 
+        microdata %>% group_by(indirect_tax_assumption, taxes_included, group = agi_top_5)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI'), 
+        microdata %>% group_by(indirect_tax_assumption, taxes_included, group = agi_top_1)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI'), 
+        microdata %>% group_by(indirect_tax_assumption, taxes_included, group = agi_top_01) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI')
       ) %>% 
       
       # Add year indicator
       mutate(year = yr, .before = everything())
   }
 
-  
   # Combine and write results
   dist_tables %>% 
     bind_rows() %>% 
@@ -117,7 +132,7 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
       capital       = pmax(0, (sole_prop + part_scorp + farm) * 0.2 + txbl_int + exempt_int + div_ord + div_pref + kg_st + kg_lt),
       liab_iit_pr   = liab_iit_net + liab_pr
     ) %>% 
-    select(year, id, weight, weight_person, filing_status, age, labor, capital, income = expanded_inc, liab_iit_pr) %>% 
+    select(year, id, weight, weight_person, filing_status, age, labor, capital, agi, income = expanded_inc, liab_iit_pr) %>% 
     
     # Join counterfactual reform scenario tax microdata
     left_join(
@@ -228,6 +243,28 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
       
     ) %>% 
     
+    # Add AGI-based income percentile measures 
+    arrange(agi, .by_group = T) %>% 
+    mutate(
+      
+      # AGI percentile
+      agi_pctile = cumsum(weight * (agi >= 0)) / sum(weight * (agi >= 0)), 
+      agi_pctile = if_else(agi < 0, NA, agi_pctile), 
+      
+      # Quintiles and top shares
+      agi_quintile = case_when(
+        agi_pctile <= 0.2 ~ 'Quintile 1',
+        agi_pctile <= 0.4 ~ 'Quintile 2',
+        agi_pctile <= 0.6 ~ 'Quintile 3',
+        agi_pctile <= 0.8 ~ 'Quintile 4',
+        agi_pctile <= 1   ~ 'Quintile 5',
+      ), 
+      agi_top_10 = if_else(agi_pctile > 0.9,   'Top 10%',   NA), 
+      agi_top_5  = if_else(agi_pctile > 0.95,  'Top 5%',    NA), 
+      agi_top_1  = if_else(agi_pctile > 0.99,  'Top 1%',    NA), 
+      agi_top_01 = if_else(agi_pctile > 0.999, 'Top 0.1%',  NA)
+    ) %>% 
+    
     # Join other taxes 
     left_join(
       other_taxes %>% 
@@ -248,33 +285,28 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
         ),
       by = c('year', 'decile')
     ) %>%
+    
     mutate(
       
       # Express counterfactual reform variables in baseline dollars to account for indirect tax increases
       across(.cols = ends_with('_reform'), .fns  = ~ . / (vat_factor * tariff_factor)),
       
-      # Indirect tax burden is the loss of real income from higher prices. Some components
-      # of expanded income will rise with prices (e.g. OASDI or capital income),
-      # others won't; compositional differences determine distributional impact
-      liab_indirect = income - income_reform,
-      
-      # Adjust indirect tax burden for consumption-to-income ratios if distributing
-      # indirect taxes by consumption rather than income
-      # (note: the entirety of second order effects, like the income/payroll 
-      # tax offset and OASDI colas, are distributed in full)
-      liab_indirect = liab_indirect * case_when(
-        indirect_tax_assumption == 'income' ~ 1,
-        decile == 1  ~ 2.0549, 
-        decile == 2  ~ 1.5746,
-        decile == 3  ~ 1.3315, 
-        decile == 4  ~ 1.1038, 
-        decile == 5  ~ 0.9815, 
-        decile == 6  ~ 0.8750, 
-        decile == 7  ~ 0.7823, 
-        decile == 8  ~ 0.7306, 
-        decile == 9  ~ 0.6804, 
-        decile == 10 ~ 0.5116
+      # Calculate indirect tax burden. If distributing by consumption, split income into consumption and saving...
+      # Source: CEX via Ernie
+      c = pmax(0, income) * case_when(
+        decile == 1  ~ 2.0549, decile == 2  ~ 1.5746,
+        decile == 3  ~ 1.3315, decile == 4  ~ 1.1038, 
+        decile == 5  ~ 0.9815, decile == 6  ~ 0.8750, 
+        decile == 7  ~ 0.7823, decile == 8  ~ 0.7306, 
+        decile == 9  ~ 0.6804, decile == 10 ~ 0.5116
       ), 
+      s = pmax(0, income) - c, 
+      
+      # Split burden depending on source. VAT applies only to consumption; for tariffs, 30% is income-based due to capital goods
+      liab_indirect = (c * (vat_factor * tariff_factor - 1)) + (s * (tariff_factor - 1) * 0.3),
+      
+      # Otherwise, indirect tax burden is the loss of real income
+      liab_indirect = if_else(indirect_tax_assumption == 'income', income - income_reform, liab_indirect),
       
       # Allocate corporate tax changes in accordance with assumed labor incidence
       liab_other_corp_labor      = other_corp_delta    * 1e9 * other_corp_labor_share       * (labor / sum(labor * weight)),
@@ -293,7 +325,7 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
         taxes_included == 'indirect_iit_pr'             ~ liab_indirect + liab_iit_pr_reform,
         taxes_included == 'indirect_iit_pr_estate'      ~ liab_indirect + liab_iit_pr_reform + liab_estate_reform,
         taxes_included == 'indirect_iit_pr_estate_cit'  ~ liab_indirect + liab_iit_pr_reform + liab_estate_reform + liab_corp
-      ), 
+      ),
       
       # Calculate change in tax liability
       liab_delta = liab_reform - liab, 
@@ -326,8 +358,9 @@ calc_dist_metrics = function(grouped_microdata) {
     summarise(
       
       # Group-metric-specific summary stats
-      income_cutoff = round(min(income) / 5) * 5,
-      n_tax_units   = sum(weight),
+      expanded_income_cutoff = round(min(income) / 5) * 5,
+      agi_cutoff             = round(min(agi) / 5) * 5,
+      n_tax_units            = sum(weight),
       
       # Unconditional and conditional averages
       avg       = round(weighted.mean(liab_delta, weight) / 5) * 5,
@@ -339,7 +372,9 @@ calc_dist_metrics = function(grouped_microdata) {
       share_raise = sum(weight * (liab_delta >= 5))  / sum(weight),
       
       # Relative changes
-      pct_chg_ati = sum(ati_reform * weight) / sum(ati * weight) - 1, 
+      ati_baseline = sum(ati * weight) / 1e9,
+      ati_reform   = sum(ati_reform   * weight) / 1e9,
+      pct_chg_ati  = ati_reform / ati_baseline - 1, 
       
       # Income group's total dollar amount tax change
       net_change = sum(round(liab_delta) * weight) / 1e9,

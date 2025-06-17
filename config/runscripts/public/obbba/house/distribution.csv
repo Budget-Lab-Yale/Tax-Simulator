@@ -1,0 +1,11 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Estate-Tax-Distribution.vintage,dep.Estate-Tax-Distribution.ID,dep.Cost-Recovery-Simulator.vintage,dep.Cost-Recovery-Simulator.ID,dep.Tariff-Model.vintage,dep.Tariff-Model.ID
+baseline,baseline,,2026:2028,2028,,,2025060917,baseline,202505311850,baseline,2025060708,baseline
+01_tcja_ind,public/obbba/house/distribution/01_tcja_ind,,2026:2028,2028,,,2025060917,baseline,202505311850,baseline,2025060708,baseline
+02_ctc,public/obbba/house/distribution/02_ctc,,2026:2028,2028,,,2025060917,baseline,202505311850,baseline,2025060708,baseline
+03_qbi,public/obbba/house/distribution/03_qbi,,2026:2028,2028,,,2025060917,baseline,202505311850,baseline,2025060708,baseline
+04_salt,public/obbba/house/distribution/04_salt,,2026:2028,2028,,,2025060917,baseline,202505311850,baseline,2025060708,baseline
+05_no_tax,public/obbba/house/distribution/05_no_tax,,2026:2028,2028,,,2025060917,baseline,202505311850,baseline,2025060708,baseline
+06_other,public/obbba/house/distribution/06_other,,2026:2028,2028,,,2025060917,baseline,202505311850,baseline,2025060708,baseline
+07_estate,public/obbba/house/distribution/06_other,,2026:2028,2028,,,2025060917,obbba,202505311850,baseline,2025060708,baseline
+08_cost_recovery,public/obbba/house/distribution/06_other,,2026:2028,2028,,,2025060917,obbba,202505311850,03_factories,2025060708,baseline
+09_tariffs,public/obbba/house/distribution/06_other,,2026:2028,2028,,,2025060917,obbba,202505311850,03_factories,2025060708,early_june_2025

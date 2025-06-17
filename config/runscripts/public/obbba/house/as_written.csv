@@ -1,0 +1,3 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2024:2055,2026,part_active kg_lt tips1 tips2 ot1 ot2,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar
+as_written,public/obbba/house/as_written,entity_shifting/pearce_prisinzano tips/fringe_low ot/france,2024:2055,2026,part_active kg_lt tips1 tips2 ot1 ot2,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar

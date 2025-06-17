@@ -295,7 +295,7 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
     do_ss_cola(year, macro_offsets) %>% 
     
     # Adjust capital income for policy-driven price level changes
-    do_capital_adjustment(year, macro_offsets) %>%
+    # do_capital_adjustment(year, macro_offsets) %>%
     
     # Adjust intensive-margin variables for excess real GDP growth
     do_excess_growth(scenario_info, macro_offsets$excess_growth)

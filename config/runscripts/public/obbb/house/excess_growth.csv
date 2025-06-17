@@ -1,7 +1,0 @@
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,excess_growth,excess_growth_start_year,dep.Off-Model-Estimates.vintage,dep.Off-Model-Estimates.ID
-baseline,baseline,,2024:2035,2026,part_active kg_lt tips1 tips2 ot1 ot2,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar,0,2026,20250603,cbo_delta
-as_written,public/obbb/house/as_written,entity_shifting/pearce_prisinzano tips/fringe_low ot/france,2024:2035,2026,part_active kg_lt tips1 tips2 ot1 ot2,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar,0,2026,20250603,cbo_delta
-05pp,public/obbb/house/as_written,entity_shifting/pearce_prisinzano tips/fringe_low ot/france,2024:2035,2026,part_active kg_lt tips1 tips2 ot1 ot2,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar,0.005,2026,20250603,cbo_delta
-1pp,public/obbb/house/as_written,entity_shifting/pearce_prisinzano tips/fringe_low ot/france,2024:2035,2026,part_active kg_lt tips1 tips2 ot1 ot2,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar,0.01,2026,20250603,cbo_delta
-2pp,public/obbb/house/as_written,entity_shifting/pearce_prisinzano tips/fringe_low ot/france,2024:2035,2026,part_active kg_lt tips1 tips2 ot1 ot2,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar,0.02,2026,20250603,cbo_delta
-5pp,public/obbb/house/as_written,entity_shifting/pearce_prisinzano tips/fringe_low ot/france,2024:2035,2026,part_active kg_lt tips1 tips2 ot1 ot2,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar,0.05,2026,20250603,cbo_delta

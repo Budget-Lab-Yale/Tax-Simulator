@@ -60,3 +60,4 @@ config/batch-submissions
 
 # Filepath roots
 config/interfaces/output_roots.yaml
+config/interfaces/output_roots.yaml
