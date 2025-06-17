@@ -83,5 +83,3 @@ min_value:
 # Phaseout type: 0 = TCJA design, 1 = May 2025 House-passed OBBB design
 po_type:
   value: 0
-
-

@@ -17,7 +17,6 @@ filing_status_mapper:
     '3': senior_ded_po_thresh
     '4': senior_ded_po_thresh
 
-
 # Whether tips deduction is limited to leisure and hospitality workers only
 tip_ded_lh:
   value: 0
@@ -42,6 +41,10 @@ tip_ded_po_rate:
 tip_ded_po_range:
   value: Inf
   
+# Wage earnings level above which tip deduction is denied
+tip_ded_wage_limit:
+  value: Inf
+  
 # Whether OT deduction applies only to the "half" of "time and a half"
 ot_ded_half:
   value: 0
@@ -64,6 +67,10 @@ ot_ded_po_rate:
 
 # Phaseout range for OT deduction
 ot_ded_po_range:
+  value: Inf
+  
+# Wage earnings level above which OT deduction is denied
+ot_ded_wage_limit:
   value: Inf
 
 # Senior bonus deduction value
