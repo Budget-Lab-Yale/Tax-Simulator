@@ -159,8 +159,8 @@ calc_fixed_cost = function(id) {
                  311,
                  59,
                  374,
-                 0, # tips,
-                 0, # ot,
+                 34,
+                 34,
                  350,
                  556, 
                  155,
@@ -253,8 +253,8 @@ calc_time_burden = function(microdata, fixed_cost) {
                  311,
                  59,
                  374,
-                 34, # tips
-                 34, # ot
+                 34,
+                 34,
                  350,
                  556, # increase for SALT?
                  155,

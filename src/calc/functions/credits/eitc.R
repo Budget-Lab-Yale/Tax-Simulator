@@ -125,7 +125,7 @@ calc_eitc = function(tax_unit, fill_missings = F) {
       
       # Adjust for pre-certification changes
       eitc     = if_else(eitc.parent_precert & n_dep_eitc > 0,
-                         if_else(globals$random_numbers$r.eitc_precert < 0.043, 0, eitc), 
+                         if_else(globals$random_numbers$r.eitc_precert < 0.031, 0, eitc), 
                          eitc)
       
     ) %>% 
