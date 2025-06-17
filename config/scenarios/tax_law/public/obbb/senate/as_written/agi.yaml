@@ -30,3 +30,10 @@ auto_int_ded_po_rate:
     '2014': 0
     '2025': 0.2
     '2029': 0
+    
+# Whether auto interest is only deductible for new cars
+auto_int_ded_new:
+  value:
+    '2014': 0
+    '2025': 1
+    '2029': 0

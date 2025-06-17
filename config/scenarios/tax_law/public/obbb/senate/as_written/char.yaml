@@ -7,3 +7,9 @@ item_cash_limit_agi:
     '2018': 0.6
     '2020': 1
     '2022': 0.6
+
+# AGI floor for itemized charitable deduction
+item_floor_agi:
+  value:
+    '2014': 0
+    '2026': 0.005
