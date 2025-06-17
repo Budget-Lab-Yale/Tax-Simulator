@@ -112,7 +112,7 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
       # Calculate credit rate after phaseouts 
       young_rate1 = pmax(0, cdctc.young_rate1 - young_excess1 * cdctc.young_po_rate1),
       young_rate2 = pmax(0, cdctc.young_rate2 - young_excess2 * cdctc.young_po_rate2),
-      young_rate3 = pmax(0, cdctc.young_rate3 - young_excess2 * cdctc.young_po_rate3),
+      young_rate3 = pmax(0, cdctc.young_rate3 - young_excess3 * cdctc.young_po_rate3),
       young_rate  = young_rate1 + young_rate2 + young_rate3,
       
       # Calculate credit value
