@@ -1,7 +1,0 @@
----
-
-# Whether parents are required to pre-certify their eligibility
-parent_precert:
-  value: 
-    '2014': 0
-    '2026': 1
