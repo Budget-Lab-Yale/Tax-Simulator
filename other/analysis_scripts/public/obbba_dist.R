@@ -88,12 +88,6 @@ dist = names(params) %>%
   ) %>% 
   ungroup()
   
-dist %>%
-  filter(variable!='avg') %>%
-  select(!c(contribution, top_breakout)) %>%
-  pivot_wider(names_from = 'group', values_from = 'value') %>%
-  write_csv(., 'obbba_dist_tables.csv')
-
 #-------
 # Plots
 #-------
