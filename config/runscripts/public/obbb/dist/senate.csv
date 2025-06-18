@@ -1,0 +1,8 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2026:2027,2026 2027,,
+01-tcja,public/obbb/dist/senate/01-tcja,,2026:2027,2026 2027,,
+02-ctc,public/obbb/dist/senate/02-ctc,,2026:2027,2026 2027,,
+03-no_tax,public/obbb/dist/senate/03-no_tax,,2026:2027,2026 2027,,
+04-qbi,public/obbb/dist/senate/04-qbi,,2026:2027,2026 2027,,
+05-salt,public/obbb/dist/senate/05-salt,,2026:2027,2026 2027,,
+06-other,public/obbb/dist/senate/06-other,,2026:2027,2026 2027,,

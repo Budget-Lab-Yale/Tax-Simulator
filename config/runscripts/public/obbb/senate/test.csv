@@ -1,4 +1,0 @@
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2025:2027,2026,part_active kg_lt tips1 tips2 ot1 ot2 auto_int_exp,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar
-13-cdctc,public/obbb/senate/stacked/13-cdctc,entity_shifting/pearce_prisinzano tips/fringe_low ot/france auto/hanson,2025:2027,2026,part_active kg_lt tips1 tips2 ot1 ot2 auto_int_exp,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar
-14-char,public/obbb/senate/stacked/14-char,entity_shifting/pearce_prisinzano tips/fringe_low ot/france auto/hanson,2025:2027,2026,part_active kg_lt tips1 tips2 ot1 ot2 auto_int_exp,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar
