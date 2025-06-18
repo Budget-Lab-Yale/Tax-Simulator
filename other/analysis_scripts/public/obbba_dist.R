@@ -11,7 +11,7 @@ output_root = '/vast/palmer/scratch/sarin/jmk263/model_data/Tax-Simulator/v1/'
 
 params = list(
   house = list(
-    vintage = '202506180911', 
+    vintage = '202506181247', 
     scenarios = c(
       '01-tcja', 
       '02-ctc', 
@@ -24,7 +24,7 @@ params = list(
     )
   ), 
   senate = list(
-    vintage = '202506180912', 
+    vintage = '202506181249', 
     scenarios = c(
       '01-tcja', 
       '02-ctc', 
@@ -37,7 +37,7 @@ params = list(
     )
   ), 
   delta = list(
-    vintage = '202506180914', 
+    vintage = '202506181250', 
     scenarios = c(
       '01-house', 
       '02-salt', 
@@ -88,7 +88,11 @@ dist = names(params) %>%
   ) %>% 
   ungroup()
   
-
+dist %>%
+  filter(variable!='avg') %>%
+  select(!c(contribution, top_breakout)) %>%
+  pivot_wider(names_from = 'group', values_from = 'value') %>%
+  write_csv(., 'obbba_dist_tables.csv')
 
 #-------
 # Plots
@@ -606,8 +610,8 @@ build_delta_plot = function() {
       subtitle = "● Net Difference",
       y = "Income Group",
       x = "Percentage Point Difference from House-Passed Version", # Keep concise
-      fill = "Provision",
-      caption = "Source: The Budget Lab calculations"
+      fill = element_blank(),#"Provision",
+      caption = "Source: The Budget Lab calculations",
     ) +
     theme_minimal() +
     theme(
@@ -616,6 +620,7 @@ build_delta_plot = function() {
       plot.title = element_text(size = 14),
       plot.subtitle = element_text(size = 12),
       plot.caption = element_text(size = 9, color = "gray50", hjust = 0),
+      legend.position = "top",
       legend.title = element_text(size = 12),
       legend.text = element_text(size = 9),
       legend.box = "horizontal",
@@ -691,12 +696,12 @@ build_delta_plot = function() {
              x = -0.1, # Position left text on the negative side
              y = anno_y_pos, # Y-position for text
              label = "Senate is less generous than the House",
-             hjust = 0.5, vjust = 0.5, size = 3) +
-    annotate("text",
-             x = 0.1, # Position right text on the positive side
-             y = anno_y_pos, # Y-position for text
-             label = "Senate is more generous than the House",
-             hjust = 0.5, vjust = 0.5, size = 3)
+             hjust = .5, vjust = 0.5, size = 3) # +
+  # annotate("text",
+   #          x = 0.1, # Position right text on the positive side
+    #         y = anno_y_pos, # Y-position for text
+     #        label = "Senate is more generous than the House",
+      #       hjust = .5, vjust = 0.5, size = 3)
   
   # Arrows (adjust x, xend, y, yend, and arrow parameters as needed)
   # For the left arrow: from a point far left, ending near x=0
@@ -706,14 +711,14 @@ build_delta_plot = function() {
   p <- p +
     annotate("segment",
              x = -0.05, xend = -0.15, # Start far left, end slightly before 0
-             y = anno_y_pos - 0.3, yend = anno_y_pos - 0.3, # Y-position for arrow, slightly below text
+             y = anno_y_pos - 0.5, yend = anno_y_pos - 0.5, # Y-position for arrow, slightly below text
              arrow = arrow(length = unit(arrow_len_cm, "cm"), type = "closed", ends = "last"),
-             linewidth = 0.6, color = "black") +
-    annotate("segment",
-             x = 0.05, xend = 0.15, # Start slightly after 0, end far right
-             y = anno_y_pos - 0.3, yend = anno_y_pos - 0.3, # Y-position for arrow
-             arrow = arrow(length = unit(arrow_len_cm, "cm"), type = "closed", ends = "last"),
-             linewidth = 0.6, color = "black")
+             linewidth = 0.6, color = "black") #+
+   # annotate("segment",
+   #          x = 0.05, xend = 0.15, # Start slightly after 0, end far right
+  #           y = anno_y_pos - 0.3, yend = anno_y_pos - 0.3, # Y-position for arrow
+  #           arrow = arrow(length = unit(arrow_len_cm, "cm"), type = "closed", ends = "last"),
+    #         linewidth = 0.6, color = "black")
   
   # Ensure nothing is clipped
   p <- p + coord_cartesian(clip = "off")
