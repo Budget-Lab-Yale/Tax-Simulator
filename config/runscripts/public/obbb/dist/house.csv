@@ -1,8 +1,10 @@
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2026:2027,2026 2027,,
-01-tcja,public/obbb/dist/house/01-tcja,,2026:2027,2026 2027,,
-02-ctc,public/obbb/dist/house/02-ctc,,2026:2027,2026 2027,,
-03-no_tax,public/obbb/dist/house/03-no_tax,,2026:2027,2026 2027,,
-04-qbi,public/obbb/dist/house/04-qbi,,2026:2027,2026 2027,,
-05-salt,public/obbb/dist/house/05-salt,,2026:2027,2026 2027,,
-06-other,public/obbb/dist/house/06-other,,2026:2027,2026 2027,,
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Estate-Tax-Distribution.vintage,dep.Estate-Tax-Distribution.ID,dep.Cost-Recovery-Simulator.vintage,dep.Cost-Recovery-Simulator.ID
+baseline,baseline,,2026:2027,2026 2027,,,2025060917,baseline,202505311850,baseline
+01-tcja,public/obbb/dist/house/01-tcja,,2026:2027,2026 2027,,,2025060917,baseline,202505311850,baseline
+02-ctc,public/obbb/dist/house/02-ctc,,2026:2027,2026 2027,,,2025060917,baseline,202505311850,baseline
+03-no_tax,public/obbb/dist/house/03-no_tax,,2026:2027,2026 2027,,,2025060917,baseline,202505311850,baseline
+04-qbi,public/obbb/dist/house/04-qbi,,2026:2027,2026 2027,,,2025060917,baseline,202505311850,baseline
+05-salt,public/obbb/dist/house/05-salt,,2026:2027,2026 2027,,,2025060917,baseline,202505311850,baseline
+06-other,public/obbb/dist/house/06-other,,2026:2027,2026 2027,,,2025060917,baseline,202505311850,baseline
+07-estate,public/obbb/dist/house/06-other,,2026:2027,2026 2027,,,2025060917,obbba,202505311850,baseline
+08-depreciation,public/obbb/dist/house/06-other,,2026:2027,2026 2027,,,2025060917,obbba,202505311850,03_factories

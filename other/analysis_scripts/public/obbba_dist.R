@@ -183,9 +183,9 @@ build_net_effect_plot()
 build_contribution_plot = function(version) {
   
   # Build title of plot
-  title_start = "House-Passed OBBBA: "
+  title_start = "Selected Tax Provisions of the House-Passed OBBBA: "
   if (version == 'senate') {
-    title_start = "Senate Finance Committee OBBBA: "
+    title_start = "Selected Tax Provisions of the Senate Finance Committee OBBBA: "
   }
   
   # Create better scenario labels
@@ -295,7 +295,7 @@ build_contribution_plot = function(version) {
     ) +
     
     labs(
-      title    = paste0(title_start, "Provision-Level Decomposition of Percent Change in After-Tax Income, 2026"),
+      title    = paste0(title_start, "Provision-Level \nDecomposition of Percent Change in After-Tax Income, 2026"),
       subtitle = "● Net Effect of All Provisions",
       x        = "Income Group",
       y        = "Percentage Points",
@@ -324,20 +324,6 @@ build_contribution_plot('house')
 build_contribution_plot('senate')
 
 
-dist %>% 
-  filter(
-    exercise == 'delta',
-    variable == 'pct_chg_ati' 
-  ) %>% 
-  group_by(group) %>%
-  mutate(total = value[scenario == '06-other'] - value[scenario == '01-house']) %>%
-  ungroup() %>%
-  filter(scenario != '01-house') %>% 
-  ggplot(aes(x = group, y = contribution, fill = scenario)) + 
-  geom_col() +
-  geom_point(aes(y = total)) +
-  geom_hline(yintercept = 0) + 
-  facet_wrap(~top_breakout)
 
 
 
