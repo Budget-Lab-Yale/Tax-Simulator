@@ -1,38 +1,5 @@
 ---
 
-
-filing_status_mapper:
-  pease_thresh:
-    '1': pease_thresh_single
-    '2': pease_thresh_married
-    '3': pease_thresh_married / 2
-    '4': pease_thresh_head
-  salt_limit:
-    '1': salt_limit_married
-    '2': salt_limit_married
-    '3': salt_limit_married / 2
-    '4': salt_limit_married
-  salt_floor:
-    '1': salt_floor
-    '2': salt_floor
-    '3': salt_floor / 2
-    '4': salt_floor
-  salt_floor_thresh:
-    '1': salt_floor_thresh
-    '2': salt_floor_thresh
-    '3': salt_floor_thresh / 2
-    '4': salt_floor_thresh
-  mort_bal_limit:
-    '1': mort_bal_limit_single
-    '2': mort_bal_limit_married
-    '3': mort_bal_limit_mfs
-    '4': mort_bal_limit_single
-  limit_tax_value_thresh:
-    '1': limit_tax_value_thresh_single
-    '2': limit_tax_value_thresh_married
-    '3': limit_tax_value_thresh_single
-    '4': limit_tax_value_thresh_single
-
 # Maximum deductible state and local taxes, joint returns
 salt_limit_married:
   value:

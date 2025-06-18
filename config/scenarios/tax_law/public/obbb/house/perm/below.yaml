@@ -27,8 +27,8 @@ ot_ded_half:
     '2014': 0
     '2025': 1
     
-# Maximum deductible OT
-ot_ded_limit:
+# Maximum deductible OT, non-joint returns
+ot_ded_limit_single:
   value:
     '2014': 0
     '2025': Inf
