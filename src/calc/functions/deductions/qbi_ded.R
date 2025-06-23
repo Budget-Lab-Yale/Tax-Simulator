@@ -168,7 +168,7 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
       #------------------
       
       # Offer minimum deduction if applicable
-      qbi_ded = pmax(qbi_ded, qbi.min_value),
+      qbi_ded = pmax(qbi_ded, qbi.min_value * (inc > 1000)),
       
       # Limit deduction to a share of ordinary taxable income
       qbi_ded = pmin(qbi_ded, pmax(0, txbl_inc - div_pref - kg_pref) * qbi.txbl_inc_limit)

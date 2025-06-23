@@ -1,0 +1,8 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Estate-Tax-Distribution.vintage,dep.Estate-Tax-Distribution.ID,dep.Cost-Recovery-Simulator.vintage,dep.Cost-Recovery-Simulator.ID
+baseline,baseline,,2026:2027,2026 2027,,,2025060917,baseline,202505311850,baseline
+01-house,public/obbb/dist/house-senate/01-house,,2026:2027,2026 2027,,,2025060917,obbba,202505311850,03_factories
+02-salt,public/obbb/dist/house-senate/02-salt,,2026:2027,2026 2027,,,2025060917,obbba,202505311850,03_factories
+03-qbi,public/obbb/dist/house-senate/03-qbi,,2026:2027,2026 2027,,,2025060917,obbba,202505311850,03_factories
+04-no_tax,public/obbb/dist/house-senate/04-no_tax,,2026:2027,2026 2027,,,2025060917,obbba,202505311850,03_factories
+05-ctc,public/obbb/dist/house-senate/05-ctc,,2026:2027,2026 2027,,,2025060917,obbba,202505311850,03_factories
+06-other,public/obbb/dist/house-senate/06-other,,2026:2027,2026 2027,,,2025060917,obbba,202505311850,03_factories
