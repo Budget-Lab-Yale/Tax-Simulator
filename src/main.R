@@ -27,9 +27,10 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
+
 runscript_names  = 'public/obbb/dist/standalone'
 scenario_id      = NULL
-local            = 1
+local            = 0
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1
