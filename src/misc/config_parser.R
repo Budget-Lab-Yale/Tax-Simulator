@@ -226,6 +226,7 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     r.cdctc_takeup    = runif(length(sample_ids)),             # CDCTC takeup rate
     r.salt_workaround = runif(length(sample_ids)),             # SALT workaround participation rate
     r.oasdi_exp       = round(rexp(length(sample_ids), 1/4)),  # For OASDI claiming year imputation in do_ss_cola()  
+    r.new_car         = runif(length(sample_ids)),             # For imputation of p(new car | car loan interest) for auto loan deduction
     r.behavior1       = runif(length(sample_ids)),             # Spare random number for use in behavioral modules
     r.behavior2       = runif(length(sample_ids)),             # Spare random number for use in behavioral modules
     r.behavior3       = runif(length(sample_ids)),             # Spare random number for use in behavioral modules

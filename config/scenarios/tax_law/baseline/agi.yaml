@@ -123,3 +123,7 @@ auto_int_ded_po_thresh_single:
 # Phaseout rate for auto loan interest deduction 
 auto_int_ded_po_rate:
   value: 0
+  
+# Whether auto interest is only deductible for new cars
+auto_int_ded_new:
+  value: 0

@@ -7,17 +7,45 @@ tip_ded_limit:
     '2014': 0
     '2025': Inf
     
+# Wage earnings level above which tip deduction is denied
+tip_ded_wage_limit:
+  value: 
+    '2014': Inf
+    '2025': 160000
+  i_measure: 
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year:
+    '2014': NA
+    '2025': 2024 
+  i_direction: -1
+  i_increment: 100
+    
 # Whether OT deduction applies only to the "half" of "time and a half"
 ot_ded_half:
   value:
     '2014': 0
     '2025': 1
     
-# Maximum deductible OT
-ot_ded_limit:
+# Maximum deductible OT, non-joint returns
+ot_ded_limit_single:
   value:
     '2014': 0
     '2025': Inf
+    
+# Wage earnings level above which OT deduction is denied
+ot_ded_wage_limit:
+  value: 
+    '2014': Inf
+    '2025': 160000
+  i_measure: 
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year:
+    '2014': NA
+    '2025': 2024 
+  i_direction: -1
+  i_increment: 100
 
 # Senior bonus deduction value
 senior_ded_value:

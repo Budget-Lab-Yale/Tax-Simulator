@@ -54,7 +54,8 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     'qbi.wage_exception_non_sstb', # (int) for non-SSTBs, whether paying wages excepts taxpayer from taxable income phaseout 
     'qbi.wage_limit',              # (dbl) share of W2 wage bill required for full deduction after phase-out 
     'qbi.txbl_inc_limit',          # (dbl) share of ordinary taxable income limit
-    'qbi.po_type'                  # (int) phaseout type: 0 = TCJA design, 1 = May 2025 House-passed OBBB design
+    'qbi.po_type',                 # (int) phaseout type: 0 = TCJA design, 1 = May 2025 House-passed OBBB design
+    'qbi.min_value'                # (int) minimum deduction amount
   )
   
   
@@ -165,6 +166,9 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
       #------------------
       # Final limitation
       #------------------
+      
+      # Offer minimum deduction if applicable
+      qbi_ded = pmax(qbi_ded, qbi.min_value * (inc > 1000)),
       
       # Limit deduction to a share of ordinary taxable income
       qbi_ded = pmin(qbi_ded, pmax(0, txbl_inc - div_pref - kg_pref) * qbi.txbl_inc_limit)

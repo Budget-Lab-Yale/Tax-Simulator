@@ -1,0 +1,23 @@
+---
+
+# Maximum deductible tips
+tip_ded_limit:
+  value: 
+    '2014': 0
+    '2025': 25000
+    '2029': 0
+    
+# AGI threshold for tip deduction phaseout, non-joint returns
+tip_ded_po_thresh_single:
+  value:
+    '2014': Inf
+    '2025': 150000
+    '2029': Inf
+    
+# Phaseout rate for tip deduction
+tip_ded_po_rate:
+  value: 
+    '2014': 0
+    '2025': 0.1
+    '2029': 0
+
