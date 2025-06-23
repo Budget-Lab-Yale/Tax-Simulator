@@ -1,6 +1,7 @@
-#------------------
-# TODO
-#------------------
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Analysis script for calculations in "Standalone Distributional Effects of Major Tax Provisions in the Reconciliation Bill: Comparing House and Senate Versions"
+# https://budgetlab.yale.edu/research/standalone-distributional-effects-major-tax-provisions-reconciliation-bill-comparing-house-and 
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 library(tidyverse)
