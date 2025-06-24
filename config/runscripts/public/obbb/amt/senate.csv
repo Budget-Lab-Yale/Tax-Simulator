@@ -1,0 +1,5 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2026:2027,2026,other_inc salt_inc_sales,nextdollar nextdollar
+tcja,public/obbb/senate/amt/tcja,,2026:2027,2026,other_inc salt_inc_sales,nextdollar nextdollar
+without,public/obbb/senate/amt/without,,2026:2027,2026,other_inc salt_inc_sales,nextdollar nextdollar
+with,public/obbb/senate/amt/with,,2026:2027,2026,other_inc salt_inc_sales,nextdollar nextdollar
