@@ -117,17 +117,6 @@ dist = names(params) %>%
   )
 
 
-
-
-
-202
-dist %>% 
-  filter(group == 'Overall') %>% 
-  group_by(provision, version) %>% 
-  summarise(sum(avg * n_tax_units) / 1e9)
-  
-
-
 #-------
 # Plots
 #-------
