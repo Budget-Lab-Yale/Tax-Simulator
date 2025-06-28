@@ -55,7 +55,7 @@ salt_limit_married:
     '2018': 10000
     '2026': Inf
 
-# Minimum value of SALT deduction
+# Minimum value of SALT cap
 salt_floor:
   value:
     '2014': 0
