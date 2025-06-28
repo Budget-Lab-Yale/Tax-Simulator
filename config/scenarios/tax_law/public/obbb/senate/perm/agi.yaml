@@ -1,0 +1,35 @@
+---
+
+# Maximum deductible business loss
+bus_loss_limit_married:
+  value:
+    '2014': Inf
+    '2022': 500000
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+    
+# Maximum amount of auto loan interest deductible from gross income
+auto_int_ded_limit:
+  value:
+    '2014': 0
+    '2025': 10000
+
+# Threshold above which auto loan interest deduction begins to phase out, non-joint returns
+auto_int_ded_po_thresh_single:
+  value:
+    '2014': Inf
+    '2025': 100000
+
+# Phaseout rate for auto loan interest deduction 
+auto_int_ded_po_rate:
+  value:
+    '2014': 0
+    '2025': 0.2
+    
+# Whether auto interest is only deductible for new cars
+auto_int_ded_new:
+  value:
+    '2014': 0
+    '2025': 1

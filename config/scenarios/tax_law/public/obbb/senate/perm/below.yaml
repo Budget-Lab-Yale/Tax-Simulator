@@ -1,0 +1,55 @@
+---
+
+# Maximum deductible tips
+tip_ded_limit:
+  value: 
+    '2014': 0
+    '2025': 25000
+    
+# AGI threshold for tip deduction phaseout, non-joint returns
+tip_ded_po_thresh_single:
+  value:
+    '2014': Inf
+    '2025': 150000
+    
+# Phaseout rate for tip deduction
+tip_ded_po_rate:
+  value: 
+    '2014': 0
+    '2025': 0.1
+    
+# Whether OT deduction applies only to the "half" of "time and a half"
+ot_ded_half:
+  value:
+    '2014': 0
+    '2025': 1
+    
+# Maximum deductible OT
+ot_ded_limit_single:
+  value:
+    '2014': 0
+    '2025': 12500
+    
+# AGI threshold for OT deduction phaseout, non-joint returns
+ot_ded_po_thresh_single:
+  value: 
+    '2014': Inf
+    '2025': 150000
+    
+# Phaseout rate for OT deduction
+ot_ded_po_rate:
+  value: 
+    '2014': 0
+    '2025': 0.1
+
+# Senior bonus deduction value
+senior_ded_value:
+  value: 
+    '2014': 0
+    '2025': 6000
+
+# Phaseout rate for senior bonus deduction
+senior_ded_po_rate:
+  value: 
+    '2014': 0
+    '2025': 0.06
