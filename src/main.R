@@ -27,15 +27,15 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'public/obbb/dist/share_current_law____public/obbb/dist/share_current_policy'
+runscript_names  = 'public/obbb/senate/as_written'
 scenario_id      = NULL
-local            = 1
+local            = 0
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
 delete_detail    = 0
-multicore        = 'none'   # one of 'none', 'scenario', or 'year'
+multicore        = 'year'   # one of 'none', 'scenario', or 'year'
 
 
 # Override default runtime args if executed from the command line
