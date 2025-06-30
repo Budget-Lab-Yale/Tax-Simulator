@@ -134,7 +134,7 @@ totals = tax %>%
     
     # Calculate after-tax-and-transfer income
     atti_baseline = ati_baseline + medicaid_benefits_baseline + snap_baseline,
-    atti_scenario = ati_baseline - tax_change + medicaid_benefits_scenario + snap_scenario,
+    atti_scenario = ati_baseline - tax_change + medicaid_benefits_scenario + snap_scenario + medicaid_providers_labor + medicaid_providers_capital,
 
     # Deltas 
     tax_change      = -tax_change,
