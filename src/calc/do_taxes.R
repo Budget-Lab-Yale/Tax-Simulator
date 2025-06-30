@@ -667,9 +667,26 @@ do_salt_workaround_baseline = function(tax_units) {
       
       # Simulate amount moved in workaround. Probability calibrated to hit 
       # $20B annual estimate from TPC 
-      incentive_for_workaround = (!is.infinite(item.salt_limit) | !is.infinite(amt.exempt)) & item.salt_workaround_allowed,
-      salt_workaround_part  = salt_part * item.salt_workaround_share * (incentive_for_workaround & (salt_part > 0)  & (r.salt_workaround < 0.75)),
-      salt_workaround_scorp = salt_scorp * item.salt_workaround_share * (incentive_for_workaround & (salt_scorp > 0) & (r.salt_workaround < 0.75)),
+      incentive_for_workaround = (!is.infinite(item.salt_limit) | !is.infinite(amt.exempt)),
+      
+      salt_workaround_part  = case_when(
+        !incentive_for_workaround ~ 0,
+        item.salt_workaround_allowed_part == 0 ~ 0,
+        is.na(sstb_part) ~ 0,
+        salt_part == 0   ~ 0,
+        sstb_part == 1   ~ salt_part * as.integer(r.salt_workaround < item.salt_workaround_allowed_sstb),
+        sstb_part == 0   ~ salt_part * as.integer(r.salt_workaround < item.salt_workaround_allowed_non_sstb),
+        T ~ NA
+      ), 
+      
+      salt_workaround_scorp  = case_when(
+        !incentive_for_workaround ~ 0,
+        is.na(sstb_scorp) ~ 0,
+        salt_scorp == 0   ~ 0,
+        sstb_scorp == 1   ~ salt_scorp * as.integer(r.salt_workaround < item.salt_workaround_allowed_sstb),
+        sstb_scorp == 0   ~ salt_scorp * as.integer(r.salt_workaround < item.salt_workaround_allowed_non_sstb),
+        T ~ NA
+      ), 
       
       # Shift SALT
       salt_inc_sales    = salt_inc_sales - salt_workaround_part - salt_workaround_scorp,

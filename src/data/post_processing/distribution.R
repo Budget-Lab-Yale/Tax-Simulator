@@ -60,6 +60,22 @@ build_distribution_tables = function(id, baseline_id) {
         microdata %>% group_by(taxes_included, group = top_01) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income')
       ) %>% 
       
+      # Add AGI quintile cuts  
+      bind_rows(
+        microdata %>% 
+          group_by(taxes_included, group = replace_na(agi_quintile, 'Negative income')) %>%
+          calc_dist_metrics() %>%
+          mutate(group_dimension = 'AGI')
+      ) %>% 
+      
+      # Add top AGI cuts
+      bind_rows(
+        microdata %>% group_by(taxes_included, group = agi_top_10) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI'), 
+        microdata %>% group_by(taxes_included, group = agi_top_5)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI'), 
+        microdata %>% group_by(taxes_included, group = agi_top_1)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI'), 
+        microdata %>% group_by(taxes_included, group = agi_top_01) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI')
+      ) %>% 
+      
       # Add year indicator
       mutate(year = yr, .before = everything())
   }
@@ -111,13 +127,13 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
     filter(dep_status == 0) %>%
     mutate(
       year          = yr,
-      weight_person = weight * (1 + (filing_status == 2)),
+      n_people      = 1 + as.integer(filing_status == 2) + n_dep,
       age           = if_else(filing_status == 2, pmax(age1, age2), age1),
       labor         = pmax(0, wages + (sole_prop + part_scorp + farm) * 0.8),
       capital       = pmax(0, (sole_prop + part_scorp + farm) * 0.2 + txbl_int + exempt_int + div_ord + div_pref + kg_st + kg_lt),
       liab_iit_pr   = liab_iit_net + liab_pr
     ) %>% 
-    select(year, id, weight, weight_person, filing_status, age, labor, capital, income = expanded_inc, liab_iit_pr) %>% 
+    select(year, id, weight, n_people, filing_status, age, labor, capital, agi, income = expanded_inc, liab_iit_pr) %>% 
     
     # Make 3 copies for tax-type inclusion assumptions 
     expand_grid(taxes_included = c('iit_pr', 'iit_pr_estate', 'iit_pr_estate_cit_vat')) %>% 
@@ -128,7 +144,7 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
         fread() %>%
         tibble() %>% 
         mutate(liab_iit_pr_reform  = liab_iit_net + liab_pr) %>%
-        select(id, income_reform = expanded_inc, liab_iit_pr_reform),
+        select(id, liab_iit_pr_reform),
       by = 'id'
     )
   
@@ -187,6 +203,7 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
     mutate(
       
       # Express counterfactual reform variables in baseline dollars to account for VAT
+      income_reform = income,
       across(.cols = ends_with('_reform'), .fns  = ~ . / vat_price_offset),
       
       # Add inheritance to income for estate tax-inclusive assumption scenarios
@@ -257,6 +274,29 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
         T        ~ '65+'
       )
     ) %>% 
+    
+    # Add AGI-based income percentile measures 
+    arrange(agi, .by_group = T) %>% 
+    mutate(
+      
+      # AGI percentile
+      agi_pctile = cumsum(weight * (agi >= 0)) / sum(weight * (agi >= 0)), 
+      agi_pctile = if_else(agi < 0, NA, agi_pctile), 
+      
+      # Quintiles and top shares
+      agi_quintile = case_when(
+        agi_pctile <= 0.2 ~ 'Quintile 1',
+        agi_pctile <= 0.4 ~ 'Quintile 2',
+        agi_pctile <= 0.6 ~ 'Quintile 3',
+        agi_pctile <= 0.8 ~ 'Quintile 4',
+        agi_pctile <= 1   ~ 'Quintile 5',
+      ), 
+      agi_top_10 = if_else(agi_pctile > 0.9,   'Top 10%',   NA), 
+      agi_top_5  = if_else(agi_pctile > 0.95,  'Top 5%',    NA), 
+      agi_top_1  = if_else(agi_pctile > 0.99,  'Top 1%',    NA), 
+      agi_top_01 = if_else(agi_pctile > 0.999, 'Top 0.1%',  NA)
+    ) %>% 
+    
     ungroup() %>% 
     return()
 }
@@ -281,7 +321,13 @@ calc_dist_metrics = function(grouped_microdata) {
       
       # Group-metric-specific summary stats
       income_cutoff = round(min(income) / 5) * 5,
+      agi_cutoff    = round(min(agi) / 5) * 5,
       n_tax_units   = sum(weight),
+      
+      # Labor/capital/ATI for spending distribution
+      labor        = sum(labor * weight) / 1e9, 
+      capital      = sum(capital * weight) / 1e9,
+      ati_baseline = sum(ati * weight) / 1e9,
       
       # Unconditional and conditional averages
       avg       = round(weighted.mean(liab_delta, weight) / 5) * 5,
@@ -293,6 +339,7 @@ calc_dist_metrics = function(grouped_microdata) {
       share_raise = sum(weight * (liab_delta >= 5))  / sum(weight),
       
       # Relative changes
+
       pct_chg_ati = sum(ati_reform * weight) / sum(ati * weight) - 1, 
       
       # Income group's total dollar amount tax change

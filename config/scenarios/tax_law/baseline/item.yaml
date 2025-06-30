@@ -36,8 +36,8 @@ filing_status_mapper:
     '4': mort_bal_limit_single
   limit_tax_value_thresh:
     '1': limit_tax_value_thresh_single
-    '2': limit_tax_value_thresh_single
-    '3': limit_tax_value_thresh_single
+    '2': limit_tax_value_thresh_married
+    '3': limit_tax_value_thresh_single / 2
     '4': limit_tax_value_thresh_single
   
 # AGI floor above which medical expenses are deductible
@@ -65,12 +65,16 @@ salt_floor_thresh:
   value:
     '2014': Inf
     
-# Whether PTE SALT workarounds are allowed  
-salt_workaround_allowed:
-  value: 1
-
-# Amount of SALT workaround that evades capture
-salt_workaround_share:
+# Amount of PTE SALT workaround allowed, non-SSTBs
+salt_workaround_allowed_non_sstb:
+  value: 0.75
+  
+# Amount of PTE SALT workaround allowed, SSTBs
+salt_workaround_allowed_sstb:
+  value: 0.75
+  
+# Amount of PTE SALT workaround allowed, partnerships
+salt_workaround_allowed_part:
   value: 1
 
 # Rate at which SALT deduction phases out towards the floor
@@ -179,6 +183,10 @@ limit:
   
 # Tax value limitation reduction threshold, single returns (i.e. next bracket where rate corresponding to maximum tax value ends)
 limit_tax_value_thresh_single:
+  value: Inf
+  
+# Tax value limitation reduction threshold, single returns (i.e. next bracket where rate corresponding to maximum tax value ends)
+limit_tax_value_thresh_married:
   value: Inf
   
 # Tax value limitation reduction rate, SALT (i.e. percentage point diference between maximum statutory tax value and target value) 

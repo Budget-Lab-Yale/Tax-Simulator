@@ -1,38 +1,5 @@
 ---
 
-
-filing_status_mapper:
-  pease_thresh:
-    '1': pease_thresh_single
-    '2': pease_thresh_married
-    '3': pease_thresh_married / 2
-    '4': pease_thresh_head
-  salt_limit:
-    '1': salt_limit_married
-    '2': salt_limit_married
-    '3': salt_limit_married / 2
-    '4': salt_limit_married
-  salt_floor:
-    '1': salt_floor
-    '2': salt_floor
-    '3': salt_floor / 2
-    '4': salt_floor
-  salt_floor_thresh:
-    '1': salt_floor_thresh
-    '2': salt_floor_thresh
-    '3': salt_floor_thresh / 2
-    '4': salt_floor_thresh
-  mort_bal_limit:
-    '1': mort_bal_limit_single
-    '2': mort_bal_limit_married
-    '3': mort_bal_limit_mfs
-    '4': mort_bal_limit_single
-  limit_tax_value_thresh:
-    '1': limit_tax_value_thresh_single
-    '2': limit_tax_value_thresh_married
-    '3': limit_tax_value_thresh_single
-    '4': limit_tax_value_thresh_single
-
 # Maximum deductible state and local taxes, joint returns
 salt_limit_married:
   value:
@@ -54,6 +21,18 @@ salt_floor:
     '2014': 0
     '2025': 10000
 
+# Amount of PTE SALT workaround allowed, SSTBs
+salt_workaround_allowed_sstb:
+  value: 
+    '2014': 0.75
+    '2025': 0
+    
+# PTE SALT workaround allowed, partnerships
+salt_workaround_allowed_part:
+  value: 
+    '2014': 1
+    '2025': 0
+
 # Income above which SALT deduction phases out towards the floor
 salt_floor_thresh:
   value:
@@ -67,12 +46,6 @@ salt_floor_thresh:
     '2031': 530760
     '2032': 536068
     '2033': 541428
-
-# Amount of SALT workaround that evades capture
-salt_workaround_share:
-  value:
-    '2014': 1
-    '2025': 0.2
 
 # Years after which mortgage interest deduction is limited based on mortgage balance. Maps to mort_bal_limit 
 mort_bal_limit_years:
@@ -145,6 +118,7 @@ limit_tax_value_thresh_single:
   value:
     '2014': Inf
     '2026': 500000
+  i_measure: default
   i_base_year:
     '2014': NA
     '2026': 2017
@@ -156,6 +130,7 @@ limit_tax_value_thresh_married:
   value:
     '2014': Inf
     '2026': 600000
+  i_measure: default
   i_base_year:
     '2014': NA
     '2026': 2017

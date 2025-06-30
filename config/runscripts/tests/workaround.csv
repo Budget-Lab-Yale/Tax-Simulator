@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Estate-Tax-Distribution.vintage,dep.Estate-Tax-Distribution.ID,dep.Cost-Recovery-Simulator.vintage,dep.Cost-Recovery-Simulator.ID
+baseline,baseline,,2026:2029,2026,,,2025062511,baseline,202506251350,baseline
+without,tests/workaround/without,,2026:2029,2026,,,2025062511,obbba,202506251350,03_factories
+with,tests/workaround/with,,2026:2029,2026,,,2025062511,obbba,202506251350,03_factories

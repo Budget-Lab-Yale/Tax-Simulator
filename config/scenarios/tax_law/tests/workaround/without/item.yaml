@@ -10,15 +10,17 @@ salt_limit_married:
     '2027': 40804
     '2028': 41212
     '2029': 41624
-    '2030': 10000
-  
+    '2030': 42040
+    '2031': 42461
+    '2032': 42885
+    '2033': 43314
+
 # Minimum value of SALT cap
 salt_floor:
   value:
     '2014': 0
     '2025': 10000
-    '2030': 0
-    
+
 # Income above which SALT deduction phases out towards the floor
 salt_floor_thresh:
   value:
@@ -28,8 +30,11 @@ salt_floor_thresh:
     '2027': 510050
     '2028': 515151
     '2029': 520302
-    '2030': Inf
-  
+    '2030': 525505
+    '2031': 530760
+    '2032': 536068
+    '2033': 541428
+
 # Years after which mortgage interest deduction is limited based on mortgage balance. Maps to mort_bal_limit 
 mort_bal_limit_years:
   value: 
@@ -120,6 +125,12 @@ limit_tax_value_thresh_married:
   i_direction: -1
   i_increment: 50
   
+# Tax value limitation reduction rate, SALT (i.e. percentage point diference between maximum statutory tax value and target value) 
+salt_limit_tax_value_rate:
+  value:
+    '2014': 0
+    '2026': 0.1351351
+
 # Tax value limitation reduction rate, non-SALT (i.e. percentage point diference between maximum statutory tax value and target value) 
 limit_tax_value_rate:
   value:
