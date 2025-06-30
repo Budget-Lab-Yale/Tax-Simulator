@@ -27,9 +27,9 @@ list.files('./src', recursive = T) %>%
 # Set runtime parameters
 #------------------------
 
-runscript_names  = 'public/obbb/senate/as_written'
+runscript_names  = 'public/obbb/dist/spending_tax_0629'
 scenario_id      = NULL
-local            = 0
+local            = 1
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1

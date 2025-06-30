@@ -9,11 +9,11 @@ library(tidyverse)
 # Set parameters
 #----------------
 
-output_root = 'C:/Users/jar335/Documents/Interfaces/model_data/Tax-Simulator/v1'
+output_root = '/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1'
 
 params = list(
   current_law = list(
-    vintage = '202506271342', 
+    vintage = '202506291824', 
     scenarios = c(
       'tcja',
       'house', 
@@ -21,7 +21,7 @@ params = list(
     )
  ), 
  current_policy = list(
-   vintage = '202506271348', 
+   vintage = '202506291827', 
    scenarios = c(
      'house-ind',
      'senate-ind',
@@ -72,6 +72,7 @@ dist = names(params) %>%
 
 
 dist %>% 
+  arrange(name) %>% 
   pivot_wider(
     names_from  = scenario, 
     values_from = value 
