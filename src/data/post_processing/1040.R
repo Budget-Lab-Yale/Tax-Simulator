@@ -493,6 +493,7 @@ recode_1040_vars = function(df, scenario_id) {
       Variable == 'txbl_ss'               ~ 'Taxable Social Security benefits',
       Variable == 'ui'                    ~ 'Unemployment compensation',
       Variable == 'sl_int_ded'            ~ 'Student loan interest deduction',
+      Variable == 'auto_int_ded'          ~ 'Car loan interest deduction',
       Variable == 'char_above_ded'        ~ 'Charitable contributions deduction, above-the-line',
       Variable == 'above_ded'             ~ 'Above-the-line deductions',
       Variable == 'agi'                   ~ 'Adjusted gross income',

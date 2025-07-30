@@ -1,0 +1,20 @@
+---
+
+
+# Credit value per adult
+value:
+  value: 
+    '2014': 0
+    '2020': 1800 
+    '2021': 1400
+    '2022': 0
+    '2026': 600
+
+# Credit value per qualifying dependent
+value_dep:
+  value:
+    '2014': 0
+    '2020': 1100
+    '2021': 1400
+    '2022': 0
+    '2026': 600

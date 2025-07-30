@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2025:2027,2026,,
+tcja,public/obbb/dist/tcja,,2025:2027,2026,,
+senate,public/obbb/senate/update/as_written,,2025:2027,2026,,

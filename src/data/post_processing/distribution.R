@@ -334,14 +334,21 @@ calc_dist_metrics = function(grouped_microdata) {
       avg_cut   = round(weighted.mean(liab_delta, (weight * (liab_delta <= -5))) / 5) * 5,
       avg_raise = round(weighted.mean(liab_delta, (weight * (liab_delta >= 5)))  / 5) * 5,
       
-      # Counts
-      share_cut   = sum(weight * (liab_delta <= -5)) / sum(weight),
-      share_raise = sum(weight * (liab_delta >= 5))  / sum(weight),
-      
       # Relative changes
-
       pct_chg_ati = sum(ati_reform * weight) / sum(ati * weight) - 1, 
       
+      # Counts
+      share_cut.5      = sum(weight * (liab_delta <= -5))    / sum(weight),
+      share_cut.100    = sum(weight * (liab_delta <= -100))  / sum(weight),
+      share_cut.500    = sum(weight * (liab_delta <= -500))  / sum(weight),
+      share_cut.1000   = sum(weight * (liab_delta <= -1000)) / sum(weight),
+      share_cut.5000   = sum(weight * (liab_delta <= -5000)) / sum(weight),
+      share_raise.5    = sum(weight * (liab_delta >= 5))     / sum(weight),
+      share_raise.100  = sum(weight * (liab_delta >= 100))   / sum(weight),
+      share_raise.500  = sum(weight * (liab_delta >= 500))   / sum(weight),
+      share_raise.1000 = sum(weight * (liab_delta >= 1000))  / sum(weight),
+      share_raise.5000 = sum(weight * (liab_delta >= 5000))  / sum(weight),
+    
       # Income group's total dollar amount tax change
       net_change = sum(round(liab_delta) * weight) / 1e9,
       

@@ -4,7 +4,7 @@
 
 # Set return variables for function
 return_vars$calc_agi = c('txbl_ss', 'excess_bus_loss', 'char_above_ded', 
-                         'gross_inc', 'above_ded', 'agi')
+                         'auto_int_ded', 'gross_inc', 'above_ded', 'agi')
 
 
 calc_agi = function(tax_unit, fill_missings = F) {

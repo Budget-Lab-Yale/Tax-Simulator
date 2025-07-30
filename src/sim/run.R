@@ -117,7 +117,7 @@ do_scenario = function(ID, baseline_mtrs) {
     build_distribution_tables(ID, baseline_id = 'baseline')
     
     # Time burden tables
-    # build_timeburden_table(ID)
+    build_timeburden_table(ID)
   }
   
   # Return MTRs if running baseline

@@ -28,14 +28,14 @@ list.files('./src', recursive = T) %>%
 #------------------------
 
 
-runscript_names  = 'public/obbb/dist/he'
+runscript_names  = 'tests/rebate'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
 pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
-delete_detail    = 1
+delete_detail    = 0
 multicore        = 'none'   # one of 'none', 'scenario', or 'year'
 
 

@@ -239,17 +239,16 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     'age1', 'age2', 'n_dep','n_dep_ctc', 'dep_age1', 'dep_age2', 'dep_age3', 
     'wages1', 'wages2', 'wages', 'txbl_int', 'exempt_int', 'se', 'div_ord', 
     'div_pref', 'txbl_kg', 'kg_st', 'kg_lt', 'sole_prop', 'sch_e', 'farm', 
-    'part_scorp', 'gross_ss', 'txbl_ss', 'above_ded', 'agi', 'expanded_inc', 
-    'std_ded', 'item_ded', 'med_item_ded', 'salt_item_ded', 'first_mort_int', 
-    'mort_int_item_ded', 'inv_int_item_ded', 'int_item_ded', 'char_item_ded', 
-    'casualty_item_ded', 'misc_item_ded', 'other_item_ded', 'item_ded_ex_limits', 
-    'itemizing', 'pe_ded', 'qbi_ded', 'tip_ded', 'ot_ded', 'txbl_inc', 'liab_ord', 
-    'liab_pref', 'liab_amt', 'liab_bc', 'cdctc_nonref', 'ctc_nonref', 'ed_nonref',
-    'nonref', 'ed_ref', 'eitc', 'cdctc_ref', 'ctc_ref', 'rebate', 'ref', 'liab_niit', 
-    'liab_iit', 'liab_iit_net', 'liab_fica_er1', 'liab_fica_er2', 'liab_seca', 
-    'liab_pr_ee', 'liab_pr', 'simple_filer', 'number_of_credits',
-    'liab_brac1', 'liab_brac2', 'liab_brac3', 'liab_brac4', 'liab_brac5',
-    'liab_brac6', 'liab_brac7'
+    'part_scorp', 'gross_ss', 'txbl_ss', 'auto_int_ded', 'above_ded', 'agi', 
+    'expanded_inc', 'std_ded', 'item_ded', 'med_item_ded', 'salt_item_ded', 
+    'first_mort_int', 'mort_int_item_ded', 'inv_int_item_ded', 'int_item_ded', 
+    'char_item_ded', 'casualty_item_ded', 'misc_item_ded', 'other_item_ded', 
+    'item_ded_ex_limits', 'itemizing', 'pe_ded', 'qbi_ded', 'tip_ded', 'ot_ded', 
+    'senior_ded', 'txbl_inc', 'liab_ord', 'liab_pref', 'liab_amt', 'liab_bc', 
+    'cdctc_nonref', 'ctc_nonref', 'ed_nonref', 'nonref', 'ed_ref', 'eitc', 
+    'cdctc_ref', 'ctc_ref', 'rebate', 'ref', 'liab_niit', 'liab_iit', 
+    'liab_iit_net', 'liab_fica_er1', 'liab_fica_er2', 'liab_seca', 'liab_pr_ee', 
+    'liab_pr', 'simple_filer', 'number_of_credits'
   )
   
   

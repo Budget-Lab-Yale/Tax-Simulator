@@ -25,23 +25,18 @@ process_for_time_burden = function(id, year) {
   # Read microdata input
   #-----------------------
   
-  # baseline here is used to compute was_hoh
-  baseline = file.path(globals$baseline_root, "baseline", "static/detail",
-                       paste0(year, ".csv")) %>% 
+  # baseline here is used to compute scenario-consistent income groups and filing status changes 
+  baseline = file.path(globals$baseline_root, "baseline", "static/detail", paste0(year, ".csv")) %>% 
     fread() %>%
     tibble()
-  reform   = file.path(globals$output_root, id, "static/detail",
-                       paste0(year, ".csv")) %>% 
+  reform = file.path(globals$output_root, id, "static/detail", paste0(year, ".csv")) %>% 
     fread() %>%
     tibble() %>%
-    mutate(
-      policy = !!id
-    ) 
+    mutate(policy = !!id) 
   
-  precert  = file.path(globals$output_root, id, "static/supplemental",
-                       "tax_law.csv") %>% 
-    fread() %>%
-    tibble() %>%
+  # Determine whether EITC eligibility precerification is law 
+  precert = file.path(globals$output_root, id, "static/supplemental", "tax_law.csv") %>% 
+    read_csv(show_col_types = F) %>%
     rename(yr = year) %>%
     filter(yr == year) %>%
     select(eitc.parent_precert) %>%
@@ -54,6 +49,15 @@ process_for_time_burden = function(id, year) {
   
   microdata = reform %>%
     
+    # start with baseline income (expanded income can shift across static scenarios 
+    # due to reporting changes like SALT cap workarounds). Also grab baseline filing status
+    select(-expanded_inc) %>% 
+    left_join(
+      baseline %>% 
+        select(id, expanded_inc, base_status = filing_status), 
+      by = 'id'
+    ) %>% 
+    
     # Remove non-filers
     filter(filer != 0) %>%
     
@@ -64,50 +68,63 @@ process_for_time_burden = function(id, year) {
                        "sole_prop",
                        "tip_ded",
                        "ot_ded",
+                       "auto_int_ded",
+                       "senior_ded",
                        "se",
                        "txbl_int",
                        "eitc",
                        "qbi_ded",
                        "liab_amt"),
-             .fns  = list(function(x) as.integer(x != 0)) ) %>%
+             .fns  = list(function(x) as.integer(x != 0))) %>%
         rename_with(~c("sch_e_flag",
                        "sch_farm_flag",
                        "sch_c_flag",
                        "tips_flag",
                        "ot_flag",
+                       "auto_flag",
+                       "senior_flag",
                        "sch_se_flag",
                        "int_flag",
                        "sch_eic_flag",
                        "qbi_flag",
                        "amt_flag") ),
-      sch_d_flag   = as.integer(div_ord != 0 | div_pref !=0 | txbl_kg != 0 |
-                                  kg_st != 0 | kg_lt != 0),
+      sch_d_flag   = as.integer(div_ord != 0 | div_pref !=0 | txbl_kg != 0 | kg_st != 0 | kg_lt != 0),
       itemize_flag = as.integer(itemizing),
       ctc_flag     = as.integer(ctc_ref > 0 | ctc_nonref > 0),
-      eitc_precert = precert
-    ) %>%
-    
-    # base filing status
-    left_join(baseline %>%
-                mutate(
-                  base_status = filing_status
-                ) %>%
-                select(id, base_status),
-              by = 'id') %>%
-    
-    mutate(
-      # person weighting
-      weight_person = weight * (1 + (filing_status == 2)),
-      
-      # adjust for number of available credits
+      eitc_precert = precert, 
+
+      # Calculate number of other nonmodeled credits
       other_credits = number_of_credits - ctc_flag - sch_eic_flag,
 
       # variables for whether filer filled out preferred rate calculation, is
-      # no longer HoH, and has no taxable income under the future policy
+      # no longer HoH, and has no taxable income under the counterfactual reform
       has_pref_inc  = as.integer(liab_pref > 0),
       was_hoh       = as.integer(base_status == 4 & filing_status == 1),
       no_tax        = as.integer(txbl_inc == 0 & agi >= 0)
     ) %>%
+    
+    # Determine income groups 
+    arrange(expanded_inc) %>% 
+    mutate(
+      
+      # Income percentile
+      income_pctile = cumsum(weight * (expanded_inc >= 0)) / sum(weight * (expanded_inc >= 0)), 
+      income_pctile = if_else(expanded_inc < 0, NA, income_pctile), 
+      
+      # Quintiles and top shares
+      quintile = case_when(
+        income_pctile <= 0.2 ~ 'Quintile 1',
+        income_pctile <= 0.4 ~ 'Quintile 2',
+        income_pctile <= 0.6 ~ 'Quintile 3',
+        income_pctile <= 0.8 ~ 'Quintile 4',
+        income_pctile <= 1   ~ 'Quintile 5',
+      ), 
+      top_10 = if_else(income_pctile > 0.9,   'Top 10%',   NA), 
+      top_5  = if_else(income_pctile > 0.95,  'Top 5%',    NA), 
+      top_1  = if_else(income_pctile > 0.99,  'Top 1%',    NA), 
+      top_01 = if_else(income_pctile > 0.999, 'Top 0.1%',  NA)
+    ) %>% 
+    
     return()
 }
 
@@ -144,6 +161,8 @@ calc_fixed_cost = function(id) {
                  "sch_e_flag",
                  "tips_flag",
                  "ot_flag",
+                 "auto_flag",
+                 "senior_flag",
                  "sch_farm_flag",
                  "itemize_flag",
                  "qbi_flag",
@@ -161,6 +180,8 @@ calc_fixed_cost = function(id) {
                  374,
                  34,
                  34,
+                 86,
+                 19,
                  350,
                  556, 
                  155,
@@ -231,6 +252,7 @@ calc_time_burden = function(microdata, fixed_cost) {
   #--------------------------------
   # define relevant tax provisions
   #--------------------------------
+  
   provisions = c("int_flag",
                  "sch_c_flag",
                  "sch_d_flag",
@@ -238,6 +260,8 @@ calc_time_burden = function(microdata, fixed_cost) {
                  "sch_e_flag",
                  "tips_flag",
                  "ot_flag",
+                 "auto_flag",
+                 "senior_flag",
                  "sch_farm_flag",
                  "itemize_flag",
                  "qbi_flag",
@@ -255,21 +279,23 @@ calc_time_burden = function(microdata, fixed_cost) {
                  374,
                  34,
                  34,
+                 86,
+                 19,
                  350,
-                 556, # increase for SALT?
+                 556,
                  155,
                  75,
                  87,
                  34,
-                 34 + unique(microdata$eitc_precert) * 156, #scalar for pct parents?
+                 34 + unique(microdata$eitc_precert) * 156,
                  34)
   
   # HoH-contingent items
-  hoh_item   = c("itemize_flag",
-                 "sch_d_flag",
-                 "qbi_flag",
-                 "amt_flag",
-                 "ctc_flag")
+  hoh_item = c("itemize_flag",
+               "sch_d_flag",
+               "qbi_flag",
+               "amt_flag",
+               "ctc_flag")
   
   
   #----------------------------------
@@ -278,80 +304,44 @@ calc_time_burden = function(microdata, fixed_cost) {
     
   microdata %>%
     mutate(
-      burden = (across(.cols = all_of(provisions)) %>%
+      burden = (
+        across(.cols = all_of(provisions)) %>%
                   as.matrix %*% time_costs
-                  - was_hoh * (rowSums(across(.cols = all_of(hoh_item)))
-                                * 11 + 34)
-                  + (no_tax == 0) * fixed_cost) %>% as.vector()
+                  - was_hoh * (rowSums(across(.cols = all_of(hoh_item))) * 11 + 34)
+                  + (no_tax == 0) * fixed_cost
+      ) %>% as.vector()
     ) %>%
     return()
 }
 
 
 
-calc_summary_stats = function(microdata) {
+calc_summary_stats = function(grouped_microdata) {
 
   #----------------------------------------------------------------------------
   # Aggregates record-level time burden microdata into summary stats, grouped
   # income.
   #
   # Parameters:
-  #  - microdata (df) : tax unit data, output by calc_time_burden()
+  #  - microdata (df) : tax unit data, grouped by policy and prespecified
+  #                     income group
   #
   # Returns: tibble of average and total time burdens grouped by income (df).
   #----------------------------------------------------------------------------
   
-  
-  #-------------------------
-  # Determine income groups
-  #-------------------------
 
-  # calculate income quantile thresholds
-  cutoffs = wtd.quantile(
-    x       = microdata %>% 
-                filter(expanded_inc >= 0) %>%
-                pull(expanded_inc),
-    probs   = c(0.2, 0.4, 0.6, 0.8, 0.9, 0.99, 0.999),
-    weights = microdata %>%
-                filter(expanded_inc >= 0) %>%
-                pull(weight_person)
-  )
-  
-  
-  # assign income groups
-  microdata = microdata %>%
-    mutate(
-      income_group = cut(
-        x              = expanded_inc,
-        breaks         = c(-Inf, max(expanded_inc[expanded_inc < 0]) / 2,
-                           cutoffs, Inf),
-        labels         = c("Negative income", "Bottom quintile",
-                           "Second quintile", "Middle quintile",
-                           "Fourth quintile", "80% - 90%", "90% - 99%",
-                           "99% - 99.9%", "Top 0.1%"),
-        right          = T,
-        include.lowest = T
-      )
-    )
-  
-  
-  #-----------------------
-  # Compute summary stats
-  #-----------------------
-  
   # aggregate time burdens by income group
-  microdata %>%
-    group_by(income_group, policy) %>%
+  grouped_microdata %>%
     summarise(
       
       # average time burden
-      mean_burden  = wtd.mean(x = burden, weights = weight),
-      # total time burden
-      total_burden = sum(burden * weight),
+      mean_burden  = wtd.mean(x = burden, weights = weight) / 60,
       
-      # counts
-      count        = sum(weight),
-      simple_filer = sum(simple_filer * weight), 
+      # total time burden
+      total_burden = (sum(burden * weight) / 60) / 1e6,
+      
+      # pre-filled returns
+      share_prefilled = wtd.mean(x = simple_filer, weights = weight), 
       
       .groups = 'drop'
     ) %>% 
@@ -371,77 +361,87 @@ build_timeburden_table = function(id) {
   # Returns: void. 
   #----------------------------------------------------------------------------
 
+  # Calculate fixed cost
+  fixed_cost = calc_fixed_cost('baseline')
   
-  # empty data frame
-  results = data.frame(
-    income_group = c('Negative income', 'Bottom quintile', 'Second quintile',
-                     'Middle quintile', 'Fourth quintile', '80% - 90%',
-                     '90% - 99%', '99% - 99.9%', 'Top 0.1%', "OVERALL")
-  )
-  
-  
-  #---------------------------
-  # Loop over year X policies
-  #---------------------------
-  
-  for (year in get_scenario_info(id)$dist_years) {
+  # Loop over years 
+  tables = list()
+  for (yr in get_scenario_info(id)$dist_years) {
     
-    for (id in c("baseline", id)){
+    # For both reform and baseline...
+    tables[[as.character(yr)]] = c('baseline', id) %>% 
+      map(
+        .f = function(scenario) {
+          
+          # Do micro-level calculations
+          microdata = scenario %>% 
+            process_for_time_burden(yr) %>% 
+            calc_time_burden(fixed_cost)
+          
+          # Calculate overall averages
+          output = microdata %>% 
+            group_by(group = 'Overall') %>% 
+            calc_summary_stats() %>% 
+            
+            # By quintile
+            bind_rows(
+              microdata %>% 
+                group_by(group = replace_na(quintile, 'Negative income')) %>%
+                calc_summary_stats()
+            ) %>% 
+            
+            # Top quintile breakout
+            bind_rows(
+              microdata %>% group_by(group = top_10) %>% calc_summary_stats() %>% filter(!is.na(group)), 
+              microdata %>% group_by(group = top_5)  %>% calc_summary_stats() %>% filter(!is.na(group)), 
+              microdata %>% group_by(group = top_1)  %>% calc_summary_stats() %>% filter(!is.na(group)), 
+              microdata %>% group_by(group = top_01) %>% calc_summary_stats() %>% filter(!is.na(group)) 
+            )
+          
+          # Add year-scenario identifiers
+          if (scenario == 'baseline') {
+            output = output %>% 
+              mutate(year = yr, scenario = scenario, .before = everything())
+          } else {
+            output = output %>% 
+              mutate(year = yr, scenario = 'reform', .before = everything())
+            output$scenario = 'reform'
+          }
+          
+          return(output)
+          
+        }
+      ) %>% 
+      bind_rows() %>% 
       
-      # read and process data
-      microdata  = process_for_time_burden(id, year)
-      # calculate time burdens
-      fixed_cost = calc_fixed_cost(id)
-      microdata  = calc_time_burden(microdata, fixed_cost)
-      output     = calc_summary_stats(microdata)
-      
-      # add time burdens for each policy
-      results = results %>%
-        left_join(output %>%
-                    # compute overall time burdens
-                    bind_rows(output %>%
-                                reframe(tibble(
-                                  mean_burden = wtd.mean(x       = mean_burden,
-                                                         weights = count),
-                                  policy      = id)) %>%
-                                mutate(income_group = "OVERALL")
-                    ) %>%
-                    mutate(burden = mean_burden / 60) %>%
-                    select(policy, income_group, burden) %>%
-                    pivot_wider(names_from = policy, values_from = burden),
-          by = c("income_group")
-        )
-    }
-    
-    results = results %>%
-      mutate(
-        
-        # compute hour and percent changes from current law
-        across(.cols  = all_of(id),
-               .fns   = list(hrs_change = function(x)  x - baseline,
-                             pct_change = function(x) (x - baseline)
-                             / baseline * 100),
-               .names = "{.fn}"),
-        
-        # round numbers to nearest tenths
-        across(.cols  = where(is.numeric),
-               .fns   = function(x) round(x,1))
+      # Calculate deltas
+      pivot_longer(
+        cols     = c(mean_burden, total_burden, share_prefilled), 
+        names_to = 'metric'
+      ) %>% 
+      arrange(metric) %>% 
+      pivot_wider(
+        names_from  = scenario, 
+        values_from = value
       ) %>%
-      
-      # rename columns with year
-      rename_with(.fn   = ~paste0(., "-", year),
-                  .cols = all_of(tail(names(.), 4)))
+      mutate(
+        diff     = reform - baseline, 
+        pct_diff = reform / baseline - 1
+      ) 
   }
   
-  # write csv
-  file = file.path(globals$output_root, id,
-                   "static/supplemental/time_burden.csv")
-  write_csv(results, file)
+  tables %>% 
+    bind_rows() %>% 
+    write_csv(
+      file.path(globals$output_root, id, "static/supplemental/time_burden.csv")
+    )
 }
+          
+          
+          
+
+  
+  
 
 
-#--------------------
-# all done!
-# (6/16/25) 
-# all done! (revised)
-#--------------------
+

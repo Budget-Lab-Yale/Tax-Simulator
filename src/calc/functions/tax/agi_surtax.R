@@ -25,9 +25,13 @@ calc_agi_surtax = function(tax_unit, fill_missings = F) {
     # Tax unit attributes
     'agi', # (dbl) Adjusted Gross Income
     
-    # Tax law attributes
-    'surtax.threshold', # (dbl) AGI threshold for surtax
-    'surtax.rate'       # (dbl) surtax rate
+    # Tax law attributes - 3 brackets
+    'surtax.threshold1', # (dbl) AGI threshold for first bracket
+    'surtax.rate1',      # (dbl) surtax rate for first bracket
+    'surtax.threshold2', # (dbl) AGI threshold for second bracket  
+    'surtax.rate2',      # (dbl) surtax rate for second bracket
+    'surtax.threshold3', # (dbl) AGI threshold for third bracket
+    'surtax.rate3'       # (dbl) surtax rate for third bracket
   )
   
   tax_unit %>%
@@ -36,8 +40,21 @@ calc_agi_surtax = function(tax_unit, fill_missings = F) {
     parse_calc_fn_input(req_vars, fill_missings) %>%
     mutate(
       
-      # Calculate AGI surtax liability
-      liab_surtax = pmax(0, agi - surtax.threshold) * surtax.rate
+      # Calculate AGI surtax liability for each bracket
+      # First bracket: from threshold1 to threshold2
+      bracket1_income = pmax(0, pmin(agi, surtax.threshold2) - surtax.threshold1),
+      bracket1_tax    = bracket1_income * surtax.rate1,
+      
+      # Second bracket: from threshold2 to threshold3
+      bracket2_income = pmax(0, pmin(agi, surtax.threshold3) - surtax.threshold2),
+      bracket2_tax    = bracket2_income * surtax.rate2,
+      
+      # Third bracket: above threshold3
+      bracket3_income = pmax(0, agi - surtax.threshold3),
+      bracket3_tax    = bracket3_income * surtax.rate3,
+      
+      # Total surtax liability
+      liab_surtax = bracket1_tax + bracket2_tax + bracket3_tax
       
     ) %>%
     

@@ -8,21 +8,54 @@ indexation_defaults:
   i_increment: 1000
 
 filing_status_mapper:
-  threshold:
-    '1': threshold_single * 1
-    '2': threshold_single * 2
-    '3': threshold_single * 1
-    '4': threshold_single * 1
+  threshold1:
+    '1': threshold_single1 * 1
+    '2': threshold_single1 * 2
+    '3': threshold_single1 * 1
+    '4': threshold_single1 * 1
+  threshold2:
+    '1': threshold_single2 * 1
+    '2': threshold_single2 * 2
+    '3': threshold_single2 * 1
+    '4': threshold_single2 * 1
+  threshold3:
+    '1': threshold_single3 * 1
+    '2': threshold_single3 * 2
+    '3': threshold_single3 * 1
+    '4': threshold_single3 * 1
 
-# Threshold above which the AGI surtax applies
-threshold_single:
-  value:
-    '2014': 1000000
+# AGI threshold for first bracket
+threshold_single1:
+  value: 1000000
   i_measure: default
   i_base_year: default
   i_direction: default
   i_increment: default
 
-# Surtax rate applied to income exceeding the threshold
-rate:
-  value: 0.0  
+# Surtax rate for first bracket
+rate1:
+  value: 0.0
+  
+# AGI threshold for first bracket
+threshold_single2:
+  value: 5000000
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+
+# Surtax rate for second bracket
+rate2:
+  value: 0.0
+  
+# AGI threshold for third bracket
+threshold_single3:
+  value: 10000000
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+
+# Surtax rate for third bracket
+rate3:
+  value: 0.0

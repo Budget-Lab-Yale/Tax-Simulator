@@ -69,6 +69,7 @@ get_1040_totals = function(tax_units, yr, by_agi = F) {
     'other_inc',
     'gross_inc',
     'auto_int_exp',
+    'auto_int_ded',
     'sl_int_ded',
     'char_above_ded',
     'above_ded',
