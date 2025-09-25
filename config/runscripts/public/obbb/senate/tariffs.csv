@@ -1,0 +1,3 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Value-Added-Tax-Model.vintage,dep.Value-Added-Tax-Model.ID
+baseline,public/obbb/senate/update/as_written,,2025:2034,2026,,,2025081012,baseline
+tariffs,public/obbb/senate/update/as_written,,2025:2034,2026,,,2025081012,tariffs

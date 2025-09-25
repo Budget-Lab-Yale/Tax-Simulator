@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2021:2035,,,
+files,public/obbb/senate/update/as_written,,2021:2035,,,
+baseline_2024,baseline_2024,,2021:2035,,,

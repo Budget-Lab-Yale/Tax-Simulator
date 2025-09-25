@@ -34,6 +34,7 @@ rate:
   value: 
     '2014': 0.0
     '2018': 0.2
+    '2026': 0.0
   
 # Taxable income phaseout threshold for SSTBs, single filers
 po_thresh_sstb_single:
@@ -53,15 +54,11 @@ po_thresh_non_sstb_single:
 
 # Taxable income phaseout range for SSTBs, single filers
 po_range_sstb_single:
-  value: 
-    '2014': 50000
-    '2026': 75000
-
+  value: 50000
+  
 # Taxable income phaseout range for non-SSTBs, single filers
 po_range_non_sstb_single:
-  value: 
-    '2014': 50000
-    '2026': 75000
+  value: 50000
 
 # For SSTBs, whether paying wages excepts taxpayer from taxable income phaseout  
 wage_exception_sstb:
@@ -81,15 +78,7 @@ txbl_inc_limit:
   
 # Minimum deduction amount
 min_value:
-  value:
-    '2014': 0
-    '2026': 400
-  i_measure:
-    '1987': cpi
-    '2017': chained_cpi
-  i_base_year: 2025
-  i_direction: 0
-  i_increment: 5
+  value: 0
 
 # Phaseout type: 0 = TCJA design, 1 = May 2025 House-passed OBBB design
 po_type:

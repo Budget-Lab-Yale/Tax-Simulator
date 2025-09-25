@@ -1,0 +1,62 @@
+---
+indexation_defaults:
+  i_measure:
+    '1986': cpi
+    '2017': chained_cpi
+  i_base_year: [1992, 1992, 2012]
+  i_direction: [-1, -1, -1]
+  i_increment: [50, 50, 50]
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_married
+    '3': brackets_married / 2
+    '4': brackets_head
+
+# Whether to tax long-term capital gains and qualified dividends at ordinary rates
+tax_at_ord:
+  value: 0
+
+# Preferred tax rate schedule 
+rates:
+  value: [0.0, 0.15, 0.20]
+
+# Brackets for preferred-rate income, single filers
+brackets_single:
+  value: [0, 22100, 400000]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: [25, 25, 25]
+
+# Brackets for preferred-rate income, joint filers
+brackets_married:
+  value: [0, 44200, 450000]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+  
+# Brackets for preferred-rate income, head of household filers
+brackets_head:
+  value: [0, 29600, 425000]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+
+# Tax rate on Section 1250 unrecapture gain
+unrecapture_rate: 
+  value: 0.25
+
+# Tax rate on collectibles gain
+collectibles_rate:
+  value: 0.28
+  
+# Whether basis on appreciated property is carried over to decedent 
+# (as opposed to stepped up to market value as per current law)
+carryover_basis:
+  value: 0
+
+

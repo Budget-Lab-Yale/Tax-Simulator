@@ -25,6 +25,7 @@ value:
   value:
     '2014': 2000
     '2018': 0
+    '2026': 2000
   i_measure:
     '1986': cpi
     '2017': chained_cpi
@@ -37,6 +38,7 @@ po_thresh_single:
   value:
     '2014': 250000
     '2018': Inf
+    '2026': 250000
   i_measure: default
   i_base_year: default
   i_direction: default
@@ -47,6 +49,7 @@ po_thresh_married:
   value:
     '2014': 300000
     '2018': Inf
+    '2026': 300000
   i_measure: default
   i_base_year: default
   i_direction: default
@@ -57,6 +60,7 @@ po_thresh_head:
   value:
     '2014': 275000
     '2018': Inf
+    '2026': 275000
   i_measure: default
   i_base_year: default
   i_direction: default

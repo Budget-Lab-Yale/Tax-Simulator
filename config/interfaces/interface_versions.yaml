@@ -33,7 +33,7 @@ Value-Added-Tax-Model:
 Off-Model-Estimates:
   type: model_data
   version: 4
-  default_vintage: '20250603'
+  default_vintage: '20250925'
   default_id: baseline
   
 Wealth-Tax-Simulator:
@@ -45,11 +45,11 @@ Wealth-Tax-Simulator:
 Cost-Recovery-Simulator:
   type: model_data
   version: 1
-  default_vintage: '202505311850'
+  default_vintage: '202509251222'
   default_id: baseline
   
 Estate-Tax-Distribution:
   type: model_data
   version: 1
-  default_vintage: '2025051420'
+  default_vintage: '2025092512'
   default_id: baseline

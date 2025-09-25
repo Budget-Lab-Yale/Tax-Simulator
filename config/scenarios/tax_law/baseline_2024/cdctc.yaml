@@ -47,15 +47,13 @@ young_rate:
     '2014': [0.2, 0.15, 0.0]
     '2021': [0.2, 0.3, 0.0]
     '2022': [0.2, 0.15, 0.0]
-    '2026': [0.2, 0.15, 0.15]
   
-# Young dependents: AGI threshold above which credit rate begins phasing out from max to min
+# Young dependents: AGI threshold above which credit rate begins phasing out from max to min, non-joint returns
 young_po_thresh_single:
   value:
     '2014': [Inf, 15000, 0]
     '2021': [400000, 125000, 0]
     '2022': [Inf, 15000, 0]
-    '2026': [Inf, 75000, 15000]
 
 # Young dependents: AGI threshold above which credit rate begins phasing out from max to min, joint returns
 young_po_thresh_joint:
@@ -63,23 +61,20 @@ young_po_thresh_joint:
     '2014': [Inf, 15000, 0]
     '2021': [400000, 125000, 0]
     '2022': [Inf, 15000, 0]
-    '2026': [Inf, 150000, 15000]
 
-# Young dependents: rate at which credit rate phases out with AGI
+# Young dependents: rate at which credit rate phases out with AGI, non-joint returns
 young_po_rate_single:
   value: 
     '2014': [0.0, 0.000005, 0.0]
     '2021': [0.000005, 0.000005, 0.0]
     '2022': [0.0, 0.000005, 0.0]
-    '2026': [0.0, 0.000005, 0.000005]
-
-# Young dependents: rate at which credit rate phases out with AGI
+    
+# Young dependents: rate at which credit rate phases out with AGI, joint returns
 young_po_rate_joint:
   value: 
     '2014': [0.0, 0.000005, 0.0]
     '2021': [0.000005, 0.000005, 0.0]
     '2022': [0.0, 0.000005, 0.0]
-    '2026': [0.0, 0.0000025, 0.000005]
     
 # Old dependents: credit rates 
 old_rate:
@@ -87,39 +82,34 @@ old_rate:
     '2014': [0.2, 0.15, 0.0]
     '2021': [0.2, 0.3, 0.0]
     '2022': [0.2, 0.15, 0.0]
-    '2026': [0.2, 0.15, 0.15]
   
-# Old dependents: AGI threshold above which credit rate begins phasing out from max to min
+# Old dependents: AGI threshold above which credit rate begins phasing out from max to min, non-joint returns
 old_po_thresh_single:
   value:
     '2014': [Inf, 15000, 0]
     '2021': [400000, 125000, 0]
     '2022': [Inf, 15000, 0]
-    '2026': [Inf, 75000, 15000]
     
-# Old dependents: AGI threshold above which credit rate begins phasing out from max to min
+# Old dependents: AGI threshold above which credit rate begins phasing out from max to min, joint returns
 old_po_thresh_joint:
   value:
     '2014': [Inf, 15000, 0]
     '2021': [400000, 125000, 0]
     '2022': [Inf, 15000, 0]
-    '2026': [Inf, 150000, 15000]
-    
-# Old dependents: rate at which credit rate phases out with AGI
+
+# Old dependents: rate at which credit rate phases out with AGI, non-joint returns
 old_po_rate_single:
   value: 
     '2014': [0.0, 0.000005, 0.0]
     '2021': [0.000005, 0.000005, 0.0]
     '2022': [0.0, 0.000005, 0.0]
-    '2026': [0.0, 0.000005, 0.000005]
-
-# Old dependents: rate at which credit rate phases out with AGI
+    
+# Old dependents: rate at which credit rate phases out with AGI, joint returns
 old_po_rate_joint:
   value: 
     '2014': [0.0, 0.000005, 0.0]
     '2021': [0.000005, 0.000005, 0.0]
     '2022': [0.0, 0.000005, 0.0]
-    '2026': [0.0, 0.0000025, 0.000005]
 
 # Rounding step for descretized phaseout function
 discrete_step:

@@ -53,30 +53,17 @@ salt_limit_married:
   value:
     '2014': Inf
     '2018': 10000
-    '2025': 40000
-    '2026': 40400
-    '2027': 40804
-    '2028': 41212
-    '2029': 41624
-    '2030': 10000
+    '2026': Inf
 
 # Minimum value of SALT cap
 salt_floor:
   value:
     '2014': 0
-    '2025': 10000
-    '2030': 0
     
 # Income above which SALT deduction phases out towards the floor
 salt_floor_thresh:
   value:
     '2014': Inf
-    '2025': 500000
-    '2026': 505000
-    '2027': 510050
-    '2028': 515151
-    '2029': 520302
-    '2030': Inf
     
 # Amount of PTE SALT workaround allowed, non-SSTBs
 salt_workaround_allowed_non_sstb:
@@ -99,24 +86,28 @@ mort_bal_limit_years:
   value: 
     '2014': [1987, Inf]
     '2018': [1987, 2017, Inf]
+    '2026': [1987, Inf]
 
 # Limitations on deductible mortgage interest based on mortgage balance, single filers
 mort_bal_limit_single:
   value:
     '2014': [Inf, 1000000]
     '2018': [Inf, 1000000, 750000]
+    '2026': [Inf, 1000000]
 
 # Limitations on deductible mortgage interest based on mortgage balance, joint filers
 mort_bal_limit_married:
   value:
     '2014': [Inf, 1000000]
     '2018': [Inf, 1000000, 750000]
+    '2026': [Inf, 1000000]
 
 # Limitations on deductible mortgage interest based on mortgage balance, married filing separately filers
 mort_bal_limit_mfs:
   value:
     '2014': [Inf, 500000]
     '2018': [Inf, 500000, 375000]
+    '2026': [Inf, 500000]
 
 # Maximum deductible mortgage interest
 mort_int_limit:
@@ -132,6 +123,7 @@ casualty_limit:
   value: 
     '2014': Inf
     '2018': 0
+    '2026': Inf
 
 # AGI floor for "miscellaneous" itemized deductions
 misc_floor_agi:
@@ -142,12 +134,14 @@ misc_limit:
   value:
     '2014': Inf
     '2018': 0
+    '2026': Inf
 
 # AGI threshold above which itemized deductions are limited under Pease, single filers
 pease_thresh_single:
   value:
     '2014': 250000
     '2018': Inf
+    '2026': 250000
   i_measure: default
   i_base_year: default
   i_direction: default
@@ -158,6 +152,7 @@ pease_thresh_married:
   value:
     '2014': 300000
     '2018': Inf
+    '2026': 300000
   i_measure: default
   i_base_year: default
   i_direction: default
@@ -168,6 +163,7 @@ pease_thresh_head:
   value:
     '2014': 275000
     '2018': Inf
+    '2026': 275000
   i_measure: default
   i_base_year: default
   i_direction: default
@@ -185,29 +181,13 @@ pease_max_share:
 limit:
   value: Inf
   
-# Tax value limitation reduction threshold, nonjoint returns (i.e. next bracket where rate corresponding to maximum tax value ends)
+# Tax value limitation reduction threshold, single returns (i.e. next bracket where rate corresponding to maximum tax value ends)
 limit_tax_value_thresh_single:
-  value:
-    '2014': Inf
-    '2026': 500000
-  i_measure: default
-  i_base_year:
-    '2014': NA
-    '2026': 2017
-  i_direction: -1
-  i_increment: 25
-    
-# Tax value limitation reduction threshold, joint returns (i.e. next bracket where rate corresponding to maximum tax value ends)
+  value: Inf
+  
+# Tax value limitation reduction threshold, single returns (i.e. next bracket where rate corresponding to maximum tax value ends)
 limit_tax_value_thresh_married:
-  value:
-    '2014': Inf
-    '2026': 600000
-  i_measure: default
-  i_base_year:
-    '2014': NA
-    '2026': 2017
-  i_direction: -1
-  i_increment: 50
+  value: Inf
   
 # Tax value limitation reduction rate, SALT (i.e. percentage point diference between maximum statutory tax value and target value) 
 salt_limit_tax_value_rate:
@@ -215,6 +195,5 @@ salt_limit_tax_value_rate:
 
 # Tax value limitation reduction rate, non-SALT (i.e. percentage point diference between maximum statutory tax value and target value) 
 limit_tax_value_rate:
-  value:
-    '2014': 0
-    '2026': 0.05405405
+  value: 0
+  
