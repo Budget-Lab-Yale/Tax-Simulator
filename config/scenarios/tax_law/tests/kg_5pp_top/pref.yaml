@@ -1,0 +1,6 @@
+---
+# 5pp increase to top bracket only (0.20 -> 0.25) starting in 2026
+rates:
+  value:
+    '2014': [0.0, 0.15, 0.20]
+    '2026': [0.0, 0.15, 0.25]
