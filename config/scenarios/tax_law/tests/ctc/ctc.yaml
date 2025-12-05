@@ -1,0 +1,252 @@
+---
+indexation_defaults:
+  i_measure:
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year: NA
+  i_direction: NA
+  i_increment: NA
+
+filing_status_mapper:
+  po_thresh:
+    '1': po_thresh_single
+    '2': po_thresh_married
+    '3': po_thresh_married / 2
+    '4': po_thresh_head
+  po_range:
+    '1': po_range_married / 2
+    '2': po_range_married
+    '3': po_range_married / 2
+    '4': po_range_married / 2
+  po_range_other:
+    '1': po_range_other_married / 2
+    '2': po_range_other_married
+    '3': po_range_other_married / 2
+    '4': po_range_other_married / 2
+  baby_bonus_po_thresh:
+    '1': baby_bonus_po_thresh_married / 2
+    '2': baby_bonus_po_thresh_married
+    '3': baby_bonus_po_thresh_married / 2
+    '4': baby_bonus_po_thresh_married / 2
+
+# Whether married filing separate returns are eligible
+mfs_eligible:
+  value: 1
+
+# Whether SSN is required to qualify for CTC
+need_ssn:
+  value:
+    '2014': 0
+    '2018': 1
+    '2021': 0
+    '2022': 1
+
+# Whether to express value for young children in levels (in which case the calculator
+# uses value_young) or in terms of difference from old (in which case the calculator
+# adds bonus_young to value_old) 
+young_level:
+  value: 1
+
+# Maximum credit value per "young" child
+value_young:
+  value:
+    '2014': [1000, 0]
+    '2018': [2000, 0]
+    '2021': [2000, 1600]
+    '2022': [2000, 0]
+    '2025': [2200, 0], 
+    '2026': [2200, 1000]
+  i_measure: 
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year:
+    '2014': NA
+    '2025': [2024, 2024]
+  i_direction: [-1, -1]
+  i_increment: [100, 100]
+
+# Maximum additional credit value per "young" child
+bonus_young:
+  value: [0, 0]
+
+# Maximum credit value per "old" child
+value_old:
+  value:
+    '2014': [1000, 0]
+    '2018': [2000, 0]
+    '2021': [2000, 1000]
+    '2022': [2000, 0] 
+    '2025': [2200, 0]
+    '2026': [2200, 1000]
+  i_measure: 
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year:
+    '2014': NA
+    '2025': [2024, 2024]
+  i_direction: [-1, -1]
+  i_increment: [100, 100]
+
+# Maximum age to qualify as "young" child
+young_age_limit:
+  value: 5
+  
+# Maximum age to qualify as an "old" child
+old_age_limit:
+  value:
+    '2014': 16
+    '2021': 17
+    '2022': 16
+
+# AGI threshold above which credit value phases out, single filers
+po_thresh_single:
+  value:
+    '2014': [75000, Inf]
+    '2018': [200000, Inf]
+    '2021': [200000, 75000]
+    '2022': [200000, Inf]
+    '2026': [200000, 50000]
+    
+# AGI threshold above which credit value phases out, joint filers
+po_thresh_married:
+  value:
+    '2014': [110000, Inf] 
+    '2018': [400000, Inf]
+    '2021': [400000, 150000]
+    '2022': [400000, Inf]
+    '2026': [400000, 100000]
+    
+# AGI threshold above which credit value phases out, HoH filers
+po_thresh_head:
+  value:
+    '2014': [75000, Inf]
+    '2018': [200000, Inf]
+    '2021': [200000, 112500]
+    '2022': [200000, Inf]
+    '2026': [200000, 50000]
+
+# Whether phaseout type is a rate (0 means range)
+po_type:
+  value: 1
+
+# Phaseout rate
+po_rate:
+  value: [0.05, 0.05]
+  
+# Phaseout rate for non-child dependent credit
+po_rate_other:
+  value: 0.05
+
+# CTC phaseout range for joint returns
+po_range_married:
+  value: [Inf, Inf]
+  
+# Non-child dependent credit phaseout range for married returns
+po_range_other_married:
+  value: Inf
+
+# Whether phaseout is discretized, as per current law
+po_discrete:
+  value: 1
+  
+# Rounding step for discretized phaseout
+po_discrete_step:
+  value: 1000
+
+# Maximum credit value per nonqualifying dependent (assumed to phaseout per po_thresh1)
+value_other:
+  value:
+    '2014': 0
+    '2018': 500
+
+# Whether to express minimum refundable CTC in dollar terms (in which case the 
+# calculator uses min_refund) or share of maximum value (in which case it 
+# uses min_refund_share)
+min_refund_level:
+  value: 1
+
+# Minimum refundable CTC per qualifying young child (i.e. y-intercept in trapezoid)
+min_refund_young:
+  value: 
+    '2014': 0
+    '2021': 3600
+    '2022': 0
+  
+# Minimum refundable CTC per qualifying old child (i.e. y-intercept in trapezoid)
+min_refund_old:
+  value: 
+    '2014': 0
+    '2021': 3000
+    '2022': 0
+
+# Minimum refundable CTC as a share of total credit
+min_refund_share:
+  value: 0
+
+# Maximum refundable CTC per young qualifying child (inf implies maximum refund 
+# is equal to the credit value)
+max_refund_young:
+  value:
+    '2014': Inf
+    '2018': 1400
+    '2021': Inf
+    '2022': 1400
+  i_measure: 
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year: 2017
+  i_direction: -1
+  i_increment: 100
+  
+# Maximum refundable CTC per old qualifying child (inf implies maximum refund 
+# is equal to the credit value)
+max_refund_old:
+  value:
+    '2014': Inf
+    '2018': 1400
+    '2021': Inf
+    '2022': 1400
+  i_measure: 
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year: 2017
+  i_direction: -1
+  i_increment: 100
+
+# Whether prior year earned income qualifies for phase-in
+ei_prior_yr:
+  value: 0
+
+# Whether phase-in type is a rate (0 means range)
+pi_type:
+  value: 1
+
+# Phase-in rate 
+pi_rate:
+  value: 0.15
+  
+# Phase-in range
+pi_range: 
+  value: Inf  
+
+# Earned income threshold above which CTC phases in
+pi_thresh:
+  value:
+    '2014': 3000
+    '2018': 2500
+
+# Bonus credit in the first month of a child's life
+baby_bonus:
+  value: 0
+
+# Phase in rate for baby bonus
+baby_bonus_pi_rate:
+  value: 0.15
+
+# Phase out rate for baby bonus
+baby_bonus_po_rate:
+  value: 0.05
+  
+# Phase out threshold for baby bonus, joint returns
+baby_bonus_po_thresh_married:
+  value: 400000

@@ -280,7 +280,6 @@ avg %>%
     "Changes to Medicaid" = "#C73E1D", 
     "Changes to SNAP" = "#FF9800"
   )) +
-  # Ensure legend shows in logical order
   guides(fill = guide_legend(override.aes = list(size = 3)))
 
 
@@ -352,7 +351,6 @@ avg %>%
     "Changes to Medicaid" = "#C73E1D", 
     "Changes to SNAP" = "#FF9800"
   )) +
-  # Ensure legend shows in logical order
   guides(fill = guide_legend(override.aes = list(size = 3)))
 
 
@@ -425,7 +423,6 @@ avg %>%
     "Changes to Medicaid" = "#C73E1D", 
     "Changes to SNAP" = "#FF9800"
   )) +
-  # Ensure legend shows in logical order
   guides(fill = guide_legend(override.aes = list(size = 3)))
 
 

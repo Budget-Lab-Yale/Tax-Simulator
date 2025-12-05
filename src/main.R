@@ -28,7 +28,7 @@ list.files('./src', recursive = T) %>%
 #------------------------
 
 
-runscript_names  = 'tests/kg_5pp_comparison'
+runscript_names  = 'baseline/baseline'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
@@ -36,7 +36,7 @@ pct_sample       = 1
 stacked          = 1
 baseline_vintage = NULL
 delete_detail    = 0
-multicore        = 'scenario'   # one of 'none', 'scenario', or 'year'
+multicore        = 'none'   # one of 'none', 'scenario', or 'year'
 
 
 # Override default runtime args if executed from the command line
@@ -47,10 +47,10 @@ if (length(args) > 0) {
   user_id                                 = args[3]
   local                                   = as.integer(args[4])
   if (args[5] == 'NULL') vintage          = NULL else vintage = args[5]
-  pct_sample                              = as.integer(args[6])
+  pct_sample                              = as.numeric(args[6])
   stacked                                 = as.integer(args[7])
   if (args[8] == 'NULL') baseline_vintage = NULL else baseline_vintage = args[8]
-  delete_detail                           = args[9]
+  delete_detail                           = as.integer(args[9])
   multicore                               = args[10]
 } 
 

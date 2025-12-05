@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(Rscript:*)",
+      "Bash(R:*)",
+      "Read(//c/Program Files//**)",
+      "Read(//c//**)",
+      "Bash(\"/c/Program Files/R/R-4.3.1/bin/Rscript.exe\" src/main.R \"tests/stimulus_2026\" NULL user_test 1 NULL 1 1 NULL 1 none)",
+      "Read(//c/Users/jar335/Documents/Interfaces/**)",
+      "Bash(\"/c/Program Files/R/R-4.3.1/bin/Rscript.exe\" src/main.R agi_surtax/agi_surtax)",
+      "Bash(\"/c/Program Files/R/R-4.3.1/bin/Rscript.exe\" src/main.R agi_surtax/agi_surtax NULL user_test 1 NULL 1 1 NULL 1 none)",
+      "Bash(find:*)",
+      "Bash(xargs rm:*)",
+      "Bash(cat:*)",
+      "Bash(\"/c/Program Files/R/R-4.3.1/bin/Rscript.exe\" src/main.R private/agi_surtax NULL user_test 1 NULL 1 1 NULL 0 year)",
+      "Bash(taskkill:*)",
+      "Bash(\"/c/Program Files/R/R-4.3.1/bin/Rscript.exe\" src/main.R private/vanhollen/agi_surtax NULL user_test 1 NULL 1 1 NULL 0 year)",
+      "Bash(\"/c/Program Files/R/R-4.3.1/bin/Rscript.exe\" src/main.R private/vanhollen/agi_surtax_fixed NULL user_test 1 NULL 1 1 NULL 0 year)",
+      "Bash(\"/c/Program Files/R/R-4.3.1/bin/Rscript.exe\" src/main.R private/vanhollen/agi_surtax_fixed NULL user_test 1 NULL 1 1 NULL 0 none)",
+      "Bash(\"/c/Program Files/R/R-4.3.1/bin/Rscript.exe\" other/analysis_scripts/private/surtax_taxpayer_impact.R)",
+      "Bash(\"/c/Program Files/R/R-4.3.1/bin/Rscript.exe\" other/analysis_scripts/private/create_report_tables.R)",
+      "Bash(\"/c/Program Files/R/R-4.3.1/bin/Rscript.exe\" -e \"\nlibrary(dplyr); library(readr)\noutput_base <- ''C:/Users/jar335/Documents/Interfaces/model_data/Tax-Simulator/v1/202509112259''\n\n# Load and calculate ETRs just like in create_report_tables.R\nbaseline_2026 <- read_csv(file.path(output_base, ''baseline/static/detail/2026.csv'')) %>%\n  filter(dep_status == 0) %>% mutate(etr_baseline = liab_iit_net / agi)\n\nsurtax_2026 <- read_csv(file.path(output_base, ''agi_surtax/static/detail/2026.csv'')) %>%\n  filter(dep_status == 0) %>% mutate(etr_surtax = liab_iit_net / agi)\n\n# Calculate bracket ETRs  \nbaseline_bracket_etrs <- baseline_2026 %>%\n  mutate(\n    filing_status_group = case_when(\n      filing_status == 2 ~ ''Married Filing Jointly'',\n      filing_status %in% c(1, 3, 4) ~ ''Unmarried/Other''\n    ),\n    bracket_1 = case_when(\n      filing_status_group == ''Unmarried/Other'' & agi >= 1000000 ~ TRUE,\n      filing_status_group == ''Married Filing Jointly'' & agi >= 1500000 ~ TRUE,\n      TRUE ~ FALSE\n    ),\n    bracket_2 = case_when(\n      filing_status_group == ''Unmarried/Other'' & agi >= 2000000 ~ TRUE,\n      filing_status_group == ''Married Filing Jointly'' & agi >= 3000000 ~ TRUE,\n      TRUE ~ FALSE\n    ),\n    bracket_3 = case_when(\n      filing_status_group == ''Unmarried/Other'' & agi >= 5000000 ~ TRUE,\n      filing_status_group == ''Married Filing Jointly'' & agi >= 7500000 ~ TRUE,\n      TRUE ~ FALSE\n    )\n  ) %>%\n  filter(agi > 0) %>%\n  group_by(filing_status_group) %>%\n  summarise(\n    bracket_1_baseline_etr = weighted.mean(etr_baseline[bracket_1], weight[bracket_1], na.rm = TRUE),\n    bracket_2_baseline_etr = weighted.mean(etr_baseline[bracket_2], weight[bracket_2], na.rm = TRUE),\n    bracket_3_baseline_etr = weighted.mean(etr_baseline[bracket_3], weight[bracket_3], na.rm = TRUE),\n    .groups = ''drop''\n  )\n\nsurtax_bracket_etrs <- surtax_2026 %>%\n  mutate(\n    filing_status_group = case_when(\n      filing_status == 2 ~ ''Married Filing Jointly'',\n      filing_status %in% c(1, 3, 4) ~ ''Unmarried/Other''\n    ),\n    bracket_1 = case_when(\n      filing_status_group == ''Unmarried/Other'' & agi >= 1000000 ~ TRUE,\n      filing_status_group == ''Married Filing Jointly'' & agi >= 1500000 ~ TRUE,\n      TRUE ~ FALSE\n    ),\n    bracket_2 = case_when(\n      filing_status_group == ''Unmarried/Other'' & agi >= 2000000 ~ TRUE,\n      filing_status_group == ''Married Filing Jointly'' & agi >= 3000000 ~ TRUE,\n      TRUE ~ FALSE\n    ),\n    bracket_3 = case_when(\n      filing_status_group == ''Unmarried/Other'' & agi >= 5000000 ~ TRUE,\n      filing_status_group == ''Married Filing Jointly'' & agi >= 7500000 ~ TRUE,\n      TRUE ~ FALSE\n    )\n  ) %>%\n  filter(agi > 0) %>%\n  group_by(filing_status_group) %>%\n  summarise(\n    bracket_1_surtax_etr = weighted.mean(etr_surtax[bracket_1], weight[bracket_1], na.rm = TRUE),\n    bracket_2_surtax_etr = weighted.mean(etr_surtax[bracket_2], weight[bracket_2], na.rm = TRUE),\n    bracket_3_surtax_etr = weighted.mean(etr_surtax[bracket_3], weight[bracket_3], na.rm = TRUE),\n    .groups = ''drop''\n  )\n\nbracket_etrs_combined <- baseline_bracket_etrs %>%\n  left_join(surtax_bracket_etrs, by = ''filing_status_group'')\n\nprint(bracket_etrs_combined)\n\")",
+      "Bash(\"/c/Program Files/R/R-4.3.1/bin/Rscript.exe\" other/analysis_scripts/private/calculate_actual_etrs.R)",
+      "Bash(\"/c/Program Files/R/R-4.3.1/bin/Rscript.exe\" other/analysis_scripts/private/comprehensive_agi_surtax_analysis.R)",
+      "Bash(git fetch:*)",
+      "Bash(git stash:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
