@@ -112,6 +112,3 @@ output_root/
 - `CLAUDE.md` – Detailed technical reference
 - `docs/website/` – User guide and module documentation
 
-## License
-
-See institutional guidelines from The Budget Lab at Yale.
