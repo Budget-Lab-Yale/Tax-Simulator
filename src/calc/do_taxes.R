@@ -434,38 +434,54 @@ remit_taxes = function(tax_units) {
 
 
 
-calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T, 
+calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
                      type = 'nextdollar') {
-  
+
   #----------------------------------------------------------------------------
-  # Calculates MTR, either at the next-dollar or 0-actual extensive margin, 
-  # with respect to given variable. Includes employee-side payroll taxes. 
+  # Calculates MTR, either at the next-dollar or 0-actual extensive margin,
+  # with respect to given variable. Includes employee-side payroll taxes.
   #
   # Note: for next-dollar MTRs, variable "wages" means non-tip, non-OT wages.
-  # For extensive margin MTRs, variable "wages" means all wages, including 
+  # For extensive margin MTRs, variable "wages" means all wages, including
   # tips and OT.
-  # 
+  #
   # Always double-check whether the variable you want a tax rate for is handled
-  # by the logic below!! It's not generalized to every variable due to 
+  # by the logic below!! It's not generalized to every variable due to
   # compositional issues (i.e. some variables are components of others).
-  # 
+  #
   # Parameters:
   #   - tax_units (df)          : tibble of tax units, exogenous variables only
   #   - actual_liab_iit (dbl[]) : vector of net income tax liability to compare
   #                               against
-  #   - actual_liab_pr (dbl[])  : vector of total payroll tax to compare 
+  #   - actual_liab_pr (dbl[])  : vector of total payroll tax to compare
   #                               against
   #   - var (str)               : name of variable to increment
   #   - pr (bool)               : whether to include payroll taxes in the MTR
   #                               calculation
   #   - type (str)              : "nextdollar" for next-dollar MTR, "extensive"
-  #                               for delta in tax when reducing the value to 0
+  #                               for delta in tax when reducing the value to 0,
+  #                               or "pct:X" for percent-change MTR (e.g.,
+  #                               "pct:10" for 10% increase, "pct:-5" for 5%
+  #                               decrease). Returns average MTR over the change.
   #
   # Returns: tibble of MTRs (df).
   #----------------------------------------------------------------------------
-  
+
+  # Parse percent type (e.g., "pct:10" -> pct_value = 10)
+  pct_value = NULL
+  if (str_detect(type, '^pct:')) {
+    pct_value = as.numeric(str_extract(type, '(?<=pct:)[\\-0-9.]+'))
+    type = 'pct'  # normalize type for downstream logic
+  }
+
   # Set output variable name
   mtr_name = paste0('mtr_', var)
+  if (!is.null(pct_value)) {
+    pct_label = if_else(pct_value >= 0,
+                        paste0('_pct', pct_value),
+                        paste0('_pct_neg', abs(pct_value)))
+    mtr_name = paste0('mtr_', var, pct_label)
+  }
   
   # Next-dollar calculation
   if (type == 'nextdollar') {
@@ -499,13 +515,55 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
     }
     
     # Set new values
-    new_values = tax_units %>% 
+    new_values = tax_units %>%
       mutate(
-        across(.cols = all_of(vars), .fns  = ~ . + 1), 
+        across(.cols = all_of(vars), .fns  = ~ . + 1),
         original_value = NA
       )
   }
-  
+
+  # Percent-change calculation
+  else if (type == 'pct') {
+
+    pct = pct_value / 100  # e.g., 0.10 for 10%
+
+    # Handle composite variables (same logic as nextdollar)
+    vars = c(var)
+
+    if (var %in% c('wages1', 'wages2')) {
+      vars = c(var, 'wages')
+    }
+    if (var %in% c('sole_prop1', 'sole_prop2')) {
+      vars = c(var, 'sole_prop')
+    }
+    if (var %in% c('farm1', 'farm2')) {
+      vars = c(var, 'farm')
+    }
+    if (var == 'tips1') {
+      vars = c('tips1', 'tips', 'wages1', 'wages')
+    }
+    if (var == 'tips2') {
+      vars = c('tips2', 'tips', 'wages2', 'wages')
+    }
+    if (var == 'ot1') {
+      vars = c('ot1', 'ot', 'wages1', 'wages')
+    }
+    if (var == 'ot2') {
+      vars = c('ot2', 'ot', 'wages2', 'wages')
+    }
+    if (var %in% c('part_active', 'part_active_loss')) {
+      vars = c(var, 'part_se1')
+    }
+
+    # Record original value and apply percent change
+    new_values = tax_units %>%
+      mutate(
+        original_value = .data[[var]],
+        original_value = if_else(original_value == 0, NA_real_, original_value),
+        across(.cols = all_of(vars), .fns = ~ . * (1 + pct))
+      )
+  }
+
   # Extensive-margin
   else if (type == 'extensive') {
     
@@ -612,7 +670,8 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
       # Calculate denominator: change in variable value
       delta_var = case_when(
         type == 'nextdollar' ~ 1,
-        type == 'extensive'  ~ if_else(original_value == 0, NA, -original_value), 
+        type == 'pct'        ~ original_value * (pct_value / 100),
+        type == 'extensive'  ~ if_else(original_value == 0, NA, -original_value),
         TRUE                 ~ NA
       ), 
       
