@@ -497,9 +497,12 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
     mtr_name = paste0('mtr_', var, dollar_label)
   }
   
+  # Save original values before any modifications (for delta calculation)
+  orig_vals = tax_units[[var]]
+
   # Next-dollar calculation
   if (type == 'nextdollar') {
-    
+
     # Deal with composite variables. Initialize list of variables to increment
     vars = c(var)
     
@@ -530,10 +533,7 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
     
     # Set new values (floor at 0 for negative shocks)
     new_values = tax_units %>%
-      mutate(
-        original_value = .data[[var]],
-        across(.cols = all_of(vars), .fns  = ~ pmax(0, . + dollar_value))
-      )
+      mutate(across(.cols = all_of(vars), .fns  = ~ pmax(0, . + dollar_value)))
   }
 
   # Percent-change calculation
@@ -569,28 +569,17 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
       vars = c(var, 'part_se1')
     }
 
-    # Record original value and apply percent change
+    # Apply percent change
     new_values = tax_units %>%
-      mutate(
-        original_value = .data[[var]],
-        original_value = if_else(original_value == 0, NA_real_, original_value),
-        across(.cols = all_of(vars), .fns = ~ . * (1 + pct))
-      )
+      mutate(across(.cols = all_of(vars), .fns = ~ . * (1 + pct)))
   }
 
   # Extensive-margin
   else if (type == 'extensive') {
-    
-    # Record initial value
-    new_values = tax_units %>% 
-      mutate(
-        across(
-          .cols  = all_of(var), 
-          .fns   = ~ ., 
-          .names = 'original_value'
-        )
-      )
-    
+
+    # Initialize new_values
+    new_values = tax_units
+
     # Wages are funny because they contain sub-components
     if (var == 'wages1') { 
       new_values %<>%  
@@ -665,40 +654,39 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
     new_values = tax_units %>% 
       mutate(across(.cols = all_of(vars), .fns  = ~ NA))
   }
-  
-  
+
   # Re-calculate taxes
-  new_values %>% 
+  new_values %>%
     do_taxes(
       baseline_pr_er = NULL,
       vars_payroll   = return_vars$calc_pr,
       vars_1040      = return_vars %>% remove_by_name('calc_pr') %>% unlist() %>% set_names(NULL)
-    ) %>% 
-    
+    ) %>%
+
     # Calculate MTR and return
     mutate(
-      
-      # Calculate numerator: change in taxes 
+
+      # Calculate numerator: change in taxes
       delta_taxes = liab_iit_net - actual_liab_iit + pr * (liab_pr - actual_liab_pr),
-      
+
       # Calculate denominator: change in variable value
-      # For nextdollar: use actual change after flooring at 0
+      # For nextdollar: use actual change after flooring at 0 (use orig_vals vector)
       delta_var = case_when(
         type == 'nextdollar' ~ if_else(
-          pmax(0, original_value + dollar_value) - original_value == 0,
+          pmax(0, orig_vals + dollar_value) - orig_vals == 0,
           NA_real_,
-          pmax(0, original_value + dollar_value) - original_value
+          pmax(0, orig_vals + dollar_value) - orig_vals
         ),
-        type == 'pct'        ~ original_value * (pct_value / 100),
-        type == 'extensive'  ~ if_else(original_value == 0, NA, -original_value),
+        type == 'pct'        ~ if_else(orig_vals == 0, NA_real_, orig_vals * (pct_value / 100)),
+        type == 'extensive'  ~ if_else(orig_vals == 0, NA, -orig_vals),
         TRUE                 ~ NA
-      ), 
-      
+      ),
+
       # Calculate MTR
       !!mtr_name := delta_taxes / delta_var
-      
-    ) %>% 
-    select(all_of(mtr_name)) %>% 
+
+    ) %>%
+    select(all_of(mtr_name)) %>%
     return()
 }
 
