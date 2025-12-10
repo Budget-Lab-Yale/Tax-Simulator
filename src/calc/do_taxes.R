@@ -474,6 +474,14 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
     type = 'pct'  # normalize type for downstream logic
   }
 
+  # Parse nextdollar type (e.g., "nextdollar:1000" -> dollar_value = 1000)
+  dollar_value = 1  # default to $1
+
+  if (str_detect(type, '^nextdollar:')) {
+    dollar_value = as.numeric(str_extract(type, '(?<=nextdollar:)[\\-0-9.]+'))
+    type = 'nextdollar'  # normalize type for downstream logic
+  }
+
   # Set output variable name
   mtr_name = paste0('mtr_', var)
   if (!is.null(pct_value)) {
@@ -481,6 +489,12 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
                         paste0('_pct', pct_value),
                         paste0('_pct_neg', abs(pct_value)))
     mtr_name = paste0('mtr_', var, pct_label)
+  }
+  if (dollar_value != 1) {
+    dollar_label = if_else(dollar_value >= 0,
+                           paste0('_d', dollar_value),
+                           paste0('_d_neg', abs(dollar_value)))
+    mtr_name = paste0('mtr_', var, dollar_label)
   }
   
   # Next-dollar calculation
@@ -517,7 +531,7 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
     # Set new values
     new_values = tax_units %>%
       mutate(
-        across(.cols = all_of(vars), .fns  = ~ . + 1),
+        across(.cols = all_of(vars), .fns  = ~ . + dollar_value),
         original_value = NA
       )
   }
@@ -669,7 +683,7 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
       
       # Calculate denominator: change in variable value
       delta_var = case_when(
-        type == 'nextdollar' ~ 1,
+        type == 'nextdollar' ~ dollar_value,
         type == 'pct'        ~ original_value * (pct_value / 100),
         type == 'extensive'  ~ if_else(original_value == 0, NA, -original_value),
         TRUE                 ~ NA

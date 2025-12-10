@@ -52,7 +52,7 @@ Runscripts are CSV files that define simulation parameters. Think of them as "re
 - `years`: Simulation years in format `{start_year}:{end_year}` (e.g., "2024:2034")
 - `dist_years`: Years for full distribution table calculation (computationally intensive)
 - `mtr_vars`: Space-delimited list of variables for marginal tax rate calculation (e.g., "wages kg_lt tips1")
-- `mtr_types`: Space-delimited types matching `mtr_vars` ("nextdollar" or "extensive")
+- `mtr_types`: Space-delimited types matching `mtr_vars`. Options: "nextdollar" (or "nextdollar:X" for arbitrary dollar amount, e.g., "nextdollar:1000"), "pct:X" (percent change, e.g., "pct:10"), or "extensive"
 
 Note: if you want to run a policy change starting in t, always start the simulation via `years` earlier -- at least t - 1. 
 
@@ -338,7 +338,7 @@ rates:
 1. Add variables to `mtr_vars` in runscript (space-delimited) -- note that when a variable is indexed by 1 and 2, 
    that is, it is associated with primary and secondary earnings, an individual level variable, typical of labor earnings and its
    components, then you need to do both, for example tips1 and tips1 or ot1 and ot1 or wages1 and wages2
-2. Specify types in `mtr_types` ("nextdollar" or "extensive")
+2. Specify types in `mtr_types` ("nextdollar", "nextdollar:X", "pct:X", or "extensive")
 3. Access MTRs in behavioral module via `baseline_mtrs$mtr_{varname}` and `static_mtrs$mtr_{varname}`
 4. Use `apply_mtr_elasticity()` for standard elasticity applications
 
