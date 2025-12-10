@@ -528,11 +528,11 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
       vars = c(var, 'part_se1')
     }
     
-    # Set new values
+    # Set new values (floor at 0 for negative shocks)
     new_values = tax_units %>%
       mutate(
-        across(.cols = all_of(vars), .fns  = ~ . + dollar_value),
-        original_value = NA
+        original_value = .data[[var]],
+        across(.cols = all_of(vars), .fns  = ~ pmax(0, . + dollar_value))
       )
   }
 
@@ -682,8 +682,13 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
       delta_taxes = liab_iit_net - actual_liab_iit + pr * (liab_pr - actual_liab_pr),
       
       # Calculate denominator: change in variable value
+      # For nextdollar: use actual change after flooring at 0
       delta_var = case_when(
-        type == 'nextdollar' ~ dollar_value,
+        type == 'nextdollar' ~ if_else(
+          pmax(0, original_value + dollar_value) - original_value == 0,
+          NA_real_,
+          pmax(0, original_value + dollar_value) - original_value
+        ),
         type == 'pct'        ~ original_value * (pct_value / 100),
         type == 'extensive'  ~ if_else(original_value == 0, NA, -original_value),
         TRUE                 ~ NA
