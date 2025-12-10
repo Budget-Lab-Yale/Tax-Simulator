@@ -478,7 +478,7 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
   dollar_value = 1  # default to $1
 
   if (str_detect(type, '^nextdollar:')) {
-    dollar_value = as.numeric(str_extract(type, '(?<=nextdollar:)[\\-0-9.]+'))
+    dollar_value = type %>% str_replace('^nextdollar:', '') %>% as.numeric()
     type = 'nextdollar'  # normalize type for downstream logic
   }
 
