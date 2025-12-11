@@ -437,12 +437,14 @@ remit_taxes = function(tax_units) {
 calc_mtrs_all = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T) {
 
   #----------------------------------------------------------------------------
-  # Calculates MTRs across the entire distribution of wages. For each tax unit,
-  # computes MTRs when moving their wages to each percentile (p1-p100) of the
-  # wages distribution (among nonzero values), plus $0.
+  # Calculates MTRs across the wage distribution. For each tax unit, computes
+  # MTRs when moving their wages to selected percentiles of the wages
+  # distribution (among nonzero values), plus $0.
+  #
+  # Percentiles: p0 (=$0), p5, p10, p15, ..., p85, p90, p91, ..., p99, p99.9,
+  #              p99.99, p100
   #
   # IMPORTANT: This function only supports var = 'wages'. All wage subcomponents
-
   # (wages1, wages2, tips, tips1, tips2, ot, ot1, ot2) are scaled proportionally
   # when moving to target values.
   #
@@ -459,9 +461,10 @@ calc_mtrs_all = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T
   #   - pr (bool)               : whether to include payroll taxes in the MTR
   #                               calculation
   #
-  # Returns: tibble with 201 columns:
-  #          - mtr_wages_p0 through mtr_wages_p100 (101 MTR columns)
-  #          - wages_p1 through wages_p100 (100 percentile value columns)
+  # Returns: list with two elements:
+  #          - mtrs: tibble with MTR columns (mtr_wages_p0, mtr_wages_p5, etc.)
+  #          - percentiles: tibble lookup table with columns 'percentile' and
+  #            'wages' for writing to supplemental output
   #----------------------------------------------------------------------------
 
   # Only 'wages' is supported for mtr_type = 'all'
@@ -477,8 +480,20 @@ calc_mtrs_all = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T
   nonzero_values = actual_values[nonzero_mask]
   nonzero_weights = tax_units$weight[nonzero_mask]
 
-  # Calculate percentiles p1-p100 using weighted quantiles
-  percentile_probs = (1:100) / 100
+  # Define sparse percentile grid:
+  # p5, p10, p15, ..., p85, p90 (every 5th), then p91-p99 (every 1), plus p99.9, p99.99, p100
+  percentile_probs = c(
+    seq(0.05, 0.90, by = 0.05),  # p5, p10, ..., p90
+    seq(0.91, 0.99, by = 0.01),  # p91, p92, ..., p99
+    0.999, 0.9999, 1.0           # p99.9, p99.99, p100
+  )
+  percentile_labels = c(
+    paste0('p', seq(5, 90, by = 5)),
+    paste0('p', 91:99),
+    'p99.9', 'p99.99', 'p100'
+  )
+
+  # Calculate percentile values using weighted quantiles
   percentile_values = Hmisc::wtd.quantile(
     nonzero_values,
     weights = nonzero_weights,
@@ -486,20 +501,21 @@ calc_mtrs_all = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T
     normwt = TRUE
   )
 
-  # Target values: $0 plus percentiles p1-p100
+  # Create percentile lookup table for supplemental output
+  percentile_lookup = tibble(
+    percentile = c('p0', percentile_labels),
+    wages = c(0, as.numeric(percentile_values))
+  )
+
+  # Target values: $0 plus the percentiles
   target_values = c(0, percentile_values)
-  target_labels = c('p0', paste0('p', 1:100))
+  target_labels = c('p0', percentile_labels)
 
   # Initialize results dataframe with just row indices
   results = tibble(.rows = nrow(tax_units))
 
-  # Add percentile value columns (p1-p100, not p0 since that's always 0)
-  for (p in 1:100) {
-    col_name = paste0('wages_p', p)
-    results[[col_name]] = percentile_values[p]
-  }
+  # Calculate MTR for each target value
 
-  # Calculate MTR for each target value (p0, p1, ..., p100)
   for (i in seq_along(target_values)) {
     target = target_values[i]
     label = target_labels[i]
@@ -544,7 +560,10 @@ calc_mtrs_all = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T
     results[[mtr_col_name]] = mtr
   }
 
-  return(results)
+  return(list(
+    mtrs = results,
+    percentiles = percentile_lookup
+  ))
 }
 
 
@@ -575,11 +594,11 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
   #                               calculation
   #   - type (str)              : "nextdollar" for next-dollar MTR, "extensive"
   #                               for delta in tax when reducing the value to 0,
-  #                               "all" for MTRs at all percentiles (p0-p100)
+  #                               "all" for MTRs at sparse percentiles (wages only)
   #
-  # Returns: tibble of MTRs (df). For type="all", returns 201 columns:
-  #          mtr_{var}_p0 through mtr_{var}_p100 (101 MTR columns) and
-  #          {var}_p1 through {var}_p100 (100 percentile value columns).
+  # Returns: tibble of MTRs (df). For type="all", returns a list with:
+  #          - mtrs: tibble with mtr_wages_p0, mtr_wages_p5, ..., mtr_wages_p100
+  #          - percentiles: lookup table for supplemental output
   #----------------------------------------------------------------------------
 
   # Handle "all" type separately - it returns multiple columns

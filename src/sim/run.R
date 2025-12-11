@@ -364,29 +364,63 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
   # Calculate marginal tax rates
   mtrs = NULL
   if (!is.null(scenario_info$mtr_vars)) {
-    mtrs = scenario_info$mtr_vars %>%
-      map2(.y = scenario_info$mtr_types, 
+
+    # Prepare tax_units for MTR calculation (remove calculated variables)
+    tax_units_for_mtr = tax_units %>%
+      select(-all_of(return_vars %>% unlist() %>% set_names(NULL)))
+
+    # Calculate MTRs for each variable/type pair
+    mtr_results = scenario_info$mtr_vars %>%
+      map2(.y = scenario_info$mtr_types,
            .f = ~ calc_mtrs(
-             tax_units       = tax_units %>% 
-                                 select(-all_of(return_vars %>% 
-                                 unlist() %>% 
-                                 set_names(NULL))), 
+             tax_units       = tax_units_for_mtr,
              actual_liab_iit = tax_units$liab_iit_net,
              actual_liab_pr  = tax_units$liab_pr,
              var             = .x,
              pr              = F,
              type            = .y
           )
-      ) %>% 
-      bind_cols() %>% 
+      )
+
+    # Handle 'all' type separately - it returns a list with mtrs and percentiles
+    # Other types return a tibble directly
+    has_all_type = 'all' %in% scenario_info$mtr_types
+
+    if (has_all_type) {
+      # Extract MTR tibbles (for 'all' type, extract $mtrs; for others, use as-is)
+      mtr_tibbles = map2(mtr_results, scenario_info$mtr_types, function(result, type) {
+        if (type == 'all') result$mtrs else result
+      })
+
+      # Extract and write percentile lookup tables for 'all' type
+      for (i in seq_along(scenario_info$mtr_types)) {
+        if (scenario_info$mtr_types[i] == 'all') {
+          percentile_lookup = mtr_results[[i]]$percentiles %>%
+            mutate(year = year)
+          write_csv(
+            percentile_lookup,
+            file.path(scenario_info$output_path,
+                      if_else(static, 'static', 'conventional'),
+                      'supplemental',
+                      paste0('percentiles_', year, '.csv'))
+          )
+        }
+      }
+
+      mtrs = mtr_tibbles %>% bind_cols()
+    } else {
+      mtrs = mtr_results %>% bind_cols()
+    }
+
+    mtrs = mtrs %>%
       mutate(id   = tax_units$id,
-             year = year) %>% 
+             year = year) %>%
       relocate(id, year)
-    
-    # Add to tax units dataframe 
-    tax_units %<>% 
-      left_join(mtrs %>% 
-                  select(-year), 
+
+    # Add to tax units dataframe
+    tax_units %<>%
+      left_join(mtrs %>%
+                  select(-year),
                 by = 'id')
   }
   
@@ -396,9 +430,8 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
   #-----------------
   
   # Write microdata
-  # Note: includes mtr_* columns and *_p* columns (percentile values from mtr_type='all')
   tax_units %>%
-    select(all_of(globals$detail_vars), starts_with('mtr_'), matches('_p\\d+$')) %>%
+    select(all_of(globals$detail_vars), starts_with('mtr_')) %>%
     write_csv(file.path(scenario_info$output_path,
                         if_else(static, 'static', 'conventional'),
                         'detail',
