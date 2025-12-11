@@ -7,39 +7,42 @@
 
 
 
-parse_globals = function(runscript_name, scenario_id, local, vintage, 
-                         baseline_vintage, pct_sample, multicore) {
-  
+parse_globals = function(runscript_name, scenario_id, local, vintage,
+                         baseline_vintage, pct_sample, multicore, dup_wages = 0) {
+
   #----------------------------------------------------------------------------
-  # Parses data interface versioning requirements and runscript; generates 
-  # scenario-specific, version-consistent filepaths for data interfaces. 
-  # Confirms that these filepaths exist. 
-  # 
+  # Parses data interface versioning requirements and runscript; generates
+  # scenario-specific, version-consistent filepaths for data interfaces.
+  # Confirms that these filepaths exist.
+  #
   # Parameters:
-  #   - runscript_name (str)   : name of runscript CSV file 
-  #   - scenario_id (str)      : optional name of scenario ID contained in 
-  #                              the runscript; "NULL" indicates all 
+  #   - runscript_name (str)   : name of runscript CSV file
+  #   - scenario_id (str)      : optional name of scenario ID contained in
+  #                              the runscript; "NULL" indicates all
   #   - local (int)            : whether this is a local run (1) or a production
-  #                              run (0)  
-  #   - vintage (str)          : optional argument (NULL if not provided) to 
-  #                              manually supply output vintage folder rather 
+  #                              run (0)
+  #   - vintage (str)          : optional argument (NULL if not provided) to
+  #                              manually supply output vintage folder rather
   #                              than being dynamically generated. Of the format
   #                              YYYYMMDDHHMM.
-  #   - baseline_vintage (str) : optional argument (NULL if not provided) to 
+  #   - baseline_vintage (str) : optional argument (NULL if not provided) to
   #                              skip the baseline run and instead use an existing
-  #                              baseline run for MTRs and revenue estimates. Of 
-  #                              the format YYYYMMDDHHMM. 
-  #   - pct_sample (dbl)       : share of records used in simulation 
+  #                              baseline run for MTRs and revenue estimates. Of
+  #                              the format YYYYMMDDHHMM.
+  #   - pct_sample (dbl)       : share of records used in simulation
   #   - multicore (str)        : dimension across which to parallelize code. One
-  #                              of three values: 'none', 'scenario', or 'year'. 
-  #                              Given enough cores, choose the dimension with 
+  #                              of three values: 'none', 'scenario', or 'year'.
+  #                              Given enough cores, choose the dimension with
   #                              the largest N (generally 'year'). But note that
   #                              some behavioral feedback modules require
   #                              sequential calculation of year, in which case
   #                              'year' is not a valid option and will result in
   #                              a race condition. Always review before running!
+  #   - dup_wages (int)        : if 1, duplicate each record with wage percentile
+  #                              values (0, p1-p99, p99.1-p99.9, p100) for wages1.
+  #                              Outputs only detail files; skips all aggregation.
   #
-  # Returns: list of 8:
+  # Returns: list of 10:
   #   - random_numbers (df)  : tibble of random numbers used across simulations
   #   - runscript (df)       : tibble representation of the runscripts CSV
   #   - interface_paths (df) : tibble with ID-interface-filepath info in rows 
@@ -235,33 +238,39 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   
   # Specifiy microdata output variable
   detail_vars = c(
-    'id', 'weight', 'filer', 'dep_status', 'filing_status', 'male1', 'male2', 
-    'age1', 'age2', 'n_dep','n_dep_ctc', 'dep_age1', 'dep_age2', 'dep_age3', 
-    'wages1', 'wages2', 'wages', 'txbl_int', 'exempt_int', 'se', 'div_ord', 
-    'div_pref', 'txbl_kg', 'kg_st', 'kg_lt', 'sole_prop', 'sch_e', 'farm', 
-    'part_scorp', 'gross_ss', 'txbl_ss', 'auto_int_ded', 'above_ded', 'agi', 
-    'expanded_inc', 'std_ded', 'item_ded', 'med_item_ded', 'salt_item_ded', 
-    'first_mort_int', 'mort_int_item_ded', 'inv_int_item_ded', 'int_item_ded', 
-    'char_item_ded', 'casualty_item_ded', 'misc_item_ded', 'other_item_ded', 
-    'item_ded_ex_limits', 'itemizing', 'pe_ded', 'qbi_ded', 'tip_ded', 'ot_ded', 
-    'senior_ded', 'txbl_inc', 'liab_ord', 'liab_pref', 'liab_amt', 'liab_bc', 
-    'cdctc_nonref', 'ctc_nonref', 'ed_nonref', 'nonref', 'ed_ref', 'eitc', 
-    'cdctc_ref', 'ctc_ref', 'rebate', 'ref', 'liab_niit', 'liab_iit', 
-    'liab_iit_net', 'liab_fica_er1', 'liab_fica_er2', 'liab_seca', 'liab_pr_ee', 
+    'id', 'weight', 'filer', 'dep_status', 'filing_status', 'male1', 'male2',
+    'age1', 'age2', 'n_dep','n_dep_ctc', 'dep_age1', 'dep_age2', 'dep_age3',
+    'wages1', 'wages2', 'wages', 'txbl_int', 'exempt_int', 'se', 'div_ord',
+    'div_pref', 'txbl_kg', 'kg_st', 'kg_lt', 'sole_prop', 'sch_e', 'farm',
+    'part_scorp', 'gross_ss', 'txbl_ss', 'auto_int_ded', 'above_ded', 'agi',
+    'expanded_inc', 'std_ded', 'item_ded', 'med_item_ded', 'salt_item_ded',
+    'first_mort_int', 'mort_int_item_ded', 'inv_int_item_ded', 'int_item_ded',
+    'char_item_ded', 'casualty_item_ded', 'misc_item_ded', 'other_item_ded',
+    'item_ded_ex_limits', 'itemizing', 'pe_ded', 'qbi_ded', 'tip_ded', 'ot_ded',
+    'senior_ded', 'txbl_inc', 'liab_ord', 'liab_pref', 'liab_amt', 'liab_bc',
+    'cdctc_nonref', 'ctc_nonref', 'ed_nonref', 'nonref', 'ed_ref', 'eitc',
+    'cdctc_ref', 'ctc_ref', 'rebate', 'ref', 'liab_niit', 'liab_iit',
+    'liab_iit_net', 'liab_fica_er1', 'liab_fica_er2', 'liab_seca', 'liab_pr_ee',
     'liab_pr', 'simple_filer', 'number_of_credits'
   )
+
+  # Add dup_wages-specific output variables if enabled
+  if (dup_wages == 1) {
+    detail_vars = c(detail_vars, 'pctl_label', 'wages1_original')
+  }
   
   
-  # Return runtime args and interface paths  
+  # Return runtime args and interface paths
   return(list(random_numbers  = random_numbers,
               runscript       = runscript,
-              interface_paths = interface_paths, 
+              interface_paths = interface_paths,
               output_root     = output_root,
               baseline_root   = baseline_root,
               pct_sample      = pct_sample,
-              sample_ids      = sample_ids, 
+              sample_ids      = sample_ids,
               detail_vars     = detail_vars,
-              multicore       = multicore))
+              multicore       = multicore,
+              dup_wages       = dup_wages))
 }
 
 
