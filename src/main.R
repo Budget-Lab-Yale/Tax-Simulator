@@ -37,7 +37,6 @@ stacked          = 1
 baseline_vintage = NULL
 delete_detail    = 0
 multicore        = 'none'   # one of 'none', 'scenario', or 'year'
-dup_wages        = 0        # if 1, duplicate records with wage percentiles
 
 
 # Override default runtime args if executed from the command line
@@ -53,7 +52,6 @@ if (length(args) > 0) {
   if (args[8] == 'NULL') baseline_vintage = NULL else baseline_vintage = args[8]
   delete_detail                           = as.integer(args[9])
   multicore                               = args[10]
-  if (length(args) >= 11) dup_wages       = as.integer(args[11])
 } 
 
 
@@ -68,12 +66,11 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   globals = parse_globals(
     runscript_name   = runscript_name,
     scenario_id      = scenario_id,
-    local            = local,
+    local            = local, 
     vintage          = vintage,
     baseline_vintage = baseline_vintage,
-    pct_sample       = pct_sample,
-    multicore        = multicore,
-    dup_wages        = dup_wages
+    pct_sample       = pct_sample, 
+    multicore        = multicore
   )
   
   # Get list of non-baseline scenarios 
@@ -120,15 +117,12 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   #---------------------------------------
   # Stacked post-processing and reporting
   #---------------------------------------
-
-  # Skip stacked processing in dup_wages mode (detail files only)
-  if (globals$dup_wages != 1) {
-    print('Running stacked post-processing routines')
-
-    if (stacked == 1) {
-      build_stacked_1040_reports(counterfactual_ids)
-      calc_stacked_rev_est(counterfactual_ids)
-    }
+  
+  print('Running stacked post-processing routines')
+  
+  if (stacked == 1) {
+    build_stacked_1040_reports(counterfactual_ids)
+    calc_stacked_rev_est(counterfactual_ids)
   }
   
   # Delete microdata files

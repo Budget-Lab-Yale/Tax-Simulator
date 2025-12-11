@@ -59,9 +59,8 @@ calc_eitc = function(tax_unit, fill_missings = F) {
     'eitc.inv_inc_limit', # (int) maximum allowable investment income for credit eligibility
     'eitc.min_age',       # (int) minimum age for credit eligibility for filers with 0 children
     'eitc.max_age',       # (int) maximum age for credit eligibility for filers with 0 children
-    'eitc.mfs_eligible',  # (int) whether credit is available for married filing separately returns
-    'eitc.parent_precert', # (int) whether parents are required to pre-certify their eligibility
-    'r.eitc_precert'       # (dbl) random number for EITC pre-certification check
+    'eitc.mfs_eligible',  # (int) whether credit is available for married filing separately returns   
+    'eitc.parent_precert' # (int) whether parents are required to pre-certify their eligibility 
   )
   
   tax_unit %>% 
@@ -126,7 +125,7 @@ calc_eitc = function(tax_unit, fill_missings = F) {
       
       # Adjust for pre-certification changes
       eitc     = if_else(eitc.parent_precert & n_dep_eitc > 0,
-                         if_else(r.eitc_precert < 0.031, 0, eitc),
+                         if_else(globals$random_numbers$r.eitc_precert < 0.031, 0, eitc), 
                          eitc)
       
     ) %>% 

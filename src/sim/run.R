@@ -104,19 +104,18 @@ do_scenario = function(ID, baseline_mtrs) {
   #--------------------
   # Do post-processing
   #--------------------
-
-  # Skip post-processing in dup_wages mode (detail files only)
-  if (ID != 'baseline' & globals$dup_wages != 1) {
-
+  
+  if (ID != 'baseline') {
+    
     # Formatted 1040 report
     build_1040_report(ID)
-
+    
     # Revenue estimates
     calc_rev_est(ID)
-
+    
     # Distribution tables
     build_distribution_tables(ID, baseline_id = 'baseline')
-
+    
     # Time burden tables
     build_timeburden_table(ID)
   }
@@ -200,43 +199,39 @@ run_sim = function(scenario_info, tax_law, static, baseline_mtrs, static_mtrs,
     }
   }
   
-  # Skip totals and supplemental output in dup_wages mode (detail files only)
-  if (globals$dup_wages != 1) {
-
-    # Write VAT price offset info
-    vat_price_offset %>%
-      write_csv(file.path(output_root, 'supplemental', 'vat_price_offset.csv'))
-    excess_growth_offset %>%
-      write_csv(file.path(output_root, 'supplemental', 'excess_growth_offset.csv'))
-
-    # Write totals files
-    totals_pr = output %>%
-      map(.f = ~.x$totals$pr) %>%
-      bind_rows() %>%
-      write_csv(file.path(output_root, 'totals', 'payroll.csv'))
-
-    totals_1040 = output %>%
-      map(.f = ~.x$totals$`1040`) %>%
-      bind_rows() %>%
-      write_csv(file.path(output_root, 'totals', '1040.csv'))
-
-    output %>%
-      map(.f = ~.x$totals$`1040_by_agi`) %>%
-      bind_rows() %>%
-      write_csv(file.path(output_root, 'totals', '1040_by_agi.csv'))
-
-    # Calculate and write receipts
-    totals_pr %>%
-      left_join(totals_1040, by = 'year') %>%
-      calc_receipts(
-        scenario_root         = output_root,
-        vat_root              = scenario_info$interface_paths$`Value-Added-Tax-Model`,
-        other_root            = scenario_info$interface_paths$`Macro-Projections`,
-        cost_recovery_root    = scenario_info$interface_paths$`Cost-Recovery-Simulator`,
-        off_model_root        = scenario_info$interface_paths$`Off-Model-Estimates`,
-        excess_growth_all_rev = scenario_info$excess_growth_all_rev
-      )
-  } 
+  # Write VAT price offset info
+  vat_price_offset %>% 
+    write_csv(file.path(output_root, 'supplemental', 'vat_price_offset.csv'))
+  excess_growth_offset %>% 
+    write_csv(file.path(output_root, 'supplemental', 'excess_growth_offset.csv'))
+  
+  # Write totals files
+  totals_pr = output %>%
+    map(.f = ~.x$totals$pr) %>% 
+    bind_rows() %>% 
+    write_csv(file.path(output_root, 'totals', 'payroll.csv'))
+  
+  totals_1040 = output %>% 
+    map(.f = ~.x$totals$`1040`) %>% 
+    bind_rows() %>% 
+    write_csv(file.path(output_root, 'totals', '1040.csv'))
+  
+  output %>% 
+    map(.f = ~.x$totals$`1040_by_agi`) %>% 
+    bind_rows() %>% 
+    write_csv(file.path(output_root, 'totals', '1040_by_agi.csv'))
+    
+  # Calculate and write receipts
+  totals_pr %>%  
+    left_join(totals_1040, by = 'year') %>% 
+    calc_receipts(
+      scenario_root         = output_root, 
+      vat_root              = scenario_info$interface_paths$`Value-Added-Tax-Model`,
+      other_root            = scenario_info$interface_paths$`Macro-Projections`,
+      cost_recovery_root    = scenario_info$interface_paths$`Cost-Recovery-Simulator`,
+      off_model_root        = scenario_info$interface_paths$`Off-Model-Estimates`, 
+      excess_growth_all_rev = scenario_info$excess_growth_all_rev
+    ) 
 
   # Return MTRs
   output %>% 
@@ -323,17 +318,7 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
     
     # Adjust intensive-margin variables for excess real GDP growth
     do_excess_growth(scenario_info, excess_growth_offset)
-
-
-  #-------------------------------------
-  # Apply wage percentile duplication
-  #-------------------------------------
-
-  # If dup_wages mode is enabled, duplicate each record with wage percentile values
-  if (globals$dup_wages == 1) {
-    tax_units = duplicate_with_wage_percentiles(tax_units)
-  }
-
+  
 
   #---------------------------
   # Model behavioral feedback
@@ -411,25 +396,20 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
   #-----------------
   
   # Write microdata
-  tax_units %>%
-    select(all_of(globals$detail_vars), starts_with('mtr_')) %>%
-    write_csv(file.path(scenario_info$output_path,
+  tax_units %>%  
+    select(all_of(globals$detail_vars), starts_with('mtr_')) %>% 
+    write_csv(file.path(scenario_info$output_path, 
                         if_else(static, 'static', 'conventional'),
-                        'detail',
+                        'detail', 
                         paste0(year, '.csv')))
 
-
-  # Skip totals calculation in dup_wages mode (detail files only)
-  if (globals$dup_wages == 1) {
-    return(list(mtrs = mtrs, totals = NULL))
-  }
-
+  
   # Get totals from microdata
-  totals = list(pr            = get_pr_totals(tax_units, year),
-                `1040`        = get_1040_totals(tax_units, year),
+  totals = list(pr            = get_pr_totals(tax_units, year), 
+                `1040`        = get_1040_totals(tax_units, year), 
                 `1040_by_agi` = get_1040_totals(tax_units, year, T))
-
+  
   # Return required data
-  return(list(mtrs   = mtrs,
+  return(list(mtrs   = mtrs, 
               totals = totals))
 } 
