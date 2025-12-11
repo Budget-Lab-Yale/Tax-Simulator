@@ -480,7 +480,7 @@ duplicate_with_wage_percentiles = function(tax_units) {
     left_join(pctl_lookup, by = 'pctl_idx') %>%
     mutate(
       wages1 = pctl_value,
-      wages  = wages1 + wages2,  # Update total wages
+      wages  = wages1 + replace_na(wages2, 0),  # Update total wages (guard against NA wages2)
       id     = paste0(id, '_p', pctl_label)  # Make IDs unique
     ) %>%
     select(-pctl_idx, -pctl_value)
