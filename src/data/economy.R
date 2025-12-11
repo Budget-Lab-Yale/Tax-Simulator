@@ -486,8 +486,10 @@ duplicate_with_wage_percentiles = function(tax_units) {
     select(-pctl_idx, -pctl_value)
 
   # Mark original records with NA percentile label (already have wages1_original)
+  # Convert id to character to match expanded records
   originals = tax_units %>%
-    mutate(pctl_label = NA_real_)
+    mutate(pctl_label = NA_real_,
+           id = as.character(id))
 
   # Combine original records with expanded copies
   bind_rows(originals, expanded) %>%
