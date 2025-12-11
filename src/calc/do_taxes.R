@@ -434,35 +434,158 @@ remit_taxes = function(tax_units) {
 
 
 
-calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T, 
-                     type = 'nextdollar') {
-  
+calc_mtrs_all = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T) {
+
   #----------------------------------------------------------------------------
-  # Calculates MTR, either at the next-dollar or 0-actual extensive margin, 
-  # with respect to given variable. Includes employee-side payroll taxes. 
+  # Calculates MTRs across the entire distribution of wages. For each tax unit,
+  # computes MTRs when moving their wages to each percentile (p1-p100) of the
+  # wages distribution (among nonzero values), plus $0.
   #
-  # Note: for next-dollar MTRs, variable "wages" means non-tip, non-OT wages.
-  # For extensive margin MTRs, variable "wages" means all wages, including 
-  # tips and OT.
-  # 
-  # Always double-check whether the variable you want a tax rate for is handled
-  # by the logic below!! It's not generalized to every variable due to 
-  # compositional issues (i.e. some variables are components of others).
-  # 
+  # IMPORTANT: This function only supports var = 'wages'. All wage subcomponents
+
+  # (wages1, wages2, tips, tips1, tips2, ot, ot1, ot2) are scaled proportionally
+  # when moving to target values.
+  #
+  # MTR formula: (tax at target value - tax at actual value) /
+  #              (target value - actual value)
+  #
   # Parameters:
   #   - tax_units (df)          : tibble of tax units, exogenous variables only
   #   - actual_liab_iit (dbl[]) : vector of net income tax liability to compare
   #                               against
-  #   - actual_liab_pr (dbl[])  : vector of total payroll tax to compare 
+  #   - actual_liab_pr (dbl[])  : vector of total payroll tax to compare
+  #                               against
+  #   - var (str)               : must be 'wages' (will error otherwise)
+  #   - pr (bool)               : whether to include payroll taxes in the MTR
+  #                               calculation
+  #
+  # Returns: tibble with 201 columns:
+  #          - mtr_wages_p0 through mtr_wages_p100 (101 MTR columns)
+  #          - wages_p1 through wages_p100 (100 percentile value columns)
+  #----------------------------------------------------------------------------
+
+  # Only 'wages' is supported for mtr_type = 'all'
+  if (var != 'wages') {
+    stop(paste0("mtr_type = 'all' only supports var = 'wages', got '", var, "'"))
+  }
+
+  # Get actual values of wages
+  actual_values = tax_units$wages
+
+  # Calculate weighted percentiles among nonzero values
+  nonzero_mask = actual_values != 0
+  nonzero_values = actual_values[nonzero_mask]
+  nonzero_weights = tax_units$weight[nonzero_mask]
+
+  # Calculate percentiles p1-p100 using weighted quantiles
+  percentile_probs = (1:100) / 100
+  percentile_values = Hmisc::wtd.quantile(
+    nonzero_values,
+    weights = nonzero_weights,
+    probs = percentile_probs,
+    normwt = TRUE
+  )
+
+  # Target values: $0 plus percentiles p1-p100
+  target_values = c(0, percentile_values)
+  target_labels = c('p0', paste0('p', 1:100))
+
+  # Initialize results dataframe with just row indices
+  results = tibble(.rows = nrow(tax_units))
+
+  # Add percentile value columns (p1-p100, not p0 since that's always 0)
+  for (p in 1:100) {
+    col_name = paste0('wages_p', p)
+    results[[col_name]] = percentile_values[p]
+  }
+
+  # Calculate MTR for each target value (p0, p1, ..., p100)
+  for (i in seq_along(target_values)) {
+    target = target_values[i]
+    label = target_labels[i]
+    mtr_col_name = paste0('mtr_wages_', label)
+
+    # Calculate the delta from actual to target
+    delta_var = target - actual_values
+
+    # Scale all wage subcomponents proportionally to hit the target total
+    # When actual_values == 0, scale_factor is 0 (all subcomponents become 0)
+    scale_factor = if_else(actual_values == 0, 0, target / actual_values)
+    scale_factor = if_else(is.infinite(scale_factor), 0, scale_factor)
+
+    new_values = tax_units %>%
+      mutate(
+        wages  = target,
+        wages1 = wages1 * scale_factor,
+        wages2 = wages2 * scale_factor,
+        tips   = tips * scale_factor,
+        tips1  = tips1 * scale_factor,
+        tips2  = tips2 * scale_factor,
+        ot     = ot * scale_factor,
+        ot1    = ot1 * scale_factor,
+        ot2    = ot2 * scale_factor
+      )
+
+    # Re-calculate taxes
+    new_taxes = new_values %>%
+      do_taxes(
+        baseline_pr_er = NULL,
+        vars_payroll   = return_vars$calc_pr,
+        vars_1040      = return_vars %>% remove_by_name('calc_pr') %>% unlist() %>% set_names(NULL)
+      )
+
+    # Calculate MTR: (new tax - actual tax) / (target value - actual value)
+    delta_taxes = new_taxes$liab_iit_net - actual_liab_iit +
+                  pr * (new_taxes$liab_pr - actual_liab_pr)
+
+    # MTR = delta_taxes / delta_var (NA when delta_var is 0)
+    mtr = if_else(delta_var == 0, NA_real_, delta_taxes / delta_var)
+
+    results[[mtr_col_name]] = mtr
+  }
+
+  return(results)
+}
+
+
+
+calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
+                     type = 'nextdollar') {
+
+  #----------------------------------------------------------------------------
+  # Calculates MTR, either at the next-dollar or 0-actual extensive margin,
+  # with respect to given variable. Includes employee-side payroll taxes.
+  #
+  # Note: for next-dollar MTRs, variable "wages" means non-tip, non-OT wages.
+  # For extensive margin MTRs, variable "wages" means all wages, including
+  # tips and OT.
+  #
+  # Always double-check whether the variable you want a tax rate for is handled
+  # by the logic below!! It's not generalized to every variable due to
+  # compositional issues (i.e. some variables are components of others).
+  #
+  # Parameters:
+  #   - tax_units (df)          : tibble of tax units, exogenous variables only
+  #   - actual_liab_iit (dbl[]) : vector of net income tax liability to compare
+  #                               against
+  #   - actual_liab_pr (dbl[])  : vector of total payroll tax to compare
   #                               against
   #   - var (str)               : name of variable to increment
   #   - pr (bool)               : whether to include payroll taxes in the MTR
   #                               calculation
   #   - type (str)              : "nextdollar" for next-dollar MTR, "extensive"
-  #                               for delta in tax when reducing the value to 0
+  #                               for delta in tax when reducing the value to 0,
+  #                               "all" for MTRs at all percentiles (p0-p100)
   #
-  # Returns: tibble of MTRs (df).
+  # Returns: tibble of MTRs (df). For type="all", returns 201 columns:
+  #          mtr_{var}_p0 through mtr_{var}_p100 (101 MTR columns) and
+  #          {var}_p1 through {var}_p100 (100 percentile value columns).
   #----------------------------------------------------------------------------
+
+  # Handle "all" type separately - it returns multiple columns
+  if (type == 'all') {
+    return(calc_mtrs_all(tax_units, actual_liab_iit, actual_liab_pr, var, pr))
+  }
   
   # Set output variable name
   mtr_name = paste0('mtr_', var)

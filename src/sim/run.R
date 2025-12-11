@@ -396,11 +396,12 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
   #-----------------
   
   # Write microdata
-  tax_units %>%  
-    select(all_of(globals$detail_vars), starts_with('mtr_')) %>% 
-    write_csv(file.path(scenario_info$output_path, 
+  # Note: includes mtr_* columns and *_p* columns (percentile values from mtr_type='all')
+  tax_units %>%
+    select(all_of(globals$detail_vars), starts_with('mtr_'), matches('_p\\d+$')) %>%
+    write_csv(file.path(scenario_info$output_path,
                         if_else(static, 'static', 'conventional'),
-                        'detail', 
+                        'detail',
                         paste0(year, '.csv')))
 
   
