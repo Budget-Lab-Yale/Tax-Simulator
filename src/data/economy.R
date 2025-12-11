@@ -439,10 +439,10 @@ duplicate_with_wage_percentiles = function(tax_units) {
   #   - id (chr)              : modified to include percentile suffix for copies
   #----------------------------------------------------------------------------
 
-  # Get wages1 values for positive earners only (for percentile calculation)
-  positive_wages = tax_units %>%
+  # Get wages1 and weights for positive earners only (for percentile calculation)
+  positive_wage_data = tax_units %>%
     filter(wages1 > 0) %>%
-    pull(wages1)
+    select(wages1, weight)
 
   # Define percentile points: 0, 1-99, 99.1-99.9, 100
   percentile_points = c(
@@ -452,12 +452,15 @@ duplicate_with_wage_percentiles = function(tax_units) {
     100                    # p100
   )
 
-  # Calculate percentile values (using positive wages only for p1-p100)
+  # Calculate weighted percentile values (using positive wages only for p1-p100)
   percentile_values = c(
     0,  # $0 literal
-    quantile(positive_wages, probs = (1:99) / 100, names = FALSE),
-    quantile(positive_wages, probs = seq(99.1, 99.9, 0.1) / 100, names = FALSE),
-    quantile(positive_wages, probs = 1, names = FALSE)  # p100
+    wtd.quantile(positive_wage_data$wages1, positive_wage_data$weight,
+                 probs = (1:99) / 100, normwt = TRUE),
+    wtd.quantile(positive_wage_data$wages1, positive_wage_data$weight,
+                 probs = seq(99.1, 99.9, 0.1) / 100, normwt = TRUE),
+    wtd.quantile(positive_wage_data$wages1, positive_wage_data$weight,
+                 probs = 1, normwt = TRUE)  # p100
   )
 
   # Create lookup tibble for percentile values
