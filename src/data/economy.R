@@ -397,22 +397,97 @@ do_excess_growth = function(tax_units, scenario_info, excess_growth_offset) {
 
 
 
-read_microdata = function(root, year) { 
-  
+read_microdata = function(root, year) {
+
   #----------------------------------------------------------------------------
   # Loads tax microdata into memory for a given scenario-year
-  # 
+  #
   # Parameters:
   #   - root (str) : filepath to scenario's microdata vintage
   #   - year (int) : year of microdata
   #
   # Returns: tibble of tax microdata (df).
   #----------------------------------------------------------------------------
-  
-  root %>% 
-    file.path(paste0('tax_units_', year, '.csv')) %>% 
+
+  root %>%
+    file.path(paste0('tax_units_', year, '.csv')) %>%
     fread() %>%
-    tibble() %>% 
+    tibble() %>%
+    return()
+}
+
+
+
+duplicate_with_wage_percentiles = function(tax_units) {
+
+  #----------------------------------------------------------------------------
+  # Duplicates each tax unit record with wage percentile values for wages1.
+  # Creates 111 versions of each record: 1 original + 110 percentile copies.
+  #
+  # Percentile values are:
+  #   - $0 (literal zero)
+  #   - p1 through p99 (calculated from positive wages1 only)
+  #   - p99.1 through p99.9 (top percentile detail)
+  #   - p100 (maximum wage)
+  #
+  # Parameters:
+  #   - tax_units (df) : tibble of tax units with wages1, wages2, wages columns
+  #
+ # Returns: tibble with 111x the original number of rows. New columns:
+  #   - pctl_label (dbl)      : percentile label (NA for original, 0-100 for copies)
+  #   - wages1_original (dbl) : original wages1 value before replacement
+  #   - id (chr)              : modified to include percentile suffix for copies
+  #----------------------------------------------------------------------------
+
+  # Get wages1 values for positive earners only (for percentile calculation)
+  positive_wages = tax_units %>%
+    filter(wages1 > 0) %>%
+    pull(wages1)
+
+  # Define percentile points: 0, 1-99, 99.1-99.9, 100
+  percentile_points = c(
+    0,                     # $0 literal
+    1:99,                  # p1 through p99
+    seq(99.1, 99.9, 0.1),  # p99.1 through p99.9
+    100                    # p100
+  )
+
+  # Calculate percentile values (using positive wages only for p1-p100)
+  percentile_values = c(
+    0,  # $0 literal
+    quantile(positive_wages, probs = (1:99) / 100, names = FALSE),
+    quantile(positive_wages, probs = seq(99.1, 99.9, 0.1) / 100, names = FALSE),
+    quantile(positive_wages, probs = 1, names = FALSE)  # p100
+  )
+
+  # Create lookup tibble for percentile values
+  pctl_lookup = tibble(
+    pctl_idx   = 1:110,
+    pctl_label = percentile_points,
+    pctl_value = percentile_values
+  )
+
+  # Store original wages1 for reference
+  tax_units = tax_units %>%
+    mutate(wages1_original = wages1)
+
+  # Create 110 copies per record with percentile wages1 values
+  expanded = tax_units %>%
+    crossing(pctl_idx = 1:110) %>%
+    left_join(pctl_lookup, by = 'pctl_idx') %>%
+    mutate(
+      wages1 = pctl_value,
+      wages  = wages1 + wages2,  # Update total wages
+      id     = paste0(id, '_p', pctl_label)  # Make IDs unique
+    ) %>%
+    select(-pctl_idx, -pctl_value)
+
+  # Mark original records with NA percentile label (already have wages1_original)
+  originals = tax_units %>%
+    mutate(pctl_label = NA_real_)
+
+  # Combine original records with expanded copies
+  bind_rows(originals, expanded) %>%
     return()
 }
 
