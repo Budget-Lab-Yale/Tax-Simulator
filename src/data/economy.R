@@ -45,7 +45,7 @@ generate_indexes = function(macro_root, vat_price_offset, excess_growth_offset) 
                            value)) %>% 
     left_join(excess_growth_offset, by = 'year') %>% 
     mutate(value = if_else(series == 'awi', 
-                           value * income_factor, 
+                           value * replace_na(income_factor, 1),
                            value)) %>%   
     select(-cpi_factor, -gdp_deflator_factor, -income_factor) %>% 
     
