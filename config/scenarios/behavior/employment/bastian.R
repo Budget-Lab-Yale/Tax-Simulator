@@ -172,8 +172,8 @@ do_employment = function(tax_units, ...) {
     
     # Recode person-index-specific variable names
     worker_info %<>%
-      select(id, weight, all_of(c(paste0(c('wages', 'sole_prop', 'delta_rtw', 'e'), person_index)))) %>% 
-      rename_with(.cols = -c(id, weight), .fn = ~ str_sub(., end = -2))
+      select(id, weight, r.behavior1, all_of(c(paste0(c('wages', 'sole_prop', 'delta_rtw', 'e'), person_index)))) %>%
+      rename_with(.cols = -c(id, weight, r.behavior1), .fn = ~ str_sub(., end = -2))
      
     # Extract group-level change in RTW
     delta_rtw = delta_emp[[person_index]] %>% 
