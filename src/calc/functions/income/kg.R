@@ -39,7 +39,8 @@ calc_kg = function(tax_unit, fill_missings = F) {
     'agi.kg_excl_rate',             # (dbl) share of capital gains excluded from AGI
     'pref.index_kg',                # (int) whether to index cost basis to inflation
     'pref.index_kg_min_years_held', # (int) minimum holding period for indexation
-    'pref.index_kg_purchased_after' # (int) effective date: only assets acquired after this year
+    'pref.index_kg_purchased_after', # (int) effective date: only assets acquired after this year
+    'pref.index_kg_no_loss'          # (int) if 1, indexation cannot turn a gain into a loss
   )
 
   tax_unit %>%
@@ -58,6 +59,11 @@ calc_kg = function(tax_unit, fill_missings = F) {
         kg_lt_basis * pmax(0, kg_lt_cpi_ratio - 1),
         0
       ),
+
+      # If no-loss flag is set, cap adjustment so it can't exceed the gain
+      kg_lt_infl_adj = if_else(pref.index_kg_no_loss == 1 & kg_lt > 0,
+                               pmin(kg_lt_infl_adj, kg_lt),
+                               kg_lt_infl_adj),
 
       # Use adjusted long-term gain for Schedule D
       kg_lt_adj = kg_lt - kg_lt_infl_adj,

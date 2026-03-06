@@ -1,0 +1,14 @@
+---
+index_kg:
+  value:
+    '2014': 0
+    '2026': 1
+
+index_kg_min_years_held:
+  value: 1
+
+index_kg_purchased_after:
+  value: 0
+
+index_kg_no_loss:
+  value: 1

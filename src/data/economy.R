@@ -25,17 +25,25 @@ generate_indexes = function(macro_root, vat_price_offset, excess_growth_offset) 
   #----------------------------------------------------------------------------
   
   
+  # Read pre-1970 CPI-U annual averages (BLS, 1982-84=100) and compute growth
+  pre1970_cpi = read_csv('./resources/cpiu_historical.csv', show_col_types = F) %>%
+    arrange(year) %>%
+    mutate(growth = cpiu / lag(cpiu) - 1) %>%
+    filter(!is.na(growth)) %>%
+    select(year, growth) %>%
+    mutate(series = 'cpi')
+
   # Read and combine historical and projected macro data
-  c('historical.csv', 'projections.csv') %>% 
-    map(.f = ~ macro_root %>% 
-          file.path(.x) %>% 
-          read_csv(show_col_types = F)) %>% 
-    bind_rows() %>% 
-    
+  macro = c('historical.csv', 'projections.csv') %>%
+    map(.f = ~ macro_root %>%
+          file.path(.x) %>%
+          read_csv(show_col_types = F)) %>%
+    bind_rows() %>%
+
     # Select indexation variables and reshape long
-    select(year, cpi = cpiu_irs, chained_cpi = ccpiu_irs, awi) %>% 
-    pivot_longer(cols      = -year, 
-                 names_to  = 'series', 
+    select(year, cpi = cpiu_irs, chained_cpi = ccpiu_irs, awi) %>%
+    pivot_longer(cols      = -year,
+                 names_to  = 'series',
                  values_to = 'value') %>% 
     
     # Adjust price level for VAT/excess growth
@@ -54,7 +62,12 @@ generate_indexes = function(macro_root, vat_price_offset, excess_growth_offset) 
     mutate(growth = value / lag(value) - 1) %>% 
     ungroup() %>% 
     select(series, year, growth) %>% 
-    arrange(series, year) %>% 
+    arrange(series, year)
+
+  # Prepend pre-1970 CPI growth rates (for capital gains basis indexation)
+  macro %>%
+    bind_rows(pre1970_cpi %>% filter(year < min(macro$year[macro$series == 'cpi']))) %>%
+    arrange(series, year) %>%
     return()
 }
 

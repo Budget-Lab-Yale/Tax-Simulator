@@ -70,3 +70,7 @@ index_kg_min_years_held:
 # Only assets acquired after this year qualify (effective date)
 index_kg_purchased_after:
   value: 2025
+
+# Whether indexation can turn a gain into a loss (0 = losses allowed, 1 = clamp at zero)
+index_kg_no_loss:
+  value: 0
