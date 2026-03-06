@@ -54,9 +54,23 @@ unrecapture_rate:
 collectibles_rate:
   value: 0.28
   
-# Whether basis on appreciated property is carried over to decedent 
+# Whether basis on appreciated property is carried over to decedent
 # (as opposed to stepped up to market value as per current law)
 carryover_basis:
   value: 0
 
+# Whether to index cost basis of long-term capital gains to inflation
+index_kg:
+  value: 0
 
+# Minimum years held for indexation to apply
+index_kg_min_years_held:
+  value: 3
+
+# Only assets acquired after this year qualify (effective date)
+index_kg_purchased_after:
+  value: 2025
+
+# Whether indexation can turn a gain into a loss (0 = losses allowed, 1 = clamp at zero)
+index_kg_no_loss:
+  value: 0

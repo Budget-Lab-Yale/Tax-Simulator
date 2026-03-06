@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2025:2055,,kg_lt,nextdollar
+indexed_kg_prospective,tests/indexed_kg_prospective,,2025:2055,2027,kg_lt,nextdollar
+indexed_kg_retrospective,tests/indexed_kg_retrospective,,2025:2055,2027,kg_lt,nextdollar

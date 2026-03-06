@@ -25,17 +25,25 @@ generate_indexes = function(macro_root, vat_price_offset, excess_growth_offset) 
   #----------------------------------------------------------------------------
   
   
+  # Read pre-1970 CPI-U annual averages (BLS, 1982-84=100) and compute growth
+  pre1970_cpi = read_csv('./resources/cpiu_historical.csv', show_col_types = F) %>%
+    arrange(year) %>%
+    mutate(growth = cpiu / lag(cpiu) - 1) %>%
+    filter(!is.na(growth)) %>%
+    select(year, growth) %>%
+    mutate(series = 'cpi')
+
   # Read and combine historical and projected macro data
-  c('historical.csv', 'projections.csv') %>% 
-    map(.f = ~ macro_root %>% 
-          file.path(.x) %>% 
-          read_csv(show_col_types = F)) %>% 
-    bind_rows() %>% 
-    
+  macro = c('historical.csv', 'projections.csv') %>%
+    map(.f = ~ macro_root %>%
+          file.path(.x) %>%
+          read_csv(show_col_types = F)) %>%
+    bind_rows() %>%
+
     # Select indexation variables and reshape long
-    select(year, cpi = cpiu_irs, chained_cpi = ccpiu_irs, awi) %>% 
-    pivot_longer(cols      = -year, 
-                 names_to  = 'series', 
+    select(year, cpi = cpiu_irs, chained_cpi = ccpiu_irs, awi) %>%
+    pivot_longer(cols      = -year,
+                 names_to  = 'series',
                  values_to = 'value') %>% 
     
     # Adjust price level for VAT/excess growth
@@ -54,7 +62,12 @@ generate_indexes = function(macro_root, vat_price_offset, excess_growth_offset) 
     mutate(growth = value / lag(value) - 1) %>% 
     ungroup() %>% 
     select(series, year, growth) %>% 
-    arrange(series, year) %>% 
+    arrange(series, year)
+
+  # Prepend pre-1970 CPI growth rates (for capital gains basis indexation)
+  macro %>%
+    bind_rows(pre1970_cpi %>% filter(year < min(macro$year[macro$series == 'cpi']))) %>%
+    arrange(series, year) %>%
     return()
 }
 
@@ -277,6 +290,70 @@ do_capital_adjustment = function(tax_units, yr, vat_price_offset) {
         .fns  = ~ . * (1 + (adjustment_factors$capital_factor - 1) * 0.2) 
       )
     ) %>% 
+    return()
+}
+
+
+
+calc_kg_cpi_ratio = function(tax_units, indexes, year) {
+
+  #----------------------------------------------------------------------------
+  # Computes the CPI ratio between current year and purchase year for each tax
+  # unit's long-term capital gains. Uses blended CPI series (CPI-U pre-2017,
+  # chained CPI-U 2017+), consistent with tax parameter indexation convention.
+  # Pure data plumbing -- no policy gating.
+  #
+  # Parameters:
+  #   - tax_units (df) : tibble of tax units
+  #   - indexes (df)   : tibble of growth rates; see generate_indexes()
+  #   - year (int)     : simulation year
+  #
+  # Returns: tax units tibble with new column kg_lt_cpi_ratio (df).
+  #----------------------------------------------------------------------------
+
+  # Validate required columns
+  if (!('kg_lt_years_held' %in% colnames(tax_units))) {
+    stop('calc_kg_cpi_ratio: kg_lt_years_held column missing from tax_units')
+  }
+  if (!('kg_lt_basis' %in% colnames(tax_units))) {
+    stop('calc_kg_cpi_ratio: kg_lt_basis column missing from tax_units')
+  }
+
+  # Check data integrity: nonzero kg_lt must have non-NA years held
+  if (any(tax_units$kg_lt != 0 & is.na(tax_units$kg_lt_years_held), na.rm = TRUE)) {
+    stop('calc_kg_cpi_ratio: kg_lt != 0 but kg_lt_years_held is NA for some records')
+  }
+
+  # Build blended CPI level series (CPI growth pre-2017, chained CPI growth 2017+)
+  cpi_levels = bind_rows(
+    indexes %>% filter(series == 'cpi', year < 2017),
+    indexes %>% filter(series == 'chained_cpi', year >= 2017)
+  ) %>%
+    arrange(year) %>%
+    mutate(level = cumprod(1 + replace_na(growth, 0))) %>%
+    select(year, level)
+
+  # Validate current year exists in CPI data
+  if (!(year %in% cpi_levels$year)) {
+    stop(paste0('calc_kg_cpi_ratio: year ', year, ' not found in CPI data'))
+  }
+
+  # Compute ratio for each tax unit, clamping purchase years to CPI range
+  min_cpi_year  = min(cpi_levels$year)
+  current_level = cpi_levels$level[cpi_levels$year == year]
+
+  tax_units %>%
+    mutate(.purchase_year = pmax(as.integer(year - round(kg_lt_years_held)), min_cpi_year)) %>%
+    left_join(cpi_levels %>% rename(.purchase_level = level),
+              by = c('.purchase_year' = 'year')) %>%
+    mutate(
+      kg_lt_cpi_ratio = if_else(
+        kg_lt == 0 | is.na(kg_lt_years_held) | kg_lt_years_held == 0,
+        1,
+        current_level / .purchase_level
+      )
+    ) %>%
+    select(-.purchase_year, -.purchase_level) %>%
     return()
 }
 

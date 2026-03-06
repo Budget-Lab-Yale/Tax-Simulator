@@ -317,7 +317,10 @@ run_one_year = function(year, scenario_info, tax_law, static, baseline_mtrs,
     do_capital_adjustment(year, vat_price_offset) %>%
     
     # Adjust intensive-margin variables for excess real GDP growth
-    do_excess_growth(scenario_info, excess_growth_offset)
+    do_excess_growth(scenario_info, excess_growth_offset) %>%
+
+    # Compute CPI ratio for capital gains basis indexation
+    calc_kg_cpi_ratio(indexes, year)
   
 
   #---------------------------

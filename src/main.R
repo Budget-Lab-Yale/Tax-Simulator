@@ -28,7 +28,7 @@ list.files('./src', recursive = T) %>%
 #------------------------
 
 
-runscript_names  = 'baseline/baseline'
+runscript_names  = 'baseline/baseline_2024'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
