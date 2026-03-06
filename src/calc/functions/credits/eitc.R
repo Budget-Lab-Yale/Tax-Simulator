@@ -59,30 +59,8 @@ calc_eitc = function(tax_unit, fill_missings = F) {
     'eitc.inv_inc_limit', # (int) maximum allowable investment income for credit eligibility
     'eitc.min_age',       # (int) minimum age for credit eligibility for filers with 0 children
     'eitc.max_age',       # (int) maximum age for credit eligibility for filers with 0 children
-    'eitc.mfs_eligible',  # (int) whether credit is available for married filing separately returns
-    'eitc.parent_precert', # (int) whether parents are required to pre-certify their eligibility
-
-    # Dependent age attributes
-    'dep_age1',            # (int) age of first dependent
-    'dep_age2',            # (int) age of second dependent
-    'dep_age3',            # (int) age of third dependent
-
-    # Young-child bonus parameters
-    'eitc.young_bonus_age_limit_1',  # (int) age threshold for "very young" child bonus
-    'eitc.young_bonus_age_limit_2',  # (int) age threshold for "young" child bonus
-    'eitc.young_bonus_max_children', # (int) maximum young children counted for bonus
-    'eitc.pi_rate_young1_1',  # (dbl) credit rate bonus per very young child, 1-child families
-    'eitc.pi_rate_young1_2',  # (dbl) credit rate bonus per very young child, 2-child families
-    'eitc.pi_rate_young1_3',  # (dbl) credit rate bonus per very young child, 3+ child families
-    'eitc.pi_rate_young2_1',  # (dbl) credit rate bonus per young child, 1-child families
-    'eitc.pi_rate_young2_2',  # (dbl) credit rate bonus per young child, 2-child families
-    'eitc.pi_rate_young2_3',  # (dbl) credit rate bonus per young child, 3+ child families
-    'eitc.po_rate_young1_1',  # (dbl) phaseout rate bonus per very young child, 1-child families
-    'eitc.po_rate_young1_2',  # (dbl) phaseout rate bonus per very young child, 2-child families
-    'eitc.po_rate_young1_3',  # (dbl) phaseout rate bonus per very young child, 3+ child families
-    'eitc.po_rate_young2_1',  # (dbl) phaseout rate bonus per young child, 1-child families
-    'eitc.po_rate_young2_2',  # (dbl) phaseout rate bonus per young child, 2-child families
-    'eitc.po_rate_young2_3'   # (dbl) phaseout rate bonus per young child, 3+ child families
+    'eitc.mfs_eligible',  # (int) whether credit is available for married filing separately returns   
+    'eitc.parent_precert' # (int) whether parents are required to pre-certify their eligibility 
   )
   
   tax_unit %>% 
@@ -111,20 +89,7 @@ calc_eitc = function(tax_unit, fill_missings = F) {
                 pmax(0, txbl_kg) + 
                 pmax(0, (sch_e - part_scorp)),
       ei = ei * (inv_inc <= eitc.inv_inc_limit),
-
-      # Count young children by age tier for bonus calculation
-      across(.cols = starts_with('dep_age'),
-             .fns  = ~ replace_na(as.numeric(.), Inf)),
-      n_very_young_raw = (dep_age1 < eitc.young_bonus_age_limit_1) +
-                         (dep_age2 < eitc.young_bonus_age_limit_1) +
-                         (dep_age3 < eitc.young_bonus_age_limit_1),
-      n_young_raw      = (dep_age1 >= eitc.young_bonus_age_limit_1 & dep_age1 < eitc.young_bonus_age_limit_2) +
-                         (dep_age2 >= eitc.young_bonus_age_limit_1 & dep_age2 < eitc.young_bonus_age_limit_2) +
-                         (dep_age3 >= eitc.young_bonus_age_limit_1 & dep_age3 < eitc.young_bonus_age_limit_2),
-      young_cap    = pmin(as.numeric(n_dep_eitc), as.numeric(eitc.young_bonus_max_children)),
-      n_very_young = pmin(as.numeric(n_very_young_raw), young_cap),
-      n_young      = pmin(as.numeric(n_young_raw), young_cap - n_very_young),
-
+            
       # Assign credit parameters based on number of children
       pi_rate = case_when(
         n_dep_eitc == 0 ~ eitc.pi_rate_0,
@@ -153,35 +118,7 @@ calc_eitc = function(tax_unit, fill_missings = F) {
         n_dep_eitc == 2 ~ eitc.po_thresh_2,
         T               ~ eitc.po_thresh_3
       ),
-
-      # Apply young-child bonus rates
-      pi_bonus_young1 = case_when(
-        n_dep_eitc == 0 ~ 0,
-        n_dep_eitc == 1 ~ eitc.pi_rate_young1_1,
-        n_dep_eitc == 2 ~ eitc.pi_rate_young1_2,
-        T               ~ eitc.pi_rate_young1_3
-      ),
-      pi_bonus_young2 = case_when(
-        n_dep_eitc == 0 ~ 0,
-        n_dep_eitc == 1 ~ eitc.pi_rate_young2_1,
-        n_dep_eitc == 2 ~ eitc.pi_rate_young2_2,
-        T               ~ eitc.pi_rate_young2_3
-      ),
-      po_bonus_young1 = case_when(
-        n_dep_eitc == 0 ~ 0,
-        n_dep_eitc == 1 ~ eitc.po_rate_young1_1,
-        n_dep_eitc == 2 ~ eitc.po_rate_young1_2,
-        T               ~ eitc.po_rate_young1_3
-      ),
-      po_bonus_young2 = case_when(
-        n_dep_eitc == 0 ~ 0,
-        n_dep_eitc == 1 ~ eitc.po_rate_young2_1,
-        n_dep_eitc == 2 ~ eitc.po_rate_young2_2,
-        T               ~ eitc.po_rate_young2_3
-      ),
-      pi_rate = pi_rate + (n_very_young * pi_bonus_young1) + (n_young * pi_bonus_young2),
-      po_rate = po_rate + (n_very_young * po_bonus_young1) + (n_young * po_bonus_young2),
-
+      
       # Calculate credit value
       max_eitc = pmin(ei, pi_end) * pi_rate,
       eitc     = pmax(0, max_eitc - pmax(0, pmax(ei, agi) - po_thresh) * po_rate),
