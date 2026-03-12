@@ -60,13 +60,21 @@ build_distribution_tables = function(id, baseline_id) {
         microdata %>% group_by(taxes_included, group = top_01) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income')
       ) %>% 
       
-      # Add AGI quintile cuts  
+      # Add parent status cuts
       bind_rows(
-        microdata %>% 
+        microdata %>%
+          group_by(taxes_included, group = parent_group) %>%
+          calc_dist_metrics() %>%
+          mutate(group_dimension = 'Parent status')
+      ) %>%
+
+      # Add AGI quintile cuts
+      bind_rows(
+        microdata %>%
           group_by(taxes_included, group = replace_na(agi_quintile, 'Negative income')) %>%
           calc_dist_metrics() %>%
           mutate(group_dimension = 'AGI')
-      ) %>% 
+      ) %>%
       
       # Add top AGI cuts
       bind_rows(
@@ -131,9 +139,15 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
       age           = if_else(filing_status == 2, pmax(age1, age2), age1),
       labor         = pmax(0, wages + (sole_prop + part_scorp + farm) * 0.8),
       capital       = pmax(0, (sole_prop + part_scorp + farm) * 0.2 + txbl_int + exempt_int + div_ord + div_pref + kg_st + kg_lt),
-      liab_iit_pr   = liab_iit_net + liab_pr
-    ) %>% 
-    select(year, id, weight, n_people, filing_status, age, labor, capital, agi, income = expanded_inc, liab_iit_pr) %>% 
+      liab_iit_pr   = liab_iit_net + liab_pr,
+      parent_group  = if_else(
+        (!is.na(dep_age1) & dep_age1 < 18) |
+        (!is.na(dep_age2) & dep_age2 < 18) |
+        (!is.na(dep_age3) & dep_age3 < 18),
+        'Parent', 'Non-parent'
+      )
+    ) %>%
+    select(year, id, weight, n_people, filing_status, age, parent_group, labor, capital, agi, income = expanded_inc, liab_iit_pr) %>%
     
     # Make 3 copies for tax-type inclusion assumptions 
     expand_grid(taxes_included = c('iit_pr', 'iit_pr_estate', 'iit_pr_estate_cit_vat')) %>% 
@@ -266,8 +280,7 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
       
       # Age group
       age_group = case_when(
-        age < 25 ~ '24 and under',
-        age < 30 ~ '25 - 29',
+        age < 30 ~ '29 and under',
         age < 40 ~ '30 - 39',
         age < 50 ~ '40 - 49',
         age < 65 ~ '50 - 64',

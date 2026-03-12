@@ -308,9 +308,27 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     
     # Liability
     bind_cols(calc_tax(.)) %>%
-    
+
+    # Alternative maximum tax (Sec. 1A cap for low/middle income)
+    bind_cols(calc_alt_max(.)) %>%
+    mutate(
+      alt_max_rem  = if_else(alt_max_cap_binds, liab - alt_max_liab, 0),
+      alt_max_ord  = pmin(alt_max_rem, liab_ord),
+      alt_max_rem  = alt_max_rem - alt_max_ord,
+      alt_max_pref = pmin(alt_max_rem, liab_pref),
+      alt_max_rem  = alt_max_rem - alt_max_pref,
+      alt_max_1250 = pmin(alt_max_rem, liab_1250),
+      alt_max_rem  = alt_max_rem - alt_max_1250,
+      alt_max_coll = pmin(alt_max_rem, liab_collect),
+      liab_ord     = liab_ord     - alt_max_ord,
+      liab_pref    = liab_pref    - alt_max_pref,
+      liab_1250    = liab_1250    - alt_max_1250,
+      liab_collect = liab_collect - alt_max_coll,
+      liab         = if_else(alt_max_cap_binds, alt_max_liab, liab)
+    ) %>%
+
     # Alternative minimum tax
-    bind_cols(calc_amt(.)) %>% 
+    bind_cols(calc_amt(.)) %>%
     
       
     #---------

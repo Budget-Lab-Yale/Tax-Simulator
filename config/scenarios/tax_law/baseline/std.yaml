@@ -6,7 +6,7 @@ indexation_defaults:
   i_base_year:
     '2014': 1987
     '2018': 2017
-    '2026': 2025
+    '2026': 2024
   i_direction: -1
   i_increment: 50
 

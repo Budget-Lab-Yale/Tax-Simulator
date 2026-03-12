@@ -19,8 +19,8 @@ suppressPackageStartupMessages(
 
 # Source all function scripts
 return_vars = list()
-list.files('./src', recursive = T) %>% 
-  walk(.f = ~ if (.x != 'main.R') source(file.path('./src/', .x)))
+list.files('./src', recursive = T) %>%
+  walk(.f = ~ if (.x != 'main.R' && !startsWith(.x, 'slurm/')) source(file.path('./src/', .x)))
 
 
 #------------------------

@@ -140,6 +140,10 @@ po_range_married:
 po_range_other_married:
   value: Inf
 
+# Whether phaseout is applied sequentially (1) or additively (0)
+po_sequential:
+  value: 0
+
 # Whether phaseout is discretized, as per current law
 po_discrete:
   value: 1

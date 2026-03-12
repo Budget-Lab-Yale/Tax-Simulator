@@ -113,8 +113,9 @@ calc_item_ded = function(tax_unit, fill_missings = F) {
       #------
       
       # Calculate deduction for state and local taxes, limited if applicable
-      salt_item_ded = pmin(item.salt_limit, salt_inc_sales + salt_prop + salt_pers),
-      salt_item_ded = pmax(item.salt_floor, salt_item_ded - item.salt_po_rate * pmax(0, agi - item.salt_floor_thresh)),
+      salt_paid     = salt_inc_sales + salt_prop + salt_pers,
+      salt_eff_cap  = pmax(item.salt_floor, item.salt_limit - item.salt_po_rate * pmax(0, agi - item.salt_floor_thresh)),
+      salt_item_ded = pmin(salt_eff_cap, salt_paid),
       
       #----------
       # Interest 
