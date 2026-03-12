@@ -1,0 +1,2 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,tests/ex_cdctc,,2019:2095,,wages1 wages2,nextdollar nextdollar

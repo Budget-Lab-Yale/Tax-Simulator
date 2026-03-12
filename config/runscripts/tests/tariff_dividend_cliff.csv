@@ -1,0 +1,6 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2024:2026,,,
+tdiv_perPerson_flat100k_cliff,public/tariff_div/perPerson_flat100k_cliff,,2024:2026,,,
+tdiv_perPerson_fsSpecific_cliff,public/tariff_div/perPerson_fsSpecific_cliff,,2024:2026,,,
+tdiv_perAdult_flat100k_cliff,public/tariff_div/perAdult_flat100k_cliff,,2024:2026,,,
+tdiv_perAdult_fsSpecific_cliff,public/tariff_div/perAdult_fsSpecific_cliff,,2024:2026,,,

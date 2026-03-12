@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2025:2055,,wages1 kg_lt part_active,nextdollar nextdollar nextdollar
+alt_max,public/cvh-watca/stacked/01-alt_max,kg/62 entity_shifting/pearce_prisinzano,2025:2055,2026,wages1 kg_lt part_active,nextdollar nextdollar nextdollar
+surtax,public/cvh-watca/stacked/02-surtax,kg/62 entity_shifting/pearce_prisinzano,2025:2055,2026,wages1 kg_lt part_active,nextdollar nextdollar nextdollar

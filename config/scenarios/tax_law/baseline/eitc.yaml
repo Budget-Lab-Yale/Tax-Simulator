@@ -174,7 +174,11 @@ max_age:
     '2021': Inf
     '2022': 64
     
-# Whether credit is available for married filing separately returns   
+# Whether prior year earned income can be elected for EITC
+ei_prior_yr:
+  value: 0
+
+# Whether credit is available for married filing separately returns
 mfs_eligible:
   value: 0
 

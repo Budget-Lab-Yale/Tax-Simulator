@@ -21,7 +21,7 @@ do_kg = function(tax_units, ...) {
   new_values = tax_units %>% 
     mutate(e_kg_lt = e_permanent, 
            e_kg_lt_type = 'semi') %>% 
-    apply_mtr_elasticity('kg_lt', baseline_mtrs, static_mtrs, 1)
+    apply_mtr_elasticity('kg_lt', baseline_mtrs, static_mtrs, 3)
 
   # Replace old values with new and return
   tax_units %>% 

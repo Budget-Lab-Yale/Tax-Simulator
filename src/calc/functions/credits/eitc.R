@@ -59,8 +59,10 @@ calc_eitc = function(tax_unit, fill_missings = F) {
     'eitc.inv_inc_limit', # (int) maximum allowable investment income for credit eligibility
     'eitc.min_age',       # (int) minimum age for credit eligibility for filers with 0 children
     'eitc.max_age',       # (int) maximum age for credit eligibility for filers with 0 children
-    'eitc.mfs_eligible',  # (int) whether credit is available for married filing separately returns   
-    'eitc.parent_precert' # (int) whether parents are required to pre-certify their eligibility 
+    'eitc.ei_prior_yr',   # (int) whether prior year earned income can be elected
+    'eitc.mfs_eligible',  # (int) whether credit is available for married filing separately returns
+    'eitc.parent_precert', # (int) whether parents are required to pre-certify their eligibility
+    'ei_prior_yr'          # (dbl) prior year earned income (aggregate)
   )
   
   tax_unit %>% 
@@ -119,9 +121,16 @@ calc_eitc = function(tax_unit, fill_missings = F) {
         T               ~ eitc.po_thresh_3
       ),
       
-      # Calculate credit value
+      # Calculate credit value with current-year EI
       max_eitc = pmin(ei, pi_end) * pi_rate,
       eitc     = pmax(0, max_eitc - pmax(0, pmax(ei, agi) - po_thresh) * po_rate),
+
+      # Prior-year EI election: if enabled, compute EITC using prior-year EI
+      # and take the larger of the two
+      ei_prior = ei_prior_yr * (ei > 0),
+      max_eitc_prior = pmin(ei_prior, pi_end) * pi_rate,
+      eitc_prior     = pmax(0, max_eitc_prior - pmax(0, pmax(ei_prior, agi) - po_thresh) * po_rate),
+      eitc           = if_else(eitc.ei_prior_yr == 1, pmax(eitc, eitc_prior), eitc),
       
       # Adjust for pre-certification changes
       eitc     = if_else(eitc.parent_precert & n_dep_eitc > 0,

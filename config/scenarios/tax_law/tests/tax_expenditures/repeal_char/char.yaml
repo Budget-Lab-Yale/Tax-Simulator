@@ -1,0 +1,16 @@
+---
+# Full charitable repeal: zero out all deduction mechanisms
+item_limit:
+  value: 0
+
+item_cash_limit_agi:
+  value: 0
+
+item_noncash_limit_agi:
+  value: 0
+
+above_limit_single:
+  value:
+    '2014': 0
+    '2020': 0
+    '2022': 0

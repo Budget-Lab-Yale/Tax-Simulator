@@ -150,6 +150,33 @@ parameter_name:
   i_increment: [25, 50, 100]  # rounding steps per bracket
 ```
 
+### Override Mechanics
+
+Understanding how reform YAML files interact with baseline is critical. Bugs often arise from misunderstanding these rules.
+
+**a) Subparameter-level replacement**
+- `build_tax_law()` in `src/data/tax_law.R` (lines 37-41) replaces at the 2nd-level YAML key (subparameter) level
+- When a reform file includes a subparameter, the **entire** subparameter is replaced — `value`, `i_measure`, `i_base_year`, `i_direction`, `i_increment` — not merged field-by-field
+- If you override `value` but omit `i_measure`, indexation is lost entirely
+
+**b) The `i_measure` indexation gate**
+- `parse_subparam()` (tax_law.R:311): `if (is.null(raw_input$i_measure)) { return(base_values) }` — if `i_measure` is missing/NULL, base values are returned with NO indexation applied
+- Having `i_base_year`, `i_direction`, `i_increment` without `i_measure` does nothing
+- When overriding any subparameter that has indexation in baseline, you MUST include `i_measure`
+
+**c) The `'default'` keyword**
+- When a subparameter sets `i_measure: default`, `replace_defaults()` (tax_law.R:573-591) substitutes the parameter's `indexation_defaults` value
+- This only works for fields explicitly set to the string `'default'` — omitting a field is NOT the same as setting it to `'default'`
+
+**d) `filing_status_mapper` and `indexation_defaults`**
+- Both are top-level YAML keys that are replaced entirely if present in the reform file
+- If you include `filing_status_mapper` in a reform, it replaces ALL mappings — including ones you didn't intend to change (e.g., `bonus`, `bonus_other`, `po_range`)
+- **Rule: Do NOT include `filing_status_mapper` or `indexation_defaults` in reform files unless you specifically need to change them.** Omitting them preserves the baseline versions intact.
+
+**e) Vector subparameters**
+- YAML arrays like `[1000, 0]` produce columns with element suffixes: `ctc.value_young1`, `ctc.value_young2`
+- Each element can have its own indexation parameters (also arrays): `i_base_year: [2024, 2024]`, `i_increment: [120, 120]`
+
 ### Behavioral Feedback Modules
 
 Behavioral modules are R scripts that simulate taxpayer responses to policy changes. They enable conventional and partial dynamic revenue estimates.
@@ -298,12 +325,72 @@ brackets_single:
   i_increment: [25, 25, 25, 25, 25, 25, 25]
 ```
 
+**Critical Rules:**
+1. Reforms replace entire subparameters, not individual fields — always include ALL indexation fields (`i_measure`, `i_base_year`, `i_direction`, `i_increment`) when overriding any subparameter that is indexed in baseline
+2. `i_measure` is required for indexation — without it, no indexation occurs regardless of other fields
+3. Never override `filing_status_mapper` or `indexation_defaults` unless you need to change them — omitting preserves baseline
+4. Include complete time series in `value` blocks — the reform replaces the baseline's entire value history
+5. Use `'default'` keyword to inherit from `indexation_defaults`; omitting an indexation field sets it to NULL (no indexation)
+
 **Common Mistakes:**
 ```yaml
 # WRONG - This overwrites 2014-2026 and leaves no rates before 2030
 rates:
   value:
     '2030': [0.1, 0.12, 0.22, 0.24, 0.32, 0.35, 0.37]
+```
+
+```yaml
+# WRONG — Overrides value but loses indexation
+value_single:
+  value:
+    '2026': 37500
+
+# RIGHT — Includes indexation fields
+value_single:
+  value:
+    '2014': 3000
+    '2018': 12000
+    '2026': 37500
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+```
+
+```yaml
+# WRONG — Clobbers all filing_status_mapper entries including bonus, bonus_other, etc.
+filing_status_mapper:
+  value:
+    '1': value_single
+    '2': value_single * 2
+    '4': value_head
+
+# RIGHT — Don't include filing_status_mapper at all if you're not changing it
+# (just omit it from the reform file)
+```
+
+```yaml
+# WRONG — Has i_base_year but no i_measure; indexation silently does nothing
+po_thresh_single:
+  value:
+    '2026': [112500, 300000]
+  i_base_year:
+    '2026': [2025, 2025]
+  i_direction: [-1, -1]
+  i_increment: [5000, 5000]
+
+# RIGHT — i_measure is the gate; must be present
+po_thresh_single:
+  value:
+    '2026': [112500, 300000]
+  i_measure:
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year:
+    '2026': [2025, 2025]
+  i_direction: [-1, -1]
+  i_increment: [5000, 5000]
 ```
 
 ### Adding New Tax Law Features
@@ -341,6 +428,40 @@ rates:
 2. Specify types in `mtr_types` ("nextdollar" or "extensive")
 3. Access MTRs in behavioral module via `baseline_mtrs$mtr_{varname}` and `static_mtrs$mtr_{varname}`
 4. Use `apply_mtr_elasticity()` for standard elasticity applications
+
+## SLURM Multi-Node Pipeline
+
+`slurm_run.sh` is an alternative entry point that distributes the simulation across SLURM cluster nodes. It produces identical output to `main.R` but runs year-tasks in parallel across nodes rather than sequentially (or via `mclapply` on one node).
+
+**Usage:**
+```bash
+bash slurm_run.sh <runscript> <scenario_id> <user_id> <local> <vintage> <pct_sample> <stacked> <baseline_vintage> <delete_detail>
+```
+Arguments are the same as `main.R` except `multicore` is omitted (SLURM handles parallelism).
+
+**Pipeline phases:**
+1. Phase 0 (login node): `src/slurm/setup.R` — parses globals, builds configs, serializes to `.rds`
+2. Phase 1 (SLURM array): `src/slurm/worker.R` — runs `run_one_year()` for each baseline year
+3. Phase 2 (SLURM array): `src/slurm/worker.R` — runs `run_one_year()` for each counterfactual × year
+4. Phase 3a (SLURM array): `src/slurm/aggregate.R` — writes totals CSVs and receipts per scenario
+5. Phase 3b (SLURM array): `src/slurm/aggregate.R` — post-processing (1040, revenue, distribution, time burden)
+6. Phase 4 (single job): `src/slurm/aggregate.R` — stacked reports and optional detail purge
+
+**CRITICAL — keeping the SLURM pipeline in sync:**
+
+The SLURM pipeline duplicates orchestration logic from `main.R`, `run_sim()`, and `do_scenario()`. When modifying any of the following, you MUST update the corresponding SLURM file:
+
+| If you change...                                    | Also update...                |
+|-----------------------------------------------------|-------------------------------|
+| `run_sim()` totals-writing or `calc_receipts()` call | `src/slurm/aggregate.R` Phase 3a |
+| `do_scenario()` post-processing calls               | `src/slurm/aggregate.R` Phase 3b |
+| `do_scenario()` pre-simulation setup (offsets, indexes, tax law) | `src/slurm/setup.R` |
+| `main.R` stacked post-processing or `purge_detail()` | `src/slurm/aggregate.R` Phase 4 |
+| `parse_globals()` return structure                  | `src/slurm/setup.R` serialization |
+| New global free variables used by post-processing   | `src/slurm/common.R` `reconstitute_environment()` |
+| `run_one_year()` signature                          | `src/slurm/worker.R` |
+
+Safe changes that need NO SLURM updates: anything inside `run_one_year()`, tax calculation functions, behavioral modules, YAML configs, runscripts.
 
 ## Notes and Best Practices
 

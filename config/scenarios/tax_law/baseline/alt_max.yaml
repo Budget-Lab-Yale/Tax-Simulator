@@ -1,0 +1,35 @@
+---
+indexation_defaults:
+  i_measure:
+    '1987': cpi
+  i_base_year: 2025
+  i_direction: -1
+  i_increment: 100
+
+filing_status_mapper:
+  exempt:
+    '1': exempt_single * 1
+    '2': exempt_married * 1
+    '3': exempt_married / 2
+    '4': exempt_head * 1
+
+# Alternative maximum tax cap rate (Sec. 1A(a))
+# 1.0 = never binds (off)
+rate:
+  value: 1.0
+
+# Qualification multiplier: 0 = nobody qualifies (off)
+qualify_mult:
+  value: 0.0
+
+# Cost-of-living exemption for single filers
+exempt_single:
+  value: 0
+
+# Cost-of-living exemption for joint filers
+exempt_married:
+  value: 0
+
+# Cost-of-living exemption for head of household
+exempt_head:
+  value: 0

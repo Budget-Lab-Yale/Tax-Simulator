@@ -1,0 +1,58 @@
+---
+indexation_defaults:
+  i_measure:
+    '1987': cpi
+  i_base_year: 2025
+  i_direction: -1
+  i_increment: 1
+
+filing_status_mapper:
+  exempt:
+    '1': exempt_single * 1
+    '2': exempt_married * 1
+    '3': exempt_married / 2
+    '4': exempt_head * 1
+
+# Alternative maximum tax cap rate (Sec. 1A(a))
+# 1.0 = never binds (off); 0.255 = caps tax at 25.5%
+rate:
+  value:
+    '2014': 1.0
+    '2026': 0.255
+
+# Qualification multiplier: qualified if MAGI < qualify_mult * exempt
+# 0 = nobody qualifies (off); 1.75 = MAGI < 175% of exemption
+qualify_mult:
+  value:
+    '2014': 0.0
+    '2026': 1.75
+
+# Cost-of-living exemption for single filers
+exempt_single:
+  value:
+    '2014': 0
+    '2026': 46000
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+
+# Cost-of-living exemption for joint filers (200% of single)
+exempt_married:
+  value:
+    '2014': 0
+    '2026': 92000
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+
+# Cost-of-living exemption for head of household (140% of single)
+exempt_head:
+  value:
+    '2014': 0
+    '2026': 64400
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
