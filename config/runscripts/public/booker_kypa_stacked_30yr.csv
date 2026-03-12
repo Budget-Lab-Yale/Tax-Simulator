@@ -1,6 +1,6 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2025:2055,,wages1,nextdollar
-std,public/booker-kypa/stacked/std,,2025:2055,2026,wages1,nextdollar
-std_eitc,public/booker-kypa/stacked/std_eitc,,2025:2055,2026,wages1,nextdollar
-std_eitc_ctc,public/booker-kypa/stacked/std_eitc_ctc,,2025:2055,2026,wages1,nextdollar
-std_eitc_ctc_ord,public/booker-kypa/stacked/std_eitc_ctc_ord,,2025:2055,2026,wages1,nextdollar
+baseline,baseline,,2025:2055,,wages1 kg_lt part_active,nextdollar nextdollar nextdollar
+std,public/booker-kypa/stacked/std,kg/62 entity_shifting/pearce_prisinzano,2025:2055,2026,wages1 kg_lt part_active,nextdollar nextdollar nextdollar
+std_eitc,public/booker-kypa/stacked/std_eitc,kg/62 entity_shifting/pearce_prisinzano,2025:2055,2026,wages1 kg_lt part_active,nextdollar nextdollar nextdollar
+std_eitc_ctc,public/booker-kypa/stacked/std_eitc_ctc,kg/62 entity_shifting/pearce_prisinzano,2025:2055,2026,wages1 kg_lt part_active,nextdollar nextdollar nextdollar
+std_eitc_ctc_ord,public/booker-kypa/stacked/std_eitc_ctc_ord,kg/62 entity_shifting/pearce_prisinzano,2025:2055,2026,wages1 kg_lt part_active,nextdollar nextdollar nextdollar

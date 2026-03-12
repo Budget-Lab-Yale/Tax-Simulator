@@ -7,25 +7,25 @@ library(tidyverse)
 library(scales)
 
 # --- Configuration -----------------------------------------------------------
-vintage   = 'booker_kypa_30yr_salt_fix'
-out_root  = file.path('/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1', vintage)
+vintage   = '202603120745'
+out_root  = file.path('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1', vintage)
 year_show = 2026
 
 # Stacked scenarios in cumulative order
 scenarios = c('std', 'std_eitc', 'std_eitc_ctc', 'std_eitc_ctc_ord')
 
 piece_labels = c(
-  'std'  = 'Standard Deduction',
-  'eitc' = 'EITC',
-  'ctc'  = 'CTC',
-  'ord'  = 'Top Rates Increase'
+  'std'  = 'Increase in Standard Deduction',
+  'eitc' = 'EITC Expansion',
+  'ctc'  = 'CTC Expansion',
+  'ord'  = 'Increase in Top Rates'
 )
 
 colors = c(
-  'Standard Deduction'  = '#2166AC',
-  'EITC'                = '#4DAF4A',
-  'CTC'                 = '#FF7F00',
-  'Top Rates Increase'  = '#E41A1C'
+  'Increase in Standard Deduction' = '#2166AC',
+  'EITC Expansion'                 = '#4DAF4A',
+  'CTC Expansion'                  = '#FF7F00',
+  'Increase in Top Rates'          = '#E41A1C'
 )
 
 # --- Read distribution tables ------------------------------------------------
@@ -38,9 +38,11 @@ read_dist = function(scenario) {
 dist_all = map_dfr(scenarios, read_dist)
 
 # --- Reusable chart builder --------------------------------------------------
+dist_footnote = str_wrap("Source: The Budget Lab calculations. Note: Estimate universe is nondependent tax units, including nonfilers. 'Income' is measured as AGI plus: above-the-line deductions, nontaxable interest, nontaxable pension income (including OASI benefits), nondeductible capital losses, employer-side payroll taxes, and inheritances.", width = 120)
+
 build_stacked_chart = function(group_dim, groups, x_positions, x_labs,
                                separator = NULL, brackets = NULL,
-                               title_suffix, filename) {
+                               fig_number, title_suffix, filename) {
 
   # Filter and compute marginal contributions
   df = dist_all %>%
@@ -120,28 +122,66 @@ build_stacked_chart = function(group_dim, groups, x_positions, x_labs,
     }
   }
 
+  # Winner/loser share annotations (from the full cumulative scenario)
+  full_scn = scenarios[length(scenarios)]
+  wl = dist_all %>%
+    filter(
+      year == year_show,
+      taxes_included == 'iit_pr',
+      group_dimension == group_dim,
+      group %in% groups,
+      scenario == full_scn
+    ) %>%
+    mutate(
+      xpos = x_positions[as.character(group)],
+      win_pct  = `share_cut.100` * 100,
+      lose_pct = `share_raise.100` * 100,
+      win_label  = if_else(win_pct > 0 & win_pct < 0.5, '<1%', paste0(round(win_pct), '%')),
+      lose_label = if_else(lose_pct > 0 & lose_pct < 0.5, '<1%', paste0(round(lose_pct), '%'))
+    )
+
+  base_offset = if (!is.null(brackets)) 0.34 else 0.18
+  row_gap     = 0.08
+  wl_y1 = y_range[1] - diff(y_range) * base_offset
+  wl_y2 = y_range[1] - diff(y_range) * (base_offset + row_gap)
+  label_x = min(x_positions) - 0.5
+
+  p = p +
+    annotate('text', x = label_x, y = wl_y1, label = 'Tax cut >$100:',
+             fontface = 'bold', size = 3, hjust = 1, color = 'grey30') +
+    annotate('text', x = label_x, y = wl_y2, label = 'Tax hike >$100:',
+             fontface = 'bold', size = 3, hjust = 1, color = 'grey30') +
+    geom_text(data = wl, aes(x = xpos, y = wl_y1, label = win_label),
+              inherit.aes = FALSE, size = 3, color = 'grey30') +
+    geom_text(data = wl, aes(x = xpos, y = wl_y2, label = lose_label),
+              inherit.aes = FALSE, size = 3, color = 'grey30')
+
   p = p +
     scale_x_continuous(breaks = x_positions, labels = x_labs) +
     scale_fill_manual(values = colors) +
     scale_y_continuous(labels = function(x) paste0(x, '%')) +
     coord_cartesian(clip = 'off') +
     labs(
-      title = paste0('Contribution to Change in After-Tax Income ', title_suffix, ' (', year_show, ')'),
-      x     = NULL,
-      y     = 'Change in After-Tax Income (pp)',
-      fill  = NULL
+      title   = paste0('Figure ', fig_number, '. Contribution to Change in After-Tax Income ', title_suffix, ' (', year_show, ')'),
+      x       = NULL,
+      y       = 'Change in After-Tax Income (pp)',
+      fill    = NULL,
+      caption = dist_footnote
     ) +
     theme_minimal(base_size = 13) +
     theme(
-      axis.text.x        = element_text(size = 10),
+      axis.text.x        = element_text(size = 11, face = 'bold'),
       legend.position     = 'bottom',
       panel.grid.major.x  = element_blank(),
       plot.title          = element_text(face = 'bold', size = 14),
-      plot.margin         = margin(10, 10, 30, 10)
+      plot.caption        = element_text(hjust = 0, size = 8, color = 'grey40'),
+      plot.margin         = margin(10, 10, 50, 40),
+      plot.background     = element_rect(fill = 'transparent', color = NA),
+      panel.background    = element_rect(fill = 'transparent', color = NA)
     )
 
   out_path = file.path(out_root, filename)
-  ggsave(out_path, plot = p, width = 10, height = 6, dpi = 200)
+  ggsave(out_path, plot = p, width = 11, height = 7, dpi = 200, bg = 'transparent')
   cat('\nChart saved to:', out_path, '\n')
 }
 
@@ -162,8 +202,9 @@ build_stacked_chart(
   separator    = 5.75,
   brackets     = list(
     list(x1 = 1, x2 = 5, label = 'Quintiles'),
-    list(x1 = 6.5, x2 = 9.5, label = 'Top Quintile Breakout')
+    list(x1 = 6.5, x2 = 9.5, label = 'Top Decile Breakout')
   ),
+  fig_number   = 1,
   title_suffix = 'by Income Group',
   filename     = 'stacked_distribution_ati.png'
 )
@@ -182,6 +223,7 @@ build_stacked_chart(
   x_labs       = age_xlabs,
   separator    = NULL,
   brackets     = NULL,
+  fig_number   = 2,
   title_suffix = 'by Age Group',
   filename     = 'stacked_distribution_ati_age.png'
 )
@@ -200,7 +242,7 @@ he_plot = he %>%
   mutate(
     iqr   = avg_within_group_iqr * 100,
     group = factor(group, levels = he_groups),
-    scenario = if_else(scenario == 'baseline', 'Baseline', 'Policy')
+    scenario = if_else(scenario == 'baseline', 'Current Law', 'Proposal')
   )
 
 cat('\n===== Horizontal Equity: Within-Group IQR of ETR (', year_show, ') =====\n\n')
@@ -209,7 +251,7 @@ he_plot %>%
   pivot_wider(names_from = scenario, values_from = iqr) %>%
   print(n = Inf, width = Inf)
 
-he_colors = c('Baseline' = '#636363', 'Policy' = '#2166AC')
+he_colors = c('Current Law' = '#636363', 'Proposal' = '#2166AC')
 
 p_he = ggplot(he_plot, aes(x = group, y = iqr, fill = scenario)) +
   geom_col(position = position_dodge(width = 0.7), width = 0.6) +
@@ -221,9 +263,10 @@ p_he = ggplot(he_plot, aes(x = group, y = iqr, fill = scenario)) +
   scale_fill_manual(values = he_colors, name = NULL) +
   scale_y_continuous(labels = function(x) paste0(x, ' pp')) +
   labs(
-    title = paste0('Horizontal Equity: Within-Group IQR of Effective Tax Rate (', year_show, ')'),
-    x     = NULL,
-    y     = 'IQR of Effective Tax Rate (pp)'
+    title   = paste0('Figure 3. Within-Group IQR of Effective Tax Rate (', year_show, ')'),
+    x       = NULL,
+    y       = 'IQR of Effective Tax Rate (pp)',
+    caption = dist_footnote
   ) +
   theme_minimal(base_size = 13) +
   theme(
@@ -231,11 +274,14 @@ p_he = ggplot(he_plot, aes(x = group, y = iqr, fill = scenario)) +
     legend.position     = 'bottom',
     panel.grid.major.x  = element_blank(),
     plot.title          = element_text(face = 'bold', size = 14),
-    plot.margin         = margin(10, 10, 10, 10)
+    plot.caption        = element_text(hjust = 0, size = 8, color = 'grey40'),
+    plot.margin         = margin(10, 10, 10, 10),
+    plot.background     = element_rect(fill = 'transparent', color = NA),
+    panel.background    = element_rect(fill = 'transparent', color = NA)
   )
 
 he_out = file.path(out_root, 'horizontal_equity.png')
-ggsave(he_out, plot = p_he, width = 10, height = 6, dpi = 200)
+ggsave(he_out, plot = p_he, width = 10, height = 6, dpi = 200, bg = 'transparent')
 cat('\nChart saved to:', he_out, '\n')
 
 # --- Chart 4: Average MTR on wages by AGI percentile, parent vs nonparent ---
@@ -248,8 +294,8 @@ read_detail = function(scenario) {
            col_select = c(weight, agi, mtr_wages1, dep_age1, dep_age2, dep_age3))
 }
 
-detail_baseline = read_detail('baseline') %>% mutate(scenario = 'Baseline')
-detail_policy   = read_detail('std_eitc_ctc_ord') %>% mutate(scenario = 'Policy')
+detail_baseline = read_detail('baseline') %>% mutate(scenario = 'Current Law')
+detail_policy   = read_detail('std_eitc_ctc_ord') %>% mutate(scenario = 'Proposal')
 
 mtr_data = bind_rows(detail_baseline, detail_policy) %>%
   # Exclude negative AGI
@@ -283,11 +329,11 @@ mtr_summary = mtr_data %>%
     .groups = 'drop'
   ) %>%
   mutate(
-    scenario = factor(scenario, levels = c('Baseline', 'Policy')),
+    scenario = factor(scenario, levels = c('Current Law', 'Proposal')),
     parent   = factor(parent, levels = c('Non-parent', 'Parent'))
   )
 
-mtr_colors = c('Baseline' = '#636363', 'Policy' = '#2166AC')
+mtr_colors = c('Current Law' = '#636363', 'Proposal' = '#2166AC')
 
 p_mtr = ggplot(mtr_summary, aes(x = agi_pctile, y = avg_mtr, color = scenario)) +
   geom_line(linewidth = 0.4, alpha = 0.35) +
@@ -298,21 +344,26 @@ p_mtr = ggplot(mtr_summary, aes(x = agi_pctile, y = avg_mtr, color = scenario)) 
   scale_x_continuous(breaks = seq(0, 100, 20)) +
   scale_y_continuous(labels = function(x) paste0(x, '%')) +
   labs(
-    title = paste0('Average Marginal Tax Rate on Wages by AGI Percentile (', year_show, ')'),
-    x     = 'AGI Percentile',
-    y     = 'Average MTR on Wages'
+    title   = paste0('Figure 5. Average Effective Marginal Tax Rate on Wages by AGI Percentile (', year_show, ')'),
+    x       = 'AGI Percentile',
+    y       = 'Average MTR on Wages',
+    caption = 'Source: The Budget Lab calculations.'
   ) +
   theme_minimal(base_size = 13) +
   theme(
     legend.position  = 'top',
     strip.text       = element_text(face = 'bold', size = 12),
     plot.title       = element_text(face = 'bold', size = 14),
+    plot.caption     = element_text(hjust = 0, size = 8, color = 'grey40'),
     panel.spacing    = unit(1.5, 'lines'),
-    plot.margin      = margin(10, 10, 10, 10)
+    plot.margin      = margin(10, 10, 10, 10),
+    plot.background  = element_rect(fill = 'transparent', color = NA),
+    panel.background = element_rect(fill = 'transparent', color = NA),
+    strip.background = element_rect(fill = 'transparent', color = NA)
   )
 
 mtr_out = file.path(out_root, 'mtr_wages_by_agi_pctile.png')
-ggsave(mtr_out, plot = p_mtr, width = 12, height = 6, dpi = 200)
+ggsave(mtr_out, plot = p_mtr, width = 12, height = 6, dpi = 200, bg = 'transparent')
 cat('\nChart saved to:', mtr_out, '\n')
 
 # --- Chart 5: Stacked MTR change decomposition by AGI percentile ------------
@@ -401,21 +452,26 @@ p_mtr_stack = ggplot(mtr_stack, aes(x = agi_pctile, y = value, fill = piece)) +
   scale_x_continuous(breaks = seq(0, 100, 20)) +
   scale_y_continuous(labels = function(x) paste0(x, ' pp')) +
   labs(
-    title = paste0('Contribution to Change in Average MTR on Wages by AGI Percentile (', year_show, ')'),
-    x     = 'AGI Percentile',
-    y     = 'Change in Average MTR (pp)'
+    title   = paste0('Figure 6. Contribution to Change in Average Effective Marginal Tax Rate on Wages by AGI Percentile (', year_show, ')'),
+    x       = 'AGI Percentile',
+    y       = 'Change in Average MTR (pp)',
+    caption = 'Source: The Budget Lab calculations.'
   ) +
   theme_minimal(base_size = 13) +
   theme(
     legend.position  = 'top',
     strip.text       = element_text(face = 'bold', size = 12),
     plot.title       = element_text(face = 'bold', size = 13),
+    plot.caption     = element_text(hjust = 0, size = 8, color = 'grey40'),
     panel.spacing    = unit(1.5, 'lines'),
-    plot.margin      = margin(10, 10, 10, 10)
+    plot.margin      = margin(10, 10, 10, 10),
+    plot.background  = element_rect(fill = 'transparent', color = NA),
+    panel.background = element_rect(fill = 'transparent', color = NA),
+    strip.background = element_rect(fill = 'transparent', color = NA)
   )
 
 mtr_stack_out = file.path(out_root, 'mtr_wages_stacked_decomposition.png')
-ggsave(mtr_stack_out, plot = p_mtr_stack, width = 12, height = 6, dpi = 200)
+ggsave(mtr_stack_out, plot = p_mtr_stack, width = 12, height = 6, dpi = 200, bg = 'transparent')
 cat('\nChart saved to:', mtr_stack_out, '\n')
 
 # --- Chart 6: Time burden levels (baseline vs policy) ------------------------
@@ -433,7 +489,7 @@ tb_plot = tb %>%
   select(group, baseline, reform) %>%
   pivot_longer(cols = c(baseline, reform), names_to = 'scenario', values_to = 'hours') %>%
   mutate(
-    scenario = if_else(scenario == 'baseline', 'Baseline', 'Policy'),
+    scenario = if_else(scenario == 'baseline', 'Current Law', 'Proposal'),
     group    = factor(group, levels = tb_groups),
     label    = formatC(round(hours, 1), format = 'f', digits = 1)
   )
@@ -445,7 +501,7 @@ tb_plot %>%
   mutate(across(where(is.numeric), ~ round(.x, 1))) %>%
   print(n = Inf, width = Inf)
 
-tb_colors = c('Baseline' = '#636363', 'Policy' = '#2166AC')
+tb_colors = c('Current Law' = '#636363', 'Proposal' = '#2166AC')
 
 p_tb = ggplot(tb_plot, aes(x = group, y = hours, fill = scenario)) +
   geom_col(position = position_dodge(width = 0.7), width = 0.6) +
@@ -457,9 +513,10 @@ p_tb = ggplot(tb_plot, aes(x = group, y = hours, fill = scenario)) +
   scale_x_discrete(labels = tb_xlabs) +
   scale_fill_manual(values = tb_colors, name = NULL) +
   labs(
-    title = paste0('Mean Tax Filing Time Burden by Income Group (', year_show, ')'),
-    x     = NULL,
-    y     = 'Mean Filing Time (hours)'
+    title   = paste0('Figure 4. Average Tax Filing Time Burden by Income Group (', year_show, ')'),
+    x       = NULL,
+    y       = 'Mean Filing Time (hours)',
+    caption = dist_footnote
   ) +
   theme_minimal(base_size = 13) +
   theme(
@@ -467,11 +524,14 @@ p_tb = ggplot(tb_plot, aes(x = group, y = hours, fill = scenario)) +
     legend.position     = 'bottom',
     panel.grid.major.x  = element_blank(),
     plot.title          = element_text(face = 'bold', size = 14),
-    plot.margin         = margin(10, 10, 10, 10)
+    plot.caption        = element_text(hjust = 0, size = 8, color = 'grey40'),
+    plot.margin         = margin(10, 10, 10, 10),
+    plot.background     = element_rect(fill = 'transparent', color = NA),
+    panel.background    = element_rect(fill = 'transparent', color = NA)
   )
 
 tb_out = file.path(out_root, 'time_burden.png')
-ggsave(tb_out, plot = p_tb, width = 10, height = 6, dpi = 200)
+ggsave(tb_out, plot = p_tb, width = 10, height = 6, dpi = 200, bg = 'transparent')
 cat('\nChart saved to:', tb_out, '\n')
 
 # --- Table: Stacked revenue estimates with % of GDP ---------------------------
@@ -490,13 +550,13 @@ rev = map_dfr(scenarios, read_rev) %>%
 # Marginal contributions
 rev_stacked = rev %>%
   mutate(
-    `Standard Deduction`  = std,
-    `EITC`                = std_eitc - std,
-    `CTC`                 = std_eitc_ctc - std_eitc,
-    `Top Rates Increase`  = std_eitc_ctc_ord - std_eitc_ctc,
-    `Total`               = std_eitc_ctc_ord
+    `Increase in Standard Deduction` = std,
+    `EITC Expansion`                 = std_eitc - std,
+    `CTC Expansion`                  = std_eitc_ctc - std_eitc,
+    `Increase in Top Rates`          = std_eitc_ctc_ord - std_eitc_ctc,
+    `Total`                          = std_eitc_ctc_ord
   ) %>%
-  select(year, `Standard Deduction`, EITC, CTC, `Top Rates Increase`, Total)
+  select(year, `Increase in Standard Deduction`, `EITC Expansion`, `CTC Expansion`, `Increase in Top Rates`, Total)
 
 # Read GDP projections
 gdp = read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Macro-Projections/v3/2026022522/baseline/projections.csv',
@@ -511,12 +571,12 @@ make_window = function(df, start, end, label) {
   gdp_total = sum(sub$gdp_fy)
   tibble(
     year  = label,
-    `Standard Deduction` = sum(sub$`Standard Deduction`),
-    EITC                 = sum(sub$EITC),
-    CTC                  = sum(sub$CTC),
-    `Top Rates Increase` = sum(sub$`Top Rates Increase`),
-    Total                = sum(sub$Total),
-    gdp_fy               = gdp_total
+    `Increase in Standard Deduction` = sum(sub$`Increase in Standard Deduction`),
+    `EITC Expansion`                 = sum(sub$`EITC Expansion`),
+    `CTC Expansion`                  = sum(sub$`CTC Expansion`),
+    `Increase in Top Rates`          = sum(sub$`Increase in Top Rates`),
+    Total                            = sum(sub$Total),
+    gdp_fy                           = gdp_total
   )
 }
 
@@ -526,7 +586,7 @@ windows = bind_rows(
   make_window(rev_stacked, 2046, 2054, '2046-2054')
 )
 
-provisions = c('Standard Deduction', 'EITC', 'CTC', 'Top Rates Increase', 'Total')
+provisions = c('Increase in Standard Deduction', 'EITC Expansion', 'CTC Expansion', 'Increase in Top Rates', 'Total')
 
 # --- Single wide table: provisions as rows, years + windows as columns ---
 # Annual dollars (wide)
@@ -615,7 +675,7 @@ g = gtable::gtable_add_grob(g,
                         gp = gpar(lwd = 1.5)),
   t = nrow(disp) + 1, l = 1, r = ncol(disp))
 
-title = textGrob('Table 1. Stacked Revenue Estimates',
+title = textGrob('Table 1. Estimated Conventional Budgetary Effects, FY2026-2055',
                   gp = gpar(fontsize = 13, fontface = 'bold'), just = 'left', x = 0.02)
 subtitle = textGrob('Billions of dollars; window totals with percent of GDP',
                      gp = gpar(fontsize = 10, fontface = 'italic', col = 'grey40'),
@@ -627,7 +687,7 @@ tbl_grob = arrangeGrob(title, subtitle, g, ncol = 1,
 
 rev_img_out = file.path(out_root, 'stacked_revenue_table.png')
 ggsave(rev_img_out, plot = tbl_grob,
-       width = 16, height = nrow(disp) * row_h + 1.5, dpi = 200)
+       width = 16, height = nrow(disp) * row_h + 1.5, dpi = 200, bg = 'transparent')
 
 cat('\nTable image saved to:', rev_img_out, '\n')
 cat('Table CSV saved to:', rev_table_out, '\n')

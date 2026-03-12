@@ -34,14 +34,22 @@ process_for_time_burden = function(id, year) {
     tibble() %>%
     mutate(policy = !!id) 
   
-  # Determine whether EITC eligibility precerification is law 
-  precert = file.path(globals$output_root, id, "static/supplemental", "tax_law.csv") %>% 
+  # Determine whether EITC eligibility precerification is law
+  tax_law = file.path(globals$output_root, id, "static/supplemental", "tax_law.csv") %>%
     read_csv(show_col_types = F) %>%
     rename(yr = year) %>%
-    filter(yr == year) %>%
+    filter(yr == year)
+
+  precert = tax_law %>%
     select(eitc.parent_precert) %>%
     unique() %>%
     pull()
+
+  # Determine whether prior year earned income election is available for EITC
+  ei_prior_yr = tax_law %>%
+    pull(eitc.ei_prior_yr) %>%
+    pmax() %>%
+    unique()
   
   #------------------------------------
   # create relevant record-level flags
@@ -74,7 +82,8 @@ process_for_time_burden = function(id, year) {
                        "txbl_int",
                        "eitc",
                        "qbi_ded",
-                       "liab_amt"),
+                       "liab_amt",
+                       "alt_max_cap_binds"),
              .fns  = list(function(x) as.integer(x != 0))) %>%
         rename_with(~c("sch_e_flag",
                        "sch_farm_flag",
@@ -87,11 +96,13 @@ process_for_time_burden = function(id, year) {
                        "int_flag",
                        "sch_eic_flag",
                        "qbi_flag",
-                       "amt_flag") ),
+                       "amt_flag",
+                       "alt_max_flag") ),
       sch_d_flag   = as.integer(div_ord != 0 | div_pref !=0 | txbl_kg != 0 | kg_st != 0 | kg_lt != 0),
       itemize_flag = as.integer(itemizing),
       ctc_flag     = as.integer(ctc_ref > 0 | ctc_nonref > 0),
-      eitc_precert = precert, 
+      eitc_precert = precert,
+      eitc_prior_yr = ei_prior_yr,
 
       # Calculate number of other nonmodeled credits
       other_credits = number_of_credits - ctc_flag - sch_eic_flag,
@@ -145,94 +156,7 @@ calc_fixed_cost = function(id) {
   # hardcoded if first year is later than 2025
   first_year = get_scenario_info(id)$years[1]
 
-  if (first_year > 2025){
-    return(497.058)
-  }
-  
-  
-  #--------------------------------
-  # define relevant tax provisions
-  #--------------------------------
-  
-  provisions = c("int_flag",
-                 "sch_c_flag",
-                 "sch_d_flag",
-                 "has_pref_inc",
-                 "sch_e_flag",
-                 "tips_flag",
-                 "ot_flag",
-                 "auto_flag",
-                 "senior_flag",
-                 "sch_farm_flag",
-                 "itemize_flag",
-                 "qbi_flag",
-                 "sch_se_flag",
-                 "amt_flag",
-                 "ctc_flag",
-                 "sch_eic_flag",
-                 "other_credits")
-  
-  # time cost of each provision (coefficients)
-  time_costs = c(86,
-                 655,
-                 311,
-                 59,
-                 374,
-                 34,
-                 34,
-                 86,
-                 19,
-                 350,
-                 556, 
-                 155,
-                 75,
-                 87,
-                 34,
-                 34,
-                 34)
-  
-  # HoH-contingent items
-  hoh_item   = c("itemize_flag",
-                 "sch_d_flag",
-                 "qbi_flag",
-                 "amt_flag",
-                 "ctc_flag")
-  
-  
-  #--------------------------
-  # process 2025 current law
-  #--------------------------
-  
-  microdata = process_for_time_burden("baseline", 2025)
-  
-  
-  #----------------------
-  # calculate fixed cost
-  #----------------------
-  
-  # fixed cost is the residual difference between the modeled time burden and
-  # the IRS-reported average of 13 hours (2022)
-  
-  microdata %>%
-    
-    # marginal time burden
-    mutate(
-      marginal_burden = (across(.cols = all_of(provisions)) %>%
-                           as.matrix() %*% time_costs) %>% as.vector()
-    ) %>%
-    
-    # fixed cost as residual difference
-    summarise(
-      total_marginal_burden = sum(weight * marginal_burden),
-      total_cost            = sum(weight * 780),
-      total_fixed_cost      = total_cost - total_marginal_burden,
-      total_taxable_filers  = sum(weight * (no_tax == 0))
-    ) %>%
-    summarise(
-      mean_fixed_cost       = total_fixed_cost / total_taxable_filers
-    ) %>%
-    pull() %>%
-    return()
+  return(497.058)
 }
 
 
@@ -269,8 +193,9 @@ calc_time_burden = function(microdata, fixed_cost) {
                  "amt_flag",
                  "ctc_flag",
                  "sch_eic_flag",
-                 "other_credits")
-  
+                 "other_credits",
+                 "alt_max_flag")
+
   # time cost of each provision (coefficients)
   time_costs = c(86,
                  655,
@@ -287,8 +212,9 @@ calc_time_burden = function(microdata, fixed_cost) {
                  75,
                  87,
                  34,
-                 34 + unique(microdata$eitc_precert) * 156,
-                 34)
+                 (34 + unique(microdata$eitc_precert) * 156) * (1 + 0.5 * unique(microdata$eitc_prior_yr)),
+                 34,
+                 29)
   
   # HoH-contingent items
   hoh_item = c("itemize_flag",
