@@ -152,30 +152,13 @@ parameter_name:
 
 ### Override Mechanics
 
-Understanding how reform YAML files interact with baseline is critical. Bugs often arise from misunderstanding these rules.
+Reform YAML files override baseline at the **subparameter level** — the entire subparameter object (value + indexation fields) is replaced, not merged. Key rules:
+- Always include `i_measure` when overriding an indexed subparameter (it's the gate for indexation)
+- Always include complete time series in `value` blocks
+- Do NOT include `filing_status_mapper` or `indexation_defaults` unless you need to change them
+- Use `'default'` keyword to inherit from `indexation_defaults`; omitting a field sets it to NULL
 
-**a) Subparameter-level replacement**
-- `build_tax_law()` in `src/data/tax_law.R` (lines 37-41) replaces at the 2nd-level YAML key (subparameter) level
-- When a reform file includes a subparameter, the **entire** subparameter is replaced — `value`, `i_measure`, `i_base_year`, `i_direction`, `i_increment` — not merged field-by-field
-- If you override `value` but omit `i_measure`, indexation is lost entirely
-
-**b) The `i_measure` indexation gate**
-- `parse_subparam()` (tax_law.R:311): `if (is.null(raw_input$i_measure)) { return(base_values) }` — if `i_measure` is missing/NULL, base values are returned with NO indexation applied
-- Having `i_base_year`, `i_direction`, `i_increment` without `i_measure` does nothing
-- When overriding any subparameter that has indexation in baseline, you MUST include `i_measure`
-
-**c) The `'default'` keyword**
-- When a subparameter sets `i_measure: default`, `replace_defaults()` (tax_law.R:573-591) substitutes the parameter's `indexation_defaults` value
-- This only works for fields explicitly set to the string `'default'` — omitting a field is NOT the same as setting it to `'default'`
-
-**d) `filing_status_mapper` and `indexation_defaults`**
-- Both are top-level YAML keys that are replaced entirely if present in the reform file
-- If you include `filing_status_mapper` in a reform, it replaces ALL mappings — including ones you didn't intend to change (e.g., `bonus`, `bonus_other`, `po_range`)
-- **Rule: Do NOT include `filing_status_mapper` or `indexation_defaults` in reform files unless you specifically need to change them.** Omitting them preserves the baseline versions intact.
-
-**e) Vector subparameters**
-- YAML arrays like `[1000, 0]` produce columns with element suffixes: `ctc.value_young1`, `ctc.value_young2`
-- Each element can have its own indexation parameters (also arrays): `i_base_year: [2024, 2024]`, `i_increment: [120, 120]`
+**Detailed override rules, common mistakes, and examples are in the `/policy-config` skill** (`.claude/skills/policy-config/SKILL.md`).
 
 ### Behavioral Feedback Modules
 
@@ -296,109 +279,13 @@ Common variables in `tax_units` dataframe:
 
 ## Policy Reform Workflow
 
-### Creating a Reform
+Use the `/policy-config` skill to create reform configurations. It contains detailed override rules, common mistakes, examples, and a complete baseline file reference.
 
-1. **Identify parameters to change**: Determine which tax law files need modification
-2. **Create reform directory**: `config/scenarios/{reform_name}/`
-3. **Copy and modify YAML files**: Only include parameters that differ from baseline
-4. **Important**: Reforms OVERWRITE baseline, they don't add to it
-   - Include all relevant years, not just the change year
-   - Missing years will have no values for those parameters
-
-**Example - Extending TCJA:**
-```yaml
-# In config/scenarios/tcja_extension/ord.yaml
-rates:
-  value:
-    '2014': [0.1, 0.15, 0.25, 0.28, 0.33, 0.35, 0.396]
-    '2018': [0.1, 0.12, 0.22, 0.24, 0.32, 0.35, 0.37]
-    # TCJA rates continue (no 2026 expiration)
-
-brackets_single:
-  value:
-    '2014': [0, 7000, 22100, 53500, 115000, 250000, 400000]
-    '2018': [0, 9525, 38700, 82500, 157500, 200000, 500000]
-    # TCJA brackets continue
-  i_measure: default
-  i_base_year: default
-  i_direction: default
-  i_increment: [25, 25, 25, 25, 25, 25, 25]
-```
-
-**Critical Rules:**
-1. Reforms replace entire subparameters, not individual fields — always include ALL indexation fields (`i_measure`, `i_base_year`, `i_direction`, `i_increment`) when overriding any subparameter that is indexed in baseline
-2. `i_measure` is required for indexation — without it, no indexation occurs regardless of other fields
-3. Never override `filing_status_mapper` or `indexation_defaults` unless you need to change them — omitting preserves baseline
-4. Include complete time series in `value` blocks — the reform replaces the baseline's entire value history
-5. Use `'default'` keyword to inherit from `indexation_defaults`; omitting an indexation field sets it to NULL (no indexation)
-
-**Common Mistakes:**
-```yaml
-# WRONG - This overwrites 2014-2026 and leaves no rates before 2030
-rates:
-  value:
-    '2030': [0.1, 0.12, 0.22, 0.24, 0.32, 0.35, 0.37]
-```
-
-```yaml
-# WRONG — Overrides value but loses indexation
-value_single:
-  value:
-    '2026': 37500
-
-# RIGHT — Includes indexation fields
-value_single:
-  value:
-    '2014': 3000
-    '2018': 12000
-    '2026': 37500
-  i_measure: default
-  i_base_year: default
-  i_direction: default
-  i_increment: default
-```
-
-```yaml
-# WRONG — Clobbers all filing_status_mapper entries including bonus, bonus_other, etc.
-filing_status_mapper:
-  value:
-    '1': value_single
-    '2': value_single * 2
-    '4': value_head
-
-# RIGHT — Don't include filing_status_mapper at all if you're not changing it
-# (just omit it from the reform file)
-```
-
-```yaml
-# WRONG — Has i_base_year but no i_measure; indexation silently does nothing
-po_thresh_single:
-  value:
-    '2026': [112500, 300000]
-  i_base_year:
-    '2026': [2025, 2025]
-  i_direction: [-1, -1]
-  i_increment: [5000, 5000]
-
-# RIGHT — i_measure is the gate; must be present
-po_thresh_single:
-  value:
-    '2026': [112500, 300000]
-  i_measure:
-    '1987': cpi
-    '2017': chained_cpi
-  i_base_year:
-    '2026': [2025, 2025]
-  i_direction: [-1, -1]
-  i_increment: [5000, 5000]
-```
-
-### Adding New Tax Law Features
-
-1. Create YAML file in `config/scenarios/tax_law/baseline/` with new parameters
-2. For reforms that only add this feature: set baseline values to "off" (e.g., credit value = 0, flag = false)
-3. Create reform YAML files with "on" values
-4. Modify calculator code if needed to incorporate new parameter logic
+**Quick summary:**
+1. Create reform directory under `config/scenarios/tax_law/{public|private|tests}/{reform_name}/`
+2. Add YAML files that override only the subparameters you're changing
+3. Reforms OVERWRITE baseline subparameters — include full time series and all indexation fields
+4. Create a runscript CSV referencing the reform's `tax_law` path
 
 ## Common Tasks
 
