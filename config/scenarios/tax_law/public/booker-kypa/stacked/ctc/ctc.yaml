@@ -24,7 +24,7 @@ value_young:
     '2021': [2000, 1600]
     '2022': [2000, 0]
     '2025': [2200, 0]
-    '2026': [4320, 0]
+    '2026': [2000, 2320]
   i_measure:
     '1987': cpi
     '2017': chained_cpi
@@ -35,7 +35,7 @@ value_young:
   i_direction: [-1, -1]
   i_increment:
     '2014': [100, 100]
-    '2026': [144, 144]
+    '2026': [100, 144]
 
 # Maximum additional credit value per "young" child
 bonus_young:
@@ -44,6 +44,9 @@ bonus_young:
 # Maximum credit value per "old" child: $300/mo x 12 = $3,600
 # Bill indexes $300 monthly amount after Dec 31, 2026 (base year 2025, rounded to $10)
 # Annual values: $10 monthly rounding * 12 = $120 annual rounding
+# Slot 1: $2,000 floor (phases out at threshold1 = $300K/$400K)
+# Slot 2: $1,600 enhancement (phases out at threshold2 = $112.5K/$150K)
+# Mirrors ARPA pattern: base in slot 1 at higher threshold, bonus in slot 2 at lower
 value_old:
   value:
     '2014': [1000, 0]
@@ -51,7 +54,7 @@ value_old:
     '2021': [2000, 1000]
     '2022': [2000, 0]
     '2025': [2200, 0]
-    '2026': [3600, 0]
+    '2026': [2000, 1600]
   i_measure:
     '1987': cpi
     '2017': chained_cpi
@@ -62,7 +65,7 @@ value_old:
   i_direction: [-1, -1]
   i_increment:
     '2014': [100, 100]
-    '2026': [120, 120]
+    '2026': [100, 120]
 
 # Maximum age to qualify as "young" child
 young_age_limit:
@@ -74,63 +77,64 @@ old_age_limit:
     '2014': 16
     '2021': 17
     '2022': 16
+    '2026': 17
 
 # AGI threshold above which credit value phases out, single filers
-# Initial threshold indexed after Dec 31, 2025 (base year 2023, rounded to $5,000)
-# Secondary threshold ($300K) is NOT indexed per the bill
+# Slot 1 ($300K): phases out $2K floor — NOT indexed per bill
+# Slot 2 ($112.5K): phases out enhancement — indexed after Dec 31, 2025 (base 2023, $5K rounding)
 po_thresh_single:
   value:
     '2014': [75000, Inf]
     '2018': [200000, Inf]
     '2021': [200000, 75000]
     '2022': [200000, Inf]
-    '2026': [112500, 300000]
+    '2026': [300000, 112500]
   i_measure:
     '1987': cpi
     '2017': chained_cpi
   i_base_year:
     '2014': NA
-    '2026': [2023, NA]
-  i_direction: [0, NA]
-  i_increment: [5000, NA]
+    '2026': [NA, 2023]
+  i_direction: [NA, 0]
+  i_increment: [NA, 5000]
 
 # AGI threshold above which credit value phases out, joint filers
-# Initial threshold indexed after Dec 31, 2025 (base year 2023, rounded to $5,000)
-# Secondary threshold ($400K) is NOT indexed per the bill
+# Slot 1 ($400K): phases out $2K floor — NOT indexed
+# Slot 2 ($150K): phases out enhancement — indexed after Dec 31, 2025 (base 2023, $5K rounding)
 po_thresh_married:
   value:
     '2014': [110000, Inf]
     '2018': [400000, Inf]
     '2021': [400000, 150000]
     '2022': [400000, Inf]
-    '2026': [150000, 400000]
+    '2026': [400000, 150000]
   i_measure:
     '1987': cpi
     '2017': chained_cpi
   i_base_year:
     '2014': NA
-    '2026': [2023, NA]
-  i_direction: [0, NA]
-  i_increment: [5000, NA]
+    '2026': [NA, 2023]
+  i_direction: [NA, 0]
+  i_increment: [NA, 5000]
 
 # AGI threshold above which credit value phases out, HoH filers
-# Initial threshold indexed after Dec 31, 2025 (base year 2023, rounded to $5,000)
-# Secondary threshold ($300K) is NOT indexed per the bill
+# Slot 1 ($300K): phases out $2K floor — NOT indexed
+# Slot 2 ($112.5K): phases out enhancement — indexed after Dec 31, 2025 (base 2023, $5K rounding)
 po_thresh_head:
   value:
     '2014': [75000, Inf]
     '2018': [200000, Inf]
     '2021': [200000, 112500]
     '2022': [200000, Inf]
-    '2026': [112500, 300000]
+    '2026': [300000, 112500]
   i_measure:
     '1987': cpi
     '2017': chained_cpi
   i_base_year:
     '2014': NA
-    '2026': [2023, NA]
-  i_direction: [0, NA]
-  i_increment: [5000, NA]
+    '2026': [NA, 2023]
+  i_direction: [NA, 0]
+  i_increment: [NA, 5000]
 
 # Whether phaseout type is a rate (0 means range)
 po_type:
@@ -144,11 +148,11 @@ po_rate:
 po_rate_other:
   value: 0.05
 
-# Sequential phaseout (Sec 24A applies two 5% phaseouts sequentially)
+# Additive phaseout mirroring ARPA pattern:
+# Slot 1 ($2K floor) phases out at threshold1 ($300K/$400K) — value_other also at threshold1 ✓
+# Slot 2 (enhancement) phases out at threshold2 ($112.5K/$150K)
 po_sequential:
-  value:
-    '2014': 0
-    '2026': 1
+  value: 0
 
 # Whether phaseout is discretized
 po_discrete:
