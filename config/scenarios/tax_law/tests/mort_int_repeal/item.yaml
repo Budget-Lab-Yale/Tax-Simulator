@@ -1,0 +1,5 @@
+# Repeal mortgage interest deduction by setting limit to $0
+mort_int_limit:
+  value:
+    '2014': Inf
+    '2026': 0

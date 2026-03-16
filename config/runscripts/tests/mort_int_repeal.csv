@@ -1,0 +1,3 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2025:2035,,,
+mort_int_repeal,tests/mort_int_repeal,,2025:2035,,,

@@ -10,7 +10,7 @@ library(Hmisc)
 # Read data
 #-----------
 
-output_root = 'C:/Users/jar335/Documents/Interfaces/model_data/Tax-Simulator/v1/202506301505'
+output_root = '/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202603161115'
 
 get_data = function(scenario, year) {
   output_root %>% 
@@ -23,10 +23,9 @@ get_data = function(scenario, year) {
 } 
 
 microdata = bind_rows(
-  get_data('baseline', 2026), 
-  get_data('tcja',  2026),
-  get_data('house', 2026), 
-  get_data('senate', 2026)
+  get_data('baseline', 2026),
+  get_data('tcja_ext',  2026),
+  get_data('obbba', 2026)
 ) %>% 
   filter(expanded_inc > 0) %>% 
   left_join(
@@ -105,28 +104,22 @@ theme_clean <- function() {
     )
 }
 
-create_waterfall_plot <- function(bill = "senate") {
-  # Validate input
-  if (!bill %in% c("house", "senate")) {
-    stop("bill argument must be either 'house' or 'senate'")
-  }
-  
+create_waterfall_plot <- function(bill = "obbba", bill_label = "OBBBA") {
   # Create bill-specific labels
-  bill_label <- stringr::str_to_title(bill)
   bill_step_label <- paste0(bill_label, "\nChanges")
-  bill_final_label <- paste0(bill_label, "\nBill")
-  
+  bill_final_label <- paste0(bill_label)
+
   # Prepare waterfall data with the specified bill
   waterfall_data = dispersion %>%
-    filter(scenario %in% c('baseline', 'tcja', bill)) %>%
+    filter(scenario %in% c('baseline', 'tcja_ext', bill)) %>%
     select(scenario, inc_quintile, avg_within_group_iqr) %>%
     pivot_wider(names_from = scenario, values_from = avg_within_group_iqr) %>%
     mutate(
       baseline_pp = baseline * 100,
-      tcja_pp = tcja * 100,
+      tcja_pp = tcja_ext * 100,
       bill_pp = .data[[bill]] * 100,  # Dynamic column reference
-      tcja_change = tcja_pp - baseline_pp, 
-      bill_change = bill_pp - tcja_pp   
+      tcja_change = tcja_pp - baseline_pp,
+      bill_change = bill_pp - tcja_pp
     ) %>%
     select(inc_quintile, baseline_pp, tcja_change, bill_change, tcja_pp, bill_pp)
   
@@ -204,12 +197,8 @@ create_waterfall_plot <- function(bill = "senate") {
       legend.position = "none"
     ) +
     labs(
-      title = if_else(
-        bill == 'house', 
-        "Figure 1. Estimated Impact of House-Passed Reconciliation Bill on Horizontal Equity, 2026",
-        "Figure 2. Estimated Impact of Senate-Amended Reconciliation Bill on Horizontal Equity, 2026"
-      ),
-      subtitle = paste0("Average Within-Group Interquartile Range of Effective Tax Rate (higher values indicate more tax rate dispersion)\nBaseline → TCJA Extension → ", bill_label, " Bill"),
+      title = paste0("Estimated Impact of ", bill_label, " on Horizontal Equity, 2026"),
+      subtitle = paste0("Average Within-Group Interquartile Range of Effective Tax Rate (higher values indicate more tax rate dispersion)\nBaseline → TCJA Extension → ", bill_label),
       x = element_blank(),
       y = "Percentage Points",
       caption = str_wrap('Source: The Budget Lab calculations. "Group" in "within-group" refers to combinations of income percentile, marital status, and number of dependents. Effective tax rate is net income tax liability (including refundable credits) divided by expanded income (AGI plus nontaxable interest/pensions/OASDI benefits, nondeductible capital losses, above-the-line deductions, and employer-side payroll taxes.', width = 180)
@@ -223,9 +212,19 @@ create_waterfall_plot <- function(bill = "senate") {
   )
 }
 
-house = create_waterfall_plot("house")
-senate = create_waterfall_plot("senate")
+obbba_plot = create_waterfall_plot("obbba", "OBBBA")
 
-house$plot_data %>% select(inc_quintile, name = step, value = display_value) %>% pivot_wider() %>% write.csv()
-senate$plot_data %>% select(inc_quintile, name = step, value = display_value) %>% pivot_wider() %>% write.csv()
+ggsave('other/analysis_scripts/public/obbba_he_waterfall.pdf', obbba_plot$plot, width = 14, height = 5)
+ggsave('other/analysis_scripts/public/obbba_he_waterfall.png', obbba_plot$plot, width = 14, height = 5, dpi = 300)
+
+obbba_plot$plot_data %>% select(inc_quintile, name = step, value = display_value) %>% pivot_wider() %>% print()
+dispersion_total %>% print()
+
+# Write underlying data CSV
+bind_rows(
+  dispersion %>% mutate(group = paste0('Quintile ', inc_quintile)) %>% select(scenario, group, avg_within_group_iqr),
+  dispersion_total %>% mutate(group = 'Overall')
+) %>%
+  pivot_wider(names_from = scenario, values_from = avg_within_group_iqr) %>%
+  write.csv('other/analysis_scripts/public/obbba_he_data.csv', row.names = FALSE)
 

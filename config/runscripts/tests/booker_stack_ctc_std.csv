@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline,,2025:2026,,,
+ctc,public/booker-kypa/stacked/ctc,,2025:2026,2026,,
+ctc_std,public/booker-kypa/stacked/ctc_std,,2025:2026,2026,,
