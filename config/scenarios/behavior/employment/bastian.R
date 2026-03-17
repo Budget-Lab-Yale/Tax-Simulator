@@ -102,18 +102,19 @@ do_employment = function(tax_units, ...) {
         TRUE ~ 0
       ),
       
-      # Second earner
+      # Second earner (use male2/wages2, not male1/wages1)
       e2 = case_when(
-        
-        # Low-income single mothers (NA for second earners by definition)
-        (male1 == 0) & (n_dep_ctc > 0) & (wages1 < eitc_thresh) & (filing_status != 2) ~ e_mothers_poor, 
-        
-        # All other mothers with family income below $80,000 
-        (male1 == 0) & (n_dep_ctc > 0) & (income < income_threshold) ~ e_mothers_other, 
-        
+
+        # Low-income mothers: second earners only exist on joint returns
+        # (filing_status == 2), so the single-filer EITC case is removed
+        (male2 == 0) & (n_dep_ctc > 0) & (wages2 < eitc_thresh) ~ e_mothers_poor,
+
+        # All other mothers with family income below $80,000
+        (male2 == 0) & (n_dep_ctc > 0) & (income < income_threshold) ~ e_mothers_other,
+
         # Others below $80,000
         (income < income_threshold & n_dep_ctc > 0) ~ e_else,
-        
+
         # Everyone else
         TRUE ~ 0
       ),
