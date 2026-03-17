@@ -179,7 +179,8 @@
       "Bash(git log:*)",
       "Bash(git merge:*)",
       "Bash(for f:*)",
-      "Bash(do git:*)"
+      "Bash(do git:*)",
+      "WebFetch(domain:www.law.cornell.edu)"
     ],
     "deny": [],
     "ask": []
