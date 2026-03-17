@@ -234,6 +234,11 @@ pi_thresh:
     '2014': 3000
     '2018': 2500
 
+# Whether baby bonus is folded into slot 2 of the main credit (1) or handled
+# separately with its own phase-in/phase-out (0)
+baby_bonus_in_credit:
+  value: 0
+
 # Bonus credit in the first month of a child's life
 baby_bonus:
   value: 0

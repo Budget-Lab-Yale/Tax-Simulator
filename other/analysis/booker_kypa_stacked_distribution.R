@@ -7,7 +7,7 @@ library(tidyverse)
 library(scales)
 
 # --- Configuration -----------------------------------------------------------
-vintage   = '202603120745'
+vintage   = '202603171031'
 out_root  = file.path('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1', vintage)
 year_show = 2026
 
@@ -42,7 +42,8 @@ dist_footnote = str_wrap("Source: The Budget Lab calculations. Note: Estimate un
 
 build_stacked_chart = function(group_dim, groups, x_positions, x_labs,
                                separator = NULL, brackets = NULL,
-                               fig_number, title_suffix, filename) {
+                               fig_number, title_suffix, filename,
+                               plot_height = 9) {
 
   # Filter and compute marginal contributions
   df = dist_all %>%
@@ -93,33 +94,42 @@ build_stacked_chart = function(group_dim, groups, x_positions, x_labs,
     summarise(pos = sum(pct_chg[pct_chg > 0]), neg = sum(pct_chg[pct_chg < 0]))
   y_range = c(min(bar_totals$neg), max(bar_totals$pos))
 
+  # Set y-axis lower limit so the last gridline sits above the annotations
+  y_lower = floor(y_range[1] * 2) / 2
+  y_upper = y_range[2] + diff(y_range) * (if (!is.null(brackets)) 0.30 else 0.15)
+  vis_range = y_upper - y_lower
+
+  # Convert fixed inch distances to data coordinates
+  # Plot area is roughly plot_height minus ~2.5 inches for title, legend, margins
+  plot_area_inches = plot_height - 2.5
+  dpi = vis_range / plot_area_inches  # data units per inch
+
+  # Fixed inch-based layout below x-axis
+  xlab_gap    = dpi * (if (!is.null(brackets)) 1.35 else 1.00)  # gap for x-axis labels
+  row_step    = dpi * 0.25   # each annotation row
+  footnote_gap = dpi * 0.45  # gap between last row and footnote
+
+  avg_y  = y_lower - xlab_gap
+  shr_y  = avg_y - row_step
+  wl_y1  = shr_y - row_step
+  wl_y2  = wl_y1 - row_step
+  foot_y = wl_y2 - footnote_gap
+  label_x = min(x_positions) - 0.5
+
   # Build plot
   p = ggplot(plot_data, aes(x = xpos, y = pct_chg, fill = piece)) +
     geom_col(position = position_stack(), width = 0.7) +
     geom_hline(yintercept = 0, linewidth = 0.3) +
-    # Net change bubbles: white filled circle with black outline + label
     geom_point(data = net_dots, aes(x = xpos, y = net),
                inherit.aes = FALSE, shape = 21, size = 10,
                fill = 'white', color = 'black', stroke = 0.8) +
     geom_text(data = net_dots, aes(x = xpos, y = net, label = net_label),
               inherit.aes = FALSE, size = 2.8, fontface = 'bold')
 
-  # Optional separator + brackets
+  # Optional separator
   if (!is.null(separator)) {
     p = p + geom_vline(xintercept = separator, linetype = 'dashed',
                        color = 'grey60', linewidth = 0.3)
-  }
-  if (!is.null(brackets)) {
-    bracket_y = y_range[1] - diff(y_range) * 0.18
-    label_y_b = y_range[1] - diff(y_range) * 0.24
-    for (b in brackets) {
-      p = p +
-        annotate('segment', x = b$x1, xend = b$x2, y = bracket_y, yend = bracket_y, color = 'grey40') +
-        annotate('segment', x = b$x1, xend = b$x1, y = bracket_y, yend = bracket_y + diff(y_range) * 0.02, color = 'grey40') +
-        annotate('segment', x = b$x2, xend = b$x2, y = bracket_y, yend = bracket_y + diff(y_range) * 0.02, color = 'grey40') +
-        annotate('text', x = (b$x1 + b$x2) / 2, y = label_y_b, label = b$label,
-                 fontface = 'bold', size = 4, color = 'grey30')
-    }
   }
 
   # Winner/loser share annotations (from the full cumulative scenario)
@@ -128,60 +138,104 @@ build_stacked_chart = function(group_dim, groups, x_positions, x_labs,
     filter(
       year == year_show,
       taxes_included == 'iit_pr',
-      group_dimension == group_dim,
+      group_dimension %in% group_dim,
       group %in% groups,
       scenario == full_scn
     ) %>%
     mutate(
       xpos = x_positions[as.character(group)],
+      avg_label  = {
+        sign_chr = if_else(avg > 0, '+', if_else(avg < 0, '-', ''))
+        amt = abs(avg)
+        num_str = case_when(
+          amt == 0        ~ '$0',
+          amt < 1000      ~ paste0('$', formatC(amt, format = 'f', digits = 0)),
+          amt < 1000000   ~ paste0('$', formatC(amt / 1000, format = 'f', digits = 1), 'K'),
+          TRUE            ~ paste0('$', formatC(amt / 1000000, format = 'f', digits = 1), 'M')
+        )
+        paste0(sign_chr, num_str)
+      },
+      net_share  = {
+        denom = if (group_dim == 'Income') {
+          sum(net_change[grepl('^Quintile', group)])
+        } else {
+          sum(net_change)
+        }
+        net_change / denom * 100
+      },
+      net_share_label = paste0(formatC(net_share, format = 'f', digits = 1), '%'),
       win_pct  = `share_cut.100` * 100,
       lose_pct = `share_raise.100` * 100,
       win_label  = if_else(win_pct > 0 & win_pct < 0.5, '<1%', paste0(round(win_pct), '%')),
       lose_label = if_else(lose_pct > 0 & lose_pct < 0.5, '<1%', paste0(round(lose_pct), '%'))
     )
 
-  base_offset = if (!is.null(brackets)) 0.34 else 0.18
-  row_gap     = 0.08
-  wl_y1 = y_range[1] - diff(y_range) * base_offset
-  wl_y2 = y_range[1] - diff(y_range) * (base_offset + row_gap)
-  label_x = min(x_positions) - 0.5
-
+  # Annotation rows
   p = p +
+    annotate('text', x = label_x, y = avg_y, label = 'Avg. tax change:',
+             fontface = 'bold', size = 3, hjust = 1, color = 'grey30') +
+    annotate('text', x = label_x, y = shr_y, label = 'Share of net change:',
+             fontface = 'bold', size = 3, hjust = 1, color = 'grey30') +
     annotate('text', x = label_x, y = wl_y1, label = 'Tax cut >$100:',
              fontface = 'bold', size = 3, hjust = 1, color = 'grey30') +
     annotate('text', x = label_x, y = wl_y2, label = 'Tax hike >$100:',
              fontface = 'bold', size = 3, hjust = 1, color = 'grey30') +
+    geom_text(data = wl, aes(x = xpos, y = avg_y, label = avg_label),
+              inherit.aes = FALSE, size = 3, color = 'grey30') +
+    geom_text(data = wl, aes(x = xpos, y = shr_y, label = net_share_label),
+              inherit.aes = FALSE, size = 3, color = 'grey30') +
     geom_text(data = wl, aes(x = xpos, y = wl_y1, label = win_label),
               inherit.aes = FALSE, size = 3, color = 'grey30') +
     geom_text(data = wl, aes(x = xpos, y = wl_y2, label = lose_label),
               inherit.aes = FALSE, size = 3, color = 'grey30')
 
+  # Footnote as annotation (not caption) — always at fixed distance below last row
+  p = p +
+    annotate('text', x = label_x, y = foot_y, label = dist_footnote,
+             hjust = 0, vjust = 1, size = 2.8, color = 'grey40', lineheight = 1.1)
+
+  # Optional brackets — placed at the TOP
+  if (!is.null(brackets)) {
+    bracket_y = y_range[2] + diff(y_range) * 0.18
+    label_y_b = y_range[2] + diff(y_range) * 0.24
+    for (b in brackets) {
+      p = p +
+        annotate('segment', x = b$x1, xend = b$x2, y = bracket_y, yend = bracket_y, color = 'grey40') +
+        annotate('segment', x = b$x1, xend = b$x1, y = bracket_y, yend = bracket_y - diff(y_range) * 0.02, color = 'grey40') +
+        annotate('segment', x = b$x2, xend = b$x2, y = bracket_y, yend = bracket_y - diff(y_range) * 0.02, color = 'grey40') +
+        annotate('text', x = (b$x1 + b$x2) / 2, y = label_y_b, label = b$label,
+                 fontface = 'bold', size = 4, color = 'grey30')
+    }
+  }
+
+  # Compute bottom margin to fit annotations + footnote (approx 3 footnote lines)
+  total_below = xlab_gap + 4 * row_step + footnote_gap + dpi * 0.45
+  bottom_margin_pt = total_below / vis_range * plot_area_inches * 72
+
   p = p +
     scale_x_continuous(breaks = x_positions, labels = x_labs) +
     scale_fill_manual(values = colors) +
     scale_y_continuous(labels = function(x) paste0(x, '%')) +
-    coord_cartesian(clip = 'off') +
+    coord_cartesian(ylim = c(y_lower, y_upper), clip = 'off') +
     labs(
       title   = paste0('Figure ', fig_number, '. Contribution to Change in After-Tax Income ', title_suffix, ' (', year_show, ')'),
       x       = NULL,
       y       = 'Change in After-Tax Income (pp)',
-      fill    = NULL,
-      caption = dist_footnote
+      fill    = NULL
     ) +
     theme_minimal(base_size = 13) +
     theme(
-      axis.text.x        = element_text(size = 11, face = 'bold'),
-      legend.position     = 'bottom',
-      panel.grid.major.x  = element_blank(),
-      plot.title          = element_text(face = 'bold', size = 14),
-      plot.caption        = element_text(hjust = 0, size = 8, color = 'grey40'),
-      plot.margin         = margin(10, 10, 50, 40),
-      plot.background     = element_rect(fill = 'transparent', color = NA),
-      panel.background    = element_rect(fill = 'transparent', color = NA)
+      axis.text.x         = element_text(size = 13, face = 'bold'),
+      legend.position      = 'top',
+      panel.grid.major.x   = element_blank(),
+      panel.grid.minor.x   = element_blank(),
+      panel.grid.minor.y   = element_blank(),
+      plot.title           = element_text(face = 'bold', size = 14),
+      plot.margin          = margin(30, 10, bottom_margin_pt, 40)
     )
 
   out_path = file.path(out_root, filename)
-  ggsave(out_path, plot = p, width = 11, height = 7, dpi = 200, bg = 'transparent')
+  ggsave(out_path, plot = p, width = 11, height = plot_height, dpi = 200, bg = 'transparent')
   cat('\nChart saved to:', out_path, '\n')
 }
 

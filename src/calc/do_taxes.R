@@ -139,22 +139,25 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
       # plausibly pre-file a return on behalf of the tax unit. Criteria is:
       # non-itemizers whose income is derived solely from wages or OASDI
       simple_filer = as.integer(
-        filer & 
+        filer &
         !itemizing &
-        txbl_int        == 0 & 
-        div_ord         == 0 & 
-        div_pref        == 0 & 
-        state_ref       == 0 &  
-        txbl_ira_dist   == 0 & 
-        gross_pens_dist == 0 & 
-        kg_st           == 0 & 
-        kg_lt           == 0 &  
+        txbl_int        == 0 &
+        div_ord         == 0 &
+        div_pref        == 0 &
+        state_ref       == 0 &
+        txbl_ira_dist   == 0 &
+        gross_pens_dist == 0 &
+        kg_st           == 0 &
+        kg_lt           == 0 &
         other_gains     == 0 &
-        alimony         == 0 & 
-        sole_prop       == 0 & 
-        sch_e           == 0 & 
-        farm            == 0 & 
-        ui              == 0
+        alimony         == 0 &
+        sole_prop       == 0 &
+        sch_e           == 0 &
+        farm            == 0 &
+        ui              == 0 &
+        tip_ded         == 0 &
+        ot_ded          == 0 &
+        auto_int_ded    == 0
       )
     )
   

@@ -362,22 +362,10 @@ build_stacked_chart = function(group_dim, groups, x_positions, x_labs,
     geom_text(data = net_dots, aes(x = xpos, y = net, label = net_label),
               inherit.aes = FALSE, size = 2.8, fontface = 'bold')
 
-  # Optional separator + brackets
+  # Optional separator
   if (!is.null(separator)) {
     p = p + geom_vline(xintercept = separator, linetype = 'dashed',
                        color = 'grey60', linewidth = 0.3)
-  }
-  if (!is.null(brackets)) {
-    bracket_y = y_range[1] - diff(y_range) * 0.18
-    label_y_b = y_range[1] - diff(y_range) * 0.24
-    for (b in brackets) {
-      p = p +
-        annotate('segment', x = b$x1, xend = b$x2, y = bracket_y, yend = bracket_y, color = 'grey40') +
-        annotate('segment', x = b$x1, xend = b$x1, y = bracket_y, yend = bracket_y + diff(y_range) * 0.02, color = 'grey40') +
-        annotate('segment', x = b$x2, xend = b$x2, y = bracket_y, yend = bracket_y + diff(y_range) * 0.02, color = 'grey40') +
-        annotate('text', x = (b$x1 + b$x2) / 2, y = label_y_b, label = b$label,
-                 fontface = 'bold', size = 4, color = 'grey30')
-    }
   }
 
   # Winner/loser share annotations (from the full cumulative scenario)
@@ -392,33 +380,83 @@ build_stacked_chart = function(group_dim, groups, x_positions, x_labs,
     ) %>%
     mutate(
       xpos = x_positions[as.character(group)],
+      avg_label  = {
+        sign_chr = if_else(avg > 0, '+', if_else(avg < 0, '-', ''))
+        amt = abs(avg)
+        num_str = case_when(
+          amt == 0        ~ '$0',
+          amt < 1000      ~ paste0('$', formatC(amt, format = 'f', digits = 0)),
+          amt < 1000000   ~ paste0('$', formatC(amt / 1000, format = 'f', digits = 1), 'K'),
+          TRUE            ~ paste0('$', formatC(amt / 1000000, format = 'f', digits = 1), 'M')
+        )
+        paste0(sign_chr, num_str)
+      },
+      is_quintile = grepl('^Quintile', group),
+      has_overlap = any(!is_quintile & !grepl('^Negative', group)),
+      net_share  = {
+        denom = sum(net_change[is_quintile | grepl('^Negative', group)])
+        net_change / denom * 100
+      },
+      net_share_label = if_else(
+        has_overlap & !is_quintile,
+        '--',
+        paste0(formatC(net_share, format = 'f', digits = 1), '%')
+      ),
       win_pct  = `share_cut.100` * 100,
       lose_pct = `share_raise.100` * 100,
       win_label  = if_else(win_pct > 0 & win_pct < 0.5, '<1%', paste0(round(win_pct), '%')),
       lose_label = if_else(lose_pct > 0 & lose_pct < 0.5, '<1%', paste0(round(lose_pct), '%'))
     )
 
-  base_offset = if (!is.null(brackets)) 0.34 else 0.18
+  # Annotation rows below bars but above x-axis labels
+  base_offset = if (!is.null(brackets)) 0.34 else 0.30
   row_gap     = 0.08
-  wl_y1 = y_range[1] - diff(y_range) * base_offset
-  wl_y2 = y_range[1] - diff(y_range) * (base_offset + row_gap)
+  avg_y  = y_range[1] - diff(y_range) * base_offset
+  shr_y  = y_range[1] - diff(y_range) * (base_offset + row_gap)
+  wl_y1  = y_range[1] - diff(y_range) * (base_offset + 2 * row_gap)
+  wl_y2  = y_range[1] - diff(y_range) * (base_offset + 3 * row_gap)
   label_x = min(x_positions) - 0.5
 
   p = p +
+    annotate('text', x = label_x, y = avg_y, label = 'Avg. tax change:',
+             fontface = 'bold', size = 3, hjust = 1, color = 'grey30') +
+    annotate('text', x = label_x, y = shr_y, label = 'Share of net change:',
+             fontface = 'bold', size = 3, hjust = 1, color = 'grey30') +
     annotate('text', x = label_x, y = wl_y1, label = 'Tax cut >$100:',
              fontface = 'bold', size = 3, hjust = 1, color = 'grey30') +
     annotate('text', x = label_x, y = wl_y2, label = 'Tax hike >$100:',
              fontface = 'bold', size = 3, hjust = 1, color = 'grey30') +
+    geom_text(data = wl, aes(x = xpos, y = avg_y, label = avg_label),
+              inherit.aes = FALSE, size = 3, color = 'grey30') +
+    geom_text(data = wl, aes(x = xpos, y = shr_y, label = net_share_label),
+              inherit.aes = FALSE, size = 3, color = 'grey30') +
     geom_text(data = wl, aes(x = xpos, y = wl_y1, label = win_label),
               inherit.aes = FALSE, size = 3, color = 'grey30') +
     geom_text(data = wl, aes(x = xpos, y = wl_y2, label = lose_label),
               inherit.aes = FALSE, size = 3, color = 'grey30')
 
+  # Optional brackets — placed at the TOP
+  if (!is.null(brackets)) {
+    bracket_y = y_range[2] + diff(y_range) * 0.18
+    label_y_b = y_range[2] + diff(y_range) * 0.24
+    for (b in brackets) {
+      p = p +
+        annotate('segment', x = b$x1, xend = b$x2, y = bracket_y, yend = bracket_y, color = 'grey40') +
+        annotate('segment', x = b$x1, xend = b$x1, y = bracket_y, yend = bracket_y - diff(y_range) * 0.02, color = 'grey40') +
+        annotate('segment', x = b$x2, xend = b$x2, y = bracket_y, yend = bracket_y - diff(y_range) * 0.02, color = 'grey40') +
+        annotate('text', x = (b$x1 + b$x2) / 2, y = label_y_b, label = b$label,
+                 fontface = 'bold', size = 4, color = 'grey30')
+    }
+  }
+
+  # Set y-axis lower limit so the last gridline sits above the annotations
+  y_lower = floor(y_range[1] * 2) / 2  # round down to nearest 0.5
+
   p = p +
     scale_x_continuous(breaks = x_positions, labels = x_labs) +
     scale_fill_manual(values = colors) +
     scale_y_continuous(labels = function(x) paste0(x, '%')) +
-    coord_cartesian(clip = 'off') +
+    coord_cartesian(ylim = c(y_lower, NA), clip = 'off') +
     labs(
       title   = paste0('Figure ', fig_number, '. Contribution to Change in After-Tax Income ', title_suffix, ' (', year_show, ')'),
       x       = NULL,
@@ -428,12 +466,15 @@ build_stacked_chart = function(group_dim, groups, x_positions, x_labs,
     ) +
     theme_minimal(base_size = 13) +
     theme(
-      axis.text.x        = element_text(size = 11, face = 'bold'),
-      legend.position     = 'bottom',
-      panel.grid.major.x  = element_blank(),
-      plot.title          = element_text(face = 'bold', size = 14),
-      plot.caption        = element_text(hjust = 0, size = 8, color = 'grey40'),
-      plot.margin         = margin(10, 10, 50, 40)
+      axis.text.x         = element_text(size = 13, face = 'bold'),
+      legend.position      = 'top',
+      panel.grid.major.x   = element_blank(),
+      panel.grid.minor.x   = element_blank(),
+      panel.grid.minor.y   = element_blank(),
+      plot.title           = element_text(face = 'bold', size = 14),
+      plot.caption         = element_text(hjust = 0, size = 8, color = 'grey40',
+                                          margin = margin(t = 75)),
+      plot.margin          = margin(30, 10, 70, 40)
     )
 
   out_path = file.path(out_root, filename)

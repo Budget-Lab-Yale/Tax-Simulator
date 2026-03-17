@@ -73,7 +73,7 @@ calc_below_ded = function(tax_unit, fill_missings = F) {
       tip_ded2 = if_else(wages2 > below.tip_ded_wage_limit, 0, tips2),
       
       # Limit to leisure and hospitality industry tips if applicable 
-      tips_lh = tip_ded1 * tips_lh1 + tip_ded1 * tips_lh2,
+      tips_lh = tip_ded1 * tips_lh1 + tip_ded2 * tips_lh2,
       tip_ded = if_else(below.tip_ded_lh == 1, tips_lh, tip_ded1 + tip_ded2),
       
       # Limit to maximum value

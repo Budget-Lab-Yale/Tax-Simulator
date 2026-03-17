@@ -1,0 +1,35 @@
+---
+# Tax rebate: $600/adult ($1,200 joint), $600/dependent child
+# Phaseout thresholds: $180K joint, $120K HoH, $90K single
+
+# Credit value per adult
+value:
+  value:
+    '2014': 0
+    '2020': 1800
+    '2021': 1400
+    '2022': 0
+    '2026': 600
+    '2027': 0
+
+# Credit value per qualifying dependent
+value_dep:
+  value:
+    '2014': 0
+    '2020': 1100
+    '2021': 1400
+    '2022': 0
+    '2026': 600
+    '2027': 0
+
+# AGI phaseout threshold, joint returns
+po_thresh_married:
+  value:
+    '2014': 150000
+    '2026': 180000
+
+# AGI phaseout threshold, head of household returns
+po_thresh_head:
+  value:
+    '2014': 112500
+    '2026': 120000

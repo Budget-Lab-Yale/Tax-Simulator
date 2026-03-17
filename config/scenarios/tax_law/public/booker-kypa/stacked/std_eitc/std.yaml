@@ -10,7 +10,11 @@ value_single:
     '2026': 37500
     '2036': 15750
   i_measure: default
-  i_base_year: default
+  i_base_year:
+    '2014': 1987
+    '2018': 2017
+    '2026': 2025
+    '2036': 2024
   i_direction: default
   i_increment: default
 
@@ -22,6 +26,10 @@ value_head:
     '2026': 56250
     '2036': 23625
   i_measure: default
-  i_base_year: default
+  i_base_year:
+    '2014': 1987
+    '2018': 2017
+    '2026': 2025
+    '2036': 2024
   i_direction: default
   i_increment: default
