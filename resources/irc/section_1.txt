@@ -1,0 +1,1057 @@
+26 U.S. Code Section 1 - Tax imposed (rates, brackets, capital gains)
+Source: https://www.law.cornell.edu/uscode/text/26/1
+============================================================
+
+(a) Married individuals filing joint returns and surviving spousesThere is hereby imposed on the taxable income of—
+
+(1)
+
+every married individual (as defined in section 7703) who makes a single return jointly with his spouse under section 6013, and
+
+(2)
+
+every surviving spouse (as defined in section 2(a)),
+
+a tax determined in accordance with the following table:
+
+If taxable income is:
+
+The tax is:
+
+Not over $36,900
+
+15% of taxable income.
+
+Over $36,900 but not over $89,150
+
+$5,535, plus 28% of the excess over $36,900.
+
+Over $89,150 but not over $140,000
+
+$20,165, plus 31% of the excess over $89,150.
+
+Over $140,000 but not over $250,000
+
+$35,928.50, plus 36% of the excess over $140,000.
+
+Over $250,000
+
+$75,528.50, plus 39.6% of the excess over $250,000.
+
+(b) Heads of households
+
+There is hereby imposed on the taxable income of every head of a household (as defined in section 2(b)) a tax determined in accordance with the following table:
+
+If taxable income is:
+
+The tax is:
+
+Not over $29,600
+
+15% of taxable income.
+
+Over $29,600 but not over $76,400
+
+$4,440, plus 28% of the excess over $29,600.
+
+Over $76,400 but not over $127,500
+
+$17,544, plus 31% of the excess over $76,400.
+
+Over $127,500 but not over $250,000
+
+$33,385, plus 36% of the excess over $127,500.
+
+Over $250,000
+
+$77,485, plus 39.6% of the excess over $250,000.
+
+(c) Unmarried individuals (other than surviving spouses and heads of households)
+
+There is hereby imposed on the taxable income of every individual (other than a surviving spouse as defined in section 2(a) or the head of a household as defined in section 2(b)) who is not a married individual (as defined in section 7703) a tax determined in accordance with the following table:
+
+If taxable income is:
+
+The tax is:
+
+Not over $22,100
+
+15% of taxable income.
+
+Over $22,100 but not over $53,500
+
+$3,315, plus 28% of the excess over $22,100.
+
+Over $53,500 but not over $115,000
+
+$12,107, plus 31% of the excess over $53,500.
+
+Over $115,000 but not over $250,000
+
+$31,172, plus 36% of the excess over $115,000.
+
+Over $250,000
+
+$79,772, plus 39.6% of the excess over $250,000.
+
+(d) Married individuals filing separate returns
+
+There is hereby imposed on the taxable income of every married individual (as defined in section 7703) who does not make a single return jointly with his spouse under section 6013, a tax determined in accordance with the following table:
+
+If taxable income is:
+
+The tax is:
+
+Not over $18,450
+
+15% of taxable income.
+
+Over $18,450 but not over $44,575
+
+$2,767.50, plus 28% of the excess over $18,450.
+
+Over $44,575 but not over $70,000
+
+$10,082.50, plus 31% of the excess over $44,575.
+
+Over $70,000 but not over $125,000
+
+$17,964.25, plus 36% of the excess over $70,000.
+
+Over $125,000
+
+$37,764.25, plus 39.6% of the excess over $125,000.
+
+(e) Estates and trustsThere is hereby imposed on the taxable income of—
+
+(1)
+
+every estate, and
+
+(2)
+
+every trust,
+
+taxable under this subsection a tax determined in accordance with the following table:
+
+If taxable income is:
+
+The tax is:
+
+Not over $1,500
+
+15% of taxable income.
+
+Over $1,500 but not over $3,500
+
+$225, plus 28% of the excess over $1,500.
+
+Over $3,500 but not over $5,500
+
+$785, plus 31% of the excess over $3,500.
+
+Over $5,500 but not over $7,500
+
+$1,405, plus 36% of the excess over $5,500.
+
+Over $7,500
+
+$2,125, plus 39.6% of the excess over $7,500.
+
+(f) Phaseout of marriage penalty in 15-percent bracket; adjustments in tax tables so that inflation will not result in tax increases
+
+(1) In general
+
+Not later than December 15 of 1993, and each subsequent calendar year, the Secretary shall prescribe tables which shall apply in lieu of the tables contained in subsections (a), (b), (c), (d), and (e) with respect to taxable years beginning in the succeeding calendar year.
+
+(2) Method of prescribing tablesThe table which under paragraph (1) is to apply in lieu of the table contained in subsection (a), (b), (c), (d), or (e), as the case may be, with respect to taxable years beginning in any calendar year shall be prescribed—
+
+(A) except as provided in paragraph (8), by increasing the minimum and maximum dollar amounts for each bracket for which a tax is imposed under such table by the cost-of-living adjustment for such calendar year, determined—
+
+(i)
+
+except as provided in clause (ii), by substituting “1992” for “2016” in paragraph (3)(A)(ii), and
+
+(ii)
+
+in the case of adjustments to the dollar amounts at which the 36 percent rate bracket begins or at which the 39.6 percent rate bracket begins, by substituting “1993” for “2016” in paragraph (3)(A)(ii),
+
+(B)
+
+by not changing the rate applicable to any rate bracket as adjusted under subparagraph (A), and
+
+(C)
+
+by adjusting the amounts setting forth the tax to the extent necessary to reflect the adjustments in the rate brackets.
+
+(3) Cost-of-living adjustmentFor purposes of this subsection—
+
+(A) In generalThe cost-of-living adjustment for any calendar year is the percentage (if any) by which—
+
+(i)
+
+the C-CPI-U for the preceding calendar year, exceeds
+
+(ii)
+
+the CPI for calendar year 2016, multiplied by the amount determined under subparagraph (B).
+
+(B) Amount determinedThe amount determined under this clause is the amount obtained by dividing—
+
+(i)
+
+the C-CPI-U for calendar year 2016, by
+
+(ii)
+
+the CPI for calendar year 2016.
+
+(C) Special rule for adjustments with a base year after 2016
+
+For purposes of any provision of this title which provides for the substitution of a year after 2016 for “2016” in subparagraph (A)(ii), subparagraph (A) shall be applied by substituting “the C-CPI-U for calendar year 2016” for “the CPI for calendar year 2016” and all that follows in clause (ii) thereof.
+
+(4) CPI for any calendar year
+
+For purposes of paragraph (3), the CPI for any calendar year is the average of the Consumer Price Index as of the close of the 12-month period ending on August 31 of such calendar year.
+
+(5) Consumer Price Index
+
+For purposes of paragraph (4), the term “Consumer Price Index” means the last Consumer Price Index for all-urban consumers published by the Department of Labor. For purposes of the preceding sentence, the revision of the Consumer Price Index which is most consistent with the Consumer Price Index for calendar year 1986 shall be used.
+
+(6) C-CPI-UFor purposes of this subsection—
+
+(A) In general
+
+The term “C-CPI-U” means the Chained Consumer Price Index for All Urban Consumers (as published by the Bureau of Labor Statistics of the Department of Labor). The values of the Chained Consumer Price Index for All Urban Consumers taken into account for purposes of determining the cost-of-living adjustment for any calendar year under this subsection shall be the latest values so published as of the date on which such Bureau publishes the initial value of the Chained Consumer Price Index for All Urban Consumers for the month of August for the preceding calendar year.
+
+(B) Determination for calendar year
+
+The C-CPI-U for any calendar year is the average of the C-CPI-U as of the close of the 12-month period ending on August 31 of such calendar year.
+
+(7) Rounding
+
+(A) In general
+
+If any increase determined under paragraph (2)(A), section 63(c)(4), section 68(b)(2) [1] or section 151(d)(4) is not a multiple of $50, such increase shall be rounded to the next lowest multiple of $50.
+
+(B) Table for married individuals filing separately
+
+In the case of a married individual filing a separate return, subparagraph (A) (other than with respect to sections 63(c)(4) and 151(d)(4)(A)) shall be applied by substituting “$25” for “$50” each place it appears.
+
+(8) Elimination of marriage penalty in 15-percent bracketWith respect to taxable years beginning after December 31, 2003, in prescribing the tables under paragraph (1)—
+
+(A)
+
+the maximum taxable income in the 15-percent rate bracket in the table contained in subsection (a) (and the minimum taxable income in the next higher taxable income bracket in such table) shall be 200 percent of the maximum taxable income in the 15-percent rate bracket in the table contained in subsection (c) (after any other adjustment under this subsection), and
+
+(B)
+
+the comparable taxable income amounts in the table contained in subsection (d) shall be ½ of the amounts determined under subparagraph (A).
+
+(g) Certain unearned income of children taxed as if parent’s income
+
+(1) In generalIn the case of any child to whom this subsection applies, the tax imposed by this section shall be equal to the greater of—
+
+(A)
+
+the tax imposed by this section without regard to this subsection, or
+
+(B) the sum of—
+
+(i)
+
+the tax which would be imposed by this section if the taxable income of such child for the taxable year were reduced by the net unearned income of such child, plus
+
+(ii)
+
+such child’s share of the allocable parental tax.
+
+(2) Child to whom subsection appliesThis subsection shall apply to any child for any taxable year if—
+
+(A) such child—
+
+(i)
+
+has not attained age 18 before the close of the taxable year, or
+
+(ii)
+
+(I)
+
+has attained age 18 before the close of the taxable year and meets the age requirements of section 152(c)(3) (determined without regard to subparagraph (B) thereof), and
+
+(II)
+
+whose earned income (as defined in section 911(d)(2)) for such taxable year does not exceed one-half of the amount of the individual’s support (within the meaning of section 152(c)(1)(D) after the application of section 152(f)(5) (without regard to subparagraph (A) thereof)) for such taxable year,
+
+(B)
+
+either parent of such child is alive at the close of the taxable year, and
+
+(C)
+
+such child does not file a joint return for the taxable year.
+
+(3) Allocable parental taxFor purposes of this subsection—
+
+(A) In generalThe term “allocable parental tax” means the excess of—
+
+(i)
+
+the tax which would be imposed by this section on the parent’s taxable income if such income included the net unearned income of all children of the parent to whom this subsection applies, over
+
+(ii)
+
+the tax imposed by this section on the parent without regard to this subsection.
+
+For purposes of clause (i), net unearned income of all children of the parent shall not be taken into account in computing any exclusion, deduction, or credit of the parent.
+
+(B) Child’s share
+
+A child’s share of any allocable parental tax of a parent shall be equal to an amount which bears the same ratio to the total allocable parental tax as the child’s net unearned income bears to the aggregate net unearned income of all children of such parent to whom this subsection applies.
+
+(C) Special rule where parent has different taxable year
+
+Except as provided in regulations, if the parent does not have the same taxable year as the child, the allocable parental tax shall be determined on the basis of the taxable year of the parent ending in the child’s taxable year.
+
+(4) Net unearned incomeFor purposes of this subsection—
+
+(A) In generalThe term “net unearned income” means the excess of—
+
+(i)
+
+the portion of the adjusted gross income for the taxable year which is not attributable to earned income (as defined in section 911(d)(2)), over
+
+(ii) the sum of—
+
+(I)
+
+the amount in effect for the taxable year under section 63(c)(5)(A) (relating to limitation on standard deduction in the case of certain dependents), plus
+
+(II)
+
+the greater of the amount described in subclause (I) or, if the child itemizes his deductions for the taxable year, the amount of the itemized deductions allowed by this chapter for the taxable year which are directly connected with the production of the portion of adjusted gross income referred to in clause (i).
+
+(B) Limitation based on taxable income
+
+The amount of the net unearned income for any taxable year shall not exceed the individual’s taxable income for such taxable year.
+
+(C) Treatment of distributions from qualified disability trusts
+
+For purposes of this subsection, in the case of any child who is a beneficiary of a qualified disability trust (as defined in section 642(b)(2)(C)(ii)), any amount included in the income of such child under sections 652 and 662 during a taxable year shall be considered earned income of such child for such taxable year.
+
+(5) Special rules for determining parent to whom subsection appliesFor purposes of this subsection, the parent whose taxable income shall be taken into account shall be—
+
+(A)
+
+in the case of parents who are not married (within the meaning of section 7703), the custodial parent (within the meaning of section 152(e)) of the child, and
+
+(B)
+
+in the case of married individuals filing separately, the individual with the greater taxable income.
+
+(6) Providing of parent’s TIN
+
+The parent of any child to whom this subsection applies for any taxable year shall provide the TIN of such parent to such child and such child shall include such TIN on the child’s return of tax imposed by this section for such taxable year.
+
+(7) Election to claim certain unearned income of child on parent’s return
+
+(A) In generalIf—
+
+(i)
+
+any child to whom this subsection applies has gross income for the taxable year only from interest and dividends (including Alaska Permanent Fund dividends),
+
+(ii)
+
+such gross income is more than the amount described in paragraph (4)(A)(ii)(I) and less than 10 times the amount so described,
+
+(iii)
+
+no estimated tax payments for such year are made in the name and TIN of such child, and no amount has been deducted and withheld under section 3406, and
+
+(iv)
+
+the parent of such child (as determined under paragraph (5)) elects the application of subparagraph (B),
+
+such child shall be treated (other than for purposes of this paragraph) as having no gross income for such year and shall not be required to file a return under section 6012.
+
+(B) Income included on parent’s returnIn the case of a parent making the election under this paragraph—
+
+(i)
+
+the gross income of each child to whom such election applies (to the extent the gross income of such child exceeds twice the amount described in paragraph (4)(A)(ii)(I)) shall be included in such parent’s gross income for the taxable year,
+
+(ii) the tax imposed by this section for such year with respect to such parent shall be the amount equal to the sum of—
+
+(I)
+
+the amount determined under this section after the application of clause (i), plus
+
+(II)
+
+for each such child, 10 percent of the lesser of the amount described in paragraph (4)(A)(ii)(I) or the excess of the gross income of such child over the amount so described, and
+
+(iii)
+
+any interest which is an item of tax preference under section 57(a)(5) of the child shall be treated as an item of tax preference of such parent (and not of such child).
+
+(C) Regulations
+
+The Secretary shall prescribe such regulations as may be necessary or appropriate to carry out the purposes of this paragraph.
+
+(h) Maximum capital gains rate
+
+(1) In generalIf a taxpayer has a net capital gain for any taxable year, the tax imposed by this section for such taxable year shall not exceed the sum of—
+
+(A) a tax computed at the rates and in the same manner as if this subsection had not been enacted on the greater of—
+
+(i)
+
+taxable income reduced by the net capital gain; or
+
+(ii) the lesser of—
+
+(I)
+
+the amount of taxable income taxed at a rate below 25 percent; or
+
+(II)
+
+taxable income reduced by the adjusted net capital gain;
+
+(B) 0 percent of so much of the adjusted net capital gain (or, if less, taxable income) as does not exceed the excess (if any) of—
+
+(i)
+
+the amount of taxable income which would (without regard to this paragraph) be taxed at a rate below 25 percent, over
+
+(ii)
+
+the taxable income reduced by the adjusted net capital gain;
+
+(C) 15 percent of the lesser of—
+
+(i)
+
+so much of the adjusted net capital gain (or, if less, taxable income) as exceeds the amount on which a tax is determined under subparagraph (B), or
+
+(ii) the excess of—
+
+(I)
+
+the amount of taxable income which would (without regard to this paragraph) be taxed at a rate below 39.6 percent, over
+
+(II)
+
+the sum of the amounts on which a tax is determined under subparagraphs (A) and (B),
+
+(D)
+
+20 percent of the adjusted net capital gain (or, if less, taxable income) in excess of the sum of the amounts on which tax is determined under subparagraphs (B) and (C),
+
+(E) 25 percent of the excess (if any) of—
+
+(i)
+
+the unrecaptured section 1250 gain (or, if less, the net capital gain (determined without regard to paragraph (11))), over
+
+(ii) the excess (if any) of—
+
+(I)
+
+the sum of the amount on which tax is determined under subparagraph (A) plus the net capital gain, over
+
+(II)
+
+taxable income; and
+
+(F)
+
+28 percent of the amount of taxable income in excess of the sum of the amounts on which tax is determined under the preceding subparagraphs of this paragraph.
+
+(2) Net capital gain taken into account as investment income
+
+For purposes of this subsection, the net capital gain for any taxable year shall be reduced (but not below zero) by the amount which the taxpayer takes into account as investment income under section 163(d)(4)(B)(iii).
+
+(3) Adjusted net capital gainFor purposes of this subsection, the term “adjusted net capital gain” means the sum of—
+
+(A) net capital gain (determined without regard to paragraph (11)) reduced (but not below zero) by the sum of—
+
+(i)
+
+unrecaptured section 1250 gain, and
+
+(ii)
+
+28-percent rate gain, plus
+
+(B)
+
+qualified dividend income (as defined in paragraph (11)).
+
+(4) 28-percent rate gainFor purposes of this subsection, the term “28-percent rate gain” means the excess (if any) of—
+
+(A) the sum of—
+
+(i)
+
+collectibles gain; and
+
+(ii)
+
+section 1202 gain, over
+
+(B) the sum of—
+
+(i)
+
+collectibles loss;
+
+(ii)
+
+the net short-term capital loss; and
+
+(iii)
+
+the amount of long-term capital loss carried under section 1212(b)(1)(B) to the taxable year.
+
+(5) Collectibles gain and lossFor purposes of this subsection—
+
+(A) In general
+
+The terms “collectibles gain” and “collectibles loss” mean gain or loss (respectively) from the sale or exchange of a collectible (as defined in section 408(m) without regard to paragraph (3) thereof) which is a capital asset held for more than 1 year but only to the extent such gain is taken into account in computing gross income and such loss is taken into account in computing taxable income.
+
+(B) Partnerships, etc.
+
+For purposes of subparagraph (A), any gain from the sale of an interest in a partnership, S corporation, or trust which is attributable to unrealized appreciation in the value of collectibles shall be treated as gain from the sale or exchange of a collectible. Rules similar to the rules of section 751 shall apply for purposes of the preceding sentence.
+
+(6) Unrecaptured section 1250 gainFor purposes of this subsection—
+
+(A) In generalThe term “unrecaptured section 1250 gain” means the excess (if any) of—
+
+(i)
+
+the amount of long-term capital gain (not otherwise treated as ordinary income) which would be treated as ordinary income if section 1250(b)(1) included all depreciation and the applicable percentage under section 1250(a) were 100 percent, over
+
+(ii) the excess (if any) of—
+
+(I)
+
+the amount described in paragraph (4)(B); over
+
+(II)
+
+the amount described in paragraph (4)(A).
+
+(B) Limitation with respect to section 1231 property
+
+The amount described in subparagraph (A)(i) from sales, exchanges, and conversions described in section 1231(a)(3)(A) for any taxable year shall not exceed the net section 1231 gain (as defined in section 1231(c)(3)) for such year.
+
+(7) Section 1202 gainFor purposes of this subsection, the term “section 1202 gain” means the excess of—
+
+(A)
+
+the gain which would be excluded from gross income under section 1202 but for the percentage limitation in section 1202(a), over
+
+(B)
+
+the gain excluded from gross income under section 1202.
+
+(8) Coordination with recapture of net ordinary losses under section 1231
+
+If any amount is treated as ordinary income under section 1231(c), such amount shall be allocated among the separate categories of net section 1231 gain (as defined in section 1231(c)(3)) in such manner as the Secretary may by forms or regulations prescribe.
+
+(9) Regulations
+
+The Secretary may prescribe such regulations as are appropriate (including regulations requiring reporting) to apply this subsection in the case of sales and exchanges by pass-thru entities and of interests in such entities.
+
+(10) Pass-thru entity definedFor purposes of this subsection, the term “pass-thru entity” means—
+
+(A)
+
+a regulated investment company;
+
+(B)
+
+a real estate investment trust;
+
+(C)
+
+an S corporation;
+
+(D)
+
+a partnership;
+
+(E)
+
+an estate or trust;
+
+(F)
+
+a common trust fund; and
+
+(G)
+
+a qualified electing fund (as defined in section 1295).
+
+(11) Dividends taxed as net capital gain
+
+(A) In general
+
+For purposes of this subsection, the term “net capital gain” means net capital gain (determined without regard to this paragraph) increased by qualified dividend income.
+
+(B) Qualified dividend incomeFor purposes of this paragraph—
+
+(i) In generalThe term “qualified dividend income” means dividends received during the taxable year from—
+
+(I)
+
+domestic corporations, and
+
+(II)
+
+qualified foreign corporations.
+
+(ii) Certain dividends excludedSuch term shall not include—
+
+(I)
+
+any dividend from a corporation which for the taxable year of the corporation in which the distribution is made, or the preceding taxable year, is a corporation exempt from tax under section 501 or 521,
+
+(II)
+
+any amount allowed as a deduction under section 591 (relating to deduction for dividends paid by mutual savings banks, etc.), and
+
+(III)
+
+any dividend described in section 404(k).
+
+(iii) Coordination with section 246(c)Such term shall not include any dividend on any share of stock—
+
+(I)
+
+with respect to which the holding period requirements of section 246(c) are not met (determined by substituting in section 246(c) “60 days” for “45 days” each place it appears and by substituting “121-day period” for “91-day period”), or
+
+(II)
+
+to the extent that the taxpayer is under an obligation (whether pursuant to a short sale or otherwise) to make related payments with respect to positions in substantially similar or related property.
+
+(C) Qualified foreign corporations
+
+(i) In generalExcept as otherwise provided in this paragraph, the term “qualified foreign corporation” means any foreign corporation if—
+
+(I)
+
+such corporation is incorporated in a possession of the United States, or
+
+(II)
+
+such corporation is eligible for benefits of a comprehensive income tax treaty with the United States which the Secretary determines is satisfactory for purposes of this paragraph and which includes an exchange of information program.
+
+(ii) Dividends on stock readily tradable on United States securities market
+
+A foreign corporation not otherwise treated as a qualified foreign corporation under clause (i) shall be so treated with respect to any dividend paid by such corporation if the stock with respect to which such dividend is paid is readily tradable on an established securities market in the United States.
+
+(iii) Exclusion of dividends of certain foreign corporationsSuch term shall not include—
+
+(I)
+
+any foreign corporation which for the taxable year of the corporation in which the dividend was paid, or the preceding taxable year, is a passive foreign investment company (as defined in section 1297), and
+
+(II)
+
+any corporation which first becomes a surrogate foreign corporation (as defined in section 7874(a)(2)(B)) after the date of the enactment of this subclause, other than a foreign corporation which is treated as a domestic corporation under section 7874(b).
+
+(iv) Coordination with foreign tax credit limitation
+
+Rules similar to the rules of section 904(b)(2)(B) shall apply with respect to the dividend rate differential under this paragraph.
+
+(D) Special rules
+
+(i) Amounts taken into account as investment income
+
+Qualified dividend income shall not include any amount which the taxpayer takes into account as investment income under section 163(d)(4)(B).
+
+(ii) Extraordinary dividends
+
+If a taxpayer to whom this section applies receives, with respect to any share of stock, qualified dividend income from 1 or more dividends which are extraordinary dividends (within the meaning of section 1059(c)), any loss on the sale or exchange of such share shall, to the extent of such dividends, be treated as long-term capital loss.
+
+(iii) Treatment of dividends from regulated investment companies and real estate investment trusts
+
+A dividend received from a regulated investment company or a real estate investment trust shall be subject to the limitations prescribed in sections 854 and 857.
+
+(i) Rate reductions after 2000
+
+(1) 10-percent rate bracket
+
+(A) In generalIn the case of taxable years beginning after December 31, 2000—
+
+(i)
+
+the rate of tax under subsections (a), (b), (c), and (d) on taxable income not over the initial bracket amount shall be 10 percent, and
+
+(ii)
+
+the 15 percent rate of tax shall apply only to taxable income over the initial bracket amount but not over the maximum dollar amount for the 15-percent rate bracket.
+
+(B) Initial bracket amountFor purposes of this paragraph, the initial bracket amount is—
+
+(i)
+
+$14,000 in the case of subsection (a),
+
+(ii)
+
+$10,000 in the case of subsection (b), and
+
+(iii)
+
+½ the amount applicable under clause (i) (after adjustment, if any, under subparagraph (C)) in the case of subsections (c) and (d).
+
+(C) Inflation adjustmentIn prescribing the tables under subsection (f) which apply with respect to taxable years beginning in calendar years after 2003—
+
+(i)
+
+the cost-of-living adjustment shall be determined under subsection (f)(3) by substituting “2002” for “2016” in subparagraph (A)(ii) thereof, and
+
+(ii)
+
+the adjustments under clause (i) shall not apply to the amount referred to in subparagraph (B)(iii).
+
+If any amount after adjustment under the preceding sentence is not a multiple of $50, such amount shall be rounded to the next lowest multiple of $50.
+
+(2) 25-, 28-, and 33-percent rate bracketsThe tables under subsections (a), (b), (c), (d), and (e) shall be applied—
+
+(A)
+
+by substituting “25%” for “28%” each place it appears (before the application of subparagraph (B)),
+
+(B)
+
+by substituting “28%” for “31%” each place it appears, and
+
+(C)
+
+by substituting “33%” for “36%” each place it appears.
+
+(3) Modifications to income tax brackets for high-income taxpayers
+
+(A) 35-percent rate bracketIn the case of taxable years beginning after December 31, 2012—
+
+(i) the rate of tax under subsections (a), (b), (c), and (d) on a taxpayer’s taxable income in the highest rate bracket shall be 35 percent to the extent such income does not exceed an amount equal to the excess of—
+
+(I)
+
+the applicable threshold, over
+
+(II)
+
+the dollar amount at which such bracket begins, and
+
+(ii)
+
+the 39.6 percent rate of tax under such subsections shall apply only to the taxpayer’s taxable income in such bracket in excess of the amount to which clause (i) applies.
+
+(B) Applicable thresholdFor purposes of this paragraph, the term “applicable threshold” means—
+
+(i)
+
+$450,000 in the case of subsection (a),
+
+(ii)
+
+$425,000 in the case of subsection (b),
+
+(iii)
+
+$400,000 in the case of subsection (c), and
+
+(iv)
+
+½ the amount applicable under clause (i) (after adjustment, if any, under subparagraph (C)) in the case of subsection (d).
+
+(C) Inflation adjustment
+
+For purposes of this paragraph, with respect to taxable years beginning in calendar years after 2013, each of the dollar amounts under clauses (i), (ii), and (iii) of subparagraph (B) shall be adjusted in the same manner as under paragraph (1)(C)(i), except that subsection (f)(3)(A)(ii) shall be applied by substituting “2012” for “2016”.
+
+(4) Adjustment of tables
+
+The Secretary shall adjust the tables prescribed under subsection (f) to carry out this subsection.
+
+(j) Modifications for taxable years beginning after 2017
+
+(1) In generalIn the case of a taxable year beginning after December 31, 2017—
+
+(A)
+
+subsection (i) shall not apply, and
+
+(B)
+
+this section (other than subsection (i)) shall be applied as provided in paragraphs (2) through (6).
+
+(2) Rate tables
+
+(A) Married individuals filing joint returns and surviving spouses
+
+The following table shall be applied in lieu of the table contained in subsection (a):
+
+If taxable income is:
+
+The tax is:
+
+Not over $19,050
+
+10% of taxable income.
+
+Over $19,050 but not over $77,400
+
+$1,905, plus 12% of the excess over $19,050.
+
+Over $77,400 but not over $165,000
+
+$8,907, plus 22% of the excess over $77,400.
+
+Over $165,000 but not over $315,000
+
+$28,179, plus 24% of the excess over $165,000.
+
+Over $315,000 but not over $400,000
+
+$64,179, plus 32% of the excess over $315,000.
+
+Over $400,000 but not over $600,000
+
+$91,379, plus 35% of the excess over $400,000.
+
+Over $600,000
+
+$161,379, plus 37% of the excess over $600,000.
+
+(B) Heads of households
+
+The following table shall be applied in lieu of the table contained in subsection (b):
+
+If taxable income is:
+
+The tax is:
+
+Not over $13,600
+
+10% of taxable income.
+
+Over $13,600 but not over $51,800
+
+$1,360, plus 12% of the excess over $13,600.
+
+Over $51,800 but not over $82,500
+
+$5,944, plus 22% of the excess over $51,800.
+
+Over $82,500 but not over $157,500
+
+$12,698, plus 24% of the excess over $82,500.
+
+Over $157,500 but not over $200,000
+
+$30,698, plus 32% of the excess over $157,500.
+
+Over $200,000 but not over $500,000
+
+$44,298, plus 35% of the excess over $200,000.
+
+Over $500,000
+
+$149,298, plus 37% of the excess over $500,000.
+
+(C) Unmarried individuals other than surviving spouses and heads of households
+
+The following table shall be applied in lieu of the table contained in subsection (c):
+
+If taxable income is:
+
+The tax is:
+
+Not over $9,525
+
+10% of taxable income.
+
+Over $9,525 but not over $38,700
+
+$952.50, plus 12% of the excess over $9,525.
+
+Over $38,700 but not over $82,500
+
+$4,453.50, plus 22% of the excess over $38,700.
+
+Over $82,500 but not over $157,500
+
+$14,089.50, plus 24% of the excess over $82,500.
+
+Over $157,500 but not over $200,000
+
+$32,089.50, plus 32% of the excess over $157,500.
+
+Over $200,000 but not over $500,000
+
+$45,689.50, plus 35% of the excess over $200,000.
+
+Over $500,000
+
+$150,689.50, plus 37% of the excess over $500,000.
+
+(D) Married individuals filing separate returns
+
+The following table shall be applied in lieu of the table contained in subsection (d):
+
+If taxable income is:
+
+The tax is:
+
+Not over $9,525
+
+10% of taxable income.
+
+Over $9,525 but not over $38,700
+
+$952.50, plus 12% of the excess over $9,525.
+
+Over $38,700 but not over $82,500
+
+$4,453.50, plus 22% of the excess over $38,700.
+
+Over $82,500 but not over $157,500
+
+$14,089.50, plus 24% of the excess over $82,500.
+
+Over $157,500 but not over $200,000
+
+$32,089.50, plus 32% of the excess over $157,500.
+
+Over $200,000 but not over $300,000
+
+$45,689.50, plus 35% of the excess over $200,000.
+
+Over $300,000
+
+$80,689.50, plus 37% of the excess over $300,000.
+
+(E) Estates and trusts
+
+The following table shall be applied in lieu of the table contained in subsection (e):
+
+If taxable income is:
+
+The tax is:
+
+Not over $2,550
+
+10% of taxable income.
+
+Over $2,550 but not over $9,150
+
+$255, plus 24% of the excess over $2,550.
+
+Over $9,150 but not over $12,500
+
+$1,839, plus 35% of the excess over $9,150.
+
+Over $12,500
+
+$3,011.50, plus 37% of the excess over $12,500.
+
+(F) References to rate tables
+
+Any reference in this title to a rate of tax under subsection (c) shall be treated as a reference to the corresponding rate bracket under subparagraph (C) of this paragraph, except that the reference in section 3402(q)(1) to the third lowest rate of tax applicable under subsection (c) shall be treated as a reference to the fourth lowest rate of tax under subparagraph (C).
+
+(3) Adjustments
+
+(A) No adjustment in 2018
+
+The tables contained in paragraph (2) shall apply without adjustment for taxable years beginning after December 31, 2017, and before January 1, 2019.
+
+(B) Subsequent yearsFor taxable years beginning after December 31, 2018, the Secretary shall prescribe tables which shall apply in lieu of the tables contained in paragraph (2) in the same manner as under paragraphs (1) and (2) of subsection (f) (applied without regard to clauses (i) and (ii) of subsection (f)(2)(A)), except that in prescribing such tables—
+
+(i)
+
+solely for purposes of determining the dollar amounts at which any rate bracket higher than 12 percent ends and at which any rate bracket higher than 22 percent begins, subsection (f)(3) shall be applied by substituting “calendar year 2017” for “calendar year 2016” in subparagraph (A)(ii) thereof,
+
+(ii)
+
+subsection (f)(7)(B) shall apply to any unmarried individual other than a surviving spouse or head of household, and
+
+(iii)
+
+subsection (f)(8) shall not apply.
+
+[(4) Repealed. Pub. L. 116–94, div. O, title V, § 501(a), Dec. 20, 2019, 133 Stat. 3180]
+
+(5) Application of current income tax brackets to capital gains brackets
+
+(A) In generalSection 1(h)(1) shall be applied—
+
+(i)
+
+by substituting “below the maximum zero rate amount” for “which would (without regard to this paragraph) be taxed at a rate below 25 percent” in subparagraph (B)(i), and
+
+(ii)
+
+by substituting “below the maximum 15-percent rate amount” for “which would (without regard to this paragraph) be taxed at a rate below 39.6 percent” in subparagraph (C)(ii)(I).
+
+(B) Maximum amounts definedFor purposes of applying section 1(h) with the modifications described in subparagraph (A)—
+
+(i) Maximum zero rate amountThe maximum zero rate amount shall be—
+
+(I)
+
+in the case of a joint return or surviving spouse, $77,200,
+
+(II)
+
+in the case of an individual who is a head of household (as defined in section 2(b)), $51,700,
+
+(III)
+
+in the case of any other individual (other than an estate or trust), an amount equal to ½ of the amount in effect for the taxable year under subclause (I), and
+
+(IV)
+
+in the case of an estate or trust, $2,600.
+
+(ii) Maximum 15-percent rate amountThe maximum 15-percent rate amount shall be—
+
+(I)
+
+in the case of a joint return or surviving spouse, $479,000 (½ such amount in the case of a married individual filing a separate return),
+
+(II)
+
+in the case of an individual who is the head of a household (as defined in section 2(b)), $452,400,
+
+(III)
+
+in the case of any other individual (other than an estate or trust), $425,800, and
+
+(IV)
+
+in the case of an estate or trust, $12,700.
+
+(C) Inflation adjustmentIn the case of any taxable year beginning after 2018, each of the dollar amounts in clauses (i) and (ii) of subparagraph (B) shall be increased by an amount equal to—
+
+(i)
+
+such dollar amount, multiplied by
+
+(ii)
+
+the cost-of-living adjustment determined under subsection (f)(3) for the calendar year in which the taxable year begins, determined by substituting “calendar year 2017” for “calendar year 2016” in subparagraph (A)(ii) thereof.
+
+If any increase under this subparagraph is not a multiple of $50, such increase shall be rounded to the next lowest multiple of $50.
+
+(6) Section 15 not to apply
+
+Section 15 shall not apply to any change in a rate of tax by reason of this subsection.
+
+(Aug. 16, 1954, ch. 736, 68A Stat. 5; Pub. L. 88–272, title I, § 111, Feb. 26, 1964, 78 Stat. 19; Pub. L. 89–809, title I, § 103(a)(2), Nov. 13, 1966, 80 Stat. 1550; Pub. L. 91–172, title VIII, § 803(a), Dec. 30, 1969, 83 Stat. 678; Pub. L. 95–30, title I, § 101(a), May 23, 1977, 91 Stat. 127; Pub. L. 95–600, title I, § 101(a), Nov. 6, 1978, 92 Stat. 2767; Pub. L. 97–34, title I, §§ 101(a), 104(a), Aug. 13, 1981, 95 Stat. 176, 188; Pub. L. 97–448, title I, § 101(a)(3), Jan. 12, 1983, 96 Stat. 2366; Pub. L. 99–514, title I, § 101(a), title III, § 302(a), title XIV, § 1411(a), Oct. 22, 1986, 100 Stat. 2096, 2218, 2714; Pub. L. 100–647, title I, §§ 1001(a)(3), 1014(e)(1)–(3), (6), (7), title VI, § 6006(a), Nov. 10, 1988, 102 Stat. 3349, 3561, 3562, 3686; Pub. L. 101–239, title VII, §§ 7811(j)(1), 7816(b), 7831(a), Dec. 19, 1989, 103 Stat. 2411, 2420, 2425; Pub. L. 101–508, title XI, §§ 11101(a)–(c), (d)(1)(A), (2), 11103(c), 11104(b), Nov. 5, 1990, 104 Stat. 1388–403 to 1388–406, 1388–408; Pub. L. 103–66, title XIII, §§ 13201(a), (b)(3)(A), (B), 13202(a), 13206(d)(2), Aug. 10, 1993, 107 Stat. 457, 459, 461, 467; Pub. L. 104–188, title I, § 1704(m)(1), (2), Aug. 20, 1996, 110 Stat. 1882, 1883; Pub. L. 105–34, title III, § 311(a), Aug. 5, 1997, 111 Stat. 831; Pub. L. 105–206, title V, § 5001(a)(1)–(4), title VI, §§ 6005(d)(1), 6007(f)(1), July 22, 1998, 112 Stat. 787, 788, 800, 810; Pub. L. 105–277, div. J, title IV, § 4002(i)(1), (3), Oct. 21, 1998, 112 Stat. 2681–907, 2681–908; Pub. L. 106–554, § 1(a)(7) [title I, § 117(b)(1)], Dec. 21, 2000, 114 Stat. 2763, 2763A–604; Pub. L. 107–16, title I, § 101(a), (c)(1), (2), title III, §§ 301(c)(1), 302(a), (b), June 7, 2001, 115 Stat. 41, 43, 54; Pub. L. 108–27, title I, §§ 102(a), (b)(1), 104(a), (b), 105(a), title III, §§ 301(a)(1), (2)(A), (b)(1), 302(a), (e)(1), May 28, 2003, 117 Stat. 754, 755, 758, 760, 763; Pub. L. 108–311, title I, § 101(c), (d), title IV, §§ 402(a)(1)–(3), 408(a)(1), (2), Oct. 4, 2004, 118 Stat. 1167, 1168, 1184, 1190; Pub. L. 108–357, title IV, § 413(c)(1), Oct. 22, 2004, 118 Stat. 1506; Pub. L. 109–222, title V, § 510(a)—(c), May 17, 2006, 120 Stat. 364; Pub. L. 110–28, title VIII, § 8241(a), (b), May 25, 2007, 121 Stat. 199; Pub. L. 110–185, title I, § 101(f)(2), Feb. 13, 2008, 122 Stat. 617; Pub. L. 112–240, title I, §§ 101(b)(1), 102(b)(1), (c)(2), Jan. 2, 2013, 126 Stat. 2316, 2318, 2319; Pub. L. 113–295, div. A, title II, § 221(a)(1), Dec. 19, 2014, 128 Stat. 4037; Pub. L. 115–97, title I, §§ 11001(a), 11002(a)–(c), 14223(a), Dec. 22, 2017, 131 Stat. 2054, 2059, 2220; Pub. L. 116–94, div. O, title V, § 501(a), Dec. 20, 2019, 133 Stat. 3180; Pub. L. 119–21, title VII, § 70101(a), (b), July 4, 2025, 139 Stat. 158.)

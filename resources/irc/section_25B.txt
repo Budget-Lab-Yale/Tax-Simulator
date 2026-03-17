@@ -1,0 +1,137 @@
+26 U.S. Code Section 25B - Elective deferrals and IRA contributions (Saver's credit)
+Source: https://www.law.cornell.edu/uscode/text/26/25B
+============================================================
+
+(a) Allowance of credit
+
+In the case of an eligible individual, there shall be allowed as a credit against the tax imposed by this subtitle for the taxable year an amount equal to the applicable percentage of so much of the qualified retirement savings contributions of the eligible individual for the taxable year as do not exceed $2,000.
+
+(b) Applicable percentageFor purposes of this section—
+
+(1) Joint returnsIn the case of a joint return, the applicable percentage is—
+
+(A)
+
+if the adjusted gross income of the taxpayer is not over $30,000, 50 percent,
+
+(B)
+
+if the adjusted gross income of the taxpayer is over $30,000 but not over $32,500, 20 percent,
+
+(C)
+
+if the adjusted gross income of the taxpayer is over $32,500 but not over $50,000, 10 percent, and
+
+(D)
+
+if the adjusted gross income of the taxpayer is over $50,000, zero percent.
+
+(2) Other returnsIn the case of—
+
+(A)
+
+a head of household, the applicable percentage shall be determined under paragraph (1) except that such paragraph shall be applied by substituting for each dollar amount therein (as adjusted under paragraph (3)) a dollar amount equal to 75 percent of such dollar amount, and
+
+(B)
+
+any taxpayer not described in paragraph (1) or subparagraph (A), the applicable percentage shall be determined under paragraph (1) except that such paragraph shall be applied by substituting for each dollar amount therein (as adjusted under paragraph (3)) a dollar amount equal to 50 percent of such dollar amount.
+
+(3) Inflation adjustmentIn the case of any taxable year beginning in a calendar year after 2006, each of the dollar amounts in paragraph (1) shall be increased by an amount equal to—
+
+(A)
+
+such dollar amount, multiplied by
+
+(B)
+
+the cost-of-living adjustment determined under section 1(f)(3) for the calendar year in which the taxable year begins, determined by substituting “calendar year 2005” for “calendar year 2016” in subparagraph (A)(ii) thereof.
+
+Any increase determined under the preceding sentence shall be rounded to the nearest multiple of $500.
+
+(c) Eligible individualFor purposes of this section—
+
+(1) In general
+
+The term “eligible individual” means any individual if such individual has attained the age of 18 as of the close of the taxable year.
+
+(2) Dependents and full-time students not eligibleThe term “eligible individual” shall not include—
+
+(A)
+
+any individual with respect to whom a deduction under section 151 is allowed to another taxpayer for a taxable year beginning in the calendar year in which such individual’s taxable year begins, and
+
+(B)
+
+any individual who is a student (as defined in section 152(f)(2)).
+
+(d) Qualified retirement savings contributionsFor purposes of this section—
+
+(1) In generalThe term “qualified retirement savings contributions” means, with respect to any taxable year, the sum of—
+
+(A)
+
+the amount of contributions made by the eligible individual during such taxable year to the ABLE account (within the meaning of section 529A) of which such individual is the designated beneficiary, and
+
+(B) in the case of any taxable year beginning before January 1, 2027—
+
+(i)
+
+the amount of the qualified retirement contributions (as defined in section 219(e)) made by the eligible individual,
+
+(ii) the amount of—
+
+(I)
+
+any elective deferrals (as defined in section 402(g)(3)) of such individual, and
+
+(II)
+
+any elective deferral of compensation by such individual under an eligible deferred compensation plan (as defined in section 457(b)) of an eligible employer described in section 457(e)(1)(A), and
+
+(iii)
+
+the amount of voluntary employee contributions by such individual to any qualified retirement plan (as defined in section 4974(c)).
+
+(2) Reduction for certain distributions
+
+(A) In general
+
+The qualified retirement savings contributions determined under paragraph (1) shall be reduced (but not below zero) by the aggregate distributions received by the individual during the testing period from any entity of a type to which contributions under paragraph (1) may be made. The preceding sentence shall not apply to the portion of any distribution which is not includible in gross income by reason of a trustee-to-trustee transfer or a rollover distribution.
+
+(B) Testing periodFor purposes of subparagraph (A), the testing period, with respect to a taxable year, is the period which includes—
+
+(i)
+
+such taxable year,
+
+(ii)
+
+the 2 preceding taxable years, and
+
+(iii)
+
+the period after such taxable year and before the due date (including extensions) for filing the return of tax for such taxable year.
+
+(C) Excepted distributionsThere shall not be taken into account under subparagraph (A)—
+
+(i)
+
+any distribution referred to in section 72(p), 401(k)(8), 401(m)(6), 402(g)(2), 404(k), or 408(d)(4), and
+
+(ii)
+
+any distribution to which section 408A(d)(3) applies.
+
+(D) Treatment of distributions received by spouse of individual
+
+For purposes of determining distributions received by an individual under subparagraph (A) for any taxable year, any distribution received by the spouse of such individual shall be treated as received by such individual if such individual and spouse file a joint return for such taxable year and for the taxable year during which the spouse receives the distribution.
+
+(e) Adjusted gross income
+
+For purposes of this section, adjusted gross income shall be determined without regard to sections 911, 931, and 933.
+
+(f) Investment in the contract
+
+Notwithstanding any other provision of law, a qualified retirement savings contribution shall not fail to be included in determining the investment in the contract for purposes of section 72 by reason of the credit under this section.
+
+(Added and amended Pub. L. 107–16, title VI, § 618(a), (b)(1), June 7, 2001, 115 Stat. 106, 108; Pub. L. 107–147, title IV, §§ 411(m), 417(1), Mar. 9, 2002, 116 Stat. 48, 56; Pub. L. 108–311, title II, § 207(4), Oct. 4, 2004, 118 Stat. 1177; Pub. L. 109–135, title IV, § 402(i)(3)(D), Dec. 21, 2005, 119 Stat. 2614; Pub. L. 109–280, title VIII, §§ 812, 833(a), Aug. 17, 2006, 120 Stat. 997, 1003; Pub. L. 110–343, div. B, title I, § 106(e)(2)(C), title II, § 205(d)(1)(C), Oct. 3, 2008, 122 Stat. 3817, 3838; Pub. L. 111–5, div. B, title I, §§ 1004(b)(4), 1142(b)(1)(C), 1144(b)(1)(C), Feb. 17, 2009, 123 Stat. 314, 330, 332; Pub. L. 111–148, title X, § 10909(b)(2)(D), (c), Mar. 23, 2010, 124 Stat. 1023; Pub. L. 111–312, title I, § 101(b)(1), Dec. 17, 2010, 124 Stat. 3298; Pub. L. 112–240, title I, § 104(c)(2)(E), Jan. 2, 2013, 126 Stat. 2322; Pub. L. 115–97, title I, §§ 11002(d)(1)(C), 11024(b), Dec. 22, 2017, 131 Stat. 2060, 2076; Pub. L. 117–328, div. T, title I, § 103(e)(1), Dec. 29, 2022, 136 Stat. 5286; Pub. L. 119–21, title VII, § 70116(a)(1), (2), (b)(1), July 4, 2025, 139 Stat. 166, 167.)

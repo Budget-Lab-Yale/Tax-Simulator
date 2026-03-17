@@ -112,15 +112,17 @@ calc_agi = function(tax_unit, fill_missings = F) {
 
       # Calculate above-the-line deductions, excluding student loan interest deduction 
       char_above_ded  = pmin(char.above_limit, char_cash + char_noncash),
-      above_ded_ex_sl = ed_exp + 
-                        hsa_contr + 
-                        liab_seca_er + 
-                        keogh_contr + 
-                        se_health + 
-                        early_penalty + 
-                        alimony_exp * alimony_qualifies + 
+      above_ded_ex_sl = char_above_ded +
+                        other_above_ded +
+                        ed_exp +
+                        hsa_contr +
+                        liab_seca_er +
+                        keogh_contr +
+                        se_health +
+                        early_penalty +
+                        alimony_exp * alimony_qualifies +
                         trad_contr_ira +
-                        pmin(tuition_ded, agi.tuition_ded_limit) + 
+                        pmin(tuition_ded, agi.tuition_ded_limit) +
                         pmin(dpad, agi.dpad_limit),
 
       # Calculate auto loan interest deduction
