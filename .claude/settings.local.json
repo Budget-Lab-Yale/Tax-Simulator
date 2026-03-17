@@ -177,7 +177,9 @@
       "Bash(sbatch:*)",
       "Read(//vast/palmer/scratch/sarin/jar335/**)",
       "Bash(git log:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(for f:*)",
+      "Bash(do git:*)"
     ],
     "deny": [],
     "ask": []

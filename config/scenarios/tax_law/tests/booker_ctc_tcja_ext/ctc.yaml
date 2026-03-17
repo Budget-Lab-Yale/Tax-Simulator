@@ -9,6 +9,7 @@ need_ssn:
     '2018': 1
     '2021': 0
     '2022': 1
+    '2026': 0
 
 # Whether to express value for young children in levels
 young_level:
@@ -233,11 +234,16 @@ pi_thresh:
     '2018': 2500
     '2026': 0
 
-# Baby bonus: $2,400 additional refundable credit in birth year
+# Fold baby bonus into slot 2 so it goes through the main two-tier phaseout
+baby_bonus_in_credit:
+  value: 1
+
+# Baby bonus: increment over regular young-child monthly amount in birth month
+# (800% - 120%) x $300/mo = $2,040
 baby_bonus:
   value:
     '2014': 0
-    '2026': 2400
+    '2026': 2040
 
 # Phase in rate for baby bonus
 baby_bonus_pi_rate:

@@ -86,10 +86,11 @@ calc_ctc = function(tax_unit, fill_missings = F) {
     'ctc.pi_type',             # (int) whether phase-in type is a rate (0 means range)
     'ctc.pi_rate',             # (dbl) phase-in rate
     'ctc.pi_range',            # (dbl) phase-in range for total CTC (excluding nonqualifying dependent credit) 
+    'ctc.baby_bonus_in_credit', # (int) whether baby bonus is folded into slot 2 (1) or separate (0)
     'ctc.baby_bonus',          # (dbl) refundable credit for newborn child
-    'ctc.baby_bonus_pi_rate',  # (dbl) phase-in rate for baby bonus
-    'ctc.baby_bonus_po_rate',  # (dbl) phase-out rate for baby bonus
-    'ctc.baby_bonus_po_thresh' # (dbl) phase-out threshold for baby bonus (AGI)
+    'ctc.baby_bonus_pi_rate',  # (dbl) phase-in rate for baby bonus (used when baby_bonus_in_credit = 0)
+    'ctc.baby_bonus_po_rate',  # (dbl) phase-out rate for baby bonus (used when baby_bonus_in_credit = 0)
+    'ctc.baby_bonus_po_thresh' # (dbl) phase-out threshold for baby bonus (used when baby_bonus_in_credit = 0)
   )
   
   tax_unit %>% 
@@ -128,11 +129,13 @@ calc_ctc = function(tax_unit, fill_missings = F) {
       value_young2 = if_else(ctc.young_level == 1, ctc.value_young2, ctc.value_old2 + ctc.bonus_young2),
       
       # Calculate value before phase-in/out, including nonrefundable credit
-      # for other dependents
+      # for other dependents. When baby_bonus_in_credit == 1, baby bonus is
+      # added to slot 2 so it flows through the main two-tier phaseout.
       max_value1      = (value_young1 * n_young) + (ctc.value_old1 * n_old),
-      max_value2      = (value_young2 * n_young) + (ctc.value_old2 * n_old),
+      max_value2      = (value_young2 * n_young) + (ctc.value_old2 * n_old) +
+                        if_else(ctc.baby_bonus_in_credit == 1, n_0 * ctc.baby_bonus, 0),
       max_value_other = ctc.value_other * n_other,
-      max_value_baby  = n_0 * ctc.baby_bonus,
+      max_value_baby  = if_else(ctc.baby_bonus_in_credit == 1, 0, n_0 * ctc.baby_bonus),
       
       # Determine amount by which income exceeds phaseout thresholds
       excess1 = agi - ctc.po_thresh1,
