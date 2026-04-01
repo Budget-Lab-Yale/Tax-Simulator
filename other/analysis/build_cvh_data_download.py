@@ -19,8 +19,8 @@ from openpyxl.worksheet.hyperlink import Hyperlink
 # Paths
 # ---------------------------------------------------------------------------
 VINTAGE  = "202603120647"
-ROOT     = f"/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/{VINTAGE}"
-GDP_PATH = "/gpfs/gibbs/project/sarin/shared/model_data/Macro-Projections/v3/2026022522/baseline/projections.csv"
+ROOT     = f"/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/{VINTAGE}"
+GDP_PATH = "/nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections/v3/2026022522/baseline/projections.csv"
 OUT      = os.path.join(ROOT, "TBL-Data-CVH-202603.xlsx")
 
 YEAR_SHOW = 2026

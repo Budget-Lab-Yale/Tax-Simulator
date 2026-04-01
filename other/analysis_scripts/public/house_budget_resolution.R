@@ -13,19 +13,19 @@ library(Hmisc)
 #-----------
 
 # Read spending estimates from Safety-Net
-spending_estimates = read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Safety-Net/snap_medicaid_cy2026.csv')
+spending_estimates = read_csv('/nfs/roberts/project/pi_nrs36/shared/model_data/Safety-Net/snap_medicaid_cy2026.csv')
 
 # Read baseline and reform data
-baseline = read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1/202502191709/baseline/static/detail/2026.csv')
-reform   = read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1/202502191709/tcja/static/detail/2026.csv')
+baseline = read_csv('/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Simulator/v1/202502191709/baseline/static/detail/2026.csv')
+reform   = read_csv('/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Simulator/v1/202502191709/tcja/static/detail/2026.csv')
 
 # Read estate tax microdata 
-estate_tax_baseline = read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Estate-Tax-Distribution/v1/2025031317/baseline/estate_tax_detail_2026.csv')
-estate_tax_reform   = read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Estate-Tax-Distribution/v1/2025031317/tcja_ext/estate_tax_detail_2026.csv')
+estate_tax_baseline = read_csv('/nfs/roberts/project/pi_nrs36/shared/model_data/Estate-Tax-Distribution/v1/2025031317/baseline/estate_tax_detail_2026.csv')
+estate_tax_reform   = read_csv('/nfs/roberts/project/pi_nrs36/shared/model_data/Estate-Tax-Distribution/v1/2025031317/tcja_ext/estate_tax_detail_2026.csv')
 
 # Read cost recovery ratios
-cost_recovery_baseline = read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Cost-Recovery-Simulator/v1/2025031013/baseline/totals/recovery_ratios_form.csv')
-cost_recovery_reform   = read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Cost-Recovery-Simulator/v1/2025031013/r&d/totals/recovery_ratios_form.csv')
+cost_recovery_baseline = read_csv('/nfs/roberts/project/pi_nrs36/shared/model_data/Cost-Recovery-Simulator/v1/2025031013/baseline/totals/recovery_ratios_form.csv')
+cost_recovery_reform   = read_csv('/nfs/roberts/project/pi_nrs36/shared/model_data/Cost-Recovery-Simulator/v1/2025031013/r&d/totals/recovery_ratios_form.csv')
 
 # Net interest estimate in billions
 # Source: https://taxfoundation.org/research/all/federal/tax-cuts-and-jobs-act-tcja-permanent-analysis/

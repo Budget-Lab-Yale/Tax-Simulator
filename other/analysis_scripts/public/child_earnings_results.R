@@ -6,7 +6,7 @@
 library(tidyverse)
 
 # Set params
-output_root = '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1/202403261058/perm_arpa_ctc/'
+output_root = '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Simulator/v1/202403261058/perm_arpa_ctc/'
 years = 2026:2054
 
 #-----------
@@ -46,10 +46,10 @@ revenue_estimates = bind_rows(
 
 # Read indexed data
 revenue_estimates_indexed = bind_rows(
-  file.path('/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1/202403211024/perm_arpa_ctc_indexed/static/supplemental/revenue_estimates.csv') %>% 
+  file.path('/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Simulator/v1/202403211024/perm_arpa_ctc_indexed/static/supplemental/revenue_estimates.csv') %>% 
     read_csv() %>% 
     mutate(type = 'direct'), 
-  file.path('/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1/202403211024/perm_arpa_ctc_indexed/conventional/supplemental/revenue_estimates.csv') %>% 
+  file.path('/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Simulator/v1/202403211024/perm_arpa_ctc_indexed/conventional/supplemental/revenue_estimates.csv') %>% 
     read_csv() %>% 
     mutate(type = 'indirect')
   ) %>% 
@@ -57,7 +57,7 @@ revenue_estimates_indexed = bind_rows(
   mutate(indirect = indirect - direct) 
 
 # Macro projections
-projections = read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Macro-Projections/v3/2024021509/baseline/projections.csv')
+projections = read_csv('/nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections/v3/2024021509/baseline/projections.csv')
 
 
 #---------------------

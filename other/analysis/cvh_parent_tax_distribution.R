@@ -1,7 +1,7 @@
 library(data.table)
 library(ggplot2)
 
-out_root <- "/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/ctc_analysis"
+out_root <- "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/ctc_analysis"
 bl <- fread(file.path(out_root, "baseline/static/detail/2026.csv"),
             select = c("id", "weight", "agi", "dep_status", "n_dep_ctc", "liab_iit_net"))
 

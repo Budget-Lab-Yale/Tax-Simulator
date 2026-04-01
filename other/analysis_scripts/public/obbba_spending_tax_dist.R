@@ -11,9 +11,9 @@ library(tidyverse)
 # Set parameters
 #----------------
 
-tax_root      = '/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202506291832'
-spending_root = '/gpfs/gibbs/project/sarin/shared/model_data/Safety-Net/v1/202506300952'
-macro_root    = '/gpfs/gibbs/project/sarin/shared/model_data/Macro-Projections/v3/2025040115/baseline'
+tax_root      = '/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202506291832'
+spending_root = '/nfs/roberts/project/pi_nrs36/shared/model_data/Safety-Net/v1/202506300952'
+macro_root    = '/nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections/v3/2025040115/baseline'
 
 scenarios = c(
   'house_20250522',

@@ -8,7 +8,7 @@ library(scales)
 
 # --- Configuration -----------------------------------------------------------
 vintage   = '202603171031'
-out_root  = file.path('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1', vintage)
+out_root  = file.path('/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1', vintage)
 year_show = 2026
 
 # Stacked scenarios in cumulative order
@@ -613,7 +613,7 @@ rev_stacked = rev %>%
   select(year, `Increase in Standard Deduction`, `EITC Expansion`, `CTC Expansion`, `Increase in Top Rates`, Total)
 
 # Read GDP projections
-gdp = read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Macro-Projections/v3/2026022522/baseline/projections.csv',
+gdp = read_csv('/nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections/v3/2026022522/baseline/projections.csv',
                show_col_types = FALSE) %>%
   select(year, gdp_fy)
 

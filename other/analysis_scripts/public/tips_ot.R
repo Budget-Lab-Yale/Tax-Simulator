@@ -8,7 +8,7 @@ library(data.table)
 library(Hmisc)
 
 # Set root
-output_root = '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202409251552'
+output_root = '/nfs/roberts/scratch/pi_nrs36/jar335/Tax-Simulator/v1/202409251552'
 
 
 #-----------

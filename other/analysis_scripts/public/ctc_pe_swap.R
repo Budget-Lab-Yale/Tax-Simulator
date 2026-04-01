@@ -16,30 +16,30 @@ library(Hmisc)
 
 # Read microdata 
 results = bind_rows(
-  fread('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202504081630/baseline/static/detail/2018.csv') %>% 
+  fread('/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202504081630/baseline/static/detail/2018.csv') %>% 
     tibble() %>% 
     mutate(year = 2018, scenario = 'tcja'), 
-  fread('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202504081630/ctc/static/detail/2018.csv') %>% 
+  fread('/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202504081630/ctc/static/detail/2018.csv') %>% 
     tibble(year = 2018, ) %>% 
     mutate(scenario = 'ctc'),
-  fread('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202504081630/pe_dep/static/detail/2018.csv') %>% 
+  fread('/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202504081630/pe_dep/static/detail/2018.csv') %>% 
     tibble() %>% 
     mutate(year = 2018, scenario = 'pe_dep'), 
-  fread('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202504081635/ctc/static/detail/2026.csv') %>% 
+  fread('/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202504081635/ctc/static/detail/2026.csv') %>% 
     tibble() %>% 
     mutate(year = 2026, scenario = 'tcja'),
-  fread('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202504081635/pe_dep/static/detail/2026.csv') %>% 
+  fread('/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202504081635/pe_dep/static/detail/2026.csv') %>% 
     tibble() %>% 
     mutate(year = 2026, scenario = 'ctc'),
-  fread('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202504081635/pe_nondep/static/detail/2026.csv') %>% 
+  fread('/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202504081635/pe_nondep/static/detail/2026.csv') %>% 
     tibble() %>% 
     mutate(year = 2026, scenario = 'pe_dep')
 )
 
 # Read inflation projections
 inflation = bind_rows(
-  read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Macro-Projections/v3/2025021319/baseline/historical.csv'), 
-  read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Macro-Projections/v3/2025021319/baseline/projections.csv')
+  read_csv('/nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections/v3/2025021319/baseline/historical.csv'), 
+  read_csv('/nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections/v3/2025021319/baseline/projections.csv')
 ) %>% 
   select(year, ccpiu_irs)
 

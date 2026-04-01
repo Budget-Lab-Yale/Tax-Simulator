@@ -6,7 +6,7 @@
 library(tidyverse)
 library(data.table)
 
-output_root    = '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202403261909'
+output_root    = '/nfs/roberts/scratch/pi_nrs36/jar335/Tax-Simulator/v1/202403261909'
 first_year     = 2026
 years          = first_year:2097
 discount_rates = 0:5/100

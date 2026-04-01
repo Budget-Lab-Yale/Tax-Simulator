@@ -24,7 +24,7 @@ library(ggplot2)
 
 # --- Configuration -----------------------------------------------------------
 vintage   <- "202603120647"
-out_root  <- file.path("/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1", vintage)
+out_root  <- file.path("/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1", vintage)
 year_show <- 2026
 
 # --- Load data ---------------------------------------------------------------

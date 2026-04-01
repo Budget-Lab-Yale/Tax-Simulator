@@ -50,7 +50,7 @@ get_stacked_chart_data = function(type, scenario) {
     names() %>% 
     map(
       ~ file.path(
-        '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1',
+        '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Simulator/v1',
         stacked_dist_scenarios[[scenario]]$vintage,
         stacked_dist_scenarios[[scenario]]$provisions[.x],
         'static/supplemental', 
@@ -130,7 +130,7 @@ get_ati_data = function(type) {
     names() %>% 
     map(
       ~ file.path(
-        '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1',
+        '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Simulator/v1',
         ati_scenarios[[.x]]$vintage,
         ati_scenarios[[.x]]$provision,
         'static/supplemental', 
@@ -198,7 +198,7 @@ get_winners_losers_data = function(type) {
     names() %>% 
     map(
       ~ file.path(
-        '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1',
+        '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Simulator/v1',
         winners_losers_scenarios[[.x]]$vintage,
         winners_losers_scenarios[[.x]]$provision,
         'static/supplemental', 
@@ -246,7 +246,7 @@ c('age', 'income') %>%
 c('baseline', 'full_extension', 'sarin_clausing') %>% 
   map(
     ~ file.path(
-      '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1/202403101543/',
+      '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Simulator/v1/202403101543/',
       .x,
       'static/detail/2026.csv'  
     ) %>% 
@@ -292,7 +292,7 @@ c('baseline', 'full_extension', 'sarin_clausing') %>%
 c('full_extension', 'partial_extension', 'sarin_clausing') %>% 
   map(
     ~ file.path(
-      '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1/202403102353',
+      '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Simulator/v1/202403102353',
       .x,
       '/static/supplemental/child_earnings/outcomes_2050.csv') %>% 
       read_csv() %>% 

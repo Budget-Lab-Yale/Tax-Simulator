@@ -15,8 +15,8 @@ library(data.table)
 library(ggplot2)
 
 # --- Configuration -----------------------------------------------------------
-out_root_cl <- "/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/ctc_analysis"
-out_root_am <- "/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/ctc_analysis_altmax"
+out_root_cl <- "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/ctc_analysis"
+out_root_am <- "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/ctc_analysis_altmax"
 
 year_show <- 2026
 

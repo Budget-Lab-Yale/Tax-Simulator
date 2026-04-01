@@ -1,12 +1,12 @@
 library(tidyverse)
 
 
-tax_data = read_csv('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202505051342/tcja_ext/static/detail/2026.csv')
-ot_data  = read_csv('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202505051342/ot_with_guardrails/static/detail/2026.csv')
+tax_data = read_csv('/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202505051342/tcja_ext/static/detail/2026.csv')
+ot_data  = read_csv('/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202505051342/ot_with_guardrails/static/detail/2026.csv')
 
 tax_data = tax_data %>% 
   left_join(
-    read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Tax-Data/v1/2025042811/baseline/tax_units_2026.csv') %>% 
+    read_csv('/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1/2025042811/baseline/tax_units_2026.csv') %>% 
       select(id, ot), 
     by = 'id'
   ) %>% 
@@ -101,7 +101,7 @@ tax_data %>%
 
 library(haven) 
 
-raw_data = read_dta('/gpfs/gibbs/project/sarin/jar335/Repositories/Tax-Data/resources/otdata2023.dta')
+raw_data = read_dta('/nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Data/resources/otdata2023.dta')
 
 
 raw_data %>%

@@ -8,7 +8,7 @@ library(tidyverse)
 # Set parameters
 #----------------
 
-output_root = '/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202506281214'
+output_root = '/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202506281214'
 
 scenarios = c(
   'tcja',

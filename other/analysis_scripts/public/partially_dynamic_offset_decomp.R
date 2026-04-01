@@ -2,7 +2,7 @@
 
 
 
-output_root = '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1/202403202038'
+output_root = '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Simulator/v1/202403202038'
 
 
 # Overall
@@ -88,8 +88,8 @@ credits %>%
 
 
 # Who is getting less EITC under EK?
-static   = read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1/202403201907/edelberg_kearney/static/detail/2026.csv')
-behavior = read_csv('/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1/202403201907/edelberg_kearney/conventional/detail/2026.csv')
+static   = read_csv('/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Simulator/v1/202403201907/edelberg_kearney/static/detail/2026.csv')
+behavior = read_csv('/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Simulator/v1/202403201907/edelberg_kearney/conventional/detail/2026.csv')
 
 static %>% 
   select(id, filing_status, n_dep, sole_prop, wages_pre = wages, eitc_pre = eitc) %>% 

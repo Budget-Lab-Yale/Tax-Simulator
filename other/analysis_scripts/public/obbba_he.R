@@ -10,7 +10,7 @@ library(Hmisc)
 # Read data
 #-----------
 
-output_root = '/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202603161115'
+output_root = '/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202603161115'
 
 get_data = function(scenario, year) {
   output_root %>% 

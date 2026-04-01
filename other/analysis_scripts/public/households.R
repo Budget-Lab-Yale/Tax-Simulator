@@ -3,7 +3,7 @@ library(data.table)
 
 output = c('baseline', 'tcja', 'senate') %>% 
   map(
-    .f = ~ fread(paste0('/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202507031807/', .x, '/static/detail/2026.csv')) %>%
+    .f = ~ fread(paste0('/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202507031807/', .x, '/static/detail/2026.csv')) %>%
       tibble() %>% 
       mutate(scenario = .x) %>% 
       filter(id %in% c(3, 4, 7))  %>% 
