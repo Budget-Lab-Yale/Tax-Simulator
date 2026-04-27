@@ -54,6 +54,10 @@ build_horizontal_table = function(id) {
         by = 'id'
       ) %>%
 
+      # Drop records whose baseline counterpart was filtered out (e.g. expanded_inc
+      # flipped sign under the reform); they can't be ranked against baseline.
+      filter(!is.na(inc)) %>%
+
       # Compute effective tax rate and grouping variables
       mutate(
         married = as.integer(filing_status == 2),
