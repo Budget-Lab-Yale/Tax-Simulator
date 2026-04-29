@@ -29,7 +29,7 @@ suppressPackageStartupMessages(
 return_vars = list()
 list.files('./src', recursive = T) %>%
   walk(.f = ~ {
-    if (!(.x %in% c('main.R')) && !startsWith(.x, 'slurm/')) {
+    if (!(.x %in% c('main.R')) && !startsWith(.x, 'slurm/') && !startsWith(.x, 'tests/')) {
       source(file.path('./src/', .x))
     }
   })
