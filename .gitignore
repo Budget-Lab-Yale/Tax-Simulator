@@ -60,3 +60,6 @@ config/batch-submissions
 
 # Filepath roots
 config/interfaces/output_roots.yaml
+
+# Per-user Claude Code settings
+.claude/settings.local.json
