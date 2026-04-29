@@ -9,9 +9,9 @@ library(tidyverse)
 library(data.table)
 library(Hmisc)
 
-current_law_output_root    = '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202409260937'
-current_policy_output_root = '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202409261000'
-tax_data_output_root       = '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Data/v1/2024091614'
+current_law_output_root    = '/nfs/roberts/scratch/pi_nrs36/jar335/Tax-Simulator/v1/202409260937'
+current_policy_output_root = '/nfs/roberts/scratch/pi_nrs36/jar335/Tax-Simulator/v1/202409261000'
+tax_data_output_root       = '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1/2024091614'
   
 
 #-----------------------

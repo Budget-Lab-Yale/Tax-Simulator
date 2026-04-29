@@ -9,7 +9,7 @@ library(tidyverse)
 # Read data
 #-----------
 
-output_root = '/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202603161308'
+output_root = '/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202603161308'
 
 # Read time burden CSVs -- each has baseline and reform columns
 tcja_ext_tb = read_csv(file.path(output_root, 'tcja_ext/static/supplemental/time_burden.csv'), show_col_types = FALSE)

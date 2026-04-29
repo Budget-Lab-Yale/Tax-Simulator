@@ -11,7 +11,7 @@ library(Hmisc)
 
 
 
-output_root = '/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202503291057'
+output_root = '/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202503291057'
 
 
 
@@ -107,7 +107,7 @@ detail %>%
 # - we know that income matters most at a young age for kids too for outcomes
 
 
-output_root = '/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202503291241'
+output_root = '/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202503291241'
 
 
 

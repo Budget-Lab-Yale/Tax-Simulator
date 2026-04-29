@@ -5,7 +5,7 @@
 
 library(tidyverse)
 
-root = '/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202603101323'
+root = '/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202603101323'
 yr   = 2026
 
 # Read detail files

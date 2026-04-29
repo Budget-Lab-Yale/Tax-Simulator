@@ -8,7 +8,7 @@ library(data.table)
 library(Hmisc)
 
 
-output_root = '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1'
+output_root = '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Simulator/v1'
 
 #-----------------------------
 # Stacked distribution charts

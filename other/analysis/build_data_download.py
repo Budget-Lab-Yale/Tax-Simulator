@@ -15,7 +15,7 @@ from openpyxl.worksheet.hyperlink import Hyperlink
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
-ROOT = "/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202603120745"
+ROOT = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202603120745"
 OUT  = os.path.join(ROOT, "TBL-Data-Booker-202603.xlsx")
 
 # ---------------------------------------------------------------------------

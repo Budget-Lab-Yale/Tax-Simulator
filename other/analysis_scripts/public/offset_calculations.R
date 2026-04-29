@@ -1,6 +1,6 @@
 library(tidyverse)
 
-output_root = '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Simulator/v1/202403211024/'
+output_root = '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Simulator/v1/202403211024/'
 
 ids = c('perm_tcja_ctc', 'perm_arpa_ctc', 'perm_arpa_ctc_indexed', 'edelberg_kearney', 'fsa_ctc', 'fsa')
 

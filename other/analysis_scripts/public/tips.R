@@ -8,9 +8,9 @@ library(data.table)
 library(Hmisc)
 
 # Set roots
-tax_data_root = '/gpfs/gibbs/project/sarin/shared/model_data/Tax-Data/v1/2024090319/baseline'
-output_root   = '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202409032008'
-sipp_root     = '/gpfs/gibbs/project/sarin/shared/raw_data/SIPP/'
+tax_data_root = '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1/2024090319/baseline'
+output_root   = '/nfs/roberts/scratch/pi_nrs36/jar335/Tax-Simulator/v1/202409032008'
+sipp_root     = '/nfs/roberts/project/pi_nrs36/shared/raw_data/SIPP/'
 
 
 #-----------

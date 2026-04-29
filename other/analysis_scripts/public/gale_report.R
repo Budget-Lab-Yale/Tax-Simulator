@@ -68,7 +68,7 @@ get_stacked_chart_data = function(type, scenario) {
     names() %>% 
     map(
       ~ file.path(
-        '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1',
+        '/nfs/roberts/scratch/pi_nrs36/jar335/Tax-Simulator/v1',
         stacked_dist_scenarios[[scenario]]$vintage,
         stacked_dist_scenarios[[scenario]]$provisions[.x],
         'static/supplemental', 
@@ -181,7 +181,7 @@ contribution_chart_data %>%
 mtrs = c('baseline', paste0('partial-', c('simple', 'mod_simple', 'back_future', 'ubi'))) %>% 
   map(
     ~ file.path(
-      '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202406071306',
+      '/nfs/roberts/scratch/pi_nrs36/jar335/Tax-Simulator/v1/202406071306',
       .x,
       'static/detail/2026.csv'  
     ) %>% 
@@ -248,7 +248,7 @@ mtrs %>%
 
 outcomes =  paste0('partial-', c('simple', 'mod_simple', 'back_future', 'ubi')) %>% 
   map(
-    ~ '/vast/palmer/scratch/sarin/jar335/Tax-Simulator/v1/202406071314' %>% 
+    ~ '/nfs/roberts/scratch/pi_nrs36/jar335/Tax-Simulator/v1/202406071314' %>% 
       file.path(.x, 'static/supplemental/child_earnings/outcomes_2054.csv') %>% 
       read_csv() %>% 
       mutate(scenario = case_when(

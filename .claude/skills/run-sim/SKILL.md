@@ -64,14 +64,14 @@ Read the runscript CSV at `config/runscripts/{runscript}.csv` and perform ALL of
 
 #### SLURM mode
 ```bash
-cd /gpfs/gibbs/project/sarin/jar335/Repositories/Tax-Simulator && bash slurm_run.sh {runscript} {scenario_id} {user_id} {local} {vintage} {pct_sample} {stacked} {baseline_vintage} {delete_detail}
+cd /nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator && bash slurm_run.sh {runscript} {scenario_id} {user_id} {local} {vintage} {pct_sample} {stacked} {baseline_vintage} {delete_detail}
 ```
 
 No need to `module load R` -- `slurm_run.sh` handles module loading in its sbatch scripts.
 
 #### Rscript mode
 ```bash
-cd /gpfs/gibbs/project/sarin/jar335/Repositories/Tax-Simulator && module load R/4.4.1-foss-2022b && Rscript src/main.R {runscript} {scenario_id} {user_id} {local} {vintage} {pct_sample} {stacked} {baseline_vintage} {delete_detail} {multicore}
+cd /nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator && module load R/4.4.1-foss-2022b && Rscript src/main.R {runscript} {scenario_id} {user_id} {local} {vintage} {pct_sample} {stacked} {baseline_vintage} {delete_detail} {multicore}
 ```
 
 **Important:** Pass literal string `NULL` (not empty) for null arguments.

@@ -1,7 +1,7 @@
 library(tidyverse)
 
 # Output vintage path
-vintage_dir = "/vast/palmer/scratch/sarin/jar335/model_data/Tax-Simulator/v1/202603121607"
+vintage_dir = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/202603121607"
 
 # Read all revenue estimates
 results = expand_grid(pp = 1:25, elast = c(62, 72)) %>%
