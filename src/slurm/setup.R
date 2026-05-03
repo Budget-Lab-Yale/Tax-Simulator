@@ -173,25 +173,42 @@ if (!has_baseline) {
 # Build manifest
 #------------------
 
-manifest = tibble(phase = integer(), scenario = character(), year = integer())
+# Phase encoding (string for clarity; old integer scheme is gone):
+#   '1'   baseline-year tasks         (parallel array; static-only)
+#   '2A'  cf static-only year tasks   (parallel array)
+#   '2B'  cf bathtub pre-pass         (one job per cf; sequential within job;
+#                                      no-op for non-kg_dynamics scenarios)
+#   '2C'  cf conventional-only year   (parallel array)
+manifest = tibble(phase = character(), scenario = character(), year = integer())
 
 # Phase 1: baseline year tasks (skip if baseline_vintage provided)
 if (has_baseline) {
   baseline_info = get_scenario_info('baseline')
   manifest = manifest %>%
     bind_rows(tibble(
-      phase    = 1L,
+      phase    = '1',
       scenario = 'baseline',
       year     = baseline_info$years
     ))
 }
 
-# Phase 2: counterfactual × year tasks
+# Phase 2A and 2C: counterfactual × year tasks (static and conventional)
+# Phase 2B:        one task per counterfactual scenario
 for (sid in counterfactual_ids) {
   si = get_scenario_info(sid)
   manifest = manifest %>%
     bind_rows(tibble(
-      phase    = 2L,
+      phase    = '2A',
+      scenario = sid,
+      year     = si$years
+    )) %>%
+    bind_rows(tibble(
+      phase    = '2B',
+      scenario = sid,
+      year     = NA_integer_
+    )) %>%
+    bind_rows(tibble(
+      phase    = '2C',
       scenario = sid,
       year     = si$years
     ))
@@ -222,12 +239,16 @@ saveRDS(
 # Restore stdout for metadata output
 sink()
 
-n_phase1    = sum(manifest$phase == 1)
-n_phase2    = sum(manifest$phase == 2)
+n_phase1    = sum(manifest$phase == '1')
+n_phase2a   = sum(manifest$phase == '2A')
+n_phase2b   = sum(manifest$phase == '2B')
+n_phase2c   = sum(manifest$phase == '2C')
 n_scenarios = length(counterfactual_ids)
 
 cat(paste0('STAGING_DIR="', staging_dir, '"\n'))
 cat(paste0('N_PHASE1=',    n_phase1,    '\n'))
-cat(paste0('N_PHASE2=',    n_phase2,    '\n'))
+cat(paste0('N_PHASE2A=',   n_phase2a,   '\n'))
+cat(paste0('N_PHASE2B=',   n_phase2b,   '\n'))
+cat(paste0('N_PHASE2C=',   n_phase2c,   '\n'))
 cat(paste0('N_SCENARIOS=', n_scenarios, '\n'))
 cat(paste0('STACKED=',     stacked,     '\n'))

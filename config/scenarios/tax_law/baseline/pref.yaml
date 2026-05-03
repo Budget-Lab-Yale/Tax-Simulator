@@ -74,3 +74,17 @@ index_kg_purchased_after:
 # Whether indexation can turn a gain into a loss (0 = losses allowed, 1 = clamp at zero)
 index_kg_no_loss:
   value: 0
+
+# Treatment of unrealized capital gains at death. Used by the kg_dynamics
+# behavioral module:
+#   0 = step_up           (current law: gain forgiven at death)
+#   1 = carryover         (gain transfers to heirs with original basis)
+#   2 = deemed_realization (gain forcibly realized on decedent's final return)
+kg_death_regime:
+  value: 0
+
+# Bequest motive theta in [0,1]. Used as c_phi only when kg_death_regime = 1
+# (carryover); represents the fraction of the heir's eventual tax burden the
+# holder internalizes when making lifetime realization decisions.
+kg_bequest_motive:
+  value: 0.5

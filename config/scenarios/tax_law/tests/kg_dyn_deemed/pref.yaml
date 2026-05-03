@@ -1,0 +1,4 @@
+---
+# Deemed realization at death; rates unchanged.
+kg_death_regime:
+  value: 2

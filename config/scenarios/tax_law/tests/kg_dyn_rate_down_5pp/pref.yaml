@@ -1,0 +1,4 @@
+---
+# -5pp on top long-term capital gains rate; step-up unchanged.
+rates:
+  value: [0.0, 0.15, 0.15]

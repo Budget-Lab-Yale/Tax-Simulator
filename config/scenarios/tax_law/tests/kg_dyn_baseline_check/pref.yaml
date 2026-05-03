@@ -1,0 +1,9 @@
+---
+# Identity reform: baseline preferred-rate schedule with no death-regime change.
+# Used as a sanity check that kg_dynamics produces zero policy-induced delta
+# when reform == baseline (spec §5.1 baseline reproduction).
+rates:
+  value: [0.0, 0.15, 0.20]
+
+kg_death_regime:
+  value: 0

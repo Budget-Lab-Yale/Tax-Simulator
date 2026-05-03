@@ -63,10 +63,33 @@ tryCatch({
     config = readRDS(file.path(staging_dir, scenario_id, 'config.rds'))
     scenario_info = config$scenario_info
 
-    # Read all per-year results
-    output = scenario_info$years %>%
-      map(~ readRDS(file.path(staging_dir, scenario_id,
-                              paste0('year_', .x, '.rds'))))
+    # Read all per-year results. For baseline, results live in year_{y}.rds
+    # (Phase 1 writes both static + null conventional via pass_type='both').
+    # For counterfactuals, Phase 2A writes year_{y}_static.rds (mtrs +
+    # static_totals) and Phase 2C writes year_{y}_conv.rds (conventional_totals).
+    # We synthesize a per-year list with the same shape as the legacy
+    # monolithic result so the rest of this function is unchanged.
+    output = scenario_info$years %>% map(function(y) {
+      if (scenario_id == 'baseline') {
+        readRDS(file.path(staging_dir, scenario_id, paste0('year_', y, '.rds')))
+      } else {
+        static_rds = file.path(staging_dir, scenario_id,
+                                paste0('year_', y, '_static.rds'))
+        conv_rds   = file.path(staging_dir, scenario_id,
+                                paste0('year_', y, '_conv.rds'))
+        s_res = readRDS(static_rds)
+        c_res = readRDS(conv_rds)
+
+        # If conv_totals is NULL (no-behavior CF), fall back to static_totals
+        # so downstream aggregation has something to write.
+        ct = c_res$conventional_totals
+        if (is.null(ct)) ct = s_res$static_totals
+
+        list(mtrs                = s_res$mtrs,
+             static_totals       = s_res$static_totals,
+             conventional_totals = ct)
+      }
+    })
 
     # --- Write static outputs ---
     static_root = file.path(scenario_info$output_path, 'static')

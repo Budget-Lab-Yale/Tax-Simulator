@@ -1,0 +1,7 @@
+---
+# +5pp on top kg rate plus deemed realization at death.
+rates:
+  value: [0.0, 0.15, 0.25]
+
+kg_death_regime:
+  value: 2

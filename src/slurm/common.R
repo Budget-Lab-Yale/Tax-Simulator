@@ -55,22 +55,24 @@ reconstitute_environment = function(staging_dir) {
 get_task = function(staging_dir, phase) {
 
   #--------------------------------------------------------------------------
-  # Maps the current SLURM_ARRAY_TASK_ID to a (scenario, year) work unit
-  # based on the manifest built in Phase 0.
+  # Maps the current SLURM_ARRAY_TASK_ID to a work unit based on the manifest
+  # built in Phase 0. Phase 1, 2A, 2C tasks have a year; Phase 2B tasks have
+  # year = NA (one job per scenario, all years processed sequentially within
+  # the job).
   #
   # Parameters:
   #   - staging_dir (str) : path to _slurm_staging directory
-  #   - phase (int)       : pipeline phase (1 or 2)
+  #   - phase (str)       : pipeline phase ('1', '2A', '2B', or '2C')
   #
-  # Returns: list with $scenario (str) and $year (int)
+  # Returns: list with $scenario (str) and $year (int or NA)
   #--------------------------------------------------------------------------
 
   task_id  = as.integer(Sys.getenv('SLURM_ARRAY_TASK_ID'))
   manifest = readRDS(file.path(staging_dir, 'manifest.rds'))
 
-  # Filter to current phase and index by 1-based task ID
+  # Filter to current phase (string compare) and index by 1-based task ID
   phase_tasks = manifest %>%
-    filter(phase == !!phase)
+    filter(phase == !!as.character(phase))
 
   if (task_id < 1 || task_id > nrow(phase_tasks)) {
     stop(paste0('SLURM_ARRAY_TASK_ID ', task_id,

@@ -7,8 +7,16 @@
 # mirror the main.R pipeline:
 #
 #   Phase 0  — Setup (login node): parse globals, serialize configs
-#   Phase 1  — Baseline (SLURM array): 1 job per year
-#   Phase 2  — Counterfactuals (SLURM array): 1 job per scenario×year
+#   Phase 1  — Baseline (SLURM array): 1 job per year (static-only,
+#              pass_type='both' since no behavior modules)
+#   Phase 2A — CF static-only (SLURM array): 1 job per scenario×year
+#              (pass_type='static'; produces static MTRs + static_totals)
+#   Phase 2B — CF bathtub (SLURM array): 1 job per scenario, runs the
+#              kg_dynamics recurrence sequentially across years; no-op
+#              for non-kg_dynamics scenarios
+#   Phase 2C — CF conventional-only (SLURM array): 1 job per scenario×year
+#              (pass_type='conventional'; reads precomputed bathtub state
+#              and Phase 2A static MTRs)
 #   Phase 3a — Aggregation (SLURM array): 1 job per scenario
 #   Phase 3b — Post-processing (SLURM array): 1 job per counterfactual
 #   Phase 4  — Stacked (single SLURM job): stacked reports + cleanup
@@ -51,7 +59,9 @@ eval "$METADATA"
 
 echo "  Staging dir: ${STAGING_DIR}"
 echo "  Baseline year-tasks (Phase 1): ${N_PHASE1}"
-echo "  Counterfactual year-tasks (Phase 2): ${N_PHASE2}"
+echo "  CF static-only year-tasks (Phase 2A): ${N_PHASE2A}"
+echo "  CF bathtub jobs (Phase 2B): ${N_PHASE2B}"
+echo "  CF conventional-only year-tasks (Phase 2C): ${N_PHASE2C}"
 echo "  Counterfactual scenarios: ${N_SCENARIOS}"
 echo "  Stacked: ${STACKED}"
 echo ""
@@ -79,20 +89,59 @@ fi
 
 
 #-------------------------------------------
-# Phase 2: Counterfactuals (skip if none)
+# Phase 2A: CF static-only year tasks
 #-------------------------------------------
 
-P2_DEP=""
-if [ "$N_PHASE2" -gt 0 ]; then
-  echo "Phase 2: Submitting ${N_PHASE2} counterfactual year jobs..."
-  P2=$(sbatch --parsable --array=1-${N_PHASE2} ${P1_DEP} \
+P2A_DEP=""
+if [ "$N_PHASE2A" -gt 0 ]; then
+  echo "Phase 2A: Submitting ${N_PHASE2A} CF static-only year jobs..."
+  P2A=$(sbatch --parsable --array=1-${N_PHASE2A} ${P1_DEP} \
     ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
-    --job-name=taxsim-cf \
-    --output="${STAGING_DIR}/logs/p2_%A_%a.log" \
+    --job-name=taxsim-cf-static \
+    --output="${STAGING_DIR}/logs/p2a_%A_%a.log" \
     --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
-            Rscript src/slurm/worker.R ${STAGING_DIR} 2")
-  echo "  Job ID: ${P2}"
-  P2_DEP="--dependency=afterok:${P2}"
+            Rscript src/slurm/worker.R ${STAGING_DIR} 2A")
+  echo "  Job ID: ${P2A}"
+  P2A_DEP="--dependency=afterok:${P2A}"
+fi
+
+
+#-------------------------------------------
+# Phase 2B: CF bathtub pre-pass (one job per CF; sequential within job)
+#-------------------------------------------
+
+P2B_DEP=""
+if [ "$N_PHASE2B" -gt 0 ]; then
+  # Bathtub depends on Phase 1 (baseline cells from Tax-Data + tax_law) and
+  # in v2 will additionally depend on Phase 2A (cell MTRs). For v1 the 2A
+  # dependency is harmless and keeps the DAG monotone.
+  echo "Phase 2B: Submitting ${N_PHASE2B} CF bathtub jobs..."
+  P2B=$(sbatch --parsable --array=1-${N_PHASE2B} ${P2A_DEP} \
+    ${SBATCH_COMMON} --time=0:15:00 --mem=8G \
+    --job-name=taxsim-bathtub \
+    --output="${STAGING_DIR}/logs/p2b_%A_%a.log" \
+    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+            Rscript src/slurm/bathtub.R ${STAGING_DIR}")
+  echo "  Job ID: ${P2B}"
+  P2B_DEP="--dependency=afterok:${P2B}"
+fi
+
+
+#-------------------------------------------
+# Phase 2C: CF conventional-only year tasks
+#-------------------------------------------
+
+P2C_DEP=""
+if [ "$N_PHASE2C" -gt 0 ]; then
+  echo "Phase 2C: Submitting ${N_PHASE2C} CF conventional-only year jobs..."
+  P2C=$(sbatch --parsable --array=1-${N_PHASE2C} ${P2B_DEP} \
+    ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
+    --job-name=taxsim-cf-conv \
+    --output="${STAGING_DIR}/logs/p2c_%A_%a.log" \
+    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+            Rscript src/slurm/worker.R ${STAGING_DIR} 2C")
+  echo "  Job ID: ${P2C}"
+  P2C_DEP="--dependency=afterok:${P2C}"
 fi
 
 
@@ -110,8 +159,9 @@ N_AGG=$((N_AGG + N_SCENARIOS))
 P3A_DEP=""
 if [ "$N_AGG" -gt 0 ]; then
 
-  # Combine dependencies from P1 and P2
-  ALL_DEPS="${P1_DEP} ${P2_DEP}"
+  # Combine dependencies from Phase 1 (baseline) and Phase 2C (conv outputs).
+  # Phase 2A and 2B feed into 2C, so transitively they're already gated.
+  ALL_DEPS="${P1_DEP} ${P2C_DEP}"
 
   echo "Phase 3a: Submitting ${N_AGG} aggregation jobs..."
   P3A=$(sbatch --parsable --array=1-${N_AGG} ${ALL_DEPS} \
