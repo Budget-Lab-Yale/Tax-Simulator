@@ -1,29 +1,41 @@
 #-------------------------------------------------------------------------------
 # kg_dynamics.R
 #
-# Core utilities for the capital-gains dynamics behavioral module. Implements
-# the law of motion for the policy-induced delta in unrealized capital gains
-# specified in other/kg_model_tests/capital_gains_realization.md, ported from
-# the standalone in other/kg_model_tests/kg_minimal.R.
+# Capital-gains dynamics behavioral module. Implements the law of motion for
+# the policy-induced delta in unrealized capital gains specified in
+# other/kg_model_tests/capital_gains_realization.md.
 #
-# All functions in this file are pure: they take cell-level structures and
-# return cell-level structures. The orchestrating behavior module lives at
-# config/scenarios/behavior/kg_dynamics/ and threads year-by-year state to
-# these utilities. v1 uses a single combined asset bucket (sum across the five
-# tracked wealth classes).
+# Architecture:
+#   1. Bathtub pre-pass: solves the recurrence sequentially across years and
+#      precomputes everything that doesn't depend on per-record kg_lt --
+#      cell-level rate factor, lock-in extra realization, and deemed scaling.
+#      Persists one state file per year per scenario.
+#   2. Behavior module (config/scenarios/behavior/kg_dynamics/eta06.R): pure
+#      allocator. Reads its year's state file and translates cell-level
+#      quantities to per-record kg_lt adjustments via kg_dyn_apply_to_records.
+#
+# Current implementation collapses the five tracked wealth classes into a
+# single asset bucket; per-asset-class disaggregation is on the roadmap.
 #-------------------------------------------------------------------------------
 
 
 
-# Constants. Calibrated values match the standalone (calibrate_eta.R targets
-# eta_30 = -0.6 at a 5pp hike from a 0.20 baseline under step-up).
+#-------------------------------------------------------------------------------
+# Constants
+#-------------------------------------------------------------------------------
+
 KG_DYN_AGE_MIN     = 18
 KG_DYN_AGE_MAX     = 80
 KG_DYN_HORIZON     = 60        # bracket integration horizon, in years
 KG_DYN_BETA        = 0.96      # annual discount factor (~4%)
-KG_DYN_LAMBDA_R    = 0.05      # voluntary realization hazard
+KG_DYN_LAMBDA_R    = 0.05      # voluntary realization hazard (asset-aggregate)
 KG_DYN_HEIR_SHIFT  = 30        # average decedent-to-heir age gap
 KG_DYN_HEIR_SIGMA  = 5         # std dev of heir age distribution
+
+# Default eta. Calibrated by other/kg_model_tests/calibrate_eta.R against
+# eta_30 = -0.6 at a 1pp uniform MTR perturbation under step-up. Last
+# calibrated 2026-05-03 against baseline run 202605031335.
+KG_DYN_DEFAULT_ETA = 9.1016
 
 KG_DYN_ASSET_VALUE_COLS = c('value.equities', 'value.pass_throughs',
                             'value.primary_home', 'value.other_home',
@@ -33,6 +45,29 @@ KG_DYN_ASSET_BASIS_COLS = c('basis.equities', 'basis.pass_throughs',
                             'basis.re_fund')
 
 
+# Death-regime taxonomy (spec §3.3). YAML pref.kg_death_regime is an integer
+# code; KG_DYN_REGIME_BY_CODE maps it to a name; KG_DYN_REGIMES carries the
+# canonical (delta_vanish, delta_route, delta_realize, c_phi_default) tuple
+# for each name. The bequest motive theta is supplied separately and overrides
+# c_phi_default for carryover.
+KG_DYN_REGIME_BY_CODE = c('0' = 'step_up',
+                          '1' = 'carryover',
+                          '2' = 'deemed_realization')
+
+KG_DYN_REGIMES = list(
+  step_up            = list(c_phi_default = 0,
+                            delta_vanish  = 1, delta_route = 0, delta_realize = 0),
+  carryover          = list(c_phi_default = NA,           # set from theta
+                            delta_vanish  = 0, delta_route = 1, delta_realize = 0),
+  deemed_realization = list(c_phi_default = 1,
+                            delta_vanish  = 0, delta_route = 0, delta_realize = 1)
+)
+
+
+
+#-------------------------------------------------------------------------------
+# Record-level helpers
+#-------------------------------------------------------------------------------
 
 kg_dyn_attach_record_attrs = function(tax_units) {
 
@@ -41,12 +76,9 @@ kg_dyn_attach_record_attrs = function(tax_units) {
   #   G_unit       : per-record unrealized gain stock, sum_k max(0, value_k -
   #                  basis_k) across the five tracked wealth classes
   #   m_household  : household death probability. q_death1*q_death2 for joint
-  #                  filers (both spouses die same year); q_death1 otherwise
+  #                  filers; q_death1 otherwise
   #   age_cohort   : cohort age. max(age1, age2) for joint, age1 otherwise.
   #                  Top-coded at KG_DYN_AGE_MAX, bottom-coded at AGE_MIN.
-  #
-  # Parameters:
-  #   - tax_units (df) : raw tax units with value.*/basis.* and q_death*
   #
   # Returns: tax_units augmented with G_unit, m_household, age_cohort.
   #----------------------------------------------------------------------------
@@ -73,46 +105,69 @@ kg_dyn_attach_record_attrs = function(tax_units) {
 
 
 
+#-------------------------------------------------------------------------------
+# Cell aggregation (with sparse-cell fallback)
+#-------------------------------------------------------------------------------
+
 kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
   #----------------------------------------------------------------------------
   # Weight-aggregates per-record (G_unit, kg_lt, m_household) to age cells.
   # tax_units must already have G_unit, m_household, age_cohort attached.
-  # Returns a complete grid over `ages`; empty cells fill with zeros.
+  #
+  # Note on R_B convention: R_B is the cell's positive realized gains
+  # (sum(weight * pmax(kg_lt, 0))), not the signed sum. The spec defines
+  # baseline realizations as positive flows out of the unrealized-gain stock,
+  # and using positive-only sums keeps r_B >= 0 and ensures the per-record
+  # allocation shares (pmax(kg_lt, 0) / R_B) sum to 1.
+  #
+  # Sparse-cell fallback (spec §5.1): cells with G_B > 0 but R_B = 0 inherit
+  # the gain-stock-weighted aggregate r_B across all age cells. This prevents
+  # young heir cohorts (carryover / deemed inflows) from getting r_S = 0
+  # forever just because they had no historical realization activity.
   #
   # Returns: tibble with age, G_B, R_B, r_B, m, n.
   #----------------------------------------------------------------------------
 
   agg = tax_units %>%
     group_by(age_cohort) %>%
-    summarise(G_B   = sum(weight * G_unit, na.rm = TRUE),
-              R_B   = sum(weight * kg_lt, na.rm = TRUE),
-              m_num = sum(weight * m_household, na.rm = TRUE),
-              n     = sum(weight, na.rm = TRUE),
+    summarise(G_B   = sum(weight * G_unit,           na.rm = TRUE),
+              R_B   = sum(weight * pmax(kg_lt, 0),   na.rm = TRUE),
+              m_num = sum(weight * m_household,      na.rm = TRUE),
+              n     = sum(weight,                    na.rm = TRUE),
               .groups = 'drop') %>%
     rename(age = age_cohort)
 
-  tibble(age = ages) %>%
+  out = tibble(age = ages) %>%
     left_join(agg, by = 'age') %>%
     mutate(across(c(G_B, R_B, m_num, n), ~ if_else(is.na(.), 0, .)),
            m   = if_else(n   > 0, m_num / n, 0),
-           r_B = if_else(G_B > 0, R_B   / G_B, 0)) %>%
+           r_B = if_else(G_B > 0, R_B   / G_B, 0))
+
+  total_R_B  = sum(out$R_B)
+  total_G_B  = sum(out$G_B)
+  r_B_pooled = if (total_G_B > 0) total_R_B / total_G_B else 0
+
+  out %>%
+    mutate(r_B = if_else(G_B > 0 & r_B == 0, r_B_pooled, r_B)) %>%
     select(age, G_B, R_B, r_B, m, n) %>%
     arrange(age)
 }
 
 
 
+#-------------------------------------------------------------------------------
+# Aging and heir matrices
+#-------------------------------------------------------------------------------
+
 kg_dyn_build_heir_matrix = function(ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX,
                                     shift = KG_DYN_HEIR_SHIFT,
                                     sigma = KG_DYN_HEIR_SIGMA) {
 
   #----------------------------------------------------------------------------
-  # Builds row-stochastic heir-allocation matrix omega[a, h] = share of
-  # decedent-age-a gains routed to heir-age h. Centered at a - shift with
-  # Gaussian noise sigma, evaluated on the integer age grid and renormalized
-  # row-by-row. v1 default: spec §6.6 leaves this exogenous; we use a Gaussian
-  # placeholder until an estate-module hookup is available.
+  # Row-stochastic heir-allocation matrix omega[a, h] = share of decedent-age-a
+  # gains routed to heir-age h. Centered at a - shift with Gaussian noise
+  # sigma. Placeholder until estate module hookup.
   #----------------------------------------------------------------------------
 
   W = outer(ages, ages, function(a, h) dnorm(h, mean = a - shift, sd = sigma))
@@ -139,6 +194,10 @@ kg_dyn_build_aging_matrix = function(ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
 
 
+#-------------------------------------------------------------------------------
+# Bracket and effective tax price (spec §4)
+#-------------------------------------------------------------------------------
+
 kg_dyn_compute_bracket = function(a, c_phi, life_table,
                                   lambda_r = KG_DYN_LAMBDA_R,
                                   beta     = KG_DYN_BETA,
@@ -146,13 +205,13 @@ kg_dyn_compute_bracket = function(a, c_phi, life_table,
                                   tau_ratio = NULL) {
 
   #----------------------------------------------------------------------------
-  # Computes the bracket M(c) for a single cohort starting at age `a`. Spec §4:
+  # Bracket M(c) for a single cohort starting at age `a` (spec §4.2-4.3):
   #   M(c) = sum_j beta^j s_j (tau_{t+j}/tau_t)
   #         + c * sum_j beta^j d_j (tau_{t+j}/tau_t)
-  # with (s_j, d_j) following the §4.3 competing-risks recursion.
+  # with (s_j, d_j) from a competing-risks recursion.
   #
   # tau_ratio: length-horizon vector of tau_{t+j}/tau_t. NULL = constant 1
-  # (naive expectations). v1 always uses NULL.
+  # (naive expectations).
   #----------------------------------------------------------------------------
 
   if (is.null(tau_ratio)) tau_ratio = rep(1, horizon)
@@ -189,13 +248,17 @@ kg_dyn_compute_brackets = function(ages, c_phi, life_table,
 
 
 
+#-------------------------------------------------------------------------------
+# Recurrence step (spec §3.5)
+#-------------------------------------------------------------------------------
+
 kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
                                   P_B, P_S, eta, delta_route) {
 
   #----------------------------------------------------------------------------
-  # One-step bathtub recurrence (spec §3.5). Operates on cell vectors indexed
-  # by age. Returns delta_next plus diagnostics (r_S, channel split) for the
-  # behavior module to use when allocating realizations to records.
+  # One-step bathtub recurrence. Operates on cell vectors indexed by age.
+  #
+  # r_S is clamped to [0, 1] (spec's choice variable is a probability).
   #
   # Parameters:
   #   - delta_prev (num[a]) : start-of-year delta_G (zero on first year)
@@ -213,7 +276,7 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
   r_B = baseline_t$r_B
   m   = baseline_t$m
 
-  r_S = r_B * exp(-eta * (P_S - P_B))
+  r_S = pmin(pmax(r_B * exp(-eta * (P_S - P_B)), 0), 1)
 
   # Survivor flow (spec §3.2)
   inner      = (1 - r_S) * delta_prev + G_B * (r_B - r_S)
@@ -236,72 +299,81 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
 
 
 
+#-------------------------------------------------------------------------------
+# Regime resolution (named lookup)
+#-------------------------------------------------------------------------------
+
 kg_dyn_resolve_regime = function(regime_code, theta) {
 
   #----------------------------------------------------------------------------
   # Maps the integer regime code from pref.kg_death_regime to the canonical
-  # (c_phi, delta_vanish, delta_route, delta_realize) tuple. Spec §3.3.
+  # (name, c_phi, delta_vanish, delta_route, delta_realize) tuple. Spec §3.3.
   #
   #   0 = step_up           : c_phi = 0,     vanish = 1
   #   1 = carryover         : c_phi = theta, route = 1
   #   2 = deemed_realization: c_phi = 1,     realize = 1
   #----------------------------------------------------------------------------
 
-  if (regime_code == 0) {
-    list(c_phi = 0,     delta_vanish = 1, delta_route = 0, delta_realize = 0)
-  } else if (regime_code == 1) {
-    list(c_phi = theta, delta_vanish = 0, delta_route = 1, delta_realize = 0)
-  } else if (regime_code == 2) {
-    list(c_phi = 1,     delta_vanish = 0, delta_route = 0, delta_realize = 1)
-  } else {
+  regime_name = KG_DYN_REGIME_BY_CODE[as.character(regime_code)]
+  if (is.na(regime_name)) {
     stop(paste0('Unknown kg_death_regime: ', regime_code,
-                ' (expected 0, 1, or 2)'))
+                ' (expected 0=step_up, 1=carryover, 2=deemed_realization)'))
   }
+
+  base  = KG_DYN_REGIMES[[regime_name]]
+  c_phi = if (regime_name == 'carryover') theta else base$c_phi_default
+
+  list(name          = regime_name,
+       c_phi         = c_phi,
+       delta_vanish  = base$delta_vanish,
+       delta_route   = base$delta_route,
+       delta_realize = base$delta_realize)
 }
 
 
 
-kg_dyn_apply_to_records = function(tax_units, baseline_cells_t, r_S, delta_prev,
-                                    regime, decedent_random) {
+#-------------------------------------------------------------------------------
+# Per-record applier (pure allocator)
+#
+# Reads the precomputed cell_table from the bathtub state file and translates
+# cell-level quantities (rate_factor, extra_R, deemed_factor) to per-record
+# kg_lt adjustments.
+#-------------------------------------------------------------------------------
+
+kg_dyn_apply_to_records = function(tax_units, cell_table, delta_realize,
+                                    decedent_random) {
 
   #----------------------------------------------------------------------------
-  # Distributes cell-level reform-vs-baseline realization adjustments back to
+  # Distributes cell-level reform-vs-baseline realization adjustments to
   # individual tax-unit kg_lt (spec §7.3) and applies per-record fractional
   # deemed-realization burden. Three channels:
   #
-  #   rate-channel    : multiply each record's positive kg_lt by r_S/r_B
-  #   carryover-prop  : pro-rata extra realization driven by accumulated dG
-  #                     (allocated to records with positive kg_lt; falls back
-  #                     to G_unit-share if no realizers in cell)
-  #   deemed-channel  : per-record fractional augmentation m_household*G_unit
+  #   rate-channel   : multiply each record's positive kg_lt by rate_factor
+  #                    = r_S/r_B (clamped to 1 when r_B = 0)
+  #   lock-in extra  : pro-rata share of cell-level extra_R = r_S * dG;
+  #                    allocated by positive-kg_lt share if R_B > 0, else by
+  #                    G_unit share, else skip
+  #   deemed-channel : per-record m_household * G_unit, scaled by cell-level
+  #                    deemed_factor = (G_B + dG)/G_B to incorporate
+  #                    accumulated stock
   #
-  # Stochastic decedent_flag is set as a side product for distribution
-  # analysis: u < m_household marks a record as decedent. Uses the precomputed
-  # uniform draws from globals$random_numbers; same draw across scenarios.
+  # decedent_flag is a stochastic side product for distribution analysis:
+  # u < m_household marks a record as decedent. Uses the precomputed uniform
+  # draws from globals$random_numbers, same draw across scenarios.
   #
   # Parameters:
   #   - tax_units (df)        : with G_unit, m_household, age_cohort attached
-  #   - baseline_cells_t (df) : year-t cell aggregates
-  #   - r_S (num[a])          : reform realization rate, named by age
-  #   - delta_prev (num[a])   : start-of-year delta_G, named by age
-  #   - regime (list)         : output of kg_dyn_resolve_regime()
+  #   - cell_table (tbl)      : output of bathtub pre-pass; has age, G_B, R_B,
+  #                             rate_factor, extra_R, deemed_factor
+  #   - delta_realize (num)   : routing share for forced realization at death
   #   - decedent_random (num) : uniform[0,1] draws, length = nrow(tax_units)
   #
   # Returns: tax_units with modified kg_lt and added decedent_flag.
   #----------------------------------------------------------------------------
 
-  cell_table = baseline_cells_t %>%
-    mutate(age         = as.integer(age),
-           r_S         = as.numeric(r_S[as.character(age)]),
-           dG          = as.numeric(delta_prev[as.character(age)]),
-           rate_factor = if_else(r_B > 0, r_S / r_B, 1),
-           extra_R     = regime$delta_route * r_S * dG) %>%
-    select(age, R_B, G_B, rate_factor, extra_R)
-
   tax_units %>%
     left_join(cell_table, by = c('age_cohort' = 'age')) %>%
     mutate(
-      # Allocation share for cell-level extra_R (spec §7.3)
       allocation = case_when(
         R_B > 0 ~ pmax(kg_lt, 0) / R_B,
         G_B > 0 ~ G_unit         / G_B,
@@ -309,11 +381,11 @@ kg_dyn_apply_to_records = function(tax_units, baseline_cells_t, r_S, delta_prev,
       ),
       kg_lt_rate    = if_else(kg_lt > 0, kg_lt * rate_factor, kg_lt),
       kg_lt_carry   = extra_R * allocation,
-      kg_lt_deemed  = regime$delta_realize * m_household * G_unit,
+      kg_lt_deemed  = delta_realize * m_household * G_unit * deemed_factor,
       kg_lt         = kg_lt_rate + kg_lt_carry + kg_lt_deemed,
       decedent_flag = as.integer(decedent_random < m_household)
     ) %>%
-    select(-rate_factor, -extra_R, -allocation,
+    select(-rate_factor, -extra_R, -deemed_factor, -allocation,
            -kg_lt_rate, -kg_lt_carry, -kg_lt_deemed,
            -R_B, -G_B)
 }
@@ -333,10 +405,10 @@ kg_dyn_state_path = function(scenario_info, year) {
 # Bathtub pre-pass orchestration
 #
 # These utilities are called once per scenario by run_bathtub_pass() (in run.R)
-# or by src/slurm/bathtub.R in the SLURM pipeline. They precompute the entire
-# delta_G trajectory and per-year reform realization rate r_S, persisting one
-# state file per year. The behavior module then reads its year's state and
-# applies the precomputed quantities to records via kg_dyn_apply_to_records().
+# or by src/slurm/bathtub.R. They precompute the entire delta_G trajectory
+# plus per-cell rate_factor / extra_R / deemed_factor, persisting one state
+# file per year. The behavior module then reads its year's state and applies
+# the precomputed quantities to records via kg_dyn_apply_to_records().
 #-------------------------------------------------------------------------------
 
 
@@ -352,12 +424,6 @@ kg_dyn_aggregate_baseline_cells_from_taxdata = function(scenario_info,
   # input. Bypasses the simulator's static detail output because the wealth
   # columns (value.*/basis.*) and q_death* are not in detail_vars; they live
   # only in the source Tax-Data csvs.
-  #
-  # Parameters:
-  #   - scenario_info (list) : provides interface_paths$`Tax-Data` and years
-  #   - sample_ids (int[])   : ids in the active sample (globals$sample_ids)
-  #   - pct_sample (dbl)     : sampling fraction used to scale weights
-  #   - ages (int[])         : age grid for cell aggregation
   #
   # Returns: named list of cell tibbles, indexed by year (as character).
   #----------------------------------------------------------------------------
@@ -383,42 +449,60 @@ kg_dyn_aggregate_baseline_cells_from_taxdata = function(scenario_info,
 
 
 
+kg_dyn_build_cell_table = function(baseline_t, r_S_vec, delta_prev, regime) {
+
+  #----------------------------------------------------------------------------
+  # Assembles the per-cell quantities the per-record applier needs: rate
+  # factor, lock-in extra realization, deemed scaling. Persisted into the
+  # state file by kg_dyn_run_bathtub_pass; consumed by kg_dyn_apply_to_records.
+  #
+  # Per-cell quantities (spec §3.5, §5.3, §3.3.2):
+  #   rate_factor   = r_S / r_B           (clamped to 1 when r_B = 0)
+  #   extra_R       = r_S * dG            (lock-in stock realized at rate r_S;
+  #                                        applies under all regimes -- spec's
+  #                                        ratio formula uses G_S = G_B + dG)
+  #   deemed_factor = (G_B + dG) / G_B    (clamped to >= 0; scales per-record
+  #                                        m * G_unit so deemed revenue
+  #                                        includes accumulated stock)
+  #
+  # delta_realize is carried separately (in regime) and gates whether the
+  # deemed channel fires at all.
+  #----------------------------------------------------------------------------
+
+  baseline_t %>%
+    mutate(age           = as.integer(age),
+           r_S           = as.numeric(r_S_vec[as.character(age)]),
+           dG            = as.numeric(delta_prev[as.character(age)]),
+           rate_factor   = if_else(r_B > 0, r_S / r_B, 1),
+           extra_R       = r_S * dG,
+           deemed_factor = if_else(G_B > 0,
+                                   pmax(0, (G_B + dG) / G_B),
+                                   1)) %>%
+    select(age, G_B, R_B, r_B, r_S, dG,
+           rate_factor, extra_R, deemed_factor)
+}
+
+
+
 kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                     baseline_tau, reform_tau,
-                                    eta = 8.488,
+                                    eta = KG_DYN_DEFAULT_ETA,
                                     ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
   #----------------------------------------------------------------------------
-  # Sequentially runs the bathtub recurrence across all years in
-  # scenario_info$years and persists one state file per year. The state file
-  # is the contract consumed by the kg_dynamics behavior module's per-record
-  # applier; the module no longer computes the recurrence itself.
+  # Sequentially runs the bathtub recurrence across scenario_info$years and
+  # persists one state file per year. The state file is the contract consumed
+  # by the kg_dynamics behavior module's per-record applier; the module no
+  # longer computes any cell-level math itself.
   #
-  # For year t, kg_dynamics_state/{t}.rds contains:
+  # State file at kg_dynamics_state/{t}.rds:
   #   list(
-  #     delta_prev   = numeric vector (named by age) of Δ_G at start of year t,
-  #     r_S          = numeric vector (named by age) of reform realization rate,
-  #     regime       = list(c_phi, delta_vanish, delta_route, delta_realize),
-  #     baseline_t   = tibble of cell aggregates for year t
+  #     regime     = list(name, c_phi, delta_vanish, delta_route, delta_realize),
+  #     cell_table = tibble(age, G_B, R_B, r_B, r_S, dG,
+  #                          rate_factor, extra_R, deemed_factor)
   #   )
   #
-  # Parameters:
-  #   - scenario_info (list)   : provides output_path, years
-  #   - tax_law (df)           : reform's joined tax_law tibble (has
-  #                              pref.kg_death_regime, pref.kg_bequest_motive)
-  #   - baseline_cells (list)  : output of kg_dyn_aggregate_baseline_cells_from_taxdata
-  #   - baseline_tau (list)    : named list by year of length-|ages| numeric
-  #                              vectors giving tau_B(a, t). For scalar mode
-  #                              (v1) every cell of a given year carries the
-  #                              same value (top kg rate). For cell-MTR mode
-  #                              (v2) entries vary by age.
-  #   - reform_tau (list)      : same structure as baseline_tau but for tau_S
-  #   - eta (dbl)              : behavioral curvature
-  #   - ages (int[])           : age grid
-  #
-  # Returns: invisibly NULL. Side effect: writes per-year state files plus
-  #          life_table.rds under {output_path}/conventional/supplemental/
-  #          kg_dynamics_state/.
+  # Returns: invisibly NULL.
   #----------------------------------------------------------------------------
 
   years     = scenario_info$years
@@ -427,12 +511,11 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                         'kg_dynamics_state')
   dir.create(state_dir, recursive = TRUE, showWarnings = FALSE)
 
-  # Life table from year-1 baseline cells (matches v1 / standalone)
+  # Life table from year-1 baseline cells
   bc1 = baseline_cells[[as.character(min(years))]]
   life_table = setNames(bc1$m, as.character(bc1$age))
   saveRDS(life_table, file.path(state_dir, 'life_table.rds'))
 
-  # Aging and heir matrices are constant across years
   A     = kg_dyn_build_aging_matrix(ages)
   omega = kg_dyn_build_heir_matrix(ages)
 
@@ -445,7 +528,6 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   for (t in years) {
     bt = baseline_cells[[as.character(t)]]
 
-    # Resolve regime for this year from tax_law (constant across filing statuses)
     tlt          = tax_law %>% filter(year == t) %>% slice(1)
     regime_code  = as.numeric(tlt$pref.kg_death_regime)
     bequest      = as.numeric(tlt$pref.kg_bequest_motive)
@@ -471,14 +553,18 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
       eta         = eta,
       delta_route = regime$delta_route
     )
-    r_S = setNames(step$r_S, as.character(ages))
+    r_S_vec = setNames(step$r_S, as.character(ages))
 
-    # State file for year t carries the inputs the behavior module needs.
-    saveRDS(list(delta_prev = delta,
-                 r_S        = r_S,
-                 regime     = regime,
-                 baseline_t = bt),
-            file.path(state_dir, paste0(t, '.rds')))
+    cell_table = kg_dyn_build_cell_table(
+      baseline_t = bt,
+      r_S_vec    = r_S_vec,
+      delta_prev = delta,
+      regime     = regime
+    )
+
+    saveRDS(list(regime     = regime,
+                 cell_table = cell_table),
+            kg_dyn_state_path(scenario_info, t))
 
     delta = setNames(step$delta_next, as.character(ages))
   }
@@ -487,6 +573,14 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
 }
 
 
+
+#-------------------------------------------------------------------------------
+# Cell-MTR tau builder
+#
+# Each cohort uses its own gain-stock-weighted average effective MTR on
+# kg_lt, pulled from the simulator's static detail. This is the only
+# supported tau parameterization; flat top-rate proxies are not.
+#-------------------------------------------------------------------------------
 
 kg_dyn_aggregate_cell_mtr = function(records_with_attrs,
                                       ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
@@ -497,10 +591,7 @@ kg_dyn_aggregate_cell_mtr = function(records_with_attrs,
   #
   #   tau(a) = sum(weight * G_unit * mtr_kg_lt) / sum(weight * G_unit)
   #
-  # Cells with sum(weight * G_unit) == 0 receive tau = 0 (no realizers,
-  # no rate elasticity bite anyway).
-  #
-  # Returns: numeric vector of length |ages|, named by age (as char).
+  # Cells with zero gain stock receive tau = 0.
   #----------------------------------------------------------------------------
 
   agg = records_with_attrs %>%
@@ -523,22 +614,17 @@ kg_dyn_aggregate_cell_mtr = function(records_with_attrs,
 
 
 
-kg_dyn_build_cellmtr_tau_lists = function(scenario_info, baseline_root,
-                                            sample_ids, pct_sample,
-                                            ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
+kg_dyn_build_tau_lists = function(scenario_info, baseline_root,
+                                   sample_ids, pct_sample,
+                                   ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
   #----------------------------------------------------------------------------
-  # v2 cell-MTR mode: builds (baseline_tau, reform_tau) lists where each
-  # year's vector carries the gain-stock-weighted cell-aggregate of per-record
-  # mtr_kg_lt. Reads Tax-Data (for G_unit / cohort / weight) and joins on id
-  # with mtr_kg_lt from baseline static detail and reform static detail.
+  # Builds (baseline_tau, reform_tau) lists where each year's vector carries
+  # the gain-stock-weighted cell-aggregate of per-record mtr_kg_lt. Reads
+  # Tax-Data (for G_unit / cohort / weight) and joins on id with mtr_kg_lt
+  # from baseline static detail and reform static detail.
   #
-  # Requires the runscript to register mtr_vars = "kg_lt" so that the static
-  # pass writes mtr_kg_lt to detail/{year}.csv. The reform's static detail
-  # must already exist (for SLURM: produced by Phase 2A; for main.R: produced
-  # by the static-only run_sim() call before run_bathtub_pass()).
-  #
-  # Returns: list(baseline_tau, reform_tau).
+  # Requires the runscript to register mtr_vars = "kg_lt".
   #----------------------------------------------------------------------------
 
   years         = scenario_info$years
@@ -578,47 +664,6 @@ kg_dyn_build_cellmtr_tau_lists = function(scenario_info, baseline_root,
       left_join(rf_mtr, by = 'id') %>%
       kg_dyn_aggregate_cell_mtr(ages)
   }
-
-  list(baseline_tau = baseline_tau, reform_tau = reform_tau)
-}
-
-
-
-kg_dyn_build_scalar_tau_lists = function(scenario_info, tax_law, baseline_root,
-                                          ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
-
-  #----------------------------------------------------------------------------
-  # Helper for v1 scalar-tau mode: builds (baseline_tau, reform_tau) lists in
-  # the format expected by kg_dyn_run_bathtub_pass. Reads pref.rates3 from the
-  # baseline scenario's persisted tax_law.csv (top kg bracket rate) and from
-  # the reform's joined tax_law tibble.
-  #
-  # Returns: list(baseline_tau, reform_tau), each a named-by-year list of
-  #          length-|ages| numeric vectors.
-  #----------------------------------------------------------------------------
-
-  years = scenario_info$years
-  n_age = length(ages)
-
-  baseline_tax_law = file.path(baseline_root, 'baseline', 'static',
-                                'supplemental', 'tax_law.csv') %>%
-    read_csv(show_col_types = FALSE)
-
-  baseline_tau = setNames(
-    lapply(years, function(t) {
-      v = baseline_tax_law %>% filter(year == t) %>% pull(pref.rates3) %>% .[1]
-      rep(v, n_age)
-    }),
-    as.character(years)
-  )
-
-  reform_tau = setNames(
-    lapply(years, function(t) {
-      v = tax_law %>% filter(year == t) %>% pull(pref.rates3) %>% .[1]
-      rep(v, n_age)
-    }),
-    as.character(years)
-  )
 
   list(baseline_tau = baseline_tau, reform_tau = reform_tau)
 }

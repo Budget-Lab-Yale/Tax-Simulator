@@ -556,10 +556,10 @@ run_bathtub_pass = function(scenario_info, tax_law) {
 
   #----------------------------------------------------------------------------
   # Orchestrates the kg_dynamics bathtub pre-pass for one scenario. Aggregates
-  # baseline cells from Tax-Data, builds scalar tau lists from baseline+reform
-  # tax law (v1; v2 will replace with cell-MTR vectors), and runs the
-  # sequential year-by-year recurrence via kg_dyn_run_bathtub_pass(). Side
-  # effect: writes per-year state files under
+  # baseline cells from Tax-Data, builds gain-stock-weighted cell-MTR tau
+  # lists from baseline + reform static detail, and runs the sequential
+  # year-by-year recurrence via kg_dyn_run_bathtub_pass(). Side effect: writes
+  # per-year state files under
   # {scenario_output}/conventional/supplemental/kg_dynamics_state/.
   #
   # Called by do_scenario() for non-baseline scenarios that include any
@@ -574,32 +574,25 @@ run_bathtub_pass = function(scenario_info, tax_law) {
   # Returns: invisibly NULL.
   #----------------------------------------------------------------------------
 
+  if (is.null(scenario_info$mtr_vars) ||
+      !('kg_lt' %in% scenario_info$mtr_vars)) {
+    stop('kg_dynamics requires the runscript to register ',
+         'mtr_vars = "kg_lt" so the bathtub can read per-cell MTRs from ',
+         'static detail. Scenario "', scenario_info$ID, '" does not.')
+  }
+
   baseline_cells = kg_dyn_aggregate_baseline_cells_from_taxdata(
     scenario_info = scenario_info,
     sample_ids    = globals$sample_ids,
     pct_sample    = globals$pct_sample
   )
 
-  # v2 cell-MTR mode activates when the scenario's runscript registers
-  # mtr_vars = "kg_lt" (so the static pass produced mtr_kg_lt in detail).
-  # Otherwise fall back to v1 scalar tau from pref.rates3.
-  use_cellmtr = !is.null(scenario_info$mtr_vars) &&
-                ('kg_lt' %in% scenario_info$mtr_vars)
-
-  if (use_cellmtr) {
-    tau_lists = kg_dyn_build_cellmtr_tau_lists(
-      scenario_info = scenario_info,
-      baseline_root = globals$baseline_root,
-      sample_ids    = globals$sample_ids,
-      pct_sample    = globals$pct_sample
-    )
-  } else {
-    tau_lists = kg_dyn_build_scalar_tau_lists(
-      scenario_info = scenario_info,
-      tax_law       = tax_law,
-      baseline_root = globals$baseline_root
-    )
-  }
+  tau_lists = kg_dyn_build_tau_lists(
+    scenario_info = scenario_info,
+    baseline_root = globals$baseline_root,
+    sample_ids    = globals$sample_ids,
+    pct_sample    = globals$pct_sample
+  )
 
   kg_dyn_run_bathtub_pass(
     scenario_info  = scenario_info,
