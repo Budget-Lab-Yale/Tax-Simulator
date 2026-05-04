@@ -55,12 +55,18 @@ if (length(args) < 1) {
 }
 BASELINE_ROOT = args[1]
 
-TAX_DATA_ROOT = '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1/2026043020/baseline'
-YEARS         = 2026:2055
+TAX_DATA_ROOT = '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1/2026050315/baseline'
 AGES          = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX
-TARGET_ETA_30 = -0.6
+TARGET_ETA    = -0.62
 PERTURBATION  = 0.01      # 1pp uniform MTR perturbation
-ANCHOR_YEAR   = min(YEARS) + 29   # year 30 (zero-indexed: index 30)
+
+# Derive YEARS from what the baseline run actually has on disk. Anchor the
+# elasticity check at year 30 if available, otherwise the last sim year.
+detail_files = list.files(file.path(BASELINE_ROOT, 'baseline/static/detail'),
+                          pattern = '^[0-9]+\\.csv$')
+YEARS         = sort(as.integer(sub('\\.csv$', '', detail_files)))
+ANCHOR_YEAR   = if (length(YEARS) >= 30) min(YEARS) + 29 else max(YEARS)
+ANCHOR_LABEL  = ANCHOR_YEAR - min(YEARS) + 1
 
 
 #-------------------------------------------------------------------------------
@@ -110,16 +116,18 @@ tau_S = lapply(tau_B, function(v) v + PERTURBATION)
 # (used as the elasticity denominator anchor)
 #-------------------------------------------------------------------------------
 
-# numerator: sum_{a,t} weight_at_to_celllevel * G_B(a,t) * tau_B(a,t)
-# denom:     sum_{a,t} G_B(a,t)
+# Realization-weighted: numerator weights cell tau by R_B (realized gains)
+# rather than G_B (unrealized stock). Realizers concentrate at higher MTRs,
+# so this anchor is higher than the stock-weighted equivalent and gives the
+# elasticity calibration the right denominator.
 num = sum(sapply(YEARS, function(t) {
-  sum(baseline_cells[[as.character(t)]]$G_B *
+  sum(baseline_cells[[as.character(t)]]$R_B *
       as.numeric(tau_B[[as.character(t)]]))
 }))
-den = sum(sapply(YEARS, function(t) sum(baseline_cells[[as.character(t)]]$G_B)))
+den = sum(sapply(YEARS, function(t) sum(baseline_cells[[as.character(t)]]$R_B)))
 TAU_AVG_B = num / den
 
-cat(sprintf("Average baseline tau (gain-stock-weighted, across all years): %.4f\n", TAU_AVG_B))
+cat(sprintf("Average baseline tau (realization-weighted, across all years): %.4f\n", TAU_AVG_B))
 cat(sprintf("Anchor: log((tau_avg_B + perturbation)/tau_avg_B) = %.5f\n",
             log((TAU_AVG_B + PERTURBATION) / TAU_AVG_B)))
 
@@ -145,7 +153,7 @@ bracket_step_up = kg_dyn_compute_brackets(AGES, c_phi = 0, life_table)
 regime_step_up = list(c_phi = 0, delta_vanish = 1, delta_route = 0, delta_realize = 0)
 
 
-eta_at_year_30 = function(eta_val) {
+eta_at_anchor = function(eta_val) {
 
   delta = setNames(rep(0, length(AGES)), as.character(AGES))
 
@@ -186,19 +194,20 @@ eta_at_year_30 = function(eta_val) {
 # Step 5: Bisect eta to hit target
 #-------------------------------------------------------------------------------
 
-cat("\nCalibrating eta to hit eta_30 =", TARGET_ETA_30, "...\n\n")
+cat(sprintf("\nCalibrating eta to hit elasticity = %.2f at sim-year %d (calendar %d)...\n\n",
+            TARGET_ETA, ANCHOR_LABEL, ANCHOR_YEAR))
 
 # Coarse grid sweep
 eta_grid = c(1, 3, 5, 8, 12, 18, 25, 40, 60)
 cat("Coarse sweep:\n")
 sweep_results = sapply(eta_grid, function(e) {
-  v = eta_at_year_30(e)
+  v = eta_at_anchor(e)
   cat(sprintf("  eta = %6.2f  ->  eta_30 = %.4f\n", e, v))
   v
 })
 
-below = which(sweep_results > TARGET_ETA_30)   # less negative
-above = which(sweep_results < TARGET_ETA_30)   # more negative
+below = which(sweep_results > TARGET_ETA)   # less negative
+above = which(sweep_results < TARGET_ETA)   # more negative
 if (length(below) == 0 || length(above) == 0) {
   stop("Grid does not bracket target. Extend eta_grid or check inputs.")
 }
@@ -210,17 +219,17 @@ cat(sprintf("\nBracketing: [%.2f, %.2f]\n", e_lo, e_hi))
 
 for (iter in 1:30) {
   e_mid = (e_lo + e_hi) / 2
-  v_mid = eta_at_year_30(e_mid)
+  v_mid = eta_at_anchor(e_mid)
   cat(sprintf("  iter %2d  eta = %.5f  eta_30 = %.5f\n", iter, e_mid, v_mid))
-  if (abs(v_mid - TARGET_ETA_30) < 1e-4) break
-  if (v_mid > TARGET_ETA_30) e_lo = e_mid else e_hi = e_mid
+  if (abs(v_mid - TARGET_ETA) < 1e-4) break
+  if (v_mid > TARGET_ETA) e_lo = e_mid else e_hi = e_mid
 }
 
 eta_star = (e_lo + e_hi) / 2
-final    = eta_at_year_30(eta_star)
+final    = eta_at_anchor(eta_star)
 
 cat(sprintf("\nCalibrated eta = %.4f  (eta_30 = %.4f, target = %.4f)\n",
-            eta_star, final, TARGET_ETA_30))
+            eta_star, final, TARGET_ETA))
 cat("\nUpdate the `eta` default in kg_dyn_run_bathtub_pass() ",
     "(src/sim/kg_dynamics.R) to this value.\n", sep = "")
 

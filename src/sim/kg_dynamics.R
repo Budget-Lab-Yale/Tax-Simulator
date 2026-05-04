@@ -33,9 +33,10 @@ KG_DYN_HEIR_SHIFT  = 30        # average decedent-to-heir age gap
 KG_DYN_HEIR_SIGMA  = 5         # std dev of heir age distribution
 
 # Default eta. Calibrated by other/kg_model_tests/calibrate_eta.R against
-# eta_30 = -0.6 at a 1pp uniform MTR perturbation under step-up. Last
-# calibrated 2026-05-03 against baseline run 202605031335.
-KG_DYN_DEFAULT_ETA = 9.1016
+# realization-weighted aggregate elasticity = -0.6 under a 1pp uniform MTR
+# perturbation, step-up regime. Last calibrated 2026-05-03 against baseline
+# run 202605031937 anchored at sim-year 10 (calendar 2035).
+KG_DYN_DEFAULT_ETA = 6.5059
 
 KG_DYN_ASSET_VALUE_COLS = c('value.equities', 'value.pass_throughs',
                             'value.primary_home', 'value.other_home',
@@ -592,26 +593,36 @@ kg_dyn_aggregate_cell_mtr = function(records_with_attrs,
                                       ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
   #----------------------------------------------------------------------------
-  # Gain-stock-weighted cell-MTR aggregation. Records must already carry
-  # G_unit, age_cohort, weight, and mtr_kg_lt. Per cell:
+  # Realization-weighted cell-MTR aggregation. Records must carry G_unit,
+  # age_cohort, weight, kg_lt, and mtr_kg_lt. Per cell:
   #
-  #   tau(a) = sum(weight * G_unit * mtr_kg_lt) / sum(weight * G_unit)
+  #   tau(a) = sum(weight * pmax(kg_lt, 0) * mtr_kg_lt) / sum(weight * pmax(kg_lt, 0))
   #
-  # Cells with zero gain stock receive tau = 0.
+  # The realization-weighting is the right anchor for elasticity calibration:
+  # it captures the average MTR on the dollars that actually realize, which
+  # is the variable the realization decision responds to. Falls back to
+  # gain-stock weighting when a cell has zero positive realizations (young
+  # heir cohorts under carryover); falls back to 0 when both are zero.
   #----------------------------------------------------------------------------
 
   agg = records_with_attrs %>%
+    mutate(kg_pos = pmax(kg_lt, 0)) %>%
     group_by(age_cohort) %>%
-    summarise(num = sum(weight * G_unit * mtr_kg_lt, na.rm = TRUE),
-              den = sum(weight * G_unit,             na.rm = TRUE),
+    summarise(num_R = sum(weight * kg_pos * mtr_kg_lt, na.rm = TRUE),
+              den_R = sum(weight * kg_pos,             na.rm = TRUE),
+              num_G = sum(weight * G_unit * mtr_kg_lt, na.rm = TRUE),
+              den_G = sum(weight * G_unit,             na.rm = TRUE),
               .groups = 'drop') %>%
     rename(age = age_cohort)
 
   out = tibble(age = ages) %>%
     left_join(agg, by = 'age') %>%
-    mutate(num = if_else(is.na(num), 0, num),
-           den = if_else(is.na(den), 0, den),
-           tau = if_else(den > 0, num / den, 0)) %>%
+    mutate(across(c(num_R, den_R, num_G, den_G), ~ if_else(is.na(.), 0, .)),
+           tau = case_when(
+             den_R > 0 ~ num_R / den_R,
+             den_G > 0 ~ num_G / den_G,
+             TRUE      ~ 0
+           )) %>%
     arrange(age) %>%
     pull(tau)
 
