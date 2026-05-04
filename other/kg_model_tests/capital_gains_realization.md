@@ -412,7 +412,7 @@ values to the same underlying mechanism.
 
 ### 4.1 The agent's choice problem
 
-Normalize to $1 of unrealized gain. A representative holder in cell
+Normalize to \$1 of unrealized gain. A representative holder in cell
 $(a, t, k)$ picks a realization fraction $r \in [0, 1]$ to maximize:
 
 $$
@@ -463,15 +463,15 @@ P_{a,t,k}(c)
 \;=\;
 \tau_t
 \;-\;
-\sum_{j=1}^{H}
+\sum_{j=1}^{\infty}
 \beta^j\, s_{a,k,j}\, \tau_{t+j}
 \;-\;
-\sum_{j=1}^{H}
+\sum_{j=1}^{\infty}
 \beta^j\, d_{a,j}\, c\, \tau_{t+j},
 }
 $$
 
-where $j$ indexes future years, $H$ is the integration horizon, and:
+where $j$ indexes future years and:
 
 * $s_{a,k,j}$ — probability that the asset is voluntarily realized in year
   $t+j$, conditional on the holder still holding at $t$. Built from the
@@ -486,6 +486,13 @@ where $j$ indexes future years, $H$ is the integration horizon, and:
   embedded tax burden that survives the holder's death and is internalized
   in their lifetime decision.
 
+The sums are written formally to infinity; the integrand decays
+geometrically at rate $\beta \cdot (1 - \lambda_r - m) \approx 0.82$ per
+year, so terms are below float precision after a few hundred years. The
+implementation truncates at 200 years, which is well into the irrelevant
+tail and exposes no tunable parameter — $\beta$ alone governs how quickly
+future events are discounted away.
+
 The first sum is the discounted expected tax from voluntary future
 realization. The second sum is the discounted expected tax from the death
 state, scaled by the regime's burden-share $c$. Under step-up ($c = 0$) the
@@ -499,7 +506,7 @@ cleanly:
 
 $$
 P_{a,t,k}(c) \;=\; \tau_t \cdot (1 - M_{a,k}(c)), \quad
-M_{a,k}(c) \;=\; \sum_{j=1}^{H} \beta^j s_{a,k,j} + c \sum_{j=1}^{H} \beta^j d_{a,j}.
+M_{a,k}(c) \;=\; \sum_{j=1}^{\infty} \beta^j s_{a,k,j} + c \sum_{j=1}^{\infty} \beta^j d_{a,j}.
 $$
 
 The dimensionless quantity $1 - M_{a,k}(c)$ is the **bracket**. It scales
@@ -522,10 +529,16 @@ is the probability that the asset is *still being held* at the start of
 year $t + j$. Then:
 
 $$
-s_{a,k,j} \;=\; S_{a, j-1} \cdot \lambda_{r,k},
+s_{a,k,j} \;=\; S_{a, j} \cdot \lambda_{r,k},
 \qquad
-d_{a,j} \;=\; S_{a, j-1} \cdot m_{a+j-1, t+j-1}.
+d_{a,j} \;=\; S_{a, j} \cdot m_{a+j, t+j}.
 $$
+
+The indexing pairs $s_j$ and $d_j$ with the bracket-sum factors $\beta^j$
+and $\tau_{t+j}$ in §4.2: realizing or dying *in year $t+j$* requires the
+holder to have survived from year $t$ through the start of year $t+j$
+(probability $S_{a,j}$, $j$ years of competing-risks decay), and then to
+realize / die during year $t+j$ at age $a+j$.
 
 For ages above the topcode $a_{\max}$, $m$ is held fixed at $m_{a_{\max}}$.
 The mortality path $m_{a+i, t+i}$ is read from the simulator's per-year

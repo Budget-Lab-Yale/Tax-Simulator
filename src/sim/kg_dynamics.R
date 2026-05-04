@@ -26,17 +26,17 @@
 
 KG_DYN_AGE_MIN     = 18
 KG_DYN_AGE_MAX     = 80
-KG_DYN_HORIZON     = 60        # bracket integration horizon, in years
 KG_DYN_BETA        = 0.96      # annual discount factor (~4%)
 KG_DYN_LAMBDA_R    = 0.05      # voluntary realization hazard (asset-aggregate)
 KG_DYN_HEIR_SHIFT  = 30        # average decedent-to-heir age gap
 KG_DYN_HEIR_SIGMA  = 5         # std dev of heir age distribution
 
 # Default eta. Calibrated by other/kg_model_tests/calibrate_eta.R against
-# realization-weighted aggregate elasticity = -0.6 under a 1pp uniform MTR
-# perturbation, step-up regime. Last calibrated 2026-05-03 against baseline
-# run 202605031937 anchored at sim-year 10 (calendar 2035).
-KG_DYN_DEFAULT_ETA = 6.5059
+# realization-weighted aggregate elasticity = -0.62 under a 1pp uniform MTR
+# perturbation, step-up regime. Last calibrated 2026-05-04 against baseline
+# run 202605041857 (30 years of real Tax-Data) anchored at sim-year 30
+# (calendar 2055) -- the long-run / "permanent" elasticity anchor.
+KG_DYN_DEFAULT_ETA = 6.8750
 
 KG_DYN_ASSET_VALUE_COLS = c('value.equities', 'value.pass_throughs',
                             'value.primary_home', 'value.other_home',
@@ -127,31 +127,36 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
   # young heir cohorts (carryover / deemed inflows) from getting r_S = 0
   # forever just because they had no historical realization activity.
   #
-  # Returns: tibble with age, G_B, R_B, r_B, m, n.
+  # Returns: tibble with age, G_B, R_B, r_B, m, mG_record.
   #----------------------------------------------------------------------------
 
   agg = tax_units %>%
     group_by(age_cohort) %>%
-    summarise(G_B   = sum(weight * G_unit,           na.rm = TRUE),
-              R_B   = sum(weight * pmax(kg_lt, 0),   na.rm = TRUE),
-              m_num = sum(weight * m_household,      na.rm = TRUE),
-              n     = sum(weight,                    na.rm = TRUE),
-              .groups = 'drop') %>%
+    summarise(G_B       = sum(weight * G_unit,                    na.rm = TRUE),
+              R_B       = sum(weight * pmax(kg_lt, 0),            na.rm = TRUE),
+              m_num     = sum(weight * m_household,               na.rm = TRUE),
+              mG_record = sum(weight * m_household * G_unit,      na.rm = TRUE),
+              w_total   = sum(weight,                             na.rm = TRUE),
+              .groups   = 'drop') %>%
     rename(age = age_cohort)
 
   out = tibble(age = ages) %>%
     left_join(agg, by = 'age') %>%
-    mutate(across(c(G_B, R_B, m_num, n), ~ if_else(is.na(.), 0, .)),
-           m   = if_else(n   > 0, m_num / n, 0),
-           r_B = if_else(G_B > 0, R_B   / G_B, 0))
+    mutate(across(c(G_B, R_B, m_num, mG_record, w_total), ~ if_else(is.na(.), 0, .)),
+           m   = if_else(w_total > 0, m_num / w_total, 0),
+           r_B = if_else(G_B     > 0, R_B   / G_B,     0))
 
-  total_R_B  = sum(out$R_B)
-  total_G_B  = sum(out$G_B)
-  r_B_pooled = if (total_G_B > 0) total_R_B / total_G_B else 0
+  # Pooled rate for sparse cells: only consider cells with R_B > 0 so the
+  # cells we're imputing don't drag the imputation toward zero. Should be a
+  # no-op under the full-sample requirement enforced in run_bathtub_pass(),
+  # but kept for safety on edge cases (e.g. carryover heir cohorts at the
+  # youngest ages, where a single-year sample may still be empty).
+  ok         = out$R_B > 0
+  r_B_pooled = if (any(ok)) sum(out$R_B[ok]) / sum(out$G_B[ok]) else 0
 
   out %>%
-    mutate(r_B = if_else(G_B > 0 & r_B == 0, r_B_pooled, r_B)) %>%
-    select(age, G_B, R_B, r_B, m, n) %>%
+    mutate(r_B = if_else(G_B > 0 & R_B == 0, r_B_pooled, r_B)) %>%
+    select(age, G_B, R_B, r_B, m, mG_record) %>%
     arrange(age)
 }
 
@@ -202,7 +207,6 @@ kg_dyn_build_aging_matrix = function(ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 kg_dyn_compute_bracket = function(a, c_phi, life_table,
                                   lambda_r = KG_DYN_LAMBDA_R,
                                   beta     = KG_DYN_BETA,
-                                  horizon  = KG_DYN_HORIZON,
                                   tau_ratio = NULL) {
 
   #----------------------------------------------------------------------------
@@ -211,22 +215,53 @@ kg_dyn_compute_bracket = function(a, c_phi, life_table,
   #         + c * sum_j beta^j d_j (tau_{t+j}/tau_t)
   # with (s_j, d_j) from a competing-risks recursion.
   #
-  # tau_ratio: length-horizon vector of tau_{t+j}/tau_t. NULL = constant 1
+  # The integral is summed to a fixed 200-year ceiling. Beta and the
+  # competing-risks decay drive the integrand to <1e-10 well before that:
+  # beta * (1 - lambda_r - m) ~ 0.82 means terms decay by 0.82 per year, so
+  # the contribution past year 60 is below float noise. The ceiling exists
+  # only to bound the loop; nothing in the model depends on it.
+  #
+  # tau_ratio: length-200 vector of tau_{t+j}/tau_t. NULL = constant 1
   # (naive expectations).
   #----------------------------------------------------------------------------
+
+  horizon = 200L
 
   if (is.null(tau_ratio)) tau_ratio = rep(1, horizon)
   stopifnot(length(tau_ratio) == horizon)
 
-  ages_future = pmin(a + 0:(horizon - 1), KG_DYN_AGE_MAX)
-  m_future    = life_table[as.character(ages_future)]
-  m_future[is.na(m_future)] = 0
+  # Hazard during year t+i-1 (when the holder is age a+i-1):
+  #   hazard[i] = lambda_r + m_{a+i-1}.
+  #
+  # The pmin(..., AGE_MAX) clamp pins all ages above 80 to the 80+ pool's
+  # average mortality. For someone starting at 70, years 11+ of the bracket
+  # use m_80 (the pool average, ~0.07-0.10) instead of the true age-90+ rate
+  # (0.15-0.30). The bracket integrand at those years is tiny under beta and
+  # competing-risks decay, so the bias is small -- but real for cohorts that
+  # survive deep into the topcode.
+  #
+  # POTENTIAL IMPROVEMENT: extend the life table beyond age 80 (SSA actuarial
+  # data through ~110) and use it here. Keep the recurrence's age=80 topcode
+  # as-is -- the cell aggregation still makes sense -- but let the bracket
+  # see proper age-specific mortality forever. Reasonable upgrade if anyone
+  # ever runs reforms targeted at the elderly (estate-style).
+  ages_hazard = pmin(a + 0:(horizon - 1), KG_DYN_AGE_MAX)
+  m_hazard    = life_table[as.character(ages_hazard)]
+  m_hazard[is.na(m_hazard)] = 0
+  hazard      = pmin(lambda_r + m_hazard, 0.999)
 
-  hazard = pmin(lambda_r + m_future, 0.999)
-  S      = c(1, cumprod(1 - hazard))[1:horizon]   # still-holding probability
+  # S[j] = probability of still holding at the start of year t+j (surviving
+  # years t..t+j-1). Pairs with beta^j and tau_{t+j} so that s_j and d_j
+  # represent events in year t+j; see spec §4.2-4.3.
+  S = cumprod(1 - hazard)[1:horizon]
 
-  s_j = S * lambda_r          # voluntary realization in year j
-  d_j = S * m_future          # death-without-realization in year j
+  # Mortality during year t+j (when age a+j): m_{a+j}.
+  ages_mort = pmin(a + 1:horizon, KG_DYN_AGE_MAX)
+  m_mort    = life_table[as.character(ages_mort)]
+  m_mort[is.na(m_mort)] = 0
+
+  s_j = S * lambda_r          # realize in year t+j
+  d_j = S * m_mort            # die in year t+j
 
   betas = beta ^ (1:horizon)
   sum(betas * s_j * tau_ratio) + c_phi * sum(betas * d_j * tau_ratio)
@@ -237,11 +272,10 @@ kg_dyn_compute_bracket = function(a, c_phi, life_table,
 kg_dyn_compute_brackets = function(ages, c_phi, life_table,
                                    lambda_r = KG_DYN_LAMBDA_R,
                                    beta     = KG_DYN_BETA,
-                                   horizon  = KG_DYN_HORIZON,
                                    tau_ratio = NULL) {
 
   out = sapply(ages, function(a) {
-    kg_dyn_compute_bracket(a, c_phi, life_table, lambda_r, beta, horizon, tau_ratio)
+    kg_dyn_compute_bracket(a, c_phi, life_table, lambda_r, beta, tau_ratio)
   })
   names(out) = as.character(ages)
   out
@@ -258,6 +292,15 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
 
   #----------------------------------------------------------------------------
   # One-step bathtub recurrence. Operates on cell vectors indexed by age.
+  #
+  # Topcode note: the age=80 cell pools every taxpayer age 80+ into one
+  # bucket and uses a single weight-averaged m_80. This is refreshed from
+  # each year's Tax-Data, so it tracks the true 80+ population mix over
+  # time. The remaining approximation is within-pool heterogeneity --
+  # someone who's been in the topcode 15 years (true age ~95) has much
+  # higher individual mortality than someone newly aged in. Pooled m_80
+  # smooths this out. Small effect in practice because most pool weight is
+  # on early-80s, but worth flagging if reforms shift the topcode age mix.
   #
   # r_S is clamped to [0, 1] (spec's choice variable is a probability).
   #
@@ -414,43 +457,76 @@ kg_dyn_state_path = function(scenario_info, year) {
 
 
 
-kg_dyn_aggregate_baseline_cells_from_taxdata = function(scenario_info,
-                                                         sample_ids,
-                                                         pct_sample,
-                                                         ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
+kg_dyn_load_bathtub_inputs = function(scenario_info, baseline_root,
+                                       sample_ids, pct_sample,
+                                       ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
   #----------------------------------------------------------------------------
-  # Reads Tax-Data microdata directly for each simulation year and aggregates
-  # to per-age-cell baseline cell tibbles. Used as the bathtub's baseline-side
-  # input. Bypasses the simulator's static detail output because the wealth
-  # columns (value.*/basis.*) and q_death* are not in detail_vars; they live
-  # only in the source Tax-Data csvs.
+  # Single Tax-Data pass that builds all three baseline-side inputs the
+  # bathtub needs:
   #
-  # Returns: named list of cell tibbles, indexed by year (as character).
+  #   - baseline_cells : named list of cell tibbles (G_B, R_B, r_B, m,
+  #                      mG_record) per year
+  #   - baseline_tau   : named list of length-|ages| named tau vectors per
+  #                      year, R-weighted on baseline static detail's
+  #                      mtr_kg_lt
+  #   - reform_tau     : same shape, R-weighted on reform static detail
+  #
+  # Bypasses static detail for the cell aggregates because the wealth
+  # columns (value.*/basis.*) and q_death* live only in the source
+  # Tax-Data csvs. mtr_kg_lt comes from baseline + reform static detail
+  # (requires runscript registers mtr_vars = "kg_lt").
   #----------------------------------------------------------------------------
 
   tax_data_root = scenario_info$interface_paths$`Tax-Data`
-  years = scenario_info$years
+  years         = scenario_info$years
 
-  cols_to_read = c('id', 'weight', 'filing_status', 'age1', 'age2',
-                   'kg_lt', 'q_death1', 'q_death2',
-                   KG_DYN_ASSET_VALUE_COLS, KG_DYN_ASSET_BASIS_COLS)
+  td_cols = c('id', 'weight', 'filing_status', 'age1', 'age2',
+              'kg_lt', 'q_death1', 'q_death2',
+              KG_DYN_ASSET_VALUE_COLS, KG_DYN_ASSET_BASIS_COLS)
 
-  out = lapply(years, function(t) {
-    file.path(tax_data_root, paste0('tax_units_', t, '.csv')) %>%
-      fread(select = cols_to_read, showProgress = FALSE) %>%
+  baseline_cells = list()
+  baseline_tau   = list()
+  reform_tau     = list()
+
+  for (t in years) {
+
+    td = file.path(tax_data_root, paste0('tax_units_', t, '.csv')) %>%
+      fread(select = td_cols, showProgress = FALSE) %>%
       as_tibble() %>%
       filter(id %in% sample_ids) %>%
       mutate(weight = weight / pct_sample) %>%
-      kg_dyn_attach_record_attrs() %>%
-      kg_dyn_aggregate_cells(ages)
-  })
-  setNames(out, as.character(years))
+      kg_dyn_attach_record_attrs()
+
+    baseline_cells[[as.character(t)]] = kg_dyn_aggregate_cells(td, ages)
+
+    bl_mtr = file.path(baseline_root, 'baseline', 'static', 'detail',
+                        paste0(t, '.csv')) %>%
+      fread(select = c('id', 'mtr_kg_lt'), showProgress = FALSE) %>%
+      as_tibble()
+
+    rf_mtr = file.path(scenario_info$output_path, 'static', 'detail',
+                        paste0(t, '.csv')) %>%
+      fread(select = c('id', 'mtr_kg_lt'), showProgress = FALSE) %>%
+      as_tibble()
+
+    baseline_tau[[as.character(t)]] = td %>%
+      left_join(bl_mtr, by = 'id') %>%
+      kg_dyn_aggregate_cell_mtr(ages)
+
+    reform_tau[[as.character(t)]] = td %>%
+      left_join(rf_mtr, by = 'id') %>%
+      kg_dyn_aggregate_cell_mtr(ages)
+  }
+
+  list(baseline_cells = baseline_cells,
+       baseline_tau   = baseline_tau,
+       reform_tau     = reform_tau)
 }
 
 
 
-kg_dyn_build_cell_table = function(baseline_t, r_S_vec, delta_prev, regime,
+kg_dyn_build_cell_table = function(baseline_t, r_S_vec, delta_prev,
                                     tau_B_vec, tau_S_vec) {
 
   #----------------------------------------------------------------------------
@@ -483,7 +559,7 @@ kg_dyn_build_cell_table = function(baseline_t, r_S_vec, delta_prev, regime,
            deemed_factor = if_else(G_B > 0,
                                    pmax(0, (G_B + dG) / G_B),
                                    1)) %>%
-    select(age, G_B, R_B, r_B, r_S, m, dG,
+    select(age, G_B, R_B, r_B, r_S, m, mG_record, dG,
            tau_B, tau_S, rate_factor, extra_R, deemed_factor)
 }
 
@@ -524,9 +600,11 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   A     = kg_dyn_build_aging_matrix(ages)
   omega = kg_dyn_build_heir_matrix(ages)
 
-  # Bracket cache by c_phi value (recompute only when regime's c_phi changes)
+  # Bracket cache by c_phi value (recompute only when regime's c_phi changes).
+  # Always key by format(c_phi, nsmall = 6) so the baseline (c=0) and reform
+  # entries can never end up under inconsistent keys.
   bracket_cache = list()
-  bracket_cache[['0']] = kg_dyn_compute_brackets(ages, c_phi = 0, life_table)
+  c_key_B       = format(0, nsmall = 6)
 
   delta = setNames(rep(0, length(ages)), as.character(ages))
 
@@ -538,12 +616,14 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     bequest      = as.numeric(tlt$pref.kg_bequest_motive)
     regime       = kg_dyn_resolve_regime(regime_code, bequest)
 
-    c_key = format(regime$c_phi, nsmall = 6)
-    if (!c_key %in% names(bracket_cache)) {
-      bracket_cache[[c_key]] = kg_dyn_compute_brackets(ages, c_phi = regime$c_phi, life_table)
+    c_key_S = format(regime$c_phi, nsmall = 6)
+    for (k in unique(c(c_key_B, c_key_S))) {
+      if (!k %in% names(bracket_cache)) {
+        bracket_cache[[k]] = kg_dyn_compute_brackets(ages, c_phi = as.numeric(k), life_table)
+      }
     }
-    bracket_B = bracket_cache[['0']]
-    bracket_S = bracket_cache[[c_key]]
+    bracket_B = bracket_cache[[c_key_B]]
+    bracket_S = bracket_cache[[c_key_S]]
 
     P_B = baseline_tau[[as.character(t)]] * (1 - bracket_B)
     P_S = reform_tau  [[as.character(t)]] * (1 - bracket_S)
@@ -564,7 +644,6 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
       baseline_t = bt,
       r_S_vec    = r_S_vec,
       delta_prev = delta,
-      regime     = regime,
       tau_B_vec  = setNames(baseline_tau[[as.character(t)]], as.character(ages)),
       tau_S_vec  = setNames(reform_tau  [[as.character(t)]], as.character(ages))
     )
@@ -631,62 +710,6 @@ kg_dyn_aggregate_cell_mtr = function(records_with_attrs,
 
 
 
-kg_dyn_build_tau_lists = function(scenario_info, baseline_root,
-                                   sample_ids, pct_sample,
-                                   ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
-
-  #----------------------------------------------------------------------------
-  # Builds (baseline_tau, reform_tau) lists where each year's vector carries
-  # the gain-stock-weighted cell-aggregate of per-record mtr_kg_lt. Reads
-  # Tax-Data (for G_unit / cohort / weight) and joins on id with mtr_kg_lt
-  # from baseline static detail and reform static detail.
-  #
-  # Requires the runscript to register mtr_vars = "kg_lt".
-  #----------------------------------------------------------------------------
-
-  years         = scenario_info$years
-  tax_data_root = scenario_info$interface_paths$`Tax-Data`
-
-  td_cols = c('id', 'weight', 'filing_status', 'age1', 'age2',
-              'q_death1', 'q_death2',
-              KG_DYN_ASSET_VALUE_COLS, KG_DYN_ASSET_BASIS_COLS)
-
-  baseline_tau = list()
-  reform_tau   = list()
-
-  for (t in years) {
-
-    td = file.path(tax_data_root, paste0('tax_units_', t, '.csv')) %>%
-      fread(select = td_cols, showProgress = FALSE) %>%
-      as_tibble() %>%
-      filter(id %in% sample_ids) %>%
-      mutate(weight = weight / pct_sample) %>%
-      kg_dyn_attach_record_attrs()
-
-    bl_mtr = file.path(baseline_root, 'baseline', 'static', 'detail',
-                        paste0(t, '.csv')) %>%
-      fread(select = c('id', 'mtr_kg_lt'), showProgress = FALSE) %>%
-      as_tibble()
-
-    rf_mtr = file.path(scenario_info$output_path, 'static', 'detail',
-                        paste0(t, '.csv')) %>%
-      fread(select = c('id', 'mtr_kg_lt'), showProgress = FALSE) %>%
-      as_tibble()
-
-    baseline_tau[[as.character(t)]] = td %>%
-      left_join(bl_mtr, by = 'id') %>%
-      kg_dyn_aggregate_cell_mtr(ages)
-
-    reform_tau[[as.character(t)]] = td %>%
-      left_join(rf_mtr, by = 'id') %>%
-      kg_dyn_aggregate_cell_mtr(ages)
-  }
-
-  list(baseline_tau = baseline_tau, reform_tau = reform_tau)
-}
-
-
-
 #-------------------------------------------------------------------------------
 # Post-processing: bathtub diagnostics summary
 #-------------------------------------------------------------------------------
@@ -726,10 +749,14 @@ kg_dyn_build_summary = function(scenario_info) {
   age_profile = bind_rows(lapply(seq_along(years), function(i) {
     s = states[[i]]
     ct = s$cell_table
-    # Backfill columns that may be missing from older state files
-    if (!('m'     %in% names(ct))) ct$m     = NA_real_
-    if (!('tau_B' %in% names(ct))) ct$tau_B = NA_real_
-    if (!('tau_S' %in% names(ct))) ct$tau_S = NA_real_
+    # Backfill columns that may be missing from older state files. For
+    # mG_record (added 2026-05), fall back to the cell-product form m * G_B
+    # so the summary still computes for legacy state files; new runs use
+    # the per-record sum the simulator actually applies.
+    if (!('m'         %in% names(ct))) ct$m         = NA_real_
+    if (!('tau_B'     %in% names(ct))) ct$tau_B     = NA_real_
+    if (!('tau_S'     %in% names(ct))) ct$tau_S     = NA_real_
+    if (!('mG_record' %in% names(ct))) ct$mG_record = ct$m * ct$G_B
     ct %>%
       mutate(year   = years[i],
              regime = s$regime$name) %>%
@@ -763,9 +790,16 @@ kg_dyn_build_summary = function(scenario_info) {
       r_S_avg_gw     = if_else(sum(G_B) > 0, sum(r_S   * G_B) / sum(G_B), 0),
       tau_B_avg_gw   = if_else(sum(G_B) > 0, sum(tau_B * G_B, na.rm = TRUE) / sum(G_B), NA_real_),
       tau_S_avg_gw   = if_else(sum(G_B) > 0, sum(tau_S * G_B, na.rm = TRUE) / sum(G_B), NA_real_),
+      tau_B_avg_rw   = if_else(sum(R_B) > 0, sum(tau_B * R_B, na.rm = TRUE) / sum(R_B), NA_real_),
+      tau_S_avg_rw   = if_else(sum(R_B) > 0, sum(tau_S * R_B, na.rm = TRUE) / sum(R_B), NA_real_),
       rate_channel   = sum(R_B * (rate_factor - 1)),  # ΔR from rate change on baseline stock
       lockin_channel = sum(extra_R),                  # ΔR from accumulated dG
-      decedent_stock = sum(m * (G_B + dG)),
+      # decedent_stock uses the same per-record sum the simulator applies in
+      # kg_dyn_apply_to_records (sum(weight * m_household * G_unit), scaled
+      # by deemed_factor to fold in accumulated dG). The cell-product form
+      # sum(m * (G_B + dG)) ignores within-cell covariance between m and
+      # G_unit and overstates the decedent stock by ~3-4x in practice.
+      decedent_stock = sum(mG_record * deemed_factor),
       .groups = 'drop'
     ) %>%
     left_join(regime_df, by = 'year') %>%
@@ -773,15 +807,19 @@ kg_dyn_build_summary = function(scenario_info) {
       inheritance_flow = delta_route   * decedent_stock,
       deemed_realized  = delta_realize * decedent_stock,
       R_S_total        = R_B_total + rate_channel + lockin_channel,
-      dlog_tau         = if_else(tau_B_avg_gw > 0 & tau_S_avg_gw > 0,
-                                 log(tau_S_avg_gw / tau_B_avg_gw), 0),
+      # eta_implied uses realization-weighted tau to match the calibrator
+      # (other/kg_model_tests/calibrate_eta.R). G-weighted columns are kept
+      # for inspection but are not the right denominator for the elasticity.
+      dlog_tau         = if_else(tau_B_avg_rw > 0 & tau_S_avg_rw > 0,
+                                 log(tau_S_avg_rw / tau_B_avg_rw), 0),
       eta_implied      = if_else(R_B_total > 0 & abs(dlog_tau) > 1e-10,
                                  log(R_S_total / R_B_total) / dlog_tau,
                                  NA_real_)
     ) %>%
     select(year, regime, c_phi, delta_vanish, delta_route, delta_realize,
            G_B_total, R_B_total, R_S_total, dG_total,
-           m_avg_gw, r_B_avg_gw, r_S_avg_gw, tau_B_avg_gw, tau_S_avg_gw,
+           m_avg_gw, r_B_avg_gw, r_S_avg_gw,
+           tau_B_avg_gw, tau_S_avg_gw, tau_B_avg_rw, tau_S_avg_rw,
            rate_channel, lockin_channel,
            decedent_stock, inheritance_flow, deemed_realized,
            eta_implied)

@@ -21,10 +21,7 @@ do_kg_dynamics = function(tax_units, baseline_mtrs, static_mtrs,
   #----------------------------------------------------------------------------
 
   year       = tax_units$year[1]
-  state_path = file.path(scenario_info$output_path,
-                          'conventional', 'supplemental',
-                          'kg_dynamics_state',
-                          paste0(year, '.rds'))
+  state_path = kg_dyn_state_path(scenario_info, year)
 
   if (!file.exists(state_path)) {
     stop("kg_dynamics: missing precomputed state file at ", state_path,

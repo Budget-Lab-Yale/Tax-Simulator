@@ -83,7 +83,9 @@ do_scenario = function(ID, baseline_mtrs) {
                           excess_growth_offset = excess_growth_offset,
                           pass_type            = 'static')
 
-    run_bathtub_pass(scenario_info, tax_law)
+    run_bathtub_pass(scenario_info, tax_law,
+                     vat_price_offset     = vat_price_offset,
+                     excess_growth_offset = excess_growth_offset)
 
     run_sim(scenario_info        = scenario_info,
             tax_law              = tax_law,
@@ -555,7 +557,9 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
 
 
 
-run_bathtub_pass = function(scenario_info, tax_law) {
+run_bathtub_pass = function(scenario_info, tax_law,
+                             vat_price_offset     = NULL,
+                             excess_growth_offset = NULL) {
 
   #----------------------------------------------------------------------------
   # Orchestrates the kg_dynamics bathtub pre-pass for one scenario. Aggregates
@@ -570,9 +574,14 @@ run_bathtub_pass = function(scenario_info, tax_law) {
   # year's state file in the conventional pass.
   #
   # Parameters:
-  #   - scenario_info (list) : output of get_scenario_info()
-  #   - tax_law (df)         : output of build_tax_law() — reform's joined
-  #                            tax law tibble
+  #   - scenario_info (list)        : output of get_scenario_info()
+  #   - tax_law (df)                : output of build_tax_law() — reform's
+  #                                   joined tax law tibble
+  #   - vat_price_offset (df)       : VAT price offset tibble; used only to
+  #                                   refuse the run when VAT is active
+  #   - excess_growth_offset (df)   : excess-growth offset tibble; used only
+  #                                   to refuse the run when growth offset
+  #                                   is active
   #
   # Returns: invisibly NULL.
   #----------------------------------------------------------------------------
@@ -584,13 +593,43 @@ run_bathtub_pass = function(scenario_info, tax_law) {
          'static detail. Scenario "', scenario_info$ID, '" does not.')
   }
 
-  baseline_cells = kg_dyn_aggregate_baseline_cells_from_taxdata(
-    scenario_info = scenario_info,
-    sample_ids    = globals$sample_ids,
-    pct_sample    = globals$pct_sample
-  )
+  if (!isTRUE(all.equal(globals$pct_sample, 1))) {
+    stop('kg_dynamics requires pct_sample = 1 (full sample). ',
+         'Realization-rate cells are too sparse at smaller samples to ',
+         'support the bathtub recurrence; sparse-cell fallbacks would mask ',
+         'sampling noise as policy response. Re-run with pct_sample = 1.')
+  }
 
-  tau_lists = kg_dyn_build_tau_lists(
+  # The bathtub reads Tax-Data CSVs directly (to access value.*/basis.*/
+  # q_death*, which aren't in detail_vars), so it bypasses the simulator's
+  # do_capital_adjustment (VAT) and do_excess_growth preprocessing. Mixing
+  # raw-dollar bathtub state with adjusted per-record kg_lt would put the
+  # lock-in carry channel in the wrong unit system. Refuse the combination
+  # until the bathtub either reads from static detail or applies the
+  # adjustments itself.
+  vat_active = !is.null(vat_price_offset) &&
+               'cpi_factor' %in% colnames(vat_price_offset) &&
+               any(abs(vat_price_offset$cpi_factor - 1) > 1e-10, na.rm = TRUE)
+  if (vat_active) {
+    stop('kg_dynamics is not currently compatible with VAT scenarios. ',
+         'The bathtub reads raw Tax-Data and would mix raw-dollar lock-in ',
+         'carry with VAT-scaled per-record kg_lt. Run the kg_dynamics ',
+         'reform without a VAT, or extend the bathtub to read from static ',
+         'detail (which is post-VAT).')
+  }
+
+  growth_active = isTRUE(scenario_info$excess_growth != 0) &&
+                  is.finite(scenario_info$excess_growth_start_year)
+  if (growth_active) {
+    stop('kg_dynamics is not currently compatible with excess-growth ',
+         'scenarios (excess_growth = ', scenario_info$excess_growth, ', ',
+         'start_year = ', scenario_info$excess_growth_start_year, '). ',
+         'Same reason as VAT: raw bathtub state would not match growth-',
+         'adjusted per-record kg_lt. Either disable excess growth on this ',
+         'scenario or extend the bathtub to read from static detail.')
+  }
+
+  inputs = kg_dyn_load_bathtub_inputs(
     scenario_info = scenario_info,
     baseline_root = globals$baseline_root,
     sample_ids    = globals$sample_ids,
@@ -600,9 +639,9 @@ run_bathtub_pass = function(scenario_info, tax_law) {
   kg_dyn_run_bathtub_pass(
     scenario_info  = scenario_info,
     tax_law        = tax_law,
-    baseline_cells = baseline_cells,
-    baseline_tau   = tau_lists$baseline_tau,
-    reform_tau     = tau_lists$reform_tau
+    baseline_cells = inputs$baseline_cells,
+    baseline_tau   = inputs$baseline_tau,
+    reform_tau     = inputs$reform_tau
   )
 
   invisible(NULL)
