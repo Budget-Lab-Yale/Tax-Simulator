@@ -198,6 +198,10 @@ tryCatch({
     # Horizontal equity
     build_horizontal_table(scenario_id)
 
+    # KG dynamics bathtub diagnostics (no-op for non-kg_dynamics scenarios)
+    scenario_info = get_scenario_info(scenario_id)
+    kg_dyn_build_summary(scenario_info)
+
     cat(paste0('Phase 3b: completed scenario=', scenario_id, '\n'))
   }
 

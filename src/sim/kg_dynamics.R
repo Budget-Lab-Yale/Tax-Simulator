@@ -449,12 +449,14 @@ kg_dyn_aggregate_baseline_cells_from_taxdata = function(scenario_info,
 
 
 
-kg_dyn_build_cell_table = function(baseline_t, r_S_vec, delta_prev, regime) {
+kg_dyn_build_cell_table = function(baseline_t, r_S_vec, delta_prev, regime,
+                                    tau_B_vec, tau_S_vec) {
 
   #----------------------------------------------------------------------------
-  # Assembles the per-cell quantities the per-record applier needs: rate
-  # factor, lock-in extra realization, deemed scaling. Persisted into the
-  # state file by kg_dyn_run_bathtub_pass; consumed by kg_dyn_apply_to_records.
+  # Assembles the per-cell quantities the per-record applier needs (rate
+  # factor, lock-in extra realization, deemed scaling) plus diagnostic
+  # quantities used by kg_dyn_build_summary (tau_B, tau_S, m). Persisted into
+  # the state file by kg_dyn_run_bathtub_pass.
   #
   # Per-cell quantities (spec §3.5, §5.3, §3.3.2):
   #   rate_factor   = r_S / r_B           (clamped to 1 when r_B = 0)
@@ -473,13 +475,15 @@ kg_dyn_build_cell_table = function(baseline_t, r_S_vec, delta_prev, regime) {
     mutate(age           = as.integer(age),
            r_S           = as.numeric(r_S_vec[as.character(age)]),
            dG            = as.numeric(delta_prev[as.character(age)]),
+           tau_B         = as.numeric(tau_B_vec[as.character(age)]),
+           tau_S         = as.numeric(tau_S_vec[as.character(age)]),
            rate_factor   = if_else(r_B > 0, r_S / r_B, 1),
            extra_R       = r_S * dG,
            deemed_factor = if_else(G_B > 0,
                                    pmax(0, (G_B + dG) / G_B),
                                    1)) %>%
-    select(age, G_B, R_B, r_B, r_S, dG,
-           rate_factor, extra_R, deemed_factor)
+    select(age, G_B, R_B, r_B, r_S, m, dG,
+           tau_B, tau_S, rate_factor, extra_R, deemed_factor)
 }
 
 
@@ -498,7 +502,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   # State file at kg_dynamics_state/{t}.rds:
   #   list(
   #     regime     = list(name, c_phi, delta_vanish, delta_route, delta_realize),
-  #     cell_table = tibble(age, G_B, R_B, r_B, r_S, dG,
+  #     cell_table = tibble(age, G_B, R_B, r_B, r_S, m, dG, tau_B, tau_S,
   #                          rate_factor, extra_R, deemed_factor)
   #   )
   #
@@ -559,7 +563,9 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
       baseline_t = bt,
       r_S_vec    = r_S_vec,
       delta_prev = delta,
-      regime     = regime
+      regime     = regime,
+      tau_B_vec  = setNames(baseline_tau[[as.character(t)]], as.character(ages)),
+      tau_S_vec  = setNames(reform_tau  [[as.character(t)]], as.character(ages))
     )
 
     saveRDS(list(regime     = regime,
@@ -666,4 +672,113 @@ kg_dyn_build_tau_lists = function(scenario_info, baseline_root,
   }
 
   list(baseline_tau = baseline_tau, reform_tau = reform_tau)
+}
+
+
+
+#-------------------------------------------------------------------------------
+# Post-processing: bathtub diagnostics summary
+#-------------------------------------------------------------------------------
+
+kg_dyn_build_summary = function(scenario_info) {
+
+  #----------------------------------------------------------------------------
+  # Reads all per-year bathtub state files for one scenario and writes two
+  # diagnostic CSVs:
+  #
+  #   conventional/supplemental/kg_dynamics_age_profile.csv
+  #     Long format (year × age) dump of cell_table. Use this for plots
+  #     of dG, r_B, r_S, m, etc. across age and time.
+  #
+  #   conventional/supplemental/kg_dynamics_summary.csv
+  #     Year-level rollup: regime parameters, gain-stock-weighted average
+  #     mortality / realization rates / MTRs, channel decomposition of
+  #     reform-induced realizations, decedent stock and routing, and an
+  #     implied year-by-year semi-elasticity.
+  #
+  # No-op if the scenario has no bathtub state directory.
+  #----------------------------------------------------------------------------
+
+  state_dir = file.path(scenario_info$output_path,
+                        'conventional', 'supplemental',
+                        'kg_dynamics_state')
+  if (!dir.exists(state_dir)) return(invisible(NULL))
+
+  years = scenario_info$years
+  state_files = file.path(state_dir, paste0(years, '.rds'))
+  if (!all(file.exists(state_files))) return(invisible(NULL))
+
+  # Long-format age profile + per-year regime metadata
+  states = lapply(years, function(t) readRDS(file.path(state_dir, paste0(t, '.rds'))))
+  names(states) = as.character(years)
+
+  age_profile = bind_rows(lapply(seq_along(years), function(i) {
+    s = states[[i]]
+    ct = s$cell_table
+    # Backfill columns that may be missing from older state files
+    if (!('m'     %in% names(ct))) ct$m     = NA_real_
+    if (!('tau_B' %in% names(ct))) ct$tau_B = NA_real_
+    if (!('tau_S' %in% names(ct))) ct$tau_S = NA_real_
+    ct %>%
+      mutate(year   = years[i],
+             regime = s$regime$name) %>%
+      relocate(year, regime, age)
+  }))
+
+  age_profile %>%
+    write_csv(file.path(scenario_info$output_path,
+                        'conventional', 'supplemental',
+                        'kg_dynamics_age_profile.csv'))
+
+  # Year-level rollup
+  regime_df = bind_rows(lapply(seq_along(years), function(i) {
+    r = states[[i]]$regime
+    tibble(year          = years[i],
+           regime        = r$name,
+           c_phi         = r$c_phi,
+           delta_vanish  = r$delta_vanish,
+           delta_route   = r$delta_route,
+           delta_realize = r$delta_realize)
+  }))
+
+  yearly = age_profile %>%
+    group_by(year) %>%
+    summarise(
+      G_B_total      = sum(G_B),
+      R_B_total      = sum(R_B),
+      dG_total       = sum(dG),
+      m_avg_gw       = if_else(sum(G_B) > 0, sum(m     * G_B, na.rm = TRUE) / sum(G_B), NA_real_),
+      r_B_avg_gw     = if_else(sum(G_B) > 0, sum(r_B   * G_B) / sum(G_B), 0),
+      r_S_avg_gw     = if_else(sum(G_B) > 0, sum(r_S   * G_B) / sum(G_B), 0),
+      tau_B_avg_gw   = if_else(sum(G_B) > 0, sum(tau_B * G_B, na.rm = TRUE) / sum(G_B), NA_real_),
+      tau_S_avg_gw   = if_else(sum(G_B) > 0, sum(tau_S * G_B, na.rm = TRUE) / sum(G_B), NA_real_),
+      rate_channel   = sum(R_B * (rate_factor - 1)),  # ΔR from rate change on baseline stock
+      lockin_channel = sum(extra_R),                  # ΔR from accumulated dG
+      decedent_stock = sum(m * (G_B + dG)),
+      .groups = 'drop'
+    ) %>%
+    left_join(regime_df, by = 'year') %>%
+    mutate(
+      inheritance_flow = delta_route   * decedent_stock,
+      deemed_realized  = delta_realize * decedent_stock,
+      R_S_total        = R_B_total + rate_channel + lockin_channel,
+      dlog_tau         = if_else(tau_B_avg_gw > 0 & tau_S_avg_gw > 0,
+                                 log(tau_S_avg_gw / tau_B_avg_gw), 0),
+      eta_implied      = if_else(R_B_total > 0 & abs(dlog_tau) > 1e-10,
+                                 log(R_S_total / R_B_total) / dlog_tau,
+                                 NA_real_)
+    ) %>%
+    select(year, regime, c_phi, delta_vanish, delta_route, delta_realize,
+           G_B_total, R_B_total, R_S_total, dG_total,
+           m_avg_gw, r_B_avg_gw, r_S_avg_gw, tau_B_avg_gw, tau_S_avg_gw,
+           rate_channel, lockin_channel,
+           decedent_stock, inheritance_flow, deemed_realized,
+           eta_implied)
+
+  yearly %>%
+    write_csv(file.path(scenario_info$output_path,
+                        'conventional', 'supplemental',
+                        'kg_dynamics_summary.csv'))
+
+  invisible(NULL)
 }

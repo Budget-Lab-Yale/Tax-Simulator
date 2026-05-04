@@ -112,21 +112,24 @@ do_scenario = function(ID, baseline_mtrs) {
   #--------------------
   
   if (ID != 'baseline') {
-    
+
     # Formatted 1040 report
     build_1040_report(ID)
-    
+
     # Revenue estimates
     calc_rev_est(ID)
-    
+
     # Distribution tables
     build_distribution_tables(ID, baseline_id = 'baseline')
-    
+
     # Time burden tables
     build_timeburden_table(ID)
 
     # Horizontal equity
     build_horizontal_table(ID)
+
+    # KG dynamics bathtub diagnostics (no-op for non-kg_dynamics scenarios)
+    kg_dyn_build_summary(scenario_info)
   }
   
   # Return MTRs if running baseline
