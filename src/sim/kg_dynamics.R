@@ -316,20 +316,65 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
   # Returns: list(delta_next, r_S, delta_surv, delta_inh).
   #----------------------------------------------------------------------------
 
-  G_B = baseline_t$G_B
-  r_B = baseline_t$r_B
-  m   = baseline_t$m
+  G_B       = baseline_t$G_B
+  r_B       = baseline_t$r_B
+  m         = baseline_t$m
+  mG_record = baseline_t$mG_record
+
+  # ----------------------------------------------------------------------------
+  # Why we use an effective cell mortality m_eff = sum(w*m*G) / sum(w*G).
+  # ----------------------------------------------------------------------------
+  #
+  # The death channel needs the cell's *decedent stock contribution* --
+  # the sum across records of (death prob) * (per-record gain stock):
+  #
+  #     D = sum_i w_i * m_i * (G_unit_i + dG_i)
+  #
+  # The naive cell-level form m * (G_B + dG) replaces this with the
+  # cell-mean m times the cell-total stock. That equals the per-record
+  # sum only if Cov(m, G_unit | cell) = 0 -- and within an age cell that
+  # covariance is large and negative (wealth-mortality gradient: wealthier
+  # holders carry more G AND die less). At the G-weighted aggregate, the
+  # cell-mean form overstates D by ~2.7x in our data.
+  #
+  # To avoid materializing per-record state for the recurrence, we adopt
+  # the assumption that within a cell, dG is allocated to records
+  # proportional to G_unit:
+  #
+  #     dG_i = dG_a * G_unit_i / G_B_a
+  #
+  # Then the per-record sum collapses cleanly:
+  #
+  #     D = sum_i w_i * m_i * G_unit_i * (1 + dG / G_B)
+  #       = mG_record * (G_B + dG) / G_B
+  #       = m_eff * (G_B + dG)        with  m_eff = mG_record / G_B
+  #
+  # So m_eff IS the per-record sum -- not an approximation -- under the
+  # G-proportional allocation rule. The same algebra gives the survivor
+  # channel as (1 - m_eff) * inner.
+  #
+  # mG_record is computed at record level in kg_dyn_aggregate_cells and
+  # carried through cell_table; this function just reads it.
+  # ----------------------------------------------------------------------------
+  #
+  # Step-up scenarios are unaffected: when delta_route = 0, the death
+  # channel is shut off, and the (1-m) vs (1-m_eff) misallocation in the
+  # survivor channel only shifts stock between "vanish at death" and
+  # "stay in the population", which are observationally equivalent under
+  # step-up baseline.
+  m_eff = if_else(G_B > 0, mG_record / G_B, m)
+  m_eff = pmin(pmax(m_eff, 0), 1)
 
   r_S = pmin(pmax(r_B * exp(-eta * (P_S - P_B)), 0), 1)
 
   # Survivor flow (spec §3.2)
   inner      = (1 - r_S) * delta_prev + G_B * (r_B - r_S)
-  contrib_a  = (1 - m) * inner
+  contrib_a  = (1 - m_eff) * inner
   delta_surv = as.numeric(crossprod(A, contrib_a))
 
   # Inheritance flow (spec §3.3.1)
   if (delta_route > 0) {
-    decedent_stock = m * (G_B + delta_prev)
+    decedent_stock = m_eff * (G_B + delta_prev)
     delta_inh      = delta_route * as.numeric(crossprod(omega, decedent_stock))
   } else {
     delta_inh = rep(0, length(delta_prev))

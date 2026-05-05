@@ -267,6 +267,66 @@ behavioral response. The second, $\delta_{\text{route}} \sum_a \omega \cdot
 m \cdot \Delta G$, is endogenous: it propagates whatever policy-induced delta
 was already in the decedent's cell to heir cells.
 
+**Within-cell derivation of the death stock.** The expressions above use
+$m_{a,t}$ as a cell-level scalar, multiplying cell-total stock. That form
+silently assumes $\mathrm{Cov}(m, G_\text{unit} \mid a, t) = 0$ — that
+within an age cell, individual mortality and individual gain stock are
+independent. This is empirically false: the wealth-mortality gradient
+makes the covariance large and negative (within any age cohort, the
+wealthier subpopulation both carries more accumulated gains and dies
+less). Using cell-mean $m$ times cell-total $G^B$ therefore overstates
+the true decedent stock contribution materially — by roughly 2.7× at
+the gain-weighted aggregate in our data.
+
+The correct calculation is per-record. The cell's decedent stock
+contribution is
+
+$$
+D_{a,t} \;=\; \sum_i w_i\, m_i\, \big(G_{\text{unit},i} + dG_i\big),
+$$
+
+where $i$ indexes the tax units in the cell, $w_i$ is the weight,
+$m_i$ is per-record household mortality, $G_{\text{unit},i}$ is per-record
+unrealized gain stock, and $dG_i$ is each record's share of the cell's
+policy-induced delta. Materializing per-record state in the recurrence
+is unnecessary: under the assumption that $dG$ within a cell is
+allocated proportional to $G_\text{unit}$ (each holder's share of the
+cell's gain stock — consistent with the distribution rule in §7.3),
+the sum collapses analytically:
+
+$$
+\begin{aligned}
+D_{a,t}
+&= \sum_i w_i\, m_i\, G_{\text{unit},i}\cdot\Big(1 + \tfrac{dG_a}{G^B_a}\Big) \\
+&= \Big(\sum_i w_i\, m_i\, G_{\text{unit},i}\Big) \cdot \frac{G^B_{a,t} + \Delta G_{a,t,k}}{G^B_{a,t}} \\
+&= m^{\text{eff}}_{a,t}\cdot\big(G^B_{a,t,k} + \Delta G_{a,t,k}\big),
+\end{aligned}
+$$
+
+where the effective cell mortality is the gain-weighted death rate
+
+$$
+m^{\text{eff}}_{a,t} \;\equiv\; \frac{\sum_i w_i\, m_i\, G_{\text{unit},i}}{G^B_{a,t}}.
+$$
+
+This $m^{\text{eff}}$ is *not* an approximation — given the
+$G$-proportional allocation of $dG$, it is exactly the per-record sum.
+The same algebra applied to the survivor channel gives $(1 - m^{\text{eff}})$
+multiplying the cell's surviving stock. Implementations should therefore
+substitute $m^{\text{eff}}$ for $m$ wherever $m$ multiplies cell-aggregate
+stock in §3.2–3.3, with $m^{\text{eff}}$ computed once per cell from the
+microdata as $\sum_i w_i\, m_i\, G_{\text{unit},i} / G^B_{a,t}$.
+
+**Practical impact.** Step-up scenarios are unaffected: when
+$\delta_\text{route}=0$ the death channel is shut off, and the
+$(1-m)$ vs $(1-m^\text{eff})$ misallocation in the survivor channel only
+shifts stock between "vanish at death" and "stay in the population,"
+which are observationally equivalent under step-up. Carryover and
+deemed-realization scenarios change materially: per-record accounting
+removes the wealth-mortality bias that would otherwise inflate decedent
+stock by ~2-3×, with proportional reductions in carryover inheritance
+flow and deemed-realization revenue.
+
 #### 3.3.2 Revenue contribution
 
 The $\delta_{\text{realize}}$ portion of decedent gain stock is forcibly
