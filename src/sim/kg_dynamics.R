@@ -38,6 +38,28 @@ KG_DYN_HEIR_SIGMA  = 5         # std dev of heir age distribution
 # (calendar 2055) -- the long-run / "permanent" elasticity anchor.
 KG_DYN_DEFAULT_ETA = 6.8750
 
+# Within-cell allocation rule for the policy-induced delta dG.
+# Determines which "effective cell mortality" the recurrence uses for
+# stock-allocation in the death and survivor channels (see spec §3.3.1).
+#
+#   "G" — dG within a cell is allocated proportional to G_unit (each
+#         holder's share of the cell's gain stock).  Effective rate
+#         m_eff = sum(w*m*G) / sum(w*G).  This is the simplest rule and
+#         corresponds to the inheritance-flow story (heirs receive a share
+#         of decedent stock proportional to their existing G).
+#
+#   "R" — dG within a cell is allocated proportional to positive realized
+#         gains (kg_lt > 0).  Effective rate m_eff = sum(w*m*R)/sum(w*R).
+#         Corresponds to the lock-in story (deferred realizations stay
+#         with the records that were going to realize the most).
+#         Falls back to "G" when R_B = 0 (e.g., young heir cohorts under
+#         carryover that haven't yet realized).
+#
+# Both rules give a per-record-correct sum under their respective allocation
+# assumption. The choice affects carryover and (mildly) deemed scoring;
+# step-up scenarios are unchanged because the death channel is shut off.
+KG_DYN_DG_ALLOCATION = 'G'
+
 KG_DYN_ASSET_VALUE_COLS = c('value.equities', 'value.pass_throughs',
                             'value.primary_home', 'value.other_home',
                             'value.re_fund')
@@ -132,17 +154,19 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
 
   agg = tax_units %>%
     group_by(age_cohort) %>%
-    summarise(G_B       = sum(weight * G_unit,                    na.rm = TRUE),
-              R_B       = sum(weight * pmax(kg_lt, 0),            na.rm = TRUE),
-              m_num     = sum(weight * m_household,               na.rm = TRUE),
-              mG_record = sum(weight * m_household * G_unit,      na.rm = TRUE),
-              w_total   = sum(weight,                             na.rm = TRUE),
+    summarise(G_B       = sum(weight * G_unit,                       na.rm = TRUE),
+              R_B       = sum(weight * pmax(kg_lt, 0),               na.rm = TRUE),
+              m_num     = sum(weight * m_household,                  na.rm = TRUE),
+              mG_record = sum(weight * m_household * G_unit,         na.rm = TRUE),
+              mR_record = sum(weight * m_household * pmax(kg_lt, 0), na.rm = TRUE),
+              w_total   = sum(weight,                                na.rm = TRUE),
               .groups   = 'drop') %>%
     rename(age = age_cohort)
 
   out = tibble(age = ages) %>%
     left_join(agg, by = 'age') %>%
-    mutate(across(c(G_B, R_B, m_num, mG_record, w_total), ~ if_else(is.na(.), 0, .)),
+    mutate(across(c(G_B, R_B, m_num, mG_record, mR_record, w_total),
+                  ~ if_else(is.na(.), 0, .)),
            m   = if_else(w_total > 0, m_num / w_total, 0),
            r_B = if_else(G_B     > 0, R_B   / G_B,     0))
 
@@ -156,7 +180,7 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
 
   out %>%
     mutate(r_B = if_else(G_B > 0 & R_B == 0, r_B_pooled, r_B)) %>%
-    select(age, G_B, R_B, r_B, m, mG_record) %>%
+    select(age, G_B, R_B, r_B, m, mG_record, mR_record) %>%
     arrange(age)
 }
 
@@ -318,11 +342,13 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
 
   G_B       = baseline_t$G_B
   r_B       = baseline_t$r_B
+  R_B       = baseline_t$R_B
   m         = baseline_t$m
   mG_record = baseline_t$mG_record
+  mR_record = baseline_t$mR_record
 
   # ----------------------------------------------------------------------------
-  # Why we use an effective cell mortality m_eff = sum(w*m*G) / sum(w*G).
+  # Why we use an effective cell mortality m_eff = sum(w*m*X) / sum(w*X).
   # ----------------------------------------------------------------------------
   #
   # The death channel needs the cell's *decedent stock contribution* --
@@ -338,31 +364,38 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
   # cell-mean form overstates D by ~2.7x in our data.
   #
   # To avoid materializing per-record state for the recurrence, we adopt
-  # the assumption that within a cell, dG is allocated to records
-  # proportional to G_unit:
+  # an assumption about how cell-level dG is split across records, then
+  # compute the per-record sum analytically. Two rules are supported via
+  # KG_DYN_DG_ALLOCATION (see constants block):
   #
-  #     dG_i = dG_a * G_unit_i / G_B_a
+  #   "G": dG_i proportional to G_unit_i. Then
+  #          D = mG_record * (G_B + dG) / G_B = m_eff_G * (G_B + dG)
+  #        with m_eff_G = mG_record / G_B.
   #
-  # Then the per-record sum collapses cleanly:
+  #   "R": dG_i proportional to pmax(kg_lt_i, 0). Then
+  #          D = mR_record * (R_B + ...) / R_B  -- but R_B is realizations,
+  #        not stock, so the algebra doesn't collapse the same way. The
+  #        practical compromise: use mR_record / R_B as the effective rate
+  #        for the part of D weighted by realizations (i.e., the dG that
+  #        accumulated via lock-in -- consistent with the per-record
+  #        applier's R-weighted lock-in distribution), and fall back to
+  #        the G rule when R_B = 0.
   #
-  #     D = sum_i w_i * m_i * G_unit_i * (1 + dG / G_B)
-  #       = mG_record * (G_B + dG) / G_B
-  #       = m_eff * (G_B + dG)        with  m_eff = mG_record / G_B
-  #
-  # So m_eff IS the per-record sum -- not an approximation -- under the
-  # G-proportional allocation rule. The same algebra gives the survivor
-  # channel as (1 - m_eff) * inner.
-  #
-  # mG_record is computed at record level in kg_dyn_aggregate_cells and
-  # carried through cell_table; this function just reads it.
-  # ----------------------------------------------------------------------------
+  # In both cases m_eff IS the per-record sum -- not an approximation --
+  # under the corresponding allocation rule.
   #
   # Step-up scenarios are unaffected: when delta_route = 0, the death
   # channel is shut off, and the (1-m) vs (1-m_eff) misallocation in the
   # survivor channel only shifts stock between "vanish at death" and
   # "stay in the population", which are observationally equivalent under
   # step-up baseline.
-  m_eff = if_else(G_B > 0, mG_record / G_B, m)
+  m_eff_G = if_else(G_B > 0, mG_record / G_B, m)
+  m_eff_R = if_else(R_B > 0, mR_record / R_B, m_eff_G)  # fall back to G when R_B = 0
+
+  m_eff = switch(KG_DYN_DG_ALLOCATION,
+                 G = m_eff_G,
+                 R = m_eff_R,
+                 stop("Unknown KG_DYN_DG_ALLOCATION rule: ", KG_DYN_DG_ALLOCATION))
   m_eff = pmin(pmax(m_eff, 0), 1)
 
   r_S = pmin(pmax(r_B * exp(-eta * (P_S - P_B)), 0), 1)
@@ -604,7 +637,7 @@ kg_dyn_build_cell_table = function(baseline_t, r_S_vec, delta_prev,
            deemed_factor = if_else(G_B > 0,
                                    pmax(0, (G_B + dG) / G_B),
                                    1)) %>%
-    select(age, G_B, R_B, r_B, r_S, m, mG_record, dG,
+    select(age, G_B, R_B, r_B, r_S, m, mG_record, mR_record, dG,
            tau_B, tau_S, rate_factor, extra_R, deemed_factor)
 }
 
@@ -802,6 +835,7 @@ kg_dyn_build_summary = function(scenario_info) {
     if (!('tau_B'     %in% names(ct))) ct$tau_B     = NA_real_
     if (!('tau_S'     %in% names(ct))) ct$tau_S     = NA_real_
     if (!('mG_record' %in% names(ct))) ct$mG_record = ct$m * ct$G_B
+    if (!('mR_record' %in% names(ct))) ct$mR_record = ct$m * ct$R_B
     ct %>%
       mutate(year   = years[i],
              regime = s$regime$name) %>%

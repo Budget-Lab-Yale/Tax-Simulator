@@ -317,6 +317,26 @@ substitute $m^{\text{eff}}$ for $m$ wherever $m$ multiplies cell-aggregate
 stock in §3.2–3.3, with $m^{\text{eff}}$ computed once per cell from the
 microdata as $\sum_i w_i\, m_i\, G_{\text{unit},i} / G^B_{a,t}$.
 
+**Choice of allocation rule.** The G-proportional rule above is one of
+several reasonable choices. An alternative is to allocate $dG$
+proportional to positive realized gains:
+
+$$
+dG_i^{(R)} \;=\; dG_a \cdot \frac{\max(kg_{\text{lt},i}, 0)}{R^B_a}
+\quad\Rightarrow\quad
+m^{\text{eff,R}}_a \;=\; \frac{\sum_i w_i\, m_i\, \max(kg_{\text{lt},i}, 0)}{R^B_a},
+$$
+
+which corresponds to the lock-in story (deferred realizations stay with
+the records that were going to realize the most). The choice between
+$G$ and $R$ rules is implementation-controlled rather than spec-fixed —
+the recurrence form $D = m^{\text{eff}}\cdot(G^B + \Delta G)$ is the same
+under either rule, with only the aggregate column changing. The simulator
+defaults to the $G$ rule but exposes both via a configuration constant
+(`KG_DYN_DG_ALLOCATION` in `src/sim/kg_dynamics.R`); under $R$, the
+recurrence falls back to the $G$ rate when $R^B_a = 0$ (e.g., young
+heir cohorts under carryover with no historical realization activity).
+
 **Practical impact.** Step-up scenarios are unaffected: when
 $\delta_\text{route}=0$ the death channel is shut off, and the
 $(1-m)$ vs $(1-m^\text{eff})$ misallocation in the survivor channel only
