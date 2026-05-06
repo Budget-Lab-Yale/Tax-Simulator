@@ -139,15 +139,15 @@ cat(sprintf("Anchor: log((tau_avg_B + perturbation)/tau_avg_B) = %.5f\n",
 A     = kg_dyn_build_aging_matrix(AGES)
 omega = kg_dyn_build_heir_matrix(AGES)
 
-# Life table from year-1 baseline cells (matches production)
-life_table = setNames(
-  baseline_cells[[as.character(min(YEARS))]]$m,
-  as.character(baseline_cells[[as.character(min(YEARS))]]$age)
-)
+# Life table and r_B table from year-1 baseline cells (matches production)
+bc1 = baseline_cells[[as.character(min(YEARS))]]
+life_table = setNames(bc1$m,   as.character(bc1$age))
+r_B_table  = setNames(bc1$r_B, as.character(bc1$age))
 
 # Bracket M(c=0) is constant across all (year, regime) combinations under
-# step-up; compute once
-bracket_step_up = kg_dyn_compute_brackets(AGES, c_phi = 0, life_table)
+# step-up; compute once. Uses production phi_I (turnover share of r_B).
+bracket_step_up = kg_dyn_compute_brackets(AGES, c_phi = 0, life_table, r_B_table,
+                                           phi_I = KG_DYN_PHI_I)
 
 # Step-up regime: delta_route = 0
 regime_step_up = list(c_phi = 0, delta_vanish = 1, delta_route = 0, delta_realize = 0)

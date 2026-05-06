@@ -10,8 +10,8 @@
 #      precomputes everything that doesn't depend on per-record kg_lt --
 #      cell-level rate factor, lock-in extra realization, and deemed scaling.
 #      Persists one state file per year per scenario.
-#   2. Behavior module (config/scenarios/behavior/kg_dynamics/eta06.R): pure
-#      allocator. Reads its year's state file and translates cell-level
+#   2. Behavior module (config/scenarios/behavior/kg_dynamics/turnover.R):
+#      pure allocator. Reads its year's state file and translates cell-level
 #      quantities to per-record kg_lt adjustments via kg_dyn_apply_to_records.
 #
 # Current implementation collapses the five tracked wealth classes into a
@@ -27,15 +27,20 @@
 KG_DYN_AGE_MIN     = 18
 KG_DYN_AGE_MAX     = 80
 KG_DYN_BETA        = 0.96      # annual discount factor (~4%)
-KG_DYN_LAMBDA_R    = 0.05      # voluntary realization hazard (asset-aggregate)
+KG_DYN_PHI_I       = 0.4       # turnover share of baseline realization rate
+                               # (asset-aggregate; spec defaults are ~0.3 for
+                               #  liquid equities, ~0.5 for pass-throughs/REIT,
+                               #  ~0.7 for housing -- 0.4 is a reasonable
+                               #  realization-weighted aggregate)
 KG_DYN_HEIR_SHIFT  = 30        # average decedent-to-heir age gap
 KG_DYN_HEIR_SIGMA  = 5         # std dev of heir age distribution
 
-# Default eta. Calibrated by other/kg_model_tests/calibrate_eta.R against
-# realization-weighted aggregate elasticity = -0.62 under a 1pp uniform MTR
-# perturbation, step-up regime. Last calibrated 2026-05-04 against baseline
-# run 202605041857 (30 years of real Tax-Data) anchored at sim-year 30
-# (calendar 2055) -- the long-run / "permanent" elasticity anchor.
+# Default eta. PLACEHOLDER -- recalibrate after the two-channel restructure
+# (turnover + voluntary) by running other/kg_model_tests/calibrate_eta.R
+# against a full-sample baseline. Target unchanged: year-30 realization-
+# weighted aggregate elasticity = -0.62 under a 1pp uniform MTR perturbation,
+# step-up regime. Expected larger in magnitude than the prior 6.875 because
+# part of r_B is now held inelastic in the turnover channel.
 KG_DYN_DEFAULT_ETA = 6.8750
 
 # Within-cell allocation rule for the policy-induced delta dG.
@@ -228,25 +233,39 @@ kg_dyn_build_aging_matrix = function(ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 # Bracket and effective tax price (spec §4)
 #-------------------------------------------------------------------------------
 
-kg_dyn_compute_bracket = function(a, c_phi, life_table,
-                                  lambda_r = KG_DYN_LAMBDA_R,
+kg_dyn_compute_bracket = function(a, c_phi, life_table, r_B_table,
+                                  phi_I    = KG_DYN_PHI_I,
                                   beta     = KG_DYN_BETA,
                                   tau_ratio = NULL) {
 
   #----------------------------------------------------------------------------
-  # Bracket M(c) for a single cohort starting at age `a` (spec §4.2-4.3):
+  # Bracket M(c) for a single cohort starting at age `a` (spec §3.2-3.3):
   #   M(c) = sum_j beta^j s_j (tau_{t+j}/tau_t)
   #         + c * sum_j beta^j d_j (tau_{t+j}/tau_t)
-  # with (s_j, d_j) from a competing-risks recursion.
+  # with (s_j, d_j) from a competing-risks recursion using the turnover
+  # hazard lambda^I = phi_I * r_B(age) and mortality m(age). Voluntary
+  # realizations do NOT enter the bracket -- they are endogenous responses
+  # to the wedge being priced and would create a fixed-point dependence.
   #
   # The integral is summed to a fixed 200-year ceiling. Beta and the
   # competing-risks decay drive the integrand to <1e-10 well before that:
-  # beta * (1 - lambda_r - m) ~ 0.82 means terms decay by 0.82 per year, so
-  # the contribution past year 60 is below float noise. The ceiling exists
-  # only to bound the loop; nothing in the model depends on it.
+  # beta * (1 - lambda^I - m) is well below 1, so terms decay rapidly and
+  # contributions past year ~60 are below float noise.
   #
-  # tau_ratio: length-200 vector of tau_{t+j}/tau_t. NULL = constant 1
-  # (naive expectations).
+  # Parameters:
+  #   - a (int)        : starting age of cohort
+  #   - c_phi (num)    : death burden share (0 step-up, theta carryover, 1 deemed)
+  #   - life_table     : named numeric vector m by age string
+  #   - r_B_table      : named numeric vector r_B by age string (year-1 baseline)
+  #   - phi_I (num)    : turnover share of r_B
+  #   - beta (num)     : annual discount factor
+  #   - tau_ratio      : length-200 vector of tau_{t+j}/tau_t (NULL = constant 1)
+  #
+  # The pmin(..., AGE_MAX) clamp pins all ages above 80 to the 80+ pool's
+  # values for both mortality and r_B. For someone starting at 70, years 11+
+  # of the bracket use the topcode pool's averages instead of true age-90+
+  # rates. Bracket integrand at those years is tiny under beta and
+  # competing-risks decay, so the bias is small.
   #----------------------------------------------------------------------------
 
   horizon = 200L
@@ -254,38 +273,29 @@ kg_dyn_compute_bracket = function(a, c_phi, life_table,
   if (is.null(tau_ratio)) tau_ratio = rep(1, horizon)
   stopifnot(length(tau_ratio) == horizon)
 
-  # Hazard during year t+i-1 (when the holder is age a+i-1):
-  #   hazard[i] = lambda_r + m_{a+i-1}.
-  #
-  # The pmin(..., AGE_MAX) clamp pins all ages above 80 to the 80+ pool's
-  # average mortality. For someone starting at 70, years 11+ of the bracket
-  # use m_80 (the pool average, ~0.07-0.10) instead of the true age-90+ rate
-  # (0.15-0.30). The bracket integrand at those years is tiny under beta and
-  # competing-risks decay, so the bias is small -- but real for cohorts that
-  # survive deep into the topcode.
-  #
-  # POTENTIAL IMPROVEMENT: extend the life table beyond age 80 (SSA actuarial
-  # data through ~110) and use it here. Keep the recurrence's age=80 topcode
-  # as-is -- the cell aggregation still makes sense -- but let the bracket
-  # see proper age-specific mortality forever. Reasonable upgrade if anyone
-  # ever runs reforms targeted at the elderly (estate-style).
-  ages_hazard = pmin(a + 0:(horizon - 1), KG_DYN_AGE_MAX)
-  m_hazard    = life_table[as.character(ages_hazard)]
+  # Survival hazards: rates during years t+0..t+horizon-1, at ages
+  # a..a+horizon-1. cumprod(1 - hazard) gives S[j] = P(holding at start of
+  # year t+j).
+  ages_hazard      = pmin(a + 0:(horizon - 1), KG_DYN_AGE_MAX)
+  m_hazard         = life_table[as.character(ages_hazard)]
   m_hazard[is.na(m_hazard)] = 0
-  hazard      = pmin(lambda_r + m_hazard, 0.999)
+  r_B_hazard       = r_B_table[as.character(ages_hazard)]
+  r_B_hazard[is.na(r_B_hazard)] = 0
+  lambda_I_hazard  = phi_I * r_B_hazard
 
-  # S[j] = probability of still holding at the start of year t+j (surviving
-  # years t..t+j-1). Pairs with beta^j and tau_{t+j} so that s_j and d_j
-  # represent events in year t+j; see spec §4.2-4.3.
-  S = cumprod(1 - hazard)[1:horizon]
+  hazard = pmin(lambda_I_hazard + m_hazard, 0.999)
+  S      = cumprod(1 - hazard)[1:horizon]
 
-  # Mortality during year t+j (when age a+j): m_{a+j}.
-  ages_mort = pmin(a + 1:horizon, KG_DYN_AGE_MAX)
-  m_mort    = life_table[as.character(ages_mort)]
-  m_mort[is.na(m_mort)] = 0
+  # Event rates during year t+j (at age a+j), j = 1..horizon.
+  ages_event       = pmin(a + 1:horizon, KG_DYN_AGE_MAX)
+  m_event          = life_table[as.character(ages_event)]
+  m_event[is.na(m_event)] = 0
+  r_B_event        = r_B_table[as.character(ages_event)]
+  r_B_event[is.na(r_B_event)] = 0
+  lambda_I_event   = phi_I * r_B_event
 
-  s_j = S * lambda_r          # realize in year t+j
-  d_j = S * m_mort            # die in year t+j
+  s_j = S * lambda_I_event    # turnover in year t+j
+  d_j = S * m_event           # die in year t+j
 
   betas = beta ^ (1:horizon)
   sum(betas * s_j * tau_ratio) + c_phi * sum(betas * d_j * tau_ratio)
@@ -293,13 +303,13 @@ kg_dyn_compute_bracket = function(a, c_phi, life_table,
 
 
 
-kg_dyn_compute_brackets = function(ages, c_phi, life_table,
-                                   lambda_r = KG_DYN_LAMBDA_R,
+kg_dyn_compute_brackets = function(ages, c_phi, life_table, r_B_table,
+                                   phi_I    = KG_DYN_PHI_I,
                                    beta     = KG_DYN_BETA,
                                    tau_ratio = NULL) {
 
   out = sapply(ages, function(a) {
-    kg_dyn_compute_bracket(a, c_phi, life_table, lambda_r, beta, tau_ratio)
+    kg_dyn_compute_bracket(a, c_phi, life_table, r_B_table, phi_I, beta, tau_ratio)
   })
   names(out) = as.character(ages)
   out
@@ -312,10 +322,20 @@ kg_dyn_compute_brackets = function(ages, c_phi, life_table,
 #-------------------------------------------------------------------------------
 
 kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
-                                  P_B, P_S, eta, delta_route) {
+                                  P_B, P_S, eta, delta_route,
+                                  phi_I = KG_DYN_PHI_I) {
 
   #----------------------------------------------------------------------------
   # One-step bathtub recurrence. Operates on cell vectors indexed by age.
+  #
+  # Two-channel realization response (spec §3.1):
+  #   lambda_I = phi_I * r_B                 (turnover hazard, policy-invariant)
+  #   r_V_B    = max(r_B - lambda_I, 0)      (voluntary baseline rate)
+  #   r_V_S    = min(r_V_B * exp(-eta * (P_S - P_B)), 1 - lambda_I)
+  #   r_S      = lambda_I + r_V_S
+  #
+  # The cap on r_V_S binds only under large rate cuts where the unconstrained
+  # exponential would overshoot the cell's available unrealized stock.
   #
   # Topcode note: the age=80 cell pools every taxpayer age 80+ into one
   # bucket and uses a single weight-averaged m_80. This is refreshed from
@@ -334,10 +354,11 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
   #   - A          (mat)    : aging matrix
   #   - omega      (mat)    : heir matrix
   #   - P_B, P_S   (num[a]) : effective tax price under baseline / reform
-  #   - eta        (num)    : behavioral curvature
+  #   - eta        (num)    : behavioral curvature (voluntary channel)
   #   - delta_route (num)   : routing share for carryover stock transfer
+  #   - phi_I      (num)    : turnover share of r_B
   #
-  # Returns: list(delta_next, r_S, delta_surv, delta_inh).
+  # Returns: list(delta_next, r_S, lambda_I, r_V_B, r_V_S, delta_surv, delta_inh).
   #----------------------------------------------------------------------------
 
   G_B       = baseline_t$G_B
@@ -398,7 +419,10 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
                  stop("Unknown KG_DYN_DG_ALLOCATION rule: ", KG_DYN_DG_ALLOCATION))
   m_eff = pmin(pmax(m_eff, 0), 1)
 
-  r_S = pmin(pmax(r_B * exp(-eta * (P_S - P_B)), 0), 1)
+  lambda_I = phi_I * r_B
+  r_V_B    = pmax(r_B - lambda_I, 0)
+  r_V_S    = pmin(r_V_B * exp(-eta * (P_S - P_B)), 1 - lambda_I)
+  r_S      = pmin(pmax(lambda_I + r_V_S, 0), 1)
 
   # Survivor flow (spec §3.2)
   inner      = (1 - r_S) * delta_prev + G_B * (r_B - r_S)
@@ -415,6 +439,9 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
 
   list(delta_next = delta_surv + delta_inh,
        r_S        = r_S,
+       lambda_I   = lambda_I,
+       r_V_B      = r_V_B,
+       r_V_S      = r_V_S,
        delta_surv = delta_surv,
        delta_inh  = delta_inh)
 }
@@ -604,14 +631,15 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, baseline_root,
 
 
 
-kg_dyn_build_cell_table = function(baseline_t, r_S_vec, delta_prev,
+kg_dyn_build_cell_table = function(baseline_t, r_S_vec, lambda_I_vec,
+                                    r_V_B_vec, r_V_S_vec, delta_prev,
                                     tau_B_vec, tau_S_vec) {
 
   #----------------------------------------------------------------------------
   # Assembles the per-cell quantities the per-record applier needs (rate
   # factor, lock-in extra realization, deemed scaling) plus diagnostic
-  # quantities used by kg_dyn_build_summary (tau_B, tau_S, m). Persisted into
-  # the state file by kg_dyn_run_bathtub_pass.
+  # quantities used by kg_dyn_build_summary (tau_B, tau_S, m, channel
+  # decomposition). Persisted into the state file by kg_dyn_run_bathtub_pass.
   #
   # Per-cell quantities (spec §3.5, §5.3, §3.3.2):
   #   rate_factor   = r_S / r_B           (clamped to 1 when r_B = 0)
@@ -622,22 +650,31 @@ kg_dyn_build_cell_table = function(baseline_t, r_S_vec, delta_prev,
   #                                        m * G_unit so deemed revenue
   #                                        includes accumulated stock)
   #
+  # Channel-decomposition diagnostics (spec §3.1):
+  #   lambda_I = phi_I * r_B              (turnover hazard)
+  #   r_V_B    = r_B - lambda_I           (voluntary baseline rate)
+  #   r_V_S    = capped voluntary reform rate
+  #
   # delta_realize is carried separately (in regime) and gates whether the
   # deemed channel fires at all.
   #----------------------------------------------------------------------------
 
   baseline_t %>%
     mutate(age           = as.integer(age),
-           r_S           = as.numeric(r_S_vec[as.character(age)]),
-           dG            = as.numeric(delta_prev[as.character(age)]),
-           tau_B         = as.numeric(tau_B_vec[as.character(age)]),
-           tau_S         = as.numeric(tau_S_vec[as.character(age)]),
+           r_S           = as.numeric(r_S_vec     [as.character(age)]),
+           lambda_I      = as.numeric(lambda_I_vec[as.character(age)]),
+           r_V_B         = as.numeric(r_V_B_vec   [as.character(age)]),
+           r_V_S         = as.numeric(r_V_S_vec   [as.character(age)]),
+           dG            = as.numeric(delta_prev  [as.character(age)]),
+           tau_B         = as.numeric(tau_B_vec   [as.character(age)]),
+           tau_S         = as.numeric(tau_S_vec   [as.character(age)]),
            rate_factor   = if_else(r_B > 0, r_S / r_B, 1),
            extra_R       = r_S * dG,
            deemed_factor = if_else(G_B > 0,
                                    pmax(0, (G_B + dG) / G_B),
                                    1)) %>%
-    select(age, G_B, R_B, r_B, r_S, m, mG_record, mR_record, dG,
+    select(age, G_B, R_B, r_B, r_S, lambda_I, r_V_B, r_V_S,
+           m, mG_record, mR_record, dG,
            tau_B, tau_S, rate_factor, extra_R, deemed_factor)
 }
 
@@ -645,8 +682,9 @@ kg_dyn_build_cell_table = function(baseline_t, r_S_vec, delta_prev,
 
 kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                     baseline_tau, reform_tau,
-                                    eta = KG_DYN_DEFAULT_ETA,
-                                    ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
+                                    eta   = KG_DYN_DEFAULT_ETA,
+                                    phi_I = KG_DYN_PHI_I,
+                                    ages  = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
   #----------------------------------------------------------------------------
   # Sequentially runs the bathtub recurrence across scenario_info$years and
@@ -657,8 +695,9 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   # State file at kg_dynamics_state/{t}.rds:
   #   list(
   #     regime     = list(name, c_phi, delta_vanish, delta_route, delta_realize),
-  #     cell_table = tibble(age, G_B, R_B, r_B, r_S, m, dG, tau_B, tau_S,
-  #                          rate_factor, extra_R, deemed_factor)
+  #     cell_table = tibble(age, G_B, R_B, r_B, r_S, lambda_I, r_V_B, r_V_S,
+  #                          m, dG, tau_B, tau_S, rate_factor, extra_R,
+  #                          deemed_factor)
   #   )
   #
   # Returns: invisibly NULL.
@@ -670,17 +709,23 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                         'kg_dynamics_state')
   dir.create(state_dir, recursive = TRUE, showWarnings = FALSE)
 
-  # Life table from year-1 baseline cells
+  # Life table and r_B table from year-1 baseline cells. r_B_table feeds the
+  # turnover hazard lambda^I = phi_I * r_B(age) used inside the bracket; we
+  # use year-1 values for forecasting purposes (year-to-year drift in
+  # baseline r_B is small compared to age variation).
   bc1 = baseline_cells[[as.character(min(years))]]
-  life_table = setNames(bc1$m, as.character(bc1$age))
+  life_table = setNames(bc1$m,   as.character(bc1$age))
+  r_B_table  = setNames(bc1$r_B, as.character(bc1$age))
   saveRDS(life_table, file.path(state_dir, 'life_table.rds'))
+  saveRDS(r_B_table,  file.path(state_dir, 'r_B_table.rds'))
 
   A     = kg_dyn_build_aging_matrix(ages)
   omega = kg_dyn_build_heir_matrix(ages)
 
   # Bracket cache by c_phi value (recompute only when regime's c_phi changes).
   # Always key by format(c_phi, nsmall = 6) so the baseline (c=0) and reform
-  # entries can never end up under inconsistent keys.
+  # entries can never end up under inconsistent keys. phi_I is global, so it
+  # does not need to enter the cache key.
   bracket_cache = list()
   c_key_B       = format(0, nsmall = 6)
 
@@ -697,7 +742,8 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     c_key_S = format(regime$c_phi, nsmall = 6)
     for (k in unique(c(c_key_B, c_key_S))) {
       if (!k %in% names(bracket_cache)) {
-        bracket_cache[[k]] = kg_dyn_compute_brackets(ages, c_phi = as.numeric(k), life_table)
+        bracket_cache[[k]] = kg_dyn_compute_brackets(
+          ages, c_phi = as.numeric(k), life_table, r_B_table, phi_I = phi_I)
       }
     }
     bracket_B = bracket_cache[[c_key_B]]
@@ -714,16 +760,24 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
       P_B         = P_B,
       P_S         = P_S,
       eta         = eta,
-      delta_route = regime$delta_route
+      delta_route = regime$delta_route,
+      phi_I       = phi_I
     )
-    r_S_vec = setNames(step$r_S, as.character(ages))
+
+    r_S_vec      = setNames(step$r_S,      as.character(ages))
+    lambda_I_vec = setNames(step$lambda_I, as.character(ages))
+    r_V_B_vec    = setNames(step$r_V_B,    as.character(ages))
+    r_V_S_vec    = setNames(step$r_V_S,    as.character(ages))
 
     cell_table = kg_dyn_build_cell_table(
-      baseline_t = bt,
-      r_S_vec    = r_S_vec,
-      delta_prev = delta,
-      tau_B_vec  = setNames(baseline_tau[[as.character(t)]], as.character(ages)),
-      tau_S_vec  = setNames(reform_tau  [[as.character(t)]], as.character(ages))
+      baseline_t   = bt,
+      r_S_vec      = r_S_vec,
+      lambda_I_vec = lambda_I_vec,
+      r_V_B_vec    = r_V_B_vec,
+      r_V_S_vec    = r_V_S_vec,
+      delta_prev   = delta,
+      tau_B_vec    = setNames(baseline_tau[[as.character(t)]], as.character(ages)),
+      tau_S_vec    = setNames(reform_tau  [[as.character(t)]], as.character(ages))
     )
 
     saveRDS(list(regime     = regime,
@@ -830,12 +884,17 @@ kg_dyn_build_summary = function(scenario_info) {
     # Backfill columns that may be missing from older state files. For
     # mG_record (added 2026-05), fall back to the cell-product form m * G_B
     # so the summary still computes for legacy state files; new runs use
-    # the per-record sum the simulator actually applies.
+    # the per-record sum the simulator actually applies. The two-channel
+    # columns (lambda_I, r_V_B, r_V_S; added 2026-05) get NA for legacy
+    # state files; downstream summaries skip them via na.rm.
     if (!('m'         %in% names(ct))) ct$m         = NA_real_
     if (!('tau_B'     %in% names(ct))) ct$tau_B     = NA_real_
     if (!('tau_S'     %in% names(ct))) ct$tau_S     = NA_real_
     if (!('mG_record' %in% names(ct))) ct$mG_record = ct$m * ct$G_B
     if (!('mR_record' %in% names(ct))) ct$mR_record = ct$m * ct$R_B
+    if (!('lambda_I'  %in% names(ct))) ct$lambda_I  = NA_real_
+    if (!('r_V_B'     %in% names(ct))) ct$r_V_B     = NA_real_
+    if (!('r_V_S'     %in% names(ct))) ct$r_V_S     = NA_real_
     ct %>%
       mutate(year   = years[i],
              regime = s$regime$name) %>%
@@ -867,6 +926,15 @@ kg_dyn_build_summary = function(scenario_info) {
       m_avg_gw       = if_else(sum(G_B) > 0, sum(m     * G_B, na.rm = TRUE) / sum(G_B), NA_real_),
       r_B_avg_gw     = if_else(sum(G_B) > 0, sum(r_B   * G_B) / sum(G_B), 0),
       r_S_avg_gw     = if_else(sum(G_B) > 0, sum(r_S   * G_B) / sum(G_B), 0),
+      # Two-channel diagnostics (NA for legacy state files):
+      lambda_I_avg_gw = if_else(sum(G_B) > 0,
+                                sum(lambda_I * G_B, na.rm = TRUE) / sum(G_B),
+                                NA_real_),
+      # Voluntary share of baseline realizations (R-weighted across cells):
+      v_share_avg_rw  = if_else(sum(R_B) > 0,
+                                sum(r_V_B * G_B, na.rm = TRUE) /
+                                sum(r_B   * G_B, na.rm = TRUE),
+                                NA_real_),
       tau_B_avg_gw   = if_else(sum(G_B) > 0, sum(tau_B * G_B, na.rm = TRUE) / sum(G_B), NA_real_),
       tau_S_avg_gw   = if_else(sum(G_B) > 0, sum(tau_S * G_B, na.rm = TRUE) / sum(G_B), NA_real_),
       tau_B_avg_rw   = if_else(sum(R_B) > 0, sum(tau_B * R_B, na.rm = TRUE) / sum(R_B), NA_real_),
@@ -898,6 +966,7 @@ kg_dyn_build_summary = function(scenario_info) {
     select(year, regime, c_phi, delta_vanish, delta_route, delta_realize,
            G_B_total, R_B_total, R_S_total, dG_total,
            m_avg_gw, r_B_avg_gw, r_S_avg_gw,
+           lambda_I_avg_gw, v_share_avg_rw,
            tau_B_avg_gw, tau_S_avg_gw, tau_B_avg_rw, tau_S_avg_rw,
            rate_channel, lockin_channel,
            decedent_stock, inheritance_flow, deemed_realized,

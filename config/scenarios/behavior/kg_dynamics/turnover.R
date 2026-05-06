@@ -12,8 +12,11 @@ do_kg_dynamics = function(tax_units, baseline_mtrs, static_mtrs,
   #
   #   {scenario_output}/conventional/supplemental/kg_dynamics_state/{year}.rds
   #
-  # Each state file is list(regime, cell_table). All math is in the bathtub;
-  # this module does no recurrence work.
+  # Each state file is list(regime, cell_table). The cell_table carries the
+  # two-channel decomposition (lambda_I = phi_I * r_B turnover hazard;
+  # r_V_B, r_V_S voluntary baseline / reform rates) plus the applier inputs
+  # (rate_factor, extra_R, deemed_factor). All math is in the bathtub; this
+  # module does no recurrence work.
   #
   # NOT compatible with the legacy kg/*.R or carryover_basis/*.R modules.
   #
