@@ -35,13 +35,15 @@ KG_DYN_PHI_I       = 0.4       # turnover share of baseline realization rate
 KG_DYN_HEIR_SHIFT  = 30        # average decedent-to-heir age gap
 KG_DYN_HEIR_SIGMA  = 5         # std dev of heir age distribution
 
-# Default eta. PLACEHOLDER -- recalibrate after the two-channel restructure
-# (turnover + voluntary) by running other/kg_model_tests/calibrate_eta.R
-# against a full-sample baseline. Target unchanged: year-30 realization-
-# weighted aggregate elasticity = -0.62 under a 1pp uniform MTR perturbation,
-# step-up regime. Expected larger in magnitude than the prior 6.875 because
-# part of r_B is now held inelastic in the turnover channel.
-KG_DYN_DEFAULT_ETA = 6.8750
+# Default eta. Calibrated against a full-sample 30-year baseline (vintage
+# wealth_calib_202605070813, Tax-Data 2026050315) to hit year-30 realization-
+# weighted aggregate elasticity = -0.62 under a 1pp uniform MTR perturbation
+# in the step-up regime. Larger than the pre-restructure value of 6.875
+# because the turnover channel (lambda_I = phi_I * r_B) now holds part of
+# r_B inelastic, so the voluntary remainder needs more curvature to hit the
+# same aggregate target. Re-run other/kg_model_tests/calibrate_eta.R if you
+# change phi_I, the bracket integrand, or move to a new Tax-Data vintage.
+KG_DYN_DEFAULT_ETA = 8.0039
 
 # Within-cell allocation rule for the policy-induced delta dG.
 # Determines which "effective cell mortality" the recurrence uses for
