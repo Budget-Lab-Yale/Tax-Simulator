@@ -8,16 +8,16 @@ do_kg_dynamics = function(tax_units, baseline_mtrs, static_mtrs,
   #
   # The bathtub pre-pass runs in run_bathtub_pass() (src/sim/run.R) for
   # main.R sequential mode and in src/slurm/bathtub.R for the SLURM pipeline.
-  # That pre-pass solves the Bellman backward induction (PDF Algorithms 1
-  # and 2) on the extended age grid [18, 119] to produce a scenario
-  # realization rate r_D_S(a, t), then runs the bathtub recurrence
+  # That pre-pass solves the representative-cell Bellman backward induction
+  # on the extended age grid [18, 119] to produce a scenario realization
+  # rate r_D_S(a, t), then runs the bathtub recurrence
   # (kg_dyn_step_recurrence) on the bathtub grid [18, 80] for dG evolution
   # and channel decomposition. Per-year state files are at:
   #
   #   {scenario_output}/conventional/supplemental/kg_dynamics_state/{year}.rds
   #
   # Each state file is list(regime, cell_table). The cell_table carries the
-  # Bellman diagnostics (W_B, W_S, P_B, P_S, mu, r_D_B, r_D_S, g_used) plus
+  # Bellman diagnostics (W_B, W_S, MC_B, MC_S, kappa, r_D_B, r_D_S) plus
   # the two-channel decomposition (lambda_I, r_V_B, r_V_S) and the applier
   # inputs (rate_factor, extra_R, deemed_factor). All math is in the bathtub;
   # this module does no recurrence work.
