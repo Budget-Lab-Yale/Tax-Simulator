@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>representative_cell_bellman_proposal</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+  </style>
+  <script defer=""
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"
+  type="text/javascript"></script>
+</head>
+<body>
+<h1
+id="representative-cell-bellman-proposal-for-capital-gains-dynamics">Representative-Cell
+Bellman Proposal for Capital Gains Dynamics</h1>
+<p><strong>Author:</strong> Design memo following eta-degeneracy review
+<strong>Status:</strong> Proposal for a replacement realization model;
+not current implementation <strong>Date:</strong> 2026-05-12</p>
+<p>This document proposes a revised capital-gains dynamics model for
+<code>Tax-Simulator</code>. The goal is to keep the core insight of the
+existing <code>kg_dynamics</code> architecture–a synthetic-cohort
+bathtub that tracks policy-induced changes in unrealized gains–while
+replacing the current closed-form Bellman realization function with a
+representative-cell dynamic program in which realization rates are
+chosen directly.</p>
+<p>The proposal is deliberately partial-equilibrium. It is a model of
+the timing of taxable realization, not a full model of household saving,
+portfolio choice, labor supply, or lifetime consumption.</p>
+<hr />
+<h2 id="motivation">1. Motivation</h2>
+<p>The current Bellman revision in <code>src/sim/kg_dynamics.R</code>
+was designed to improve on a reduced-form realization elasticity by
+letting taxpayers internalize future realization opportunities.
+Mechanically, it solves a per-unit Bellman equation for the value of
+holding one dollar of unrealized gain, then uses an exponential response
+rule:</p>
+<p><span class="math display">\[
+r^{D,S}_{a,t}
+= r^{D,B}_{a,t}\exp\{-\eta(P^S_{a,t} - P^B_{a,t})\}.
+\]</span></p>
+<p>The accompanying degeneracy note shows that, under the current
+functional form, the response parameter <span
+class="math inline">\(\eta\)</span> cancels from the realized response.
+The model runs, but varying <span class="math inline">\(\eta\)</span>
+does not change the implied realization elasticity. This is a structural
+problem, not a numerical calibration issue.</p>
+<p>The deeper issue is that the current formulation asks one object to
+do two jobs:</p>
+<ol type="1">
+<li>define the curvature of the holder’s nontax realization benefit;
+and</li>
+<li>provide a free empirical response parameter calibrated to
+realization elasticities.</li>
+</ol>
+<p>Recovering the cell intercept from baseline realizations then makes
+the Bellman value scale mechanically with the same parameter that
+appears in the exponential response. The calibration handle
+disappears.</p>
+<p>This proposal takes a different route. Instead of deriving a
+tax-price wedge and applying a separate closed-form response, the model
+solves directly for the realization share chosen by a representative
+cell. Baseline and scenario realization paths are both outputs of the
+dynamic program.</p>
+<hr />
+<h2 id="modeling-closure">2. Modeling Closure</h2>
+<p>Tax-Simulator is a repeated cross-section. It observes tax units by
+year but does not follow the same household longitudinally. The
+capital-gains module therefore cannot honestly maintain record-level
+dynamic wealth histories. The natural dynamic unit is a representative
+age-year cell, treated as a synthetic cohort.</p>
+<p>The proposed closure is:</p>
+<ul>
+<li>The underlying asset/unrealized-gain path is exogenous and anchored
+in the baseline repeated cross-sections.</li>
+<li>Realization behavior changes the timing of taxable recognition and
+creates policy-induced deviations from that baseline gain stock.</li>
+<li>New unrealized gains enter the cell stock additively through an
+exogenous baseline inflow process. They are not mechanically
+proportional to the share of old embedded gains that the cell chose not
+to realize.</li>
+<li>Earlier or later tax payments are financed through an unmodeled
+outside margin: lower consumption, lower saving in other assets,
+borrowing, or higher labor supply.</li>
+<li>The discount factor <span class="math inline">\(\beta\)</span>
+prices that outside-margin timing cost.</li>
+<li>The model does not feed tax payments back into the gross asset path
+or into future economy-wide saving.</li>
+</ul>
+<p>Thus, the model does not say:</p>
+<p><span class="math display">\[
+\text{tax paid today} \Rightarrow
+\text{lower modeled asset stock tomorrow}.
+\]</span></p>
+<p>Instead, it says:</p>
+<p><span class="math display">\[
+\text{tax paid today} \Rightarrow
+\text{outside budget margin absorbs the payment today},
+\]</span></p>
+<p>while the cell’s baseline asset/gain accumulation process remains
+anchored to the observed or imputed baseline path. This keeps the model
+a capital-gains realization-timing model rather than a full household
+savings model.</p>
+<hr />
+<h2 id="objects-and-primitives">3. Objects and Primitives</h2>
+<h3 id="indices">3.1 Indices</h3>
+<ul>
+<li><span class="math inline">\(a\)</span> indexes age cells.</li>
+<li><span class="math inline">\(t\)</span> indexes simulation
+years.</li>
+<li><span class="math inline">\(S\)</span> indexes a reform
+scenario.</li>
+</ul>
+<p>The core Bellman state is <span class="math inline">\((a,t)\)</span>.
+A later extension may add an embedded gain ratio state <span
+class="math inline">\(e\)</span> or a small number of
+embedded-gain-ratio bins, but the first version should be age-year
+only.</p>
+<h3 id="baseline-cell-quantities">3.2 Baseline Cell Quantities</h3>
+<p>Each cell carries baseline objects already used by the current
+bathtub:</p>
+<ul>
+<li><span class="math inline">\(G^B_{a,t}\)</span>: baseline unrealized
+taxable gain stock.</li>
+<li><span class="math inline">\(R^B_{a,t}\)</span>: baseline positive
+realized gains.</li>
+<li><span class="math inline">\(r^B_{a,t} =
+R^B_{a,t}/G^B_{a,t}\)</span>: baseline realization rate.</li>
+<li><span class="math inline">\(m_{a,t}\)</span>: effective cell
+mortality, preferably gain-weighted.</li>
+<li><span class="math inline">\(\tau^B_{a,t}\)</span>: baseline average
+capital gains marginal tax rate. The baseline stock path may also
+contain an implicit exogenous additive inflow of new unrealized gains.
+This residual includes asset appreciation, new saving, portfolio
+composition changes, ordinary inheritance flows already present in
+baseline, data imputation, and other processes that make the
+repeated-cross-section stock <span class="math inline">\(G^B\)</span>
+change over time. It is not a compounding return on the old
+embedded-gain stock, and it does not need to be computed for the
+Bellman.</li>
+</ul>
+<p>Scenario tax rates are <span
+class="math inline">\(\tau^S_{a,t}\)</span>. Death-regime parameters may
+also vary by scenario and year.</p>
+<h3 id="two-channel-realization">3.3 Two-Channel Realization</h3>
+<p>Total realizations split into an inelastic turnover component and a
+discretionary component:</p>
+<p><span class="math display">\[
+r_{a,t} = \lambda^T_{a,t} + r^D_{a,t}.
+\]</span></p>
+<p>The turnover component captures sales that occur for relatively
+tax-insensitive reasons: liquidity shocks, business exits, divorce,
+household moves, and other events outside the timing model. A simple
+first version can retain the current rule:</p>
+<p><span class="math display">\[
+\lambda^T_{a,t} = \phi_I r^B_{a,t}.
+\]</span></p>
+<p>The Bellman chooses only <span
+class="math inline">\(r^D_{a,t}\)</span>, subject to <span
+class="math inline">\(0 \le r^D_{a,t} \le
+1-\lambda^T_{a,t}\)</span>.</p>
+<h3 id="death-regime">3.4 Death Regime</h3>
+<p>Death enters through the unrealized gains not realized during the
+current period. The important object is the value of reaching death with
+one dollar of unrealized gain still embedded. A first version should
+model this as a tax-liability-forgiveness value, not as a general
+dynastic bequest utility.</p>
+<p>Let <span class="math inline">\(F_{a,t}\)</span> denote the
+death-state forgiveness value internalized by the current holder:</p>
+<p><span class="math display">\[
+F_{a,t} =
+\begin{cases}
+\tau_{a,t}, &amp; \text{step-up basis},\\
+(1-\theta)\tau_{a,t}, &amp; \text{carryover basis},\\
+0, &amp; \text{deemed realization}.
+\end{cases}
+\]</span></p>
+<p>Under step-up, death forgives the capital-gains tax liability, so the
+value of holding an unrealized dollar into death is approximately <span
+class="math inline">\(\tau\)</span>. Under deemed realization, no
+liability is forgiven, so this special death value is zero. Under
+carryover, the liability is not forgiven at the family level, but the
+current holder may not fully internalize the heir’s future tax burden.
+The parameter <span class="math inline">\(\theta \in [0,1]\)</span> is
+the internalized share of the heir-side future tax burden; when <span
+class="math inline">\(\theta=1\)</span>, carryover is valued like deemed
+realization for the current holder, and when <span
+class="math inline">\(\theta=0\)</span>, it is valued like step-up.</p>
+<p>This <span class="math inline">\(F\)</span> parameter is not the
+physical stock-routing rule. It is the holder’s reduced-form valuation
+of tax forgiveness at death for the old embedded gains whose realization
+decision is being modeled. Physical stock routing remains in the
+bathtub:</p>
+<ul>
+<li>under step-up, decedent unrealized gains vanish;</li>
+<li>under deemed realization, decedent gains are taxed and removed;</li>
+<li>under carryover, decedent unrealized gains are routed to heir
+cells.</li>
+</ul>
+<p>Because new gain inflows are additive and exogenous, they do not
+enter the marginal death value of realizing one additional dollar of old
+embedded gain. Those new gains are still present in the dollar stock
+accounting, but they are not multiplied by the current-period
+realization share.</p>
+<hr />
+<h2 id="representative-cell-bellman">4. Representative-Cell Bellman</h2>
+<h3 id="per-unit-normalization">4.1 Per-Unit Normalization</h3>
+<p>The Bellman is normalized to one dollar of unrealized gain in cell
+<span class="math inline">\((a,t)\)</span>. This avoids modeling the
+full asset and basis account. It is consistent with the current bathtub
+closure: the dynamic program chooses realization shares, and the bathtub
+scales those shares by the cell’s dollar stock of gains.</p>
+<p>Let <span class="math inline">\(W^j_{a,t}\)</span> be the per-dollar
+value of an unrealized gain in environment <span class="math inline">\(j
+\in \{B,S\}\)</span>, where <span class="math inline">\(B\)</span> is
+baseline and <span class="math inline">\(S\)</span> is a scenario.</p>
+<p>Let <span
+class="math inline">\(b_{a,t}(r^D;\kappa_{a,t},\psi)\)</span> be the
+reduced-form nontax benefit from discretionary realization. Here:</p>
+<ul>
+<li><span class="math inline">\(\kappa_{a,t}\)</span> is a cell-specific
+benefit/intercept chosen to reproduce baseline realization rates.</li>
+<li><span class="math inline">\(\psi\)</span> is a global or
+low-dimensional curvature/responsiveness parameter calibrated to an
+empirical realization elasticity target.</li>
+</ul>
+<p>The benefit is not a full consumption utility function. It represents
+liquidity, diversification, rebalancing, consumption needs, and other
+nontax motives for realizing gains.</p>
+<h3 id="bellman-equation">4.2 Bellman Equation</h3>
+<p>For a given environment <span class="math inline">\(j\)</span>, tax
+path <span class="math inline">\(\tau^j\)</span>, and death-regime
+forgiveness path <span class="math inline">\(F^j\)</span>, the
+representative cell solves:</p>
+<p><span class="math display">\[
+\boxed{
+W^j_{a,t}
+=
+\max_{r^D \in [0,\,1-\lambda^T_{a,t}]}
+\left\{
+b_{a,t}(r^D;\kappa_{a,t},\psi)
+- \tau^j_{a,t} r^D
++ (1-\lambda^T_{a,t}-r^D)
+\left[
+\beta(1-m_{a,t})W^j_{a+1,t+1}
++ \beta m_{a,t}F^j_{a,t}
+\right]
+\right\}.
+}
+\]</span></p>
+<p>The terms are:</p>
+<ul>
+<li><span class="math inline">\(b_{a,t}(r^D;\kappa,\psi)\)</span>:
+nontax benefit of realizing now.</li>
+<li><span class="math inline">\(-\tau r^D\)</span>: current tax cost of
+discretionary realization.</li>
+<li><span
+class="math inline">\((1-\lambda^T-r^D)\beta(1-m)W_{a+1,t+1}\)</span>:
+discounted continuation value of gains that survive and remain
+unrealized.</li>
+<li><span class="math inline">\((1-\lambda^T-r^D)\beta m F\)</span>:
+discounted value of tax-liability forgiveness if the holder dies before
+realizing.</li>
+</ul>
+<p>There is no multiplicative <span class="math inline">\((1+g)\)</span>
+term in the Bellman. The baseline gain-stock residual is treated as an
+additive inflow of new gains, not as a return on the old embedded gains
+that remain after current-period realizations. Since that inflow is not
+caused by today’s marginal realization decision, it does not enter the
+first-order condition.</p>
+<p>This positive death branch is what generates the standard step-up
+lock-in result. Under step-up, <span
+class="math inline">\(F=\tau\)</span>, so higher mortality increases the
+value of holding unrealized gains. Under deemed realization, <span
+class="math inline">\(F=0\)</span>, so that step-up-specific death
+option disappears.</p>
+<p>The Bellman is solved by backward induction over age and year. At the
+terminal age, continuation value is zero or set by a terminal condition.
+At the terminal simulation year, the same stationary-tail convention
+used by the current implementation can be retained.</p>
+<h3 id="first-order-condition">4.3 First-Order Condition</h3>
+<p>For an interior solution, the optimal discretionary realization rate
+satisfies:</p>
+<p><span class="math display">\[
+\frac{\partial b_{a,t}(r^D;\kappa,\psi)}{\partial r^D}
+=
+\tau^j_{a,t}
++ \beta(1-m_{a,t})W^j_{a+1,t+1}
++ \beta m_{a,t}F^j_{a,t}.
+\]</span></p>
+<p>The right-hand side is the marginal cost of realizing one more dollar
+of unrealized gain today:</p>
+<ul>
+<li>current tax paid now;</li>
+<li>continuation value forgone by reducing future unrealized gains;</li>
+<li>death-state forgiveness value forgone if the holder would otherwise
+die with the gain unrealized.</li>
+</ul>
+<p>This formulation intentionally does not derive an exponential
+response rule. The Bellman itself supplies <span
+class="math inline">\(r^{D,B}_{a,t}\)</span> and <span
+class="math inline">\(r^{D,S}_{a,t}\)</span>.</p>
+<h3 id="candidate-benefit-function">4.4 Candidate Benefit Function</h3>
+<p>A convenient first functional form is a concave benefit with cell
+intercept and global curvature, such as:</p>
+<p><span class="math display">\[
+b_{a,t}(r;\kappa_{a,t},\psi)
+=
+\kappa_{a,t}r - \frac{\psi}{2}r^2.
+\]</span></p>
+<p>Then:</p>
+<p><span class="math display">\[
+b&#39;_{a,t}(r;\kappa,\psi) = \kappa_{a,t} - \psi r.
+\]</span></p>
+<p>For an interior solution:</p>
+<p><span class="math display">\[
+r^{D,j}_{a,t}
+=
+\frac{\kappa_{a,t} - MC^j_{a,t}}{\psi},
+\]</span></p>
+<p>where</p>
+<p><span class="math display">\[
+MC^j_{a,t}
+=
+\tau^j_{a,t}
++ \beta(1-m_{a,t})W^j_{a+1,t+1}
++ \beta m_{a,t}F^j_{a,t}.
+\]</span></p>
+<p>The implementation should still solve the bounded maximization
+problem directly, because corner solutions are economically
+meaningful:</p>
+<p><span class="math display">\[
+r^{D,j}_{a,t} \in [0,\,1-\lambda^T_{a,t}].
+\]</span></p>
+<p>The quadratic form is not mandatory. It is a transparent starting
+point because one parameter shifts the level of baseline realization
+motives (<span class="math inline">\(\kappa\)</span>), while another
+controls response curvature (<span
+class="math inline">\(\psi\)</span>).</p>
+<hr />
+<h2 id="bathtub-interface">5. Bathtub Interface</h2>
+<p>The bathtub remains the synthetic-cohort law of motion for the dollar
+stock of unrealized gains. The Bellman replaces only the source of
+realization rates.</p>
+<p>For each scenario and year, the Bellman pre-pass returns:</p>
+<ul>
+<li><span class="math inline">\(r^{D,B}_{a,t}\)</span>: model-implied
+baseline discretionary realization rate.</li>
+<li><span class="math inline">\(r^{D,S}_{a,t}\)</span>: model-implied
+scenario discretionary realization rate.</li>
+<li><span class="math inline">\(r^B_{\text{model},a,t} = \lambda^T_{a,t}
++ r^{D,B}_{a,t}\)</span>.</li>
+<li><span class="math inline">\(r^S_{\text{model},a,t} = \lambda^T_{a,t}
++ r^{D,S}_{a,t}\)</span>.</li>
+</ul>
+<p>The ratio applied to observed baseline realized gains can be:</p>
+<p><span class="math display">\[
+\text{rate\_factor}_{a,t}
+=
+\frac{r^S_{\text{model},a,t}}{r^B_{\text{model},a,t}},
+\]</span></p>
+<p>with safeguards for sparse cells. If calibration exactly reproduces
+the observed baseline realization rate, then <span
+class="math inline">\(r^B_{\text{model},a,t} = r^B_{a,t}\)</span> and
+this ratio matches the observed baseline denominator.</p>
+<p>The existing bathtub recurrence can then be reused:</p>
+<p><span class="math display">\[
+\Delta G_{h,t+1}
+=
+\sum_a A_{a\to h}(1-m^{\text{eff}}_{a,t})
+\left[
+(1-r^S_{a,t})\Delta G_{a,t}
++ G^B_{a,t}(r^B_{a,t}-r^S_{a,t})
+\right]
++ \delta_{\text{route}}
+\sum_a \omega_{a\to h}m^{\text{eff}}_{a,t}(G^B_{a,t}+\Delta G_{a,t}).
+\]</span></p>
+<p>This recurrence is a delta equation around an exogenous baseline
+stock path. One way to see the additive-inflow closure is to write the
+full baseline stock equation as:</p>
+<p><span class="math display">\[
+G^B_{h,t+1}
+=
+\sum_a A_{a\to h}(1-m^{\text{eff}}_{a,t})(1-r^B_{a,t})G^B_{a,t}
++ \delta^B_{\text{route}}
+\sum_a \omega_{a\to h}m^{\text{eff}}_{a,t}G^B_{a,t}
++ I^B_{h,t+1}.
+\]</span></p>
+<p>The scenario equation uses the same exogenous inflow <span
+class="math inline">\(I^B_{h,t+1}\)</span>:</p>
+<p><span class="math display">\[
+G^S_{h,t+1}
+=
+\sum_a A_{a\to h}(1-m^{\text{eff}}_{a,t})(1-r^S_{a,t})G^S_{a,t}
++ \delta^S_{\text{route}}
+\sum_a \omega_{a\to h}m^{\text{eff}}_{a,t}G^S_{a,t}
++ I^B_{h,t+1}.
+\]</span></p>
+<p>Under the usual current-law step-up baseline, <span
+class="math inline">\(\delta^B_{\text{route}}=0\)</span>. Subtracting
+baseline from scenario then cancels the additive inflow and gives the
+displayed <span class="math inline">\(\Delta G\)</span> recurrence. That
+is why the bathtub can track only <span class="math inline">\(\Delta
+G\)</span> while still respecting the fact that new gain creation is not
+mechanically reduced when old embedded gains are realized.</p>
+<p>This cancellation is also why the additive inflow does not need to be
+an explicit implementation input. More generally, if</p>
+<p><span class="math display">\[
+G^j_{t+1}=H^j(G^j_t,r^j_t)+I_{t+1}
+\]</span></p>
+<p>for <span class="math inline">\(j\in\{B,S\}\)</span> and the inflow
+<span class="math inline">\(I_{t+1}\)</span> is exogenous and common to
+baseline and scenario, then</p>
+<p><span class="math display">\[
+\Delta G_{t+1}
+=G^S_{t+1}-G^B_{t+1}
+=H^S(G^S_t,r^S_t)-H^B(G^B_t,r^B_t).
+\]</span></p>
+<p>The common additive inflow drops out. It can rationalize growth in
+the baseline stock path without entering the Bellman first-order
+condition or the <span class="math inline">\(\Delta G\)</span>
+recurrence.</p>
+<p>Under carryover, the Bellman uses the reduced-form forgiveness value
+<span class="math inline">\(F=(1-\theta)\tau\)</span>, while the bathtub
+handles physical heir routing through <span
+class="math inline">\(\omega\)</span>. This deliberately avoids a fully
+dynastic Bellman in the first version.</p>
+<hr />
+<h2 id="calibration">6. Calibration</h2>
+<p>Calibration has two jobs:</p>
+<ol type="1">
+<li>match baseline realization levels by cell; and</li>
+<li>match an empirical aggregate realization elasticity.</li>
+</ol>
+<p>These should be assigned to different parameters.</p>
+<h3 id="baseline-inversion">6.1 Baseline Inversion</h3>
+<p>For each cell, recover <span
+class="math inline">\(\kappa_{a,t}\)</span> so that the baseline Bellman
+reproduces the observed discretionary baseline realization rate:</p>
+<p><span class="math display">\[
+r^{D,B}_{a,t} = r^B_{a,t} - \lambda^T_{a,t}.
+\]</span></p>
+<p>With the quadratic benefit and an interior solution, this inversion
+is:</p>
+<p><span class="math display">\[
+\kappa_{a,t}
+=
+MC^B_{a,t} + \psi r^{D,B}_{a,t}.
+\]</span></p>
+<p>Because <span class="math inline">\(MC^B_{a,t}\)</span> depends on
+<span class="math inline">\(W^B_{a+1,t+1}\)</span>, which itself depends
+on future <span class="math inline">\(\kappa\)</span> values, the
+baseline inversion should run backward over age/year alongside the
+Bellman solve. In practice:</p>
+<ol type="1">
+<li>start from terminal values;</li>
+<li>compute continuation value;</li>
+<li>choose <span class="math inline">\(\kappa_{a,t}\)</span> to make
+observed <span class="math inline">\(r^{D,B}_{a,t}\)</span>
+optimal;</li>
+<li>compute <span class="math inline">\(W^B_{a,t}\)</span> at that
+observed choice;</li>
+<li>move backward.</li>
+</ol>
+<p>This is analogous to recovering cell fixed effects. The <span
+class="math inline">\(\kappa_{a,t}\)</span> objects are nuisance
+calibration parameters, not the main economic elasticity parameter.</p>
+<p>The recovered <span class="math inline">\(\kappa_{a,t}\)</span>
+values are baseline-specific. They are tied to the baseline realization
+path, baseline tax-rate path, mortality inputs, additive-inflow rule,
+turnover share, and the candidate <span
+class="math inline">\(\psi\)</span>. If the baseline data vintage or
+baseline tax path changes, <span class="math inline">\(\kappa\)</span>
+must be recovered again before scenario solves. Operationally, <span
+class="math inline">\(\kappa\)</span> recovery should live inside the
+same pre-pass that builds the scenario’s bathtub state, not as a
+permanent one-time artifact.</p>
+<h3 id="elasticity-calibration">6.2 Elasticity Calibration</h3>
+<p>Given <span class="math inline">\(\kappa_{a,t}\)</span> and fixed
+parameters, apply a small tax perturbation under current-law
+step-up:</p>
+<p><span class="math display">\[
+\tau^S_{a,t} = \tau^B_{a,t} + 0.01.
+\]</span></p>
+<p>Solve the scenario Bellman, run the bathtub, and compute an aggregate
+elasticity target:</p>
+<p><span class="math display">\[
+\epsilon_{\text{model}}
+=
+\frac{\Delta \log R}{\Delta \log(1-\tau)}
+\]</span></p>
+<p>or the simulator’s preferred semi-elasticity convention. Tune <span
+class="math inline">\(\psi\)</span> using a full-model root find until
+the model matches the literature target, such as a permanent realization
+elasticity around <span class="math inline">\(-0.6\)</span>.</p>
+<p>The response need not scale linearly as <span
+class="math inline">\(1/\psi\)</span>. Locally, the first-order
+condition suggests that larger <span class="math inline">\(\psi\)</span>
+flattens the realization response, but the marginal cost also includes
+next-period <span class="math inline">\(W\)</span>, and <span
+class="math inline">\(W\)</span> depends on future choices that are
+themselves governed by <span class="math inline">\(\psi\)</span>. The
+calibration routine should therefore use robust bracketing and
+diagnostics rather than assuming monotone-linear behavior.</p>
+<p>This is identified because:</p>
+<ul>
+<li><span class="math inline">\(\kappa_{a,t}\)</span> pins baseline
+realization levels;</li>
+<li><span class="math inline">\(\psi\)</span> controls responsiveness
+around the baseline;</li>
+<li><span class="math inline">\(\beta\)</span>, <span
+class="math inline">\(\theta\)</span>, and <span
+class="math inline">\(\phi_I\)</span> are fixed or sensitivity
+parameters.</li>
+</ul>
+<p>The key design rule is that <span class="math inline">\(\psi\)</span>
+must affect scenario responses after baseline inversion. It must not
+cancel out of <span class="math inline">\(r^S/r^B\)</span> as <span
+class="math inline">\(\eta\)</span> does in the current log-benefit
+Bellman.</p>
+<p>The elasticity calibration is local to a small tax-rate perturbation
+under current-law step-up. Large regime changes, such as step-up to
+deemed realization, shift the death branch by much more than a marginal
+tax-rate shock. Responses to those reforms are therefore extrapolations
+through the chosen benefit function and calibrated <span
+class="math inline">\(\psi\)</span>, not directly identified by the 1pp
+elasticity target.</p>
+<h3 id="parameter-posture">6.3 Parameter Posture</h3>
+<p>A first implementation should treat:</p>
+<ul>
+<li><span class="math inline">\(\beta\)</span>: fixed from an annual
+discount rate assumption, with sensitivity.</li>
+<li><span class="math inline">\(\phi_I\)</span>: fixed turnover share,
+initially retaining the current value.</li>
+<li><span class="math inline">\(\theta\)</span>: share of heir-side
+future tax burden internalized under carryover, reported as a
+sensitivity.</li>
+<li><span class="math inline">\(\psi\)</span>: calibrated to the
+aggregate realization elasticity target.</li>
+<li><span class="math inline">\(\kappa_{a,t}\)</span>: cell-level
+baseline fit parameters, recovered for each baseline/scenario pre-pass
+rather than reused across baseline vintages.</li>
+</ul>
+<hr />
+<h2 id="algorithm-sketch">7. Algorithm Sketch</h2>
+<p>For each scenario:</p>
+<ol type="1">
+<li>Build baseline age-year cell inputs: <span
+class="math inline">\(G^B\)</span>, <span
+class="math inline">\(R^B\)</span>, <span
+class="math inline">\(r^B\)</span>, <span
+class="math inline">\(m\)</span>, <span
+class="math inline">\(\tau^B\)</span>, and <span
+class="math inline">\(\tau^S\)</span>.</li>
+<li>Set turnover <span class="math inline">\(\lambda^T = \phi_I
+r^B\)</span> and discretionary baseline target <span
+class="math inline">\(r^{D,B} = r^B-\lambda^T\)</span>.</li>
+<li>For a candidate <span class="math inline">\(\psi\)</span>, run
+baseline backward induction: recover <span
+class="math inline">\(\kappa_{a,t}\)</span> and compute <span
+class="math inline">\(W^B_{a,t}\)</span> while forcing <span
+class="math inline">\(r^{D,B}_{a,t}\)</span> to match the observed
+baseline.</li>
+<li>Run scenario backward induction: use fixed <span
+class="math inline">\(\kappa_{a,t}\)</span> and <span
+class="math inline">\(\psi\)</span> to solve for <span
+class="math inline">\(r^{D,S}_{a,t}\)</span>.</li>
+<li>Construct total rates: <span
+class="math inline">\(r^B_{\text{model}} = \lambda^T+r^{D,B}\)</span>
+and <span class="math inline">\(r^S_{\text{model}} =
+\lambda^T+r^{D,S}\)</span>.</li>
+<li>Feed <span class="math inline">\(r^S_{\text{model}}\)</span> into
+the bathtub recurrence.</li>
+<li>Persist per-year state files with the same downstream contract as
+the current <code>kg_dynamics</code> behavior module: rate factors,
+extra realizations, deemed factors, and diagnostic columns.</li>
+</ol>
+<p>For calibration, wrap the above in an outer loop over <span
+class="math inline">\(\psi\)</span> and target the chosen aggregate
+elasticity.</p>
+<hr />
+<h2 id="what-this-buys">8. What This Buys</h2>
+<p>Relative to the current model, this proposal provides:</p>
+<ul>
+<li><strong>Endogenous baseline and scenario realization paths.</strong>
+The Bellman chooses realization shares directly; the reform response is
+not imposed through an external exponential ratio.</li>
+<li><strong>Dynamic consistency.</strong> The choice to defer today
+changes the stock that enters future realization decisions through the
+bathtub.</li>
+<li><strong>Explicit death treatment.</strong> Step-up creates a
+positive tax-forgiveness value of dying with unrealized gains; deemed
+realization removes that value; carryover sits between them depending on
+<span class="math inline">\(\theta\)</span>. Physical stock routing
+remains in the bathtub.</li>
+<li><strong>Identifiable calibration.</strong> Cell intercepts match
+baseline levels; a separate curvature parameter targets realization
+responsiveness.</li>
+<li><strong>Compatibility with repeated cross-sections.</strong> Dynamic
+state remains at the representative-cell level, not the record
+level.</li>
+</ul>
+<p>It does not provide:</p>
+<ul>
+<li>a full household savings model;</li>
+<li>endogenous asset allocation or portfolio returns;</li>
+<li>record-level longitudinal wealth histories;</li>
+<li>a fully dynastic model of heirs’ future realization choices.</li>
+</ul>
+<hr />
+<h2 id="open-design-choices">9. Open Design Choices</h2>
+<p>Several choices should be settled before implementation:</p>
+<ul>
+<li>Whether the first version should include an embedded-gain-ratio
+state or stay strictly age-year.</li>
+<li>Whether future versions should introduce a separate carried-gain
+return parameter. The recommended first version treats baseline stock
+growth as an additive inflow and omits a multiplicative
+continuation-growth factor.</li>
+<li>Whether the quadratic benefit function is sufficient, or whether a
+different concave form is needed to improve corner behavior.</li>
+<li>Whether the elasticity target should be a permanent elasticity, a
+semi-elasticity, or a profile across years.</li>
+<li>Whether carryover’s <span class="math inline">\(\theta\)</span>
+should be fixed, calibrated, or reported only as sensitivity.</li>
+<li>Whether to add a separate pure bequest-value parameter <span
+class="math inline">\(\zeta\)</span> later. The recommended first
+version omits it and uses tax-liability forgiveness <span
+class="math inline">\(F\)</span> as the death branch.</li>
+</ul>
+<p>The recommended first prototype is deliberately minimal:</p>
+<p><span class="math display">\[
+\text{state} = (a,t), \qquad
+\text{control} = r^D, \qquad
+b(r)=\kappa r-\frac{\psi}{2}r^2.
+\]</span></p>
+<p>That prototype is sufficient to test whether a direct-control
+representative-cell Bellman produces sensible realization paths and
+avoids the eta-degeneracy problem.</p>
+</body>
+</html>
