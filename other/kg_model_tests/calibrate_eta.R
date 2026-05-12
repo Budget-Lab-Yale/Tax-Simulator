@@ -1,26 +1,27 @@
 #-------------------------------------------------------------------------------
 # calibrate_eta.R
 #
-# Eta calibration for the kg_dynamics behavioral curvature parameter. Run
-# AFTER a full-sample baseline simulator pass that registered mtr_vars =
-# "kg_lt" (so baseline static detail carries mtr_kg_lt per record).
+# Eta calibration for the kg_dynamics behavioral curvature parameter under
+# the Bellman-based effective tax price (PDF Algorithms 1 and 2). Run AFTER
+# a full-sample baseline simulator pass that registered mtr_vars = "kg_lt"
+# (so baseline static detail carries mtr_kg_lt per record).
 #
 # Methodology:
 #   1. Aggregate baseline cell MTRs (gain-stock-weighted) from baseline static
 #      detail joined with Tax-Data.
 #   2. Construct a uniform 1pp perturbation: tau_S(a, t) = tau_B(a, t) + 0.01
-#      for every cell × year.
-#   3. Run the bathtub recurrence for 30 years using kg_dyn_step_recurrence
-#      under step-up regime (c_phi = 0).
+#      for every cell x year.
+#   3. For a given candidate eta, run the Bellman pre-pass (life-table
+#      extension, accrual rates, baseline Bellman, scenario Bellman) plus
+#      the bathtub recurrence for 30 years under step-up regime (c_phi = 0).
 #   4. Compute year-30 implied elasticity:
 #        eta_30 = log(R_S / R_B) / log((tau_avg_B + 0.01) / tau_avg_B)
-#      where tau_avg_B is the gain-stock-weighted average baseline cell MTR
-#      across all cells × all years.
+#      where tau_avg_B is the realization-weighted average baseline cell MTR
+#      across all cells x all years.
 #   5. Bisect eta until eta_30 hits -0.6.
 #
-# Why offline: bathtub math is ms-fast; iterating eta over a fixed (tau_B,
-# tau_S, baseline_cells) input set takes seconds, vs minutes per iteration
-# if we wrapped around the simulator.
+# Why offline: the Bellman + bathtub takes a fraction of a second per
+# iteration; bisection converges in ~12 iters. Total runtime ~seconds.
 #
 # Output: prints recommended eta. Paste into KG_DYN_DEFAULT_ETA in
 # src/sim/kg_dynamics.R.
@@ -56,7 +57,8 @@ if (length(args) < 1) {
 BASELINE_ROOT = args[1]
 
 TAX_DATA_ROOT = '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1/2026050315/baseline'
-AGES          = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX
+AGES_BATHTUB  = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX
+AGES_BELLMAN  = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX_BELLMAN
 TARGET_ETA    = -0.62
 PERTURBATION  = 0.01      # 1pp uniform MTR perturbation
 
@@ -79,9 +81,8 @@ td_cols = c('id', 'weight', 'filing_status', 'age1', 'age2',
             'kg_lt', 'q_death1', 'q_death2',
             KG_DYN_ASSET_VALUE_COLS, KG_DYN_ASSET_BASIS_COLS)
 
-# Per-year: load TaxData with attrs, join with mtr_kg_lt, compute cell aggregates + cell MTRs
 baseline_cells = list()
-tau_B          = list()  # named list: year -> length-|ages| named numeric vector
+tau_B          = list()
 
 for (t in YEARS) {
 
@@ -97,8 +98,8 @@ for (t in YEARS) {
 
   td_with_mtr = td %>% inner_join(bl, by = 'id')
 
-  baseline_cells[[as.character(t)]] = kg_dyn_aggregate_cells(td_with_mtr, AGES)
-  tau_B[[as.character(t)]]          = kg_dyn_aggregate_cell_mtr(td_with_mtr, AGES)
+  baseline_cells[[as.character(t)]] = kg_dyn_aggregate_cells(td_with_mtr, AGES_BATHTUB)
+  tau_B[[as.character(t)]]          = kg_dyn_aggregate_cell_mtr(td_with_mtr, AGES_BATHTUB)
 }
 
 cat("  loaded\n")
@@ -112,7 +113,29 @@ tau_S = lapply(tau_B, function(v) v + PERTURBATION)
 
 
 #-------------------------------------------------------------------------------
-# Step 3: Compute gain-stock-weighted average baseline tau across all years
+# Step 3: Build Bellman pre-pass inputs that don't depend on eta
+#-------------------------------------------------------------------------------
+
+cat("Building extended grid, accrual rates, tau matrices...\n")
+
+life_ext    = kg_dyn_load_life_table_extension(years = YEARS)
+grid_ext    = kg_dyn_build_extended_grid(baseline_cells, life_ext, YEARS,
+                                         ages_bellman = AGES_BELLMAN)
+g_mat       = kg_dyn_compute_growth_rates(grid_ext, YEARS,
+                                          ages_bellman = AGES_BELLMAN,
+                                          rule = KG_DYN_G_RULE)
+grid_packed = kg_dyn_pack_baseline_grid(grid_ext, YEARS,
+                                        ages_bellman = AGES_BELLMAN)
+tau_B_mat   = kg_dyn_pack_tau(tau_B, YEARS, ages_bellman = AGES_BELLMAN)
+tau_S_mat   = kg_dyn_pack_tau(tau_S, YEARS, ages_bellman = AGES_BELLMAN)
+
+# Step-up regime applies under current law; c_phi = 0 throughout. We bisect
+# eta using a 1pp perturbation under step-up to match the elasticity target.
+c_phi_S_by_year = rep(0, length(YEARS))
+
+
+#-------------------------------------------------------------------------------
+# Step 4: Compute gain-stock-weighted average baseline tau across all years
 # (used as the elasticity denominator anchor)
 #-------------------------------------------------------------------------------
 
@@ -133,48 +156,47 @@ cat(sprintf("Anchor: log((tau_avg_B + perturbation)/tau_avg_B) = %.5f\n",
 
 
 #-------------------------------------------------------------------------------
-# Step 4: Recurrence loop, parameterized by eta. Step-up regime; no carryover.
+# Step 5: Recurrence + Bellman loop, parameterized by eta. Step-up regime.
 #-------------------------------------------------------------------------------
 
-A     = kg_dyn_build_aging_matrix(AGES)
-omega = kg_dyn_build_heir_matrix(AGES)
-
-# Life table and r_B table from year-1 baseline cells (matches production)
-bc1 = baseline_cells[[as.character(min(YEARS))]]
-life_table = setNames(bc1$m,   as.character(bc1$age))
-r_B_table  = setNames(bc1$r_B, as.character(bc1$age))
-
-# Bracket M(c=0) is constant across all (year, regime) combinations under
-# step-up; compute once. Uses production phi_I (turnover share of r_B).
-bracket_step_up = kg_dyn_compute_brackets(AGES, c_phi = 0, life_table, r_B_table,
-                                           phi_I = KG_DYN_PHI_I)
-
-# Step-up regime: delta_route = 0
-regime_step_up = list(c_phi = 0, delta_vanish = 1, delta_route = 0, delta_realize = 0)
-
+A     = kg_dyn_build_aging_matrix(AGES_BATHTUB)
+omega = kg_dyn_build_heir_matrix(AGES_BATHTUB)
+bathtub_ages_chr = as.character(AGES_BATHTUB)
 
 eta_at_anchor = function(eta_val) {
 
-  delta = setNames(rep(0, length(AGES)), as.character(AGES))
+  pass1 = kg_dyn_solve_bellman_baseline(grid_packed, g_mat, tau_B_mat,
+                                         c_phi_B = 0,
+                                         eta = eta_val,
+                                         phi_I = KG_DYN_PHI_I,
+                                         beta = KG_DYN_BETA)
+  pass2 = kg_dyn_solve_bellman_scenario(grid_packed, g_mat, tau_S_mat,
+                                         mu_mat = pass1$mu,
+                                         c_phi_S_by_year = c_phi_S_by_year,
+                                         eta = eta_val,
+                                         phi_I = KG_DYN_PHI_I,
+                                         beta = KG_DYN_BETA)
 
+  delta = setNames(rep(0, length(AGES_BATHTUB)), bathtub_ages_chr)
   R_B_total = 0
   R_S_total = 0
 
-  for (t in YEARS) {
-
+  for (j in seq_along(YEARS)) {
+    t  = YEARS[j]
     bt = baseline_cells[[as.character(t)]]
-    P_B = as.numeric(tau_B[[as.character(t)]]) * (1 - bracket_step_up)
-    P_S = as.numeric(tau_S[[as.character(t)]]) * (1 - bracket_step_up)
+
+    r_D_S_bt = pass2$r_D[bathtub_ages_chr, j]
+    lambda_I = KG_DYN_PHI_I * bt$r_B
+    r_S_vec  = setNames(lambda_I + r_D_S_bt, bathtub_ages_chr)
 
     step = kg_dyn_step_recurrence(
       delta_prev  = delta,
       baseline_t  = bt,
       A           = A,
       omega       = omega,
-      P_B         = P_B,
-      P_S         = P_S,
-      eta         = eta_val,
-      delta_route = regime_step_up$delta_route
+      r_S_vec     = r_S_vec,
+      delta_route = 0,
+      phi_I       = KG_DYN_PHI_I
     )
 
     if (t == ANCHOR_YEAR) {
@@ -191,14 +213,16 @@ eta_at_anchor = function(eta_val) {
 
 
 #-------------------------------------------------------------------------------
-# Step 5: Bisect eta to hit target
+# Step 6: Bisect eta to hit target
 #-------------------------------------------------------------------------------
 
 cat(sprintf("\nCalibrating eta to hit elasticity = %.2f at sim-year %d (calendar %d)...\n\n",
             TARGET_ETA, ANCHOR_LABEL, ANCHOR_YEAR))
 
-# Coarse grid sweep
-eta_grid = c(1, 3, 5, 8, 12, 18, 25, 40, 60)
+# Coarse grid sweep. The Bellman P is more responsive than the old bracket P
+# (anticipation channel), so eta needs to be smaller in magnitude. Wider grid
+# to be safe.
+eta_grid = c(0.5, 1, 2, 4, 8, 16, 32, 64)
 cat("Coarse sweep:\n")
 sweep_results = sapply(eta_grid, function(e) {
   v = eta_at_anchor(e)
@@ -230,8 +254,8 @@ final    = eta_at_anchor(eta_star)
 
 cat(sprintf("\nCalibrated eta = %.4f  (eta_30 = %.4f, target = %.4f)\n",
             eta_star, final, TARGET_ETA))
-cat("\nUpdate the `eta` default in kg_dyn_run_bathtub_pass() ",
-    "(src/sim/kg_dynamics.R) to this value.\n", sep = "")
+cat("\nUpdate KG_DYN_DEFAULT_ETA in src/sim/kg_dynamics.R to this value.\n",
+    sep = "")
 
 
 #-------------------------------------------------------------------------------
@@ -240,20 +264,33 @@ cat("\nUpdate the `eta` default in kg_dyn_run_bathtub_pass() ",
 
 profile_years = function(eta_val) {
 
-  delta = setNames(rep(0, length(AGES)), as.character(AGES))
+  pass1 = kg_dyn_solve_bellman_baseline(grid_packed, g_mat, tau_B_mat,
+                                         c_phi_B = 0,
+                                         eta = eta_val,
+                                         phi_I = KG_DYN_PHI_I,
+                                         beta = KG_DYN_BETA)
+  pass2 = kg_dyn_solve_bellman_scenario(grid_packed, g_mat, tau_S_mat,
+                                         mu_mat = pass1$mu,
+                                         c_phi_S_by_year = c_phi_S_by_year,
+                                         eta = eta_val,
+                                         phi_I = KG_DYN_PHI_I,
+                                         beta = KG_DYN_BETA)
+
+  delta = setNames(rep(0, length(AGES_BATHTUB)), bathtub_ages_chr)
   out = tibble(sim_year = integer(), year = integer(), eta_t = numeric())
 
-  for (i in seq_along(YEARS)) {
-    t = YEARS[i]; bt = baseline_cells[[as.character(t)]]
-    P_B = as.numeric(tau_B[[as.character(t)]]) * (1 - bracket_step_up)
-    P_S = as.numeric(tau_S[[as.character(t)]]) * (1 - bracket_step_up)
-    step = kg_dyn_step_recurrence(delta, bt, A, omega, P_B, P_S, eta_val,
-                                   regime_step_up$delta_route)
+  for (j in seq_along(YEARS)) {
+    t  = YEARS[j]; bt = baseline_cells[[as.character(t)]]
+    r_D_S_bt = pass2$r_D[bathtub_ages_chr, j]
+    lambda_I = KG_DYN_PHI_I * bt$r_B
+    r_S_vec  = setNames(lambda_I + r_D_S_bt, bathtub_ages_chr)
+
+    step = kg_dyn_step_recurrence(delta, bt, A, omega, r_S_vec, 0, KG_DYN_PHI_I)
     G_S = bt$G_B + delta
     R_B_t = sum(bt$R_B)
     R_S_t = sum(step$r_S * G_S)
     eta_t = log(R_S_t / R_B_t) / log((TAU_AVG_B + PERTURBATION) / TAU_AVG_B)
-    out = bind_rows(out, tibble(sim_year = i, year = t, eta_t = round(eta_t, 4)))
+    out = bind_rows(out, tibble(sim_year = j, year = t, eta_t = round(eta_t, 4)))
     delta = step$delta_next
   }
   out
