@@ -1,0 +1,10 @@
+---
+# Delayed-implementation +5pp on top long-term capital gains rate.
+# Policy announced in 2026 but effective from 2027 onwards. The Bellman
+# should produce a forward-looking acceleration in 2026 (taxpayers
+# realize at the lower rate before the hike), then suppressed realization
+# from 2027 on. Step-up unchanged.
+rates:
+  value:
+    '2026': [0.0, 0.15, 0.20]
+    '2027': [0.0, 0.15, 0.25]

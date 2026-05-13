@@ -1,0 +1,12 @@
+---
+# Temporary one-year +5pp on top long-term capital gains rate.
+# Rate hike in effect only for 2026; reverts to baseline rate from
+# 2027 on. Expected behavior: suppressed realization in 2026 (defer to
+# escape the high rate), with the new Bellman producing slightly more
+# deferral than legacy because the future-low-rate path is anticipated.
+# Slight rebound in 2027+ as the deferred stock pressure unwinds. Step-up
+# unchanged.
+rates:
+  value:
+    '2026': [0.0, 0.15, 0.25]
+    '2027': [0.0, 0.15, 0.20]
