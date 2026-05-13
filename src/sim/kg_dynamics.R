@@ -20,18 +20,20 @@
 #
 # Bellman primitives. The representative cell maximizes per dollar of
 # unrealized gain:
-#   W^j(a,t) = max_{r_D in [0, 1 - lambda_T]} {
+#   W^j(a,t) = max_{r_D in [0, 1 - r_exog_B]} {
 #       kappa(a,t)*r_D - (psi/2)*r_D^2
 #     - tau^j(a,t)*r_D
-#     + (1 - lambda_T - r_D) * [beta*(1-m) W^j(a+1,t+1) + beta*m*F^j(a,t)]
+#     + (1 - r_exog_B - r_D) *
+#         [beta*(1-m) W^j(a+1,t+1) + beta*m*F^j(a,t)]
 #   }
-# where lambda_T = phi_I*r_B is the policy-invariant turnover hazard,
+# where r_exog_B = (fixed_share + planned_share)*r_B is the baseline
+# realization share outside the ordinary Bellman bucket,
 # F^j = (1 - c_phi^j)*tau^j is the death-state tax-liability forgiveness
 # value (c_phi^j is the regime's holder-internalized burden share: 0 step-up,
 # theta carryover, 1 deemed). Marginal cost of realization:
 #   MC^j(a,t) = tau^j + beta*(1-m)*W^j(a+1,t+1) + beta*m*F^j.
-# Interior FOC: r_D = (kappa - MC)/psi, clipped to [0, 1 - lambda_T].
-# kappa(a,t) is recovered from baseline so r_D^B = r_B - lambda_T:
+# Interior FOC: r_D = (kappa - MC)/psi, clipped to [0, 1 - r_exog_B].
+# kappa(a,t) is recovered from baseline so r_D^B is the ordinary bucket:
 #   kappa = MC^B + psi * r_D^B   (at corner cells with r_D^B = 0, kappa = MC^B).
 #
 # Current implementation collapses the five tracked wealth classes into a
@@ -58,11 +60,17 @@ KG_DYN_BETA             = 0.978   # fallback annual discount factor, used
                                   # ~2.2% real rate, the rough mid-horizon
                                   # value implied by the default Macro-
                                   # Projections vintage.
-KG_DYN_PHI_I            = 0.4     # turnover share of baseline realization rate
-                                  # (asset-aggregate; spec defaults are ~0.3
-                                  #  for liquid equities, ~0.5 for pass-
-                                  #  throughs/REIT, ~0.7 for housing -- 0.4 is
-                                  #  a reasonable realization-weighted aggregate)
+# Baseline realization bucket shares. The fixed share is nonresponsive; the
+# planned share is mechanically timeable across nearby years; the remainder is
+# the ordinary Bellman-controlled share. Defaults preserve the prior two-bucket
+# model: fixed=0.4 and planned=0 imply ordinary=0.6.
+KG_DYN_SHARE_FIXED      = 0.4
+KG_DYN_SHARE_PLANNED    = 0.0
+KG_DYN_TIMING_WINDOW    = 1L
+
+# Backward-compatible alias used by existing callers and diagnostics. In the
+# three-bucket interpretation this is the fixed/nonresponsive share.
+KG_DYN_PHI_I            = KG_DYN_SHARE_FIXED
 KG_DYN_HEIR_SHIFT       = 30      # average decedent-to-heir age gap
 KG_DYN_HEIR_SIGMA       = 5       # std dev of heir age distribution
 
@@ -73,10 +81,10 @@ KG_DYN_HEIR_SIGMA       = 5       # std dev of heir age distribution
 # ramps over the first ~10 years as the bathtub accumulates stock,
 # then plateaus). Set to NA_real_ here to force fail-fast at run time
 # if someone tries to run kg_dynamics without an up-to-date calibration.
-# Re-run calibrate_psi.R whenever Tax-Data vintage, phi_I, the discount
-# series (Macro-Projections vintage), or any Bellman primitive (mortality
-# weighting, age-tail r_B treatment, etc.) changes, then paste the printed
-# value below.
+# Re-run calibrate_psi.R whenever Tax-Data vintage, bucket shares, the
+# discount series (Macro-Projections vintage), or any Bellman primitive
+# (mortality weighting, age-tail r_B treatment, etc.) changes, then paste the
+# printed value below.
 KG_DYN_DEFAULT_PSI      = 25.2297
 
 # Within-cell allocation rule for the policy-induced delta dG.
@@ -472,11 +480,11 @@ kg_dyn_build_extended_grid = function(baseline_cells, life_ext, years,
 # Bellman backward induction
 #
 # Pass 1 (baseline) solves W_B and recovers kappa(a, t) so the observed
-# baseline discretionary realization rate r_D_B = r_B - phi_I*r_B is the
-# Pass-1 cell's optimal choice.
+# ordinary realization bucket r_D_B = (1 - fixed_share - planned_share)*r_B
+# is the Pass-1 cell's optimal choice.
 # Pass 2 (scenario) solves W_S using kappa(a, t) from Pass 1 and the
 # scenario-specific (tau_S, c_phi_S) pair, producing r_D_S(a, t) via the
-# clipped quadratic FOC r_D = clip((kappa - MC)/psi, 0, 1 - lambda_T).
+# clipped quadratic FOC r_D = clip((kappa - MC)/psi, 0, 1 - r_exog_B).
 #
 # Both passes solve on the extended age grid [18, 119], outer loop backward
 # in time, inner loop backward in age. Terminal condition:
@@ -550,8 +558,9 @@ kg_dyn_pack_baseline_grid = function(grid_ext, years,
 
 
 kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
-                                     c_phi, psi, phi_I, beta, kappa_col = NULL,
-                                     stationary = FALSE) {
+                                     c_phi, psi, phi_I, beta,
+                                     planned_share = KG_DYN_SHARE_PLANNED,
+                                     kappa_col = NULL, stationary = FALSE) {
 
   #----------------------------------------------------------------------------
   # One age-backward sweep through [a_min, a_max] for a single year column.
@@ -559,13 +568,13 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
   # backward induction.
   #
   # When kappa_col is NULL, this is a Pass 1 (baseline) sweep: r_D_B is
-  # derived directly from r_B and lambda_T = phi_I * r_B, and the cell
-  # intercept kappa is recovered so r_D_B is the optimal choice given
-  # MC_B = tau + beta*(1-m)*W_next + beta*m*F.
+  # derived directly from r_B after removing the fixed and planned buckets,
+  # and the cell intercept kappa is recovered so r_D_B is the optimal choice
+  # given MC_B = tau + beta*(1-m)*W_next + beta*m*F.
   #
   # When kappa_col is supplied, this is a Pass 2 (scenario) sweep:
   # MC_S is computed from scenario primitives and the quadratic FOC gives
-  # r_D = clip((kappa - MC_S)/psi, 0, 1 - lambda_T) at each cell.
+  # r_D = clip((kappa - MC_S)/psi, 0, 1 - r_exog_B) at each cell.
   #
   # When stationary = FALSE (default, regular year-by-year case), the
   # continuation value at age a uses W_next[a+1] -- next year's W at age
@@ -581,7 +590,7 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
   #
   # The cell's per-dollar value satisfies:
   #   W(a,t) = kappa*r_D - (psi/2)*r_D^2 - tau*r_D
-  #          + (1 - lambda_T - r_D) * [beta*(1-m)*W_next + beta*m*F]
+  #          + (1 - r_exog_B - r_D) * [beta*(1-m)*W_next + beta*m*F]
   # with F = (1 - c_phi)*tau the death-state forgiveness value.
   #
   # Returns a list with numeric vectors of length n_ages:
@@ -614,12 +623,13 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
     # death-state forgiveness value forgone.
     MC_i = tau_i + beta * (1 - m_i) * W_next_i + beta * m_i * F_i
 
-    lambda_T = phi_I * r_B_col[i]
-    r_D_cap  = max(1 - lambda_T, 0)
+    r_exog_B = (phi_I + planned_share) * r_B_col[i]
+    r_D_cap  = max(1 - r_exog_B, 0)
 
     if (is_baseline_pass) {
-      # Target observed r_D_B = r_B - lambda_T, clipped to [0, 1 - lambda_T].
-      r_D_B_target = min(max(r_B_col[i] - lambda_T, 0), r_D_cap)
+      # Target observed ordinary realization rate after removing fixed and
+      # planned baseline buckets.
+      r_D_B_target = min(max(r_B_col[i] - r_exog_B, 0), r_D_cap)
       r_D_i = r_D_B_target
       # Recover kappa from the interior FOC b'(r_D) = MC, i.e.
       # kappa = MC + psi * r_D. At corner cells (r_D = 0) this gives
@@ -635,7 +645,7 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
     # Quadratic benefit; net of tax cost; continuation on the remaining stock.
     benefit   = kappa_i * r_D_i - 0.5 * psi * r_D_i * r_D_i
     tax_cost  = tau_i * r_D_i
-    remaining = max(1 - lambda_T - r_D_i, 0)
+    remaining = max(1 - r_exog_B - r_D_i, 0)
     cont      = remaining * (beta * (1 - m_i) * W_next_i + beta * m_i * F_i)
 
     W[i]     = benefit - tax_cost + cont
@@ -653,12 +663,14 @@ kg_dyn_solve_bellman_baseline = function(grid_packed, tau_B_mat,
                                           c_phi_B = 0,
                                           psi          = KG_DYN_DEFAULT_PSI,
                                           phi_I        = KG_DYN_PHI_I,
+                                          planned_share = KG_DYN_SHARE_PLANNED,
                                           beta_by_year = NULL) {
 
   #----------------------------------------------------------------------------
   # Pass 1 backward induction. Recovers kappa(a, t), W_B, MC_B on the
   # extended age grid by forcing the cell's optimal r_D to equal the
-  # observed r_D_B = r_B - phi_I*r_B (clipped to [0, 1 - lambda_T]).
+  # observed ordinary realization bucket after fixed and planned buckets are
+  # removed from r_B.
   # Under current-law step-up the baseline regime has c_phi = 0, so the
   # death-state forgiveness value F = tau (full forgiveness).
   #
@@ -668,7 +680,7 @@ kg_dyn_solve_bellman_baseline = function(grid_packed, tau_B_mat,
   #   - tau_B_mat    : baseline tau matrix [age, year]
   #   - c_phi_B      : death-state burden share for baseline (0 under current-
   #                     law step-up; passed in for completeness)
-  #   - psi, phi_I   : behavioral params
+  #   - psi, phi_I, planned_share : behavioral / bucket-share params
   #   - beta_by_year : numeric vector of per-year discount factors (length
   #                     n_years). Each beta_by_year[j] discounts between
   #                     year j and year j+1. If NULL, falls back to a
@@ -704,6 +716,7 @@ kg_dyn_solve_bellman_baseline = function(grid_packed, tau_B_mat,
     tau_col   = tau_B_mat[, t_max_idx],
     c_phi     = c_phi_B,
     psi       = psi, phi_I = phi_I, beta = beta_by_year[t_max_idx],
+    planned_share = planned_share,
     kappa_col = NULL,
     stationary = TRUE
   )
@@ -722,6 +735,7 @@ kg_dyn_solve_bellman_baseline = function(grid_packed, tau_B_mat,
         tau_col   = tau_B_mat[, j],
         c_phi     = c_phi_B,
         psi       = psi, phi_I = phi_I, beta = beta_by_year[j],
+        planned_share = planned_share,
         kappa_col = NULL
       )
       W    [, j] = res$W
@@ -740,12 +754,13 @@ kg_dyn_solve_bellman_scenario = function(grid_packed, tau_S_mat,
                                           kappa_mat, c_phi_S_by_year,
                                           psi          = KG_DYN_DEFAULT_PSI,
                                           phi_I        = KG_DYN_PHI_I,
+                                          planned_share = KG_DYN_SHARE_PLANNED,
                                           beta_by_year = NULL) {
 
   #----------------------------------------------------------------------------
   # Pass 2 backward induction. With kappa(a, t) recovered from Pass 1,
   # solve the clipped quadratic FOC r_D = clip((kappa - MC_S)/psi, 0,
-  # 1 - lambda_T) at each cell. c_phi can vary year by year (e.g., a
+  # 1 - r_exog_B) at each cell. c_phi can vary year by year (e.g., a
   # carryover regime phased in mid-horizon), so c_phi_S_by_year is a
   # numeric vector aligned with the year columns.
   #
@@ -785,6 +800,7 @@ kg_dyn_solve_bellman_scenario = function(grid_packed, tau_S_mat,
     tau_col   = tau_S_mat[, t_max_idx],
     c_phi     = c_phi_S_by_year[t_max_idx],
     psi       = psi, phi_I = phi_I, beta = beta_by_year[t_max_idx],
+    planned_share = planned_share,
     kappa_col = kappa_mat[, t_max_idx],
     stationary = TRUE
   )
@@ -801,6 +817,7 @@ kg_dyn_solve_bellman_scenario = function(grid_packed, tau_S_mat,
         tau_col   = tau_S_mat[, j],
         c_phi     = c_phi_S_by_year[j],
         psi       = psi, phi_I = phi_I, beta = beta_by_year[j],
+        planned_share = planned_share,
         kappa_col = kappa_mat[, j]
       )
       W  [, j] = res$W
@@ -815,7 +832,133 @@ kg_dyn_solve_bellman_scenario = function(grid_packed, tau_S_mat,
 
 
 #-------------------------------------------------------------------------------
-# Bathtub recurrence step (spec §3.5)
+# Three-bucket realization timing helpers
+#-------------------------------------------------------------------------------
+
+kg_dyn_validate_realization_buckets = function(fixed_share   = KG_DYN_PHI_I,
+                                               planned_share = KG_DYN_SHARE_PLANNED,
+                                               timing_window = KG_DYN_TIMING_WINDOW) {
+
+  if (!is.finite(fixed_share) || !is.finite(planned_share)) {
+    stop('kg_dynamics: realization bucket shares must be finite.')
+  }
+  if (fixed_share < 0 || planned_share < 0 || fixed_share + planned_share > 1) {
+    stop(sprintf(
+      paste0('kg_dynamics: invalid realization bucket shares: fixed=%.4f, ',
+             'planned=%.4f. Expected nonnegative shares with fixed + ',
+             'planned <= 1.'),
+      fixed_share, planned_share))
+  }
+  if (length(timing_window) != 1 || is.na(timing_window) ||
+      timing_window < 0 || timing_window != as.integer(timing_window)) {
+    stop('kg_dynamics: KG_DYN_TIMING_WINDOW must be a nonnegative integer.')
+  }
+
+  invisible(TRUE)
+}
+
+
+
+kg_dyn_build_planned_timing = function(baseline_cells, tau_S_mat, years,
+                                       tau_B_mat = NULL,
+                                       planned_share = KG_DYN_SHARE_PLANNED,
+                                       timing_window = KG_DYN_TIMING_WINDOW,
+                                       ages_bathtub = KG_DYN_AGE_MIN:
+                                                      KG_DYN_AGE_MAX,
+                                       tie_tol = 1e-12) {
+
+  #----------------------------------------------------------------------------
+  # Builds the pure-minimization planned-realization schedule. For each age
+  # cell and scheduled year u, planned baseline dollars can move to the lowest
+  # policy-induced tax wedge in [u-H, u+H]. If u is tied for lowest, dollars
+  # stay put; otherwise ties are broken by nearest year, then earlier year.
+  # Using tau_S - tau_B prevents baseline-check runs from retiming dollars
+  # merely because the baseline MTR path varies across years.
+  #----------------------------------------------------------------------------
+
+  kg_dyn_validate_realization_buckets(planned_share = planned_share,
+                                      timing_window = timing_window)
+
+  ages_chr  = as.character(ages_bathtub)
+  years_chr = as.character(years)
+  n_ages    = length(ages_bathtub)
+  n_years   = length(years)
+  H         = as.integer(timing_window)
+
+  R_B = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
+  for (t_chr in years_chr) {
+    bt = baseline_cells[[t_chr]]
+    R_B[, t_chr] = bt$R_B[match(ages_bathtub, bt$age)]
+  }
+
+  R_planned_B = planned_share * R_B
+  R_planned_S = matrix(0, n_ages, n_years,
+                       dimnames = list(ages_chr, years_chr))
+  timing_tau_mat = if (is.null(tau_B_mat)) tau_S_mat else tau_S_mat - tau_B_mat
+  tau_bt = timing_tau_mat[ages_chr, years_chr, drop = FALSE]
+
+  if (planned_share == 0 || H == 0) {
+    R_planned_S = R_planned_B
+  } else {
+    for (i in seq_len(n_ages)) {
+      for (j in seq_len(n_years)) {
+        amount = R_planned_B[i, j]
+        if (amount == 0) next
+
+        eligible = max(1, j - H):min(n_years, j + H)
+        tau_vals = tau_bt[i, eligible]
+        min_tau  = min(tau_vals, na.rm = TRUE)
+
+        if (tau_bt[i, j] <= min_tau + tie_tol) {
+          dest = j
+        } else {
+          candidates = eligible[tau_vals <= min_tau + tie_tol]
+          distances  = abs(candidates - j)
+          nearest    = candidates[distances == min(distances)]
+          dest       = min(nearest)
+        }
+
+        R_planned_S[i, dest] = R_planned_S[i, dest] + amount
+      }
+    }
+  }
+
+  list(R_planned_B = R_planned_B,
+       R_planned_S = R_planned_S,
+       planned_timing_shift = R_planned_S - R_planned_B)
+}
+
+
+
+kg_dyn_build_scenario_rate = function(baseline_t, r_ordinary_S,
+                                      R_planned_B_col, R_planned_S_col,
+                                      fixed_share = KG_DYN_PHI_I) {
+
+  G_B = baseline_t$G_B
+  r_B = baseline_t$r_B
+
+  r_fixed_B    = fixed_share * r_B
+  r_planned_B  = ifelse(G_B > 0, R_planned_B_col / G_B, 0)
+  r_planned_S  = ifelse(G_B > 0, R_planned_S_col / G_B, 0)
+  r_ordinary_B = pmax(r_B - r_fixed_B - r_planned_B, 0)
+
+  r_S_unclipped = r_fixed_B + r_ordinary_S + r_planned_S
+  r_S           = pmin(pmax(r_S_unclipped, 0), 1)
+
+  list(r_S            = r_S,
+       r_S_unclipped  = r_S_unclipped,
+       timing_clipped = abs(r_S - r_S_unclipped) > 1e-12,
+       r_fixed_B      = r_fixed_B,
+       r_planned_B    = r_planned_B,
+       r_planned_S    = r_planned_S,
+       r_ordinary_B   = r_ordinary_B,
+       r_ordinary_S   = r_ordinary_S)
+}
+
+
+
+#-------------------------------------------------------------------------------
+# Bathtub recurrence step
 #-------------------------------------------------------------------------------
 
 kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
@@ -826,9 +969,9 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
   # One-step bathtub recurrence for delta_G. Operates on cell vectors indexed
   # by age (on the bathtub grid [18, 80]).
   #
-  # The scenario realization rate r_S is supplied directly by the caller --
-  # the Bellman pre-pass computes r_D_S, and r_S = lambda_I + r_D_S where
-  # lambda_I = phi_I * r_B is the policy-invariant turnover hazard.
+  # The scenario realization rate r_S is supplied directly by the caller.
+  # Upstream, it combines the fixed baseline bucket, Bellman ordinary bucket,
+  # and retimed planned bucket.
   #
   # Topcode note: the age=80 cell pools every taxpayer age 80+ into one
   # bucket and uses a single weight-averaged m_80. This is refreshed from
@@ -846,7 +989,7 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
   #   - omega      (mat)    : heir matrix
   #   - r_S_vec    (num[a]) : scenario realization rate from Bellman
   #   - delta_route (num)   : routing share for carryover stock transfer
-  #   - phi_I      (num)    : turnover share of r_B (diagnostic only)
+  #   - phi_I      (num)    : fixed/nonresponsive share of r_B (diagnostic only)
   #
   # Returns: list(delta_next, r_S, lambda_I, r_V_B, r_V_S, delta_surv,
   # delta_inh).
@@ -899,8 +1042,8 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
                  stop("Unknown KG_DYN_DG_ALLOCATION rule: ", KG_DYN_DG_ALLOCATION))
   m_eff = pmin(pmax(m_eff, 0), 1)
 
-  # Channel-decomposition diagnostics (lambda_I = turnover hazard,
-  # r_V_B/r_V_S = voluntary baseline/scenario rates)
+  # Channel-decomposition diagnostics. Keep lambda_I for the existing state
+  # contract, but interpret it as the fixed/nonresponsive realization bucket.
   lambda_I = phi_I * r_B
   r_V_B    = pmax(r_B     - lambda_I, 0)
   r_V_S    = pmax(r_S_vec - lambda_I, 0)
@@ -1021,9 +1164,14 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, delta_realize,
            -R_B, -G_B,
            # Bellman diagnostic columns from the cell_table left_join;
            # not consumed downstream, drop to avoid polluting tax_units schema.
-           -r_B, -r_S, -lambda_I, -r_V_B, -r_V_S, -m, -mG_record, -mR_record,
-           -dG, -tau_B, -tau_S, -W_B, -W_S, -MC_B, -MC_S, -kappa,
-           -r_D_B, -r_D_S)
+           -any_of(c('r_B', 'r_S', 'r_S_unclipped', 'timing_clipped',
+                     'lambda_I', 'r_V_B', 'r_V_S',
+                     'r_fixed_B', 'r_planned_B', 'r_planned_S',
+                     'r_ordinary_B', 'r_ordinary_S',
+                     'R_planned_B', 'R_planned_S', 'planned_timing_shift',
+                     'm', 'mG_record', 'mR_record',
+                     'dG', 'tau_B', 'tau_S', 'W_B', 'W_S', 'MC_B', 'MC_S',
+                     'kappa', 'r_D_B', 'r_D_S')))
 }
 
 
@@ -1116,6 +1264,7 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
                                     tau_B_col, tau_S_col,
                                     W_B_col, W_S_col, MC_B_col, MC_S_col,
                                     kappa_col, r_D_B_col, r_D_S_col,
+                                    planned_diag = NULL,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
   #----------------------------------------------------------------------------
@@ -1139,13 +1288,35 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
   #----------------------------------------------------------------------------
 
   ages_chr = as.character(ages_bathtub)
+  diag_or = function(name, default) {
+    v = planned_diag[[name]]
+    if (!is.null(v)) return(v)
+    if (length(default) == length(ages_chr)) {
+      setNames(as.vector(default), ages_chr)
+    } else {
+      setNames(rep(default, length(ages_chr)), ages_chr)
+    }
+  }
 
   baseline_t %>%
     mutate(age           = as.integer(age),
            r_S           = as.numeric(r_S_vec     [as.character(age)]),
+           r_S_unclipped = as.numeric(diag_or('r_S_unclipped', r_S)[as.character(age)]),
+           timing_clipped = as.logical(diag_or('timing_clipped', FALSE)[as.character(age)]),
            lambda_I      = as.numeric(lambda_I_vec[as.character(age)]),
            r_V_B         = as.numeric(r_V_B_vec   [as.character(age)]),
            r_V_S         = as.numeric(r_V_S_vec   [as.character(age)]),
+           r_D_B         = as.numeric(r_D_B_col   [as.character(age)]),
+           r_D_S         = as.numeric(r_D_S_col   [as.character(age)]),
+           r_fixed_B     = as.numeric(diag_or('r_fixed_B', lambda_I)[as.character(age)]),
+           r_planned_B   = as.numeric(diag_or('r_planned_B', 0)[as.character(age)]),
+           r_planned_S   = as.numeric(diag_or('r_planned_S', 0)[as.character(age)]),
+           r_ordinary_B  = as.numeric(diag_or('r_ordinary_B', r_D_B)[as.character(age)]),
+           r_ordinary_S  = as.numeric(diag_or('r_ordinary_S', r_D_S)[as.character(age)]),
+           R_planned_B   = as.numeric(diag_or('R_planned_B', 0)[as.character(age)]),
+           R_planned_S   = as.numeric(diag_or('R_planned_S', 0)[as.character(age)]),
+           planned_timing_shift =
+             as.numeric(diag_or('planned_timing_shift', 0)[as.character(age)]),
            dG            = as.numeric(delta_prev  [as.character(age)]),
            tau_B         = as.numeric(tau_B_col   [as.character(age)]),
            tau_S         = as.numeric(tau_S_col   [as.character(age)]),
@@ -1154,14 +1325,15 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            MC_B          = as.numeric(MC_B_col    [as.character(age)]),
            MC_S          = as.numeric(MC_S_col    [as.character(age)]),
            kappa         = as.numeric(kappa_col   [as.character(age)]),
-           r_D_B         = as.numeric(r_D_B_col   [as.character(age)]),
-           r_D_S         = as.numeric(r_D_S_col   [as.character(age)]),
            rate_factor   = if_else(r_B > 0, r_S / r_B, 1),
            extra_R       = r_S * dG,
            deemed_factor = if_else(G_B > 0,
                                    pmax(0, (G_B + dG) / G_B),
                                    1)) %>%
-    select(age, G_B, R_B, r_B, r_S, lambda_I, r_V_B, r_V_S,
+    select(age, G_B, R_B, r_B, r_S, r_S_unclipped, timing_clipped,
+           lambda_I, r_V_B, r_V_S,
+           r_fixed_B, r_planned_B, r_planned_S, r_ordinary_B, r_ordinary_S,
+           R_planned_B, R_planned_S, planned_timing_shift,
            m, mG_record, mR_record, dG,
            tau_B, tau_S, W_B, W_S, MC_B, MC_S, kappa, r_D_B, r_D_S,
            rate_factor, extra_R, deemed_factor)
@@ -1173,6 +1345,8 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                     baseline_tau, reform_tau,
                                     psi   = KG_DYN_DEFAULT_PSI,
                                     phi_I = KG_DYN_PHI_I,
+                                    planned_share = KG_DYN_SHARE_PLANNED,
+                                    timing_window = KG_DYN_TIMING_WINDOW,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX,
                                     ages_bellman = KG_DYN_AGE_MIN:
                                                     KG_DYN_AGE_MAX_BELLMAN) {
@@ -1191,14 +1365,15 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   #      r_D_B. Under current-law step-up, c_phi_B = 0.
   #   4. Resolve scenario regimes per year (may be year-varying); solve
   #      Pass 2 (scenario Bellman) once using kappa from Pass 1.
-  #   5. Loop years: build r_S_vec on bathtub grid, run kg_dyn_step_recurrence
-  #      for dG evolution, build cell_table, persist.
+  #   5. Build the planned-realization timing schedule from tau_S.
+  #   6. Loop years: combine fixed, ordinary, and planned buckets into r_S_vec,
+  #      run kg_dyn_step_recurrence for dG evolution, build cell_table, persist.
   #
   # State file at kg_dynamics_state/{t}.rds:
   #   list(
   #     regime     = list(name, c_phi, delta_vanish, delta_route, delta_realize),
-  #     cell_table = tibble(age, G_B, R_B, r_B, r_S, lambda_I, r_V_B, r_V_S,
-  #                          m, mG_record, mR_record, dG,
+  #     cell_table = tibble(age, G_B, R_B, r_B, r_S, bucket diagnostics,
+  #                          lambda_I, r_V_B, r_V_S, m, mG_record, mR_record, dG,
   #                          tau_B, tau_S, W_B, W_S, MC_B, MC_S, kappa,
   #                          r_D_B, r_D_S, rate_factor, extra_R, deemed_factor)
   #   )
@@ -1212,6 +1387,9 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
          'and paste the calibrated value into the constants block at the top ',
          'of src/sim/kg_dynamics.R.')
   }
+  kg_dyn_validate_realization_buckets(fixed_share = phi_I,
+                                      planned_share = planned_share,
+                                      timing_window = timing_window)
 
   years     = scenario_info$years
   state_dir = file.path(scenario_info$output_path,
@@ -1243,6 +1421,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   pass1 = kg_dyn_solve_bellman_baseline(grid_packed, tau_B_mat,
                                          c_phi_B = 0,
                                          psi = psi, phi_I = phi_I,
+                                         planned_share = planned_share,
                                          beta_by_year = beta_by_year)
 
   # Step 4: resolve year-by-year scenario regimes and run scenario Bellman
@@ -1261,7 +1440,18 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                          kappa_mat = pass1$kappa,
                                          c_phi_S_by_year = c_phi_S,
                                          psi = psi, phi_I = phi_I,
+                                         planned_share = planned_share,
                                          beta_by_year = beta_by_year)
+
+  planned_timing = kg_dyn_build_planned_timing(
+    baseline_cells = baseline_cells,
+    tau_S_mat      = tau_S_mat,
+    years          = years,
+    tau_B_mat      = tau_B_mat,
+    planned_share  = planned_share,
+    timing_window  = timing_window,
+    ages_bathtub   = ages_bathtub
+  )
 
   # Save life table for later diagnostic inspection
   saveRDS(life_ext, file.path(state_dir, 'life_table_extension.rds'))
@@ -1280,9 +1470,14 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
 
     # Slice Bellman outputs from extended grid to bathtub grid for this year
     r_D_S_bt = pass2$r_D[bathtub_ages_chr, j]
-    r_B_bt   = bt$r_B
-    lambda_I = phi_I * r_B_bt
-    r_S_vec  = setNames(lambda_I + r_D_S_bt, bathtub_ages_chr)
+    rate_info = kg_dyn_build_scenario_rate(
+      baseline_t       = bt,
+      r_ordinary_S     = r_D_S_bt,
+      R_planned_B_col  = planned_timing$R_planned_B[, j],
+      R_planned_S_col  = planned_timing$R_planned_S[, j],
+      fixed_share      = phi_I
+    )
+    r_S_vec = setNames(rate_info$r_S, bathtub_ages_chr)
 
     step = kg_dyn_step_recurrence(
       delta_prev  = delta,
@@ -1316,6 +1511,18 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
       kappa_col    = pass1$kappa[bathtub_ages_chr, j],
       r_D_B_col    = pass1$r_D  [bathtub_ages_chr, j],
       r_D_S_col    = pass2$r_D  [bathtub_ages_chr, j],
+      planned_diag  = list(
+        r_S_unclipped = setNames(rate_info$r_S_unclipped, bathtub_ages_chr),
+        timing_clipped = setNames(rate_info$timing_clipped, bathtub_ages_chr),
+        r_fixed_B = setNames(rate_info$r_fixed_B, bathtub_ages_chr),
+        r_planned_B = setNames(rate_info$r_planned_B, bathtub_ages_chr),
+        r_planned_S = setNames(rate_info$r_planned_S, bathtub_ages_chr),
+        r_ordinary_B = setNames(rate_info$r_ordinary_B, bathtub_ages_chr),
+        r_ordinary_S = setNames(rate_info$r_ordinary_S, bathtub_ages_chr),
+        R_planned_B = planned_timing$R_planned_B[, j],
+        R_planned_S = planned_timing$R_planned_S[, j],
+        planned_timing_shift = planned_timing$planned_timing_shift[, j]
+      ),
       ages_bathtub = ages_bathtub
     )
 
@@ -1451,6 +1658,11 @@ kg_dyn_build_summary = function(scenario_info) {
       r_B_avg_gw      = if_else(sum(G_B) > 0, sum(r_B * G_B) / sum(G_B), 0),
       r_S_avg_gw      = if_else(sum(G_B) > 0, sum(r_S * G_B) / sum(G_B), 0),
       lambda_I_avg_gw = if_else(sum(G_B) > 0, sum(lambda_I * G_B) / sum(G_B), NA_real_),
+      r_fixed_avg_gw  = if_else(sum(G_B) > 0, sum(r_fixed_B * G_B) / sum(G_B), NA_real_),
+      r_planned_B_avg_gw = if_else(sum(G_B) > 0, sum(r_planned_B * G_B) / sum(G_B), NA_real_),
+      r_planned_S_avg_gw = if_else(sum(G_B) > 0, sum(r_planned_S * G_B) / sum(G_B), NA_real_),
+      r_ordinary_B_avg_gw = if_else(sum(G_B) > 0, sum(r_ordinary_B * G_B) / sum(G_B), NA_real_),
+      r_ordinary_S_avg_gw = if_else(sum(G_B) > 0, sum(r_ordinary_S * G_B) / sum(G_B), NA_real_),
       v_share_avg_rw  = if_else(sum(R_B) > 0,
                                 sum(r_V_B * G_B) / sum(r_B * G_B),
                                 NA_real_),
@@ -1465,6 +1677,10 @@ kg_dyn_build_summary = function(scenario_info) {
       kappa_avg_gw    = if_else(sum(G_B) > 0, sum(kappa * G_B) / sum(G_B), NA_real_),
       rate_channel    = sum(R_B * (rate_factor - 1)),
       lockin_channel  = sum(extra_R),
+      R_planned_B_total = sum(R_planned_B),
+      R_planned_S_total = sum(R_planned_S),
+      planned_timing_shift_total = sum(planned_timing_shift),
+      timing_clipped_cells = sum(timing_clipped, na.rm = TRUE),
       decedent_stock  = sum(mG_record * deemed_factor),
       .groups = 'drop'
     ) %>%
@@ -1482,10 +1698,15 @@ kg_dyn_build_summary = function(scenario_info) {
     select(year, regime, c_phi, delta_vanish, delta_route, delta_realize,
            G_B_total, R_B_total, R_S_total, dG_total,
            m_avg_gw, r_B_avg_gw, r_S_avg_gw,
-           lambda_I_avg_gw, v_share_avg_rw,
+           lambda_I_avg_gw, r_fixed_avg_gw,
+           r_planned_B_avg_gw, r_planned_S_avg_gw,
+           r_ordinary_B_avg_gw, r_ordinary_S_avg_gw,
+           v_share_avg_rw,
            tau_B_avg_gw, tau_S_avg_gw, tau_B_avg_rw, tau_S_avg_rw,
            W_B_avg_gw, W_S_avg_gw, MC_B_avg_gw, MC_S_avg_gw, kappa_avg_gw,
            rate_channel, lockin_channel,
+           R_planned_B_total, R_planned_S_total,
+           planned_timing_shift_total, timing_clipped_cells,
            decedent_stock, inheritance_flow, deemed_realized,
            semi_elast_implied)
 

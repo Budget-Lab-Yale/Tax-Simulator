@@ -18,9 +18,9 @@ do_kg_dynamics = function(tax_units, baseline_mtrs, static_mtrs,
   #
   # Each state file is list(regime, cell_table). The cell_table carries the
   # Bellman diagnostics (W_B, W_S, MC_B, MC_S, kappa, r_D_B, r_D_S) plus
-  # the two-channel decomposition (lambda_I, r_V_B, r_V_S) and the applier
-  # inputs (rate_factor, extra_R, deemed_factor). All math is in the bathtub;
-  # this module does no recurrence work.
+  # the fixed / ordinary / planned bucket decomposition and the applier inputs
+  # (rate_factor, extra_R, deemed_factor). All math is in the bathtub; this
+  # module does no recurrence work.
   #
   # NOT compatible with the legacy kg/*.R or carryover_basis/*.R modules.
   #

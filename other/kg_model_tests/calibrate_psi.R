@@ -12,8 +12,8 @@
 #   2. Construct a uniform 1pp perturbation: tau_S(a, t) = tau_B(a, t) + 0.01
 #      for every cell x year.
 #   3. For a given candidate psi, run the Bellman pre-pass (life-table
-#      extension, baseline Bellman, scenario Bellman) plus the bathtub
-#      recurrence under step-up regime (c_phi = 0).
+#      extension, baseline Bellman, scenario Bellman), planned-bucket timing,
+#      and the bathtub recurrence under step-up regime (c_phi = 0).
 #   4. Compute the implied aggregate semi-elasticity at sim year 30:
 #        semi_elast_30 = log(R_S_30 / R_B_30) / (tau_S_30 - tau_B_30)
 #      where tau_*_30 is the realization-weighted average cell MTR at
@@ -33,8 +33,8 @@
 # (anchoring on a shorter horizon would lock in a transient, not the
 # permanent response). The script will fail-fast otherwise.
 #
-# Output: prints recommended psi. Paste into KG_DYN_DEFAULT_PSI in
-# src/sim/kg_dynamics.R.
+# Output: prints recommended psi for the current bucket-share constants. Paste
+# into KG_DYN_DEFAULT_PSI in src/sim/kg_dynamics.R.
 #
 # CLI:
 #   Rscript other/kg_model_tests/calibrate_psi.R <baseline_root> [<macro_root>]
@@ -156,6 +156,18 @@ grid_packed  = kg_dyn_pack_baseline_grid(grid_ext, YEARS,
 tau_B_mat    = kg_dyn_pack_tau(tau_B, YEARS, ages_bellman = AGES_BELLMAN)
 tau_S_mat    = kg_dyn_pack_tau(tau_S, YEARS, ages_bellman = AGES_BELLMAN)
 beta_by_year = kg_dyn_load_beta_series(MACRO_ROOT, YEARS)
+kg_dyn_validate_realization_buckets(fixed_share = KG_DYN_PHI_I,
+                                    planned_share = KG_DYN_SHARE_PLANNED,
+                                    timing_window = KG_DYN_TIMING_WINDOW)
+planned_timing = kg_dyn_build_planned_timing(
+  baseline_cells = baseline_cells,
+  tau_S_mat      = tau_S_mat,
+  years          = YEARS,
+  tau_B_mat      = tau_B_mat,
+  planned_share  = KG_DYN_SHARE_PLANNED,
+  timing_window  = KG_DYN_TIMING_WINDOW,
+  ages_bathtub   = AGES_BATHTUB
+)
 
 cat(sprintf("  beta range: [%.4f, %.4f] (real-rate discount, from %s)\n",
             min(beta_by_year), max(beta_by_year), MACRO_ROOT))
@@ -196,12 +208,14 @@ semi_at_anchor = function(psi_val) {
                                          c_phi_B = 0,
                                          psi          = psi_val,
                                          phi_I        = KG_DYN_PHI_I,
+                                         planned_share = KG_DYN_SHARE_PLANNED,
                                          beta_by_year = beta_by_year)
   pass2 = kg_dyn_solve_bellman_scenario(grid_packed, tau_S_mat,
                                          kappa_mat = pass1$kappa,
                                          c_phi_S_by_year = c_phi_S_by_year,
                                          psi          = psi_val,
                                          phi_I        = KG_DYN_PHI_I,
+                                         planned_share = KG_DYN_SHARE_PLANNED,
                                          beta_by_year = beta_by_year)
 
   delta = setNames(rep(0, length(AGES_BATHTUB)), bathtub_ages_chr)
@@ -213,8 +227,14 @@ semi_at_anchor = function(psi_val) {
     bt = baseline_cells[[as.character(t)]]
 
     r_D_S_bt = pass2$r_D[bathtub_ages_chr, j]
-    lambda_T = KG_DYN_PHI_I * bt$r_B
-    r_S_vec  = setNames(lambda_T + r_D_S_bt, bathtub_ages_chr)
+    rate_info = kg_dyn_build_scenario_rate(
+      baseline_t       = bt,
+      r_ordinary_S     = r_D_S_bt,
+      R_planned_B_col  = planned_timing$R_planned_B[, j],
+      R_planned_S_col  = planned_timing$R_planned_S[, j],
+      fixed_share      = KG_DYN_PHI_I
+    )
+    r_S_vec = setNames(rate_info$r_S, bathtub_ages_chr)
 
     step = kg_dyn_step_recurrence(
       delta_prev  = delta,
@@ -300,12 +320,14 @@ profile_years = function(psi_val) {
                                          c_phi_B = 0,
                                          psi          = psi_val,
                                          phi_I        = KG_DYN_PHI_I,
+                                         planned_share = KG_DYN_SHARE_PLANNED,
                                          beta_by_year = beta_by_year)
   pass2 = kg_dyn_solve_bellman_scenario(grid_packed, tau_S_mat,
                                          kappa_mat = pass1$kappa,
                                          c_phi_S_by_year = c_phi_S_by_year,
                                          psi          = psi_val,
                                          phi_I        = KG_DYN_PHI_I,
+                                         planned_share = KG_DYN_SHARE_PLANNED,
                                          beta_by_year = beta_by_year)
 
   delta = setNames(rep(0, length(AGES_BATHTUB)), bathtub_ages_chr)
@@ -315,8 +337,14 @@ profile_years = function(psi_val) {
   for (j in seq_along(YEARS)) {
     t  = YEARS[j]; bt = baseline_cells[[as.character(t)]]
     r_D_S_bt = pass2$r_D[bathtub_ages_chr, j]
-    lambda_T = KG_DYN_PHI_I * bt$r_B
-    r_S_vec  = setNames(lambda_T + r_D_S_bt, bathtub_ages_chr)
+    rate_info = kg_dyn_build_scenario_rate(
+      baseline_t       = bt,
+      r_ordinary_S     = r_D_S_bt,
+      R_planned_B_col  = planned_timing$R_planned_B[, j],
+      R_planned_S_col  = planned_timing$R_planned_S[, j],
+      fixed_share      = KG_DYN_PHI_I
+    )
+    r_S_vec = setNames(rate_info$r_S, bathtub_ages_chr)
 
     step = kg_dyn_step_recurrence(delta, bt, A, omega, r_S_vec, 0, KG_DYN_PHI_I)
     G_S        = bt$G_B + delta
