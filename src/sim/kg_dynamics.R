@@ -2,9 +2,10 @@
 # kg_dynamics.R
 #
 # Capital-gains dynamics behavioral module. Implements the law of motion for
-# the policy-induced delta in unrealized capital gains via a representative-
-# cell Bellman whose control is the discretionary realization rate r_D
-# directly; see other/kg_model_tests/representative_cell_bellman_proposal.md.
+# the policy-induced delta in unrealized capital gains via two representative-
+# cell Bellman states: an ordinary state whose control is the discretionary
+# realization rate r_D, and a forced-window state whose control is the
+# immediate-realization share q.
 #
 # Architecture:
 #   1. Bathtub pre-pass (kg_dyn_run_bathtub_pass): for each scenario, build an
@@ -18,7 +19,7 @@
 #      pure allocator. Reads its year's state file and translates cell-level
 #      quantities to per-record kg_lt adjustments via kg_dyn_apply_to_records.
 #
-# Bellman primitives. The representative cell maximizes per dollar of
+# Ordinary Bellman primitives. The representative cell maximizes per dollar of
 # unrealized gain:
 #   W^j(a,t) = max_{r_D in [0, 1 - r_exog_B]} {
 #       kappa(a,t)*r_D - (psi/2)*r_D^2
@@ -35,6 +36,16 @@
 # Interior FOC: r_D = (kappa - MC)/psi, clipped to [0, 1 - r_exog_B].
 # kappa(a,t) is recovered from baseline so r_D^B is the ordinary bucket:
 #   kappa = MC^B + psi * r_D^B   (at corner cells with r_D^B = 0, kappa = MC^B).
+#
+# Forced-window Bellman primitives. Entrants start in F1 and choose q, the share
+# that realizes now instead of waiting one year. F0 is the deadline state and
+# must realize:
+#   F0^j(a,t+1) = -tau^j(a,t+1)
+#   F1^j(a,t) = max_{q in [0,1]} {
+#       q*(-tau^j(a,t)) + (1-q)*beta*F0^j(a,t+1)
+#     + alpha_B(a,t)*q - (ref_wedge/2)*(q - q_B)^2
+#   }
+# alpha_B(a,t) is recovered so the baseline FOC reproduces q_B = 0.5.
 #
 # Current implementation collapses the five tracked wealth classes into a
 # single asset bucket; per-asset-class disaggregation is on the roadmap.
@@ -70,9 +81,9 @@ KG_DYN_SHARE_PLANNED    = 0.3285
 KG_DYN_TIMING_WINDOW    = 1L
 KG_DYN_FORCED_Q_B       = 0.5
 
-# Reference wedge controlling forced-window timing around the one-year
-# deadline. q_S = clamp(q_B + timing_advantage / KG_DYN_TIMING_REF_WEDGE, 0, 1).
-# Default 5pp means a 5pp future-vs-current tax advantage moves q by 1.
+# Reference wedge controlling the convex timing cost in the forced-window
+# Bellman. Default 5pp means a 5pp current-vs-deadline value advantage moves
+# the bounded FOC solution for q by 1.
 KG_DYN_TIMING_REF_WEDGE = 0.05
 
 # Backward-compatible alias used by existing callers and diagnostics. Nonzero
@@ -883,6 +894,7 @@ kg_dyn_solve_forced_window_state = function(baseline_cells, tau_S_mat, years,
                                             timing_window = KG_DYN_TIMING_WINDOW,
                                             ref_wedge = KG_DYN_TIMING_REF_WEDGE,
                                             q_B = KG_DYN_FORCED_Q_B,
+                                            beta_by_year = NULL,
                                             ages_bathtub = KG_DYN_AGE_MIN:
                                                            KG_DYN_AGE_MAX,
                                             neg_tol = 1e-8) {
@@ -895,14 +907,18 @@ kg_dyn_solve_forced_window_state = function(baseline_cells, tau_S_mat, years,
   #   E_B(t0) = lambda * R_B(t0) / q_B
   #   E_B(t)  = [lambda * R_B(t) - (1 - q_B) * E_B(t-1)] / q_B
   #
-  # F1 entrants choose whether to realize immediately (q) or wait one year to
-  # the F0 deadline, which must realize. The baseline timing intercept is fixed
-  # so that the baseline tax path reproduces q_B. Scenario q compares the
-  # current-vs-deadline tax advantage after that intercept:
+  # F1 entrants choose q, the share realizing immediately rather than waiting
+  # one year to the F0 deadline, which must realize. This is a Bellman control:
   #
-  #   q_S(t) = clamp(q_B + timing_advantage(t) / ref_wedge, 0, 1)
+  #   F1 = max_q q*V_now + (1-q)*V_wait
+  #            + forced_intercept*q - 0.5*ref_wedge*(q - q_B)^2
   #
-  # Scenario forced realizations are state outputs:
+  # where V_now = -tau(t), V_wait = beta(t)*F0(t+1), and F0(t+1) =
+  # -tau(t+1). The baseline intercept is inverted so that the baseline FOC
+  # reproduces q_B. Scenario q is the bounded FOC solution using the fixed
+  # baseline intercept:
+  #
+  #   q_S(t) = argmax_q F1_S(q)
   #
   #   R_forced_S(t) = q_S(t) * E_B(t) + [1 - q_S(t-1)] * E_B(t-1)
   #----------------------------------------------------------------------------
@@ -921,6 +937,8 @@ kg_dyn_solve_forced_window_state = function(baseline_cells, tau_S_mat, years,
   years_chr = as.character(years)
   n_ages    = length(ages_bathtub)
   n_years   = length(years)
+  if (is.null(beta_by_year)) beta_by_year = rep(1, n_years)
+  stopifnot(length(beta_by_year) == n_years)
 
   R_B = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   for (t_chr in years_chr) {
@@ -939,6 +957,14 @@ kg_dyn_solve_forced_window_state = function(baseline_cells, tau_S_mat, years,
                             dimnames = list(ages_chr, years_chr))
   timing_advantage = matrix(0, n_ages, n_years,
                             dimnames = list(ages_chr, years_chr))
+  F0_forced_B = matrix(0, n_ages, n_years,
+                       dimnames = list(ages_chr, years_chr))
+  F0_forced_S = matrix(0, n_ages, n_years,
+                       dimnames = list(ages_chr, years_chr))
+  F1_forced_B = matrix(0, n_ages, n_years,
+                       dimnames = list(ages_chr, years_chr))
+  F1_forced_S = matrix(0, n_ages, n_years,
+                       dimnames = list(ages_chr, years_chr))
 
   if (n_years >= 1) {
     E_forced_B[, 1] = R_forced_B[, 1] / q_B
@@ -962,15 +988,33 @@ kg_dyn_solve_forced_window_state = function(baseline_cells, tau_S_mat, years,
 
   tau_B_bt = tau_B_mat[ages_chr, years_chr, drop = FALSE]
   tau_S_bt = tau_S_mat[ages_chr, years_chr, drop = FALSE]
+  F0_forced_B = -tau_B_bt
+  F0_forced_S = -tau_S_bt
+  forced_objective = function(q, now_value, wait_value, intercept) {
+    q * now_value + (1 - q) * wait_value +
+      intercept * q - 0.5 * ref_wedge * (q - q_B)^2
+  }
   if (n_years >= 2) {
     for (j in 1:(n_years - 1)) {
-      baseline_adv = tau_B_bt[, j + 1] - tau_B_bt[, j]
-      scenario_adv = tau_S_bt[, j + 1] - tau_S_bt[, j]
-      forced_intercept[, j] = -baseline_adv
-      timing_advantage[, j] = scenario_adv + forced_intercept[, j]
+      V_now_B  = -tau_B_bt[, j]
+      V_wait_B = beta_by_year[j] * F0_forced_B[, j + 1]
+      V_now_S  = -tau_S_bt[, j]
+      V_wait_S = beta_by_year[j] * F0_forced_S[, j + 1]
+
+      advantage_B = V_now_B - V_wait_B
+      advantage_S = V_now_S - V_wait_S
+      forced_intercept[, j] = -advantage_B
+      timing_advantage[, j] = advantage_S + forced_intercept[, j]
       q_forced_S[, j] = pmin(pmax(q_B + timing_advantage[, j] / ref_wedge, 0), 1)
+
+      F1_forced_B[, j] = forced_objective(q_B, V_now_B, V_wait_B,
+                                          forced_intercept[, j])
+      F1_forced_S[, j] = forced_objective(q_forced_S[, j], V_now_S,
+                                          V_wait_S, forced_intercept[, j])
     }
   }
+  F1_forced_B[, n_years] = F0_forced_B[, n_years]
+  F1_forced_S[, n_years] = F0_forced_S[, n_years]
 
   R_forced_S = q_forced_S * E_forced_B
   if (n_years >= 2) {
@@ -987,7 +1031,11 @@ kg_dyn_solve_forced_window_state = function(baseline_cells, tau_S_mat, years,
              R_forced_S = R_forced_S,
              forced_timing_shift = R_forced_S - R_forced_B,
              forced_intercept = forced_intercept,
-             forced_timing_advantage = timing_advantage)
+             forced_timing_advantage = timing_advantage,
+             F0_forced_B = F0_forced_B,
+             F0_forced_S = F0_forced_S,
+             F1_forced_B = F1_forced_B,
+             F1_forced_S = F1_forced_S)
 
   # Compatibility aliases for older diagnostics and calibration scripts. These
   # names are aliases only; the forced-state outputs above are authoritative.
@@ -1261,6 +1309,7 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, delta_realize,
                      'R_forced_B', 'R_forced_S', 'forced_timing_shift',
                      'E_forced_B', 'q_forced_B', 'q_forced_S',
                      'forced_intercept', 'forced_timing_advantage',
+                     'F0_forced_B', 'F0_forced_S', 'F1_forced_B', 'F1_forced_S',
                      'm', 'mG_record', 'mR_record',
                      'dG', 'tau_B', 'tau_S', 'W_B', 'W_S', 'MC_B', 'MC_S',
                      'kappa', 'r_D_B', 'r_D_S')))
@@ -1423,6 +1472,10 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
              as.numeric(diag_or('forced_intercept', 0)[as.character(age)]),
            forced_timing_advantage =
              as.numeric(diag_or('forced_timing_advantage', 0)[as.character(age)]),
+           F0_forced_B  = as.numeric(diag_or('F0_forced_B', 0)[as.character(age)]),
+           F0_forced_S  = as.numeric(diag_or('F0_forced_S', 0)[as.character(age)]),
+           F1_forced_B  = as.numeric(diag_or('F1_forced_B', F0_forced_B)[as.character(age)]),
+           F1_forced_S  = as.numeric(diag_or('F1_forced_S', F0_forced_S)[as.character(age)]),
            dG            = as.numeric(delta_prev  [as.character(age)]),
            tau_B         = as.numeric(tau_B_col   [as.character(age)]),
            tau_S         = as.numeric(tau_S_col   [as.character(age)]),
@@ -1444,6 +1497,7 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            planned_timing_shift, forced_timing_shift,
            E_forced_B, q_forced_B, q_forced_S,
            forced_intercept, forced_timing_advantage,
+           F0_forced_B, F0_forced_S, F1_forced_B, F1_forced_S,
            m, mG_record, mR_record, dG,
            tau_B, tau_S, W_B, W_S, MC_B, MC_S, kappa, r_D_B, r_D_S,
            rate_factor, extra_R, deemed_factor)
@@ -1564,6 +1618,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     planned_share  = planned_share,
     timing_window  = timing_window,
     ref_wedge      = ref_wedge,
+    beta_by_year   = beta_by_year,
     ages_bathtub   = ages_bathtub
   )
 
@@ -1645,7 +1700,11 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
         q_forced_B = forced_state$q_forced_B[, j],
         q_forced_S = forced_state$q_forced_S[, j],
         forced_intercept = forced_state$forced_intercept[, j],
-        forced_timing_advantage = forced_state$forced_timing_advantage[, j]
+        forced_timing_advantage = forced_state$forced_timing_advantage[, j],
+        F0_forced_B = forced_state$F0_forced_B[, j],
+        F0_forced_S = forced_state$F0_forced_S[, j],
+        F1_forced_B = forced_state$F1_forced_B[, j],
+        F1_forced_S = forced_state$F1_forced_S[, j]
       ),
       ages_bathtub = ages_bathtub
     )

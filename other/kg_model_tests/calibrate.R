@@ -194,6 +194,7 @@ eval_response = function(psi_val, ps_val, scenario_tau_mat,
     planned_share  = ps_val,
     timing_window  = KG_DYN_TIMING_WINDOW,
     ref_wedge      = KG_DYN_TIMING_REF_WEDGE,
+    beta_by_year   = beta_by_year,
     ages_bathtub   = AGES_BATHTUB
   )
 
@@ -395,6 +396,7 @@ profile_years = function(psi_val, ps_val) {
     planned_share  = ps_val,
     timing_window  = KG_DYN_TIMING_WINDOW,
     ref_wedge      = KG_DYN_TIMING_REF_WEDGE,
+    beta_by_year   = beta_by_year,
     ages_bathtub   = AGES_BATHTUB
   )
 

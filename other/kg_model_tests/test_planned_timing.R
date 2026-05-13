@@ -52,6 +52,15 @@ force_state = function(cells, tau_S, lambda = 0.2, tau_B = make_tau(rep(0.20, le
   )
 }
 
+forced_objective = function(x, tau_S, year, q, ref_wedge = 0.05) {
+  j = match(as.character(year), colnames(x$q_forced_S))
+  now_value = -tau_S[as.character(ages), as.character(year)]
+  wait_value = x$F0_forced_S[, j + 1]
+  q * now_value + (1 - q) * wait_value +
+    x$forced_intercept[, j] * q -
+    0.5 * ref_wedge * (q - KG_DYN_FORCED_Q_B)^2
+}
+
 cells = make_cells(rep(100, length(years)))
 baseline_tau = make_tau(rep(0.20, length(years)))
 
@@ -77,6 +86,8 @@ stopifnot(all(rate_info$r_S == 0.03),
 # Baseline entrant inference with q_B = 0.5 reproduces lambda * R_B.
 base = force_state(cells, baseline_tau, lambda = 0.2)
 stopifnot(all(abs(base$q_forced_B - 0.5) < 1e-12),
+          all(abs(base$F0_forced_B + baseline_tau) < 1e-12),
+          all(abs(base$F0_forced_S + baseline_tau) < 1e-12),
           all(abs(base$R_forced_B - 20) < 1e-12),
           all(abs(base$q_forced_B * base$E_forced_B +
                     cbind(0, (1 - base$q_forced_B[, -ncol(base$q_forced_B)]) *
@@ -111,10 +122,31 @@ stopifnot(all(abs(temporary$q_forced_S[, '2026']) < 1e-12),
           all(abs(temporary$R_forced_S[, '2027'] - 40) < 1e-12))
 
 # Friction: a 1pp delayed hike moves q by 0.2 with the default 5pp wedge.
-small_delayed = force_state(cells, make_tau(c(0.20, 0.21, 0.21, 0.21, 0.21)))
+small_delayed_tau = make_tau(c(0.20, 0.21, 0.21, 0.21, 0.21))
+small_delayed = force_state(cells, small_delayed_tau)
 stopifnot(all(abs(small_delayed$q_forced_S[, '2026'] - 0.7) < 1e-12),
           all(abs(small_delayed$R_forced_S[, '2026'] - 28) < 1e-12),
           all(abs(small_delayed$R_forced_S[, '2027'] - 12) < 1e-12))
+
+# The reported q_S is the F1 Bellman optimizer. For an interior case, it beats
+# nearby controls; for corner cases, the chosen bound beats moving inward.
+q_int = small_delayed$q_forced_S[, '2026']
+stopifnot(all(abs(small_delayed$F1_forced_S[, '2026'] -
+                    forced_objective(small_delayed, small_delayed_tau,
+                                     2026, q_int)) < 1e-12),
+          all(small_delayed$F1_forced_S[, '2026'] >=
+                forced_objective(small_delayed, small_delayed_tau,
+                                 2026, q_int - 0.01)),
+          all(small_delayed$F1_forced_S[, '2026'] >=
+                forced_objective(small_delayed, small_delayed_tau,
+                                 2026, q_int + 0.01)))
+
+stopifnot(all(delayed$F1_forced_S[, '2026'] >=
+                forced_objective(delayed, make_tau(c(0.20, 0.25, 0.25, 0.25, 0.25)),
+                                 2026, 0.99)),
+          all(temporary$F1_forced_S[, '2026'] >=
+                forced_objective(temporary, make_tau(c(0.25, 0.20, 0.20, 0.20, 0.20)),
+                                 2026, 0.01)))
 
 # Forced dollars are conserved across fully observed entrant cohorts. The last
 # year's entrants may have deadline realizations beyond the simulation boundary.
