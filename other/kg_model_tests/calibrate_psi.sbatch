@@ -8,7 +8,10 @@
 # run on disk.
 #
 # Submit from repo root:
-#   sbatch other/kg_model_tests/calibrate_psi.sbatch <baseline_root>
+#   sbatch other/kg_model_tests/calibrate_psi.sbatch <baseline_root> [<macro_root>]
+#
+# <macro_root> is optional; defaults to the production Macro-Projections
+# vintage in calibrate_psi.R if omitted.
 #-----------------------------------------------------------------------
 #SBATCH --job-name=kg_calib_psi
 #SBATCH --partition=day
@@ -20,11 +23,16 @@
 set -euo pipefail
 
 if [ "$#" -lt 1 ]; then
-  echo "Usage: sbatch other/kg_model_tests/calibrate_psi.sbatch <baseline_root>"
+  echo "Usage: sbatch other/kg_model_tests/calibrate_psi.sbatch <baseline_root> [<macro_root>]"
   exit 1
 fi
 
 BASELINE_ROOT="$1"
+MACRO_ROOT="${2:-}"
 
 module load R/4.4.1-foss-2022b
-Rscript other/kg_model_tests/calibrate_psi.R "${BASELINE_ROOT}"
+if [ -n "${MACRO_ROOT}" ]; then
+  Rscript other/kg_model_tests/calibrate_psi.R "${BASELINE_ROOT}" "${MACRO_ROOT}"
+else
+  Rscript other/kg_model_tests/calibrate_psi.R "${BASELINE_ROOT}"
+fi

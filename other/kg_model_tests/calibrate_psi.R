@@ -37,12 +37,18 @@
 # src/sim/kg_dynamics.R.
 #
 # CLI:
-#   Rscript other/kg_model_tests/calibrate_psi.R <baseline_root>
+#   Rscript other/kg_model_tests/calibrate_psi.R <baseline_root> [<macro_root>]
 #
 #   <baseline_root> is the path to a full-sample Tax-Simulator vintage that
 #   contains baseline/static/detail/{year}.csv with mtr_kg_lt for years
 #   2026..2055. Typically the staging output of slurm_run.sh on a runscript
 #   with mtr_vars=kg_lt registered for baseline.
+#
+#   <macro_root> (optional) is the path to a Macro-Projections vintage's
+#   baseline directory (containing historical.csv and projections.csv).
+#   The Bellman uses the real-rate discount factor series derived from
+#   tsy_10y / cpiu over the requested years. Defaults to the vintage at
+#   config/interfaces/interface_versions.yaml.
 #-------------------------------------------------------------------------------
 
 
@@ -62,9 +68,11 @@ source('./src/sim/kg_dynamics.R')
 
 args = commandArgs(trailingOnly = TRUE)
 if (length(args) < 1) {
-  stop('Usage: Rscript other/kg_model_tests/calibrate_psi.R <baseline_root>')
+  stop('Usage: Rscript other/kg_model_tests/calibrate_psi.R <baseline_root> [<macro_root>]')
 }
 BASELINE_ROOT = args[1]
+MACRO_ROOT    = if (length(args) >= 2) args[2] else
+  '/nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections/v3/2026022522/baseline'
 
 TAX_DATA_ROOT = '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1/2026050315/baseline'
 AGES_BATHTUB  = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX
@@ -138,15 +146,19 @@ tau_S = lapply(tau_B, function(v) v + PERTURBATION)
 # Step 3: Build Bellman pre-pass inputs that don't depend on psi
 #-------------------------------------------------------------------------------
 
-cat("Building extended grid, tau matrices...\n")
+cat("Building extended grid, tau matrices, and real-rate beta series...\n")
 
-life_ext    = kg_dyn_load_life_table_extension(years = YEARS)
-grid_ext    = kg_dyn_build_extended_grid(baseline_cells, life_ext, YEARS,
+life_ext     = kg_dyn_load_life_table_extension(years = YEARS)
+grid_ext     = kg_dyn_build_extended_grid(baseline_cells, life_ext, YEARS,
+                                          ages_bellman = AGES_BELLMAN)
+grid_packed  = kg_dyn_pack_baseline_grid(grid_ext, YEARS,
                                          ages_bellman = AGES_BELLMAN)
-grid_packed = kg_dyn_pack_baseline_grid(grid_ext, YEARS,
-                                        ages_bellman = AGES_BELLMAN)
-tau_B_mat   = kg_dyn_pack_tau(tau_B, YEARS, ages_bellman = AGES_BELLMAN)
-tau_S_mat   = kg_dyn_pack_tau(tau_S, YEARS, ages_bellman = AGES_BELLMAN)
+tau_B_mat    = kg_dyn_pack_tau(tau_B, YEARS, ages_bellman = AGES_BELLMAN)
+tau_S_mat    = kg_dyn_pack_tau(tau_S, YEARS, ages_bellman = AGES_BELLMAN)
+beta_by_year = kg_dyn_load_beta_series(MACRO_ROOT, YEARS)
+
+cat(sprintf("  beta range: [%.4f, %.4f] (real-rate discount, from %s)\n",
+            min(beta_by_year), max(beta_by_year), MACRO_ROOT))
 
 # Step-up regime applies under current law; c_phi = 0 throughout.
 c_phi_S_by_year = rep(0, length(YEARS))
@@ -182,15 +194,15 @@ semi_at_anchor = function(psi_val) {
 
   pass1 = kg_dyn_solve_bellman_baseline(grid_packed, tau_B_mat,
                                          c_phi_B = 0,
-                                         psi   = psi_val,
-                                         phi_I = KG_DYN_PHI_I,
-                                         beta  = KG_DYN_BETA)
+                                         psi          = psi_val,
+                                         phi_I        = KG_DYN_PHI_I,
+                                         beta_by_year = beta_by_year)
   pass2 = kg_dyn_solve_bellman_scenario(grid_packed, tau_S_mat,
                                          kappa_mat = pass1$kappa,
                                          c_phi_S_by_year = c_phi_S_by_year,
-                                         psi   = psi_val,
-                                         phi_I = KG_DYN_PHI_I,
-                                         beta  = KG_DYN_BETA)
+                                         psi          = psi_val,
+                                         phi_I        = KG_DYN_PHI_I,
+                                         beta_by_year = beta_by_year)
 
   delta = setNames(rep(0, length(AGES_BATHTUB)), bathtub_ages_chr)
   R_B_total = 0
@@ -286,15 +298,15 @@ profile_years = function(psi_val) {
 
   pass1 = kg_dyn_solve_bellman_baseline(grid_packed, tau_B_mat,
                                          c_phi_B = 0,
-                                         psi   = psi_val,
-                                         phi_I = KG_DYN_PHI_I,
-                                         beta  = KG_DYN_BETA)
+                                         psi          = psi_val,
+                                         phi_I        = KG_DYN_PHI_I,
+                                         beta_by_year = beta_by_year)
   pass2 = kg_dyn_solve_bellman_scenario(grid_packed, tau_S_mat,
                                          kappa_mat = pass1$kappa,
                                          c_phi_S_by_year = c_phi_S_by_year,
-                                         psi   = psi_val,
-                                         phi_I = KG_DYN_PHI_I,
-                                         beta  = KG_DYN_BETA)
+                                         psi          = psi_val,
+                                         phi_I        = KG_DYN_PHI_I,
+                                         beta_by_year = beta_by_year)
 
   delta = setNames(rep(0, length(AGES_BATHTUB)), bathtub_ages_chr)
   out   = tibble(sim_year = integer(), year = integer(),

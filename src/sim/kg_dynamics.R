@@ -48,7 +48,16 @@ KG_DYN_AGE_MIN          = 18
 KG_DYN_AGE_MAX          = 80      # bathtub topcode (matches simulator)
 KG_DYN_AGE_MAX_BELLMAN  = 119     # Bellman extended-grid terminal age; SSA
                                   # PerLifeTables hit q(x)=1 at 119
-KG_DYN_BETA             = 0.96    # annual discount factor (~4%)
+KG_DYN_BETA             = 0.978   # fallback annual discount factor, used
+                                  # only by isolated solver unit tests that
+                                  # don't attach Macro-Projections. Production
+                                  # paths build a year-varying real-rate
+                                  # discount series from tsy_10y / cpiu via
+                                  # kg_dyn_load_beta_series; see Bellman
+                                  # primitives below. 0.978 corresponds to a
+                                  # ~2.2% real rate, the rough mid-horizon
+                                  # value implied by the default Macro-
+                                  # Projections vintage.
 KG_DYN_PHI_I            = 0.4     # turnover share of baseline realization rate
                                   # (asset-aggregate; spec defaults are ~0.3
                                   #  for liquid equities, ~0.5 for pass-
@@ -64,10 +73,11 @@ KG_DYN_HEIR_SIGMA       = 5       # std dev of heir age distribution
 # ramps over the first ~10 years as the bathtub accumulates stock,
 # then plateaus). Set to NA_real_ here to force fail-fast at run time
 # if someone tries to run kg_dynamics without an up-to-date calibration.
-# Re-run calibrate_psi.R whenever Tax-Data vintage, phi_I, beta, or any
-# Bellman primitive (mortality weighting, age-tail r_B treatment, etc.)
-# changes, then paste the printed value below.
-KG_DYN_DEFAULT_PSI      = 23.1078
+# Re-run calibrate_psi.R whenever Tax-Data vintage, phi_I, the discount
+# series (Macro-Projections vintage), or any Bellman primitive (mortality
+# weighting, age-tail r_B treatment, etc.) changes, then paste the printed
+# value below.
+KG_DYN_DEFAULT_PSI      = 25.2297
 
 # Within-cell allocation rule for the policy-induced delta dG.
 # Determines which "effective cell mortality" the recurrence uses for
@@ -333,6 +343,72 @@ kg_dyn_load_life_table_extension = function(years,
 
 
 
+#-------------------------------------------------------------------------------
+# Real-rate discount factor series (year-varying)
+#-------------------------------------------------------------------------------
+
+kg_dyn_load_beta_series = function(macro_root, years) {
+
+  #----------------------------------------------------------------------------
+  # Builds the per-year Bellman discount factor from Macro-Projections.
+  # Uses the real 10-year Treasury yield (Fisher-deflated by year-t YoY CPI-U
+  # growth):
+  #
+  #   infl_t     = cpiu_t / cpiu_{t-1} - 1
+  #   r_real_t   = (1 + tsy_10y_t / 100) / (1 + infl_t) - 1
+  #   beta_t     = 1 / (1 + r_real_t)
+  #
+  # The Bellman compares "realize today and pay tau now" vs. "hold the asset
+  # (whose nominal price grows with inflation) and pay tau on a nominally
+  # larger gain later." Inflation cancels except in the discount of the tax
+  # wedge, so the economically correct discount is the real rate; using
+  # nominal tsy_10y would double-count inflation.
+  #
+  # historical.csv covers <= 2025, projections.csv covers >= 2026; both have
+  # cpiu and tsy_10y columns on a continuous index, so we bind them and
+  # compute YoY growth directly. The implied 2025->2026 inflation reflects
+  # the projection team's near-term assumption.
+  #
+  # Parameters:
+  #   - macro_root : path to a Macro-Projections vintage's baseline directory
+  #                  (must contain historical.csv and projections.csv)
+  #   - years      : integer vector of simulation years; must all be present
+  #                  in the macro data
+  #
+  # Returns: named numeric vector beta_t, names = as.character(years),
+  #          length = length(years).
+  #----------------------------------------------------------------------------
+
+  cpiu_tsy = c('historical.csv', 'projections.csv') %>%
+    file.path(macro_root, .) %>%
+    map(~ read_csv(.x, show_col_types = FALSE) %>%
+              select(year, cpiu, tsy_10y)) %>%
+    bind_rows() %>%
+    arrange(year) %>%
+    mutate(infl_t   = cpiu / lag(cpiu) - 1,
+           r_real   = (1 + tsy_10y / 100) / (1 + infl_t) - 1,
+           beta     = 1 / (1 + r_real))
+
+  beta_df = cpiu_tsy %>% filter(year %in% years) %>% select(year, beta)
+
+  missing = setdiff(years, beta_df$year)
+  if (length(missing) > 0) {
+    stop('kg_dyn_load_beta_series: years ',
+         paste(missing, collapse = ', '),
+         ' not present in macro_projections at ', macro_root)
+  }
+  if (any(is.na(beta_df$beta))) {
+    stop('kg_dyn_load_beta_series: NA in real-rate discount factor for years ',
+         paste(beta_df$year[is.na(beta_df$beta)], collapse = ', '),
+         ' (likely missing prior-year cpiu for YoY differencing).')
+  }
+
+  beta_df = beta_df %>% arrange(match(year, years))
+  setNames(beta_df$beta, as.character(beta_df$year))
+}
+
+
+
 kg_dyn_build_extended_grid = function(baseline_cells, life_ext, years,
                                        ages_bellman = KG_DYN_AGE_MIN:
                                                       KG_DYN_AGE_MAX_BELLMAN) {
@@ -575,9 +651,9 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
 
 kg_dyn_solve_bellman_baseline = function(grid_packed, tau_B_mat,
                                           c_phi_B = 0,
-                                          psi   = KG_DYN_DEFAULT_PSI,
-                                          phi_I = KG_DYN_PHI_I,
-                                          beta  = KG_DYN_BETA) {
+                                          psi          = KG_DYN_DEFAULT_PSI,
+                                          phi_I        = KG_DYN_PHI_I,
+                                          beta_by_year = NULL) {
 
   #----------------------------------------------------------------------------
   # Pass 1 backward induction. Recovers kappa(a, t), W_B, MC_B on the
@@ -587,12 +663,17 @@ kg_dyn_solve_bellman_baseline = function(grid_packed, tau_B_mat,
   # death-state forgiveness value F = tau (full forgiveness).
   #
   # Parameters:
-  #   - grid_packed : list with m, r_B matrices (output of
-  #                    kg_dyn_pack_baseline_grid)
-  #   - tau_B_mat   : baseline tau matrix [age, year]
-  #   - c_phi_B     : death-state burden share for baseline (0 under current-
-  #                    law step-up; passed in for completeness)
-  #   - psi, phi_I, beta : behavioral / discount params
+  #   - grid_packed  : list with m, r_B matrices (output of
+  #                     kg_dyn_pack_baseline_grid)
+  #   - tau_B_mat    : baseline tau matrix [age, year]
+  #   - c_phi_B      : death-state burden share for baseline (0 under current-
+  #                     law step-up; passed in for completeness)
+  #   - psi, phi_I   : behavioral params
+  #   - beta_by_year : numeric vector of per-year discount factors (length
+  #                     n_years). Each beta_by_year[j] discounts between
+  #                     year j and year j+1. If NULL, falls back to a
+  #                     constant KG_DYN_BETA vector (kept for isolated
+  #                     solver unit tests).
   #
   # Returns: list(W = W_mat, MC = MC_mat, kappa = kappa_mat, r_D = r_D_B_mat),
   # each indexed [age, year].
@@ -603,6 +684,9 @@ kg_dyn_solve_bellman_baseline = function(grid_packed, tau_B_mat,
   n_ages  = nrow(m_mat); n_years = ncol(m_mat)
   ages_chr  = rownames(m_mat); years_chr = colnames(m_mat)
 
+  if (is.null(beta_by_year)) beta_by_year = rep(KG_DYN_BETA, n_years)
+  stopifnot(length(beta_by_year) == n_years)
+
   W     = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   MC    = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   kappa = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
@@ -610,6 +694,8 @@ kg_dyn_solve_bellman_baseline = function(grid_packed, tau_B_mat,
 
   # Terminal year column: stationary backward solve in age, with the
   # continuation at age a pulling W[a+1] from the same just-computed sweep.
+  # Use beta_by_year[n_years] as the steady-state discount factor (the
+  # stationary solve treats year-n_years primitives as constant forward).
   t_max_idx = n_years
   res = kg_dyn_bellman_sweep_age(
     W_next    = NULL,
@@ -617,7 +703,7 @@ kg_dyn_solve_bellman_baseline = function(grid_packed, tau_B_mat,
     r_B_col   = r_B_mat[, t_max_idx],
     tau_col   = tau_B_mat[, t_max_idx],
     c_phi     = c_phi_B,
-    psi       = psi, phi_I = phi_I, beta = beta,
+    psi       = psi, phi_I = phi_I, beta = beta_by_year[t_max_idx],
     kappa_col = NULL,
     stationary = TRUE
   )
@@ -626,7 +712,7 @@ kg_dyn_solve_bellman_baseline = function(grid_packed, tau_B_mat,
   kappa[, t_max_idx] = res$kappa
   r_D  [, t_max_idx] = res$r_D
 
-  # March backward in time
+  # March backward in time. beta_by_year[j] discounts between year j and j+1.
   if (n_years >= 2) {
     for (j in (n_years - 1):1) {
       res = kg_dyn_bellman_sweep_age(
@@ -635,7 +721,7 @@ kg_dyn_solve_bellman_baseline = function(grid_packed, tau_B_mat,
         r_B_col   = r_B_mat[, j],
         tau_col   = tau_B_mat[, j],
         c_phi     = c_phi_B,
-        psi       = psi, phi_I = phi_I, beta = beta,
+        psi       = psi, phi_I = phi_I, beta = beta_by_year[j],
         kappa_col = NULL
       )
       W    [, j] = res$W
@@ -652,9 +738,9 @@ kg_dyn_solve_bellman_baseline = function(grid_packed, tau_B_mat,
 
 kg_dyn_solve_bellman_scenario = function(grid_packed, tau_S_mat,
                                           kappa_mat, c_phi_S_by_year,
-                                          psi   = KG_DYN_DEFAULT_PSI,
-                                          phi_I = KG_DYN_PHI_I,
-                                          beta  = KG_DYN_BETA) {
+                                          psi          = KG_DYN_DEFAULT_PSI,
+                                          phi_I        = KG_DYN_PHI_I,
+                                          beta_by_year = NULL) {
 
   #----------------------------------------------------------------------------
   # Pass 2 backward induction. With kappa(a, t) recovered from Pass 1,
@@ -668,6 +754,10 @@ kg_dyn_solve_bellman_scenario = function(grid_packed, tau_S_mat,
   #   - tau_S_mat       : scenario tau matrix [age, year]
   #   - kappa_mat       : kappa matrix from Pass 1
   #   - c_phi_S_by_year : numeric vector length n_years
+  #   - beta_by_year    : per-year discount factors (length n_years). NULL
+  #                        falls back to constant KG_DYN_BETA (unit-test
+  #                        convenience only); production paths pass a real
+  #                        vector built by kg_dyn_load_beta_series.
   #
   # Returns: list(W, MC, r_D), each [age, year]. r_D is the scenario
   # discretionary realization rate.
@@ -678,11 +768,15 @@ kg_dyn_solve_bellman_scenario = function(grid_packed, tau_S_mat,
   n_ages  = nrow(m_mat); n_years = ncol(m_mat)
   ages_chr  = rownames(m_mat); years_chr = colnames(m_mat)
 
+  if (is.null(beta_by_year)) beta_by_year = rep(KG_DYN_BETA, n_years)
+  stopifnot(length(beta_by_year) == n_years)
+
   W   = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   MC  = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   r_D = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
 
-  # Terminal stationary solve at t_max using year-t_max primitives
+  # Terminal stationary solve at t_max using year-t_max primitives, including
+  # the year-t_max discount factor.
   t_max_idx = n_years
   res = kg_dyn_bellman_sweep_age(
     W_next    = NULL,
@@ -690,7 +784,7 @@ kg_dyn_solve_bellman_scenario = function(grid_packed, tau_S_mat,
     r_B_col   = r_B_mat[, t_max_idx],
     tau_col   = tau_S_mat[, t_max_idx],
     c_phi     = c_phi_S_by_year[t_max_idx],
-    psi       = psi, phi_I = phi_I, beta = beta,
+    psi       = psi, phi_I = phi_I, beta = beta_by_year[t_max_idx],
     kappa_col = kappa_mat[, t_max_idx],
     stationary = TRUE
   )
@@ -706,7 +800,7 @@ kg_dyn_solve_bellman_scenario = function(grid_packed, tau_S_mat,
         r_B_col   = r_B_mat[, j],
         tau_col   = tau_S_mat[, j],
         c_phi     = c_phi_S_by_year[j],
-        psi       = psi, phi_I = phi_I, beta = beta,
+        psi       = psi, phi_I = phi_I, beta = beta_by_year[j],
         kappa_col = kappa_mat[, j]
       )
       W  [, j] = res$W
@@ -1079,7 +1173,6 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                     baseline_tau, reform_tau,
                                     psi   = KG_DYN_DEFAULT_PSI,
                                     phi_I = KG_DYN_PHI_I,
-                                    beta  = KG_DYN_BETA,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX,
                                     ages_bellman = KG_DYN_AGE_MIN:
                                                     KG_DYN_AGE_MAX_BELLMAN) {
@@ -1126,6 +1219,15 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                         'kg_dynamics_state')
   dir.create(state_dir, recursive = TRUE, showWarnings = FALSE)
 
+  # Step 0: build per-year real-rate discount factors from Macro-Projections
+  macro_root = scenario_info$interface_paths$`Macro-Projections`
+  if (is.null(macro_root)) {
+    stop('kg_dynamics: scenario_info$interface_paths$`Macro-Projections` is ',
+         'NULL. The bathtub pre-pass needs the Macro-Projections vintage to ',
+         'derive the real-rate discount factor for the Bellman.')
+  }
+  beta_by_year = kg_dyn_load_beta_series(macro_root, years)
+
   # Step 1: extended grid (mortality tail 81-119)
   life_ext = kg_dyn_load_life_table_extension(years = years)
   grid_ext = kg_dyn_build_extended_grid(baseline_cells, life_ext, years,
@@ -1140,7 +1242,8 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   # Step 3: baseline Bellman pass (c_phi_B = 0 under current-law step-up)
   pass1 = kg_dyn_solve_bellman_baseline(grid_packed, tau_B_mat,
                                          c_phi_B = 0,
-                                         psi = psi, phi_I = phi_I, beta = beta)
+                                         psi = psi, phi_I = phi_I,
+                                         beta_by_year = beta_by_year)
 
   # Step 4: resolve year-by-year scenario regimes and run scenario Bellman
   regime_list = vector('list', length(years))
@@ -1157,7 +1260,8 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   pass2 = kg_dyn_solve_bellman_scenario(grid_packed, tau_S_mat,
                                          kappa_mat = pass1$kappa,
                                          c_phi_S_by_year = c_phi_S,
-                                         psi = psi, phi_I = phi_I, beta = beta)
+                                         psi = psi, phi_I = phi_I,
+                                         beta_by_year = beta_by_year)
 
   # Save life table for later diagnostic inspection
   saveRDS(life_ext, file.path(state_dir, 'life_table_extension.rds'))
