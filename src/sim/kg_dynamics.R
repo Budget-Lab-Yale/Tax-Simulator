@@ -65,8 +65,15 @@ KG_DYN_BETA             = 0.978   # fallback annual discount factor, used
 # the ordinary Bellman-controlled share. Defaults preserve the prior two-bucket
 # model: fixed=0.4 and planned=0 imply ordinary=0.6.
 KG_DYN_SHARE_FIXED      = 0.4
-KG_DYN_SHARE_PLANNED    = 0.0
+KG_DYN_SHARE_PLANNED    = 0.3285
 KG_DYN_TIMING_WINDOW    = 1L
+
+# Reference wedge controlling the friction in planned-bucket routing. The
+# fraction of a year's planned dollars that move toward the best year in the
+# window is clamp((tau_S - tau_B differential between source and destination) /
+# KG_DYN_TIMING_REF_WEDGE, 0, 1). Default 5pp means the full planned bucket
+# moves at a 5pp wedge differential, a 1pp differential moves 20%, etc.
+KG_DYN_TIMING_REF_WEDGE = 0.05
 
 # Backward-compatible alias used by existing callers and diagnostics. In the
 # three-bucket interpretation this is the fixed/nonresponsive share.
@@ -75,17 +82,22 @@ KG_DYN_HEIR_SHIFT       = 30      # average decedent-to-heir age gap
 KG_DYN_HEIR_SIGMA       = 5       # std dev of heir age distribution
 
 # Default psi (global curvature of the quadratic realization benefit).
-# Calibrated by other/kg_model_tests/calibrate_psi.R to a permanent
-# semi-elasticity dlog(R)/dtau ~= -0.6/0.238 under a 1pp uniform tau
-# bump on the step-up baseline, anchored at sim year 30 (the response
-# ramps over the first ~10 years as the bathtub accumulates stock,
-# then plateaus). Set to NA_real_ here to force fail-fast at run time
-# if someone tries to run kg_dynamics without an up-to-date calibration.
-# Re-run calibrate_psi.R whenever Tax-Data vintage, bucket shares, the
-# discount series (Macro-Projections vintage), or any Bellman primitive
-# (mortality weighting, age-tail r_B treatment, etc.) changes, then paste the
-# printed value below.
-KG_DYN_DEFAULT_PSI      = 25.2297
+# Jointly calibrated with KG_DYN_SHARE_PLANNED by
+# other/kg_model_tests/calibrate.R against two moments:
+#   - long-run permanent semi-elasticity dlog(R)/dtau ~= -0.6/0.238 under
+#     a 1pp uniform tau bump on the step-up baseline, anchored at sim year
+#     30 (the response ramps over the first ~10 years as the bathtub
+#     accumulates stock, then plateaus);
+#   - short-run announced-shock semi-elasticity dlog(R(t))/dtau(t+1) under
+#     a 5pp delayed permanent shock, anchored at sim year 1 (twice the
+#     long-run magnitude with opposite sign).
+# Set to NA_real_ here to force fail-fast at run time if someone tries to
+# run kg_dynamics without an up-to-date calibration. Re-run calibrate.R
+# whenever Tax-Data vintage, bucket shares, ref_wedge, the discount series
+# (Macro-Projections vintage), or any Bellman primitive (mortality
+# weighting, age-tail r_B treatment, etc.) changes, then paste the printed
+# values below.
+KG_DYN_DEFAULT_PSI      = 26.5673
 
 # Within-cell allocation rule for the policy-induced delta dG.
 # Determines which "effective cell mortality" the recurrence uses for
@@ -837,7 +849,8 @@ kg_dyn_solve_bellman_scenario = function(grid_packed, tau_S_mat,
 
 kg_dyn_validate_realization_buckets = function(fixed_share   = KG_DYN_PHI_I,
                                                planned_share = KG_DYN_SHARE_PLANNED,
-                                               timing_window = KG_DYN_TIMING_WINDOW) {
+                                               timing_window = KG_DYN_TIMING_WINDOW,
+                                               ref_wedge     = KG_DYN_TIMING_REF_WEDGE) {
 
   if (!is.finite(fixed_share) || !is.finite(planned_share)) {
     stop('kg_dynamics: realization bucket shares must be finite.')
@@ -853,6 +866,9 @@ kg_dyn_validate_realization_buckets = function(fixed_share   = KG_DYN_PHI_I,
       timing_window < 0 || timing_window != as.integer(timing_window)) {
     stop('kg_dynamics: KG_DYN_TIMING_WINDOW must be a nonnegative integer.')
   }
+  if (length(ref_wedge) != 1 || !is.finite(ref_wedge) || ref_wedge <= 0) {
+    stop('kg_dynamics: KG_DYN_TIMING_REF_WEDGE must be a positive finite number.')
+  }
 
   invisible(TRUE)
 }
@@ -863,21 +879,27 @@ kg_dyn_build_planned_timing = function(baseline_cells, tau_S_mat, years,
                                        tau_B_mat = NULL,
                                        planned_share = KG_DYN_SHARE_PLANNED,
                                        timing_window = KG_DYN_TIMING_WINDOW,
+                                       ref_wedge     = KG_DYN_TIMING_REF_WEDGE,
                                        ages_bathtub = KG_DYN_AGE_MIN:
                                                       KG_DYN_AGE_MAX,
                                        tie_tol = 1e-12) {
 
   #----------------------------------------------------------------------------
-  # Builds the pure-minimization planned-realization schedule. For each age
-  # cell and scheduled year u, planned baseline dollars can move to the lowest
-  # policy-induced tax wedge in [u-H, u+H]. If u is tied for lowest, dollars
-  # stay put; otherwise ties are broken by nearest year, then earlier year.
-  # Using tau_S - tau_B prevents baseline-check runs from retiming dollars
+  # Builds the planned-realization timing schedule. For each age cell and
+  # scheduled year u, planned baseline dollars look at the policy-induced tax
+  # wedge tau_S - tau_B over the window [u-H, u+H] and route a fraction toward
+  # the best year v* (lowest wedge; ties broken by nearest year, then earlier
+  # year). The fraction is clamp((wedge[u] - wedge[v*]) / ref_wedge, 0, 1), so
+  # small wedge differentials produce proportionally small movement and a
+  # differential of ref_wedge or larger moves the entire planned bucket. The
+  # complementary share stays at the source year. Using tau_S - tau_B keeps the
+  # rule policy-driven and prevents baseline-only runs from retiming dollars
   # merely because the baseline MTR path varies across years.
   #----------------------------------------------------------------------------
 
   kg_dyn_validate_realization_buckets(planned_share = planned_share,
-                                      timing_window = timing_window)
+                                      timing_window = timing_window,
+                                      ref_wedge     = ref_wedge)
 
   ages_chr  = as.character(ages_bathtub)
   years_chr = as.character(years)
@@ -910,15 +932,20 @@ kg_dyn_build_planned_timing = function(baseline_cells, tau_S_mat, years,
         min_tau  = min(tau_vals, na.rm = TRUE)
 
         if (tau_bt[i, j] <= min_tau + tie_tol) {
-          dest = j
+          R_planned_S[i, j] = R_planned_S[i, j] + amount
         } else {
           candidates = eligible[tau_vals <= min_tau + tie_tol]
           distances  = abs(candidates - j)
           nearest    = candidates[distances == min(distances)]
           dest       = min(nearest)
-        }
 
-        R_planned_S[i, dest] = R_planned_S[i, dest] + amount
+          tax_saving = tau_bt[i, j] - tau_bt[i, dest]
+          move_share = min(max(tax_saving / ref_wedge, 0), 1)
+          moved      = amount * move_share
+
+          R_planned_S[i, dest] = R_planned_S[i, dest] + moved
+          R_planned_S[i, j]    = R_planned_S[i, j]    + (amount - moved)
+        }
       }
     }
   }
@@ -1347,6 +1374,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                     phi_I = KG_DYN_PHI_I,
                                     planned_share = KG_DYN_SHARE_PLANNED,
                                     timing_window = KG_DYN_TIMING_WINDOW,
+                                    ref_wedge     = KG_DYN_TIMING_REF_WEDGE,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX,
                                     ages_bellman = KG_DYN_AGE_MIN:
                                                     KG_DYN_AGE_MAX_BELLMAN) {
@@ -1383,13 +1411,14 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
 
   if (!is.finite(psi)) {
     stop('kg_dynamics: KG_DYN_DEFAULT_PSI is not set. Run ',
-         'other/kg_model_tests/calibrate_psi.R against a full-sample baseline ',
-         'and paste the calibrated value into the constants block at the top ',
-         'of src/sim/kg_dynamics.R.')
+         'other/kg_model_tests/calibrate.R against a full-sample baseline ',
+         'and paste the calibrated psi and planned_share values into the ',
+         'constants block at the top of src/sim/kg_dynamics.R.')
   }
   kg_dyn_validate_realization_buckets(fixed_share = phi_I,
                                       planned_share = planned_share,
-                                      timing_window = timing_window)
+                                      timing_window = timing_window,
+                                      ref_wedge     = ref_wedge)
 
   years     = scenario_info$years
   state_dir = file.path(scenario_info$output_path,
@@ -1450,6 +1479,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     tau_B_mat      = tau_B_mat,
     planned_share  = planned_share,
     timing_window  = timing_window,
+    ref_wedge      = ref_wedge,
     ages_bathtub   = ages_bathtub
   )
 

@@ -114,4 +114,49 @@ pass = kg_dyn_solve_bellman_baseline(grid_packed, tau_mat, psi = 25,
                                       beta_by_year = c(0.96, 0.96))
 stopifnot(all(abs(pass$r_D - 0.6 * grid_packed$r_B) < 1e-12))
 
+# Friction: a 1pp delayed hike with default 5pp reference wedge moves only
+# 20% of next year's planned bucket (4 of 20) into the announcement year. The
+# announcement year retains its own 20 and gains 4 from 2027; 2027 keeps the
+# other 16. Total planned dollars per age cell remain conserved.
+small_delayed = kg_dyn_build_planned_timing(cells,
+                                            make_tau(c(0.20, 0.21, 0.21, 0.21, 0.21)),
+                                            years, planned_share = 0.2,
+                                            tau_B_mat = baseline_tau,
+                                            timing_window = 1,
+                                            ref_wedge = 0.05,
+                                            ages_bathtub = ages)
+stopifnot(all(abs(small_delayed$R_planned_S[, '2026'] - 24) < 1e-9),
+          all(abs(small_delayed$R_planned_S[, '2027'] - 16) < 1e-9),
+          all(abs(rowSums(small_delayed$R_planned_B) -
+                  rowSums(small_delayed$R_planned_S)) < 1e-9))
+
+# Friction: a 10pp delayed hike saturates the clamp -- all planned dollars move.
+big_delayed = kg_dyn_build_planned_timing(cells,
+                                          make_tau(c(0.20, 0.30, 0.30, 0.30, 0.30)),
+                                          years, planned_share = 0.2,
+                                          tau_B_mat = baseline_tau,
+                                          timing_window = 1,
+                                          ref_wedge = 0.05,
+                                          ages_bathtub = ages)
+stopifnot(all(big_delayed$R_planned_S[, '2026'] == 40),
+          all(big_delayed$R_planned_S[, '2027'] == 0))
+
+# Friction: shrinking ref_wedge approaches the all-or-nothing limit even for
+# small differentials. With ref_wedge = 0.005, a 1pp shock saturates.
+tight = kg_dyn_build_planned_timing(cells,
+                                    make_tau(c(0.20, 0.21, 0.21, 0.21, 0.21)),
+                                    years, planned_share = 0.2,
+                                    tau_B_mat = baseline_tau,
+                                    timing_window = 1,
+                                    ref_wedge = 0.005,
+                                    ages_bathtub = ages)
+stopifnot(all(tight$R_planned_S[, '2026'] == 40),
+          all(tight$R_planned_S[, '2027'] == 0))
+
+# Validation: nonpositive ref_wedge should fail-fast.
+stopifnot(inherits(try(kg_dyn_validate_realization_buckets(ref_wedge = 0),
+                       silent = TRUE), 'try-error'),
+          inherits(try(kg_dyn_validate_realization_buckets(ref_wedge = -0.01),
+                       silent = TRUE), 'try-error'))
+
 cat("planned timing tests passed\n")
