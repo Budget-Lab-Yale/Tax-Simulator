@@ -14,14 +14,24 @@
 #   3. For a given candidate psi, run the Bellman pre-pass (life-table
 #      extension, baseline Bellman, scenario Bellman) plus the bathtub
 #      recurrence under step-up regime (c_phi = 0).
-#   4. Compute the implied aggregate semi-elasticity at the anchor year:
-#        semi_elast_t = log(R_S_t / R_B_t) / (tau_S_t - tau_B_t)
-#      where tau_*_t is the realization-weighted average cell MTR at year t.
-#   5. Bisect psi until semi_elast at the anchor year hits the target.
+#   4. Compute the implied aggregate semi-elasticity at sim year 30:
+#        semi_elast_30 = log(R_S_30 / R_B_30) / (tau_S_30 - tau_B_30)
+#      where tau_*_30 is the realization-weighted average cell MTR at
+#      sim year 30 (= baseline start year + 29). The semi-elasticity
+#      ramps over the first ~10 years as the bathtub accumulates stock
+#      pressure, then plateaus; year 30 is safely in the permanent-
+#      response steady state that the literature target reflects.
+#   5. Bisect psi until the year-30 semi_elast hits the target.
 #
-# Target: dlog(R)/dtau = -0.6 / 0.238 ~= -2.52. This decomposes a literature
-# arc elasticity of -0.6 (wrt tau) at a baseline tau of ~0.238 into a semi-
-# elasticity that's directly comparable to a 1pp perturbation.
+# Target: dlog(R)/dtau = -0.6 / 0.238 ~= -2.52. Semi-elasticity wrt tau,
+# matching the convention used by the legacy reduced-form module kg/62.R
+# (literature arc elasticity -0.62 evaluated at a baseline tau of 0.238).
+# The 0.238 anchor is a fixed convention; do NOT re-evaluate it at the
+# current Tax-Data's realization-weighted tau.
+#
+# Required: the baseline run must have at least 30 years of static detail
+# (anchoring on a shorter horizon would lock in a transient, not the
+# permanent response). The script will fail-fast otherwise.
 #
 # Output: prints recommended psi. Paste into KG_DYN_DEFAULT_PSI in
 # src/sim/kg_dynamics.R.
@@ -62,13 +72,25 @@ AGES_BELLMAN  = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX_BELLMAN
 TARGET        = -0.6 / 0.238   # semi-elasticity dlog(R)/dtau target (~-2.52)
 PERTURBATION  = 0.01           # 1pp uniform MTR perturbation
 
-# Derive YEARS from what the baseline run actually has on disk. Anchor the
-# elasticity check at year 30 if available, otherwise the last sim year.
+# Derive YEARS from what the baseline run actually has on disk. The
+# anchor is fixed at sim year 30: the semi-elasticity ramps over the
+# first ~10 years as the bathtub accumulates stock pressure, then
+# plateaus; year 30 gets us safely into the permanent-response steady
+# state that the literature target reflects. A shorter horizon would
+# anchor on a transient response, so fail fast.
 detail_files = list.files(file.path(BASELINE_ROOT, 'baseline/static/detail'),
                           pattern = '^[0-9]+\\.csv$')
 YEARS         = sort(as.integer(sub('\\.csv$', '', detail_files)))
-ANCHOR_YEAR   = if (length(YEARS) >= 30) min(YEARS) + 29 else max(YEARS)
-ANCHOR_LABEL  = ANCHOR_YEAR - min(YEARS) + 1
+if (length(YEARS) < 30) {
+  stop(sprintf(
+    paste0('calibrate_psi requires at least 30 years of baseline data ',
+           '(anchoring on the permanent semi-elasticity at sim year 30); ',
+           'found %d years at %s. Re-run with a 30-year baseline (e.g. ',
+           'tests/kg_dynamics_baseline_30yr.csv).'),
+    length(YEARS), BASELINE_ROOT))
+}
+ANCHOR_YEAR   = min(YEARS) + 29
+ANCHOR_LABEL  = 30
 
 
 #-------------------------------------------------------------------------------

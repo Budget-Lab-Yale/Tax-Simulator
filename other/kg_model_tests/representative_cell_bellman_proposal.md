@@ -493,17 +493,20 @@ $$
 $$
 
 Solve the scenario Bellman, run the bathtub, and compute an aggregate
-elasticity target:
+semi-elasticity:
 
 $$
 \epsilon_{\text{model}}
 =
-\frac{\Delta \log R}{\Delta \log(1-\tau)}
+\frac{\Delta \log R}{\Delta \tau}
 $$
 
-or the simulator's preferred semi-elasticity convention. Tune $\psi$ using a
-full-model root find until the model matches the literature target, such as
-a permanent realization elasticity around $-0.6$.
+i.e., percent change in aggregate realized gains per percentage-point
+change in $\tau$. This matches the convention used by the legacy
+reduced-form module `kg/62.R`, which applies
+$\epsilon_{\text{perm}} = -0.62/0.238$ as a semi-elasticity on $\tau$
+(literature arc elasticity $-0.62$ evaluated at the prior baseline rate
+$\tau = 0.238$). Tune $\psi$ until the model hits this target.
 
 The response need not scale linearly as $1/\psi$. Locally, the first-order
 condition suggests that larger $\psi$ flattens the realization response, but

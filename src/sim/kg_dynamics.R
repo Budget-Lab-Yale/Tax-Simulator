@@ -58,12 +58,16 @@ KG_DYN_HEIR_SHIFT       = 30      # average decedent-to-heir age gap
 KG_DYN_HEIR_SIGMA       = 5       # std dev of heir age distribution
 
 # Default psi (global curvature of the quadratic realization benefit).
-# Calibrated to a permanent semi-elasticity dlog(R)/dtau ~= -0.6/0.238
-# under a 1pp uniform tau bump on the step-up baseline, anchored at
-# the last sim year (year 10 / 2035) of a 10-year horizon. Re-run
-# other/kg_model_tests/calibrate_psi.R whenever Tax-Data vintage,
-# phi_I, beta, or the Bellman primitives change.
-KG_DYN_DEFAULT_PSI      = 25.6125
+# Calibrated by other/kg_model_tests/calibrate_psi.R to a permanent
+# semi-elasticity dlog(R)/dtau ~= -0.6/0.238 under a 1pp uniform tau
+# bump on the step-up baseline, anchored at sim year 30 (the response
+# ramps over the first ~10 years as the bathtub accumulates stock,
+# then plateaus). Set to NA_real_ here to force fail-fast at run time
+# if someone tries to run kg_dynamics without an up-to-date calibration.
+# Re-run calibrate_psi.R whenever Tax-Data vintage, phi_I, beta, or any
+# Bellman primitive (mortality weighting, age-tail r_B treatment, etc.)
+# changes, then paste the printed value below.
+KG_DYN_DEFAULT_PSI      = 23.1078
 
 # Within-cell allocation rule for the policy-induced delta dG.
 # Determines which "effective cell mortality" the recurrence uses for
@@ -340,9 +344,18 @@ kg_dyn_build_extended_grid = function(baseline_cells, life_ext, years,
   # Bellman uses the extended grid (to get a true mortality-driven terminal
   # condition).
   #
-  # For ages 81+, G_B, R_B, r_B, mG_record, mR_record are all zero by
-  # construction (no Tax-Data observations past the topcode); only m is
-  # populated from life_ext.
+  # For ages 81+:
+  #   - m is populated from life_ext (SSA Alternative-2 projections)
+  #   - r_B is held flat at r_B(80, t), the observed topcode-pool rate. The
+  #     simulator's age-80 cell already pools all 80+ taxpayers, so r_B(80)
+  #     is the empirically-correct rate for the 80+ cohort and the simplest
+  #     extrapolation is to assume it continues to age 119. Without this,
+  #     ages 81+ would have r_B = 0, which makes the Bellman's continuation
+  #     value at age 80 purely death-driven (no nontax realization benefit
+  #     past the topcode) and over-states the regime-induced acceleration
+  #     under deemed in older cohorts.
+  #   - G_B, R_B, mG_record, mR_record stay at 0 (no observed stock past
+  #     the topcode; the per-dollar Bellman doesn't need cell totals).
   #
   # Parameters:
   #   - baseline_cells : list keyed by year-string, each entry a tibble from
@@ -359,16 +372,18 @@ kg_dyn_build_extended_grid = function(baseline_cells, life_ext, years,
 
   ages_ext = setdiff(ages_bellman, KG_DYN_AGE_MIN:KG_DYN_AGE_MAX)
 
-  ext_template = tibble(age = ages_ext,
-                        G_B = 0, R_B = 0, r_B = 0,
-                        mG_record = 0, mR_record = 0)
-
   out = list()
   for (t in years) {
     key = as.character(t)
     inner = baseline_cells[[key]]
-    ext = ext_template %>%
-      mutate(m = as.numeric(life_ext[as.character(age), key]))
+    r_B_topcode = inner$r_B[inner$age == KG_DYN_AGE_MAX]
+    ext = tibble(age       = ages_ext,
+                 G_B       = 0,
+                 R_B       = 0,
+                 r_B       = r_B_topcode,
+                 m         = as.numeric(life_ext[as.character(ages_ext), key]),
+                 mG_record = 0,
+                 mR_record = 0)
     out[[key]] = bind_rows(inner, ext %>% select(names(inner))) %>%
       arrange(age)
   }
@@ -425,6 +440,19 @@ kg_dyn_pack_baseline_grid = function(grid_ext, years,
   #----------------------------------------------------------------------------
   # Stacks per-year extended-grid tibbles into named matrices indexed
   # [age, year], for the columns the Bellman needs (m, r_B).
+  #
+  # m is gain-stock-weighted: m = sum(w*m_household*G_unit) / sum(w*G_unit).
+  # The Bellman is normalized per dollar of unrealized gain, so the mortality
+  # input must be the probability that the *dollar's* holder dies, not the
+  # average taxpayer in the cell. Wealthier holders die less, so taxpayer-
+  # weighted m is biased upward by 2-3x relative to gain-weighted m in
+  # practice. The recurrence (see kg_dyn_step_recurrence) already adopts the
+  # same convention; this brings the Bellman in line.
+  #
+  # Falls back to taxpayer-weighted m where G_B = 0 (ages 81+ on the
+  # extended grid, and any cells without observed gain stock). At those ages
+  # the gain-weighted average is undefined, and the SSA life-table mortality
+  # (which is what grid_ext$m holds for 81+) is the right input anyway.
   #----------------------------------------------------------------------------
 
   n_ages  = length(ages_bellman)
@@ -436,7 +464,8 @@ kg_dyn_pack_baseline_grid = function(grid_ext, years,
   r_B = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   for (t_chr in years_chr) {
     bt = grid_ext[[t_chr]]
-    m  [, t_chr] = bt$m
+    m_gw = ifelse(bt$G_B > 0, bt$mG_record / bt$G_B, bt$m)
+    m  [, t_chr] = pmin(pmax(m_gw, 0), 1)
     r_B[, t_chr] = bt$r_B
   }
   list(m = m, r_B = r_B)
