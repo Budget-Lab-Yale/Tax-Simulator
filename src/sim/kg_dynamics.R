@@ -26,7 +26,7 @@
 #     + (1 - r_exog_B - r_D) *
 #         [beta*(1-m) W^j(a+1,t+1) + beta*m*F^j(a,t)]
 #   }
-# where r_exog_B = (fixed_share + planned_share)*r_B is the baseline
+# where r_exog_B = planned_share*r_B is the baseline forced-window
 # realization share outside the ordinary Bellman bucket,
 # F^j = (1 - c_phi^j)*tau^j is the death-state tax-liability forgiveness
 # value (c_phi^j is the regime's holder-internalized burden share: 0 step-up,
@@ -60,23 +60,24 @@ KG_DYN_BETA             = 0.978   # fallback annual discount factor, used
                                   # ~2.2% real rate, the rough mid-horizon
                                   # value implied by the default Macro-
                                   # Projections vintage.
-# Baseline realization bucket shares. The fixed share is nonresponsive; the
-# planned share is mechanically timeable across nearby years; the remainder is
-# the ordinary Bellman-controlled share. Defaults preserve the prior two-bucket
-# model: fixed=0.4 and planned=0 imply ordinary=0.6.
-KG_DYN_SHARE_FIXED      = 0.4
+# Baseline realization bucket shares. On this branch there are two buckets:
+# the forced-window share is timeable across nearby years with a baseline-
+# inverted timing intercept; the remainder is the ordinary Bellman-controlled
+# share. The fixed share is retained only as a backward-compatible diagnostic
+# slot and is set to zero.
+KG_DYN_SHARE_FIXED      = 0
 KG_DYN_SHARE_PLANNED    = 0.3285
 KG_DYN_TIMING_WINDOW    = 1L
 
-# Reference wedge controlling the friction in planned-bucket routing. The
-# fraction of a year's planned dollars that move toward the best year in the
+# Reference wedge controlling the friction in forced-window routing. The
+# fraction of a year's forced-window dollars that move toward the best year in the
 # window is clamp((tau_S - tau_B differential between source and destination) /
-# KG_DYN_TIMING_REF_WEDGE, 0, 1). Default 5pp means the full planned bucket
+# KG_DYN_TIMING_REF_WEDGE, 0, 1). Default 5pp means the full forced-window bucket
 # moves at a 5pp wedge differential, a 1pp differential moves 20%, etc.
 KG_DYN_TIMING_REF_WEDGE = 0.05
 
 # Backward-compatible alias used by existing callers and diagnostics. In the
-# three-bucket interpretation this is the fixed/nonresponsive share.
+# forced-window experiment this is always zero.
 KG_DYN_PHI_I            = KG_DYN_SHARE_FIXED
 KG_DYN_HEIR_SHIFT       = 30      # average decedent-to-heir age gap
 KG_DYN_HEIR_SIGMA       = 5       # std dev of heir age distribution
@@ -492,7 +493,7 @@ kg_dyn_build_extended_grid = function(baseline_cells, life_ext, years,
 # Bellman backward induction
 #
 # Pass 1 (baseline) solves W_B and recovers kappa(a, t) so the observed
-# ordinary realization bucket r_D_B = (1 - fixed_share - planned_share)*r_B
+# ordinary realization bucket r_D_B = (1 - planned_share)*r_B
 # is the Pass-1 cell's optimal choice.
 # Pass 2 (scenario) solves W_S using kappa(a, t) from Pass 1 and the
 # scenario-specific (tau_S, c_phi_S) pair, producing r_D_S(a, t) via the
@@ -580,7 +581,7 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
   # backward induction.
   #
   # When kappa_col is NULL, this is a Pass 1 (baseline) sweep: r_D_B is
-  # derived directly from r_B after removing the fixed and planned buckets,
+  # derived directly from r_B after removing the forced-window bucket,
   # and the cell intercept kappa is recovered so r_D_B is the optimal choice
   # given MC_B = tau + beta*(1-m)*W_next + beta*m*F.
   #
@@ -635,12 +636,12 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
     # death-state forgiveness value forgone.
     MC_i = tau_i + beta * (1 - m_i) * W_next_i + beta * m_i * F_i
 
-    r_exog_B = (phi_I + planned_share) * r_B_col[i]
+    r_exog_B = planned_share * r_B_col[i]
     r_D_cap  = max(1 - r_exog_B, 0)
 
     if (is_baseline_pass) {
-      # Target observed ordinary realization rate after removing fixed and
-      # planned baseline buckets.
+      # Target observed ordinary realization rate after removing the forced-
+      # window baseline bucket.
       r_D_B_target = min(max(r_B_col[i] - r_exog_B, 0), r_D_cap)
       r_D_i = r_D_B_target
       # Recover kappa from the interior FOC b'(r_D) = MC, i.e.
@@ -681,7 +682,7 @@ kg_dyn_solve_bellman_baseline = function(grid_packed, tau_B_mat,
   #----------------------------------------------------------------------------
   # Pass 1 backward induction. Recovers kappa(a, t), W_B, MC_B on the
   # extended age grid by forcing the cell's optimal r_D to equal the
-  # observed ordinary realization bucket after fixed and planned buckets are
+  # observed ordinary realization bucket after the forced-window bucket is
   # removed from r_B.
   # Under current-law step-up the baseline regime has c_phi = 0, so the
   # death-state forgiveness value F = tau (full forgiveness).
@@ -844,7 +845,7 @@ kg_dyn_solve_bellman_scenario = function(grid_packed, tau_S_mat,
 
 
 #-------------------------------------------------------------------------------
-# Three-bucket realization timing helpers
+# Forced-window realization timing helpers
 #-------------------------------------------------------------------------------
 
 kg_dyn_validate_realization_buckets = function(fixed_share   = KG_DYN_PHI_I,
@@ -855,16 +856,21 @@ kg_dyn_validate_realization_buckets = function(fixed_share   = KG_DYN_PHI_I,
   if (!is.finite(fixed_share) || !is.finite(planned_share)) {
     stop('kg_dynamics: realization bucket shares must be finite.')
   }
-  if (fixed_share < 0 || planned_share < 0 || fixed_share + planned_share > 1) {
+  if (abs(fixed_share) > 1e-12) {
     stop(sprintf(
-      paste0('kg_dynamics: invalid realization bucket shares: fixed=%.4f, ',
-             'planned=%.4f. Expected nonnegative shares with fixed + ',
-             'planned <= 1.'),
-      fixed_share, planned_share))
+      paste0('kg_dynamics: fixed_share must be zero in the forced-window ',
+             'two-bucket model; got %.4f.'),
+      fixed_share))
+  }
+  if (planned_share < 0 || planned_share > 1) {
+    stop(sprintf(
+      paste0('kg_dynamics: invalid forced-window share: %.4f. Expected ',
+             'planned_share in [0, 1].'),
+      planned_share))
   }
   if (length(timing_window) != 1 || is.na(timing_window) ||
-      timing_window < 0 || timing_window != as.integer(timing_window)) {
-    stop('kg_dynamics: KG_DYN_TIMING_WINDOW must be a nonnegative integer.')
+      timing_window != 1L) {
+    stop('kg_dynamics: forced-window v1 requires KG_DYN_TIMING_WINDOW = 1.')
   }
   if (length(ref_wedge) != 1 || !is.finite(ref_wedge) || ref_wedge <= 0) {
     stop('kg_dynamics: KG_DYN_TIMING_REF_WEDGE must be a positive finite number.')
@@ -875,37 +881,45 @@ kg_dyn_validate_realization_buckets = function(fixed_share   = KG_DYN_PHI_I,
 
 
 
-kg_dyn_build_planned_timing = function(baseline_cells, tau_S_mat, years,
-                                       tau_B_mat = NULL,
-                                       planned_share = KG_DYN_SHARE_PLANNED,
-                                       timing_window = KG_DYN_TIMING_WINDOW,
-                                       ref_wedge     = KG_DYN_TIMING_REF_WEDGE,
-                                       ages_bathtub = KG_DYN_AGE_MIN:
-                                                      KG_DYN_AGE_MAX,
-                                       tie_tol = 1e-12) {
+kg_dyn_build_forced_window_timing = function(baseline_cells, tau_S_mat, years,
+                                             tau_B_mat,
+                                             planned_share = KG_DYN_SHARE_PLANNED,
+                                             timing_window = KG_DYN_TIMING_WINDOW,
+                                             ref_wedge     = KG_DYN_TIMING_REF_WEDGE,
+                                             ages_bathtub = KG_DYN_AGE_MIN:
+                                                            KG_DYN_AGE_MAX,
+                                             tie_tol = 1e-12) {
 
   #----------------------------------------------------------------------------
-  # Builds the planned-realization timing schedule. For each age cell and
-  # scheduled year u, planned baseline dollars look at the policy-induced tax
-  # wedge tau_S - tau_B over the window [u-H, u+H] and route a fraction toward
-  # the best year v* (lowest wedge; ties broken by nearest year, then earlier
-  # year). The fraction is clamp((wedge[u] - wedge[v*]) / ref_wedge, 0, 1), so
-  # small wedge differentials produce proportionally small movement and a
-  # differential of ref_wedge or larger moves the entire planned bucket. The
-  # complementary share stays at the source year. Using tau_S - tau_B keeps the
-  # rule policy-driven and prevents baseline-only runs from retiming dollars
-  # merely because the baseline MTR path varies across years.
+  # Builds the forced-window timing schedule. For each age cell and scheduled
+  # baseline year u, forced-window dollars can realize in u-1, u, or u+1.
+  # A baseline timing intercept is inverted for each source/destination pair:
+  #
+  #   intercept[u, v] = max(tau_B[u] - tau_B[v], 0), with intercept[u, u] = 0.
+  #
+  # This makes the scheduled year weakly optimal under the baseline tax path
+  # without adding an external calibration target. The scenario then solves
+  # the same small timing state on levels:
+  #
+  #   generalized_cost_S[u, v] = tau_S[v] + intercept[u, v].
+  #
+  # If a nearby year has lower generalized cost than the scheduled year, a
+  # continuous share clamp((cost[u] - min_cost) / ref_wedge, 0, 1) moves to
+  # the best year. Ties prefer the source year, then nearest year, then earlier
+  # year. Dollar mass is conserved within age cells over the simulated window.
   #----------------------------------------------------------------------------
 
   kg_dyn_validate_realization_buckets(planned_share = planned_share,
                                       timing_window = timing_window,
                                       ref_wedge     = ref_wedge)
+  if (is.null(tau_B_mat)) {
+    stop('kg_dynamics: tau_B_mat is required for forced-window timing.')
+  }
 
   ages_chr  = as.character(ages_bathtub)
   years_chr = as.character(years)
   n_ages    = length(ages_bathtub)
   n_years   = length(years)
-  H         = as.integer(timing_window)
 
   R_B = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   for (t_chr in years_chr) {
@@ -913,47 +927,68 @@ kg_dyn_build_planned_timing = function(baseline_cells, tau_S_mat, years,
     R_B[, t_chr] = bt$R_B[match(ages_bathtub, bt$age)]
   }
 
-  R_planned_B = planned_share * R_B
-  R_planned_S = matrix(0, n_ages, n_years,
-                       dimnames = list(ages_chr, years_chr))
-  timing_tau_mat = if (is.null(tau_B_mat)) tau_S_mat else tau_S_mat - tau_B_mat
-  tau_bt = timing_tau_mat[ages_chr, years_chr, drop = FALSE]
+  R_forced_B = planned_share * R_B
+  R_forced_S = matrix(0, n_ages, n_years,
+                      dimnames = list(ages_chr, years_chr))
+  intercept_avg = matrix(0, n_ages, n_years,
+                         dimnames = list(ages_chr, years_chr))
 
-  if (planned_share == 0 || H == 0) {
-    R_planned_S = R_planned_B
+  tau_B_bt = tau_B_mat[ages_chr, years_chr, drop = FALSE]
+  tau_S_bt = tau_S_mat[ages_chr, years_chr, drop = FALSE]
+
+  if (planned_share == 0) {
+    R_forced_S = R_forced_B
   } else {
     for (i in seq_len(n_ages)) {
       for (j in seq_len(n_years)) {
-        amount = R_planned_B[i, j]
+        amount = R_forced_B[i, j]
         if (amount == 0) next
 
-        eligible = max(1, j - H):min(n_years, j + H)
-        tau_vals = tau_bt[i, eligible]
-        min_tau  = min(tau_vals, na.rm = TRUE)
+        eligible = max(1, j - 1L):min(n_years, j + 1L)
+        intercept = pmax(tau_B_bt[i, j] - tau_B_bt[i, eligible], 0)
+        intercept[eligible == j] = 0
+        gen_cost = tau_S_bt[i, eligible] + intercept
+        source_pos = which(eligible == j)
+        source_cost = gen_cost[source_pos]
+        min_cost = min(gen_cost, na.rm = TRUE)
 
-        if (tau_bt[i, j] <= min_tau + tie_tol) {
-          R_planned_S[i, j] = R_planned_S[i, j] + amount
+        if (source_cost <= min_cost + tie_tol) {
+          R_forced_S[i, j] = R_forced_S[i, j] + amount
         } else {
-          candidates = eligible[tau_vals <= min_tau + tie_tol]
+          candidates = eligible[gen_cost <= min_cost + tie_tol]
           distances  = abs(candidates - j)
           nearest    = candidates[distances == min(distances)]
           dest       = min(nearest)
+          dest_pos   = which(eligible == dest)
 
-          tax_saving = tau_bt[i, j] - tau_bt[i, dest]
-          move_share = min(max(tax_saving / ref_wedge, 0), 1)
+          timing_advantage = source_cost - gen_cost[dest_pos]
+          move_share = min(max(timing_advantage / ref_wedge, 0), 1)
           moved      = amount * move_share
 
-          R_planned_S[i, dest] = R_planned_S[i, dest] + moved
-          R_planned_S[i, j]    = R_planned_S[i, j]    + (amount - moved)
+          R_forced_S[i, dest] = R_forced_S[i, dest] + moved
+          R_forced_S[i, j]    = R_forced_S[i, j]    + (amount - moved)
+          intercept_avg[i, j] = intercept_avg[i, j] + intercept[dest_pos] * move_share
         }
       }
     }
   }
 
-  list(R_planned_B = R_planned_B,
-       R_planned_S = R_planned_S,
-       planned_timing_shift = R_planned_S - R_planned_B)
+  out = list(R_forced_B = R_forced_B,
+             R_forced_S = R_forced_S,
+             forced_timing_shift = R_forced_S - R_forced_B,
+             forced_intercept = intercept_avg)
+
+  # Backward-compatible aliases for the existing state-file and summary
+  # contract while the downstream diagnostics are renamed.
+  out$R_planned_B = out$R_forced_B
+  out$R_planned_S = out$R_forced_S
+  out$planned_timing_shift = out$forced_timing_shift
+  out
 }
+
+
+
+kg_dyn_build_planned_timing = kg_dyn_build_forced_window_timing
 
 
 
@@ -961,15 +996,19 @@ kg_dyn_build_scenario_rate = function(baseline_t, r_ordinary_S,
                                       R_planned_B_col, R_planned_S_col,
                                       fixed_share = KG_DYN_PHI_I) {
 
+  if (abs(fixed_share) > 1e-12) {
+    stop('kg_dynamics: fixed_share must be zero in kg_dyn_build_scenario_rate.')
+  }
+
   G_B = baseline_t$G_B
   r_B = baseline_t$r_B
 
-  r_fixed_B    = fixed_share * r_B
+  r_fixed_B    = rep(0, length(r_B))
   r_planned_B  = ifelse(G_B > 0, R_planned_B_col / G_B, 0)
   r_planned_S  = ifelse(G_B > 0, R_planned_S_col / G_B, 0)
-  r_ordinary_B = pmax(r_B - r_fixed_B - r_planned_B, 0)
+  r_ordinary_B = pmax(r_B - r_planned_B, 0)
 
-  r_S_unclipped = r_fixed_B + r_ordinary_S + r_planned_S
+  r_S_unclipped = r_ordinary_S + r_planned_S
   r_S           = pmin(pmax(r_S_unclipped, 0), 1)
 
   list(r_S            = r_S,
@@ -978,6 +1017,8 @@ kg_dyn_build_scenario_rate = function(baseline_t, r_ordinary_S,
        r_fixed_B      = r_fixed_B,
        r_planned_B    = r_planned_B,
        r_planned_S    = r_planned_S,
+       r_forced_B     = r_planned_B,
+       r_forced_S     = r_planned_S,
        r_ordinary_B   = r_ordinary_B,
        r_ordinary_S   = r_ordinary_S)
 }
@@ -997,8 +1038,8 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
   # by age (on the bathtub grid [18, 80]).
   #
   # The scenario realization rate r_S is supplied directly by the caller.
-  # Upstream, it combines the fixed baseline bucket, Bellman ordinary bucket,
-  # and retimed planned bucket.
+  # Upstream, it combines the Bellman ordinary bucket and the retimed
+  # forced-window bucket.
   #
   # Topcode note: the age=80 cell pools every taxpayer age 80+ into one
   # bucket and uses a single weight-averaged m_80. This is refreshed from
@@ -1016,7 +1057,7 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
   #   - omega      (mat)    : heir matrix
   #   - r_S_vec    (num[a]) : scenario realization rate from Bellman
   #   - delta_route (num)   : routing share for carryover stock transfer
-  #   - phi_I      (num)    : fixed/nonresponsive share of r_B (diagnostic only)
+  #   - phi_I      (num)    : retained compatibility argument; zero here
   #
   # Returns: list(delta_next, r_S, lambda_I, r_V_B, r_V_S, delta_surv,
   # delta_inh).
@@ -1070,7 +1111,7 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
   m_eff = pmin(pmax(m_eff, 0), 1)
 
   # Channel-decomposition diagnostics. Keep lambda_I for the existing state
-  # contract, but interpret it as the fixed/nonresponsive realization bucket.
+  # contract; it is zero in the two-bucket forced-window experiment.
   lambda_I = phi_I * r_B
   r_V_B    = pmax(r_B     - lambda_I, 0)
   r_V_S    = pmax(r_S_vec - lambda_I, 0)
@@ -1194,8 +1235,11 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, delta_realize,
            -any_of(c('r_B', 'r_S', 'r_S_unclipped', 'timing_clipped',
                      'lambda_I', 'r_V_B', 'r_V_S',
                      'r_fixed_B', 'r_planned_B', 'r_planned_S',
+                     'r_forced_B', 'r_forced_S',
                      'r_ordinary_B', 'r_ordinary_S',
                      'R_planned_B', 'R_planned_S', 'planned_timing_shift',
+                     'R_forced_B', 'R_forced_S', 'forced_timing_shift',
+                     'forced_intercept',
                      'm', 'mG_record', 'mR_record',
                      'dG', 'tau_B', 'tau_S', 'W_B', 'W_S', 'MC_B', 'MC_S',
                      'kappa', 'r_D_B', 'r_D_S')))
@@ -1338,12 +1382,21 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            r_fixed_B     = as.numeric(diag_or('r_fixed_B', lambda_I)[as.character(age)]),
            r_planned_B   = as.numeric(diag_or('r_planned_B', 0)[as.character(age)]),
            r_planned_S   = as.numeric(diag_or('r_planned_S', 0)[as.character(age)]),
+           r_forced_B    = as.numeric(diag_or('r_forced_B', r_planned_B)[as.character(age)]),
+           r_forced_S    = as.numeric(diag_or('r_forced_S', r_planned_S)[as.character(age)]),
            r_ordinary_B  = as.numeric(diag_or('r_ordinary_B', r_D_B)[as.character(age)]),
            r_ordinary_S  = as.numeric(diag_or('r_ordinary_S', r_D_S)[as.character(age)]),
            R_planned_B   = as.numeric(diag_or('R_planned_B', 0)[as.character(age)]),
            R_planned_S   = as.numeric(diag_or('R_planned_S', 0)[as.character(age)]),
+           R_forced_B    = as.numeric(diag_or('R_forced_B', R_planned_B)[as.character(age)]),
+           R_forced_S    = as.numeric(diag_or('R_forced_S', R_planned_S)[as.character(age)]),
            planned_timing_shift =
              as.numeric(diag_or('planned_timing_shift', 0)[as.character(age)]),
+           forced_timing_shift =
+             as.numeric(diag_or('forced_timing_shift',
+                                 planned_timing_shift)[as.character(age)]),
+           forced_intercept =
+             as.numeric(diag_or('forced_intercept', 0)[as.character(age)]),
            dG            = as.numeric(delta_prev  [as.character(age)]),
            tau_B         = as.numeric(tau_B_col   [as.character(age)]),
            tau_S         = as.numeric(tau_S_col   [as.character(age)]),
@@ -1359,8 +1412,10 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
                                    1)) %>%
     select(age, G_B, R_B, r_B, r_S, r_S_unclipped, timing_clipped,
            lambda_I, r_V_B, r_V_S,
-           r_fixed_B, r_planned_B, r_planned_S, r_ordinary_B, r_ordinary_S,
-           R_planned_B, R_planned_S, planned_timing_shift,
+           r_fixed_B, r_planned_B, r_planned_S, r_forced_B, r_forced_S,
+           r_ordinary_B, r_ordinary_S,
+           R_planned_B, R_planned_S, R_forced_B, R_forced_S,
+           planned_timing_shift, forced_timing_shift, forced_intercept,
            m, mG_record, mR_record, dG,
            tau_B, tau_S, W_B, W_S, MC_B, MC_S, kappa, r_D_B, r_D_S,
            rate_factor, extra_R, deemed_factor)
@@ -1393,8 +1448,9 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   #      r_D_B. Under current-law step-up, c_phi_B = 0.
   #   4. Resolve scenario regimes per year (may be year-varying); solve
   #      Pass 2 (scenario Bellman) once using kappa from Pass 1.
-  #   5. Build the planned-realization timing schedule from tau_S.
-  #   6. Loop years: combine fixed, ordinary, and planned buckets into r_S_vec,
+  #   5. Build the forced-window timing schedule from tau_S and the baseline
+  #      timing intercept.
+  #   6. Loop years: combine ordinary and forced-window buckets into r_S_vec,
   #      run kg_dyn_step_recurrence for dG evolution, build cell_table, persist.
   #
   # State file at kg_dynamics_state/{t}.rds:
@@ -1472,7 +1528,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                          planned_share = planned_share,
                                          beta_by_year = beta_by_year)
 
-  planned_timing = kg_dyn_build_planned_timing(
+  planned_timing = kg_dyn_build_forced_window_timing(
     baseline_cells = baseline_cells,
     tau_S_mat      = tau_S_mat,
     years          = years,
@@ -1547,11 +1603,17 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
         r_fixed_B = setNames(rate_info$r_fixed_B, bathtub_ages_chr),
         r_planned_B = setNames(rate_info$r_planned_B, bathtub_ages_chr),
         r_planned_S = setNames(rate_info$r_planned_S, bathtub_ages_chr),
+        r_forced_B = setNames(rate_info$r_forced_B, bathtub_ages_chr),
+        r_forced_S = setNames(rate_info$r_forced_S, bathtub_ages_chr),
         r_ordinary_B = setNames(rate_info$r_ordinary_B, bathtub_ages_chr),
         r_ordinary_S = setNames(rate_info$r_ordinary_S, bathtub_ages_chr),
         R_planned_B = planned_timing$R_planned_B[, j],
         R_planned_S = planned_timing$R_planned_S[, j],
-        planned_timing_shift = planned_timing$planned_timing_shift[, j]
+        R_forced_B = planned_timing$R_forced_B[, j],
+        R_forced_S = planned_timing$R_forced_S[, j],
+        planned_timing_shift = planned_timing$planned_timing_shift[, j],
+        forced_timing_shift = planned_timing$forced_timing_shift[, j],
+        forced_intercept = planned_timing$forced_intercept[, j]
       ),
       ages_bathtub = ages_bathtub
     )
@@ -1691,6 +1753,8 @@ kg_dyn_build_summary = function(scenario_info) {
       r_fixed_avg_gw  = if_else(sum(G_B) > 0, sum(r_fixed_B * G_B) / sum(G_B), NA_real_),
       r_planned_B_avg_gw = if_else(sum(G_B) > 0, sum(r_planned_B * G_B) / sum(G_B), NA_real_),
       r_planned_S_avg_gw = if_else(sum(G_B) > 0, sum(r_planned_S * G_B) / sum(G_B), NA_real_),
+      r_forced_B_avg_gw = if_else(sum(G_B) > 0, sum(r_forced_B * G_B) / sum(G_B), NA_real_),
+      r_forced_S_avg_gw = if_else(sum(G_B) > 0, sum(r_forced_S * G_B) / sum(G_B), NA_real_),
       r_ordinary_B_avg_gw = if_else(sum(G_B) > 0, sum(r_ordinary_B * G_B) / sum(G_B), NA_real_),
       r_ordinary_S_avg_gw = if_else(sum(G_B) > 0, sum(r_ordinary_S * G_B) / sum(G_B), NA_real_),
       v_share_avg_rw  = if_else(sum(R_B) > 0,
@@ -1709,7 +1773,10 @@ kg_dyn_build_summary = function(scenario_info) {
       lockin_channel  = sum(extra_R),
       R_planned_B_total = sum(R_planned_B),
       R_planned_S_total = sum(R_planned_S),
+      R_forced_B_total = sum(R_forced_B),
+      R_forced_S_total = sum(R_forced_S),
       planned_timing_shift_total = sum(planned_timing_shift),
+      forced_timing_shift_total = sum(forced_timing_shift),
       timing_clipped_cells = sum(timing_clipped, na.rm = TRUE),
       decedent_stock  = sum(mG_record * deemed_factor),
       .groups = 'drop'
@@ -1730,13 +1797,16 @@ kg_dyn_build_summary = function(scenario_info) {
            m_avg_gw, r_B_avg_gw, r_S_avg_gw,
            lambda_I_avg_gw, r_fixed_avg_gw,
            r_planned_B_avg_gw, r_planned_S_avg_gw,
+           r_forced_B_avg_gw, r_forced_S_avg_gw,
            r_ordinary_B_avg_gw, r_ordinary_S_avg_gw,
            v_share_avg_rw,
            tau_B_avg_gw, tau_S_avg_gw, tau_B_avg_rw, tau_S_avg_rw,
            W_B_avg_gw, W_S_avg_gw, MC_B_avg_gw, MC_S_avg_gw, kappa_avg_gw,
            rate_channel, lockin_channel,
            R_planned_B_total, R_planned_S_total,
-           planned_timing_shift_total, timing_clipped_cells,
+           R_forced_B_total, R_forced_S_total,
+           planned_timing_shift_total, forced_timing_shift_total,
+           timing_clipped_cells,
            decedent_stock, inheritance_flow, deemed_realized,
            semi_elast_implied)
 
