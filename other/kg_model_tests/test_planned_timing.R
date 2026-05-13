@@ -83,9 +83,9 @@ stopifnot(all(rate_info$r_S == 0.03),
           all(rate_info$r_forced_B == 0),
           all(rate_info$r_forced_S == 0))
 
-# Baseline entrant inference with q_B = 0.5 reproduces lambda * R_B.
+# Baseline entrant inference with q_B reproduces lambda * R_B.
 base = force_state(cells, baseline_tau, lambda = 0.2)
-stopifnot(all(abs(base$q_forced_B - 0.5) < 1e-12),
+stopifnot(all(abs(base$q_forced_B - KG_DYN_FORCED_Q_B) < 1e-12),
           all(abs(base$F0_forced_B + baseline_tau) < 1e-12),
           all(abs(base$F0_forced_S + baseline_tau) < 1e-12),
           all(abs(base$R_forced_B - 20) < 1e-12),
@@ -103,7 +103,7 @@ stopifnot(all(abs(no_reform$R_forced_B - no_reform$R_forced_S) < 1e-12),
           all(no_reform$planned_timing_shift == no_reform$forced_timing_shift))
 
 # Entrant inference fails fast if the baseline forced realization path implies
-# materially negative entrant cohorts under q_B = 0.5.
+# materially negative entrant cohorts under q_B.
 bad_cells = make_cells(c(100, 1, 100, 100, 100))
 stopifnot(inherits(try(force_state(bad_cells, baseline_tau, lambda = 0.2),
                        silent = TRUE), 'try-error'))
@@ -112,8 +112,8 @@ stopifnot(inherits(try(force_state(bad_cells, baseline_tau, lambda = 0.2),
 # forced realizations from the one-year-left state.
 delayed = force_state(cells, make_tau(c(0.20, 0.25, 0.25, 0.25, 0.25)))
 stopifnot(all(abs(delayed$q_forced_S[, '2026'] - 1) < 1e-12),
-          all(abs(delayed$R_forced_S[, '2026'] - 40) < 1e-12),
-          all(abs(delayed$R_forced_S[, '2027']) < 1e-12))
+          all(abs(delayed$R_forced_S[, '2026'] - 25) < 1e-12),
+          all(abs(delayed$R_forced_S[, '2027'] - 15) < 1e-12))
 
 # Temporary current hike: q_S falls and the same cohort realizes at deadline.
 temporary = force_state(cells, make_tau(c(0.25, 0.20, 0.20, 0.20, 0.20)))
@@ -121,12 +121,12 @@ stopifnot(all(abs(temporary$q_forced_S[, '2026']) < 1e-12),
           all(abs(temporary$R_forced_S[, '2026']) < 1e-12),
           all(abs(temporary$R_forced_S[, '2027'] - 40) < 1e-12))
 
-# Friction: a 1pp delayed hike moves q by 0.2 with the default 5pp wedge.
-small_delayed_tau = make_tau(c(0.20, 0.21, 0.21, 0.21, 0.21))
+# Friction: a 0.5pp delayed hike moves q by 0.1 with the default 5pp wedge.
+small_delayed_tau = make_tau(c(0.20, 0.205, 0.205, 0.205, 0.205))
 small_delayed = force_state(cells, small_delayed_tau)
-stopifnot(all(abs(small_delayed$q_forced_S[, '2026'] - 0.7) < 1e-12),
-          all(abs(small_delayed$R_forced_S[, '2026'] - 28) < 1e-12),
-          all(abs(small_delayed$R_forced_S[, '2027'] - 12) < 1e-12))
+stopifnot(all(abs(small_delayed$q_forced_S[, '2026'] - 0.9) < 1e-12),
+          all(abs(small_delayed$R_forced_S[, '2026'] - 22.5) < 1e-12),
+          all(abs(small_delayed$R_forced_S[, '2027'] - 17.5) < 1e-12))
 
 # The reported q_S is the F1 Bellman optimizer. For an interior case, it beats
 # nearby controls; for corner cases, the chosen bound beats moving inward.

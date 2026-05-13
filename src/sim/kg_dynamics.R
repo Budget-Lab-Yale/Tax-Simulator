@@ -45,7 +45,8 @@
 #       q*(-tau^j(a,t)) + (1-q)*beta*F0^j(a,t+1)
 #     + alpha_B(a,t)*q - (ref_wedge/2)*(q - q_B)^2
 #   }
-# alpha_B(a,t) is recovered so the baseline FOC reproduces q_B = 0.5.
+# alpha_B(a,t) is recovered so the baseline FOC reproduces q_B. q_B is set
+# above 0.5 to keep baseline entrant inference stable in sparse cells.
 #
 # Current implementation collapses the five tracked wealth classes into a
 # single asset bucket; per-asset-class disaggregation is on the roadmap.
@@ -79,7 +80,7 @@ KG_DYN_BETA             = 0.978   # fallback annual discount factor, used
 KG_DYN_SHARE_FIXED      = 0
 KG_DYN_SHARE_PLANNED    = 0.3285
 KG_DYN_TIMING_WINDOW    = 1L
-KG_DYN_FORCED_Q_B       = 0.5
+KG_DYN_FORCED_Q_B       = 0.8
 
 # Reference wedge controlling the convex timing cost in the forced-window
 # Bellman. Default 5pp means a 5pp current-vs-deadline value advantage moves
