@@ -1,7 +1,7 @@
 #-------------------------------------------------------------------------------
 # test_planned_timing.R
 #
-# Focused checks for the two-bucket forced-window timing helper.
+# Focused checks for the three-bucket planned-realization timing helper.
 #-------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({
@@ -38,68 +38,67 @@ make_tau = function(vals) {
 }
 
 cells = make_cells(rep(100, length(years)))
-baseline_tau = make_tau(rep(0.20, length(years)))
 
-# planned_share = 0 preserves the ordinary Bellman-only model.
-z = kg_dyn_build_forced_window_timing(cells, baseline_tau, years,
-                                      tau_B_mat = baseline_tau,
-                                      planned_share = 0,
-                                      ages_bathtub = ages)
-stopifnot(all(z$R_forced_B == 0),
-          all(z$R_forced_S == 0),
-          all(z$forced_timing_shift == 0))
+# planned_share = 0 preserves the prior model exactly.
+z = kg_dyn_build_planned_timing(cells, make_tau(rep(0.20, length(years))), years,
+                                planned_share = 0, timing_window = 1,
+                                ages_bathtub = ages)
+stopifnot(all(z$R_planned_B == 0),
+          all(z$R_planned_S == 0),
+          all(z$planned_timing_shift == 0))
 
-# No-reform paths reproduce baseline timing even if baseline MTR levels vary.
+# No-reform paths do not retime planned dollars even if baseline MTR levels vary.
 varying_tau = make_tau(c(0.25, 0.20, 0.22, 0.18, 0.24))
-no_reform = kg_dyn_build_forced_window_timing(cells, varying_tau, years,
-                                              tau_B_mat = varying_tau,
-                                              planned_share = 0.2,
-                                              ages_bathtub = ages)
-stopifnot(all(no_reform$R_forced_B == no_reform$R_forced_S),
-          all(no_reform$forced_timing_shift == 0))
+no_reform = kg_dyn_build_planned_timing(cells, varying_tau, years,
+                                        tau_B_mat = varying_tau,
+                                        planned_share = 0.2,
+                                        timing_window = 1,
+                                        ages_bathtub = ages)
+stopifnot(all(no_reform$R_planned_B == no_reform$R_planned_S),
+          all(no_reform$planned_timing_shift == 0))
 
-# Delayed hike: forced dollars scheduled next year move into the current
-# low-tax year when the generalized-cost advantage saturates the ref_wedge.
-delayed = kg_dyn_build_forced_window_timing(
-  cells, make_tau(c(0.20, 0.25, 0.25, 0.25, 0.25)), years,
-  tau_B_mat = baseline_tau, planned_share = 0.2, ages_bathtub = ages
-)
-stopifnot(all(abs(delayed$R_forced_S[, '2026'] - 40) < 1e-9),
-          all(abs(delayed$R_forced_S[, '2027']) < 1e-9))
+# Delayed hike: planned dollars scheduled next year move into the current low-tax year.
+baseline_tau = make_tau(rep(0.20, length(years)))
+delayed = kg_dyn_build_planned_timing(cells, make_tau(c(0.20, 0.25, 0.25, 0.25, 0.25)),
+                                      years, planned_share = 0.2,
+                                      tau_B_mat = baseline_tau,
+                                      timing_window = 1, ages_bathtub = ages)
+stopifnot(all(delayed$R_planned_S[, '2026'] == 40),
+          all(delayed$R_planned_S[, '2027'] == 0))
 
-# Temporary hike: forced dollars scheduled in the high-tax year delay one year.
-temporary = kg_dyn_build_forced_window_timing(
-  cells, make_tau(c(0.25, 0.20, 0.20, 0.20, 0.20)), years,
-  tau_B_mat = baseline_tau, planned_share = 0.2, ages_bathtub = ages
-)
-stopifnot(all(abs(temporary$R_forced_S[, '2026']) < 1e-9),
-          all(abs(temporary$R_forced_S[, '2027'] - 40) < 1e-9))
+# Temporary hike: planned dollars scheduled in the high-tax year delay one year.
+temporary = kg_dyn_build_planned_timing(cells, make_tau(c(0.25, 0.20, 0.20, 0.20, 0.20)),
+                                        years, planned_share = 0.2,
+                                        tau_B_mat = baseline_tau,
+                                        timing_window = 1, ages_bathtub = ages)
+stopifnot(all(temporary$R_planned_S[, '2026'] == 0),
+          all(temporary$R_planned_S[, '2027'] == 40))
 
 # End of a multi-year high-rate window: year 2029 can delay into lower-tax 2030.
-sunset = kg_dyn_build_forced_window_timing(
-  cells, make_tau(c(0.25, 0.25, 0.25, 0.25, 0.20)), years,
-  tau_B_mat = baseline_tau, planned_share = 0.2, ages_bathtub = ages
-)
-stopifnot(all(abs(sunset$R_forced_S[, '2029']) < 1e-9),
-          all(abs(sunset$R_forced_S[, '2030'] - 40) < 1e-9))
+sunset = kg_dyn_build_planned_timing(cells, make_tau(c(0.25, 0.25, 0.25, 0.25, 0.20)),
+                                     years, planned_share = 0.2,
+                                     tau_B_mat = baseline_tau,
+                                     timing_window = 1, ages_bathtub = ages)
+stopifnot(all(sunset$R_planned_S[, '2029'] == 0),
+          all(sunset$R_planned_S[, '2030'] == 40))
 
-# Forced-window dollars are conserved within each age cell.
-stopifnot(all(rowSums(delayed$R_forced_B) == rowSums(delayed$R_forced_S)),
-          all(rowSums(temporary$R_forced_B) == rowSums(temporary$R_forced_S)),
-          all(rowSums(sunset$R_forced_B) == rowSums(sunset$R_forced_S)))
+# Planned dollars are conserved within each age cell.
+stopifnot(all(rowSums(delayed$R_planned_B) == rowSums(delayed$R_planned_S)),
+          all(rowSums(temporary$R_planned_B) == rowSums(temporary$R_planned_S)),
+          all(rowSums(sunset$R_planned_B) == rowSums(sunset$R_planned_S)))
 
-# With planned_share = 0, total scenario rates reduce to ordinary only.
+# With planned_share = 0, total scenario rates reduce to fixed + ordinary.
 bt = cells[['2026']]
 rate_info = kg_dyn_build_scenario_rate(
   baseline_t      = bt,
   r_ordinary_S    = 0.03,
-  R_planned_B_col = z$R_forced_B[, '2026'],
-  R_planned_S_col = z$R_forced_S[, '2026']
+  R_planned_B_col = z$R_planned_B[, '2026'],
+  R_planned_S_col = z$R_planned_S[, '2026'],
+  fixed_share     = 0.4
 )
-stopifnot(all(rate_info$r_S == 0.03),
-          all(rate_info$r_fixed_B == 0),
-          all(rate_info$r_forced_B == 0),
-          all(rate_info$r_forced_S == 0))
+stopifnot(all(rate_info$r_S == 0.4 * bt$r_B + 0.03),
+          all(rate_info$r_planned_B == 0),
+          all(rate_info$r_planned_S == 0))
 
 # Baseline Bellman inversion targets the ordinary bucket exactly.
 grid_packed = list(
@@ -111,58 +110,53 @@ grid_packed = list(
 tau_mat = matrix(0.2, nrow = length(ages), ncol = 2,
                  dimnames = list(as.character(ages), as.character(years[1:2])))
 pass = kg_dyn_solve_bellman_baseline(grid_packed, tau_mat, psi = 25,
-                                      planned_share = 0.2,
+                                      phi_I = 0.4, planned_share = 0,
                                       beta_by_year = c(0.96, 0.96))
-stopifnot(all(abs(pass$r_D - 0.8 * grid_packed$r_B) < 1e-12))
+stopifnot(all(abs(pass$r_D - 0.6 * grid_packed$r_B) < 1e-12))
 
 # Friction: a 1pp delayed hike with default 5pp reference wedge moves only
-# 20% of next year's forced bucket (4 of 20) into the announcement year.
-small_delayed = kg_dyn_build_forced_window_timing(
-  cells, make_tau(c(0.20, 0.21, 0.21, 0.21, 0.21)), years,
-  planned_share = 0.2, tau_B_mat = baseline_tau, ref_wedge = 0.05,
-  ages_bathtub = ages
-)
-stopifnot(all(abs(small_delayed$R_forced_S[, '2026'] - 24) < 1e-9),
-          all(abs(small_delayed$R_forced_S[, '2027'] - 16) < 1e-9),
-          all(abs(rowSums(small_delayed$R_forced_B) -
-                  rowSums(small_delayed$R_forced_S)) < 1e-9))
+# 20% of next year's planned bucket (4 of 20) into the announcement year. The
+# announcement year retains its own 20 and gains 4 from 2027; 2027 keeps the
+# other 16. Total planned dollars per age cell remain conserved.
+small_delayed = kg_dyn_build_planned_timing(cells,
+                                            make_tau(c(0.20, 0.21, 0.21, 0.21, 0.21)),
+                                            years, planned_share = 0.2,
+                                            tau_B_mat = baseline_tau,
+                                            timing_window = 1,
+                                            ref_wedge = 0.05,
+                                            ages_bathtub = ages)
+stopifnot(all(abs(small_delayed$R_planned_S[, '2026'] - 24) < 1e-9),
+          all(abs(small_delayed$R_planned_S[, '2027'] - 16) < 1e-9),
+          all(abs(rowSums(small_delayed$R_planned_B) -
+                  rowSums(small_delayed$R_planned_S)) < 1e-9))
 
-# Friction: a 10pp delayed hike saturates the clamp -- all forced dollars move.
-big_delayed = kg_dyn_build_forced_window_timing(
-  cells, make_tau(c(0.20, 0.30, 0.30, 0.30, 0.30)), years,
-  planned_share = 0.2, tau_B_mat = baseline_tau, ref_wedge = 0.05,
-  ages_bathtub = ages
-)
-stopifnot(all(abs(big_delayed$R_forced_S[, '2026'] - 40) < 1e-9),
-          all(abs(big_delayed$R_forced_S[, '2027']) < 1e-9))
+# Friction: a 10pp delayed hike saturates the clamp -- all planned dollars move.
+big_delayed = kg_dyn_build_planned_timing(cells,
+                                          make_tau(c(0.20, 0.30, 0.30, 0.30, 0.30)),
+                                          years, planned_share = 0.2,
+                                          tau_B_mat = baseline_tau,
+                                          timing_window = 1,
+                                          ref_wedge = 0.05,
+                                          ages_bathtub = ages)
+stopifnot(all(big_delayed$R_planned_S[, '2026'] == 40),
+          all(big_delayed$R_planned_S[, '2027'] == 0))
 
 # Friction: shrinking ref_wedge approaches the all-or-nothing limit even for
 # small differentials. With ref_wedge = 0.005, a 1pp shock saturates.
-tight = kg_dyn_build_forced_window_timing(
-  cells, make_tau(c(0.20, 0.21, 0.21, 0.21, 0.21)), years,
-  planned_share = 0.2, tau_B_mat = baseline_tau, ref_wedge = 0.005,
-  ages_bathtub = ages
-)
-stopifnot(all(abs(tight$R_forced_S[, '2026'] - 40) < 1e-9),
-          all(abs(tight$R_forced_S[, '2027']) < 1e-9))
+tight = kg_dyn_build_planned_timing(cells,
+                                    make_tau(c(0.20, 0.21, 0.21, 0.21, 0.21)),
+                                    years, planned_share = 0.2,
+                                    tau_B_mat = baseline_tau,
+                                    timing_window = 1,
+                                    ref_wedge = 0.005,
+                                    ages_bathtub = ages)
+stopifnot(all(tight$R_planned_S[, '2026'] == 40),
+          all(tight$R_planned_S[, '2027'] == 0))
 
-# Baseline intercept: if a nearby baseline year has a lower tax rate, no-reform
-# timing still stays at the scheduled year.
-baseline_dip = make_tau(c(0.25, 0.20, 0.25, 0.25, 0.25))
-intercept_case = kg_dyn_build_forced_window_timing(
-  cells, baseline_dip, years, tau_B_mat = baseline_dip,
-  planned_share = 0.2, ref_wedge = 0.05, ages_bathtub = ages
-)
-stopifnot(all(intercept_case$R_forced_B == intercept_case$R_forced_S))
-
-# Validation: fixed bucket and unsupported H should fail-fast.
-stopifnot(inherits(try(kg_dyn_validate_realization_buckets(fixed_share = 0.4),
-                       silent = TRUE), 'try-error'),
-          inherits(try(kg_dyn_validate_realization_buckets(timing_window = 2),
-                       silent = TRUE), 'try-error'),
-          inherits(try(kg_dyn_validate_realization_buckets(ref_wedge = 0),
+# Validation: nonpositive ref_wedge should fail-fast.
+stopifnot(inherits(try(kg_dyn_validate_realization_buckets(ref_wedge = 0),
                        silent = TRUE), 'try-error'),
           inherits(try(kg_dyn_validate_realization_buckets(ref_wedge = -0.01),
                        silent = TRUE), 'try-error'))
 
-cat("forced-window timing tests passed\n")
+cat("planned timing tests passed\n")

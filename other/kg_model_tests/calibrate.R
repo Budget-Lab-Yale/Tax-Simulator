@@ -17,12 +17,11 @@
 #
 # Methodology (nested bisection):
 #   Outer loop -- bisect planned_share in [0, 0.5] against the short-run
-#                  target. Larger forced-window share -> larger short-run
-#                  response.
+#                  target. Larger planned_share -> larger short-run response.
 #   Inner loop -- for each candidate planned_share, bisect psi to satisfy
 #                  the long-run target (the existing single-parameter
 #                  calibration logic, with the ordinary bucket shrunk to
-#                  (1 - planned_share) * r_B).
+#                  (1 - fixed_share - planned_share) * r_B).
 #
 # Convergence: warm-starts the inner psi bisection from the previous outer
 # iteration's solution. Typical cost is ~10-20 outer iterations x 5-10 inner
@@ -186,7 +185,7 @@ eval_response = function(psi_val, ps_val, scenario_tau_mat,
                                       timing_window = KG_DYN_TIMING_WINDOW,
                                       ref_wedge     = KG_DYN_TIMING_REF_WEDGE)
 
-  planned_timing = kg_dyn_build_forced_window_timing(
+  planned_timing = kg_dyn_build_planned_timing(
     baseline_cells = baseline_cells,
     tau_S_mat      = scenario_tau_mat,
     years          = YEARS,
@@ -387,7 +386,7 @@ cat('\nUpdate KG_DYN_DEFAULT_PSI and KG_DYN_SHARE_PLANNED in src/sim/kg_dynamics
 
 profile_years = function(psi_val, ps_val) {
 
-  planned_timing = kg_dyn_build_forced_window_timing(
+  planned_timing = kg_dyn_build_planned_timing(
     baseline_cells = baseline_cells,
     tau_S_mat      = tau_S_long_mat,
     years          = YEARS,
