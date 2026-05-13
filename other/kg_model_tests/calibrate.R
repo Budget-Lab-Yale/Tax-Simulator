@@ -16,12 +16,13 @@
 #      (future-tax-up -> realize-today). Identifies KG_DYN_SHARE_PLANNED.
 #
 # Methodology (nested bisection):
-#   Outer loop -- bisect planned_share in [0, 0.5] against the short-run
-#                  target. Larger planned_share -> larger short-run response.
+#   Outer loop -- bisect forced-window lambda (planned_share) in [0, 0.5]
+#                  against the short-run target. Larger lambda -> larger
+#                  short-run response.
 #   Inner loop -- for each candidate planned_share, bisect psi to satisfy
 #                  the long-run target (the existing single-parameter
 #                  calibration logic, with the ordinary bucket shrunk to
-#                  (1 - fixed_share - planned_share) * r_B).
+#                  (1 - planned_share) * r_B).
 #
 # Convergence: warm-starts the inner psi bisection from the previous outer
 # iteration's solution. Typical cost is ~10-20 outer iterations x 5-10 inner
@@ -185,7 +186,7 @@ eval_response = function(psi_val, ps_val, scenario_tau_mat,
                                       timing_window = KG_DYN_TIMING_WINDOW,
                                       ref_wedge     = KG_DYN_TIMING_REF_WEDGE)
 
-  planned_timing = kg_dyn_build_planned_timing(
+  forced_state = kg_dyn_solve_forced_window_state(
     baseline_cells = baseline_cells,
     tau_S_mat      = scenario_tau_mat,
     years          = YEARS,
@@ -222,8 +223,8 @@ eval_response = function(psi_val, ps_val, scenario_tau_mat,
     rate_info = kg_dyn_build_scenario_rate(
       baseline_t       = bt,
       r_ordinary_S     = r_D_S_bt,
-      R_planned_B_col  = planned_timing$R_planned_B[, j],
-      R_planned_S_col  = planned_timing$R_planned_S[, j],
+      R_forced_B_col   = forced_state$R_forced_B[, j],
+      R_forced_S_col   = forced_state$R_forced_S[, j],
       fixed_share      = KG_DYN_PHI_I
     )
     r_S_vec = setNames(rate_info$r_S, bathtub_ages_chr)
@@ -386,7 +387,7 @@ cat('\nUpdate KG_DYN_DEFAULT_PSI and KG_DYN_SHARE_PLANNED in src/sim/kg_dynamics
 
 profile_years = function(psi_val, ps_val) {
 
-  planned_timing = kg_dyn_build_planned_timing(
+  forced_state = kg_dyn_solve_forced_window_state(
     baseline_cells = baseline_cells,
     tau_S_mat      = tau_S_long_mat,
     years          = YEARS,
@@ -420,8 +421,8 @@ profile_years = function(psi_val, ps_val) {
     rate_info = kg_dyn_build_scenario_rate(
       baseline_t       = bt,
       r_ordinary_S     = r_D_S_bt,
-      R_planned_B_col  = planned_timing$R_planned_B[, j],
-      R_planned_S_col  = planned_timing$R_planned_S[, j],
+      R_forced_B_col   = forced_state$R_forced_B[, j],
+      R_forced_S_col   = forced_state$R_forced_S[, j],
       fixed_share      = KG_DYN_PHI_I
     )
     r_S_vec = setNames(rate_info$r_S, bathtub_ages_chr)
