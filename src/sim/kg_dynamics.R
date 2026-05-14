@@ -217,7 +217,7 @@ kg_dyn_attach_record_attrs = function(tax_units, cpiu_by_year = NULL) {
       KG_DYN_CHAR_INTENSIVE_LN_SLOPE * log_estate[has_estate]
   )
 
-  tax_units %>%
+  out = tax_units %>%
     bind_cols(as_tibble(diffs)) %>%
     mutate(
       G_unit                      = rowSums(diffs),
@@ -235,6 +235,18 @@ kg_dyn_attach_record_attrs = function(tax_units, cpiu_by_year = NULL) {
                             age1),
       age_cohort  = pmax(KG_DYN_AGE_MIN, pmin(KG_DYN_AGE_MAX, age_cohort))
     )
+
+  if (anyNA(out$age_cohort)) {
+    n_bad = sum(is.na(out$age_cohort))
+    stop(sprintf(
+      paste0('kg_dyn_attach_record_attrs: %d records have NA age_cohort ',
+             '(typically non-joint filers with missing age1). NA cohorts ',
+             'silently drop from kg_dyn_aggregate_cells via group_by + ',
+             'left_join. Fix the upstream age fields or impute before ',
+             'calling this helper.'), n_bad))
+  }
+
+  out
 }
 
 
@@ -1286,17 +1298,36 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
         as_tibble()
     }
 
-    baseline_tau[[as.character(t)]] = td_slim %>%
+    # Verify the static detail covers every kg-active record in td_slim.
+    # left_join + na.rm = TRUE in kg_dyn_aggregate_cell_mtr would silently
+    # treat a missing mtr_kg_lt as zero, biasing tau downward toward 0.
+    check_mtr_coverage = function(joined, side, year) {
+      missing = joined %>% filter(pmax(kg_lt, 0) > 0 & is.na(mtr_kg_lt))
+      if (nrow(missing) > 0) {
+        stop(sprintf(
+          paste0('kg_dynamics: %d records with kg_lt > 0 missing ',
+                 'mtr_kg_lt in %s static detail for year %d. This biases ',
+                 'tau toward zero. Check that the static run wrote ',
+                 'mtr_kg_lt for every sample id.'),
+          nrow(missing), side, year))
+      }
+    }
+
+    baseline_joined = td_slim %>%
       left_join(read_mtr(file.path(baseline_root, 'baseline', 'static',
                                    'detail')),
-                by = 'id') %>%
-      kg_dyn_aggregate_cell_mtr(ages)
+                by = 'id')
+    check_mtr_coverage(baseline_joined, 'baseline', t)
+    baseline_tau[[as.character(t)]] =
+      kg_dyn_aggregate_cell_mtr(baseline_joined, ages)
 
-    reform_tau[[as.character(t)]] = td_slim %>%
+    reform_joined = td_slim %>%
       left_join(read_mtr(file.path(scenario_info$output_path, 'static',
                                    'detail')),
-                by = 'id') %>%
-      kg_dyn_aggregate_cell_mtr(ages)
+                by = 'id')
+    check_mtr_coverage(reform_joined, 'reform', t)
+    reform_tau[[as.character(t)]] =
+      kg_dyn_aggregate_cell_mtr(reform_joined, ages)
   }
 
   list(baseline_cells = baseline_cells,
@@ -1388,7 +1419,12 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            taxable_death_stock =
              as.numeric(death_or('taxable_death_stock', 0)[as.character(age)]),
            rate_factor   = if_else(r_B > 0, r_S / r_B, 1),
-           extra_R       = r_S * dG,
+           # Clamp the lock-in stock to the cell's gain stock: under
+           # permanent rate hikes dG can run sufficiently negative that
+           # r_S * dG would subtract more from kg_lt than the cell holds.
+           # pmax(dG, -G_B) caps the drawdown at full depletion of G_B,
+           # consistent with deemed_factor's >=0 clamp below.
+           extra_R       = r_S * pmax(dG, -G_B),
            deemed_factor = if_else(G_B > 0,
                                    pmax(0, (G_B + dG) / G_B),
                                    1)) %>%
@@ -1464,6 +1500,29 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   grid_packed = kg_dyn_pack_baseline_grid(grid_ext, years,
                                           ages_bellman = ages_bellman)
 
+  # Flag cells where the fixed + planned exogenous buckets alone "want" to
+  # realize more than the cell's gain stock. When r_exog_B = (phi_I +
+  # planned_share) * r_B > 1, r_D_cap collapses to 0 and Pass-1 inversion
+  # silently sets kappa = MC + 0, killing the quadratic premium and damping
+  # the scenario response. Empirically possible at cell level when measured
+  # realized gains exceed measured embedded gains (sparse cells, heavy
+  # turnover).
+  r_exog_max = (phi_I + planned_share) * grid_packed$r_B
+  if (any(r_exog_max > 1)) {
+    bad = which(r_exog_max > 1, arr.ind = TRUE)
+    bad_cells = paste0(
+      '(age=', rownames(r_exog_max)[bad[, 'row']], ', year=',
+      colnames(r_exog_max)[bad[, 'col']], ', r_B=',
+      sprintf('%.3f', grid_packed$r_B[bad]), ')')
+    warning(sprintf(
+      paste0('kg_dynamics: %d cells have r_exog_B = (phi_I + ',
+             'planned_share) * r_B > 1, i.e. r_B > %.3f. The Bellman ',
+             'caps r_D at 1 - r_exog_B, so these cells get r_D_cap = 0 ',
+             'and lose the quadratic premium. Offending cells: %s'),
+      nrow(bad), 1 / (phi_I + planned_share),
+      paste(bad_cells, collapse = ', ')))
+  }
+
   # Step 2: tau matrices
   tau_B_mat = kg_dyn_pack_tau(baseline_tau, years, ages_bellman = ages_bellman)
   tau_S_mat = kg_dyn_pack_tau(reform_tau,   years, ages_bellman = ages_bellman)
@@ -1502,6 +1561,14 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
       re_fund       = as.numeric(tlt_row$`pref.kg_death_regime_re_fund`)
     )
     theta = as.numeric(tlt_row$`pref.kg_bequest_motive`)
+    if (length(theta) != 1 || !is.finite(theta) || theta < 0 || theta > 1) {
+      stop(sprintf(
+        paste0('kg_dynamics: pref.kg_bequest_motive must be a finite ',
+               'scalar in [0, 1]; got %s for year %d. theta drives c_phi ',
+               'under carryover and feeds the Bellman; out-of-range or NA ',
+               'values silently produce nonsensical W/MC/kappa.'),
+        format(theta), years[j]))
+    }
 
     sec121_by_fs = tlt %>%
       select(filing_status, `pref.kg_sec121_excl`) %>%
@@ -1824,7 +1891,8 @@ kg_dyn_build_summary = function(scenario_info) {
     ) %>%
     left_join(regime_df, by = 'year') %>%
     mutate(
-      R_S_total          = R_B_total + rate_channel + lockin_channel,
+      R_S_total          = R_B_total + rate_channel + lockin_channel +
+                           deemed_realized,
       dtau               = tau_S_avg_rw - tau_B_avg_rw,
       semi_elast_implied = if_else(R_B_total > 0 & R_S_total > 0 &
                                      abs(dtau) > 1e-10,
