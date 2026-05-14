@@ -59,7 +59,7 @@ KG_DYN_BETA             = 0.978
 # planned is mechanically timeable across nearby years; the remainder is
 # the ordinary Bellman-controlled share.
 KG_DYN_PHI_I            = 0.4
-KG_DYN_SHARE_PLANNED    = 0.3285
+KG_DYN_SHARE_PLANNED    = 0.3041
 KG_DYN_TIMING_WINDOW    = 1L
 
 # Fraction of planned dollars that move toward the best year in the window
@@ -81,7 +81,7 @@ KG_DYN_HEIR_DISTRIBUTION_PATH = './resources/heir_distribution_scf2022.csv'
 # (year 1 of a delayed +5pp shock). Re-run calibration whenever Tax-Data
 # vintage, bucket shares, ref_wedge, the discount series, or any Bellman
 # primitive changes.
-KG_DYN_DEFAULT_PSI      = 26.5673
+KG_DYN_DEFAULT_PSI      = 26.3535
 
 # Within-cell allocation rule for policy-induced dG, controlling the
 # effective cell mortality m_eff used in the death/survivor channels.
@@ -92,12 +92,11 @@ KG_DYN_DEFAULT_PSI      = 26.5673
 # Only affects carryover/deemed; step-up is unchanged (death channel off).
 KG_DYN_DG_ALLOCATION    = 'G'
 
-KG_DYN_ASSET_VALUE_COLS = c('value.equities', 'value.pass_throughs',
-                            'value.primary_home', 'value.other_home',
-                            'value.re_fund')
-KG_DYN_ASSET_BASIS_COLS = c('basis.equities', 'basis.pass_throughs',
-                            'basis.primary_home', 'basis.other_home',
-                            'basis.re_fund')
+KG_DYN_ASSET_CLASSES    = c('equities', 'pass_throughs',
+                            'primary_home', 'other_home', 're_fund')
+KG_DYN_ASSET_VALUE_COLS = paste0('value.', KG_DYN_ASSET_CLASSES)
+KG_DYN_ASSET_BASIS_COLS = paste0('basis.', KG_DYN_ASSET_CLASSES)
+KG_DYN_ASSET_GAIN_COLS  = paste0('gain.',  KG_DYN_ASSET_CLASSES)
 
 # Trustees Report Alternative 2, 50/50 male/female blend (cohort module is
 # gender-blind). Supplies the 81+ tail of the Bellman extended grid.
@@ -105,22 +104,17 @@ KG_DYN_LIFE_TABLE_M_PATH = './resources/PerLifeTables_M_Alt2_TR2024.csv'
 KG_DYN_LIFE_TABLE_F_PATH = './resources/PerLifeTables_F_Alt2_TR2024.csv'
 
 
-# Death-regime taxonomy. YAML pref.kg_death_regime is an integer code;
-# the bequest motive theta is supplied separately and overrides c_phi for
-# carryover. c_phi is the death-state burden share the holder internalizes:
-# 0 step-up (full forgiveness), theta carryover, 1 deemed (no forgiveness).
-# Forgiveness value F = (1 - c_phi) * tau.
-KG_DYN_REGIME_BY_CODE = c('0' = 'step_up',
-                          '1' = 'carryover',
-                          '2' = 'deemed_realization')
-
-KG_DYN_REGIMES = list(
-  step_up            = list(c_phi_default = 0,
-                            delta_vanish  = 1, delta_route = 0, delta_realize = 0),
-  carryover          = list(c_phi_default = NA,           # set from theta
-                            delta_vanish  = 0, delta_route = 1, delta_realize = 0),
-  deemed_realization = list(c_phi_default = 1,
-                            delta_vanish  = 0, delta_route = 0, delta_realize = 1)
+# Per-asset death-regime codes. The YAML carries one
+# pref.kg_death_regime_{class} per asset class; kg_dyn_build_regime_mix
+# resolves them at the cell level via gain-stock-weighted averaging.
+# c_phi(a,t) (death-state burden share the holder internalizes) is the
+# share of cell gain stock taxed at death given the regime mix, theta on
+# carryover-routed shares, and the cell-level §121 utilization aggregate
+# G_B_primary_above_cap / G_B_primary on primary_home dollars.
+KG_DYN_REGIME_TRIPLET = list(
+  '0' = list(vanish = 1, route = 0, realize = 0),  # step_up
+  '1' = list(vanish = 0, route = 1, realize = 0),  # carryover
+  '2' = list(vanish = 0, route = 0, realize = 1)   # deemed_realization
 )
 
 
@@ -131,22 +125,43 @@ KG_DYN_REGIMES = list(
 
 kg_dyn_attach_record_attrs = function(tax_units) {
 
-  # Adds three derived columns the bathtub recurrence needs:
-  #   G_unit       : per-record unrealized gain stock, sum_k max(0, value_k -
-  #                  basis_k) across the five tracked wealth classes
-  #   m_household  : q_death1 * q_death2 for joint filers; q_death1 otherwise
-  #   age_cohort   : max(age1, age2) for joint, age1 otherwise; clipped to
-  #                  [KG_DYN_AGE_MIN, KG_DYN_AGE_MAX]
+  # Adds per-record columns the bathtub recurrence and applier need:
+  #   gain.{class}            : per-asset unrealized gain, max(0, value_k - basis_k)
+  #   G_unit                  : sum over asset classes of gain.{class}
+  #   gain.primary_home_above_cap : pmax(0, gain.primary_home -
+  #                             pref.kg_sec121_excl); the §121-net primary-home
+  #                             gain that would be taxable at deemed realization
+  #   m_household             : q_death1 * q_death2 for joint filers; q_death1
+  #                             otherwise
+  #   age_cohort              : max(age1, age2) for joint, age1 otherwise;
+  #                             clipped to [KG_DYN_AGE_MIN, KG_DYN_AGE_MAX]
+  #
+  # Requires tax_units to carry pref.kg_sec121_excl per record (filing-status
+  # mapped). load_bathtub_inputs joins it in for the bathtub pass; the
+  # simulator runtime already has it on tax_units from the tax_law merge.
+
+  if (!('pref.kg_sec121_excl' %in% names(tax_units))) {
+    stop('kg_dyn_attach_record_attrs: tax_units missing column ',
+         '`pref.kg_sec121_excl`. Merge it in via filing_status before ',
+         'calling this helper.')
+  }
 
   values = as.matrix(tax_units[, KG_DYN_ASSET_VALUE_COLS])
   basis  = as.matrix(tax_units[, KG_DYN_ASSET_BASIS_COLS])
   diffs  = values - basis
   diffs[is.na(diffs)] = 0
   diffs[diffs < 0]    = 0
+  colnames(diffs) = KG_DYN_ASSET_GAIN_COLS
+
+  gain_primary = diffs[, 'gain.primary_home']
+  sec121       = as.numeric(tax_units$`pref.kg_sec121_excl`)
+  sec121[is.na(sec121)] = 0
 
   tax_units %>%
+    bind_cols(as_tibble(diffs)) %>%
     mutate(
-      G_unit      = rowSums(diffs),
+      G_unit                      = rowSums(diffs),
+      gain.primary_home_above_cap = pmax(0, gain_primary - sec121),
       m_household = if_else(filing_status == 2 & !is.na(q_death2),
                             q_death1 * q_death2,
                             q_death1),
@@ -166,8 +181,15 @@ kg_dyn_attach_record_attrs = function(tax_units) {
 
 kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
-  # Weight-aggregates per-record (G_unit, kg_lt, m_household) to age cells.
-  # tax_units must already have G_unit, m_household, age_cohort attached.
+  # Weight-aggregates per-record gain stocks, kg_lt, and m_household to age
+  # cells. tax_units must already have the gain.{class} columns,
+  # gain.primary_home_above_cap, G_unit, m_household, and age_cohort
+  # attached by kg_dyn_attach_record_attrs.
+  #
+  # Returns per-cell: G_B (sum across assets), R_B, r_B, m, mG_record,
+  # mR_record, per-asset G_B_{class}, and G_B_primary_above_cap (the
+  # §121-net primary-home stock used in the Bellman's cell-level c_phi
+  # when primary_home is in a deemed regime).
   #
   # R_B uses positive-only sums of kg_lt so r_B >= 0 and per-record
   # allocation shares (pmax(kg_lt, 0) / R_B) sum to 1.
@@ -184,13 +206,23 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
               mG_record = sum(weight * m_household * G_unit,         na.rm = TRUE),
               mR_record = sum(weight * m_household * pmax(kg_lt, 0), na.rm = TRUE),
               w_total   = sum(weight,                                na.rm = TRUE),
+              G_B_equities          = sum(weight * gain.equities,          na.rm = TRUE),
+              G_B_pass_throughs     = sum(weight * gain.pass_throughs,     na.rm = TRUE),
+              G_B_primary_home      = sum(weight * gain.primary_home,      na.rm = TRUE),
+              G_B_other_home        = sum(weight * gain.other_home,        na.rm = TRUE),
+              G_B_re_fund           = sum(weight * gain.re_fund,           na.rm = TRUE),
+              G_B_primary_above_cap = sum(weight * gain.primary_home_above_cap,
+                                          na.rm = TRUE),
               .groups   = 'drop') %>%
     rename(age = age_cohort)
 
+  zero_fill_cols = c('G_B', 'R_B', 'm_num', 'mG_record', 'mR_record', 'w_total',
+                     'G_B_equities', 'G_B_pass_throughs', 'G_B_primary_home',
+                     'G_B_other_home', 'G_B_re_fund', 'G_B_primary_above_cap')
+
   out = tibble(age = ages) %>%
     left_join(agg, by = 'age') %>%
-    mutate(across(c(G_B, R_B, m_num, mG_record, mR_record, w_total),
-                  ~ if_else(is.na(.), 0, .)),
+    mutate(across(all_of(zero_fill_cols), ~ if_else(is.na(.), 0, .)),
            m   = if_else(w_total > 0, m_num / w_total, 0),
            r_B = if_else(G_B     > 0, R_B   / G_B,     0))
 
@@ -204,7 +236,9 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
 
   out %>%
     mutate(r_B = if_else(G_B > 0 & R_B == 0, r_B_pooled, r_B)) %>%
-    select(age, G_B, R_B, r_B, m, mG_record, mR_record) %>%
+    select(age, G_B, R_B, r_B, m, mG_record, mR_record,
+           G_B_equities, G_B_pass_throughs, G_B_primary_home,
+           G_B_other_home, G_B_re_fund, G_B_primary_above_cap) %>%
     arrange(age)
 }
 
@@ -378,13 +412,19 @@ kg_dyn_build_extended_grid = function(baseline_cells, life_ext, years,
     key = as.character(t)
     inner = baseline_cells[[key]]
     r_B_topcode = inner$r_B[inner$age == KG_DYN_AGE_MAX]
-    ext = tibble(age       = ages_ext,
-                 G_B       = 0,
-                 R_B       = 0,
-                 r_B       = r_B_topcode,
-                 m         = as.numeric(life_ext[as.character(ages_ext), key]),
-                 mG_record = 0,
-                 mR_record = 0)
+    ext = tibble(age                   = ages_ext,
+                 G_B                   = 0,
+                 R_B                   = 0,
+                 r_B                   = r_B_topcode,
+                 m                     = as.numeric(life_ext[as.character(ages_ext), key]),
+                 mG_record             = 0,
+                 mR_record             = 0,
+                 G_B_equities          = 0,
+                 G_B_pass_throughs     = 0,
+                 G_B_primary_home      = 0,
+                 G_B_other_home        = 0,
+                 G_B_re_fund           = 0,
+                 G_B_primary_above_cap = 0)
     out[[key]] = bind_rows(inner, ext %>% select(names(inner))) %>%
       arrange(age)
   }
@@ -455,11 +495,16 @@ kg_dyn_pack_baseline_grid = function(grid_ext, years,
 
 
 kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
-                                     c_phi, psi, phi_I, beta,
+                                     c_phi_col, psi, phi_I, beta,
                                      planned_share = KG_DYN_SHARE_PLANNED,
                                      kappa_col = NULL, stationary = FALSE) {
 
   # One age-backward sweep through [a_min, a_max] for a single year column.
+  #
+  # c_phi_col is a length-n_ages vector of cell-level burden shares
+  # (built by kg_dyn_build_regime_mix on the bathtub grid then extended to
+  # the Bellman grid in kg_dyn_run_bathtub_pass by repeating the age-80
+  # value forward — same pattern as tau_col).
   #
   # kappa_col = NULL: Pass 1 (baseline). r_D_B = r_B after removing fixed
   # and planned buckets; kappa recovered so this is the cell's optimum.
@@ -479,7 +524,7 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
   is_baseline_pass = is.null(kappa_col)
 
   # Precompute age-vector quantities used inside the loop.
-  F_vec        = (1 - c_phi) * tau_col
+  F_vec        = (1 - c_phi_col) * tau_col
   r_exog_B_vec = (phi_I + planned_share) * r_B_col
   r_D_cap_vec  = pmax(1 - r_exog_B_vec, 0)
   bs_vec       = beta * (1 - m_col)   # survivor discount
@@ -516,7 +561,7 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
 
 
 
-kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi,
+kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
                                 kappa_mat     = NULL,
                                 psi           = KG_DYN_DEFAULT_PSI,
                                 phi_I         = KG_DYN_PHI_I,
@@ -528,12 +573,16 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi,
   #
   # When kappa_mat = NULL: Pass 1 (baseline). Recovers kappa from the FOC
   # by forcing optimal r_D to equal the observed ordinary realization
-  # bucket. c_phi is a scalar (typically 0 under current-law step-up).
+  # bucket. c_phi_mat is typically all-zero under current-law step-up.
   #
   # When kappa_mat is supplied: Pass 2 (scenario). Solves the clipped
-  # quadratic FOC r_D = clip((kappa - MC)/psi, 0, 1 - r_exog_B). c_phi may
-  # be a scalar or a length-n_years vector (e.g., a carryover regime
-  # phased in mid-horizon).
+  # quadratic FOC r_D = clip((kappa - MC)/psi, 0, 1 - r_exog_B).
+  #
+  # c_phi_mat is an [n_ages, n_years] matrix of cell-level burden shares
+  # produced by kg_dyn_build_regime_mix on the bathtub grid, then extended
+  # to the Bellman grid by repeating the age-80 value forward (same
+  # treatment as tau_mat). Scalars are accepted for unit tests and
+  # broadcast to a constant matrix.
   #
   # beta_by_year[j] discounts between year j and j+1; NULL falls back to a
   # constant KG_DYN_BETA vector for isolated solver unit tests.
@@ -549,8 +598,11 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi,
   if (is.null(beta_by_year)) beta_by_year = rep(KG_DYN_BETA, n_years)
   stopifnot(length(beta_by_year) == n_years)
 
-  c_phi_vec = if (length(c_phi) == 1) rep(c_phi, n_years) else c_phi
-  stopifnot(length(c_phi_vec) == n_years)
+  if (length(c_phi_mat) == 1) {
+    c_phi_mat = matrix(c_phi_mat, n_ages, n_years,
+                       dimnames = list(ages_chr, years_chr))
+  }
+  stopifnot(identical(dim(c_phi_mat), c(n_ages, n_years)))
 
   W     = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   MC    = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
@@ -563,7 +615,7 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi,
       m_col         = m_mat  [, j],
       r_B_col       = r_B_mat[, j],
       tau_col       = tau_mat[, j],
-      c_phi         = c_phi_vec[j],
+      c_phi_col     = c_phi_mat[, j],
       psi           = psi,
       phi_I         = phi_I,
       beta          = beta_by_year[j],
@@ -737,11 +789,14 @@ kg_dyn_build_scenario_rate = function(baseline_t, r_ordinary_S,
 #-------------------------------------------------------------------------------
 
 kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
-                                  r_S_vec, delta_route,
+                                  r_S_vec, delta_route_vec,
                                   phi_I = KG_DYN_PHI_I) {
 
   # One-step bathtub recurrence for delta_G on the [18, 80] grid. r_S_vec
   # combines the fixed, Bellman ordinary, and retimed planned buckets.
+  # delta_route_vec is a length-n_ages cell-level share of the dying stock
+  # that routes to heirs (carryover); under per-asset regime mixing it's
+  # produced by kg_dyn_build_regime_mix as sum_k share_k(a) * route_k.
   #
   # Topcode caveat: the age=80 cell pools all 80+ taxpayers with a single
   # weight-averaged m_80, refreshed from each year's Tax-Data. Within-pool
@@ -785,10 +840,12 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
   contrib_a  = (1 - m_eff) * inner
   delta_surv = as.numeric(crossprod(A, contrib_a))
 
-  # Inheritance flow (spec §3.3.1)
-  if (delta_route > 0) {
+  # Inheritance flow (spec §3.3.1). delta_route_vec is per-cell so a cell
+  # whose regime mix has no carryover share contributes nothing to the
+  # routing crossprod even when adjacent cells do.
+  if (any(delta_route_vec > 0)) {
     decedent_stock = m_eff * (G_B + delta_prev)
-    delta_inh      = delta_route * as.numeric(crossprod(omega, decedent_stock))
+    delta_inh      = as.numeric(crossprod(omega, delta_route_vec * decedent_stock))
   } else {
     delta_inh = rep(0, length(delta_prev))
   }
@@ -805,30 +862,89 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
 
 
 #-------------------------------------------------------------------------------
-# Regime resolution (named lookup)
+# Cell-level regime mix (per-asset codes → per-age vanish/route/realize + c_phi)
 #-------------------------------------------------------------------------------
 
-kg_dyn_resolve_regime = function(regime_code, theta) {
+kg_dyn_build_regime_mix = function(regime_codes, theta, baseline_t,
+                                    ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
-  # pref.kg_death_regime integer → canonical regime tuple (spec §3.3):
-  #   0 = step_up           : c_phi = 0,     vanish = 1
-  #   1 = carryover         : c_phi = theta, route = 1
-  #   2 = deemed_realization: c_phi = 1,     realize = 1
+  # Aggregates per-asset regime codes into cell-level multipliers via
+  # gain-stock-weighted shares:
+  #   share_k(a)              = G_B_k(a) / G_B(a)
+  #   share_primary_above_cap = G_B_primary_above_cap(a) / G_B(a)
+  #   delta_{vanish,route,realize}(a) = sum_k share_k(a) * triplet_k$*
+  #
+  # c_phi(a) (share of cell gain stock taxed at death, the death-state
+  # burden share the holder internalizes in the Bellman):
+  #   c_phi(a) = sum_{k ≠ primary_home, deemed} share_k(a)
+  #            + share_primary_above_cap(a)               (deemed + §121)
+  #            + theta * sum_{k, carryover} share_k(a)    (route internalized)
+  #
+  # regime_codes : named list of 5 integer codes (one per asset class).
+  # theta        : scalar bequest motive in [0, 1].
+  # baseline_t   : per-cell tibble with G_B, G_B_{class}, G_B_primary_above_cap.
+  #
+  # Returns tibble keyed by age with delta_vanish, delta_route, delta_realize,
+  # c_phi — each on the bathtub grid [18, 80].
 
-  regime_name = KG_DYN_REGIME_BY_CODE[as.character(regime_code)]
-  if (is.na(regime_name)) {
-    stop(paste0('Unknown kg_death_regime: ', regime_code,
-                ' (expected 0=step_up, 1=carryover, 2=deemed_realization)'))
+  asset_classes = KG_DYN_ASSET_CLASSES
+
+  missing = setdiff(asset_classes, names(regime_codes))
+  if (length(missing) > 0) {
+    stop('kg_dyn_build_regime_mix: regime_codes missing asset classes: ',
+         paste(missing, collapse = ', '))
   }
 
-  base  = KG_DYN_REGIMES[[regime_name]]
-  c_phi = if (regime_name == 'carryover') theta else base$c_phi_default
+  resolve_triplet = function(code) {
+    t = KG_DYN_REGIME_TRIPLET[[as.character(code)]]
+    if (is.null(t)) {
+      stop('kg_dyn_build_regime_mix: unknown regime code ', code,
+           ' (expected 0=step_up, 1=carryover, 2=deemed_realization)')
+    }
+    t
+  }
+  triplets = lapply(asset_classes, function(k) resolve_triplet(regime_codes[[k]]))
+  names(triplets) = asset_classes
 
-  list(name          = regime_name,
-       c_phi         = c_phi,
-       delta_vanish  = base$delta_vanish,
-       delta_route   = base$delta_route,
-       delta_realize = base$delta_realize)
+  G_B = baseline_t$G_B
+  safe_share = function(num) if_else(G_B > 0, num / G_B, 0)
+
+  share = lapply(asset_classes,
+                 function(k) safe_share(baseline_t[[paste0('G_B_', k)]]))
+  names(share) = asset_classes
+  share_primary_above_cap = safe_share(baseline_t$G_B_primary_above_cap)
+
+  n_cells       = length(G_B)
+  delta_vanish  = rep(0, n_cells)
+  delta_route   = rep(0, n_cells)
+  delta_realize = rep(0, n_cells)
+  c_phi         = rep(0, n_cells)
+
+  for (k in asset_classes) {
+    tr = triplets[[k]]
+    delta_vanish  = delta_vanish  + share[[k]] * tr$vanish
+    delta_route   = delta_route   + share[[k]] * tr$route
+    delta_realize = delta_realize + share[[k]] * tr$realize
+
+    # Carryover internalization: holder values theta of the routed stock
+    c_phi = c_phi + theta * tr$route * share[[k]]
+
+    # Deemed realization: full asset share for non-primary, §121-net share
+    # for primary_home.
+    if (k == 'primary_home') {
+      c_phi = c_phi + tr$realize * share_primary_above_cap
+    } else {
+      c_phi = c_phi + tr$realize * share[[k]]
+    }
+  }
+
+  tibble(
+    age           = baseline_t$age,
+    delta_vanish  = delta_vanish,
+    delta_route   = delta_route,
+    delta_realize = delta_realize,
+    c_phi         = pmin(pmax(c_phi, 0), 1)
+  )
 }
 
 
@@ -840,12 +956,18 @@ kg_dyn_resolve_regime = function(regime_code, theta) {
 #   rate     : kg_lt > 0 → kg_lt * rate_factor (= r_S/r_B, clamped to 1)
 #   lock-in  : extra_R = r_S * dG, allocated by positive-kg_lt share if
 #              R_B > 0, else by G_unit share, else skip
-#   deemed   : delta_realize * m_household * G_unit * (G_B + dG)/G_B
+#   deemed   : asset-aware. For each asset class k:
+#                contribution_k = realize_k * gain_k_i        (k ≠ primary)
+#                contribution_primary = realize_primary *
+#                                       pmax(0, gain_primary_i - sec121_i)
+#              Summed then multiplied by m_household * (G_B + dG)/G_B
+#              (deemed_factor). realize_k comes from regime$realize, the
+#              year-level per-asset deemed indicators from the regime mix.
 # Also stamps decedent_flag = (u < m_household) using precomputed uniform
 # draws from globals$random_numbers (same draw across scenarios).
 #-------------------------------------------------------------------------------
 
-kg_dyn_apply_to_records = function(tax_units, cell_table, delta_realize,
+kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset,
                                     decedent_random) {
 
   # Pull just the columns the applier consumes from cell_table via a
@@ -859,8 +981,26 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, delta_realize,
   R_B           = cell_table$R_B          [idx]
   G_B           = cell_table$G_B          [idx]
 
+  missing = setdiff(KG_DYN_ASSET_CLASSES, names(realize_by_asset))
+  if (length(missing) > 0) {
+    stop('kg_dyn_apply_to_records: realize_by_asset missing asset classes: ',
+         paste(missing, collapse = ', '))
+  }
+
+  # Asset-aware deemed contribution per record. primary_home uses the
+  # §121-net gain (precomputed in kg_dyn_attach_record_attrs); all other
+  # asset classes use their full gain stock.
+  deemed_per_record =
+      realize_by_asset[['equities']]      * tax_units$gain.equities +
+      realize_by_asset[['pass_throughs']] * tax_units$gain.pass_throughs +
+      realize_by_asset[['primary_home']]  *
+        tax_units$gain.primary_home_above_cap +
+      realize_by_asset[['other_home']]    * tax_units$gain.other_home +
+      realize_by_asset[['re_fund']]       * tax_units$gain.re_fund
+
   tax_units %>%
     mutate(
+      decedent_flag = as.integer(decedent_random < m_household),
       allocation = case_when(
         R_B > 0 ~ pmax(kg_lt, 0) / R_B,
         G_B > 0 ~ G_unit         / G_B,
@@ -868,8 +1008,7 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, delta_realize,
       ),
       kg_lt = if_else(kg_lt > 0, kg_lt * rate_factor, kg_lt) +
               extra_R * allocation +
-              delta_realize * m_household * G_unit * deemed_factor,
-      decedent_flag = as.integer(decedent_random < m_household)
+              decedent_flag * deemed_factor * deemed_per_record
     ) %>%
     select(-allocation)
 }
@@ -937,15 +1076,20 @@ kg_dyn_load_heir_distribution = function(path = KG_DYN_HEIR_DISTRIBUTION_PATH,
 
 
 
-kg_dyn_load_bathtub_inputs = function(scenario_info, baseline_root,
+kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
                                        sample_ids, pct_sample,
                                        ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
   # Single Tax-Data pass producing baseline_cells (per-year G_B, R_B, r_B, m,
-  # mG_record, mR_record over ages 18-80), baseline_tau, and reform_tau
-  # (per-year R-weighted mtr_kg_lt vectors). Cell aggregates come straight
-  # from Tax-Data csvs (the wealth value.*/basis.* and q_death* columns live
-  # only there); mtr_kg_lt comes from each side's static detail.
+  # mG_record, mR_record, per-asset G_B_{class}, G_B_primary_above_cap over
+  # ages 18-80), baseline_tau, and reform_tau (per-year R-weighted
+  # mtr_kg_lt vectors). Cell aggregates come straight from Tax-Data csvs
+  # (the wealth value.*/basis.* and q_death* columns live only there);
+  # mtr_kg_lt comes from each side's static detail.
+  #
+  # tax_law is consumed only to merge the filing-status-mapped §121 cap
+  # (pref.kg_sec121_excl) onto records before kg_dyn_attach_record_attrs
+  # computes gain.primary_home_above_cap.
 
   tax_data_root = scenario_info$interface_paths$`Tax-Data`
   years         = scenario_info$years
@@ -962,11 +1106,17 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, baseline_root,
 
   for (t in years) {
 
+    sec121_t = tax_law %>%
+      filter(year == t) %>%
+      select(filing_status, `pref.kg_sec121_excl`) %>%
+      distinct()
+
     td = file.path(tax_data_root, paste0('tax_units_', t, '.csv')) %>%
       fread(select = td_cols, showProgress = FALSE) %>%
       as_tibble() %>%
       filter(id %in% sample_ids) %>%
       mutate(weight = weight / pct_sample) %>%
+      left_join(sec121_t, by = 'filing_status') %>%
       kg_dyn_attach_record_attrs()
 
     baseline_cells[[as.character(t)]] = kg_dyn_aggregate_cells(td, ages)
@@ -1009,6 +1159,7 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
                                     tau_B_col, tau_S_col,
                                     W_B_col, W_S_col, MC_B_col, MC_S_col,
                                     kappa_col, r_D_B_col, r_D_S_col,
+                                    regime_mix,
                                     planned_diag = NULL,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
@@ -1016,9 +1167,10 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
   #   rate_factor   = r_S / r_B           (clamped to 1 when r_B = 0)
   #   extra_R       = r_S * dG            (lock-in stock realized at r_S)
   #   deemed_factor = (G_B + dG) / G_B    (clamped >= 0)
-  # Plus diagnostic columns used by kg_dyn_build_summary. Bellman matrices
-  # are sliced from the extended grid to the bathtub grid [18, 80] before
-  # persisting.
+  # Plus diagnostic columns used by kg_dyn_build_summary: per-asset
+  # G_B_{class}, G_B_primary_above_cap, cell-level regime-mix outputs
+  # (delta_vanish/route/realize, c_phi). Bellman matrices are sliced from
+  # the extended grid to the bathtub grid [18, 80] before persisting.
 
   ages_chr = as.character(ages_bathtub)
   diag_or = function(name, default) {
@@ -1030,6 +1182,9 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
       setNames(rep(default, length(ages_chr)), ages_chr)
     }
   }
+
+  mix_lookup = regime_mix
+  mix_lookup$age = as.character(mix_lookup$age)
 
   baseline_t %>%
     mutate(age           = as.integer(age),
@@ -1058,6 +1213,10 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            MC_B          = as.numeric(MC_B_col    [as.character(age)]),
            MC_S          = as.numeric(MC_S_col    [as.character(age)]),
            kappa         = as.numeric(kappa_col   [as.character(age)]),
+           delta_vanish  = mix_lookup$delta_vanish [match(as.character(age), mix_lookup$age)],
+           delta_route   = mix_lookup$delta_route  [match(as.character(age), mix_lookup$age)],
+           delta_realize = mix_lookup$delta_realize[match(as.character(age), mix_lookup$age)],
+           c_phi         = mix_lookup$c_phi        [match(as.character(age), mix_lookup$age)],
            rate_factor   = if_else(r_B > 0, r_S / r_B, 1),
            extra_R       = r_S * dG,
            deemed_factor = if_else(G_B > 0,
@@ -1068,6 +1227,9 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            r_fixed_B, r_planned_B, r_planned_S, r_ordinary_B, r_ordinary_S,
            R_planned_B, R_planned_S, planned_timing_shift,
            m, mG_record, mR_record, dG,
+           G_B_equities, G_B_pass_throughs, G_B_primary_home,
+           G_B_other_home, G_B_re_fund, G_B_primary_above_cap,
+           delta_vanish, delta_route, delta_realize, c_phi,
            tau_B, tau_S, W_B, W_S, MC_B, MC_S, kappa, r_D_B, r_D_S,
            rate_factor, extra_R, deemed_factor)
 }
@@ -1134,25 +1296,81 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   tau_B_mat = kg_dyn_pack_tau(baseline_tau, years, ages_bellman = ages_bellman)
   tau_S_mat = kg_dyn_pack_tau(reform_tau,   years, ages_bellman = ages_bellman)
 
-  # Step 3: baseline Bellman pass (c_phi = 0 under current-law step-up)
-  pass1 = kg_dyn_solve_bellman(grid_packed, tau_B_mat, c_phi = 0,
+  # Step 3: baseline Bellman pass (c_phi = 0 across the whole grid under
+  # current-law step-up — every asset gets step-up forgiveness)
+  pass1 = kg_dyn_solve_bellman(grid_packed, tau_B_mat, c_phi_mat = 0,
                                psi = psi, phi_I = phi_I,
                                planned_share = planned_share,
                                beta_by_year = beta_by_year)
 
-  # Step 4: resolve year-by-year scenario regimes and run scenario Bellman
+  # Step 4: resolve year-by-year per-asset regime codes, build cell-level
+  # regime mix (c_phi, delta_vanish/route/realize), and pack the Bellman
+  # c_phi matrix on the extended grid.
+  ages_bathtub_chr = as.character(ages_bathtub)
+  ages_ext_chr     = as.character(setdiff(ages_bellman, ages_bathtub))
+  ages_bellman_chr = as.character(ages_bellman)
+
   regime_list = vector('list', length(years))
-  c_phi_S     = numeric(length(years))
+  mix_list    = vector('list', length(years))
+  c_phi_S_mat = matrix(0, length(ages_bellman), length(years),
+                       dimnames = list(ages_bellman_chr, as.character(years)))
+
   for (j in seq_along(years)) {
-    tlt = tax_law %>% filter(year == years[j]) %>% slice(1)
-    regime_list[[j]] = kg_dyn_resolve_regime(
-      regime_code = as.numeric(tlt$pref.kg_death_regime),
-      theta       = as.numeric(tlt$pref.kg_bequest_motive)
+    tlt = tax_law %>% filter(year == years[j])
+    if (nrow(tlt) == 0) {
+      stop('kg_dynamics: tax_law has no rows for year ', years[j])
+    }
+    tlt_row = tlt %>% slice(1)
+
+    regime_codes = list(
+      equities      = as.numeric(tlt_row$`pref.kg_death_regime_equities`),
+      pass_throughs = as.numeric(tlt_row$`pref.kg_death_regime_pass_throughs`),
+      primary_home  = as.numeric(tlt_row$`pref.kg_death_regime_primary_home`),
+      other_home    = as.numeric(tlt_row$`pref.kg_death_regime_other_home`),
+      re_fund       = as.numeric(tlt_row$`pref.kg_death_regime_re_fund`)
     )
-    c_phi_S[j] = regime_list[[j]]$c_phi
+    theta = as.numeric(tlt_row$`pref.kg_bequest_motive`)
+
+    sec121_by_fs = tlt %>%
+      select(filing_status, `pref.kg_sec121_excl`) %>%
+      distinct()
+    sec121_single = sec121_by_fs %>%
+      filter(filing_status == 1) %>% pull(`pref.kg_sec121_excl`)
+    sec121_married = sec121_by_fs %>%
+      filter(filing_status == 2) %>% pull(`pref.kg_sec121_excl`)
+    if (length(sec121_single)  == 0) sec121_single  = NA_real_
+    if (length(sec121_married) == 0) sec121_married = NA_real_
+
+    bt  = baseline_cells[[as.character(years[j])]]
+    mix = kg_dyn_build_regime_mix(regime_codes, theta, bt, ages_bathtub)
+
+    # Per-asset realize indicators (year-level scalars from the regime codes)
+    realize_by_asset = lapply(KG_DYN_ASSET_CLASSES, function(k) {
+      KG_DYN_REGIME_TRIPLET[[as.character(regime_codes[[k]])]]$realize
+    })
+    names(realize_by_asset) = KG_DYN_ASSET_CLASSES
+
+    regime_list[[j]] = list(
+      codes               = regime_codes,
+      theta               = theta,
+      sec121_excl_single  = sec121_single[1],
+      sec121_excl_married = sec121_married[1],
+      realize             = realize_by_asset
+    )
+    mix_list[[j]] = mix
+
+    # Pack c_phi onto the extended Bellman grid: bathtub values from the
+    # mix, age-80 value repeated forward across [81, 119] (same pattern as
+    # tau_mat in kg_dyn_pack_tau).
+    c_phi_bt_named = setNames(mix$c_phi, as.character(mix$age))
+    c_phi_S_mat[ages_bathtub_chr, j] = c_phi_bt_named[ages_bathtub_chr]
+    if (length(ages_ext_chr) > 0) {
+      c_phi_S_mat[ages_ext_chr, j] =
+        c_phi_bt_named[as.character(KG_DYN_AGE_MAX)]
+    }
   }
 
-  pass2 = kg_dyn_solve_bellman(grid_packed, tau_S_mat, c_phi = c_phi_S,
+  pass2 = kg_dyn_solve_bellman(grid_packed, tau_S_mat, c_phi_mat = c_phi_S_mat,
                                kappa_mat = pass1$kappa,
                                psi = psi, phi_I = phi_I,
                                planned_share = planned_share,
@@ -1184,6 +1402,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     t  = years[j]
     bt = baseline_cells[[as.character(t)]]
     regime = regime_list[[j]]
+    mix    = mix_list[[j]]
 
     # Slice Bellman outputs from extended grid to bathtub grid for this year
     r_D_S_bt = pass2$r_D[bathtub_ages_chr, j]
@@ -1197,13 +1416,13 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     r_S_vec = setNames(rate_info$r_S, bathtub_ages_chr)
 
     step = kg_dyn_step_recurrence(
-      delta_prev  = delta,
-      baseline_t  = bt,
-      A           = A,
-      omega       = omega,
-      r_S_vec     = r_S_vec,
-      delta_route = regime$delta_route,
-      phi_I       = phi_I
+      delta_prev      = delta,
+      baseline_t      = bt,
+      A               = A,
+      omega           = omega,
+      r_S_vec         = r_S_vec,
+      delta_route_vec = mix$delta_route,
+      phi_I           = phi_I
     )
 
     r_S_named      = setNames(step$r_S,      bathtub_ages_chr)
@@ -1228,6 +1447,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
       kappa_col    = pass1$kappa[bathtub_ages_chr, j],
       r_D_B_col    = pass1$r_D  [bathtub_ages_chr, j],
       r_D_S_col    = pass2$r_D  [bathtub_ages_chr, j],
+      regime_mix   = mix,
       planned_diag  = list(
         r_S_unclipped = setNames(rate_info$r_S_unclipped, bathtub_ages_chr),
         timing_clipped = setNames(rate_info$timing_clipped, bathtub_ages_chr),
@@ -1321,13 +1541,23 @@ kg_dyn_build_summary = function(scenario_info) {
   states = lapply(years, function(t) readRDS(file.path(state_dir, paste0(t, '.rds'))))
   names(states) = as.character(years)
 
-  # Long-format age profile + per-year regime metadata
+  # Long-format age profile: stamp the per-year regime codes onto every
+  # cell row for diagnostic convenience (cell_table itself carries the
+  # cell-level c_phi / delta_* mix).
   age_profile = bind_rows(lapply(seq_along(years), function(i) {
     s = states[[i]]
+    codes = s$regime$codes
     s$cell_table %>%
-      mutate(year   = years[i],
-             regime = s$regime$name) %>%
-      relocate(year, regime, age)
+      mutate(year                          = years[i],
+             regime_equities               = codes$equities,
+             regime_pass_throughs          = codes$pass_throughs,
+             regime_primary_home           = codes$primary_home,
+             regime_other_home             = codes$other_home,
+             regime_re_fund                = codes$re_fund,
+             theta                         = s$regime$theta,
+             sec121_excl_single            = s$regime$sec121_excl_single,
+             sec121_excl_married           = s$regime$sec121_excl_married) %>%
+      relocate(year, age)
   }))
 
   age_profile %>%
@@ -1335,15 +1565,18 @@ kg_dyn_build_summary = function(scenario_info) {
                         'conventional', 'supplemental',
                         'kg_dynamics_age_profile.csv'))
 
-  # Year-level rollup
+  # Year-level regime metadata table (per-asset codes + theta + §121 cap).
   regime_df = bind_rows(lapply(seq_along(years), function(i) {
     r = states[[i]]$regime
-    tibble(year          = years[i],
-           regime        = r$name,
-           c_phi         = r$c_phi,
-           delta_vanish  = r$delta_vanish,
-           delta_route   = r$delta_route,
-           delta_realize = r$delta_realize)
+    tibble(year                 = years[i],
+           regime_equities      = r$codes$equities,
+           regime_pass_throughs = r$codes$pass_throughs,
+           regime_primary_home  = r$codes$primary_home,
+           regime_other_home    = r$codes$other_home,
+           regime_re_fund       = r$codes$re_fund,
+           theta                = r$theta,
+           sec121_excl_single   = r$sec121_excl_single,
+           sec121_excl_married  = r$sec121_excl_married)
   }))
 
   # Weighted means with a default when the weight column sums to zero.
@@ -1359,9 +1592,19 @@ kg_dyn_build_summary = function(scenario_info) {
       G_B_total           = sum(G_B),
       R_B_total           = sum(R_B),
       dG_total            = sum(dG),
+      G_B_equities_total          = sum(G_B_equities),
+      G_B_pass_throughs_total     = sum(G_B_pass_throughs),
+      G_B_primary_home_total      = sum(G_B_primary_home),
+      G_B_other_home_total        = sum(G_B_other_home),
+      G_B_re_fund_total           = sum(G_B_re_fund),
+      G_B_primary_above_cap_total = sum(G_B_primary_above_cap),
       m_avg_gw            = wmean(m,            G_B),
       r_B_avg_gw          = wmean(r_B,          G_B, default = 0),
       r_S_avg_gw          = wmean(r_S,          G_B, default = 0),
+      c_phi_avg_gw        = wmean(c_phi,         G_B, default = 0),
+      delta_vanish_avg_gw  = wmean(delta_vanish,  G_B, default = 0),
+      delta_route_avg_gw   = wmean(delta_route,   G_B, default = 0),
+      delta_realize_avg_gw = wmean(delta_realize, G_B, default = 0),
       lambda_I_avg_gw     = wmean(lambda_I,     G_B),
       r_fixed_avg_gw      = wmean(r_fixed_B,    G_B),
       r_planned_B_avg_gw  = wmean(r_planned_B,  G_B),
@@ -1386,13 +1629,13 @@ kg_dyn_build_summary = function(scenario_info) {
       R_planned_S_total = sum(R_planned_S),
       planned_timing_shift_total = sum(planned_timing_shift),
       timing_clipped_cells = sum(timing_clipped, na.rm = TRUE),
-      decedent_stock  = sum(mG_record * deemed_factor),
+      decedent_stock      = sum(mG_record * deemed_factor),
+      inheritance_flow    = sum(delta_route   * mG_record * deemed_factor),
+      deemed_realized     = sum(delta_realize * mG_record * deemed_factor),
       .groups = 'drop'
     ) %>%
     left_join(regime_df, by = 'year') %>%
     mutate(
-      inheritance_flow   = delta_route   * decedent_stock,
-      deemed_realized    = delta_realize * decedent_stock,
       R_S_total          = R_B_total + rate_channel + lockin_channel,
       dtau               = tau_S_avg_rw - tau_B_avg_rw,
       semi_elast_implied = if_else(R_B_total > 0 & R_S_total > 0 &
@@ -1400,8 +1643,16 @@ kg_dyn_build_summary = function(scenario_info) {
                                    log(R_S_total / R_B_total) / dtau,
                                    NA_real_)
     ) %>%
-    select(year, regime, c_phi, delta_vanish, delta_route, delta_realize,
+    select(year,
+           regime_equities, regime_pass_throughs, regime_primary_home,
+           regime_other_home, regime_re_fund,
+           theta, sec121_excl_single, sec121_excl_married,
+           c_phi_avg_gw,
+           delta_vanish_avg_gw, delta_route_avg_gw, delta_realize_avg_gw,
            G_B_total, R_B_total, R_S_total, dG_total,
+           G_B_equities_total, G_B_pass_throughs_total,
+           G_B_primary_home_total, G_B_other_home_total,
+           G_B_re_fund_total, G_B_primary_above_cap_total,
            m_avg_gw, r_B_avg_gw, r_S_avg_gw,
            lambda_I_avg_gw, r_fixed_avg_gw,
            r_planned_B_avg_gw, r_planned_S_avg_gw,

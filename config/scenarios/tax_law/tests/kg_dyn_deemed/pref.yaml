@@ -1,4 +1,13 @@
 ---
-# Deemed realization at death; rates unchanged.
-kg_death_regime:
+# Deemed realization at death across all asset classes; rates unchanged.
+# Primary-home contribution is §121-net (carve-out applied per record).
+kg_death_regime_equities:
+  value: 2
+kg_death_regime_pass_throughs:
+  value: 2
+kg_death_regime_primary_home:
+  value: 2
+kg_death_regime_other_home:
+  value: 2
+kg_death_regime_re_fund:
   value: 2

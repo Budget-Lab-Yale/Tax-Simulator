@@ -13,6 +13,11 @@ filing_status_mapper:
     '2': brackets_married
     '3': brackets_married / 2
     '4': brackets_head
+  kg_sec121_excl:
+    '1': kg_sec121_excl_single
+    '2': kg_sec121_excl_married
+    '3': kg_sec121_excl_married / 2
+    '4': kg_sec121_excl_single
 
 # Whether to tax long-term capital gains and qualified dividends at ordinary rates
 tax_at_ord:
@@ -75,16 +80,36 @@ index_kg_purchased_after:
 index_kg_no_loss:
   value: 0
 
-# Treatment of unrealized capital gains at death. Used by the kg_dynamics
-# behavioral module:
-#   0 = step_up           (current law: gain forgiven at death)
-#   1 = carryover         (gain transfers to heirs with original basis)
+# Treatment of unrealized capital gains at death, per asset class. Used by
+# the kg_dynamics behavioral module. Codes:
+#   0 = step_up            (gain forgiven at death; current law)
+#   1 = carryover          (gain transfers to heirs with original basis)
 #   2 = deemed_realization (gain forcibly realized on decedent's final return)
-kg_death_regime:
+# Cell-level mixing aggregates regime codes via per-asset gain shares; see
+# kg_dyn_build_regime_mix in src/sim/kg_dynamics.R.
+kg_death_regime_equities:
+  value: 0
+kg_death_regime_pass_throughs:
+  value: 0
+kg_death_regime_primary_home:
+  value: 0
+kg_death_regime_other_home:
+  value: 0
+kg_death_regime_re_fund:
   value: 0
 
-# Bequest motive theta in [0,1]. Used as c_phi only when kg_death_regime = 1
-# (carryover); represents the fraction of the heir's eventual tax burden the
-# holder internalizes when making lifetime realization decisions.
+# Bequest motive theta in [0,1]. Scales the share of carryover-routed gain
+# stock the holder internalizes in lifetime realization decisions; applied
+# uniformly to all asset classes whose regime is carryover.
 kg_bequest_motive:
   value: 0.5
+
+# Section 121 primary-residence exclusion at deemed realization. $250k for
+# single/HoH/MFS, $500k for MFJ (real law; not indexed). Consumed only by
+# kg_dynamics: subtracted per-record from primary_home gain when that asset
+# class is in a deemed regime, and aggregated to G_B_primary_above_cap for
+# the Bellman's cell-level effective c_phi.
+kg_sec121_excl_single:
+  value: 250000
+kg_sec121_excl_married:
+  value: 500000

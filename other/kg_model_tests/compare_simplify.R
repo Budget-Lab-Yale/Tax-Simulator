@@ -10,11 +10,17 @@ NEW = '/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_s
 
 SCENARIOS = c('baseline', 'baseline_check', 'rate_up_5pp', 'carryover', 'deemed')
 
-FILES = list(
-  totals      = 'conventional/totals/1040.csv',
-  receipts    = 'conventional/totals/receipts.csv',
-  summary     = 'conventional/supplemental/kg_dynamics_summary.csv',
-  revenue     = 'conventional/supplemental/revenue_estimates.csv'
+# Baseline only has a static pass (no behavior module → no conventional);
+# CFs have both, but conventional carries the kg_dynamics behavior.
+FILES_BASELINE = list(
+  totals   = 'static/totals/1040.csv',
+  receipts = 'static/totals/receipts.csv'
+)
+FILES_CF = list(
+  totals   = 'conventional/totals/1040.csv',
+  receipts = 'conventional/totals/receipts.csv',
+  summary  = 'conventional/supplemental/kg_dynamics_summary.csv',
+  revenue  = 'conventional/supplemental/revenue_estimates.csv'
 )
 
 # A small diff helper: read both files, align by all non-numeric columns,
@@ -60,10 +66,9 @@ summarize_diffs = function(diffs, kind, scenario) {
     cat(sprintf('  [%s/%s] %s\n', scenario, kind, diffs$status[1]))
     return(invisible())
   }
-  cat(sprintf('  [%s/%s] %d columns differ\n', scenario, kind, nrow(diffs)))
-  diffs %>% head(5) %>% as.data.frame() %>%
-    walk2(seq_len(nrow(.)), function(.x, .y) NULL)
-  print(head(diffs, 5))
+  cat(sprintf('  [%s/%s] %d numeric columns differ above 1e-9:\n',
+              scenario, kind, nrow(diffs)))
+  print(as.data.frame(head(diffs, 8)), row.names = FALSE)
 }
 
 cat('==================================================================\n')
@@ -72,9 +77,10 @@ cat('==================================================================\n')
 
 for (scen in SCENARIOS) {
   cat(sprintf('\n--- scenario: %s ---\n', scen))
-  for (kind in names(FILES)) {
-    ref_path = file.path(REF, scen, FILES[[kind]])
-    new_path = file.path(NEW, scen, FILES[[kind]])
+  files = if (scen == 'baseline') FILES_BASELINE else FILES_CF
+  for (kind in names(files)) {
+    ref_path = file.path(REF, scen, files[[kind]])
+    new_path = file.path(NEW, scen, files[[kind]])
     summarize_diffs(diff_file(ref_path, new_path), kind, scen)
   }
 }

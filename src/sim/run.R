@@ -629,6 +629,7 @@ run_bathtub_pass = function(scenario_info, tax_law,
 
   inputs = kg_dyn_load_bathtub_inputs(
     scenario_info = scenario_info,
+    tax_law       = tax_law,
     baseline_root = globals$baseline_root,
     sample_ids    = globals$sample_ids,
     pct_sample    = globals$pct_sample

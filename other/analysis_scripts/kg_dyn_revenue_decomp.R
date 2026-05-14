@@ -57,12 +57,10 @@ stopifnot(file.exists(age_profile_path), file.exists(conv_rev_path),
 # --- Cell-level channel algebra --------------------------------------------
 age = read_csv(age_profile_path, show_col_types = FALSE)
 
-# regime metadata: delta_realize is 0 except under deemed regime
-regime_by_year = age %>%
-  group_by(year, regime) %>%
-  summarise(.groups = 'drop') %>%
-  mutate(delta_realize = if_else(regime == 'deemed_realization', 1, 0),
-         delta_route   = if_else(regime == 'carryover',          1, 0))
+# Per-cell delta_realize / delta_route already live on age_profile (added by
+# kg_dyn_build_regime_mix). Under the per-asset regime schema these are
+# gain-stock-weighted mixes in [0, 1], not 0/1 flags, so the deemed-channel
+# gating happens at the cell level rather than year level.
 
 # --- Decedent-weighted tau (fix for the deemed-channel compositional bias)--
 # Cohort tau in age_profile is realization-weighted (averages MTR across
@@ -111,12 +109,11 @@ channels = age_aug %>%
   summarise(
     ch_lockin_unlock = sum(tau_S * G_B * (r_S - r_B)),
     ch_stock         = sum(tau_S * extra_R),                          # = tau_S * r_S * dG
-    ch_deemed_raw    = sum(tau_deemed_S * mG_record * deemed_factor), # decedent-weighted tau
+    ch_deemed        = sum(tau_deemed_S * mG_record * deemed_factor   # cell-level delta_realize
+                           * delta_realize),
     .groups = 'drop'
   ) %>%
-  left_join(regime_by_year, by = 'year') %>%
-  mutate(ch_deemed = delta_realize * ch_deemed_raw,
-         across(starts_with('ch_'), ~ . / 1e9))   # dollars -> $B
+  mutate(across(starts_with('ch_'), ~ . / 1e9))   # dollars -> $B
 
 # --- Engine numbers ---------------------------------------------------------
 conv_rev   = read_csv(conv_rev_path,   show_col_types = FALSE) %>% rename(conv_rev   = total)
@@ -130,7 +127,7 @@ decomp = channels %>%
     cell_sum      = mechanical + ch_lockin_unlock + ch_stock + ch_deemed,
     nonlinearity  = conv_rev - cell_sum
   ) %>%
-  select(year, regime, mechanical, ch_lockin_unlock, ch_stock, ch_deemed,
+  select(year, mechanical, ch_lockin_unlock, ch_stock, ch_deemed,
          nonlinearity, cell_sum, conv_rev, static_rev)
 
 # --- Write CSV --------------------------------------------------------------
@@ -185,7 +182,7 @@ cat('Wrote ', plot_path, '\n', sep = '')
 # --- Console summary --------------------------------------------------------
 cat('\nFirst/last 3 years of decomposition ($B):\n')
 print(bind_rows(head(decomp, 3), tail(decomp, 3)) %>%
-        select(year, regime, mechanical, ch_lockin_unlock, ch_stock,
+        select(year, mechanical, ch_lockin_unlock, ch_stock,
                ch_deemed, nonlinearity, conv_rev),
       n = Inf)
 

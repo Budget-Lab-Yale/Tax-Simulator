@@ -1,0 +1,15 @@
+---
+# Mixed regime: step-up retained for primary residences (politically realistic
+# "protect the homeowner" carve-out), deemed realization for everything else.
+# Exercises cell-level c_phi blending: c_phi(a,t) varies with the home-share
+# of each cohort's gain stock.
+kg_death_regime_equities:
+  value: 2
+kg_death_regime_pass_throughs:
+  value: 2
+kg_death_regime_primary_home:
+  value: 0
+kg_death_regime_other_home:
+  value: 2
+kg_death_regime_re_fund:
+  value: 2

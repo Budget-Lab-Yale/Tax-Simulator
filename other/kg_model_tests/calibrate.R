@@ -116,9 +116,15 @@ tau_B          = list()
 
 for (t in YEARS) {
 
+  # §121 exclusion is filing-status-mapped at runtime via tax_law; here we
+  # inject the flat baseline values directly since the calibrator builds
+  # td from Tax-Data csv without going through the tax_law parser.
+  # Calibration scenarios run under step-up everywhere, so §121 only feeds
+  # gain.primary_home_above_cap (a diagnostic for this run).
   td = file.path(TAX_DATA_ROOT, paste0('tax_units_', t, '.csv')) %>%
     fread(select = td_cols, showProgress = FALSE) %>%
     as_tibble() %>%
+    mutate(`pref.kg_sec121_excl` = if_else(filing_status == 2, 500000, 250000)) %>%
     kg_dyn_attach_record_attrs()
 
   bl = file.path(BASELINE_ROOT, 'baseline', 'static', 'detail',
@@ -167,7 +173,7 @@ beta_by_year     = kg_dyn_load_beta_series(MACRO_ROOT, YEARS)
 cat(sprintf("  beta range: [%.4f, %.4f] (real-rate discount, from %s)\n",
             min(beta_by_year), max(beta_by_year), MACRO_ROOT))
 
-c_phi_S_by_year  = rep(0, length(YEARS))   # step-up regime
+zero_route_vec   = rep(0, length(AGES_BATHTUB))   # step-up: no carryover routing
 A                = kg_dyn_build_aging_matrix(AGES_BATHTUB)
 # omega is inert under step-up calibration (delta_route = 0), so any valid
 # row-stochastic vector works. Use a uniform vector to avoid taking a
@@ -202,13 +208,13 @@ eval_response = function(psi_val, ps_val, scenario_tau_mat,
     ages_bathtub   = AGES_BATHTUB
   )
 
-  pass1 = kg_dyn_solve_bellman(grid_packed, tau_B_mat, c_phi = 0,
+  pass1 = kg_dyn_solve_bellman(grid_packed, tau_B_mat, c_phi_mat = 0,
                                psi           = psi_val,
                                phi_I         = KG_DYN_PHI_I,
                                planned_share = ps_val,
                                beta_by_year  = beta_by_year)
   pass2 = kg_dyn_solve_bellman(grid_packed, scenario_tau_mat,
-                               c_phi         = c_phi_S_by_year,
+                               c_phi_mat     = 0,
                                kappa_mat     = pass1$kappa,
                                psi           = psi_val,
                                phi_I         = KG_DYN_PHI_I,
@@ -234,13 +240,13 @@ eval_response = function(psi_val, ps_val, scenario_tau_mat,
     r_S_vec = setNames(rate_info$r_S, bathtub_ages_chr)
 
     step = kg_dyn_step_recurrence(
-      delta_prev  = delta,
-      baseline_t  = bt,
-      A           = A,
-      omega       = omega,
-      r_S_vec     = r_S_vec,
-      delta_route = 0,
-      phi_I       = KG_DYN_PHI_I
+      delta_prev      = delta,
+      baseline_t      = bt,
+      A               = A,
+      omega           = omega,
+      r_S_vec         = r_S_vec,
+      delta_route_vec = zero_route_vec,
+      phi_I           = KG_DYN_PHI_I
     )
 
     if (t == anchor_year) {
@@ -402,13 +408,13 @@ profile_years = function(psi_val, ps_val) {
     ages_bathtub   = AGES_BATHTUB
   )
 
-  pass1 = kg_dyn_solve_bellman(grid_packed, tau_B_mat, c_phi = 0,
+  pass1 = kg_dyn_solve_bellman(grid_packed, tau_B_mat, c_phi_mat = 0,
                                psi           = psi_val,
                                phi_I         = KG_DYN_PHI_I,
                                planned_share = ps_val,
                                beta_by_year  = beta_by_year)
   pass2 = kg_dyn_solve_bellman(grid_packed, tau_S_long_mat,
-                               c_phi         = c_phi_S_by_year,
+                               c_phi_mat     = 0,
                                kappa_mat     = pass1$kappa,
                                psi           = psi_val,
                                phi_I         = KG_DYN_PHI_I,
@@ -430,7 +436,8 @@ profile_years = function(psi_val, ps_val) {
     )
     r_S_vec = setNames(rate_info$r_S, bathtub_ages_chr)
 
-    step = kg_dyn_step_recurrence(delta, bt, A, omega, r_S_vec, 0, KG_DYN_PHI_I)
+    step = kg_dyn_step_recurrence(delta, bt, A, omega, r_S_vec,
+                                  zero_route_vec, KG_DYN_PHI_I)
     G_S    = bt$G_B + delta
     R_B_t  = sum(bt$R_B)
     R_S_t  = sum(step$r_S * G_S)

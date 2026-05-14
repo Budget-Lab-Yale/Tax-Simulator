@@ -1,4 +1,12 @@
 ---
-# Switch to carryover basis; rates unchanged.
-kg_death_regime:
+# Switch all asset classes to carryover basis at death; rates unchanged.
+kg_death_regime_equities:
+  value: 1
+kg_death_regime_pass_throughs:
+  value: 1
+kg_death_regime_primary_home:
+  value: 1
+kg_death_regime_other_home:
+  value: 1
+kg_death_regime_re_fund:
   value: 1

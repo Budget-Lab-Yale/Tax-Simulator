@@ -42,9 +42,9 @@ do_kg_dynamics = function(tax_units, baseline_mtrs, static_mtrs,
   tax_units = kg_dyn_attach_record_attrs(tax_units)
 
   kg_dyn_apply_to_records(
-    tax_units       = tax_units,
-    cell_table      = state$cell_table,
-    delta_realize   = state$regime$delta_realize,
-    decedent_random = tax_units$r.behavior1
+    tax_units        = tax_units,
+    cell_table       = state$cell_table,
+    realize_by_asset = state$regime$realize,
+    decedent_random  = tax_units$r.behavior1
   )
 }
