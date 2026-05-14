@@ -83,14 +83,20 @@ stopifnot(all(rate_info$r_S == 0.03),
           all(rate_info$r_forced_B == 0),
           all(rate_info$r_forced_S == 0))
 
-# Baseline entrant inference with q_B reproduces lambda * R_B.
+# Per-cell baseline q is back-solved from observed R_forced_B. With flat R the
+# recurrence stays at q_ref everywhere. The model-implied baseline must
+# reproduce the observed R_forced_B at every cell after accounting for the
+# year-0 phantom carry-in (1 - q_ref) * E_B(1).
 base = force_state(cells, baseline_tau, lambda = 0.2)
+year_0_carry = (1 - KG_DYN_FORCED_Q_B) * base$E_forced_B[, 1, drop = FALSE]
 stopifnot(all(abs(base$q_forced_B - KG_DYN_FORCED_Q_B) < 1e-12),
           all(abs(base$F0_forced_B + baseline_tau) < 1e-12),
           all(abs(base$F0_forced_S + baseline_tau) < 1e-12),
           all(abs(base$R_forced_B - 20) < 1e-12),
+          all(abs(base$R_forced_B_model - base$R_forced_B) < 1e-12),
           all(abs(base$q_forced_B * base$E_forced_B +
-                    cbind(0, (1 - base$q_forced_B[, -ncol(base$q_forced_B)]) *
+                    cbind(year_0_carry,
+                          (1 - base$q_forced_B[, -ncol(base$q_forced_B)]) *
                              base$E_forced_B[, -ncol(base$E_forced_B)]) -
                     base$R_forced_B) < 1e-12))
 
@@ -102,31 +108,39 @@ stopifnot(all(abs(no_reform$R_forced_B - no_reform$R_forced_S) < 1e-12),
           all(abs(no_reform$q_forced_S - no_reform$q_forced_B) < 1e-12),
           all(no_reform$planned_timing_shift == no_reform$forced_timing_shift))
 
-# Entrant inference fails fast if the baseline forced realization path implies
-# materially negative entrant cohorts under q_B.
+# Sharp drops in baseline R drive the back-solved q below zero; the model
+# clips and the per-cell baseline match degrades for that year. Verify the
+# clipping fires (q_forced_B(t) = 0 when raw recurrence would be negative)
+# rather than failing outright -- the residual is logged as a diagnostic.
 bad_cells = make_cells(c(100, 1, 100, 100, 100))
-stopifnot(inherits(try(force_state(bad_cells, baseline_tau, lambda = 0.2),
-                       silent = TRUE), 'try-error'))
+bad = force_state(bad_cells, baseline_tau, lambda = 0.2)
+stopifnot(all(bad$q_forced_B[, '2027'] == 0),
+          all(bad$R_forced_B_model[, '2027'] != bad$R_forced_B[, '2027']))
 
-# Delayed future hike: q_S rises in the announcement year and accelerates
-# forced realizations from the one-year-left state.
+# Delayed future hike: q_S(year 1) saturates at 1 (full immediate). Year-1
+# realizations = q_S(1)*E_B(1) + (1-q_ref)*E_B(1) = 1*20 + 0.5*20 = 30.
+# Year-2 realizations = q_S(2)*E_B(2) + (1-q_S(1))*E_B(1) = 0.5*20 + 0*20 = 10.
 delayed = force_state(cells, make_tau(c(0.20, 0.25, 0.25, 0.25, 0.25)))
 stopifnot(all(abs(delayed$q_forced_S[, '2026'] - 1) < 1e-12),
-          all(abs(delayed$R_forced_S[, '2026'] - 25) < 1e-12),
-          all(abs(delayed$R_forced_S[, '2027'] - 15) < 1e-12))
+          all(abs(delayed$R_forced_S[, '2026'] - 30) < 1e-12),
+          all(abs(delayed$R_forced_S[, '2027'] - 10) < 1e-12))
 
-# Temporary current hike: q_S falls and the same cohort realizes at deadline.
+# Temporary current hike: q_S(year 1) goes to 0 (full defer); year-1
+# realizations = 0*20 + 0.5*20 = 10. Year-2 realizations = q_S(2)*E_B(2)
+# + (1-q_S(1))*E_B(1) = 0.5*20 + 1*20 = 30.
 temporary = force_state(cells, make_tau(c(0.25, 0.20, 0.20, 0.20, 0.20)))
 stopifnot(all(abs(temporary$q_forced_S[, '2026']) < 1e-12),
-          all(abs(temporary$R_forced_S[, '2026']) < 1e-12),
-          all(abs(temporary$R_forced_S[, '2027'] - 40) < 1e-12))
+          all(abs(temporary$R_forced_S[, '2026'] - 10) < 1e-12),
+          all(abs(temporary$R_forced_S[, '2027'] - 30) < 1e-12))
 
 # Friction: a 0.5pp delayed hike moves q by 0.1 with the default 5pp wedge.
+# q_S(1) = 0.5 + 0.005/0.05 = 0.6. R_forced_S(1) = 0.6*20 + 0.5*20 = 22.
+# Year-2 q_S = q_ref = 0.5; R_forced_S(2) = 0.5*20 + 0.4*20 = 18.
 small_delayed_tau = make_tau(c(0.20, 0.205, 0.205, 0.205, 0.205))
 small_delayed = force_state(cells, small_delayed_tau)
-stopifnot(all(abs(small_delayed$q_forced_S[, '2026'] - 0.9) < 1e-12),
-          all(abs(small_delayed$R_forced_S[, '2026'] - 22.5) < 1e-12),
-          all(abs(small_delayed$R_forced_S[, '2027'] - 17.5) < 1e-12))
+stopifnot(all(abs(small_delayed$q_forced_S[, '2026'] - 0.6) < 1e-12),
+          all(abs(small_delayed$R_forced_S[, '2026'] - 22) < 1e-12),
+          all(abs(small_delayed$R_forced_S[, '2027'] - 18) < 1e-12))
 
 # The reported q_S is the F1 Bellman optimizer. For an interior case, it beats
 # nearby controls; for corner cases, the chosen bound beats moving inward.
@@ -148,20 +162,15 @@ stopifnot(all(delayed$F1_forced_S[, '2026'] >=
                 forced_objective(temporary, make_tau(c(0.25, 0.20, 0.20, 0.20, 0.20)),
                                  2026, 0.01)))
 
-# Forced dollars are conserved across fully observed entrant cohorts. The last
-# year's entrants may have deadline realizations beyond the simulation boundary.
-observed_cohort_total = function(x) {
-  rowSums(x$R_forced_S[, -ncol(x$R_forced_S), drop = FALSE]) +
-    (1 - x$q_forced_S[, ncol(x$q_forced_S) - 1]) *
-      x$E_forced_B[, ncol(x$E_forced_B) - 1]
-}
-source_cohort_total = function(x) {
-  rowSums(x$E_forced_B[, -ncol(x$E_forced_B), drop = FALSE])
-}
-stopifnot(all(abs(observed_cohort_total(delayed) -
-                  source_cohort_total(delayed)) < 1e-9),
-          all(abs(observed_cohort_total(temporary) -
-                  source_cohort_total(temporary)) < 1e-9))
+# Total forced dollars across the window are conserved (modulo the year-0
+# phantom carry-in and the year-N deadline leakage past the simulation
+# boundary). Under flat R and the terminal-year boundary that forces q_S(N)
+# back to q_ref, the total scenario realization equals the total baseline
+# realization to numerical precision.
+stopifnot(all(abs(rowSums(delayed$R_forced_S) -
+                  rowSums(delayed$R_forced_B)) < 1e-9),
+          all(abs(rowSums(temporary$R_forced_S) -
+                  rowSums(temporary$R_forced_B)) < 1e-9))
 
 # Baseline Bellman inversion targets the ordinary bucket exactly.
 grid_packed = list(

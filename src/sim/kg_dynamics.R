@@ -86,7 +86,7 @@ KG_DYN_BETA             = 0.978   # fallback annual discount factor, used
 # forced-window share lambda. The remainder is the ordinary Bellman-controlled
 # share.
 KG_DYN_SHARE_FIXED      = 0
-KG_DYN_SHARE_PLANNED    = 0.6395
+KG_DYN_SHARE_PLANNED    = NA_real_
 KG_DYN_TIMING_WINDOW    = 1L
 KG_DYN_FORCED_Q_B       = 0.5   # reference q (q_ref) for the forced FOC.
                                 # Per-cell baseline q_forced_B(a,t) is
@@ -120,7 +120,7 @@ KG_DYN_HEIR_SIGMA       = 5       # std dev of heir age distribution
 # (Macro-Projections vintage), or any Bellman primitive (mortality
 # weighting, age-tail r_B treatment, etc.) changes, then paste the printed
 # values below.
-KG_DYN_DEFAULT_PSI      = 22.4365
+KG_DYN_DEFAULT_PSI      = NA_real_
 
 # Within-cell allocation rule for the policy-induced delta dG.
 # Determines which "effective cell mortality" the recurrence uses for
@@ -1051,6 +1051,16 @@ kg_dyn_solve_forced_window_state = function(baseline_cells, tau_S_mat, years,
   }
   F1_forced_B[, n_years] = F0_forced_B[, n_years]
   F1_forced_S[, n_years] = F0_forced_S[, n_years]
+
+  # Terminal-year boundary: the Bellman has no year (n_years + 1) to draw a
+  # V_wait from, so the FOC for q is not solved at n_years (the loop above
+  # ends at n_years - 1). Force the scenario q at the boundary to equal the
+  # back-solved baseline q so no-reform reproduces R_forced_B at the
+  # simulation boundary too. This gives zero scenario response in the final
+  # year, which is the right behavior for "no future to anticipate."
+  if (n_years >= 1) {
+    q_forced_S[, n_years] = q_forced_B[, n_years]
+  }
 
   # Apply the realization formula. Both paths share E_forced_B and the year-0
   # carry-in assumption (q_S(0) = q_ref, E_B(0) = E_B(1)). With this setup the
