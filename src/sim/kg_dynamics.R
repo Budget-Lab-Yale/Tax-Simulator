@@ -67,8 +67,13 @@ KG_DYN_TIMING_WINDOW    = 1L
 # 5pp moves the full bucket; 1pp moves 20%.
 KG_DYN_TIMING_REF_WEDGE = 0.05
 
-KG_DYN_HEIR_SHIFT       = 30      # average decedent-to-heir age gap
-KG_DYN_HEIR_SIGMA       = 5       # std dev of heir age distribution
+# Static resource: dollar-weighted heir-age distribution derived from SCF
+# 2022 inheritance data (filtered to non-gift transfers, weighted by
+# Gale-Sabelhaus 2024 recency probabilities for the current-year flow).
+# Built by other/kg_model_tests/build_heir_distribution.R; see that script
+# for the filter definitions. Treated as a model constant because the
+# upstream survey is not year-varying at the projection horizons we use.
+KG_DYN_HEIR_DISTRIBUTION_PATH = './resources/heir_distribution_scf2022.csv'
 
 # Calibrated jointly with KG_DYN_SHARE_PLANNED in
 # other/kg_model_tests/calibrate.R against long-run dlog(R)/dtau (sim year
@@ -209,16 +214,39 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
 # Aging and heir matrices
 #-------------------------------------------------------------------------------
 
-kg_dyn_build_heir_matrix = function(ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX,
-                                    shift = KG_DYN_HEIR_SHIFT,
-                                    sigma = KG_DYN_HEIR_SIGMA) {
+kg_dyn_build_heir_matrix = function(heir_dist,
+                                    ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
   # Row-stochastic omega[a, h] = share of decedent-age-a gains routed to
-  # heir-age h. Centered at a - shift, Gaussian sigma. Placeholder until
-  # estate module hookup.
+  # heir-age h. Every row is a copy of the empirical dollar-weighted
+  # heir-age distribution heir_dist, sourced from
+  # kg_dyn_load_heir_distribution (which reads the static SCF-derived
+  # resource at KG_DYN_HEIR_DISTRIBUTION_PATH).
+  #
+  # This is equivalent to assuming heir age is independent of decedent age
+  # conditional on inheritance. Marginal heir flow matches the data
+  # exactly; conditional dispersion is the part the marginals don't pin
+  # down. Compare to a Gaussian-shift prior + IPF, which would let the
+  # conditional vary at the cost of an external prior — for revenue scoring
+  # under carryover the marginal-only rule is the right default.
 
-  W = outer(ages, ages, function(a, h) dnorm(h, mean = a - shift, sd = sigma))
-  W = W / rowSums(W)
+  n = length(ages)
+  if (length(heir_dist) != n) {
+    stop(sprintf(
+      'kg_dyn_build_heir_matrix: heir_dist length %d != length(ages) %d.',
+      length(heir_dist), n))
+  }
+  if (any(heir_dist < 0, na.rm = TRUE) || any(is.na(heir_dist))) {
+    stop('kg_dyn_build_heir_matrix: heir_dist must be nonnegative and ',
+         'free of NA.')
+  }
+  s = sum(heir_dist)
+  if (!is.finite(s) || s <= 0) {
+    stop('kg_dyn_build_heir_matrix: heir_dist has nonpositive sum.')
+  }
+  row = as.numeric(heir_dist) / s
+
+  W = matrix(row, nrow = n, ncol = n, byrow = TRUE)
   stopifnot(all(abs(rowSums(W) - 1) < 1e-12))
   rownames(W) = colnames(W) = ages
   W
@@ -870,6 +898,45 @@ scenario_uses_kg_dynamics = function(scenario_info) {
 # Bathtub pre-pass orchestration
 #-------------------------------------------------------------------------------
 
+kg_dyn_load_heir_distribution = function(path = KG_DYN_HEIR_DISTRIBUTION_PATH,
+                                          ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
+
+  # Reads the precomputed dollar-weighted heir-age distribution from a
+  # static SCF-derived resource. Built by
+  # other/kg_model_tests/build_heir_distribution.R; re-run that script
+  # when the SCF vintage updates.
+
+  if (!file.exists(path)) {
+    stop('kg_dynamics: heir distribution resource missing at ', path,
+         '. Regenerate via ',
+         'sbatch other/kg_model_tests/build_heir_distribution.sbatch.')
+  }
+
+  raw = read_csv(path, show_col_types = FALSE)
+  if (!all(c('age', 'share') %in% names(raw))) {
+    stop('kg_dynamics: heir distribution resource at ', path,
+         ' missing required columns (age, share).')
+  }
+  raw = raw %>% arrange(age)
+  if (!identical(as.integer(raw$age), as.integer(ages))) {
+    stop('kg_dynamics: heir distribution resource at ', path,
+         ' has age range ', min(raw$age), ':', max(raw$age),
+         ' but expected ', min(ages), ':', max(ages), '.')
+  }
+  if (any(raw$share < 0, na.rm = TRUE) || any(is.na(raw$share))) {
+    stop('kg_dynamics: heir distribution resource at ', path,
+         ' has negative or NA share entries.')
+  }
+  if (abs(sum(raw$share) - 1) > 1e-6) {
+    stop('kg_dynamics: heir distribution shares at ', path,
+         ' sum to ', sum(raw$share), ', expected 1.')
+  }
+
+  setNames(raw$share, as.character(raw$age))
+}
+
+
+
 kg_dyn_load_bathtub_inputs = function(scenario_info, baseline_root,
                                        sample_ids, pct_sample,
                                        ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
@@ -882,6 +949,8 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, baseline_root,
 
   tax_data_root = scenario_info$interface_paths$`Tax-Data`
   years         = scenario_info$years
+
+  heir_dist = kg_dyn_load_heir_distribution(ages = ages)
 
   td_cols = c('id', 'weight', 'filing_status', 'age1', 'age2',
               'kg_lt', 'q_death1', 'q_death2',
@@ -928,7 +997,8 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, baseline_root,
 
   list(baseline_cells = baseline_cells,
        baseline_tau   = baseline_tau,
-       reform_tau     = reform_tau)
+       reform_tau     = reform_tau,
+       heir_dist      = heir_dist)
 }
 
 
@@ -1005,7 +1075,7 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
 
 
 kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
-                                    baseline_tau, reform_tau,
+                                    baseline_tau, reform_tau, heir_dist,
                                     psi   = KG_DYN_DEFAULT_PSI,
                                     phi_I = KG_DYN_PHI_I,
                                     planned_share = KG_DYN_SHARE_PLANNED,
@@ -1099,12 +1169,13 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     ages_bathtub   = ages_bathtub
   )
 
-  # Save life table for later diagnostic inspection
-  saveRDS(life_ext, file.path(state_dir, 'life_table_extension.rds'))
+  # Save life table and heir distribution for later diagnostic inspection
+  saveRDS(life_ext,  file.path(state_dir, 'life_table_extension.rds'))
+  saveRDS(heir_dist, file.path(state_dir, 'heir_distribution.rds'))
 
   # Step 5: year-by-year bathtub recurrence
   A     = kg_dyn_build_aging_matrix(ages_bathtub)
-  omega = kg_dyn_build_heir_matrix(ages_bathtub)
+  omega = kg_dyn_build_heir_matrix(heir_dist, ages_bathtub)
 
   delta = setNames(rep(0, length(ages_bathtub)), as.character(ages_bathtub))
   bathtub_ages_chr = as.character(ages_bathtub)

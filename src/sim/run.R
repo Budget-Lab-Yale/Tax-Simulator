@@ -639,7 +639,8 @@ run_bathtub_pass = function(scenario_info, tax_law,
     tax_law        = tax_law,
     baseline_cells = inputs$baseline_cells,
     baseline_tau   = inputs$baseline_tau,
-    reform_tau     = inputs$reform_tau
+    reform_tau     = inputs$reform_tau,
+    heir_dist      = inputs$heir_dist
   )
 
   invisible(NULL)

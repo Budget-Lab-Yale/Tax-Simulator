@@ -169,7 +169,13 @@ cat(sprintf("  beta range: [%.4f, %.4f] (real-rate discount, from %s)\n",
 
 c_phi_S_by_year  = rep(0, length(YEARS))   # step-up regime
 A                = kg_dyn_build_aging_matrix(AGES_BATHTUB)
-omega            = kg_dyn_build_heir_matrix(AGES_BATHTUB)
+# omega is inert under step-up calibration (delta_route = 0), so any valid
+# row-stochastic vector works. Use a uniform vector to avoid taking a
+# dependency on Estate-Tax-Distribution from the standalone calibrator.
+omega            = kg_dyn_build_heir_matrix(
+  heir_dist = rep(1 / length(AGES_BATHTUB), length(AGES_BATHTUB)),
+  ages      = AGES_BATHTUB
+)
 bathtub_ages_chr = as.character(AGES_BATHTUB)
 
 
