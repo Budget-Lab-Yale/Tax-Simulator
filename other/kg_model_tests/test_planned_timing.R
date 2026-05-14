@@ -63,24 +63,24 @@ delayed = kg_dyn_build_planned_timing(cells, make_tau(c(0.20, 0.25, 0.25, 0.25, 
                                       years, planned_share = 0.2,
                                       tau_B_mat = baseline_tau,
                                       timing_window = 1, ages_bathtub = ages)
-stopifnot(all(delayed$R_planned_S[, '2026'] == 40),
-          all(delayed$R_planned_S[, '2027'] == 0))
+stopifnot(all(abs(delayed$R_planned_S[, '2026'] - 40) < 1e-9),
+          all(abs(delayed$R_planned_S[, '2027'])      < 1e-9))
 
 # Temporary hike: planned dollars scheduled in the high-tax year delay one year.
 temporary = kg_dyn_build_planned_timing(cells, make_tau(c(0.25, 0.20, 0.20, 0.20, 0.20)),
                                         years, planned_share = 0.2,
                                         tau_B_mat = baseline_tau,
                                         timing_window = 1, ages_bathtub = ages)
-stopifnot(all(temporary$R_planned_S[, '2026'] == 0),
-          all(temporary$R_planned_S[, '2027'] == 40))
+stopifnot(all(abs(temporary$R_planned_S[, '2026'])      < 1e-9),
+          all(abs(temporary$R_planned_S[, '2027'] - 40) < 1e-9))
 
 # End of a multi-year high-rate window: year 2029 can delay into lower-tax 2030.
 sunset = kg_dyn_build_planned_timing(cells, make_tau(c(0.25, 0.25, 0.25, 0.25, 0.20)),
                                      years, planned_share = 0.2,
                                      tau_B_mat = baseline_tau,
                                      timing_window = 1, ages_bathtub = ages)
-stopifnot(all(sunset$R_planned_S[, '2029'] == 0),
-          all(sunset$R_planned_S[, '2030'] == 40))
+stopifnot(all(abs(sunset$R_planned_S[, '2029'])      < 1e-9),
+          all(abs(sunset$R_planned_S[, '2030'] - 40) < 1e-9))
 
 # Planned dollars are conserved within each age cell.
 stopifnot(all(rowSums(delayed$R_planned_B) == rowSums(delayed$R_planned_S)),
@@ -109,9 +109,9 @@ grid_packed = list(
 )
 tau_mat = matrix(0.2, nrow = length(ages), ncol = 2,
                  dimnames = list(as.character(ages), as.character(years[1:2])))
-pass = kg_dyn_solve_bellman_baseline(grid_packed, tau_mat, psi = 25,
-                                      phi_I = 0.4, planned_share = 0,
-                                      beta_by_year = c(0.96, 0.96))
+pass = kg_dyn_solve_bellman(grid_packed, tau_mat, c_phi = 0, psi = 25,
+                            phi_I = 0.4, planned_share = 0,
+                            beta_by_year = c(0.96, 0.96))
 stopifnot(all(abs(pass$r_D - 0.6 * grid_packed$r_B) < 1e-12))
 
 # Friction: a 1pp delayed hike with default 5pp reference wedge moves only

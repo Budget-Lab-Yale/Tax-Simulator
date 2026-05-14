@@ -39,12 +39,7 @@ tryCatch({
   config        = readRDS(file.path(staging_dir, task$scenario, 'config.rds'))
   scenario_info = config$scenario_info
 
-  # No-op when scenario doesn't use kg_dynamics
-  uses_kg = any(startsWith(
-    scenario_info$behavior_modules %||% character(),
-    'kg_dynamics/'
-  ))
-  if (!uses_kg) {
+  if (!scenario_uses_kg_dynamics(scenario_info)) {
     cat(paste0('Phase 2B: scenario=', task$scenario,
                ' does not use kg_dynamics; skipping.\n'))
     quit(status = 0)

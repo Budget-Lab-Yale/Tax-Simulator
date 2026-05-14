@@ -196,19 +196,18 @@ eval_response = function(psi_val, ps_val, scenario_tau_mat,
     ages_bathtub   = AGES_BATHTUB
   )
 
-  pass1 = kg_dyn_solve_bellman_baseline(grid_packed, tau_B_mat,
-                                         c_phi_B = 0,
-                                         psi          = psi_val,
-                                         phi_I        = KG_DYN_PHI_I,
-                                         planned_share = ps_val,
-                                         beta_by_year = beta_by_year)
-  pass2 = kg_dyn_solve_bellman_scenario(grid_packed, scenario_tau_mat,
-                                         kappa_mat = pass1$kappa,
-                                         c_phi_S_by_year = c_phi_S_by_year,
-                                         psi          = psi_val,
-                                         phi_I        = KG_DYN_PHI_I,
-                                         planned_share = ps_val,
-                                         beta_by_year = beta_by_year)
+  pass1 = kg_dyn_solve_bellman(grid_packed, tau_B_mat, c_phi = 0,
+                               psi           = psi_val,
+                               phi_I         = KG_DYN_PHI_I,
+                               planned_share = ps_val,
+                               beta_by_year  = beta_by_year)
+  pass2 = kg_dyn_solve_bellman(grid_packed, scenario_tau_mat,
+                               c_phi         = c_phi_S_by_year,
+                               kappa_mat     = pass1$kappa,
+                               psi           = psi_val,
+                               phi_I         = KG_DYN_PHI_I,
+                               planned_share = ps_val,
+                               beta_by_year  = beta_by_year)
 
   delta = setNames(rep(0, length(AGES_BATHTUB)), bathtub_ages_chr)
   R_B_anchor = NA_real_
@@ -397,19 +396,18 @@ profile_years = function(psi_val, ps_val) {
     ages_bathtub   = AGES_BATHTUB
   )
 
-  pass1 = kg_dyn_solve_bellman_baseline(grid_packed, tau_B_mat,
-                                         c_phi_B = 0,
-                                         psi          = psi_val,
-                                         phi_I        = KG_DYN_PHI_I,
-                                         planned_share = ps_val,
-                                         beta_by_year = beta_by_year)
-  pass2 = kg_dyn_solve_bellman_scenario(grid_packed, tau_S_long_mat,
-                                         kappa_mat = pass1$kappa,
-                                         c_phi_S_by_year = c_phi_S_by_year,
-                                         psi          = psi_val,
-                                         phi_I        = KG_DYN_PHI_I,
-                                         planned_share = ps_val,
-                                         beta_by_year = beta_by_year)
+  pass1 = kg_dyn_solve_bellman(grid_packed, tau_B_mat, c_phi = 0,
+                               psi           = psi_val,
+                               phi_I         = KG_DYN_PHI_I,
+                               planned_share = ps_val,
+                               beta_by_year  = beta_by_year)
+  pass2 = kg_dyn_solve_bellman(grid_packed, tau_S_long_mat,
+                               c_phi         = c_phi_S_by_year,
+                               kappa_mat     = pass1$kappa,
+                               psi           = psi_val,
+                               phi_I         = KG_DYN_PHI_I,
+                               planned_share = ps_val,
+                               beta_by_year  = beta_by_year)
 
   delta = setNames(rep(0, length(AGES_BATHTUB)), bathtub_ages_chr)
   out   = tibble(sim_year = integer(), year = integer(), semi_elast = numeric())

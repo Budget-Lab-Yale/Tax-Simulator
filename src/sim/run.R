@@ -62,9 +62,7 @@ do_scenario = function(ID, baseline_mtrs) {
   # Run simulation
   #----------------
 
-  uses_kg = ID != 'baseline' &&
-            any(startsWith(scenario_info$behavior_modules %||% character(),
-                           'kg_dynamics/'))
+  uses_kg = ID != 'baseline' && scenario_uses_kg_dynamics(scenario_info)
 
   if (uses_kg) {
 

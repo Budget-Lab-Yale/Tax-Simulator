@@ -48,77 +48,43 @@
 
 KG_DYN_AGE_MIN          = 18
 KG_DYN_AGE_MAX          = 80      # bathtub topcode (matches simulator)
-KG_DYN_AGE_MAX_BELLMAN  = 119     # Bellman extended-grid terminal age; SSA
-                                  # PerLifeTables hit q(x)=1 at 119
-KG_DYN_BETA             = 0.978   # fallback annual discount factor, used
-                                  # only by isolated solver unit tests that
-                                  # don't attach Macro-Projections. Production
-                                  # paths build a year-varying real-rate
-                                  # discount series from tsy_10y / cpiu via
-                                  # kg_dyn_load_beta_series; see Bellman
-                                  # primitives below. 0.978 corresponds to a
-                                  # ~2.2% real rate, the rough mid-horizon
-                                  # value implied by the default Macro-
-                                  # Projections vintage.
-# Baseline realization bucket shares. The fixed share is nonresponsive; the
-# planned share is mechanically timeable across nearby years; the remainder is
-# the ordinary Bellman-controlled share. Defaults preserve the prior two-bucket
-# model: fixed=0.4 and planned=0 imply ordinary=0.6.
-KG_DYN_SHARE_FIXED      = 0.4
+KG_DYN_AGE_MAX_BELLMAN  = 119     # SSA PerLifeTables hit q(x)=1 at 119
+
+# Fallback annual discount factor for isolated solver unit tests. Production
+# paths build a year-varying real-rate series via kg_dyn_load_beta_series
+# (tsy_10y Fisher-deflated by year-t YoY CPI-U).
+KG_DYN_BETA             = 0.978
+
+# Realization bucket shares. phi_I is the fixed/nonresponsive share;
+# planned is mechanically timeable across nearby years; the remainder is
+# the ordinary Bellman-controlled share.
+KG_DYN_PHI_I            = 0.4
 KG_DYN_SHARE_PLANNED    = 0.3285
 KG_DYN_TIMING_WINDOW    = 1L
 
-# Reference wedge controlling the friction in planned-bucket routing. The
-# fraction of a year's planned dollars that move toward the best year in the
-# window is clamp((tau_S - tau_B differential between source and destination) /
-# KG_DYN_TIMING_REF_WEDGE, 0, 1). Default 5pp means the full planned bucket
-# moves at a 5pp wedge differential, a 1pp differential moves 20%, etc.
+# Fraction of planned dollars that move toward the best year in the window
+# is clamp((tau_S - tau_B between source and destination) / ref_wedge, 0, 1).
+# 5pp moves the full bucket; 1pp moves 20%.
 KG_DYN_TIMING_REF_WEDGE = 0.05
 
-# Backward-compatible alias used by existing callers and diagnostics. In the
-# three-bucket interpretation this is the fixed/nonresponsive share.
-KG_DYN_PHI_I            = KG_DYN_SHARE_FIXED
 KG_DYN_HEIR_SHIFT       = 30      # average decedent-to-heir age gap
 KG_DYN_HEIR_SIGMA       = 5       # std dev of heir age distribution
 
-# Default psi (global curvature of the quadratic realization benefit).
-# Jointly calibrated with KG_DYN_SHARE_PLANNED by
-# other/kg_model_tests/calibrate.R against two moments:
-#   - long-run permanent semi-elasticity dlog(R)/dtau ~= -0.6/0.238 under
-#     a 1pp uniform tau bump on the step-up baseline, anchored at sim year
-#     30 (the response ramps over the first ~10 years as the bathtub
-#     accumulates stock, then plateaus);
-#   - short-run announced-shock semi-elasticity dlog(R(t))/dtau(t+1) under
-#     a 5pp delayed permanent shock, anchored at sim year 1 (twice the
-#     long-run magnitude with opposite sign).
-# Set to NA_real_ here to force fail-fast at run time if someone tries to
-# run kg_dynamics without an up-to-date calibration. Re-run calibrate.R
-# whenever Tax-Data vintage, bucket shares, ref_wedge, the discount series
-# (Macro-Projections vintage), or any Bellman primitive (mortality
-# weighting, age-tail r_B treatment, etc.) changes, then paste the printed
-# values below.
+# Calibrated jointly with KG_DYN_SHARE_PLANNED in
+# other/kg_model_tests/calibrate.R against long-run dlog(R)/dtau (sim year
+# 30 of a +1pp permanent shock) and short-run announcement-year response
+# (year 1 of a delayed +5pp shock). Re-run calibration whenever Tax-Data
+# vintage, bucket shares, ref_wedge, the discount series, or any Bellman
+# primitive changes.
 KG_DYN_DEFAULT_PSI      = 26.5673
 
-# Within-cell allocation rule for the policy-induced delta dG.
-# Determines which "effective cell mortality" the recurrence uses for
-# stock-allocation in the death and survivor channels.
-#
-#   "G" — dG within a cell is allocated proportional to G_unit (each
-#         holder's share of the cell's gain stock).  Effective rate
-#         m_eff = sum(w*m*G) / sum(w*G).  This is the simplest rule and
-#         corresponds to the inheritance-flow story (heirs receive a share
-#         of decedent stock proportional to their existing G).
-#
-#   "R" — dG within a cell is allocated proportional to positive realized
-#         gains (kg_lt > 0).  Effective rate m_eff = sum(w*m*R)/sum(w*R).
-#         Corresponds to the lock-in story (deferred realizations stay
-#         with the records that were going to realize the most).
-#         Falls back to "G" when R_B = 0 (e.g., young heir cohorts under
-#         carryover that haven't yet realized).
-#
-# Both rules give a per-record-correct sum under their respective allocation
-# assumption. The choice affects carryover and (mildly) deemed scoring;
-# step-up scenarios are unchanged because the death channel is shut off.
+# Within-cell allocation rule for policy-induced dG, controlling the
+# effective cell mortality m_eff used in the death/survivor channels.
+#   "G" — dG allocated proportional to G_unit; m_eff = sum(w*m*G)/sum(w*G).
+#         Inheritance-flow story.
+#   "R" — dG allocated proportional to positive kg_lt; m_eff = sum(w*m*R)/sum(w*R).
+#         Lock-in story. Falls back to "G" when R_B = 0.
+# Only affects carryover/deemed; step-up is unchanged (death channel off).
 KG_DYN_DG_ALLOCATION    = 'G'
 
 KG_DYN_ASSET_VALUE_COLS = c('value.equities', 'value.pass_throughs',
@@ -128,23 +94,17 @@ KG_DYN_ASSET_BASIS_COLS = c('basis.equities', 'basis.pass_throughs',
                             'basis.primary_home', 'basis.other_home',
                             'basis.re_fund')
 
-# Life-table paths for ages 81+ in the Bellman extended grid. Year-varying
-# Trustees Report Alternative 2 projections, blended 50/50 male/female since
-# the cohort module does not track gender.
+# Trustees Report Alternative 2, 50/50 male/female blend (cohort module is
+# gender-blind). Supplies the 81+ tail of the Bellman extended grid.
 KG_DYN_LIFE_TABLE_M_PATH = './resources/PerLifeTables_M_Alt2_TR2024.csv'
 KG_DYN_LIFE_TABLE_F_PATH = './resources/PerLifeTables_F_Alt2_TR2024.csv'
 
 
 # Death-regime taxonomy. YAML pref.kg_death_regime is an integer code;
-# KG_DYN_REGIME_BY_CODE maps it to a name; KG_DYN_REGIMES carries the
-# canonical (delta_vanish, delta_route, delta_realize, c_phi_default) tuple
-# for each name. The bequest motive theta is supplied separately and overrides
-# c_phi_default for carryover.
-#
-# c_phi is the death-state burden share the current holder internalizes:
-# 0 step-up (full forgiveness), theta carryover (partial), 1 deemed (no
-# forgiveness). The Bellman maps it to the forgiveness value F = (1-c_phi)*tau
-# (= tau under step-up, (1-theta)*tau under carryover, 0 under deemed).
+# the bequest motive theta is supplied separately and overrides c_phi for
+# carryover. c_phi is the death-state burden share the holder internalizes:
+# 0 step-up (full forgiveness), theta carryover, 1 deemed (no forgiveness).
+# Forgiveness value F = (1 - c_phi) * tau.
 KG_DYN_REGIME_BY_CODE = c('0' = 'step_up',
                           '1' = 'carryover',
                           '2' = 'deemed_realization')
@@ -166,17 +126,12 @@ KG_DYN_REGIMES = list(
 
 kg_dyn_attach_record_attrs = function(tax_units) {
 
-  #----------------------------------------------------------------------------
-  # Adds three derived columns to tax_units used by the bathtub recurrence:
+  # Adds three derived columns the bathtub recurrence needs:
   #   G_unit       : per-record unrealized gain stock, sum_k max(0, value_k -
   #                  basis_k) across the five tracked wealth classes
-  #   m_household  : household death probability. q_death1*q_death2 for joint
-  #                  filers; q_death1 otherwise
-  #   age_cohort   : cohort age. max(age1, age2) for joint, age1 otherwise.
-  #                  Top-coded at KG_DYN_AGE_MAX, bottom-coded at AGE_MIN.
-  #
-  # Returns: tax_units augmented with G_unit, m_household, age_cohort.
-  #----------------------------------------------------------------------------
+  #   m_household  : q_death1 * q_death2 for joint filers; q_death1 otherwise
+  #   age_cohort   : max(age1, age2) for joint, age1 otherwise; clipped to
+  #                  [KG_DYN_AGE_MIN, KG_DYN_AGE_MAX]
 
   values = as.matrix(tax_units[, KG_DYN_ASSET_VALUE_COLS])
   basis  = as.matrix(tax_units[, KG_DYN_ASSET_BASIS_COLS])
@@ -206,23 +161,15 @@ kg_dyn_attach_record_attrs = function(tax_units) {
 
 kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
-  #----------------------------------------------------------------------------
   # Weight-aggregates per-record (G_unit, kg_lt, m_household) to age cells.
   # tax_units must already have G_unit, m_household, age_cohort attached.
   #
-  # Note on R_B convention: R_B is the cell's positive realized gains
-  # (sum(weight * pmax(kg_lt, 0))), not the signed sum. The spec defines
-  # baseline realizations as positive flows out of the unrealized-gain stock,
-  # and using positive-only sums keeps r_B >= 0 and ensures the per-record
+  # R_B uses positive-only sums of kg_lt so r_B >= 0 and per-record
   # allocation shares (pmax(kg_lt, 0) / R_B) sum to 1.
   #
   # Sparse-cell fallback (spec §5.1): cells with G_B > 0 but R_B = 0 inherit
-  # the gain-stock-weighted aggregate r_B across all age cells. This prevents
-  # young heir cohorts (carryover / deemed inflows) from getting r_S = 0
-  # forever just because they had no historical realization activity.
-  #
-  # Returns: tibble with age, G_B, R_B, r_B, m, mG_record, mR_record.
-  #----------------------------------------------------------------------------
+  # the gain-stock-weighted aggregate r_B. Prevents young heir cohorts
+  # (carryover / deemed inflows) from getting r_S = 0 forever.
 
   agg = tax_units %>%
     group_by(age_cohort) %>%
@@ -266,11 +213,9 @@ kg_dyn_build_heir_matrix = function(ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX,
                                     shift = KG_DYN_HEIR_SHIFT,
                                     sigma = KG_DYN_HEIR_SIGMA) {
 
-  #----------------------------------------------------------------------------
-  # Row-stochastic heir-allocation matrix omega[a, h] = share of decedent-age-a
-  # gains routed to heir-age h. Centered at a - shift with Gaussian noise
-  # sigma. Placeholder until estate module hookup.
-  #----------------------------------------------------------------------------
+  # Row-stochastic omega[a, h] = share of decedent-age-a gains routed to
+  # heir-age h. Centered at a - shift, Gaussian sigma. Placeholder until
+  # estate module hookup.
 
   W = outer(ages, ages, function(a, h) dnorm(h, mean = a - shift, sd = sigma))
   W = W / rowSums(W)
@@ -283,9 +228,7 @@ kg_dyn_build_heir_matrix = function(ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX,
 
 kg_dyn_build_aging_matrix = function(ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
-  #----------------------------------------------------------------------------
   # A[a, h] = 1 if h = a + 1; A[a_max, a_max] = 1 (topcode loops). Spec §3.4.
-  #----------------------------------------------------------------------------
 
   n = length(ages)
   A = matrix(0, n, n, dimnames = list(ages, ages))
@@ -306,34 +249,13 @@ kg_dyn_load_life_table_extension = function(years,
                                             path_M = KG_DYN_LIFE_TABLE_M_PATH,
                                             path_F = KG_DYN_LIFE_TABLE_F_PATH) {
 
-  #----------------------------------------------------------------------------
-  # Loads SSA Trustees Report Alternative-2 mortality projections for ages
-  # past the simulator topcode. The simulator's own life table (per-year cell
-  # aggregates, ages 18-80) is used as-is for [18, 80]; this loader supplies
-  # the post-topcode tail [81, 119] that the Bellman backward induction needs
-  # for a true terminal condition (q(119) = 1 in the SSA tables).
-  #
-  # The PerLifeTables_*_Alt2_TR2024.csv files have a 5-line header followed
-  # by Year,x,q(x),l(x),d(x),... rows. We pull q(x) for the requested years
-  # and ages, blend male/female 50/50 (cohort module is gender-blind), and
-  # return a matrix indexed [age, year].
-  #
-  # Parameters:
-  #   - years    : integer vector of simulation years
-  #   - ages_ext : ages past KG_DYN_AGE_MAX
-  #   - path_M   : path to male-cohort life table
-  #   - path_F   : path to female-cohort life table
-  #
-  # Returns: matrix of dim length(ages_ext) x length(years), entry [a, t] is
-  #          gender-blended q(x) at age a in year t.
-  #----------------------------------------------------------------------------
+  # Supplies the post-topcode mortality tail [81, 119] that the Bellman
+  # needs for a true terminal condition (q(119) = 1 in the SSA tables).
+  # Returns a [age, year] matrix of gender-blended q(x).
 
   load_one = function(path) {
-    # The PerLifeTables files start with 4 lines of metadata, then a header
-    # row (Year,x,q(x),...), then data. skip=4 lands fread on the header
-    # row, header=TRUE consumes it. Column names from the file are odd
-    # ("q(x)", "12a(x)", etc.); we slice to the first three by position and
-    # rename to clean lowercase.
+    # PerLifeTables files: 4 metadata lines, then header (Year,x,q(x),...),
+    # then data. Column names are odd ("q(x)", "12a(x)"); slice by position.
     raw = fread(path, skip = 4, header = TRUE, showProgress = FALSE)
     out = data.table(year = as.integer(raw[[1]]),
                      x    = as.integer(raw[[2]]),
@@ -352,11 +274,9 @@ kg_dyn_load_life_table_extension = function(years,
     inner_join(Fm %>% rename(q_F = q), by = c('year', 'x')) %>%
     mutate(q = 0.5 * q_M + 0.5 * q_F)
 
-  out = matrix(NA_real_, nrow = length(ages_ext), ncol = length(years),
+  blended = blended %>% arrange(year, x)
+  out = matrix(blended$q, nrow = length(ages_ext), ncol = length(years),
                dimnames = list(as.character(ages_ext), as.character(years)))
-  for (i in seq_len(nrow(blended))) {
-    out[as.character(blended$x[i]), as.character(blended$year[i])] = blended$q[i]
-  }
   stopifnot(all(!is.na(out)))
   out
 }
@@ -369,35 +289,14 @@ kg_dyn_load_life_table_extension = function(years,
 
 kg_dyn_load_beta_series = function(macro_root, years) {
 
-  #----------------------------------------------------------------------------
-  # Builds the per-year Bellman discount factor from Macro-Projections.
-  # Uses the real 10-year Treasury yield (Fisher-deflated by year-t YoY CPI-U
-  # growth):
-  #
-  #   infl_t     = cpiu_t / cpiu_{t-1} - 1
-  #   r_real_t   = (1 + tsy_10y_t / 100) / (1 + infl_t) - 1
-  #   beta_t     = 1 / (1 + r_real_t)
-  #
-  # The Bellman compares "realize today and pay tau now" vs. "hold the asset
-  # (whose nominal price grows with inflation) and pay tau on a nominally
-  # larger gain later." Inflation cancels except in the discount of the tax
-  # wedge, so the economically correct discount is the real rate; using
+  # Per-year Bellman discount built from Macro-Projections: Fisher-deflated
+  # 10-year Treasury yield.
+  #   infl_t   = cpiu_t / cpiu_{t-1} - 1
+  #   r_real_t = (1 + tsy_10y_t / 100) / (1 + infl_t) - 1
+  #   beta_t   = 1 / (1 + r_real_t)
+  # Inflation cancels in the realize-now vs. hold-and-pay-on-nominally-larger-
+  # gain trade-off, so the economically correct discount is real; using
   # nominal tsy_10y would double-count inflation.
-  #
-  # historical.csv covers <= 2025, projections.csv covers >= 2026; both have
-  # cpiu and tsy_10y columns on a continuous index, so we bind them and
-  # compute YoY growth directly. The implied 2025->2026 inflation reflects
-  # the projection team's near-term assumption.
-  #
-  # Parameters:
-  #   - macro_root : path to a Macro-Projections vintage's baseline directory
-  #                  (must contain historical.csv and projections.csv)
-  #   - years      : integer vector of simulation years; must all be present
-  #                  in the macro data
-  #
-  # Returns: named numeric vector beta_t, names = as.character(years),
-  #          length = length(years).
-  #----------------------------------------------------------------------------
 
   cpiu_tsy = c('historical.csv', 'projections.csv') %>%
     file.path(macro_root, .) %>%
@@ -433,38 +332,16 @@ kg_dyn_build_extended_grid = function(baseline_cells, life_ext, years,
                                        ages_bellman = KG_DYN_AGE_MIN:
                                                       KG_DYN_AGE_MAX_BELLMAN) {
 
-  #----------------------------------------------------------------------------
   # Stitches the simulator's [18, 80] cell aggregates together with the
-  # external life-table tail [81, 119] into a single per-year extended-grid
-  # tibble keyed by age. The bathtub recurrence stays on [18, 80]; only the
-  # Bellman uses the extended grid (to get a true mortality-driven terminal
-  # condition).
+  # SSA life-table tail [81, 119] into a per-year extended grid. The
+  # bathtub recurrence stays on [18, 80]; only the Bellman uses the
+  # extended grid (for a true mortality-driven terminal condition).
   #
-  # For ages 81+:
-  #   - m is populated from life_ext (SSA Alternative-2 projections)
-  #   - r_B is held flat at r_B(80, t), the observed topcode-pool rate. The
-  #     simulator's age-80 cell already pools all 80+ taxpayers, so r_B(80)
-  #     is the empirically-correct rate for the 80+ cohort and the simplest
-  #     extrapolation is to assume it continues to age 119. Without this,
-  #     ages 81+ would have r_B = 0, which makes the Bellman's continuation
-  #     value at age 80 purely death-driven (no nontax realization benefit
-  #     past the topcode) and over-states the regime-induced acceleration
-  #     under deemed in older cohorts.
-  #   - G_B, R_B, mG_record, mR_record stay at 0 (no observed stock past
-  #     the topcode; the per-dollar Bellman doesn't need cell totals).
-  #
-  # Parameters:
-  #   - baseline_cells : list keyed by year-string, each entry a tibble from
-  #                      kg_dyn_aggregate_cells (ages 18-80)
-  #   - life_ext       : matrix from kg_dyn_load_life_table_extension
-  #                      (ages 81-119 x years)
-  #   - years          : integer vector of simulation years
-  #   - ages_bellman   : full extended-grid age range
-  #
-  # Returns: named list keyed by year-string, each entry a tibble on
-  #          ages_bellman with columns (age, G_B, R_B, r_B, m, mG_record,
-  #          mR_record).
-  #----------------------------------------------------------------------------
+  # For ages 81+: m comes from life_ext; r_B is held flat at r_B(80, t),
+  # the topcode-pool rate (otherwise the Bellman's continuation value at
+  # age 80 would be purely death-driven and over-state regime-induced
+  # acceleration in older cohorts under deemed). G_B/R_B stay 0 since the
+  # per-dollar Bellman doesn't need cell totals.
 
   ages_ext = setdiff(ages_bellman, KG_DYN_AGE_MIN:KG_DYN_AGE_MAX)
 
@@ -489,31 +366,19 @@ kg_dyn_build_extended_grid = function(baseline_cells, life_ext, years,
 
 
 #-------------------------------------------------------------------------------
-# Bellman backward induction
-#
-# Pass 1 (baseline) solves W_B and recovers kappa(a, t) so the observed
-# ordinary realization bucket r_D_B = (1 - fixed_share - planned_share)*r_B
-# is the Pass-1 cell's optimal choice.
-# Pass 2 (scenario) solves W_S using kappa(a, t) from Pass 1 and the
-# scenario-specific (tau_S, c_phi_S) pair, producing r_D_S(a, t) via the
-# clipped quadratic FOC r_D = clip((kappa - MC)/psi, 0, 1 - r_exog_B).
-#
-# Both passes solve on the extended age grid [18, 119], outer loop backward
-# in time, inner loop backward in age. Terminal condition:
-#   W[A_max+1, t+1] = 0          (age cap; m(119) ~ 1, so this binds quickly)
-# For year t_max, we additionally need W[a+1, t_max+1]. We seed that column
-# by running a stationary backward-induction sweep at t_max using year-t_max
-# primitives extended forward indefinitely.
+# Bellman backward induction. Outer loop backward in time, inner loop
+# backward in age, on the extended grid [18, 119]. Terminal condition
+# W[A_max+1, .] = 0 (m(119) ~ 1, binds quickly). At year t_max we seed
+# W[, t_max+1] with a stationary backward sweep using t_max primitives.
+# Pass 1 solves baseline and recovers kappa; Pass 2 solves the scenario
+# from that kappa via the clipped quadratic FOC.
 #-------------------------------------------------------------------------------
 
 kg_dyn_pack_tau = function(tau_list, years,
                             ages_bellman = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX_BELLMAN) {
 
-  #----------------------------------------------------------------------------
-  # Packs the per-year tau lists from kg_dyn_load_bathtub_inputs (each a
-  # named vector over [18, 80]) into a single matrix on the Bellman grid.
-  # Ages 81+ inherit tau(80) since the topcode pool already represents 80+.
-  #----------------------------------------------------------------------------
+  # Packs per-year tau vectors (over [18, 80]) into a matrix on the
+  # Bellman grid; ages 81+ inherit tau(80).
 
   out = matrix(0, length(ages_bellman), length(years),
                dimnames = list(as.character(ages_bellman), as.character(years)))
@@ -533,23 +398,15 @@ kg_dyn_pack_baseline_grid = function(grid_ext, years,
                                      ages_bellman = KG_DYN_AGE_MIN:
                                                     KG_DYN_AGE_MAX_BELLMAN) {
 
-  #----------------------------------------------------------------------------
-  # Stacks per-year extended-grid tibbles into named matrices indexed
-  # [age, year], for the columns the Bellman needs (m, r_B).
+  # Packs per-year (m, r_B) into [age, year] matrices for the Bellman.
   #
-  # m is gain-stock-weighted: m = sum(w*m_household*G_unit) / sum(w*G_unit).
-  # The Bellman is normalized per dollar of unrealized gain, so the mortality
-  # input must be the probability that the *dollar's* holder dies, not the
-  # average taxpayer in the cell. Wealthier holders die less, so taxpayer-
-  # weighted m is biased upward by 2-3x relative to gain-weighted m in
-  # practice. The recurrence (see kg_dyn_step_recurrence) already adopts the
-  # same convention; this brings the Bellman in line.
-  #
-  # Falls back to taxpayer-weighted m where G_B = 0 (ages 81+ on the
-  # extended grid, and any cells without observed gain stock). At those ages
-  # the gain-weighted average is undefined, and the SSA life-table mortality
-  # (which is what grid_ext$m holds for 81+) is the right input anyway.
-  #----------------------------------------------------------------------------
+  # m is gain-stock-weighted: sum(w*m_household*G_unit) / sum(w*G_unit).
+  # The Bellman is normalized per dollar of unrealized gain, so it needs
+  # the probability that the *dollar's* holder dies, not the average
+  # taxpayer in the cell. (Taxpayer-weighted m is biased upward 2-3x in
+  # practice since wealthier holders die less.) Falls back to taxpayer-
+  # weighted m where G_B = 0 — i.e., 81+ on the extended grid, where
+  # grid_ext$m is the SSA life-table mortality anyway.
 
   n_ages  = length(ages_bellman)
   n_years = length(years)
@@ -574,43 +431,16 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
                                      planned_share = KG_DYN_SHARE_PLANNED,
                                      kappa_col = NULL, stationary = FALSE) {
 
-  #----------------------------------------------------------------------------
   # One age-backward sweep through [a_min, a_max] for a single year column.
-  # Used for both the stationary terminal solve and the regular year-by-year
-  # backward induction.
   #
-  # When kappa_col is NULL, this is a Pass 1 (baseline) sweep: r_D_B is
-  # derived directly from r_B after removing the fixed and planned buckets,
-  # and the cell intercept kappa is recovered so r_D_B is the optimal choice
-  # given MC_B = tau + beta*(1-m)*W_next + beta*m*F.
+  # kappa_col = NULL: Pass 1 (baseline). r_D_B = r_B after removing fixed
+  # and planned buckets; kappa recovered so this is the cell's optimum.
+  # kappa_col supplied: Pass 2 (scenario). r_D = clip((kappa - MC)/psi, 0,
+  # 1 - r_exog_B).
   #
-  # When kappa_col is supplied, this is a Pass 2 (scenario) sweep:
-  # MC_S is computed from scenario primitives and the quadratic FOC gives
-  # r_D = clip((kappa - MC_S)/psi, 0, 1 - r_exog_B) at each cell.
-  #
-  # When stationary = FALSE (default, regular year-by-year case), the
-  # continuation value at age a uses W_next[a+1] -- next year's W at age
-  # a+1. This is the "year t uses W[a+1, t+1]" recursion.
-  #
-  # When stationary = TRUE (used at the t_max terminal column), the
-  # continuation value at age a uses the freshly-computed W[a+1] from
-  # within this very sweep -- i.e., a stationary backward solve over age
-  # alone, treating primitives as constant forward. W_next is ignored.
-  #
-  # In both cases, at the top age (i == n_ages) the continuation is 0
-  # by the terminal-condition convention W[A_max+1, .] = 0.
-  #
-  # The cell's per-dollar value satisfies:
-  #   W(a,t) = kappa*r_D - (psi/2)*r_D^2 - tau*r_D
-  #          + (1 - r_exog_B - r_D) * [beta*(1-m)*W_next + beta*m*F]
-  # with F = (1 - c_phi)*tau the death-state forgiveness value.
-  #
-  # Returns a list with numeric vectors of length n_ages:
-  #   W      : W at this column
-  #   MC     : marginal cost of realizing one more dollar at this column
-  #   r_D    : discretionary realization rate
-  #   kappa  : cell intercept (recovered in Pass 1; passed through in Pass 2)
-  #----------------------------------------------------------------------------
+  # stationary = TRUE seeds the terminal year by pulling W[i+1] from the
+  # same sweep (year-t_max primitives constant forward); otherwise uses
+  # W_next[i+1]. At i == n_ages the continuation is 0 (W[A_max+1] = 0).
 
   n_ages = length(m_col)
   W     = numeric(n_ages)
@@ -620,47 +450,34 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
 
   is_baseline_pass = is.null(kappa_col)
 
-  for (i in n_ages:1) {
-    m_i     = m_col[i]
-    tau_i   = tau_col[i]
-    F_i     = (1 - c_phi) * tau_i
+  # Precompute age-vector quantities used inside the loop.
+  F_vec        = (1 - c_phi) * tau_col
+  r_exog_B_vec = (phi_I + planned_share) * r_B_col
+  r_D_cap_vec  = pmax(1 - r_exog_B_vec, 0)
+  bs_vec       = beta * (1 - m_col)   # survivor discount
+  bm_vec       = beta * m_col         # death-state discount
 
-    # Continuation: at top age, 0 (terminal condition). Below top age,
-    # either next-year value (regular) or freshly-computed same-sweep
-    # value at age i+1 (stationary).
+  for (i in n_ages:1) {
+    tau_i = tau_col[i]
+    F_i   = F_vec[i]
+
     W_next_i = if (i == n_ages) 0 else if (stationary) W[i + 1] else W_next[i + 1]
 
-    # Marginal cost of realizing one more dollar today: tax paid now,
-    # plus the discounted survivor value forgone, plus the discounted
-    # death-state forgiveness value forgone.
-    MC_i = tau_i + beta * (1 - m_i) * W_next_i + beta * m_i * F_i
-
-    r_exog_B = (phi_I + planned_share) * r_B_col[i]
-    r_D_cap  = max(1 - r_exog_B, 0)
+    death_cont = bs_vec[i] * W_next_i + bm_vec[i] * F_i
+    MC_i       = tau_i + death_cont
+    r_D_cap    = r_D_cap_vec[i]
 
     if (is_baseline_pass) {
-      # Target observed ordinary realization rate after removing fixed and
-      # planned baseline buckets.
-      r_D_B_target = min(max(r_B_col[i] - r_exog_B, 0), r_D_cap)
-      r_D_i = r_D_B_target
-      # Recover kappa from the interior FOC b'(r_D) = MC, i.e.
-      # kappa = MC + psi * r_D. At corner cells (r_D = 0) this gives
-      # kappa = MC, meaning the cell sits exactly at the lower corner.
+      r_D_i   = min(max(r_B_col[i] - r_exog_B_vec[i], 0), r_D_cap)
       kappa_i = MC_i + psi * r_D_i
     } else {
       kappa_i = kappa_col[i]
-      # Interior solution to kappa - psi*r_D - MC = 0, clipped.
-      r_D_unclipped = (kappa_i - MC_i) / psi
-      r_D_i = min(max(r_D_unclipped, 0), r_D_cap)
+      r_D_i   = min(max((kappa_i - MC_i) / psi, 0), r_D_cap)
     }
 
-    # Quadratic benefit; net of tax cost; continuation on the remaining stock.
-    benefit   = kappa_i * r_D_i - 0.5 * psi * r_D_i * r_D_i
-    tax_cost  = tau_i * r_D_i
-    remaining = max(1 - r_exog_B - r_D_i, 0)
-    cont      = remaining * (beta * (1 - m_i) * W_next_i + beta * m_i * F_i)
-
-    W[i]     = benefit - tax_cost + cont
+    remaining = max(1 - r_exog_B_vec[i] - r_D_i, 0)
+    W[i]     = kappa_i * r_D_i - 0.5 * psi * r_D_i * r_D_i -
+               tau_i * r_D_i + remaining * death_cont
     MC[i]    = MC_i
     r_D[i]   = r_D_i
     kappa[i] = kappa_i
@@ -671,36 +488,29 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
 
 
 
-kg_dyn_solve_bellman_baseline = function(grid_packed, tau_B_mat,
-                                          c_phi_B = 0,
-                                          psi          = KG_DYN_DEFAULT_PSI,
-                                          phi_I        = KG_DYN_PHI_I,
-                                          planned_share = KG_DYN_SHARE_PLANNED,
-                                          beta_by_year = NULL) {
+kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi,
+                                kappa_mat     = NULL,
+                                psi           = KG_DYN_DEFAULT_PSI,
+                                phi_I         = KG_DYN_PHI_I,
+                                planned_share = KG_DYN_SHARE_PLANNED,
+                                beta_by_year  = NULL) {
 
   #----------------------------------------------------------------------------
-  # Pass 1 backward induction. Recovers kappa(a, t), W_B, MC_B on the
-  # extended age grid by forcing the cell's optimal r_D to equal the
-  # observed ordinary realization bucket after fixed and planned buckets are
-  # removed from r_B.
-  # Under current-law step-up the baseline regime has c_phi = 0, so the
-  # death-state forgiveness value F = tau (full forgiveness).
+  # Backward induction over (age, year) cells.
   #
-  # Parameters:
-  #   - grid_packed  : list with m, r_B matrices (output of
-  #                     kg_dyn_pack_baseline_grid)
-  #   - tau_B_mat    : baseline tau matrix [age, year]
-  #   - c_phi_B      : death-state burden share for baseline (0 under current-
-  #                     law step-up; passed in for completeness)
-  #   - psi, phi_I, planned_share : behavioral / bucket-share params
-  #   - beta_by_year : numeric vector of per-year discount factors (length
-  #                     n_years). Each beta_by_year[j] discounts between
-  #                     year j and year j+1. If NULL, falls back to a
-  #                     constant KG_DYN_BETA vector (kept for isolated
-  #                     solver unit tests).
+  # When kappa_mat = NULL: Pass 1 (baseline). Recovers kappa from the FOC
+  # by forcing optimal r_D to equal the observed ordinary realization
+  # bucket. c_phi is a scalar (typically 0 under current-law step-up).
   #
-  # Returns: list(W = W_mat, MC = MC_mat, kappa = kappa_mat, r_D = r_D_B_mat),
-  # each indexed [age, year].
+  # When kappa_mat is supplied: Pass 2 (scenario). Solves the clipped
+  # quadratic FOC r_D = clip((kappa - MC)/psi, 0, 1 - r_exog_B). c_phi may
+  # be a scalar or a length-n_years vector (e.g., a carryover regime
+  # phased in mid-horizon).
+  #
+  # beta_by_year[j] discounts between year j and j+1; NULL falls back to a
+  # constant KG_DYN_BETA vector for isolated solver unit tests.
+  #
+  # Returns: list(W, MC, kappa, r_D), each [age, year].
   #----------------------------------------------------------------------------
 
   m_mat   = grid_packed$m
@@ -711,45 +521,42 @@ kg_dyn_solve_bellman_baseline = function(grid_packed, tau_B_mat,
   if (is.null(beta_by_year)) beta_by_year = rep(KG_DYN_BETA, n_years)
   stopifnot(length(beta_by_year) == n_years)
 
+  c_phi_vec = if (length(c_phi) == 1) rep(c_phi, n_years) else c_phi
+  stopifnot(length(c_phi_vec) == n_years)
+
   W     = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   MC    = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   kappa = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   r_D   = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
 
-  # Terminal year column: stationary backward solve in age, with the
-  # continuation at age a pulling W[a+1] from the same just-computed sweep.
-  # Use beta_by_year[n_years] as the steady-state discount factor (the
-  # stationary solve treats year-n_years primitives as constant forward).
-  t_max_idx = n_years
-  res = kg_dyn_bellman_sweep_age(
-    W_next    = NULL,
-    m_col     = m_mat  [, t_max_idx],
-    r_B_col   = r_B_mat[, t_max_idx],
-    tau_col   = tau_B_mat[, t_max_idx],
-    c_phi     = c_phi_B,
-    psi       = psi, phi_I = phi_I, beta = beta_by_year[t_max_idx],
-    planned_share = planned_share,
-    kappa_col = NULL,
-    stationary = TRUE
-  )
-  W    [, t_max_idx] = res$W
-  MC   [, t_max_idx] = res$MC
-  kappa[, t_max_idx] = res$kappa
-  r_D  [, t_max_idx] = res$r_D
+  sweep = function(j, W_next_col, stationary) {
+    kg_dyn_bellman_sweep_age(
+      W_next        = W_next_col,
+      m_col         = m_mat  [, j],
+      r_B_col       = r_B_mat[, j],
+      tau_col       = tau_mat[, j],
+      c_phi         = c_phi_vec[j],
+      psi           = psi,
+      phi_I         = phi_I,
+      beta          = beta_by_year[j],
+      planned_share = planned_share,
+      kappa_col     = if (is.null(kappa_mat)) NULL else kappa_mat[, j],
+      stationary    = stationary
+    )
+  }
 
-  # March backward in time. beta_by_year[j] discounts between year j and j+1.
+  # Terminal year: stationary backward solve in age (W[a+1] from the same
+  # sweep), treating year-n_years primitives as constant forward.
+  res = sweep(n_years, W_next_col = NULL, stationary = TRUE)
+  W    [, n_years] = res$W
+  MC   [, n_years] = res$MC
+  kappa[, n_years] = res$kappa
+  r_D  [, n_years] = res$r_D
+
+  # March backward in time.
   if (n_years >= 2) {
     for (j in (n_years - 1):1) {
-      res = kg_dyn_bellman_sweep_age(
-        W_next    = W[, j + 1],
-        m_col     = m_mat  [, j],
-        r_B_col   = r_B_mat[, j],
-        tau_col   = tau_B_mat[, j],
-        c_phi     = c_phi_B,
-        psi       = psi, phi_I = phi_I, beta = beta_by_year[j],
-        planned_share = planned_share,
-        kappa_col = NULL
-      )
+      res = sweep(j, W_next_col = W[, j + 1], stationary = FALSE)
       W    [, j] = res$W
       MC   [, j] = res$MC
       kappa[, j] = res$kappa
@@ -758,87 +565,6 @@ kg_dyn_solve_bellman_baseline = function(grid_packed, tau_B_mat,
   }
 
   list(W = W, MC = MC, kappa = kappa, r_D = r_D)
-}
-
-
-
-kg_dyn_solve_bellman_scenario = function(grid_packed, tau_S_mat,
-                                          kappa_mat, c_phi_S_by_year,
-                                          psi          = KG_DYN_DEFAULT_PSI,
-                                          phi_I        = KG_DYN_PHI_I,
-                                          planned_share = KG_DYN_SHARE_PLANNED,
-                                          beta_by_year = NULL) {
-
-  #----------------------------------------------------------------------------
-  # Pass 2 backward induction. With kappa(a, t) recovered from Pass 1,
-  # solve the clipped quadratic FOC r_D = clip((kappa - MC_S)/psi, 0,
-  # 1 - r_exog_B) at each cell. c_phi can vary year by year (e.g., a
-  # carryover regime phased in mid-horizon), so c_phi_S_by_year is a
-  # numeric vector aligned with the year columns.
-  #
-  # Parameters:
-  #   - grid_packed     : same as Pass 1
-  #   - tau_S_mat       : scenario tau matrix [age, year]
-  #   - kappa_mat       : kappa matrix from Pass 1
-  #   - c_phi_S_by_year : numeric vector length n_years
-  #   - beta_by_year    : per-year discount factors (length n_years). NULL
-  #                        falls back to constant KG_DYN_BETA (unit-test
-  #                        convenience only); production paths pass a real
-  #                        vector built by kg_dyn_load_beta_series.
-  #
-  # Returns: list(W, MC, r_D), each [age, year]. r_D is the scenario
-  # discretionary realization rate.
-  #----------------------------------------------------------------------------
-
-  m_mat   = grid_packed$m
-  r_B_mat = grid_packed$r_B
-  n_ages  = nrow(m_mat); n_years = ncol(m_mat)
-  ages_chr  = rownames(m_mat); years_chr = colnames(m_mat)
-
-  if (is.null(beta_by_year)) beta_by_year = rep(KG_DYN_BETA, n_years)
-  stopifnot(length(beta_by_year) == n_years)
-
-  W   = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
-  MC  = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
-  r_D = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
-
-  # Terminal stationary solve at t_max using year-t_max primitives, including
-  # the year-t_max discount factor.
-  t_max_idx = n_years
-  res = kg_dyn_bellman_sweep_age(
-    W_next    = NULL,
-    m_col     = m_mat  [, t_max_idx],
-    r_B_col   = r_B_mat[, t_max_idx],
-    tau_col   = tau_S_mat[, t_max_idx],
-    c_phi     = c_phi_S_by_year[t_max_idx],
-    psi       = psi, phi_I = phi_I, beta = beta_by_year[t_max_idx],
-    planned_share = planned_share,
-    kappa_col = kappa_mat[, t_max_idx],
-    stationary = TRUE
-  )
-  W  [, t_max_idx] = res$W
-  MC [, t_max_idx] = res$MC
-  r_D[, t_max_idx] = res$r_D
-
-  if (n_years >= 2) {
-    for (j in (n_years - 1):1) {
-      res = kg_dyn_bellman_sweep_age(
-        W_next    = W[, j + 1],
-        m_col     = m_mat  [, j],
-        r_B_col   = r_B_mat[, j],
-        tau_col   = tau_S_mat[, j],
-        c_phi     = c_phi_S_by_year[j],
-        psi       = psi, phi_I = phi_I, beta = beta_by_year[j],
-        planned_share = planned_share,
-        kappa_col = kappa_mat[, j]
-      )
-      W  [, j] = res$W
-      MC [, j] = res$MC
-      r_D[, j] = res$r_D
-    }
-  }
-
-  list(W = W, MC = MC, r_D = r_D)
 }
 
 
@@ -884,18 +610,12 @@ kg_dyn_build_planned_timing = function(baseline_cells, tau_S_mat, years,
                                                       KG_DYN_AGE_MAX,
                                        tie_tol = 1e-12) {
 
-  #----------------------------------------------------------------------------
-  # Builds the planned-realization timing schedule. For each age cell and
-  # scheduled year u, planned baseline dollars look at the policy-induced tax
-  # wedge tau_S - tau_B over the window [u-H, u+H] and route a fraction toward
-  # the best year v* (lowest wedge; ties broken by nearest year, then earlier
-  # year). The fraction is clamp((wedge[u] - wedge[v*]) / ref_wedge, 0, 1), so
-  # small wedge differentials produce proportionally small movement and a
-  # differential of ref_wedge or larger moves the entire planned bucket. The
-  # complementary share stays at the source year. Using tau_S - tau_B keeps the
-  # rule policy-driven and prevents baseline-only runs from retiming dollars
-  # merely because the baseline MTR path varies across years.
-  #----------------------------------------------------------------------------
+  # For each (age, source-year u), planned baseline dollars look at the
+  # policy-induced wedge tau_S - tau_B over [u-H, u+H] and route toward
+  # the best year v* (lowest wedge; ties broken by nearest, then earlier).
+  # Move fraction = clamp((wedge[u] - wedge[v*]) / ref_wedge, 0, 1); the
+  # complement stays at u. Using tau_S - tau_B (not just tau_S) keeps the
+  # rule policy-driven so baseline-only runs don't retime dollars.
 
   kg_dyn_validate_realization_buckets(planned_share = planned_share,
                                       timing_window = timing_window,
@@ -992,35 +712,14 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
                                   r_S_vec, delta_route,
                                   phi_I = KG_DYN_PHI_I) {
 
-  #----------------------------------------------------------------------------
-  # One-step bathtub recurrence for delta_G. Operates on cell vectors indexed
-  # by age (on the bathtub grid [18, 80]).
+  # One-step bathtub recurrence for delta_G on the [18, 80] grid. r_S_vec
+  # combines the fixed, Bellman ordinary, and retimed planned buckets.
   #
-  # The scenario realization rate r_S is supplied directly by the caller.
-  # Upstream, it combines the fixed baseline bucket, Bellman ordinary bucket,
-  # and retimed planned bucket.
-  #
-  # Topcode note: the age=80 cell pools every taxpayer age 80+ into one
-  # bucket and uses a single weight-averaged m_80. This is refreshed from
-  # each year's Tax-Data, so it tracks the true 80+ population mix over
-  # time. The remaining approximation is within-pool heterogeneity --
-  # someone who's been in the topcode 15 years (true age ~95) has much
-  # higher individual mortality than someone newly aged in. Pooled m_80
-  # smooths this out. Small effect in practice because most pool weight is
-  # on early-80s, but worth flagging if reforms shift the topcode age mix.
-  #
-  # Parameters:
-  #   - delta_prev (num[a]) : start-of-year delta_G (zero on first year)
-  #   - baseline_t (tbl)    : output of kg_dyn_aggregate_cells for year t
-  #   - A          (mat)    : aging matrix
-  #   - omega      (mat)    : heir matrix
-  #   - r_S_vec    (num[a]) : scenario realization rate from Bellman
-  #   - delta_route (num)   : routing share for carryover stock transfer
-  #   - phi_I      (num)    : fixed/nonresponsive share of r_B (diagnostic only)
-  #
-  # Returns: list(delta_next, r_S, lambda_I, r_V_B, r_V_S, delta_surv,
-  # delta_inh).
-  #----------------------------------------------------------------------------
+  # Topcode caveat: the age=80 cell pools all 80+ taxpayers with a single
+  # weight-averaged m_80, refreshed from each year's Tax-Data. Within-pool
+  # heterogeneity (e.g., 15-year topcode residents vs. newly aged-in) is
+  # smoothed out — small effect in practice but worth flagging if reforms
+  # shift the topcode age mix.
 
   G_B       = baseline_t$G_B
   r_B       = baseline_t$r_B
@@ -1029,37 +728,14 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
   mG_record = baseline_t$mG_record
   mR_record = baseline_t$mR_record
 
-  # ----------------------------------------------------------------------------
-  # Why we use an effective cell mortality m_eff = sum(w*m*X) / sum(w*X).
-  # ----------------------------------------------------------------------------
-  #
-  # The death channel needs the cell's *decedent stock contribution* --
-  # the sum across records of (death prob) * (per-record gain stock):
-  #
-  #     D = sum_i w_i * m_i * (G_unit_i + dG_i)
-  #
-  # The naive cell-level form m * (G_B + dG) replaces this with the
-  # cell-mean m times the cell-total stock. That equals the per-record
-  # sum only if Cov(m, G_unit | cell) = 0 -- and within an age cell that
-  # covariance is large and negative (wealth-mortality gradient: wealthier
-  # holders carry more G AND die less). At the G-weighted aggregate, the
-  # cell-mean form overstates D by ~2.7x in our data.
-  #
-  # To avoid materializing per-record state for the recurrence, we adopt
-  # an assumption about how cell-level dG is split across records, then
-  # compute the per-record sum analytically. Two rules are supported via
-  # KG_DYN_DG_ALLOCATION (see constants block):
-  #
-  #   "G": dG_i proportional to G_unit_i. Then
-  #          D = mG_record * (G_B + dG) / G_B = m_eff_G * (G_B + dG)
-  #        with m_eff_G = mG_record / G_B.
-  #
-  #   "R": dG_i proportional to pmax(kg_lt_i, 0). m_eff_R = mR_record / R_B
-  #        for the realization-weighted lock-in story. Falls back to "G"
-  #        when R_B = 0.
-  #
-  # In both cases m_eff IS the per-record sum -- not an approximation --
-  # under the corresponding allocation rule.
+  # Effective cell mortality m_eff = sum(w*m*X) / sum(w*X). The death
+  # channel needs sum_i w_i * m_i * (G_unit_i + dG_i); the naive cell-mean
+  # form m * (G_B + dG) overstates that by ~2.7x in our data due to a
+  # large negative within-cell Cov(m, G_unit) (wealth-mortality gradient).
+  # Allocating dG_i proportional to X_i and summing analytically gives an
+  # exact per-record sum, not an approximation. Two rules via
+  # KG_DYN_DG_ALLOCATION: "G" (X = G_unit) or "R" (X = pmax(kg_lt, 0),
+  # falling back to "G" when R_B = 0).
   m_eff_G = if_else(G_B > 0, mG_record / G_B, m)
   m_eff_R = if_else(R_B > 0, mR_record / R_B, m_eff_G)
 
@@ -1069,8 +745,8 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
                  stop("Unknown KG_DYN_DG_ALLOCATION rule: ", KG_DYN_DG_ALLOCATION))
   m_eff = pmin(pmax(m_eff, 0), 1)
 
-  # Channel-decomposition diagnostics. Keep lambda_I for the existing state
-  # contract, but interpret it as the fixed/nonresponsive realization bucket.
+  # lambda_I = fixed/nonresponsive realization bucket; kept on the state
+  # contract under the old name.
   lambda_I = phi_I * r_B
   r_V_B    = pmax(r_B     - lambda_I, 0)
   r_V_S    = pmax(r_S_vec - lambda_I, 0)
@@ -1106,14 +782,10 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
 
 kg_dyn_resolve_regime = function(regime_code, theta) {
 
-  #----------------------------------------------------------------------------
-  # Maps the integer regime code from pref.kg_death_regime to the canonical
-  # (name, c_phi, delta_vanish, delta_route, delta_realize) tuple. Spec §3.3.
-  #
+  # pref.kg_death_regime integer → canonical regime tuple (spec §3.3):
   #   0 = step_up           : c_phi = 0,     vanish = 1
   #   1 = carryover         : c_phi = theta, route = 1
   #   2 = deemed_realization: c_phi = 1,     realize = 1
-  #----------------------------------------------------------------------------
 
   regime_name = KG_DYN_REGIME_BY_CODE[as.character(regime_code)]
   if (is.na(regime_name)) {
@@ -1134,80 +806,62 @@ kg_dyn_resolve_regime = function(regime_code, theta) {
 
 
 #-------------------------------------------------------------------------------
-# Per-record applier (pure allocator)
-#
-# Reads the precomputed cell_table from the bathtub state file and translates
-# cell-level quantities (rate_factor, extra_R, deemed_factor) to per-record
-# kg_lt adjustments.
+# Per-record applier (pure allocator). Reads the precomputed cell_table from
+# the bathtub state file and translates cell-level quantities into per-record
+# kg_lt adjustments via three channels (spec §7.3):
+#   rate     : kg_lt > 0 → kg_lt * rate_factor (= r_S/r_B, clamped to 1)
+#   lock-in  : extra_R = r_S * dG, allocated by positive-kg_lt share if
+#              R_B > 0, else by G_unit share, else skip
+#   deemed   : delta_realize * m_household * G_unit * (G_B + dG)/G_B
+# Also stamps decedent_flag = (u < m_household) using precomputed uniform
+# draws from globals$random_numbers (same draw across scenarios).
 #-------------------------------------------------------------------------------
 
 kg_dyn_apply_to_records = function(tax_units, cell_table, delta_realize,
                                     decedent_random) {
 
-  #----------------------------------------------------------------------------
-  # Distributes cell-level reform-vs-baseline realization adjustments to
-  # individual tax-unit kg_lt (spec §7.3) and applies per-record fractional
-  # deemed-realization burden. Three channels:
-  #
-  #   rate-channel   : multiply each record's positive kg_lt by rate_factor
-  #                    = r_S/r_B (clamped to 1 when r_B = 0)
-  #   lock-in extra  : pro-rata share of cell-level extra_R = r_S * dG;
-  #                    allocated by positive-kg_lt share if R_B > 0, else by
-  #                    G_unit share, else skip
-  #   deemed-channel : per-record m_household * G_unit, scaled by cell-level
-  #                    deemed_factor = (G_B + dG)/G_B to incorporate
-  #                    accumulated stock
-  #
-  # decedent_flag is a stochastic side product for distribution analysis:
-  # u < m_household marks a record as decedent. Uses the precomputed uniform
-  # draws from globals$random_numbers, same draw across scenarios.
-  #
-  # Parameters:
-  #   - tax_units (df)        : with G_unit, m_household, age_cohort attached
-  #   - cell_table (tbl)      : output of bathtub pre-pass; has age, G_B, R_B,
-  #                             rate_factor, extra_R, deemed_factor
-  #   - delta_realize (num)   : routing share for forced realization at death
-  #   - decedent_random (num) : uniform[0,1] draws, length = nrow(tax_units)
-  #
-  # Returns: tax_units with modified kg_lt and added decedent_flag.
-  #----------------------------------------------------------------------------
+  # Pull just the columns the applier consumes from cell_table via a
+  # vectorized match() — avoids hash-joining the ~35-column diagnostics
+  # table (with all the Bellman/timing/regime columns) onto 220k records
+  # per scenario-year.
+  idx           = match(tax_units$age_cohort, cell_table$age)
+  rate_factor   = cell_table$rate_factor  [idx]
+  extra_R       = cell_table$extra_R      [idx]
+  deemed_factor = cell_table$deemed_factor[idx]
+  R_B           = cell_table$R_B          [idx]
+  G_B           = cell_table$G_B          [idx]
 
   tax_units %>%
-    left_join(cell_table, by = c('age_cohort' = 'age')) %>%
     mutate(
       allocation = case_when(
         R_B > 0 ~ pmax(kg_lt, 0) / R_B,
         G_B > 0 ~ G_unit         / G_B,
         TRUE    ~ 0
       ),
-      kg_lt_rate    = if_else(kg_lt > 0, kg_lt * rate_factor, kg_lt),
-      kg_lt_carry   = extra_R * allocation,
-      kg_lt_deemed  = delta_realize * m_household * G_unit * deemed_factor,
-      kg_lt         = kg_lt_rate + kg_lt_carry + kg_lt_deemed,
+      kg_lt = if_else(kg_lt > 0, kg_lt * rate_factor, kg_lt) +
+              extra_R * allocation +
+              delta_realize * m_household * G_unit * deemed_factor,
       decedent_flag = as.integer(decedent_random < m_household)
     ) %>%
-    select(-rate_factor, -extra_R, -deemed_factor, -allocation,
-           -kg_lt_rate, -kg_lt_carry, -kg_lt_deemed,
-           -R_B, -G_B,
-           # Bellman diagnostic columns from the cell_table left_join;
-           # not consumed downstream, drop to avoid polluting tax_units schema.
-           -any_of(c('r_B', 'r_S', 'r_S_unclipped', 'timing_clipped',
-                     'lambda_I', 'r_V_B', 'r_V_S',
-                     'r_fixed_B', 'r_planned_B', 'r_planned_S',
-                     'r_ordinary_B', 'r_ordinary_S',
-                     'R_planned_B', 'R_planned_S', 'planned_timing_shift',
-                     'm', 'mG_record', 'mR_record',
-                     'dG', 'tau_B', 'tau_S', 'W_B', 'W_S', 'MC_B', 'MC_S',
-                     'kappa', 'r_D_B', 'r_D_S')))
+    select(-allocation)
 }
 
 
 
-kg_dyn_state_path = function(scenario_info, year) {
+kg_dyn_state_dir = function(scenario_info) {
   file.path(scenario_info$output_path,
             'conventional', 'supplemental',
-            'kg_dynamics_state',
-            paste0(year, '.rds'))
+            'kg_dynamics_state')
+}
+
+kg_dyn_state_path = function(scenario_info, year) {
+  file.path(kg_dyn_state_dir(scenario_info), paste0(year, '.rds'))
+}
+
+# Does this scenario's behavior set include any kg_dynamics module?
+scenario_uses_kg_dynamics = function(scenario_info) {
+  any(startsWith(scenario_info$behavior_modules %||% character(),
+                 'kg_dynamics/'))
 }
 
 
@@ -1220,22 +874,11 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, baseline_root,
                                        sample_ids, pct_sample,
                                        ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
-  #----------------------------------------------------------------------------
-  # Single Tax-Data pass that builds all three baseline-side inputs the
-  # bathtub needs:
-  #
-  #   - baseline_cells : named list of cell tibbles (G_B, R_B, r_B, m,
-  #                      mG_record, mR_record) per year (ages 18-80)
-  #   - baseline_tau   : named list of length-|ages| named tau vectors per
-  #                      year, R-weighted on baseline static detail's
-  #                      mtr_kg_lt
-  #   - reform_tau     : same shape, R-weighted on reform static detail
-  #
-  # Bypasses static detail for the cell aggregates because the wealth
-  # columns (value.*/basis.*) and q_death* live only in the source
-  # Tax-Data csvs. mtr_kg_lt comes from baseline + reform static detail
-  # (requires runscript registers mtr_vars = "kg_lt").
-  #----------------------------------------------------------------------------
+  # Single Tax-Data pass producing baseline_cells (per-year G_B, R_B, r_B, m,
+  # mG_record, mR_record over ages 18-80), baseline_tau, and reform_tau
+  # (per-year R-weighted mtr_kg_lt vectors). Cell aggregates come straight
+  # from Tax-Data csvs (the wealth value.*/basis.* and q_death* columns live
+  # only there); mtr_kg_lt comes from each side's static detail.
 
   tax_data_root = scenario_info$interface_paths$`Tax-Data`
   years         = scenario_info$years
@@ -1259,22 +902,27 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, baseline_root,
 
     baseline_cells[[as.character(t)]] = kg_dyn_aggregate_cells(td, ages)
 
-    bl_mtr = file.path(baseline_root, 'baseline', 'static', 'detail',
-                        paste0(t, '.csv')) %>%
-      fread(select = c('id', 'mtr_kg_lt'), showProgress = FALSE) %>%
-      as_tibble()
+    # mtr aggregator only needs id/weight/kg_lt/age_cohort/G_unit; slim
+    # before the joins so we don't drag the asset value.*/basis.* columns
+    # through two hash joins on ~220k records.
+    td_slim = td %>% select(id, weight, kg_lt, age_cohort, G_unit)
 
-    rf_mtr = file.path(scenario_info$output_path, 'static', 'detail',
-                        paste0(t, '.csv')) %>%
-      fread(select = c('id', 'mtr_kg_lt'), showProgress = FALSE) %>%
-      as_tibble()
+    read_mtr = function(path) {
+      file.path(path, paste0(t, '.csv')) %>%
+        fread(select = c('id', 'mtr_kg_lt'), showProgress = FALSE) %>%
+        as_tibble()
+    }
 
-    baseline_tau[[as.character(t)]] = td %>%
-      left_join(bl_mtr, by = 'id') %>%
+    baseline_tau[[as.character(t)]] = td_slim %>%
+      left_join(read_mtr(file.path(baseline_root, 'baseline', 'static',
+                                   'detail')),
+                by = 'id') %>%
       kg_dyn_aggregate_cell_mtr(ages)
 
-    reform_tau[[as.character(t)]] = td %>%
-      left_join(rf_mtr, by = 'id') %>%
+    reform_tau[[as.character(t)]] = td_slim %>%
+      left_join(read_mtr(file.path(scenario_info$output_path, 'static',
+                                   'detail')),
+                by = 'id') %>%
       kg_dyn_aggregate_cell_mtr(ages)
   }
 
@@ -1294,25 +942,13 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
                                     planned_diag = NULL,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
-  #----------------------------------------------------------------------------
-  # Assembles the per-cell quantities the per-record applier needs (rate
-  # factor, lock-in extra realization, deemed scaling) plus diagnostic
-  # quantities used by kg_dyn_build_summary (tau_B, tau_S, W, MC, kappa,
-  # channel decomposition). Persisted into the state file by
-  # kg_dyn_run_bathtub_pass.
-  #
-  # The Bellman matrices are on the extended grid; we slice to the bathtub
-  # grid [18, 80] before persisting since the per-record applier only acts
-  # on those ages.
-  #
-  # Per-cell quantities:
+  # Assembles per-cell quantities the applier needs:
   #   rate_factor   = r_S / r_B           (clamped to 1 when r_B = 0)
-  #   extra_R       = r_S * dG            (lock-in stock realized at rate r_S;
-  #                                        applies under all regimes)
-  #   deemed_factor = (G_B + dG) / G_B    (clamped to >= 0; scales per-record
-  #                                        m * G_unit so deemed revenue
-  #                                        includes accumulated stock)
-  #----------------------------------------------------------------------------
+  #   extra_R       = r_S * dG            (lock-in stock realized at r_S)
+  #   deemed_factor = (G_B + dG) / G_B    (clamped >= 0)
+  # Plus diagnostic columns used by kg_dyn_build_summary. Bellman matrices
+  # are sliced from the extended grid to the bathtub grid [18, 80] before
+  # persisting.
 
   ages_chr = as.character(ages_bathtub)
   diag_or = function(name, default) {
@@ -1379,35 +1015,19 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                     ages_bellman = KG_DYN_AGE_MIN:
                                                     KG_DYN_AGE_MAX_BELLMAN) {
 
-  #----------------------------------------------------------------------------
-  # Sequentially runs the bathtub recurrence across scenario_info$years and
-  # persists one state file per year. The state file is the contract consumed
-  # by the kg_dynamics behavior module's per-record applier; the module
-  # computes no cell-level math itself.
+  # Runs the bathtub recurrence across scenario_info$years and persists one
+  # state file per year — the contract consumed by the kg_dynamics behavior
+  # module's per-record applier. State at kg_dynamics_state/{t}.rds is
+  # list(regime, cell_table).
   #
   # Flow:
-  #   1. Build extended-grid baseline cells (bathtub ages from baseline_cells,
-  #      mortality tail 81-119 from PerLifeTables).
-  #   2. Pack tau matrices (baseline + reform) onto the extended grid.
-  #   3. Solve Pass 1 (baseline Bellman) once; recover kappa, W_B, MC_B,
-  #      r_D_B. Under current-law step-up, c_phi_B = 0.
-  #   4. Resolve scenario regimes per year (may be year-varying); solve
-  #      Pass 2 (scenario Bellman) once using kappa from Pass 1.
-  #   5. Build the planned-realization timing schedule from tau_S.
-  #   6. Loop years: combine fixed, ordinary, and planned buckets into r_S_vec,
-  #      run kg_dyn_step_recurrence for dG evolution, build cell_table, persist.
-  #
-  # State file at kg_dynamics_state/{t}.rds:
-  #   list(
-  #     regime     = list(name, c_phi, delta_vanish, delta_route, delta_realize),
-  #     cell_table = tibble(age, G_B, R_B, r_B, r_S, bucket diagnostics,
-  #                          lambda_I, r_V_B, r_V_S, m, mG_record, mR_record, dG,
-  #                          tau_B, tau_S, W_B, W_S, MC_B, MC_S, kappa,
-  #                          r_D_B, r_D_S, rate_factor, extra_R, deemed_factor)
-  #   )
-  #
-  # Returns: invisibly NULL.
-  #----------------------------------------------------------------------------
+  #   1. Build extended-grid baseline cells (bathtub + 81-119 SSA tail).
+  #   2. Pack tau matrices (baseline + reform).
+  #   3. Pass 1 Bellman (baseline): recover kappa.
+  #   4. Resolve per-year scenario regime; Pass 2 Bellman using kappa.
+  #   5. Build planned-timing schedule from tau_S - tau_B.
+  #   6. Per year: combine buckets into r_S_vec, run kg_dyn_step_recurrence,
+  #      build cell_table, persist.
 
   if (!is.finite(psi)) {
     stop('kg_dynamics: KG_DYN_DEFAULT_PSI is not set. Run ',
@@ -1421,9 +1041,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                       ref_wedge     = ref_wedge)
 
   years     = scenario_info$years
-  state_dir = file.path(scenario_info$output_path,
-                        'conventional', 'supplemental',
-                        'kg_dynamics_state')
+  state_dir = kg_dyn_state_dir(scenario_info)
   dir.create(state_dir, recursive = TRUE, showWarnings = FALSE)
 
   # Step 0: build per-year real-rate discount factors from Macro-Projections
@@ -1446,12 +1064,11 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   tau_B_mat = kg_dyn_pack_tau(baseline_tau, years, ages_bellman = ages_bellman)
   tau_S_mat = kg_dyn_pack_tau(reform_tau,   years, ages_bellman = ages_bellman)
 
-  # Step 3: baseline Bellman pass (c_phi_B = 0 under current-law step-up)
-  pass1 = kg_dyn_solve_bellman_baseline(grid_packed, tau_B_mat,
-                                         c_phi_B = 0,
-                                         psi = psi, phi_I = phi_I,
-                                         planned_share = planned_share,
-                                         beta_by_year = beta_by_year)
+  # Step 3: baseline Bellman pass (c_phi = 0 under current-law step-up)
+  pass1 = kg_dyn_solve_bellman(grid_packed, tau_B_mat, c_phi = 0,
+                               psi = psi, phi_I = phi_I,
+                               planned_share = planned_share,
+                               beta_by_year = beta_by_year)
 
   # Step 4: resolve year-by-year scenario regimes and run scenario Bellman
   regime_list = vector('list', length(years))
@@ -1465,12 +1082,11 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     c_phi_S[j] = regime_list[[j]]$c_phi
   }
 
-  pass2 = kg_dyn_solve_bellman_scenario(grid_packed, tau_S_mat,
-                                         kappa_mat = pass1$kappa,
-                                         c_phi_S_by_year = c_phi_S,
-                                         psi = psi, phi_I = phi_I,
-                                         planned_share = planned_share,
-                                         beta_by_year = beta_by_year)
+  pass2 = kg_dyn_solve_bellman(grid_packed, tau_S_mat, c_phi = c_phi_S,
+                               kappa_mat = pass1$kappa,
+                               psi = psi, phi_I = phi_I,
+                               planned_share = planned_share,
+                               beta_by_year = beta_by_year)
 
   planned_timing = kg_dyn_build_planned_timing(
     baseline_cells = baseline_cells,
@@ -1579,18 +1195,11 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
 kg_dyn_aggregate_cell_mtr = function(records_with_attrs,
                                       ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
-  #----------------------------------------------------------------------------
-  # Realization-weighted cell-MTR aggregation. Records must carry G_unit,
-  # age_cohort, weight, kg_lt, and mtr_kg_lt. Per cell:
-  #
-  #   tau(a) = sum(weight * pmax(kg_lt, 0) * mtr_kg_lt) / sum(weight * pmax(kg_lt, 0))
-  #
-  # The realization-weighting is the right anchor for elasticity calibration:
-  # it captures the average MTR on the dollars that actually realize, which
-  # is the variable the realization decision responds to. Falls back to
-  # gain-stock weighting when a cell has zero positive realizations (young
-  # heir cohorts under carryover); falls back to 0 when both are zero.
-  #----------------------------------------------------------------------------
+  # Realization-weighted cell-MTR aggregation: per cell
+  #   tau(a) = sum(w * pmax(kg_lt, 0) * mtr_kg_lt) / sum(w * pmax(kg_lt, 0))
+  # The right anchor for elasticity calibration — average MTR on the dollars
+  # that realize. Falls back to gain-stock weighting when R = 0 (e.g., young
+  # heir cohorts under carryover), then to 0 when both are zero.
 
   agg = records_with_attrs %>%
     mutate(kg_pos = pmax(kg_lt, 0)) %>%
@@ -1624,26 +1233,14 @@ kg_dyn_aggregate_cell_mtr = function(records_with_attrs,
 
 kg_dyn_build_summary = function(scenario_info) {
 
-  #----------------------------------------------------------------------------
-  # Reads all per-year bathtub state files for one scenario and writes two
-  # diagnostic CSVs:
-  #
-  #   conventional/supplemental/kg_dynamics_age_profile.csv
-  #     Long format (year x age) dump of cell_table. Use this for plots
-  #     of dG, r_B, r_S, m, W, MC, kappa, etc. across age and time.
-  #
-  #   conventional/supplemental/kg_dynamics_summary.csv
-  #     Year-level rollup: regime parameters, gain-stock-weighted averages
-  #     of m / r_B / r_S / tau / W / MC / kappa, channel decomposition of
-  #     reform-induced realizations, decedent stock and routing, implied
-  #     year-by-year aggregate semi-elasticity dlog(R)/dtau.
-  #
+  # Reads all per-year bathtub state files and writes:
+  #   kg_dynamics_age_profile.csv : long (year × age) dump of cell_table
+  #   kg_dynamics_summary.csv     : year-level rollup with regime, weighted
+  #                                 means, channel decomposition, decedent
+  #                                 stock, implied semi-elasticity.
   # No-op if the scenario has no bathtub state directory.
-  #----------------------------------------------------------------------------
 
-  state_dir = file.path(scenario_info$output_path,
-                        'conventional', 'supplemental',
-                        'kg_dynamics_state')
+  state_dir = kg_dyn_state_dir(scenario_info)
   if (!dir.exists(state_dir)) return(invisible(NULL))
 
   years = scenario_info$years
@@ -1678,33 +1275,40 @@ kg_dyn_build_summary = function(scenario_info) {
            delta_realize = r$delta_realize)
   }))
 
+  # Weighted means with a default when the weight column sums to zero.
+  # r_B and r_S default to 0; everything else to NA.
+  wmean = function(x, w, default = NA_real_) {
+    s = sum(w)
+    if (s > 0) sum(x * w) / s else default
+  }
+
   yearly = age_profile %>%
     group_by(year) %>%
     summarise(
-      G_B_total       = sum(G_B),
-      R_B_total       = sum(R_B),
-      dG_total        = sum(dG),
-      m_avg_gw        = if_else(sum(G_B) > 0, sum(m * G_B) / sum(G_B), NA_real_),
-      r_B_avg_gw      = if_else(sum(G_B) > 0, sum(r_B * G_B) / sum(G_B), 0),
-      r_S_avg_gw      = if_else(sum(G_B) > 0, sum(r_S * G_B) / sum(G_B), 0),
-      lambda_I_avg_gw = if_else(sum(G_B) > 0, sum(lambda_I * G_B) / sum(G_B), NA_real_),
-      r_fixed_avg_gw  = if_else(sum(G_B) > 0, sum(r_fixed_B * G_B) / sum(G_B), NA_real_),
-      r_planned_B_avg_gw = if_else(sum(G_B) > 0, sum(r_planned_B * G_B) / sum(G_B), NA_real_),
-      r_planned_S_avg_gw = if_else(sum(G_B) > 0, sum(r_planned_S * G_B) / sum(G_B), NA_real_),
-      r_ordinary_B_avg_gw = if_else(sum(G_B) > 0, sum(r_ordinary_B * G_B) / sum(G_B), NA_real_),
-      r_ordinary_S_avg_gw = if_else(sum(G_B) > 0, sum(r_ordinary_S * G_B) / sum(G_B), NA_real_),
-      v_share_avg_rw  = if_else(sum(R_B) > 0,
-                                sum(r_V_B * G_B) / sum(r_B * G_B),
-                                NA_real_),
-      tau_B_avg_gw    = if_else(sum(G_B) > 0, sum(tau_B * G_B) / sum(G_B), NA_real_),
-      tau_S_avg_gw    = if_else(sum(G_B) > 0, sum(tau_S * G_B) / sum(G_B), NA_real_),
-      tau_B_avg_rw    = if_else(sum(R_B) > 0, sum(tau_B * R_B) / sum(R_B), NA_real_),
-      tau_S_avg_rw    = if_else(sum(R_B) > 0, sum(tau_S * R_B) / sum(R_B), NA_real_),
-      W_B_avg_gw      = if_else(sum(G_B) > 0, sum(W_B * G_B) / sum(G_B), NA_real_),
-      W_S_avg_gw      = if_else(sum(G_B) > 0, sum(W_S * G_B) / sum(G_B), NA_real_),
-      MC_B_avg_gw     = if_else(sum(G_B) > 0, sum(MC_B * G_B) / sum(G_B), NA_real_),
-      MC_S_avg_gw     = if_else(sum(G_B) > 0, sum(MC_S * G_B) / sum(G_B), NA_real_),
-      kappa_avg_gw    = if_else(sum(G_B) > 0, sum(kappa * G_B) / sum(G_B), NA_real_),
+      G_B_total           = sum(G_B),
+      R_B_total           = sum(R_B),
+      dG_total            = sum(dG),
+      m_avg_gw            = wmean(m,            G_B),
+      r_B_avg_gw          = wmean(r_B,          G_B, default = 0),
+      r_S_avg_gw          = wmean(r_S,          G_B, default = 0),
+      lambda_I_avg_gw     = wmean(lambda_I,     G_B),
+      r_fixed_avg_gw      = wmean(r_fixed_B,    G_B),
+      r_planned_B_avg_gw  = wmean(r_planned_B,  G_B),
+      r_planned_S_avg_gw  = wmean(r_planned_S,  G_B),
+      r_ordinary_B_avg_gw = wmean(r_ordinary_B, G_B),
+      r_ordinary_S_avg_gw = wmean(r_ordinary_S, G_B),
+      v_share_avg_rw      = if_else(sum(R_B) > 0,
+                                    sum(r_V_B * G_B) / sum(r_B * G_B),
+                                    NA_real_),
+      tau_B_avg_gw        = wmean(tau_B,        G_B),
+      tau_S_avg_gw        = wmean(tau_S,        G_B),
+      tau_B_avg_rw        = wmean(tau_B,        R_B),
+      tau_S_avg_rw        = wmean(tau_S,        R_B),
+      W_B_avg_gw          = wmean(W_B,          G_B),
+      W_S_avg_gw          = wmean(W_S,          G_B),
+      MC_B_avg_gw         = wmean(MC_B,         G_B),
+      MC_S_avg_gw         = wmean(MC_S,         G_B),
+      kappa_avg_gw        = wmean(kappa,        G_B),
       rate_channel    = sum(R_B * (rate_factor - 1)),
       lockin_channel  = sum(extra_R),
       R_planned_B_total = sum(R_planned_B),
