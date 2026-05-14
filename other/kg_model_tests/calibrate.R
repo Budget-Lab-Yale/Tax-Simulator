@@ -85,7 +85,7 @@ SHORT_TOL          = 1e-3
 MAX_OUTER          = 25
 MAX_INNER          = 30
 PS_LO_INIT         = 0
-PS_HI_INIT         = 0.5
+PS_HI_INIT         = 0.7
 PSI_GRID_INIT      = c(0.8, 1.6, 3.2, 6.4, 12.8, 25.6, 51.2, 102.4)
 
 detail_files = list.files(file.path(BASELINE_ROOT, 'baseline/static/detail'),
@@ -222,13 +222,15 @@ eval_response = function(psi_val, ps_val, scenario_tau_mat,
 
     r_D_S_bt = pass2$r_D[bathtub_ages_chr, j]
     rate_info = kg_dyn_build_scenario_rate(
-      baseline_t       = bt,
-      r_ordinary_S     = r_D_S_bt,
-      R_forced_B_col   = forced_state$R_forced_B[, j],
-      R_forced_S_col   = forced_state$R_forced_S[, j],
-      fixed_share      = KG_DYN_PHI_I
+      baseline_t           = bt,
+      r_ordinary_S         = r_D_S_bt,
+      R_forced_B_col       = forced_state$R_forced_B[, j],
+      R_forced_B_model_col = forced_state$R_forced_B_model[, j],
+      R_forced_S_col       = forced_state$R_forced_S[, j],
+      fixed_share          = KG_DYN_PHI_I
     )
     r_S_vec = setNames(rate_info$r_S, bathtub_ages_chr)
+    r_B_model_vec = setNames(rate_info$r_B_model, bathtub_ages_chr)
 
     step = kg_dyn_step_recurrence(
       delta_prev  = delta,
@@ -241,8 +243,11 @@ eval_response = function(psi_val, ps_val, scenario_tau_mat,
     )
 
     if (t == anchor_year) {
+      # Use model baseline as the reference. This matches the downstream
+      # applier's rate_factor = r_S / r_B_model and makes baseline_check
+      # produce zero delta exactly.
       G_S        = bt$G_B + delta
-      R_B_anchor = sum(bt$R_B)
+      R_B_anchor = sum(r_B_model_vec * bt$G_B)
       R_S_anchor = sum(step$r_S * G_S)
     }
 
@@ -421,17 +426,19 @@ profile_years = function(psi_val, ps_val) {
     t  = YEARS[j]; bt = baseline_cells[[as.character(t)]]
     r_D_S_bt = pass2$r_D[bathtub_ages_chr, j]
     rate_info = kg_dyn_build_scenario_rate(
-      baseline_t       = bt,
-      r_ordinary_S     = r_D_S_bt,
-      R_forced_B_col   = forced_state$R_forced_B[, j],
-      R_forced_S_col   = forced_state$R_forced_S[, j],
-      fixed_share      = KG_DYN_PHI_I
+      baseline_t           = bt,
+      r_ordinary_S         = r_D_S_bt,
+      R_forced_B_col       = forced_state$R_forced_B[, j],
+      R_forced_B_model_col = forced_state$R_forced_B_model[, j],
+      R_forced_S_col       = forced_state$R_forced_S[, j],
+      fixed_share          = KG_DYN_PHI_I
     )
     r_S_vec = setNames(rate_info$r_S, bathtub_ages_chr)
+    r_B_model_vec = setNames(rate_info$r_B_model, bathtub_ages_chr)
 
     step = kg_dyn_step_recurrence(delta, bt, A, omega, r_S_vec, 0, KG_DYN_PHI_I)
     G_S    = bt$G_B + delta
-    R_B_t  = sum(bt$R_B)
+    R_B_t  = sum(r_B_model_vec * bt$G_B)
     R_S_t  = sum(step$r_S * G_S)
     out    = bind_rows(out, tibble(sim_year   = j,
                                    year       = t,

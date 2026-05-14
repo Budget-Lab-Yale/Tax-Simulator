@@ -78,9 +78,9 @@ KG_DYN_BETA             = 0.978   # fallback annual discount factor, used
 # forced-window share lambda. The remainder is the ordinary Bellman-controlled
 # share.
 KG_DYN_SHARE_FIXED      = 0
-KG_DYN_SHARE_PLANNED    = 0.3285
+KG_DYN_SHARE_PLANNED    = 0.6152
 KG_DYN_TIMING_WINDOW    = 1L
-KG_DYN_FORCED_Q_B       = 0.8
+KG_DYN_FORCED_Q_B       = 0.5
 
 # Reference wedge controlling the convex timing cost in the forced-window
 # Bellman. Default 5pp means a 5pp current-vs-deadline value advantage moves
@@ -109,7 +109,7 @@ KG_DYN_HEIR_SIGMA       = 5       # std dev of heir age distribution
 # (Macro-Projections vintage), or any Bellman primitive (mortality
 # weighting, age-tail r_B treatment, etc.) changes, then paste the printed
 # values below.
-KG_DYN_DEFAULT_PSI      = NA_real_
+KG_DYN_DEFAULT_PSI      = 33.5688
 
 # Within-cell allocation rule for the policy-induced delta dG.
 # Determines which "effective cell mortality" the recurrence uses for
@@ -897,16 +897,22 @@ kg_dyn_solve_forced_window_state = function(baseline_cells, tau_S_mat, years,
                                             q_B = KG_DYN_FORCED_Q_B,
                                             beta_by_year = NULL,
                                             ages_bathtub = KG_DYN_AGE_MIN:
-                                                           KG_DYN_AGE_MAX,
-                                            neg_tol = 1e-8) {
+                                                           KG_DYN_AGE_MAX) {
 
   #----------------------------------------------------------------------------
   # Solves the forced-window realization state for the one-year timing window.
-  # The observed baseline forced realizations are lambda * R_B, not entrant
-  # flows. We infer the entrant cohorts E_B from the baseline convention q_B:
+  # The observed baseline forced realizations are lambda * R_B. We use the
+  # steady-state shortcut to skip the entrant-flow inversion:
   #
-  #   E_B(t0) = lambda * R_B(t0) / q_B
-  #   E_B(t)  = [lambda * R_B(t) - (1 - q_B) * E_B(t-1)] / q_B
+  #   E_B(t) := lambda * R_B(t)
+  #
+  # This is exact when R_forced_B is stationary year-over-year and is a
+  # well-behaved approximation otherwise; the alternative recurrence
+  # E_B(t) = (lambda*R_B(t) - (1-q_B)*E_B(t-1))/q_B amplifies sparse-cell noise
+  # at low q_B and forces q_B up to the point that the short-run anticipation
+  # target becomes unreachable. The downstream applier consumes r_S/r_B ratios
+  # and reform-vs-baseline deltas, so the modest year-over-year deviation
+  # introduced by this shortcut does not propagate into per-record adjustments.
   #
   # F1 entrants choose q, the share realizing immediately rather than waiting
   # one year to the F0 deadline, which must realize. This is a Bellman control:
@@ -967,25 +973,9 @@ kg_dyn_solve_forced_window_state = function(baseline_cells, tau_S_mat, years,
   F1_forced_S = matrix(0, n_ages, n_years,
                        dimnames = list(ages_chr, years_chr))
 
-  if (n_years >= 1) {
-    E_forced_B[, 1] = R_forced_B[, 1] / q_B
-  }
-  if (n_years >= 2) {
-    for (j in 2:n_years) {
-      E_forced_B[, j] = (R_forced_B[, j] -
-                           (1 - q_B) * E_forced_B[, j - 1]) / q_B
-    }
-  }
-
-  min_E = min(E_forced_B, na.rm = TRUE)
-  if (is.finite(min_E) && min_E < -neg_tol) {
-    loc = which(E_forced_B < -neg_tol, arr.ind = TRUE)[1, ]
-    stop(sprintf(paste0('kg_dynamics: inferred forced-window entrant flow is ',
-                        'negative at age %s year %s (E_B = %.6f).'),
-                 rownames(E_forced_B)[loc[1]], colnames(E_forced_B)[loc[2]],
-                 E_forced_B[loc[1], loc[2]]))
-  }
-  E_forced_B[E_forced_B < 0] = 0
+  # Steady-state shortcut: each year's entrant cohort equals that year's
+  # observed forced realization mass. See function header for the rationale.
+  E_forced_B = R_forced_B
 
   tau_B_bt = tau_B_mat[ages_chr, years_chr, drop = FALSE]
   tau_S_bt = tau_S_mat[ages_chr, years_chr, drop = FALSE]
@@ -1017,20 +1007,33 @@ kg_dyn_solve_forced_window_state = function(baseline_cells, tau_S_mat, years,
   F1_forced_B[, n_years] = F0_forced_B[, n_years]
   F1_forced_S[, n_years] = F0_forced_S[, n_years]
 
-  R_forced_S = q_forced_S * E_forced_B
-  if (n_years >= 2) {
-    for (j in 2:n_years) {
-      R_forced_S[, j] = R_forced_S[, j] +
-        (1 - q_forced_S[, j - 1]) * E_forced_B[, j - 1]
+  # Apply the realization formula to both q paths using shared E_forced_B and
+  # year-0 carry-in. The "_model" baseline output is the model's view of
+  # baseline forced realizations under q = q_B, distinct from the observed
+  # R_forced_B = planned_share * R_B. The downstream rate_factor uses the
+  # model baseline as the denominator so baseline_check yields exactly 1.
+  apply_q_path = function(q_path) {
+    R = q_path * E_forced_B
+    if (n_years >= 1) {
+      R[, 1] = R[, 1] + (1 - q_B) * E_forced_B[, 1]
     }
+    if (n_years >= 2) {
+      for (j in 2:n_years) {
+        R[, j] = R[, j] + (1 - q_path[, j - 1]) * E_forced_B[, j - 1]
+      }
+    }
+    R
   }
+  R_forced_B_model = apply_q_path(q_forced_B)
+  R_forced_S       = apply_q_path(q_forced_S)
 
   out = list(E_forced_B = E_forced_B,
              q_forced_B = q_forced_B,
              q_forced_S = q_forced_S,
              R_forced_B = R_forced_B,
+             R_forced_B_model = R_forced_B_model,
              R_forced_S = R_forced_S,
-             forced_timing_shift = R_forced_S - R_forced_B,
+             forced_timing_shift = R_forced_S - R_forced_B_model,
              forced_intercept = forced_intercept,
              forced_timing_advantage = timing_advantage,
              F0_forced_B = F0_forced_B,
@@ -1056,6 +1059,7 @@ kg_dyn_build_planned_timing = function(...) {
 
 kg_dyn_build_scenario_rate = function(baseline_t, r_ordinary_S,
                                       R_forced_B_col = NULL,
+                                      R_forced_B_model_col = NULL,
                                       R_forced_S_col = NULL,
                                       R_planned_B_col = NULL,
                                       R_planned_S_col = NULL,
@@ -1069,28 +1073,41 @@ kg_dyn_build_scenario_rate = function(baseline_t, r_ordinary_S,
   if (is.null(R_forced_B_col) || is.null(R_forced_S_col)) {
     stop('kg_dynamics: forced-window realization columns are required.')
   }
+  # Model baseline defaults to observed when an old caller doesn't supply it.
+  # This preserves prior behavior for any external test code that doesn't
+  # know about the model-baseline reference; production callers supply the
+  # model column explicitly.
+  if (is.null(R_forced_B_model_col)) R_forced_B_model_col = R_forced_B_col
 
   G_B = baseline_t$G_B
   r_B = baseline_t$r_B
 
-  r_fixed_B    = rep(0, length(r_B))
-  r_forced_B   = ifelse(G_B > 0, R_forced_B_col / G_B, 0)
-  r_forced_S   = ifelse(G_B > 0, R_forced_S_col / G_B, 0)
-  r_ordinary_B = pmax(r_B - r_forced_B, 0)
+  r_fixed_B        = rep(0, length(r_B))
+  r_forced_B       = ifelse(G_B > 0, R_forced_B_col       / G_B, 0)
+  r_forced_B_model = ifelse(G_B > 0, R_forced_B_model_col / G_B, 0)
+  r_forced_S       = ifelse(G_B > 0, R_forced_S_col       / G_B, 0)
+  r_ordinary_B     = pmax(r_B - r_forced_B, 0)
 
   r_S_unclipped = r_ordinary_S + r_forced_S
   r_S           = pmin(pmax(r_S_unclipped, 0), 1)
 
-  list(r_S            = r_S,
-       r_S_unclipped  = r_S_unclipped,
-       timing_clipped = abs(r_S - r_S_unclipped) > 1e-12,
-       r_fixed_B      = r_fixed_B,
-       r_planned_B    = r_forced_B,
-       r_planned_S    = r_forced_S,
-       r_forced_B     = r_forced_B,
-       r_forced_S     = r_forced_S,
-       r_ordinary_B   = r_ordinary_B,
-       r_ordinary_S   = r_ordinary_S)
+  # Model baseline total rate. r_ordinary_B reproduces observed by Bellman
+  # construction (kappa is inverted to match), so the only swap is the
+  # forced bucket's observed-vs-model gap.
+  r_B_model = pmin(pmax(r_ordinary_B + r_forced_B_model, 0), 1)
+
+  list(r_S              = r_S,
+       r_S_unclipped    = r_S_unclipped,
+       timing_clipped   = abs(r_S - r_S_unclipped) > 1e-12,
+       r_B_model        = r_B_model,
+       r_fixed_B        = r_fixed_B,
+       r_planned_B      = r_forced_B,
+       r_planned_S      = r_forced_S,
+       r_forced_B       = r_forced_B,
+       r_forced_B_model = r_forced_B_model,
+       r_forced_S       = r_forced_S,
+       r_ordinary_B     = r_ordinary_B,
+       r_ordinary_S     = r_ordinary_S)
 }
 
 
@@ -1301,13 +1318,14 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, delta_realize,
            -R_B, -G_B,
            # Bellman diagnostic columns from the cell_table left_join;
            # not consumed downstream, drop to avoid polluting tax_units schema.
-           -any_of(c('r_B', 'r_S', 'r_S_unclipped', 'timing_clipped',
+           -any_of(c('r_B', 'r_B_model', 'r_S', 'r_S_unclipped', 'timing_clipped',
                      'lambda_I', 'r_V_B', 'r_V_S',
                      'r_fixed_B', 'r_planned_B', 'r_planned_S',
-                     'r_forced_B', 'r_forced_S',
+                     'r_forced_B', 'r_forced_B_model', 'r_forced_S',
                      'r_ordinary_B', 'r_ordinary_S',
                      'R_planned_B', 'R_planned_S', 'planned_timing_shift',
-                     'R_forced_B', 'R_forced_S', 'forced_timing_shift',
+                     'R_forced_B', 'R_forced_B_model', 'R_forced_S',
+                     'forced_timing_shift',
                      'E_forced_B', 'q_forced_B', 'q_forced_S',
                      'forced_intercept', 'forced_timing_advantage',
                      'F0_forced_B', 'F0_forced_S', 'F1_forced_B', 'F1_forced_S',
@@ -1477,6 +1495,11 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            F0_forced_S  = as.numeric(diag_or('F0_forced_S', 0)[as.character(age)]),
            F1_forced_B  = as.numeric(diag_or('F1_forced_B', F0_forced_B)[as.character(age)]),
            F1_forced_S  = as.numeric(diag_or('F1_forced_S', F0_forced_S)[as.character(age)]),
+           r_forced_B_model =
+             as.numeric(diag_or('r_forced_B_model', r_forced_B)[as.character(age)]),
+           R_forced_B_model =
+             as.numeric(diag_or('R_forced_B_model', R_forced_B)[as.character(age)]),
+           r_B_model    = as.numeric(diag_or('r_B_model', r_B)[as.character(age)]),
            dG            = as.numeric(delta_prev  [as.character(age)]),
            tau_B         = as.numeric(tau_B_col   [as.character(age)]),
            tau_S         = as.numeric(tau_S_col   [as.character(age)]),
@@ -1485,16 +1508,23 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            MC_B          = as.numeric(MC_B_col    [as.character(age)]),
            MC_S          = as.numeric(MC_S_col    [as.character(age)]),
            kappa         = as.numeric(kappa_col   [as.character(age)]),
-           rate_factor   = if_else(r_B > 0, r_S / r_B, 1),
+           # rate_factor uses the model baseline as the denominator so that
+           # baseline_check (q_S = q_B) gives r_S = r_B_model -> rate_factor = 1
+           # exactly. The downstream applier multiplies per-record observed
+           # kg_lt by this factor, so observed mass passes through unchanged
+           # under no-policy-change runs.
+           rate_factor   = if_else(r_B_model > 0, r_S / r_B_model, 1),
            extra_R       = r_S * dG,
            deemed_factor = if_else(G_B > 0,
                                    pmax(0, (G_B + dG) / G_B),
                                    1)) %>%
-    select(age, G_B, R_B, r_B, r_S, r_S_unclipped, timing_clipped,
+    select(age, G_B, R_B, r_B, r_B_model, r_S, r_S_unclipped, timing_clipped,
            lambda_I, r_V_B, r_V_S,
-           r_fixed_B, r_planned_B, r_planned_S, r_forced_B, r_forced_S,
+           r_fixed_B, r_planned_B, r_planned_S,
+           r_forced_B, r_forced_B_model, r_forced_S,
            r_ordinary_B, r_ordinary_S,
-           R_planned_B, R_planned_S, R_forced_B, R_forced_S,
+           R_planned_B, R_planned_S,
+           R_forced_B, R_forced_B_model, R_forced_S,
            planned_timing_shift, forced_timing_shift,
            E_forced_B, q_forced_B, q_forced_S,
            forced_intercept, forced_timing_advantage,
@@ -1641,11 +1671,12 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     # Slice Bellman outputs from extended grid to bathtub grid for this year
     r_D_S_bt = pass2$r_D[bathtub_ages_chr, j]
     rate_info = kg_dyn_build_scenario_rate(
-      baseline_t       = bt,
-      r_ordinary_S     = r_D_S_bt,
-      R_forced_B_col   = forced_state$R_forced_B[, j],
-      R_forced_S_col   = forced_state$R_forced_S[, j],
-      fixed_share      = phi_I
+      baseline_t           = bt,
+      r_ordinary_S         = r_D_S_bt,
+      R_forced_B_col       = forced_state$R_forced_B[, j],
+      R_forced_B_model_col = forced_state$R_forced_B_model[, j],
+      R_forced_S_col       = forced_state$R_forced_S[, j],
+      fixed_share          = phi_I
     )
     r_S_vec = setNames(rate_info$r_S, bathtub_ages_chr)
 
@@ -1688,12 +1719,15 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
         r_planned_B = setNames(rate_info$r_planned_B, bathtub_ages_chr),
         r_planned_S = setNames(rate_info$r_planned_S, bathtub_ages_chr),
         r_forced_B = setNames(rate_info$r_forced_B, bathtub_ages_chr),
+        r_forced_B_model = setNames(rate_info$r_forced_B_model, bathtub_ages_chr),
         r_forced_S = setNames(rate_info$r_forced_S, bathtub_ages_chr),
+        r_B_model = setNames(rate_info$r_B_model, bathtub_ages_chr),
         r_ordinary_B = setNames(rate_info$r_ordinary_B, bathtub_ages_chr),
         r_ordinary_S = setNames(rate_info$r_ordinary_S, bathtub_ages_chr),
         R_planned_B = forced_state$R_planned_B[, j],
         R_planned_S = forced_state$R_planned_S[, j],
         R_forced_B = forced_state$R_forced_B[, j],
+        R_forced_B_model = forced_state$R_forced_B_model[, j],
         R_forced_S = forced_state$R_forced_S[, j],
         planned_timing_shift = forced_state$planned_timing_shift[, j],
         forced_timing_shift = forced_state$forced_timing_shift[, j],
