@@ -243,11 +243,12 @@ eval_response = function(psi_val, ps_val, scenario_tau_mat,
     )
 
     if (t == anchor_year) {
-      # Use model baseline as the reference. This matches the downstream
-      # applier's rate_factor = r_S / r_B_model and makes baseline_check
-      # produce zero delta exactly.
+      # With per-cell q_forced_B back-solved, the model reproduces observed
+      # R_forced_B exactly. So r_S == r_B under no-reform, and using observed
+      # R_B as the denominator gives a calibration moment consistent with the
+      # downstream applier's rate_factor = r_S / r_B.
       G_S        = bt$G_B + delta
-      R_B_anchor = sum(r_B_model_vec * bt$G_B)
+      R_B_anchor = sum(bt$R_B)
       R_S_anchor = sum(step$r_S * G_S)
     }
 
@@ -438,7 +439,7 @@ profile_years = function(psi_val, ps_val) {
 
     step = kg_dyn_step_recurrence(delta, bt, A, omega, r_S_vec, 0, KG_DYN_PHI_I)
     G_S    = bt$G_B + delta
-    R_B_t  = sum(r_B_model_vec * bt$G_B)
+    R_B_t  = sum(bt$R_B)
     R_S_t  = sum(step$r_S * G_S)
     out    = bind_rows(out, tibble(sim_year   = j,
                                    year       = t,

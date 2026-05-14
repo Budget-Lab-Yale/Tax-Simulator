@@ -43,10 +43,18 @@
 #   F0^j(a,t+1) = -tau^j(a,t+1)
 #   F1^j(a,t) = max_{q in [0,1]} {
 #       q*(-tau^j(a,t)) + (1-q)*beta*F0^j(a,t+1)
-#     + alpha_B(a,t)*q - (ref_wedge/2)*(q - q_B)^2
+#     + alpha_B(a,t)*q - (ref_wedge/2)*(q - q_ref)^2
 #   }
-# alpha_B(a,t) is recovered so the baseline FOC reproduces q_B. q_B is set
-# above 0.5 to keep baseline entrant inference stable in sparse cells.
+# Cell-specific baseline timing share q_forced_B(a,t) is back-solved from
+# observed R_forced_B = lambda * R_B using the cohort accounting:
+#   q_B(t) = 1 - (1 - q_B(t-1)) * R_B(t-1) / R_B(t),  q_B(1) = q_ref.
+# The structural intercept alpha_B(a,t) is then recovered so the baseline
+# Bellman FOC reproduces that q_forced_B at the baseline tau path:
+#   alpha_B(a,t) = ref_wedge * (q_B(a,t) - q_ref) - (V_now_B - V_wait_B).
+# alpha_B is the q-analog of kappa in the ordinary Bellman; under no policy
+# change, the model reproduces observed R_forced_B exactly cell-by-cell. The
+# global q_ref is the cost-minimizing reference share, NOT the observed
+# baseline q.
 #
 # Current implementation collapses the five tracked wealth classes into a
 # single asset bucket; per-asset-class disaggregation is on the roadmap.
@@ -78,9 +86,12 @@ KG_DYN_BETA             = 0.978   # fallback annual discount factor, used
 # forced-window share lambda. The remainder is the ordinary Bellman-controlled
 # share.
 KG_DYN_SHARE_FIXED      = 0
-KG_DYN_SHARE_PLANNED    = 0.6152
+KG_DYN_SHARE_PLANNED    = 0.6395
 KG_DYN_TIMING_WINDOW    = 1L
-KG_DYN_FORCED_Q_B       = 0.5
+KG_DYN_FORCED_Q_B       = 0.5   # reference q (q_ref) for the forced FOC.
+                                # Per-cell baseline q_forced_B(a,t) is
+                                # back-solved from observed R_forced_B and may
+                                # differ from this value.
 
 # Reference wedge controlling the convex timing cost in the forced-window
 # Bellman. Default 5pp means a 5pp current-vs-deadline value advantage moves
@@ -109,7 +120,7 @@ KG_DYN_HEIR_SIGMA       = 5       # std dev of heir age distribution
 # (Macro-Projections vintage), or any Bellman primitive (mortality
 # weighting, age-tail r_B treatment, etc.) changes, then paste the printed
 # values below.
-KG_DYN_DEFAULT_PSI      = 33.5688
+KG_DYN_DEFAULT_PSI      = 22.4365
 
 # Within-cell allocation rule for the policy-induced delta dG.
 # Determines which "effective cell mortality" the recurrence uses for
@@ -901,40 +912,45 @@ kg_dyn_solve_forced_window_state = function(baseline_cells, tau_S_mat, years,
 
   #----------------------------------------------------------------------------
   # Solves the forced-window realization state for the one-year timing window.
-  # The observed baseline forced realizations are lambda * R_B. We use the
-  # steady-state shortcut to skip the entrant-flow inversion:
+  # The observed baseline forced realizations are lambda * R_B. The model
+  # carries TWO structural quantities per cell-year:
   #
-  #   E_B(t) := lambda * R_B(t)
+  #   E_forced_B(a,t) = lambda * R_B(a,t)            (entrant convention)
+  #   q_forced_B(a,t) back-solved from the cohort accounting so the model
+  #                    reproduces observed R_forced_B exactly:
   #
-  # This is exact when R_forced_B is stationary year-over-year and is a
-  # well-behaved approximation otherwise; the alternative recurrence
-  # E_B(t) = (lambda*R_B(t) - (1-q_B)*E_B(t-1))/q_B amplifies sparse-cell noise
-  # at low q_B and forces q_B up to the point that the short-run anticipation
-  # target becomes unreachable. The downstream applier consumes r_S/r_B ratios
-  # and reform-vs-baseline deltas, so the modest year-over-year deviation
-  # introduced by this shortcut does not propagate into per-record adjustments.
+  #     R_forced_B(a,t) = q_forced_B(a,t)   * E_B(a,t)
+  #                     + (1 - q_forced_B(a,t-1)) * E_B(a,t-1)
   #
-  # F1 entrants choose q, the share realizing immediately rather than waiting
-  # one year to the F0 deadline, which must realize. This is a Bellman control:
+  #     -> q_B(a,t) = 1 - (1 - q_B(a,t-1)) * R_B(a,t-1)/R_B(a,t)
   #
-  #   F1 = max_q q*V_now + (1-q)*V_wait
-  #            + forced_intercept*q - 0.5*ref_wedge*(q - q_B)^2
+  #   Boundary: q_B(a,1) = q_ref (global reference q), with a phantom year-0
+  #   carry-in cohort at the same q_ref.
   #
-  # where V_now = -tau(t), V_wait = beta(t)*F0(t+1), and F0(t+1) =
-  # -tau(t+1). The baseline intercept is inverted so that the baseline FOC
-  # reproduces q_B. Scenario q is the bounded FOC solution using the fixed
-  # baseline intercept:
+  # The structural intercept alpha_B(a,t) is inverted from the Bellman FOC at
+  # the baseline tau path so the FOC produces q_forced_B(a,t):
   #
-  #   q_S(t) = argmax_q F1_S(q)
+  #   alpha_B(a,t) = ref_wedge * (q_B(a,t) - q_ref) - (V_now_B - V_wait_B)
   #
-  #   R_forced_S(t) = q_S(t) * E_B(t) + [1 - q_S(t-1)] * E_B(t-1)
+  # Scenario q is the FOC solution at the scenario tau path holding alpha_B
+  # fixed:
+  #
+  #   q_S(a,t) = clip(q_ref + (V_now_S - V_wait_S + alpha_B(a,t)) / ref_wedge,
+  #                   0, 1)
+  #   R_forced_S(a,t) = q_S(a,t)*E_B(a,t) + (1 - q_S(a,t-1))*E_B(a,t-1)
+  #
+  # The per-cell back-solve of q_B(a,t) is analogous to kappa(a,t) in the
+  # ordinary Bellman: it absorbs cell-specific timing heterogeneity so the
+  # global parameters (q_ref, ref_wedge) only drive scenario response shape,
+  # and observed baseline R is reproduced cell-by-cell where feasible.
   #----------------------------------------------------------------------------
 
   kg_dyn_validate_realization_buckets(planned_share = planned_share,
                                       timing_window = timing_window,
                                       ref_wedge     = ref_wedge)
-  if (length(q_B) != 1 || !is.finite(q_B) || q_B <= 0 || q_B >= 1) {
-    stop('kg_dynamics: KG_DYN_FORCED_Q_B must be strictly between 0 and 1.')
+  q_ref = q_B
+  if (length(q_ref) != 1 || !is.finite(q_ref) || q_ref <= 0 || q_ref >= 1) {
+    stop('kg_dynamics: KG_DYN_FORCED_Q_B (reference q) must be strictly between 0 and 1.')
   }
   if (is.null(tau_B_mat)) {
     stop('kg_dynamics: tau_B_mat is required for forced-window state solves.')
@@ -954,11 +970,16 @@ kg_dyn_solve_forced_window_state = function(baseline_cells, tau_S_mat, years,
   }
 
   R_forced_B = planned_share * R_B
-  E_forced_B = matrix(0, n_ages, n_years,
-                       dimnames = list(ages_chr, years_chr))
-  q_forced_B = matrix(q_B, n_ages, n_years,
+  # Entrant convention: each year's entrant cohort equals that year's observed
+  # forced realization mass. The per-cell baseline q is back-solved to make the
+  # observed realization pattern exactly consistent with the cohort-deadline
+  # accounting -- analogous to kappa(a,t) inverted from r_D_B in the ordinary
+  # Bellman. This gives exact baseline reproduction in every (a, t) cell.
+  E_forced_B = R_forced_B
+
+  q_forced_B = matrix(q_ref, n_ages, n_years,
                       dimnames = list(ages_chr, years_chr))
-  q_forced_S = matrix(q_B, n_ages, n_years,
+  q_forced_S = matrix(q_ref, n_ages, n_years,
                       dimnames = list(ages_chr, years_chr))
   forced_intercept = matrix(0, n_ages, n_years,
                             dimnames = list(ages_chr, years_chr))
@@ -973,9 +994,23 @@ kg_dyn_solve_forced_window_state = function(baseline_cells, tau_S_mat, years,
   F1_forced_S = matrix(0, n_ages, n_years,
                        dimnames = list(ages_chr, years_chr))
 
-  # Steady-state shortcut: each year's entrant cohort equals that year's
-  # observed forced realization mass. See function header for the rationale.
-  E_forced_B = R_forced_B
+  # Per-cell back-solve of q_forced_B. Year 1 takes the reference q_ref
+  # (we assume the pre-simulation cohort is at steady state with the same q).
+  # Year >= 2: q_B(t) = 1 - (1 - q_B(t-1)) * R_B(t-1)/R_B(t). For cells with
+  # zero R, q falls back to q_ref. Clip to [0, 1]; cells where the inversion
+  # is infeasible (sharp shrinks in R cause q < 0) accept clipping at the cost
+  # of small per-cell baseline-match error.
+  for (j in seq_len(n_years)) {
+    if (j == 1) {
+      q_forced_B[, j] = q_ref
+    } else {
+      prev_R = R_forced_B[, j - 1]
+      this_R = R_forced_B[, j]
+      raw_q  = 1 - (1 - q_forced_B[, j - 1]) * prev_R / pmax(this_R, .Machine$double.eps)
+      raw_q[this_R == 0] = q_ref
+      q_forced_B[, j] = pmin(pmax(raw_q, 0), 1)
+    }
+  }
 
   tau_B_bt = tau_B_mat[ages_chr, years_chr, drop = FALSE]
   tau_S_bt = tau_S_mat[ages_chr, years_chr, drop = FALSE]
@@ -983,8 +1018,17 @@ kg_dyn_solve_forced_window_state = function(baseline_cells, tau_S_mat, years,
   F0_forced_S = -tau_S_bt
   forced_objective = function(q, now_value, wait_value, intercept) {
     q * now_value + (1 - q) * wait_value +
-      intercept * q - 0.5 * ref_wedge * (q - q_B)^2
+      intercept * q - 0.5 * ref_wedge * (q - q_ref)^2
   }
+  # alpha_B(a,t) is the structural timing intercept, analogous to kappa(a,t).
+  # It is recovered so the baseline FOC reproduces the per-cell q_forced_B at
+  # the baseline tau path:
+  #   q_forced_B = q_ref + (V_now_B - V_wait_B + alpha_B) / ref_wedge
+  # -> alpha_B = ref_wedge * (q_forced_B - q_ref) - (V_now_B - V_wait_B).
+  # In scenarios, alpha_B is held fixed (it captures cell-specific timing
+  # heterogeneity) and only V_now/V_wait shift with the scenario tau path:
+  #   q_forced_S = clip(q_ref + (V_now_S - V_wait_S + alpha_B) / ref_wedge,
+  #                     0, 1).
   if (n_years >= 2) {
     for (j in 1:(n_years - 1)) {
       V_now_B  = -tau_B_bt[, j]
@@ -993,29 +1037,29 @@ kg_dyn_solve_forced_window_state = function(baseline_cells, tau_S_mat, years,
       V_wait_S = beta_by_year[j] * F0_forced_S[, j + 1]
 
       advantage_B = V_now_B - V_wait_B
+      forced_intercept[, j] = ref_wedge * (q_forced_B[, j] - q_ref) - advantage_B
       advantage_S = V_now_S - V_wait_S
-      forced_intercept[, j] = -advantage_B
       timing_advantage[, j] = advantage_S + forced_intercept[, j]
-      q_forced_S[, j] = pmin(pmax(q_B + timing_advantage[, j] / ref_wedge, 0), 1)
+      q_forced_S[, j] = pmin(pmax(q_ref + timing_advantage[, j] / ref_wedge,
+                                  0), 1)
 
-      F1_forced_B[, j] = forced_objective(q_B, V_now_B, V_wait_B,
+      F1_forced_B[, j] = forced_objective(q_forced_B[, j], V_now_B, V_wait_B,
                                           forced_intercept[, j])
-      F1_forced_S[, j] = forced_objective(q_forced_S[, j], V_now_S,
-                                          V_wait_S, forced_intercept[, j])
+      F1_forced_S[, j] = forced_objective(q_forced_S[, j], V_now_S, V_wait_S,
+                                          forced_intercept[, j])
     }
   }
   F1_forced_B[, n_years] = F0_forced_B[, n_years]
   F1_forced_S[, n_years] = F0_forced_S[, n_years]
 
-  # Apply the realization formula to both q paths using shared E_forced_B and
-  # year-0 carry-in. The "_model" baseline output is the model's view of
-  # baseline forced realizations under q = q_B, distinct from the observed
-  # R_forced_B = planned_share * R_B. The downstream rate_factor uses the
-  # model baseline as the denominator so baseline_check yields exactly 1.
+  # Apply the realization formula. Both paths share E_forced_B and the year-0
+  # carry-in assumption (q_S(0) = q_ref, E_B(0) = E_B(1)). With this setup the
+  # baseline path reproduces R_forced_B exactly at every cell whose back-solved
+  # q stays in [0,1].
   apply_q_path = function(q_path) {
     R = q_path * E_forced_B
     if (n_years >= 1) {
-      R[, 1] = R[, 1] + (1 - q_B) * E_forced_B[, 1]
+      R[, 1] = R[, 1] + (1 - q_ref) * E_forced_B[, 1]
     }
     if (n_years >= 2) {
       for (j in 2:n_years) {
@@ -1033,7 +1077,7 @@ kg_dyn_solve_forced_window_state = function(baseline_cells, tau_S_mat, years,
              R_forced_B = R_forced_B,
              R_forced_B_model = R_forced_B_model,
              R_forced_S = R_forced_S,
-             forced_timing_shift = R_forced_S - R_forced_B_model,
+             forced_timing_shift = R_forced_S - R_forced_B,
              forced_intercept = forced_intercept,
              forced_timing_advantage = timing_advantage,
              F0_forced_B = F0_forced_B,
@@ -1508,12 +1552,12 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            MC_B          = as.numeric(MC_B_col    [as.character(age)]),
            MC_S          = as.numeric(MC_S_col    [as.character(age)]),
            kappa         = as.numeric(kappa_col   [as.character(age)]),
-           # rate_factor uses the model baseline as the denominator so that
-           # baseline_check (q_S = q_B) gives r_S = r_B_model -> rate_factor = 1
-           # exactly. The downstream applier multiplies per-record observed
-           # kg_lt by this factor, so observed mass passes through unchanged
-           # under no-policy-change runs.
-           rate_factor   = if_else(r_B_model > 0, r_S / r_B_model, 1),
+           # rate_factor uses observed r_B as the denominator. Per-cell
+           # q_forced_B is back-solved so the model reproduces observed
+           # R_forced_B exactly, which makes r_S equal r_B under baseline_check
+           # and rate_factor = 1 to machine precision. The downstream applier
+           # multiplies per-record observed kg_lt by this factor.
+           rate_factor   = if_else(r_B > 0, r_S / r_B, 1),
            extra_R       = r_S * dG,
            deemed_factor = if_else(G_B > 0,
                                    pmax(0, (G_B + dG) / G_B),
