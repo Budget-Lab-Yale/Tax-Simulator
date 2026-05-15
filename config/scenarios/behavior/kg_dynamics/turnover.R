@@ -39,7 +39,12 @@ do_kg_dynamics = function(tax_units, baseline_mtrs, static_mtrs,
 
   state = readRDS(state_path)
 
-  tax_units = kg_dyn_attach_record_attrs(tax_units)
+  cpiu_by_year = kg_dyn_load_cpiu_levels(
+    scenario_info$interface_paths$`Macro-Projections`,
+    years = year
+  )
+  tax_units = kg_dyn_attach_record_attrs(tax_units,
+                                         cpiu_by_year = cpiu_by_year)
 
   kg_dyn_apply_to_records(
     tax_units        = tax_units,

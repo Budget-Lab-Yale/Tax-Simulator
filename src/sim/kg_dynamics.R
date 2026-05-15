@@ -98,6 +98,19 @@ KG_DYN_ASSET_VALUE_COLS = paste0('value.', KG_DYN_ASSET_CLASSES)
 KG_DYN_ASSET_BASIS_COLS = paste0('basis.', KG_DYN_ASSET_CLASSES)
 KG_DYN_ASSET_GAIN_COLS  = paste0('gain.',  KG_DYN_ASSET_CLASSES)
 
+KG_DYN_ESTATE_ASSET_VALUE_COLS = c(
+  'value.cash', 'value.equities', 'value.bonds', 'value.dc', 'value.db',
+  'value.life_ins', 'value.annuities', 'value.trusts', 'value.other_fin',
+  'value.pass_throughs', 'value.primary_home', 'value.other_home',
+  'value.re_fund', 'value.other_nonfin'
+)
+
+KG_DYN_CHAR_EXTENSIVE_INTERCEPT = -2.415
+KG_DYN_CHAR_EXTENSIVE_LN_SLOPE  =  0.458
+KG_DYN_CHAR_INTENSIVE_INTERCEPT = -1.872
+KG_DYN_CHAR_INTENSIVE_LN_SLOPE  =  0.468
+KG_DYN_CHAR_BASE_YEAR           = 2026
+
 # Trustees Report Alternative 2, 50/50 male/female blend (cohort module is
 # gender-blind). Supplies the 81+ tail of the Bellman extended grid.
 KG_DYN_LIFE_TABLE_M_PATH = './resources/PerLifeTables_M_Alt2_TR2024.csv'
@@ -123,7 +136,7 @@ KG_DYN_REGIME_TRIPLET = list(
 # Record-level helpers
 #-------------------------------------------------------------------------------
 
-kg_dyn_attach_record_attrs = function(tax_units) {
+kg_dyn_attach_record_attrs = function(tax_units, cpiu_by_year = NULL) {
 
   # Adds per-record columns the bathtub recurrence and applier need:
   #   gain.{class}            : per-asset unrealized gain, max(0, value_k - basis_k)
@@ -146,6 +159,12 @@ kg_dyn_attach_record_attrs = function(tax_units) {
          'calling this helper.')
   }
 
+  missing_estate_cols = setdiff(KG_DYN_ESTATE_ASSET_VALUE_COLS, names(tax_units))
+  if (length(missing_estate_cols) > 0) {
+    stop('kg_dyn_attach_record_attrs: tax_units missing estate asset columns: ',
+         paste(missing_estate_cols, collapse = ', '))
+  }
+
   values = as.matrix(tax_units[, KG_DYN_ASSET_VALUE_COLS])
   basis  = as.matrix(tax_units[, KG_DYN_ASSET_BASIS_COLS])
   diffs  = values - basis
@@ -157,11 +176,56 @@ kg_dyn_attach_record_attrs = function(tax_units) {
   sec121       = as.numeric(tax_units$`pref.kg_sec121_excl`)
   sec121[is.na(sec121)] = 0
 
+  estate = as.matrix(tax_units[, KG_DYN_ESTATE_ASSET_VALUE_COLS])
+  estate[is.na(estate)] = 0
+  estate_assets = rowSums(estate)
+
+  estate_2026_m = rep(NA_real_, nrow(tax_units))
+  if (!is.null(cpiu_by_year)) {
+    if (!('year' %in% names(tax_units))) {
+      stop('kg_dyn_attach_record_attrs: tax_units must include year when ',
+           'cpiu_by_year is supplied.')
+    }
+    cpiu_years = names(cpiu_by_year)
+    needed = unique(c(as.character(tax_units$year),
+                      as.character(KG_DYN_CHAR_BASE_YEAR)))
+    missing_cpiu = setdiff(needed, cpiu_years)
+    if (length(missing_cpiu) > 0) {
+      stop('kg_dyn_attach_record_attrs: cpiu_by_year missing years ',
+           paste(missing_cpiu, collapse = ', '))
+    }
+    cpiu_base = as.numeric(cpiu_by_year[as.character(KG_DYN_CHAR_BASE_YEAR)])
+    cpiu_cur  = as.numeric(cpiu_by_year[as.character(tax_units$year)])
+    if (!is.finite(cpiu_base) || any(!is.finite(cpiu_cur))) {
+      stop('kg_dyn_attach_record_attrs: cpiu_by_year has non-finite CPI-U ',
+           'for the record year or base year.')
+    }
+    estate_2026_m = estate_assets * cpiu_base / cpiu_cur / 1e6
+  }
+
+  has_estate = is.finite(estate_2026_m) & estate_2026_m > 0
+  log_estate = rep(NA_real_, length(estate_2026_m))
+  log_estate[has_estate] = log(estate_2026_m[has_estate])
+  p_char_extensive = rep(0, length(estate_2026_m))
+  p_char_intensive = rep(0, length(estate_2026_m))
+  p_char_extensive[has_estate] = plogis(
+    KG_DYN_CHAR_EXTENSIVE_INTERCEPT +
+      KG_DYN_CHAR_EXTENSIVE_LN_SLOPE * log_estate[has_estate]
+  )
+  p_char_intensive[has_estate] = plogis(
+    KG_DYN_CHAR_INTENSIVE_INTERCEPT +
+      KG_DYN_CHAR_INTENSIVE_LN_SLOPE * log_estate[has_estate]
+  )
+
   tax_units %>%
     bind_cols(as_tibble(diffs)) %>%
     mutate(
       G_unit                      = rowSums(diffs),
       gain.primary_home_above_cap = pmax(0, gain_primary - sec121),
+      estate_2026_m               = estate_2026_m,
+      p_char_extensive            = p_char_extensive,
+      p_char_intensive            = p_char_intensive,
+      p_char                      = p_char_extensive * p_char_intensive,
       m_household = if_else(filing_status == 2 & !is.na(q_death2),
                             q_death1 * q_death2,
                             q_death1),
@@ -213,18 +277,39 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
               G_B_re_fund           = sum(weight * gain.re_fund,           na.rm = TRUE),
               G_B_primary_above_cap = sum(weight * gain.primary_home_above_cap,
                                           na.rm = TRUE),
+              p_char_num = sum(weight * m_household * G_unit * p_char,
+                               na.rm = TRUE),
+              p_char_extensive_num =
+                sum(weight * m_household * G_unit * p_char_extensive,
+                    na.rm = TRUE),
+              p_char_intensive_num =
+                sum(weight * m_household * G_unit * p_char_intensive,
+                    na.rm = TRUE),
+              estate_2026_m_num =
+                sum(weight * m_household * G_unit * estate_2026_m,
+                    na.rm = TRUE),
               .groups   = 'drop') %>%
     rename(age = age_cohort)
 
   zero_fill_cols = c('G_B', 'R_B', 'm_num', 'mG_record', 'mR_record', 'w_total',
                      'G_B_equities', 'G_B_pass_throughs', 'G_B_primary_home',
-                     'G_B_other_home', 'G_B_re_fund', 'G_B_primary_above_cap')
+                     'G_B_other_home', 'G_B_re_fund', 'G_B_primary_above_cap',
+                     'p_char_num', 'p_char_extensive_num',
+                     'p_char_intensive_num', 'estate_2026_m_num')
 
   out = tibble(age = ages) %>%
     left_join(agg, by = 'age') %>%
     mutate(across(all_of(zero_fill_cols), ~ if_else(is.na(.), 0, .)),
            m   = if_else(w_total > 0, m_num / w_total, 0),
-           r_B = if_else(G_B     > 0, R_B   / G_B,     0))
+           r_B = if_else(G_B     > 0, R_B   / G_B,     0),
+           p_char = if_else(mG_record > 0, p_char_num / mG_record, 0),
+           p_char_extensive = if_else(mG_record > 0,
+                                      p_char_extensive_num / mG_record, 0),
+           p_char_intensive = if_else(mG_record > 0,
+                                      p_char_intensive_num / mG_record, 0),
+           estate_2026_m_avg_dgw = if_else(mG_record > 0,
+                                            estate_2026_m_num / mG_record,
+                                            NA_real_))
 
   # Pooled rate for sparse cells: only consider cells with R_B > 0 so the
   # cells we're imputing don't drag the imputation toward zero. Should be a
@@ -237,6 +322,7 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
   out %>%
     mutate(r_B = if_else(G_B > 0 & R_B == 0, r_B_pooled, r_B)) %>%
     select(age, G_B, R_B, r_B, m, mG_record, mR_record,
+           p_char, p_char_extensive, p_char_intensive, estate_2026_m_avg_dgw,
            G_B_equities, G_B_pass_throughs, G_B_primary_home,
            G_B_other_home, G_B_re_fund, G_B_primary_above_cap) %>%
     arrange(age)
@@ -390,6 +476,35 @@ kg_dyn_load_beta_series = function(macro_root, years) {
 
 
 
+kg_dyn_load_cpiu_levels = function(macro_root, years,
+                                   base_year = KG_DYN_CHAR_BASE_YEAR) {
+
+  needed_years = unique(c(years, base_year))
+  cpiu = c('historical.csv', 'projections.csv') %>%
+    file.path(macro_root, .) %>%
+    map(~ read_csv(.x, show_col_types = FALSE) %>%
+          select(year, cpiu)) %>%
+    bind_rows() %>%
+    distinct(year, .keep_all = TRUE) %>%
+    filter(year %in% needed_years)
+
+  missing = setdiff(needed_years, cpiu$year)
+  if (length(missing) > 0) {
+    stop('kg_dyn_load_cpiu_levels: years ',
+         paste(missing, collapse = ', '),
+         ' not present in macro_projections at ', macro_root)
+  }
+  if (any(is.na(cpiu$cpiu))) {
+    stop('kg_dyn_load_cpiu_levels: NA CPI-U for years ',
+         paste(cpiu$year[is.na(cpiu$cpiu)], collapse = ', '))
+  }
+
+  cpiu = cpiu %>% arrange(match(year, needed_years))
+  setNames(cpiu$cpiu, as.character(cpiu$year))
+}
+
+
+
 kg_dyn_build_extended_grid = function(baseline_cells, life_ext, years,
                                        ages_bellman = KG_DYN_AGE_MIN:
                                                       KG_DYN_AGE_MAX_BELLMAN) {
@@ -419,6 +534,11 @@ kg_dyn_build_extended_grid = function(baseline_cells, life_ext, years,
                  m                     = as.numeric(life_ext[as.character(ages_ext), key]),
                  mG_record             = 0,
                  mR_record             = 0,
+                 p_char                = inner$p_char[inner$age == KG_DYN_AGE_MAX],
+                 p_char_extensive      = inner$p_char_extensive[inner$age == KG_DYN_AGE_MAX],
+                 p_char_intensive      = inner$p_char_intensive[inner$age == KG_DYN_AGE_MAX],
+                 estate_2026_m_avg_dgw =
+                   inner$estate_2026_m_avg_dgw[inner$age == KG_DYN_AGE_MAX],
                  G_B_equities          = 0,
                  G_B_pass_throughs     = 0,
                  G_B_primary_home      = 0,
@@ -483,19 +603,21 @@ kg_dyn_pack_baseline_grid = function(grid_ext, years,
 
   m   = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   r_B = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
+  p_char = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   for (t_chr in years_chr) {
     bt = grid_ext[[t_chr]]
     m_gw = ifelse(bt$G_B > 0, bt$mG_record / bt$G_B, bt$m)
     m  [, t_chr] = pmin(pmax(m_gw, 0), 1)
     r_B[, t_chr] = bt$r_B
+    p_char[, t_chr] = pmin(pmax(bt$p_char, 0), 1)
   }
-  list(m = m, r_B = r_B)
+  list(m = m, r_B = r_B, p_char = p_char)
 }
 
 
 
 kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
-                                     c_phi_col, psi, phi_I, beta,
+                                     c_phi_col, p_char_col, psi, phi_I, beta,
                                      planned_share = KG_DYN_SHARE_PLANNED,
                                      kappa_col = NULL, stationary = FALSE) {
 
@@ -524,7 +646,8 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
   is_baseline_pass = is.null(kappa_col)
 
   # Precompute age-vector quantities used inside the loop.
-  F_vec        = (1 - c_phi_col) * tau_col
+  c_phi_eff    = c_phi_col * (1 - pmin(pmax(p_char_col, 0), 1))
+  F_vec        = (1 - c_phi_eff) * tau_col
   r_exog_B_vec = (phi_I + planned_share) * r_B_col
   r_D_cap_vec  = pmax(1 - r_exog_B_vec, 0)
   bs_vec       = beta * (1 - m_col)   # survivor discount
@@ -566,7 +689,8 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
                                 psi           = KG_DYN_DEFAULT_PSI,
                                 phi_I         = KG_DYN_PHI_I,
                                 planned_share = KG_DYN_SHARE_PLANNED,
-                                beta_by_year  = NULL) {
+                                beta_by_year  = NULL,
+                                c_phi         = NULL) {
 
   #----------------------------------------------------------------------------
   # Backward induction over (age, year) cells.
@@ -592,17 +716,28 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
 
   m_mat   = grid_packed$m
   r_B_mat = grid_packed$r_B
+  p_char_mat = grid_packed$p_char
   n_ages  = nrow(m_mat); n_years = ncol(m_mat)
   ages_chr  = rownames(m_mat); years_chr = colnames(m_mat)
 
   if (is.null(beta_by_year)) beta_by_year = rep(KG_DYN_BETA, n_years)
   stopifnot(length(beta_by_year) == n_years)
 
+  if (missing(c_phi_mat) || is.null(c_phi_mat)) {
+    c_phi_mat = c_phi %||% 0
+  }
+
   if (length(c_phi_mat) == 1) {
     c_phi_mat = matrix(c_phi_mat, n_ages, n_years,
                        dimnames = list(ages_chr, years_chr))
   }
   stopifnot(identical(dim(c_phi_mat), c(n_ages, n_years)))
+
+  if (is.null(p_char_mat)) {
+    p_char_mat = matrix(0, n_ages, n_years,
+                        dimnames = list(ages_chr, years_chr))
+  }
+  stopifnot(identical(dim(p_char_mat), c(n_ages, n_years)))
 
   W     = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   MC    = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
@@ -616,6 +751,7 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
       r_B_col       = r_B_mat[, j],
       tau_col       = tau_mat[, j],
       c_phi_col     = c_phi_mat[, j],
+      p_char_col    = p_char_mat[, j],
       psi           = psi,
       phi_I         = phi_I,
       beta          = beta_by_year[j],
@@ -810,6 +946,7 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
   m         = baseline_t$m
   mG_record = baseline_t$mG_record
   mR_record = baseline_t$mR_record
+  p_char    = pmin(pmax(baseline_t$p_char, 0), 1)
 
   # Effective cell mortality m_eff = sum(w*m*X) / sum(w*X). The death
   # channel needs sum_i w_i * m_i * (G_unit_i + dG_i); the naive cell-mean
@@ -843,9 +980,12 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
   # Inheritance flow (spec §3.3.1). delta_route_vec is per-cell so a cell
   # whose regime mix has no carryover share contributes nothing to the
   # routing crossprod even when adjacent cells do.
+  decedent_stock      = m_eff * (G_B + delta_prev)
+  terminal_char_stock = p_char * decedent_stock
+  taxable_death_stock = (1 - p_char) * decedent_stock
   if (any(delta_route_vec > 0)) {
-    decedent_stock = m_eff * (G_B + delta_prev)
-    delta_inh      = as.numeric(crossprod(omega, delta_route_vec * decedent_stock))
+    delta_inh = as.numeric(crossprod(omega,
+                                     delta_route_vec * taxable_death_stock))
   } else {
     delta_inh = rep(0, length(delta_prev))
   }
@@ -856,7 +996,10 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
        r_V_B      = r_V_B,
        r_V_S      = r_V_S,
        delta_surv = delta_surv,
-       delta_inh  = delta_inh)
+       delta_inh  = delta_inh,
+       decedent_stock      = decedent_stock,
+       terminal_char_stock = terminal_char_stock,
+       taxable_death_stock = taxable_death_stock)
 }
 
 
@@ -980,6 +1123,7 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset,
   deemed_factor = cell_table$deemed_factor[idx]
   R_B           = cell_table$R_B          [idx]
   G_B           = cell_table$G_B          [idx]
+  p_char        = cell_table$p_char       [idx]
 
   missing = setdiff(KG_DYN_ASSET_CLASSES, names(realize_by_asset))
   if (length(missing) > 0) {
@@ -1008,7 +1152,7 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset,
       ),
       kg_lt = if_else(kg_lt > 0, kg_lt * rate_factor, kg_lt) +
               extra_R * allocation +
-              decedent_flag * deemed_factor * deemed_per_record
+              decedent_flag * (1 - p_char) * deemed_factor * deemed_per_record
     ) %>%
     select(-allocation)
 }
@@ -1092,13 +1236,22 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
   # computes gain.primary_home_above_cap.
 
   tax_data_root = scenario_info$interface_paths$`Tax-Data`
+  macro_root    = scenario_info$interface_paths$`Macro-Projections`
   years         = scenario_info$years
+  if (is.null(macro_root)) {
+    stop('kg_dynamics: scenario_info$interface_paths$`Macro-Projections` is ',
+         'NULL. The bathtub input pass needs CPI-U to express estate size ',
+         'in 2026 dollars for terminal charity calibration.')
+  }
 
   heir_dist = kg_dyn_load_heir_distribution(ages = ages)
+  cpiu_by_year = kg_dyn_load_cpiu_levels(macro_root, years)
 
   td_cols = c('id', 'weight', 'filing_status', 'age1', 'age2',
               'kg_lt', 'q_death1', 'q_death2',
-              KG_DYN_ASSET_VALUE_COLS, KG_DYN_ASSET_BASIS_COLS)
+              KG_DYN_ESTATE_ASSET_VALUE_COLS,
+              KG_DYN_ASSET_VALUE_COLS, KG_DYN_ASSET_BASIS_COLS) %>%
+    unique()
 
   baseline_cells = list()
   baseline_tau   = list()
@@ -1115,9 +1268,10 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
       fread(select = td_cols, showProgress = FALSE) %>%
       as_tibble() %>%
       filter(id %in% sample_ids) %>%
-      mutate(weight = weight / pct_sample) %>%
+      mutate(weight = weight / pct_sample,
+             year = t) %>%
       left_join(sec121_t, by = 'filing_status') %>%
-      kg_dyn_attach_record_attrs()
+      kg_dyn_attach_record_attrs(cpiu_by_year = cpiu_by_year)
 
     baseline_cells[[as.character(t)]] = kg_dyn_aggregate_cells(td, ages)
 
@@ -1161,6 +1315,7 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
                                     kappa_col, r_D_B_col, r_D_S_col,
                                     regime_mix,
                                     planned_diag = NULL,
+                                    death_diag = NULL,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
   # Assembles per-cell quantities the applier needs:
@@ -1175,6 +1330,15 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
   ages_chr = as.character(ages_bathtub)
   diag_or = function(name, default) {
     v = planned_diag[[name]]
+    if (!is.null(v)) return(v)
+    if (length(default) == length(ages_chr)) {
+      setNames(as.vector(default), ages_chr)
+    } else {
+      setNames(rep(default, length(ages_chr)), ages_chr)
+    }
+  }
+  death_or = function(name, default) {
+    v = death_diag[[name]]
     if (!is.null(v)) return(v)
     if (length(default) == length(ages_chr)) {
       setNames(as.vector(default), ages_chr)
@@ -1217,6 +1381,12 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            delta_route   = mix_lookup$delta_route  [match(as.character(age), mix_lookup$age)],
            delta_realize = mix_lookup$delta_realize[match(as.character(age), mix_lookup$age)],
            c_phi         = mix_lookup$c_phi        [match(as.character(age), mix_lookup$age)],
+           decedent_stock =
+             as.numeric(death_or('decedent_stock', 0)[as.character(age)]),
+           terminal_char_stock =
+             as.numeric(death_or('terminal_char_stock', 0)[as.character(age)]),
+           taxable_death_stock =
+             as.numeric(death_or('taxable_death_stock', 0)[as.character(age)]),
            rate_factor   = if_else(r_B > 0, r_S / r_B, 1),
            extra_R       = r_S * dG,
            deemed_factor = if_else(G_B > 0,
@@ -1227,9 +1397,11 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            r_fixed_B, r_planned_B, r_planned_S, r_ordinary_B, r_ordinary_S,
            R_planned_B, R_planned_S, planned_timing_shift,
            m, mG_record, mR_record, dG,
+           p_char, p_char_extensive, p_char_intensive, estate_2026_m_avg_dgw,
            G_B_equities, G_B_pass_throughs, G_B_primary_home,
            G_B_other_home, G_B_re_fund, G_B_primary_above_cap,
            delta_vanish, delta_route, delta_realize, c_phi,
+           decedent_stock, terminal_char_stock, taxable_death_stock,
            tau_B, tau_S, W_B, W_S, MC_B, MC_S, kappa, r_D_B, r_D_S,
            rate_factor, extra_R, deemed_factor)
 }
@@ -1460,6 +1632,14 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
         R_planned_S = planned_timing$R_planned_S[, j],
         planned_timing_shift = planned_timing$planned_timing_shift[, j]
       ),
+      death_diag = list(
+        decedent_stock =
+          setNames(step$decedent_stock, bathtub_ages_chr),
+        terminal_char_stock =
+          setNames(step$terminal_char_stock, bathtub_ages_chr),
+        taxable_death_stock =
+          setNames(step$taxable_death_stock, bathtub_ages_chr)
+      ),
       ages_bathtub = ages_bathtub
     )
 
@@ -1599,6 +1779,11 @@ kg_dyn_build_summary = function(scenario_info) {
       G_B_re_fund_total           = sum(G_B_re_fund),
       G_B_primary_above_cap_total = sum(G_B_primary_above_cap),
       m_avg_gw            = wmean(m,            G_B),
+      estate_2026_m_avg_dgw =
+        wmean(estate_2026_m_avg_dgw, mG_record),
+      p_char_extensive_avg_dgw = wmean(p_char_extensive, mG_record),
+      p_char_intensive_avg_dgw = wmean(p_char_intensive, mG_record),
+      p_char_avg_dgw      = wmean(p_char,       mG_record, default = 0),
       r_B_avg_gw          = wmean(r_B,          G_B, default = 0),
       r_S_avg_gw          = wmean(r_S,          G_B, default = 0),
       c_phi_avg_gw        = wmean(c_phi,         G_B, default = 0),
@@ -1629,9 +1814,12 @@ kg_dyn_build_summary = function(scenario_info) {
       R_planned_S_total = sum(R_planned_S),
       planned_timing_shift_total = sum(planned_timing_shift),
       timing_clipped_cells = sum(timing_clipped, na.rm = TRUE),
-      decedent_stock      = sum(mG_record * deemed_factor),
-      inheritance_flow    = sum(delta_route   * mG_record * deemed_factor),
-      deemed_realized     = sum(delta_realize * mG_record * deemed_factor),
+      inheritance_flow    = sum(delta_route   * taxable_death_stock),
+      deemed_realized     = sum(delta_realize * taxable_death_stock),
+      taxable_deemed_stock = sum(delta_realize * taxable_death_stock),
+      decedent_stock      = sum(decedent_stock),
+      terminal_char_stock = sum(terminal_char_stock),
+      taxable_death_stock = sum(taxable_death_stock),
       .groups = 'drop'
     ) %>%
     left_join(regime_df, by = 'year') %>%
@@ -1648,6 +1836,9 @@ kg_dyn_build_summary = function(scenario_info) {
            regime_other_home, regime_re_fund,
            theta, sec121_excl_single, sec121_excl_married,
            c_phi_avg_gw,
+           estate_2026_m_avg_dgw,
+           p_char_extensive_avg_dgw, p_char_intensive_avg_dgw,
+           p_char_avg_dgw,
            delta_vanish_avg_gw, delta_route_avg_gw, delta_realize_avg_gw,
            G_B_total, R_B_total, R_S_total, dG_total,
            G_B_equities_total, G_B_pass_throughs_total,
@@ -1663,7 +1854,8 @@ kg_dyn_build_summary = function(scenario_info) {
            rate_channel, lockin_channel,
            R_planned_B_total, R_planned_S_total,
            planned_timing_shift_total, timing_clipped_cells,
-           decedent_stock, inheritance_flow, deemed_realized,
+           decedent_stock, terminal_char_stock, taxable_death_stock,
+           inheritance_flow, deemed_realized, taxable_deemed_stock,
            semi_elast_implied)
 
   yearly %>%
