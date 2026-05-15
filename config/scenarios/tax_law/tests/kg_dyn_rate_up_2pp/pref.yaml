@@ -1,0 +1,5 @@
+---
+# +2pp across-the-board on preferred rates (LTCG + qualified dividends);
+# step-up unchanged.
+rates:
+  value: [0.02, 0.17, 0.22]
