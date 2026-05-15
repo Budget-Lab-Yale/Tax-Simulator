@@ -59,7 +59,7 @@ KG_DYN_BETA             = 0.978
 # planned is mechanically timeable across nearby years; the remainder is
 # the ordinary Bellman-controlled share.
 KG_DYN_PHI_I            = 0.4
-KG_DYN_SHARE_PLANNED    = 0.3041
+KG_DYN_SHARE_PLANNED    = 0.3921
 KG_DYN_TIMING_WINDOW    = 1L
 
 # Fraction of planned dollars that move toward the best year in the window
@@ -78,10 +78,17 @@ KG_DYN_HEIR_DISTRIBUTION_PATH = './resources/heir_distribution_scf2022.csv'
 # Calibrated jointly with KG_DYN_SHARE_PLANNED in
 # other/kg_model_tests/calibrate.R against long-run dlog(R)/dtau (sim year
 # 30 of a +1pp permanent shock) and short-run announcement-year response
-# (year 1 of a delayed +5pp shock). Re-run calibration whenever Tax-Data
-# vintage, bucket shares, ref_wedge, the discount series, or any Bellman
-# primitive changes.
-KG_DYN_DEFAULT_PSI      = 26.3535
+# (year 1 of a delayed +5pp shock). The bathtub-internal targets the
+# calibrator chases are INFLATED by 1/KG_DYN_DILUTION_LONG and
+# 1/KG_DYN_DILUTION_SHORT (defined in calibrate.R) so the FULL SIM delivers
+# the nominal literature targets (-2.52 long-run, +5.04 short-run).
+# Dilution factors absorb the gap between the calibrator's standalone
+# bathtub solve and the full sim's per-record application, AGI/AMT/NIIT
+# interactions, and anchor-tau drift. Re-measure dilutions and re-run
+# calibration whenever Tax-Data vintage, bucket shares, ref_wedge, the
+# discount series, the apply-to-records logic, or any Bellman primitive
+# changes.
+KG_DYN_DEFAULT_PSI      = 21.2272
 
 # Within-cell allocation rule for policy-induced dG, controlling the
 # effective cell mortality m_eff used in the death/survivor channels.
@@ -658,6 +665,9 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
   is_baseline_pass = is.null(kappa_col)
 
   # Precompute age-vector quantities used inside the loop.
+  # Charity peels proportionally from the regime mix (not preferentially from
+  # the would-be-taxed share). Bathtub split in kg_dyn_step_recurrence uses
+  # the same assumption.
   c_phi_eff    = c_phi_col * (1 - pmin(pmax(p_char_col, 0), 1))
   F_vec        = (1 - c_phi_eff) * tau_col
   r_exog_B_vec = (phi_I + planned_share) * r_B_col

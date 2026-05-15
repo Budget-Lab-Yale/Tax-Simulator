@@ -70,12 +70,32 @@ TAX_DATA_ROOT = '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1/202
 AGES_BATHTUB  = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX
 AGES_BELLMAN  = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX_BELLMAN
 
-LONG_RUN_TARGET    = -0.6 / 0.238    # -2.52, permanent semi-elasticity target
+# Nominal (literature) elasticity targets — what the FULL SIM should deliver.
+LONG_RUN_NOMINAL   = -0.6 / 0.238    # -2.52, permanent semi-elasticity target
+SHORT_RUN_RATIO    = 2               # short-run / |long-run| magnitude
+SHORT_RUN_NOMINAL  = -SHORT_RUN_RATIO * LONG_RUN_NOMINAL   # +5.04
+
+# Empirical dilution factors: ratio of full-sim measured elasticity at the
+# anchor year to the bathtub-internal elasticity the calibrator computes.
+# The calibrator's standalone Bellman + bathtub recurrence omits per-record
+# clamps in kg_dyn_apply_to_records, AGI/AMT/NIIT-driven MTR-distribution
+# effects, and baseline-anchor-tau drift (literature -2.52 is anchored at
+# tau=0.238 but the sim's kg-weighted average baseline mtr_kg_lt is lower).
+# The internal bathtub target is inflated by 1/dilution so the full sim
+# delivers the nominal literature target.
+#
+# Measured from kg_dyn_2pp:
+#   rate_up_2pp at sim year 30 (2055): actual = -1.98, nominal = -2.52
+#   delayed at announcement year (2026): actual = +4.36, nominal = +5.04
+KG_DYN_DILUTION_LONG  = 0.786
+KG_DYN_DILUTION_SHORT = 0.865
+
+# Internal bathtub targets the bisection actually chases.
+LONG_RUN_TARGET    = LONG_RUN_NOMINAL  / KG_DYN_DILUTION_LONG   # ≈ -3.21
 LONG_RUN_PERTURB   = 0.01            # 1pp uniform permanent shock
 LONG_RUN_OFFSET    = 29              # measure at YEARS[1] + 29 (sim year 30)
 
-SHORT_RUN_RATIO    = 2               # short-run / |long-run| magnitude
-SHORT_RUN_TARGET   = -SHORT_RUN_RATIO * LONG_RUN_TARGET   # +5.04
+SHORT_RUN_TARGET   = SHORT_RUN_NOMINAL / KG_DYN_DILUTION_SHORT  # ≈ +5.83
 SHORT_RUN_PERTURB  = 0.05            # 5pp delayed (announced at t, hits t+1)
 SHORT_RUN_OFFSET   = 0               # measure at YEARS[1] (announcement year)
 
@@ -109,7 +129,11 @@ cat("Loading Tax-Data and baseline MTRs for", length(YEARS), "years (full sample
 
 td_cols = c('id', 'weight', 'filing_status', 'age1', 'age2',
             'kg_lt', 'q_death1', 'q_death2',
-            KG_DYN_ASSET_VALUE_COLS, KG_DYN_ASSET_BASIS_COLS)
+            KG_DYN_ESTATE_ASSET_VALUE_COLS,
+            KG_DYN_ASSET_VALUE_COLS, KG_DYN_ASSET_BASIS_COLS) %>%
+  unique()
+
+cpiu_by_year = kg_dyn_load_cpiu_levels(MACRO_ROOT, YEARS)
 
 baseline_cells = list()
 tau_B          = list()
@@ -124,8 +148,9 @@ for (t in YEARS) {
   td = file.path(TAX_DATA_ROOT, paste0('tax_units_', t, '.csv')) %>%
     fread(select = td_cols, showProgress = FALSE) %>%
     as_tibble() %>%
-    mutate(`pref.kg_sec121_excl` = if_else(filing_status == 2, 500000, 250000)) %>%
-    kg_dyn_attach_record_attrs()
+    mutate(`pref.kg_sec121_excl` = if_else(filing_status == 2, 500000, 250000),
+           year = t) %>%
+    kg_dyn_attach_record_attrs(cpiu_by_year = cpiu_by_year)
 
   bl = file.path(BASELINE_ROOT, 'baseline', 'static', 'detail',
                  paste0(t, '.csv')) %>%
