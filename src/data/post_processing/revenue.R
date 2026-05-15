@@ -80,22 +80,27 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   totals %>%
     mutate(
       
-      # FY receipts: nonwithheld tax plus 75% of current CY withheld tax plus 
-      # 25% of previous CY withheld 
-      outlays_tax_credits = 0.75 * pmt_refund_withheld + 
-        0.25 * lag(pmt_refund_withheld) + 
+      # FY receipts: nonwithheld tax plus 75% of current CY withheld tax plus
+      # 25% of previous CY withheld. lag default=0 zero-imputes the missing
+      # prior CY when the sim starts at year t with no t-1 lead-in. For
+      # deltas, this is unbiased whenever ΔCY (t-1) = 0 (i.e., a reform whose
+      # effect starts at CY t). The partial-FY first-year row is written
+      # only to the internal receipts_full.csv used by calc_rev_est; the
+      # public receipts.csv still drops it.
+      outlays_tax_credits = 0.75 * pmt_refund_withheld +
+        0.25 * lag(pmt_refund_withheld, default = 0) +
         pmt_refund_nonwithheld,
-      
-      revenues_income_tax = 0.75 * pmt_iit_withheld + 
-        0.25 * lag(pmt_iit_withheld) + 
+
+      revenues_income_tax = 0.75 * pmt_iit_withheld +
+        0.25 * lag(pmt_iit_withheld, default = 0) +
         pmt_iit_nonwithheld,
-      
-      revenues_payroll_tax = 0.75 * pmt_pr_withheld + 
-        0.25 * lag(pmt_pr_withheld) + 
+
+      revenues_payroll_tax = 0.75 * pmt_pr_withheld +
+        0.25 * lag(pmt_pr_withheld, default = 0) +
         pmt_pr_nonwithheld,
-      
+
       delta_revenues_corp_tax = 0.75 * corp_tax_change +
-        0.25 * lag(corp_tax_change)
+        0.25 * lag(corp_tax_change, default = 0)
     ) %>%
     
     
@@ -128,12 +133,20 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
       )
     ) %>% 
     
-    # Drop incomplete year
+    # Final column selection
+    select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits,
+           revenues_corp_tax, revenues_estate_tax, revenues_vat, revenues_other) ->
+    fy_receipts
+
+  # Internal sidecar: keeps the partial first sim year so calc_rev_est can
+  # produce an FY t delta when sim starts at the policy effective year t.
+  fy_receipts %>%
+    write_csv(file.path(scenario_root, 'totals', 'receipts_full.csv'))
+
+  # Public file: drops the partial first year (preserves existing format
+  # for external readers / analysis scripts).
+  fy_receipts %>%
     filter(year != min(year)) %>%
-    
-    # Write CSV
-    select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits, 
-           revenues_corp_tax, revenues_estate_tax, revenues_vat, revenues_other) %>%
     write_csv(file.path(scenario_root, 'totals', 'receipts.csv'))
 }
 
@@ -163,12 +176,12 @@ calc_rev_est = function(id) {
     return()
   }
   
-  # Read baseline receipts
-  baseline = file.path(globals$baseline_root, 
-                       'baseline', 
-                       'static', 
+  # Read baseline receipts (sidecar: includes partial first sim year)
+  baseline = file.path(globals$baseline_root,
+                       'baseline',
+                       'static',
                        'totals',
-                       'receipts.csv') %>%
+                       'receipts_full.csv') %>%
     read_csv(show_col_types = F) %>%
     
     # Pivot long in variable type
@@ -190,12 +203,13 @@ calc_rev_est = function(id) {
       file.path(id, 'static/supplemental/vat_price_offset.csv') %>% 
       read_csv(show_col_types = F)
     
-    # Read in counterfactual scenario receipts 
-    scenario = file.path(globals$output_root, 
-                         id, 
+    # Read in counterfactual scenario receipts (sidecar: includes partial
+    # first sim year)
+    scenario = file.path(globals$output_root,
+                         id,
                          if_else(static, 'static', 'conventional'),
-                         'totals', 
-                         'receipts.csv') %>%
+                         'totals',
+                         'receipts_full.csv') %>%
       read_csv(show_col_types = F) %>%
       
       # Pivot long in variable type
@@ -384,12 +398,13 @@ calc_stacked_rev_est = function(counterfactual_ids) {
     
     stacked_rev_est = c('baseline', counterfactual_ids) %>% 
       
-      # Read scenario receipts file and store 
+      # Read scenario receipts file and store (sidecar: includes partial
+      # first sim year)
       map(.f = ~ file.path(if_else(.x == 'baseline', globals$baseline_root, globals$output_root),
-                           .x, 
+                           .x,
                            if_else(static | .x == 'baseline', 'static', 'conventional'),
-                           'totals', 
-                           'receipts.csv') %>% 
+                           'totals',
+                           'receipts_full.csv') %>%
             read_csv(show_col_types = F) %>% 
             mutate(scenario_id = .x,
                    Dollars = revenues_payroll_tax + 
