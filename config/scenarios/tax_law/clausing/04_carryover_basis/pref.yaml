@@ -1,0 +1,31 @@
+---
+# Clausing reform — Policy 04: Carryover basis at death
+# Starting in 2030, eliminate the step-up in basis at death across all asset
+# classes. Heirs inherit the decedent's basis (regime code = 1).
+# Engages the kg_dynamics behavioral module to capture lifetime realization
+# responses (reduced lock-in) under the new regime.
+
+kg_death_regime_equities:
+  value:
+    '2014': 0
+    '2030': 1
+
+kg_death_regime_pass_throughs:
+  value:
+    '2014': 0
+    '2030': 1
+
+kg_death_regime_primary_home:
+  value:
+    '2014': 0
+    '2030': 1
+
+kg_death_regime_other_home:
+  value:
+    '2014': 0
+    '2030': 1
+
+kg_death_regime_re_fund:
+  value:
+    '2014': 0
+    '2030': 1
