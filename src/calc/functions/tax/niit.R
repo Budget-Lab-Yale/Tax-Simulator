@@ -32,9 +32,11 @@ calc_niit = function(tax_unit, fill_missings = FALSE) {
     'scorp_active',      # (dbl) active S corp income
     'scorp_active_loss', # (dbl) active S corp loss 
     'scorp_179',         # (dbl) S corp section 179 deduction
-    'part_active',       # (dbl) active partnership income 
-    'part_active_loss',  # (dbl) active partnership loss 
+    'part_active',       # (dbl) active partnership income
+    'part_active_loss',  # (dbl) active partnership loss
     'part_179',          # (dbl) partnership section 179 deduction
+    'part_se1',          # (dbl) partnership SE earnings already in SECA base, primary
+    'part_se2',          # (dbl) partnership SE earnings already in SECA base, secondary
     'inv_int_item_ded',  # (dbl) itemized deduction for investment interest expense
     'agi',               # (dbl) Adjusted Gross Income
     
@@ -59,8 +61,11 @@ calc_niit = function(tax_unit, fill_missings = FALSE) {
       net_active_bus = scorp_active - scorp_active_loss - scorp_179 +
                        part_active  - part_active_loss  - part_179,
       
-      # Determine whether active business earnings are deductible
-      net_active_ded = if_else(niit.include_active == 1, 0, net_active_bus),
+      # Determine whether active business earnings are deductible. When active
+      # earnings are pulled into the NIIT base (include_active == 1), still
+      # deduct the partnership SE earnings already taxed under SECA, since
+      # IRC 1411(c)(6) excludes income subject to SE tax from the NIIT base.
+      net_active_ded = if_else(niit.include_active == 1, part_se1 + part_se2, net_active_bus),
       
       # Calculate net investment income
       nii = pmax(0, txbl_int + div_ord + div_pref + txbl_kg + sch_e - 
