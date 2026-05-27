@@ -1178,43 +1178,37 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset,
   }
   avoidance_keep = 1 - KG_DYN_DEEMED_AVOIDANCE
 
-  # The avoidance haircut is conceptually a VALUE discount (valuation games mark
-  # down the asset value; basis is unchanged): reported gain = keep*value - basis.
-  # But the bathtub tracks only GAINS (G_B, dG, deemed_factor = (G_B+dG)/G_B);
-  # value and basis are NOT carried through the recurrence. So we map the
-  # value-concept keep to an equivalent per-class GAIN scalar via the average
-  # basis/value ratio b_k, and apply it to the static gain stock (gain.*):
-  #     keep*value - basis = (value - basis) * (keep - b_k)/(1 - b_k)
-  #     f_k = clamp((keep - b_k)/(1 - b_k), 0, 1),   b_k = avg basis/value
-  # This stays in gain units (consistent with deemed_factor/dG) and never needs
-  # record-level value/basis through the bathtub. f_k = 1 at keep = 1.
+  # The avoidance haircut is a VALUE discount (valuation games mark down the
+  # asset value; basis is unchanged), applied PER RECORD so cross-sectional
+  # dispersion in basis/value is preserved: discounted gain = pmax(0, keep*value
+  # - basis). A uniform average basis/value ratio would (Jensen, at the pmax(0)
+  # kink) zero out a whole class once the mean basis/value exceeds keep, even
+  # though the low-basis tail still has taxable gain. value.*/basis.* are on
+  # tax_units (read by kg_dyn_attach_record_attrs); the result is a dollar gain
+  # amount, so it still rides deemed_factor = (G_B + dG)/G_B for the dG
+  # evolution -- we only need baseline value/basis at the record, never through
+  # the recurrence. Equals the full gain stock at keep = 1. primary_home nets
+  # the §121 exclusion off the discounted gain.
   needed = c(KG_DYN_ASSET_VALUE_COLS, KG_DYN_ASSET_BASIS_COLS)
   miss = setdiff(needed, names(tax_units))
   if (length(miss) > 0) {
     stop('kg_dyn_apply_to_records: tax_units missing value/basis columns: ',
          paste(miss, collapse = ', '))
   }
-  w = rep(1, nrow(tax_units))
-  if ('weight' %in% names(tax_units)) {
-    w = replace_na(as.numeric(tax_units$weight), 0)
-  }
-  gain_scalar = function(cls) {
+  disc_gain = function(cls) {
     v = replace_na(as.numeric(tax_units[[paste0('value.', cls)]]), 0)
     b = replace_na(as.numeric(tax_units[[paste0('basis.', cls)]]), 0)
-    vtot = sum(w * v)
-    b_k = if (vtot > 0) sum(w * b) / vtot else 1
-    clamp((avoidance_keep - b_k) / max(1 - b_k, 1e-9), 0, 1)
+    pmax(0, avoidance_keep * v - b)
   }
-  f = vapply(KG_DYN_ASSET_CLASSES, gain_scalar, numeric(1))
+  sec121 = replace_na(as.numeric(tax_units$`pref.kg_sec121_excl`), 0)
+  g_primary_above_cap = pmax(0, disc_gain('primary_home') - sec121)
 
-  # Asset-aware deemed contribution per record (gain-based). primary_home uses
-  # the §121-net gain (precomputed in kg_dyn_attach_record_attrs).
   deemed_per_record =
-      realize_by_asset[['equities']]      * f[['equities']]      * tax_units$gain.equities +
-      realize_by_asset[['pass_throughs']] * f[['pass_throughs']] * tax_units$gain.pass_throughs +
-      realize_by_asset[['primary_home']]  * f[['primary_home']]  * tax_units$gain.primary_home_above_cap +
-      realize_by_asset[['other_home']]    * f[['other_home']]    * tax_units$gain.other_home +
-      realize_by_asset[['re_fund']]       * f[['re_fund']]       * tax_units$gain.re_fund
+      realize_by_asset[['equities']]      * disc_gain('equities') +
+      realize_by_asset[['pass_throughs']] * disc_gain('pass_throughs') +
+      realize_by_asset[['primary_home']]  * g_primary_above_cap +
+      realize_by_asset[['other_home']]    * disc_gain('other_home') +
+      realize_by_asset[['re_fund']]       * disc_gain('re_fund')
 
   tax_units %>%
     mutate(
