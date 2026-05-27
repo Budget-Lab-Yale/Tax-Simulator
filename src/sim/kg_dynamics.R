@@ -68,12 +68,15 @@ KG_DYN_TIMING_WINDOW    = 1L
 # by (1 - KG_DYN_DEEMED_AVOIDANCE) in kg_dyn_apply_to_records; does NOT enter
 # c_phi (lifetime realization still sees the full deemed burden). Set to 0 for
 # no haircut.
+# Default 0.25 (a 25% value discount): the 10-yr deemed-realization sweep gives
+# $695B at keep=0.75 vs JCT's ~$600B, and ~25-33% is consistent with the
+# estate-side pass-through discount (rho_pt ~ 0.65).
 # TODO: this is the same object as the estate-tax asset-class reporting factor
 # (a valuation discount on closely-held/illiquid assets). When an estate module
 # lands, concord this with a shared per-asset-class rho_k.
-# Defaults to 0; overridable via the KG_DEEMED_AVOIDANCE env var for sweeps
-# (e.g. a sensitivity grid) without editing source.
-KG_DYN_DEEMED_AVOIDANCE = as.numeric(Sys.getenv('KG_DEEMED_AVOIDANCE', '0'))
+# Overridable via the KG_DEEMED_AVOIDANCE env var for sweeps without editing
+# source.
+KG_DYN_DEEMED_AVOIDANCE = as.numeric(Sys.getenv('KG_DEEMED_AVOIDANCE', '0.25'))
 
 # Fraction of planned dollars that move toward the best year in the window
 # is clamp((tau_S - tau_B between source and destination) / ref_wedge, 0, 1).
