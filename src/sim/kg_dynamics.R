@@ -62,6 +62,19 @@ KG_DYN_PHI_I            = 0.4
 KG_DYN_SHARE_PLANNED    = 0.3921
 KG_DYN_TIMING_WINDOW    = 1L
 
+# Applier-only deemed-realization avoidance haircut: a data-calibration
+# parameter (valuation games / noncompliance that JCT and Treasury assume but
+# the Bellman doesn't), NOT tax law. Scales the per-record deemed contribution
+# by (1 - KG_DYN_DEEMED_AVOIDANCE) in kg_dyn_apply_to_records; does NOT enter
+# c_phi (lifetime realization still sees the full deemed burden). Set to 0 for
+# no haircut.
+# TODO: this is the same object as the estate-tax asset-class reporting factor
+# (a valuation discount on closely-held/illiquid assets). When an estate module
+# lands, concord this with a shared per-asset-class rho_k.
+# Defaults to 0; overridable via the KG_DEEMED_AVOIDANCE env var for sweeps
+# (e.g. a sensitivity grid) without editing source.
+KG_DYN_DEEMED_AVOIDANCE = as.numeric(Sys.getenv('KG_DEEMED_AVOIDANCE', '0'))
+
 # Fraction of planned dollars that move toward the best year in the window
 # is clamp((tau_S - tau_B between source and destination) / ref_wedge, 0, 1).
 # 5pp moves the full bucket; 1pp moves 20%.
@@ -1153,16 +1166,55 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset,
          paste(missing, collapse = ', '))
   }
 
-  # Asset-aware deemed contribution per record. primary_home uses the
-  # §121-net gain (precomputed in kg_dyn_attach_record_attrs); all other
-  # asset classes use their full gain stock.
+  # Applier-only deemed avoidance haircut. Data-calibration constant
+  # (KG_DYN_DEEMED_AVOIDANCE), NOT tax law. Scales the per-record deemed
+  # contribution to reflect noncompliance / valuation games; does not touch
+  # c_phi or the Bellman.
+  if (!is.finite(KG_DYN_DEEMED_AVOIDANCE) ||
+      KG_DYN_DEEMED_AVOIDANCE < 0 || KG_DYN_DEEMED_AVOIDANCE > 1) {
+    stop(sprintf(
+      'kg_dyn_apply_to_records: KG_DYN_DEEMED_AVOIDANCE must be in [0, 1]; got %s.',
+      format(KG_DYN_DEEMED_AVOIDANCE)))
+  }
+  avoidance_keep = 1 - KG_DYN_DEEMED_AVOIDANCE
+
+  # The avoidance haircut is conceptually a VALUE discount (valuation games mark
+  # down the asset value; basis is unchanged): reported gain = keep*value - basis.
+  # But the bathtub tracks only GAINS (G_B, dG, deemed_factor = (G_B+dG)/G_B);
+  # value and basis are NOT carried through the recurrence. So we map the
+  # value-concept keep to an equivalent per-class GAIN scalar via the average
+  # basis/value ratio b_k, and apply it to the static gain stock (gain.*):
+  #     keep*value - basis = (value - basis) * (keep - b_k)/(1 - b_k)
+  #     f_k = clamp((keep - b_k)/(1 - b_k), 0, 1),   b_k = avg basis/value
+  # This stays in gain units (consistent with deemed_factor/dG) and never needs
+  # record-level value/basis through the bathtub. f_k = 1 at keep = 1.
+  needed = c(KG_DYN_ASSET_VALUE_COLS, KG_DYN_ASSET_BASIS_COLS)
+  miss = setdiff(needed, names(tax_units))
+  if (length(miss) > 0) {
+    stop('kg_dyn_apply_to_records: tax_units missing value/basis columns: ',
+         paste(miss, collapse = ', '))
+  }
+  w = rep(1, nrow(tax_units))
+  if ('weight' %in% names(tax_units)) {
+    w = replace_na(as.numeric(tax_units$weight), 0)
+  }
+  gain_scalar = function(cls) {
+    v = replace_na(as.numeric(tax_units[[paste0('value.', cls)]]), 0)
+    b = replace_na(as.numeric(tax_units[[paste0('basis.', cls)]]), 0)
+    vtot = sum(w * v)
+    b_k = if (vtot > 0) sum(w * b) / vtot else 1
+    clamp((avoidance_keep - b_k) / max(1 - b_k, 1e-9), 0, 1)
+  }
+  f = vapply(KG_DYN_ASSET_CLASSES, gain_scalar, numeric(1))
+
+  # Asset-aware deemed contribution per record (gain-based). primary_home uses
+  # the §121-net gain (precomputed in kg_dyn_attach_record_attrs).
   deemed_per_record =
-      realize_by_asset[['equities']]      * tax_units$gain.equities +
-      realize_by_asset[['pass_throughs']] * tax_units$gain.pass_throughs +
-      realize_by_asset[['primary_home']]  *
-        tax_units$gain.primary_home_above_cap +
-      realize_by_asset[['other_home']]    * tax_units$gain.other_home +
-      realize_by_asset[['re_fund']]       * tax_units$gain.re_fund
+      realize_by_asset[['equities']]      * f[['equities']]      * tax_units$gain.equities +
+      realize_by_asset[['pass_throughs']] * f[['pass_throughs']] * tax_units$gain.pass_throughs +
+      realize_by_asset[['primary_home']]  * f[['primary_home']]  * tax_units$gain.primary_home_above_cap +
+      realize_by_asset[['other_home']]    * f[['other_home']]    * tax_units$gain.other_home +
+      realize_by_asset[['re_fund']]       * f[['re_fund']]       * tax_units$gain.re_fund
 
   tax_units %>%
     mutate(
