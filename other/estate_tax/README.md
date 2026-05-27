@@ -36,12 +36,23 @@ nine-month estate return due date.
 - CBO/JCT score targets are estate-and-gift targets.
 - The script applies a fixed 10% gift-tax haircut once:
   `estate_target = 0.90 * estate_and_gift_target`.
-- The baseline/sunset exclusion is $7.2 million for 2026 deaths, indexed after
-  2026 when `--macro-root` is provided.
-- The OBBBA exclusion is $15 million for 2026 deaths, indexed after 2026 when
-  `--macro-root` is provided.
+- **Current law is OBBBA.** The CBO baseline-receipts target is matched to the
+  OBBBA scenario: a $15 million exclusion for 2026 deaths, indexed after 2026
+  when `--macro-root` is provided. There is no TCJA sunset in the baseline.
+- The pre-OBBBA TCJA sunset ($7.2 million exclusion) is used **only** as the
+  counterfactual for the JCT obbba-vs-sunset policy delta, never as the
+  current-law baseline.
 - Historical exclusions are hard-coded for 2018-2025 for SOI filing-year
   calibration and the FY2026 score target.
+- The modeled universe is **taxable returns** -- death-weighted units whose
+  taxable estate exceeds the exemption. SOI moments use `tax_status == 'taxable'`,
+  and the taxable-fraction and DSUE tables are fit on the payer population (not
+  all filers), since nontaxable filers (marital-deduction first deaths,
+  portability/DSUE-only elections, fully-charitable estates) arise from
+  mechanisms the model does not represent.
+- SOI comparison targets are further restricted to (death year, size bin) cells
+  the model can populate: death years with Tax-Data wealth coverage (currently
+  2022 onward) and size bins above the exemption.
 
 ## Outputs
 

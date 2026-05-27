@@ -325,8 +325,14 @@ load_soi_targets = function(path, policy_index) {
   )
   check_cols(names(soi), required, 'SOI file')
 
+  # We model the taxable universe: death-weighted units whose taxable estate
+  # exceeds the exemption. Nontaxable filers (marital-deduction first deaths,
+  # portability/DSUE-only elections, fully-charitable estates) arise from
+  # mechanisms the model does not represent, so we calibrate against taxable
+  # returns only -- which also fits the taxable-fraction and DSUE tables on the
+  # payer population rather than all filers.
   soi %>%
-    filter(tax_status == 'all', size_bin != 'all') %>%
+    filter(tax_status == 'taxable', size_bin != 'all') %>%
     mutate(
       filing_year = as.integer(year),
       death_year = filing_year - 1L,
@@ -364,6 +370,7 @@ load_tax_data_cells = function(tax_data_root, years, wealth_cells) {
     estate = as.matrix(td[, ESTATE_VALUE_COLS])
     estate[is.na(estate)] = 0
     economic_gross = rowSums(estate)
+    pass_through = estate[, 'value.pass_throughs']
 
     q1 = replace_na(as.numeric(td$q_death1), 0)
     q2 = replace_na(as.numeric(td$q_death2), 0)
@@ -373,6 +380,7 @@ load_tax_data_cells = function(tax_data_root, years, wealth_cells) {
       death_year = as.integer(t),
       receipt_year = as.integer(t) + 1L,
       economic_gross = economic_gross,
+      pass_through = pass_through,
       expected_weight = as.numeric(td$weight) * mortality
     ) %>%
       filter(is.finite(economic_gross), economic_gross > 0,
@@ -398,16 +406,18 @@ load_tax_data_cells = function(tax_data_root, years, wealth_cells) {
           receipt_year = first(receipt_year),
           cell_weight = sum(expected_weight, na.rm = TRUE),
           weighted_gross = sum(expected_weight * economic_gross, na.rm = TRUE),
+          weighted_pt = sum(expected_weight * pass_through, na.rm = TRUE),
           .groups = 'drop'
         ) %>%
         transmute(
           receipt_year,
           expected_weight = cell_weight,
+          pass_through = weighted_pt / pmax(cell_weight, 1e-12),
           economic_gross = weighted_gross / pmax(cell_weight, 1e-12)
         )
     }) %>%
     ungroup() %>%
-    select(death_year, receipt_year, economic_gross, expected_weight)
+    select(death_year, receipt_year, economic_gross, pass_through, expected_weight)
 }
 
 
@@ -471,8 +481,14 @@ predict_taxable_fraction = function(gross, form, fits) {
 # Reporting-factor forms
 #-------------------------------------------------------------------------------
 
+# Every form carries one additional composition parameter, rho_pt: the
+# pass-through (closely-held business) reporting factor RELATIVE to all other
+# assets. The size form sets the baseline (the all-else rate / gradient); the
+# composition multiplier M = 1 + (rho_pt - 1) * s_pt tilts it by the
+# pass-through share. M = 1 when s_pt = 0, so the size form and rho_pt are
+# separately identified (no scale redundancy).
 reporting_par_names = function(form) {
-  switch(
+  size_pars = switch(
     form,
     constant = c('a'),
     log_linear = c('a', 'b'),
@@ -481,31 +497,28 @@ reporting_par_names = function(form) {
     bin_lookup = c('under_10m', '10m_20m', '20m_50m', '50m_plus'),
     stop('Unknown reporting form: ', form)
   )
+  c(size_pars, 'rho_pt')
 }
 
-predict_reporting_factor = function(w, form, par) {
+predict_reporting_factor = function(w, s_pt, form, par) {
   x = log(pmax(w, 1) / 1e7)
-  if (form == 'constant') {
-    return(rep(clamp(exp(par[['a']]), 0.01, 5), length(w)))
+  r_size = if (form == 'constant') {
+    rep(clamp(exp(par[['a']]), 0.01, 5), length(w))
+  } else if (form == 'log_linear') {
+    clamp(exp(par[['a']] + par[['b']] * x), 0.01, 5)
+  } else if (form == 'log_quadratic') {
+    clamp(exp(par[['a']] + par[['b']] * x + par[['c']] * x^2), 0.01, 5)
+  } else if (form == 'bounded_log_quadratic') {
+    0.05 + (2.5 - 0.05) * plogis(par[['a']] + par[['b']] * x + par[['c']] * x^2)
+  } else if (form == 'bin_lookup') {
+    clamp(exp(par[size_bin_for(w)]), 0.01, 5)
+  } else {
+    stop('Unknown reporting form: ', form)
   }
-  if (form == 'log_linear') {
-    eta = par[['a']] + par[['b']] * x
-    return(clamp(exp(eta), 0.01, 5))
-  }
-  if (form == 'log_quadratic') {
-    eta = par[['a']] + par[['b']] * x + par[['c']] * x^2
-    return(clamp(exp(eta), 0.01, 5))
-  }
-  if (form == 'bounded_log_quadratic') {
-    eta = par[['a']] + par[['b']] * x + par[['c']] * x^2
-    return(0.05 + (2.5 - 0.05) * plogis(eta))
-  }
-  if (form == 'bin_lookup') {
-    b = size_bin_for(w)
-    out = exp(par[b])
-    return(clamp(out, 0.01, 5))
-  }
-  stop('Unknown reporting form: ', form)
+
+  s_pt = clamp(replace_na(s_pt, 0), 0, 1)
+  composition = 1 + (par[['rho_pt']] - 1) * s_pt
+  clamp(r_size * composition, 0.01, 5)
 }
 
 initial_grid = function(form, quick = FALSE) {
@@ -514,29 +527,33 @@ initial_grid = function(form, quick = FALSE) {
     levels_b = c(-0.25, 0, 0.25)
     levels_c = c(-0.05, 0, 0.05)
     bin_levels = log(c(0.5, 1, 1.5))
+    rho_levels = c(0.6, 1.0)
   } else {
     levels_a = log(c(0.25, 0.5, 0.75, 1, 1.25, 1.5, 2))
     levels_b = c(-0.75, -0.35, 0, 0.35, 0.75)
     levels_c = c(-0.15, 0, 0.15)
     bin_levels = log(c(0.35, 0.6, 0.85, 1.1, 1.5))
+    rho_levels = c(0.4, 0.6, 0.8, 1.0)
   }
 
   if (form == 'constant') {
-    grid = expand.grid(a = levels_a)
+    grid = expand.grid(a = levels_a, rho_pt = rho_levels)
   } else if (form == 'log_linear') {
-    grid = expand.grid(a = levels_a, b = levels_b)
+    grid = expand.grid(a = levels_a, b = levels_b, rho_pt = rho_levels)
   } else if (form == 'log_quadratic') {
-    grid = expand.grid(a = levels_a, b = levels_b, c = levels_c)
+    grid = expand.grid(a = levels_a, b = levels_b, c = levels_c, rho_pt = rho_levels)
   } else if (form == 'bounded_log_quadratic') {
     grid = expand.grid(a = seq(-2, 2, length.out = ifelse(quick, 3, 5)),
                        b = levels_b,
-                       c = levels_c)
+                       c = levels_c,
+                       rho_pt = rho_levels)
   } else if (form == 'bin_lookup') {
     grid = expand.grid(
       under_10m = bin_levels,
       `10m_20m` = bin_levels,
       `20m_50m` = bin_levels,
       `50m_plus` = bin_levels,
+      rho_pt = rho_levels,
       check.names = FALSE
     )
   } else {
@@ -552,13 +569,18 @@ param_bounds = function(form) {
     lower = c(a = -8, b = -4, c = -2)
     upper = c(a = 8, b = 4, c = 2)
   } else {
-    lower = setNames(rep(-5, length(nms)), nms)
-    upper = setNames(rep(2, length(nms)), nms)
+    size_nms = setdiff(nms, 'rho_pt')
+    lower = setNames(rep(-5, length(size_nms)), size_nms)
+    upper = setNames(rep(2, length(size_nms)), size_nms)
     if (form %in% c('log_linear', 'log_quadratic')) {
-      lower[nms != 'a'] = -3
-      upper[nms != 'a'] = 3
+      lower[size_nms != 'a'] = -3
+      upper[size_nms != 'a'] = 3
     }
   }
+  # Pass-through reporting factor relative to all-else, bounded to a plausible
+  # valuation-discount range.
+  lower['rho_pt'] = 0.3
+  upper['rho_pt'] = 1.2
   list(lower = lower[nms], upper = upper[nms])
 }
 
@@ -571,8 +593,9 @@ apply_candidate = function(cells, reporting_form, reporting_par,
                            taxable_form, taxable_fits, dsue_table,
                            policy, policy_index) {
   out = cells
+  out$s_pt = out$pass_through / pmax(out$economic_gross, 1e-9)
   out$reporting_factor = predict_reporting_factor(
-    out$economic_gross, reporting_form, reporting_par
+    out$economic_gross, out$s_pt, reporting_form, reporting_par
   )
   out$reported_gross = out$economic_gross * out$reporting_factor
   out$size_bin = size_bin_for(out$reported_gross)
@@ -595,6 +618,9 @@ apply_candidate = function(cells, reporting_form, reporting_par,
     (1 - out$p_dsue) * out$liability_no_dsue +
     out$p_dsue * out$liability_with_dsue
   out$filed = out$reported_gross >= out$bea
+  # The modeled universe: units whose taxable estate exceeds the exemption and
+  # therefore owe estate tax. This is the basis for the SOI moments.
+  out$taxable = out$taxable_estate > out$bea
 
   out
 }
@@ -608,9 +634,9 @@ model_soi_moments = function(cells, soi_targets, reporting_form, reporting_par,
     filter(death_year %in% unique(soi_targets$death_year)) %>%
     group_by(death_year, size_bin) %>%
     summarise(
-      gross_count = sum(expected_weight * filed, na.rm = TRUE),
-      gross_amount = sum(expected_weight * filed * reported_gross, na.rm = TRUE),
-      taxable_estate = sum(expected_weight * filed * taxable_estate, na.rm = TRUE),
+      gross_count = sum(expected_weight * taxable, na.rm = TRUE),
+      gross_amount = sum(expected_weight * taxable * reported_gross, na.rm = TRUE),
+      taxable_estate = sum(expected_weight * taxable * taxable_estate, na.rm = TRUE),
       net_estate_tax = sum(expected_weight * liability, na.rm = TRUE),
       .groups = 'drop'
     )
@@ -635,27 +661,33 @@ model_score_moments = function(cells, score_targets, reporting_form, reporting_p
                                policy_index) {
   needed_receipt_years = unique(score_targets$year)
 
-  baseline = apply_candidate(cells, reporting_form, reporting_par,
-                             taxable_form, taxable_fits, dsue_table,
-                             'baseline', policy_index) %>%
+  # Current-law baseline is OBBBA: the $15M permanent exclusion. The CBO
+  # baseline-receipts target reflects this world (post-OBBBA, no TCJA sunset),
+  # so it is matched to the OBBBA scenario.
+  current_law = apply_candidate(cells, reporting_form, reporting_par,
+                                taxable_form, taxable_fits, dsue_table,
+                                'obbba', policy_index) %>%
     filter(receipt_year %in% needed_receipt_years) %>%
     group_by(receipt_year) %>%
-    summarise(baseline_receipts = sum(expected_weight * liability, na.rm = TRUE) / 1e6,
+    summarise(current_law_receipts = sum(expected_weight * liability, na.rm = TRUE) / 1e6,
               .groups = 'drop')
 
-  obbba = apply_candidate(cells, reporting_form, reporting_par,
-                          taxable_form, taxable_fits, dsue_table,
-                          'obbba', policy_index) %>%
+  # The pre-OBBBA TCJA sunset ($7.2M exclusion) is NOT the current baseline; it
+  # exists only as the counterfactual JCT scored OBBBA against, so it is used
+  # solely to form the obbba-vs-sunset policy delta.
+  sunset = apply_candidate(cells, reporting_form, reporting_par,
+                           taxable_form, taxable_fits, dsue_table,
+                           'baseline', policy_index) %>%
     filter(receipt_year %in% needed_receipt_years) %>%
     group_by(receipt_year) %>%
-    summarise(obbba_receipts = sum(expected_weight * liability, na.rm = TRUE) / 1e6,
+    summarise(sunset_receipts = sum(expected_weight * liability, na.rm = TRUE) / 1e6,
               .groups = 'drop')
 
-  modeled = full_join(baseline, obbba, by = 'receipt_year') %>%
+  modeled = full_join(current_law, sunset, by = 'receipt_year') %>%
     mutate(
-      baseline_receipts = replace_na(baseline_receipts, 0),
-      obbba_receipts = replace_na(obbba_receipts, 0),
-      policy_delta = obbba_receipts - baseline_receipts
+      current_law_receipts = replace_na(current_law_receipts, 0),
+      sunset_receipts = replace_na(sunset_receipts, 0),
+      policy_delta = current_law_receipts - sunset_receipts
     ) %>%
     rename(year = receipt_year)
 
@@ -664,7 +696,7 @@ model_score_moments = function(cells, score_targets, reporting_form, reporting_p
     mutate(
       modeled_value_millions = case_when(
         scenario == 'baseline' & target_type == 'baseline_receipts' ~
-          modeled$baseline_receipts[match(year, modeled$year)],
+          modeled$current_law_receipts[match(year, modeled$year)],
         scenario == 'obbba_vs_sunset' & target_type == 'policy_delta' ~
           modeled$policy_delta[match(year, modeled$year)],
         TRUE ~ NA_real_
@@ -931,8 +963,33 @@ main = function() {
   cells = load_tax_data_cells(args$tax_data_root, needed_death_years, args$wealth_cells)
   message('  model cells: ', nrow(cells))
 
+  # Taxable-fraction and DSUE tables use the full SOI panel (they are pure SOI
+  # ratios, independent of Tax-Data wealth coverage).
   taxable_fits = fit_taxable_fraction_models(soi_targets)
   dsue_table = build_dsue_table(soi_targets)
+
+  # The SOI *comparison* targets, however, can only be matched where the model
+  # has mass. Drop (a) death years with no Tax-Data wealth coverage and (b)
+  # size bins whose upper bound is below the filing exclusion -- the model never
+  # files an estate below the exclusion, whereas SOI's small-estate filers are
+  # mostly portability/DSUE-election returns we do not represent.
+  available_death_years = sort(unique(cells$death_year))
+  soi_targets_model = soi_targets %>%
+    mutate(filing_exclusion = bea_for_year(death_year, 'historical', policy_index)) %>%
+    filter(death_year %in% available_death_years, max_gross > filing_exclusion)
+
+  dropped_years = setdiff(unique(soi_targets$death_year), available_death_years)
+  if (length(dropped_years) > 0) {
+    warning('No Tax-Data wealth coverage for SOI death year(s): ',
+            paste(sort(dropped_years), collapse = ', '),
+            '. Dropping them from the SOI objective.')
+  }
+  message('  SOI comparison cells retained: ', nrow(soi_targets_model),
+          ' (death years: ',
+          paste(sort(unique(soi_targets_model$death_year)), collapse = ', '), ')')
+  if (nrow(soi_targets_model) == 0) {
+    stop('No SOI comparison cells remain after coverage/exclusion filtering.')
+  }
 
   reporting_forms = c('constant', 'log_linear', 'log_quadratic',
                       'bounded_log_quadratic', 'bin_lookup')
@@ -951,7 +1008,7 @@ main = function() {
 
     fit = calibrate_candidate(
       cells = cells,
-      soi_targets = soi_targets,
+      soi_targets = soi_targets_model,
       score_targets = score_targets,
       reporting_form = rf,
       taxable_form = tf,
