@@ -8,7 +8,7 @@ on-model estate tax module. It does not change simulator tax calculations.
 ```sh
 Rscript other/estate_tax/calibrate_estate_tax.R \
   --tax-data-root /path/to/Tax-Data/v1/<vintage>/baseline \
-  --soi-file /path/to/estate_tax_filed_2019_2023.csv \
+  --soi-file other/estate_tax/estate_tax_filed_2019_2023.csv \
   --output-dir /path/to/output \
   --macro-root /path/to/Macro-Projections/v3/<vintage>/baseline
 ```
