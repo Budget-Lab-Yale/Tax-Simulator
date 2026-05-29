@@ -95,6 +95,10 @@ do_scenario = function(ID, baseline_mtrs) {
   
   # Return MTRs if running baseline
   if (ID == 'baseline') {
+
+    # CBO baseline benchmark (baseline-only post-processing)
+    build_cbo_comparison(ID)
+
     return(static_mtrs)
   }
 }

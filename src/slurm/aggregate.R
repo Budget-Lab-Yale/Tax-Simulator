@@ -102,6 +102,12 @@ tryCatch({
         excess_growth_all_rev = scenario_info$excess_growth_all_rev
       )
 
+    # CBO baseline benchmark (baseline-only post-processing). Phase 3b is
+    # counterfactual-only, so this baseline-only step lives here in Phase 3a,
+    # after the baseline static 1040.csv has been written. Mirrors the
+    # build_cbo_comparison() call in do_scenario() (src/sim/run.R).
+    if (scenario_id == 'baseline') build_cbo_comparison(scenario_id)
+
     # --- Write conventional outputs (skip for baseline) ---
     if (scenario_id != 'baseline') {
 
