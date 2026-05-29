@@ -22,7 +22,7 @@ do_kg_dynamics = function(tax_units, baseline_mtrs, static_mtrs,
   # (rate_factor, extra_R, deemed_factor). All math is in the bathtub; this
   # module does no recurrence work.
   #
-  # NOT compatible with the legacy kg/*.R or carryover_basis/*.R modules.
+  # NOT compatible with the legacy kg/*.R modules.
   #
   # Returns: tibble of tax units with adjusted kg_lt and added decedent_flag.
   #----------------------------------------------------------------------------
