@@ -342,6 +342,7 @@ The SLURM pipeline duplicates orchestration logic from `main.R`, `run_sim()`, an
 |-----------------------------------------------------|-------------------------------|
 | `run_sim()` totals-writing or `calc_receipts()` call | `src/slurm/aggregate.R` Phase 3a |
 | `do_scenario()` post-processing calls               | `src/slurm/aggregate.R` Phase 3b |
+| `do_scenario()` baseline-only post-processing (e.g. `build_cbo_comparison()`) | `src/slurm/aggregate.R` Phase 3a (Phase 3b is counterfactual-only) |
 | `do_scenario()` pre-simulation setup (offsets, indexes, tax law) | `src/slurm/setup.R` |
 | `main.R` stacked post-processing or `purge_detail()` | `src/slurm/aggregate.R` Phase 4 |
 | `parse_globals()` return structure                  | `src/slurm/setup.R` serialization |
