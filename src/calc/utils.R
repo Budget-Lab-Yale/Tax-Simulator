@@ -298,10 +298,14 @@ integrate_conditional_rates_brackets = function(df, n_brackets, prefix_brackets,
       # Calculate excess of x over adjusted bracket
       excess_x = pmax(0, pmin(adj_next_bracket, x) - adj_bracket)
       
-      # Limit excess x to excess y if y includes x
+      # When x is part of y, the preferred-rate income occupies the top x
+      # dollars of y, i.e. the band [max(0, y - x), y]. Tax it over the brackets
+      # that band actually spans, rather than stacking x above y and capping
+      # per-bracket (which drops lower brackets when ordinary income y - x is
+      # small but y sits high in the schedule).
       if (inclusive) {
-        excess_y = pmax(0, pmin(next_bracket, y) - bracket)
-        excess_x = pmin(excess_x, excess_y)
+        lo       = pmax(0, y - x)
+        excess_x = pmax(0, pmin(next_bracket, y) - pmax(bracket, lo))
       }
       
       # Apply rate and return
