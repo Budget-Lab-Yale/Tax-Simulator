@@ -1057,9 +1057,11 @@ kg_dyn_build_regime_mix = function(regime_codes, theta, baseline_t,
   #
   # c_phi(a) (share of cell gain stock taxed at death, the death-state
   # burden share the holder internalizes in the Bellman):
-  #   c_phi(a) = sum_{k ≠ primary_home, deemed} share_k(a)
-  #            + share_primary_above_cap(a)               (deemed + §121)
-  #            + theta * sum_{k, carryover} share_k(a)    (route internalized)
+  #   c_phi(a) = sum_{k, deemed}            live_share_k(a)
+  #            + theta * sum_{k, carryover} live_share_k(a)   (route internalized)
+  # where live_share_k = share_primary_above_cap for primary_home (§121-net),
+  # share_k otherwise. §121 nets the exclusion cap under BOTH deemed and
+  # carryover (see live_share in the regime loop below).
   #
   # regime_codes : named list of 5 integer codes (one per asset class).
   # theta        : scalar bequest motive in [0, 1].
@@ -1103,20 +1105,26 @@ kg_dyn_build_regime_mix = function(regime_codes, theta, baseline_t,
 
   for (k in asset_classes) {
     tr = triplets[[k]]
+
+    # §121 primary-residence exclusion. Under BOTH deemed realization and
+    # carryover, only the above-cap primary-home gain is "live": deemed taxes
+    # it on the decedent's final return; carryover routes it to heirs. Both are
+    # modeled as a death-time basis step-up of up to the §121 cap, so the
+    # below-cap portion never enters the taxable/routed stock. Under step-up the
+    # whole home gain is forgiven, so §121 is moot (delta_vanish keeps the full
+    # share). live_share is §121-net for primary_home, the full share otherwise.
+    live_share = if (k == 'primary_home') share_primary_above_cap else share[[k]]
+
     delta_vanish  = delta_vanish  + share[[k]] * tr$vanish
-    delta_route   = delta_route   + share[[k]] * tr$route
-    delta_realize = delta_realize + share[[k]] * tr$realize
+    delta_route   = delta_route   + live_share * tr$route
+    delta_realize = delta_realize + live_share * tr$realize
 
     # Carryover internalization: holder values theta of the routed stock
-    c_phi = c_phi + theta * tr$route * share[[k]]
+    # (§121-net for primary_home).
+    c_phi = c_phi + theta * tr$route * live_share
 
-    # Deemed realization: full asset share for non-primary, §121-net share
-    # for primary_home.
-    if (k == 'primary_home') {
-      c_phi = c_phi + tr$realize * share_primary_above_cap
-    } else {
-      c_phi = c_phi + tr$realize * share[[k]]
-    }
+    # Deemed realization burden share (§121-net for primary_home).
+    c_phi = c_phi + tr$realize * live_share
   }
 
   tibble(
