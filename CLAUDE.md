@@ -187,8 +187,21 @@ each death year is independent, expected-value). Key facts:
   (scenario − model-baseline), booked in FY death-year + 1. The model never sets
   baseline estate LEVELS (a known growth-slope disagreement with CBO); it
   contributes reform deltas only. The off-model estate delta is superseded.
-- **Not yet built (stage 2)**: heir-side distribution (rank-matching allocator);
-  estate reforms currently show revenue but not distributional effects.
+- **Heir-side distribution (stage 2)**: the rank-matching allocator
+  (`allocate_estate_to_heirs()`, `src/data/post_processing/estate_allocator.R`)
+  passes each leg-scenario's expected estate tax through to heirs by matching
+  cumulative dollar mass (estates sorted by distributable value, heirs by
+  inheritance; DSUE/no-DSUE branches enter as separate ladder entries). It runs
+  on the fly inside `process_for_distribution()` for both legs — no
+  cross-scenario file dependency. Heir structure (p, inheritance) comes from
+  the baseline Estate-Tax-Distribution interface; inheritance is GROSS of
+  estate tax (assumption, evidence in thoughts doc §12), so only the liability
+  column varies by scenario. Aggregate identity Σw·p·λ = E[estate tax] per
+  (leg, year) ties to `totals/estate.csv`; per-year diagnostics land in
+  `static/supplemental/estate_allocator_diag_{t}.csv`. Heir-ladder exhaustion
+  is a hard error. NOTE: kg_dynamics deemed-realization tax deliberately keeps
+  the proportional-to-inheritance smear (it has no exemption threshold — the
+  rank match exists because the estate tax is threshold'd).
 
 ### Behavioral Feedback Modules
 

@@ -176,37 +176,66 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
       by = 'id'
     )
   
-  # Join estate tax data if it exists
-  baseline_estate_path = globals$interface_paths %>% 
-    filter(ID == globals$interface_path$ID[1], interface == 'Estate-Tax-Distribution') %>%
-    pull(path) %>% 
-    file.path(paste0('estate_tax_detail_', yr, '.csv')) 
-  scenario_estate_path = get_scenario_info(id)$interface_paths$`Estate-Tax-Distribution` %>%
+  # Estate tax incidence: heir structure (p_inheritance, inheritance) comes
+  # from the BASELINE Estate-Tax-Distribution interface; liability comes from
+  # the on-model rank-matching allocator (estate_allocator.R), run
+  # independently on each leg's detail file so reform estate law flows
+  # through to heirs. Inheritance is GROSS of estate tax (scenario-invariant);
+  # only the liability column differs across legs. No scenario-specific
+  # upstream file is needed anymore
+  baseline_estate_path = globals$interface_paths %>%
+    filter(ID == globals$interface_paths$ID[1], interface == 'Estate-Tax-Distribution') %>%
+    pull(path) %>%
     file.path(paste0('estate_tax_detail_', yr, '.csv'))
-  
-  if (file.exists(baseline_estate_path) & file.exists(scenario_estate_path)) {
-    microdata %<>% 
+
+  have_estate_cols = all(ESTATE_DETAIL_COLS %in% names(baseline_detail)) &
+                     all(ESTATE_DETAIL_COLS %in% names(reform_detail))
+
+  if (file.exists(baseline_estate_path) & have_estate_cols) {
+
+    heir_px = baseline_estate_path %>%
+      fread() %>%
+      tibble() %>%
+      select(id, p_inheritance, inheritance)
+
+    alloc_baseline = allocate_estate_to_heirs(baseline_detail, heir_px, yr, baseline_id)
+    alloc_reform   = allocate_estate_to_heirs(reform_detail,   heir_px, yr, id)
+
+    # Persist this scenario's heir-level liabilities (4-column upstream
+    # schema) and the allocator diagnostics, per year for idempotence
+    supp_root = file.path(globals$output_root, id, 'static/supplemental')
+    heir_px %>%
+      left_join(alloc_reform$heirs, by = 'id') %>%
+      write_csv(file.path(supp_root, paste0('estate_tax_detail_', yr, '.csv')))
+    bind_rows(alloc_baseline$diag, alloc_reform$diag) %>%
+      write_csv(file.path(supp_root, paste0('estate_allocator_diag_', yr, '.csv')))
+
+    microdata %<>%
       left_join(
-        baseline_estate_path %>% 
-          fread() %>% 
-          tibble() %>% 
-          rename(liab_estate = estate_tax_liability), 
+        heir_px %>%
+          left_join(alloc_baseline$heirs, by = 'id') %>%
+          rename(liab_estate = estate_tax_liability),
         by = 'id'
-      ) %>% 
+      ) %>%
       left_join(
-        scenario_estate_path %>% 
-          fread() %>% 
-          tibble() %>% 
-          select(id, inheritance_reform = inheritance, liab_estate_reform = estate_tax_liability), 
+        alloc_reform$heirs %>%
+          rename(liab_estate_reform = estate_tax_liability),
         by = 'id'
-      )
+      ) %>%
+      mutate(inheritance_reform = inheritance)
+
   } else {
+    if (file.exists(baseline_estate_path) & !have_estate_cols) {
+      warning('Estate-Tax-Distribution data exists for ', yr, ' but the ',
+              'detail files predate the on-model estate columns; estate tax ',
+              'is excluded from these distribution tables')
+    }
     microdata %<>%
       mutate(
         p_inheritance      = 0,
-        inheritance        = 0, 
-        inheritance_reform = 0, 
-        liab_estate        = 0, 
+        inheritance        = 0,
+        inheritance_reform = 0,
+        liab_estate        = 0,
         liab_estate_reform = 0
       )
   }

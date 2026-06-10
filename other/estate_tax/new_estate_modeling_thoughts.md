@@ -742,9 +742,8 @@ the 3 known clone clusters. Full-pipeline baseline + sunset runs vs the
 calibrator's OBBBA receipts / JCT delta: see logs referenced in repo root
 (estate_smoke_*, slurm validation run).
 
-**Stage 2 (not built):** §10d rank-matching heir allocator + distribution.R
-rewiring — estate reforms currently show revenue but no distributional
-effects. Also still open: §10h improvement agenda 1–7.
+**Stage 2 (BUILT — see §12):** §10d rank-matching heir allocator +
+distribution.R rewiring. Still open: §10h improvement agenda 1–7.
 
 ### 11a. THE SAMPLE-UNIVERSE BUG the estate level exposed (2026-06-10, fixed)
 
@@ -771,3 +770,128 @@ noise vs old runs; (ii) kg_dynamics cell aggregates now include the
 top-tail records (they filter raw Tax-Data by the same sample_ids);
 (iii) income-tax aggregates pick up the 935 records (weight-1 each —
 negligible there, decisive for estate).
+
+## 12. 2026-06-10 — STAGE 2 BUILT: rank-matching heir allocator + distribution.R rewiring
+
+The §10d allocator is implemented (`src/data/post_processing/estate_allocator.R`,
+`allocate_estate_to_heirs()`) and wired into `process_for_distribution()`.
+Estate reforms now show distributional effects. Design decisions locked with
+user (this session), where they refine or supersede §10d:
+
+1. **DSUE branch split in the ladder.** Each single record contributes up to
+   two decedent-ladder entries — (d·p, T_dsue) and (d·(1−p), T_nodsue), taxed
+   branches only — NOT an expected-blend T̄. Blending dilutes rates for records
+   straddling the unified-credit kink and flattens the λ/x profile near the
+   cutoff (same logic as the per-branch indicator blend in
+   `get_estate_totals()`). Married records have p_dsue = 0 and fall out of the
+   branch machinery with no special case.
+2. **On-the-fly, both legs, no file dependency.** The allocator is a pure
+   function of (leg detail year-file, baseline heir p/x). It runs inside
+   `process_for_distribution()` for the baseline AND reform legs — so there is
+   no cross-scenario file race in the SLURM Phase 3b array, and stacked-table
+   legs (baseline_id = preceding scenario) work for free. Each scenario still
+   writes its own `estate_tax_detail_{t}.csv` (4-column upstream schema) plus
+   `estate_allocator_diag_{t}.csv` to `static/supplemental/` for inspection.
+   The scenario-specific upstream interface requirement is GONE: the baseline
+   Estate-Tax-Distribution file is the only upstream input, and its liability
+   column is ignored.
+3. **x is GROSS of estate tax — built as an assumption, not yet confirmed.**
+   Evidence stands (max tax/inheritance = 0.392 < 0.40 in the old upstream
+   file; a net convention would allow 0.67). `inheritance_reform ≡ inheritance`.
+   The per-year diag file reports max λ/x; still TODO: confirm convention with
+   the 2025092512 vintage's author.
+4. **Model liability replaces upstream EVERYWHERE** — baseline leg and all
+   scenarios, including non-estate reforms. Death-inclusive presentation
+   LEVELS shift from the upstream file's pre-OBBBA assumptions to
+   model-baseline λ; deltas for non-estate reforms are unchanged.
+5. **λ/x may exceed the statutory top rate, by design.** The gift add-back
+   (base = n + γ·reported) makes T/n exceed the top rate for gift-heavy
+   estates; that tax belongs to transfers heirs effectively received earlier,
+   and folding it into the death-time rate preserves the aggregate identity
+   Σw·p·λ = Σd·T exactly (which also ties each leg to `totals/estate.csv`
+   est_tax_exp — a free cross-check, asserted in code).
+6. **Heir-ladder exhaustion is a hard error.** If a reform's taxed bequest
+   mass exceeds total heir inheritance mass, the allocator stops — incidence
+   is never fabricated by scaling rates up. Related: taxed estates with ZERO
+   distributable value (debts wipe the estate but the gift add-back alone
+   exceeds the exemption) carry tax mass with no bequest mass; they are
+   dropped from the ladder with a warning and reported in the diag file.
+7. **dist_years only.** The allocator runs inside the distribution year loop;
+   no whole-sim plumbing.
+8. **Deemed realization keeps the proportional smear — PERMANENTLY, by
+   design (user ruling; supersedes §10d's "flagged, deferrable" unification).**
+   Deemed realization has no exemption threshold — it applies to all transfers
+   at death — so proportional-to-inheritance incidence is conceptually correct
+   for it. The rank match exists because the estate tax is threshold'd. There
+   is no inconsistency to unify away.
+
+Diagnostics shipped per (leg, year): bequest/heir/tax masses, allocated tax +
+identity residual, dropped zero-distributable tax, endogenous cutoff x*,
+taxed-heir count (raw and weighted), expected taxed estates,
+heirs-per-taxable-estate, max λ/x, and λ mass on dependent-return heirs (these
+are filtered from the microdata by dep_status == 0 — expected ≈ 0, reported so
+a violation would surface).
+
+Unit tests: `other/estate_tax/test_allocator.R` (+ `test_allocator.sbatch`) —
+single-estate/many-heir rates, straddling-heir blend, branch split at the kink,
+exhaustion error, 1e-10 identity on random ladders, shuffle invariance,
+zero-distributable handling. Full-pipeline validation: `tests/estate_sunset`
+with dist_years 2026:2027 at pct_sample = 1.
+
+Still open after stage 2: §10h improvement agenda 1–7, and the gross-x
+convention confirmation (item 3 above).
+
+### 12a. TODO — estate-splitting heterogeneity (imperfect rank matching)
+
+**The limitation (user-flagged, 2026-06-10).** The allocator is PERFECT
+assortative matching: a sharp endogenous cutoff x* below which no heir bears
+any estate tax (baseline 2026: zero below $11.2M). Reality has splitting
+heterogeneity — a $20M estate splitting 4 ways puts real tax on four $5M
+inheritances, while an intact $12M inheritance from a $12M (untaxed) estate
+carries none. The true E[rate | x] is a fuzzy declining envelope, not a step.
+Rank matching misassigns in both directions inside the top tail: intact heirs
+just above x* get taxed with certainty (their actual estates may be exempt),
+split heirs below x* get zero (their actual estates may be taxed).
+
+**Why it ships anyway:** the aggregate identity is exact regardless; the
+threshold response direction is right; and published tables cut on income
+INCLUDING the inheritance, so both the misassigned-to and misassigned-from
+heirs sit in the top 1% (mostly top 0.1%) — the error shuffles tax within
+reported groups, not across them. It is FIRST-order only for claims at the
+inheritance level inside the top tail ("share of sub-$5M inheritances facing
+estate tax" is zero by construction).
+
+**Empirical finding — the old upstream file has NO splitting variance either**
+(fingerprinted 2026-06-10, vintage 2025092512, year 2026): among its 1,655
+taxed heirs there are 1,655 DISTINCT tax/inheritance ratios (proportional
+within-estate splits would repeat T_j/n_j across co-heirs — zero repeats ⇒
+one heir per estate) and ZERO ratio-vs-x monotonicity violations in 1,654
+adjacent pairs, with the ratio ramping smoothly 0.0003 → 0.3923 from x =
+$5.36M up. That ramp is the estate tax schedule's own average-rate curve
+evaluated at x: upstream "heirs" appear to be estates relabeled (inheritance ≈
+distributable value, liability = schedule(x)). So the sharp-cutoff property
+predates stage 2; the rank match reproduced (and slightly relaxed — implied
+heirs-per-estate 0.89–1.33 vs their exact 1.00) the upstream structural class.
+Corollary: the old file's softer marginal-bin rate (0.032 vs our 0.140 at
+$5–7.5M, sunset leg) is a CONVENTION difference, not extra realism — their
+heir rate is x's own schedule position; ours is the matched estate's average
+rate pushed down a thinner heir ladder.
+
+**The fix, when wanted:** imperfect assortative matching. Impose rank
+correlation ρ < 1 (equivalently a heirs-per-estate / split-count
+distribution) between estate size and inheritance size and spread each
+estate's FIXED tax mass over the heir ladder per that copula instead of a
+contiguous block. Aggregate identity still holds by construction; the cutoff
+smears into a declining P(taxed | x) curve; λ/x stops being deterministic at
+the boundary. The binding constraint is the PARAMETER, not the algorithm —
+candidate sources, in order of preference:
+  1. the upstream Estate-Tax-Distribution model's actual estate→heir
+     structure or assumptions (ask the 2025092512 vintage's author — same
+     person who owes us the gross-of-tax convention confirmation, §12 item 3;
+     one conversation, two open items);
+  2. SCF inheritance module (top-tail inheritance amounts vs estate-size
+     data → feasible rank-correlation estimate);
+  3. crude calibration to ~2–3 heirs per taxable estate from Form 706
+     filing patterns.
+Diagnostics already in place (heirs_per_estate, cutoff_x, max λ/x) give the
+before/after comparison for free when this lands.
