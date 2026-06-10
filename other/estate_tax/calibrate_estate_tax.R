@@ -55,6 +55,46 @@ HISTORICAL_BEA = c(
 
 SOI_UNDER_10M_WEIGHT = 0.25
 
+# FRED household net worth (Z.1 / TNWBSHNO), annual average of the four quarters,
+# in dollars. Used to deflate SOI size-bin thresholds to a consistent wealth
+# basis across death years: the bins ($10M/$20M/$50M) are nominal and fixed, but
+# wealth grows, so a fixed bin captures a different real slice each year. We
+# express every SOI year in the model's base-year (2022) wealth dollars by
+# scaling the bin edges by NW_2022 / NW_year. Annual average (not year-end)
+# because deaths spread across the year and it smooths the 2021 ramp / 2022
+# drawdown.
+FRED_HH_NET_WORTH = c(
+  '2018' = 105951254,
+  '2019' = 112549872,
+  '2020' = 120073861,
+  '2021' = 144807269,
+  '2022' = 146284336
+) * 1e6   # series is in $ millions -> dollars (only ratios are used)
+
+# The model has Tax-Data wealth only from this death year onward; SOI shape
+# targets for every year are matched against this base year's modeled wealth,
+# viewed at each year's deflated thresholds.
+SOI_MODEL_BASE_YEAR = 2022L
+
+# The objective is now SHAPE-minimization under a LEVEL CONSTRAINT, not a
+# weighted sum of two incommensurable blocks. The SOI block (a normalized share
+# distribution, scored in share-point / Brier space) is the primary objective at
+# its natural scale (SOI_SHARE_SCALE = 1). The CBO/JCT score block enters only as
+# a one-sided deadband penalty: zero while each cumulative target is within
+# LEVEL_TOL, steeply quadratic outside. This keeps each block in its own correct
+# ruler (pp for a distribution, relative-% for dollar levels) instead of summing
+# them via a hand-tuned exchange rate -- the old SOI_SHARE_SCALE=10 silently made
+# shape ~20x heavier than level, so the level fell out of the fit.
+SOI_SHARE_SCALE = 1
+
+# Level constraint on each cumulative score target (CBO baseline receipts, JCT
+# OBBBA-vs-sunset delta). |relative error| <= LEVEL_TOL incurs no penalty;
+# beyond it, LEVEL_LAMBDA * (excess)^2. LEVEL_LAMBDA need only be "large enough
+# to bind" (unlike an exact exchange rate) -- at 200, a 1pp breach of the band
+# already dominates the ~0.04 natural SOI objective.
+LEVEL_TOL = 0.03
+LEVEL_LAMBDA = 200
+
 SCRIPT_PATH = tryCatch({
   cmd = commandArgs(trailingOnly = FALSE)
   file_arg = cmd[grepl('^--file=', cmd)]
@@ -172,6 +212,28 @@ size_bin_for = function(x) {
     x < 10e6 ~ 'under_10m',
     x < 20e6 ~ '10m_20m',
     x < 50e6 ~ '20m_50m',
+    TRUE ~ '50m_plus'
+  )
+}
+
+# Net-worth deflator that re-expresses a death year's nominal estate-size scale
+# in SOI_MODEL_BASE_YEAR wealth dollars: factor = NW_base / NW_year (>= 1 for
+# earlier, wealth-poorer years). Bin edges for year Y are then $10M/$20M/$50M
+# times this factor, so the model's base-year wealth is sliced at each year's
+# real-equivalent cut points. Returns 1 if a year is missing from FRED.
+soi_wealth_deflator = function(death_year) {
+  base = FRED_HH_NET_WORTH[as.character(SOI_MODEL_BASE_YEAR)]
+  wy = FRED_HH_NET_WORTH[as.character(death_year)]
+  ifelse(is.na(wy) | wy <= 0, 1, base / wy)
+}
+
+# Size bin using thresholds scaled by a single deflator (applied to base-year
+# wealth so it lines up with a given SOI year's real cut points).
+size_bin_scaled = function(x, deflator) {
+  case_when(
+    x < 10e6 * deflator ~ 'under_10m',
+    x < 20e6 * deflator ~ '10m_20m',
+    x < 50e6 * deflator ~ '20m_50m',
     TRUE ~ '50m_plus'
   )
 }
@@ -319,6 +381,7 @@ load_soi_targets = function(path, policy_index) {
     'gross_estate_for_tax_purposes_n',
     'gross_estate_for_tax_purposes_amt',
     'taxable_estate_amt',
+    'adjusted_taxable_gifts_amt',
     'deceased_spousal_unused_exclusion_n',
     'deceased_spousal_unused_exclusion_amt',
     'net_estate_tax_amt'
@@ -340,6 +403,7 @@ load_soi_targets = function(path, policy_index) {
       gross_n = as.numeric(gross_estate_for_tax_purposes_n),
       gross_amt = as.numeric(gross_estate_for_tax_purposes_amt),
       taxable_estate_amt = as.numeric(taxable_estate_amt),
+      gifts_amt = as.numeric(adjusted_taxable_gifts_amt),
       net_estate_tax_amt = as.numeric(net_estate_tax_amt),
       dsue_n = as.numeric(deceased_spousal_unused_exclusion_n),
       dsue_amt = as.numeric(deceased_spousal_unused_exclusion_amt),
@@ -459,6 +523,30 @@ build_dsue_table = function(soi_targets) {
                           0, 1),
       .groups = 'drop'
     )
+}
+
+# Lifetime-gift add-back fraction. The estate tax base is the UNIFIED transfer
+# base: taxable_estate + adjusted_taxable_gifts (post-1976 taxable gifts, added
+# back at death so the progressive schedule and the single lifetime exemption
+# apply to cumulative transfers, not just deathtime ones). The model omits gifts
+# entirely, so it applies the exemption to the estate alone and misses every
+# decedent whose estate-plus-gifts clears the bar. We approximate gifts as a flat
+# fraction gamma of reported gross, pre-fit from the SOI gifts/gross ratio on the
+# modelable bins (under_10m excluded: its taxable returns are gift-DOMINATED
+# outliers -- gifts ~1.45x gross -- which would inflate a population-mean gamma).
+#
+# CAVEAT for the count goal: this is a population-MEAN add-back. The real gift
+# distribution is highly skewed and inversely selected (the smallest taxable
+# estates are taxable precisely because they carry gifts larger than the estate),
+# so a flat gamma will under-create bottom-bin filers. If counts still miss after
+# this, the next step is a heterogeneous gift model, not a bigger gamma.
+gift_addback_gamma = function(soi_targets) {
+  g = soi_targets %>%
+    filter(size_bin %in% SOI_BINS3) %>%
+    summarise(gamma = sum(gifts_amt, na.rm = TRUE) /
+                pmax(sum(gross_amt, na.rm = TRUE), 1)) %>%
+    pull(gamma)
+  clamp(g, 0, 1)
 }
 
 predict_taxable_fraction = function(gross, form, fits) {
@@ -591,7 +679,7 @@ param_bounds = function(form) {
 
 apply_candidate = function(cells, reporting_form, reporting_par,
                            taxable_form, taxable_fits, dsue_table,
-                           policy, policy_index) {
+                           policy, policy_index, gift_gamma = 0) {
   out = cells
   out$s_pt = out$pass_through / pmax(out$economic_gross, 1e-9)
   out$reporting_factor = predict_reporting_factor(
@@ -604,6 +692,15 @@ apply_candidate = function(cells, reporting_form, reporting_par,
   )
   out$taxable_estate = out$reported_gross * out$taxable_fraction
 
+  # Unified transfer-tax base: deathtime taxable estate plus the lifetime-gift
+  # add-back (gamma * reported gross). The progressive schedule and the single
+  # exemption apply to this combined base, so gifts both create new payers (small
+  # estates that clear the bar only with gifts) and push others into higher
+  # brackets. We apply the full exemption against the combined base and omit the
+  # gift-tax-payable credit -- on taxable returns lifetime gifts overwhelmingly
+  # consumed exemption rather than paying cash gift tax.
+  out$estate_base = out$taxable_estate + gift_gamma * out$reported_gross
+
   out$bea = bea_for_year(out$death_year, policy, policy_index)
   dsue_idx = match(out$size_bin, dsue_table$size_bin)
   out$p_dsue = dsue_table$p_dsue[dsue_idx]
@@ -611,54 +708,102 @@ apply_candidate = function(cells, reporting_form, reporting_par,
   out$p_dsue[is.na(out$p_dsue)] = 0
   out$dsue_to_bea[is.na(out$dsue_to_bea)] = 0
   out$dsue_amount = out$dsue_to_bea * out$bea
-  out$liability_no_dsue = estate_tax_liability(out$taxable_estate, out$bea)
+  out$liability_no_dsue = estate_tax_liability(out$estate_base, out$bea)
   out$liability_with_dsue =
-    estate_tax_liability(out$taxable_estate, out$bea + out$dsue_amount)
+    estate_tax_liability(out$estate_base, out$bea + out$dsue_amount)
   out$liability =
     (1 - out$p_dsue) * out$liability_no_dsue +
     out$p_dsue * out$liability_with_dsue
   out$filed = out$reported_gross >= out$bea
-  # The modeled universe: units whose taxable estate exceeds the exemption and
+  # The modeled universe: units whose unified base exceeds the exemption and
   # therefore owe estate tax. This is the basis for the SOI moments.
-  out$taxable = out$taxable_estate > out$bea
+  out$taxable = out$estate_base > out$bea
 
   out
 }
 
+SOI_BINS3 = c('10m_20m', '20m_50m', '50m_plus')
+
+# SOI moments are matched as SHAPE (within-year bin shares), not dollar levels.
+# Levels in any single year are dominated by asset-price swings and top-tail
+# lumpiness (death year 2022 is a ~2x top-tail outlier); shares are far more
+# stable. The overall level is pinned separately by the CBO/JCT score targets.
+#
+# Cross-year comparability: the $10M/$20M/$50M bins are nominal and fixed while
+# wealth grows, so a fixed bin is a different real slice each year (bracket
+# creep). We hold the model at its one wealth year (SOI_MODEL_BASE_YEAR) and,
+# for each SOI death year, re-bin that base-year wealth at thresholds scaled by
+# the FRED net-worth deflator -- i.e. we read the model's shape at each year's
+# real-equivalent cut points and compare to that year's SOI shape. Averaging
+# across years denoises the lumpy top.
 model_soi_moments = function(cells, soi_targets, reporting_form, reporting_par,
                              taxable_form, taxable_fits, dsue_table,
-                             policy_index) {
-  modeled = apply_candidate(cells, reporting_form, reporting_par,
-                            taxable_form, taxable_fits, dsue_table,
-                            'historical', policy_index) %>%
-    filter(death_year %in% unique(soi_targets$death_year)) %>%
-    group_by(death_year, size_bin) %>%
-    summarise(
-      gross_count = sum(expected_weight * taxable, na.rm = TRUE),
-      gross_amount = sum(expected_weight * taxable * reported_gross, na.rm = TRUE),
-      taxable_estate = sum(expected_weight * taxable * taxable_estate, na.rm = TRUE),
-      net_estate_tax = sum(expected_weight * liability, na.rm = TRUE),
-      .groups = 'drop'
-    )
+                             policy_index, gift_gamma = 0) {
+  modeled = apply_candidate(
+    cells %>% filter(death_year == SOI_MODEL_BASE_YEAR),
+    reporting_form, reporting_par, taxable_form, taxable_fits, dsue_table,
+    'historical', policy_index, gift_gamma
+  ) %>%
+    filter(taxable)   # taxable universe
 
-  targets = soi_targets %>%
-    transmute(
-      death_year, size_bin,
-      target_gross_count = gross_n,
-      target_gross_amount = gross_amt,
-      target_taxable_estate = taxable_estate_amt,
-      target_net_estate_tax = net_estate_tax_amt
-    )
+  soi_years = sort(unique(soi_targets$death_year))
 
-  targets %>%
-    left_join(modeled, by = c('death_year', 'size_bin')) %>%
-    mutate(across(c(gross_count, gross_amount, taxable_estate, net_estate_tax),
-                  ~ replace_na(.x, 0)))
+  # SOI target shares: within each death year, each bin's share of the year's
+  # 3-bin total, for every moment.
+  target_shares = soi_targets %>%
+    filter(size_bin %in% SOI_BINS3) %>%
+    group_by(death_year) %>%
+    mutate(
+      count   = gross_n / sum(gross_n),
+      gross   = gross_amt / sum(gross_amt),
+      taxable = taxable_estate_amt / sum(taxable_estate_amt),
+      nettax  = net_estate_tax_amt / sum(net_estate_tax_amt)
+    ) %>%
+    ungroup() %>%
+    select(death_year, size_bin, count, gross, taxable, nettax) %>%
+    pivot_longer(c(count, gross, taxable, nettax),
+                 names_to = 'moment', values_to = 'target')
+
+  # Model shares: re-bin base-year wealth at each year's deflated thresholds.
+  model_shares = map_dfr(soi_years, function(y) {
+    d = as.numeric(soi_wealth_deflator(y))
+    modeled %>%
+      mutate(size_bin = size_bin_scaled(reported_gross, d)) %>%
+      filter(size_bin %in% SOI_BINS3) %>%
+      group_by(size_bin) %>%
+      summarise(
+        count   = sum(expected_weight, na.rm = TRUE),
+        gross   = sum(expected_weight * reported_gross, na.rm = TRUE),
+        taxable = sum(expected_weight * taxable_estate, na.rm = TRUE),
+        nettax  = sum(expected_weight * liability, na.rm = TRUE),
+        .groups = 'drop'
+      ) %>%
+      mutate(
+        count   = count / sum(count),
+        gross   = gross / sum(gross),
+        taxable = taxable / sum(taxable),
+        nettax  = nettax / sum(nettax),
+        death_year = y
+      ) %>%
+      select(death_year, size_bin, count, gross, taxable, nettax) %>%
+      pivot_longer(c(count, gross, taxable, nettax),
+                   names_to = 'moment', values_to = 'model')
+  })
+
+  expand_grid(death_year = soi_years, size_bin = SOI_BINS3,
+              moment = c('count', 'gross', 'taxable', 'nettax')) %>%
+    left_join(model_shares, by = c('death_year', 'size_bin', 'moment')) %>%
+    left_join(target_shares, by = c('death_year', 'size_bin', 'moment')) %>%
+    mutate(
+      model = replace_na(model, 0),
+      target = replace_na(target, 0),
+      weight = if_else(moment == 'nettax', 2, 1)
+    )
 }
 
 model_score_moments = function(cells, score_targets, reporting_form, reporting_par,
                                taxable_form, taxable_fits, dsue_table,
-                               policy_index) {
+                               policy_index, gift_gamma = 0) {
   needed_receipt_years = unique(score_targets$year)
 
   # Current-law baseline is OBBBA: the $15M permanent exclusion. The CBO
@@ -666,7 +811,7 @@ model_score_moments = function(cells, score_targets, reporting_form, reporting_p
   # so it is matched to the OBBBA scenario.
   current_law = apply_candidate(cells, reporting_form, reporting_par,
                                 taxable_form, taxable_fits, dsue_table,
-                                'obbba', policy_index) %>%
+                                'obbba', policy_index, gift_gamma) %>%
     filter(receipt_year %in% needed_receipt_years) %>%
     group_by(receipt_year) %>%
     summarise(current_law_receipts = sum(expected_weight * liability, na.rm = TRUE) / 1e6,
@@ -677,7 +822,7 @@ model_score_moments = function(cells, score_targets, reporting_form, reporting_p
   # solely to form the obbba-vs-sunset policy delta.
   sunset = apply_candidate(cells, reporting_form, reporting_par,
                            taxable_form, taxable_fits, dsue_table,
-                           'baseline', policy_index) %>%
+                           'baseline', policy_index, gift_gamma) %>%
     filter(receipt_year %in% needed_receipt_years) %>%
     group_by(receipt_year) %>%
     summarise(sunset_receipts = sum(expected_weight * liability, na.rm = TRUE) / 1e6,
@@ -705,34 +850,25 @@ model_score_moments = function(cells, score_targets, reporting_form, reporting_p
     )
 }
 
+# Per-year-averaged sum of squared SOI share residuals, scaled to be
+# commensurate with the score block. Shared by objective_value (optimizer) and
+# objective_components (diagnostics) so the two never diverge.
+soi_share_objective = function(soi_moments) {
+  n_year = length(unique(soi_moments$death_year))
+  if (n_year == 0) return(0)
+  SOI_SHARE_SCALE *
+    sum(soi_moments$weight * (soi_moments$model - soi_moments$target)^2,
+        na.rm = TRUE) / n_year
+}
+
 objective_components = function(soi_moments, score_moments) {
+  n_year = max(length(unique(soi_moments$death_year)), 1)
   soi_long = soi_moments %>%
-    transmute(
-      death_year, size_bin,
-      gross_count_model = gross_count,
-      gross_count_target = target_gross_count,
-      gross_amount_model = gross_amount,
-      gross_amount_target = target_gross_amount,
-      taxable_estate_model = taxable_estate,
-      taxable_estate_target = target_taxable_estate,
-      net_estate_tax_model = net_estate_tax,
-      net_estate_tax_target = target_net_estate_tax
-    ) %>%
-    pivot_longer(
-      cols = -c(death_year, size_bin),
-      names_to = c('moment', '.value'),
-      names_pattern = '(.+)_(model|target)$'
-    ) %>%
     mutate(
       group = 'soi',
       year = death_year,
-      weight = case_when(
-        moment == 'net_estate_tax' ~ 2,
-        TRUE ~ 1
-      ),
-      weight = weight * if_else(size_bin == 'under_10m', SOI_UNDER_10M_WEIGHT, 1),
-      error = log_rel_error(model, target),
-      objective = weight * error^2
+      error = model - target,                          # share-point difference
+      objective = SOI_SHARE_SCALE * weight * (model - target)^2 / n_year
     )
 
   score_long = score_moments %>%
@@ -749,9 +885,9 @@ objective_components = function(soi_moments, score_moments) {
       moment = paste(scenario, target_type, paste0(first_year, '_', last_year), sep = ':'),
       size_bin = NA_character_,
       year = NA_integer_,
-      weight = 4,
+      weight = LEVEL_LAMBDA,
       error = if_else(abs(target) <= 0, NA_real_, (model - target) / abs(target)),
-      objective = weight * error^2
+      objective = LEVEL_LAMBDA * pmax(0, abs(error) - LEVEL_TOL)^2
     ) %>%
     select(group, year, size_bin, moment, model, target, weight, error, objective)
 
@@ -776,23 +912,10 @@ objective_components = function(soi_moments, score_moments) {
 }
 
 objective_value = function(soi_moments, score_moments) {
-  soi_specs = list(
-    list(model = 'gross_count', target = 'target_gross_count', weight = 1),
-    list(model = 'gross_amount', target = 'target_gross_amount', weight = 1),
-    list(model = 'taxable_estate', target = 'target_taxable_estate', weight = 1),
-    list(model = 'net_estate_tax', target = 'target_net_estate_tax', weight = 2)
-  )
+  soi_obj = soi_share_objective(soi_moments)
 
-  soi_obj = 0
-  bin_weight = if_else(soi_moments$size_bin == 'under_10m',
-                       SOI_UNDER_10M_WEIGHT, 1)
-  for (spec in soi_specs) {
-    model = soi_moments[[spec$model]]
-    target = soi_moments[[spec$target]]
-    err = log_rel_error(model, target)
-    soi_obj = soi_obj + sum(spec$weight * bin_weight * err^2, na.rm = TRUE)
-  }
-
+  # Level CONSTRAINT, not weighted term: each cumulative score target contributes
+  # nothing while |relative error| <= LEVEL_TOL, then LEVEL_LAMBDA*(excess)^2.
   score_obj = score_moments %>%
     group_by(scenario, target_type, source) %>%
     summarise(
@@ -801,8 +924,9 @@ objective_value = function(soi_moments, score_moments) {
       .groups = 'drop'
     ) %>%
     mutate(error = if_else(abs(target) <= 0, NA_real_,
-                           (model - target) / abs(target))) %>%
-    summarise(objective = sum(4 * error^2, na.rm = TRUE)) %>%
+                           (model - target) / abs(target)),
+           excess = pmax(0, abs(error) - LEVEL_TOL)) %>%
+    summarise(objective = sum(LEVEL_LAMBDA * excess^2, na.rm = TRUE)) %>%
     pull(objective)
 
   soi_obj + score_obj
@@ -810,12 +934,15 @@ objective_value = function(soi_moments, score_moments) {
 
 evaluate_candidate = function(par, cells, soi_targets, score_targets,
                               reporting_form, taxable_form,
-                              taxable_fits, dsue_table, policy_index) {
+                              taxable_fits, dsue_table, policy_index,
+                              gift_gamma = 0) {
   names(par) = reporting_par_names(reporting_form)
   soi = model_soi_moments(cells, soi_targets, reporting_form, par,
-                          taxable_form, taxable_fits, dsue_table, policy_index)
+                          taxable_form, taxable_fits, dsue_table, policy_index,
+                          gift_gamma)
   scores = model_score_moments(cells, score_targets, reporting_form, par,
-                               taxable_form, taxable_fits, dsue_table, policy_index)
+                               taxable_form, taxable_fits, dsue_table, policy_index,
+                               gift_gamma)
   comps = objective_components(soi, scores)
 
   list(
@@ -828,19 +955,22 @@ evaluate_candidate = function(par, cells, soi_targets, score_targets,
 
 evaluate_candidate_objective = function(par, cells, soi_targets, score_targets,
                                         reporting_form, taxable_form,
-                                        taxable_fits, dsue_table, policy_index) {
+                                        taxable_fits, dsue_table, policy_index,
+                                        gift_gamma = 0) {
   names(par) = reporting_par_names(reporting_form)
   soi = model_soi_moments(cells, soi_targets, reporting_form, par,
-                          taxable_form, taxable_fits, dsue_table, policy_index)
+                          taxable_form, taxable_fits, dsue_table, policy_index,
+                          gift_gamma)
   scores = model_score_moments(cells, score_targets, reporting_form, par,
-                               taxable_form, taxable_fits, dsue_table, policy_index)
+                               taxable_form, taxable_fits, dsue_table, policy_index,
+                               gift_gamma)
   objective_value(soi, scores)
 }
 
 calibrate_candidate = function(cells, soi_targets, score_targets,
                                reporting_form, taxable_form,
                                taxable_fits, dsue_table, policy_index,
-                               quick, optim_starts, maxit) {
+                               quick, optim_starts, maxit, gift_gamma = 0) {
   grid = initial_grid(reporting_form, quick = quick)
   par_names = reporting_par_names(reporting_form)
 
@@ -848,7 +978,8 @@ calibrate_candidate = function(cells, soi_targets, score_targets,
     names(par) = par_names
     evaluate_candidate_objective(par, cells, soi_targets, score_targets,
                                  reporting_form, taxable_form,
-                                 taxable_fits, dsue_table, policy_index)
+                                 taxable_fits, dsue_table, policy_index,
+                                 gift_gamma)
   }
 
   grid_scores = apply(grid[, par_names, drop = FALSE], 1, function(row) {
@@ -884,7 +1015,8 @@ calibrate_candidate = function(cells, soi_targets, score_targets,
 
   final = evaluate_candidate(best_par, cells, soi_targets, score_targets,
                              reporting_form, taxable_form,
-                             taxable_fits, dsue_table, policy_index)
+                             taxable_fits, dsue_table, policy_index,
+                             gift_gamma)
   final$par = best_par
   final
 }
@@ -933,6 +1065,57 @@ write_diagnostics = function(path, parameter_rows, score_targets, args) {
 }
 
 
+# Taxable-return COUNT diagnostic for the SOI base year, at that year's actual
+# exemption -- an honest out-of-sample read on how counts fall out of the fit.
+# Counts are NOT targeted by the objective (only count SHARES are), so this is
+# pure observation: model death-weighted taxable count by bin vs SOI gross_n.
+write_count_diagnostic = function(path, cells, soi_targets, reporting_form,
+                                  reporting_par, taxable_form, taxable_fits,
+                                  dsue_table, policy_index, gift_gamma) {
+  base_cells = cells %>% filter(death_year == SOI_MODEL_BASE_YEAR)
+  if (nrow(base_cells) == 0) return(invisible(NULL))
+
+  # Raw death-weighted POPULATION by economic-gross bin: how many decedents the
+  # DATA contains at each wealth level, before any reporting factor or taxable
+  # filter. This is the ceiling on what any parameter choice could classify into
+  # a bin -- if raw_pop_count < soi_count, the shortfall is data coverage and no
+  # in-model knob (r, rho_pt, mortality) can close it.
+  raw = base_cells %>%
+    mutate(size_bin = size_bin_for(economic_gross)) %>%
+    group_by(size_bin) %>%
+    summarise(raw_pop_count = sum(expected_weight, na.rm = TRUE), .groups = 'drop')
+
+  model = apply_candidate(base_cells, reporting_form, reporting_par,
+                          taxable_form, taxable_fits, dsue_table,
+                          'historical', policy_index, gift_gamma) %>%
+    filter(taxable) %>%
+    group_by(size_bin) %>%
+    summarise(model_count = sum(expected_weight, na.rm = TRUE),
+              model_tax_b = sum(expected_weight * liability, na.rm = TRUE) / 1e9,
+              .groups = 'drop')
+
+  soi = soi_targets %>%
+    filter(death_year == SOI_MODEL_BASE_YEAR) %>%
+    transmute(size_bin,
+              soi_count = gross_n,
+              soi_tax_b = net_estate_tax_amt / 1e9)
+
+  cmp = tibble(size_bin = SIZE_BINS$size_bin) %>%
+    left_join(raw, by = 'size_bin') %>%
+    left_join(model, by = 'size_bin') %>%
+    left_join(soi, by = 'size_bin') %>%
+    mutate(across(where(is.numeric), ~ replace_na(., 0)),
+           count_err    = if_else(soi_count > 0, model_count / soi_count - 1, NA_real_),
+           coverage     = if_else(soi_count > 0, raw_pop_count / soi_count, NA_real_),
+           gift_gamma   = gift_gamma,
+           death_year   = SOI_MODEL_BASE_YEAR) %>%
+    select(size_bin, raw_pop_count, model_count, soi_count, coverage, count_err,
+           model_tax_b, soi_tax_b, gift_gamma, death_year)
+
+  write_csv(cmp, path)
+  cmp
+}
+
 #-------------------------------------------------------------------------------
 # Main
 #-------------------------------------------------------------------------------
@@ -957,39 +1140,42 @@ main = function() {
   message('Loading SOI targets...')
   soi_targets = load_soi_targets(args$soi_file, policy_index)
 
-  needed_death_years = sort(unique(c(soi_targets$death_year, score_death_years)))
+  # The model only needs wealth for the SOI base year (every SOI year's shape is
+  # matched against this base year viewed at deflated thresholds) plus the score
+  # death years. Earlier SOI years no longer require their own Tax-Data wealth.
+  if (!SOI_MODEL_BASE_YEAR %in% soi_targets$death_year) {
+    stop('SOI_MODEL_BASE_YEAR (', SOI_MODEL_BASE_YEAR,
+         ') has no SOI target rows; cannot anchor shape matching.')
+  }
+  needed_death_years = sort(unique(c(SOI_MODEL_BASE_YEAR, score_death_years)))
 
   message('Loading Tax-Data cells for years: ', paste(needed_death_years, collapse = ', '))
   cells = load_tax_data_cells(args$tax_data_root, needed_death_years, args$wealth_cells)
   message('  model cells: ', nrow(cells))
+  if (!any(cells$death_year == SOI_MODEL_BASE_YEAR)) {
+    stop('No Tax-Data wealth cells for SOI_MODEL_BASE_YEAR = ', SOI_MODEL_BASE_YEAR)
+  }
 
   # Taxable-fraction and DSUE tables use the full SOI panel (they are pure SOI
   # ratios, independent of Tax-Data wealth coverage).
   taxable_fits = fit_taxable_fraction_models(soi_targets)
   dsue_table = build_dsue_table(soi_targets)
 
-  # The SOI *comparison* targets, however, can only be matched where the model
-  # has mass. Drop (a) death years with no Tax-Data wealth coverage and (b)
-  # size bins whose upper bound is below the filing exclusion -- the model never
-  # files an estate below the exclusion, whereas SOI's small-estate filers are
-  # mostly portability/DSUE-election returns we do not represent.
-  available_death_years = sort(unique(cells$death_year))
-  soi_targets_model = soi_targets %>%
-    mutate(filing_exclusion = bea_for_year(death_year, 'historical', policy_index)) %>%
-    filter(death_year %in% available_death_years, max_gross > filing_exclusion)
+  # Lifetime-gift add-back fraction, pre-fit from SOI (see gift_addback_gamma).
+  # Applied to the unified base in apply_candidate; not optimized.
+  gift_gamma = gift_addback_gamma(soi_targets)
+  message('  gift add-back gamma (SOI gifts/gross, modelable bins): ',
+          signif(gift_gamma, 4))
 
-  dropped_years = setdiff(unique(soi_targets$death_year), available_death_years)
-  if (length(dropped_years) > 0) {
-    warning('No Tax-Data wealth coverage for SOI death year(s): ',
-            paste(sort(dropped_years), collapse = ', '),
-            '. Dropping them from the SOI objective.')
-  }
-  message('  SOI comparison cells retained: ', nrow(soi_targets_model),
-          ' (death years: ',
-          paste(sort(unique(soi_targets_model$death_year)), collapse = ', '), ')')
-  if (nrow(soi_targets_model) == 0) {
-    stop('No SOI comparison cells remain after coverage/exclusion filtering.')
-  }
+  # SOI shape targets: all death years, restricted to the modelable bins above
+  # the filing exclusion (under_10m is portability/DSUE-election filers the model
+  # does not represent). Levels are NOT used -- only within-year bin shares,
+  # deflated to a common wealth basis -- so every SOI year contributes shape
+  # regardless of Tax-Data wealth coverage.
+  soi_targets_model = soi_targets %>% filter(size_bin %in% SOI_BINS3)
+  message('  SOI shape years: ',
+          paste(sort(unique(soi_targets_model$death_year)), collapse = ', '),
+          ' (model base year ', SOI_MODEL_BASE_YEAR, ')')
 
   reporting_forms = c('constant', 'log_linear', 'log_quadratic',
                       'bounded_log_quadratic', 'bin_lookup')
@@ -999,6 +1185,7 @@ main = function() {
 
   parameter_rows = list()
   moment_rows = list()
+  fit_pars = list()
 
   for (j in seq_len(nrow(candidates))) {
     rf = candidates$reporting_form[j]
@@ -1017,10 +1204,13 @@ main = function() {
       policy_index = policy_index,
       quick = args$quick,
       optim_starts = args$optim_starts,
-      maxit = args$maxit
+      maxit = args$maxit,
+      gift_gamma = gift_gamma
     )
 
     comps = fit$components
+    fit_pars[[j]] = list(reporting_form = rf, taxable_form = tf, par = fit$par,
+                         total_objective = fit$objective)
     parameter_rows[[j]] = tibble(
       reporting_form = rf,
       taxable_form = tf,
@@ -1057,6 +1247,28 @@ main = function() {
   write_diagnostics(file.path(args$output_dir, 'estate_calibration_diagnostics.md'),
                     parameters, score_targets, args)
 
+  # Observe (do not target) how taxable counts fall out of the best-objective
+  # fit, at the SOI base year's actual exemption.
+  best_idx = which.min(map_dbl(fit_pars, ~ .x$total_objective))
+  best = fit_pars[[best_idx]]
+  count_cmp = write_count_diagnostic(
+    file.path(args$output_dir, 'estate_calibration_counts.csv'),
+    cells, soi_targets, best$reporting_form, best$par, best$taxable_form,
+    taxable_fits, dsue_table, policy_index, gift_gamma
+  )
+  if (!is.null(count_cmp)) {
+    message('Taxable-count check (', SOI_MODEL_BASE_YEAR, ', best = ',
+            best$reporting_form, '/', best$taxable_form, '):')
+    message(sprintf('  %-10s %10s %10s %8s %10s %8s',
+                    'bin', 'raw_pop', 'model', 'soi', 'coverage', 'err'))
+    for (i in seq_len(nrow(count_cmp))) {
+      message(sprintf('  %-10s %10.0f %10.0f %8.0f %9.0f%% %+7.0f%%',
+                      count_cmp$size_bin[i], count_cmp$raw_pop_count[i],
+                      count_cmp$model_count[i], count_cmp$soi_count[i],
+                      100 * count_cmp$coverage[i], 100 * count_cmp$count_err[i]))
+    }
+  }
+
   message('Wrote calibration outputs to ', args$output_dir)
 }
 
@@ -1068,6 +1280,10 @@ is_rscript_entrypoint = function() {
     normalizePath(SCRIPT_PATH, winslash = '/', mustWork = FALSE)
 }
 
-if (is_rscript_entrypoint()) {
+# Run main() only when invoked directly, and never when another script sources
+# this file for its functions (set ESTATE_CALIBRATE_NO_MAIN=1 before source()).
+# The entrypoint check alone is unreliable under source() because commandArgs
+# still reports the outer Rscript file.
+if (is_rscript_entrypoint() && !nzchar(Sys.getenv('ESTATE_CALIBRATE_NO_MAIN'))) {
   main()
 }
