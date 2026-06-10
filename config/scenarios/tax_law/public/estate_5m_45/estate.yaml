@@ -1,0 +1,34 @@
+---
+#-------------------------------------------------------------------------------
+# Estate tax: $5M exemption ($10M per couple via the joint 2x path) with a
+# 45% top rate, effective for decedents dying in 2026+.
+#
+# The exemption is $5M AS OF 2026 — anchored at 2026 with a 2025 base year
+# (the OBBBA structure with a $5M base value) — chained-CPI indexed forward,
+# rounded down to $10k. Pre-2026 law is current law (regimes restated
+# identically to baseline; reform YAMLs replace subparameters wholesale).
+#
+# The §2001(c) ladder below $1M is unchanged (brackets not overridden); only
+# the top rate moves 40% -> 45% from 2026. Since the exemption exceeds $1M,
+# liability is 45% of the excess over the exemption.
+#-------------------------------------------------------------------------------
+
+exemption:
+  value:
+    '2014': 5340000
+    '2018': 11180000
+    '2026': 5000000
+  i_measure:
+    '2013': cpi
+    '2018': chained_cpi
+  i_base_year:
+    '2014': 2013
+    '2018': 2017
+    '2026': 2025
+  i_direction: -1
+  i_increment: 10000
+
+rates:
+  value:
+    '2014': [0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.37, 0.39, 0.40]
+    '2026': [0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.37, 0.39, 0.45]
