@@ -444,26 +444,32 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                vars_1040      = vars_1040,
                vars_payroll   = return_vars$calc_pr)
 
-    # Tax attributable to mechanical deemed death gains: exact, via a
-    # counterfactual recompute with the deemed gains removed — both legs
-    # under reform law, so rate reforms flow through automatically. Used by
-    # the distribution layer to reattribute the decedent's deemed tax to
-    # heirs. The recompute runs on the FULL frame (not the decedent subset):
-    # calc functions index globals$random_numbers positionally (e.g. the
-    # EITC pre-certification draw), so subsetting rows breaks alignment.
-    # Non-decedent rows have kg_deemed = 0, hence identical inputs and an
-    # exactly-zero delta.
+    # Expected tax on mechanical deemed death gains, preserving record-level
+    # nonlinearity without splitting records:
+    #   liab_deemed = m * [T(y + kg_deemed_full) - T(y)]
+    # where the dead leg is a second recompute with the full (§121-net,
+    # post-avoidance) death gain on the return, both legs under reform law
+    # (so rate reforms flow through automatically). This is the exact
+    # decedent/survivor copy-split expectation, computed with two full-frame
+    # passes instead of row duplication. The recompute runs on the FULL
+    # frame (never a subset): calc functions index globals$random_numbers
+    # positionally (e.g. the EITC pre-certification draw), so subsetting
+    # rows breaks alignment. Non-holders have kg_deemed_full = 0, hence
+    # identical inputs and an exactly-zero delta. The main frame's kg_lt is
+    # alive-leg (no deemed), so MTRs and tau are pure inter-vivos margins;
+    # liab_deemed is folded into liab_iit_net AFTER the MTR block below.
     if (uses_kg_mech) {
       tax_units_static = tax_units_static %>% mutate(liab_deemed = 0)
-      if (any(static_input$kg_deemed > 0)) {
-        cf = static_input %>%
-          mutate(kg_lt = kg_lt - kg_deemed) %>%
+      if (any(static_input$kg_deemed_full > 0)) {
+        dead_leg = static_input %>%
+          mutate(kg_lt = kg_lt + kg_deemed_full) %>%
           do_taxes(baseline_pr_er = baseline_pr_er,
                    vars_1040      = vars_1040,
                    vars_payroll   = return_vars$calc_pr)
-        stopifnot(identical(cf$id, tax_units_static$id))
+        stopifnot(identical(dead_leg$id, tax_units_static$id))
         tax_units_static$liab_deemed =
-          tax_units_static$liab_iit_net - cf$liab_iit_net
+          static_input$m_household *
+          (dead_leg$liab_iit_net - tax_units_static$liab_iit_net)
       }
     }
 
@@ -496,6 +502,18 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                   by = 'id')
     }
 
+    # Fold the expected deemed tax into reported liability (after MTRs,
+    # which anchor on the alive-leg liability). Receipts are built from the
+    # pmt_* payment-timing variables, not liab_iit_net, so fold there too:
+    # deemed tax is a final-return capital gains bill, i.e. nonwithheld
+    # income tax paid at filing (pmt_iit itself is dropped by remit_taxes).
+    if (uses_kg_mech) {
+      tax_units_static %<>%
+        mutate(liab_iit_net        = liab_iit_net        + liab_deemed,
+               liab_iit            = liab_iit            + liab_deemed,
+               pmt_iit_nonwithheld = pmt_iit_nonwithheld + liab_deemed)
+    }
+
     # Write static detail (kg_dynamics mechanical columns included when
     # present: kg_lockin, kg_deemed, liab_deemed)
     tax_units_static %>%
@@ -520,15 +538,32 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     if (has_behavior) {
 
       # Behavioral feedback on original (unmodified) tax_units
-      tax_units_conv = tax_units %>%
+      conv_input = tax_units %>%
         do_behavioral_feedback(behavior_modules = scenario_info$behavior_modules,
                                baseline_mtrs    = baseline_mtrs,
                                static_mtrs      = static_mtrs_year,
                                scenario_info    = scenario_info,
-                               indexes          = indexes) %>%
+                               indexes          = indexes)
+      tax_units_conv = conv_input %>%
         do_taxes(baseline_pr_er = baseline_pr_er,
                  vars_1040      = vars_1040,
                  vars_payroll   = return_vars$calc_pr)
+
+      # kg_dynamics: expected tax on deemed death gains via the same two-leg
+      # full-frame recompute as the static pass (see comment there); folded
+      # into liab_iit_net after the MTR block below
+      conv_liab_deemed = NULL
+      if (uses_kg_mech && 'kg_deemed_full' %in% names(conv_input) &&
+          any(conv_input$kg_deemed_full > 0)) {
+        dead_leg = conv_input %>%
+          mutate(kg_lt = kg_lt + kg_deemed_full) %>%
+          do_taxes(baseline_pr_er = baseline_pr_er,
+                   vars_1040      = vars_1040,
+                   vars_payroll   = return_vars$calc_pr)
+        stopifnot(identical(dead_leg$id, tax_units_conv$id))
+        conv_liab_deemed = conv_input$m_household *
+          (dead_leg$liab_iit_net - tax_units_conv$liab_iit_net)
+      }
 
       # Calculate conventional marginal tax rates
       if (!is.null(scenario_info$mtr_vars)) {
@@ -557,11 +592,23 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                     by = 'id')
       }
 
+      # Fold the expected deemed tax into reported liability (after MTRs,
+      # which anchor on the alive-leg liability), including the pmt_*
+      # payment-timing variables receipts are built from (nonwithheld
+      # income tax paid at filing, like any final-return gains bill)
+      if (!is.null(conv_liab_deemed)) {
+        tax_units_conv %<>%
+          mutate(liab_deemed         = conv_liab_deemed,
+                 liab_iit_net        = liab_iit_net        + liab_deemed,
+                 liab_iit            = liab_iit            + liab_deemed,
+                 pmt_iit_nonwithheld = pmt_iit_nonwithheld + liab_deemed)
+      }
+
       # Write conventional detail (kg_dynamics behavior modules stamp
       # kg_lockin / kg_deemed; included when present)
       tax_units_conv %>%
         select(all_of(globals$detail_vars), starts_with('mtr_'),
-               any_of(c('kg_lockin', 'kg_deemed'))) %>%
+               any_of(c('kg_lockin', 'kg_deemed', 'liab_deemed'))) %>%
         write_csv(file.path(scenario_info$output_path, 'conventional', 'detail',
                             paste0(year, '.csv')))
 

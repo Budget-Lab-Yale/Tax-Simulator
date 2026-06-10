@@ -84,14 +84,41 @@ record. New static-detail columns:
 
 - `kg_lockin` — the record's share of the cell's realized routed stock
   (pure carryover realization in the mechanical pass).
-- `kg_deemed` — deemed death gains included on the return (post-avoidance,
-  §121-net).
-- `liab_deemed` — tax attributable to the deemed gains: a full-frame
-  counterfactual recompute with `kg_lt − kg_deemed`, both legs under reform
-  law (so rate packages flow through automatically; no rate/deemed
-  separation needed). **Implementation constraint:** calc functions index
-  `globals$random_numbers` positionally (e.g. the EITC pre-cert draw), so the
-  recompute must run on the full frame, never a row subset.
+- `kg_deemed` — expected deemed death gains, `m_household × kg_deemed_full`
+  (post-avoidance, §121-net).
+- `liab_deemed` — expected tax on deemed gains. **REVISED (June 2026):** the
+  original implementation drew a binary decedent flag from a per-record
+  uniform (`r.behavior1`) fixed across years; with ~40% of expected death
+  gains in the top 200 records, that put ±~50% persistent sampling error on
+  deemed revenue (discovered comparing Tax-Data vintages: a −44% "change"
+  was draw luck). Now computed as the exact decedent/survivor expectation
+  without row duplication: `liab_deemed = m × [T(y + kg_deemed_full) −
+  T(y)]`, where the dead leg is a second full-frame `do_taxes` with the full
+  death gain on the return. Deemed gains never enter `kg_lt`, so MTRs and
+  tau are pure inter-vivos margins (the deemed-decedent tau exclusion is
+  gone); `liab_deemed` is folded into `liab_iit_net` after MTRs. Record-
+  level nonlinearity (brackets, NIIT, §121/avoidance kinks) is fully
+  preserved — no Jensen bias, no draw variance. Same two-leg recompute now
+  also runs in the conventional pass. **Implementation constraint:** calc
+  functions index `globals$random_numbers` positionally (e.g. the EITC
+  pre-cert draw), so both legs must run on the full frame, never a row
+  subset. Because deemed bypasses `kg_lt`, the fold must also reach the
+  receipts inputs by hand: `liab_iit_net`, `liab_iit`, and
+  `pmt_iit_nonwithheld` (receipts read `pmt_*`; `pmt_iit` itself is dropped
+  by `remit_taxes`). Validation (vintages `kg_mech_50_frac` /
+  `kg_td0609_frac`): 10yr deemed static $339.9B (Tax-Data 2026050315) vs
+  $318.7B (2026060918) — the true cross-vintage effect is −6%, vs the
+  binary draw's spurious −44% ($465B vs $260B); conventional $758B/$753B;
+  smooth monotone year profiles; carryover byte-identical to binary;
+  distribution ties, `iit_pr ≈ 0`, and heir profiles all pass. Tax-Data
+  `default_vintage` incremented to `2026060918` on the strength of this.
+  Pipeline bug hit along the way (pre-existing) and FIXED in
+  `config_parser.R`: a `scenario_id` subset used to drop the baseline
+  runscript row, leaving no `ID='baseline'` rows in
+  `globals$interface_paths` and crashing `get_other_taxes()` in Phase 3b.
+  The subset now always retains the baseline row (baseline *execution* is
+  governed solely by `baseline_vintage` in `main.R`/`setup.R`, so nothing
+  re-runs) and an unknown `scenario_id` fails with a clear message.
 
 Static MTRs are computed **post-injection** (decision: accepted), with one
 carve-out: records with `kg_deemed > 0` are excluded from the reform-side
@@ -157,12 +184,29 @@ land in middle quintiles) — both expected pre-reattribution.
 
 ## 6. Outstanding work
 
-1. **Deemed heir reattribution in `distribution.R`.** Strip `liab_deemed`
+1. **Deemed heir reattribution in `distribution.R`.** ~~Strip `liab_deemed`
    from decedent records and reallocate revenue-neutrally to heirs via the
-   existing `p_inheritance` copy-split, entering heir `liab_delta` (same
-   convention as the estate tax today). Fully unblocked: `liab_deemed` is in
-   static detail. This also dissolves the decedent-table lumpiness and most
-   of the middle-quintile ranking artifact.
+   existing `p_inheritance` copy-split.~~ **DONE (June 2026).** As built:
+   `liab_deemed` is stripped from both legs' `liab_iit_pr` in all variants;
+   the pooled total is reallocated to heir copies proportional to baseline
+   `inheritance × weight` (flat tax per inheritance dollar — implicitly a
+   uniform gain/estate ratio, since the estate model imputes no gains), and
+   enters only the death-inclusive presentations, like the estate tax. No
+   income is reattributed to heirs. The `taxes_included` variants were
+   renamed `iit_pr_estate*` → `iit_pr_death*`. Consequences, validated on
+   re-run `kg_mech_50` tables (originals saved as
+   `distribution_pre_reattribution.csv`): the deemed `iit_pr` variant is now
+   ~0 by construction (deemed lives only in death variants, mirroring estate
+   tax); the 65+ decedent lump dissolved (98% → ~52% of 2035 burden) into an
+   heir-age profile; the middle-quintile ranking artifact dissolved (Q3:
+   $18.1B → $0.4B in 2035); top 1% now bears ~64% of the 2035 deemed burden;
+   reattribution is exactly revenue-neutral and the death-variant total
+   still ties to static revenue with the same pre-existing ~0.8% CY/FY
+   rounding wedge. Fails loudly if deemed tax is present but the
+   Estate-Tax-Distribution join is missing or produces NA `p_inheritance`.
+   Carryover tables are byte-equivalent pre/post (no deemed). Verified the
+   estate detail file ids match Tax-Data vintage `2026050315` exactly
+   (220,896 = 220,896, zero mismatches).
 2. **Cumulative inheritance-eligibility weight.** The better-grounded
    replacement for the 50-50 blend's G half: from the estate model's
    `p_inheritance` by age, build P(inherited at least once since policy

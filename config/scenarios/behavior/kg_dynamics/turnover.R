@@ -24,7 +24,8 @@ do_kg_dynamics = function(tax_units, baseline_mtrs, static_mtrs,
   #
   # NOT compatible with the legacy kg/*.R modules.
   #
-  # Returns: tibble of tax units with adjusted kg_lt and added decedent_flag.
+  # Returns: tibble of tax units with adjusted kg_lt (deemed enters as the
+  #          mortality-weighted expectation; no stochastic decedent draw).
   #----------------------------------------------------------------------------
 
   year       = tax_units$year[1]
@@ -49,7 +50,6 @@ do_kg_dynamics = function(tax_units, baseline_mtrs, static_mtrs,
   kg_dyn_apply_to_records(
     tax_units        = tax_units,
     cell_table       = state$cell_table,
-    realize_by_asset = state$regime$realize,
-    decedent_random  = tax_units$r.behavior1
+    realize_by_asset = state$regime$realize
   )
 }

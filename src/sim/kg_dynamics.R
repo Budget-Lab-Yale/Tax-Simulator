@@ -1176,15 +1176,15 @@ kg_dyn_build_regime_mix = function(regime_codes, theta, baseline_t,
 #                contribution_k = realize_k * gain_k_i        (k ≠ primary)
 #                contribution_primary = realize_primary *
 #                                       pmax(0, gain_primary_i - sec121_i)
-#              Summed then multiplied by m_household * (G_B + dG)/G_B
-#              (deemed_factor). realize_k comes from regime$realize, the
-#              year-level per-asset deemed indicators from the regime mix.
-# Also stamps decedent_flag = (u < m_household) using precomputed uniform
-# draws from globals$random_numbers (same draw across scenarios).
+#              Summed and scaled by (G_B + dG)/G_B (deemed_factor) into
+#              kg_deemed_full; kg_deemed = m_household * kg_deemed_full.
+#              realize_k comes from regime$realize, the year-level per-asset
+#              deemed indicators from the regime mix. Deemed gains do NOT
+#              enter kg_lt — run_one_year prices them via a two-leg
+#              expected-tax recompute (see kg_deemed comment below).
 #-------------------------------------------------------------------------------
 
-kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset,
-                                    decedent_random) {
+kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset) {
 
   # Pull just the columns the applier consumes from cell_table via a
   # vectorized match() — avoids hash-joining the ~35-column diagnostics
@@ -1261,7 +1261,6 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset,
 
   tax_units %>%
     mutate(
-      decedent_flag = as.integer(decedent_random < m_household),
       # Each share sums to 1 within an age cell (with cross-fallbacks when a
       # cell has no realizations / no gain stock), so any convex blend does
       # too.
@@ -1276,23 +1275,35 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset,
         TRUE    ~ 0
       ),
       allocation = (1 - alpha_G) * share_R + alpha_G * share_G,
-      # Diagnostic decomposition columns, persisted in detail files:
-      #   kg_lockin — this record's share of the cell's realized dG stock
-      #               (extra_R). In the conventional pass this blends lock-in
-      #               and carryover survival; in the mechanical frozen pass
-      #               (r_S = r_B) it is pure carryover realization.
-      #   kg_deemed — deemed death gains included on this return (post-
-      #               avoidance, §121-net, scaled by deemed_factor). The
-      #               distribution layer uses this to identify mechanically-
-      #               deemed decedents for heir reattribution; the bathtub
-      #               tau builder uses it to exclude death-year MTRs from
-      #               the inter-vivos tau anchor.
-      kg_lockin = extra_R * allocation,
-      kg_deemed = decedent_flag * (1 - p_char) * deemed_factor *
-                  deemed_per_record,
+      # Decomposition columns:
+      #   kg_lockin      — this record's share of the cell's realized dG stock
+      #                    (extra_R). In the conventional pass this blends
+      #                    lock-in and carryover survival; in the mechanical
+      #                    frozen pass (r_S = r_B) it is pure carryover
+      #                    realization. Enters kg_lt directly.
+      #   kg_deemed_full — the record's full deemed death gain (post-
+      #                    avoidance, §121-net, scaled by deemed_factor):
+      #                    what lands on the final return IF the household
+      #                    dies this year. NOT added to kg_lt here.
+      #   kg_deemed      — m_household * kg_deemed_full, the expected deemed
+      #                    gain (diagnostics / ETR denominators / heir
+      #                    reattribution identification).
+      # Deemed death gains deliberately do NOT enter kg_lt. A stochastic
+      # decedent draw puts ~±50% sampling error on deemed revenue (expected
+      # death gains are concentrated in a few records, and a draw fixed
+      # across years makes the error persistent); a fractional m*G injection
+      # linearizes the rate schedule (Jensen: taxes m*G at the inter-vivos
+      # margin instead of averaging the alive/dead outcomes). Instead,
+      # run_one_year computes liab_deemed = m * [T(y + kg_deemed_full) -
+      # T(y)] via a second full-frame recompute — the exact expectation with
+      # record-level nonlinearity intact — and folds it into liab_iit_net.
+      # The kg_lt frame stays alive-leg, so MTRs and tau are pure
+      # inter-vivos margins.
+      kg_lockin      = extra_R * allocation,
+      kg_deemed_full = (1 - p_char) * deemed_factor * deemed_per_record,
+      kg_deemed      = m_household * kg_deemed_full,
       kg_lt = if_else(kg_lt > 0, kg_lt * rate_factor, kg_lt) +
-              kg_lockin +
-              kg_deemed
+              kg_lockin
     ) %>%
     select(-allocation, -share_R, -share_G)
 }
@@ -1533,11 +1544,10 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
   # kg_dyn_load_cells_inputs; pass a precomputed cells_inputs (e.g. the
   # frozen mechanical pass's inputs cache) to skip the second sweep.
   #
-  # Reform-side tau exclusion: records whose static detail carries
-  # kg_deemed > 0 are decedents with mechanically-injected death gains.
-  # Their post-injection mtr_kg_lt reflects the death-year spike, not an
-  # inter-vivos margin, so they are dropped from the reform tau aggregation
-  # (weights are baseline Tax-Data kg_lt either way).
+  # Both sides aggregate over all records. Deemed death gains never enter
+  # kg_lt (priced via the two-leg expected-tax recompute in run_one_year),
+  # so reform-side MTRs are pure inter-vivos margins — no decedent
+  # exclusion needed.
 
   years = scenario_info$years
 
@@ -1559,14 +1569,9 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
 
     td_slim = cells_inputs$td_slim_by_year[[as.character(t)]]
 
-    read_mtr = function(path, with_deemed = FALSE) {
+    read_mtr = function(path) {
       f = file.path(path, paste0(t, '.csv'))
-      cols = c('id', 'mtr_kg_lt')
-      if (with_deemed) {
-        hdr = names(fread(f, nrows = 0, showProgress = FALSE))
-        if ('kg_deemed' %in% hdr) cols = c(cols, 'kg_deemed')
-      }
-      fread(f, select = cols, showProgress = FALSE) %>%
+      fread(f, select = c('id', 'mtr_kg_lt'), showProgress = FALSE) %>%
         as_tibble()
     }
 
@@ -1595,17 +1600,9 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
 
     reform_joined = td_slim %>%
       left_join(read_mtr(file.path(scenario_info$output_path, 'static',
-                                   'detail'),
-                         with_deemed = TRUE),
+                                   'detail')),
                 by = 'id')
     check_mtr_coverage(reform_joined, 'reform', t)
-
-    # Drop mechanically-deemed decedents from the inter-vivos tau anchor
-    # (coverage check above runs first so genuinely missing MTRs still fail).
-    if ('kg_deemed' %in% names(reform_joined)) {
-      reform_joined = reform_joined %>%
-        filter(is.na(kg_deemed) | kg_deemed <= 0)
-    }
     reform_tau[[as.character(t)]] =
       kg_dyn_aggregate_cell_mtr(reform_joined, ages)
   }
@@ -2091,8 +2088,7 @@ kg_dyn_apply_mech_to_records = function(tax_units, scenario_info, year) {
   kg_dyn_apply_to_records(
     tax_units        = tax_units,
     cell_table       = state$cell_table,
-    realize_by_asset = state$regime$realize,
-    decedent_random  = tax_units$r.behavior1
+    realize_by_asset = state$regime$realize
   )
 }
 

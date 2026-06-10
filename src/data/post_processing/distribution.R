@@ -126,11 +126,18 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
     baseline_root = file.path(globals$output_root, baseline_id)
   }
   
-  # Read baseline microdata
-  microdata = file.path(baseline_root, 'static/detail', paste0(yr, '.csv')) %>%
+  # Read baseline microdata. liab_deemed (tax on deemed realization at death,
+  # kg_dynamics scenarios only) is stripped from decedent records here and
+  # reattributed to heirs below
+  baseline_detail = file.path(baseline_root, 'static/detail', paste0(yr, '.csv')) %>%
     fread() %>%
-    tibble() %>% 
-    
+    tibble()
+  if (!('liab_deemed' %in% names(baseline_detail))) {
+    baseline_detail$liab_deemed = 0
+  }
+
+  microdata = baseline_detail %>%
+
     # Remove dependent returns and extraneous variables for distribution calculation
     filter(dep_status == 0) %>%
     mutate(
@@ -139,7 +146,7 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
       age           = if_else(filing_status == 2, pmax(age1, age2), age1),
       labor         = pmax(0, wages + (sole_prop + part_scorp + farm) * 0.8),
       capital       = pmax(0, (sole_prop + part_scorp + farm) * 0.2 + txbl_int + exempt_int + div_ord + div_pref + kg_st + kg_lt),
-      liab_iit_pr   = liab_iit_net + liab_pr,
+      liab_iit_pr   = liab_iit_net + liab_pr - liab_deemed,
       parent_group  = if_else(
         (!is.na(dep_age1) & dep_age1 < 18) |
         (!is.na(dep_age2) & dep_age2 < 18) |
@@ -147,18 +154,25 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
         'Parent', 'Non-parent'
       )
     ) %>%
-    select(year, id, weight, n_people, filing_status, age, parent_group, labor, capital, agi, income = expanded_inc, liab_iit_pr) %>%
-    
-    # Make 3 copies for tax-type inclusion assumptions 
-    expand_grid(taxes_included = c('iit_pr', 'iit_pr_estate', 'iit_pr_estate_cit_vat')) %>% 
-    
-    # Join counterfactual reform scenario tax microdata
+    select(year, id, weight, n_people, filing_status, age, parent_group, labor, capital, agi, income = expanded_inc, liab_iit_pr, liab_deemed) %>%
+
+    # Make 3 copies for tax-type inclusion assumptions
+    expand_grid(taxes_included = c('iit_pr', 'iit_pr_death', 'iit_pr_death_cit_vat'))
+
+  # Read counterfactual reform scenario tax microdata, stripping deemed
+  # realization tax from decedents same as the baseline leg above
+  reform_detail = file.path(globals$output_root, id, 'static/detail', paste0(yr, '.csv')) %>%
+    fread() %>%
+    tibble()
+  if (!('liab_deemed' %in% names(reform_detail))) {
+    reform_detail$liab_deemed = 0
+  }
+
+  microdata %<>%
     left_join(
-      file.path(globals$output_root, id, 'static/detail', paste0(yr, '.csv')) %>%
-        fread() %>%
-        tibble() %>% 
-        mutate(liab_iit_pr_reform  = liab_iit_net + liab_pr) %>%
-        select(id, liab_iit_pr_reform),
+      reform_detail %>%
+        mutate(liab_iit_pr_reform = liab_iit_net + liab_pr - liab_deemed) %>%
+        select(id, liab_iit_pr_reform, liab_deemed_reform = liab_deemed),
       by = 'id'
     )
   
@@ -197,8 +211,33 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
       )
   }
   
-  microdata %<>%     
-      
+  # Records absent from the Estate-Tax-Distribution detail (e.g. ids new to a
+  # later Tax-Data vintage) get NA from the join; treat them as non-heirs and
+  # keep them in the table (NA weight would silently drop them) but warn
+  n_unmatched = n_distinct(microdata$id[is.na(microdata$p_inheritance)])
+  if (n_unmatched > 0) {
+    warning(n_unmatched, ' records in ', yr, ' detail are missing from the ',
+            'Estate-Tax-Distribution detail file; treating as non-heirs')
+    microdata %<>%
+      mutate(
+        across(
+          .cols = c(p_inheritance, starts_with('inheritance'), starts_with('liab_estate')),
+          .fns  = ~ replace_na(., 0)
+        )
+      )
+  }
+
+  # Heir reattribution of deemed realization tax requires inheritance data:
+  # fail loudly rather than silently dropping decedents' stripped liab_deemed
+  if (sum((microdata$liab_deemed + microdata$liab_deemed_reform) * microdata$weight, na.rm = T) > 0) {
+    if (sum(microdata$inheritance * microdata$p_inheritance * microdata$weight) <= 0) {
+      stop('Deemed realization tax present in ', yr, ' but no Estate-Tax-',
+           'Distribution inheritance data is available for heir reattribution')
+    }
+  }
+
+  microdata %<>%
+
     # Split records based on probability of inheritance
     expand_grid(copy_id = 1:2) %>% 
     mutate(
@@ -221,8 +260,8 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
       across(.cols = ends_with('_reform'), .fns  = ~ . / vat_price_offset),
       
       # Add inheritance to income for estate tax-inclusive assumption scenarios
-      income        = income        + inheritance        * (taxes_included %in% c('iit_pr_estate', 'iit_pr_estate_cit_vat')),
-      income_reform = income_reform + inheritance_reform * (taxes_included %in% c('iit_pr_estate', 'iit_pr_estate_cit_vat')),
+      income        = income        + inheritance        * (taxes_included %in% c('iit_pr_death', 'iit_pr_death_cit_vat')),
+      income_reform = income_reform + inheritance_reform * (taxes_included %in% c('iit_pr_death', 'iit_pr_death_cit_vat')),
       
       # VAT burden is the loss of real income from higher prices. Some components
       # of expanded income will rise with prices (e.g. OASDI or capital income),
@@ -236,17 +275,32 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
       liab_cost_recovery_capital = cost_recovery_delta * 1e9 * 0.5                          * (capital / sum(capital * weight)),
       liab_corp                  = liab_other_corp_labor + liab_other_corp_capital + liab_cost_recovery_labor + liab_cost_recovery_capital, 
       
+      # Reattribute deemed realization tax from decedents to heir copies in
+      # proportion to inheritance, revenue-neutral within year. Like the estate
+      # tax, it enters only the estate-inclusive presentations; no income is
+      # reattributed (the deemed gain accrued to the decedent)
+      liab_deemed_heir = if_else(
+        inheritance > 0,
+        sum(liab_deemed * weight) * inheritance / sum(inheritance * weight),
+        0
+      ),
+      liab_deemed_heir_reform = if_else(
+        inheritance > 0,
+        sum(liab_deemed_reform * weight) * inheritance / sum(inheritance * weight),
+        0
+      ),
+
       # Calculate liability under each scenario
       liab = case_when(
         taxes_included == 'iit_pr'                ~ liab_iit_pr,
-        taxes_included == 'iit_pr_estate'         ~ liab_iit_pr + liab_estate,
-        taxes_included == 'iit_pr_estate_cit_vat' ~ liab_iit_pr + liab_estate
-      ), 
+        taxes_included == 'iit_pr_death'         ~ liab_iit_pr + liab_estate + liab_deemed_heir,
+        taxes_included == 'iit_pr_death_cit_vat' ~ liab_iit_pr + liab_estate + liab_deemed_heir
+      ),
       liab_reform = case_when(
         taxes_included == 'iit_pr'                ~ liab_iit_pr_reform,
-        taxes_included == 'iit_pr_estate'         ~ liab_iit_pr_reform + liab_estate_reform,
-        taxes_included == 'iit_pr_estate_cit_vat' ~ liab_iit_pr_reform + liab_estate_reform + liab_corp + liab_vat
-      ), 
+        taxes_included == 'iit_pr_death'         ~ liab_iit_pr_reform + liab_estate_reform + liab_deemed_heir_reform,
+        taxes_included == 'iit_pr_death_cit_vat' ~ liab_iit_pr_reform + liab_estate_reform + liab_deemed_heir_reform + liab_corp + liab_vat
+      ),
       
       # Calculate change in tax liability
       liab_delta = liab_reform - liab, 
@@ -447,6 +501,10 @@ get_other_taxes = function(id, baseline_id) {
   # Other corporate tax changes
   #-----------------------------
 
+  # Length (years) over which the labor share of changed corporate burden phases
+  # in; 0 means the first year takes the long-run labor share with no phase-in
+  phasein = scenario_info$corp_incidence_phasein
+
   # Read baseline off-model revenue deltas (0 if actual baseline)
   other_corp_delta = globals$interface_paths %>%
     filter(ID == baseline_id, interface == 'Off-Model-Estimates') %>%
@@ -481,7 +539,11 @@ get_other_taxes = function(id, baseline_id) {
           min(year[cumsum(other_corp_delta) != 0 & lag(other_corp_delta, default = 0) == 0]),
           Inf
         ),
-        other_corp_labor_share =  0.2 * pmax(0, pmin(1, (year - first_year) / 10))) %>%
+        other_corp_labor_share = if (phasein <= 0) {
+          0.2 * (year >= first_year)
+        } else {
+          0.2 * pmax(0, pmin(1, (year - first_year) / phasein))
+        }) %>%
       select(year, other_corp_delta, other_corp_labor_share)
     
   # Combine and return

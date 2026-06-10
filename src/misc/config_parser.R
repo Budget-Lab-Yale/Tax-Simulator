@@ -153,11 +153,25 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   if (!('excess_growth_all_rev' %in% colnames(runscript))) {
     runscript$excess_growth_all_rev = 0
   }
+
+  # Add nonspecified corporate incidence labor-share phase-in length, in years
+  # (0 = first year takes the long-run labor share with no phase-in)
+  if (!('corp_incidence_phasein' %in% colnames(runscript))) {
+    runscript$corp_incidence_phasein = 10
+  }
   
-  # Subset runscript to specified ID, if supplied
+  # Subset runscript to specified ID, if supplied. The baseline row is always
+  # retained: whether baseline actually RUNS is governed by baseline_vintage
+  # (main.R / src/slurm/setup.R), but its interface paths and scenario info
+  # must remain resolvable either way — post-processing looks them up by
+  # ID == 'baseline' (e.g. get_other_taxes() in distribution.R), and dropping
+  # the row crashes Phase 3b in scenario-subset runs.
   if (!is.null(scenario_id)) {
-    runscript %<>% 
-      filter(ID == scenario_id)
+    if (!(scenario_id %in% runscript$ID)) {
+      stop("Scenario ID '", scenario_id, "' not found in runscript")
+    }
+    runscript %<>%
+      filter(ID %in% c('baseline', scenario_id))
   }
   
   # Write dependencies CSV; this is a vintage-level file which lists all 
@@ -372,7 +386,14 @@ get_scenario_info = function(id) {
   excess_growth            = runscript_items$excess_growth
   excess_growth_start_year = runscript_items$excess_growth_start_year
   excess_growth_all_rev    = runscript_items$excess_growth_all_rev
-   
+
+  # Corporate incidence labor-share phase-in length, in years (0 = no phase-in,
+  # i.e. the first year takes the long-run labor share). Defaults to 10 if blank.
+  corp_incidence_phasein = as.numeric(runscript_items$corp_incidence_phasein)
+  if (length(corp_incidence_phasein) == 0 || is.na(corp_incidence_phasein)) {
+    corp_incidence_phasein = 10
+  }
+
   # Return as named list
   return(list(ID                       = id,
               output_path              = output_root,
@@ -383,9 +404,10 @@ get_scenario_info = function(id) {
               dist_years               = dist_years,
               mtr_vars                 = mtr_vars,
               mtr_types                = mtr_types, 
-              excess_growth            = excess_growth, 
-              excess_growth_start_year = excess_growth_start_year, 
-              excess_growth_all_rev    = excess_growth_all_rev))
+              excess_growth            = excess_growth,
+              excess_growth_start_year = excess_growth_start_year,
+              excess_growth_all_rev    = excess_growth_all_rev,
+              corp_incidence_phasein   = corp_incidence_phasein))
 }
 
 
