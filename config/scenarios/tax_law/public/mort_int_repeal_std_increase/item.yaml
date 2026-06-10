@@ -1,0 +1,7 @@
+---
+# Repeal mortgage interest deduction 2026-2030
+mort_int_limit:
+  value:
+    '2014': Inf
+    '2026': 0
+    '2031': Inf

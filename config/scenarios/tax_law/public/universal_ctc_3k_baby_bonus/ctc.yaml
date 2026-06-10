@@ -1,0 +1,117 @@
+---
+# Universal Child Tax Credit: $3K/child + $3K baby bonus
+# Fully refundable, no phaseout, unindexed, effective 2026
+
+# Credit value: $3,000 per child (young), unindexed from 2026
+value_young:
+  value:
+    '2014': [1000, 0]
+    '2018': [2000, 0]
+    '2021': [2000, 1600]
+    '2022': [2000, 0]
+    '2025': [2200, 0]
+    '2026': [3000, 0]
+  i_measure:
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year:
+    '2014': NA
+    '2025': [2024, 2024]
+    '2026': [NA, NA]
+  i_direction: [-1, -1]
+  i_increment: [100, 100]
+
+# Credit value: $3,000 per child (old), unindexed from 2026
+value_old:
+  value:
+    '2014': [1000, 0]
+    '2018': [2000, 0]
+    '2021': [2000, 1000]
+    '2022': [2000, 0]
+    '2025': [2200, 0]
+    '2026': [3000, 0]
+  i_measure:
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year:
+    '2014': NA
+    '2025': [2024, 2024]
+    '2026': [NA, NA]
+  i_direction: [-1, -1]
+  i_increment: [100, 100]
+
+# Eliminate phaseout: set all thresholds to infinity
+po_thresh_single:
+  value:
+    '2014': [75000, Inf]
+    '2018': [200000, Inf]
+    '2021': [200000, 75000]
+    '2022': [200000, Inf]
+    '2026': [Inf, Inf]
+
+po_thresh_married:
+  value:
+    '2014': [110000, Inf]
+    '2018': [400000, Inf]
+    '2021': [400000, 150000]
+    '2022': [400000, Inf]
+    '2026': [Inf, Inf]
+
+po_thresh_head:
+  value:
+    '2014': [75000, Inf]
+    '2018': [200000, Inf]
+    '2021': [200000, 112500]
+    '2022': [200000, Inf]
+    '2026': [Inf, Inf]
+
+# Fully refundable: 100% of credit is refundable floor (no earned income gate)
+min_refund_level:
+  value:
+    '2014': 1
+    '2026': 0
+
+min_refund_share:
+  value:
+    '2014': 0
+    '2026': 1
+
+# No cap on refundable amount
+max_refund_young:
+  value:
+    '2014': Inf
+    '2018': 1400
+    '2021': Inf
+    '2022': 1400
+    '2026': Inf
+  i_measure:
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year: 2017
+  i_direction: -1
+  i_increment: 100
+
+max_refund_old:
+  value:
+    '2014': Inf
+    '2018': 1400
+    '2021': Inf
+    '2022': 1400
+    '2026': Inf
+  i_measure:
+    '1987': cpi
+    '2017': chained_cpi
+  i_base_year: 2017
+  i_direction: -1
+  i_increment: 100
+
+# $3,000 baby bonus folded into slot 2 of the main credit
+baby_bonus_in_credit:
+  value:
+    '2014': 0
+    '2026': 1
+
+baby_bonus:
+  value:
+    '2014': 0
+    '2026': 3000
