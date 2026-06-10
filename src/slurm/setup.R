@@ -175,6 +175,10 @@ if (!has_baseline) {
 
 # Phase encoding (string for clarity; old integer scheme is gone):
 #   '1'   baseline-year tasks         (parallel array; static-only)
+#   '1B'  cf frozen mechanical pass   (one job per cf; sequential within job;
+#                                      no-op for non-kg_dynamics scenarios;
+#                                      must precede 2A — static workers inject
+#                                      its state)
 #   '2A'  cf static-only year tasks   (parallel array)
 #   '2B'  cf bathtub pre-pass         (one job per cf; sequential within job;
 #                                      no-op for non-kg_dynamics scenarios)
@@ -193,10 +197,15 @@ if (has_baseline) {
 }
 
 # Phase 2A and 2C: counterfactual × year tasks (static and conventional)
-# Phase 2B:        one task per counterfactual scenario
+# Phase 1B and 2B: one task per counterfactual scenario
 for (sid in counterfactual_ids) {
   si = get_scenario_info(sid)
   manifest = manifest %>%
+    bind_rows(tibble(
+      phase    = '1B',
+      scenario = sid,
+      year     = NA_integer_
+    )) %>%
     bind_rows(tibble(
       phase    = '2A',
       scenario = sid,
@@ -240,6 +249,7 @@ saveRDS(
 sink()
 
 n_phase1    = sum(manifest$phase == '1')
+n_phase1b   = sum(manifest$phase == '1B')
 n_phase2a   = sum(manifest$phase == '2A')
 n_phase2b   = sum(manifest$phase == '2B')
 n_phase2c   = sum(manifest$phase == '2C')
@@ -247,6 +257,7 @@ n_scenarios = length(counterfactual_ids)
 
 cat(paste0('STAGING_DIR="', staging_dir, '"\n'))
 cat(paste0('N_PHASE1=',    n_phase1,    '\n'))
+cat(paste0('N_PHASE1B=',   n_phase1b,   '\n'))
 cat(paste0('N_PHASE2A=',   n_phase2a,   '\n'))
 cat(paste0('N_PHASE2B=',   n_phase2b,   '\n'))
 cat(paste0('N_PHASE2C=',   n_phase2c,   '\n'))

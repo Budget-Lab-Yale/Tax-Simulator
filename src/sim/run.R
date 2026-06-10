@@ -66,12 +66,18 @@ do_scenario = function(ID, baseline_mtrs) {
 
   if (uses_kg) {
 
-    # 3-step: static-only run, bathtub pre-pass, conventional-only run.
-    # Required because the bathtub recurrence may need this scenario's static
-    # MTRs (v2 cell-MTR mode) to compute r_S(a, t). The static run writes
-    # static detail (with mtr_kg_lt when registered) and totals; the bathtub
-    # consumes those; the conventional run reads precomputed kg_dynamics_state
-    # via the behavior module.
+    # 4-step: frozen mechanical pre-pass, static-only run, bathtub pre-pass,
+    # conventional-only run. The frozen pass needs only Tax-Data cells and
+    # the tax law (no Bellman, no MTRs), and writes the mechanical state the
+    # static pass injects into records — so mechanical carryover/deemed
+    # effects reach static detail, static revenue, and distribution tables.
+    # The bathtub then reads the (post-injection) static MTRs for tau; the
+    # conventional run reads precomputed kg_dynamics_state via the behavior
+    # module. behavioral = conventional − static.
+
+    run_frozen_pass(scenario_info, tax_law,
+                    vat_price_offset     = vat_price_offset,
+                    excess_growth_offset = excess_growth_offset)
 
     static_mtrs = run_sim(scenario_info        = scenario_info,
                           tax_law              = tax_law,
@@ -416,13 +422,50 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   # --- STATIC PASS ---
   static_totals    = NULL
   tax_units_static = NULL
+  uses_kg_mech     = scenario_info$ID != 'baseline' &&
+                     scenario_uses_kg_dynamics(scenario_info)
   if (pass_type %in% c('both', 'static')) {
 
+    # kg_dynamics scenarios: inject the mechanical (frozen-realization)
+    # carryover/deemed quantities into records BEFORE tax calculation, so the
+    # policy's mechanical content lands in static liabilities, static MTRs
+    # (post-injection by design), and the distribution tables. The original
+    # tax_units stays unmodified for the conventional pass, whose behavior
+    # module applies the full bathtub state itself.
+    static_input = tax_units
+    if (uses_kg_mech) {
+      static_input = kg_dyn_apply_mech_to_records(tax_units, scenario_info,
+                                                  year)
+    }
+
     # Use %>% (not %<>%) so original tax_units stays unmodified for conventional pass
-    tax_units_static = tax_units %>%
+    tax_units_static = static_input %>%
       do_taxes(baseline_pr_er = baseline_pr_er,
                vars_1040      = vars_1040,
                vars_payroll   = return_vars$calc_pr)
+
+    # Tax attributable to mechanical deemed death gains: exact, via a
+    # counterfactual recompute with the deemed gains removed — both legs
+    # under reform law, so rate reforms flow through automatically. Used by
+    # the distribution layer to reattribute the decedent's deemed tax to
+    # heirs. The recompute runs on the FULL frame (not the decedent subset):
+    # calc functions index globals$random_numbers positionally (e.g. the
+    # EITC pre-certification draw), so subsetting rows breaks alignment.
+    # Non-decedent rows have kg_deemed = 0, hence identical inputs and an
+    # exactly-zero delta.
+    if (uses_kg_mech) {
+      tax_units_static = tax_units_static %>% mutate(liab_deemed = 0)
+      if (any(static_input$kg_deemed > 0)) {
+        cf = static_input %>%
+          mutate(kg_lt = kg_lt - kg_deemed) %>%
+          do_taxes(baseline_pr_er = baseline_pr_er,
+                   vars_1040      = vars_1040,
+                   vars_payroll   = return_vars$calc_pr)
+        stopifnot(identical(cf$id, tax_units_static$id))
+        tax_units_static$liab_deemed =
+          tax_units_static$liab_iit_net - cf$liab_iit_net
+      }
+    }
 
     # Calculate static marginal tax rates
     static_mtrs_year = NULL
@@ -453,9 +496,11 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                   by = 'id')
     }
 
-    # Write static detail
+    # Write static detail (kg_dynamics mechanical columns included when
+    # present: kg_lockin, kg_deemed, liab_deemed)
     tax_units_static %>%
-      select(all_of(globals$detail_vars), starts_with('mtr_')) %>%
+      select(all_of(globals$detail_vars), starts_with('mtr_'),
+             any_of(c('kg_lockin', 'kg_deemed', 'liab_deemed'))) %>%
       write_csv(file.path(scenario_info$output_path, 'static', 'detail',
                           paste0(year, '.csv')))
 
@@ -512,9 +557,11 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                     by = 'id')
       }
 
-      # Write conventional detail
+      # Write conventional detail (kg_dynamics behavior modules stamp
+      # kg_lockin / kg_deemed; included when present)
       tax_units_conv %>%
-        select(all_of(globals$detail_vars), starts_with('mtr_')) %>%
+        select(all_of(globals$detail_vars), starts_with('mtr_'),
+               any_of(c('kg_lockin', 'kg_deemed'))) %>%
         write_csv(file.path(scenario_info$output_path, 'conventional', 'detail',
                             paste0(year, '.csv')))
 
@@ -584,6 +631,53 @@ run_bathtub_pass = function(scenario_info, tax_law,
   # Returns: invisibly NULL.
   #----------------------------------------------------------------------------
 
+  kg_dyn_check_run_compat(scenario_info, vat_price_offset,
+                          excess_growth_offset)
+
+  # Reuse the frozen pass's Tax-Data sweep when available (same scenario,
+  # same pipeline run) instead of re-reading the wide wealth columns.
+  cache_path   = kg_dyn_inputs_cache_path(scenario_info)
+  cells_inputs = if (file.exists(cache_path)) readRDS(cache_path) else NULL
+
+  inputs = kg_dyn_load_bathtub_inputs(
+    scenario_info = scenario_info,
+    tax_law       = tax_law,
+    baseline_root = globals$baseline_root,
+    sample_ids    = globals$sample_ids,
+    pct_sample    = globals$pct_sample,
+    cells_inputs  = cells_inputs
+  )
+
+  kg_dyn_run_bathtub_pass(
+    scenario_info  = scenario_info,
+    tax_law        = tax_law,
+    baseline_cells = inputs$baseline_cells,
+    baseline_tau   = inputs$baseline_tau,
+    reform_tau     = inputs$reform_tau,
+    heir_dist      = inputs$heir_dist
+  )
+
+  invisible(NULL)
+}
+
+
+
+kg_dyn_check_run_compat = function(scenario_info, vat_price_offset,
+                                   excess_growth_offset) {
+
+  #----------------------------------------------------------------------------
+  # Shared preconditions for the kg_dynamics pre-passes (frozen mechanical
+  # and conventional bathtub). Both read raw Tax-Data CSVs directly (for
+  # value.*/basis.*/q_death*, which aren't in detail_vars), so both refuse
+  # VAT and excess-growth scenarios: raw-dollar cell state would mix with
+  # adjusted per-record kg_lt and put the carry channels in the wrong unit
+  # system. Full sample is required because realization-rate cells are too
+  # sparse otherwise; the kg_lt MTR registration is required by the bathtub
+  # (checked here too so the pipeline fails before any pass runs).
+  #
+  # Returns: invisibly TRUE; stops on violation.
+  #----------------------------------------------------------------------------
+
   if (is.null(scenario_info$mtr_vars) ||
       !('kg_lt' %in% scenario_info$mtr_vars)) {
     stop('kg_dynamics requires the runscript to register ',
@@ -598,19 +692,12 @@ run_bathtub_pass = function(scenario_info, tax_law,
          'sampling noise as policy response. Re-run with pct_sample = 1.')
   }
 
-  # The bathtub reads Tax-Data CSVs directly (to access value.*/basis.*/
-  # q_death*, which aren't in detail_vars), so it bypasses the simulator's
-  # do_capital_adjustment (VAT) and do_excess_growth preprocessing. Mixing
-  # raw-dollar bathtub state with adjusted per-record kg_lt would put the
-  # lock-in carry channel in the wrong unit system. Refuse the combination
-  # until the bathtub either reads from static detail or applies the
-  # adjustments itself.
   vat_active = !is.null(vat_price_offset) &&
                'cpi_factor' %in% colnames(vat_price_offset) &&
                any(abs(vat_price_offset$cpi_factor - 1) > 1e-10, na.rm = TRUE)
   if (vat_active) {
     stop('kg_dynamics is not currently compatible with VAT scenarios. ',
-         'The bathtub reads raw Tax-Data and would mix raw-dollar lock-in ',
+         'The pre-passes read raw Tax-Data and would mix raw-dollar lock-in ',
          'carry with VAT-scaled per-record kg_lt. Run the kg_dynamics ',
          'reform without a VAT, or extend the bathtub to read from static ',
          'detail (which is post-VAT).')
@@ -622,26 +709,55 @@ run_bathtub_pass = function(scenario_info, tax_law,
     stop('kg_dynamics is not currently compatible with excess-growth ',
          'scenarios (excess_growth = ', scenario_info$excess_growth, ', ',
          'start_year = ', scenario_info$excess_growth_start_year, '). ',
-         'Same reason as VAT: raw bathtub state would not match growth-',
+         'Same reason as VAT: raw cell state would not match growth-',
          'adjusted per-record kg_lt. Either disable excess growth on this ',
          'scenario or extend the bathtub to read from static detail.')
   }
 
-  inputs = kg_dyn_load_bathtub_inputs(
+  invisible(TRUE)
+}
+
+
+
+run_frozen_pass = function(scenario_info, tax_law,
+                            vat_price_offset     = NULL,
+                            excess_growth_offset = NULL) {
+
+  #----------------------------------------------------------------------------
+  # Orchestrates the kg_dynamics frozen mechanical pre-pass for one scenario.
+  # Runs BEFORE the static pass (it needs only Tax-Data cell aggregates and
+  # the joined tax law — no Bellman, no MTRs). Side effects:
+  #   - per-year mechanical state files under
+  #     {scenario_output}/static/supplemental/kg_dynamics_mech_state/
+  #   - inputs_cache.rds in the same directory (baseline cells + slim
+  #     per-record frames), reused by run_bathtub_pass to skip its own
+  #     Tax-Data sweep.
+  #
+  # Called by do_scenario() for non-baseline kg_dynamics scenarios (main.R
+  # sequential mode) and by src/slurm/frozen.R (SLURM Phase 1B).
+  #
+  # Returns: invisibly NULL.
+  #----------------------------------------------------------------------------
+
+  kg_dyn_check_run_compat(scenario_info, vat_price_offset,
+                          excess_growth_offset)
+
+  cells_inputs = kg_dyn_load_cells_inputs(
     scenario_info = scenario_info,
     tax_law       = tax_law,
-    baseline_root = globals$baseline_root,
     sample_ids    = globals$sample_ids,
     pct_sample    = globals$pct_sample
   )
 
-  kg_dyn_run_bathtub_pass(
+  dir.create(kg_dyn_mech_state_dir(scenario_info), recursive = TRUE,
+             showWarnings = FALSE)
+  saveRDS(cells_inputs, kg_dyn_inputs_cache_path(scenario_info))
+
+  kg_dyn_run_frozen_pass(
     scenario_info  = scenario_info,
     tax_law        = tax_law,
-    baseline_cells = inputs$baseline_cells,
-    baseline_tau   = inputs$baseline_tau,
-    reform_tau     = inputs$reform_tau,
-    heir_dist      = inputs$heir_dist
+    baseline_cells = cells_inputs$baseline_cells,
+    heir_dist      = cells_inputs$heir_dist
   )
 
   invisible(NULL)

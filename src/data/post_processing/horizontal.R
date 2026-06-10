@@ -46,13 +46,19 @@ build_horizontal_table = function(id) {
       # Remove dependent returns and negative/zero income
       filter(dep_status == 0, expanded_inc > 0) %>%
 
-      # Join baseline income for consistent percentile ranking
+      # Join baseline income for consistent percentile ranking. Records with
+      # no positive-income baseline anchor are dropped: scenario static
+      # detail can now carry different expanded_inc than baseline (kg
+      # mechanical injection adds heir/decedent gains), so the two filtered
+      # sets no longer coincide and an unmatched join would put NA etr into
+      # wtd.quantile.
       left_join(
         baseline %>%
           filter(dep_status == 0, expanded_inc > 0) %>%
           select(id, inc = expanded_inc),
         by = 'id'
       ) %>%
+      filter(!is.na(inc)) %>%
 
       # Compute effective tax rate and grouping variables
       mutate(

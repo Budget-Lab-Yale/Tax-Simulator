@@ -115,6 +115,33 @@ KG_DYN_DEFAULT_PSI      = 21.2272
 # Only affects carryover/deemed; step-up is unchanged (death channel off).
 KG_DYN_DG_ALLOCATION    = 'G'
 
+# Within-cell allocation rule used by the per-record APPLIER to distribute the
+# lock-in/carryover stock realization (extra_R) across records in an age cell.
+#   "R" (= 0)  — proportional to positive kg_lt (falls back to G_unit share
+#                when R_B = 0). Historical behavior: targets active realizers
+#                (trading-propensity proxy).
+#   "G" (= 1)  — proportional to G_unit (falls back to kg_lt share when
+#                G_B = 0). Holdings-based: targets holders of unrealized
+#                gains.
+#   numeric a in [0, 1] — convex blend: (1-a)*R_share + a*G_share. The
+#                realized carryover dollar needs a holder (G) who sells (R);
+#                a blend is the reduced-form compromise between the proxies.
+# Note the recurrence's death-channel m_eff stays on KG_DYN_DG_ALLOCATION
+# ('G') regardless: whose dollars DIE follows holdings; whose dollars get
+# SOLD is what this knob controls. Overridable via the KG_APPLIER_ALLOCATION
+# env var for comparison runs without editing source.
+#
+# Default 0.5 (adopted 2026-06): the realized carryover dollar requires a
+# holder who sells; neither proxy alone is right, and the planned cumulative
+# inheritance-eligibility weight (see design doc) is expected to land between
+# them — large inheritances are top-heavy, so it would pull concentration up
+# from pure G. Sensitivity from the kg_mech_{R,G,50} comparison runs:
+# carryover mechanical revenue 2025-35 is $55.9B (R) / $48.0B (0.5) /
+# $40.4B (G); deemed is invariant to this knob.
+# NOTE: psi/planned_share and the dilution factors were calibrated under the
+# historical "R" rule; recalibration against the 0.5 default is pending.
+KG_DYN_APPLIER_ALLOCATION = Sys.getenv('KG_APPLIER_ALLOCATION', '0.5')
+
 KG_DYN_ASSET_CLASSES    = c('equities', 'pass_throughs',
                             'primary_home', 'other_home', 're_fund')
 KG_DYN_ASSET_VALUE_COLS = paste0('value.', KG_DYN_ASSET_CLASSES)
@@ -1221,19 +1248,53 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset,
       realize_by_asset[['other_home']]    * disc_gain('other_home') +
       realize_by_asset[['re_fund']]       * disc_gain('re_fund')
 
+  # Resolve the allocation knob to a numeric weight on the G (holdings)
+  # share: 'R' = 0 (historical), 'G' = 1, or a numeric blend in [0, 1].
+  alpha_G = switch(KG_DYN_APPLIER_ALLOCATION,
+                   R = 0,
+                   G = 1,
+                   suppressWarnings(as.numeric(KG_DYN_APPLIER_ALLOCATION)))
+  if (!is.finite(alpha_G) || alpha_G < 0 || alpha_G > 1) {
+    stop("kg_dyn_apply_to_records: KG_DYN_APPLIER_ALLOCATION must be 'R', ",
+         "'G', or a number in [0, 1]; got '", KG_DYN_APPLIER_ALLOCATION, "'.")
+  }
+
   tax_units %>%
     mutate(
       decedent_flag = as.integer(decedent_random < m_household),
-      allocation = case_when(
+      # Each share sums to 1 within an age cell (with cross-fallbacks when a
+      # cell has no realizations / no gain stock), so any convex blend does
+      # too.
+      share_R = case_when(
         R_B > 0 ~ pmax(kg_lt, 0) / R_B,
         G_B > 0 ~ G_unit         / G_B,
         TRUE    ~ 0
       ),
+      share_G = case_when(
+        G_B > 0 ~ G_unit         / G_B,
+        R_B > 0 ~ pmax(kg_lt, 0) / R_B,
+        TRUE    ~ 0
+      ),
+      allocation = (1 - alpha_G) * share_R + alpha_G * share_G,
+      # Diagnostic decomposition columns, persisted in detail files:
+      #   kg_lockin — this record's share of the cell's realized dG stock
+      #               (extra_R). In the conventional pass this blends lock-in
+      #               and carryover survival; in the mechanical frozen pass
+      #               (r_S = r_B) it is pure carryover realization.
+      #   kg_deemed — deemed death gains included on this return (post-
+      #               avoidance, §121-net, scaled by deemed_factor). The
+      #               distribution layer uses this to identify mechanically-
+      #               deemed decedents for heir reattribution; the bathtub
+      #               tau builder uses it to exclude death-year MTRs from
+      #               the inter-vivos tau anchor.
+      kg_lockin = extra_R * allocation,
+      kg_deemed = decedent_flag * (1 - p_char) * deemed_factor *
+                  deemed_per_record,
       kg_lt = if_else(kg_lt > 0, kg_lt * rate_factor, kg_lt) +
-              extra_R * allocation +
-              decedent_flag * (1 - p_char) * deemed_factor * deemed_per_record
+              kg_lockin +
+              kg_deemed
     ) %>%
-    select(-allocation)
+    select(-allocation, -share_R, -share_G)
 }
 
 
@@ -1248,10 +1309,100 @@ kg_dyn_state_path = function(scenario_info, year) {
   file.path(kg_dyn_state_dir(scenario_info), paste0(year, '.rds'))
 }
 
+# Mechanical (frozen-realization) state: consumed by the STATIC pass, so it
+# lives under static/supplemental. One {year}.rds per year, same
+# list(regime, cell_table) contract as the conventional bathtub state, plus
+# inputs_cache.rds (baseline cells + slim per-record frames) reused by the
+# full bathtub pass to avoid a second Tax-Data sweep.
+kg_dyn_mech_state_dir = function(scenario_info) {
+  file.path(scenario_info$output_path,
+            'static', 'supplemental',
+            'kg_dynamics_mech_state')
+}
+
+kg_dyn_mech_state_path = function(scenario_info, year) {
+  file.path(kg_dyn_mech_state_dir(scenario_info), paste0(year, '.rds'))
+}
+
+kg_dyn_inputs_cache_path = function(scenario_info) {
+  file.path(kg_dyn_mech_state_dir(scenario_info), 'inputs_cache.rds')
+}
+
 # Does this scenario's behavior set include any kg_dynamics module?
 scenario_uses_kg_dynamics = function(scenario_info) {
   any(startsWith(scenario_info$behavior_modules %||% character(),
                  'kg_dynamics/'))
+}
+
+
+
+#-------------------------------------------------------------------------------
+# Per-year regime resolution (shared by the conventional bathtub pass and the
+# mechanical frozen pass)
+#-------------------------------------------------------------------------------
+
+kg_dyn_resolve_year_regime = function(tax_law, year, baseline_t,
+                                       ages_bathtub = KG_DYN_AGE_MIN:
+                                                      KG_DYN_AGE_MAX) {
+
+  # Extracts the year's per-asset death-regime codes, bequest motive theta,
+  # and §121 caps from the joined tax law, validates them, and builds the
+  # cell-level regime mix. Returns list(regime, mix) where regime is the
+  # metadata object persisted in state files (codes, theta, sec121 caps,
+  # per-asset realize indicators) and mix is the output of
+  # kg_dyn_build_regime_mix on the bathtub grid.
+
+  tlt = tax_law %>% filter(year == !!year)
+  if (nrow(tlt) == 0) {
+    stop('kg_dynamics: tax_law has no rows for year ', year)
+  }
+  tlt_row = tlt %>% slice(1)
+
+  regime_codes = list(
+    equities      = as.numeric(tlt_row$`pref.kg_death_regime_equities`),
+    pass_throughs = as.numeric(tlt_row$`pref.kg_death_regime_pass_throughs`),
+    primary_home  = as.numeric(tlt_row$`pref.kg_death_regime_primary_home`),
+    other_home    = as.numeric(tlt_row$`pref.kg_death_regime_other_home`),
+    re_fund       = as.numeric(tlt_row$`pref.kg_death_regime_re_fund`)
+  )
+  theta = as.numeric(tlt_row$`pref.kg_bequest_motive`)
+  if (length(theta) != 1 || !is.finite(theta) || theta < 0 || theta > 1) {
+    stop(sprintf(
+      paste0('kg_dynamics: pref.kg_bequest_motive must be a finite ',
+             'scalar in [0, 1]; got %s for year %d. theta drives c_phi ',
+             'under carryover and feeds the Bellman; out-of-range or NA ',
+             'values silently produce nonsensical W/MC/kappa.'),
+      format(theta), year))
+  }
+
+  sec121_by_fs = tlt %>%
+    select(filing_status, `pref.kg_sec121_excl`) %>%
+    distinct()
+  sec121_single = sec121_by_fs %>%
+    filter(filing_status == 1) %>% pull(`pref.kg_sec121_excl`)
+  sec121_married = sec121_by_fs %>%
+    filter(filing_status == 2) %>% pull(`pref.kg_sec121_excl`)
+  if (length(sec121_single)  == 0) sec121_single  = NA_real_
+  if (length(sec121_married) == 0) sec121_married = NA_real_
+
+  mix = kg_dyn_build_regime_mix(regime_codes, theta, baseline_t, ages_bathtub)
+
+  # Per-asset realize indicators (year-level scalars from the regime codes)
+  realize_by_asset = lapply(KG_DYN_ASSET_CLASSES, function(k) {
+    KG_DYN_REGIME_TRIPLET[[as.character(regime_codes[[k]])]]$realize
+  })
+  names(realize_by_asset) = KG_DYN_ASSET_CLASSES
+
+  list(
+    regime = list(
+      codes               = regime_codes,
+      theta               = theta,
+      sec121_excl_single  = sec121_single[1],
+      sec121_excl_married = sec121_married[1],
+      realize             = realize_by_asset
+    ),
+    mix = mix
+  )
 }
 
 
@@ -1299,20 +1450,24 @@ kg_dyn_load_heir_distribution = function(path = KG_DYN_HEIR_DISTRIBUTION_PATH,
 
 
 
-kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
-                                       sample_ids, pct_sample,
-                                       ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
+kg_dyn_load_cells_inputs = function(scenario_info, tax_law,
+                                     sample_ids, pct_sample,
+                                     ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
   # Single Tax-Data pass producing baseline_cells (per-year G_B, R_B, r_B, m,
   # mG_record, mR_record, per-asset G_B_{class}, G_B_primary_above_cap over
-  # ages 18-80), baseline_tau, and reform_tau (per-year R-weighted
-  # mtr_kg_lt vectors). Cell aggregates come straight from Tax-Data csvs
-  # (the wealth value.*/basis.* and q_death* columns live only there);
-  # mtr_kg_lt comes from each side's static detail.
+  # ages 18-80), the slim per-record frames the tau aggregator consumes
+  # (td_slim_by_year: id/weight/kg_lt/age_cohort/G_unit), and heir_dist.
+  # Cell aggregates come straight from Tax-Data csvs (the wealth
+  # value.*/basis.* and q_death* columns live only there).
   #
   # tax_law is consumed only to merge the filing-status-mapped §121 cap
   # (pref.kg_sec121_excl) onto records before kg_dyn_attach_record_attrs
   # computes gain.primary_home_above_cap.
+  #
+  # Called by the frozen mechanical pass (which persists the result to
+  # kg_dyn_inputs_cache_path) and by kg_dyn_load_bathtub_inputs when no
+  # cache is available.
 
   tax_data_root = scenario_info$interface_paths$`Tax-Data`
   macro_root    = scenario_info$interface_paths$`Macro-Projections`
@@ -1332,9 +1487,8 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
               KG_DYN_ASSET_VALUE_COLS, KG_DYN_ASSET_BASIS_COLS) %>%
     unique()
 
-  baseline_cells = list()
-  baseline_tau   = list()
-  reform_tau     = list()
+  baseline_cells  = list()
+  td_slim_by_year = list()
 
   for (t in years) {
 
@@ -1357,11 +1511,62 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
     # mtr aggregator only needs id/weight/kg_lt/age_cohort/G_unit; slim
     # before the joins so we don't drag the asset value.*/basis.* columns
     # through two hash joins on ~220k records.
-    td_slim = td %>% select(id, weight, kg_lt, age_cohort, G_unit)
+    td_slim_by_year[[as.character(t)]] =
+      td %>% select(id, weight, kg_lt, age_cohort, G_unit)
+  }
 
-    read_mtr = function(path) {
-      file.path(path, paste0(t, '.csv')) %>%
-        fread(select = c('id', 'mtr_kg_lt'), showProgress = FALSE) %>%
+  list(baseline_cells  = baseline_cells,
+       td_slim_by_year = td_slim_by_year,
+       heir_dist       = heir_dist)
+}
+
+
+
+kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
+                                       sample_ids, pct_sample,
+                                       ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX,
+                                       cells_inputs = NULL) {
+
+  # Builds the full bathtub input set: baseline_cells plus baseline_tau and
+  # reform_tau (per-year realization-weighted mtr_kg_lt vectors read from
+  # each side's static detail). The Tax-Data sweep is delegated to
+  # kg_dyn_load_cells_inputs; pass a precomputed cells_inputs (e.g. the
+  # frozen mechanical pass's inputs cache) to skip the second sweep.
+  #
+  # Reform-side tau exclusion: records whose static detail carries
+  # kg_deemed > 0 are decedents with mechanically-injected death gains.
+  # Their post-injection mtr_kg_lt reflects the death-year spike, not an
+  # inter-vivos margin, so they are dropped from the reform tau aggregation
+  # (weights are baseline Tax-Data kg_lt either way).
+
+  years = scenario_info$years
+
+  if (is.null(cells_inputs)) {
+    cells_inputs = kg_dyn_load_cells_inputs(
+      scenario_info = scenario_info,
+      tax_law       = tax_law,
+      sample_ids    = sample_ids,
+      pct_sample    = pct_sample,
+      ages          = ages
+    )
+  }
+
+  baseline_cells = cells_inputs$baseline_cells
+  baseline_tau   = list()
+  reform_tau     = list()
+
+  for (t in years) {
+
+    td_slim = cells_inputs$td_slim_by_year[[as.character(t)]]
+
+    read_mtr = function(path, with_deemed = FALSE) {
+      f = file.path(path, paste0(t, '.csv'))
+      cols = c('id', 'mtr_kg_lt')
+      if (with_deemed) {
+        hdr = names(fread(f, nrows = 0, showProgress = FALSE))
+        if ('kg_deemed' %in% hdr) cols = c(cols, 'kg_deemed')
+      }
+      fread(f, select = cols, showProgress = FALSE) %>%
         as_tibble()
     }
 
@@ -1390,9 +1595,17 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
 
     reform_joined = td_slim %>%
       left_join(read_mtr(file.path(scenario_info$output_path, 'static',
-                                   'detail')),
+                                   'detail'),
+                         with_deemed = TRUE),
                 by = 'id')
     check_mtr_coverage(reform_joined, 'reform', t)
+
+    # Drop mechanically-deemed decedents from the inter-vivos tau anchor
+    # (coverage check above runs first so genuinely missing MTRs still fail).
+    if ('kg_deemed' %in% names(reform_joined)) {
+      reform_joined = reform_joined %>%
+        filter(is.na(kg_deemed) | kg_deemed <= 0)
+    }
     reform_tau[[as.character(t)]] =
       kg_dyn_aggregate_cell_mtr(reform_joined, ages)
   }
@@ -1400,7 +1613,7 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
   list(baseline_cells = baseline_cells,
        baseline_tau   = baseline_tau,
        reform_tau     = reform_tau,
-       heir_dist      = heir_dist)
+       heir_dist      = cells_inputs$heir_dist)
 }
 
 
@@ -1614,56 +1827,12 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                        dimnames = list(ages_bellman_chr, as.character(years)))
 
   for (j in seq_along(years)) {
-    tlt = tax_law %>% filter(year == years[j])
-    if (nrow(tlt) == 0) {
-      stop('kg_dynamics: tax_law has no rows for year ', years[j])
-    }
-    tlt_row = tlt %>% slice(1)
-
-    regime_codes = list(
-      equities      = as.numeric(tlt_row$`pref.kg_death_regime_equities`),
-      pass_throughs = as.numeric(tlt_row$`pref.kg_death_regime_pass_throughs`),
-      primary_home  = as.numeric(tlt_row$`pref.kg_death_regime_primary_home`),
-      other_home    = as.numeric(tlt_row$`pref.kg_death_regime_other_home`),
-      re_fund       = as.numeric(tlt_row$`pref.kg_death_regime_re_fund`)
-    )
-    theta = as.numeric(tlt_row$`pref.kg_bequest_motive`)
-    if (length(theta) != 1 || !is.finite(theta) || theta < 0 || theta > 1) {
-      stop(sprintf(
-        paste0('kg_dynamics: pref.kg_bequest_motive must be a finite ',
-               'scalar in [0, 1]; got %s for year %d. theta drives c_phi ',
-               'under carryover and feeds the Bellman; out-of-range or NA ',
-               'values silently produce nonsensical W/MC/kappa.'),
-        format(theta), years[j]))
-    }
-
-    sec121_by_fs = tlt %>%
-      select(filing_status, `pref.kg_sec121_excl`) %>%
-      distinct()
-    sec121_single = sec121_by_fs %>%
-      filter(filing_status == 1) %>% pull(`pref.kg_sec121_excl`)
-    sec121_married = sec121_by_fs %>%
-      filter(filing_status == 2) %>% pull(`pref.kg_sec121_excl`)
-    if (length(sec121_single)  == 0) sec121_single  = NA_real_
-    if (length(sec121_married) == 0) sec121_married = NA_real_
-
     bt  = baseline_cells[[as.character(years[j])]]
-    mix = kg_dyn_build_regime_mix(regime_codes, theta, bt, ages_bathtub)
+    res = kg_dyn_resolve_year_regime(tax_law, years[j], bt, ages_bathtub)
+    mix = res$mix
 
-    # Per-asset realize indicators (year-level scalars from the regime codes)
-    realize_by_asset = lapply(KG_DYN_ASSET_CLASSES, function(k) {
-      KG_DYN_REGIME_TRIPLET[[as.character(regime_codes[[k]])]]$realize
-    })
-    names(realize_by_asset) = KG_DYN_ASSET_CLASSES
-
-    regime_list[[j]] = list(
-      codes               = regime_codes,
-      theta               = theta,
-      sec121_excl_single  = sec121_single[1],
-      sec121_excl_married = sec121_married[1],
-      realize             = realize_by_asset
-    )
-    mix_list[[j]] = mix
+    regime_list[[j]] = res$regime
+    mix_list[[j]]    = mix
 
     # Pack c_phi onto the extended Bellman grid: bathtub values from the
     # mix, age-80 value repeated forward across [81, 119] (same pattern as
@@ -1785,6 +1954,146 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   }
 
   invisible(NULL)
+}
+
+
+
+#-------------------------------------------------------------------------------
+# Mechanical (frozen-realization) pass
+#
+# The static-side counterpart of the bathtub: same recurrence, same regime
+# mix, but realization frozen at baseline (r_S = r_B) and no Bellman (no
+# Pass 1/Pass 2, no tau, no planned timing — the behavioral margins are all
+# shut off by construction). What remains is the policy's mechanical content:
+#   - carryover: routed death stock accumulates in dG and is realized at the
+#     heir cell's BASELINE rate (extra_R = r_B * dG); rate_factor = 1 so no
+#     rate channel.
+#   - deemed: dG stays 0 (nothing routes), deemed_factor = 1, and the
+#     applier's decedent term delivers the deemed tax on the baseline gain
+#     stock at death.
+#   - step-up: delta_route = delta_realize = 0 → the pass is a no-op.
+# State files land under static/supplemental/kg_dynamics_mech_state and are
+# consumed by the STATIC pass in run_one_year via
+# kg_dyn_apply_mech_to_records, so mechanical effects reach static detail,
+# static revenue, and the distribution tables. behavioral = conventional −
+# static then falls out of the existing outputs.
+#-------------------------------------------------------------------------------
+
+kg_dyn_run_frozen_pass = function(scenario_info, tax_law, baseline_cells,
+                                   heir_dist,
+                                   phi_I = KG_DYN_PHI_I,
+                                   ages_bathtub = KG_DYN_AGE_MIN:
+                                                  KG_DYN_AGE_MAX) {
+
+  years     = scenario_info$years
+  state_dir = kg_dyn_mech_state_dir(scenario_info)
+  dir.create(state_dir, recursive = TRUE, showWarnings = FALSE)
+
+  A     = kg_dyn_build_aging_matrix(ages_bathtub)
+  omega = kg_dyn_build_heir_matrix(heir_dist, ages_bathtub)
+
+  ages_chr = as.character(ages_bathtub)
+  delta    = setNames(rep(0, length(ages_bathtub)), ages_chr)
+
+  for (j in seq_along(years)) {
+    t   = years[j]
+    bt  = baseline_cells[[as.character(t)]]
+    res = kg_dyn_resolve_year_regime(tax_law, t, bt, ages_bathtub)
+    mix = res$mix
+
+    # Frozen realization: scenario rate is the baseline rate everywhere.
+    r_S_vec = setNames(bt$r_B, ages_chr)
+
+    step = kg_dyn_step_recurrence(
+      delta_prev      = delta,
+      baseline_t      = bt,
+      A               = A,
+      omega           = omega,
+      r_S_vec         = r_S_vec,
+      delta_route_vec = mix$delta_route,
+      phi_I           = phi_I
+    )
+
+    # Stock entering year t (same timing convention as the bathtub's
+    # cell_table: dG is delta_prev, realized this year at r_S = r_B).
+    dG  = as.numeric(delta[as.character(bt$age)])
+    mxi = match(bt$age, mix$age)
+
+    cell_table = bt %>%
+      mutate(
+        age           = as.integer(age),
+        dG            = dG,
+        r_S           = r_B,
+        rate_factor   = 1,
+        # pmax(dG, -G_B) kept for symmetry with the bathtub; under frozen
+        # realization dG >= 0 always (delta_inh >= 0, survivor flow decays
+        # geometrically), so the clamp is inert here.
+        extra_R       = r_B * pmax(dG, -G_B),
+        deemed_factor = if_else(G_B > 0, pmax(0, (G_B + dG) / G_B), 1),
+        delta_vanish  = mix$delta_vanish [mxi],
+        delta_route   = mix$delta_route  [mxi],
+        delta_realize = mix$delta_realize[mxi],
+        c_phi         = mix$c_phi        [mxi],
+        decedent_stock      = step$decedent_stock,
+        terminal_char_stock = step$terminal_char_stock,
+        taxable_death_stock = step$taxable_death_stock,
+        delta_inh           = step$delta_inh
+      ) %>%
+      select(age, G_B, R_B, r_B, r_S, m, mG_record, mR_record, dG,
+             p_char, p_char_extensive, p_char_intensive,
+             G_B_equities, G_B_pass_throughs, G_B_primary_home,
+             G_B_other_home, G_B_re_fund, G_B_primary_above_cap,
+             delta_vanish, delta_route, delta_realize, c_phi,
+             decedent_stock, terminal_char_stock, taxable_death_stock,
+             delta_inh, rate_factor, extra_R, deemed_factor)
+
+    saveRDS(list(regime     = res$regime,
+                 cell_table = cell_table),
+            kg_dyn_mech_state_path(scenario_info, t))
+
+    delta = setNames(step$delta_next, ages_chr)
+  }
+
+  invisible(NULL)
+}
+
+
+
+kg_dyn_apply_mech_to_records = function(tax_units, scenario_info, year) {
+
+  # Static-pass injection: reads the year's mechanical state file and applies
+  # it to records via the same applier the conventional behavior module uses
+  # (kg_dyn_apply_to_records). With rate_factor = 1 the rate channel is
+  # inert; what lands on records is the carryover realization (kg_lockin)
+  # and the mechanical deemed death gains (kg_deemed). Returns tax_units
+  # with adjusted kg_lt plus the kg_lockin / kg_deemed columns and
+  # decedent_flag (same RNG draw as the conventional pass, so the two
+  # passes stamp identical decedents and conventional − static decomposes
+  # record by record).
+
+  state_path = kg_dyn_mech_state_path(scenario_info, year)
+  if (!file.exists(state_path)) {
+    stop('kg_dynamics: missing mechanical state file at ', state_path,
+         '. The frozen pre-pass (kg_dyn_run_frozen_pass) must run before ',
+         'the static pass for kg_dynamics scenarios. In main.R sequential ',
+         'mode this happens automatically inside do_scenario(); in SLURM ',
+         'mode it is Phase 1B (src/slurm/frozen.R).')
+  }
+  state = readRDS(state_path)
+
+  cpiu_by_year = kg_dyn_load_cpiu_levels(
+    scenario_info$interface_paths$`Macro-Projections`,
+    years = year
+  )
+  tax_units = kg_dyn_attach_record_attrs(tax_units,
+                                         cpiu_by_year = cpiu_by_year)
+
+  kg_dyn_apply_to_records(
+    tax_units        = tax_units,
+    cell_table       = state$cell_table,
+    realize_by_asset = state$regime$realize,
+    decedent_random  = tax_units$r.behavior1
+  )
 }
 
 

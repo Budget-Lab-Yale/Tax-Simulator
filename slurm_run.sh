@@ -9,6 +9,10 @@
 #   Phase 0  — Setup (login node): parse globals, serialize configs
 #   Phase 1  — Baseline (SLURM array): 1 job per year (static-only,
 #              pass_type='both' since no behavior modules)
+#   Phase 1B — CF frozen mechanical pass (SLURM array): 1 job per scenario,
+#              runs the kg_dynamics frozen-realization recurrence (no
+#              Bellman); writes mechanical state the Phase 2A static
+#              workers inject; no-op for non-kg_dynamics scenarios
 #   Phase 2A — CF static-only (SLURM array): 1 job per scenario×year
 #              (pass_type='static'; produces static MTRs + static_totals)
 #   Phase 2B — CF bathtub (SLURM array): 1 job per scenario, runs the
@@ -59,6 +63,7 @@ eval "$METADATA"
 
 echo "  Staging dir: ${STAGING_DIR}"
 echo "  Baseline year-tasks (Phase 1): ${N_PHASE1}"
+echo "  CF frozen mechanical jobs (Phase 1B): ${N_PHASE1B}"
 echo "  CF static-only year-tasks (Phase 2A): ${N_PHASE2A}"
 echo "  CF bathtub jobs (Phase 2B): ${N_PHASE2B}"
 echo "  CF conventional-only year-tasks (Phase 2C): ${N_PHASE2C}"
@@ -89,13 +94,45 @@ fi
 
 
 #-------------------------------------------
-# Phase 2A: CF static-only year tasks
+# Phase 1B: CF frozen mechanical pass (one job per CF; no dependencies —
+# needs only Tax-Data and the staged tax law, so it runs alongside Phase 1)
 #-------------------------------------------
+
+P1B_ID=""
+if [ "$N_PHASE1B" -gt 0 ]; then
+  echo "Phase 1B: Submitting ${N_PHASE1B} CF frozen mechanical jobs..."
+  P1B=$(sbatch --parsable --array=1-${N_PHASE1B} \
+    ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
+    --job-name=taxsim-frozen \
+    --output="${STAGING_DIR}/logs/p1b_%A_%a.log" \
+    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+            Rscript src/slurm/frozen.R ${STAGING_DIR}")
+  echo "  Job ID: ${P1B}"
+  P1B_ID="${P1B}"
+fi
+
+
+#-------------------------------------------
+# Phase 2A: CF static-only year tasks (depends on Phase 1 baseline AND
+# Phase 1B frozen state — static workers inject the mechanical state)
+#-------------------------------------------
+
+P2A_PREREQS=""
+if [ "$N_PHASE1" -gt 0 ]; then
+  P2A_PREREQS="${P2A_PREREQS}:${P1}"
+fi
+if [ -n "$P1B_ID" ]; then
+  P2A_PREREQS="${P2A_PREREQS}:${P1B_ID}"
+fi
+P2A_PRE_DEP=""
+if [ -n "$P2A_PREREQS" ]; then
+  P2A_PRE_DEP="--dependency=afterok${P2A_PREREQS}"
+fi
 
 P2A_DEP=""
 if [ "$N_PHASE2A" -gt 0 ]; then
   echo "Phase 2A: Submitting ${N_PHASE2A} CF static-only year jobs..."
-  P2A=$(sbatch --parsable --array=1-${N_PHASE2A} ${P1_DEP} \
+  P2A=$(sbatch --parsable --array=1-${N_PHASE2A} ${P2A_PRE_DEP} \
     ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
     --job-name=taxsim-cf-static \
     --output="${STAGING_DIR}/logs/p2a_%A_%a.log" \

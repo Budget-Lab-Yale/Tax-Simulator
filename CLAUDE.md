@@ -329,7 +329,8 @@ Arguments are the same as `main.R` except `multicore` is omitted (SLURM handles 
 **Pipeline phases:**
 1. Phase 0 (login node): `src/slurm/setup.R` — parses globals, builds configs, serializes to `.rds`
 2. Phase 1 (SLURM array): `src/slurm/worker.R` — runs `run_one_year()` for each baseline year
-3. Phase 2 (SLURM array): `src/slurm/worker.R` — runs `run_one_year()` for each counterfactual × year
+3. Phase 1B (SLURM array): `src/slurm/frozen.R` — kg_dynamics frozen mechanical pre-pass per scenario (writes static-side mech state consumed by Phase 2A; no-op for non-kg scenarios)
+4. Phase 2 (SLURM array): `src/slurm/worker.R` — runs `run_one_year()` for each counterfactual × year
 4. Phase 3a (SLURM array): `src/slurm/aggregate.R` — writes totals CSVs and receipts per scenario
 5. Phase 3b (SLURM array): `src/slurm/aggregate.R` — post-processing (1040, revenue, distribution, time burden)
 6. Phase 4 (single job): `src/slurm/aggregate.R` — stacked reports and optional detail purge
@@ -343,6 +344,7 @@ The SLURM pipeline duplicates orchestration logic from `main.R`, `run_sim()`, an
 | `run_sim()` totals-writing or `calc_receipts()` call | `src/slurm/aggregate.R` Phase 3a |
 | `do_scenario()` post-processing calls               | `src/slurm/aggregate.R` Phase 3b |
 | `do_scenario()` pre-simulation setup (offsets, indexes, tax law) | `src/slurm/setup.R` |
+| `run_frozen_pass()` or the kg mechanical state contract | `src/slurm/frozen.R` (Phase 1B) |
 | `main.R` stacked post-processing or `purge_detail()` | `src/slurm/aggregate.R` Phase 4 |
 | `parse_globals()` return structure                  | `src/slurm/setup.R` serialization |
 | New global free variables used by post-processing   | `src/slurm/common.R` `reconstitute_environment()` |
