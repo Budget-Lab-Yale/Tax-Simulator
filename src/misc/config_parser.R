@@ -225,21 +225,41 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     stop("Invalid argument for 'multicore' runtime parameter")
   }
   
-  # Tax unit ID in sample
-  sample_ids = interface_paths %>% 
+  # Tax unit IDs in sample. The id universe is the UNION of ids across all
+  # simulation years: Tax-Data adds records in projection years (e.g. new
+  # top-tail entrants absent from earlier files), so an id set built from any
+  # single year silently drops them from every year of the simulation.
+  # (Caught 2026-06-10 via the estate tax: the previous 2017-based id set
+  # dropped 935 weight-1 records on vintage 2026060918 — all with gross
+  # wealth above $50M, $8.2T in total — depressing expected estate tax ~30%.)
+  tax_data_root = interface_paths %>%
     filter(interface == 'Tax-Data') %>%
-    slice(1) %>% 
-    get_vector('path') %>% 
-    read_microdata(2017) %>%
-    sample_frac(size = pct_sample) %>% 
+    slice(1) %>%
+    get_vector('path')
+  sim_years = runscript$years %>%
+    as.character() %>%
+    map(.f = ~ as.integer(str_split_1(.x, ':'))) %>%
+    map(.f = ~ .x[1]:.x[length(.x)]) %>%
+    unlist() %>%
+    unique()
+  sample_ids = sim_years %>%
+    map(.f = ~ fread(file.path(tax_data_root, paste0('tax_units_', .x, '.csv')),
+                     select = 'id', showProgress = FALSE)$id) %>%
+    unlist() %>%
+    unique() %>%
+    tibble(id = .) %>%
+    sample_frac(size = pct_sample) %>%
     get_vector('id')
-  
-  # Precalculate random numbers for consistency across scenarios 
+
+  # Precalculate random numbers for consistency across scenarios. Keyed by
+  # id and JOINED to tax units each year (run_one_year): the per-year id
+  # universe varies, so positional binding would misalign draws.
   random_numbers = tibble(
+    id                = sample_ids,
     r.bus_loss        = runif(length(sample_ids)),             # Excess business loss limitation eligibility rate
     r.cdctc_takeup    = runif(length(sample_ids)),             # CDCTC takeup rate
     r.salt_workaround = runif(length(sample_ids)),             # SALT workaround participation rate
-    r.oasdi_exp       = round(rexp(length(sample_ids), 1/4)),  # For OASDI claiming year imputation in do_ss_cola()  
+    r.oasdi_exp       = round(rexp(length(sample_ids), 1/4)),  # For OASDI claiming year imputation in do_ss_cola()
     r.new_car         = runif(length(sample_ids)),             # For imputation of p(new car | car loan interest) for auto loan deduction
     r.behavior1       = runif(length(sample_ids)),             # Spare random number for use in behavioral modules
     r.behavior2       = runif(length(sample_ids)),             # Spare random number for use in behavioral modules
@@ -263,7 +283,8 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     'cdctc_ref', 'ctc_ref', 'rebate', 'ref', 'liab_niit', 'liab_iit', 
     'liab_iit_net', 'liab_fica_er1', 'liab_fica_er2', 'liab_seca', 'liab_pr_ee',
     'liab_pr', 'simple_filer', 'number_of_credits', 'kg_lt_infl_adj',
-    'alt_max_cap_binds', 'decedent_flag'
+    'alt_max_cap_binds', 'decedent_flag', 'estate_m', 'estate_p_dsue',
+    'liab_estate_nodsue', 'liab_estate_dsue', 'estate_distributable'
   )
   
   

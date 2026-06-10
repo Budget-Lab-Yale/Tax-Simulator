@@ -122,6 +122,7 @@ Tax law is represented as collections of **tax parameters** (thematically relate
 - `niit.yaml`: Net Investment Income Tax
 - `pe.yaml`: Personal exemptions
 - `rebate.yaml`: Generic per-person refundable credit (for stimulus, UBI modeling)
+- `estate.yaml`: Estate tax (exemption, graduated rate schedule, portability switch)
 
 **YAML Structure:**
 ```yaml
@@ -159,6 +160,35 @@ Reform YAML files override baseline at the **subparameter level** — the entire
 - Use `'default'` keyword to inherit from `indexation_defaults`; omitting a field sets it to NULL
 
 **Detailed override rules, common mistakes, and examples are in the `/policy-config` skill** (`.claude/skills/policy-config/SKILL.md`).
+
+### On-Model Estate Tax
+
+Estate tax liability is computed per record in the normal year pass (no pre-pass;
+each death year is independent, expected-value). Key facts:
+
+- **Law vs measurement are strictly separated.** Estate LAW (exemption, rate
+  schedule, portability) lives in `estate.yaml` and is reform-overridable like any
+  parameter. The MEASUREMENT bridge from Tax-Data economic wealth to reported
+  gross estate (valuation factors r/rho_pt, per-bin deduction/DSUE fractions, gift
+  add-back gamma, donor-clone cluster cap) lives in
+  `config/estate/estate_valuation_params.yaml` and must NEVER be overridden by a
+  reform. Regenerate it with `other/estate_tax/write_frozen_params.R` (sbatch)
+  after any re-calibration; it is pinned to a Tax-Data vintage and the sim warns
+  on mismatch.
+- **Calculator is pure and weight-free** (`calc_estate()`,
+  `src/calc/functions/tax/estate.R`): liability conditional on death, two full
+  DSUE/no-DSUE branch calcs for singles (the unified-credit kink is nonlinear),
+  joint records at the both-die event with 2x exemption. Mortality (`estate_m`,
+  incl. the cluster cap — a population-level weights operation) is computed in
+  `src/sim/estate.R` and applied only at aggregation.
+- **Detail columns**: `estate_m`, `estate_p_dsue`, `liab_estate_nodsue`,
+  `liab_estate_dsue`, `estate_distributable` on every detail file.
+- **Receipts**: `revenues_estate_tax` = CBO level + on-model delta
+  (scenario − model-baseline), booked in FY death-year + 1. The model never sets
+  baseline estate LEVELS (a known growth-slope disagreement with CBO); it
+  contributes reform deltas only. The off-model estate delta is superseded.
+- **Not yet built (stage 2)**: heir-side distribution (rank-matching allocator);
+  estate reforms currently show revenue but not distributional effects.
 
 ### Behavioral Feedback Modules
 

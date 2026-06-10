@@ -38,7 +38,8 @@ calc_eitc = function(tax_unit, fill_missings = F) {
     'txbl_kg',       # (dbl) net capital gain included in AGI
     'sch_e',         # (dbl) Schedule E net income
     'part_scorp',    # (dbl) net partnership and S corporation income
-    
+    'r.eitc_precert',# (dbl) random number for EITC pre-certification check
+
     # Tax law attributes
     'eitc.pi_rate_0',     # (dbl) credit phase-in rate for filers with no qualifying children
     'eitc.pi_rate_1',     # (dbl) credit phase-in rate for filers with 1 child
@@ -132,9 +133,11 @@ calc_eitc = function(tax_unit, fill_missings = F) {
       eitc_prior     = pmax(0, max_eitc_prior - pmax(0, pmax(ei_prior, agi) - po_thresh) * po_rate),
       eitc           = if_else(eitc.ei_prior_yr == 1, pmax(eitc, eitc_prior), eitc),
       
-      # Adjust for pre-certification changes
+      # Adjust for pre-certification changes. r.eitc_precert is an id-keyed
+      # column joined in run_one_year (the per-year id universe varies, so
+      # indexing globals$random_numbers positionally would misalign)
       eitc     = if_else(eitc.parent_precert & n_dep_eitc > 0,
-                         if_else(globals$random_numbers$r.eitc_precert < 0.031, 0, eitc), 
+                         if_else(r.eitc_precert < 0.031, 0, eitc),
                          eitc)
       
     ) %>% 

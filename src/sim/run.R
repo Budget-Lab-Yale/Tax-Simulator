@@ -246,8 +246,14 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
       bind_rows() %>%
       write_csv(file.path(static_root, 'totals', '1040_by_agi.csv'))
 
+    static_totals_estate = output %>%
+      map(.f = ~.x$static_totals$estate) %>%
+      bind_rows() %>%
+      write_csv(file.path(static_root, 'totals', 'estate.csv'))
+
     static_totals_pr %>%
-      left_join(static_totals_1040, by = 'year') %>%
+      left_join(static_totals_1040,   by = 'year') %>%
+      left_join(static_totals_estate, by = 'year') %>%
       calc_receipts(
         scenario_root         = static_root,
         vat_root              = scenario_info$interface_paths$`Value-Added-Tax-Model`,
@@ -283,8 +289,14 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
       bind_rows() %>%
       write_csv(file.path(conv_root, 'totals', '1040_by_agi.csv'))
 
+    conv_totals_estate = output %>%
+      map(.f = ~.x$conventional_totals$estate) %>%
+      bind_rows() %>%
+      write_csv(file.path(conv_root, 'totals', 'estate.csv'))
+
     conv_totals_pr %>%
-      left_join(conv_totals_1040, by = 'year') %>%
+      left_join(conv_totals_1040,   by = 'year') %>%
+      left_join(conv_totals_estate, by = 'year') %>%
       calc_receipts(
         scenario_root         = conv_root,
         vat_root              = scenario_info$interface_paths$`Value-Added-Tax-Model`,
@@ -368,8 +380,9 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
            year          = year,
            decedent_flag = 0L) %>%
 
-    # Assign random numbers
-    bind_cols(globals$random_numbers) %>%
+    # Assign random numbers (id-keyed: the per-year id universe varies, so a
+    # positional bind would misalign draws and break on years with new ids)
+    left_join(globals$random_numbers, by = 'id') %>%
 
     # Recode filing status if tax law departs from traditional options
     left_join(tax_law %>%
@@ -396,6 +409,21 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
 
     # Compute CPI ratio for capital gains basis indexation
     calc_kg_cpi_ratio(indexes, year)
+
+  # Calculate estate tax variables: per-record conditional liabilities from
+  # the pure calculator, then the household death-event probability (the
+  # weights side, incl. the donor-clone cluster cap). Once per year, outside
+  # the MTR loop (estate liability has no income dependence), before the
+  # static/conventional split (no behavioral module touches wealth, so both
+  # passes share the same estate columns). Wealth stays in raw dollars: the
+  # VAT / excess-growth income adjustments don't apply to balance-sheet
+  # stocks, so under those scenarios the estate base is intentionally in
+  # pre-adjustment units.
+  estate_params = get_estate_params(scenario_info$interface_paths$`Tax-Data`)
+  tax_units %<>%
+    bind_cols(calc_estate(., estate_params))
+  tax_units$estate_m = calc_estate_mortality(
+    tax_units, estate_params$cluster_death_weight_cap)
 
 
   #----------
@@ -525,7 +553,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     # Get static totals
     static_totals = list(pr            = get_pr_totals(tax_units_static, year),
                           `1040`        = get_1040_totals(tax_units_static, year),
-                          `1040_by_agi` = get_1040_totals(tax_units_static, year, T))
+                          `1040_by_agi` = get_1040_totals(tax_units_static, year, T),
+                          estate        = get_estate_totals(tax_units_static, year))
   }
 
 
@@ -615,7 +644,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       # Get conventional totals
       conventional_totals = list(pr            = get_pr_totals(tax_units_conv, year),
                                   `1040`        = get_1040_totals(tax_units_conv, year),
-                                  `1040_by_agi` = get_1040_totals(tax_units_conv, year, T))
+                                  `1040_by_agi` = get_1040_totals(tax_units_conv, year, T),
+                                  estate        = get_estate_totals(tax_units_conv, year))
 
     } else if (scenario_info$ID != 'baseline') {
 

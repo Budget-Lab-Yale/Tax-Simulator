@@ -1,0 +1,60 @@
+---
+#-------------------------------------------------------------------------------
+# Estate tax law parameters. LAW ONLY: the measurement bridge from Tax-Data
+# economic wealth to reported gross estate (valuation factors, deduction
+# fractions, DSUE incidence, gift add-back) is NOT tax law and lives in
+# config/estate/estate_valuation_params.yaml — reforms must never touch it.
+#
+# Consumed by calc_estate() (src/calc/functions/tax/estate.R). Estate liability
+# is expected-value per record: these parameters apply to the decedent's
+# estate at death, with receipts booked in the following fiscal year.
+#-------------------------------------------------------------------------------
+
+# Basic exclusion amount (IRC §2010(c)(3)), expressed as RULES rather than a
+# hardcoded path: each statutory regime anchors its first-year published value
+# and the indexation machinery generates the rest (the ord.yaml convention).
+#   - 2014-2017: pre-TCJA ($5M-in-2010 regime; 2014 published value $5.34M,
+#     CPI-indexed off the prior year)
+#   - 2018-2025: TCJA temporarily substitutes a doubled base ($11.18M
+#     published for 2018), chained CPI thereafter per §1(f)(7)
+#   - 2026+: OBBBA $15M base, chained CPI off a 2025 base year per
+#     §2010(c)(3)(B)
+# Rounding: down to the nearest $10,000. Generated intra-regime values land
+# within one $10k rounding step of the published Rev. Proc. amounts (e.g.
+# 2025 generates $13.98M vs published $13.99M): chained CPI is subsequently
+# REVISED, and the statutory amounts are computed from the initially
+# announced (unrevised) index while the macro series carries revised values.
+# Accepted discrepancy. The both-die joint event gets 2x this exemption;
+# singles get a DSUE blend (see calculator).
+exemption:
+  value:
+    '2014': 5340000
+    '2018': 11180000
+    '2026': 15000000
+  i_measure:
+    '2013': cpi
+    '2018': chained_cpi
+  i_base_year:
+    '2014': 2013
+    '2018': 2017
+    '2026': 2025
+  i_direction: -1
+  i_increment: 10000
+
+# Tentative tax schedule (IRC §2001(c)): graduated rates with bracket LOWER
+# bounds, fixed in nominal terms. Under current law the unified credit at the
+# exemption makes liability exactly 40% of the excess over the exemption
+# (the whole ladder sits below $1M); the graduated representation exists so
+# reform proposals with progressive top schedules (e.g. 45/50/55/65%) are
+# expressible as ordinary overrides. The calculator reads however many
+# bracket/rate elements the scenario supplies.
+rates:
+  value: [0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.37, 0.39, 0.40]
+
+brackets:
+  value: [0, 10000, 20000, 40000, 60000, 80000, 100000, 150000, 250000, 500000, 750000, 1000000]
+
+# Portability of the deceased spousal unused exclusion (§2010(c)(4)-(5)).
+# When 0, the DSUE channel is shut off (p_dsue forced to 0 in the calculator).
+portability:
+  value: 1

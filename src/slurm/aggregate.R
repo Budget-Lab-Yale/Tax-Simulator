@@ -114,8 +114,14 @@ tryCatch({
       bind_rows() %>%
       write_csv(file.path(static_root, 'totals', '1040_by_agi.csv'))
 
+    static_totals_estate = output %>%
+      map(.f = ~.x$static_totals$estate) %>%
+      bind_rows() %>%
+      write_csv(file.path(static_root, 'totals', 'estate.csv'))
+
     static_totals_pr %>%
-      left_join(static_totals_1040, by = 'year') %>%
+      left_join(static_totals_1040,   by = 'year') %>%
+      left_join(static_totals_estate, by = 'year') %>%
       calc_receipts(
         scenario_root         = static_root,
         vat_root              = scenario_info$interface_paths$`Value-Added-Tax-Model`,
@@ -150,8 +156,14 @@ tryCatch({
         bind_rows() %>%
         write_csv(file.path(conv_root, 'totals', '1040_by_agi.csv'))
 
+      conv_totals_estate = output %>%
+        map(.f = ~.x$conventional_totals$estate) %>%
+        bind_rows() %>%
+        write_csv(file.path(conv_root, 'totals', 'estate.csv'))
+
       conv_totals_pr %>%
-        left_join(conv_totals_1040, by = 'year') %>%
+        left_join(conv_totals_1040,   by = 'year') %>%
+        left_join(conv_totals_estate, by = 'year') %>%
         calc_receipts(
           scenario_root         = conv_root,
           vat_root              = scenario_info$interface_paths$`Value-Added-Tax-Model`,

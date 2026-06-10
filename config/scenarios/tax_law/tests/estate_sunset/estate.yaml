@@ -1,0 +1,34 @@
+---
+#-------------------------------------------------------------------------------
+# Estate tax TCJA-sunset counterfactual: pre-OBBBA basic exclusion amount
+# ($7.2M in 2026, chained-CPI indexed thereafter), the JCT OBBBA-vs-sunset
+# scoring counterfactual. Validation target: the calibrator's sunset delta
+# (other/estate_tax/calibrate_estate_v2.R, SUNSET_BEA_2026; log
+# estate_cal_v2_14571339.log, JCT delta -6.5%).
+#
+# Full subparameter override: the entire exemption series + indexation fields
+# are restated (reform YAMLs replace subparameters wholesale).
+#
+# NOTE: this is a VALIDATION FIXTURE pinned to the calibrator's flat $7.2M
+# assumption so the on-model JCT-delta comparison is apples-to-apples. The
+# rules-based equivalent (which GENERATES ~$7.17M endogenously) would anchor
+# value '2026': 5000000 with i_base_year 2026: 2010 and the cpi->chained_cpi
+# splice — see public/estate_2009/estate.yaml for that pattern.
+#-------------------------------------------------------------------------------
+
+# Pre-2026 regimes restated identically to baseline (rules form) so
+# pre-reform years are bit-identical; only the 2026 anchor changes.
+exemption:
+  value:
+    '2014': 5340000
+    '2018': 11180000
+    '2026': 7200000
+  i_measure:
+    '2013': cpi
+    '2018': chained_cpi
+  i_base_year:
+    '2014': 2013
+    '2018': 2017
+    '2026': 2025
+  i_direction: -1
+  i_increment: 10000

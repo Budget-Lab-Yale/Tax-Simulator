@@ -19,7 +19,8 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   #        - pmt_refund_nonwithheld (dbl) : payments for refundable credits paid during filing season
   #        - pmt_refund_withheld    (dbl) : advance credits paid throughout year
   #        - pmt_pr_nonwithheld     (dbl) : payroll tax paid at time of filing
-  #        - pmt_pr_withheld        (dbl) : payroll tax withheld (FICA) or paid quarterly (SECA)  
+  #        - pmt_pr_withheld        (dbl) : payroll tax withheld (FICA) or paid quarterly (SECA)
+  #        - est_tax_exp            (dbl) : expected estate tax liability, $B (CY of death)
   #   - scenario_root         (str) : directory where scenario's data is written
   #   - vat_root              (str) : directory for VAT revenue for this scenario
   #   - other_root            (str) : Macro-Projections root (for other taxes)
@@ -59,10 +60,42 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     read_csv(show_col_types = F) %>% 
     rename(delta_revenues_cost_recovery = delta)
   
-  # Read off-model deltas 
+  # Read off-model deltas
   deltas_off_model = off_model_root %>%
-    file.path('revenues.csv') %>% 
+    file.path('revenues.csv') %>%
     read_csv(show_col_types = F)
+
+  # Read the model-baseline estate tax series. Estate revenue is presented as
+  # the CBO LEVEL plus an on-model DELTA (scenario minus model-baseline), so
+  # baseline receipts stay CBO-anchored and the model contributes only reform
+  # deltas — the quantity it is validated on (JCT sunset delta). The baseline
+  # leg is always the baseline's STATIC totals (baseline has no conventional).
+  baseline_estate_path = globals$baseline_root %>%
+    file.path('baseline/static/totals/estate.csv')
+  if (file.exists(baseline_estate_path)) {
+    baseline_estate = baseline_estate_path %>%
+      read_csv(show_col_types = F) %>%
+      select(year, est_tax_exp_baseline = est_tax_exp)
+  } else {
+
+    # SLURM Phase 3a runs scenarios as a parallel array, so the baseline's
+    # totals may not be written yet when a counterfactual's receipts job
+    # runs; rebuild the baseline series from its detail files, which Phase 2
+    # guarantees exist (counterfactual years read baseline detail)
+    baseline_estate = get_estate_totals_from_detail(
+      detail_root = file.path(globals$baseline_root, 'baseline/static/detail'),
+      years       = totals$year
+    )
+    if (!is.null(baseline_estate)) {
+      baseline_estate %<>% select(year, est_tax_exp_baseline = est_tax_exp)
+    } else {
+      warning('estate: no baseline totals/estate.csv at ',
+              baseline_estate_path, ' and baseline detail lacks estate ',
+              'columns (baseline run predates the on-model estate tax?). ',
+              'On-model estate deltas are set to 0 — estate reform effects ',
+              'will NOT appear in receipts. Re-run the baseline.')
+    }
+  }
   
   # Read excess growth offset (on CY basis) and convert to FY basis
   excess_growth_offset_cy = scenario_root %>% 
@@ -78,8 +111,12 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     select(year, income_factor_fy)
   
   totals %>%
+
+    # Join the model-baseline estate series (delta 0 when unavailable)
+    { if (!is.null(baseline_estate)) left_join(., baseline_estate, by = 'year')
+      else mutate(., est_tax_exp_baseline = est_tax_exp) } %>%
     mutate(
-      
+
       # FY receipts: nonwithheld tax plus 75% of current CY withheld tax plus
       # 25% of previous CY withheld. lag default=0 zero-imputes the missing
       # prior CY when the sim starts at year t with no t-1 lead-in. For
@@ -100,7 +137,14 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
         pmt_pr_nonwithheld,
 
       delta_revenues_corp_tax = 0.75 * corp_tax_change +
-        0.25 * lag(corp_tax_change, default = 0)
+        0.25 * lag(corp_tax_change, default = 0),
+
+      # On-model estate tax delta on an FY basis: CY t decedents' liability is
+      # due 9 months after death (Form 706), so it books entirely in FY t + 1.
+      # lag(default = 0) zero-imputes the missing prior CY in the first sim
+      # year — same lead-in convention as the withheld splits above.
+      delta_revenues_estate_tax = lag(
+        coalesce(est_tax_exp - est_tax_exp_baseline, 0), default = 0)
     ) %>%
     
     
@@ -119,10 +163,13 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     left_join(deltas_off_model, by = 'year') %>% 
     left_join(excess_growth_offset_fy, by = 'year') %>% 
     mutate(revenues_payroll_tax = revenues_payroll_tax + (payroll * income_factor_fy),
-           revenues_income_tax = revenues_income_tax + (individual * income_factor_fy),  
-           revenues_corp_tax   = (revenues_corp_tax + corporate) * income_factor_fy, 
-           revenues_estate_tax = revenues_estate_tax + estate, 
-           revenues_vat        = revenues_vat + vat) %>% 
+           revenues_income_tax = revenues_income_tax + (individual * income_factor_fy),
+           revenues_corp_tax   = (revenues_corp_tax + corporate) * income_factor_fy,
+
+           # CBO level plus the on-model delta. The off-model `estate` column
+           # is superseded by the on-model estate tax and no longer applied.
+           revenues_estate_tax = revenues_estate_tax + delta_revenues_estate_tax,
+           revenues_vat        = revenues_vat + vat) %>%
     
     # Apply excess growth to non-IIT/payroll/corporate revenues if applicable 
     mutate(
