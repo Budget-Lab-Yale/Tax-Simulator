@@ -3,7 +3,13 @@
 #
 # Mirrors the layout of booker_kypa_stacked_distribution.R, but stacks THREE
 # blocks of contribution to the change in after-tax income (pp), by income
-# group, for a single year:
+# group, as the AVERAGE ANNUAL EFFECT over the 10-year window (2030-2039):
+# pct-of-ATI pieces are computed per year (income groups defined within-year)
+# and averaged; dollar averages are deflated to 2026 dollars (chained CPI)
+# before averaging. The window average is used instead of a single year
+# because several provisions ramp (carryover basis starts at zero in 2030 —
+# its carryover stock enters heir realizations with a lag — and estate and
+# carbon trend in opposite directions):
 #
 #   1. Individual and estate provisions: cumulative scenarios 01-07 (07 is
 #      the on-model estate layer, $5M@2030/45%, distributed to heirs via the
@@ -38,10 +44,19 @@ library(scales)
 # --- Configuration -----------------------------------------------------------
 vintage     = 'clausing_estate'
 out_root    = file.path('/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1', vintage)
-year_show   = 2030
+years_avg   = 2030:2039
+period_lab  = 'avg_2030_2039'
 repo_root   = '/nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator'
 excise_file = file.path(repo_root, 'other/analysis_scripts/public',
-                        paste0('clausing_excise_distribution_', year_show, '.csv'))
+                        'clausing_excise_distribution_avg_2030_2039.csv')
+
+# Chained CPI (base 2026 = 1) for expressing dollar averages in 2026 dollars.
+# Default Macro-Projections vintage, same as the model run used.
+ccpiu = readr::read_csv(file.path('/nfs/roberts/project/pi_nrs36/shared/model_data',
+                                  'Macro-Projections/v3/2026022522/baseline/projections.csv'),
+                        show_col_types = FALSE) %>%
+  filter(year %in% years_avg) %>%
+  select(year, ccpiu)
 
 # Tax-inclusion variant in which the estate and corporate burdens appear
 TAX_VARIANT = 'iit_pr_death_cit_vat'
@@ -91,24 +106,33 @@ block_colors = c(
 read_dist = function(scenario) {
   path = file.path(out_root, scenario, 'static/supplemental/distribution.csv')
   read_csv(path, show_col_types = FALSE) %>%
-    filter(year == year_show, taxes_included == TAX_VARIANT,
+    filter(year %in% years_avg, taxes_included == TAX_VARIANT,
            group_dimension == 'Income') %>%
-    transmute(scenario = scenario, group, pct_chg_ati, avg)
+    transmute(scenario = scenario, year, group, pct_chg_ati, avg)
 }
 
 model_dist = map_dfr(model_order, read_dist)
 
-# Marginal (incremental) contribution of each scenario, within each group, in
-# cumulative order: piece_k = cumulative_k - cumulative_{k-1} (k=1 -> vs baseline)
+# Marginal (incremental) contribution of each scenario, within each group and
+# year, in cumulative order: piece_k = cumulative_k - cumulative_{k-1}
+# (k=1 -> vs baseline). Then average across years: pct directly, dollars in
+# 2026 dollars
 model_marg = model_dist %>%
   mutate(scenario = factor(scenario, levels = model_order)) %>%
-  arrange(group, scenario) %>%
-  group_by(group) %>%
+  arrange(group, year, scenario) %>%
+  group_by(group, year) %>%
   mutate(
     pct_piece = pct_chg_ati - lag(pct_chg_ati, default = 0),
     avg_piece = avg         - lag(avg,         default = 0)
   ) %>%
   ungroup() %>%
+  left_join(ccpiu, by = 'year') %>%
+  group_by(scenario, group) %>%
+  summarise(
+    pct_piece = mean(pct_piece),
+    avg_piece = mean(avg_piece / ccpiu),
+    .groups = 'drop'
+  ) %>%
   mutate(
     scenario    = as.character(scenario),
     # 01-07 individual and estate; corporate moves to 11 so the off-model
@@ -123,8 +147,10 @@ model_marg = model_dist %>%
   select(group, piece_order, piece_id, piece_label, block, pct_piece, avg_piece)
 
 # --- Read off-model income tax and excise distributions ----------------------
+# Already 10-year averages with dollar metrics in 2026$ (produced by
+# clausing_excise_distribution.R)
 offmodel = read_csv(excise_file, show_col_types = FALSE) %>%
-  filter(year == year_show, group_dimension == 'Income')
+  filter(group_dimension == 'Income')
 
 inc_offmodel = offmodel %>%
   filter(measure %in% inc_measures) %>%
@@ -165,7 +191,7 @@ pieces = bind_rows(model_marg, inc_offmodel, excise) %>%
   select(group, piece_order, piece_id, piece_label, block,
          pct_chg_ati = pct_piece, pct_chg_ati_pp, avg = avg_piece)
 
-data_out = file.path(out_root, paste0('clausing_corp_sin_stacked_data_', year_show, '.csv'))
+data_out = file.path(out_root, paste0('clausing_corp_sin_stacked_data_', period_lab, '.csv'))
 write_csv(pieces, data_out)
 cat('\nBroken-out stacking data written to:', data_out, '\n\n')
 
@@ -201,7 +227,9 @@ names(income_xlabs) = income_groups
 
 dist_footnote = str_wrap(paste0(
   "Source: The Budget Lab calculations. Stacked contribution to the change in ",
-  "after-tax income, ", year_show, ". Individual, estate, and corporate components from ",
+  "after-tax income: average annual effect over 2030-2039, with dollar averages ",
+  "in 2026 dollars (chained CPI); income groups defined within each year. ",
+  "Individual, estate, and corporate components from ",
   "the Tax-Simulator distribution (estate tax borne by heirs via rank-matched ",
   "inheritances; corporate burden allocated 80% capital / 20% labor); ",
   "carried interest, QSBS, and OZ components imputed off-model from capital gains; ",
@@ -304,8 +332,8 @@ p = p +
   scale_y_continuous(labels = function(x) paste0(x, '%')) +
   coord_cartesian(ylim = c(y_lower, y_upper), clip = 'off') +
   labs(
-    title = paste0('Contribution to Change in After-Tax Income by Income Group (', year_show, ')'),
-    subtitle = 'Clausing-Sarin package: individual, corporate, and excise components',
+    title = 'Contribution to Change in After-Tax Income by Income Group (2030-2039 average)',
+    subtitle = 'Clausing-Sarin package: individual and estate, corporate, and excise components; dollar averages in 2026 dollars',
     x = NULL, y = 'Change in After-Tax Income (pp)', fill = NULL
   ) +
   theme_minimal(base_size = 13) +
@@ -320,6 +348,6 @@ p = p +
     plot.margin        = margin(30, 10, bottom_margin_pt, 40)
   )
 
-chart_out = file.path(out_root, paste0('clausing_corp_sin_stacked_distribution_', year_show, '.png'))
+chart_out = file.path(out_root, paste0('clausing_corp_sin_stacked_distribution_', period_lab, '.png'))
 ggsave(chart_out, plot = p, width = 11, height = plot_height, dpi = 200, bg = 'white')
 cat('\nChart saved to:', chart_out, '\n')

@@ -1,10 +1,10 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Off-Model-Estimates.vintage,dep.Off-Model-Estimates.ID,corp_incidence_phasein
 baseline,baseline,,2030:2039,,kg_lt part_active,nextdollar nextdollar,20250925,baseline,10
-01_clinton_rates,clausing/01_clinton_rates,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2039,2030,kg_lt part_active,nextdollar nextdollar,20250925,baseline,10
-02_restore_bottom_rates,clausing/02_restore_bottom_rates,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2039,2030,kg_lt part_active,nextdollar nextdollar,20250925,baseline,10
-03_199a,clausing/03_199a,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2039,2030,kg_lt part_active,nextdollar nextdollar,20250925,baseline,10
-04_carryover_basis,clausing/04_carryover_basis,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2039,2030,kg_lt part_active,nextdollar nextdollar,20250925,baseline,10
-05_pref_rates,clausing/05_pref_rates,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2039,2030,kg_lt part_active,nextdollar nextdollar,20250925,baseline,10
-06_niit_reform,clausing/06_niit_reform,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2039,2030,kg_lt part_active,nextdollar nextdollar,20250925,baseline,10
-07_estate,clausing/07_estate,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2039,2030,kg_lt part_active,nextdollar nextdollar,20250925,baseline,10
-08_corporate,clausing/07_estate,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2039,2030,kg_lt part_active,nextdollar nextdollar,20260609,07_corporate,0
+01_clinton_rates,clausing/01_clinton_rates,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2039,2030:2039,kg_lt part_active,nextdollar nextdollar,20250925,baseline,10
+02_restore_bottom_rates,clausing/02_restore_bottom_rates,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2039,2030:2039,kg_lt part_active,nextdollar nextdollar,20250925,baseline,10
+03_199a,clausing/03_199a,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2039,2030:2039,kg_lt part_active,nextdollar nextdollar,20250925,baseline,10
+04_carryover_basis,clausing/04_carryover_basis,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2039,2030:2039,kg_lt part_active,nextdollar nextdollar,20250925,baseline,10
+05_pref_rates,clausing/05_pref_rates,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2039,2030:2039,kg_lt part_active,nextdollar nextdollar,20250925,baseline,10
+06_niit_reform,clausing/06_niit_reform,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2039,2030:2039,kg_lt part_active,nextdollar nextdollar,20250925,baseline,10
+07_estate,clausing/07_estate,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2039,2030:2039,kg_lt part_active,nextdollar nextdollar,20250925,baseline,10
+08_corporate,clausing/07_estate,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2039,2030:2039,kg_lt part_active,nextdollar nextdollar,20260609,07_corporate,0
