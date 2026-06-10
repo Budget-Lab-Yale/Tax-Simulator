@@ -1,8 +1,9 @@
 #------------------------------------------------------------------------------
 # clausing_excise_distribution.R
 #
-# Off-model distribution of the Clausing-Sarin excise package. The excise
-# measures are scored off-model, so this script does NOT touch the tax
+# Off-model distribution of the Clausing-Sarin excise package, plus a handful
+# of off-model INCOME TAX measures (carried interest repeal, QSBS reform, OZ
+# repeal). All are scored off-model, so this script does NOT touch the tax
 # calculator. It allocates each measure's (single-year) revenue across income
 # groups and reports the average tax change and the percent change in after-tax
 # income per group -- in the same group definitions the model's distribution.csv
@@ -28,6 +29,18 @@
 #   gambling -> c_other_services_health,  carve = FEEADMCQ / (service-health CQs)   [entertainment]
 #   guns     -> c_other_services_health,  carve = OTHENTCQ / (service-health CQs)   [recreation]
 #
+# Income tax measures use baseline detail-file income columns as the base
+# (no consumption, no CEX carve):
+#   carried_interest -> LT capital gains among records with pass-through
+#                       (partnership/S-corp) income: carry is reported as LTCG
+#                       flowing through a K-1, so kg_lt alone would spread it
+#                       over all stockholders and part_scorp alone would catch
+#                       operating businesses with no carry
+#   qsbs             -> LT capital gains (Sec 1202 exclusion accrues to
+#                       founders/early investors; top-concentrated gains)
+#   oz               -> LT capital gains (OZ deferral/exclusion is elected
+#                       against realized gains)
+#
 # Bucketing and after-tax income exactly mirror
 # src/data/post_processing/distribution.R (Income dimension, iit_pr inclusion).
 #------------------------------------------------------------------------------
@@ -48,19 +61,32 @@ REVENUE_B = c(
   gambling = 11.4,
   guns     = 1.0,
   alcohol  = 19.4,
-  tobacco  = 0.3
+  tobacco  = 0.3,
+  carried_interest = 7.0,
+  qsbs             = 9.5,
+  oz               = 7.0
+)
+
+# Measures distributed by detail-file income columns rather than consumption.
+# Each entry is an expression evaluated per record on the joined micro data.
+INCOME_BASE = list(
+  carried_interest = quote(pmax(kg_lt, 0) * (part_scorp != 0)),
+  qsbs             = quote(pmax(kg_lt, 0)),
+  oz               = quote(pmax(kg_lt, 0))
 )
 
 # Tax-Simulator output vintage + the baseline scenario used for grouping/ATI.
 # (The model builds its distribution table off baseline microdata, so we do too.)
 TS_ROOT       = '/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1'
-TS_VINTAGE    = 'clausing_2026_policy'
+TS_VINTAGE    = 'clausing_estate'
 BASELINE_SCEN = 'baseline'
 
-# Tax-Data interface vintage carrying the per-tax-unit c_* consumption columns
+# Tax-Data interface vintage carrying the per-tax-unit c_* consumption columns.
+# Must match the vintage the TS_VINTAGE run simulated on (the join is by id,
+# and ids change across Tax-Data vintages)
 TAXDATA_FILE = file.path(
   '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1',
-  '2026052823/baseline',
+  '2026060918/baseline',
   paste0('tax_units_', YEAR, '.csv')
 )
 
@@ -175,7 +201,9 @@ detail = file.path(TS_ROOT, TS_VINTAGE, BASELINE_SCEN, 'static/detail',
     id,
     weight,
     income = expanded_inc,
-    ati    = expanded_inc - (liab_iit_net + liab_pr)   # iit_pr ATI, per distribution.R
+    ati    = expanded_inc - (liab_iit_net + liab_pr),  # iit_pr ATI, per distribution.R
+    kg_lt,
+    part_scorp
   )
 
 # Join per-tax-unit consumption from the Tax-Data interface
@@ -224,11 +252,17 @@ micro = micro %>% left_join(carve_wide, by = 'quintile')
 
 measures = names(REVENUE_B)
 
-# taxed base per record per measure = parent c_* level * carve ratio
+# taxed base per record per measure:
+#   excises:        parent c_* level * CEX carve ratio
+#   income measures: expression over detail-file income columns
 for (m in measures) {
-  parent = PARENT[[m]]
-  carve  = if (m == 'carbon') 1 else micro[[paste0('carve_', m)]]
-  micro[[paste0('base_', m)]] = micro[[parent]] * carve
+  if (m %in% names(INCOME_BASE)) {
+    micro[[paste0('base_', m)]] = eval(INCOME_BASE[[m]], micro)
+  } else {
+    parent = PARENT[[m]]
+    carve  = if (m == 'carbon') 1 else micro[[paste0('carve_', m)]]
+    micro[[paste0('base_', m)]] = micro[[parent]] * carve
+  }
 }
 
 # helper: metrics for one subset of records, one measure
@@ -271,25 +305,37 @@ results = imap_dfr(group_defs, function(cond, grp) {
            .before = 1)
 })
 
-# total across all five measures (sum of avg dollars; ATI effects additive)
-totals = results %>%
-  group_by(group, income_cutoff, share_income, share_consumption) %>%
-  summarise(measure = 'all_excises',
-            dollars_B   = sum(dollars_B),
-            avg         = sum(avg),
-            pct_chg_ati = sum(pct_chg_ati),
-            .groups = 'drop')
+# subtotals by type and grand total (sum of avg dollars; ATI effects additive)
+income_measures = names(INCOME_BASE)
+total_defs = list(
+  all_excises    = setdiff(measures, income_measures),
+  all_income_tax = intersect(measures, income_measures),
+  all_measures   = measures
+)
+totals = imap_dfr(total_defs, function(members, label) {
+  results %>%
+    filter(measure %in% members) %>%
+    group_by(group, income_cutoff, share_income, share_consumption) %>%
+    summarise(measure = label,
+              dollars_B   = sum(dollars_B),
+              avg         = sum(avg),
+              pct_chg_ati = sum(pct_chg_ati),
+              .groups = 'drop')
+})
 
 out = bind_rows(results, totals) %>%
   mutate(year = YEAR, group_dimension = 'Income', .before = 1) %>%
   arrange(factor(group, levels = names(group_defs)),
-          factor(measure, levels = c(measures, 'all_excises')))
+          factor(measure, levels = c(measures, names(total_defs))))
 
 write_csv(out, OUT_FILE)
 cat('\nWrote', OUT_FILE, '\n\n')
-out %>% filter(measure == 'all_excises') %>%
-  select(group, income_cutoff, share_income, share_consumption, avg, pct_chg_ati) %>%
-  print(n = Inf)
+for (label in names(total_defs)) {
+  cat('\n', label, ':\n', sep = '')
+  out %>% filter(measure == label) %>%
+    select(group, income_cutoff, share_income, share_consumption, avg, pct_chg_ati) %>%
+    print(n = Inf)
+}
 
 #==============================================================================
 # Carbon: flat (total consumption) vs intensity-weighted, side by side
