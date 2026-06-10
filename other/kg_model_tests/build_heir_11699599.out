@@ -1,0 +1,11 @@
+
+The following have been reloaded with a version change:
+  1) GCCcore/13.3.0 => GCCcore/12.2.0
+  2) ICU/75.1-GCCcore-13.3.0 => ICU/72.1-GCCcore-12.2.0
+  3) OpenSSL/3 => OpenSSL/1.1
+  4) nodejs/20.13.1-GCCcore-13.3.0 => nodejs/20.11.1-GCCcore-12.2.0
+
+Wrote ./resources/heir_distribution_scf2022.csv
+  rows = 63
+  sum  = 1.0000000000
+  max  = age 67 at share 0.065719

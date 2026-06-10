@@ -1,0 +1,46 @@
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+
+Attaching package: ‘data.table’
+
+The following objects are masked from ‘package:lubridate’:
+
+    hour, isoweek, mday, minute, month, quarter, second, wday, week,
+    yday, year
+
+The following objects are masked from ‘package:dplyr’:
+
+    between, first, last
+
+The following object is masked from ‘package:purrr’:
+
+    transpose
+
+Reading conventional detail to compute decedent-weighted tau ...
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_recal_ev/deemed/conventional/supplemental/kg_dynamics_revenue_decomp.csv
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_recal_ev/deemed/conventional/supplemental/kg_dynamics_revenue_decomp.png
+
+First/last 3 years of decomposition ($B):
+# A tibble: 6 × 7
+   year mechanical ch_lockin_unlock ch_stock ch_deemed nonlinearity conv_rev
+  <dbl>      <dbl>            <dbl>    <dbl>     <dbl>        <dbl>    <dbl>
+1  2026          0             26.1   -0.645      54.8        -19.7     60.6
+2  2027          0             26.8   -1.18       56.8        -18.8     63.5
+3  2028          0             28.1   -1.62       59.9        -19.4     66.9
+4  2053          0             78.9  -16.5       193.         -46.7    209. 
+5  2054          0             81.8  -17.2       198.         -46.3    216. 
+6  2055          0             85.0  -18.1       206.         -48.6    224. 
+
+Reconciliation check (cell_sum vs conv_rev, $B):
+# A tibble: 1 × 3
+  mean_abs_err max_abs_err mean_pct_err
+         <dbl>       <dbl>        <dbl>
+1         33.4        48.6         26.6

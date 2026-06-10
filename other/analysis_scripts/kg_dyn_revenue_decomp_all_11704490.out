@@ -1,0 +1,297 @@
+============================================================
+  baseline_check
+============================================================
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/baseline_check/conventional/supplemental/kg_dynamics_revenue_decomp.csv
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/baseline_check/conventional/supplemental/kg_dynamics_revenue_decomp.png
+
+First/last 3 years of decomposition ($B):
+# A tibble: 6 × 8
+   year regime  mechanical ch_lockin_unlock  ch_stock ch_deemed nonlinearity
+  <dbl> <chr>        <dbl>            <dbl>     <dbl>     <dbl>        <dbl>
+1  2026 step_up          0        -3.50e-10 -1.09e-11         0    -4.25e-11
+2  2027 step_up          0         9.42e-10  1.56e-11         0     1.29e-11
+3  2028 step_up          0        -3.96e- 9 -4.72e-11         0    -2.53e-12
+4  2053 step_up          0         1.81e- 8  6.00e-10         0     2.63e-10
+5  2054 step_up          0        -7.28e- 9  3.48e-10         0    -1.61e-10
+6  2055 step_up          0        -1.23e- 8  4.63e-10         0    -4.34e-11
+# ℹ 1 more variable: conv_rev <dbl>
+
+Reconciliation check (cell_sum vs conv_rev, $B):
+# A tibble: 1 × 3
+  mean_abs_err max_abs_err mean_pct_err
+         <dbl>       <dbl>        <dbl>
+1     9.51e-11    3.97e-10         1.62
+============================================================
+  carryover
+============================================================
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/carryover/conventional/supplemental/kg_dynamics_revenue_decomp.csv
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/carryover/conventional/supplemental/kg_dynamics_revenue_decomp.png
+
+First/last 3 years of decomposition ($B):
+# A tibble: 6 × 8
+   year regime    mechanical ch_lockin_unlock ch_stock ch_deemed nonlinearity
+  <dbl> <chr>          <dbl>            <dbl>    <dbl>     <dbl>        <dbl>
+1  2026 carryover          0             15.2     1.37         0      -0.252 
+2  2027 carryover          0             15.5     2.54         0       0.0837
+3  2028 carryover          0             16.2     3.51         0       0.0947
+4  2053 carryover          0             44.2    43.1          0       0.998 
+5  2054 carryover          0             45.8    45.2          0       1.13  
+6  2055 carryover          0             47.6    47.3          0       1.19  
+# ℹ 1 more variable: conv_rev <dbl>
+
+Reconciliation check (cell_sum vs conv_rev, $B):
+# A tibble: 1 × 3
+  mean_abs_err max_abs_err mean_pct_err
+         <dbl>       <dbl>        <dbl>
+1        0.443        1.19        0.750
+============================================================
+  deemed
+============================================================
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/deemed/conventional/supplemental/kg_dynamics_revenue_decomp.csv
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/deemed/conventional/supplemental/kg_dynamics_revenue_decomp.png
+
+First/last 3 years of decomposition ($B):
+# A tibble: 6 × 8
+   year regime       mechanical ch_lockin_unlock ch_stock ch_deemed nonlinearity
+  <dbl> <chr>             <dbl>            <dbl>    <dbl>     <dbl>        <dbl>
+1  2026 deemed_real…          0             29.8   -0.745      57.8        -16.3
+2  2027 deemed_real…          0             30.5   -1.36       60.1        -15.5
+3  2028 deemed_real…          0             31.8   -1.88       63.1        -15.7
+4  2053 deemed_real…          0             86.8  -18.5       181.         -20.7
+5  2054 deemed_real…          0             90.1  -19.4       186.         -20.5
+6  2055 deemed_real…          0             93.6  -20.4       193.         -21.4
+# ℹ 1 more variable: conv_rev <dbl>
+
+Reconciliation check (cell_sum vs conv_rev, $B):
+# A tibble: 1 × 3
+  mean_abs_err max_abs_err mean_pct_err
+         <dbl>       <dbl>        <dbl>
+1         18.6        21.7         14.1
+============================================================
+  delayed
+============================================================
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/delayed/conventional/supplemental/kg_dynamics_revenue_decomp.csv
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/delayed/conventional/supplemental/kg_dynamics_revenue_decomp.png
+
+First/last 3 years of decomposition ($B):
+# A tibble: 6 × 8
+   year regime  mechanical ch_lockin_unlock ch_stock ch_deemed nonlinearity
+  <dbl> <chr>        <dbl>            <dbl>    <dbl>     <dbl>        <dbl>
+1  2026 step_up        0               67.3    0.116         0       -0.257
+2  2027 step_up       52.8           -109.    -1.35          0        1.73 
+3  2028 step_up       52.8            -26.7    0.736         0       -0.212
+4  2053 step_up      120.             -70.7   11.9           0        0.377
+5  2054 step_up      125.             -73.9   12.5           0        0.276
+6  2055 step_up      129.             -74.7   13.1           0        0.169
+# ℹ 1 more variable: conv_rev <dbl>
+
+Reconciliation check (cell_sum vs conv_rev, $B):
+# A tibble: 1 × 3
+  mean_abs_err max_abs_err mean_pct_err
+         <dbl>       <dbl>        <dbl>
+1        0.243        1.73        0.495
+============================================================
+  rate_down_5pp
+============================================================
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/rate_down_5pp/conventional/supplemental/kg_dynamics_revenue_decomp.csv
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/rate_down_5pp/conventional/supplemental/kg_dynamics_revenue_decomp.png
+
+First/last 3 years of decomposition ($B):
+# A tibble: 6 × 8
+   year regime  mechanical ch_lockin_unlock ch_stock ch_deemed nonlinearity
+  <dbl> <chr>        <dbl>            <dbl>    <dbl>     <dbl>        <dbl>
+1  2026 step_up      -58.1             17.2   -0.417         0      -0.274 
+2  2027 step_up      -55.8             16.5   -0.788         0       0.0360
+3  2028 step_up      -52.7             16.7   -1.07          0       0.0319
+4  2053 step_up     -120.              46.1   -9.70          0       0.212 
+5  2054 step_up     -124.              47.4  -10.2           0       0.206 
+6  2055 step_up     -129.              48.8  -10.6           0       0.140 
+# ℹ 1 more variable: conv_rev <dbl>
+
+Reconciliation check (cell_sum vs conv_rev, $B):
+# A tibble: 1 × 3
+  mean_abs_err max_abs_err mean_pct_err
+         <dbl>       <dbl>        <dbl>
+1        0.135       0.551        0.220
+============================================================
+  rate_up_5pp
+============================================================
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/rate_up_5pp/conventional/supplemental/kg_dynamics_revenue_decomp.csv
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/rate_up_5pp/conventional/supplemental/kg_dynamics_revenue_decomp.png
+
+First/last 3 years of decomposition ($B):
+# A tibble: 6 × 8
+   year regime  mechanical ch_lockin_unlock ch_stock ch_deemed nonlinearity
+  <dbl> <chr>        <dbl>            <dbl>    <dbl>     <dbl>        <dbl>
+1  2026 step_up       58.2            -25.1    0.554         0       0.350 
+2  2027 step_up       55.9            -25.1    1.02          0       0.0728
+3  2028 step_up       52.8            -25.6    1.37          0       0.112 
+4  2053 step_up      120.             -70.7   12.0           0       0.372 
+5  2054 step_up      125.             -73.9   12.6           0       0.274 
+6  2055 step_up      129.             -74.7   13.3           0       0.168 
+# ℹ 1 more variable: conv_rev <dbl>
+
+Reconciliation check (cell_sum vs conv_rev, $B):
+# A tibble: 1 × 3
+  mean_abs_err max_abs_err mean_pct_err
+         <dbl>       <dbl>        <dbl>
+1        0.185       0.467        0.401
+============================================================
+  rate_up_carryover
+============================================================
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/rate_up_carryover/conventional/supplemental/kg_dynamics_revenue_decomp.csv
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/rate_up_carryover/conventional/supplemental/kg_dynamics_revenue_decomp.png
+
+First/last 3 years of decomposition ($B):
+# A tibble: 6 × 8
+   year regime    mechanical ch_lockin_unlock ch_stock ch_deemed nonlinearity
+  <dbl> <chr>          <dbl>            <dbl>    <dbl>     <dbl>        <dbl>
+1  2026 carryover       58.2            -3.32     2.06         0      -0.0692
+2  2027 carryover       55.9            -2.77     3.82         0       0.0302
+3  2028 carryover       52.8            -2.26     5.24         0       0.0484
+4  2053 carryover      120.             -6.59    60.9          0       0.459 
+5  2054 carryover      125.             -7.41    63.8          0       0.591 
+6  2055 carryover      129.             -5.77    67.0          0       0.783 
+# ℹ 1 more variable: conv_rev <dbl>
+
+Reconciliation check (cell_sum vs conv_rev, $B):
+# A tibble: 1 × 3
+  mean_abs_err max_abs_err mean_pct_err
+         <dbl>       <dbl>        <dbl>
+1        0.228       0.783        0.168
+============================================================
+  rate_up_deemed
+============================================================
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/rate_up_deemed/conventional/supplemental/kg_dynamics_revenue_decomp.csv
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/rate_up_deemed/conventional/supplemental/kg_dynamics_revenue_decomp.png
+
+First/last 3 years of decomposition ($B):
+# A tibble: 6 × 8
+   year regime       mechanical ch_lockin_unlock ch_stock ch_deemed nonlinearity
+  <dbl> <chr>             <dbl>            <dbl>    <dbl>     <dbl>        <dbl>
+1  2026 deemed_real…       58.2             17.5   -0.397      68.3        -21.8
+2  2027 deemed_real…       55.9             18.6   -0.707      71.2        -21.3
+3  2028 deemed_real…       52.8             20.1   -0.982      74.7        -21.5
+4  2053 deemed_real…      120.              54.8  -10.4       221.         -38.0
+5  2054 deemed_real…      125.              56.2  -10.8       227.         -37.3
+6  2055 deemed_real…      129.              60.2  -11.5       233.         -37.5
+# ℹ 1 more variable: conv_rev <dbl>
+
+Reconciliation check (cell_sum vs conv_rev, $B):
+# A tibble: 1 × 3
+  mean_abs_err max_abs_err mean_pct_err
+         <dbl>       <dbl>        <dbl>
+1         28.9        38.0         13.6
+============================================================
+  temp
+============================================================
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/temp/conventional/supplemental/kg_dynamics_revenue_decomp.csv
+Wrote /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_dyn_scf_check/temp/conventional/supplemental/kg_dynamics_revenue_decomp.png
+
+First/last 3 years of decomposition ($B):
+# A tibble: 6 × 8
+   year regime  mechanical ch_lockin_unlock ch_stock ch_deemed nonlinearity
+  <dbl> <chr>        <dbl>            <dbl>    <dbl>     <dbl>        <dbl>
+1  2026 step_up      55.2          -1.09e+2  -1.45           0   3.10      
+2  2027 step_up       3.12          1.16e+1   0.831          0  -0.264     
+3  2028 step_up       0            -2.66e-9   0.367          0  -0.0472    
+4  2053 step_up       0             1.81e-8   0.105          0  -0.000343  
+5  2054 step_up       0            -7.28e-9   0.0988         0  -0.000144  
+6  2055 step_up       0            -1.23e-8   0.0967         0   0.00000857
+# ℹ 1 more variable: conv_rev <dbl>
+
+Reconciliation check (cell_sum vs conv_rev, $B):
+# A tibble: 1 × 3
+  mean_abs_err max_abs_err mean_pct_err
+         <dbl>       <dbl>        <dbl>
+1        0.114        3.10        0.966

@@ -1,0 +1,49 @@
+
+The following have been reloaded with a version change:
+  1) GCCcore/13.3.0 => GCCcore/12.2.0
+  2) ICU/75.1-GCCcore-13.3.0 => ICU/72.1-GCCcore-12.2.0
+  3) OpenSSL/3 => OpenSSL/1.1
+  4) nodejs/20.13.1-GCCcore-13.3.0 => nodejs/20.11.1-GCCcore-12.2.0
+
+Loading Tax-Data and baseline MTRs for 10 years (full sample)...
+  loaded
+Building extended grid, tau matrices...
+Average baseline tau (realization-weighted, across all years): 0.1866
+Target semi-elasticity at 1pp perturbation: dlog(R)/dtau = -2.5210
+
+Calibrating psi to hit semi-elasticity = -2.5210 at sim-year 10 (calendar 2035)...
+
+Coarse sweep:
+  psi =  0.800  ->  semi_elast = -77.3425
+  psi =  1.600  ->  semi_elast = -49.5873
+  psi =  3.200  ->  semi_elast = -22.6130
+  psi =  6.400  ->  semi_elast = -10.4044
+  psi = 12.800  ->  semi_elast = -5.0063
+  psi = 25.600  ->  semi_elast = -2.4573
+  psi = 51.200  ->  semi_elast = -1.2175
+  psi = 102.400  ->  semi_elast = -0.6060
+
+Bracketing: [12.800, 25.600]
+  iter  1  psi = 19.20000  semi_elast = -3.29644
+  iter  2  psi = 22.40000  semi_elast = -2.81564
+  iter  3  psi = 24.00000  semi_elast = -2.62427
+  iter  4  psi = 24.80000  semi_elast = -2.53801
+  iter  5  psi = 25.20000  semi_elast = -2.49698
+  iter  6  psi = 25.00000  semi_elast = -2.51733
+  iter  7  psi = 24.90000  semi_elast = -2.52763
+  iter  8  psi = 24.95000  semi_elast = -2.52247
+  iter  9  psi = 24.97500  semi_elast = -2.51990
+  iter 10  psi = 24.96250  semi_elast = -2.52118
+  iter 11  psi = 24.96875  semi_elast = -2.52054
+  iter 12  psi = 24.96562  semi_elast = -2.52086
+  iter 13  psi = 24.96406  semi_elast = -2.52102
+
+Calibrated psi = 24.9641  (semi_elast = -2.5210, target = -2.5210)
+
+Update KG_DYN_DEFAULT_PSI in src/sim/kg_dynamics.R to this value.
+
+Semi-elasticity profile by sim year (calibrated psi):
+ sim_year year semi_elast
+        1 2026    -1.9431
+        5 2030    -2.4750
+       10 2035    -2.5210

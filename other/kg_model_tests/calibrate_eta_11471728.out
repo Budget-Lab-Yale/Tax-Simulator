@@ -1,0 +1,26 @@
+
+The following have been reloaded with a version change:
+  1) GCCcore/13.3.0 => GCCcore/12.2.0
+  2) ICU/75.1-GCCcore-13.3.0 => ICU/72.1-GCCcore-12.2.0
+  3) OpenSSL/3 => OpenSSL/1.1
+  4) nodejs/20.13.1-GCCcore-13.3.0 => nodejs/20.11.1-GCCcore-12.2.0
+
+Loading Tax-Data and baseline MTRs for 10 years (full sample)...
+  loaded
+Building extended grid, accrual rates, tau matrices...
+Average baseline tau (realization-weighted, across all years): 0.1866
+Anchor: log((tau_avg_B + perturbation)/tau_avg_B) = 0.05221
+
+Calibrating eta to hit elasticity = -0.62 at sim-year 10 (calendar 2035)...
+
+Coarse sweep:
+  eta =   0.50  ->  eta_30 = -0.0407
+  eta =   1.00  ->  eta_30 = -0.0407
+  eta =   2.00  ->  eta_30 = -0.0407
+  eta =   4.00  ->  eta_30 = -0.0407
+  eta =   8.00  ->  eta_30 = -0.0407
+  eta =  16.00  ->  eta_30 = -0.0407
+  eta =  32.00  ->  eta_30 = -0.0407
+  eta =  64.00  ->  eta_30 = -0.0407
+Error: Grid does not bracket target. Extend eta_grid or check inputs.
+Execution halted

@@ -1,0 +1,27 @@
+
+The following have been reloaded with a version change:
+  1) GCCcore/13.3.0 => GCCcore/12.2.0
+  2) ICU/75.1-GCCcore-13.3.0 => ICU/72.1-GCCcore-12.2.0
+  3) OpenSSL/3 => OpenSSL/1.1
+  4) nodejs/20.13.1-GCCcore-13.3.0 => nodejs/20.11.1-GCCcore-12.2.0
+
+Loading Tax-Data and baseline MTRs for 10 years (full sample)...
+  loaded
+Building extended grid, tau matrices...
+Average baseline tau (realization-weighted, across all years): 0.1866
+Target semi-elasticity at 1pp perturbation: dlog(R)/dtau = -2.5210
+
+Calibrating psi to hit semi-elasticity = -2.5210 at sim-year 10 (calendar 2035)...
+
+Coarse sweep:
+  psi =  0.050  ->  semi_elast = -83.3651
+  psi =  0.100  ->  semi_elast = -83.3651
+  psi =  0.200  ->  semi_elast = -83.3651
+  psi =  0.400  ->  semi_elast = -83.3565
+  psi =  0.800  ->  semi_elast = -78.3504
+  psi =  1.600  ->  semi_elast = -51.0247
+  psi =  3.200  ->  semi_elast = -23.2835
+  psi =  6.400  ->  semi_elast = -10.6921
+  psi = 12.800  ->  semi_elast = -5.1405
+Error: Grid does not bracket target. Extend psi_grid or check inputs.
+Execution halted
