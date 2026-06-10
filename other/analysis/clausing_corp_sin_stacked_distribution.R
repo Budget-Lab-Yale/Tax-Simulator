@@ -108,10 +108,18 @@ read_dist = function(scenario) {
   read_csv(path, show_col_types = FALSE) %>%
     filter(year %in% years_avg, taxes_included == TAX_VARIANT,
            group_dimension == 'Income') %>%
-    transmute(scenario = scenario, year, group, pct_chg_ati, avg)
+    transmute(scenario = scenario, year, group, pct_chg_ati, avg, income_cutoff)
 }
 
 model_dist = map_dfr(model_order, read_dist)
+
+# Income-group lower cutoffs: identical across scenarios (groups are built on
+# baseline income); 10-year average in 2026 dollars
+group_cutoffs = model_dist %>%
+  filter(scenario == model_order[1]) %>%
+  left_join(ccpiu, by = 'year') %>%
+  group_by(group) %>%
+  summarise(income_cutoff = mean(income_cutoff / ccpiu), .groups = 'drop')
 
 # Marginal (incremental) contribution of each scenario, within each group and
 # year, in cumulative order: piece_k = cumulative_k - cumulative_{k-1}
@@ -233,7 +241,8 @@ dist_footnote = str_wrap(paste0(
   "the Tax-Simulator distribution (estate tax borne by heirs via rank-matched ",
   "inheritances; corporate burden allocated 80% capital / 20% labor); ",
   "carried interest, QSBS, and OZ components imputed off-model from capital gains; ",
-  "excise components imputed off-model from consumption. Avg. tax change is the ",
+  "excise components imputed off-model from consumption. Income cutoffs are group ",
+  "lower bounds (10-yr avg, 2026 dollars). Avg. tax change is the ",
   "total across all three blocks. Universe is nondependent tax units including nonfilers."),
   width = 130)
 
@@ -251,24 +260,35 @@ net_dots = group_totals %>%
     net_label = paste0(ifelse(net >= 0, '+', ''), formatC(round(net, 1), format = 'f', digits = 1))
   )
 
+# Compact dollar formatter shared by the annotation rows
+fmt_dollars = function(x, signed = TRUE) {
+  sign_chr = if (signed) if_else(x > 0, '+', if_else(x < 0, '-', '')) else ''
+  amt = abs(x)
+  num_str = case_when(
+    amt == 0      ~ '$0',
+    amt < 1000    ~ paste0('$', formatC(amt, format = 'f', digits = 0)),
+    amt < 1e6     ~ paste0('$', formatC(amt / 1000, format = 'f', digits = 1), 'K'),
+    TRUE          ~ paste0('$', formatC(amt / 1e6, format = 'f', digits = 1), 'M')
+  )
+  paste0(sign_chr, num_str)
+}
+
 # Average tax change annotation (total of all three blocks)
 avg_ann = group_totals %>%
   mutate(
-    xpos = income_xpos[as.character(group)],
-    avg_label = {
-      sign_chr = if_else(avg_total > 0, '+', if_else(avg_total < 0, '-', ''))
-      amt = abs(avg_total)
-      num_str = case_when(
-        amt == 0      ~ '$0',
-        amt < 1000    ~ paste0('$', formatC(amt, format = 'f', digits = 0)),
-        amt < 1e6     ~ paste0('$', formatC(amt / 1000, format = 'f', digits = 1), 'K'),
-        TRUE          ~ paste0('$', formatC(amt / 1e6, format = 'f', digits = 1), 'M')
-      )
-      paste0(sign_chr, num_str)
-    }
+    xpos      = income_xpos[as.character(group)],
+    avg_label = fmt_dollars(avg_total)
   )
 
-# y-range and fixed-inch layout below the x-axis (one annotation row only)
+# Income-cutoff annotation (group lower bound, 10-yr avg, 2026$)
+cutoff_ann = group_cutoffs %>%
+  filter(group %in% income_groups) %>%
+  mutate(
+    xpos         = income_xpos[group],
+    cutoff_label = fmt_dollars(income_cutoff, signed = FALSE)
+  )
+
+# y-range and fixed-inch layout below the x-axis (two annotation rows)
 plot_height = 9
 bar_totals = plot_data %>%
   group_by(group) %>%
@@ -285,9 +305,10 @@ xlab_gap     = dpi_du * 1.35               # gap for the bracketed x-axis labels
 row_step     = dpi_du * 0.25
 footnote_gap = dpi_du * 0.45
 
-avg_y  = y_lower - xlab_gap
-foot_y = avg_y - row_step - footnote_gap
-label_x = min(income_xpos) - 0.5
+cutoff_y = y_lower - xlab_gap
+avg_y    = cutoff_y - row_step
+foot_y   = avg_y - row_step - footnote_gap
+label_x  = min(income_xpos) - 0.5
 
 brackets = list(
   list(x1 = 1,   x2 = 5,   label = 'Quintiles'),
@@ -303,7 +324,11 @@ p = ggplot(plot_data, aes(x = xpos, y = pct_chg, fill = block)) +
              fill = 'white', color = 'black', stroke = 0.8) +
   geom_text(data = net_dots, aes(x = xpos, y = net, label = net_label),
             inherit.aes = FALSE, size = 2.8, fontface = 'bold') +
-  # Single summary row: average tax change (total of all blocks)
+  # Summary rows: income-group cutoff, then average tax change (all blocks)
+  annotate('text', x = label_x, y = cutoff_y, label = 'Income cutoff:',
+           fontface = 'bold', size = 3, hjust = 1, color = 'grey30') +
+  geom_text(data = cutoff_ann, aes(x = xpos, y = cutoff_y, label = cutoff_label),
+            inherit.aes = FALSE, size = 3, color = 'grey30') +
   annotate('text', x = label_x, y = avg_y, label = 'Avg. tax change:',
            fontface = 'bold', size = 3, hjust = 1, color = 'grey30') +
   geom_text(data = avg_ann, aes(x = xpos, y = avg_y, label = avg_label),
@@ -323,7 +348,7 @@ for (b in brackets) {
              fontface = 'bold', size = 4, color = 'grey30')
 }
 
-total_below = xlab_gap + row_step + footnote_gap + dpi_du * 0.45
+total_below = xlab_gap + 2 * row_step + footnote_gap + dpi_du * 0.45
 bottom_margin_pt = total_below / vis_range * plot_area_inches * 72
 
 p = p +
