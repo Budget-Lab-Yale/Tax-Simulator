@@ -528,6 +528,39 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
         left_join(static_mtrs_year %>%
                     select(-year),
                   by = 'id')
+
+      # Law-only kg_lt MTR for the planned-timing wedge: same reform law,
+      # computed on the PRE-injection frame. The mech injection above adds
+      # mechanically-routed carryover realizations to heir records' kg_lt,
+      # which moves their bracket/NIIT/phaseout positions and drifts the
+      # cell-average tau by single-digit bp even when the living-side
+      # schedule is unchanged -- and the argmin planned-timing rule
+      # (kg_dyn_build_planned_timing) would retime ~1-3% of a ~$600B bucket
+      # against that composition drift, putting a +/-$2-4B sawtooth on
+      # otherwise-smooth annual paths. Only the timing wedge consumes this
+      # column; the Bellman keeps the post-injection tau above, where the
+      # income effect is real signal. Full-frame recompute (never a subset)
+      # for the same positional-random_numbers reason as the deemed dead
+      # leg. Cost: two extra full-frame passes per kg scenario-year,
+      # accepted for unconditional simplicity (no law-identity gating).
+      if (uses_kg_mech) {
+        tax_units_raw = tax_units %>%
+          do_taxes(baseline_pr_er = baseline_pr_er,
+                   vars_1040      = vars_1040,
+                   vars_payroll   = return_vars$calc_pr)
+        stopifnot(identical(tax_units_raw$id, tax_units_static$id))
+        tax_units_static$mtr_kg_lt_lawonly = calc_mtrs(
+          tax_units       = tax_units_raw %>%
+                              select(-all_of(return_vars %>%
+                              unlist() %>%
+                              set_names(NULL))),
+          actual_liab_iit = tax_units_raw$liab_iit_net,
+          actual_liab_pr  = tax_units_raw$liab_pr,
+          var             = 'kg_lt',
+          pr              = F,
+          type            = 'nextdollar'  # kg_dynamics tau is nextdollar-only
+        )$mtr_kg_lt
+      }
     }
 
     # Fold the expected deemed tax into reported liability (after MTRs,
@@ -726,12 +759,13 @@ run_bathtub_pass = function(scenario_info, tax_law,
   )
 
   kg_dyn_run_bathtub_pass(
-    scenario_info  = scenario_info,
-    tax_law        = tax_law,
-    baseline_cells = inputs$baseline_cells,
-    baseline_tau   = inputs$baseline_tau,
-    reform_tau     = inputs$reform_tau,
-    heir_dist      = inputs$heir_dist
+    scenario_info     = scenario_info,
+    tax_law           = tax_law,
+    baseline_cells    = inputs$baseline_cells,
+    baseline_tau      = inputs$baseline_tau,
+    reform_tau        = inputs$reform_tau,
+    reform_tau_timing = inputs$reform_tau_timing,
+    heir_dist         = inputs$heir_dist
   )
 
   invisible(NULL)

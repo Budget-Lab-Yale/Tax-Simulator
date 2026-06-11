@@ -80,7 +80,11 @@ KG_DYN_DEEMED_AVOIDANCE = as.numeric(Sys.getenv('KG_DEEMED_AVOIDANCE', '0.25'))
 
 # Fraction of planned dollars that move toward the best year in the window
 # is clamp((tau_S - tau_B between source and destination) / ref_wedge, 0, 1).
-# 5pp moves the full bucket; 1pp moves 20%.
+# 5pp moves the full bucket; 1pp moves 20%. tau_S here is the LAW-ONLY tau
+# (mtr_kg_lt_lawonly: reform MTRs on the pre-mech-injection frame), so the
+# wedge is exactly zero when the living-side schedule is unchanged --
+# post-injection MTRs would drift a few bp from the income effect of
+# mechanically-routed carryover realizations and retime against noise.
 KG_DYN_TIMING_REF_WEDGE = 0.05
 
 # Static resource: dollar-weighted heir-age distribution derived from SCF
@@ -897,6 +901,9 @@ kg_dyn_build_planned_timing = function(baseline_cells, tau_S_mat, years,
   # Move fraction = clamp((wedge[u] - wedge[v*]) / ref_wedge, 0, 1); the
   # complement stays at u. Using tau_S - tau_B (not just tau_S) keeps the
   # rule policy-driven so baseline-only runs don't retime dollars.
+  # Callers pass the LAW-ONLY reform tau (aggregated from
+  # mtr_kg_lt_lawonly) as tau_S_mat, so the wedge is statutory-only and
+  # identically zero when the living-side schedule matches baseline.
 
   kg_dyn_validate_realization_buckets(planned_share = planned_share,
                                       timing_window = timing_window,
@@ -1538,9 +1545,10 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
                                        ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX,
                                        cells_inputs = NULL) {
 
-  # Builds the full bathtub input set: baseline_cells plus baseline_tau and
-  # reform_tau (per-year realization-weighted mtr_kg_lt vectors read from
-  # each side's static detail). The Tax-Data sweep is delegated to
+  # Builds the full bathtub input set: baseline_cells plus baseline_tau,
+  # reform_tau, and reform_tau_timing (per-year realization-weighted
+  # mtr_kg_lt / mtr_kg_lt_lawonly vectors read from each side's static
+  # detail). The Tax-Data sweep is delegated to
   # kg_dyn_load_cells_inputs; pass a precomputed cells_inputs (e.g. the
   # frozen mechanical pass's inputs cache) to skip the second sweep.
   #
@@ -1561,17 +1569,28 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
     )
   }
 
-  baseline_cells = cells_inputs$baseline_cells
-  baseline_tau   = list()
-  reform_tau     = list()
+  baseline_cells    = cells_inputs$baseline_cells
+  baseline_tau      = list()
+  reform_tau        = list()
+  reform_tau_timing = list()
 
   for (t in years) {
 
     td_slim = cells_inputs$td_slim_by_year[[as.character(t)]]
 
-    read_mtr = function(path) {
+    read_mtr = function(path, cols = c('id', 'mtr_kg_lt')) {
       f = file.path(path, paste0(t, '.csv'))
-      fread(f, select = c('id', 'mtr_kg_lt'), showProgress = FALSE) %>%
+      have = names(fread(f, nrows = 0, showProgress = FALSE))
+      missing_cols = setdiff(cols, have)
+      if (length(missing_cols) > 0) {
+        stop(sprintf(
+          paste0('kg_dynamics: static detail %s lacks column(s): %s. ',
+                 'mtr_kg_lt_lawonly is written by the static pass (run.R) ',
+                 'for kg_dynamics scenarios; re-run the scenario static ',
+                 'pass with current code.'),
+          f, paste(missing_cols, collapse = ', ')))
+      }
+      fread(f, select = cols, showProgress = FALSE) %>%
         as_tibble()
     }
 
@@ -1600,17 +1619,30 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
 
     reform_joined = td_slim %>%
       left_join(read_mtr(file.path(scenario_info$output_path, 'static',
-                                   'detail')),
+                                   'detail'),
+                         cols = c('id', 'mtr_kg_lt', 'mtr_kg_lt_lawonly')),
                 by = 'id')
     check_mtr_coverage(reform_joined, 'reform', t)
     reform_tau[[as.character(t)]] =
       kg_dyn_aggregate_cell_mtr(reform_joined, ages)
+
+    # Law-only tau for the planned-timing wedge: identical records and
+    # weights, but MTRs evaluated on the pre-mech-injection frame (see the
+    # static pass in run.R). tau_S - tau_B built from this column isolates
+    # statutory price changes; the post-injection reform_tau above retains
+    # the mech income effect for the Bellman.
+    lawonly_joined = reform_joined %>%
+      mutate(mtr_kg_lt = mtr_kg_lt_lawonly)
+    check_mtr_coverage(lawonly_joined, 'reform (law-only)', t)
+    reform_tau_timing[[as.character(t)]] =
+      kg_dyn_aggregate_cell_mtr(lawonly_joined, ages)
   }
 
-  list(baseline_cells = baseline_cells,
-       baseline_tau   = baseline_tau,
-       reform_tau     = reform_tau,
-       heir_dist      = cells_inputs$heir_dist)
+  list(baseline_cells    = baseline_cells,
+       baseline_tau      = baseline_tau,
+       reform_tau        = reform_tau,
+       reform_tau_timing = reform_tau_timing,
+       heir_dist         = cells_inputs$heir_dist)
 }
 
 
@@ -1722,7 +1754,8 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
 
 
 kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
-                                    baseline_tau, reform_tau, heir_dist,
+                                    baseline_tau, reform_tau,
+                                    reform_tau_timing, heir_dist,
                                     psi   = KG_DYN_DEFAULT_PSI,
                                     phi_I = KG_DYN_PHI_I,
                                     planned_share = KG_DYN_SHARE_PLANNED,
@@ -1742,7 +1775,9 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   #   2. Pack tau matrices (baseline + reform).
   #   3. Pass 1 Bellman (baseline): recover kappa.
   #   4. Resolve per-year scenario regime; Pass 2 Bellman using kappa.
-  #   5. Build planned-timing schedule from tau_S - tau_B.
+  #   5. Build planned-timing schedule from law-only tau_S minus tau_B
+  #      (reform_tau_timing: pre-mech-injection MTRs, so the wedge is
+  #      statutory-only; the Bellman's tau_S keeps the mech income effect).
   #   6. Per year: combine buckets into r_S_vec, run kg_dyn_step_recurrence,
   #      build cell_table, persist.
 
@@ -1803,6 +1838,8 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   # Step 2: tau matrices
   tau_B_mat = kg_dyn_pack_tau(baseline_tau, years, ages_bellman = ages_bellman)
   tau_S_mat = kg_dyn_pack_tau(reform_tau,   years, ages_bellman = ages_bellman)
+  tau_S_timing_mat = kg_dyn_pack_tau(reform_tau_timing, years,
+                                     ages_bellman = ages_bellman)
 
   # Step 3: baseline Bellman pass (c_phi = 0 across the whole grid under
   # current-law step-up — every asset gets step-up forgiveness)
@@ -1850,7 +1887,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
 
   planned_timing = kg_dyn_build_planned_timing(
     baseline_cells = baseline_cells,
-    tau_S_mat      = tau_S_mat,
+    tau_S_mat      = tau_S_timing_mat,
     years          = years,
     tau_B_mat      = tau_B_mat,
     planned_share  = planned_share,
