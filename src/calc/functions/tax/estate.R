@@ -6,11 +6,15 @@
 # liability is computed CONDITIONAL on the record's death event this year;
 # mortality enters only as a weight at aggregation (see src/sim/estate.R).
 #
-# Unlike the 1040 calc functions, calc_estate() is NOT part of the do_taxes()
-# chain (estate tax does not interact with income tax) and is not registered
-# in return_vars. It is called once per year in run_one_year(), outside the
-# MTR loop, and takes the frozen measurement parameters as an argument so that
-# reforms structurally cannot override them.
+# calc_estate() runs inside the do_taxes() chain (the "Estate tax" section
+# there) so that each pass -- and any behavioral repricing -- recomputes
+# estate liability on its own frame. Unlike the 1040 calc functions it is
+# deliberately NOT registered in return_vars: calc_mtrs() rebuilds vars_1040
+# from that registry, and estate columns must not enter do_1040()'s final
+# select. do_taxes() instead drops and rebinds ESTATE_OUTPUT_COLS, keeping
+# the section idempotent under MTR recomputes. The frozen measurement
+# parameters arrive as an argument (globals$estate_params) so that reforms
+# structurally cannot override them.
 #-------------------------------------------------------------------------------
 
 # Tax-Data wealth and debt columns (estate_module.R constants). Gross estate
@@ -26,6 +30,13 @@ ESTATE_ASSET_COLS = c(
 ESTATE_DEBT_COLS = c(
   'value.primary_mortgage', 'value.other_mortgage', 'value.credit_lines',
   'value.credit_cards', 'value.installment_debt', 'value.other_debt'
+)
+
+# Columns produced by calc_estate(). do_taxes() drops these before rebinding
+# (MTR-loop frames already carry them from the prior pass)
+ESTATE_OUTPUT_COLS = c(
+  'liab_estate_nodsue', 'liab_estate_dsue', 'estate_p_dsue',
+  'estate_distributable'
 )
 
 

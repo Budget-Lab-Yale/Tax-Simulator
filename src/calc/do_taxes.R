@@ -108,15 +108,29 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
       left_join(bind_rows(above, item), by = c('id', 'char_ded_type')) %>% 
       select(-char_ded_type)
     
-  # Standard case: just calculate the 1040 once  
+  # Standard case: just calculate the 1040 once
   } else {
-    tax_units %<>% 
+    tax_units %<>%
       bind_cols(do_1040(., vars_1040))
   }
 
 
+  #------------
+  # Estate tax
+  #------------
+
+  # Per-record liability conditional on this year's death event. Lives in the
+  # chain so passes/behavior reprice it; mortality (estate_m) is population-
+  # weights math and stays outside (src/sim/estate.R). Drop any previously
+  # computed estate columns first: the MTR loop re-runs do_taxes on frames
+  # that already carry them.
+  tax_units %<>%
+    select(-any_of(ESTATE_OUTPUT_COLS)) %>%
+    bind_cols(calc_estate(., globals$estate_params))
+
+
   #----------------
-  # Add other vars 
+  # Add other vars
   #----------------
   
 

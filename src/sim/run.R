@@ -410,20 +410,19 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     # Compute CPI ratio for capital gains basis indexation
     calc_kg_cpi_ratio(indexes, year)
 
-  # Calculate estate tax variables: per-record conditional liabilities from
-  # the pure calculator, then the household death-event probability (the
-  # weights side, incl. the donor-clone cluster cap). Once per year, outside
-  # the MTR loop (estate liability has no income dependence), before the
-  # static/conventional split (no behavioral module touches wealth, so both
-  # passes share the same estate columns). Wealth stays in raw dollars: the
-  # VAT / excess-growth income adjustments don't apply to balance-sheet
-  # stocks, so under those scenarios the estate base is intentionally in
-  # pre-adjustment units.
-  estate_params = get_estate_params(scenario_info$interface_paths$`Tax-Data`)
-  tax_units %<>%
-    bind_cols(calc_estate(., estate_params))
+  # Estate tax setup. Liability itself is computed in-chain by do_taxes()
+  # (per pass, so behavioral modules and pass-specific state reprice it);
+  # here we (1) load the frozen measurement parameters into globals, where
+  # every do_taxes() call -- including MTR-loop recomputes -- can see them,
+  # and (2) compute the household death-event probability (the weights side,
+  # incl. the donor-clone cluster cap), a population-level operation that
+  # stays out of the per-record calculator chain. Wealth stays in raw
+  # dollars: the VAT / excess-growth income adjustments don't apply to
+  # balance-sheet stocks, so under those scenarios the estate base is
+  # intentionally in pre-adjustment units.
+  globals$estate_params <<- get_estate_params(scenario_info$interface_paths$`Tax-Data`)
   tax_units$estate_m = calc_estate_mortality(
-    tax_units, estate_params$cluster_death_weight_cap)
+    tax_units, globals$estate_params$cluster_death_weight_cap)
 
 
   #----------
