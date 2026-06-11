@@ -58,3 +58,13 @@ brackets:
 # When 0, the DSUE channel is shut off (p_dsue forced to 0 in the calculator).
 portability:
   value: 1
+
+# Deductibility of the decedent's death-triggered income tax against the
+# taxable estate (a §2053(a)(3)-style claim against the estate). Applies to
+# the income tax on deemed-realized gains at death under kg_dynamics death
+# regimes (the estate_income_tax_ded column stamped by the dead-leg recompute
+# in run_one_year); no effect under current law, where death triggers no
+# income tax. When 0, the estate base ignores the decedent's income tax at
+# death.
+income_tax_ded:
+  value: 1

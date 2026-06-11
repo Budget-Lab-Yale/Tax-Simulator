@@ -46,8 +46,9 @@ for (i in seq_along(law$brackets)) {
   td[[paste0('estate.brackets', i)]] = law$brackets[i]
   td[[paste0('estate.rates', i)]]    = law$rates[i]
 }
-td$`estate.exemption`   = EXEMPTION
-td$`estate.portability` = 1
+td$`estate.exemption`      = EXEMPTION
+td$`estate.portability`    = 1
+td$`estate.income_tax_ded` = 1  # no-op: no estate_income_tax_ded column here
 
 onmodel = td %>%
   bind_cols(calc_estate(., params)) %>%

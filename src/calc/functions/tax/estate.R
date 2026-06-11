@@ -50,8 +50,9 @@ calc_estate = function(tax_unit, estate_params, fill_missings = FALSE) {
   # Per-record pipeline:
   #   reported = economic_gross * r * [1 + (rho_pt - 1) * s_pt]   [valuation]
   #   taxable  = max(reported - debts - f_ded(bin) * reported, 0) [deductions]
-  #   base     = max(taxable - income_tax_ded, 0)        [Sec. 2053 deduction]
-  #              + gamma * reported                          [gift add-back]
+  #   base     = max(taxable - switch * income_tax_ded, 0) [Sec. 2053 ded.,
+  #              + gamma * reported              gift add-back; switch = the
+  #                                              estate.income_tax_ded lever]
   #   L(base, excl) = max(T(base) - T(excl), 0), T = graduated tentative
   #                   schedule (unified credit as a credit at the exclusion)
   #
@@ -83,7 +84,9 @@ calc_estate = function(tax_unit, estate_params, fill_missings = FALSE) {
   #                                   kg_dynamics deemed-realization dead-leg
   #                                   recompute. Enters the BASE only:
   #                                   estate_distributable stays scenario-
-  #                                   invariant (fixed-wealth convention)
+  #                                   invariant (fixed-wealth convention).
+  #                                   Gated by the estate.income_tax_ded law
+  #                                   switch (baseline default 1)
   #
   # Returns: dataframe with the following variables:
   #   - liab_estate_nodsue (dbl)   : liability conditional on death, no-DSUE
@@ -107,10 +110,13 @@ calc_estate = function(tax_unit, estate_params, fill_missings = FALSE) {
     ESTATE_DEBT_COLS,   # (dbl) debts by liability class
 
     # Tax law attributes
-    'estate.exemption',   # (dbl)   basic exclusion amount
-    'estate.brackets[]',  # (int[]) tentative tax schedule bracket lower bounds
-    'estate.rates[]',     # (dbl[]) tentative tax schedule rates
-    'estate.portability'  # (int)   whether DSUE portability is in effect
+    'estate.exemption',      # (dbl)   basic exclusion amount
+    'estate.brackets[]',     # (int[]) tentative tax schedule bracket lower bounds
+    'estate.rates[]',        # (dbl[]) tentative tax schedule rates
+    'estate.portability',    # (int)   whether DSUE portability is in effect
+    'estate.income_tax_ded'  # (int)   whether the decedent's income tax at
+                             #         death is deductible against the
+                             #         taxable estate
   )
 
   bins = estate_params$bins
@@ -150,11 +156,13 @@ calc_estate = function(tax_unit, estate_params, fill_missings = FALSE) {
       f_dsue  = bins$f_dsue[bin_idx],
 
       # Taxable estate and unified base with the lifetime-gift add-back. The
-      # income tax deduction enters the BASE only: estate_distributable (the
-      # heir allocator's bequest-mass ladder) stays scenario-invariant under
-      # the fixed-wealth convention
+      # income tax deduction enters the BASE only -- gated by the
+      # estate.income_tax_ded law switch -- so estate_distributable (the heir
+      # allocator's bequest-mass ladder) stays scenario-invariant under the
+      # fixed-wealth convention
       estate_distributable = pmax(reported_gross - estate_debts - f_ded * reported_gross, 0),
-      estate_base          = pmax(estate_distributable - estate_income_tax_ded, 0) +
+      estate_base          = pmax(estate_distributable -
+                                  estate.income_tax_ded * estate_income_tax_ded, 0) +
                              estate_params$gamma * reported_gross,
 
       # Exclusion amounts for the three liability calculations. Joint records

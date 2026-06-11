@@ -122,7 +122,7 @@ Tax law is represented as collections of **tax parameters** (thematically relate
 - `niit.yaml`: Net Investment Income Tax
 - `pe.yaml`: Personal exemptions
 - `rebate.yaml`: Generic per-person refundable credit (for stimulus, UBI modeling)
-- `estate.yaml`: Estate tax (exemption, graduated rate schedule, portability switch)
+- `estate.yaml`: Estate tax (exemption, graduated rate schedule, portability switch, income-tax-at-death deduction switch)
 
 **YAML Structure:**
 ```yaml
@@ -167,7 +167,8 @@ Estate tax liability is computed per record in the normal year pass (no pre-pass
 each death year is independent, expected-value). Key facts:
 
 - **Law vs measurement are strictly separated.** Estate LAW (exemption, rate
-  schedule, portability) lives in `estate.yaml` and is reform-overridable like any
+  schedule, portability, deductibility of the decedent's income tax at death)
+  lives in `estate.yaml` and is reform-overridable like any
   parameter. The MEASUREMENT bridge from Tax-Data economic wealth to reported
   gross estate (valuation factors r/rho_pt, per-bin deduction/DSUE fractions, gift
   add-back gamma, donor-clone cluster cap) lives in
