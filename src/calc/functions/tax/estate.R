@@ -50,7 +50,8 @@ calc_estate = function(tax_unit, estate_params, fill_missings = FALSE) {
   # Per-record pipeline:
   #   reported = economic_gross * r * [1 + (rho_pt - 1) * s_pt]   [valuation]
   #   taxable  = max(reported - debts - f_ded(bin) * reported, 0) [deductions]
-  #   base     = taxable + gamma * reported                       [gift add-back]
+  #   base     = max(taxable - income_tax_ded, 0)        [Sec. 2053 deduction]
+  #              + gamma * reported                          [gift add-back]
   #   L(base, excl) = max(T(base) - T(excl), 0), T = graduated tentative
   #                   schedule (unified credit as a credit at the exclusion)
   #
@@ -73,6 +74,16 @@ calc_estate = function(tax_unit, estate_params, fill_missings = FALSE) {
   #                             hi, f_ded, p_dsue, f_dsue)
   #   - fill_missings (bool)  : whether to populate unsupplied variables with
   #                             0s (used in testing, not in simulation)
+  #
+  # Optional input column (absent => 0, all other callers unaffected):
+  #   - estate_income_tax_ded (dbl) : decedent's income tax at death,
+  #                                   deductible against the taxable estate
+  #                                   (Sec. 2053-style). Conditional-on-death
+  #                                   dollars, set by run_one_year()'s
+  #                                   kg_dynamics deemed-realization dead-leg
+  #                                   recompute. Enters the BASE only:
+  #                                   estate_distributable stays scenario-
+  #                                   invariant (fixed-wealth convention)
   #
   # Returns: dataframe with the following variables:
   #   - liab_estate_nodsue (dbl)   : liability conditional on death, no-DSUE
@@ -107,7 +118,14 @@ calc_estate = function(tax_unit, estate_params, fill_missings = FALSE) {
   df = tax_unit %>%
 
     # Parse tax unit object passed as argument
-    parse_calc_fn_input(req_vars, fill_missings) %>%
+    parse_calc_fn_input(req_vars, fill_missings)
+
+  # Default the optional income tax deduction when the caller doesn't supply it
+  if (!('estate_income_tax_ded' %in% names(df))) {
+    df$estate_income_tax_ded = 0
+  }
+
+  df %<>%
 
     mutate(
 
@@ -131,9 +149,13 @@ calc_estate = function(tax_unit, estate_params, fill_missings = FALSE) {
       p_dsue  = bins$p_dsue[bin_idx],
       f_dsue  = bins$f_dsue[bin_idx],
 
-      # Taxable estate and unified base with the lifetime-gift add-back
+      # Taxable estate and unified base with the lifetime-gift add-back. The
+      # income tax deduction enters the BASE only: estate_distributable (the
+      # heir allocator's bequest-mass ladder) stays scenario-invariant under
+      # the fixed-wealth convention
       estate_distributable = pmax(reported_gross - estate_debts - f_ded * reported_gross, 0),
-      estate_base          = estate_distributable + estate_params$gamma * reported_gross,
+      estate_base          = pmax(estate_distributable - estate_income_tax_ded, 0) +
+                             estate_params$gamma * reported_gross,
 
       # Exclusion amounts for the three liability calculations. Joint records
       # (married filing jointly with a living spouse) are modeled at the

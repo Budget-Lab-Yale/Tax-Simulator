@@ -494,9 +494,20 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                    vars_1040      = vars_1040,
                    vars_payroll   = return_vars$calc_pr)
         stopifnot(identical(dead_leg$id, tax_units_static$id))
-        tax_units_static$liab_deemed =
-          static_input$m_household *
-          (dead_leg$liab_iit_net - tax_units_static$liab_iit_net)
+        liab_deemed_cond = dead_leg$liab_iit_net - tax_units_static$liab_iit_net
+        tax_units_static$liab_deemed = static_input$m_household * liab_deemed_cond
+
+        # The decedent's deemed-realization tax is deductible against the
+        # taxable estate (Sec. 2053-style). Both are conditional-on-death
+        # quantities at the same household death event (m_household and
+        # estate_m share the q1*q2 / q1 construction), so the deduction is
+        # the unweighted conditional tax; mortality enters only at
+        # aggregation. Recompute estate liabilities with the deduction (the
+        # in-chain estate ran with ded = 0); estate_distributable is
+        # unchanged by construction (the deduction enters the base only)
+        tax_units_static$estate_income_tax_ded = pmax(liab_deemed_cond, 0)
+        est = calc_estate(tax_units_static, globals$estate_params)
+        tax_units_static[, ESTATE_OUTPUT_COLS] = est[ESTATE_OUTPUT_COLS]
       }
     }
 
@@ -575,10 +586,11 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     }
 
     # Write static detail (kg_dynamics mechanical columns included when
-    # present: kg_lockin, kg_deemed, liab_deemed)
+    # present: kg_lockin, kg_deemed, liab_deemed, estate_income_tax_ded)
     tax_units_static %>%
       select(all_of(globals$detail_vars), starts_with('mtr_'),
-             any_of(c('kg_lockin', 'kg_deemed', 'liab_deemed'))) %>%
+             any_of(c('kg_lockin', 'kg_deemed', 'liab_deemed',
+                      'estate_income_tax_ded'))) %>%
       write_csv(file.path(scenario_info$output_path, 'static', 'detail',
                           paste0(year, '.csv')))
 
@@ -622,8 +634,14 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                    vars_1040      = vars_1040,
                    vars_payroll   = return_vars$calc_pr)
         stopifnot(identical(dead_leg$id, tax_units_conv$id))
-        conv_liab_deemed = conv_input$m_household *
-          (dead_leg$liab_iit_net - tax_units_conv$liab_iit_net)
+        conv_liab_deemed_cond = dead_leg$liab_iit_net - tax_units_conv$liab_iit_net
+        conv_liab_deemed = conv_input$m_household * conv_liab_deemed_cond
+
+        # Deemed tax deductible against the taxable estate -- same logic as
+        # the static pass, here on the bathtub-state conditional tax
+        tax_units_conv$estate_income_tax_ded = pmax(conv_liab_deemed_cond, 0)
+        est = calc_estate(tax_units_conv, globals$estate_params)
+        tax_units_conv[, ESTATE_OUTPUT_COLS] = est[ESTATE_OUTPUT_COLS]
       }
 
       # Calculate conventional marginal tax rates
@@ -669,7 +687,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       # kg_lockin / kg_deemed; included when present)
       tax_units_conv %>%
         select(all_of(globals$detail_vars), starts_with('mtr_'),
-               any_of(c('kg_lockin', 'kg_deemed', 'liab_deemed'))) %>%
+               any_of(c('kg_lockin', 'kg_deemed', 'liab_deemed',
+                        'estate_income_tax_ded'))) %>%
         write_csv(file.path(scenario_info$output_path, 'conventional', 'detail',
                             paste0(year, '.csv')))
 
