@@ -3,26 +3,36 @@
 #----------------------------------------------------------------
 
 
-do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) { 
+do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll,
+                    calc_estate_flag = TRUE) {
 
   #----------------------------------------------------------------------------
   # Calculates payroll and individual income taxes for all tax units. Form-
   # behavior optimization in which the filer needs to calculate taxes more
-  # than once is performed here (rather than inside of a calc function.) 
+  # than once is performed here (rather than inside of a calc function.)
   # Currently supports charitable contribution reporting optimization when
   # a deduction is available both above the line and on Schedule A.
-  # 
+  #
   # Parameters:
-  #   - tax_units (df)       : tibble of tax units, exogenous variables only
-  #   - baseline_pr_er (df)  : tibble of baseline employer-side payroll 
-  #                            liabilities. NULL if baseline
-  #   - vars_1040 (str[])    : vector of (calculated) names of 1040 variables  
-  #                            to return
-  #   - vars_payroll (str[]) : vector of (calculated) names of payroll tax  
-  #                            variables to return
-  # 
+  #   - tax_units (df)          : tibble of tax units, exogenous variables only
+  #   - baseline_pr_er (df)     : tibble of baseline employer-side payroll
+  #                               liabilities. NULL if baseline
+  #   - vars_1040 (str[])       : vector of (calculated) names of 1040 variables
+  #                               to return
+  #   - vars_payroll (str[])    : vector of (calculated) names of payroll tax
+  #                               variables to return
+  #   - calc_estate_flag (bool) : whether to compute in-chain estate liability.
+  #                               TRUE for the real static/conventional passes
+  #                               that consume estate output; FALSE for callers
+  #                               that only read income-tax results and discard
+  #                               estate (the MTR loop and the kg deemed/law-only
+  #                               dead-leg recomputes), saving a full-frame
+  #                               estate pass each. Estate is computed after, and
+  #                               never feeds back into, income tax, so gating it
+  #                               off for those callers is output-preserving.
+  #
   # Returns: tibble of tax units with new columns for calculated tax variables
-  #          (df).  
+  #          (df).
   #----------------------------------------------------------------------------
       
   
@@ -123,10 +133,15 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll) {
   # chain so passes/behavior reprice it; mortality (estate_m) is population-
   # weights math and stays outside (src/sim/estate.R). Drop any previously
   # computed estate columns first: the MTR loop re-runs do_taxes on frames
-  # that already carry them.
-  tax_units %<>%
-    select(-any_of(ESTATE_OUTPUT_COLS)) %>%
-    bind_cols(calc_estate(., globals$estate_params))
+  # that already carry them. Skipped (calc_estate_flag = FALSE) by callers that
+  # only read income-tax output and discard estate -- the MTR loop and the kg
+  # deemed/law-only dead-leg recomputes -- since estate is computed after, and
+  # never feeds back into, income tax.
+  if (calc_estate_flag) {
+    tax_units %<>%
+      select(-any_of(ESTATE_OUTPUT_COLS)) %>%
+      bind_cols(calc_estate(., globals$estate_params))
+  }
 
 
   #----------------
@@ -631,12 +646,13 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
   
   
   # Re-calculate taxes
-  new_values %>% 
+  new_values %>%
     do_taxes(
-      baseline_pr_er = NULL,
-      vars_payroll   = return_vars$calc_pr,
-      vars_1040      = return_vars %>% remove_by_name('calc_pr') %>% unlist() %>% set_names(NULL)
-    ) %>% 
+      baseline_pr_er   = NULL,
+      vars_payroll     = return_vars$calc_pr,
+      vars_1040        = return_vars %>% remove_by_name('calc_pr') %>% unlist() %>% set_names(NULL),
+      calc_estate_flag = FALSE   # MTR reads only income-tax delta; estate discarded
+    ) %>%
     
     # Calculate MTR and return
     mutate(

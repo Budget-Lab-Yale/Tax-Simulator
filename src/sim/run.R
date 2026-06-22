@@ -321,6 +321,64 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
 
 
 
+kg_dyn_recompute_deemed_tax = function(taxed, input, baseline_pr_er,
+                                       vars_1040, vars_payroll, estate_params) {
+
+  #----------------------------------------------------------------------------
+  # Expected income tax on mechanical deemed death gains, plus the Sec. 2053
+  # estate-deduction reprice. Shared verbatim by the static and conventional
+  # passes of run_one_year() (previously copy-pasted in both). Computes the
+  # exact decedent/survivor copy-split expectation without row duplication:
+  #   liab_deemed = m_household * [T(y + kg_deemed_full) - T(y)]
+  # via a second full-frame do_taxes() recompute (the "dead leg") with the full
+  # (Sec.121-net, post-avoidance) death gain added to kg_lt, both legs under
+  # reform law (so rate reforms flow through automatically). The decedent's
+  # deemed-realization tax is then applied as a deductible against the taxable
+  # estate (the in-chain estate ran with ded = 0) and estate liabilities are
+  # repriced; estate_distributable is unchanged by construction (the deduction
+  # enters the base only).
+  #
+  # The recompute runs on the FULL frame (never a subset): calc functions index
+  # globals$random_numbers positionally (e.g. the EITC pre-certification draw),
+  # so subsetting rows breaks alignment. Non-holders have kg_deemed_full = 0 and
+  # an exactly-zero delta. The dead-leg pass skips the estate calc
+  # (calc_estate_flag = FALSE): only its liab_iit_net is read; estate is
+  # repriced here separately. The caller folds liab_deemed into reported
+  # liability AFTER the MTR block (MTRs anchor on the alive-leg liability).
+  #
+  # Parameters:
+  #   - taxed (df)          : already-taxed alive-leg frame (carries liab_iit_net,
+  #                           id, estate inputs); modified and returned
+  #   - input (df)          : pre-tax input frame for this pass, same row order
+  #                           (carries kg_lt, kg_deemed_full, m_household)
+  #   - baseline_pr_er (df) : baseline employer payroll, passed to do_taxes()
+  #   - vars_1040 (str[])   : 1040 return vars for do_taxes()
+  #   - vars_payroll (str[]): payroll return vars for do_taxes()
+  #   - estate_params       : frozen estate measurement params
+  #
+  # Returns: `taxed` with liab_deemed attached and ESTATE_OUTPUT_COLS repriced.
+  #----------------------------------------------------------------------------
+
+  dead_leg = input %>%
+    mutate(kg_lt = kg_lt + kg_deemed_full) %>%
+    do_taxes(baseline_pr_er   = baseline_pr_er,
+             vars_1040        = vars_1040,
+             vars_payroll     = vars_payroll,
+             calc_estate_flag = FALSE)
+  stopifnot(identical(dead_leg$id, taxed$id))
+
+  liab_deemed_cond  = dead_leg$liab_iit_net - taxed$liab_iit_net
+  taxed$liab_deemed = input$m_household * liab_deemed_cond
+
+  taxed$estate_income_tax_ded = pmax(liab_deemed_cond, 0)
+  est = calc_estate(taxed, estate_params)
+  taxed[, ESTATE_OUTPUT_COLS] = est[ESTATE_OUTPUT_COLS]
+
+  taxed
+}
+
+
+
 run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                         indexes, vat_price_offset, excess_growth_offset,
                         pass_type = c('both', 'static', 'conventional'),
@@ -493,26 +551,13 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     if (uses_kg_mech) {
       tax_units_static = tax_units_static %>% mutate(liab_deemed = 0)
       if (any(static_input$kg_deemed_full > 0)) {
-        dead_leg = static_input %>%
-          mutate(kg_lt = kg_lt + kg_deemed_full) %>%
-          do_taxes(baseline_pr_er = baseline_pr_er,
-                   vars_1040      = vars_1040,
-                   vars_payroll   = return_vars$calc_pr)
-        stopifnot(identical(dead_leg$id, tax_units_static$id))
-        liab_deemed_cond = dead_leg$liab_iit_net - tax_units_static$liab_iit_net
-        tax_units_static$liab_deemed = static_input$m_household * liab_deemed_cond
-
-        # The decedent's deemed-realization tax is deductible against the
-        # taxable estate (Sec. 2053-style). Both are conditional-on-death
-        # quantities at the same household death event (m_household and
-        # estate_m share the q1*q2 / q1 construction), so the deduction is
-        # the unweighted conditional tax; mortality enters only at
-        # aggregation. Recompute estate liabilities with the deduction (the
-        # in-chain estate ran with ded = 0); estate_distributable is
-        # unchanged by construction (the deduction enters the base only)
-        tax_units_static$estate_income_tax_ded = pmax(liab_deemed_cond, 0)
-        est = calc_estate(tax_units_static, globals$estate_params)
-        tax_units_static[, ESTATE_OUTPUT_COLS] = est[ESTATE_OUTPUT_COLS]
+        tax_units_static = kg_dyn_recompute_deemed_tax(
+          taxed          = tax_units_static,
+          input          = static_input,
+          baseline_pr_er = baseline_pr_er,
+          vars_1040      = vars_1040,
+          vars_payroll   = return_vars$calc_pr,
+          estate_params  = globals$estate_params)
       }
     }
 
@@ -560,9 +605,10 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       # accepted for unconditional simplicity (no law-identity gating).
       if (uses_kg_mech) {
         tax_units_raw = tax_units %>%
-          do_taxes(baseline_pr_er = baseline_pr_er,
-                   vars_1040      = vars_1040,
-                   vars_payroll   = return_vars$calc_pr)
+          do_taxes(baseline_pr_er   = baseline_pr_er,
+                   vars_1040        = vars_1040,
+                   vars_payroll     = return_vars$calc_pr,
+                   calc_estate_flag = FALSE)   # only liab_iit_net/liab_pr read for the law-only MTR
         stopifnot(identical(tax_units_raw$id, tax_units_static$id))
         tax_units_static$mtr_kg_lt_lawonly = calc_mtrs(
           tax_units       = tax_units_raw %>%
@@ -633,20 +679,14 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       conv_liab_deemed = NULL
       if (uses_kg_mech && 'kg_deemed_full' %in% names(conv_input) &&
           any(conv_input$kg_deemed_full > 0)) {
-        dead_leg = conv_input %>%
-          mutate(kg_lt = kg_lt + kg_deemed_full) %>%
-          do_taxes(baseline_pr_er = baseline_pr_er,
-                   vars_1040      = vars_1040,
-                   vars_payroll   = return_vars$calc_pr)
-        stopifnot(identical(dead_leg$id, tax_units_conv$id))
-        conv_liab_deemed_cond = dead_leg$liab_iit_net - tax_units_conv$liab_iit_net
-        conv_liab_deemed = conv_input$m_household * conv_liab_deemed_cond
-
-        # Deemed tax deductible against the taxable estate -- same logic as
-        # the static pass, here on the bathtub-state conditional tax
-        tax_units_conv$estate_income_tax_ded = pmax(conv_liab_deemed_cond, 0)
-        est = calc_estate(tax_units_conv, globals$estate_params)
-        tax_units_conv[, ESTATE_OUTPUT_COLS] = est[ESTATE_OUTPUT_COLS]
+        tax_units_conv = kg_dyn_recompute_deemed_tax(
+          taxed          = tax_units_conv,
+          input          = conv_input,
+          baseline_pr_er = baseline_pr_er,
+          vars_1040      = vars_1040,
+          vars_payroll   = return_vars$calc_pr,
+          estate_params  = globals$estate_params)
+        conv_liab_deemed = tax_units_conv$liab_deemed
       }
 
       # Calculate conventional marginal tax rates
