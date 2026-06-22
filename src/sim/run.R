@@ -843,6 +843,10 @@ kg_dyn_check_run_compat = function(scenario_info, vat_price_offset,
          'scenario or extend the bathtub to read from static detail.')
   }
 
+  # Loudly flag a stale calibration (e.g. applier-rule flip or new Tax-Data
+  # vintage without recalibration). Warns by default; KG_STRICT_CALIB=1 stops.
+  kg_dyn_check_calibration_provenance(scenario_info)
+
   invisible(TRUE)
 }
 

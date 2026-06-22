@@ -1,0 +1,3 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Tax-Data.vintage,dep.Tax-Data.ID
+baseline,baseline,,2026:2035,,kg_lt,nextdollar,2026050315,baseline
+rate_up_5pp_atb,tests/kg_dyn_rate_up_5pp_atb,kg_dynamics/turnover,2026:2035,,kg_lt,nextdollar,2026050315,baseline

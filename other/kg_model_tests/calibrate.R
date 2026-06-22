@@ -84,11 +84,26 @@ SHORT_RUN_NOMINAL  = -SHORT_RUN_RATIO * LONG_RUN_NOMINAL   # +5.04
 # The internal bathtub target is inflated by 1/dilution so the full sim
 # delivers the nominal literature target.
 #
-# Measured from kg_dyn_2pp:
-#   rate_up_2pp at sim year 30 (2055): actual = -1.98, nominal = -2.52
-#   delayed at announcement year (2026): actual = +4.36, nominal = +5.04
-KG_DYN_DILUTION_LONG  = 0.786
-KG_DYN_DILUTION_SHORT = 0.865
+# Re-measured 2026-06-22 under the KG_APPLIER_ALLOCATION = '0.5' default
+# (vintage kg_recal_2pp_05, full sample, via other/kg_model_tests/
+# measure_dilution.R). dilution = E_full / E_int, both at the (psi, planned_share)
+# the measurement run used (21.2272, 0.3921 -> E_int -3.2075 / +5.8293):
+#   rate_up_2pp at sim year 30 (2055):    E_full = -3.62  (was -1.98 under 'R')
+#   delayed     at announcement yr (2026): E_full = +8.97  (was +4.36 under 'R')
+# Under 0.5 the full sim AMPLIFIES the bathtub response (dilution > 1) rather
+# than damping it: the lock-in/carryover stock realization (extra_R) lands on a
+# broader record set, and the small realization-weighted dtau denominator turns
+# that into a large elasticity swing. Prior 'R'-rule values: 0.786 / 0.865.
+#
+# Iteration 2 (2026-06-22): the iter-1 values (1.1275 / 1.5391, measured at the
+# old psi/ps 21.2272/0.3921) were extrapolated too far -- a verify run at the
+# iter-1 solution (29.3290 / 0.2102, vintage kg_recal_2pp_05_verify) gave
+# full-sim E_full = -2.43 long (ok) / +4.13 short (18% under nominal). The
+# dilution is psi/ps-dependent, especially short-run. These values are
+# RE-MEASURED at that verify point (E_int -2.2358 / +3.2758), so they anchor
+# the bisection where the solution lives.
+KG_DYN_DILUTION_LONG  = 1.0890
+KG_DYN_DILUTION_SHORT = 1.2599
 
 # Internal bathtub targets the bisection actually chases.
 LONG_RUN_TARGET    = LONG_RUN_NOMINAL  / KG_DYN_DILUTION_LONG   # ≈ -3.21
@@ -414,6 +429,31 @@ cat(sprintf('  KG_DYN_DEFAULT_PSI    = %.4f  (long-run  semi = %+7.4f  target %+
 cat(sprintf('  KG_DYN_SHARE_PLANNED  = %.4f  (short-run semi = %+7.4f  target %+7.4f)\n',
             ps_star, short_star, SHORT_RUN_TARGET))
 cat('\nUpdate KG_DYN_DEFAULT_PSI and KG_DYN_SHARE_PLANNED in src/sim/kg_dynamics.R.\n')
+
+# Ready-to-paste provenance stamp (kg_dyn_check_calibration_provenance compares
+# the live config against this and warns on drift). applier_allocation is the
+# rule the dilutions were measured under = the live KG_APPLIER_ALLOCATION here.
+td_vint    = sub('.*/Tax-Data/v[0-9]+/([0-9A-Za-z_]+)/.*',         '\\1', TAX_DATA_ROOT)
+macro_vint = sub('.*/Macro-Projections/v[0-9]+/([0-9A-Za-z_]+)/.*', '\\1', MACRO_ROOT)
+cat(sprintf(paste0(
+  '\n--- paste into KG_DYN_CALIB_PROVENANCE (and bump spec_version on logic changes) ---\n',
+  'KG_DYN_CALIB_PROVENANCE = list(\n',
+  '  date               = \'%s\',\n',
+  '  spec_version       = %dL,\n',
+  '  psi                = %s,\n',
+  '  planned_share      = %s,\n',
+  '  applier_allocation = \'%s\',\n',
+  '  phi_I              = %s,\n',
+  '  ref_wedge          = %s,\n',
+  '  timing_window      = %dL,\n',
+  '  tax_data_vintage   = \'%s\',\n',
+  '  macro_vintage      = \'%s\'\n',
+  ')\n'),
+  as.character(Sys.Date()), KG_DYN_SPEC_VERSION,
+  format(round(psi_star, 4)), format(round(ps_star, 4)),
+  KG_DYN_APPLIER_ALLOCATION,
+  format(KG_DYN_PHI_I), format(KG_DYN_TIMING_REF_WEDGE),
+  as.integer(KG_DYN_TIMING_WINDOW), td_vint, macro_vint))
 
 
 #-------------------------------------------------------------------------------

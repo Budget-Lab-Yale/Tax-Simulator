@@ -59,7 +59,7 @@ KG_DYN_BETA             = 0.978
 # planned is mechanically timeable across nearby years; the remainder is
 # the ordinary Bellman-controlled share.
 KG_DYN_PHI_I            = 0.4
-KG_DYN_SHARE_PLANNED    = 0.3921
+KG_DYN_SHARE_PLANNED    = as.numeric(Sys.getenv('KG_SHARE_PLANNED', '0.2571'))  # calib under APPLIER_ALLOCATION 0.5 (2026-06-22); env-overridable for comparison runs
 KG_DYN_TIMING_WINDOW    = 1L
 
 # Applier-only deemed-realization avoidance haircut: a data-calibration
@@ -108,7 +108,7 @@ KG_DYN_HEIR_DISTRIBUTION_PATH = './resources/heir_distribution_scf2022.csv'
 # calibration whenever Tax-Data vintage, bucket shares, ref_wedge, the
 # discount series, the apply-to-records logic, or any Bellman primitive
 # changes.
-KG_DYN_DEFAULT_PSI      = 21.2272
+KG_DYN_DEFAULT_PSI      = as.numeric(Sys.getenv('KG_PSI', '28.5562'))  # calib under APPLIER_ALLOCATION 0.5 (2026-06-22); env-overridable for comparison runs
 
 # Within-cell allocation rule for policy-induced dG, controlling the
 # effective cell mortality m_eff used in the death/survivor channels.
@@ -142,8 +142,11 @@ KG_DYN_DG_ALLOCATION    = 'G'
 # from pure G. Sensitivity from the kg_mech_{R,G,50} comparison runs:
 # carryover mechanical revenue 2025-35 is $55.9B (R) / $48.0B (0.5) /
 # $40.4B (G); deemed is invariant to this knob.
-# NOTE: psi/planned_share and the dilution factors were calibrated under the
-# historical "R" rule; recalibration against the 0.5 default is pending.
+# NOTE: psi/planned_share and the dilution factors were recalibrated against
+# this 0.5 default on 2026-06-22 (2 iterations; dilutions 1.0890 / 1.2599 in
+# calibrate.R, re-measured at the operating point because they are psi/ps-
+# dependent). Re-run other/kg_model_tests/measure_dilution.R + calibrate.sbatch
+# if this default changes.
 KG_DYN_APPLIER_ALLOCATION = Sys.getenv('KG_APPLIER_ALLOCATION', '0.5')
 
 KG_DYN_ASSET_CLASSES    = c('equities', 'pass_throughs',
@@ -183,6 +186,120 @@ KG_DYN_REGIME_TRIPLET = list(
   '1' = list(vanish = 0, route = 1, realize = 0),  # carryover
   '2' = list(vanish = 0, route = 0, realize = 1)   # deemed_realization
 )
+
+
+
+#-------------------------------------------------------------------------------
+# Calibration provenance + staleness guard
+#
+# psi/planned_share and the dilution factors are valid only for the conditions
+# they were calibrated under. The KG_DYN_DEFAULT_PSI header lists what
+# invalidates them (Tax-Data vintage, bucket shares, ref_wedge, discount
+# series, apply-to-records logic, Bellman primitives). Those dependencies used
+# to live only in comments, so the 2026-06 applier-rule flip (R -> 0.5) silently
+# biased every conventional kg estimate (~37% on a 5pp gains-rate score) until
+# it was re-measured. This block records the calibration's invalidating inputs;
+# kg_dyn_check_calibration_provenance() (called from kg_dyn_check_run_compat,
+# i.e. before every kg pass) surfaces any mismatch loudly -- mirroring the
+# estate vintage warning in get_estate_params().
+#-------------------------------------------------------------------------------
+
+# Bump whenever the Bellman primitives, bucket structure, or apply-to-records
+# logic change in a way that invalidates psi/planned_share. The guard compares
+# this against the spec_version the live calibration was produced under.
+KG_DYN_SPEC_VERSION = 1L
+
+# Stamp of the calibration-invalidating inputs as of the last calibrate.sbatch
+# run. Update alongside KG_DYN_DEFAULT_PSI / KG_DYN_SHARE_PLANNED whenever you
+# recalibrate (calibrate.R prints a ready-to-paste block). applier_allocation
+# is the rule the DILUTIONS were measured under.
+KG_DYN_CALIB_PROVENANCE = list(
+  date               = '2026-06-22',
+  spec_version       = 1L,
+  psi                = 28.5562,   # the calibrated outputs, recorded so a stray
+  planned_share      = 0.2571,    # KG_PSI / KG_SHARE_PLANNED override or an
+                                  # un-stamped hand-edit also trips the guard
+  applier_allocation = '0.5',
+  phi_I              = 0.4,
+  ref_wedge          = 0.05,
+  timing_window      = 1L,
+  tax_data_vintage   = '2026050315',
+  macro_vintage      = '2026022522'
+)
+
+
+kg_dyn_check_calibration_provenance = function(scenario_info) {
+
+  # Warns (loudly) when the live configuration no longer matches the conditions
+  # psi/planned_share/dilutions were calibrated under. Warning, not stop, so
+  # deliberate sweeps via the env knobs (KG_APPLIER_ALLOCATION, KG_PSI,
+  # KG_SHARE_PLANNED) still run -- but set KG_STRICT_CALIB=1 to hard-stop
+  # instead (e.g. for production scoring). Returns TRUE iff everything matches.
+
+  p    = KG_DYN_CALIB_PROVENANCE
+  msgs = character(0)
+  num_mismatch = function(live, cal) !isTRUE(all.equal(as.numeric(live),
+                                                       as.numeric(cal)))
+
+  if (!identical(as.character(KG_DYN_APPLIER_ALLOCATION),
+                 as.character(p$applier_allocation)))
+    msgs = c(msgs, sprintf("applier allocation: live '%s' vs calibrated '%s'",
+                           KG_DYN_APPLIER_ALLOCATION, p$applier_allocation))
+  if (num_mismatch(KG_DYN_DEFAULT_PSI, p$psi))
+    msgs = c(msgs, sprintf(paste0('psi: live %s vs calibrated %s (KG_PSI ',
+                                  'override or un-stamped hand-edit?)'),
+                           KG_DYN_DEFAULT_PSI, p$psi))
+  if (num_mismatch(KG_DYN_SHARE_PLANNED, p$planned_share))
+    msgs = c(msgs, sprintf(paste0('planned_share: live %s vs calibrated %s ',
+                                  '(KG_SHARE_PLANNED override or un-stamped ',
+                                  'hand-edit?)'),
+                           KG_DYN_SHARE_PLANNED, p$planned_share))
+  if (num_mismatch(KG_DYN_PHI_I, p$phi_I))
+    msgs = c(msgs, sprintf('phi_I (fixed share): live %s vs calibrated %s',
+                           KG_DYN_PHI_I, p$phi_I))
+  if (num_mismatch(KG_DYN_TIMING_REF_WEDGE, p$ref_wedge))
+    msgs = c(msgs, sprintf('ref_wedge: live %s vs calibrated %s',
+                           KG_DYN_TIMING_REF_WEDGE, p$ref_wedge))
+  if (num_mismatch(KG_DYN_TIMING_WINDOW, p$timing_window))
+    msgs = c(msgs, sprintf('timing_window: live %s vs calibrated %s',
+                           KG_DYN_TIMING_WINDOW, p$timing_window))
+  if (!identical(as.integer(KG_DYN_SPEC_VERSION), as.integer(p$spec_version)))
+    msgs = c(msgs, sprintf(paste0('spec_version: live %d vs calibrated %d ',
+                                  '(Bellman/applier logic changed since ',
+                                  'calibration?)'),
+                           KG_DYN_SPEC_VERSION, p$spec_version))
+
+  td = scenario_info$interface_paths$`Tax-Data`
+  if (!is.null(td) && !grepl(p$tax_data_vintage, td, fixed = TRUE))
+    msgs = c(msgs, sprintf("Tax-Data vintage: run uses '%s', calibrated on '%s'",
+                           td, p$tax_data_vintage))
+  macro = scenario_info$interface_paths$`Macro-Projections`
+  if (!is.null(macro) && !grepl(p$macro_vintage, macro, fixed = TRUE))
+    msgs = c(msgs, sprintf(paste0("Macro-Projections vintage: run uses '%s', ",
+                                  "calibrated on '%s'"),
+                           macro, p$macro_vintage))
+
+  if (length(msgs) > 0) {
+    banner = paste0(
+      '\n=======================================================================\n',
+      'kg_dynamics CALIBRATION STALE -- conventional estimates may be off-target\n',
+      'psi/planned_share/dilutions were calibrated under conditions that no\n',
+      'longer match this run:\n  - ', paste(msgs, collapse = '\n  - '), '\n',
+      'Fix: re-run other/kg_model_tests/measure_dilution.R + calibrate.sbatch,\n',
+      'then update KG_DYN_DEFAULT_PSI / KG_DYN_SHARE_PLANNED /\n',
+      'KG_DYN_CALIB_PROVENANCE. If this is a deliberate sweep, restore the env\n',
+      'knobs to the calibrated values to silence this.\n',
+      '=======================================================================')
+    if (identical(Sys.getenv('KG_STRICT_CALIB'), '1')) {
+      stop(banner)
+    }
+    message(banner)
+    warning('kg_dynamics calibration is stale (see banner above); ',
+            'conventional estimates may be off-target.')
+    return(invisible(FALSE))
+  }
+  invisible(TRUE)
+}
 
 
 
