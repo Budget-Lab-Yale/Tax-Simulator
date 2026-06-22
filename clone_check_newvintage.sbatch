@@ -4,7 +4,7 @@
 #SBATCH --time=00:30:00
 #SBATCH --mem=8G
 #SBATCH --cpus-per-task=1
-#SBATCH --output=clone_check_newvintage_%j.log
+#SBATCH --output=logs/clone_check_newvintage_%j.log
 
 cd /nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator/other/estate_tax
 

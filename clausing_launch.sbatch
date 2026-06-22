@@ -3,7 +3,7 @@
 #SBATCH --mem=16G
 #SBATCH --partition=day
 #SBATCH --job-name=clausing-launch
-#SBATCH --output=clausing_launch_%j.log
+#SBATCH --output=logs/clausing_launch_%j.log
 # Runs Phase 0 setup on a compute node (not login) and submits the
 # SLURM array chain for the clausing stack.
 cd /nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator

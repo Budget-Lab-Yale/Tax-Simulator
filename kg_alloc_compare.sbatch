@@ -3,7 +3,7 @@
 #SBATCH --mem=16G
 #SBATCH --partition=day
 #SBATCH --job-name=kg-alloc
-#SBATCH --output=kg_alloc_%j.log
+#SBATCH --output=logs/kg_alloc_%j.log
 # Phase 0 setup + array-chain submission for the applier-allocation comparison
 # (kg_lt-share 'R' vs G_unit-share 'G' in kg_dyn_apply_to_records).
 # KG_APPLIER_ALLOCATION and VINTAGE come from --export on submit:

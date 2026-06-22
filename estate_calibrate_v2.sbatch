@@ -4,7 +4,7 @@
 #SBATCH --time=03:00:00
 #SBATCH --mem=24G
 #SBATCH --cpus-per-task=1
-#SBATCH --output=estate_cal_v2_%j.log
+#SBATCH --output=logs/estate_cal_v2_%j.log
 
 module load R/4.4.1-foss-2022b
 

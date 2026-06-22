@@ -3,7 +3,7 @@
 #SBATCH --mem=16G
 #SBATCH --partition=day
 #SBATCH --job-name=kg-deemed
-#SBATCH --output=kg_deemed_%j.log
+#SBATCH --output=logs/kg_deemed_%j.log
 # Phase 0 setup + array-chain submission for the value-based deemed-realization
 # avoidance sweep. KG_DEEMED_AVOIDANCE and VINTAGE come from --export on submit.
 cd /nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator

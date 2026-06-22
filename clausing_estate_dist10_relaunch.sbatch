@@ -3,7 +3,7 @@
 #SBATCH --mem=16G
 #SBATCH --partition=day
 #SBATCH --job-name=clausing-dist10-relaunch
-#SBATCH --output=clausing_estate_dist10_relaunch_%j.log
+#SBATCH --output=logs/clausing_estate_dist10_relaunch_%j.log
 # Re-runs ONLY setup (re-serializing configs with dist_years 2030:2039) and
 # Phase 3b post-processing for the clausing_estate vintage. Detail and totals
 # from the full run are untouched and reused; this just rebuilds the

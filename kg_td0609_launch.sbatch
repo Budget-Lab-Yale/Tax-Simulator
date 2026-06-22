@@ -3,7 +3,7 @@
 #SBATCH --mem=16G
 #SBATCH --partition=day
 #SBATCH --job-name=kg-td0609-launch
-#SBATCH --output=kg_td0609_launch_%j.log
+#SBATCH --output=logs/kg_td0609_launch_%j.log
 # Re-runs the kg mechanical-pass scenarios (baseline, carryover, deemed) on
 # Tax-Data vintage 2026060918 (updated wealth imputation), full sample, for
 # comparison against kg_mech_50 (Tax-Data 2026050315).

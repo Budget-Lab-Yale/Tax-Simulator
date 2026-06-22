@@ -3,7 +3,7 @@
 #SBATCH --mem=16G
 #SBATCH --partition=day
 #SBATCH --job-name=clausing-corp-launch
-#SBATCH --output=clausing_corp_launch_%j.log
+#SBATCH --output=logs/clausing_corp_launch_%j.log
 # Runs Phase 0 setup on a compute node (not login) and submits the
 # SLURM array chain for the clausing stack, including the new 07_corporate
 # scenario carrying the off-model corporate revenue stream.

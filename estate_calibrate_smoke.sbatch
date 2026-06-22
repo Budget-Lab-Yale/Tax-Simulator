@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --partition=day
 #SBATCH --job-name=estate-smoke
-#SBATCH --output=estate_calibrate_smoke_%j.log
+#SBATCH --output=logs/estate_calibrate_smoke_%j.log
 # Quick smoke test of the gift add-back + level-constraint changes.
 cd /nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator
 module load R/4.4.1-foss-2022b

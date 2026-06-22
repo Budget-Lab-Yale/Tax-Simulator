@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=2
 #SBATCH --partition=day
 #SBATCH --job-name=estate-q
-#SBATCH --output=estate_quick_%j.log
+#SBATCH --output=logs/estate_quick_%j.log
 cd /nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator
 module load R/4.4.1-foss-2022b
 TAX_DATA=/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1/2026052823/baseline

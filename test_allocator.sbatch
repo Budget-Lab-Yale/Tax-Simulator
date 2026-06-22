@@ -4,7 +4,7 @@
 #SBATCH --time=00:10:00
 #SBATCH --mem=8G
 #SBATCH --cpus-per-task=1
-#SBATCH --output=test_allocator_%j.log
+#SBATCH --output=logs/test_allocator_%j.log
 
 cd /nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator
 module load R/4.4.1-foss-2022b

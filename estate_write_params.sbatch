@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --partition=day
 #SBATCH --job-name=estate-params
-#SBATCH --output=estate_write_params_%j.log
+#SBATCH --output=logs/estate_write_params_%j.log
 # Regenerates config/estate/estate_valuation_params.yaml from the calibration
 # outputs and the SOI table (see other/estate_tax/write_frozen_params.R).
 cd /nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator

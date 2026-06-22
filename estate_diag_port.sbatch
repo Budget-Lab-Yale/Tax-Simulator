@@ -4,7 +4,7 @@
 #SBATCH --time=01:00:00
 #SBATCH --mem=16G
 #SBATCH --cpus-per-task=1
-#SBATCH --output=estate_diag_port_%j.log
+#SBATCH --output=logs/estate_diag_port_%j.log
 
 module load R/4.4.1-foss-2022b
 

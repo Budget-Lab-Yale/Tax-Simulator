@@ -3,7 +3,7 @@
 #SBATCH --mem=16G
 #SBATCH --partition=day
 #SBATCH --job-name=kg-s121-carry
-#SBATCH --output=kg_sec121_carryover_%j.log
+#SBATCH --output=logs/kg_sec121_carryover_%j.log
 # Phase 0 setup + array-chain submission for the §121-under-carryover test.
 # Runs baseline + all-carryover (§121 on), all-carryover (§121 off / cap=0),
 # home-carryover-others-deemed, and all-deemed. Full sample per kg_dynamics

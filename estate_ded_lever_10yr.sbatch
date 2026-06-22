@@ -3,7 +3,7 @@
 #SBATCH --mem=16G
 #SBATCH --partition=day
 #SBATCH --job-name=estate-lever-10yr
-#SBATCH --output=estate_ded_lever_10yr_%j.log
+#SBATCH --output=logs/estate_ded_lever_10yr_%j.log
 # Ten-year (FY2027-2036) budget comparison for the estate.income_tax_ded
 # lever: dr_prim (deduction on) vs dr_prim_noded (off), 2026:2036 full
 # sample, baseline reused from niskanen_housing (same years-span => same

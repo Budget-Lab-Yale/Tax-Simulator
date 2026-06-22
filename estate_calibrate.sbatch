@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --partition=day
 #SBATCH --job-name=estate-cal
-#SBATCH --output=estate_calibrate_%j.log
+#SBATCH --output=logs/estate_calibrate_%j.log
 # Estate tax calibration side-script. Runs on a compute node (never login).
 cd /nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator
 module load R/4.4.1-foss-2022b

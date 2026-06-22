@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --partition=day
 #SBATCH --job-name=estate-smoke
-#SBATCH --output=estate_smoke_%j.log
+#SBATCH --output=logs/estate_smoke_%j.log
 # Single-node smoke of the on-model estate tax: baseline + estate_sunset at
 # 5% sample, years 2025:2034, multicore over years. Checks plumbing only
 # (tax law parse, calc_estate join, totals/estate.csv, receipts delta);

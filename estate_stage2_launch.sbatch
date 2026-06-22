@@ -3,7 +3,7 @@
 #SBATCH --mem=16G
 #SBATCH --partition=day
 #SBATCH --job-name=estate-stage2-launch
-#SBATCH --output=estate_stage2_launch_%j.log
+#SBATCH --output=logs/estate_stage2_launch_%j.log
 # Stage-2 heir-allocator validation: baseline + estate_sunset at full sample,
 # dist_years 2026:2027 exercise the rank-matching allocator in Phase 3b.
 cd /nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator

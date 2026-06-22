@@ -3,7 +3,7 @@
 #SBATCH --mem=16G
 #SBATCH --partition=day
 #SBATCH --job-name=clausing-estate-launch
-#SBATCH --output=clausing_estate_launch_%j.log
+#SBATCH --output=logs/clausing_estate_launch_%j.log
 # Clausing-Sarin stack rebuilt on default Tax-Data (2026060918) with the new
 # on-model estate layer (07_estate, $5M@2030/45%) and corporate moved to 08.
 # Full sample, vintage clausing_estate.

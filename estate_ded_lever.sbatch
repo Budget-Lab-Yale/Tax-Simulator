@@ -3,7 +3,7 @@
 #SBATCH --mem=16G
 #SBATCH --partition=day
 #SBATCH --job-name=estate-ded-lever
-#SBATCH --output=estate_ded_lever_%j.log
+#SBATCH --output=logs/estate_ded_lever_%j.log
 # With/without comparison for the estate.income_tax_ded law lever: dr_prim
 # (deduction on, baseline default) vs dr_prim_noded (lever overridden to 0),
 # 2026:2029 full sample, baseline reused from the niskanen_housing vintage.

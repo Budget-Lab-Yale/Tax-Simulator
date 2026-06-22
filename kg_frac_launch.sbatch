@@ -3,7 +3,7 @@
 #SBATCH --mem=16G
 #SBATCH --partition=day
 #SBATCH --job-name=kg-frac-launch
-#SBATCH --output=kg_frac_launch_%j.log
+#SBATCH --output=logs/kg_frac_launch_%j.log
 # Two-leg expected-deemed comparison runs, deemed scenario only (carryover
 # already validated identical to binary; baselines reused from prior vintages)
 cd /nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator

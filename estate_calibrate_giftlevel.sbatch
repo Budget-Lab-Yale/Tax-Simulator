@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --partition=day
 #SBATCH --job-name=estate-gl
-#SBATCH --output=estate_calibrate_giftlevel_%j.log
+#SBATCH --output=logs/estate_calibrate_giftlevel_%j.log
 # Full calibration with gift add-back + level constraint. Writes to a NEW dir so
 # the pre-change fit at .../estate_tax_calibration/ is preserved for comparison.
 cd /nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator

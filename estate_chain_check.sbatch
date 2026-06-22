@@ -3,7 +3,7 @@
 #SBATCH --mem=16G
 #SBATCH --partition=day
 #SBATCH --job-name=estate-chain-check
-#SBATCH --output=estate_chain_check_%j.log
+#SBATCH --output=logs/estate_chain_check_%j.log
 # Commit-1 bit-identity check for the estate-into-do_taxes refactor:
 # baseline-only re-run of private/niskanen_housing (full sample, Tax-Data
 # 2026060918). Same runscript and 2026:2036 years => identical sample_ids

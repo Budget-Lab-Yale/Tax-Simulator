@@ -3,7 +3,7 @@
 #SBATCH --mem=4G
 #SBATCH --partition=day
 #SBATCH --job-name=estate-chain-compare
-#SBATCH --output=estate_chain_compare_%j.log
+#SBATCH --output=logs/estate_chain_compare_%j.log
 # Bytewise comparison for the commit-1 bit-identity check: the
 # estate_chain_check baseline re-run (post-refactor code) against the
 # existing niskanen_housing baseline (pre-refactor code). Hard criteria:

@@ -3,7 +3,7 @@
 #SBATCH --mem=24G
 #SBATCH --partition=day
 #SBATCH --job-name=clausing-corp-sin-chart
-#SBATCH --output=clausing_corp_sin_chart_%j.log
+#SBATCH --output=logs/clausing_corp_sin_chart_%j.log
 # Builds the 3-block stacked distribution chart + broken-out data file for the
 # Clausing-Sarin package (individual and estate 01-07 on-model + 08-10
 # off-model income measures, corporate 11, excise 12-16).
