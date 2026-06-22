@@ -146,6 +146,73 @@ do_scenario = function(ID, baseline_mtrs) {
 
 
 
+write_pass_outputs = function(output, root, totals_slot,
+                              vat_price_offset, excess_growth_offset,
+                              scenario_info) {
+
+  #----------------------------------------------------------------------------
+  # Writes one pass's (static or conventional) supplemental offsets, totals
+  # CSVs, and receipts for a scenario. Shared by run_sim() (in-process) and
+  # SLURM aggregate.R Phase 3a, which assemble `output` to the same shape. The
+  # two passes differ only in `root`, `totals_slot`, and the offset source, so
+  # factoring this here keeps the two call paths in lockstep (see the SLURM
+  # sync table in CLAUDE.md).
+  #
+  # Parameters:
+  #   - output (list)             : per-year results; each element carries
+  #                                 $static_totals and/or $conventional_totals
+  #   - root (str)                : pass output root (…/static or …/conventional)
+  #   - totals_slot (str)         : 'static_totals' or 'conventional_totals' —
+  #                                 which per-year totals list to aggregate
+  #   - vat_price_offset (df)     : VAT price offset series, written to supplemental
+  #   - excess_growth_offset (df) : excess-growth offset series, written to supplemental
+  #   - scenario_info (list)      : scenario info (interface paths, excess_growth_all_rev)
+  #
+  # Returns: invisible NULL (writes files as a side effect)
+  #----------------------------------------------------------------------------
+
+  vat_price_offset %>%
+    write_csv(file.path(root, 'supplemental', 'vat_price_offset.csv'))
+  excess_growth_offset %>%
+    write_csv(file.path(root, 'supplemental', 'excess_growth_offset.csv'))
+
+  totals_pr = output %>%
+    map(.f = ~ .x[[totals_slot]]$pr) %>%
+    bind_rows() %>%
+    write_csv(file.path(root, 'totals', 'payroll.csv'))
+
+  totals_1040 = output %>%
+    map(.f = ~ .x[[totals_slot]]$`1040`) %>%
+    bind_rows() %>%
+    write_csv(file.path(root, 'totals', '1040.csv'))
+
+  output %>%
+    map(.f = ~ .x[[totals_slot]]$`1040_by_agi`) %>%
+    bind_rows() %>%
+    write_csv(file.path(root, 'totals', '1040_by_agi.csv'))
+
+  totals_estate = output %>%
+    map(.f = ~ .x[[totals_slot]]$estate) %>%
+    bind_rows() %>%
+    write_csv(file.path(root, 'totals', 'estate.csv'))
+
+  totals_pr %>%
+    left_join(totals_1040,   by = 'year') %>%
+    left_join(totals_estate, by = 'year') %>%
+    calc_receipts(
+      scenario_root         = root,
+      vat_root              = scenario_info$interface_paths$`Value-Added-Tax-Model`,
+      other_root            = scenario_info$interface_paths$`Macro-Projections`,
+      cost_recovery_root    = scenario_info$interface_paths$`Cost-Recovery-Simulator`,
+      off_model_root        = scenario_info$interface_paths$`Off-Model-Estimates`,
+      excess_growth_all_rev = scenario_info$excess_growth_all_rev
+    )
+
+  invisible(NULL)
+}
+
+
+
 run_sim = function(scenario_info, tax_law, baseline_mtrs,
                    indexes, vat_price_offset, excess_growth_offset,
                    pass_type = c('both', 'static', 'conventional'),
@@ -223,88 +290,26 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
 
   # --- Write static outputs (only when this run actually ran the static pass) ---
   if (pass_type %in% c('both', 'static')) {
-
-    static_root = file.path(scenario_info$output_path, 'static')
-
-    vat_price_offset %>%
-      write_csv(file.path(static_root, 'supplemental', 'vat_price_offset.csv'))
-    excess_growth_offset %>%
-      write_csv(file.path(static_root, 'supplemental', 'excess_growth_offset.csv'))
-
-    static_totals_pr = output %>%
-      map(.f = ~.x$static_totals$pr) %>%
-      bind_rows() %>%
-      write_csv(file.path(static_root, 'totals', 'payroll.csv'))
-
-    static_totals_1040 = output %>%
-      map(.f = ~.x$static_totals$`1040`) %>%
-      bind_rows() %>%
-      write_csv(file.path(static_root, 'totals', '1040.csv'))
-
-    output %>%
-      map(.f = ~.x$static_totals$`1040_by_agi`) %>%
-      bind_rows() %>%
-      write_csv(file.path(static_root, 'totals', '1040_by_agi.csv'))
-
-    static_totals_estate = output %>%
-      map(.f = ~.x$static_totals$estate) %>%
-      bind_rows() %>%
-      write_csv(file.path(static_root, 'totals', 'estate.csv'))
-
-    static_totals_pr %>%
-      left_join(static_totals_1040,   by = 'year') %>%
-      left_join(static_totals_estate, by = 'year') %>%
-      calc_receipts(
-        scenario_root         = static_root,
-        vat_root              = scenario_info$interface_paths$`Value-Added-Tax-Model`,
-        other_root            = scenario_info$interface_paths$`Macro-Projections`,
-        cost_recovery_root    = scenario_info$interface_paths$`Cost-Recovery-Simulator`,
-        off_model_root        = scenario_info$interface_paths$`Off-Model-Estimates`,
-        excess_growth_all_rev = scenario_info$excess_growth_all_rev
-      )
+    write_pass_outputs(
+      output               = output,
+      root                 = file.path(scenario_info$output_path, 'static'),
+      totals_slot          = 'static_totals',
+      vat_price_offset     = vat_price_offset,
+      excess_growth_offset = excess_growth_offset,
+      scenario_info        = scenario_info
+    )
   }
 
   # --- Write conventional outputs (skip for baseline; only when conv pass ran) ---
   if (pass_type %in% c('both', 'conventional') && scenario_info$ID != 'baseline') {
-
-    conv_root = file.path(scenario_info$output_path, 'conventional')
-
-    vat_price_offset %>%
-      write_csv(file.path(conv_root, 'supplemental', 'vat_price_offset.csv'))
-    excess_growth_offset %>%
-      write_csv(file.path(conv_root, 'supplemental', 'excess_growth_offset.csv'))
-
-    conv_totals_pr = output %>%
-      map(.f = ~.x$conventional_totals$pr) %>%
-      bind_rows() %>%
-      write_csv(file.path(conv_root, 'totals', 'payroll.csv'))
-
-    conv_totals_1040 = output %>%
-      map(.f = ~.x$conventional_totals$`1040`) %>%
-      bind_rows() %>%
-      write_csv(file.path(conv_root, 'totals', '1040.csv'))
-
-    output %>%
-      map(.f = ~.x$conventional_totals$`1040_by_agi`) %>%
-      bind_rows() %>%
-      write_csv(file.path(conv_root, 'totals', '1040_by_agi.csv'))
-
-    conv_totals_estate = output %>%
-      map(.f = ~.x$conventional_totals$estate) %>%
-      bind_rows() %>%
-      write_csv(file.path(conv_root, 'totals', 'estate.csv'))
-
-    conv_totals_pr %>%
-      left_join(conv_totals_1040,   by = 'year') %>%
-      left_join(conv_totals_estate, by = 'year') %>%
-      calc_receipts(
-        scenario_root         = conv_root,
-        vat_root              = scenario_info$interface_paths$`Value-Added-Tax-Model`,
-        other_root            = scenario_info$interface_paths$`Macro-Projections`,
-        cost_recovery_root    = scenario_info$interface_paths$`Cost-Recovery-Simulator`,
-        off_model_root        = scenario_info$interface_paths$`Off-Model-Estimates`,
-        excess_growth_all_rev = scenario_info$excess_growth_all_rev
-      )
+    write_pass_outputs(
+      output               = output,
+      root                 = file.path(scenario_info$output_path, 'conventional'),
+      totals_slot          = 'conventional_totals',
+      vat_price_offset     = vat_price_offset,
+      excess_growth_offset = excess_growth_offset,
+      scenario_info        = scenario_info
+    )
   }
 
   # Return combined MTRs (only meaningful when static pass ran in this call)

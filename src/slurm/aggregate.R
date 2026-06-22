@@ -92,86 +92,27 @@ tryCatch({
     })
 
     # --- Write static outputs ---
-    static_root = file.path(scenario_info$output_path, 'static')
-
-    config$vat_price_offset %>%
-      write_csv(file.path(static_root, 'supplemental', 'vat_price_offset.csv'))
-    config$excess_growth_offset %>%
-      write_csv(file.path(static_root, 'supplemental', 'excess_growth_offset.csv'))
-
-    static_totals_pr = output %>%
-      map(.f = ~.x$static_totals$pr) %>%
-      bind_rows() %>%
-      write_csv(file.path(static_root, 'totals', 'payroll.csv'))
-
-    static_totals_1040 = output %>%
-      map(.f = ~.x$static_totals$`1040`) %>%
-      bind_rows() %>%
-      write_csv(file.path(static_root, 'totals', '1040.csv'))
-
-    output %>%
-      map(.f = ~.x$static_totals$`1040_by_agi`) %>%
-      bind_rows() %>%
-      write_csv(file.path(static_root, 'totals', '1040_by_agi.csv'))
-
-    static_totals_estate = output %>%
-      map(.f = ~.x$static_totals$estate) %>%
-      bind_rows() %>%
-      write_csv(file.path(static_root, 'totals', 'estate.csv'))
-
-    static_totals_pr %>%
-      left_join(static_totals_1040,   by = 'year') %>%
-      left_join(static_totals_estate, by = 'year') %>%
-      calc_receipts(
-        scenario_root         = static_root,
-        vat_root              = scenario_info$interface_paths$`Value-Added-Tax-Model`,
-        other_root            = scenario_info$interface_paths$`Macro-Projections`,
-        cost_recovery_root    = scenario_info$interface_paths$`Cost-Recovery-Simulator`,
-        off_model_root        = scenario_info$interface_paths$`Off-Model-Estimates`,
-        excess_growth_all_rev = scenario_info$excess_growth_all_rev
-      )
+    # Shared with run_sim() via write_pass_outputs() (src/sim/run.R), sourced
+    # into this process by reconstitute_environment().
+    write_pass_outputs(
+      output               = output,
+      root                 = file.path(scenario_info$output_path, 'static'),
+      totals_slot          = 'static_totals',
+      vat_price_offset     = config$vat_price_offset,
+      excess_growth_offset = config$excess_growth_offset,
+      scenario_info        = scenario_info
+    )
 
     # --- Write conventional outputs (skip for baseline) ---
     if (scenario_id != 'baseline') {
-
-      conv_root = file.path(scenario_info$output_path, 'conventional')
-
-      config$vat_price_offset %>%
-        write_csv(file.path(conv_root, 'supplemental', 'vat_price_offset.csv'))
-      config$excess_growth_offset %>%
-        write_csv(file.path(conv_root, 'supplemental', 'excess_growth_offset.csv'))
-
-      conv_totals_pr = output %>%
-        map(.f = ~.x$conventional_totals$pr) %>%
-        bind_rows() %>%
-        write_csv(file.path(conv_root, 'totals', 'payroll.csv'))
-
-      conv_totals_1040 = output %>%
-        map(.f = ~.x$conventional_totals$`1040`) %>%
-        bind_rows() %>%
-        write_csv(file.path(conv_root, 'totals', '1040.csv'))
-
-      output %>%
-        map(.f = ~.x$conventional_totals$`1040_by_agi`) %>%
-        bind_rows() %>%
-        write_csv(file.path(conv_root, 'totals', '1040_by_agi.csv'))
-
-      conv_totals_estate = output %>%
-        map(.f = ~.x$conventional_totals$estate) %>%
-        bind_rows() %>%
-        write_csv(file.path(conv_root, 'totals', 'estate.csv'))
-
-      conv_totals_pr %>%
-        left_join(conv_totals_1040,   by = 'year') %>%
-        left_join(conv_totals_estate, by = 'year') %>%
-        calc_receipts(
-          scenario_root         = conv_root,
-          vat_root              = scenario_info$interface_paths$`Value-Added-Tax-Model`,
-          other_root            = scenario_info$interface_paths$`Macro-Projections`,
-          cost_recovery_root    = scenario_info$interface_paths$`Cost-Recovery-Simulator`,
-          off_model_root        = scenario_info$interface_paths$`Off-Model-Estimates`,
-          excess_growth_all_rev = scenario_info$excess_growth_all_rev
-        )
+      write_pass_outputs(
+        output               = output,
+        root                 = file.path(scenario_info$output_path, 'conventional'),
+        totals_slot          = 'conventional_totals',
+        vat_price_offset     = config$vat_price_offset,
+        excess_growth_offset = config$excess_growth_offset,
+        scenario_info        = scenario_info
+      )
     }
 
     cat(paste0('Phase 3a: completed scenario=', scenario_id, '\n'))
