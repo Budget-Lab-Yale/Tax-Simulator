@@ -406,3 +406,4 @@ Safe changes that need NO SLURM updates: anything inside `run_one_year()`, tax c
 - **Heterogeneous elasticities**: Assign different elasticities to different demographic groups/income levels using `case_when()`
 - **Extensive margin simulation**: Use probabilities and RNG for binary outcomes (e.g., employment exit)
 - **Global random seed**: Always reset with `set.seed(globals$random_seed)` before stochastic operations
+- **Report full paths for deliverables**: Whenever you finish producing a document, chart, table, or other output artifact, print its FULL absolute path (e.g., `/nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator/other/.../file.html`) in your summary — never just the filename or a relative path
