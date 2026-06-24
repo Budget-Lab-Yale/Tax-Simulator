@@ -21,6 +21,7 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   #        - pmt_pr_nonwithheld     (dbl) : payroll tax paid at time of filing
   #        - pmt_pr_withheld        (dbl) : payroll tax withheld (FICA) or paid quarterly (SECA)
   #        - est_tax_exp            (dbl) : expected estate tax liability, $B (CY of death)
+  #        - wealth_tax             (dbl) : annual wealth tax liability, $B (CY)
   #   - scenario_root         (str) : directory where scenario's data is written
   #   - vat_root              (str) : directory for VAT revenue for this scenario
   #   - other_root            (str) : Macro-Projections root (for other taxes)
@@ -144,7 +145,16 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
       # lag(default = 0) zero-imputes the missing prior CY in the first sim
       # year — same lead-in convention as the withheld splits above.
       delta_revenues_estate_tax = lag(
-        coalesce(est_tax_exp - est_tax_exp_baseline, 0), default = 0)
+        coalesce(est_tax_exp - est_tax_exp_baseline, 0), default = 0),
+
+      # On-model annual wealth tax: a pure LEVEL (no CBO anchor, unlike estate's
+      # level+delta — there is no current-law wealth tax to anchor to), booked
+      # FY = CY with NO withholding split and NO estate-style t+1 lag. An annual
+      # net-worth assessment is a stock tax on the living population in the
+      # calendar year; deltas against the (zero) baseline fall straight out in
+      # calc_rev_est. It is on-model (computed on already-adjusted data), so it
+      # does NOT take the excess-growth `all_rev` factor below.
+      revenues_wealth_tax = coalesce(wealth_tax, 0)
     ) %>%
     
     
@@ -182,7 +192,8 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     
     # Final column selection
     select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits,
-           revenues_corp_tax, revenues_estate_tax, revenues_vat, revenues_other) ->
+           revenues_corp_tax, revenues_estate_tax, revenues_wealth_tax,
+           revenues_vat, revenues_other) ->
     fy_receipts
 
   # Internal sidecar: keeps the partial first sim year so calc_rev_est can
@@ -232,15 +243,16 @@ calc_rev_est = function(id) {
     read_csv(show_col_types = F) %>%
     
     # Pivot long in variable type
-    mutate(total = revenues_payroll_tax + 
-                   revenues_income_tax - 
+    mutate(total = revenues_payroll_tax +
+                   revenues_income_tax -
                    outlays_tax_credits +
-                   revenues_corp_tax + 
-                   revenues_estate_tax + 
-                   revenues_vat + 
-                   revenues_other) %>% 
-    pivot_longer(cols      = -year, 
-                 names_to  = 'series', 
+                   revenues_corp_tax +
+                   revenues_estate_tax +
+                   revenues_wealth_tax +
+                   revenues_vat +
+                   revenues_other) %>%
+    pivot_longer(cols      = -year,
+                 names_to  = 'series',
                  values_to = 'baseline')
   
   for (static in c(T, F)) {
@@ -260,15 +272,16 @@ calc_rev_est = function(id) {
       read_csv(show_col_types = F) %>%
       
       # Pivot long in variable type
-      mutate(total = revenues_payroll_tax + 
-                     revenues_income_tax - 
+      mutate(total = revenues_payroll_tax +
+                     revenues_income_tax -
                      outlays_tax_credits +
-                     revenues_corp_tax + 
-                     revenues_estate_tax + 
+                     revenues_corp_tax +
+                     revenues_estate_tax +
+                     revenues_wealth_tax +
                      revenues_vat +
-                     revenues_other) %>% 
-      pivot_longer(cols      = -year, 
-                   names_to  = 'series', 
+                     revenues_other) %>%
+      pivot_longer(cols      = -year,
+                   names_to  = 'series',
                    values_to = 'counterfactual')
     
     # Read GDP and adjust for VAT (i.e. price level rises)
@@ -302,23 +315,24 @@ calc_rev_est = function(id) {
                    values_to = 'delta') %>% 
       pivot_wider(names_from  = `year`, 
                   values_from = delta) %>% 
-      arrange(Measure, 
-              match(Series, c('total', 'revenues_income_tax', 
-                              'revenues_payroll_tax', 'revenues_corp_rate', 'revenues_corp_tax', 
-                              'revenues_estate_tax', 'revenues_other',
+      arrange(Measure,
+              match(Series, c('total', 'revenues_income_tax',
+                              'revenues_payroll_tax', 'revenues_corp_rate', 'revenues_corp_tax',
+                              'revenues_estate_tax', 'revenues_wealth_tax', 'revenues_other',
                               'revenues_vat', 'outlays_tax_credits'))
-      ) %>% 
+      ) %>%
       mutate(Series = case_when(
-        Series == 'total'                ~ 'Total budget effect', 
-        Series == 'revenues_payroll_tax' ~ '  Revenues, payroll tax', 
-        Series == 'revenues_income_tax'  ~ '  Revenues, individual income tax', 
+        Series == 'total'                ~ 'Total budget effect',
+        Series == 'revenues_payroll_tax' ~ '  Revenues, payroll tax',
+        Series == 'revenues_income_tax'  ~ '  Revenues, individual income tax',
         Series == 'outlays_tax_credits'  ~ '  Outlays, refundable tax credits',
         Series == 'revenues_corp_rate'   ~ '  Revenues, corporate income tax (rate change)',
         Series == 'revenues_corp_tax'    ~ '  Revenues, corporate income tax',
         Series == 'revenues_estate_tax'  ~ '  Revenues, estate tax',
+        Series == 'revenues_wealth_tax'  ~ '  Revenues, wealth tax',
         Series == 'revenues_vat'         ~ '  Revenues, value added tax',
         Series == 'revenues_other'       ~ '  Revenues, other'
-      )) 
+      ))
     
     # Convert to measure-indexed list
     rev_est = c('Dollars', 'Baseline dollars', 'Share of GDP') %>% 
@@ -454,14 +468,15 @@ calc_stacked_rev_est = function(counterfactual_ids) {
                            'receipts_full.csv') %>%
             read_csv(show_col_types = F) %>% 
             mutate(scenario_id = .x,
-                   Dollars = revenues_payroll_tax + 
-                             revenues_income_tax - 
+                   Dollars = revenues_payroll_tax +
+                             revenues_income_tax -
                              outlays_tax_credits +
-                             revenues_corp_tax + 
-                             revenues_estate_tax + 
-                             revenues_vat + 
-                             revenues_other) %>% 
-            select(scenario_id, year, Dollars, vat = revenues_vat)) %>% 
+                             revenues_corp_tax +
+                             revenues_estate_tax +
+                             revenues_wealth_tax +
+                             revenues_vat +
+                             revenues_other) %>%
+            select(scenario_id, year, Dollars, vat = revenues_vat)) %>%
       bind_rows() %>% 
       
       # Calculate share-of-GDP metric, accounting  for introduction of a VAT

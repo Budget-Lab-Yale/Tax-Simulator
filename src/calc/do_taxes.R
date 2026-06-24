@@ -4,7 +4,7 @@
 
 
 do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll,
-                    calc_estate_flag = TRUE) {
+                    calc_estate_flag = TRUE, calc_wealth_flag = TRUE) {
 
   #----------------------------------------------------------------------------
   # Calculates payroll and individual income taxes for all tax units. Form-
@@ -30,6 +30,14 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll,
   #                               estate pass each. Estate is computed after, and
   #                               never feeds back into, income tax, so gating it
   #                               off for those callers is output-preserving.
+  #   - calc_wealth_flag (bool) : whether to compute in-chain annual wealth tax
+  #                               liability. Same contract as calc_estate_flag:
+  #                               TRUE for the real passes; FALSE for the
+  #                               income-tax MTR loop and the kg dead-leg
+  #                               recomputes (which read only income-tax output).
+  #                               The exception is the net_worth MTR pass, which
+  #                               sets it TRUE so the +$1 net_worth bump reprices
+  #                               the marginal statutory wealth rate.
   #
   # Returns: tibble of tax units with new columns for calculated tax variables
   #          (df).
@@ -141,6 +149,27 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll,
     tax_units %<>%
       select(-any_of(ESTATE_OUTPUT_COLS)) %>%
       bind_cols(calc_estate(., globals$estate_params))
+  }
+
+
+  #------------
+  # Wealth tax
+  #------------
+
+  # Annual net-worth tax: per-record liability on the materialized net_worth
+  # column (set in run_one_year). Lives in the chain so each pass / behavioral
+  # repricing recomputes it on its own frame -- including the conventional
+  # avoidance module, which overwrites net_worth, and the net_worth MTR bump.
+  # Drop any previously computed wealth column first (the MTR loop re-runs
+  # do_taxes on frames that already carry it). Skipped (calc_wealth_flag =
+  # FALSE) by callers that only read income-tax output and discard wealth --
+  # the income-tax MTR loop and the kg dead-leg recomputes -- since wealth is
+  # computed after, and never feeds back into, income tax. liab_wealth stays a
+  # SEPARATE column (like liab_estate_*), never folded into liab_iit.
+  if (calc_wealth_flag) {
+    tax_units %<>%
+      select(-any_of(WEALTH_OUTPUT_COLS)) %>%
+      bind_cols(calc_wealth(.))
   }
 
 
@@ -484,38 +513,51 @@ remit_taxes = function(tax_units) {
 
 
 
-calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T, 
-                     type = 'nextdollar') {
-  
+calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
+                     type = 'nextdollar', actual_liab_wealth = NULL) {
+
   #----------------------------------------------------------------------------
-  # Calculates MTR, either at the next-dollar or 0-actual extensive margin, 
-  # with respect to given variable. Includes employee-side payroll taxes. 
+  # Calculates MTR, either at the next-dollar or 0-actual extensive margin,
+  # with respect to given variable. Includes employee-side payroll taxes.
   #
   # Note: for next-dollar MTRs, variable "wages" means non-tip, non-OT wages.
-  # For extensive margin MTRs, variable "wages" means all wages, including 
+  # For extensive margin MTRs, variable "wages" means all wages, including
   # tips and OT.
-  # 
+  #
   # Always double-check whether the variable you want a tax rate for is handled
-  # by the logic below!! It's not generalized to every variable due to 
+  # by the logic below!! It's not generalized to every variable due to
   # compositional issues (i.e. some variables are components of others).
-  # 
+  #
   # Parameters:
-  #   - tax_units (df)          : tibble of tax units, exogenous variables only
-  #   - actual_liab_iit (dbl[]) : vector of net income tax liability to compare
-  #                               against
-  #   - actual_liab_pr (dbl[])  : vector of total payroll tax to compare 
-  #                               against
-  #   - var (str)               : name of variable to increment
-  #   - pr (bool)               : whether to include payroll taxes in the MTR
-  #                               calculation
-  #   - type (str)              : "nextdollar" for next-dollar MTR, "extensive"
-  #                               for delta in tax when reducing the value to 0
+  #   - tax_units (df)             : tibble of tax units, exogenous variables only
+  #   - actual_liab_iit (dbl[])    : vector of net income tax liability to compare
+  #                                  against
+  #   - actual_liab_pr (dbl[])     : vector of total payroll tax to compare
+  #                                  against
+  #   - var (str)                  : name of variable to increment
+  #   - pr (bool)                  : whether to include payroll taxes in the MTR
+  #                                  calculation
+  #   - type (str)                 : "nextdollar" for next-dollar MTR, "extensive"
+  #                                  for delta in tax when reducing the value to 0
+  #   - actual_liab_wealth (dbl[]) : vector of annual wealth tax liability to
+  #                                  compare against. Required (and used) only
+  #                                  for var == 'net_worth', where the +$1 bump
+  #                                  reprices the marginal statutory wealth rate;
+  #                                  NULL for income/payroll MTRs (which never
+  #                                  move net_worth, so the wealth term is 0)
   #
   # Returns: tibble of MTRs (df).
   #----------------------------------------------------------------------------
-  
+
   # Set output variable name
   mtr_name = paste0('mtr_', var)
+
+  # The wealth tax is a stock tax whose only base is net_worth: recompute
+  # calc_wealth in the bumped pass for the net_worth MTR (so the +$1 reprices
+  # the marginal statutory wealth rate), and skip it for every other MTR var
+  # (income/payroll bumps don't move net_worth, and recomputing wealth would
+  # just waste a full-frame pass).
+  calc_wealth_flag = (var == 'net_worth')
   
   # Next-dollar calculation
   if (type == 'nextdollar') {
@@ -651,15 +693,20 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
       baseline_pr_er   = NULL,
       vars_payroll     = return_vars$calc_pr,
       vars_1040        = return_vars %>% remove_by_name('calc_pr') %>% unlist() %>% set_names(NULL),
-      calc_estate_flag = FALSE   # MTR reads only income-tax delta; estate discarded
+      calc_estate_flag = FALSE,             # MTR reads only income-tax delta; estate discarded
+      calc_wealth_flag = calc_wealth_flag   # TRUE only for the net_worth MTR (see above)
     ) %>%
-    
+
     # Calculate MTR and return
     mutate(
-      
-      # Calculate numerator: change in taxes 
-      delta_taxes = liab_iit_net - actual_liab_iit + pr * (liab_pr - actual_liab_pr),
-      
+
+      # Calculate numerator: change in taxes. The wealth term is added only for
+      # the net_worth MTR (calc_wealth_flag); for every other var it is 0 (and
+      # liab_wealth is not even computed, so the branch is never evaluated -- R
+      # `if` only evaluates the taken branch)
+      delta_taxes = liab_iit_net - actual_liab_iit + pr * (liab_pr - actual_liab_pr) +
+                    (if (calc_wealth_flag) liab_wealth - actual_liab_wealth else 0),
+
       # Calculate denominator: change in variable value
       delta_var = case_when(
         type == 'nextdollar' ~ 1,

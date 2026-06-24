@@ -19,7 +19,10 @@
 
 # Tax-Data wealth and debt columns (estate_module.R constants). Gross estate
 # is the sum of asset values; debts are subtracted explicitly (the SOI-derived
-# f_ded covers only non-debt deductions).
+# f_ded covers only non-debt deductions). These are the single source of truth
+# for the economic balance sheet: the wealth tax aliases them as
+# WEALTH_ASSET_COLS / WEALTH_DEBT_COLS (src/calc/functions/tax/wealth.R) so
+# estate + wealth stay in lockstep on what "net worth" means.
 ESTATE_ASSET_COLS = c(
   'value.cash', 'value.equities', 'value.bonds', 'value.dc', 'value.db',
   'value.life_ins', 'value.annuities', 'value.trusts', 'value.other_fin',

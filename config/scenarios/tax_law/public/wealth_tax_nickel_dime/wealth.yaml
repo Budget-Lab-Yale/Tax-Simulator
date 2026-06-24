@@ -1,0 +1,44 @@
+---
+#-------------------------------------------------------------------------------
+# "Nickel-and-dime" annual net-worth tax, effective 2026. Replicates the
+# standalone Wealth-Tax-Simulator's nickel_dime scenario for cross-model
+# comparison:
+#   - $50M exemption
+#   - 5% on net worth between $50M and $250M
+#   - 10% on net worth above $250M
+#
+# Modeled here as an indexed exemption + a graduated schedule on the
+# POST-exemption base, so brackets start at 0:
+#   wealth.brackets = [0, 200M]  (i.e. [50M, 250M] in net-worth terms)
+#   wealth.rates    = [0.05, 0.10]
+#
+# Only the exemption is indexed (chained CPI off a 2026 base, nearest $1M),
+# matching the standalone, which indexes the schedule to ccpiu_irs. The
+# filing_status_mapper and indexation_defaults carry over from the baseline
+# wealth.yaml (subparameter-level merge). In the 2025 lead-in year the
+# exemption is Inf (no tax), so the FY-2026 receipts delta is clean.
+#-------------------------------------------------------------------------------
+
+exemption_single:
+  value:
+    '2025': Inf
+    '2026': 50000000
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+
+exemption_head:
+  value:
+    '2025': Inf
+    '2026': 50000000
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+
+rates:
+  value: [0.05, 0.10]
+
+brackets:
+  value: [0, 200000000]

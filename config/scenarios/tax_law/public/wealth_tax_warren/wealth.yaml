@@ -1,0 +1,40 @@
+---
+#-------------------------------------------------------------------------------
+# Warren-style annual net-worth tax, effective 2026:
+#   - $50M exemption
+#   - 2% on net worth between $50M and $1B
+#   - 3% on net worth above $1B
+#
+# Modeled as an indexed exemption + a graduated schedule on the POST-exemption
+# base, so brackets start at 0:
+#   wealth.brackets = [0, 950M]  (i.e. [50M, 1B] in net-worth terms)
+#   wealth.rates    = [0.02, 0.03]
+#
+# The filing_status_mapper and indexation_defaults carry over from the baseline
+# wealth.yaml (subparameter-level merge). In the 2025 lead-in year the exemption
+# is Inf (no tax), so the FY-2026 receipts delta is clean.
+#-------------------------------------------------------------------------------
+
+exemption_single:
+  value:
+    '2025': Inf
+    '2026': 50000000
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+
+exemption_head:
+  value:
+    '2025': Inf
+    '2026': 50000000
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+
+rates:
+  value: [0.02, 0.03]
+
+brackets:
+  value: [0, 950000000]

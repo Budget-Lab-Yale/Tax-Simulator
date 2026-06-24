@@ -284,7 +284,8 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     'liab_iit_net', 'liab_fica_er1', 'liab_fica_er2', 'liab_seca', 'liab_pr_ee',
     'liab_pr', 'simple_filer', 'number_of_credits', 'kg_lt_infl_adj',
     'alt_max_cap_binds', 'decedent_flag', 'estate_m', 'estate_p_dsue',
-    'liab_estate_nodsue', 'liab_estate_dsue', 'estate_distributable'
+    'liab_estate_nodsue', 'liab_estate_dsue', 'estate_distributable',
+    'net_worth', 'liab_wealth'
   )
   
   

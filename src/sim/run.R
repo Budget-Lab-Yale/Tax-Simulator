@@ -196,9 +196,15 @@ write_pass_outputs = function(output, root, totals_slot,
     bind_rows() %>%
     write_csv(file.path(root, 'totals', 'estate.csv'))
 
+  totals_wealth = output %>%
+    map(.f = ~ .x[[totals_slot]]$wealth) %>%
+    bind_rows() %>%
+    write_csv(file.path(root, 'totals', 'wealth.csv'))
+
   totals_pr %>%
     left_join(totals_1040,   by = 'year') %>%
     left_join(totals_estate, by = 'year') %>%
+    left_join(totals_wealth, by = 'year') %>%
     calc_receipts(
       scenario_root         = root,
       vat_root              = scenario_info$interface_paths$`Value-Added-Tax-Model`,
@@ -364,7 +370,8 @@ kg_dyn_recompute_deemed_tax = function(taxed, input, baseline_pr_er,
     do_taxes(baseline_pr_er   = baseline_pr_er,
              vars_1040        = vars_1040,
              vars_payroll     = vars_payroll,
-             calc_estate_flag = FALSE)
+             calc_estate_flag = FALSE,
+             calc_wealth_flag = FALSE)   # only liab_iit_net read; wealth discarded
   stopifnot(identical(dead_leg$id, taxed$id))
 
   liab_deemed_cond  = dead_leg$liab_iit_net - taxed$liab_iit_net
@@ -487,6 +494,18 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   tax_units$estate_m = calc_estate_mortality(
     tax_units, globals$estate_params$cluster_death_weight_cap)
 
+  # Materialize economic net worth (Sigma assets - Sigma debts, raw dollars,
+  # no valuation discount) as a STORED column, computed once here so it can
+  # serve three roles downstream: (1) the wealth-tax base read by calc_wealth();
+  # (2) the +$1 bump target for the net_worth MTR (calc_mtrs operates on stored
+  # columns, and net_worth is derived); (3) the isolation point the conventional
+  # avoidance module overwrites with the avoided base. value.* stay intact, so
+  # estate and capital income are unaffected. Like the estate base, wealth stays
+  # in raw (non-VAT-adjusted) dollars by construction.
+  tax_units %<>%
+    mutate(net_worth = rowSums(across(all_of(WEALTH_ASSET_COLS), ~ replace_na(., 0))) -
+                       rowSums(across(all_of(WEALTH_DEBT_COLS),  ~ replace_na(., 0))))
+
 
   #----------
   # Do taxes
@@ -567,15 +586,16 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       static_mtrs_year = scenario_info$mtr_vars %>%
         map2(.y = scenario_info$mtr_types,
              .f = ~ calc_mtrs(
-               tax_units       = tax_units_static %>%
-                                   select(-all_of(return_vars %>%
-                                   unlist() %>%
-                                   set_names(NULL))),
-               actual_liab_iit = tax_units_static$liab_iit_net,
-               actual_liab_pr  = tax_units_static$liab_pr,
-               var             = .x,
-               pr              = F,
-               type            = .y
+               tax_units          = tax_units_static %>%
+                                      select(-all_of(return_vars %>%
+                                      unlist() %>%
+                                      set_names(NULL))),
+               actual_liab_iit    = tax_units_static$liab_iit_net,
+               actual_liab_pr     = tax_units_static$liab_pr,
+               actual_liab_wealth = tax_units_static$liab_wealth,
+               var                = .x,
+               pr                 = F,
+               type               = .y
             )
         ) %>%
         bind_cols() %>%
@@ -608,7 +628,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
           do_taxes(baseline_pr_er   = baseline_pr_er,
                    vars_1040        = vars_1040,
                    vars_payroll     = return_vars$calc_pr,
-                   calc_estate_flag = FALSE)   # only liab_iit_net/liab_pr read for the law-only MTR
+                   calc_estate_flag = FALSE,    # only liab_iit_net/liab_pr read for the law-only MTR
+                   calc_wealth_flag = FALSE)
         stopifnot(identical(tax_units_raw$id, tax_units_static$id))
         tax_units_static$mtr_kg_lt_lawonly = calc_mtrs(
           tax_units       = tax_units_raw %>%
@@ -649,7 +670,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     static_totals = list(pr            = get_pr_totals(tax_units_static, year),
                           `1040`        = get_1040_totals(tax_units_static, year),
                           `1040_by_agi` = get_1040_totals(tax_units_static, year, T),
-                          estate        = get_estate_totals(tax_units_static, year))
+                          estate        = get_estate_totals(tax_units_static, year),
+                          wealth        = get_wealth_totals(tax_units_static, year))
   }
 
 
@@ -694,15 +716,16 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
         conv_mtrs = scenario_info$mtr_vars %>%
           map2(.y = scenario_info$mtr_types,
                .f = ~ calc_mtrs(
-                 tax_units       = tax_units_conv %>%
-                                     select(-all_of(return_vars %>%
-                                     unlist() %>%
-                                     set_names(NULL))),
-                 actual_liab_iit = tax_units_conv$liab_iit_net,
-                 actual_liab_pr  = tax_units_conv$liab_pr,
-                 var             = .x,
-                 pr              = F,
-                 type            = .y
+                 tax_units          = tax_units_conv %>%
+                                        select(-all_of(return_vars %>%
+                                        unlist() %>%
+                                        set_names(NULL))),
+                 actual_liab_iit    = tax_units_conv$liab_iit_net,
+                 actual_liab_pr     = tax_units_conv$liab_pr,
+                 actual_liab_wealth = tax_units_conv$liab_wealth,
+                 var                = .x,
+                 pr                 = F,
+                 type               = .y
               )
           ) %>%
           bind_cols() %>%
@@ -741,7 +764,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       conventional_totals = list(pr            = get_pr_totals(tax_units_conv, year),
                                   `1040`        = get_1040_totals(tax_units_conv, year),
                                   `1040_by_agi` = get_1040_totals(tax_units_conv, year, T),
-                                  estate        = get_estate_totals(tax_units_conv, year))
+                                  estate        = get_estate_totals(tax_units_conv, year),
+                                  wealth        = get_wealth_totals(tax_units_conv, year))
 
     } else if (scenario_info$ID != 'baseline') {
 

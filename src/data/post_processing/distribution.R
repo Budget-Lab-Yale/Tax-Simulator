@@ -135,6 +135,11 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
   if (!('liab_deemed' %in% names(baseline_detail))) {
     baseline_detail$liab_deemed = 0
   }
+  # Annual wealth tax: a living tax borne by the owner's own record (like income
+  # tax), 0 under baseline law. Default for detail predating the wealth column.
+  if (!('liab_wealth' %in% names(baseline_detail))) {
+    baseline_detail$liab_wealth = 0
+  }
 
   microdata = baseline_detail %>%
 
@@ -154,7 +159,7 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
         'Parent', 'Non-parent'
       )
     ) %>%
-    select(year, id, weight, n_people, filing_status, age, parent_group, labor, capital, agi, income = expanded_inc, liab_iit_pr, liab_deemed) %>%
+    select(year, id, weight, n_people, filing_status, age, parent_group, labor, capital, agi, income = expanded_inc, liab_iit_pr, liab_deemed, liab_wealth) %>%
 
     # Make 3 copies for tax-type inclusion assumptions
     expand_grid(taxes_included = c('iit_pr', 'iit_pr_death', 'iit_pr_death_cit_vat'))
@@ -167,12 +172,16 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
   if (!('liab_deemed' %in% names(reform_detail))) {
     reform_detail$liab_deemed = 0
   }
+  if (!('liab_wealth' %in% names(reform_detail))) {
+    reform_detail$liab_wealth = 0
+  }
 
   microdata %<>%
     left_join(
       reform_detail %>%
         mutate(liab_iit_pr_reform = liab_iit_net + liab_pr - liab_deemed) %>%
-        select(id, liab_iit_pr_reform, liab_deemed_reform = liab_deemed),
+        select(id, liab_iit_pr_reform, liab_deemed_reform = liab_deemed,
+               liab_wealth_reform = liab_wealth),
       by = 'id'
     )
   
@@ -319,16 +328,21 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
         0
       ),
 
-      # Calculate liability under each scenario
+      # Calculate liability under each scenario. The annual wealth tax is a
+      # living tax attached to the owner's OWN record (like income tax), so it
+      # enters every presentation tier directly -- NOT through the estate heir
+      # allocator (whose rank match exists only because estate lands on a
+      # decedent != beneficiary). Baseline liab_wealth is 0, so the wealth-tax
+      # burden falls out of liab_reform - liab.
       liab = case_when(
-        taxes_included == 'iit_pr'                ~ liab_iit_pr,
-        taxes_included == 'iit_pr_death'         ~ liab_iit_pr + liab_estate + liab_deemed_heir,
-        taxes_included == 'iit_pr_death_cit_vat' ~ liab_iit_pr + liab_estate + liab_deemed_heir
+        taxes_included == 'iit_pr'                ~ liab_iit_pr + liab_wealth,
+        taxes_included == 'iit_pr_death'         ~ liab_iit_pr + liab_wealth + liab_estate + liab_deemed_heir,
+        taxes_included == 'iit_pr_death_cit_vat' ~ liab_iit_pr + liab_wealth + liab_estate + liab_deemed_heir
       ),
       liab_reform = case_when(
-        taxes_included == 'iit_pr'                ~ liab_iit_pr_reform,
-        taxes_included == 'iit_pr_death'         ~ liab_iit_pr_reform + liab_estate_reform + liab_deemed_heir_reform,
-        taxes_included == 'iit_pr_death_cit_vat' ~ liab_iit_pr_reform + liab_estate_reform + liab_deemed_heir_reform + liab_corp + liab_vat
+        taxes_included == 'iit_pr'                ~ liab_iit_pr_reform + liab_wealth_reform,
+        taxes_included == 'iit_pr_death'         ~ liab_iit_pr_reform + liab_wealth_reform + liab_estate_reform + liab_deemed_heir_reform,
+        taxes_included == 'iit_pr_death_cit_vat' ~ liab_iit_pr_reform + liab_wealth_reform + liab_estate_reform + liab_deemed_heir_reform + liab_corp + liab_vat
       ),
       
       # Calculate change in tax liability

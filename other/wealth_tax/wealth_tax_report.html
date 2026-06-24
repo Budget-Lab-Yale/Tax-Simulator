@@ -1,0 +1,340 @@
+<title>On-model wealth tax — build & validation</title>
+<style>
+  :root{
+    --ground:#f7f8fa; --panel:#ffffff; --ink:#16202e; --muted:#5a6675;
+    --faint:#8995a6; --accent:#37597f; --accent-dk:#284563;
+    --rule:#dde1e8; --rule-soft:#e9ecf1;
+    --pass:#1f7a52; --pass-bg:#e7f1ec; --pass-rule:#bcdccb;
+    --warn:#9a6b1e; --warn-bg:#f8efdd; --warn-rule:#e7d2a6;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--ground);color:var(--ink);font-family:var(--sans);
+    line-height:1.6;margin:0;-webkit-font-smoothing:antialiased;font-size:16px}
+  .wrap{max-width:920px;margin:0 auto;padding:0 28px 96px}
+  a{color:var(--accent-dk)}
+
+  /* ---- masthead ---- */
+  .top-rule{height:4px;background:var(--accent);max-width:920px;margin:0 auto}
+  header.mast{padding:48px 0 30px;border-bottom:1px solid var(--rule)}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+  h1{font-family:var(--serif);font-weight:600;font-size:clamp(30px,5vw,46px);
+    line-height:1.08;margin:0 0 14px;text-wrap:balance;letter-spacing:-.01em}
+  .dek{font-size:18px;color:var(--muted);max-width:62ch;margin:0}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 26px;margin-top:24px;
+    font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+  .meta b{color:var(--ink);font-weight:600}
+
+  /* ---- verdict band ---- */
+  .verdict{display:flex;gap:18px;align-items:flex-start;margin:34px 0 8px;
+    background:var(--pass-bg);border:1px solid var(--pass-rule);
+    border-left:4px solid var(--pass);border-radius:7px;padding:18px 22px}
+  .verdict .mark{font-family:var(--serif);font-size:30px;line-height:1;color:var(--pass);flex:none;margin-top:2px}
+  .verdict p{margin:0;font-size:15.5px}
+  .verdict strong{color:var(--pass)}
+
+  section{margin-top:52px}
+  h2{font-family:var(--serif);font-weight:600;font-size:26px;margin:0 0 6px;letter-spacing:-.01em}
+  .sec-label{font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--faint);margin:0 0 18px;
+    padding-bottom:10px;border-bottom:1px solid var(--rule-soft)}
+  p{margin:0 0 14px}
+  .lead{max-width:68ch}
+  code{font-family:var(--mono);font-size:.86em;background:#eef1f5;
+    padding:1px 5px;border-radius:4px;color:var(--accent-dk)}
+
+  /* ---- checklist ---- */
+  .checks{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+  .check{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;
+    background:var(--panel);border:1px solid var(--rule);border-radius:7px;padding:14px 16px}
+  .pill{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.06em;
+    color:var(--pass);background:var(--pass-bg);border:1px solid var(--pass-rule);
+    border-radius:20px;padding:3px 10px;white-space:nowrap;margin-top:1px}
+  .check h3{margin:0 0 3px;font-size:15px;font-weight:650;font-family:var(--sans)}
+  .check p{margin:0;font-size:13.5px;color:var(--muted)}
+  .check .num{font-family:var(--mono);color:var(--ink)}
+
+  /* ---- tables ---- */
+  .scroll{overflow-x:auto;border:1px solid var(--rule);border-radius:8px;background:var(--panel)}
+  table{border-collapse:collapse;width:100%;font-size:14px}
+  caption{caption-side:top;text-align:left;font-family:var(--mono);font-size:11.5px;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:14px 16px 0}
+  th,td{padding:9px 14px;text-align:right;font-variant-numeric:tabular-nums;
+    border-bottom:1px solid var(--rule-soft);white-space:nowrap}
+  th:first-child,td:first-child{text-align:left;font-variant-numeric:normal}
+  thead th{font-size:12px;font-weight:650;color:var(--muted);border-bottom:1px solid var(--rule);
+    position:sticky;top:0;background:var(--panel)}
+  tbody tr:last-child td{border-bottom:none}
+  .grp th{background:#f0f3f7;font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--accent-dk);text-align:left}
+  td.em{font-weight:650;color:var(--ink)}
+  .sub{color:var(--faint);font-size:12px}
+  .bar{display:inline-block;height:9px;background:var(--accent);border-radius:2px;vertical-align:middle;margin-right:7px;opacity:.85}
+
+  /* ---- caveats ---- */
+  .caveats{display:grid;gap:12px}
+  .caveat{background:var(--warn-bg);border:1px solid var(--warn-rule);
+    border-left:4px solid var(--warn);border-radius:7px;padding:14px 18px}
+  .caveat h3{margin:0 0 4px;font-size:14.5px;font-weight:650;color:var(--warn)}
+  .caveat p{margin:0;font-size:13.5px;color:#6f5417}
+
+  /* ---- files ---- */
+  .files{font-family:var(--mono);font-size:12.5px;background:var(--panel);
+    border:1px solid var(--rule);border-radius:8px;padding:6px 4px;overflow-x:auto}
+  .files div{padding:7px 14px;border-bottom:1px solid var(--rule-soft);white-space:nowrap}
+  .files div:last-child{border-bottom:none}
+  .files .tag{color:var(--pass);font-weight:600}
+  .files .tag.ed{color:var(--accent)}
+  .files .path{color:var(--ink)}
+  .note{font-size:13px;color:var(--muted);margin-top:10px}
+
+  footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--rule);
+    font-size:13px;color:var(--faint)}
+  @media (max-width:560px){
+    .check{grid-template-columns:1fr;gap:6px}
+    .meta{gap:6px 18px}
+  }
+</style>
+
+<div class="top-rule"></div>
+<div class="wrap">
+
+  <header class="mast">
+    <p class="eyebrow">Tax-Simulator · Budget Lab at Yale · build report</p>
+    <h1>An on-model annual wealth tax, composed with the rest of the system</h1>
+    <p class="dek">A first-class net-worth tax base built on Tax-Simulator — replacing the
+      standalone Wealth-Tax-Simulator. Implemented per plan <code>iridescent-twirling-raven</code>,
+      validated at full sample, and cross-checked against the standalone model.</p>
+    <div class="meta">
+      <span><b>Branch</b> wealth-tax-base</span>
+      <span><b>Built</b> 2026-06-23</span>
+      <span><b>Run vintage</b> wealth_full · pct_sample 1</span>
+      <span><b>Scope</b> static + within-year avoidance (s = 0)</span>
+    </div>
+  </header>
+
+  <div class="verdict">
+    <span class="mark">✓</span>
+    <p>Built end-to-end and <strong>every validation check passes at full sample</strong>: the
+      base is dormant under current law, liability reconciles from per-record detail through totals,
+      receipts and the headline budget effect; the registered net-worth MTR returns the exact
+      statutory marginal rates; within-year avoidance lowers the conventional score while leaving the
+      estate tax byte-identical (isolation holds); and the burden lands almost entirely on the top 1%.</p>
+  </div>
+
+  <section>
+    <h2>What was built</h2>
+    <p class="sec-label">design in brief</p>
+    <p class="lead">A wealth tax is structurally <em>the estate tax minus death</em> — a
+      balance-sheet/stock tax that lives in the <code>do_taxes()</code> chain, aggregates with
+      weights, books receipts, and feeds distribution, but stripped of mortality, DSUE/portability,
+      the death-time valuation adjustments, and the estate's FY <code>t+1</code> receipts lag.</p>
+    <p class="lead">One design choice ties it together: a <strong>materialized
+      <code>net_worth</code> column</strong> (economic Σ assets − Σ debts, raw dollars) computed once
+      per record in <code>run_one_year()</code>. That single column plays three roles — it is the
+      <code>calc_wealth()</code> base, the <code>+$1</code> bump target that lets the standard
+      next-dollar MTR machinery price the marginal statutory wealth rate, and the isolation point the
+      conventional-pass avoidance module overwrites. Because avoidance touches only <code>net_worth</code>
+      and never the raw <code>value.*</code> columns, estate liability and capital income are
+      structurally unaffected. <code>liab_wealth</code> stays a separate column, never folded into
+      income tax.</p>
+    <p class="lead">All revenue/totals/distribution wiring lives in functions the SLURM pipeline
+      already shares (<code>write_pass_outputs</code>, <code>calc_receipts</code>,
+      <code>calc_rev_est</code>, <code>process_for_distribution</code>), so <strong>no
+      <code>aggregate.R</code> mirror edits were needed</strong> — the new source files are
+      auto-sourced by <code>reconstitute_environment()</code>.</p>
+  </section>
+
+  <section>
+    <h2>Validation</h2>
+    <p class="sec-label">full sample · 2026 · both reforms</p>
+    <ul class="checks">
+      <li class="check"><span class="pill">PASS</span><div>
+        <h3>Dormancy</h3>
+        <p>With <code>wealth.yaml</code> present, baseline <code>liab_wealth ≡ 0</code> (exemption Inf
+          ⇒ base 0). The added <code>net_worth</code>/<code>liab_wealth</code> columns perturb no
+          existing output.</p></div></li>
+      <li class="check"><span class="pill">PASS</span><div>
+        <h3>Liability reconciles end-to-end</h3>
+        <p>Per-record detail aggregate = <code>totals/wealth.csv</code> = <code>revenues_wealth_tax</code>
+          in receipts = the headline <span class="num">Total budget effect</span> — the silent-drop
+          check at all five revenue sites.</p></div></li>
+      <li class="check"><span class="pill">PASS</span><div>
+        <h3>Net-worth MTR = statutory rate</h3>
+        <p><code>mtr_net_worth</code> takes exactly <span class="num">{0, 0.02, 0.03}</span> (Warren)
+          and <span class="num">{0, 0.05, 0.10}</span> (nickel-dime) — zero below the exemption, the
+          bracket rate above.</p></div></li>
+      <li class="check"><span class="pill">PASS</span><div>
+        <h3>Avoidance isolation</h3>
+        <p>Conventional &lt; static (the avoidance response), while estate tax is identical static vs
+          conventional (<span class="num">$35.8902B</span> both) — proof that overwriting
+          <code>net_worth</code> leaves <code>value.*</code>, hence estate, untouched.</p></div></li>
+      <li class="check"><span class="pill">PASS</span><div>
+        <h3>Top-weighted incidence</h3>
+        <p>The burden attaches to owners' own records: bottom 80% pay ≈ $0, the top 1% bears ~95% of
+          the static Warren tax, the top 0.1% ~84%.</p></div></li>
+      <li class="check"><span class="pill">PASS</span><div>
+        <h3>Pipeline parity</h3>
+        <p>Smoke (5% sample) and full sample (pct_sample 1) both complete clean; SLURM wiring is
+          inherited through shared functions, no mirror edits.</p></div></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Headline numbers</h2>
+    <p class="sec-label">integrated model · annual wealth tax, $B, calendar year</p>
+    <p class="lead">Two illustrative reforms, each a $50M exemption over a graduated schedule. Static
+      is the mechanical base; conventional applies within-year avoidance (dual marketable /
+      closely-held semi-elasticities seeded from the standalone). The static−conventional gap is the
+      avoidance response.</p>
+    <div class="scroll">
+      <table>
+        <caption>Warren-style — 2% over $50M, 3% over $1B</caption>
+        <thead><tr><th>Year</th><th>Static</th><th>Conventional</th><th>Avoidance</th><th>Taxable returns</th></tr></thead>
+        <tbody>
+          <tr><td>2026</td><td class="em">435.2</td><td>281.0</td><td>35.4%</td><td>130,509</td></tr>
+          <tr><td>2027</td><td class="em">458.4</td><td>295.9</td><td>35.5%</td><td>132,102</td></tr>
+          <tr><td>2028</td><td class="em">481.4</td><td>310.9</td><td>35.4%</td><td>136,177</td></tr>
+          <tr><td>2029</td><td class="em">499.6</td><td>322.9</td><td>35.4%</td><td>137,060</td></tr>
+          <tr><td>2030</td><td class="em">523.0</td><td>338.2</td><td>35.3%</td><td>139,777</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="scroll" style="margin-top:16px">
+      <table>
+        <caption>Nickel-and-dime — 5% over $50M, 10% over $250M</caption>
+        <thead><tr><th>Year</th><th>Static</th><th>Conventional</th><th>Avoidance</th><th>Taxable returns</th></tr></thead>
+        <tbody>
+          <tr><td>2026</td><td class="em">1,409.6</td><td>354.0</td><td>74.9%</td><td>130,509</td></tr>
+          <tr><td>2027</td><td class="em">1,486.9</td><td>369.8</td><td>75.1%</td><td>132,102</td></tr>
+          <tr><td>2028</td><td class="em">1,563.5</td><td>386.6</td><td>75.3%</td><td>136,177</td></tr>
+          <tr><td>2029</td><td class="em">1,627.4</td><td>398.4</td><td>75.5%</td><td>137,060</td></tr>
+          <tr><td>2030</td><td class="em">1,706.4</td><td>415.2</td><td>75.7%</td><td>139,777</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Avoidance is far larger under nickel-and-dime because the seeded semi-elasticities
+      (<code>exp(mtr·e)</code>, public −7 / private −17) bite hard at a 10% marginal rate. These
+      elasticities are <em>uncalibrated</em> — see caveats.</p>
+  </section>
+
+  <section>
+    <h2>Who pays</h2>
+    <p class="sec-label">Warren static · 2026 · avg tax change per unit, by income group</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Income group</th><th>Tax units</th><th>Avg Δ tax</th><th>Concentration</th></tr></thead>
+        <tbody>
+          <tr><td>Bottom 80% (Q1–Q4)</td><td>147.5M</td><td>≈ $0</td><td><span class="sub">—</span></td></tr>
+          <tr><td>Quintile 5</td><td>36.9M</td><td>$11,795</td><td><span class="bar" style="width:14px"></span></td></tr>
+          <tr><td>Top 10%</td><td>18.4M</td><td>$23,565</td><td><span class="bar" style="width:28px"></span></td></tr>
+          <tr><td>Top 5%</td><td>9.2M</td><td>$46,890</td><td><span class="bar" style="width:56px"></span></td></tr>
+          <tr><td class="em">Top 1%</td><td>1.84M</td><td class="em">$224,955</td><td><span class="bar" style="width:120px"></span></td></tr>
+          <tr><td class="em">Top 0.1%</td><td>0.18M</td><td class="em">$1,989,885</td><td><span class="bar" style="width:200px"></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Of the $435B static Warren total, the top 1% bears ~95% and the top 0.1% ~84% —
+      textbook wealth-tax incidence, and confirmation that the tax attaches to the right records.</p>
+  </section>
+
+  <section>
+    <h2>Cross-model comparison</h2>
+    <p class="sec-label">integrated Tax-Simulator vs standalone Wealth-Tax-Simulator · nickel-dime · $B</p>
+    <p class="lead">The shared scenario (nickel-and-dime, identical brackets/rates and the same seeded
+      avoidance elasticities). The plan explicitly does not expect the levels to reconcile — the two
+      models sit on different data (Tax-Data tax units vs an SCF+Forbes household universe), with
+      different top-tail construction and no top-share calibration on either side. The agreement is
+      nonetheless close, especially after behavior.</p>
+    <div class="scroll">
+      <table>
+        <thead><tr>
+          <th>Year</th><th>TS static</th><th>WTS static</th><th>ratio</th>
+          <th>TS conv.</th><th>WTS conv.</th><th>ratio</th>
+          <th>TS returns</th><th>WTS returns</th></tr></thead>
+        <tbody>
+          <tr><td>2026</td><td>1,409.6</td><td>1,783.7</td><td>0.79</td><td>354.0</td><td>392.1</td><td class="em">0.90</td><td>130,509</td><td>304,231</td></tr>
+          <tr><td>2027</td><td>1,486.9</td><td>1,859.8</td><td>0.80</td><td>369.8</td><td>406.8</td><td class="em">0.91</td><td>132,102</td><td>318,376</td></tr>
+          <tr><td>2028</td><td>1,563.5</td><td>1,933.3</td><td>0.81</td><td>386.6</td><td>421.2</td><td class="em">0.92</td><td>136,177</td><td>323,095</td></tr>
+          <tr><td>2029</td><td>1,627.4</td><td>2,009.1</td><td>0.81</td><td>398.4</td><td>437.8</td><td class="em">0.91</td><td>137,060</td><td>329,787</td></tr>
+          <tr><td>2030</td><td>1,706.4</td><td>2,085.4</td><td>0.82</td><td>415.2</td><td>453.1</td><td class="em">0.92</td><td>139,777</td><td>339,942</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="lead" style="margin-top:18px">Two readings stand out. <strong>Conventional levels agree
+      to within ~8–10%</strong> — once the common avoidance elasticities act, the two models land in
+      the same place, which is the strongest evidence the integrated calculator and behavior behave
+      like the standalone. On the static side, the standalone is ~20% higher even though
+      <strong>it counts ~2.3× more taxable units</strong> (304k households vs 131k tax units): the
+      standalone's SCF+Forbes universe spreads $50M+ wealth across many more (household) units, while
+      Tax-Data concentrates it in fewer, richer tax units. Different denominators, same order of
+      magnitude — exactly the "won't reconcile, will rhyme" outcome the plan predicted.</p>
+  </section>
+
+  <section>
+    <h2>Caveats &amp; deferred work</h2>
+    <p class="sec-label">read the levels as illustrative, not published estimates</p>
+    <div class="caveats">
+      <div class="caveat">
+        <h3>Donor-clone top tail is uncapped for a living tax</h3>
+        <p>Tax-Data replicates thin top-wealth pools into byte-identical donor clones. The estate
+          model caps their <em>death</em> weight (~300/cluster), but an annual tax weights every
+          <em>living</em> clone every year — inflating the very top of the base where a wealth tax
+          concentrates (max single net worth here: $758B). A living-weight cap is deferred (plan P2);
+          until then the static levels likely overstate the top tail.</p>
+      </div>
+      <div class="caveat">
+        <h3>Avoidance elasticities are seeded, not calibrated</h3>
+        <p><code>public_e = −7</code>, <code>private_e = −17</code> are copied verbatim from the
+          standalone so the behavioral comparison is apples-to-apples. They are deliberately extreme
+          (near-total base disappearance at high rates) and must be re-justified on Tax-Data before
+          any published conventional score. Flagged in the module's <code>WEALTH_AVOID_PROVENANCE</code>.</p>
+      </div>
+      <div class="caveat">
+        <h3>Fixed wealth stock (s = 0)</h3>
+        <p>This build is the simple case: the stock is held fixed across years and the only behavior
+          is within-year reported-base avoidance. The saving-financed decumulation "bathtub" (tax
+          paid out of saving → smaller future estate &amp; capital-income base) is a separate
+          mechanism, deferred to <code>purrfect-weaving-toucan</code>.</p>
+      </div>
+      <div class="caveat">
+        <h3>Receipts booked FY = CY</h3>
+        <p>The annual wealth tax is booked as a pure on-model level in the calendar year, with no
+          75/25 withholding split and no estate-style <code>t+1</code> lag — a deliberate modeling
+          choice for an annual assessment, distinct from how estate and income receipts time out.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Files &amp; reproduction</h2>
+    <p class="sec-label">new · edited · run artifacts</p>
+    <div class="files">
+      <div><span class="tag">NEW </span> <span class="path">src/calc/functions/tax/wealth.R</span> — calc_wealth(), WEALTH_*_COLS</div>
+      <div><span class="tag">NEW </span> <span class="path">src/sim/wealth.R</span> — get_wealth_totals()</div>
+      <div><span class="tag">NEW </span> <span class="path">config/scenarios/tax_law/baseline/wealth.yaml</span> — exemption + mapper, baseline Inf</div>
+      <div><span class="tag">NEW </span> <span class="path">config/scenarios/behavior/wealth/avoidance.R</span> — do_wealth() dual elasticity</div>
+      <div><span class="tag">NEW </span> <span class="path">config/scenarios/tax_law/public/wealth_tax_{warren,nickel_dime}/wealth.yaml</span></div>
+      <div><span class="tag">NEW </span> <span class="path">config/runscripts/wealth_tax.csv</span></div>
+      <div><span class="tag ed">EDIT</span> <span class="path">src/calc/do_taxes.R</span> — wealth block, calc_wealth_flag, net_worth MTR term</div>
+      <div><span class="tag ed">EDIT</span> <span class="path">src/sim/run.R</span> — materialize net_worth, wealth totals, flags</div>
+      <div><span class="tag ed">EDIT</span> <span class="path">src/misc/config_parser.R</span> — detail_vars += net_worth, liab_wealth</div>
+      <div><span class="tag ed">EDIT</span> <span class="path">src/data/post_processing/revenue.R</span> — revenues_wealth_tax ×5 sites</div>
+      <div><span class="tag ed">EDIT</span> <span class="path">src/data/post_processing/distribution.R</span> — liab_wealth, on-owner</div>
+      <div><span class="tag ed">EDIT</span> <span class="path">src/calc/functions/tax/estate.R</span> — note shared net-worth cols</div>
+    </div>
+    <p class="note">Full-sample output: <code>/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/wealth_full</code><br>
+      Validation harness: <code>other/wealth_tax/validate_wealth.R</code> · comparison:
+      <code>other/wealth_tax/compare_wts.R</code> · logs &amp; CSVs in <code>other/wealth_tax/</code>.</p>
+    <p class="note">Reproduce: <code>Rscript src/main.R wealth_tax NULL user_test 1 &lt;vintage&gt; 1 1 NULL 0 year</code></p>
+  </section>
+
+  <footer>
+    Tax-Simulator · Budget Lab at Yale · branch <code style="background:none;padding:0">wealth-tax-base</code> ·
+    built &amp; validated 2026-06-23. Levels illustrative pending top-tail cap and elasticity calibration.
+  </footer>
+
+</div>
