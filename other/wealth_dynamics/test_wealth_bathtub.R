@@ -144,6 +144,35 @@ ag = tibble(value.cash = 100, value.equities = NA, value.bonds = 50,
             value.other_nonfin = 0)
 check('economic_gross: NA-safe sum of value.*', approx(wealth_dyn_economic_gross(ag), 175))
 
+cat('\n== r_total splice (historical + projections) ==\n')
+
+# wealth_dyn_read_rtotal must splice historical.csv ahead of projections.csv so
+# a pre-projection lead-in year and the projection-boundary year difference off
+# a REAL prior-year level (regression: projections.csv-only left those NA and
+# crashed the pre-pass). Synthetic macro dir spanning the boundary at 2026.
+.macro_dir = file.path(tempdir(), 'macro_splice_test')
+dir.create(.macro_dir, showWarnings = FALSE, recursive = TRUE)
+# gdp/pop chosen so the 2025->2026 boundary growth differs from 2026->2027:
+# a backfill-from-projections would (wrongly) set r(2026) == r(2027).
+write.csv(data.frame(year = 2023:2025, gdp = c(100, 104, 110),
+                     unmarried_40 = c(60, 60.5, 61), married_40 = c(40, 40.5, 41)),
+          file.path(.macro_dir, 'historical.csv'), row.names = FALSE)
+write.csv(data.frame(year = 2026:2028, gdp = c(114, 119, 124),
+                     unmarried_40 = c(61.5, 62, 62.5), married_40 = c(41.5, 42, 42.5)),
+          file.path(.macro_dir, 'projections.csv'), row.names = FALSE)
+.si = list(interface_paths = list(`Macro-Projections` = .macro_dir),
+           years = 2024:2027)
+.r = wealth_dyn_read_rtotal(.si, list(r_total = list(additive_delta = 0)))
+check('r_total: lead-in + boundary years all finite', all(is.finite(.r)) && !anyNA(.r))
+# Boundary year differences off the historical 2025 level (pop_2025 = 102):
+.r2026_exp = (114 / 110) / ((61.5 + 41.5) / (61 + 41)) - 1
+check('r_total: boundary year uses real prior (historical) level',
+      approx(unname(.r['2026']), .r2026_exp))
+# Pre-projection lead-in year (fully inside historical):
+.r2024_exp = (104 / 100) / ((60.5 + 40.5) / (60 + 40)) - 1
+check('r_total: pre-projection lead-in resolves', approx(unname(.r['2024']), .r2024_exp))
+unlink(.macro_dir, recursive = TRUE)
+
 # --- Summary ------------------------------------------------------------------
 cat(sprintf('\n==== %d passed, %d failed ====\n', .n_pass, .n_fail))
 if (.n_fail > 0) quit(status = 1)

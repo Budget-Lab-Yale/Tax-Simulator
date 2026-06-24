@@ -420,12 +420,20 @@ calc_cap_bundle_mtr = function(tax_units, actual_liab_iit, baseline_pr_er,
 wealth_dyn_read_rtotal = function(scenario_info, params) {
 
   #----------------------------------------------------------------------------
-  # r_total(t) = nominal GDP-per-capita growth, per year, from Macro-Projections
-  # projections.csv. NOMINAL (matches the nominal wealth stock/flows):
+  # r_total(t) = nominal GDP-per-capita growth, per year, spliced across the
+  # Macro-Projections historical.csv + projections.csv series. NOMINAL (matches
+  # the nominal wealth stock/flows):
   #   r_total(t) = (gdp_t / gdp_{t-1}) / (pop_t / pop_{t-1}) - 1
   # where `gdp` is nominal GDP and population is the sum of the per-age
   # unmarried_* + married_* tax-unit-count columns. (NOTE: do NOT use gdp_c --
-  # that is the CONSUMPTION component of GDP, not GDP per capita.) Matches the
+  # that is the CONSUMPTION component of GDP, not GDP per capita.)
+  #
+  # We splice historical+projections rather than reading projections.csv alone:
+  # projections.csv begins in the first projection year, so the YoY growth of
+  # that boundary year (and of any pre-projection lead-in year, e.g. a sim that
+  # starts a year before the policy to capture FY revenue) has no t-1 predecessor
+  # and is undefined. Splicing differences the boundary growth off the real prior
+  # actual year, mirroring kg_dynamics.R's cpiu/tsy loaders. Matches the
   # calibration diagnostic other/wealth_dynamics/cohort_wealth_growth.R. Plus the
   # optional additive path-delta knob (default 0, a one-time sensitivity test).
   #
@@ -433,25 +441,27 @@ wealth_dyn_read_rtotal = function(scenario_info, params) {
   #          scenario_info$years.
   #----------------------------------------------------------------------------
 
-  raw = scenario_info$interface_paths$`Macro-Projections` %>%
-    file.path('projections.csv') %>%
-    read_csv(show_col_types = FALSE)
-  pop_cols = grep('^(unmarried|married)_[0-9]+$', names(raw), value = TRUE)
-  if (length(pop_cols) == 0) {
-    stop('wealth_dynamics: no unmarried_*/married_* population columns in ',
-         'Macro-Projections projections.csv; cannot form GDP per capita.')
+  macro_root = scenario_info$interface_paths$`Macro-Projections`
+  read_gdp_pop = function(f) {
+    raw = read_csv(file.path(macro_root, f), show_col_types = FALSE)
+    pop_cols = grep('^(unmarried|married)_[0-9]+$', names(raw), value = TRUE)
+    if (length(pop_cols) == 0) {
+      stop('wealth_dynamics: no unmarried_*/married_* population columns in ',
+           'Macro-Projections ', f, '; cannot form GDP per capita.')
+    }
+    raw %>% transmute(year, gdp,
+                      pop = rowSums(across(all_of(pop_cols), ~ replace_na(., 0))))
   }
-  macro = raw %>%
-    transmute(year, gdp,
-              pop = rowSums(across(all_of(pop_cols), ~ replace_na(., 0)))) %>%
+
+  # Splice historical (through the last actual year) ahead of projections so
+  # every requested year -- including a lead-in or the projection boundary -- has
+  # a real t-1 predecessor for the YoY growth difference. distinct() keeps the
+  # historical (actual) row if the two series ever overlap on a year.
+  macro = bind_rows(read_gdp_pop('historical.csv'),
+                    read_gdp_pop('projections.csv')) %>%
+    distinct(year, .keep_all = TRUE) %>%
     arrange(year) %>%
-    mutate(r = (gdp / lag(gdp)) / (pop / lag(pop)) - 1) %>%
-    # The earliest macro year has no predecessor, so its growth is NA. Backfill
-    # it with the next year's growth: it is only ever the lead-in year's
-    # r_total, which multiplies a zero deficit (P = 0 before any reform year),
-    # so any finite value is harmless -- the next year's growth is the sensible
-    # choice. Internal NAs (a genuinely missing mid-series year) still error below.
-    mutate(r = if_else(is.na(r) & year == min(year), lead(r), r))
+    mutate(r = (gdp / lag(gdp)) / (pop / lag(pop)) - 1)
 
   delta = params$r_total$additive_delta %||% 0
   yrs   = scenario_info$years
@@ -460,7 +470,8 @@ wealth_dyn_read_rtotal = function(scenario_info, params) {
   if (anyNA(r)) {
     stop('wealth_dynamics: nominal GDP/capita growth missing for year(s) ',
          paste(yrs[is.na(r)], collapse = ', '),
-         ' in Macro-Projections projections.csv. r_total(t) is undefined.')
+         ' in spliced Macro-Projections historical.csv + projections.csv. ',
+         'r_total(t) is undefined.')
   }
   setNames(r, as.character(yrs))
 }
