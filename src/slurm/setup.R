@@ -182,6 +182,12 @@ if (!has_baseline) {
 #   '2A'  cf static-only year tasks   (parallel array)
 #   '2B'  cf bathtub pre-pass         (one job per cf; sequential within job;
 #                                      no-op for non-kg_dynamics scenarios)
+#   '2N'  cf conv-no-wealth year      (parallel array; only for s>0 wealth
+#                                      scenarios; produces ΔT⁰ ingredients +
+#                                      mtr_cap_bundle on the un-eroded base)
+#   '2W'  cf wealth bathtub pre-pass  (one job per s>0 cf; sequential within
+#                                      job; reads 2N + baseline detail, writes
+#                                      the per-year deficit state 2C applies)
 #   '2C'  cf conventional-only year   (parallel array)
 manifest = tibble(phase = character(), scenario = character(), year = integer())
 
@@ -221,6 +227,24 @@ for (sid in counterfactual_ids) {
       scenario = sid,
       year     = si$years
     ))
+
+  # Wealth bathtub: the conv-no-wealth year-array (2N) and the sequential
+  # pre-pass (2W), emitted only for s>0 scenarios (a year-array of no-op tasks
+  # for every non-wealth scenario would be wasteful; the in-worker gate is a
+  # belt-and-suspenders no-op anyway).
+  if (scenario_uses_wealth_dynamics(si)) {
+    manifest = manifest %>%
+      bind_rows(tibble(
+        phase    = '2N',
+        scenario = sid,
+        year     = si$years
+      )) %>%
+      bind_rows(tibble(
+        phase    = '2W',
+        scenario = sid,
+        year     = NA_integer_
+      ))
+  }
 }
 
 
@@ -252,6 +276,8 @@ n_phase1    = sum(manifest$phase == '1')
 n_phase1b   = sum(manifest$phase == '1B')
 n_phase2a   = sum(manifest$phase == '2A')
 n_phase2b   = sum(manifest$phase == '2B')
+n_phase2n   = sum(manifest$phase == '2N')
+n_phase2w   = sum(manifest$phase == '2W')
 n_phase2c   = sum(manifest$phase == '2C')
 n_scenarios = length(counterfactual_ids)
 
@@ -260,6 +286,8 @@ cat(paste0('N_PHASE1=',    n_phase1,    '\n'))
 cat(paste0('N_PHASE1B=',   n_phase1b,   '\n'))
 cat(paste0('N_PHASE2A=',   n_phase2a,   '\n'))
 cat(paste0('N_PHASE2B=',   n_phase2b,   '\n'))
+cat(paste0('N_PHASE2N=',   n_phase2n,   '\n'))
+cat(paste0('N_PHASE2W=',   n_phase2w,   '\n'))
 cat(paste0('N_PHASE2C=',   n_phase2c,   '\n'))
 cat(paste0('N_SCENARIOS=', n_scenarios, '\n'))
 cat(paste0('STACKED=',     stacked,     '\n'))

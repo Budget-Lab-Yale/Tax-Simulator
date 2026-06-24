@@ -159,6 +159,15 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
   # Economic net worth, the grouping variable for the by-wealth distribution
   # view (baseline stock, like income/AGI cuts use baseline income). Default 0
   # for detail predating the column.
+  #
+  # Wealth-bathtub schema note (src/sim/wealth_dynamics.R): distribution stays
+  # STATIC-sourced (D20), so net_worth here is the UN-ERODED stock. Under the
+  # channel (s > 0), CONVENTIONAL detail's net_worth is POST-haircut (~1% lower)
+  # while STATIC is un-haircut; the erosion surfaces via receipts, not the
+  # distribution tables (the ~1% haircut barely moves rank-order). The by-wealth
+  # ranking keeps net_worth >= 0 (zero-NW kept) here, which DIFFERS from the
+  # bathtub's cell ranking (net_worth > 0, zero excluded; plan D17) -- the
+  # bathtub deliberately drops zero-NW records (no stock to draw, no estate).
   if (!('net_worth' %in% names(baseline_detail))) {
     baseline_detail$net_worth = 0
   }

@@ -49,9 +49,10 @@ tryCatch({
   # Load scenario config
   config = readRDS(file.path(staging_dir, task$scenario, 'config.rds'))
 
-  # Load baseline MTRs (only needed for conventional pass)
+  # Load baseline MTRs (needed for the behavior modules on the conventional and
+  # conv-no-wealth passes)
   baseline_mtrs = NULL
-  if (phase == '2C') {
+  if (phase %in% c('2C', '2N')) {
     prebuilt_path = file.path(staging_dir, 'baseline', 'baseline_mtrs.rds')
     if (file.exists(prebuilt_path)) {
       baseline_mtrs = readRDS(prebuilt_path)
@@ -70,9 +71,9 @@ tryCatch({
     }
   }
 
-  # For Phase 2C: load this scenario's static_mtrs from Phase 2A's per-year .rds
+  # For Phase 2C/2N: load this scenario's static_mtrs from Phase 2A's per-year .rds
   static_mtrs_year = NULL
-  if (phase == '2C') {
+  if (phase %in% c('2C', '2N')) {
     static_rds = file.path(staging_dir, task$scenario,
                            paste0('year_', task$year, '_static.rds'))
     if (file.exists(static_rds)) {
@@ -84,6 +85,7 @@ tryCatch({
   pass_type = switch(phase,
     '1'  = 'both',
     '2A' = 'static',
+    '2N' = 'conventional_no_wealth',
     '2C' = 'conventional',
     stop('Unknown phase: ', phase)
   )
@@ -101,10 +103,13 @@ tryCatch({
     static_mtrs_year     = static_mtrs_year
   )
 
-  # Save result with phase-appropriate filename
+  # Save result with phase-appropriate filename. The conv-no-wealth (2N) result
+  # carries no totals (intermediate pass; its detail is consumed by the wealth
+  # pre-pass 2W from disk) -- saved for symmetry, not read by Phase 3a.
   out_path = switch(phase,
     '1'  = paste0('year_', task$year, '.rds'),
     '2A' = paste0('year_', task$year, '_static.rds'),
+    '2N' = paste0('year_', task$year, '_convnw.rds'),
     '2C' = paste0('year_', task$year, '_conv.rds')
   )
   saveRDS(result, file.path(staging_dir, task$scenario, out_path))

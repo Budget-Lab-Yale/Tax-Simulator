@@ -204,6 +204,65 @@ each death year is independent, expected-value). Key facts:
   the proportional-to-inheritance smear (it has no exemption threshold — the
   rank match exists because the estate tax is threshold'd).
 
+### Wealth Dynamics (the wealth bathtub)
+
+A **mechanical, conventional-side** saving-financing channel that lets cross-base
+interactions surface: a share `s = 1 − MPC` of the net above-baseline
+**during-life** tax (income + payroll − deemed + **wealth**) is financed out of
+wealth rather than consumption, compounds over time, and **drains into the estate
+(and capital-income) base at death**. Quantifies capital-gains-during-life ↔
+estate tax and wealth-tax ↔ capital-income tax. Code: `src/sim/wealth_dynamics.R`
+(+ generic cohort primitives in `src/sim/cohort_bathtub.R`). Key facts:
+
+- **It is NOT a behavior module.** There is no `do_wealth_dynamics()` hook. `s` is
+  a **runscript COLUMN** (per-scenario scalar; flat ages, symmetric in v1) — the
+  only knob. `s > 0` activates the channel; absent/`0` ⇒ dormant (byte-identical
+  output). `scenario_uses_wealth_dynamics()` keys off `s > 0`, NOT the `behavior`
+  column. The haircut applier (`wealth_dyn_apply_to_records()`) is invoked
+  **directly as a fixed step at the head of the final conventional pass** in
+  `run_one_year()`, before the behavior modules and `do_taxes`.
+- **Conventional-only.** Static stays the clean law-only counterfactual; the
+  interaction surfaces as the `static − conventional` estate/capital-income
+  delta, reported via **receipts** (distribution tables stay static-sourced, D20).
+  Composes with kg: a scenario sets `behavior = kg_dynamics` *and* `s = 0.5`; the
+  haircut applies first, kg runs on the haircut frame.
+- **Cells** = (age cohort × within-age net-worth percentile). Joint key
+  `pmax(age1,age2)` pre-80+-topcode (matches kg / distribution). Ranking **drops
+  `net_worth ≤ 0`** (plan D17 — deliberately differs from `distribution.R`'s `< 0`).
+- **Forcing `ΔT⁰` is CONVENTIONAL (wealth-excluding):** `Δ(liab_iit_pr +
+  liab_wealth)` = `Δ(liab_iit_net + liab_pr − liab_deemed + liab_wealth)`,
+  scenario − baseline. Measured on a dedicated **conv-no-wealth pass**
+  (behavior on, haircut off) → its own output root
+  `{scenario}/conventional_no_wealth/detail/` (never clobbers final-conv detail;
+  no totals/receipts written).
+- **Kernel** `G(a,p,t) = (1 + r_total(t)) − s·(τ·y + τ_w)`: `r_total` = per-year
+  **nominal GDP/capita** growth (Macro-Projections `gdp_c`); `τ` = `mtr_cap_bundle`
+  (composition-weighted capital-income bundle MTR, measured through the
+  calculator); `y` = cell-aggregate `ΣF/Σgross` (clamped ≥0); `τ_w` = marginal
+  wealth rate (`mtr_net_worth`). Guard `0 < G ≤ 1+r_total` per cell.
+- **Recurrence is per-living-record** (NO `(1−m)` factor — deaths handled only at
+  aggregation via each record's `estate_m`, D1). State `P(a,p,t)` + percentile
+  cutoffs written to `{scenario}/conventional/supplemental/wealth_dynamics_state/{year}.rds`.
+- **`WEALTH_CAP_FLOWS`** (`src/sim/wealth_dynamics.R`) is the SINGLE SOURCE OF
+  TRUTH for which capital flows the MTR bump and the haircut scale, and at what
+  weight (pure-capital 1.0; pass-through slice 0.2, the `economy.R` raw list).
+  Scale `kg_lt_basis` with `kg_lt`. value.* assets scale **uniformly** by `(1−f)`
+  (so `s_pt`/`rho_pt` stay invariant); pass-through flows by `(1 − 0.2·f)`.
+  `net_worth` is recomputed from the eroded balance sheet so `calc_wealth`
+  reprices `liab_wealth` and `calc_estate` the estate base.
+- **`net_worth` pass semantics:** under the channel, CONVENTIONAL `net_worth` is
+  post-haircut; STATIC is un-haircut. Pin the heir-allocator `Σw·p·λ` identity to
+  **static** `totals/estate.csv`.
+- **Guards** (mirror kg): `wealth_dyn_check_run_compat()` hard-stops `pct_sample ≠
+  1` / VAT / excess-growth; `wealth_dyn_check_provenance()` (`WEALTH_DYN_PROVENANCE`
+  stamp) warns on a stale Macro vintage (`WEALTH_STRICT_CALIB=1` stops).
+- **Operational params** in `config/wealth/wealth_financing_params.yaml` (`fmax`,
+  `n_pctiles`, `r_total` additive-delta, transition-matrix path) — NOT a reform
+  file, never scenario-overridden. v1 `M` = 100×100 identity (full persistence;
+  loader defaults to it when `transition_matrix_file` is null).
+- **Run one year past the reporting window** (estate/wealth deltas are FY
+  death-year+1 lagged).
+
 ### Behavioral Feedback Modules
 
 Behavioral modules are R scripts that simulate taxpayer responses to policy changes. They enable conventional and partial dynamic revenue estimates.
@@ -374,8 +433,9 @@ Arguments are the same as `main.R` except `multicore` is omitted (SLURM handles 
 1. Phase 0 (login node): `src/slurm/setup.R` — parses globals, builds configs, serializes to `.rds`
 2. Phase 1 (SLURM array): `src/slurm/worker.R` — runs `run_one_year()` for each baseline year
 3. Phase 1B (SLURM array): `src/slurm/frozen.R` — kg_dynamics frozen mechanical pre-pass per scenario (writes static-side mech state consumed by Phase 2A; no-op for non-kg scenarios)
-4. Phase 2 (SLURM array): `src/slurm/worker.R` — runs `run_one_year()` for each counterfactual × year
-4. Phase 3a (SLURM array): `src/slurm/aggregate.R` — writes totals CSVs and receipts per scenario
+4. Phase 2A/2B/2C (SLURM array): `src/slurm/worker.R` (2A static, 2C conventional) + `src/slurm/bathtub.R` (2B kg bathtub) — `run_one_year()` for each counterfactual × year
+5. Phase 2N/2W (SLURM array, **only for `s>0` wealth scenarios**): `src/slurm/worker.R` 2N (conv-no-wealth, the `ΔT⁰`/`mtr_cap_bundle` pass) + `src/slurm/wealth.R` 2W (wealth bathtub pre-pass). DAG: 2A → 2B → 2N → 2W → 2C; 2W also depends on Phase 1 baseline
+6. Phase 3a (SLURM array): `src/slurm/aggregate.R` — writes totals CSVs and receipts per scenario
 5. Phase 3b (SLURM array): `src/slurm/aggregate.R` — post-processing (1040, revenue, distribution, time burden)
 6. Phase 4 (single job): `src/slurm/aggregate.R` — stacked reports and optional detail purge
 
@@ -389,6 +449,8 @@ The SLURM pipeline duplicates orchestration logic from `main.R`, `run_sim()`, an
 | `do_scenario()` post-processing calls               | `src/slurm/aggregate.R` Phase 3b |
 | `do_scenario()` pre-simulation setup (offsets, indexes, tax law) | `src/slurm/setup.R` |
 | `run_frozen_pass()` or the kg mechanical state contract | `src/slurm/frozen.R` (Phase 1B) |
+| `run_wealth_bathtub_pass()` or the wealth state/detail contract | `src/slurm/wealth.R` (Phase 2W) |
+| `do_scenario()` wealth/conv-no-wealth pass sequencing or a new `pass_type` | `src/slurm/worker.R` (2N dispatch), `src/slurm/setup.R` (2N/2W manifest + `N_PHASE2N`/`N_PHASE2W`), `slurm_run.sh` (2N/2W phases + 2C deps) |
 | `main.R` stacked post-processing or `purge_detail()` | `src/slurm/aggregate.R` Phase 4 |
 | `parse_globals()` return structure                  | `src/slurm/setup.R` serialization |
 | New global free variables used by post-processing   | `src/slurm/common.R` `reconstitute_environment()` |

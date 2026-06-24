@@ -159,6 +159,13 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   if (!('corp_incidence_phasein' %in% colnames(runscript))) {
     runscript$corp_incidence_phasein = 10
   }
+
+  # Add nonspecified wealth-dynamics saving share s (= 1 - MPC). s > 0 activates
+  # the mechanical wealth bathtub (src/sim/wealth_dynamics.R); absent/0 leaves it
+  # dormant (byte-identical output). See scenario_uses_wealth_dynamics().
+  if (!('s' %in% colnames(runscript))) {
+    runscript$s = 0
+  }
   
   # Subset runscript to specified ID, if supplied. The baseline row is always
   # retained: whether baseline actually RUNS is governed by baseline_vintage
@@ -416,20 +423,30 @@ get_scenario_info = function(id) {
     corp_incidence_phasein = 10
   }
 
+  # Wealth-dynamics saving share s (= 1 - MPC). The only knob the analyst sets
+  # for the mechanical wealth bathtub: s > 0 activates the pre-pass + applier;
+  # 0/blank leaves the channel dormant (scenario_uses_wealth_dynamics() tests
+  # s > 0). Flat across ages and symmetric for hikes/cuts in v1.
+  s = as.numeric(runscript_items$s)
+  if (length(s) == 0 || is.na(s)) {
+    s = 0
+  }
+
   # Return as named list
   return(list(ID                       = id,
               output_path              = output_root,
               interface_paths          = interface_paths,
               tax_law_id               = tax_law_id,
-              behavior_modules         = behavior_modules, 
-              years                    = years, 
+              behavior_modules         = behavior_modules,
+              years                    = years,
               dist_years               = dist_years,
               mtr_vars                 = mtr_vars,
-              mtr_types                = mtr_types, 
+              mtr_types                = mtr_types,
               excess_growth            = excess_growth,
               excess_growth_start_year = excess_growth_start_year,
               excess_growth_all_rev    = excess_growth_all_rev,
-              corp_incidence_phasein   = corp_incidence_phasein))
+              corp_incidence_phasein   = corp_incidence_phasein,
+              s                        = s))
 }
 
 

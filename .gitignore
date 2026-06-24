@@ -64,6 +64,15 @@ config/batch-submissions
 /slurm-*.out
 /Rplots.pdf
 
+# Wealth-dynamics run debris: sbatch logs, derived data, generated outputs
+other/wealth_dynamics/logs/
+other/wealth_dynamics/*.log
+other/wealth_dynamics/networth_traj.csv
+other/wealth_dynamics/revenue_traj.json
+other/wealth_dynamics/wealth_bathtub_results.html
+other/wealth_dynamics/cohort_wealth_growth_2026_2027.csv
+other/wealth_dynamics/cohort_wealth_growth_2026_2027.png
+
 # Filepath roots
 config/interfaces/output_roots.yaml
 

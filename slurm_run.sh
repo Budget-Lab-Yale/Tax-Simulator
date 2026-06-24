@@ -18,9 +18,15 @@
 #   Phase 2B — CF bathtub (SLURM array): 1 job per scenario, runs the
 #              kg_dynamics recurrence sequentially across years; no-op
 #              for non-kg_dynamics scenarios
+#   Phase 2N — CF conv-no-wealth (SLURM array): 1 job per scenario×year, only
+#              for s>0 wealth scenarios (pass_type='conventional_no_wealth';
+#              produces ΔT⁰ ingredients + mtr_cap_bundle on the un-eroded base)
+#   Phase 2W — CF wealth bathtub (SLURM array): 1 job per s>0 scenario, runs the
+#              wealth deficit recurrence sequentially across years (reads 2N +
+#              baseline detail; writes the state Phase 2C applies)
 #   Phase 2C — CF conventional-only (SLURM array): 1 job per scenario×year
-#              (pass_type='conventional'; reads precomputed bathtub state
-#              and Phase 2A static MTRs)
+#              (pass_type='conventional'; reads precomputed bathtub state, the
+#              Phase 2A static MTRs, and the wealth deficit state from 2W)
 #   Phase 3a — Aggregation (SLURM array): 1 job per scenario
 #   Phase 3b — Post-processing (SLURM array): 1 job per counterfactual
 #   Phase 4  — Stacked (single SLURM job): stacked reports + cleanup
@@ -66,6 +72,8 @@ echo "  Baseline year-tasks (Phase 1): ${N_PHASE1}"
 echo "  CF frozen mechanical jobs (Phase 1B): ${N_PHASE1B}"
 echo "  CF static-only year-tasks (Phase 2A): ${N_PHASE2A}"
 echo "  CF bathtub jobs (Phase 2B): ${N_PHASE2B}"
+echo "  CF conv-no-wealth year-tasks (Phase 2N): ${N_PHASE2N}"
+echo "  CF wealth bathtub jobs (Phase 2W): ${N_PHASE2W}"
 echo "  CF conventional-only year-tasks (Phase 2C): ${N_PHASE2C}"
 echo "  Counterfactual scenarios: ${N_SCENARIOS}"
 echo "  Stacked: ${STACKED}"
@@ -165,13 +173,79 @@ fi
 
 
 #-------------------------------------------
-# Phase 2C: CF conventional-only year tasks
+# Phase 2N: CF conv-no-wealth year tasks (only s>0 wealth scenarios). Depends on
+# Phase 2B (kg bathtub state, when both channels are active) — which
+# transitively covers Phase 2A's static MTRs the behavior modules read.
 #-------------------------------------------
+
+P2N_ID=""
+if [ "$N_PHASE2N" -gt 0 ]; then
+  echo "Phase 2N: Submitting ${N_PHASE2N} CF conv-no-wealth year jobs..."
+  P2N=$(sbatch --parsable --array=1-${N_PHASE2N} ${P2B_DEP} \
+    ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
+    --job-name=taxsim-cf-convnw \
+    --output="${STAGING_DIR}/logs/p2n_%A_%a.log" \
+    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+            Rscript src/slurm/worker.R ${STAGING_DIR} 2N")
+  echo "  Job ID: ${P2N}"
+  P2N_ID="${P2N}"
+fi
+
+
+#-------------------------------------------
+# Phase 2W: CF wealth bathtub pre-pass (one job per s>0 scenario; sequential
+# recurrence within the job). Depends on Phase 2N (conv-no-wealth detail) AND
+# Phase 1 (baseline static detail, the ΔT⁰ baseline leg) when the baseline ran.
+#-------------------------------------------
+
+P2W_ID=""
+if [ "$N_PHASE2W" -gt 0 ]; then
+  P2W_PREREQS=""
+  if [ -n "$P2N_ID" ]; then
+    P2W_PREREQS="${P2W_PREREQS}:${P2N_ID}"
+  fi
+  if [ "$N_PHASE1" -gt 0 ]; then
+    P2W_PREREQS="${P2W_PREREQS}:${P1}"
+  fi
+  P2W_PRE_DEP=""
+  if [ -n "$P2W_PREREQS" ]; then
+    P2W_PRE_DEP="--dependency=afterok${P2W_PREREQS}"
+  fi
+
+  echo "Phase 2W: Submitting ${N_PHASE2W} CF wealth bathtub jobs..."
+  P2W=$(sbatch --parsable --array=1-${N_PHASE2W} ${P2W_PRE_DEP} \
+    ${SBATCH_COMMON} --time=0:15:00 --mem=8G \
+    --job-name=taxsim-wealth \
+    --output="${STAGING_DIR}/logs/p2w_%A_%a.log" \
+    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+            Rscript src/slurm/wealth.R ${STAGING_DIR}")
+  echo "  Job ID: ${P2W}"
+  P2W_ID="${P2W}"
+fi
+
+
+#-------------------------------------------
+# Phase 2C: CF conventional-only year tasks. Depends on the kg bathtub (2B) AND
+# the wealth deficit state (2W, when present). 2W transitively covers 2N -> 2B,
+# so :${P2B} + :${P2W} gates the whole upstream DAG.
+#-------------------------------------------
+
+P2C_PREREQS=""
+if [ "$N_PHASE2B" -gt 0 ]; then
+  P2C_PREREQS="${P2C_PREREQS}:${P2B}"
+fi
+if [ -n "$P2W_ID" ]; then
+  P2C_PREREQS="${P2C_PREREQS}:${P2W_ID}"
+fi
+P2C_PRE_DEP=""
+if [ -n "$P2C_PREREQS" ]; then
+  P2C_PRE_DEP="--dependency=afterok${P2C_PREREQS}"
+fi
 
 P2C_DEP=""
 if [ "$N_PHASE2C" -gt 0 ]; then
   echo "Phase 2C: Submitting ${N_PHASE2C} CF conventional-only year jobs..."
-  P2C=$(sbatch --parsable --array=1-${N_PHASE2C} ${P2B_DEP} \
+  P2C=$(sbatch --parsable --array=1-${N_PHASE2C} ${P2C_PRE_DEP} \
     ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
     --job-name=taxsim-cf-conv \
     --output="${STAGING_DIR}/logs/p2c_%A_%a.log" \

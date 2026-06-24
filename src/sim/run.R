@@ -62,22 +62,31 @@ do_scenario = function(ID, baseline_mtrs) {
   # Run simulation
   #----------------
 
-  uses_kg = ID != 'baseline' && scenario_uses_kg_dynamics(scenario_info)
+  uses_kg     = ID != 'baseline' && scenario_uses_kg_dynamics(scenario_info)
+  uses_wealth = ID != 'baseline' && scenario_uses_wealth_dynamics(scenario_info)
 
-  if (uses_kg) {
+  if (uses_kg || uses_wealth) {
 
-    # 4-step: frozen mechanical pre-pass, static-only run, bathtub pre-pass,
-    # conventional-only run. The frozen pass needs only Tax-Data cells and
-    # the tax law (no Bellman, no MTRs), and writes the mechanical state the
-    # static pass injects into records — so mechanical carryover/deemed
-    # effects reach static detail, static revenue, and distribution tables.
-    # The bathtub then reads the (post-injection) static MTRs for tau; the
-    # conventional run reads precomputed kg_dynamics_state via the behavior
-    # module. behavioral = conventional − static.
+    # Split-pass orchestration for the cohort-dynamics channels (kg and/or the
+    # wealth bathtub), computed INDEPENDENTLY (4 combinations, not a 5th
+    # branch). Chain:
+    #   [frozen (kg)] -> static -> [kg bathtub] -> [conv-no-wealth + wealth
+    #   bathtub] -> final conventional.
+    #
+    # The kg frozen pass needs only Tax-Data cells + tax law and writes the
+    # mechanical state the static pass injects. The static pass is always the
+    # measurement baseline (the clean law-only counterfactual). The wealth
+    # bathtub's forcing ΔT⁰ is CONVENTIONAL (wealth-excluding), so it needs an
+    # extra conv-no-wealth pass (behavior on, haircut off) BEFORE the pre-pass;
+    # the final conventional pass then applies the haircut (and runs kg behavior
+    # on the haircut frame when both channels are active). behavioral =
+    # conventional − static.
 
-    run_frozen_pass(scenario_info, tax_law,
-                    vat_price_offset     = vat_price_offset,
-                    excess_growth_offset = excess_growth_offset)
+    if (uses_kg) {
+      run_frozen_pass(scenario_info, tax_law,
+                      vat_price_offset     = vat_price_offset,
+                      excess_growth_offset = excess_growth_offset)
+    }
 
     static_mtrs = run_sim(scenario_info        = scenario_info,
                           tax_law              = tax_law,
@@ -87,9 +96,28 @@ do_scenario = function(ID, baseline_mtrs) {
                           excess_growth_offset = excess_growth_offset,
                           pass_type            = 'static')
 
-    run_bathtub_pass(scenario_info, tax_law,
-                     vat_price_offset     = vat_price_offset,
-                     excess_growth_offset = excess_growth_offset)
+    if (uses_kg) {
+      run_bathtub_pass(scenario_info, tax_law,
+                       vat_price_offset     = vat_price_offset,
+                       excess_growth_offset = excess_growth_offset)
+    }
+
+    if (uses_wealth) {
+      # Conv-no-wealth pass: produces ΔT⁰ ingredients + mtr_cap_bundle /
+      # mtr_net_worth / economic_gross on the un-eroded conventional base.
+      run_sim(scenario_info        = scenario_info,
+              tax_law              = tax_law,
+              baseline_mtrs        = baseline_mtrs,
+              indexes              = indexes,
+              vat_price_offset     = vat_price_offset,
+              excess_growth_offset = excess_growth_offset,
+              pass_type            = 'conventional_no_wealth',
+              static_mtrs_all      = static_mtrs)
+
+      run_wealth_bathtub_pass(scenario_info, tax_law,
+                              vat_price_offset     = vat_price_offset,
+                              excess_growth_offset = excess_growth_offset)
+    }
 
     run_sim(scenario_info        = scenario_info,
             tax_law              = tax_law,
@@ -221,7 +249,8 @@ write_pass_outputs = function(output, root, totals_slot,
 
 run_sim = function(scenario_info, tax_law, baseline_mtrs,
                    indexes, vat_price_offset, excess_growth_offset,
-                   pass_type = c('both', 'static', 'conventional'),
+                   pass_type = c('both', 'static', 'conventional',
+                                 'conventional_no_wealth'),
                    static_mtrs_all = NULL) {
 
   #----------------------------------------------------------------------------
@@ -388,7 +417,8 @@ kg_dyn_recompute_deemed_tax = function(taxed, input, baseline_pr_er,
 
 run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                         indexes, vat_price_offset, excess_growth_offset,
-                        pass_type = c('both', 'static', 'conventional'),
+                        pass_type = c('both', 'static', 'conventional',
+                                      'conventional_no_wealth'),
                         static_mtrs_year = NULL) {
 
   #----------------------------------------------------------------------------
@@ -533,6 +563,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   tax_units_static = NULL
   uses_kg_mech     = scenario_info$ID != 'baseline' &&
                      scenario_uses_kg_dynamics(scenario_info)
+  uses_wealth      = scenario_info$ID != 'baseline' &&
+                     scenario_uses_wealth_dynamics(scenario_info)
   if (pass_type %in% c('both', 'static')) {
 
     # kg_dynamics scenarios: inject the mechanical (frozen-realization)
@@ -675,21 +707,54 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   }
 
 
-  # --- CONVENTIONAL PASS ---
+  # --- CONVENTIONAL PASS (and the wealth conv-no-wealth pre-pass) ---
   has_behavior        = length(scenario_info$behavior_modules) > 0
   conventional_totals = NULL
 
-  if (pass_type %in% c('both', 'conventional')) {
+  if (pass_type %in% c('both', 'conventional', 'conventional_no_wealth')) {
 
-    if (has_behavior) {
+    is_convnw     = pass_type == 'conventional_no_wealth'
+    # The final conventional pass applies the wealth haircut; the conv-no-wealth
+    # pass deliberately does NOT (it measures ΔT⁰ / mtr_cap_bundle on the
+    # un-eroded base, the frame independent of the deficit).
+    apply_haircut = uses_wealth && !is_convnw
+    conv_root     = if (is_convnw) {
+                      file.path(scenario_info$output_path, 'conventional_no_wealth')
+                    } else {
+                      file.path(scenario_info$output_path, 'conventional')
+                    }
+    conv_detail_path = file.path(conv_root, 'detail', paste0(year, '.csv'))
 
-      # Behavioral feedback on original (unmodified) tax_units
-      conv_input = tax_units %>%
-        do_behavioral_feedback(behavior_modules = scenario_info$behavior_modules,
-                               baseline_mtrs    = baseline_mtrs,
-                               static_mtrs      = static_mtrs_year,
-                               scenario_info    = scenario_info,
-                               indexes          = indexes)
+    # The full do_taxes path runs whenever there is a behavior module OR the
+    # wealth channel is active: the conv-no-wealth pass needs liabilities +
+    # mtr_cap_bundle, and the final conv pass needs the haircut applied. Only a
+    # plain no-behavior, no-wealth scenario takes the copy-static shortcut.
+    if (has_behavior || uses_wealth) {
+
+      # Mechanical wealth haircut: a fixed conventional-pass step BEFORE the
+      # behavior modules / do_taxes. Drains each record's (age x net-worth-
+      # percentile) cell deficit out of wealth (value.* / capital flows / basis)
+      # and recomputes net_worth, so calc_estate sees a smaller estate base and
+      # calc_wealth reprices liab_wealth on the eroded stock. Final conv only.
+      conv_base = tax_units
+      if (apply_haircut) {
+        wealth_state = read_cohort_state(scenario_info, 'wealth_dynamics_state', year)
+        conv_base    = wealth_dyn_apply_to_records(conv_base, wealth_state)
+      }
+
+      # Behavioral feedback (identity passthrough when no behavior module). When
+      # both channels are active, kg runs on the post-haircut frame.
+      if (has_behavior) {
+        conv_input = conv_base %>%
+          do_behavioral_feedback(behavior_modules = scenario_info$behavior_modules,
+                                 baseline_mtrs    = baseline_mtrs,
+                                 static_mtrs      = static_mtrs_year,
+                                 scenario_info    = scenario_info,
+                                 indexes          = indexes)
+      } else {
+        conv_input = conv_base
+      }
+
       tax_units_conv = conv_input %>%
         do_taxes(baseline_pr_er = baseline_pr_er,
                  vars_1040      = vars_1040,
@@ -711,8 +776,47 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
         conv_liab_deemed = tax_units_conv$liab_deemed
       }
 
-      # Calculate conventional marginal tax rates
-      if (!is.null(scenario_info$mtr_vars)) {
+      # Wealth bathtub forcing ingredients (conv-no-wealth pass only): the
+      # composition-weighted capital-income bundle MTR + capital total, the
+      # marginal wealth-tax rate, and gross assets -- all on this un-eroded
+      # frame and BEFORE the deemed fold (so tau is a pure inter-vivos margin,
+      # mirroring mtr_kg_lt_lawonly). The wealth pre-pass reads these from this
+      # pass's detail.
+      if (is_convnw) {
+        bundle = calc_cap_bundle_mtr(
+          tax_units       = conv_input,
+          actual_liab_iit = tax_units_conv$liab_iit_net,
+          baseline_pr_er  = baseline_pr_er,
+          vars_1040       = vars_1040,
+          vars_payroll    = return_vars$calc_pr)
+        tax_units_conv$mtr_cap_bundle = bundle$mtr_cap_bundle
+        tax_units_conv$cap_bundle_F   = bundle$cap_bundle_F
+        tax_units_conv$economic_gross = wealth_dyn_economic_gross(conv_input)
+        # Raw (pre-behavior) economic net worth, the cell ranking + denominator
+        # variable. A net_worth-overwriting behavior module (e.g. wealth
+        # avoidance) mutates conv_input$net_worth on this frame, but the applier
+        # ranks on the RAW pre-behavior net_worth (it runs before behavior), so
+        # the pre-pass must rank on the same raw stock or cells/conservation
+        # break. tax_units is the raw frame, row-aligned to tax_units_conv.
+        stopifnot(identical(tax_units_conv$id, tax_units$id))
+        tax_units_conv$net_worth_raw  = tax_units$net_worth
+        tax_units_conv$mtr_net_worth  = calc_mtrs(
+          tax_units          = conv_input %>%
+                                 select(-any_of(return_vars %>%
+                                 unlist() %>%
+                                 set_names(NULL))),
+          actual_liab_iit    = tax_units_conv$liab_iit_net,
+          actual_liab_pr     = tax_units_conv$liab_pr,
+          actual_liab_wealth = tax_units_conv$liab_wealth,
+          var                = 'net_worth',
+          pr                 = F,
+          type               = 'nextdollar')$mtr_net_worth
+      }
+
+      # Calculate conventional marginal tax rates (skip on the conv-no-wealth
+      # pass -- its detail is read only by the wealth pre-pass, which needs only
+      # the mtr_cap_bundle / mtr_net_worth computed above)
+      if (!is.null(scenario_info$mtr_vars) && !is_convnw) {
         conv_mtrs = scenario_info$mtr_vars %>%
           map2(.y = scenario_info$mtr_types,
                .f = ~ calc_mtrs(
@@ -751,29 +855,35 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                  pmt_iit_nonwithheld = pmt_iit_nonwithheld + liab_deemed)
       }
 
-      # Write conventional detail (kg_dynamics behavior modules stamp
-      # kg_lockin / kg_deemed; included when present)
+      # Write detail to this pass's root (conv-no-wealth detail lives in its own
+      # tree so it never clobbers the final conventional detail). The wealth
+      # forcing/diagnostic columns ride any_of() -- present only on the relevant
+      # pass -- so dormancy is preserved byte-for-byte for non-wealth scenarios.
+      dir.create(file.path(conv_root, 'detail'), recursive = TRUE,
+                 showWarnings = FALSE)
       tax_units_conv %>%
         select(all_of(globals$detail_vars), starts_with('mtr_'),
                any_of(c('kg_lockin', 'kg_deemed', 'liab_deemed',
-                        'estate_income_tax_ded'))) %>%
-        write_csv(file.path(scenario_info$output_path, 'conventional', 'detail',
-                            paste0(year, '.csv')))
+                        'estate_income_tax_ded', 'economic_gross', 'cap_bundle_F',
+                        'net_worth_raw', 'nw_pctile', 'D_alloc', 'wealth_haircut'))) %>%
+        write_csv(conv_detail_path)
 
-      # Get conventional totals
-      conventional_totals = list(pr            = get_pr_totals(tax_units_conv, year),
-                                  `1040`        = get_1040_totals(tax_units_conv, year),
-                                  `1040_by_agi` = get_1040_totals(tax_units_conv, year, T),
-                                  estate        = get_estate_totals(tax_units_conv, year),
-                                  wealth        = get_wealth_totals(tax_units_conv, year))
+      # Conventional totals (skip the conv-no-wealth pass -- intermediate, no
+      # totals/receipts; run_sim does not aggregate it either)
+      if (!is_convnw) {
+        conventional_totals = list(pr            = get_pr_totals(tax_units_conv, year),
+                                    `1040`        = get_1040_totals(tax_units_conv, year),
+                                    `1040_by_agi` = get_1040_totals(tax_units_conv, year, T),
+                                    estate        = get_estate_totals(tax_units_conv, year),
+                                    wealth        = get_wealth_totals(tax_units_conv, year))
+      }
 
     } else if (scenario_info$ID != 'baseline') {
 
-      # No behavior: copy static detail to conventional output. In 'both' mode
-      # we have tax_units_static in memory; in 'conventional' mode we copy the
-      # already-written static csv directly.
-      conv_path = file.path(scenario_info$output_path, 'conventional', 'detail',
-                            paste0(year, '.csv'))
+      # No behavior (and no wealth channel): copy static detail to conventional
+      # output. In 'both' mode we have tax_units_static in memory; in
+      # 'conventional' mode we copy the already-written static csv directly.
+      conv_path = conv_detail_path
       if (!is.null(tax_units_static)) {
         tax_units_static %>%
           select(all_of(globals$detail_vars), starts_with('mtr_')) %>%
