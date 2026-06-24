@@ -266,36 +266,96 @@
   </section>
 
   <section>
-    <h2>Cross-model comparison</h2>
-    <p class="sec-label">integrated Tax-Simulator vs standalone Wealth-Tax-Simulator · nickel-dime · $B</p>
-    <p class="lead">The shared scenario (nickel-and-dime, identical brackets/rates and the same seeded
-      avoidance elasticities). The plan explicitly does not expect the levels to reconcile — the two
-      models sit on different data (Tax-Data tax units vs an SCF+Forbes household universe), with
-      different top-tail construction and no top-share calibration on either side. The agreement is
-      nonetheless close, especially after behavior.</p>
+    <h2>Net-worth universe</h2>
+    <p class="sec-label">2026 · units and total net worth above threshold · Tax-Data vs WTS</p>
+    <p class="lead">Before comparing the tax, compare the balance sheets the two models tax. Tax-Data
+      counts non-dependent tax units; WTS counts SCF+Forbes households. The middle of the top —
+      <strong>$10M to $100M — agrees strikingly</strong> (counts and dollars within a few percent),
+      independent of Forbes. The divergence is all at the extremes.</p>
     <div class="scroll">
       <table>
+        <caption>Counts and total net worth above threshold</caption>
+        <thead><tr><th>Net worth</th><th>TD units</th><th>TD wealth</th><th>WTS units</th><th>WTS wealth</th></tr></thead>
+        <tbody>
+          <tr><td>Total</td><td>186,347,348</td><td>$194.0T</td><td>138,162,223</td><td>$181.0T</td></tr>
+          <tr><td>≥ $10M</td><td>3,249,477</td><td>$92.7T</td><td>2,886,200</td><td>$87.2T</td></tr>
+          <tr><td>≥ $50M</td><td>308,743</td><td>$40.9T</td><td>304,231</td><td>$40.5T</td></tr>
+          <tr><td>≥ $100M</td><td>98,768</td><td>$26.2T</td><td>97,108</td><td>$26.8T</td></tr>
+          <tr><td>≥ $500M</td><td>3,593</td><td>$10.6T</td><td>6,992</td><td>$10.8T</td></tr>
+          <tr><td>≥ $1B</td><td class="em">1,474</td><td class="em">$9.19T</td><td>1,165</td><td>$6.70T</td></tr>
+          <tr><td>≥ $5B</td><td class="em">322</td><td class="em">$7.03T</td><td>281</td><td>$4.96T</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="scroll" style="margin-top:16px">
+      <table>
+        <caption>Married vs nonmarried unit counts</caption>
+        <thead><tr><th>Net worth</th><th>TD married</th><th>TD nonmar.</th><th>WTS married</th><th>WTS nonmar.</th></tr></thead>
+        <tbody>
+          <tr><td>Total</td><td>62,105,062</td><td>124,242,286</td><td>77,915,547</td><td>60,246,675</td></tr>
+          <tr><td>≥ $50M</td><td>257,607</td><td>51,136</td><td>288,353</td><td>15,878</td></tr>
+          <tr><td>≥ $100M</td><td>79,373</td><td>19,395</td><td>92,172</td><td>4,936</td></tr>
+          <tr><td>≥ $1B</td><td>1,183</td><td>291</td><td>1,165</td><td class="em">0</td></tr>
+          <tr><td>≥ $5B</td><td>253</td><td>69</td><td>281</td><td class="em">0</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Two extremes diverge. <strong>$1B+: Tax-Data is ~40% heavier</strong> (322 units /
+      $7.0T vs 281 / $5.0T at ≥$5B) — the living-weight donor-clone duplication a wealth tax exposes
+      (deferred cap, P2). <strong>$500M: WTS has ~2× the units</strong> at similar total dollars — its
+      Forbes splice (assumes ≥$500M) populates that band with more, smaller fortunes. And WTS forces
+      every billionaire to be married (the literal <span class="num">0</span> nonmarried at ≥$1B);
+      Tax-Data shows ~80/20 married/nonmarried at the top.</p>
+  </section>
+
+  <section>
+    <h2>Cross-model comparison — apples-to-apples</h2>
+    <p class="sec-label">filing-blind nickel-dime · identical law + elasticities · $B, CY</p>
+    <p class="lead">The first comparison looked off — TS scored 0.79× the standalone and ~2.3× fewer
+      taxable units. Tracing it: the gap was <strong>not</strong> the data, it was one law difference.
+      TS doubles the exemption for couples (MFJ → $100M), so married units between $50M–$100M escape;
+      WTS is filing-blind ($50M for everyone). The arithmetic closes exactly — nonmarried ≥$50M
+      (51,136) + married ≥$100M (79,373) = 130,509, the TS taxable count to the unit. Making TS
+      filing-blind too (a flat <code>filing_status_mapper</code>) puts the two models on identical
+      law and identical avoidance elasticities; the residual is then pure data.</p>
+    <div class="scroll">
+      <table>
+        <caption>Filing-blind TS vs WTS — law &amp; elasticities identical</caption>
         <thead><tr>
           <th>Year</th><th>TS static</th><th>WTS static</th><th>ratio</th>
           <th>TS conv.</th><th>WTS conv.</th><th>ratio</th>
           <th>TS returns</th><th>WTS returns</th></tr></thead>
         <tbody>
-          <tr><td>2026</td><td>1,409.6</td><td>1,783.7</td><td>0.79</td><td>354.0</td><td>392.1</td><td class="em">0.90</td><td>130,509</td><td>304,231</td></tr>
-          <tr><td>2027</td><td>1,486.9</td><td>1,859.8</td><td>0.80</td><td>369.8</td><td>406.8</td><td class="em">0.91</td><td>132,102</td><td>318,376</td></tr>
-          <tr><td>2028</td><td>1,563.5</td><td>1,933.3</td><td>0.81</td><td>386.6</td><td>421.2</td><td class="em">0.92</td><td>136,177</td><td>323,095</td></tr>
-          <tr><td>2029</td><td>1,627.4</td><td>2,009.1</td><td>0.81</td><td>398.4</td><td>437.8</td><td class="em">0.91</td><td>137,060</td><td>329,787</td></tr>
-          <tr><td>2030</td><td>1,706.4</td><td>2,085.4</td><td>0.82</td><td>415.2</td><td>453.1</td><td class="em">0.92</td><td>139,777</td><td>339,942</td></tr>
+          <tr><td>2026</td><td>1,813</td><td>1,784</td><td class="em">1.02</td><td>461</td><td>392</td><td>1.17</td><td>308,743</td><td>304,231</td></tr>
+          <tr><td>2027</td><td>1,916</td><td>1,860</td><td class="em">1.03</td><td>484</td><td>407</td><td>1.19</td><td>315,971</td><td>318,376</td></tr>
+          <tr><td>2028</td><td>2,017</td><td>1,933</td><td class="em">1.04</td><td>510</td><td>421</td><td>1.21</td><td>327,629</td><td>323,095</td></tr>
+          <tr><td>2029</td><td>2,099</td><td>2,009</td><td class="em">1.04</td><td>527</td><td>438</td><td>1.20</td><td>326,292</td><td>329,787</td></tr>
+          <tr><td>2030</td><td>2,203</td><td>2,085</td><td class="em">1.06</td><td>548</td><td>453</td><td>1.21</td><td>336,027</td><td>339,942</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="lead" style="margin-top:18px">Two readings stand out. <strong>Conventional levels agree
-      to within ~8–10%</strong> — once the common avoidance elasticities act, the two models land in
-      the same place, which is the strongest evidence the integrated calculator and behavior behave
-      like the standalone. On the static side, the standalone is ~20% higher even though
-      <strong>it counts ~2.3× more taxable units</strong> (304k households vs 131k tax units): the
-      standalone's SCF+Forbes universe spreads $50M+ wealth across many more (household) units, while
-      Tax-Data concentrates it in fewer, richer tax units. Different denominators, same order of
-      magnitude — exactly the "won't reconcile, will rhyme" outcome the plan predicted.</p>
+    <p class="lead" style="margin-top:18px">On an apples-to-apples basis the models <strong>agree on the
+      static score within 2% in 2026</strong> (1,813 vs 1,784) and on <strong>taxable units within
+      1.5%</strong> (308.7k vs 304.2k) — the integrated calculator reproduces the standalone where the
+      assumptions are shared. The static ratio drifts to +6% by 2030 as the two projection paths and
+      indexation conventions diverge. The conventional score runs ~17–21% higher in TS: same statutory
+      MTRs and same −7/−17 elasticities, so this is an <em>asset-composition</em> difference — the two
+      data sources split top-tail wealth differently between the avoidance-prone closely-held class
+      (−17) and the marketable class (−7), so the dual-elasticity erosion bites unevenly.</p>
+    <div class="scroll" style="margin-top:18px">
+      <table>
+        <caption>For contrast — TS with MFJ doubling (NOT comparable: a law difference, not data)</caption>
+        <thead><tr><th>Year</th><th>TS static</th><th>WTS static</th><th>ratio</th><th>TS returns</th><th>WTS returns</th></tr></thead>
+        <tbody>
+          <tr><td>2026</td><td>1,409.6</td><td>1,783.7</td><td>0.79</td><td>130,509</td><td>304,231</td></tr>
+          <tr><td>2030</td><td>1,706.4</td><td>2,085.4</td><td>0.82</td><td>139,777</td><td>339,942</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">The 0.79 ratio and the 2.3× unit gap are entirely the MFJ exemption doubling —
+      a deliberate, realistic policy feature of the TS reform, not a modeling discrepancy. The
+      <code>wealth_tax_nickel_dime</code> (MFJ-doubled) and <code>wealth_tax_nickel_dime_flat</code>
+      scenarios are both in the runscript.</p>
   </section>
 
   <section>
@@ -345,8 +405,9 @@
       <div><span class="tag">NEW </span> <span class="path">src/sim/wealth.R</span> — get_wealth_totals()</div>
       <div><span class="tag">NEW </span> <span class="path">config/scenarios/tax_law/baseline/wealth.yaml</span> — exemption + mapper, baseline Inf</div>
       <div><span class="tag">NEW </span> <span class="path">config/scenarios/behavior/wealth/avoidance.R</span> — do_wealth() dual elasticity</div>
-      <div><span class="tag">NEW </span> <span class="path">config/scenarios/tax_law/public/wealth_tax_{warren,nickel_dime}/wealth.yaml</span></div>
+      <div><span class="tag">NEW </span> <span class="path">config/scenarios/tax_law/public/wealth_tax_{warren,nickel_dime,nickel_dime_flat}/wealth.yaml</span></div>
       <div><span class="tag">NEW </span> <span class="path">config/runscripts/wealth_tax.csv</span></div>
+      <div><span class="tag">NEW </span> <span class="path">other/wealth_tax/networth_stats.R</span> — 2026 TD vs WTS net-worth statistics</div>
       <div><span class="tag ed">EDIT</span> <span class="path">src/calc/do_taxes.R</span> — wealth block, calc_wealth_flag, net_worth MTR term</div>
       <div><span class="tag ed">EDIT</span> <span class="path">src/sim/run.R</span> — materialize net_worth, wealth totals, flags</div>
       <div><span class="tag ed">EDIT</span> <span class="path">src/misc/config_parser.R</span> — detail_vars += net_worth, liab_wealth</div>
@@ -362,8 +423,9 @@
 
   <footer>
     Tax-Simulator · Budget Lab at Yale · branch <code style="background:none;padding:0">wealth-tax-base</code> ·
-    built &amp; validated 2026-06-23; refined 2026-06-24 (generic net-worth distribution view +
-    filing-season t+1 receipts lag). Levels illustrative pending top-tail cap and elasticity calibration.
+    built &amp; validated 2026-06-23; refined 2026-06-24 (net-worth distribution view, filing-season
+    t+1 receipts lag, apples-to-apples WTS comparison + net-worth universe stats). Levels illustrative
+    pending top-tail cap and elasticity calibration.
   </footer>
 
 </div>

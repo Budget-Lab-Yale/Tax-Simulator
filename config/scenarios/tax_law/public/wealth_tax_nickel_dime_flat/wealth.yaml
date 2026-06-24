@@ -1,0 +1,36 @@
+---
+#-------------------------------------------------------------------------------
+# Filing-BLIND "nickel-and-dime" wealth tax — identical to wealth_tax_nickel_dime
+# (5% over $50M, 10% over $250M, effective 2026) EXCEPT it removes the MFJ
+# exemption doubling: every filing status gets the same $50M exemption. This is
+# the apples-to-apples counterpart to the standalone Wealth-Tax-Simulator, which
+# is filing-blind. With law (exemption, schedule) and avoidance elasticities now
+# identical across the two models, any remaining difference in the score is pure
+# data/universe (top-tail shape), not policy.
+#
+# The ONLY substantive difference from wealth_tax_nickel_dime is the flat
+# filing_status_mapper below (all four statuses -> exemption_single, no x2 for
+# MFJ). Overriding the mapper replaces the baseline one (file-level merge).
+#-------------------------------------------------------------------------------
+
+filing_status_mapper:
+  exemption:
+    '1': exemption_single
+    '2': exemption_single
+    '3': exemption_single
+    '4': exemption_single
+
+exemption_single:
+  value:
+    '2025': Inf
+    '2026': 50000000
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+
+rates:
+  value: [0.05, 0.10]
+
+brackets:
+  value: [0, 200000000]

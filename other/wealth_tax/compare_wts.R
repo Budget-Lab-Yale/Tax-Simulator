@@ -34,14 +34,15 @@ ts_levels = function(scn) {
     left_join(c %>% select(year, ts_conv = wealth_tax), by = 'year') %>%
     mutate(scenario = scn)
 }
-ts_nd  = ts_levels('wealth_tax_nickel_dime')
-ts_war = ts_levels('wealth_tax_warren')
+ts_nd   = ts_levels('wealth_tax_nickel_dime')        # MFJ exemption doubling
+ts_ndf  = ts_levels('wealth_tax_nickel_dime_flat')   # filing-blind (apples-to-apples)
+ts_war  = ts_levels('wealth_tax_warren')
 
 cat('=== Integrated Tax-Simulator: annual wealth tax level ($B, CY) ===\n')
-print(bind_rows(ts_nd, ts_war) %>%
+print(bind_rows(ts_nd, ts_ndf, ts_war) %>%
         select(scenario, year, ts_static, ts_conv, ts_returns) %>%
         mutate(across(c(ts_static, ts_conv), ~ round(., 1)),
-               ts_returns = round(ts_returns)))
+               ts_returns = round(ts_returns)), n = 30)
 
 # --- Standalone WTS nickel_dime levels (aggregate detail) --------------------
 wts_levels = function(scn) {
@@ -69,22 +70,33 @@ if (!is.null(wts_nd)) {
   cat('  (no WTS output found)\n')
 }
 
-# --- Side-by-side comparison (nickel_dime) -----------------------------------
-cat('\n=== CROSS-MODEL COMPARISON: nickel_dime ($B wealth tax, CY) ===\n')
-if (!is.null(ts_nd) && !is.null(wts_nd)) {
-  cmp = ts_nd %>% select(year, ts_static, ts_conv, ts_returns) %>%
-    inner_join(wts_nd, by = 'year') %>%
+# --- Comparison helper --------------------------------------------------------
+mk_cmp = function(ts, wts, fname, title) {
+  if (is.null(ts) || is.null(wts)) { cat('  (cannot compare', title, '— missing one side)\n'); return(invisible()) }
+  cmp = ts %>% select(year, ts_static, ts_conv, ts_returns) %>%
+    inner_join(wts, by = 'year') %>%
     mutate(static_ratio = ts_static / wts_static,
            conv_ratio   = ts_conv   / wts_conv) %>%
     select(year, ts_static, wts_static, static_ratio,
            ts_conv, wts_conv, conv_ratio, ts_returns, wts_returns)
+  cat('\n=== ', title, ' ===\n', sep = '')
   print(cmp %>% mutate(across(c(ts_static, wts_static, ts_conv, wts_conv), ~ round(., 1)),
                        across(c(static_ratio, conv_ratio), ~ round(., 2)),
                        across(c(ts_returns, wts_returns), ~ round(.))))
-  write_csv(cmp, file.path(out_dir, 'comparison_nickel_dime.csv'))
-  cat('\nwrote', file.path(out_dir, 'comparison_nickel_dime.csv'), '\n')
-} else cat('  (cannot compare — missing one side)\n')
+  write_csv(cmp, file.path(out_dir, fname))
+  cat('wrote', file.path(out_dir, fname), '\n')
+}
+
+# APPLES-TO-APPLES: filing-blind TS (no MFJ doubling) vs filing-blind WTS. Law +
+# elasticities now identical; residual = data/universe (top-tail shape).
+mk_cmp(ts_ndf, wts_nd, 'comparison_apples.csv',
+       'APPLES-TO-APPLES: nickel_dime filing-blind ($B wealth tax, CY)')
+
+# For contrast: the MFJ-doubled TS scenario (couples get $100M exemption), which
+# is NOT comparable to filing-blind WTS — the gap is the law, not the data.
+mk_cmp(ts_nd, wts_nd, 'comparison_nickel_dime.csv',
+       'CONTRAST: nickel_dime with MFJ doubling vs filing-blind WTS ($B, CY)')
 
 # Persist the integrated levels too
-write_csv(bind_rows(ts_nd, ts_war), file.path(out_dir, 'ts_wealth_levels.csv'))
+write_csv(bind_rows(ts_nd, ts_ndf, ts_war), file.path(out_dir, 'ts_wealth_levels.csv'))
 cat('wrote', file.path(out_dir, 'ts_wealth_levels.csv'), '\n')
