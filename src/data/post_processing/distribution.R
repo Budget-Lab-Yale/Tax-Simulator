@@ -78,12 +78,28 @@ build_distribution_tables = function(id, baseline_id) {
       
       # Add top AGI cuts
       bind_rows(
-        microdata %>% group_by(taxes_included, group = agi_top_10) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI'), 
-        microdata %>% group_by(taxes_included, group = agi_top_5)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI'), 
-        microdata %>% group_by(taxes_included, group = agi_top_1)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI'), 
+        microdata %>% group_by(taxes_included, group = agi_top_10) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI'),
+        microdata %>% group_by(taxes_included, group = agi_top_5)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI'),
+        microdata %>% group_by(taxes_included, group = agi_top_1)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI'),
         microdata %>% group_by(taxes_included, group = agi_top_01) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI')
-      ) %>% 
-      
+      ) %>%
+
+      # Add net-worth quintile cuts (the natural lens for a wealth tax)
+      bind_rows(
+        microdata %>%
+          group_by(taxes_included, group = replace_na(nw_quintile, 'Negative net worth')) %>%
+          calc_dist_metrics() %>%
+          mutate(group_dimension = 'Net worth')
+      ) %>%
+
+      # Add top net-worth cuts
+      bind_rows(
+        microdata %>% group_by(taxes_included, group = nw_top_10) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Net worth'),
+        microdata %>% group_by(taxes_included, group = nw_top_5)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Net worth'),
+        microdata %>% group_by(taxes_included, group = nw_top_1)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Net worth'),
+        microdata %>% group_by(taxes_included, group = nw_top_01) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Net worth')
+      ) %>%
+
       # Add year indicator
       mutate(year = yr, .before = everything())
   }
@@ -140,6 +156,12 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
   if (!('liab_wealth' %in% names(baseline_detail))) {
     baseline_detail$liab_wealth = 0
   }
+  # Economic net worth, the grouping variable for the by-wealth distribution
+  # view (baseline stock, like income/AGI cuts use baseline income). Default 0
+  # for detail predating the column.
+  if (!('net_worth' %in% names(baseline_detail))) {
+    baseline_detail$net_worth = 0
+  }
 
   microdata = baseline_detail %>%
 
@@ -159,7 +181,7 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
         'Parent', 'Non-parent'
       )
     ) %>%
-    select(year, id, weight, n_people, filing_status, age, parent_group, labor, capital, agi, income = expanded_inc, liab_iit_pr, liab_deemed, liab_wealth) %>%
+    select(year, id, weight, n_people, filing_status, age, parent_group, labor, capital, agi, net_worth, income = expanded_inc, liab_iit_pr, liab_deemed, liab_wealth) %>%
 
     # Make 3 copies for tax-type inclusion assumptions
     expand_grid(taxes_included = c('iit_pr', 'iit_pr_death', 'iit_pr_death_cit_vat'))
@@ -401,13 +423,41 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
         agi_pctile <= 0.8 ~ 'Quintile 4',
         agi_pctile <= 1   ~ 'Quintile 5',
       ), 
-      agi_top_10 = if_else(agi_pctile > 0.9,   'Top 10%',   NA), 
-      agi_top_5  = if_else(agi_pctile > 0.95,  'Top 5%',    NA), 
-      agi_top_1  = if_else(agi_pctile > 0.99,  'Top 1%',    NA), 
+      agi_top_10 = if_else(agi_pctile > 0.9,   'Top 10%',   NA),
+      agi_top_5  = if_else(agi_pctile > 0.95,  'Top 5%',    NA),
+      agi_top_1  = if_else(agi_pctile > 0.99,  'Top 1%',    NA),
       agi_top_01 = if_else(agi_pctile > 0.999, 'Top 0.1%',  NA)
-    ) %>% 
-    
-    ungroup() %>% 
+    ) %>%
+
+    # Add net-worth-based percentile measures. This is the natural lens for a
+    # wealth tax — it ranks by the balance sheet, not the income statement, so a
+    # wealthy-but-low-income unit (e.g. a retiree living off principal) lands in
+    # the right group. Computed on baseline economic net worth, mirroring the
+    # income/AGI blocks above. Produced for every scenario; most informative for
+    # wealth reforms.
+    arrange(net_worth, .by_group = T) %>%
+    mutate(
+
+      # Net worth percentile (ranks only the non-negative-net-worth population,
+      # like the income/AGI percentiles rank non-negative income)
+      nw_pctile = cumsum(weight * (net_worth >= 0)) / sum(weight * (net_worth >= 0)),
+      nw_pctile = if_else(net_worth < 0, NA, nw_pctile),
+
+      # Quintiles and top shares
+      nw_quintile = case_when(
+        nw_pctile <= 0.2 ~ 'Quintile 1',
+        nw_pctile <= 0.4 ~ 'Quintile 2',
+        nw_pctile <= 0.6 ~ 'Quintile 3',
+        nw_pctile <= 0.8 ~ 'Quintile 4',
+        nw_pctile <= 1   ~ 'Quintile 5',
+      ),
+      nw_top_10 = if_else(nw_pctile > 0.9,   'Top 10%',   NA),
+      nw_top_5  = if_else(nw_pctile > 0.95,  'Top 5%',    NA),
+      nw_top_1  = if_else(nw_pctile > 0.99,  'Top 1%',    NA),
+      nw_top_01 = if_else(nw_pctile > 0.999, 'Top 0.1%',  NA)
+    ) %>%
+
+    ungroup() %>%
     return()
 }
 
@@ -429,10 +479,13 @@ calc_dist_metrics = function(grouped_microdata) {
   grouped_microdata %>%
     summarise(
       
-      # Group-metric-specific summary stats
-      income_cutoff = round(min(income) / 5) * 5,
-      agi_cutoff    = round(min(agi) / 5) * 5,
-      n_tax_units   = sum(weight),
+      # Group-metric-specific summary stats (lower edge of each group on each
+      # ranking variable; net_worth_cutoff is the meaningful one for the
+      # 'Net worth' dimension, as income/agi cutoffs are for their dimensions)
+      income_cutoff    = round(min(income) / 5) * 5,
+      agi_cutoff       = round(min(agi) / 5) * 5,
+      net_worth_cutoff = round(min(net_worth)),
+      n_tax_units      = sum(weight),
       
       # Labor/capital/ATI for spending distribution
       labor        = sum(labor * weight) / 1e9, 

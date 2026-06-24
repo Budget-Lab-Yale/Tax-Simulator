@@ -110,8 +110,8 @@
       validated at full sample, and cross-checked against the standalone model.</p>
     <div class="meta">
       <span><b>Branch</b> wealth-tax-base</span>
-      <span><b>Built</b> 2026-06-23</span>
-      <span><b>Run vintage</b> wealth_full · pct_sample 1</span>
+      <span><b>Built</b> 2026-06-23 · refined 06-24</span>
+      <span><b>Run</b> wealth_full · pct_sample 1 · CY 2025–2031</span>
       <span><b>Scope</b> static + within-year avoidance (s = 0)</span>
     </div>
   </header>
@@ -223,22 +223,46 @@
 
   <section>
     <h2>Who pays</h2>
-    <p class="sec-label">Warren static · 2026 · avg tax change per unit, by income group</p>
+    <p class="sec-label">Warren static · 2026 · avg tax change per unit</p>
+    <p class="lead">The distribution tables now carry a generic <strong>net-worth-percentile</strong>
+      grouping alongside income, AGI, age and parent status — produced for every scenario, but the
+      natural lens for a wealth tax: it ranks by the balance sheet, so a wealthy-but-low-income unit
+      (a retiree living off principal) lands in the right band. The two lenses tell a sharper story
+      together.</p>
     <div class="scroll">
       <table>
-        <thead><tr><th>Income group</th><th>Tax units</th><th>Avg Δ tax</th><th>Concentration</th></tr></thead>
+        <caption>By net worth — the natural lens</caption>
+        <thead><tr><th>Net-worth group</th><th>Band starts at</th><th>Avg Δ tax</th><th>Concentration</th></tr></thead>
         <tbody>
-          <tr><td>Bottom 80% (Q1–Q4)</td><td>147.5M</td><td>≈ $0</td><td><span class="sub">—</span></td></tr>
-          <tr><td>Quintile 5</td><td>36.9M</td><td>$11,795</td><td><span class="bar" style="width:14px"></span></td></tr>
-          <tr><td>Top 10%</td><td>18.4M</td><td>$23,565</td><td><span class="bar" style="width:28px"></span></td></tr>
-          <tr><td>Top 5%</td><td>9.2M</td><td>$46,890</td><td><span class="bar" style="width:56px"></span></td></tr>
-          <tr><td class="em">Top 1%</td><td>1.84M</td><td class="em">$224,955</td><td><span class="bar" style="width:120px"></span></td></tr>
-          <tr><td class="em">Top 0.1%</td><td>0.18M</td><td class="em">$1,989,885</td><td><span class="bar" style="width:200px"></span></td></tr>
+          <tr><td>Bottom 80% &amp; negative</td><td>&lt; $0.9M</td><td>≈ $0</td><td><span class="sub">—</span></td></tr>
+          <tr><td>Quintile 5</td><td>$0.88M</td><td>$12,610</td><td><span class="bar" style="width:8px"></span></td></tr>
+          <tr><td>Top 10%</td><td>$1.89M</td><td>$25,220</td><td><span class="bar" style="width:15px"></span></td></tr>
+          <tr><td>Top 5%</td><td>$3.79M</td><td>$50,450</td><td><span class="bar" style="width:30px"></span></td></tr>
+          <tr><td>Top 1%</td><td>$14.84M</td><td>$252,165</td><td><span class="bar" style="width:60px"></span></td></tr>
+          <tr><td class="em">Top 0.1%</td><td class="em">$75.1M</td><td class="em">$2,481,785</td><td><span class="bar" style="width:200px"></span></td></tr>
         </tbody>
       </table>
     </div>
-    <p class="note">Of the $435B static Warren total, the top 1% bears ~95% and the top 0.1% ~84% —
-      textbook wealth-tax incidence, and confirmation that the tax attaches to the right records.</p>
+    <div class="scroll" style="margin-top:16px">
+      <table>
+        <caption>By income — for comparison</caption>
+        <thead><tr><th>Income group</th><th>Tax units</th><th>Avg Δ tax</th><th>Concentration</th></tr></thead>
+        <tbody>
+          <tr><td>Bottom 80% (Q1–Q4)</td><td>147.5M</td><td>≈ $0</td><td><span class="sub">—</span></td></tr>
+          <tr><td>Quintile 5</td><td>36.9M</td><td>$11,795</td><td><span class="bar" style="width:8px"></span></td></tr>
+          <tr><td>Top 10%</td><td>18.4M</td><td>$23,565</td><td><span class="bar" style="width:15px"></span></td></tr>
+          <tr><td>Top 5%</td><td>9.2M</td><td>$46,890</td><td><span class="bar" style="width:30px"></span></td></tr>
+          <tr><td>Top 1%</td><td>1.84M</td><td>$224,955</td><td><span class="bar" style="width:60px"></span></td></tr>
+          <tr><td class="em">Top 0.1%</td><td>0.18M</td><td class="em">$1,989,885</td><td><span class="bar" style="width:160px"></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">The net-worth lens is the honest one: the $50M exemption sits <em>above</em> the
+      top-1% net-worth threshold ($14.8M) and just below the top-0.1% threshold ($75.1M), so
+      essentially only the top fraction of a percent by net worth pays anything — and that band's
+      average bill ($2.48M) is correspondingly larger than the income lens implies. Of the $435B
+      static Warren total, the top 1% by income bears ~95% and the top 0.1% ~84% — textbook incidence,
+      and confirmation the tax attaches to the right records.</p>
   </section>
 
   <section>
@@ -301,10 +325,14 @@
           mechanism, deferred to <code>purrfect-weaving-toucan</code>.</p>
       </div>
       <div class="caveat">
-        <h3>Receipts booked FY = CY</h3>
-        <p>The annual wealth tax is booked as a pure on-model level in the calendar year, with no
-          75/25 withholding split and no estate-style <code>t+1</code> lag — a deliberate modeling
-          choice for an annual assessment, distinct from how estate and income receipts time out.</p>
+        <h3>Receipts lag to the filing-season FY (t+1)</h3>
+        <p>A wealth tax is non-withheld, paid at filing the spring after the assessment year (CY t net
+          worth → return Jan–Apr CY t+1 → FY t+1), so <code>revenues_wealth_tax</code> books a full
+          year late, mechanically like the estate tax. The runscript therefore runs one year past the
+          window (to 2031) so the last policy year's receipt isn't dropped. Note an open inconsistency:
+          the model books ordinary non-withheld income/payroll tax <em>in-year</em> (a documented
+          <code>remit_taxes</code> simplification), so the wealth tax is now timed like estate, not
+          like the model's other non-withheld receipts.</p>
       </div>
     </div>
   </section>
@@ -322,8 +350,8 @@
       <div><span class="tag ed">EDIT</span> <span class="path">src/calc/do_taxes.R</span> — wealth block, calc_wealth_flag, net_worth MTR term</div>
       <div><span class="tag ed">EDIT</span> <span class="path">src/sim/run.R</span> — materialize net_worth, wealth totals, flags</div>
       <div><span class="tag ed">EDIT</span> <span class="path">src/misc/config_parser.R</span> — detail_vars += net_worth, liab_wealth</div>
-      <div><span class="tag ed">EDIT</span> <span class="path">src/data/post_processing/revenue.R</span> — revenues_wealth_tax ×5 sites</div>
-      <div><span class="tag ed">EDIT</span> <span class="path">src/data/post_processing/distribution.R</span> — liab_wealth, on-owner</div>
+      <div><span class="tag ed">EDIT</span> <span class="path">src/data/post_processing/revenue.R</span> — revenues_wealth_tax ×5 sites, t+1 filing-season lag</div>
+      <div><span class="tag ed">EDIT</span> <span class="path">src/data/post_processing/distribution.R</span> — liab_wealth on-owner + generic net-worth-percentile view</div>
       <div><span class="tag ed">EDIT</span> <span class="path">src/calc/functions/tax/estate.R</span> — note shared net-worth cols</div>
     </div>
     <p class="note">Full-sample output: <code>/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/wealth_full</code><br>
@@ -334,7 +362,8 @@
 
   <footer>
     Tax-Simulator · Budget Lab at Yale · branch <code style="background:none;padding:0">wealth-tax-base</code> ·
-    built &amp; validated 2026-06-23. Levels illustrative pending top-tail cap and elasticity calibration.
+    built &amp; validated 2026-06-23; refined 2026-06-24 (generic net-worth distribution view +
+    filing-season t+1 receipts lag). Levels illustrative pending top-tail cap and elasticity calibration.
   </footer>
 
 </div>

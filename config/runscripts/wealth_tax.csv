@@ -1,4 +1,4 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2025:2030,,,
-wealth_tax_warren,public/wealth_tax_warren,wealth/avoidance,2025:2030,2026:2027,net_worth,nextdollar
-wealth_tax_nickel_dime,public/wealth_tax_nickel_dime,wealth/avoidance,2025:2030,2026:2027,net_worth,nextdollar
+baseline,baseline,,2025:2031,,,
+wealth_tax_warren,public/wealth_tax_warren,wealth/avoidance,2025:2031,2026:2027,net_worth,nextdollar
+wealth_tax_nickel_dime,public/wealth_tax_nickel_dime,wealth/avoidance,2025:2031,2026:2027,net_worth,nextdollar

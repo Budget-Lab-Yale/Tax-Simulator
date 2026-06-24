@@ -148,13 +148,16 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
         coalesce(est_tax_exp - est_tax_exp_baseline, 0), default = 0),
 
       # On-model annual wealth tax: a pure LEVEL (no CBO anchor, unlike estate's
-      # level+delta — there is no current-law wealth tax to anchor to), booked
-      # FY = CY with NO withholding split and NO estate-style t+1 lag. An annual
-      # net-worth assessment is a stock tax on the living population in the
-      # calendar year; deltas against the (zero) baseline fall straight out in
-      # calc_rev_est. It is on-model (computed on already-adjusted data), so it
-      # does NOT take the excess-growth `all_rev` factor below.
-      revenues_wealth_tax = coalesce(wealth_tax, 0)
+      # level+delta — there is no current-law wealth tax to anchor to). Like any
+      # NON-WITHHELD tax it is paid at filing in the spring AFTER the assessment
+      # year (CY t net worth → return filed Jan–Apr CY t+1 → FY t+1), so it books
+      # entirely in FY t+1: revenues_wealth_tax[FY t] = wealth_tax[CY t-1]. This
+      # matches the estate t+1 lag mechanically (lag with zero-imputed prior CY),
+      # NOT the in-year booking the model currently uses for ordinary nonwithheld
+      # income tax (a known simplification in remit_taxes/calc_receipts). It is
+      # on-model (computed on already-adjusted data), so it does NOT take the
+      # excess-growth `all_rev` factor below.
+      revenues_wealth_tax = lag(coalesce(wealth_tax, 0), default = 0)
     ) %>%
     
     
