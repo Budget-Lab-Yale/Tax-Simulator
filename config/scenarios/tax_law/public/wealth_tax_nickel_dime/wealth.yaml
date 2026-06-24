@@ -7,38 +7,61 @@
 #   - 5% on net worth between $50M and $250M
 #   - 10% on net worth above $250M
 #
-# Modeled here as an indexed exemption + a graduated schedule on the
-# POST-exemption base, so brackets start at 0:
-#   wealth.brackets = [0, 200M]  (i.e. [50M, 250M] in net-worth terms)
-#   wealth.rates    = [0.05, 0.10]
+# Modeled as a single graduated schedule on ABSOLUTE net worth with a 0%-rated
+# bottom bracket standing in for the exemption (no separate exemption param):
+#   single:  brackets [0, 50M, 250M],  rates [0, 0.05, 0.10]
+# All thresholds index together (chained CPI, 2025 base, nearest $1M), matching
+# the standalone, which indexes the whole schedule to ccpiu_irs.
 #
-# Only the exemption is indexed (chained CPI off a 2026 base, nearest $1M),
-# matching the standalone, which indexes the schedule to ccpiu_irs. The
-# filing_status_mapper and indexation_defaults carry over from the baseline
-# wealth.yaml (subparameter-level merge). In the 2025 lead-in year the
-# exemption is Inf (no tax), so the FY-2026 receipts delta is clean.
+# Filing status: MFJ doubles the exemption to $100M and shifts the schedule up
+# accordingly (exemption doubled, band widths unchanged), so the 10% kink lands
+# at $300M for couples; HoH and MFS use the single schedule.
+#
+# Year-keyed ARRAY values must anchor at the parse-start year (2014, when
+# build_tax_law generates the series) — fill() only forward-fills, so a later
+# first anchor would leave pre-anchor years NA and crash the list unnest. So the
+# pre-policy state is anchored at 2014 (rates all-0% => no tax through 2025) and
+# the policy turns on at the 2026 anchor (exact, verbatim). rates/brackets/
+# filing_status_mapper/indexation_defaults otherwise carry over from baseline.
 #-------------------------------------------------------------------------------
 
-exemption_single:
-  value:
-    '2025': Inf
-    '2026': 50000000
-  i_measure: default
-  i_base_year: default
-  i_direction: default
-  i_increment: default
-
-exemption_head:
-  value:
-    '2025': Inf
-    '2026': 50000000
-  i_measure: default
-  i_base_year: default
-  i_direction: default
-  i_increment: default
-
+# Shared rate schedule. Pre-2026 is all-0% (no tax, anchored at the 2014 parse
+# start so the series is gap-free); 2026+ is the 0/5/10% ladder. Unindexed
+# (rates are nominal); forward-filled past 2026.
 rates:
-  value: [0.05, 0.10]
+  value:
+    '2014': [0.0, 0.0, 0.0]
+    '2026': [0.0, 0.05, 0.10]
 
-brackets:
-  value: [0, 200000000]
+# Single (and MFS) thresholds: 0% to $50M, 5% to $250M, 10% above. Anchored at
+# the 2014 parse start (gap-free; pre-2026 rate is 0 so these don't bite) and at
+# 2026 (exact $50M/$250M), indexed 2027+.
+brackets_single:
+  value:
+    '2014': [0, 50000000, 250000000]
+    '2026': [0, 50000000, 250000000]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+
+# MFJ thresholds: exemption doubled to $100M, band widths preserved, so 10%
+# kicks in at $300M ($100M + the $200M 5% band).
+brackets_married:
+  value:
+    '2014': [0, 100000000, 300000000]
+    '2026': [0, 100000000, 300000000]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+
+# HoH thresholds: same as single.
+brackets_head:
+  value:
+    '2014': [0, 50000000, 250000000]
+    '2026': [0, 50000000, 250000000]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default

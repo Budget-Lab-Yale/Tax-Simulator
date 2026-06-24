@@ -2,35 +2,56 @@
 #-------------------------------------------------------------------------------
 # Filing-BLIND "nickel-and-dime" wealth tax — identical to wealth_tax_nickel_dime
 # (5% over $50M, 10% over $250M, effective 2026) EXCEPT it removes the MFJ
-# exemption doubling: every filing status gets the same $50M exemption. This is
+# exemption doubling: every filing status gets the same $50M threshold. This is
 # the apples-to-apples counterpart to the standalone Wealth-Tax-Simulator, which
-# is filing-blind. With law (exemption, schedule) and avoidance elasticities now
+# is filing-blind. With law (thresholds, schedule) and avoidance elasticities now
 # identical across the two models, any remaining difference in the score is pure
 # data/universe (top-tail shape), not policy.
 #
-# The ONLY substantive difference from wealth_tax_nickel_dime is the flat
-# filing_status_mapper below (all four statuses -> exemption_single, no x2 for
-# MFJ). Overriding the mapper replaces the baseline one (file-level merge).
+# Under the Option-B single-schedule design the filing-blindness is expressed by
+# setting ALL THREE bracket arrays to the SAME thresholds (MFJ simply not
+# doubled), so the baseline filing_status_mapper carries over unchanged and no
+# subparameter is orphaned. The ONLY substantive difference from
+# wealth_tax_nickel_dime is brackets_married = brackets_single (no x2).
+#
+# Year-keyed ARRAY values anchor at the parse-start year (2014) — fill() only
+# forward-fills, so the pre-policy state (rates all-0% => no tax through 2025) is
+# anchored at 2014 and the policy turns on at the 2026 anchor.
 #-------------------------------------------------------------------------------
 
-filing_status_mapper:
-  exemption:
-    '1': exemption_single
-    '2': exemption_single
-    '3': exemption_single
-    '4': exemption_single
-
-exemption_single:
+# Shared rate schedule. Pre-2026 is all-0% (anchored at the 2014 parse start so
+# the series is gap-free); 2026+ is the 0/5/10% ladder. Unindexed; forward-filled.
+rates:
   value:
-    '2025': Inf
-    '2026': 50000000
+    '2014': [0.0, 0.0, 0.0]
+    '2026': [0.0, 0.05, 0.10]
+
+# Single thresholds: 0% to $50M, 5% to $250M, 10% above.
+brackets_single:
+  value:
+    '2014': [0, 50000000, 250000000]
+    '2026': [0, 50000000, 250000000]
   i_measure: default
   i_base_year: default
   i_direction: default
   i_increment: default
 
-rates:
-  value: [0.05, 0.10]
+# MFJ thresholds: filing-blind — identical to single (NOT doubled).
+brackets_married:
+  value:
+    '2014': [0, 50000000, 250000000]
+    '2026': [0, 50000000, 250000000]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
 
-brackets:
-  value: [0, 200000000]
+# HoH thresholds: identical to single.
+brackets_head:
+  value:
+    '2014': [0, 50000000, 250000000]
+    '2026': [0, 50000000, 250000000]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default

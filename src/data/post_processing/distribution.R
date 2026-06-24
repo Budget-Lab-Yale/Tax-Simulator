@@ -184,7 +184,7 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
     select(year, id, weight, n_people, filing_status, age, parent_group, labor, capital, agi, net_worth, income = expanded_inc, liab_iit_pr, liab_deemed, liab_wealth) %>%
 
     # Make 3 copies for tax-type inclusion assumptions
-    expand_grid(taxes_included = c('iit_pr', 'iit_pr_death', 'iit_pr_death_cit_vat'))
+    expand_grid(taxes_included = c('iit_pr_wealth', 'iit_pr_death_wealth', 'iit_pr_death_cit_vat_wealth'))
 
   # Read counterfactual reform scenario tax microdata, stripping deemed
   # realization tax from decedents same as the baseline leg above
@@ -320,8 +320,8 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
       across(.cols = ends_with('_reform'), .fns  = ~ . / vat_price_offset),
       
       # Add inheritance to income for estate tax-inclusive assumption scenarios
-      income        = income        + inheritance        * (taxes_included %in% c('iit_pr_death', 'iit_pr_death_cit_vat')),
-      income_reform = income_reform + inheritance_reform * (taxes_included %in% c('iit_pr_death', 'iit_pr_death_cit_vat')),
+      income        = income        + inheritance        * (taxes_included %in% c('iit_pr_death_wealth', 'iit_pr_death_cit_vat_wealth')),
+      income_reform = income_reform + inheritance_reform * (taxes_included %in% c('iit_pr_death_wealth', 'iit_pr_death_cit_vat_wealth')),
       
       # VAT burden is the loss of real income from higher prices. Some components
       # of expanded income will rise with prices (e.g. OASDI or capital income),
@@ -357,14 +357,14 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
       # decedent != beneficiary). Baseline liab_wealth is 0, so the wealth-tax
       # burden falls out of liab_reform - liab.
       liab = case_when(
-        taxes_included == 'iit_pr'                ~ liab_iit_pr + liab_wealth,
-        taxes_included == 'iit_pr_death'         ~ liab_iit_pr + liab_wealth + liab_estate + liab_deemed_heir,
-        taxes_included == 'iit_pr_death_cit_vat' ~ liab_iit_pr + liab_wealth + liab_estate + liab_deemed_heir
+        taxes_included == 'iit_pr_wealth'               ~ liab_iit_pr + liab_wealth,
+        taxes_included == 'iit_pr_death_wealth'         ~ liab_iit_pr + liab_wealth + liab_estate + liab_deemed_heir,
+        taxes_included == 'iit_pr_death_cit_vat_wealth' ~ liab_iit_pr + liab_wealth + liab_estate + liab_deemed_heir
       ),
       liab_reform = case_when(
-        taxes_included == 'iit_pr'                ~ liab_iit_pr_reform + liab_wealth_reform,
-        taxes_included == 'iit_pr_death'         ~ liab_iit_pr_reform + liab_wealth_reform + liab_estate_reform + liab_deemed_heir_reform,
-        taxes_included == 'iit_pr_death_cit_vat' ~ liab_iit_pr_reform + liab_wealth_reform + liab_estate_reform + liab_deemed_heir_reform + liab_corp + liab_vat
+        taxes_included == 'iit_pr_wealth'               ~ liab_iit_pr_reform + liab_wealth_reform,
+        taxes_included == 'iit_pr_death_wealth'         ~ liab_iit_pr_reform + liab_wealth_reform + liab_estate_reform + liab_deemed_heir_reform,
+        taxes_included == 'iit_pr_death_cit_vat_wealth' ~ liab_iit_pr_reform + liab_wealth_reform + liab_estate_reform + liab_deemed_heir_reform + liab_corp + liab_vat
       ),
       
       # Calculate change in tax liability

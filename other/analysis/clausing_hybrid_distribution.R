@@ -74,7 +74,7 @@ build_dist_chart = function(group_dim, groups, x_positions, x_labs,
   df = dist %>%
     filter(
       year == year_show,
-      taxes_included == 'iit_pr',
+      taxes_included == 'iit_pr_wealth',
       group_dimension == group_dim,
       group %in% groups
     )

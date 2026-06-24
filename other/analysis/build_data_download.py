@@ -206,14 +206,14 @@ for i, r in enumerate(rev_rows):
 # ===========================================================================
 SCENARIOS_STACKED = ["std", "std_eitc", "std_eitc_ctc", "std_eitc_ctc_ord"]
 
-def read_dist_pct(scenario, year="2026", taxes="iit_pr", dim="Income"):
+def read_dist_pct(scenario, year="2026", taxes="iit_pr_wealth", dim="Income"):
     path = os.path.join(ROOT, scenario, "static", "supplemental", "distribution.csv")
     rows = read_csv(path)
     filtered = filter_rows(rows, year=year, taxes_included=taxes, group_dimension=dim)
     return {r["group"]: float(r["pct_chg_ati"]) for r in filtered}
 
 
-def read_dist_winners_losers(scenario, year="2026", taxes="iit_pr", dim="Income"):
+def read_dist_winners_losers(scenario, year="2026", taxes="iit_pr_wealth", dim="Income"):
     """Read share_cut.100 and share_raise.100 from the full cumulative scenario."""
     path = os.path.join(ROOT, scenario, "static", "supplemental", "distribution.csv")
     rows = read_csv(path)

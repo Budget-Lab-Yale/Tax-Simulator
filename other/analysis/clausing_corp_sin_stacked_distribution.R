@@ -31,7 +31,7 @@
 # burdens (imputed at the group level, not per tax unit) are mixed in.
 #
 # Note on additivity: individual + estate + corporate come from the model's
-# 'iit_pr_death_cit_vat' distribution variant (the death-inclusive variant in
+# 'iit_pr_death_cit_vat_wealth' distribution variant (the death-inclusive variant in
 # which estate tax on heirs and the off-model corporate burden, liab_corp,
 # enter liab_reform). The excise block is appended from the off-model excise
 # distribution, whose per-group pct_chg_ati / avg are computed against the
@@ -59,7 +59,7 @@ ccpiu = readr::read_csv(file.path('/nfs/roberts/project/pi_nrs36/shared/model_da
   select(year, ccpiu)
 
 # Tax-inclusion variant in which the estate and corporate burdens appear
-TAX_VARIANT = 'iit_pr_death_cit_vat'
+TAX_VARIANT = 'iit_pr_death_cit_vat_wealth'
 
 # Individual and estate provisions, in cumulative stacking order, then the
 # corporate layer
