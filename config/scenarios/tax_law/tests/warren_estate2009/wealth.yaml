@@ -1,0 +1,67 @@
+---
+#-------------------------------------------------------------------------------
+# Warren-style annual net-worth tax, effective 2026:
+#   - $50M exemption
+#   - 2% on net worth between $50M and $1B
+#   - 3% on net worth above $1B
+#
+# Modeled as a single graduated schedule on ABSOLUTE net worth with a 0%-rated
+# bottom bracket standing in for the exemption (no separate exemption param):
+#   single:  brackets [0, 50M, 1B],    rates [0, 0.02, 0.03]
+# All thresholds index together (chained CPI, 2025 base, nearest $1M), so the
+# $1B kink no longer drifts against the exemption — uniform indexation matching
+# the standalone Wealth-Tax-Simulator (which indexes the whole schedule).
+#
+# Filing status: MFJ doubles the exemption to $100M and shifts the schedule up
+# accordingly (preserving the prior model's behavior — exemption doubled, band
+# widths unchanged), so the 3% kink lands at $1.05B for couples; HoH and MFS use
+# the single schedule (mapper '3' -> brackets_single, '4' -> brackets_head).
+#
+# Year-keyed ARRAY values must anchor at the parse-start year (2014, when
+# build_tax_law generates the series) — fill() only forward-fills, so a later
+# first anchor would leave pre-anchor years NA and crash the list unnest. So the
+# pre-policy state is anchored at 2014 (rates all-0% => no tax through 2025) and
+# the policy turns on at the 2026 anchor (exact, verbatim). rates/brackets/
+# filing_status_mapper/indexation_defaults otherwise carry over from baseline.
+#-------------------------------------------------------------------------------
+
+# Shared rate schedule. Pre-2026 is all-0% (no tax, anchored at the 2014 parse
+# start so the series is gap-free); 2026+ is the Warren 0/2/3% ladder. Unindexed
+# (rates are nominal); forward-filled past 2026.
+rates:
+  value:
+    '2014': [0.0, 0.0, 0.0]
+    '2026': [0.0, 0.02, 0.03]
+
+# Single (and MFS) thresholds: 0% to $50M, 2% to $1B, 3% above. Anchored at the
+# 2014 parse start (gap-free; pre-2026 rate is 0 so these don't bite) and at 2026
+# (exact $50M/$1B), indexed 2027+.
+brackets_single:
+  value:
+    '2014': [0, 50000000, 1000000000]
+    '2026': [0, 50000000, 1000000000]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+
+# MFJ thresholds: exemption doubled to $100M, band widths preserved, so 3% kicks
+# in at $1.05B ($100M + the $950M 2% band).
+brackets_married:
+  value:
+    '2014': [0, 100000000, 1050000000]
+    '2026': [0, 100000000, 1050000000]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
+
+# HoH thresholds: same as single.
+brackets_head:
+  value:
+    '2014': [0, 50000000, 1000000000]
+    '2026': [0, 50000000, 1000000000]
+  i_measure: default
+  i_base_year: default
+  i_direction: default
+  i_increment: default
