@@ -105,10 +105,10 @@ def row_cells(d, dp=1, sign=False, cls=""):
     return "".join(f'<td class="n {cls}">{f(d[tt],dp,sign) if d else "&mdash;"}</td>' for tt in TT)
 
 # build s-impact + headline + envelope table rows
-def headline_rows():
+def headline_rows(M="identity"):
     out=[]
     for tag,sv in S:
-        d=HT["identity"][tag]
+        d=HT[M][tag]
         out.append(f'<tr><td class="num">{sv:g}</td>{row_cells(d,1)}</tr>')
     return "".join(out)
 def simpact_rows():
@@ -159,7 +159,7 @@ section{padding:28px 0;border-top:1px solid var(--hair)}section.flush{border-top
 .verdict{background:var(--ink);color:#dfe8ec;border-radius:14px;padding:24px 26px;margin:6px 0}
 .verdict h2{color:#fff;font-size:1.2rem;margin-bottom:.5em}.verdict p{color:#c3d2d8;max-width:70ch;margin-bottom:.6em}
 .verdict .lost{color:#f0a59b}.verdict .pos{color:#8fd0b3}.verdict p:last-child{margin-bottom:0}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:14px;margin-top:18px}
 .stat{background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:15px 16px 13px}
 .stat .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:1.45rem;color:var(--ink);font-weight:600;line-height:1.1}
 .stat .v.lost{color:var(--lost)}.stat .l{font-size:.8rem;color:var(--muted);margin-top:5px;line-height:1.35}
@@ -181,10 +181,8 @@ svg{display:block;width:100%;height:auto;overflow:visible}.axt{font-family:var(-
 ul{margin:0 0 1em;padding-left:1.15em}li{margin:.25em 0}
 """
 
-HTML = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bounding s &amp; M &mdash; capital-gains +5pp under carryover basis</title>
-<style>{CSS}</style></head><body><div class="wrap"><div class="col">
+TITLE = "Bounding s &amp; M — capital-gains +5pp under carryover basis"
+INNER = f"""<div class="wrap"><div class="col">
 
 <header class="hero">
 <div class="eyebrow">Wealth bathtub &middot; sensitivity bounds</div>
@@ -196,7 +194,7 @@ HTML = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <section class="flush"><div class="verdict">
 <h2>Bottom line</h2>
 <p>For a capital-income reform, <strong>s dominates</strong>: financing the tax hike out of wealth (rather than consumption) erodes the future capital-income and estate bases, and the cross-base cost scales almost linearly &mdash; from <span class="lost">&minus;${abs(simp['s25']['total']):.1f}B</span> at s=0.25 to <span class="lost">&minus;${abs(simp100['total']):.1f}B</span> at s=1 (about <span class="lost">&minus;$22B per unit of s</span>). At a central <span class="pos">s=0.5</span> the channel costs <span class="lost">&minus;${abs(simp50['total']):.1f}B</span> over ten years (~2% of the estimate).</p>
-<p><strong>M is second-order.</strong> Swapping full persistence (identity) for extreme diffusion (uniform 1/n) moves the estimate by at most <span class="num">~$2B</span> over ten years (&lt;0.4%). It acts almost entirely through the <em>threshold'd estate base</em>: persistence keeps the wealth drain on high-net-worth (estate-taxable) records &mdash; maximal leakage; diffusion spreads it onto sub-threshold records &mdash; less leakage. At realistic near-identity mobility, M is negligible.</p>
+<p><strong>M is second-order.</strong> Swapping full persistence (identity) for extreme diffusion (uniform 1/n) moves the <em>total</em> by at most <span class="num">~$2B</span> over ten years (&lt;0.4%) &mdash; and even that is mostly <em>reallocation</em>, not magnitude: diffusion shifts leakage off the threshold'd estate base (persistence concentrates the drain on estate-taxable wealth) and onto payroll (it spreads onto working-age pass-through owners), the two nearly cancelling. At realistic near-identity mobility, M is negligible.</p>
 </div>
 
 <div class="stats">
@@ -234,11 +232,25 @@ HTML = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 
 <section>
 <h2>Second order: the mobility operator M</h2>
-<p>M re-grids the accumulated wealth deficit across within-age net-worth percentiles each year. Identity = full persistence (the v1 default); uniform 1/n = the extreme-diffusion bound. M changes <em>where</em> the (conserved) drain lands, which matters only because the estate base is threshold'd. The envelope below is the entire span the assumption can produce.</p>
+<p>M re-grids the accumulated wealth deficit across within-age net-worth percentiles each year. To bound it we ran the <em>identical reform twice</em>: under <strong>identity</strong> (full persistence &mdash; a record's wealth rank never moves; the v1 default, and where the truth sits) and under <strong>uniform 1/n</strong> (extreme diffusion &mdash; ranks fully re-drawn every year). The two estimates and their difference are below. <strong>At s=0 they are identical</strong> &mdash; the channel is dormant, so M cannot bite until s&gt;0.</p>
+<p>What M changes is <strong>where the leakage lands, not its size</strong>. Under identity the drain stays on the high-net-worth records that paid the tax, so leakage concentrates in income and the threshold'd <strong>estate</strong> base. Under diffusion it spreads onto working-age pass-through / self-employment owners, shifting leakage toward <strong>payroll</strong> and away from estate. The two nearly cancel: the total moves by at most <span class="num">~$2B</span> over ten years.</p>
+<h3>Levels &mdash; M = identity</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th class="num">s</th><th class="n">income</th><th class="n">payroll</th><th class="n">estate</th><th class="n">total</th></tr></thead>
+<tbody>{headline_rows("identity")}</tbody>
+<caption>Conventional estimate (reform &minus; baseline), $B/10y, full persistence.</caption>
+</table></div>
+<h3>Levels &mdash; M = uniform</h3>
+<div class="tbl-wrap"><table>
+<thead><tr><th class="num">s</th><th class="n">income</th><th class="n">payroll</th><th class="n">estate</th><th class="n">total</th></tr></thead>
+<tbody>{headline_rows("uniform")}</tbody>
+<caption>Same reform, same baseline, recomputed under extreme diffusion, $B/10y.</caption>
+</table></div>
+<h3>Delta &mdash; uniform &minus; identity</h3>
 <div class="tbl-wrap"><table>
 <thead><tr><th class="num">s</th><th class="n">income</th><th class="n">payroll</th><th class="n">estate</th><th class="n">total</th></tr></thead>
 <tbody>{menv_rows()}</tbody>
-<caption>M-envelope = uniform &minus; identity, $B/10y. Positive estate = <em>less</em> estate leakage under diffusion (drain pushed onto sub-threshold records). |total| &le; ~$2B across all s.</caption>
+<caption>Difference of the two tables above. Positive estate = <em>less</em> estate leakage under diffusion; negative payroll = <em>more</em> payroll leakage. |total| &le; ~$2B across all s &mdash; reallocation, not magnitude.</caption>
 </table></div>
 </section>
 
@@ -265,9 +277,20 @@ HTML = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <p class="dim">Vintages: cgcarry_bound_identity, cgcarry_bound_uniform. Data: bounding_grid.csv, bounding_drain.csv (this directory).</p>
 </section>
 
-</div></div></body></html>
+</div></div>
 """
 
-out = os.path.join(HERE, "bounding_report.html")
-open(out, "w").write(HTML)
-print("wrote", out, f"({len(HTML)} bytes)")
+HEAD = f'<title>{TITLE}</title>\n<style>{CSS}</style>'
+# (1) standalone document for opening the file directly off the cluster
+standalone = ('<!doctype html><html lang="en"><head><meta charset="utf-8">'
+              '<meta name="viewport" content="width=device-width,initial-scale=1">'
+              f'{HEAD}</head><body>{INNER}</body></html>')
+# (2) artifact body: the publish skeleton supplies <!doctype>/<head>/<body>,
+#     so emit only <title> + <style> + content (no html/head/body wrappers)
+artifact = f'{HEAD}\n{INNER}'
+
+open(os.path.join(HERE, "bounding_report.html"), "w").write(standalone)
+open(os.path.join(HERE, "bounding_report_artifact.html"), "w").write(artifact)
+print("wrote bounding_report.html (standalone) +",
+      "bounding_report_artifact.html (artifact body)",
+      f"[{len(standalone)} / {len(artifact)} bytes]")
