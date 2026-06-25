@@ -1,0 +1,135 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bounding s &amp; M &mdash; capital-gains +5pp under carryover basis</title>
+<style>
+:root{--ground:#f5f7f8;--surface:#fff;--surface-2:#eef2f4;--ink:#16242e;--body:#33444f;
+--muted:#6b7c86;--hair:#dbe3e8;--hair-strong:#c6d2d8;--teal:#0e7c8b;--teal-deep:#0a4f59;
+--teal-wash:#e3f0f1;--amber:#c07426;--plum:#8a4b86;--lost:#b5473d;--lost-wash:#fbf3f1;--good:#2f7d5b;
+--serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+--sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--body);font-family:var(--sans);line-height:1.6;margin:0;-webkit-font-smoothing:antialiased}
+.wrap{max-width:980px;margin:0 auto;padding:0 24px 96px}.col{max-width:70ch}
+h1,h2,h3{font-family:var(--serif);color:var(--ink);font-weight:600;letter-spacing:-.01em;line-height:1.15;text-wrap:balance}
+h2{font-size:1.7rem;margin:0 0 .35em}h3{font-size:1.16rem;margin:1.7em 0 .4em}p{margin:0 0 1em}
+strong{color:var(--ink);font-weight:600}a{color:var(--teal-deep)}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);font-weight:600}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}.lost{color:var(--lost)}.good{color:var(--good)}.dim{color:var(--muted)}
+header.hero{padding:60px 0 26px}header.hero h1{font-size:2.8rem;margin:.18em 0 .25em;line-height:1.06}
+.lede{font-size:1.18rem;color:var(--body);max-width:66ch}.lede .key{color:var(--ink);font-weight:600}
+.meta-line{font-family:var(--mono);font-size:.76rem;color:var(--muted);margin-top:16px;display:flex;flex-wrap:wrap;gap:6px 16px}
+section{padding:28px 0;border-top:1px solid var(--hair)}section.flush{border-top:none}
+.verdict{background:var(--ink);color:#dfe8ec;border-radius:14px;padding:24px 26px;margin:6px 0}
+.verdict h2{color:#fff;font-size:1.2rem;margin-bottom:.5em}.verdict p{color:#c3d2d8;max-width:70ch;margin-bottom:.6em}
+.verdict .lost{color:#f0a59b}.verdict .pos{color:#8fd0b3}.verdict p:last-child{margin-bottom:0}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px}
+.stat{background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:15px 16px 13px}
+.stat .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:1.45rem;color:var(--ink);font-weight:600;line-height:1.1}
+.stat .v.lost{color:var(--lost)}.stat .l{font-size:.8rem;color:var(--muted);margin-top:5px;line-height:1.35}
+.tbl-wrap{overflow-x:auto;margin:8px 0 2px;border:1px solid var(--hair);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:.88rem;background:var(--surface)}
+caption{caption-side:bottom;color:var(--muted);font-size:.78rem;text-align:left;padding:8px 4px 0}
+th,td{padding:9px 13px;text-align:left;border-bottom:1px solid var(--hair);white-space:nowrap}
+thead th{font-family:var(--mono);font-size:.7rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:none}td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+tr.tot td{font-weight:600;color:var(--ink);background:var(--surface-2)}
+.chart{background:var(--surface);border:1px solid var(--hair);border-radius:14px;padding:18px 20px 12px;margin:8px 0}
+.chart .ct{font-family:var(--serif);color:var(--ink);font-size:1.04rem;font-weight:600}
+.chart .cs{font-size:.84rem;color:var(--muted);margin:2px 0 10px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:8px;font-size:.8rem}
+.legend span{display:inline-flex;align-items:center;gap:7px;color:var(--body)}
+.legend i{width:16px;height:3px;border-radius:2px;display:inline-block}.legend i.d{height:0;border-top:3px dashed var(--amber)}
+svg{display:block;width:100%;height:auto;overflow:visible}.axt{font-family:var(--mono);font-size:10.5px;fill:var(--muted)}
+.note{background:var(--lost-wash);border:1px solid #eccfc9;border-radius:11px;padding:14px 16px;font-size:.9rem;color:var(--body)}
+ul{margin:0 0 1em;padding-left:1.15em}li{margin:.25em 0}
+</style></head><body><div class="wrap"><div class="col">
+
+<header class="hero">
+<div class="eyebrow">Wealth bathtub &middot; sensitivity bounds</div>
+<h1>How much do <span class="num">s</span> and <span class="num">M</span> move a capital-gains reform?</h1>
+<p class="lede">Bounding the wealth saving-financing channel on a <span class="key">+5pp top capital-gains rate under carryover basis at death</span>. The saving share <span class="num">s</span> is the first-order knob; the within-age wealth-mobility operator <span class="num">M</span> is second-order. Across the full plausible range the conventional 10-year estimate sits at <span class="key">$546B</span> (no channel) falling to <span class="key">$524B</span> at the <span class="num">s=1</span> extreme &mdash; an envelope of about <span class="key">22B</span>, of which <span class="num">M</span> contributes at most <span class="num">~$2B</span>.</p>
+<div class="meta-line"><span>reform: tests/kg_dyn_rate_up_carryover</span><span>behavior: kg_dynamics/turnover</span><span>full sample</span><span>FY2027&ndash;2036</span><span>Tax-Data 2026060918</span></div>
+</header>
+
+<section class="flush"><div class="verdict">
+<h2>Bottom line</h2>
+<p>For a capital-income reform, <strong>s dominates</strong>: financing the tax hike out of wealth (rather than consumption) erodes the future capital-income and estate bases, and the cross-base cost scales almost linearly &mdash; from <span class="lost">&minus;$5.6B</span> at s=0.25 to <span class="lost">&minus;$21.9B</span> at s=1 (about <span class="lost">&minus;$22B per unit of s</span>). At a central <span class="pos">s=0.5</span> the channel costs <span class="lost">&minus;$11.1B</span> over ten years (~2% of the estimate).</p>
+<p><strong>M is second-order.</strong> Swapping full persistence (identity) for extreme diffusion (uniform 1/n) moves the estimate by at most <span class="num">~$2B</span> over ten years (&lt;0.4%). It acts almost entirely through the <em>threshold'd estate base</em>: persistence keeps the wealth drain on high-net-worth (estate-taxable) records &mdash; maximal leakage; diffusion spreads it onto sub-threshold records &mdash; less leakage. At realistic near-identity mobility, M is negligible.</p>
+</div>
+
+<div class="stats">
+<div class="stat"><div class="v">$546B</div><div class="l">10y conventional estimate, no channel (s=0)</div></div>
+<div class="stat"><div class="v lost">&minus;$11.1B</div><div class="l">cross-base cost of the saving channel at s=0.5</div></div>
+<div class="stat"><div class="v lost">&minus;$21.9B</div><div class="l">&hellip; at the s=1 upper bound</div></div>
+<div class="stat"><div class="v">&plusmn;$2B</div><div class="l">full M envelope (identity &harr; uniform), 10y</div></div>
+</div>
+</section>
+
+<section>
+<h2>First order: the saving share s</h2>
+<p>At <span class="num">s=0</span> the wealth channel is dormant and the reform is the clean law-plus-realization estimate: <strong>$546B</strong> over ten years, essentially all income tax. Turning the channel on diverts a share <span class="num">s</span> of the net during-life tax increase into wealth decumulation, which compounds and shrinks the bases that later get taxed.</p>
+<div class="chart">
+<div class="ct">Total 10-year estimate vs. saving share</div>
+<div class="cs">Reform &minus; baseline, conventional. The teal&ndash;amber band is the entire M sensitivity &mdash; hair-thin against the s slope.</div>
+<svg viewBox="0 0 720 330" role="img" aria-label="Total reform estimate vs s">
+      <line x1="64" y1="277.5" x2="696" y2="277.5" stroke="var(--hair)"/><text x="56" y="280.5" text-anchor="end" class="axt">520</text><line x1="64" y1="234.8" x2="696" y2="234.8" stroke="var(--hair)"/><text x="56" y="237.8" text-anchor="end" class="axt">525</text><line x1="64" y1="192.1" x2="696" y2="192.1" stroke="var(--hair)"/><text x="56" y="195.1" text-anchor="end" class="axt">530</text><line x1="64" y1="149.5" x2="696" y2="149.5" stroke="var(--hair)"/><text x="56" y="152.5" text-anchor="end" class="axt">535</text><line x1="64" y1="106.8" x2="696" y2="106.8" stroke="var(--hair)"/><text x="56" y="109.8" text-anchor="end" class="axt">540</text><line x1="64" y1="64.2" x2="696" y2="64.2" stroke="var(--hair)"/><text x="56" y="67.2" text-anchor="end" class="axt">545</text>
+      <path d="M64.0,57.6 L222.0,105.3 L380.0,152.4 L538.0,199.0 L696.0,244.4 L696.0,226.6 L538.0,194.7 L380.0,160.9 L222.0,121.5 L64.0,57.6 Z" fill="var(--teal-wash)" opacity="0.7" stroke="none"/>
+      <path d="M64.0,57.6 L222.0,105.3 L380.0,152.4 L538.0,199.0 L696.0,244.4" fill="none" stroke="var(--teal-deep)" stroke-width="2.4"/>
+      <path d="M64.0,57.6 L222.0,121.5 L380.0,160.9 L538.0,194.7 L696.0,226.6" fill="none" stroke="var(--amber)" stroke-width="2.4" stroke-dasharray="5 4"/>
+      <circle cx="64.0" cy="57.6" r="3.4" fill="var(--teal-deep)"/><circle cx="222.0" cy="105.3" r="3.4" fill="var(--teal-deep)"/><circle cx="380.0" cy="152.4" r="3.4" fill="var(--teal-deep)"/><circle cx="538.0" cy="199.0" r="3.4" fill="var(--teal-deep)"/><circle cx="696.0" cy="244.4" r="3.4" fill="var(--teal-deep)"/><circle cx="64.0" cy="57.6" r="3.4" fill="var(--amber)"/><circle cx="222.0" cy="121.5" r="3.4" fill="var(--amber)"/><circle cx="380.0" cy="160.9" r="3.4" fill="var(--amber)"/><circle cx="538.0" cy="194.7" r="3.4" fill="var(--amber)"/><circle cx="696.0" cy="226.6" r="3.4" fill="var(--amber)"/>
+      <text x="64" y="45.6" text-anchor="start" class="axt" fill="var(--ink)">s=0: $546B</text>
+      <text x="380" y="322" text-anchor="middle" class="axt">saving share  s  =  1 &minus; MPC</text>
+    </svg>
+<div class="legend"><span><i style="background:var(--teal-deep)"></i> M = identity (persistence)</span><span><i class="d"></i> M = uniform (diffusion)</span><span><i style="background:var(--teal-wash)" class="sq"></i> M envelope</span></div>
+</div>
+<div class="tbl-wrap"><table>
+<thead><tr><th class="num">s</th><th class="n">income</th><th class="n">payroll</th><th class="n">estate</th><th class="n">total</th></tr></thead>
+<tbody><tr><td class="num">0</td><td class="n ">545.6</td><td class="n ">0.0</td><td class="n ">0.0</td><td class="n ">545.8</td></tr><tr><td class="num">0.25</td><td class="n ">540.6</td><td class="n ">-0.1</td><td class="n ">-0.5</td><td class="n ">540.2</td></tr><tr><td class="num">0.5</td><td class="n ">535.6</td><td class="n ">-0.1</td><td class="n ">-0.9</td><td class="n ">534.7</td></tr><tr><td class="num">0.75</td><td class="n ">530.7</td><td class="n ">-0.2</td><td class="n ">-1.4</td><td class="n ">529.2</td></tr><tr><td class="num">1</td><td class="n ">525.9</td><td class="n ">-0.2</td><td class="n ">-1.8</td><td class="n ">523.9</td></tr></tbody>
+<caption>Headline conventional estimate (reform &minus; baseline), $B over FY2027&ndash;36, at M = identity. Baseline levels: income $32.6T, payroll $21.0T, estate $403B.</caption>
+</table></div>
+
+<h3>The cross-base cost, isolated</h3>
+<p>Subtracting the s=0 leg cancels the baseline and the direct reform effect, leaving the pure interaction &mdash; what the saving response costs, by base it leaks from.</p>
+<div class="chart"><div class="ct">Cross-base cost &nbsp;=&nbsp; conv(s) &minus; conv(s=0)</div><div class="cs">Total revenue lost to the saving-financing channel, $B/10y, M = identity.</div><svg viewBox="0 0 720 250" role="img" aria-label="s-impact total by s"><line x1="64" y1="18.0" x2="702" y2="18.0" stroke="var(--hair-strong)"/><rect x="103.9" y="18.0" width="79.8" height="39.0" fill="var(--lost)" rx="3"/><text x="143.8" y="72.0" text-anchor="middle" class="axt" fill="var(--lost)">-5.6</text><text x="143.8" y="218" text-anchor="middle" class="axt">s=0.25</text><rect x="263.4" y="18.0" width="79.8" height="77.4" fill="var(--lost)" rx="3"/><text x="303.2" y="110.4" text-anchor="middle" class="axt" fill="var(--lost)">-11.1</text><text x="303.2" y="218" text-anchor="middle" class="axt">s=0.5</text><rect x="422.9" y="18.0" width="79.8" height="115.5" fill="var(--lost)" rx="3"/><text x="462.8" y="148.5" text-anchor="middle" class="axt" fill="var(--lost)">-16.6</text><text x="462.8" y="218" text-anchor="middle" class="axt">s=0.75</text><rect x="582.4" y="18.0" width="79.8" height="152.5" fill="var(--lost)" rx="3"/><text x="622.2" y="185.5" text-anchor="middle" class="axt" fill="var(--lost)">-21.9</text><text x="622.2" y="218" text-anchor="middle" class="axt">s=1</text><text x="64" y="12.0" class="axt">$0</text></svg></div>
+<div class="tbl-wrap"><table>
+<thead><tr><th class="num">s</th><th class="n">income</th><th class="n">payroll</th><th class="n">estate</th><th class="n">total</th></tr></thead>
+<tbody><tr><td class="num">0</td><td class="n ">0.00</td><td class="n ">0.00</td><td class="n ">0.00</td><td class="n ">0.00</td></tr><tr><td class="num">0.25</td><td class="n lost">-5.03</td><td class="n lost">-0.05</td><td class="n lost">-0.48</td><td class="n lost">-5.59</td></tr><tr><td class="num">0.5</td><td class="n lost">-10.00</td><td class="n lost">-0.11</td><td class="n lost">-0.94</td><td class="n lost">-11.11</td></tr><tr><td class="num">0.75</td><td class="n lost">-14.92</td><td class="n lost">-0.16</td><td class="n lost">-1.41</td><td class="n lost">-16.57</td></tr><tr><td class="num">1</td><td class="n lost">-19.77</td><td class="n lost">-0.21</td><td class="n lost">-1.80</td><td class="n lost">-21.89</td></tr></tbody>
+<caption>s-impact = conv(s) &minus; conv(s=0), $B/10y, M = identity. Negative = revenue lost. Roughly linear in s; income is the dominant leak, estate the cross-base signature.</caption>
+</table></div>
+</section>
+
+<section>
+<h2>Second order: the mobility operator M</h2>
+<p>M re-grids the accumulated wealth deficit across within-age net-worth percentiles each year. Identity = full persistence (the v1 default); uniform 1/n = the extreme-diffusion bound. M changes <em>where</em> the (conserved) drain lands, which matters only because the estate base is threshold'd. The envelope below is the entire span the assumption can produce.</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th class="num">s</th><th class="n">income</th><th class="n">payroll</th><th class="n">estate</th><th class="n">total</th></tr></thead>
+<tbody><tr><td class="num">0</td><td class="n ">0.00</td><td class="n ">0.00</td><td class="n ">0.00</td><td class="n ">0.00</td></tr><tr><td class="num">0.25</td><td class="n ">-0.77</td><td class="n ">-0.87</td><td class="n ">+0.40</td><td class="n ">-1.90</td></tr><tr><td class="num">0.5</td><td class="n ">+0.64</td><td class="n ">-1.45</td><td class="n ">+0.78</td><td class="n ">-1.00</td></tr><tr><td class="num">0.75</td><td class="n ">+2.45</td><td class="n ">-1.91</td><td class="n ">+1.18</td><td class="n ">+0.50</td></tr><tr><td class="num">1</td><td class="n ">+4.36</td><td class="n ">-2.31</td><td class="n ">+1.49</td><td class="n ">+2.09</td></tr></tbody>
+<caption>M-envelope = uniform &minus; identity, $B/10y. Positive estate = <em>less</em> estate leakage under diffusion (drain pushed onto sub-threshold records). |total| &le; ~$2B across all s.</caption>
+</table></div>
+</section>
+
+<section>
+<h2>Mechanism &amp; the clamp caveat</h2>
+<p>The drained wealth is small against the stock: at s=0.5 the cumulative drain reaches <strong>$348B</strong> by 2036 against a <strong>$290T</strong> net-worth base (~0.12%), rising to <strong>$688B</strong> at s=1. The aggregate drain is conserved across M (the operator is doubly-stochastic) &mdash; M only redistributes it.</p>
+<div class="note"><strong>Clamp caveat.</strong> The per-record haircut is capped at |f| &le; fmax = 0.9. Under identity it almost never binds (&le;49 records, 0.06M people at s=1). Under uniform it binds heavily &mdash; <strong>2036 records (3.3M people) at s=1</strong> &mdash; because diffusion dumps deficit onto low-net-worth cells that cannot absorb it. So the high-s uniform bound is partly clamp-shaped, not pure diffusion; the realistic (near-identity) case carries negligible clamping. This <em>reinforces</em> that M is second-order for plausible mobility.</p>
+<div class="tbl-wrap"><table>
+<thead><tr><th>M</th><th class="num">s</th><th class="n">drain 2036 ($B)</th><th class="n">net worth ($T)</th><th class="n">records clamped</th><th class="n">pop clamped (M)</th></tr></thead>
+<tbody><tr><td>identity</td><td class="num">0.25</td><td class="n">175</td><td class="n">290</td><td class="n">16</td><td class="n">0.02</td></tr><tr><td>identity</td><td class="num">0.5</td><td class="n">348</td><td class="n">290</td><td class="n">17</td><td class="n">0.03</td></tr><tr><td>identity</td><td class="num">0.75</td><td class="n">519</td><td class="n">290</td><td class="n">41</td><td class="n">0.05</td></tr><tr><td>identity</td><td class="num">1</td><td class="n">688</td><td class="n">290</td><td class="n">49</td><td class="n">0.06</td></tr><tr><td>uniform</td><td class="num">0.25</td><td class="n">174</td><td class="n">290</td><td class="n">1189</td><td class="n">1.86</td></tr><tr><td>uniform</td><td class="num">0.5</td><td class="n">348</td><td class="n">290</td><td class="n">1538</td><td class="n">2.53</td></tr><tr><td>uniform</td><td class="num">0.75</td><td class="n">521</td><td class="n">290</td><td class="n">1806</td><td class="n">2.95</td></tr><tr><td>uniform</td><td class="num">1</td><td class="n">694</td><td class="n">290</td><td class="n">2036</td><td class="n">3.32</td></tr></tbody>
+<caption>Mechanical channel size at the final year, conventional detail. drain = &Sigma; w&middot;D_alloc; clamp incidence at fmax=0.9.</caption>
+</table></div>
+</section>
+
+<section>
+<h2>Method</h2>
+<ul>
+<li><strong>Reform.</strong> Top preferred rate 0.20&rarr;0.25 (+5pp) with carryover basis at death for all asset classes (kg_death_regime_* = 1); behavioral realization via kg_dynamics/turnover. Baseline = current law.</li>
+<li><strong>Grid.</strong> s &isin; {0, .25, .5, .75, 1} at M = identity; s &isin; {.25, .5, .75, 1} at M = uniform (s=0 is channel-dormant, hence M-independent). Two serialized full-sample pipelines (M is read live at the wealth pre-pass, so they cannot overlap).</li>
+<li><strong>Window.</strong> 10 fiscal years FY2027&ndash;2036 (policy effective CY2026, receipts FY-booked with a filing-season t+1 lag; estate booked death-year+1). Sim run one year past the window.</li>
+<li><strong>What's varied &mdash; and what isn't.</strong> Only s and M. s is flat across ages and symmetric (v1); calibration of kg realization (psi/planned_share) is held fixed. Static estimates are M- and s-invariant by construction; the interaction is conventional-only.</li>
+<li><strong>Conservative s=1.</strong> The fmax clamp means s=1 understates the unconstrained drain &mdash; treat it as a soft upper bound.</li>
+</ul>
+<p class="dim">Vintages: cgcarry_bound_identity, cgcarry_bound_uniform. Data: bounding_grid.csv, bounding_drain.csv (this directory).</p>
+</section>
+
+</div></div></body></html>
