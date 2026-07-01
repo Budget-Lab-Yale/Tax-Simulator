@@ -79,11 +79,13 @@ do_entity_shifting = function(tax_units, ...) {
       # Adjust pass-through income
       part_active = part_active + amount_shifted,
       
-      # Adjust corporate distributions. Assume any reduction operates through 
-      # capital gain, to prevent dividends from being negative. A situation where
-      # the revenue effect is correct but the micro-level output cannot be 
-      # interpreted literally, not unlike standard capital gains elasticity modeling
-      kg_lt = kg_lt - (amount_shifted * (alpha + (1 - alpha) * beta)),
+      # Adjust corporate distributions. Shareholders receive only the
+      # after-corporate-tax portion of shifted income, per equation (1) of the
+      # paper. Assume any reduction operates through capital gain, to prevent
+      # dividends from being negative. A situation where the revenue effect is
+      # correct but the micro-level output cannot be interpreted literally, not
+      # unlike standard capital gains elasticity modeling
+      kg_lt = kg_lt - (amount_shifted * (1 - corp.rate) * (alpha + (1 - alpha) * beta)),
       
       # Calculate implied change in corporate tax revenue
       corp_tax_change = -amount_shifted * corp.rate
