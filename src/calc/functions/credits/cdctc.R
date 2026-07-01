@@ -139,9 +139,9 @@ calc_cdctc = function(tax_unit, fill_missings = F) {
       old_excess3 = ceiling(old_excess3 / cdctc.discrete_step) * cdctc.discrete_step,
       
       # Calculate credit rate after phaseouts 
-      old_rate1 = pmax(0, pmax(0, cdctc.old_rate1 - old_excess1 * cdctc.old_po_rate1)),
-      old_rate2 = pmax(0, pmax(0, cdctc.old_rate2 - old_excess2 * cdctc.old_po_rate2)),
-      old_rate3 = pmax(0, pmax(0, cdctc.old_rate3 - old_excess3 * cdctc.old_po_rate3)),
+      old_rate1 = pmax(0, cdctc.old_rate1 - old_excess1 * cdctc.old_po_rate1),
+      old_rate2 = pmax(0, cdctc.old_rate2 - old_excess2 * cdctc.old_po_rate2),
+      old_rate3 = pmax(0, cdctc.old_rate3 - old_excess3 * cdctc.old_po_rate3),
       old_rate  = old_rate1 + old_rate2 + old_rate3,
       
       # Calculate credit value

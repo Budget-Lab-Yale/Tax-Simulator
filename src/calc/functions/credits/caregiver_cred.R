@@ -66,7 +66,7 @@ calc_caregiver_cred = function(tax_unit, fill_missings = F) {
       exp2 = if_else(filing_status == 2, exp2 * (ei2 > caregiver.min_ei), 0),
       
       # Calculate tenative credit value 
-      caregiver_credit = pmin((exp1 + exp2) * caregiver.credit_rate),
+      caregiver_credit = (exp1 + exp2) * caregiver.credit_rate,
       
       # Apply maximum value limitation
       caregiver_credit = pmin(caregiver.max_credit, caregiver_credit),

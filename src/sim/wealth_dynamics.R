@@ -120,8 +120,7 @@ WEALTH_DYN_PROVENANCE = list(
   spec_version   = 1L,
   macro_vintage  = '2026022522',  # vintage r_total (nominal GDP/capita) is derived from
   fmax           = 0.9,           # expected applier clamp
-  n_pctiles      = 100L,          # expected within-age bin count
-  transition     = 'identity'     # M placeholder (full persistence)
+  n_pctiles      = 100L           # expected within-age bin count
 )
 
 
@@ -297,7 +296,7 @@ wealth_dyn_load_M = function(dir, n_bins) {
   # n_bins x n_bins numeric grid, the diffable canonical form); falls back to
   # M.rds (a single matrix OR a per-age named list); an absent M file means the
   # identity (full persistence). Single matrices and list elements are raked to
-  # doubly-stochastic (sinkhorn_rake), matching the old build_within_age_transition.
+  # doubly-stochastic (sinkhorn_rake).
   #----------------------------------------------------------------------------
 
   csv = file.path(dir, 'M.csv')

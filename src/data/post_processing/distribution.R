@@ -577,7 +577,7 @@ get_other_taxes = function(id, baseline_id) {
   
   # Read recovery ratios by legal form
   cost_recovery_delta = globals$interface_paths %>%
-    filter(ID == globals$interface_path$ID[1], interface == 'Cost-Recovery-Simulator') %>%
+    filter(ID == globals$interface_paths$ID[1], interface == 'Cost-Recovery-Simulator') %>%
     pull(path) %>% 
     file.path('totals/recovery_ratios_form.csv') %>%
     read_csv(show_col_types = F) %>%

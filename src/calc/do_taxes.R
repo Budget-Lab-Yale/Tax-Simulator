@@ -682,8 +682,7 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
   
   # Invalid type
   else {
-    new_values = tax_units %>% 
-      mutate(across(.cols = all_of(vars), .fns  = ~ NA))
+    stop('Invalid MTR type: ', type)
   }
   
   

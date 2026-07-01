@@ -289,7 +289,7 @@ calc_rev_est = function(id) {
     
     # Read GDP and adjust for VAT (i.e. price level rises)
     gdp = globals$interface_paths %>% 
-      filter(ID == globals$interface_path$ID[1], interface == 'Macro-Projections') %>% 
+      filter(ID == globals$interface_paths$ID[1], interface == 'Macro-Projections') %>% 
       get_vector('path') %>% 
       file.path(c('historical.csv', 'projections.csv')) %>% 
       map(~ read_csv(.x, show_col_types = F)) %>% 
@@ -320,7 +320,7 @@ calc_rev_est = function(id) {
                   values_from = delta) %>% 
       arrange(Measure,
               match(Series, c('total', 'revenues_income_tax',
-                              'revenues_payroll_tax', 'revenues_corp_rate', 'revenues_corp_tax',
+                              'revenues_payroll_tax', 'revenues_corp_tax',
                               'revenues_estate_tax', 'revenues_wealth_tax', 'revenues_other',
                               'revenues_vat', 'outlays_tax_credits'))
       ) %>%
@@ -329,7 +329,6 @@ calc_rev_est = function(id) {
         Series == 'revenues_payroll_tax' ~ '  Revenues, payroll tax',
         Series == 'revenues_income_tax'  ~ '  Revenues, individual income tax',
         Series == 'outlays_tax_credits'  ~ '  Outlays, refundable tax credits',
-        Series == 'revenues_corp_rate'   ~ '  Revenues, corporate income tax (rate change)',
         Series == 'revenues_corp_tax'    ~ '  Revenues, corporate income tax',
         Series == 'revenues_estate_tax'  ~ '  Revenues, estate tax',
         Series == 'revenues_wealth_tax'  ~ '  Revenues, wealth tax',
@@ -485,7 +484,7 @@ calc_stacked_rev_est = function(counterfactual_ids) {
       # Calculate share-of-GDP metric, accounting  for introduction of a VAT
       left_join(
         globals$interface_paths %>% 
-          filter(ID == globals$interface_path$ID[1], interface == 'Macro-Projections') %>% 
+          filter(ID == globals$interface_paths$ID[1], interface == 'Macro-Projections') %>% 
           get_vector('path') %>% 
           file.path(c('historical.csv', 'projections.csv')) %>% 
           map(~ read_csv(.x, show_col_types = F)) %>% 

@@ -151,10 +151,6 @@ calc_fixed_cost = function(id) {
   #
   # Returns: fixed cost of filing (dbl).
   #----------------------------------------------------------------------------
-  
-  
-  # hardcoded if first year is later than 2025
-  first_year = get_scenario_info(id)$years[1]
 
   return(497.058)
 }
@@ -325,14 +321,10 @@ build_timeburden_table = function(id) {
             )
           
           # Add year-scenario identifiers
-          if (scenario == 'baseline') {
-            output = output %>% 
-              mutate(year = yr, scenario = scenario, .before = everything())
-          } else {
-            output = output %>% 
-              mutate(year = yr, scenario = 'reform', .before = everything())
-            output$scenario = 'reform'
-          }
+          output = output %>%
+            mutate(year     = yr,
+                   scenario = if_else(scenario == 'baseline', 'baseline', 'reform'),
+                   .before  = everything())
           
           return(output)
           

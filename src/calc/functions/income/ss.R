@@ -37,10 +37,7 @@ calc_ss = function(tax_unit, fill_missings = F) {
   tax_unit = parse_calc_fn_input(tax_unit, req_vars, fill_missings) 
   
   # Determine number of inclusion rates/brackets
-  n = tax_unit %>% 
-    select(starts_with('ss.brackets')) %>% 
-    names() %>%
-    length()
+  n = get_n_cols(tax_unit, 'ss.brackets')
   
   # Add integer index if not specified under single-bracket case
   if (n == 1 & 'ss.brackets' %in% names(tax_unit)) {
