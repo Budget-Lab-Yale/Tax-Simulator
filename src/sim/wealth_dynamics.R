@@ -133,12 +133,15 @@ WEALTH_DYN_PROVENANCE = list(
 scenario_uses_wealth_dynamics = function(scenario_info) {
 
   #----------------------------------------------------------------------------
-  # The channel is keyed off the runscript `s` column (saving share), NOT the
-  # behavior column. s > 0 activates it; absent/0 leaves it dormant.
+  # The channel is keyed off the scenario's resolved FINANCING PROFILE (the
+  # bracket-varying s(age, percentile) -- see wealth_dyn_resolve_profile), NOT
+  # the behavior column. Active iff any cell's saving share is positive, so a
+  # flat-zero profile (incl. the auto-applied default until it is calibrated,
+  # and an explicit scalar s = 0) is dormant and skips the ~2x split-pass
+  # compute. A malformed/missing profile errors here (loudly), by design.
   #----------------------------------------------------------------------------
 
-  s = scenario_info$s
-  isTRUE(is.numeric(s) && length(s) == 1 && !is.na(s) && s > 0)
+  isTRUE(wealth_dyn_resolve_profile(scenario_info)$active)
 }
 
 
@@ -151,8 +154,10 @@ wealth_dyn_load_params = function() {
 
   #----------------------------------------------------------------------------
   # Loads the operational params (NOT reform tax law; never scenario-overridden).
-  # Returns a list with n_pctiles, fmax, r_total (source + additive_delta), and
-  # transition_matrix_file.
+  # Returns a list with n_pctiles, fmax, and r_total (source + additive_delta).
+  # The saving share s and the transition operator M are NOT here -- they live
+  # in a per-scenario FINANCING PROFILE folder (config/wealth/profiles/<name>/);
+  # see wealth_dyn_resolve_profile().
   #----------------------------------------------------------------------------
 
   p = read_yaml(wealth_dyn_params_path())
@@ -162,6 +167,249 @@ wealth_dyn_load_params = function() {
   if (is.null(p$r_total)) p$r_total = list()
   p$r_total$additive_delta = as.numeric(p$r_total$additive_delta %||% 0)
   p
+}
+
+
+
+#-------------------------------------------------------------------------------
+# Financing profile: the bracket-varying saving share s(age, percentile) and the
+# transition operator M, resolved per scenario from a profile FOLDER.
+#
+# A profile folder (config/wealth/profiles/<name>/) holds exactly two files:
+#   - s.csv : one row per (age, nw_pctile) cell -- columns age, nw_pctile, s --
+#             covering the full WEALTH_DYN age grid x n_pctiles grid (every cell
+#             present exactly once; s in [0, 1] = 1 - MPC).
+#   - M.csv : the n_pctiles x n_pctiles within-age percentile transition (single
+#             matrix applied to every age), raked to doubly-stochastic on load.
+#             (M.rds -- a matrix or a per-age list -- is also accepted; an absent
+#             M file means identity / full persistence.)
+#
+# Resolution precedence for a scenario (wealth_dyn_profile_spec):
+#   1. wealth_financing = 'none'/'off'   -> channel forced OFF (s == 0 everywhere)
+#   2. wealth_financing = <folder name>  -> that profile (the bracket-varying path)
+#   3. scalar runscript column s set     -> FLAT profile (s_mat = s, M = identity);
+#                                           the back-compatible shorthand
+#   4. nothing specified                 -> the auto-applied 'default' profile
+#
+# The channel is ACTIVE iff the resolved s_mat has any positive entry (so a
+# flat-zero default is a no-op and the ~2x split-pass compute is skipped). The
+# resolved profile is memoized per (kind, value, grid) within a process.
+#-------------------------------------------------------------------------------
+
+WEALTH_PROFILES_ROOT   = './config/wealth/profiles'
+WEALTH_DEFAULT_PROFILE = 'default'
+
+# Per-process memo of resolved profiles (keyed by resolution signature). Each
+# SLURM worker is its own process and rebuilds its own cache.
+.wealth_profile_cache = new.env(parent = emptyenv())
+
+
+wealth_dyn_profile_spec = function(scenario_info) {
+
+  #----------------------------------------------------------------------------
+  # Decide WHICH profile source a scenario resolves to, cheaply (no matrices
+  # built). Returns list(kind, value) with kind in {'off','folder','scalar'}.
+  # See the precedence note above.
+  #----------------------------------------------------------------------------
+
+  wf = scenario_info$wealth_financing
+  wf = if (is.null(wf) || length(wf) == 0 || all(is.na(wf))) NA_character_
+       else trimws(as.character(wf)[1])
+
+  if (!is.na(wf) && nzchar(wf)) {
+    if (tolower(wf) %in% c('none', 'off')) return(list(kind = 'off', value = NA))
+    return(list(kind = 'folder', value = wf))
+  }
+
+  s = suppressWarnings(as.numeric(scenario_info$s))
+  s = if (length(s) == 0) NA_real_ else s[1]
+  if (!is.na(s)) return(list(kind = 'scalar', value = s))
+
+  list(kind = 'folder', value = WEALTH_DEFAULT_PROFILE)   # auto-applied default
+}
+
+
+
+wealth_dyn_load_s_csv = function(path, ages, n_bins) {
+
+  #----------------------------------------------------------------------------
+  # Load a profile's s.csv (full per-cell grid: columns age, nw_pctile, s) into
+  # an (n_ages x n_bins) saving-share matrix. Validates HARD: required columns,
+  # s in [0, 1], age/pctile in range, no duplicate cells, and complete coverage
+  # of every (age, pctile) cell -- a partial grid would silently zero some cells'
+  # saving response, so it is an error, not a fill.
+  #----------------------------------------------------------------------------
+
+  d = path %>% fread() %>% tibble()
+  need = c('age', 'nw_pctile', 's')
+  missing = setdiff(need, names(d))
+  if (length(missing) > 0) {
+    stop("wealth_dynamics profile s.csv (", path, ") is missing column(s): ",
+         paste(missing, collapse = ', '), '. Required: age, nw_pctile, s.')
+  }
+  d = d %>% transmute(age       = as.integer(age),
+                      nw_pctile = as.integer(nw_pctile),
+                      s         = as.numeric(s))
+
+  if (anyNA(d$age) || anyNA(d$nw_pctile) || anyNA(d$s)) {
+    stop('wealth_dynamics profile s.csv (', path, ') has non-numeric/NA entries.')
+  }
+  if (any(d$s < 0 | d$s > 1)) {
+    bad = which(d$s < 0 | d$s > 1)[1]
+    stop(sprintf(paste0('wealth_dynamics profile s.csv (%s): s must be in [0, 1] ',
+                        '(s = 1 - MPC). First offending cell: age %d, pctile %d, ',
+                        's = %s.'),
+                 path, d$age[bad], d$nw_pctile[bad], d$s[bad]))
+  }
+  if (any(d$age < min(ages) | d$age > max(ages))) {
+    stop(sprintf('wealth_dynamics profile s.csv (%s): age outside [%d, %d].',
+                 path, min(ages), max(ages)))
+  }
+  if (any(d$nw_pctile < 1 | d$nw_pctile > n_bins)) {
+    stop(sprintf('wealth_dynamics profile s.csv (%s): nw_pctile outside [1, %d].',
+                 path, n_bins))
+  }
+  if (anyDuplicated(d[c('age', 'nw_pctile')])) {
+    stop('wealth_dynamics profile s.csv (', path,
+         ') has duplicate (age, nw_pctile) rows.')
+  }
+  if (nrow(d) != length(ages) * n_bins) {
+    stop(sprintf(paste0('wealth_dynamics profile s.csv (%s) must cover all %d ',
+                        '(age x pctile) cells exactly once; found %d rows.'),
+                 path, length(ages) * n_bins, nrow(d)))
+  }
+
+  s_mat = matrix(NA_real_, length(ages), n_bins, dimnames = list(ages, NULL))
+  s_mat[cbind(match(d$age, ages), d$nw_pctile)] = d$s
+  if (anyNA(s_mat)) {
+    stop('wealth_dynamics profile s.csv (', path,
+         ') does not cover every (age, pctile) cell.')
+  }
+  s_mat
+}
+
+
+
+wealth_dyn_load_M = function(dir, n_bins) {
+
+  #----------------------------------------------------------------------------
+  # Load a profile's transition operator M. Prefers M.csv (a plain headerless
+  # n_bins x n_bins numeric grid, the diffable canonical form); falls back to
+  # M.rds (a single matrix OR a per-age named list); an absent M file means the
+  # identity (full persistence). Single matrices and list elements are raked to
+  # doubly-stochastic (sinkhorn_rake), matching the old build_within_age_transition.
+  #----------------------------------------------------------------------------
+
+  csv = file.path(dir, 'M.csv')
+  rds = file.path(dir, 'M.rds')
+
+  if (file.exists(csv)) {
+    M = as.matrix(fread(csv, header = FALSE))
+    storage.mode(M) = 'double'
+    if (nrow(M) != n_bins || ncol(M) != n_bins) {
+      stop(sprintf('wealth_dynamics profile M.csv (%s) must be %d x %d; got %d x %d.',
+                   csv, n_bins, n_bins, nrow(M), ncol(M)))
+    }
+    if (any(M < 0, na.rm = TRUE) || anyNA(M)) {
+      stop('wealth_dynamics profile M.csv (', csv,
+           ') has negative or NA entries.')
+    }
+    return(sinkhorn_rake(M))
+  }
+
+  if (file.exists(rds)) {
+    M = readRDS(rds)
+    if (is.list(M) && !is.matrix(M)) return(lapply(M, sinkhorn_rake))
+    if (nrow(M) != n_bins || ncol(M) != n_bins) {
+      stop(sprintf('wealth_dynamics profile M.rds (%s) must be %d x %d.',
+                   rds, n_bins, n_bins))
+    }
+    return(sinkhorn_rake(M))
+  }
+
+  diag(n_bins)                          # absent M file -> identity
+}
+
+
+
+wealth_dyn_load_profile_folder = function(name, ages, n_bins) {
+
+  # Load a profile folder's s.csv (+ M.csv/M.rds) into {s_mat, M}.
+  dir = file.path(WEALTH_PROFILES_ROOT, name)
+  if (!dir.exists(dir)) {
+    stop(sprintf(paste0("wealth_dynamics: financing profile '%s' not found at %s. ",
+                        'Set wealth_financing to a folder under %s, or supply the ',
+                        "scalar `s` column, or ship the '%s' profile."),
+                 name, dir, WEALTH_PROFILES_ROOT, WEALTH_DEFAULT_PROFILE))
+  }
+  s_path = file.path(dir, 's.csv')
+  if (!file.exists(s_path)) {
+    stop("wealth_dynamics: financing profile '", name, "' has no s.csv (", s_path, ').')
+  }
+  list(s_mat  = wealth_dyn_load_s_csv(s_path, ages, n_bins),
+       M      = wealth_dyn_load_M(dir, n_bins),
+       source = sprintf('profile %s', name))
+}
+
+
+
+wealth_dyn_resolve_profile = function(scenario_info, params = NULL,
+                                      ages = NULL, n_bins = NULL) {
+
+  #----------------------------------------------------------------------------
+  # Resolve a scenario to its financing profile {s_mat [n_ages x n_bins], M},
+  # following wealth_dyn_profile_spec()'s precedence. The scalar `s` column and
+  # the 'off' sentinel synthesize their profiles in memory (flat / zero, identity
+  # M); a folder name is loaded from disk. Memoized per (kind, value, grid).
+  #
+  # Adds: $active (any s_mat > 0 -- the gate), $ages, $n_bins, $source, and a
+  # cheap $fingerprint (for state stamping / logging, NOT a provenance gate --
+  # profiles are intended to vary per scenario).
+  #
+  # Returns: the profile list.
+  #----------------------------------------------------------------------------
+
+  if (is.null(params)) params = wealth_dyn_load_params()
+  if (is.null(ages))   ages   = WEALTH_DYN_AGE_MIN:WEALTH_DYN_AGE_MAX
+  if (is.null(n_bins)) n_bins = params$n_pctiles
+
+  spec = wealth_dyn_profile_spec(scenario_info)
+  key  = paste(spec$kind, spec$value, min(ages), max(ages), n_bins, sep = '|')
+  hit  = .wealth_profile_cache[[key]]
+  if (!is.null(hit)) return(hit)
+
+  zero_mat = function() matrix(0, length(ages), n_bins, dimnames = list(ages, NULL))
+  prof = switch(
+    spec$kind,
+    'off'    = list(s_mat = zero_mat(), M = diag(n_bins),
+                    source = 'off (forced dormant)'),
+    'scalar' = {
+      if (spec$value < 0 || spec$value > 1)
+        stop(sprintf(paste0('wealth_dynamics: scalar saving share s = %s is ',
+                            'outside [0, 1] (s = 1 - MPC). Use a profile folder ',
+                            'for bracket-varying s, or fix the runscript.'),
+                     spec$value))
+      list(s_mat = matrix(spec$value, length(ages), n_bins,
+                          dimnames = list(ages, NULL)),
+           M = diag(n_bins),
+           source = sprintf('scalar s = %s', spec$value))
+    },
+    'folder' = wealth_dyn_load_profile_folder(spec$value, ages, n_bins),
+    stop('wealth_dynamics: unknown profile kind ', spec$kind))
+
+  prof$ages   = ages
+  prof$n_bins = n_bins
+  prof$active = any(prof$s_mat > 0)
+  prof$fingerprint = list(
+    s_mean        = mean(prof$s_mat),
+    s_min         = min(prof$s_mat),
+    s_max         = max(prof$s_mat),
+    s_sd          = stats::sd(as.numeric(prof$s_mat)),
+    M_is_identity = is.matrix(prof$M) &&
+                    isTRUE(all.equal(unname(prof$M), diag(n_bins))))
+
+  .wealth_profile_cache[[key]] = prof
+  prof
 }
 
 
@@ -478,32 +726,6 @@ wealth_dyn_read_rtotal = function(scenario_info, params) {
 
 
 
-build_within_age_transition = function(params, ages, n_bins) {
-
-  #----------------------------------------------------------------------------
-  # The within-age percentile transition M. v1 PLACEHOLDER: 100x100 identity
-  # (full persistence) for every age when transition_matrix_file is null/absent.
-  # Otherwise loads an .rds (either a single n_bins x n_bins matrix applied to
-  # all ages, or a per-age named list) and rakes each to doubly-stochastic.
-  #
-  # Returns: either a single n_bins x n_bins matrix (applied to every age) or a
-  #          named-by-age list of such matrices, consumable by
-  #          apply_percentile_transition().
-  #----------------------------------------------------------------------------
-
-  f = params$transition_matrix_file
-  if (is.null(f) || identical(f, '') || identical(tolower(as.character(f)), 'null')) {
-    return(diag(n_bins))            # # PLACEHOLDER: full persistence (identity)
-  }
-  M = readRDS(f)
-  if (is.list(M) && !is.matrix(M)) {
-    return(lapply(M, sinkhorn_rake))
-  }
-  sinkhorn_rake(M)
-}
-
-
-
 #-------------------------------------------------------------------------------
 # Detail IO for the conv-no-wealth pass
 #-------------------------------------------------------------------------------
@@ -553,13 +775,23 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
   wealth_dyn_check_run_compat(scenario_info, vat_price_offset, excess_growth_offset)
 
   params  = wealth_dyn_load_params()
-  s       = scenario_info$s
   ages    = WEALTH_DYN_AGE_MIN:WEALTH_DYN_AGE_MAX
   n_ages  = length(ages)
   n_bins  = params$n_pctiles
 
+  # Resolve the bracket-varying financing profile: s_mat[age, pctile] (the
+  # saving share per cell) and the within-age transition M. A flat scalar `s`
+  # resolves to a constant s_mat with identity M (byte-identical to the old
+  # scalar path); a folder gives the full age x net-worth-rank surface.
+  profile = wealth_dyn_resolve_profile(scenario_info, params, ages, n_bins)
+  s_mat   = profile$s_mat
+  M       = profile$M
+  message(sprintf('wealth_dynamics: financing profile = %s (s in [%.3f, %.3f], mean %.3f; M %s)',
+                  profile$source, profile$fingerprint$s_min, profile$fingerprint$s_max,
+                  profile$fingerprint$s_mean,
+                  if (isTRUE(profile$fingerprint$M_is_identity)) 'identity' else 'non-identity'))
+
   A       = build_aging_matrix(ages)
-  M       = build_within_age_transition(params, ages, n_bins)
   r_total = wealth_dyn_read_rtotal(scenario_info, params)
   years   = scenario_info$years
 
@@ -646,7 +878,8 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
     # (a cell whose F-weighted bundle MTR is negative -- refundable-credit /
     # phase-in interactions -- would otherwise push G above 1+r_total).
     rt = unname(r_total[as.character(t)])
-    G  = (1 + rt) - s * (pmax(tau_mat * y_mat, 0) + pmax(tw_mat, 0))
+    # s_mat is the per-cell saving share (constant under a flat scalar/default).
+    G  = (1 + rt) - s_mat * (pmax(tau_mat * y_mat, 0) + pmax(tw_mat, 0))
     # A non-finite G means a genuinely mis-scaled input (NaN/Inf): abort loudly.
     if (any(!is.finite(G))) {
       bad = which(!is.finite(G), arr.ind = TRUE)
@@ -673,8 +906,9 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
     G = pmin(pmax(G, WEALTH_DYN_G_FLOOR), 1 + rt)
 
     # Recurrence: carried deficit (aged + percentile-transitioned) grows by G;
-    # fresh inflow s*ΔT⁰ enters at face value (end-of-year saving, D24).
-    P = cohort_recurrence_step(P_prev = P, growth = G, inflow = s * dT0_mat,
+    # fresh inflow s*ΔT⁰ enters at face value (end-of-year saving, D24). Both the
+    # kernel feedback and this inflow use the cell's own s_mat[a, p].
+    P = cohort_recurrence_step(P_prev = P, growth = G, inflow = s_mat * dT0_mat,
                                A = A, M_by_age = M)
 
     write_cohort_state(
@@ -684,7 +918,14 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
                    n_bins       = n_bins,
                    year         = t,
                    r_total      = rt,
-                   s            = s,
+                   # s_mat is the full per-cell saving share; s is the scalar
+                   # summary (the flat value, or NA for a non-flat profile) kept
+                   # for back-compatible diagnostics.
+                   s_mat        = s_mat,
+                   s            = if (isTRUE(all.equal(min(s_mat), max(s_mat))))
+                                    s_mat[1] else NA_real_,
+                   profile_src  = profile$source,
+                   profile_fp   = profile$fingerprint,
                    spec_version = WEALTH_DYN_SPEC_VERSION,
                    # diagnostics for verification (closed-form kernel check, etc.)
                    diag         = list(y = y_mat, tau = tau_mat, tau_w = tw_mat,

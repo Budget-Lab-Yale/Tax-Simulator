@@ -173,6 +173,91 @@ check('r_total: boundary year uses real prior (historical) level',
 check('r_total: pre-projection lead-in resolves', approx(unname(.r['2024']), .r2024_exp))
 unlink(.macro_dir, recursive = TRUE)
 
+cat('\n== financing profiles (s.csv / M.csv, resolver) ==\n')
+
+.ages = WEALTH_DYN_AGE_MIN:WEALTH_DYN_AGE_MAX
+.nb   = wealth_dyn_load_params()$n_pctiles
+.errs = function(expr) inherits(tryCatch(expr, error = function(e) e), 'error')
+
+# --- profile spec precedence (off > folder > scalar > default) ---------------
+check('spec: none -> off',
+      wealth_dyn_profile_spec(list(wealth_financing = 'none', s = NA))$kind == 'off')
+check('spec: folder name -> folder', {
+  sp = wealth_dyn_profile_spec(list(wealth_financing = 'example_age_wealth', s = NA))
+  sp$kind == 'folder' && sp$value == 'example_age_wealth' })
+check('spec: scalar s set -> scalar', {
+  sp = wealth_dyn_profile_spec(list(wealth_financing = NA, s = 0.5))
+  sp$kind == 'scalar' && sp$value == 0.5 })
+check('spec: nothing -> default folder', {
+  sp = wealth_dyn_profile_spec(list(wealth_financing = NA, s = NA))
+  sp$kind == 'folder' && sp$value == 'default' })
+check('spec: folder beats scalar',
+      wealth_dyn_profile_spec(list(wealth_financing = 'example_age_wealth',
+                                   s = 0.5))$kind == 'folder')
+
+# --- resolve the SHIPPED profiles --------------------------------------------
+# default: flat zero -> inactive no-op, identity M (model byte-identical today)
+.pd = wealth_dyn_resolve_profile(list(wealth_financing = NA, s = NA))
+check('default: dims 63x100',  all(dim(.pd$s_mat) == c(length(.ages), .nb)))
+check('default: all zero',     all(.pd$s_mat == 0))
+check('default: inactive',     isFALSE(.pd$active))
+check('default: M identity',   isTRUE(.pd$fingerprint$M_is_identity))
+
+# scalar shorthand: flat s_mat == constant matrix the old scalar kernel used
+.p5 = wealth_dyn_resolve_profile(list(wealth_financing = NA, s = 0.5))
+check('scalar .5: all 0.5',    all(.p5$s_mat == 0.5))
+check('scalar .5: active',     isTRUE(.p5$active))
+check('scalar .5 == flat matrix (scalar-path equivalence)',
+      approx(.p5$s_mat, matrix(0.5, length(.ages), .nb)))
+check('scalar 0: inactive',
+      isFALSE(wealth_dyn_resolve_profile(list(wealth_financing = NA, s = 0))$active))
+check('scalar out of [0,1] errors',
+      .errs(wealth_dyn_resolve_profile(list(wealth_financing = NA, s = -0.5))))
+check('off: inactive + zero', {
+  p = wealth_dyn_resolve_profile(list(wealth_financing = 'off', s = NA))
+  isFALSE(p$active) && all(p$s_mat == 0) })
+
+# example: bracket-varying, active, correct spot cells (rows named by age)
+.pe = wealth_dyn_resolve_profile(list(wealth_financing = 'example_age_wealth', s = NA))
+check('example: active',                 isTRUE(.pe$active))
+check('example: varies by cell',         .pe$fingerprint$s_min < .pe$fingerprint$s_max)
+check('example: age25 p10 = 0.50',       approx(.pe$s_mat['25', 10],  0.50, 1e-6))
+check('example: age50 p95 = 0.88',       approx(.pe$s_mat['50', 95],  0.88, 1e-6))
+check('example: age70 p100 = 0.89',      approx(.pe$s_mat['70', 100], 0.89, 1e-6))
+
+# --- s.csv / M.csv loaders: validation (temp files) --------------------------
+.mkprof = function() { d = tempfile('prof_'); dir.create(d, recursive = TRUE,
+                                                         showWarnings = FALSE); d }
+.full_grid = function(sval = 0.3) {
+  g = expand.grid(age = .ages, nw_pctile = 1:.nb)
+  g$s = sval
+  g[c('age', 'nw_pctile', 's')]
+}
+.write_s = function(g) { d = .mkprof(); write.csv(g, file.path(d, 's.csv'),
+                                                  row.names = FALSE); d }
+.load_s = function(d) wealth_dyn_load_s_csv(file.path(d, 's.csv'), .ages, .nb)
+
+check('s.csv: valid full grid -> constant matrix',
+      approx(.load_s(.write_s(.full_grid(0.3))), matrix(0.3, length(.ages), .nb)))
+check('s.csv: missing nw_pctile column errors',
+      .errs(.load_s(.write_s(data.frame(age = .ages[1], s = 0.3)))))
+check('s.csv: incomplete grid (gap) errors',
+      .errs(.load_s(.write_s(.full_grid(0.3)[-1, ]))))
+check('s.csv: duplicate cell errors',
+      .errs(.load_s(.write_s(rbind(.full_grid(0.3), .full_grid(0.3)[1, ])))))
+check('s.csv: s out of [0,1] errors', {
+  g = .full_grid(0.3); g$s[5] = 1.5; .errs(.load_s(.write_s(g))) })
+
+.write_M = function(M) { d = .mkprof(); write.table(M, file.path(d, 'M.csv'),
+                                  sep = ',', row.names = FALSE, col.names = FALSE); d }
+check('M.csv: identity -> identity', approx(wealth_dyn_load_M(.write_M(diag(.nb)), .nb),
+                                            diag(.nb)))
+check('M: absent file -> identity',  approx(wealth_dyn_load_M(.mkprof(), .nb), diag(.nb)))
+check('M.csv: wrong dims errors',    .errs(wealth_dyn_load_M(.write_M(diag(.nb - 1)), .nb)))
+.Mu = wealth_dyn_load_M(.write_M(matrix(1, .nb, .nb)), .nb)
+check('M.csv: uniform -> doubly-stochastic',
+      approx(rowSums(.Mu), 1, 1e-6) && approx(colSums(.Mu), 1, 1e-6))
+
 # --- Summary ------------------------------------------------------------------
 cat(sprintf('\n==== %d passed, %d failed ====\n', .n_pass, .n_fail))
 if (.n_fail > 0) quit(status = 1)

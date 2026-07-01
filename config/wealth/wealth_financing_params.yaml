@@ -2,8 +2,11 @@
 #
 # This file holds the TUNABLE knobs of the mechanical wealth-accumulation
 # channel (src/sim/wealth_dynamics.R). It is NOT a reform tax-law file and must
-# never be overridden by a scenario. The saving share `s` is NOT here -- it is a
-# per-scenario runscript COLUMN (the only knob the analyst sets per run).
+# never be overridden by a scenario. NEITHER the saving share `s` NOR the
+# transition operator `M` lives here: they are a per-scenario FINANCING PROFILE
+# -- a folder of two files (s.csv, M.csv) under config/wealth/profiles/<name>/,
+# selected by the runscript `wealth_financing` column (or the scalar `s`
+# shorthand). See wealth_dyn_resolve_profile() in src/sim/wealth_dynamics.R.
 #
 # Provenance: the staleness stamp (spec_version, pinned macro_vintage) lives in
 # code as WEALTH_DYN_PROVENANCE (src/sim/wealth_dynamics.R), mirroring kg's
@@ -40,24 +43,16 @@ r_total:
   additive_delta: 0.0            # one-time sensitivity shift (pp, as a decimal); default 0
 
 # ----------------------------------------------------------------------------
-# Transition operator M
+# Transition operator M and saving share s
 # ----------------------------------------------------------------------------
-# Within-age percentile transition. v1 PLACEHOLDER = 100x100 identity (full
-# persistence) for every age; truth sits close to identity (small idiosyncratic
-# rank churn). The loader (build_within_age_transition) defaults to identity
-# when transition_matrix_file is null/absent. Swap path: PSID within-age
-# percentile transitions, raked doubly-stochastic; the uniform 1/n matrix is the
-# extreme-diffusion bound.
-transition_matrix_file: null     # null => identity; else path to an .rds (per-age list or single matrix)
-
-# ----------------------------------------------------------------------------
-# Dormant hooks (v1 uses the scalar runscript `s`; these are NOT yet wired)
-# ----------------------------------------------------------------------------
-# Age-shape and direction-split for the saving share. v1 is a flat, symmetric
-# scalar `s` from the runscript. Asymmetry (hike vs cut) REQUIRES a
-# direction-conditional s because the linear recurrence mechanically enforces
-# symmetry; magnitude alone cannot. Left here as documented swap paths.
-s_hooks:
-  age_shape: null                # e.g. a per-age multiplier on s; null => flat
-  s_hike: null                   # direction-split saving share for tax hikes; null => use scalar s
-  s_cut: null                    # direction-split saving share for tax cuts;  null => use scalar s
+# BOTH moved to the per-scenario financing PROFILE (config/wealth/profiles/<name>/):
+#   - s.csv : the bracket-varying saving share s(age, net-worth percentile)
+#   - M.csv : the within-age percentile transition (identity = full persistence,
+#             the realistic near-truth; uniform 1/n is the extreme-diffusion
+#             bound). Absent M file => identity.
+# The 'default' profile is auto-applied to any scenario that names no profile and
+# sets no scalar `s`. Bracket-varying s and a per-age M are no longer dormant
+# hooks -- they are realized by the profile files. (Direction-split s for
+# hike-vs-cut asymmetry remains a future extension: the linear recurrence
+# enforces symmetry, so it would need a direction-conditional inflow, not just a
+# per-cell magnitude.)

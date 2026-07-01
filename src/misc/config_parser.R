@@ -160,13 +160,26 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     runscript$corp_incidence_phasein = 10
   }
 
-  # Add nonspecified wealth-dynamics saving share s (= 1 - MPC). s > 0 activates
-  # the mechanical wealth bathtub (src/sim/wealth_dynamics.R); absent/0 leaves it
-  # dormant (byte-identical output). See scenario_uses_wealth_dynamics().
-  if (!('s' %in% colnames(runscript))) {
-    runscript$s = 0
+  # Wealth-dynamics financing inputs (src/sim/wealth_dynamics.R). The channel is
+  # configured by a per-scenario FINANCING PROFILE -- a bracket-varying saving
+  # share s(age, net-worth percentile) plus a transition matrix M -- resolved by
+  # wealth_dyn_resolve_profile(). Two runscript columns feed it:
+  #   - wealth_financing : a profile FOLDER name under config/wealth/profiles/
+  #                        (the bracket-varying path), or 'none'/'off' to force
+  #                        the channel off. Absent => the auto-applied 'default'
+  #                        profile (unless the scalar `s` below is set).
+  #   - s                : the back-compatible FLAT shorthand (s = 1 - MPC, applied
+  #                        uniformly with identity M). Absent => NA (not 0), so an
+  #                        explicit s = 0 -- a deliberate "channel off" -- is
+  #                        distinguishable from an unset column that falls back to
+  #                        the default profile.
+  if (!('wealth_financing' %in% colnames(runscript))) {
+    runscript$wealth_financing = NA_character_
   }
-  
+  if (!('s' %in% colnames(runscript))) {
+    runscript$s = NA_real_
+  }
+
   # Subset runscript to specified ID, if supplied. The baseline row is always
   # retained: whether baseline actually RUNS is governed by baseline_vintage
   # (main.R / src/slurm/setup.R), but its interface paths and scenario info
@@ -423,13 +436,16 @@ get_scenario_info = function(id) {
     corp_incidence_phasein = 10
   }
 
-  # Wealth-dynamics saving share s (= 1 - MPC). The only knob the analyst sets
-  # for the mechanical wealth bathtub: s > 0 activates the pre-pass + applier;
-  # 0/blank leaves the channel dormant (scenario_uses_wealth_dynamics() tests
-  # s > 0). Flat across ages and symmetric for hikes/cuts in v1.
-  s = as.numeric(runscript_items$s)
-  if (length(s) == 0 || is.na(s)) {
-    s = 0
+  # Wealth-dynamics financing inputs (resolved by wealth_dyn_resolve_profile()).
+  # `wealth_financing` is a profile folder name (or 'none'/'off'); `s` is the flat
+  # shorthand (s = 1 - MPC). Both pass through verbatim -- including s = NA (unset,
+  # falls back to the default profile) vs an explicit s = 0 (channel forced off).
+  wealth_financing = runscript_items$wealth_financing
+  wealth_financing = if (is.null(wealth_financing) || length(wealth_financing) == 0)
+                       NA_character_ else as.character(wealth_financing)[1]
+  s = suppressWarnings(as.numeric(runscript_items$s))
+  if (length(s) == 0) {
+    s = NA_real_
   }
 
   # Return as named list
@@ -446,7 +462,8 @@ get_scenario_info = function(id) {
               excess_growth_start_year = excess_growth_start_year,
               excess_growth_all_rev    = excess_growth_all_rev,
               corp_incidence_phasein   = corp_incidence_phasein,
-              s                        = s))
+              s                        = s,
+              wealth_financing         = wealth_financing))
 }
 
 
