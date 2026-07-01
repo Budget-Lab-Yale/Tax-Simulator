@@ -51,6 +51,8 @@ suppressPackageStartupMessages({
   library(magrittr)
 })
 
+source('./src/calc/functions/tax/estate.R')   # ESTATE_ASSET_COLS
+source('./src/sim/cohort_bathtub.R')           # build_aging_matrix
 source('./src/sim/kg_dynamics.R')
 
 
@@ -144,7 +146,7 @@ cat("Loading Tax-Data and baseline MTRs for", length(YEARS), "years (full sample
 
 td_cols = c('id', 'weight', 'filing_status', 'age1', 'age2',
             'kg_lt', 'q_death1', 'q_death2',
-            KG_DYN_ESTATE_ASSET_VALUE_COLS,
+            ESTATE_ASSET_COLS,
             KG_DYN_ASSET_VALUE_COLS, KG_DYN_ASSET_BASIS_COLS) %>%
   unique()
 
@@ -214,7 +216,7 @@ cat(sprintf("  beta range: [%.4f, %.4f] (real-rate discount, from %s)\n",
             min(beta_by_year), max(beta_by_year), MACRO_ROOT))
 
 zero_route_vec   = rep(0, length(AGES_BATHTUB))   # step-up: no carryover routing
-A                = kg_dyn_build_aging_matrix(AGES_BATHTUB)
+A                = build_aging_matrix(AGES_BATHTUB)
 # omega is inert under step-up calibration (delta_route = 0), so any valid
 # row-stochastic vector works. Use a uniform vector to avoid taking a
 # dependency on Estate-Tax-Distribution from the standalone calibrator.

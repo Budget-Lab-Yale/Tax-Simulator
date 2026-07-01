@@ -6,6 +6,7 @@ suppressPackageStartupMessages({
   library(tibble)
 })
 
+source('src/calc/functions/tax/estate.R')   # ESTATE_ASSET_COLS
 source('src/sim/kg_dynamics.R')
 
 tol = 8e-4
@@ -36,7 +37,7 @@ records = tibble(
   year = c(2026, 2026)
 )
 
-for (nm in KG_DYN_ESTATE_ASSET_VALUE_COLS) records[[nm]] = 0
+for (nm in ESTATE_ASSET_COLS) records[[nm]] = 0
 records[['value.equities']] = c(1e7, 5e7)
 records[['value.pass_throughs']] = c(0, 0)
 records[['value.primary_home']] = c(0, 0)
