@@ -155,12 +155,10 @@ KG_DYN_ASSET_VALUE_COLS = paste0('value.', KG_DYN_ASSET_CLASSES)
 KG_DYN_ASSET_BASIS_COLS = paste0('basis.', KG_DYN_ASSET_CLASSES)
 KG_DYN_ASSET_GAIN_COLS  = paste0('gain.',  KG_DYN_ASSET_CLASSES)
 
-KG_DYN_ESTATE_ASSET_VALUE_COLS = c(
-  'value.cash', 'value.equities', 'value.bonds', 'value.dc', 'value.db',
-  'value.life_ins', 'value.annuities', 'value.trusts', 'value.other_fin',
-  'value.pass_throughs', 'value.primary_home', 'value.other_home',
-  'value.re_fund', 'value.other_nonfin'
-)
+# Estate gross-asset value columns: the canonical list is ESTATE_ASSET_COLS
+# (src/calc/functions/tax/estate.R), which wealth_dynamics.R also consumes.
+# kg references it directly so the three channels stay in lockstep on what
+# counts as a gross-estate asset.
 
 KG_DYN_CHAR_EXTENSIVE_INTERCEPT = -2.415
 KG_DYN_CHAR_EXTENSIVE_LN_SLOPE  =  0.458
@@ -330,7 +328,7 @@ kg_dyn_attach_record_attrs = function(tax_units, cpiu_by_year = NULL) {
          'calling this helper.')
   }
 
-  missing_estate_cols = setdiff(KG_DYN_ESTATE_ASSET_VALUE_COLS, names(tax_units))
+  missing_estate_cols = setdiff(ESTATE_ASSET_COLS, names(tax_units))
   if (length(missing_estate_cols) > 0) {
     stop('kg_dyn_attach_record_attrs: tax_units missing estate asset columns: ',
          paste(missing_estate_cols, collapse = ', '))
@@ -347,7 +345,7 @@ kg_dyn_attach_record_attrs = function(tax_units, cpiu_by_year = NULL) {
   sec121       = as.numeric(tax_units$`pref.kg_sec121_excl`)
   sec121[is.na(sec121)] = 0
 
-  estate = as.matrix(tax_units[, KG_DYN_ESTATE_ASSET_VALUE_COLS])
+  estate = as.matrix(tax_units[, ESTATE_ASSET_COLS])
   estate[is.na(estate)] = 0
   estate_assets = rowSums(estate)
 
@@ -557,16 +555,10 @@ kg_dyn_build_heir_matrix = function(heir_dist,
 
 
 
-kg_dyn_build_aging_matrix = function(ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
-
-  # A[a, h] = 1 if h = a + 1; A[a_max, a_max] = 1 (topcode loops). Spec §3.4.
-
-  n = length(ages)
-  A = matrix(0, n, n, dimnames = list(ages, ages))
-  for (i in seq_len(n - 1)) A[i, i + 1] = 1
-  A[n, n] = 1
-  A
-}
+# NOTE: the deterministic age-shift operator lives in cohort_bathtub.R as the
+# shared build_aging_matrix() (A[a, h] = 1 if h = a + 1; A[a_max, a_max] = 1 so
+# the topcode age self-loops; spec §3.4). kg calls it directly at the two use
+# sites in kg_dyn_run_bathtub_pass() / kg_dyn_run_frozen_pass().
 
 
 
@@ -1434,14 +1426,15 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset) {
 
 
 
+# Conventional bathtub state: thin wrappers over the shared cohort-state IO
+# helpers (cohort_bathtub.R) with kg's subdir/pass fixed. Path is
+# {output_path}/conventional/supplemental/kg_dynamics_state/{year}.rds.
 kg_dyn_state_dir = function(scenario_info) {
-  file.path(scenario_info$output_path,
-            'conventional', 'supplemental',
-            'kg_dynamics_state')
+  cohort_state_dir(scenario_info, 'kg_dynamics_state', 'conventional')
 }
 
 kg_dyn_state_path = function(scenario_info, year) {
-  file.path(kg_dyn_state_dir(scenario_info), paste0(year, '.rds'))
+  cohort_state_path(scenario_info, 'kg_dynamics_state', year, 'conventional')
 }
 
 # Mechanical (frozen-realization) state: consumed by the STATIC pass, so it
@@ -1450,13 +1443,11 @@ kg_dyn_state_path = function(scenario_info, year) {
 # inputs_cache.rds (baseline cells + slim per-record frames) reused by the
 # full bathtub pass to avoid a second Tax-Data sweep.
 kg_dyn_mech_state_dir = function(scenario_info) {
-  file.path(scenario_info$output_path,
-            'static', 'supplemental',
-            'kg_dynamics_mech_state')
+  cohort_state_dir(scenario_info, 'kg_dynamics_mech_state', 'static')
 }
 
 kg_dyn_mech_state_path = function(scenario_info, year) {
-  file.path(kg_dyn_mech_state_dir(scenario_info), paste0(year, '.rds'))
+  cohort_state_path(scenario_info, 'kg_dynamics_mech_state', year, 'static')
 }
 
 kg_dyn_inputs_cache_path = function(scenario_info) {
@@ -1618,7 +1609,7 @@ kg_dyn_load_cells_inputs = function(scenario_info, tax_law,
 
   td_cols = c('id', 'weight', 'filing_status', 'age1', 'age2',
               'kg_lt', 'q_death1', 'q_death2',
-              KG_DYN_ESTATE_ASSET_VALUE_COLS,
+              ESTATE_ASSET_COLS,
               KG_DYN_ASSET_VALUE_COLS, KG_DYN_ASSET_BASIS_COLS) %>%
     unique()
 
@@ -2018,7 +2009,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   saveRDS(heir_dist, file.path(state_dir, 'heir_distribution.rds'))
 
   # Step 5: year-by-year bathtub recurrence
-  A     = kg_dyn_build_aging_matrix(ages_bathtub)
+  A     = build_aging_matrix(ages_bathtub)
   omega = kg_dyn_build_heir_matrix(heir_dist, ages_bathtub)
 
   delta = setNames(rep(0, length(ages_bathtub)), as.character(ages_bathtub))
@@ -2140,7 +2131,7 @@ kg_dyn_run_frozen_pass = function(scenario_info, tax_law, baseline_cells,
   state_dir = kg_dyn_mech_state_dir(scenario_info)
   dir.create(state_dir, recursive = TRUE, showWarnings = FALSE)
 
-  A     = kg_dyn_build_aging_matrix(ages_bathtub)
+  A     = build_aging_matrix(ages_bathtub)
   omega = kg_dyn_build_heir_matrix(heir_dist, ages_bathtub)
 
   ages_chr = as.character(ages_bathtub)

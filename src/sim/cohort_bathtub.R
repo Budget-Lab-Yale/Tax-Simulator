@@ -21,8 +21,9 @@ build_aging_matrix = function(ages) {
   #----------------------------------------------------------------------------
   # Deterministic age-shift operator on a contiguous integer age grid.
   # A[a, h] = 1 if h = a + 1; the top age self-loops (A[a_max, a_max] = 1) so
-  # the topcode pool accumulates. Identical structure to kg's
-  # kg_dyn_build_aging_matrix(); factored here as the generic primitive.
+  # the topcode pool accumulates. Formerly duplicated as kg's private
+  # kg_dyn_build_aging_matrix() (now removed); this is the shared primitive
+  # both the wealth and kg channels call.
   #
   # The shift is applied as crossprod(A, X) (i.e. t(A) %*% X): row a of the
   # result gathers from row a-1 of X, with the top age also gathering itself.
