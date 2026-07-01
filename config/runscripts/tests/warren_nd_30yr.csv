@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,wealth_financing,dep.Tax-Data.vintage,dep.Tax-Data.ID
+baseline,baseline,,2026:2055,,net_worth,nextdollar,,2026060918,baseline
+warren,public/wealth_tax_warren,wealth/avoidance,2026:2055,,net_worth,nextdollar,s1_uniform,2026060918,baseline
+nickeldime,public/wealth_tax_nickel_dime,wealth/avoidance,2026:2055,,net_worth,nextdollar,s1_uniform,2026060918,baseline
