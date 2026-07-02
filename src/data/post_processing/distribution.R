@@ -167,6 +167,23 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
     reform_detail$liab_wealth = 0
   }
 
+  # The two legs must share the same record universe: a baseline id missing
+  # from the reform detail would flow NA through liab_delta and silently
+  # poison every group aggregate (no na.rm downstream), and a reform-only id
+  # would be silently dropped by the join. Mismatches mean the legs come from
+  # incompatible vintages (e.g. different sample universes) -- fail loudly
+  base_ids   = unique(microdata$id)
+  reform_ids = reform_detail$id[reform_detail$dep_status == 0]
+  if (length(setdiff(base_ids, reform_ids)) > 0 |
+      length(setdiff(reform_ids, base_ids)) > 0) {
+    stop('distribution: baseline and scenario ', yr, ' detail files do not ',
+         'share the same record universe (',
+         length(setdiff(base_ids, reform_ids)), ' baseline-only ids, ',
+         length(setdiff(reform_ids, base_ids)), ' scenario-only ids). ',
+         'The legs come from incompatible vintages; re-run against a ',
+         'consistent baseline.')
+  }
+
   microdata %<>%
     left_join(
       reform_detail %>%

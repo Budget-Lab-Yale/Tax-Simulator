@@ -175,11 +175,21 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   # leg is always the baseline's STATIC totals (baseline has no conventional).
   baseline_estate_path = globals$baseline_root %>%
     file.path('baseline/static/totals/estate.csv')
+  baseline_estate = NULL
   if (file.exists(baseline_estate_path)) {
     baseline_estate = baseline_estate_path %>%
       read_csv(show_col_types = F) %>%
       select(year, est_tax_exp_baseline = est_tax_exp)
-  } else {
+
+    # A totals file covering only a subset of this scenario's years (baseline
+    # run over a shorter window) would silently zero the estate delta for the
+    # uncovered years via the coalesce() below -- fall back to rebuilding from
+    # detail instead
+    if (!all(totals$year %in% baseline_estate$year)) {
+      baseline_estate = NULL
+    }
+  }
+  if (is.null(baseline_estate)) {
 
     # SLURM Phase 3a runs scenarios as a parallel array, so the baseline's
     # totals may not be written yet when a counterfactual's receipts job
@@ -192,11 +202,13 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     if (!is.null(baseline_estate)) {
       baseline_estate %<>% select(year, est_tax_exp_baseline = est_tax_exp)
     } else {
-      warning('estate: no baseline totals/estate.csv at ',
-              baseline_estate_path, ' and baseline detail lacks estate ',
-              'columns (baseline run predates the on-model estate tax?). ',
-              'On-model estate deltas are set to 0 — estate reform effects ',
-              'will NOT appear in receipts. Re-run the baseline.')
+      warning('estate: baseline totals/estate.csv at ', baseline_estate_path,
+              ' is missing or does not cover years ',
+              min(totals$year), ':', max(totals$year), ', and the baseline ',
+              'detail files cannot supply them (missing, or predating the ',
+              'on-model estate tax?). On-model estate deltas are set to 0 — ',
+              'estate reform effects will NOT appear in receipts. Re-run ',
+              'the baseline.')
     }
   }
   
@@ -280,20 +292,25 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     mutate(revenues_payroll_tax = revenues_payroll_tax + (payroll * income_factor_fy),
            revenues_income_tax = revenues_income_tax + (individual * income_factor_fy),
            revenues_corp_tax   = (revenues_corp_tax + corporate) * income_factor_fy,
-
-           # CBO level plus the on-model delta. The off-model `estate` column
-           # is superseded by the on-model estate tax and no longer applied.
-           revenues_estate_tax = revenues_estate_tax + delta_revenues_estate_tax,
            revenues_vat        = revenues_vat + vat) %>%
-    
-    # Apply excess growth to non-IIT/payroll/corporate revenues if applicable 
+
+    # Apply excess growth to non-IIT/payroll/corporate revenues if applicable.
+    # Only the CBO estate LEVEL takes the factor: the on-model delta is added
+    # after this block because est_tax_exp is computed on micro data that
+    # already embed the excess-growth adjustment (do_excess_growth), so
+    # scaling it again would double-count -- the same exemption the on-model
+    # wealth tax gets above
     mutate(
       all_rev = excess_growth_all_rev,
       across(
-        .cols = c(revenues_estate_tax, revenues_vat, revenues_other), 
+        .cols = c(revenues_estate_tax, revenues_vat, revenues_other),
         .fns  = ~ . * if_else(all_rev == 1, income_factor_fy, 1)
-      )
-    ) %>% 
+      ),
+
+      # CBO level plus the on-model delta. The off-model `estate` column
+      # is superseded by the on-model estate tax and no longer applied.
+      revenues_estate_tax = revenues_estate_tax + delta_revenues_estate_tax
+    ) %>%
     
     # Final column selection
     select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits,
