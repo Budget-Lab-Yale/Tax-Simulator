@@ -109,6 +109,23 @@ WEALTH_CAP_FLOWS_SE_COMPANIONS = c(
   'part_se1', 'part_se2', 'sole_prop1', 'sole_prop2', 'farm1', 'farm2'
 )
 
+# Retirement distributions, co-scaled with the balance-sheet haircut (1 - f).
+# The uniform value.* scaling marks down retirement balances (value.dc /
+# value.db are ESTATE_ASSET_COLS), so proportional draws from those balances
+# must scale with the markdown or the erosion is silently undone by relatively
+# faster drawdown (corporate-incidence FORMAL_MODEL P7, the two-pocket lemma).
+# Deliberately NOT part of WEALTH_CAP_FLOWS: distributions are internal
+# conversions (pocket-to-pocket), so they never enter the bundle MTR or any
+# forcing income term (D16) -- their tax consequence arrives only through
+# do_taxes on the final conventional pass. Known approximation: the kernel's
+# tau*y drag prices tax forgone on missing CAPITAL income only; the ordinary-
+# income relief on eroded distributions is outside the drag (accepted).
+# gross_pens_dist rides along so expanded_inc / simple-filer / SALT-share
+# metrics stay consistent with the taxable legs.
+WEALTH_RET_DIST_FLOWS = c(
+  'txbl_ira_dist', 'txbl_pens_dist', 'gross_pens_dist'
+)
+
 # Staleness stamp, mirroring KG_DYN_CALIB_PROVENANCE. Records the conditions the
 # channel's defaults were pinned under; wealth_dyn_check_provenance() compares
 # the live Macro-Projections vintage (r_total source) and the operational params
@@ -1013,7 +1030,9 @@ wealth_dyn_apply_to_records = function(tax_units, state, params = NULL) {
   # then scale the 14 value.* asset columns UNIFORMLY by (1 - f) (so s_pt and the
   # frozen rho_pt valuation discount stay invariant -- the WHOLE balance sheet
   # shrinks), scale the WEALTH_CAP_FLOWS income flows (pure by (1-f),
-  # pass-through + SE companions by (1 - 0.2 f)) and kg_lt_basis by (1-f), and
+  # pass-through + SE companions by (1 - 0.2 f)), kg_lt_basis by (1-f), and the
+  # WEALTH_RET_DIST_FLOWS retirement distributions by (1-f) (draws sourced from
+  # the marked-down balances scale with the markdown; P7), and
   # recompute net_worth (debts untouched). The eroded value.* flow into
   # calc_estate (estate base falls) and calc_wealth (wealth tax reprices on the
   # eroded net_worth). Records with no cell (neg/zero NW) are untouched (f = 0).
@@ -1079,6 +1098,7 @@ wealth_dyn_apply_to_records = function(tax_units, state, params = NULL) {
                         names(tax_units))
   pt_cols   = intersect(c(WEALTH_CAP_FLOWS_PT, WEALTH_CAP_FLOWS_SE_COMPANIONS),
                         names(tax_units))
+  ret_cols  = intersect(WEALTH_RET_DIST_FLOWS, names(tax_units))
   asset_cols = intersect(ESTATE_ASSET_COLS, names(tax_units))
 
   f_pure = 1 - f
@@ -1092,6 +1112,7 @@ wealth_dyn_apply_to_records = function(tax_units, state, params = NULL) {
     mutate(
       across(all_of(asset_cols), ~ . * (1 - f)),
       across(all_of(pure_cols),  ~ . * f_pure),
+      across(all_of(ret_cols),   ~ . * f_pure),
       across(all_of(pt_cols),    ~ . * f_pt)) %>%
     # Recompute the stored net-worth stock from the (now eroded) balance sheet,
     # mirroring run_one_year:505-507 / avoidance.R:90-92, so calc_wealth
