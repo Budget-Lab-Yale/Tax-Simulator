@@ -74,10 +74,13 @@ calc_tax = function(tax_unit, fill_missings = F) {
       # Taxable income
       txbl_ord_inc      = pmax(0, txbl_inc - pref_inc),
       txbl_adj_pref_inc = pmax(0, pmin(txbl_inc, adj_pref_inc)),
-      txbl_1250         = pmax(0, pmin(txbl_ord_inc - txbl_adj_pref_inc, 
+
+      # Special gains fill whatever taxable income remains after ordinary
+      # income and non-special preferred-rate income, 1250 stacking first
+      txbl_1250         = pmax(0, pmin(txbl_inc - txbl_adj_pref_inc - txbl_ord_inc,
                                        pmin(kg_pref, kg_1250))),
       txbl_ord_1250     = pmax(0, txbl_ord_inc + txbl_1250),
-      txbl_collect      = pmax(0, pmin(txbl_ord_inc - txbl_adj_pref_inc - txbl_1250,  
+      txbl_collect      = pmax(0, pmin(txbl_inc - txbl_adj_pref_inc - txbl_ord_inc - txbl_1250,
                                        pmin(kg_pref, kg_collect))),
       
     ) %>% 
