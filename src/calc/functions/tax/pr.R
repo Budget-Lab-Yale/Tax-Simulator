@@ -211,10 +211,11 @@ calc_pr = function(tax_unit, fill_missings = F) {
                       liab_seca_hi_ee1 + liab_seca_hi_ee2 + 
                       liab_fica_hi_er1 + liab_fica_hi_er2 + 
                       liab_seca_hi_er1 + liab_seca_hi_er2 + liab_add_med,
-      liab_pr_ee    = liab_fica_oasdi_ee1 + liab_fica_oasdi_ee2 + 
-                      liab_fica_hi_ee1    + liab_fica_hi_ee2 + 
-                      liab_seca_oasdi_ee1 + liab_seca_oasdi_ee2 + 
-                      liab_seca_hi_ee1    + liab_seca_hi_ee2,
+      # (Additional Medicare Tax is employee-side only -- no employer match)
+      liab_pr_ee    = liab_fica_oasdi_ee1 + liab_fica_oasdi_ee2 +
+                      liab_fica_hi_ee1    + liab_fica_hi_ee2 +
+                      liab_seca_oasdi_ee1 + liab_seca_oasdi_ee2 +
+                      liab_seca_hi_ee1    + liab_seca_hi_ee2 + liab_add_med,
       liab_pr_er    = liab_fica_oasdi_er1 + liab_fica_oasdi_er2 + 
                       liab_fica_hi_er1    + liab_fica_hi_er2 + 
                       liab_seca_oasdi_er1 + liab_seca_oasdi_er2 + 
