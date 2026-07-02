@@ -71,14 +71,21 @@ tryCatch({
     }
   }
 
-  # For Phase 2C/2N: load this scenario's static_mtrs from Phase 2A's per-year .rds
+  # For Phase 2C/2N: load this scenario's static_mtrs from Phase 2A's per-year
+  # .rds. Every 2C/2N task has a matching 2A task that wrote this file, so a
+  # missing file means a broken/partial staging dir (e.g. a manual phase
+  # re-run after cleanup) -- fail here rather than silently handing behavior
+  # modules static_mtrs = NULL (main.R always threads the in-memory MTRs)
   static_mtrs_year = NULL
   if (phase %in% c('2C', '2N')) {
     static_rds = file.path(staging_dir, task$scenario,
                            paste0('year_', task$year, '_static.rds'))
-    if (file.exists(static_rds)) {
-      static_mtrs_year = readRDS(static_rds)$mtrs
+    if (!file.exists(static_rds)) {
+      stop('Phase ', phase, ' task (', task$scenario, ', ', task$year,
+           ') found no static-pass results at ', static_rds,
+           ' -- Phase 2A output is missing; re-run the pipeline from setup')
     }
+    static_mtrs_year = readRDS(static_rds)$mtrs
   }
 
   # Map phase to pass_type

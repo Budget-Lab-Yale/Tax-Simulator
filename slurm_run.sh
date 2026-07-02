@@ -274,21 +274,44 @@ if [ "$N_AGG" -gt 0 ]; then
   # Phase 2A and 2B feed into 2C, so transitively they're already gated.
   ALL_DEPS="${P1_DEP} ${P2C_DEP}"
 
-  echo "Phase 3a: Submitting ${N_AGG} aggregation jobs..."
-  P3A=$(sbatch --parsable --array=1-${N_AGG} ${ALL_DEPS} \
-    ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
-    --job-name=taxsim-agg \
-    --output="${STAGING_DIR}/logs/p3a_%A_%a.log" \
-    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
-            Rscript src/slurm/aggregate.R ${STAGING_DIR} 3a")
-  echo "  Job ID: ${P3A}"
-  P3A_DEP="--dependency=afterok:${P3A}"
+  # The baseline aggregation (array task 1) runs BEFORE the counterfactual
+  # aggregations: scenario receipts read the baseline's totals/estate.csv,
+  # and racing it in one parallel array makes them fall back to rebuilding
+  # the series from detail CSVs -- last-bit float drift vs main.R (detail
+  # files carry 15 significant digits, not full doubles)
+  SCEN_DEPS="${ALL_DEPS}"
+  if [ "$N_PHASE1" -gt 0 ]; then
+    echo "Phase 3a: Submitting baseline aggregation job..."
+    P3A_BASE=$(sbatch --parsable --array=1-1 ${ALL_DEPS} \
+      ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
+      --job-name=taxsim-agg \
+      --output="${STAGING_DIR}/logs/p3a_%A_%a.log" \
+      --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+              Rscript src/slurm/aggregate.R ${STAGING_DIR} 3a")
+    echo "  Job ID: ${P3A_BASE}"
+    SCEN_DEPS="--dependency=afterok:${P3A_BASE}"
+    P3A_DEP="--dependency=afterok:${P3A_BASE}"
+  fi
+
+  if [ "$N_SCENARIOS" -gt 0 ]; then
+    FIRST_SCEN_TASK=$((N_AGG - N_SCENARIOS + 1))
+    echo "Phase 3a: Submitting ${N_SCENARIOS} counterfactual aggregation jobs..."
+    P3A=$(sbatch --parsable --array=${FIRST_SCEN_TASK}-${N_AGG} ${SCEN_DEPS} \
+      ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
+      --job-name=taxsim-agg \
+      --output="${STAGING_DIR}/logs/p3a_%A_%a.log" \
+      --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+              Rscript src/slurm/aggregate.R ${STAGING_DIR} 3a")
+    echo "  Job ID: ${P3A}"
+    P3A_DEP="--dependency=afterok:${P3A}"
+  fi
 
 
   #-------------------------------------------
   # Phase 3b: Post-processing (counterfactuals)
   #-------------------------------------------
 
+  P4_DEP="${P3A_DEP}"
   if [ "$N_SCENARIOS" -gt 0 ]; then
     echo "Phase 3b: Submitting ${N_SCENARIOS} post-processing jobs..."
     P3B=$(sbatch --parsable --array=1-${N_SCENARIOS} ${P3A_DEP} \
@@ -298,22 +321,28 @@ if [ "$N_AGG" -gt 0 ]; then
       --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
               Rscript src/slurm/aggregate.R ${STAGING_DIR} 3b")
     echo "  Job ID: ${P3B}"
+    P4_DEP="--dependency=afterok:${P3B}"
+  fi
 
 
-    #-------------------------------------------
-    # Phase 4: Stacked (single job)
-    #-------------------------------------------
+  #-------------------------------------------
+  # Phase 4: Stacked + optional detail purge (single job)
+  #-------------------------------------------
 
-    if [ "$STACKED" == "1" ]; then
-      echo "Phase 4: Submitting stacked post-processing job..."
-      P4=$(sbatch --parsable --dependency=afterok:${P3B} \
-        ${SBATCH_COMMON} --time=0:30:00 --mem=8G \
-        --job-name=taxsim-stacked \
-        --output="${STAGING_DIR}/logs/p4.log" \
-        --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
-                Rscript src/slurm/aggregate.R ${STAGING_DIR} 4")
-      echo "  Job ID: ${P4}"
-    fi
+  # Submitted whenever there is stacked work OR a detail purge to do --
+  # aggregate.R gates each internally on the runtime args. main.R runs
+  # purge_detail() regardless of stacked, so gating Phase 4 on STACKED alone
+  # would silently leave detail files on disk when delete_detail=1, stacked=0.
+  DELETE_DETAIL="${9}"
+  if [ "$STACKED" == "1" ] || [ "$DELETE_DETAIL" == "1" ]; then
+    echo "Phase 4: Submitting stacked/cleanup post-processing job..."
+    P4=$(sbatch --parsable ${P4_DEP} \
+      ${SBATCH_COMMON} --time=0:30:00 --mem=8G \
+      --job-name=taxsim-stacked \
+      --output="${STAGING_DIR}/logs/p4.log" \
+      --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+              Rscript src/slurm/aggregate.R ${STAGING_DIR} 4")
+    echo "  Job ID: ${P4}"
   fi
 fi
 

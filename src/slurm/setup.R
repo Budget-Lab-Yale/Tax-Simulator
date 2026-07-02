@@ -46,6 +46,10 @@ if (length(args) < 9) {
 }
 
 runscript_name  = args[1]
+if (grepl('____', runscript_name, fixed = TRUE)) {
+  stop('Multi-runscript invocations (____-separated) are not supported by ',
+       'the SLURM pipeline; submit one slurm_run.sh per runscript')
+}
 scenario_id     = if (args[2] == 'NULL') NULL else args[2]
 user_id         = args[3]
 local           = as.integer(args[4])

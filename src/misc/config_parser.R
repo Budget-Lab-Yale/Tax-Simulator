@@ -52,8 +52,12 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   #   - multicore (str)      : parallelization setting (see arguments)
   #----------------------------------------------------------------------------
   
-  # Set random seed 
-  set.seed(76)
+  # Set random seed. Stored in the returned globals so behavior modules can
+  # re-seed before RNG use (the CLAUDE.md module convention) and so SLURM
+  # workers -- fresh R processes that never run this function -- can seed
+  # identically (src/slurm/common.R)
+  random_seed = 76
+  set.seed(random_seed)
   
   # Read and parse data dependency interface file paths
   output_roots           = read_yaml('./config/interfaces/output_roots.yaml')
@@ -310,14 +314,15 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   )
   
   
-  # Return runtime args and interface paths  
+  # Return runtime args and interface paths
   return(list(random_numbers  = random_numbers,
+              random_seed     = random_seed,
               runscript       = runscript,
-              interface_paths = interface_paths, 
+              interface_paths = interface_paths,
               output_root     = output_root,
               baseline_root   = baseline_root,
               pct_sample      = pct_sample,
-              sample_ids      = sample_ids, 
+              sample_ids      = sample_ids,
               detail_vars     = detail_vars,
               multicore       = multicore))
 }

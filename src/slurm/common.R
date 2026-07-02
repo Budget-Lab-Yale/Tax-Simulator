@@ -45,6 +45,13 @@ reconstitute_environment = function(staging_dir) {
   globals      <<- readRDS(file.path(staging_dir, 'globals.rds'))
   return_vars  <<- readRDS(file.path(staging_dir, 'return_vars.rds'))
 
+  # Seed the RNG stream. main.R inherits the seed set inside parse_globals();
+  # a worker is a fresh R process that never runs it, so without this any
+  # bare-RNG code (e.g. a behavior module that skips the set.seed convention)
+  # draws from a time/PID-initialized stream -- non-reproducible run to run
+  # and divergent from main.R. Older globals.rds lack the field; fall back.
+  set.seed(globals$random_seed %||% 76)
+
   # Assign counterfactual_ids to global env (needed by calc_rev_est,
   # build_1040_report, and other post-processing functions as free variable)
   counterfactual_ids <<- readRDS(file.path(staging_dir, 'counterfactual_ids.rds'))

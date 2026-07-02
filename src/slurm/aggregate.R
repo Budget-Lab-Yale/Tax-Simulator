@@ -43,9 +43,15 @@ tryCatch({
 
     task_id = as.integer(Sys.getenv('SLURM_ARRAY_TASK_ID'))
 
-    # Build ordered list of scenarios: baseline (if ran) + counterfactuals
+    # Build ordered list of scenarios: baseline (if ran THIS run) +
+    # counterfactuals. Derived from the manifest, not from probing
+    # baseline/config.rds on disk: the staging dir persists across runs of
+    # the same vintage, so a stale baseline config from an earlier run would
+    # otherwise shift the array indexing and silently drop the last
+    # counterfactual (slurm_run.sh sizes the array from this run's counts)
+    manifest = readRDS(file.path(staging_dir, 'manifest.rds'))
     all_scenarios = c()
-    if (file.exists(file.path(staging_dir, 'baseline', 'config.rds'))) {
+    if (any(manifest$phase == '1')) {
       all_scenarios = c('baseline')
     }
     all_scenarios = c(all_scenarios, counterfactual_ids)
