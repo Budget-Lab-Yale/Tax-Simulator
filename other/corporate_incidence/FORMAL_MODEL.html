@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The corporate–individual channel: a formal model</title>
+<style>
+  :root{
+    --bg: #fdfdfa;
+    --ink: #1c1e21;
+    --muted: #6b7280;
+    --rule: #d8d5cc;
+    --accent: #1a5276;
+    --prop-bg: #f4f6f8;
+    --prop-edge: #1a5276;
+    --warn-bg: #fdf3e3;
+    --warn-edge: #b9770e;
+    --code-bg: #eef0ee;
+    --th-bg: #f0efe9;
+    --pill-green-bg:#e3f0e5; --pill-green-ink:#1e6b34;
+    --pill-amber-bg:#fbeedb; --pill-amber-ink:#96610c;
+    --pill-red-bg:#fbe4e2;   --pill-red-ink:#a33025;
+    --pill-blue-bg:#e3ecf5;  --pill-blue-ink:#1a5276;
+    --pill-gray-bg:#ebebe7;  --pill-gray-ink:#55595f;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#181a1c; --ink:#e6e4de; --muted:#9aa0a6; --rule:#3a3d40;
+      --accent:#7fb3d5; --prop-bg:#20242a; --prop-edge:#5d8aa8;
+      --warn-bg:#2a2318; --warn-edge:#c8913a; --code-bg:#26292c; --th-bg:#232528;
+      --pill-green-bg:#1d3323; --pill-green-ink:#8fce9f;
+      --pill-amber-bg:#382b14; --pill-amber-ink:#e5b567;
+      --pill-red-bg:#3a2120;   --pill-red-ink:#e89890;
+      --pill-blue-bg:#1c2a38;  --pill-blue-ink:#93bdd9;
+      --pill-gray-bg:#2c2e30;  --pill-gray-ink:#b3b8bd;
+    }
+  }
+  html{background:var(--bg);}
+  body{
+    margin:0 auto; padding:3rem 1.4rem 6rem; max-width:47rem;
+    color:var(--ink); background:var(--bg);
+    font-family: Palatino, "Palatino Linotype", "URW Palladio L", Georgia, serif;
+    font-size:17px; line-height:1.58;
+  }
+  header{border-bottom:2px solid var(--ink); padding-bottom:1.2rem; margin-bottom:1.6rem;}
+  h1{font-size:1.75rem; line-height:1.25; margin:0 0 .6rem; font-weight:700;}
+  .status{color:var(--muted); font-style:italic; font-size:.95rem; margin:.35rem 0;}
+  h2{font-size:1.3rem; margin:2.6rem 0 .8rem; padding-top:.6rem; border-top:1px solid var(--rule);}
+  h3{font-size:1.05rem; margin:1.8rem 0 .5rem;}
+  p{margin:.7rem 0;}
+  a{color:var(--accent); text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  code{
+    font-family:"SF Mono", Menlo, Consolas, monospace; font-size:.82em;
+    background:var(--code-bg); padding:.1em .32em; border-radius:4px;
+  }
+  /* ---------- math ---------- */
+  var, .mv{font-style:italic; font-family:inherit;}
+  .eq{
+    margin:1.05rem 0; padding:.15rem 0; text-align:center;
+    font-size:1.04em; overflow-x:auto;
+  }
+  .eq .tag{float:right; color:var(--muted); font-style:normal; font-size:.85em; padding-top:.35em;}
+  .frac{display:inline-block; vertical-align:-0.9em; text-align:center; margin:0 .12em; line-height:1.15;}
+  .frac > span{display:block; padding:0 .25em;}
+  .frac > span.den{border-top:1px solid currentColor;}
+  .sum{font-size:1.35em; vertical-align:-.12em; margin-right:.05em;}
+  sub, sup{font-size:.72em;}
+  .bar{text-decoration:overline;}
+  /* labeled multi-row equation */
+  .eqrows{margin:1.05rem 0; display:grid; grid-template-columns:auto 1fr; gap:.4rem 1.2rem; align-items:center; overflow-x:auto;}
+  .eqrows .m{text-align:left; white-space:nowrap; font-size:1.03em;}
+  .eqrows .lbl{color:var(--muted); font-size:.88em; font-style:italic;}
+  .legend{color:var(--muted); font-size:.88em; font-style:italic; text-align:center; margin:-.5rem 0 1rem;}
+  /* ---------- propositions ---------- */
+  .prop{
+    background:var(--prop-bg); border-left:4px solid var(--prop-edge);
+    padding:.75rem 1.05rem; margin:1.15rem 0; border-radius:0 6px 6px 0;
+  }
+  .prop .pn{font-weight:700; font-style:normal;}
+  .caveat{
+    background:var(--warn-bg); border-left:4px solid var(--warn-edge);
+    padding:.75rem 1.05rem; margin:1.15rem 0; border-radius:0 6px 6px 0;
+  }
+  .qed{float:right; color:var(--muted);}
+  /* ---------- tables ---------- */
+  .tw{overflow-x:auto; margin:1rem 0;}
+  table{border-collapse:collapse; width:100%; font-size:.92em;}
+  th, td{border:1px solid var(--rule); padding:.45rem .6rem; text-align:left; vertical-align:top;}
+  th{background:var(--th-bg); font-weight:700;}
+  .pill{
+    display:inline-block; padding:.05rem .5rem; border-radius:99px;
+    font-size:.78em; font-weight:700; font-family:system-ui, sans-serif;
+    white-space:nowrap; margin-right:.3rem;
+  }
+  .p-green{background:var(--pill-green-bg); color:var(--pill-green-ink);}
+  .p-amber{background:var(--pill-amber-bg); color:var(--pill-amber-ink);}
+  .p-red{background:var(--pill-red-bg); color:var(--pill-red-ink);}
+  .p-blue{background:var(--pill-blue-bg); color:var(--pill-blue-ink);}
+  .p-gray{background:var(--pill-gray-bg); color:var(--pill-gray-ink);}
+  /* ---------- toc ---------- */
+  nav{
+    background:var(--prop-bg); border:1px solid var(--rule); border-radius:8px;
+    padding:.9rem 1.2rem; margin:1.4rem 0; font-size:.93em;
+  }
+  nav b{display:block; margin-bottom:.35rem;}
+  nav ol{margin:.2rem 0 .2rem 1.2rem; padding:0;}
+  nav li{margin:.14rem 0;}
+  ol.main > li, ul.main > li{margin:.45rem 0;}
+  li{margin:.3rem 0;}
+  .defn{font-weight:700;}
+  hr{border:none; border-top:1px solid var(--rule); margin:2rem 0;}
+  .fn{color:var(--muted); font-size:.9em;}
+</style>
+</head>
+<body>
+
+<header>
+<h1>The corporate–individual channel: a formal model</h1>
+<p class="status">Technical documentation for the on-model corporate incidence design
+(<code>CONSIDERATIONS.md</code>, rulings D1–D14). Drafted 2026-07-02. Status:
+<b>derivation / verification</b>. Assumptions are stated as numbered primitives, the
+document's claims are derived as propositions with proofs, and each claim is graded:
+theorem, needs qualification, or genuinely inconsistent. Verdicts in §9; items needing a
+new author ruling in §10.</p>
+<p class="status">Written in model-native objects: record columns (<code>div_ord</code>,
+<code>kg_lt</code>, <code>kg_lt_basis</code>, <code>value.*</code>,
+<code>txbl_ira_dist</code>, <code>net_worth</code>, <code>estate_m</code>), the
+wealth-bathtub state and kernel (<code>src/sim/wealth_dynamics.R</code>), the VAT
+vintaging machinery (<code>src/data/economy.R:193</code>), and the receipts/distribution
+plumbing (<code>src/data/post_processing/{revenue,distribution}.R</code>).
+Markdown source: <code>other/corporate_incidence/FORMAL_MODEL.md</code>.</p>
+<p class="status"><b>UPDATE (2026-07-02, later same day):</b> all five §10 asks were ruled
+in an author walkthrough session and are recorded as <b>D15–D18</b> in CONSIDERATIONS §11
+(item 4 was editorial, applied in place there). §10 below carries the outcomes inline.</p>
+</header>
+
+<nav>
+<b>Contents</b>
+<ol>
+  <li><a href="#s1">Frame and primitives</a></li>
+  <li><a href="#s2">Asset valuation under perfect foresight (D9)</a> — P1–P7</li>
+  <li><a href="#s3">The household budget identity and the bathtub (D11)</a> — P8–P12</li>
+  <li><a href="#s4">The conservation identity</a></li>
+  <li><a href="#s5">Depreciation (D13)</a> — P13′</li>
+  <li><a href="#s6">Harberger migration (D14)</a> — P13, P14</li>
+  <li><a href="#s7">The shock pipeline, assembled</a></li>
+  <li><a href="#s8">Model mapping</a></li>
+  <li><a href="#s9">Verdicts</a></li>
+  <li><a href="#s10">Items needing an author ruling</a></li>
+  <li><a href="#sA">Appendix: proof sketches</a></li>
+</ol>
+</nav>
+
+<!-- ============================== 1 ============================== -->
+<h2 id="s1">1 · Frame and primitives</h2>
+
+<h3>1.1 The conventional frame</h3>
+
+<p><span class="defn">(F1) Fixed nominal GNP.</span> Aggregate pre-tax factor income is
+unchanged by the reform. For a corporate rate change this pins the <i>pre-tax</i> profit
+path: the tax comes out of the residual claim (after-tax profits), which is nominally
+flexible (Viard 2014; CONSIDERATIONS §4). No price-level machinery: the shock changes
+nominal incomes of identified equity holders, not the price level. Wages are fenced
+(bucket 2, Viard fn.&nbsp;15).</p>
+
+<p><span class="defn">(F2) Perfect foresight of the legislated path (D9).</span> Agents
+and markets know the scenario's statutory rate path {<var>τ<sub>t</sub></var>} as
+written, including sunsets. A scoring convention, not an empirical claim; the
+&ldquo;priced-as-permanent&rdquo; corner is a sensitivity, not the central case.</p>
+
+<p><span class="defn">(F3) Conventional-pass placement (D5).</span> The shock applies on
+conventional-side passes only (including conv-no-wealth). Static stays the clean
+individual-law counterfactual; distribution tables (static-sourced) and the smear are
+untouched (D4). The corporate interaction is read off conventional&nbsp;−&nbsp;static.</p>
+
+<p><span class="defn">(F4) Delta-only doctrine (P1-ruling).</span> The channel
+contributes reform deltas only. Baseline Tax-Data already embodies current-law corporate
+incidence; a scenario with no corporate change is byte-identical to today.</p>
+
+<h3>1.2 Firm-side objects and the eligibility gate</h3>
+
+<p>Let <var>Π<sub>t</sub></var> be aggregate US-taxable C-corp profit (pre-tax),
+<var>τ<sub>t</sub></var> the statutory rate path, and</p>
+
+<div class="eq"><var>π<sub>t</sub></var> = (1 − <var>τ<sub>t</sub></var>) <var>Π<sub>t</sub></var></div>
+
+<p>aggregate after-tax domestic profit. A reform changes the rate path by
+Δ<var>τ<sub>t</sub></var>; under (F1) the pre-tax path is unchanged at impact, so the
+<b>wedge</b> is</p>
+
+<div class="eq"><var>w<sub>t</sub></var> = Δ<var>τ<sub>t</sub></var> · <var>Π<sub>t</sub></var>,&emsp;&emsp;Δ<var>π<sub>t</sub></var> = −<var>w<sub>t</sub></var>.</div>
+
+<p><span class="defn">Definition (the D13 gate).</span> A corporate provision is
+<i>eligible</i> for the on-model channel iff its conventional receipts path is a valid
+year-by-year proxy for its after-tax profit path:</p>
+
+<div class="eq"><span class="tag">(G)</span>ΔRev<sup>corp</sup><sub>t</sub> = −Δ<var>π<sub>t</sub></var>&emsp;∀<var>t</var>.</div>
+
+<p>For a rate change on a fixed base this holds identically — and it holds <i>net of
+corporate-side avoidance</i>: whatever avoidance does to the base, receipts and after-tax
+profits move dollar-for-dollar in opposite directions given (F1). §5 shows depreciation
+fails (G) in both timing and sign; transition/one-time levies fail it structurally (a
+stock levy is not a recurring profit change).</p>
+
+<p><span class="defn">Gross-input requirement (D1), formalized.</span> The channel books
+an endogenous individual offset <var>O′<sub>t</sub></var> on top of the corporate input
+<var>R<sub>t</sub></var>. If the supplied input is JCT-benchmark-net,
+<var>R<sub>t</sub></var> = <var>R<sup>gross</sup><sub>t</sub></var> − <var>O<sub>t</sub></var>
+(Nunns), then total booked revenue is
+<var>R<sup>gross</sup><sub>t</sub></var> − <var>O<sub>t</sub></var> + <var>O′<sub>t</sub></var> ≈
+<var>R<sup>gross</sup><sub>t</sub></var> <b>minus the double-counted offset</b>: combined
+revenue is understated, bounded by |<var>O<sub>t</sub></var>| (a few percent of the
+corporate estimate given the ~24% taxable share). The input must be gross by
+construction, or the bound must be stated.</p>
+
+<h3>1.3 Household-side objects</h3>
+
+<p>Records <var>i</var> with weights <var>w<sub>i</sub></var>. The exposure of each model
+column to C-corp equity is a <i>measured</i> vector <var>ω</var> (Phase 0 recon content),
+not a free parameter:</p>
+
+<div class="tw"><table>
+<tr><th>symbol</th><th>content</th><th>model column(s)</th></tr>
+<tr><td><var>ω<sub>div</sub></var></td><td>C-corp share of dividends (direct + via funds; excludes REIT/bond-fund distributions)</td><td><code>div_ord</code>, <code>div_pref</code></td></tr>
+<tr><td><var>ω<sub>kg</sub></var></td><td>C-corp equity share of realized LTCG (~0.5 per SOI sale-of-capital-assets)</td><td><code>kg_st</code>, <code>kg_lt</code>, <code>kg_lt_basis</code></td></tr>
+<tr><td><var>ω<sub>a</sub></var></td><td>equity share of asset column <var>a</var></td><td><code>value.equities</code> (≈1); imputed shares of <code>value.dc</code>, <code>value.trusts</code>, <code>value.re_fund</code></td></tr>
+<tr><td>—</td><td>DB pensions</td><td>to the residual (D10), never on records</td></tr>
+</table></div>
+
+<p>The <b>residual</b> (foreigners, nonprofits, DB sponsors) is the unallocated remainder
+of the mapping (D3): no gross-up forces household hits to sum to the revenue line.</p>
+
+<p>Two aggregate factors drive every record-level transformation:</p>
+<ul class="main">
+<li>the <b>flow factor</b> <var>φ<sub>t</sub></var> — the proportional change in
+after-tax profits reaching equity payouts (§2.1; migration-adjusted in §6);</li>
+<li>the <b>markdown</b> <var>μ<sub>t</sub></var> — the proportional equity price
+discount (§2.2; its long-run floor derived in §6).</li>
+</ul>
+
+<!-- ============================== 2 ============================== -->
+<h2 id="s2">2 · Asset valuation under perfect foresight (the D9 block)</h2>
+
+<h3>2.1 Pricing assumptions</h3>
+
+<p><span class="defn">(A1) PV pricing.</span> Equity value is the present value of
+distributions (dividends + net repurchases), at a constant nominal discount rate
+<var>r</var>:</p>
+
+<div class="eq"><var>V<sub>t</sub></var> = <span class="sum">Σ</span><sub><var>s</var>&gt;<var>t</var></sub>
+<span class="frac"><span><var>X<sub>s</sub></var></span><span class="den">(1 + <var>r</var>)<sup><var>s</var>−<var>t</var></sup></span></span>.</div>
+
+<p><span class="defn">(A2) Constant <var>r</var>.</span> The reform does not move the
+discount rate or risk premium. (§6 relaxes this in exactly one place — the Harberger
+general-equilibrium return <var>ρ′</var> &lt; <var>ρ</var> — and the interaction is
+load-bearing there; see P13/P14.)</p>
+
+<p><span class="defn">(A3) MM payout irrelevance + fixed composition (D8/D12).</span>
+Total distributions track after-tax profits with a fixed dividend/buyback/retention
+composition — the composition embedded in the microdata. Hence every distribution margin
+scales with the same factor:</p>
+
+<div class="eq"><var>φ<sub>t</sub></var> =
+<span class="frac"><span>Δ<var>π<sub>t</sub></var></span><span class="den"><var>π<sub>t</sub></var></span></span> =
+<span class="frac"><span>(1 − <var>τ′<sub>t</sub></var>) − (1 − <var>τ<sub>t</sub></var>)</span><span class="den">1 − <var>τ<sub>t</sub></var></span></span> =
+−<span class="frac"><span>Δ<var>τ<sub>t</sub></var></span><span class="den">1 − <var>τ<sub>t</sub></var></span></span>.</div>
+
+<p>For a hike, <var>φ<sub>t</sub></var> &lt; 0. Record level: <code>div_ord</code>,
+<code>div_pref</code> scale by (1 + <var>ω<sub>div</sub></var><var>φ<sub>t</sub></var>) —
+&ldquo;dividends track the current-year statute.&rdquo;</p>
+
+<h3>2.2 Permanent shocks</h3>
+
+<div class="prop"><span class="pn">P1 (markdown = flow factor; the §5 ceiling).</span>
+For a permanent rate change <var>τ</var> → <var>τ′</var>, every future distribution
+scales by (1 + <var>φ</var>), so by (A1) <var>V</var> → (1 + <var>φ</var>)<var>V</var>:
+the proportional markdown is
+<div class="eq"><var>μ</var> = −<var>φ</var> =
+<span class="frac"><span>Δ<var>τ</var></span><span class="den">1 − <var>τ</var></span></span>,</div>
+scaled by exposure at the record level. This is CONSIDERATIONS §5's &ldquo;naive
+benchmark&rdquo; — exact under (A1)–(A3) and full US-taxable exposure; the real-world
+wedges (§5's list) enter through the measured <var>ω</var>'s and through migration (§6),
+not through a free κ. <span class="qed">∎</span></div>
+
+<div class="prop"><span class="pn">P2 (yield preservation).</span> Under P1,
+<var>D′</var>/<var>V′</var> = (1 + <var>φ</var>)<var>D</var> / (1 + <var>φ</var>)<var>V</var> =
+<var>D</var>/<var>V</var>. The dividend yield is unchanged — a theorem given proportional
+scaling and constant <var>r</var>, as D9 claims. <span class="qed">∎</span></div>
+
+<h3>2.3 Temporary shocks</h3>
+
+<p>Let the shock cut distributions by <var>d<sub>s</sub></var> = <var>m</var>·<var>X<sub>s</sub></var>
+for <var>s</var> ∈ {1, …, <var>n</var>} only (legislated sunset, known under (F2)).</p>
+
+<div class="prop"><span class="pn">P3 (markdown path).</span> The markdown at year
+<var>t</var> is the PV of the <i>remaining</i> cuts:
+<div class="eq"><var>M<sub>t</sub></var> =
+<span class="sum">Σ</span><sup><var>n</var></sup><sub><var>s</var>=<var>t</var>+1</sub>
+<span class="frac"><span><var>d<sub>s</sub></var></span><span class="den">(1 + <var>r</var>)<sup><var>s</var>−<var>t</var></sup></span></span>,
+&emsp;<var>μ<sub>t</sub></var> = <var>M<sub>t</sub></var> / <var>V<sub>t</sub></var>,</div>
+largest at announcement and reaching zero at expiry <var>t</var> = <var>n</var>. With
+distributions growing at <var>g</var>, the closed form at announcement is
+<div class="eq"><var>μ</var><sub>0</sub> = <var>m</var> [ 1 −
+( <span class="frac"><span>1 + <var>g</var></span><span class="den">1 + <var>r</var></span></span> )<sup><var>n</var></sup> ],</div>
+the &ldquo;annuity share&rdquo; of D9. <span class="qed">∎</span></div>
+
+<div class="prop"><span class="pn">P4 (holders earn <var>r</var>; burden = announcement
+loss).</span> For any <var>t</var> &lt; <var>n</var>, the one-period return on the
+post-shock asset is exactly <var>r</var>:
+<div class="eq"><span class="frac"><span><var>V<sup>post</sup><sub>t+1</sub></var> + <var>X<sup>post</sup><sub>t+1</sub></var> − <var>V<sup>post</sup><sub>t</sub></var></span><span class="den"><var>V<sup>post</sup><sub>t</sub></var></span></span> = <var>r</var>,</div>
+since <var>V<sup>post</sup><sub>t</sub></var> = <var>V<sub>t</sub></var> − <var>M<sub>t</sub></var>
+and <var>M<sub>t</sub></var>(1 + <var>r</var>) = <var>d<sub>t+1</sub></var> + <var>M<sub>t+1</sub></var>
+(the telescoping recursion of PV; full algebra in the <a href="#sA">Appendix</a>).
+Holders during the window receive low distributions plus above-normal recovery
+appreciation summing to <var>r</var>; the entire pre-tax burden is the one-time capital
+loss <var>M</var><sub>0</sub> to whoever holds at announcement — Auerbach's old-capital
+result, operationalized. <span class="qed">∎</span></div>
+
+<div class="caveat"><b>Caveat to D9's estate gloss.</b> D9 concludes &ldquo;decedents
+dying after expiry are untouched.&rdquo; That is true of the <i>markdown leg</i> (P3:
+<var>M<sub>t</sub></var> = 0 for <var>t</var> ≥ <var>n</var>) but — after D11 generalized
+the bathtub forcing — <b>false for the flow leg</b>: the during-window dissaving
+<var>s</var>(1 − <var>τ</var>)<var>d<sub>t</sub></var> accumulates in the bathtub state
+and compounds <i>past expiry</i> (§3.6). Temporary shocks do have a (smaller)
+long-horizon estate effect. See P10 and verdict V10.</div>
+
+<h3>2.4 The unrealized-gain state: basis invariance and realization reduced forms</h3>
+
+<p>Let a holding have value <var>V</var>, basis <var>B</var>, basis share
+<var>b</var> = <var>B</var>/<var>V</var>, unrealized gain <var>U</var> = <var>V</var> − <var>B</var>.</p>
+
+<div class="prop"><span class="pn">P5 (basis invariance and gain leverage).</span> A
+markdown <var>μ</var> moves price, not basis (§8.5): Δ<var>U</var> = Δ<var>V</var> =
+−<var>μV</var>, so the <i>proportional</i> hit to the gain is
+<div class="eq"><span class="frac"><span>|Δ<var>U</var>|</span><span class="den"><var>U</var></span></span> =
+<span class="frac"><span><var>μ</var></span><span class="den">1 − <var>b</var></span></span> ≥ <var>μ</var>,</div>
+with equality only at <var>b</var> = 0. Every holder's gain falls more than
+proportionally to the value hit; the amplification factor 1/(1 − <var>b</var>) is
+<i>increasing in the basis share</i> — high-basis holders lose gains most in proportional
+terms, while low-basis (top-tail) holders lose the most <i>dollars</i> of gain because
+they hold the gains. (§8.5's phrasing &ldquo;low-basis holders lose accrued gains more
+than proportionally&rdquo; conflates the two; the mechanism it protects — debit the gain
+state, never scale basis — is exactly right.) <span class="qed">∎</span></div>
+
+<p><b>In kg_dynamics runs</b>: debit the unrealized-gain state by
+<var>ω<sub>kg</sub></var><var>M<sub>t</sub></var> at enactment and credit it back as
+<var>M<sub>t</sub></var> shrinks (P3's recovery appreciation <i>is</i> the credit-back).
+Deferral and step-up then come for free from the existing machinery.</p>
+
+<div class="prop"><span class="pn">P6 (realization reduced forms; the D12 blend).</span>
+Realized gains have two drivers with different scaling:
+<ul>
+<li><i>Buyback-driven (quantity margin).</i> Repurchase dollars scale with after-tax
+profits: <var>R′</var> = (1 + <var>φ</var>)<var>R</var>. Each dollar of sale carries gain
+share 1 − <var>b</var>/(1 − <var>μ</var>) (price down, basis fixed). Exactly:
+<div class="eq"><span class="frac"><span><var>G′</var></span><span class="den"><var>G</var></span></span> =
+(1 + <var>φ</var>) ·
+<span class="frac"><span>1 − <var>b</var>/(1 − <var>μ</var>)</span><span class="den">1 − <var>b</var></span></span>
+&ensp;≈&ensp; 1 + <var>φ</var> − <var>μ</var> <span class="frac"><span><var>b</var></span><span class="den">1 − <var>b</var></span></span>
+&emsp;<span style="font-size:.85em;color:var(--muted)">(first order)</span>.</div>
+The dominant term tracks the <i>current-year statute</i> <var>φ</var> (D12 ✓); the
+correction is the gain-slice compression.</li>
+<li><i>Appreciation-driven (price margin).</i> Realizations proportional to the gain
+stock scale by P5: factor 1 − <var>μ</var>/(1 − <var>b</var>) — they track the
+<i>markdown path</i>.</li>
+</ul>
+A single kg factor blends the two; the blend error is ∝ (<var>φ<sub>t</sub></var> +
+<var>μ<sub>t</sub></var>), which is <b>zero for permanent shocks</b> (there
+<var>μ<sub>t</sub></var> = −<var>φ<sub>t</sub></var> = <var>m</var> for all <var>t</var>)
+and second-order for temporary ones — confirming and quantifying D12's &ldquo;accepted
+approximation.&rdquo;
+<p style="margin-bottom:0"><b>Implementable exact form.</b> Because
+<code>kg_lt_basis</code> is a record column, the appreciation-driven leg needs no
+approximation: per record,
+<div class="eq">Δ<var>kg</var> = <var>ω<sub>kg</sub></var> [ <var>φ<sub>t</sub></var> · <var>kg</var> − <var>μ<sub>t</sub></var> · (<var>kg</var> + <var>basis</var>) ]
+&emsp;<span style="font-size:.85em;color:var(--muted)">(first order, both margins)</span>,</div>
+using −<var>μ</var>(<var>kg</var> + <var>basis</var>) = −<var>μ</var><var>V<sub>sold</sub></var>,
+the exact price-times-quantity hit on the sold lot. Recommended over the
+flow-factor-only reduced form for non-kg runs. <span class="qed">∎</span></p></div>
+
+<h3>2.5 Retirement accounts: the two-pocket lemma</h3>
+
+<div class="prop"><span class="pn">P7 (internal-transfer invariance).</span> Let
+<var>B</var> be a retirement balance inside household wealth <var>A</var>, with
+distributions <var>δ<sub>t</sub></var> = <var>ρB<sub>t</sub></var> (proportional draws).
+A markdown <var>μ</var> on <var>B</var> scales all future distributions by
+(1 − <var>μ</var>); conversely, if distributions did <i>not</i> scale, the balance
+markdown would be silently undone by relatively faster drawdown. Consistency requirement
+(§8.7 / Phase 1, formalized): <b>every cash flow sourced from a marked-down stock must
+scale with the markdown.</b>
+<p style="margin-bottom:0">Moreover a distribution is a transfer between the household's
+own pockets (<var>B</var> → cash): its only <i>net</i> cash-flow content at the
+total-wealth level is the tax on it. The pre-distribution balance markdown
+<var>μB<sub>t</sub></var> already contains the current year's distribution cut
+<var>μρB<sub>t</sub></var> plus the remaining markdown <var>μ</var>(1 − <var>ρ</var>)<var>B<sub>t</sub></var>
+— counting the distribution cut <i>again</i> as an income shock double-counts.
+Consequence for the bathtub forcing in §3.3. <span class="qed">∎</span></p></div>
+
+<p>Contrast with dividends: the model's <code>value.*</code> stocks are year-end
+(ex-distribution) values, and a dividend is income <i>from the corporate sector into</i>
+<var>A</var>, not a draw on a pocket of <var>A</var>. The year-<var>t</var> dividend cut
+is therefore <b>not</b> inside the year-end markdown (which prices cuts strictly after
+<var>t</var>) — dividends are a genuine external cash flow. P10 confirms the two
+treatments jointly conserve the total burden.</p>
+
+<!-- ============================== 3 ============================== -->
+<h2 id="s3">3 · The household budget identity and the bathtub (the D11 block)</h2>
+
+<h3>3.1 Accounting and the taxonomy</h3>
+
+<p>Household wealth <var>A</var> evolves by</p>
+
+<div class="eq"><var>A<sub>t+1</sub></var> = (1 + <var>r</var>)<var>A<sub>t</sub></var> + <var>κ<sub>t</sub></var> + <var>Y<sub>t</sub></var> − <var>T<sub>t</sub></var> − <var>C<sub>t</sub></var>,</div>
+
+<p>where <var>κ<sub>t</sub></var> = accrual revaluations (price margin: <var>p</var>
+moves, holdings <var>n</var> don't; no cash moves), <var>Y<sub>t</sub></var> = external
+cash income (dividends, interest, rents, pass-through returns, wages…),
+<var>T<sub>t</sub></var> = taxes (a function of <i>realized</i> flows),
+<var>C<sub>t</sub></var> = consumption. Internal conversions (asset sales, retirement
+distributions) do not appear: they move value between pockets of <var>A</var> and enter
+only through <var>T</var>.</p>
+
+<p><span class="defn">(B1) Revaluation MPC = 0 (P2-ruling as amended).</span>
+Δ<var>κ</var> shocks hit the balance sheet directly; no consumption response. Defensible
+at the top tail, where bequests are the residual claimant; weakest for
+distribution-dependent retirees (noted, accepted).</p>
+
+<p><span class="defn">(B2) Cash-flow MPC = 1 − <var>s</var>.</span> Consumption absorbs
+(1 − <var>s</var>) of any net after-tax <i>exogenous</i> cash-flow shock; the rest is
+financed out of wealth. One parameter, one rule.</p>
+
+<p><span class="defn">(B3) Behavioral responses stay out.</span> Chosen responses (kg
+realization timing, labor supply) are not financing shocks; they belong to behavior
+modules, not the forcing.</p>
+
+<h3>3.2 The generalized forcing and the sign theorem</h3>
+
+<p>Define the forcing as the net exogenous cash-flow shock, sign convention
+&ldquo;deficit-positive&rdquo;:</p>
+
+<div class="eq"><var>F<sub>t</sub></var> = Δ<var>T<sub>t</sub></var> − Δ<var>Y<sup>exog</sup><sub>t</sub></var>.</div>
+
+<p>Applying (B2) to the budget identity, the wealth deviation (deficit
+<var>P</var> &gt; 0 = wealth below baseline) obeys</p>
+
+<div class="eq"><var>P<sub>t+1</sub></var> = (1 + <var>r</var>)<var>P<sub>t</sub></var> + <var>s</var>·<var>F<sub>t</sub></var>,</div>
+
+<p>which is exactly the model recurrence (<code>cohort_recurrence_step</code>,
+<code>src/sim/cohort_bathtub.R:248</code>; inflow at face value end-of-year, D24) with
+the kernel feedback discussed in P11.</p>
+
+<div class="prop"><span class="pn">P8 (sign theorem — D11's fix, verified).</span>
+Corporate flow leg per household: dividends fall by <var>D</var>, taxes fall by the
+rebate <var>R</var> = <var>τD</var>. Then
+<div class="eq"><var>F</var> = Δ<var>T</var> − Δ<var>Y<sup>exog</sup></var> = (−<var>τD</var>) − (−<var>D</var>) = <var>D</var>(1 − <var>τ</var>) &gt; 0:</div>
+wealth is <i>debited</i> <var>s·D</var>(1 − <var>τ</var>) — the household dissaves to
+defend consumption. The tax-only forcing <var>F</var> = Δ<var>T</var> = −<var>τD</var> &lt; 0
+would <i>credit</i> wealth <var>sτD</var> (household appears to profit from the hike).
+The generalization is necessary and sufficient to fix the sign, and it is numerically
+identical to the current implementation for every existing scenario
+(Δ<var>Y<sup>exog</sup></var> = 0 to date). <span class="qed">∎</span></div>
+
+<h3>3.3 What enters Δ<var>Y<sup>exog</sup></var>: the internal/external criterion</h3>
+
+<div class="prop"><span class="pn">P9 (line assignment).</span> By the budget identity
+and P7, the forcing must partition model columns as follows — this is
+implementation-critical and CONSIDERATIONS does not state it:
+<div class="tw"><table>
+<tr><th>enters Δ<var>Y<sup>exog</sup></var> (external income)</th>
+    <th>does NOT enter (internal conversion — tax leg only, via Δ<var>T</var>)</th></tr>
+<tr><td><code>div_ord</code>, <code>div_pref</code> cuts</td>
+    <td>realized-gain cuts (<code>kg_*</code>) — the resource loss is the <code>value.*</code>/gain-state markdown</td></tr>
+<tr><td>interest cuts at rollover (<code>txbl_int</code>, <code>exempt_int</code>)</td>
+    <td>retirement-distribution cuts (<code>txbl_ira_dist</code>, <code>txbl_pens_dist</code>) — the loss is the balance markdown (P7)</td></tr>
+<tr><td>rent and pass-through cuts (Harberger leg, §6; capital weight 0.2 per <code>WEALTH_CAP_FLOWS</code>)</td>
+    <td>sale proceeds of any marked-down asset</td></tr>
+</table></div>
+Putting a kg or retirement-distribution cut into Δ<var>Y<sup>exog</sup></var>
+double-counts the markdown; leaving a dividend/interest/rent cut out reintroduces the P8
+sign error on that line. Since the corporate scaling factors are analytic,
+Δ<var>Y<sup>exog</sup></var> should be computed exactly from the pre/post-scaling column
+deltas, not measured. <span class="qed">∎</span></div>
+
+<p><b>Corollary (retiree case):</b> with distributions excluded, a marked-down IRA
+produces <var>F</var> = −<var>τ</var>|Δ<var>δ</var>| &lt; 0 — a small <i>credit</i> (the
+rebate) — and consumption <i>rises</i> by (1 − <var>s</var>)<var>τ</var>|Δ<var>δ</var>|
+while the full resource loss sits in the markdown. That is the consumption-smoothing
+content of (B1), stated so nobody mistakes it for a sign bug later.</p>
+
+<h3 id="s34">3.4 The decomposition theorem: no double-count, and what <var>s</var> does</h3>
+
+<div class="prop"><span class="pn">P10 (burden decomposition).</span> Household holds
+equity with baseline distributions <var>D<sub>t</sub></var>; a shock cuts them by
+<var>d<sub>t</sub></var> (any path — permanent or windowed), taxed at rate <var>τ</var>;
+the markdown obeys P3; the bathtub runs with (B1)–(B2). Let death occur at <var>T</var>.
+Then, discounting at <var>r</var>:
+<div class="eqrows">
+  <span class="m">consumption absorbs&ensp;(1 − <var>s</var>)(1 − <var>τ</var>) <span class="sum">Σ</span><sub><var>t</var>≤<var>T</var></sub> <var>d<sub>t</sub></var>/(1 + <var>r</var>)<sup><var>t</var></sup></span>
+  <span class="lbl">the (1 − s) share of during-life cuts</span>
+  <span class="m">bathtub debit at death&ensp;Δ<var>W<sub>T</sub></var> = −<var>s</var>(1 − <var>τ</var>) <span class="sum">Σ</span><sub><var>t</var>≤<var>T</var></sub> (1 + <var>r</var>)<sup><var>T</var>−<var>t</var></sup> <var>d<sub>t</sub></var></span>
+  <span class="lbl">the s share, compounded into the estate</span>
+  <span class="m">markdown at death&ensp;<var>M<sub>T</sub></var> = <span class="sum">Σ</span><sub><var>t</var>&gt;<var>T</var></sub> <var>d<sub>t</sub></var>/(1 + <var>r</var>)<sup><var>t</var>−<var>T</var></sup></span>
+  <span class="lbl">prices only the post-death cuts</span>
+</div>
+and the total household burden in PV is
+<div class="eqrows">
+  <span class="m">(1 − <var>τ</var>) <span class="sum">Σ</span><sub><var>t</var>≤<var>T</var></sub> <var>d<sub>t</sub></var>/(1 + <var>r</var>)<sup><var>t</var></sup></span>
+  <span class="lbl">during-life, split (1 − s)/s between consumption and estate</span>
+  <span class="m">&ensp;+&ensp;<span class="sum">Σ</span><sub><var>t</var>&gt;<var>T</var></sub> <var>d<sub>t</sub></var>/(1 + <var>r</var>)<sup><var>t</var></sup></span>
+  <span class="lbl">post-death cuts = M<sub>T</sub> discounted</span>
+  <span class="m">&ensp;=&ensp;<var>M</var><sub>0</sub> − <var>τ</var> <span class="sum">Σ</span><sub><var>t</var>≤<var>T</var></sub> <var>d<sub>t</sub></var>/(1 + <var>r</var>)<sup><var>t</var></sup>,</span>
+  <span class="lbl">announcement loss minus PV of rebates — independent of s</span>
+</div>
+i.e. <b>the announcement capital loss minus the PV of tax rebates, independent of
+<var>s</var>.</b> The markdown leg and the dissaving leg partition the same total across
+time with no overlap (the year-<var>t</var> markdown prices only cuts after <var>t</var>;
+the year-<var>t</var> cash shortfall is the year-<var>t</var> cut) — the no-double-count
+theorem, by budget identity, under any MPC. <var>s</var> allocates the during-life share
+between lifetime consumption and the estate; it does not change the burden.
+<span class="qed">∎</span></div>
+
+<p>Two consequences worth stating:</p>
+<ol class="main">
+<li><b>Temporary shocks</b> (<var>d<sub>t</sub></var> = 0 for <var>t</var> &gt; <var>n</var>):
+<var>M<sub>T</sub></var> = 0 for deaths after expiry, but the dissaving term
+Δ<var>W<sub>T</sub></var> persists and <i>compounds</i> for all <var>T</var> &gt; <var>n</var>.
+The long-horizon estate erosion of a windowed shock is
+<var>s</var>(1 − <var>τ</var>) Σ<sub><var>t</var>≤<var>n</var></sub> (1 + <var>r</var>)<sup><var>T</var>−<var>t</var></sup><var>d<sub>t</sub></var>
+— not zero. (Corrects the D9 gloss; see §2.3.)</li>
+<li>Both legs hit <code>net_worth</code> → wealth-tax and estate bases; the theorem
+guarantees their sum is the right object, so implementing &ldquo;markdown + haircut
+applier&rdquo; is not double-charging the estate.</li>
+</ol>
+
+<h3>3.5 Kernel consistency and the second-round interaction</h3>
+
+<div class="prop"><span class="pn">P11 (the kernel is the forcing rule applied to its own
+feedback).</span> The implemented kernel (<code>wealth_dynamics.R:881</code>)
+<div class="eq"><var>G<sub>t</sub></var> = (1 + <var>r<sub>total</sub></var>(<var>t</var>)) − <var>s</var>(<var>τy</var> + <var>τ<sub>w</sub></var>)</div>
+expands the recurrence to
+<div class="eq"><var>P<sub>t+1</sub></var> = (1 + <var>r<sub>total</sub></var>)<var>P<sub>t</sub></var> + <var>s</var> [ <var>F<sub>t</sub></var> − (<var>τy</var> + <var>τ<sub>w</sub></var>)<var>P<sub>t</sub></var> ] :</div>
+<div class="legend">the bracketed drag term = Δ<var>T<sup>endog</sup></var>, the tax forgone on the missing wealth</div>
+the drag is precisely the endogenous tax <i>relief</i> generated by the deficit itself
+(missing capital income <var>yP</var> taxed at <var>τ</var>, missing wealth taxed at
+<var>τ<sub>w</sub></var>), run through the same <var>s</var>-split as any other cash
+flow. D11's &ldquo;one parameter, one rule&rdquo; extends to the kernel — a consistency
+result, not an assumption. Note the boundary of (B3): <i>mechanical</i> endogenous tax
+consequences of the state are in (measured via <code>mtr_cap_bundle</code>);
+<i>behavioral</i> responses are out. <span class="qed">∎</span></div>
+
+<div class="prop"><span class="pn">P12 (what breaks exact <var>s</var>-invariance, and
+why that's the point).</span> P10's invariance assumed wealth compounds at the discount
+rate <var>r</var>. In the implementation (i) <var>r<sub>total</sub></var> is nominal
+GDP-per-capita growth (the house cohort-wealth convention), not an asset return, and
+(ii) the drag makes the effective growth <var>G</var> &lt; 1 + <var>r<sub>total</sub></var>.
+The gross burden remains <var>s</var>-invariant (P10); the <i>split</i> between household
+and Treasury does not: a larger <var>s</var> parks more of the burden in wealth,
+generating more forgone future tax ((<var>τy</var> + <var>τ<sub>w</sub></var>) on
+<var>P</var>) — Treasury's long-horizon take falls with <var>s</var>. That
+<var>s</var>-dependent second-round term <b>is the measured interaction the channel
+exists to quantify</b>; it is a feature of the accounting, not a violation of the
+theorem. The <var>r<sub>total</sub></var>-vs-<var>r</var> gap is a genuine (small)
+approximation: the estate leg compounds at GDP/capita growth rather than at portfolio
+returns; conservative when returns exceed nominal growth. <span class="qed">∎</span></div>
+
+<!-- ============================== 4 ============================== -->
+<h2 id="s4">4 · The conservation identity (the model invariant)</h2>
+
+<p>Per calendar year <var>t</var>, in CY liability space (before FY conversion), the
+wedge allocates exactly:</p>
+
+<div class="eqrows">
+  <span class="m"><var>w<sub>t</sub></var> = ΔRev<sup>corp</sup><sub>t</sub></span>
+  <span class="lbl">Treasury, gross input (D1)</span>
+  <span class="m">Δ<var>π<sub>t</sub></var> = −<var>w<sub>t</sub></var> = <span class="sum">Σ</span><sub><var>i</var></sub> <var>w<sub>i</sub></var> [Δ<var>div<sub>i</sub></var> + Δ<var>int<sub>i</sub></var> + Δ<var>rent/pt<sub>i</sub></var>]</span>
+  <span class="lbl">household flow hits (= ΔY<sup>exog</sup>)</span>
+  <span class="m">&emsp;&emsp;+ ΔAccr<sup>hh</sup><sub>t</sub></span>
+  <span class="lbl">household accrual hits: gain-state debit / markdown flow</span>
+  <span class="m">&emsp;&emsp;+ Residual<sub>t</sub>,</span>
+  <span class="lbl">foreign / nonprofit / DB slice (D3, D10) — reportable</span>
+</div>
+
+<p>with Residual<sub>t</sub> ≥ 0 &ldquo;borne outside the household sector.&rdquo;
+Because the flow and accrual legs are the same object measured on different margins
+(P4/P10), the PV statement closes:</p>
+
+<div class="eq">PV(household burden net of rebates) + PV(Residual) = PV(<var>w</var>) − PV(endogenous individual offset),</div>
+
+<p>where the offset is what the calculator produces on the conventional pass (D1: never a
+special line — it materializes in ordinary receipts deltas, plus the estate / wealth-tax
+/ deemed legs in death years). Check it allocator-style (the estate allocator's
+Σ<var>w</var>·<var>p</var>·<var>λ</var> precedent): per year, per leg, hard-error on
+violation beyond tolerance. Under D14 the identity needs one explicit residual note
+(P14's Δ<var>ρ</var> revaluations). FY booking wraps the CY identity afterward: corporate
+input at 0.75/0.25 (<code>revenue.R:140</code>), estate and wealth at FY+1
+(<code>revenue.R:147,160</code>) — run one year past the window, as with the wealth
+channel.</p>
+
+<!-- ============================== 5 ============================== -->
+<h2 id="s5">5 · Depreciation (the D13 block)</h2>
+
+<h3>5.1 Setup</h3>
+
+<p>A dollar of new investment carries depreciation deductions with PV <var>z</var> per
+dollar (discounted at the firm's rate), so its effective acquisition cost is
+1 − <var>τz</var>. Competitive entry drives new investment to the zero-NPV margin:</p>
+
+<div class="eq"><span class="tag">(Z)</span>PV[(1 − <var>τ</var>) quasi-rents] = 1 − <var>τz</var>.</div>
+
+<p>A reform moves <var>z</var> → <var>z′</var> = <var>z</var> + Δ<var>z</var> (bonus,
+expensing, R&amp;D amortization…).</p>
+
+<h3>5.2 The receipts seesaw vs the profit path</h3>
+
+<p>Receipts change by the <i>timing shift</i> of deductions on affected vintages:
+ΔRev<sub>t</sub> = −<var>τ</var>·Δ(deductions taken)<sub>t</sub>·<var>I</var>, negative in
+early years, reversing later (e.g. <code>01_bonus</code>: −$61B in 2026 → +$35B by 2030).
+Economic after-tax profits barely move: the entire economic content is the <i>time
+value</i> of the deferral,</p>
+
+<div class="eq">Δ<var>π<sup>econ</sup></var> ≈ <var>r</var>·<var>τ</var>·Δ<var>z</var>·<var>I</var>&emsp;per vintage-year,</div>
+
+<p>a small, smooth flow against a large, sign-flipping receipts path. <b>Depreciation
+fails gate (G) in timing</b> — feeding its receipts path into the D9 machinery would
+price a seesaw as a profit path. ∎</p>
+
+<h3>5.3 The old-capital revaluation: the sign theorem</h3>
+
+<div class="prop"><span class="pn">P13′ (Tobin-q arbitrage).</span> Post-reform, a new
+unit of capacity costs 1 − <var>τz′</var> net. An installed (grandfathered) unit with the
+same capacity and no remaining excess deductions must trade at replacement parity:
+<div class="eq"><var>q<sup>old</sup></var> = 1 − <var>τz′</var> = (1 − <var>τz</var>) − <var>τ</var>Δ<var>z</var> :</div>
+<b>more generous depreciation devalues existing capital by <var>τ</var>Δ<var>z</var> per
+dollar of installed reproducible capital.</b> A receipts <i>cut</i> is a shareholder
+<i>loss</i> — the sign is flipped relative to the rate case, where a receipts cut is a
+shareholder gain. Feeding depreciation receipts into the D9 channel is wrong in sign, not
+just size (D13 ✓). Symmetric in reverse: stingier depreciation is a windfall <i>gain</i>
+to old capital (Auerbach's TRA86 9–14% windfall). The Gale–Auerbach chain (expensing =
+cash-flow tax = business half of a consumption tax) makes each step toward expensing a
+one-time relative levy on old wealth. Attenuations, also structural: only
+<i>reproducible</i> capital reprices (rents and intangibles — most of C-corp equity value
+— do not compete with subsidized new machines), and temporary bonus has small
+Δ<var>z</var> in PV. Known, small, sign-flipped, deliberately unmodeled — recorded so
+nobody &ldquo;fixes&rdquo; it later with the rate-case sign. <span class="qed">∎</span></div>
+
+<h3>5.4 The existing infrastructure as a PV booking (blessed)</h3>
+
+<p>The current split is conceptually correct and should never be collapsed:</p>
+<ul class="main">
+<li><b>Receipts</b> take the timing seesaw — right for Treasury cash
+(<code>revenue.R:59-62,172-173</code>; ccorp + pass-through combined).</li>
+<li><b>Distributed burden</b> is independently recomputed as the time-value transfer:
+<code>distribution.R:600</code> books <var>I</var>·<var>τ</var>·Δ<var>z</var> (investment
+× ΔPV(deductions) × <code>corp.rate</code>) per year of investment — the full PV of each
+vintage's benefit at purchase. TPC's level-annuity spreads the same PV over the asset
+life; the two integrate identically and differ only in booking year. The 50/50
+labor/capital allocation of that burden is a smear <b>forced by the economics</b>: the
+new-capital benefit has no record-level owner (zero-NPV at the competitive margin,
+competed into prices/wages/expansion). Caveat for someday: rent capture on inframarginal
+investment (Kennedy et al.) implies partial shareholder capture.</li>
+<li><b>Pass-through leg</b> (named v2): the pt slice of the interface delta is individual
+income tax booked on the corporate line, distributed to no one; it has record-level
+claimants (Schedule C/E/F, K-1) and an existing interface path
+(<code>recovery_ratios_form.csv</code>).</li>
+</ul>
+
+<!-- ============================== 6 ============================== -->
+<h2 id="s6">6 · Harberger migration (the D14 block)</h2>
+
+<h3>6.1 Two-sector equilibrium</h3>
+
+<p>Corporate sector produces with reproducible capital <var>K<sub>c</sub></var> plus a
+fixed rent flow <var>R</var> (inframarginal: IP, market power); noncorporate with
+<var>K<sub>n</sub></var>; total stock <span class="bar"><var>K</var></span> =
+<var>K<sub>c</sub></var> + <var>K<sub>n</sub></var> fixed (F1 horizon). After-tax
+arbitrage on the marginal unit:</p>
+
+<div class="eq">(1 − <var>τ</var>) <var>f<sub>c</sub>′</var>(<var>K<sub>c</sub></var>) = <var>f<sub>n</sub>′</var>(<var>K<sub>n</sub></var>) ≡ <var>ρ</var>.</div>
+
+<p>A hike <var>dτ</var>: capital exits the corporate sector until returns re-equalize at
+<var>ρ′</var> &lt; <var>ρ</var> — corporate pre-tax returns rise via scarcity,
+noncorporate pre-tax returns fall via crowding, everyone's after-tax return falls. Pure
+reallocation of a fixed stock = a composition effect inside fixed GNP (JCT-sanctioned;
+bucket 1). The labor leg (smaller <i>total</i> stock) stays bucket-2 fenced.</p>
+
+<p><b>Burden decomposition.</b> Split the wedge <var>w<sub>t</sub></var> =
+<var>w<sup>rent</sup><sub>t</sub></var> + <var>w<sup>norm</sup><sub>t</sub></var> with
+<var>σ<sub>N</sub></var> = <var>w<sup>norm</sup></var>/<var>w</var> the normal-return
+share (&ldquo;taxes on margins get shifted; taxes on rents get capitalized&rdquo; — the
+rent slice has no supply margin and cannot migrate). Anchors: OTA 63% / TPC 60%
+supernormal ⇒ <var>σ<sub>N</sub></var> ≈ 0.35–0.40 central; house VAT convention (50%
+normal, Auerbach via Toder) = upper corner; <var>σ<sub>N</sub></var> = 0 = lower.</p>
+
+<div class="prop"><span class="pn">P13 (steady-state allocation — the κ factor).</span>
+In the migrated equilibrium the normal-return burden is borne by <i>all</i> normal
+capital through the common compression <var>ρ</var> − <var>ρ′</var>:
+<div class="eq">(<var>ρ</var> − <var>ρ′</var>) <span class="bar"><var>K</var></span><sup>norm</sup> = <var>w<sup>norm</sup></var>,
+&emsp;so corporate equity retains&ensp;<var>κ</var>·<var>w<sup>norm</sup></var>,
+&emsp;<var>κ</var> = <span class="frac"><span><var>K<sub>c</sub><sup>norm</sup></var></span><span class="den"><span class="bar"><var>K</var></span><sup>norm</sup></span></span>,</div>
+and the noncorporate sector receives (1 − <var>κ</var>)·<var>w<sup>norm</sup></var> —
+<b>not</b> <var>w<sup>norm</sup></var>. D14's rule &ldquo;scale noncorporate
+capital-income lines by <var>λ</var>(<var>t</var>)·burden&rdquo; is the <var>κ</var> → 0
+limit (noncorporate as an infinitely elastic sink), and that limit is not internally
+consistent: the <i>only</i> mechanism that compresses noncorporate yields is
+<var>ρ′</var> &lt; <var>ρ</var>, and the same <var>ρ′</var> necessarily keeps the
+<var>κ</var>-share of the compression on corporate normal capital. Either both appear or
+neither does. With <var>κ</var> ≈ the C-corp share of the private normal-capital stock
+(~⅓–½, measurement item), the correction is first-order for the flow allocation:
+<ul style="margin-bottom:0">
+<li>corporate flow lines (dividends, kg): long-run hit
+<var>w<sup>rent</sup></var> + <var>κ</var><var>w<sup>norm</sup></var>, not
+<var>w<sup>rent</sup></var>;</li>
+<li>noncorporate lines: long-run hit (1 − <var>κ</var>)<var>w<sup>norm</sup></var>, not
+<var>w<sup>norm</sup></var>. <span class="qed">∎</span></li>
+</ul></div>
+
+<div class="prop"><span class="pn">P14 (the pinning theorem and the markdown floor —
+unchanged).</span> Asset-class pricing:
+<ul style="margin-bottom:0">
+<li><i>Reproducible capital</i> (elastic supply): price pinned at replacement cost by
+construction arbitrage; the burden arrives entirely as yield compression. At the new
+margin <var>q</var> = 1: PV<sub><var>ρ′</var></sub>(compressed flows) = replacement cost —
+the flow compression and the lower discount rate cancel <i>exactly</i> for the normal
+slice. Hence the retained <var>κ</var><var>w<sup>norm</sup></var> of P13 shows up in
+<b>flows but not in the markdown</b>: the equity markdown still decays to the
+<b>rent-share floor</b> <var>w<sup>rent</sup></var>, exactly as D14 states. The
+reconciling item is the Δ<var>ρ</var> revaluation — which is therefore <i>not</i>
+ignorable bookkeeping: it is first-order equal to the retained corporate flow
+compression, and its analogs on other assets (bond appreciation at fixed coupons, land
+gains from <var>ρ′</var> + complementary capital) are the same object. Recommended
+treatment: values untouched (flows-only, by theorem), with the Δ<var>ρ</var> revaluations
+booked as a named line in the conservation residual so the §4 identity closes by
+construction rather than approximately.</li>
+<li><i>Fixed-coupon claims</i>: price appreciates (<var>ρ′</var> discount on fixed
+coupons); income unchanged until rollover — interest lines ramp on the empirical
+debt-maturity schedule (<code>resources/debt_maturities.csv</code>, ~fully rolled by year
+10), the exact contract-rigidity content of the theorem.</li>
+<li><i>Land/fixed factors</i>: often <i>gain</i> (lower discount + complementary inflow)
+— the offsetting residue, unmodeled, now booked in the residual note above.</li>
+<li><i>Pass-through interests</i>: residual claims on mostly-reproducible bundles ⇒
+income falls, value doesn't — flows-only at the <code>WEALTH_CAP_FLOWS</code> 0.2 capital
+weight; <code>value.*</code> pt columns untouched, which also keeps the frozen
+estate-valuation bridge (<var>ρ<sub>pt</sub></var>, <var>s<sub>pt</sub></var>) invariant.
+<span class="qed">∎</span></li>
+</ul></div>
+
+<h3>6.2 The adjustment path and the perfect-foresight markdown</h3>
+
+<p>Vintaging (house convention, reused from <code>do_capital_adjustment</code>,
+<code>src/data/economy.R:193</code>): the reallocation clock is the replacement clock,</p>
+
+<div class="eq"><var>η</var>(<var>t</var>) = 1 − (1 − <var>δ</var>)<sup><var>t</var></sup>,&emsp;<var>δ</var> = 0.057 (NIPA),</div>
+
+<p>(44% at 10y, 69% at 20y, 83% at 30y; half-life ≈ 12y; conservative — only
+Δ<var>K<sub>c</sub></var> must move — bounded by the <var>σ<sub>N</sub></var> corners).
+D14's single curve <var>λ</var>(<var>t</var>) = <var>σ<sub>N</sub></var>·<var>η</var>(<var>t</var>)
+conflates the share and the ramp; keeping them separate makes the P13 correction
+explicit. The corporate equity <i>flow</i> hit path and markdown are</p>
+
+<div class="eq"><var>h<sup>c</sup><sub>t</sub></var> = <var>w<sup>rent</sup><sub>t</sub></var> + <var>w<sup>norm</sup><sub>t</sub></var> [ (1 − <var>η</var>(<var>t</var>)) + <var>η</var>(<var>t</var>)·<var>κ</var> ],</div>
+<div class="eq"><var>M<sub>t</sub></var> = PV<sub><var>t</var></sub> [ <var>w<sup>rent</sup><sub>s</sub></var> + (1 − <var>κ</var>)(1 − <var>η</var>(<var>s</var>))<var>w<sup>norm</sup><sub>s</sub></var> ]</div>
+
+<p>(the price-relevant hits exclude the Δ<var>ρ</var>-offset <var>κ</var>-slice, P14),
+and the noncorporate flow allocation is
+(1 − <var>κ</var>)·<var>η</var>(<var>t</var>)·<var>w<sup>norm</sup><sub>t</sub></var>
+across interest (rollover ramp), rents, and pass-through (0.2 weight). Under perfect
+foresight the announcement markdown is the PV of the <i>remaining</i> decaying path —
+smaller than the no-migration markdown because migration is anticipated (§5's
+&ldquo;shifting expectations&rdquo; wedge, derived); it decays to the rent-share floor
+either way, since (1 − <var>κ</var>)(1 − <var>η</var>) → 0. The migrated slice reaches
+estates <i>only</i> through D11 dissaving on the affected income lines (P9's external
+column) — the complete channel, since no price event exists to miss (P14).</p>
+
+<p><b>Estate-composition consequence of P13:</b> relative to the D14 spec,
+corporate-equity-heavy portfolios bear more of the long-run flow burden (persistent
+dividend compression) and pass-through/interest-heavy portfolios bear (1 − <var>κ</var>)
+of what the spec assigns them. Direction of the net estate-revenue effect depends on
+top-tail portfolio composition — a Phase 0a column worth adding.</p>
+
+<!-- ============================== 7 ============================== -->
+<h2 id="s7">7 · The shock pipeline (assembled)</h2>
+
+<p>Per scenario, per conventional-pass year (identical transformation on conv-no-wealth
+and final conventional; head of <code>run_one_year</code>, before behavior modules,
+before the wealth haircut applier so kg/wealth machinery run on the shocked frame):</p>
+
+<ol class="main">
+<li><b>Inputs</b>: gross corporate receipts delta path (gate (G) asserted, D13);
+aggregates <var>Π<sub>t</sub></var>, <var>π<sub>t</sub></var>
+(Macro-Projections/NIPA); measured exposures <var>ω</var>, <var>σ<sub>N</sub></var>,
+<var>κ</var>; vintaging curves <var>η</var>(<var>t</var>), debt rollover.</li>
+<li><b>Paths</b> (analytic, once per scenario): <var>w<sub>t</sub></var> →
+<var>h<sup>c</sup><sub>t</sub></var>, <var>M<sub>t</sub></var>/<var>μ<sub>t</sub></var>,
+noncorporate allocation, per §6.2.</li>
+<li><b>Flows</b>: <code>div_ord</code>, <code>div_pref</code> ×
+(1 + <var>ω<sub>div</sub></var><var>φ<sup>c</sup><sub>t</sub></var>) where
+<var>φ<sup>c</sup><sub>t</sub></var> = −<var>h<sup>c</sup><sub>t</sub></var>/<var>π<sub>t</sub></var>;
+interest lines on the rollover ramp; rent/pt lines at the 0.2 capital weight — all
+recorded as Δ<var>Y<sup>exog</sup></var> (P9).</li>
+<li><b>Stocks</b>: <code>value.equities</code> (and <var>ω<sub>a</sub></var> shares of
+<code>value.dc</code>, <code>value.trusts</code>, <code>value.re_fund</code>) ×
+(1 − <var>ω<sub>a</sub></var><var>μ<sub>t</sub></var>); <b>column-specific, not the
+uniform (1 − <var>f</var>) wealth-haircut scaler</b> (which exists to keep
+<var>s<sub>pt</sub></var>/<var>ρ<sub>pt</sub></var> invariant — a different design goal);
+<code>net_worth</code> recomputed from the marked-down balance sheet; <b>basis never
+scales</b> (P5). DB → residual (D10).</li>
+<li><b>Gains</b>: kg_dynamics runs debit/credit the unrealized-gain state by
+<var>ω<sub>kg</sub></var><var>M<sub>t</sub></var>; non-kg runs use P6's exact per-record
+form with <code>kg_lt_basis</code>. Realized-gain deltas stay out of
+Δ<var>Y<sup>exog</sup></var> (P9).</li>
+<li><b>Retirement</b>: <code>txbl_ira_dist</code>/<code>txbl_pens_dist</code> ×
+(1 − <var>μ<sup>ret</sup><sub>t</sub></var>) (P7; Phase 1 prerequisite); distributions
+stay out of Δ<var>Y<sup>exog</sup></var> (P9).</li>
+<li><b>Bathtub</b>: forcing generalized to
+<var>F</var> = Δ<var>T</var> − Δ<var>Y<sup>exog</sup></var> with
+Δ<var>Y<sup>exog</sup></var> from step 3 exactly; Δ<var>T</var> measured by the
+calculator on the conv-no-wealth pass as today
+(<code>wealth_dynamics.R:829-836</code>).</li>
+<li><b>Receipts</b>: corporate input at 0.75/0.25 CY→FY; endogenous offset rides the
+normal individual receipts deltas; estate/wealth/deemed legs at FY+1; run one year past
+the window. Conservation (§4) checked per CY year, allocator-style, with the
+Δ<var>ρ</var> residual line (P14).</li>
+</ol>
+
+<p>Order-dependence caveat (CONSIDERATIONS §8.13) stands: the endogenous offset makes the
+corporate row stacking-order-dependent by construction.</p>
+
+<!-- ============================== 8 ============================== -->
+<h2 id="s8">8 · Model mapping</h2>
+
+<div class="tw"><table>
+<tr><th>math object</th><th>model object</th></tr>
+<tr><td><var>F<sub>t</sub></var> forcing</td><td><code>dT0</code> in <code>run_wealth_bathtub_pass</code> (<code>wealth_dynamics.R:829-836</code>), generalized per P8/P9</td></tr>
+<tr><td><var>P</var>, <var>G</var>, recurrence</td><td><code>cohort_recurrence_step</code> (<code>cohort_bathtub.R:248</code>), kernel <code>wealth_dynamics.R:881</code></td></tr>
+<tr><td><var>s</var>, <var>M</var></td><td>financing profile folders (<code>config/wealth/profiles/</code>), <code>wealth_dyn_resolve_profile</code></td></tr>
+<tr><td><var>τy</var> + <var>τ<sub>w</sub></var> drag</td><td><code>mtr_cap_bundle</code> × cell yield + <code>mtr_net_worth</code> (P11)</td></tr>
+<tr><td>flow columns &amp; weights</td><td><code>WEALTH_CAP_FLOWS_*</code> (<code>wealth_dynamics.R:79-110</code>) — single source of truth, incl. the 0.2 pt weight</td></tr>
+<tr><td><var>μ<sub>t</sub></var> on stocks</td><td>new column-weighted scaler over <code>ESTATE_ASSET_COLS</code> (NOT the uniform <code>wealth_dyn_apply_to_records</code> (1 − <var>f</var>))</td></tr>
+<tr><td>gain state, basis</td><td>kg_dynamics unrealized-gain state; <code>kg_lt_basis</code> (P5/P6)</td></tr>
+<tr><td>vintaging <var>η</var>(<var>t</var>), rollover</td><td><code>do_capital_adjustment</code> machinery (<code>economy.R:193-294</code>), <code>resources/debt_maturities.csv</code></td></tr>
+<tr><td>smear (fallback, distribution)</td><td><code>distribution.R:341-345</code> (unchanged, D4); cost-recovery <code>distribution.R:600</code> (§5.4)</td></tr>
+<tr><td>FY booking</td><td><code>revenue.R:140</code> (corp 0.75/0.25), <code>:147-148</code> (estate FY+1), <code>:160</code> (wealth FY+1)</td></tr>
+<tr><td>conservation check</td><td>new supplemental diagnostic, estate-allocator style (<code>estate_allocator_diag</code> precedent)</td></tr>
+</table></div>
+
+<!-- ============================== 9 ============================== -->
+<h2 id="s9">9 · Verdicts</h2>
+
+<div class="tw"><table>
+<tr><th style="width:2.2rem">#</th><th>claim (source)</th><th>verdict</th></tr>
+<tr><td>V1</td><td>Naive markdown Δ<var>τ</var>/(1 − <var>τ</var>) is the ceiling (§5)</td>
+<td><span class="pill p-green">THEOREM</span> (P1) under (A1)–(A3); wedges = measured <var>ω</var> + migration</td></tr>
+<tr><td>V2</td><td>Yield preservation under permanent shock (D9)</td>
+<td><span class="pill p-green">THEOREM</span> (P2)</td></tr>
+<tr><td>V3</td><td>Temporary markdown = annuity share, shrinking to zero; holders earn <var>r</var>; burden = announcement loss (D9)</td>
+<td><span class="pill p-green">THEOREM</span> (P3, P4)</td></tr>
+<tr><td>V4</td><td>Stock and flow legs cannot double-count (D9)</td>
+<td><span class="pill p-green">THEOREM</span> (P4 telescoping, P10 budget identity)</td></tr>
+<tr><td>V5</td><td>Generalized forcing fixes the sign; <var>s</var> allocates a fixed PV burden (D11)</td>
+<td><span class="pill p-green">THEOREM</span> (P8, P10); in-model invariance is gross of the second-round drag, which is <var>s</var>-dependent <i>by design</i> (P12); kernel = the rule applied to its own feedback (P11, new consistency result)</td></tr>
+<tr><td>V6</td><td>Composition-neutral proportional scaling; blend error second-order (D12)</td>
+<td><span class="pill p-green">CONFIRMED + QUANTIFIED</span> (P6): error ∝ (<var>φ<sub>t</sub></var> + <var>μ<sub>t</sub></var>), exactly zero for permanent shocks; exact per-record form available via <code>kg_lt_basis</code></td></tr>
+<tr><td>V7</td><td>Basis never scales; the gain absorbs the hit (§8.5)</td>
+<td><span class="pill p-green">THEOREM</span> (P5); <span class="pill p-amber">WORDING FIX</span> amplification <var>μ</var>/(1 − <var>b</var>) <i>increases in basis share</i> — high-basis holders lose proportionally more, low-basis holders lose more dollars</td></tr>
+<tr><td>V8</td><td>Depreciation sign-flip; receipts/distribution split correct; permanently separate (D13)</td>
+<td><span class="pill p-green">THEOREM</span> (P13′, §5.4); gate (G) formalized; <code>distribution.R:600</code> = per-vintage PV booking of the time-value transfer</td></tr>
+<tr><td>V9</td><td>Flows-only migration; markdown decays to rent-share floor (D14)</td>
+<td><span class="pill p-green">FLOOR CONFIRMED</span> (P14, via the q-pinning/Δ<var>ρ</var> offset). <span class="pill p-amber">ALLOCATION CORRECTED</span> (P13): migrated normal burden splits (1 − <var>κ</var>) noncorporate / <var>κ</var> retained on corporate flows; the noncorporate-only rule is the <var>κ</var> → 0 limit and is internally inconsistent with its own mechanism. <span class="pill p-green">RULED: ADOPTED (D15)</span></td></tr>
+<tr><td>V10</td><td>&ldquo;Decedents dying after expiry are untouched&rdquo; (D9)</td>
+<td><span class="pill p-red">FALSE POST-D11</span> the markdown leg vanishes at expiry but the accumulated dissaving compounds past it (P10.1). Temporary shocks have a smaller but nonzero 30-year story. <span class="pill p-green">RULED: GLOSS AMENDED (D17)</span></td></tr>
+<tr><td>V11</td><td>Retirement/kg flows in the forcing</td>
+<td><span class="pill p-blue">UNSPECIFIED → RESOLVED HERE</span> (P7, P9): internal conversions enter via Δ<var>T</var> only; putting them in Δ<var>Y<sup>exog</sup></var> double-counts the markdown. <span class="pill p-green">RULED: CONFIRMED (D16)</span></td></tr>
+<tr><td>V12</td><td>Gross-input requirement (D1)</td>
+<td><span class="pill p-gray">FORMALIZED</span> error bound: net-treated-as-gross understates combined revenue by the embedded offset (§1.2)</td></tr>
+<tr><td>V13</td><td>Conservation identity as the invariant (D9)</td>
+<td><span class="pill p-gray">STATED CHECKABLY</span> (§4); requires CY space and the named Δ<var>ρ</var> residual line under D14</td></tr>
+<tr><td>V14</td><td>Doc internal consistency</td>
+<td><span class="pill p-amber">STALE SECTIONS</span> §8.2 (&ldquo;static AND conventional&rdquo;), §8.3 (smear kill-switch), §8.11 (&ldquo;shock applies to both passes&rdquo;), §10-Phase-2 (&ldquo;both passes&rdquo;), and the §6 bucket-table frames predate and contradict D4/D5 — mark superseded before implementation. Open question 9.7 resolves trivially under D5: static estate totals never move, so the heir-allocator pin is untouched</td></tr>
+</table></div>
+
+<!-- ============================== 10 ============================== -->
+<h2 id="s10">10 · Items needing an author ruling</h2>
+
+<ol class="main">
+<li><b>The κ factor (P13/V9).</b> Accept the two-sector allocation: noncorporate lines
+get (1 − <var>κ</var>)<var>η</var>(<var>t</var>)<var>w<sup>norm</sup></var>, corporate
+dividend/kg flow factors retain <var>κη</var>(<var>t</var>)<var>w<sup>norm</sup></var>;
+markdown floor unchanged at <var>w<sup>rent</sup></var>; the Δ<var>ρ</var> revaluations
+(bond/land gains + the pinning offset) booked as a named conservation residual. Requires
+measuring <var>κ</var> (C-corp share of the private normal-capital stock, ~⅓–½ prior).
+The alternative — keeping the D14 spec — should be recorded as the deliberate
+<var>κ</var> → 0 approximation with its known bias (overstates pt/interest burden,
+understates persistent dividend compression).
+<br><span class="pill p-green">RULED 2026-07-02</span> <b>ADOPTED as D15</b> — κ measured
+from Fed Z.1 in Phase 0; the owner-occupied-housing definitional fork sets the sweep
+corners κ ∈ {~0.25, ~0.4, ~0.5}.</li>
+<li><b>The Δ<var>Y<sup>exog</sup></var> line list (P9/V11).</b> Confirm: dividends,
+interest, rents, pass-through IN; realized gains, retirement distributions, sale
+proceeds OUT (tax legs only). This is the difference between a correct forcing and a
+silent double-count, and it should be a hard-coded column contract like
+<code>WEALTH_CAP_FLOWS</code>.
+<br><span class="pill p-green">RULED 2026-07-02</span> <b>CONFIRMED as D16</b> (with the
+retiree-credit corollary explicitly accepted, recorded so it is not later mistaken for a
+sign bug).</li>
+<li><b>Temporary-shock persistence (V10).</b> Amend the D9 gloss: the estate erosion of
+a windowed shock does not end at expiry; the dissaving leg persists. Affects how
+&ldquo;the 30-year story requires permanence&rdquo; is worded — it requires permanence
+only for the <i>markdown</i> leg.
+<br><span class="pill p-green">RULED 2026-07-02</span> <b>CONFIRMED as D17.</b></li>
+<li><b>§8.5 wording (V7)</b> and the <b>stale sections (V14)</b> — editorial, but both
+have bitten implementations before.
+<br><span class="pill p-green">RULED 2026-07-02</span> <b>applied</b> — §8.5 rewritten;
+supersession annotations placed at §8.2, §8.3, §8.11, §6, §10-Phase-2; §9.7 marked
+resolved.</li>
+<li><b>Non-kg reduced form (P6).</b> Adopt the exact per-record form
+Δ<var>kg</var> = <var>ω<sub>kg</sub></var>[<var>φ<sub>t</sub></var><var>kg</var> −
+<var>μ<sub>t</sub></var>(<var>kg</var> + <var>basis</var>)] over flow-factor-only
+scaling; costless (uses existing columns) and removes the basis-share understatement
+(worst for mid/high-basis lots; the low-basis top tail is nearly exact either way).
+<br><span class="pill p-green">RULED 2026-07-02</span> <b>ADOPTED as D18, extended</b> —
+the <var>φ</var> quantity term applies to the realization flow in BOTH run types (the
+kg_dynamics realization rule knows MTRs and mortality, not payout policy); the price
+margin in kg runs stays the state debit, which is exact because the state is
+gain-denominated.</li>
+</ol>
+
+<!-- ============================== A ============================== -->
+<h2 id="sA">Appendix: proof sketches not shown inline</h2>
+
+<p><b>P4 (holder return).</b>
+<var>V<sup>post</sup><sub>t</sub></var> = <var>V<sub>t</sub></var> − <var>M<sub>t</sub></var>,
+<var>X<sup>post</sup><sub>t+1</sub></var> = <var>X<sub>t+1</sub></var> − <var>d<sub>t+1</sub></var>.
+Return numerator = (<var>V<sub>t+1</sub></var> − <var>M<sub>t+1</sub></var>) +
+(<var>X<sub>t+1</sub></var> − <var>d<sub>t+1</sub></var>) −
+(<var>V<sub>t</sub></var> − <var>M<sub>t</sub></var>) =
+<var>rV<sub>t</sub></var> − (<var>M<sub>t+1</sub></var> + <var>d<sub>t+1</sub></var> − <var>M<sub>t</sub></var>).
+Since <var>M<sub>t</sub></var>(1 + <var>r</var>) = <var>d<sub>t+1</sub></var> + <var>M<sub>t+1</sub></var>,
+the bracket is <var>rM<sub>t</sub></var>, so the numerator is
+<var>r</var>(<var>V<sub>t</sub></var> − <var>M<sub>t</sub></var>) =
+<var>rV<sup>post</sup><sub>t</sub></var>. ∎</p>
+
+<p><b>P10 (decomposition).</b> Cash pocket deviation:
+Δ<var>W<sub>t+1</sub></var> = (1 + <var>r</var>)Δ<var>W<sub>t</sub></var> −
+<var>d<sub>t</sub></var> + <var>τd<sub>t</sub></var> − Δ<var>C<sub>t</sub></var> with
+Δ<var>C<sub>t</sub></var> = −(1 − <var>s</var>)(1 − <var>τ</var>)<var>d<sub>t</sub></var>
+gives Δ<var>W<sub>t+1</sub></var> = (1 + <var>r</var>)Δ<var>W<sub>t</sub></var> −
+<var>s</var>(1 − <var>τ</var>)<var>d<sub>t</sub></var>, hence
+Δ<var>W<sub>T</sub></var> = −<var>s</var>(1 − <var>τ</var>)
+Σ<sub><var>t</var>≤<var>T</var></sub> (1 + <var>r</var>)<sup><var>T</var>−<var>t</var></sup><var>d<sub>t</sub></var>.
+Total burden = −Σ Δ<var>C<sub>t</sub></var>/(1 + <var>r</var>)<sup><var>t</var></sup> −
+(Δ<var>W<sub>T</sub></var> + Δ<var>V<sub>T</sub></var>)/(1 + <var>r</var>)<sup><var>T</var></sup>
+with Δ<var>V<sub>T</sub></var> = −<var>M<sub>T</sub></var>; substituting and using
+<var>M<sub>T</sub></var>/(1 + <var>r</var>)<sup><var>T</var></sup> =
+Σ<sub><var>t</var>&gt;<var>T</var></sub> <var>d<sub>t</sub></var>/(1 + <var>r</var>)<sup><var>t</var></sup>
+yields the stated sum, and adding/subtracting
+<var>τ</var>Σ<sub><var>t</var>≤<var>T</var></sub><var>d<sub>t</sub></var>/(1 + <var>r</var>)<sup><var>t</var></sup>
+gives the <var>M</var><sub>0</sub> form. No term depends on <var>s</var> except the split
+of the during-life share. ∎</p>
+
+<p><b>P13′ (q-arbitrage).</b> A buyer can always create capacity at 1 − <var>τz′</var>;
+no rational buyer pays more for equivalent installed capacity, and entry at the margin
+enforces equality given (Z) held pre-reform for old vintages at the old margin. The
+incumbent's loss per unit is (1 − <var>τz</var>) − (1 − <var>τz′</var>) =
+<var>τ</var>Δ<var>z</var>. Quasi-rents are pinned by the <i>output</i> market in the
+short run; the capital-goods market reprices immediately. ∎</p>
+
+<p><b>P13 (κ).</b> Long-run arbitrage forces one after-tax return <var>ρ′</var> on every
+unit of normal capital. Fixed GNP ⇒ total after-tax capital income falls by exactly the
+revenue <var>w</var>. Rents absorb <var>w<sup>rent</sup></var> (no margin). The remainder
+<var>w<sup>norm</sup></var> is (<var>ρ</var> − <var>ρ′</var>)<span class="bar"><var>K</var></span><sup>norm</sup>
+by definition of the compression, distributed pro-rata over
+<span class="bar"><var>K</var></span><sup>norm</sup>; corporate normal capital is
+<var>κ</var> of that stock. For noncorporate lines to absorb <i>all</i> of
+<var>w<sup>norm</sup></var> would require <var>ρ</var> unchanged on corporate normal
+capital while changed on noncorporate — contradicting the single-price condition that
+generates the migration in the first place. ∎</p>
+
+<hr>
+<p class="fn">Source: <code>other/corporate_incidence/FORMAL_MODEL.md</code> ·
+Companion: <code>other/corporate_incidence/CONSIDERATIONS.md</code> (D1–D14) ·
+Generated 2026-07-02 on branch <code>wealth</code>.</p>
+
+</body>
+</html>
