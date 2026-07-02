@@ -56,11 +56,11 @@ calc_std_ded = function(tax_unit, fill_missings = F) {
       # Calculate nondependent total standard deduction
       std_ded = std.value + bonus_value + std.bonus_other,
       
-      # Calculate dependent standard deduction
+      # Calculate dependent standard deduction: earned income formula capped
+      # by the base (bonus-exclusive) deduction, with age/blind and other
+      # bonuses added on top, per the IRS dependent worksheet order
       dep_std_ded = pmax(std.dep_floor, ei + std.dep_earned_bonus),
-      
-      # Limit dependent standard deduction to actual standard deduction
-      dep_std_ded = pmin(std_ded, dep_std_ded),
+      dep_std_ded = pmin(std.value, dep_std_ded) + bonus_value + std.bonus_other,
       
       # Assign final deduction value based on dependent status
       std_ded = if_else(!dep_status, std_ded, dep_std_ded)
