@@ -1,0 +1,10 @@
+# Above-the-line charitable deduction of $500 single / $1,000 joint from 2025
+# on, alongside the baseline itemized deduction. Exists for smoke-test coverage
+# of the above-vs-itemized two-pass optimization branch in do_taxes.R (which
+# never fires under baseline law, where above_limit is 0 after 2021).
+above_limit_single:
+  value:
+    '2014': 0
+    '2020': 300
+    '2022': 0
+    '2025': 500

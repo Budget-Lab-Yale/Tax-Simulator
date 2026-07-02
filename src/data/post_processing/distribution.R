@@ -23,82 +23,53 @@ build_distribution_tables = function(id, baseline_id) {
   # Get info on VAT, corporate rate, and cost recovery changes
   other_taxes = get_other_taxes(id, baseline_id)
 
-  # Loop over years 
+  # One entry per cut of the table: the grouping variable (NULL = whole
+  # population), the reported dimension label, and NA handling -- 'keep'
+  # groups as-is, 'drop' removes the non-member NA group after aggregation
+  # (top-X cuts, where NA shares still enter the group's share-of-total
+  # denominator), any other string labels the NA group (negative-rank records)
+  dist_cuts = list(
+    list(var = NULL,           dim = 'Overall',       na = 'keep'),
+    list(var = 'age_group',    dim = 'Age',           na = 'keep'),
+    list(var = 'quintile',     dim = 'Income',        na = 'Negative income'),
+    list(var = 'top_10',       dim = 'Income',        na = 'drop'),
+    list(var = 'top_5',        dim = 'Income',        na = 'drop'),
+    list(var = 'top_1',        dim = 'Income',        na = 'drop'),
+    list(var = 'top_01',       dim = 'Income',        na = 'drop'),
+    list(var = 'parent_group', dim = 'Parent status', na = 'keep'),
+    list(var = 'agi_quintile', dim = 'AGI',           na = 'Negative income'),
+    list(var = 'agi_top_10',   dim = 'AGI',           na = 'drop'),
+    list(var = 'agi_top_5',    dim = 'AGI',           na = 'drop'),
+    list(var = 'agi_top_1',    dim = 'AGI',           na = 'drop'),
+    list(var = 'agi_top_01',   dim = 'AGI',           na = 'drop'),
+    list(var = 'nw_quintile',  dim = 'Net worth',     na = 'Negative net worth'),
+    list(var = 'nw_top_10',    dim = 'Net worth',     na = 'drop'),
+    list(var = 'nw_top_5',     dim = 'Net worth',     na = 'drop'),
+    list(var = 'nw_top_1',     dim = 'Net worth',     na = 'drop'),
+    list(var = 'nw_top_01',    dim = 'Net worth',     na = 'drop')
+  )
+
+  # Loop over years
   dist_tables = list()
   for (yr in get_scenario_info(id)$dist_years) {
-    
-    # Process microdata 
+
+    # Process microdata
     microdata = process_for_distribution(id, baseline_id, yr, other_taxes)
-    
-    # Calculate overall averages
-    dist_tables[[as.character(yr)]] = microdata %>% 
-      group_by(taxes_included, group = 'Overall') %>% 
-      calc_dist_metrics() %>% 
-      mutate(group_dimension = 'Overall') %>% 
-      
-      # Add age cuts 
-      bind_rows(
-        microdata %>% 
-          group_by(taxes_included, group = age_group) %>% 
-          calc_dist_metrics() %>% 
-          mutate(group_dimension = 'Age') 
-      ) %>%
-      
-      # Add income quintile cuts  
-      bind_rows(
-        microdata %>% 
-          group_by(taxes_included, group = replace_na(quintile, 'Negative income')) %>%
-          calc_dist_metrics() %>%
-          mutate(group_dimension = 'Income')
-      ) %>% 
-      
-      # Add top income cuts
-      bind_rows(
-        microdata %>% group_by(taxes_included, group = top_10) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income'), 
-        microdata %>% group_by(taxes_included, group = top_5)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income'), 
-        microdata %>% group_by(taxes_included, group = top_1)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income'), 
-        microdata %>% group_by(taxes_included, group = top_01) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Income')
-      ) %>% 
-      
-      # Add parent status cuts
-      bind_rows(
-        microdata %>%
-          group_by(taxes_included, group = parent_group) %>%
-          calc_dist_metrics() %>%
-          mutate(group_dimension = 'Parent status')
-      ) %>%
 
-      # Add AGI quintile cuts
-      bind_rows(
+    # Calculate metrics for each cut
+    dist_tables[[as.character(yr)]] = dist_cuts %>%
+      map(.f = function(cut) {
+        group_vals = if (is.null(cut$var)) 'Overall' else microdata[[cut$var]]
+        if (!(cut$na %in% c('keep', 'drop'))) {
+          group_vals = replace_na(group_vals, cut$na)
+        }
         microdata %>%
-          group_by(taxes_included, group = replace_na(agi_quintile, 'Negative income')) %>%
+          group_by(taxes_included, group = group_vals) %>%
           calc_dist_metrics() %>%
-          mutate(group_dimension = 'AGI')
-      ) %>%
-      
-      # Add top AGI cuts
-      bind_rows(
-        microdata %>% group_by(taxes_included, group = agi_top_10) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI'),
-        microdata %>% group_by(taxes_included, group = agi_top_5)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI'),
-        microdata %>% group_by(taxes_included, group = agi_top_1)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI'),
-        microdata %>% group_by(taxes_included, group = agi_top_01) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'AGI')
-      ) %>%
-
-      # Add net-worth quintile cuts (the natural lens for a wealth tax)
-      bind_rows(
-        microdata %>%
-          group_by(taxes_included, group = replace_na(nw_quintile, 'Negative net worth')) %>%
-          calc_dist_metrics() %>%
-          mutate(group_dimension = 'Net worth')
-      ) %>%
-
-      # Add top net-worth cuts
-      bind_rows(
-        microdata %>% group_by(taxes_included, group = nw_top_10) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Net worth'),
-        microdata %>% group_by(taxes_included, group = nw_top_5)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Net worth'),
-        microdata %>% group_by(taxes_included, group = nw_top_1)  %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Net worth'),
-        microdata %>% group_by(taxes_included, group = nw_top_01) %>% calc_dist_metrics() %>% filter(!is.na(group)) %>% mutate(group_dimension = 'Net worth')
-      ) %>%
+          { if (cut$na == 'drop') filter(., !is.na(group)) else . } %>%
+          mutate(group_dimension = cut$dim)
+      }) %>%
+      bind_rows() %>%
 
       # Add year indicator
       mutate(year = yr, .before = everything())
@@ -135,19 +106,10 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
   #----------------------------------------------------------------------------
   
 
-  # Get file path for baseline 
-  if (baseline_id == 'baseline') {
-    baseline_root = file.path(globals$baseline_root, 'baseline')
-  } else {
-    baseline_root = file.path(globals$output_root, baseline_id)
-  }
-  
   # Read baseline microdata. liab_deemed (tax on deemed realization at death,
   # kg_dynamics scenarios only) is stripped from decedent records here and
   # reattributed to heirs below
-  baseline_detail = file.path(baseline_root, 'static/detail', paste0(yr, '.csv')) %>%
-    fread() %>%
-    tibble()
+  baseline_detail = read_static_detail(baseline_id, yr)
   if (!('liab_deemed' %in% names(baseline_detail))) {
     baseline_detail$liab_deemed = 0
   }
@@ -197,9 +159,7 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
 
   # Read counterfactual reform scenario tax microdata, stripping deemed
   # realization tax from decedents same as the baseline leg above
-  reform_detail = file.path(globals$output_root, id, 'static/detail', paste0(yr, '.csv')) %>%
-    fread() %>%
-    tibble()
+  reform_detail = read_static_detail(id, yr)
   if (!('liab_deemed' %in% names(reform_detail))) {
     reform_detail$liab_deemed = 0
   }
@@ -223,9 +183,7 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
   # through to heirs. Inheritance is GROSS of estate tax (scenario-invariant);
   # only the liability column differs across legs. No scenario-specific
   # upstream file is needed anymore
-  baseline_estate_path = globals$interface_paths %>%
-    filter(ID == globals$interface_paths$ID[1], interface == 'Estate-Tax-Distribution') %>%
-    pull(path) %>%
+  baseline_estate_path = interface_root('Estate-Tax-Distribution') %>%
     file.path(paste0('estate_tax_detail_', yr, '.csv'))
 
   have_estate_cols = all(ESTATE_DETAIL_COLS %in% names(baseline_detail)) &
@@ -385,28 +343,9 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
       
     ) %>% 
     
-    # Add grouping variables
-    arrange(income, .by_group = T) %>% 
+    # Add income-based percentile measures and age group
+    add_rank_groups('income', 'income_pctile') %>%
     mutate(
-      
-      # Income percentile
-      income_pctile = cumsum(weight * (income >= 0)) / sum(weight * (income >= 0)), 
-      income_pctile = if_else(income < 0, NA, income_pctile), 
-      
-      # Quintiles and top shares
-      quintile = case_when(
-        income_pctile <= 0.2 ~ 'Quintile 1',
-        income_pctile <= 0.4 ~ 'Quintile 2',
-        income_pctile <= 0.6 ~ 'Quintile 3',
-        income_pctile <= 0.8 ~ 'Quintile 4',
-        income_pctile <= 1   ~ 'Quintile 5',
-      ), 
-      top_10 = if_else(income_pctile > 0.9,   'Top 10%',   NA), 
-      top_5  = if_else(income_pctile > 0.95,  'Top 5%',    NA), 
-      top_1  = if_else(income_pctile > 0.99,  'Top 1%',    NA), 
-      top_01 = if_else(income_pctile > 0.999, 'Top 0.1%',  NA),
-      
-      # Age group
       age_group = case_when(
         age < 30 ~ '29 and under',
         age < 40 ~ '30 - 39',
@@ -414,57 +353,18 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
         age < 65 ~ '50 - 64',
         T        ~ '65+'
       )
-    ) %>% 
-    
-    # Add AGI-based income percentile measures 
-    arrange(agi, .by_group = T) %>% 
-    mutate(
-      
-      # AGI percentile
-      agi_pctile = cumsum(weight * (agi >= 0)) / sum(weight * (agi >= 0)), 
-      agi_pctile = if_else(agi < 0, NA, agi_pctile), 
-      
-      # Quintiles and top shares
-      agi_quintile = case_when(
-        agi_pctile <= 0.2 ~ 'Quintile 1',
-        agi_pctile <= 0.4 ~ 'Quintile 2',
-        agi_pctile <= 0.6 ~ 'Quintile 3',
-        agi_pctile <= 0.8 ~ 'Quintile 4',
-        agi_pctile <= 1   ~ 'Quintile 5',
-      ), 
-      agi_top_10 = if_else(agi_pctile > 0.9,   'Top 10%',   NA),
-      agi_top_5  = if_else(agi_pctile > 0.95,  'Top 5%',    NA),
-      agi_top_1  = if_else(agi_pctile > 0.99,  'Top 1%',    NA),
-      agi_top_01 = if_else(agi_pctile > 0.999, 'Top 0.1%',  NA)
     ) %>%
+
+    # Add AGI-based income percentile measures
+    add_rank_groups('agi', 'agi_pctile', 'agi_') %>%
 
     # Add net-worth-based percentile measures. This is the natural lens for a
     # wealth tax — it ranks by the balance sheet, not the income statement, so a
     # wealthy-but-low-income unit (e.g. a retiree living off principal) lands in
     # the right group. Computed on baseline economic net worth, mirroring the
-    # income/AGI blocks above. Produced for every scenario; most informative for
-    # wealth reforms.
-    arrange(net_worth, .by_group = T) %>%
-    mutate(
-
-      # Net worth percentile (ranks only the non-negative-net-worth population,
-      # like the income/AGI percentiles rank non-negative income)
-      nw_pctile = cumsum(weight * (net_worth >= 0)) / sum(weight * (net_worth >= 0)),
-      nw_pctile = if_else(net_worth < 0, NA, nw_pctile),
-
-      # Quintiles and top shares
-      nw_quintile = case_when(
-        nw_pctile <= 0.2 ~ 'Quintile 1',
-        nw_pctile <= 0.4 ~ 'Quintile 2',
-        nw_pctile <= 0.6 ~ 'Quintile 3',
-        nw_pctile <= 0.8 ~ 'Quintile 4',
-        nw_pctile <= 1   ~ 'Quintile 5',
-      ),
-      nw_top_10 = if_else(nw_pctile > 0.9,   'Top 10%',   NA),
-      nw_top_5  = if_else(nw_pctile > 0.95,  'Top 5%',    NA),
-      nw_top_1  = if_else(nw_pctile > 0.99,  'Top 1%',    NA),
-      nw_top_01 = if_else(nw_pctile > 0.999, 'Top 0.1%',  NA)
-    ) %>%
+    # income/AGI cuts above (only the non-negative-net-worth population is
+    # ranked). Produced for every scenario; most informative for wealth reforms.
+    add_rank_groups('net_worth', 'nw_pctile', 'nw_') %>%
 
     ungroup() %>%
     return()
@@ -560,9 +460,7 @@ get_other_taxes = function(id, baseline_id) {
   #-----------------
   
   # Read VAT price offset for deflating other taxes
-  vat_price_offset = globals$output_root %>%
-    file.path(id, '/static/supplemental/vat_price_offset.csv') %>%
-    read_csv(show_col_types = F) %>% 
+  vat_price_offset = read_vat_offset(id) %>%
     select(year, vat_price_offset = cpi_factor)
   
   
@@ -576,9 +474,7 @@ get_other_taxes = function(id, baseline_id) {
     distinct(year, corp.rate)
   
   # Read recovery ratios by legal form
-  cost_recovery_delta = globals$interface_paths %>%
-    filter(ID == globals$interface_paths$ID[1], interface == 'Cost-Recovery-Simulator') %>%
-    pull(path) %>% 
+  cost_recovery_delta = interface_root('Cost-Recovery-Simulator') %>%
     file.path('totals/recovery_ratios_form.csv') %>%
     read_csv(show_col_types = F) %>%
     mutate(policy = 'baseline') %>%
@@ -611,9 +507,7 @@ get_other_taxes = function(id, baseline_id) {
   phasein = scenario_info$corp_incidence_phasein
 
   # Read baseline off-model revenue deltas (0 if actual baseline)
-  other_corp_delta = globals$interface_paths %>%
-    filter(ID == baseline_id, interface == 'Off-Model-Estimates') %>%
-    pull(path) %>% 
+  other_corp_delta = interface_root('Off-Model-Estimates', baseline_id) %>%
     file.path('revenues.csv') %>%
     read_csv(show_col_types = F) %>%
     select(year, baseline = corporate) %>% 

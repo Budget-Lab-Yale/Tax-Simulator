@@ -34,11 +34,7 @@ generate_indexes = function(macro_root, vat_price_offset, excess_growth_offset) 
     mutate(series = 'cpi')
 
   # Read and combine historical and projected macro data
-  macro = c('historical.csv', 'projections.csv') %>%
-    map(.f = ~ macro_root %>%
-          file.path(.x) %>%
-          read_csv(show_col_types = F)) %>%
-    bind_rows() %>%
+  macro = read_macro_spliced(macro_root) %>%
 
     # Select indexation variables and reshape long
     select(year, cpi = cpiu_irs, chained_cpi = ccpiu_irs, awi) %>%
@@ -123,6 +119,26 @@ get_vat_price_offset = function(macro_root, vat_root, years) {
 
 
 
+vat_excess_inflation = function(vat_price_offset) {
+
+  #----------------------------------------------------------------------------
+  # Computes year-over-year price growth attributable to the VAT price offset.
+  #
+  # Parameters:
+  #   - vat_price_offset (df) : series of price level adjustment factors; see
+  #                             get_vat_price_offset()
+  #
+  # Returns: tibble of excess inflation rates by year (df).
+  #----------------------------------------------------------------------------
+
+  vat_price_offset %>%
+    mutate(excess_inflation = cpi_factor / lag(cpi_factor, default = 1) - 1) %>%
+    select(year, excess_inflation) %>%
+    return()
+}
+
+
+
 do_ss_cola = function(tax_units, yr, vat_price_offset) {
   
   #----------------------------------------------------------------------------
@@ -172,11 +188,8 @@ do_ss_cola = function(tax_units, yr, vat_price_offset) {
     expand_grid(year = min(ss$claiming_year):(yr - 1)) %>% 
     filter(year >= claiming_year) %>% 
     
-    # Add VAT and calculate cumulative excess inflation since retirement 
-    left_join(vat_price_offset %>% 
-                mutate(excess_inflation = cpi_factor / lag(cpi_factor, default = 1) - 1) %>% 
-                select(year, excess_inflation), 
-              by = 'year') %>% 
+    # Add VAT and calculate cumulative excess inflation since retirement
+    left_join(vat_excess_inflation(vat_price_offset), by = 'year') %>%
     group_by(claiming_year) %>% 
     mutate(cola = cumprod(1 + replace_na(excess_inflation, 0))) %>% 
     ungroup() %>% 
@@ -235,9 +248,8 @@ do_capital_adjustment = function(tax_units, yr, vat_price_offset) {
     mutate(share_new_capital = 1 - round((1 - 0.057) ^ year, 2)) 
   
   # Determine years when VAT changed, requiring that vintages be tracked
-  vat_change_years = vat_price_offset %>% 
-    mutate(excess_inflation = cpi_factor / lag(cpi_factor, default = 1) - 1) %>% 
-    select(source_year = year, excess_inflation) %>% 
+  vat_change_years = vat_excess_inflation(vat_price_offset) %>%
+    rename(source_year = year) %>%
     filter(excess_inflation != 0, source_year < yr)
   
   # Skip if no VAT-driven changes in prices
@@ -449,17 +461,18 @@ do_excess_growth = function(tax_units, scenario_info, excess_growth_offset) {
       #    year was 3 years prior (currently a placeholder for average vintage of current
       #    SSDI claims).
       # -- For pensions, we make no adjustments.
-      age_avg = ceil(ifelse(!is.na(age2),((age1 + age2)/2), age1)), 
+      age_avg = ceil(ifelse(!is.na(age2),((age1 + age2)/2), age1)),
+      wedge_factor_60 = (1 + scenario_info$excess_growth)^(60 - age_avg),
       wedge_factor_oasdi = case_when(
         age_avg < 60  ~ (1 + scenario_info$excess_growth)^(-pmin(year - scenario_info$excess_growth_start_year, 3)),
-        age_avg >= 60 ~ (1 + scenario_info$excess_growth)^(60 - age_avg),
+        age_avg >= 60 ~ wedge_factor_60,
         TRUE ~ 1
       ),
       wedge_factor_pension = case_when(
         age_avg < 60  ~ 1,
-        age_avg >= 60 ~ (1 + scenario_info$excess_growth)^(60 - age_avg),
+        age_avg >= 60 ~ wedge_factor_60,
         TRUE ~ 1
-      ),      
+      ),
       
       # For OASDI and pension growth variables, multiply by wedge factor and adjustment factor
       across(
@@ -478,7 +491,7 @@ do_excess_growth = function(tax_units, scenario_info, excess_growth_offset) {
       )
       
     ) %>%
-    select(-age_avg, -wedge_factor_oasdi, -wedge_factor_pension, -income_factor) %>%
+    select(-age_avg, -wedge_factor_60, -wedge_factor_oasdi, -wedge_factor_pension, -income_factor) %>%
     return()
 }
 

@@ -1,8 +1,36 @@
 #---------------------------------------------------
 # 1040.R
-# 
-# Post-processing functions to generate 1040 report 
+#
+# Post-processing functions to generate 1040 report
 #---------------------------------------------------
+
+
+pivot_1040_long = function(df, id_cols, names_to = 'series') {
+
+  #----------------------------------------------------------------------------
+  # Reshapes a wide 1040 totals dataframe long in (series, Variable): n_*
+  # columns become count.*, all other value columns amount.*, then pivots on
+  # the "." separator.
+  #
+  # Parameters:
+  #   - df (df)          : wide 1040 totals dataframe
+  #   - id_cols (str[])  : identifier columns to keep wide
+  #   - names_to (str)   : name for the count/amount series column
+  #
+  # Returns: tibble long in (series, Variable) with a value column (df).
+  #----------------------------------------------------------------------------
+
+  df %>%
+    rename_with(.cols = starts_with('n_'),
+                .fn   = ~ str_replace(., 'n_', 'count.')) %>%
+    rename_with(.cols = -c(all_of(id_cols), starts_with('count.')),
+                .fn   = ~ paste0('amount.', .)) %>%
+    pivot_longer(cols      = -all_of(id_cols),
+                 names_to  = c(names_to, 'Variable'),
+                 names_sep = '[.]',
+                 values_to = 'value') %>%
+    return()
+}
 
 
 build_1040_report = function(id) {
@@ -27,19 +55,12 @@ build_1040_report = function(id) {
                        'static',
                        'totals', 
                        '1040.csv') %>%
-          read_csv(show_col_types = F) %>%  
-    
-    # Pivot long in variable 
-    rename_with(.cols = starts_with('n_'), 
-                .fn   = ~ str_replace(., 'n_', 'count.')) %>% 
-    rename_with(.cols = -c(year, starts_with('count.')), 
-                .fn   = ~ paste0('amount.', .)) %>%
-    pivot_longer(cols      = -year, 
-                 names_to  = c('series', 'Variable'), 
-                 names_sep = '[.]',
-                 values_to = 'value') %>% 
-    pivot_wider(names_from  = series, 
-                values_from = value) 
+          read_csv(show_col_types = F) %>%
+
+    # Pivot long in variable
+    pivot_1040_long(id_cols = 'year') %>%
+    pivot_wider(names_from  = series,
+                values_from = value)
   
   # Read in counterfactual scenario 1040 totals 
   scenario = c('static', 'conventional') %>% 
@@ -53,18 +74,11 @@ build_1040_report = function(id) {
     ) %>% 
     bind_rows() %>% 
     
-    # Pivot long in variable 
-    select(-starts_with('mtr_')) %>% 
-    rename_with(.cols = starts_with('n_'), 
-                .fn   = ~ str_replace(., 'n_', 'count.')) %>% 
-    rename_with(.cols = -c(year, run_type, starts_with('count.')), 
-                .fn   = ~ paste0('amount.', .)) %>%
-    pivot_longer(cols      = -c(year, run_type), 
-                 names_to  = c('series', 'Variable'), 
-                 names_sep = '[.]',
-                 values_to = 'value') %>% 
-    pivot_wider(names_from  = series, 
-                values_from = value) %>% 
+    # Pivot long in variable
+    select(-starts_with('mtr_')) %>%
+    pivot_1040_long(id_cols = c('year', 'run_type')) %>%
+    pivot_wider(names_from  = series,
+                values_from = value) %>%
     
     # Join baseline numbers 
     left_join(baseline %>% 
@@ -79,8 +93,8 @@ build_1040_report = function(id) {
     pivot_wider(names_from  = run_type, 
                 values_from = c(count, diff_count, amount, diff_amount)) %>% 
     
-    # Rename variables 
-    recode_1040_vars(id) %>% 
+    # Rename variables
+    recode_1040_vars() %>%
     filter(!is.na(Variable)) %>% 
     select(year, Variable, baseline_count, baseline_amount, count_static, 
            amount_static, diff_count_static, diff_amount_static, 
@@ -125,58 +139,29 @@ build_1040_report = function(id) {
                                   diff_count_conventional, diff_amount_conventional),
               startRow = 3,
               startCol = 10)
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Baseline', 
-              xy       = c(2, 2))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Policy reform, static', 
-              xy       = c(5, 2))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Policy reform, conventional', 
-              xy       = c(10, 2))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Number of returns', 
-              xy       = c(2, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Amount', 
-              xy       = c(3, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Number of returns', 
-              xy       = c(5, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Amount', 
-              xy       = c(6, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Number of returns, difference from baseline', 
-              xy       = c(7, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Amount, difference from baseline', 
-              xy       = c(8, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Number of returns', 
-              xy       = c(10, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Amount', 
-              xy       = c(11, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Number of returns, difference from baseline', 
-              xy       = c(12, 3))
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = 'Amount, difference from baseline', 
-              xy       = c(13, 3))
+    # Write column headers
+    headers = tribble(
+      ~text,                                          ~col, ~row,
+      'Baseline',                                        2,    2,
+      'Policy reform, static',                           5,    2,
+      'Policy reform, conventional',                    10,    2,
+      'Number of returns',                               2,    3,
+      'Amount',                                          3,    3,
+      'Number of returns',                               5,    3,
+      'Amount',                                          6,    3,
+      'Number of returns, difference from baseline',     7,    3,
+      'Amount, difference from baseline',                8,    3,
+      'Number of returns',                              10,    3,
+      'Amount',                                         11,    3,
+      'Number of returns, difference from baseline',    12,    3,
+      'Amount, difference from baseline',               13,    3
+    )
+    for (j in 1:nrow(headers)) {
+      writeData(wb    = wb,
+                sheet = as.character(yr),
+                x     = headers$text[j],
+                xy    = c(headers$col[j], headers$row[j]))
+    }
 
     # Add title
     writeData(wb = wb, sheet = as.character(yr), startRow = 1, 
@@ -315,21 +300,15 @@ build_stacked_1040_reports = function(counterfactual_ids) {
                   .fns  = ~ if_else(scenario_id == 'baseline', ., . - lag(.)))) %>% 
     ungroup() %>%  
   
-    # Reshape wide in scenario 
-    rename_with(.cols = starts_with('n_'), 
-                .fn   = ~ str_replace(., 'n_', 'count.')) %>% 
-    rename_with(.cols = -c(scenario_id, year, run_type, starts_with('count.')), 
-                .fn   = ~ paste0('amount.', .)) %>%
-    pivot_longer(cols      = -c(scenario_id, year, run_type), 
-                 names_to  = c('Series', 'Variable'), 
-                 names_sep = '[.]',
-                 values_to = 'value') %>% 
-    pivot_wider(names_from  = scenario_id, 
+    # Reshape wide in scenario
+    pivot_1040_long(id_cols  = c('scenario_id', 'year', 'run_type'),
+                    names_to = 'Series') %>%
+    pivot_wider(names_from  = scenario_id,
                 values_from = value) %>%
     
     # Clean up 
-    relocate(run_type, Variable, Series) %>% 
-    recode_1040_vars('baseline') %>%
+    relocate(run_type, Variable, Series) %>%
+    recode_1040_vars() %>%
     filter(!is.na(Variable)) %>% 
     mutate(Series = if_else(Series == 'amount', 'Amount', 'Number of returns'))
   
@@ -421,15 +400,14 @@ build_stacked_1040_reports = function(counterfactual_ids) {
 
 
 
-recode_1040_vars = function(df, scenario_id) {
-  
+recode_1040_vars = function(df) {
+
   #----------------------------------------------------------------------------
-  # Converts subset of variable names to human-readable descriptions. 
-  # Unspecified mappings are returned as NA.  
-  # 
+  # Converts subset of variable names to human-readable descriptions.
+  # Unspecified mappings are returned as NA.
+  #
   # Parameters:
-  #   - df (df)           : dataframe long in Variable with 1040.csv names 
-  #   - scenario_id (str) : scenario ID
+  #   - df (df) : dataframe long in Variable with 1040.csv names
   #
   # Returns: dataframe with recoded Variable column (df).
   #----------------------------------------------------------------------------

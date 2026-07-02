@@ -92,38 +92,31 @@ do_taxes = function(tax_units, baseline_pr_er, vars_1040, vars_payroll,
   # Check whether individual income taxes need to be calculated more than once.
   # If both an above-the-line and an itemized charitable deduction are available,
   # the taxpayer chooses between the two by calculating their taxes twice
-  if (any(tax_units$char.above_limit > 0 & tax_units$char.item_limit > 0)) { 
-    
-    # Force filers to take the above-the-line deduction
-    above = tax_units %>% 
-      do_1040(return_vars = vars_1040,
-              force_char  = T, 
-              char_above  = T) %>% 
-      mutate(id            = tax_units$id, 
-             char_ded_type = 'above')
-    
-    # Force filers to take the itemized deduction
-    item = tax_units %>% 
-      do_1040(return_vars = vars_1040, 
-              force_char  = T, 
-              char_above  = F) %>% 
-      mutate(id            = tax_units$id,
-             char_ded_type = 'item')
-    
+  if (any(tax_units$char.above_limit > 0 & tax_units$char.item_limit > 0)) {
+
+    # Force filers to take each deduction form in turn
+    legs = list(above = T, item = F) %>%
+      imap(.f = ~ tax_units %>%
+             do_1040(return_vars = vars_1040,
+                     force_char  = T,
+                     char_above  = .x) %>%
+             mutate(id            = tax_units$id,
+                    char_ded_type = .y))
+
     # Determine which is better
-    opt = above %>% 
-      select(above = liab_iit_net) %>% 
+    opt = legs$above %>%
+      select(above = liab_iit_net) %>%
       bind_cols(
-        item %>% 
+        legs$item %>%
           select(item = liab_iit_net)
-      ) %>% 
-      mutate(char_ded_type = if_else(above <= item, 'above', 'item')) %>% 
+      ) %>%
+      mutate(char_ded_type = if_else(above <= item, 'above', 'item')) %>%
       select(char_ded_type)
-    
+
     # Select optimized answer
     tax_units %<>%
       bind_cols(opt) %>%
-      left_join(bind_rows(above, item), by = c('id', 'char_ded_type')) %>% 
+      left_join(bind_rows(legs), by = c('id', 'char_ded_type')) %>%
       select(-char_ded_type)
     
   # Standard case: just calculate the 1040 once
@@ -298,12 +291,23 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
   #----------------------------------------------------------------------------
   
   
-  # Create tibble-length vectors for form-behavior booleans 
+  # Create tibble-length vectors for form-behavior booleans
   force_char = rep(force_char, nrow(tax_units))
   char_above = rep(char_above, nrow(tax_units))
-  
-  
-  tax_units %>% 
+
+  # Calculate a tax concept with charitable contributions masked to zero where
+  # the forced form says they belong on the other side of the 1040, restoring
+  # the original values afterward (from the *_ duplicates created below)
+  with_char_masked = function(df, zero_when, calc_fn) {
+    df %>%
+      mutate(across(.cols = c(char_cash, char_noncash),
+                    .fns  = ~ if_else(zero_when, 0, .))) %>%
+      bind_cols(calc_fn(.)) %>%
+      mutate(char_cash    = char_cash_,
+             char_noncash = char_noncash_)
+  }
+
+  tax_units %>%
     
     # Create duplicates for variables affected by form-behavior optimization
     mutate(across(.cols  = c(char_cash, char_noncash), 
@@ -317,14 +321,12 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # Net capital gain includable in AGI
     bind_cols(calc_kg(.)) %>% 
       
-    # AGI, including taxable OASI benefits
-    mutate(across(.cols = c(char_cash, char_noncash), 
-                  .fns  = ~ if_else(force_char & !char_above, 0, .))) %>% 
-    bind_cols(calc_agi(.)) %>% 
-    mutate(char_cash    = char_cash_, 
-           char_noncash = char_noncash_) %>% 
-      
-      
+    # AGI, including taxable OASI benefits (charitable masked out of the
+    # above-the-line deduction when forcing the itemized form)
+    with_char_masked(force_char & !char_above, calc_agi) %>%
+
+
+
     #----------------
     # Taxable income 
     #----------------
@@ -332,12 +334,9 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     # Standard deduction
     bind_cols(calc_std_ded(.)) %>% 
       
-    # Itemized deductions
-    mutate(across(.cols = c(char_cash, char_noncash), 
-                  .fns  = ~ if_else(force_char & char_above, 0, .))) %>%
-    bind_cols(calc_item_ded(.)) %>% 
-    mutate(char_cash    = char_cash_, 
-           char_noncash = char_noncash_) %>% 
+    # Itemized deductions (charitable masked out of the itemized deduction
+    # when forcing the above-the-line form)
+    with_char_masked(force_char & char_above, calc_item_ded) %>%
     
     # Personal exemptions
     bind_cols(calc_pe_ded(.)) %>% 

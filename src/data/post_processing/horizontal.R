@@ -26,15 +26,8 @@ build_horizontal_table = function(id) {
   for (yr in get_scenario_info(id)$dist_years) {
 
     # Read baseline and scenario microdata
-    baseline = globals$baseline_root %>%
-      file.path('baseline/static/detail', paste0(yr, '.csv')) %>%
-      fread() %>%
-      tibble()
-
-    scenario = globals$output_root %>%
-      file.path(id, 'static/detail', paste0(yr, '.csv')) %>%
-      fread() %>%
-      tibble()
+    baseline = read_static_detail('baseline', yr)
+    scenario = read_static_detail(id, yr)
 
     # Combine with scenario labels
     scenario_id = id

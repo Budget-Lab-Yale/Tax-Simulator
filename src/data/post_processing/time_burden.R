@@ -25,14 +25,10 @@ process_for_time_burden = function(id, year) {
   # Read microdata input
   #-----------------------
   
-  # baseline here is used to compute scenario-consistent income groups and filing status changes 
-  baseline = file.path(globals$baseline_root, "baseline", "static/detail", paste0(year, ".csv")) %>% 
-    fread() %>%
-    tibble()
-  reform = file.path(globals$output_root, id, "static/detail", paste0(year, ".csv")) %>% 
-    fread() %>%
-    tibble() %>%
-    mutate(policy = !!id) 
+  # baseline here is used to compute scenario-consistent income groups and filing status changes
+  baseline = read_static_detail('baseline', year)
+  reform   = read_static_detail(id, year) %>%
+    mutate(policy = !!id)
   
   # Determine whether EITC eligibility precerification is law
   tax_law = file.path(globals$output_root, id, "static/supplemental", "tax_law.csv") %>%
@@ -114,28 +110,9 @@ process_for_time_burden = function(id, year) {
       no_tax        = as.integer(txbl_inc == 0 & agi >= 0)
     ) %>%
     
-    # Determine income groups 
-    arrange(expanded_inc) %>% 
-    mutate(
-      
-      # Income percentile
-      income_pctile = cumsum(weight * (expanded_inc >= 0)) / sum(weight * (expanded_inc >= 0)), 
-      income_pctile = if_else(expanded_inc < 0, NA, income_pctile), 
-      
-      # Quintiles and top shares
-      quintile = case_when(
-        income_pctile <= 0.2 ~ 'Quintile 1',
-        income_pctile <= 0.4 ~ 'Quintile 2',
-        income_pctile <= 0.6 ~ 'Quintile 3',
-        income_pctile <= 0.8 ~ 'Quintile 4',
-        income_pctile <= 1   ~ 'Quintile 5',
-      ), 
-      top_10 = if_else(income_pctile > 0.9,   'Top 10%',   NA), 
-      top_5  = if_else(income_pctile > 0.95,  'Top 5%',    NA), 
-      top_1  = if_else(income_pctile > 0.99,  'Top 1%',    NA), 
-      top_01 = if_else(income_pctile > 0.999, 'Top 0.1%',  NA)
-    ) %>% 
-    
+    # Determine income groups
+    add_rank_groups('expanded_inc', 'income_pctile') %>%
+
     return()
 }
 

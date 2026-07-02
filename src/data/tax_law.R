@@ -33,11 +33,13 @@ build_tax_law = function(scenario_info, indexes) {
   # Read baseline YAML files
   tax_law = load_tax_law_input('./config/scenarios/tax_law/baseline') 
   
-  # Overwrite baseline subparams with specified changes
+  # Overwrite baseline subparams with specified changes. Each reform
+  # subparameter object replaces the baseline one WHOLESALE (value plus all
+  # indexation fields together), never merged field-by-field: a reform that
+  # omits an indexation field must reset it to NULL, not inherit baseline's
+  # (which rules out modifyList here -- it merges nested lists recursively)
   for (param in names(changes_from_baseline)) {
-    for (subparam in names(changes_from_baseline[[param]])) {
-      tax_law[[param]][[subparam]] = changes_from_baseline[[param]][[subparam]]
-    }
+    tax_law[[param]][names(changes_from_baseline[[param]])] = changes_from_baseline[[param]]
   }
   
   # Parse all parameters and concatenate
@@ -592,42 +594,44 @@ replace_defaults = function(supplied, default) {
 
 
 
-parse_inf = function(value) {
-  
+walk_atomic = function(value, fn) {
+
   #----------------------------------------------------------------------------
-  # Helper function to replace string "Inf" with R's infinity (Inf) object in 
+  # Applies fn to the atomic leaves of a raw YAML value: elementwise over a
+  # named list (year-value specification), directly otherwise (scalar, vector,
+  # or unnamed heterogeneous list).
+  #
+  # Parameters:
+  #   - value (list | any atomic) : value of raw input
+  #   - fn (function)             : leaf transformation
+  #
+  # Returns: value with fn applied to each atomic leaf (list | any atomic).
+  #----------------------------------------------------------------------------
+
+  if (is.list(value) && !is.null(names(value))) {
+    return(map(value, fn))
+  }
+  return(fn(value))
+}
+
+
+
+parse_inf = function(value) {
+
+  #----------------------------------------------------------------------------
+  # Helper function to replace string "Inf" with R's infinity (Inf) object in
   # a potentially multi-level nested list
   #
   # Parameters:
-  #   - value (list | any atomic) : value of raw input 
+  #   - value (list | any atomic) : value of raw input
   #
-  # Returns: updated input object with instances of "Inf" replaced with Inf 
+  # Returns: updated input object with instances of "Inf" replaced with Inf
   #          (list | any atomic).
   #----------------------------------------------------------------------------
-  
-  if (is.list(value)) {
-    
-    # Named lists indicate year-value specification 
-    if (!is.null(names(value))) {
-      value %>% 
-        map(~ if (any(. == 'Inf')) { as.numeric(.) } else { . }) %>% 
-        return()
-    
-    # Unnamed lists indicate heterogeneous list YAML parsing  
-    } else { 
-      if (any(value == 'Inf')) {
-        return(as.numeric(value))
-      }
-      return(value)
-    }
-  
-  # Scalars
-  } else {
-    if (any(value == 'Inf')) { 
-      return(as.numeric(value))
-    }
-    return(value)
-  }
+
+  walk_atomic(value, function(x) {
+    if (any(x == 'Inf')) as.numeric(x) else x
+  })
 }
 
 
@@ -658,16 +662,7 @@ parse_na = function(value) {
   #          (list | any atomic).
   #----------------------------------------------------------------------------
   
-  if (is.list(value)) {
-    
-    # Named lists indicate year-value specification 
-    if (!is.null(names(value))) {
-      value %<>% 
-        map(.f = ~ suppressWarnings(as.numeric(.))) 
-      return(value)
-    }
-  }
-  return(suppressWarnings(as.numeric(value)))
+  walk_atomic(value, function(x) suppressWarnings(as.numeric(x)))
 }
 
   

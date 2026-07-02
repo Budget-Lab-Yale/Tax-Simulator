@@ -1,12 +1,119 @@
 #-------------------------------------------------------------------------
 # revenue.R
-# 
+#
 # Post-processing functions to produce revenue estimates for fiscal years
 #-------------------------------------------------------------------------
 
 
 
-calc_receipts = function(totals, scenario_root, vat_root, other_root, 
+add_receipts_total = function(receipts, name) {
+
+  #----------------------------------------------------------------------------
+  # Appends the total budget-effect column to a wide receipts dataframe:
+  # the sum of all revenue components less refundable credit outlays.
+  #
+  # Parameters:
+  #   - receipts (df) : wide receipts dataframe (receipts_full.csv layout)
+  #   - name (str)    : name for the new total column
+  #
+  # Returns: receipts with the total column appended (df).
+  #----------------------------------------------------------------------------
+
+  receipts[[name]] = with(receipts,
+    revenues_payroll_tax + revenues_income_tax - outlays_tax_credits +
+    revenues_corp_tax + revenues_estate_tax + revenues_wealth_tax +
+    revenues_vat + revenues_other
+  )
+  return(receipts)
+}
+
+
+
+read_receipts_long = function(path, values_to) {
+
+  #----------------------------------------------------------------------------
+  # Reads a receipts_full.csv, adds the total budget-effect column, and pivots
+  # long in series.
+  #
+  # Parameters:
+  #   - path (str)      : path to a receipts_full.csv
+  #   - values_to (str) : name for the value column in the long output
+  #
+  # Returns: tibble long in (year, series) (df).
+  #----------------------------------------------------------------------------
+
+  path %>%
+    read_csv(show_col_types = F) %>%
+    add_receipts_total('total') %>%
+    pivot_longer(cols      = -year,
+                 names_to  = 'series',
+                 values_to = values_to) %>%
+    return()
+}
+
+
+
+split_by_measure = function(rev_est) {
+
+  #----------------------------------------------------------------------------
+  # Splits a revenue table long in Measure into a measure-indexed list.
+  #
+  # Parameters:
+  #   - rev_est (df) : revenue estimates with a Measure column
+  #
+  # Returns: list of dataframes named by measure (lst).
+  #----------------------------------------------------------------------------
+
+  measures = c('Dollars', 'Baseline dollars', 'Share of GDP')
+  measures %>%
+    map(.f = ~ rev_est %>%
+          filter(Measure == .x) %>%
+          select(-Measure)) %>%
+    set_names(measures) %>%
+    return()
+}
+
+
+
+style_rev_sheet = function(wb, sheet, n_cols, comma_rows, pct_rows,
+                           border_rows, bold_rows, center_rows) {
+
+  #----------------------------------------------------------------------------
+  # Applies the shared revenue-workbook styling (number formats, borders, bold
+  # headers, centering, column widths) to a sheet. Callers supply row
+  # positions, which differ between the fixed-layout single-scenario report
+  # and the nrow-dependent stacked report.
+  #
+  # Parameters:
+  #   - wb (Workbook)     : openxlsx workbook object (modified in place)
+  #   - sheet (str)       : sheet name
+  #   - n_cols (int)      : number of columns in the written tables
+  #   - comma_rows (int[]): rows formatted with comma separators
+  #   - pct_rows (int[])  : rows formatted as percentages
+  #   - border_rows (int[]) : rows given a bottom border
+  #   - bold_rows (int[]) : rows in bold
+  #   - center_rows (int[]) : rows center-aligned
+  #
+  # Returns: void (modifies wb in place).
+  #----------------------------------------------------------------------------
+
+  addStyle(wb = wb, sheet = sheet, rows = comma_rows, cols = 2:n_cols,
+           gridExpand = T, style = createStyle(numFmt = 'COMMA'), stack = T)
+  addStyle(wb = wb, sheet = sheet, rows = pct_rows, cols = 2:n_cols,
+           gridExpand = T, style = createStyle(numFmt = 'PERCENTAGE'), stack = T)
+  addStyle(wb = wb, sheet = sheet, rows = border_rows, cols = 1:n_cols,
+           gridExpand = T, style = createStyle(border = 'bottom'), stack = T)
+  addStyle(wb = wb, sheet = sheet, rows = bold_rows, cols = 1:n_cols,
+           gridExpand = T, style = createStyle(textDecoration = 'bold'), stack = T)
+  addStyle(wb = wb, sheet = sheet, rows = center_rows, cols = 2:n_cols,
+           gridExpand = T, style = createStyle(halign = 'center'), stack = T)
+  setColWidths(wb = wb, sheet = sheet, cols = 1:n_cols,
+               widths = c(29, rep(6, n_cols - 1)))
+}
+
+
+
+calc_receipts = function(totals, scenario_root, vat_root, other_root,
                          cost_recovery_root, off_model_root, excess_growth_all_rev) {
   
   #----------------------------------------------------------------------------
@@ -46,14 +153,9 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     select(year, revenues_vat = receipts_fy)
   
   # Read other receipts (CBO projections)
-  revenues_other = c('historical.csv', 'projections.csv') %>% 
-    map(.f = ~ other_root %>% 
-          file.path(.x) %>%
-          read_csv(show_col_types = F) %>%
-          mutate(revenues_other = rev_excise + rev_customs + rev_misc) %>% 
-          select(year, revenues_corp_tax = rev_corp, revenues_estate_tax = rev_estate, revenues_other)
-    ) %>% 
-    bind_rows()
+  revenues_other = read_macro_spliced(other_root) %>%
+    mutate(revenues_other = rev_excise + rev_customs + rev_misc) %>%
+    select(year, revenues_corp_tax = rev_corp, revenues_estate_tax = rev_estate, revenues_other)
   
   # Read deltas attributable to cost recovery changes
   deltas_cost_recovery = cost_recovery_root %>% 
@@ -243,28 +345,13 @@ calc_rev_est = function(id) {
                        'static',
                        'totals',
                        'receipts_full.csv') %>%
-    read_csv(show_col_types = F) %>%
-    
-    # Pivot long in variable type
-    mutate(total = revenues_payroll_tax +
-                   revenues_income_tax -
-                   outlays_tax_credits +
-                   revenues_corp_tax +
-                   revenues_estate_tax +
-                   revenues_wealth_tax +
-                   revenues_vat +
-                   revenues_other) %>%
-    pivot_longer(cols      = -year,
-                 names_to  = 'series',
-                 values_to = 'baseline')
-  
+    read_receipts_long(values_to = 'baseline')
+
+  # Read VAT price offset for baseline dollars calculation
+  vat_price_offset = read_vat_offset(id)
+
   for (static in c(T, F)) {
-  
-    # Read VAT price offset for baseline dollars calculation
-    vat_price_offset = globals$output_root %>% 
-      file.path(id, 'static/supplemental/vat_price_offset.csv') %>% 
-      read_csv(show_col_types = F)
-    
+
     # Read in counterfactual scenario receipts (sidecar: includes partial
     # first sim year)
     scenario = file.path(globals$output_root,
@@ -272,28 +359,11 @@ calc_rev_est = function(id) {
                          if_else(static, 'static', 'conventional'),
                          'totals',
                          'receipts_full.csv') %>%
-      read_csv(show_col_types = F) %>%
-      
-      # Pivot long in variable type
-      mutate(total = revenues_payroll_tax +
-                     revenues_income_tax -
-                     outlays_tax_credits +
-                     revenues_corp_tax +
-                     revenues_estate_tax +
-                     revenues_wealth_tax +
-                     revenues_vat +
-                     revenues_other) %>%
-      pivot_longer(cols      = -year,
-                   names_to  = 'series',
-                   values_to = 'counterfactual')
-    
+      read_receipts_long(values_to = 'counterfactual')
+
     # Read GDP and adjust for VAT (i.e. price level rises)
-    gdp = globals$interface_paths %>% 
-      filter(ID == globals$interface_paths$ID[1], interface == 'Macro-Projections') %>% 
-      get_vector('path') %>% 
-      file.path(c('historical.csv', 'projections.csv')) %>% 
-      map(~ read_csv(.x, show_col_types = F)) %>% 
-      bind_rows() %>% 
+    gdp = interface_root('Macro-Projections') %>%
+      read_macro_spliced() %>%
       left_join(scenario %>% 
                   filter(series == 'revenues_vat') %>% 
                   select(year, vat = counterfactual), 
@@ -337,11 +407,7 @@ calc_rev_est = function(id) {
       ))
     
     # Convert to measure-indexed list
-    rev_est = c('Dollars', 'Baseline dollars', 'Share of GDP') %>% 
-      map(.f = ~ rev_est %>% 
-            filter(Measure == .x) %>% 
-            select(-Measure)) %>% 
-      set_names(c('Dollars', 'Baseline dollars', 'Share of GDP'))
+    rev_est = split_by_measure(rev_est)
     
     # Write machine-readable version
     rev_est$Dollars %>% 
@@ -374,47 +440,17 @@ calc_rev_est = function(id) {
     writeData(wb = wb, sheet = as.character(id), startRow = 23, 
               x = 'FY budget effects of policy change, share of GDP')
     
-    # Format numbers and cells 
-    addStyle(wb         = wb, 
-             sheet      = as.character(id), 
-             rows       = c(2:10, 14:21), 
-             cols       = 2:ncol(rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(numFmt = 'COMMA'), 
-             stack      = T)
-    addStyle(wb         = wb, 
-             sheet      = as.character(id),
-             rows       = 25:31, 
-             cols       = 2:ncol(rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(numFmt = 'PERCENTAGE'), 
-             stack      = T)
-    addStyle(wb         = wb, 
-             sheet      = as.character(id), 
-             rows       = c(1, 2, 10, 12, 13, 21, 23, 24, 32), 
-             cols       = 1:ncol(rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(border = 'bottom'), 
-             stack      = T)
-    addStyle(wb         = wb, 
-             sheet      = as.character(id), 
-             rows       = c(2, 13, 24), 
-             cols       = 1:ncol(rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(textDecoration = 'bold'), 
-             stack      = T)
-    addStyle(wb         = wb, 
-             sheet      = as.character(id), 
-             rows       = 2:31,
-             cols       = 2:ncol(rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(halign = 'center'), 
-             stack      = T)
-    setColWidths(wb     = wb,
-                 sheet  = as.character(id),
-                 cols   = 1:ncol(rev_est$Dollars),
-                 widths = c(29, rep(6, ncol(rev_est$Dollars) - 1)))
-      
+    # Format numbers and cells (fixed layout: 9 series rows per block)
+    style_rev_sheet(
+      wb          = wb,
+      sheet       = as.character(id),
+      n_cols      = ncol(rev_est$Dollars),
+      comma_rows  = c(2:10, 14:21),
+      pct_rows    = 25:31,
+      border_rows = c(1, 2, 10, 12, 13, 21, 23, 24, 32),
+      bold_rows   = c(2, 13, 24),
+      center_rows = 2:31
+    )
 
     # Write revenue estimates file
     saveWorkbook(wb   = wb, 
@@ -447,20 +483,17 @@ calc_stacked_rev_est = function(counterfactual_ids) {
     return()
   }
   
+  # Read VAT price offset for baseline dollars calculation
+  vat_price_offsets = counterfactual_ids %>%
+    map(.f = ~ read_vat_offset(.x) %>%
+          mutate(scenario_id = .x)
+    ) %>%
+    bind_rows()
+
   for (static in c(T, F)) {
-    
-    # Read VAT price offset for baseline dollars calculation
-    vat_price_offsets = counterfactual_ids %>% 
-      map(.f = ~ globals$output_root %>% 
-            file.path(.x, 'static/supplemental/vat_price_offset.csv') %>% 
-            read_csv(show_col_types = F) %>% 
-            mutate(scenario_id = .x) 
-      ) %>% 
-      bind_rows()
-    
-    
-    stacked_rev_est = c('baseline', counterfactual_ids) %>% 
-      
+
+    stacked_rev_est = c('baseline', counterfactual_ids) %>%
+
       # Read scenario receipts file and store (sidecar: includes partial
       # first sim year)
       map(.f = ~ file.path(if_else(.x == 'baseline', globals$baseline_root, globals$output_root),
@@ -468,28 +501,17 @@ calc_stacked_rev_est = function(counterfactual_ids) {
                            if_else(static | .x == 'baseline', 'static', 'conventional'),
                            'totals',
                            'receipts_full.csv') %>%
-            read_csv(show_col_types = F) %>% 
-            mutate(scenario_id = .x,
-                   Dollars = revenues_payroll_tax +
-                             revenues_income_tax -
-                             outlays_tax_credits +
-                             revenues_corp_tax +
-                             revenues_estate_tax +
-                             revenues_wealth_tax +
-                             revenues_vat +
-                             revenues_other) %>%
+            read_csv(show_col_types = F) %>%
+            add_receipts_total('Dollars') %>%
+            mutate(scenario_id = .x) %>%
             select(scenario_id, year, Dollars, vat = revenues_vat)) %>%
-      bind_rows() %>% 
-      
+      bind_rows() %>%
+
       # Calculate share-of-GDP metric, accounting  for introduction of a VAT
       left_join(
-        globals$interface_paths %>% 
-          filter(ID == globals$interface_paths$ID[1], interface == 'Macro-Projections') %>% 
-          get_vector('path') %>% 
-          file.path(c('historical.csv', 'projections.csv')) %>% 
-          map(~ read_csv(.x, show_col_types = F)) %>% 
-          bind_rows() %>% 
-          select(year, gdp_fy), 
+        interface_root('Macro-Projections') %>%
+          read_macro_spliced() %>%
+          select(year, gdp_fy),
         by = 'year'
       ) %>%
       mutate(`Share of GDP` = Dollars / (gdp_fy + vat))  %>% 
@@ -520,18 +542,15 @@ calc_stacked_rev_est = function(counterfactual_ids) {
     
     
     # Convert to measure-indexed list, adding totals row in the process
-    stacked_rev_est = c('Dollars', 'Baseline dollars', 'Share of GDP') %>% 
-      map(.f = ~ stacked_rev_est %>% 
-            filter(Measure == .x) %>% 
-            select(-Measure) %>% 
+    stacked_rev_est = split_by_measure(stacked_rev_est) %>%
+      map(.f = ~ .x %>%
             bind_rows(
-              (.) %>%
-                summarise(across(.cols = -scenario_id, 
-                                 .fns  = sum)) %>% 
+              .x %>%
+                summarise(across(.cols = -scenario_id,
+                                 .fns  = sum)) %>%
                 mutate(scenario_id = 'Total')
-            ) %>% 
-            rename(Scenario = scenario_id)) %>% 
-      set_names(c('Dollars', 'Baseline dollars', 'Share of GDP'))
+            ) %>%
+            rename(Scenario = scenario_id))
     
     
     # Create workbook
@@ -559,52 +578,22 @@ calc_stacked_rev_est = function(counterfactual_ids) {
               x = 'Stacked FY budget effects of policy changes, share of GDP')
     
     
-    # Format numbers and cells 
-    addStyle(wb         = wb, 
-             sheet      = 'Stacked revenue estimates', 
-             rows       = c(2:(nrow(stacked_rev_est$Dollars) + 2),
-                            1 + start_real:(start_real + nrow(stacked_rev_est$`Baseline dollars`))),
-             cols       = 2:ncol(stacked_rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(numFmt = 'COMMA'), 
-             stack      = T)
-    addStyle(wb         = wb, 
-             sheet      = 'Stacked revenue estimates', 
-             rows       = 1 + start_gdp:(start_gdp + nrow(stacked_rev_est$`Share of GDP`)), 
-             cols       = 2:ncol(stacked_rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(numFmt = 'PERCENTAGE'), 
-             stack      = T)
-    addStyle(wb         = wb, 
-             sheet      = 'Stacked revenue estimates', 
-             rows       = c(1, 2, nrow(stacked_rev_est$Dollars) + c(1, 2), 
-                            start_real + c(-1, 0, nrow(stacked_rev_est$`Baseline dollars`) + c(-1, 0)),
-                            start_gdp  + c(-1, 0, nrow(stacked_rev_est$`Share of GDP`) + c(-1, 0))
-                            ),
-             cols       = 1:ncol(stacked_rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(border = 'bottom'), 
-             stack      = T)
-    addStyle(wb         = wb, 
-             sheet      = 'Stacked revenue estimates', 
-             rows       = c(2, start_real, start_gdp), 
-             cols       = 1:ncol(stacked_rev_est$Dollars), 
-             gridExpand = T, 
-             style      = createStyle(textDecoration = 'bold'), 
-             stack      = T)
-    addStyle(wb         = wb, 
-             sheet      = 'Stacked revenue estimates', 
-             rows       = 2:(1 + start_gdp + nrow(stacked_rev_est$`Share of GDP`)), 
-             cols       = 2:(ncol(stacked_rev_est$Dollars)), 
-             gridExpand = T,
-             style      = createStyle(halign = 'center'), 
-             stack      = T)
-    setColWidths(wb     = wb,
-                 sheet  = 'Stacked revenue estimates',
-                 cols   = 1:ncol(stacked_rev_est$Dollars),
-                 widths = c(29, rep(6, ncol(stacked_rev_est$Dollars) - 1)))
-    
-    
+    # Format numbers and cells (nrow-dependent layout)
+    style_rev_sheet(
+      wb          = wb,
+      sheet       = 'Stacked revenue estimates',
+      n_cols      = ncol(stacked_rev_est$Dollars),
+      comma_rows  = c(2:(nrow(stacked_rev_est$Dollars) + 2),
+                      1 + start_real:(start_real + nrow(stacked_rev_est$`Baseline dollars`))),
+      pct_rows    = 1 + start_gdp:(start_gdp + nrow(stacked_rev_est$`Share of GDP`)),
+      border_rows = c(1, 2, nrow(stacked_rev_est$Dollars) + c(1, 2),
+                      start_real + c(-1, 0, nrow(stacked_rev_est$`Baseline dollars`) + c(-1, 0)),
+                      start_gdp  + c(-1, 0, nrow(stacked_rev_est$`Share of GDP`) + c(-1, 0))),
+      bold_rows   = c(2, start_real, start_gdp),
+      center_rows = 2:(1 + start_gdp + nrow(stacked_rev_est$`Share of GDP`))
+    )
+
+
     # Write revenue estimates file
     saveWorkbook(wb   = wb, 
                  file = file.path(globals$output_root, 
