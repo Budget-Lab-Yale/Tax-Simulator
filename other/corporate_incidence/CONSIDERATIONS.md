@@ -287,11 +287,17 @@ absorb the near-term hit. In model terms: `net_worth`, wealth-tax base, estate b
 kg_dynamics unrealized-gain state reprice **now**; the flow-side income-tax effects phase in
 behind a **payout-split parameter**. This timing asymmetry is the whole design — and why the
 conventional individual offset is modest early even though capitalization is instant.
+_(SUPERSEDED by D8/D9/D12: the central case is proportional IMMEDIATE payout — dividends
+fall with current-year after-tax profits; no Lintner smoothing, no payout-split parameter.
+The stock-reprices-now half stands; the flows-later half does not.)_
 
 **v1 parameterization:** a single capitalization coefficient
 κ ∈ [~0.3, 1.0] × Δτ/(1−τ), swept s×M-style, + a payout-split/timing parameter for the flow
 leg. Anchors: TCJA event studies (κ), dividend-smoothing literature (payout split), Kennedy
 et al. 2024 (within-firm allocation if the labor leg is ever modeled).
+_(SUPERSEDED in full by D9/D12: no free κ, no payout-split parameter — perfect-foresight
+PV markdown + data-measured exposures. This paragraph is kept for the arithmetic only.
+NB: this κ is unrelated to D15's κ, the corporate share of the normal-capital stock.)_
 
 ---
 
@@ -439,6 +445,16 @@ on-model mapping.
     larger. Standard stacking caveat, newly applicable to the corporate line specifically:
     the corporate row is NOT order-invariant. Note in stacked-report documentation when the
     channel ships.
+14. **Fail-closed input contract** (added 2026-07-02, external review). D1 (gross-of-
+    offset) and D13 (rate-type) are interface CONTRACTS, not comments — enforcement
+    mirrors the house refusal-gate pattern (`kg_dyn_check_run_compat` /
+    `wealth_dyn_check_run_compat`): the channel activates ONLY when the Off-Model-
+    Estimates corporate input carries an explicit declaration (metadata:
+    gross_of_offset + provision_type = rate); absent or contradicting metadata → hard
+    stop, fall back to the smear (status quo), loudly. Plus a mechanical guard: reject
+    receipts paths whose cumulative delta reverses sign or retraces beyond a threshold —
+    the timing-seesaw signature of depreciation-type provisions, whose old-capital
+    revaluation is SIGN-FLIPPED (D13) — even when declared rate-type.
 
 ---
 
@@ -483,7 +499,8 @@ this week, then a disciplined build.
   21→28 rate hike and, using existing baseline detail files + Tax-Data `value.*`, compute
   (i) the naive-κ capitalization hit to household equity by net-worth percentile
   (`value.equities` is a first-class column — recon 2026-07-02 — plus imputed equity shares
-  of `value.dc`/`value.db`/`value.trusts`/`value.re_fund`); (ii) the taxable-flow offset
+  of `value.dc`/`value.trusts`/`value.re_fund`; `value.db` is measured ONLY to size the
+  D10 residual — DB is never debited on records); (ii) the taxable-flow offset
   ceiling (div + kg at effective rates; cf. the ~4–5¢/$ back-of-envelope); (iii) estate /
   wealth-tax / deemed-realization base deltas over 10–30 yrs using `estate_m` machinery;
   (iv) the holdings-based vs current-smear allocation comparison. **Gate: are the stock-side
@@ -701,7 +718,10 @@ are recorded and stand unless overridden.
   profits; the baseline composition is held fixed at whatever the microdata embodies.
   **Accepted approximation:** one kg factor blends buyback-driven realizations (which purely
   should track the current-year statute) with appreciation-driven ones (which should track
-  the markdown path) — matters only under temporary shocks, second-order. **Deferred to
+  the markdown path) — matters only under temporary shocks, second-order. _(CORRECTED
+  2026-07-02, external review: FIRST-order in the shock for short sunsets — φ+μ → −m as
+  the window shrinks; moot under D18, whose φ/μ split supersedes the blended factor.)_
+  **Deferred to
   v2:** payout-SHIFT behavior (dividend↔buyback substitution, the 2022 buyback-excise
   question) — a behavior module, not mechanical incidence; the `buyback-tax` repo seeds it,
   and the Phase 0b recon on that repo now attaches to the v2 module, not v1.
@@ -718,8 +738,9 @@ are recorded and stand unless overridden.
     a provision type off the smear, Off-Model-Estimates must supply an actual profit path
     (or, for transition-type provisions, a valuation shock) — not a receipts path.
   - **v1 operating rule:** ASSERT that the off-model corporate input is rate-type and run
-    the D9 channel on it. Labeled limitation: the further a scenario's corporate change is
-    from the rate case, the worse the model. One exemption: **depreciation policy, which
+    the D9 channel on it _(enforced fail-closed per §8.14: explicit input declaration +
+    seesaw guard, not a comment)_. Labeled limitation: the further a scenario's corporate
+    change is from the rate case, the worse the model. One exemption: **depreciation policy, which
     never enters through the corporate input at all** — it arrives on its own
     Cost-Recovery-Simulator interface (verified 2026-07-02): receipts delta read at
     `revenue.R:59-62,172-173` (confirmed = ccorp + PASS-THROUGH combined, checked against

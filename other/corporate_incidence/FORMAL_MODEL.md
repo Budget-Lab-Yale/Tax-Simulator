@@ -11,6 +11,13 @@ _UPDATE (2026-07-02, later same day): all five §10 asks were ruled in an author
 walkthrough session and are recorded as D15–D18 in CONSIDERATIONS §11 (item 4 was
 editorial and is applied in place there). §10 below carries the outcomes inline._
 
+_UPDATE (2026-07-02, external-review pass): five findings from an external model review
+incorporated — §4 rewritten as two separate invariants in burden units (the draft mixed
+the per-year flow identity with stock/PV objects and had a residual sign slip); P6's
+"second-order for temporary shocks" corrected to FIRST-order for short sunsets; the
+(G) gate made fail-closed (CONSIDERATIONS §8.14); DB/value.db and §5 staleness fixed in
+CONSIDERATIONS._
+
 _Everything is written in model-native objects: the record columns (`div_ord`, `kg_lt`,
 `kg_lt_basis`, `value.*`, `txbl_ira_dist`, `net_worth`, `estate_m`), the wealth-bathtub
 state and kernel (`src/sim/wealth_dynamics.R`), the VAT vintaging machinery
@@ -66,6 +73,14 @@ corporate-side avoidance*, because whatever avoidance does to the base, receipts
 after-tax profits move dollar-for-dollar in opposite directions given (F1). §5 shows
 depreciation fails (G) in both timing and sign; transition/one-time levies fail it
 structurally (a stock levy is not a recurring profit change).
+
+**Enforcement is fail-closed** (added 2026-07-02, external-review pass; CONSIDERATIONS
+§8.14): the channel activates only on an explicit input declaration — gross-of-offset +
+rate-type metadata on the Off-Model-Estimates vintage — and a mechanical seesaw guard
+rejects receipts paths whose cumulative delta reverses sign (the depreciation
+signature, whose old-capital revaluation is sign-flipped, §5.3). Absent or
+contradicting metadata → hard stop, fall back to the smear, loudly. "Assert" in D13's
+operating rule means this gate, not a comment.
 
 **Gross-input requirement (D1), formalized.** The channel books an endogenous individual
 offset $O'_t$ on top of the corporate input $R_t$. If the supplied input is
@@ -208,8 +223,12 @@ different scaling:
 
 A single kg factor blends the two; the blend error is
 $\propto (\phi_t + \mu_t)$, which is **zero for permanent shocks** (there
-$\mu_t = -\phi_t = m$ for all $t$) and second-order for temporary ones — confirming and
-quantifying D12's "accepted approximation."
+$\mu_t = -\phi_t = m$ for all $t$) but **first-order in the shock for short sunsets**:
+$\phi_t + \mu_t = -m\,(1 - \text{annuity share})$, approaching the full $-m$ as the
+window shrinks. _(CORRECTED 2026-07-02, external-review pass — this paper originally
+repeated D12's "second-order" gloss, which is too strong. The blend is precisely why
+D18's split — quantity margin at $\phi$, price margin at $\mu$ — is the implementation
+path rather than any single blended factor.)_
 
 **Implementable exact form.** Because `kg_lt_basis` is a record column, the
 appreciation-driven leg needs no approximation: per record,
@@ -389,33 +408,55 @@ nominal growth. ∎
 
 ## 4. The conservation identity (the model invariant)
 
-Per calendar year $t$, in CY liability space (before FY conversion), the wedge allocates
-exactly:
+_(REWRITTEN 2026-07-02, external-review pass: the original draft mixed the per-year flow
+identity with stock/PV objects and carried a sign slip on the residual. Two separate
+invariants, stated in burden units so every term is $\ge 0$ under a hike and $\le 0$
+under a cut.)_
 
-$$w_t \;=\; \underbrace{\Delta \mathrm{Rev}^{corp}_t}_{\text{Treasury, gross input}}\,,
-\qquad
-\Delta\pi_t \;=\; -\,w_t \;=\;
-\underbrace{\sum_i w_i\,\big[\Delta div_i + \Delta int_i + \Delta rent/pt_i\big]}_{
-\text{household flow hits (}\Delta Y^{exog}\text{)}}
-\;+\; \underbrace{\Delta \mathrm{Accr}^{hh}_t}_{\substack{\text{household accrual hits:}\\
-\text{gain-state debit / markdown flow}}}
-\;+\; \mathrm{Residual}_t,$$
+**Invariant 1 — per-year flow allocation.** Work in CY liability space (before FY
+conversion), in burden units: $w_t = \Delta\mathrm{Rev}^{corp}_t$ (gross input, D1).
+Every object below is a year-$t$ FLOW:
 
-with $\mathrm{Residual}_t \ge 0$ the foreign/nonprofit/DB slice (D3/D10) — reportable as
-"borne outside the household sector." Because the flow and accrual legs are the same
-object measured on different margins (P4/P10), the PV statement closes:
+$$w_t \;=\; B^{flow}_t \;+\; B^{accr}_t \;+\; B^{res}_t,$$
 
-$$\mathrm{PV}(\text{household burden net of rebates}) + \mathrm{PV}(\mathrm{Residual})
+- $B^{flow}_t = -\sum_i w_i\,[\Delta div_i + \Delta int_i + \Delta rent/pt_i]$ — the
+  household external-income hits (exactly the $\Delta Y^{exog}$ lines, P9/D16), measured
+  from the applied record-level scalings;
+- $B^{accr}_t$ — the household **accrual flow**: the non-cash-distribution slice
+  (retentions + the net-repurchase channel) of the year-$t$ hit — the shortfall in
+  accrued appreciation during year $t$, measured from the year-over-year movement of the
+  gain-state debit / markdown position (exact measurement formula is a Phase 2 design
+  item). This is NOT the gain-state debit itself: that is a stock (a PV) and is never
+  compared to a single year's $w_t$. Under a temporary shock $B^{accr}_t$ turns negative
+  in the recovery years (the credit-back);
+- $B^{res}_t = \theta_{res}\,w_t$ — the foreign/nonprofit/DB slice, same sign as the
+  total by construction (D3/D10); under D15 it also carries the named $\Delta\rho$
+  revaluation line (P14).
+
+The check content is real because the three terms are computed independently (record
+scalings; state movement; exposure shares): a violation flags a mis-measured $\omega$, a
+missed line, or a weights bug — the estate allocator's $\Sigma w\cdot p\cdot\lambda$
+precedent. Per year, per leg, hard-error beyond tolerance.
+
+**Invariant 2 — stock/flow consistency of the markdown.** The markdown is a PV object;
+it is checked against its own telescoping recursion on the legislated path (P4), never
+against a single year's wedge:
+
+$$M_t\,(1+r) \;=\; (\text{price-relevant hit})_{t+1} \;+\; M_{t+1},$$
+
+with the gain-state debit $=\omega_{kg}M_t$ at every $t$, and $M_t \to$ the rent-share
+floor path of §6.2 at the horizon.
+
+The PV statement then closes across the two invariants:
+
+$$\mathrm{PV}(\text{household burden net of rebates}) + \mathrm{PV}(B^{res})
 = \mathrm{PV}(w) - \mathrm{PV}(\text{endogenous individual offset}),$$
 
 where the offset is what the calculator produces on the conventional pass (D1: never a
 special line — it materializes in ordinary receipts deltas, plus the estate / wealth-tax
-/ deemed legs in death years). Check it allocator-style (the estate allocator's
-$\Sigma w\cdot p\cdot\lambda$ precedent): per year, per leg, hard-error on violation
-beyond tolerance. Under D14 the identity needs one explicit residual note (P13's
-$\Delta\rho$ revaluations). FY booking wraps the CY identity afterward: corporate input
-at 0.75/0.25 (`revenue.R:140`), estate and wealth at FY+1 (`revenue.R:147,160`) — run
-one year past the window, as with the wealth channel.
+/ deemed legs in death years). FY booking wraps the CY identities afterward: corporate
+input at 0.75/0.25 (`revenue.R:140`), estate and wealth at FY+1 (`revenue.R:147,160`) —
+run one year past the window, as with the wealth channel.
 
 ---
 
@@ -654,7 +695,7 @@ stacking-order-dependent by construction.
 | V3 | Temporary markdown = annuity share, shrinking to zero; holders earn $r$; burden = announcement loss (D9) | **Theorem** (P3, P4) |
 | V4 | Stock and flow legs cannot double-count (D9) | **Theorem** (P4 telescoping, P10 budget identity) |
 | V5 | Generalized forcing fixes the sign; $s$ allocates a fixed PV burden (D11) | **Theorem** (P8, P10); in-model invariance is gross of the second-round drag, which is $s$-dependent *by design* (P12); kernel = the rule applied to its own feedback (P11, new consistency result) |
-| V6 | Composition-neutral proportional scaling; blend error second-order (D12) | **Confirmed and quantified** (P6): error $\propto(\phi_t+\mu_t)$, exactly zero for permanent shocks; exact per-record form available via `kg_lt_basis` |
+| V6 | Composition-neutral proportional scaling; blend error second-order (D12) | **Confirmed with a correction** (P6): error $\propto(\phi_t+\mu_t)$ — exactly zero for permanent shocks but FIRST-order for short sunsets (D12's "second-order" gloss too strong; corrected in the external-review pass); resolved by D18's $\phi$/$\mu$ split via `kg_lt_basis` |
 | V7 | Basis never scales; the gain absorbs the hit (§8.5) | **Theorem** (P5); wording fix: amplification $\mu/(1-b)$ *increases in basis share* — high-basis holders lose proportionally more, low-basis holders lose more dollars |
 | V8 | Depreciation sign-flip; receipts/distribution split correct; permanently separate (D13) | **Theorem** (P13′, §5.4); gate (G) formalized; `distribution.R:600` = per-vintage PV booking of the time-value transfer |
 | V9 | Flows-only migration; markdown decays to rent-share floor (D14) | **Floor confirmed** (P14, via the q-pinning/$\Delta\rho$ offset). **Allocation corrected** (P13): migrated normal burden splits $(1-\kappa)$ noncorporate / $\kappa$ retained on corporate flows; the noncorporate-only rule is the $\kappa\to 0$ limit and is internally inconsistent with its own mechanism. **RULED: adopted (D15)** |
