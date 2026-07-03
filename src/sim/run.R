@@ -565,6 +565,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                      scenario_uses_kg_dynamics(scenario_info)
   uses_wealth      = scenario_info$ID != 'baseline' &&
                      scenario_uses_wealth_dynamics(scenario_info)
+  uses_corp        = scenario_info$ID != 'baseline' &&
+                     scenario_uses_corp_incidence(scenario_info)
   if (pass_type %in% c('both', 'static')) {
 
     # kg_dynamics scenarios: inject the mechanical (frozen-realization)
@@ -726,20 +728,56 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     conv_detail_path = file.path(conv_root, 'detail', paste0(year, '.csv'))
 
     # The full do_taxes path runs whenever there is a behavior module OR the
-    # wealth channel is active: the conv-no-wealth pass needs liabilities +
-    # mtr_cap_bundle, and the final conv pass needs the haircut applied. Only a
-    # plain no-behavior, no-wealth scenario takes the copy-static shortcut.
-    if (has_behavior || uses_wealth) {
+    # wealth channel OR the corporate channel is active: the conv-no-wealth
+    # pass needs liabilities + mtr_cap_bundle, the final conv pass needs the
+    # haircut applied, and a corporate scenario needs its shocked frame taxed.
+    # Only a plain no-behavior, no-wealth, no-corp scenario takes the
+    # copy-static shortcut.
+    if (has_behavior || uses_wealth || uses_corp) {
+
+      # On-model corporate incidence: a fixed step at the head of EVERY
+      # conventional-side pass (incl. conv-no-wealth), BEFORE the wealth
+      # haircut and the behavior modules, so the kg/wealth machinery runs on
+      # the shocked frame (corp_incidence.R; FORMAL_MODEL section 7). Scales
+      # the D16 external-income lines (accumulating the analytic corp_dY_exog
+      # the wealth bathtub forcing consumes), marks down exposed value.*
+      # stocks and recomputes net_worth (so calc_estate / calc_wealth reprice),
+      # and adjusts kg flows in non-kg runs (kg runs route gains through the
+      # bathtub state debit + the post-behavior phi term instead). Static side
+      # never sees this (D5).
+      conv_base = tax_units
+      if (uses_corp) {
+        corp_check_run_compat(scenario_info, vat_price_offset,
+                              excess_growth_offset)
+        conv_base = corp_apply_to_records(
+          tax_units          = conv_base,
+          paths              = corp_get_paths(scenario_info),
+          year               = year,
+          kg_dynamics_active = uses_kg_mech)
+
+        # Conservation diagnostic (WARN-level reconciliation REPORT; the
+        # per-line testable content is analytic-vs-realized, measured here by
+        # differencing the pre/post frames). Final conventional pass only.
+        if (!is_convnw) {
+          corp_write_conservation_diag(
+            pre = tax_units, post = conv_base,
+            paths = corp_get_paths(scenario_info),
+            year = year, conv_root = conv_root)
+        }
+      }
 
       # Mechanical wealth haircut: a fixed conventional-pass step BEFORE the
       # behavior modules / do_taxes. Drains each record's (age x net-worth-
       # percentile) cell deficit out of wealth (value.* / capital flows / basis)
       # and recomputes net_worth, so calc_estate sees a smaller estate base and
       # calc_wealth reprices liab_wealth on the eroded stock. Final conv only.
-      conv_base = tax_units
+      # Ranking/binning uses the RAW pre-corp net worth (tax_units, row-aligned
+      # to conv_base): the pre-pass cutoffs were computed on net_worth_raw, and
+      # the corporate markdown must not shift records across cells.
       if (apply_haircut) {
         wealth_state = read_cohort_state(scenario_info, 'wealth_dynamics_state', year)
-        conv_base    = wealth_dyn_apply_to_records(conv_base, wealth_state)
+        conv_base    = wealth_dyn_apply_to_records(conv_base, wealth_state,
+                                                   rank_value = tax_units$net_worth)
       }
 
       # Behavioral feedback (identity passthrough when no behavior module). When
@@ -753,6 +791,17 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                                  indexes          = indexes)
       } else {
         conv_input = conv_base
+      }
+
+      # Corporate D18 quantity margin for kg_dynamics runs: buyback-forced
+      # sale volume tracks after-tax payouts, applied AFTER
+      # kg_dyn_apply_to_records (the realization rule knows MTRs and
+      # mortality, not payout policy). Mutually exclusive with the record
+      # applier's non-kg kg block (skipped there via kg_dynamics_active);
+      # the price margin rides the bathtub gain-state debit, never this step.
+      if (uses_corp && uses_kg_mech) {
+        conv_input = corp_apply_kg_quantity_to_records(
+          conv_input, corp_get_paths(scenario_info), year)
       }
 
       tax_units_conv = conv_input %>%
@@ -865,7 +914,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
         select(all_of(globals$detail_vars), starts_with('mtr_'),
                any_of(c('kg_lockin', 'kg_deemed', 'liab_deemed',
                         'estate_income_tax_ded', 'economic_gross', 'cap_bundle_F',
-                        'net_worth_raw', 'nw_pctile', 'D_alloc', 'wealth_haircut'))) %>%
+                        'net_worth_raw', 'nw_pctile', 'D_alloc', 'wealth_haircut',
+                        'corp_dY_exog', 'corp_markdown', 'corp_flow_factor'))) %>%
         write_csv(conv_detail_path)
 
       # Conventional totals (skip the conv-no-wealth pass -- intermediate, no
@@ -962,7 +1012,13 @@ run_bathtub_pass = function(scenario_info, tax_law,
     baseline_tau      = inputs$baseline_tau,
     reform_tau        = inputs$reform_tau,
     reform_tau_timing = inputs$reform_tau_timing,
-    heir_dist         = inputs$heir_dist
+    heir_dist         = inputs$heir_dist,
+    # Corporate gain-state debit (D18 price margin in kg runs): per-year
+    # level adjustments D_a(t) = mu_t * V_corp_exposed_a(t), recomputed from
+    # the current markdown each year (credit-back automatic). NULL when the
+    # corporate channel is inactive -- byte-identical state files then.
+    corp_debit_by_year = corp_kg_state_debit_by_year(scenario_info,
+                                                     inputs$baseline_cells)
   )
 
   invisible(NULL)

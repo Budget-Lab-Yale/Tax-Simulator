@@ -2,11 +2,14 @@
 # wealth_dynamics.R
 #
 # The wealth bathtub: a MECHANICAL, conventional-side saving-financing channel.
-# A share s = 1 - MPC of the net above-baseline DURING-LIFE tax (income +
-# payroll - deemed + wealth) is financed out of wealth rather than consumption.
-# That deficit compounds over time and drains into the estate (and capital-
-# income) base at death, so the model can quantify interactions like
-# capital-gains-during-life <-> estate tax and wealth-tax <-> capital-income tax.
+# A share s = 1 - MPC of the net above-baseline DURING-LIFE after-tax cash-flow
+# shock F = ΔT⁰ - ΔY_exog -- the during-life tax delta (income + payroll -
+# deemed + wealth) minus any exogenous external-income shock (today: the
+# corporate channel's corp_dY_exog; 0 elsewhere) -- is financed out of wealth
+# rather than consumption. That deficit compounds over time and drains into the
+# estate (and capital-income) base at death, so the model can quantify
+# interactions like capital-gains-during-life <-> estate tax, wealth-tax <->
+# capital-income tax, and corporate-tax <-> estate/wealth-tax.
 #
 # This is NOT a behavior module: there is no do_wealth_dynamics() hook. The
 # applier (wealth_dyn_apply_to_records) is invoked DIRECTLY as a built-in step
@@ -770,12 +773,18 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
   #----------------------------------------------------------------------------
   # Orchestrates the wealth bathtub pre-pass for one scenario. For each year:
   # reads the scenario CONV-NO-WEALTH detail and the baseline static detail,
-  # assigns (age x net-worth-percentile) cells, builds the CONVENTIONAL forcing
-  # ΔT⁰ = Δ(liab_iit_pr + liab_wealth), forms the cell-aggregate yield y, the
-  # bundle MTR tau, and the wealth-tax MTR tau_w, and runs the per-living-record
-  # recurrence
+  # assigns (age x net-worth-percentile) cells, builds the GENERALIZED
+  # CONVENTIONAL forcing (corporate-incidence FORMAL_MODEL P8/P9, D11/D16)
+  #     F = ΔT⁰ - ΔY_exog
+  #       = Δ(liab_iit_pr + liab_wealth) - corp_dY_exog
+  # (ΔY_exog is the analytic external-income shock accumulated by
+  # corp_apply_to_records on the conv-no-wealth pass; 0 for every non-corp
+  # scenario, so this is numerically identical to the old tax-only ΔT⁰ there;
+  # the baseline leg has no income shock by construction), forms the
+  # cell-aggregate yield y, the bundle MTR tau, and the wealth-tax MTR tau_w,
+  # and runs the per-living-record recurrence
   #     P(a,p,t) = G(a,p,t) * [aged + percentile-transitioned P(t-1)]
-  #                + s * ΔT⁰(a,p,t)
+  #                + s * F(a,p,t)
   # with the feedback growth kernel
   #     G(a,p,t) = (1 + r_total(t)) - s*(tau(a,p,t)*y(a,p) + tau_w(a,p,t)).
   # There is NO (1-m) survival factor (deaths handled at aggregation via each
@@ -840,9 +849,19 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
     scen$bin = assign_within_age_bin(scen$net_worth_raw, scen$age_cohort, cutoffs,
                                      n_bins, positive_only = TRUE)
 
-    # Per-record during-life tax delta ΔT⁰ (CONVENTIONAL, wealth-excluding):
+    # Per-record generalized forcing F = ΔT⁰ - ΔY_exog (CONVENTIONAL,
+    # wealth-excluding):
     #   liab_iit_pr = liab_iit_net + liab_pr - liab_deemed   (distribution.R:176)
-    #   forcing leg = liab_iit_pr + liab_wealth
+    #   tax leg     = Δ(liab_iit_pr + liab_wealth), scenario - baseline
+    #   income leg  = corp_dY_exog (the corporate channel's analytic external-
+    #                 income shock on this record; NEGATIVE for a hike, so the
+    #                 forcing turns POSITIVE -- the household dissaves to defend
+    #                 consumption against the lost income net of the tax rebate,
+    #                 P8's sign theorem. Baseline leg carries none: the channel
+    #                 is reform-delta-only.)
+    # Internal conversions (kg, retirement distributions) are deliberately NOT
+    # income legs (D16) -- their resource loss is already the balance-sheet /
+    # gain-state markdown; only their tax consequence enters, via ΔT⁰.
     scen = scen %>%
       mutate(liab_iit_pr_scen = liab_iit_net + liab_pr - coalesce(liab_deemed, 0)) %>%
       left_join(base %>% select(id, liab_iit_pr_base, liab_wealth_base),
@@ -850,7 +869,8 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
       mutate(liab_iit_pr_base = coalesce(liab_iit_pr_base, 0),
              liab_wealth_base = coalesce(liab_wealth_base, 0),
              dT0 = weight * ((liab_iit_pr_scen + liab_wealth) -
-                             (liab_iit_pr_base + liab_wealth_base)))
+                             (liab_iit_pr_base + liab_wealth_base) -
+                             coalesce(corp_dY_exog, 0)))
 
     # Cell aggregates (drop records with no cell: NA bin = neg/zero NW).
     cells = scen %>%
@@ -922,8 +942,9 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
     G = pmin(pmax(G, WEALTH_DYN_G_FLOOR), 1 + rt)
 
     # Recurrence: carried deficit (aged + percentile-transitioned) grows by G;
-    # fresh inflow s*ΔT⁰ enters at face value (end-of-year saving, D24). Both the
-    # kernel feedback and this inflow use the cell's own s_mat[a, p].
+    # fresh inflow s*F (F = ΔT⁰ - ΔY_exog, the dT0_mat above) enters at face
+    # value (end-of-year saving, D24). Both the kernel feedback and this inflow
+    # use the cell's own s_mat[a, p].
     P = cohort_recurrence_step(P_prev = P, growth = G, inflow = s_mat * dT0_mat,
                                A = A, M_by_age = M)
 
@@ -977,6 +998,11 @@ wealth_dyn_read_convnw_detail = function(scenario_info, year) {
          ' is missing required column(s): ', paste(missing, collapse = ', '))
   }
   if (!('liab_deemed' %in% names(d))) d$liab_deemed = 0
+  # Corporate-incidence external-income shock (generalized forcing income leg).
+  # Absent for non-corp scenarios and for detail written before the corporate
+  # channel existed: 0 keeps the forcing tax-only, byte-identical to the old
+  # behavior.
+  if (!('corp_dY_exog' %in% names(d))) d$corp_dY_exog = 0
   d
 }
 
@@ -1017,7 +1043,8 @@ wealth_dyn_read_baseline_detail = function(year, has_baseline) {
 # Applier (built-in conventional-pass step)
 #-------------------------------------------------------------------------------
 
-wealth_dyn_apply_to_records = function(tax_units, state, params = NULL) {
+wealth_dyn_apply_to_records = function(tax_units, state, params = NULL,
+                                       rank_value = NULL) {
 
   #----------------------------------------------------------------------------
   # The mechanical haircut: drains each record's share of its cell's deficit
@@ -1041,6 +1068,14 @@ wealth_dyn_apply_to_records = function(tax_units, state, params = NULL) {
   #   - tax_units (df)   : the conventional-pass base frame (pre-behavior)
   #   - state (list)     : the year's wealth_dynamics_state (P + cutoffs)
   #   - params (list)    : wealth params (for fmax); loaded if NULL
+  #   - rank_value (dbl[]): the net-worth vector to RANK/BIN on; defaults to
+  #                        tax_units$net_worth. Callers that transform the
+  #                        frame before the haircut (the corporate-incidence
+  #                        markdown) must pass the RAW pre-transform stock so
+  #                        binning matches the pre-pass's net_worth_raw
+  #                        cutoffs. The D_alloc denominator still uses the
+  #                        live frame's net worth (conservation is within-cell
+  #                        and unaffected by which consistent stock allocates).
   #
   # Returns: tax_units with eroded value.*/flows/basis, recomputed net_worth,
   #          and the diagnostic columns nw_pctile, D_alloc, wealth_haircut.
@@ -1056,8 +1091,12 @@ wealth_dyn_apply_to_records = function(tax_units, state, params = NULL) {
   age_cohort = wealth_dyn_age_cohort(tax_units)
   # Rank on the RAW pre-behavior net worth -- the applier runs at the head of the
   # conventional pass (before behavior), so tax_units$net_worth IS the raw
-  # materialized stock, matching the pre-pass's net_worth_raw cutoffs.
-  bin = assign_within_age_bin(tax_units$net_worth, age_cohort, state$cutoffs,
+  # materialized stock, matching the pre-pass's net_worth_raw cutoffs (unless
+  # the caller passes the raw stock explicitly via rank_value, e.g. when the
+  # corporate markdown has already transformed the frame).
+  if (is.null(rank_value)) rank_value = tax_units$net_worth
+  stopifnot(length(rank_value) == n)
+  bin = assign_within_age_bin(rank_value, age_cohort, state$cutoffs,
                               n_bins, positive_only = TRUE)
   # Exclude dependent returns (no cell), matching the pre-pass forcing
   # population (distribution.R filters dep_status == 0).

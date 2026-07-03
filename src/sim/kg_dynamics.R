@@ -432,9 +432,11 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
   # attached by kg_dyn_attach_record_attrs.
   #
   # Returns per-cell: G_B (sum across assets), R_B, r_B, m, mG_record,
-  # mR_record, per-asset G_B_{class}, and G_B_primary_above_cap (the
+  # mR_record, per-asset G_B_{class}, G_B_primary_above_cap (the
   # §121-net primary-home stock used in the Bellman's cell-level c_phi
-  # when primary_home is in a deemed regime).
+  # when primary_home is in a deemed regime), and V_corp_exposed (the
+  # omega-weighted C-corp equity VALUE underlying the kg state, sizing the
+  # corporate-incidence gain-state debit -- corp_kg_state_debit_by_year).
   #
   # R_B uses positive-only sums of kg_lt so r_B >= 0 and per-record
   # allocation shares (pmax(kg_lt, 0) / R_B) sum to 1.
@@ -442,6 +444,10 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
   # Sparse-cell fallback (spec §5.1): cells with G_B > 0 but R_B = 0 inherit
   # the gain-stock-weighted aggregate r_B. Prevents young heir cohorts
   # (carryover / deemed inflows) from getting r_S = 0 forever.
+
+  # Corporate-exposure value per record (corp_incidence.R helper; plain
+  # column so the grouped summarise below can weight-sum it).
+  tax_units$corp_exposed_value = corp_kg_state_exposed_value(tax_units)
 
   agg = tax_units %>%
     group_by(age_cohort) %>%
@@ -457,6 +463,8 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
               G_B_other_home        = sum(weight * gain.other_home,        na.rm = TRUE),
               G_B_re_fund           = sum(weight * gain.re_fund,           na.rm = TRUE),
               G_B_primary_above_cap = sum(weight * gain.primary_home_above_cap,
+                                          na.rm = TRUE),
+              V_corp_exposed        = sum(weight * corp_exposed_value,
                                           na.rm = TRUE),
               p_char_num = sum(weight * m_household * G_unit * p_char,
                                na.rm = TRUE),
@@ -475,7 +483,7 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
   zero_fill_cols = c('G_B', 'R_B', 'm_num', 'mG_record', 'mR_record', 'w_total',
                      'G_B_equities', 'G_B_pass_throughs', 'G_B_primary_home',
                      'G_B_other_home', 'G_B_re_fund', 'G_B_primary_above_cap',
-                     'p_char_num', 'p_char_extensive_num',
+                     'V_corp_exposed', 'p_char_num', 'p_char_extensive_num',
                      'p_char_intensive_num', 'estate_2026_m_num')
 
   out = tibble(age = ages) %>%
@@ -505,7 +513,8 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
     select(age, G_B, R_B, r_B, m, mG_record, mR_record,
            p_char, p_char_extensive, p_char_intensive, estate_2026_m_avg_dgw,
            G_B_equities, G_B_pass_throughs, G_B_primary_home,
-           G_B_other_home, G_B_re_fund, G_B_primary_above_cap) %>%
+           G_B_other_home, G_B_re_fund, G_B_primary_above_cap,
+           V_corp_exposed) %>%
     arrange(age)
 }
 
@@ -719,7 +728,8 @@ kg_dyn_build_extended_grid = function(baseline_cells, life_ext, years,
                  G_B_primary_home      = 0,
                  G_B_other_home        = 0,
                  G_B_re_fund           = 0,
-                 G_B_primary_above_cap = 0)
+                 G_B_primary_above_cap = 0,
+                 V_corp_exposed        = 0)
     out[[key]] = bind_rows(inner, ext %>% select(names(inner))) %>%
       arrange(age)
   }
@@ -1764,16 +1774,29 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
                                     regime_mix,
                                     planned_diag = NULL,
                                     death_diag = NULL,
+                                    corp_debit = NULL,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
   # Assembles per-cell quantities the applier needs:
   #   rate_factor   = r_S / r_B           (clamped to 1 when r_B = 0)
-  #   extra_R       = r_S * dG            (lock-in stock realized at r_S)
-  #   deemed_factor = (G_B + dG) / G_B    (clamped >= 0)
+  #   extra_R       = r_S * (dG - corp_gain_debit)  (lock-in stock realized
+  #                   at r_S; the corporate-incidence gain-state debit -- the
+  #                   PRICE margin of the equity markdown, D18 -- reduces the
+  #                   realized deviation stock. It is a per-year LEVEL
+  #                   adjustment recomputed from the current markdown
+  #                   (corp_kg_state_debit_by_year), NEVER accumulated through
+  #                   the recurrence, and deliberately NOT in deemed_factor:
+  #                   deemed gains already carry the markdown through the
+  #                   record-level value.* columns the corporate applier
+  #                   scaled on the conventional frame.)
+  #   deemed_factor = (G_B + dG) / G_B    (clamped >= 0; CLEAN dG)
   # Plus diagnostic columns used by kg_dyn_build_summary: per-asset
   # G_B_{class}, G_B_primary_above_cap, cell-level regime-mix outputs
   # (delta_vanish/route/realize, c_phi). Bellman matrices are sliced from
   # the extended grid to the bathtub grid [18, 80] before persisting.
+  #
+  # corp_debit: optional named (by age) vector of gain-state debit dollars
+  # (>= 0 for a hike); NULL for non-corporate scenarios (identical output).
 
   ages_chr = as.character(ages_bathtub)
   diag_or = function(name, default) {
@@ -1797,6 +1820,10 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
 
   mix_lookup = regime_mix
   mix_lookup$age = as.character(mix_lookup$age)
+
+  if (is.null(corp_debit)) {
+    corp_debit = setNames(rep(0, length(ages_chr)), ages_chr)
+  }
 
   baseline_t %>%
     mutate(age           = as.integer(age),
@@ -1835,13 +1862,17 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
              as.numeric(death_or('terminal_char_stock', 0)[as.character(age)]),
            taxable_death_stock =
              as.numeric(death_or('taxable_death_stock', 0)[as.character(age)]),
+           corp_gain_debit = as.numeric(corp_debit[as.character(age)]),
+           corp_gain_debit = if_else(is.na(corp_gain_debit), 0, corp_gain_debit),
            rate_factor   = if_else(r_B > 0, r_S / r_B, 1),
            # Clamp the lock-in stock to the cell's gain stock: under
            # permanent rate hikes dG can run sufficiently negative that
            # r_S * dG would subtract more from kg_lt than the cell holds.
-           # pmax(dG, -G_B) caps the drawdown at full depletion of G_B,
-           # consistent with deemed_factor's >=0 clamp below.
-           extra_R       = r_S * pmax(dG, -G_B),
+           # pmax(., -G_B) caps the drawdown at full depletion of G_B,
+           # consistent with deemed_factor's >=0 clamp below. The corporate
+           # gain-state debit reduces the realized deviation stock here (and
+           # ONLY here -- see docstring).
+           extra_R       = r_S * pmax(dG - corp_gain_debit, -G_B),
            deemed_factor = if_else(G_B > 0,
                                    pmax(0, (G_B + dG) / G_B),
                                    1)) %>%
@@ -1849,7 +1880,7 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            lambda_I, r_V_B, r_V_S,
            r_fixed_B, r_planned_B, r_planned_S, r_ordinary_B, r_ordinary_S,
            R_planned_B, R_planned_S, planned_timing_shift,
-           m, mG_record, mR_record, dG,
+           m, mG_record, mR_record, dG, corp_gain_debit,
            p_char, p_char_extensive, p_char_intensive, estate_2026_m_avg_dgw,
            G_B_equities, G_B_pass_throughs, G_B_primary_home,
            G_B_other_home, G_B_re_fund, G_B_primary_above_cap,
@@ -1869,6 +1900,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                     planned_share = KG_DYN_SHARE_PLANNED,
                                     timing_window = KG_DYN_TIMING_WINDOW,
                                     ref_wedge     = KG_DYN_TIMING_REF_WEDGE,
+                                    corp_debit_by_year = NULL,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX,
                                     ages_bellman = KG_DYN_AGE_MIN:
                                                     KG_DYN_AGE_MAX_BELLMAN) {
@@ -1877,6 +1909,14 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   # state file per year — the contract consumed by the kg_dynamics behavior
   # module's per-record applier. State at kg_dynamics_state/{t}.rds is
   # list(regime, cell_table).
+  #
+  # corp_debit_by_year (optional): per-year named vectors of the corporate
+  # gain-state debit (corp_kg_state_debit_by_year; NULL = no corporate
+  # channel). Threaded into kg_dyn_build_cell_table's extra_R only -- the
+  # RECURRENCE runs on the clean behavioral delta by design (the debit is a
+  # level adjustment recomputed each year from the current markdown; routing
+  # it through delta would compound it and double-count heirs' markdown,
+  # which next year's recomputed debit already covers).
   #
   # Flow:
   #   1. Build extended-grid baseline cells (bathtub + 81-119 SSA tail).
@@ -2085,6 +2125,8 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
         taxable_death_stock =
           setNames(step$taxable_death_stock, bathtub_ages_chr)
       ),
+      corp_debit   = if (!is.null(corp_debit_by_year))
+                       corp_debit_by_year[[as.character(t)]] else NULL,
       ages_bathtub = ages_bathtub
     )
 
