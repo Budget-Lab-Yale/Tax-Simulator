@@ -405,10 +405,13 @@ on-model mapping.
    _(Wording corrected in the formal-model session — FORMAL_MODEL P5; reduced form for
    non-kg runs ruled in D18.)_
 6. **Heterogeneous asset vector.** Directly held stock + an equity share of mutual funds + an
-   equity share of DC/DB retirement get the direct capitalization hit; pass-throughs get only
-   the smaller Harberger all-capital slice. Unlike the wealth channel's uniform `(1−f)`, the
-   `value.*` scaling vector varies by column. (Reconnaissance needed: what's actually in the
-   Tax-Data `value.*` columns and what equity shares to impute.)
+   equity share of DC retirement get the direct capitalization hit — DB is NEVER debited on
+   records (D10): its valuation shortfall lands on plan sponsors and joins the unallocated
+   residual, and `value.db` is measured only to SIZE that residual slice. Pass-throughs get
+   only the smaller Harberger all-capital slice (flows-only per D14/P14 — pt `value.*` columns
+   untouched). Unlike the wealth channel's uniform `(1−f)`, the `value.*` scaling vector
+   varies by column. (Recon 2026-07-02: `value.equities` is first-class; imputation needed
+   for the dc/trusts/re_fund equity shares.)
 7. **Retirement-distribution erosion** (`txbl_ira_dist`/`txbl_pens_dist` scaling with eroded
    balances) is a prerequisite-ish gap shared with the wealth channel — the corporate channel
    is its second customer.
@@ -465,7 +468,7 @@ on-model mapping.
 2. Does Off-Model-Estimates expose enough structure to derive the Δ after-tax domestic profit
    path, or receipts only?
 3. What equity-exposure vector can be built from Tax-Data `value.*` (direct stock, fund
-   shares, DC/DB equity share)?
+   shares, DC equity share — plus DB-residual SIZING only, per D10; DB is never debited)?
 4. Convention toggle design: can one runscript column select {smear (status quo) |
    on-model incidence}, with frame tags handled internally?
 5. Does our off-model corporate number embed an individual offset already? (§8.4)
@@ -716,11 +719,12 @@ are recorded and stand unless overridden.
   correct reduced form); retentions live in the gain-state debit, where deferral/step-up
   come for free. Formal gloss on D8: every distribution margin scales with after-tax
   profits; the baseline composition is held fixed at whatever the microdata embodies.
-  **Accepted approximation:** one kg factor blends buyback-driven realizations (which purely
-  should track the current-year statute) with appreciation-driven ones (which should track
-  the markdown path) — matters only under temporary shocks, second-order. _(CORRECTED
-  2026-07-02, external review: FIRST-order in the shock for short sunsets — φ+μ → −m as
-  the window shrinks; moot under D18, whose φ/μ split supersedes the blended factor.)_
+  **On the single-factor blend (superseded):** any ONE kg factor blending buyback-driven
+  realizations (which track the current-year statute, φ) with appreciation-driven ones
+  (which track the markdown path, μ) carries a blend error ∝ (φ+μ) — exactly zero for
+  permanent shocks but FIRST-order in the shock for short sunsets (φ+μ → −m as the window
+  shrinks). No blended factor ships: D18's φ/μ split (quantity margin at φ, price margin at
+  μ via `kg_lt_basis` / the gain-state debit) is the implementation.
   **Deferred to
   v2:** payout-SHIFT behavior (dividend↔buyback substitution, the 2022 buyback-excise
   question) — a behavior module, not mechanical incidence; the `buyback-tax` repo seeds it,

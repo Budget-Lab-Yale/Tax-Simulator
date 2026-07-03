@@ -243,10 +243,13 @@ estate tax and wealth-tax ↔ capital-income tax. Code: `src/sim/wealth_dynamics
 - **Cells** = (age cohort × within-age net-worth percentile). Joint key
   `pmax(age1,age2)` pre-80+-topcode (matches kg / distribution). Ranking **drops
   `net_worth ≤ 0`** (plan D17 — deliberately differs from `distribution.R`'s `< 0`).
-- **Forcing `ΔT⁰` is CONVENTIONAL (wealth-excluding):** `Δ(liab_iit_pr +
-  liab_wealth)` = `Δ(liab_iit_net + liab_pr − liab_deemed + liab_wealth)`,
-  scenario − baseline. Measured on a dedicated **conv-no-wealth pass**
-  (behavior on, haircut off) → its own output root
+- **Forcing is the GENERALIZED after-tax cash flow `F = ΔT⁰ − ΔY_exog`,
+  CONVENTIONAL (wealth-excluding):** `ΔT⁰ = Δ(liab_iit_pr + liab_wealth)` =
+  `Δ(liab_iit_net + liab_pr − liab_deemed + liab_wealth)`, scenario − baseline;
+  `ΔY_exog` = the corporate channel's analytic external-income shock
+  (`corp_dY_exog` detail column; 0 for every non-corp scenario — numerically
+  identical to the old tax-only forcing there). Measured on a dedicated
+  **conv-no-wealth pass** (behavior on, haircut off) → its own output root
   `{scenario}/conventional_no_wealth/detail/` (never clobbers final-conv detail;
   no totals/receipts written).
 - **Kernel** `G(a,p,t) = (1 + r_total(t)) − s·(τ·y + τ_w)`: `r_total` = per-year
@@ -280,6 +283,65 @@ estate tax and wealth-tax ↔ capital-income tax. Code: `src/sim/wealth_dynamics
   folders, with no pipeline serialization.)
 - **Run one year past the reporting window** (estate/wealth deltas are FY
   death-year+1 lagged).
+
+### On-Model Corporate Incidence
+
+A **mechanical, conventional-side, REVENUE-side** channel (`src/sim/corp_incidence.R`)
+that maps the gross corporate receipts delta from Off-Model-Estimates onto records:
+flow cuts (dividends/interest/rent/pt), an equity markdown on exposed `value.*`
+stocks, kg gain adjustments, bathtub dissaving, and an **endogenous individual-tax
+offset that simply materializes in conventional receipts deltas**. Static stays the
+clean law-only counterfactual and the distribution smear is untouched (D4/D5);
+the channel contributes reform **deltas only**. Design docs:
+`other/corporate_incidence/{CONSIDERATIONS,FORMAL_MODEL}.md` (rulings D1–D18, P1–P14).
+
+- **Activation is FAIL-CLOSED and automatic** (no runscript column): the scenario's
+  OME vintage must carry `corporate_meta.yaml` next to `revenues.csv`
+  (`gross_of_offset: true`, `provision_type: rate`, `beyond_horizon: extend|zero`).
+  Absent metadata + nonzero corporate wedge → channel OFF, status quo, one loud
+  warning. Present-but-invalid metadata, a depreciation-signature (seesaw) wedge
+  path, or enactment before the sim window → **hard stop**. A/B runs use the
+  existing `dep.Off-Model-Estimates.vintage`/`.ID` overrides.
+- **Parameters are hardcoded `CORP_*` constants** (WEALTH_CAP_FLOWS style,
+  provenance-commented; several are Phase-0c placeholders — update in place when
+  measured). Sweep corners via env vars ONLY: `CORP_SIGMA_N`, `CORP_KAPPA`,
+  `CORP_PRICED_AS_PERMANENT=1`.
+- **Paths are analytic** (`corp_resolve_paths`, memoized; no serialized state, no
+  new SLURM phase): π_t = `gdp_corp − rev_corp` (Macro-Projections); wedge split by
+  σ_N; η(t) vintaging at 0.057 (`do_capital_adjustment` convention); debt-rollover
+  ramp for interest; D15 κ-split (corporate flows retain κ·η·w_norm; noncorporate
+  lines get (1−κ)·η·w_norm ∝ Macro `gdp_interest`/`gdp_rent`/0.2·`gdp_proprietors`);
+  perfect-foresight markdown M_t/μ_t by backward recursion (constant nominal
+  r = tsy_10y(enactment) + ERP, Gordon terminals, telescoping hard-asserted).
+- **Record applier runs at the head of EVERY conventional-side pass** (incl.
+  conv-no-wealth), BEFORE the wealth haircut and behavior modules. D16 contract:
+  dividends/interest/rent/pt flows are external income → accumulate analytically
+  into the **`corp_dY_exog`** detail column; kg and retirement distributions are
+  internal conversions (tax leg only — adding them to ΔY_exog double-counts the
+  markdown). `value.*` markdown is **column-specific** (ω_a exposure; basis never
+  scales; `value.db` never debited (D10); pt stocks untouched (P14) so ρ_pt/s_pt
+  stay frozen); `net_worth` recomputed. Retirement distributions scale with their
+  source-balance markdown (P7; dc-share split for pensions).
+- **kg composition (D18, one rule, two entry points):** non-kg runs get the exact
+  per-record form `Δkg = ω_kg[φ·kg_lt − μ·(kg_lt + kg_lt_basis)]` inside the
+  applier (basis co-scales with φ only). kg_dynamics runs skip that block: the
+  PRICE margin enters as a bathtub **gain-state debit**
+  (`corp_kg_state_debit_by_year`: D_a(t) = μ_t·V_corp_exposed_a, recomputed each
+  year, consumed by `extra_R` ONLY — recurrence stays clean, deemed gains already
+  see the markdown through record `value.*`), and the QUANTITY margin is the
+  post-behavior φ step (`corp_apply_kg_quantity_to_records`). Never both.
+- **Wealth bathtub forcing generalized** to F = ΔT⁰ − ΔY_exog (see the wealth
+  section). The wealth applier ranks cells on the RAW pre-corp `net_worth`
+  (`rank_value` argument) so the markdown never shifts records across cells.
+- **Guards:** `corp_check_run_compat` hard-stops `pct_sample ≠ 1` / VAT /
+  excess-growth. **Conservation diagnostic** (WARN-level reconciliation REPORT):
+  `conventional/supplemental/corp_conservation_diag_{t}.csv` — per-line
+  analytic-vs-realized is the testable content; the three-way identity is a report.
+- **Receipts plumbing unchanged:** corporate input keeps its 0.75/0.25 CY→FY
+  booking; the endogenous offset rides ordinary receipts deltas; estate/wealth
+  legs book FY+1 → **run one year past the reporting window**. Stacking caveat:
+  with an endogenous offset the corporate row is NOT stacking-order-invariant
+  (§8.13).
 
 ### Behavioral Feedback Modules
 
@@ -474,7 +536,7 @@ The SLURM pipeline duplicates orchestration logic from `main.R`, `run_sim()`, an
 | New global free variables used by post-processing   | `src/slurm/common.R` `reconstitute_environment()` |
 | `run_one_year()` signature                          | `src/slurm/worker.R` |
 
-Safe changes that need NO SLURM updates: anything inside `run_one_year()`, tax calculation functions, behavioral modules, YAML configs, runscripts.
+Safe changes that need NO SLURM updates: anything inside `run_one_year()`, tax calculation functions, behavioral modules, YAML configs, runscripts. The corporate-incidence channel (`src/sim/corp_incidence.R`) is in this category by construction: its applier lives inside `run_one_year()`, its kg glue inside `run_bathtub_pass()`/`kg_dyn_run_bathtub_pass()`, its paths are analytic (recomputed per worker, no serialized state), and `reconstitute_environment()` sources all of `src/` recursively — no manifest, phase, or worker changes.
 
 ## Notes and Best Practices
 

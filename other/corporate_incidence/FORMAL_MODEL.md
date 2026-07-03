@@ -703,7 +703,7 @@ stacking-order-dependent by construction.
 | V11 | Retirement/kg flows in the forcing | **Unspecified in CONSIDERATIONS; resolved here** (P7, P9): internal conversions enter via $\Delta T$ only; putting them in $\Delta Y^{exog}$ double-counts the markdown. **RULED: confirmed (D16)** |
 | V12 | Gross-input requirement (D1) | Formalized error bound: net-treated-as-gross understates combined revenue by the embedded offset (§1.2) |
 | V13 | Conservation identity as the invariant (D9) | Stated checkably (§4); requires CY space and the named $\Delta\rho$ residual line under D14 |
-| V14 | Doc internal consistency | §8.2 ("static AND conventional"), §8.3 (smear kill-switch), §8.11 ("shock applies to both passes"), §10-Phase-2 ("both passes"), and the §6 bucket-table frames predate and contradict D4/D5 — mark superseded before implementation. Open question 9.7 resolves trivially under D5: static estate totals never move, so the heir-allocator pin is untouched |
+| V14 | Doc internal consistency | **Resolved in the external-review pass** (supersession annotations placed at CONSIDERATIONS §8.2, §8.3, §8.11, §6, §10-Phase-2; §8.6/§9.3 DB cleanup and the D12 blend sentence replaced in the implementation pass, 2026-07-03). Open question 9.7 resolves trivially under D5: static estate totals never move, so the heir-allocator pin is untouched |
 
 ---
 
