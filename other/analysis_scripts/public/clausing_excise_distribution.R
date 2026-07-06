@@ -45,6 +45,30 @@
 #
 # Bucketing and after-tax income exactly mirror
 # src/data/post_processing/distribution.R (Income dimension, iit_pr inclusion).
+#
+# COLA'd-benefit offset (fiscal response, outlay side):
+#   Excises raise consumer prices; indexed transfers respond with a one-year
+#   lag (Social Security and SSI via the CPI-W COLA, SNAP via the annual
+#   Thrifty Food Plan update), partially offsetting the burden. The excise
+#   REVENUE_B vectors are NET of the standard 25% income/payroll tax offset,
+#   so the price-level effect uses GROSS collections:
+#     pi_t = (net excises_t / 0.75) / PCE_t
+#   with PCE = Macro-Projections gdp_c, the same denominator the model's own
+#   VAT price-offset machinery uses (get_vat_price_offset). Offset in year t
+#   uses pi_{t-1}, so 2030 is zero and the 10-year average understates the
+#   steady state.
+#
+#   Distribution of the offset:
+#     - Social Security: per-record, gross_ss (on the detail file) x pi_lag.
+#     - SNAP & SSI: not on the tax file. CBO Feb-2026 baseline program totals
+#       are allocated to records using CBO's distribution of each program
+#       across households ranked by MARKET income (2022 supplemental data,
+#       table 11): quintiles map 1:1 to ours (negative-income units pooled
+#       with Q1, mirroring the CEX-carve convention), and Q5 is sub-allocated
+#       by CBO's 81-90/91-95/96-99/top-1 detail so Top-X groups inherit CBO's
+#       own top-tail pattern. Flat per-unit within each bracket.
+#   Sign convention: offset rows are income GAINS (avg < 0, pct_chg_ati > 0),
+#   so metrics sum across rows to net burden.
 #------------------------------------------------------------------------------
 
 library(tidyverse)
@@ -83,7 +107,7 @@ INCOME_BASE = list(
 # Tax-Simulator output vintage + the baseline scenario used for grouping/ATI.
 # (The model builds its distribution table off baseline microdata, so we do too.)
 TS_ROOT       = '/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1'
-TS_VINTAGE    = 'clausing_estate'
+TS_VINTAGE    = 'clausing_v2_s50'
 BASELINE_SCEN = 'baseline'
 
 # Tax-Data interface vintage carrying the per-tax-unit c_* consumption columns.
@@ -93,9 +117,9 @@ TAXDATA_ROOT = '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1/2026
 
 # Chained CPI (base 2026 = 1) for expressing dollar metrics in 2026 dollars.
 # Default Macro-Projections vintage, same as the model run used.
-CCPIU = fread(file.path('/nfs/roberts/project/pi_nrs36/shared/model_data',
-                        'Macro-Projections/v3/2026022522/baseline/projections.csv'),
-              select = c('year', 'ccpiu')) %>%
+MACRO_PROJ = file.path('/nfs/roberts/project/pi_nrs36/shared/model_data',
+                       'Macro-Projections/v3/2026022522/baseline/projections.csv')
+CCPIU = fread(MACRO_PROJ, select = c('year', 'ccpiu')) %>%
   filter(year %in% YEARS) %>%
   { setNames(.$ccpiu, .$year) }
 
@@ -162,6 +186,92 @@ INTENSITY = read_csv(file.path(OUT_DIR, 'resources',
 if (CARBON_WEIGHTED) PARENT['carbon'] = 'carbon_weighted'
 
 
+#------------------------------------------------------------------------------
+# COLA'd-benefit offset config (see header). All excises enter one price path.
+#------------------------------------------------------------------------------
+
+EXCISE_NET_SHARE = 0.75  # excise scores are net of the 25% income/payroll
+                         # revenue offset; gross collections = net / 0.75
+
+# PCE denominator ($B), same series as get_vat_price_offset()
+PCE = fread(MACRO_PROJ, select = c('year', 'gdp_c')) %>%
+  filter(year %in% YEARS) %>%
+  { setNames(.$gdp_c, .$year) }
+
+# Cumulative price-level effect of the excise package (gross), by year, and
+# the one-year-lagged version benefits actually respond to (pi_2029 = 0)
+excise_measures = setdiff(names(REVENUE_B), names(INCOME_BASE))
+PI = map_dbl(seq_along(YEARS), function(i) {
+  sum(map_dbl(REVENUE_B[excise_measures], ~ .x[i])) / EXCISE_NET_SHARE /
+    PCE[as.character(YEARS[i])]
+}) %>%
+  setNames(YEARS)
+PI_LAG = setNames(c(0, head(PI, -1)), YEARS)
+
+# CBO projected outlays, $M by fiscal year, February 2026 baseline:
+#   snap: 51312-2026-02-snap.xlsx, "Estimated Outlays" row
+#   ssi : 51142-2026-02-Spending-Projections.xlsx, TIN 028-0406-0-1-609,
+#         mandatory row (benefits only; excludes ~$5B discretionary admin)
+BENEFIT_OUTLAYS_RAW = list(
+  snap = c('2030' = 96032, '2031' = 97521, '2032' = 99193, '2033' = 100251,
+           '2034' = 101212, '2035' = 102240, '2036' = 103187),
+  ssi  = c('2027' = 68500, '2028' = 76190, '2029' = 67080, '2030' = 75200,
+           '2031' = 77610, '2032' = 80140, '2033' = 89350, '2034' = 85750,
+           '2035' = 81040, '2036' = 91020)
+)
+
+# SNAP is smooth as published: use as-is, extend 2037-39 at trailing 3yr
+# average growth. SSI FYs carry 11/12/13-payment-month timing artifacts, so
+# fit a log-linear trend over 2027-2036 and use fitted values throughout.
+g_snap = (BENEFIT_OUTLAYS_RAW$snap['2036'] / BENEFIT_OUTLAYS_RAW$snap['2033'])^(1/3) - 1
+ssi_fit = lm(log(v) ~ yr, data = tibble(yr = as.integer(names(BENEFIT_OUTLAYS_RAW$ssi)),
+                                        v  = BENEFIT_OUTLAYS_RAW$ssi))
+BENEFIT_OUTLAYS = list(
+  snap = c(BENEFIT_OUTLAYS_RAW$snap,
+           BENEFIT_OUTLAYS_RAW$snap['2036'] * (1 + g_snap) ^ (1:3)) %>%
+    setNames(YEARS),
+  ssi  = exp(predict(ssi_fit, newdata = tibble(yr = YEARS))) %>%
+    setNames(YEARS)
+)
+
+# CBO shares of SNAP/SSI dollars across households ranked by market income
+# (2022). The 8 brackets (Q1-Q4 + Q5's four published sub-groups) partition
+# all households; renormalize to remove rounding error.
+CBO_MI_SHARES = read_csv(
+  file.path(OUT_DIR, 'resources/cbo',
+            'households_ranked_by_market_inc_table_11_means_tested_transfer_shares_1979_2022.csv'),
+  show_col_types = FALSE) %>%
+  filter(household_type == 'all_households', year == 2022,
+         income_group %in% c('lowest_quintile', 'second_quintile',
+                             'middle_quintile', 'fourth_quintile',
+                             'percentiles_81_90', 'percentiles_91_95',
+                             'percentiles_96_99', 'top_1_percent')) %>%
+  transmute(
+    cbo_bracket = recode(income_group,
+                         lowest_quintile   = 'lowest',
+                         second_quintile   = 'second',
+                         middle_quintile   = 'middle',
+                         fourth_quintile   = 'fourth',
+                         percentiles_81_90 = 'p81_90',
+                         percentiles_91_95 = 'p91_95',
+                         percentiles_96_99 = 'p96_99',
+                         top_1_percent     = 'top1'),
+    share_snap = snap / sum(snap),
+    share_ssi  = ssi  / sum(ssi)
+  )
+stopifnot(nrow(CBO_MI_SHARES) == 8)
+
+# per-record benefit column behind each cola measure (built in run_year)
+COLA_BASE = c(cola_ss = 'ben_ss', cola_snap = 'ben_snap', cola_ssi = 'ben_ssi')
+
+cat('\nExcise price-level effect (gross, cumulative) and COLA inputs:\n')
+tibble(year = YEARS, pi = PI, pi_lag = PI_LAG,
+       snap_outlays_M = BENEFIT_OUTLAYS$snap,
+       ssi_outlays_M  = BENEFIT_OUTLAYS$ssi) %>% print(n = Inf)
+cat('\nCBO market-income shares (renormalized):\n')
+print(CBO_MI_SHARES)
+
+
 #==============================================================================
 # 1. CEX within-category carve ratios, by income quintile (year-invariant)
 #==============================================================================
@@ -211,7 +321,7 @@ carve_wide = carve_by_q %>%
 # 2. Per-year micro build + allocation
 #==============================================================================
 
-measures = names(REVENUE_B)
+measures = c(names(REVENUE_B), names(COLA_BASE))
 
 # group definitions matching distribution.R's Income dimension
 group_defs = list(
@@ -240,7 +350,8 @@ run_year = function(yr) {
       income = expanded_inc,
       ati    = expanded_inc - (liab_iit_net + liab_pr),  # iit_pr ATI, per distribution.R
       kg_lt,
-      part_scorp
+      part_scorp,
+      gross_ss
     )
 
   # Join per-tax-unit consumption from the Tax-Data interface
@@ -272,11 +383,38 @@ run_year = function(yr) {
     ) %>%
     left_join(carve_wide, by = 'quintile')
 
+  # COLA'd benefits per record: gross_ss is on-file; SNAP/SSI allocated flat
+  # per unit within CBO market-income brackets (Neg pooled with Q1; Q5 split
+  # by CBO's published top-group detail)
+  micro = micro %>%
+    mutate(
+      cbo_bracket = case_when(
+        quintile %in% c('Negative income', 'Quintile 1') ~ 'lowest',
+        quintile == 'Quintile 2' ~ 'second',
+        quintile == 'Quintile 3' ~ 'middle',
+        quintile == 'Quintile 4' ~ 'fourth',
+        income_pctile <= 0.90    ~ 'p81_90',
+        income_pctile <= 0.95    ~ 'p91_95',
+        income_pctile <= 0.99    ~ 'p96_99',
+        TRUE                     ~ 'top1'
+      )
+    ) %>%
+    left_join(CBO_MI_SHARES, by = 'cbo_bracket') %>%
+    group_by(cbo_bracket) %>%
+    mutate(
+      ben_ss   = gross_ss,
+      ben_snap = share_snap * BENEFIT_OUTLAYS$snap[as.character(yr)] * 1e6 / sum(weight),
+      ben_ssi  = share_ssi  * BENEFIT_OUTLAYS$ssi[as.character(yr)]  * 1e6 / sum(weight)
+    ) %>%
+    ungroup()
+
   # taxed base per record per measure:
   #   excises:        parent c_* level * CEX carve ratio
   #   income measures: expression over detail-file income columns
   for (m in measures) {
-    if (m %in% names(INCOME_BASE)) {
+    if (m %in% names(COLA_BASE)) {
+      micro[[paste0('base_', m)]] = micro[[COLA_BASE[[m]]]]
+    } else if (m %in% names(INCOME_BASE)) {
       micro[[paste0('base_', m)]] = eval(INCOME_BASE[[m]], micro)
     } else {
       parent = PARENT[[m]]
@@ -285,11 +423,15 @@ run_year = function(yr) {
     }
   }
 
-  # helper: metrics for one subset of records, one measure
+  # helper: metrics for one subset of records, one measure. For cola measures
+  # the "revenue" is the negative of aggregate benefits x lagged price effect
+  # (an income gain), distributed by each record's benefit level.
   group_metrics = function(df, m) {
-    rev   = REVENUE_B[[m]][match(yr, YEARS)] * 1e9
+    total = sum(micro$weight * micro[[paste0('base_', m)]])
+    rev   = if (m %in% names(COLA_BASE)) -PI_LAG[as.character(yr)] * total
+            else REVENUE_B[[m]][match(yr, YEARS)] * 1e9
     base  = df[[paste0('base_', m)]]
-    share = sum(df$weight * base) / sum(micro$weight * micro[[paste0('base_', m)]])
+    share = sum(df$weight * base) / total
     dollars = rev * share
     tibble(
       measure      = m,
@@ -324,9 +466,12 @@ results_yearly = map_dfr(YEARS, function(yr) {
 
 income_measures = names(INCOME_BASE)
 total_defs = list(
-  all_excises    = setdiff(measures, income_measures),
-  all_income_tax = intersect(measures, income_measures),
-  all_measures   = measures
+  all_excises      = setdiff(names(REVENUE_B), income_measures),
+  all_income_tax   = intersect(names(REVENUE_B), income_measures),
+  all_measures     = names(REVENUE_B),
+  benefit_offset   = names(COLA_BASE),
+  all_excises_net  = c(setdiff(names(REVENUE_B), income_measures), names(COLA_BASE)),
+  all_measures_net = c(names(REVENUE_B), names(COLA_BASE))
 )
 
 # subtotals by type and grand total within each year (additive metrics)
