@@ -23,7 +23,15 @@
 # The chart shows the three blocks; the underlying data file breaks every
 # component out separately in stacking order (01-07 on-model individual and
 # estate, 08-10 off-model individual, 11 corporate, 12-16 for the five
-# excises).
+# excises, 17 the COLA'd-benefit offset — so the excise block is NET of the
+# fiscal response to the excise price level).
+#
+# NB (2026-07-06): points at the clausing_v2_s50 vintage — wealth bathtub
+# s = 0.5 + on-model corporate incidence, surprise framing 2030:2040. The
+# distribution smear now excludes the foreign-borne 40% of the corporate
+# capital leg (DIST_CORP_FOREIGN_SHARE, distribution.R), so the corporate
+# block reflects the US-household burden only (68% of the wedge) and no
+# longer sums to the corporate revenue line.
 #
 # The only summary metric printed beneath each group is the AVERAGE tax change
 # (total of all three blocks) -- the share-of-net-change and winner/loser
@@ -42,7 +50,7 @@ library(tidyverse)
 library(scales)
 
 # --- Configuration -----------------------------------------------------------
-vintage     = 'clausing_estate'
+vintage     = 'clausing_v2_s50'
 out_root    = file.path('/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1', vintage)
 years_avg   = 2030:2039
 period_lab  = 'avg_2030_2039'
@@ -86,10 +94,16 @@ inc_labels   = c(carried_interest = 'Carried interest repeal',
                  qsbs             = 'QSBS reform',
                  oz               = 'OZ repeal')
 
-# Excise measures, in stacking order (largest 2030 revenue first)
-sin_measures = c('carbon', 'alcohol', 'gambling', 'guns', 'tobacco')
+# Excise measures, in stacking order (largest 2030 revenue first), plus the
+# COLA'd-benefit fiscal-response offset (SS/SNAP/SSI respond to the excise
+# price level with a one-year lag; rows carry avg < 0 / pct_chg_ati > 0 by
+# construction, so the excise BLOCK total is net of the offset while the data
+# file keeps every gross piece broken out)
+sin_measures = c('carbon', 'alcohol', 'gambling', 'guns', 'tobacco',
+                 'benefit_offset')
 sin_labels   = c(carbon = 'Carbon', alcohol = 'Alcohol', gambling = 'Gambling',
-                 guns = 'Guns', tobacco = 'Tobacco')
+                 guns = 'Guns', tobacco = 'Tobacco',
+                 benefit_offset = 'COLA benefit offset')
 
 # Three-block grouping for the chart
 BLOCK_IND  = 'Individual and estate'
@@ -239,9 +253,12 @@ dist_footnote = str_wrap(paste0(
   "in 2026 dollars (chained CPI); income groups defined within each year. ",
   "Individual, estate, and corporate components from ",
   "the Tax-Simulator distribution (estate tax borne by heirs via rank-matched ",
-  "inheritances; corporate burden allocated 80% capital / 20% labor); ",
-  "carried interest, QSBS, and OZ components imputed off-model from capital gains; ",
-  "excise components imputed off-model from consumption. Income cutoffs are group ",
+  "inheritances; corporate burden allocated 80% capital / 20% labor, with the ",
+  "foreign-borne 40% of the capital share excluded rather than assigned to US ",
+  "households); carried interest, QSBS, and OZ components imputed off-model from ",
+  "capital gains; excise components imputed off-model from consumption, net of the ",
+  "fiscal system's response to the higher price level (COLA'd Social Security, ",
+  "SNAP, and SSI benefits). Income cutoffs are group ",
   "lower bounds (10-yr avg, 2026 dollars). Avg. tax change is the ",
   "total across all three blocks. Universe is nondependent tax units including nonfilers."),
   width = 130)
