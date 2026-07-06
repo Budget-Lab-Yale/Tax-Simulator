@@ -1,8 +1,23 @@
 #----------------------------------------------------------------------------
 # distribution.R
-# 
+#
 # Post-processing functions to generate distributional tables for a scenario
 #----------------------------------------------------------------------------
+
+# Foreign-borne share of the CAPITAL leg of corporate tax changes, excluded
+# from distribution tables rather than allocated to US households (the JCT
+# convention: JCX-14-13 excludes 20.6% as foreign-borne; CBO/OTA/TPC instead
+# allocate 100% to US households). Value = foreign share of total US corporate
+# equity, FDI + portfolio, publicly traded + closely held: 42% at end-2022
+# (Rosenthal & Mucciolo, Tax Notes Federal 183, 2024-04-01), rounded down --
+# note the denominator includes S-corp equity that foreigners are statutorily
+# barred from holding, biasing the C-corp share DOWN. The labor leg is NOT
+# haircut: wage incidence lands on US workers regardless of who owns the
+# equity. Conceptually distinct from CORP_THETA_RES = 0.40 (corp_incidence.R:
+# foreign + nonprofit + DB residual, conservation diagnostic only) -- equal by
+# coincidence; do not merge. Tables no longer sum to the corporate revenue
+# line by construction (the remainder is foreign-borne).
+DIST_CORP_FOREIGN_SHARE = 0.40
 
 
 
@@ -312,11 +327,13 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
       # others won't; compositional differences determine distributional impact
       liab_vat = income - income_reform,
     
-      # Allocate corporate tax changes in accordance with assumed labor incidence
+      # Allocate corporate tax changes in accordance with assumed labor
+      # incidence. The capital legs are scaled by (1 - DIST_CORP_FOREIGN_SHARE):
+      # the foreign-borne portion is excluded from the tables, not reallocated
       liab_other_corp_labor      = other_corp_delta    * 1e9 * other_corp_labor_share       * (labor / sum(labor * weight)),
-      liab_other_corp_capital    = other_corp_delta    * 1e9 * (1 - other_corp_labor_share) * (capital / sum(capital * weight)),
+      liab_other_corp_capital    = other_corp_delta    * 1e9 * (1 - other_corp_labor_share) * (1 - DIST_CORP_FOREIGN_SHARE) * (capital / sum(capital * weight)),
       liab_cost_recovery_labor   = cost_recovery_delta * 1e9 * 0.5                          * (labor / sum(labor * weight)),
-      liab_cost_recovery_capital = cost_recovery_delta * 1e9 * 0.5                          * (capital / sum(capital * weight)),
+      liab_cost_recovery_capital = cost_recovery_delta * 1e9 * 0.5                          * (1 - DIST_CORP_FOREIGN_SHARE) * (capital / sum(capital * weight)),
       liab_corp                  = liab_other_corp_labor + liab_other_corp_capital + liab_cost_recovery_labor + liab_cost_recovery_capital, 
       
       # Reattribute deemed realization tax from decedents to heir copies in
