@@ -227,10 +227,11 @@ estate tax and wealth-tax ↔ capital-income tax. Code: `src/sim/wealth_dynamics
   (used when neither column is set). `scenario_uses_wealth_dynamics()` keys off
   `max(s_mat) > 0` (so a flat-zero profile — including the shipped `default`
   until it is calibrated, and an explicit `s = 0` — is dormant and skips the ~2×
-  split-pass compute), NOT the `behavior` column. The shipped `default` is flat
-  `s = 0` (model byte-identical to no channel); calibrating `default/s.csv` to
-  realistic bracket values turns the channel on **model-wide** from that one
-  folder. `example_age_wealth/` is an illustrative (not calibrated) bracket
+  split-pass compute), NOT the `behavior` column. The shipped `default` is **calibrated**
+  (2026-07-07, persistent-flow anchor: s ≈ 0.1 bottom → 0.80 top percentile,
+  age-tilted; memo at `other/wealth_dynamics/default_s_calibration.md`), so the
+  channel is ON model-wide for any scenario that doesn't set `wealth_financing
+  = none`. `example_age_wealth/` is an illustrative (not calibrated) bracket
   profile. The haircut applier (`wealth_dyn_apply_to_records()`) is invoked
   **directly as a fixed step at the head of the final conventional pass** in
   `run_one_year()`, before the behavior modules and `do_taxes`; it consumes the

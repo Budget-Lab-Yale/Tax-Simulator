@@ -155,9 +155,12 @@ scenario_uses_wealth_dynamics = function(scenario_info) {
   # The channel is keyed off the scenario's resolved FINANCING PROFILE (the
   # bracket-varying s(age, percentile) -- see wealth_dyn_resolve_profile), NOT
   # the behavior column. Active iff any cell's saving share is positive, so a
-  # flat-zero profile (incl. the auto-applied default until it is calibrated,
-  # and an explicit scalar s = 0) is dormant and skips the ~2x split-pass
-  # compute. A malformed/missing profile errors here (loudly), by design.
+  # flat-zero profile (e.g. an explicit scalar s = 0) is dormant and skips the
+  # ~2x split-pass compute. NB: the auto-applied 'default' profile carries a
+  # CALIBRATED nonzero surface as of 2026-07 (persistent-flow anchor; see
+  # other/wealth_dynamics/default_s_calibration.md), so unconfigured scenarios
+  # run with the channel ON -- opt out with wealth_financing = none. A
+  # malformed/missing profile errors here (loudly), by design.
   #----------------------------------------------------------------------------
 
   isTRUE(wealth_dyn_resolve_profile(scenario_info)$active)
@@ -211,7 +214,9 @@ wealth_dyn_load_params = function() {
 #   4. nothing specified                 -> the auto-applied 'default' profile
 #
 # The channel is ACTIVE iff the resolved s_mat has any positive entry (so a
-# flat-zero default is a no-op and the ~2x split-pass compute is skipped). The
+# flat-zero profile is a no-op and the ~2x split-pass compute is skipped).
+# The shipped 'default' profile is CALIBRATED (nonzero) as of 2026-07, so path
+# 4 activates the channel; force it off with wealth_financing = none. The
 # resolved profile is memoized per (kind, value, grid) within a process.
 #-------------------------------------------------------------------------------
 

@@ -7,9 +7,11 @@ to the wealth bathtub: a bracket-varying saving share s(age, net-worth pctile)
 and a within-age percentile transition matrix M. This script writes the two
 shipped profiles deterministically so they can be regenerated/diffed:
 
-  default/           flat s = 0  + identity M  (auto-applied; a NO-OP until
-                     calibrated to realistic bracket values, at which point the
-                     channel turns on model-wide from this one folder)
+  default/           CALIBRATED persistent-flow s surface + identity M
+                     (auto-applied; calibration 2026-07-07 -- see s_default and
+                     other/wealth_dynamics/default_s_calibration.md. This turns
+                     the channel ON model-wide for any scenario that does not
+                     set wealth_financing = none.)
   example_age_wealth/  ILLUSTRATIVE bracket-varying s (NOT calibrated) + identity M
                      -- shows the file format and the age x wealth-rank shape
 
@@ -53,9 +55,76 @@ def write_M_identity(path):
             w.writerow([1 if j == i else 0 for j in range(N_PCTILES)])
 
 
-# --- default: flat zero (channel dormant until calibrated) -------------------
+# --- default: calibrated persistent-flow surface (2026-07-07) ----------------
+# CONCEPT: s = 1 - MPC out of a PERSISTENT net income change (a permanent tax
+# reform hits every year; by year 2+ the household has fully internalized it),
+# NOT the one-off transitory-windfall MPC. Author decision 2026-07-07; memo with
+# full sourcing: other/wealth_dynamics/default_s_calibration.md.
+#
+# BRIDGE FORMULA for the wealth-rank gradient: for a persistent flow change dY,
+# dC = eps * (C/Y) * dY with eps ~= 0.7, the cross-sectional elasticity of
+# consumption to permanent income (Straub 2019, "Consumption, Savings, and the
+# Distribution of Permanent Income"). So s(p) = 1 - 0.7*(C/Y)(p), with C/Y by
+# rank read off consumption-vs-income shares:
+#   - top 1%: income share ~20% vs consumption share ~6-7% (Mian-Straub-Sufi
+#     2021, "The Saving Glut of the Rich") => C/Y ~ 0.30 => s ~ 0.80
+#   - P90-99: C/Y ~ 0.65-0.75 => s ~ 0.50-0.65
+#   - middle: C/Y ~ 0.9-1.0 => bridge s ~ 0.3, hand-to-mouth mix (Kaplan-
+#     Violante) pulls the realized value down to ~0.2
+#   - bottom: liquidity-constrained mix dominates => s ~ 0.10
+# Gradient SHAPE cross-checked against the transitory-MPC-by-liquidity gradient
+# (Fagereng-Holm-Natvik 2021 AEJ:Macro, deposit-quartile MPCs .44/.42/.34/.22)
+# and the DSZ saving-rate-by-lifetime-income gradient (Dynan-Skinner-Zeldes
+# 2004 JPE: ~0 bottom quintile -> ~25% top quintile -> ~50% top 1%).
+S_BASE_NODES = [   # (nw_pctile, s) -- piecewise-linear between nodes
+    (1,   0.10),
+    (30,  0.14),
+    (50,  0.20),
+    (70,  0.28),
+    (85,  0.40),
+    (90,  0.46),
+    (95,  0.55),
+    (99,  0.65),
+    (100, 0.80),
+]
+
+# AGE TILT (additive), attenuated toward zero at the top of the wealth
+# distribution: the young are more liquidity-constrained conditional on rank
+# (lower s); peak earners 45-64 save the most out of a marginal persistent flow;
+# ordinary retirees are in the decumulation phase (lower s; consistent with the
+# rising-in-age transitory MPC in Fagereng-Holm-Natvik). The attenuation
+# implements De Nardi-French-Jones (2010 JPE): high-permanent-income elderly do
+# NOT run down wealth with age (bequest motives + medical-expense risk), so the
+# retiree tilt must vanish at top ranks.
+S_AGE_TILT_NODES = [   # (age, tilt) -- piecewise-linear between nodes
+    (18, -0.06),
+    (30, -0.05),
+    (40,  0.00),
+    (50,  0.03),
+    (62,  0.03),
+    (70, -0.03),
+    (80, -0.05),
+]
+
+# Age-tilt attenuation in wealth rank: full tilt through P90, linearly to zero
+# at the top percentile (age is second-order for the very wealthy, and the
+# forcing dollars concentrate there).
+TILT_ATTEN_NODES = [(1, 1.0), (90, 1.0), (100, 0.0)]
+
+
+def _interp(nodes, x):
+    if x <= nodes[0][0]:
+        return nodes[0][1]
+    for (x0, y0), (x1, y1) in zip(nodes, nodes[1:]):
+        if x <= x1:
+            return y0 + (y1 - y0) * (x - x0) / (x1 - x0)
+    return nodes[-1][1]
+
+
 def s_default(age, p):
-    return 0.0
+    s = _interp(S_BASE_NODES, p) \
+        + _interp(S_AGE_TILT_NODES, age) * _interp(TILT_ATTEN_NODES, p)
+    return max(0.0, min(1.0, s))
 
 
 # --- example: ILLUSTRATIVE age x wealth-rank surface (NOT calibrated) --------

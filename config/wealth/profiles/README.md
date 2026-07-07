@@ -34,10 +34,17 @@ flat-zero profile is a no-op and skips the ~2× split-pass compute.
 
 ## Shipped profiles
 
-- **`default/`** — flat `s = 0`, identity `M`. Auto-applied, so it is currently
-  a **no-op** and the model is byte-identical to having no wealth channel.
-  Calibrating `default/s.csv` to realistic bracket values turns the channel on
-  **model-wide** from this one folder.
+- **`default/`** — **CALIBRATED** (2026-07-07) persistent-flow `s` surface,
+  identity `M`. Auto-applied, so the channel is **on model-wide**: any scenario
+  that names no profile and sets no scalar `s` gets this surface (and the ~2×
+  split-pass compute). Opt out with `wealth_financing = none`. Concept:
+  `s = 1 − MPC` out of a *persistent* net income change, anchored to Straub
+  (2019), Mian–Straub–Sufi (2021), Dynan–Skinner–Zeldes (2004),
+  Fagereng–Holm–Natvik (2021), De Nardi–French–Jones (2010) — rises from ~0.1
+  (bottom of within-age net worth) to 0.80 (top percentile), hump-shaped in age
+  with the tilt attenuated to zero at top ranks. Sourcing memo:
+  `other/wealth_dynamics/default_s_calibration.md`; generator: `s_default()` in
+  `other/wealth_dynamics/write_profiles.py`.
 - **`example_age_wealth/`** — an **ILLUSTRATIVE** (not calibrated) `s` surface
   that rises with net-worth rank and is hump-shaped in age, with identity `M`.
   Point a scenario at it to exercise the bracket machinery.

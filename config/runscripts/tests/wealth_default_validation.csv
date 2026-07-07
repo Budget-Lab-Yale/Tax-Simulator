@@ -1,0 +1,9 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,s,wealth_financing,dep.Tax-Data.vintage,dep.Tax-Data.ID
+baseline,baseline,,2026:2036,,kg_lt net_worth,nextdollar nextdollar,0,,2026060918,baseline
+cg5_off,tests/kg_5pp_all,kg_dynamics/turnover,2026:2036,2026,kg_lt,nextdollar,0,,2026060918,baseline
+cg5_flat50,tests/kg_5pp_all,kg_dynamics/turnover,2026:2036,2026,kg_lt,nextdollar,0.5,,2026060918,baseline
+cg5_default,tests/kg_5pp_all,kg_dynamics/turnover,2026:2036,2026,kg_lt,nextdollar,,,2026060918,baseline
+warren_off,public/wealth_tax_warren,wealth/avoidance,2026:2036,2026,net_worth,nextdollar,0,,2026060918,baseline
+warren_flat50,public/wealth_tax_warren,wealth/avoidance,2026:2036,2026,net_worth,nextdollar,0.5,,2026060918,baseline
+warren_default,public/wealth_tax_warren,wealth/avoidance,2026:2036,2026,net_worth,nextdollar,,,2026060918,baseline
+estate2009_default,public/estate_2009,,2026:2036,2026,net_worth,nextdollar,,,2026060918,baseline
