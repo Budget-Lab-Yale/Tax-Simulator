@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taxing the Top — Conceptualizing the Revenue-Frontier Exercise</title>
+<style>
+  :root {
+    --bg: #F6F7F9;
+    --surface: #FFFFFF;
+    --ink: #1C2431;
+    --muted: #5A6577;
+    --accent: #00356B;
+    --link: #14508F;
+    --rule: #D9DEE6;
+    --mono-bg: #EDF0F4;
+    --tint: #EAF1F8;
+    --sans: -apple-system, "Segoe UI", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+    --serif: "Charter", "Bitstream Charter", "Iowan Old Style", Georgia, "Times New Roman", serif;
+    --mono: ui-monospace, "SFMono-Regular", "Cascadia Code", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #10151D;
+      --surface: #171E29;
+      --ink: #E4E9F1;
+      --muted: #97A2B3;
+      --accent: #85AEDD;
+      --link: #9CBFE8;
+      --rule: #2A3442;
+      --mono-bg: #202938;
+      --tint: #1B2634;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { background: var(--bg); }
+  body {
+    font-family: var(--serif);
+    color: var(--ink);
+    line-height: 1.62;
+    font-size: 17px;
+    border-top: 4px solid var(--accent);
+  }
+
+  .page {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 5rem;
+  }
+
+  /* ------- masthead ------- */
+  .eyebrow {
+    font-family: var(--sans);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1 {
+    font-family: var(--sans);
+    font-size: 2.05rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
+    text-wrap: balance;
+    margin: 0.6rem 0 0.9rem;
+  }
+  .meta {
+    font-family: var(--sans);
+    font-size: 0.82rem;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.4rem;
+    padding-bottom: 1.6rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .meta code { font-size: 0.78rem; }
+
+  /* ------- abstract ------- */
+  .abstract {
+    background: var(--tint);
+    padding: 1.15rem 1.35rem;
+    margin: 1.8rem 0 0.6rem;
+    font-size: 0.97rem;
+  }
+  .abstract .label {
+    font-family: var(--sans);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 0.45rem;
+  }
+
+  /* ------- sections ------- */
+  section { margin-top: 3rem; }
+  h2 {
+    font-family: var(--sans);
+    font-size: 1.28rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    text-wrap: balance;
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 1.1rem;
+  }
+  h2 .no {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  h3 {
+    font-family: var(--sans);
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 1.7rem 0 0.6rem;
+  }
+  p { margin: 0 0 1rem; }
+  p:last-child { margin-bottom: 0; }
+  strong { font-weight: 700; }
+  em { font-style: italic; }
+
+  a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.83em;
+    background: var(--mono-bg);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+
+  /* ------- numbered loop list (§1) ------- */
+  ol.loops { list-style: none; counter-reset: loop; margin: 1.2rem 0; display: grid; gap: 1.05rem; }
+  ol.loops > li {
+    counter-increment: loop;
+    position: relative;
+    padding-left: 2.5rem;
+  }
+  ol.loops > li::before {
+    content: counter(loop);
+    position: absolute;
+    left: 0;
+    top: 0.18rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--sans);
+    font-size: 0.78rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--surface);
+    background: var(--accent);
+    border-radius: 50%;
+  }
+  ol.loops .head { font-family: var(--sans); font-weight: 700; font-size: 0.95rem; }
+
+  /* ------- ranked gaps (§2) — same skeleton, outlined badge encodes "ranked risk" ------- */
+  ol.gaps { list-style: none; counter-reset: gap; margin: 1.2rem 0; display: grid; gap: 1.05rem; }
+  ol.gaps > li {
+    counter-increment: gap;
+    position: relative;
+    padding-left: 2.5rem;
+  }
+  ol.gaps > li::before {
+    content: counter(gap);
+    position: absolute;
+    left: 0;
+    top: 0.18rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--sans);
+    font-size: 0.78rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+    background: transparent;
+    border: 1.5px solid var(--accent);
+    border-radius: 50%;
+  }
+  ol.gaps .head { font-family: var(--sans); font-weight: 700; font-size: 0.95rem; }
+
+  /* ------- layers (§3) ------- */
+  .layers { display: grid; gap: 0; margin: 1.2rem 0; border: 1px solid var(--rule); background: var(--surface); }
+  .layer { padding: 1.05rem 1.25rem; }
+  .layer + .layer { border-top: 1px solid var(--rule); }
+  .layer .tag {
+    font-family: var(--sans);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 0.3rem;
+  }
+  .layer .head { font-family: var(--sans); font-weight: 700; font-size: 0.98rem; }
+  .layer p { font-size: 0.95rem; margin-top: 0.35rem; }
+
+  /* ------- pitch panel (§4) ------- */
+  .pitch {
+    border-top: 3px solid var(--accent);
+    border-bottom: 1px solid var(--rule);
+    padding: 1.3rem 0 1.2rem;
+    margin: 1.2rem 0;
+    font-size: 1.02rem;
+  }
+
+  /* ------- generic lists ------- */
+  ul.plain, ol.plain { margin: 0 0 1rem 1.3rem; display: grid; gap: 0.5rem; }
+  ul.plain li::marker { color: var(--accent); }
+  ol.plain li::marker { color: var(--accent); font-weight: 700; font-family: var(--sans); font-size: 0.9em; }
+
+  /* ------- decisions table (§5) ------- */
+  .tablewrap { overflow-x: auto; margin: 1.2rem 0; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.92rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+  }
+  th {
+    font-family: var(--sans);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--muted);
+    padding: 0.6rem 0.9rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  td {
+    padding: 0.65rem 0.9rem;
+    vertical-align: top;
+    border-bottom: 1px solid var(--rule);
+  }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-family: var(--sans); font-weight: 600; font-size: 0.88rem; width: 38%; }
+
+  /* ------- footer ------- */
+  footer {
+    margin-top: 3.5rem;
+    padding-top: 1.1rem;
+    border-top: 1px solid var(--rule);
+    font-family: var(--sans);
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  footer code { white-space: normal; word-break: break-all; }
+
+  @media (max-width: 540px) {
+    body { font-size: 16px; }
+    h1 { font-size: 1.6rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <span class="eyebrow">Tax-Simulator · Working Note</span>
+    <h1>Taxing the Top: Conceptualizing the Revenue-Frontier Exercise</h1>
+    <div class="meta">
+      <span>July 7, 2026</span>
+      <span>Branch <code>wealth</code></span>
+      <span>Top-tax project, part 2 (“grid search”)</span>
+    </div>
+  </header>
+
+  <div class="abstract">
+    <span class="label">Summary</span>
+    The model already closes four cross-base loops — the wealth bathtub, the corporate channel,
+    an endogenous realization elasticity keyed to the death regime, and entity shifting. The
+    exercise should be built in three layers (standalone curves → a pairwise interaction matrix →
+    a quadratic-surrogate search), framed as a constrained revenue frontier rather than a bare
+    Laffer maximum. Three parameter gaps would dominate referee reports and should be built
+    first: a residual top-end ETI, an estate behavioral response, and a calibrated wealth-avoidance
+    elasticity.
+  </div>
+
+  <section id="have">
+    <h2><span class="no">1</span>What we actually have: the interaction machinery, as the paper would state it</h2>
+    <p>The model currently closes four cross-base loops — three mechanical, one behavioral:</p>
+    <ol class="loops">
+      <li>
+        <span class="head">Wealth ↔ capital income ↔ estate (the bathtub).</span>
+        Any during-life tax increase (income + payroll + wealth) is financed partly out of wealth
+        (<code>s</code> = 0.1 → 0.8 by wealth rank, calibrated 2026-07-07 on a persistent-flow anchor),
+        which erodes <code>value.*</code>, which shrinks future dividends, interest, gains, and
+        pass-through flows, the estate base, <em>and</em> the wealth-tax base itself. One channel,
+        three of the outline’s interactions.
+      </li>
+      <li>
+        <span class="head">Corporate → individual.</span>
+        A corporate hike cuts dividend/interest/rent/pass-through flows, marks down equity
+        (price margin on gains, basis fixed), scales payouts (quantity margin), and the
+        individual-tax offset materializes endogenously in conventional receipts — “raise the
+        corporate rate, fewer dividends to tax.” It also feeds the bathtub via
+        <code>corp_dY_exog</code>.
+      </li>
+      <li>
+        <span class="head">Death regime → realization elasticity (the crown jewel).</span>
+        In <code>kg_dynamics</code>, realization is the solution to a Bellman problem whose
+        continuation value depends on the death regime (step-up / carryover / deemed — a
+        per-asset-class law switch in <code>pref.yaml</code>). Ending step-up mechanically
+        <em>lowers the realization elasticity</em>, so the revenue-maximizing capital gains rate
+        rises endogenously. A naive ETI calculation must assume that; we derive it.
+      </li>
+      <li>
+        <span class="head">Entity shifting (behavioral, already built).</span>
+        <code>entity_shifting/pearce_prisinzano.R</code> moves business income between the
+        corporate and individual bases as the corp-vs-pass-through differential moves
+        (semi-elasticity ≈ 0.63). This is the 1970s-sheltering margin from the historical
+        section, live in the model: raising top ordinary rates with the corporate rate fixed
+        triggers pass-through-to-C shifting.
+      </li>
+    </ol>
+    <p>
+      Also on hand: charity elasticities (−0.5 / −1.0 tax-price), the deemed-death avoidance
+      haircut (0.25), the NIIT <code>include_active</code> switch, the <code>tax_at_ord</code>
+      switch, and fully parameterized QBI, estate, and wealth-tax law levers.
+    </p>
+  </section>
+
+  <section id="gaps">
+    <h2><span class="no">2</span>What’s missing, ranked by threat to the headline</h2>
+    <ol class="gaps">
+      <li>
+        <span class="head">No top-end ordinary-income ETI.</span>
+        The biggest gap. A top-rate hike currently scores at mechanical + entity-shifting only,
+        so any revenue-max search slams ordinary rates to the grid ceiling. The framing
+        opportunity: the classic ETI is a <em>bundle</em> of margins we already model separately
+        (realization deferral, entity shifting, charitable deductions). Build a
+        <strong>residual ETI</strong> — take a defensible top-end total (SSG range, ~0.2–0.4),
+        subtract the model-endogenous components to avoid double-counting, and implement the
+        remainder as a semi-elasticity on top-bracket income. The decomposition is itself a
+        contribution: naive ETI applications at the top either double-count shifting or miss it.
+      </li>
+      <li>
+        <span class="head">Wealth-tax avoidance is uncalibrated and deliberately extreme.</span>
+        Semi-elasticities of −7 / −17 imply ≈19% / 40% base erosion at a 3% rate; the module
+        header itself says the values “must be re-justified before publishing.” The
+        <em>design</em> is right — reported-base-only avoidance, cleanly separated from the real
+        response (which is the bathtub) — but the parameters need anchoring to the
+        Scandinavian/Swiss/Colombian estimates, which bracket a huge range. This becomes a
+        frontier band, not a point.
+      </li>
+      <li>
+        <span class="head">Estate tax has zero behavioral response.</span>
+        Purely mechanical; given the report’s “very leaky” framing, a mechanical estate score
+        overstates. A Kopczuk–Slemrod-style reported-estate elasticity (mirroring the
+        wealth-avoidance design: reported base only, <code>value.*</code> untouched) is a
+        contained build. Related: <code>f_ded</code> is frozen measurement, but charitable
+        bequests should respond to the estate rate — fold into the same elasticity.
+      </li>
+      <li>
+        <span class="head">Mark-to-market doesn’t exist.</span>
+        We have deemed-at-death, not annual accrual. Either build a crude MTM regime in
+        <code>kg_dynamics</code> (force the realization rate, kill the deferral option value —
+        the machinery is well-suited) or demote MTM to the off-model sidebar with trusts,
+        insurance, and carried interest. Lean: sidebar for v1 — the death-regime lever already
+        delivers the conceptual point about deferral — but MTM is a headline policy, so this is
+        an author call.
+      </li>
+      <li>
+        <span class="head">The corporate lever has an upstream dependency.</span>
+        The channel maps a <em>given</em> OME corporate wedge onto records. Searching over
+        corporate rates needs a τ<sub>c</sub> → gross-receipts curve from Off-Model-Estimates
+        (a family of vintages or a parameterized curve). Six <code>CORP_*</code> constants are
+        also still Phase-0c placeholders (asset exposures, ω<sub>div</sub>, ω<sub>kg</sub>, κ, θ).
+      </li>
+      <li>
+        <span class="head">Migration and expatriation are nowhere.</span>
+        And they are the wealth-tax critics’ first objection. An off-model haircut band, not a
+        module.
+      </li>
+      <li>
+        <span class="head">Housekeeping.</span>
+        <code>capital_income/wealth_tax_interaction.R</code> (the old bridge to the standalone
+        Wealth-Tax-Simulator; hardcoded scenario id + NFS path) is now a double-count hazard
+        against the on-model machinery — retire it before this exercise.
+        <em>(Done 2026-07-07: module, its stale runscript, and the dead interface entry removed.)</em>
+      </li>
+    </ol>
+  </section>
+
+  <section id="exercise">
+    <h2><span class="no">3</span>What the exercise should be</h2>
+    <p>
+      <strong>Don’t make the deliverable “the revenue-maximizing point.”</strong> An
+      unconstrained Laffer search returns “max out every lever except the capital gains rate” —
+      fragile and boring. Structure it in three layers:
+    </p>
+
+    <div class="layers">
+      <div class="layer">
+        <span class="tag">Layer 1 · Greenbook</span>
+        <span class="head">Standalone revenue curves</span>
+        <p>
+          Each of ~8 levers at 3–4 intensities: top ordinary rate (+ millionaire bracket),
+          CG/dividend rate (+ <code>tax_at_ord</code>), death regime, QBI repeal, NIIT expansion
+          (<code>include_active = 1</code>), corporate rate, estate (exemption × rate), wealth
+          tax (rate × threshold). ~30 runs. Reusable in the broader greenbook.
+        </p>
+      </div>
+      <div class="layer">
+        <span class="tag">Layer 2 · The central exhibit</span>
+        <span class="head">The interaction matrix</span>
+        <p>
+          All pairwise combinations at central intensities (~28 runs): stacked revenue vs. sum
+          of standalones, in dollars and percent. “A corporate hike lowers the yield of a CG
+          hike by X%; ending step-up raises it by Y%.” Publishable, robust, and where the model
+          has no competition.
+        </p>
+      </div>
+      <div class="layer">
+        <span class="tag">Layer 3 · The search</span>
+        <span class="head">A surrogate, not a grid</span>
+        <p>
+          Fit a quadratic response surface — main-effect curves from Layer 1, interaction terms
+          from Layer 2 — optimize <em>that</em> analytically under constraints, validate the
+          argmax with a handful of full runs, iterate once. Total ≈ 70–100 pipeline runs; at
+          observed wall-clock (tens of minutes per scenario on SLURM), that is days, not months.
+          Spot-check a few triples (death-regime × CG × wealth is the likeliest three-way) to
+          confirm the pairwise surface suffices.
+        </p>
+      </div>
+    </div>
+
+    <h3>Frontier axes</h3>
+    <p>
+      Revenue-max needs a counterweight to be a frontier. Two we get nearly free:
+      (a) <strong>leakage share</strong> = 1 − conventional/static per package — already an
+      output, and it operationalizes “minimizing leakages”; (b) genuinely novel: the bathtub
+      state is on disk, so plot <strong>revenue against cumulative top-1% private wealth
+      erosion</strong> — how much of each marginal revenue dollar is financed by decumulation
+      rather than consumption. No ETI-based calculation can produce that axis. As a constraint
+      rather than an axis: hold the burden below P99 ≈ 0 using the distribution tables — the
+      “greenbook for the rich” discipline.
+    </p>
+
+    <h3>Two conventions to fix upfront</h3>
+    <ol class="plain">
+      <li>
+        The objective is <em>total package revenue vs. a common baseline</em>, not stacked
+        attribution — with the endogenous corporate offset, stacked rows aren’t order-invariant
+        (§8.13). Attribution order is a presentation convention only.
+      </li>
+      <li>
+        Horizon matters: bathtub erosion compounds, so the year-10 revenue-max mix ≠ the
+        year-30 mix. Report the 10-year window <em>and</em> the terminal-year annual rate; the
+        divergence is itself a finding (“wealth taxes look better in the window than in the
+        steady state”).
+      </li>
+    </ol>
+
+    <h3>The frontier is a fan, not a line</h3>
+    <p>
+      Every point is conditional on ψ, the wealth-avoidance elasticities, the residual ETI,
+      <code>s</code>, and the corporate corners. Env-var sweep machinery exists for several of
+      these already; publish a band over a low/central/high elasticity bundle.
+    </p>
+  </section>
+
+  <section id="pitch">
+    <h2><span class="no">4</span>The pitch vs. naive ETI, in one paragraph</h2>
+    <div class="pitch">
+      An ETI calculation prices each instrument with a fixed, policy-invariant elasticity and
+      adds the results. That fails at the top for two reasons we fix: the <strong>bases
+      overlap</strong> — the same dollar of wealth is capital income during life, an estate at
+      death, and wealth-tax base in between, so hitting it anywhere shrinks the other bases,
+      tracked here on actual record-level balance sheets rather than through an assumed
+      elasticity — and the <strong>elasticities are policy-dependent</strong> — the realization
+      elasticity is an equilibrium object that collapses when step-up ends, the shifting
+      elasticity depends on the corporate–individual differential, and the financing response
+      depends on the whole tax vector. The Lucas critique bites hardest exactly where this
+      report lives: large reforms far outside the variation that identified the reduced-form
+      elasticities.
+    </div>
+  </section>
+
+  <section id="eti">
+    <h2><span class="no">5</span>The ETI program (decided 2026-07-07)</h2>
+    <p>
+      Replaces the "residual ETI module" idea from §2.1. The top-end ETI is decomposed and each
+      piece gets its own treatment:
+    </p>
+    <ul class="plain">
+      <li>
+        <strong>Real responses (labor supply): excluded</strong>, by conventional-scoring
+        convention (macro aggregates fixed). An assumed value (~0.05, banded) enters only the
+        residualization arithmetic, never the model. Error direction: assuming real too small
+        inflates σ, which <em>understates</em> ordinary-rate revenue in open-exit
+        configurations — the conservative direction.
+      </li>
+      <li>
+        <strong>Modeled legal avoidance</strong> — realization, entity shifting, charity —
+        measured via a top-rate perturbation run with strict income-concept discipline
+        (kg realization and the bathtub are excluded from the tally: wrong income concept,
+        wrong horizon).
+      </li>
+      <li>
+        <strong>Evasion: its own module, a leak</strong> —
+        <code>behavior/evasion/debacker.R</code>, built 2026-07-07. DeBacker–Heim–Yuskavage
+        (NTA 2025, NRP audit data) net-of-tax elasticities on reported income, gated by
+        information-reporting visibility: Schedule C/F 0.046, partnership/S-corp 0.052,
+        rent 0.04, wages/interest/dividends 0. Positive income legs only; SECA companions
+        co-scale. Env knobs <code>EVASION_E_SCHC/_PT/_RENT</code>,
+        <code>EVASION_TOPEND_MULT</code> (NRP underdetects top-end evasion per Guyton et al.;
+        detected-based values are a floor — sweep 1.5–2). Requires
+        <code>mtr_vars = "sole_prop1 part_active rent"</code>.
+      </li>
+      <li>
+        <strong>The remainder — cross-base shifting σ — is a conservation parameter, not a
+        leak</strong>: a wedge-driven semi-elasticity moving shiftable labor compensation into
+        the kg gain state (the founder-equity path), phased in as a flow, gated to
+        owner-managers. Destination taxation is endogenous to the death regime and CG rates,
+        so the ordinary-rate response shrinks when a package closes the capital-side exits —
+        operationalizing Kopczuk (2005): the elasticity is a function of base breadth.
+        <em>Not yet built.</em>
+      </li>
+      <li>
+        <strong>σ calibration: triangulated, not just residualized.</strong> (1) Residualization:
+        σ ≈ top-ETI anchor (~0.25, itself banded) − real (~0.05) − evasion (~0.05,
+        top-weighted DHY) − modeled (~0.05 from the perturbation) ⇒ ~0.10 in ETI units;
+        (2) the Pearce–Prisinzano boundary-crossing prior (~0.63 semi-elasticity);
+        (3) TRA86 shifting magnitudes. Agreement across anchors is the validation story.
+        Calibrated under current law (open exits), σ reproduces literature ETIs where they
+        were estimated and endogenously shrinks under closed-exit packages.
+      </li>
+      <li>
+        <strong>Disjointness constraint</strong>: σ's flow (wages → gain state), entity
+        shifting's flow (business income across the C/PT boundary), and evasion's leak
+        (reported pass-through income) must never touch the same dollars — assert in code
+        when σ is built.
+      </li>
+      <li>
+        <strong>Escape-route framing</strong>: the dominant labor-comp escape routes (founder
+        equity, corporate retention, carry) move income <em>into</em> modeled bases rather
+        than out of the system; the modern top W-2 base is the selection residue of past
+        escape (RSUs are ordinary-at-vest). Proposed exhibit: the "conversion wedge" — top
+        ordinary rate minus the accrual-equivalent effective rate on the equity path, from
+        the kg Bellman — across packages.
+      </li>
+    </ul>
+  </section>
+
+  <section id="next">
+    <h2><span class="no">6</span>Build order and open decisions</h2>
+    <p>The build order that falls out:</p>
+    <ol class="plain">
+      <li>
+        Residual-ETI module + estate elasticity + wealth-avoidance calibration — the three
+        parameter gaps that would otherwise dominate referee reports.
+      </li>
+      <li>Retire the legacy capital-income bridge module.</li>
+      <li>Sort the OME corporate-rate curve dependency.</li>
+      <li>Then the Layer 1–3 run campaign is mostly orchestration we already know how to do.</li>
+    </ol>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th scope="col">Open decision</th><th scope="col">Recommendation</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Constrained frontier vs. pure max</td>
+            <td>Frontier framing, with the unconstrained maximum shown as one labeled point.</td>
+          </tr>
+          <tr>
+            <td>Mark-to-market: on-model or sidebar</td>
+            <td>Off-model sidebar for v1; the death-regime lever already carries the deferral point. Revisit if MTM must headline.</td>
+          </tr>
+          <tr>
+            <td>Corporate lever in v1</td>
+            <td>A few discrete OME-scored rate points unless a parameterized τ<sub>c</sub> → wedge curve is cheap to obtain upstream.</td>
+          </tr>
+          <tr>
+            <td>Headline horizon</td>
+            <td>10-year FY window headline, terminal-year annual rate alongside; report the divergence explicitly.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    Source notes: <code>other/top_tax/frontier_exercise_notes_2026-07-07.md</code> ·
+    Working notes from code review + discussion, 2026-07-07. Interaction map and parameter
+    inventory verified against branch <code>wealth</code> as of this date.
+  </footer>
+
+</div>
+</body>
+</html>

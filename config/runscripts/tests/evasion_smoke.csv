@@ -1,0 +1,3 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,wealth_financing
+baseline,baseline,,2025:2027,,sole_prop1 part_active rent,nextdollar nextdollar nextdollar,none
+clinton_rates,tests/clinton_rates,evasion/debacker,2025:2027,,sole_prop1 part_active rent,nextdollar nextdollar nextdollar,none
