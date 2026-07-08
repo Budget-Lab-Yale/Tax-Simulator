@@ -4,6 +4,53 @@
 currently has, what's missing, what the exercise should be, and the pitch
 vs. a naive ETI calculation.*
 
+> **UPDATE 2026-07-08.** The σ channel described below is now **built,
+> validated, and calibrated**: precedence is `other/top_tax/DESIGN_LOCK.md`
+> (incl. amendment A1) > the prospectus > this file. Headlines: τ_eq is a
+> full kg-machinery extraction (finite-difference-verified), NOT the crude
+> closed form sketched in item 4 below; residual-style discipline returned
+> via measurement — the validation run showed the full stack at the asserted
+> σ = 0.6 over-responds (top ETI 0.431 vs SSG 0.12–0.40) while entity
+> shifting + evasion + charity alone deliver 0.223, so **σ central = 0.08**
+> (confirmed full-stack ETI 0.2505). Machinery: `src/sim/sigma_conversion.R`;
+> plain-terms account: `other/top_tax/sigma_explainer.md`; results:
+> `other/top_tax/sigma_validation_out/`.
+
+> **SUPERSEDED IN PART (later 2026-07-07).** The authoritative design is now
+> the team prospectus at `other/top_tax/interaction_prospectus.html`. Deltas
+> vs. this file, decided in discussion with the author:
+>
+> 1. **Revenue-max search DROPPED entirely** — §3's Layer 3 (quadratic
+>    surrogate, constrained optimization) and the frontier-vs-max framing are
+>    retired. The deliverable is the **interaction matrix as an interactive
+>    full-factorial explorer** (~5,184 packages at the central elasticity
+>    bundle + hero-lever band runs + standalones ≈ 5,500 exact SLURM runs; no
+>    interpolation), plus a simplified static exhibit.
+> 2. **Horizons**: 10-year AND 30-year windows as two separate outputs (not
+>    10-yr + terminal-year annual rate).
+> 3. **σ pool** (supersedes §5's disjointness constraint): labor-content
+>    slice — wages + ~0.75·active pass-through (SYZZ) for gated
+>    owner-managers. Overlap with entity shifting is safe under two
+>    disciplines: sequential application (σ → entity shifting → evasion,
+>    pinned + asserted) and **residual calibration** (σ = remainder of the
+>    target total ETI after a perturbation run with the other modules on).
+>    Mortenson/P–P become brackets on the TOTAL cross-base response. The
+>    corp-base-vs-gain-state split of the response is an explicit sweepable
+>    parameter.
+> 4. **Wedge = crude closed form**, not Bellman extraction: τ_eq = τ_cg ×
+>    [ρ·δ_defer + (1−ρ)·x_regime], with ρ/δ pinned per death regime from
+>    existing kg baseline outputs. The σ module takes W(t) as an input series,
+>    so the Bellman version is a swappable upgrade. Symmetry invariant stated
+>    in WEDGE units (dτ_eq/dτ_cg < 1; statutory asymmetry is a model
+>    prediction).
+> 5. **MTM and trusts deferred entirely** (§2.4's on-model-vs-sidebar question
+>    is moot for v1; report covers on-model instruments only). Note the data
+>    for a crude MTM lever exists — per-asset `gain.{class}`/`G_unit` and
+>    `net_worth` are on every record — so this is sequencing, not
+>    impossibility.
+> 6. **Corporate lever**: discrete OME-scored points (21/25/28/35), not a
+>    continuous curve.
+
 ## 1. What we actually have (the interaction machinery, as the paper would state it)
 
 The model currently closes four cross-base loops — three mechanical, one behavioral:
@@ -178,16 +225,55 @@ decomposed and each piece gets its own treatment:
   regime / CG rates, so the ordinary-rate response shrinks when a package
   closes the capital-side exits — operationalizing Kopczuk (2005): the
   elasticity is a function of base breadth. NOT YET BUILT.
-- **σ calibration: triangulated, not just residualized.** Three anchors:
+- **σ calibration: triangulated, not just residualized.** Four anchors:
   (1) residualization — σ ≈ top ETI anchor (~0.25, itself banded 0.2–0.6)
   − real (~0.05) − evasion (DHY, ~0.05 top-weighted) − modeled (~0.05 from
   the perturbation run) ⇒ ~0.10 in ETI units, converted to wedge units by
   the same perturbation; (2) the Pearce–Prisinzano boundary-crossing prior
   (~0.63 semi-elasticity); (3) TRA86 shifting magnitudes (Gordon–Slemrod,
-  Gordon–MacKie-Mason). Agreement across anchors is the validation story;
-  disagreement is a finding to investigate. Key property: calibrated under
-  current law (open exits), it REPRODUCES literature ETIs where they were
-  estimated, and endogenously shrinks under closed-exit packages.
+  Gordon–MacKie-Mason); (4) **Mortenson (2016 WP)** — direct US ord↔kg
+  cross-tax elasticities off the Bush cuts (SOI panel, Weber instruments).
+  Use as a BRACKET not a central (author states no preferred point; range
+  −0.24 to −2.4, only 3-yr diffs significant), but two structural findings
+  are load-bearing: (a) the SYMMETRY test — his cleanest ITT spec has own
+  +0.79 vs cross −0.77, i.e. equal-and-opposite, exactly the prediction of
+  a differential(wedge)-driven σ and NOT of a single-rate ETI; (b) own-tax
+  ordinary ETI ≈ 0 with valid instruments UNTIL the CG cross-rate enters —
+  single-base ETI regressions are misspecified when relative rates move
+  (the framing weapon; also softens the 0.25 anchor). His kg-side persistent
+  cross-elasticity (+2.77, noisy) = directional validation target: model's
+  implied realizations response to ordinary rates should be positive,
+  persistent, and well below 2.77. Paid-preparer-only responsiveness in his
+  heterogeneity table supports the owner-manager/sophistication gating.
+  Agreement across anchors is the validation story; disagreement is a
+  finding to investigate. Key property: calibrated under current law (open
+  exits), σ REPRODUCES literature ETIs where they were estimated, and
+  endogenously shrinks under closed-exit packages. Validation exhibit
+  upgraded: the perturbation run reports the full 2×2 own/cross elasticity
+  matrix (ord, kg) × (τ_ord, τ_kg) vs Mortenson/Dowd ranges — the
+  micro-scale mirror of the Layer-2 interaction matrix.
+- **σ CALIBRATION TABLE (decided 2026-07-07).** Units: percent of the
+  shiftable labor-comp pool converted to the equity/gains path per
+  PERCENTAGE POINT of change in the conversion wedge (top ordinary MTR −
+  accrual-equivalent effective rate on the equity path), relative to the
+  baseline wedge; applied to the gated pool (owner-managers + small
+  new-formation flow share), with the flow phase-in. The three anchors
+  disagree by ~4–5×; that spread IS the published uncertainty band — the
+  whole exercise (Layers 1–3, frontier) runs at all three:
+
+  | setting | value | provenance |
+  |---|---|---|
+  | low | 0.2 %/pp | ETI subtraction: 0.25 total − 0.05 real − 0.05 evasion − 0.05 modeled ⇒ ~0.10 ETI units ≈ 0.16%/pp at τ=0.37 |
+  | central | 0.6 %/pp | Pearce–Prisinzano entity-shifting semi-elasticity (0.631) converted to per-pp-of-differential units; sits between the other two anchors |
+  | high | 0.9 %/pp | Mortenson (2016) Table 5 col 6 cross-elasticity −0.77 at τ_cg≈0.17 ⇒ ~0.9%/pp; face value, full-population, known double-count risk ⇒ ceiling |
+
+  Worked example (central): +5pp top ordinary rate, CG/step-up untouched ⇒
+  wedge +5pp ⇒ eligible owner-managers convert 5 × 0.6 = 3% of shiftable
+  comp, phased in; the income lands in the kg gain state and is taxed (or
+  not) per the package's CG/death-regime choices. Same package with gains
+  at ordinary + deemed at death ⇒ wedge ~unchanged ⇒ ~no shifting.
+  Invariant test at every setting: response to +Δτ_ord must mirror −Δτ_cg
+  (equal-and-opposite, Mortenson's robust structural finding).
 - **Disjointness constraint**: σ's flow (wages → gain state), entity
   shifting's flow (business income across the C/PT boundary), and evasion's
   leak (reported pass-through income) must not touch the same dollars —

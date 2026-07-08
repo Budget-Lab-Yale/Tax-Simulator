@@ -281,6 +281,20 @@
 <body>
 <div class="page">
 
+  <div style="border:1px solid rgba(196,145,58,.55); border-left:4px solid rgba(196,145,58,.9); background:rgba(196,145,58,.10); border-radius:6px; padding:14px 18px; margin:0 0 26px; font-size:14.5px; line-height:1.55;">
+    <strong>Superseded working note.</strong> Design authority is now
+    <code>other/top_tax/DESIGN_LOCK.md</code> (rulings + amendment A1) &gt;
+    <code>interaction_prospectus.html</code> &gt; this file. Since this was written:
+    the revenue-max search was dropped (the deliverable is the full-factorial
+    interaction explorer); and the &sigma; channel was <strong>built, validated, and
+    calibrated (2026-07-08)</strong> &mdash; &tau;<sub>eq</sub> is a full kg-machinery
+    extraction (finite-difference-verified), not the crude closed form sketched here,
+    and &sigma; central = <strong>0.08</strong>, the residual that lands the full-stack
+    top ETI at 0.25 after entity shifting + evasion + charity contribute their measured
+    0.223 (see <code>SIGMA_CALIB_PROVENANCE</code> in <code>src/sim/sigma_conversion.R</code>
+    and <code>other/top_tax/sigma_explainer.md</code>).
+  </div>
+
   <header>
     <span class="eyebrow">Tax-Simulator · Working Note</span>
     <h1>Taxing the Top: Conceptualizing the Revenue-Frontier Exercise</h1>
@@ -548,9 +562,20 @@
         σ ≈ top-ETI anchor (~0.25, itself banded) − real (~0.05) − evasion (~0.05,
         top-weighted DHY) − modeled (~0.05 from the perturbation) ⇒ ~0.10 in ETI units;
         (2) the Pearce–Prisinzano boundary-crossing prior (~0.63 semi-elasticity);
-        (3) TRA86 shifting magnitudes. Agreement across anchors is the validation story.
-        Calibrated under current law (open exits), σ reproduces literature ETIs where they
-        were estimated and endogenously shrinks under closed-exit packages.
+        (3) TRA86 shifting magnitudes; (4) Mortenson (2016 WP) — direct US ord↔kg
+        cross-tax elasticities off the Bush cuts. Use as a <em>bracket</em>, not a central
+        (no preferred point; range −0.24 to −2.4), but two structural findings are
+        load-bearing: the <strong>symmetry test</strong> (his cleanest ITT spec: own +0.79 vs
+        cross −0.77, equal-and-opposite — the signature of a wedge-driven σ, not a
+        single-rate ETI) and the <strong>zero own-ETI result</strong> (ordinary ETI ≈ 0 with
+        valid instruments until the CG cross-rate enters — single-base ETI regressions are
+        misspecified when relative rates move). His kg-side persistent cross-elasticity
+        (+2.77, noisy) is a directional validation target. Agreement across anchors is the
+        validation story. Calibrated under current law (open exits), σ reproduces literature
+        ETIs where they were estimated and endogenously shrinks under closed-exit packages.
+        Validation exhibit upgraded: the perturbation run reports the full 2×2 own/cross
+        elasticity matrix — (ord, kg) × (τ<sub>ord</sub>, τ<sub>kg</sub>) — vs the
+        Mortenson/Dowd ranges, the micro-scale mirror of the Layer 2 interaction matrix.
       </li>
       <li>
         <strong>Disjointness constraint</strong>: σ's flow (wages → gain state), entity
@@ -558,6 +583,54 @@
         (reported pass-through income) must never touch the same dollars — assert in code
         when σ is built.
       </li>
+    </ul>
+
+    <h3>σ calibration table (decided 2026-07-07)</h3>
+    <p>
+      Units: percent of the shiftable labor-compensation pool converted to the equity/gains
+      path per <em>percentage point</em> of change in the conversion wedge (top ordinary MTR
+      − accrual-equivalent effective rate on the equity path), applied to the gated pool
+      with the flow phase-in. The three anchors disagree by ~4–5×; that spread <em>is</em>
+      the published uncertainty band — the whole exercise runs at all three settings.
+    </p>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th scope="col">Setting</th><th scope="col">Value</th><th scope="col">Provenance</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Low — 0.2 %/pp</td>
+            <td>ETI subtraction</td>
+            <td>0.25 total − 0.05 real − 0.05 evasion − 0.05 modeled ⇒ ~0.10 in ETI units
+                ≈ 0.16%/pp at τ = 0.37.</td>
+          </tr>
+          <tr>
+            <td>Central — 0.6 %/pp</td>
+            <td>Pearce–Prisinzano</td>
+            <td>Entity-shifting semi-elasticity (0.631) converted to per-pp-of-differential
+                units; sits between the other two anchors.</td>
+          </tr>
+          <tr>
+            <td>High — 0.9 %/pp</td>
+            <td>Mortenson (2016)</td>
+            <td>Table 5 col 6 cross-elasticity −0.77 at τ<sub>cg</sub> ≈ 0.17 ⇒ ~0.9%/pp.
+                Face value; full-population estimate with known double-count risk ⇒ treat
+                as ceiling.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Worked example (central): +5pp top ordinary rate with CG/step-up untouched ⇒ wedge
+      +5pp ⇒ eligible owner-managers convert 5 × 0.6 = 3% of shiftable compensation, phased
+      in; the income lands in the kg gain state and is taxed (or not) per the package's
+      CG/death-regime choices. The same package with gains at ordinary + deemed realization
+      at death leaves the wedge ~unchanged ⇒ ~no shifting. Invariant test at every setting:
+      the response to +Δτ<sub>ord</sub> must mirror −Δτ<sub>cg</sub> (equal-and-opposite —
+      Mortenson's one specification-proof structural finding).
+    </p>
+    <ul class="plain">
       <li>
         <strong>Escape-route framing</strong>: the dominant labor-comp escape routes (founder
         equity, corporate retention, carry) move income <em>into</em> modeled bases rather
