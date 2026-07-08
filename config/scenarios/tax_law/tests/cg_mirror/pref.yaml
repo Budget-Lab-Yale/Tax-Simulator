@@ -1,0 +1,13 @@
+---
+# sigma validation leg 2: top preferred (LTCG/qualified dividend) rate cut,
+# 0.20 -> 0.085 starting 2026. Sized from leg 1 (tests/topord_plus5): the
+# smoke's pool-weighted wedge change was +4.47pp and the pool-weighted
+# tau_eq_B / tau_B ratio is 0.395 (other/top_tax/logs/cg_sizing_17347084.out),
+# so an 11.5pp top-CG cut moves the equity leg of the wedge by
+# ~0.395 * 11.5pp = 4.5pp — the same pool-weighted wedge magnitude as leg 1,
+# with the opposite sign entering through tau_eq instead of the ordinary MTR.
+# Validation instrument only, not a policy scenario.
+rates:
+  value:
+    '2014': [0.0, 0.15, 0.20]
+    '2026': [0.0, 0.15, 0.085]
