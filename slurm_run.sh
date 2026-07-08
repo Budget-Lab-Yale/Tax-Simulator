@@ -161,8 +161,10 @@ if [ "$N_PHASE2B" -gt 0 ]; then
   # in v2 will additionally depend on Phase 2A (cell MTRs). For v1 the 2A
   # dependency is harmless and keeps the DAG monotone.
   echo "Phase 2B: Submitting ${N_PHASE2B} CF bathtub jobs..."
+  # 30 min (was 15): sigma-conversion scenarios add per-year raw Tax-Data +
+  # detail reads and the tau_eq recursion inside the bathtub pass.
   P2B=$(sbatch --parsable --array=1-${N_PHASE2B} ${P2A_DEP} \
-    ${SBATCH_COMMON} --time=0:15:00 --mem=8G \
+    ${SBATCH_COMMON} --time=0:30:00 --mem=8G \
     --job-name=taxsim-bathtub \
     --output="${STAGING_DIR}/logs/p2b_%A_%a.log" \
     --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \

@@ -7,6 +7,13 @@
 # and persists per-year state files under the scenario's
 # conventional/supplemental/kg_dynamics_state/ directory.
 #
+# sigma income-conversion scenarios (conversion/sigma in the behavior
+# column) need no extra handling here: run_bathtub_pass() builds the sigma
+# context internally (raw Tax-Data pool legs + baseline/scenario static
+# detail MTRs — both available, since Phase 2B depends on 2A which depends
+# on Phase 1) and the bathtub pass computes conversions, injects the
+# gain-state inflow, and persists the cell tracker in the state files.
+#
 # No-op for scenarios that don't include any kg_dynamics/ behavior module.
 #
 # CLI args:

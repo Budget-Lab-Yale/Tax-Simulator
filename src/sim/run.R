@@ -65,6 +65,16 @@ do_scenario = function(ID, baseline_mtrs) {
   uses_kg     = ID != 'baseline' && scenario_uses_kg_dynamics(scenario_info)
   uses_wealth = ID != 'baseline' && scenario_uses_wealth_dynamics(scenario_info)
 
+  # sigma income conversion is built ON the kg bathtub (gain-state injection,
+  # tau_eq wedge): hard-stop early rather than failing later in the
+  # conventional pass. (SLURM mode reaches the same stop via the module's
+  # own guard in do_conversion().)
+  if (ID != 'baseline' && scenario_uses_sigma(scenario_info) && !uses_kg) {
+    stop('Scenario "', ID, '" registers a conversion/ behavior module but ',
+         'no kg_dynamics/ module. sigma requires kg_dynamics (pinned order ',
+         'kg_dynamics -> conversion/sigma -> entity_shifting -> evasion).')
+  }
+
   if (uses_kg || uses_wealth) {
 
     # Split-pass orchestration for the cohort-dynamics channels (kg and/or the
@@ -1005,6 +1015,23 @@ run_bathtub_pass = function(scenario_info, tax_law,
     cells_inputs  = cells_inputs
   )
 
+  # sigma income-conversion context (NULL when the scenario doesn't run the
+  # conversion/sigma module): the bathtub pass computes per-record
+  # conversions per year, injects the cell inflow into the recurrence, and
+  # persists the cell tracker in the state files. Pool legs come from raw
+  # Tax-Data; txbl_inc + per-leg MTRs from the baseline/scenario static
+  # detail, both available here (the bathtub already requires them).
+  sigma_ctx = NULL
+  if (scenario_uses_sigma(scenario_info)) {
+    sigma_ctx = sigma_build_ctx(
+      scenario_info = scenario_info,
+      tax_law       = tax_law,
+      baseline_root = globals$baseline_root,
+      sample_ids    = globals$sample_ids,
+      pct_sample    = globals$pct_sample
+    )
+  }
+
   kg_dyn_run_bathtub_pass(
     scenario_info     = scenario_info,
     tax_law           = tax_law,
@@ -1018,7 +1045,8 @@ run_bathtub_pass = function(scenario_info, tax_law,
     # the current markdown each year (credit-back automatic). NULL when the
     # corporate channel is inactive -- byte-identical state files then.
     corp_debit_by_year = corp_kg_state_debit_by_year(scenario_info,
-                                                     inputs$baseline_cells)
+                                                     inputs$baseline_cells),
+    sigma_ctx          = sigma_ctx
   )
 
   invisible(NULL)
