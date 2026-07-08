@@ -1115,29 +1115,7 @@ kg_dyn_build_scenario_rate = function(baseline_t, r_ordinary_S,
 # Bathtub recurrence step
 #-------------------------------------------------------------------------------
 
-kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
-                                  r_S_vec, delta_route_vec,
-                                  phi_I = KG_DYN_PHI_I) {
-
-  # One-step bathtub recurrence for delta_G on the [18, 80] grid. r_S_vec
-  # combines the fixed, Bellman ordinary, and retimed planned buckets.
-  # delta_route_vec is a length-n_ages cell-level share of the dying stock
-  # that routes to heirs (carryover); under per-asset regime mixing it's
-  # produced by kg_dyn_build_regime_mix as sum_k share_k(a) * route_k.
-  #
-  # Topcode caveat: the age=80 cell pools all 80+ taxpayers with a single
-  # weight-averaged m_80, refreshed from each year's Tax-Data. Within-pool
-  # heterogeneity (e.g., 15-year topcode residents vs. newly aged-in) is
-  # smoothed out — small effect in practice but worth flagging if reforms
-  # shift the topcode age mix.
-
-  G_B       = baseline_t$G_B
-  r_B       = baseline_t$r_B
-  R_B       = baseline_t$R_B
-  m         = baseline_t$m
-  mG_record = baseline_t$mG_record
-  mR_record = baseline_t$mR_record
-  p_char    = pmin(pmax(baseline_t$p_char, 0), 1)
+kg_dyn_cell_m_eff = function(baseline_t) {
 
   # Effective cell mortality m_eff = sum(w*m*X) / sum(w*X). The death
   # channel needs sum_i w_i * m_i * (G_unit_i + dG_i); the naive cell-mean
@@ -1147,14 +1125,53 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
   # exact per-record sum, not an approximation. Two rules via
   # KG_DYN_DG_ALLOCATION: "G" (X = G_unit) or "R" (X = pmax(kg_lt, 0),
   # falling back to "G" when R_B = 0).
-  m_eff_G = if_else(G_B > 0, mG_record / G_B, m)
-  m_eff_R = if_else(R_B > 0, mR_record / R_B, m_eff_G)
+  #
+  # Shared by kg_dyn_step_recurrence and the tau_eq machinery
+  # (kg_dyn_tau_eq_primitives) so the two stay in lockstep on what
+  # mortality the delta stock experiences.
+
+  m_eff_G = if_else(baseline_t$G_B > 0,
+                    baseline_t$mG_record / baseline_t$G_B, baseline_t$m)
+  m_eff_R = if_else(baseline_t$R_B > 0,
+                    baseline_t$mR_record / baseline_t$R_B, m_eff_G)
 
   m_eff = switch(KG_DYN_DG_ALLOCATION,
                  G = m_eff_G,
                  R = m_eff_R,
                  stop("Unknown KG_DYN_DG_ALLOCATION rule: ", KG_DYN_DG_ALLOCATION))
-  m_eff = pmin(pmax(m_eff, 0), 1)
+  pmin(pmax(m_eff, 0), 1)
+}
+
+
+
+kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
+                                  r_S_vec, delta_route_vec,
+                                  phi_I = KG_DYN_PHI_I,
+                                  conv_inflow_vec = NULL) {
+
+  # One-step bathtub recurrence for delta_G on the [18, 80] grid. r_S_vec
+  # combines the fixed, Bellman ordinary, and retimed planned buckets.
+  # delta_route_vec is a length-n_ages cell-level share of the dying stock
+  # that routes to heirs (carryover); under per-asset regime mixing it's
+  # produced by kg_dyn_build_regime_mix as sum_k share_k(a) * route_k.
+  #
+  # conv_inflow_vec (optional): length-n_ages vector of sigma-conversion
+  # dollars entering the gain state at END of year t (the inheritance-inflow
+  # convention, DESIGN_LOCK R6): it joins delta_next directly, participating
+  # in realization/death dynamics from t+1 onward. NULL = no conversion
+  # channel (identical output).
+  #
+  # Topcode caveat: the age=80 cell pools all 80+ taxpayers with a single
+  # weight-averaged m_80, refreshed from each year's Tax-Data. Within-pool
+  # heterogeneity (e.g., 15-year topcode residents vs. newly aged-in) is
+  # smoothed out — small effect in practice but worth flagging if reforms
+  # shift the topcode age mix.
+
+  G_B       = baseline_t$G_B
+  r_B       = baseline_t$r_B
+  p_char    = pmin(pmax(baseline_t$p_char, 0), 1)
+
+  m_eff = kg_dyn_cell_m_eff(baseline_t)
 
   # lambda_I = fixed/nonresponsive realization bucket; kept on the state
   # contract under the old name.
@@ -1181,16 +1198,241 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
     delta_inh = rep(0, length(delta_prev))
   }
 
-  list(delta_next = delta_surv + delta_inh,
+  # Sigma-conversion inflow: converted compensation enters the gain state at
+  # end of year (participates from t+1, like the inheritance inflow).
+  conv_inflow = if (is.null(conv_inflow_vec)) {
+    rep(0, length(delta_prev))
+  } else {
+    stopifnot(length(conv_inflow_vec) == length(delta_prev))
+    as.numeric(conv_inflow_vec)
+  }
+
+  list(delta_next = delta_surv + delta_inh + conv_inflow,
        r_S        = r_S,
        lambda_I   = lambda_I,
        r_V_B      = r_V_B,
        r_V_S      = r_V_S,
        delta_surv = delta_surv,
        delta_inh  = delta_inh,
+       conv_inflow = conv_inflow,
        decedent_stock      = decedent_stock,
        terminal_char_stock = terminal_char_stock,
        taxable_death_stock = taxable_death_stock)
+}
+
+
+
+#-------------------------------------------------------------------------------
+# tau_eq: expected PV tax per dollar entering the gain state
+#
+# The equity leg of the sigma income-conversion wedge (top-tax exercise; see
+# other/top_tax/DESIGN_LOCK.md rulings 1 and 6). tau_eq(a, t) prices a dollar
+# injected into cell (age a, year t)'s deviation stock at END of year t (the
+# inheritance-inflow convention, same as the conversion inflow itself), as the
+# present value of tax the kg machinery actually collects on it:
+#
+#   - realization tax r_S * tau on the FULL stock each year (matching
+#     extra_R = r_S * dG in kg_dyn_build_cell_table — including the retimed
+#     planned bucket, NOT the Bellman's baseline-scaled r_exog);
+#   - deaths take the full stock (decedents do not realize in-year, matching
+#     the recurrence event order): the taxable share (1 - p_char) * m_eff
+#     splits by regime mix — delta_realize taxed at tau at death (deemed),
+#     delta_route routed to heir cells via omega and taxed there in later
+#     years (FULL heir taxes, no theta -- tau_eq is a tax-price, not the
+#     holder-internalized Bellman burden), delta_vanish forgiven (step-up).
+#
+# Ground truth is the finite-difference harness (kg_dyn_tau_eq_finite_diff):
+# forward-simulate the EXACT kg_dyn_step_recurrence marginal dynamics for a
+# test dollar and accumulate discounted taxes. The production path is the
+# linear backward recursion (kg_dyn_compute_tau_eq), which unit tests (and
+# the SIGMA_TAU_EQ_FDCHECK=1 in-pass check) verify cell-by-cell against the
+# finite difference:
+#
+#   T(a, j)      = c(a, j) + beta_j * [K_j T(., j+1)](a)
+#   c(a, j)      = r_S*tau + m_eff*(1 - p_char)*delta_realize*tau
+#   K_j          = diag((1-m_eff)(1-r_S)) A  +  diag(m_eff (1-p_char) route) omega
+#   tau_eq(a, t_j) = beta_j * T(a, j+1)     (end-of-year entry: first events
+#                                            in t+1, discounted back to t)
+#
+# Terminal condition mirrors the Bellman's stationary assumption: T at
+# t_max + 1 solves the year-t_max stationary system (I - beta K) T = c, a
+# contraction since row sums of beta*K are <= beta < 1.
+#
+# Deliberate approximations (documented, Bellman-consistent):
+#   - taxes are priced at the cell-aggregate MTR tau (the record applier
+#     allocates to records and taxes through the calculator; tau_eq is a
+#     wedge input, not a revenue booking);
+#   - the record-level deemed refinements (avoidance haircut, sec 121
+#     netting) do NOT enter, mirroring their exclusion from c_phi/Bellman.
+#-------------------------------------------------------------------------------
+
+kg_dyn_tau_eq_primitives = function(baseline_cells, years, r_S_by_year,
+                                    tau_bt_mat, mix_list, A, omega,
+                                    ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
+
+  # Assembles the [age, year] primitive matrices on the bathtub grid that
+  # both the tau_eq recursion and the finite-difference harness consume, so
+  # the two code paths share inputs by construction.
+  #
+  # Parameters:
+  #   - baseline_cells (list) : per-year cell tibbles (G_B, m, mG_record, ...)
+  #   - years (int[])         : simulation years
+  #   - r_S_by_year (list)    : per-year realization-rate vectors on the
+  #                             bathtub grid (scenario: rate_info$r_S incl.
+  #                             the retimed planned bucket; baseline: r_B)
+  #   - tau_bt_mat (mat)      : [age, year] cell MTRs, bathtub slice
+  #   - mix_list (list|NULL)  : per-year regime-mix tibbles (delta_route,
+  #                             delta_realize); NULL = step-up everywhere
+  #                             (the baseline-side assumption, mirroring
+  #                             Pass 1's c_phi = 0)
+  #   - A, omega (mat)        : aging and heir-routing operators
+  #
+  # Returns: list of [n_ages, n_years] matrices (m_eff, p_char, r_S, tau,
+  #          route, realize) plus A, omega, ages, years.
+
+  ages_chr  = as.character(ages_bathtub)
+  years_chr = as.character(years)
+  n_ages    = length(ages_bathtub)
+  n_years   = length(years)
+
+  blank = function() matrix(0, n_ages, n_years,
+                            dimnames = list(ages_chr, years_chr))
+  m_eff   = blank(); p_char = blank(); r_S = blank()
+  route   = blank(); realize = blank()
+
+  for (j in seq_len(n_years)) {
+    bt = baseline_cells[[years_chr[j]]]
+    stopifnot(identical(as.integer(bt$age), as.integer(ages_bathtub)))
+    m_eff [, j] = kg_dyn_cell_m_eff(bt)
+    p_char[, j] = pmin(pmax(bt$p_char, 0), 1)
+    r_S   [, j] = pmin(pmax(as.numeric(r_S_by_year[[j]]), 0), 1)
+    if (!is.null(mix_list)) {
+      mix = mix_list[[j]]
+      idx = match(ages_bathtub, mix$age)
+      route  [, j] = mix$delta_route  [idx]
+      realize[, j] = mix$delta_realize[idx]
+    }
+  }
+
+  tau = tau_bt_mat[ages_chr, years_chr, drop = FALSE]
+
+  list(m_eff = m_eff, p_char = p_char, r_S = r_S, tau = tau,
+       route = route, realize = realize, A = A, omega = omega,
+       ages = ages_bathtub, years = years)
+}
+
+
+
+kg_dyn_compute_tau_eq = function(prims, beta_by_year) {
+
+  # Linear backward recursion for tau_eq on the bathtub grid (see the block
+  # comment above for the model and conventions). beta_by_year is the same
+  # per-year real-rate discount series the Bellman uses.
+  #
+  # Returns: list(tau_eq, T, T_stationary), tau_eq and T both [age, year].
+
+  n_ages  = length(prims$ages)
+  n_years = length(prims$years)
+  stopifnot(length(beta_by_year) == n_years)
+
+  dimnm = list(as.character(prims$ages), as.character(prims$years))
+
+  # Per-year tax flow per dollar of start-of-year stock, and the two
+  # continuation operators (survivor aging + heir routing).
+  c_mat = prims$r_S * prims$tau +
+          prims$m_eff * (1 - prims$p_char) * prims$realize * prims$tau
+  K_of = function(j) {
+    surv_w  = (1 - prims$m_eff[, j]) * (1 - prims$r_S[, j])
+    route_w = prims$m_eff[, j] * (1 - prims$p_char[, j]) * prims$route[, j]
+    surv_w * prims$A + route_w * prims$omega   # vector * matrix scales rows
+  }
+
+  # Stationary terminal: T(., t_max + 1) under year-t_max primitives.
+  T_stat = solve(diag(n_ages) - beta_by_year[n_years] * K_of(n_years),
+                 c_mat[, n_years])
+
+  T_mat  = matrix(0, n_ages, n_years, dimnames = dimnm)
+  tau_eq = matrix(0, n_ages, n_years, dimnames = dimnm)
+
+  T_next = T_stat
+  for (j in n_years:1) {
+    tau_eq[, j] = beta_by_year[j] * T_next
+    T_mat [, j] = c_mat[, j] +
+                  beta_by_year[j] * as.numeric(K_of(j) %*% T_next)
+    T_next      = T_mat[, j]
+  }
+
+  list(tau_eq = tau_eq, T = T_mat, T_stationary = T_stat)
+}
+
+
+
+kg_dyn_tau_eq_finite_diff = function(prims, beta_by_year, j0,
+                                     horizon = 500, tol = 1e-14) {
+
+  # Ground-truth tau_eq for injections at end of year index j0 (DESIGN_LOCK
+  # ruling 1): forward-simulate the exact kg_dyn_step_recurrence marginal
+  # dynamics for a test dollar in every age cell simultaneously (identity
+  # injection matrix; columns = injection age) and accumulate the PV of tax
+  # collected, discounted back to year j0. Primitives are held at their
+  # year-t_max values beyond the simulation horizon, matching the
+  # recursion's stationary terminal assumption.
+  #
+  # Returns: length-n_ages vector, tau_eq_FD(a, j0).
+
+  n_ages  = length(prims$ages)
+  n_years = length(prims$years)
+
+  delta  = diag(n_ages)                # [current age, injection age]
+  pv     = numeric(n_ages)
+  disc   = beta_by_year[j0]            # discounts year-(j0+1) taxes to j0
+  tA     = t(prims$A)
+  tOmega = t(prims$omega)
+
+  for (step in seq_len(horizon)) {
+    ju  = min(j0 + step, n_years)      # hold t_max primitives beyond horizon
+    c_u = prims$r_S[, ju] * prims$tau[, ju] +
+          prims$m_eff[, ju] * (1 - prims$p_char[, ju]) *
+            prims$realize[, ju] * prims$tau[, ju]
+
+    pv = pv + disc * as.numeric(crossprod(delta, c_u))
+
+    # Exact marginal delta dynamics: survivors (1-m_eff)(1-r_S) age via A;
+    # the routed share of the dying stock moves to heir cells via omega.
+    surv_w  = (1 - prims$m_eff[, ju]) * (1 - prims$r_S[, ju])
+    route_w = prims$m_eff[, ju] * (1 - prims$p_char[, ju]) * prims$route[, ju]
+    delta   = tA %*% (surv_w * delta) + tOmega %*% (route_w * delta)
+
+    disc = disc * beta_by_year[ju]
+    if (max(colSums(abs(delta))) < tol) break
+  }
+
+  setNames(pv, as.character(prims$ages))
+}
+
+
+
+kg_dyn_check_tau_eq = function(tau_eq_mat, tau_bt_mat, side) {
+
+  # In-pass sanity bounds: tau_eq is a (discounted, at-most-once-ish) tax on
+  # one dollar, so it must be nonnegative and cannot meaningfully exceed the
+  # max cell MTR. The 1.05 slack covers the model's own realization/death
+  # event overlap (extra_R charges r_S on the full stock while deaths also
+  # take it; overlap ~ r_S * m_eff per year).
+
+  max_tau = max(tau_bt_mat, na.rm = TRUE)
+  if (any(!is.finite(tau_eq_mat))) {
+    stop('kg_dynamics: non-finite tau_eq_', side, ' values.')
+  }
+  if (any(tau_eq_mat < -1e-9)) {
+    stop('kg_dynamics: negative tau_eq_', side, ' values (min = ',
+         format(min(tau_eq_mat)), ').')
+  }
+  if (any(tau_eq_mat > max_tau * 1.05 + 1e-9)) {
+    stop('kg_dynamics: tau_eq_', side, ' exceeds 1.05 * max cell tau (max = ',
+         format(max(tau_eq_mat)), ' vs tau cap ', format(max_tau), ').')
+  }
+  invisible(TRUE)
 }
 
 
@@ -1775,6 +2017,9 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
                                     planned_diag = NULL,
                                     death_diag = NULL,
                                     corp_debit = NULL,
+                                    tau_eq_B_col = NULL,
+                                    tau_eq_S_col = NULL,
+                                    conv_inflow_vec = NULL,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
   # Assembles per-cell quantities the applier needs:
@@ -1825,6 +2070,18 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
     corp_debit = setNames(rep(0, length(ages_chr)), ages_chr)
   }
 
+  # tau_eq / sigma-conversion columns: additive diagnostics (zeros when the
+  # tau_eq recursion or the conversion channel is off).
+  if (is.null(tau_eq_B_col)) {
+    tau_eq_B_col = setNames(rep(0, length(ages_chr)), ages_chr)
+  }
+  if (is.null(tau_eq_S_col)) {
+    tau_eq_S_col = setNames(rep(0, length(ages_chr)), ages_chr)
+  }
+  if (is.null(conv_inflow_vec)) {
+    conv_inflow_vec = setNames(rep(0, length(ages_chr)), ages_chr)
+  }
+
   baseline_t %>%
     mutate(age           = as.integer(age),
            r_S           = as.numeric(r_S_vec     [as.character(age)]),
@@ -1864,6 +2121,10 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
              as.numeric(death_or('taxable_death_stock', 0)[as.character(age)]),
            corp_gain_debit = as.numeric(corp_debit[as.character(age)]),
            corp_gain_debit = if_else(is.na(corp_gain_debit), 0, corp_gain_debit),
+           tau_eq_B      = as.numeric(tau_eq_B_col   [as.character(age)]),
+           tau_eq_S      = as.numeric(tau_eq_S_col   [as.character(age)]),
+           conv_inflow   = as.numeric(conv_inflow_vec[as.character(age)]),
+           conv_inflow   = if_else(is.na(conv_inflow), 0, conv_inflow),
            rate_factor   = if_else(r_B > 0, r_S / r_B, 1),
            # Clamp the lock-in stock to the cell's gain stock: under
            # permanent rate hikes dG can run sufficiently negative that
@@ -1887,6 +2148,7 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            delta_vanish, delta_route, delta_realize, c_phi,
            decedent_stock, terminal_char_stock, taxable_death_stock,
            tau_B, tau_S, W_B, W_S, MC_B, MC_S, kappa, r_D_B, r_D_S,
+           tau_eq_B, tau_eq_S, conv_inflow,
            rate_factor, extra_R, deemed_factor)
 }
 
@@ -1901,6 +2163,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                     timing_window = KG_DYN_TIMING_WINDOW,
                                     ref_wedge     = KG_DYN_TIMING_REF_WEDGE,
                                     corp_debit_by_year = NULL,
+                                    sigma_ctx = NULL,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX,
                                     ages_bellman = KG_DYN_AGE_MIN:
                                                     KG_DYN_AGE_MAX_BELLMAN) {
@@ -1908,7 +2171,8 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   # Runs the bathtub recurrence across scenario_info$years and persists one
   # state file per year — the contract consumed by the kg_dynamics behavior
   # module's per-record applier. State at kg_dynamics_state/{t}.rds is
-  # list(regime, cell_table).
+  # list(regime, cell_table) plus, for sigma-conversion scenarios, a
+  # cell-level sigma tracker (DESIGN_LOCK ruling 7).
   #
   # corp_debit_by_year (optional): per-year named vectors of the corporate
   # gain-state debit (corp_kg_state_debit_by_year; NULL = no corporate
@@ -1918,6 +2182,15 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   # it through delta would compound it and double-count heirs' markdown,
   # which next year's recomputed debit already covers).
   #
+  # sigma_ctx (optional): sigma-conversion context built by
+  # sigma_build_ctx() (src/sim/sigma_conversion.R) when the scenario runs
+  # the conversion/sigma behavior module. Per year, the pass computes
+  # per-record conversions from the per-leg MTR wedges against tau_eq,
+  # aggregates them to age cells, and injects the cell inflow into the
+  # recurrence's delta_next (end-of-year entry). Only the cell tracker is
+  # persisted; the behavior module recomputes record conversions from the
+  # same inputs (ruling 7). NULL = no conversion channel.
+  #
   # Flow:
   #   1. Build extended-grid baseline cells (bathtub + 81-119 SSA tail).
   #   2. Pack tau matrices (baseline + reform).
@@ -1926,8 +2199,11 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   #   5. Build planned-timing schedule from law-only tau_S minus tau_B
   #      (reform_tau_timing: pre-mech-injection MTRs, so the wedge is
   #      statutory-only; the Bellman's tau_S keeps the mech income effect).
-  #   6. Per year: combine buckets into r_S_vec, run kg_dyn_step_recurrence,
-  #      build cell_table, persist.
+  #   5b. Combine buckets into per-year r_S vectors; run the tau_eq
+  #      recursion (baseline + scenario policies) on the bathtub grid.
+  #   6. Per year: sigma conversions (when active), run
+  #      kg_dyn_step_recurrence with the conversion inflow, build
+  #      cell_table, persist.
 
   if (!is.finite(psi)) {
     stop('kg_dynamics: KG_DYN_DEFAULT_PSI is not set. Run ',
@@ -2048,12 +2324,75 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   saveRDS(life_ext,  file.path(state_dir, 'life_table_extension.rds'))
   saveRDS(heir_dist, file.path(state_dir, 'heir_distribution.rds'))
 
-  # Step 5: year-by-year bathtub recurrence
   A     = build_aging_matrix(ages_bathtub)
   omega = kg_dyn_build_heir_matrix(heir_dist, ages_bathtub)
-
-  delta = setNames(rep(0, length(ages_bathtub)), as.character(ages_bathtub))
   bathtub_ages_chr = as.character(ages_bathtub)
+
+  # Step 5b: per-year scenario realization rates (all inputs are
+  # stock-independent, so the whole schedule is available before the
+  # recurrence runs), then the tau_eq recursion on both policies.
+  rate_info_list = lapply(seq_along(years), function(j) {
+    kg_dyn_build_scenario_rate(
+      baseline_t       = baseline_cells[[as.character(years[j])]],
+      r_ordinary_S     = pass2$r_D[bathtub_ages_chr, j],
+      R_planned_B_col  = planned_timing$R_planned_B[, j],
+      R_planned_S_col  = planned_timing$R_planned_S[, j],
+      fixed_share      = phi_I
+    )
+  })
+
+  # Scenario-policy primitives: r_S incl. the retimed planned bucket, reform
+  # tau, the scenario regime mix. Baseline-policy primitives: realization at
+  # r_B, baseline tau, step-up everywhere (mirroring Pass 1's c_phi = 0).
+  prims_S = kg_dyn_tau_eq_primitives(
+    baseline_cells = baseline_cells,
+    years          = years,
+    r_S_by_year    = lapply(rate_info_list, `[[`, 'r_S'),
+    tau_bt_mat     = tau_S_mat[bathtub_ages_chr, , drop = FALSE],
+    mix_list       = mix_list,
+    A              = A,
+    omega          = omega,
+    ages_bathtub   = ages_bathtub
+  )
+  prims_B = kg_dyn_tau_eq_primitives(
+    baseline_cells = baseline_cells,
+    years          = years,
+    r_S_by_year    = lapply(as.character(years),
+                            function(t) baseline_cells[[t]]$r_B),
+    tau_bt_mat     = tau_B_mat[bathtub_ages_chr, , drop = FALSE],
+    mix_list       = NULL,
+    A              = A,
+    omega          = omega,
+    ages_bathtub   = ages_bathtub
+  )
+
+  tau_eq_S_mat = kg_dyn_compute_tau_eq(prims_S, beta_by_year)$tau_eq
+  tau_eq_B_mat = kg_dyn_compute_tau_eq(prims_B, beta_by_year)$tau_eq
+  kg_dyn_check_tau_eq(tau_eq_S_mat, prims_S$tau, 'S')
+  kg_dyn_check_tau_eq(tau_eq_B_mat, prims_B$tau, 'B')
+
+  # Optional in-pass ground-truth check (DESIGN_LOCK ruling 1): verify the
+  # linear recursion cell-by-cell against the finite-difference simulation
+  # of the exact recurrence dynamics, on the real grid. Cheap; enabled in
+  # smoke/validation runs via SIGMA_TAU_EQ_FDCHECK=1.
+  if (identical(Sys.getenv('SIGMA_TAU_EQ_FDCHECK'), '1')) {
+    for (j in seq_along(years)) {
+      fd_S = kg_dyn_tau_eq_finite_diff(prims_S, beta_by_year, j)
+      fd_B = kg_dyn_tau_eq_finite_diff(prims_B, beta_by_year, j)
+      err  = max(abs(fd_S - tau_eq_S_mat[, j]), abs(fd_B - tau_eq_B_mat[, j]))
+      if (err > 1e-8) {
+        stop(sprintf(
+          paste0('kg_dynamics: tau_eq recursion vs finite difference ',
+                 'mismatch at year %d (max abs err %.3e).'),
+          years[j], err))
+      }
+    }
+    message('kg_dynamics: tau_eq finite-difference check passed for all ',
+            length(years), ' years.')
+  }
+
+  # Step 6: year-by-year bathtub recurrence
+  delta = setNames(rep(0, length(ages_bathtub)), as.character(ages_bathtub))
 
   for (j in seq_along(years)) {
     t  = years[j]
@@ -2061,16 +2400,23 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     regime = regime_list[[j]]
     mix    = mix_list[[j]]
 
-    # Slice Bellman outputs from extended grid to bathtub grid for this year
-    r_D_S_bt = pass2$r_D[bathtub_ages_chr, j]
-    rate_info = kg_dyn_build_scenario_rate(
-      baseline_t       = bt,
-      r_ordinary_S     = r_D_S_bt,
-      R_planned_B_col  = planned_timing$R_planned_B[, j],
-      R_planned_S_col  = planned_timing$R_planned_S[, j],
-      fixed_share      = phi_I
-    )
+    rate_info = rate_info_list[[j]]
     r_S_vec = setNames(rate_info$r_S, bathtub_ages_chr)
+
+    # Sigma conversions for year t (end-of-year injection: computed on
+    # year-t wedges, enters delta_next below, participates from t+1).
+    sigma_year = NULL
+    conv_inflow_vec = NULL
+    if (!is.null(sigma_ctx)) {
+      sigma_year = sigma_compute_year(
+        ctx          = sigma_ctx,
+        year         = t,
+        tau_eq_B_col = setNames(tau_eq_B_mat[, j], bathtub_ages_chr),
+        tau_eq_S_col = setNames(tau_eq_S_mat[, j], bathtub_ages_chr),
+        ages_bathtub = ages_bathtub
+      )
+      conv_inflow_vec = sigma_year$conv_inflow
+    }
 
     step = kg_dyn_step_recurrence(
       delta_prev      = delta,
@@ -2079,7 +2425,8 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
       omega           = omega,
       r_S_vec         = r_S_vec,
       delta_route_vec = mix$delta_route,
-      phi_I           = phi_I
+      phi_I           = phi_I,
+      conv_inflow_vec = conv_inflow_vec
     )
 
     r_S_named      = setNames(step$r_S,      bathtub_ages_chr)
@@ -2127,12 +2474,18 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
       ),
       corp_debit   = if (!is.null(corp_debit_by_year))
                        corp_debit_by_year[[as.character(t)]] else NULL,
+      tau_eq_B_col = setNames(tau_eq_B_mat[, j], bathtub_ages_chr),
+      tau_eq_S_col = setNames(tau_eq_S_mat[, j], bathtub_ages_chr),
+      conv_inflow_vec = conv_inflow_vec,
       ages_bathtub = ages_bathtub
     )
 
-    saveRDS(list(regime     = regime,
-                 cell_table = cell_table),
-            kg_dyn_state_path(scenario_info, t))
+    state = list(regime     = regime,
+                 cell_table = cell_table)
+    if (!is.null(sigma_year)) {
+      state$sigma = sigma_year$tracker
+    }
+    saveRDS(state, kg_dyn_state_path(scenario_info, t))
 
     delta = setNames(step$delta_next, bathtub_ages_chr)
   }
