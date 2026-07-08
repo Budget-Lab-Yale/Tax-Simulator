@@ -135,10 +135,15 @@ do_evasion = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, inde
 
     mutate(
 
-      # Group response factors
-      .g_schc = response_factor(mtr_sole_prop1,  mtr_sole_prop1_baseline,  EVASION_E_SCHC),
-      .g_pt   = response_factor(mtr_part_active, mtr_part_active_baseline, EVASION_E_PT),
-      .g_rent = response_factor(mtr_rent,        mtr_rent_baseline,        EVASION_E_RENT),
+      # Group response factors. PERSISTED as record columns (evasion_g_*) so the
+      # wealth-avoidance module -- which runs AFTER this one in the pinned stack
+      # -- can read each record's income-evasion outcome for the R3
+      # evasion->wealth consistency link (an income evader under a wealth tax
+      # should not report the assets whose income he hides). Not registered in
+      # detail_vars, so they do not leak into the written detail.
+      evasion_g_schc = response_factor(mtr_sole_prop1,  mtr_sole_prop1_baseline,  EVASION_E_SCHC),
+      evasion_g_pt   = response_factor(mtr_part_active, mtr_part_active_baseline, EVASION_E_PT),
+      evasion_g_rent = response_factor(mtr_rent,        mtr_rent_baseline,        EVASION_E_RENT),
 
       # Positive-income gates, evaluated BEFORE any leg is scaled so the
       # companions always ride with their parent
@@ -152,24 +157,24 @@ do_evasion = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, inde
 
       # Schedule C/F group (+ SECA earner-split companions)
       across(.cols = all_of(c('sole_prop', 'sole_prop1', 'sole_prop2')),
-             .fns  = ~ if_else(.schc_pos, . * .g_schc, .)),
+             .fns  = ~ if_else(.schc_pos, . * evasion_g_schc, .)),
       across(.cols = all_of(c('farm', 'farm1', 'farm2')),
-             .fns  = ~ if_else(.farm_pos, . * .g_schc, .)),
+             .fns  = ~ if_else(.farm_pos, . * evasion_g_schc, .)),
 
       # Partnership / S-corp group (+ partnership SE companions)
       across(.cols = all_of(c('part_active', 'part_se1', 'part_se2')),
-             .fns  = ~ if_else(.parta_pos, . * .g_pt, .)),
-      part_passive  = if_else(.partp_pos,  part_passive  * .g_pt, part_passive),
-      scorp_active  = if_else(.scorpa_pos, scorp_active  * .g_pt, scorp_active),
-      scorp_passive = if_else(.scorpp_pos, scorp_passive * .g_pt, scorp_passive),
+             .fns  = ~ if_else(.parta_pos, . * evasion_g_pt, .)),
+      part_passive  = if_else(.partp_pos,  part_passive  * evasion_g_pt, part_passive),
+      scorp_active  = if_else(.scorpa_pos, scorp_active  * evasion_g_pt, scorp_active),
+      scorp_passive = if_else(.scorpp_pos, scorp_passive * evasion_g_pt, scorp_passive),
 
       # Rent (rent_loss untouched)
-      rent = if_else(.rent_pos, rent * .g_rent, rent)
+      rent = if_else(.rent_pos, rent * evasion_g_rent, rent)
     ) %>%
 
-    # Drop joined MTRs and temp columns; return full frame
+    # Drop joined MTRs and the positive-income gate temps (evasion_g_* are kept
+    # for the downstream wealth-avoidance consistency link); return full frame
     select(-all_of(c(required, paste0(required, '_baseline'),
-                     '.g_schc', '.g_pt', '.g_rent',
                      '.schc_pos', '.farm_pos', '.parta_pos', '.partp_pos',
                      '.scorpa_pos', '.scorpp_pos', '.rent_pos'))) %>%
     return()

@@ -79,7 +79,7 @@ calc_estate = function(tax_unit, estate_params, fill_missings = FALSE) {
   #   - fill_missings (bool)  : whether to populate unsupplied variables with
   #                             0s (used in testing, not in simulation)
   #
-  # Optional input column (absent => 0, all other callers unaffected):
+  # Optional input columns (absent => 0, all other callers unaffected):
   #   - estate_income_tax_ded (dbl) : decedent's income tax at death,
   #                                   deductible against the taxable estate
   #                                   (Sec. 2053-style). Conditional-on-death
@@ -90,6 +90,20 @@ calc_estate = function(tax_unit, estate_params, fill_missings = FALSE) {
   #                                   invariant (fixed-wealth convention).
   #                                   Gated by the estate.income_tax_ded law
   #                                   switch (baseline default 1)
+  #   - estate_concealed_frac (dbl) : share of gross assets concealed from the
+  #                                   tax authority under a wealth tax, set by
+  #                                   the conventional-pass wealth-avoidance
+  #                                   module (config/scenarios/behavior/wealth/
+  #                                   avoidance.R; hidden-ledger ruling R4).
+  #                                   Concealed wealth escapes the reported
+  #                                   estate: it enters the BASE only (as
+  #                                   estate_concealed_frac * reported_gross),
+  #                                   so estate_distributable -- the heir
+  #                                   allocator's bequest ladder -- stays
+  #                                   invariant and heirs inherit the hidden
+  #                                   wealth unchanged. Absent on the static
+  #                                   pass (no behavior) => 0 => static stays
+  #                                   the clean law-only counterfactual
   #
   # Returns: dataframe with the following variables:
   #   - liab_estate_nodsue (dbl)   : liability conditional on death, no-DSUE
@@ -134,6 +148,12 @@ calc_estate = function(tax_unit, estate_params, fill_missings = FALSE) {
     df$estate_income_tax_ded = 0
   }
 
+  # Default the optional concealment fraction (hidden-ledger R4) when the caller
+  # doesn't supply it -- e.g. the static pass, which runs no behavior module
+  if (!('estate_concealed_frac' %in% names(df))) {
+    df$estate_concealed_frac = 0
+  }
+
   df %<>%
 
     mutate(
@@ -159,13 +179,17 @@ calc_estate = function(tax_unit, estate_params, fill_missings = FALSE) {
       f_dsue  = bins$f_dsue[bin_idx],
 
       # Taxable estate and unified base with the lifetime-gift add-back. The
-      # income tax deduction enters the BASE only -- gated by the
-      # estate.income_tax_ded law switch -- so estate_distributable (the heir
-      # allocator's bequest-mass ladder) stays scenario-invariant under the
-      # fixed-wealth convention
+      # income tax deduction AND the hidden-ledger concealment (R4) enter the
+      # BASE only -- the former gated by the estate.income_tax_ded law switch --
+      # so estate_distributable (the heir allocator's bequest-mass ladder) stays
+      # scenario-invariant under the fixed-wealth convention. Concealment is a
+      # fraction of gross assets applied to reported_gross (concealed dollars in
+      # reported terms); the gift add-back is deliberately left on the FULL
+      # reported_gross (conservative -- hidden gifts are not netted out)
       estate_distributable = pmax(reported_gross - estate_debts - f_ded * reported_gross, 0),
       estate_base          = pmax(estate_distributable -
-                                  estate.income_tax_ded * estate_income_tax_ded, 0) +
+                                  estate.income_tax_ded * estate_income_tax_ded -
+                                  estate_concealed_frac * reported_gross, 0) +
                              estate_params$gamma * reported_gross,
 
       # Exclusion amounts for the three liability calculations. Joint records

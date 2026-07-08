@@ -923,7 +923,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       tax_units_conv %>%
         select(all_of(globals$detail_vars), starts_with('mtr_'),
                any_of(c('kg_lockin', 'kg_deemed', 'liab_deemed',
-                        'estate_income_tax_ded', 'economic_gross', 'cap_bundle_F',
+                        'estate_income_tax_ded', 'estate_concealed_frac',
+                        'economic_gross', 'cap_bundle_F',
                         'net_worth_raw', 'nw_pctile', 'D_alloc', 'wealth_haircut',
                         'corp_dY_exog', 'corp_markdown', 'corp_flow_factor'))) %>%
         write_csv(conv_detail_path)
