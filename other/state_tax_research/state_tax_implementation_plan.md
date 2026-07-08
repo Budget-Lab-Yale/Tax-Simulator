@@ -42,7 +42,12 @@ Decisions already made (validated by research):
 state = 2-letter code + `DC` + `OA` for other areas). Long beats wide because
 downstream joins in the per-state loop are `filter(state == st) %>% left_join(by='id')`.
 
-**Construction (prototype, in-repo):**
+**Construction:** two methods are prototyped and compared head-to-head in Phase 1 —
+**Approach A** (classical calibration, below) and **Approach B** (differentiable /
+ML reweighting). Both honor `Σ_st w_{i,st} = w_i` and emit the identical file format,
+so they are swappable behind `build_state_weights(method = c("calibration","gradient"))`.
+Approach B and the A/B comparison harness are specified in
+`state_weights_ml_alternative.md`. Approach A (the baseline):
 1. Ingest SOI Historic Table 2 CSVs (latest published year, currently ~2022):
    per-state × AGI-class return counts and amounts for AGI, wages, interest,
    dividends, capital gains, SALT deductions, mortgage interest, EITC.
@@ -186,10 +191,14 @@ state-static estimates, which is everything in Phases 1–6.
 Branch `state-tax`. Commit both research/plan docs. CLAUDE.md addendum describing the
 state module conventions. Decision sign-off on §5 open items.
 
-**Phase 1 — State weights prototype (1–2 weeks)**
-HT2 ingestion → calibration → `state_weights_{year}.csv` + OTA-style diagnostics
-report. Acceptance: targeted variables within 2% for ≥99% of state×stratum targets
-(TPC benchmark); untargeted-variable MARD reported honestly.
+**Phase 1 — State weights prototype + A/B bake-off (2–3 weeks)**
+HT2 ingestion → build BOTH Approach A (classical calibration) and Approach B
+(differentiable reweighting) behind `build_state_weights(method=)` → run the shared
+comparison harness (`state_weights_ml_alternative.md` §4) → `state_weights_{year}.csv`
++ OTA-style diagnostics for each. Acceptance: chosen method hits targeted variables
+within 2% for ≥99% of state×stratum targets (TPC benchmark), with untargeted-variable
+MARD and downstream pilot-state liability reported honestly for both methods. Includes
+a `torch`-for-R availability check on the cluster before committing to B in production.
 
 **Phase 2 — Parameter schema + pilot states (2–3 weeks, parallel with Phase 1)**
 Implement `build_state_tax_law()`, `st_` naming, `reference` field tolerance, index
