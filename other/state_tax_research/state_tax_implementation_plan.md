@@ -67,6 +67,32 @@ Approach B and the A/B comparison harness are specified in
 6. Diagnostics report in the OTA style: per-state correlation and mean absolute
    relative difference vs HT2 for targeted AND untargeted variables.
 
+**Filers vs non-filers (both approaches).** The Tax-Data microdata carries a full
+population: filers AND non-filers, each a weighted tax-unit record with the same
+imputed `weight`; `filer` is an exogenous 0/1 field (`variable_guide.csv` line 4),
+only flipped endogenously when a refundable CTC/rebate induces filing
+(`do_taxes.R:127`). HT2 is **filers only**, so it cannot pin non-filer geography, and
+non-filers are geographically unlike filers (low-income, elderly-SS-only, students).
+Therefore **partition records by `filer` status and target each partition separately**,
+then concatenate:
+- **Filers → HT2** (steps 1–6 above).
+- **Non-filers → ACS/Census population margins**, by state × cell, cells built from
+  model-native variables — broad age band (`age1`/`age2`, catches elderly SS-only),
+  an income tier, and dependent presence (`n_dep`). Minimum target: non-filing count
+  by state; preferred: state × age × income-tier.
+The per-record split constraint holds automatically (each record is in exactly one
+partition), so federal totals stay invariant. Add a **population reconciliation**
+cross-check: `sum(weight · n_people)` by state — where
+`n_people = 1 + (filing_status==2) + n_dep` over non-dependent units
+(`distribution.R:138`) — must hit Census state population across both partitions.
+Caveats to document: ACS is residence-based vs HT2 filing-address-based (minor at
+state level); "non-filer" is not observed in ACS, so the imputed `filer` flag is the
+authority for *who* is a non-filer and ACS supplies only the geographic *margins*.
+Open sub-decision: non-filer cell granularity (state-total vs state×age×income) —
+tune in Phase 1 against the reconciliation and downstream refundable-credit results.
+This matters most for the EITC and the `rebate` (stimulus/UBI) module, where
+non-filers are the population of interest.
+
 **Home:** prototype as `src/data/state_weights.R` + a build script under `other/`;
 **production home is upstream Tax-Data** (new interface file alongside
 `tax_units_{year}.csv`), versioned via `interface_versions.yaml`. Migrate once stable.

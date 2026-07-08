@@ -74,6 +74,12 @@ L(θ) = Σ_t λ_t · ((T̂_t(W) − T_t) / T_t)²          # target fidelity
   income deduction, real-estate tax, mortgage interest, EITC. `T̂_t(W)` is the
   weighted total over records in class `c`. `λ_t` lets us up-weight counts vs
   amounts, or scarce cells.
+- **Filers vs non-filers:** HT2 targets constrain filers only. Partition records by
+  the exogenous `filer` flag and add **ACS/Census population-margin targets** (state ×
+  age × income-tier) for the non-filer partition, plus a `sum(W·n_people)`-by-state
+  population reconciliation target spanning both. In B this is trivial — non-filer
+  cells are just more terms in the same loss; the softmax split constraint still holds
+  per record. See plan §2.1 "Filers vs non-filers" for rationale and caveats.
 - The KL term pulls each record's split distribution toward a **prior** and is the
   analog of PolicyEngine's dropout regularization and of classical calibration's
   "stay near the design weights." Natural prior choices: uniform, HT2-share prior, or
