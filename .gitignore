@@ -81,3 +81,7 @@ config/interfaces/output_roots.yaml
 
 # Singularity images
 wine.sif
+
+# Transient job output anywhere in the tree (sbatch stdout + log dirs)
+*.out
+**/logs/
