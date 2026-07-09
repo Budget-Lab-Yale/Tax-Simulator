@@ -12,6 +12,15 @@ conservation-of-dollars timing channel; the Bellman handles ordinary
 permanent realization decisions. See `src/sim/kg_dynamics.R` for the
 implementation.
 
+> **SUPERSEDED (2026-07, spec v2).** The quadratic `psi` and the flat
+> `(phi_I, planned_share)` buckets in §1 were replaced by the entropy cost and
+> the nested `(Phi, omega)` reparameterization. The three-bucket architecture
+> (fixed / ordinary-Bellman / planned) is unchanged, but the buckets are now
+> derived as `phi_I = Phi*(1-omega)`, `planned_share = Phi*omega`. See
+> `representative_cell_bellman_results.md` "2026-07: entropy/log cost (spec v2)"
+> and `eta_migration_regression.md`. Do not cite the `psi` / `planned_share`
+> numbers below.
+
 ---
 
 ## 1. Calibrated parameters

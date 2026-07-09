@@ -1,8 +1,17 @@
 # Representative-Cell Bellman: First Results
 
-**Status**: Refactor complete, calibrated, and validated end-to-end. Two
-review-driven corrections applied (gain-weighted Bellman mortality;
-realistic r_B in the 81+ Bellman tail). Calibration anchor moved to
+> **SUPERSEDED (2026-07, spec v2).** The quadratic realization cost
+> `(psi/2)*r_D^2` and the flat `(phi_I, planned_share)` bucket pair described
+> below were replaced by an **entropy (KL / Bregman) realization cost** and a
+> **nested `(Phi, omega)` bucket reparameterization**. See the
+> **"2026-07: entropy/log cost (spec v2)"** section at the bottom of this file
+> for the current formulation. The formula block, the `psi` bullets, and every
+> calibrated table below reflect the OLD quadratic model and are retained for
+> history only — do not cite `psi` / `planned_share` numbers from them.
+
+**Status (v1, historical)**: Refactor complete, calibrated, and validated
+end-to-end. Two review-driven corrections applied (gain-weighted Bellman
+mortality; realistic r_B in the 81+ Bellman tail). Calibration anchor moved to
 sim year 30 for a permanent-response interpretation.
 
 Companion to `representative_cell_bellman_proposal.md`. The proposal
@@ -248,3 +257,86 @@ right; the aggregate level is what remains elevated relative to CBO.
   baseline; psi recalibrated to 23.1078. Carryover at +5% of CBO; deemed
   at +42%. Doc convention clarified to "semi-elast wrt tau" matching
   legacy kg/62. Carryover theta default (0.5) noted explicitly.
+
+---
+
+## 2026-07: entropy/log cost (spec v2)
+
+**This section is current; everything above is the superseded quadratic
+model (spec v1).**
+
+### Why
+
+The revmax grid (vintage 202607081937) showed the CG revenue response
+*saturating*: the quadratic cost `(psi/2)*r_D^2` gives a linear-with-hard-corner
+control, and only the ~34% Bellman-controlled bucket ever responds long-run, so
+no revenue-maximizing rate exists in the grid range. Root causes: (a) the fixed
+share `phi_I = 0.4` was a 2026-05-06 judgment call, never calibrated; (b) the
+local elasticity calibration cannot pin the *global* curvature that determines
+revmax; (c) the naive scorekeeper "revmax ~= 40%" is exactly the
+constant-semi-elasticity special case.
+
+### The cost function
+
+Replace the quadratic with the **entropy (KL / Bregman) cost** anchored at the
+cell's baseline discretionary rate `r_D_B`:
+
+```
+C(r_D; r_D_B) = (1/eta) * [ r_D * ln(r_D / r_D_B) - r_D + r_D_B ]
+```
+
+so `C'(r_D) = (1/eta) * ln(r_D / r_D_B)` and `C'(r_D_B) = 0` exactly.
+
+- **Pass 1** (baseline inversion): `C'(r_D_B) = 0` => `kappa = MC_B` EXACTLY
+  (interior AND corner). No `psi * r_D_B` premium term. `W_B = (MC_B - tau_B) *
+  r_D_B + remaining * death_cont`.
+- **Pass 2** (scenario FOC): the closed form
+  `r_D_S = r_D_B * exp(-eta * (MC_S - MC_B))`, clipped to `[0, r_D_cap]`. Only
+  the upper clip can bind; `r_D_B = 0` cells (exactly the `r_B = 0` cells) stay
+  0. The response argument is the FULL wedge `Delta MC` (tau + continuation
+  `W'` + death-forgiveness `F`), so carryover/deemed regime changes and
+  anticipation are all priced with the SAME `eta`.
+
+This makes the discretionary response **globally constant-semi-elasticity in
+the structural wedge**: `dln(r_D)/dMC = -eta` everywhere. Consequences:
+- The model hits the literature elasticity under current-law step-up **by
+  construction** (eta is calibrated against the tau-moment).
+- It **endogenously** implies lower rate-elasticities under carryover/deemed
+  (the wedge is amplified by the continuation/forgiveness terms).
+- It **nests the naive CBO/JCT revmax arithmetic as its `Phi -> 0` limit**:
+  with a constant semi-elasticity `s`, the revenue-maximizing rate is `1/|s|`
+  (~= 0.397 for `s = -2.52`). Verified end-to-end in
+  `test_naive_limit.R` (argmax within 1/2.52 +/- 0.05).
+
+### Nested bucket reparameterization
+
+The flat `(phi_I, planned_share)` pair becomes two primitives:
+
+- `Phi` (`KG_DYN_SHARE_INERT`, env `KG_SHARE_INERT`, **central 0.50** — SSZZ
+  TPE-36: ~50% of realizations untimeable): the INERT share, outside the
+  discretionary Bellman bucket. The ordinary bucket is `1 - Phi`.
+- `omega` (`KG_DYN_TIMEABLE_FRAC`, env `KG_TIMEABLE_FRAC`, **calibrated**): of
+  the inert share, the mechanically-timeable fraction.
+
+Derived (all downstream consumers unchanged): `phi_I = Phi*(1 - omega)`,
+`planned_share = Phi*omega`. Because `phi_I + planned_share = Phi` independent
+of `omega`, `r_exog_B = Phi * r_B` is `omega`-invariant, so the long-run moment
+is `omega`-invariant and `eta`/`omega` identify nearly independently (the
+calibrator's inner `eta` loop collapses to ~1 iteration after the first outer
+`omega` step — a health signal).
+
+The **frozen mechanical pass is Phi-invariant** (`phi_I` feeds only the
+`lambda_I` / `r_V_*` diagnostics in `kg_dyn_step_recurrence`; `delta_next` and
+all mech cell_table columns are independent of it) => pre/post mech state is
+byte-identical across the migration (a regression assertion).
+
+### Code / provenance
+
+`KG_DYN_SPEC_VERSION = 2L`. `KG_DYN_DEFAULT_ETA` replaces `KG_DYN_DEFAULT_PSI`
+(NA-guarded until the calibration paste; the finite-eta guard hard-stops an
+uncalibrated sim). `KG_DYN_CALIB_PROVENANCE` now stamps
+`eta / timeable_frac / share_inert`. Env knobs `KG_PSI` / `KG_SHARE_PLANNED`
+are removed; `KG_ETA` / `KG_SHARE_INERT` / `KG_TIMEABLE_FRAC` replace them.
+Calibrated by `calibrate.R` (outer bisection over `omega`, inner over `eta`
+with the DECREASING-in-eta direction flip); dilution loop / regression memo in
+`eta_migration_regression.md`.

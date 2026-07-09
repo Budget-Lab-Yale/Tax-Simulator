@@ -217,11 +217,20 @@ land in middle quintiles) — both expected pre-reattribution.
    second accumulator is judged unnecessary — `extra_R` is zero in year 1
    anyway because dG enters lagged). Expected to pull concentration up from
    pure G (large inheritances are top-heavy).
-3. **Recalibration.** psi / `KG_DYN_SHARE_PLANNED` / dilution factors are
-   anchored to the historical `'R'` applier rule and pre-injection tau.
-   Re-measure dilutions and re-run `other/kg_model_tests/calibrate.R` under
-   the 0.5 default and post-injection tau. Measured drift is small
-   (≤2% conventional), so this is hygiene, not a fire.
+3. **Recalibration (spec v2, 2026-07).** The Bellman moved to an entropy
+   realization cost with a nested `(Phi, omega)` bucket reparameterization
+   (`representative_cell_bellman_results.md` §"2026-07"). The calibrated
+   parameters are now `eta` (`KG_DYN_DEFAULT_ETA`) and `omega`
+   (`KG_DYN_TIMEABLE_FRAC`), with `Phi` (`KG_DYN_SHARE_INERT`) fixed at 0.50.
+   Checklist per iteration: (a) `sbatch other/kg_model_tests/calibrate.sbatch
+   <baseline_root>` -> eta, omega, and the E_int_long/short it printed;
+   (b) paste eta/omega + the provenance stamp into `src/sim/kg_dynamics.R`;
+   (c) full-sim the dilution runscript; (d) `sbatch
+   other/kg_model_tests/measure_dilution.sbatch <vintage> <root> <E_int_long>
+   <E_int_short>` -> new dilutions; (e) if full-sim semis are within tol of
+   -2.52 / +5.04 stop, else update the dilutions in `calibrate.R` and iterate
+   (2 iterations sufficed at the 2026-06-22 precedent; short-run dilution is
+   the sensitive one). Full loop + regression memo: `eta_migration_regression.md`.
 4. **Mechanical-pass diagnostics** (optional): extend `kg_dyn_build_summary`
    to also roll up the mech state files (currently conventional-only).
 
