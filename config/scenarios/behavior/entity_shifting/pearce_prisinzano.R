@@ -132,12 +132,19 @@ do_entity_shifting = function(tax_units, baseline_mtrs, static_mtrs,
 
       # Adjust pass-through income, co-scaling the partnership SECA
       # earner-split companions (part_se1/2) with their parent aggregate so
-      # the payroll frame stays consistent (evasion-module convention).
+      # the payroll frame stays consistent (evasion-module convention: one
+      # bounded shared percent scales all legs in the group). The factor is
+      # 1 + percent_shifted, NOT (part_active + amount_shifted)/part_active:
+      # amount_shifted is a percent of the record's ENTIRE pass-through basis
+      # (partnership + scorp + sole_prop), so dividing it by part_active alone
+      # is degenerate when part_active is small relative to the other legs
+      # (2026-07-09 top_tax factorial: per-record factors in the hundreds,
+      # se base +/- $13-26T, payroll head +$500B/yr on a +5pp ord change).
       # When part_active <= 0 pre-shift there is no companion basis to
       # scale; the companions are left untouched (accepted, small).
       .part_factor = if_else(!is.na(part_active) & part_active > 0 &
                                amount_shifted != 0,
-                             (part_active + amount_shifted) / part_active,
+                             1 + percent_shifted,
                              1),
       part_active = part_active + amount_shifted,
       part_se1    = part_se1 * .part_factor,
