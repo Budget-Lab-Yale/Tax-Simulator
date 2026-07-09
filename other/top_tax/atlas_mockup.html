@@ -1,0 +1,453 @@
+<title>How much is really there? — top-tax explorer (mock)</title>
+<style>
+  :root {
+    --paper:#f7f6f2; --surface:#fcfcfb; --surface-2:#f1f0ea; --ink:#14130f; --ink-2:#55534c;
+    --muted:#8a887f; --grid:#e4e2d9; --rule:#d7d5cb; --accent:#1c5cab; --accent-2:#cfe0f6;
+    --hair:rgba(20,19,15,0.10); --good:#0a7d3a; --warn:#b9601b;
+    --h-iit:#2a78d6; --h-pay:#1baf7a; --h-cg:#c9891a; --h-est:#008300; --h-wealth:#4a3aa7; --h-corp:#e34948;
+    --shadow:0 1px 2px rgba(20,19,15,.05),0 4px 16px rgba(20,19,15,.04); color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){ :root{
+    --paper:#0d0d0d; --surface:#17181a; --surface-2:#202225; --ink:#f4f3ef; --ink-2:#c3c2b7;
+    --muted:#8f8d84; --grid:#2b2c2e; --rule:#33343a; --accent:#4b93ea; --accent-2:#173254;
+    --hair:rgba(255,255,255,0.10); --good:#31b45c; --warn:#e0873f;
+    --h-iit:#3987e5; --h-pay:#199e70; --h-cg:#d9a02f; --h-est:#2ba32b; --h-wealth:#9085e9; --h-corp:#e66767;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35); color-scheme:dark; } }
+  :root[data-theme="light"]{
+    --paper:#f7f6f2; --surface:#fcfcfb; --surface-2:#f1f0ea; --ink:#14130f; --ink-2:#55534c;
+    --muted:#8a887f; --grid:#e4e2d9; --rule:#d7d5cb; --accent:#1c5cab; --accent-2:#cfe0f6;
+    --hair:rgba(20,19,15,0.10); --good:#0a7d3a; --warn:#b9601b;
+    --h-iit:#2a78d6; --h-pay:#1baf7a; --h-cg:#c9891a; --h-est:#008300; --h-wealth:#4a3aa7; --h-corp:#e34948; color-scheme:light; }
+  :root[data-theme="dark"]{
+    --paper:#0d0d0d; --surface:#17181a; --surface-2:#202225; --ink:#f4f3ef; --ink-2:#c3c2b7;
+    --muted:#8f8d84; --grid:#2b2c2e; --rule:#33343a; --accent:#4b93ea; --accent-2:#173254;
+    --hair:rgba(255,255,255,0.10); --good:#31b45c; --warn:#e0873f;
+    --h-iit:#3987e5; --h-pay:#199e70; --h-cg:#d9a02f; --h-est:#2ba32b; --h-wealth:#9085e9; --h-corp:#e66767; color-scheme:dark; }
+
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 24px; }
+  h1,h2,h3 { text-wrap:balance; margin:0; font-weight:620; letter-spacing:-0.01em; }
+  a { color:var(--accent); }
+  .eyebrow { font:600 12px/1.2 ui-monospace,monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+  .mono { font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-variant-numeric:tabular-nums; }
+
+  header.top { border-bottom:1px solid var(--rule); background:var(--surface); }
+  .top-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; }
+  .brand { font:600 13px/1 ui-monospace,monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-2); }
+  .top-right { display:flex; align-items:center; gap:14px; }
+  .synthetic { font:600 11px/1 ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--warn); border:1px solid var(--warn); border-radius:999px; padding:4px 10px; white-space:nowrap; }
+  .unit { display:inline-flex; border:1px solid var(--rule); border-radius:8px; overflow:hidden; background:var(--surface-2); }
+  .unit button { font:600 11.5px/1 ui-monospace,monospace; letter-spacing:.03em; padding:7px 11px; background:transparent; color:var(--ink-2); border:0; cursor:pointer; transition:.12s; }
+  .unit button + button { border-left:1px solid var(--rule); }
+  .unit button[aria-pressed="true"] { background:var(--accent); color:#fff; }
+  .unit button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+  .hero { padding:56px 0 44px; border-bottom:1px solid var(--rule); }
+  .hero h1 { font-size:clamp(30px,4.6vw,52px); line-height:1.04; max-width:18ch; }
+  .hero .dek { margin-top:18px; max-width:60ch; font-size:18px; color:var(--ink-2); }
+  .thesis { margin-top:40px; display:grid; grid-template-columns:1fr auto; gap:36px; align-items:end; }
+  @media (max-width:760px){ .thesis{ grid-template-columns:1fr; } }
+  .ladder { display:flex; flex-direction:column; gap:14px; }
+  .ladder-row { display:grid; grid-template-columns:210px 1fr; align-items:center; gap:16px; }
+  .ladder-lab { font-size:13px; color:var(--ink-2); text-align:right; }
+  .ladder-lab small { display:block; color:var(--muted); font-size:11px; }
+  .bartrack { position:relative; height:34px; background:var(--surface-2); border-radius:5px; overflow:hidden; }
+  .barfill { position:absolute; inset:0 auto 0 0; border-radius:5px; }
+  .barfill .val { position:absolute; right:10px; top:50%; transform:translateY(-50%); font:600 15px/1 ui-monospace,monospace; font-variant-numeric:tabular-nums; color:#fff; }
+  .barfill.ghost .val { color:var(--ink); }
+  .gapcall { align-self:center; text-align:right; }
+  .gapcall .big { font:680 clamp(38px,6.6vw,70px)/0.95 ui-monospace,monospace; font-variant-numeric:tabular-nums; letter-spacing:-.02em; color:var(--accent); }
+  .gapcall .altbig { font:600 15px/1 ui-monospace,monospace; font-variant-numeric:tabular-nums; color:var(--ink-2); margin-top:6px; }
+  .gapcall .lab { font-size:13px; color:var(--ink-2); max-width:24ch; margin-left:auto; margin-top:8px; }
+
+  section { padding:48px 0; border-bottom:1px solid var(--rule); }
+  .sec-head { display:flex; align-items:baseline; gap:14px; margin-bottom:8px; }
+  .sec-head h2 { font-size:24px; }
+  .sec-sub { color:var(--ink-2); max-width:70ch; margin:6px 0 26px; }
+
+  .exp { display:grid; grid-template-columns:300px 1fr; gap:28px; align-items:start; }
+  @media (max-width:900px){ .exp{ grid-template-columns:1fr; } }
+  .panel { background:var(--surface); border:1px solid var(--hair); border-radius:12px; box-shadow:var(--shadow); }
+  .controls { padding:18px; position:sticky; top:14px; }
+  .controls .grp { font:600 11px/1 ui-monospace,monospace; letter-spacing:.13em; text-transform:uppercase; color:var(--muted); margin:14px 2px 8px; }
+  .controls .grp:first-child { margin-top:2px; }
+  .sw { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; background:var(--surface-2); border:1px solid transparent; color:var(--ink); border-radius:9px; padding:9px 11px; margin-bottom:7px; cursor:pointer; text-align:left; font-size:13.5px; transition:.12s; }
+  .sw:hover { border-color:var(--hair); }
+  .sw .dot { width:30px; height:18px; border-radius:999px; background:var(--rule); position:relative; flex:none; transition:.14s; }
+  .sw .dot::after { content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:.14s; }
+  .sw[aria-pressed="true"] { background:var(--accent-2); border-color:color-mix(in srgb,var(--accent) 40%,transparent); }
+  .sw[aria-pressed="true"] .dot { background:var(--accent); }
+  .sw[aria-pressed="true"] .dot::after { transform:translateX(12px); }
+  .sw:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .presets { display:flex; flex-wrap:wrap; gap:6px; }
+  .preset { font:600 11.5px/1 ui-monospace,monospace; padding:6px 9px; border-radius:7px; border:1px solid var(--hair); background:transparent; color:var(--ink-2); cursor:pointer; }
+  .preset:hover { color:var(--ink); border-color:var(--accent); }
+
+  .out { display:flex; flex-direction:column; gap:20px; min-width:0; }
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  @media (max-width:640px){ .tiles{ grid-template-columns:repeat(2,1fr);} }
+  .tile { background:var(--surface); border:1px solid var(--hair); border-radius:11px; padding:14px 15px; box-shadow:var(--shadow); }
+  .tile .k { font:600 10.5px/1.2 ui-monospace,monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .tile .v { font:660 26px/1.05 ui-monospace,monospace; font-variant-numeric:tabular-nums; margin-top:8px; letter-spacing:-.01em; }
+  .tile .alt { font:600 12px/1 ui-monospace,monospace; font-variant-numeric:tabular-nums; color:var(--muted); margin-top:5px; }
+  .tile .s { font-size:11.5px; color:var(--ink-2); margin-top:3px; }
+  .tile.accent .v { color:var(--accent); }
+  .card { background:var(--surface); border:1px solid var(--hair); border-radius:12px; padding:18px 20px; box-shadow:var(--shadow); min-width:0; }
+  .card h3 { font-size:15px; }
+  .card .cap { font-size:12.5px; color:var(--ink-2); margin:4px 0 14px; }
+  .card .step { font:600 10.5px/1 ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); margin-bottom:6px; }
+  figure { margin:0; }
+  svg { display:block; width:100%; height:auto; overflow:visible; }
+  .legend { display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; font-size:12px; color:var(--ink-2); }
+  .legend .it { display:flex; align-items:center; gap:6px; }
+  .legend .sw2 { width:11px; height:11px; border-radius:3px; flex:none; }
+
+  .atlas { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
+  @media (max-width:720px){ .atlas{ grid-template-columns:1fr; } }
+  .lev { background:var(--surface); border:1px solid var(--hair); border-radius:12px; padding:18px 20px; box-shadow:var(--shadow); }
+  .lev .name { font-weight:640; font-size:15px; }
+  .lev .intens { font:600 12px/1 ui-monospace,monospace; color:var(--accent); margin-top:3px; }
+  .lev .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px; }
+  .lev .stats .k { font:600 10px/1.2 ui-monospace,monospace; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  .lev .stats .v { font:640 18px/1 ui-monospace,monospace; margin-top:5px; }
+
+  footer { padding:34px 0 60px; color:var(--muted); font-size:12.5px; }
+  footer .wrap > * + * { margin-top:8px; }
+</style>
+
+<header class="top"><div class="wrap top-row">
+  <span class="brand">The Budget Lab · Yale</span>
+  <div class="top-right">
+    <div class="unit" id="unitTog" role="group" aria-label="Revenue units">
+      <button type="button" data-unit="gdp" aria-pressed="true">% of GDP</button>
+      <button type="button" data-unit="usd" aria-pressed="false">$ (10-yr)</button>
+    </div>
+    <span class="synthetic">Synthetic data · layout mock</span>
+  </div>
+</div></header>
+
+<div class="hero"><div class="wrap">
+  <p class="eyebrow">Taxing the top</p>
+  <h1>How much revenue is <em>really</em> there at the top?</h1>
+  <p class="dek">Progressive agendas raise money from the same small group through many statutes at once. Score each alone and add them up and you overstate the total — because the bases overlap. Here is the full stack, all seven levers at once — 10-year, shown as share of GDP or dollars (toggle up top).</p>
+
+  <div class="thesis">
+    <div class="ladder" id="heroLadder"></div>
+    <div class="gapcall">
+      <div class="big mono" id="heroGap">—</div>
+      <div class="altbig mono" id="heroGapAlt">—</div>
+      <div class="lab" id="heroGapLab">vanishes to overlap when you turn them all on together — the gap between summing the conventional scores and the actual package</div>
+    </div>
+  </div>
+</div></div>
+
+<section id="explorer"><div class="wrap">
+  <div class="sec-head"><p class="eyebrow">The explorer</p></div>
+  <h2>Build a package. Watch the overlap.</h2>
+  <p class="sec-sub">Toggle any of the seven switches. Everything recomputes from the same underlying run — the overlap, where the money lands, how much survives behavior, and the effective rate it delivers across the distribution. Revenue is 10-year cumulative; switch between share of GDP and dollars with the toggle up top.</p>
+
+  <div class="exp">
+    <div class="panel controls">
+      <div class="grp">Presets</div>
+      <div class="presets" id="presets"></div>
+      <div class="grp">Rate levers</div>
+      <div id="rateSw"></div>
+      <div class="grp">Structural</div>
+      <div id="structSw"></div>
+    </div>
+
+    <div class="out">
+      <div class="tiles" id="tiles"></div>
+
+      <div class="card">
+        <div class="step">A · Parts vs. whole</div>
+        <h3>Summing the parts overstates the package</h3>
+        <div class="cap">Sum each lever's standalone score, then compare to the actual package run together. The gap is the overlap — convention-free (all totals vs. the same baseline).</div>
+        <figure><div id="pvw"></div></figure>
+      </div>
+
+      <div class="card">
+        <div class="step">F · Destination ledger</div>
+        <h3>Where the money lands</h3>
+        <div class="cap">Static intent (each lever's own base) reconciled to the conventional total, by tax head. Individual income tax is split into its <b>ordinary</b> and <b>capital-gains &amp; dividends</b> portions (the calculator's <span class="mono">liab_pref</span> slice, gross of credits) so ordinary↔gains base-shifting stays visible. An accounting identity — some revenue relocates to another base, some vanishes.</div>
+        <figure><div id="ledger"></div></figure>
+        <div class="legend" id="ledgerLegend"></div>
+      </div>
+
+      <div class="card">
+        <div class="step">G · Conventional vs. static</div>
+        <h3>How much survives behavior</h3>
+        <div class="cap">The actual package's mechanical (static) score against its conventional score. The shortfall is the behavioral response to the whole package.</div>
+        <figure><div id="survive"></div></figure>
+      </div>
+
+      <div class="card">
+        <div class="step">B/C/D · Effective rate by percentile</div>
+        <h3>What the top actually pays — statutory intent vs. delivered</h3>
+        <div class="cap">Haig-Simons ETR by percentile. Each group shows three bars — <b>baseline</b>, <b>static</b> (what the law mechanically implies), <b>conventional</b> (what's delivered) — stacked by tax type, with income tax split into ordinary vs. capital gains &amp; dividends. The static→conventional drop is the avoidance wedge; the dip at the very top is the unrealized-gains effect.</div>
+        <figure><div id="etr"></div></figure>
+        <div class="legend" id="etrLegend"></div>
+        <div class="legend" style="margin-top:6px"><span class="it mono" style="font-size:11px;color:var(--muted)">each percentile, left→right: baseline · static · conventional</span></div>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<section id="atlas"><div class="wrap">
+  <div class="sec-head"><p class="eyebrow">The atlas</p></div>
+  <h2>Each rate lever, on its own</h2>
+  <p class="sec-sub">The four rate levers scored standalone at a single intensity, revenue-matched by hand so they compare on equal footing. "Survives" is conventional as a share of static. Revenue is 10-year cumulative, in the units selected up top.</p>
+  <div class="atlas" id="atlas"></div>
+</div></section>
+
+<footer><div class="wrap">
+  <p><strong>This is a layout mock.</strong> Every number is synthetic — generated client-side from a plausible overlap model so the controls behave. Real figures come from the 128-combo factorial (7 binary switches; effective 2027; 10-yr window 2027–2036) once the batch completes.</p>
+  <p>Revenue can be shown as % of GDP (10-yr revenue ÷ 10-yr cumulative nominal GDP, ≈ $360T) or in dollars (10-yr cumulative), via the toggle up top. Switches: top ordinary +5pp · capital gains → 39.6% · corporate → 28% · wealth 1% &gt; $50M · deemed realization at death · estate $5M / 45% · repeal QBI.</p>
+  <p><strong>On "capital gains & dividends."</strong> It is not a separate receipt — the model books revenue into seven destinations (income tax, payroll, corporate, estate, wealth, VAT, other). It is the preferential-rate slice of the individual income tax (<span class="mono">liab_pref + §1250 + collectibles</span>, from <span class="mono">totals/1040.csv</span>, both legs), carved out for legibility; ordinary income tax is the residual, so credits park in the ordinary bucket. Qualified dividends ride with long-term gains; gains taxed at death under the deemed regime join this head.</p>
+</div></footer>
+
+<script>
+(function(){
+  "use strict";
+  var $=function(s,r){return (r||document).querySelector(s);};
+  var GDP10=360000; // $B, 10-yr cumulative nominal GDP
+  var UNIT='gdp';   // 'gdp' | 'usd' — global revenue-unit selector
+  var pg=function(b){ return (b/GDP10*100).toFixed(2)+"%"; };   // % of GDP
+  var pg1=function(b){ return (b/GDP10*100).toFixed(1)+"%"; };
+  function usd(b){ var v=Math.abs(b),sg=b<0?"−":"";        // $, 10-yr cumulative
+    return v>=1000 ? sg+"$"+(v/1000).toFixed(2)+"T" : sg+"$"+Math.round(v)+"B"; }
+  function fmt(b){ return UNIT==='usd'?usd(b):pg(b); }          // primary (selected) unit
+  function fmtAlt(b){ return UNIT==='usd'?pg(b):usd(b); }       // the other unit, shown muted
+  function fmtBig(b){ return UNIT==='usd'?usd(b):pg1(b); }      // hero headline (1-dec GDP)
+
+  var SW=[
+    {key:'ord',label:'Top ordinary +5pp',grp:'rate'},
+    {key:'cg',label:'Capital gains → 39.6%',grp:'rate'},
+    {key:'corp',label:'Corporate → 28%',grp:'rate'},
+    {key:'wealth',label:'Wealth 1% > $50M',grp:'rate'},
+    {key:'deemed',label:'Deemed gains at death',grp:'struct'},
+    {key:'estate',label:'Estate $5M / 45%',grp:'struct'},
+    {key:'qbi',label:'Repeal QBI (§199A)',grp:'struct'}
+  ];
+  var STD={ord:{S:1180,r:0.79},cg:{S:940,r:0.51},corp:{S:1310,r:0.67},wealth:{S:1020,r:0.57},deemed:{S:700,r:0.64},estate:{S:420,r:0.83},qbi:{S:600,r:0.89}};
+  var C=function(k){return STD[k].S*STD[k].r;};
+  var OV={'cg|deemed':0.34,'cg|wealth':0.14,'cg|estate':0.12,'cg|corp':0.10,'cg|ord':0.07,'cg|qbi':0.04,
+    'wealth|estate':0.30,'wealth|deemed':0.18,'wealth|corp':0.06,'wealth|ord':0.05,'wealth|qbi':0.03,
+    'deemed|estate':0.26,'deemed|ord':0.04,'deemed|corp':0.05,'deemed|qbi':0.03,
+    'estate|corp':0.03,'estate|ord':0.03,'estate|qbi':0.02,'corp|ord':0.09,'corp|qbi':0.05,'ord|qbi':0.13};
+  var ovl=function(a,b){return OV[a+'|'+b]||OV[b+'|'+a]||0.03;};
+  var HEAD={ord:'iit',cg:'cg',corp:'corp',wealth:'wealth',deemed:'cg',estate:'est',qbi:'iit'};
+  var HEADS=[{k:'iit',label:'Individual income (ordinary)',c:'var(--h-iit)'},{k:'cg',label:'Capital gains & dividends',c:'var(--h-cg)'},
+    {k:'corp',label:'Corporate',c:'var(--h-corp)'},{k:'est',label:'Estate',c:'var(--h-est)'},
+    {k:'wealth',label:'Wealth',c:'var(--h-wealth)'},{k:'pay',label:'Payroll',c:'var(--h-pay)'}];
+
+  var PCTS=['0–20','20–40','40–60','60–80','80–90','90–95','95–99','99–99.9','Top 0.1%'];
+  var BASECOMP={
+    // income tax split into ordinary (iit) + preferential-rate gains & dividends (cg);
+    // the two sum to the old lumped income-tax profile, with cg top-concentrated
+    iit:[1.0,3.5,6.5,9.5,12.4,14.6,16.2,13.0,6.2],
+    cg:[0,0,0,0,0.1,0.4,1.3,3.5,5.3],
+    pay:[1.0,2.5,3.5,4.0,4.5,4.5,4.0,2.5,1.0],
+    est:[0,0,0,0,0,0,0.1,0.3,0.5],
+    wealth:[0,0,0,0,0,0,0,0,0],
+    corp:[0,0.2,0.4,0.6,0.8,1.1,2.6,3.2,3.8]
+  };
+  var BUMP={
+    ord:[0,0,0,0,0.1,0.4,2.4,3.0,2.2], cg:[0,0,0,0,0,0.2,1.2,3.4,4.6],
+    corp:[0,0,0.1,0.2,0.4,0.7,1.3,2.2,3.1], wealth:[0,0,0,0,0,0.1,0.6,2.6,6.2],
+    deemed:[0,0,0,0,0,0.1,0.7,1.9,3.0], estate:[0,0,0,0,0,0,0.2,0.9,1.8], qbi:[0,0,0,0,0.1,0.5,1.4,1.6,1.1]
+  };
+  var ETRCOMPS=[{k:'iit',c:'var(--h-iit)',l:'Individual income (ordinary)'},{k:'cg',c:'var(--h-cg)',l:'Capital gains & dividends'},
+    {k:'pay',c:'var(--h-pay)',l:'Payroll'},{k:'est',c:'var(--h-est)',l:'Estate / death'},
+    {k:'wealth',c:'var(--h-wealth)',l:'Wealth'},{k:'corp',c:'var(--h-corp)',l:'Corporate'}];
+
+  function compute(on){
+    var keys=SW.map(function(s){return s.key;}).filter(function(k){return on[k];});
+    var staticParts=0,convParts=0;
+    keys.forEach(function(k){staticParts+=STD[k].S;convParts+=C(k);});
+    var lost=0;
+    for(var i=0;i<keys.length;i++)for(var j=i+1;j<keys.length;j++) lost+=ovl(keys[i],keys[j])*Math.min(C(keys[i]),C(keys[j]));
+    var actual=Math.max(convParts-lost,convParts*0.35);
+    var scale=convParts>0?actual/convParts:1;
+    var comboStatic=staticParts*0.94; // mild mechanical (statutory) base overlap
+    // ledger by head
+    var hs={},hc={}; HEADS.forEach(function(h){hs[h.k]=0;hc[h.k]=0;});
+    keys.forEach(function(k){hs[HEAD[k]]+=STD[k].S; hc[HEAD[k]]+=C(k)*scale;});
+    if(on.cg||on.deemed){var mv=hc.cg*0.14; hc.cg-=mv; hc.est+=mv*0.6; hc.wealth+=mv*0.4;}
+    // ETR components: baseline / static / conventional
+    var comps=['iit','cg','pay','est','wealth','corp'];
+    var add={}; comps.forEach(function(c){add[c]=[0,0,0,0,0,0,0,0,0];});
+    keys.forEach(function(k){
+      for(var i=0;i<9;i++){
+        if(k==='deemed'){ add.cg[i]+=BUMP.deemed[i]*0.7; add.est[i]+=BUMP.deemed[i]*0.3; }
+        else if(k==='cg'){ add.cg[i]+=BUMP.cg[i]; }
+        else if(k==='ord'||k==='qbi'){ add.iit[i]+=BUMP[k][i]; }
+        else if(k==='corp'){ add.corp[i]+=BUMP.corp[i]; }
+        else if(k==='wealth'){ add.wealth[i]+=BUMP.wealth[i]; }
+        else if(k==='estate'){ add.est[i]+=BUMP.estate[i]; }
+      }
+    });
+    var etr={baseline:{},static:{},conv:{}};
+    comps.forEach(function(c){
+      etr.baseline[c]=BASECOMP[c].slice();
+      etr.static[c]=BASECOMP[c].map(function(v,i){return v+add[c][i];});
+      etr.conv[c]=BASECOMP[c].map(function(v,i){return v+add[c][i]*scale;});
+    });
+    var statTop=24; if(on.ord)statTop=Math.max(statTop,42); if(on.cg)statTop=Math.max(statTop,43.4);
+    if(on.wealth)statTop+=4; if(on.corp)statTop+=2;
+    var totTop={baseline:0,static:0,conv:0};
+    comps.forEach(function(c){totTop.baseline+=etr.baseline[c][8];totTop.static+=etr.static[c][8];totTop.conv+=etr.conv[c][8];});
+    return {keys:keys,staticParts:staticParts,convParts:convParts,actual:actual,lost:convParts-actual,
+      scale:scale,comboStatic:comboStatic,hs:hs,hc:hc,etr:etr,comps:comps,statTop:statTop,totTop:totTop};
+  }
+
+  function svg(w,h){return '<svg viewBox="0 0 '+w+' '+h+'" role="img" preserveAspectRatio="xMidYMid meet">';}
+
+  function hbars(rows,w){
+    var h=rows.length*46+6,bw=w-224,x0=214;
+    var s=svg(w,h);
+    rows.forEach(function(r,i){
+      var y=i*46+6,len=Math.max(2,(r.val/r.max)*bw);
+      s+='<text x="206" y="'+(y+17)+'" text-anchor="end" font-size="12.5" fill="var(--ink-2)" font-family="system-ui">'+r.label+'</text>';
+      if(r.sub)s+='<text x="206" y="'+(y+31)+'" text-anchor="end" font-size="10.5" fill="var(--muted)" font-family="ui-monospace,monospace">'+r.sub+'</text>';
+      s+='<rect x="'+x0+'" y="'+y+'" width="'+bw+'" height="32" rx="5" fill="var(--surface-2)"/>';
+      s+='<rect x="'+x0+'" y="'+y+'" width="'+len+'" height="32" rx="5" fill="'+r.color+'"/>';
+      var inside=len>96,tx=inside?x0+len-9:x0+len+9,anc=inside?'end':'start',tc=inside?(r.ghost?'var(--ink)':'#fff'):'var(--ink)';
+      s+='<text x="'+tx+'" y="'+(y+21)+'" text-anchor="'+anc+'" font-size="14" font-weight="600" font-family="ui-monospace,monospace" fill="'+tc+'">'+fmt(r.val)+'</text>';
+    });
+    return s+'</svg>';
+  }
+
+  function ledgerChart(d,w){
+    var order=['iit','cg','corp','est','wealth','pay'],ts=0,tc=0;
+    order.forEach(function(k){ts+=d.hs[k];tc+=d.hc[k];});
+    var maxv=Math.max(ts,1),h=178,pad=8,iw=w-2*pad,sc=iw/maxv,s=svg(w,h),x,y;
+    y=26; x=pad;
+    s+='<text x="'+pad+'" y="'+(y-8)+'" font-size="11" fill="var(--muted)" font-family="ui-monospace,monospace">STATIC INTENT · '+fmt(ts)+'</text>';
+    order.forEach(function(k){if(d.hs[k]<=0)return;var wseg=d.hs[k]*sc;s+='<rect x="'+x+'" y="'+y+'" width="'+Math.max(0,wseg-2)+'" height="34" rx="3" fill="'+headColor(k)+'"/>';x+=wseg;});
+    y=94; x=pad;
+    s+='<text x="'+pad+'" y="'+(y-8)+'" font-size="11" fill="var(--muted)" font-family="ui-monospace,monospace">CONVENTIONAL · '+fmt(tc)+'  ('+Math.round(100*tc/(ts||1))+'% of static)</text>';
+    order.forEach(function(k){if(d.hc[k]<=0.3)return;var wseg=d.hc[k]*sc;s+='<rect x="'+x+'" y="'+y+'" width="'+Math.max(0,wseg-2)+'" height="34" rx="3" fill="'+headColor(k)+'"/>';x+=wseg;});
+    var van=ts-tc; if(van>0){var wv=van*sc;s+='<rect x="'+x+'" y="'+y+'" width="'+Math.max(0,wv-2)+'" height="34" rx="3" fill="none" stroke="var(--muted)" stroke-dasharray="4 3"/>';
+      if(wv>60)s+='<text x="'+(x+wv/2)+'" y="'+(y+21)+'" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-family="ui-monospace,monospace">'+fmt(van)+' gone</text>';}
+    return s+'</svg>';
+  }
+  function headColor(k){var m={iit:'--h-iit',cg:'--h-cg',corp:'--h-corp',est:'--h-est',wealth:'--h-wealth',pay:'--h-pay'};return 'var('+m[k]+')';}
+
+  function surviveChart(d,w){
+    var mx=Math.max(d.comboStatic,1),surv=d.comboStatic>0?Math.round(100*d.actual/d.comboStatic):0;
+    return hbars([
+      {label:'Package · static',sub:'mechanical, no behavior',val:d.comboStatic,max:mx,color:'color-mix(in srgb,var(--accent) 42%,var(--surface-2))'},
+      {label:'Package · conventional',sub:surv+'% survives',val:d.actual,max:mx,color:'var(--accent)'}
+    ],w);
+  }
+
+  function combinedEtr(d,w){
+    var comps=d.comps.map(function(k){return ETRCOMPS.filter(function(e){return e.k===k;})[0];});
+    var groups=['baseline','static','conv'],gl={baseline:'b',static:'s',conv:'c'};
+    var n=PCTS.length,h=320,pad={l:34,r:12,t:16,b:46},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
+    var maxv=0; for(var i=0;i<n;i++){groups.forEach(function(g){var t=0;comps.forEach(function(c){t+=d.etr[g][c.k][i];});if(t>maxv)maxv=t;});}
+    maxv=Math.max(maxv*1.08,10);
+    var Y=function(v){return pad.t+ih-(v/maxv)*ih;};
+    var gw=iw/n,bw=Math.min(16,gw*0.20),gap=gw*0.05,off=(gw-(3*bw+2*gap))/2;
+    var s=svg(w,h);
+    for(var g=0;g<=maxv;g+=10){var y=Y(g);s+='<line x1="'+pad.l+'" x2="'+(w-pad.r)+'" y1="'+y+'" y2="'+y+'" stroke="var(--grid)" stroke-width="1"/>';
+      s+='<text x="'+(pad.l-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="var(--muted)" font-family="ui-monospace,monospace">'+g+'%</text>';}
+    for(i=0;i<n;i++){
+      var gx=pad.l+i*gw;
+      groups.forEach(function(grp,gi){
+        var bx=gx+off+gi*(bw+gap),cy=pad.t+ih;
+        comps.forEach(function(c){var val=d.etr[grp][c.k][i];if(val<=0.01)return;var sh=(val/maxv)*ih;
+          s+='<rect x="'+bx.toFixed(1)+'" y="'+(cy-sh).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,sh-1).toFixed(1)+'" fill="'+c.c+'"/>'; cy-=sh;});
+        s+='<text x="'+(bx+bw/2).toFixed(1)+'" y="'+(pad.t+ih+11)+'" text-anchor="middle" font-size="8" fill="var(--muted)" font-family="ui-monospace,monospace">'+gl[grp]+'</text>';
+      });
+      s+='<text x="'+(gx+gw/2).toFixed(1)+'" y="'+(h-9)+'" text-anchor="middle" font-size="9.5" fill="var(--ink-2)" font-family="ui-monospace,monospace">'+PCTS[i]+'</text>';
+    }
+    // statutory marker over top group
+    var yst=Y(d.statTop),gx2=pad.l+(n-1)*gw;
+    s+='<line x1="'+(gx2)+'" x2="'+(w-pad.r)+'" y1="'+yst+'" y2="'+yst+'" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="3 2"/>';
+    s+='<text x="'+(w-pad.r)+'" y="'+(yst-5)+'" text-anchor="end" font-size="9.5" fill="var(--warn)" font-family="ui-monospace,monospace">statutory ~'+Math.round(d.statTop)+'%</text>';
+    return s+'</svg>';
+  }
+
+  var state={}; SW.forEach(function(s){state[s.key]=false;});
+  function widthOf(id){var e=$('#'+id);return Math.max(300,e?e.clientWidth:660);}
+
+  function renderControls(){
+    var pr=[{n:'Current law',on:[]},{n:'Rates only',on:['ord','cg','corp','wealth']},
+      {n:'Base-first',on:['deemed','estate','qbi']},{n:'Full stack',on:['ord','cg','corp','wealth','deemed','estate','qbi']}];
+    $('#presets').innerHTML='';
+    pr.forEach(function(p){var b=document.createElement('button');b.className='preset';b.textContent=p.n;
+      b.onclick=function(){SW.forEach(function(s){state[s.key]=p.on.indexOf(s.key)>=0;});renderAll();};$('#presets').appendChild(b);});
+    ['rate','struct'].forEach(function(g){
+      var host=$(g==='rate'?'#rateSw':'#structSw');host.innerHTML='';
+      SW.filter(function(s){return s.grp===g;}).forEach(function(s){
+        var b=document.createElement('button');b.className='sw';b.setAttribute('aria-pressed','false');b.dataset.key=s.key;
+        b.innerHTML='<span>'+s.label+'</span><span class="dot"></span>';
+        b.onclick=function(){state[s.key]=!state[s.key];renderAll();};host.appendChild(b);});
+    });
+  }
+
+  function tile(k,v,alt,s,accent){return '<div class="tile'+(accent?' accent':'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div>'+(alt?'<div class="alt">'+alt+'</div>':'')+'<div class="s">'+s+'</div></div>';}
+
+  function renderAll(){
+    SW.forEach(function(s){var b=document.querySelector('.sw[data-key="'+s.key+'"]');if(b)b.setAttribute('aria-pressed',state[s.key]?'true':'false');});
+    var d=compute(state),any=d.keys.length>0;
+    $('#tiles').innerHTML=[
+      tile('Naive sum',any?fmt(d.convParts):'—',any?fmtAlt(d.convParts):'',d.keys.length+' lever'+(d.keys.length===1?'':'s')+' summed'),
+      tile('Actual package',any?fmt(d.actual):'—',any?fmtAlt(d.actual):'','run together',true),
+      tile('Overlap gap',any?fmt(d.lost):'—',any?fmtAlt(d.lost):'',any?('−'+Math.round(100*d.lost/d.convParts)+'% vs. naive'):'nothing selected'),
+      tile('Top 0.1% ETR',d.totTop.conv.toFixed(1)+'%','',any?('+'+(d.totTop.conv-d.totTop.baseline).toFixed(1)+'pp vs. law · delivered'):'baseline')
+    ].join('');
+    var mx=Math.max(d.staticParts,1);
+    $('#pvw').innerHTML=hbars([
+      {label:'Σ static parts',sub:'sum each mechanical score',val:any?d.staticParts:0,max:mx,color:'var(--rule)',ghost:true},
+      {label:'Σ conventional parts',sub:'sum each score, w/ behavior',val:any?d.convParts:0,max:mx,color:'color-mix(in srgb,var(--accent) 45%,var(--surface-2))'},
+      {label:'Actual package',sub:'behavior AND overlapping bases',val:any?d.actual:0,max:mx,color:'var(--accent)'}
+    ],widthOf('pvw'));
+    $('#ledger').innerHTML=ledgerChart(d,widthOf('ledger'));
+    $('#ledgerLegend').innerHTML=HEADS.map(function(h){return '<span class="it"><span class="sw2" style="background:'+h.c+'"></span>'+h.label+'</span>';}).join('');
+    $('#survive').innerHTML=surviveChart(d,widthOf('survive'));
+    $('#etr').innerHTML=combinedEtr(d,widthOf('etr'));
+    $('#etrLegend').innerHTML=ETRCOMPS.map(function(h){return '<span class="it"><span class="sw2" style="background:'+h.c+'"></span>'+h.l+'</span>';}).join('');
+  }
+
+  function renderHero(){
+    var d=compute({ord:1,cg:1,corp:1,wealth:1,deemed:1,estate:1,qbi:1}),mx=d.staticParts;
+    $('#heroLadder').innerHTML=[
+      heroRow('Σ static parts','sum of the seven mechanical scores',d.staticParts,mx,'var(--rule)',true),
+      heroRow('Σ conventional parts','summed, each with its own behavior',d.convParts,mx,'color-mix(in srgb,var(--accent) 45%,var(--surface-2))',false),
+      heroRow('Actual full stack','all seven on together',d.actual,mx,'var(--accent)',false)
+    ].join('');
+    $('#heroGap').textContent=fmtBig(d.convParts-d.actual);
+    $('#heroGapAlt').textContent='= '+fmtAlt(d.convParts-d.actual);
+  }
+  function heroRow(lab,sub,val,mx,color,ghost){var pct=Math.max(6,(val/mx)*100);
+    return '<div class="ladder-row"><div class="ladder-lab">'+lab+'<small>'+sub+'</small></div>'+
+      '<div class="bartrack"><div class="barfill'+(ghost?' ghost':'')+'" style="width:'+pct+'%;background:'+color+'"><span class="val">'+fmt(val)+'</span></div></div></div>';}
+
+  function renderAtlas(){
+    var rows=[{k:'ord',name:'Top ordinary rate',intens:'37% → 42% (+5pp)'},{k:'cg',name:'Top capital-gains rate',intens:'20% → 39.6%'},
+      {k:'corp',name:'Corporate rate',intens:'21% → 28%'},{k:'wealth',name:'Wealth tax',intens:'1% on net worth > $50M'}];
+    $('#atlas').innerHTML=rows.map(function(r){var st=STD[r.k],conv=C(r.k);
+      return '<div class="lev"><div class="name">'+r.name+'</div><div class="intens mono">'+r.intens+'</div>'+
+        '<div class="stats"><div><div class="k">Static 10y</div><div class="v">'+fmt(st.S)+'</div></div>'+
+        '<div><div class="k">Conventional</div><div class="v">'+fmt(conv)+'</div></div>'+
+        '<div><div class="k">Survives</div><div class="v">'+Math.round(st.r*100)+'%</div></div></div></div>';
+    }).join('');
+  }
+
+  function setUnit(u){ UNIT=u;
+    Array.prototype.forEach.call(document.querySelectorAll('#unitTog button'),function(b){
+      b.setAttribute('aria-pressed', b.dataset.unit===u?'true':'false'); });
+    renderHero();renderAtlas();renderAll();
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#unitTog button'),function(b){
+    b.onclick=function(){ setUnit(b.dataset.unit); }; });
+
+  renderControls();renderHero();renderAtlas();
+  SW.forEach(function(s){state[s.key]=true;});renderAll();
+  var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(renderAll,120);});
+})();
+</script>

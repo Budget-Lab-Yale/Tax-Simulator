@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Baseline ETR Composition: AGI vs Accrual</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f7f4ef;
+  --panel: #ffffff;
+  --ink: #1f2933;
+  --muted: #64748b;
+  --rule: #d7dce2;
+  --zero: #1f2933;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.45;
+}
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 34px 24px 44px;
+}
+h1 {
+  font-size: 28px;
+  margin: 0 0 8px;
+  letter-spacing: 0;
+}
+h2 {
+  margin: 30px 0 10px;
+  font-size: 19px;
+}
+p {
+  max-width: 860px;
+  margin: 0 0 16px;
+  color: var(--muted);
+}
+code {
+  background: #eceff3;
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: 18px 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.legend i {
+  width: 13px;
+  height: 13px;
+  display: inline-block;
+  border-radius: 3px;
+}
+section {
+  margin-top: 14px;
+}
+.axis {
+  display: grid;
+  grid-template-columns: 80px 74px 1fr 64px;
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 4px;
+}
+.axis span:nth-child(1) { grid-column: 2; text-align: left; }
+.axis span:nth-child(2) { grid-column: 3; margin-left: 21%; }
+.axis span:nth-child(3) { grid-column: 4; text-align: right; }
+.chart {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 16px;
+}
+.group-label {
+  font-weight: 700;
+  margin-top: 14px;
+}
+.group-label:first-child {
+  margin-top: 0;
+}
+.group-bars {
+  display: grid;
+  grid-template-columns: 62px minmax(260px, 1fr) 62px;
+  gap: 7px 12px;
+  align-items: center;
+  margin-top: 6px;
+}
+.leg, .total {
+  color: var(--muted);
+  font-size: 12px;
+}
+.total {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.bar {
+  position: relative;
+  height: 18px;
+  background:
+    linear-gradient(to right, transparent 0 21%, rgba(31, 41, 51, .14) 21% calc(21% + 1px), transparent calc(21% + 1px)),
+    #f1f3f5;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.zero {
+  position: absolute;
+  left: 21%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #000000;
+  z-index: 3;
+}
+.neg, .pos {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+}
+.neg {
+  right: 79%;
+  width: var(--neg);
+  justify-content: flex-end;
+}
+.pos {
+  left: 21%;
+  width: var(--pos);
+}
+.seg {
+  display: block;
+  height: 100%;
+}
+.note {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 18px 0 8px;
+  color: #7c2d12;
+  max-width: 900px;
+}
+details {
+  margin-top: 24px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.table-wrap {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 760px;
+  font-size: 13px;
+}
+th, td {
+  border-bottom: 1px solid var(--rule);
+  padding: 7px 8px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) {
+  text-align: left;
+}
+@media (max-width: 720px) {
+  .wrap { padding: 24px 14px 34px; }
+  .group-bars { grid-template-columns: 52px minmax(180px, 1fr) 56px; gap-column: 8px; }
+  .axis { grid-template-columns: 70px 58px 1fr 52px; }
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>Baseline ETR Composition: AGI vs Accrual</h1>
+  <p>Baseline law, inheritance-inclusive fixed income ranking, equity/supernormal corporate convention, 2028. Bars compare the same grouped tax units under AGI and Haig-Simons accrual income denominators.</p>
+  <div class="legend"><span><i style="background:#356a9a"></i>Income tax</span><span><i style="background:#2a9d8f"></i>Payroll</span><span><i style="background:#9b5de5"></i>Estate / deemed</span><span><i style="background:#d97706"></i>Corporate / wealth / VAT</span></div>
+  <div class="note">Components are read directly from <code>distribution_etrs.csv</code> and use each row denominator. The black vertical line marks zero.</div>
+  
+      <section>
+        <h2>Mutually Exclusive Quintiles</h2>
+        <div class="axis"><span>-8 pp</span><span>0</span><span>34 pp</span></div>
+        <div class="chart">
+          <div class="group-label">Quintile 1</div><div class="group-bars">
+                <div class="leg">AGI</div>
+                
+      <div class="bar" style="--neg:29.4224%;--pos:50.4250%">
+        <div class="zero"></div>
+        <div class="neg"><span class="seg" style="width:29.4224%;background:#356a9a" title="income -10.00 pp"></span></div>
+        <div class="pos"><span class="seg" style="width:47.6238%;background:#2a9d8f" title="payroll +16.19 pp"></span><span class="seg" style="width:2.8012%;background:#d97706" title="corp +0.95 pp"></span></div>
+      </div>
+    
+                <div class="total">7.14%</div>
+                
+                <div class="leg">Accrual</div>
+                
+      <div class="bar" style="--neg:13.8901%;--pos:23.8053%">
+        <div class="zero"></div>
+        <div class="neg"><span class="seg" style="width:13.8901%;background:#356a9a" title="income -4.72 pp"></span></div>
+        <div class="pos"><span class="seg" style="width:22.4829%;background:#2a9d8f" title="payroll +7.64 pp"></span><span class="seg" style="width:1.3224%;background:#d97706" title="corp +0.45 pp"></span></div>
+      </div>
+    
+                <div class="total">3.37%</div>
+                </div><div class="group-label">Quintile 2</div><div class="group-bars">
+                <div class="leg">AGI</div>
+                
+      <div class="bar" style="--neg:14.1421%;--pos:45.9432%">
+        <div class="zero"></div>
+        <div class="neg"><span class="seg" style="width:14.1421%;background:#356a9a" title="income -4.81 pp"></span></div>
+        <div class="pos"><span class="seg" style="width:43.3524%;background:#2a9d8f" title="payroll +14.74 pp"></span><span class="seg" style="width:2.5908%;background:#d97706" title="corp +0.88 pp"></span></div>
+      </div>
+    
+                <div class="total">10.81%</div>
+                
+                <div class="leg">Accrual</div>
+                
+      <div class="bar" style="--neg:7.7661%;--pos:25.2295%">
+        <div class="zero"></div>
+        <div class="neg"><span class="seg" style="width:7.7661%;background:#356a9a" title="income -2.64 pp"></span></div>
+        <div class="pos"><span class="seg" style="width:23.8068%;background:#2a9d8f" title="payroll +8.09 pp"></span><span class="seg" style="width:1.4227%;background:#d97706" title="corp +0.48 pp"></span></div>
+      </div>
+    
+                <div class="total">5.94%</div>
+                </div><div class="group-label">Quintile 3</div><div class="group-bars">
+                <div class="leg">AGI</div>
+                
+      <div class="bar" style="--neg:0.0000%;--pos:51.4400%">
+        <div class="zero"></div>
+        <div class="neg"></div>
+        <div class="pos"><span class="seg" style="width:11.5018%;background:#356a9a" title="income +3.91 pp"></span><span class="seg" style="width:37.4705%;background:#2a9d8f" title="payroll +12.74 pp"></span><span class="seg" style="width:2.4678%;background:#d97706" title="corp +0.84 pp"></span></div>
+      </div>
+    
+                <div class="total">17.49%</div>
+                
+                <div class="leg">Accrual</div>
+                
+      <div class="bar" style="--neg:0.0000%;--pos:35.9098%">
+        <div class="zero"></div>
+        <div class="neg"></div>
+        <div class="pos"><span class="seg" style="width:8.0293%;background:#356a9a" title="income +2.73 pp"></span><span class="seg" style="width:26.1578%;background:#2a9d8f" title="payroll +8.89 pp"></span><span class="seg" style="width:1.7227%;background:#d97706" title="corp +0.59 pp"></span></div>
+      </div>
+    
+                <div class="total">12.21%</div>
+                </div><div class="group-label">Quintile 4</div><div class="group-bars">
+                <div class="leg">AGI</div>
+                
+      <div class="bar" style="--neg:0.0000%;--pos:59.7561%">
+        <div class="zero"></div>
+        <div class="neg"></div>
+        <div class="pos"><span class="seg" style="width:22.0038%;background:#356a9a" title="income +7.48 pp"></span><span class="seg" style="width:34.9560%;background:#2a9d8f" title="payroll +11.89 pp"></span><span class="seg" style="width:2.7963%;background:#d97706" title="corp +0.95 pp"></span></div>
+      </div>
+    
+                <div class="total">20.32%</div>
+                
+                <div class="leg">Accrual</div>
+                
+      <div class="bar" style="--neg:0.0000%;--pos:42.9897%">
+        <div class="zero"></div>
+        <div class="neg"></div>
+        <div class="pos"><span class="seg" style="width:15.8300%;background:#356a9a" title="income +5.38 pp"></span><span class="seg" style="width:25.1480%;background:#2a9d8f" title="payroll +8.55 pp"></span><span class="seg" style="width:2.0117%;background:#d97706" title="corp +0.68 pp"></span></div>
+      </div>
+    
+                <div class="total">14.62%</div>
+                </div><div class="group-label">Quintile 5</div><div class="group-bars">
+                <div class="leg">AGI</div>
+                
+      <div class="bar" style="--neg:0.0000%;--pos:80.7291%">
+        <div class="zero"></div>
+        <div class="neg"></div>
+        <div class="pos"><span class="seg" style="width:53.3619%;background:#356a9a" title="income +18.14 pp"></span><span class="seg" style="width:21.2705%;background:#2a9d8f" title="payroll +7.23 pp"></span><span class="seg" style="width:0.9043%;background:#9b5de5" title="death +0.31 pp"></span><span class="seg" style="width:5.1924%;background:#d97706" title="corp +1.77 pp"></span></div>
+      </div>
+    
+                <div class="total">27.45%</div>
+                
+                <div class="leg">Accrual</div>
+                
+      <div class="bar" style="--neg:0.0000%;--pos:44.6928%">
+        <div class="zero"></div>
+        <div class="neg"></div>
+        <div class="pos"><span class="seg" style="width:29.5419%;background:#356a9a" title="income +10.04 pp"></span><span class="seg" style="width:11.7757%;background:#2a9d8f" title="payroll +4.00 pp"></span><span class="seg" style="width:0.5006%;background:#9b5de5" title="death +0.17 pp"></span><span class="seg" style="width:2.8746%;background:#d97706" title="corp +0.98 pp"></span></div>
+      </div>
+    
+                <div class="total">15.20%</div>
+                </div>
+        </div>
+      </section>
+    
+  
+      <section>
+        <h2>Top-Tail Breakouts</h2>
+        <div class="axis"><span>-8 pp</span><span>0</span><span>34 pp</span></div>
+        <div class="chart">
+          <div class="group-label">Top 10%</div><div class="group-bars">
+                <div class="leg">AGI</div>
+                
+      <div class="bar" style="--neg:0.0000%;--pos:85.7925%">
+        <div class="zero"></div>
+        <div class="neg"></div>
+        <div class="pos"><span class="seg" style="width:60.3671%;background:#356a9a" title="income +20.52 pp"></span><span class="seg" style="width:18.4154%;background:#2a9d8f" title="payroll +6.26 pp"></span><span class="seg" style="width:1.2074%;background:#9b5de5" title="death +0.41 pp"></span><span class="seg" style="width:5.8027%;background:#d97706" title="corp +1.97 pp"></span></div>
+      </div>
+    
+                <div class="total">29.17%</div>
+                
+                <div class="leg">Accrual</div>
+                
+      <div class="bar" style="--neg:0.0000%;--pos:44.6040%">
+        <div class="zero"></div>
+        <div class="neg"></div>
+        <div class="pos"><span class="seg" style="width:31.3852%;background:#356a9a" title="income +10.67 pp"></span><span class="seg" style="width:9.5743%;background:#2a9d8f" title="payroll +3.26 pp"></span><span class="seg" style="width:0.6277%;background:#9b5de5" title="death +0.21 pp"></span><span class="seg" style="width:3.0168%;background:#d97706" title="corp +1.03 pp"></span></div>
+      </div>
+    
+                <div class="total">15.17%</div>
+                </div><div class="group-label">Top 5%</div><div class="group-bars">
+                <div class="leg">AGI</div>
+                
+      <div class="bar" style="--neg:0.0000%;--pos:89.1202%">
+        <div class="zero"></div>
+        <div class="neg"></div>
+        <div class="pos"><span class="seg" style="width:66.9095%;background:#356a9a" title="income +22.75 pp"></span><span class="seg" style="width:14.5485%;background:#2a9d8f" title="payroll +4.95 pp"></span><span class="seg" style="width:1.5924%;background:#9b5de5" title="death +0.54 pp"></span><span class="seg" style="width:6.0698%;background:#d97706" title="corp +2.06 pp"></span></div>
+      </div>
+    
+                <div class="total">30.30%</div>
+                
+                <div class="leg">Accrual</div>
+                
+      <div class="bar" style="--neg:0.0000%;--pos:45.0248%">
+        <div class="zero"></div>
+        <div class="neg"></div>
+        <div class="pos"><span class="seg" style="width:33.8036%;background:#356a9a" title="income +11.49 pp"></span><span class="seg" style="width:7.3501%;background:#2a9d8f" title="payroll +2.50 pp"></span><span class="seg" style="width:0.8045%;background:#9b5de5" title="death +0.27 pp"></span><span class="seg" style="width:3.0666%;background:#d97706" title="corp +1.04 pp"></span></div>
+      </div>
+    
+                <div class="total">15.31%</div>
+                </div><div class="group-label">Top 1%</div><div class="group-bars">
+                <div class="leg">AGI</div>
+                
+      <div class="bar" style="--neg:0.0000%;--pos:94.7366%">
+        <div class="zero"></div>
+        <div class="neg"></div>
+        <div class="pos"><span class="seg" style="width:78.8835%;background:#356a9a" title="income +26.82 pp"></span><span class="seg" style="width:7.2104%;background:#2a9d8f" title="payroll +2.45 pp"></span><span class="seg" style="width:2.8322%;background:#9b5de5" title="death +0.96 pp"></span><span class="seg" style="width:5.8106%;background:#d97706" title="corp +1.98 pp"></span></div>
+      </div>
+    
+                <div class="total">32.21%</div>
+                
+                <div class="leg">Accrual</div>
+                
+      <div class="bar" style="--neg:0.0000%;--pos:48.8619%">
+        <div class="zero"></div>
+        <div class="neg"></div>
+        <div class="pos"><span class="seg" style="width:40.6854%;background:#356a9a" title="income +13.83 pp"></span><span class="seg" style="width:3.7189%;background:#2a9d8f" title="payroll +1.26 pp"></span><span class="seg" style="width:1.4607%;background:#9b5de5" title="death +0.50 pp"></span><span class="seg" style="width:2.9969%;background:#d97706" title="corp +1.02 pp"></span></div>
+      </div>
+    
+                <div class="total">16.61%</div>
+                </div><div class="group-label">Top 0.1%</div><div class="group-bars">
+                <div class="leg">AGI</div>
+                
+      <div class="bar" style="--neg:0.0000%;--pos:95.2987%">
+        <div class="zero"></div>
+        <div class="neg"></div>
+        <div class="pos"><span class="seg" style="width:81.6106%;background:#356a9a" title="income +27.75 pp"></span><span class="seg" style="width:3.2076%;background:#2a9d8f" title="payroll +1.09 pp"></span><span class="seg" style="width:5.5355%;background:#9b5de5" title="death +1.88 pp"></span><span class="seg" style="width:4.9450%;background:#d97706" title="corp +1.68 pp"></span></div>
+      </div>
+    
+                <div class="total">32.40%</div>
+                
+                <div class="leg">Accrual</div>
+                
+      <div class="bar" style="--neg:0.0000%;--pos:57.4539%">
+        <div class="zero"></div>
+        <div class="neg"></div>
+        <div class="pos"><span class="seg" style="width:49.2016%;background:#356a9a" title="income +16.73 pp"></span><span class="seg" style="width:1.9338%;background:#2a9d8f" title="payroll +0.66 pp"></span><span class="seg" style="width:3.3372%;background:#9b5de5" title="death +1.13 pp"></span><span class="seg" style="width:2.9812%;background:#d97706" title="corp +1.01 pp"></span></div>
+      </div>
+    
+                <div class="total">19.53%</div>
+                </div><div class="group-label">Top 0.01%</div><div class="group-bars">
+                <div class="leg">AGI</div>
+                
+      <div class="bar" style="--neg:0.0000%;--pos:95.7745%">
+        <div class="zero"></div>
+        <div class="neg"></div>
+        <div class="pos"><span class="seg" style="width:77.4503%;background:#356a9a" title="income +26.33 pp"></span><span class="seg" style="width:1.8545%;background:#2a9d8f" title="payroll +0.63 pp"></span><span class="seg" style="width:11.7219%;background:#9b5de5" title="death +3.99 pp"></span><span class="seg" style="width:4.7478%;background:#d97706" title="corp +1.61 pp"></span></div>
+      </div>
+    
+                <div class="total">32.56%</div>
+                
+                <div class="leg">Accrual</div>
+                
+      <div class="bar" style="--neg:0.0000%;--pos:61.5438%">
+        <div class="zero"></div>
+        <div class="neg"></div>
+        <div class="pos"><span class="seg" style="width:49.7689%;background:#356a9a" title="income +16.92 pp"></span><span class="seg" style="width:1.1917%;background:#2a9d8f" title="payroll +0.41 pp"></span><span class="seg" style="width:7.5324%;background:#9b5de5" title="death +2.56 pp"></span><span class="seg" style="width:3.0509%;background:#d97706" title="corp +1.04 pp"></span></div>
+      </div>
+    
+                <div class="total">20.92%</div>
+                </div>
+        </div>
+      </section>
+    
+  
+      <details>
+        <summary>Component values</summary>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Group</th><th>Leg</th>
+                <th>Income tax</th><th>Payroll</th><th>Estate / deemed</th><th>Corporate / wealth / VAT</th>
+                <th>Total ETR</th>
+              </tr>
+            </thead>
+            <tbody><tr><td>Quintile 1</td><td>AGI</td><td>-10.00 pp</td><td>+16.19 pp</td><td>+0.00 pp</td><td>+0.95 pp</td><td>7.14%</td></tr><tr><td>Quintile 1</td><td>Accrual</td><td>-4.72 pp</td><td>+7.64 pp</td><td>+0.00 pp</td><td>+0.45 pp</td><td>3.37%</td></tr><tr><td>Quintile 2</td><td>AGI</td><td>-4.81 pp</td><td>+14.74 pp</td><td>+0.00 pp</td><td>+0.88 pp</td><td>10.81%</td></tr><tr><td>Quintile 2</td><td>Accrual</td><td>-2.64 pp</td><td>+8.09 pp</td><td>+0.00 pp</td><td>+0.48 pp</td><td>5.94%</td></tr><tr><td>Quintile 3</td><td>AGI</td><td>+3.91 pp</td><td>+12.74 pp</td><td>+0.00 pp</td><td>+0.84 pp</td><td>17.49%</td></tr><tr><td>Quintile 3</td><td>Accrual</td><td>+2.73 pp</td><td>+8.89 pp</td><td>+0.00 pp</td><td>+0.59 pp</td><td>12.21%</td></tr><tr><td>Quintile 4</td><td>AGI</td><td>+7.48 pp</td><td>+11.89 pp</td><td>+0.00 pp</td><td>+0.95 pp</td><td>20.32%</td></tr><tr><td>Quintile 4</td><td>Accrual</td><td>+5.38 pp</td><td>+8.55 pp</td><td>+0.00 pp</td><td>+0.68 pp</td><td>14.62%</td></tr><tr><td>Quintile 5</td><td>AGI</td><td>+18.14 pp</td><td>+7.23 pp</td><td>+0.31 pp</td><td>+1.77 pp</td><td>27.45%</td></tr><tr><td>Quintile 5</td><td>Accrual</td><td>+10.04 pp</td><td>+4.00 pp</td><td>+0.17 pp</td><td>+0.98 pp</td><td>15.20%</td></tr><tr><td>Top 10%</td><td>AGI</td><td>+20.52 pp</td><td>+6.26 pp</td><td>+0.41 pp</td><td>+1.97 pp</td><td>29.17%</td></tr><tr><td>Top 10%</td><td>Accrual</td><td>+10.67 pp</td><td>+3.26 pp</td><td>+0.21 pp</td><td>+1.03 pp</td><td>15.17%</td></tr><tr><td>Top 5%</td><td>AGI</td><td>+22.75 pp</td><td>+4.95 pp</td><td>+0.54 pp</td><td>+2.06 pp</td><td>30.30%</td></tr><tr><td>Top 5%</td><td>Accrual</td><td>+11.49 pp</td><td>+2.50 pp</td><td>+0.27 pp</td><td>+1.04 pp</td><td>15.31%</td></tr><tr><td>Top 1%</td><td>AGI</td><td>+26.82 pp</td><td>+2.45 pp</td><td>+0.96 pp</td><td>+1.98 pp</td><td>32.21%</td></tr><tr><td>Top 1%</td><td>Accrual</td><td>+13.83 pp</td><td>+1.26 pp</td><td>+0.50 pp</td><td>+1.02 pp</td><td>16.61%</td></tr><tr><td>Top 0.1%</td><td>AGI</td><td>+27.75 pp</td><td>+1.09 pp</td><td>+1.88 pp</td><td>+1.68 pp</td><td>32.40%</td></tr><tr><td>Top 0.1%</td><td>Accrual</td><td>+16.73 pp</td><td>+0.66 pp</td><td>+1.13 pp</td><td>+1.01 pp</td><td>19.53%</td></tr><tr><td>Top 0.01%</td><td>AGI</td><td>+26.33 pp</td><td>+0.63 pp</td><td>+3.99 pp</td><td>+1.61 pp</td><td>32.56%</td></tr><tr><td>Top 0.01%</td><td>Accrual</td><td>+16.92 pp</td><td>+0.41 pp</td><td>+2.56 pp</td><td>+1.04 pp</td><td>20.92%</td></tr></tbody>
+          </table>
+        </div>
+      </details>
+    
+  <p style="margin-top:18px">
+    Source:
+    <code>/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/dist_etrs_other_v1/corp_perm/static/supplemental/distribution_etrs.csv</code>
+  </p>
+</main>
+</body>
+</html>

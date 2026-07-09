@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Baseline ETR: Cash Income vs Accrual</title>
+<style>
+:root {
+  color-scheme: light;
+  --bg: #f7f4ef;
+  --panel: #ffffff;
+  --ink: #1f2933;
+  --muted: #64748b;
+  --rule: #d7dce2;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.45;
+}
+.wrap {
+  max-width: 1260px;
+  margin: 0 auto;
+  padding: 34px 24px 44px;
+}
+h1 {
+  font-size: 28px;
+  margin: 0 0 8px;
+  letter-spacing: 0;
+}
+h2 {
+  margin: 30px 0 10px;
+  font-size: 19px;
+}
+p {
+  max-width: 940px;
+  margin: 0 0 16px;
+  color: var(--muted);
+}
+code {
+  background: #eceff3;
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: 18px 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.legend i {
+  width: 13px;
+  height: 13px;
+  display: inline-block;
+  border-radius: 3px;
+}
+.note {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin: 18px 0 8px;
+  color: #7c2d12;
+  max-width: 980px;
+}
+.compare-head, .compare-grid {
+  display: grid;
+  grid-template-columns: 150px minmax(250px, 1fr) minmax(250px, 1fr) 72px 64px;
+  gap: 8px 12px;
+  align-items: center;
+}
+.compare-head {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0 16px 6px;
+}
+.compare-grid {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.compare-group {
+  font-weight: 700;
+}
+.compare-cell {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 58px;
+  gap: 8px;
+  align-items: center;
+}
+.compare-total, .metric {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.compare-bar {
+  position: relative;
+  height: 18px;
+  background:
+    linear-gradient(to right, transparent 0 21%, #000000 21% calc(21% + 2px), transparent calc(21% + 2px)),
+    #f1f3f5;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.zero {
+  position: absolute;
+  left: 21%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #000000;
+  z-index: 3;
+}
+.neg, .pos {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+}
+.neg {
+  right: 79%;
+  width: var(--neg);
+  justify-content: flex-end;
+}
+.pos {
+  left: 21%;
+  width: var(--pos);
+}
+.seg {
+  display: block;
+  height: 100%;
+}
+@media (max-width: 900px) {
+  .wrap { padding: 24px 14px 34px; }
+  .compare-head { display: none; }
+  .compare-grid {
+    grid-template-columns: 1fr;
+  }
+  .compare-group {
+    margin-top: 12px;
+  }
+  .compare-group:first-child {
+    margin-top: 0;
+  }
+  .metric {
+    text-align: left;
+  }
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>Baseline ETR: Cash Income vs Accrual</h1>
+  <p>
+    Baseline law, equity/supernormal corporate convention, 2028. Cash income is
+    <code>expanded</code>; accrual is <code>hs</code>. Each bar decomposes the
+    all-in ETR into tax components over that row's denominator, now including the
+    imputed state &amp; local + federal-excise <code>other</code> tax type
+    (DINA <code>dina_other_taxes_rate</code> &times; reconstructed broad income) &mdash;
+    a steeply regressive layer that shrinks as a share of income toward the top and
+    is nearly invisible under the accrual denominator at the very top of the wealth
+    distribution.
+  </p>
+  <div class="legend"><span><i style="background:#356a9a"></i>Income tax</span><span><i style="background:#2a9d8f"></i>Payroll</span><span><i style="background:#9b5de5"></i>Estate / deemed</span><span><i style="background:#d97706"></i>Corporate / wealth / VAT</span><span><i style="background:#c1121f"></i>State &amp; local + excise</span></div>
+  <div class="note">
+    Rows are arranged as horizontal columns: group, cash-income ETR, accrual ETR,
+    cash-minus-accrual gap, and cash/accrual ratio. The black vertical line marks zero.
+    The <code>other</code> component is state+local+federal-excise tax placed over the
+    same denominator as the federal components (so all five sum to the all-in ETR); it
+    is exogenous to federal law and identical across baseline and policy legs.
+  </div>
+  
+      <section>
+        <h2>By Cash-Income Rank</h2>
+        <div class="compare-head">
+          <div>Group</div><div>Cash income</div><div>Accrual</div><div>Gap</div><div>Ratio</div>
+        </div>
+        <div class="compare-grid">
+            <div class="compare-group">Quintile 1</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:16.6248%;--pos:91.7889%">
+          <div class="zero"></div>
+          <div class="neg"><span class="seg" style="width:16.6248%;background:#356a9a" title="income -6.32 pp"></span></div>
+          <div class="pos"><span class="seg" style="width:26.9093%;background:#2a9d8f" title="payroll +10.23 pp"></span><span class="seg" style="width:1.5828%;background:#d97706" title="corp +0.60 pp"></span><span class="seg" style="width:63.2968%;background:#c1121f" title="other +24.05 pp"></span></div>
+        </div>
+        <div class="compare-total">28.56%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:12.4280%;--pos:68.6176%">
+          <div class="zero"></div>
+          <div class="neg"><span class="seg" style="width:12.4280%;background:#356a9a" title="income -4.72 pp"></span></div>
+          <div class="pos"><span class="seg" style="width:20.1163%;background:#2a9d8f" title="payroll +7.64 pp"></span><span class="seg" style="width:1.1832%;background:#d97706" title="corp +0.45 pp"></span><span class="seg" style="width:47.3181%;background:#c1121f" title="other +17.98 pp"></span></div>
+        </div>
+        <div class="compare-total">21.35%</div>
+      </div>
+    
+            <div class="metric">+7.21 pp</div>
+            <div class="metric">1.34x</div>
+            
+            <div class="compare-group">Quintile 2</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:8.4344%;--pos:66.8764%">
+          <div class="zero"></div>
+          <div class="neg"><span class="seg" style="width:8.4344%;background:#356a9a" title="income -3.21 pp"></span></div>
+          <div class="pos"><span class="seg" style="width:25.8556%;background:#2a9d8f" title="payroll +9.83 pp"></span><span class="seg" style="width:1.5452%;background:#d97706" title="corp +0.59 pp"></span><span class="seg" style="width:39.4757%;background:#c1121f" title="other +15.00 pp"></span></div>
+        </div>
+        <div class="compare-total">22.21%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:6.9486%;--pos:55.0953%">
+          <div class="zero"></div>
+          <div class="neg"><span class="seg" style="width:6.9486%;background:#356a9a" title="income -2.64 pp"></span></div>
+          <div class="pos"><span class="seg" style="width:21.3008%;background:#2a9d8f" title="payroll +8.09 pp"></span><span class="seg" style="width:1.2730%;background:#d97706" title="corp +0.48 pp"></span><span class="seg" style="width:32.5216%;background:#c1121f" title="other +12.36 pp"></span></div>
+        </div>
+        <div class="compare-total">18.30%</div>
+      </div>
+    
+            <div class="metric">+3.91 pp</div>
+            <div class="metric">1.21x</div>
+            
+            <div class="compare-group">Quintile 3</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:72.6657%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:8.7378%;background:#356a9a" title="income +3.32 pp"></span><span class="seg" style="width:28.4661%;background:#2a9d8f" title="payroll +10.82 pp"></span><span class="seg" style="width:1.8748%;background:#d97706" title="corp +0.71 pp"></span><span class="seg" style="width:33.5871%;background:#c1121f" title="other +12.76 pp"></span></div>
+        </div>
+        <div class="compare-total">27.61%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:59.7446%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:7.1841%;background:#356a9a" title="income +2.73 pp"></span><span class="seg" style="width:23.4043%;background:#2a9d8f" title="payroll +8.89 pp"></span><span class="seg" style="width:1.5414%;background:#d97706" title="corp +0.59 pp"></span><span class="seg" style="width:27.6148%;background:#c1121f" title="other +10.49 pp"></span></div>
+        </div>
+        <div class="compare-total">22.70%</div>
+      </div>
+    
+            <div class="metric">+4.91 pp</div>
+            <div class="metric">1.22x</div>
+            
+            <div class="compare-group">Quintile 4</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:78.2235%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:17.5409%;background:#356a9a" title="income +6.67 pp"></span><span class="seg" style="width:27.8661%;background:#2a9d8f" title="payroll +10.59 pp"></span><span class="seg" style="width:2.2292%;background:#d97706" title="corp +0.85 pp"></span><span class="seg" style="width:30.5873%;background:#c1121f" title="other +11.62 pp"></span></div>
+        </div>
+        <div class="compare-total">29.72%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:63.1625%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:14.1636%;background:#356a9a" title="income +5.38 pp"></span><span class="seg" style="width:22.5008%;background:#2a9d8f" title="payroll +8.55 pp"></span><span class="seg" style="width:1.8000%;background:#d97706" title="corp +0.68 pp"></span><span class="seg" style="width:24.6981%;background:#c1121f" title="other +9.39 pp"></span></div>
+        </div>
+        <div class="compare-total">24.00%</div>
+      </div>
+    
+            <div class="metric">+5.72 pp</div>
+            <div class="metric">1.24x</div>
+            
+            <div class="compare-group">Quintile 5</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:87.9106%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:39.9718%;background:#356a9a" title="income +15.19 pp"></span><span class="seg" style="width:15.9331%;background:#2a9d8f" title="payroll +6.05 pp"></span><span class="seg" style="width:0.6774%;background:#9b5de5" title="death +0.26 pp"></span><span class="seg" style="width:3.8895%;background:#d97706" title="corp +1.48 pp"></span><span class="seg" style="width:27.4389%;background:#c1121f" title="other +10.43 pp"></span></div>
+        </div>
+        <div class="compare-total">33.41%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:58.1329%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:26.4322%;background:#356a9a" title="income +10.04 pp"></span><span class="seg" style="width:10.5361%;background:#2a9d8f" title="payroll +4.00 pp"></span><span class="seg" style="width:0.4479%;background:#9b5de5" title="death +0.17 pp"></span><span class="seg" style="width:2.5720%;background:#d97706" title="corp +0.98 pp"></span><span class="seg" style="width:18.1446%;background:#c1121f" title="other +6.89 pp"></span></div>
+        </div>
+        <div class="compare-total">22.09%</div>
+      </div>
+    
+            <div class="metric">+11.32 pp</div>
+            <div class="metric">1.51x</div>
+            
+            <div class="compare-group">Top 10%</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:89.2404%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:44.2872%;background:#356a9a" title="income +16.83 pp"></span><span class="seg" style="width:13.5101%;background:#2a9d8f" title="payroll +5.13 pp"></span><span class="seg" style="width:0.8858%;background:#9b5de5" title="death +0.34 pp"></span><span class="seg" style="width:4.2570%;background:#d97706" title="corp +1.62 pp"></span><span class="seg" style="width:26.3003%;background:#c1121f" title="other +9.99 pp"></span></div>
+        </div>
+        <div class="compare-total">33.91%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:56.5852%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:28.0815%;background:#356a9a" title="income +10.67 pp"></span><span class="seg" style="width:8.5664%;background:#2a9d8f" title="payroll +3.26 pp"></span><span class="seg" style="width:0.5616%;background:#9b5de5" title="death +0.21 pp"></span><span class="seg" style="width:2.6993%;background:#d97706" title="corp +1.03 pp"></span><span class="seg" style="width:16.6764%;background:#c1121f" title="other +6.34 pp"></span></div>
+        </div>
+        <div class="compare-total">21.50%</div>
+      </div>
+    
+            <div class="metric">+12.41 pp</div>
+            <div class="metric">1.58x</div>
+            
+            <div class="compare-group">Top 5%</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:89.2397%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:48.1488%;background:#356a9a" title="income +18.30 pp"></span><span class="seg" style="width:10.4692%;background:#2a9d8f" title="payroll +3.98 pp"></span><span class="seg" style="width:1.1459%;background:#9b5de5" title="death +0.44 pp"></span><span class="seg" style="width:4.3679%;background:#d97706" title="corp +1.66 pp"></span><span class="seg" style="width:25.1078%;background:#c1121f" title="other +9.54 pp"></span></div>
+        </div>
+        <div class="compare-total">33.91%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:56.0572%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:30.2453%;background:#356a9a" title="income +11.49 pp"></span><span class="seg" style="width:6.5764%;background:#2a9d8f" title="payroll +2.50 pp"></span><span class="seg" style="width:0.7198%;background:#9b5de5" title="death +0.27 pp"></span><span class="seg" style="width:2.7438%;background:#d97706" title="corp +1.04 pp"></span><span class="seg" style="width:15.7719%;background:#c1121f" title="other +5.99 pp"></span></div>
+        </div>
+        <div class="compare-total">21.30%</div>
+      </div>
+    
+            <div class="metric">+12.61 pp</div>
+            <div class="metric">1.59x</div>
+            
+            <div class="compare-group">Top 1%</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:89.2280%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:55.7170%;background:#356a9a" title="income +21.17 pp"></span><span class="seg" style="width:5.0928%;background:#2a9d8f" title="payroll +1.94 pp"></span><span class="seg" style="width:2.0004%;background:#9b5de5" title="death +0.76 pp"></span><span class="seg" style="width:4.1041%;background:#d97706" title="corp +1.56 pp"></span><span class="seg" style="width:22.3136%;background:#c1121f" title="other +8.48 pp"></span></div>
+        </div>
+        <div class="compare-total">33.91%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:58.2971%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:36.4027%;background:#356a9a" title="income +13.83 pp"></span><span class="seg" style="width:3.3274%;background:#2a9d8f" title="payroll +1.26 pp"></span><span class="seg" style="width:1.3070%;background:#9b5de5" title="death +0.50 pp"></span><span class="seg" style="width:2.6814%;background:#d97706" title="corp +1.02 pp"></span><span class="seg" style="width:14.5786%;background:#c1121f" title="other +5.54 pp"></span></div>
+        </div>
+        <div class="compare-total">22.15%</div>
+      </div>
+    
+            <div class="metric">+11.75 pp</div>
+            <div class="metric">1.53x</div>
+            
+            <div class="compare-group">Top 0.1%</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:93.9270%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:62.3164%;background:#356a9a" title="income +23.68 pp"></span><span class="seg" style="width:2.4493%;background:#2a9d8f" title="payroll +0.93 pp"></span><span class="seg" style="width:4.2268%;background:#9b5de5" title="death +1.61 pp"></span><span class="seg" style="width:3.7759%;background:#d97706" title="corp +1.43 pp"></span><span class="seg" style="width:21.1586%;background:#c1121f" title="other +8.04 pp"></span></div>
+        </div>
+        <div class="compare-total">35.69%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:66.3533%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:44.0224%;background:#356a9a" title="income +16.73 pp"></span><span class="seg" style="width:1.7303%;background:#2a9d8f" title="payroll +0.66 pp"></span><span class="seg" style="width:2.9860%;background:#9b5de5" title="death +1.13 pp"></span><span class="seg" style="width:2.6674%;background:#d97706" title="corp +1.01 pp"></span><span class="seg" style="width:14.9472%;background:#c1121f" title="other +5.68 pp"></span></div>
+        </div>
+        <div class="compare-total">25.21%</div>
+      </div>
+    
+            <div class="metric">+10.48 pp</div>
+            <div class="metric">1.42x</div>
+            
+            <div class="compare-group">Top 0.01%</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:91.4525%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:59.3130%;background:#356a9a" title="income +22.54 pp"></span><span class="seg" style="width:1.4202%;background:#2a9d8f" title="payroll +0.54 pp"></span><span class="seg" style="width:8.9768%;background:#9b5de5" title="death +3.41 pp"></span><span class="seg" style="width:3.6360%;background:#d97706" title="corp +1.38 pp"></span><span class="seg" style="width:18.1066%;background:#c1121f" title="other +6.88 pp"></span></div>
+        </div>
+        <div class="compare-total">34.75%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:68.6593%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:44.5300%;background:#356a9a" title="income +16.92 pp"></span><span class="seg" style="width:1.0662%;background:#2a9d8f" title="payroll +0.41 pp"></span><span class="seg" style="width:6.7395%;background:#9b5de5" title="death +2.56 pp"></span><span class="seg" style="width:2.7298%;background:#d97706" title="corp +1.04 pp"></span><span class="seg" style="width:13.5938%;background:#c1121f" title="other +5.17 pp"></span></div>
+        </div>
+        <div class="compare-total">26.09%</div>
+      </div>
+    
+            <div class="metric">+8.66 pp</div>
+            <div class="metric">1.33x</div>
+            </div>
+      </section>
+    
+  
+      <section>
+        <h2>By Net-Worth Rank</h2>
+        <div class="compare-head">
+          <div>Group</div><div>Cash income</div><div>Accrual</div><div>Gap</div><div>Ratio</div>
+        </div>
+        <div class="compare-grid">
+            <div class="compare-group">Negative net worth</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:79.7784%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:8.5791%;background:#356a9a" title="income +3.26 pp"></span><span class="seg" style="width:32.8036%;background:#2a9d8f" title="payroll +12.47 pp"></span><span class="seg" style="width:0.5685%;background:#9b5de5" title="death +0.22 pp"></span><span class="seg" style="width:1.2393%;background:#d97706" title="corp +0.47 pp"></span><span class="seg" style="width:36.5878%;background:#c1121f" title="other +13.90 pp"></span></div>
+        </div>
+        <div class="compare-total">30.32%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:77.6884%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:8.3543%;background:#356a9a" title="income +3.17 pp"></span><span class="seg" style="width:31.9442%;background:#2a9d8f" title="payroll +12.14 pp"></span><span class="seg" style="width:0.5536%;background:#9b5de5" title="death +0.21 pp"></span><span class="seg" style="width:1.2068%;background:#d97706" title="corp +0.46 pp"></span><span class="seg" style="width:35.6293%;background:#c1121f" title="other +13.54 pp"></span></div>
+        </div>
+        <div class="compare-total">29.52%</div>
+      </div>
+    
+            <div class="metric">+0.79 pp</div>
+            <div class="metric">1.03x</div>
+            
+            <div class="compare-group">Quintile 1</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:86.9014%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:15.0817%;background:#356a9a" title="income +5.73 pp"></span><span class="seg" style="width:32.2800%;background:#2a9d8f" title="payroll +12.27 pp"></span><span class="seg" style="width:1.4478%;background:#9b5de5" title="death +0.55 pp"></span><span class="seg" style="width:1.1703%;background:#d97706" title="corp +0.44 pp"></span><span class="seg" style="width:36.9216%;background:#c1121f" title="other +14.03 pp"></span></div>
+        </div>
+        <div class="compare-total">33.02%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:81.8914%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:14.2122%;background:#356a9a" title="income +5.40 pp"></span><span class="seg" style="width:30.4190%;background:#2a9d8f" title="payroll +11.56 pp"></span><span class="seg" style="width:1.3643%;background:#9b5de5" title="death +0.52 pp"></span><span class="seg" style="width:1.1029%;background:#d97706" title="corp +0.42 pp"></span><span class="seg" style="width:34.7930%;background:#c1121f" title="other +13.22 pp"></span></div>
+        </div>
+        <div class="compare-total">31.12%</div>
+      </div>
+    
+            <div class="metric">+1.90 pp</div>
+            <div class="metric">1.06x</div>
+            
+            <div class="compare-group">Quintile 2</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:77.0194%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:4.9792%;background:#356a9a" title="income +1.89 pp"></span><span class="seg" style="width:32.8113%;background:#2a9d8f" title="payroll +12.47 pp"></span><span class="seg" style="width:0.0004%;background:#9b5de5" title="death +0.00 pp"></span><span class="seg" style="width:1.2733%;background:#d97706" title="corp +0.48 pp"></span><span class="seg" style="width:37.9553%;background:#c1121f" title="other +14.42 pp"></span></div>
+        </div>
+        <div class="compare-total">29.27%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:71.8537%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:4.6452%;background:#356a9a" title="income +1.77 pp"></span><span class="seg" style="width:30.6106%;background:#2a9d8f" title="payroll +11.63 pp"></span><span class="seg" style="width:0.0004%;background:#9b5de5" title="death +0.00 pp"></span><span class="seg" style="width:1.1879%;background:#d97706" title="corp +0.45 pp"></span><span class="seg" style="width:35.4096%;background:#c1121f" title="other +13.46 pp"></span></div>
+        </div>
+        <div class="compare-total">27.30%</div>
+      </div>
+    
+            <div class="metric">+1.96 pp</div>
+            <div class="metric">1.07x</div>
+            
+            <div class="compare-group">Quintile 3</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:83.3333%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:16.0306%;background:#356a9a" title="income +6.09 pp"></span><span class="seg" style="width:30.4568%;background:#2a9d8f" title="payroll +11.57 pp"></span><span class="seg" style="width:1.0484%;background:#9b5de5" title="death +0.40 pp"></span><span class="seg" style="width:1.3956%;background:#d97706" title="corp +0.53 pp"></span><span class="seg" style="width:34.4019%;background:#c1121f" title="other +13.07 pp"></span></div>
+        </div>
+        <div class="compare-total">31.67%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:71.1608%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:13.6890%;background:#356a9a" title="income +5.20 pp"></span><span class="seg" style="width:26.0080%;background:#2a9d8f" title="payroll +9.88 pp"></span><span class="seg" style="width:0.8953%;background:#9b5de5" title="death +0.34 pp"></span><span class="seg" style="width:1.1917%;background:#d97706" title="corp +0.45 pp"></span><span class="seg" style="width:29.3768%;background:#c1121f" title="other +11.16 pp"></span></div>
+        </div>
+        <div class="compare-total">27.04%</div>
+      </div>
+    
+            <div class="metric">+4.63 pp</div>
+            <div class="metric">1.17x</div>
+            
+            <div class="compare-group">Quintile 4</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:80.1328%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:21.0194%;background:#356a9a" title="income +7.99 pp"></span><span class="seg" style="width:25.2071%;background:#2a9d8f" title="payroll +9.58 pp"></span><span class="seg" style="width:0.6727%;background:#9b5de5" title="death +0.26 pp"></span><span class="seg" style="width:1.6681%;background:#d97706" title="corp +0.63 pp"></span><span class="seg" style="width:31.5655%;background:#c1121f" title="other +11.99 pp"></span></div>
+        </div>
+        <div class="compare-total">30.45%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:67.0385%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:17.5847%;background:#356a9a" title="income +6.68 pp"></span><span class="seg" style="width:21.0881%;background:#2a9d8f" title="payroll +8.01 pp"></span><span class="seg" style="width:0.5628%;background:#9b5de5" title="death +0.21 pp"></span><span class="seg" style="width:1.3956%;background:#d97706" title="corp +0.53 pp"></span><span class="seg" style="width:26.4075%;background:#c1121f" title="other +10.03 pp"></span></div>
+        </div>
+        <div class="compare-total">25.47%</div>
+      </div>
+    
+            <div class="metric">+4.98 pp</div>
+            <div class="metric">1.20x</div>
+            
+            <div class="compare-group">Quintile 5</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:88.2917%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:41.3620%;background:#356a9a" title="income +15.72 pp"></span><span class="seg" style="width:13.9321%;background:#2a9d8f" title="payroll +5.29 pp"></span><span class="seg" style="width:0.2009%;background:#9b5de5" title="death +0.08 pp"></span><span class="seg" style="width:4.8005%;background:#d97706" title="corp +1.82 pp"></span><span class="seg" style="width:27.9962%;background:#c1121f" title="other +10.64 pp"></span></div>
+        </div>
+        <div class="compare-total">33.55%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:52.1123%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:24.4130%;background:#356a9a" title="income +9.28 pp"></span><span class="seg" style="width:8.2231%;background:#2a9d8f" title="payroll +3.12 pp"></span><span class="seg" style="width:0.1186%;background:#9b5de5" title="death +0.05 pp"></span><span class="seg" style="width:2.8334%;background:#d97706" title="corp +1.08 pp"></span><span class="seg" style="width:16.5242%;background:#c1121f" title="other +6.28 pp"></span></div>
+        </div>
+        <div class="compare-total">19.80%</div>
+      </div>
+    
+            <div class="metric">+13.75 pp</div>
+            <div class="metric">1.69x</div>
+            
+            <div class="compare-group">Top 10%</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:90.7313%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:46.1745%;background:#356a9a" title="income +17.55 pp"></span><span class="seg" style="width:11.5866%;background:#2a9d8f" title="payroll +4.40 pp"></span><span class="seg" style="width:0.2577%;background:#9b5de5" title="death +0.10 pp"></span><span class="seg" style="width:5.5616%;background:#d97706" title="corp +2.11 pp"></span><span class="seg" style="width:27.1509%;background:#c1121f" title="other +10.32 pp"></span></div>
+        </div>
+        <div class="compare-total">34.48%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:49.4164%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:25.1487%;background:#356a9a" title="income +9.56 pp"></span><span class="seg" style="width:6.3106%;background:#2a9d8f" title="payroll +2.40 pp"></span><span class="seg" style="width:0.1404%;background:#9b5de5" title="death +0.05 pp"></span><span class="seg" style="width:3.0291%;background:#d97706" title="corp +1.15 pp"></span><span class="seg" style="width:14.7876%;background:#c1121f" title="other +5.62 pp"></span></div>
+        </div>
+        <div class="compare-total">18.78%</div>
+      </div>
+    
+            <div class="metric">+15.70 pp</div>
+            <div class="metric">1.84x</div>
+            
+            <div class="compare-group">Top 5%</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:92.6444%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:50.8402%;background:#356a9a" title="income +19.32 pp"></span><span class="seg" style="width:9.1766%;background:#2a9d8f" title="payroll +3.49 pp"></span><span class="seg" style="width:0.1382%;background:#9b5de5" title="death +0.05 pp"></span><span class="seg" style="width:6.1976%;background:#d97706" title="corp +2.36 pp"></span><span class="seg" style="width:26.2918%;background:#c1121f" title="other +9.99 pp"></span></div>
+        </div>
+        <div class="compare-total">35.20%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:47.4979%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:26.0653%;background:#356a9a" title="income +9.90 pp"></span><span class="seg" style="width:4.7047%;background:#2a9d8f" title="payroll +1.79 pp"></span><span class="seg" style="width:0.0709%;background:#9b5de5" title="death +0.03 pp"></span><span class="seg" style="width:3.1774%;background:#d97706" title="corp +1.21 pp"></span><span class="seg" style="width:13.4796%;background:#c1121f" title="other +5.12 pp"></span></div>
+        </div>
+        <div class="compare-total">18.05%</div>
+      </div>
+    
+            <div class="metric">+17.16 pp</div>
+            <div class="metric">1.95x</div>
+            
+            <div class="compare-group">Top 1%</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:96.7976%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:59.6301%;background:#356a9a" title="income +22.66 pp"></span><span class="seg" style="width:5.2278%;background:#2a9d8f" title="payroll +1.99 pp"></span><span class="seg" style="width:0.1571%;background:#9b5de5" title="death +0.06 pp"></span><span class="seg" style="width:7.0855%;background:#d97706" title="corp +2.69 pp"></span><span class="seg" style="width:24.6971%;background:#c1121f" title="other +9.38 pp"></span></div>
+        </div>
+        <div class="compare-total">36.78%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:45.2956%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:27.9034%;background:#356a9a" title="income +10.60 pp"></span><span class="seg" style="width:2.4463%;background:#2a9d8f" title="payroll +0.93 pp"></span><span class="seg" style="width:0.0735%;background:#9b5de5" title="death +0.03 pp"></span><span class="seg" style="width:3.3156%;background:#d97706" title="corp +1.26 pp"></span><span class="seg" style="width:11.5568%;background:#c1121f" title="other +4.39 pp"></span></div>
+        </div>
+        <div class="compare-total">17.21%</div>
+      </div>
+    
+            <div class="metric">+19.57 pp</div>
+            <div class="metric">2.14x</div>
+            
+            <div class="compare-group">Top 0.1%</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:96.0121%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:63.9677%;background:#356a9a" title="income +24.31 pp"></span><span class="seg" style="width:2.3145%;background:#2a9d8f" title="payroll +0.88 pp"></span><span class="seg" style="width:0.0179%;background:#9b5de5" title="death +0.01 pp"></span><span class="seg" style="width:8.4360%;background:#d97706" title="corp +3.21 pp"></span><span class="seg" style="width:21.2761%;background:#c1121f" title="other +8.08 pp"></span></div>
+        </div>
+        <div class="compare-total">36.48%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:39.5740%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:26.3661%;background:#356a9a" title="income +10.02 pp"></span><span class="seg" style="width:0.9540%;background:#2a9d8f" title="payroll +0.36 pp"></span><span class="seg" style="width:0.0074%;background:#9b5de5" title="death +0.00 pp"></span><span class="seg" style="width:3.4771%;background:#d97706" title="corp +1.32 pp"></span><span class="seg" style="width:8.7695%;background:#c1121f" title="other +3.33 pp"></span></div>
+        </div>
+        <div class="compare-total">15.04%</div>
+      </div>
+    
+            <div class="metric">+21.45 pp</div>
+            <div class="metric">2.43x</div>
+            
+            <div class="compare-group">Top 0.01%</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:92.3672%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:66.1344%;background:#356a9a" title="income +25.13 pp"></span><span class="seg" style="width:1.6227%;background:#2a9d8f" title="payroll +0.62 pp"></span><span class="seg" style="width:0.0075%;background:#9b5de5" title="death +0.00 pp"></span><span class="seg" style="width:13.6422%;background:#d97706" title="corp +5.18 pp"></span><span class="seg" style="width:10.9603%;background:#c1121f" title="other +4.16 pp"></span></div>
+        </div>
+        <div class="compare-total">35.10%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:25.0888%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:17.9634%;background:#356a9a" title="income +6.83 pp"></span><span class="seg" style="width:0.4408%;background:#2a9d8f" title="payroll +0.17 pp"></span><span class="seg" style="width:0.0020%;background:#9b5de5" title="death +0.00 pp"></span><span class="seg" style="width:3.7055%;background:#d97706" title="corp +1.41 pp"></span><span class="seg" style="width:2.9770%;background:#c1121f" title="other +1.13 pp"></span></div>
+        </div>
+        <div class="compare-total">9.53%</div>
+      </div>
+    
+            <div class="metric">+25.57 pp</div>
+            <div class="metric">3.68x</div>
+            
+            <div class="compare-group">Billionaires</div>
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:83.4568%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:66.5023%;background:#356a9a" title="income +25.27 pp"></span><span class="seg" style="width:0.5655%;background:#2a9d8f" title="payroll +0.21 pp"></span><span class="seg" style="width:0.0009%;background:#9b5de5" title="death +0.00 pp"></span><span class="seg" style="width:15.3522%;background:#d97706" title="corp +5.83 pp"></span><span class="seg" style="width:1.0358%;background:#c1121f" title="other +0.39 pp"></span></div>
+        </div>
+        <div class="compare-total">31.71%</div>
+      </div>
+    
+            
+      <div class="compare-cell">
+        <div class="compare-bar" style="--neg:0.0000%;--pos:20.7307%">
+          <div class="zero"></div>
+          <div class="neg"></div>
+          <div class="pos"><span class="seg" style="width:16.5192%;background:#356a9a" title="income +6.28 pp"></span><span class="seg" style="width:0.1405%;background:#2a9d8f" title="payroll +0.05 pp"></span><span class="seg" style="width:0.0002%;background:#9b5de5" title="death +0.00 pp"></span><span class="seg" style="width:3.8135%;background:#d97706" title="corp +1.45 pp"></span><span class="seg" style="width:0.2573%;background:#c1121f" title="other +0.10 pp"></span></div>
+        </div>
+        <div class="compare-total">7.88%</div>
+      </div>
+    
+            <div class="metric">+23.84 pp</div>
+            <div class="metric">4.03x</div>
+            </div>
+      </section>
+    
+  <p style="margin-top:18px">
+    Source:
+    <code>/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/dist_etrs_other_v1/corp_perm/static/supplemental/distribution_etrs.csv</code>
+  </p>
+</main>
+</body>
+</html>

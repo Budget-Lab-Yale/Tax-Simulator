@@ -1,4 +1,4 @@
-# Frozen estate-module valuation/measurement parameters — INTERIM (2026-06-10)
+# Frozen estate-module valuation/measurement parameters — INTERIM (2026-07-08)
 #
 # These are MEASUREMENT parameters (the bridge from Tax-Data economic wealth to
 # reported gross estate), NOT tax law. Reforms must never override them. They
@@ -6,12 +6,15 @@
 # (f_ded / p_dsue / f_dsue / gamma, re-derived from estate_tax_filed_*.csv at
 # run time) and the cluster guard.
 #
-# Provenance: calibrate_estate_v2.R on Tax-Data 2026060918, objective = SOI
+# Provenance: calibrate_estate_v2.R on Tax-Data 2026070814, objective = SOI
 # shape (death years 2018-2022) + deadbands on {post-TCJA SOI level, JCT
 # OBBBA-vs-sunset delta, CBO FY2026-28}, cluster cap + gift add-back ON,
-# pre-TCJA 2015-2017 held out (validates within +/-15% on tax).
-# Log: estate_cal_v2_14571339.log. Status and residuals:
-# new_estate_modeling_thoughts.md §10h.
+# pre-TCJA 2015-2017 held out (validates within +/-15% on tax). r/rho_pt are
+# UNCHANGED from the 2026060918 fit — the wealth/balance-sheet columns are
+# identical between the two vintages, so the fit is invariant; this run only
+# re-pins the staleness guard to the current default vintage.
+# Log: estate_calib_17403421.out (other/taxdata_interface_2026070814/logs).
+# Status and residuals: new_estate_modeling_thoughts.md §10h.
 
 # reported_gross = economic_gross * r * [1 + (rho_pt - 1) * s_pt]
 r: 0.951
@@ -27,5 +30,5 @@ cluster_death_weight_cap: 300
 # SOI bins with lower bound >= gamma_pool_factor * exemption (selection guard).
 gamma_pool_factor: 1.5
 
-tax_data_vintage: '2026060918'
-calibration_date: '2026-06-10'
+tax_data_vintage: '2026070814'
+calibration_date: '2026-07-08'

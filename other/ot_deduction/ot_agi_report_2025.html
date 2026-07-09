@@ -1,0 +1,331 @@
+<title>Overtime Deduction by AGI, 2025</title>
+<meta name="description" content="Who benefits from the OBBB overtime-pay deduction in 2025, its first year — tax units, claimants, returns benefiting, and average benefit across the income distribution.">
+
+<style>
+  :root{
+    --paper:#F4F6F8; --surface:#FFFFFF; --ink:#17212B; --muted:#5C6873;
+    --line:#E3E8ED; --line-strong:#CBD4DC;
+    --navy:#14334E; --navy-2:#0E2740; --accent:#2C6E9B; --accent-soft:#7DAAC8;
+    --gold:#A8782C; --gold-soft:#F3E9D6;
+    --maxw:1060px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px}
+  .serif{font-family:Georgia,"Iowan Old Style","Times New Roman",serif}
+  .tnum{font-variant-numeric:tabular-nums}
+
+  .masthead{background:var(--navy); color:#EaF0F5; border-bottom:3px solid var(--gold)}
+  .masthead .wrap{padding-top:34px; padding-bottom:30px}
+  .eyebrow{font-size:12px; letter-spacing:.16em; text-transform:uppercase;
+    color:#9DB6C9; margin:0 0 12px}
+  h1{font-size:clamp(28px,4.4vw,44px); line-height:1.08; margin:0; font-weight:600;
+    text-wrap:balance; color:#fff}
+  .dek{margin:14px 0 0; max-width:64ch; color:#C6D4DF; font-size:16.5px}
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:22px}
+  .chip{font-size:12px; letter-spacing:.02em; color:#Cfe0ec;
+    border:1px solid rgba(255,255,255,.22); border-radius:2px; padding:4px 10px;
+    background:rgba(255,255,255,.04)}
+  .chip b{color:#fff; font-weight:600}
+
+  .kpis{display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin:-30px 0 0}
+  .kpi{background:var(--surface); border:1px solid var(--line);
+    border-top:3px solid var(--accent); border-radius:3px; padding:16px 16px 14px;
+    box-shadow:0 1px 2px rgba(20,51,78,.05)}
+  .kpi .v{font-size:27px; font-weight:650; color:var(--navy); letter-spacing:-.01em}
+  .kpi .v small{font-size:15px; font-weight:600; color:var(--muted); margin-left:1px}
+  .kpi .l{font-size:11.5px; letter-spacing:.07em; text-transform:uppercase;
+    color:var(--muted); margin-top:5px; line-height:1.3}
+  .kpi.feature{border-top-color:var(--gold)}
+  .kpi.feature .v{color:#7d571c}
+
+  section{padding:42px 0 6px}
+  .sec-head{display:flex; align-items:baseline; gap:14px; margin-bottom:6px}
+  h2{font-size:21px; font-weight:600; margin:0; color:var(--navy)}
+  .sec-note{font-size:13px; color:var(--muted); margin:4px 0 22px; max-width:70ch}
+
+  .callout{background:#FBF4E4; border:1px solid #E6D2A8; border-left:3px solid var(--gold);
+    border-radius:3px; padding:13px 16px; font-size:13.5px; color:#5b4a28; margin:18px 0 0}
+  .callout b{color:#6b531f}
+
+  .chart{background:var(--surface); border:1px solid var(--line); border-radius:4px;
+    padding:22px 24px 18px}
+  .bar-row{display:grid; grid-template-columns:84px 1fr 64px; align-items:center;
+    gap:14px; padding:5px 0}
+  .bar-row .cat{font-size:13px; color:var(--ink); text-align:right; white-space:nowrap}
+  .track{position:relative; height:20px; background:#EEF2F5; border-radius:2px; overflow:hidden}
+  .fill{height:100%; width:0; border-radius:2px;
+    transition:width .9s cubic-bezier(.2,.7,.2,1)}
+  .bar-row .val{font-size:13px; color:var(--muted); text-align:right}
+  .bar-row .val b{color:var(--ink); font-weight:600}
+  .axis{display:grid; grid-template-columns:84px 1fr 64px; gap:14px; margin-top:10px;
+    font-size:11px; color:var(--muted)}
+  .axis .scale{display:flex; justify-content:space-between}
+  .legend{display:flex; align-items:center; gap:10px; margin-top:14px; font-size:12px;
+    color:var(--muted); flex-wrap:wrap}
+  .ramp{height:11px; width:120px; border-radius:2px;
+    background:linear-gradient(90deg,var(--accent-soft),var(--navy-2))}
+
+  .tbl-scroll{overflow-x:auto; border:1px solid var(--line); border-radius:4px; background:var(--surface)}
+  table{border-collapse:collapse; width:100%; min-width:780px; font-size:14px}
+  thead th{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted);
+    font-weight:600; text-align:right; padding:13px 16px; border-bottom:1.5px solid var(--line-strong);
+    white-space:nowrap; background:#FBFCFD}
+  thead th:first-child{text-align:left}
+  tbody td{padding:10px 16px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap}
+  tbody td:first-child{text-align:left; color:var(--ink); font-weight:500}
+  tbody tr:hover{background:#F7FAFC}
+  tfoot td{padding:13px 16px; text-align:right; border-top:2px solid var(--navy);
+    font-weight:700; color:var(--navy); white-space:nowrap}
+  tfoot td:first-child{text-align:left}
+  .group-dim td:first-child{color:var(--muted); font-weight:500}
+
+  .cols{display:grid; grid-template-columns:1.35fr 1fr; gap:22px; align-items:start}
+  .insights{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:16px}
+  .insights li{padding-left:18px; position:relative; font-size:14.5px; color:#2b3742}
+  .insights li::before{content:""; position:absolute; left:0; top:9px; width:7px; height:7px;
+    background:var(--accent); border-radius:50%}
+  .insights b{color:var(--navy)}
+  .panel{background:var(--surface); border:1px solid var(--line); border-radius:4px; padding:20px 22px}
+  .panel.gold{background:var(--gold-soft); border-color:#E6D2A8}
+  .panel h3{margin:0 0 4px; font-size:15px; color:var(--navy)}
+  .panel .pnote{font-size:12.5px; color:var(--muted); margin:0 0 16px}
+  .compare{display:flex; flex-direction:column; gap:12px}
+  .crow{display:flex; align-items:baseline; justify-content:space-between; gap:10px}
+  .crow .clab{font-size:13.5px; color:#3a4651}
+  .crow .cval{font-variant-numeric:tabular-nums; font-weight:650; color:var(--navy); font-size:18px}
+  .crow.delta .cval{color:#7d571c}
+  .crow .cval small{font-size:12px; font-weight:600; color:var(--muted)}
+  .cbar{height:8px; border-radius:2px; background:#E7EDF2; overflow:hidden; margin-top:3px}
+  .cbar i{display:block; height:100%}
+
+  footer{margin-top:36px; border-top:1px solid var(--line); padding:26px 0 60px}
+  .defs{display:grid; grid-template-columns:repeat(2,1fr); gap:6px 34px; font-size:12.5px;
+    color:var(--muted); margin:0}
+  .defs div b{color:var(--ink); font-weight:600}
+  .prov{font-size:12px; color:#8A95A0; margin-top:20px; line-height:1.6}
+  .prov code{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px;
+    background:#EAEEF2; padding:1px 5px; border-radius:3px; color:#42505c}
+
+  @media (max-width:860px){
+    .kpis{grid-template-columns:repeat(2,1fr); margin-top:18px}
+    .cols{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){ .fill{transition:none} }
+</style>
+
+<header class="masthead">
+  <div class="wrap">
+    <p class="eyebrow">The Budget Lab at Yale · Tax-Simulator</p>
+    <h1 class="serif">Who benefits from the overtime-pay deduction</h1>
+    <p class="dek">Distribution of the value of the no-tax-on-overtime deduction across the income
+      scale in <b>2025</b>, the deduction's first year — a conventional estimate including the
+      induced-overtime response, by adjusted gross income.</p>
+    <div class="chips">
+      <span class="chip">Tax year <b>2025</b></span>
+      <span class="chip"><b>Conventional</b> · income tax</span>
+      <span class="chip">Behavioral response</span>
+      <span class="chip">Full sample</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="kpis" id="kpis"></div>
+
+  <div class="callout">
+    <b>First-year note:</b> 2025 is the deduction's first year, so a standard phased-in score would
+    show little behavioral response (conventional ≈ static). To stay apples-to-apples with the 2026
+    view, the figures here force the <b>full steady-state</b> response. The mechanical, behavior-free
+    benefit ($14.7B) is shown in the panel below.
+  </div>
+
+  <section>
+    <div class="sec-head"><h2 class="serif">Where the benefit goes</h2></div>
+    <p class="sec-note">Total dollars saved by taxpayers in each AGI group. Bar length is the
+      aggregate benefit; color depth is the <em>average</em> benefit per benefiting return — so a
+      long pale bar is many modest benefits, a short dark bar is fewer but larger ones.</p>
+    <div class="chart">
+      <div id="bars"></div>
+      <div class="axis">
+        <span></span>
+        <span class="scale"><span>$0B</span><span>$1B</span><span>$2B</span><span>$3B</span><span>$4B</span></span>
+        <span></span>
+      </div>
+      <div class="legend">
+        <span>Avg. benefit per return</span>
+        <span class="ramp" aria-hidden="true"></span>
+        <span>$120 → $3,008</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2 class="serif">Detail by AGI group</h2></div>
+    <p class="sec-note">Counts in millions. A unit is a <em>claimant</em> if it claims the deduction,
+      and <em>benefiting</em> if its income tax actually falls as a result.</p>
+    <div class="tbl-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>AGI group</th>
+            <th>Tax units</th>
+            <th>Returns</th>
+            <th>Claimants</th>
+            <th>Avg. deduction</th>
+            <th>Benefiting</th>
+            <th>Avg. benefit</th>
+            <th>Total benefit</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+        <tfoot id="tfoot"></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="cols">
+      <div>
+        <div class="sec-head"><h2 class="serif">What the columns reveal</h2></div>
+        <ul class="insights">
+          <li><b>The bottom of the scale barely participates.</b> Of 60.7M tax units under $20k,
+            only 36.3M file at all, 1.0M claim the deduction, and just <b>0.25M see any tax cut</b> —
+            most owe no income tax for a deduction to offset.</li>
+          <li><b>Take-up converts to benefit above ~$40k.</b> From $40k up, claimants and benefiting
+            returns nearly coincide; the gap lives entirely in the $0–40k bands.</li>
+          <li><b>Average benefit climbs the income scale</b> — from <b>$120</b> at the bottom to
+            <b>$3,008</b> in the $200k+ group — tracking higher marginal rates and larger overtime
+            amounts up to the $12,500 / $25k-joint cap.</li>
+          <li><b>The single largest block of dollars is the $200k+ group ($3.7B)</b>, mostly joint
+            filers still partially eligible above the $150k single phase-out threshold.</li>
+        </ul>
+      </div>
+      <div class="panel gold">
+        <h3>Static vs. conventional</h3>
+        <p class="pnote">The figures above are <b>conventional</b> — they include the induced-overtime
+          response (Cahuc–Carcillo intensive margin, full effect). The mechanical, behavior-free
+          benefit is lower:</p>
+        <div class="compare">
+          <div class="crow">
+            <div><div class="clab">Static (mechanical)</div>
+              <div class="cbar"><i style="width:93.7%;background:var(--accent)"></i></div></div>
+            <div class="cval tnum">$14.7B</div>
+          </div>
+          <div class="crow">
+            <div><div class="clab">Conventional (induced OT)</div>
+              <div class="cbar"><i style="width:100%;background:var(--navy)"></i></div></div>
+            <div class="cval tnum">$15.7B</div>
+          </div>
+          <div class="crow delta">
+            <div class="clab">Behavioral increment</div>
+            <div class="cval tnum">+$1.0B <small>+6.7%</small></div>
+          </div>
+        </div>
+        <p class="pnote" style="margin:16px 0 0">No payroll offset — the response reclassifies pay
+          as overtime, it doesn't add hours, so wages, AGI, and payroll tax don't move.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="defs">
+      <div><b>Tax units</b> — all units, filing or not (weighted).</div>
+      <div><b>Returns</b> — units that file a return (<code>filer = 1</code>).</div>
+      <div><b>Claimants</b> — units claiming the deduction (<code>ot_ded &gt; 0</code>).</div>
+      <div><b>Avg. deduction</b> — average <code>ot_ded</code> per claimant.</div>
+      <div><b>Benefiting</b> — units whose net income tax falls because of the deduction.</div>
+      <div><b>Avg. benefit</b> — total benefit ÷ number benefiting.</div>
+      <div><b>Benefit</b> — income tax without the deduction minus income tax with it (incl. behavior).</div>
+    </div>
+    <p class="prov">
+      Source: The Budget Lab at Yale, Tax-Simulator (vintage <code>ot_behavior_2025</code>, full
+      sample, conventional). Calendar year 2025. Benefit = income tax in a no-deduction world minus
+      income tax under current law with the deduction and the induced-overtime behavioral response
+      (<code>ot/france_full</code>, intensive-margin semi-elasticity ≈ −1.47, no phase-in so 2025
+      carries the full steady-state effect — a modeling choice to match the 2026 view, not a
+      first-year forecast). The response reclassifies pay as overtime rather than adding hours, so
+      wages, AGI, and payroll tax are unaffected. The deduction is scheduled to sunset after 2028.
+      The <code>&lt;0</code> AGI group shows a few thousand returns and ≈ $0 total benefit (omitted
+      average is a rounding artifact).
+    </p>
+  </footer>
+</main>
+
+<script>
+  const data = [
+    {g:"<0",       units:2.840, ret:1.782, clm:0.038, ded:4287, ben:0.000, avg:null, tot:0.000},
+    {g:"$0–20k",   units:60.735,ret:36.301,clm:0.998, ded:1148, ben:0.251, avg:120,  tot:0.030},
+    {g:"$20–40k",  units:28.222,ret:24.913,clm:1.423, ded:2561, ben:1.034, avg:267,  tot:0.276},
+    {g:"$40–60k",  units:25.597,ret:25.185,clm:2.511, ded:4280, ben:2.426, avg:499,  tot:1.211},
+    {g:"$60–80k",  units:17.797,ret:17.713,clm:2.346, ded:6335, ben:2.336, avg:961,  tot:2.245},
+    {g:"$80–100k", units:11.440,ret:11.439,clm:1.500, ded:7097, ben:1.493, avg:1192, tot:1.779},
+    {g:"$100–120k",units:10.142,ret:10.142,clm:1.246, ded:7669, ben:1.244, avg:1182, tot:1.471},
+    {g:"$120–140k",units:7.036, ret:7.033, clm:0.718, ded:8224, ben:0.718, avg:1333, tot:0.957},
+    {g:"$140–160k",units:6.096, ret:6.096, clm:0.581, ded:10134,ben:0.581, avg:2179, tot:1.266},
+    {g:"$160–180k",units:5.291, ret:5.291, clm:0.675, ded:9967, ben:0.675, avg:2246, tot:1.515},
+    {g:"$180–200k",units:3.730, ret:3.730, clm:0.501, ded:10980,ben:0.501, avg:2417, tot:1.210},
+    {g:"$200k+",   units:16.560,ret:16.557,clm:1.230, ded:12998,ben:1.228, avg:3008, tot:3.695},
+  ];
+  const total = {g:"Total", units:195.487, ret:166.182, clm:13.765, ded:6594, ben:12.486, avg:1254, tot:15.655};
+
+  const AXIS_MAX = 4.0;                 // $B, matches axis ticks ($0–$4)
+  const fmt = (x,d=3)=>x.toFixed(d);
+  const usd = x => x==null ? "—" : "$"+Math.round(x).toLocaleString();
+
+  const c0=[125,170,200], c1=[14,39,64], AVG_MAX=3008;
+  function ramp(avg){
+    if(avg==null) return "#C3CED7";
+    const t=Math.min(1, avg/AVG_MAX);
+    const m=c0.map((a,i)=>Math.round(a+(c1[i]-a)*t));
+    return `rgb(${m[0]},${m[1]},${m[2]})`;
+  }
+
+  const kpis=[
+    {v:"195.5",s:"M",l:"Tax units"},
+    {v:"13.8",s:"M",l:"Claim the deduction"},
+    {v:"12.5",s:"M",l:"Returns benefiting"},
+    {v:"$15.7",s:"B",l:"Total benefit (conventional)",feature:true},
+    {v:"$1,254",s:"",l:"Avg. per benefiting return"},
+  ];
+  document.getElementById("kpis").innerHTML = kpis.map(k=>
+    `<div class="kpi${k.feature?' feature':''}"><div class="v tnum">${k.v}<small>${k.s}</small></div>
+     <div class="l">${k.l}</div></div>`).join("");
+
+  document.getElementById("bars").innerHTML = data.map(d=>
+    `<div class="bar-row">
+       <span class="cat">${d.g}</span>
+       <div class="track"><div class="fill" data-w="${(d.tot/AXIS_MAX*100).toFixed(1)}"
+            style="background:${ramp(d.avg)}"></div></div>
+       <span class="val"><b>$${fmt(d.tot,2)}</b>B</span>
+     </div>`).join("");
+
+  document.getElementById("tbody").innerHTML = data.map(d=>
+    `<tr${d.g==="<0"?' class="group-dim"':''}>
+       <td>${d.g}</td>
+       <td class="tnum">${fmt(d.units)}</td>
+       <td class="tnum">${fmt(d.ret)}</td>
+       <td class="tnum">${fmt(d.clm)}</td>
+       <td class="tnum">${usd(d.ded)}</td>
+       <td class="tnum">${fmt(d.ben)}</td>
+       <td class="tnum">${usd(d.avg)}</td>
+       <td class="tnum">$${fmt(d.tot,2)}B</td>
+     </tr>`).join("");
+  document.getElementById("tfoot").innerHTML =
+    `<tr><td>${total.g}</td>
+       <td class="tnum">${fmt(total.units)}</td>
+       <td class="tnum">${fmt(total.ret)}</td>
+       <td class="tnum">${fmt(total.clm)}</td>
+       <td class="tnum">${usd(total.ded)}</td>
+       <td class="tnum">${fmt(total.ben)}</td>
+       <td class="tnum">${usd(total.avg)}</td>
+       <td class="tnum">$${fmt(total.tot,2)}B</td></tr>`;
+
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    document.querySelectorAll(".fill").forEach(f=>{ f.style.width=f.dataset.w+"%"; });
+  }));
+</script>

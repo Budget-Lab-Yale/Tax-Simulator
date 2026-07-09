@@ -130,7 +130,8 @@ add_rank_groups = function(df, rank_var, pctile_col, prefix = '') {
       "{prefix}top_10" := if_else(.pctile > 0.9,   'Top 10%',   NA),
       "{prefix}top_5"  := if_else(.pctile > 0.95,  'Top 5%',    NA),
       "{prefix}top_1"  := if_else(.pctile > 0.99,  'Top 1%',    NA),
-      "{prefix}top_01" := if_else(.pctile > 0.999, 'Top 0.1%',  NA)
+      "{prefix}top_01"  := if_else(.pctile > 0.999,  'Top 0.1%',  NA),
+      "{prefix}top_001" := if_else(.pctile > 0.9999, 'Top 0.01%', NA)
     ) %>%
     select(-.rank_val, -.pctile)
 }

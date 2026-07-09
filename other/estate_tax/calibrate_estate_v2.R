@@ -47,7 +47,7 @@ source(file.path(dirname(sub('--file=', '', grep('--file=', commandArgs(), value
 # Configuration
 #-------------------------------------------------------------------------------
 
-TAX_DATA_ROOT = '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1/2026060918/baseline'
+TAX_DATA_ROOT = '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1/2026070814/baseline'
 MACRO_ROOT    = '/nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections/v3/2026022522/baseline'
 SCRIPT_DIR    = dirname(sub('--file=', '', grep('--file=', commandArgs(), value = TRUE)))
 SOI_PATH      = file.path(SCRIPT_DIR, 'estate_tax_filed_2016_2023.csv')

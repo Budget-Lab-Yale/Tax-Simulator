@@ -159,12 +159,6 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     runscript$excess_growth_all_rev = 0
   }
 
-  # Add nonspecified corporate incidence labor-share phase-in length, in years
-  # (0 = first year takes the long-run labor share with no phase-in)
-  if (!('corp_incidence_phasein' %in% colnames(runscript))) {
-    runscript$corp_incidence_phasein = 10
-  }
-
   # Wealth-dynamics financing inputs (src/sim/wealth_dynamics.R). The channel is
   # configured by a per-scenario FINANCING PROFILE -- a bracket-varying saving
   # share s(age, net-worth percentile) plus a transition matrix M -- resolved by
@@ -435,13 +429,6 @@ get_scenario_info = function(id) {
   excess_growth_start_year = runscript_items$excess_growth_start_year
   excess_growth_all_rev    = runscript_items$excess_growth_all_rev
 
-  # Corporate incidence labor-share phase-in length, in years (0 = no phase-in,
-  # i.e. the first year takes the long-run labor share). Defaults to 10 if blank.
-  corp_incidence_phasein = as.numeric(runscript_items$corp_incidence_phasein)
-  if (length(corp_incidence_phasein) == 0 || is.na(corp_incidence_phasein)) {
-    corp_incidence_phasein = 10
-  }
-
   # Wealth-dynamics financing inputs (resolved by wealth_dyn_resolve_profile()).
   # `wealth_financing` is a profile folder name (or 'none'/'off'); `s` is the flat
   # shorthand (s = 1 - MPC). Both pass through verbatim -- including s = NA (unset,
@@ -467,7 +454,6 @@ get_scenario_info = function(id) {
               excess_growth            = excess_growth,
               excess_growth_start_year = excess_growth_start_year,
               excess_growth_all_rev    = excess_growth_all_rev,
-              corp_incidence_phasein   = corp_incidence_phasein,
               s                        = s,
               wealth_financing         = wealth_financing))
 }

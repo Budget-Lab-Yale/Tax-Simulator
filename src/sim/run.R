@@ -166,6 +166,10 @@ do_scenario = function(ID, baseline_mtrs) {
     # Distribution tables
     build_distribution_tables(ID, baseline_id = 'baseline')
 
+    # ETR-levels distribution supplemental (accrual income defs + stock-based
+    # corporate-incidence conventions)
+    build_distribution_etrs(ID)
+
     # Time burden tables
     build_timeburden_table(ID)
 

@@ -1,0 +1,180 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>distribution_etrs smoke results</title><style>
+:root{
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --series-1:#2a78d6; --series-2:#1baf7a; --series-3:#eda100; --series-6:#e34948;
+  --good:#006300; --track:#efefe9; --chip:#f0efec;
+}
+@media (prefers-color-scheme:dark){:root{
+  --page:#0d0d0d; --surface:#1a1a19; --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+  --series-1:#3987e5; --series-2:#199e70; --series-3:#c98500; --series-6:#e66767;
+  --good:#0ca30c; --track:#242422; --chip:#242422;
+}}
+:root[data-theme=light]{
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --series-1:#2a78d6; --series-2:#1baf7a; --series-3:#eda100; --series-6:#e34948;
+  --good:#006300; --track:#efefe9; --chip:#f0efec;
+}
+:root[data-theme=dark]{
+  --page:#0d0d0d; --surface:#1a1a19; --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,0.10);
+  --series-1:#3987e5; --series-2:#199e70; --series-3:#c98500; --series-6:#e66767;
+  --good:#0ca30c; --track:#242422; --chip:#242422;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5;
+  -webkit-font-smoothing:antialiased;font-size:15px}
+.wrap{max-width:960px;margin:0 auto;padding:40px 24px 80px}
+h1{font-size:27px;line-height:1.2;margin:0 0 6px;letter-spacing:-0.01em}
+h2{font-size:19px;margin:44px 0 4px;letter-spacing:-0.01em}
+h2 .n{color:var(--muted);font-weight:600;margin-right:8px}
+.sub{color:var(--ink2);font-size:14px;margin:0 0 2px}
+.lede{color:var(--ink2);max-width:70ch;margin:8px 0 0}
+.meta{color:var(--muted);font-size:12.5px;margin-top:14px}
+.meta code{background:var(--chip);padding:1px 6px;border-radius:5px;font-size:12px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:20px 22px;margin-top:16px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:18px}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.tile .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.tile .v{font-size:22px;font-weight:650;margin-top:3px;letter-spacing:-0.01em;font-variant-numeric:tabular-nums}
+.tile .d{font-size:12.5px;color:var(--good);margin-top:2px;font-weight:600}
+.chart{margin:6px 0 2px}
+.brow{display:flex;align-items:center;gap:12px;margin:7px 0}
+.brow2{display:flex;align-items:center;gap:12px;margin:11px 0}
+.blab{flex:0 0 168px;font-size:13px;color:var(--ink2);text-align:right;font-variant-numeric:tabular-nums}
+.btrack{position:relative;flex:1;background:var(--track);border-radius:5px;height:22px;display:flex;align-items:center}
+.bstack{flex:1;display:flex;flex-direction:column;gap:3px}
+.bfill{height:22px;border-radius:5px;min-width:2px}
+.bstack .bfill{height:16px}
+.bstack .btrack{height:16px}
+.bval{position:absolute;right:auto;left:8px;font-size:12px;font-weight:600;color:var(--ink);
+  font-variant-numeric:tabular-nums;mix-blend-mode:normal;padding-left:2px}
+.bstack .bval{font-size:11px}
+.legend{display:flex;gap:18px;margin:2px 0 12px 180px;font-size:12.5px;color:var(--ink2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:11px;height:11px;border-radius:3px;display:inline-block}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin-top:6px}
+.tblwrap{overflow-x:auto}
+th,td{padding:7px 12px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;font-variant-numeric:normal}
+thead th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;
+  letter-spacing:.03em;border-bottom:1px solid var(--axis)}
+tbody tr{border-bottom:1px solid var(--grid)}
+tbody tr:last-child{border-bottom:none}
+tr.hi td{background:color-mix(in srgb,var(--series-1) 8%,transparent);font-weight:600}
+.callout{border-left:3px solid var(--series-1);background:color-mix(in srgb,var(--series-1) 6%,transparent);
+  padding:14px 18px;border-radius:0 10px 10px 0;margin-top:16px}
+.callout.warn{border-color:var(--series-3);background:color-mix(in srgb,var(--series-3) 9%,transparent)}
+.callout b{font-weight:650}
+.check{color:var(--good);font-weight:700;margin-right:4px}
+.small{font-size:12.5px;color:var(--muted)}
+hr{border:none;border-top:1px solid var(--grid);margin:34px 0}
+a{color:var(--series-1)}
+.toggle{position:fixed;top:14px;right:14px;background:var(--surface);border:1px solid var(--border);
+  color:var(--ink2);border-radius:8px;padding:6px 11px;font-size:12.5px;cursor:pointer;z-index:9}
+</style></head><body>
+<button class="toggle" onclick="var r=document.documentElement;var c=r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');r.setAttribute('data-theme',c==='dark'?'light':'dark')">◐ theme</button>
+<div class="wrap">
+
+<h1>ETR-levels supplemental &amp; stock-based corporate incidence</h1>
+<p class="sub">Smoke-run review · scenario <b>corp_perm</b> (permanent corporate-rate hike) · dist year <b>2028</b> · full sample</p>
+<p class="lede">The new <code>distribution_etrs.csv</code> reports effective tax rates as <b>levels</b>,
+baseline and policy side by side, under three income definitions and three corporate-incidence
+conventions. The corporate tax is now allocated on capital <b>stocks</b> (the Harberger base) —
+net equity, with owner-occupied housing entered as structure-only — replacing the old
+capital-<i>income</i> allocation, and with the labor-share phase-in retired.</p>
+
+<div class="tiles">
+<div class="tile"><div class="k">Output rows</div><div class="v">474</div><div class="d">all combos present</div></div>
+<div class="tile"><div class="k">Reconciliation</div><div class="v">exact</div><div class="d">level + delta to the ¢</div></div>
+<div class="tile"><div class="k">Top-1% corp share</div><div class="v">28.8%</div><div class="d">equity/supernormal</div></div>
+<div class="tile"><div class="k">Corp tax allocated</div><div class="v">$383B</div><div class="d">conserves across conv.</div></div>
+</div>
+<p class="meta">Source: <code>…/dist_etrs_smoke_v1/corp_perm/static/supplemental/distribution_etrs.csv</code>
+&nbsp;·&nbsp; OME <code>corp_test_20260703 / corp_rate_perm</code> &nbsp;·&nbsp; generated from the verification run</p>
+
+<h2><span class="n">1</span>Progressivity — ETR rises across the distribution</h2>
+<p class="sub">Expanded income · fixed ranking · 2028</p>
+<div class="card">
+<div class="small" style="margin-bottom:8px">Income + payroll ETR by income quintile (baseline law; policy is identical at this tier — the corporate change lands only in the top tier)</div>
+<div class="chart"><div class="brow"><div class="blab">Q1</div><div class="btrack"><div class="bfill" style="width:15.02%;background:var(--series-1)"></div><span class="bval">3.9%</span></div></div><div class="brow"><div class="blab">Q2</div><div class="btrack"><div class="bfill" style="width:25.54%;background:var(--series-1)"></div><span class="bval">6.6%</span></div></div><div class="brow"><div class="blab">Q3</div><div class="btrack"><div class="bfill" style="width:54.87%;background:var(--series-1)"></div><span class="bval">14.2%</span></div></div><div class="brow"><div class="blab">Q4</div><div class="btrack"><div class="bfill" style="width:67.39%;background:var(--series-1)"></div><span class="bval">17.5%</span></div></div><div class="brow"><div class="blab">Q5</div><div class="btrack"><div class="bfill" style="width:87.72%;background:var(--series-1)"></div><span class="bval">22.7%</span></div></div></div>
+</div>
+<div class="callout"><span class="check">✓</span> ETRs increase monotonically Q1→Q5
+(3.9% → 22.7%), confirming the levels table reproduces a progressive schedule.</div>
+
+<h2><span class="n">2</span>Tax-tier build-up (whole population)</h2>
+<p class="sub">Expanded income · equity/supernormal corporate convention · 2028</p>
+<div class="card"><div class="tblwrap"><table>
+<thead><tr><th>Taxes included</th><th>ETR baseline</th><th>ETR policy</th><th>Δ</th></tr></thead>
+<tbody><tr><td>Income tax</td><td>12.0%</td><td>12.0%</td><td>+0.00 pp</td></tr><tr><td>+ Payroll</td><td>20.2%</td><td>20.2%</td><td>+0.00 pp</td></tr><tr><td>+ Estate / deemed</td><td>19.7%</td><td>19.7%</td><td>+0.00 pp</td></tr><tr><td>+ Wealth / CIT / VAT</td><td>20.7%</td><td>21.0%</td><td>+0.31 pp</td></tr></tbody></table></div>
+<div class="small" style="margin-top:10px">Each row adds a tax base. Only the final row carries the corporate change; the policy raises the overall ETR by the corporate wedge spread across the economy.</div>
+</div>
+
+<h2><span class="n">3</span>Corporate incidence — the base convention matters</h2>
+<p class="sub">Share of the corporate tax borne by the income top&nbsp;1% · fixed (income) ranking · 2028</p>
+<div class="card">
+<div class="chart"><div class="brow"><div class="blab">Equity / supernormal</div><div class="btrack"><div class="bfill" style="width:50.78%;background:var(--series-1)"></div><span class="bval">28.8%</span></div></div><div class="brow"><div class="blab">Capital income</div><div class="btrack"><div class="bfill" style="width:87.72%;background:var(--series-2)"></div><span class="bval">49.7%</span></div></div><div class="brow"><div class="blab">Uniform net worth</div><div class="btrack"><div class="bfill" style="width:46.21%;background:var(--series-3)"></div><span class="bval">26.2%</span></div></div></div>
+<div class="legend">
+<span><span class="dot" style="background:var(--series-1)"></span>equity/supernormal</span>
+<span><span class="dot" style="background:var(--series-2)"></span>capital income</span>
+<span><span class="dot" style="background:var(--series-3)"></span>uniform net worth</span>
+</div>
+</div>
+<div class="callout warn"><b>Finding — a real income-ranking effect, opposite the plan's initial guess.</b>
+Under an <b>income</b> ranking, the <i>capital-income</i> base loads
+~50% of the corporate tax onto the income-top&nbsp;1% (they mechanically
+hold ~half of all capital income), whereas the <i>equity stock</i> base spreads it to
+~29% — because equity stock includes DC / retirement (0.55 weight) held
+more broadly than top incomes. The plan's "top-1% corporate ETR rises moving capital&nbsp;income →
+equity/supernormal" holds only under a <b>wealth</b> ranking, which this file doesn't emit.
+The 28.8% equity/supernormal share sits right in the SZ / TPC ~30–35% ballpark.</div>
+
+<h2><span class="n">4</span>Income definition — Haig-Simons deflates top rates</h2>
+<p class="sub">Top 1% · policy leg · equity/supernormal · fixed ranking · 2028</p>
+<div class="card">
+<div class="chart"><div class="brow"><div class="blab">AGI (statutory)</div><div class="btrack"><div class="bfill" style="width:87.72%;background:var(--series-1)"></div><span class="bval">32.0%</span></div></div><div class="brow"><div class="blab">Expanded income</div><div class="btrack"><div class="bfill" style="width:75.23%;background:var(--series-1)"></div><span class="bval">27.5%</span></div></div><div class="brow"><div class="blab">Haig-Simons accrual</div><div class="btrack"><div class="bfill" style="width:47.35%;background:var(--series-1)"></div><span class="bval">17.3%</span></div></div></div>
+<div class="small" style="margin-top:8px">Top-1% pre-tax income by definition:
+AGI $4,207B,
+expanded $4,905B, Haig-Simons $7,795B.</div>
+</div>
+<div class="callout"><span class="check">✓</span> The Haig-Simons top ETR (17.3%) falls well below the
+expanded-income top ETR (27.5%): marking gains to accrual inflates the top
+denominator with unrealized gains, so the same tax is a smaller share of a larger income.</div>
+
+<h2><span class="n">5</span>Reconciliation identity</h2>
+<p class="sub">Allocated corporate dollars vs. analytic expectation · equity/supernormal · 2028</p>
+<div class="card"><div class="tblwrap"><table>
+<thead><tr><th>Component</th><th>Expected</th><th>Observed</th><th></th></tr></thead>
+<tbody><tr><td>Corporate baseline LEVEL (rev_corp 2028 = $432.53B)</td><td>$291.96B</td><td>$291.96B</td><td><span class="check">✓</span> exact</td></tr><tr><td>Corporate reform DELTA (off-model wedge 2028 = $135.07B)</td><td>$91.17B</td><td>$91.17B</td><td><span class="check">✓</span> exact</td></tr><tr><td>Corporate reform TOTAL (level + delta)</td><td>$383.13B</td><td>$383.13B</td><td><span class="check">✓</span> exact</td></tr></tbody></table></div>
+<div class="small" style="margin-top:10px">Expected = amount × 0.675, where 0.675 = (1−σ)(1−foreign) + σ·½ + σ·½·(1−foreign),
+with σ&nbsp;=&nbsp;0.375 and the 40% foreign share dropped from the capital legs only (labor leg un-haircut).
+The corporate total is identical across all three conventions — only its <i>distribution</i> changes.</div>
+</div>
+
+<h2><span class="n">6</span>Headline ETR table</h2>
+<p class="sub">Expanded income · fixed ranking · equity/supernormal · full tier (iit + payroll + estate/deemed + wealth/CIT/VAT) · 2028</p>
+<div class="card"><div class="tblwrap"><table>
+<thead><tr><th>Group</th><th>Tax units</th><th>Income floor</th><th>ETR baseline</th><th>ETR policy</th><th>Δ</th></tr></thead>
+<tbody><tr><td>Overall</td><td>188.6M</td><td>—</td><td>20.7%</td><td>21.0%</td><td>+0.31 pp</td></tr><tr><td>Quintile 1</td><td>37.3M</td><td>$0</td><td>5.9%</td><td>6.1%</td><td>+0.14 pp</td></tr><tr><td>Quintile 2</td><td>37.3M</td><td>$24k</td><td>7.1%</td><td>7.2%</td><td>+0.17 pp</td></tr><tr><td>Quintile 3</td><td>37.3M</td><td>$47k</td><td>14.9%</td><td>15.1%</td><td>+0.19 pp</td></tr><tr><td>Quintile 4</td><td>37.3M</td><td>$82k</td><td>17.8%</td><td>18.0%</td><td>+0.21 pp</td></tr><tr><td>Quintile 5</td><td>37.3M</td><td>$151k</td><td>23.2%</td><td>23.6%</td><td>+0.36 pp</td></tr><tr><td>Top 10%</td><td>18.7M</td><td>$234k</td><td>24.4%</td><td>24.8%</td><td>+0.39 pp</td></tr><tr><td>Top 5%</td><td>9.3M</td><td>$338k</td><td>25.2%</td><td>25.6%</td><td>+0.41 pp</td></tr><tr class="hi"><td>Top 1%</td><td>1.9M</td><td>$855k</td><td>27.1%</td><td>27.5%</td><td>+0.39 pp</td></tr><tr><td>Top 0.1%</td><td>0.2M</td><td>$3.9M</td><td>28.4%</td><td>28.8%</td><td>+0.35 pp</td></tr></tbody></table></div>
+<div class="small" style="margin-top:10px">One slice of the cube; the file also carries AGI &amp; Haig-Simons definitions, self ranking, the
+capital-income &amp; uniform-net-worth conventions, and Age / Parent-status dimensions —
+474 rows in all.</div>
+</div>
+
+<hr>
+<p class="small">
+<b>Files.</b>
+Report: <code>other/distribution_etrs/dist_etrs_smoke_report.html</code> ·
+Output: <code>/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/dist_etrs_smoke_v1/corp_perm/static/supplemental/distribution_etrs.csv</code><br>
+<b>Caveats.</b> corp_perm carries no wealth tax or VAT, so those numerator pieces are zero here (the tiers still write).
+<code>CORP_ASSET_EXPOSURE</code>, σ<sub>N</sub>, and the 0.70 housing structure share are Phase-0c placeholders.
+Retiring the phase-in changes <code>distribution.csv</code> for every scenario on re-run.
+Verified via sbatch (never the login node).</p>
+</div>
+</body></html>

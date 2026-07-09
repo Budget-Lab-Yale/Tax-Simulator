@@ -1,0 +1,16 @@
+---
+# CG top rate +20pp (0.20 -> 0.4); enactment 2027
+rates:
+  value:
+    '2014': [0.0, 0.15, 0.20]
+    '2027': [0.0, 0.15, 0.4]
+kg_death_regime_equities:
+  value: 2
+kg_death_regime_pass_throughs:
+  value: 2
+kg_death_regime_primary_home:
+  value: 2
+kg_death_regime_other_home:
+  value: 2
+kg_death_regime_re_fund:
+  value: 2

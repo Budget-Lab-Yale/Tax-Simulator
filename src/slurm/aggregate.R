@@ -151,6 +151,10 @@ tryCatch({
     # Distribution tables
     build_distribution_tables(scenario_id, baseline_id = 'baseline')
 
+    # ETR-levels distribution supplemental (accrual income defs + stock-based
+    # corporate-incidence conventions)
+    build_distribution_etrs(scenario_id)
+
     # Time burden tables
     build_timeburden_table(scenario_id)
 

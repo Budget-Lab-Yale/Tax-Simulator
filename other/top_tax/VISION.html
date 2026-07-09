@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taxing the top: project vision v2</title>
+<style>
+  :root {
+    --ink: #1a1e24;
+    --muted: #5b6470;
+    --accent: #1f4e79;
+    --accent-soft: #eaf1f7;
+    --rule: #d8dde3;
+    --flag-bg: #fdf3e3;
+    --flag-edge: #c98a1b;
+    --gate-bg: #f6ecec;
+    --gate-edge: #a34343;
+    --bg: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.62 Georgia, 'Times New Roman', serif;
+  }
+  .page { max-width: 860px; margin: 0 auto; padding: 48px 28px 96px; }
+  header.doc { border-bottom: 3px solid var(--accent); padding-bottom: 18px; margin-bottom: 8px; }
+  h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 6px; color: var(--accent); }
+  .subtitle { font-size: 1.15rem; color: var(--muted); margin: 0; font-style: italic; }
+  .preamble {
+    font-size: 0.95rem; color: var(--muted); font-style: italic;
+    border-left: 3px solid var(--rule); padding: 4px 0 4px 16px; margin: 22px 0 34px;
+  }
+  h2 {
+    font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 1.35rem;
+    color: var(--accent); margin: 48px 0 14px; padding-top: 10px;
+    border-top: 1px solid var(--rule);
+  }
+  h3 {
+    font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 1.05rem;
+    margin: 30px 0 8px;
+  }
+  p { margin: 0 0 14px; }
+  ul, ol { margin: 0 0 16px; padding-left: 26px; }
+  li { margin-bottom: 7px; }
+  li > ul, li > ol { margin-top: 7px; }
+  strong { color: #000; }
+  code {
+    font: 0.85em/1.4 'SF Mono', Menlo, Consolas, monospace;
+    background: #f2f4f6; padding: 1px 5px; border-radius: 3px;
+    white-space: nowrap;
+  }
+  .tablewrap { overflow-x: auto; margin: 18px 0 24px; }
+  table {
+    border-collapse: collapse; width: 100%;
+    font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 0.88rem;
+  }
+  th {
+    text-align: left; background: var(--accent-soft); color: var(--accent);
+    padding: 8px 10px; border-bottom: 2px solid var(--accent); vertical-align: bottom;
+  }
+  td { padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  tr:nth-child(even) td { background: #fafbfc; }
+  .authorcall {
+    display: inline-block; font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+    background: var(--flag-bg); color: var(--flag-edge);
+    border: 1px solid var(--flag-edge); border-radius: 3px;
+    padding: 1px 7px; vertical-align: 1px;
+  }
+  .gate {
+    display: inline-block; font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em;
+    background: var(--gate-bg); color: var(--gate-edge);
+    border: 1px solid var(--gate-edge); border-radius: 3px;
+    padding: 1px 7px; vertical-align: 1px;
+  }
+  .meta-note {
+    font-size: 0.92rem; color: var(--muted); font-style: italic;
+  }
+  .toc {
+    background: var(--accent-soft); border-radius: 6px; padding: 18px 24px;
+    margin: 26px 0 10px; font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 0.92rem;
+  }
+  .toc b { color: var(--accent); display: block; margin-bottom: 8px; font-size: 0.8rem;
+    text-transform: uppercase; letter-spacing: 0.08em; }
+  .toc ol { margin: 0; padding-left: 22px; column-count: 2; column-gap: 36px; }
+  .toc li { margin-bottom: 4px; }
+  .toc a { color: var(--ink); text-decoration: none; }
+  .toc a:hover { color: var(--accent); text-decoration: underline; }
+  @media (max-width: 620px) { .toc ol { column-count: 1; } }
+  @media print {
+    .page { max-width: none; padding: 0; }
+    h2 { break-after: avoid; }
+    .tablewrap { overflow: visible; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="doc">
+  <h1>Taxing the top: how much is really there?</h1>
+  <p class="subtitle">Project vision, v2 &mdash; 2026-07-08</p>
+</header>
+
+<p class="preamble">Fresh start after the 2026-07-08 reset. Everything that came
+before lives in <code>other/top_tax/archive/</code> (prospectus, design lock,
+&sigma; build plan, codex review, validation outputs). The &sigma; machinery and
+all other model channels built during that phase remain live in the codebase
+&mdash; this document is about what we <em>do</em> with them. Where this document
+assigns a decision to the author it is marked
+<span class="authorcall">AUTHOR CALL</span>; everything else is a working default
+that can be overturned cheaply.</p>
+
+<p style="background:var(--accent-soft);border-left:4px solid var(--accent);padding:12px 18px;margin:0 0 26px;font-size:0.95rem;">
+<strong>STATUS (updated 2026-07-08).</strong> Credibility gates triaged
+(&sect;6): gate 1 (hidden-wealth consistency) <strong>BUILT</strong> (commit
+<code>7b46a169c</code>), gates 3 &amp; 5 cleared, gate 2 (estate own-rate
+response) parked, gate 4 (corporate constants) proceeds, gate 6 (migration) a
+late memo. <strong>No open gate blocks the &sect;A run campaign</strong> &mdash;
+that is the live next step. The deliverable shape (&sect;4) is still being
+refined with the author.</p>
+
+<nav class="toc">
+  <b>Contents</b>
+  <ol>
+    <li><a href="#s1">The research question</a></li>
+    <li><a href="#s2">The full object, before any pruning</a></li>
+    <li><a href="#s3">What the model has (inventory)</a></li>
+    <li><a href="#s4">The deliverable: sections as projections</a></li>
+    <li><a href="#s5">What is deliberately discarded</a></li>
+    <li><a href="#s6">Analytical prerequisites (gates)</a></li>
+    <li><a href="#s7">Sequencing proposal</a></li>
+    <li><a href="#s8">Consolidated author decisions</a></li>
+  </ol>
+</nav>
+
+<h2 id="s1">1. The research question</h2>
+
+<p><strong>How much additional revenue is actually available at the top of the
+income and wealth distribution?</strong></p>
+
+<p>Progressive tax agendas propose raising revenue from the same small group of
+people through several statutes at once: top ordinary rates, capital gains
+rates, the treatment of gains at death, the estate tax, a wealth tax, the
+corporate tax, QBI repeal, NIIT expansion. Scoring each proposal in isolation
+and summing overstates the combined capacity, because the bases overlap
+mechanically (the same dollar of wealth is capital income during life, estate at
+death, wealth-tax base in between, and corporate profit upstream) and
+behaviorally (avoidance re-routes income between bases; evasion removes it).</p>
+
+<p>The model now closes these loops on actual record-level balance sheets rather
+than through assumed elasticities: realization behavior that responds to the
+death regime (kg Bellman), a saving-financing channel that drains during-life
+taxes out of future capital-income/estate/wealth bases (the bathtub), an
+on-model corporate incidence channel with an endogenous individual-side offset,
+entity shifting across the C/PT boundary, income conversion into the
+unrealized-gain state (&sigma;), evasion as a leak, and charitable responses.
+The question is answerable in a way it was not before. What remains open is how
+to <em>state the answer</em> &mdash; that is what this document designs.</p>
+
+<h2 id="s2">2. The full object, before any pruning</h2>
+
+<p>Every exhibit we could produce is a projection of one object. Stating it
+explicitly forces every pruning decision into the open.</p>
+
+<p>For a policy package <strong>x</strong> = (top ordinary rate, top CG rate,
+death regime, estate params, wealth-tax params, corporate rate, QBI, NIIT,
+&hellip;) the model produces:</p>
+
+<ul>
+  <li><strong>R(x, t, h)</strong> &mdash; revenue by calendar year <em>t</em> and
+  by tax head <em>h</em> (individual income, payroll, capital gains within IIT,
+  estate, wealth, corporate), under two run types (static = law-only;
+  conventional = with all behavioral/mechanical channels).</li>
+  <li><strong>A mechanism account</strong> of the static&minus;conventional
+  wedge, decomposable by channel: realization response, entity shifting,
+  conversion (&sigma;), evasion, charity, bathtub financing, corporate offset.
+  <em>This taxonomy is model-defined, not God-given</em> &mdash; the bathtub is
+  mechanical in implementation but rides on a calibrated saving profile;
+  &sigma; is conservation (dollars resurface in later years under a different
+  head), evasion is a leak (they don't); the corporate offset is neither. Any
+  exhibit that aggregates these owes the reader the definitions.</li>
+  <li><strong>E(x)</strong> &mdash; the incidence cube: effective tax rates in
+  LEVELS, baseline and reform side by side, by income group &times; income
+  definition {AGI, expanded, Haig-Simons} &times; ranking {fixed, self} &times;
+  cumulative tax tier {IIT &rarr; +payroll &rarr; +death taxes &rarr;
+  +wealth/CIT/VAT} &times; corporate-incidence convention {equity-supernormal,
+  capital-income, uniform-net-worth}, with component ETRs by tax type. This
+  exists as of 2026-07-08:
+  <code>static/supplemental/distribution_etrs.csv</code> per scenario.</li>
+  <li><strong>Parameter dependence &theta;</strong> &mdash; everything above is
+  conditional on the behavioral bundle (&sigma;, evasion elasticities,
+  wealth-avoidance parameters, entity-shifting semi-elasticity, s-profile,
+  CORP_* constants, &psi;). Some of these are calibrated, some asserted, some
+  placeholders (&sect;6).</li>
+</ul>
+
+<p>Dimensions any exhibit must either display or knowingly integrate out:</p>
+
+<ol>
+  <li><strong>Intensity.</strong> Interactions are curve shifts, not scalars.
+  The effect of step-up repeal on CG revenue depends on where on the CG rate
+  schedule you evaluate it.</li>
+  <li><strong>Horizon.</strong> The bathtub compounds; estate and wealth
+  interactions grow with the window. Year-10 and year-30 interaction structures
+  differ, and the divergence is a finding (&ldquo;wealth taxes look better in
+  the window than in the steady state&rdquo;), not a nuisance. Both horizons,
+  everywhere.</li>
+  <li><strong>Tax head.</strong> A wealth tax doesn't just &ldquo;lose revenue
+  to the estate-tax overlap&rdquo; &mdash; it collects part of the estate base
+  early, moves IIT receipts across decades. Cross-head accounting is richer and
+  more honest than a leakage number.</li>
+  <li><strong>Mechanism.</strong> Mechanical base erosion &ne; avoidance
+  re-routing &ne; evasion leak. Conflating them flattens the paper's actual
+  contribution.</li>
+  <li><strong>Order/attribution.</strong> With the endogenous corporate offset,
+  stacked attribution is not order-invariant. Package totals against a common
+  baseline are the only convention-free numbers; any decomposition of a package
+  into lever contributions requires a stated convention.</li>
+  <li><strong>Incidence.</strong> Revenue and effective rates are dual: revenue
+  = &Sigma; ETR &times; income across the distribution. A capacity claim in
+  dollars has an exact restatement in delivered effective rates on top economic
+  income.</li>
+  <li><strong>Parameter uncertainty.</strong> Every number is conditional on
+  &theta;. Bands, not points, wherever &theta; is soft.</li>
+</ol>
+
+<h2 id="s3">3. What the model has (inventory and status)</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>Channel / capability</th><th>Where</th><th>Status</th></tr>
+  <tr>
+    <td>Realization Bellman + death regimes (step-up / carryover / deemed)</td>
+    <td><code>kg_dynamics</code></td>
+    <td>Production; recalibrated under 0.5 applier rule; provenance-guarded</td>
+  </tr>
+  <tr>
+    <td>&tau;_eq(age, year) &mdash; PV tax per $ entering the gain state</td>
+    <td>kg machinery, <code>sigma_conversion.R</code></td>
+    <td>Built, finite-difference-verified. Current law: ~9.4% (age 18) falling
+    to ~5.8% (age 66) vs ~24% statutory top CG &mdash; the quantified price of
+    deferral + step-up</td>
+  </tr>
+  <tr>
+    <td>Wealth bathtub (saving-financing &rarr; estate/cap-income/wealth bases)</td>
+    <td><code>wealth_dynamics.R</code></td>
+    <td>Production; default s-profile calibrated 2026-07-07</td>
+  </tr>
+  <tr>
+    <td>Corporate incidence (flows, markdown, kg, endogenous offset)</td>
+    <td><code>corp_incidence.R</code></td>
+    <td>Code complete + verified; <strong>CORP_* constants are Phase-0c
+    placeholders</strong></td>
+  </tr>
+  <tr>
+    <td>Entity shifting (C &harr; PT)</td>
+    <td><code>entity_shifting/pearce_prisinzano.R</code></td>
+    <td>Hardened 2026-07-08 (SECA co-scaling, guards, conservation diag)</td>
+  </tr>
+  <tr>
+    <td>Income conversion &sigma; (salary &rarr; unrealized gain state)</td>
+    <td><code>sigma_conversion.R</code> + <code>conversion/sigma.R</code></td>
+    <td>Built; &sigma; = 0.08 residual-calibrated to full-stack top ETI 0.25,
+    <strong>conditional on the rest of the stack</strong> (staleness guard in
+    code)</td>
+  </tr>
+  <tr>
+    <td>Evasion (DHY visibility-gated leak)</td>
+    <td><code>evasion/debacker.R</code></td>
+    <td>Built; top-end multiplier sweepable</td>
+  </tr>
+  <tr>
+    <td>Charity (tax-price)</td>
+    <td><code>charity/*</code></td>
+    <td>Production</td>
+  </tr>
+  <tr>
+    <td>Wealth-tax base + avoidance + <strong>hidden ledger</strong></td>
+    <td><code>calc_wealth</code> + <code>wealth/avoidance.R</code></td>
+    <td>Production; avoidance elasticities author-accepted;
+    <strong>hidden-ledger concealment BUILT 2026-07-08</strong> (gate 1) &mdash;
+    avoidance now shrinks reported income + estate bases too,
+    <code>evasion&rarr;wealth</code> link, &chi; env knobs</td>
+  </tr>
+  <tr>
+    <td>Estate tax (on-model, heir allocator)</td>
+    <td><code>estate.R</code>, allocator</td>
+    <td>Production; mechanical <strong>+ concealment haircut</strong> via
+    <code>estate_concealed_frac</code>; still <strong>no own-rate behavioral
+    response</strong> (gate 2, parked)</td>
+  </tr>
+  <tr>
+    <td>ETR-levels incidence cube</td>
+    <td><code>distribution_etrs.R</code></td>
+    <td>Built + smoke-verified 2026-07-08; corp-alloc stock keys have
+    placeholder exposures</td>
+  </tr>
+  <tr>
+    <td>Policy levers (QBI, NIIT include_active, estate/wealth yaml,
+    tax_at_ord, death regime per asset class)</td>
+    <td>yaml</td>
+    <td>Production</td>
+  </tr>
+</table>
+</div>
+
+<p>Resolved loose end: the archived validation exhibit's full-stack
+own-ordinary elasticity of 0.431 was a <strong>stale number</strong> &mdash;
+produced at &sigma; = 0.6 before the recalibration to &sigma; = 0.08 (the
+confirming top-ETI measurement of 0.2505 came after). No live contradiction;
+the exhibit just needs regenerating at the calibrated &sigma; whenever we next
+touch validation. Not a blocker.</p>
+
+<h2 id="s4">4. The deliverable: report sections as explicit projections</h2>
+
+<p>Audience: informed general public for the report body; an interactive layer
+for practitioners. Every section below states what it shows and what it
+integrates out.</p>
+
+<h3>&sect;A. Standalone revenue schedules (the greenbook layer)</h3>
+
+<p>Each instrument alone, at 3&ndash;5 intensities, both horizons, conventional
+and static. ~30&ndash;40 runs, reusable beyond this project.</p>
+
+<p class="meta-note"><em>Integrates out:</em> interactions (by construction
+&mdash; that's its job as the reference surface). <em>Discloses:</em> the
+&theta;-bundle in force.</p>
+
+<h3>&sect;B. Conditional revenue schedules (the interaction layer)</h3>
+
+<p>The generalization of &ldquo;CG raises more without step-up&rdquo; that keeps
+intensity structure: for each economically motivated ordered pair (i | j), the
+full revenue schedule of instrument <em>i</em> re-run with <em>j</em> at central
+intensity &mdash; plotted against the &sect;A standalone schedule. The reader
+sees the whole curve shift and where it bends, not a scalar. Candidate pairs
+(~10&ndash;14, chosen for economic content, not factorial completeness):</p>
+
+<ul>
+  <li>CG rate | death regime (the crown-jewel pair &mdash; the realization
+  elasticity is policy-dependent and we derive it)</li>
+  <li>CG rate | corporate rate (upstream base erosion)</li>
+  <li>Top ordinary | CG + death regime (the &sigma; wedge: closing the
+  capital-side exit raises the ordinary-rate yield)</li>
+  <li>Estate | wealth tax (same stock, death vs. annual timing)</li>
+  <li>Wealth tax | CG rate (bathtub + reported-base interactions)</li>
+  <li>Estate | CG-at-death treatment (deemed realization cannibalizes the estate
+  base)</li>
+  <li>Corporate | top ordinary (entity-shifting boundary)</li>
+  <li>QBI | top ordinary</li>
+</ul>
+
+<p>A summary interaction matrix (cell = % change in i's 10-yr yield at central
+intensity when j is on) goes to the <strong>appendix</strong>, with its
+convention stated &mdash; it is a compression of &sect;B, not a headline.</p>
+
+<p class="meta-note"><em>Integrates out:</em> higher-order interactions, horizon
+in the matrix cells (fix by showing 10y and 30y matrices).
+<span class="authorcall">AUTHOR CALL</span> the pair list.</p>
+
+<h3>&sect;C. Coherent packages and cross-head accounting</h3>
+
+<p>Not a 5,500-run factorial. Three to five <strong>named, internally coherent
+packages</strong> at escalating ambition &mdash; e.g. <em>Rates-only</em> (push
+statutory rates, change no structure), <em>Base-first</em> (step-up repeal, QBI,
+NIIT before rate hikes), <em>Full-stack</em> (rates + structure +
+estate/wealth), possibly a <em>Rates-only-pushed-to-match</em> variant that hits
+Full-stack's revenue on rates alone (if it can at all &mdash; its failure is the
+finding). For each package:</p>
+
+<ol>
+  <li><strong>Package total vs. sum of standalone parts</strong>, both horizons
+  &mdash; the overstatement quantified, in dollars and percent.</li>
+  <li><strong>Revenue by tax head by year</strong> &mdash; where the dollars
+  actually arrive, under which statute, in which decade. A stacked-area exhibit
+  per package. This replaces the Sankey: it is the same information without
+  inventing a leakage taxonomy for the headline.</li>
+  <li><strong>Mechanism decomposition</strong> of the static&minus;conventional
+  wedge by channel, with definitions, as a table (not a ribbon chart).</li>
+</ol>
+
+<p>Attribution of the parts-vs-whole gap to specific pairs:
+<span class="authorcall">AUTHOR CALL</span> between (a) pairwise-from-&sect;B +
+explicit &ldquo;higher-order + ordering&rdquo; residual (cheap, honest, residual
+can be large) and (b) Shapley over levers (order-invariant and complete;
+2<sup>k</sup> runs per package &mdash; feasible for k&le;8 at ~256 runs/package,
+but only for a subset of packages). Default: (a) for all packages, (b) once, for
+the Full-stack package, as a check on the residual.</p>
+
+<h3>&sect;D. The effective-rate statement (the new ETR work &mdash; the centerpiece candidate)</h3>
+
+<p>Revenue totals answer &ldquo;how much money&rdquo;; they are horizon-tangled
+and attribution-dependent. The dual question &mdash; <strong>what effective tax
+rate does each package actually deliver on the true economic income of the top,
+and how far short of the statutory push does it land?</strong> &mdash; is
+cleaner, and as of this week the model answers it natively.
+<code>distribution_etrs.csv</code> gives, for every scenario: ETR levels
+(baseline and reform side by side) by income group, under a
+<strong>Haig-Simons income definition</strong> (accrued gains in the denominator
+&mdash; the concept behind the &ldquo;billionaires pay 8%&rdquo; genre of
+claims, now computable under counterfactual policy), with the corporate tax
+allocated under three conventions and taxes accumulated in tiers (IIT &rarr;
++payroll &rarr; +death &rarr; +wealth/CIT/VAT) with component ETRs by tax
+type.</p>
+
+<p>Proposed exhibits:</p>
+
+<ol>
+  <li><strong>Delivered-vs-statutory:</strong> for each package (and along one
+  or two &sect;B intensity ladders), the top-0.1%/top-1% Haig-Simons ETR,
+  baseline vs. reform, against the statutory top rates the package legislates.
+  The vertical gap between &ldquo;what the law says&rdquo; and &ldquo;what lands
+  on economic income&rdquo; &mdash; and how the <em>structure</em> levers (death
+  regime, QBI, NIIT) close it while pure rate levers mostly don't &mdash; is the
+  paper's thesis in incidence units, with no leakage taxonomy required.</li>
+  <li><strong>ETR by percentile, current law vs. named packages</strong>, at the
+  all-taxes-in tier, HS definition, with the three corporate conventions as a
+  visible robustness band rather than a footnote. (We already know the
+  conventions matter: under income ranking, the capital-income convention puts
+  ~50% of the corporate tax on the top 1% vs ~29% under equity-supernormal
+  &mdash; that spread IS content for this audience.)</li>
+  <li><strong>Component stack at the top:</strong> for the top 0.1%, the
+  component-ETR decomposition (IIT / payroll / death / wealth / corporate) under
+  each package &mdash; the incidence-side mirror of &sect;C's
+  revenue-by-head.</li>
+</ol>
+
+<p>One honest limitation to resolve: the ETR file is
+<strong>static-sourced</strong> (house convention D20 &mdash; distribution is a
+static concept). So the ETRs show the law-only incidence; behavioral re-routing
+(conversion, evasion, bathtub erosion) does not shrink the numerator. For THIS
+project the gap between the statutory-incidence ETR and the behavior-inclusive
+delivered rate is close to the point. <span class="authorcall">AUTHOR CALL</span>
+build a conventional-side ETR variant (same cube measured on conventional detail
+&mdash; machinery exists, convention change only) so &sect;D can show
+<em>statutory rate &rarr; static ETR &rarr; delivered-after-behavior ETR</em> as
+a two-stage shortfall; or keep D20 strictly and state the limitation. Default:
+build the variant, label it clearly as a departure from the distribution
+convention, report both.</p>
+
+<p class="meta-note"><em>Integrates out:</em> year-by-year timing (ETR snapshots
+at 2&ndash;3 display years); within-group heterogeneity. <em>Gate:</em>
+corp-alloc placeholder exposures (&sect;6).</p>
+
+<h3>&sect;E. Robustness and uncertainty</h3>
+
+<ul>
+  <li>&theta;-bands on headline numbers: &sigma;, evasion top-multiplier,
+  wealth-avoidance parameters, s-profile, CORP_* corners. Bands enter as ranges
+  on the &sect;C/&sect;D headline exhibits, not as a separate 40-page
+  appendix.</li>
+  <li><strong>Migration/expatriation:</strong> off-model haircut band on
+  wealth/estate-lever yields (the critics' first objection; a module is not
+  warranted for v1).</li>
+  <li>The &sigma;-conditionality statement: &sigma; = 0.08 is a residual
+  conditional on the rest of the stack; re-derive if any stack component changes
+  (guard exists in code).</li>
+  <li>Full parameter table: every behavioral parameter, value, provenance,
+  status (calibrated / asserted / placeholder). This is where the archived codex
+  review's &ldquo;citation crosswalk&rdquo; requirement lands, once, before
+  publication.</li>
+</ul>
+
+<h3>&sect;F. The interactive layer (for the nerds)</h3>
+
+<p>Serves the <em>object</em>, not a toy: pick a package &rarr; see its &sect;C
+revenue-by-head time paths, its parts-vs-whole comparison, its &sect;D ETR
+profile, at both horizons, with the &theta;-band. The run set behind it is
+&sect;A + &sect;B + &sect;C (order ~100&ndash;200 runs, not 5,500). A
+slider-per-lever full-factorial explorer is explicitly out of scope for v1
+&mdash; exact runs only, over the exhibits' actual support.
+<span class="authorcall">AUTHOR CALL</span> whether the explorer ships at all in
+v1 or the report links run-level CSVs.</p>
+
+<h2 id="s5">5. What &sect;4 deliberately discards (the pruning, stated)</h2>
+
+<ul>
+  <li><strong>Full-factorial coverage</strong> (the archived ~5,500-run
+  campaign): replaced by economically chosen pairs + named packages. We lose the
+  ability to quote arbitrary 4-lever combinations; we keep everything the
+  exhibits actually show, exactly.</li>
+  <li><strong>Revenue-maximization / frontier framing:</strong> stays dropped
+  (2026-07-07 ruling stands). &ldquo;Capacity&rdquo; is bounded by the
+  delivered-ETR and parts-vs-whole exhibits, not by a Laffer argmax.</li>
+  <li><strong>Low/central/high elasticity bundles as separate full
+  grids:</strong> replaced by &theta;-bands on headline numbers (targeted
+  re-runs, not grid duplication).</li>
+  <li><strong>A single leakage-taxonomy headline chart (Sankey):</strong>
+  replaced by revenue-by-head accounting (&sect;C) + mechanism table with
+  definitions.</li>
+</ul>
+
+<h2 id="s6">6. Analytical prerequisites (credibility gates)</h2>
+
+<p class="meta-note">Triaged with the author 2026-07-08. Status in
+<strong>bold</strong>.</p>
+
+<ol>
+  <li><strong>Hidden-wealth cross-base consistency &mdash; &#9989; BUILT
+  2026-07-08.</strong> Was: wealth avoidance shrank only reported
+  <code>net_worth</code>, so hidden wealth still threw off taxable capital
+  income and still landed in the estate &mdash; biasing the wealth-tax
+  interaction toward zero. Now: the <strong>hidden ledger</strong>
+  (<code>hidden_ledger_design.md</code>, code audit
+  <code>reporting_vs_real_audit.md</code>) splits avoidance into concealment vs.
+  valuation and suppresses the correlated reported income flows (incl. a
+  realized-gain overlay) and the estate base, plus the reverse
+  <code>evasion&rarr;wealth</code> consistency link. &chi; shares are env knobs
+  (marketable = 1.0 all concealment; closely-held = 0.5). Verified: estate
+  &minus;$7&ndash;8B/yr, IIT &minus;$34&ndash;35B/yr, wealth-tax own revenue
+  unchanged, &chi;=0 no-op exact, conservation ~1e-15. Commit
+  <code>7b46a169c</code>. <em>Un-gates: &sect;B wealth rows, &sect;C Full-stack,
+  &sect;D wealth tier.</em></li>
+  <li><strong>Estate-tax own-rate responsiveness &mdash; PARKED (author,
+  2026-07-08).</strong> Still zero, so a mechanical estate
+  <em>rate/exemption</em> score overstates. The contained build
+  (Kopczuk&ndash;Slemrod reported-estate elasticity mirroring the avoidance
+  design + charitable-bequest response, currently frozen in <code>f_ded</code>)
+  is sketched but deferred. Note: the gate-1 concealment haircut already gives
+  the estate base a wealth-tax-driven response; this gate is specifically the
+  estate tax's response to <em>its own</em> rate. <em>Gates: standalone estate
+  rows.</em></li>
+  <li><strong>0.431-vs-0.2505 reconciliation &mdash; &#9989; RESOLVED (stale
+  number, &sect;3).</strong> Just regenerate the validation exhibit at
+  &sigma; = 0.08 when convenient. Not a blocker.</li>
+  <li><strong>Corporate constants &mdash; proceed as planned.</strong> CORP_*
+  Phase-0c placeholders + the &tau;_c &rarr; gross-receipts OME dependency for
+  corporate intensity ladders; the corp-alloc stock exposures in the ETR file
+  share the placeholder status. <em>Gates: corporate rows in &sect;A/&sect;B,
+  corp conventions in &sect;D.</em> Fallback if unresolved by run time:
+  corporate lever enters at 2&ndash;3 discrete OME-scored points with
+  placeholder status disclosed, and &sect;D leans on the convention band.</li>
+  <li><strong>Wealth-avoidance elasticities &mdash; &#9989; AUTHOR-ACCEPTED
+  (2026-07-08).</strong> The &minus;7 / &minus;17 centrals are accepted as
+  reasonable; the module header no longer flags them as extreme placeholders. A
+  &chi;_priv / elasticity sensitivity band is still good practice for published
+  numbers. <em>No longer gating.</em></li>
+  <li><strong>Migration haircut band</strong> (off-model, memo-sized, later).
+  <em>Gates: publication of wealth/estate headline numbers.</em></li>
+</ol>
+
+<p>Net: gate 1 done, gates 3 and 5 cleared, gate 4 proceeds, gate 2 parked,
+gate 6 is a late memo. <strong>No open gate blocks starting the &sect;A run
+campaign.</strong></p>
+
+<h2 id="s7">7. Sequencing proposal</h2>
+
+<ol>
+  <li><s>Gate work first</s> &mdash; mostly done: gate 1 built, gates 3/5
+  cleared. Only the parked estate-response build (gate 2) and the
+  corporate-constants work (gate 4) remain, and neither blocks &sect;A.</li>
+  <li><strong>&sect;A standalone schedules</strong> &mdash; the live next step
+  (they're needed under any design and stress the lever set end-to-end).</li>
+  <li><strong>&sect;D prototype early</strong> on &sect;A output: the
+  delivered-vs-statutory exhibit at 2&ndash;3 packages, placeholder corp
+  exposures disclosed. Cheap, and it tests whether the ETR statement carries the
+  headline weight this document bets it can. <strong>Includes the
+  conventional-ETR variant decision.</strong></li>
+  <li><strong>&sect;B pair runs &rarr; &sect;C packages &rarr; &sect;E
+  bands.</strong></li>
+  <li>Report + interactive layer last, on frozen runs.</li>
+</ol>
+
+<h2 id="s8">8. Consolidated author decisions</h2>
+
+<div class="tablewrap">
+<table>
+  <tr><th>#</th><th>Decision</th><th>Default in this doc</th></tr>
+  <tr><td>1</td><td>&sect;B pair list</td><td>the 8 pairs listed</td></tr>
+  <tr><td>2</td><td>Named packages (count, contents, names)</td>
+      <td>3&ndash;5, Rates-only / Base-first / Full-stack (+ Rates-to-match)</td></tr>
+  <tr><td>3</td><td>Gap attribution convention</td>
+      <td>pairwise + residual everywhere; Shapley once (Full-stack)</td></tr>
+  <tr><td>4</td><td>Conventional-side ETR variant (D20 departure)</td>
+      <td>build it, label it, report both</td></tr>
+  <tr><td>5</td><td>Explorer in v1</td>
+      <td>modest (serve exact runs), no factorial</td></tr>
+  <tr><td>6</td><td>Hidden-wealth fix: one concealment parameter or
+      concealment/valuation split</td>
+      <td>start one-parameter, design note decides</td></tr>
+  <tr><td>7</td><td>Estate elasticity anchor + range</td>
+      <td>Kopczuk&ndash;Slemrod, band</td></tr>
+  <tr><td>8</td><td>Corporate lever: wait for constants vs. ship discrete
+      disclosed points</td>
+      <td>discrete points if unresolved</td></tr>
+  <tr><td>9</td><td>Display years / horizons for &sect;D snapshots</td>
+      <td>2029 + 2035 + terminal, 10y &amp; 30y windows for &sect;A&ndash;&sect;C</td></tr>
+</table>
+</div>
+
+</div>
+</body>
+</html>

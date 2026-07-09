@@ -1,0 +1,3 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Tax-Data.vintage,dep.Tax-Data.ID,wealth_financing
+baseline,baseline,,2025:2027,,kg_lt,nextdollar,2026070814,baseline,none
+etr_check,baseline,,2025:2027,2026,kg_lt,nextdollar,2026070814,baseline,none

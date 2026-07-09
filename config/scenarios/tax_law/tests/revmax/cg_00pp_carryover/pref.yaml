@@ -1,0 +1,12 @@
+---
+# CG rate unchanged (regime-only anchor of the schedule)
+kg_death_regime_equities:
+  value: 1
+kg_death_regime_pass_throughs:
+  value: 1
+kg_death_regime_primary_home:
+  value: 1
+kg_death_regime_other_home:
+  value: 1
+kg_death_regime_re_fund:
+  value: 1
