@@ -207,6 +207,15 @@
   </div>
 </div></section>
 
+<section id="frontierSec"><div class="wrap">
+  <h2>The frontier: how much is there, at what price?</h2>
+  <p class="sec-sub">Every one of the 127 packages, placed by what it collects (horizontal) and its <b>leakage price</b> — the gap between its static and conventional scores per dollar actually collected (vertical). A package is <b>dominated</b> when another raises more revenue at a weakly lower leakage price; the undominated packages trace the frontier, which reads as a supply curve of top-end revenue. Below the zero line a package collects <i>more</i> than its static ask: taxing gains at death removes the incentive to defer realizations, and that efficiency gain anchors the frontier's first several trillion. Leakage price is a heuristic efficiency measure — offsets include cross-base shifts and timing, not only deadweight loss — and corporate figures ride a placeholder input.</p>
+  <div class="card">
+    <figure><div id="frontChart"></div></figure>
+    <div class="legend" id="frontLegend"></div>
+  </div>
+</div></section>
+
 <section id="atlas"><div class="wrap">
   <h2>Each rate policy on its own</h2>
   <p class="sec-sub">Standalone scores for the four rate policies. "Survives" is the conventional score as a share of the static score. Revenue is 10-year cumulative.</p>
@@ -419,6 +428,70 @@ var DATA=/*__ATLAS_DATA__*/null;
   }
   function headColor(k){var m={iit:'--h-iit',cg:'--h-cg',corp:'--h-corp',est:'--h-est',wealth:'--h-wealth',pay:'--h-pay',other:'--muted'};return 'var('+m[k]+')';}
 
+  // Frontier: all 127 packages in (conventional revenue, leakage price) space.
+  // leakage = (static - conv)/conv, in cents per collected dollar. A package is
+  // dominated if another raises more revenue at weakly lower leakage; the
+  // undominated set is found by a single descending-revenue sweep.
+  var FRONTD=null;
+  function frontierData(){
+    var pts=[];
+    Object.keys(DATA.combos).forEach(function(key){
+      var c=DATA.combos[key],bits=+key,st=c.static.total10,cv=c.conv.total10;
+      if(!(cv>0))return;
+      var etr=null;
+      if(c.etr&&c.etr.hs&&c.etr.hs[ETRYEAR]&&c.etr.hs[ETRYEAR]['Top 0.1%'])
+        etr=c.etr.hs[ETRYEAR]['Top 0.1%'].reduce(function(a,b){return a+b;},0);
+      pts.push({bits:bits,st:st,cv:cv,lk:100*(st-cv)/cv,etr:etr,
+        name:SW.filter(function(s){return bits&BIT[s.key];}).map(function(s){return s.key;}).join('+')});
+    });
+    var front=[],best=Infinity;
+    pts.slice().sort(function(a,b){return b.cv-a.cv;}).forEach(function(p){
+      if(p.lk<best-1e-9){front.push(p);best=p.lk;p.onFront=true;}});
+    front.reverse();
+    var emin=Infinity,emax=-Infinity;
+    pts.forEach(function(p){if(p.etr!==null){emin=Math.min(emin,p.etr);emax=Math.max(emax,p.etr);}});
+    return {pts:pts,front:front,emin:emin,emax:emax};
+  }
+  function dotColor(etr){ if(etr===null)return 'var(--muted)';
+    var t=(etr-FRONTD.emin)/((FRONTD.emax-FRONTD.emin)||1),p=Math.round(25+65*t);
+    return 'color-mix(in srgb,var(--accent) '+p+'%,var(--surface-2))'; }
+  function frontierChart(w,selBits){
+    var YMIN=-65,YMAX=62,h=460,pad={l:64,r:26,t:26,b:54},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
+    var xmax=0; FRONTD.pts.forEach(function(p){xmax=Math.max(xmax,p.cv);}); xmax*=1.05;
+    var X=function(v){return pad.l+v/xmax*iw;},
+        Y=function(v){return pad.t+(YMAX-Math.max(YMIN,Math.min(YMAX,v)))/(YMAX-YMIN)*ih;};
+    var s=svg(w,h);
+    s+='<rect x="'+pad.l+'" y="'+Y(0).toFixed(1)+'" width="'+iw+'" height="'+(Y(YMIN)-Y(0)).toFixed(1)+'" fill="var(--good)" opacity="0.05"/>';
+    for(var gx=0;gx<=xmax;gx+=1000){var xx=X(gx).toFixed(1);
+      s+='<line x1="'+xx+'" x2="'+xx+'" y1="'+pad.t+'" y2="'+(h-pad.b)+'" stroke="var(--grid)"/>';
+      s+='<text x="'+xx+'" y="'+(h-pad.b+16)+'" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="ui-monospace,monospace">'+(gx?('$'+(gx/1000)+'T'):'0')+'</text>';}
+    for(var gy=-60;gy<=60;gy+=20){var yy=Y(gy).toFixed(1);
+      s+='<line x1="'+pad.l+'" x2="'+(w-pad.r)+'" y1="'+yy+'" y2="'+yy+'" stroke="'+(gy===0?'var(--rule)':'var(--grid)')+'" stroke-width="'+(gy===0?1.5:1)+'"/>';
+      s+='<text x="'+(pad.l-8)+'" y="'+(+yy+3.5)+'" text-anchor="end" font-size="10" fill="var(--muted)" font-family="ui-monospace,monospace">'+(gy>0?'+':'')+gy+'¢</text>';}
+    s+='<text x="'+pad.l+'" y="'+(pad.t-10)+'" font-size="10.5" fill="var(--ink-2)" font-family="ui-monospace,monospace">behavioral leakage, ¢ per $ collected · below $0 line = collects more than the static ask</text>';
+    s+='<text x="'+(w-pad.r)+'" y="'+(h-12)+'" text-anchor="end" font-size="10.5" fill="var(--ink-2)" font-family="ui-monospace,monospace">conventional revenue, 10 years →</text>';
+    s+='<path d="'+FRONTD.front.map(function(p,i){return (i?'L':'M')+X(p.cv).toFixed(1)+' '+Y(p.lk).toFixed(1);}).join(' ')+'" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0.75"/>';
+    FRONTD.pts.forEach(function(p){
+      var cx=X(p.cv),cy=Y(p.lk),off=p.lk>YMAX,
+          tip=p.name+' — conventional '+fmt(p.cv)+' · static '+usd(p.st)+' · leakage '+(p.lk>=0?'+':'−')+Math.abs(Math.round(p.lk))+'¢/$'+(p.etr!==null?(' · top 0.1% accrual ETR '+p.etr.toFixed(1)+'%'):'')+(off?' · OFF SCALE':'');
+      if(off){s+='<path d="M'+(cx-5).toFixed(1)+' '+(pad.t+14)+' L'+(cx+5).toFixed(1)+' '+(pad.t+14)+' L'+cx.toFixed(1)+' '+(pad.t+4)+' Z" fill="'+dotColor(p.etr)+'"><title>'+tip+'</title></path>';return;}
+      s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(p.onFront?6:4.5)+'" fill="'+dotColor(p.etr)+'"'+(p.onFront?' stroke="var(--accent)" stroke-width="2"':' stroke="var(--surface)" stroke-width="1"')+'><title>'+tip+'</title></circle>';
+    });
+    if(selBits){var sp=FRONTD.pts.filter(function(p){return p.bits===selBits;})[0];
+      if(sp){var scy=sp.lk>YMAX?pad.t+12:Y(sp.lk);
+        s+='<circle cx="'+X(sp.cv).toFixed(1)+'" cy="'+scy.toFixed(1)+'" r="10" fill="none" stroke="var(--warn)" stroke-width="2.5"/>';
+        s+='<text x="'+(X(sp.cv)+14).toFixed(1)+'" y="'+(scy-11).toFixed(1)+'" font-size="10.5" font-weight="600" fill="var(--warn)" font-family="ui-monospace,monospace">your selection</text>';}}
+    [{bits:16,dx:10,dy:-8,anc:'start',t:function(p){return 'deemed alone · '+usd(p.cv)+' at −'+Math.abs(Math.round(p.lk))+'¢';}},
+     {bits:117,dx:-10,dy:-16,anc:'end',t:function(p){return 'all but cg & wealth · '+usd(p.cv)+' at '+Math.round(p.lk)+'¢';}},
+     {bits:120,dx:12,dy:16,anc:'start',t:function(p){return 'wealth joins · +'+Math.round(p.lk)+'¢';}},
+     {bits:127,dx:-12,dy:-14,anc:'end',t:function(p){return 'full stack · '+usd(p.cv)+' at +'+Math.round(p.lk)+'¢';}},
+     {bits:2,dx:10,dy:6,anc:'start',t:function(p){return 'cg alone · +'+Math.round(p.lk)+'¢, off scale';}}
+    ].forEach(function(a){var p=FRONTD.pts.filter(function(q){return q.bits===a.bits;})[0];if(!p)return;
+      var cx=X(p.cv),cy=p.lk>YMAX?pad.t+14:Y(p.lk);
+      s+='<text x="'+(cx+a.dx).toFixed(1)+'" y="'+(cy+a.dy).toFixed(1)+'" text-anchor="'+a.anc+'" font-size="10.5" font-weight="600" fill="var(--ink-2)" font-family="ui-monospace,monospace">'+a.t(p)+'</text>';});
+    return s+'</svg>';
+  }
+
   function combinedEtr(d,w){
     var comps=d.comps.map(function(k){return ETRCOMPS.filter(function(e){return e.k===k;})[0];});
     var groups=['baseline','static'],gl={baseline:'b',static:'s'};
@@ -518,6 +591,7 @@ var DATA=/*__ATLAS_DATA__*/null;
     $('#ledgerLegend').innerHTML=HEADS.filter(function(h){return (d.hs[h.k]||0)>0.5||(d.hc[h.k]||0)>0.5;}).map(function(h){return '<span class="it"><span class="sw2" style="background:'+h.c+'"></span>'+h.label+'</span>';}).join('');
     $('#etr').innerHTML=combinedEtr(d,widthOf('etr'));
     $('#etrLegend').innerHTML=ETRCOMPS.map(function(h){return '<span class="it"><span class="sw2" style="background:'+h.c+'"></span>'+h.l+'</span>';}).join('');
+    $('#frontChart').innerHTML=frontierChart(widthOf('frontChart'),d.bits);
   }
 
   function renderHero(){
@@ -560,6 +634,11 @@ var DATA=/*__ATLAS_DATA__*/null;
     ? 'Preview · '+DATA.meta.placeholder
     : 'Model output · '+vint+' · '+DATA.meta.n_combos+'/127 combos';
 
+  FRONTD=frontierData();
+  $('#frontLegend').innerHTML=
+    '<span class="it"><span style="display:inline-block;width:64px;height:10px;border-radius:3px;background:linear-gradient(to right,color-mix(in srgb,var(--accent) 25%,var(--surface-2)),color-mix(in srgb,var(--accent) 90%,var(--surface-2)))"></span>top 0.1% accrual ETR, '+FRONTD.emin.toFixed(0)+'% → '+FRONTD.emax.toFixed(0)+'%</span>'+
+    '<span class="it"><span class="sw2" style="background:transparent;border:2px solid var(--accent);border-radius:50%"></span>on the frontier</span>'+
+    '<span class="it mono" style="color:var(--muted)">▲ at chart top = leakage off scale · hover any point for its package</span>';
   renderControls();renderHero();renderAtlas();
   SW.forEach(function(s){state[s.key]=true;});renderAll();
   var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(renderAll,120);});
