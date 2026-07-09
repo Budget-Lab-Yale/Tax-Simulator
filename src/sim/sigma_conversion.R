@@ -48,7 +48,7 @@
 #     Sequential module order prevents double-moves.
 #-------------------------------------------------------------------------------
 
-SIGMA_CONV_VERSION = '2026-07-08 sigma build + ETI-0.25 central recalibration'
+SIGMA_CONV_VERSION = '2026-07-08 sigma build + ETI-0.25 central; re-derived under kg spec-v2 (unchanged 0.08)'
 
 #-------------------------------------------------------------------------------
 # SIGMA_CALIB_PROVENANCE
@@ -67,14 +67,25 @@ SIGMA_CONV_VERSION = '2026-07-08 sigma build + ETI-0.25 central recalibration'
 #   - CONFIRMED at sigma = 0.08  : ETI 0.2505 (vintage sigma_calib_confirm)
 # Measurement script: other/top_tax/tests/compute_top_eti.R.
 #
+# RE-DERIVED under the spec-v2 kg calibration (2026-07-08, entropy cost,
+# eta=4.4984 / omega=0.5132; vintage sigma_recal_eta). Result: UNCHANGED at
+# 0.08. Both legs reproduced the original within 0.0001 (sigma=0.60 -> ETI
+# 0.4312; no-sigma -> ETI 0.2229; solved sigma* = 0.6*(0.25-0.2229)/
+# (0.4312-0.2229) = 0.078 -> 0.08; CONFIRMED at sigma=0.08 -> ETI 0.2505,
+# vintage sigma_confirm_eta). This is expected and reassuring: the target
+# is the top ORDINARY-income ETI (O = txbl_inc - net gains), which EXCLUDES
+# capital-gains realizations, so the kg realization recalibration is orthogonal
+# to it. sigma and the kg Bellman calibrate on disjoint bases.
+#
 # STALENESS WARNING (kg-provenance-guard spirit): this value is CONDITIONAL
 # ON THE REST OF THE STACK. Entity shifting and evasion supply ~0.22 of the
 # 0.25 target by themselves, so sigma is calibrated as the RESIDUAL
 # conversion margin. Re-derive sigma (rerun the two legs above) whenever any
 # of the following change: the entity-shifting elasticity/parameters
 # (pearce_prisinzano.R), the evasion centrals (debacker.R), the charity
-# elasticity, the pool definition/gate in this file, KG_DYN_* calibration,
-# or the Tax-Data vintage (calibrated on 2026050315).
+# elasticity, the pool definition/gate in this file, or the Tax-Data vintage
+# (calibrated on 2026050315). (KG_DYN_* calibration proved orthogonal in the
+# 2026-07-08 re-derivation, but re-check if the pool ever starts taxing gains.)
 #
 # Substantive reading: the ETI evidence disciplines the TOTAL top response;
 # with P-P and DHY already in the stack, a large independent conversion

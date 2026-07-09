@@ -3,9 +3,10 @@
 # calibrate.sbatch
 #
 # SLURM wrapper for other/kg_model_tests/calibrate.R. Jointly bisects
-# KG_DYN_DEFAULT_PSI (long-run permanent semi-elasticity) and
-# KG_DYN_SHARE_PLANNED (short-run announced-shock semi-elasticity)
-# against the two targets declared in calibrate.R.
+# eta (KG_DYN_DEFAULT_ETA; long-run permanent semi-elasticity) and
+# omega (KG_DYN_TIMEABLE_FRAC; short-run announced-shock semi-elasticity)
+# against the two targets declared in calibrate.R. Phi (KG_DYN_SHARE_INERT)
+# is held fixed (env-overridable via KG_SHARE_INERT).
 #
 # Submit from repo root:
 #   sbatch other/kg_model_tests/calibrate.sbatch <baseline_root> [<macro_root>]

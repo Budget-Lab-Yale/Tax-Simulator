@@ -1,13 +1,15 @@
-suppressPackageStartupMessages({
-  library(data.table)
-  library(dplyr)
-  library(purrr)
-  library(readr)
-  library(tibble)
-})
-
-source('src/calc/functions/tax/estate.R')   # ESTATE_ASSET_COLS
-source('src/sim/kg_dynamics.R')
+# kg_dyn_aggregate_cells reaches into corp_incidence.R (corp_kg_state_exposed_value,
+# CORP_ASSET_EXPOSURE) and wealth_dynamics.R (wealth_dyn_safe_col), so load the
+# full requirements and source the whole src tree (the reconstitute_environment /
+# check_core.R convention) rather than a hand-picked file list.
+suppressPackageStartupMessages(
+  invisible(capture.output(
+    lapply(readLines('./requirements.txt'), library, character.only = TRUE))))
+library(purrr)
+return_vars <<- list()   # some src post-processing files reference this at source time
+list.files('./src', recursive = TRUE) %>%
+  walk(~ if (.x != 'main.R' && !startsWith(.x, 'slurm/') && !startsWith(.x, 'tests/'))
+         source(file.path('./src', .x)))
 
 tol = 8e-4
 estate_m = c(10, 50, 100, 200)
@@ -62,13 +64,13 @@ grid = list(
   p_char = matrix(0.25, 1, 1, dimnames = list('70', '2026'))
 )
 tau = matrix(0.2, 1, 1, dimnames = list('70', '2026'))
-with_char = kg_dyn_solve_bellman(grid, tau, c_phi_mat = 1, psi = 25,
+with_char = kg_dyn_solve_bellman(grid, tau, c_phi_mat = 1, eta = 5,
                                  phi_I = 0, planned_share = 0,
                                  beta_by_year = 1)
 without_char = kg_dyn_solve_bellman(
   list(m = grid$m, r_B = grid$r_B,
        p_char = matrix(0, 1, 1, dimnames = dimnames(grid$m))),
-  tau, c_phi_mat = 1, psi = 25, phi_I = 0, planned_share = 0,
+  tau, c_phi_mat = 1, eta = 5, phi_I = 0, planned_share = 0,
   beta_by_year = 1
 )
 stopifnot(with_char$MC[1, 1] > without_char$MC[1, 1])

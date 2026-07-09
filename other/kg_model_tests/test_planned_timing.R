@@ -109,10 +109,14 @@ grid_packed = list(
 )
 tau_mat = matrix(0.2, nrow = length(ages), ncol = 2,
                  dimnames = list(as.character(ages), as.character(years[1:2])))
-pass = kg_dyn_solve_bellman(grid_packed, tau_mat, c_phi = 0, psi = 25,
+pass = kg_dyn_solve_bellman(grid_packed, tau_mat, c_phi = 0, eta = 5,
                             phi_I = 0.4, planned_share = 0,
                             beta_by_year = c(0.96, 0.96))
-stopifnot(all(abs(pass$r_D - 0.6 * grid_packed$r_B) < 1e-12))
+# Pass-1 r_D = r_D_B = (1 - phi_I - planned) * r_B is form-independent (holds
+# for both the old quadratic cost and the entropy cost). Under the entropy
+# cost, Pass-1 additionally recovers kappa = MC exactly (C'(r_D_B) = 0).
+stopifnot(all(abs(pass$r_D - 0.6 * grid_packed$r_B) < 1e-12),
+          all(abs(pass$kappa - pass$MC) < 1e-12))
 
 # Friction: a 1pp delayed hike with default 5pp reference wedge moves only
 # 20% of next year's planned bucket (4 of 20) into the announcement year. The
@@ -158,5 +162,17 @@ stopifnot(inherits(try(kg_dyn_validate_realization_buckets(ref_wedge = 0),
                        silent = TRUE), 'try-error'),
           inherits(try(kg_dyn_validate_realization_buckets(ref_wedge = -0.01),
                        silent = TRUE), 'try-error'))
+
+# Validation: nested bucket primitives Phi/omega must lie in [0, 1] (spec v2).
+stopifnot(inherits(try(kg_dyn_validate_realization_buckets(share_inert = 1.5),
+                       silent = TRUE), 'try-error'),
+          inherits(try(kg_dyn_validate_realization_buckets(share_inert = -0.1),
+                       silent = TRUE), 'try-error'),
+          inherits(try(kg_dyn_validate_realization_buckets(timeable_frac = 1.5),
+                       silent = TRUE), 'try-error'),
+          inherits(try(kg_dyn_validate_realization_buckets(timeable_frac = -0.1),
+                       silent = TRUE), 'try-error'),
+          isTRUE(kg_dyn_validate_realization_buckets(share_inert = 0.5,
+                                                     timeable_frac = 0.4)))
 
 cat("planned timing tests passed\n")
