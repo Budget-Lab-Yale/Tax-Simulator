@@ -145,7 +145,7 @@
 <section id="explorer"><div class="wrap">
   <div class="sec-head"><p class="eyebrow">The explorer</p></div>
   <h2>Build a package. Watch the overlap.</h2>
-  <p class="sec-sub">Toggle any of the seven switches. Everything recomputes from the same underlying run — the overlap, where the money lands, how much survives behavior, and the effective rate it delivers across the distribution. Revenue is 10-year cumulative; switch between share of GDP and dollars with the toggle up top.</p>
+  <p class="sec-sub">Toggle any of the seven switches. Everything recomputes from the same underlying run — the overlap, where the money lands, how much survives behavior, and the effective rate across the distribution. Revenue is 10-year cumulative; switch between share of GDP and dollars with the toggle up top.</p>
 
   <div class="exp">
     <div class="panel controls">
@@ -183,12 +183,12 @@
       </div>
 
       <div class="card">
-        <div class="step">B/C/D · Effective rate by percentile</div>
-        <h3>What the top actually pays — statutory intent vs. delivered</h3>
-        <div class="cap">Haig-Simons ETR by percentile. Each group shows three bars — <b>baseline</b>, <b>static</b> (what the law mechanically implies), <b>conventional</b> (what's delivered) — stacked by tax type, with income tax split into ordinary vs. capital gains &amp; dividends. The static→conventional drop is the avoidance wedge; the dip at the very top is the unrealized-gains effect.</div>
+        <div class="step">B/C · Effective rate by percentile</div>
+        <h3>What the top pays — baseline vs. statutory intent</h3>
+        <div class="cap">Haig-Simons ETR by percentile. Each group shows two bars — <b>baseline</b> and <b>static</b> (what the law mechanically implies) — stacked by tax type. The dip at the very top is the unrealized-gains effect.</div>
         <figure><div id="etr"></div></figure>
         <div class="legend" id="etrLegend"></div>
-        <div class="legend" style="margin-top:6px"><span class="it mono" style="font-size:11px;color:var(--muted)">each percentile, left→right: baseline · static · conventional</span></div>
+        <div class="legend" style="margin-top:6px"><span class="it mono" style="font-size:11px;color:var(--muted)">each percentile, left→right: baseline · static</span></div>
       </div>
     </div>
   </div>
@@ -204,7 +204,7 @@
 <footer><div class="wrap">
   <p><strong>This is a layout mock.</strong> Every number is synthetic — generated client-side from a plausible overlap model so the controls behave. Real figures come from the 128-combo factorial (7 binary switches; effective 2027; 10-yr window 2027–2036) once the batch completes.</p>
   <p>Revenue can be shown as % of GDP (10-yr revenue ÷ 10-yr cumulative nominal GDP, ≈ $360T) or in dollars (10-yr cumulative), via the toggle up top. Switches: top ordinary +5pp · capital gains → 39.6% · corporate → 28% · wealth 1% &gt; $50M · deemed realization at death · estate $5M / 45% · repeal QBI.</p>
-  <p><strong>On "capital gains & dividends."</strong> It is not a separate receipt — the model books revenue into seven destinations (income tax, payroll, corporate, estate, wealth, VAT, other). It is the preferential-rate slice of the individual income tax (<span class="mono">liab_pref + §1250 + collectibles</span>, from <span class="mono">totals/1040.csv</span>, both legs), carved out for legibility; ordinary income tax is the residual, so credits park in the ordinary bucket. Qualified dividends ride with long-term gains; gains taxed at death under the deemed regime join this head.</p>
+  <p><strong>On "capital gains & dividends."</strong> It is not a separate receipt — the model books revenue into seven destinations (income tax, payroll, corporate, estate, wealth, VAT, other). It is the preferential-rate slice of the individual income tax (<span class="mono">liab_pref + §1250 + collectibles</span>, from <span class="mono">totals/1040.csv</span>, both legs), carved out for legibility <b>in the destination ledger only</b> (the effective-rate chart keeps income tax lumped, since the distribution pipeline is static-sourced and doesn't decompose it per percentile); ordinary income tax is the residual, so credits park in the ordinary bucket. Qualified dividends ride with long-term gains; gains taxed at death under the deemed regime join this head.</p>
 </div></footer>
 
 <script>
@@ -244,10 +244,7 @@
 
   var PCTS=['0–20','20–40','40–60','60–80','80–90','90–95','95–99','99–99.9','Top 0.1%'];
   var BASECOMP={
-    // income tax split into ordinary (iit) + preferential-rate gains & dividends (cg);
-    // the two sum to the old lumped income-tax profile, with cg top-concentrated
-    iit:[1.0,3.5,6.5,9.5,12.4,14.6,16.2,13.0,6.2],
-    cg:[0,0,0,0,0.1,0.4,1.3,3.5,5.3],
+    iit:[1.0,3.5,6.5,9.5,12.5,15.0,17.5,16.5,11.5],
     pay:[1.0,2.5,3.5,4.0,4.5,4.5,4.0,2.5,1.0],
     est:[0,0,0,0,0,0,0.1,0.3,0.5],
     wealth:[0,0,0,0,0,0,0,0,0],
@@ -258,9 +255,8 @@
     corp:[0,0,0.1,0.2,0.4,0.7,1.3,2.2,3.1], wealth:[0,0,0,0,0,0.1,0.6,2.6,6.2],
     deemed:[0,0,0,0,0,0.1,0.7,1.9,3.0], estate:[0,0,0,0,0,0,0.2,0.9,1.8], qbi:[0,0,0,0,0.1,0.5,1.4,1.6,1.1]
   };
-  var ETRCOMPS=[{k:'iit',c:'var(--h-iit)',l:'Individual income (ordinary)'},{k:'cg',c:'var(--h-cg)',l:'Capital gains & dividends'},
-    {k:'pay',c:'var(--h-pay)',l:'Payroll'},{k:'est',c:'var(--h-est)',l:'Estate / death'},
-    {k:'wealth',c:'var(--h-wealth)',l:'Wealth'},{k:'corp',c:'var(--h-corp)',l:'Corporate'}];
+  var ETRCOMPS=[{k:'iit',c:'var(--h-iit)',l:'Individual income'},{k:'pay',c:'var(--h-pay)',l:'Payroll'},
+    {k:'est',c:'var(--h-est)',l:'Estate / death'},{k:'wealth',c:'var(--h-wealth)',l:'Wealth'},{k:'corp',c:'var(--h-corp)',l:'Corporate'}];
 
   function compute(on){
     var keys=SW.map(function(s){return s.key;}).filter(function(k){return on[k];});
@@ -275,13 +271,13 @@
     var hs={},hc={}; HEADS.forEach(function(h){hs[h.k]=0;hc[h.k]=0;});
     keys.forEach(function(k){hs[HEAD[k]]+=STD[k].S; hc[HEAD[k]]+=C(k)*scale;});
     if(on.cg||on.deemed){var mv=hc.cg*0.14; hc.cg-=mv; hc.est+=mv*0.6; hc.wealth+=mv*0.4;}
-    // ETR components: baseline / static / conventional
-    var comps=['iit','cg','pay','est','wealth','corp'];
+    // ETR components: baseline / static (income tax lumped; no CG breakout here)
+    var comps=['iit','pay','est','wealth','corp'];
     var add={}; comps.forEach(function(c){add[c]=[0,0,0,0,0,0,0,0,0];});
     keys.forEach(function(k){
       for(var i=0;i<9;i++){
-        if(k==='deemed'){ add.cg[i]+=BUMP.deemed[i]*0.7; add.est[i]+=BUMP.deemed[i]*0.3; }
-        else if(k==='cg'){ add.cg[i]+=BUMP.cg[i]; }
+        if(k==='deemed'){ add.iit[i]+=BUMP.deemed[i]*0.6; add.est[i]+=BUMP.deemed[i]*0.4; }
+        else if(k==='cg'){ add.iit[i]+=BUMP.cg[i]; }
         else if(k==='ord'||k==='qbi'){ add.iit[i]+=BUMP[k][i]; }
         else if(k==='corp'){ add.corp[i]+=BUMP.corp[i]; }
         else if(k==='wealth'){ add.wealth[i]+=BUMP.wealth[i]; }
@@ -345,12 +341,12 @@
 
   function combinedEtr(d,w){
     var comps=d.comps.map(function(k){return ETRCOMPS.filter(function(e){return e.k===k;})[0];});
-    var groups=['baseline','static','conv'],gl={baseline:'b',static:'s',conv:'c'};
+    var groups=['baseline','static'],gl={baseline:'b',static:'s'};
     var n=PCTS.length,h=320,pad={l:34,r:12,t:16,b:46},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
     var maxv=0; for(var i=0;i<n;i++){groups.forEach(function(g){var t=0;comps.forEach(function(c){t+=d.etr[g][c.k][i];});if(t>maxv)maxv=t;});}
     maxv=Math.max(maxv*1.08,10);
     var Y=function(v){return pad.t+ih-(v/maxv)*ih;};
-    var gw=iw/n,bw=Math.min(16,gw*0.20),gap=gw*0.05,off=(gw-(3*bw+2*gap))/2;
+    var gw=iw/n,ng=groups.length,bw=Math.min(20,gw*0.28),gap=gw*0.07,off=(gw-(ng*bw+(ng-1)*gap))/2;
     var s=svg(w,h);
     for(var g=0;g<=maxv;g+=10){var y=Y(g);s+='<line x1="'+pad.l+'" x2="'+(w-pad.r)+'" y1="'+y+'" y2="'+y+'" stroke="var(--grid)" stroke-width="1"/>';
       s+='<text x="'+(pad.l-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="var(--muted)" font-family="ui-monospace,monospace">'+g+'%</text>';}
@@ -398,7 +394,7 @@
       tile('Naive sum',any?fmt(d.convParts):'—',any?fmtAlt(d.convParts):'',d.keys.length+' lever'+(d.keys.length===1?'':'s')+' summed'),
       tile('Actual package',any?fmt(d.actual):'—',any?fmtAlt(d.actual):'','run together',true),
       tile('Overlap gap',any?fmt(d.lost):'—',any?fmtAlt(d.lost):'',any?('−'+Math.round(100*d.lost/d.convParts)+'% vs. naive'):'nothing selected'),
-      tile('Top 0.1% ETR',d.totTop.conv.toFixed(1)+'%','',any?('+'+(d.totTop.conv-d.totTop.baseline).toFixed(1)+'pp vs. law · delivered'):'baseline')
+      tile('Top 0.1% ETR',d.totTop.static.toFixed(1)+'%','',any?('+'+(d.totTop.static-d.totTop.baseline).toFixed(1)+'pp vs. baseline · statutory'):'baseline')
     ].join('');
     var mx=Math.max(d.staticParts,1);
     $('#pvw').innerHTML=hbars([
