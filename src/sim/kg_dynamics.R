@@ -18,35 +18,41 @@
 #      pure allocator. Reads its year's state file and translates cell-level
 #      quantities to per-record kg_lt adjustments via kg_dyn_apply_to_records.
 #
-# Bellman primitives (spec v2, 2026-07: ENTROPY realization cost). The
-# representative cell maximizes per dollar of unrealized gain:
-#   W^j(a,t) = max_{r_D in [0, 1 - r_exog_B]} {
+# Bellman primitives (spec v3, 2026-07: ENTROPY realization cost, SINGLE POOL).
+# The representative cell maximizes per dollar of unrealized gain:
+#   W^j(a,t) = max_{r_D in [0, 1]} {
 #       kappa(a,t)*r_D - C(r_D; r_D_B)
 #     - tau^j(a,t)*r_D
-#     + (1 - r_exog_B - r_D) *
+#     + (1 - r_D) *
 #         [beta*(1-m) W^j(a+1,t+1) + beta*m*F^j(a,t)]
 #   }
-# where r_exog_B = (phi_I + planned_share)*r_B is the baseline realization
-# share outside the ordinary Bellman bucket, r_D_B = clip(r_B - r_exog_B, 0,
-# 1 - r_exog_B) is the cell's baseline discretionary rate, and
-# F^j = (1 - c_phi^j)*tau^j is the death-state tax-liability forgiveness
-# value (c_phi^j is the regime's holder-internalized burden share: 0 step-up,
-# theta carryover, 1 deemed). Marginal cost of realization:
+# where r_D_B = clip(r_B, 0, 1) is the cell's baseline discretionary rate --
+# in v3 the WHOLE baseline realization rate is discretionary (no r_exog
+# carve-out; the responsive/inert split and fixed floor are gone). F^j =
+# (1 - c_phi^j)*tau^j is the death-state tax-liability forgiveness value
+# (c_phi^j is the regime's holder-internalized burden share: 0 step-up, theta
+# carryover, 1 deemed). Marginal cost of realization:
 #   MC^j(a,t) = tau^j + beta*(1-m)*W^j(a+1,t+1) + beta*m*F^j.
 #
 # The realization cost is the entropy (KL / Bregman) form anchored at the
-# cell's baseline discretionary rate r_D_B:
+# cell's baseline rate r_D_B:
 #   C(r_D; r_D_B) = (1/eta) * [ r_D*ln(r_D/r_D_B) - r_D + r_D_B ],
 # so C'(r_D) = (1/eta)*ln(r_D/r_D_B) and C'(r_D_B) = 0 exactly.
 #   * Pass 1 (baseline inversion): C'(r_D_B) = 0 => kappa = MC^B EXACTLY,
-#     interior AND corner (no psi*r_D^B premium term anymore).
+#     interior AND corner.
 #   * Pass 2 (scenario FOC): kappa - MC^j = C'(r_D) => the closed form
-#       r_D^j = r_D_B * exp(-eta * (MC^j - MC^B)),   clipped to [0, 1-r_exog_B].
+#       r_D^j = r_D_B * exp(-eta * (MC^j - MC^B)),   clipped to [0, 1].
 #     Only the upper clip can bind; r_D_B = 0 cells stay 0. This is a GLOBALLY
-#     constant-semi-elasticity response in the structural wedge (the point of
-#     the entropy reparameterization): dln(r_D)/dMC = -eta everywhere, so the
-#     model hits the literature elasticity under current-law step-up by
-#     construction and nests the naive CBO/JCT revmax arithmetic as Phi->0.
+#     constant-semi-elasticity response in the structural wedge: dln(r_D)/dMC =
+#     -eta everywhere. Since the whole pool responds, eta IS the aggregate
+#     long-run semi-elasticity, and the aggregate revenue-maximizing rate is the
+#     naive CBO/JCT ~1/eta (no inert floor pushing it out).
+#
+# The short-run timing margin is a SEPARATE overlay (kg_dyn_build_planned_timing
+# + kg_dyn_build_scenario_rate): a calibrated fraction KG_DYN_TIMEABLE_SHARE of
+# ALL baseline realizations retimes across the +/-TIMING_WINDOW years, composed
+# as r_S = r_ordinary_S + (r_planned_S - r_planned_B). It nets to zero under a
+# uniform permanent shock, so it leaves the long-run (level) response untouched.
 #
 # Current implementation collapses the five tracked wealth classes into a
 # single asset bucket; per-asset-class disaggregation is on the roadmap.
@@ -67,27 +73,29 @@ KG_DYN_AGE_MAX_BELLMAN  = 119     # SSA PerLifeTables hit q(x)=1 at 119
 # (tsy_10y Fisher-deflated by year-t YoY CPI-U).
 KG_DYN_BETA             = 0.978
 
-# Realization bucket shares -- NESTED reparameterization (spec v2, 2026-07).
-# Two primitives replace the flat (phi_I, planned_share) pair:
-#   Phi   (KG_DYN_SHARE_INERT)   -- the INERT share: fraction of baseline
-#       realizations OUTSIDE the discretionary Bellman bucket. Central 0.50
-#       (Sarin-Summers-Zidar-Zwick, TPE vol. 36: ~50% of realizations are
-#       untimeable / nondiscretionary). The ordinary Bellman-controlled share
-#       is therefore 1 - Phi.
-#   omega (KG_DYN_TIMEABLE_FRAC) -- of the inert share, the fraction that is
-#       mechanically timeable across nearby years (vs. truly fixed). CALIBRATED.
-# The downstream primitives (consumed unchanged by the sweep, recurrence,
-# planned-timing, scenario-rate, frozen-pass, and r_exog checks) derive from
-# them immediately below:
-#   phi_I         = Phi*(1 - omega)   -- fixed/nonresponsive share
-#   planned_share = Phi*omega         -- mechanically-timeable share
-# so phi_I + planned_share == Phi. Low-level solver/test signatures keep the
-# phi_I / planned_share primitives; Phi/omega live at the constants/calibrator
-# level only. Env overrides: KG_SHARE_INERT, KG_TIMEABLE_FRAC (for sweeps).
-KG_DYN_SHARE_INERT      = as.numeric(Sys.getenv('KG_SHARE_INERT',   '0.50'))
-KG_DYN_TIMEABLE_FRAC    = as.numeric(Sys.getenv('KG_TIMEABLE_FRAC', '0.5132'))  # calib iter 2 (2026-07-08, calibrate_17428684.out); Phase-4 dilution loop
-KG_DYN_PHI_I            = KG_DYN_SHARE_INERT * (1 - KG_DYN_TIMEABLE_FRAC)
-KG_DYN_SHARE_PLANNED    = KG_DYN_SHARE_INERT * KG_DYN_TIMEABLE_FRAC
+# Timeable share -- SINGLE POOL (spec v3, 2026-07). The v2 nested (Phi, omega)
+# bucket reparameterization is GONE: there is no responsive/inert split and no
+# fixed floor (phi_I). Rationale: the entropy realization cost is a
+# reservation-benefit spectrum (exponential b: many easily-deterred dollars, a
+# thin tail of robust sellers) that already embeds the "first dollar easier to
+# sell than the last" heterogeneity, so a discrete inert carve-out is a
+# vestige of the old quadratic (tail-less) cost. In v3:
+#   * LEVEL margin -- ALL gains respond on the permanent margin via the entropy
+#     Bellman (r_D_B = r_B, no r_exog carve-out); eta IS the long-run
+#     semi-elasticity directly.
+#   * TIMING margin -- a single calibrated fraction of ALL baseline
+#     realizations retimes across the +/-TIMING_WINDOW years (short-run overlay,
+#     r_S = r_ordinary_S + (r_planned_S - r_planned_B)).
+#
+#   KG_DYN_TIMEABLE_SHARE -- fraction of ALL realizations that is mechanically
+#       timeable. CALIBRATED against the short-run announcement moment GIVEN eta
+#       (the long-run moment pins eta independently: the timing overlay nets to
+#       zero under a uniform permanent shock, so long-run is timeable-share
+#       invariant). Default NA until the calibration paste -- the finite guard in
+#       kg_dyn_run_bathtub_pass hard-stops any sim reaching the Bellman with it
+#       unset. Env override KG_TIMEABLE_SHARE for sweeps.
+KG_DYN_TIMEABLE_SHARE   = local({ v = Sys.getenv('KG_TIMEABLE_SHARE', '0.2542')  # v3 FINAL (2026-07-09): pinned by direct full-sim short-run fit (bathtub dilution unstable in f)
+                                  if (identical(v, 'NA')) NA_real_ else as.numeric(v) })
 KG_DYN_TIMING_WINDOW    = 1L
 
 # Applier-only deemed-realization avoidance haircut: a data-calibration
@@ -123,27 +131,27 @@ KG_DYN_TIMING_REF_WEDGE = 0.05
 # upstream survey is not year-varying at the projection horizons we use.
 KG_DYN_HEIR_DISTRIBUTION_PATH = './resources/heir_distribution_scf2022.csv'
 
-# eta -- the entropy-cost precision (semi-elasticity of r_D in the structural
-# wedge). Calibrated jointly with omega (KG_DYN_TIMEABLE_FRAC) in
-# other/kg_model_tests/calibrate.R against long-run dlog(R)/dtau (sim year
-# 30 of a +1pp permanent shock) and short-run announcement-year response
-# (year 1 of a delayed +5pp shock). Response is INCREASING in |eta| (bigger
-# eta => steeper exp response); the calibrator's inner bisection is monotone
-# DECREASING in eta (a more negative signed semi-elasticity) -- see
-# calibrate.R. The bathtub-internal targets the calibrator chases are INFLATED
-# by 1/KG_DYN_DILUTION_LONG and 1/KG_DYN_DILUTION_SHORT (defined in
-# calibrate.R) so the FULL SIM delivers the nominal literature targets
-# (-2.52 long-run, +5.04 short-run). Dilution factors absorb the gap between
-# the calibrator's standalone bathtub solve and the full sim's per-record
-# application, AGI/AMT/NIIT interactions, and anchor-tau drift. Re-measure
-# dilutions and re-run calibration whenever Tax-Data vintage, bucket shares
-# (Phi/omega), ref_wedge, the discount series, the apply-to-records logic, or
+# eta -- the entropy-cost precision. In the SINGLE POOL (spec v3) eta IS the
+# long-run CG semi-elasticity directly (the Bellman responds on the whole pool,
+# so there is no responsive-half deflation). Calibrated in
+# other/kg_model_tests/calibrate.R against long-run dlog(R)/dtau (sim year 30 of
+# a +1pp permanent shock); the timeable share is then calibrated against the
+# short-run announcement moment GIVEN this eta. Response is INCREASING in |eta|
+# (bigger eta => steeper exp response); the calibrator's long-run bisection is
+# monotone DECREASING in eta -- see calibrate.R. The bathtub-internal targets the
+# calibrator chases are INFLATED by 1/KG_DYN_DILUTION_LONG and
+# 1/KG_DYN_DILUTION_SHORT (defined in calibrate.R) so the FULL SIM delivers the
+# nominal literature targets (-2.52 long-run, +5.04 short-run). Dilution factors
+# absorb the gap between the calibrator's standalone bathtub solve and the full
+# sim's per-record application, AGI/AMT/NIIT interactions, and anchor-tau drift.
+# Re-measure dilutions and re-run calibration whenever Tax-Data vintage, the
+# timeable share, ref_wedge, the discount series, the apply-to-records logic, or
 # any Bellman primitive changes.
 #
-# Default 'NA' until the iter-1 calibration paste: the finite-eta guard in
+# Default 'NA' until the v3 calibration paste: the finite-eta guard in
 # kg_dyn_run_bathtub_pass hard-stops any sim that reaches the Bellman with eta
 # unset (intended -- prevents accidental sims on an uncalibrated model).
-KG_DYN_DEFAULT_ETA      = local({ v = Sys.getenv('KG_ETA', '4.4984')  # calib iter 2 (2026-07-08); env-overridable for comparison runs
+KG_DYN_DEFAULT_ETA      = local({ v = Sys.getenv('KG_ETA', '2.3992')  # calib v3 iter1 (2026-07-09); provisional pending dilution confirm
                                   if (identical(v, 'NA')) NA_real_ else as.numeric(v) })
 
 # Within-cell allocation rule for policy-induced dG, controlling the
@@ -178,8 +186,8 @@ KG_DYN_DG_ALLOCATION    = 'G'
 # from pure G. Sensitivity from the kg_mech_{R,G,50} comparison runs:
 # carryover mechanical revenue 2025-35 is $55.9B (R) / $48.0B (0.5) /
 # $40.4B (G); deemed is invariant to this knob.
-# NOTE: the Bellman calibration (eta/omega, spec v2; formerly psi/planned_share)
-# and the dilution factors are conditioned on this 0.5 default. Re-run
+# NOTE: the Bellman calibration (eta/timeable_share, spec v3) and the dilution
+# factors are conditioned on this 0.5 default. Re-run
 # other/kg_model_tests/measure_dilution.R + calibrate.sbatch if this default
 # changes.
 KG_DYN_APPLIER_ALLOCATION = Sys.getenv('KG_APPLIER_ALLOCATION', '0.5')
@@ -225,9 +233,9 @@ KG_DYN_REGIME_TRIPLET = list(
 #-------------------------------------------------------------------------------
 # Calibration provenance + staleness guard
 #
-# eta/share_inert/timeable_frac and the dilution factors are valid only for the
+# eta/timeable_share and the dilution factors are valid only for the
 # conditions they were calibrated under. The KG_DYN_DEFAULT_ETA header lists what
-# invalidates them (Tax-Data vintage, bucket shares Phi/omega, ref_wedge, discount
+# invalidates them (Tax-Data vintage, timeable_share, ref_wedge, discount
 # series, apply-to-records logic, Bellman primitives). Those dependencies used
 # to live only in comments, so the 2026-06 applier-rule flip (R -> 0.5) silently
 # biased every conventional kg estimate (~37% on a 5pp gains-rate score) until
@@ -237,28 +245,28 @@ KG_DYN_REGIME_TRIPLET = list(
 # estate vintage warning in get_estate_params().
 #-------------------------------------------------------------------------------
 
-# Bump whenever the Bellman primitives, bucket structure, or apply-to-records
-# logic change in a way that invalidates eta/share_inert/timeable_frac. The guard
-# compares this against the spec_version the live calibration was produced under.
-# v2 (2026-07): entropy realization cost + nested (Phi, omega) bucket
-# reparameterization (replaces the quadratic cost / flat (phi_I, planned_share)).
-KG_DYN_SPEC_VERSION = 2L
+# Bump whenever the Bellman primitives, pool structure, or apply-to-records
+# logic change in a way that invalidates eta/timeable_share. The guard compares
+# this against the spec_version the live calibration was produced under.
+# v2 (2026-07): entropy realization cost + nested (Phi, omega) bucket reparam.
+# v3 (2026-07): SINGLE POOL -- responsive/inert split and fixed floor removed;
+# Bellman on all gains (r_D_B = r_B); one calibrated timeable share overlay.
+KG_DYN_SPEC_VERSION = 3L
 
 # Stamp of the calibration-invalidating inputs as of the last calibrate.sbatch
-# run. Update alongside KG_DYN_DEFAULT_ETA / KG_DYN_TIMEABLE_FRAC whenever you
+# run. Update alongside KG_DYN_DEFAULT_ETA / KG_DYN_TIMEABLE_SHARE whenever you
 # recalibrate (calibrate.R prints a ready-to-paste block). applier_allocation
 # is the rule the DILUTIONS were measured under.
-# NOTE: eta/omega below are calibration ITER 2 (2026-07-08, calibrate_17428684.out,
-# baseline kg_recal_2pp_05, dilutions 1.1095/1.2880) and are FINAL: the iter-2
-# full sim (vintage kg_eta_recal_iter2) re-measured E_full_long -2.523 /
-# E_full_short +5.039 -- both on the -2.52 / +5.04 nominal targets (CONVERGED).
+# NOTE: eta/timeable_share are NA pending the v3 (single-pool) recalibration;
+# paste the calibrate.sbatch outputs here once it converges to the -2.52 / +5.04
+# nominal targets. Until then the finite-eta / finite-timeable-share guards in
+# kg_dyn_run_bathtub_pass hard-stop any sim.
 KG_DYN_CALIB_PROVENANCE = list(
-  date               = '2026-07-08',
-  spec_version       = 2L,
-  eta                = 4.4984,     # the calibrated outputs, recorded so a stray
-  timeable_frac      = 0.5132,     # KG_ETA / KG_TIMEABLE_FRAC override or an
-  share_inert        = 0.50,       # un-stamped hand-edit also trips the guard
-  applier_allocation = '0.5',
+  date               = '2026-07-09',  # v3 FINAL (eta via dilution loop; f via direct full-sim pin)
+  spec_version       = 3L,
+  eta                = 2.3992,     # the calibrated outputs, recorded so a stray
+  timeable_share     = 0.2542,     # KG_ETA / KG_TIMEABLE_SHARE override or an
+  applier_allocation = '0.5',      # un-stamped hand-edit also trips the guard
   ref_wedge          = 0.05,
   timing_window      = 1L,
   tax_data_vintage   = '2026050315',
@@ -269,9 +277,9 @@ KG_DYN_CALIB_PROVENANCE = list(
 kg_dyn_check_calibration_provenance = function(scenario_info) {
 
   # Warns (loudly) when the live configuration no longer matches the conditions
-  # eta/share_inert/timeable_frac/dilutions were calibrated under. Warning, not
+  # eta/timeable_share/dilutions were calibrated under. Warning, not
   # stop, so deliberate sweeps via the env knobs (KG_APPLIER_ALLOCATION, KG_ETA,
-  # KG_SHARE_INERT, KG_TIMEABLE_FRAC) still run -- but set KG_STRICT_CALIB=1 to
+  # KG_TIMEABLE_SHARE) still run -- but set KG_STRICT_CALIB=1 to
   # hard-stop instead (e.g. for production scoring). Returns TRUE iff everything
   # matches.
 
@@ -288,16 +296,11 @@ kg_dyn_check_calibration_provenance = function(scenario_info) {
     msgs = c(msgs, sprintf(paste0('eta: live %s vs calibrated %s (KG_ETA ',
                                   'override or un-stamped hand-edit?)'),
                            KG_DYN_DEFAULT_ETA, p$eta))
-  if (num_mismatch(KG_DYN_TIMEABLE_FRAC, p$timeable_frac))
-    msgs = c(msgs, sprintf(paste0('timeable_frac (omega): live %s vs calibrated ',
-                                  '%s (KG_TIMEABLE_FRAC override or un-stamped ',
+  if (num_mismatch(KG_DYN_TIMEABLE_SHARE, p$timeable_share))
+    msgs = c(msgs, sprintf(paste0('timeable_share: live %s vs calibrated %s ',
+                                  '(KG_TIMEABLE_SHARE override or un-stamped ',
                                   'hand-edit?)'),
-                           KG_DYN_TIMEABLE_FRAC, p$timeable_frac))
-  if (num_mismatch(KG_DYN_SHARE_INERT, p$share_inert))
-    msgs = c(msgs, sprintf(paste0('share_inert (Phi): live %s vs calibrated %s ',
-                                  '(KG_SHARE_INERT override or un-stamped ',
-                                  'hand-edit?)'),
-                           KG_DYN_SHARE_INERT, p$share_inert))
+                           KG_DYN_TIMEABLE_SHARE, p$timeable_share))
   if (num_mismatch(KG_DYN_TIMING_REF_WEDGE, p$ref_wedge))
     msgs = c(msgs, sprintf('ref_wedge: live %s vs calibrated %s',
                            KG_DYN_TIMING_REF_WEDGE, p$ref_wedge))
@@ -324,10 +327,10 @@ kg_dyn_check_calibration_provenance = function(scenario_info) {
     banner = paste0(
       '\n=======================================================================\n',
       'kg_dynamics CALIBRATION STALE -- conventional estimates may be off-target\n',
-      'eta/share_inert/timeable_frac/dilutions were calibrated under conditions\n',
+      'eta/timeable_share/dilutions were calibrated under conditions\n',
       'that no longer match this run:\n  - ', paste(msgs, collapse = '\n  - '), '\n',
       'Fix: re-run other/kg_model_tests/measure_dilution.R + calibrate.sbatch,\n',
-      'then update KG_DYN_DEFAULT_ETA / KG_DYN_TIMEABLE_FRAC /\n',
+      'then update KG_DYN_DEFAULT_ETA / KG_DYN_TIMEABLE_SHARE /\n',
       'KG_DYN_CALIB_PROVENANCE. If this is a deliberate sweep, restore the env\n',
       'knobs to the calibrated values to silence this.\n',
       '=======================================================================')
@@ -845,8 +848,7 @@ kg_dyn_pack_baseline_grid = function(grid_ext, years,
 
 
 kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
-                                     c_phi_col, p_char_col, eta, phi_I, beta,
-                                     planned_share = KG_DYN_SHARE_PLANNED,
+                                     c_phi_col, p_char_col, eta, beta,
                                      kappa_col = NULL, stationary = FALSE) {
 
   # One age-backward sweep through [a_min, a_max] for a single year column.
@@ -857,14 +859,14 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
   # value forward — same pattern as tau_col).
   #
   # Realization cost is the ENTROPY / KL form C(r_D) = (1/eta) *
-  # [r_D*ln(r_D/r_D_B) - r_D + r_D_B], anchored at the cell's baseline
-  # discretionary rate r_D_B = clip(r_B - r_exog_B, 0, 1 - r_exog_B).
+  # [r_D*ln(r_D/r_D_B) - r_D + r_D_B], anchored at the cell's baseline rate
+  # r_D_B = clip(r_B, 0, 1) (single pool: the whole rate is discretionary).
   #
-  # kappa_col = NULL: Pass 1 (baseline). r_D = r_D_B (the ordinary bucket);
-  # C'(r_D_B) = 0 so kappa = MC exactly (interior AND corner).
+  # kappa_col = NULL: Pass 1 (baseline). r_D = r_D_B; C'(r_D_B) = 0 so kappa =
+  # MC exactly (interior AND corner).
   # kappa_col supplied: Pass 2 (scenario). kappa carries MC_B, and the FOC
-  # closed form is r_D = r_D_B*exp(-eta*(MC - MC_B)), clipped to
-  # [0, 1 - r_exog_B]; r_D_B = 0 cells stay 0.
+  # closed form is r_D = r_D_B*exp(-eta*(MC - MC_B)), clipped to [0, 1];
+  # r_D_B = 0 cells stay 0.
   #
   # stationary = TRUE seeds the terminal year by pulling W[i+1] from the
   # same sweep (year-t_max primitives constant forward); otherwise uses
@@ -884,11 +886,12 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
   # the same assumption.
   c_phi_eff    = c_phi_col * (1 - pmin(pmax(p_char_col, 0), 1))
   F_vec        = (1 - c_phi_eff) * tau_col
-  r_exog_B_vec = (phi_I + planned_share) * r_B_col
-  r_D_cap_vec  = pmax(1 - r_exog_B_vec, 0)
+  # Single pool: the WHOLE baseline rate is discretionary (no r_exog carve-out),
+  # so the realization cap is 1 and the entropy cost's reference point is r_B.
+  r_D_cap_vec  = rep(1, length(r_B_col))
   # Baseline discretionary rate = the entropy cost's reference point. Both
   # passes recompute it from r_B_col (Pass 2 needs it for the exp response).
-  r_D_B_vec    = pmin(pmax(r_B_col - r_exog_B_vec, 0), r_D_cap_vec)
+  r_D_B_vec    = pmin(pmax(r_B_col, 0), 1)
   bs_vec       = beta * (1 - m_col)   # survivor discount
   bm_vec       = beta * m_col         # death-state discount
 
@@ -926,7 +929,7 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
       C_i = 0
     }
 
-    remaining = max(1 - r_exog_B_vec[i] - r_D_i, 0)
+    remaining = max(1 - r_D_i, 0)
     W[i]     = kappa_i * r_D_i - C_i - tau_i * r_D_i + remaining * death_cont
     MC[i]    = MC_i
     r_D[i]   = r_D_i
@@ -941,8 +944,6 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
 kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
                                 kappa_mat     = NULL,
                                 eta           = KG_DYN_DEFAULT_ETA,
-                                phi_I         = KG_DYN_PHI_I,
-                                planned_share = KG_DYN_SHARE_PLANNED,
                                 beta_by_year  = NULL,
                                 c_phi         = NULL) {
 
@@ -950,12 +951,12 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
   # Backward induction over (age, year) cells.
   #
   # When kappa_mat = NULL: Pass 1 (baseline). Recovers kappa from the FOC
-  # by forcing optimal r_D to equal the observed ordinary realization
-  # bucket; the entropy cost's C'(r_D_B) = 0 makes kappa = MC exactly.
+  # by forcing optimal r_D to equal the observed baseline realization rate
+  # r_B; the entropy cost's C'(r_D_B) = 0 makes kappa = MC exactly.
   # c_phi_mat is typically all-zero under current-law step-up.
   #
   # When kappa_mat is supplied: Pass 2 (scenario). Solves the entropy FOC
-  # closed form r_D = clip(r_D_B*exp(-eta*(MC - MC_B)), 0, 1 - r_exog_B).
+  # closed form r_D = clip(r_D_B*exp(-eta*(MC - MC_B)), 0, 1).
   #
   # c_phi_mat is an [n_ages, n_years] matrix of cell-level burden shares
   # produced by kg_dyn_build_regime_mix on the bathtub grid, then extended
@@ -1008,9 +1009,7 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
       c_phi_col     = c_phi_mat[, j],
       p_char_col    = p_char_mat[, j],
       eta           = eta,
-      phi_I         = phi_I,
       beta          = beta_by_year[j],
-      planned_share = planned_share,
       kappa_col     = if (is.null(kappa_mat)) NULL else kappa_mat[, j],
       stationary    = stationary
     )
@@ -1044,32 +1043,21 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
 # Three-bucket realization timing helpers
 #-------------------------------------------------------------------------------
 
-kg_dyn_validate_realization_buckets = function(fixed_share   = KG_DYN_PHI_I,
-                                               planned_share = KG_DYN_SHARE_PLANNED,
-                                               timing_window = KG_DYN_TIMING_WINDOW,
-                                               ref_wedge     = KG_DYN_TIMING_REF_WEDGE,
-                                               share_inert   = KG_DYN_SHARE_INERT,
-                                               timeable_frac = KG_DYN_TIMEABLE_FRAC) {
+kg_dyn_validate_timing_params = function(timeable_share = KG_DYN_TIMEABLE_SHARE,
+                                         timing_window  = KG_DYN_TIMING_WINDOW,
+                                         ref_wedge      = KG_DYN_TIMING_REF_WEDGE) {
 
-  if (!is.finite(fixed_share) || !is.finite(planned_share)) {
-    stop('kg_dynamics: realization bucket shares must be finite.')
-  }
-  if (fixed_share < 0 || planned_share < 0 || fixed_share + planned_share > 1) {
-    stop(sprintf(
-      paste0('kg_dynamics: invalid realization bucket shares: fixed=%.4f, ',
-             'planned=%.4f. Expected nonnegative shares with fixed + ',
-             'planned <= 1.'),
-      fixed_share, planned_share))
-  }
-  # Nested reparameterization primitives (spec v2): Phi (inert share) and
-  # omega (timeable fraction) must each be a finite scalar in [0, 1]. Called
-  # once at source time (below) so bad env overrides fail at load.
-  for (nm in c('share_inert', 'timeable_frac')) {
-    v = get(nm)
-    if (length(v) != 1 || !is.finite(v) || v < 0 || v > 1) {
-      stop(sprintf(paste0('kg_dynamics: %s must be a finite scalar in [0, 1]; ',
-                          'got %s.'), nm, paste(format(v), collapse = ', ')))
-    }
+  # Single-pool (spec v3) timing parameters. timeable_share is the fraction of
+  # ALL realizations that retimes across the window. NA is permitted here
+  # (uncalibrated) and hard-stopped later in kg_dyn_run_bathtub_pass -- so the
+  # source-time self-call below validates only structure. A non-NA share must be
+  # a finite scalar in [0, 1].
+  if (!is.na(timeable_share) &&
+      (length(timeable_share) != 1 || !is.finite(timeable_share) ||
+       timeable_share < 0 || timeable_share > 1)) {
+    stop(sprintf(paste0('kg_dynamics: KG_DYN_TIMEABLE_SHARE must be a finite ',
+                        'scalar in [0, 1] (or NA when uncalibrated); got %s.'),
+                 paste(format(timeable_share), collapse = ', ')))
   }
   if (length(timing_window) != 1 || is.na(timing_window) ||
       timing_window < 0 || timing_window != as.integer(timing_window)) {
@@ -1082,35 +1070,36 @@ kg_dyn_validate_realization_buckets = function(fixed_share   = KG_DYN_PHI_I,
   invisible(TRUE)
 }
 
-# Fail fast at source time on bad env overrides of the bucket primitives
-# (KG_SHARE_INERT / KG_TIMEABLE_FRAC). fixed_share/planned_share are derived
-# from Phi/omega so a bad Phi/omega surfaces here too.
-kg_dyn_validate_realization_buckets()
+# Fail fast at source time on bad env overrides (KG_TIMEABLE_SHARE / window /
+# ref_wedge). timeable_share may be NA here (uncalibrated); its value is checked
+# where it is used with a real number.
+kg_dyn_validate_timing_params()
 
 
 
 kg_dyn_build_planned_timing = function(baseline_cells, tau_S_mat, years,
                                        tau_B_mat = NULL,
-                                       planned_share = KG_DYN_SHARE_PLANNED,
+                                       timeable_share = KG_DYN_TIMEABLE_SHARE,
                                        timing_window = KG_DYN_TIMING_WINDOW,
                                        ref_wedge     = KG_DYN_TIMING_REF_WEDGE,
                                        ages_bathtub = KG_DYN_AGE_MIN:
                                                       KG_DYN_AGE_MAX,
                                        tie_tol = 1e-12) {
 
-  # For each (age, source-year u), planned baseline dollars look at the
-  # policy-induced wedge tau_S - tau_B over [u-H, u+H] and route toward
-  # the best year v* (lowest wedge; ties broken by nearest, then earlier).
-  # Move fraction = clamp((wedge[u] - wedge[v*]) / ref_wedge, 0, 1); the
-  # complement stays at u. Using tau_S - tau_B (not just tau_S) keeps the
-  # rule policy-driven so baseline-only runs don't retime dollars.
-  # Callers pass the LAW-ONLY reform tau (aggregated from
-  # mtr_kg_lt_lawonly) as tau_S_mat, so the wedge is statutory-only and
-  # identically zero when the living-side schedule matches baseline.
+  # The short-run timing overlay (spec v3). For each (age, source-year u), the
+  # timeable share of baseline dollars (timeable_share * R_B, drawn from the
+  # WHOLE pool) looks at the policy-induced wedge tau_S - tau_B over [u-H, u+H]
+  # and routes toward the best year v* (lowest wedge; ties broken by nearest,
+  # then earlier). Move fraction = clamp((wedge[u] - wedge[v*]) / ref_wedge, 0,
+  # 1); the complement stays at u. Using tau_S - tau_B (not just tau_S) keeps
+  # the rule policy-driven so baseline-only runs don't retime dollars.
+  # Callers pass the LAW-ONLY reform tau (aggregated from mtr_kg_lt_lawonly) as
+  # tau_S_mat, so the wedge is statutory-only and identically zero when the
+  # living-side schedule matches baseline.
 
-  kg_dyn_validate_realization_buckets(planned_share = planned_share,
-                                      timing_window = timing_window,
-                                      ref_wedge     = ref_wedge)
+  kg_dyn_validate_timing_params(timeable_share = timeable_share,
+                                timing_window  = timing_window,
+                                ref_wedge      = ref_wedge)
 
   ages_chr  = as.character(ages_bathtub)
   years_chr = as.character(years)
@@ -1124,13 +1113,13 @@ kg_dyn_build_planned_timing = function(baseline_cells, tau_S_mat, years,
     R_B[, t_chr] = bt$R_B[match(ages_bathtub, bt$age)]
   }
 
-  R_planned_B = planned_share * R_B
+  R_planned_B = timeable_share * R_B
   R_planned_S = matrix(0, n_ages, n_years,
                        dimnames = list(ages_chr, years_chr))
   timing_tau_mat = if (is.null(tau_B_mat)) tau_S_mat else tau_S_mat - tau_B_mat
   tau_bt = timing_tau_mat[ages_chr, years_chr, drop = FALSE]
 
-  if (planned_share == 0 || H == 0) {
+  if (timeable_share == 0 || H == 0) {
     R_planned_S = R_planned_B
   } else {
     for (i in seq_len(n_ages)) {
@@ -1169,24 +1158,26 @@ kg_dyn_build_planned_timing = function(baseline_cells, tau_S_mat, years,
 
 
 kg_dyn_build_scenario_rate = function(baseline_t, r_ordinary_S,
-                                      R_planned_B_col, R_planned_S_col,
-                                      fixed_share = KG_DYN_PHI_I) {
+                                      R_planned_B_col, R_planned_S_col) {
 
   G_B = baseline_t$G_B
   r_B = baseline_t$r_B
 
-  r_fixed_B    = fixed_share * r_B
   r_planned_B  = ifelse(G_B > 0, R_planned_B_col / G_B, 0)
   r_planned_S  = ifelse(G_B > 0, R_planned_S_col / G_B, 0)
-  r_ordinary_B = pmax(r_B - r_fixed_B - r_planned_B, 0)
+  # Single pool: the level rate the Bellman anchors on is the full baseline rate.
+  r_ordinary_B = r_B
 
-  r_S_unclipped = r_fixed_B + r_ordinary_S + r_planned_S
+  # Full-pool Bellman level response (r_ordinary_S = pass2 r_D) plus the NET
+  # short-run timing shift. The shift nets to zero under a uniform permanent
+  # shock (no year is cheaper), so it leaves the long-run level response intact;
+  # at baseline r_ordinary_S = r_B and r_planned_S = r_planned_B, so r_S = r_B.
+  r_S_unclipped = r_ordinary_S + (r_planned_S - r_planned_B)
   r_S           = pmin(pmax(r_S_unclipped, 0), 1)
 
   list(r_S            = r_S,
        r_S_unclipped  = r_S_unclipped,
        timing_clipped = abs(r_S - r_S_unclipped) > 1e-12,
-       r_fixed_B      = r_fixed_B,
        r_planned_B    = r_planned_B,
        r_planned_S    = r_planned_S,
        r_ordinary_B   = r_ordinary_B,
@@ -1230,11 +1221,11 @@ kg_dyn_cell_m_eff = function(baseline_t) {
 
 kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
                                   r_S_vec, delta_route_vec,
-                                  phi_I = KG_DYN_PHI_I,
                                   conv_inflow_vec = NULL) {
 
-  # One-step bathtub recurrence for delta_G on the [18, 80] grid. r_S_vec
-  # combines the fixed, Bellman ordinary, and retimed planned buckets.
+  # One-step bathtub recurrence for delta_G on the [18, 80] grid. r_S_vec is
+  # the scenario realization rate: the full-pool Bellman level response plus
+  # the retimed short-run timing overlay.
   # delta_route_vec is a length-n_ages cell-level share of the dying stock
   # that routes to heirs (carryover); under per-asset regime mixing it's
   # produced by kg_dyn_build_regime_mix as sum_k share_k(a) * route_k.
@@ -1257,12 +1248,7 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
 
   m_eff = kg_dyn_cell_m_eff(baseline_t)
 
-  # lambda_I = fixed/nonresponsive realization bucket; kept on the state
-  # contract under the old name.
-  lambda_I = phi_I * r_B
-  r_V_B    = pmax(r_B     - lambda_I, 0)
-  r_V_S    = pmax(r_S_vec - lambda_I, 0)
-  r_S      = pmin(pmax(r_S_vec, 0), 1)
+  r_S = pmin(pmax(r_S_vec, 0), 1)
 
   # Survivor flow (spec §3.2)
   inner      = (1 - r_S) * delta_prev + G_B * (r_B - r_S)
@@ -1293,9 +1279,6 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
 
   list(delta_next = delta_surv + delta_inh + conv_inflow,
        r_S        = r_S,
-       lambda_I   = lambda_I,
-       r_V_B      = r_V_B,
-       r_V_S      = r_V_S,
        delta_surv = delta_surv,
        delta_inh  = delta_inh,
        conv_inflow = conv_inflow,
@@ -1316,8 +1299,8 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
 # present value of tax the kg machinery actually collects on it:
 #
 #   - realization tax r_S * tau on the FULL stock each year (matching
-#     extra_R = r_S * dG in kg_dyn_build_cell_table — including the retimed
-#     planned bucket, NOT the Bellman's baseline-scaled r_exog);
+#     extra_R = r_S * dG in kg_dyn_build_cell_table — r_S is the full-pool
+#     scenario rate incl. the retimed short-run timing overlay);
 #   - deaths take the full stock (decedents do not realize in-year, matching
 #     the recurrence event order): the taxable share (1 - p_char) * m_eff
 #     splits by regime mix — delta_realize taxed at tau at death (deemed),
@@ -2092,7 +2075,7 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
 
 
 kg_dyn_build_cell_table = function(baseline_t, year_idx,
-                                    r_S_vec, lambda_I_vec, r_V_B_vec, r_V_S_vec,
+                                    r_S_vec,
                                     delta_prev,
                                     tau_B_col, tau_S_col,
                                     W_B_col, W_S_col, MC_B_col, MC_S_col,
@@ -2171,12 +2154,8 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            r_S           = as.numeric(r_S_vec     [as.character(age)]),
            r_S_unclipped = as.numeric(diag_or('r_S_unclipped', r_S)[as.character(age)]),
            timing_clipped = as.logical(diag_or('timing_clipped', FALSE)[as.character(age)]),
-           lambda_I      = as.numeric(lambda_I_vec[as.character(age)]),
-           r_V_B         = as.numeric(r_V_B_vec   [as.character(age)]),
-           r_V_S         = as.numeric(r_V_S_vec   [as.character(age)]),
            r_D_B         = as.numeric(r_D_B_col   [as.character(age)]),
            r_D_S         = as.numeric(r_D_S_col   [as.character(age)]),
-           r_fixed_B     = as.numeric(diag_or('r_fixed_B', lambda_I)[as.character(age)]),
            r_planned_B   = as.numeric(diag_or('r_planned_B', 0)[as.character(age)]),
            r_planned_S   = as.numeric(diag_or('r_planned_S', 0)[as.character(age)]),
            r_ordinary_B  = as.numeric(diag_or('r_ordinary_B', r_D_B)[as.character(age)]),
@@ -2222,8 +2201,7 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
                                    pmax(0, (G_B + dG) / G_B),
                                    1)) %>%
     select(age, G_B, R_B, r_B, r_S, r_S_unclipped, timing_clipped,
-           lambda_I, r_V_B, r_V_S,
-           r_fixed_B, r_planned_B, r_planned_S, r_ordinary_B, r_ordinary_S,
+           r_planned_B, r_planned_S, r_ordinary_B, r_ordinary_S,
            R_planned_B, R_planned_S, planned_timing_shift,
            m, mG_record, mR_record, dG, corp_gain_debit,
            p_char, p_char_extensive, p_char_intensive, estate_2026_m_avg_dgw,
@@ -2242,8 +2220,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                     baseline_tau, reform_tau,
                                     reform_tau_timing, heir_dist,
                                     eta   = KG_DYN_DEFAULT_ETA,
-                                    phi_I = KG_DYN_PHI_I,
-                                    planned_share = KG_DYN_SHARE_PLANNED,
+                                    timeable_share = KG_DYN_TIMEABLE_SHARE,
                                     timing_window = KG_DYN_TIMING_WINDOW,
                                     ref_wedge     = KG_DYN_TIMING_REF_WEDGE,
                                     corp_debit_by_year = NULL,
@@ -2292,13 +2269,18 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   if (!is.finite(eta)) {
     stop('kg_dynamics: KG_DYN_DEFAULT_ETA is not set. Run ',
          'other/kg_model_tests/calibrate.R against a full-sample baseline ',
-         'and paste the calibrated eta and timeable_frac values into the ',
+         'and paste the calibrated eta and timeable_share values into the ',
          'constants block at the top of src/sim/kg_dynamics.R.')
   }
-  kg_dyn_validate_realization_buckets(fixed_share = phi_I,
-                                      planned_share = planned_share,
-                                      timing_window = timing_window,
-                                      ref_wedge     = ref_wedge)
+  if (!is.finite(timeable_share)) {
+    stop('kg_dynamics: KG_DYN_TIMEABLE_SHARE is not set. Run ',
+         'other/kg_model_tests/calibrate.R against a full-sample baseline ',
+         'and paste the calibrated eta and timeable_share values into the ',
+         'constants block at the top of src/sim/kg_dynamics.R.')
+  }
+  kg_dyn_validate_timing_params(timeable_share = timeable_share,
+                                timing_window  = timing_window,
+                                ref_wedge      = ref_wedge)
 
   years     = scenario_info$years
   state_dir = kg_dyn_state_dir(scenario_info)
@@ -2320,28 +2302,8 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   grid_packed = kg_dyn_pack_baseline_grid(grid_ext, years,
                                           ages_bellman = ages_bellman)
 
-  # Flag cells where the fixed + planned exogenous buckets alone "want" to
-  # realize more than the cell's gain stock. When r_exog_B = (phi_I +
-  # planned_share) * r_B > 1, r_D_cap collapses to 0, so r_D_B = 0 and the
-  # entropy reference degenerates: the cell is pinned at r_D = 0 in Pass 2
-  # (r_D_B = 0 cells stay 0) and contributes no scenario response.
-  # Empirically possible at cell level when measured realized gains exceed
-  # measured embedded gains (sparse cells, heavy turnover).
-  r_exog_max = (phi_I + planned_share) * grid_packed$r_B
-  if (any(r_exog_max > 1)) {
-    bad = which(r_exog_max > 1, arr.ind = TRUE)
-    bad_cells = paste0(
-      '(age=', rownames(r_exog_max)[bad[, 'row']], ', year=',
-      colnames(r_exog_max)[bad[, 'col']], ', r_B=',
-      sprintf('%.3f', grid_packed$r_B[bad]), ')')
-    warning(sprintf(
-      paste0('kg_dynamics: %d cells have r_exog_B = (phi_I + ',
-             'planned_share) * r_B > 1, i.e. r_B > %.3f. The Bellman ',
-             'caps r_D at 1 - r_exog_B, so these cells get r_D_cap = 0, ',
-             'r_D_B = 0, and no scenario response. Offending cells: %s'),
-      nrow(bad), 1 / (phi_I + planned_share),
-      paste(bad_cells, collapse = ', ')))
-  }
+  # (Single pool: no r_exog carve-out, so r_D_B = clip(r_B, 0, 1) is always well
+  # defined; cells with measured r_B > 1 clip to r_D_B = 1 and still respond.)
 
   # Step 2: tau matrices
   tau_B_mat = kg_dyn_pack_tau(baseline_tau, years, ages_bellman = ages_bellman)
@@ -2352,8 +2314,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   # Step 3: baseline Bellman pass (c_phi = 0 across the whole grid under
   # current-law step-up — every asset gets step-up forgiveness)
   pass1 = kg_dyn_solve_bellman(grid_packed, tau_B_mat, c_phi_mat = 0,
-                               eta = eta, phi_I = phi_I,
-                               planned_share = planned_share,
+                               eta = eta,
                                beta_by_year = beta_by_year)
 
   # Step 4: resolve year-by-year per-asset regime codes, build cell-level
@@ -2389,8 +2350,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
 
   pass2 = kg_dyn_solve_bellman(grid_packed, tau_S_mat, c_phi_mat = c_phi_S_mat,
                                kappa_mat = pass1$kappa,
-                               eta = eta, phi_I = phi_I,
-                               planned_share = planned_share,
+                               eta = eta,
                                beta_by_year = beta_by_year)
 
   planned_timing = kg_dyn_build_planned_timing(
@@ -2398,7 +2358,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     tau_S_mat      = tau_S_timing_mat,
     years          = years,
     tau_B_mat      = tau_B_mat,
-    planned_share  = planned_share,
+    timeable_share = timeable_share,
     timing_window  = timing_window,
     ref_wedge      = ref_wedge,
     ages_bathtub   = ages_bathtub
@@ -2420,8 +2380,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
       baseline_t       = baseline_cells[[as.character(years[j])]],
       r_ordinary_S     = pass2$r_D[bathtub_ages_chr, j],
       R_planned_B_col  = planned_timing$R_planned_B[, j],
-      R_planned_S_col  = planned_timing$R_planned_S[, j],
-      fixed_share      = phi_I
+      R_planned_S_col  = planned_timing$R_planned_S[, j]
     )
   })
 
@@ -2509,22 +2468,15 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
       omega           = omega,
       r_S_vec         = r_S_vec,
       delta_route_vec = mix$delta_route,
-      phi_I           = phi_I,
       conv_inflow_vec = conv_inflow_vec
     )
 
-    r_S_named      = setNames(step$r_S,      bathtub_ages_chr)
-    lambda_I_named = setNames(step$lambda_I, bathtub_ages_chr)
-    r_V_B_named    = setNames(step$r_V_B,    bathtub_ages_chr)
-    r_V_S_named    = setNames(step$r_V_S,    bathtub_ages_chr)
+    r_S_named = setNames(step$r_S, bathtub_ages_chr)
 
     cell_table = kg_dyn_build_cell_table(
       baseline_t   = bt,
       year_idx     = j,
       r_S_vec      = r_S_named,
-      lambda_I_vec = lambda_I_named,
-      r_V_B_vec    = r_V_B_named,
-      r_V_S_vec    = r_V_S_named,
       delta_prev   = delta,
       tau_B_col    = tau_B_mat[bathtub_ages_chr, j],
       tau_S_col    = tau_S_mat[bathtub_ages_chr, j],
@@ -2539,7 +2491,6 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
       planned_diag  = list(
         r_S_unclipped = setNames(rate_info$r_S_unclipped, bathtub_ages_chr),
         timing_clipped = setNames(rate_info$timing_clipped, bathtub_ages_chr),
-        r_fixed_B = setNames(rate_info$r_fixed_B, bathtub_ages_chr),
         r_planned_B = setNames(rate_info$r_planned_B, bathtub_ages_chr),
         r_planned_S = setNames(rate_info$r_planned_S, bathtub_ages_chr),
         r_ordinary_B = setNames(rate_info$r_ordinary_B, bathtub_ages_chr),
@@ -2602,7 +2553,6 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
 
 kg_dyn_run_frozen_pass = function(scenario_info, tax_law, baseline_cells,
                                    heir_dist,
-                                   phi_I = KG_DYN_PHI_I,
                                    ages_bathtub = KG_DYN_AGE_MIN:
                                                   KG_DYN_AGE_MAX) {
 
@@ -2631,8 +2581,7 @@ kg_dyn_run_frozen_pass = function(scenario_info, tax_law, baseline_cells,
       A               = A,
       omega           = omega,
       r_S_vec         = r_S_vec,
-      delta_route_vec = mix$delta_route,
-      phi_I           = phi_I
+      delta_route_vec = mix$delta_route
     )
 
     # Stock entering year t (same timing convention as the bathtub's
@@ -2853,15 +2802,10 @@ kg_dyn_build_summary = function(scenario_info) {
       delta_vanish_avg_gw  = wmean(delta_vanish,  G_B, default = 0),
       delta_route_avg_gw   = wmean(delta_route,   G_B, default = 0),
       delta_realize_avg_gw = wmean(delta_realize, G_B, default = 0),
-      lambda_I_avg_gw     = wmean(lambda_I,     G_B),
-      r_fixed_avg_gw      = wmean(r_fixed_B,    G_B),
       r_planned_B_avg_gw  = wmean(r_planned_B,  G_B),
       r_planned_S_avg_gw  = wmean(r_planned_S,  G_B),
       r_ordinary_B_avg_gw = wmean(r_ordinary_B, G_B),
       r_ordinary_S_avg_gw = wmean(r_ordinary_S, G_B),
-      v_share_avg_rw      = if_else(sum(R_B) > 0,
-                                    sum(r_V_B * G_B) / sum(r_B * G_B),
-                                    NA_real_),
       tau_B_avg_gw        = wmean(tau_B,        G_B),
       tau_S_avg_gw        = wmean(tau_S,        G_B),
       tau_B_avg_rw        = wmean(tau_B,        R_B),
@@ -2909,10 +2853,8 @@ kg_dyn_build_summary = function(scenario_info) {
            G_B_primary_home_total, G_B_other_home_total,
            G_B_re_fund_total, G_B_primary_above_cap_total,
            m_avg_gw, r_B_avg_gw, r_S_avg_gw,
-           lambda_I_avg_gw, r_fixed_avg_gw,
            r_planned_B_avg_gw, r_planned_S_avg_gw,
            r_ordinary_B_avg_gw, r_ordinary_S_avg_gw,
-           v_share_avg_rw,
            tau_B_avg_gw, tau_S_avg_gw, tau_B_avg_rw, tau_S_avg_rw,
            W_B_avg_gw, W_S_avg_gw, MC_B_avg_gw, MC_S_avg_gw, kappa_avg_gw,
            rate_channel, lockin_channel,

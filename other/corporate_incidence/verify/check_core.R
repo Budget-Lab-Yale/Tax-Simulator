@@ -240,8 +240,7 @@ mix_syn = tibble(age = ages_bt, delta_vanish = 1, delta_route = 0,
 debit_syn = vec(40)
 ct = kg_dyn_build_cell_table(
   baseline_t = bt_syn, year_idx = 1,
-  r_S_vec = vec(0.05), lambda_I_vec = vec(0.01),
-  r_V_B_vec = vec(0.04), r_V_S_vec = vec(0.04),
+  r_S_vec = vec(0.05),
   delta_prev = vec(100),
   tau_B_col = vec(0.2), tau_S_col = vec(0.25),
   W_B_col = vec(1), W_S_col = vec(1), MC_B_col = vec(0.1), MC_S_col = vec(0.1),
@@ -252,8 +251,7 @@ stopifnot(max(abs(ct$extra_R - 0.05 * (100 - 40))) < 1e-12,
           max(abs(ct$corp_gain_debit - 40)) < 1e-12)
 ct0 = kg_dyn_build_cell_table(
   baseline_t = bt_syn, year_idx = 1,
-  r_S_vec = vec(0.05), lambda_I_vec = vec(0.01),
-  r_V_B_vec = vec(0.04), r_V_S_vec = vec(0.04),
+  r_S_vec = vec(0.05),
   delta_prev = vec(100),
   tau_B_col = vec(0.2), tau_S_col = vec(0.25),
   W_B_col = vec(1), W_S_col = vec(1), MC_B_col = vec(0.1), MC_S_col = vec(0.1),

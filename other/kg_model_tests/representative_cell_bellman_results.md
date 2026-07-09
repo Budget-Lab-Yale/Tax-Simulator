@@ -1,13 +1,21 @@
 # Representative-Cell Bellman: First Results
 
-> **SUPERSEDED (2026-07, spec v2).** The quadratic realization cost
-> `(psi/2)*r_D^2` and the flat `(phi_I, planned_share)` bucket pair described
-> below were replaced by an **entropy (KL / Bregman) realization cost** and a
-> **nested `(Phi, omega)` bucket reparameterization**. See the
-> **"2026-07: entropy/log cost (spec v2)"** section at the bottom of this file
-> for the current formulation. The formula block, the `psi` bullets, and every
-> calibrated table below reflect the OLD quadratic model and are retained for
-> history only — do not cite `psi` / `planned_share` numbers from them.
+> **SUPERSEDED (2026-07, spec v3 — SINGLE POOL).** The entire bucket structure
+> below and in the v2 section — the responsive/inert split, the flat
+> `(phi_I, planned_share)` pair, AND the nested `(Phi, omega)` reparameterization
+> — is gone. In spec v3 there is one pool: the entropy Bellman responds on ALL
+> gains (`r_D_B = r_B`, no carve-out; `eta` = the long-run semi-elasticity
+> directly, calibrated to **2.3992**), plus a single timeable share
+> (**0.2542**) as an additive short-run timing overlay. See
+> **`other/kg_model_tests/single_pool_SESSION_SUMMARY.md`** for the current
+> formulation, calibration, and revalidation. Everything below (both the v1
+> quadratic tables and the v2 `(Phi, omega)` section) is retained for history
+> only — do not cite `psi` / `phi_I` / `planned_share` / `Phi` / `omega` numbers.
+>
+> **Prior banner (spec v2, now also superseded):** the quadratic cost
+> `(psi/2)*r_D^2` and flat `(phi_I, planned_share)` pair were first replaced by
+> an entropy (KL) cost + nested `(Phi, omega)`; that v2 section at the bottom is
+> itself now superseded by the single pool above.
 
 **Status (v1, historical)**: Refactor complete, calibrated, and validated
 end-to-end. Two review-driven corrections applied (gain-weighted Bellman

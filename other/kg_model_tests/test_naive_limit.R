@@ -5,17 +5,16 @@
 # backward induction, on a synthetic dependency-light grid (like
 # test_planned_timing.R):
 #
-#   (a) With Phi = 0 (no inert bucket => phi_I = planned_share = 0), c_phi = 0
-#       (step-up), and a PERMANENT tau shock, the scenario discretionary rate
-#       satisfies
+#   (a) In the single pool (all gains discretionary, r_D_B = r_B), with c_phi = 0
+#       (step-up) and a PERMANENT tau shock, the scenario rate satisfies
 #         log(r_D_S / r_D_B) = -eta * (MC_S - MC_B)   exactly (to 1e-10),
 #       elementwise across all (unclipped) cells and with the SAME implied
 #       slope dlog(r_D)/dMC = -eta across +1/+5/+10pp shocks. This is the
 #       globally constant-semi-elasticity property that the entropy cost buys
 #       (and that the old quadratic cost did not have).
 #
-#   (b) The Phi -> 0 limit nests the naive CBO/JCT revmax arithmetic: with a
-#       test-local eta bisected so the aggregate +1pp semi-elasticity equals
+#   (b) The single pool gives the naive CBO/JCT revmax arithmetic directly: with
+#       a test-local eta bisected so the aggregate +1pp semi-elasticity equals
 #       -2.52, the revenue-maximizing gains rate is ~ 1/2.52 ~= 0.397
 #       (+/- an MC-amplification wobble).
 #-------------------------------------------------------------------------------
@@ -44,10 +43,9 @@ tau_B = matrix(TAU_B, na_, ny_, dimnames = list(ac, yc))
 solve_pair = function(eta, tau_S_scalar) {
   tau_S = matrix(tau_S_scalar, na_, ny_, dimnames = list(ac, yc))
   p1 = kg_dyn_solve_bellman(grid, tau_B, c_phi_mat = 0, eta = eta,
-                            phi_I = 0, planned_share = 0, beta_by_year = beta)
-  p2 = kg_dyn_solve_bellman(grid, tau_S, c_phi_mat = 0, kappa_mat = p1$kappa,
-                            eta = eta, phi_I = 0, planned_share = 0,
                             beta_by_year = beta)
+  p2 = kg_dyn_solve_bellman(grid, tau_S, c_phi_mat = 0, kappa_mat = p1$kappa,
+                            eta = eta, beta_by_year = beta)
   list(p1 = p1, p2 = p2)
 }
 

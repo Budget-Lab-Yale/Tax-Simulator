@@ -1,43 +1,42 @@
 #-------------------------------------------------------------------------------
 # calibrate.R
 #
-# Joint calibration of the kg_dynamics representative-cell Bellman (spec v2:
-# ENTROPY realization cost, nested Phi/omega bucket reparameterization) to two
-# moments:
+# Calibration of the kg_dynamics representative-cell Bellman (spec v3: ENTROPY
+# realization cost, SINGLE POOL -- no responsive/inert split, no fixed floor) to
+# two moments:
 #
 #   1. Long-run (permanent) semi-elasticity: dlog(R)/dtau at sim-year 30
 #      under a uniform +1pp permanent perturbation. Target -0.6 / 0.238 ~=
 #      -2.52 (literature arc elasticity -0.62 anchored at a fixed baseline
-#      tau of 0.238). Identifies eta (KG_DYN_DEFAULT_ETA).
+#      tau of 0.238). Identifies eta (KG_DYN_DEFAULT_ETA) -- and since the whole
+#      pool responds, eta IS the long-run semi-elasticity directly.
 #
 #   2. Short-run (transitory anticipation) semi-elasticity: dlog(R(t))/dtau(t+1)
 #      at the announcement year under a +5pp delayed permanent shock (tau
 #      unchanged in year 1, +5pp from year 2 onward). Target +5.04, i.e.,
 #      twice the magnitude of the long-run target with the sign flipped
-#      (future-tax-up -> realize-today). Identifies omega (KG_DYN_TIMEABLE_FRAC).
+#      (future-tax-up -> realize-today). Identifies KG_DYN_TIMEABLE_SHARE.
 #
-# Reparameterization: Phi = KG_DYN_SHARE_INERT (inert share) is HELD FIXED
-# (env-overridable for sensitivity); the calibrator moves only omega. The two
-# derived bucket primitives are phi_I = Phi*(1-omega) and planned_share =
-# Phi*omega, so the ordinary Bellman share 1 - Phi is CONSTANT in omega -- which
-# makes the long-run moment omega-invariant and eta/omega identify nearly
-# independently.
+# Single pool: the Bellman responds on ALL gains (r_D_B = r_B, no carve-out),
+# and a fraction f = KG_DYN_TIMEABLE_SHARE of ALL realizations retimes across
+# the window as an additive overlay (r_S = r_ordinary_S + (r_planned_S -
+# r_planned_B)). The overlay nets to zero under a UNIFORM permanent shock (no
+# year is cheaper), so the long-run moment is EXACTLY timeable-share invariant.
 #
-# Methodology (nested bisection):
-#   Outer loop -- bisect omega in [0, 1] against the short-run target. Larger
-#                  omega -> larger planned_share -> larger short-run response.
-#   Inner loop -- for each candidate omega, bisect eta to satisfy the long-run
-#                  target. Response is DECREASING in eta (steeper exp response =
-#                  more negative semi-elasticity), so the bracket/bisection
-#                  direction is FLIPPED vs. the old psi calibration -- see
-#                  bracket_eta / inner_bisect_eta.
+# Methodology (two SEQUENTIAL 1-D bisections -- the v2 nested loop collapses):
+#   Step 5 -- bisect eta in the ETA_GRID against the long-run target (at an
+#             arbitrary reference share F_REF; f-invariance is asserted first).
+#             Response is DECREASING in eta (steeper exp = more negative semi).
+#   Step 6 -- with eta* fixed, bisect f in [0, 1] against the short-run target.
+#             Short-run is INCREASING in f (more timeable dollars pull-forward),
+#             and also carries the full-pool Bellman's own anticipation at eta*,
+#             so f supplies only the residual. If the pure-Bellman short-run at
+#             f=0 already exceeds target, the bracket fails -- that signals the
+#             short-run anchor is inconsistent with the full-pool level response
+#             (revisit SHORT_RUN_RATIO), not a bug.
 #
-# Convergence: warm-starts the inner eta bisection from the previous outer
-# iteration's solution. Because long-run is omega-invariant, the inner loop
-# collapses to ~1 iteration after the first outer step (a health signal).
-#
-# Output: prints recommended eta (KG_DYN_DEFAULT_ETA) and omega
-# (KG_DYN_TIMEABLE_FRAC). Paste both into src/sim/kg_dynamics.R.
+# Output: prints recommended eta (KG_DYN_DEFAULT_ETA) and f
+# (KG_DYN_TIMEABLE_SHARE). Paste both into src/sim/kg_dynamics.R.
 #
 # CLI:
 #   Rscript other/kg_model_tests/calibrate.R <baseline_root> [<macro_root>]
@@ -89,76 +88,46 @@ SHORT_RUN_RATIO    = 2               # short-run / |long-run| magnitude
 SHORT_RUN_NOMINAL  = -SHORT_RUN_RATIO * LONG_RUN_NOMINAL   # +5.04
 
 # Empirical dilution factors: ratio of full-sim measured elasticity at the
-# anchor year to the bathtub-internal elasticity the calibrator computes.
-# The calibrator's standalone Bellman + bathtub recurrence omits per-record
-# clamps in kg_dyn_apply_to_records, AGI/AMT/NIIT-driven MTR-distribution
-# effects, and baseline-anchor-tau drift (literature -2.52 is anchored at
-# tau=0.238 but the sim's kg-weighted average baseline mtr_kg_lt is lower).
-# The internal bathtub target is inflated by 1/dilution so the full sim
-# delivers the nominal literature target.
+# anchor year to the bathtub-internal elasticity the calibrator computes. The
+# standalone Bellman + bathtub recurrence omits per-record clamps in
+# kg_dyn_apply_to_records, AGI/AMT/NIIT-driven MTR-distribution effects, and
+# baseline-anchor-tau drift (literature -2.52 is anchored at tau=0.238 but the
+# sim's kg-weighted average baseline mtr_kg_lt is lower). The internal bathtub
+# target is inflated by 1/dilution so the full sim delivers the nominal target.
 #
-# Re-measured 2026-06-22 under the KG_APPLIER_ALLOCATION = '0.5' default
-# (vintage kg_recal_2pp_05, full sample, via other/kg_model_tests/
-# measure_dilution.R). dilution = E_full / E_int, both at the (psi, planned_share)
-# the measurement run used (21.2272, 0.3921 -> E_int -3.2075 / +5.8293):
-#   rate_up_2pp at sim year 30 (2055):    E_full = -3.62  (was -1.98 under 'R')
-#   delayed     at announcement yr (2026): E_full = +8.97  (was +4.36 under 'R')
-# Under 0.5 the full sim AMPLIFIES the bathtub response (dilution > 1) rather
-# than damping it: the lock-in/carryover stock realization (extra_R) lands on a
-# broader record set, and the small realization-weighted dtau denominator turns
-# that into a large elasticity swing. Prior 'R'-rule values: 0.786 / 0.865.
-#
-# Iteration 2 (2026-06-22): the iter-1 values (1.1275 / 1.5391, measured at the
-# old psi/ps 21.2272/0.3921) were extrapolated too far -- a verify run at the
-# iter-1 solution (29.3290 / 0.2102, vintage kg_recal_2pp_05_verify) gave
-# full-sim E_full = -2.43 long (ok) / +4.13 short (18% under nominal). The
-# dilution is psi/ps-dependent, especially short-run. These values are
-# RE-MEASURED at that verify point (E_int -2.2358 / +3.2758), so they anchor
-# the bisection where the solution lives.
-#
-# SPEC v2 (2026-07): re-measured against the entropy model in the Phase-4
-# dilution loop (measure_dilution.sbatch); update both here each iteration
-# until the full-sim semis land on nominal.
-#   iter 1 (psi-era priors 1.0890 / 1.2599): eta=4.5837, omega=0.5254 ->
-#          full sim kg_eta_recal_iter1: E_full_long -2.568 (ok, <0.05),
-#          E_full_short +5.153 (short-run 0.113 over the +/-0.10 band).
-#   iter 2 (values below, measure_dilution_17427646.out): re-measured
-#          1.1095 / 1.2880 at the iter-1 operating point -> calibrate gave
-#          eta=4.4984, omega=0.5132 -> full sim kg_eta_recal_iter2:
-#          E_full_long -2.5232, E_full_short +5.0391 -- BOTH on nominal.
-#          CONVERGED. The iter-2 verify re-measured 1.1104 / 1.2872 (drift
-#          <0.1%, i.e. dilution stable), so these iter-2 dilutions are final;
-#          they are the values eta*/omega* were calibrated under -- do not
-#          swap in the re-measured pair without re-running calibrate.
-KG_DYN_DILUTION_LONG  = 1.1095
-KG_DYN_DILUTION_SHORT = 1.2880
+# Re-measured each iteration by measure_dilution.sbatch (dilution = E_full /
+# E_int at the current operating point); update both here and re-run calibrate
+# until the full-sim semis land on nominal. The values below are the v2
+# converged priors used to SEED the v3 (single-pool) recalibration -- REPLACE
+# with the v3 re-measurement before treating the calibrated eta/timeable_share
+# as final.
+KG_DYN_DILUTION_LONG  = 1.1277
+KG_DYN_DILUTION_SHORT = 1.0864
 
-# Internal bathtub targets the bisection actually chases.
-LONG_RUN_TARGET    = LONG_RUN_NOMINAL  / KG_DYN_DILUTION_LONG   # ≈ -3.21
+# Internal bathtub targets the bisection actually chases (nominal / dilution).
+LONG_RUN_TARGET    = LONG_RUN_NOMINAL  / KG_DYN_DILUTION_LONG
 LONG_RUN_PERTURB   = 0.01            # 1pp uniform permanent shock
 LONG_RUN_OFFSET    = 29              # measure at YEARS[1] + 29 (sim year 30)
 
-SHORT_RUN_TARGET   = SHORT_RUN_NOMINAL / KG_DYN_DILUTION_SHORT  # ≈ +5.83
+SHORT_RUN_TARGET   = SHORT_RUN_NOMINAL / KG_DYN_DILUTION_SHORT
 SHORT_RUN_PERTURB  = 0.05            # 5pp delayed (announced at t, hits t+1)
 SHORT_RUN_OFFSET   = 0               # measure at YEARS[1] (announcement year)
 
 ETA_TOL            = 1e-4
 SHORT_TOL          = 1e-3
-MAX_OUTER          = 25
-MAX_INNER          = 30
+MAX_ETA_ITER       = 30
+MAX_F_ITER         = 30
 
-# Nested reparameterization. Phi (inert share) is held fixed at the live
-# KG_DYN_SHARE_INERT (env-overridable via KG_SHARE_INERT for sensitivity); the
-# calibrator moves omega in [0, 1]. Derived bucket primitives:
-PHI                = KG_DYN_SHARE_INERT
-phi_of             = function(om) PHI * (1 - om)   # fixed/nonresponsive share
-ps_of              = function(om) PHI * om         # mechanically-timeable share
-OMEGA_LO_INIT      = 0
-OMEGA_HI_INIT      = 1
+# Single pool: eta is calibrated against the (timeable-share invariant) long-run
+# moment at this arbitrary reference share; the invariance is asserted at
+# runtime before the eta bisection.
+F_REF              = 0.5
+F_LO_INIT          = 0
+F_HI_INIT          = 1
 
-# eta bracket grid. Expected eta* ~ 4-8 (solving the internal long-run target
-# through the MC amplification); extend the top only if the bracket stop() fires
-# high. Response is DECREASING in eta.
+# eta bracket grid. In the single pool eta ~ the long-run semi-elasticity
+# directly (order ~2.5, well below v2's responsive-half ~4.5); extend the top
+# only if the bracket stop() fires high. Response is DECREASING in eta.
 ETA_GRID_INIT      = c(0.5, 1, 2, 4, 8, 16, 32)
 
 detail_files = list.files(file.path(BASELINE_ROOT, 'baseline/static/detail'),
@@ -234,7 +203,7 @@ names(tau_S_short) = as.character(YEARS)
 
 
 #-------------------------------------------------------------------------------
-# Step 3: Build Bellman pre-pass inputs that don't depend on (psi, planned_share)
+# Step 3: Build Bellman pre-pass inputs that don't depend on (eta, timeable_share)
 #-------------------------------------------------------------------------------
 
 cat("Building extended grid, tau matrices, and real-rate beta series...\n")
@@ -268,47 +237,36 @@ bathtub_ages_chr = as.character(AGES_BATHTUB)
 # Step 4: Evaluation helpers (response at a chosen anchor year)
 #-------------------------------------------------------------------------------
 
-# eval_response(eta_val, omega_val, ...): omega sets BOTH bucket primitives
-# phi_I = phi_of(omega) and planned_share = ps_of(omega) (their sum is the fixed
-# Phi). The 'omega' argument here is the timeable fraction -- distinct from the
-# heir-aging matrix `omega` (the global from Step 3), which is unused under
-# step-up calibration (delta_route = 0). We rename the local to `omega_frac`.
-eval_response = function(eta_val, omega_frac, scenario_tau_mat,
+# eval_response(eta_val, timeable_share, ...): single pool -- the Bellman runs
+# on the full baseline rate (no phi_I/planned carve-out) and timeable_share
+# drives the additive timing overlay. The heir-aging matrix `omega` (the global
+# from Step 3) is unused under step-up calibration (delta_route = 0).
+eval_response = function(eta_val, timeable_share, scenario_tau_mat,
                          anchor_year, perturbation) {
 
-  phi_val = phi_of(omega_frac)
-  ps_val  = ps_of(omega_frac)
-
-  kg_dyn_validate_realization_buckets(fixed_share   = phi_val,
-                                      planned_share = ps_val,
-                                      timing_window = KG_DYN_TIMING_WINDOW,
-                                      ref_wedge     = KG_DYN_TIMING_REF_WEDGE,
-                                      share_inert   = PHI,
-                                      timeable_frac = omega_frac)
+  kg_dyn_validate_timing_params(timeable_share = timeable_share,
+                                timing_window  = KG_DYN_TIMING_WINDOW,
+                                ref_wedge      = KG_DYN_TIMING_REF_WEDGE)
 
   planned_timing = kg_dyn_build_planned_timing(
     baseline_cells = baseline_cells,
     tau_S_mat      = scenario_tau_mat,
     years          = YEARS,
     tau_B_mat      = tau_B_mat,
-    planned_share  = ps_val,
+    timeable_share = timeable_share,
     timing_window  = KG_DYN_TIMING_WINDOW,
     ref_wedge      = KG_DYN_TIMING_REF_WEDGE,
     ages_bathtub   = AGES_BATHTUB
   )
 
   pass1 = kg_dyn_solve_bellman(grid_packed, tau_B_mat, c_phi_mat = 0,
-                               eta           = eta_val,
-                               phi_I         = phi_val,
-                               planned_share = ps_val,
-                               beta_by_year  = beta_by_year)
+                               eta          = eta_val,
+                               beta_by_year = beta_by_year)
   pass2 = kg_dyn_solve_bellman(grid_packed, scenario_tau_mat,
-                               c_phi_mat     = 0,
-                               kappa_mat     = pass1$kappa,
-                               eta           = eta_val,
-                               phi_I         = phi_val,
-                               planned_share = ps_val,
-                               beta_by_year  = beta_by_year)
+                               c_phi_mat    = 0,
+                               kappa_mat    = pass1$kappa,
+                               eta          = eta_val,
+                               beta_by_year = beta_by_year)
 
   delta = setNames(rep(0, length(AGES_BATHTUB)), bathtub_ages_chr)
   R_B_anchor = NA_real_
@@ -318,13 +276,11 @@ eval_response = function(eta_val, omega_frac, scenario_tau_mat,
     t  = YEARS[j]
     bt = baseline_cells[[as.character(t)]]
 
-    r_D_S_bt = pass2$r_D[bathtub_ages_chr, j]
     rate_info = kg_dyn_build_scenario_rate(
       baseline_t       = bt,
-      r_ordinary_S     = r_D_S_bt,
+      r_ordinary_S     = pass2$r_D[bathtub_ages_chr, j],
       R_planned_B_col  = planned_timing$R_planned_B[, j],
-      R_planned_S_col  = planned_timing$R_planned_S[, j],
-      fixed_share      = phi_val
+      R_planned_S_col  = planned_timing$R_planned_S[, j]
     )
     r_S_vec = setNames(rate_info$r_S, bathtub_ages_chr)
 
@@ -334,8 +290,7 @@ eval_response = function(eta_val, omega_frac, scenario_tau_mat,
       A               = A,
       omega           = omega,
       r_S_vec         = r_S_vec,
-      delta_route_vec = zero_route_vec,
-      phi_I           = phi_val
+      delta_route_vec = zero_route_vec
     )
 
     if (t == anchor_year) {
@@ -350,48 +305,44 @@ eval_response = function(eta_val, omega_frac, scenario_tau_mat,
   log(R_S_anchor / R_B_anchor) / perturbation
 }
 
-eval_long_run  = function(eta_val, omega_frac) {
-  eval_response(eta_val, omega_frac, tau_S_long_mat,
+eval_long_run  = function(eta_val, timeable_share = F_REF) {
+  eval_response(eta_val, timeable_share, tau_S_long_mat,
                 LONG_RUN_ANCHOR,  LONG_RUN_PERTURB)
 }
-eval_short_run = function(eta_val, omega_frac) {
-  eval_response(eta_val, omega_frac, tau_S_short_mat,
+eval_short_run = function(eta_val, timeable_share) {
+  eval_response(eta_val, timeable_share, tau_S_short_mat,
                 SHORT_RUN_ANCHOR, SHORT_RUN_PERTURB)
 }
 
 
 #-------------------------------------------------------------------------------
-# Step 5: Inner eta bisection (long-run target, at given omega)
+# Step 5: eta bisection against the long-run target
 #
-# DIRECTION FLIP vs. the old psi calibration: the long-run response is
-# DECREASING in eta (bigger eta => steeper exp => more negative semi). So the
-# lo/hi bracket and the bisection update are the mirror of the quadratic-psi
-# version. The straddle product-<=0 test is direction-agnostic; only the
-# grid-bracket pick and the update inequality flip.
+# The long-run response is DECREASING in eta (bigger eta => steeper exp => more
+# negative semi), so the lo/hi bracket and the bisection update are mirrored vs.
+# an increasing target. The straddle product-<=0 test is direction-agnostic;
+# only the grid-bracket pick and the update inequality flip.
 #-------------------------------------------------------------------------------
 
 # Bracket eta from a coarse grid (or a tight window around a warm-start guess).
-bracket_eta = function(omega_frac, warm = NULL) {
+bracket_eta = function(warm = NULL) {
 
   if (!is.null(warm)) {
     eta_lo = max(warm * 0.4, min(ETA_GRID_INIT))
     eta_hi = warm * 2.5
-    v_lo = eval_long_run(eta_lo, omega_frac)
-    v_hi = eval_long_run(eta_hi, omega_frac)
-    # Verify the warm-start bracket actually straddles the target. If not,
-    # fall through to the coarse grid.
+    v_lo = eval_long_run(eta_lo)
+    v_hi = eval_long_run(eta_hi)
     if ((v_lo - LONG_RUN_TARGET) * (v_hi - LONG_RUN_TARGET) <= 0) {
       return(list(lo = eta_lo, hi = eta_hi))
     }
   }
 
-  vals = sapply(ETA_GRID_INIT, function(e) eval_long_run(e, omega_frac))
+  vals = sapply(ETA_GRID_INIT, function(e) eval_long_run(e))
   above = which(vals > LONG_RUN_TARGET)   # less negative response (small eta)
   below = which(vals < LONG_RUN_TARGET)   # more negative response (large eta)
   if (length(above) == 0 || length(below) == 0) {
-    stop(sprintf(paste0('eta grid does not bracket long-run target at ',
-                        'omega = %.4f (vals: [%s]); extend ETA_GRID_INIT.'),
-                 omega_frac,
+    stop(sprintf(paste0('eta grid does not bracket long-run target (vals: ',
+                        '[%s]); extend ETA_GRID_INIT.'),
                  paste(sprintf('%.3f', vals), collapse = ', ')))
   }
   # Response decreasing in eta: the largest eta still above (less negative) is
@@ -399,16 +350,16 @@ bracket_eta = function(omega_frac, warm = NULL) {
   list(lo = ETA_GRID_INIT[max(above)], hi = ETA_GRID_INIT[min(below)])
 }
 
-inner_bisect_eta = function(omega_frac, warm = NULL) {
+bisect_eta = function(warm = NULL) {
 
-  br = bracket_eta(omega_frac, warm = warm)
+  br = bracket_eta(warm = warm)
   e_lo = br$lo
   e_hi = br$hi
   v_mid = NA_real_
 
-  for (iter in 1:MAX_INNER) {
+  for (iter in 1:MAX_ETA_ITER) {
     e_mid = (e_lo + e_hi) / 2
-    v_mid = eval_long_run(e_mid, omega_frac)
+    v_mid = eval_long_run(e_mid)
     if (abs(v_mid - LONG_RUN_TARGET) < ETA_TOL) break
     # Decreasing in eta: too negative (below target) => eta too big => lower hi.
     if (v_mid < LONG_RUN_TARGET) e_hi = e_mid else e_lo = e_mid
@@ -416,71 +367,77 @@ inner_bisect_eta = function(omega_frac, warm = NULL) {
   list(eta = (e_lo + e_hi) / 2, semi = v_mid, iters = iter)
 }
 
-
-#-------------------------------------------------------------------------------
-# Step 6: Outer omega bisection (short-run target)
-#-------------------------------------------------------------------------------
-
-cat(sprintf(
-  '\nPhi (inert share, fixed) = %.4f;  ordinary Bellman share = %.4f\n', PHI, 1 - PHI))
 cat(sprintf(
   'Targets:\n  long-run  d log(R)/dtau              = %+7.4f  (sim-year %2d)\n  short-run d log(R(t))/dtau(t+1) = %+7.4f  (sim-year %2d)\n\n',
   LONG_RUN_TARGET,  LONG_RUN_OFFSET + 1,
   SHORT_RUN_TARGET, SHORT_RUN_OFFSET + 1))
 
-# Verify that the short-run target is bracketable in [OMEGA_LO_INIT, OMEGA_HI_INIT].
-cat(sprintf('Outer bracket check on omega in [%.2f, %.2f]:\n',
-            OMEGA_LO_INIT, OMEGA_HI_INIT))
-inner_lo = inner_bisect_eta(OMEGA_LO_INIT, warm = NULL)
-short_lo = eval_short_run(inner_lo$eta, OMEGA_LO_INIT)
-cat(sprintf('  omega = %.4f  (phi_I = %.4f, planned = %.4f)  eta = %.4f  short_run = %+7.4f\n',
-            OMEGA_LO_INIT, phi_of(OMEGA_LO_INIT), ps_of(OMEGA_LO_INIT),
-            inner_lo$eta, short_lo))
-
-inner_hi = inner_bisect_eta(OMEGA_HI_INIT, warm = inner_lo$eta)
-short_hi = eval_short_run(inner_hi$eta, OMEGA_HI_INIT)
-cat(sprintf('  omega = %.4f  (phi_I = %.4f, planned = %.4f)  eta = %.4f  short_run = %+7.4f\n\n',
-            OMEGA_HI_INIT, phi_of(OMEGA_HI_INIT), ps_of(OMEGA_HI_INIT),
-            inner_hi$eta, short_hi))
-
-if ((short_lo - SHORT_RUN_TARGET) * (short_hi - SHORT_RUN_TARGET) > 0) {
-  stop(sprintf(paste0('short-run target %.4f not bracketed by omega range ',
-                      '[%.2f, %.2f] (short_lo = %.4f, short_hi = %.4f). Adjust ',
-                      'OMEGA_LO_INIT / OMEGA_HI_INIT or Phi (KG_SHARE_INERT), or ',
-                      'revisit SHORT_RUN_RATIO / KG_DYN_TIMING_REF_WEDGE.'),
-               SHORT_RUN_TARGET, OMEGA_LO_INIT, OMEGA_HI_INIT, short_lo, short_hi))
+# Health check -- the single-pool design claim: the long-run moment is EXACTLY
+# invariant to the timeable share (a uniform permanent shock leaves no year
+# cheaper, so nothing retimes). Verify at f=0 and f=1 before calibrating eta.
+lr_f0 = eval_long_run(2, timeable_share = 0)
+lr_f1 = eval_long_run(2, timeable_share = 1)
+cat(sprintf('f-invariance check (eta=2): long-run at f=0 %+7.5f vs f=1 %+7.5f  (|diff| %.2e)\n',
+            lr_f0, lr_f1, abs(lr_f0 - lr_f1)))
+if (abs(lr_f0 - lr_f1) > 1e-8) {
+  stop('calibrate.R: long-run moment is NOT timeable-share invariant ',
+       '(|diff| > 1e-8). The timing overlay is leaking into the permanent ',
+       'margin -- check kg_dyn_build_scenario_rate / build_planned_timing.')
 }
 
-# Outer bisection. Larger omega -> larger planned_share -> larger (more
-# positive) short_run. eta is (nearly) omega-invariant, so warm-starting the
-# inner bisection makes it collapse to ~1 iteration -- a health signal.
-om_lo = OMEGA_LO_INIT
-om_hi = OMEGA_HI_INIT
-eta_warm = inner_hi$eta
-om_star  = NA_real_
-eta_star = NA_real_
+cat('\nCalibrating eta against the long-run moment...\n')
+eta_fit    = bisect_eta(warm = NULL)
+eta_star   = eta_fit$eta
+E_int_long = eta_fit$semi
+cat(sprintf('  KG_DYN_DEFAULT_ETA = %.4f  (long-run semi = %+7.4f  target %+7.4f, %d iters)\n',
+            eta_star, E_int_long, LONG_RUN_TARGET, eta_fit$iters))
+
+
+#-------------------------------------------------------------------------------
+# Step 6: timeable-share bisection against the short-run target (at eta*)
+#
+# Short-run is INCREASING in f. At f=0 it is the pure full-pool Bellman
+# anticipation at eta*; f adds the residual mechanical retiming. If the f=0
+# response already exceeds target the bracket fails -- that is the flagged
+# risk, not a bug (revisit SHORT_RUN_RATIO / the short-run anchor).
+#-------------------------------------------------------------------------------
+
+cat(sprintf('\nOuter bracket check on timeable share in [%.2f, %.2f] (eta = %.4f):\n',
+            F_LO_INIT, F_HI_INIT, eta_star))
+short_lo = eval_short_run(eta_star, F_LO_INIT)
+short_hi = eval_short_run(eta_star, F_HI_INIT)
+cat(sprintf('  f = %.4f  short_run = %+7.4f  (pure full-pool Bellman anticipation)\n',
+            F_LO_INIT, short_lo))
+cat(sprintf('  f = %.4f  short_run = %+7.4f\n\n', F_HI_INIT, short_hi))
+
+if ((short_lo - SHORT_RUN_TARGET) * (short_hi - SHORT_RUN_TARGET) > 0) {
+  stop(sprintf(paste0('short-run target %.4f not bracketed by f in [%.2f, %.2f] ',
+                      '(short_lo = %.4f, short_hi = %.4f). If short_lo already ',
+                      'exceeds the target, the full-pool Bellman alone ',
+                      'overshoots the short-run at eta* -- revisit ',
+                      'SHORT_RUN_RATIO / KG_DYN_TIMING_REF_WEDGE.'),
+               SHORT_RUN_TARGET, F_LO_INIT, F_HI_INIT, short_lo, short_hi))
+}
+
+f_lo = F_LO_INIT
+f_hi = F_HI_INIT
+f_star     = NA_real_
 short_star = NA_real_
 
-for (iter in 1:MAX_OUTER) {
-  om_mid = (om_lo + om_hi) / 2
+for (iter in 1:MAX_F_ITER) {
+  f_mid = (f_lo + f_hi) / 2
+  short = eval_short_run(eta_star, f_mid)
 
-  inner = inner_bisect_eta(om_mid, warm = eta_warm)
-  eta_warm = inner$eta
+  cat(sprintf('  f-iter %2d  timeable_share = %.4f  short = %+7.4f\n',
+              iter, f_mid, short))
 
-  short = eval_short_run(inner$eta, om_mid)
-
-  cat(sprintf(
-    '  outer %2d  omega = %.4f  (phi_I = %.4f, planned = %.4f)  eta = %.4f  long = %+7.4f  short = %+7.4f  (inner iters = %d)\n',
-    iter, om_mid, phi_of(om_mid), ps_of(om_mid), inner$eta, inner$semi,
-    short, inner$iters))
-
-  om_star    = om_mid
-  eta_star   = inner$eta
+  f_star     = f_mid
   short_star = short
 
   if (abs(short - SHORT_RUN_TARGET) < SHORT_TOL) break
 
-  if (short < SHORT_RUN_TARGET) om_lo = om_mid else om_hi = om_mid
+  # Increasing in f: too small (below target) => raise f.
+  if (short < SHORT_RUN_TARGET) f_lo = f_mid else f_hi = f_mid
 }
 
 
@@ -488,29 +445,24 @@ for (iter in 1:MAX_OUTER) {
 # Step 7: Report
 #-------------------------------------------------------------------------------
 
-phi_star = phi_of(om_star)
-ps_star  = ps_of(om_star)
-E_int_long  = eval_long_run(eta_star, om_star)
 E_int_short = short_star
 
-# Count of frozen r_D_B = 0 cells (r_D_B = (1-Phi)*r_B, so exactly the r_B = 0
-# cells; these are pinned at r_D = 0 and contribute no scenario response).
+# Frozen r_D_B = 0 cells: single pool r_D_B = r_B, so exactly the r_B = 0 cells;
+# these stay at r_D = 0 and contribute no scenario response.
 n_frozen = sum(grid_packed$r_B[bathtub_ages_chr, , drop = FALSE] == 0)
 n_cells  = length(grid_packed$r_B[bathtub_ages_chr, , drop = FALSE])
 
-cat(sprintf('\nCalibrated (spec v2, entropy cost; Phi = %.4f fixed):\n', PHI))
-cat(sprintf('  KG_DYN_DEFAULT_ETA    = %.4f  (long-run  semi = %+7.4f  target %+7.4f)\n',
+cat('\nCalibrated (spec v3, entropy cost, single pool):\n')
+cat(sprintf('  KG_DYN_DEFAULT_ETA     = %.4f  (long-run  semi = %+7.4f  target %+7.4f)\n',
             eta_star, E_int_long, LONG_RUN_TARGET))
-cat(sprintf('  KG_DYN_TIMEABLE_FRAC  = %.4f  (short-run semi = %+7.4f  target %+7.4f)\n',
-            om_star, E_int_short, SHORT_RUN_TARGET))
-cat(sprintf('  derived phi_I         = %.4f\n', phi_star))
-cat(sprintf('  derived planned_share = %.4f\n', ps_star))
-cat(sprintf('  frozen r_D_B=0 cells  = %d of %d bathtub cells (r_B = 0)\n',
+cat(sprintf('  KG_DYN_TIMEABLE_SHARE  = %.4f  (short-run semi = %+7.4f  target %+7.4f)\n',
+            f_star, E_int_short, SHORT_RUN_TARGET))
+cat(sprintf('  frozen r_D_B=0 cells   = %d of %d bathtub cells (r_B = 0)\n',
             n_frozen, n_cells))
 cat(sprintf(paste0('\n  E_int_long  = %+.4f  (measure_dilution.sbatch arg 3)\n',
                    '  E_int_short = %+.4f  (measure_dilution.sbatch arg 4)\n'),
             E_int_long, E_int_short))
-cat('\nUpdate KG_DYN_DEFAULT_ETA and KG_DYN_TIMEABLE_FRAC in src/sim/kg_dynamics.R.\n')
+cat('\nUpdate KG_DYN_DEFAULT_ETA and KG_DYN_TIMEABLE_SHARE in src/sim/kg_dynamics.R.\n')
 
 # Ready-to-paste provenance stamp (kg_dyn_check_calibration_provenance compares
 # the live config against this and warns on drift). applier_allocation is the
@@ -523,73 +475,62 @@ cat(sprintf(paste0(
   '  date               = \'%s\',\n',
   '  spec_version       = %dL,\n',
   '  eta                = %s,\n',
-  '  timeable_frac      = %s,\n',
-  '  share_inert        = %s,\n',
+  '  timeable_share     = %s,\n',
   '  applier_allocation = \'%s\',\n',
   '  ref_wedge          = %s,\n',
   '  timing_window      = %dL,\n',
   '  tax_data_vintage   = \'%s\',\n',
   '  macro_vintage      = \'%s\'\n',
   ')\n',
-  '# also set KG_DYN_DEFAULT_ETA default to %s and KG_DYN_TIMEABLE_FRAC to %s\n'),
+  '# also set KG_DYN_DEFAULT_ETA default to %s and KG_DYN_TIMEABLE_SHARE to %s\n'),
   as.character(Sys.Date()), KG_DYN_SPEC_VERSION,
-  format(round(eta_star, 4)), format(round(om_star, 4)), format(PHI),
+  format(round(eta_star, 4)), format(round(f_star, 4)),
   KG_DYN_APPLIER_ALLOCATION,
   format(KG_DYN_TIMING_REF_WEDGE),
   as.integer(KG_DYN_TIMING_WINDOW), td_vint, macro_vint,
-  format(round(eta_star, 4)), format(round(om_star, 4))))
+  format(round(eta_star, 4)), format(round(f_star, 4))))
 
 
 #-------------------------------------------------------------------------------
 # Bonus: long-run semi-elasticity profile by sim year at the calibrated point
 #-------------------------------------------------------------------------------
 
-profile_years = function(eta_val, omega_frac) {
-
-  phi_val = phi_of(omega_frac)
-  ps_val  = ps_of(omega_frac)
+profile_years = function(eta_val, timeable_share) {
 
   planned_timing = kg_dyn_build_planned_timing(
     baseline_cells = baseline_cells,
     tau_S_mat      = tau_S_long_mat,
     years          = YEARS,
     tau_B_mat      = tau_B_mat,
-    planned_share  = ps_val,
+    timeable_share = timeable_share,
     timing_window  = KG_DYN_TIMING_WINDOW,
     ref_wedge      = KG_DYN_TIMING_REF_WEDGE,
     ages_bathtub   = AGES_BATHTUB
   )
 
   pass1 = kg_dyn_solve_bellman(grid_packed, tau_B_mat, c_phi_mat = 0,
-                               eta           = eta_val,
-                               phi_I         = phi_val,
-                               planned_share = ps_val,
-                               beta_by_year  = beta_by_year)
+                               eta          = eta_val,
+                               beta_by_year = beta_by_year)
   pass2 = kg_dyn_solve_bellman(grid_packed, tau_S_long_mat,
-                               c_phi_mat     = 0,
-                               kappa_mat     = pass1$kappa,
-                               eta           = eta_val,
-                               phi_I         = phi_val,
-                               planned_share = ps_val,
-                               beta_by_year  = beta_by_year)
+                               c_phi_mat    = 0,
+                               kappa_mat    = pass1$kappa,
+                               eta          = eta_val,
+                               beta_by_year = beta_by_year)
 
   delta = setNames(rep(0, length(AGES_BATHTUB)), bathtub_ages_chr)
   out   = tibble(sim_year = integer(), year = integer(), semi_elast = numeric())
 
   for (j in seq_along(YEARS)) {
     t  = YEARS[j]; bt = baseline_cells[[as.character(t)]]
-    r_D_S_bt = pass2$r_D[bathtub_ages_chr, j]
     rate_info = kg_dyn_build_scenario_rate(
       baseline_t       = bt,
-      r_ordinary_S     = r_D_S_bt,
+      r_ordinary_S     = pass2$r_D[bathtub_ages_chr, j],
       R_planned_B_col  = planned_timing$R_planned_B[, j],
-      R_planned_S_col  = planned_timing$R_planned_S[, j],
-      fixed_share      = phi_val
+      R_planned_S_col  = planned_timing$R_planned_S[, j]
     )
     r_S_vec = setNames(rate_info$r_S, bathtub_ages_chr)
 
-    step = kg_dyn_step_recurrence(delta, bt, A, omega, r_S_vec,
-                                  zero_route_vec, phi_val)
+    step = kg_dyn_step_recurrence(delta, bt, A, omega, r_S_vec, zero_route_vec)
     G_S    = bt$G_B + delta
     R_B_t  = sum(bt$R_B)
     R_S_t  = sum(step$r_S * G_S)
@@ -603,6 +544,6 @@ profile_years = function(eta_val, omega_frac) {
 }
 
 cat('\nLong-run semi-elasticity profile by sim year (at calibrated point):\n')
-print(as.data.frame(profile_years(eta_star, om_star) %>%
+print(as.data.frame(profile_years(eta_star, f_star) %>%
                       filter(sim_year %in% c(1, 5, 10, 20, 30))),
       row.names = FALSE)

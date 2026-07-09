@@ -8,9 +8,9 @@
 # dilution = E_full / E_int, where
 #   E_full = full-sim measured semi-elasticity (this script), and
 #   E_int  = the bathtub-internal semi-elasticity the calibrator hit at the
-#            (eta, omega) USED IN THE SIM RUN being measured (spec v2; formerly
-#            (psi, planned_share)). calibrate.R prints E_int_long / E_int_short
-#            at the calibrated point -- pass them as args 3/4 below.
+#            (eta, timeable_share) USED IN THE SIM RUN being measured (spec v3,
+#            single pool). calibrate.R prints E_int_long / E_int_short at the
+#            calibrated point -- pass them as args 3/4 below.
 #
 # E_full convention (matches other/kg_model_tests/planned_bucket_results.md):
 #   E_full = log(R_shock / R_base) / dtau
@@ -42,13 +42,13 @@ LOCAL_ROOT = if (length(args) >= 2) args[2] else
   '/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1'
 ROOT = file.path(LOCAL_ROOT, VINTAGE)
 
-# Bathtub-internal semi-elasticities at the (eta, omega) the sim ran under
-# (spec v2). ALWAYS pass args 3/4 from calibrate.R's E_int_long / E_int_short
-# printout for the iteration being measured -- the defaults below are stale
-# psi-era placeholders retained only so the script runs argless. These are
-# allocation-INDEPENDENT (the bathtub never calls the applier).
-E_INT_LONG  = if (length(args) >= 3) as.numeric(args[3]) else -3.2075
-E_INT_SHORT = if (length(args) >= 4) as.numeric(args[4]) else +5.8293
+# Bathtub-internal semi-elasticities at the (eta, timeable_share) the sim ran
+# under (spec v3, single pool). ALWAYS pass args 3/4 from calibrate.R's
+# E_int_long / E_int_short printout for the iteration being measured -- the
+# defaults below are placeholders retained only so the script runs argless.
+# These are allocation-INDEPENDENT (the bathtub never calls the applier).
+E_INT_LONG  = if (length(args) >= 3) as.numeric(args[3]) else -2.2722
+E_INT_SHORT = if (length(args) >= 4) as.numeric(args[4]) else +3.9146
 
 # Nominal literature targets, for reporting only.
 NOMINAL_LONG  = -2.52

@@ -65,12 +65,11 @@ grid = list(
 )
 tau = matrix(0.2, 1, 1, dimnames = list('70', '2026'))
 with_char = kg_dyn_solve_bellman(grid, tau, c_phi_mat = 1, eta = 5,
-                                 phi_I = 0, planned_share = 0,
                                  beta_by_year = 1)
 without_char = kg_dyn_solve_bellman(
   list(m = grid$m, r_B = grid$r_B,
        p_char = matrix(0, 1, 1, dimnames = dimnames(grid$m))),
-  tau, c_phi_mat = 1, eta = 5, phi_I = 0, planned_share = 0,
+  tau, c_phi_mat = 1, eta = 5,
   beta_by_year = 1
 )
 stopifnot(with_char$MC[1, 1] > without_char$MC[1, 1])
@@ -81,8 +80,7 @@ step = kg_dyn_step_recurrence(
   A = matrix(1, 1, 1),
   omega = matrix(1, 1, 1),
   r_S_vec = setNames(cell$r_B, '70'),
-  delta_route_vec = 1,
-  phi_I = 0
+  delta_route_vec = 1
 )
 stopifnot(abs(step$terminal_char_stock -
               cell$p_char * step$decedent_stock) < 1e-8)

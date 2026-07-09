@@ -14,10 +14,7 @@ for (f in files) { invisible(parse(f)); cat('PARSE OK:', f, '\n') }
 source('src/sim/kg_dynamics.R')
 cat('\nlive KG_DYN_APPLIER_ALLOCATION =', KG_DYN_APPLIER_ALLOCATION,
     '| KG_DYN_DEFAULT_ETA =', KG_DYN_DEFAULT_ETA,
-    '| KG_DYN_SHARE_INERT (Phi) =', KG_DYN_SHARE_INERT,
-    '| KG_DYN_TIMEABLE_FRAC (omega) =', KG_DYN_TIMEABLE_FRAC,
-    '| phi_I =', KG_DYN_PHI_I,
-    '| planned_share =', KG_DYN_SHARE_PLANNED, '\n\n')
+    '| KG_DYN_TIMEABLE_SHARE =', KG_DYN_TIMEABLE_SHARE, '\n\n')
 
 mk = function(td, macro) list(interface_paths = list(`Tax-Data` = td,
                                                       `Macro-Projections` = macro))
