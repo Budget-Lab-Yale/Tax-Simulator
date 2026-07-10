@@ -49,21 +49,9 @@
 
   .hero { padding:56px 0 44px; border-bottom:1px solid var(--rule); }
   .hero h1 { font-size:clamp(30px,4.6vw,52px); line-height:1.04; max-width:18ch; }
-  .hero .dek { margin-top:18px; max-width:60ch; font-size:18px; color:var(--ink-2); }
-  .thesis { margin-top:40px; display:grid; grid-template-columns:1fr auto; gap:36px; align-items:end; }
-  @media (max-width:760px){ .thesis{ grid-template-columns:1fr; } }
-  .ladder { display:flex; flex-direction:column; gap:14px; }
-  .ladder-row { display:grid; grid-template-columns:210px 1fr; align-items:center; gap:16px; }
-  .ladder-lab { font-size:13px; color:var(--ink-2); text-align:right; }
-  .ladder-lab small { display:block; color:var(--muted); font-size:11px; }
-  .bartrack { position:relative; height:34px; background:var(--surface-2); border-radius:5px; overflow:hidden; }
-  .barfill { position:absolute; inset:0 auto 0 0; border-radius:5px; }
-  .barfill .val { position:absolute; right:10px; top:50%; transform:translateY(-50%); font:600 15px/1 ui-monospace,monospace; font-variant-numeric:tabular-nums; color:#fff; }
-  .barfill.ghost .val { color:var(--ink); }
-  .gapcall { align-self:center; text-align:right; }
-  .gapcall .big { font:680 clamp(38px,6.6vw,70px)/0.95 ui-monospace,monospace; font-variant-numeric:tabular-nums; letter-spacing:-.02em; color:var(--accent); }
-  .gapcall .altbig { font:600 15px/1 ui-monospace,monospace; font-variant-numeric:tabular-nums; color:var(--ink-2); margin-top:6px; }
-  .gapcall .lab { font-size:13px; color:var(--ink-2); max-width:24ch; margin-left:auto; margin-top:8px; }
+  .dekcols { margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:32px; }
+  @media (max-width:760px){ .dekcols{ grid-template-columns:1fr; gap:0; } }
+  .hero .dek { margin:0 0 14px; font-size:17px; color:var(--ink-2); }
 
   section { padding:48px 0; border-bottom:1px solid var(--rule); }
   .sec-head { display:flex; align-items:baseline; gap:14px; margin-bottom:8px; }
@@ -84,9 +72,6 @@
   .sw[aria-pressed="true"] .dot { background:var(--accent); }
   .sw[aria-pressed="true"] .dot::after { transform:translateX(12px); }
   .sw:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
-  .presets { display:flex; flex-wrap:wrap; gap:6px; }
-  .preset { font:600 11.5px/1 ui-monospace,monospace; padding:6px 9px; border-radius:7px; border:1px solid var(--hair); background:transparent; color:var(--ink-2); cursor:pointer; }
-  .preset:hover { color:var(--ink); border-color:var(--accent); }
 
   .out { display:flex; flex-direction:column; gap:20px; min-width:0; }
   .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
@@ -107,17 +92,13 @@
   .legend .it { display:flex; align-items:center; gap:6px; }
   .legend .sw2 { width:11px; height:11px; border-radius:3px; flex:none; }
 
-  .atlas { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
-  @media (max-width:720px){ .atlas{ grid-template-columns:1fr; } }
-  .lev { background:var(--surface); border:1px solid var(--hair); border-radius:12px; padding:18px 20px; box-shadow:var(--shadow); }
-  .lev .name { font-weight:640; font-size:15px; }
-  .lev .intens { font:600 12px/1 ui-monospace,monospace; color:var(--accent); margin-top:3px; }
-  .lev .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px; }
-  .lev .stats .k { font:600 10px/1.2 ui-monospace,monospace; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
-  .lev .stats .v { font:640 18px/1 ui-monospace,monospace; margin-top:5px; }
-
   footer { padding:34px 0 60px; color:var(--muted); font-size:12.5px; }
   footer .wrap > * + * { margin-top:8px; }
+  footer .margins { display:grid; grid-template-columns:1fr 1fr; gap:8px 36px; margin-bottom:16px; }
+  @media (max-width:720px){ footer .margins{ grid-template-columns:1fr; } }
+  footer .mhead { font:600 11px/1 ui-monospace,monospace; letter-spacing:.13em; text-transform:uppercase; color:var(--muted); margin:0 0 6px; }
+  footer .margins ul { margin:0; padding-left:16px; color:var(--ink-2); }
+  footer .margins li { margin:3px 0; }
 </style>
 
 <header class="top"><div class="wrap top-row">
@@ -129,22 +110,15 @@
 
 <div class="hero"><div class="wrap">
   <h1>How much revenue is there at the top?</h1>
-  <p class="dek">There are many tax policy options for raising revenue from the rich, each with its own standalone revenue estimate. But these policies tax overlapping bases, and they interact — mechanically and through behavioral responses — so a combined package does not raise the sum of the standalone estimates. It can raise less, where bases overlap, or more, where one policy closes another's escape route.</p>
-  <p class="dek">This page quantifies those interactions: seven top-tax policies, scored alone and in every combination, using the Budget Lab's tax microsimulation model. Revenue figures are cumulative over 2027–2036, shown in dollars and as a share of GDP.</p>
-
-  <div class="thesis">
-    <div class="ladder" id="heroLadder"></div>
-    <div class="gapcall">
-      <div class="big mono" id="heroGap">—</div>
-      <div class="altbig mono" id="heroGapAlt">—</div>
-      <div class="lab" id="heroGapLab">the difference between the sum of the seven standalone scores and the score of all seven combined</div>
-    </div>
+  <div class="dekcols">
+    <p class="dek">There are many ways to raise taxes on the rich, and each comes with its own standalone revenue estimate. But these policies tax overlapping bases and change how people respond to one another's rates, so a package does not raise what its parts raise separately. It can raise less, where bases overlap, or more, where one policy shuts down the escape routes from another.</p>
+    <p class="dek">This page quantifies those interactions: seven top-tax policies, scored alone and in every combination, using the Budget Lab's tax microsimulation model. Revenue figures are cumulative over 2027–2036, shown in dollars and as a share of GDP.</p>
   </div>
 </div></div>
 
 <section id="explorer"><div class="wrap">
   <h2>Build a package</h2>
-  <p class="sec-sub">Select any combination of the seven policies. Every figure below comes from the model run for that exact combination — the revenue total, its composition by tax type, the behavioral offset, and effective tax rates across the income distribution.</p>
+  <p class="sec-sub">Select any combination of the seven policies. Everything below comes from the model run for that exact combination — nothing is interpolated.</p>
 
   <div class="exp">
     <div class="panel controls">
@@ -160,40 +134,24 @@
       <div class="card">
         <div class="step">Parts vs. whole</div>
         <h3>Standalone scores vs. the combined package</h3>
-        <div class="cap">The sum of each selected policy's standalone score, compared with the score of the combined package run as one reform. The difference reflects base overlap and interaction. Each bar is split by policy: the first two split trivially into the standalone scores; the package bar is split by each policy's <b>Shapley contribution</b> — its marginal revenue averaged over every order in which the package could be assembled, computed exactly from the runs of all sub-combinations. Contributions sum to the package total, so interaction effects — losses and gains alike — are shared among the policies responsible. All estimates are measured against the same current-law baseline.</div>
+        <div class="cap">The sum of each selected policy's standalone score, compared with the combined package scored as one reform. The first two bars split into the standalone scores. The package bar splits by Shapley contribution: each policy's marginal revenue averaged over every order in which the package could be assembled, computed from the runs of all sub-combinations. Contributions sum to the package total, so interaction effects are shared among the policies responsible. All estimates are measured against the same current-law baseline.</div>
         <figure><div id="pvw"></div></figure>
         <div class="legend" id="pvwLegend"></div>
         <div class="cap mono" id="pvwNote" style="margin:8px 0 0;font-size:11px;color:var(--muted)"></div>
       </div>
 
       <div class="card">
-        <div class="step">Order matters</div>
-        <h3>Stacked first vs. stacked last</h3>
-        <div class="cap">Each selected policy's revenue at the two extremes of stacking order: <b>first</b> — alone, against current law (its standalone score) — and <b>last</b> — added on top of everything else in the package (the package score minus the package without it). These are the two ends of the orderings the Shapley split above averages over; the gap is the policy's interaction with the rest of the package. A positive gap means the package strengthens the policy — for example, taxing gains at death closes the deferral escape that otherwise drains a capital-gains rate increase.</div>
-        <figure><div id="ordermat"></div></figure>
-        <div class="legend" id="ordermatLegend"></div>
-      </div>
-
-      <div class="card">
         <div class="step">Spillovers</div>
         <h3>What each policy does to the other bases</h3>
-        <div class="cap">Each selected policy on its own, with behavioral responses: where its revenue comes from, by tax type. Segments to the right of the zero line are revenue raised; segments to the left are revenue <b>drained from other bases</b> as behavior responds — saving and avoidance under a wealth tax erode the income-tax, capital-gains, and estate bases; a higher corporate rate marks down equity values and, with them, future capital-gains revenue. These first-order spillovers are part of each policy's own standalone score (the net figure at right), which is why they don't appear as package-level interaction above.</div>
+        <div class="cap">Each selected policy on its own, with behavioral responses: where its revenue comes from, by tax type. Segments right of the zero line are revenue raised; segments left of it are revenue drained from other bases as behavior responds. A wealth tax erodes the income-tax, capital-gains, and estate bases through saving and avoidance; a higher corporate rate marks down equity values and with them future capital-gains revenue. These spillovers are part of each policy's own standalone score, which is why they don't show up as package-level interaction above.</div>
         <figure><div id="spill"></div></figure>
         <div class="legend" id="spillLegend"></div>
       </div>
 
       <div class="card">
-        <div class="step">Composition</div>
-        <h3>Revenue by tax type</h3>
-        <div class="cap">The package's static score and its conventional score, broken out by tax type. Differences between the two bars show where behavioral responses move revenue across bases, and where revenue is lost outright.</div>
-        <figure><div id="ledger"></div></figure>
-        <div class="legend" id="ledgerLegend"></div>
-      </div>
-
-      <div class="card">
         <div class="step">Distribution</div>
-        <h3>Effective tax rates by income group</h3>
-        <div class="cap">Effective tax rate by income percentile in 2027, measured against <b>cash</b> income (expanded cash income) or <b>accrual</b> income (Haig-Simons, which includes unrealized gains). Baseline-fixed ranking; corporate tax under the capital-income convention. Each group shows two bars — <b>baseline</b> law and the package's <b>static</b> rate — stacked by tax type.
+        <h3>Distribution of tax rates</h3>
+        <div class="cap">Effective tax rate by income percentile in 2027, measured against cash income (expanded cash income) or accrual income (Haig-Simons, which includes unrealized gains). Baseline-fixed ranking; corporate tax under the capital-income convention. Each group shows two bars — baseline law and the package's static rate — stacked by tax type.
           <span class="unit" id="etrDefTog" role="group" aria-label="Income definition" style="margin-left:10px;vertical-align:middle">
             <button type="button" data-def="expanded" aria-pressed="true">Cash income</button>
             <button type="button" data-def="hs" aria-pressed="false">Accrual income</button>
@@ -209,23 +167,38 @@
 
 <section id="frontierSec"><div class="wrap">
   <h2>The frontier: how much is there, at what price?</h2>
-  <p class="sec-sub">Every one of the 127 packages, placed by what it collects (horizontal) and its <b>leakage price</b> — the gap between its static and conventional scores per dollar actually collected (vertical). A package is <b>dominated</b> when another raises more revenue at a weakly lower leakage price; the undominated packages trace the frontier, which reads as a supply curve of top-end revenue. Below the zero line a package collects <i>more</i> than its static ask: taxing gains at death removes the incentive to defer realizations, and that efficiency gain anchors the frontier's first several trillion. Leakage price is a heuristic efficiency measure — offsets include cross-base shifts and timing, not only deadweight loss — and corporate figures ride a placeholder input.</p>
+  <p class="sec-sub">Each point below is one of the 127 packages. Its horizontal position is what it collects over ten years. Its vertical position is its leakage price: the gap between its static and conventional scores, in cents per dollar actually collected. When some other package raises more money at a lower leakage price, a package is dominated; the packages nothing dominates form the frontier line, which traces the cheapest available route to any given amount of revenue. Points below the zero line collect more than their static score — taxing gains at death removes the incentive to defer realizations, so revenue comes in above the mechanical estimate.</p>
   <div class="card">
     <figure><div id="frontChart"></div></figure>
     <div class="legend" id="frontLegend"></div>
   </div>
 </div></section>
 
-<section id="atlas"><div class="wrap">
-  <h2>Each rate policy on its own</h2>
-  <p class="sec-sub">Standalone scores for the four rate policies. "Survives" is the conventional score as a share of the static score. Revenue is 10-year cumulative.</p>
-  <div class="atlas" id="atlas"></div>
-</div></section>
-
 <footer><div class="wrap">
-  <p id="footSource"><strong>Model output.</strong> Figures come from the 128-combo factorial run of the Budget Lab Tax-Simulator (7 binary switches; effective 2027; 10-yr window 2027–2036; conventional estimates include capital-gains realization dynamics, ordinary↔gains conversion, entity shifting, evasion, charitable response, wealth-tax avoidance, the saving-financing wealth channel, and on-model corporate incidence). <b>Corporate figures use a placeholder off-model input pending the official estimate.</b></p>
+  <div class="margins">
+    <div>
+      <p class="mhead">Behavioral responses included</p>
+      <ul>
+        <li>Capital-gains realization: timing and permanent responses, including how taxing gains at death changes the incentive to defer</li>
+        <li>Conversion of ordinary income into capital gains</li>
+        <li>Entity shifting between pass-through and C-corporation form, including its payroll-tax base effect</li>
+        <li>Underreporting and evasion</li>
+        <li>Charitable giving</li>
+        <li>Wealth-tax avoidance, applied consistently to the wealth, income, and estate bases</li>
+      </ul>
+    </div>
+    <div>
+      <p class="mhead">Mechanical channels included</p>
+      <ul>
+        <li>Part of new taxes is financed out of saving, which compounds over time into smaller estates and less capital income</li>
+        <li>Corporate incidence on households: lower dividends, interest, rent, and pass-through income, and marked-down equity values that reduce future realized gains</li>
+        <li>Interactions inside the tax calculation itself: rate stacking, base broadening, and revenue moving across bases (income, payroll, corporate, estate, wealth)</li>
+      </ul>
+    </div>
+  </div>
+  <p>Not included: labor-supply responses, macroeconomic feedback, and changes to tax enforcement.</p>
+  <p id="footSource"><strong>Model output.</strong> Figures come from the 128-combo factorial run of the Budget Lab Tax-Simulator: seven binary switches, effective 2027, ten-year window 2027–2036. Corporate figures use a placeholder off-model input pending the official estimate.</p>
   <p>Revenue figures are 10-year cumulative dollars, with the share of GDP (10-yr revenue ÷ 10-yr cumulative fiscal-year nominal GDP) shown alongside. Policies: top ordinary rate +5pp · capital gains taxed at 39.6% · corporate rate 28% · wealth tax of 1% above $50M · deemed realization at death · estate tax at $5M exemption / 45% rate · repeal of the QBI deduction.</p>
-  <p><strong>On "capital gains & dividends."</strong> It is not a separate receipt — the model books revenue into seven destinations (income tax, payroll, corporate, estate, wealth, VAT, other). It is the preferential-rate slice of the individual income tax (<span class="mono">liab_pref + §1250 + collectibles</span>, from <span class="mono">totals/1040.csv</span>, both legs), carved out for legibility <b>in the destination ledger only</b> (the effective-rate chart keeps income tax lumped, since the distribution pipeline is static-sourced and doesn't decompose it per percentile); ordinary income tax is the residual, so credits park in the ordinary bucket. Qualified dividends ride with long-term gains; gains taxed at death under the deemed regime join this head.</p>
 </div></footer>
 
 <script>
@@ -322,20 +295,28 @@ var DATA=/*__ATLAS_DATA__*/null;
     var actual=pkg?pkg.conv.total10:0;
     var phi=(pkg&&!missing.length)?shapley(keys):null;
     var comboStatic=pkg?pkg.static.total10:0;
-    // destination ledger straight from the run
-    var hs={},hc={}; HEADS.forEach(function(h){hs[h.k]=0;hc[h.k]=0;});
-    if(pkg){HEADS.forEach(function(h){hs[h.k]=pkg.static.heads10[h.k]||0;hc[h.k]=pkg.conv.heads10[h.k]||0;});}
     // ETR stacks: baseline + this package's static, at the selected income def
     var comps=['iit','pay','est','wealth','corp'];
     var eb=(DATA.etr_base[INCDEF]||{})[ETRYEAR];
     var es=pkg&&pkg.etr[INCDEF]&&pkg.etr[INCDEF][ETRYEAR]?pkg.etr[INCDEF][ETRYEAR]:eb;
     var etr={baseline:etrSeries(eb),static:etrSeries(es)};
+    // y-axis ceiling held constant across the cash/accrual toggle: max stacked
+    // total over BOTH income definitions for this selection
+    var etrMax=0;
+    ['expanded','hs'].forEach(function(idf){
+      var b2=(DATA.etr_base[idf]||{})[ETRYEAR];
+      var s2=pkg&&pkg.etr[idf]&&pkg.etr[idf][ETRYEAR]?pkg.etr[idf][ETRYEAR]:b2;
+      [b2,s2].forEach(function(byG){ if(!byG)return;
+        PCTS.forEach(function(g){ if(!byG[g])return;
+          var st=etrStack(byG[g]),t=0;
+          comps.forEach(function(c){t+=Math.max(0,st[c]);});
+          if(t>etrMax)etrMax=t; }); });
+    });
     var iTop=PCTS.indexOf('Top 0.1%'); if(iTop<0)iTop=PCTS.length-1;
     var totTop={baseline:0,static:0};
     comps.forEach(function(c){totTop.baseline+=etr.baseline[c][iTop];totTop.static+=etr.static[c][iTop];});
     return {keys:keys,bits:bits,missing:missing,staticParts:staticParts,convParts:convParts,
-      actual:actual,lost:convParts-actual,comboStatic:comboStatic,hs:hs,hc:hc,
-      etr:etr,comps:comps,totTop:totTop,parts:parts,phi:phi};
+      actual:actual,comboStatic:comboStatic,etr:etr,etrMax:etrMax,comps:comps,totTop:totTop,parts:parts,phi:phi};
   }
 
   function svg(w,h){return '<svg viewBox="0 0 '+w+' '+h+'" role="img" preserveAspectRatio="xMidYMid meet">';}
@@ -354,53 +335,6 @@ var DATA=/*__ATLAS_DATA__*/null;
         x+=wseg; });
       s+='<text x="'+(x0+tot*sc+10).toFixed(1)+'" y="'+(y+21)+'" text-anchor="start" font-size="13" font-weight="600" font-family="ui-monospace,monospace" fill="var(--ink)">'+fmt(tot)+'</text>';
     });
-    return s+'</svg>';
-  }
-
-  function orderChart(rows,w){
-    if(!rows.length)return '';
-    var rh=44,padT=22,h=rows.length*rh+padT+8,bw=Math.max(60,w-224-130),x0=214;
-    var mx=1; rows.forEach(function(r){mx=Math.max(mx,r.first,r.last);}); mx*=1.06;
-    var X=function(v){return x0+Math.max(0,v)/mx*bw;};
-    var s=svg(w,h);
-    for(var q=0;q<=4;q++){var gx=X(mx*q/4);
-      s+='<line x1="'+gx.toFixed(1)+'" x2="'+gx.toFixed(1)+'" y1="'+padT+'" y2="'+(h-8)+'" stroke="var(--grid)" stroke-width="1"/>';
-      s+='<text x="'+gx.toFixed(1)+'" y="'+(padT-8)+'" text-anchor="middle" font-size="9.5" fill="var(--muted)" font-family="ui-monospace,monospace">'+usd(mx*q/4)+'</text>';}
-    rows.forEach(function(r,i){
-      var y=padT+i*rh+rh/2,x1=X(r.first),x2=X(r.last);
-      s+='<text x="206" y="'+(y+4)+'" text-anchor="end" font-size="12.5" fill="var(--ink-2)" font-family="system-ui">'+r.label+'</text>';
-      s+='<line x1="'+x1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y1="'+y+'" y2="'+y+'" stroke="'+r.color+'" stroke-width="2.5" opacity="0.55"/>';
-      s+='<circle cx="'+x1.toFixed(1)+'" cy="'+y+'" r="6" fill="var(--surface)" stroke="'+r.color+'" stroke-width="2.5"><title>'+r.label+' — stacked first (standalone): '+fmt(r.first)+'</title></circle>';
-      s+='<circle cx="'+x2.toFixed(1)+'" cy="'+y+'" r="6.5" fill="'+r.color+'" stroke="var(--surface)" stroke-width="2"><title>'+r.label+' — stacked last (package − package without it): '+fmt(r.last)+'</title></circle>';
-      var dg=r.last-r.first;
-      s+='<text x="'+(x0+bw+12)+'" y="'+(y+4)+'" text-anchor="start" font-size="12.5" font-weight="600" font-family="ui-monospace,monospace" fill="var(--ink-2)">'+(dg>=0?'+':'−')+usd(Math.abs(dg))+'</text>';
-    });
-    return s+'</svg>';
-  }
-
-  function ledgerChart(d,w){
-    var order=['iit','cg','corp','est','wealth','pay','other'],ts=0,tc=0,negX=0,posX=0;
-    order.forEach(function(k){ts+=d.hs[k];tc+=d.hc[k];});
-    [d.hs,d.hc].forEach(function(hh){var n=0,p=0;
-      order.forEach(function(k){var v=hh[k]||0;if(v<0)n-=v;else p+=v;});
-      negX=Math.max(negX,n);posX=Math.max(posX,p);});
-    var h=178,pad=8,iw=w-2*pad,sc=iw/((negX+posX)||1),xz=pad+negX*sc,s=svg(w,h);
-    function leg(hh,y,cap){
-      s+='<text x="'+pad+'" y="'+(y-8)+'" font-size="11" fill="var(--muted)" font-family="ui-monospace,monospace">'+cap+'</text>';
-      var xp=xz,xn=xz;
-      order.forEach(function(k){var v=hh[k]||0,wseg=Math.abs(v)*sc;if(wseg<1)return;
-        var hn=HEADS.filter(function(z){return z.k===k;})[0],lab=(hn?hn.label:k)+': '+fmt(v);
-        if(v>0){s+='<rect x="'+xp.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,wseg-2).toFixed(1)+'" height="34" rx="3" fill="'+headColor(k)+'"><title>'+lab+'</title></rect>';xp+=wseg;}
-        else{xn-=wseg;s+='<rect x="'+xn.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,wseg-2).toFixed(1)+'" height="34" rx="3" fill="'+headColor(k)+'" opacity="0.85"><title>'+lab+' (drained)</title></rect>';}
-      });
-      return xp;
-    }
-    leg(d.hs,26,'STATIC · '+fmt(ts)+' of GDP');
-    var xEnd=leg(d.hc,94,'CONVENTIONAL · '+fmt(tc)+' of GDP  ('+Math.round(100*tc/(ts||1))+'% of static)');
-    if(negX>0.5){s+='<line x1="'+xz.toFixed(1)+'" x2="'+xz.toFixed(1)+'" y1="18" y2="134" stroke="var(--rule)" stroke-width="1.5"/>';
-      s+='<text x="'+xz.toFixed(1)+'" y="146" text-anchor="middle" font-size="9.5" fill="var(--muted)" font-family="ui-monospace,monospace">$0</text>';}
-    var van=ts-tc; if(van>0){var wv=van*sc;s+='<rect x="'+xEnd.toFixed(1)+'" y="94" width="'+Math.max(0,wv-2).toFixed(1)+'" height="34" rx="3" fill="none" stroke="var(--muted)" stroke-dasharray="4 3"/>';
-      if(wv>60)s+='<text x="'+(xEnd+wv/2).toFixed(1)+'" y="115" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-family="ui-monospace,monospace">'+usd(van)+' lost</text>';}
     return s+'</svg>';
   }
 
@@ -438,23 +372,16 @@ var DATA=/*__ATLAS_DATA__*/null;
     Object.keys(DATA.combos).forEach(function(key){
       var c=DATA.combos[key],bits=+key,st=c.static.total10,cv=c.conv.total10;
       if(!(cv>0))return;
-      var etr=null;
-      if(c.etr&&c.etr.hs&&c.etr.hs[ETRYEAR]&&c.etr.hs[ETRYEAR]['Top 0.1%'])
-        etr=c.etr.hs[ETRYEAR]['Top 0.1%'].reduce(function(a,b){return a+b;},0);
-      pts.push({bits:bits,st:st,cv:cv,lk:100*(st-cv)/cv,etr:etr,
+      pts.push({bits:bits,st:st,cv:cv,lk:100*(st-cv)/cv,
         name:SW.filter(function(s){return bits&BIT[s.key];}).map(function(s){return s.key;}).join('+')});
     });
     var front=[],best=Infinity;
     pts.slice().sort(function(a,b){return b.cv-a.cv;}).forEach(function(p){
       if(p.lk<best-1e-9){front.push(p);best=p.lk;p.onFront=true;}});
     front.reverse();
-    var emin=Infinity,emax=-Infinity;
-    pts.forEach(function(p){if(p.etr!==null){emin=Math.min(emin,p.etr);emax=Math.max(emax,p.etr);}});
-    return {pts:pts,front:front,emin:emin,emax:emax};
+    return {pts:pts,front:front};
   }
-  function dotColor(etr){ if(etr===null)return 'var(--muted)';
-    var t=(etr-FRONTD.emin)/((FRONTD.emax-FRONTD.emin)||1),p=Math.round(25+65*t);
-    return 'color-mix(in srgb,var(--accent) '+p+'%,var(--surface-2))'; }
+  var DOTFILL='color-mix(in srgb,var(--accent) 45%,var(--surface-2))';
   function frontierChart(w,selBits){
     var YMIN=-65,YMAX=62,h=460,pad={l:64,r:26,t:26,b:54},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
     var xmax=0; FRONTD.pts.forEach(function(p){xmax=Math.max(xmax,p.cv);}); xmax*=1.05;
@@ -472,10 +399,9 @@ var DATA=/*__ATLAS_DATA__*/null;
     s+='<text x="'+(w-pad.r)+'" y="'+(h-12)+'" text-anchor="end" font-size="10.5" fill="var(--ink-2)" font-family="ui-monospace,monospace">conventional revenue, 10 years →</text>';
     s+='<path d="'+FRONTD.front.map(function(p,i){return (i?'L':'M')+X(p.cv).toFixed(1)+' '+Y(p.lk).toFixed(1);}).join(' ')+'" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0.75"/>';
     FRONTD.pts.forEach(function(p){
-      var cx=X(p.cv),cy=Y(p.lk),off=p.lk>YMAX,
-          tip=p.name+' — conventional '+fmt(p.cv)+' · static '+usd(p.st)+' · leakage '+(p.lk>=0?'+':'−')+Math.abs(Math.round(p.lk))+'¢/$'+(p.etr!==null?(' · top 0.1% accrual ETR '+p.etr.toFixed(1)+'%'):'')+(off?' · OFF SCALE':'');
-      if(off){s+='<path d="M'+(cx-5).toFixed(1)+' '+(pad.t+14)+' L'+(cx+5).toFixed(1)+' '+(pad.t+14)+' L'+cx.toFixed(1)+' '+(pad.t+4)+' Z" fill="'+dotColor(p.etr)+'"><title>'+tip+'</title></path>';return;}
-      s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(p.onFront?6:4.5)+'" fill="'+dotColor(p.etr)+'"'+(p.onFront?' stroke="var(--accent)" stroke-width="2"':' stroke="var(--surface)" stroke-width="1"')+'><title>'+tip+'</title></circle>';
+      var cx=X(p.cv),cy=Y(p.lk),off=p.lk>YMAX;
+      if(off){s+='<path d="M'+(cx-5).toFixed(1)+' '+(pad.t+14)+' L'+(cx+5).toFixed(1)+' '+(pad.t+14)+' L'+cx.toFixed(1)+' '+(pad.t+4)+' Z" fill="'+DOTFILL+'"><title>'+p.name+'</title></path>';return;}
+      s+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+(p.onFront?6:4.5)+'" fill="'+DOTFILL+'"'+(p.onFront?' stroke="var(--accent)" stroke-width="2"':' stroke="var(--surface)" stroke-width="1"')+'><title>'+p.name+'</title></circle>';
     });
     if(selBits){var sp=FRONTD.pts.filter(function(p){return p.bits===selBits;})[0];
       if(sp){var scy=sp.lk>YMAX?pad.t+12:Y(sp.lk);
@@ -496,14 +422,13 @@ var DATA=/*__ATLAS_DATA__*/null;
     var comps=d.comps.map(function(k){return ETRCOMPS.filter(function(e){return e.k===k;})[0];});
     var groups=['baseline','static'],gl={baseline:'b',static:'s'};
     var n=PCTS.length,h=320,pad={l:34,r:12,t:16,b:46},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
-    var maxv=0; for(var i=0;i<n;i++){groups.forEach(function(g){var t=0;comps.forEach(function(c){t+=d.etr[g][c.k][i];});if(t>maxv)maxv=t;});}
-    maxv=Math.max(maxv*1.08,10);
+    var maxv=Math.max(d.etrMax*1.08,10);
     var Y=function(v){return pad.t+ih-(v/maxv)*ih;};
     var gw=iw/n,ng=groups.length,bw=Math.min(20,gw*0.28),gap=gw*0.07,off=(gw-(ng*bw+(ng-1)*gap))/2;
     var s=svg(w,h);
     for(var g=0;g<=maxv;g+=10){var y=Y(g);s+='<line x1="'+pad.l+'" x2="'+(w-pad.r)+'" y1="'+y+'" y2="'+y+'" stroke="var(--grid)" stroke-width="1"/>';
       s+='<text x="'+(pad.l-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="var(--muted)" font-family="ui-monospace,monospace">'+g+'%</text>';}
-    for(i=0;i<n;i++){
+    for(var i=0;i<n;i++){
       var gx=pad.l+i*gw;
       groups.forEach(function(grp,gi){
         var bx=gx+off+gi*(bw+gap),cy=pad.t+ih;
@@ -570,12 +495,6 @@ var DATA=/*__ATLAS_DATA__*/null;
     $('#pvwLegend').innerHTML=d.parts.map(function(p){var m=swBy[p.key];
       return '<span class="it"><span class="sw2" style="background:'+m.c+'"></span>'+m.label+'</span>';}).join('');
     $('#pvwNote').textContent=note;
-    var od=(any&&!d.missing.length)?d.keys.map(function(k){var m=swBy[k],rest=d.bits&~BIT[k];
-      var without=rest?combo(rest):null;
-      if(rest&&!without)return null;
-      return {label:m.label,color:m.c,first:combo(BIT[k]).conv.total10,
-              last:d.actual-(rest?without.conv.total10:0)};}).filter(Boolean):[];
-    $('#ordermat').innerHTML=orderChart(od,widthOf('ordermat'));
     var sp=d.parts.map(function(p){var m=swBy[p.key];
       return {label:m.label,heads:combo(BIT[p.key]).conv.heads10};});
     $('#spill').innerHTML=spillChart(sp,widthOf('spill'));
@@ -583,44 +502,9 @@ var DATA=/*__ATLAS_DATA__*/null;
         return sp.some(function(r){return Math.abs(r.heads[hh.k]||0)>0.5;});
       }).map(function(hh){return '<span class="it"><span class="sw2" style="background:'+hh.c+'"></span>'+hh.label+'</span>';}).join('')
       +'<span class="it mono" style="color:var(--muted)">left of $0 = drained from that base · right column: net score</span>':'';
-    $('#ordermatLegend').innerHTML=od.length?
-      '<span class="it"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;border:2.5px solid var(--muted);background:var(--surface)"></span>stacked first (standalone)</span>'+
-      '<span class="it"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--muted)"></span>stacked last (package − package without it)</span>'+
-      '<span class="it mono" style="color:var(--muted)">right column: last − first</span>':'';
-    $('#ledger').innerHTML=ledgerChart(d,widthOf('ledger'));
-    $('#ledgerLegend').innerHTML=HEADS.filter(function(h){return (d.hs[h.k]||0)>0.5||(d.hc[h.k]||0)>0.5;}).map(function(h){return '<span class="it"><span class="sw2" style="background:'+h.c+'"></span>'+h.label+'</span>';}).join('');
     $('#etr').innerHTML=combinedEtr(d,widthOf('etr'));
     $('#etrLegend').innerHTML=ETRCOMPS.map(function(h){return '<span class="it"><span class="sw2" style="background:'+h.c+'"></span>'+h.l+'</span>';}).join('');
     $('#frontChart').innerHTML=frontierChart(widthOf('frontChart'),d.bits);
-  }
-
-  function renderHero(){
-    var d=compute({ord:1,cg:1,corp:1,wealth:1,deemed:1,estate:1,qbi:1}),mx=d.staticParts;
-    $('#heroLadder').innerHTML=[
-      heroRow('Sum of static scores','each policy alone, no behavior',d.staticParts,mx,'var(--rule)',true),
-      heroRow('Sum of conventional scores','each policy alone, with behavior',d.convParts,mx,'color-mix(in srgb,var(--accent) 45%,var(--surface-2))',false),
-      heroRow('Combined package','all seven scored as one reform',d.actual,mx,'var(--accent)',false)
-    ].join('');
-    var gap=d.actual-d.convParts,gsign=gap>=0?'+':'−';
-    $('#heroGap').textContent=gsign+usd(Math.abs(gap));
-    $('#heroGapAlt').textContent='= '+pg(Math.abs(gap))+' of GDP';
-    $('#heroGapLab').textContent='the combined package raises this much '+(gap>=0?'more':'less')+' than the sum of the seven standalone scores';
-  }
-  function heroRow(lab,sub,val,mx,color,ghost){var pct=Math.max(6,(val/mx)*100);
-    return '<div class="ladder-row"><div class="ladder-lab">'+lab+'<small>'+sub+'</small></div>'+
-      '<div class="bartrack"><div class="barfill'+(ghost?' ghost':'')+'" style="width:'+pct+'%;background:'+color+'"><span class="val">'+fmt(val)+'</span></div></div></div>';}
-
-  function renderAtlas(){
-    var rows=[{k:'ord',name:'Top ordinary rate',intens:'37% → 42% (+5pp)'},{k:'cg',name:'Top capital-gains rate',intens:'20% → 39.6%'},
-      {k:'corp',name:'Corporate rate',intens:'21% → 28%'},{k:'wealth',name:'Wealth tax',intens:'1% on net worth > $50M'}];
-    $('#atlas').innerHTML=rows.map(function(r){var c1=combo(BIT[r.k]);
-      var S=c1?c1.static.total10:0,conv=c1?c1.conv.total10:0,surv=S>0?Math.round(100*conv/S):0;
-      var cell=function(v){return '<div class="v">'+usd(v)+'</div><div class="k" style="margin-top:3px;text-transform:none">'+pg(v)+' of GDP</div>';};
-      return '<div class="lev"><div class="name">'+r.name+'</div><div class="intens mono">'+r.intens+'</div>'+
-        '<div class="stats"><div><div class="k">Static 10y</div>'+(c1?cell(S):'<div class="v">—</div>')+'</div>'+
-        '<div><div class="k">Conventional</div>'+(c1?cell(conv):'<div class="v">—</div>')+'</div>'+
-        '<div><div class="k">Survives</div><div class="v">'+(c1?surv+'%':'—')+'</div></div></div></div>';
-    }).join('');
   }
 
   Array.prototype.forEach.call(document.querySelectorAll('#etrDefTog button'),function(b){
@@ -636,10 +520,9 @@ var DATA=/*__ATLAS_DATA__*/null;
 
   FRONTD=frontierData();
   $('#frontLegend').innerHTML=
-    '<span class="it"><span style="display:inline-block;width:64px;height:10px;border-radius:3px;background:linear-gradient(to right,color-mix(in srgb,var(--accent) 25%,var(--surface-2)),color-mix(in srgb,var(--accent) 90%,var(--surface-2)))"></span>top 0.1% accrual ETR, '+FRONTD.emin.toFixed(0)+'% → '+FRONTD.emax.toFixed(0)+'%</span>'+
     '<span class="it"><span class="sw2" style="background:transparent;border:2px solid var(--accent);border-radius:50%"></span>on the frontier</span>'+
     '<span class="it mono" style="color:var(--muted)">▲ at chart top = leakage off scale · hover any point for its package</span>';
-  renderControls();renderHero();renderAtlas();
+  renderControls();
   SW.forEach(function(s){state[s.key]=true;});renderAll();
   var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(renderAll,120);});
 })();
