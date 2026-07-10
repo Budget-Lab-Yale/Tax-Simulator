@@ -74,25 +74,41 @@ build_distribution_etrs = function(id) {
   rev_corp = read_macro_spliced(interface_root('Macro-Projections', baseline_id)) %>%
     select(year, rev_corp_level = rev_corp)
 
-  # Loop over years, build per-record microdata, aggregate the cube
+  # Loop over years x reform leg, build per-record microdata, aggregate the
+  # cube. reform_leg keys WHICH leg supplies the reform tax numerators:
+  #   static       — the law-only ask (welfare ETR, envelope theorem)
+  #   conventional — realized collections with behavior (numerator-only swap;
+  #                  denominators/rankings stay baseline-static in both)
+  # Baseline columns are identical across the two legs (baseline has no
+  # behavior). The conventional rows are skipped when the leg's detail is
+  # absent (static-only runs, purged vintages).
   etr_tables = list()
   for (yr in get_scenario_info(id)$dist_years) {
-    microdata = process_for_etrs(id, baseline_id, yr, other_taxes, rev_corp)
-    etr_tables[[as.character(yr)]] = aggregate_etrs(microdata) %>%
-      mutate(year = yr, .before = everything())
+    for (leg in c('static', 'conventional')) {
+      if (leg == 'conventional' &&
+          !file.exists(file.path(globals$output_root, id, 'conventional/detail',
+                                 paste0(yr, '.csv')))) {
+        next
+      }
+      microdata = process_for_etrs(id, baseline_id, yr, other_taxes, rev_corp,
+                                   reform_leg = leg)
+      etr_tables[[paste(yr, leg)]] = aggregate_etrs(microdata) %>%
+        mutate(year = yr, reform_leg = leg, .before = everything())
+    }
   }
 
   etr_tables %>%
     bind_rows() %>%
-    arrange(year, income_definition, ranking, taxes_included, corp_convention,
-            group_dimension) %>%
+    arrange(year, reform_leg, income_definition, ranking, taxes_included,
+            corp_convention, group_dimension) %>%
     write_csv(file.path(globals$output_root, id, 'static/supplemental',
                         'distribution_etrs.csv'))
 }
 
 
 
-process_for_etrs = function(id, baseline_id, yr, other_taxes, rev_corp) {
+process_for_etrs = function(id, baseline_id, yr, other_taxes, rev_corp,
+                            reform_leg = 'static') {
 
   #----------------------------------------------------------------------------
   # Builds the per-record ETR microdata: the shared distribution microdata plus
@@ -115,7 +131,8 @@ process_for_etrs = function(id, baseline_id, yr, other_taxes, rev_corp) {
   # split, stock bases, income-definition cores. Do NOT re-emit the estate
   # supplemental files (the delta table already wrote them).
   md = build_distribution_microdata(id, baseline_id, yr, other_taxes,
-                                    write_supplemental = FALSE) %>%
+                                    write_supplemental = FALSE,
+                                    reform_leg = reform_leg) %>%
     left_join(rev_corp, by = 'year')
 
   if (any(is.na(md$rev_corp_level))) {

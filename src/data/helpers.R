@@ -8,21 +8,25 @@
 
 
 
-read_static_detail = function(id, yr) {
+read_static_detail = function(id, yr, leg = 'static') {
 
   #----------------------------------------------------------------------------
-  # Reads a scenario's static tax unit detail file for a given year.
+  # Reads a scenario's tax unit detail file for a given year. Defaults to the
+  # static leg (the historical behavior and name); pass leg = 'conventional'
+  # to read the behavioral-feedback leg (used by the realized-ETR variant of
+  # the distribution_etrs supplemental).
   #
   # Parameters:
-  #   - id (str) : scenario ID ('baseline' resolves to the baseline root)
-  #   - yr (int) : year of detail file
+  #   - id  (str) : scenario ID ('baseline' resolves to the baseline root)
+  #   - yr  (int) : year of detail file
+  #   - leg (str) : run type subfolder, 'static' (default) or 'conventional'
   #
   # Returns: tibble of tax unit detail (df).
   #----------------------------------------------------------------------------
 
   root = if (id == 'baseline') globals$baseline_root else globals$output_root
   root %>%
-    file.path(id, 'static/detail', paste0(yr, '.csv')) %>%
+    file.path(id, leg, 'detail', paste0(yr, '.csv')) %>%
     fread() %>%
     tibble() %>%
     return()

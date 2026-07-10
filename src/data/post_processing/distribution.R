@@ -97,7 +97,8 @@ build_distribution_tables = function(id, baseline_id) {
 
 
 build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
-                                        write_supplemental = TRUE) {
+                                        write_supplemental = TRUE,
+                                        reform_leg = 'static') {
 
   #----------------------------------------------------------------------------
   # Reads and cleans input data for a scenario and its "baseline", producing
@@ -125,6 +126,13 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
   #                          liabilities and allocator diagnostics (TRUE for the
   #                          delta table; FALSE for the ETR table, which reuses
   #                          the same allocation but must not re-emit the files)
+  #   - reform_leg  (str)  : which run-type leg supplies the REFORM tax
+  #                          numerators: 'static' (default, the law-only ask)
+  #                          or 'conventional' (realized, with behavior). The
+  #                          baseline leg, income cores, rankings, and stock
+  #                          bases are baseline-static regardless — swapping
+  #                          the leg swaps NUMERATORS only (realized-ETR
+  #                          variant, VISION §"welfare vs realized")
   #
   # Returns: ungrouped per-record microdata (df), post heir copy-split.
   #----------------------------------------------------------------------------
@@ -222,7 +230,7 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
 
   # Read counterfactual reform scenario tax microdata, stripping deemed
   # realization tax from decedents same as the baseline leg above
-  reform_detail = read_static_detail(id, yr)
+  reform_detail = read_static_detail(id, yr, leg = reform_leg)
   if (!('liab_deemed' %in% names(reform_detail))) {
     reform_detail$liab_deemed = 0
   }
