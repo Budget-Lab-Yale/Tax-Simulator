@@ -1,0 +1,903 @@
+<title>How much revenue is there at the top?</title>
+<style>
+  :root {
+    --paper:#f7f6f2; --surface:#fcfcfb; --surface-2:#f1f0ea; --ink:#14130f; --ink-2:#55534c;
+    --muted:#8a887f; --grid:#e4e2d9; --rule:#d7d5cb; --accent:#1c5cab; --accent-2:#cfe0f6;
+    --hair:rgba(20,19,15,0.10); --good:#0a7d3a; --warn:#b9601b;
+    --h-iit:#2a78d6; --h-pay:#1baf7a; --h-cg:#c9891a; --h-est:#008300; --h-wealth:#4a3aa7; --h-corp:#e34948;
+    --l-ord:#b06a2a; --l-cg:#0f95b0; --l-corp:#c2417e; --l-wealth:#7f8f22; --l-deemed:#6d5bd0; --l-estate:#2f9e60; --l-qbi:#d95f3b; --l-taxmax:#3f6fd1;
+    --shadow:0 1px 2px rgba(20,19,15,.05),0 4px 16px rgba(20,19,15,.04); color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){ :root{
+    --paper:#0d0d0d; --surface:#17181a; --surface-2:#202225; --ink:#f4f3ef; --ink-2:#c3c2b7;
+    --muted:#8f8d84; --grid:#2b2c2e; --rule:#33343a; --accent:#4b93ea; --accent-2:#173254;
+    --hair:rgba(255,255,255,0.10); --good:#31b45c; --warn:#e0873f;
+    --h-iit:#3987e5; --h-pay:#199e70; --h-cg:#d9a02f; --h-est:#2ba32b; --h-wealth:#9085e9; --h-corp:#e66767;
+    --l-ord:#c98336; --l-cg:#1f97b3; --l-corp:#d1609b; --l-wealth:#87962c; --l-deemed:#8f7fe0; --l-estate:#33a86b; --l-qbi:#df6c44; --l-taxmax:#6f97e8;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35); color-scheme:dark; } }
+  :root[data-theme="light"]{
+    --paper:#f7f6f2; --surface:#fcfcfb; --surface-2:#f1f0ea; --ink:#14130f; --ink-2:#55534c;
+    --muted:#8a887f; --grid:#e4e2d9; --rule:#d7d5cb; --accent:#1c5cab; --accent-2:#cfe0f6;
+    --hair:rgba(20,19,15,0.10); --good:#0a7d3a; --warn:#b9601b;
+    --h-iit:#2a78d6; --h-pay:#1baf7a; --h-cg:#c9891a; --h-est:#008300; --h-wealth:#4a3aa7; --h-corp:#e34948;
+    --l-ord:#b06a2a; --l-cg:#0f95b0; --l-corp:#c2417e; --l-wealth:#7f8f22; --l-deemed:#6d5bd0; --l-estate:#2f9e60; --l-qbi:#d95f3b; --l-taxmax:#3f6fd1; color-scheme:light; }
+  :root[data-theme="dark"]{
+    --paper:#0d0d0d; --surface:#17181a; --surface-2:#202225; --ink:#f4f3ef; --ink-2:#c3c2b7;
+    --muted:#8f8d84; --grid:#2b2c2e; --rule:#33343a; --accent:#4b93ea; --accent-2:#173254;
+    --hair:rgba(255,255,255,0.10); --good:#31b45c; --warn:#e0873f;
+    --h-iit:#3987e5; --h-pay:#199e70; --h-cg:#d9a02f; --h-est:#2ba32b; --h-wealth:#9085e9; --h-corp:#e66767;
+    --l-ord:#c98336; --l-cg:#1f97b3; --l-corp:#d1609b; --l-wealth:#87962c; --l-deemed:#8f7fe0; --l-estate:#33a86b; --l-qbi:#df6c44; --l-taxmax:#6f97e8; color-scheme:dark; }
+
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 24px; }
+  h1,h2,h3 { text-wrap:balance; margin:0; font-weight:620; letter-spacing:-0.01em; }
+  a { color:var(--accent); }
+  .eyebrow { font:600 12px/1.2 ui-monospace,monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+  .mono { font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-variant-numeric:tabular-nums; }
+
+  header.top { border-bottom:1px solid var(--rule); background:var(--surface); }
+  .top-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; }
+  .brand { font:600 13px/1 ui-monospace,monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-2); }
+  .top-right { display:flex; align-items:center; gap:14px; }
+  .synthetic { font:600 11px/1 ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--warn); border:1px solid var(--warn); border-radius:999px; padding:4px 10px; white-space:nowrap; }
+  .unit { display:inline-flex; border:1px solid var(--rule); border-radius:8px; overflow:hidden; background:var(--surface-2); }
+  .unit button { font:600 11.5px/1 ui-monospace,monospace; letter-spacing:.03em; padding:7px 11px; background:transparent; color:var(--ink-2); border:0; cursor:pointer; transition:.12s; }
+  .unit button + button { border-left:1px solid var(--rule); }
+  .unit button[aria-pressed="true"] { background:var(--accent); color:#fff; }
+  .unit button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+  .hero { padding:56px 0 44px; border-bottom:1px solid var(--rule); }
+  .hero h1 { font-size:clamp(30px,4.6vw,52px); line-height:1.04; max-width:18ch; }
+  .dekcols { margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:32px; }
+  @media (max-width:760px){ .dekcols{ grid-template-columns:1fr; gap:0; } }
+  .hero .dek { margin:0 0 14px; font-size:17px; color:var(--ink-2); }
+
+  section { padding:48px 0; border-bottom:1px solid var(--rule); }
+  .sec-head { display:flex; align-items:baseline; gap:14px; margin-bottom:8px; }
+  .sec-head h2 { font-size:24px; }
+  .sec-sub { color:var(--ink-2); max-width:70ch; margin:6px 0 26px; }
+
+  .exp { display:grid; grid-template-columns:320px 1fr; gap:28px; align-items:start; }
+  @media (max-width:900px){ .exp{ grid-template-columns:1fr; } }
+  .panel { background:var(--surface); border:1px solid var(--hair); border-radius:12px; box-shadow:var(--shadow); }
+  .controls { padding:18px; position:sticky; top:14px; }
+  .controls .grp { font:600 11px/1 ui-monospace,monospace; letter-spacing:.13em; text-transform:uppercase; color:var(--muted); margin:14px 2px 8px; }
+  .controls .grp:first-child { margin-top:2px; }
+  .sw { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; background:var(--surface-2); border:1px solid transparent; color:var(--ink); border-radius:9px; padding:9px 11px; cursor:pointer; text-align:left; font-size:13.5px; transition:.12s; }
+  .sw:hover { border-color:var(--hair); }
+  .sw .dot { width:30px; height:18px; border-radius:999px; background:var(--rule); position:relative; flex:none; transition:.14s; }
+  .sw .dot::after { content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:.14s; }
+  .sw[aria-pressed="true"] { background:var(--accent-2); border-color:color-mix(in srgb,var(--accent) 40%,transparent); }
+  .sw[aria-pressed="true"] .dot { background:var(--accent); }
+  .sw[aria-pressed="true"] .dot::after { transform:translateX(12px); }
+  .sw:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .lever { margin-bottom:9px; }
+  .dials { padding:7px 4px 2px 11px; display:none; }
+  .lever.on .dials { display:block; }
+  .drow { display:flex; align-items:center; gap:8px; margin:4px 0; font-size:12px; color:var(--ink-2); }
+  .drow .dlab { flex:1; }
+  .drow input { width:86px; font:600 12.5px/1.2 ui-monospace,monospace; color:var(--ink); background:var(--surface); border:1px solid var(--rule); border-radius:7px; padding:5px 7px; text-align:right; }
+  .drow input:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .drow .dunit { width:18px; color:var(--muted); font:600 11px/1 ui-monospace,monospace; }
+  .seg { display:flex; border:1px solid var(--rule); border-radius:8px; overflow:hidden; background:var(--surface-2); margin:2px 0 3px; }
+  .seg button { flex:1; font:600 11px/1.2 ui-monospace,monospace; padding:7px 4px; background:transparent; color:var(--ink-2); border:0; cursor:pointer; transition:.12s; }
+  .seg button + button { border-left:1px solid var(--rule); }
+  .seg button[aria-pressed="true"] { background:var(--accent); color:#fff; }
+  .btnrow { display:flex; gap:8px; margin-top:14px; }
+  .btnrow button { flex:1; font:600 11.5px/1 ui-monospace,monospace; letter-spacing:.02em; padding:8px 8px; border:1px solid var(--rule); border-radius:8px; background:var(--surface-2); color:var(--ink-2); cursor:pointer; transition:.12s; }
+  .btnrow button:hover { border-color:var(--accent); color:var(--accent); }
+
+  .out { display:flex; flex-direction:column; gap:20px; min-width:0; }
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  @media (max-width:640px){ .tiles{ grid-template-columns:repeat(2,1fr);} }
+  .tile { background:var(--surface); border:1px solid var(--hair); border-radius:11px; padding:14px 15px; box-shadow:var(--shadow); }
+  .tile .k { font:600 10.5px/1.2 ui-monospace,monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .tile .v { font:660 26px/1.05 ui-monospace,monospace; font-variant-numeric:tabular-nums; margin-top:8px; letter-spacing:-.01em; }
+  .tile .alt { font:600 12px/1 ui-monospace,monospace; font-variant-numeric:tabular-nums; color:var(--muted); margin-top:5px; }
+  .tile .s { font-size:11.5px; color:var(--ink-2); margin-top:3px; }
+  .tile.accent .v { color:var(--accent); }
+  .card { background:var(--surface); border:1px solid var(--hair); border-radius:12px; padding:18px 20px; box-shadow:var(--shadow); min-width:0; }
+  .card h3 { font-size:15px; }
+  .card .cap { font-size:12.5px; color:var(--ink-2); margin:4px 0 14px; }
+  .card .step { font:600 10.5px/1 ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); margin-bottom:6px; }
+  figure { margin:0; }
+  svg { display:block; width:100%; height:auto; overflow:visible; }
+  .legend { display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; font-size:12px; color:var(--ink-2); }
+  .legend .it { display:flex; align-items:center; gap:6px; }
+  .legend .sw2 { width:11px; height:11px; border-radius:3px; flex:none; }
+
+  footer { padding:34px 0 60px; color:var(--muted); font-size:12.5px; }
+  footer .wrap > * + * { margin-top:8px; }
+  footer .margins { display:grid; grid-template-columns:1fr 1fr; gap:8px 36px; margin-bottom:16px; }
+  @media (max-width:720px){ footer .margins{ grid-template-columns:1fr; } }
+  footer .mhead { font:600 11px/1 ui-monospace,monospace; letter-spacing:.13em; text-transform:uppercase; color:var(--muted); margin:0 0 6px; }
+  footer .margins ul { margin:0; padding-left:16px; color:var(--ink-2); }
+  footer .margins li { margin:3px 0; }
+</style>
+
+<header class="top"><div class="wrap top-row">
+  <span class="brand">The Budget Lab · Yale</span>
+  <div class="top-right">
+    <span class="synthetic" id="dataBadge">Model output</span>
+  </div>
+</div></header>
+
+<div class="hero"><div class="wrap">
+  <h1>How much revenue is there at the top?</h1>
+  <div class="dekcols">
+    <p class="dek">There are many ways to raise taxes on the rich, and each comes with its own standalone revenue estimate. But these policies tax overlapping bases and change how people respond to one another's rates, so a package does not raise what its parts raise separately. It can raise less, where bases overlap, or more, where one policy shuts down the escape routes from another.</p>
+    <p class="dek">This page quantifies those interactions: eight top-tax policies with adjustable rates and thresholds, combined however you like, using the Budget Lab's tax microsimulation model. Revenue figures are cumulative over 2027–2036, shown in dollars and as a share of GDP.</p>
+  </div>
+</div></div>
+
+<section id="explorer"><div class="wrap">
+  <h2>Build a package</h2>
+  <p class="sec-sub">Switch any policy on and type your own rates and thresholds. The model was run at a lattice of anchor settings — every value in between is interpolated from those runs, and the interpolation is verified against held-out model runs of full packages (the badge above states the bound).</p>
+
+  <div class="exp">
+    <div class="panel controls">
+      <div class="grp">Tax rates</div>
+      <div id="rateSw"></div>
+      <div class="grp">Tax bases</div>
+      <div id="structSw"></div>
+      <div class="btnrow"><button id="allRef" type="button">All at reference</button><button id="allOff" type="button">All off</button></div>
+    </div>
+
+    <div class="out">
+      <div class="tiles" id="tiles"></div>
+
+      <div class="card">
+        <div class="step">Parts vs. whole</div>
+        <h3>Standalone scores vs. the combined package</h3>
+        <div class="cap">The sum of each selected policy's standalone score, compared with the combined package scored as one reform. The first two bars split into the standalone scores. The package bar splits by Shapley contribution: each policy's marginal revenue averaged over every order in which the package could be assembled. Contributions sum to the package total, so interaction effects are shared among the policies responsible. All estimates are measured against the same current-law baseline.</div>
+        <figure><div id="pvw"></div></figure>
+        <div class="legend" id="pvwLegend"></div>
+        <div class="cap mono" id="pvwNote" style="margin:8px 0 0;font-size:11px;color:var(--muted)"></div>
+      </div>
+
+      <div class="card">
+        <div class="step">Spillovers</div>
+        <h3>What each policy does to the other bases</h3>
+        <div class="cap">Each selected policy on its own, at your dial settings, with behavioral responses: where its revenue comes from, by tax type. Segments right of the zero line are revenue raised; segments left of it are revenue drained from other bases as behavior responds. A wealth tax erodes the income-tax, capital-gains, and estate bases through saving and avoidance; a higher corporate rate marks down equity values and with them future capital-gains revenue. These spillovers are part of each policy's own standalone score, which is why they don't show up as package-level interaction above.</div>
+        <figure><div id="spill"></div></figure>
+        <div class="legend" id="spillLegend"></div>
+      </div>
+
+      <div class="card">
+        <div class="step">Distribution</div>
+        <h3>Distribution of tax rates</h3>
+        <div class="cap">Effective tax rate by income percentile in 2027, measured against cash income (expanded cash income) or accrual income (Haig-Simons, which includes unrealized gains). Baseline-fixed ranking; corporate tax under the capital-income convention. Each group shows two bars — baseline law and the package's static rate — stacked by tax type.
+          <span class="unit" id="etrDefTog" role="group" aria-label="Income definition" style="margin-left:10px;vertical-align:middle">
+            <button type="button" data-def="expanded" aria-pressed="true">Cash income</button>
+            <button type="button" data-def="hs" aria-pressed="false">Accrual income</button>
+          </span>
+        </div>
+        <figure><div id="etr"></div></figure>
+        <div class="legend" id="etrLegend"></div>
+        <div class="legend" style="margin-top:6px"><span class="it mono" style="font-size:11px;color:var(--muted)">each percentile, left→right: baseline · static</span></div>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<section id="frontierSec"><div class="wrap">
+  <h2>The frontier: how much is there, at what price?</h2>
+  <p class="sec-sub">Each point below is one package drawn from a lattice over the dial space — every policy at several settings, in every combination. Its horizontal position is what it collects over ten years. Its vertical position is its leakage price: the gap between its static and conventional scores, in cents per dollar actually collected. When some other package raises more money at a lower leakage price, a package is dominated; the packages nothing dominates form the frontier line, which traces the cheapest available route to any given amount of revenue. Points below the zero line collect more than their static score — taxing gains at death removes the incentive to defer realizations, so revenue comes in above the mechanical estimate. Your current selection is marked.</p>
+  <div class="card">
+    <figure><div id="frontChart"></div></figure>
+    <div class="legend" id="frontLegend"></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="margins">
+    <div>
+      <p class="mhead">Behavioral responses included</p>
+      <ul>
+        <li>Capital-gains realization: timing and permanent responses, including how taxing gains at death changes the incentive to defer</li>
+        <li>Conversion of ordinary income into capital gains</li>
+        <li>Entity shifting between pass-through and C-corporation form, including its payroll-tax base effect</li>
+        <li>Underreporting and evasion</li>
+        <li>Charitable giving</li>
+        <li>Wealth-tax avoidance, applied consistently to the wealth, income, and estate bases</li>
+      </ul>
+    </div>
+    <div>
+      <p class="mhead">Mechanical channels included</p>
+      <ul>
+        <li>Part of new taxes is financed out of saving, which compounds over time into smaller estates and less capital income</li>
+        <li>Corporate incidence on households: lower dividends, interest, rent, and pass-through income, and marked-down equity values that reduce future realized gains</li>
+        <li>Interactions inside the tax calculation itself: rate stacking, base broadening, and revenue moving across bases (income, payroll, corporate, estate, wealth)</li>
+      </ul>
+    </div>
+  </div>
+  <p>Not included: labor-supply responses, macroeconomic feedback, and changes to tax enforcement.</p>
+  <p id="footSource"><strong>Model output, interpolated.</strong> Figures come from the top-tax dials batch of the Budget Lab Tax-Simulator: each policy run at a set of anchor settings, every pair run together at reference settings, and the four policies that share the capital-gains-at-death channel also run three at a time. Any dial setting in between is interpolated with a solo + pairwise + triple decomposition, and the interpolation is validated against held-out model runs of full multi-policy packages at off-anchor settings; the badge states the verified bound. The corporate dial is linear between 21% and 28% by construction — the off-model corporate input is itself linear in the rate change.</p>
+  <p>Revenue figures are 10-year cumulative dollars, with the share of GDP (10-yr revenue ÷ 10-yr cumulative fiscal-year nominal GDP) shown alongside. Policies, effective 2027: top ordinary rate · top capital-gains &amp; dividends rate · corporate rate · annual wealth tax (rate and threshold) · treatment of gains at death (step-up, carryover, or taxed at death) · estate tax (top rate and exemption) · repeal of the QBI deduction · elimination of the Social Security taxable maximum.</p>
+</div></footer>
+
+<script>
+var DATA={"meta":{"schema":2,"window":[2027,2036],"gdp10_fy":396000.0,"dist_years":[2027],"etr_slice":{},"etr_income_defs":["hs","expanded"],"etr_comps":["income_tax","payroll","estate","deemed","wealth","corp","vat","other"],"etr_groups":["Bottom quintile","Second quintile","Middle quintile","Fourth quintile","80-90","90-99","99-99.9","Top 0.1%"],"levers":[{"key":"ord","label":"Top ordinary rate","grp":"rate","kind":"continuous","interp":"linear1d","cluster":false,"params":[{"key":"rate","label":"Top rate","unit":"%","fmt":"pct","off":37.0,"ref":44.8,"knots":[37.0,39.6,44.8,50.0],"scale":"linear","min":39.6,"max":50.0,"anchors":[39.6,44.8,50.0]}]},{"key":"cg","label":"Capital gains & dividends top rate","grp":"rate","kind":"continuous","interp":"linear1d","cluster":true,"params":[{"key":"rate","label":"Top rate","unit":"%","fmt":"pct","off":20.0,"ref":40.0,"knots":[20.0,25.0,30.0,35.0,40.0,45.0,50.0],"scale":"linear","min":20.0,"max":50.0,"anchors":[25.0,30.0,35.0,40.0,45.0,50.0]}]},{"key":"corp","label":"Corporate rate","grp":"rate","kind":"continuous","interp":"linear1d","cluster":false,"params":[{"key":"rate","label":"Rate","unit":"%","fmt":"pct","off":21.0,"ref":28.0,"knots":[21.0,28.0],"scale":"linear","min":21.0,"max":28.0,"anchors":[28.0]}]},{"key":"wealth","label":"Annual wealth tax","grp":"rate","kind":"continuous","interp":"bilinear","cluster":true,"params":[{"key":"rate","label":"Rate","unit":"%","fmt":"pct","off":0.0,"ref":2.0,"knots":[0.0,0.5,1.0,2.0,3.0,4.0,5.0],"scale":"linear","min":0.0,"max":5.0,"anchors":[0.5,1.0,2.0,3.0,4.0,5.0]},{"key":"thr","label":"Threshold","unit":"$","fmt":"usd","off":50000000.0,"ref":50000000.0,"knots":[50000000.0,100000000.0,150000000.0,250000000.0,500000000.0,1000000000.0],"scale":"log","min":50000000.0,"max":1000000000.0,"anchors":[50000000.0,100000000.0,150000000.0,250000000.0,500000000.0,1000000000.0]}]},{"key":"deemed","label":"Gains at death","grp":"struct","kind":"discrete","interp":"ladder","cluster":true,"params":[{"key":"pos","label":"Treatment","unit":"","fmt":"pos","off":"off","ref":"deemed","knots":["off","carryover","deemed"],"scale":"pos","positions":["off","carryover","deemed"]}]},{"key":"estate","label":"Estate tax","grp":"struct","kind":"continuous","interp":"bilinear","cluster":true,"params":[{"key":"rate","label":"Top rate","unit":"%","fmt":"pct","off":40.0,"ref":50.0,"knots":[40.0,50.0,60.0],"scale":"linear","min":40.0,"max":60.0,"anchors":[40.0,50.0,60.0]},{"key":"exem","label":"Exemption","unit":"$","fmt":"usd","off":15390000.0,"ref":8460000.0,"knots":[5000000.0,8460000.0,11930000.0,15390000.0],"scale":"linear","min":5000000.0,"max":15390000.0,"anchors":[5000000.0,8460000.0,11930000.0,15390000.0]}]},{"key":"qbi","label":"Repeal QBI (\u00a7199A)","grp":"struct","kind":"binary","interp":"binary","cluster":false,"params":[{"key":"on","label":"Repeal","unit":"","fmt":"bool","off":0,"ref":1,"knots":[0,1],"scale":"pos","positions":[0,1]}]},{"key":"taxmax","label":"Eliminate SS taxable max","grp":"struct","kind":"binary","interp":"binary","cluster":false,"params":[{"key":"on","label":"Eliminate","unit":"","fmt":"bool","off":0,"ref":1,"knots":[0,1],"scale":"pos","positions":[0,1]}]}],"surrogate":{"quantities":["ct","cy","ch","st","sy","sh","etr"],"m":{"ct":1,"cy":10,"ch":7,"st":1,"sy":10,"sh":7,"etr":128},"heads_order":["iit","cg","pay","corp","est","wealth","other"],"ref":{"ord":{"rate":44.8},"cg":{"rate":40.0},"corp":{"rate":28.0},"wealth":{"rate":2.0,"thr":50000000.0},"deemed":{"pos":"deemed"},"estate":{"rate":50.0,"exem":8460000.0},"qbi":{"on":1},"taxmax":{"on":1}},"cluster":["cg","wealth","deemed","estate"],"validation":{"quiz":{"n":3,"max_pct":0.0,"median_pct":0.0},"corners":{"n":0,"max_pct":null},"byyear_max_pct":0.0,"heads_max_b":0.0,"etr_max_pp":0.0,"bound_pct":0.5,"hard_bar_pct":2.0,"passed":true,"date":"2026-07-09"},"checks":[{"id":"synth0","state":{"cg":{"rate":33.0},"deemed":{"pos":"deemed"},"estate":{"rate":55.0,"exem":7000000.0}},"conv_total10":1681.396,"static_total10":1597.379},{"id":"synth1","state":{"ord":{"rate":47.0},"wealth":{"rate":3.0,"thr":200000000.0},"qbi":{"on":1},"taxmax":{"on":1}},"conv_total10":4369.852,"static_total10":5427.263},{"id":"synth2","state":{"ord":{"rate":44.8},"cg":{"rate":40.0},"corp":{"rate":28.0},"wealth":{"rate":2.0,"thr":50000000.0},"deemed":{"pos":"deemed"},"estate":{"rate":50.0,"exem":8460000.0},"qbi":{"on":1},"taxmax":{"on":1}},"conv_total10":6703.45,"static_total10":7931.16}]},"provenance":{"vintage":"SYNTHETIC","git_sha":"","date":"2026-07-09","n_scenarios":0,"corp_note":"synthetic"},"units":"$B; ETRs in percent (deltas in pp)","placeholder":"synthetic stub \u2014 awaiting top_tax_dials_v1"},"etr_base":{"hs":{"2027":{"Bottom quintile":[2.25,1.5,0.1,0.0,0.0,0.75,0.15,0.25],"Second quintile":[4.179,2.786,0.186,0.0,0.0,1.393,0.279,0.464],"Middle quintile":[6.107,4.071,0.271,0.0,0.0,2.036,0.407,0.679],"Fourth quintile":[8.036,5.357,0.357,0.0,0.0,2.679,0.536,0.893],"80-90":[9.964,6.643,0.443,0.0,0.0,3.321,0.664,1.107],"90-99":[11.893,7.929,0.529,0.0,0.0,3.964,0.793,1.321],"99-99.9":[13.821,9.214,0.614,0.0,0.0,4.607,0.921,1.536],"Top 0.1%":[15.75,10.5,0.7,0.0,0.0,5.25,1.05,1.75]}},"expanded":{"2027":{"Bottom quintile":[2.25,1.5,0.1,0.0,0.0,0.75,0.15,0.25],"Second quintile":[4.179,2.786,0.186,0.0,0.0,1.393,0.279,0.464],"Middle quintile":[6.107,4.071,0.271,0.0,0.0,2.036,0.407,0.679],"Fourth quintile":[8.036,5.357,0.357,0.0,0.0,2.679,0.536,0.893],"80-90":[9.964,6.643,0.443,0.0,0.0,3.321,0.664,1.107],"90-99":[11.893,7.929,0.529,0.0,0.0,3.964,0.793,1.321],"99-99.9":[13.821,9.214,0.614,0.0,0.0,4.607,0.921,1.536],"Top 0.1%":[15.75,10.5,0.7,0.0,0.0,5.25,1.05,1.75]}}},"surrogate":{"solo":{"ord":{"ct":[[0.0],[207.667],[623.0],[1038.333]],"cy":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[12.979,14.71,16.44,18.171,19.901,21.632,23.363,25.093,26.824,28.554],[38.938,44.129,49.321,54.512,59.704,64.896,70.088,75.279,80.471,85.662],[64.896,73.549,82.201,90.854,99.507,108.16,116.813,125.465,134.118,142.771]],"ch":[[0.0,-0.0,0.0,0.0,0.0,0.0,0.0],[186.9,-10.383,20.767,0.0,6.23,0.0,4.153],[560.7,-31.15,62.3,0.0,18.69,0.0,12.46],[934.5,-51.917,103.833,0.0,31.15,0.0,20.767]],"st":[[0.0],[233.333],[700.0],[1166.667]],"sy":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[14.583,16.528,18.472,20.417,22.361,24.306,26.25,28.194,30.139,32.083],[43.75,49.583,55.417,61.25,67.083,72.917,78.75,84.583,90.417,96.25],[72.917,82.639,92.361,102.083,111.806,121.528,131.25,140.972,150.694,160.417]],"sh":[[0.0,-0.0,0.0,0.0,0.0,0.0,0.0],[210.0,-11.667,23.333,0.0,7.0,0.0,4.667],[630.0,-35.0,70.0,0.0,21.0,0.0,14.0],[1050.0,-58.333,116.667,0.0,35.0,0.0,23.333]],"etr":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.007,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.024,0.0,0.007,0.0,0.007,0.0,0.0,0.0,0.056,0.0,0.016,0.0,0.016,0.0,0.0,0.0,0.109,0.0,0.03,0.0,0.03,0.0,0.0,0.0,0.189,0.0,0.052,0.0,0.052,0.0,0.0,0.0,0.3,0.0,0.083,0.0,0.083,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.007,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.024,0.0,0.007,0.0,0.007,0.0,0.0,0.0,0.056,0.0,0.016,0.0,0.016,0.0,0.0,0.0,0.109,0.0,0.03,0.0,0.03,0.0,0.0,0.0,0.189,0.0,0.052,0.0,0.052,0.0,0.0,0.0,0.3,0.0,0.083,0.0,0.083,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.021,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.071,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.168,0.0,0.047,0.0,0.047,0.0,0.0,0.0,0.328,0.0,0.091,0.0,0.091,0.0,0.0,0.0,0.567,0.0,0.157,0.0,0.157,0.0,0.0,0.0,0.9,0.0,0.25,0.0,0.25,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.021,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.071,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.168,0.0,0.047,0.0,0.047,0.0,0.0,0.0,0.328,0.0,0.091,0.0,0.091,0.0,0.0,0.0,0.567,0.0,0.157,0.0,0.157,0.0,0.0,0.0,0.9,0.0,0.25,0.0,0.25,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.035,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.118,0.0,0.033,0.0,0.033,0.0,0.0,0.0,0.28,0.0,0.078,0.0,0.078,0.0,0.0,0.0,0.547,0.0,0.152,0.0,0.152,0.0,0.0,0.0,0.945,0.0,0.262,0.0,0.262,0.0,0.0,0.0,1.5,0.0,0.417,0.0,0.417,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.035,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.118,0.0,0.033,0.0,0.033,0.0,0.0,0.0,0.28,0.0,0.078,0.0,0.078,0.0,0.0,0.0,0.547,0.0,0.152,0.0,0.152,0.0,0.0,0.0,0.945,0.0,0.262,0.0,0.262,0.0,0.0,0.0,1.5,0.0,0.417,0.0,0.417,0.0,0.0,0.0]]},"cg":{"ct":[[0.0],[54.0],[108.0],[162.0],[216.0],[270.0],[324.0]],"cy":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[3.375,3.825,4.275,4.725,5.175,5.625,6.075,6.525,6.975,7.425],[6.75,7.65,8.55,9.45,10.35,11.25,12.15,13.05,13.95,14.85],[10.125,11.475,12.825,14.175,15.525,16.875,18.225,19.575,20.925,22.275],[13.5,15.3,17.1,18.9,20.7,22.5,24.3,26.1,27.9,29.7],[16.875,19.125,21.375,23.625,25.875,28.125,30.375,32.625,34.875,37.125],[20.25,22.95,25.65,28.35,31.05,33.75,36.45,39.15,41.85,44.55]],"ch":[[-0.0,0.0,0.0,0.0,0.0,0.0,0.0],[-5.4,59.4,0.0,0.0,0.0,0.0,0.0],[-10.8,118.8,0.0,0.0,0.0,0.0,0.0],[-16.2,178.2,0.0,0.0,0.0,0.0,0.0],[-21.6,237.6,0.0,0.0,0.0,0.0,0.0],[-27.0,297.0,0.0,0.0,0.0,0.0,0.0],[-32.4,356.4,0.0,0.0,0.0,0.0,0.0]],"st":[[0.0],[225.0],[450.0],[675.0],[900.0],[1125.0],[1350.0]],"sy":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[14.062,15.938,17.812,19.688,21.562,23.438,25.313,27.188,29.062,30.937],[28.125,31.875,35.625,39.375,43.125,46.875,50.625,54.375,58.125,61.875],[42.188,47.812,53.438,59.062,64.688,70.312,75.938,81.563,87.188,92.812],[56.25,63.75,71.25,78.75,86.25,93.75,101.25,108.75,116.25,123.75],[70.312,79.687,89.062,98.438,107.812,117.188,126.562,135.938,145.312,154.687],[84.375,95.625,106.875,118.125,129.375,140.625,151.875,163.125,174.375,185.625]],"sh":[[-0.0,0.0,0.0,0.0,0.0,0.0,0.0],[-22.5,247.5,0.0,0.0,0.0,0.0,0.0],[-45.0,495.0,0.0,0.0,0.0,0.0,0.0],[-67.5,742.5,0.0,0.0,0.0,0.0,0.0],[-90.0,990.0,0.0,0.0,0.0,0.0,0.0],[-112.5,1237.5,0.0,0.0,0.0,0.0,0.0],[-135.0,1485.0,0.0,0.0,0.0,0.0,0.0]],"etr":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.018,0.0,0.005,0.0,0.005,0.0,0.0,0.0,0.042,0.0,0.012,0.0,0.012,0.0,0.0,0.0,0.082,0.0,0.023,0.0,0.023,0.0,0.0,0.0,0.142,0.0,0.039,0.0,0.039,0.0,0.0,0.0,0.225,0.0,0.062,0.0,0.062,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.018,0.0,0.005,0.0,0.005,0.0,0.0,0.0,0.042,0.0,0.012,0.0,0.012,0.0,0.0,0.0,0.082,0.0,0.023,0.0,0.023,0.0,0.0,0.0,0.142,0.0,0.039,0.0,0.039,0.0,0.0,0.0,0.225,0.0,0.062,0.0,0.062,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.01,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.035,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.084,0.0,0.023,0.0,0.023,0.0,0.0,0.0,0.164,0.0,0.046,0.0,0.046,0.0,0.0,0.0,0.283,0.0,0.079,0.0,0.079,0.0,0.0,0.0,0.45,0.0,0.125,0.0,0.125,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.01,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.035,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.084,0.0,0.023,0.0,0.023,0.0,0.0,0.0,0.164,0.0,0.046,0.0,0.046,0.0,0.0,0.0,0.283,0.0,0.079,0.0,0.079,0.0,0.0,0.0,0.45,0.0,0.125,0.0,0.125,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.016,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.053,0.0,0.015,0.0,0.015,0.0,0.0,0.0,0.126,0.0,0.035,0.0,0.035,0.0,0.0,0.0,0.246,0.0,0.068,0.0,0.068,0.0,0.0,0.0,0.425,0.0,0.118,0.0,0.118,0.0,0.0,0.0,0.675,0.0,0.188,0.0,0.188,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.016,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.053,0.0,0.015,0.0,0.015,0.0,0.0,0.0,0.126,0.0,0.035,0.0,0.035,0.0,0.0,0.0,0.246,0.0,0.068,0.0,0.068,0.0,0.0,0.0,0.425,0.0,0.118,0.0,0.118,0.0,0.0,0.0,0.675,0.0,0.188,0.0,0.188,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.021,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.071,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.168,0.0,0.047,0.0,0.047,0.0,0.0,0.0,0.328,0.0,0.091,0.0,0.091,0.0,0.0,0.0,0.567,0.0,0.157,0.0,0.157,0.0,0.0,0.0,0.9,0.0,0.25,0.0,0.25,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.021,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.071,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.168,0.0,0.047,0.0,0.047,0.0,0.0,0.0,0.328,0.0,0.091,0.0,0.091,0.0,0.0,0.0,0.567,0.0,0.157,0.0,0.157,0.0,0.0,0.0,0.9,0.0,0.25,0.0,0.25,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.026,0.0,0.007,0.0,0.007,0.0,0.0,0.0,0.089,0.0,0.025,0.0,0.025,0.0,0.0,0.0,0.21,0.0,0.058,0.0,0.058,0.0,0.0,0.0,0.41,0.0,0.114,0.0,0.114,0.0,0.0,0.0,0.708,0.0,0.197,0.0,0.197,0.0,0.0,0.0,1.125,0.0,0.312,0.0,0.312,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.026,0.0,0.007,0.0,0.007,0.0,0.0,0.0,0.089,0.0,0.025,0.0,0.025,0.0,0.0,0.0,0.21,0.0,0.058,0.0,0.058,0.0,0.0,0.0,0.41,0.0,0.114,0.0,0.114,0.0,0.0,0.0,0.708,0.0,0.197,0.0,0.197,0.0,0.0,0.0,1.125,0.0,0.312,0.0,0.312,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.031,0.0,0.009,0.0,0.009,0.0,0.0,0.0,0.106,0.0,0.03,0.0,0.03,0.0,0.0,0.0,0.252,0.0,0.07,0.0,0.07,0.0,0.0,0.0,0.492,0.0,0.137,0.0,0.137,0.0,0.0,0.0,0.85,0.0,0.236,0.0,0.236,0.0,0.0,0.0,1.35,0.0,0.375,0.0,0.375,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.031,0.0,0.009,0.0,0.009,0.0,0.0,0.0,0.106,0.0,0.03,0.0,0.03,0.0,0.0,0.0,0.252,0.0,0.07,0.0,0.07,0.0,0.0,0.0,0.492,0.0,0.137,0.0,0.137,0.0,0.0,0.0,0.85,0.0,0.236,0.0,0.236,0.0,0.0,0.0,1.35,0.0,0.375,0.0,0.375,0.0,0.0,0.0]]},"corp":{"ct":[[0.0],[792.0]],"cy":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[49.5,56.1,62.7,69.3,75.9,82.5,89.1,95.7,102.3,108.9]],"ch":[[0.0,-0.0,0.0,0.0,-0.0,0.0,0.0],[39.6,-63.36,0.0,831.6,-15.84,0.0,0.0]],"st":[[0.0],[900.0]],"sy":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[56.25,63.75,71.25,78.75,86.25,93.75,101.25,108.75,116.25,123.75]],"sh":[[0.0,-0.0,0.0,0.0,-0.0,0.0,0.0],[45.0,-72.0,0.0,945.0,-18.0,0.0,0.0]],"etr":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.021,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.071,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.168,0.0,0.047,0.0,0.047,0.0,0.0,0.0,0.328,0.0,0.091,0.0,0.091,0.0,0.0,0.0,0.567,0.0,0.157,0.0,0.157,0.0,0.0,0.0,0.9,0.0,0.25,0.0,0.25,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.021,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.071,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.168,0.0,0.047,0.0,0.047,0.0,0.0,0.0,0.328,0.0,0.091,0.0,0.091,0.0,0.0,0.0,0.567,0.0,0.157,0.0,0.157,0.0,0.0,0.0,0.9,0.0,0.25,0.0,0.25,0.0,0.0,0.0]]},"wealth":{"ct":[[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],[435.5],[362.949],[320.509],[267.042],[194.491],[121.94],[871.0],[725.898],[641.019],[534.084],[388.982],[243.88],[1742.0],[1451.796],[1282.038],[1068.168],[777.964],[487.76],[2613.0],[2177.694],[1923.057],[1602.251],[1166.946],[731.64],[3484.0],[2903.592],[2564.076],[2136.335],[1555.928],[975.52],[4355.0],[3629.49],[3205.095],[2670.419],[1944.91],[1219.4]],"cy":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[27.219,30.848,34.477,38.106,41.735,45.365,48.994,52.623,56.252,59.881],[22.684,25.709,28.733,31.758,34.783,37.807,40.832,43.856,46.881,49.905],[20.032,22.703,25.374,28.045,30.715,33.386,36.057,38.728,41.399,44.07],[16.69,18.915,21.141,23.366,25.592,27.817,30.042,32.268,34.493,36.718],[12.156,13.776,15.397,17.018,18.639,20.259,21.88,23.501,25.122,26.743],[7.621,8.637,9.654,10.67,11.686,12.702,13.718,14.734,15.751,16.767],[54.438,61.696,68.954,76.213,83.471,90.729,97.988,105.246,112.504,119.762],[45.369,51.418,57.467,63.516,69.565,75.614,81.664,87.713,93.762,99.811],[40.064,45.406,50.747,56.089,61.431,66.773,72.115,77.456,82.798,88.14],[33.38,37.831,42.282,46.732,51.183,55.634,60.084,64.535,68.986,73.437],[24.311,27.553,30.794,34.036,37.277,40.519,43.76,47.002,50.243,53.485],[15.243,17.275,19.307,21.34,23.372,25.404,27.437,29.469,31.501,33.534],[108.875,123.392,137.908,152.425,166.942,181.458,195.975,210.492,225.008,239.525],[90.737,102.836,114.934,127.032,139.13,151.229,163.327,175.425,187.524,199.622],[80.127,90.811,101.495,112.178,122.862,133.546,144.229,154.913,165.597,176.28],[66.76,75.662,84.563,93.465,102.366,111.267,120.169,129.07,137.972,146.873],[48.623,55.106,61.589,68.072,74.555,81.038,87.521,94.004,100.487,106.97],[30.485,34.55,38.614,42.679,46.744,50.808,54.873,58.938,63.002,67.067],[163.312,185.088,206.863,228.638,250.413,272.188,293.963,315.738,337.512,359.287],[136.106,154.253,172.401,190.548,208.696,226.843,244.991,263.138,281.286,299.433],[120.191,136.217,152.242,168.267,184.293,200.318,216.344,232.369,248.395,264.42],[100.141,113.493,126.845,140.197,153.549,166.901,180.253,193.605,206.957,220.31],[72.934,82.659,92.383,102.108,111.832,121.557,131.281,141.006,150.73,160.455],[45.728,51.825,57.922,64.019,70.116,76.213,82.31,88.407,94.504,100.601],[217.75,246.783,275.817,304.85,333.883,362.917,391.95,420.983,450.017,479.05],[181.475,205.671,229.868,254.064,278.261,302.458,326.654,350.851,375.047,399.244],[160.255,181.622,202.989,224.357,245.724,267.091,288.459,309.826,331.193,352.56],[133.521,151.324,169.127,186.929,204.732,222.535,240.338,258.141,275.943,293.746],[97.245,110.212,123.178,136.144,149.11,162.076,175.042,188.008,200.974,213.94],[60.97,69.099,77.229,85.358,93.487,101.617,109.746,117.875,126.005,134.134],[272.188,308.479,344.771,381.062,417.354,453.646,489.938,526.229,562.521,598.812],[226.843,257.089,287.335,317.58,347.826,378.072,408.318,438.563,468.809,499.055],[200.318,227.028,253.737,280.446,307.155,333.864,360.573,387.282,413.991,440.701],[166.901,189.155,211.408,233.662,255.915,278.169,300.422,322.676,344.929,367.183],[121.557,137.764,153.972,170.18,186.387,202.595,218.802,235.01,251.217,267.425],[76.213,86.374,96.536,106.698,116.859,127.021,137.183,147.344,157.506,167.668]],"ch":[[-0.0,-0.0,0.0,0.0,-0.0,0.0,0.0],[-0.0,-0.0,0.0,0.0,-0.0,0.0,0.0],[-0.0,-0.0,0.0,0.0,-0.0,0.0,0.0],[-0.0,-0.0,0.0,0.0,-0.0,0.0,0.0],[-0.0,-0.0,0.0,0.0,-0.0,0.0,0.0],[-0.0,-0.0,0.0,0.0,-0.0,0.0,0.0],[-39.195,-21.775,0.0,0.0,-8.71,505.18,0.0],[-32.665,-18.147,0.0,0.0,-7.259,421.021,0.0],[-28.846,-16.025,0.0,0.0,-6.41,371.791,0.0],[-24.034,-13.352,0.0,0.0,-5.341,309.769,0.0],[-17.504,-9.725,0.0,0.0,-3.89,225.61,0.0],[-10.975,-6.097,0.0,0.0,-2.439,141.45,0.0],[-78.39,-43.55,0.0,0.0,-17.42,1010.36,0.0],[-65.331,-36.295,0.0,0.0,-14.518,842.042,0.0],[-57.692,-32.051,0.0,0.0,-12.82,743.582,0.0],[-48.068,-26.704,0.0,0.0,-10.682,619.537,0.0],[-35.008,-19.449,0.0,0.0,-7.78,451.219,0.0],[-21.949,-12.194,0.0,0.0,-4.878,282.901,0.0],[-156.78,-87.1,0.0,0.0,-34.84,2020.72,0.0],[-130.662,-72.59,0.0,0.0,-29.036,1684.084,0.0],[-115.383,-64.102,0.0,0.0,-25.641,1487.164,0.0],[-96.135,-53.408,0.0,0.0,-21.363,1239.074,0.0],[-70.017,-38.898,0.0,0.0,-15.559,902.438,0.0],[-43.898,-24.388,0.0,0.0,-9.755,565.802,0.0],[-235.17,-130.65,0.0,0.0,-52.26,3031.08,0.0],[-195.992,-108.885,0.0,0.0,-43.554,2526.125,0.0],[-173.075,-96.153,0.0,0.0,-38.461,2230.746,0.0],[-144.203,-80.113,0.0,0.0,-32.045,1858.612,0.0],[-105.025,-58.347,0.0,0.0,-23.339,1353.657,0.0],[-65.848,-36.582,0.0,0.0,-14.633,848.702,0.0],[-313.56,-174.2,0.0,0.0,-69.68,4041.44,0.0],[-261.323,-145.18,0.0,0.0,-58.072,3368.167,0.0],[-230.767,-128.204,0.0,0.0,-51.282,2974.328,0.0],[-192.27,-106.817,0.0,0.0,-42.727,2478.149,0.0],[-140.033,-77.796,0.0,0.0,-31.119,1804.876,0.0],[-87.797,-48.776,0.0,0.0,-19.51,1131.603,0.0],[-391.95,-217.75,0.0,0.0,-87.1,5051.8,0.0],[-326.654,-181.475,0.0,0.0,-72.59,4210.209,0.0],[-288.459,-160.255,0.0,0.0,-64.102,3717.91,0.0],[-240.338,-133.521,0.0,0.0,-53.408,3097.686,0.0],[-175.042,-97.245,0.0,0.0,-38.898,2256.095,0.0],[-109.746,-60.97,0.0,0.0,-24.388,1414.504,0.0]],"st":[[0.0],[0.0],[0.0],[0.0],[0.0],[0.0],[650.0],[541.715],[478.372],[398.57],[290.285],[182.0],[1300.0],[1083.43],[956.745],[797.14],[580.57],[364.0],[2600.0],[2166.86],[1913.489],[1594.28],[1161.14],[728.0],[3900.0],[3250.29],[2870.234],[2391.42],[1741.71],[1092.0],[5200.0],[4333.72],[3826.979],[3188.56],[2322.28],[1456.0],[6500.0],[5417.15],[4783.723],[3985.7],[2902.85],[1820.0]],"sy":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[40.625,46.042,51.458,56.875,62.292,67.708,73.125,78.542,83.958,89.375],[33.857,38.371,42.886,47.4,51.914,56.429,60.943,65.457,69.972,74.486],[29.898,33.885,37.871,41.858,45.844,49.83,53.817,57.803,61.79,65.776],[24.911,28.232,31.553,34.875,38.196,41.518,44.839,48.161,51.482,54.803],[18.143,20.562,22.981,25.4,27.819,30.238,32.657,35.076,37.495,39.914],[11.375,12.892,14.408,15.925,17.442,18.958,20.475,21.992,23.508,25.025],[81.25,92.083,102.917,113.75,124.583,135.417,146.25,157.083,167.917,178.75],[67.714,76.743,85.772,94.8,103.829,112.857,121.886,130.914,139.943,148.972],[59.797,67.769,75.742,83.715,91.688,99.661,107.634,115.607,123.58,131.552],[49.821,56.464,63.107,69.75,76.393,83.035,89.678,96.321,102.964,109.607],[36.286,41.124,45.962,50.8,55.638,60.476,65.314,70.152,74.99,79.828],[22.75,25.783,28.817,31.85,34.883,37.917,40.95,43.983,47.017,50.05],[162.5,184.167,205.833,227.5,249.167,270.833,292.5,314.167,335.833,357.5],[135.429,153.486,171.543,189.6,207.657,225.715,243.772,261.829,279.886,297.943],[119.593,135.539,151.485,167.43,183.376,199.322,215.268,231.213,247.159,263.105],[99.643,112.928,126.214,139.5,152.785,166.071,179.357,192.642,205.928,219.214],[72.571,82.247,91.924,101.6,111.276,120.952,130.628,140.304,149.981,159.657],[45.5,51.567,57.633,63.7,69.767,75.833,81.9,87.967,94.033,100.1],[243.75,276.25,308.75,341.25,373.75,406.25,438.75,471.25,503.75,536.25],[203.143,230.229,257.315,284.4,311.486,338.572,365.658,392.743,419.829,446.915],[179.39,203.308,227.227,251.145,275.064,298.983,322.901,346.82,370.739,394.657],[149.464,169.392,189.321,209.249,229.178,249.106,269.035,288.963,308.892,328.82],[108.857,123.371,137.885,152.4,166.914,181.428,195.942,210.457,224.971,239.485],[68.25,77.35,86.45,95.55,104.65,113.75,122.85,131.95,141.05,150.15],[325.0,368.333,411.667,455.0,498.333,541.667,585.0,628.333,671.667,715.0],[270.857,306.972,343.086,379.2,415.315,451.429,487.543,523.658,559.772,595.886],[239.186,271.078,302.969,334.861,366.752,398.644,430.535,462.427,494.318,526.21],[199.285,225.856,252.428,278.999,305.57,332.142,358.713,385.284,411.856,438.427],[145.143,164.495,183.847,203.2,222.552,241.904,261.257,280.609,299.961,319.314],[91.0,103.133,115.267,127.4,139.533,151.667,163.8,175.933,188.067,200.2],[406.25,460.417,514.583,568.75,622.917,677.083,731.25,785.417,839.583,893.75],[338.572,383.715,428.858,474.001,519.144,564.286,609.429,654.572,699.715,744.858],[298.983,338.847,378.711,418.576,458.44,498.305,538.169,578.033,617.898,657.762],[249.106,282.32,315.535,348.749,381.963,415.177,448.391,481.605,514.82,548.034],[181.428,205.619,229.809,253.999,278.19,302.38,326.571,350.761,374.951,399.142],[113.75,128.917,144.083,159.25,174.417,189.583,204.75,219.917,235.083,250.25]],"sh":[[-0.0,-0.0,0.0,0.0,-0.0,0.0,0.0],[-0.0,-0.0,0.0,0.0,-0.0,0.0,0.0],[-0.0,-0.0,0.0,0.0,-0.0,0.0,0.0],[-0.0,-0.0,0.0,0.0,-0.0,0.0,0.0],[-0.0,-0.0,0.0,0.0,-0.0,0.0,0.0],[-0.0,-0.0,0.0,0.0,-0.0,0.0,0.0],[-58.5,-32.5,0.0,0.0,-13.0,754.0,0.0],[-48.754,-27.086,0.0,0.0,-10.834,628.389,0.0],[-43.054,-23.919,0.0,0.0,-9.567,554.912,0.0],[-35.871,-19.929,0.0,0.0,-7.971,462.341,0.0],[-26.126,-14.514,0.0,0.0,-5.806,336.731,0.0],[-16.38,-9.1,0.0,0.0,-3.64,211.12,0.0],[-117.0,-65.0,0.0,0.0,-26.0,1508.0,0.0],[-97.509,-54.171,0.0,0.0,-21.669,1256.779,0.0],[-86.107,-47.837,0.0,0.0,-19.135,1109.824,0.0],[-71.743,-39.857,0.0,0.0,-15.943,924.682,0.0],[-52.251,-29.029,0.0,0.0,-11.611,673.461,0.0],[-32.76,-18.2,0.0,0.0,-7.28,422.24,0.0],[-234.0,-130.0,0.0,0.0,-52.0,3016.0,0.0],[-195.017,-108.343,0.0,0.0,-43.337,2513.558,0.0],[-172.214,-95.674,0.0,0.0,-38.27,2219.648,0.0],[-143.485,-79.714,0.0,0.0,-31.886,1849.365,0.0],[-104.503,-58.057,0.0,0.0,-23.223,1346.922,0.0],[-65.52,-36.4,0.0,0.0,-14.56,844.48,0.0],[-351.0,-195.0,0.0,0.0,-78.0,4524.0,0.0],[-292.526,-162.514,0.0,0.0,-65.006,3770.336,0.0],[-258.321,-143.512,0.0,0.0,-57.405,3329.471,0.0],[-215.228,-119.571,0.0,0.0,-47.828,2774.047,0.0],[-156.754,-87.086,0.0,0.0,-34.834,2020.384,0.0],[-98.28,-54.6,0.0,0.0,-21.84,1266.72,0.0],[-468.0,-260.0,0.0,0.0,-104.0,6032.0,0.0],[-390.035,-216.686,0.0,0.0,-86.674,5027.115,0.0],[-344.428,-191.349,0.0,0.0,-76.54,4439.295,0.0],[-286.97,-159.428,0.0,0.0,-63.771,3698.73,0.0],[-209.005,-116.114,0.0,0.0,-46.446,2693.845,0.0],[-131.04,-72.8,0.0,0.0,-29.12,1688.96,0.0],[-585.0,-325.0,0.0,0.0,-130.0,7540.0,0.0],[-487.543,-270.857,0.0,0.0,-108.343,6283.894,0.0],[-430.535,-239.186,0.0,0.0,-95.674,5549.119,0.0],[-358.713,-199.285,0.0,0.0,-79.714,4623.412,0.0],[-261.257,-145.143,0.0,0.0,-58.057,3367.306,0.0],[-163.8,-91.0,0.0,0.0,-36.4,2111.2,0.0]],"etr":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.018,0.0,0.005,0.0,0.005,0.0,0.0,0.0,0.042,0.0,0.012,0.0,0.012,0.0,0.0,0.0,0.082,0.0,0.023,0.0,0.023,0.0,0.0,0.0,0.142,0.0,0.039,0.0,0.039,0.0,0.0,0.0,0.225,0.0,0.062,0.0,0.062,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.018,0.0,0.005,0.0,0.005,0.0,0.0,0.0,0.042,0.0,0.012,0.0,0.012,0.0,0.0,0.0,0.082,0.0,0.023,0.0,0.023,0.0,0.0,0.0,0.142,0.0,0.039,0.0,0.039,0.0,0.0,0.0,0.225,0.0,0.062,0.0,0.062,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.015,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.035,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.068,0.0,0.019,0.0,0.019,0.0,0.0,0.0,0.118,0.0,0.033,0.0,0.033,0.0,0.0,0.0,0.188,0.0,0.052,0.0,0.052,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.015,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.035,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.068,0.0,0.019,0.0,0.019,0.0,0.0,0.0,0.118,0.0,0.033,0.0,0.033,0.0,0.0,0.0,0.188,0.0,0.052,0.0,0.052,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.013,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.031,0.0,0.009,0.0,0.009,0.0,0.0,0.0,0.06,0.0,0.017,0.0,0.017,0.0,0.0,0.0,0.104,0.0,0.029,0.0,0.029,0.0,0.0,0.0,0.166,0.0,0.046,0.0,0.046,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.013,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.031,0.0,0.009,0.0,0.009,0.0,0.0,0.0,0.06,0.0,0.017,0.0,0.017,0.0,0.0,0.0,0.104,0.0,0.029,0.0,0.029,0.0,0.0,0.0,0.166,0.0,0.046,0.0,0.046,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.011,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.026,0.0,0.007,0.0,0.007,0.0,0.0,0.0,0.05,0.0,0.014,0.0,0.014,0.0,0.0,0.0,0.087,0.0,0.024,0.0,0.024,0.0,0.0,0.0,0.138,0.0,0.038,0.0,0.038,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.011,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.026,0.0,0.007,0.0,0.007,0.0,0.0,0.0,0.05,0.0,0.014,0.0,0.014,0.0,0.0,0.0,0.087,0.0,0.024,0.0,0.024,0.0,0.0,0.0,0.138,0.0,0.038,0.0,0.038,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.008,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.019,0.0,0.005,0.0,0.005,0.0,0.0,0.0,0.037,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.063,0.0,0.018,0.0,0.018,0.0,0.0,0.0,0.1,0.0,0.028,0.0,0.028,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.008,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.019,0.0,0.005,0.0,0.005,0.0,0.0,0.0,0.037,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.063,0.0,0.018,0.0,0.018,0.0,0.0,0.0,0.1,0.0,0.028,0.0,0.028,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.012,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.023,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.04,0.0,0.011,0.0,0.011,0.0,0.0,0.0,0.063,0.0,0.018,0.0,0.018,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.012,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.023,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.04,0.0,0.011,0.0,0.011,0.0,0.0,0.0,0.063,0.0,0.018,0.0,0.018,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.01,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.035,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.084,0.0,0.023,0.0,0.023,0.0,0.0,0.0,0.164,0.0,0.046,0.0,0.046,0.0,0.0,0.0,0.283,0.0,0.079,0.0,0.079,0.0,0.0,0.0,0.45,0.0,0.125,0.0,0.125,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.01,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.035,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.084,0.0,0.023,0.0,0.023,0.0,0.0,0.0,0.164,0.0,0.046,0.0,0.046,0.0,0.0,0.0,0.283,0.0,0.079,0.0,0.079,0.0,0.0,0.0,0.45,0.0,0.125,0.0,0.125,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.009,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.03,0.0,0.008,0.0,0.008,0.0,0.0,0.0,0.07,0.0,0.019,0.0,0.019,0.0,0.0,0.0,0.137,0.0,0.038,0.0,0.038,0.0,0.0,0.0,0.236,0.0,0.066,0.0,0.066,0.0,0.0,0.0,0.375,0.0,0.104,0.0,0.104,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.009,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.03,0.0,0.008,0.0,0.008,0.0,0.0,0.0,0.07,0.0,0.019,0.0,0.019,0.0,0.0,0.0,0.137,0.0,0.038,0.0,0.038,0.0,0.0,0.0,0.236,0.0,0.066,0.0,0.066,0.0,0.0,0.0,0.375,0.0,0.104,0.0,0.104,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.008,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.026,0.0,0.007,0.0,0.007,0.0,0.0,0.0,0.062,0.0,0.017,0.0,0.017,0.0,0.0,0.0,0.121,0.0,0.034,0.0,0.034,0.0,0.0,0.0,0.209,0.0,0.058,0.0,0.058,0.0,0.0,0.0,0.331,0.0,0.092,0.0,0.092,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.008,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.026,0.0,0.007,0.0,0.007,0.0,0.0,0.0,0.062,0.0,0.017,0.0,0.017,0.0,0.0,0.0,0.121,0.0,0.034,0.0,0.034,0.0,0.0,0.0,0.209,0.0,0.058,0.0,0.058,0.0,0.0,0.0,0.331,0.0,0.092,0.0,0.092,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.006,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.022,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.051,0.0,0.014,0.0,0.014,0.0,0.0,0.0,0.101,0.0,0.028,0.0,0.028,0.0,0.0,0.0,0.174,0.0,0.048,0.0,0.048,0.0,0.0,0.0,0.276,0.0,0.077,0.0,0.077,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.006,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.022,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.051,0.0,0.014,0.0,0.014,0.0,0.0,0.0,0.101,0.0,0.028,0.0,0.028,0.0,0.0,0.0,0.174,0.0,0.048,0.0,0.048,0.0,0.0,0.0,0.276,0.0,0.077,0.0,0.077,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.016,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.037,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.073,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.127,0.0,0.035,0.0,0.035,0.0,0.0,0.0,0.201,0.0,0.056,0.0,0.056,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.016,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.037,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.073,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.127,0.0,0.035,0.0,0.035,0.0,0.0,0.0,0.201,0.0,0.056,0.0,0.056,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.01,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.024,0.0,0.007,0.0,0.007,0.0,0.0,0.0,0.046,0.0,0.013,0.0,0.013,0.0,0.0,0.0,0.079,0.0,0.022,0.0,0.022,0.0,0.0,0.0,0.126,0.0,0.035,0.0,0.035,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.01,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.024,0.0,0.007,0.0,0.007,0.0,0.0,0.0,0.046,0.0,0.013,0.0,0.013,0.0,0.0,0.0,0.079,0.0,0.022,0.0,0.022,0.0,0.0,0.0,0.126,0.0,0.035,0.0,0.035,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.021,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.071,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.168,0.0,0.047,0.0,0.047,0.0,0.0,0.0,0.328,0.0,0.091,0.0,0.091,0.0,0.0,0.0,0.567,0.0,0.157,0.0,0.157,0.0,0.0,0.0,0.9,0.0,0.25,0.0,0.25,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.021,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.071,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.168,0.0,0.047,0.0,0.047,0.0,0.0,0.0,0.328,0.0,0.091,0.0,0.091,0.0,0.0,0.0,0.567,0.0,0.157,0.0,0.157,0.0,0.0,0.0,0.9,0.0,0.25,0.0,0.25,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.017,0.0,0.005,0.0,0.005,0.0,0.0,0.0,0.059,0.0,0.016,0.0,0.016,0.0,0.0,0.0,0.14,0.0,0.039,0.0,0.039,0.0,0.0,0.0,0.273,0.0,0.076,0.0,0.076,0.0,0.0,0.0,0.472,0.0,0.131,0.0,0.131,0.0,0.0,0.0,0.75,0.0,0.208,0.0,0.208,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.017,0.0,0.005,0.0,0.005,0.0,0.0,0.0,0.059,0.0,0.016,0.0,0.016,0.0,0.0,0.0,0.14,0.0,0.039,0.0,0.039,0.0,0.0,0.0,0.273,0.0,0.076,0.0,0.076,0.0,0.0,0.0,0.472,0.0,0.131,0.0,0.131,0.0,0.0,0.0,0.75,0.0,0.208,0.0,0.208,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.015,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.052,0.0,0.014,0.0,0.014,0.0,0.0,0.0,0.124,0.0,0.034,0.0,0.034,0.0,0.0,0.0,0.241,0.0,0.067,0.0,0.067,0.0,0.0,0.0,0.417,0.0,0.116,0.0,0.116,0.0,0.0,0.0,0.662,0.0,0.184,0.0,0.184,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.015,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.052,0.0,0.014,0.0,0.014,0.0,0.0,0.0,0.124,0.0,0.034,0.0,0.034,0.0,0.0,0.0,0.241,0.0,0.067,0.0,0.067,0.0,0.0,0.0,0.417,0.0,0.116,0.0,0.116,0.0,0.0,0.0,0.662,0.0,0.184,0.0,0.184,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.013,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.043,0.0,0.012,0.0,0.012,0.0,0.0,0.0,0.103,0.0,0.029,0.0,0.029,0.0,0.0,0.0,0.201,0.0,0.056,0.0,0.056,0.0,0.0,0.0,0.348,0.0,0.097,0.0,0.097,0.0,0.0,0.0,0.552,0.0,0.153,0.0,0.153,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.013,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.043,0.0,0.012,0.0,0.012,0.0,0.0,0.0,0.103,0.0,0.029,0.0,0.029,0.0,0.0,0.0,0.201,0.0,0.056,0.0,0.056,0.0,0.0,0.0,0.348,0.0,0.097,0.0,0.097,0.0,0.0,0.0,0.552,0.0,0.153,0.0,0.153,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.009,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.032,0.0,0.009,0.0,0.009,0.0,0.0,0.0,0.075,0.0,0.021,0.0,0.021,0.0,0.0,0.0,0.146,0.0,0.041,0.0,0.041,0.0,0.0,0.0,0.253,0.0,0.07,0.0,0.07,0.0,0.0,0.0,0.402,0.0,0.112,0.0,0.112,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.009,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.032,0.0,0.009,0.0,0.009,0.0,0.0,0.0,0.075,0.0,0.021,0.0,0.021,0.0,0.0,0.0,0.146,0.0,0.041,0.0,0.041,0.0,0.0,0.0,0.253,0.0,0.07,0.0,0.07,0.0,0.0,0.0,0.402,0.0,0.112,0.0,0.112,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.006,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.02,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.047,0.0,0.013,0.0,0.013,0.0,0.0,0.0,0.092,0.0,0.026,0.0,0.026,0.0,0.0,0.0,0.159,0.0,0.044,0.0,0.044,0.0,0.0,0.0,0.252,0.0,0.07,0.0,0.07,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.006,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.02,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.047,0.0,0.013,0.0,0.013,0.0,0.0,0.0,0.092,0.0,0.026,0.0,0.026,0.0,0.0,0.0,0.159,0.0,0.044,0.0,0.044,0.0,0.0,0.0,0.252,0.0,0.07,0.0,0.07,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.031,0.0,0.009,0.0,0.009,0.0,0.0,0.0,0.106,0.0,0.03,0.0,0.03,0.0,0.0,0.0,0.252,0.0,0.07,0.0,0.07,0.0,0.0,0.0,0.492,0.0,0.137,0.0,0.137,0.0,0.0,0.0,0.85,0.0,0.236,0.0,0.236,0.0,0.0,0.0,1.35,0.0,0.375,0.0,0.375,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.031,0.0,0.009,0.0,0.009,0.0,0.0,0.0,0.106,0.0,0.03,0.0,0.03,0.0,0.0,0.0,0.252,0.0,0.07,0.0,0.07,0.0,0.0,0.0,0.492,0.0,0.137,0.0,0.137,0.0,0.0,0.0,0.85,0.0,0.236,0.0,0.236,0.0,0.0,0.0,1.35,0.0,0.375,0.0,0.375,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.026,0.0,0.007,0.0,0.007,0.0,0.0,0.0,0.089,0.0,0.025,0.0,0.025,0.0,0.0,0.0,0.21,0.0,0.058,0.0,0.058,0.0,0.0,0.0,0.41,0.0,0.114,0.0,0.114,0.0,0.0,0.0,0.709,0.0,0.197,0.0,0.197,0.0,0.0,0.0,1.125,0.0,0.313,0.0,0.313,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.026,0.0,0.007,0.0,0.007,0.0,0.0,0.0,0.089,0.0,0.025,0.0,0.025,0.0,0.0,0.0,0.21,0.0,0.058,0.0,0.058,0.0,0.0,0.0,0.41,0.0,0.114,0.0,0.114,0.0,0.0,0.0,0.709,0.0,0.197,0.0,0.197,0.0,0.0,0.0,1.125,0.0,0.313,0.0,0.313,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.023,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.078,0.0,0.022,0.0,0.022,0.0,0.0,0.0,0.185,0.0,0.051,0.0,0.051,0.0,0.0,0.0,0.362,0.0,0.101,0.0,0.101,0.0,0.0,0.0,0.626,0.0,0.174,0.0,0.174,0.0,0.0,0.0,0.994,0.0,0.276,0.0,0.276,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.023,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.078,0.0,0.022,0.0,0.022,0.0,0.0,0.0,0.185,0.0,0.051,0.0,0.051,0.0,0.0,0.0,0.362,0.0,0.101,0.0,0.101,0.0,0.0,0.0,0.626,0.0,0.174,0.0,0.174,0.0,0.0,0.0,0.994,0.0,0.276,0.0,0.276,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.019,0.0,0.005,0.0,0.005,0.0,0.0,0.0,0.065,0.0,0.018,0.0,0.018,0.0,0.0,0.0,0.154,0.0,0.043,0.0,0.043,0.0,0.0,0.0,0.302,0.0,0.084,0.0,0.084,0.0,0.0,0.0,0.521,0.0,0.145,0.0,0.145,0.0,0.0,0.0,0.828,0.0,0.23,0.0,0.23,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.019,0.0,0.005,0.0,0.005,0.0,0.0,0.0,0.065,0.0,0.018,0.0,0.018,0.0,0.0,0.0,0.154,0.0,0.043,0.0,0.043,0.0,0.0,0.0,0.302,0.0,0.084,0.0,0.084,0.0,0.0,0.0,0.521,0.0,0.145,0.0,0.145,0.0,0.0,0.0,0.828,0.0,0.23,0.0,0.23,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.014,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.047,0.0,0.013,0.0,0.013,0.0,0.0,0.0,0.112,0.0,0.031,0.0,0.031,0.0,0.0,0.0,0.22,0.0,0.061,0.0,0.061,0.0,0.0,0.0,0.38,0.0,0.105,0.0,0.105,0.0,0.0,0.0,0.603,0.0,0.167,0.0,0.167,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.014,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.047,0.0,0.013,0.0,0.013,0.0,0.0,0.0,0.112,0.0,0.031,0.0,0.031,0.0,0.0,0.0,0.22,0.0,0.061,0.0,0.061,0.0,0.0,0.0,0.38,0.0,0.105,0.0,0.105,0.0,0.0,0.0,0.603,0.0,0.167,0.0,0.167,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.009,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.03,0.0,0.008,0.0,0.008,0.0,0.0,0.0,0.071,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.138,0.0,0.038,0.0,0.038,0.0,0.0,0.0,0.238,0.0,0.066,0.0,0.066,0.0,0.0,0.0,0.378,0.0,0.105,0.0,0.105,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.009,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.03,0.0,0.008,0.0,0.008,0.0,0.0,0.0,0.071,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.138,0.0,0.038,0.0,0.038,0.0,0.0,0.0,0.238,0.0,0.066,0.0,0.066,0.0,0.0,0.0,0.378,0.0,0.105,0.0,0.105,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.042,0.0,0.012,0.0,0.012,0.0,0.0,0.0,0.142,0.0,0.039,0.0,0.039,0.0,0.0,0.0,0.336,0.0,0.093,0.0,0.093,0.0,0.0,0.0,0.656,0.0,0.182,0.0,0.182,0.0,0.0,0.0,1.134,0.0,0.315,0.0,0.315,0.0,0.0,0.0,1.8,0.0,0.5,0.0,0.5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.042,0.0,0.012,0.0,0.012,0.0,0.0,0.0,0.142,0.0,0.039,0.0,0.039,0.0,0.0,0.0,0.336,0.0,0.093,0.0,0.093,0.0,0.0,0.0,0.656,0.0,0.182,0.0,0.182,0.0,0.0,0.0,1.134,0.0,0.315,0.0,0.315,0.0,0.0,0.0,1.8,0.0,0.5,0.0,0.5,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.035,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.118,0.0,0.033,0.0,0.033,0.0,0.0,0.0,0.28,0.0,0.078,0.0,0.078,0.0,0.0,0.0,0.547,0.0,0.152,0.0,0.152,0.0,0.0,0.0,0.945,0.0,0.262,0.0,0.262,0.0,0.0,0.0,1.5,0.0,0.417,0.0,0.417,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.035,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.118,0.0,0.033,0.0,0.033,0.0,0.0,0.0,0.28,0.0,0.078,0.0,0.078,0.0,0.0,0.0,0.547,0.0,0.152,0.0,0.152,0.0,0.0,0.0,0.945,0.0,0.262,0.0,0.262,0.0,0.0,0.0,1.5,0.0,0.417,0.0,0.417,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.031,0.0,0.009,0.0,0.009,0.0,0.0,0.0,0.104,0.0,0.029,0.0,0.029,0.0,0.0,0.0,0.247,0.0,0.069,0.0,0.069,0.0,0.0,0.0,0.483,0.0,0.134,0.0,0.134,0.0,0.0,0.0,0.834,0.0,0.232,0.0,0.232,0.0,0.0,0.0,1.325,0.0,0.368,0.0,0.368,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.031,0.0,0.009,0.0,0.009,0.0,0.0,0.0,0.104,0.0,0.029,0.0,0.029,0.0,0.0,0.0,0.247,0.0,0.069,0.0,0.069,0.0,0.0,0.0,0.483,0.0,0.134,0.0,0.134,0.0,0.0,0.0,0.834,0.0,0.232,0.0,0.232,0.0,0.0,0.0,1.325,0.0,0.368,0.0,0.368,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.026,0.0,0.007,0.0,0.007,0.0,0.0,0.0,0.087,0.0,0.024,0.0,0.024,0.0,0.0,0.0,0.206,0.0,0.057,0.0,0.057,0.0,0.0,0.0,0.402,0.0,0.112,0.0,0.112,0.0,0.0,0.0,0.695,0.0,0.193,0.0,0.193,0.0,0.0,0.0,1.104,0.0,0.307,0.0,0.307,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.026,0.0,0.007,0.0,0.007,0.0,0.0,0.0,0.087,0.0,0.024,0.0,0.024,0.0,0.0,0.0,0.206,0.0,0.057,0.0,0.057,0.0,0.0,0.0,0.402,0.0,0.112,0.0,0.112,0.0,0.0,0.0,0.695,0.0,0.193,0.0,0.193,0.0,0.0,0.0,1.104,0.0,0.307,0.0,0.307,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.019,0.0,0.005,0.0,0.005,0.0,0.0,0.0,0.063,0.0,0.018,0.0,0.018,0.0,0.0,0.0,0.15,0.0,0.042,0.0,0.042,0.0,0.0,0.0,0.293,0.0,0.081,0.0,0.081,0.0,0.0,0.0,0.506,0.0,0.141,0.0,0.141,0.0,0.0,0.0,0.804,0.0,0.223,0.0,0.223,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.019,0.0,0.005,0.0,0.005,0.0,0.0,0.0,0.063,0.0,0.018,0.0,0.018,0.0,0.0,0.0,0.15,0.0,0.042,0.0,0.042,0.0,0.0,0.0,0.293,0.0,0.081,0.0,0.081,0.0,0.0,0.0,0.506,0.0,0.141,0.0,0.141,0.0,0.0,0.0,0.804,0.0,0.223,0.0,0.223,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.012,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.04,0.0,0.011,0.0,0.011,0.0,0.0,0.0,0.094,0.0,0.026,0.0,0.026,0.0,0.0,0.0,0.184,0.0,0.051,0.0,0.051,0.0,0.0,0.0,0.317,0.0,0.088,0.0,0.088,0.0,0.0,0.0,0.504,0.0,0.14,0.0,0.14,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.012,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.04,0.0,0.011,0.0,0.011,0.0,0.0,0.0,0.094,0.0,0.026,0.0,0.026,0.0,0.0,0.0,0.184,0.0,0.051,0.0,0.051,0.0,0.0,0.0,0.317,0.0,0.088,0.0,0.088,0.0,0.0,0.0,0.504,0.0,0.14,0.0,0.14,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.007,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.052,0.0,0.015,0.0,0.015,0.0,0.0,0.0,0.177,0.0,0.049,0.0,0.049,0.0,0.0,0.0,0.42,0.0,0.117,0.0,0.117,0.0,0.0,0.0,0.82,0.0,0.228,0.0,0.228,0.0,0.0,0.0,1.417,0.0,0.394,0.0,0.394,0.0,0.0,0.0,2.25,0.0,0.625,0.0,0.625,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.007,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.052,0.0,0.015,0.0,0.015,0.0,0.0,0.0,0.177,0.0,0.049,0.0,0.049,0.0,0.0,0.0,0.42,0.0,0.117,0.0,0.117,0.0,0.0,0.0,0.82,0.0,0.228,0.0,0.228,0.0,0.0,0.0,1.417,0.0,0.394,0.0,0.394,0.0,0.0,0.0,2.25,0.0,0.625,0.0,0.625,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.044,0.0,0.012,0.0,0.012,0.0,0.0,0.0,0.148,0.0,0.041,0.0,0.041,0.0,0.0,0.0,0.35,0.0,0.097,0.0,0.097,0.0,0.0,0.0,0.683,0.0,0.19,0.0,0.19,0.0,0.0,0.0,1.181,0.0,0.328,0.0,0.328,0.0,0.0,0.0,1.875,0.0,0.521,0.0,0.521,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.044,0.0,0.012,0.0,0.012,0.0,0.0,0.0,0.148,0.0,0.041,0.0,0.041,0.0,0.0,0.0,0.35,0.0,0.097,0.0,0.097,0.0,0.0,0.0,0.683,0.0,0.19,0.0,0.19,0.0,0.0,0.0,1.181,0.0,0.328,0.0,0.328,0.0,0.0,0.0,1.875,0.0,0.521,0.0,0.521,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.039,0.0,0.011,0.0,0.011,0.0,0.0,0.0,0.13,0.0,0.036,0.0,0.036,0.0,0.0,0.0,0.309,0.0,0.086,0.0,0.086,0.0,0.0,0.0,0.603,0.0,0.168,0.0,0.168,0.0,0.0,0.0,1.043,0.0,0.29,0.0,0.29,0.0,0.0,0.0,1.656,0.0,0.46,0.0,0.46,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.039,0.0,0.011,0.0,0.011,0.0,0.0,0.0,0.13,0.0,0.036,0.0,0.036,0.0,0.0,0.0,0.309,0.0,0.086,0.0,0.086,0.0,0.0,0.0,0.603,0.0,0.168,0.0,0.168,0.0,0.0,0.0,1.043,0.0,0.29,0.0,0.29,0.0,0.0,0.0,1.656,0.0,0.46,0.0,0.46,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.032,0.0,0.009,0.0,0.009,0.0,0.0,0.0,0.109,0.0,0.03,0.0,0.03,0.0,0.0,0.0,0.257,0.0,0.072,0.0,0.072,0.0,0.0,0.0,0.503,0.0,0.14,0.0,0.14,0.0,0.0,0.0,0.869,0.0,0.241,0.0,0.241,0.0,0.0,0.0,1.38,0.0,0.383,0.0,0.383,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.032,0.0,0.009,0.0,0.009,0.0,0.0,0.0,0.109,0.0,0.03,0.0,0.03,0.0,0.0,0.0,0.257,0.0,0.072,0.0,0.072,0.0,0.0,0.0,0.503,0.0,0.14,0.0,0.14,0.0,0.0,0.0,0.869,0.0,0.241,0.0,0.241,0.0,0.0,0.0,1.38,0.0,0.383,0.0,0.383,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.023,0.0,0.007,0.0,0.007,0.0,0.0,0.0,0.079,0.0,0.022,0.0,0.022,0.0,0.0,0.0,0.187,0.0,0.052,0.0,0.052,0.0,0.0,0.0,0.366,0.0,0.102,0.0,0.102,0.0,0.0,0.0,0.633,0.0,0.176,0.0,0.176,0.0,0.0,0.0,1.005,0.0,0.279,0.0,0.279,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.023,0.0,0.007,0.0,0.007,0.0,0.0,0.0,0.079,0.0,0.022,0.0,0.022,0.0,0.0,0.0,0.187,0.0,0.052,0.0,0.052,0.0,0.0,0.0,0.366,0.0,0.102,0.0,0.102,0.0,0.0,0.0,0.633,0.0,0.176,0.0,0.176,0.0,0.0,0.0,1.005,0.0,0.279,0.0,0.279,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.015,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.05,0.0,0.014,0.0,0.014,0.0,0.0,0.0,0.118,0.0,0.033,0.0,0.033,0.0,0.0,0.0,0.23,0.0,0.064,0.0,0.064,0.0,0.0,0.0,0.397,0.0,0.11,0.0,0.11,0.0,0.0,0.0,0.63,0.0,0.175,0.0,0.175,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.015,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.05,0.0,0.014,0.0,0.014,0.0,0.0,0.0,0.118,0.0,0.033,0.0,0.033,0.0,0.0,0.0,0.23,0.0,0.064,0.0,0.064,0.0,0.0,0.0,0.397,0.0,0.11,0.0,0.11,0.0,0.0,0.0,0.63,0.0,0.175,0.0,0.175,0.0,0.0,0.0]]},"deemed":{"ct":[[0.0],[337.5],[750.0]],"cy":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[21.094,23.906,26.719,29.531,32.344,35.156,37.969,40.781,43.594,46.406],[46.875,53.125,59.375,65.625,71.875,78.125,84.375,90.625,96.875,103.125]],"ch":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0],[16.875,303.75,0.0,0.0,16.875,0.0,0.0],[37.5,675.0,0.0,0.0,37.5,0.0,0.0]],"st":[[0.0],[135.0],[300.0]],"sy":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[8.438,9.562,10.688,11.812,12.938,14.062,15.188,16.313,17.438,18.562],[18.75,21.25,23.75,26.25,28.75,31.25,33.75,36.25,38.75,41.25]],"sh":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0],[6.75,121.5,0.0,0.0,6.75,0.0,0.0],[15.0,270.0,0.0,0.0,15.0,0.0,0.0]],"etr":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.009,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.032,0.0,0.009,0.0,0.009,0.0,0.0,0.0,0.076,0.0,0.021,0.0,0.021,0.0,0.0,0.0,0.148,0.0,0.041,0.0,0.041,0.0,0.0,0.0,0.255,0.0,0.071,0.0,0.071,0.0,0.0,0.0,0.405,0.0,0.113,0.0,0.113,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.009,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.032,0.0,0.009,0.0,0.009,0.0,0.0,0.0,0.076,0.0,0.021,0.0,0.021,0.0,0.0,0.0,0.148,0.0,0.041,0.0,0.041,0.0,0.0,0.0,0.255,0.0,0.071,0.0,0.071,0.0,0.0,0.0,0.405,0.0,0.113,0.0,0.113,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.021,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.071,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.168,0.0,0.047,0.0,0.047,0.0,0.0,0.0,0.328,0.0,0.091,0.0,0.091,0.0,0.0,0.0,0.567,0.0,0.157,0.0,0.157,0.0,0.0,0.0,0.9,0.0,0.25,0.0,0.25,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.021,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.071,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.168,0.0,0.047,0.0,0.047,0.0,0.0,0.0,0.328,0.0,0.091,0.0,0.091,0.0,0.0,0.0,0.567,0.0,0.157,0.0,0.157,0.0,0.0,0.0,0.9,0.0,0.25,0.0,0.25,0.0,0.0,0.0]]},"estate":{"ct":[[202.403],[135.0],[67.403],[0.0],[524.827],[405.0],[284.827],[165.0],[847.251],[675.0],[502.251],[330.0]],"cy":[[12.65,14.337,16.024,17.71,19.397,21.084,22.77,24.457,26.144,27.83],[8.438,9.562,10.688,11.812,12.938,14.062,15.188,16.313,17.438,18.562],[4.213,4.774,5.336,5.898,6.459,7.021,7.583,8.144,8.706,9.268],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[32.802,37.175,41.549,45.922,50.296,54.669,59.043,63.417,67.79,72.164],[25.312,28.688,32.062,35.438,38.812,42.188,45.563,48.938,52.312,55.687],[17.802,20.175,22.549,24.922,27.296,29.669,32.043,34.417,36.79,39.164],[10.312,11.688,13.063,14.438,15.812,17.188,18.563,19.938,21.312,22.688],[52.953,60.014,67.074,74.134,81.195,88.255,95.316,102.376,109.437,116.497],[42.188,47.812,53.438,59.062,64.688,70.312,75.938,81.563,87.188,92.812],[31.391,35.576,39.762,43.947,48.132,52.318,56.503,60.689,64.874,69.06],[20.625,23.375,26.125,28.875,31.625,34.375,37.125,39.875,42.625,45.375]],"ch":[[-4.048,-6.072,0.0,0.0,212.523,0.0,0.0],[-2.7,-4.05,0.0,0.0,141.75,0.0,0.0],[-1.348,-2.022,0.0,0.0,70.773,0.0,0.0],[-0.0,-0.0,0.0,0.0,0.0,0.0,0.0],[-10.497,-15.745,0.0,0.0,551.068,0.0,0.0],[-8.1,-12.15,0.0,0.0,425.25,0.0,0.0],[-5.697,-8.545,0.0,0.0,299.068,0.0,0.0],[-3.3,-4.95,0.0,0.0,173.25,0.0,0.0],[-16.945,-25.418,0.0,0.0,889.614,0.0,0.0],[-13.5,-20.25,0.0,0.0,708.75,0.0,0.0],[-10.045,-15.068,0.0,0.0,527.364,0.0,0.0],[-6.6,-9.9,0.0,0.0,346.5,0.0,0.0]],"st":[[202.403],[135.0],[67.403],[0.0],[524.827],[405.0],[284.827],[165.0],[847.251],[675.0],[502.251],[330.0]],"sy":[[12.65,14.337,16.024,17.71,19.397,21.084,22.77,24.457,26.144,27.83],[8.438,9.562,10.688,11.812,12.938,14.062,15.188,16.313,17.438,18.562],[4.213,4.774,5.336,5.898,6.459,7.021,7.583,8.144,8.706,9.268],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[32.802,37.175,41.549,45.922,50.296,54.669,59.043,63.417,67.79,72.164],[25.312,28.688,32.062,35.438,38.812,42.188,45.563,48.938,52.312,55.687],[17.802,20.175,22.549,24.922,27.296,29.669,32.043,34.417,36.79,39.164],[10.312,11.688,13.063,14.438,15.812,17.188,18.563,19.938,21.312,22.688],[52.953,60.014,67.074,74.134,81.195,88.255,95.316,102.376,109.437,116.497],[42.188,47.812,53.438,59.062,64.688,70.312,75.938,81.563,87.188,92.812],[31.391,35.576,39.762,43.947,48.132,52.318,56.503,60.689,64.874,69.06],[20.625,23.375,26.125,28.875,31.625,34.375,37.125,39.875,42.625,45.375]],"sh":[[-4.048,-6.072,0.0,0.0,212.523,0.0,0.0],[-2.7,-4.05,0.0,0.0,141.75,0.0,0.0],[-1.348,-2.022,0.0,0.0,70.773,0.0,0.0],[-0.0,-0.0,0.0,0.0,0.0,0.0,0.0],[-10.497,-15.745,0.0,0.0,551.068,0.0,0.0],[-8.1,-12.15,0.0,0.0,425.25,0.0,0.0],[-5.697,-8.545,0.0,0.0,299.068,0.0,0.0],[-3.3,-4.95,0.0,0.0,173.25,0.0,0.0],[-16.945,-25.418,0.0,0.0,889.614,0.0,0.0],[-13.5,-20.25,0.0,0.0,708.75,0.0,0.0],[-10.045,-15.068,0.0,0.0,527.364,0.0,0.0],[-6.6,-9.9,0.0,0.0,346.5,0.0,0.0]],"etr":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.014,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.048,0.0,0.013,0.0,0.013,0.0,0.0,0.0,0.113,0.0,0.031,0.0,0.031,0.0,0.0,0.0,0.221,0.0,0.061,0.0,0.061,0.0,0.0,0.0,0.382,0.0,0.106,0.0,0.106,0.0,0.0,0.0,0.607,0.0,0.169,0.0,0.169,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.014,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.048,0.0,0.013,0.0,0.013,0.0,0.0,0.0,0.113,0.0,0.031,0.0,0.031,0.0,0.0,0.0,0.221,0.0,0.061,0.0,0.061,0.0,0.0,0.0,0.382,0.0,0.106,0.0,0.106,0.0,0.0,0.0,0.607,0.0,0.169,0.0,0.169,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.009,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.032,0.0,0.009,0.0,0.009,0.0,0.0,0.0,0.076,0.0,0.021,0.0,0.021,0.0,0.0,0.0,0.148,0.0,0.041,0.0,0.041,0.0,0.0,0.0,0.255,0.0,0.071,0.0,0.071,0.0,0.0,0.0,0.405,0.0,0.113,0.0,0.113,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.009,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.032,0.0,0.009,0.0,0.009,0.0,0.0,0.0,0.076,0.0,0.021,0.0,0.021,0.0,0.0,0.0,0.148,0.0,0.041,0.0,0.041,0.0,0.0,0.0,0.255,0.0,0.071,0.0,0.071,0.0,0.0,0.0,0.405,0.0,0.113,0.0,0.113,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.016,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.038,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.074,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.127,0.0,0.035,0.0,0.035,0.0,0.0,0.0,0.202,0.0,0.056,0.0,0.056,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.016,0.0,0.004,0.0,0.004,0.0,0.0,0.0,0.038,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.074,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.127,0.0,0.035,0.0,0.035,0.0,0.0,0.0,0.202,0.0,0.056,0.0,0.056,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.037,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.124,0.0,0.034,0.0,0.034,0.0,0.0,0.0,0.294,0.0,0.082,0.0,0.082,0.0,0.0,0.0,0.574,0.0,0.159,0.0,0.159,0.0,0.0,0.0,0.992,0.0,0.275,0.0,0.275,0.0,0.0,0.0,1.574,0.0,0.437,0.0,0.437,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.005,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.037,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.124,0.0,0.034,0.0,0.034,0.0,0.0,0.0,0.294,0.0,0.082,0.0,0.082,0.0,0.0,0.0,0.574,0.0,0.159,0.0,0.159,0.0,0.0,0.0,0.992,0.0,0.275,0.0,0.275,0.0,0.0,0.0,1.574,0.0,0.437,0.0,0.437,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.028,0.0,0.008,0.0,0.008,0.0,0.0,0.0,0.096,0.0,0.027,0.0,0.027,0.0,0.0,0.0,0.227,0.0,0.063,0.0,0.063,0.0,0.0,0.0,0.443,0.0,0.123,0.0,0.123,0.0,0.0,0.0,0.765,0.0,0.213,0.0,0.213,0.0,0.0,0.0,1.215,0.0,0.338,0.0,0.338,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.028,0.0,0.008,0.0,0.008,0.0,0.0,0.0,0.096,0.0,0.027,0.0,0.027,0.0,0.0,0.0,0.227,0.0,0.063,0.0,0.063,0.0,0.0,0.0,0.443,0.0,0.123,0.0,0.123,0.0,0.0,0.0,0.765,0.0,0.213,0.0,0.213,0.0,0.0,0.0,1.215,0.0,0.338,0.0,0.338,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.02,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.067,0.0,0.019,0.0,0.019,0.0,0.0,0.0,0.159,0.0,0.044,0.0,0.044,0.0,0.0,0.0,0.311,0.0,0.086,0.0,0.086,0.0,0.0,0.0,0.538,0.0,0.149,0.0,0.149,0.0,0.0,0.0,0.854,0.0,0.237,0.0,0.237,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.002,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.02,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.067,0.0,0.019,0.0,0.019,0.0,0.0,0.0,0.159,0.0,0.044,0.0,0.044,0.0,0.0,0.0,0.311,0.0,0.086,0.0,0.086,0.0,0.0,0.0,0.538,0.0,0.149,0.0,0.149,0.0,0.0,0.0,0.854,0.0,0.237,0.0,0.237,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.012,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.039,0.0,0.011,0.0,0.011,0.0,0.0,0.0,0.092,0.0,0.026,0.0,0.026,0.0,0.0,0.0,0.18,0.0,0.05,0.0,0.05,0.0,0.0,0.0,0.312,0.0,0.087,0.0,0.087,0.0,0.0,0.0,0.495,0.0,0.138,0.0,0.138,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.001,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.012,0.0,0.003,0.0,0.003,0.0,0.0,0.0,0.039,0.0,0.011,0.0,0.011,0.0,0.0,0.0,0.092,0.0,0.026,0.0,0.026,0.0,0.0,0.0,0.18,0.0,0.05,0.0,0.05,0.0,0.0,0.0,0.312,0.0,0.087,0.0,0.087,0.0,0.0,0.0,0.495,0.0,0.138,0.0,0.138,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.007,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.059,0.0,0.016,0.0,0.016,0.0,0.0,0.0,0.2,0.0,0.056,0.0,0.056,0.0,0.0,0.0,0.474,0.0,0.132,0.0,0.132,0.0,0.0,0.0,0.926,0.0,0.257,0.0,0.257,0.0,0.0,0.0,1.601,0.0,0.445,0.0,0.445,0.0,0.0,0.0,2.542,0.0,0.706,0.0,0.706,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.007,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.059,0.0,0.016,0.0,0.016,0.0,0.0,0.0,0.2,0.0,0.056,0.0,0.056,0.0,0.0,0.0,0.474,0.0,0.132,0.0,0.132,0.0,0.0,0.0,0.926,0.0,0.257,0.0,0.257,0.0,0.0,0.0,1.601,0.0,0.445,0.0,0.445,0.0,0.0,0.0,2.542,0.0,0.706,0.0,0.706,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.006,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.047,0.0,0.013,0.0,0.013,0.0,0.0,0.0,0.159,0.0,0.044,0.0,0.044,0.0,0.0,0.0,0.378,0.0,0.105,0.0,0.105,0.0,0.0,0.0,0.738,0.0,0.205,0.0,0.205,0.0,0.0,0.0,1.275,0.0,0.354,0.0,0.354,0.0,0.0,0.0,2.025,0.0,0.562,0.0,0.562,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.006,0.0,0.002,0.0,0.002,0.0,0.0,0.0,0.047,0.0,0.013,0.0,0.013,0.0,0.0,0.0,0.159,0.0,0.044,0.0,0.044,0.0,0.0,0.0,0.378,0.0,0.105,0.0,0.105,0.0,0.0,0.0,0.738,0.0,0.205,0.0,0.205,0.0,0.0,0.0,1.275,0.0,0.354,0.0,0.354,0.0,0.0,0.0,2.025,0.0,0.562,0.0,0.562,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.035,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.119,0.0,0.033,0.0,0.033,0.0,0.0,0.0,0.281,0.0,0.078,0.0,0.078,0.0,0.0,0.0,0.549,0.0,0.153,0.0,0.153,0.0,0.0,0.0,0.949,0.0,0.264,0.0,0.264,0.0,0.0,0.0,1.507,0.0,0.419,0.0,0.419,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.004,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.035,0.0,0.01,0.0,0.01,0.0,0.0,0.0,0.119,0.0,0.033,0.0,0.033,0.0,0.0,0.0,0.281,0.0,0.078,0.0,0.078,0.0,0.0,0.0,0.549,0.0,0.153,0.0,0.153,0.0,0.0,0.0,0.949,0.0,0.264,0.0,0.264,0.0,0.0,0.0,1.507,0.0,0.419,0.0,0.419,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.023,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.078,0.0,0.022,0.0,0.022,0.0,0.0,0.0,0.185,0.0,0.051,0.0,0.051,0.0,0.0,0.0,0.361,0.0,0.1,0.0,0.1,0.0,0.0,0.0,0.623,0.0,0.173,0.0,0.173,0.0,0.0,0.0,0.99,0.0,0.275,0.0,0.275,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.023,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.078,0.0,0.022,0.0,0.022,0.0,0.0,0.0,0.185,0.0,0.051,0.0,0.051,0.0,0.0,0.0,0.361,0.0,0.1,0.0,0.1,0.0,0.0,0.0,0.623,0.0,0.173,0.0,0.173,0.0,0.0,0.0,0.99,0.0,0.275,0.0,0.275,0.0,0.0,0.0]]},"qbi":{"ct":[[0.0],[700.0]],"cy":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[43.75,49.583,55.417,61.25,67.083,72.917,78.75,84.583,90.417,96.25]],"ch":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0],[700.0,0.0,0.0,0.0,0.0,0.0,0.0]],"st":[[0.0],[700.0]],"sy":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[43.75,49.583,55.417,61.25,67.083,72.917,78.75,84.583,90.417,96.25]],"sh":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0],[700.0,0.0,0.0,0.0,0.0,0.0,0.0]],"etr":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.021,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.071,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.168,0.0,0.047,0.0,0.047,0.0,0.0,0.0,0.328,0.0,0.091,0.0,0.091,0.0,0.0,0.0,0.567,0.0,0.157,0.0,0.157,0.0,0.0,0.0,0.9,0.0,0.25,0.0,0.25,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.021,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.071,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.168,0.0,0.047,0.0,0.047,0.0,0.0,0.0,0.328,0.0,0.091,0.0,0.091,0.0,0.0,0.0,0.567,0.0,0.157,0.0,0.157,0.0,0.0,0.0,0.9,0.0,0.25,0.0,0.25,0.0,0.0,0.0]]},"taxmax":{"ct":[[0.0],[1080.0]],"cy":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[67.5,76.5,85.5,94.5,103.5,112.5,121.5,130.5,139.5,148.5]],"ch":[[-0.0,0.0,0.0,0.0,0.0,0.0,0.0],[-54.0,0.0,1134.0,0.0,0.0,0.0,0.0]],"st":[[0.0],[1200.0]],"sy":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[75.0,85.0,95.0,105.0,115.0,125.0,135.0,145.0,155.0,165.0]],"sh":[[-0.0,0.0,0.0,0.0,0.0,0.0,0.0],[-60.0,0.0,1260.0,0.0,0.0,0.0,0.0]],"etr":[[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.021,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.071,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.168,0.0,0.047,0.0,0.047,0.0,0.0,0.0,0.328,0.0,0.091,0.0,0.091,0.0,0.0,0.0,0.567,0.0,0.157,0.0,0.157,0.0,0.0,0.0,0.9,0.0,0.25,0.0,0.25,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.003,0.0,0.001,0.0,0.001,0.0,0.0,0.0,0.021,0.0,0.006,0.0,0.006,0.0,0.0,0.0,0.071,0.0,0.02,0.0,0.02,0.0,0.0,0.0,0.168,0.0,0.047,0.0,0.047,0.0,0.0,0.0,0.328,0.0,0.091,0.0,0.091,0.0,0.0,0.0,0.567,0.0,0.157,0.0,0.157,0.0,0.0,0.0,0.9,0.0,0.25,0.0,0.25,0.0,0.0,0.0]]}},"g":{"ord":[0.0,0.333333,1.0,1.666667],"cg":[0.0,0.25,0.5,0.75,1.0,1.25,1.5],"corp":[0.0,1.0],"wealth":[0.0,0.0,0.0,0.0,0.0,0.0,0.25,0.208352,0.183989,0.153296,0.111648,0.07,0.5,0.416704,0.367979,0.306592,0.223296,0.14,1.0,0.833408,0.735957,0.613185,0.446592,0.28,1.5,1.250112,1.103936,0.919777,0.669888,0.42,2.0,1.666815,1.471915,1.226369,0.893185,0.56,2.5,2.083519,1.839894,1.532962,1.116481,0.7],"deemed":[0.0,0.45,1.0],"estate":[0.674675,0.45,0.224675,0.0,1.749423,1.35,0.949423,0.55,2.82417,2.25,1.67417,1.1],"qbi":[0.0,1.0],"taxmax":[0.0,1.0]},"pairs":{"ord|cg":{"ct":[60.0],"cy":[6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0],"ch":[30.0,30.0,0,0,0,0,0],"st":[36.0],"sy":[6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.0],"sh":[30.0,30.0,0,0,0,0,0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"ord|corp":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"ord|wealth":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"ord|deemed":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"ord|estate":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"ord|qbi":{"ct":[25.0],"cy":[2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5],"ch":[12.5,12.5,0,0,0,0,0],"st":[15.0],"sy":[2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5,2.5],"sh":[12.5,12.5,0,0,0,0,0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"ord|taxmax":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"cg|corp":{"ct":[-20.0],"cy":[-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0],"ch":[-10.0,-10.0,0,0,0,0,0],"st":[-12.0],"sy":[-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0,-2.0],"sh":[-10.0,-10.0,0,0,0,0,0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"cg|wealth":{"ct":[-25.0],"cy":[-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5],"ch":[-12.5,-12.5,0,0,0,0,0],"st":[-15.0],"sy":[-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5,-2.5],"sh":[-12.5,-12.5,0,0,0,0,0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"cg|deemed":{"ct":[250.0],"cy":[25.0,25.0,25.0,25.0,25.0,25.0,25.0,25.0,25.0,25.0],"ch":[125.0,125.0,0,0,0,0,0],"st":[150.0],"sy":[25.0,25.0,25.0,25.0,25.0,25.0,25.0,25.0,25.0,25.0],"sh":[125.0,125.0,0,0,0,0,0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"cg|estate":{"ct":[4.0],"cy":[0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4],"ch":[2.0,2.0,0,0,0,0,0],"st":[2.4],"sy":[0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4],"sh":[2.0,2.0,0,0,0,0,0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"cg|qbi":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"cg|taxmax":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"corp|wealth":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"corp|deemed":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"corp|estate":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"corp|qbi":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"corp|taxmax":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"wealth|deemed":{"ct":[-15.0],"cy":[-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,-1.5],"ch":[-7.5,-7.5,0,0,0,0,0],"st":[-9.0],"sy":[-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,-1.5,-1.5],"sh":[-7.5,-7.5,0,0,0,0,0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"wealth|estate":{"ct":[-8.0],"cy":[-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8],"ch":[-4.0,-4.0,0,0,0,0,0],"st":[-4.8],"sy":[-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8,-0.8],"sh":[-4.0,-4.0,0,0,0,0,0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"wealth|qbi":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"wealth|taxmax":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"deemed|estate":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"deemed|qbi":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"deemed|taxmax":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"estate|qbi":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"estate|taxmax":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"qbi|taxmax":{"ct":[3.0],"cy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"ch":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"st":[1.8],"sy":[0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3,0.3],"sh":[1.5,1.5,0.0,0.0,0.0,0.0,0.0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]}},"triples":{"cg|wealth|deemed":{"ct":[12.0],"st":[5.0],"cy":[1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2],"sy":[0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5],"ch":[6.0,6.0,0,0,0,0,0],"sh":[2.5,2.5,0,0,0,0,0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"cg|wealth|estate":{"ct":[12.0],"st":[5.0],"cy":[1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2],"sy":[0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5],"ch":[6.0,6.0,0,0,0,0,0],"sh":[2.5,2.5,0,0,0,0,0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"cg|deemed|estate":{"ct":[12.0],"st":[5.0],"cy":[1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2],"sy":[0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5],"ch":[6.0,6.0,0,0,0,0,0],"sh":[2.5,2.5,0,0,0,0,0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]},"wealth|deemed|estate":{"ct":[12.0],"st":[5.0],"cy":[1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2,1.2],"sy":[0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5],"ch":[6.0,6.0,0,0,0,0,0],"sh":[2.5,2.5,0,0,0,0,0],"etr":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]}}}};
+(function(){
+  "use strict";
+  var $=function(s,r){return (r||document).querySelector(s);};
+  if(!DATA){document.body.insertAdjacentHTML('afterbegin','<div style="background:#b9601b;color:#fff;padding:10px 24px;font:600 13px system-ui">No data injected — run other/top_tax/build_atlas.py atlas2_data.json atlas2_built.html other/top_tax/atlas2.html.</div>');return;}
+  var GDP10=DATA.meta.gdp10_fy;
+  var ETRYEAR=String(DATA.meta.dist_years[0]);
+  var INCDEF='expanded';
+  var pg=function(b){ return (b/GDP10*100).toFixed(2)+"%"; };
+  function usd(b){ var v=Math.abs(b),sg=b<0?"−":"";
+    return v>=1000 ? sg+"$"+(v/1000).toFixed(2)+"T" : sg+"$"+Math.round(v)+"B"; }
+  function fmt(b){ return usd(b)+" · "+pg(b); }
+
+  // ---- lever metadata ----------------------------------------------------- //
+  var LEVERS=DATA.meta.levers;                 // canonical order
+  var BYKEY={}; LEVERS.forEach(function(l){BYKEY[l.key]=l;});
+  var LCOLOR={ord:'var(--l-ord)',cg:'var(--l-cg)',corp:'var(--l-corp)',wealth:'var(--l-wealth)',
+    deemed:'var(--l-deemed)',estate:'var(--l-estate)',qbi:'var(--l-qbi)',taxmax:'var(--l-taxmax)'};
+  var SUR=DATA.surrogate, MQ=DATA.meta.surrogate.m;
+  var HEADS_ORDER=DATA.meta.surrogate.heads_order;
+
+  // ---- evaluator (mirrors fit_surrogate.py — keep in lockstep) ------------- //
+  // Knot-verbatim rule: input exactly on a knot returns the stored row with
+  // no interpolation arithmetic (rows[i].slice()).
+  function locate(knots,x,scale){
+    var k=knots,i;
+    if(scale==='log'){ k=knots.map(function(v){return Math.log(v);}); x=Math.log(Math.max(x,1e-12)); }
+    if(x<=k[0])return [0,0];
+    if(x>=k[k.length-1])return [k.length-1,0];
+    for(i=0;i<k.length-1;i++){
+      if(x===k[i])return [i,0];
+      if(x<k[i+1])return [i,(x-k[i])/(k[i+1]-k[i])];
+    }
+    return [k.length-1,0];
+  }
+  function evalGrid(lv,rows,vals){
+    var axes=lv.params;
+    if(axes.length===1){
+      var p=axes[0],x=vals[p.key];
+      if(p.scale==='pos'){ return rows[p.knots.indexOf(x)].slice(); }
+      var it=locate(p.knots,x,p.scale),i=it[0],t=it[1];
+      if(t===0)return rows[i].slice();
+      return rows[i].map(function(a,z){return (1-t)*a+t*rows[i+1][z];});
+    }
+    var p1=axes[0],p2=axes[1],n2=p2.knots.length;
+    var l1=locate(p1.knots,vals[p1.key],p1.scale),i1=l1[0],t1=l1[1];
+    var l2=locate(p2.knots,vals[p2.key],p2.scale),i2=l2[0],t2=l2[1];
+    function row(a,b){return rows[a*n2+b];}
+    if(t1===0&&t2===0)return row(i1,i2).slice();
+    var j1=Math.min(i1+1,p1.knots.length-1),j2=Math.min(i2+1,n2-1);
+    var r00=row(i1,i2),r01=row(i1,j2),r10=row(j1,i2),r11=row(j1,j2);
+    return r00.map(function(_,z){
+      return (1-t1)*((1-t2)*r00[z]+t2*r01[z])+t1*((1-t2)*r10[z]+t2*r11[z]);});
+  }
+  function gOf(key,vals){
+    return evalGrid(BYKEY[key],SUR.g[key].map(function(v){return [v];}),vals)[0];
+  }
+  // Pair term honoring per-position vectors (the discrete-lever escape hatch):
+  // when the pair carries byPos and one lever is the ladder (deemed), use the
+  // position-specific vector scaled by the OTHER lever's g only.
+  function pairTerm(a,b,qid,s,g){
+    var pe=SUR.pairs[a+'|'+b];
+    if(!pe)return null;
+    var ladder=(a==='deemed'||b==='deemed')?'deemed':null;
+    if(pe.byPos&&ladder){
+      var pos=s[ladder].pos;
+      if(pe.byPos[pos]){
+        var other=(a===ladder)?b:a;
+        var v=pe.byPos[pos][qid];
+        return v?{vec:v,w:g[other]}:null;
+      }
+    }
+    return pe[qid]?{vec:pe[qid],w:g[a]*g[b]}:null;
+  }
+  // Triple term with the same per-position rule: byPos + deemed member ->
+  // position vector scaled by the product of the other two levers' g.
+  function tripleTerm(entry,ks,qid,s,g){
+    if(entry.byPos&&ks.indexOf('deemed')>=0){
+      var pos=s.deemed.pos;
+      if(entry.byPos[pos]){
+        var w=1;
+        ks.forEach(function(k){ if(k!=='deemed')w*=g[k]; });
+        var v=entry.byPos[pos][qid];
+        return v?{vec:v,w:w}:null;
+      }
+    }
+    if(!entry[qid])return null;
+    var w2=1; ks.forEach(function(k){w2*=g[k];});
+    return {vec:entry[qid],w:w2};
+  }
+  function evalQ(qid,s){
+    var m=MQ[qid],tot=[],i,j,x;
+    for(x=0;x<m;x++)tot.push(0);
+    var on=[]; LEVERS.forEach(function(l){ if(s[l.key])on.push(l.key); });
+    var g={};
+    on.forEach(function(k){
+      var f=SUR.solo[k][qid];
+      if(f){ var v=evalGrid(BYKEY[k],f,s[k]); for(x=0;x<m;x++)tot[x]+=v[x]; }
+      g[k]=gOf(k,s[k]);
+    });
+    for(i=0;i<on.length;i++)for(j=i+1;j<on.length;j++){
+      var pt=pairTerm(on[i],on[j],qid,s,g);
+      if(pt){ for(x=0;x<m;x++)tot[x]+=pt.vec[x]*pt.w; }
+    }
+    Object.keys(SUR.triples).forEach(function(tk){
+      var ks=tk.split('|');
+      if(ks.every(function(k){return g[k]!==undefined;})){
+        var tt=tripleTerm(SUR.triples[tk],ks,qid,s,g);
+        if(tt){ for(x=0;x<m;x++)tot[x]+=tt.vec[x]*tt.w; }
+      }
+    });
+    return tot;
+  }
+  // Closed-form Shapley of predicted conv total10:
+  // phi_i = f_i + 1/2 sum_j I_ij g_i g_j + 1/3 sum_{j<k} T_ijk g_i g_j g_k
+  function shapley(s){
+    var on=[]; LEVERS.forEach(function(l){ if(s[l.key])on.push(l.key); });
+    var g={},phi={},i,j;
+    on.forEach(function(k){
+      g[k]=gOf(k,s[k]);
+      var f=SUR.solo[k].ct;
+      phi[k]=f?evalGrid(BYKEY[k],f,s[k])[0]:0;
+    });
+    for(i=0;i<on.length;i++)for(j=i+1;j<on.length;j++){
+      var pt=pairTerm(on[i],on[j],'ct',s,g);
+      if(pt){ var half=0.5*pt.vec[0]*pt.w;
+        phi[on[i]]+=half; phi[on[j]]+=half; }
+    }
+    Object.keys(SUR.triples).forEach(function(tk){
+      var ks=tk.split('|');
+      if(ks.every(function(k){return g[k]!==undefined;})){
+        var tt=tripleTerm(SUR.triples[tk],ks,'ct',s,g);
+        if(tt){ var third=tt.vec[0]*tt.w/3;
+          ks.forEach(function(k){phi[k]+=third;}); }
+      }
+    });
+    return phi;
+  }
+
+  // ---- dial state ----------------------------------------------------------- //
+  // state[key] = {on:bool, vals:{param:value}} (vals in native units: %, $)
+  var state={};
+  function initState(){
+    LEVERS.forEach(function(l){
+      var vals={};
+      l.params.forEach(function(p){ vals[p.key]=p.ref; });
+      state[l.key]={on:false,vals:vals};
+    });
+  }
+  function surState(){
+    var s={};
+    LEVERS.forEach(function(l){
+      if(!state[l.key].on)return;
+      var vals={},ok=true;
+      l.params.forEach(function(p){ vals[p.key]=state[l.key].vals[p.key]; });
+      if(ok)s[l.key]=vals;
+    });
+    return s;
+  }
+  function clampParam(p,x){
+    if(p.scale==='pos'||p.fmt==='bool'||p.fmt==='pos')return x;
+    if(isNaN(x)||x===null)return p.ref;
+    return Math.min(Math.max(x,p.min),p.max);
+  }
+
+  // ---- UI ------------------------------------------------------------------- //
+  var DOLLAR=1e6; // $ inputs shown in $M
+  function fmtIn(p,v){ return p.unit==='$'? +(v/DOLLAR).toFixed(2) : +(+v).toFixed(2); }
+  function parseIn(p,raw){
+    var x=parseFloat(raw);
+    if(isNaN(x))return p.ref;
+    return clampParam(p,p.unit==='$'? x*DOLLAR : x);
+  }
+  function renderControls(){
+    ['rate','struct'].forEach(function(gname){
+      var host=$(gname==='rate'?'#rateSw':'#structSw'); host.innerHTML='';
+      LEVERS.filter(function(l){return l.grp===gname;}).forEach(function(l){
+        var wrapEl=document.createElement('div'); wrapEl.className='lever'; wrapEl.dataset.key=l.key;
+        if(l.interp==='ladder'){
+          var lab=document.createElement('div'); lab.className='drow';
+          lab.innerHTML='<span class="dlab" style="font-size:13px;color:var(--ink)">'+l.label+'</span>';
+          wrapEl.appendChild(lab);
+          var seg=document.createElement('div'); seg.className='seg';
+          var names={off:'Step-up',carryover:'Carryover',deemed:'Taxed at death'};
+          l.params[0].positions.forEach(function(pos){
+            var b=document.createElement('button'); b.type='button';
+            b.dataset.key=l.key; b.dataset.pos=pos;
+            b.textContent=names[pos]||pos;
+            b.setAttribute('aria-pressed','false');
+            b.onclick=function(){
+              state[l.key].on=(pos!=='off');
+              state[l.key].vals[l.params[0].key]=pos;
+              renderAll();
+            };
+            seg.appendChild(b);
+          });
+          wrapEl.appendChild(seg);
+        } else {
+          var b=document.createElement('button'); b.className='sw'; b.type='button';
+          b.setAttribute('aria-pressed','false'); b.dataset.key=l.key;
+          b.innerHTML='<span>'+l.label+'</span><span class="dot"></span>';
+          b.onclick=function(){ state[l.key].on=!state[l.key].on; renderAll(); };
+          wrapEl.appendChild(b);
+          if(l.kind==='continuous'){
+            var dials=document.createElement('div'); dials.className='dials';
+            l.params.forEach(function(p){
+              var row=document.createElement('div'); row.className='drow';
+              var sp=document.createElement('span'); sp.className='dlab';
+              sp.textContent=p.label+(p.unit==='$'?' ($M)':'');
+              row.appendChild(sp);
+              var inp=document.createElement('input');
+              inp.type='number'; inp.dataset.lever=l.key; inp.dataset.param=p.key;
+              inp.min=fmtIn(p,p.min); inp.max=fmtIn(p,p.max);
+              inp.step=p.unit==='$'?1:0.1;
+              inp.placeholder=String(fmtIn(p,p.ref));
+              inp.value=fmtIn(p,state[l.key].vals[p.key]);
+              inp.onchange=function(){
+                var v=parseIn(p,inp.value);
+                state[l.key].vals[p.key]=v;
+                inp.value=fmtIn(p,v);          // clamp reflected in the box
+                renderAll();
+              };
+              row.appendChild(inp);
+              var un=document.createElement('span'); un.className='dunit';
+              un.textContent=p.unit==='$'?'M':p.unit;
+              row.appendChild(un);
+              dials.appendChild(row);
+            });
+            wrapEl.appendChild(dials);
+          }
+        }
+        host.appendChild(wrapEl);
+      });
+    });
+    $('#allRef').onclick=function(){
+      LEVERS.forEach(function(l){
+        state[l.key].on=true;
+        l.params.forEach(function(p){ state[l.key].vals[p.key]=p.ref; });
+      });
+      syncInputs(); renderAll();
+    };
+    $('#allOff').onclick=function(){
+      LEVERS.forEach(function(l){
+        state[l.key].on=false;
+        l.params.forEach(function(p){ state[l.key].vals[p.key]=p.ref; });
+      });
+      syncInputs(); renderAll();
+    };
+  }
+  function syncInputs(){
+    Array.prototype.forEach.call(document.querySelectorAll('input[data-lever]'),function(inp){
+      if(!inp.dataset||!inp.dataset.lever)return;
+      var l=BYKEY[inp.dataset.lever],p=null;
+      l.params.forEach(function(pp){ if(pp.key===inp.dataset.param)p=pp; });
+      if(p)inp.value=fmtIn(p,state[l.key].vals[p.key]);
+    });
+  }
+
+  // ---- ETR machinery --------------------------------------------------------- //
+  var GROUPS_ALL=DATA.meta.etr_groups;
+  var PCTS=GROUPS_ALL.filter(function(g){return g!=='Negative income';});
+  var CI={}; DATA.meta.etr_comps.forEach(function(c,i){CI[c]=i;});
+  var NC=DATA.meta.etr_comps.length;
+  var ETRCOMPS=[{k:'iit',c:'var(--h-iit)',l:'Individual income'},{k:'pay',c:'var(--h-pay)',l:'Payroll'},
+    {k:'est',c:'var(--h-est)',l:'Estate / deemed at death'},{k:'wealth',c:'var(--h-wealth)',l:'Wealth'},{k:'corp',c:'var(--h-corp)',l:'Corporate'}];
+  function etrStack(row){
+    return {iit:row[CI.income_tax],pay:row[CI.payroll],est:row[CI.estate]+row[CI.deemed],
+            wealth:row[CI.wealth],corp:row[CI.corp]};
+  }
+  function etrRowAt(deltaVec,idf,grp){
+    // reform row = baseline + delta, floored at 0 per component
+    var di=DATA.meta.etr_income_defs.indexOf(idf),gi=GROUPS_ALL.indexOf(grp);
+    var base=(DATA.etr_base[idf]||{})[ETRYEAR];
+    var brow=base&&base[grp]?base[grp]:null;
+    if(!brow)return null;
+    var out=[];
+    for(var c=0;c<NC;c++){
+      var d=deltaVec?deltaVec[(di*GROUPS_ALL.length+gi)*NC+c]:0;
+      out.push(Math.max(0,brow[c]+d));
+    }
+    return out;
+  }
+  function etrSeries(deltaVec,idf){
+    var out={iit:[],pay:[],est:[],wealth:[],corp:[]};
+    PCTS.forEach(function(g){
+      var row=etrRowAt(deltaVec,idf,g);
+      var st=row?etrStack(row):{iit:0,pay:0,est:0,wealth:0,corp:0};
+      Object.keys(out).forEach(function(k){out[k].push(st[k]);});
+    });
+    return out;
+  }
+  function etrBaseSeries(idf){ return etrSeries(null,idf); }
+
+  // ---- compute -------------------------------------------------------------- //
+  function compute(){
+    var s=surState();
+    var keys=Object.keys(s);
+    var ordKeys=LEVERS.map(function(l){return l.key;}).filter(function(k){return s[k];});
+    var actual=keys.length?evalQ('ct',s)[0]:0;
+    var comboStatic=keys.length?evalQ('st',s)[0]:0;
+    var parts=[],staticParts=0,convParts=0;
+    ordKeys.forEach(function(k){
+      var solo={}; solo[k]=s[k];
+      var c1=evalQ('ct',solo)[0],s1=evalQ('st',solo)[0];
+      parts.push({key:k,s:s1,c:c1}); staticParts+=s1; convParts+=c1;
+    });
+    var phi=keys.length?shapley(s):{};
+    var etrDelta=keys.length?evalQ('etr',s):null;
+    var etr={baseline:etrBaseSeries(INCDEF),static:etrSeries(etrDelta,INCDEF)};
+    var etrMax=0;
+    DATA.meta.etr_income_defs.forEach(function(idf){
+      [etrBaseSeries(idf),etrSeries(etrDelta,idf)].forEach(function(ser){
+        for(var i=0;i<PCTS.length;i++){
+          var t=0; Object.keys(ser).forEach(function(k){t+=Math.max(0,ser[k][i]);});
+          if(t>etrMax)etrMax=t;
+        }
+      });
+    });
+    var iTop=PCTS.indexOf('Top 0.1%'); if(iTop<0)iTop=PCTS.length-1;
+    var totTop={baseline:0,static:0};
+    Object.keys(etr.baseline).forEach(function(k){
+      totTop.baseline+=etr.baseline[k][iTop]; totTop.static+=etr.static[k][iTop];});
+    return {s:s,keys:ordKeys,actual:actual,comboStatic:comboStatic,parts:parts,
+      staticParts:staticParts,convParts:convParts,phi:phi,etr:etr,etrMax:etrMax,totTop:totTop};
+  }
+
+  // ---- charts (segBars/spill/etr reused from atlas v1) ------------------------ //
+  function svg(w,h){return '<svg viewBox="0 0 '+w+' '+h+'" role="img" preserveAspectRatio="xMidYMid meet">';}
+  function segBars(rows,w){
+    var h=rows.length*46+6,bw=Math.max(60,w-224-130),x0=214;
+    var s=svg(w,h);
+    rows.forEach(function(r,i){
+      var y=i*46+6,tot=0; r.segs.forEach(function(g2){tot+=Math.max(0,g2.val);});
+      s+='<text x="206" y="'+(y+17)+'" text-anchor="end" font-size="12.5" fill="var(--ink-2)" font-family="system-ui">'+r.label+'</text>';
+      if(r.sub)s+='<text x="206" y="'+(y+31)+'" text-anchor="end" font-size="10.5" fill="var(--muted)" font-family="ui-monospace,monospace">'+r.sub+'</text>';
+      s+='<rect x="'+x0+'" y="'+y+'" width="'+bw+'" height="32" rx="5" fill="var(--surface-2)"/>';
+      var sc=bw/r.max,x=x0;
+      r.segs.forEach(function(g2){ if(g2.val<=0)return; var wseg=g2.val*sc;
+        s+='<rect x="'+x.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,wseg-2).toFixed(1)+'" height="32" rx="3" fill="'+g2.color+'"><title>'+g2.tip+'</title></rect>';
+        x+=wseg; });
+      s+='<text x="'+(x0+tot*sc+10).toFixed(1)+'" y="'+(y+21)+'" text-anchor="start" font-size="13" font-weight="600" font-family="ui-monospace,monospace" fill="var(--ink)">'+fmt(tot)+'</text>';
+    });
+    return s+'</svg>';
+  }
+  var HEADS=[{k:'iit',label:'Individual income (ordinary)',c:'var(--h-iit)'},{k:'cg',label:'Capital gains & dividends',c:'var(--h-cg)'},
+    {k:'corp',label:'Corporate',c:'var(--h-corp)'},{k:'est',label:'Estate',c:'var(--h-est)'},
+    {k:'wealth',label:'Wealth',c:'var(--h-wealth)'},{k:'pay',label:'Payroll',c:'var(--h-pay)'},
+    {k:'other',label:'Other',c:'var(--muted)'}];
+  function headColor(k){var m={iit:'--h-iit',cg:'--h-cg',corp:'--h-corp',est:'--h-est',wealth:'--h-wealth',pay:'--h-pay',other:'--muted'};return 'var('+m[k]+')';}
+  function spillChart(rows,w){
+    if(!rows.length)return '';
+    var order=['iit','cg','pay','corp','est','wealth','other'];
+    var rh=44,padT=22,bw=Math.max(60,w-224-130),x0=214,h=rows.length*rh+padT+10,negX=0,posX=0;
+    rows.forEach(function(r){var n=0,p=0;
+      order.forEach(function(k){var v=r.heads[k]||0;if(v<0)n-=v;else p+=v;});
+      negX=Math.max(negX,n);posX=Math.max(posX,p);});
+    var sc=bw/((negX+posX)||1),xz=x0+negX*sc,s=svg(w,h);
+    s+='<line x1="'+xz.toFixed(1)+'" x2="'+xz.toFixed(1)+'" y1="'+(padT-4)+'" y2="'+(h-10)+'" stroke="var(--rule)" stroke-width="1.5"/>';
+    s+='<text x="'+xz.toFixed(1)+'" y="'+(padT-8)+'" text-anchor="middle" font-size="9.5" fill="var(--muted)" font-family="ui-monospace,monospace">$0</text>';
+    rows.forEach(function(r,i){
+      var y=padT+i*rh+6,xp=xz,xn=xz,tot=0;
+      s+='<text x="206" y="'+(y+17)+'" text-anchor="end" font-size="12.5" fill="var(--ink-2)" font-family="system-ui">'+r.label+'</text>';
+      order.forEach(function(k){var v=r.heads[k]||0;tot+=v;var wseg=Math.abs(v)*sc;if(wseg<1)return;
+        var hn=HEADS.filter(function(z){return z.k===k;})[0],lab=(hn?hn.label:k)+': '+fmt(v);
+        if(v>0){s+='<rect x="'+xp.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,wseg-2).toFixed(1)+'" height="26" rx="3" fill="'+headColor(k)+'"><title>'+r.label+' · '+lab+'</title></rect>';xp+=wseg;}
+        else{xn-=wseg;s+='<rect x="'+xn.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,wseg-2).toFixed(1)+'" height="26" rx="3" fill="'+headColor(k)+'" opacity="0.85"><title>'+r.label+' · '+lab+' (drained from this base)</title></rect>';}
+      });
+      s+='<text x="'+(x0+bw+12)+'" y="'+(y+18)+'" text-anchor="start" font-size="12.5" font-weight="600" font-family="ui-monospace,monospace" fill="var(--ink-2)">'+usd(tot)+'</text>';
+    });
+    return s+'</svg>';
+  }
+  function combinedEtr(d,w){
+    var comps=['iit','pay','est','wealth','corp'].map(function(k){return ETRCOMPS.filter(function(e){return e.k===k;})[0];});
+    var groups=['baseline','static'],gl={baseline:'b',static:'s'};
+    var n=PCTS.length,h=320,pad={l:34,r:12,t:16,b:46},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
+    var maxv=Math.max(d.etrMax*1.08,10);
+    var Y=function(v){return pad.t+ih-(v/maxv)*ih;};
+    var gw=iw/n,ng=groups.length,bw=Math.min(20,gw*0.28),gap=gw*0.07,off=(gw-(ng*bw+(ng-1)*gap))/2;
+    var s=svg(w,h);
+    for(var g=0;g<=maxv;g+=10){var y=Y(g);s+='<line x1="'+pad.l+'" x2="'+(w-pad.r)+'" y1="'+y+'" y2="'+y+'" stroke="var(--grid)" stroke-width="1"/>';
+      s+='<text x="'+(pad.l-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="var(--muted)" font-family="ui-monospace,monospace">'+g+'%</text>';}
+    for(var i=0;i<n;i++){
+      var gx=pad.l+i*gw;
+      groups.forEach(function(grp,gi){
+        var bx=gx+off+gi*(bw+gap),cy=pad.t+ih;
+        comps.forEach(function(c){var val=d.etr[grp][c.k][i];if(val<=0.01)return;var sh=(val/maxv)*ih;
+          s+='<rect x="'+bx.toFixed(1)+'" y="'+(cy-sh).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,sh-1).toFixed(1)+'" fill="'+c.c+'"/>'; cy-=sh;});
+        s+='<text x="'+(bx+bw/2).toFixed(1)+'" y="'+(pad.t+ih+11)+'" text-anchor="middle" font-size="8" fill="var(--muted)" font-family="ui-monospace,monospace">'+gl[grp]+'</text>';
+      });
+      s+='<text x="'+(gx+gw/2).toFixed(1)+'" y="'+(h-9)+'" text-anchor="middle" font-size="9.5" fill="var(--ink-2)" font-family="ui-monospace,monospace">'+PCTS[i]+'</text>';
+    }
+    return s+'</svg>';
+  }
+
+  // ---- frontier: deterministic lattice over the dial space ------------------- //
+  // Options per lever (off + a few deterministic settings); per-option
+  // {fct, fst, g} precomputed once, so the lattice sweep is pure arithmetic.
+  function latticeOptions(){
+    var opts={};
+    LEVERS.forEach(function(l){
+      var list=[null];                            // null = off
+      if(l.interp==='linear1d'){
+        var p=l.params[0],vals=[];
+        if(p.knots.length<=2){ vals=[p.max]; }    // corp: off/on
+        else { [1/3,2/3,1].forEach(function(f){vals.push(+(p.min+f*(p.max-p.min)).toFixed(2));}); }
+        vals.forEach(function(v){var o={};o[p.key]=v;list.push(o);});
+      } else if(l.interp==='bilinear'){
+        var p1=l.params[0],p2=l.params[1];
+        var r1=[2/3,1].map(function(f){return +(p1.min+f*(p1.max-p1.min)).toFixed(2);});
+        var r2;
+        if(l.key==='wealth'){ r2=[p2.min,p2.max]; }
+        else { r2=[1/3,1].map(function(f){return +(p2.off-f*(p2.off-p2.min)).toFixed(0);}); }
+        r1.forEach(function(a){r2.forEach(function(b){
+          var o={};o[p1.key]=a;o[p2.key]=b;list.push(o);});});
+      } else if(l.interp==='ladder'){
+        l.params[0].positions.forEach(function(pos){
+          if(pos==='off')return;
+          var o={};o[l.params[0].key]=pos;list.push(o);});
+      } else { var o2={};o2[l.params[0].key]=1;list.push(o2); }
+      opts[l.key]=list;
+    });
+    return opts;
+  }
+  var FRONTD=null,FRONTSVG='';
+  function frontierData(){
+    var opts=latticeOptions();
+    var tabs=LEVERS.map(function(l){
+      return opts[l.key].map(function(o){
+        if(o===null)return {fct:0,fst:0,g:0,on:false,vals:null};
+        var st1={}; st1[l.key]=o;
+        return {fct:evalQ('ct',st1)[0],fst:evalQ('st',st1)[0],g:gOf(l.key,o),on:true,vals:o};
+      });
+    });
+    // pair/triple lookup tables keyed by lever index
+    var K=LEVERS.length,pairCT=[],pairST=[],i,j;
+    for(i=0;i<K;i++){pairCT.push([]);pairST.push([]);
+      for(j=0;j<K;j++){pairCT[i].push(0);pairST[i].push(0);}}
+    for(i=0;i<K;i++)for(j=i+1;j<K;j++){
+      var pe=SUR.pairs[LEVERS[i].key+'|'+LEVERS[j].key];
+      if(pe){ pairCT[i][j]=pe.ct?pe.ct[0]:0; pairST[i][j]=pe.st?pe.st[0]:0; }
+    }
+    var IDX={}; LEVERS.forEach(function(l,z){IDX[l.key]=z;});
+    // byPos pairs leave the generic g*g tables and get position-keyed terms
+    var DIDX=IDX.deemed,bpp=[];
+    Object.keys(SUR.pairs).forEach(function(pk){
+      var pe=SUR.pairs[pk]; if(!pe.byPos||DIDX===undefined)return;
+      var ks=pk.split('|'); if(ks[0]!=='deemed'&&ks[1]!=='deemed')return;
+      var o=IDX[ks[0]==='deemed'?ks[1]:ks[0]];
+      bpp.push({o:o,byPos:pe.byPos});
+      var lo=Math.min(o,DIDX),hi=Math.max(o,DIDX);
+      pairCT[lo][hi]=0; pairST[lo][hi]=0;
+    });
+    var trips=Object.keys(SUR.triples).map(function(tk){
+      var ks=tk.split('|'),e=SUR.triples[tk];
+      var t={a:IDX[ks[0]],b:IDX[ks[1]],c:IDX[ks[2]],
+        ct:e.ct?e.ct[0]:0, st:e.st?e.st[0]:0, others:null, byPos:null};
+      if(e.byPos&&ks.indexOf('deemed')>=0){
+        t.byPos={};
+        Object.keys(e.byPos).forEach(function(pos){
+          t.byPos[pos]={ct:e.byPos[pos].ct?e.byPos[pos].ct[0]:0,
+                        st:e.byPos[pos].st?e.byPos[pos].st[0]:0};
+        });
+        t.others=ks.filter(function(k){return k!=='deemed';}).map(function(k){return IDX[k];});
+      }
+      return t;
+    });
+    var pts=[];
+    var counts=tabs.map(function(t){return t.length;});
+    var idx=[]; for(i=0;i<K;i++)idx.push(0);
+    for(;;){
+      var ct=0,st=0,gv=[],nOn=0;
+      for(i=0;i<K;i++){ var cell=tabs[i][idx[i]];
+        ct+=cell.fct; st+=cell.fst; gv.push(cell.g); if(cell.on)nOn++; }
+      if(nOn>0){
+        for(i=0;i<K;i++){ if(!gv[i])continue;
+          for(j=i+1;j<K;j++){ if(!gv[j])continue;
+            var w=gv[i]*gv[j]; ct+=pairCT[i][j]*w; st+=pairST[i][j]*w; } }
+        if(DIDX!==undefined&&tabs[DIDX][idx[DIDX]].on){
+          var dpos=tabs[DIDX][idx[DIDX]].vals[LEVERS[DIDX].params[0].key];
+          bpp.forEach(function(e){
+            var v=e.byPos[dpos],go=gv[e.o];
+            if(v&&go){ ct+=(v.ct?v.ct[0]:0)*go; st+=(v.st?v.st[0]:0)*go; }
+          });
+        }
+        trips.forEach(function(t){
+          if(t.byPos&&DIDX!==undefined&&tabs[DIDX][idx[DIDX]].on){
+            var tpos=tabs[DIDX][idx[DIDX]].vals[LEVERS[DIDX].params[0].key];
+            if(t.byPos[tpos]){
+              var wo=gv[t.others[0]]*gv[t.others[1]];
+              if(wo){ ct+=t.byPos[tpos].ct*wo; st+=t.byPos[tpos].st*wo; }
+              return;
+            }
+          }
+          var w3=gv[t.a]*gv[t.b]*gv[t.c];
+          if(w3){ ct+=t.ct*w3; st+=t.st*w3; }
+        });
+        if(ct>0){
+          var name=[];
+          for(i=0;i<K;i++)if(tabs[i][idx[i]].on)name.push(LEVERS[i].key);
+          pts.push({cv:ct,st:st,lk:100*(st-ct)/ct,name:name.join('+')});
+        }
+      }
+      var d=K-1;
+      while(d>=0){ idx[d]++; if(idx[d]<counts[d])break; idx[d]=0; d--; }
+      if(d<0)break;
+    }
+    var front=[],best=Infinity;
+    pts.slice().sort(function(a,b){return b.cv-a.cv||a.lk-b.lk;}).forEach(function(p){
+      if(p.lk<best-1e-9){front.push(p);best=p.lk;p.onFront=true;}});
+    front.reverse();
+    return {pts:pts,front:front,n:pts.length};
+  }
+  var DOTFILL='color-mix(in srgb,var(--accent) 45%,var(--surface-2))';
+  function frontierBase(w){
+    var YMIN=-65,YMAX=62,h=460,pad={l:64,r:26,t:26,b:54},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
+    var xmax=0; FRONTD.pts.forEach(function(p){xmax=Math.max(xmax,p.cv);}); xmax*=1.05;
+    var X=function(v){return pad.l+v/xmax*iw;},
+        Y=function(v){return pad.t+(YMAX-Math.max(YMIN,Math.min(YMAX,v)))/(YMAX-YMIN)*ih;};
+    FRONTD.geom={X:X,Y:Y,YMAX:YMAX,pad:pad,h:h,w:w};
+    var s=svg(w,h);
+    s+='<rect x="'+pad.l+'" y="'+Y(0).toFixed(1)+'" width="'+iw+'" height="'+(Y(YMIN)-Y(0)).toFixed(1)+'" fill="var(--good)" opacity="0.05"/>';
+    for(var gx=0;gx<=xmax;gx+=1000){var xx=X(gx).toFixed(1);
+      s+='<line x1="'+xx+'" x2="'+xx+'" y1="'+pad.t+'" y2="'+(h-pad.b)+'" stroke="var(--grid)"/>';
+      s+='<text x="'+xx+'" y="'+(h-pad.b+16)+'" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="ui-monospace,monospace">'+(gx?('$'+(gx/1000)+'T'):'0')+'</text>';}
+    for(var gy=-60;gy<=60;gy+=20){var yy=Y(gy).toFixed(1);
+      s+='<line x1="'+pad.l+'" x2="'+(w-pad.r)+'" y1="'+yy+'" y2="'+yy+'" stroke="'+(gy===0?'var(--rule)':'var(--grid)')+'" stroke-width="'+(gy===0?1.5:1)+'"/>';
+      s+='<text x="'+(pad.l-8)+'" y="'+(+yy+3.5)+'" text-anchor="end" font-size="10" fill="var(--muted)" font-family="ui-monospace,monospace">'+(gy>0?'+':'')+gy+'¢</text>';}
+    s+='<text x="'+pad.l+'" y="'+(pad.t-10)+'" font-size="10.5" fill="var(--ink-2)" font-family="ui-monospace,monospace">behavioral leakage, ¢ per $ collected · below $0 line = collects more than the static ask</text>';
+    s+='<text x="'+(w-pad.r)+'" y="'+(h-12)+'" text-anchor="end" font-size="10.5" fill="var(--ink-2)" font-family="ui-monospace,monospace">conventional revenue, 10 years →</text>';
+    // dominated cloud: binned density (the lattice is thousands of points)
+    var NBX=64,NBY=40,bins={},offCount=0;
+    FRONTD.pts.forEach(function(p){
+      if(p.onFront)return;
+      if(p.lk>YMAX){offCount++;return;}
+      var bx=Math.min(NBX-1,Math.max(0,Math.floor((X(p.cv)-pad.l)/iw*NBX)));
+      var by=Math.min(NBY-1,Math.max(0,Math.floor((Y(p.lk)-pad.t)/ih*NBY)));
+      var k=bx+'|'+by; bins[k]=(bins[k]||0)+1;
+    });
+    var maxc=1; Object.keys(bins).forEach(function(k){maxc=Math.max(maxc,bins[k]);});
+    Object.keys(bins).sort().forEach(function(k){
+      var xy=k.split('|'),bx=+xy[0],by=+xy[1];
+      var op=(0.10+0.45*Math.log(1+bins[k])/Math.log(1+maxc)).toFixed(3);
+      s+='<circle cx="'+(pad.l+(bx+0.5)/NBX*iw).toFixed(1)+'" cy="'+(pad.t+(by+0.5)/NBY*ih).toFixed(1)+'" r="2.6" fill="'+DOTFILL+'" opacity="'+op+'"/>';
+    });
+    if(offCount)s+='<text x="'+(pad.l+8)+'" y="'+(pad.t+14)+'" font-size="9.5" fill="var(--muted)" font-family="ui-monospace,monospace">▲ '+offCount+' high-leakage packages off scale</text>';
+    s+='<path d="'+FRONTD.front.map(function(p,i){return (i?'L':'M')+X(p.cv).toFixed(1)+' '+Y(p.lk).toFixed(1);}).join(' ')+'" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0.75"/>';
+    FRONTD.front.forEach(function(p){
+      s+='<circle cx="'+X(p.cv).toFixed(1)+'" cy="'+Y(p.lk).toFixed(1)+'" r="5" fill="'+DOTFILL+'" stroke="var(--accent)" stroke-width="2"><title>'+p.name+' · '+usd(p.cv)+' at '+(p.lk>0?'+':'')+Math.round(p.lk)+'¢</title></circle>';
+    });
+    return s+'</svg>';
+  }
+  function frontierWithMarker(d){
+    if(!FRONTSVG)return '';
+    if(!d.keys.length||!(d.actual>0))return FRONTSVG;
+    var g=FRONTD.geom,lk=100*(d.comboStatic-d.actual)/d.actual;
+    var cx=g.X(d.actual),cy=lk>g.YMAX?g.pad.t+12:g.Y(lk);
+    var mk='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="10" fill="none" stroke="var(--warn)" stroke-width="2.5"/>'
+      +'<text x="'+(cx+14).toFixed(1)+'" y="'+(cy-11).toFixed(1)+'" font-size="10.5" font-weight="600" fill="var(--warn)" font-family="ui-monospace,monospace">your selection</text>';
+    return FRONTSVG.replace('</svg>',mk+'</svg>');
+  }
+
+  // ---- render ----------------------------------------------------------------- //
+  function widthOf(id){var e=$('#'+id);return Math.max(300,e?e.clientWidth:660);}
+  function tile(k,v,alt,s2,accent){return '<div class="tile'+(accent?' accent':'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div>'+(alt?'<div class="alt">'+alt+'</div>':'')+'<div class="s">'+s2+'</div></div>';}
+  function dialSummary(l){
+    var st=state[l.key];
+    if(!st.on)return '';
+    return l.params.map(function(p){
+      var v=st.vals[p.key];
+      if(p.fmt==='pct')return p.label.toLowerCase()+' '+(+v).toFixed(1).replace(/\.0$/,'')+'%';
+      if(p.fmt==='usd')return '$'+(v/1e6).toFixed(2).replace(/\.?0+$/,'')+'M';
+      if(p.fmt==='pos')return v;
+      return '';
+    }).filter(Boolean).join(' · ');
+  }
+  function renderAll(){
+    LEVERS.forEach(function(l){
+      var host=document.querySelector('.lever[data-key="'+l.key+'"]');
+      if(host)host.className='lever'+(state[l.key].on?' on':'');
+      var b=document.querySelector('.sw[data-key="'+l.key+'"]');
+      if(b)b.setAttribute('aria-pressed',state[l.key].on?'true':'false');
+      if(l.interp==='ladder'){
+        var pos=state[l.key].on?state[l.key].vals[l.params[0].key]:'off';
+        l.params[0].positions.forEach(function(pp){
+          var sb=document.querySelector('.seg button[data-key="'+l.key+'"][data-pos="'+pp+'"]');
+          if(sb)sb.setAttribute('aria-pressed',pp===pos?'true':'false');
+        });
+      }
+    });
+    var d=compute(),any=d.keys.length>0;
+    var gap2=d.actual-d.convParts,g2s=gap2>=0?'+':'−',
+        gapPct=d.convParts>0?Math.round(100*Math.abs(gap2)/d.convParts):0;
+    $('#tiles').innerHTML=[
+      tile('Sum of standalone scores',any?usd(d.convParts):'—',any?pg(d.convParts)+' of GDP':'',d.keys.length+' polic'+(d.keys.length===1?'y':'ies')+', scored separately'),
+      tile('Combined package',any?usd(d.actual):'—',any?pg(d.actual)+' of GDP':'','scored as one reform',true),
+      tile('Interaction',any?(g2s+usd(Math.abs(gap2))):'—',any?(g2s+gapPct+'% vs. the sum'):'',any?'package vs. sum of standalone scores':'nothing selected'),
+      tile('Top 0.1% ETR',d.totTop.static.toFixed(1)+'%','',any?('+'+(d.totTop.static-d.totTop.baseline).toFixed(1)+'pp vs. baseline · '+ETRYEAR+', static'):'baseline')
+    ].join('');
+    var mx=Math.max(d.staticParts,d.comboStatic,1);
+    function segsOf(field){ return d.parts.map(function(p){var m=BYKEY[p.key];
+      return {name:m.label,val:p[field],color:LCOLOR[p.key],
+        tip:m.label+' ('+dialSummary(m)+') — standalone '+(field==='s'?'static':'conventional')+' score: '+fmt(p[field])}; }); }
+    var pkgSegs,note='';
+    if(d.keys.length){
+      var negs=d.keys.filter(function(k){return d.phi[k]<-0.5;});
+      if(!negs.length){
+        pkgSegs=d.keys.map(function(k){var m=BYKEY[k],v=Math.max(0,d.phi[k]);
+          return {name:m.label,val:v,color:LCOLOR[k],
+            tip:m.label+' — contribution to the package: '+fmt(v)+' ('+(d.actual>0?Math.round(100*v/d.actual):0)+'% of package, Shapley)'}; });
+      } else {
+        pkgSegs=[{name:'pkg',val:d.actual,color:'var(--accent)',tip:'Combined package — '+fmt(d.actual)}];
+        note='contribution split suppressed: '+negs.join(', ')+' contribute'+(negs.length===1?'s':'')+' negatively at this selection';
+      }
+    } else { pkgSegs=[]; }
+    $('#pvw').innerHTML=segBars([
+      {label:'Sum of static scores',sub:'each policy alone, no behavior',segs:any?segsOf('s'):[],max:mx},
+      {label:'Sum of conventional scores',sub:'each policy alone, with behavior',segs:any?segsOf('c'):[],max:mx},
+      {label:'Combined package',sub:'with interactions and behavior',segs:any?pkgSegs:[],max:mx}
+    ],widthOf('pvw'));
+    $('#pvwLegend').innerHTML=d.parts.map(function(p){var m=BYKEY[p.key];
+      return '<span class="it"><span class="sw2" style="background:'+LCOLOR[p.key]+'"></span>'+m.label+'</span>';}).join('');
+    $('#pvwNote').textContent=note;
+    var sp=d.parts.map(function(p){
+      var solo={}; solo[p.key]=d.s[p.key];
+      var ch=evalQ('ch',solo),heads={};
+      HEADS_ORDER.forEach(function(hk,z){heads[hk]=ch[z];});
+      return {label:BYKEY[p.key].label,heads:heads};});
+    $('#spill').innerHTML=spillChart(sp,widthOf('spill'));
+    $('#spillLegend').innerHTML=sp.length?HEADS.filter(function(hh){
+        return sp.some(function(r){return Math.abs(r.heads[hh.k]||0)>0.5;});
+      }).map(function(hh){return '<span class="it"><span class="sw2" style="background:'+hh.c+'"></span>'+hh.label+'</span>';}).join('')
+      +'<span class="it mono" style="color:var(--muted)">left of $0 = drained from that base · right column: net score</span>':'';
+    $('#etr').innerHTML=combinedEtr(d,widthOf('etr'));
+    $('#etrLegend').innerHTML=ETRCOMPS.map(function(h){return '<span class="it"><span class="sw2" style="background:'+h.c+'"></span>'+h.l+'</span>';}).join('');
+    $('#frontChart').innerHTML=frontierWithMarker(d);
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('#etrDefTog button'),function(b){
+    b.onclick=function(){ INCDEF=b.dataset.def;
+      Array.prototype.forEach.call(document.querySelectorAll('#etrDefTog button'),function(x){
+        x.setAttribute('aria-pressed', x.dataset.def===INCDEF?'true':'false'); });
+      renderAll(); }; });
+
+  // ---- badge ------------------------------------------------------------------- //
+  var val=DATA.meta.surrogate.validation||{};
+  var nHold=((val.quiz&&val.quiz.n)||0)+((val.corners&&val.corners.n)||0);
+  $('#dataBadge').textContent=DATA.meta.placeholder
+    ? 'Preview · '+DATA.meta.placeholder
+    : 'Model output · interpolated; verified within ±'+val.bound_pct+'% on '+nHold+' holdout runs';
+
+  // ---- boot ---------------------------------------------------------------------- //
+  initState();
+  renderControls();
+  FRONTD=frontierData();
+  FRONTSVG=frontierBase(widthOf('frontChart'));
+  $('#frontLegend').innerHTML=
+    '<span class="it"><span class="sw2" style="background:transparent;border:2px solid var(--accent);border-radius:50%"></span>on the frontier</span>'+
+    '<span class="it mono" style="color:var(--muted)">'+FRONTD.n+' lattice packages · shading = package density · hover frontier points for composition</span>';
+  // default view: everything at reference
+  LEVERS.forEach(function(l){ state[l.key].on=true;
+    l.params.forEach(function(p){ state[l.key].vals[p.key]=p.ref; }); });
+  syncInputs();
+  renderAll();
+  var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(renderAll,120);});
+
+  // ---- harness hooks --------------------------------------------------------------- //
+  function setState(s){
+    LEVERS.forEach(function(l){
+      if(s[l.key]){
+        state[l.key].on=true;
+        l.params.forEach(function(p){
+          state[l.key].vals[p.key]=s[l.key][p.key]!==undefined?s[l.key][p.key]:p.ref;});
+      } else {
+        state[l.key].on=false;
+      }
+    });
+    syncInputs(); renderAll();
+  }
+  window.__ATLAS2__={evalQ:evalQ,shapley:shapley,gOf:gOf,evalGrid:evalGrid,
+    setState:setState,renderNow:renderAll,surState:surState,
+    FRONTD:FRONTD,DATA:DATA,state:state,LEVERS:LEVERS};
+})();
+</script>

@@ -1,0 +1,570 @@
+#!/usr/bin/env python3
+"""
+Fit the top_tax dial surrogate from the dials batch and write atlas2_data.json.
+
+Model (evaluated client-side per quantity, mirrored 1:1 in atlas2.html):
+
+    V(x_1..x_k) = sum_i f_i(x_i)
+                + sum_{i<j} I_ij * g_i(x_i) * g_j(x_j)
+                + sum_{cluster triples} T_ijk * g_i * g_j * g_k
+
+  f_i : per-lever solo curve. Stored as a COMPLETE knot grid per lever —
+        1-D knot rows for continuous levers (off-knot row = zeros), row-major
+        (axis1 outer x axis2 inner) grids for the 2-param levers, position
+        rows for ladder/binary. Anchor rows are the run output VERBATIM
+        (post 3-dp rounding); interpolation is piecewise-linear between
+        knots (bilinear on grids; wealth threshold on a log($) axis).
+  g_i : scalar dial-strength function: the lever's STATIC solo total10 at x
+        divided by its value at REF (g(off)=0, g(ref)=1). Stored on the same
+        knot grid as f_i. One g per lever scales ALL quantities' interaction
+        terms. Guard: |static ref total10| < 1e-6 -> g identically 0.
+  I_ij: pair interference measured once per pair at REF settings.
+  T_ijk: triple interference for the flagged cluster {cg, wealth, deemed,
+        estate} only, measured at REF.
+
+Quantities (all deltas vs the same-vintage baseline, $B except etr in pp):
+  ct/st  conv/static total10          (m=1)
+  cy/sy  conv/static byyear           (m=10, window 2027-2036)
+  ch/sh  conv/static heads10          (m=7, HEADS_ORDER)
+  etr    static ETR reform-baseline   (m=2 defs x groups x 8 comps, 2027 only)
+
+Usage (pure file I/O — login-node safe):
+  python3 other/top_tax/fit_surrogate.py [vintage_root] [out_json]
+
+validate_surrogate.py imports the evaluator below (eval_state) so the python
+and JS implementations are checked against the same holdout fixtures.
+"""
+
+import csv
+import json
+import math
+import os
+import subprocess
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import levers as L
+import extract_atlas_data as X
+
+DEFAULT_ROOT = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/top_tax_dials_v1"
+DEFAULT_OUT = os.path.join(HERE, "atlas2_data.json")
+LEGEND = os.path.join(L.REPO, "config", "runscripts", "top_tax", "dials_legend.csv")
+
+WINDOW = X.WINDOW                      # 2027..2036
+ETR_YEAR = 2027                        # atlas2 ships the impact year only
+HEADS_ORDER = ["iit", "cg", "pay", "corp", "est", "wealth", "other"]
+MONEY_QIDS = ["ct", "cy", "ch", "st", "sy", "sh"]
+QIDS = MONEY_QIDS + ["etr"]
+# Near-zero omission: money vectors are kept unless zero at shipped 3-dp
+# precision (preserves fit exactness); ETR vectors get a real 0.005pp floor
+# (they are 160-wide — omission is where the size saving lives).
+PAIR_TOL = {"money": 0.0005, "etr": 0.005}
+
+
+# --------------------------------------------------------------------------- #
+# Knot grids: the client contract. Every lever is a full grid over per-param
+# knot axes (off value included), row-major, with identically-zero rows for
+# current-law cells. States in this file / fixtures / the page are
+# {leverKey: {param: value}} for ON levers only.
+# --------------------------------------------------------------------------- #
+def lever_axes(key):
+    """[(param_key, [knots], scale)] — off value prepended when not an anchor."""
+    lv = L.BY_KEY[key]
+    axes = []
+    for p in lv["params"]:
+        if "positions" in p:
+            axes.append((p["key"], list(p["positions"]), "pos"))
+        else:
+            knots = list(p["anchors"])
+            if p["off"] not in knots:
+                knots = [p["off"]] + knots
+            axes.append((p["key"], knots, p.get("scale", "linear")))
+    return axes
+
+
+def lever_grid_states(key):
+    """Row-major [(vals, is_zero)] over the full knot grid."""
+    axes = lever_axes(key)
+    if len(axes) == 1:
+        pk, knots, _ = axes[0]
+        return [({pk: k}, _is_zero_state(key, {pk: k})) for k in knots]
+    (p1, k1, _), (p2, k2, _) = axes
+    return [({p1: a, p2: b}, _is_zero_state(key, {p1: a, p2: b}))
+            for a in k1 for b in k2]
+
+
+def _is_zero_state(key, vals):
+    lv = L.BY_KEY[key]
+    if lv["interp"] in ("ladder", "binary"):
+        return vals[lv["params"][0]["key"]] == lv["params"][0]["off"]
+    if key == "wealth":
+        return vals["rate"] == 0.0
+    return L.is_off(key, vals)
+
+
+def state_key(state):
+    return json.dumps(state, sort_keys=True)
+
+
+# --------------------------------------------------------------------------- #
+# Evaluator (mirrored in atlas2.html — keep the two in lockstep).
+# Knot-verbatim rule: an input exactly on a knot returns the stored row with
+# no interpolation arithmetic.
+# --------------------------------------------------------------------------- #
+def _locate(knots, x, scale):
+    """(index, t) on a numeric knot axis; x clamped to [knots0, knots-1]."""
+    if scale == "log":
+        knots = [math.log(k) for k in knots]
+        x = math.log(max(x, 1e-12))
+    if x <= knots[0]:
+        return 0, 0.0
+    if x >= knots[-1]:
+        return len(knots) - 1, 0.0
+    for i in range(len(knots) - 1):
+        if x == knots[i]:
+            return i, 0.0
+        if x < knots[i + 1]:
+            return i, (x - knots[i]) / (knots[i + 1] - knots[i])
+    return len(knots) - 1, 0.0
+
+
+def eval_grid(key, rows, state_vals):
+    """Interpolate a stored grid (list of rows, row = list) at state_vals."""
+    axes = lever_axes(key)
+    if len(axes) == 1:
+        pk, knots, scale = axes[0]
+        x = state_vals[pk]
+        if scale == "pos":
+            i = knots.index(x)
+            return list(rows[i])
+        i, t = _locate(knots, x, scale)
+        if t == 0.0:
+            return list(rows[i])
+        return [(1 - t) * a + t * b for a, b in zip(rows[i], rows[i + 1])]
+    (p1, k1, s1), (p2, k2, s2) = axes
+    i1, t1 = _locate(k1, state_vals[p1], s1)
+    i2, t2 = _locate(k2, state_vals[p2], s2)
+    n2 = len(k2)
+
+    def row(a, b):
+        return rows[a * n2 + b]
+    if t1 == 0.0 and t2 == 0.0:
+        return list(row(i1, i2))
+    r00, r01 = row(i1, i2), row(i1, min(i2 + 1, n2 - 1))
+    r10 = row(min(i1 + 1, len(k1) - 1), i2)
+    r11 = row(min(i1 + 1, len(k1) - 1), min(i2 + 1, n2 - 1))
+    return [(1 - t1) * ((1 - t2) * a + t2 * b) + t1 * ((1 - t2) * c + t2 * d)
+            for a, b, c, d in zip(r00, r01, r10, r11)]
+
+
+def _pair_term(sur, a, b, qid, state, gval):
+    """(vector, weight) for pair a|b at qid, honoring byPos vectors: when the
+    pair carries per-position vectors and one lever is the ladder (deemed),
+    use the position-specific vector scaled by the OTHER lever's g only."""
+    entry = sur["pairs"].get(f"{a}|{b}")
+    if not entry:
+        return None, 0.0
+    by_pos = entry.get("byPos")
+    ladder = "deemed" if "deemed" in (a, b) else None
+    if by_pos and ladder:
+        pos = state[ladder]["pos"]
+        if pos in by_pos:
+            other = b if a == ladder else a
+            vec = by_pos[pos].get(qid)
+            return vec, gval[other]
+    vec = entry.get(qid)
+    return vec, gval[a] * gval[b]
+
+
+def _triple_term(entry, keys, qid, state, gval):
+    """(vector, weight) for a triple, honoring byPos: with per-position
+    vectors and the ladder (deemed) among the members, use the position
+    vector scaled by the product of the OTHER two levers' g."""
+    by_pos = entry.get("byPos")
+    if by_pos and "deemed" in keys:
+        pos = state["deemed"]["pos"]
+        if pos in by_pos:
+            w = 1.0
+            for k in keys:
+                if k != "deemed":
+                    w *= gval[k]
+            return by_pos[pos].get(qid), w
+    vec = entry.get(qid)
+    w = 1.0
+    for k in keys:
+        w *= gval[k]
+    return vec, w
+
+
+def eval_state(data, qid, state):
+    """Predict quantity qid (vector) at a state dict. Mirrors JS evalQ."""
+    sur = data["surrogate"]
+    m = data["meta"]["surrogate"]["m"][qid]
+    tot = [0.0] * m
+    on = [k for k in L.LEVER_KEYS if k in state]
+    gval = {}
+    for k in on:
+        f = sur["solo"][k].get(qid)
+        if f:
+            for i, v in enumerate(eval_grid(k, f, state[k])):
+                tot[i] += v
+        gs = eval_grid(k, [[v] for v in sur["g"][k]], state[k])
+        gval[k] = gs[0]
+    for i in range(len(on)):
+        for j in range(i + 1, len(on)):
+            vec, w = _pair_term(sur, on[i], on[j], qid, state, gval)
+            if vec:
+                for x in range(m):
+                    tot[x] += vec[x] * w
+    for trip, qs in sur["triples"].items():
+        keys = trip.split("|")
+        if all(k in gval for k in keys):
+            vec, w = _triple_term(qs, keys, qid, state, gval)
+            if vec:
+                for x in range(m):
+                    tot[x] += vec[x] * w
+    return tot
+
+
+def shapley(data, state):
+    """Closed-form Shapley split of predicted conv total10 across ON levers."""
+    sur = data["surrogate"]
+    on = [k for k in L.LEVER_KEYS if k in state]
+    gval, phi = {}, {}
+    for k in on:
+        gval[k] = eval_grid(k, [[v] for v in sur["g"][k]], state[k])[0]
+        f = sur["solo"][k].get("ct")
+        phi[k] = eval_grid(k, f, state[k])[0] if f else 0.0
+    for i in range(len(on)):
+        for j in range(i + 1, len(on)):
+            vec, w = _pair_term(sur, on[i], on[j], "ct", state, gval)
+            if vec:
+                half = 0.5 * vec[0] * w
+                phi[on[i]] += half
+                phi[on[j]] += half
+    for trip, qs in sur["triples"].items():
+        ks = trip.split("|")
+        if all(k in gval and k in phi for k in ks):
+            vec, w = _triple_term(qs, ks, "ct", state, gval)
+            if vec:
+                third = vec[0] * w / 3.0
+                for k in ks:
+                    phi[k] += third
+    return phi
+
+
+# --------------------------------------------------------------------------- #
+# Reading run output (readers from extract_atlas_data.py)
+# --------------------------------------------------------------------------- #
+def read_legend():
+    """Main legend + any dials_patch{N}_legend.csv (same-vintage patch runs).
+    Later legends win on duplicate IDs (patch 2 re-lists patch 1's rows)."""
+    import glob
+    by_id = {}
+    paths = [LEGEND] + sorted(glob.glob(LEGEND.replace("_legend.csv", "_patch*_legend.csv")))
+    for path in paths:
+        with open(path, newline="") as fh:
+            for r in csv.DictReader(fh):
+                by_id[r["ID"]] = (r["ID"], r["kind"], json.loads(r["levers_json"]))
+    return list(by_id.values())
+
+
+def read_scenario(root, scen_id, base_heads, base_cg, etr_base_flat, groups, want_etr=True):
+    """All quantity vectors (deltas vs baseline) for one scenario run."""
+    scen_dir = os.path.join(root, scen_id)
+    static, _ = X.leg_deltas(scen_dir, base_heads, base_cg, "static")
+    conv, _ = X.leg_deltas(scen_dir, base_heads, base_cg, "conventional")
+    out = {
+        "ct": [conv["total10"]], "cy": conv["byyear"],
+        "ch": [conv["heads10"][h] for h in HEADS_ORDER],
+        "st": [static["total10"]], "sy": static["byyear"],
+        "sh": [static["heads10"][h] for h in HEADS_ORDER],
+    }
+    if want_etr:
+        rows = [r for r in X.etr_rows(scen_dir) if int(r["year"]) == ETR_YEAR]
+        if not rows:
+            # etr_rows() returns [] for a MISSING file too — zero-filling that
+            # would poison the fitted ETR deltas with -baseline rows (bitten
+            # 2026-07-09 when a patch batch's Phase 3b failed silently).
+            sys.exit(f"{scen_dir}: no distribution_etrs rows for {ETR_YEAR} "
+                     "(missing or failed post-processing) — refusing to fit")
+        pack = X.etr_pack(rows, "reform")
+        flat = flatten_etr(pack, groups)
+        out["etr"] = [round(a - b, 3) for a, b in zip(flat, etr_base_flat)]
+    return out
+
+
+def flatten_etr(pack, groups):
+    """{def: {year: {group: [comps]}}} -> flat def x group x comp vector."""
+    out = []
+    for d in X.ETR_INCOME_DEFS:
+        by_group = pack.get(d, {}).get(str(ETR_YEAR), {})
+        for g in groups:
+            row = by_group.get(g)
+            out.extend(row if row else [0.0] * len(X.ETR_COMPS))
+    return out
+
+
+def etr_groups_of(scen_dir):
+    rows = [r for r in X.etr_rows(scen_dir) if int(r["year"]) == ETR_YEAR]
+    seen = []
+    for r in rows:
+        if r["group"] not in seen:
+            seen.append(r["group"])
+    return seen, rows
+
+
+# --------------------------------------------------------------------------- #
+def fit(root, out_path):
+    legend = read_legend()
+    by_kind = {}
+    for scen_id, kind, state in legend:
+        by_kind.setdefault(kind, []).append((scen_id, state))
+
+    base_totals = os.path.join(root, "baseline", "static", "totals")
+    bh, bcg = X.receipts_heads(base_totals), X.cg_carve(base_totals)
+    base_heads = {"static": bh, "conventional": bh}
+    base_cg = {"static": bcg, "conventional": bcg}
+
+    # ETR base pack + group order from the first solo run that has rows
+    first_dir = os.path.join(root, by_kind["solo"][0][0])
+    groups, rows0 = etr_groups_of(first_dir)
+    etr_base_pack = X.etr_pack(rows0, "baseline")
+    etr_base_flat = flatten_etr(etr_base_pack, groups)
+
+    def read(scen_id):
+        return read_scenario(root, scen_id, base_heads, base_cg, etr_base_flat, groups)
+
+    runs = {}          # state_key -> quantities (fitted scenarios only)
+    id_of = {}
+    for kind in ("solo", "pair", "triple", "pairco", "tripco"):
+        for scen_id, state in by_kind.get(kind, []):
+            runs[state_key(state)] = read(scen_id)
+            id_of[state_key(state)] = scen_id
+
+    m_of = {"ct": 1, "cy": len(WINDOW), "ch": len(HEADS_ORDER),
+            "st": 1, "sy": len(WINDOW), "sh": len(HEADS_ORDER),
+            "etr": len(X.ETR_INCOME_DEFS) * len(groups) * len(X.ETR_COMPS)}
+
+    # ---- solo grids + g ---------------------------------------------------- #
+    solo, gfun = {}, {}
+    for key in L.LEVER_KEYS:
+        cells = lever_grid_states(key)
+        solo[key] = {qid: [] for qid in QIDS}
+        st_vals = []
+        for vals, is_zero in cells:
+            if is_zero:
+                q = {qid: [0.0] * m_of[qid] for qid in QIDS}
+            else:
+                sk = state_key({key: vals})
+                if sk not in runs:
+                    sys.exit(f"missing solo run for {key} at {vals}")
+                q = runs[sk]
+            for qid in QIDS:
+                solo[key][qid].append([round(v, 3) for v in q[qid]])
+            st_vals.append(q["st"][0])
+        ref_state = {key: L.REF[key]}
+        ref_i = [i for i, (vals, _) in enumerate(cells)
+                 if state_key({key: vals}) == state_key(ref_state)]
+        assert len(ref_i) == 1, f"{key}: REF not on the knot grid"
+        st_ref = st_vals[ref_i[0]]
+        if abs(st_ref) < 1e-6:
+            gfun[key] = [0.0] * len(cells)          # g guard
+        else:
+            gfun[key] = [round(v / st_ref, 6) for v in st_vals]
+
+    data_stub = {"surrogate": {"solo": solo, "g": gfun, "pairs": {}, "triples": {}},
+                 "meta": {"surrogate": {"m": m_of}}}
+
+    def f_at_ref(key, qid):
+        return eval_grid(key, solo[key][qid], L.REF[key])
+
+    # ---- pairs ------------------------------------------------------------- #
+    pairs = {}
+    import itertools
+    for a, b in itertools.combinations(L.LEVER_KEYS, 2):
+        sk = state_key({a: L.REF[a], b: L.REF[b]})
+        if sk not in runs:
+            sys.exit(f"missing pair run {a}|{b}")
+        entry = {}
+        for qid in QIDS:
+            fa, fb = f_at_ref(a, qid), f_at_ref(b, qid)
+            vec = [round(v - x - y, 3) for v, x, y in zip(runs[sk][qid], fa, fb)]
+            tol = PAIR_TOL["etr" if qid == "etr" else "money"]
+            if any(abs(v) > tol for v in vec):
+                entry[qid] = vec
+        if entry:
+            pairs[f"{a}|{b}"] = entry
+
+    # Per-position pair vectors (discrete-lever escape hatch): pairco runs
+    # measure the deemed pair AT a specific ladder position (carryover), so
+    # the evaluator can bypass the g_deemed scaling for that pair. The
+    # 'deemed' position vector is materialized from the ref pair (g == 1
+    # there), so byPos covers every ON position and the g-scaled fallback
+    # never fires for these pairs.
+    for scen_id, state in by_kind.get("pairco", []):
+        others = [k for k in state if k != "deemed"]
+        assert len(others) == 1, f"{scen_id}: pairco must be lever+deemed"
+        other = others[0]
+        assert state[other] == L.REF[other], f"{scen_id}: pairco other lever off-ref"
+        pos = state["deemed"]["pos"]
+        a, b = sorted([other, "deemed"], key=L.LEVER_KEYS.index)
+        pkey = f"{a}|{b}"
+        entry = pairs.setdefault(pkey, {})
+        by_pos = entry.setdefault("byPos", {})
+        vec_pos, vec_ref = {}, {}
+        for qid in QIDS:
+            fo = f_at_ref(other, qid)
+            fd = eval_grid("deemed", solo["deemed"][qid], state["deemed"])
+            sk = state_key(state)
+            if sk not in runs:
+                sys.exit(f"missing pairco run {scen_id}")
+            vec_pos[qid] = [round(v - x - y, 3)
+                            for v, x, y in zip(runs[sk][qid], fo, fd)]
+            ref_i = entry.get(qid)
+            vec_ref[qid] = ref_i if ref_i else [0.0] * m_of[qid]
+        by_pos[pos] = vec_pos
+        by_pos["deemed"] = vec_ref
+    data_stub["surrogate"]["pairs"] = pairs
+
+    # ---- triples (every kind='triple' run in the legend; deemed at its ref
+    # position — carryover comes in via the tripco byPos block below) -------- #
+    triples = {}
+    triple_trios = []
+    for scen_id, state in by_kind.get("triple", []):
+        trio = tuple(sorted(state, key=L.LEVER_KEYS.index))
+        for k in trio:
+            assert state[k] == L.REF[k], f"{scen_id}: triple lever {k} off-ref"
+        triple_trios.append(trio)
+    for a, b, c in triple_trios:
+        sk = state_key({a: L.REF[a], b: L.REF[b], c: L.REF[c]})
+        if sk not in runs:
+            sys.exit(f"missing triple run {a}|{b}|{c}")
+        entry = {}
+        for qid in QIDS:
+            base = [0.0] * m_of[qid]
+            for k in (a, b, c):
+                for i, v in enumerate(f_at_ref(k, qid)):
+                    base[i] += v
+            for x, y in ((a, b), (a, c), (b, c)):
+                vec = pairs.get(f"{x}|{y}", {}).get(qid)
+                if vec:
+                    for i, v in enumerate(vec):
+                        base[i] += v            # g == 1 at REF
+            vec = [round(v - w, 3) for v, w in zip(runs[sk][qid], base)]
+            tol = PAIR_TOL["etr" if qid == "etr" else "money"]
+            if any(abs(v) > tol for v in vec):
+                entry[qid] = vec
+        if entry:
+            triples[f"{a}|{b}|{c}"] = entry
+
+    # Per-position triple vectors: tripco runs re-measure a cluster triple
+    # with deemed at a specific ladder position (discrete positions are never
+    # g-scaled). Baseline for the residual = solo terms at this state + the
+    # pair terms as the EVALUATOR computes them there (byPos pair vectors for
+    # the deemed pairs, ref I for the continuous pair) — so prediction at the
+    # tripco state is exact by construction.
+    for scen_id, state in by_kind.get("tripco", []):
+        others = sorted([k for k in state if k != "deemed"], key=L.LEVER_KEYS.index)
+        assert len(others) == 2, f"{scen_id}: tripco must be 2 levers + deemed"
+        for k in others:
+            assert state[k] == L.REF[k], f"{scen_id}: tripco lever {k} off-ref"
+        pos = state["deemed"]["pos"]
+        trip_key = "|".join(sorted(others + ["deemed"], key=L.LEVER_KEYS.index))
+        entry = triples.setdefault(trip_key, {})
+        by_pos = entry.setdefault("byPos", {})
+        sk = state_key(state)
+        if sk not in runs:
+            sys.exit(f"missing tripco run {scen_id}")
+        vec_pos, vec_ref = {}, {}
+        for qid in QIDS:
+            base = [0.0] * m_of[qid]
+            for k in others:
+                for i, v in enumerate(f_at_ref(k, qid)):
+                    base[i] += v
+            for i, v in enumerate(eval_grid("deemed", solo["deemed"][qid],
+                                            state["deemed"])):
+                base[i] += v
+            o1, o2 = others
+            vec = pairs.get(f"{o1}|{o2}", {}).get(qid)
+            if vec:
+                for i, v in enumerate(vec):
+                    base[i] += v                      # g_o1 = g_o2 = 1 at REF
+            for other in others:
+                a2, b2 = sorted([other, "deemed"], key=L.LEVER_KEYS.index)
+                pe = pairs.get(f"{a2}|{b2}", {})
+                pvec = pe.get("byPos", {}).get(pos, {}).get(qid)
+                if pvec:                              # scaled by g_other = 1
+                    for i, v in enumerate(pvec):
+                        base[i] += v
+            vec_pos[qid] = [round(v - w, 3) for v, w in zip(runs[sk][qid], base)]
+            ref_t = entry.get(qid)
+            vec_ref[qid] = ref_t if ref_t else [0.0] * m_of[qid]
+        by_pos[pos] = vec_pos
+        by_pos["deemed"] = vec_ref
+    data_stub["surrogate"]["triples"] = triples
+
+    # ---- meta --------------------------------------------------------------- #
+    gdp = X.year_map(X.read_csv(X.MACRO), "gdp_fy")
+    gdp10 = sum(gdp[y] for y in WINDOW)
+    try:
+        sha = subprocess.run(["git", "-C", L.REPO, "rev-parse", "--short", "HEAD"],
+                             capture_output=True, text=True).stdout.strip()
+    except OSError:
+        sha = ""
+
+    lever_meta = []
+    for lv in L.LEVERS:
+        params = []
+        for p, (pk, knots, scale) in zip(lv["params"], lever_axes(lv["key"])):
+            pm = dict(key=p["key"], label=p["label"], unit=p["unit"], fmt=p["fmt"],
+                      off=p["off"], ref=p["ref"], knots=knots, scale=scale)
+            if "positions" in p:
+                pm["positions"] = p["positions"]
+            else:
+                pm["min"], pm["max"] = p["min"], p["max"]
+                pm["anchors"] = p["anchors"]
+            params.append(pm)
+        kind = {"linear1d": "continuous", "bilinear": "continuous",
+                "ladder": "discrete", "binary": "binary"}[lv["interp"]]
+        lever_meta.append(dict(key=lv["key"], label=lv["label"], grp=lv["grp"],
+                               kind=kind, interp=lv["interp"], cluster=lv["cluster"],
+                               params=params))
+
+    n_scen = sum(len(v) for v in by_kind.values())
+    meta = dict(
+        schema=2, window=[WINDOW[0], WINDOW[-1]], gdp10_fy=round(gdp10, 1),
+        dist_years=[ETR_YEAR], etr_slice=X.ETR_FILTER,
+        etr_income_defs=X.ETR_INCOME_DEFS, etr_comps=X.ETR_COMPS, etr_groups=groups,
+        levers=lever_meta,
+        surrogate=dict(quantities=QIDS, m=m_of, heads_order=HEADS_ORDER,
+                       ref={k: L.REF[k] for k in L.LEVER_KEYS},
+                       cluster=L.CLUSTER,
+                       validation=None, checks=None),
+        provenance=dict(
+            vintage=root, git_sha=sha, date="2026-07-09",
+            n_scenarios=n_scen,
+            corp_note=("corp dial linear 21->28 by construction: single OME wedge "
+                       "at 28, and the OME itself is linear in delta-tau")),
+        units="$B; ETRs in percent (deltas in pp)",
+        placeholder=None,
+    )
+
+    # etr_base: baseline LEVELS by def/group (2027), same comp order
+    payload = dict(meta=meta,
+                   etr_base=etr_base_pack,
+                   surrogate=data_stub["surrogate"])
+    with open(out_path, "w") as fh:
+        json.dump(payload, fh, separators=(",", ":"))
+    print(f"Wrote {out_path} ({os.path.getsize(out_path) / 1e3:.0f} KB)")
+    print(f"  solos {sum(len(v['ct']) for v in solo.values())} grid rows | "
+          f"pairs kept {len(pairs)}/28 | "
+          f"triples kept {len(triples)}/{len(triple_trios)} measured")
+    return payload
+
+
+if __name__ == "__main__":
+    root = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_ROOT
+    out = sys.argv[2] if len(sys.argv) > 2 else DEFAULT_OUT
+    fit(root, out)

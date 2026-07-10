@@ -1,0 +1,921 @@
+<title>How much revenue is there at the top?</title>
+<style>
+  :root {
+    --paper:#f7f6f2; --surface:#fcfcfb; --surface-2:#f1f0ea; --ink:#14130f; --ink-2:#55534c;
+    --muted:#8a887f; --grid:#e4e2d9; --rule:#d7d5cb; --accent:#1c5cab; --accent-2:#cfe0f6;
+    --hair:rgba(20,19,15,0.10); --good:#0a7d3a; --warn:#b9601b;
+    --h-iit:#2a78d6; --h-pay:#1baf7a; --h-cg:#c9891a; --h-est:#008300; --h-wealth:#4a3aa7; --h-corp:#e34948;
+    --l-ord:#b06a2a; --l-cg:#0f95b0; --l-corp:#c2417e; --l-wealth:#7f8f22; --l-deemed:#6d5bd0; --l-estate:#2f9e60; --l-qbi:#d95f3b; --l-taxmax:#3f6fd1;
+    --shadow:0 1px 2px rgba(20,19,15,.05),0 4px 16px rgba(20,19,15,.04); color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){ :root{
+    --paper:#0d0d0d; --surface:#17181a; --surface-2:#202225; --ink:#f4f3ef; --ink-2:#c3c2b7;
+    --muted:#8f8d84; --grid:#2b2c2e; --rule:#33343a; --accent:#4b93ea; --accent-2:#173254;
+    --hair:rgba(255,255,255,0.10); --good:#31b45c; --warn:#e0873f;
+    --h-iit:#3987e5; --h-pay:#199e70; --h-cg:#d9a02f; --h-est:#2ba32b; --h-wealth:#9085e9; --h-corp:#e66767;
+    --l-ord:#c98336; --l-cg:#1f97b3; --l-corp:#d1609b; --l-wealth:#87962c; --l-deemed:#8f7fe0; --l-estate:#33a86b; --l-qbi:#df6c44; --l-taxmax:#6f97e8;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35); color-scheme:dark; } }
+  :root[data-theme="light"]{
+    --paper:#f7f6f2; --surface:#fcfcfb; --surface-2:#f1f0ea; --ink:#14130f; --ink-2:#55534c;
+    --muted:#8a887f; --grid:#e4e2d9; --rule:#d7d5cb; --accent:#1c5cab; --accent-2:#cfe0f6;
+    --hair:rgba(20,19,15,0.10); --good:#0a7d3a; --warn:#b9601b;
+    --h-iit:#2a78d6; --h-pay:#1baf7a; --h-cg:#c9891a; --h-est:#008300; --h-wealth:#4a3aa7; --h-corp:#e34948;
+    --l-ord:#b06a2a; --l-cg:#0f95b0; --l-corp:#c2417e; --l-wealth:#7f8f22; --l-deemed:#6d5bd0; --l-estate:#2f9e60; --l-qbi:#d95f3b; --l-taxmax:#3f6fd1; color-scheme:light; }
+  :root[data-theme="dark"]{
+    --paper:#0d0d0d; --surface:#17181a; --surface-2:#202225; --ink:#f4f3ef; --ink-2:#c3c2b7;
+    --muted:#8f8d84; --grid:#2b2c2e; --rule:#33343a; --accent:#4b93ea; --accent-2:#173254;
+    --hair:rgba(255,255,255,0.10); --good:#31b45c; --warn:#e0873f;
+    --h-iit:#3987e5; --h-pay:#199e70; --h-cg:#d9a02f; --h-est:#2ba32b; --h-wealth:#9085e9; --h-corp:#e66767;
+    --l-ord:#c98336; --l-cg:#1f97b3; --l-corp:#d1609b; --l-wealth:#87962c; --l-deemed:#8f7fe0; --l-estate:#33a86b; --l-qbi:#df6c44; --l-taxmax:#6f97e8; color-scheme:dark; }
+
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--paper); color:var(--ink); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 24px; }
+  h1,h2,h3 { text-wrap:balance; margin:0; font-weight:620; letter-spacing:-0.01em; }
+  a { color:var(--accent); }
+  .eyebrow { font:600 12px/1.2 ui-monospace,monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+  .mono { font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-variant-numeric:tabular-nums; }
+
+  header.top { border-bottom:1px solid var(--rule); background:var(--surface); }
+  .top-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; }
+  .brand { font:600 13px/1 ui-monospace,monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-2); }
+  .top-right { display:flex; align-items:center; gap:14px; }
+  .synthetic { font:600 11px/1 ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--warn); border:1px solid var(--warn); border-radius:999px; padding:4px 10px; white-space:nowrap; }
+  .unit { display:inline-flex; border:1px solid var(--rule); border-radius:8px; overflow:hidden; background:var(--surface-2); }
+  .unit button { font:600 11.5px/1 ui-monospace,monospace; letter-spacing:.03em; padding:7px 11px; background:transparent; color:var(--ink-2); border:0; cursor:pointer; transition:.12s; }
+  .unit button + button { border-left:1px solid var(--rule); }
+  .unit button[aria-pressed="true"] { background:var(--accent); color:#fff; }
+  .unit button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+  .hero { padding:56px 0 44px; border-bottom:1px solid var(--rule); }
+  .hero h1 { font-size:clamp(30px,4.6vw,52px); line-height:1.04; max-width:18ch; }
+  .dekcols { margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:32px; }
+  @media (max-width:760px){ .dekcols{ grid-template-columns:1fr; gap:0; } }
+  .hero .dek { margin:0 0 14px; font-size:17px; color:var(--ink-2); }
+
+  section { padding:48px 0; border-bottom:1px solid var(--rule); }
+  .sec-head { display:flex; align-items:baseline; gap:14px; margin-bottom:8px; }
+  .sec-head h2 { font-size:24px; }
+  .sec-sub { color:var(--ink-2); max-width:70ch; margin:6px 0 26px; }
+
+  .exp { display:grid; grid-template-columns:320px 1fr; gap:28px; align-items:start; }
+  @media (max-width:900px){ .exp{ grid-template-columns:1fr; } }
+  .panel { background:var(--surface); border:1px solid var(--hair); border-radius:12px; box-shadow:var(--shadow); }
+  .controls { padding:18px; position:sticky; top:14px; }
+  .sw { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; background:var(--surface-2); border:1px solid transparent; color:var(--ink); border-radius:9px; padding:9px 11px; cursor:pointer; text-align:left; font-size:13.5px; transition:.12s; }
+  .sw:hover { border-color:var(--hair); }
+  .sw .dot { width:30px; height:18px; border-radius:999px; background:var(--rule); position:relative; flex:none; transition:.14s; }
+  .sw .dot::after { content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:.14s; }
+  .sw[aria-pressed="true"] { background:var(--accent-2); border-color:color-mix(in srgb,var(--accent) 40%,transparent); }
+  .sw[aria-pressed="true"] .dot { background:var(--accent); }
+  .sw[aria-pressed="true"] .dot::after { transform:translateX(12px); }
+  .sw:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .lever { margin-bottom:9px; }
+  .dials { padding:7px 4px 2px 11px; display:none; }
+  .lever.on .dials { display:block; }
+  .drow { display:flex; align-items:center; gap:8px; margin:4px 0; font-size:12px; color:var(--ink-2); }
+  .drow .dlab { flex:1; }
+  .drow input { width:86px; font:600 12.5px/1.2 ui-monospace,monospace; color:var(--ink); background:var(--surface); border:1px solid var(--rule); border-radius:7px; padding:5px 7px; text-align:right; }
+  .drow input:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .drow .dunit { width:18px; color:var(--muted); font:600 11px/1 ui-monospace,monospace; }
+  /* ladder lever wrapper: same bubble as .sw, with the segmented control inside */
+  .swseg { background:var(--surface-2); border:1px solid transparent; border-radius:9px; padding:9px 11px; transition:.12s; }
+  .swseg:hover { border-color:var(--hair); }
+  .swseg .slab { display:block; font-size:13.5px; color:var(--ink); margin-bottom:8px; }
+  .lever.on .swseg { background:var(--accent-2); border-color:color-mix(in srgb,var(--accent) 40%,transparent); }
+  .seg { display:flex; border:1px solid var(--rule); border-radius:8px; overflow:hidden; background:var(--surface); margin:0; }
+  .seg button { flex:1; font:600 11px/1.2 ui-monospace,monospace; padding:7px 4px; background:transparent; color:var(--ink-2); border:0; cursor:pointer; transition:.12s; }
+  .seg button + button { border-left:1px solid var(--rule); }
+  .seg button[aria-pressed="true"] { background:var(--accent); color:#fff; }
+  .btnrow { display:flex; gap:8px; margin-top:14px; }
+  .btnrow button { flex:1; font:600 11.5px/1 ui-monospace,monospace; letter-spacing:.02em; padding:8px 8px; border:1px solid var(--rule); border-radius:8px; background:var(--surface-2); color:var(--ink-2); cursor:pointer; transition:.12s; }
+  .btnrow button:hover { border-color:var(--accent); color:var(--accent); }
+
+  .out { display:flex; flex-direction:column; gap:20px; min-width:0; }
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  @media (max-width:640px){ .tiles{ grid-template-columns:repeat(2,1fr);} }
+  .tile { background:var(--surface); border:1px solid var(--hair); border-radius:11px; padding:14px 15px; box-shadow:var(--shadow); }
+  .tile .k { font:600 10.5px/1.2 ui-monospace,monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .tile .v { font:660 26px/1.05 ui-monospace,monospace; font-variant-numeric:tabular-nums; margin-top:8px; letter-spacing:-.01em; }
+  .tile .alt { font:600 12px/1 ui-monospace,monospace; font-variant-numeric:tabular-nums; color:var(--muted); margin-top:5px; }
+  .tile .s { font-size:11.5px; color:var(--ink-2); margin-top:3px; }
+  .tile.accent .v { color:var(--accent); }
+  .card { background:var(--surface); border:1px solid var(--hair); border-radius:12px; padding:18px 20px; box-shadow:var(--shadow); min-width:0; }
+  .card h3 { font-size:15px; }
+  .card .cap { font-size:12.5px; color:var(--ink-2); margin:4px 0 14px; }
+  .card .step { font:600 10.5px/1 ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--accent); margin-bottom:6px; }
+  figure { margin:0; }
+  svg { display:block; width:100%; height:auto; overflow:visible; }
+  .legend { display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; font-size:12px; color:var(--ink-2); }
+  .legend .it { display:flex; align-items:center; gap:6px; }
+  .legend .sw2 { width:11px; height:11px; border-radius:3px; flex:none; }
+
+  footer { padding:34px 0 60px; color:var(--muted); font-size:12.5px; }
+  footer .wrap > * + * { margin-top:8px; }
+  footer .margins { display:grid; grid-template-columns:1fr 1fr; gap:8px 36px; margin-bottom:16px; }
+  @media (max-width:720px){ footer .margins{ grid-template-columns:1fr; } }
+  footer .mhead { font:600 11px/1 ui-monospace,monospace; letter-spacing:.13em; text-transform:uppercase; color:var(--muted); margin:0 0 6px; }
+  footer .margins ul { margin:0; padding-left:16px; color:var(--ink-2); }
+  footer .margins li { margin:3px 0; }
+</style>
+
+<header class="top"><div class="wrap top-row">
+  <span class="brand">The Budget Lab · Yale</span>
+  <div class="top-right">
+    <span class="synthetic" id="dataBadge">Model output</span>
+  </div>
+</div></header>
+
+<div class="hero"><div class="wrap">
+  <h1>How much revenue is there at the top?</h1>
+  <div class="dekcols">
+    <p class="dek">There are many ways to raise taxes on the rich, and each comes with its own standalone revenue estimate. But these policies tax overlapping bases and change how people respond to one another's rates, so a package does not raise what its parts raise separately. It can raise less, where bases overlap, or more, where one policy shuts down the escape routes from another.</p>
+    <p class="dek">This page quantifies those interactions: eight top-tax policies with adjustable rates and thresholds, combined however you like, using the Budget Lab's tax microsimulation model. Revenue figures are cumulative over 2027–2036, shown in dollars and as a share of GDP.</p>
+  </div>
+</div></div>
+
+<section id="explorer"><div class="wrap">
+  <h2>Build a package</h2>
+  <p class="sec-sub">Switch any policy on and type your own rates and thresholds. The model was run at a lattice of anchor settings — every value in between is interpolated from those runs, and the interpolation is verified against held-out model runs of full packages (the badge above states the bound).</p>
+
+  <div class="exp">
+    <div class="panel controls">
+      <div id="rateSw"></div>
+      <div id="structSw"></div>
+      <div class="btnrow"><button id="resetLaw" type="button">Reset to default (current law)</button></div>
+    </div>
+
+    <div class="out">
+      <div class="tiles" id="tiles"></div>
+
+      <div class="card">
+        <div class="step">Parts vs. whole</div>
+        <h3>Standalone scores vs. the combined package</h3>
+        <div class="cap">The sum of each selected policy's standalone score, compared with the combined package scored as one reform. The first two bars split into the standalone scores. The package bar splits by Shapley contribution: each policy's marginal revenue averaged over every order in which the package could be assembled. Contributions sum to the package total, so interaction effects are shared among the policies responsible. All estimates are measured against the same current-law baseline.</div>
+        <figure><div id="pvw"></div></figure>
+        <div class="legend" id="pvwLegend"></div>
+        <div class="cap mono" id="pvwNote" style="margin:8px 0 0;font-size:11px;color:var(--muted)"></div>
+      </div>
+
+      <div class="card">
+        <div class="step">Spillovers</div>
+        <h3>What each policy does to the other bases</h3>
+        <div class="cap">Each selected policy on its own, at your dial settings, with behavioral responses: where its revenue comes from, by tax type. Segments right of the zero line are revenue raised; segments left of it are revenue drained from other bases as behavior responds. A wealth tax erodes the income-tax, capital-gains, and estate bases through saving and avoidance; a higher corporate rate marks down equity values and with them future capital-gains revenue. These spillovers are part of each policy's own standalone score, which is why they don't show up as package-level interaction above.</div>
+        <figure><div id="spill"></div></figure>
+        <div class="legend" id="spillLegend"></div>
+      </div>
+
+      <div class="card">
+        <div class="step">Distribution</div>
+        <h3>Distribution of tax rates</h3>
+        <div class="cap">Effective tax rate by income percentile in 2027, measured against cash income (expanded cash income) or accrual income (Haig-Simons, which includes unrealized gains). Baseline-fixed ranking; corporate tax under the capital-income convention. Each group shows two bars — baseline law and the package's static rate — stacked by tax type.
+          <span class="unit" id="etrDefTog" role="group" aria-label="Income definition" style="margin-left:10px;vertical-align:middle">
+            <button type="button" data-def="expanded" aria-pressed="true">Cash income</button>
+            <button type="button" data-def="hs" aria-pressed="false">Accrual income</button>
+          </span>
+        </div>
+        <figure><div id="etr"></div></figure>
+        <div class="legend" id="etrLegend"></div>
+        <div class="legend" style="margin-top:6px"><span class="it mono" style="font-size:11px;color:var(--muted)">each percentile, left→right: baseline · static</span></div>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<section id="frontierSec"><div class="wrap">
+  <h2>The frontier: how much is there, at what price?</h2>
+  <p class="sec-sub">Each point below is one package drawn from a lattice over the dial space — every policy at several settings, in every combination. Its horizontal position is what it collects over ten years. Its vertical position is its behavioral gain or leakage: the gap between its conventional and static scores, in cents per dollar actually collected — positive when behavior helps, negative when it erodes the take. When some other package raises more money with less leakage, a package is dominated; the packages nothing dominates form the frontier line, which traces the cheapest available route to any given amount of revenue. Points above the zero line collect more than their static score — taxing gains at death removes the incentive to defer realizations, so revenue comes in above the mechanical estimate. Your current selection is marked.</p>
+  <div class="card">
+    <figure><div id="frontChart"></div></figure>
+    <div class="legend" id="frontLegend"></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="margins">
+    <div>
+      <p class="mhead">Behavioral responses included</p>
+      <ul>
+        <li>Capital-gains realization: timing and permanent responses, including how taxing gains at death changes the incentive to defer</li>
+        <li>Conversion of ordinary income into capital gains</li>
+        <li>Entity shifting between pass-through and C-corporation form, including its payroll-tax base effect</li>
+        <li>Underreporting and evasion</li>
+        <li>Charitable giving</li>
+        <li>Wealth-tax avoidance, applied consistently to the wealth, income, and estate bases</li>
+      </ul>
+    </div>
+    <div>
+      <p class="mhead">Mechanical channels included</p>
+      <ul>
+        <li>Part of new taxes is financed out of saving, which compounds over time into smaller estates and less capital income</li>
+        <li>Corporate incidence on households: lower dividends, interest, rent, and pass-through income, and marked-down equity values that reduce future realized gains</li>
+        <li>Interactions inside the tax calculation itself: rate stacking, base broadening, and revenue moving across bases (income, payroll, corporate, estate, wealth)</li>
+      </ul>
+    </div>
+  </div>
+  <p>Not included: labor-supply responses, macroeconomic feedback, and changes to tax enforcement.</p>
+  <p id="footSource"><strong>Model output, interpolated.</strong> Figures come from the top-tax dials batch of the Budget Lab Tax-Simulator: each policy run at a set of anchor settings, every pair run together at reference settings, and the four policies that share the capital-gains-at-death channel also run three at a time. Any dial setting in between is interpolated with a solo + pairwise + triple decomposition, and the interpolation is validated against held-out model runs of full multi-policy packages at off-anchor settings; the badge states the verified bound. The corporate dial is linear between 21% and 28% by construction — the off-model corporate input is itself linear in the rate change.</p>
+  <p>Revenue figures are 10-year cumulative dollars, with the share of GDP (10-yr revenue ÷ 10-yr cumulative fiscal-year nominal GDP) shown alongside. Policies, effective 2027: top ordinary rate · top capital-gains &amp; dividends rate · corporate rate · annual wealth tax (rate and threshold) · treatment of gains at death (step-up, carryover, or taxed at death) · estate tax (top rate and exemption) · repeal of the QBI deduction · elimination of the Social Security taxable maximum.</p>
+</div></footer>
+
+<script>
+var DATA=/*__ATLAS_DATA__*/null;
+(function(){
+  "use strict";
+  var $=function(s,r){return (r||document).querySelector(s);};
+  if(!DATA){document.body.insertAdjacentHTML('afterbegin','<div style="background:#b9601b;color:#fff;padding:10px 24px;font:600 13px system-ui">No data injected — run other/top_tax/build_atlas.py atlas2_data.json atlas2_built.html other/top_tax/atlas2.html.</div>');return;}
+  var GDP10=DATA.meta.gdp10_fy;
+  var ETRYEAR=String(DATA.meta.dist_years[0]);
+  var INCDEF='expanded';
+  var pg=function(b){ return (b/GDP10*100).toFixed(2)+"%"; };
+  function usd(b){ var v=Math.abs(b),sg=b<0?"−":"";
+    return v>=1000 ? sg+"$"+(v/1000).toFixed(2)+"T" : sg+"$"+Math.round(v)+"B"; }
+  function fmt(b){ return usd(b)+" · "+pg(b); }
+
+  // ---- lever metadata ----------------------------------------------------- //
+  var LEVERS=DATA.meta.levers;                 // canonical order
+  var BYKEY={}; LEVERS.forEach(function(l){BYKEY[l.key]=l;});
+  var LCOLOR={ord:'var(--l-ord)',cg:'var(--l-cg)',corp:'var(--l-corp)',wealth:'var(--l-wealth)',
+    deemed:'var(--l-deemed)',estate:'var(--l-estate)',qbi:'var(--l-qbi)',taxmax:'var(--l-taxmax)'};
+  var SUR=DATA.surrogate, MQ=DATA.meta.surrogate.m;
+  var HEADS_ORDER=DATA.meta.surrogate.heads_order;
+
+  // ---- evaluator (mirrors fit_surrogate.py — keep in lockstep) ------------- //
+  // Knot-verbatim rule: input exactly on a knot returns the stored row with
+  // no interpolation arithmetic (rows[i].slice()).
+  function locate(knots,x,scale){
+    var k=knots,i;
+    if(scale==='log'){ k=knots.map(function(v){return Math.log(v);}); x=Math.log(Math.max(x,1e-12)); }
+    if(x<=k[0])return [0,0];
+    if(x>=k[k.length-1])return [k.length-1,0];
+    for(i=0;i<k.length-1;i++){
+      if(x===k[i])return [i,0];
+      if(x<k[i+1])return [i,(x-k[i])/(k[i+1]-k[i])];
+    }
+    return [k.length-1,0];
+  }
+  function evalGrid(lv,rows,vals){
+    var axes=lv.params;
+    if(axes.length===1){
+      var p=axes[0],x=vals[p.key];
+      if(p.scale==='pos'){ return rows[p.knots.indexOf(x)].slice(); }
+      var it=locate(p.knots,x,p.scale),i=it[0],t=it[1];
+      if(t===0)return rows[i].slice();
+      return rows[i].map(function(a,z){return (1-t)*a+t*rows[i+1][z];});
+    }
+    var p1=axes[0],p2=axes[1],n2=p2.knots.length;
+    var l1=locate(p1.knots,vals[p1.key],p1.scale),i1=l1[0],t1=l1[1];
+    var l2=locate(p2.knots,vals[p2.key],p2.scale),i2=l2[0],t2=l2[1];
+    function row(a,b){return rows[a*n2+b];}
+    if(t1===0&&t2===0)return row(i1,i2).slice();
+    var j1=Math.min(i1+1,p1.knots.length-1),j2=Math.min(i2+1,n2-1);
+    var r00=row(i1,i2),r01=row(i1,j2),r10=row(j1,i2),r11=row(j1,j2);
+    return r00.map(function(_,z){
+      return (1-t1)*((1-t2)*r00[z]+t2*r01[z])+t1*((1-t2)*r10[z]+t2*r11[z]);});
+  }
+  function gOf(key,vals){
+    return evalGrid(BYKEY[key],SUR.g[key].map(function(v){return [v];}),vals)[0];
+  }
+  // Pair term honoring per-position vectors (the discrete-lever escape hatch):
+  // when the pair carries byPos and one lever is the ladder (deemed), use the
+  // position-specific vector scaled by the OTHER lever's g only.
+  function pairTerm(a,b,qid,s,g){
+    var pe=SUR.pairs[a+'|'+b];
+    if(!pe)return null;
+    var ladder=(a==='deemed'||b==='deemed')?'deemed':null;
+    if(pe.byPos&&ladder){
+      var pos=s[ladder].pos;
+      if(pe.byPos[pos]){
+        var other=(a===ladder)?b:a;
+        var v=pe.byPos[pos][qid];
+        return v?{vec:v,w:g[other]}:null;
+      }
+    }
+    return pe[qid]?{vec:pe[qid],w:g[a]*g[b]}:null;
+  }
+  // Triple term with the same per-position rule: byPos + deemed member ->
+  // position vector scaled by the product of the other two levers' g.
+  function tripleTerm(entry,ks,qid,s,g){
+    if(entry.byPos&&ks.indexOf('deemed')>=0){
+      var pos=s.deemed.pos;
+      if(entry.byPos[pos]){
+        var w=1;
+        ks.forEach(function(k){ if(k!=='deemed')w*=g[k]; });
+        var v=entry.byPos[pos][qid];
+        return v?{vec:v,w:w}:null;
+      }
+    }
+    if(!entry[qid])return null;
+    var w2=1; ks.forEach(function(k){w2*=g[k];});
+    return {vec:entry[qid],w:w2};
+  }
+  function evalQ(qid,s){
+    var m=MQ[qid],tot=[],i,j,x;
+    for(x=0;x<m;x++)tot.push(0);
+    var on=[]; LEVERS.forEach(function(l){ if(s[l.key])on.push(l.key); });
+    var g={};
+    on.forEach(function(k){
+      var f=SUR.solo[k][qid];
+      if(f){ var v=evalGrid(BYKEY[k],f,s[k]); for(x=0;x<m;x++)tot[x]+=v[x]; }
+      g[k]=gOf(k,s[k]);
+    });
+    for(i=0;i<on.length;i++)for(j=i+1;j<on.length;j++){
+      var pt=pairTerm(on[i],on[j],qid,s,g);
+      if(pt){ for(x=0;x<m;x++)tot[x]+=pt.vec[x]*pt.w; }
+    }
+    Object.keys(SUR.triples).forEach(function(tk){
+      var ks=tk.split('|');
+      if(ks.every(function(k){return g[k]!==undefined;})){
+        var tt=tripleTerm(SUR.triples[tk],ks,qid,s,g);
+        if(tt){ for(x=0;x<m;x++)tot[x]+=tt.vec[x]*tt.w; }
+      }
+    });
+    return tot;
+  }
+  // Closed-form Shapley of predicted conv total10:
+  // phi_i = f_i + 1/2 sum_j I_ij g_i g_j + 1/3 sum_{j<k} T_ijk g_i g_j g_k
+  function shapley(s){
+    var on=[]; LEVERS.forEach(function(l){ if(s[l.key])on.push(l.key); });
+    var g={},phi={},i,j;
+    on.forEach(function(k){
+      g[k]=gOf(k,s[k]);
+      var f=SUR.solo[k].ct;
+      phi[k]=f?evalGrid(BYKEY[k],f,s[k])[0]:0;
+    });
+    for(i=0;i<on.length;i++)for(j=i+1;j<on.length;j++){
+      var pt=pairTerm(on[i],on[j],'ct',s,g);
+      if(pt){ var half=0.5*pt.vec[0]*pt.w;
+        phi[on[i]]+=half; phi[on[j]]+=half; }
+    }
+    Object.keys(SUR.triples).forEach(function(tk){
+      var ks=tk.split('|');
+      if(ks.every(function(k){return g[k]!==undefined;})){
+        var tt=tripleTerm(SUR.triples[tk],ks,'ct',s,g);
+        if(tt){ var third=tt.vec[0]*tt.w/3;
+          ks.forEach(function(k){phi[k]+=third;}); }
+      }
+    });
+    return phi;
+  }
+
+  // ---- dial state ----------------------------------------------------------- //
+  // state[key] = {on:bool, vals:{param:value}} (vals in native units: %, $)
+  var state={};
+  function lawVal(p){ return Math.min(Math.max(p.off,p.min),p.max); }
+  function initState(){
+    LEVERS.forEach(function(l){
+      var vals={};
+      l.params.forEach(function(p){
+        // continuous dials start at current law (zero effect), clamped into
+        // the modeled range. binary/ladder params keep their on-position
+        // value: their off state is the switch itself.
+        vals[p.key]=(p.fmt==='pct'||p.fmt==='usd')? lawVal(p) : p.ref;
+      });
+      state[l.key]={on:false,vals:vals};
+    });
+  }
+  function surState(){
+    var s={};
+    LEVERS.forEach(function(l){
+      if(!state[l.key].on)return;
+      var vals={},ok=true;
+      l.params.forEach(function(p){ vals[p.key]=state[l.key].vals[p.key]; });
+      if(ok)s[l.key]=vals;
+    });
+    return s;
+  }
+  function clampParam(p,x){
+    if(p.scale==='pos'||p.fmt==='bool'||p.fmt==='pos')return x;
+    if(isNaN(x)||x===null)return lawVal(p);
+    return Math.min(Math.max(x,p.min),p.max);
+  }
+
+  // ---- UI ------------------------------------------------------------------- //
+  var DOLLAR=1e6; // $ inputs shown in $M
+  function fmtIn(p,v){ return p.unit==='$'? +(v/DOLLAR).toFixed(2) : +(+v).toFixed(2); }
+  function parseIn(p,raw){
+    var x=parseFloat(raw);
+    if(isNaN(x))return lawVal(p);
+    return clampParam(p,p.unit==='$'? x*DOLLAR : x);
+  }
+  function renderControls(){
+    ['rate','struct'].forEach(function(gname){
+      var host=$(gname==='rate'?'#rateSw':'#structSw'); host.innerHTML='';
+      LEVERS.filter(function(l){return l.grp===gname;}).forEach(function(l){
+        var wrapEl=document.createElement('div'); wrapEl.className='lever'; wrapEl.dataset.key=l.key;
+        if(l.interp==='ladder'){
+          var box=document.createElement('div'); box.className='swseg';
+          var slab=document.createElement('span'); slab.className='slab';
+          slab.textContent=l.label; box.appendChild(slab);
+          var seg=document.createElement('div'); seg.className='seg';
+          var names={off:'Step-up',carryover:'Carryover',deemed:'Taxed at death'};
+          l.params[0].positions.forEach(function(pos){
+            var b=document.createElement('button'); b.type='button';
+            b.dataset.key=l.key; b.dataset.pos=pos;
+            b.textContent=names[pos]||pos;
+            b.setAttribute('aria-pressed','false');
+            b.onclick=function(){
+              state[l.key].on=(pos!=='off');
+              state[l.key].vals[l.params[0].key]=pos;
+              renderAll();
+            };
+            seg.appendChild(b);
+          });
+          box.appendChild(seg);
+          wrapEl.appendChild(box);
+        } else {
+          var b=document.createElement('button'); b.className='sw'; b.type='button';
+          b.setAttribute('aria-pressed','false'); b.dataset.key=l.key;
+          b.innerHTML='<span>'+l.label+'</span><span class="dot"></span>';
+          b.onclick=function(){ state[l.key].on=!state[l.key].on; renderAll(); };
+          wrapEl.appendChild(b);
+          if(l.kind==='continuous'){
+            var dials=document.createElement('div'); dials.className='dials';
+            l.params.forEach(function(p){
+              var row=document.createElement('div'); row.className='drow';
+              var sp=document.createElement('span'); sp.className='dlab';
+              sp.textContent=p.label+(p.unit==='$'?' ($M)':'');
+              row.appendChild(sp);
+              var inp=document.createElement('input');
+              inp.type='number'; inp.dataset.lever=l.key; inp.dataset.param=p.key;
+              inp.min=fmtIn(p,p.min); inp.max=fmtIn(p,p.max);
+              inp.step=p.unit==='$'?1:0.1;
+              inp.value=fmtIn(p,state[l.key].vals[p.key]);
+              inp.onchange=function(){
+                var v=parseIn(p,inp.value);
+                state[l.key].vals[p.key]=v;
+                inp.value=fmtIn(p,v);          // clamp reflected in the box
+                renderAll();
+              };
+              row.appendChild(inp);
+              var un=document.createElement('span'); un.className='dunit';
+              un.textContent=p.unit==='$'?'M':p.unit;
+              row.appendChild(un);
+              dials.appendChild(row);
+            });
+            wrapEl.appendChild(dials);
+          }
+        }
+        host.appendChild(wrapEl);
+      });
+    });
+    $('#resetLaw').onclick=function(){
+      initState();                       // back to boot state: off, current-law values
+      syncInputs(); renderAll();
+    };
+  }
+  function syncInputs(){
+    Array.prototype.forEach.call(document.querySelectorAll('input[data-lever]'),function(inp){
+      if(!inp.dataset||!inp.dataset.lever)return;
+      var l=BYKEY[inp.dataset.lever],p=null;
+      l.params.forEach(function(pp){ if(pp.key===inp.dataset.param)p=pp; });
+      if(p)inp.value=fmtIn(p,state[l.key].vals[p.key]);
+    });
+  }
+
+  // ---- ETR machinery --------------------------------------------------------- //
+  var GROUPS_ALL=DATA.meta.etr_groups;
+  var PCTS=GROUPS_ALL.filter(function(g){return g!=='Negative income';});
+  var CI={}; DATA.meta.etr_comps.forEach(function(c,i){CI[c]=i;});
+  var NC=DATA.meta.etr_comps.length;
+  var ETRCOMPS=[{k:'iit',c:'var(--h-iit)',l:'Individual income'},{k:'pay',c:'var(--h-pay)',l:'Payroll'},
+    {k:'est',c:'var(--h-est)',l:'Estate / deemed at death'},{k:'wealth',c:'var(--h-wealth)',l:'Wealth'},{k:'corp',c:'var(--h-corp)',l:'Corporate'}];
+  function etrStack(row){
+    return {iit:row[CI.income_tax],pay:row[CI.payroll],est:row[CI.estate]+row[CI.deemed],
+            wealth:row[CI.wealth],corp:row[CI.corp]};
+  }
+  function etrRowAt(deltaVec,idf,grp){
+    // reform row = baseline + delta, floored at 0 per component
+    var di=DATA.meta.etr_income_defs.indexOf(idf),gi=GROUPS_ALL.indexOf(grp);
+    var base=(DATA.etr_base[idf]||{})[ETRYEAR];
+    var brow=base&&base[grp]?base[grp]:null;
+    if(!brow)return null;
+    var out=[];
+    for(var c=0;c<NC;c++){
+      var d=deltaVec?deltaVec[(di*GROUPS_ALL.length+gi)*NC+c]:0;
+      out.push(Math.max(0,brow[c]+d));
+    }
+    return out;
+  }
+  function etrSeries(deltaVec,idf){
+    var out={iit:[],pay:[],est:[],wealth:[],corp:[]};
+    PCTS.forEach(function(g){
+      var row=etrRowAt(deltaVec,idf,g);
+      var st=row?etrStack(row):{iit:0,pay:0,est:0,wealth:0,corp:0};
+      Object.keys(out).forEach(function(k){out[k].push(st[k]);});
+    });
+    return out;
+  }
+  function etrBaseSeries(idf){ return etrSeries(null,idf); }
+
+  // ---- compute -------------------------------------------------------------- //
+  function compute(){
+    var s=surState();
+    var keys=Object.keys(s);
+    var ordKeys=LEVERS.map(function(l){return l.key;}).filter(function(k){return s[k];});
+    var actual=keys.length?evalQ('ct',s)[0]:0;
+    var comboStatic=keys.length?evalQ('st',s)[0]:0;
+    var parts=[],staticParts=0,convParts=0;
+    ordKeys.forEach(function(k){
+      var solo={}; solo[k]=s[k];
+      var c1=evalQ('ct',solo)[0],s1=evalQ('st',solo)[0];
+      parts.push({key:k,s:s1,c:c1}); staticParts+=s1; convParts+=c1;
+    });
+    var phi=keys.length?shapley(s):{};
+    var etrDelta=keys.length?evalQ('etr',s):null;
+    var etr={baseline:etrBaseSeries(INCDEF),static:etrSeries(etrDelta,INCDEF)};
+    var etrMax=0;
+    DATA.meta.etr_income_defs.forEach(function(idf){
+      [etrBaseSeries(idf),etrSeries(etrDelta,idf)].forEach(function(ser){
+        for(var i=0;i<PCTS.length;i++){
+          var t=0; Object.keys(ser).forEach(function(k){t+=Math.max(0,ser[k][i]);});
+          if(t>etrMax)etrMax=t;
+        }
+      });
+    });
+    var iTop=PCTS.indexOf('Top 0.1%'); if(iTop<0)iTop=PCTS.length-1;
+    var totTop={baseline:0,static:0};
+    Object.keys(etr.baseline).forEach(function(k){
+      totTop.baseline+=etr.baseline[k][iTop]; totTop.static+=etr.static[k][iTop];});
+    return {s:s,keys:ordKeys,actual:actual,comboStatic:comboStatic,parts:parts,
+      staticParts:staticParts,convParts:convParts,phi:phi,etr:etr,etrMax:etrMax,totTop:totTop};
+  }
+
+  // ---- charts (segBars/spill/etr reused from atlas v1) ------------------------ //
+  function svg(w,h){return '<svg viewBox="0 0 '+w+' '+h+'" role="img" preserveAspectRatio="xMidYMid meet">';}
+  function segBars(rows,w){
+    var h=rows.length*46+6,bw=Math.max(60,w-224-130),x0=214;
+    var s=svg(w,h);
+    rows.forEach(function(r,i){
+      var y=i*46+6,tot=0; r.segs.forEach(function(g2){tot+=Math.max(0,g2.val);});
+      s+='<text x="206" y="'+(y+17)+'" text-anchor="end" font-size="12.5" fill="var(--ink-2)" font-family="system-ui">'+r.label+'</text>';
+      if(r.sub)s+='<text x="206" y="'+(y+31)+'" text-anchor="end" font-size="10.5" fill="var(--muted)" font-family="ui-monospace,monospace">'+r.sub+'</text>';
+      s+='<rect x="'+x0+'" y="'+y+'" width="'+bw+'" height="32" rx="5" fill="var(--surface-2)"/>';
+      var sc=bw/r.max,x=x0;
+      r.segs.forEach(function(g2){ if(g2.val<=0)return; var wseg=g2.val*sc;
+        s+='<rect x="'+x.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,wseg-2).toFixed(1)+'" height="32" rx="3" fill="'+g2.color+'"><title>'+g2.tip+'</title></rect>';
+        x+=wseg; });
+      s+='<text x="'+(x0+tot*sc+10).toFixed(1)+'" y="'+(y+21)+'" text-anchor="start" font-size="13" font-weight="600" font-family="ui-monospace,monospace" fill="var(--ink)">'+fmt(tot)+'</text>';
+    });
+    return s+'</svg>';
+  }
+  var HEADS=[{k:'iit',label:'Individual income (ordinary)',c:'var(--h-iit)'},{k:'cg',label:'Capital gains & dividends',c:'var(--h-cg)'},
+    {k:'corp',label:'Corporate',c:'var(--h-corp)'},{k:'est',label:'Estate',c:'var(--h-est)'},
+    {k:'wealth',label:'Wealth',c:'var(--h-wealth)'},{k:'pay',label:'Payroll',c:'var(--h-pay)'},
+    {k:'other',label:'Other',c:'var(--muted)'}];
+  function headColor(k){var m={iit:'--h-iit',cg:'--h-cg',corp:'--h-corp',est:'--h-est',wealth:'--h-wealth',pay:'--h-pay',other:'--muted'};return 'var('+m[k]+')';}
+  function spillChart(rows,w){
+    if(!rows.length)return '';
+    var order=['iit','cg','pay','corp','est','wealth','other'];
+    var rh=44,padT=22,bw=Math.max(60,w-224-130),x0=214,h=rows.length*rh+padT+10,negX=0,posX=0;
+    rows.forEach(function(r){var n=0,p=0;
+      order.forEach(function(k){var v=r.heads[k]||0;if(v<0)n-=v;else p+=v;});
+      negX=Math.max(negX,n);posX=Math.max(posX,p);});
+    var sc=bw/((negX+posX)||1),xz=x0+negX*sc,s=svg(w,h);
+    s+='<line x1="'+xz.toFixed(1)+'" x2="'+xz.toFixed(1)+'" y1="'+(padT-4)+'" y2="'+(h-10)+'" stroke="var(--rule)" stroke-width="1.5"/>';
+    s+='<text x="'+xz.toFixed(1)+'" y="'+(padT-8)+'" text-anchor="middle" font-size="9.5" fill="var(--muted)" font-family="ui-monospace,monospace">$0</text>';
+    rows.forEach(function(r,i){
+      var y=padT+i*rh+6,xp=xz,xn=xz,tot=0;
+      s+='<text x="206" y="'+(y+17)+'" text-anchor="end" font-size="12.5" fill="var(--ink-2)" font-family="system-ui">'+r.label+'</text>';
+      order.forEach(function(k){var v=r.heads[k]||0;tot+=v;var wseg=Math.abs(v)*sc;if(wseg<1)return;
+        var hn=HEADS.filter(function(z){return z.k===k;})[0],lab=(hn?hn.label:k)+': '+fmt(v);
+        if(v>0){s+='<rect x="'+xp.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,wseg-2).toFixed(1)+'" height="26" rx="3" fill="'+headColor(k)+'"><title>'+r.label+' · '+lab+'</title></rect>';xp+=wseg;}
+        else{xn-=wseg;s+='<rect x="'+xn.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,wseg-2).toFixed(1)+'" height="26" rx="3" fill="'+headColor(k)+'" opacity="0.85"><title>'+r.label+' · '+lab+' (drained from this base)</title></rect>';}
+      });
+      s+='<text x="'+(x0+bw+12)+'" y="'+(y+18)+'" text-anchor="start" font-size="12.5" font-weight="600" font-family="ui-monospace,monospace" fill="var(--ink-2)">'+usd(tot)+'</text>';
+    });
+    return s+'</svg>';
+  }
+  function combinedEtr(d,w){
+    var comps=['iit','pay','est','wealth','corp'].map(function(k){return ETRCOMPS.filter(function(e){return e.k===k;})[0];});
+    var groups=['baseline','static'],gl={baseline:'b',static:'s'};
+    // Two distinct slicings share this chart: mutually exclusive quintiles,
+    // then the top-decile breakout (nested inside quintile 5). A gap +
+    // divider + captions keep the reader from reading them as one scale.
+    var nQ=PCTS.filter(function(g){return g.indexOf('Quintile')===0;}).length;
+    var n=PCTS.length,SPLIT=28,h=338,pad={l:34,r:12,t:34,b:46},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
+    var maxv=Math.max(d.etrMax*1.08,10);
+    var Y=function(v){return pad.t+ih-(v/maxv)*ih;};
+    var gw=(iw-SPLIT)/n,ng=groups.length,bw=Math.min(20,gw*0.28),gap=gw*0.07,off=(gw-(ng*bw+(ng-1)*gap))/2;
+    var s=svg(w,h);
+    for(var g=0;g<=maxv;g+=10){var y=Y(g);s+='<line x1="'+pad.l+'" x2="'+(w-pad.r)+'" y1="'+y+'" y2="'+y+'" stroke="var(--grid)" stroke-width="1"/>';
+      s+='<text x="'+(pad.l-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="var(--muted)" font-family="ui-monospace,monospace">'+g+'%</text>';}
+    var xd=pad.l+nQ*gw+SPLIT/2;
+    s+='<line x1="'+xd.toFixed(1)+'" x2="'+xd.toFixed(1)+'" y1="'+pad.t+'" y2="'+(pad.t+ih)+'" stroke="var(--rule)" stroke-width="1" stroke-dasharray="3 4"/>';
+    s+='<text x="'+(pad.l+nQ*gw/2).toFixed(1)+'" y="14" text-anchor="middle" font-size="9.5" font-weight="600" letter-spacing="0.08em" fill="var(--muted)" font-family="ui-monospace,monospace">BY QUINTILE</text>';
+    s+='<text x="'+(pad.l+nQ*gw+SPLIT+(n-nQ)*gw/2).toFixed(1)+'" y="14" text-anchor="middle" font-size="9.5" font-weight="600" letter-spacing="0.08em" fill="var(--muted)" font-family="ui-monospace,monospace">TOP DECILE BREAKOUT · INSIDE QUINTILE 5</text>';
+    for(var i=0;i<n;i++){
+      var gx=pad.l+i*gw+(i>=nQ?SPLIT:0);
+      groups.forEach(function(grp,gi){
+        var bx=gx+off+gi*(bw+gap),cy=pad.t+ih;
+        comps.forEach(function(c){var val=d.etr[grp][c.k][i];if(val<=0.01)return;var sh=(val/maxv)*ih;
+          s+='<rect x="'+bx.toFixed(1)+'" y="'+(cy-sh).toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0,sh-1).toFixed(1)+'" fill="'+c.c+'"/>'; cy-=sh;});
+        s+='<text x="'+(bx+bw/2).toFixed(1)+'" y="'+(pad.t+ih+11)+'" text-anchor="middle" font-size="8" fill="var(--muted)" font-family="ui-monospace,monospace">'+gl[grp]+'</text>';
+      });
+      s+='<text x="'+(gx+gw/2).toFixed(1)+'" y="'+(h-9)+'" text-anchor="middle" font-size="9.5" fill="var(--ink-2)" font-family="ui-monospace,monospace">'+PCTS[i]+'</text>';
+    }
+    return s+'</svg>';
+  }
+
+  // ---- frontier: deterministic lattice over the dial space ------------------- //
+  // Options per lever (off + a few deterministic settings); per-option
+  // {fct, fst, g} precomputed once, so the lattice sweep is pure arithmetic.
+  function latticeOptions(){
+    var opts={};
+    LEVERS.forEach(function(l){
+      var list=[null];                            // null = off
+      if(l.interp==='linear1d'){
+        var p=l.params[0],vals=[];
+        if(p.knots.length<=2){ vals=[p.max]; }    // corp: off/on
+        else { [1/3,2/3,1].forEach(function(f){vals.push(+(p.min+f*(p.max-p.min)).toFixed(2));}); }
+        vals.forEach(function(v){var o={};o[p.key]=v;list.push(o);});
+      } else if(l.interp==='bilinear'){
+        var p1=l.params[0],p2=l.params[1];
+        var r1=[2/3,1].map(function(f){return +(p1.min+f*(p1.max-p1.min)).toFixed(2);});
+        var r2;
+        if(l.key==='wealth'){ r2=[p2.min,p2.max]; }
+        else { r2=[1/3,1].map(function(f){return +(p2.off-f*(p2.off-p2.min)).toFixed(0);}); }
+        r1.forEach(function(a){r2.forEach(function(b){
+          var o={};o[p1.key]=a;o[p2.key]=b;list.push(o);});});
+      } else if(l.interp==='ladder'){
+        l.params[0].positions.forEach(function(pos){
+          if(pos==='off')return;
+          var o={};o[l.params[0].key]=pos;list.push(o);});
+      } else { var o2={};o2[l.params[0].key]=1;list.push(o2); }
+      opts[l.key]=list;
+    });
+    return opts;
+  }
+  var FRONTD=null,FRONTSVG='';
+  // compact "lever + its dial settings" label for frontier tooltips,
+  // e.g. "cg 40%", "wealth 3.33% >$50M", "estate 53.3% $8.5M exem", "carryover"
+  function optLabel(l,vals){
+    if(!vals)return l.key;
+    if(l.interp==='ladder')return String(vals[l.params[0].key]);
+    if(l.interp==='binary')return l.key;
+    return l.key+' '+l.params.map(function(p){
+      var v=vals[p.key];
+      if(p.fmt==='pct')return (+v).toFixed(2).replace(/\.?0+$/,'')+'%';
+      if(p.fmt==='usd')return (p.key==='thr'?'>':'')+'$'+(v>=1e9?(v/1e9).toFixed(1).replace(/\.0$/,'')+'B':(v/1e6).toFixed(1).replace(/\.0$/,'')+'M')+(p.key==='exem'?' exem':'');
+      return String(v);
+    }).join(' ');
+  }
+  function frontierData(){
+    var opts=latticeOptions();
+    var tabs=LEVERS.map(function(l){
+      return opts[l.key].map(function(o){
+        if(o===null)return {fct:0,fst:0,g:0,on:false,vals:null};
+        var st1={}; st1[l.key]=o;
+        return {fct:evalQ('ct',st1)[0],fst:evalQ('st',st1)[0],g:gOf(l.key,o),on:true,vals:o};
+      });
+    });
+    // pair/triple lookup tables keyed by lever index
+    var K=LEVERS.length,pairCT=[],pairST=[],i,j;
+    for(i=0;i<K;i++){pairCT.push([]);pairST.push([]);
+      for(j=0;j<K;j++){pairCT[i].push(0);pairST[i].push(0);}}
+    for(i=0;i<K;i++)for(j=i+1;j<K;j++){
+      var pe=SUR.pairs[LEVERS[i].key+'|'+LEVERS[j].key];
+      if(pe){ pairCT[i][j]=pe.ct?pe.ct[0]:0; pairST[i][j]=pe.st?pe.st[0]:0; }
+    }
+    var IDX={}; LEVERS.forEach(function(l,z){IDX[l.key]=z;});
+    // byPos pairs leave the generic g*g tables and get position-keyed terms
+    var DIDX=IDX.deemed,bpp=[];
+    Object.keys(SUR.pairs).forEach(function(pk){
+      var pe=SUR.pairs[pk]; if(!pe.byPos||DIDX===undefined)return;
+      var ks=pk.split('|'); if(ks[0]!=='deemed'&&ks[1]!=='deemed')return;
+      var o=IDX[ks[0]==='deemed'?ks[1]:ks[0]];
+      bpp.push({o:o,byPos:pe.byPos});
+      var lo=Math.min(o,DIDX),hi=Math.max(o,DIDX);
+      pairCT[lo][hi]=0; pairST[lo][hi]=0;
+    });
+    var trips=Object.keys(SUR.triples).map(function(tk){
+      var ks=tk.split('|'),e=SUR.triples[tk];
+      var t={a:IDX[ks[0]],b:IDX[ks[1]],c:IDX[ks[2]],
+        ct:e.ct?e.ct[0]:0, st:e.st?e.st[0]:0, others:null, byPos:null};
+      if(e.byPos&&ks.indexOf('deemed')>=0){
+        t.byPos={};
+        Object.keys(e.byPos).forEach(function(pos){
+          t.byPos[pos]={ct:e.byPos[pos].ct?e.byPos[pos].ct[0]:0,
+                        st:e.byPos[pos].st?e.byPos[pos].st[0]:0};
+        });
+        t.others=ks.filter(function(k){return k!=='deemed';}).map(function(k){return IDX[k];});
+      }
+      return t;
+    });
+    var pts=[];
+    var counts=tabs.map(function(t){return t.length;});
+    var idx=[]; for(i=0;i<K;i++)idx.push(0);
+    for(;;){
+      var ct=0,st=0,gv=[],nOn=0;
+      for(i=0;i<K;i++){ var cell=tabs[i][idx[i]];
+        ct+=cell.fct; st+=cell.fst; gv.push(cell.g); if(cell.on)nOn++; }
+      if(nOn>0){
+        for(i=0;i<K;i++){ if(!gv[i])continue;
+          for(j=i+1;j<K;j++){ if(!gv[j])continue;
+            var w=gv[i]*gv[j]; ct+=pairCT[i][j]*w; st+=pairST[i][j]*w; } }
+        if(DIDX!==undefined&&tabs[DIDX][idx[DIDX]].on){
+          var dpos=tabs[DIDX][idx[DIDX]].vals[LEVERS[DIDX].params[0].key];
+          bpp.forEach(function(e){
+            var v=e.byPos[dpos],go=gv[e.o];
+            if(v&&go){ ct+=(v.ct?v.ct[0]:0)*go; st+=(v.st?v.st[0]:0)*go; }
+          });
+        }
+        trips.forEach(function(t){
+          if(t.byPos&&DIDX!==undefined&&tabs[DIDX][idx[DIDX]].on){
+            var tpos=tabs[DIDX][idx[DIDX]].vals[LEVERS[DIDX].params[0].key];
+            if(t.byPos[tpos]){
+              var wo=gv[t.others[0]]*gv[t.others[1]];
+              if(wo){ ct+=t.byPos[tpos].ct*wo; st+=t.byPos[tpos].st*wo; }
+              return;
+            }
+          }
+          var w3=gv[t.a]*gv[t.b]*gv[t.c];
+          if(w3){ ct+=t.ct*w3; st+=t.st*w3; }
+        });
+        if(ct>0){
+          var name=[];
+          for(i=0;i<K;i++)if(tabs[i][idx[i]].on)name.push(optLabel(LEVERS[i],tabs[i][idx[i]].vals));
+          pts.push({cv:ct,st:st,lk:100*(ct-st)/ct,name:name.join(' + ')});
+        }
+      }
+      var d=K-1;
+      while(d>=0){ idx[d]++; if(idx[d]<counts[d])break; idx[d]=0; d--; }
+      if(d<0)break;
+    }
+    var front=[],best=-Infinity;
+    pts.slice().sort(function(a,b){return b.cv-a.cv||b.lk-a.lk;}).forEach(function(p){
+      if(p.lk>best+1e-9){front.push(p);best=p.lk;p.onFront=true;}});
+    front.reverse();
+    return {pts:pts,front:front,n:pts.length};
+  }
+  var DOTFILL='color-mix(in srgb,var(--accent) 45%,var(--surface-2))';
+  function frontierBase(w){
+    var YMIN=-62,YMAX=65,h=460,pad={l:64,r:26,t:26,b:54},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
+    var xmax=0; FRONTD.pts.forEach(function(p){xmax=Math.max(xmax,p.cv);}); xmax*=1.05;
+    var X=function(v){return pad.l+v/xmax*iw;},
+        Y=function(v){return pad.t+(YMAX-Math.max(YMIN,Math.min(YMAX,v)))/(YMAX-YMIN)*ih;};
+    FRONTD.geom={X:X,Y:Y,YMIN:YMIN,YMAX:YMAX,pad:pad,h:h,w:w};
+    var s=svg(w,h);
+    s+='<rect x="'+pad.l+'" y="'+pad.t+'" width="'+iw+'" height="'+(Y(0)-pad.t).toFixed(1)+'" fill="var(--good)" opacity="0.05"/>';
+    for(var gx=0;gx<=xmax;gx+=1000){var xx=X(gx).toFixed(1);
+      s+='<line x1="'+xx+'" x2="'+xx+'" y1="'+pad.t+'" y2="'+(h-pad.b)+'" stroke="var(--grid)"/>';
+      s+='<text x="'+xx+'" y="'+(h-pad.b+16)+'" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="ui-monospace,monospace">'+(gx?('$'+(gx/1000)+'T'):'0')+'</text>';}
+    for(var gy=-60;gy<=60;gy+=20){var yy=Y(gy).toFixed(1);
+      s+='<line x1="'+pad.l+'" x2="'+(w-pad.r)+'" y1="'+yy+'" y2="'+yy+'" stroke="'+(gy===0?'var(--rule)':'var(--grid)')+'" stroke-width="'+(gy===0?1.5:1)+'"/>';
+      s+='<text x="'+(pad.l-8)+'" y="'+(+yy+3.5)+'" text-anchor="end" font-size="10" fill="var(--muted)" font-family="ui-monospace,monospace">'+(gy>0?'+':'')+gy+'¢</text>';}
+    s+='<text x="'+pad.l+'" y="'+(pad.t-10)+'" font-size="10.5" fill="var(--ink-2)" font-family="ui-monospace,monospace">behavioral gain (+) or leakage (−), ¢ per $ collected · above $0 line = collects more than the static ask</text>';
+    s+='<text x="'+(w-pad.r)+'" y="'+(h-12)+'" text-anchor="end" font-size="10.5" fill="var(--ink-2)" font-family="ui-monospace,monospace">conventional revenue, 10 years →</text>';
+    // dominated cloud: binned density (the lattice is thousands of points)
+    var NBX=64,NBY=40,bins={},offCount=0;
+    FRONTD.pts.forEach(function(p){
+      if(p.onFront)return;
+      if(p.lk<YMIN){offCount++;return;}
+      var bx=Math.min(NBX-1,Math.max(0,Math.floor((X(p.cv)-pad.l)/iw*NBX)));
+      var by=Math.min(NBY-1,Math.max(0,Math.floor((Y(p.lk)-pad.t)/ih*NBY)));
+      var k=bx+'|'+by; bins[k]=(bins[k]||0)+1;
+    });
+    var maxc=1; Object.keys(bins).forEach(function(k){maxc=Math.max(maxc,bins[k]);});
+    Object.keys(bins).sort().forEach(function(k){
+      var xy=k.split('|'),bx=+xy[0],by=+xy[1];
+      var op=(0.10+0.45*Math.log(1+bins[k])/Math.log(1+maxc)).toFixed(3);
+      s+='<circle cx="'+(pad.l+(bx+0.5)/NBX*iw).toFixed(1)+'" cy="'+(pad.t+(by+0.5)/NBY*ih).toFixed(1)+'" r="2.6" fill="'+DOTFILL+'" opacity="'+op+'"/>';
+    });
+    if(offCount)s+='<text x="'+(pad.l+8)+'" y="'+(h-pad.b-8)+'" font-size="9.5" fill="var(--muted)" font-family="ui-monospace,monospace">▼ '+offCount+' high-leakage packages off scale</text>';
+    s+='<path d="'+FRONTD.front.map(function(p,i){return (i?'L':'M')+X(p.cv).toFixed(1)+' '+Y(p.lk).toFixed(1);}).join(' ')+'" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0.75"/>';
+    FRONTD.front.forEach(function(p){
+      s+='<circle cx="'+X(p.cv).toFixed(1)+'" cy="'+Y(p.lk).toFixed(1)+'" r="5" fill="'+DOTFILL+'" stroke="var(--accent)" stroke-width="2"><title>'+p.name+' · '+usd(p.cv)+' at '+(p.lk>0?'+':'')+Math.round(p.lk)+'¢</title></circle>';
+    });
+    return s+'</svg>';
+  }
+  function frontierWithMarker(d){
+    if(!FRONTSVG)return '';
+    if(!d.keys.length||!(d.actual>0))return FRONTSVG;
+    var g=FRONTD.geom,lk=100*(d.actual-d.comboStatic)/d.actual;
+    var cx=g.X(d.actual),cy=lk<g.YMIN?g.h-g.pad.b-12:g.Y(lk);
+    var mk='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="10" fill="none" stroke="var(--warn)" stroke-width="2.5"/>'
+      +'<text x="'+(cx+14).toFixed(1)+'" y="'+(cy-11).toFixed(1)+'" font-size="10.5" font-weight="600" fill="var(--warn)" font-family="ui-monospace,monospace">your selection</text>';
+    return FRONTSVG.replace('</svg>',mk+'</svg>');
+  }
+
+  // ---- render ----------------------------------------------------------------- //
+  function widthOf(id){var e=$('#'+id);return Math.max(300,e?e.clientWidth:660);}
+  function tile(k,v,alt,s2,accent){return '<div class="tile'+(accent?' accent':'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div>'+(alt?'<div class="alt">'+alt+'</div>':'')+'<div class="s">'+s2+'</div></div>';}
+  function dialSummary(l){
+    var st=state[l.key];
+    if(!st.on)return '';
+    return l.params.map(function(p){
+      var v=st.vals[p.key];
+      if(p.fmt==='pct')return p.label.toLowerCase()+' '+(+v).toFixed(1).replace(/\.0$/,'')+'%';
+      if(p.fmt==='usd')return '$'+(v/1e6).toFixed(2).replace(/\.?0+$/,'')+'M';
+      if(p.fmt==='pos')return v;
+      return '';
+    }).filter(Boolean).join(' · ');
+  }
+  function renderAll(){
+    LEVERS.forEach(function(l){
+      var host=document.querySelector('.lever[data-key="'+l.key+'"]');
+      if(host)host.className='lever'+(state[l.key].on?' on':'');
+      var b=document.querySelector('.sw[data-key="'+l.key+'"]');
+      if(b)b.setAttribute('aria-pressed',state[l.key].on?'true':'false');
+      if(l.interp==='ladder'){
+        var pos=state[l.key].on?state[l.key].vals[l.params[0].key]:'off';
+        l.params[0].positions.forEach(function(pp){
+          var sb=document.querySelector('.seg button[data-key="'+l.key+'"][data-pos="'+pp+'"]');
+          if(sb)sb.setAttribute('aria-pressed',pp===pos?'true':'false');
+        });
+      }
+    });
+    var d=compute(),any=d.keys.length>0;
+    var gap2=d.actual-d.convParts,g2s=gap2>=0?'+':'−',
+        gapPct=d.convParts>0?Math.round(100*Math.abs(gap2)/d.convParts):0;
+    $('#tiles').innerHTML=[
+      tile('Sum of standalone scores',any?usd(d.convParts):'—',any?pg(d.convParts)+' of GDP':'',d.keys.length+' polic'+(d.keys.length===1?'y':'ies')+', scored separately'),
+      tile('Combined package',any?usd(d.actual):'—',any?pg(d.actual)+' of GDP':'','scored as one reform',true),
+      tile('Interaction',any?(g2s+usd(Math.abs(gap2))):'—',any?(g2s+gapPct+'% vs. the sum'):'',any?'package vs. sum of standalone scores':'nothing selected'),
+      tile('Top 0.1% ETR',d.totTop.static.toFixed(1)+'%','',any?('+'+(d.totTop.static-d.totTop.baseline).toFixed(1)+'pp vs. baseline · '+ETRYEAR+', static'):'baseline')
+    ].join('');
+    var mx=Math.max(d.staticParts,d.comboStatic,1);
+    function segsOf(field){ return d.parts.map(function(p){var m=BYKEY[p.key];
+      return {name:m.label,val:p[field],color:LCOLOR[p.key],
+        tip:m.label+' ('+dialSummary(m)+') — standalone '+(field==='s'?'static':'conventional')+' score: '+fmt(p[field])}; }); }
+    var pkgSegs,note='';
+    if(d.keys.length){
+      var negs=d.keys.filter(function(k){return d.phi[k]<-0.5;});
+      if(!negs.length){
+        pkgSegs=d.keys.map(function(k){var m=BYKEY[k],v=Math.max(0,d.phi[k]);
+          return {name:m.label,val:v,color:LCOLOR[k],
+            tip:m.label+' — contribution to the package: '+fmt(v)+' ('+(d.actual>0?Math.round(100*v/d.actual):0)+'% of package, Shapley)'}; });
+      } else {
+        pkgSegs=[{name:'pkg',val:d.actual,color:'var(--accent)',tip:'Combined package — '+fmt(d.actual)}];
+        note='contribution split suppressed: '+negs.join(', ')+' contribute'+(negs.length===1?'s':'')+' negatively at this selection';
+      }
+    } else { pkgSegs=[]; }
+    $('#pvw').innerHTML=segBars([
+      {label:'Sum of static scores',sub:'each policy alone, no behavior',segs:any?segsOf('s'):[],max:mx},
+      {label:'Sum of conventional scores',sub:'each policy alone, with behavior',segs:any?segsOf('c'):[],max:mx},
+      {label:'Combined package',sub:'with interactions and behavior',segs:any?pkgSegs:[],max:mx}
+    ],widthOf('pvw'));
+    $('#pvwLegend').innerHTML=d.parts.map(function(p){var m=BYKEY[p.key];
+      return '<span class="it"><span class="sw2" style="background:'+LCOLOR[p.key]+'"></span>'+m.label+'</span>';}).join('');
+    $('#pvwNote').textContent=note;
+    var sp=d.parts.map(function(p){
+      var solo={}; solo[p.key]=d.s[p.key];
+      var ch=evalQ('ch',solo),heads={};
+      HEADS_ORDER.forEach(function(hk,z){heads[hk]=ch[z];});
+      return {label:BYKEY[p.key].label,heads:heads};});
+    $('#spill').innerHTML=spillChart(sp,widthOf('spill'));
+    $('#spillLegend').innerHTML=sp.length?HEADS.filter(function(hh){
+        return sp.some(function(r){return Math.abs(r.heads[hh.k]||0)>0.5;});
+      }).map(function(hh){return '<span class="it"><span class="sw2" style="background:'+hh.c+'"></span>'+hh.label+'</span>';}).join('')
+      +'<span class="it mono" style="color:var(--muted)">left of $0 = drained from that base · right column: net score</span>':'';
+    $('#etr').innerHTML=combinedEtr(d,widthOf('etr'));
+    $('#etrLegend').innerHTML=ETRCOMPS.map(function(h){return '<span class="it"><span class="sw2" style="background:'+h.c+'"></span>'+h.l+'</span>';}).join('');
+    $('#frontChart').innerHTML=frontierWithMarker(d);
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('#etrDefTog button'),function(b){
+    b.onclick=function(){ INCDEF=b.dataset.def;
+      Array.prototype.forEach.call(document.querySelectorAll('#etrDefTog button'),function(x){
+        x.setAttribute('aria-pressed', x.dataset.def===INCDEF?'true':'false'); });
+      renderAll(); }; });
+
+  // ---- badge ------------------------------------------------------------------- //
+  var val=DATA.meta.surrogate.validation||{};
+  var nHold=((val.quiz&&val.quiz.n)||0)+((val.corners&&val.corners.n)||0);
+  $('#dataBadge').textContent=DATA.meta.placeholder
+    ? 'Preview · '+DATA.meta.placeholder
+    : 'Model output · interpolated; verified within ±'+val.bound_pct+'% ('
+      +(val.static_bound_pct!=null?'static ±'+val.static_bound_pct+'%':'')
+      +') on '+nHold+' holdout runs';
+
+  // ---- boot ---------------------------------------------------------------------- //
+  initState();
+  renderControls();
+  FRONTD=frontierData();
+  FRONTSVG=frontierBase(widthOf('frontChart'));
+  $('#frontLegend').innerHTML=
+    '<span class="it"><span class="sw2" style="background:transparent;border:2px solid var(--accent);border-radius:50%"></span>on the frontier</span>'+
+    '<span class="it mono" style="color:var(--muted)">'+FRONTD.n+' lattice packages · shading = package density · hover frontier points for composition</span>';
+  // default view: current law — everything off, dials at their law values
+  syncInputs();
+  renderAll();
+  var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(renderAll,120);});
+
+  // ---- harness hooks --------------------------------------------------------------- //
+  function setState(s){
+    LEVERS.forEach(function(l){
+      if(s[l.key]){
+        state[l.key].on=true;
+        l.params.forEach(function(p){
+          state[l.key].vals[p.key]=s[l.key][p.key]!==undefined?s[l.key][p.key]:p.ref;});
+      } else {
+        state[l.key].on=false;
+      }
+    });
+    syncInputs(); renderAll();
+  }
+  window.__ATLAS2__={evalQ:evalQ,shapley:shapley,gOf:gOf,evalGrid:evalGrid,
+    setState:setState,renderNow:renderAll,surState:surState,
+    FRONTD:FRONTD,DATA:DATA,state:state,LEVERS:LEVERS};
+})();
+</script>

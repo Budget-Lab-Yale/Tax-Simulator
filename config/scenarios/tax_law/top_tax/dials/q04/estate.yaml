@@ -1,0 +1,25 @@
+---
+# top_tax dial ESTATE exemption -> $10,500,000 at 2027, chained-CPI indexed after
+# (re-anchored 2027 regime; pre-2027 path = current law)
+exemption:
+  value:
+    '2014': 5340000
+    '2018': 11180000
+    '2026': 15000000
+    '2027': 10500000
+  i_measure:
+    '2013': cpi
+    '2018': chained_cpi
+  i_base_year:
+    '2014': 2013
+    '2018': 2017
+    '2026': 2025
+    '2027': 2026
+  i_direction: -1
+  i_increment: 10000
+
+# top_tax dial ESTATE top rate -> 53.0% from 2027 (graduated ladder kept)
+rates:
+  value:
+    '2014': [0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.37, 0.39, 0.40]
+    '2027': [0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.37, 0.39, 0.53]

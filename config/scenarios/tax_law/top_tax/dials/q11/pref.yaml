@@ -1,0 +1,29 @@
+---
+# top_tax dial CG: top preferred (LTCG/qual-div) rate -> 34.0% from 2027
+rates:
+  value:
+    '2014': [0.0, 0.15, 0.20]
+    '2027': [0.0, 0.15, 0.34]
+
+# top_tax dial DEEMED: deemed at death, all asset classes, from 2027
+# (code 0=step-up baseline, 1=carryover, 2=deemed_realization)
+kg_death_regime_equities:
+  value:
+    '2014': 0
+    '2027': 2
+kg_death_regime_pass_throughs:
+  value:
+    '2014': 0
+    '2027': 2
+kg_death_regime_primary_home:
+  value:
+    '2014': 0
+    '2027': 2
+kg_death_regime_other_home:
+  value:
+    '2014': 0
+    '2027': 2
+kg_death_regime_re_fund:
+  value:
+    '2014': 0
+    '2027': 2
