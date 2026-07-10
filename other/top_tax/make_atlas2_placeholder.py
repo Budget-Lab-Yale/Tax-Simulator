@@ -31,7 +31,8 @@ DEFS = ["hs", "expanded"]
 M_ETR = len(DEFS) * len(GROUPS) * len(COMPS)
 N_DEC = 3
 M_OF = {"ct": N_DEC, "cy": 30, "ch": 7 * N_DEC,
-        "st": N_DEC, "sy": 30, "sh": 7 * N_DEC, "etr": M_ETR}
+        "st": N_DEC, "sy": 30, "sh": 7 * N_DEC,
+        "etr": M_ETR, "etrc": M_ETR}
 # synthetic decade growth factors (nominal-GDP-ish) for d2/d3 vs d1
 DEC_GROW = [1.0, 1.55, 2.4]
 
@@ -85,12 +86,14 @@ def vec(qid, key, scale):
     if qid in ("ch", "sh"):
         tot = ct if qid == "ch" else st
         return [tot * gf * w for gf in DEC_GROW for w in HEAD_MIX[key]]
-    # etr: small positive deltas concentrated at the top
+    # etr: small positive deltas concentrated at the top; etrc (realized) is a
+    # scaled-down copy so the two bars are visibly distinct in the stub
+    damp = 0.78 if qid == "etrc" else 1.0
     out = []
     for _d in DEFS:
         for gi in range(len(GROUPS)):
             for c in COMPS:
-                bump = (gi / (len(GROUPS) - 1.0)) ** 3 * scale
+                bump = (gi / (len(GROUPS) - 1.0)) ** 3 * scale * damp
                 out.append(round(0.9 * bump if c == "income_tax" else
                                  0.25 * bump if c in ("wealth", "estate") else 0.0, 3))
     return out
@@ -144,7 +147,7 @@ def main():
                    for w in [1, 1, 0, 0, 0, 0, 0]],
             "sh": [round(2.5 * gf, 3) * w for gf in DEC_GROW
                    for w in [1, 1, 0, 0, 0, 0, 0]],
-            "etr": [0.0] * M_ETR}
+            "etr": [0.0] * M_ETR, "etrc": [0.0] * M_ETR}
 
     lever_meta = []
     for lv in L.LEVERS:

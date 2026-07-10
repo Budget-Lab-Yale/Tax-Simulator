@@ -70,10 +70,18 @@ def year_map(rows, col):
 
 
 def receipts_heads(totals_dir):
-    """Per-year receipt levels by ledger head (pre-CG-carve) + credit outlays."""
+    """Per-year receipt levels by ledger head (pre-CG-carve) + credit outlays.
+    Years with any NA field are skipped: the sim's final lead-out year (window
+    end + 1, run only for the FY-lag legs) reports corp as NA and sits outside
+    every reporting window."""
     rf = read_csv(os.path.join(totals_dir, "receipts_full.csv"))
+    cols = ["revenues_income_tax", "outlays_tax_credits", "revenues_payroll_tax",
+            "revenues_corp_tax", "revenues_estate_tax", "revenues_wealth_tax",
+            "revenues_vat", "revenues_other"]
     out = {}
     for r in rf:
+        if any(r[c] in ("", "NA") for c in cols):
+            continue
         y = int(r["year"])
         out[y] = dict(
             iit=float(r["revenues_income_tax"]) - float(r["outlays_tax_credits"]),
@@ -155,13 +163,19 @@ def leg_deltas_windows(scen_dir, base_heads, base_cg, leg, windows=DECADES):
                 span=[span[0], span[-1]]), drifts
 
 
-def etr_rows(scen_dir):
+def etr_rows(scen_dir, reform_leg="static"):
+    """Filtered ETR rows. reform_leg keys which leg supplied the reform
+    numerators ('static' = welfare ask, 'conventional' = realized). Files
+    written before the realized-ETR build have no reform_leg column — their
+    rows read as static."""
     path = os.path.join(scen_dir, "static", "supplemental", "distribution_etrs.csv")
     if not os.path.exists(path):
         return []
     keep = []
     with open(path, newline="") as fh:
         for r in csv.DictReader(fh):
+            if r.get("reform_leg", "static") != reform_leg:
+                continue
             if int(r["year"]) not in DIST_YEARS:
                 continue
             if r["income_definition"] not in ETR_INCOME_DEFS:

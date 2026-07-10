@@ -31,6 +31,8 @@ DECADE-STRUCTURED (32-yr batches, decade toggle in atlas2):
   ch/sh  conv/static decade heads     (m=21, decade-major: d1 HEADS_ORDER,
                                        d2 HEADS_ORDER, d3 HEADS_ORDER)
   etr    static ETR reform-baseline   (m=2 defs x groups x 8 comps, 2027 only)
+  etrc   conventional-NUMERATOR ETR reform-baseline (same m; realized tax over
+         the same baseline-static denominators — the welfare/realized swap)
 Every fitted object (f, g, I, T) is estimated independently per decade from
 the same runs; nothing is extrapolated across decades. What remains shared
 is the FORM (solo + I.g.g pairs + T.g.g.g triples, 4-way+ assumed zero) —
@@ -64,7 +66,10 @@ SPAN = list(range(DECADES[0][0], DECADES[-1][1] + 1))   # 2027..2056
 ETR_YEAR = 2027                        # atlas2 ships the impact year only
 HEADS_ORDER = ["iit", "cg", "pay", "corp", "est", "wealth", "other"]
 MONEY_QIDS = ["ct", "cy", "ch", "st", "sy", "sh"]
-QIDS = MONEY_QIDS + ["etr"]
+# etr  = static-numerator (welfare) ETR deltas; etrc = conventional-numerator
+# (realized) ETR deltas — same denominators/groups/comps, numerator-only swap
+QIDS = MONEY_QIDS + ["etr", "etrc"]
+ETR_QIDS = ("etr", "etrc")
 # Near-zero omission: money vectors are kept unless zero at shipped 3-dp
 # precision (preserves fit exactness); ETR vectors get a real 0.005pp floor
 # (they are 160-wide — omission is where the size saving lives).
@@ -173,7 +178,7 @@ def dec_of(data, qid):
     (impact-year) quantity."""
     m = data["meta"]["surrogate"]["m"][qid]
     nd = len(data["meta"].get("decades") or [0])
-    if qid == "etr" or nd < 2:
+    if qid in ETR_QIDS or nd < 2:
         return [0] * m
     per = m // nd
     return [d for d in range(nd) for _ in range(per)]
@@ -309,16 +314,21 @@ def read_scenario(root, scen_id, base_heads, base_cg, etr_base_flat, groups, wan
         "sh": flat_heads(static),
     }
     if want_etr:
-        rows = [r for r in X.etr_rows(scen_dir) if int(r["year"]) == ETR_YEAR]
-        if not rows:
-            # etr_rows() returns [] for a MISSING file too — zero-filling that
-            # would poison the fitted ETR deltas with -baseline rows (bitten
-            # 2026-07-09 when a patch batch's Phase 3b failed silently).
-            sys.exit(f"{scen_dir}: no distribution_etrs rows for {ETR_YEAR} "
-                     "(missing or failed post-processing) — refusing to fit")
-        pack = X.etr_pack(rows, "reform")
-        flat = flatten_etr(pack, groups)
-        out["etr"] = [round(a - b, 3) for a, b in zip(flat, etr_base_flat)]
+        for qid, leg in (("etr", "static"), ("etrc", "conventional")):
+            rows = [r for r in X.etr_rows(scen_dir, reform_leg=leg)
+                    if int(r["year"]) == ETR_YEAR]
+            if not rows:
+                # etr_rows() returns [] for a MISSING file too — zero-filling
+                # that would poison the fitted ETR deltas with -baseline rows
+                # (bitten 2026-07-09 when a patch batch's 3b failed silently).
+                # The conventional rows additionally require the realized-ETR
+                # 3b (reform_leg column) — refuse rather than ship a dead bar.
+                sys.exit(f"{scen_dir}: no {leg}-leg distribution_etrs rows for "
+                         f"{ETR_YEAR} (missing/failed/pre-realized-ETR "
+                         "post-processing) — refusing to fit")
+            pack = X.etr_pack(rows, "reform")
+            flat = flatten_etr(pack, groups)
+            out[qid] = [round(a - b, 3) for a, b in zip(flat, etr_base_flat)]
     return out
 
 
@@ -370,9 +380,10 @@ def fit(root, out_path):
             runs[state_key(state)] = read(scen_id)
             id_of[state_key(state)] = scen_id
 
+    m_etr = len(X.ETR_INCOME_DEFS) * len(groups) * len(X.ETR_COMPS)
     m_of = {"ct": len(DECADES), "cy": len(SPAN), "ch": len(DECADES) * len(HEADS_ORDER),
             "st": len(DECADES), "sy": len(SPAN), "sh": len(DECADES) * len(HEADS_ORDER),
-            "etr": len(X.ETR_INCOME_DEFS) * len(groups) * len(X.ETR_COMPS)}
+            "etr": m_etr, "etrc": m_etr}
 
     # ---- solo grids + g ---------------------------------------------------- #
     solo, gfun = {}, {}
@@ -418,7 +429,7 @@ def fit(root, out_path):
         for qid in QIDS:
             fa, fb = f_at_ref(a, qid), f_at_ref(b, qid)
             vec = [round(v - x - y, 3) for v, x, y in zip(runs[sk][qid], fa, fb)]
-            tol = PAIR_TOL["etr" if qid == "etr" else "money"]
+            tol = PAIR_TOL["etr" if qid in ETR_QIDS else "money"]
             if any(abs(v) > tol for v in vec):
                 entry[qid] = vec
         if entry:
@@ -480,7 +491,7 @@ def fit(root, out_path):
                     for i, v in enumerate(vec):
                         base[i] += v            # g == 1 at REF
             vec = [round(v - w, 3) for v, w in zip(runs[sk][qid], base)]
-            tol = PAIR_TOL["etr" if qid == "etr" else "money"]
+            tol = PAIR_TOL["etr" if qid in ETR_QIDS else "money"]
             if any(abs(v) > tol for v in vec):
                 entry[qid] = vec
         if entry:

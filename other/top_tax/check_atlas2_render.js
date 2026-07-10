@@ -312,8 +312,25 @@ if (typeof A.setDecade !== "function" || N_DEC < 2) {
 
 // ---- frontier: non-empty + byte-identical across two fresh vm runs ---------------
 const FR = A.FRONTD();
-if (!FR || !FR.pts.length || !FR.front.length)
-  problems.push("frontier: empty lattice or empty frontier");
+if (!FR || !FR.pts.length)
+  problems.push("frontier: empty lattice");
+else {
+  for (const metric of ["rev", "etr"]) {
+    const fr = A.frontFor(FR, metric);
+    if (!fr.length) problems.push(`frontier: empty undominated set for metric ${metric}`);
+  }
+  // metric toggle re-renders and the ETR axis produces finite positive spans
+  if (typeof A.setFrontMetric === "function") {
+    A.setState({ ord: { rate: 44.8 }, cg: { rate: 40 } });
+    A.setFrontMetric("etr");
+    const e = w1.byId.frontChart;
+    if (e && !/<svg/i.test(e.innerHTML)) problems.push("#frontChart: no <svg> under ETR metric");
+    if (!FR.pts.some(p => isFinite(p.ex) && p.ex > 0))
+      problems.push("frontier: no package with positive top-0.1% ETR change");
+    A.setFrontMetric("rev");
+    A.setState({});
+  } else problems.push("frontier: setFrontMetric hook missing");
+}
 const w2 = makeWorld();
 try { runScripts(w2); } catch (err) { fail("second vm run threw:\n" + err.stack); }
 const f1 = JSON.stringify(A.frontierFor(0).pts) + "|" + JSON.stringify(A.frontierFor(2).pts);

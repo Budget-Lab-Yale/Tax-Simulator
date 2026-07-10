@@ -45,7 +45,7 @@ REPORT = os.path.join(HERE, "surrogate_report.md")
 HARD_PCT = 2.0            # quiz / corner / stack bar on conv DECADE-1 total, percent
 ETR_PP = 0.1              # secondary: per-ETR-cell bound, percentage points
 EXACT_TOL = {"ct": 2e-3, "cy": 2e-3, "ch": 2e-3, "st": 2e-3, "sy": 2e-3,
-             "sh": 2e-3, "etr": 6e-3}     # 3-dp rounding + etr omission floor
+             "sh": 2e-3, "etr": 6e-3, "etrc": 6e-3}  # 3dp + etr omission floor
 N_DEC = len(F.DECADES)    # 3 decade windows; hard bar applies to decade 1 only,
                           # decades 2/3 get measured-and-disclosed bounds
 
@@ -181,6 +181,8 @@ def main():
         e_h = max(abs(a - b) for a, b in zip(ch_p, q["ch"]))
         etr_p = F.eval_state(data, "etr", state)
         e_e = max(abs(a - b) for a, b in zip(etr_p, q["etr"]))
+        etrc_p = F.eval_state(data, "etrc", state)
+        e_e = max(e_e, max(abs(a - b) for a, b in zip(etrc_p, q["etrc"])))
         byyear_worst, heads_worst = max(byyear_worst, e_by), max(heads_worst, e_h)
         etr_worst = max(etr_worst, e_e)
         lines.append(f"| {scen_id} | {'+'.join(state)} | {q['ct'][0]:.1f} | {pc[0]:.1f} "
