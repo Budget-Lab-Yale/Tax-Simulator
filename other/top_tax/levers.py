@@ -30,7 +30,16 @@ REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 # --------------------------------------------------------------------------- #
 # Run-level constants (mirror build_factorial.py)
 # --------------------------------------------------------------------------- #
-YEARS = "2026:2057"          # FY lead-in 2026 + one year past the 2056 window (30y toggle)
+YEARS = "2027:2057"          # SURPRISE-ENACTMENT convention (author call 2026-07-10):
+                             # start AT the effective year, no 2026 lead-in, so the
+                             # kg timing overlay never sees a pre-enactment year —
+                             # no 2026 acceleration surge and no 2027 retiming
+                             # crater (which made the impact-year realized ETR dip
+                             # below baseline for ANY cg increase). Trade-off,
+                             # accepted: FY2027 misses the Oct-Dec 2026 anticipation
+                             # revenue (the usual start-at-t-1 rule is deliberately
+                             # waived here). One year past the 2056 window for the
+                             # FY-lagged estate/wealth legs.
 DIST_YEARS = "2027 2036"     # distribution years; the atlas2 ETR panel ships 2027 only
                              # (heir files end 2055 — dist_years must stay <= 2055)
 BEHAVIOR_BASE = "kg_dynamics/turnover conversion/sigma entity_shifting/pearce_prisinzano evasion/debacker charity/50"
