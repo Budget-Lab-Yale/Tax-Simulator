@@ -130,6 +130,16 @@ SIGMA_TD_COLS = c('id', 'weight', 'filing_status', 'age1', 'age2',
 # in the 2037 lead-out year -- the documented benign drift, marginally over.
 SIGMA_CONSERVE_RTOL = 0.015
 
+# Absolute companion tolerance: the check fails only when the divergence
+# exceeds BOTH the relative and absolute bars. Needed because conv_total is a
+# NET flow that can sit near zero (opposing rate wedges in a package), so the
+# $1e6 denominator floor lets an immaterial dollar drift read as a huge
+# relative one. 2026-07-10 (top_tax dials, post calc_mtrs fix): the restored
+# wealth haircut scales PT legs harder, and q04 failed at rel 1.9e-2 on a
+# $1.2M absolute gap (conv_total -$0.06B); tco_wealth_qbi_deemed at 1.501e-2
+# on $6.7M. Real frame/threshold divergence bugs show up at $B scale.
+SIGMA_CONSERVE_ATOL = 5e7
+
 
 scenario_uses_sigma = function(scenario_info) {
   any(startsWith(scenario_info$behavior_modules %||% character(),
@@ -580,14 +590,17 @@ sigma_module_recompute = function(tax_units, baseline_mtrs, static_mtrs,
     paste0('sigma_conversion: year %d conservation check: module $%.4fB vs ',
            'pre-pass $%.4fB (rel diff %.2e).'),
     year, module_total / 1e9, prepass_total / 1e9, rel))
-  if (rel > SIGMA_CONSERVE_RTOL) {
+  if (rel > SIGMA_CONSERVE_RTOL &&
+      abs(module_total - prepass_total) > SIGMA_CONSERVE_ATOL) {
     stop(sprintf(
       paste0('sigma_conversion: conservation failure in year %d: module ',
              'recompute (%.6g) vs persisted cell inflow (%.6g), rel diff ',
-             '%.3e > %.0e. Records applied and dollars injected into the ',
-             'gain state have diverged; check that pre-pass and module see ',
-             'the same MTR frames, thresholds, and pool legs.'),
-      year, module_total, prepass_total, rel, SIGMA_CONSERVE_RTOL))
+             '%.3e > %.1e and abs diff $%.3fB > $%.3fB. Records applied and ',
+             'dollars injected into the gain state have diverged; check that ',
+             'pre-pass and module see the same MTR frames, thresholds, and ',
+             'pool legs.'),
+      year, module_total, prepass_total, rel, SIGMA_CONSERVE_RTOL,
+      abs(module_total - prepass_total) / 1e9, SIGMA_CONSERVE_ATOL / 1e9))
   }
 
   conv

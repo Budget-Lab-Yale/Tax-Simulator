@@ -85,3 +85,7 @@ wine.sif
 # Transient job output anywhere in the tree (sbatch stdout + log dirs)
 *.out
 **/logs/
+
+# Python bytecode + generated Netlify Drop staging copy (rebuilt from atlas2_built.html)
+__pycache__/
+other/top_tax/netlify_drop/

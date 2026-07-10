@@ -641,6 +641,10 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                actual_liab_iit    = tax_units_static$liab_iit_net,
                actual_liab_pr     = tax_units_static$liab_pr,
                actual_liab_wealth = tax_units_static$liab_wealth,
+               # NULL, NOT the pass-level baseline_pr_er: tax_units_static is
+               # a POST-do_taxes frame, so its wages already carry the er-
+               # payroll rescale (see calc_mtrs parameter doc)
+               baseline_pr_er     = NULL,
                var                = .x,
                pr                 = F,
                type               = .y
@@ -686,6 +690,9 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                               set_names(NULL))),
           actual_liab_iit = tax_units_raw$liab_iit_net,
           actual_liab_pr  = tax_units_raw$liab_pr,
+          # NULL: tax_units_raw is a POST-do_taxes frame (wages already
+          # rescaled once; see calc_mtrs parameter doc)
+          baseline_pr_er  = NULL,
           var             = 'kg_lt',
           pr              = F,
           type            = 'nextdollar'  # kg_dynamics tau is nextdollar-only
@@ -871,6 +878,10 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
           actual_liab_iit    = tax_units_conv$liab_iit_net,
           actual_liab_pr     = tax_units_conv$liab_pr,
           actual_liab_wealth = tax_units_conv$liab_wealth,
+          # conv_input is the PRE-do_taxes frame (un-rescaled wages), so the
+          # recompute must apply the same rescale as the actuals run -- thread
+          # baseline_pr_er (2026-07-09 fix; see calc_mtrs parameter doc)
+          baseline_pr_er     = baseline_pr_er,
           var                = 'net_worth',
           pr                 = F,
           type               = 'nextdollar')$mtr_net_worth
@@ -890,6 +901,12 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                  actual_liab_iit    = tax_units_conv$liab_iit_net,
                  actual_liab_pr     = tax_units_conv$liab_pr,
                  actual_liab_wealth = tax_units_conv$liab_wealth,
+                 # NULL, NOT baseline_pr_er: tax_units_conv is a POST-do_taxes
+                 # frame (wages already rescaled; see calc_mtrs parameter doc).
+                 # The convnw mtr_net_worth call above differs deliberately:
+                 # it passes the PRE-do_taxes conv_input, so it must thread
+                 # baseline_pr_er.
+                 baseline_pr_er     = NULL,
                  var                = .x,
                  pr                 = F,
                  type               = .y

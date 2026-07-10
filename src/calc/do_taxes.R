@@ -513,7 +513,8 @@ remit_taxes = function(tax_units) {
 
 
 calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
-                     type = 'nextdollar', actual_liab_wealth = NULL) {
+                     type = 'nextdollar', actual_liab_wealth = NULL,
+                     baseline_pr_er = NULL) {
 
   #----------------------------------------------------------------------------
   # Calculates MTR, either at the next-dollar or 0-actual extensive margin,
@@ -544,6 +545,30 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
   #                                  reprices the marginal statutory wealth rate;
   #                                  NULL for income/payroll MTRs (which never
   #                                  move net_worth, so the wealth term is 0)
+  #   - baseline_pr_er (df)        : baseline employer-side payroll, passed to
+  #                                  the internal do_taxes() recompute. The
+  #                                  requirement is that the recompute's TOTAL
+  #                                  wage rescaling equals the actuals' --
+  #                                  do_taxes() rescales wages by the employer-
+  #                                  payroll delta vs baseline AND BAKES THE
+  #                                  RESCALED WAGES INTO THE FRAME IT RETURNS.
+  #                                  So the correct value depends on which
+  #                                  frame you pass:
+  #                                    * PRE-do_taxes input frame (un-rescaled
+  #                                      wages): pass the SAME baseline_pr_er
+  #                                      as the actuals-producing call -- the
+  #                                      recompute rescales once, bit-identical
+  #                                      to the actuals at zero perturbation.
+  #                                    * POST-do_taxes frame (wages already
+  #                                      rescaled once): pass NULL -- the
+  #                                      rescale is already in the wages;
+  #                                      passing baseline_pr_er here rescales
+  #                                      a SECOND time and dumps the full
+  #                                      income-tax effect of the extra wage
+  #                                      shift into the $1 numerator (garbage
+  #                                      MTRs up to 1e7 on taxmax / entity-
+  #                                      shifted records; found 2026-07-09,
+  #                                      double-rescale variant 2026-07-10).
   #
   # Returns: tibble of MTRs (df).
   #----------------------------------------------------------------------------
@@ -685,10 +710,13 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
   }
   
   
-  # Re-calculate taxes
+  # Re-calculate taxes. baseline_pr_er must be chosen per the frame convention
+  # in the parameter doc above (pre-do_taxes frame: mirror the actuals call;
+  # post-do_taxes frame: NULL) so the total wage rescaling is identical on
+  # both sides of the difference.
   new_values %>%
     do_taxes(
-      baseline_pr_er   = NULL,
+      baseline_pr_er   = baseline_pr_er,
       vars_payroll     = return_vars$calc_pr,
       vars_1040        = return_vars %>% remove_by_name('calc_pr') %>% unlist() %>% set_names(NULL),
       calc_estate_flag = FALSE,             # MTR reads only income-tax delta; estate discarded
