@@ -325,18 +325,24 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
     list(post = df$scorp_passive, hid = hid_scrpp, pre = pre$scorp_passive, c = c_priv, gate = g_scrpp),
     list(post = df$sole_prop,     hid = hid_sole,  pre = pre$sole_prop,     c = c_priv, gate = g_sole),
     list(post = df$rent,          hid = hid_rent,  pre = pre$rent,          c = c_priv, gate = g_rent))
+  # RELATIVE per-record error with a $1 floor. Absolute float rounding scales
+  # with the flow level — past-2040 nominal dollars (~1e11 per record at the
+  # top) broke an absolute 1e-6 bar on pure double-precision noise in the
+  # 30-yr batch (2026-07-10). Any real mapping/factor bug is O(1) relative,
+  # so 1e-9 relative keeps the guard's full diagnostic power at any horizon.
   max_err = 0
   for (lg in legs) {
     pre0 = replace_na(lg$pre, 0)
+    den  = pmax(abs(pre0), 1)
     # identity: post + hidden == pre (exact restatement, guards NA/arithmetic)
-    max_err = max(max_err, max(abs((lg$post + lg$hid) - lg$pre), na.rm = TRUE))
+    max_err = max(max_err, max(abs((lg$post + lg$hid) - lg$pre) / den, na.rm = TRUE))
     # independent hidden recompute from the fraction (guards column/factor swaps)
     exp_hid = ifelse(lg$gate, pre0 * lg$c, 0)
-    max_err = max(max_err, max(abs(lg$hid - exp_hid), na.rm = TRUE))
+    max_err = max(max_err, max(abs(lg$hid - exp_hid) / den, na.rm = TRUE))
   }
-  if (!is.finite(max_err) || max_err > 1e-6) {
+  if (!is.finite(max_err) || max_err > 1e-9) {
     stop('do_wealth(): hidden-ledger conservation identity failed (max leg ',
-         'reconciliation error = ', format(max_err, scientific = TRUE),
+         'RELATIVE reconciliation error = ', format(max_err, scientific = TRUE),
          '); reported + hidden != pre-avoidance for at least one flow class.')
   }
   if (any(is.na(df$net_worth)) || any(is.na(df$estate_concealed_frac))) {
