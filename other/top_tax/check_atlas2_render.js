@@ -49,11 +49,19 @@ function makeWorld() {
       this.type = "";
       this.onclick = null;
       this.onchange = null;
+      this.width = 0;
+      this.height = 0;
+      this.classList = { add() {}, remove() {} };
+      this.parentElement = { clientWidth: 900 };
     }
     appendChild(c) { this.children.push(c); return c; }
     setAttribute(k, v) { this.attrs[k] = String(v); }
     getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; }
     addEventListener() {}
+    // canvas surface (the 3D section): every 2D-context method is a no-op
+    getContext() { return new Proxy({}, { get: () => () => {}, set: () => true }); }
+    getBoundingClientRect() { return { width: 900, height: 540, left: 0, top: 0 }; }
+    setPointerCapture() {}
   }
   const byId = {};
   for (const m of html.matchAll(/id="([A-Za-z][\w-]*)"/g)) {
@@ -81,13 +89,19 @@ function makeWorld() {
     addEventListener() {},
     body: { insertAdjacentHTML() {} },
   };
-  const windowStub = { addEventListener() {} };
+  const windowStub = {
+    addEventListener() {},
+    devicePixelRatio: 1,
+    matchMedia: () => ({ matches: true }),   // reduced-motion path: no animation loop
+  };
   const sandbox = {
     document: documentStub,
     window: windowStub,
     console,
     setTimeout: (fn) => fn && 0,
     clearTimeout: () => {},
+    performance: { now: () => 0 },
+    requestAnimationFrame: () => 0,
     Math, JSON, Array, Object, Number, String, Date, isFinite, isNaN,
     parseFloat, parseInt, Infinity, NaN,
   };
@@ -111,6 +125,22 @@ catch (err) { fail("script threw during initial render:\n" + err.stack); }
 const A = w1.sandbox.window.__ATLAS2__;
 if (!A) fail("window.__ATLAS2__ not exposed — page hooks missing");
 const DATA = A.DATA;
+
+// ---- capital-gains surface section: sheets computed, stacked-last identity ----
+if (!A.surf) problems.push("surface: __ATLAS2__.surf missing");
+else {
+  const Zs = A.surf.Z();
+  if (!Zs || Zs.length !== 3) problems.push("surface: expected 3 regime sheets");
+  else {
+    const mx = Math.max(...Zs.map(s => Math.max(...s.map(r => Math.max(...r)))));
+    if (!(mx > 100)) problems.push("surface: Z max implausibly small: " + mx);
+    const direct = A.evalQ("ct", { cg: { rate: 40 }, ord: { rate: 44 }, deemed: { pos: "deemed" } })[0]
+                 - A.evalQ("ct", { ord: { rate: 44 }, deemed: { pos: "deemed" } })[0];
+    const sc = A.surf.cgScore(40, 44, "deemed");
+    if (Math.abs(sc - direct) > 1e-6)
+      problems.push(`surface: stacked-last identity broken: ${sc} vs ${direct}`);
+  }
+}
 
 // ---- boot contract: page loads at current law, nothing selected ---------------
 const bootSel = A.surState();
@@ -176,25 +206,32 @@ for (const qid of DATA.meta.surrogate.quantities) {
   if (!v.every(x => x === 0)) problems.push(`zero identity: evalQ(${qid}, {}) != 0`);
 }
 
-// ---- holdout fixtures within the validated bound --------------------------------
+// ---- holdout fixtures within the validated per-decade bounds --------------------
 const val = DATA.meta.surrogate.validation;
 const checks = DATA.meta.surrogate.checks;
+const N_DEC = (DATA.meta.decades || []).length;
 if (!val || !checks || !checks.length) {
   problems.push("meta.surrogate.validation/checks absent — unvalidated data is unshippable");
+} else if (!val.bounds_pct || val.bounds_pct.length !== N_DEC || !val.static_bounds_pct) {
+  problems.push("meta.surrogate.validation lacks per-decade bounds_pct/static_bounds_pct");
 } else {
-  const bound = val.bound_pct / 100 + 1e-9;
   for (const c of checks) {
-    const pc = A.evalQ("ct", c.state)[0];
-    const err = Math.abs(pc - c.conv_total10) / Math.max(1e-9, Math.abs(c.conv_total10));
-    if (err > bound)
-      problems.push(`fixture ${c.id}: conv pred ${pc.toFixed(1)} vs run ${c.conv_total10} — ${(100 * err).toFixed(2)}% > ±${val.bound_pct}%`);
-    const ps = A.evalQ("st", c.state)[0];
-    const errS = Math.abs(ps - c.static_total10) / Math.max(1e-9, Math.abs(c.static_total10));
-    // static gates against its own stamped (looser) bound: the hard bar is
-    // conv-only; static accuracy is measured and disclosed, not assumed
-    const boundS = ((val.static_bound_pct != null ? val.static_bound_pct : val.bound_pct) / 100) + 1e-9;
-    if (errS > boundS)
-      problems.push(`fixture ${c.id}: static pred ${ps.toFixed(1)} vs run ${c.static_total10} — ${(100 * errS).toFixed(2)}% > ±${val.static_bound_pct}%`);
+    if (!c.conv_totals || c.conv_totals.length !== N_DEC)
+      { problems.push(`fixture ${c.id}: conv_totals missing or wrong length`); continue; }
+    const pc = A.evalQ("ct", c.state);
+    const ps = A.evalQ("st", c.state);
+    for (let d = 0; d < N_DEC; d++) {
+      const bound = val.bounds_pct[d] / 100 + 1e-9;
+      const err = Math.abs(pc[d] - c.conv_totals[d]) / Math.max(1e-9, Math.abs(c.conv_totals[d]));
+      if (err > bound)
+        problems.push(`fixture ${c.id} d${d + 1}: conv pred ${pc[d].toFixed(1)} vs run ${c.conv_totals[d]} — ${(100 * err).toFixed(2)}% > ±${val.bounds_pct[d]}%`);
+      // static gates against its own stamped (looser) per-decade bound: the hard
+      // bar is conv-d1-only; static accuracy is measured and disclosed, not assumed
+      const boundS = val.static_bounds_pct[d] / 100 + 1e-9;
+      const errS = Math.abs(ps[d] - c.static_totals[d]) / Math.max(1e-9, Math.abs(c.static_totals[d]));
+      if (errS > boundS)
+        problems.push(`fixture ${c.id} d${d + 1}: static pred ${ps[d].toFixed(1)} vs run ${c.static_totals[d]} — ${(100 * errS).toFixed(2)}% > ±${val.static_bounds_pct[d]}%`);
+    }
   }
 }
 
@@ -205,11 +242,13 @@ const probes = (checks && checks.length >= 3 ? checks.slice(0, 3).map(c => c.sta
   { wealth: { rate: 2.0, thr: 50e6 }, estate: { rate: 50.0, exem: 8460000.0 }, cg: { rate: 40.0 } },
 ]);
 for (const s of probes) {
-  const phi = A.shapley(s);
-  const tot = A.evalQ("ct", s)[0];
-  const sum = Object.values(phi).reduce((a, b) => a + b, 0);
-  if (Math.abs(sum - tot) > 1e-6 * Math.max(1, Math.abs(tot)))
-    problems.push(`shapley additivity: sum(phi)=${sum} != evalQ ct ${tot} at ${JSON.stringify(s)}`);
+  for (let d = 0; d < Math.max(1, N_DEC); d++) {
+    const phi = A.shapley(s, d);
+    const tot = A.evalQ("ct", s)[d];
+    const sum = Object.values(phi).reduce((a, b) => a + b, 0);
+    if (Math.abs(sum - tot) > 1e-6 * Math.max(1, Math.abs(tot)))
+      problems.push(`shapley additivity d${d + 1}: sum(phi)=${sum} != evalQ ct ${tot} at ${JSON.stringify(s)}`);
+  }
 }
 
 // ---- inputs wired: value -> onchange -> re-render; clamping --------------------
@@ -248,14 +287,38 @@ try {
 } catch (err) {
   fail("script threw during control-toggle re-render:\n" + err.stack);
 }
+if (typeof A.setDecade === "function") A.setDecade(0);   // toggle loop can leave a non-default decade
+
+// ---- decade toggle: switching re-renders and changes the numbers -----------------
+if (typeof A.setDecade !== "function" || N_DEC < 2) {
+  problems.push("decade toggle: setDecade hook or meta.decades missing");
+} else {
+  A.setState({ ord: { rate: 44.8 }, wealth: { rate: 2, thr: 50e6 } });
+  const t0 = w1.byId.tiles.innerHTML;
+  A.setDecade(1);
+  const t1 = w1.byId.tiles.innerHTML;
+  if (t0 === t1) problems.push("decade toggle: switching to decade 2 did not change #tiles");
+  if (A.getDecade() !== 1) problems.push("decade toggle: getDecade() != 1 after setDecade(1)");
+  for (const id of ["pvw", "spill", "frontChart"]) {
+    const e = w1.byId[id];
+    if (e && !/<svg/i.test(e.innerHTML)) problems.push(`#${id}: no <svg> after decade switch`);
+  }
+  A.setDecade(2);
+  if (!A.FRONTD() || !A.FRONTD().pts.length)
+    problems.push("frontier: empty lattice under decade 3");
+  A.setDecade(0);
+  A.setState({});
+}
 
 // ---- frontier: non-empty + byte-identical across two fresh vm runs ---------------
-if (!A.FRONTD || !A.FRONTD.pts.length || !A.FRONTD.front.length)
+const FR = A.FRONTD();
+if (!FR || !FR.pts.length || !FR.front.length)
   problems.push("frontier: empty lattice or empty frontier");
 const w2 = makeWorld();
 try { runScripts(w2); } catch (err) { fail("second vm run threw:\n" + err.stack); }
-const f1 = JSON.stringify(w1.sandbox.window.__ATLAS2__.FRONTD.pts);
-const f2 = JSON.stringify(w2.sandbox.window.__ATLAS2__.FRONTD.pts);
+const f1 = JSON.stringify(A.frontierFor(0).pts) + "|" + JSON.stringify(A.frontierFor(2).pts);
+const A2 = w2.sandbox.window.__ATLAS2__;
+const f2 = JSON.stringify(A2.frontierFor(0).pts) + "|" + JSON.stringify(A2.frontierFor(2).pts);
 if (f1 !== f2) problems.push("frontier: lattice differs between two identical runs (non-deterministic)");
 
 // ---- badge -------------------------------------------------------------------------
@@ -263,13 +326,15 @@ const badge = w1.byId.dataBadge && (w1.byId.dataBadge.textContent || "").trim();
 if (!badge) problems.push("#dataBadge: empty");
 else if (/preview/i.test(badge)) {
   if (!allowPlaceholder) problems.push("#dataBadge: still on placeholder data (" + badge + ")");
-} else if (val && !badge.includes("±" + val.bound_pct + "%")) {
-  problems.push(`#dataBadge: does not state the validated bound ±${val.bound_pct}% (got: ${badge})`);
+} else if (val && val.bounds_pct &&
+           !val.bounds_pct.every(b => badge.includes("±" + b + "%"))) {
+  problems.push(`#dataBadge: does not state every per-decade bound ${JSON.stringify(val.bounds_pct)} (got: ${badge})`);
 }
 
 if (problems.length) fail(problems.join("\n"));
 console.log(`OK ${path.basename(file)} — containers rendered; ${nAnchor} anchor rows exact; ` +
-  `${checks ? checks.length : 0} holdout fixtures within ±${val ? val.bound_pct : "?"}%; ` +
-  `frontier ${A.FRONTD.pts.length} pts deterministic; badge: ${badge}`);
+  `${checks ? checks.length : 0} holdout fixtures within per-decade bounds ` +
+  `${val && val.bounds_pct ? val.bounds_pct.map(b => "±" + b + "%").join("/") : "?"}; ` +
+  `frontier ${FR.pts.length} pts deterministic across decades; badge: ${badge}`);
 
 function fail(msg) { console.error("RENDER CHECK FAILED\n" + msg); process.exit(1); }

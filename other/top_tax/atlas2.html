@@ -36,11 +36,7 @@
   .eyebrow { font:600 12px/1.2 ui-monospace,monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
   .mono { font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-variant-numeric:tabular-nums; }
 
-  header.top { border-bottom:1px solid var(--rule); background:var(--surface); }
-  .top-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; }
-  .brand { font:600 13px/1 ui-monospace,monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-2); }
-  .top-right { display:flex; align-items:center; gap:14px; }
-  .synthetic { font:600 11px/1 ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--warn); border:1px solid var(--warn); border-radius:999px; padding:4px 10px; white-space:nowrap; }
+  .synthetic { display:inline-block; font:600 11px/1 ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); border:1px solid var(--rule); border-radius:999px; padding:4px 10px; white-space:nowrap; }
   .unit { display:inline-flex; border:1px solid var(--rule); border-radius:8px; overflow:hidden; background:var(--surface-2); }
   .unit button { font:600 11.5px/1 ui-monospace,monospace; letter-spacing:.03em; padding:7px 11px; background:transparent; color:var(--ink-2); border:0; cursor:pointer; transition:.12s; }
   .unit button + button { border-left:1px solid var(--rule); }
@@ -87,6 +83,21 @@
   .seg button { flex:1; font:600 11px/1.2 ui-monospace,monospace; padding:7px 4px; background:transparent; color:var(--ink-2); border:0; cursor:pointer; transition:.12s; }
   .seg button + button { border-left:1px solid var(--rule); }
   .seg button[aria-pressed="true"] { background:var(--accent); color:#fff; }
+  /* capital-gains surface section */
+  .surfrow { display:flex; align-items:center; gap:12px; margin-bottom:8px; flex-wrap:wrap; }
+  .surfrow .surflab { font:600 11px/1 ui-monospace,monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .surfrow .surfseg { flex:0 1 430px; margin:0; }
+  .surfbtn { font:600 11.5px/1 ui-monospace,monospace; color:var(--ink-2); background:var(--surface-2); border:1px solid var(--rule); border-radius:8px; padding:7px 11px; cursor:pointer; }
+  .surfbtn:hover { border-color:var(--accent); color:var(--accent); }
+  #surfStage { position:relative; }
+  #surfCv { width:100%; height:auto; display:block; cursor:grab; touch-action:none; }
+  #surfCv.dragging { cursor:grabbing; }
+  #surfTip { position:absolute; pointer-events:none; display:none; background:var(--surface); border:1px solid var(--rule); border-radius:9px; box-shadow:var(--shadow); padding:9px 11px; font:12px/1.5 ui-monospace,monospace; color:var(--ink); min-width:210px; z-index:5; }
+  #surfTip .h { font-weight:700; margin-bottom:4px; }
+  #surfTip .r { display:flex; justify-content:space-between; gap:14px; }
+  #surfTip .r .d { display:flex; align-items:center; gap:6px; }
+  #surfTip .r .sq { width:9px; height:9px; border-radius:2px; }
+  #surfTip .gap { border-top:1px solid var(--grid); margin-top:5px; padding-top:5px; color:var(--ink-2); }
   .btnrow { display:flex; gap:8px; margin-top:14px; }
   .btnrow button { flex:1; font:600 11.5px/1 ui-monospace,monospace; letter-spacing:.02em; padding:8px 8px; border:1px solid var(--rule); border-radius:8px; background:var(--surface-2); color:var(--ink-2); cursor:pointer; transition:.12s; }
   .btnrow button:hover { border-color:var(--accent); color:var(--accent); }
@@ -119,18 +130,15 @@
   footer .margins li { margin:3px 0; }
 </style>
 
-<header class="top"><div class="wrap top-row">
-  <span class="brand">The Budget Lab · Yale</span>
-  <div class="top-right">
-    <span class="synthetic" id="dataBadge">Model output</span>
-  </div>
-</div></header>
-
 <div class="hero"><div class="wrap">
   <h1>How much revenue is there at the top?</h1>
   <div class="dekcols">
     <p class="dek">There are many ways to raise taxes on the rich, and each comes with its own standalone revenue estimate. But these policies tax overlapping bases and change how people respond to one another's rates, so a package does not raise what its parts raise separately. It can raise less, where bases overlap, or more, where one policy shuts down the escape routes from another.</p>
-    <p class="dek">This page quantifies those interactions: eight top-tax policies with adjustable rates and thresholds, combined however you like, using the Budget Lab's tax microsimulation model. Revenue figures are cumulative over 2027–2036, shown in dollars and as a share of GDP.</p>
+    <p class="dek">This page quantifies those interactions: eight top-tax policies with adjustable rates and thresholds, combined however you like, using the Budget Lab's tax microsimulation model. Revenue figures are cumulative over the decade selected below, shown in dollars and as a share of that decade's GDP.</p>
+  </div>
+  <div style="margin-top:22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <span class="eyebrow">Budget window</span>
+    <span class="unit" id="decTog" role="group" aria-label="Budget window (decade)"></span>
   </div>
 </div></div>
 
@@ -168,7 +176,7 @@
       <div class="card">
         <div class="step">Distribution</div>
         <h3>Distribution of tax rates</h3>
-        <div class="cap">Effective tax rate by income percentile in 2027, measured against cash income (expanded cash income) or accrual income (Haig-Simons, which includes unrealized gains). Baseline-fixed ranking; corporate tax under the capital-income convention. Each group shows two bars — baseline law and the package's static rate — stacked by tax type.
+        <div class="cap">Effective tax rate by income percentile in 2027 — the impact year, whichever decade is selected above. Measured against cash income (expanded cash income) or accrual income (Haig-Simons, which includes unrealized gains). Baseline-fixed ranking; corporate tax under the capital-income convention. Each group shows two bars — baseline law and the package's static rate — stacked by tax type.
           <span class="unit" id="etrDefTog" role="group" aria-label="Income definition" style="margin-left:10px;vertical-align:middle">
             <button type="button" data-def="expanded" aria-pressed="true">Cash income</button>
             <button type="button" data-def="hs" aria-pressed="false">Accrual income</button>
@@ -190,6 +198,34 @@
     <div class="legend" id="frontLegend"></div>
   </div>
 </div></section>
+
+<section id="surfaceSec"><div class="wrap">
+  <h2>The capital-gains policy in three dimensions</h2>
+  <p class="sec-sub">One surface per death regime: the ten-year revenue attributable to the capital-gains rate change — its stacked-last score, on top of the ordinary-rate change and the death regime — at every combination of the two top rates. Where a sheet crests along the capital-gains axis, that rate is revenue-maximizing under that regime; taxing gains at death lifts the whole sheet and pushes the crest to higher rates. Drag to rotate, hover a grid point for values, or flatten away an axis for the 2D read.</p>
+  <div class="card">
+    <div class="surfrow">
+      <span class="surflab">View</span>
+      <div class="seg surfseg" id="surfViewSeg">
+        <button type="button" data-mode="3d" aria-pressed="true">3D surface</button>
+        <button type="button" data-mode="cg" aria-pressed="false">Flatten to cg axis</button>
+        <button type="button" data-mode="ord" aria-pressed="false">Flatten to ord axis</button>
+      </div>
+      <span style="flex:1"></span>
+      <button id="surfReset" type="button" class="surfbtn">Reset view</button>
+    </div>
+    <div id="surfStage">
+      <canvas id="surfCv"></canvas>
+      <div id="surfTip"></div>
+    </div>
+    <div class="legend">
+      <span class="it"><span class="sw2" style="background:#6d5bd0"></span>Gains taxed at death</span>
+      <span class="it"><span class="sw2" style="background:#0f95b0"></span>Carryover basis</span>
+      <span class="it"><span class="sw2" style="background:#c9891a"></span>Step-up (current law)</span>
+      <span class="it mono" style="color:var(--muted)">stacked-last score · piecewise-linear between the 5-point rate anchors · crest = revenue-maximizing rate</span>
+    </div>
+  </div>
+</div></section>
+
 
 <footer><div class="wrap">
   <div class="margins">
@@ -214,8 +250,9 @@
     </div>
   </div>
   <p>Not included: labor-supply responses, macroeconomic feedback, and changes to tax enforcement.</p>
+  <p style="margin-bottom:8px"><span class="synthetic" id="dataBadge">Model output</span></p>
   <p id="footSource"><strong>Model output, interpolated.</strong> Figures come from the top-tax dials batch of the Budget Lab Tax-Simulator: each policy run at a set of anchor settings, every pair run together at reference settings, and the four policies that share the capital-gains-at-death channel also run three at a time. Any dial setting in between is interpolated with a solo + pairwise + triple decomposition, and the interpolation is validated against held-out model runs of full multi-policy packages at off-anchor settings; the badge states the verified bound. The corporate dial is linear between 21% and 28% by construction — the off-model corporate input is itself linear in the rate change.</p>
-  <p>Revenue figures are 10-year cumulative dollars, with the share of GDP (10-yr revenue ÷ 10-yr cumulative fiscal-year nominal GDP) shown alongside. Policies, effective 2027: top ordinary rate · top capital-gains &amp; dividends rate · corporate rate · annual wealth tax (rate and threshold) · treatment of gains at death (step-up, carryover, or taxed at death) · estate tax (top rate and exemption) · repeal of the QBI deduction · elimination of the Social Security taxable maximum.</p>
+  <p>Revenue figures are 10-year cumulative dollars over the decade selected at the top of the page (first, second, or third decade after enactment), with the share of GDP (10-yr revenue ÷ that decade's cumulative fiscal-year nominal GDP) shown alongside. The distribution card always shows 2027, the impact year, regardless of the selected decade. Policies, effective 2027: top ordinary rate · top capital-gains &amp; dividends rate · corporate rate · annual wealth tax (rate and threshold) · treatment of gains at death (step-up, carryover, or taxed at death) · estate tax (top rate and exemption) · repeal of the QBI deduction · elimination of the Social Security taxable maximum.</p>
 </div></footer>
 
 <script>
@@ -224,10 +261,13 @@ var DATA=/*__ATLAS_DATA__*/null;
   "use strict";
   var $=function(s,r){return (r||document).querySelector(s);};
   if(!DATA){document.body.insertAdjacentHTML('afterbegin','<div style="background:#b9601b;color:#fff;padding:10px 24px;font:600 13px system-ui">No data injected — run other/top_tax/build_atlas.py atlas2_data.json atlas2_built.html other/top_tax/atlas2.html.</div>');return;}
-  var GDP10=DATA.meta.gdp10_fy;
+  var DECADES=DATA.meta.decades;               // [[2027,2036],[2037,2046],[2047,2056]]
+  var GDPD=DATA.meta.gdp_fy_decades;           // cumulative FY GDP per decade
+  var DEC=0;                                   // selected decade index
   var ETRYEAR=String(DATA.meta.dist_years[0]);
   var INCDEF='expanded';
-  var pg=function(b){ return (b/GDP10*100).toFixed(2)+"%"; };
+  function decLabel(d){ return DECADES[d][0]+'–'+String(DECADES[d][1]).slice(2); }
+  var pg=function(b){ return (b/GDPD[DEC]*100).toFixed(2)+"%"; };
   function usd(b){ var v=Math.abs(b),sg=b<0?"−":"";
     return v>=1000 ? sg+"$"+(v/1000).toFixed(2)+"T" : sg+"$"+Math.round(v)+"B"; }
   function fmt(b){ return usd(b)+" · "+pg(b); }
@@ -274,11 +314,22 @@ var DATA=/*__ATLAS_DATA__*/null;
       return (1-t1)*((1-t2)*r00[z]+t2*r01[z])+t1*((1-t2)*r10[z]+t2*r11[z]);});
   }
   function gOf(key,vals){
-    return evalGrid(BYKEY[key],SUR.g[key].map(function(v){return [v];}),vals)[0];
+    return evalGrid(BYKEY[key],SUR.g[key],vals);   // per-decade dial-strength vector
   }
+  // Element index -> decade index per quantity (decade-major money vectors;
+  // etr is a decade-1 impact-year quantity). Mirrors fit_surrogate.dec_of.
+  var NDEC=DECADES.length;
+  var DECI={};
+  Object.keys(MQ).forEach(function(qid){
+    var m=MQ[qid],out=[],x;
+    if(qid==='etr'||NDEC<2){ for(x=0;x<m;x++)out.push(0); }
+    else { var per=m/NDEC; for(var dd=0;dd<NDEC;dd++)for(x=0;x<per;x++)out.push(dd); }
+    DECI[qid]=out;
+  });
   // Pair term honoring per-position vectors (the discrete-lever escape hatch):
   // when the pair carries byPos and one lever is the ladder (deemed), use the
-  // position-specific vector scaled by the OTHER lever's g only.
+  // position-specific vector scaled by the OTHER lever's g only. Weights are
+  // per-decade vectors — element x uses the weight of its own decade.
   function pairTerm(a,b,qid,s,g){
     var pe=SUR.pairs[a+'|'+b];
     if(!pe)return null;
@@ -288,29 +339,29 @@ var DATA=/*__ATLAS_DATA__*/null;
       if(pe.byPos[pos]){
         var other=(a===ladder)?b:a;
         var v=pe.byPos[pos][qid];
-        return v?{vec:v,w:g[other]}:null;
+        return v?{vec:v,w:g[other].slice()}:null;
       }
     }
-    return pe[qid]?{vec:pe[qid],w:g[a]*g[b]}:null;
+    return pe[qid]?{vec:pe[qid],w:g[a].map(function(x,z){return x*g[b][z];})}:null;
   }
   // Triple term with the same per-position rule: byPos + deemed member ->
   // position vector scaled by the product of the other two levers' g.
   function tripleTerm(entry,ks,qid,s,g){
+    var w=[],z; for(z=0;z<NDEC;z++)w.push(1);
     if(entry.byPos&&ks.indexOf('deemed')>=0){
       var pos=s.deemed.pos;
       if(entry.byPos[pos]){
-        var w=1;
-        ks.forEach(function(k){ if(k!=='deemed')w*=g[k]; });
+        ks.forEach(function(k){ if(k!=='deemed')for(z=0;z<NDEC;z++)w[z]*=g[k][z]; });
         var v=entry.byPos[pos][qid];
         return v?{vec:v,w:w}:null;
       }
     }
     if(!entry[qid])return null;
-    var w2=1; ks.forEach(function(k){w2*=g[k];});
-    return {vec:entry[qid],w:w2};
+    ks.forEach(function(k){ for(z=0;z<NDEC;z++)w[z]*=g[k][z]; });
+    return {vec:entry[qid],w:w};
   }
   function evalQ(qid,s){
-    var m=MQ[qid],tot=[],i,j,x;
+    var m=MQ[qid],deci=DECI[qid],tot=[],i,j,x;
     for(x=0;x<m;x++)tot.push(0);
     var on=[]; LEVERS.forEach(function(l){ if(s[l.key])on.push(l.key); });
     var g={};
@@ -321,37 +372,38 @@ var DATA=/*__ATLAS_DATA__*/null;
     });
     for(i=0;i<on.length;i++)for(j=i+1;j<on.length;j++){
       var pt=pairTerm(on[i],on[j],qid,s,g);
-      if(pt){ for(x=0;x<m;x++)tot[x]+=pt.vec[x]*pt.w; }
+      if(pt){ for(x=0;x<m;x++)tot[x]+=pt.vec[x]*pt.w[deci[x]]; }
     }
     Object.keys(SUR.triples).forEach(function(tk){
       var ks=tk.split('|');
       if(ks.every(function(k){return g[k]!==undefined;})){
         var tt=tripleTerm(SUR.triples[tk],ks,qid,s,g);
-        if(tt){ for(x=0;x<m;x++)tot[x]+=tt.vec[x]*tt.w; }
+        if(tt){ for(x=0;x<m;x++)tot[x]+=tt.vec[x]*tt.w[deci[x]]; }
       }
     });
     return tot;
   }
-  // Closed-form Shapley of predicted conv total10:
-  // phi_i = f_i + 1/2 sum_j I_ij g_i g_j + 1/3 sum_{j<k} T_ijk g_i g_j g_k
-  function shapley(s){
+  // Closed-form Shapley of predicted conv decade-d total (d defaults to the
+  // selected decade): phi_i = f_i + 1/2 sum_j I_ij g_i g_j + 1/3 sum T g g g
+  function shapley(s,dArg){
+    var d=(dArg===undefined)?DEC:dArg;
     var on=[]; LEVERS.forEach(function(l){ if(s[l.key])on.push(l.key); });
     var g={},phi={},i,j;
     on.forEach(function(k){
       g[k]=gOf(k,s[k]);
       var f=SUR.solo[k].ct;
-      phi[k]=f?evalGrid(BYKEY[k],f,s[k])[0]:0;
+      phi[k]=f?evalGrid(BYKEY[k],f,s[k])[d]:0;
     });
     for(i=0;i<on.length;i++)for(j=i+1;j<on.length;j++){
       var pt=pairTerm(on[i],on[j],'ct',s,g);
-      if(pt){ var half=0.5*pt.vec[0]*pt.w;
+      if(pt){ var half=0.5*pt.vec[d]*pt.w[d];
         phi[on[i]]+=half; phi[on[j]]+=half; }
     }
     Object.keys(SUR.triples).forEach(function(tk){
       var ks=tk.split('|');
       if(ks.every(function(k){return g[k]!==undefined;})){
         var tt=tripleTerm(SUR.triples[tk],ks,'ct',s,g);
-        if(tt){ var third=tt.vec[0]*tt.w/3;
+        if(tt){ var third=tt.vec[d]*tt.w[d]/3;
           ks.forEach(function(k){phi[k]+=third;}); }
       }
     });
@@ -513,12 +565,12 @@ var DATA=/*__ATLAS_DATA__*/null;
     var s=surState();
     var keys=Object.keys(s);
     var ordKeys=LEVERS.map(function(l){return l.key;}).filter(function(k){return s[k];});
-    var actual=keys.length?evalQ('ct',s)[0]:0;
-    var comboStatic=keys.length?evalQ('st',s)[0]:0;
+    var actual=keys.length?evalQ('ct',s)[DEC]:0;
+    var comboStatic=keys.length?evalQ('st',s)[DEC]:0;
     var parts=[],staticParts=0,convParts=0;
     ordKeys.forEach(function(k){
       var solo={}; solo[k]=s[k];
-      var c1=evalQ('ct',solo)[0],s1=evalQ('st',solo)[0];
+      var c1=evalQ('ct',solo)[DEC],s1=evalQ('st',solo)[DEC];
       parts.push({key:k,s:s1,c:c1}); staticParts+=s1; convParts+=c1;
     });
     var phi=keys.length?shapley(s):{};
@@ -647,6 +699,7 @@ var DATA=/*__ATLAS_DATA__*/null;
     return opts;
   }
   var FRONTD=null,FRONTSVG='';
+  var FRONTCACHE={};       // decade index -> {d: frontier data, svg: cached base SVG}
   // compact "lever + its dial settings" label for frontier tooltips,
   // e.g. "cg 40%", "wealth 3.33% >$50M", "estate 53.3% $8.5M exem", "carryover"
   function optLabel(l,vals){
@@ -660,13 +713,14 @@ var DATA=/*__ATLAS_DATA__*/null;
       return String(v);
     }).join(' ');
   }
-  function frontierData(){
+  function frontierData(dec){
     var opts=latticeOptions();
     var tabs=LEVERS.map(function(l){
       return opts[l.key].map(function(o){
         if(o===null)return {fct:0,fst:0,g:0,on:false,vals:null};
         var st1={}; st1[l.key]=o;
-        return {fct:evalQ('ct',st1)[0],fst:evalQ('st',st1)[0],g:gOf(l.key,o),on:true,vals:o};
+        return {fct:evalQ('ct',st1)[dec],fst:evalQ('st',st1)[dec],
+                g:gOf(l.key,o)[dec],on:true,vals:o};   // decade-matched dial strength
       });
     });
     // pair/triple lookup tables keyed by lever index
@@ -675,7 +729,7 @@ var DATA=/*__ATLAS_DATA__*/null;
       for(j=0;j<K;j++){pairCT[i].push(0);pairST[i].push(0);}}
     for(i=0;i<K;i++)for(j=i+1;j<K;j++){
       var pe=SUR.pairs[LEVERS[i].key+'|'+LEVERS[j].key];
-      if(pe){ pairCT[i][j]=pe.ct?pe.ct[0]:0; pairST[i][j]=pe.st?pe.st[0]:0; }
+      if(pe){ pairCT[i][j]=pe.ct?pe.ct[dec]:0; pairST[i][j]=pe.st?pe.st[dec]:0; }
     }
     var IDX={}; LEVERS.forEach(function(l,z){IDX[l.key]=z;});
     // byPos pairs leave the generic g*g tables and get position-keyed terms
@@ -691,12 +745,12 @@ var DATA=/*__ATLAS_DATA__*/null;
     var trips=Object.keys(SUR.triples).map(function(tk){
       var ks=tk.split('|'),e=SUR.triples[tk];
       var t={a:IDX[ks[0]],b:IDX[ks[1]],c:IDX[ks[2]],
-        ct:e.ct?e.ct[0]:0, st:e.st?e.st[0]:0, others:null, byPos:null};
+        ct:e.ct?e.ct[dec]:0, st:e.st?e.st[dec]:0, others:null, byPos:null};
       if(e.byPos&&ks.indexOf('deemed')>=0){
         t.byPos={};
         Object.keys(e.byPos).forEach(function(pos){
-          t.byPos[pos]={ct:e.byPos[pos].ct?e.byPos[pos].ct[0]:0,
-                        st:e.byPos[pos].st?e.byPos[pos].st[0]:0};
+          t.byPos[pos]={ct:e.byPos[pos].ct?e.byPos[pos].ct[dec]:0,
+                        st:e.byPos[pos].st?e.byPos[pos].st[dec]:0};
         });
         t.others=ks.filter(function(k){return k!=='deemed';}).map(function(k){return IDX[k];});
       }
@@ -717,7 +771,7 @@ var DATA=/*__ATLAS_DATA__*/null;
           var dpos=tabs[DIDX][idx[DIDX]].vals[LEVERS[DIDX].params[0].key];
           bpp.forEach(function(e){
             var v=e.byPos[dpos],go=gv[e.o];
-            if(v&&go){ ct+=(v.ct?v.ct[0]:0)*go; st+=(v.st?v.st[0]:0)*go; }
+            if(v&&go){ ct+=(v.ct?v.ct[dec]:0)*go; st+=(v.st?v.st[dec]:0)*go; }
           });
         }
         trips.forEach(function(t){
@@ -834,7 +888,9 @@ var DATA=/*__ATLAS_DATA__*/null;
       tile('Interaction',any?(g2s+usd(Math.abs(gap2))):'—',any?(g2s+gapPct+'% vs. the sum'):'',any?'package vs. sum of standalone scores':'nothing selected'),
       tile('Top 0.1% ETR',d.totTop.static.toFixed(1)+'%','',any?('+'+(d.totTop.static-d.totTop.baseline).toFixed(1)+'pp vs. baseline · '+ETRYEAR+', static'):'baseline')
     ].join('');
-    var mx=Math.max(d.staticParts,d.comboStatic,1);
+    // scale over ALL drawn rows: under carryover/deemed, behavior ADDS revenue,
+    // so the conventional sum and the package can exceed the static sum
+    var mx=Math.max(d.staticParts,d.convParts,d.actual,1);
     function segsOf(field){ return d.parts.map(function(p){var m=BYKEY[p.key];
       return {name:m.label,val:p[field],color:LCOLOR[p.key],
         tip:m.label+' ('+dialSummary(m)+') — standalone '+(field==='s'?'static':'conventional')+' score: '+fmt(p[field])}; }); }
@@ -860,8 +916,8 @@ var DATA=/*__ATLAS_DATA__*/null;
     $('#pvwNote').textContent=note;
     var sp=d.parts.map(function(p){
       var solo={}; solo[p.key]=d.s[p.key];
-      var ch=evalQ('ch',solo),heads={};
-      HEADS_ORDER.forEach(function(hk,z){heads[hk]=ch[z];});
+      var ch=evalQ('ch',solo),heads={},NH=HEADS_ORDER.length;
+      HEADS_ORDER.forEach(function(hk,z){heads[hk]=ch[DEC*NH+z];});
       return {label:BYKEY[p.key].label,heads:heads};});
     $('#spill').innerHTML=spillChart(sp,widthOf('spill'));
     $('#spillLegend').innerHTML=sp.length?HEADS.filter(function(hh){
@@ -882,24 +938,434 @@ var DATA=/*__ATLAS_DATA__*/null;
   // ---- badge ------------------------------------------------------------------- //
   var val=DATA.meta.surrogate.validation||{};
   var nHold=((val.quiz&&val.quiz.n)||0)+((val.corners&&val.corners.n)||0);
+  function pctList(a){ return a?a.map(function(v){return '±'+v+'%';}).join(' / '):''; }
   $('#dataBadge').textContent=DATA.meta.placeholder
     ? 'Preview · '+DATA.meta.placeholder
-    : 'Model output · interpolated; verified within ±'+val.bound_pct+'% ('
-      +(val.static_bound_pct!=null?'static ±'+val.static_bound_pct+'%':'')
-      +') on '+nHold+' holdout runs';
+    : 'Model output · interpolated; verified on '+nHold+' holdout runs — conv '
+      +pctList(val.bounds_pct)+' by decade (static '+pctList(val.static_bounds_pct)+')';
+
+  // ---- decade toggle -------------------------------------------------------------- //
+  function ensureFrontier(){
+    if(!FRONTCACHE[DEC])FRONTCACHE[DEC]={d:frontierData(DEC),svg:''};
+    FRONTD=FRONTCACHE[DEC].d;
+    if(!FRONTCACHE[DEC].svg){
+      FRONTSVG='';
+      FRONTCACHE[DEC].svg=frontierBase(widthOf('frontChart'));
+    }
+    FRONTSVG=FRONTCACHE[DEC].svg;
+    $('#frontLegend').innerHTML=
+      '<span class="it"><span class="sw2" style="background:transparent;border:2px solid var(--accent);border-radius:50%"></span>on the frontier</span>'+
+      '<span class="it mono" style="color:var(--muted)">'+FRONTD.n+' lattice packages · '+decLabel(DEC)+' · shading = package density · hover frontier points for composition</span>';
+  }
+  function renderDecTog(){
+    var host=$('#decTog'); host.innerHTML='';
+    var names=['First decade','Second decade','Third decade'];
+    DECADES.forEach(function(w,i){
+      var b=document.createElement('button'); b.type='button'; b.dataset.dec=String(i);
+      b.textContent=(names[i]||('Decade '+(i+1)))+' · '+w[0]+'–'+String(w[1]).slice(2);
+      b.setAttribute('aria-pressed',i===DEC?'true':'false');
+      b.onclick=function(){ setDecade(i); };
+      host.appendChild(b);
+    });
+  }
+  function setDecade(i){
+    if(i===DEC)return;
+    DEC=i;
+    Array.prototype.forEach.call(document.querySelectorAll('#decTog button'),function(x){
+      x.setAttribute('aria-pressed',+x.dataset.dec===DEC?'true':'false');});
+    ensureFrontier();
+    if(SURF&&SURF.refresh)SURF.refresh();   // surface caches are decade-dependent
+    renderAll();
+  }
 
   // ---- boot ---------------------------------------------------------------------- //
   initState();
   renderControls();
-  FRONTD=frontierData();
-  FRONTSVG=frontierBase(widthOf('frontChart'));
-  $('#frontLegend').innerHTML=
-    '<span class="it"><span class="sw2" style="background:transparent;border:2px solid var(--accent);border-radius:50%"></span>on the frontier</span>'+
-    '<span class="it mono" style="color:var(--muted)">'+FRONTD.n+' lattice packages · shading = package density · hover frontier points for composition</span>';
+  renderDecTog();
+  ensureFrontier();
   // default view: current law — everything off, dials at their law values
   syncInputs();
   renderAll();
   var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(renderAll,120);});
+
+  // ---- capital-gains surface (ported from atlas2_surface.html — keep in lockstep) -- //
+  var SURF=(function(){
+  // ---- surface grid ----------------------------------------------------------- //
+  var CG={min:20,max:50,n:25}, ORD={min:37,max:50,n:14};
+  var REGIMES=[
+    {key:'stepup', label:'Step-up (current law)', pos:null,        col:'#c9891a'},
+    {key:'carry',  label:'Carryover basis',       pos:'carryover', col:'#0f95b0'},
+    {key:'deemed', label:'Gains taxed at death',  pos:'deemed',    col:'#6d5bd0'}
+  ];
+  function gridVal(cg,ord,pos){
+    var s={};
+    if(cg>20)s.cg={rate:cg};
+    if(ord>37)s.ord={rate:ord};
+    if(pos)s.deemed={pos:pos};
+    return Object.keys(s).length?evalQ('ct',s)[DEC]:0;   // selected decade
+  }
+  // The cg policy's STACKED-LAST score: total revenue attributable to the
+  // capital-gains change when layered on top of the ordinary-rate change and
+  // the death regime -- V(cg, ord, regime) minus V(no cg change, ord, regime).
+  // Exact surrogate arithmetic (PWL in the rate, kinks at the 5pp anchors);
+  // zero at cg = 20 by construction, and the revenue-maximizing rate is where
+  // a sheet crests.
+  var CGK=BYKEY.cg.params[0].knots;
+  function cgScore(cg,ord,pos){
+    return gridVal(cg,ord,pos)-gridVal(CG.min,ord,pos);
+  }
+  var Z=[],ZMAX=1,ZMIN=0;   // Z[r][i][j] = cg policy stacked-last $B; i over cg, j over ord
+  function computeZ(){
+    ZMAX=1;ZMIN=0;
+    Z=REGIMES.map(function(r){
+      var m=[];
+      for(var i=0;i<CG.n;i++)m.push([]);
+      for(var j=0;j<ORD.n;j++){
+        var od=ORD.min+(ORD.max-ORD.min)*j/(ORD.n-1);
+        var base=gridVal(CG.min,od,r.pos);   // one no-cg base per (ord, regime) row
+        for(var i2=0;i2<CG.n;i2++){
+          var cg=CG.min+(CG.max-CG.min)*i2/(CG.n-1);
+          var v=gridVal(cg,od,r.pos)-base; m[i2].push(v);
+          if(v>ZMAX)ZMAX=v; if(v<ZMIN)ZMIN=v;
+        }}
+      return m;
+    });
+    ZMAX=Math.ceil(ZMAX/100)*100; ZMIN=Math.min(0,Math.floor(ZMIN/100)*100);   // $100B steps
+  }
+  function znorm(v){ return (v-ZMIN)/(ZMAX-ZMIN); }
+
+  // ---- projection ------------------------------------------------------------- //
+  var yaw=-0.62,pitch=0.42,YAW0=yaw,PITCH0=pitch;
+  var W=940,H=560,SC=340,DPR=Math.min(2,window.devicePixelRatio||1);
+  var cv=$('#surfCv'),ctx=cv.getContext('2d');
+  function proj(i,j,v){
+    // unit cube: x = cg axis, y = ord axis, z = marginal revenue
+    var dx=i/(CG.n-1)-0.5, dy=j/(ORD.n-1)-0.5, dz=znorm(v)-0.42;
+    var cyw=Math.cos(yaw),syw=Math.sin(yaw);
+    var x1=dx*cyw-dy*syw, y1=dx*syw+dy*cyw;
+    var sp=Math.sin(pitch),cp=Math.cos(pitch);
+    return { x:W/2+x1*SC,
+             y:H*0.52+y1*sp*SC*0.9-dz*cp*SC,
+             far:y1*cp+dz*sp*0.25 };          // larger = farther from viewer
+  }
+  function shade(hex,f){ // lighten toward white by f (0..1)
+    var n=parseInt(hex.slice(1),16),r=n>>16,g=(n>>8)&255,b=n&255;
+    var mix=function(c){return Math.round(c+(255-c)*f);};
+    return 'rgb('+mix(r)+','+mix(g)+','+mix(b)+')';
+  }
+  var VPX=[];   // projected vertices for hover: {x,y,i,j}
+  function draw3D(){
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    ctx.clearRect(0,0,W,H);
+    // floor grid at z=0
+    ctx.strokeStyle='#e4e2d9'; ctx.lineWidth=1;
+    for(var i=0;i<CG.n;i+=3){ var a=proj(i,0,0),b=proj(i,ORD.n-1,0);
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke(); }
+    for(var j=0;j<ORD.n;j+=3){ var a2=proj(0,j,0),b2=proj(CG.n-1,j,0);
+      ctx.beginPath();ctx.moveTo(a2.x,a2.y);ctx.lineTo(b2.x,b2.y);ctx.stroke(); }
+    // z pole + ticks at the (0,0) corner (cg policy stacked-last $B, 10-yr)
+    ctx.fillStyle='#8a887f'; ctx.font='600 10.5px ui-monospace,monospace';
+    var p0=proj(0,0,ZMIN),pT=proj(0,0,ZMAX);
+    ctx.strokeStyle='#d7d5cb'; ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(pT.x,pT.y);ctx.stroke();
+    var tstep=(ZMAX-ZMIN)>1500?500:(ZMAX-ZMIN)>600?200:100;
+    for(var t=Math.ceil(ZMIN/tstep)*tstep;t<=ZMAX;t+=tstep){ var pt=proj(0,0,t);
+      ctx.fillText(t>=1000?('$'+(t/1000).toFixed(1).replace(/\.0$/,'')+'T'):('$'+t+'B'),pt.x-40,pt.y+3); }
+    ctx.save(); ctx.translate(p0.x-52,(p0.y+pT.y)/2); ctx.rotate(-Math.PI/2);
+    ctx.fillStyle='#55534c'; ctx.textAlign='center';
+    ctx.fillText('revenue raised by the cg policy, stacked last (10-yr)',0,0); ctx.restore();
+    // axis labels along the two floor edges
+    var eCG=proj(CG.n-1,0,0),eO=proj(0,ORD.n-1,0);
+    ctx.fillStyle='#55534c';
+    ctx.fillText('capital gains top rate 20→50%',(p0.x+eCG.x)/2-70,Math.max(p0.y,eCG.y)+26);
+    ctx.fillText('ordinary top rate 37→50%',(p0.x+eO.x)/2-60,Math.max(p0.y,eO.y)+26);
+    // tick labels at floor corners
+    ctx.fillStyle='#8a887f';
+    ctx.fillText('cg 50',eCG.x-12,eCG.y+13); ctx.fillText('ord 50',eO.x-14,eO.y+13);
+    // quads, painter-sorted across all three surfaces
+    var quads=[];
+    REGIMES.forEach(function(r,ri){
+      for(var i=0;i<CG.n-1;i++)for(var j=0;j<ORD.n-1;j++){
+        var q=[proj(i,j,Z[ri][i][j]),proj(i+1,j,Z[ri][i+1][j]),
+               proj(i+1,j+1,Z[ri][i+1][j+1]),proj(i,j+1,Z[ri][i][j+1])];
+        quads.push({p:q,ri:ri,far:(q[0].far+q[1].far+q[2].far+q[3].far)/4,
+                    zn:znorm((Z[ri][i][j]+Z[ri][i+1][j]+Z[ri][i+1][j+1]+Z[ri][i][j+1])/4)});
+      }});
+    quads.sort(function(a,b){return b.far-a.far;});
+    quads.forEach(function(q){
+      var col=REGIMES[q.ri].col;
+      ctx.beginPath();
+      ctx.moveTo(q.p[0].x,q.p[0].y);
+      for(var k=1;k<4;k++)ctx.lineTo(q.p[k].x,q.p[k].y);
+      ctx.closePath();
+      ctx.globalAlpha=0.60;
+      ctx.fillStyle=shade(col,0.62-0.42*q.zn);   // higher cells read darker
+      ctx.fill();
+      ctx.globalAlpha=0.9; ctx.lineWidth=0.7; ctx.strokeStyle=col; ctx.stroke();
+      ctx.globalAlpha=1;
+    });
+    // direct labels at each surface's near-high corner (contrast relief for amber)
+    ctx.font='700 11.5px ui-monospace,monospace';
+    REGIMES.forEach(function(r,ri){
+      var c=proj(CG.n-1,ORD.n-1,Z[ri][CG.n-1][ORD.n-1]);
+      ctx.fillStyle=r.col;
+      ctx.fillText(r.label,c.x+8,c.y+(ri===0?12:-4));
+    });
+    // hover vertex cache: top (deemed) surface drives snapping
+    VPX=[];
+    for(var i2=0;i2<CG.n;i2++)for(var j2=0;j2<ORD.n;j2++){
+      var pv=proj(i2,j2,Z[2][i2][j2]);
+      VPX.push({x:pv.x,y:pv.y,i:i2,j:j2});
+    }
+    if(hoverIJ)drawHover();
+  }
+  var hoverIJ=null;
+  function drawHover(){
+    var i=hoverIJ[0],j=hoverIJ[1];
+    var base=proj(i,j,0);
+    ctx.strokeStyle='#55534c'; ctx.setLineDash([3,3]); ctx.lineWidth=1;
+    var top=proj(i,j,Z[2][i][j]);
+    ctx.beginPath();ctx.moveTo(base.x,base.y);ctx.lineTo(top.x,top.y);ctx.stroke();
+    ctx.setLineDash([]);
+    REGIMES.forEach(function(r,ri){
+      var p=proj(i,j,Z[ri][i][j]);
+      ctx.beginPath();ctx.arc(p.x,p.y,4.5,0,6.284);
+      ctx.fillStyle=r.col;ctx.fill();
+      ctx.lineWidth=2;ctx.strokeStyle='#fcfcfb';ctx.stroke();
+    });
+  }
+  function showTip(mx,my){
+    var i=hoverIJ[0],j=hoverIJ[1];
+    var cg=CG.min+(CG.max-CG.min)*i/(CG.n-1),od=ORD.min+(ORD.max-ORD.min)*j/(ORD.n-1);
+    var rows=REGIMES.map(function(r,ri){
+      return '<div class="r"><span class="d"><span class="sq" style="background:'+r.col+'"></span>'
+        +r.label+'</span><b>'+usd(Z[ri][i][j])+'</b></div>';
+    }).reverse().join('');
+    var gap=Z[2][i][j]-Z[0][i][j];
+    var tip=$('#surfTip');
+    tip.innerHTML='<div class="h">cg policy at cg '+cg.toFixed(1).replace(/\.0$/,'')+'% · ord '
+      +od.toFixed(1).replace(/\.0$/,'')+'%</div>'
+      +rows+'<div class="gap">taxing at death adds <b>'+usd(gap)
+      +'</b> to the cg policy’s take</div>';
+    tip.style.display='block';
+    var st=$('#surfStage').getBoundingClientRect();
+    tip.style.left=Math.min(mx+16,st.width-230)+'px';
+    tip.style.top=Math.max(my-10,8)+'px';
+  }
+  // ---- 2D flattened views ------------------------------------------------------ //
+  // "Flatten to cg axis" drops the ord dimension: solid line = the cg policy's
+  // stacked-last score vs its rate at ord 37 (current law), sampled at the
+  // anchors (the score is PWL between them); band = spread across ord 37-50.
+  // "Flatten to ord axis" is the mirror: line = the score of a 40% cg rate vs
+  // the ordinary rate; band = spread across cg rates 25-50.
+  var CH2D={};
+  function series2D(mode){
+    if(CH2D[mode])return CH2D[mode];
+    var out={regs:[]},j,k;
+    if(mode==='cg'){
+      out.xs=CGK.slice();
+      REGIMES.forEach(function(r){
+        var line=CGK.map(function(x){return cgScore(x,ORD.min,r.pos);}),
+            lo=line.slice(),hi=line.slice();
+        for(j=1;j<ORD.n;j++){
+          var od=ORD.min+(ORD.max-ORD.min)*j/(ORD.n-1);
+          for(k=0;k<CGK.length;k++){
+            var v=cgScore(CGK[k],od,r.pos);
+            lo[k]=Math.min(lo[k],v);hi[k]=Math.max(hi[k],v);
+          }
+        }
+        out.regs.push({line:line,lo:lo,hi:hi});
+      });
+    } else {
+      out.xs=[];
+      for(j=0;j<ORD.n;j++)out.xs.push(ORD.min+(ORD.max-ORD.min)*j/(ORD.n-1));
+      var cgBand=CGK.filter(function(x){return x>CG.min;});   // 25..50: 20 is 0 by construction
+      REGIMES.forEach(function(r){
+        var line=[],lo=[],hi=[];
+        out.xs.forEach(function(od){
+          line.push(cgScore(40,od,r.pos));
+          var vs=cgBand.map(function(x){return cgScore(x,od,r.pos);});
+          lo.push(Math.min.apply(null,vs));hi.push(Math.max.apply(null,vs));
+        });
+        out.regs.push({line:line,lo:lo,hi:hi});
+      });
+    }
+    var ym=0; out.regs.forEach(function(g){g.hi.forEach(function(v){if(v>ym)ym=v;});});
+    out.ymax=Math.ceil(ym/100)*100;
+    CH2D[mode]=out; return out;
+  }
+  var G2D=null;   // geometry of the current 2D frame (for hover)
+  function draw2D(mode,alpha){
+    var d=series2D(mode);
+    var pad={l:64,r:170,t:40,b:52},iw=W-pad.l-pad.r,ih=H-pad.t-pad.b;
+    var xmin=mode==='cg'?CG.min:ORD.min,xmax=mode==='cg'?CG.max:ORD.max;
+    var X=function(v){return pad.l+(v-xmin)/(xmax-xmin)*iw;},
+        Y=function(v){return pad.t+ih-(v/d.ymax)*ih;};
+    G2D={mode:mode,X:X,Y:Y,pad:pad,d:d,xmin:xmin,xmax:xmax};
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle='#fcfcfb'; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='#e4e2d9'; ctx.lineWidth=1;
+    ctx.font='600 10.5px ui-monospace,monospace'; ctx.fillStyle='#8a887f';
+    var ystep=d.ymax>1500?500:d.ymax>600?200:100;
+    for(var gy=0;gy<=d.ymax;gy+=ystep){
+      ctx.beginPath();ctx.moveTo(pad.l,Y(gy));ctx.lineTo(W-pad.r,Y(gy));ctx.stroke();
+      ctx.fillText(gy>=1000?('$'+(gy/1000).toFixed(1).replace(/\.0$/,'')+'T'):('$'+gy+'B'),pad.l-42,Y(gy)+3.5);
+    }
+    ctx.strokeStyle='#d7d5cb';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(pad.l,Y(0));ctx.lineTo(W-pad.r,Y(0));ctx.stroke();
+    var xstep=mode==='cg'?5:2;
+    for(var gx=Math.ceil(xmin/xstep)*xstep;gx<=xmax;gx+=xstep){
+      ctx.fillText(gx+'%',X(gx)-10,H-pad.b+18);
+    }
+    ctx.fillStyle='#55534c';
+    ctx.fillText(mode==='cg'?'capital gains top rate':'ordinary top rate',pad.l+iw/2-60,H-14);
+    ctx.fillText('revenue raised by the cg policy, stacked last (10-yr)',pad.l-30,pad.t-20);
+    ctx.font='10.5px ui-monospace,monospace'; ctx.fillStyle='#8a887f';
+    ctx.fillText(mode==='cg'?'line: at ord 37% (current law) · band: across ord 37–50%'
+                            :'line: cg at 40% · band: across cg 25–50%',
+                 pad.l+iw/2-150,pad.t-6);
+    function pwlPath(xs,vals,rev){
+      var pts=xs.map(function(x,k){return [X(x),Y(vals[k])];});
+      if(rev)pts.reverse();
+      return pts;
+    }
+    d.regs.forEach(function(g,ri){
+      var col=REGIMES[ri].col;
+      var top=pwlPath(d.xs,g.hi),bot=pwlPath(d.xs,g.lo,true);
+      ctx.beginPath();
+      top.concat(bot).forEach(function(p,z){z?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);});
+      ctx.closePath();
+      ctx.globalAlpha=alpha*0.13; ctx.fillStyle=col; ctx.fill();
+      ctx.globalAlpha=alpha;
+      var ln=pwlPath(d.xs,g.line);
+      ctx.beginPath();
+      ln.forEach(function(p,z){z?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);});
+      ctx.lineWidth=2; ctx.strokeStyle=col; ctx.stroke();
+    });
+    // direct labels, right edge, collision-staggered
+    var ends=d.regs.map(function(g,ri){
+      return {ri:ri,y:Y(g.line[g.line.length-1])};
+    }).sort(function(a,b){return a.y-b.y;});
+    for(var z=1;z<ends.length;z++)
+      if(ends[z].y-ends[z-1].y<15)ends[z].y=ends[z-1].y+15;
+    ctx.font='700 11.5px ui-monospace,monospace';
+    ends.forEach(function(e){
+      ctx.fillStyle=REGIMES[e.ri].col;
+      ctx.fillText(REGIMES[e.ri].label,W-pad.r+8,e.y+4);
+    });
+    ctx.globalAlpha=1;
+  }
+  function showTip2D(cssX,cssY,mx){
+    var g=G2D; if(!g)return;
+    var xv=g.xmin+(mx-g.pad.l)/(W-g.pad.l-g.pad.r)*(g.xmax-g.xmin);
+    if(xv<g.xmin||xv>g.xmax){$('#surfTip').style.display='none';return;}
+    var xs=g.d.xs,bi=0,bd=1e9;
+    xs.forEach(function(x,z){var dd=Math.abs(x-xv);if(dd<bd){bd=dd;bi=z;}});
+    xv=xs[bi];
+    var vals=g.d.regs.map(function(r){return r.line[bi];});
+    var rows=REGIMES.map(function(r,ri){
+      return '<div class="r"><span class="d"><span class="sq" style="background:'+r.col+'"></span>'
+        +r.label+'</span><b>'+usd(vals[ri])+'</b></div>';
+    }).reverse().join('');
+    var tip=$('#surfTip');
+    tip.innerHTML='<div class="h">'+(g.mode==='cg'?'cg ':'ord ')+xv.toFixed(1).replace(/\.0$/,'')+'%</div>'+rows;
+    tip.style.display='block';
+    var st=$('#surfStage').getBoundingClientRect();
+    tip.style.left=Math.min(cssX+16,st.width-230)+'px';
+    tip.style.top=Math.max(cssY-10,8)+'px';
+  }
+
+  // ---- view modes + the flatten animation --------------------------------------- //
+  var MODE='3d',ANIMATING=false;
+  var REDUCED=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function draw(){
+    if(ANIMATING)return;
+    if(MODE==='3d')draw3D(); else draw2D(MODE,1);
+  }
+  function ease(t){return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
+  function animate(steps,done){
+    if(REDUCED){steps.forEach(function(s){s.frame(1);});ANIMATING=false;if(done)done();return;}
+    var i=0,t0=performance.now();
+    function tick(now){
+      var s=steps[i],t=Math.min(1,(now-t0)/s.dur);
+      s.frame(ease(t));
+      if(t>=1){i++;t0=now;if(i>=steps.length){ANIMATING=false;if(done)done();return;}}
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  function camTarget(m){ return m==='cg'?{y:0,p:0.14}:{y:-Math.PI/2,p:0.14}; }
+  function setMode(m){
+    if(ANIMATING||m===MODE)return;
+    hoverIJ=null;$('#surfTip').style.display='none';
+    Array.prototype.forEach.call(document.querySelectorAll('#surfViewSeg button'),function(b){
+      b.setAttribute('aria-pressed',b.dataset.mode===m?'true':'false');});
+    ANIMATING=true;
+    if(m!=='3d'){
+      var y0=yaw,p0=pitch,tg=camTarget(m);
+      animate([
+        {dur:430,frame:function(t){yaw=y0+(tg.y-y0)*t;pitch=p0+(tg.p-p0)*t;draw3D();}},
+        {dur:260,frame:function(t){draw3D();draw2D(m,t);}}
+      ],function(){MODE=m;draw();});
+    } else {
+      var old=MODE,tg2=camTarget(old);
+      MODE='3d';
+      animate([
+        {dur:260,frame:function(t){yaw=tg2.y;pitch=tg2.p;draw3D();draw2D(old,1-t);}},
+        {dur:430,frame:function(t){yaw=tg2.y+(YAW0-tg2.y)*t;pitch=tg2.p+(PITCH0-tg2.p)*t;draw3D();}}
+      ],function(){draw();});
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#surfViewSeg button'),function(b){
+    b.onclick=function(){setMode(b.dataset.mode);};
+  });
+
+  // ---- interaction ------------------------------------------------------------ //
+  var dragging=false,lx=0,ly=0;
+  cv.addEventListener('pointerdown',function(e){
+    if(MODE!=='3d'||ANIMATING)return;
+    dragging=true;lx=e.clientX;ly=e.clientY;
+    cv.classList.add('dragging');cv.setPointerCapture(e.pointerId);});
+  cv.addEventListener('pointerup',function(e){dragging=false;cv.classList.remove('dragging');});
+  cv.addEventListener('pointermove',function(e){
+    if(ANIMATING)return;
+    var r=cv.getBoundingClientRect();
+    var mx=(e.clientX-r.left)*(W/r.width),my=(e.clientY-r.top)*(H/r.height);
+    if(MODE!=='3d'){ draw(); showTip2D(e.clientX-r.left,e.clientY-r.top,mx); return; }
+    if(dragging){
+      yaw+=(e.clientX-lx)*0.008; pitch+=(e.clientY-ly)*0.006;
+      pitch=Math.min(1.35,Math.max(0.12,pitch));
+      lx=e.clientX;ly=e.clientY;
+      hoverIJ=null;$('#surfTip').style.display='none';
+      draw(); return;
+    }
+    var best=null,bd=400;
+    VPX.forEach(function(v){var d=(v.x-mx)*(v.x-mx)+(v.y-my)*(v.y-my);
+      if(d<bd){bd=d;best=v;}});
+    if(best){ hoverIJ=[best.i,best.j]; draw();
+      showTip((e.clientX-r.left),(e.clientY-r.top)); }
+    else if(hoverIJ){ hoverIJ=null;$('#surfTip').style.display='none'; draw(); }
+  });
+  cv.addEventListener('pointerleave',function(){hoverIJ=null;$('#surfTip').style.display='none';draw();});
+  $('#surfReset').onclick=function(){
+    if(ANIMATING)return;
+    if(MODE!=='3d'){setMode('3d');return;}
+    yaw=YAW0;pitch=PITCH0;draw();
+  };
+  function size(){
+    var css=cv.parentElement.clientWidth||940;
+    W=css; H=Math.round(css*0.6); SC=css*0.36;
+    cv.width=W*DPR; cv.height=H*DPR;
+    cv.style.height=H+'px';
+    draw();
+  }
+  var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(size,120);});
+
+  computeZ();
+  size();
+  return {Z:function(){return Z;},cgScore:cgScore,
+    refresh:function(){ CH2D={}; computeZ(); draw(); }};   // decade change hook
+  })();
 
   // ---- harness hooks --------------------------------------------------------------- //
   function setState(s){
@@ -914,8 +1380,10 @@ var DATA=/*__ATLAS_DATA__*/null;
     });
     syncInputs(); renderAll();
   }
-  window.__ATLAS2__={evalQ:evalQ,shapley:shapley,gOf:gOf,evalGrid:evalGrid,
+  window.__ATLAS2__={evalQ:evalQ,surf:SURF,shapley:shapley,gOf:gOf,evalGrid:evalGrid,
     setState:setState,renderNow:renderAll,surState:surState,
-    FRONTD:FRONTD,DATA:DATA,state:state,LEVERS:LEVERS};
+    setDecade:setDecade,getDecade:function(){return DEC;},
+    frontierFor:function(d){ if(!FRONTCACHE[d])FRONTCACHE[d]={d:frontierData(d),svg:''}; return FRONTCACHE[d].d; },
+    FRONTD:function(){return FRONTD;},DATA:DATA,state:state,LEVERS:LEVERS};
 })();
 </script>

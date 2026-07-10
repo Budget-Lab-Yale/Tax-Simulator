@@ -1,0 +1,577 @@
+<title>Capital-gains policy revenue surfaces</title>
+<style>
+  :root {
+    --paper:#f7f6f2; --surface:#fcfcfb; --surface-2:#f1f0ea; --ink:#14130f; --ink-2:#55534c;
+    --muted:#8a887f; --grid:#e4e2d9; --rule:#d7d5cb; --accent:#1c5cab; --accent-2:#cfe0f6;
+    --hair:rgba(20,19,15,0.10);
+    --r-stepup:#c9891a; --r-carry:#0f95b0; --r-deemed:#6d5bd0;
+    --shadow:0 1px 2px rgba(20,19,15,.05),0 4px 14px rgba(20,19,15,.05);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { background:var(--paper); }
+  body { font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--ink); background:var(--paper); }
+  .wrap { max-width:980px; margin:0 auto; padding:0 22px; }
+  header { padding:40px 0 6px; }
+  header h1 { font-size:26px; line-height:1.2; letter-spacing:-0.01em; text-wrap:balance; }
+  header .sub { color:var(--ink-2); margin-top:8px; max-width:64ch; }
+  .badge { display:inline-block; font:600 10.5px/1 ui-monospace,monospace; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--ink-2); background:var(--surface-2); border:1px solid var(--rule); border-radius:999px; padding:5px 10px; margin-bottom:14px; }
+  .card { background:var(--surface); border:1px solid var(--hair); border-radius:12px; box-shadow:var(--shadow); padding:16px 18px 12px; margin:18px 0 10px; }
+  .row { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .row .lab { font:600 11px/1 ui-monospace,monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .row input[type=range] { width:180px; accent-color:var(--accent); }
+  .row .val { font:600 12.5px/1 ui-monospace,monospace; color:var(--ink); min-width:120px; }
+  .row button { font:600 11.5px/1 ui-monospace,monospace; color:var(--ink-2); background:var(--surface-2);
+    border:1px solid var(--rule); border-radius:8px; padding:7px 11px; cursor:pointer; }
+  .row button:hover { border-color:var(--accent); color:var(--accent); }
+  .seg { display:flex; border:1px solid var(--rule); border-radius:8px; overflow:hidden; background:var(--surface); }
+  .seg button { font:600 11.5px/1.2 ui-monospace,monospace; padding:8px 13px; background:transparent;
+    color:var(--ink-2); border:0; border-radius:0; cursor:pointer; transition:.12s; }
+  .seg button + button { border-left:1px solid var(--rule); }
+  .seg button[aria-pressed="true"] { background:var(--accent); color:#fff; }
+  #stage { position:relative; }
+  canvas { width:100%; height:auto; display:block; cursor:grab; touch-action:none; }
+  canvas.dragging { cursor:grabbing; }
+  .legend { display:flex; gap:18px; flex-wrap:wrap; padding:8px 2px 4px; font-size:12.5px; color:var(--ink-2); }
+  .legend .it { display:flex; align-items:center; gap:7px; }
+  .legend .swp { width:14px; height:10px; border-radius:3px; }
+  #tip { position:absolute; pointer-events:none; display:none; background:var(--surface); border:1px solid var(--rule);
+    border-radius:9px; box-shadow:var(--shadow); padding:9px 11px; font:12px/1.5 ui-monospace,monospace; color:var(--ink); min-width:210px; }
+  #tip .h { font-weight:700; margin-bottom:4px; }
+  #tip .r { display:flex; justify-content:space-between; gap:14px; }
+  #tip .r .d { display:flex; align-items:center; gap:6px; }
+  #tip .r .sq { width:9px; height:9px; border-radius:2px; }
+  #tip .gap { border-top:1px solid var(--grid); margin-top:5px; padding-top:5px; color:var(--ink-2); }
+  footer { color:var(--muted); font-size:12.5px; padding:10px 0 46px; max-width:74ch; }
+  footer strong { color:var(--ink-2); }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="badge" id="dataBadge">Model output</span>
+    <h1>How much does the capital-gains policy raise?</h1>
+    <p class="sub">One surface per death regime: the ten-year revenue attributable to the capital-gains rate
+      change — its stacked-last score, on top of the ordinary-rate change and the death regime — at every
+      combination of the two top rates. Where a sheet crests along the capital-gains axis, that rate is
+      revenue-maximizing under that regime; taxing gains at death lifts the whole sheet and pushes the crest
+      to higher rates. Drag to rotate; hover a grid point for values.</p>
+  </header>
+
+  <div class="card">
+    <div class="row" style="margin-bottom:6px">
+      <span class="lab">View</span>
+      <div class="seg" id="viewSeg">
+        <button type="button" data-mode="3d" aria-pressed="true">3D surface</button>
+        <button type="button" data-mode="cg" aria-pressed="false">Flatten to cg axis</button>
+        <button type="button" data-mode="ord" aria-pressed="false">Flatten to ord axis</button>
+      </div>
+      <span style="flex:1"></span>
+      <button id="resetView" type="button">Reset view</button>
+    </div>
+    <div id="stage">
+      <canvas id="cv"></canvas>
+      <div id="tip"></div>
+    </div>
+    <div class="legend">
+      <span class="it"><span class="swp" style="background:var(--r-deemed)"></span>Gains taxed at death</span>
+      <span class="it"><span class="swp" style="background:var(--r-carry)"></span>Carryover basis</span>
+      <span class="it"><span class="swp" style="background:var(--r-stepup)"></span>Step-up (current law)</span>
+    </div>
+  </div>
+
+  <footer id="foot"><strong>Model output, interpolated.</strong> Revenue-vs-rate is evaluated at the capital-gains
+    anchors (every 5 points) with the same measured solo + pairwise + triple decomposition the dials explorer uses,
+    on the same run data — the deemed and carryover surfaces use interaction terms measured at each ladder
+    position, never scaled from another position. Each sheet is the capital-gains policy's stacked-last score:
+    the package total minus the same package without the capital-gains change, so interactions with the ordinary
+    rate and the death regime accrue to the capital-gains line — the same last-in-the-stack convention as a
+    conventional stacked estimate. The score is piecewise-linear between the 5-point rate anchors; where a sheet
+    crests, that regime's capital-gains rate is revenue-maximizing. The flattened views drop one axis: the solid
+    line holds the removed dimension at a reference (ordinary rate at current law, or cg at 40%) and the shaded
+    band spans its range. The badge states the interpolation bound verified on held-out full-package runs.</footer>
+</div>
+
+<script>
+(function(){
+  var DATA=/*__ATLAS_DATA__*/null;
+  if(!DATA){document.body.insertAdjacentHTML('afterbegin','<div style="background:#b9601b;color:#fff;padding:10px 24px;font:600 13px system-ui">No data injected — run other/top_tax/build_atlas.py atlas2_data.json atlas2_surface_built.html other/top_tax/atlas2_surface.html.</div>');return;}
+  var $=function(s){return document.querySelector(s);};
+
+  // ---- lever metadata + evaluator: VERBATIM from atlas2.html ----------------- //
+  // (mirrors fit_surrogate.py — keep in lockstep with atlas2.html)
+  var LEVERS=DATA.meta.levers;
+  var BYKEY={}; LEVERS.forEach(function(l){BYKEY[l.key]=l;});
+  var SUR=DATA.surrogate, MQ=DATA.meta.surrogate.m;
+  function locate(knots,x,scale){
+    var k=knots,i;
+    if(scale==='log'){ k=knots.map(function(v){return Math.log(v);}); x=Math.log(Math.max(x,1e-12)); }
+    if(x<=k[0])return [0,0];
+    if(x>=k[k.length-1])return [k.length-1,0];
+    for(i=0;i<k.length-1;i++){
+      if(x===k[i])return [i,0];
+      if(x<k[i+1])return [i,(x-k[i])/(k[i+1]-k[i])];
+    }
+    return [k.length-1,0];
+  }
+  function evalGrid(lv,rows,vals){
+    var axes=lv.params;
+    if(axes.length===1){
+      var p=axes[0],x=vals[p.key];
+      if(p.scale==='pos'){ return rows[p.knots.indexOf(x)].slice(); }
+      var it=locate(p.knots,x,p.scale),i=it[0],t=it[1];
+      if(t===0)return rows[i].slice();
+      return rows[i].map(function(a,z){return (1-t)*a+t*rows[i+1][z];});
+    }
+    var p1=axes[0],p2=axes[1],n2=p2.knots.length;
+    var l1=locate(p1.knots,vals[p1.key],p1.scale),i1=l1[0],t1=l1[1];
+    var l2=locate(p2.knots,vals[p2.key],p2.scale),i2=l2[0],t2=l2[1];
+    function row(a,b){return rows[a*n2+b];}
+    if(t1===0&&t2===0)return row(i1,i2).slice();
+    var j1=Math.min(i1+1,p1.knots.length-1),j2=Math.min(i2+1,n2-1);
+    var r00=row(i1,i2),r01=row(i1,j2),r10=row(j1,i2),r11=row(j1,j2);
+    return r00.map(function(_,z){
+      return (1-t1)*((1-t2)*r00[z]+t2*r01[z])+t1*((1-t2)*r10[z]+t2*r11[z]);});
+  }
+  function gOf(key,vals){
+    return evalGrid(BYKEY[key],SUR.g[key].map(function(v){return [v];}),vals)[0];
+  }
+  function pairTerm(a,b,qid,s,g){
+    var pe=SUR.pairs[a+'|'+b];
+    if(!pe)return null;
+    var ladder=(a==='deemed'||b==='deemed')?'deemed':null;
+    if(pe.byPos&&ladder){
+      var pos=s[ladder].pos;
+      if(pe.byPos[pos]){
+        var other=(a===ladder)?b:a;
+        var v=pe.byPos[pos][qid];
+        return v?{vec:v,w:g[other]}:null;
+      }
+    }
+    return pe[qid]?{vec:pe[qid],w:g[a]*g[b]}:null;
+  }
+  function tripleTerm(entry,ks,qid,s,g){
+    if(entry.byPos&&ks.indexOf('deemed')>=0){
+      var pos=s.deemed.pos;
+      if(entry.byPos[pos]){
+        var w=1;
+        ks.forEach(function(k){ if(k!=='deemed')w*=g[k]; });
+        var v=entry.byPos[pos][qid];
+        return v?{vec:v,w:w}:null;
+      }
+    }
+    if(!entry[qid])return null;
+    var w2=1; ks.forEach(function(k){w2*=g[k];});
+    return {vec:entry[qid],w:w2};
+  }
+  function evalQ(qid,s){
+    var m=MQ[qid],tot=[],i,j,x;
+    for(x=0;x<m;x++)tot.push(0);
+    var on=[]; LEVERS.forEach(function(l){ if(s[l.key])on.push(l.key); });
+    var g={};
+    on.forEach(function(k){
+      var f=SUR.solo[k][qid];
+      if(f){ var v=evalGrid(BYKEY[k],f,s[k]); for(x=0;x<m;x++)tot[x]+=v[x]; }
+      g[k]=gOf(k,s[k]);
+    });
+    for(i=0;i<on.length;i++)for(j=i+1;j<on.length;j++){
+      var pt=pairTerm(on[i],on[j],qid,s,g);
+      if(pt){ for(x=0;x<m;x++)tot[x]+=pt.vec[x]*pt.w; }
+    }
+    Object.keys(SUR.triples).forEach(function(tk){
+      var ks=tk.split('|');
+      if(ks.every(function(k){return g[k]!==undefined;})){
+        var tt=tripleTerm(SUR.triples[tk],ks,qid,s,g);
+        if(tt){ for(x=0;x<m;x++)tot[x]+=tt.vec[x]*tt.w; }
+      }
+    });
+    return tot;
+  }
+  // ---- end verbatim evaluator ------------------------------------------------ //
+
+  var usd=function(b){ var v=Math.abs(b),sg=b<0?"−":"";
+    return v>=1000 ? sg+"$"+(v/1000).toFixed(2)+"T" : sg+"$"+Math.round(v)+"B"; };
+
+  // badge from the stamped validation bound (same contract as atlas2)
+  var val=DATA.meta.surrogate.validation||{};
+  $('#dataBadge').textContent=DATA.meta.placeholder
+    ? 'Preview · '+DATA.meta.placeholder
+    : 'Model output · interpolated; verified within ±'+val.bound_pct+'% on '
+      +(((val.quiz&&val.quiz.n)||0)+((val.corners&&val.corners.n)||0))+' holdout runs';
+
+  // ---- surface grid ----------------------------------------------------------- //
+  var CG={min:20,max:50,n:25}, ORD={min:37,max:50,n:14};
+  var REGIMES=[
+    {key:'stepup', label:'Step-up (current law)', pos:null,        col:'#c9891a'},
+    {key:'carry',  label:'Carryover basis',       pos:'carryover', col:'#0f95b0'},
+    {key:'deemed', label:'Gains taxed at death',  pos:'deemed',    col:'#6d5bd0'}
+  ];
+  function gridVal(cg,ord,pos){
+    var s={};
+    if(cg>20)s.cg={rate:cg};
+    if(ord>37)s.ord={rate:ord};
+    if(pos)s.deemed={pos:pos};
+    return Object.keys(s).length?evalQ('ct',s)[0]:0;
+  }
+  // The cg policy's STACKED-LAST score: total revenue attributable to the
+  // capital-gains change when layered on top of the ordinary-rate change and
+  // the death regime -- V(cg, ord, regime) minus V(no cg change, ord, regime).
+  // Exact surrogate arithmetic (PWL in the rate, kinks at the 5pp anchors);
+  // zero at cg = 20 by construction, and the revenue-maximizing rate is where
+  // a sheet crests.
+  var CGK=BYKEY.cg.params[0].knots;
+  function cgScore(cg,ord,pos){
+    return gridVal(cg,ord,pos)-gridVal(CG.min,ord,pos);
+  }
+  var Z=[],ZMAX=1,ZMIN=0;   // Z[r][i][j] = cg policy stacked-last $B; i over cg, j over ord
+  function computeZ(){
+    ZMAX=1;ZMIN=0;
+    Z=REGIMES.map(function(r){
+      var m=[];
+      for(var i=0;i<CG.n;i++)m.push([]);
+      for(var j=0;j<ORD.n;j++){
+        var od=ORD.min+(ORD.max-ORD.min)*j/(ORD.n-1);
+        var base=gridVal(CG.min,od,r.pos);   // one no-cg base per (ord, regime) row
+        for(var i2=0;i2<CG.n;i2++){
+          var cg=CG.min+(CG.max-CG.min)*i2/(CG.n-1);
+          var v=gridVal(cg,od,r.pos)-base; m[i2].push(v);
+          if(v>ZMAX)ZMAX=v; if(v<ZMIN)ZMIN=v;
+        }}
+      return m;
+    });
+    ZMAX=Math.ceil(ZMAX/100)*100; ZMIN=Math.min(0,Math.floor(ZMIN/100)*100);   // $100B steps
+  }
+  function znorm(v){ return (v-ZMIN)/(ZMAX-ZMIN); }
+
+  // ---- projection ------------------------------------------------------------- //
+  var yaw=-0.62,pitch=0.42,YAW0=yaw,PITCH0=pitch;
+  var W=940,H=560,SC=340,DPR=Math.min(2,window.devicePixelRatio||1);
+  var cv=$('#cv'),ctx=cv.getContext('2d');
+  function proj(i,j,v){
+    // unit cube: x = cg axis, y = ord axis, z = marginal revenue
+    var dx=i/(CG.n-1)-0.5, dy=j/(ORD.n-1)-0.5, dz=znorm(v)-0.42;
+    var cyw=Math.cos(yaw),syw=Math.sin(yaw);
+    var x1=dx*cyw-dy*syw, y1=dx*syw+dy*cyw;
+    var sp=Math.sin(pitch),cp=Math.cos(pitch);
+    return { x:W/2+x1*SC,
+             y:H*0.52+y1*sp*SC*0.9-dz*cp*SC,
+             far:y1*cp+dz*sp*0.25 };          // larger = farther from viewer
+  }
+  function shade(hex,f){ // lighten toward white by f (0..1)
+    var n=parseInt(hex.slice(1),16),r=n>>16,g=(n>>8)&255,b=n&255;
+    var mix=function(c){return Math.round(c+(255-c)*f);};
+    return 'rgb('+mix(r)+','+mix(g)+','+mix(b)+')';
+  }
+  var VPX=[];   // projected vertices for hover: {x,y,i,j}
+  function draw3D(){
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    ctx.clearRect(0,0,W,H);
+    // floor grid at z=0
+    ctx.strokeStyle='#e4e2d9'; ctx.lineWidth=1;
+    for(var i=0;i<CG.n;i+=3){ var a=proj(i,0,0),b=proj(i,ORD.n-1,0);
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke(); }
+    for(var j=0;j<ORD.n;j+=3){ var a2=proj(0,j,0),b2=proj(CG.n-1,j,0);
+      ctx.beginPath();ctx.moveTo(a2.x,a2.y);ctx.lineTo(b2.x,b2.y);ctx.stroke(); }
+    // z pole + ticks at the (0,0) corner (cg policy stacked-last $B, 10-yr)
+    ctx.fillStyle='#8a887f'; ctx.font='600 10.5px ui-monospace,monospace';
+    var p0=proj(0,0,ZMIN),pT=proj(0,0,ZMAX);
+    ctx.strokeStyle='#d7d5cb'; ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(pT.x,pT.y);ctx.stroke();
+    var tstep=(ZMAX-ZMIN)>1500?500:(ZMAX-ZMIN)>600?200:100;
+    for(var t=Math.ceil(ZMIN/tstep)*tstep;t<=ZMAX;t+=tstep){ var pt=proj(0,0,t);
+      ctx.fillText(t>=1000?('$'+(t/1000).toFixed(1).replace(/\.0$/,'')+'T'):('$'+t+'B'),pt.x-40,pt.y+3); }
+    ctx.save(); ctx.translate(p0.x-52,(p0.y+pT.y)/2); ctx.rotate(-Math.PI/2);
+    ctx.fillStyle='#55534c'; ctx.textAlign='center';
+    ctx.fillText('revenue raised by the cg policy, stacked last (10-yr)',0,0); ctx.restore();
+    // axis labels along the two floor edges
+    var eCG=proj(CG.n-1,0,0),eO=proj(0,ORD.n-1,0);
+    ctx.fillStyle='#55534c';
+    ctx.fillText('capital gains top rate 20→50%',(p0.x+eCG.x)/2-70,Math.max(p0.y,eCG.y)+26);
+    ctx.fillText('ordinary top rate 37→50%',(p0.x+eO.x)/2-60,Math.max(p0.y,eO.y)+26);
+    // tick labels at floor corners
+    ctx.fillStyle='#8a887f';
+    ctx.fillText('cg 50',eCG.x-12,eCG.y+13); ctx.fillText('ord 50',eO.x-14,eO.y+13);
+    // quads, painter-sorted across all three surfaces
+    var quads=[];
+    REGIMES.forEach(function(r,ri){
+      for(var i=0;i<CG.n-1;i++)for(var j=0;j<ORD.n-1;j++){
+        var q=[proj(i,j,Z[ri][i][j]),proj(i+1,j,Z[ri][i+1][j]),
+               proj(i+1,j+1,Z[ri][i+1][j+1]),proj(i,j+1,Z[ri][i][j+1])];
+        quads.push({p:q,ri:ri,far:(q[0].far+q[1].far+q[2].far+q[3].far)/4,
+                    zn:znorm((Z[ri][i][j]+Z[ri][i+1][j]+Z[ri][i+1][j+1]+Z[ri][i][j+1])/4)});
+      }});
+    quads.sort(function(a,b){return b.far-a.far;});
+    quads.forEach(function(q){
+      var col=REGIMES[q.ri].col;
+      ctx.beginPath();
+      ctx.moveTo(q.p[0].x,q.p[0].y);
+      for(var k=1;k<4;k++)ctx.lineTo(q.p[k].x,q.p[k].y);
+      ctx.closePath();
+      ctx.globalAlpha=0.60;
+      ctx.fillStyle=shade(col,0.62-0.42*q.zn);   // higher cells read darker
+      ctx.fill();
+      ctx.globalAlpha=0.9; ctx.lineWidth=0.7; ctx.strokeStyle=col; ctx.stroke();
+      ctx.globalAlpha=1;
+    });
+    // direct labels at each surface's near-high corner (contrast relief for amber)
+    ctx.font='700 11.5px ui-monospace,monospace';
+    REGIMES.forEach(function(r,ri){
+      var c=proj(CG.n-1,ORD.n-1,Z[ri][CG.n-1][ORD.n-1]);
+      ctx.fillStyle=r.col;
+      ctx.fillText(r.label,c.x+8,c.y+(ri===0?12:-4));
+    });
+    // hover vertex cache: top (deemed) surface drives snapping
+    VPX=[];
+    for(var i2=0;i2<CG.n;i2++)for(var j2=0;j2<ORD.n;j2++){
+      var pv=proj(i2,j2,Z[2][i2][j2]);
+      VPX.push({x:pv.x,y:pv.y,i:i2,j:j2});
+    }
+    if(hoverIJ)drawHover();
+  }
+  var hoverIJ=null;
+  function drawHover(){
+    var i=hoverIJ[0],j=hoverIJ[1];
+    var base=proj(i,j,0);
+    ctx.strokeStyle='#55534c'; ctx.setLineDash([3,3]); ctx.lineWidth=1;
+    var top=proj(i,j,Z[2][i][j]);
+    ctx.beginPath();ctx.moveTo(base.x,base.y);ctx.lineTo(top.x,top.y);ctx.stroke();
+    ctx.setLineDash([]);
+    REGIMES.forEach(function(r,ri){
+      var p=proj(i,j,Z[ri][i][j]);
+      ctx.beginPath();ctx.arc(p.x,p.y,4.5,0,6.284);
+      ctx.fillStyle=r.col;ctx.fill();
+      ctx.lineWidth=2;ctx.strokeStyle='#fcfcfb';ctx.stroke();
+    });
+  }
+  function showTip(mx,my){
+    var i=hoverIJ[0],j=hoverIJ[1];
+    var cg=CG.min+(CG.max-CG.min)*i/(CG.n-1),od=ORD.min+(ORD.max-ORD.min)*j/(ORD.n-1);
+    var rows=REGIMES.map(function(r,ri){
+      return '<div class="r"><span class="d"><span class="sq" style="background:'+r.col+'"></span>'
+        +r.label+'</span><b>'+usd(Z[ri][i][j])+'</b></div>';
+    }).reverse().join('');
+    var gap=Z[2][i][j]-Z[0][i][j];
+    var tip=$('#tip');
+    tip.innerHTML='<div class="h">cg policy at cg '+cg.toFixed(1).replace(/\.0$/,'')+'% · ord '
+      +od.toFixed(1).replace(/\.0$/,'')+'%</div>'
+      +rows+'<div class="gap">taxing at death adds <b>'+usd(gap)
+      +'</b> to the cg policy’s take</div>';
+    tip.style.display='block';
+    var st=$('#stage').getBoundingClientRect();
+    tip.style.left=Math.min(mx+16,st.width-230)+'px';
+    tip.style.top=Math.max(my-10,8)+'px';
+  }
+  // ---- 2D flattened views ------------------------------------------------------ //
+  // "Flatten to cg axis" drops the ord dimension: solid line = the cg policy's
+  // stacked-last score vs its rate at ord 37 (current law), sampled at the
+  // anchors (the score is PWL between them); band = spread across ord 37-50.
+  // "Flatten to ord axis" is the mirror: line = the score of a 40% cg rate vs
+  // the ordinary rate; band = spread across cg rates 25-50.
+  var CH2D={};
+  function series2D(mode){
+    if(CH2D[mode])return CH2D[mode];
+    var out={regs:[]},j,k;
+    if(mode==='cg'){
+      out.xs=CGK.slice();
+      REGIMES.forEach(function(r){
+        var line=CGK.map(function(x){return cgScore(x,ORD.min,r.pos);}),
+            lo=line.slice(),hi=line.slice();
+        for(j=1;j<ORD.n;j++){
+          var od=ORD.min+(ORD.max-ORD.min)*j/(ORD.n-1);
+          for(k=0;k<CGK.length;k++){
+            var v=cgScore(CGK[k],od,r.pos);
+            lo[k]=Math.min(lo[k],v);hi[k]=Math.max(hi[k],v);
+          }
+        }
+        out.regs.push({line:line,lo:lo,hi:hi});
+      });
+    } else {
+      out.xs=[];
+      for(j=0;j<ORD.n;j++)out.xs.push(ORD.min+(ORD.max-ORD.min)*j/(ORD.n-1));
+      var cgBand=CGK.filter(function(x){return x>CG.min;});   // 25..50: 20 is 0 by construction
+      REGIMES.forEach(function(r){
+        var line=[],lo=[],hi=[];
+        out.xs.forEach(function(od){
+          line.push(cgScore(40,od,r.pos));
+          var vs=cgBand.map(function(x){return cgScore(x,od,r.pos);});
+          lo.push(Math.min.apply(null,vs));hi.push(Math.max.apply(null,vs));
+        });
+        out.regs.push({line:line,lo:lo,hi:hi});
+      });
+    }
+    var ym=0; out.regs.forEach(function(g){g.hi.forEach(function(v){if(v>ym)ym=v;});});
+    out.ymax=Math.ceil(ym/100)*100;
+    CH2D[mode]=out; return out;
+  }
+  var G2D=null;   // geometry of the current 2D frame (for hover)
+  function draw2D(mode,alpha){
+    var d=series2D(mode);
+    var pad={l:64,r:170,t:40,b:52},iw=W-pad.l-pad.r,ih=H-pad.t-pad.b;
+    var xmin=mode==='cg'?CG.min:ORD.min,xmax=mode==='cg'?CG.max:ORD.max;
+    var X=function(v){return pad.l+(v-xmin)/(xmax-xmin)*iw;},
+        Y=function(v){return pad.t+ih-(v/d.ymax)*ih;};
+    G2D={mode:mode,X:X,Y:Y,pad:pad,d:d,xmin:xmin,xmax:xmax};
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle='#fcfcfb'; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='#e4e2d9'; ctx.lineWidth=1;
+    ctx.font='600 10.5px ui-monospace,monospace'; ctx.fillStyle='#8a887f';
+    var ystep=d.ymax>1500?500:d.ymax>600?200:100;
+    for(var gy=0;gy<=d.ymax;gy+=ystep){
+      ctx.beginPath();ctx.moveTo(pad.l,Y(gy));ctx.lineTo(W-pad.r,Y(gy));ctx.stroke();
+      ctx.fillText(gy>=1000?('$'+(gy/1000).toFixed(1).replace(/\.0$/,'')+'T'):('$'+gy+'B'),pad.l-42,Y(gy)+3.5);
+    }
+    ctx.strokeStyle='#d7d5cb';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(pad.l,Y(0));ctx.lineTo(W-pad.r,Y(0));ctx.stroke();
+    var xstep=mode==='cg'?5:2;
+    for(var gx=Math.ceil(xmin/xstep)*xstep;gx<=xmax;gx+=xstep){
+      ctx.fillText(gx+'%',X(gx)-10,H-pad.b+18);
+    }
+    ctx.fillStyle='#55534c';
+    ctx.fillText(mode==='cg'?'capital gains top rate':'ordinary top rate',pad.l+iw/2-60,H-14);
+    ctx.fillText('revenue raised by the cg policy, stacked last (10-yr)',pad.l-30,pad.t-20);
+    ctx.font='10.5px ui-monospace,monospace'; ctx.fillStyle='#8a887f';
+    ctx.fillText(mode==='cg'?'line: at ord 37% (current law) · band: across ord 37–50%'
+                            :'line: cg at 40% · band: across cg 25–50%',
+                 pad.l+iw/2-150,pad.t-6);
+    function pwlPath(xs,vals,rev){
+      var pts=xs.map(function(x,k){return [X(x),Y(vals[k])];});
+      if(rev)pts.reverse();
+      return pts;
+    }
+    d.regs.forEach(function(g,ri){
+      var col=REGIMES[ri].col;
+      var top=pwlPath(d.xs,g.hi),bot=pwlPath(d.xs,g.lo,true);
+      ctx.beginPath();
+      top.concat(bot).forEach(function(p,z){z?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);});
+      ctx.closePath();
+      ctx.globalAlpha=alpha*0.13; ctx.fillStyle=col; ctx.fill();
+      ctx.globalAlpha=alpha;
+      var ln=pwlPath(d.xs,g.line);
+      ctx.beginPath();
+      ln.forEach(function(p,z){z?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);});
+      ctx.lineWidth=2; ctx.strokeStyle=col; ctx.stroke();
+    });
+    // direct labels, right edge, collision-staggered
+    var ends=d.regs.map(function(g,ri){
+      return {ri:ri,y:Y(g.line[g.line.length-1])};
+    }).sort(function(a,b){return a.y-b.y;});
+    for(var z=1;z<ends.length;z++)
+      if(ends[z].y-ends[z-1].y<15)ends[z].y=ends[z-1].y+15;
+    ctx.font='700 11.5px ui-monospace,monospace';
+    ends.forEach(function(e){
+      ctx.fillStyle=REGIMES[e.ri].col;
+      ctx.fillText(REGIMES[e.ri].label,W-pad.r+8,e.y+4);
+    });
+    ctx.globalAlpha=1;
+  }
+  function showTip2D(cssX,cssY,mx){
+    var g=G2D; if(!g)return;
+    var xv=g.xmin+(mx-g.pad.l)/(W-g.pad.l-g.pad.r)*(g.xmax-g.xmin);
+    if(xv<g.xmin||xv>g.xmax){$('#tip').style.display='none';return;}
+    var xs=g.d.xs,bi=0,bd=1e9;
+    xs.forEach(function(x,z){var dd=Math.abs(x-xv);if(dd<bd){bd=dd;bi=z;}});
+    xv=xs[bi];
+    var vals=g.d.regs.map(function(r){return r.line[bi];});
+    var rows=REGIMES.map(function(r,ri){
+      return '<div class="r"><span class="d"><span class="sq" style="background:'+r.col+'"></span>'
+        +r.label+'</span><b>'+usd(vals[ri])+'</b></div>';
+    }).reverse().join('');
+    var tip=$('#tip');
+    tip.innerHTML='<div class="h">'+(g.mode==='cg'?'cg ':'ord ')+xv.toFixed(1).replace(/\.0$/,'')+'%</div>'+rows;
+    tip.style.display='block';
+    var st=$('#stage').getBoundingClientRect();
+    tip.style.left=Math.min(cssX+16,st.width-230)+'px';
+    tip.style.top=Math.max(cssY-10,8)+'px';
+  }
+
+  // ---- view modes + the flatten animation --------------------------------------- //
+  var MODE='3d',ANIMATING=false;
+  var REDUCED=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function draw(){
+    if(ANIMATING)return;
+    if(MODE==='3d')draw3D(); else draw2D(MODE,1);
+  }
+  function ease(t){return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
+  function animate(steps,done){
+    if(REDUCED){steps.forEach(function(s){s.frame(1);});ANIMATING=false;if(done)done();return;}
+    var i=0,t0=performance.now();
+    function tick(now){
+      var s=steps[i],t=Math.min(1,(now-t0)/s.dur);
+      s.frame(ease(t));
+      if(t>=1){i++;t0=now;if(i>=steps.length){ANIMATING=false;if(done)done();return;}}
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+  function camTarget(m){ return m==='cg'?{y:0,p:0.14}:{y:-Math.PI/2,p:0.14}; }
+  function setMode(m){
+    if(ANIMATING||m===MODE)return;
+    hoverIJ=null;$('#tip').style.display='none';
+    Array.prototype.forEach.call(document.querySelectorAll('#viewSeg button'),function(b){
+      b.setAttribute('aria-pressed',b.dataset.mode===m?'true':'false');});
+    ANIMATING=true;
+    if(m!=='3d'){
+      var y0=yaw,p0=pitch,tg=camTarget(m);
+      animate([
+        {dur:430,frame:function(t){yaw=y0+(tg.y-y0)*t;pitch=p0+(tg.p-p0)*t;draw3D();}},
+        {dur:260,frame:function(t){draw3D();draw2D(m,t);}}
+      ],function(){MODE=m;draw();});
+    } else {
+      var old=MODE,tg2=camTarget(old);
+      MODE='3d';
+      animate([
+        {dur:260,frame:function(t){yaw=tg2.y;pitch=tg2.p;draw3D();draw2D(old,1-t);}},
+        {dur:430,frame:function(t){yaw=tg2.y+(YAW0-tg2.y)*t;pitch=tg2.p+(PITCH0-tg2.p)*t;draw3D();}}
+      ],function(){draw();});
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#viewSeg button'),function(b){
+    b.onclick=function(){setMode(b.dataset.mode);};
+  });
+
+  // ---- interaction ------------------------------------------------------------ //
+  var dragging=false,lx=0,ly=0;
+  cv.addEventListener('pointerdown',function(e){
+    if(MODE!=='3d'||ANIMATING)return;
+    dragging=true;lx=e.clientX;ly=e.clientY;
+    cv.classList.add('dragging');cv.setPointerCapture(e.pointerId);});
+  cv.addEventListener('pointerup',function(e){dragging=false;cv.classList.remove('dragging');});
+  cv.addEventListener('pointermove',function(e){
+    if(ANIMATING)return;
+    var r=cv.getBoundingClientRect();
+    var mx=(e.clientX-r.left)*(W/r.width),my=(e.clientY-r.top)*(H/r.height);
+    if(MODE!=='3d'){ draw(); showTip2D(e.clientX-r.left,e.clientY-r.top,mx); return; }
+    if(dragging){
+      yaw+=(e.clientX-lx)*0.008; pitch+=(e.clientY-ly)*0.006;
+      pitch=Math.min(1.35,Math.max(0.12,pitch));
+      lx=e.clientX;ly=e.clientY;
+      hoverIJ=null;$('#tip').style.display='none';
+      draw(); return;
+    }
+    var best=null,bd=400;
+    VPX.forEach(function(v){var d=(v.x-mx)*(v.x-mx)+(v.y-my)*(v.y-my);
+      if(d<bd){bd=d;best=v;}});
+    if(best){ hoverIJ=[best.i,best.j]; draw();
+      showTip((e.clientX-r.left),(e.clientY-r.top)); }
+    else if(hoverIJ){ hoverIJ=null;$('#tip').style.display='none'; draw(); }
+  });
+  cv.addEventListener('pointerleave',function(){hoverIJ=null;$('#tip').style.display='none';draw();});
+  $('#resetView').onclick=function(){
+    if(ANIMATING)return;
+    if(MODE!=='3d'){setMode('3d');return;}
+    yaw=YAW0;pitch=PITCH0;draw();
+  };
+  function size(){
+    var css=cv.parentElement.clientWidth||940;
+    W=css; H=Math.round(css*0.6); SC=css*0.36;
+    cv.width=W*DPR; cv.height=H*DPR;
+    cv.style.height=H+'px';
+    draw();
+  }
+  var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(size,120);});
+
+  computeZ();
+  size();
+  window.__SURF__={evalQ:evalQ,gridVal:gridVal,cgScore:cgScore,Z:function(){return Z;},
+    ZMAX:function(){return ZMAX;},ZMIN:function(){return ZMIN;}};
+})();
+</script>
