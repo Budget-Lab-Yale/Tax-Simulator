@@ -40,7 +40,11 @@ DEFAULT_OUT = os.path.join(REPO, "other", "top_tax", "atlas_data.json")
 MACRO = "/nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections/v3/2026022522/baseline/projections.csv"
 LEGEND = os.path.join(REPO, "config", "runscripts", "top_tax", "factorial_legend.csv")
 
-WINDOW = list(range(2027, 2037))          # 10-yr budget window
+WINDOW = list(range(2027, 2037))          # 10-yr budget window (v1 atlas)
+# Decade windows for the dials/atlas2 track (32-yr batches, 2026:2057).
+# Contiguous by construction — leg_deltas_windows assumes the union spans
+# min(first)..max(last) with no gaps.
+DECADES = [(2027, 2036), (2037, 2046), (2047, 2056)]
 DIST_YEARS = [2027, 2036]                 # ETR display years
 SWITCHES = ["ord", "cg", "corp", "wealth", "deemed", "estate", "qbi"]  # bit i = 2**i
 
@@ -112,6 +116,43 @@ def leg_deltas(scen_dir, base_heads, base_cg, leg):
     drift = heads_total - total10
     return dict(total10=round(total10, 3), byyear=byyear,
                 heads10={k: round(v, 3) for k, v in heads10.items()}), drift
+
+
+def leg_deltas_windows(scen_dir, base_heads, base_cg, leg, windows=DECADES):
+    """Multi-window deltas vs the same-leg baseline, reading each file once.
+
+    Returns (result, drifts) where result is:
+      totals  [len(windows)]                    official revenue delta per window
+      byyear  [span]                            official per-year deltas over the
+                                                full span min(first)..max(last)
+      heads   [len(windows)] of {head: $B}      destination-ledger deltas
+      span    [first_year, last_year]
+    and drifts is one heads-vs-official reconciliation residual per window.
+    """
+    tdir = os.path.join(scen_dir, leg, "totals")
+    sdir = os.path.join(scen_dir, leg, "supplemental")
+    heads = receipts_heads(tdir)
+    cg = cg_carve(tdir)
+    rev = year_map(read_csv(os.path.join(sdir, "revenue_estimates.csv")), "total")
+
+    span = list(range(min(w[0] for w in windows), max(w[1] for w in windows) + 1))
+    totals, heads_w, drifts = [], [], []
+    for w0, w1 in windows:
+        hw = {k: 0.0 for k in ("iit", "cg", "pay", "corp", "est", "wealth", "other")}
+        for y in range(w0, w1 + 1):
+            d_cg = cg[y] - base_cg[leg][y]
+            hw["cg"] += d_cg
+            hw["iit"] += (heads[y]["iit"] - base_heads[leg][y]["iit"]) - d_cg
+            for k in ("pay", "corp", "est", "wealth", "other"):
+                hw[k] += heads[y][k] - base_heads[leg][y][k]
+        tot = sum(rev.get(y, 0.0) for y in range(w0, w1 + 1))
+        totals.append(round(tot, 3))
+        heads_w.append({k: round(v, 3) for k, v in hw.items()})
+        drifts.append(sum(hw.values()) - tot)
+
+    byyear = [round(rev.get(y, 0.0), 3) for y in span]
+    return dict(totals=totals, byyear=byyear, heads=heads_w,
+                span=[span[0], span[-1]]), drifts
 
 
 def etr_rows(scen_dir):

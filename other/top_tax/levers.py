@@ -30,8 +30,9 @@ REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 # --------------------------------------------------------------------------- #
 # Run-level constants (mirror build_factorial.py)
 # --------------------------------------------------------------------------- #
-YEARS = "2026:2037"          # FY lead-in 2026 + one year past the 2036 window
+YEARS = "2026:2057"          # FY lead-in 2026 + one year past the 2056 window (30y toggle)
 DIST_YEARS = "2027 2036"     # distribution years; the atlas2 ETR panel ships 2027 only
+                             # (heir files end 2055 — dist_years must stay <= 2055)
 BEHAVIOR_BASE = "kg_dynamics/turnover conversion/sigma entity_shifting/pearce_prisinzano evasion/debacker charity/50"
 BEHAVIOR_WEALTH = "kg_dynamics/turnover conversion/sigma entity_shifting/pearce_prisinzano evasion/debacker wealth/avoidance charity/50"
 MTR_VARS = "wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent char_cash net_worth"

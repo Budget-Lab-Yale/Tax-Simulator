@@ -14,19 +14,27 @@ Model (evaluated client-side per quantity, mirrored 1:1 in atlas2.html):
         rows for ladder/binary. Anchor rows are the run output VERBATIM
         (post 3-dp rounding); interpolation is piecewise-linear between
         knots (bilinear on grids; wealth threshold on a log($) axis).
-  g_i : scalar dial-strength function: the lever's STATIC solo total10 at x
-        divided by its value at REF (g(off)=0, g(ref)=1). Stored on the same
-        knot grid as f_i. One g per lever scales ALL quantities' interaction
-        terms. Guard: |static ref total10| < 1e-6 -> g identically 0.
+  g_i : PER-DECADE dial-strength function: the lever's STATIC solo decade-d
+        total at x divided by its value at REF (g_d(off)=0, g_d(ref)=1),
+        stored as an n_decade vector per knot-grid row. Interaction terms for
+        a decade-d quantity element scale by that decade's g — every decade
+        is estimated independently (etr, a 2027 quantity, uses decade-1 g).
+        Guard per decade: |static ref total| < 1e-6 -> g 0 for that decade.
   I_ij: pair interference measured once per pair at REF settings.
   T_ijk: triple interference for the flagged cluster {cg, wealth, deemed,
         estate} only, measured at REF.
 
-Quantities (all deltas vs the same-vintage baseline, $B except etr in pp):
-  ct/st  conv/static total10          (m=1)
-  cy/sy  conv/static byyear           (m=10, window 2027-2036)
-  ch/sh  conv/static heads10          (m=7, HEADS_ORDER)
+Quantities (all deltas vs the same-vintage baseline, $B except etr in pp).
+DECADE-STRUCTURED (32-yr batches, decade toggle in atlas2):
+  ct/st  conv/static decade totals    (m=3: 2027-36, 2037-46, 2047-56)
+  cy/sy  conv/static byyear           (m=30, span 2027-2056)
+  ch/sh  conv/static decade heads     (m=21, decade-major: d1 HEADS_ORDER,
+                                       d2 HEADS_ORDER, d3 HEADS_ORDER)
   etr    static ETR reform-baseline   (m=2 defs x groups x 8 comps, 2027 only)
+Every fitted object (f, g, I, T) is estimated independently per decade from
+the same runs; nothing is extrapolated across decades. What remains shared
+is the FORM (solo + I.g.g pairs + T.g.g.g triples, 4-way+ assumed zero) —
+the per-decade quiz holdouts measure how that form holds up out-decade.
 
 Usage (pure file I/O — login-node safe):
   python3 other/top_tax/fit_surrogate.py [vintage_root] [out_json]
@@ -51,7 +59,8 @@ DEFAULT_ROOT = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1
 DEFAULT_OUT = os.path.join(HERE, "atlas2_data.json")
 LEGEND = os.path.join(L.REPO, "config", "runscripts", "top_tax", "dials_legend.csv")
 
-WINDOW = X.WINDOW                      # 2027..2036
+DECADES = X.DECADES                    # [(2027,2036), (2037,2046), (2047,2056)]
+SPAN = list(range(DECADES[0][0], DECADES[-1][1] + 1))   # 2027..2056
 ETR_YEAR = 2027                        # atlas2 ships the impact year only
 HEADS_ORDER = ["iit", "cg", "pay", "corp", "est", "wealth", "other"]
 MONEY_QIDS = ["ct", "cy", "ch", "st", "sy", "sh"]
@@ -158,13 +167,27 @@ def eval_grid(key, rows, state_vals):
             for a, b, c, d in zip(r00, r01, r10, r11)]
 
 
+def dec_of(data, qid):
+    """Element index -> decade index for quantity qid. Decade-structured money
+    quantities are decade-major with m = n_dec * per; etr is a decade-1
+    (impact-year) quantity."""
+    m = data["meta"]["surrogate"]["m"][qid]
+    nd = len(data["meta"].get("decades") or [0])
+    if qid == "etr" or nd < 2:
+        return [0] * m
+    per = m // nd
+    return [d for d in range(nd) for _ in range(per)]
+
+
 def _pair_term(sur, a, b, qid, state, gval):
-    """(vector, weight) for pair a|b at qid, honoring byPos vectors: when the
-    pair carries per-position vectors and one lever is the ladder (deemed),
-    use the position-specific vector scaled by the OTHER lever's g only."""
+    """(vector, per-decade weights) for pair a|b at qid, honoring byPos
+    vectors: when the pair carries per-position vectors and one lever is the
+    ladder (deemed), use the position-specific vector scaled by the OTHER
+    lever's g only. Weights are n_dec-vectors — element x of the quantity
+    uses the weight of its own decade."""
     entry = sur["pairs"].get(f"{a}|{b}")
     if not entry:
-        return None, 0.0
+        return None, None
     by_pos = entry.get("byPos")
     ladder = "deemed" if "deemed" in (a, b) else None
     if by_pos and ladder:
@@ -172,28 +195,29 @@ def _pair_term(sur, a, b, qid, state, gval):
         if pos in by_pos:
             other = b if a == ladder else a
             vec = by_pos[pos].get(qid)
-            return vec, gval[other]
+            return vec, list(gval[other])
     vec = entry.get(qid)
-    return vec, gval[a] * gval[b]
+    return vec, [x * y for x, y in zip(gval[a], gval[b])]
 
 
 def _triple_term(entry, keys, qid, state, gval):
-    """(vector, weight) for a triple, honoring byPos: with per-position
-    vectors and the ladder (deemed) among the members, use the position
-    vector scaled by the product of the OTHER two levers' g."""
+    """(vector, per-decade weights) for a triple, honoring byPos: with
+    per-position vectors and the ladder (deemed) among the members, use the
+    position vector scaled by the product of the OTHER two levers' g."""
     by_pos = entry.get("byPos")
+    nd = len(next(iter(gval.values())))
     if by_pos and "deemed" in keys:
         pos = state["deemed"]["pos"]
         if pos in by_pos:
-            w = 1.0
+            w = [1.0] * nd
             for k in keys:
                 if k != "deemed":
-                    w *= gval[k]
+                    w = [a * b for a, b in zip(w, gval[k])]
             return by_pos[pos].get(qid), w
     vec = entry.get(qid)
-    w = 1.0
+    w = [1.0] * nd
     for k in keys:
-        w *= gval[k]
+        w = [a * b for a, b in zip(w, gval[k])]
     return vec, w
 
 
@@ -201,6 +225,7 @@ def eval_state(data, qid, state):
     """Predict quantity qid (vector) at a state dict. Mirrors JS evalQ."""
     sur = data["surrogate"]
     m = data["meta"]["surrogate"]["m"][qid]
+    deci = dec_of(data, qid)
     tot = [0.0] * m
     on = [k for k in L.LEVER_KEYS if k in state]
     gval = {}
@@ -209,38 +234,37 @@ def eval_state(data, qid, state):
         if f:
             for i, v in enumerate(eval_grid(k, f, state[k])):
                 tot[i] += v
-        gs = eval_grid(k, [[v] for v in sur["g"][k]], state[k])
-        gval[k] = gs[0]
+        gval[k] = eval_grid(k, sur["g"][k], state[k])   # per-decade vector
     for i in range(len(on)):
         for j in range(i + 1, len(on)):
             vec, w = _pair_term(sur, on[i], on[j], qid, state, gval)
             if vec:
                 for x in range(m):
-                    tot[x] += vec[x] * w
+                    tot[x] += vec[x] * w[deci[x]]
     for trip, qs in sur["triples"].items():
         keys = trip.split("|")
         if all(k in gval for k in keys):
             vec, w = _triple_term(qs, keys, qid, state, gval)
             if vec:
                 for x in range(m):
-                    tot[x] += vec[x] * w
+                    tot[x] += vec[x] * w[deci[x]]
     return tot
 
 
-def shapley(data, state):
-    """Closed-form Shapley split of predicted conv total10 across ON levers."""
+def shapley(data, state, d=0):
+    """Closed-form Shapley split of predicted conv decade-d total across ON levers."""
     sur = data["surrogate"]
     on = [k for k in L.LEVER_KEYS if k in state]
     gval, phi = {}, {}
     for k in on:
-        gval[k] = eval_grid(k, [[v] for v in sur["g"][k]], state[k])[0]
+        gval[k] = eval_grid(k, sur["g"][k], state[k])
         f = sur["solo"][k].get("ct")
-        phi[k] = eval_grid(k, f, state[k])[0] if f else 0.0
+        phi[k] = eval_grid(k, f, state[k])[d] if f else 0.0
     for i in range(len(on)):
         for j in range(i + 1, len(on)):
             vec, w = _pair_term(sur, on[i], on[j], "ct", state, gval)
             if vec:
-                half = 0.5 * vec[0] * w
+                half = 0.5 * vec[d] * w[d]
                 phi[on[i]] += half
                 phi[on[j]] += half
     for trip, qs in sur["triples"].items():
@@ -248,7 +272,7 @@ def shapley(data, state):
         if all(k in gval and k in phi for k in ks):
             vec, w = _triple_term(qs, ks, "ct", state, gval)
             if vec:
-                third = vec[0] * w / 3.0
+                third = vec[d] * w[d] / 3.0
                 for k in ks:
                     phi[k] += third
     return phi
@@ -273,13 +297,16 @@ def read_legend():
 def read_scenario(root, scen_id, base_heads, base_cg, etr_base_flat, groups, want_etr=True):
     """All quantity vectors (deltas vs baseline) for one scenario run."""
     scen_dir = os.path.join(root, scen_id)
-    static, _ = X.leg_deltas(scen_dir, base_heads, base_cg, "static")
-    conv, _ = X.leg_deltas(scen_dir, base_heads, base_cg, "conventional")
+    static, _ = X.leg_deltas_windows(scen_dir, base_heads, base_cg, "static", DECADES)
+    conv, _ = X.leg_deltas_windows(scen_dir, base_heads, base_cg, "conventional", DECADES)
+
+    def flat_heads(res):
+        return [res["heads"][d][h] for d in range(len(DECADES)) for h in HEADS_ORDER]
     out = {
-        "ct": [conv["total10"]], "cy": conv["byyear"],
-        "ch": [conv["heads10"][h] for h in HEADS_ORDER],
-        "st": [static["total10"]], "sy": static["byyear"],
-        "sh": [static["heads10"][h] for h in HEADS_ORDER],
+        "ct": list(conv["totals"]), "cy": conv["byyear"],
+        "ch": flat_heads(conv),
+        "st": list(static["totals"]), "sy": static["byyear"],
+        "sh": flat_heads(static),
     }
     if want_etr:
         rows = [r for r in X.etr_rows(scen_dir) if int(r["year"]) == ETR_YEAR]
@@ -343,8 +370,8 @@ def fit(root, out_path):
             runs[state_key(state)] = read(scen_id)
             id_of[state_key(state)] = scen_id
 
-    m_of = {"ct": 1, "cy": len(WINDOW), "ch": len(HEADS_ORDER),
-            "st": 1, "sy": len(WINDOW), "sh": len(HEADS_ORDER),
+    m_of = {"ct": len(DECADES), "cy": len(SPAN), "ch": len(DECADES) * len(HEADS_ORDER),
+            "st": len(DECADES), "sy": len(SPAN), "sh": len(DECADES) * len(HEADS_ORDER),
             "etr": len(X.ETR_INCOME_DEFS) * len(groups) * len(X.ETR_COMPS)}
 
     # ---- solo grids + g ---------------------------------------------------- #
@@ -363,16 +390,16 @@ def fit(root, out_path):
                 q = runs[sk]
             for qid in QIDS:
                 solo[key][qid].append([round(v, 3) for v in q[qid]])
-            st_vals.append(q["st"][0])
+            st_vals.append(list(q["st"]))   # per-decade static totals -> per-decade g
         ref_state = {key: L.REF[key]}
         ref_i = [i for i, (vals, _) in enumerate(cells)
                  if state_key({key: vals}) == state_key(ref_state)]
         assert len(ref_i) == 1, f"{key}: REF not on the knot grid"
         st_ref = st_vals[ref_i[0]]
-        if abs(st_ref) < 1e-6:
-            gfun[key] = [0.0] * len(cells)          # g guard
-        else:
-            gfun[key] = [round(v / st_ref, 6) for v in st_vals]
+        gfun[key] = [[0.0 if abs(st_ref[d]) < 1e-6            # g guard per decade
+                      else round(v[d] / st_ref[d], 6)
+                      for d in range(len(DECADES))]
+                     for v in st_vals]
 
     data_stub = {"surrogate": {"solo": solo, "g": gfun, "pairs": {}, "triples": {}},
                  "meta": {"surrogate": {"m": m_of}}}
@@ -507,7 +534,8 @@ def fit(root, out_path):
 
     # ---- meta --------------------------------------------------------------- #
     gdp = X.year_map(X.read_csv(X.MACRO), "gdp_fy")
-    gdp10 = sum(gdp[y] for y in WINDOW)
+    gdp_decades = [round(sum(gdp[y] for y in range(w0, w1 + 1)), 1)
+                   for w0, w1 in DECADES]
     try:
         sha = subprocess.run(["git", "-C", L.REPO, "rev-parse", "--short", "HEAD"],
                              capture_output=True, text=True).stdout.strip()
@@ -534,7 +562,8 @@ def fit(root, out_path):
 
     n_scen = sum(len(v) for v in by_kind.values())
     meta = dict(
-        schema=2, window=[WINDOW[0], WINDOW[-1]], gdp10_fy=round(gdp10, 1),
+        schema=3, window=[SPAN[0], SPAN[-1]],
+        decades=[list(w) for w in DECADES], gdp_fy_decades=gdp_decades,
         dist_years=[ETR_YEAR], etr_slice=X.ETR_FILTER,
         etr_income_defs=X.ETR_INCOME_DEFS, etr_comps=X.ETR_COMPS, etr_groups=groups,
         levers=lever_meta,
@@ -543,7 +572,7 @@ def fit(root, out_path):
                        cluster=L.CLUSTER,
                        validation=None, checks=None),
         provenance=dict(
-            vintage=root, git_sha=sha, date="2026-07-09",
+            vintage=root, git_sha=sha, date="2026-07-10",
             n_scenarios=n_scen,
             corp_note=("corp dial linear 21->28 by construction: single OME wedge "
                        "at 28, and the OME itself is linear in delta-tau")),

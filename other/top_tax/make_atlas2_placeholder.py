@@ -29,9 +29,13 @@ GROUPS = ["Bottom quintile", "Second quintile", "Middle quintile",
 COMPS = ["income_tax", "payroll", "estate", "deemed", "wealth", "corp", "vat", "other"]
 DEFS = ["hs", "expanded"]
 M_ETR = len(DEFS) * len(GROUPS) * len(COMPS)
-M_OF = {"ct": 1, "cy": 10, "ch": 7, "st": 1, "sy": 10, "sh": 7, "etr": M_ETR}
+N_DEC = 3
+M_OF = {"ct": N_DEC, "cy": 30, "ch": 7 * N_DEC,
+        "st": N_DEC, "sy": 30, "sh": 7 * N_DEC, "etr": M_ETR}
+# synthetic decade growth factors (nominal-GDP-ish) for d2/d3 vs d1
+DEC_GROW = [1.0, 1.55, 2.4]
 
-# synthetic 10-yr static solo total10 at each lever's REF ($B) + conv survival
+# synthetic decade-1 static solo total at each lever's REF ($B) + conv survival
 REF_ST = {"ord": 700, "cg": 900, "corp": 900, "wealth": 2600, "deemed": 300,
           "estate": 300, "qbi": 700, "taxmax": 1200}
 SURV = {"ord": 0.89, "cg": 0.24, "corp": 0.88, "wealth": 0.67, "deemed": 2.5,
@@ -67,17 +71,20 @@ def vec(qid, key, scale):
     st = REF_ST[key] * scale
     ct = st * SURV[key]
     if qid == "ct":
-        return [ct]
+        return [ct * gf for gf in DEC_GROW]
     if qid == "st":
-        return [st]
+        return [st * gf for gf in DEC_GROW]
     if qid in ("cy", "sy"):
         tot = ct if qid == "cy" else st
-        ramp = [0.6 + 0.08 * i for i in range(10)]
-        s = sum(ramp)
-        return [tot * r / s for r in ramp]
+        out = []
+        for d, gf in enumerate(DEC_GROW):
+            ramp = [0.6 + 0.08 * i for i in range(10)]
+            s = sum(ramp)
+            out.extend(tot * gf * r / s for r in ramp)
+        return out
     if qid in ("ch", "sh"):
         tot = ct if qid == "ch" else st
-        return [tot * w for w in HEAD_MIX[key]]
+        return [tot * gf * w for gf in DEC_GROW for w in HEAD_MIX[key]]
     # etr: small positive deltas concentrated at the top
     out = []
     for _d in DEFS:
@@ -99,7 +106,10 @@ def main():
             s = 0.0 if is_zero else dial_strength(key, vals)
             for qid in F.QIDS:
                 solo[key][qid].append([round(v, 3) for v in vec(qid, key, s)])
-            gvals.append(round(s, 6))
+            # per-decade g: g_d(ref)=1 for every decade, decade-dependent
+            # curvature off-ref so cross-decade wiring bugs can't cancel out
+            gvals.append([round(max(0.0, s) ** (1 + 0.15 * d), 6)
+                          for d in range(N_DEC)])
         g[key] = gvals
 
     pairs = {}
@@ -111,22 +121,30 @@ def main():
         entry = {}
         for qid in F.QIDS:
             if qid in ("ct", "st"):
-                entry[qid] = [round(base * (1.0 if qid == "ct" else 0.6), 3)]
+                f = 1.0 if qid == "ct" else 0.6
+                entry[qid] = [round(base * f * gf, 3) for gf in DEC_GROW]
             elif qid in ("cy", "sy"):
-                entry[qid] = [round(base * 0.1, 3)] * 10
+                entry[qid] = [round(base * 0.1 * gf, 3)
+                              for gf in DEC_GROW for _ in range(10)]
             elif qid in ("ch", "sh"):
-                entry[qid] = [round(base * w, 3) for w in [0.5, 0.5, 0, 0, 0, 0, 0]]
+                entry[qid] = [round(base * gf * w, 3) for gf in DEC_GROW
+                              for w in [0.5, 0.5, 0, 0, 0, 0, 0]]
             else:
                 entry[qid] = [0.0] * M_ETR
         pairs[f"{a}|{b}"] = entry
 
     triples = {}
     for a, b, c in itertools.combinations(L.CLUSTER, 3):
-        triples[f"{a}|{b}|{c}"] = {"ct": [12.0], "st": [5.0],
-                                   "cy": [1.2] * 10, "sy": [0.5] * 10,
-                                   "ch": [6.0, 6.0, 0, 0, 0, 0, 0],
-                                   "sh": [2.5, 2.5, 0, 0, 0, 0, 0],
-                                   "etr": [0.0] * M_ETR}
+        triples[f"{a}|{b}|{c}"] = {
+            "ct": [round(12.0 * gf, 3) for gf in DEC_GROW],
+            "st": [round(5.0 * gf, 3) for gf in DEC_GROW],
+            "cy": [round(1.2 * gf, 3) for gf in DEC_GROW for _ in range(10)],
+            "sy": [round(0.5 * gf, 3) for gf in DEC_GROW for _ in range(10)],
+            "ch": [round(6.0 * gf, 3) * w for gf in DEC_GROW
+                   for w in [1, 1, 0, 0, 0, 0, 0]],
+            "sh": [round(2.5 * gf, 3) * w for gf in DEC_GROW
+                   for w in [1, 1, 0, 0, 0, 0, 0]],
+            "etr": [0.0] * M_ETR}
 
     lever_meta = []
     for lv in L.LEVERS:
@@ -156,7 +174,9 @@ def main():
         etr_base[d] = {"2027": by}
 
     data = dict(
-        meta=dict(schema=2, window=[2027, 2036], gdp10_fy=396000.0,
+        meta=dict(schema=3, window=[2027, 2056],
+                  decades=[[2027, 2036], [2037, 2046], [2047, 2056]],
+                  gdp_fy_decades=[397364.0, 615000.0, 952000.0],
                   dist_years=[2027], etr_slice={}, etr_income_defs=DEFS,
                   etr_comps=COMPS, etr_groups=GROUPS, levers=lever_meta,
                   surrogate=dict(quantities=F.QIDS, m=M_OF,
@@ -181,15 +201,17 @@ def main():
     ]
     checks = []
     for i, st in enumerate(probe_states):
-        checks.append(dict(id=f"synth{i}", state=st,
-                           conv_total10=round(F.eval_state(data, "ct", st)[0], 3),
-                           static_total10=round(F.eval_state(data, "st", st)[0], 3)))
+        checks.append(dict(
+            id=f"synth{i}", state=st,
+            conv_totals=[round(v, 3) for v in F.eval_state(data, "ct", st)],
+            static_totals=[round(v, 3) for v in F.eval_state(data, "st", st)]))
     data["meta"]["surrogate"]["checks"] = checks
     data["meta"]["surrogate"]["validation"] = dict(
         quiz=dict(n=len(checks), max_pct=0.0, median_pct=0.0),
         corners=dict(n=0, max_pct=None), byyear_max_pct=0.0, heads_max_b=0.0,
-        etr_max_pp=0.0, bound_pct=0.5, hard_bar_pct=2.0, passed=True,
-        date="2026-07-09")
+        etr_max_pp=0.0, bound_pct=0.5, bounds_pct=[0.5, 0.5, 0.5],
+        static_bounds_pct=[0.5, 0.5, 0.5], hard_bar_pct=2.0, passed=True,
+        date="2026-07-10")
 
     with open(OUT, "w") as fh:
         json.dump(data, fh, separators=(",", ":"))
