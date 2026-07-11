@@ -7,10 +7,11 @@
 #
 #  (a) CHI=0 no-op (concealment fully off): in the CHI=0 run the conventional
 #      MARKETABLE flows (div_ord / txbl_int / kg_lt -- concealment's c_pub targets,
-#      which the evasion module never touches) and the estate liability equal the
-#      STATIC pass record-by-record; estate_concealed_frac = 0 everywhere; and the
-#      reported net_worth is identical across the CHI legs (CHI drives concealment,
-#      not the avoidance response). NB the closely-held/income aggregates are NOT
+#      which the evasion module never touches) equal the STATIC pass record-by-
+#      record; and reported net_worth is identical across the CHI legs. Estate
+#      liability need not equal static: the independent income-evasion link now
+#      hides corresponding closely-held assets from the estate even at CHI=0.
+#      NB the closely-held/income aggregates are NOT
 #      compared to static here: the evasion module is in the stack per the plan and
 #      is not a perfect no-op even under a pure wealth tax (tiny baseline-vs-static
 #      income-MTR residuals -- the known Tax-Data wages residual), so concealment
@@ -100,13 +101,9 @@ for (t in years) {
   check(err_mkt0 == 0,
         sprintf('year %d (a): CHI=0 conventional marketable flows == static exactly (max err %.2e)',
                 t, err_mkt0))
-  err_est = max(abs(est_liab(c0c) - est_liab(c0s)))
-  check(err_est < 1e-3,
-        sprintf('year %d (a): CHI=0 conventional estate liability == static (max err %.2e)',
-                t, err_est))
-  ecf0 = if ('estate_concealed_frac' %in% names(c0c)) max(abs(c0c$estate_concealed_frac)) else NA
-  check(!is.na(ecf0) && ecf0 == 0,
-        sprintf('year %d (a): CHI=0 estate_concealed_frac = 0 everywhere', t))
+  ecf0 = if ('estate_concealed_frac' %in% names(c0c)) c0c$estate_concealed_frac else NA
+  check(all(is.finite(ecf0)) && all(ecf0 >= 0 & ecf0 <= 1),
+        sprintf('year %d (a): CHI=0 income-evasion estate concealment share is valid', t))
   # net_worth is the FULL avoidance response (uses f, not c), so it is identical
   # across the CHI legs -- CHI drives concealment, not the reported wealth base.
   err_nw = max(abs(cc$net_worth - c0c$net_worth))

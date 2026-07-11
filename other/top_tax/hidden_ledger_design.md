@@ -131,8 +131,9 @@ further scales the reported closely-held component of `net_worth` by the
 record's evaded income share (weighted across its PT legs). Effect: an income
 evader under a wealth tax does not report the assets whose income he hides.
 
-- Consumed by the wealth-tax base only in v1. Extension to the estate
-  (income evaders' estates under-report too) is flagged, not built.
+- Consumed by both the wealth-tax and estate-tax reported bases. The estate
+  combines income-evasion concealment with wealth-tax concealment as a
+  multiplicative union, so overlap is not counted twice (extended 2026-07-11).
 - Harmless when no wealth tax exists: the overwritten `net_worth` column is
   read only by `calc_wealth`.
 - Why this isn't double-counting against `private_e = −17`: the avoidance

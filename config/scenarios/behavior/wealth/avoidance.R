@@ -32,10 +32,10 @@
 #       price)                                                  -> CHI_PUB  = 1.0
 #   R2  Closely-held avoidance is 50% valuation / 50% concealment (discounts are
 #       real and legal for private businesses)                  -> CHI_PRIV = 0.5
-#   R3  The evasion elasticity applies to wealth too: the evaded share of a
-#       record's closely-held income pulls the matching share of its closely-held
-#       assets out of the reported wealth base (a consistency rule, not a new
-#       elasticity)
+#   R3  The evasion elasticity applies to wealth and estate reporting too: the
+#       evaded share of a record's closely-held income pulls the matching share
+#       of its closely-held assets out of both reported stock bases (a
+#       consistency rule, not a new elasticity)
 #   R4  Concealed wealth also escapes the reported ESTATE at death (via the
 #       estate_concealed_frac column read by calc_estate)
 #   R5  Homes keep the uniform 50/50 split (no home-specific chi)
@@ -89,10 +89,11 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   #     closely-held wealth stops producing reported pass-through / rent income
   #     (SECA companions co-scaled, debacker pattern). Multiplicative,
   #     positive-leg gated. These columns feed only do_taxes.
-  # (4) Estate: estate_concealed_frac (concealed dollars / gross assets) rides
-  #     the record into calc_estate, where it reduces estate_base but NOT
-  #     estate_distributable (heirs inherit the hidden wealth unchanged; the
-  #     income-tax-at-death deduction uses the exact same slot).
+  # (4) Estate: estate_concealed_frac (wealth concealment union income-evasion
+  #     concealment, divided by gross assets) rides the record into calc_estate,
+  #     where it reduces estate_base but NOT estate_distributable (heirs inherit
+  #     the hidden wealth unchanged; the income-tax-at-death deduction uses the
+  #     exact same slot).
   #
   # This is an "implement-any-logic" module (like employment/bastian.R), not a
   # one-line apply_mtr_elasticity() call, because the dual-class response scales
@@ -302,13 +303,18 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   df$part_se1   = conceal_leg(df$part_se1,   c_priv, g_parta)
   df$part_se2   = conceal_leg(df$part_se2,   c_priv, g_parta)
 
-  #--- Estate concealment (R4) -------------------------------------------------
-  # Concealed dollars (both classes, summed per record) as a fraction of gross
-  # assets. Rides the record into calc_estate (optional input; absent => 0), where
-  # it reduces estate_base but not estate_distributable. Gift add-back is left on
-  # full reported_gross there (conservative; commented in the calculator).
+  #--- Estate concealment (R4 + R3 cross-base extension) -----------------------
+  # Wealth-tax concealment and income-tax evasion are two routes by which a
+  # closely-held asset leaves the authority's sight. Combine them as a
+  # multiplicative union: c_priv is hidden first, then evasion hides its share
+  # of the remaining visible balance. This carries the R3 evasion->wealth link
+  # through to the estate base without counting their overlap twice. Legal
+  # valuation avoidance (f_priv - c_priv) remains visible to the estate, as
+  # intended. The resulting fraction reduces estate_base but not
+  # estate_distributable; heirs still receive hidden assets.
+  estate_c_priv = c_priv + (1 - c_priv) * evaded
   df$estate_concealed_frac = ifelse(gross > 0,
-                                    (c_pub * mkt + c_priv * clh) / gross, 0)
+                                    (c_pub * mkt + estate_c_priv * clh) / gross, 0)
 
   #--- Conservation identity (hard assert) -------------------------------------
   # Per leg, reported (post) + hidden = pre-avoidance, recomputed independently
@@ -368,6 +374,7 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
     weighted_records_pos_mtr      = sum(w[df$mtr_net_worth > 0]),
     concealed_wealth_marketable   = sum(w * c_pub  * mkt),
     concealed_wealth_closely_held = sum(w * c_priv * clh),
+    estate_hidden_from_evasion    = sum(w * (1 - c_priv) * evaded * clh),
     concealed_flow_txbl_int       = sum(w * hid_int),
     concealed_flow_div_ord        = sum(w * hid_dord),
     concealed_flow_div_pref       = sum(w * hid_dprf),

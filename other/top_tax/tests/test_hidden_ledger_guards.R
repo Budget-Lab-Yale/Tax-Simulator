@@ -156,6 +156,12 @@ nw3 = 1e8 * exp(0.02 * WEALTH_AVOID_PUBLIC_E) +
       1e8 * exp(0.02 * WEALTH_AVOID_PRIVATE_E) * (1 - 0.10)
 check(abs(out$net_worth[3] - nw3) < 1e-3,
       'evasion link shaves closely-held net_worth by evaded income share (0.10)')
+# Estate sees the union of wealth concealment and the 10% income-evasion link:
+# c_priv + (1 - c_priv) * 0.10, with no overlap double-counted.
+estate_c_priv3 = c_priv + (1 - c_priv) * 0.10
+ecf3 = (c_pub * 1e8 + estate_c_priv3 * 1e8) / 2e8
+check(abs(out$estate_concealed_frac[3] - ecf3) < 1e-9,
+      'evasion link also hides closely-held assets from the estate base')
 
 #-------------------------------------------------------------------------------
 # 5. Loss legs untouched (record 4: negative part_active / div_ord)
@@ -203,8 +209,11 @@ check(all(abs(out0$div_ord - tu$div_ord) < 1e-9) &&
       all(abs(out0$part_active - tu$part_active) < 1e-9) &&
       all(abs(out0$kg_lt - tu$kg_lt) < 1e-9),
       'CHI = 0: all reported flows identical to input (concealment off)')
-check(all(out0$estate_concealed_frac == 0),
-      'CHI = 0: estate_concealed_frac = 0 everywhere')
+# With CHI=0, wealth-tax concealment is off but the independent income-evasion
+# link still hides record 3's closely-held assets from the estate base.
+check(abs(out0$estate_concealed_frac[3] - 0.05) < 1e-9 &&
+      all(out0$estate_concealed_frac[-3] == 0),
+      'CHI = 0: estate concealment retains only the income-evasion link')
 check(abs(out0$net_worth[1] - nw1) < 1e-3,
       'CHI = 0: reported net_worth STILL shrinks by the full avoidance response')
 WEALTH_CHI_PUB  <<- 1.0
@@ -249,6 +258,24 @@ check(!is.null(out_alone) && abs(out_alone$net_worth[3] -
         (1e8 * exp(0.02 * WEALTH_AVOID_PUBLIC_E) +
          1e8 * exp(0.02 * WEALTH_AVOID_PRIVATE_E))) < 1e-3,
       'evasion link inert when evasion_g_* absent (evaded defaults to 0)')
+check(!is.null(out_alone) && abs(out_alone$estate_concealed_frac[3] -
+        (c_pub + c_priv) / 2) < 1e-9,
+      'estate evasion link inert when evasion_g_* absent')
+
+#-------------------------------------------------------------------------------
+# 10. Evasion net-of-tax denominator guard
+#-------------------------------------------------------------------------------
+
+sys.source('./config/scenarios/behavior/evasion/debacker.R', envir = globalenv())
+g_guard = evasion_response_factor(
+  mtr          = c(0.4, 0.4, NA_real_, Inf),
+  mtr_baseline = c(1.0, 1 - EVASION_NET_RATE_EPS / 2, 0.3, 0.3),
+  e            = EVASION_E_PT)
+check(all(g_guard == 1),
+      'degenerate/non-finite evasion MTR inputs produce no response')
+g_regular = evasion_response_factor(0.4, 0.3, EVASION_E_PT)
+check(is.finite(g_regular) && g_regular > 0 && g_regular != 1,
+      'regular evasion MTR inputs still produce a finite response')
 
 expect_error(
   do_wealth(tu, NULL, static_mtrs %>% select(-mtr_net_worth), si(), NULL),
