@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Distribution card — who holds the income, and what the plan takes</title>
+<style>
+  :root{
+    --paper:#f7f6f2; --surface:#fcfcfb; --surface-2:#f1f0ea; --ink:#14130f; --ink-2:#55534c;
+    --muted:#8a887f; --grid:#e4e2d9; --rule:#d7d5cb; --accent:#1c5cab; --accent-2:#cfe0f6;
+    --hair:rgba(20,19,15,0.10); --good:#0a7d3a; --warn:#b9601b;
+    --kept:#c9c6ba;               /* warm neutral: income the plan leaves untouched */
+    --curlaw:#6f8bad;             /* muted steel: tax already paid under current law */
+    --shadow:0 1px 2px rgba(20,19,15,.05),0 4px 16px rgba(20,19,15,.04); color-scheme:light;
+  }
+  @media (prefers-color-scheme:dark){ :root{
+    --paper:#0d0d0d; --surface:#17181a; --surface-2:#202225; --ink:#f4f3ef; --ink-2:#c3c2b7;
+    --muted:#8f8d84; --grid:#2b2c2e; --rule:#33343a; --accent:#4b93ea; --accent-2:#173254;
+    --hair:rgba(255,255,255,0.10); --good:#31b45c; --warn:#e0873f; --kept:#4a4842; --curlaw:#5e79a0;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35); color-scheme:dark; } }
+  :root[data-theme="light"]{
+    --paper:#f7f6f2; --surface:#fcfcfb; --surface-2:#f1f0ea; --ink:#14130f; --ink-2:#55534c;
+    --muted:#8a887f; --grid:#e4e2d9; --rule:#d7d5cb; --accent:#1c5cab; --accent-2:#cfe0f6;
+    --hair:rgba(20,19,15,0.10); --good:#0a7d3a; --warn:#b9601b; --kept:#c9c6ba; --curlaw:#6f8bad; color-scheme:light; }
+  :root[data-theme="dark"]{
+    --paper:#0d0d0d; --surface:#17181a; --surface-2:#202225; --ink:#f4f3ef; --ink-2:#c3c2b7;
+    --muted:#8f8d84; --grid:#2b2c2e; --rule:#33343a; --accent:#4b93ea; --accent-2:#173254;
+    --hair:rgba(255,255,255,0.10); --good:#31b45c; --warn:#e0873f; --kept:#4a4842; --curlaw:#5e79a0; color-scheme:dark; }
+
+  *{box-sizing:border-box}
+  body{ margin:0; background:var(--paper); color:var(--ink);
+    font-family:"YaleNew","Yale New",Georgia,"Iowan Old Style","Palatino Linotype","Times New Roman",serif;
+    line-height:1.6; -webkit-font-smoothing:antialiased; }
+  .wrap{ max-width:1000px; margin:0 auto; padding:38px 22px 70px; }
+  .mono{ font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-variant-numeric:tabular-nums; }
+  .sans{ font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+
+  .eyebrow{ font:600 11px/1 ui-monospace,monospace; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); }
+  h1{ font-weight:600; font-size:30px; line-height:1.15; margin:10px 0 6px; letter-spacing:-.01em; }
+  .cap{ color:var(--ink-2); font-size:15px; max-width:74ch; margin:0 0 8px; }
+  .prov{ font:600 11px/1 ui-monospace,monospace; letter-spacing:.02em; color:var(--muted); margin:12px 0 0;
+    display:inline-flex; gap:8px; align-items:center; }
+  .badge{ display:inline-block; font:600 10.5px/1 ui-monospace,monospace; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--good); border:1px solid color-mix(in srgb,var(--good) 45%,transparent); border-radius:999px; padding:4px 9px; }
+
+  .card{ background:var(--surface); border:1px solid var(--hair); border-radius:14px; padding:20px 22px 18px;
+    box-shadow:var(--shadow); margin-top:22px; }
+
+  .ctl{ display:flex; flex-wrap:wrap; gap:18px 26px; align-items:flex-end; margin-bottom:14px; }
+  .ctl .grp{ display:flex; flex-direction:column; gap:6px; }
+  .ctl .lab{ font:600 10.5px/1 ui-monospace,monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .seg{ display:inline-flex; border:1px solid var(--rule); border-radius:9px; overflow:hidden; background:var(--surface-2); }
+  .seg button{ font:600 12px/1 ui-monospace,monospace; letter-spacing:.02em; padding:8px 13px; background:transparent;
+    color:var(--ink-2); border:0; cursor:pointer; transition:.12s; }
+  .seg button+button{ border-left:1px solid var(--rule); }
+  .seg button[aria-pressed="true"]{ background:var(--accent); color:#fff; }
+  .seg button:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  .chartbox{ position:relative; }
+  svg{ display:block; width:100%; height:auto; }
+  .axtext{ font:11px ui-monospace,monospace; fill:var(--muted); }
+  .binlab{ font:11px ui-monospace,monospace; fill:var(--ink-2); }
+  .dlab{ font:600 11px ui-monospace,monospace; fill:var(--ink); }
+  .dlab.sub{ fill:var(--accent); }
+
+  .legend{ display:flex; flex-wrap:wrap; gap:16px 20px; align-items:center; margin:14px 2px 2px;
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif; font-size:12.5px; color:var(--ink-2); }
+  .legend .it{ display:inline-flex; gap:8px; align-items:center; }
+  .sw2{ width:16px; height:12px; border-radius:3px; flex:none; display:inline-block; }
+  .legend .note{ color:var(--muted); font:12px ui-monospace,monospace; }
+
+  #tip{ position:absolute; pointer-events:none; display:none; z-index:6; background:var(--surface);
+    border:1px solid var(--rule); border-radius:10px; box-shadow:var(--shadow); padding:11px 13px;
+    font:12px/1.55 ui-monospace,monospace; color:var(--ink); min-width:230px; }
+  #tip .th{ font:600 12.5px/1.2 system-ui,sans-serif; margin-bottom:7px; color:var(--ink); }
+  #tip .r{ display:flex; justify-content:space-between; gap:16px; }
+  #tip .r .k{ color:var(--ink-2); } #tip .r .v{ font-variant-numeric:tabular-nums; }
+  #tip .r.ask .v{ color:var(--accent); font-weight:600; }
+  #tip .div{ border-top:1px solid var(--grid); margin:6px 0; }
+  #tip .sm{ color:var(--muted); font-size:11px; }
+
+  .foot{ margin-top:16px; font-size:12.5px; color:var(--ink-2); max-width:78ch; }
+  details{ margin-top:14px; } summary{ cursor:pointer; font:600 12px/1 ui-monospace,monospace; color:var(--accent);
+    letter-spacing:.04em; text-transform:uppercase; }
+  table{ border-collapse:collapse; width:100%; margin-top:12px; font:12px ui-monospace,monospace; }
+  th,td{ text-align:right; padding:5px 9px; border-bottom:1px solid var(--grid); white-space:nowrap; }
+  th:first-child,td:first-child{ text-align:left; }
+  thead th{ color:var(--muted); font-weight:600; border-bottom:1px solid var(--rule); }
+  tfoot td{ color:var(--ink-2); border-top:1px solid var(--rule); border-bottom:0; font-weight:600; }
+
+  .themebtn{ position:fixed; top:14px; right:16px; font:600 11px/1 ui-monospace,monospace; color:var(--ink-2);
+    background:var(--surface); border:1px solid var(--rule); border-radius:8px; padding:7px 10px; cursor:pointer; }
+</style>
+</head>
+<body>
+<button class="themebtn" id="themebtn" title="Toggle light/dark">◐ theme</button>
+<div class="wrap">
+  <div class="eyebrow">New card · distribution in dollars</div>
+  <h1>Who holds the income — and what the plan takes</h1>
+  <p class="cap">Three views of one distribution. <b>In context</b>, each bar is the income a slice holds, split into
+  <b>after-tax income</b>, <b>current law taxes</b> (steel), the plan&rsquo;s <b>new taxes</b> (solid blue), and
+  <b>leakage</b> — asked for but not paid (hatched). <b>New taxes</b> zooms to just the plan&rsquo;s cut; <b>Effective
+  rate</b> tells it as rates — the dumbbell, over the standard income groups. The <b>cash / accrual</b> dial swaps the
+  income base; accrual counts unrealized gains, so top rates fall and bars grow.</p>
+  <p class="prov mono"><span class="badge">real data</span> stack_ref · vintage top_tax_dials_30y_v1 · federal taxes (iit+payroll+estate+deemed+wealth+corp+vat) · baseline-fixed income ranking · cash = expanded, accrual = Haig-Simons</p>
+
+  <div class="card">
+    <div class="ctl">
+      <div class="grp">
+        <span class="lab">View</span>
+        <div class="seg" id="segMode" role="group" aria-label="View">
+          <button data-m="context" aria-pressed="true">In context</button>
+          <button data-m="new" aria-pressed="false">New taxes</button>
+          <button data-m="etr" aria-pressed="false">Effective rate</button>
+        </div>
+      </div>
+      <div class="grp">
+        <span class="lab">Income basis</span>
+        <div class="seg" id="segBasis" role="group" aria-label="Income basis">
+          <button data-b="cash" aria-pressed="true">Cash</button>
+          <button data-b="accrual" aria-pressed="false">Accrual</button>
+        </div>
+      </div>
+      <div class="grp">
+        <span class="lab">Impact year</span>
+        <div class="seg" id="segYear" role="group" aria-label="Year">
+          <button data-y="2027" aria-pressed="true">2027</button>
+          <button data-y="2036" aria-pressed="false">2036</button>
+        </div>
+      </div>
+      <div class="grp" id="grpUnit">
+        <span class="lab">Scale</span>
+        <div class="seg" id="segUnit" role="group" aria-label="Units">
+          <button data-u="agg" aria-pressed="true">Aggregate&nbsp;$</button>
+          <button data-u="hh" aria-pressed="false">Per household</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="chartbox">
+      <svg id="chart" viewBox="0 0 980 470" preserveAspectRatio="xMidYMid meet" role="img"
+           aria-label="Stacked bar chart of income by distribution group, split into kept, collected, and avoidance"></svg>
+      <div id="tip"></div>
+    </div>
+
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <p class="foot" id="foot"></p>
+
+  <details>
+    <summary>Table view</summary>
+    <div style="overflow-x:auto"><table id="tbl"></table></div>
+  </details>
+
+  <p class="foot mono" style="color:var(--muted)">Mockup for a candidate atlas card. Palette, typography, and the
+  collected / ask / avoidance encoding match <span style="color:var(--ink-2)">atlas2</span>, so it drops in.
+  All three views share the standard income groups — quintiles plus the top-decile breakout (Top 10% … Top 0.01%),
+  which nest inside Quintile 5, so those bars overlap by design.</p>
+</div>
+
+<script>
+/* ---- data (real; extracted from stack_ref distribution_etrs.csv) ---- */
+const DATA = {"meta":{"scenario":"stack_ref","vintage":"top_tax_dials_30y_v1","ranking":"Income percentile (fixed)","income_defs":{"cash":"expanded (cash) income","accrual":"Haig-Simons (accrual, incl. unrealized gains)"},"taxes":"wealth_cit_vat (federal: iit+payroll+estate+deemed+wealth+corp+vat)","units":"$B","note":"dollar views use disjoint bins; rate view uses nested cumulative groups (atlas set); tax $ invariant to income basis"},"years":{"2027":{"bins":[{"bin":"Bottom 20%","n":37097541.1,"income":{"cash":452.429,"accrual":603.151},"tax_base":20.029,"static":0.4705,"conv":0.461,"avoid":0.0095},{"bin":"20\u201340%","n":37098627.5,"income":{"cash":1252.522,"accrual":1521.342},"tax_base":89.391,"static":1.3967,"conv":1.3309,"avoid":0.0658},{"bin":"40\u201360%","n":37100096.5,"income":{"cash":2281.227,"accrual":2768.765},"tax_base":336.408,"static":3.0896,"conv":2.6616,"avoid":0.4281},{"bin":"60\u201380%","n":37098266.6,"income":{"cash":4060.766,"accrual":4999.952},"tax_base":724.49,"static":7.4699,"conv":5.4701,"avoid":1.9998},{"bin":"80\u201390%","n":18551068.8,"income":{"cash":3491.074,"accrual":4542.549},"tax_base":682.066,"static":14.593,"conv":9.6614,"avoid":4.9316},{"bin":"90\u201395%","n":9274803.0,"income":{"cash":2570.994,"accrual":3898.254},"tax_base":558.157,"static":48.0536,"conv":34.1178,"avoid":13.9358},{"bin":"95\u201399%","n":7420103.3,"income":{"cash":3748.538,"accrual":6231.591},"tax_base":837.931,"static":160.0937,"conv":121.5018,"avoid":38.5919},{"bin":"99\u201399.9%","n":1669678.7,"income":{"cash":2691.519,"accrual":4325.387},"tax_base":629.981,"static":314.8352,"conv":204.6752,"avoid":110.16},{"bin":"99.9\u201399.99%","n":166938.3,"income":{"cash":1326.397,"accrual":1914.366},"tax_base":377.879,"static":324.2237,"conv":190.879,"avoid":133.3447},{"bin":"Top 0.01%","n":18558.3,"income":{"cash":1193.897,"accrual":1511.522},"tax_base":358.354,"static":384.1075,"conv":206.4393,"avoid":177.6682}],"nested":[{"bin":"Q1","n":37097541.1,"income":{"cash":452.429,"accrual":603.151},"tax_base":20.029,"static":0.4705,"conv":0.461,"avoid":0.0095},{"bin":"Q2","n":37098627.5,"income":{"cash":1252.522,"accrual":1521.342},"tax_base":89.391,"static":1.3967,"conv":1.3309,"avoid":0.0658},{"bin":"Q3","n":37100096.5,"income":{"cash":2281.227,"accrual":2768.765},"tax_base":336.408,"static":3.0896,"conv":2.6616,"avoid":0.4281},{"bin":"Q4","n":37098266.6,"income":{"cash":4060.766,"accrual":4999.952},"tax_base":724.49,"static":7.4699,"conv":5.4701,"avoid":1.9998},{"bin":"Q5","n":37101150.4,"income":{"cash":15022.419,"accrual":22423.668},"tax_base":3444.368,"static":1245.9067,"conv":767.2744,"avoid":478.6323},{"bin":"Top 10%","n":18550081.6,"income":{"cash":11531.344,"accrual":17881.119},"tax_base":2762.302,"static":1231.3137,"conv":757.6131,"avoid":473.7007},{"bin":"Top 5%","n":9275278.6,"income":{"cash":8960.351,"accrual":13982.865},"tax_base":2204.145,"static":1183.2601,"conv":723.4953,"avoid":459.7648},{"bin":"Top 1%","n":1855175.3,"income":{"cash":5211.813,"accrual":7751.274},"tax_base":1366.214,"static":1023.1664,"conv":601.9935,"avoid":421.1729},{"bin":"Top 0.1%","n":185496.6,"income":{"cash":2520.294,"accrual":3425.888},"tax_base":736.233,"static":708.3312,"conv":397.3183,"avoid":311.013},{"bin":"Top 0.01%","n":18558.3,"income":{"cash":1193.897,"accrual":1511.522},"tax_base":358.354,"static":384.1075,"conv":206.4393,"avoid":177.6682}]},"2036":{"bins":[{"bin":"Bottom 20%","n":38878589.9,"income":{"cash":652.379,"accrual":866.037},"tax_base":34.893,"static":0.8997,"conv":0.8535,"avoid":0.0462},{"bin":"20\u201340%","n":38880055.3,"income":{"cash":1789.688,"accrual":2187.285},"tax_base":151.441,"static":2.8136,"conv":2.5795,"avoid":0.2341},{"bin":"40\u201360%","n":38878739.4,"income":{"cash":3225.21,"accrual":3969.643},"tax_base":513.472,"static":5.9129,"conv":5.2042,"avoid":0.7088},{"bin":"60\u201380%","n":38879331.9,"income":{"cash":5702.523,"accrual":7105.713},"tax_base":1090.387,"static":13.4244,"conv":11.2534,"avoid":2.171},{"bin":"80\u201390%","n":19440025.9,"income":{"cash":4815.515,"accrual":6397.005},"tax_base":1030.012,"static":25.2199,"conv":19.173,"avoid":6.0469},{"bin":"90\u201395%","n":9719438.3,"income":{"cash":3567.855,"accrual":5518.974},"tax_base":857.082,"static":69.8523,"conv":54.4328,"avoid":15.4195},{"bin":"95\u201399%","n":7776399.5,"income":{"cash":5178.73,"accrual":8873.428},"tax_base":1254.791,"static":253.9815,"conv":196.8883,"avoid":57.0932},{"bin":"99\u201399.9%","n":1749681.7,"income":{"cash":3667.939,"accrual":6161.121},"tax_base":904.763,"static":488.149,"conv":343.1069,"avoid":145.0421},{"bin":"99.9\u201399.99%","n":174954.4,"income":{"cash":1791.26,"accrual":2728.777},"tax_base":521.634,"static":468.4331,"conv":294.0404,"avoid":174.3927},{"bin":"Top 0.01%","n":19446.3,"income":{"cash":1512.025,"accrual":2103.83},"tax_base":462.132,"static":508.1468,"conv":313.0335,"avoid":195.1133}],"nested":[{"bin":"Q1","n":38878589.9,"income":{"cash":652.379,"accrual":866.037},"tax_base":34.893,"static":0.8997,"conv":0.8535,"avoid":0.0462},{"bin":"Q2","n":38880055.3,"income":{"cash":1789.688,"accrual":2187.285},"tax_base":151.441,"static":2.8136,"conv":2.5795,"avoid":0.2341},{"bin":"Q3","n":38878739.4,"income":{"cash":3225.21,"accrual":3969.643},"tax_base":513.472,"static":5.9129,"conv":5.2042,"avoid":0.7088},{"bin":"Q4","n":38879331.9,"income":{"cash":5702.523,"accrual":7105.713},"tax_base":1090.387,"static":13.4244,"conv":11.2534,"avoid":2.171},{"bin":"Q5","n":38879946.1,"income":{"cash":20533.323,"accrual":31783.136},"tax_base":5030.413,"static":1813.7825,"conv":1220.6749,"avoid":593.1076},{"bin":"Top 10%","n":19439920.2,"income":{"cash":15717.808,"accrual":25386.131},"tax_base":4000.401,"static":1788.5626,"conv":1201.5018,"avoid":587.0607},{"bin":"Top 5%","n":9720481.9,"income":{"cash":12149.953,"accrual":19867.157},"tax_base":3143.32,"static":1718.7103,"conv":1147.069,"avoid":571.6413},{"bin":"Top 1%","n":1944082.4,"income":{"cash":6971.223,"accrual":10993.729},"tax_base":1888.528,"static":1464.7288,"conv":950.1807,"avoid":514.5481},{"bin":"Top 0.1%","n":194400.7,"income":{"cash":3303.284,"accrual":4832.608},"tax_base":983.765,"static":976.5799,"conv":607.0739,"avoid":369.506},{"bin":"Top 0.01%","n":19446.3,"income":{"cash":1512.025,"accrual":2103.83},"tax_base":462.132,"static":508.1468,"conv":313.0335,"avoid":195.1133}]}}};
+
+const fmtB = v => (Math.abs(v)>=1000 ? "$"+(v/1000).toFixed(2)+"T" : "$"+v.toFixed(v<10?1:0)+"B");
+const fmtHH = v => { v=Math.abs(v);
+  if(v>=1e6) return "$"+(v/1e6).toFixed(2)+"M";
+  if(v>=1e3) return "$"+(v/1e3).toFixed(0)+"k";
+  return "$"+v.toFixed(0); };
+const pct = (a,b)=> b? (100*a/b).toFixed(1)+"%" : "—";
+
+let YEAR="2027", MODE="context", UNIT="agg", BASIS="cash";
+const pctp = v => (v>=0?"":"−")+Math.abs(v).toFixed(1)+"%";   // signed pp/pct
+
+const svg = document.getElementById("chart");
+const tip = document.getElementById("tip");
+
+/* Each row carries dollar amounts (per current UNIT) plus rates (unit-free).
+   Income uses the selected basis (cash = expanded; accrual = Haig-Simons).
+   Tax dollars are invariant to basis — only the denominator moves.
+   Per-household divides $B by household count; rates are scale-invariant. */
+function mapRows(arr){
+  return arr.map(d=>{
+    const inc = d.income[BASIS];
+    const div = (UNIT==="hh") ? d.n : 1;                 // $B/count => $ per hh
+    const sc  = (UNIT==="hh") ? 1e9 : 1;                 // $B -> $ when per-hh
+    const f = x => x*sc/div;
+    return { bin:d.bin, n:d.n,
+      income:f(inc), conv:f(d.conv), avoid:f(d.avoid), ask:f(d.static), taxbase:f(d.tax_base),
+      // effective rates over the (basis) income denominator, in percent
+      etrBase: 100*d.tax_base/inc,
+      etrColl: 100*(d.tax_base+d.conv)/inc,
+      etrAsk:  100*(d.tax_base+d.static)/inc };
+  });
+}
+// all views share the nested atlas groups (quintiles + top-decile breakout);
+// drop the negative-income group. Top groups nest inside Q5 — bars overlap by design.
+function groupSet(){ return DATA.years[YEAR].nested.filter(function(d){return d.bin!=='Neg';}); }
+function rows(){ return mapRows(groupSet()); }
+
+function niceMax(v){
+  const pow = Math.pow(10, Math.floor(Math.log10(v)));
+  const n = v/pow;
+  const step = n<=1?1 : n<=2?2 : n<=2.5?2.5 : n<=5?5 : 10;
+  return step*pow;
+}
+
+function render(){
+  const R = rows();
+  const W=980, H=470, pad={l:64,r:22,t:26,b:74};
+  const iw = W-pad.l-pad.r, ih = H-pad.t-pad.b;
+  const isRate = (MODE==="etr");
+  const fmtV = isRate ? (v=>v.toFixed(0)+"%") : (UNIT==="hh"?fmtHH:fmtB);
+
+  // y domain: income (context) / tax bill (take) in $, or effective rate (%) in etr.
+  const tops = R.map(d => isRate ? d.etrAsk : (MODE==="context" ? d.income : d.ask));
+  let ymax = isRate ? Math.max(10, Math.ceil(Math.max(...tops)/10)*10)   // rates: nearest 10%
+                    : niceMax(Math.max(...tops));
+  // per-household + context: the top 0.01% dwarfs all; clamp to ~99.9-99.99 scale.
+  let clamped=false;
+  if(UNIT==="hh" && MODE==="context"){
+    const sorted=[...tops].sort((a,b)=>a-b);
+    const clampVal = niceMax(sorted[sorted.length-2]*1.15);    // 2nd tallest
+    if(clampVal < ymax){ ymax=clampVal; clamped=true; }
+  }
+
+  const x = i => pad.l + (i+0.5)*(iw/R.length);
+  const bw = Math.min(58, (iw/R.length)*0.62);
+  const y = v => pad.t + ih*(1 - Math.min(v,ymax)/ymax);
+  const GAP = 2;   // surface gap between stacked segments
+
+  let s = "";
+  // defs: diagonal hatch for the avoidance (leaked) segment
+  s += `<defs>
+    <pattern id="hatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+      <rect width="7" height="7" fill="var(--accent-2)"></rect>
+      <line x1="0" y1="0" x2="0" y2="7" stroke="var(--accent)" stroke-width="3"></line>
+    </pattern>
+  </defs>`;
+
+  // gridlines + y ticks
+  const nT=5;
+  for(let t=0;t<=nT;t++){
+    const v=ymax*t/nT, yy=y(v);
+    s += `<line x1="${pad.l}" y1="${yy.toFixed(1)}" x2="${W-pad.r}" y2="${yy.toFixed(1)}" stroke="var(--grid)" stroke-width="1"/>`;
+    s += `<text class="axtext" x="${pad.l-9}" y="${(yy+3.5).toFixed(1)}" text-anchor="end">${fmtV(v)}</text>`;
+  }
+  // baseline
+  s += `<line x1="${pad.l}" y1="${y(0).toFixed(1)}" x2="${W-pad.r}" y2="${y(0).toFixed(1)}" stroke="var(--rule)" stroke-width="1.5"/>`;
+
+  R.forEach((d,i)=>{
+    const cx=x(i), x0=cx-bw/2;
+    const rr=(a,b,fill,extra="")=>{  // rect from value a (bottom) to b (top)
+      const yb=y(a), yt=y(b), h=Math.max(0,yb-yt-GAP);
+      if(h<=0.3) return "";
+      return `<rect x="${x0.toFixed(1)}" y="${yt.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${fill}" ${extra}/>`;
+    };
+    if(isRate){
+      // dumbbell: stem from baseline ETR to ask ETR; three dots (baseline ink,
+      // collected filled accent, ask hollow accent). Same encoding as atlas2.
+      const yb=y(d.etrBase), yc=y(d.etrColl), ya=y(d.etrAsk);
+      const lo=Math.min(yb,ya), hi=Math.max(yb,ya);
+      s += `<line x1="${cx.toFixed(1)}" y1="${lo.toFixed(1)}" x2="${cx.toFixed(1)}" y2="${hi.toFixed(1)}" stroke="var(--accent)" stroke-width="2" stroke-opacity="0.35"/>`;
+      s += `<circle cx="${cx.toFixed(1)}" cy="${yb.toFixed(1)}" r="4.6" fill="var(--ink)"/>`;
+      s += `<circle cx="${cx.toFixed(1)}" cy="${yc.toFixed(1)}" r="4.6" fill="var(--accent)"/>`;
+      s += `<circle cx="${cx.toFixed(1)}" cy="${ya.toFixed(1)}" r="4.6" fill="var(--surface)" stroke="var(--accent)" stroke-width="2"/>`;
+      if(i>=6) s += `<text class="dlab sub" x="${cx.toFixed(1)}" y="${(ya-9).toFixed(1)}" text-anchor="middle">${d.etrAsk.toFixed(0)}%</text>`;
+    } else if(MODE==="context"){
+      // bottom→top: after-tax income (warm neutral); current-law taxes (steel);
+      // new taxes (solid); leakage (hatch). solid+hatch = the plan's ask.
+      const disp = d.income - d.taxbase - d.ask;     // after-tax income = income − current law − plan ask
+      const b1=disp, b2=b1+d.taxbase, b3=b2+d.conv, b4=b3+d.avoid;
+      s += rr(0, b1, "var(--kept)");
+      s += rr(b1, b2, "var(--curlaw)");
+      s += rr(b2, b3, "var(--accent)");
+      s += rr(b3, b4, "url(#hatch)");
+    } else {
+      // new taxes only: new taxes collected (solid) + leakage (hatch) = the plan's ask
+      const b1=d.conv, b2=b1+d.avoid;
+      s += rr(0, b1, "var(--accent)");
+      s += rr(b1, b2, "url(#hatch)");
+    }
+    // overflow flag when clamped (per-household, in-context only)
+    const overflow = clamped && MODE==="context" && d.income>ymax;
+    if(overflow){
+      s += `<text class="dlab sub" x="${cx.toFixed(1)}" y="${(pad.t-8).toFixed(1)}" text-anchor="middle">▲ ${fmtV(d.income)}</text>`;
+    }
+    // selective direct label on the four richest-tax bins (dollar views only)
+    if(!isRate && i>=6 && !overflow){
+      if(MODE==="context"){                          // "+$X" — what the plan adds on top of current law
+        const yt=y(d.income);
+        s += `<text class="dlab sub" x="${cx.toFixed(1)}" y="${(yt-7).toFixed(1)}" text-anchor="middle">+${fmtV(d.ask)}</text>`;
+      } else {                                        // total new tax the plan asks
+        const yt=y(d.ask);
+        s += `<text class="dlab sub" x="${cx.toFixed(1)}" y="${(yt-7).toFixed(1)}" text-anchor="middle">${fmtV(d.ask)}</text>`;
+      }
+    }
+    // x label (rotated)
+    s += `<text class="binlab" x="${cx.toFixed(1)}" y="${(H-pad.b+16).toFixed(1)}" text-anchor="end" transform="rotate(-32 ${cx.toFixed(1)} ${(H-pad.b+16).toFixed(1)})">${d.bin}</text>`;
+    // invisible hit target for hover (full column)
+    s += `<rect x="${(cx-iw/R.length/2).toFixed(1)}" y="${pad.t}" width="${(iw/R.length).toFixed(1)}" height="${ih}" fill="transparent" data-i="${i}" class="hit"/>`;
+  });
+
+  // axis titles
+  const basisWord = BASIS==="cash" ? "cash income" : "accrual income";
+  const ytitle = isRate ? `Effective tax rate on ${basisWord}`
+               : `${UNIT==="hh"?"Per household":"Total"} ${MODE==="context"?basisWord:"new taxes from the plan"}`;
+  s += `<text class="axtext" x="${pad.l}" y="16" text-anchor="start">${ytitle} — ${YEAR}</text>`;
+  s += `<text class="binlab" x="${(W-pad.r)}" y="${H-6}" text-anchor="end" fill="var(--muted)">income percentile →</text>`;
+
+  svg.innerHTML = s;
+  bindHover(R, clamped, ymax);
+  drawLegend();
+  drawFoot(R, clamped);
+  drawTable();
+}
+
+function bindHover(R, clamped, ymax){
+  svg.querySelectorAll(".hit").forEach(el=>{
+    el.addEventListener("mousemove", ev=>{
+      const d = R[+el.dataset.i];
+      const head = `<div class="th">${d.bin}<span class="sm"> · ${(d.n/1e6).toFixed(d.n<1e6?3:2)}M households · ${BASIS==="cash"?"cash":"accrual"} basis</span></div>`;
+      if(MODE==="etr"){
+        tip.innerHTML = head +
+          `<div class="r"><span class="k">Current-law rate</span><span class="v">${d.etrBase.toFixed(1)}%</span></div>`+
+          `<div class="r ask"><span class="k">Rate the plan asks</span><span class="v">${d.etrAsk.toFixed(1)}%</span></div>`+
+          `<div class="r"><span class="k">Rate collected</span><span class="v">${d.etrColl.toFixed(1)}%</span></div>`+
+          `<div class="div"></div>`+
+          `<div class="r sm"><span class="k">plan adds</span><span class="v">+${(d.etrAsk-d.etrBase).toFixed(1)}pp asked, +${(d.etrColl-d.etrBase).toFixed(1)}pp realized</span></div>`+
+          `<div class="r sm"><span class="k">avoidance gap</span><span class="v">${(d.etrAsk-d.etrColl).toFixed(1)}pp</span></div>`;
+      } else {
+        const clPct=pct(d.taxbase,d.income), askPct=pct(d.ask,d.income), convPct=pct(d.conv,d.income), totPct=pct(d.taxbase+d.ask,d.income);
+        const leak = d.ask? (100*d.avoid/d.ask).toFixed(0) : "0";
+        const grow = d.taxbase? (100*d.ask/d.taxbase).toFixed(0) : "—";
+        const disp = d.income - d.taxbase - d.ask;
+        const fmt = UNIT==="hh"?fmtHH:fmtB;
+        tip.innerHTML = head +
+          `<div class="r"><span class="k">Income held</span><span class="v">${fmt(d.income)}</span></div>`+
+          `<div class="div"></div>`+
+          `<div class="r"><span class="k">Current law taxes</span><span class="v">${fmt(d.taxbase)} · ${clPct}</span></div>`+
+          `<div class="r ask"><span class="k">Plan&rsquo;s ask</span><span class="v">${fmt(d.ask)} · ${askPct}</span></div>`+
+          `<div class="r"><span class="k">&nbsp;&nbsp;↳ New taxes</span><span class="v">${fmt(d.conv)} · ${convPct}</span></div>`+
+          `<div class="r"><span class="k">&nbsp;&nbsp;↳ Leakage</span><span class="v">${fmt(d.avoid)}</span></div>`+
+          `<div class="r sm"><span class="k">not paid</span><span class="v">${leak}¢ per asked-$${grow!=="—"?" · +"+grow+"% vs. now":""}</span></div>`+
+          `<div class="div"></div>`+
+          `<div class="r"><span class="k">Total bill under plan</span><span class="v">${fmt(d.taxbase+d.ask)} · ${totPct}</span></div>`+
+          `<div class="r"><span class="k">After-tax income</span><span class="v">${fmt(disp)}</span></div>`;
+      }
+      tip.style.display="block";
+      const box=svg.getBoundingClientRect(), cb=tip.getBoundingClientRect();
+      let lx=ev.clientX-box.left+14, ty=ev.clientY-box.top-10;
+      if(lx+cb.width>box.width) lx=ev.clientX-box.left-cb.width-14;
+      if(ty+cb.height>box.height) ty=box.height-cb.height-6;
+      tip.style.left=lx+"px"; tip.style.top=Math.max(0,ty)+"px";
+    });
+    el.addEventListener("mouseleave", ()=> tip.style.display="none");
+  });
+}
+
+function drawLegend(){
+  const L = document.getElementById("legend");
+  let items = "";
+  if(MODE==="etr"){
+    items += `<span class="it"><span class="sw2" style="background:var(--ink);border-radius:50%;width:12px"></span>Current law</span>`;
+    items += `<span class="it"><span class="sw2" style="background:var(--accent);border-radius:50%;width:12px"></span>Collected — rate realized</span>`;
+    items += `<span class="it"><span class="sw2" style="background:var(--surface);border:2px solid var(--accent);border-radius:50%;width:12px"></span>The ask — rate the law seeks</span>`;
+    items += `<span class="note">hollow-to-filled gap = avoidance margin</span>`;
+  } else {
+    if(MODE==="context"){
+      items += `<span class="it"><span class="sw2" style="background:var(--kept)"></span>After-tax income</span>`;
+      items += `<span class="it"><span class="sw2" style="background:var(--curlaw)"></span>Current law taxes</span>`;
+    }
+    items += `<span class="it"><span class="sw2" style="background:var(--accent)"></span>New taxes</span>`;
+    items += `<span class="it"><span class="sw2" style="background:var(--accent-2);background-image:repeating-linear-gradient(45deg,var(--accent) 0 3px,var(--accent-2) 3px 7px)"></span>Leakage (asked for but not paid)</span>`;
+    items += `<span class="note">new taxes + leakage = the plan&rsquo;s ask</span>`;
+  }
+  L.innerHTML = items;
+}
+
+function drawFoot(R, clamped){
+  const d = R[R.length-1];                                   // top 0.01%
+  const raw = groupSet()[R.length-1];
+  const basisTxt = BASIS==="cash" ? "cash income" : "accrual income (which counts unrealized gains)";
+  let t;
+  if(MODE==="etr"){
+    t = `In ${YEAR}, the <b>top 0.01%</b>&rsquo;s effective rate on ${basisTxt} runs ${d.etrBase.toFixed(1)}% under current law; `+
+        `the plan seeks <b>${d.etrAsk.toFixed(1)}%</b> and realizes ${d.etrColl.toFixed(1)}% — the ${(d.etrAsk-d.etrColl).toFixed(1)}pp gap is avoidance. `+
+        `Switch to accrual and every top rate falls: the same tax over a larger, gains-inclusive base.`;
+  } else {
+    const grow = (100*raw.static/raw.tax_base).toFixed(0);
+    const leak = (100*raw.avoid/raw.static).toFixed(0);
+    t = `In ${YEAR}, the <b>top 0.01%</b> pays ${fmtB(raw.tax_base)} in federal tax under current law; the plan asks `+
+        `${fmtB(raw.static)} more — <b>+${grow}%</b> on their bill, ${d.etrAsk.toFixed(0)}% of their ${BASIS} income — `+
+        `and collects the rest short of a ${leak}¢-per-asked-dollar avoidance gap. `+
+        `Down the distribution the steel band shrinks and the blue cap all but vanishes: this is a top tax.`;
+    if(clamped) t += ` <span class="mono" style="color:var(--warn)">Per-household view clamps the y-axis below the top 0.01% (marked ▲) so the rest stays legible.</span>`;
+  }
+  document.getElementById("foot").innerHTML = t;
+}
+
+function drawTable(){
+  const R = groupSet();
+  const bl = BASIS==="cash" ? "cash" : "accrual";
+  let h = `<thead><tr><th>Group</th><th>Households</th><th>Income (${bl})</th><th>Current law</th><th>Collected</th><th>Avoidance</th><th>Static ask</th><th>ETR now→ask</th><th>Kept</th></tr></thead><tbody>`;
+  let tot={income:0,cl:0,conv:0,avoid:0,ask:0,disp:0,n:0};
+  R.forEach(d=>{
+    const inc=d.income[BASIS], disp=inc-d.tax_base-d.static;
+    tot.income+=inc; tot.cl+=d.tax_base; tot.conv+=d.conv; tot.avoid+=d.avoid; tot.ask+=d.static; tot.disp+=disp; tot.n+=d.n;
+    h += `<tr><td>${d.bin}</td><td>${(d.n/1e6).toFixed(2)}M</td><td>${fmtB(inc)}</td><td>${fmtB(d.tax_base)}</td>`+
+         `<td>${fmtB(d.conv)}</td><td>${fmtB(d.avoid)}</td><td>${fmtB(d.static)}</td>`+
+         `<td>${(100*d.tax_base/inc).toFixed(1)}→${(100*(d.tax_base+d.static)/inc).toFixed(1)}%</td><td>${fmtB(disp)}</td></tr>`;
+  });
+  h += `</tbody><tfoot><tr><td>All</td><td>${(tot.n/1e6).toFixed(0)}M</td><td>${fmtB(tot.income)}</td><td>${fmtB(tot.cl)}</td>`+
+       `<td>${fmtB(tot.conv)}</td><td>${fmtB(tot.avoid)}</td><td>${fmtB(tot.ask)}</td>`+
+       `<td>${(100*tot.cl/tot.income).toFixed(1)}→${(100*(tot.cl+tot.ask)/tot.income).toFixed(1)}%</td><td>${fmtB(tot.disp)}</td></tr></tfoot>`;
+  document.getElementById("tbl").innerHTML = h;
+}
+
+/* ---- controls ---- */
+function wireSeg(id, attr, set){
+  const box=document.getElementById(id);
+  box.querySelectorAll("button").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      box.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed","false"));
+      b.setAttribute("aria-pressed","true");
+      set(b.dataset[attr]); render();
+    });
+  });
+}
+wireSeg("segYear","y", v=>YEAR=v);
+wireSeg("segMode","m", v=>{ MODE=v; document.getElementById("grpUnit").style.visibility = (v==="etr")?"hidden":"visible"; });
+wireSeg("segBasis","b", v=>BASIS=v);
+wireSeg("segUnit","u", v=>UNIT=v);
+
+const tb=document.getElementById("themebtn");
+tb.addEventListener("click", ()=>{
+  const cur=document.documentElement.getAttribute("data-theme");
+  const mql=window.matchMedia("(prefers-color-scheme:dark)").matches;
+  const next=(cur? cur==="dark":mql) ? "light":"dark";
+  document.documentElement.setAttribute("data-theme", next);
+});
+
+render();
+</script>
+</body>
+</html>

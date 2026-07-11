@@ -332,6 +332,15 @@ def read_scenario(root, scen_id, base_heads, base_cg, etr_base_flat, groups, wan
     return out
 
 
+def income_levels_of(rows):
+    """{income_def: {group: baseline income $B}} for the dist year. Baseline-
+    fixed (denominators don't vary by reform leg), so any run's rows serve."""
+    out = {}
+    for r in rows:
+        out.setdefault(r["income_definition"], {})[r["group"]] = round(float(r["income_baseline"]), 3)
+    return out
+
+
 def flatten_etr(pack, groups):
     """{def: {year: {group: [comps]}}} -> flat def x group x comp vector."""
     out = []
@@ -369,6 +378,10 @@ def fit(root, out_path):
     groups, rows0 = etr_groups_of(first_dir)
     etr_base_pack = X.etr_pack(rows0, "baseline")
     etr_base_flat = flatten_etr(etr_base_pack, groups)
+    # baseline income LEVELS ($B) by def/group — baseline-fixed, so any run's
+    # rows serve. The dist card multiplies surrogate ETR deltas by these to get
+    # dollar tax deltas; bar heights use them as the resource denominator.
+    income_levels = income_levels_of(rows0)
 
     def read(scen_id):
         return read_scenario(root, scen_id, base_heads, base_cg, etr_base_flat, groups)
@@ -594,6 +607,7 @@ def fit(root, out_path):
     # etr_base: baseline LEVELS by def/group (2027), same comp order
     payload = dict(meta=meta,
                    etr_base=etr_base_pack,
+                   income_levels=income_levels,
                    surrogate=data_stub["surrogate"])
     with open(out_path, "w") as fh:
         json.dump(payload, fh, separators=(",", ":"))

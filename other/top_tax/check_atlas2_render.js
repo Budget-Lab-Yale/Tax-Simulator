@@ -78,9 +78,22 @@ function makeWorld() {
       return created.find(e => e.dataset.key === m[1] && e.dataset.pos === m[2]) || null;
     return null;
   }
+  // parse the dist-card toggle buttons (static HTML inside <span class="unit" id=...>)
+  function parseBtns(togId) {
+    const block = (html.match(new RegExp('id="' + togId + '"[\\s\\S]*?</span>')) || [""])[0];
+    return [...block.matchAll(/<button ([^>]*)>/g)].map(m => {
+      const e = new El("button");
+      for (const a of m[1].matchAll(/data-(\w+)="([^"]*)"/g)) e.dataset[a[1]] = a[2];
+      created.push(e);
+      return e;
+    });
+  }
+  const distViewBtns = parseBtns("distViewTog"), etrDefBtns = parseBtns("etrDefTog");
   function querySelectorAll(sel) {
     if (sel === "input[data-lever]")
       return created.filter(e => e.tagName === "INPUT" && e.dataset.lever);
+    if (sel === "#distViewTog button") return distViewBtns;
+    if (sel === "#etrDefTog button") return etrDefBtns;
     return [];
   }
   const documentStub = {
@@ -88,6 +101,7 @@ function makeWorld() {
     createElement(tag) { const e = new El(tag); created.push(e); return e; },
     addEventListener() {},
     body: { insertAdjacentHTML() {} },
+    _distViewBtns: distViewBtns, _etrDefBtns: etrDefBtns,
   };
   const windowStub = {
     addEventListener() {},
@@ -289,6 +303,38 @@ try {
 }
 if (typeof A.setDecade === "function") A.setDecade(0);   // toggle loop can leave a non-default decade
 
+// ---- distribution card: each of the three views renders valid marks ---------------
+{
+  const dv = w1.sandbox.document._distViewBtns, def = w1.sandbox.document._etrDefBtns;
+  const byV = {}; dv.forEach(b => byV[b.dataset.v] = b);
+  // activate a plan so there is real avoidance (static ≠ conventional)
+  if (typeof A.setState === "function") A.setState({ ord: { rate: 44.8 }, cg: { rate: 40 }, wealth: { rate: 2, thr: 50e6 } });
+  if (!byV.context || !byV.new || !byV.etr) problems.push("dist card: view toggle buttons missing");
+  else {
+    const etrEl = w1.byId.etr, capEl = w1.byId.distCap;
+    const expect = { context: /<rect /, new: /<rect /, etr: /<circle / };
+    for (const v of ["context", "new", "etr"]) {
+      byV[v].onclick();
+      const h = etrEl.innerHTML;
+      if (!h || h.length < 200) problems.push(`dist view ${v}: chart empty`);
+      if (!expect[v].test(h)) problems.push(`dist view ${v}: missing expected marks`);
+      if (/NaN|undefined|\$NaN/.test(h)) problems.push(`dist view ${v}: NaN/undefined in output`);
+      if (v !== "etr" && !/url\(#disthatch\)/.test(h)) problems.push(`dist view ${v}: no leakage hatch`);
+      if (!capEl.innerHTML || capEl.innerHTML.length < 40) problems.push(`dist view ${v}: caption not set`);
+    }
+    // cash vs accrual must actually move the dollar bars (accrual base is larger)
+    byV.context.onclick();
+    def.forEach(b => { if (b.dataset.def === "expanded") b.onclick(); });
+    const cash = w1.byId.etr.innerHTML;
+    def.forEach(b => { if (b.dataset.def === "hs") b.onclick(); });
+    byV.context.onclick();
+    const accr = w1.byId.etr.innerHTML;
+    if (cash === accr) problems.push("dist card: cash vs accrual did not change the In-context bars");
+    def.forEach(b => { if (b.dataset.def === "expanded") b.onclick(); });
+    byV.context.onclick();
+  }
+}
+
 // ---- decade toggle: switching re-renders and changes the numbers -----------------
 if (typeof A.setDecade !== "function" || N_DEC < 2) {
   problems.push("decade toggle: setDecade hook or meta.decades missing");
@@ -307,6 +353,32 @@ if (typeof A.setDecade !== "function" || N_DEC < 2) {
   if (!A.FRONTD() || !A.FRONTD().pts.length)
     problems.push("frontier: empty lattice under decade 3");
   A.setDecade(0);
+  A.setState({});
+}
+
+// ---- dist card correctness: REF dollars reproduce the stack_ref run --------------
+// The dollar views are surrogate ETR-delta × fixed baseline income. At the reference
+// dials this must reproduce the actual stack_ref run (top 0.01%: current-law $358B,
+// new taxes $206B, leakage $178B — from other/top_tax/dist_card_data.json).
+{
+  const D = JSON.parse(fs.readFileSync(path.join(__dirname, "atlas2_data.json"), "utf8"));
+  const lev = D.meta.levers, groups = D.meta.etr_groups, comps = D.meta.etr_comps;
+  const idf = "expanded", di = D.meta.etr_income_defs.indexOf(idf);
+  const gi = groups.indexOf("Top 0.01%"), NC = comps.length, NG = groups.length;
+  const inc = D.income_levels[idf]["Top 0.01%"];
+  const base = D.etr_base[idf][String(D.meta.dist_years[0])]["Top 0.01%"];
+  const five = ["income_tax", "payroll", "estate", "deemed", "wealth", "corp"].map(c => comps.indexOf(c));
+  const ref = {}; lev.forEach(l => { ref[l.key] = {}; l.params.forEach(p => { ref[l.key][p.key] = p.ref; }); });
+  const etrD = A.evalQ("etr", ref), etrcD = A.evalQ("etrc", ref);
+  const rowTot = (delta) => { let t = 0; for (const c of five) { const d = delta ? delta[(di * NG + gi) * NC + c] : 0; t += Math.max(0, base[c] + d); } return t; };
+  const baseRate = five.reduce((t, c) => t + base[c], 0);
+  const statRate = rowTot(etrD), convRate = rowTot(etrcD);
+  const clD = baseRate / 100 * inc, newD = (convRate - baseRate) / 100 * inc, leakD = (statRate - convRate) / 100 * inc;
+  const exp = { cl: 358.354, nw: 206.439, lk: 177.668 };
+  const near = (a, b, tol) => Math.abs(a - b) <= tol;
+  if (!near(clD, exp.cl, 1)) problems.push(`dist REF: current-law $${clD.toFixed(1)}B vs stack_ref $${exp.cl}B`);
+  if (!near(newD, exp.nw, 12)) problems.push(`dist REF: new taxes $${newD.toFixed(1)}B vs stack_ref $${exp.nw}B (surrogate tol)`);
+  if (!near(leakD, exp.lk, 12)) problems.push(`dist REF: leakage $${leakD.toFixed(1)}B vs stack_ref $${exp.lk}B (surrogate tol)`);
   A.setState({});
 }
 

@@ -4,6 +4,7 @@
     --paper:#f7f6f2; --surface:#fcfcfb; --surface-2:#f1f0ea; --ink:#14130f; --ink-2:#55534c;
     --muted:#8a887f; --grid:#e4e2d9; --rule:#d7d5cb; --accent:#1c5cab; --accent-2:#cfe0f6;
     --hair:rgba(20,19,15,0.10); --good:#0a7d3a; --warn:#b9601b;
+    --kept:#c9c6ba; --curlaw:#6f8bad;
     --h-iit:#2a78d6; --h-pay:#1baf7a; --h-cg:#c9891a; --h-est:#008300; --h-wealth:#4a3aa7; --h-corp:#e34948;
     --l-ord:#b06a2a; --l-cg:#0f95b0; --l-corp:#c2417e; --l-wealth:#7f8f22; --l-deemed:#6d5bd0; --l-estate:#2f9e60; --l-qbi:#d95f3b; --l-taxmax:#3f6fd1;
     --shadow:0 1px 2px rgba(20,19,15,.05),0 4px 16px rgba(20,19,15,.04); color-scheme:light;
@@ -12,6 +13,7 @@
     --paper:#0d0d0d; --surface:#17181a; --surface-2:#202225; --ink:#f4f3ef; --ink-2:#c3c2b7;
     --muted:#8f8d84; --grid:#2b2c2e; --rule:#33343a; --accent:#4b93ea; --accent-2:#173254;
     --hair:rgba(255,255,255,0.10); --good:#31b45c; --warn:#e0873f;
+    --kept:#4a4842; --curlaw:#5e79a0;
     --h-iit:#3987e5; --h-pay:#199e70; --h-cg:#d9a02f; --h-est:#2ba32b; --h-wealth:#9085e9; --h-corp:#e66767;
     --l-ord:#c98336; --l-cg:#1f97b3; --l-corp:#d1609b; --l-wealth:#87962c; --l-deemed:#8f7fe0; --l-estate:#33a86b; --l-qbi:#df6c44; --l-taxmax:#6f97e8;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35); color-scheme:dark; } }
@@ -19,12 +21,14 @@
     --paper:#f7f6f2; --surface:#fcfcfb; --surface-2:#f1f0ea; --ink:#14130f; --ink-2:#55534c;
     --muted:#8a887f; --grid:#e4e2d9; --rule:#d7d5cb; --accent:#1c5cab; --accent-2:#cfe0f6;
     --hair:rgba(20,19,15,0.10); --good:#0a7d3a; --warn:#b9601b;
+    --kept:#c9c6ba; --curlaw:#6f8bad;
     --h-iit:#2a78d6; --h-pay:#1baf7a; --h-cg:#c9891a; --h-est:#008300; --h-wealth:#4a3aa7; --h-corp:#e34948;
     --l-ord:#b06a2a; --l-cg:#0f95b0; --l-corp:#c2417e; --l-wealth:#7f8f22; --l-deemed:#6d5bd0; --l-estate:#2f9e60; --l-qbi:#d95f3b; --l-taxmax:#3f6fd1; color-scheme:light; }
   :root[data-theme="dark"]{
     --paper:#0d0d0d; --surface:#17181a; --surface-2:#202225; --ink:#f4f3ef; --ink-2:#c3c2b7;
     --muted:#8f8d84; --grid:#2b2c2e; --rule:#33343a; --accent:#4b93ea; --accent-2:#173254;
     --hair:rgba(255,255,255,0.10); --good:#31b45c; --warn:#e0873f;
+    --kept:#4a4842; --curlaw:#5e79a0;
     --h-iit:#3987e5; --h-pay:#199e70; --h-cg:#d9a02f; --h-est:#2ba32b; --h-wealth:#9085e9; --h-corp:#e66767;
     --l-ord:#c98336; --l-cg:#1f97b3; --l-corp:#d1609b; --l-wealth:#87962c; --l-deemed:#8f7fe0; --l-estate:#33a86b; --l-qbi:#df6c44; --l-taxmax:#6f97e8; color-scheme:dark; }
 
@@ -165,9 +169,15 @@
 
       <div class="card">
         <div class="step">Distribution</div>
-        <h3>Distribution of tax rates</h3>
-        <div class="cap">Effective tax rate by income percentile in 2027 — the impact year, whichever decade is selected above. Measured against cash income (expanded cash income) or accrual income (Haig-Simons, which includes unrealized gains). Baseline-fixed ranking; corporate tax under the capital-income convention. Each group shows three dots on a stem: current law (black); the package's static rate — the law-only ask (hollow); and its conventional rate — the tax actually collected after behavioral responses, over the same income denominator (filled blue). The distance between the hollow and filled dots is the avoidance margin.
-          <span class="unit" id="etrDefTog" role="group" aria-label="Income definition" style="margin-left:10px;vertical-align:middle">
+        <h3>Who holds the income — and what the plan takes</h3>
+        <div class="cap" id="distCap"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin:2px 0 12px">
+          <span class="unit" id="distViewTog" role="group" aria-label="View">
+            <button type="button" data-v="context" aria-pressed="true">In context</button>
+            <button type="button" data-v="new" aria-pressed="false">New taxes</button>
+            <button type="button" data-v="etr" aria-pressed="false">Effective rate</button>
+          </span>
+          <span class="unit" id="etrDefTog" role="group" aria-label="Income definition">
             <button type="button" data-def="expanded" aria-pressed="true">Cash income</button>
             <button type="button" data-def="hs" aria-pressed="false">Accrual income</button>
           </span>
@@ -280,6 +290,7 @@ var DATA=/*__ATLAS_DATA__*/null;
   var DEC=0;                                   // selected decade index
   var ETRYEAR=String(DATA.meta.dist_years[0]);
   var INCDEF='expanded';
+  var DIST_VIEW='context';    // distribution card view: 'context' | 'new' | 'etr'
   function decLabel(d){ return DECADES[d][0]+'–'+String(DECADES[d][1]).slice(2); }
   var pg=function(b){ return (b/GDPD[DEC]*100).toFixed(2)+"%"; };
   function usd(b){ var v=Math.abs(b),sg=b<0?"−":"";
@@ -688,6 +699,60 @@ var DATA=/*__ATLAS_DATA__*/null;
     return s+'</svg>';
   }
 
+  // ---- dollar distribution: income by group, split kept / current-law / new / leakage
+  // Same story as the dumbbell, in dollars. Per-PCTS total rates x fixed baseline
+  // income levels -> dollar tax; nested groups differenced into disjoint bins.
+  function usdShort(b){ var v=Math.abs(b),sg=b<0?'−':'';
+    return v>=1000 ? sg+'$'+(v/1000).toFixed(1)+'T' : v>=10 ? sg+'$'+Math.round(v)+'B' : sg+'$'+v.toFixed(1)+'B'; }
+  function distBins(d){
+    // same nested groups as the dumbbell (PCTS): quintiles + top-decile breakout.
+    // The top groups nest inside Quintile 5 — bars overlap by design (author call).
+    var inc=(DATA.income_levels&&DATA.income_levels[INCDEF])||{};
+    var tot=function(ser,i){var t=0;Object.keys(ser).forEach(function(k){t+=ser[k][i];});return t;};
+    return PCTS.map(function(g,i){
+      var I=inc[g]||0, br=tot(d.etr.baseline,i), sr=tot(d.etr.static,i), cr=tot(d.etr.conv,i);
+      var taxbase=br/100*I, sd=(sr-br)/100*I, cd=(cr-br)/100*I;
+      return {bin:g, income:I, taxbase:taxbase, conv:cd, avoid:sd-cd, ask:sd, aftertax:I-taxbase-sd};
+    });
+  }
+  function combinedDist(d,w){
+    var R=distBins(d), n=R.length, isNew=(DIST_VIEW==='new');
+    var nQ=PCTS.filter(function(g){return g.indexOf('Quintile')===0;}).length, SPLIT=28;
+    var h=338,pad={l:46,r:12,t:34,b:46},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
+    var tops=R.map(function(r){return isNew?r.ask:r.income;});
+    var maxv=Math.max.apply(null,tops)*1.08; if(!(maxv>0))maxv=1;
+    var Y=function(v){return pad.t+ih-(Math.max(0,Math.min(v,maxv))/maxv)*ih;};
+    var gw=(iw-SPLIT)/n, GAP=2, bw=Math.min(gw*0.6,44);
+    var s=svg(w,h);
+    s+='<defs><pattern id="disthatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="7" height="7" fill="var(--accent-2)"></rect><line x1="0" y1="0" x2="0" y2="7" stroke="var(--accent)" stroke-width="3"></line></pattern></defs>';
+    var nt=4;
+    for(var t=0;t<=nt;t++){ var v=maxv*t/nt, y=Y(v);
+      s+='<line x1="'+pad.l+'" x2="'+(w-pad.r)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="var(--grid)" stroke-width="1"/>';
+      s+='<text x="'+(pad.l-6)+'" y="'+(y+4).toFixed(1)+'" text-anchor="end" font-size="10" fill="var(--muted)" font-family="ui-monospace,monospace">'+usdShort(v)+'</text>'; }
+    var xd=pad.l+nQ*gw+SPLIT/2;
+    s+='<line x1="'+xd.toFixed(1)+'" x2="'+xd.toFixed(1)+'" y1="'+pad.t+'" y2="'+(pad.t+ih)+'" stroke="var(--rule)" stroke-width="1" stroke-dasharray="3 4"/>';
+    s+='<text x="'+pad.l+'" y="14" font-size="9.5" font-weight="600" letter-spacing="0.08em" fill="var(--muted)" font-family="ui-monospace,monospace">'+(isNew?'NEW TAXES FROM THE PLAN':(INCDEF==='hs'?'ACCRUAL INCOME':'CASH INCOME'))+' · '+ETRYEAR+' · $B</text>';
+    R.forEach(function(r,i){
+      var gx=pad.l+i*gw+(i>=nQ?SPLIT:0), cx=gx+gw/2, x0=cx-bw/2;
+      var rr=function(a,b,fill){var yb=Y(a),yt=Y(b),hh=Math.max(0,yb-yt-GAP);if(hh<=0.3)return '';
+        return '<rect x="'+x0.toFixed(1)+'" y="'+yt.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+hh.toFixed(1)+'" rx="3" fill="'+fill+'"/>';};
+      if(isNew){ s+=rr(0,r.conv,'var(--accent)'); s+=rr(r.conv,r.conv+r.avoid,'url(#disthatch)'); }
+      else { var d0=r.aftertax,d1=d0+r.taxbase,d2=d1+r.conv,d3=d2+r.avoid;
+        s+=rr(0,d0,'var(--kept)'); s+=rr(d0,d1,'var(--curlaw)'); s+=rr(d1,d2,'var(--accent)'); s+=rr(d2,d3,'url(#disthatch)'); }
+      if(i>=6){ var yt=Y(isNew?r.ask:r.income);
+        s+='<text x="'+cx.toFixed(1)+'" y="'+(yt-6).toFixed(1)+'" text-anchor="middle" font-size="10" font-weight="600" fill="var(--accent)" font-family="ui-monospace,monospace">'+(isNew?'':'+')+usdShort(r.ask)+'</text>'; }
+      s+='<text x="'+cx.toFixed(1)+'" y="'+(h-9)+'" text-anchor="middle" font-size="9.5" fill="var(--ink-2)" font-family="ui-monospace,monospace">'+r.bin+'</text>';
+      var pctI=function(x){return r.income>0?(100*x/r.income).toFixed(1)+'%':'—';};
+      s+='<rect x="'+gx.toFixed(1)+'" y="'+pad.t+'" width="'+gw.toFixed(1)+'" height="'+ih+'" fill="transparent"><title>'+r.bin
+        +'\nIncome held: '+usdShort(r.income)
+        +'\nCurrent law taxes: '+usdShort(r.taxbase)+' ('+pctI(r.taxbase)+')'
+        +'\nNew taxes (collected): '+usdShort(r.conv)+' ('+pctI(r.conv)+')'
+        +'\nLeakage (not paid): '+usdShort(r.avoid)
+        +'\nPlan ask: '+usdShort(r.ask)+' ('+pctI(r.ask)+')</title></rect>';
+    });
+    return s+'</svg>';
+  }
+
   // ---- frontier: deterministic lattice over the dial space ------------------- //
   // Options per lever (off + a few deterministic settings); per-option
   // {fct, fst, g} precomputed once, so the lattice sweep is pure arithmetic.
@@ -997,13 +1062,38 @@ var DATA=/*__ATLAS_DATA__*/null;
         return sp.some(function(r){return Math.abs(r.heads[hh.k]||0)>0.5;});
       }).map(function(hh){return '<span class="it"><span class="sw2" style="background:'+hh.c+'"></span>'+hh.label+'</span>';}).join('')
       +'<span class="it mono" style="color:var(--muted)">left of $0 = drained from that base · right column: net score</span>':'';
-    $('#etr').innerHTML=combinedEtr(d,widthOf('etr'));
-    $('#etrLegend').innerHTML=
-      '<span class="it"><span class="sw2" style="background:var(--ink);border-radius:50%"></span>Baseline (current law)</span>'
-      +'<span class="it"><span class="sw2" style="background:transparent;border:2px solid var(--accent);border-radius:50%"></span>Static — the ask</span>'
-      +'<span class="it"><span class="sw2" style="background:var(--accent);border-radius:50%"></span>Conventional — collected</span>'
-      +'<span class="it mono" style="color:var(--muted)">hollow-to-filled gap = avoidance margin</span>';
+    paintDist(d);
     $('#frontChart').innerHTML=frontierWithMarker(d);
+  }
+
+  // distribution card: chart + legend + caption switch by DIST_VIEW
+  function paintDist(d){
+    var hatchSw='background:var(--accent-2);background-image:repeating-linear-gradient(45deg,var(--accent) 0 3px,var(--accent-2) 3px 7px)';
+    if(DIST_VIEW==='etr'){
+      $('#etr').innerHTML=combinedEtr(d,widthOf('etr'));
+      $('#etrLegend').innerHTML=
+        '<span class="it"><span class="sw2" style="background:var(--ink);border-radius:50%"></span>Current law</span>'
+        +'<span class="it"><span class="sw2" style="background:var(--accent);border-radius:50%"></span>New taxes collected — rate realized</span>'
+        +'<span class="it"><span class="sw2" style="background:transparent;border:2px solid var(--accent);border-radius:50%"></span>The ask — rate the law seeks</span>'
+        +'<span class="it mono" style="color:var(--muted)">hollow-to-filled gap = avoidance margin</span>';
+    } else {
+      $('#etr').innerHTML=combinedDist(d,widthOf('etr'));
+      var leg='';
+      if(DIST_VIEW==='context'){
+        leg+='<span class="it"><span class="sw2" style="background:var(--kept)"></span>After-tax income</span>'
+            +'<span class="it"><span class="sw2" style="background:var(--curlaw)"></span>Current law taxes</span>';
+      }
+      leg+='<span class="it"><span class="sw2" style="background:var(--accent)"></span>New taxes</span>'
+          +'<span class="it"><span class="sw2" style="'+hatchSw+'"></span>Leakage (asked for but not paid)</span>'
+          +'<span class="it mono" style="color:var(--muted)">new taxes + leakage = the plan’s ask</span>';
+      $('#etrLegend').innerHTML=leg;
+    }
+    var basisTxt=(INCDEF==='hs'?'accrual income (Haig-Simons, which includes unrealized gains)':'cash income (expanded cash income)');
+    var cap;
+    if(DIST_VIEW==='context') cap='Each bar is the income a slice of the distribution holds, in '+ETRYEAR+', split into after-tax income, the tax paid under <b>current law</b> (steel), the plan’s <b>new taxes</b> (solid blue), and <b>leakage</b> — tax the law asks for but behavior leaks back (hatched). New taxes + leakage is the static ask; the solid part is what’s collected. Measured against '+basisTxt+'; baseline-fixed ranking, corporate tax under the capital-income convention.';
+    else if(DIST_VIEW==='new') cap='Just the plan’s new taxes in '+ETRYEAR+', by income group: solid blue is what it <b>collects</b>, hatched is <b>leakage</b> — asked for but not paid — and together they are the static ask. Over '+basisTxt+'; baseline-fixed ranking, corporate tax under the capital-income convention.';
+    else cap='Effective tax rate by income group in '+ETRYEAR+', the same story as rates. Each group shows three dots on a stem: current law (black); the plan’s static rate — the ask (hollow); and its conventional rate — collected after behavior, over the same denominator (filled). The hollow-to-filled gap is the avoidance margin. Over '+basisTxt+'; baseline-fixed ranking, corporate tax under the capital-income convention.';
+    $('#distCap').innerHTML=cap;
   }
 
   Array.prototype.forEach.call(document.querySelectorAll('#etrDefTog button'),function(b){
@@ -1011,6 +1101,14 @@ var DATA=/*__ATLAS_DATA__*/null;
       Array.prototype.forEach.call(document.querySelectorAll('#etrDefTog button'),function(x){
         x.setAttribute('aria-pressed', x.dataset.def===INCDEF?'true':'false'); });
       renderAll(); }; });
+
+  // distribution view toggle (In context / New taxes / Effective rate) — repaint
+  // only the dist card (the rest of the page is view-independent)
+  Array.prototype.forEach.call(document.querySelectorAll('#distViewTog button'),function(b){
+    b.onclick=function(){ DIST_VIEW=b.dataset.v;
+      Array.prototype.forEach.call(document.querySelectorAll('#distViewTog button'),function(x){
+        x.setAttribute('aria-pressed', x.dataset.v===DIST_VIEW?'true':'false'); });
+      paintDist(compute()); }; });
 
   // ---- badge ------------------------------------------------------------------- //
   var val=DATA.meta.surrogate.validation||{};
