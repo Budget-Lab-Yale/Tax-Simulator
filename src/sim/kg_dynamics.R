@@ -133,25 +133,25 @@ KG_DYN_HEIR_DISTRIBUTION_PATH = './resources/heir_distribution_scf2022.csv'
 
 # eta -- the entropy-cost precision. In the SINGLE POOL (spec v3) eta IS the
 # long-run CG semi-elasticity directly (the Bellman responds on the whole pool,
-# so there is no responsive-half deflation). Calibrated in
-# other/kg_model_tests/calibrate.R against long-run dlog(R)/dtau (sim year 30 of
-# a +1pp permanent shock); the timeable share is then calibrated against the
-# short-run announcement moment GIVEN this eta. Response is INCREASING in |eta|
-# (bigger eta => steeper exp response); the calibrator's long-run bisection is
-# monotone DECREASING in eta -- see calibrate.R. The bathtub-internal targets the
-# calibrator chases are INFLATED by 1/KG_DYN_DILUTION_LONG and
-# 1/KG_DYN_DILUTION_SHORT (defined in calibrate.R) so the FULL SIM delivers the
-# nominal literature targets (-2.52 long-run, +5.04 short-run). Dilution factors
-# absorb the gap between the calibrator's standalone bathtub solve and the full
-# sim's per-record application, AGI/AMT/NIIT interactions, and anchor-tau drift.
-# Re-measure dilutions and re-run calibration whenever Tax-Data vintage, the
-# timeable share, ref_wedge, the discount series, the apply-to-records logic, or
-# any Bellman primitive changes.
+# so there is no responsive-half deflation). PINNED DIRECTLY ON THE FULL
+# SIMULATOR (2026-07-12): the eta_dial grid measures E_full(eta) = dlog(R)/dtau
+# at sim-year 30 across a few eta values and inverts the (linear-through-origin)
+# line for eta* = |E_full_target| / slope, with E_full_target = -0.6 / 0.238 =
+# -2.52 (literature realization elasticity at the top-rate divisor). See
+# other/top_tax/eta_dial/measure_efull_by_eta.R; the fitted slope + grid are
+# recorded in other/top_tax/eta_dial/eta_repin_fit.csv, so the next re-pin is
+# arithmetic. The timeable share is calibrated against the short-run
+# announcement moment GIVEN this eta. Response is INCREASING in |eta| (bigger
+# eta => steeper exp response). The old dilution-bridge calibrator
+# (other/kg_model_tests/calibrate.R) is retired to a drift diagnostic -- no
+# hand-carried KG_DYN_DILUTION_* factors remain. Re-run the eta_dial re-pin
+# whenever Tax-Data vintage, the timeable share, ref_wedge, the discount series,
+# the apply-to-records logic, or any Bellman primitive changes.
 #
 # Default 'NA' until the v3 calibration paste: the finite-eta guard in
 # kg_dyn_run_bathtub_pass hard-stops any sim that reaches the Bellman with eta
 # unset (intended -- prevents accidental sims on an uncalibrated model).
-KG_DYN_DEFAULT_ETA      = local({ v = Sys.getenv('KG_ETA', '2.3992')  # calib v3 iter1 (2026-07-09); provisional pending dilution confirm
+KG_DYN_DEFAULT_ETA      = local({ v = Sys.getenv('KG_ETA', '2.4825')  # full-sim re-pin 2026-07-12 (E_full=-2.52 / slope 1.0155; eta_repin_fit.csv)
                                   if (identical(v, 'NA')) NA_real_ else as.numeric(v) })
 
 # Within-cell allocation rule for policy-induced dG, controlling the
@@ -259,23 +259,26 @@ KG_DYN_REGIME_TRIPLET = list(
 # run for no reason.
 KG_DYN_SPEC_VERSION = 3L
 
-# Stamp of the calibration-invalidating inputs as of the last calibrate.sbatch
-# run. Update alongside KG_DYN_DEFAULT_ETA / KG_DYN_TIMEABLE_SHARE whenever you
-# recalibrate (calibrate.R prints a ready-to-paste block). applier_allocation
-# is the rule the DILUTIONS were measured under.
-# NOTE: eta/timeable_share are NA pending the v3 (single-pool) recalibration;
-# paste the calibrate.sbatch outputs here once it converges to the -2.52 / +5.04
-# nominal targets. Until then the finite-eta / finite-timeable-share guards in
-# kg_dyn_run_bathtub_pass hard-stop any sim.
+# Stamp of the calibration-invalidating inputs. Update alongside
+# KG_DYN_DEFAULT_ETA / KG_DYN_TIMEABLE_SHARE whenever you recalibrate.
+# applier_allocation is the rule the calibration was conditioned on.
+# NOTE: eta was RE-PINNED 2026-07-12 directly on the full simulator (E_full line
+# inversion; see the KG_DYN_DEFAULT_ETA header + other/top_tax/eta_dial/
+# eta_repin_fit.csv), NOT via calibrate.R (now a drift diagnostic). The re-pin
+# was measured on Tax-Data 2026070814 (the production default), so the stamp
+# vintage moves to 2026070814. timeable_share is carried from the 2026-07-09
+# short-run calibration (a timing overlay, robust to the Tax-Data vintage); its
+# own derivation vintage (2026050315) is tracked separately in
+# other/kg_model_tests/calibration_reference.csv.
 KG_DYN_CALIB_PROVENANCE = list(
-  date               = '2026-07-09',  # v3 FINAL (eta via dilution loop; f via direct full-sim pin)
+  date               = '2026-07-12',  # eta re-pinned on the full sim (eta_dial)
   spec_version       = 3L,
-  eta                = 2.3992,     # the calibrated outputs, recorded so a stray
+  eta                = 2.4825,     # the calibrated outputs, recorded so a stray
   timeable_share     = 0.2542,     # KG_ETA / KG_TIMEABLE_SHARE override or an
   applier_allocation = '0.5',      # un-stamped hand-edit also trips the guard
   ref_wedge          = 0.05,
   timing_window      = 1L,
-  tax_data_vintage   = '2026050315',
+  tax_data_vintage   = '2026070814',
   macro_vintage      = '2026022522'
 )
 

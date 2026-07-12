@@ -1,6 +1,13 @@
 #-------------------------------------------------------------------------------
 # measure_dilution.R
 #
+# RETIRED 2026-07-12. The dilution bridge is gone: eta is now pinned directly on
+# the full simulator by inverting the measured E_full(eta) line
+# (other/top_tax/eta_dial/measure_efull_by_eta.R). calibrate.R no longer consumes
+# KG_DYN_DILUTION_LONG/SHORT, so nothing reads this script's output. Kept only as
+# a historical reference for the E_full measurement convention -- do NOT paste
+# its printed dilution factors anywhere.
+#
 # Measures the full-sim kg_dynamics realization semi-elasticity under the
 # CURRENT applier-allocation rule (KG_APPLIER_ALLOCATION, default 0.5) and
 # converts it to the dilution factors calibrate.R needs.

@@ -1,9 +1,15 @@
 #-------------------------------------------------------------------------------
 # calibrate.R
 #
-# Calibration of the kg_dynamics representative-cell Bellman (spec v3: ENTROPY
-# realization cost, SINGLE POOL -- no responsive/inert split, no fixed floor) to
-# two moments:
+# DRIFT DIAGNOSTIC (demoted 2026-07-12). This was the calibration path for
+# kg_dynamics eta/timeable_share; eta is now pinned DIRECTLY on the full
+# simulator by inverting the measured E_full(eta) line
+# (other/top_tax/eta_dial/measure_efull_by_eta.R). This standalone
+# representative-cell Bellman + bathtub miniature no longer ships values -- it
+# only reports how far the miniature has drifted from the full-sim calibration,
+# feeding Tier A of the staleness watch (calibration_reference.csv). It solves
+# the kg_dynamics Bellman (spec v3: ENTROPY realization cost, SINGLE POOL -- no
+# responsive/inert split, no fixed floor) against two moments:
 #
 #   1. Long-run (permanent) semi-elasticity: dlog(R)/dtau at sim-year 30
 #      under a uniform +1pp permanent perturbation. Target -0.6 / 0.238 ~=
@@ -35,8 +41,9 @@
 #             short-run anchor is inconsistent with the full-pool level response
 #             (revisit SHORT_RUN_RATIO), not a bug.
 #
-# Output: prints recommended eta (KG_DYN_DEFAULT_ETA) and f
-# (KG_DYN_TIMEABLE_SHARE). Paste both into src/sim/kg_dynamics.R.
+# Output: prints the miniature's eta / timeable_share and their drift vs the
+# SHIPPED constants. Diagnostic only -- do NOT paste these into kg_dynamics.R;
+# the shipped eta comes from the eta_dial full-sim re-pin.
 #
 # CLI:
 #   Rscript other/kg_model_tests/calibrate.R <baseline_root> [<macro_root>]
@@ -87,29 +94,23 @@ LONG_RUN_NOMINAL   = -0.6 / 0.238    # -2.52, permanent semi-elasticity target
 SHORT_RUN_RATIO    = 2               # short-run / |long-run| magnitude
 SHORT_RUN_NOMINAL  = -SHORT_RUN_RATIO * LONG_RUN_NOMINAL   # +5.04
 
-# Empirical dilution factors: ratio of full-sim measured elasticity at the
-# anchor year to the bathtub-internal elasticity the calibrator computes. The
-# standalone Bellman + bathtub recurrence omits per-record clamps in
-# kg_dyn_apply_to_records, AGI/AMT/NIIT-driven MTR-distribution effects, and
-# baseline-anchor-tau drift (literature -2.52 is anchored at tau=0.238 but the
-# sim's kg-weighted average baseline mtr_kg_lt is lower). The internal bathtub
-# target is inflated by 1/dilution so the full sim delivers the nominal target.
-#
-# Re-measured each iteration by measure_dilution.sbatch (dilution = E_full /
-# E_int at the current operating point); update both here and re-run calibrate
-# until the full-sim semis land on nominal. The values below are the v2
-# converged priors used to SEED the v3 (single-pool) recalibration -- REPLACE
-# with the v3 re-measurement before treating the calibrated eta/timeable_share
-# as final.
-KG_DYN_DILUTION_LONG  = 1.1277
-KG_DYN_DILUTION_SHORT = 1.0864
+# DEMOTED 2026-07-12: eta is now pinned DIRECTLY on the full simulator by
+# inverting the measured E_full(eta) line (other/top_tax/eta_dial/), retiring
+# the hand-carried dilution bridge (KG_DYN_DILUTION_LONG/SHORT) this script once
+# used to inflate the internal targets. This standalone Bellman + bathtub
+# miniature is now only a fast DRIFT DIAGNOSTIC: it chases the raw literature
+# moments directly, so the eta/f it reports measure how far the miniature has
+# drifted from the full-sim calibration -- they are NOT the shipped values.
+# Ship eta from the eta_dial re-pin, not from here. (This feeds Tier A of the
+# calibration staleness watch; see other/kg_model_tests/calibration_reference.csv.)
 
-# Internal bathtub targets the bisection actually chases (nominal / dilution).
-LONG_RUN_TARGET    = LONG_RUN_NOMINAL  / KG_DYN_DILUTION_LONG
+# Internal bathtub targets the bisection chases = the raw literature moments
+# (no dilution bridge -- the miniature is a diagnostic, not the calibration path).
+LONG_RUN_TARGET    = LONG_RUN_NOMINAL
 LONG_RUN_PERTURB   = 0.01            # 1pp uniform permanent shock
 LONG_RUN_OFFSET    = 29              # measure at YEARS[1] + 29 (sim year 30)
 
-SHORT_RUN_TARGET   = SHORT_RUN_NOMINAL / KG_DYN_DILUTION_SHORT
+SHORT_RUN_TARGET   = SHORT_RUN_NOMINAL
 SHORT_RUN_PERTURB  = 0.05            # 5pp delayed (announced at t, hits t+1)
 SHORT_RUN_OFFSET   = 0               # measure at YEARS[1] (announcement year)
 
@@ -389,7 +390,7 @@ cat('\nCalibrating eta against the long-run moment...\n')
 eta_fit    = bisect_eta(warm = NULL)
 eta_star   = eta_fit$eta
 E_int_long = eta_fit$semi
-cat(sprintf('  KG_DYN_DEFAULT_ETA = %.4f  (long-run semi = %+7.4f  target %+7.4f, %d iters)\n',
+cat(sprintf('  miniature eta = %.4f  (long-run semi = %+7.4f  target %+7.4f, %d iters)\n',
             eta_star, E_int_long, LONG_RUN_TARGET, eta_fit$iters))
 
 
@@ -452,43 +453,21 @@ E_int_short = short_star
 n_frozen = sum(grid_packed$r_B[bathtub_ages_chr, , drop = FALSE] == 0)
 n_cells  = length(grid_packed$r_B[bathtub_ages_chr, , drop = FALSE])
 
-cat('\nCalibrated (spec v3, entropy cost, single pool):\n')
-cat(sprintf('  KG_DYN_DEFAULT_ETA     = %.4f  (long-run  semi = %+7.4f  target %+7.4f)\n',
+cat('\n=== DRIFT DIAGNOSTIC (miniature bathtub; NOT the shipped calibration) ===\n')
+cat('The shipped eta is pinned on the FULL simulator via the eta_dial re-pin\n')
+cat('(other/top_tax/eta_dial/). The values below are what the standalone\n')
+cat('Bellman+bathtub miniature would pick to hit the raw literature moments;\n')
+cat('compare against the shipped constants to see how far the miniature drifts.\n\n')
+cat(sprintf('  miniature eta          = %.4f  (long-run  semi = %+7.4f  target %+7.4f)\n',
             eta_star, E_int_long, LONG_RUN_TARGET))
-cat(sprintf('  KG_DYN_TIMEABLE_SHARE  = %.4f  (short-run semi = %+7.4f  target %+7.4f)\n',
+cat(sprintf('  miniature timeable_shr = %.4f  (short-run semi = %+7.4f  target %+7.4f)\n',
             f_star, E_int_short, SHORT_RUN_TARGET))
 cat(sprintf('  frozen r_D_B=0 cells   = %d of %d bathtub cells (r_B = 0)\n',
             n_frozen, n_cells))
-cat(sprintf(paste0('\n  E_int_long  = %+.4f  (measure_dilution.sbatch arg 3)\n',
-                   '  E_int_short = %+.4f  (measure_dilution.sbatch arg 4)\n'),
-            E_int_long, E_int_short))
-cat('\nUpdate KG_DYN_DEFAULT_ETA and KG_DYN_TIMEABLE_SHARE in src/sim/kg_dynamics.R.\n')
-
-# Ready-to-paste provenance stamp (kg_dyn_check_calibration_provenance compares
-# the live config against this and warns on drift). applier_allocation is the
-# rule the dilutions were measured under = the live KG_APPLIER_ALLOCATION here.
-td_vint    = sub('.*/Tax-Data/v[0-9]+/([0-9A-Za-z_]+)/.*',         '\\1', TAX_DATA_ROOT)
-macro_vint = sub('.*/Macro-Projections/v[0-9]+/([0-9A-Za-z_]+)/.*', '\\1', MACRO_ROOT)
-cat(sprintf(paste0(
-  '\n--- paste into KG_DYN_CALIB_PROVENANCE (and bump spec_version on logic changes) ---\n',
-  'KG_DYN_CALIB_PROVENANCE = list(\n',
-  '  date               = \'%s\',\n',
-  '  spec_version       = %dL,\n',
-  '  eta                = %s,\n',
-  '  timeable_share     = %s,\n',
-  '  applier_allocation = \'%s\',\n',
-  '  ref_wedge          = %s,\n',
-  '  timing_window      = %dL,\n',
-  '  tax_data_vintage   = \'%s\',\n',
-  '  macro_vintage      = \'%s\'\n',
-  ')\n',
-  '# also set KG_DYN_DEFAULT_ETA default to %s and KG_DYN_TIMEABLE_SHARE to %s\n'),
-  as.character(Sys.Date()), KG_DYN_SPEC_VERSION,
-  format(round(eta_star, 4)), format(round(f_star, 4)),
-  KG_DYN_APPLIER_ALLOCATION,
-  format(KG_DYN_TIMING_REF_WEDGE),
-  as.integer(KG_DYN_TIMING_WINDOW), td_vint, macro_vint,
-  format(round(eta_star, 4)), format(round(f_star, 4))))
+cat(sprintf('\n  drift vs shipped KG_DYN_DEFAULT_ETA (%.4f): %+.2f%%\n',
+            KG_DYN_DEFAULT_ETA, 100 * (eta_star / KG_DYN_DEFAULT_ETA - 1)))
+cat('  (>1% here is a signal the miniature and the full-sim calibration have\n')
+cat('   diverged -- re-run the eta_dial re-pin, do NOT paste these numbers.)\n')
 
 
 #-------------------------------------------------------------------------------
