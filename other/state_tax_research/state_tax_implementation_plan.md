@@ -251,6 +251,47 @@ election for non-income-tax states (Pub 600-style regression — separate task).
 itemizers (~9% of filers) trigger the loop; run it on that subset. Not needed for
 state-static estimates, which is everything in Phases 1–6.
 
+### 2.6 Local income taxes (deferred; design sketch, JI 2026-07-12)
+
+Eventually the model should cover localities with individual income taxes. Proposed
+approach: **extend the split-weight design one level down**, using **IRS SOI
+county-level data** (https://www.irs.gov/statistics/soi-tax-stats-county-data —
+county × AGI-class return counts and income items, same family as HT2) to further
+split a state's weights across sub-state areas, conditional on the state weights:
+
+- **Formal structure:** split `w_{i,st}` into `w_{i,st,loc}` with
+  `Σ_loc w_{i,st,loc} = w_{i,st}` — the same per-record split constraint one level
+  down, so state totals (and hence national totals) are preserved by construction.
+  Both Phase 1 weight engines (calibration and gradient) apply unchanged with county
+  targets in place of HT2 targets.
+- **Cleanest implementation:** treat taxing localities as **additional jurisdiction
+  columns in the same weights file** — e.g., split NY into `NY-NYC` and `NY-xNYC`,
+  both running NY state law, with NYC local law layered on the first. The weights
+  format (`id, state, weight` with `state` generalized to a jurisdiction key), the
+  per-jurisdiction loop, and the sum-to-national invariant all carry over without
+  structural change. NYC = 5 boroughs = 5 counties, so SOI county data targets it
+  directly.
+- **Scoping task (first step):** enumerate the subset of states with local income
+  taxes and the localities within them, by structure: NYC + Yonkers (NY); MD county
+  add-on rates (statewide, county-level — good county-data fit); IN county rates;
+  OH municipal and school-district taxes and PA local EIT (**sub-county** — county
+  data cannot resolve these; approximate at county level or defer); KY occupational
+  licenses; MO (KC/St. Louis earnings taxes); AL occupational; DE Wilmington; NJ
+  Newark; OR metro (Portland).
+- **Known limits to document:** residence-based reweighting cannot capture
+  **workplace-based** taxes (OH municipal work-place withholding, Yonkers
+  nonresident earnings tax, KC/St. Louis earnings taxes on commuters); SOI county
+  data is filer-only (non-filer county margins would need ACS, mirroring §2.1);
+  sub-county jurisdictions (OH/PA) need an allocation assumption on top of county
+  calibration.
+- Open to alternative reweighting refinements — the NYC/non-NYC split is the
+  motivating case; the same mechanism generalizes to any sub-state partition with
+  SOI county coverage.
+
+Priority: after the 50-state rollout stabilizes (Phase 7 list); NYC first (largest
+local PIT, cleanest county mapping), MD counties second (statewide coverage,
+county-native).
+
 ---
 
 ## 3. Phases and deliverables
@@ -319,10 +360,10 @@ harness before the next:
 **Phase 7 — Later scope, in rough priority order**
 Coupled federal↔state iteration + sales-tax election imputation; frozen-base
 mechanics for fixed-date-conformity states under federal reforms (§2.2
-`st_agi.conformity_year`); state MTRs and
-combined-MTR behavioral feedback; state distribution tables; local income taxes (NYC,
-MD counties); state AMTs; historical years pre-2017; state population-projection
-aging of weights.
+`st_agi.conformity_year`); local income taxes via county-level sub-state weights
+(§2.6 — NYC/Yonkers, MD counties first); state MTRs and
+combined-MTR behavioral feedback; state distribution tables; state AMTs; historical
+years pre-2017; state population-projection aging of weights.
 
 ---
 
