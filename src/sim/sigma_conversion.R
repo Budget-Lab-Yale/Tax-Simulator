@@ -37,18 +37,23 @@
 #     wedge gap. Delta conv_i(t) = sigma * Delta W_i(t) * pool_i. The wedge
 #     can narrow => negative conversion allowed, clamped so no leg goes
 #     negative (or more than doubles, on the negative side).
-#   - sigma central = 0.08, calibrated 2026-07-08 to a top-subset ETI of
-#     0.25 on the +5pp validation leg (author-directed; supersedes ruling
-#     2's asserted 0.2/0.6/0.9, whose total-response anchors double-counted
-#     the entity-shifting/evasion response exactly as the R2 caveat
-#     anticipated). See SIGMA_CALIB_PROVENANCE below for method, measured
-#     legs, and the staleness conditions. Env knob SIGMA_CONV.
+#   - sigma central = 0.16, re-derived 2026-07-12 to the same top-subset
+#     ETI-0.25 target on the +5pp validation leg (author-sanctioned; the
+#     2026-07-08 central 0.08 went stale when the entity-shifting tau_eq
+#     repricing and the evasion cross-base fix landed without the
+#     staleness-rule re-run — both shrank the non-sigma stack's ETI
+#     contribution, roughly doubling the residual conversion margin).
+#     See SIGMA_CALIB_PROVENANCE below for method, measured legs, and the
+#     staleness conditions. Env knob SIGMA_CONV.
 #   - Composition (conversion into gain state vs entity shifting into the
 #     corporate base) is an OUTPUT (tracker diagnostics), not a dial.
 #     Sequential module order prevents double-moves.
 #-------------------------------------------------------------------------------
 
-SIGMA_CONV_VERSION = '2026-07-08 sigma build + ETI-0.25 central; re-derived under kg spec-v2 (unchanged 0.08)'
+SIGMA_CONV_VERSION = paste('2026-07-12 re-derivation to ETI-0.25 (0.08 -> 0.16;',
+                           'driver = entity-shifting tau_eq repricing +',
+                           'evasion cross-base fix, measured during the',
+                           'estate-margins build)')
 
 #-------------------------------------------------------------------------------
 # SIGMA_CALIB_PROVENANCE
@@ -77,6 +82,23 @@ SIGMA_CONV_VERSION = '2026-07-08 sigma build + ETI-0.25 central; re-derived unde
 # capital-gains realizations, so the kg realization recalibration is orthogonal
 # to it. sigma and the kg Bellman calibrate on disjoint bases.
 #
+# RE-DERIVED 2026-07-12 (vintage sigma_recal_estate; protocol run triggered
+# by the estate-margins build): sigma* MOVED to 0.157 -> central updated to
+# 0.16 (author-sanctioned 2026-07-12). Measured: full stack at sigma=0.60 ->
+# ETI 0.4041; stack WITHOUT sigma -> 0.1955; solved sigma* =
+# 0.6*(0.25-0.1955)/(0.4041-0.1955) = 0.157; CONFIRMED at sigma=0.1568 ->
+# ETI 0.2497 (vintage sigma_confirm_estate) AND at the SHIPPED 0.16 ->
+# ETI 0.2508 (vintage sigma_confirm_016). ATTRIBUTION: NOT the estate margins --
+# the calibration leg is a step-up regime where the tau_eq death-realize
+# term has realize = 0, and the ETI base excludes gains. The drivers are
+# two staleness-list changes that landed after the 07-08 derivation without
+# their required re-run: the entity-shifting tau_eq repricing
+# (pearce_prisinzano.R, 4e95d0904) and the evasion cross-base consistency
+# fix (debacker.R, 88bbdd5fc). Both reduced the non-sigma stack's ETI
+# contribution (0.223 -> 0.196), roughly doubling the residual conversion
+# margin. ETI outputs: other/kg_model_tests/sigma_recal_estate_eti_*.out /
+# sigma_confirm_estate_eti_*.out.
+#
 # STALENESS WARNING (kg-provenance-guard spirit): this value is CONDITIONAL
 # ON THE REST OF THE STACK. Entity shifting and evasion supply ~0.22 of the
 # 0.25 target by themselves, so sigma is calibrated as the RESIDUAL
@@ -96,8 +118,8 @@ SIGMA_CONV_VERSION = '2026-07-08 sigma build + ETI-0.25 central; re-derived unde
 #-------------------------------------------------------------------------------
 
 # Response parameter: percent of pool converted per percentage point of
-# wedge change (so a +5pp wedge at sigma = 0.08 converts 0.4% of the pool).
-SIGMA_CONV = as.numeric(Sys.getenv('SIGMA_CONV', unset = '0.08'))
+# wedge change (so a +5pp wedge at sigma = 0.16 converts 0.8% of the pool).
+SIGMA_CONV = as.numeric(Sys.getenv('SIGMA_CONV', unset = '0.16'))
 
 # SYZZ labor-content share applied to active pass-through legs in the pool.
 SIGMA_PT_LABOR_SHARE = 0.75
