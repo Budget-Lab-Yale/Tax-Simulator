@@ -698,6 +698,40 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
           type            = 'nextdollar'  # kg_dynamics tau is nextdollar-only
         )$mtr_kg_lt
       }
+
+      # Guaranteed mtr_net_worth for wealth-active kg scenarios: the kg
+      # bathtub's wealth-carry aggregator (kg_dyn_aggregate_cell_carry)
+      # prices deferral off the record product mtr_net_worth * mtr_kg_lt
+      # read from THIS static detail. When the runscript already registers
+      # net_worth in mtr_vars (e.g. top_tax dials), the generic loop above
+      # wrote it and this branch is skipped — those static legs stay
+      # byte-identical. The wealth-law gate (any nonzero wealth.rates* in
+      # any year) keeps the detail schema stable across phase-in years.
+      if (uses_kg_mech && kg_dyn_wealth_law_active(tax_law) &&
+          !('net_worth' %in% scenario_info$mtr_vars)) {
+        tax_units_static$mtr_net_worth = calc_mtrs(
+          # Drop the just-joined mtr_* columns too: this recovers exactly
+          # the frame the generic loop above ran on, so the fallback column
+          # matches a runscript-registered mtr_net_worth bit-for-bit.
+          tax_units          = tax_units_static %>%
+                                 select(-all_of(return_vars %>%
+                                 unlist() %>%
+                                 set_names(NULL)),
+                                 -starts_with('mtr_')),
+          actual_liab_iit    = tax_units_static$liab_iit_net,
+          actual_liab_pr     = tax_units_static$liab_pr,
+          actual_liab_wealth = tax_units_static$liab_wealth,
+          # NULL, NOT the pass-level baseline_pr_er: tax_units_static is a
+          # POST-do_taxes frame, so its wages already carry the er-payroll
+          # rescale (double-rescale trap; see calc_mtrs parameter doc).
+          # Deliberately NOT copied from the conv-no-wealth block below,
+          # whose frame is PRE-do_taxes and correctly threads baseline_pr_er.
+          baseline_pr_er     = NULL,
+          var                = 'net_worth',
+          pr                 = F,
+          type               = 'nextdollar'
+        )$mtr_net_worth
+      }
     }
 
     # Fold the expected deemed tax into reported liability (after MTRs,
@@ -1068,7 +1102,11 @@ run_bathtub_pass = function(scenario_info, tax_law,
     # corporate channel is inactive -- byte-identical state files then.
     corp_debit_by_year = corp_kg_state_debit_by_year(scenario_info,
                                                      inputs$baseline_cells),
-    sigma_ctx          = sigma_ctx
+    sigma_ctx          = sigma_ctx,
+    # Wealth-tax deferral carrying cost h (per-year cell vectors; all-zero
+    # when the scenario levies no wealth tax) -- prices the wealth x CG
+    # margin in the Bellman and tau_eq.
+    reform_carry       = inputs$reform_carry
   )
 
   invisible(NULL)

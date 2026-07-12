@@ -251,6 +251,12 @@ KG_DYN_REGIME_TRIPLET = list(
 # v2 (2026-07): entropy realization cost + nested (Phi, omega) bucket reparam.
 # v3 (2026-07): SINGLE POOL -- responsive/inert split and fixed floor removed;
 # Bellman on all gains (r_D_B = r_B); one calibrated timeable share overlay.
+# NOT bumped for the wealth-tax deferral carrying cost (2026-07, h in the
+# Bellman survivor continuation + tau_eq flow): eta and timeable_share were
+# calibrated under tau_w = 0 conditions, which the carry term reproduces
+# EXACTLY (h == 0 is a verified bitwise no-op) -- the calibration is not
+# invalidated, so a bump would only make the provenance guard warn/stop every
+# run for no reason.
 KG_DYN_SPEC_VERSION = 3L
 
 # Stamp of the calibration-invalidating inputs as of the last calibrate.sbatch
@@ -849,7 +855,8 @@ kg_dyn_pack_baseline_grid = function(grid_ext, years,
 
 kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
                                      c_phi_col, p_char_col, eta, beta,
-                                     kappa_col = NULL, stationary = FALSE) {
+                                     kappa_col = NULL, stationary = FALSE,
+                                     h_col = NULL) {
 
   # One age-backward sweep through [a_min, a_max] for a single year column.
   #
@@ -857,6 +864,18 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
   # (built by kg_dyn_build_regime_mix on the bathtub grid then extended to
   # the Bellman grid in kg_dyn_run_bathtub_pass by repeating the age-80
   # value forward — same pattern as tau_col).
+  #
+  # h_col is the per-cell wealth-tax CARRYING COST of one more year of
+  # deferral: the gain-weighted mean of the RECORD-LEVEL product
+  # tau_w,i * tau_cg,i (kg_dyn_aggregate_cell_carry — never a product of
+  # separately averaged rates, Cov(tau_w, tau_cg) > 0 at the top). It
+  # debits the SURVIVOR continuation: death_cont = bs*(W_next - h) + bm*F.
+  # Timing convention: the wealth tax is assessed on END-OF-YEAR holdings,
+  # so in-year realizers and decedents pay no carrying cost for that year
+  # (their deferred liability has left the wealth base by assessment) —
+  # only continued deferral into next year is charged. Top-age SURVIVORS
+  # still pay h (the -h term persists at W_next = 0). NULL = zeros
+  # (baseline pass, and every scenario without an active wealth tax).
   #
   # Realization cost is the ENTROPY / KL form C(r_D) = (1/eta) *
   # [r_D*ln(r_D/r_D_B) - r_D + r_D_B], anchored at the cell's baseline rate
@@ -894,6 +913,7 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
   r_D_B_vec    = pmin(pmax(r_B_col, 0), 1)
   bs_vec       = beta * (1 - m_col)   # survivor discount
   bm_vec       = beta * m_col         # death-state discount
+  if (is.null(h_col)) h_col = numeric(n_ages)
 
   for (i in n_ages:1) {
     tau_i   = tau_col[i]
@@ -902,7 +922,10 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
 
     W_next_i = if (i == n_ages) 0 else if (stationary) W[i + 1] else W_next[i + 1]
 
-    death_cont = bs_vec[i] * W_next_i + bm_vec[i] * F_i
+    # Wealth-tax carrying cost rides the survivor branch only (see
+    # docstring). MC and W pick it up consistently through death_cont;
+    # h > 0 => MC_S < MC_B => r_D = r_D_B*exp(-eta*(MC_S - MC_B)) rises.
+    death_cont = bs_vec[i] * (W_next_i - h_col[i]) + bm_vec[i] * F_i
     MC_i       = tau_i + death_cont
     r_D_cap    = r_D_cap_vec[i]
 
@@ -945,7 +968,8 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
                                 kappa_mat     = NULL,
                                 eta           = KG_DYN_DEFAULT_ETA,
                                 beta_by_year  = NULL,
-                                c_phi         = NULL) {
+                                c_phi         = NULL,
+                                h_mat         = NULL) {
 
   #----------------------------------------------------------------------------
   # Backward induction over (age, year) cells.
@@ -966,6 +990,12 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
   #
   # beta_by_year[j] discounts between year j and j+1; NULL falls back to a
   # constant KG_DYN_BETA vector for isolated solver unit tests.
+  #
+  # h_mat is the [n_ages, n_years] wealth-tax carrying-cost matrix (see
+  # kg_dyn_bellman_sweep_age): per-cell gain-weighted mean of the record
+  # product tau_w * tau_cg, arriving PRE-MULTIPLIED from
+  # kg_dyn_aggregate_cell_carry. NULL (all existing callers) and scalar 0
+  # broadcast to zeros — bit-identical to the pre-carry code path.
   #
   # Returns: list(W, MC, kappa, r_D), each [age, year].
   #----------------------------------------------------------------------------
@@ -995,6 +1025,13 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
   }
   stopifnot(identical(dim(p_char_mat), c(n_ages, n_years)))
 
+  if (is.null(h_mat)) h_mat = 0
+  if (length(h_mat) == 1) {
+    h_mat = matrix(h_mat, n_ages, n_years,
+                   dimnames = list(ages_chr, years_chr))
+  }
+  stopifnot(identical(dim(h_mat), c(n_ages, n_years)))
+
   W     = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   MC    = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   kappa = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
@@ -1011,7 +1048,8 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
       eta           = eta,
       beta          = beta_by_year[j],
       kappa_col     = if (is.null(kappa_mat)) NULL else kappa_mat[, j],
-      stationary    = stationary
+      stationary    = stationary,
+      h_col         = h_mat[, j]
     )
   }
 
@@ -1335,7 +1373,8 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
 
 kg_dyn_tau_eq_primitives = function(baseline_cells, years, r_S_by_year,
                                     tau_bt_mat, mix_list, A, omega,
-                                    ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
+                                    ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX,
+                                    h_bt_mat = NULL) {
 
   # Assembles the [age, year] primitive matrices on the bathtub grid that
   # both the tau_eq recursion and the finite-difference harness consume, so
@@ -1353,9 +1392,15 @@ kg_dyn_tau_eq_primitives = function(baseline_cells, years, r_S_by_year,
   #                             (the baseline-side assumption, mirroring
   #                             Pass 1's c_phi = 0)
   #   - A, omega (mat)        : aging and heir-routing operators
+  #   - h_bt_mat (mat|NULL)   : [age, year] wealth-tax carrying cost
+  #                             (bathtub slice of the packed h matrix,
+  #                             post-KG_WEALTH_CARRY_SCALE); NULL = zeros
+  #                             (baseline side — h_B == 0 by law, asserted
+  #                             in kg_dyn_load_bathtub_inputs; and every
+  #                             non-wealth scenario)
   #
   # Returns: list of [n_ages, n_years] matrices (m_eff, p_char, r_S, tau,
-  #          route, realize) plus A, omega, ages, years.
+  #          route, realize, h) plus A, omega, ages, years.
 
   ages_chr  = as.character(ages_bathtub)
   years_chr = as.character(years)
@@ -1383,9 +1428,50 @@ kg_dyn_tau_eq_primitives = function(baseline_cells, years, r_S_by_year,
 
   tau = tau_bt_mat[ages_chr, years_chr, drop = FALSE]
 
+  h = if (is.null(h_bt_mat)) blank() else {
+    stopifnot(identical(dim(h_bt_mat), c(n_ages, n_years)))
+    h_bt_mat[ages_chr, years_chr, drop = FALSE]
+  }
+
   list(m_eff = m_eff, p_char = p_char, r_S = r_S, tau = tau,
-       route = route, realize = realize, A = A, omega = omega,
+       route = route, realize = realize, h = h, A = A, omega = omega,
        ages = ages_bathtub, years = years)
+}
+
+
+
+kg_dyn_tau_eq_flow = function(prims, j) {
+
+  # Per-dollar year-j tax flow on one dollar of unrealized gain — the SINGLE
+  # source of the c vector for BOTH the tau_eq backward recursion
+  # (kg_dyn_compute_tau_eq) and the finite-difference verifier
+  # (kg_dyn_tau_eq_finite_diff), so recursion and FD stay in lockstep by
+  # construction. Three terms:
+  #   realization:   r_S * tau
+  #   death events:  m_eff * (1 - p_char) * realize * tau
+  #   wealth carry:  (1 - m_eff) * (1 - r_S) * h   — the SURVIVING-unrealized
+  #                  share pays the wealth-tax carrying cost h = tau_w*tau_cg
+  #                  on the deferred liability it keeps in the wealth base.
+  # Timing convention (matches the Bellman sweep's survivor gate): wealth tax
+  # assessed on END-OF-YEAR holdings, so in-year realizers and decedents pay
+  # no carrying cost for that year. h == 0 reproduces the pre-carry flow
+  # bitwise (x + 0 is exact for finite x; verified, not assumed, in
+  # other/kg_model_tests/test_tau_eq_wealth.R).
+  #
+  # Balance-sheet basis note: net_worth = sum(value.*) - debts with NO
+  # netting of the contingent CG liability — that non-deductibility is
+  # exactly why the carrying cost exists. Two-path check on $1 of gain,
+  # tau_w = w, tau_cg = tau:
+  #   realize now : pay tau today; the (1 - tau) proceeds stay in the wealth
+  #                 base and pay w*(1 - tau) per year.
+  #   hold        : pay nothing today; the FULL dollar stays in the wealth
+  #                 base and pays w*1 per year.
+  #   difference  : holding costs w*tau = h per year of continued deferral.
+
+  prims$r_S[, j] * prims$tau[, j] +
+    prims$m_eff[, j] * (1 - prims$p_char[, j]) *
+      prims$realize[, j] * prims$tau[, j] +
+    (1 - prims$m_eff[, j]) * (1 - prims$r_S[, j]) * prims$h[, j]
 }
 
 
@@ -1404,10 +1490,16 @@ kg_dyn_compute_tau_eq = function(prims, beta_by_year) {
 
   dimnm = list(as.character(prims$ages), as.character(prims$years))
 
-  # Per-year tax flow per dollar of start-of-year stock, and the two
-  # continuation operators (survivor aging + heir routing).
-  c_mat = prims$r_S * prims$tau +
-          prims$m_eff * (1 - prims$p_char) * prims$realize * prims$tau
+  # Per-year tax flow per dollar of start-of-year stock (shared with the FD
+  # verifier via kg_dyn_tau_eq_flow — incl. the wealth-tax carrying cost on
+  # the surviving-unrealized share), and the two continuation operators
+  # (survivor aging + heir routing). Deemed composition note: h rides the
+  # survivor branch only; HEIR carrying is priced through tau_eq's routing
+  # continuation (the routed dollar re-enters the flow at the heir cell,
+  # where it pays h again while deferred) — never in the holder Bellman.
+  # Same asymmetry as the existing "full heir taxes, no theta" convention.
+  c_mat = matrix(0, n_ages, n_years, dimnames = dimnm)
+  for (j in seq_len(n_years)) c_mat[, j] = kg_dyn_tau_eq_flow(prims, j)
   K_of = function(j) {
     surv_w  = (1 - prims$m_eff[, j]) * (1 - prims$r_S[, j])
     route_w = prims$m_eff[, j] * (1 - prims$p_char[, j]) * prims$route[, j]
@@ -1458,9 +1550,7 @@ kg_dyn_tau_eq_finite_diff = function(prims, beta_by_year, j0,
 
   for (step in seq_len(horizon)) {
     ju  = min(j0 + step, n_years)      # hold t_max primitives beyond horizon
-    c_u = prims$r_S[, ju] * prims$tau[, ju] +
-          prims$m_eff[, ju] * (1 - prims$p_char[, ju]) *
-            prims$realize[, ju] * prims$tau[, ju]
+    c_u = kg_dyn_tau_eq_flow(prims, ju)
 
     pv = pv + disc * as.numeric(crossprod(delta, c_u))
 
@@ -1479,13 +1569,23 @@ kg_dyn_tau_eq_finite_diff = function(prims, beta_by_year, j0,
 
 
 
-kg_dyn_check_tau_eq = function(tau_eq_mat, tau_bt_mat, side) {
+kg_dyn_check_tau_eq = function(tau_eq_mat, tau_bt_mat, side,
+                               carry_slack = 0) {
 
   # In-pass sanity bounds: tau_eq is a (discounted, at-most-once-ish) tax on
   # one dollar, so it must be nonnegative and cannot meaningfully exceed the
   # max cell MTR. The 1.05 slack covers the model's own realization/death
   # event overlap (extra_R charges r_S on the full stock while deaths also
   # take it; overlap ~ r_S * m_eff per year).
+  #
+  # carry_slack: with an active wealth tax, the deferred dollar ALSO pays
+  # the carrying cost h every surviving-unrealized year, so tau_eq can
+  # legitimately exceed the pure-CG cap. Callers pass the OPERATOR bound
+  # max(h) * rho / (1 - rho), rho = max over cells/years of
+  # beta*(1 - m_eff)*(1 - r_S) — the actual survival-continuation weight
+  # incl. mortality + realization exit (deliberately tighter than the bare
+  # 1/(1 - beta) geometric bound, which is too loose to catch real bugs).
+  # Zero when h = 0, so non-wealth runs keep the original cap exactly.
 
   max_tau = max(tau_bt_mat, na.rm = TRUE)
   if (any(!is.finite(tau_eq_mat))) {
@@ -1495,11 +1595,29 @@ kg_dyn_check_tau_eq = function(tau_eq_mat, tau_bt_mat, side) {
     stop('kg_dynamics: negative tau_eq_', side, ' values (min = ',
          format(min(tau_eq_mat)), ').')
   }
-  if (any(tau_eq_mat > max_tau * 1.05 + 1e-9)) {
-    stop('kg_dynamics: tau_eq_', side, ' exceeds 1.05 * max cell tau (max = ',
-         format(max(tau_eq_mat)), ' vs tau cap ', format(max_tau), ').')
+  if (any(tau_eq_mat > max_tau * 1.05 + carry_slack + 1e-9)) {
+    stop('kg_dynamics: tau_eq_', side, ' exceeds 1.05 * max cell tau + ',
+         'carry slack (max = ', format(max(tau_eq_mat)), ' vs tau cap ',
+         format(max_tau), ', carry_slack ', format(carry_slack), ').')
   }
   invisible(TRUE)
+}
+
+
+
+kg_dyn_carry_slack = function(prims, beta_by_year) {
+
+  # Operator bound on the wealth-carry contribution to tau_eq (see
+  # kg_dyn_check_tau_eq): each surviving-unrealized year adds at most
+  # max(h), discounted-and-survived at most rho per year, so the total
+  # carry PV is bounded by max(h) * (rho + rho^2 + ...) = max(h)*rho/(1-rho).
+
+  h_max = max(prims$h)
+  if (h_max <= 0) return(0)
+  surv = (1 - prims$m_eff) * (1 - prims$r_S)
+  rho  = max(sweep(surv, 2, beta_by_year, `*`))
+  stopifnot(is.finite(rho), rho >= 0, rho < 1)
+  h_max * rho / (1 - rho)
 }
 
 
@@ -1983,8 +2101,40 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
   # kg_lt (priced via the two-leg expected-tax recompute in run_one_year),
   # so reform-side MTRs are pure inter-vivos margins — no decedent
   # exclusion needed.
+  #
+  # When the scenario levies a wealth tax (kg_dyn_wealth_law_active), the
+  # reform side additionally reads mtr_net_worth and builds reform_carry:
+  # per-year, per-age-cell gain-weighted means of the RECORD-LEVEL product
+  # mtr_net_worth * mtr_kg_lt — the wealth-tax carrying cost of deferral h
+  # consumed by the Bellman and the tau_eq recursion. The BASELINE side is
+  # never read for h: h_B == 0 by law (current law has no wealth tax), an
+  # INVARIANT asserted against the baseline tax_law.csv below, not an
+  # assumption.
 
   years = scenario_info$years
+
+  wealth_active = kg_dyn_wealth_law_active(tax_law)
+  if (wealth_active) {
+    bl_law_path = file.path(baseline_root, 'baseline', 'static',
+                            'supplemental', 'tax_law.csv')
+    if (!file.exists(bl_law_path)) {
+      stop('kg_dynamics: wealth-active scenario but the baseline tax law ',
+           'dump is missing at ', bl_law_path, '; cannot verify the ',
+           'h_B == 0 invariant (the omitted-baseline-carry convention).')
+    }
+    bl_law = fread(bl_law_path, showProgress = FALSE) %>% as_tibble()
+    bl_rate_cols = grep('^wealth\\.rates[0-9]*$', names(bl_law), value = TRUE)
+    bl_nonzero = length(bl_rate_cols) > 0 &&
+      any(sapply(bl_law[bl_rate_cols],
+                 function(x) any(!is.na(x) & x != 0)))
+    if (bl_nonzero) {
+      stop('kg_dynamics: the BASELINE wealth schedule has a nonzero rate ',
+           '(', bl_law_path, '). The carry channel omits the baseline h ',
+           'matrix on the invariant h_B == 0; a wealth tax in baseline law ',
+           'breaks that convention and requires threading a baseline-side ',
+           'carry matrix through the Bellman/tau_eq before proceeding.')
+    }
+  }
 
   if (is.null(cells_inputs)) {
     cells_inputs = kg_dyn_load_cells_inputs(
@@ -2000,6 +2150,7 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
   baseline_tau      = list()
   reform_tau        = list()
   reform_tau_timing = list()
+  reform_carry      = list()
 
   for (t in years) {
 
@@ -2013,8 +2164,11 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
         stop(sprintf(
           paste0('kg_dynamics: static detail %s lacks column(s): %s. ',
                  'mtr_kg_lt_lawonly is written by the static pass (run.R) ',
-                 'for kg_dynamics scenarios; re-run the scenario static ',
-                 'pass with current code.'),
+                 'for kg_dynamics scenarios, and mtr_net_worth is ',
+                 'guaranteed there for wealth-active kg scenarios (either ',
+                 'registered in the runscript mtr_vars or via the run.R ',
+                 'fallback); a missing column means STALE static detail — ',
+                 're-run the scenario static pass with current code.'),
           f, paste(missing_cols, collapse = ', ')))
       }
       fread(f, select = cols, showProgress = FALSE) %>%
@@ -2044,14 +2198,39 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
     baseline_tau[[as.character(t)]] =
       kg_dyn_aggregate_cell_mtr(baseline_joined, ages)
 
+    reform_cols = c('id', 'mtr_kg_lt', 'mtr_kg_lt_lawonly')
+    if (wealth_active) reform_cols = c(reform_cols, 'mtr_net_worth')
     reform_joined = td_slim %>%
       left_join(read_mtr(file.path(scenario_info$output_path, 'static',
                                    'detail'),
-                         cols = c('id', 'mtr_kg_lt', 'mtr_kg_lt_lawonly')),
+                         cols = reform_cols),
                 by = 'id')
     check_mtr_coverage(reform_joined, 'reform', t)
     reform_tau[[as.character(t)]] =
       kg_dyn_aggregate_cell_mtr(reform_joined, ages)
+
+    # Wealth-carry cell aggregation (gain-weighted record-level product;
+    # zeros when no wealth tax is active). Coverage stop mirrors
+    # check_mtr_coverage on the GAIN side: a silently-NA mtr_net_worth on a
+    # gain-holding record would bias h toward zero.
+    if (wealth_active) {
+      missing_nw = reform_joined %>%
+        filter(G_unit > 0 & is.na(mtr_net_worth))
+      if (nrow(missing_nw) > 0) {
+        stop(sprintf(
+          paste0('kg_dynamics: %d records with G_unit > 0 missing ',
+                 'mtr_net_worth in reform static detail for year %d. This ',
+                 'biases the wealth carrying cost h toward zero. Check ',
+                 'that the static run wrote mtr_net_worth for every ',
+                 'sample id.'),
+          nrow(missing_nw), t))
+      }
+      reform_carry[[as.character(t)]] =
+        kg_dyn_aggregate_cell_carry(reform_joined, ages)
+    } else {
+      zero = setNames(rep(0, length(ages)), as.character(ages))
+      reform_carry[[as.character(t)]] = list(h = zero, tau_w = zero)
+    }
 
     # Law-only tau for the planned-timing wedge: identical records and
     # weights, but MTRs evaluated on the pre-mech-injection frame (see the
@@ -2069,6 +2248,7 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
        baseline_tau      = baseline_tau,
        reform_tau        = reform_tau,
        reform_tau_timing = reform_tau_timing,
+       reform_carry      = reform_carry,
        heir_dist         = cells_inputs$heir_dist)
 }
 
@@ -2087,6 +2267,8 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
                                     tau_eq_B_col = NULL,
                                     tau_eq_S_col = NULL,
                                     conv_inflow_vec = NULL,
+                                    carry_h_col = NULL,
+                                    tau_w_col = NULL,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
   # Assembles per-cell quantities the applier needs:
@@ -2149,6 +2331,19 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
     conv_inflow_vec = setNames(rep(0, length(ages_chr)), ages_chr)
   }
 
+  # Wealth-carry columns: additive diagnostics on the same zero-default
+  # pattern (all-zero for every non-wealth run — byte-diff tooling should
+  # compare revenue/detail CSVs, not the kg state/diagnostic files).
+  # carry_h is the h the Bellman/tau_eq actually consumed (post-
+  # KG_WEALTH_CARRY_SCALE); tau_w is the plain gain-weighted mtr_net_worth
+  # mean, diagnostics only.
+  if (is.null(carry_h_col)) {
+    carry_h_col = setNames(rep(0, length(ages_chr)), ages_chr)
+  }
+  if (is.null(tau_w_col)) {
+    tau_w_col = setNames(rep(0, length(ages_chr)), ages_chr)
+  }
+
   baseline_t %>%
     mutate(age           = as.integer(age),
            r_S           = as.numeric(r_S_vec     [as.character(age)]),
@@ -2188,6 +2383,10 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            tau_eq_S      = as.numeric(tau_eq_S_col   [as.character(age)]),
            conv_inflow   = as.numeric(conv_inflow_vec[as.character(age)]),
            conv_inflow   = if_else(is.na(conv_inflow), 0, conv_inflow),
+           carry_h       = as.numeric(carry_h_col    [as.character(age)]),
+           carry_h       = if_else(is.na(carry_h), 0, carry_h),
+           tau_w         = as.numeric(tau_w_col      [as.character(age)]),
+           tau_w         = if_else(is.na(tau_w), 0, tau_w),
            rate_factor   = if_else(r_B > 0, r_S / r_B, 1),
            # Clamp the lock-in stock to the cell's gain stock: under
            # permanent rate hikes dG can run sufficiently negative that
@@ -2210,7 +2409,7 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            delta_vanish, delta_route, delta_realize, c_phi,
            decedent_stock, terminal_char_stock, taxable_death_stock,
            tau_B, tau_S, W_B, W_S, MC_B, MC_S, kappa, r_D_B, r_D_S,
-           tau_eq_B, tau_eq_S, conv_inflow,
+           tau_eq_B, tau_eq_S, conv_inflow, carry_h, tau_w,
            rate_factor, extra_R, deemed_factor)
 }
 
@@ -2225,6 +2424,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                     ref_wedge     = KG_DYN_TIMING_REF_WEDGE,
                                     corp_debit_by_year = NULL,
                                     sigma_ctx = NULL,
+                                    reform_carry = NULL,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX,
                                     ages_bellman = KG_DYN_AGE_MIN:
                                                     KG_DYN_AGE_MAX_BELLMAN) {
@@ -2242,6 +2442,19 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   # level adjustment recomputed each year from the current markdown; routing
   # it through delta would compound it and double-count heirs' markdown,
   # which next year's recomputed debit already covers).
+  #
+  # reform_carry (optional): per-year list(h, tau_w) of named age vectors
+  # from kg_dyn_aggregate_cell_carry (via kg_dyn_load_bathtub_inputs) — the
+  # wealth-tax deferral carrying cost. h is packed onto the Bellman grid
+  # (age-80 repeated forward, kg_dyn_pack_tau), scaled by the
+  # KG_WEALTH_CARRY_SCALE env var (default 1; a DISCLOSED, uncalibrated
+  # statutory-vs-effective sensitivity knob — e.g. set to the
+  # retained-reported share under avoidance), and threaded into Pass 2 of
+  # the Bellman and the scenario-side tau_eq recursion. Pass 1 (baseline)
+  # and prims_B NEVER receive h: h_B == 0 by law, asserted in the loader.
+  # NULL or all-zero h (every non-wealth scenario) reproduces the pre-carry
+  # outputs bitwise, except for the all-zero carry_h/tau_w diagnostic
+  # columns in state files and the two kg diagnostic CSVs.
   #
   # sigma_ctx (optional): sigma-conversion context built by
   # sigma_build_ctx() (src/sim/sigma_conversion.R) when the scenario runs
@@ -2311,6 +2524,29 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   tau_S_timing_mat = kg_dyn_pack_tau(reform_tau_timing, years,
                                      ages_bellman = ages_bellman)
 
+  # Step 2b: wealth-carry matrix (scenario side only; see reform_carry doc).
+  # KG_WEALTH_CARRY_SCALE applies at pack time so every consumer (Bellman,
+  # tau_eq, guard slack, state-file carry_h column) sees the scaled h.
+  carry_scale = as.numeric(Sys.getenv('KG_WEALTH_CARRY_SCALE', unset = '1'))
+  if (!is.finite(carry_scale) || carry_scale < 0) {
+    stop('kg_dynamics: KG_WEALTH_CARRY_SCALE must be a finite nonnegative ',
+         'number; got "', Sys.getenv('KG_WEALTH_CARRY_SCALE'), '".')
+  }
+  years_chr_all = as.character(years)
+  if (is.null(reform_carry)) {
+    h_S_mat = matrix(0, length(ages_bellman), length(years),
+                     dimnames = list(as.character(ages_bellman),
+                                     years_chr_all))
+    tau_w_diag = setNames(
+      rep(list(setNames(rep(0, length(ages_bathtub)),
+                        as.character(ages_bathtub))), length(years)),
+      years_chr_all)
+  } else {
+    h_S_mat = kg_dyn_pack_tau(lapply(reform_carry, `[[`, 'h'), years,
+                              ages_bellman = ages_bellman) * carry_scale
+    tau_w_diag = lapply(reform_carry, `[[`, 'tau_w')
+  }
+
   # Step 3: baseline Bellman pass (c_phi = 0 across the whole grid under
   # current-law step-up — every asset gets step-up forgiveness)
   pass1 = kg_dyn_solve_bellman(grid_packed, tau_B_mat, c_phi_mat = 0,
@@ -2351,7 +2587,8 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   pass2 = kg_dyn_solve_bellman(grid_packed, tau_S_mat, c_phi_mat = c_phi_S_mat,
                                kappa_mat = pass1$kappa,
                                eta = eta,
-                               beta_by_year = beta_by_year)
+                               beta_by_year = beta_by_year,
+                               h_mat = h_S_mat)
 
   planned_timing = kg_dyn_build_planned_timing(
     baseline_cells = baseline_cells,
@@ -2395,7 +2632,8 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     mix_list       = mix_list,
     A              = A,
     omega          = omega,
-    ages_bathtub   = ages_bathtub
+    ages_bathtub   = ages_bathtub,
+    h_bt_mat       = h_S_mat[bathtub_ages_chr, , drop = FALSE]
   )
   prims_B = kg_dyn_tau_eq_primitives(
     baseline_cells = baseline_cells,
@@ -2411,7 +2649,8 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
 
   tau_eq_S_mat = kg_dyn_compute_tau_eq(prims_S, beta_by_year)$tau_eq
   tau_eq_B_mat = kg_dyn_compute_tau_eq(prims_B, beta_by_year)$tau_eq
-  kg_dyn_check_tau_eq(tau_eq_S_mat, prims_S$tau, 'S')
+  kg_dyn_check_tau_eq(tau_eq_S_mat, prims_S$tau, 'S',
+                      carry_slack = kg_dyn_carry_slack(prims_S, beta_by_year))
   kg_dyn_check_tau_eq(tau_eq_B_mat, prims_B$tau, 'B')
 
   # Optional in-pass ground-truth check (DESIGN_LOCK ruling 1): verify the
@@ -2512,6 +2751,9 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
       tau_eq_B_col = setNames(tau_eq_B_mat[, j], bathtub_ages_chr),
       tau_eq_S_col = setNames(tau_eq_S_mat[, j], bathtub_ages_chr),
       conv_inflow_vec = conv_inflow_vec,
+      carry_h_col  = setNames(h_S_mat[bathtub_ages_chr, j],
+                              bathtub_ages_chr),
+      tau_w_col    = tau_w_diag[[as.character(t)]],
       ages_bathtub = ages_bathtub
     )
 
@@ -2710,6 +2952,61 @@ kg_dyn_aggregate_cell_mtr = function(records_with_attrs,
 
 
 
+kg_dyn_aggregate_cell_carry = function(records_with_attrs,
+                                        ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
+
+  # Gain-weighted cell aggregation of the wealth-tax deferral carrying cost:
+  #   h(a) = sum(w * G_unit * mtr_net_worth * mtr_kg_lt) / sum(w * G_unit)
+  # The numerator is the RECORD-LEVEL PRODUCT h_i = tau_w,i * tau_cg,i —
+  # never the product of separately averaged rates: Cov(tau_w, tau_cg) > 0
+  # (the >$50M records are also the top-bracket/NIIT CG records), so
+  # mean(tau_w)*mean(tau_cg) understates mean(tau_w*tau_cg).
+  #
+  # Pure gain-weighting, no realization-weighted branch (unlike
+  # kg_dyn_aggregate_cell_mtr): h prices the dollars that STAY deferred,
+  # not the dollars that realize. Cells with zero gain stock get h = 0.
+  # Also emits the plain gain-weighted tau_w mean — DIAGNOSTICS ONLY (state
+  # file / age-profile column); nothing downstream prices off it.
+
+  agg = records_with_attrs %>%
+    group_by(age_cohort) %>%
+    summarise(num_h = sum(weight * G_unit *
+                            coalesce(mtr_net_worth, 0) *
+                            coalesce(mtr_kg_lt, 0), na.rm = TRUE),
+              num_w = sum(weight * G_unit * coalesce(mtr_net_worth, 0),
+                          na.rm = TRUE),
+              den   = sum(weight * G_unit, na.rm = TRUE),
+              .groups = 'drop') %>%
+    rename(age = age_cohort)
+
+  out = tibble(age = ages) %>%
+    left_join(agg, by = 'age') %>%
+    mutate(across(c(num_h, num_w, den), ~ if_else(is.na(.), 0, .)),
+           h     = if_else(den > 0, num_h / den, 0),
+           tau_w = if_else(den > 0, num_w / den, 0)) %>%
+    arrange(age)
+
+  list(h     = setNames(out$h,     as.character(ages)),
+       tau_w = setNames(out$tau_w, as.character(ages)))
+}
+
+
+
+kg_dyn_wealth_law_active = function(tax_law) {
+
+  # TRUE iff the scenario's joined tax law levies a nonzero annual wealth
+  # tax in ANY year (keeps the static detail schema stable across phase-in
+  # years: the guaranteed mtr_net_worth column is written for every year of
+  # a wealth scenario, not just post-enactment years). Baseline wealth.yaml
+  # is a single 0% bracket, so every non-wealth scenario returns FALSE.
+
+  rate_cols = grep('^wealth\\.rates[0-9]*$', names(tax_law), value = TRUE)
+  if (length(rate_cols) == 0) return(FALSE)
+  any(sapply(tax_law[rate_cols], function(x) any(!is.na(x) & x != 0)))
+}
+
+
+
 #-------------------------------------------------------------------------------
 # Post-processing: bathtub diagnostics summary
 #-------------------------------------------------------------------------------
@@ -2810,6 +3107,7 @@ kg_dyn_build_summary = function(scenario_info) {
       tau_S_avg_gw        = wmean(tau_S,        G_B),
       tau_B_avg_rw        = wmean(tau_B,        R_B),
       tau_S_avg_rw        = wmean(tau_S,        R_B),
+      carry_h_avg_gw      = wmean(carry_h,      G_B, default = 0),
       W_B_avg_gw          = wmean(W_B,          G_B),
       W_S_avg_gw          = wmean(W_S,          G_B),
       MC_B_avg_gw         = wmean(MC_B,         G_B),
@@ -2856,6 +3154,7 @@ kg_dyn_build_summary = function(scenario_info) {
            r_planned_B_avg_gw, r_planned_S_avg_gw,
            r_ordinary_B_avg_gw, r_ordinary_S_avg_gw,
            tau_B_avg_gw, tau_S_avg_gw, tau_B_avg_rw, tau_S_avg_rw,
+           carry_h_avg_gw,
            W_B_avg_gw, W_S_avg_gw, MC_B_avg_gw, MC_S_avg_gw, kappa_avg_gw,
            rate_channel, lockin_channel,
            R_planned_B_total, R_planned_S_total,
