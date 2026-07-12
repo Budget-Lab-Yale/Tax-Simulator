@@ -46,6 +46,9 @@ pension_excl_under65:
 pension_excl_65plus:
   value: Inf
   reference: 'IL-1040 Line 5; 35 ILCS 5/203(a)(2); IL DOR Pub. 120'
+pension_excl_min_age:
+  value: 0
+  reference: 'IL retirement subtraction has no age requirement; IL-1040 Line 5'
 
 # Note: CO-style combined pension/SS caps (pension_cap_incl_ss) and AL/MO/OR
 # federal-tax deductibility (fed_tax_ded_limit) are encoded only in states

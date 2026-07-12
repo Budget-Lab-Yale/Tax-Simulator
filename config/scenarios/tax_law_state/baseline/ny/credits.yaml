@@ -69,6 +69,9 @@ ctc_style:
 ctc_match_share:
   value: 0.33
   reference: 'Tax Law 606(c-1); IT-213 Worksheets A/B (pre-TCJA federal rules)'
+ctc_fed_base_per_child:
+  value: 1000
+  reference: 'IT-213 Worksheet A (pre-TCJA federal CTC: $1,000 per qualifying child)'
 ctc_min_per_child:
   value: 100
   reference: 'Tax Law 606(c-1); IT-213 line 9 (requires FAGI <= threshold)'

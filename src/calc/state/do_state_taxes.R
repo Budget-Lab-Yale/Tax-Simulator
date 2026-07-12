@@ -1,0 +1,193 @@
+#---------------------------------------------------------------------------
+# do_state_taxes.R
+#
+# Orchestrator for state individual income tax calculation, mirroring
+# do_1040(). Operates on tax units AFTER the federal pass, with one state's
+# st_-prefixed tax law columns already joined (per-state loop in Phase 4).
+# Design: other/state_tax_research/state_tax_implementation_plan.md §2.3
+#---------------------------------------------------------------------------
+
+
+do_state_taxes = function(tax_units) {
+
+  #----------------------------------------------------------------------------
+  # Calculates state individual income tax for all tax units under one
+  # state's law. Expects federal-pass outputs (agi, txbl_inc, itemizing,
+  # itemized components, eitc, ctc_*, cdctc_*, std_ded) and st_* law columns
+  # on the input tibble.
+  #
+  # Parameters:
+  #   - tax_units (df) : tibble of tax units post-federal calculation, with
+  #                      one state's law columns joined
+  #
+  # Returns: tibble of state-calculated variables (df).
+  #----------------------------------------------------------------------------
+
+  tax_units %>%
+
+    # Fill parameters absent from this state's config (feature-not-present)
+    ensure_st_params() %>%
+
+    # State AGI: starting point plus additions minus subtractions
+    bind_cols(calc_st_agi(.)) %>%
+
+    # Deductions and addbacks
+    bind_cols(calc_st_ded(.)) %>%
+
+    # Exemptions
+    bind_cols(calc_st_exempt(.)) %>%
+
+    # Taxable income
+    bind_cols(calc_st_txbl(.)) %>%
+
+    # Tax before credits (rate schedule + recapture)
+    bind_cols(calc_st_tax(.)) %>%
+
+    # Credits
+    bind_cols(calc_st_credits(.)) %>%
+
+    # Liability and state-filer flag
+    bind_cols(calc_st_liab(.)) %>%
+
+    # Return calculated state variables only
+    select(all_of(unname(unlist(return_vars[str_detect(names(return_vars),
+                                                       '^calc_st_')])))) %>%
+    return()
+}
+
+
+
+ensure_st_params = function(tax_units) {
+
+  #----------------------------------------------------------------------------
+  # Guarantees that every optional state law parameter column exists,
+  # defaulting to a neutral no-feature value. States encode only the
+  # parameters for features they have (plan §2.2 convention); bind_rows()
+  # across states yields NA for others, and single-state law slices may lack
+  # the columns entirely. Core parameters (st_agi.start_point, st_ord.*) are
+  # NOT defaulted here -- their absence is an error caught by req_vars.
+  #
+  # Parameters:
+  #   - tax_units (df) : tibble with one state's law columns joined
+  #
+  # Returns: tibble with all optional st_* parameter columns present (df).
+  #----------------------------------------------------------------------------
+
+  defaults = c(
+
+    # agi.yaml
+    'st_agi.add_exempt_int'        = 0,
+    'st_agi.own_state_exempt'      = 0,
+    'st_agi.sub_us_int'            = 0,
+    'st_agi.sub_state_ref'         = 0,
+    'st_agi.ss_sub_share'          = 0,
+    'st_agi.ss_full_sub_65plus'    = 0,
+    'st_agi.ss_full_sub_5564'      = 0,
+    'st_agi.ss_5564_agi_limit'     = Inf,
+    'st_agi.pension_excl_under65'  = 0,
+    'st_agi.pension_excl_65plus'   = 0,
+    'st_agi.pension_excl_min_age'  = Inf,
+    'st_agi.pension_cap_incl_ss'   = 0,
+    'st_agi.sub_char_nonitem_floor' = Inf,
+    'st_agi.add_overtime_ded'      = 0,
+
+    # ded.yaml
+    'st_ded.std_amount'            = 0,
+    'st_ded.std_dependent'         = NA,   # falls back to std_amount
+    'st_ded.item_allowed'          = 0,
+    'st_ded.item_coupling'         = 0,
+    'st_ded.salt_addback'          = 0,
+    'st_ded.pease'                 = 0,
+    'st_ded.pease_thresh'          = Inf,
+    'st_ded.item_limit_po_thresh'  = Inf,
+    'st_ded.item_limit_po_width'   = 50000,
+    'st_ded.item_limit_share1'     = 0,
+    'st_ded.item_limit_tier2_thresh' = Inf,
+    'st_ded.item_limit_tier2_width'  = 50000,
+    'st_ded.item_limit_share2'     = 0,
+    'st_ded.char_only_thresh1'     = Inf,
+    'st_ded.char_only_share1'      = 1,
+    'st_ded.char_only_thresh2'     = Inf,
+    'st_ded.char_only_share2'      = 1,
+    'st_ded.addback_cap_thresh'    = Inf,
+    'st_ded.addback_cap'           = Inf,
+    'st_ded.addback_incl_std'      = 0,
+
+    # exempt.yaml
+    'st_exempt.personal_amount'    = 0,
+    'st_exempt.dep_amount'         = 0,
+    'st_exempt.aged_addl'          = 0,
+    'st_exempt.blind_addl'         = 0,
+    'st_exempt.po_thresh'          = Inf,
+    'st_exempt.po_type'            = 0,
+
+    # ord.yaml (recapture)
+    'st_ord.recapture_agi_start'   = Inf,
+    'st_ord.recapture_width'       = 50000,
+
+    # credits.yaml
+    'st_credits.eitc_match'        = 0,
+    'st_credits.eitc_refundable'   = 1,
+    'st_credits.eitc_less_household_credit' = 0,
+    'st_credits.ctc_style'         = 0,
+    'st_credits.ctc_match_share'   = 0,
+    'st_credits.ctc_fed_base_per_child' = 1000,
+    'st_credits.ctc_min_per_child' = 0,
+    'st_credits.ctc_min_child_age' = 0,
+    'st_credits.ctc_max_child_age' = 16,
+    'st_credits.ctc_young_age_limit' = 0,
+    'st_credits.ctc_young_amount'  = 0,
+    'st_credits.ctc_old_amount'    = 0,
+    'st_credits.ctc_po_thresh'     = Inf,
+    'st_credits.ctc_po_rate'       = 0,
+    'st_credits.ctc_pct_of_eitc'   = 0,
+    'st_credits.ctc_max_age'       = 16,
+    'st_credits.cdctc_match'       = 0,
+    'st_credits.cdctc_style'       = 0,
+    'st_credits.cdctc_rate_max'    = 0,
+    'st_credits.cdctc_rate_floor'  = 0,
+    'st_credits.cdctc_rate_po_per_1k' = 0,
+    'st_credits.cdctc_rate_po_start'  = Inf,
+    'st_credits.prop_tax_credit_rate' = 0,
+    'st_credits.credit_agi_limit'  = Inf,
+    'st_credits.fatc_young_amount' = 0,
+    'st_credits.fatc_old_amount'   = 0,
+    'st_credits.fatc_young_age_limit' = 0,
+    'st_credits.fatc_max_child_age'   = 16,
+    'st_credits.fatc_po_start'     = 0,
+    'st_credits.fatc_po_step'      = 5000,
+    'st_credits.fatc_po_zero'      = 0,
+    'st_credits.hh_mfs_half'       = 0,
+
+    # filing.yaml
+    'st_filing.req_type'           = 0,
+    'st_filing.req_income_thresh'  = Inf,
+    'st_filing.req_income_thresh_dep' = Inf,
+    'st_filing.req_if_fed_filer'   = 0
+  )
+
+  # Add absent columns, then replace NAs with defaults
+  for (p in names(defaults)) {
+    if (!(p %in% colnames(tax_units))) {
+      tax_units[[p]] = defaults[[p]]
+    } else {
+      tax_units[[p]] = coalesce(tax_units[[p]], defaults[[p]])
+    }
+  }
+
+  # Dependent-filer standard deduction falls back to the regular amount
+  tax_units[['st_ded.std_dependent']] = coalesce(
+    tax_units[['st_ded.std_dependent']], tax_units[['st_ded.std_amount']]
+  )
+
+  # Vector params (household credit tables, CTC tiers, CDCTC anchors) are
+  # feature-gated on their first element existing; add sentinel if absent
+  for (p in c('st_credits.hh_agi_bounds_single1', 'st_credits.hh_agi_bounds_other1',
+              'st_credits.ctc_tier1_bound')) {
+    if (!(p %in% colnames(tax_units))) {
+      tax_units[[p]] = NA_real_
+    }
+  }
+
+  return(tax_units)
+}
