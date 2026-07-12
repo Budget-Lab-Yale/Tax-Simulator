@@ -361,3 +361,39 @@ Safe changes that need NO SLURM updates: anything inside `run_one_year()`, tax c
 - **Heterogeneous elasticities**: Assign different elasticities to different demographic groups/income levels using `case_when()`
 - **Extensive margin simulation**: Use probabilities and RNG for binary outcomes (e.g., employment exit)
 - **Global random seed**: Always reset with `set.seed(globals$random_seed)` before stochastic operations
+
+## Running R on this cluster
+
+R is **not on `PATH` by default** (Lmod environment modules). Load the module in
+the **same shell command** as `Rscript` — module state does not persist across
+separate shell invocations (and each Claude Bash tool call is a fresh shell):
+
+```bash
+module load R/4.4.2-gfbf-2024a
+Rscript your_script.R
+```
+
+This gives **R 4.4.2** (matches the Tariff-Rate-Tracker / Tariff-Model manifests)
+with `tidyverse`, `scales`, `lubridate`, `here`, `patchwork`, `openxlsx`,
+`readxl`, `arrow`, and the rest of the CRAN/Bioconductor bundle already attached.
+
+### Gotchas
+
+- Run the `module load` as the **sole/first** module op in a clean shell. It
+  works fine that way (it pulls in `R-bare` + `R-bundle-CRAN` + Bioconductor via
+  Lmod `depends_on`). It only appears to "fail" if you `module purge` first or
+  stack another R module in the same accumulated shell.
+- `~/r_libs_4.4` sits **first** on `.libPaths()`. Its hand-built **Arrow 24 lacks
+  zstd** and breaks parquet builds; the module's Arrow 17 has zstd. For
+  Arrow/parquet work, don't let the personal lib shadow the module. (CSV-only
+  builds are unaffected.)
+- Fallback if the meta-module ever won't load: `module load
+  R/4.4.2-gfbf-2024a-bare` (Rscript + toolchain only), then `export
+  R_LIBS_SITE=/apps/software/2024a/software/R-bundle-CRAN/2024.11-foss-2024a` for
+  the CRAN packages. Do **not** `module load` the CRAN bundle on top of `-bare`
+  (foss/gfbf toolchain conflict drops Rscript off `PATH`).
+
+### Heavy jobs
+
+Light builds run in seconds interactively. For memory-heavy rebuilds, wrap the
+same `module load` line in an `sbatch` script and submit via Slurm.
