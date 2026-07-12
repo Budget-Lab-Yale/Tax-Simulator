@@ -1,4 +1,4 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Tax-Data.vintage,dep.Tax-Data.ID
-baseline,baseline,,2025:2035,,kg_lt,nextdollar,2026060918,baseline
-carryover,tests/kg_dyn_carryover,kg_dynamics/turnover,2025:2035,2026 2030 2035,kg_lt,nextdollar,2026060918,baseline
-deemed,tests/kg_dyn_deemed,kg_dynamics/turnover,2025:2035,2026 2030 2035,kg_lt,nextdollar,2026060918,baseline
+baseline,baseline,,2025:2035,,kg_lt estate,nextdollar nextdollar,2026060918,baseline
+carryover,tests/kg_dyn_carryover,kg_dynamics/turnover,2025:2035,2026 2030 2035,kg_lt estate,nextdollar nextdollar,2026060918,baseline
+deemed,tests/kg_dyn_deemed,kg_dynamics/turnover,2025:2035,2026 2030 2035,kg_lt estate,nextdollar nextdollar,2026060918,baseline
