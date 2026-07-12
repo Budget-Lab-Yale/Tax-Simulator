@@ -298,9 +298,14 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
   #
   # Returns: dataframe long in year and element (df).
   #----------------------------------------------------------------------------
-  
+
+  # Tolerate and ignore metadata keys: "reference" holds source citations (form
+  # line / statute / URL) and is not parsed. Must be stripped before the
+  # indexation logic below, which treats all non-"value" keys as indexation info
+  raw_input$reference = NULL
+
   # Extract base values and convert to time series
-  base_values = raw_input$value %>% 
+  base_values = raw_input$value %>%
     parse_inf() %>%
     generate_time_series(years, 'base_value') %>% 
     unnest_if_nested() %>% 
