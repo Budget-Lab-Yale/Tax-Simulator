@@ -101,15 +101,21 @@ tu$evasion_g_schc = c(1, 1, 1,   1, 1)
 tu$evasion_g_pt   = c(1, 1, 0.9, 1, 1)   # record 3: 10% of PT income evaded
 tu$evasion_g_rent = c(1, 1, 1,   1, 1)
 
+# mtr_estate equal on both legs (ratio = 1) => the estate own-rate response
+# is an exact no-op here, so every pre-existing expectation below is
+# unchanged. The response itself is tested in section 11.
 static_mtrs = tibble(id = 1:5, year = 2026L,
-                     mtr_net_worth = c(0.02, 0, 0.02, 0.02, 0.02))
+                     mtr_net_worth = c(0.02, 0, 0.02, 0.02, 0.02),
+                     mtr_estate    = c(0.40, 0, 0.40, 0.40, 0.40))
+base_mtrs   = tibble(id = 1:5, year = 2026L,
+                     mtr_estate    = c(0.40, 0, 0.40, 0.40, 0.40))
 
 si = function(modules = c('evasion/debacker', 'wealth/avoidance')) list(
   ID = 'hl_test',
   behavior_modules = modules,
   output_path = file.path(tempdir(), 'hl_guard_test'))
 
-out = do_wealth(tu, NULL, static_mtrs, si(), NULL)
+out = do_wealth(tu, base_mtrs, static_mtrs, si(), NULL)
 
 # Expected concealment fractions at the top rate
 f_pub  = 1 - exp(0.02 * WEALTH_AVOID_PUBLIC_E)
@@ -204,7 +210,7 @@ if (file.exists(diag_path)) {
 
 WEALTH_CHI_PUB  <<- 0
 WEALTH_CHI_PRIV <<- 0
-out0 = do_wealth(tu, NULL, static_mtrs, si(), NULL)
+out0 = do_wealth(tu, base_mtrs, static_mtrs, si(), NULL)
 check(all(abs(out0$div_ord - tu$div_ord) < 1e-9) &&
       all(abs(out0$part_active - tu$part_active) < 1e-9) &&
       all(abs(out0$kg_lt - tu$kg_lt) < 1e-9),
@@ -236,13 +242,13 @@ expect_error(
   'guard: wealth/avoidance before kg_dynamics hard-stops (R6 ordering)')
 
 # kg_dynamics before wealth/avoidance (correct R6 order) must NOT stop
-ok_kg = tryCatch({ do_wealth(tu, NULL, static_mtrs,
+ok_kg = tryCatch({ do_wealth(tu, base_mtrs, static_mtrs,
                              si(c('kg_dynamics/turnover', 'wealth/avoidance')), NULL); TRUE },
                  error = function(e) FALSE)
 check(ok_kg, 'correct order (kg_dynamics before wealth) runs without error')
 
 # Correct order must NOT stop
-ok_order = tryCatch({ do_wealth(tu, NULL, static_mtrs,
+ok_order = tryCatch({ do_wealth(tu, base_mtrs, static_mtrs,
                                 si(c('evasion/debacker', 'wealth/avoidance')), NULL); TRUE },
                     error = function(e) FALSE)
 check(ok_order, 'correct order (evasion before wealth) runs without error')
@@ -250,7 +256,7 @@ check(ok_order, 'correct order (evasion before wealth) runs without error')
 # wealth/avoidance alone (evasion_g_* columns absent) must NOT stop, and the
 # R3 link must be inert (net_worth = full avoidance response, no extra shave)
 tu_noev = tu %>% select(-starts_with('evasion_g_'))
-out_alone = tryCatch(do_wealth(tu_noev, NULL, static_mtrs,
+out_alone = tryCatch(do_wealth(tu_noev, base_mtrs, static_mtrs,
                                si(c('wealth/avoidance')), NULL),
                      error = function(e) NULL)
 check(!is.null(out_alone), 'wealth/avoidance without an evasion module runs without error')
@@ -278,14 +284,81 @@ check(is.finite(g_regular) && g_regular > 0 && g_regular != 1,
       'regular evasion MTR inputs still produce a finite response')
 
 expect_error(
-  do_wealth(tu, NULL, static_mtrs %>% select(-mtr_net_worth), si(), NULL),
+  do_wealth(tu, base_mtrs, static_mtrs %>% select(-mtr_net_worth), si(), NULL),
   'requires a registered',
   'guard: missing mtr_net_worth hard-stops')
 
 expect_error(
-  do_wealth(tu, NULL, NULL, si(), NULL),
+  do_wealth(tu, base_mtrs, NULL, si(), NULL),
   'requires a registered',
   'guard: NULL static_mtrs hard-stops')
+
+#-------------------------------------------------------------------------------
+# 11. Estate own-rate response (part (b): exact KS net-of-tax power form)
+#-------------------------------------------------------------------------------
+
+# New guards: missing estate MTR legs hard-stop
+expect_error(
+  do_wealth(tu, base_mtrs, static_mtrs %>% select(-mtr_estate), si(), NULL),
+  'estate own-rate response requires a registered',
+  'guard: missing mtr_estate in static MTRs hard-stops')
+expect_error(
+  do_wealth(tu, NULL, static_mtrs, si(), NULL),
+  'BASELINE MTRs',
+  'guard: NULL baseline_mtrs hard-stops (estate leg is load-bearing)')
+expect_error(
+  do_wealth(tu, base_mtrs %>% select(-mtr_estate), static_mtrs, si(), NULL),
+  'BASELINE MTRs',
+  'guard: missing mtr_estate in baseline MTRs hard-stops')
+
+# Ratio = 1 no-op is implicitly covered by every section above (both legs at
+# 0.40); make it explicit once:
+check(abs(out$estate_concealed_frac[1] -
+          (c_pub * 1e8 + c_priv * 1e8) / 2e8) < 1e-9,
+      'estate own-rate: unchanged estate law (ratio = 1) is an exact no-op')
+
+# (i) Rate HIKE: tau 0.40 -> 0.50 on record 1. f = 1 - (0.5/0.6)^eps stacks
+# multiplicatively on the retained share of the wealth/evasion union.
+sm_hike = static_mtrs %>% mutate(mtr_estate = c(0.50, 0, 0.40, 0.40, 0.40))
+out_h   = do_wealth(tu, base_mtrs, sm_hike, si(), NULL)
+ret_h   = ((1 - 0.50) / (1 - 0.40)) ^ ESTATE_REPORT_EPS
+union1  = (c_pub * 1e8 + c_priv * 1e8) / 2e8
+exp_h   = 1 - (1 - union1) * ret_h
+check(abs(out_h$estate_concealed_frac[1] - exp_h) < 1e-9,
+      'estate own-rate: rate hike stacks multiplicatively on the union')
+check(out_h$estate_concealed_frac[1] > union1,
+      'estate own-rate: rate hike strictly increases the concealed fraction')
+check(all(abs(out_h$estate_concealed_frac[-1] -
+              out$estate_concealed_frac[-1]) < 1e-12),
+      'estate own-rate: records with unchanged estate MTR are untouched')
+# Firewall: the response must not touch flows or reported net worth
+check(abs(out_h$net_worth[1] - out$net_worth[1]) < 1e-9 &&
+      abs(out_h$kg_lt[1] - out$kg_lt[1]) < 1e-9,
+      'estate own-rate: firewall (net_worth / flows unaffected)')
+
+# (ii) REPEAL: tau 0.40 -> 0 on record 3 => retained > 1, previously
+# unreported estate surfaces (combined fraction falls below the union).
+sm_rep = static_mtrs %>% mutate(mtr_estate = c(0.40, 0, 0, 0.40, 0.40))
+out_r  = do_wealth(tu, base_mtrs, sm_rep, si(), NULL)
+ret_r  = (1 / (1 - 0.40)) ^ ESTATE_REPORT_EPS
+estate_c_priv3 = c_priv + (1 - c_priv) * 0.10
+union3 = (c_pub * 1e8 + estate_c_priv3 * 1e8) / 2e8
+exp_r  = 1 - (1 - union3) * ret_r
+check(abs(out_r$estate_concealed_frac[3] - exp_r) < 1e-9 &&
+      out_r$estate_concealed_frac[3] < union3,
+      'estate own-rate: repeal surfaces reported estate (retained > 1)')
+
+# (iii) NEWLY TAXABLE: tau_B = 0 -> tau_S = 0.40 on record 2 (union = 0
+# there: wealth MTR 0, no evasion) => fraction = 1 - (1 - 0.4)^eps exactly.
+sm_new = static_mtrs %>% mutate(mtr_estate = c(0.40, 0.40, 0.40, 0.40, 0.40))
+out_n  = do_wealth(tu, base_mtrs, sm_new, si(), NULL)
+exp_n  = 1 - (1 - 0.40) ^ ESTATE_REPORT_EPS
+check(abs(out_n$estate_concealed_frac[2] - exp_n) < 1e-9,
+      'estate own-rate: newly taxable record uses (1 - tau_S)^eps directly')
+
+# Returned frame drops the joined estate MTR legs
+check(!any(c('mtr_estate_S', 'mtr_estate_B') %in% names(out_h)),
+      'estate own-rate: joined estate MTR legs dropped from returned frame')
 
 unlink(si()$output_path, recursive = TRUE)
 
