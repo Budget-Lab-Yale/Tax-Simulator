@@ -228,11 +228,16 @@ calc_time_burden = function(microdata, fixed_cost) {
   # compute record-level time burden
   #----------------------------------
     
+  # NOTE: the provision-cost term is a weighted row sum, not a BLAS matrix
+  # multiply. The natural `as.matrix(...) %*% time_costs` form dispatches to BLAS
+  # (dgemm), which is NOT fork-safe: under mclapply (--multicore) a multithreaded
+  # OpenBLAS/MKL thread pool inherited across fork() segfaults on the next call.
+  # rowSums(sweep(...)) is arithmetic-only and fork-safe; result is identical.
+  # AI-Fiscal Issue 1 / upstream Budget-Lab-Yale/Tax-Simulator#128.
   microdata %>%
     mutate(
       burden = (
-        across(.cols = all_of(provisions)) %>%
-                  as.matrix %*% time_costs
+        rowSums(sweep(as.matrix(across(.cols = all_of(provisions))), 2, time_costs, `*`))
                   - was_hoh * (rowSums(across(.cols = all_of(hoh_item))) * 11 + 34)
                   + (no_tax == 0) * fixed_cost
       ) %>% as.vector()

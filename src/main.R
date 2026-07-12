@@ -106,8 +106,8 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   if (globals$multicore == 'scenario') {
     mc_out = mclapply(
       X        = counterfactual_ids, 
-      FUN      = do_scenario, baseline_mtrs, 
-      mc.cores = min(32, detectCores(logical = F))
+      FUN      = do_scenario, baseline_mtrs,
+      mc.cores = mc_cores()   # scheduler-aware; see mc_cores() in src/sim/run.R (upstream #130)
     )
   } else {
     walk(.x = counterfactual_ids, .f = ~ do_scenario(.x, baseline_mtrs))

@@ -6,6 +6,34 @@
 
 
 
+mc_cores = function(cap = 32) {
+
+  #----------------------------------------------------------------------------
+  # Worker count for mclapply(), scheduler-aware.
+  #
+  # Honors an explicit MC_CORES override, then the SLURM allocation
+  # (SLURM_CPUS_PER_TASK), before falling back to the machine's physical core
+  # count. detectCores() reports the whole machine, not the cores the scheduler
+  # granted, so on a shared SLURM node the two diverge and the job oversubscribes
+  # the node. Guards against unset / non-numeric / non-positive env values.
+  #
+  # Origin: AI-Fiscal Tax-Simulator patch Issue 3, filed upstream as
+  # Budget-Lab-Yale/Tax-Simulator#130 (see AI-Fiscal docs/tax_simulator_patches.md).
+  #
+  # Parameters:
+  #   - cap (int) : maximum worker count for the physical-core fallback
+  #
+  # Returns: positive integer worker count (int).
+  #----------------------------------------------------------------------------
+
+  env = Sys.getenv('MC_CORES', Sys.getenv('SLURM_CPUS_PER_TASK', ''))
+  n   = suppressWarnings(as.integer(env))
+  if (!is.na(n) && n >= 1) return(n)
+  min(cap, detectCores(logical = FALSE))
+}
+
+
+
 do_scenario = function(ID, baseline_mtrs) {
   
   #----------------------------------------------------------------------------
@@ -87,9 +115,15 @@ do_scenario = function(ID, baseline_mtrs) {
     build_distribution_tables(ID, baseline_id = 'baseline')
     
     # Time burden tables
+    # (Formerly disabled — segfaulted under --multicore scenario via a fork x
+    # multithreaded-BLAS interaction. Root-caused and fixed in calc_time_burden();
+    # AI-Fiscal Issue 1 / upstream Budget-Lab-Yale/Tax-Simulator#128.)
     build_timeburden_table(ID)
 
     # Horizontal equity
+    # (Formerly disabled — cut() "breaks are not unique" on counterfactual
+    # point-mass income. Root-caused and fixed in build_horizontal_table();
+    # AI-Fiscal Issue 2 / upstream Budget-Lab-Yale/Tax-Simulator#129.)
     build_horizontal_table(ID)
   }
   
@@ -143,7 +177,7 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
                      vat_price_offset     = vat_price_offset,
                      excess_growth_offset = excess_growth_offset)
       },
-      mc.cores = min(32, detectCores(logical = F))
+      mc.cores = mc_cores()   # scheduler-aware; see mc_cores() above (upstream #130)
     )
   } else {
 
