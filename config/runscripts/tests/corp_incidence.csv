@@ -1,9 +1,9 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Off-Model-Estimates.vintage,dep.Off-Model-Estimates.ID,s
-baseline,baseline,,2026:2033,2028:2028,kg_lt,nextdollar,corp_test_20260703,baseline,
+baseline,baseline,,2026:2033,2028:2028,kg_lt estate,nextdollar nextdollar,corp_test_20260703,baseline,
 corp_perm,baseline,,2026:2033,2028:2028,,,corp_test_20260703,corp_rate_perm,
 corp_sunset,baseline,,2026:2033,2028:2028,,,corp_test_20260703,corp_rate_sunset,
 corp_nometa,baseline,,2026:2033,2028:2028,,,corp_test_20260703,corp_rate_nometa,
 corp_perm_wealth,baseline,,2026:2033,2028:2028,,,corp_test_20260703,corp_rate_perm,0.5
 corp_sunset_wealth,baseline,,2026:2033,2028:2028,,,corp_test_20260703,corp_rate_sunset,0.5
-corp_perm_kg,baseline,kg_dynamics/turnover,2026:2033,2028:2028,kg_lt,nextdollar,corp_test_20260703,corp_rate_perm,
-corp_perm_kg_wealth,baseline,kg_dynamics/turnover,2026:2033,2028:2028,kg_lt,nextdollar,corp_test_20260703,corp_rate_perm,0.5
+corp_perm_kg,baseline,kg_dynamics/turnover,2026:2033,2028:2028,kg_lt estate,nextdollar nextdollar,corp_test_20260703,corp_rate_perm,
+corp_perm_kg_wealth,baseline,kg_dynamics/turnover,2026:2033,2028:2028,kg_lt estate,nextdollar nextdollar,corp_test_20260703,corp_rate_perm,0.5
