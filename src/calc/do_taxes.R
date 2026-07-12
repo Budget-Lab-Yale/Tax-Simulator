@@ -514,7 +514,8 @@ remit_taxes = function(tax_units) {
 
 calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
                      type = 'nextdollar', actual_liab_wealth = NULL,
-                     baseline_pr_er = NULL) {
+                     baseline_pr_er = NULL, actual_liab_estate = NULL,
+                     actual_estate_p_dsue = NULL) {
 
   #----------------------------------------------------------------------------
   # Calculates MTR, either at the next-dollar or 0-actual extensive margin,
@@ -545,6 +546,23 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
   #                                  reprices the marginal statutory wealth rate;
   #                                  NULL for income/payroll MTRs (which never
   #                                  move net_worth, so the wealth term is 0)
+  #   - actual_liab_estate (dbl[]) : vector of SAME-FRAME (current-pass)
+  #                                  expected estate liability -- the DSUE
+  #                                  blend E[liab] = p_dsue * liab_dsue +
+  #                                  (1 - p_dsue) * liab_nodsue -- to compare
+  #                                  against. Required (and used) only for
+  #                                  var == 'estate'. NEVER the baseline's:
+  #                                  the delta must be measured on the frame
+  #                                  the recompute runs on
+  #   - actual_estate_p_dsue (dbl[]) : same-frame estate_p_dsue vector.
+  #                                  Required for var == 'estate': asserted
+  #                                  equal to the bumped recompute's p_dsue
+  #                                  (the +$1 base bump cannot move the DSUE
+  #                                  bin, whose lookup is on reported_gross)
+  #                                  -- this doubles as a row-order/frame-
+  #                                  identity guard, since actuals arrive as
+  #                                  bare vectors and silent misalignment
+  #                                  would otherwise produce garbage MTRs
   #   - baseline_pr_er (df)        : baseline employer-side payroll, passed to
   #                                  the internal do_taxes() recompute. The
   #                                  requirement is that the recompute's TOTAL
@@ -582,13 +600,50 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
   # (income/payroll bumps don't move net_worth, and recomputing wealth would
   # just waste a full-frame pass).
   calc_wealth_flag = (var == 'net_worth')
-  
+
+  # The estate MTR reprices calc_estate in the bumped pass (var == 'estate');
+  # every other MTR var skips the estate branch (income/payroll bumps never
+  # move the estate base). NOTE 'estate' is NOT a column: the perturbation is
+  # remapped below to the dedicated calculator input estate_base_bump (+$1 on
+  # the taxable base, inside its pmax -- see calc_estate parameter doc), so
+  # the delta is +d(liab)/d(base) directly: positive by construction and
+  # un-switched (not gated by estate.income_tax_ded). The emitted mtr_estate
+  # is a CONDITIONAL-ON-DEATH statutory price (no mortality; that lives in
+  # the kg Bellman and the aggregation weights).
+  calc_estate_flag = (var == 'estate')
+  if (calc_estate_flag) {
+    if (type != 'nextdollar') {
+      stop('calc_mtrs: the estate MTR is defined only as a next-dollar ',
+           'right-derivative (type = "nextdollar"); got type = "', type, '".')
+    }
+    # The actuals are externally computed bare vectors: assert frame identity
+    # up front (length here; value alignment via the p_dsue identity below)
+    if (is.null(actual_liab_estate) || is.null(actual_estate_p_dsue)) {
+      stop('calc_mtrs: var = "estate" requires same-frame actual_liab_estate ',
+           '(the DSUE-blended expected liability) and actual_estate_p_dsue.')
+    }
+    stopifnot(length(actual_liab_estate)   == nrow(tax_units),
+              length(actual_estate_p_dsue) == nrow(tax_units))
+    # Materialize the bump input (= 0) if absent so the generic +1 below
+    # takes it 0 -> 1
+    if (!('estate_base_bump' %in% names(tax_units))) {
+      tax_units$estate_base_bump = 0
+    }
+  }
+
   # Next-dollar calculation
   if (type == 'nextdollar') {
-    
+
     # Deal with composite variables. Initialize list of variables to increment
     vars = c(var)
-    
+
+    # 'estate' remaps to the dedicated base-bump input (not a mirror of
+    # net_worth, which IS a stored column): across(all_of('estate')) would
+    # error since no such column exists
+    if (var == 'estate') {
+      vars = c('estate_base_bump')
+    }
+
     if (var %in% c('wages1', 'wages2')) {
       vars = c(var, 'wages')
     }
@@ -714,24 +769,52 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
   # in the parameter doc above (pre-do_taxes frame: mirror the actuals call;
   # post-do_taxes frame: NULL) so the total wage rescaling is identical on
   # both sides of the difference.
-  new_values %>%
+  recomputed = new_values %>%
     do_taxes(
       baseline_pr_er   = baseline_pr_er,
       vars_payroll     = return_vars$calc_pr,
       vars_1040        = return_vars %>% remove_by_name('calc_pr') %>% unlist() %>% set_names(NULL),
-      calc_estate_flag = FALSE,             # MTR reads only income-tax delta; estate discarded
+      calc_estate_flag = calc_estate_flag,  # TRUE only for the estate MTR (see above)
       calc_wealth_flag = calc_wealth_flag   # TRUE only for the net_worth MTR (see above)
-    ) %>%
+    )
+
+  # Estate MTR: the +$1 base bump cannot move the DSUE state probability (bin
+  # lookup is on reported_gross, which the bump does not enter) -- assert it
+  # rather than assume it. Because the actuals arrive as bare vectors, this
+  # identity is also the row-order guard: a shuffled or wrong-frame
+  # actual_estate_p_dsue fails here instead of producing silent garbage.
+  if (calc_estate_flag) {
+    if (!isTRUE(all.equal(recomputed$estate_p_dsue,
+                          as.numeric(actual_estate_p_dsue)))) {
+      stop('calc_mtrs: bumped-frame estate_p_dsue differs from the supplied ',
+           'actual_estate_p_dsue. Either the actuals were computed on a ',
+           'different frame / row order than tax_units, or the base bump ',
+           'moved the DSUE bin (it must not -- bin lookup is on ',
+           'reported_gross).')
+    }
+  }
+
+  recomputed %>%
 
     # Calculate MTR and return
     mutate(
 
       # Calculate numerator: change in taxes. The wealth term is added only for
-      # the net_worth MTR (calc_wealth_flag); for every other var it is 0 (and
-      # liab_wealth is not even computed, so the branch is never evaluated -- R
-      # `if` only evaluates the taken branch)
+      # the net_worth MTR (calc_wealth_flag) and the estate term only for the
+      # estate MTR (calc_estate_flag); for every other var they are 0 (and
+      # liab_wealth / liab_estate_* are not even computed, so the branches are
+      # never evaluated -- R `if` only evaluates the taken branch). The estate
+      # delta differences the EXPECTED liability: the DSUE blend is taken
+      # BEFORE the response formulas downstream, a documented approximation
+      # (response(E[MTR]) != E[response(MTR)]; second-order at current
+      # parameters).
       delta_taxes = liab_iit_net - actual_liab_iit + pr * (liab_pr - actual_liab_pr) +
-                    (if (calc_wealth_flag) liab_wealth - actual_liab_wealth else 0),
+                    (if (calc_wealth_flag) liab_wealth - actual_liab_wealth else 0) +
+                    (if (calc_estate_flag)
+                       estate_p_dsue * liab_estate_dsue +
+                         (1 - estate_p_dsue) * liab_estate_nodsue -
+                         actual_liab_estate
+                     else 0),
 
       # Calculate denominator: change in variable value
       delta_var = case_when(

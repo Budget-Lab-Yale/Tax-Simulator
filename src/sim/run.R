@@ -631,6 +631,15 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     # Calculate static marginal tax rates
     static_mtrs_year = NULL
     if (!is.null(scenario_info$mtr_vars)) {
+
+      # Same-frame expected estate liability (the get_estate_totals DSUE
+      # blend) for the estate MTR; consumed by calc_mtrs only when 'estate'
+      # is registered. NEVER the baseline's -- the delta must be measured on
+      # the frame the recompute runs on.
+      actual_liab_estate_static =
+        tax_units_static$estate_p_dsue * tax_units_static$liab_estate_dsue +
+        (1 - tax_units_static$estate_p_dsue) * tax_units_static$liab_estate_nodsue
+
       static_mtrs_year = scenario_info$mtr_vars %>%
         map2(.y = scenario_info$mtr_types,
              .f = ~ calc_mtrs(
@@ -641,6 +650,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                actual_liab_iit    = tax_units_static$liab_iit_net,
                actual_liab_pr     = tax_units_static$liab_pr,
                actual_liab_wealth = tax_units_static$liab_wealth,
+               actual_liab_estate = actual_liab_estate_static,
+               actual_estate_p_dsue = tax_units_static$estate_p_dsue,
                # NULL, NOT the pass-level baseline_pr_er: tax_units_static is
                # a POST-do_taxes frame, so its wages already carry the er-
                # payroll rescale (see calc_mtrs parameter doc)
@@ -660,6 +671,20 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
         left_join(static_mtrs_year %>%
                     select(-year),
                   by = 'id')
+
+      # Switch-gated estate MTR for the kg death value (part (a) of the
+      # estate-margins build): mtr_estate_ded = estate.income_tax_ded x
+      # mtr_estate, derived per record while the law column is in the frame
+      # -- one perturbation, two emitted columns. mtr_estate stays the raw
+      # un-switched base rate (consumed by the wealth-avoidance estate
+      # response); mtr_estate_ded is what the kg Bellman/tau_eq exposure
+      # aggregator reads (the deductibility interaction must vanish when a
+      # reform sets estate.income_tax_ded = 0 while mtr_estate itself is
+      # unchanged).
+      if ('estate' %in% scenario_info$mtr_vars) {
+        tax_units_static %<>%
+          mutate(mtr_estate_ded = estate.income_tax_ded * mtr_estate)
+      }
 
       # Law-only kg_lt MTR for the planned-timing wedge: same reform law,
       # computed on the PRE-injection frame. The mech injection above adds
@@ -731,6 +756,39 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
           pr                 = F,
           type               = 'nextdollar'
         )$mtr_net_worth
+      }
+
+      # Guaranteed mtr_estate / mtr_estate_ded for kg scenarios: the kg
+      # bathtub's estate-exposure aggregator (kg_dyn_aggregate_cell_estate)
+      # prices the death value's estate offset off mtr_estate_ded read from
+      # THIS static detail. Same guarantee pattern as mtr_net_worth above,
+      # but with NO law gate -- estate law is always active. When the
+      # runscript registers 'estate' in mtr_vars the generic loop already
+      # wrote both columns (bit-identical to this path) and this branch is
+      # skipped. NOTE the fallback exists only on the SCENARIO leg: the
+      # BASELINE pass cannot know a kg scenario will consume its detail, so
+      # baseline rows of kg/wealth runscripts must register 'estate' in
+      # mtr_vars (read_mtr in kg_dynamics.R hard-stops with that message).
+      if (uses_kg_mech && !('estate' %in% scenario_info$mtr_vars)) {
+        tax_units_static$mtr_estate = calc_mtrs(
+          tax_units          = tax_units_static %>%
+                                 select(-all_of(return_vars %>%
+                                 unlist() %>%
+                                 set_names(NULL)),
+                                 -starts_with('mtr_')),
+          actual_liab_iit    = tax_units_static$liab_iit_net,
+          actual_liab_pr     = tax_units_static$liab_pr,
+          actual_liab_wealth = tax_units_static$liab_wealth,
+          actual_liab_estate = actual_liab_estate_static,
+          actual_estate_p_dsue = tax_units_static$estate_p_dsue,
+          # NULL: POST-do_taxes frame (see the net_worth fallback above)
+          baseline_pr_er     = NULL,
+          var                = 'estate',
+          pr                 = F,
+          type               = 'nextdollar'
+        )$mtr_estate
+        tax_units_static %<>%
+          mutate(mtr_estate_ded = estate.income_tax_ded * mtr_estate)
       }
     }
 
@@ -925,6 +983,13 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       # pass -- its detail is read only by the wealth pre-pass, which needs only
       # the mtr_cap_bundle / mtr_net_worth computed above)
       if (!is.null(scenario_info$mtr_vars) && !is_convnw) {
+
+        # Same-frame expected estate liability (DSUE blend) for the estate
+        # MTR -- see the static-pass comment
+        actual_liab_estate_conv =
+          tax_units_conv$estate_p_dsue * tax_units_conv$liab_estate_dsue +
+          (1 - tax_units_conv$estate_p_dsue) * tax_units_conv$liab_estate_nodsue
+
         conv_mtrs = scenario_info$mtr_vars %>%
           map2(.y = scenario_info$mtr_types,
                .f = ~ calc_mtrs(
@@ -935,6 +1000,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                  actual_liab_iit    = tax_units_conv$liab_iit_net,
                  actual_liab_pr     = tax_units_conv$liab_pr,
                  actual_liab_wealth = tax_units_conv$liab_wealth,
+                 actual_liab_estate = actual_liab_estate_conv,
+                 actual_estate_p_dsue = tax_units_conv$estate_p_dsue,
                  # NULL, NOT baseline_pr_er: tax_units_conv is a POST-do_taxes
                  # frame (wages already rescaled; see calc_mtrs parameter doc).
                  # The convnw mtr_net_worth call above differs deliberately:
@@ -955,6 +1022,12 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
           left_join(conv_mtrs %>%
                       select(-year),
                     by = 'id')
+
+        # Switch-gated estate MTR (see the static-pass comment)
+        if ('estate' %in% scenario_info$mtr_vars) {
+          tax_units_conv %<>%
+            mutate(mtr_estate_ded = estate.income_tax_ded * mtr_estate)
+        }
       }
 
       # Fold the expected deemed tax into reported liability (after MTRs,
@@ -1106,7 +1179,13 @@ run_bathtub_pass = function(scenario_info, tax_law,
     # Wealth-tax deferral carrying cost h (per-year cell vectors; all-zero
     # when the scenario levies no wealth tax) -- prices the wealth x CG
     # margin in the Bellman and tau_eq.
-    reform_carry       = inputs$reform_carry
+    reform_carry       = inputs$reform_carry,
+    # Leg-paired estate exposure of the kg death value (per-year cell
+    # vectors of switch-gated mtr_estate_ded) -- prices the estate x CG
+    # margin: (1 - e) on the Bellman death value F and on the tau_eq
+    # death-realize term. e_B rides Pass 1 / prims_B, e_S Pass 2 / prims_S.
+    baseline_estate    = inputs$baseline_estate,
+    reform_estate      = inputs$reform_estate
   )
 
   invisible(NULL)

@@ -1,0 +1,263 @@
+<title>Estate margins build — review</title>
+<style>
+  :root {
+    --paper: #F7F8FB; --ink: #1B2130; --muted: #5A6478;
+    --accent: #3F5CA8; --accent-soft: #E7ECF8;
+    --border: #DEE3EE; --card: #FFFFFF; --code-bg: #EEF1F8;
+    --pass: #1F7A4D; --pass-soft: #E2F2E9;
+    --warn: #9A6B1F; --warn-soft: #F7EEDC;
+    --fail: #B03A3F; --fail-soft: #F8E4E5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #14181F; --ink: #E3E8F2; --muted: #98A2B8;
+      --accent: #8CA3E8; --accent-soft: #232B40;
+      --border: #2A3140; --card: #1A1F29; --code-bg: #222836;
+      --pass: #4CC38A; --pass-soft: #1B2E25;
+      --warn: #D9A24A; --warn-soft: #322813;
+      --fail: #E07A7E; --fail-soft: #371F21;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #14181F; --ink: #E3E8F2; --muted: #98A2B8;
+    --accent: #8CA3E8; --accent-soft: #232B40;
+    --border: #2A3140; --card: #1A1F29; --code-bg: #222836;
+    --pass: #4CC38A; --pass-soft: #1B2E25;
+    --warn: #D9A24A; --warn-soft: #322813;
+    --fail: #E07A7E; --fail-soft: #371F21;
+  }
+  :root[data-theme="light"] {
+    --paper: #F7F8FB; --ink: #1B2130; --muted: #5A6478;
+    --accent: #3F5CA8; --accent-soft: #E7ECF8;
+    --border: #DEE3EE; --card: #FFFFFF; --code-bg: #EEF1F8;
+    --pass: #1F7A4D; --pass-soft: #E2F2E9;
+    --warn: #9A6B1F; --warn-soft: #F7EEDC;
+    --fail: #B03A3F; --fail-soft: #F8E4E5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 16px/1.62 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 60rem; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+  header.masthead { border-bottom: 2px solid var(--ink); padding-bottom: 1.2rem; margin-bottom: 2.2rem; }
+  .eyebrow {
+    font-size: .74rem; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin-bottom: .5rem;
+  }
+  h1 {
+    font-family: Charter, Georgia, "Times New Roman", serif;
+    font-size: 2.1rem; line-height: 1.15; margin: 0 0 .8rem; text-wrap: balance;
+  }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .meta code { font-size: .85rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+  .chip {
+    font-size: .78rem; font-weight: 600; padding: .22rem .65rem;
+    border-radius: 999px; border: 1px solid transparent; white-space: nowrap;
+  }
+  .chip.pass { color: var(--pass); background: var(--pass-soft); }
+  .chip.warn { color: var(--warn); background: var(--warn-soft); }
+  h2 {
+    font-family: Charter, Georgia, serif; font-size: 1.35rem;
+    margin: 2.6rem 0 .8rem; padding-top: 1.4rem; border-top: 1px solid var(--border);
+    text-wrap: balance;
+  }
+  h2 .secno { color: var(--muted); font-weight: 400; margin-right: .5rem; }
+  h3 { font-size: 1rem; margin: 1.5rem 0 .4rem; }
+  p, li { max-width: 46rem; }
+  code, .mono {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: .86em; background: var(--code-bg); border-radius: 4px;
+    padding: .08em .35em;
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: .9rem 1.1rem; overflow-x: auto; font-size: .84rem; line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; }
+  .tblwrap { overflow-x: auto; margin: 1rem 0; }
+  table {
+    border-collapse: collapse; width: 100%; font-size: .88rem;
+    font-variant-numeric: tabular-nums;
+  }
+  th {
+    text-align: left; font-size: .74rem; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); border-bottom: 2px solid var(--border); padding: .45rem .7rem .45rem 0;
+  }
+  td { border-bottom: 1px solid var(--border); padding: .5rem .7rem .5rem 0; vertical-align: top; }
+  td.num, th.num { text-align: right; padding-right: 1rem; }
+  .ok { color: var(--pass); font-weight: 700; }
+  .flag { color: var(--warn); font-weight: 700; }
+  .pending { color: var(--muted); font-style: italic; }
+  .callout {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    border-radius: 0 8px 8px 0; padding: .85rem 1.1rem; margin: 1.2rem 0; max-width: 46rem;
+  }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .callout p { margin: .3rem 0; }
+  .filelist td:first-child { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .82rem; white-space: nowrap; }
+  .small { font-size: .85rem; color: var(--muted); }
+  a { color: var(--accent); }
+  ul { padding-left: 1.2rem; }
+  li { margin-bottom: .35rem; }
+</style>
+
+<div class="wrap">
+<header class="masthead">
+  <div class="eyebrow">Tax-Simulator · branch <span class="mono">wealth</span> · Tier 1.2 of the top-tax margins gap</div>
+  <h1>Estate margins build: CG-at-death estate offset&nbsp;+ reported-estate own-rate response</h1>
+  <div class="meta">Implements plan <code>effervescent-plotting-wadler.md</code> (rev 3) with the six drift corrections from the pre-build audit · 2026-07-12 · uncommitted, awaiting your review</div>
+  <div class="chips">
+    <span class="chip pass">Code complete</span>
+    <span class="chip pass">Unit tests 62/62</span>
+    <span class="chip pass">A/B checks 23/23</span>
+    <span class="chip pass">Pure-channel A/B 8/8</span>
+    <span class="chip pass">σ = 0.16 shipped + confirmed (ETI 0.2508)</span>
+    <span class="chip warn">η: +3.7% drift measured → re-pin to ≈2.49 recommended</span>
+  </div>
+</header>
+
+<p><strong>TL;DR.</strong> Both margins are built, unit-tested, and verified end-to-end on full-sample SLURM runs. The estate tax now (a) discounts the kg death value — an estate-taxable cell prices dying with the gain at <span class="mono">τ·(1−e)</span>, so estate-only reforms move realization behavior for the first time — and (b) responds to its own rate, via the exact Kopczuk–Slemrod net-of-tax power form on the reported base. The crown finding from the verification runs: under a pure 2009-parameters estate reform, <strong>realizations rise in all 63 age cells</strong> (previously exactly zero response), and current-law estate exposure of the top gain decile is <strong>~18% of the marginal death-tax value</strong> — lock-in at the top was being overstated by that much. Your 2026-07-12 rulings are executed: <strong>σ = 0.16 is shipped and confirmed</strong> (ETI 0.2508 on the 0.25 target; §7), the <strong>η check ran</strong> and found a +3.7% drift — re-pin to ≈2.4901 recommended but left for the full revalidation loop (§6, F2) — and the <strong>F1 convention is accepted</strong> as disclosed (§6).</p>
+
+<h2><span class="secno">1</span>What was built</h2>
+
+<h3>Shared primitive — <code>mtr_estate</code> via a base-side bump</h3>
+<p><code>calc_estate()</code> gains an optional input <code>estate_base_bump</code> (default 0) inside the <code>estate_base</code> pmax, and <code>calc_mtrs()</code> learns <code>var = 'estate'</code>: it remaps the perturbation to that input, reprices the estate branch (<code>calc_estate_flag</code>), and differences the DSUE-blended expected liability against same-frame actuals. Two guards ride the call: a length assert on the actuals and a bumped-vs-actual <code>estate_p_dsue</code> identity, which doubles as the row-order guard (a shuffled frame fails loudly instead of producing garbage). One perturbation yields two columns in every static/conventional detail file:</p>
+<ul>
+  <li><code>mtr_estate</code> — the raw, un-switched marginal estate rate. Positive by construction, conditional-on-death (no mortality), 0 below the exemption. Consumed by part (b).</li>
+  <li><code>mtr_estate_ded</code> = <code>estate.income_tax_ded × mtr_estate</code> — the switch-gated rate. Consumed by part (a), so the deductibility interaction vanishes when a reform turns the §2053-style deduction off while the raw rate is untouched.</li>
+</ul>
+<p>Scenario legs of kg runs get a <code>run.R</code> guarantee fallback (the wealth-carry <code>mtr_net_worth</code> pattern, no law gate since estate law is always active); baseline legs must register <code>estate</code> in <code>mtr_vars</code> — all 59 kg/wealth runscripts were swept and patched, baseline rows included.</p>
+
+<h3>Part (a) — leg-paired estate exposure in the kg Bellman and τ<sub>eq</sub></h3>
+<p>A new gain-weighted cell aggregator (<code>kg_dyn_aggregate_cell_estate</code>, clamped to [0,1]) turns record-level <code>mtr_estate_ded</code> into per-(age, year) exposure matrices — <strong>one per leg</strong>: <code>e_B</code> from baseline static detail, <code>e_S</code> from reform static detail. They enter at exactly two points:</p>
+<ul>
+  <li><strong>Bellman death value:</strong> <code>F = (1 − c_φ,eff) · τ · (1 − e)</code>. Pass 1 gets <code>e_B</code>, Pass 2 gets <code>e_S</code>. Inert under deemed (F is already 0), hardest-biting under step-up, scales carryover.</li>
+  <li><strong>τ<sub>eq</sub> death-realize term</strong> in the shared flow helper <code>kg_dyn_tau_eq_flow</code>: <code>m·(1−p_char)·realize·τ·(1−e)</code>. The route (carryover-deferral) term, the during-life <code>r_S·τ</code> term, and the wealth-carry <code>h</code> term stay undiscounted — rationale comments in place, and the no-double-count claim is <em>demonstrated</em> by the one-record accounting test, not asserted.</li>
+</ul>
+<p>State files carry <code>estate_e_B</code>/<code>estate_e_S</code> diagnostic columns, and each kg scenario-year writes a <code>kg_estate_exposure_diag_{t}.csv</code> comparing the cell aggregate against the record-level gain-weighted distribution (zero-exposure share, near-top-rate share, gain-decile profile, the 80+ donor-clone cell).</p>
+
+<h3>Part (b) — reported-estate own-rate response</h3>
+<p>In <code>wealth/avoidance.R</code>, the exact KS net-of-tax power form on the <em>change</em> in the un-switched estate price:</p>
+<pre><code>retained = ((1 − τ_S) / (1 − τ_B)) ^ ESTATE_REPORT_EPS      # 0.16, band 0.10–0.22, env-overridable
+estate_concealed_frac = 1 − (1 − union) · retained          # union = wealth concealment ∪ income evasion</code></pre>
+<p>It stacks as the <strong>third driver</strong> of the one hidden ledger (the plan's "two drivers" predated the evasion cross-base commit), full strength (no CHI — own-base), keys strictly off the τ change (level avoidance is already in the frozen valuation bridge), and honors the firewall: <code>estate_base</code> only; <code>estate_distributable</code> and <code>value.*</code> byte-invariant. Rate cuts are symmetric (retained &gt; 1 surfaces previously unreported estate). A full <code>ESTATE_AVOID_PROVENANCE</code> header block documents sources, caveats, and the denominator convention.</p>
+
+<h2><span class="secno">2</span>Where the implementation deviates from plan rev 3 (audit-driven)</h2>
+<div class="tblwrap"><table>
+  <tr><th style="width:16rem">Plan said</th><th>What was done, and why</th></tr>
+  <tr><td>Multiply the death-realize term "in c_mat at :1410" of <code>kg_dyn_compute_tau_eq</code></td>
+      <td>The wealth-carry build factored that flow into <code>kg_dyn_tau_eq_flow</code>, shared with the finite-difference verifier. The (1−e) went there instead — one injection, and the FD verifier stays in lockstep by construction (test E5a proves it under all three regimes).</td></tr>
+  <tr><td>New threading patterns for the e matrices</td>
+      <td>Mirrored the shipped <code>h</code> threading (aggregator → pack → solve_bellman arg → prims field) — but <strong>two-legged</strong>: h is scenario-side-only by law, e is leg-paired with a nonzero baseline. <code>prims_B</code> receives <code>e_B</code> (inert today under the step-up baseline convention; threaded so the leg-pairing rule stays uniform, with a comment for the day baselines carry other regimes).</td></tr>
+  <tr><td>Register <code>estate</code> in every runscript's <code>mtr_vars</code></td>
+      <td>Done for all 59 files <em>and</em> a <code>run.R</code> guarantee fallback added for kg scenario legs (the carry build's <code>mtr_net_worth</code> pattern), so future runscripts can't silently break the scenario side. Baseline legs still require registration — the baseline pass can't know a kg scenario will consume its detail — and <code>read_mtr</code>'s hard-stop message says exactly that.</td></tr>
+  <tr><td>Stack (b) on "two drivers"</td>
+      <td>Three drivers now: the evasion cross-base commit (<code>88bbdd5f</code>) made <code>estate_concealed_frac</code> a wealth-concealment ∪ income-evasion union. f_estate multiplies the <em>combined</em> retained share; conservation asserts and the new horizon-robust relative tolerances preserved.</td></tr>
+  <tr><td>Deemed-regime effect runs "through τ_eq→σ only"</td>
+      <td>τ_eq gained a second consumer the plan didn't know about: <code>entity_shifting/pearce_prisinzano</code> now prices retained C-corp earnings off τ_eq (commit <code>4e95d090</code>). Injection B therefore also moves entity-shifting behavior wherever that module is stacked — including both legs of the σ-recal runscript. Expected to difference out there (e_S ≈ e_B on that leg); the σ run below documents it.</td></tr>
+  <tr><td>Verification 4(i): a <code>income_tax_ded = 0</code> reform "reproduces pre-change kg output"</td>
+      <td>Not literally true under leg-pairing: Pass 1 carries <code>e_B &gt; 0</code> under current law regardless of the reform's switch. What is true and was verified: <code>mtr_estate_ded ≡ 0</code> on that reform leg while the raw <code>mtr_estate</code> is bit-identical to baseline (V2), i.e. the two-column split does exactly its job.</td></tr>
+</table></div>
+
+<h2><span class="secno">3</span>Unit tests — all green</h2>
+<p>Job 17957079 (<code>other/kg_model_tests/estate_offset_tests_17957079.out</code>): parse checks on all five touched sources, 13 new estate-offset tests, the extended hidden-ledger suite (46 checks, 11 of them new), and every pre-existing kg suite rerun clean (wealth-carry T1–T3, planned timing, terminal charity, provenance guard, naive limit).</p>
+<div class="tblwrap"><table>
+  <tr><th>Test</th><th>What it pins down</th></tr>
+  <tr><td class="mono">E1</td><td>1×1 hand-check: estate-only reform ⇒ MC wedge = −β·m·τ·e<sub>S</sub> exactly (≤1e-15); realizations rise</td></tr>
+  <tr><td class="mono">E2</td><td>Leg-pairing: matched legs ⇒ r_D == r_B <em>exactly</em>; e_S &gt; e_B with τ fixed ⇒ response (the single-matrix failure mode is dead)</td></tr>
+  <tr><td class="mono">E3</td><td>Deemed regime: direct Bellman channel bitwise-inert in e (F = 0) — effect runs through τ_eq only</td></tr>
+  <tr><td class="mono">E4</td><td>e = 0 is a bitwise no-op (omitted / scalar / matrix) — pre-build outputs reproduced exactly</td></tr>
+  <tr><td class="mono">E5a–e</td><td>τ_eq: recursion == FD verifier with e &gt; 0 (three regimes); route term inert; deemed τ_eq strictly decreasing in e; 1×1 closed form; e = 0 flow bitwise pre-build</td></tr>
+  <tr><td class="mono">E6</td><td>Aggregator: gain weights, NA coalesce, zero cells, the [0,1] clamp</td></tr>
+  <tr><td class="mono">E7</td><td>calc_estate kinks (0 below / 0.40 at-and-above the exemption / 0 at the pmax floor, never negative) and the one-record §2053 accounting identity: estate −e·D, heirs −(1−e)·D — the same (1−e) the Bellman prices</td></tr>
+  <tr><td class="mono">HL §11</td><td>Part (b): three new guard stops; power form exact at rate hike / repeal / newly-taxable; multiplicative stacking on the union; firewall; ratio-1 no-op</td></tr>
+</table></div>
+
+<h2><span class="secno">4</span>Full-sample A/B verification — 23/23 checks pass</h2>
+<p>Vintage <code>estate_offset_ab_v1</code> (4 years 2026–2029, full sample, five scenarios; checker job 17957553). Highlights, all from real 2027 output:</p>
+<div class="tblwrap"><table>
+  <tr><th>Check</th><th>Result</th></tr>
+  <tr><td>Baseline <code>mtr_estate</code> shape</td><td><span class="ok">PASS</span> — range [0, 0.40]; exactly 0 for all 114,031 records under $1M net worth; ≥0.35 for <strong>100%</strong> of gain-weighted &gt;$100M records (n = 9,769)</td></tr>
+  <tr><td>Two-column split (<code>dr_prim_noded</code>, ded switch off)</td><td><span class="ok">PASS</span> — <code>mtr_estate_ded ≡ 0</code> while raw <code>mtr_estate</code> is bit-identical to baseline (max diff 0.0e+00)</td></tr>
+  <tr><td>Leg-pairing backstop (2009-estate reform through kg)</td><td><span class="ok">PASS</span> — gain-weighted e: 0.137 → 0.247; τ legs identical to 4e-11; <strong>realizations rose in 63/63 cells</strong></td></tr>
+  <tr><td>CG-only reform leaves the estate price alone</td><td><span class="ok">PASS</span> — e_S == e_B bitwise; current-law exposure up to 0.199 at 70+ cells</td></tr>
+  <tr><td>Part (b) record discipline</td><td><span class="ok">PASS</span> — 58,045 responding records; zero response on all 163,786 unchanged-price records; <code>estate_distributable</code> invariant to 0.0e+00</td></tr>
+  <tr><td>Estate revenue ordering under the reform</td><td><span class="ok">PASS</span> — baseline $37.9B &lt; conventional $62.2B &lt; static $75.1B (2027)</td></tr>
+</table></div>
+
+<h3>Current-law estate exposure of the gain stock (the number the model was missing)</h3>
+<p>From the new exposure diagnostic (<code>kg_estate_exposure_diag_2027.csv</code>, baseline leg): 66% of gain dollars have zero estate exposure, but exposure is entirely a top-decile phenomenon —</p>
+<div class="tblwrap"><table>
+  <tr><th>Gain decile (weighted)</th><th class="num">Gain stock</th><th class="num">Gain-weighted e (baseline)</th><th class="num">e under 2009-estate reform</th></tr>
+  <tr><td>1–8</td><td class="num">$10.2T</td><td class="num">≈ 0.000</td><td class="num">≤ 0.004</td></tr>
+  <tr><td>9</td><td class="num">$6.5T</td><td class="num">0.002</td><td class="num">0.011</td></tr>
+  <tr><td>10 (top)</td><td class="num">$53.4T</td><td class="num"><strong>0.179</strong></td><td class="num"><strong>0.323</strong></td></tr>
+  <tr><td>All (share of gain $ at e ≥ 0.35)</td><td class="num">$70.2T</td><td class="num">0.137 (34%)</td><td class="num">0.247 (55%)</td></tr>
+</table></div>
+<p class="small">Read: for the top gain decile, ~18¢ of every marginal dollar of death-forgiven CG tax was being handed back through the estate tax under current law — lock-in the Bellman previously priced at full τ. The 80+ cell (donor clones) sits at e = 0.161 baseline / 0.253 reform, in line with its neighbors.</p>
+
+<h2><span class="secno">5</span>Pure-channel A/B (attribution cleanup)</h2>
+<p>Mid-verification I found that <code>tests/warren_estate2009</code> — the plan-era "estate-only" fixture — <strong>also carries a wealth tax</strong> (<code>wealth.yaml</code> in the same folder). The first A/B's checks all pass, but its est2009 legs conflate the estate offset with the wealth-carry h channel (kg leg) and wealth concealment (avoidance leg). I built <code>tests/estate2009_only</code> (the same estate parameters, no wealth tax) and re-ran both legs against the same baseline — vintage <code>estate_offset_ab2_v1</code>, checker job 17958453.</p>
+<p>All 8 pure-channel checks pass (<code>other/kg_model_tests/check_estate_offset_ab2_17958453.out</code>):</p>
+<div class="tblwrap"><table>
+  <tr><th>Check</th><th>Result</th></tr>
+  <tr><td>Wealth channels silent</td><td><span class="ok">PASS</span> — <code>carry_h ≡ 0</code> in kg state; <code>mtr_net_worth ≡ 0</code> on the avoidance leg (wealth concealment off)</td></tr>
+  <tr><td>Part (a), single channel</td><td><span class="ok">PASS</span> — e: 0.137 → 0.247, τ legs identical; realizations rise in 63/63 cells; <strong>gain-weighted realization-rate response +1.9%</strong> — the estate offset alone moves realization behavior, previously an exact zero</td></tr>
+  <tr><td>Part (b), single channel</td><td><span class="ok">PASS</span> — response fires iff the estate price rose (58,045 records); power form exact at the record level (top responder: τ 0 → 0.45, f = 0.0912)</td></tr>
+  <tr><td>Pure KS revenue giveback</td><td><span class="ok">PASS</span> — baseline $37.9B &lt; conventional $70.3B &lt; static $75.1B (2027): the own-rate response gives back <strong>12.9%</strong> of the static estate delta</td></tr>
+</table></div>
+<p class="small">Read against §4: the first A/B's 35% conventional−static wedge was mostly the bundled wealth tax's concealment riding the union; the KS margin itself is a moderate 12.9% — squarely in the range the 0.16 elasticity implies.</p>
+<p><strong>Guarantee-path equivalence (third pipeline).</strong> Because the runscript sweep registered <code>estate</code> everywhere, the <code>run.R</code> fallback was never exercised by the runs above. A dedicated scenario with no <code>estate</code> registration (vintage <code>estate_offset_ab3_v1</code>, checker 17959864) confirms the fallback produces <code>mtr_estate</code>/<code>mtr_estate_ded</code>, bathtub <code>e_S</code>, and <code>r_D_S</code> <strong>bit-identical (0.0e+00)</strong> to the registered path — future runscripts that forget the column cannot silently diverge.</p>
+
+<h2><span class="secno">6</span>Flags for your review</h2>
+<div class="callout warn">
+  <p><strong>F1 — KS-on-gross denominator convention near the exemption kink (magnitude now measured: moderate).</strong> The plan applies <code>estate_concealed_frac</code> to <code>reported_gross</code>, while the KS elasticity is of the reported <em>taxable</em> estate — an overstatement that is worst for newly taxable records just over a lowered exemption, where a 9%-of-gross haircut can wipe out much of a thin taxable band. The pure-channel run puts the aggregate at <strong>12.9% of the static estate delta given back</strong> under a 2009-parameters reform — defensible for ε = 0.16, so I recommend keeping the plan's convention and disclosing it with the ε band. If you ever want it tighter, the fix is one line: apply the response to <code>estate_base</code> (pre gift add-back) instead of gross, at the cost of breaking symmetry with the wealth-concealment convention.</p>
+  <p><strong>F2 — η anchor re-check: RUN (author-directed), drift confirmed, re-pin recommended.</strong> (1−e_B) discounts the death value under <em>current law</em>, so the calibrated long-run realization elasticity drifts. Measured on a fresh 32-year post-build baseline (<code>eta_estate_check_v1</code>; harness <code>other/kg_model_tests/eta_estate_check.R</code>, job 18004072): the calibrator's long-run moment at η = 2.3992 is <strong>−2.24 without the estate term vs −2.15 with it — a 3.7% weakening</strong>; the η that restores the target with the estate term live is <strong>2.4901 (+3.8%)</strong>. Grid-wide gain-weighted current-law exposure is 0.075 (max cell 0.177). Recommendation: re-pin <code>KG_DYN_DEFAULT_ETA</code> to ≈2.49 — <em>not done here</em>, because the constant change formally requires the spec-v3 full-sim revalidation loop (dilution re-measurement + regression) and flags pre-change kg vintages as non-comparable. The internal-moment measurement is the whole input that loop needs.</p>
+  <p><strong>F3 — every pre-build baseline vintage is dead for kg and wealth-behavior scenarios.</strong> <code>read_mtr</code> hard-stops on baseline detail lacking <code>mtr_estate_ded</code>, and the avoidance guard stops on missing <code>mtr_estate</code>. Old <code>baseline_vintage</code> pointers for these scenario classes will fail loudly with a "re-run the baseline static pass" message. Intentional, per plan.</p>
+</div>
+
+<h2><span class="secno">7</span>Calibration runs (verification #8–9)</h2>
+<p><strong>σ moved — but not because of this build.</strong> The full protocol re-run (vintage <code>sigma_recal_estate</code>, both legs 2025:2035 full sample, estate MTRs registered, part (a) live) measured:</p>
+<div class="tblwrap"><table>
+  <tr><th>Leg</th><th class="num">Mean top-subset ETI 2026–35</th><th class="num">Last derivation (2026-07-08)</th></tr>
+  <tr><td>Full stack at σ = 0.60</td><td class="num">0.4041</td><td class="num">0.4312</td></tr>
+  <tr><td>Stack without σ</td><td class="num">0.1955</td><td class="num">0.2229</td></tr>
+  <tr><td><strong>Solved σ*</strong> = 0.6·(0.25 − ETI<sub>ns</sub>)/(ETI<sub>s</sub> − ETI<sub>ns</sub>)</td><td class="num"><strong>0.157</strong></td><td class="num">0.078 → 0.08</td></tr>
+</table></div>
+<p><strong>Attribution:</strong> the estate offset is inert on this leg by construction — <code>topord_plus5</code> is a step-up regime, so the τ<sub>eq</sub> death-realize term has <code>realize = 0</code> and (1−e) multiplies nothing, and the ETI base excludes capital gains. What actually changed since the 2026-07-08 derivation are <strong>two commits that are explicitly on σ's staleness list</strong> and had not yet triggered a re-run: the entity-shifting τ<sub>eq</sub> repricing (<code>4e95d090</code>, 2026-07-11) and the evasion cross-base guards fix (<code>88bbdd5f</code>, touched <code>debacker.R</code>). Both legs' non-σ contribution fell (0.223 → 0.196), so the residual conversion margin roughly doubles. This build's run is simply the first to re-measure since those landed.</p>
+<div class="callout">
+  <p><strong>Ruled 2026-07-12 (author): update sanctioned — DONE.</strong> <code>SIGMA_CONV = 0.16</code> is in <code>sigma_conversion.R</code> with <code>SIGMA_CONV_VERSION</code> bumped and the provenance block rewritten (staleness triggers credited, both ETI legs and both confirmations recorded). Protocol evidence: solved σ* = 0.157; confirmed at 0.1568 → ETI 0.2497 and at the shipped 0.16 → <strong>ETI 0.2508</strong>, both on the 0.25 target.</p>
+</div>
+<div class="tblwrap"><table>
+  <tr><th>Run</th><th>Vintage / jobs</th><th>Status</th></tr>
+  <tr><td>σ re-derivation (two ETI legs)</td><td><code>sigma_recal_estate</code> · pipeline 17957802–10, ETI 17957833</td><td class="flag">DONE — σ* = 0.157, decision above</td></tr>
+  <tr><td>σ confirmation at 0.157</td><td><code>sigma_confirm_estate</code> · ETI 17959159</td><td class="ok">DONE — ETI 0.2497 ≈ 0.25 target</td></tr>
+  <tr><td>σ confirmation at the SHIPPED 0.16 (post-sanction)</td><td><code>sigma_confirm_016</code> · ETI 18004015</td><td class="ok">DONE — ETI 0.2508; <code>SIGMA_CONV = 0.16</code> is now in the code with rewritten provenance</td></tr>
+  <tr><td>η anchor re-check (32-yr baseline + internal-moment harness)</td><td><code>eta_estate_check_v1</code> · baseline 18004016, check 18004072</td><td class="flag">DONE — drift +3.7%; re-pin to η ≈ 2.4901 recommended (F2)</td></tr>
+</table></div>
+
+<h2><span class="secno">8</span>Files changed</h2>
+<div class="tblwrap"><table class="filelist">
+  <tr><th>File</th><th class="num">Δ</th><th>Change</th></tr>
+  <tr><td>src/calc/functions/tax/estate.R</td><td class="num">+41/−2</td><td><code>estate_base_bump</code> optional input inside the base pmax; conditional-on-death + legal-scope docs</td></tr>
+  <tr><td>src/calc/do_taxes.R</td><td class="num">+94/−11</td><td><code>calc_mtrs</code>: estate var remap, <code>calc_estate_flag</code>, DSUE-blended delta, actuals + p_dsue frame guards</td></tr>
+  <tr><td>src/sim/run.R</td><td class="num">+80/−1</td><td>estate actuals threading (static + conv loops), <code>mtr_estate_ded</code> derivation, kg guarantee fallback</td></tr>
+  <tr><td>src/sim/kg_dynamics.R</td><td class="num">+321/−20</td><td>e aggregator + diag writer; leg-paired read/pack/threading; (1−e) in the Bellman sweep and τ_eq flow; state columns</td></tr>
+  <tr><td>config/scenarios/behavior/wealth/avoidance.R</td><td class="num">+151/−11</td><td>Part (b): estate-leg guards/joins, KS power form, three-driver stacking, provenance block, diagnostics</td></tr>
+  <tr><td>other/top_tax/tests/test_hidden_ledger_guards.R</td><td class="num">+81/−8</td><td>Fixtures for the new guards + §11 estate own-rate tests</td></tr>
+  <tr><td>config/runscripts/** (59 files)</td><td class="num">~550</td><td><code>estate</code>/<code>nextdollar</code> registered on kg/wealth rows incl. baselines (scripted sweep, verified 0 unpatched)</td></tr>
+  <tr><td colspan="3" class="small">New: <code>other/kg_model_tests/test_estate_offset.R</code> + <code>estate_offset_tests.sbatch</code>, <code>check_estate_offset_ab{,2}.R/.sbatch</code>, <code>check_estate_guarantee.R/.sbatch</code>, <code>sigma_recal_estate_eti.sbatch</code> + <code>sigma_confirm_estate_eti.sbatch</code>, <code>config/runscripts/tests/estate_offset_ab{,2,3}.csv</code>, <code>config/scenarios/tax_law/tests/estate2009_only/</code>. No SLURM pipeline edits needed (everything lives inside <code>run_one_year</code>/<code>run_bathtub_pass</code>/behavior — the safe category per CLAUDE.md).</td></tr>
+</table></div>
+
+<h2><span class="secno">9</span>If you approve</h2>
+<p>Nothing is committed. Suggested single commit on <code>wealth</code> (runscript sweep included — it is load-bearing, not cosmetic):</p>
+<pre><code>kg + estate: price the estate tax into the CG death value (leg-paired 1-e)
+and give the reported estate a KS own-rate response
+
+[body: parts (a)/(b), mtr_estate primitive, blast radius, test summary]</code></pre>
+<p class="small">Post-commit follow-ups, in order: (1) η re-pin to ≈2.4901 via the spec-v3 full-sim revalidation loop (F2 — the internal-moment measurement in <code>other/kg_model_tests/eta_estate_check_18004072.out</code> is its input; re-pinning flags pre-change kg vintages non-comparable); (2) re-run any standing baselines once so downstream kg runs stop hard-stopping (F3); (3) the featured wealth-card panel re-run (plan verification #7) now that its estate backdrop is behavioral — natural to fold into the next atlas refresh. σ (ruled, shipped, confirmed) and F1 (ruled: keep + disclose) are closed.</p>
+
+<p class="small" style="margin-top:2.5rem">Deliverables: this report · unit tests <code>other/kg_model_tests/estate_offset_tests_17957079.out</code> · A/B checker <code>other/kg_model_tests/check_estate_offset_ab_17957553.out</code> · exposure diagnostics under <code>…/estate_offset_ab_v1/*/conventional/supplemental/</code>.</p>
+</div>

@@ -1,4 +1,4 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Tax-Data.vintage,dep.Tax-Data.ID
-baseline,baseline,,2026:2036,,kg_lt,nextdollar,2026060918,baseline
-dr_prim,private/niskanen_housing/dr_prim,kg_dynamics/turnover,2026:2036,,kg_lt,nextdollar,2026060918,baseline
-dr_prim_noded,tests/dr_prim_noded,kg_dynamics/turnover,2026:2036,,kg_lt,nextdollar,2026060918,baseline
+baseline,baseline,,2026:2036,,kg_lt estate,nextdollar nextdollar,2026060918,baseline
+dr_prim,private/niskanen_housing/dr_prim,kg_dynamics/turnover,2026:2036,,kg_lt estate,nextdollar nextdollar,2026060918,baseline
+dr_prim_noded,tests/dr_prim_noded,kg_dynamics/turnover,2026:2036,,kg_lt estate,nextdollar nextdollar,2026060918,baseline

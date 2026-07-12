@@ -856,7 +856,7 @@ kg_dyn_pack_baseline_grid = function(grid_ext, years,
 kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
                                      c_phi_col, p_char_col, eta, beta,
                                      kappa_col = NULL, stationary = FALSE,
-                                     h_col = NULL) {
+                                     h_col = NULL, e_col = NULL) {
 
   # One age-backward sweep through [a_min, a_max] for a single year column.
   #
@@ -876,6 +876,24 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
   # only continued deferral into next year is charged. Top-age SURVIVORS
   # still pay h (the -h term persists at W_next = 0). NULL = zeros
   # (baseline pass, and every scenario without an active wealth tax).
+  #
+  # e_col is the per-cell ESTATE EXPOSURE of the death value: the
+  # gain-weighted mean of the RECORD-LEVEL switch-gated marginal estate
+  # rate mtr_estate_ded (kg_dyn_aggregate_cell_estate), clamped to [0, 1].
+  # It discounts the death-CG value: F = (1 - c_phi_eff) * tau * (1 - e).
+  # Economics: for an estate-taxable cell, CG tax paid (or forgiven) at
+  # death interacts with the estate base through the Sec. 2053-style
+  # deduction -- realizing during life shrinks the future estate while
+  # dying with the gain forgoes (under deemed) or captures (under step-up)
+  # that offset, so the net death-forgiveness value is tau * (1 - e).
+  # Inert under deemed (c_phi_eff = 1 => F = 0 regardless); bites hardest
+  # under step-up; scales carryover. Below-exemption cells have e = 0
+  # (exact no-op). UNLIKE h_col, e is LEG-PAIRED: Pass 1 receives the
+  # baseline-law exposure e_B (current law HAS an estate tax, so e_B > 0
+  # for top cells) and Pass 2 the reform-law e_S -- a single shared matrix
+  # would zero out estate-only reforms (e_S > e_B with tau unchanged =>
+  # MC_S = MC_B => no response), the exact margin this term exists to
+  # price. NULL = zeros (isolated solver unit tests only).
   #
   # Realization cost is the ENTROPY / KL form C(r_D) = (1/eta) *
   # [r_D*ln(r_D/r_D_B) - r_D + r_D_B], anchored at the cell's baseline rate
@@ -904,7 +922,10 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
   # the would-be-taxed share). Bathtub split in kg_dyn_step_recurrence uses
   # the same assumption.
   c_phi_eff    = c_phi_col * (1 - pmin(pmax(p_char_col, 0), 1))
-  F_vec        = (1 - c_phi_eff) * tau_col
+  if (is.null(e_col)) e_col = numeric(n_ages)
+  # Estate offset on the death value (leg-paired e; see docstring). The
+  # aggregator clamps e to [0, 1], so (1 - e_col) can never flip F's sign.
+  F_vec        = (1 - c_phi_eff) * tau_col * (1 - e_col)
   # Single pool: the WHOLE baseline rate is discretionary (no r_exog carve-out),
   # so the realization cap is 1 and the entropy cost's reference point is r_B.
   r_D_cap_vec  = rep(1, length(r_B_col))
@@ -969,7 +990,8 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
                                 eta           = KG_DYN_DEFAULT_ETA,
                                 beta_by_year  = NULL,
                                 c_phi         = NULL,
-                                h_mat         = NULL) {
+                                h_mat         = NULL,
+                                e_mat         = NULL) {
 
   #----------------------------------------------------------------------------
   # Backward induction over (age, year) cells.
@@ -996,6 +1018,14 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
   # product tau_w * tau_cg, arriving PRE-MULTIPLIED from
   # kg_dyn_aggregate_cell_carry. NULL (all existing callers) and scalar 0
   # broadcast to zeros — bit-identical to the pre-carry code path.
+  #
+  # e_mat is the [n_ages, n_years] estate-exposure matrix (see
+  # kg_dyn_bellman_sweep_age): per-cell gain-weighted mean of the record
+  # switch-gated marginal estate rate mtr_estate_ded, clamped to [0, 1]
+  # (kg_dyn_aggregate_cell_estate). LEG-PAIRED, unlike h: Pass 1 must get
+  # the baseline-law matrix e_B and Pass 2 the reform-law e_S. NULL and
+  # scalar 0 broadcast to zeros — bit-identical to the pre-estate-offset
+  # code path.
   #
   # Returns: list(W, MC, kappa, r_D), each [age, year].
   #----------------------------------------------------------------------------
@@ -1032,6 +1062,13 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
   }
   stopifnot(identical(dim(h_mat), c(n_ages, n_years)))
 
+  if (is.null(e_mat)) e_mat = 0
+  if (length(e_mat) == 1) {
+    e_mat = matrix(e_mat, n_ages, n_years,
+                   dimnames = list(ages_chr, years_chr))
+  }
+  stopifnot(identical(dim(e_mat), c(n_ages, n_years)))
+
   W     = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   MC    = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
   kappa = matrix(0, n_ages, n_years, dimnames = list(ages_chr, years_chr))
@@ -1049,7 +1086,8 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
       beta          = beta_by_year[j],
       kappa_col     = if (is.null(kappa_mat)) NULL else kappa_mat[, j],
       stationary    = stationary,
-      h_col         = h_mat[, j]
+      h_col         = h_mat[, j],
+      e_col         = e_mat[, j]
     )
   }
 
@@ -1374,7 +1412,7 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
 kg_dyn_tau_eq_primitives = function(baseline_cells, years, r_S_by_year,
                                     tau_bt_mat, mix_list, A, omega,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX,
-                                    h_bt_mat = NULL) {
+                                    h_bt_mat = NULL, e_bt_mat = NULL) {
 
   # Assembles the [age, year] primitive matrices on the bathtub grid that
   # both the tau_eq recursion and the finite-difference harness consume, so
@@ -1398,9 +1436,17 @@ kg_dyn_tau_eq_primitives = function(baseline_cells, years, r_S_by_year,
   #                             (baseline side — h_B == 0 by law, asserted
   #                             in kg_dyn_load_bathtub_inputs; and every
   #                             non-wealth scenario)
+  #   - e_bt_mat (mat|NULL)   : [age, year] estate exposure of the death
+  #                             value (bathtub slice of the packed e matrix;
+  #                             gain-weighted cell mtr_estate_ded, clamped
+  #                             to [0, 1]). LEG-PAIRED, unlike h: prims_B
+  #                             must receive the baseline-law e_B (current
+  #                             law HAS an estate tax) and prims_S the
+  #                             reform-law e_S. NULL = zeros (isolated unit
+  #                             tests only)
   #
   # Returns: list of [n_ages, n_years] matrices (m_eff, p_char, r_S, tau,
-  #          route, realize, h) plus A, omega, ages, years.
+  #          route, realize, h, e) plus A, omega, ages, years.
 
   ages_chr  = as.character(ages_bathtub)
   years_chr = as.character(years)
@@ -1433,8 +1479,13 @@ kg_dyn_tau_eq_primitives = function(baseline_cells, years, r_S_by_year,
     h_bt_mat[ages_chr, years_chr, drop = FALSE]
   }
 
+  e = if (is.null(e_bt_mat)) blank() else {
+    stopifnot(identical(dim(e_bt_mat), c(n_ages, n_years)))
+    e_bt_mat[ages_chr, years_chr, drop = FALSE]
+  }
+
   list(m_eff = m_eff, p_char = p_char, r_S = r_S, tau = tau,
-       route = route, realize = realize, h = h, A = A, omega = omega,
+       route = route, realize = realize, h = h, e = e, A = A, omega = omega,
        ages = ages_bathtub, years = years)
 }
 
@@ -1448,7 +1499,7 @@ kg_dyn_tau_eq_flow = function(prims, j) {
   # (kg_dyn_tau_eq_finite_diff), so recursion and FD stay in lockstep by
   # construction. Three terms:
   #   realization:   r_S * tau
-  #   death events:  m_eff * (1 - p_char) * realize * tau
+  #   death events:  m_eff * (1 - p_char) * realize * tau * (1 - e)
   #   wealth carry:  (1 - m_eff) * (1 - r_S) * h   — the SURVIVING-unrealized
   #                  share pays the wealth-tax carrying cost h = tau_w*tau_cg
   #                  on the deferred liability it keeps in the wealth base.
@@ -1457,6 +1508,25 @@ kg_dyn_tau_eq_flow = function(prims, j) {
   # no carrying cost for that year. h == 0 reproduces the pre-carry flow
   # bitwise (x + 0 is exact for finite x; verified, not assumed, in
   # other/kg_model_tests/test_tau_eq_wealth.R).
+  #
+  # Estate offset on the DEATH-REALIZE term only (leg-paired e = cell
+  # mtr_estate_ded, clamped [0,1]): the death-triggered CG tax is deductible
+  # against the taxable estate (Sec. 2053-style, gated by the
+  # estate.income_tax_ded law switch baked into mtr_estate_ded), so a dollar
+  # of deemed-realization tax collects only (1 - e) net of the estate-tax
+  # offset. Deliberately NOT discounted:
+  #   - the route term (carryover-to-heir): a DEFERRAL of basis, not a
+  #     collection — no death-time income tax is stamped there, so there is
+  #     no Sec. 2053 deduction to price.
+  #   - the during-life r_S * tau term: CG tax paid during life also shrinks
+  #     the future estate, but that channel is carried MECHANICALLY by the
+  #     wealth bathtub (during-life tax payments enter F = dT0 - dY_exog and
+  #     drain into the estate base at death); discounting here would
+  #     double-count it. Demonstrated end-to-end by the one-record
+  #     accounting test (other/kg_model_tests/test_estate_offset.R).
+  #   - the wealth-carry h term: a during-life wealth-tax flow, same
+  #     bathtub-carried logic.
+  # e == 0 reproduces the pre-offset flow bitwise (x * (1 - 0) is exact).
   #
   # Balance-sheet basis note: net_worth = sum(value.*) - debts with NO
   # netting of the contingent CG liability — that non-deductibility is
@@ -1468,9 +1538,13 @@ kg_dyn_tau_eq_flow = function(prims, j) {
   #                 base and pays w*1 per year.
   #   difference  : holding costs w*tau = h per year of continued deferral.
 
+  # Missing e (hand-built prims in unit tests) defaults to 0 — the exact
+  # pre-offset flow; kg_dyn_tau_eq_primitives always materializes it.
+  e_j = if (is.null(prims$e)) 0 else prims$e[, j]
+
   prims$r_S[, j] * prims$tau[, j] +
     prims$m_eff[, j] * (1 - prims$p_char[, j]) *
-      prims$realize[, j] * prims$tau[, j] +
+      prims$realize[, j] * prims$tau[, j] * (1 - e_j) +
     (1 - prims$m_eff[, j]) * (1 - prims$r_S[, j]) * prims$h[, j]
 }
 
@@ -2110,6 +2184,18 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
   # never read for h: h_B == 0 by law (current law has no wealth tax), an
   # INVARIANT asserted against the baseline tax_law.csv below, not an
   # assumption.
+  #
+  # BOTH sides additionally read mtr_estate_ded (the switch-gated marginal
+  # estate rate written by run.R's static pass) and build LEG-PAIRED estate
+  # exposure vectors baseline_estate / reform_estate
+  # (kg_dyn_aggregate_cell_estate) — the (1 - e) offset on the kg death
+  # value in the Bellman and on the tau_eq death-realize term. Unlike h,
+  # the estate exposure is NONZERO UNDER CURRENT LAW (the estate tax
+  # exists in baseline), so the baseline leg is genuinely load-bearing: a
+  # single shared matrix would zero out estate-only reforms. The scenario
+  # leg is guaranteed by run.R's kg fallback; the BASELINE leg requires
+  # 'estate' registered in the baseline row's mtr_vars — stale baseline
+  # detail hard-stops in read_mtr below.
 
   years = scenario_info$years
 
@@ -2151,12 +2237,15 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
   reform_tau        = list()
   reform_tau_timing = list()
   reform_carry      = list()
+  baseline_estate   = list()
+  reform_estate     = list()
 
   for (t in years) {
 
     td_slim = cells_inputs$td_slim_by_year[[as.character(t)]]
 
-    read_mtr = function(path, cols = c('id', 'mtr_kg_lt')) {
+    read_mtr = function(path, cols = c('id', 'mtr_kg_lt',
+                                       'mtr_estate_ded')) {
       f = file.path(path, paste0(t, '.csv'))
       have = names(fread(f, nrows = 0, showProgress = FALSE))
       missing_cols = setdiff(cols, have)
@@ -2164,11 +2253,14 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
         stop(sprintf(
           paste0('kg_dynamics: static detail %s lacks column(s): %s. ',
                  'mtr_kg_lt_lawonly is written by the static pass (run.R) ',
-                 'for kg_dynamics scenarios, and mtr_net_worth is ',
-                 'guaranteed there for wealth-active kg scenarios (either ',
+                 'for kg_dynamics scenarios; mtr_net_worth is ',
+                 'guaranteed there for wealth-active kg scenarios and ',
+                 'mtr_estate_ded for ALL kg scenarios (either ',
                  'registered in the runscript mtr_vars or via the run.R ',
-                 'fallback); a missing column means STALE static detail — ',
-                 're-run the scenario static pass with current code.'),
+                 'fallback). The BASELINE leg has no fallback: its row ',
+                 'must register "estate" in mtr_vars. A missing column ',
+                 'means STALE static detail — re-run the baseline/',
+                 'scenario static pass with current code.'),
           f, paste(missing_cols, collapse = ', ')))
       }
       fread(f, select = cols, showProgress = FALSE) %>%
@@ -2190,15 +2282,34 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
       }
     }
 
+    # Estate-exposure coverage stop, mirroring check_mtr_coverage on the
+    # GAIN side: a silently-NA mtr_estate_ded on a gain-holding record
+    # would bias e toward zero (i.e. toward the pre-build no-offset model).
+    check_estate_coverage = function(joined, side, year) {
+      missing = joined %>% filter(G_unit > 0 & is.na(mtr_estate_ded))
+      if (nrow(missing) > 0) {
+        stop(sprintf(
+          paste0('kg_dynamics: %d records with G_unit > 0 missing ',
+                 'mtr_estate_ded in %s static detail for year %d. This ',
+                 'biases the estate death-value exposure e toward zero. ',
+                 'Check that the static run wrote mtr_estate_ded for ',
+                 'every sample id.'),
+          nrow(missing), side, year))
+      }
+    }
+
     baseline_joined = td_slim %>%
       left_join(read_mtr(file.path(baseline_root, 'baseline', 'static',
                                    'detail')),
                 by = 'id')
     check_mtr_coverage(baseline_joined, 'baseline', t)
+    check_estate_coverage(baseline_joined, 'baseline', t)
     baseline_tau[[as.character(t)]] =
       kg_dyn_aggregate_cell_mtr(baseline_joined, ages)
+    baseline_estate[[as.character(t)]] =
+      kg_dyn_aggregate_cell_estate(baseline_joined, ages)
 
-    reform_cols = c('id', 'mtr_kg_lt', 'mtr_kg_lt_lawonly')
+    reform_cols = c('id', 'mtr_kg_lt', 'mtr_kg_lt_lawonly', 'mtr_estate_ded')
     if (wealth_active) reform_cols = c(reform_cols, 'mtr_net_worth')
     reform_joined = td_slim %>%
       left_join(read_mtr(file.path(scenario_info$output_path, 'static',
@@ -2206,8 +2317,24 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
                          cols = reform_cols),
                 by = 'id')
     check_mtr_coverage(reform_joined, 'reform', t)
+    check_estate_coverage(reform_joined, 'reform', t)
     reform_tau[[as.character(t)]] =
       kg_dyn_aggregate_cell_mtr(reform_joined, ages)
+    reform_estate[[as.character(t)]] =
+      kg_dyn_aggregate_cell_estate(reform_joined, ages)
+
+    # Per-year estate-exposure diagnostic: the cell aggregation above
+    # compresses a very skewed record-level distribution (within-age
+    # gain x estate-exposure correlation is strong at the top, and the 80+
+    # cell concentrates the donor-clone records). Write the record-level
+    # gain-weighted distribution next to the state files so the compression
+    # is visible, per leg: overall mean / zero-exposure share / near-top-
+    # rate share, and the mean by (weighted) gain decile.
+    kg_dyn_write_estate_exposure_diag(
+      baseline_joined = baseline_joined,
+      reform_joined   = reform_joined,
+      scenario_info   = scenario_info,
+      year            = t)
 
     # Wealth-carry cell aggregation (gain-weighted record-level product;
     # zeros when no wealth tax is active). Coverage stop mirrors
@@ -2249,7 +2376,72 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
        reform_tau        = reform_tau,
        reform_tau_timing = reform_tau_timing,
        reform_carry      = reform_carry,
+       baseline_estate   = baseline_estate,
+       reform_estate     = reform_estate,
        heir_dist         = cells_inputs$heir_dist)
+}
+
+
+
+kg_dyn_write_estate_exposure_diag = function(baseline_joined, reform_joined,
+                                              scenario_info, year) {
+
+  # Per-year, per-leg record-level estate-exposure diagnostic (see the call
+  # site in kg_dyn_load_bathtub_inputs). One CSV per year at
+  # conventional/supplemental/kg_estate_exposure_diag_{t}.csv with rows =
+  # (leg x gain-decile) plus a per-leg 'all' summary row carrying the
+  # zero-exposure / near-top-rate gain-dollar shares and the 80+ cell mean.
+
+  leg_diag = function(joined, leg) {
+    d = joined %>%
+      filter(pmax(G_unit, 0) > 0) %>%
+      mutate(e_rec = pmin(pmax(coalesce(mtr_estate_ded, 0), 0), 1),
+             gw    = weight * G_unit)
+    if (nrow(d) == 0) return(NULL)
+
+    # Weighted (population-weight) gain deciles: sort by gain stock, split
+    # on cumulative weight
+    d = d %>%
+      arrange(G_unit) %>%
+      mutate(decile = pmin(floor(cumsum(weight) / sum(weight) * 10) + 1, 10))
+
+    by_decile = d %>%
+      group_by(decile) %>%
+      summarise(e_gw_mean    = sum(gw * e_rec) / pmax(sum(gw), 1e-12),
+                gain_dollars = sum(gw),
+                n_records    = n(),
+                .groups = 'drop') %>%
+      mutate(group = paste0('gain_decile_', decile)) %>%
+      select(-decile)
+
+    all_row = d %>%
+      summarise(
+        e_gw_mean    = sum(gw * e_rec) / pmax(sum(gw), 1e-12),
+        gain_dollars = sum(gw),
+        n_records    = n(),
+        share_zero   = sum(gw * (e_rec < 1e-6)) / pmax(sum(gw), 1e-12),
+        share_top    = sum(gw * (e_rec >= 0.35)) / pmax(sum(gw), 1e-12),
+        e_gw_age80   = {
+          gw80 = gw * (age_cohort >= 80)
+          if (sum(gw80) > 0) sum(gw80 * e_rec) / sum(gw80) else 0
+        }) %>%
+      mutate(group = 'all')
+
+    bind_rows(by_decile, all_row) %>%
+      mutate(leg = leg, year = year) %>%
+      relocate(year, leg, group)
+  }
+
+  diag = bind_rows(leg_diag(baseline_joined, 'baseline'),
+                   leg_diag(reform_joined,   'reform'))
+  if (is.null(diag) || nrow(diag) == 0) return(invisible(NULL))
+
+  out_dir = file.path(scenario_info$output_path, 'conventional',
+                      'supplemental')
+  dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+  write_csv(diag, file.path(out_dir,
+                            paste0('kg_estate_exposure_diag_', year, '.csv')))
+  invisible(NULL)
 }
 
 
@@ -2269,6 +2461,8 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
                                     conv_inflow_vec = NULL,
                                     carry_h_col = NULL,
                                     tau_w_col = NULL,
+                                    estate_e_B_col = NULL,
+                                    estate_e_S_col = NULL,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
   # Assembles per-cell quantities the applier needs:
@@ -2387,6 +2581,10 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            carry_h       = if_else(is.na(carry_h), 0, carry_h),
            tau_w         = as.numeric(tau_w_col      [as.character(age)]),
            tau_w         = if_else(is.na(tau_w), 0, tau_w),
+           estate_e_B    = as.numeric(estate_e_B_col [as.character(age)]),
+           estate_e_B    = if_else(is.na(estate_e_B), 0, estate_e_B),
+           estate_e_S    = as.numeric(estate_e_S_col [as.character(age)]),
+           estate_e_S    = if_else(is.na(estate_e_S), 0, estate_e_S),
            rate_factor   = if_else(r_B > 0, r_S / r_B, 1),
            # Clamp the lock-in stock to the cell's gain stock: under
            # permanent rate hikes dG can run sufficiently negative that
@@ -2410,6 +2608,7 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            decedent_stock, terminal_char_stock, taxable_death_stock,
            tau_B, tau_S, W_B, W_S, MC_B, MC_S, kappa, r_D_B, r_D_S,
            tau_eq_B, tau_eq_S, conv_inflow, carry_h, tau_w,
+           estate_e_B, estate_e_S,
            rate_factor, extra_R, deemed_factor)
 }
 
@@ -2425,6 +2624,8 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                     corp_debit_by_year = NULL,
                                     sigma_ctx = NULL,
                                     reform_carry = NULL,
+                                    baseline_estate = NULL,
+                                    reform_estate = NULL,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX,
                                     ages_bellman = KG_DYN_AGE_MIN:
                                                     KG_DYN_AGE_MAX_BELLMAN) {
@@ -2455,6 +2656,29 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   # NULL or all-zero h (every non-wealth scenario) reproduces the pre-carry
   # outputs bitwise, except for the all-zero carry_h/tau_w diagnostic
   # columns in state files and the two kg diagnostic CSVs.
+  #
+  # baseline_estate / reform_estate (optional): per-year named age vectors
+  # from kg_dyn_aggregate_cell_estate (via kg_dyn_load_bathtub_inputs) —
+  # the LEG-PAIRED estate exposure of the kg death value (cell-aggregated
+  # switch-gated mtr_estate_ded, clamped [0, 1]). Packed onto the Bellman
+  # grid like tau (age-80 repeated forward). Pass 1 and prims_B receive
+  # e_B; Pass 2 and prims_S receive e_S — NEVER a single shared matrix
+  # (that would zero out estate-only reforms: e_S > e_B with tau unchanged
+  # would give MC_S = MC_B and no realization response). Unlike h there is
+  # no zero-baseline invariant: current law HAS an estate tax, so e_B > 0
+  # for estate-taxable cells — which also means (1 - e_B) touches the
+  # CURRENT-LAW Bellman and hence the eta long-run-elasticity anchor
+  # (re-check it when this channel changes). NULL = zeros (unit tests /
+  # pre-build callers), bitwise-identical to the pre-offset outputs except
+  # the all-zero estate_e_B/estate_e_S state columns.
+  #
+  # Baseline-regime assumption: Pass 1 hard-codes step-up (c_phi = 0,
+  # mix_list = NULL); adding baseline estate exposure e_B is correct IN
+  # CONJUNCTION with that convention (F_B = tau_B * (1 - e_B), and prims_B
+  # has realize = 0 so e_B enters tau_eq_B only through... nothing — the
+  # death-realize term is zero under step-up; e_B's bite is in the Bellman).
+  # If baselines ever carry carryover/deemed regimes, revisit the
+  # baseline-side construction here.
   #
   # sigma_ctx (optional): sigma-conversion context built by
   # sigma_build_ctx() (src/sim/sigma_conversion.R) when the scenario runs
@@ -2547,11 +2771,29 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     tau_w_diag = lapply(reform_carry, `[[`, 'tau_w')
   }
 
+  # Step 2c: LEG-PAIRED estate-exposure matrices (see the parameter doc).
+  # Same pack as tau (age-80 repeated forward across [81, 119]); the
+  # aggregator already clamped each cell to [0, 1]. NULL (unit tests /
+  # pre-build callers) = zeros = bitwise pre-offset behavior.
+  zeros_bellman = function() {
+    matrix(0, length(ages_bellman), length(years),
+           dimnames = list(as.character(ages_bellman), years_chr_all))
+  }
+  e_B_mat = if (is.null(baseline_estate)) zeros_bellman() else {
+    kg_dyn_pack_tau(baseline_estate, years, ages_bellman = ages_bellman)
+  }
+  e_S_mat = if (is.null(reform_estate)) zeros_bellman() else {
+    kg_dyn_pack_tau(reform_estate, years, ages_bellman = ages_bellman)
+  }
+
   # Step 3: baseline Bellman pass (c_phi = 0 across the whole grid under
-  # current-law step-up — every asset gets step-up forgiveness)
+  # current-law step-up — every asset gets step-up forgiveness). e_mat is
+  # the BASELINE-law exposure e_B: current law has an estate tax, so the
+  # baseline death value is F_B = tau_B * (1 - e_B) (leg-paired, unlike h).
   pass1 = kg_dyn_solve_bellman(grid_packed, tau_B_mat, c_phi_mat = 0,
                                eta = eta,
-                               beta_by_year = beta_by_year)
+                               beta_by_year = beta_by_year,
+                               e_mat = e_B_mat)
 
   # Step 4: resolve year-by-year per-asset regime codes, build cell-level
   # regime mix (c_phi, delta_vanish/route/realize), and pack the Bellman
@@ -2588,7 +2830,8 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                kappa_mat = pass1$kappa,
                                eta = eta,
                                beta_by_year = beta_by_year,
-                               h_mat = h_S_mat)
+                               h_mat = h_S_mat,
+                               e_mat = e_S_mat)
 
   planned_timing = kg_dyn_build_planned_timing(
     baseline_cells = baseline_cells,
@@ -2633,8 +2876,14 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     A              = A,
     omega          = omega,
     ages_bathtub   = ages_bathtub,
-    h_bt_mat       = h_S_mat[bathtub_ages_chr, , drop = FALSE]
+    h_bt_mat       = h_S_mat[bathtub_ages_chr, , drop = FALSE],
+    e_bt_mat       = e_S_mat[bathtub_ages_chr, , drop = FALSE]
   )
+  # prims_B DOES receive e_B (leg-paired, unlike h whose baseline is zero by
+  # law): under the step-up baseline convention (mix_list = NULL =>
+  # realize = 0) the death-realize term is zero anyway, so e_B is inert in
+  # tau_eq_B today -- threaded for correctness if baselines ever carry
+  # deemed/carryover regimes, and to keep the leg-pairing rule uniform.
   prims_B = kg_dyn_tau_eq_primitives(
     baseline_cells = baseline_cells,
     years          = years,
@@ -2644,7 +2893,8 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     mix_list       = NULL,
     A              = A,
     omega          = omega,
-    ages_bathtub   = ages_bathtub
+    ages_bathtub   = ages_bathtub,
+    e_bt_mat       = e_B_mat[bathtub_ages_chr, , drop = FALSE]
   )
 
   tau_eq_S_mat = kg_dyn_compute_tau_eq(prims_S, beta_by_year)$tau_eq
@@ -2754,6 +3004,10 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
       carry_h_col  = setNames(h_S_mat[bathtub_ages_chr, j],
                               bathtub_ages_chr),
       tau_w_col    = tau_w_diag[[as.character(t)]],
+      estate_e_B_col = setNames(e_B_mat[bathtub_ages_chr, j],
+                                bathtub_ages_chr),
+      estate_e_S_col = setNames(e_S_mat[bathtub_ages_chr, j],
+                                bathtub_ages_chr),
       ages_bathtub = ages_bathtub
     )
 
@@ -2988,6 +3242,53 @@ kg_dyn_aggregate_cell_carry = function(records_with_attrs,
 
   list(h     = setNames(out$h,     as.character(ages)),
        tau_w = setNames(out$tau_w, as.character(ages)))
+}
+
+
+
+kg_dyn_aggregate_cell_estate = function(records_with_attrs,
+                                         ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
+
+  # Gain-weighted cell aggregation of the estate exposure of the death value:
+  #   e(a) = sum(w * G_unit * mtr_estate_ded) / sum(w * G_unit)
+  # mtr_estate_ded is the SWITCH-GATED marginal estate rate
+  # (estate.income_tax_ded x mtr_estate, derived in run.R's static pass):
+  # per-record, per-leg-law by construction, so a reform that sets
+  # estate.income_tax_ded = 0 zeroes this exposure while the raw mtr_estate
+  # is unchanged.
+  #
+  # Pure gain-weighting, no realization-weighted branch (same reasoning as
+  # kg_dyn_aggregate_cell_carry): e prices the dollars that STAY deferred
+  # and die, not the dollars that realize. Cells with zero gain stock get
+  # e = 0. Records below the estate exemption have mtr_estate_ded = 0, so
+  # below-exemption cells are exact no-ops.
+  #
+  # CLAMPED to [0, 1] per cell: numerical MTR noise near the unified-credit
+  # kink must never create negative death-tax costs or (1 - e) < 0 in the
+  # Bellman / tau_eq. (Record-level mtr_estate is a right-derivative of a
+  # graduated schedule, so cell means live in [0, top rate] anyway; the
+  # clamp is a guard, not a correction.)
+  #
+  # Gain-weighting note (see the per-year exposure diagnostic written by
+  # kg_dyn_load_bathtub_inputs): within-age gain x estate-exposure
+  # correlation is strong at the top, so the cell mean compresses a very
+  # skewed record-level distribution — the diagnostic makes that visible.
+
+  agg = records_with_attrs %>%
+    group_by(age_cohort) %>%
+    summarise(num_e = sum(weight * G_unit * coalesce(mtr_estate_ded, 0),
+                          na.rm = TRUE),
+              den   = sum(weight * G_unit, na.rm = TRUE),
+              .groups = 'drop') %>%
+    rename(age = age_cohort)
+
+  out = tibble(age = ages) %>%
+    left_join(agg, by = 'age') %>%
+    mutate(across(c(num_e, den), ~ if_else(is.na(.), 0, .)),
+           e = if_else(den > 0, pmin(pmax(num_e / den, 0), 1), 0)) %>%
+    arrange(age)
+
+  setNames(out$e, as.character(ages))
 }
 
 

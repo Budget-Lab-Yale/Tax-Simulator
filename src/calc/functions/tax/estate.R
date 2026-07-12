@@ -104,6 +104,34 @@ calc_estate = function(tax_unit, estate_params, fill_missings = FALSE) {
   #                                   wealth unchanged. Absent on the static
   #                                   pass (no behavior) => 0 => static stays
   #                                   the clean law-only counterfactual
+  #   - estate_base_bump (dbl)      : perturbation to the taxable estate BASE,
+  #                                   used ONLY by calc_mtrs(var = 'estate') to
+  #                                   measure the marginal estate rate as a
+  #                                   +$1 right-derivative. It enters INSIDE
+  #                                   the estate_base pmax so the bump gives
+  #                                   +d(liab)/d(base) directly: positive by
+  #                                   construction, un-switched (not gated by
+  #                                   estate.income_tax_ded), 0 when the pmax
+  #                                   floor binds, 0 below the exemption.
+  #                                   The resulting mtr_estate is a
+  #                                   CONDITIONAL-ON-DEATH statutory price --
+  #                                   the marginal estate rate IF the estate
+  #                                   event occurs, DSUE-blended downstream.
+  #                                   It deliberately contains NO mortality:
+  #                                   mortality lives in the kg Bellman
+  #                                   (bm_vec) and the aggregation weights.
+  #                                   Do NOT "correct" it by multiplying in
+  #                                   estate_m.
+  #                                   Legal/timing scope: the deduction this
+  #                                   rate prices (via mtr_estate_ded =
+  #                                   estate.income_tax_ded x mtr_estate) is
+  #                                   the DEATH-TRIGGERED income tax stamped
+  #                                   by the kg dead-leg recompute
+  #                                   (estate_income_tax_ded) -- the same
+  #                                   liability priced by the Bellman's F and
+  #                                   the deemed-realization term -- NOT
+  #                                   lifetime CG taxes or a broader income-
+  #                                   tax deduction
   #
   # Returns: dataframe with the following variables:
   #   - liab_estate_nodsue (dbl)   : liability conditional on death, no-DSUE
@@ -154,6 +182,12 @@ calc_estate = function(tax_unit, estate_params, fill_missings = FALSE) {
     df$estate_concealed_frac = 0
   }
 
+  # Default the optional base perturbation (estate-MTR measurement input; see
+  # parameter doc) when the caller doesn't supply it -- every non-MTR caller
+  if (!('estate_base_bump' %in% names(df))) {
+    df$estate_base_bump = 0
+  }
+
   df %<>%
 
     mutate(
@@ -185,11 +219,16 @@ calc_estate = function(tax_unit, estate_params, fill_missings = FALSE) {
       # scenario-invariant under the fixed-wealth convention. Concealment is a
       # fraction of gross assets applied to reported_gross (concealed dollars in
       # reported terms); the gift add-back is deliberately left on the FULL
-      # reported_gross (conservative -- hidden gifts are not netted out)
+      # reported_gross (conservative -- hidden gifts are not netted out).
+      # estate_base_bump (the +$1 estate-MTR perturbation) sits INSIDE the
+      # pmax so the bump is correctly inert when the floor binds; at exact
+      # kinks (zero base, exemption boundary, bracket edges) the resulting
+      # MTR is the standard next-dollar right-derivative
       estate_distributable = pmax(reported_gross - estate_debts - f_ded * reported_gross, 0),
       estate_base          = pmax(estate_distributable -
                                   estate.income_tax_ded * estate_income_tax_ded -
-                                  estate_concealed_frac * reported_gross, 0) +
+                                  estate_concealed_frac * reported_gross +
+                                  estate_base_bump, 0) +
                              estate_params$gamma * reported_gross,
 
       # Exclusion amounts for the three liability calculations. Joint records
