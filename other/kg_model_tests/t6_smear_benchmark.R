@@ -135,13 +135,18 @@ td %>%
   write_csv('other/kg_model_tests/t6_h_by_age_corner.csv')
 
 if (!all(results$understates)) {
-  stop('T6 GATE FAILED: smear does not understate the record-level response ',
-       '(Jensen direction violated) — investigate before T5.')
+  stop('T6: smear does not understate the record-level response ',
+       '(Jensen direction violated) — a correctness invariant, investigate.')
 }
+# Magnitude gate RULED 2026-07-12 (author): breach ACCEPTED. The smear's
+# error is one-signed (conservative) and the exposed/unexposed two-state
+# split — which closes it to <=1.5% (rel_error_2state above) — was declined
+# as not worth the extra state. Report, don't stop. Ruling recorded in
+# other/top_tax/margins_gap_assessment.md §1.1.
 if (!all(results$within_gate)) {
-  stop('T6 GATE FAILED: smear error exceeds the gate at lever(s): ',
-       paste(results$lever[!results$within_gate], collapse = ', '),
-       '. Escalate to the exposed/unexposed two-state split (author ',
-       'decision) before shipping.')
+  cat('\nNOTE: smear error exceeds the original plan gate at lever(s): ',
+      paste(results$lever[!results$within_gate], collapse = ', '),
+      ' — breach RULED ACCEPTED 2026-07-12 (conservative; disclosed).\n',
+      sep = '')
 }
-cat('\nT6 SMEAR-BENCHMARK GATE PASSED\n')
+cat('\nT6 SMEAR BENCHMARK COMPLETE (direction invariant holds)\n')
