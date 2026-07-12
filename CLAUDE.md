@@ -61,6 +61,7 @@ Note: if you want to run a policy change starting in t, always start the simulat
 - `dep.{MODEL_NAME}.ID`: Override dependent model scenario ID
 - `states`: State income tax mode — space-delimited 2-letter codes (e.g. "IL CO NY") or "all" (every state with a config under `config/scenarios/tax_law_state/baseline/`). Empty/absent = federal-only (bit-identical to pre-state behavior). If any counterfactual sets `states`, the baseline row must set a superset (validated in `parse_globals()`). Adds `totals/state.csv` and (for counterfactuals) `supplemental/state_rev_est.csv` outputs. NOTE: state weights are currently a uniform PLACEHOLDER split — state totals are not meaningful until the Phase 1 weights land; federal results are unaffected either way.
 - `state_tax_law`: State tax law reform directory under `config/scenarios/tax_law_state/` (default `baseline`); overlay semantics identical to federal, per state
+- `state_detail`: 0/1 (default 0). When 1 (and `states` is set), writes ONE compact per-year state detail matrix at `detail/state/{year}.csv` (`id` + one liability column per state) per run type — not 51 full detail files. Purged by `delete_detail` like other detail output. Stacked runs (`stacked=1`) with state mode also produce `stacked_state_rev_est_{static,conventional}.csv` at the vintage root (incremental state deltas in runscript order)
 - Custom columns can be added if you modify `get_scenario_info()` in `src/misc/config_parser.R`
 
 **Runtime Parameters (command-line arguments, not in runscript CSV):**

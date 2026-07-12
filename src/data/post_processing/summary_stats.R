@@ -279,18 +279,23 @@ get_pr_totals = function(tax_units, yr) {
 } 
 
 
-get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr) {
+get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr,
+                            detail_path = NULL) {
 
   #----------------------------------------------------------------------------
   # Calculates state-level aggregates: runs the state calculator per
   # jurisdiction on federally-calculated tax units and aggregates with the
-  # split state weights (plan §2.4).
+  # split state weights (plan §2.4). Optionally writes the compact per-year
+  # state detail matrix -- id plus one liability column per state (plan §5.3)
+  # -- accumulated in the same pass, no recomputation.
   #
   # Parameters:
   #   - tax_units_calc (df) : tax units post-federal calculation
   #   - state_tax_law (df)  : state tax law tibble; see build_state_tax_law()
   #   - state_weights (df)  : long (id, state, weight) split weights
   #   - yr (int)            : year
+  #   - detail_path (str)   : when non-NULL, path for the per-year state
+  #                           detail matrix CSV
   #
   # Returns: tibble long in (year, state, variable) with weighted totals, or
   #          NULL when no state law exists for the year (df | NULL).
@@ -305,11 +310,13 @@ get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr) {
     return(NULL)
   }
 
-  unique(law_yr$state) %>%
+  detail = list()
+
+  totals = unique(law_yr$state) %>%
     map(.f = function(st) {
 
       # Join this state's law, calculate, and reattach ids and weights
-      tax_units_calc %>%
+      st_results = tax_units_calc %>%
         left_join(law_yr %>%
                     filter(state == st) %>%
                     select(-state),
@@ -320,7 +327,15 @@ get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr) {
                     filter(state == st) %>%
                     select(id, st_weight = weight),
                   by = 'id') %>%
-        mutate(st_weight = replace_na(st_weight, 0)) %>%
+        mutate(st_weight = replace_na(st_weight, 0))
+
+      # Accumulate the per-record liability column for the detail matrix
+      if (!is.null(detail_path)) {
+        detail[[st]] <<- st_results %>%
+          select(id, !!st := liab_st_iit)
+      }
+
+      st_results %>%
 
         # Weighted aggregates
         summarise(
@@ -340,6 +355,15 @@ get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr) {
                      names_to  = 'variable',
                      values_to = 'value')
     }) %>%
-    bind_rows() %>%
-    return()
+    bind_rows()
+
+  # Write the compact detail matrix: id + one liability column per state
+  if (!is.null(detail_path) && length(detail) > 0) {
+    dir.create(dirname(detail_path), recursive = T, showWarnings = F)
+    detail %>%
+      reduce(.f = ~ left_join(.x, .y, by = 'id')) %>%
+      write_csv(detail_path)
+  }
+
+  return(totals)
 }

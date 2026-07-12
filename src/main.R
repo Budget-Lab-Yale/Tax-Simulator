@@ -123,6 +123,7 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   if (stacked == 1) {
     build_stacked_1040_reports(counterfactual_ids)
     calc_stacked_rev_est(counterfactual_ids)
+    build_stacked_state_rev_est(counterfactual_ids)
   }
   
   # Delete microdata files

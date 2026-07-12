@@ -391,6 +391,14 @@ get_scenario_info = function(id) {
     state_tax_law_id = runscript_items$state_tax_law
   }
 
+  # State detail output: off by default; when on, one compact per-year
+  # liability matrix at detail/state/{year}.csv (plan §5.3)
+  state_detail = 0
+  if (!is.null(runscript_items$state_detail) &&
+      !is.na(runscript_items$state_detail)) {
+    state_detail = as.integer(runscript_items$state_detail)
+  }
+
   # Return as named list
   return(list(ID                       = id,
               output_path              = output_root,
@@ -405,7 +413,8 @@ get_scenario_info = function(id) {
               excess_growth_start_year = excess_growth_start_year,
               excess_growth_all_rev    = excess_growth_all_rev,
               states                   = states,
-              state_tax_law_id         = state_tax_law_id))
+              state_tax_law_id         = state_tax_law_id,
+              state_detail             = state_detail))
 }
 
 

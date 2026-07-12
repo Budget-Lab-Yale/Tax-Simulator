@@ -463,13 +463,22 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     write_csv(file.path(scenario_info$output_path, 'static', 'detail',
                         paste0(year, '.csv')))
 
-  # Get static totals (state totals NULL unless state mode is on)
+  # Get static totals (state totals NULL unless state mode is on); when
+  # state_detail is on, the compact per-year state liability matrix is
+  # written in the same pass
+  static_state_detail_path = NULL
+  if (!is.null(scenario_info$states) && scenario_info$state_detail == 1) {
+    static_state_detail_path = file.path(scenario_info$output_path, 'static',
+                                         'detail', 'state',
+                                         paste0(year, '.csv'))
+  }
   static_totals = list(pr            = get_pr_totals(tax_units_static, year),
                         `1040`        = get_1040_totals(tax_units_static, year),
                         `1040_by_agi` = get_1040_totals(tax_units_static, year, T),
                         state         = get_state_totals(tax_units_static,
                                                          state_tax_law,
-                                                         state_weights, year))
+                                                         state_weights, year,
+                                                         static_state_detail_path))
 
 
   # --- CONVENTIONAL PASS ---
@@ -521,12 +530,19 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                           paste0(year, '.csv')))
 
     # Get conventional totals (state totals NULL unless state mode is on)
+    conv_state_detail_path = NULL
+    if (!is.null(scenario_info$states) && scenario_info$state_detail == 1) {
+      conv_state_detail_path = file.path(scenario_info$output_path,
+                                         'conventional', 'detail', 'state',
+                                         paste0(year, '.csv'))
+    }
     conventional_totals = list(pr            = get_pr_totals(tax_units_conv, year),
                                 `1040`        = get_1040_totals(tax_units_conv, year),
                                 `1040_by_agi` = get_1040_totals(tax_units_conv, year, T),
                                 state         = get_state_totals(tax_units_conv,
                                                                  state_tax_law,
-                                                                 state_weights, year))
+                                                                 state_weights, year,
+                                                                 conv_state_detail_path))
 
   } else if (scenario_info$ID != 'baseline') {
 
@@ -535,6 +551,17 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       select(all_of(globals$detail_vars), starts_with('mtr_')) %>%
       write_csv(file.path(scenario_info$output_path, 'conventional', 'detail',
                           paste0(year, '.csv')))
+
+    # Mirror the static state detail matrix, if written
+    if (!is.null(static_state_detail_path) &&
+        file.exists(static_state_detail_path)) {
+      conv_state_dir = file.path(scenario_info$output_path, 'conventional',
+                                 'detail', 'state')
+      dir.create(conv_state_dir, recursive = T, showWarnings = F)
+      file.copy(static_state_detail_path,
+                file.path(conv_state_dir, paste0(year, '.csv')),
+                overwrite = T)
+    }
 
     conventional_totals = static_totals
   }

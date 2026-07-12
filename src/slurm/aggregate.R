@@ -224,6 +224,8 @@ tryCatch({
     if (runtime_args$stacked == 1) {
       build_stacked_1040_reports(counterfactual_ids)
       calc_stacked_rev_est(counterfactual_ids)
+      # Stacked state deltas (no-op when state mode is off; mirrors main.R)
+      build_stacked_state_rev_est(counterfactual_ids)
     }
 
     if (runtime_args$delete_detail == 1) {
