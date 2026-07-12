@@ -14,8 +14,9 @@ directly comparable.
 
 ## 0. The shared invariant (both approaches honor it)
 
-Let record `i` have national weight `w_i` (from Tax-Data) and let `S = 52`
-jurisdictions (50 states + DC + OA). Both approaches produce a weight matrix
+Let record `i` have national weight `w_i` (from Tax-Data) and let `S = 53`
+jurisdictions (50 states + DC modeled, plus `PR` and `OA` no-tax buckets — HT2
+reports Puerto Rico separately from Other Areas; plan §5.4, amended 2026-07-12). Both approaches produce a weight matrix
 `W[i,s] ≥ 0` subject to the **per-record split constraint**
 
 ```
@@ -89,7 +90,7 @@ L(θ) = Σ_t λ_t · ((T̂_t(W) − T_t) / T_t)²          # target fidelity
 
 ### 2.3 Two parameterizations of θ (pick on the flexibility/cost axis)
 
-- **B-dense** — `θ` is a free `N × S` logit matrix (~221k × 52 ≈ 11.5M parameters
+- **B-dense** — `θ` is a free `N × S` logit matrix (~221k × 53 ≈ 11.7M parameters
   per year). Maximum flexibility, per-record freedom, closest to PolicyEngine's raw
   reweighting. Large but tractable in `torch`.
 - **B-amortized** — `θ[i,·] = f_φ(x_i)`, a small learned function (linear, GBM, or a
@@ -113,18 +114,25 @@ ensemble: A is the interpretable prior, B the target-driven refinement.
 
 ### 2.5 Tooling and compute
 
-- **`torch` for R** (libtorch bindings) — native autograd, CPU or GPU, keeps the
-  prototype in-repo and in R. Optimizer: Adam, a few hundred to few thousand
-  full-batch steps per year.
-- B-dense is ~11.5M params × (2017–2022 historical years) — fine on GPU, heavy but
-  feasible on CPU (minutes–tens of minutes/year). B-amortized is far lighter.
-- **Reproducibility:** fix the torch seed via `globals$random_seed`; log the loss
-  curve and final per-target residuals. Determinism is a real difference from A
-  (which is deterministic given its estimator) and must be pinned.
-- New dependency (`torch`) — note the cluster module/Arrow caveats in CLAUDE.md; verify
-  `torch` availability before committing to B as production.
+**RESOLVED 2026-07-12 — no `torch`.** `torch` is not installed on the cluster, so
+Approach B is implemented **dependency-free** in `src/data/state_weights.R`:
+`fit_gradient()` computes the softmax/KL/target-loss gradients analytically in base
+matrix algebra with a hand-rolled Adam loop, validated by a finite-difference
+gradient self-test (`.state_weights_selftest()`). Consequences vs the original spec:
 
-### 2.6 Skeleton (design sketch — NOT yet runnable; HT2 data not in hand)
+- No autograd dependency and no GPU path; B-dense (~221k × 53 logits) runs on CPU
+  in base R — same objective, same optimizer, same result up to numerics.
+- **Reproducibility:** `set.seed(globals$random_seed)` + deterministic full-batch
+  gradients (no torch seed to pin). Log the loss curve and final per-target
+  residuals as before.
+- B-amortized, if pursued, would need its gradients derived analytically too (or a
+  revisit of the dependency question) — acceptable for linear/shallow `f_φ`.
+
+### 2.6 Skeleton (SUPERSEDED — kept for design provenance)
+
+The torch sketch below is superseded by the actual dependency-free implementation
+(`fit_gradient()` in `src/data/state_weights.R`, see §2.5). Same parameterization
+and loss; only the autograd machinery differs.
 
 ```r
 # B-dense, one simulation year. Pseudocode-level; shapes and API to be verified.
@@ -206,5 +214,6 @@ overfitting the targets. Keep the ensemble option (A as B's prior) on the table.
 ## 5. Impact on the plan
 
 Phase 1 becomes an **A/B bake-off**: build both behind `build_state_weights(method=)`,
-run the harness, decide by §4. Adds ~1 week and a `torch` dependency check to Phase 1;
-no change to downstream phases (weights format is identical either way).
+run the harness, decide by §4. Adds ~1 week to Phase 1; the `torch` dependency
+question is resolved (not available on cluster; B implemented dependency-free, §2.5).
+No change to downstream phases (weights format is identical either way).

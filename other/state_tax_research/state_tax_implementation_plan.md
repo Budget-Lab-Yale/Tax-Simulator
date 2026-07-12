@@ -16,9 +16,10 @@ PolicyEngine) used for validation and structural reference only.
 Decisions already made (validated by research):
 
 - **D1 — With-state / without-state mode.** Without-state runs are bit-identical to
-  today. With-state runs use the same PUF records carrying 51 state-specific weight
-  vectors, with the constraint `Σ_st w_{i,st} = w_i` so federal aggregates are
-  mechanically unchanged. This is the OTA TP-6 / TPC split-weight design.
+  today. With-state runs use the same PUF records carrying split-weight vectors over
+  53 jurisdictions (51 modeled + `PR`/`OA` no-tax buckets, §5.4), with the constraint
+  `Σ_st w_{i,st} = w_i` so federal aggregates are mechanically unchanged. This is
+  the OTA TP-6 / TPC split-weight design.
 - **D2 — Federal once, states as a downstream layer.** The federal static pass runs
   once per record-year. State liability is computed per state on the same records
   (51 cheap vectorized passes over ~221k records). Baseline federal calculation keeps
@@ -39,7 +40,9 @@ Decisions already made (validated by research):
 
 **Format:** one file per year, long:
 `state_weights_{year}.csv` with columns `id, state, weight` (rows where weight > 0;
-state = 2-letter code + `DC` + `OA` for other areas). Long beats wide because
+state = 2-letter code incl. `DC`, plus `PR` and `OA` no-tax buckets — HT2 reports
+Puerto Rico and Other Areas separately, so both are carried: 51 modeled + 2 buckets
+= 53 jurisdictions). Long beats wide because
 downstream joins in the per-state loop are `filter(state == st) %>% left_join(by='id')`.
 
 **Construction:** two methods are prototyped and compared head-to-head in Phase 1 —
@@ -109,7 +112,8 @@ config/scenarios/tax_law_state/
 │   │   ├── ded.yaml   # standard deduction, itemized rules, coupling flags
 │   │   ├── ord.yaml   # rates and brackets
 │   │   ├── credits.yaml  # EITC match, CTC, CDCTC, property/renter credits
-│   │   └── exempt.yaml   # personal exemptions
+│   │   ├── exempt.yaml   # personal exemptions
+│   │   └── filing.yaml   # filing-requirement thresholds (gross-income tests)
 │   ├── co/ …
 │   └── ny/ …
 └── {public|private|tests}/{reform_name}/{st}/*.yaml   # overrides, same mechanics
@@ -126,6 +130,16 @@ config/scenarios/tax_law_state/
   (default `baseline`).
 - **Conformity encoded as parameters** in `agi.yaml`/`ded.yaml` per state, e.g.:
   - `st_agi.start_point`: 0 = own base, 1 = federal AGI, 2 = federal taxable income
+  - `st_agi.conformity_year`: 0 = rolling conformity (state base moves with the
+    scenario's federal law); else the fixed IRC conformity date (e.g. CA ≈ 2015).
+    **Encode from day one** (read off the same statutes as everything else), but v1
+    *mechanics* treat every state as rolling: the frozen-base computation for
+    fixed-date states under federal reforms (join *baseline* federal `agi` /
+    `txbl_inc` by id) is deferred to Phase 7 with the coupled mode. Until then, any
+    federal-reform run with states on emits a known-differences warning listing the
+    affected fixed-conformity states. State-static baseline estimates are unaffected
+    (baseline federal law = every conformity date's law for level purposes, absorbed
+    by the additions/subtractions parameters).
   - `st_ded.item_coupling`: 0 = independent choice, 1 = must match federal,
     2 = federal itemizers may choose (NE-style)
   - `st_ded.fed_tax_ded_limit`: deduction cap for federal income tax paid
@@ -134,8 +148,14 @@ config/scenarios/tax_law_state/
   - `st_ded.salt_addback`: 1 if state income tax must be backed out of federal
     itemized deductions (uncapped line-5a semantics)
 - **`reference` metadata field** (PolicyEngine practice): every parameter cites form
-  line / statute section + URL. Requires a small `parse_subparam()` change to
-  tolerate-and-ignore a `reference` key — verify with a unit test.
+  line / statute section + URL. Parser status (verified 2026-07-12): unknown keys are
+  already tolerated for **unindexed** subparams (early return, `tax_law.R:311`) but
+  break **indexed** ones — with `indexation_defaults` present, the `map2()` at
+  `tax_law.R:319-320` requires equal lengths and errors; without defaults, the extra
+  key is swept into the indexation-year handling and corrupts the series. Fix: strip
+  `reference` in `parse_subparam()` before the indexation-key sweep. The unit test
+  MUST cover an indexed subparameter under `indexation_defaults` — an
+  unindexed-only test passes vacuously.
 - **Indexation:** state YAML uses existing `i_measure` fields. New index series
   needed in `generate_indexes()` (`src/data/economy.R`): chained CPI already exists;
   add GDP deflator (from Macro-Projections) and alias state-specific CPIs (AZ Phoenix
@@ -160,14 +180,27 @@ do_state_taxes(tax_units_post_federal, st)   # orchestrator, mirrors do_1040()
 ├── calc_st_tax()      # reuse integrate_rates_brackets()
 ├── calc_st_credits()  # EITC/CTC/CDCTC matches on federal amounts; nonrefundable
 │                      #   ordering per state form
-└── calc_st_liab()     # -> liab_st_iit
+└── calc_st_liab()     # -> liab_st_iit; applies st_filing.req_threshold
+                       #   (filing-status-mapped gross-income test): records below
+                       #   the state filing requirement get zero liability and are
+                       #   excluded from state filer counts (§6 TPC overcount risk)
 ```
 
 - Inputs: federal-pass outputs already on the tibble (`agi`, `txbl_inc`, itemizer
-  flag, *uncapped* itemized components, `eitc`, `ctc_*`, `cdctc_*`) + `st_*` law
-  columns. **Task:** ensure the federal calc exposes the sub-line detail states need
-  (notably uncapped SALT components and pre-limitation itemized totals) in
-  `return_vars` — plumbing only, no recomputation.
+  flag `itemizing`, itemized components incl. pre-limitation total
+  `item_ded_ex_limits`, `eitc`, `ctc_*`, `cdctc_*`) + `st_*` law columns.
+  **Verified 2026-07-12:** all of the above are registered `return_vars`, and raw
+  input columns survive downstream because `do_taxes()` binds calc output onto the
+  original records — so NO federal `return_vars` plumbing is needed. Uncapped SALT
+  components (`salt_inc_sales`, `salt_prop`, `salt_pers`) reach the state layer as
+  input columns; `calc_st_*` functions declare them in `req_vars` directly.
+  **DECIDED (2026-07-12) — state SALT add-back uses the post-workaround value.**
+  `do_taxes()` mutates `salt_inc_sales` in place (the "Shift SALT" block,
+  `do_taxes.R:713`), subtracting PTE-workaround amounts recharacterized as
+  entity-level losses. Those dollars were not paid as individual state income tax
+  on Schedule A, so the post-workaround value is the *correct* individual amount
+  for state add-back semantics. If a pristine pre-workaround value is ever needed,
+  capture it before that mutation — do not re-derive it downstream.
 - Genuinely idiosyncratic structures that resist parameterization (PA's eight income
   classes, NJ's own base) get `case_when(st == …)` blocks inside the generic
   functions — contained, documented exceptions rather than per-state files.
@@ -177,9 +210,16 @@ do_state_taxes(tax_units_post_federal, st)   # orchestrator, mirrors do_1040()
 ### 2.4 Orchestration and outputs
 
 - **Mode switch:** new optional runscript column `states` (empty/absent = current
-  behavior; `all` or space-delimited list, e.g. `IL CO NY`). Parsed in
-  `get_scenario_info()` (`src/misc/config_parser.R`), which also validates that the
-  baseline row sets `states` whenever any counterfactual does.
+  behavior; `all` or space-delimited list, e.g. `IL CO NY`). Per-row parsing in
+  `get_scenario_info()` (`src/misc/config_parser.R`). The cross-row consistency rule
+  — baseline's `states` must be a **superset** of every counterfactual's — cannot
+  live there (`get_scenario_info()` filters to a single ID, `config_parser.R:321`,
+  and never sees other rows); it goes in **`parse_globals()`**, which reads the full
+  runscript CSV (`config_parser.R:114-118`) and already does runscript-level
+  defaulting. Runtime guard for the case parse-time can't see: if `baseline_vintage`
+  points at a pre-existing baseline run without state totals, the state
+  revenue-estimate builder fails fast with a clear message instead of emitting
+  empty deltas.
 - In `run_one_year()`, after the federal static pass:
   ```
   for (st in scenario_info$states):
@@ -191,10 +231,12 @@ do_state_taxes(tax_units_post_federal, st)   # orchestrator, mirrors do_1040()
   detail, off by default; when enabled, written as ONE compact per-year matrix
   `detail/state/{year}.csv` (`id` + one liability column per state), not 51 full
   detail files.
-- **Outputs:** `totals/state.csv` (year × state × variable levels),
-  `supplemental/state_rev_est.csv` (deltas vs baseline, by state), and a state
-  distribution cut later. Add new variables to `globals$detail_vars` only if state
-  detail is on.
+- **Outputs:** `totals/state.csv` (year × state × variable levels; structural
+  precedent is the long `1040_by_agi.csv`), `supplemental/state_rev_est.csv`
+  (deltas vs baseline, by state), and a state distribution cut later. State detail
+  goes exclusively through the compact matrix — do NOT touch `globals$detail_vars`
+  (an unconditional hardcoded vector, `config_parser.R:237-253`; conditional
+  membership would be new machinery for no benefit).
 - **SLURM:** per the CLAUDE.md sync table — the state loop lives inside
   `run_one_year()` (no worker changes), but new totals/post-processing must be added
   to `src/slurm/aggregate.R` Phases 3a/3b, and `states`/`state_tax_law` scenario-info
@@ -223,8 +265,14 @@ HT2 ingestion → build BOTH Approach A (classical calibration) and Approach B
 comparison harness (`state_weights_ml_alternative.md` §4) → `state_weights_{year}.csv`
 + OTA-style diagnostics for each. Acceptance: chosen method hits targeted variables
 within 2% for ≥99% of state×stratum targets (TPC benchmark), with untargeted-variable
-MARD and downstream pilot-state liability reported honestly for both methods. Includes
-a `torch`-for-R availability check on the cluster before committing to B in production.
+MARD and downstream pilot-state liability reported honestly for both methods.
+**Torch question RESOLVED (2026-07-12):** `torch` is not installed on the cluster, so
+Approach B is implemented dependency-free in `src/data/state_weights.R` (softmax/Adam
+with analytic gradients + a finite-difference self-test); reproducibility via
+`globals$random_seed` and deterministic full-batch gradients. **Prototype status:**
+HT2 ingestion, ACS non-filer margins, and both fitting engines exist; still missing
+are the `build_state_weights(method=)` dispatcher and the `state_weights_{year}.csv`
+assembly/writer.
 
 **Phase 2 — Parameter schema + pilot states (2–3 weeks, parallel with Phase 1)**
 Implement `build_state_tax_law()`, `st_` naming, `reference` field tolerance, index
@@ -269,7 +317,9 @@ harness before the next:
    deferred — verify each during encoding, not from this list.)
 
 **Phase 7 — Later scope, in rough priority order**
-Coupled federal↔state iteration + sales-tax election imputation; state MTRs and
+Coupled federal↔state iteration + sales-tax election imputation; frozen-base
+mechanics for fixed-date-conformity states under federal reforms (§2.2
+`st_agi.conformity_year`); state MTRs and
 combined-MTR behavioral feedback; state distribution tables; local income taxes (NYC,
 MD counties); state AMTs; historical years pre-2017; state population-projection
 aging of weights.
@@ -302,9 +352,10 @@ aging of weights.
 3. **State detail files: DECIDED — off by default.** When enabled, write one compact
    per-year liability matrix (`id` + one liability column per state, ~100–200 MB/yr)
    rather than 51 full detail files.
-4. **`OA` (other areas) bucket: DECIDED — carry as a 52nd jurisdiction with no tax
-   calculation.** Keeps `Σ_st w = w_national` exact and state totals reconcilable to
-   HT2 by construction.
+4. **Non-state buckets: DECIDED (amended 2026-07-12) — carry `PR` AND `OA` as
+   no-tax jurisdictions** (HT2 reports Puerto Rico separately from Other Areas, so
+   the weights prototype carries both: 51 modeled + 2 buckets = 53). Keeps
+   `Σ_st w = w_national` exact and state totals reconcilable to HT2 by construction.
 5. **State mode switch: DECIDED — runscript `states` column** (per-scenario control,
    reproducible-by-config). Add a validation rule in `get_scenario_info()`: if any
    counterfactual row sets `states`, the baseline must too (state deltas need
@@ -326,7 +377,14 @@ aging of weights.
   conditioning variables, and by keeping state-varying *attributes* in the calc
   layer, not the weight layer.
 - **State filer counts** — federal filers ≠ state filers (TPC overcounted 8–35%).
-  Encode state filing thresholds/requirements per state from day one.
+  Encode state filing thresholds/requirements per state from day one (schema home:
+  `filing.yaml` → `st_filing.*`, applied in `calc_st_liab()`, §2.3).
+- **Fixed-date IRC conformity** — `st_agi.start_point` treats "federal AGI" as the
+  scenario's computed AGI, but fixed-date-conformity states (CA and others) do not
+  move with federal reforms. Invisible for state-static baseline estimates; wrong in
+  detail for federal reforms with states on. `st_agi.conformity_year` encoded from
+  day one, frozen-base mechanics in Phase 7, known-differences warning in between
+  (§2.2).
 - **`salt_inc_sales` conflation** — income vs sales tax not separable in the data;
   fine for state-static; the coupled mode needs the imputation task before it's real.
 - **TAXSIM recent-year state law is approximate** — validation gaps in 2021+ may be
