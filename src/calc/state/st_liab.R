@@ -59,13 +59,13 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
       #  0     : no encoding; fall back to the federal filer flag
       meets_income_test = case_when(
         st_filing.req_type == 1 ~ st_agi > st_exempt,
-        st_filing.req_type == 2 ~ st_agi > if_else(dep_status,
+        st_filing.req_type == 2 ~ st_agi > if_else(dep_status == 1,
                                                    st_filing.req_income_thresh_dep,
                                                    st_filing.req_income_thresh),
         TRUE                    ~ FALSE
       ),
-      st_filer = (filer & st_filing.req_if_fed_filer == 1) |
-                 (filer & st_filing.req_type == 0) |
+      st_filer = (filer == 1 & st_filing.req_if_fed_filer == 1) |
+                 (filer == 1 & st_filing.req_type == 0) |
                  meets_income_test |
                  liab_st_iit != 0
     ) %>%

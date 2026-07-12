@@ -154,9 +154,13 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     runscript$excess_growth_all_rev = 0
   }
   
+  # Validate cross-row state-mode consistency BEFORE any scenario subsetting
+  # (the rule needs visibility into all rows; plan §2.4)
+  validate_runscript_states(runscript)
+
   # Subset runscript to specified ID, if supplied
   if (!is.null(scenario_id)) {
-    runscript %<>% 
+    runscript %<>%
       filter(ID == scenario_id)
   }
   
@@ -372,20 +376,109 @@ get_scenario_info = function(id) {
   excess_growth            = runscript_items$excess_growth
   excess_growth_start_year = runscript_items$excess_growth_start_year
   excess_growth_all_rev    = runscript_items$excess_growth_all_rev
-   
+
+  # State income tax mode (plan §2.4): optional space-delimited state list or
+  # 'all' (= every state with a config directory); empty/absent = federal-only
+  states = NULL
+  if (!is.null(runscript_items$states) && !is.na(runscript_items$states)) {
+    states = parse_states_value(runscript_items$states)
+  }
+
+  # State tax law scenario (reform overlay dir under tax_law_state/)
+  state_tax_law_id = 'baseline'
+  if (!is.null(runscript_items$state_tax_law) &&
+      !is.na(runscript_items$state_tax_law)) {
+    state_tax_law_id = runscript_items$state_tax_law
+  }
+
   # Return as named list
   return(list(ID                       = id,
               output_path              = output_root,
               interface_paths          = interface_paths,
               tax_law_id               = tax_law_id,
-              behavior_modules         = behavior_modules, 
-              years                    = years, 
+              behavior_modules         = behavior_modules,
+              years                    = years,
               dist_years               = dist_years,
               mtr_vars                 = mtr_vars,
-              mtr_types                = mtr_types, 
-              excess_growth            = excess_growth, 
-              excess_growth_start_year = excess_growth_start_year, 
-              excess_growth_all_rev    = excess_growth_all_rev))
+              mtr_types                = mtr_types,
+              excess_growth            = excess_growth,
+              excess_growth_start_year = excess_growth_start_year,
+              excess_growth_all_rev    = excess_growth_all_rev,
+              states                   = states,
+              state_tax_law_id         = state_tax_law_id))
+}
+
+
+
+parse_states_value = function(x) {
+
+  #----------------------------------------------------------------------------
+  # Parses a runscript 'states' cell: 'all' expands to every jurisdiction with
+  # a baseline config directory; otherwise a space-delimited list of 2-letter
+  # postal codes.
+  #
+  # Parameters:
+  #   - x (str) : raw cell value
+  #
+  # Returns: uppercase vector of state codes (str[]).
+  #----------------------------------------------------------------------------
+
+  x = str_trim(as.character(x))
+  if (tolower(x) == 'all') {
+    return(
+      './config/scenarios/tax_law_state/baseline' %>%
+        list.dirs(recursive = F) %>%
+        basename() %>%
+        toupper()
+    )
+  }
+  return(toupper(str_split_1(x, ' ')))
+}
+
+
+
+validate_runscript_states = function(runscript) {
+
+  #----------------------------------------------------------------------------
+  # Validates the cross-row state-mode rule: if any counterfactual row sets
+  # 'states', the baseline row must set a superset (state deltas need baseline
+  # state liability). Skipped when the baseline row is absent from the
+  # runscript (baseline_vintage workflows) -- the state revenue-estimate
+  # builder carries a runtime guard for that case.
+  #
+  # Parameters:
+  #   - runscript (df) : full runscript tibble (all rows)
+  #
+  # Returns: TRUE invisibly; throws on violation.
+  #----------------------------------------------------------------------------
+
+  if (!('states' %in% colnames(runscript))) {
+    return(invisible(TRUE))
+  }
+
+  cf = runscript %>%
+    filter(ID != 'baseline', !is.na(states))
+  bl = runscript %>%
+    filter(ID == 'baseline')
+  if (nrow(cf) == 0 | nrow(bl) == 0) {
+    return(invisible(TRUE))
+  }
+
+  if (is.na(bl$states[1])) {
+    stop('Counterfactual scenario(s) set the states column but the baseline ',
+         'row does not; baseline state results are required for state deltas')
+  }
+  bl_states = parse_states_value(bl$states[1])
+
+  for (i in 1:nrow(cf)) {
+    cf_states = parse_states_value(cf$states[i])
+    if (!all(cf_states %in% bl_states)) {
+      stop("Scenario '", cf$ID[i], "' requests states (",
+           paste(setdiff(cf_states, bl_states), collapse = ' '),
+           ") that the baseline row does not include")
+    }
+  }
+  return(invisible(TRUE))
 }
 
 

@@ -345,3 +345,29 @@ get_n_cols = function(df, prefix) {
 
 
 
+
+
+fed_calc_vars = function(incl_payroll = T) {
+
+  #----------------------------------------------------------------------------
+  # Lists the FEDERAL calculated variable names registered in return_vars,
+  # excluding the state calculator's calc_st_* registrations (state variables
+  # are computed in a separate downstream pass and never exist on federally-
+  # calculated tax units; plan §2.4).
+  #
+  # Parameters:
+  #   - incl_payroll (bool) : whether to include payroll (calc_pr) variables
+  #
+  # Returns: character vector of calculated variable names (str[]).
+  #----------------------------------------------------------------------------
+
+  out = return_vars %>%
+    `[`(!str_detect(names(.), '^calc_st_'))
+  if (!incl_payroll) {
+    out %<>% remove_by_name('calc_pr')
+  }
+  out %>%
+    unlist() %>%
+    set_names(NULL) %>%
+    return()
+}

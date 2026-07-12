@@ -74,6 +74,7 @@ ctc_tier_amounts:
   reference: 'DR 0104CN 2024/2025 (flat per-child amounts by AGI tier)'
 ctc_tier1_single:
   value:
+    '2017': 25000
     '2022': 25000
     '2025': 26000
   reference: 'DR 0104CN 2022-2025; DOR Income Tax Topics: Child Tax Credit'
@@ -86,6 +87,7 @@ ctc_tier1_single:
   i_increment: 1000
 ctc_tier1_joint:
   value:
+    '2017': 35000
     '2022': 35000
     '2025': 36000
   reference: 'DR 0104CN 2022-2025'
@@ -98,6 +100,7 @@ ctc_tier1_joint:
   i_increment: 1000
 ctc_tier2_single:
   value:
+    '2017': 50000
     '2022': 50000
     '2025': 51000
   reference: 'DR 0104CN 2022-2025'
@@ -110,6 +113,7 @@ ctc_tier2_single:
   i_increment: 1000
 ctc_tier2_joint:
   value:
+    '2017': 60000
     '2022': 60000
     '2025': 61000
   reference: 'DR 0104CN 2022-2025'
@@ -122,6 +126,7 @@ ctc_tier2_joint:
   i_increment: 1000
 ctc_tier3_single:
   value:
+    '2017': 75000
     '2022': 75000
     '2025': 77000
   reference: 'DR 0104CN 2022-2025 (also the eligibility cliff)'
@@ -134,6 +139,7 @@ ctc_tier3_single:
   i_increment: 1000
 ctc_tier3_joint:
   value:
+    '2017': 85000
     '2022': 85000
     '2025': 87000
   reference: 'DR 0104CN 2022-2025 (also the eligibility cliff)'
@@ -184,6 +190,7 @@ fatc_po_zero_single:
   reference: 'DR 0104CN 2024/2025 (credit 0 above 85,000 single)'
 fatc_po_zero_joint:
   value:
+    '2017': 95000
     '2024': 95000
     '2025': 96000
   reference: 'DR 0104CN 2024; DOR FATC publication 2025'

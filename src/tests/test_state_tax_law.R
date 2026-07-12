@@ -57,8 +57,12 @@ test_pilot_state_values = function() {
   }
 
   stopifnot(
-    # Structure: all states, all years x 4 filing statuses, no NA core cols
+    # Structure: all states, all years x 4 filing statuses, no NA core cols.
+    # Narrow year windows must also parse (every year-keyed value list is
+    # anchored at 2017 -- plan §2.2 encoding convention)
     'row count wrong'   = nrow(law) == 3 * length(2017:2035) * 4,
+    'single-year build broke' =
+      nrow(build_state_tax_law(c('IL', 'CO', 'NY'), 2020, test_indexes)) == 12,
     'core rates NA'     = !anyNA(law$st_ord.rates1),
     'start_point NA'    = !anyNA(law$st_agi.start_point),
 

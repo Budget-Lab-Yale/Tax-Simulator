@@ -125,6 +125,9 @@ do_scenario = function(ID, baseline_mtrs) {
     # point-mass income. Root-caused and fixed in build_horizontal_table();
     # AI-Fiscal Issue 2 / upstream Budget-Lab-Yale/Tax-Simulator#129.)
     build_horizontal_table(ID)
+
+    # State revenue estimates (no-op when state mode is off)
+    build_state_rev_est(ID)
   }
   
   # Return MTRs if running baseline
@@ -221,6 +224,21 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
     bind_rows() %>%
     write_csv(file.path(static_root, 'totals', '1040_by_agi.csv'))
 
+  # State mode: write state totals and the parsed state tax law
+  if (!is.null(scenario_info$states)) {
+    output %>%
+      map(.f = ~.x$static_totals$state) %>%
+      bind_rows() %>%
+      write_csv(file.path(static_root, 'totals', 'state.csv'))
+    build_state_tax_law(
+      states           = scenario_info$states,
+      years            = scenario_info$years,
+      indexes          = indexes,
+      state_tax_law_id = scenario_info$state_tax_law_id,
+      output_path      = scenario_info$output_path
+    )
+  }
+
   static_totals_pr %>%
     left_join(static_totals_1040, by = 'year') %>%
     calc_receipts(
@@ -256,6 +274,14 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
       map(.f = ~.x$conventional_totals$`1040_by_agi`) %>%
       bind_rows() %>%
       write_csv(file.path(conv_root, 'totals', '1040_by_agi.csv'))
+
+    # State mode: write conventional state totals
+    if (!is.null(scenario_info$states)) {
+      output %>%
+        map(.f = ~.x$conventional_totals$state) %>%
+        bind_rows() %>%
+        write_csv(file.path(conv_root, 'totals', 'state.csv'))
+    }
 
     conv_totals_pr %>%
       left_join(conv_totals_1040, by = 'year') %>%
@@ -371,11 +397,30 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       select(id, baseline1 = liab_fica_er1, baseline2 = liab_fica_er2)
   }
 
-  # List calculated tax variables
-  vars_1040 = return_vars %>%
-    remove_by_name('calc_pr') %>%
-    unlist() %>%
-    set_names(NULL)
+  # List calculated tax variables (federal only; state vars are computed in a
+  # separate downstream pass, plan §2.4)
+  vars_1040 = fed_calc_vars(incl_payroll = F)
+
+
+  # --- STATE MODE PREP ---
+  # Built per year inside run_one_year (cheap YAML parse) so the function
+  # signature is unchanged and the SLURM worker needs no sync (CLAUDE.md)
+  state_tax_law = NULL
+  state_weights = NULL
+  if (!is.null(scenario_info$states)) {
+    state_tax_law = build_state_tax_law(
+      states           = scenario_info$states,
+      years            = year,
+      indexes          = indexes,
+      state_tax_law_id = scenario_info$state_tax_law_id
+    )
+    state_weights = build_state_weights(
+      tax_units = tax_units,
+      year      = year,
+      method    = 'placeholder',   # PLACEHOLDER until the Phase 1 bake-off lands
+      states    = scenario_info$states
+    )
+  }
 
 
   # --- STATIC PASS ---
@@ -392,9 +437,7 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       map2(.y = scenario_info$mtr_types,
            .f = ~ calc_mtrs(
              tax_units       = tax_units_static %>%
-                                 select(-all_of(return_vars %>%
-                                 unlist() %>%
-                                 set_names(NULL))),
+                                 select(-all_of(fed_calc_vars())),
              actual_liab_iit = tax_units_static$liab_iit_net,
              actual_liab_pr  = tax_units_static$liab_pr,
              var             = .x,
@@ -420,10 +463,13 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     write_csv(file.path(scenario_info$output_path, 'static', 'detail',
                         paste0(year, '.csv')))
 
-  # Get static totals
+  # Get static totals (state totals NULL unless state mode is on)
   static_totals = list(pr            = get_pr_totals(tax_units_static, year),
                         `1040`        = get_1040_totals(tax_units_static, year),
-                        `1040_by_agi` = get_1040_totals(tax_units_static, year, T))
+                        `1040_by_agi` = get_1040_totals(tax_units_static, year, T),
+                        state         = get_state_totals(tax_units_static,
+                                                         state_tax_law,
+                                                         state_weights, year))
 
 
   # --- CONVENTIONAL PASS ---
@@ -449,9 +495,7 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
         map2(.y = scenario_info$mtr_types,
              .f = ~ calc_mtrs(
                tax_units       = tax_units_conv %>%
-                                   select(-all_of(return_vars %>%
-                                   unlist() %>%
-                                   set_names(NULL))),
+                                   select(-all_of(fed_calc_vars())),
                actual_liab_iit = tax_units_conv$liab_iit_net,
                actual_liab_pr  = tax_units_conv$liab_pr,
                var             = .x,
@@ -476,10 +520,13 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       write_csv(file.path(scenario_info$output_path, 'conventional', 'detail',
                           paste0(year, '.csv')))
 
-    # Get conventional totals
+    # Get conventional totals (state totals NULL unless state mode is on)
     conventional_totals = list(pr            = get_pr_totals(tax_units_conv, year),
                                 `1040`        = get_1040_totals(tax_units_conv, year),
-                                `1040_by_agi` = get_1040_totals(tax_units_conv, year, T))
+                                `1040_by_agi` = get_1040_totals(tax_units_conv, year, T),
+                                state         = get_state_totals(tax_units_conv,
+                                                                 state_tax_law,
+                                                                 state_weights, year))
 
   } else if (scenario_info$ID != 'baseline') {
 

@@ -147,6 +147,13 @@ config/scenarios/tax_law_state/
   - `st_credits.eitc_match`: share of federal EITC (0 where none)
   - `st_ded.salt_addback`: 1 if state income tax must be backed out of federal
     itemized deductions (uncapped line-5a semantics)
+- **Encoding convention — anchor every year-keyed value list at 2017** (the state
+  law floor). A subparameter whose first specified year is later (e.g. a credit
+  enacted in 2025 encoded only as `'2025': …`) produces an empty series when the
+  simulation window ends before that year and breaks the parse; the 2017 anchor
+  (usually `0` for a not-yet-enacted credit) is also the semantically correct
+  value. Discovered in Phase 4 single-year builds; enforced by the year-window
+  regression in `test_state_tax_law`.
 - **`reference` metadata field** (PolicyEngine practice): every parameter cites form
   line / statute section + URL. Parser status (verified 2026-07-12): unknown keys are
   already tolerated for **unindexed** subparams (early return, `tax_law.R:311`) but

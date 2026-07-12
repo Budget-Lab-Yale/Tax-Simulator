@@ -621,8 +621,8 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
     do_taxes(
       baseline_pr_er = NULL,
       vars_payroll   = return_vars$calc_pr,
-      vars_1040      = return_vars %>% remove_by_name('calc_pr') %>% unlist() %>% set_names(NULL)
-    ) %>% 
+      vars_1040      = fed_calc_vars(incl_payroll = F)
+    ) %>%
     
     # Calculate MTR and return
     mutate(

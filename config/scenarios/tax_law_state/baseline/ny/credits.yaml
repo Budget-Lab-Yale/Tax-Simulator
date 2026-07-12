@@ -88,13 +88,15 @@ ctc_young_age_limit:
   reference: 'Tax Law 606(c-1) ("aged three or younger")'
 ctc_young_amount:
   value:
+    '2017': 0
     '2025': 1000
-  reference: 'Tax Law 606(c-1); IT-213-I 2025'
+  reference: 'Tax Law 606(c-1); IT-213-I 2025 (0 pre-2025: style-1 regime)'
 ctc_old_amount:
   value:
+    '2017': 0
     '2025': 330
     '2026': 500
-  reference: 'Tax Law 606(c-1) ("five hundred dollars" for 2026-2027); IT-213-I 2025'
+  reference: 'Tax Law 606(c-1) ("five hundred dollars" for 2026-2027); IT-213-I 2025 (0 pre-2025)'
 ctc_po_single:
   value: 75000
   reference: 'Tax Law 606(c-1); IT-213 line 3 (single/HoH/QSS)'

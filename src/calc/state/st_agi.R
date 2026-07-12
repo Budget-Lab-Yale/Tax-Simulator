@@ -125,7 +125,7 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
 
       # Subtraction: charitable contributions for federal non-itemizers in
       # excess of the floor (CO)
-      st_sub_char = if_else(!itemizing & is.finite(st_agi.sub_char_nonitem_floor),
+      st_sub_char = if_else(itemizing != 1 & is.finite(st_agi.sub_char_nonitem_floor),
                             pmax(0, char_cash + char_noncash -
                                     st_agi.sub_char_nonitem_floor),
                             0),

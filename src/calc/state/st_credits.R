@@ -137,7 +137,7 @@ calc_st_credits = function(tax_unit, fill_missings = F) {
                      na.rm = T)
 
     st_hh_credit = case_when(
-      tax_unit$dep_status          ~ 0,
+      tax_unit$dep_status == 1     ~ 0,
       tax_unit$filing_status == 1  ~ hh_s,
       tax_unit$filing_status == 3  ~ hh_o * if_else(tax_unit$st_credits.hh_mfs_half == 1,
                                                     0.5, 1),
@@ -195,10 +195,16 @@ calc_st_credits = function(tax_unit, fill_missings = F) {
     co_tier[is.na(co_tier)] = 0L
   }
 
+  # case_when() evaluates all branches eagerly, so this must return zeros
+  # (not error) when the tier columns are absent from this state's law slice
   pick_tier = function(prefix) {
-    m = as.matrix(tax_unit[paste0(prefix, 1:3)])
-    out = rep(0, n)
-    ok  = co_tier > 0
+    cols = paste0(prefix, 1:3)
+    out  = rep(0, n)
+    if (!all(cols %in% cn)) {
+      return(out)
+    }
+    m  = as.matrix(tax_unit[cols])
+    ok = co_tier > 0
     out[ok] = m[cbind(which(ok), co_tier[ok])]
     out
   }

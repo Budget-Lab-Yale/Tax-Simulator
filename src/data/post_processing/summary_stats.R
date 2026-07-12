@@ -277,3 +277,69 @@ get_pr_totals = function(tax_units, yr) {
     relocate(year) %>% 
     return()
 } 
+
+
+get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr) {
+
+  #----------------------------------------------------------------------------
+  # Calculates state-level aggregates: runs the state calculator per
+  # jurisdiction on federally-calculated tax units and aggregates with the
+  # split state weights (plan §2.4).
+  #
+  # Parameters:
+  #   - tax_units_calc (df) : tax units post-federal calculation
+  #   - state_tax_law (df)  : state tax law tibble; see build_state_tax_law()
+  #   - state_weights (df)  : long (id, state, weight) split weights
+  #   - yr (int)            : year
+  #
+  # Returns: tibble long in (year, state, variable) with weighted totals, or
+  #          NULL when no state law exists for the year (df | NULL).
+  #----------------------------------------------------------------------------
+
+  if (is.null(state_tax_law) || nrow(state_tax_law) == 0) {
+    return(NULL)
+  }
+  law_yr = state_tax_law %>%
+    filter(year == yr)
+  if (nrow(law_yr) == 0) {
+    return(NULL)
+  }
+
+  unique(law_yr$state) %>%
+    map(.f = function(st) {
+
+      # Join this state's law, calculate, and reattach ids and weights
+      tax_units_calc %>%
+        left_join(law_yr %>%
+                    filter(state == st) %>%
+                    select(-state),
+                  by = c('year', 'filing_status')) %>%
+        do_state_taxes() %>%
+        mutate(id = tax_units_calc$id) %>%
+        left_join(state_weights %>%
+                    filter(state == st) %>%
+                    select(id, st_weight = weight),
+                  by = 'id') %>%
+        mutate(st_weight = replace_na(st_weight, 0)) %>%
+
+        # Weighted aggregates
+        summarise(
+          returns           = sum(st_weight * st_filer),
+          liab_st_iit       = sum(st_weight * liab_st_iit),
+          st_agi            = sum(st_weight * st_agi),
+          st_txbl_inc       = sum(st_weight * st_txbl_inc),
+          st_tax_pre_credit = sum(st_weight * st_tax_pre_credit),
+          st_eitc           = sum(st_weight * st_eitc),
+          st_ctc            = sum(st_weight * st_ctc),
+          st_cdctc          = sum(st_weight * st_cdctc),
+          st_credits_nonref = sum(st_weight * st_credits_nonref),
+          st_credits_ref    = sum(st_weight * st_credits_ref)
+        ) %>%
+        mutate(year = yr, state = st) %>%
+        pivot_longer(cols      = -c(year, state),
+                     names_to  = 'variable',
+                     values_to = 'value')
+    }) %>%
+    bind_rows() %>%
+    return()
+}

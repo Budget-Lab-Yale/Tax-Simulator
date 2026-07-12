@@ -343,3 +343,44 @@ fit_calibration <- function(w, P0, targets, n_iter = 50, tol = 1e-4, verbose = F
   cat("calibration totals:", round(totals(rc$P),2), "\n")
   invisible(list(max_grad_err = max_grad_err, grad = totals(rg$P), calib = totals(rc$P)))
 }
+
+
+
+# -----------------------------------------------------------------------------
+# build_state_weights(): the runtime dispatcher (plan §2.1). Returns long
+# split weights (id, state, weight) satisfying Σ_state w_{i,state} = weight_i
+# across ALL jurisdictions -- so federal aggregates are invariant to the
+# with-state mode by construction.
+#
+# Methods:
+#   "placeholder" -- UNIFORM split across the 53 jurisdictions. Exists so the
+#                    Phase 4 orchestration can run before the Phase 1 bake-off
+#                    lands; state LEVELS are meaningless (every state gets
+#                    1/53 of the nation) but the split-constraint invariant,
+#                    file contract, and all downstream machinery are real.
+#   "calibration" -- Approach A (fit_calibration); not yet wired to HT2/ACS
+#                    target ingestion at runtime.
+#   "gradient"    -- Approach B (fit_gradient); ditto.
+# -----------------------------------------------------------------------------
+build_state_weights = function(tax_units, year,
+                               method = c('placeholder', 'calibration', 'gradient'),
+                               states = NULL) {
+
+  method = match.arg(method)
+  jurisdictions = c(STATE_JURISDICTIONS, NONTAX_BUCKETS)
+  if (is.null(states)) {
+    states = jurisdictions
+  }
+
+  if (method != 'placeholder') {
+    stop('build_state_weights(): method "', method, '" is not yet wired into ',
+         'the runtime (Phase 1 bake-off pending); use "placeholder"')
+  }
+
+  tax_units %>%
+    select(id, weight) %>%
+    expand_grid(state = states) %>%
+    mutate(weight = weight / length(jurisdictions)) %>%
+    select(id, state, weight) %>%
+    return()
+}

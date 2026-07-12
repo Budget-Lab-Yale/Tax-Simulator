@@ -237,6 +237,29 @@ test_state_calc = function() {
   }
   message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 3 states x 5 years)')
 
+  # Subset-states regression: a law table built WITHOUT a given state lacks
+  # that state's feature columns entirely (not just NA cells); the calculator
+  # must handle both shapes (real-run failure: IL+NY slice missing CO's
+  # ctc_tier_shares columns)
+  for (subset_states in list(c('IL', 'NY'), 'CO', 'NY')) {
+    law_sub = build_state_tax_law(
+      states  = subset_states,
+      years   = 2024,
+      indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+                mutate(growth = 0.025)
+    )
+    for (st in subset_states) {
+      out = grid %>%
+        left_join(law_sub %>%
+                    filter(state == st) %>%
+                    select(-state, -year),
+                  by = 'filing_status') %>%
+        do_state_taxes()
+      stopifnot('subset-states: NA liability' = !anyNA(out$liab_st_iit))
+    }
+  }
+  message('test_state_calc subset-states regression: PASSED')
+
   message('test_state_calc: ALL TESTS PASSED')
   invisible(TRUE)
 }
@@ -256,12 +279,14 @@ st_test_unit = function(overrides = list()) {
   # Returns: one-row tibble (df).
   #----------------------------------------------------------------------------
 
+  # 0/1 numerics for flag variables, mirroring the production microdata
+  # (the calculator must accept both; regression for a real-data failure)
   unit = list(
-    filing_status = 1, filer = TRUE, dep_status = FALSE,
-    age1 = 40, age2 = NA_integer_, blind1 = FALSE, blind2 = NA,
+    filing_status = 1, filer = 1, dep_status = 0,
+    age1 = 40, age2 = NA_integer_, blind1 = 0, blind2 = NA_real_,
     n_dep = 0, dep_age1 = NA_integer_, dep_age2 = NA_integer_,
     dep_age3 = NA_integer_,
-    agi = 0, txbl_inc = 0, itemizing = FALSE,
+    agi = 0, txbl_inc = 0, itemizing = 0,
     exempt_int = 0, state_ref = 0, txbl_ss = 0, txbl_pens_dist = 0,
     txbl_ira_dist = 0, ot_ded = 0, char_cash = 0, char_noncash = 0,
     item_ded = 0, item_ded_ex_limits = 0, salt_item_ded = 0,

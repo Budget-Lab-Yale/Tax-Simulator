@@ -85,7 +85,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # State deduction (AGI-start states: IL, NY, ...)
       #------------------------------------------------
 
-      st_std_ded = if_else(dep_status, st_ded.std_dependent, st_ded.std_amount),
+      st_std_ded = if_else(dep_status == 1, st_ded.std_dependent, st_ded.std_amount),
 
       # State itemized base: pre-limitation federal itemized, SALT component
       # replaced by uncapped property taxes (income/sales excluded where
@@ -128,7 +128,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # federal election
       st_itemizing = case_when(
         st_ded.item_allowed == 0 ~ FALSE,
-        st_ded.item_coupling == 1 ~ itemizing,
+        st_ded.item_coupling == 1 ~ itemizing == 1,
         TRUE                      ~ st_item_ded > st_std_ded
       ),
       st_ded = if_else(st_itemizing, st_item_ded, st_std_ded),
@@ -141,7 +141,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # of the (capped) SALT deduction, limited to the itemized-over-standard
       # excess
       salt_inc_component = pmax(0, salt_item_ded - salt_prop - salt_pers),
-      st_addback_salt = if_else(st_ded.salt_addback == 1 & itemizing &
+      st_addback_salt = if_else(st_ded.salt_addback == 1 & itemizing == 1 &
                                   st_ded.item_allowed == 0,
                                 pmin(salt_inc_component,
                                      pmax(0, item_ded - std_ded)),
@@ -150,10 +150,10 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # High-income federal deduction addback (CO three regimes): federal
       # deduction claimed in excess of the cap, net of state income tax
       # already added back
-      fed_ded_claimed = if_else(itemizing, item_ded,
+      fed_ded_claimed = if_else(itemizing == 1, item_ded,
                                 std_ded * st_ded.addback_incl_std),
       st_addback_cap  = if_else(agi > st_ded.addback_cap_thresh &
-                                  (itemizing | st_ded.addback_incl_std == 1),
+                                  (itemizing == 1 | st_ded.addback_incl_std == 1),
                                 pmax(0, fed_ded_claimed - st_ded.addback_cap -
                                         st_addback_salt),
                                 0),

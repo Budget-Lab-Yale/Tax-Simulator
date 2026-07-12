@@ -91,6 +91,22 @@ tryCatch({
       bind_rows() %>%
       write_csv(file.path(static_root, 'totals', '1040_by_agi.csv'))
 
+    # State mode: write state totals and the parsed state tax law
+    # (mirrors run_sim(); plan §2.4)
+    if (!is.null(scenario_info$states)) {
+      output %>%
+        map(.f = ~.x$static_totals$state) %>%
+        bind_rows() %>%
+        write_csv(file.path(static_root, 'totals', 'state.csv'))
+      build_state_tax_law(
+        states           = scenario_info$states,
+        years            = scenario_info$years,
+        indexes          = config$indexes,
+        state_tax_law_id = scenario_info$state_tax_law_id,
+        output_path      = scenario_info$output_path
+      )
+    }
+
     static_totals_pr %>%
       left_join(static_totals_1040, by = 'year') %>%
       calc_receipts(
@@ -132,6 +148,14 @@ tryCatch({
         map(.f = ~.x$conventional_totals$`1040_by_agi`) %>%
         bind_rows() %>%
         write_csv(file.path(conv_root, 'totals', '1040_by_agi.csv'))
+
+      # State mode: write conventional state totals (mirrors run_sim())
+      if (!is.null(scenario_info$states)) {
+        output %>%
+          map(.f = ~.x$conventional_totals$state) %>%
+          bind_rows() %>%
+          write_csv(file.path(conv_root, 'totals', 'state.csv'))
+      }
 
       conv_totals_pr %>%
         left_join(conv_totals_1040, by = 'year') %>%
@@ -180,6 +204,10 @@ tryCatch({
 
     # Horizontal equity
     build_horizontal_table(scenario_id)
+
+    # State revenue estimates (no-op when state mode is off; mirrors
+    # do_scenario())
+    build_state_rev_est(scenario_id)
 
     cat(paste0('Phase 3b: completed scenario=', scenario_id, '\n'))
   }
