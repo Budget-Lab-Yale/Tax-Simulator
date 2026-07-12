@@ -32,6 +32,74 @@ test_state_tax_law = function() {
 
 
 
+test_pilot_state_values = function() {
+
+  #----------------------------------------------------------------------------
+  # Spot-checks parsed pilot-state tax law values against primary-source
+  # figures (see reference fields in config/scenarios/tax_law_state/baseline).
+  # Uses synthetic constant-growth indexes; asserted values are all
+  # transcribed (pre-projection) years, so they do not depend on the index.
+  #
+  # Returns: TRUE invisibly if test passes (throws otherwise).
+  #----------------------------------------------------------------------------
+
+  test_indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+    mutate(growth = 0.025)
+
+  law = build_state_tax_law(states  = c('IL', 'NY'),
+                            years   = 2017:2035,
+                            indexes = test_indexes)
+
+  pick = function(st, yr, fs, var) {
+    law %>%
+      filter(state == st, year == yr, filing_status == fs) %>%
+      pull(!!sym(var))
+  }
+
+  stopifnot(
+    # Structure: both states, all years x 4 filing statuses, no NA core cols
+    'row count wrong'   = nrow(law) == 2 * length(2017:2035) * 4,
+    'core rates NA'     = !anyNA(law$st_ord.rates1),
+    'start_point NA'    = !anyNA(law$st_agi.start_point),
+
+    # Illinois (see il/ yaml reference fields)
+    'IL 2017 blended rate'   = pick('IL', 2017, 1, 'st_ord.rates1') == 0.043549,
+    'IL 2018 rate'           = pick('IL', 2018, 1, 'st_ord.rates1') == 0.0495,
+    'IL 2024 exemption'      = pick('IL', 2024, 1, 'st_exempt.personal_amount') == 2775,
+    'IL 2023 frozen exemption' = pick('IL', 2023, 1, 'st_exempt.personal_amount') == 2425,
+    'IL exemption cliff'     = pick('IL', 2020, 2, 'st_exempt.po_thresh') == 500000,
+    'IL 2017 EITC 14pct'     = pick('IL', 2017, 1, 'st_credits.eitc_match') == 0.14,
+    'IL 2023 EITC 20pct'     = pick('IL', 2023, 1, 'st_credits.eitc_match') == 0.20,
+    'IL starts from fed AGI' = pick('IL', 2020, 1, 'st_agi.start_point') == 1,
+
+    # New York (see ny/ yaml reference fields)
+    'NY 2021 top rates'      = pick('NY', 2021, 1, 'st_ord.rates8')  == 0.0965 &&
+                               pick('NY', 2021, 1, 'st_ord.rates10') == 0.109,
+    'NY 2033 reversion'      = pick('NY', 2033, 1, 'st_ord.rates8')  == 0.0882,
+    'NY 2026 bottom rate cut' = pick('NY', 2026, 1, 'st_ord.rates1') == 0.039,
+    'NY single top bracket'  = pick('NY', 2021, 1, 'st_ord.brackets8') == 1077550,
+    'NY MFS uses single schedule' =
+      pick('NY', 2021, 3, 'st_ord.brackets8') == 1077550,
+    'NY joint top bracket'   = pick('NY', 2021, 2, 'st_ord.brackets8') == 2155350,
+    'NY std deduction joint' = pick('NY', 2024, 2, 'st_ded.std_amount') == 16050,
+    'NY dep exemption'       = pick('NY', 2024, 1, 'st_exempt.dep_amount') == 1000 &&
+                               pick('NY', 2024, 1, 'st_exempt.personal_amount') == 0,
+    'NY EITC 30pct'          = pick('NY', 2020, 1, 'st_credits.eitc_match') == 0.30,
+    'NY pease 2017 single'   = pick('NY', 2017, 1, 'st_ded.pease_thresh') == 261500,
+    'NY pease 2023 joint'    = pick('NY', 2023, 2, 'st_ded.pease_thresh') == 375850,
+    'NY ESCC 2025 restructure' = pick('NY', 2025, 1, 'st_credits.ctc_old_amount') == 330 &&
+                                 pick('NY', 2026, 1, 'st_credits.ctc_old_amount') == 500,
+    'NY itemized decoupling' = pick('NY', 2017, 1, 'st_ded.item_coupling') == 1 &&
+                               pick('NY', 2018, 1, 'st_ded.item_coupling') == 0,
+    'NY filing threshold'    = pick('NY', 2020, 1, 'st_filing.req_income_thresh') == 4000
+  )
+
+  message('test_pilot_state_values: PASSED')
+  invisible(TRUE)
+}
+
+
+
 test_reference_key_tolerance = function() {
 
   #----------------------------------------------------------------------------

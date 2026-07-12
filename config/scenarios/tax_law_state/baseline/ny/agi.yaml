@@ -1,0 +1,74 @@
+---
+# New York: base and additions/subtractions (IT-201 lines 19-33; Tax Law §612)
+# NY AGI = federal AGI + NY additions - NY subtractions.
+
+filing_status_mapper:
+  sub_529_cap:
+    '1': sub_529_single
+    '2': sub_529_joint
+    '3': sub_529_single
+    '4': sub_529_single
+
+# Starting point for state base: 1 = federal AGI (IT-201 line 19)
+start_point:
+  value: 1
+  reference: 'IT-201 line 19; Tax Law 612(a)'
+
+# IRC conformity: NY is rolling-conformity for PIT generally; the targeted
+# post-2020-03-01 CARES decoupling (recomputed FAGI, NOL/163(j) items) is a
+# known-difference, not a fixed conformity date
+conformity_year:
+  value: 0
+  reference: 'Tax Law 607; 2020-2022 "recomputed FAGI" line 19a treated as known-difference'
+
+# Federally tax-exempt interest: NY adds back interest on NON-NY state/local
+# bonds only (own-state bonds stay exempt; contrast IL which adds back all)
+add_exempt_int:
+  value: 1
+  reference: 'IT-201 line 20; Tax Law 612(b)(1)'
+own_state_exempt:
+  value: 1
+  reference: 'Tax Law 612(b)(1) (obligations of NY and its subdivisions excluded from addback)'
+
+# US government obligation interest subtracted
+sub_us_int:
+  value: 1
+  reference: 'IT-201 line 28; Tax Law 612(c)(1)'
+
+# State income tax refunds included in federal AGI subtracted
+sub_state_ref:
+  value: 1
+  reference: 'IT-201 line 25; Tax Law 612(c)(3)'
+
+# Share of federally taxable Social Security subtracted (full)
+ss_sub_share:
+  value: 1
+  reference: 'Tax Law 612(c)(3-c); IT-201 line 27'
+
+# Private pension and annuity exclusion: $20,000 PER PERSON at age 59.5+
+# (statutory, not indexed, unchanged 2017-2026; no spousal sharing of unused
+# exclusion). Age floor approximated as 60 in integer-age microdata.
+# Government pensions (NYS/local/federal) are fully exempt with no cap or age
+# test -- the private/government pension split is data-limited in the PUF;
+# see known-differences
+pension_excl_under65:
+  value: 20000
+  reference: 'Tax Law 612(c)(3-a) ("not in excess of twenty thousand dollars"); IT-201-I line 29'
+pension_excl_65plus:
+  value: 20000
+  reference: 'Tax Law 612(c)(3-a); IT-201-I line 29'
+pension_excl_min_age:
+  value: 60
+  reference: 'Tax Law 612(c)(3-a) (age 59.5; integer-age approximation documented)'
+govt_pension_full_sub:
+  value: 1
+  reference: 'Tax Law 612(c)(3); IT-201-I line 26 (data-limited: pension type unobserved in PUF)'
+
+# NY 529 contribution subtraction (data-limited: contributions unobserved in
+# PUF; encoded for completeness)
+sub_529_single:
+  value: 5000
+  reference: 'Tax Law 612(c)(32)'
+sub_529_joint:
+  value: 10000
+  reference: 'Tax Law 612(c)(32)'

@@ -1,0 +1,52 @@
+---
+# Illinois: base and additions/subtractions (IL-1040 Lines 1-9, Schedule M)
+# All parameters verified from primary sources 2026-07-12; see reference fields.
+
+# Starting point for state base: 0 = own base, 1 = federal AGI, 2 = federal
+# taxable income. IL-1040 Line 1 starts from federal AGI
+start_point:
+  value: 1
+  reference: 'IL-1040 Line 1; 35 ILCS 5/203(a)(1); https://tax.illinois.gov'
+
+# IRC conformity: 0 = rolling (base moves with scenario federal law); else the
+# fixed conformity year. Illinois conforms on a rolling basis
+conformity_year:
+  value: 0
+  reference: '35 ILCS 5/203; rolling IRC conformity'
+
+# Whether federally tax-exempt interest is added back to the state base.
+# Illinois adds back ALL muni interest (incl. most IL bonds; the specifically
+# exempted IL-authority bond share is unobservable in the PUF and small)
+add_exempt_int:
+  value: 1
+  reference: 'IL-1040 Line 2; 2024 Schedule M Instr. Lines 34-35; IL DOR Pub. 101'
+
+# Whether US government obligation interest is subtracted (share of taxable
+# interest unobservable in PUF; flag encoded for calc-layer treatment)
+sub_us_int:
+  value: 1
+  reference: '2024 Schedule M Instr. Line 22; IL DOR Pub. 101'
+
+# Whether state income tax refunds included in federal AGI are subtracted
+sub_state_ref:
+  value: 1
+  reference: 'IL-1040 Line 6 (Illinois Income Tax overpayment included in fed 1040)'
+
+# Share of federally taxable Social Security subtracted from the state base
+ss_sub_share:
+  value: 1
+  reference: 'IL-1040 Line 5; 35 ILCS 5/203(a)(2); IL DOR Pub. 120'
+
+# Cap on subtraction of federally taxable pension/IRA/401(k) retirement income,
+# by age of primary filer. Illinois subtracts 100% of federally taxed
+# retirement income with no dollar cap and no income test
+pension_excl_under65:
+  value: Inf
+  reference: 'IL-1040 Line 5; 35 ILCS 5/203(a)(2); IL DOR Pub. 120'
+pension_excl_65plus:
+  value: Inf
+  reference: 'IL-1040 Line 5; 35 ILCS 5/203(a)(2); IL DOR Pub. 120'
+
+# Note: CO-style combined pension/SS caps (pension_cap_incl_ss) and AL/MO/OR
+# federal-tax deductibility (fed_tax_ded_limit) are encoded only in states
+# that have those features; absent = NA = feature-not-present in the calc

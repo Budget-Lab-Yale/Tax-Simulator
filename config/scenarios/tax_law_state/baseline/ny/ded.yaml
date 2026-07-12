@@ -1,0 +1,211 @@
+---
+# New York: deductions (Tax Law §615; Form IT-201-D through 2017, IT-196
+# from 2018). Standard deduction amounts live here alongside itemized rules.
+#
+# TCJA decoupling (2018+): NY itemized = pre-TCJA federal Schedule A rules
+# (§615(a): deductions "as such deductions existed immediately prior to the
+# enactment of Public Law 115-97"), elected INDEPENDENTLY of the federal
+# choice. 2017: NY itemizing required itemizing federally. No $10k SALT cap
+# for NY; state/local income (or sales) tax is subtracted (IT-196 line 41),
+# property tax fully deductible.
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_joint
+    '3': std_mfs
+    '4': std_head
+  pease_thresh:
+    '1': pease_single
+    '2': pease_joint
+    '3': pease_mfs
+    '4': pease_head
+  item_limit_po_thresh:
+    '1': item_limit_po_single
+    '2': item_limit_po_joint
+    '3': item_limit_po_single
+    '4': item_limit_po_head
+
+# Standard deduction (Tax Law §614; IT-201 line 34). Frozen at these values
+# in every published year 2017-2025 (verified per-year); statute unamended
+# for 2026. Not indexed in practice
+std_single:
+  value: 8000
+  reference: 'Tax Law 614; IT-201-I Standard deduction table, verified each year 2017-2025'
+std_joint:
+  value: 16050
+  reference: 'Tax Law 614; IT-201-I Standard deduction table, verified each year 2017-2025'
+std_mfs:
+  value: 8000
+  reference: 'Tax Law 614; IT-201-I Standard deduction table, verified each year 2017-2025'
+std_head:
+  value: 11200
+  reference: 'Tax Law 614; IT-201-I Standard deduction table, verified each year 2017-2025'
+
+# Standard deduction for a single filer claimable as a dependent on another
+# return (IT-201 item C); also the dependent-filer filing threshold
+std_dependent:
+  value: 3100
+  reference: 'Tax Law 614; IT-201-I Standard deduction table (single, item C = Yes)'
+
+# Whether itemized deductions are allowed at the state level
+item_allowed:
+  value: 1
+  reference: 'NY Tax Law 615; Form IT-196'
+
+# Itemized/standard coupling: 0 = independent choice, 1 = must match federal.
+# 2017: NY itemizing required federal itemizing; 2018+: decoupled
+item_coupling:
+  value:
+    '2017': 1
+    '2018': 0
+  reference: '2017 IT-201-I line 34; 2018+ IT-196-I p.1; Tax Law 615(a)'
+
+# Whether NY itemized components follow pre-TCJA federal rules (misc 2%-floor
+# deductions allowed, pre-TCJA mortgage limits, no SALT cap). Data-limited
+# components (misc 2%) flagged in known-differences
+item_base_pre_tcja:
+  value:
+    '2017': 0
+    '2018': 1
+  reference: 'Tax Law 615(a); IT-196-I ("IRC as it existed before ... Public Law 115-97")'
+
+# Whether the federal $10k SALT cap applies to state itemized (it does not)
+salt_cap_applies:
+  value: 0
+  reference: 'IT-196-I p.2 ("not subject to this federal limit")'
+
+# Whether state/local income (or sales) tax is subtracted from state itemized
+salt_addback:
+  value: 1
+  reference: 'IT-196 line 41 subtraction adjustment A; Tax Law 615(c)(1); pre-2018 IT-201-D line 9'
+
+# Pre-TCJA IRC 68 (Pease) overall limitation with NY-indexed thresholds
+# (federal AGI). 2017 = federal Rev. Proc. 2016-55 amounts (NY piggybacked on
+# the live federal limitation that year); NY-specific indexing from 2018.
+# All years 2017-2025 verified from year-specific IT-196-I / 2017 IT-201-D
+# instructions; projected years indexed by CPI off 2025
+pease:
+  value: 1
+  reference: 'IT-196-I line 40 Total itemized deductions worksheet (pre-TCJA IRC 68 mechanics)'
+pease_single:
+  value:
+    '2017': 261500
+    '2018': 266700
+    '2019': 273150
+    '2020': 278300
+    '2021': 282400
+    '2022': 290850
+    '2023': 313200
+    '2024': 330200
+    '2025': 340700
+  reference: 'IT-196-I line 40 worksheet, each year 2018-2025 (tax.ny.gov/pdf/{yr}/inc/it196i_{yr}.pdf; 2023 HTML instructions); 2017 IT-201-D Worksheet 2'
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': NA
+    '2025': 2024
+  i_direction: 0
+  i_increment: 50
+pease_joint:
+  value:
+    '2017': 313800
+    '2018': 320000
+    '2019': 327750
+    '2020': 334000
+    '2021': 338850
+    '2022': 349000
+    '2023': 375850
+    '2024': 396250
+    '2025': 408850
+  reference: 'IT-196-I line 40 worksheet, each year 2018-2025; 2017 IT-201-D Worksheet 2'
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': NA
+    '2025': 2024
+  i_direction: 0
+  i_increment: 50
+pease_mfs:
+  value:
+    '2017': 156900
+    '2018': 160000
+    '2019': 163850
+    '2020': 167000
+    '2021': 169400
+    '2022': 174500
+    '2023': 187900
+    '2024': 198100
+    '2025': 204400
+  reference: 'IT-196-I line 40 worksheet, each year 2018-2025; 2017 IT-201-D Worksheet 2'
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': NA
+    '2025': 2024
+  i_direction: 0
+  i_increment: 50
+pease_head:
+  value:
+    '2017': 287650
+    '2018': 293350
+    '2019': 300450
+    '2020': 306150
+    '2021': 310600
+    '2022': 319950
+    '2023': 344500
+    '2024': 363250
+    '2025': 374800
+  reference: 'IT-196-I line 40 worksheet, each year 2018-2025; 2017 IT-201-D Worksheet 2'
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': NA
+    '2025': 2024
+  i_direction: 0
+  i_increment: 50
+
+# High-income itemized deduction limitation, Tax Law 615(f)/(g) (IT-196 line
+# 46; identical tiers 2017-2026, keyed to NY AGI):
+#   - 25% reduction phased in over item_limit_po_width above
+#     item_limit_po_thresh (by filing status)
+#   - a second 25% phased in over tier2_width above tier2_thresh
+#     (flat 50% reduction above 525k = tier2_thresh + tier2_width)
+#   - NYAGI > char_only_thresh1: deduction = char_only_share1 x charitable only
+#   - NYAGI > char_only_thresh2: deduction = char_only_share2 x charitable only
+item_limit_po_single:
+  value: 100000
+  reference: 'Tax Law 615(f)(1); 2024 IT-196-I Worksheet 3'
+item_limit_po_joint:
+  value: 200000
+  reference: 'Tax Law 615(f)(1); 2024 IT-196-I Worksheet 3'
+item_limit_po_head:
+  value: 150000
+  reference: 'Tax Law 615(f)(1); 2024 IT-196-I Worksheet 3'
+item_limit_po_width:
+  value: 50000
+  reference: 'Tax Law 615(f)(1)'
+item_limit_share1:
+  value: 0.25
+  reference: 'Tax Law 615(f)(1)'
+item_limit_tier2_thresh:
+  value: 475000
+  reference: 'Tax Law 615(f)(2); 2024 IT-196-I Worksheet 4'
+item_limit_tier2_width:
+  value: 50000
+  reference: 'Tax Law 615(f)(2)'
+item_limit_share2:
+  value: 0.25
+  reference: 'Tax Law 615(f)(2)'
+char_only_thresh1:
+  value: 1000000
+  reference: 'Tax Law 615(g)(1); 2024 IT-196-I Worksheet 5'
+char_only_share1:
+  value: 0.5
+  reference: 'Tax Law 615(g)(1); in effect every year 2017-2026'
+char_only_thresh2:
+  value: 10000000
+  reference: 'Tax Law 615(g)(2); 2024 IT-196-I Worksheet 6'
+char_only_share2:
+  value: 0.25
+  reference: 'Tax Law 615(g)(2); extended through TY2029 (statute text at nysenate.gov)'

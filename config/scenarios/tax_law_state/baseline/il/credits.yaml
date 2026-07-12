@@ -1,0 +1,70 @@
+---
+# Illinois: credits (Schedule IL-E/EIC, Schedule ICR)
+# Note: the 2023+ EITC expansion to ITIN filers and childless workers aged
+# 18-24 / 65+ (P.A. 102-0700) is data-limited in a PUF-based model and is not
+# parameterized; see plan known-differences.
+
+filing_status_mapper:
+  credit_agi_limit:
+    '1': credit_agi_limit_single
+    '2': credit_agi_limit_joint
+    '3': credit_agi_limit_single
+    '4': credit_agi_limit_single
+
+# State EITC as a share of the federal credit. Refundable all years.
+# 10% -> 14% (2017) -> 18% (2018) -> 20% (2023, permanent)
+eitc_match:
+  value:
+    '2017': 0.14
+    '2018': 0.18
+    '2023': 0.20
+  reference: '35 ILCS 5/212(a); 2017/2018/2023 IL-1040 Instr. What''s New'
+eitc_refundable:
+  value: 1
+  reference: '35 ILCS 5/212 (excess credit refunded)'
+
+# Illinois Child Tax Credit (P.A. 103-0592): share of the taxpayer's IL EITC,
+# for EITC-qualifiers with at least one child under 12. 20% for TY2024,
+# 40% for TY2025+
+ctc_pct_of_eitc:
+  value:
+    '2017': 0
+    '2024': 0.20
+    '2025': 0.40
+  reference: 'P.A. 103-0592; 2024/2025 IL-1040 Instr.; Bulletin FY 2026-15'
+ctc_max_child_age:
+  value: 11
+  reference: 'P.A. 103-0592 (child under age 12)'
+
+# State CDCTC as share of federal: Illinois has none
+cdctc_match:
+  value: 0
+  reference: 'No IL child and dependent care credit'
+
+# Property tax credit: 5% of IL real property tax paid on principal residence,
+# nonrefundable; disallowed above the AGI cliff (same $250k/$500k as exemption)
+prop_tax_credit_rate:
+  value: 0.05
+  reference: '35 ILCS 5/208; Schedule ICR Section A'
+
+# K-12 education expense credit: 25% of qualified expenses over $250, capped
+# at $750/family ($500 pre-2017); same AGI cliff. Data-limited (education
+# expenses unobserved in PUF); encoded for completeness
+k12_credit_rate:
+  value: 0.25
+  reference: '35 ILCS 5/201(m); Schedule ICR Section B'
+k12_credit_floor:
+  value: 250
+  reference: '35 ILCS 5/201(m)'
+k12_credit_max:
+  value: 750
+  reference: '35 ILCS 5/201(m): $750 for TY ending on/after 2017-12-31'
+
+# AGI cliff applying to the property tax and K-12 credits (and exemption;
+# see exempt.yaml). Not indexed
+credit_agi_limit_single:
+  value: 250000
+  reference: '35 ILCS 5/208, 5/201(m) (P.A. 100-0022), TY2017+'
+credit_agi_limit_joint:
+  value: 500000
+  reference: '35 ILCS 5/208, 5/201(m) (P.A. 100-0022), TY2017+'

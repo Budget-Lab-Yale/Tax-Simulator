@@ -1,0 +1,15 @@
+---
+# New York: exemptions (Tax Law §616; IT-201 line 36)
+# NY has NO personal exemption for taxpayer/spouse -- dependents only
+# ($1,000 each, keyed to IRC 151(c) dependents). Unchanged and unindexed
+# 2017-2026 (verified verbatim in every year's IT-201-I).
+
+# Personal exemption for taxpayer/spouse
+personal_amount:
+  value: 0
+  reference: '2017 IT-201-I p.20 ("you may not take personal exemptions for yourself and for your spouse")'
+
+# Dependent exemption
+dep_amount:
+  value: 1000
+  reference: 'Tax Law 616; IT-201-I line 36 ("The value of each New York State dependent exemption is $1,000"), verified 2017-2025'

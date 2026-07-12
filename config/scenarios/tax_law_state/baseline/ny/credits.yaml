@@ -1,0 +1,162 @@
+---
+# New York: credits (Tax Law §606; Forms IT-215, IT-213, IT-216, IT-272)
+# Noncustodial-parent EITC (IT-209: greater of 20% of one-child federal EITC
+# or 2.5x childless EITC) is data-limited (child support orders unobserved)
+# and not parameterized; see known-differences.
+
+filing_status_mapper:
+  ctc_po_thresh:
+    '1': ctc_po_single
+    '2': ctc_po_joint
+    '3': ctc_po_mfs
+    '4': ctc_po_single
+
+# State EITC as a share of the federal credit: 30% all years (Tax Law
+# 606(d)(1), permanent). Refundable
+eitc_match:
+  value: 0.30
+  reference: 'Tax Law 606(d)(1) ("thirty percent ... and thereafter"); IT-215 line 11'
+eitc_refundable:
+  value: 1
+  reference: 'Tax Law 606(d)(5)'
+
+# NY EITC is reduced by min(household credit, tax after resident/accumulation
+# credits) -- the IT-215 line 13-16 mechanic
+eitc_less_household_credit:
+  value: 1
+  reference: 'Form IT-215 lines 13-16 (2024, 2025); Tax Law 606(d)'
+
+# Household credit (Tax Law 606(b); IT-201 line 40). Nonrefundable, unchanged
+# and unindexed 2017-2026; denied to federal-dependent filers. Formula: base
+# amount + increment x (n_exemptions - 1), by federal AGI tier, where
+# n_exemptions = dependents + taxpayer (+ spouse if MFJ). MFS gets half the
+# Table 2 amounts on combined AGI (hh_mfs_half). Single (Table 1) has no
+# per-exemption increment
+hh_agi_bounds_single:
+  value: [0, 5000, 6000, 7000, 20000, 25000, 28000]
+  reference: '2017/2021/2024/2025 IT-201-I line 40 Table 1; Tax Law 606(b)'
+hh_amount_single:
+  value: [75, 60, 50, 45, 40, 20]
+  reference: 'IT-201-I line 40 Table 1 (credit is 0 above the last bound)'
+hh_agi_bounds_other:
+  value: [0, 5000, 6000, 7000, 20000, 22000, 25000, 28000, 32000]
+  reference: 'IT-201-I line 40 Table 2; Tax Law 606(b)'
+hh_base_other:
+  value: [90, 75, 65, 60, 60, 50, 40, 20]
+  reference: 'IT-201-I line 40 Table 2, one-exemption column'
+hh_incr_other:
+  value: [15, 15, 15, 15, 10, 10, 5, 5]
+  reference: 'IT-201-I line 40 Table 2, per-additional-exemption increments'
+hh_mfs_half:
+  value: 1
+  reference: 'IT-201-I line 40 Table 3 (half of Table 2, combined AGI)'
+
+# Empire State child credit (Tax Law 606(c-1); IT-213). Three regimes:
+#   style 1 (2017-2024): greater of ctc_match_share x pre-TCJA federal
+#     CTC+ACTC (computed with TY2017 federal parameters -- calc reuses the
+#     federal CTC calculator with 2017 ctc.yaml values) or ctc_min_per_child
+#     x n children, the latter only when FAGI <= threshold (cliff). Child age
+#     4-16 through 2022; 0-16 from 2023
+#   style 2 (2025+): decoupled flat amounts -- ctc_young_amount per child
+#     under 4 + ctc_old_amount per child 4-16, phased out at ctc_po_rate per
+#     $1,000 of FAGI over threshold (no cliff, no floor)
+# Refundable in all years. Thresholds never indexed
+ctc_style:
+  value:
+    '2017': 1
+    '2025': 2
+  reference: 'IT-213-I 2017/2023/2025; Tax Law 606(c-1); Ch.59 L.2025 Part C'
+ctc_match_share:
+  value: 0.33
+  reference: 'Tax Law 606(c-1); IT-213 Worksheets A/B (pre-TCJA federal rules)'
+ctc_min_per_child:
+  value: 100
+  reference: 'Tax Law 606(c-1); IT-213 line 9 (requires FAGI <= threshold)'
+ctc_min_child_age:
+  value:
+    '2017': 4
+    '2023': 0
+  reference: 'IT-213-I 2023 ("all children under age 17" from 2023); FY2024 budget'
+ctc_max_child_age:
+  value: 16
+  reference: 'Tax Law 606(c-1) (under 17)'
+ctc_young_age_limit:
+  value: 3
+  reference: 'Tax Law 606(c-1) ("aged three or younger")'
+ctc_young_amount:
+  value:
+    '2025': 1000
+  reference: 'Tax Law 606(c-1); IT-213-I 2025'
+ctc_old_amount:
+  value:
+    '2025': 330
+    '2026': 500
+  reference: 'Tax Law 606(c-1) ("five hundred dollars" for 2026-2027); IT-213-I 2025'
+ctc_po_single:
+  value: 75000
+  reference: 'Tax Law 606(c-1); IT-213 line 3 (single/HoH/QSS)'
+ctc_po_joint:
+  value: 110000
+  reference: 'Tax Law 606(c-1); IT-213 line 3'
+ctc_po_mfs:
+  value: 55000
+  reference: 'Tax Law 606(c-1); IT-213 line 3'
+ctc_po_rate:
+  value:
+    '2017': 0.05
+    '2025': 0.0165
+  reference: 'Pre-2025: 5% per $1,000 over threshold (pre-TCJA replica, excess rounded up); 2025+: $16.50 per $1,000 (FAGI rounded down)'
+
+# NY child and dependent care credit (Tax Law 606(c); IT-216).
+#   style 1 (2017-2025): NY share x federal-style credit recomputed under
+#     pre-ARPA rules with NY expense caps. NY share is a function of NYAGI:
+#     110% (<=25k), linear to 100% (25-40k), 100% (40-50k), published
+#     non-monotonic $200-step tables 50k-65k (v1 approximates linearly
+#     100%->60%; exact table is a Phase 3 lookup task -- known-difference),
+#     60% (65-150k), 20% (>150k)
+#   style 2 (2026+, FY2027 budget): applicable % x expenses directly; 55% at
+#     NYAGI <= 15000, minus 0.25pp per $1,000 over, floor 4%
+# Refundable for full-year residents
+cdctc_style:
+  value:
+    '2017': 1
+    '2026': 2
+  reference: 'IT-216-I 2021/2024; Tax Law 606(c) current text (FY2027 budget restructure)'
+cdctc_expense_caps:
+  value: [3000, 6000, 7500, 8500, 9000]
+  reference: 'IT-216-I Worksheet 1 line 12 (1/2/3/4/5+ qualifying persons); unchanged incl. 2026+'
+cdctc_share_agi_bounds:
+  value: [0, 25000, 40000, 50000, 65000, 150000]
+  reference: 'IT-216-I 2024 p.7 limitation table (anchors; $200-step detail deferred)'
+cdctc_share_start:
+  value: [1.10, 1.10, 1.00, 1.00, 0.60, 0.20]
+  reference: 'IT-216-I 2024 p.7 (share at lower bound of each AGI segment; linear within)'
+cdctc_share_end:
+  value: [1.10, 1.00, 1.00, 0.60, 0.60, 0.20]
+  reference: 'IT-216-I 2024 p.7 (share at upper bound of each segment)'
+cdctc_rate_max:
+  value: 0.55
+  reference: 'Tax Law 606(c) (2026+): 55% at NYAGI <= 15000'
+cdctc_rate_floor:
+  value: 0.04
+  reference: 'Tax Law 606(c) (2026+): 4% floor (~NYAGI 219k)'
+cdctc_rate_po_per_1k:
+  value: 0.0025
+  reference: 'Tax Law 606(c) (2026+): 0.25pp per $1,000 over 15000'
+cdctc_rate_po_start:
+  value: 15000
+  reference: 'Tax Law 606(c) (2026+)'
+
+# College tuition credit (Tax Law 606(t); IT-272): 4% of qualified
+# undergraduate tuition up to $10,000/student (max $400); if aggregate
+# expenses < $5,000, credit = min(expenses, $200). Refundable. Data-limited
+# (tuition unobserved in PUF); encoded for completeness
+tuition_credit_rate:
+  value: 0.04
+  reference: 'Form IT-272 (2024) Part 3; Tax Law 606(t)'
+tuition_expense_cap:
+  value: 10000
+  reference: 'Form IT-272 (2024) Part 1 line I'
+tuition_credit_max:
+  value: 400
+  reference: 'IT-272-I (2024): "$400 per eligible student"'

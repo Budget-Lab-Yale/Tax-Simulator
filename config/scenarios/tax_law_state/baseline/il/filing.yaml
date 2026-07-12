@@ -1,0 +1,23 @@
+---
+# Illinois: filing requirement (plan §2.2 filing.yaml / §6 filer-count risk)
+# Residents must file if (a) required to file federally, or (b) IL base
+# income (Line 9) exceeds the exemption allowance.
+
+# Filing requirement type:
+#   1 = state base income > exemption allowance (IL)
+#   2 = state AGI > standard deduction (NY-style)
+#   3 = any state liability or federal filing requirement (CO-style)
+req_type:
+  value: 1
+  reference: '2017-2025 IL-1040 Instr., "Who must file an Illinois tax return?"'
+
+# Fixed dollar filing threshold (unused when req_type ties the threshold to
+# another parameter, as for IL)
+req_income_thresh:
+  value: 0
+  reference: 'n/a for IL; threshold = exemption allowance (exempt.yaml)'
+
+# Whether a federal filing requirement forces a state return
+req_if_fed_filer:
+  value: 1
+  reference: '2017-2025 IL-1040 Instr., "Who must file an Illinois tax return?"'
