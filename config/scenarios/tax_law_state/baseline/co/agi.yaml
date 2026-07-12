@@ -1,0 +1,95 @@
+---
+# Colorado: base and additions/subtractions (DR 0104 lines 1-9; DR 0104AD)
+# CO tax = rate x (federal TAXABLE income + additions - subtractions), so the
+# federal standard/itemized deduction flows through the starting point.
+
+filing_status_mapper:
+  ss_5564_agi_limit:
+    '1': ss_5564_agi_limit_single
+    '2': ss_5564_agi_limit_joint
+    '3': ss_5564_agi_limit_single
+    '4': ss_5564_agi_limit_single
+
+# Starting point for state base: 2 = federal taxable income (DR 0104 line 1)
+start_point:
+  value: 2
+  reference: 'DR 0104 line 1, verified 2017-2025 booklets; C.R.S. 39-22-104'
+
+# IRC conformity: rolling
+conformity_year:
+  value: 0
+  reference: 'C.R.S. 39-22-104 (federal taxable income as defined in the IRC, rolling)'
+
+# Non-Colorado state/local bond interest added back (CO bonds issued on/after
+# 1980-05-01 stay exempt)
+add_exempt_int:
+  value: 1
+  reference: 'C.R.S. 39-22-104(3)(b); DR 0104 Other Additions, verified 2017-2025'
+own_state_exempt:
+  value: 1
+  reference: 'C.R.S. 39-22-104(3)(b) (post-1980 Colorado bonds excluded from addback)'
+
+# US government obligation interest subtracted (DR 0104AD line 2 all years)
+sub_us_int:
+  value: 1
+  reference: 'C.R.S. 39-22-104(4)(a); DR 0104AD line 2; DOR FYI Income 20'
+
+# State income tax refunds included in federal taxable income subtracted
+# (DR 0104AD state income tax refund line). Transcription check pending --
+# standard mechanic given the fed-taxable-income start, but not independently
+# verified in the 2026-07-12 research pass
+sub_state_ref:
+  value: 1
+  reference: 'DR 0104AD line 1 (state income tax refund) [verify in Phase 5 transcription check]'
+
+# Social Security subtraction rules (C.R.S. 39-22-104(4)(f)-(g)):
+# pre-2022: taxable SS counts WITHIN the pension cap (no separate treatment).
+# 2022+: 65+ subtract ALL taxable SS (outside the cap), and the pension cap
+# is reduced by the SS subtraction claimed. 2025+: 55-64 also subtract all
+# taxable SS if federal AGI <= 75k single / 95k joint (HB24-1142)
+ss_full_sub_65plus:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'HB21-1311; C.R.S. 39-22-104(4)(f)(III)(B); 2023 booklet DR 0104AD lines 3-6'
+ss_full_sub_5564:
+  value:
+    '2017': 0
+    '2025': 1
+  reference: 'HB24-1142, TY2025+; 2025 booklet DR 0104AD line 3'
+ss_5564_agi_limit_single:
+  value: 75000
+  reference: 'HB24-1142; 2025 booklet DR 0104AD line 3'
+ss_5564_agi_limit_joint:
+  value: 95000
+  reference: 'HB24-1142; 2025 booklet DR 0104AD line 3'
+
+# Pension/annuity/IRA subtraction caps, PER PERSON (no spousal sharing).
+# Under-55 death-benefit-only rule is data-limited; treated as no subtraction
+pension_excl_under65:
+  value: 20000
+  reference: 'C.R.S. 39-22-104(4)(f) (age 55-64); DR 0104AD, verified 2017-2025'
+pension_excl_65plus:
+  value: 24000
+  reference: 'C.R.S. 39-22-104(4)(f) (age 65+); DR 0104AD, verified 2017-2025'
+pension_excl_min_age:
+  value: 55
+  reference: 'C.R.S. 39-22-104(4)(f)'
+pension_cap_incl_ss:
+  value: 1
+  reference: 'Taxable SS counts within the cap (pre-2022 fully; post-2022 the cap is reduced by SS subtracted -- see ss_full_sub_* flags)'
+
+# Charitable contribution subtraction for federal non-itemizers: qualifying
+# contributions in excess of $500 (unchanged 2017-2026)
+sub_char_nonitem_floor:
+  value: 500
+  reference: 'C.R.S. 39-22-104(4)(m); DR 0104AD worksheet, verified 2017-2025'
+
+# Federal overtime-compensation deduction added back from TY2026 (HB25-1296);
+# the federal tips deduction is NOT added back. Interacts with the model's
+# OBBBA below-the-line ot/tips machinery
+add_overtime_ded:
+  value:
+    '2017': 0
+    '2026': 1
+  reference: 'HB25-1296 (2025), TY2026+; DOR January 2026 Tax Policy Updates'

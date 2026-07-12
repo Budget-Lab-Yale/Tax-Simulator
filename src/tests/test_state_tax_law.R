@@ -46,7 +46,7 @@ test_pilot_state_values = function() {
   test_indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
     mutate(growth = 0.025)
 
-  law = build_state_tax_law(states  = c('IL', 'NY'),
+  law = build_state_tax_law(states  = c('IL', 'CO', 'NY'),
                             years   = 2017:2035,
                             indexes = test_indexes)
 
@@ -57,8 +57,8 @@ test_pilot_state_values = function() {
   }
 
   stopifnot(
-    # Structure: both states, all years x 4 filing statuses, no NA core cols
-    'row count wrong'   = nrow(law) == 2 * length(2017:2035) * 4,
+    # Structure: all states, all years x 4 filing statuses, no NA core cols
+    'row count wrong'   = nrow(law) == 3 * length(2017:2035) * 4,
     'core rates NA'     = !anyNA(law$st_ord.rates1),
     'start_point NA'    = !anyNA(law$st_agi.start_point),
 
@@ -71,6 +71,30 @@ test_pilot_state_values = function() {
     'IL 2017 EITC 14pct'     = pick('IL', 2017, 1, 'st_credits.eitc_match') == 0.14,
     'IL 2023 EITC 20pct'     = pick('IL', 2023, 1, 'st_credits.eitc_match') == 0.20,
     'IL starts from fed AGI' = pick('IL', 2020, 1, 'st_agi.start_point') == 1,
+
+    # Colorado (see co/ yaml reference fields)
+    'CO 2017 rate'           = pick('CO', 2017, 1, 'st_ord.rates1') == 0.0463,
+    'CO 2019 TABOR rate'     = pick('CO', 2019, 1, 'st_ord.rates1') == 0.045,
+    'CO 2021 TABOR rate'     = pick('CO', 2021, 1, 'st_ord.rates1') == 0.045,
+    'CO 2024 TABOR rate'     = pick('CO', 2024, 1, 'st_ord.rates1') == 0.0425,
+    'CO 2025 rate'           = pick('CO', 2025, 1, 'st_ord.rates1') == 0.044,
+    'CO starts from fed txbl' = pick('CO', 2020, 1, 'st_agi.start_point') == 2,
+    'CO EITC 50pct 2023-25'  = pick('CO', 2023, 1, 'st_credits.eitc_match') == 0.50 &&
+                               pick('CO', 2025, 1, 'st_credits.eitc_match') == 0.50,
+    'CO EITC 25pct 2026'     = pick('CO', 2026, 1, 'st_credits.eitc_match') == 0.25,
+    'CO addback three regimes' =
+      pick('CO', 2022, 2, 'st_ded.addback_cap') == 60000 &&
+      pick('CO', 2023, 2, 'st_ded.addback_cap') == 16000 &&
+      pick('CO', 2026, 2, 'st_ded.addback_cap') == 2000,
+    'CO addback thresh'      = pick('CO', 2022, 1, 'st_ded.addback_cap_thresh') == 400000 &&
+                               pick('CO', 2023, 1, 'st_ded.addback_cap_thresh') == 300000,
+    'CO SS full sub 65+ 2022' = pick('CO', 2021, 1, 'st_agi.ss_full_sub_65plus') == 0 &&
+                                pick('CO', 2022, 1, 'st_agi.ss_full_sub_65plus') == 1,
+    'CO pension caps'        = pick('CO', 2020, 1, 'st_agi.pension_excl_65plus') == 24000 &&
+                               pick('CO', 2020, 1, 'st_agi.pension_excl_under65') == 20000,
+    'CO FATC 2024-25 only'   = pick('CO', 2024, 1, 'st_credits.fatc_young_amount') == 3200 &&
+                               pick('CO', 2025, 1, 'st_credits.fatc_young_amount') == 3273 &&
+                               pick('CO', 2026, 1, 'st_credits.fatc_young_amount') == 0,
 
     # New York (see ny/ yaml reference fields)
     'NY 2021 top rates'      = pick('NY', 2021, 1, 'st_ord.rates8')  == 0.0965 &&

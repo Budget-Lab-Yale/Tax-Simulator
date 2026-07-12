@@ -1,0 +1,189 @@
+---
+# Colorado: credits (DR 0104CR, DR 0104CN)
+# TODO(Phase 2 follow-up): the CO child care expenses credit (DR 0347,
+# percentage of federal CDCTC by AGI tier) and the low-income child care
+# credit were not covered in the 2026-07-12 research pass -- research and
+# encode before Phase 5 validation. HB24-1134 also consolidates child-care
+# credits for 2026.
+
+filing_status_mapper:
+  ctc_tier1_bound:
+    '1': ctc_tier1_single
+    '2': ctc_tier1_joint
+    '3': ctc_tier1_single
+    '4': ctc_tier1_single
+  ctc_tier2_bound:
+    '1': ctc_tier2_single
+    '2': ctc_tier2_joint
+    '3': ctc_tier2_single
+    '4': ctc_tier2_single
+  ctc_tier3_bound:
+    '1': ctc_tier3_single
+    '2': ctc_tier3_joint
+    '3': ctc_tier3_single
+    '4': ctc_tier3_single
+  fatc_po_start:
+    '1': fatc_po_start_single
+    '2': fatc_po_start_joint
+    '3': fatc_po_start_single
+    '4': fatc_po_start_single
+  fatc_po_zero:
+    '1': fatc_po_zero_single
+    '2': fatc_po_zero_joint
+    '3': fatc_po_zero_single
+    '4': fatc_po_zero_single
+
+# State EITC as a share of the federal credit. Refundable all years.
+# 10% (2017-2021) -> 20% (2022) -> 50% (2023-2025, via HB23B-1002/HB24-1134
+# incl. the met 2025 trigger) -> 25% (2026+, DOR-published; statutory
+# triggers to 30-50% exist but were not met). ITIN-filer eligibility from
+# TY2020 and childless 18-24 from TY2022 are data-limited (known-differences)
+eitc_match:
+  value:
+    '2017': 0.10
+    '2022': 0.20
+    '2023': 0.50
+    '2026': 0.25
+  reference: 'C.R.S. 39-22-123.5; DOR Income Tax Topics: EITC percentage table; DR 0104CR line instructions 2017/2021/2023/2024/2025; HB21-1311; HB23B-1002; HB24-1134'
+eitc_refundable:
+  value: 1
+  reference: 'C.R.S. 39-22-123.5 (refundable since HB13-1001)'
+
+# Colorado child tax credit (C.R.S. 39-22-129; DR 0104CN; first payable
+# TY2022; child under 6; refundable; hard AGI eligibility cliff at the tier-3
+# bound). Three-tier structure by AGI:
+#   style 1 (2022-2023): tier shares x federal CTC+ACTC recomputed for
+#     eligible children (60/30/10%)
+#   style 2 (2024+): flat per-child amounts by tier (1200/600/200), tier
+#     bounds inflation-adjusted from 2025 (2026 amounts not yet published;
+#     projected by CPI)
+ctc_style:
+  value:
+    '2017': 0
+    '2022': 1
+    '2024': 2
+  reference: 'HB21-1311 (funding, TY2022); HB23-1112 (flat restructure, TY2024); DR 0104CN 2022-2025'
+ctc_max_child_age:
+  value: 5
+  reference: 'C.R.S. 39-22-129 (child under 6)'
+ctc_tier_shares:
+  value: [0.60, 0.30, 0.10]
+  reference: 'DR 0104CN 2022/2023 (percent of recomputed federal credit by AGI tier)'
+ctc_tier_amounts:
+  value: [1200, 600, 200]
+  reference: 'DR 0104CN 2024/2025 (flat per-child amounts by AGI tier)'
+ctc_tier1_single:
+  value:
+    '2022': 25000
+    '2025': 26000
+  reference: 'DR 0104CN 2022-2025; DOR Income Tax Topics: Child Tax Credit'
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': NA
+    '2025': 2024
+  i_direction: 0
+  i_increment: 1000
+ctc_tier1_joint:
+  value:
+    '2022': 35000
+    '2025': 36000
+  reference: 'DR 0104CN 2022-2025'
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': NA
+    '2025': 2024
+  i_direction: 0
+  i_increment: 1000
+ctc_tier2_single:
+  value:
+    '2022': 50000
+    '2025': 51000
+  reference: 'DR 0104CN 2022-2025'
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': NA
+    '2025': 2024
+  i_direction: 0
+  i_increment: 1000
+ctc_tier2_joint:
+  value:
+    '2022': 60000
+    '2025': 61000
+  reference: 'DR 0104CN 2022-2025'
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': NA
+    '2025': 2024
+  i_direction: 0
+  i_increment: 1000
+ctc_tier3_single:
+  value:
+    '2022': 75000
+    '2025': 77000
+  reference: 'DR 0104CN 2022-2025 (also the eligibility cliff)'
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': NA
+    '2025': 2024
+  i_direction: 0
+  i_increment: 1000
+ctc_tier3_joint:
+  value:
+    '2022': 85000
+    '2025': 87000
+  reference: 'DR 0104CN 2022-2025 (also the eligibility cliff)'
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': NA
+    '2025': 2024
+  i_direction: 0
+  i_increment: 1000
+
+# Family Affordability Tax Credit (C.R.S. 39-22-130; HB24-1311): refundable,
+# additional to the CO CTC, children under 17 (higher amount under 6),
+# TABOR-growth-contingent. Allowed TY2024 and TY2025 only; the TY2026
+# December-2025 forecast trigger was NOT met (DOR Jan 2026 publication), and
+# later years default to 0 pending each year's trigger
+fatc_young_amount:
+  value:
+    '2017': 0
+    '2024': 3200
+    '2025': 3273
+    '2026': 0
+  reference: 'HB24-1311; DR 0104CN 2024; DOR ITT Family Affordability Tax Credit (Jan 2026: "tax years 2024 and 2025")'
+fatc_old_amount:
+  value:
+    '2017': 0
+    '2024': 2400
+    '2025': 2455
+    '2026': 0
+  reference: 'HB24-1311 (75% of the under-6 amount); DR 0104CN 2024; DOR ITT FATC Jan 2026'
+fatc_young_age_limit:
+  value: 5
+  reference: 'C.R.S. 39-22-130 (children 5 or younger vs 6-16)'
+fatc_max_child_age:
+  value: 16
+  reference: 'C.R.S. 39-22-130'
+fatc_po_start_single:
+  value: 15000
+  reference: 'DR 0104CN 2024 (max credit at AGI <= 15,000 single)'
+fatc_po_start_joint:
+  value: 25000
+  reference: 'DR 0104CN 2024'
+fatc_po_step:
+  value: 5000
+  reference: 'DR 0104CN 2024 ($5,000 AGI steps, linear decline)'
+fatc_po_zero_single:
+  value: 85000
+  reference: 'DR 0104CN 2024/2025 (credit 0 above 85,000 single)'
+fatc_po_zero_joint:
+  value:
+    '2024': 95000
+    '2025': 96000
+  reference: 'DR 0104CN 2024; DOR FATC publication 2025'
