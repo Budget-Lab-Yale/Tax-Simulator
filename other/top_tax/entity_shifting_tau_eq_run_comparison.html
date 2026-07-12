@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Entity Shifting tau_eq Run Comparison</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+      margin: 40px auto;
+      max-width: 980px;
+      color: #1f2937;
+      padding: 0 20px 40px;
+    }
+    h1, h2 {
+      line-height: 1.2;
+    }
+    code {
+      background: #f3f4f6;
+      padding: 0.1rem 0.3rem;
+      border-radius: 4px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 16px 0 24px;
+    }
+    th, td {
+      border: 1px solid #d1d5db;
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f9fafb;
+    }
+    .note {
+      background: #f9fafb;
+      border-left: 4px solid #2563eb;
+      padding: 12px 16px;
+      margin: 16px 0 24px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Entity Shifting: tau_eq vs. legacy retained-share deferral</h1>
+
+  <div class="note">
+    This report summarizes the implementation change and the clean one-year Slurm A/B test.
+    The clean runs used separate output vintages so the job chains did not collide.
+  </div>
+
+  <h2>What changed</h2>
+  <p>
+    The Pearce-Prisinzano entity-shifting module now uses <code>tau_eq</code> directly as the
+    deferral price signal whenever the run is paired with <code>kg_dynamics</code>. The legacy
+    path still uses the fixed retained-share shortcut for comparison runs.
+  </p>
+
+  <h2>Files</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Artifact</th>
+        <th>Path</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Implemented module</td>
+        <td><code>config/scenarios/behavior/entity_shifting/pearce_prisinzano.R</code></td>
+      </tr>
+      <tr>
+        <td>Legacy comparison selector</td>
+        <td><code>config/scenarios/behavior/entity_shifting/pearce_prisinzano_legacy.R</code></td>
+      </tr>
+      <tr>
+        <td>Clean tau_eq test run</td>
+        <td><code>config/runscripts/tests/pearce_priz.csv</code></td>
+      </tr>
+      <tr>
+        <td>Clean legacy test run</td>
+        <td><code>config/runscripts/tests/pearce_priz_legacy.csv</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Clean Slurm result</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Run</th>
+        <th>Status</th>
+        <th>2026 revenue estimate</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>tau_eq</td>
+        <td>All stages completed</td>
+        <td>29.62270</td>
+      </tr>
+      <tr>
+        <td>legacy retained-share shortcut</td>
+        <td>All stages completed</td>
+        <td>29.35543</td>
+      </tr>
+      <tr>
+        <td>Difference</td>
+        <td></td>
+        <td>+0.26727 (+0.91%)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>1040 totals comparison</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Metric</th>
+        <th>tau_eq</th>
+        <th>Legacy</th>
+        <th>Difference</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Taxable kg filers</td><td>43.569588</td><td>22.851097</td><td>+20.718491</td></tr>
+      <tr><td>Taxable kg dollars</td><td>1560.377398</td><td>1559.248668</td><td>+1.128730</td></tr>
+      <tr><td>Preferential kg filers</td><td>13.567466</td><td>13.570349</td><td>-0.002882</td></tr>
+      <tr><td>Preferential kg dollars</td><td>1486.891087</td><td>1485.765742</td><td>+1.125345</td></tr>
+      <tr><td>Partnership active filers</td><td>26.701374</td><td>3.026426</td><td>+23.674948</td></tr>
+      <tr><td>Partnership active dollars</td><td>595.003711</td><td>595.048201</td><td>-0.044491</td></tr>
+      <tr><td>S-corp filers</td><td>25.973783</td><td>6.663306</td><td>+19.310476</td></tr>
+      <tr><td>S-corp dollars</td><td>1446.421985</td><td>1446.464239</td><td>-0.042254</td></tr>
+      <tr><td>Sch. E filers</td><td>35.384723</td><td>17.509842</td><td>+17.874880</td></tr>
+      <tr><td>Sch. E dollars</td><td>1602.260447</td><td>1602.302924</td><td>-0.042477</td></tr>
+      <tr><td>Taxable income</td><td>14101.716095</td><td>14100.633605</td><td>+1.082490</td></tr>
+      <tr><td>IIT liability</td><td>2621.469298</td><td>2621.231628</td><td>+0.237670</td></tr>
+      <tr><td>Net IIT liability</td><td>2503.002416</td><td>2502.764743</td><td>+0.237673</td></tr>
+      <tr><td>Corporate tax change</td><td>3.372147</td><td>3.362861</td><td>+0.009286</td></tr>
+      <tr><td>Mean MTR on kg_lt</td><td>0.051260</td><td>0.050871</td><td>+0.000389</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Interpretation</h2>
+  <ul>
+    <li>The kg dynamics summary was unchanged between the two runs, which is consistent with the change being in the deferral wedge calculation rather than the mechanical state evolution.</li>
+    <li>The 1040 totals move mainly in the affected activity categories, with the largest shifts in counts of taxable kg, partnership active, S-corp, and Sch. E filers.</li>
+    <li>The tau_eq specification produces a higher 2026 revenue estimate than the legacy shortcut in this policy configuration.</li>
+    <li>The clean A/B test is the only result set that should be treated as valid; the earlier retry chains were discarded because they reused colliding output staging.</li>
+  </ul>
+</body>
+</html>

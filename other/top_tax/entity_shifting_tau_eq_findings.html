@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entity shifting and tau_eq: findings</title>
+  <style>
+    body { max-width: 920px; margin: 40px auto; padding: 0 22px; color: #1d2630; background: #fbfcfe; font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    h1, h2 { line-height: 1.2; color: #102a43; } h1 { margin-bottom: .2rem; }
+    .lede { color: #486581; font-size: 1.1rem; } .answer { background: #e6fffa; border-left: 5px solid #0f766e; padding: 14px 18px; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; } code { background: #edf2f7; padding: .1em .25em; border-radius: 3px; }
+    pre { white-space: pre-wrap; background: #102a43; color: #f0f4f8; padding: 16px; border-radius: 6px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; } th, td { padding: .55rem; border-bottom: 1px solid #cbd5e0; text-align: left; } th { background: #eaf2f8; }
+    .caution { background: #fff7e6; border-left: 5px solid #c05621; padding: 12px 16px; } .source { color: #627d98; font-size: .92rem; }
+  </style>
+</head>
+<body>
+  <h1>Entity shifting: replace the deferral stub with <code>tau_eq</code>?</h1>
+  <p class="lede">Code review completed July 11, 2026. “t_eq” in the question appears to refer to the repository’s <code>tau_eq</code> series.</p>
+
+  <div class="answer">
+    <strong>Conclusion:</strong> yes, for runs that include <code>kg_dynamics</code>, the retained-earnings part of the C-corporation tax price should use <code>tau_eq</code>. It is the model’s existing expected present-value tax price for a new unrealized gain, whereas the entity-shifting module currently applies a fixed 25% reduction to every capital-gains MTR. Use <code>tau_eq</code> directly—not a ratio where avoidable—and retain an explicit legacy fallback for entity-only runs.
+  </div>
+
+  <h2>What the module does now</h2>
+  <p>The Pearce–Prisinzano module sets the distribution share to <code>alpha = 0.45</code> and the retained-earnings “benefit of deferral” multiplier to <code>beta = 0.25</code>. For either policy side it prices shareholder-level corporate income as:</p>
+  <pre>tau_dist = mtr_kg_lt * [ alpha + (1 - alpha) * 0.25 ]</pre>
+  <p>That price is then combined with the corporate tax rate:</p>
+  <pre>tau_corp = corp.rate + (1 - corp.rate) * tau_dist</pre>
+  <p>The module’s own comment says that the 25% value is a proxy and that a future version should model the behavior giving rise to it.</p>
+
+  <h2>Why <code>tau_eq</code> is the appropriate replacement</h2>
+  <p><code>tau_eq(age, year)</code> is calculated by the capital-gains bathtub as the discounted expected tax collected per dollar that enters the unrealized-gain state at the end of that year. Its recursion includes realization, discounting, mortality, charitable transfers, heir routing/carryover, and deemed realization. It is calculated separately for baseline and policy and is written to every year’s conventional kg state file as <code>cell_table$tau_eq_B</code> and <code>cell_table$tau_eq_S</code>.</p>
+  <p>Consequently, it varies with the capital-gains tax rate, age, realization behavior, and death regime. The 25% stub cannot respond to any of these. In particular, a deemed-at-death policy makes the future tax less avoidable, so it should raise the retained-earnings tax price and reduce the incentive to select the corporate form; the current stub leaves that channel unchanged.</p>
+
+  <h2>Recommended formula</h2>
+  <p>Keep the existing 45% current-distribution assumption, but price the two pieces separately:</p>
+  <pre>tau_dist_S(i) = alpha * mtr_kg_lt_S(i) + (1 - alpha) * tau_eq_S(age_i, year)
+tau_dist_B(i) = alpha * mtr_kg_lt_B(i) + (1 - alpha) * tau_eq_B(age_i, year)
+
+tau_corp_j(i) = corp.rate_j + (1 - corp.rate_j) * tau_dist_j(i)   # j = B, S</pre>
+  <p>This is algebraically the same as replacing <code>0.25</code> with <code>tau_eq / mtr_kg_lt</code> only when the denominator is nonzero and both objects use the same gain-tax rate. The direct form is better: it avoids division by zero and states the economics clearly. It also allows <code>tau_eq</code> to be a cell-level expected tax price while the paid-distribution leg remains the record’s calculator-measured MTR.</p>
+
+  <h2>Magnitude check</h2>
+  <p>As a rough diagnostic, the archived current-law validation series (not a calibration target) has a gain-stock-weighted <code>tau_eq</code> of 6.48% versus a gain-stock-weighted statutory gain MTR of 20.14%: an implied ratio of 0.322. At ages 40, 60, and 80 the displayed ratios are approximately 0.45, 0.34, and 0.26, respectively. Thus the live 0.25 stub is not merely a uniform approximation; it misses meaningful age and policy variation.</p>
+
+  <h2>Safe integration design</h2>
+  <ol>
+    <li>Only enable the dynamic price when <code>kg_dynamics/</code> is present. Read that year’s existing kg state file and join the two <code>tau_eq</code> columns to records by <code>age_cohort</code>.</li>
+    <li>Require finite, nonnegative values for both sides. The kg module already attaches <code>age_cohort</code> before entity shifting in the pinned order <code>kg_dynamics → conversion → entity_shifting → evasion</code>.</li>
+    <li>For entity-only scenarios, preserve the documented <code>beta = 0.25</code> legacy approximation (or make the fallback a named scenario parameter). Do not silently substitute zero.</li>
+    <li>Test: baseline/no-law-change is a no-op; a CG-rate change moves the retained leg through <code>tau_eq</code>; deemed, carryover, and step-up produce the expected ordering; legacy entity-only runs remain reproducible.</li>
+    <li>Re-residualize the sigma conversion parameter after this change. Entity shifting is one component of the combined top-end behavioral response, so changing its tax price changes the remaining conversion margin.</li>
+  </ol>
+
+  <div class="caution">
+    <strong>Important scope limitation.</strong> <code>tau_eq</code> prices a dollar that behaves like the model’s aggregate unrealized-gain pool. The entity module would therefore be assuming that retained C-corporate earnings have the same realization, mortality, charitable-transfer, and death-regime path as that pool. This is a substantial improvement over a universal 25% discount, but it is still a reduced-form proxy—not a dedicated corporate retained-earnings lifecycle model. The module also continues to proxy dividend taxation with <code>mtr_kg_lt</code>, which should be revisited separately if policies create a dividend/gain rate differential.
+  </div>
+
+  <h2>Relevant code reviewed</h2>
+  <ul>
+    <li><code>config/scenarios/behavior/entity_shifting/pearce_prisinzano.R</code>, especially lines 76–123: current 0.25 stub and corporate/pass-through wedge.</li>
+    <li><code>src/sim/kg_dynamics.R</code>, especially lines 1293–1333 and 2390–2519: <code>tau_eq</code> definition, baseline/policy computation, checks, and persistence.</li>
+    <li><code>config/scenarios/behavior/kg_dynamics/turnover.R</code>: kg state is available before the entity module in combined runs.</li>
+    <li><code>other/top_tax/margins_gap_assessment.md</code>, section 1.3: independently records this same gap and recommends the same replacement.</li>
+  </ul>
+  <p class="source">No simulator behavior was changed for this review; this file is a findings and implementation recommendation.</p>
+</body>
+</html>
