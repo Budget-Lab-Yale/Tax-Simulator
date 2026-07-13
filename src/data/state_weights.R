@@ -408,32 +408,51 @@ compare_wages_acs_irs <- function(ht2, acs) {
   out[order(state)]
 }
 
-#' State-level annual payroll and employment from Census QWI (LEHD).
-#' Sums Total Quarterly Payroll over the year's four quarters; employment is
-#' the average of full-quarter stable counts (jobs, not persons). Workplace-
-#' based; see caveats above. Requires a Census API key.
-fetch_qwi_state_payroll <- function(year, key = Sys.getenv("CENSUS_API_KEY")) {
+#' State-level annual employment and payroll from Census QWI (LEHD sex-age
+#' endpoint). API facts learned empirically (2026-07-13): the 'for' clause
+#' does not accept state:* (loop states); the Payroll variable is NULL at
+#' state tabulations, so annual payroll is proxied as
+#'   Σ_quarters 3 * EmpS * EarnS
+#' (full-quarter stable jobs x average monthly earnings x 3 months) --
+#' understates total payroll by unstable-job earnings; document when
+#' comparing levels. Jobs are not persons (multi-jobholders duplicated) and
+#' geography is WORKPLACE-based.
+#'
+#' The sex x age cross IS fully published: pass sex ('1','2') and agegrp
+#' ('A01'..'A08', WIA bands) vectors to pull demographic cells -- the basis
+#' for candidate person-level wage/employment targets matched to the PUF's
+#' individual earners (wages1/2 x male1/2 x age1/2).
+fetch_qwi <- function(year, sex = "0", agegrp = "A00",
+                      states = names(FIPS_TO_STATE),
+                      key = Sys.getenv("CENSUS_API_KEY")) {
 
   if (!nzchar(key)) {
-    stop("fetch_qwi_state_payroll(): set CENSUS_API_KEY ",
+    stop("fetch_qwi(): set CENSUS_API_KEY ",
          "(free signup: https://api.census.gov/data/key_signup.html)")
   }
-  qs <- lapply(1:4, function(q) {
+  grid <- CJ(fips = states, q = 1:4, sx = sex, ag = agegrp)
+  rows <- lapply(seq_len(nrow(grid)), function(i) {
+    g <- grid[i]
     url <- sprintf(paste0("https://api.census.gov/data/timeseries/qwi/sa",
-                          "?get=Emp,EmpS,Payroll&for=state:*&time=%d-Q%d",
-                          "&sex=0&agegrp=A00&key=%s"), year, q, key)
-    j <- jsonlite::fromJSON(url)
+                          "?get=Emp,EmpS,EarnS&for=state:%s&time=%d-Q%d",
+                          "&sex=%s&agegrp=%s&key=%s"),
+                   g$fips, year, g$q, g$sx, g$ag, key)
+    j <- tryCatch(jsonlite::fromJSON(url), error = function(e) NULL)
+    if (is.null(j) || nrow(j) < 2) return(NULL)
     dt <- as.data.table(j[-1, , drop = FALSE])
     setnames(dt, as.character(j[1, ]))
-    dt[, `:=`(Payroll = as.numeric(Payroll), EmpS = as.numeric(EmpS),
-              quarter = q)]
+    dt[, quarter := g$q]
     dt
   })
-  rbindlist(qs)[, .(qwi_payroll  = sum(Payroll),
-                    qwi_jobs_avg = mean(EmpS)),
-                by = .(statefips = state)][
+  out <- rbindlist(rows, fill = TRUE)
+  out[, c("Emp","EmpS","EarnS") := lapply(.SD, as.numeric),
+      .SDcols = c("Emp","EmpS","EarnS")]
+  out[, .(qwi_jobs_avg      = mean(Emp,  na.rm = TRUE),
+          qwi_stable_avg    = mean(EmpS, na.rm = TRUE),
+          qwi_payroll_proxy = sum(3 * EmpS * EarnS, na.rm = TRUE)),
+      by = .(statefips = state, sex, agegrp)][
     , state := FIPS_TO_STATE[as.character(as.integer(statefips))]][
-    !is.na(state)][order(state)]
+    !is.na(state)][order(state, sex, agegrp)]
 }
 
 # =============================================================================

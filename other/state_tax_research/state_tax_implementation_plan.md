@@ -112,6 +112,32 @@ overage from ACS top-coding) — a high anchor confirming HT2 wage targets.
 Counts carry concept gaps (returns vs persons vs jobs): returns-with-wages /
 persons-with-wages = 75.5%, tight across states (70.9–78.8%), so residual
 variation is informative.
+
+QWI 2022 results (43/51 states published; payroll proxied as 3·EmpS·EarnS
+since the API's Payroll variable is null at state tabulations): IRS/proxy =
+105% nationally (proxy omits unstable-job earnings), with the
+workplace-vs-residence signature unmistakable — DC 57.8%, MD 131.7%, VA
+117.1% vs their tight residence-based ACS ratios. QWI is therefore a
+STRUCTURAL cross-check and demographic-cell source, not a level anchor.
+
+**Candidate person-level target dimensions (JI 2026-07-13).** The PUF splits
+wages by earner with demographics (`wages1/2` × `age1/2` × `male1/2`), so
+record-level x-vectors like "wage dollars earned by males 25–34" are
+directly constructible — fully compatible with the engines' target format:
+- **QWI sex × age** (verified: Emp/EmpS/EarnS publish by sex × 8 WIA age
+  bands × state, quarterly) ↔ PUF earner counts and wage dollars by sex ×
+  age band. Jobs≠persons, workplace-based, UI-covered — use for structure.
+- **ACS marital status × age × wages** (INCWAGE × MARST × AGE): QWI lacks
+  marital status; ACS supplies it residence-based, matching PUF geography.
+  Two-earner-couple rates by state (both spouses with wages) are a sharp
+  derived margin for joint-return geography.
+- **Elderly (65+) wage participation** (QWI A08 / ACS) ↔ PUF earners 65+ —
+  retirement-state signal (FL/AZ).
+- **Not matchable**: QWI race/ethnicity and education crosses, industry,
+  firm size — the PUF carries none of these.
+Recommended use: start as UNTARGETED validation cells in the harness
+(metric 2, where OTA's weights showed weakness); promote to calibration
+targets only where state fit is poor — thin demographic cells overfit.
 Caveats to document: ACS is residence-based vs HT2 filing-address-based (minor at
 state level); "non-filer" is not observed in ACS, so the imputed `filer` flag is the
 authority for *who* is a non-filer and ACS supplies only the geographic *margins*.
