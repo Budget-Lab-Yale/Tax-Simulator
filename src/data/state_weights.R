@@ -785,9 +785,50 @@ build_split_weights <- function(tax_units, year,
 # of the identical softmax objective (state_weights_ml_alternative.md §2). Logits
 # theta (N×S); P = softmax(theta); loss = Σ_t lambda_t ((That_t-T_t)/T_t)^2 +
 # beta * Σ_i KL(P[i,]||P0[i,]). Adam on theta.
+#
+# VECTORIZED (2026-07-13): targets sharing a rows set (all series within a
+# stub, by assembly construction; identified via the stub/cell metadata) are
+# stacked into one group -- X (n_g × K) holds the w·x columns, T/L (K × S)
+# the targets/lambdas -- so each Adam step does ~10 GEMMs instead of ~10,700
+# per-target scatter updates:
+#   predicted totals (all series × states):  crossprod(X, P[rows, ])
+#   gradient accumulation:                    G[rows, ] += X %*% C
+# Targets without metadata become singleton groups (still exact; used by the
+# self-test). Verified against finite differences in .state_weights_selftest().
 fit_gradient <- function(w, P0, targets, beta = 1e-3,
                          lr = 0.1, n_steps = 500, verbose = FALSE) {
   N <- length(w); S <- ncol(P0)
+
+  # ---- group targets by shared rows (stub / cell metadata; else singleton)
+  key <- vapply(seq_along(targets), function(i) {
+    t <- targets[[i]]
+    if (!is.null(t$stub)) paste0("stub_", t$stub)
+    else if (!is.null(t$cell)) paste0("cell_", t$cell)
+    else paste0("tgt_", i)
+  }, character(1))
+  groups <- lapply(split(seq_along(targets), key), function(idx) {
+    rows <- targets[[idx[1]]]$rows
+    # one X column per distinct series in the group; map each target to its
+    # column and its state
+    ser <- vapply(idx, function(i) {
+      t <- targets[[i]]
+      if (is.null(t$series)) paste0("x", i) else t$series
+    }, character(1))
+    useries <- unique(ser)
+    X <- matrix(0, length(rows), length(useries))
+    Tm <- matrix(NA_real_, length(useries), S)
+    Lm <- matrix(0, length(useries), S)
+    for (j in seq_along(idx)) {
+      t <- targets[[idx[j]]]
+      stopifnot(identical(t$rows, rows))       # grouping precondition
+      k <- match(ser[j], useries)
+      X[, k] <- w[rows] * t$x
+      Tm[k, t$state] <- t$target
+      Lm[k, t$state] <- t$lambda
+    }
+    list(rows = rows, X = X, Tm = Tm, Lm = Lm, has = !is.na(Tm))
+  })
+
   theta <- log(pmax(P0, 1e-12))                          # warm start at the prior
   m <- matrix(0, N, S); v <- matrix(0, N, S)             # Adam moments
   b1 <- 0.9; b2 <- 0.999; eps <- 1e-8
@@ -796,15 +837,14 @@ fit_gradient <- function(w, P0, targets, beta = 1e-3,
   loss_hist <- numeric(n_steps)
   for (step in seq_len(n_steps)) {
     P <- softmax_rows(theta)
-    W <- w * P
     G <- matrix(0, N, S)                                 # dLoss_fit / dP
     loss_fit <- 0
-    for (t in targets) {
-      That <- sum(w[t$rows] * P[t$rows, t$state] * t$x)
-      resid <- (That - t$target) / t$target
-      loss_fit <- loss_fit + t$lambda * resid^2
-      G[t$rows, t$state] <- G[t$rows, t$state] +
-        t$lambda * 2 * resid / t$target * w[t$rows] * t$x
+    for (g in groups) {
+      That  <- crossprod(g$X, P[g$rows, , drop = FALSE]) # K × S predicted totals
+      resid <- (That - g$Tm) / g$Tm                      # NA where untargeted
+      loss_fit <- loss_fit + sum(g$Lm * resid^2, na.rm = TRUE)
+      C <- ifelse(g$has, 2 * g$Lm * resid / g$Tm, 0)     # K × S coefficient
+      G[g$rows, ] <- G[g$rows, ] + g$X %*% C
     }
     # KL(P||P0) gradient wrt P, plus softmax backprop:  gtheta = P*(g - rowSums(P*g))
     Greg <- beta * (log(pmax(P, 1e-12)) - log(pmax(P0, 1e-12)) + 1)

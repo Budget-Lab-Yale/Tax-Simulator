@@ -148,3 +148,26 @@ comparison that was always economically meaningful.
 
 Remaining work: vectorize `fit_gradient()` (group targets by (stub, series)
 into matrix ops) and run the full harness.
+
+## Step 5 result (2026-07-13): vectorized joint fit validates the architecture
+
+`fit_gradient()` vectorized: targets sharing a rows set (all series within a
+stub) stack into per-group X/T/λ matrices, so each Adam step is ~10 GEMMs
+instead of ~10,700 scatter updates. Gradient verified against finite
+differences (1e-10) on both the singleton and grouped paths.
+
+Full 2022 joint fit — counts-backbone IPF prior → 300 Adam steps
+(β = 1e-3, lr = 0.1), run under sbatch (48G; the login node OOM-kills at
+~7 GB RSS — compute jobs are the documented route):
+
+- **within 2%: 82.9% | MARD 1.43%** (vs 9.8% / 37.5% for multi-series IPF
+  on identical targets), runtime 7.5 min, exact row sums.
+- Loss still descending at exit (fit loss 460 → 37); residual misses
+  concentrate in SALT/real-estate-tax cells (61–67% within 2%) and the
+  EITC/AGI families (73–77%). Closing the gap to the ≥99% acceptance bar
+  is an optimization-budget matter — more steps, lr schedule, per-series
+  λ up-weighting — i.e., harness tuning, not architecture.
+
+Status: engines DONE. Next: the §4 comparison harness (β/lr sweep,
+untargeted validation incl. the QWI/ACS demographic cells, downstream
+pilot-state liability), then the weights writer swap-in.
