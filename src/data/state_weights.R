@@ -364,6 +364,78 @@ compare_individuals_acs_irs <- function(ht2, acs) {
   out[order(state)]
 }
 
+# -----------------------------------------------------------------------------
+# Wage-based IRS vs ACS/QWI comparison (reconciliation diagnostic, JI
+# 2026-07-13): wage earners and total wage dollars by state, IRS records vs
+# two independent sources.
+#
+# DOLLARS are the clean comparison: HT2 A00200 (wages on filed returns) vs
+# ACS INCWAGE person sums vs QWI total payroll. COUNTS carry documented
+# concept gaps: HT2 N00200 counts RETURNS with wages (a two-earner joint
+# return is one), ACS counts PERSONS with wage income, QWI counts JOBS
+# (multi-jobholders duplicated).
+#
+# Source caveats:
+#   ACS: INCWAGE reference period is the 12 months before interview, so the
+#        2022 1-year sample spans calendar 2021-2022 income; residence-based.
+#   QWI: UI-covered employment only (excludes most self-employment, some
+#        federal/agricultural work) and WORKPLACE-based -- state comparisons
+#        against residence-based IRS/ACS diverge sharply in commuter
+#        geographies (DC especially). Requires CENSUS_API_KEY (free:
+#        https://api.census.gov/data/key_signup.html).
+# -----------------------------------------------------------------------------
+compare_wages_acs_irs <- function(ht2, acs) {
+
+  irs <- dcast(as.data.table(ht2)[!(state %in% NONTAX_BUCKETS) &
+                                  variable %in% c("n_wages","wages_amt"),
+                                  .(value = sum(value)), by = .(state, variable)],
+               state ~ variable, value.var = "value")
+
+  a <- as.data.table(acs)
+  stopifnot("INCWAGE" %in% names(a))
+  a[, state := FIPS_TO_STATE[as.character(STATEFIP)]]
+  a <- a[!is.na(state)]
+  a[INCWAGE >= 999998, INCWAGE := NA_real_]          # IPUMS N/A / missing codes
+  acs_tab <- a[, .(
+    acs_wage_earners = sum(PERWT * (!is.na(INCWAGE) & INCWAGE > 0)),
+    acs_wages        = sum(PERWT * fifelse(is.na(INCWAGE), 0, INCWAGE))
+  ), by = state]
+
+  out <- merge(irs, acs_tab, by = "state")
+  out[, `:=`(irs_share_earners = n_wages / acs_wage_earners,
+             irs_share_wages   = wages_amt / acs_wages)]
+  setnames(out, c("n_wages","wages_amt"), c("irs_returns_wages","irs_wages"))
+  out[order(state)]
+}
+
+#' State-level annual payroll and employment from Census QWI (LEHD).
+#' Sums Total Quarterly Payroll over the year's four quarters; employment is
+#' the average of full-quarter stable counts (jobs, not persons). Workplace-
+#' based; see caveats above. Requires a Census API key.
+fetch_qwi_state_payroll <- function(year, key = Sys.getenv("CENSUS_API_KEY")) {
+
+  if (!nzchar(key)) {
+    stop("fetch_qwi_state_payroll(): set CENSUS_API_KEY ",
+         "(free signup: https://api.census.gov/data/key_signup.html)")
+  }
+  qs <- lapply(1:4, function(q) {
+    url <- sprintf(paste0("https://api.census.gov/data/timeseries/qwi/sa",
+                          "?get=Emp,EmpS,Payroll&for=state:*&time=%d-Q%d",
+                          "&sex=0&agegrp=A00&key=%s"), year, q, key)
+    j <- jsonlite::fromJSON(url)
+    dt <- as.data.table(j[-1, , drop = FALSE])
+    setnames(dt, as.character(j[1, ]))
+    dt[, `:=`(Payroll = as.numeric(Payroll), EmpS = as.numeric(EmpS),
+              quarter = q)]
+    dt
+  })
+  rbindlist(qs)[, .(qwi_payroll  = sum(Payroll),
+                    qwi_jobs_avg = mean(EmpS)),
+                by = .(statefips = state)][
+    , state := FIPS_TO_STATE[as.character(as.integer(statefips))]][
+    !is.na(state)][order(state)]
+}
+
 # =============================================================================
 # PUF-SIDE TARGET ASSEMBLY (plan §2.1)
 #

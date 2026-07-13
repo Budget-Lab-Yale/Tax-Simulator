@@ -101,6 +101,17 @@ coverage 85.6% national (74.5% MS – 95.3% SD), single-adult 77.6% (64.5% WV �
 86.3% MN), children 109.2% (IRS dependents include 18+ students; dependent
 filers double-count — documented construction gap). The plan's original
 `sum(weight · n_people)` Census-population total remains a secondary check.
+
+A companion **wage-based diagnostic** (JI 2026-07-13) compares wage earners
+and wage dollars by state against two independent sources:
+`compare_wages_acs_irs()` (ACS INCWAGE) and `fetch_qwi_state_payroll()`
+(Census QWI/LEHD total payroll + stable job counts; workplace-based, UI-
+covered, requires CENSUS_API_KEY). Dollars are the clean comparison — 2022:
+IRS $9.63T vs ACS $9.97T (96.6% national; 81.7% DC – 101.8% CA, the CA
+overage from ACS top-coding) — a high anchor confirming HT2 wage targets.
+Counts carry concept gaps (returns vs persons vs jobs): returns-with-wages /
+persons-with-wages = 75.5%, tight across states (70.9–78.8%), so residual
+variation is informative.
 Caveats to document: ACS is residence-based vs HT2 filing-address-based (minor at
 state level); "non-filer" is not observed in ACS, so the imputed `filer` flag is the
 authority for *who* is a non-filer and ACS supplies only the geographic *margins*.
