@@ -85,8 +85,15 @@ national weight under the prior rather than losing mass.
 
 - 331 ACS units dropped for unresolved heads (known, logged, negligible).
 - The v0 ACS filing model yields 148.2M filer units vs HT2's 159.7M actual
-  2022 returns (~7% short) — the known Phase 1 tuning item for the
-  reconciliation check, unrelated to the engine issues above.
+  2022 returns (~7% short) — the known Phase 1 tuning item, unrelated to the
+  engine issues above. **Superseded as the reconciliation basis
+  (2026-07-13)**: per JI, reconciliation now runs at the individual level
+  (`compare_individuals_acs_irs()`), which is model-free. 2022: married
+  adults 112.6M IRS / 131.6M ACS (85.6%), single adults 100.5M / 129.5M
+  (77.6%), children/dependents 78.9M / 72.2M (109.2%, expected sign from
+  the documented construction gap); state coverage spreads 74.5–95.3%
+  (married) and 64.5–86.3% (single) — a strong geographic gradient
+  confirming non-filer geography needs its own targeting.
 - `fit_gradient()` has not yet been run at full scale; its per-target loop
   (10.8k targets × 500 steps) will need vectorization (group targets by
   stub into matrix ops) before the A/B bake-off is practical.

@@ -88,10 +88,19 @@ then concatenate:
   an income tier, and dependent presence (`n_dep`). Minimum target: non-filing count
   by state; preferred: state × age × income-tier.
 The per-record split constraint holds automatically (each record is in exactly one
-partition), so federal totals stay invariant. Add a **population reconciliation**
-cross-check: `sum(weight · n_people)` by state — where
-`n_people = 1 + (filing_status==2) + n_dep` over non-dependent units
-(`distribution.R:138`) — must hit Census state population across both partitions.
+partition), so federal totals stay invariant. **Reconciliation is at the
+INDIVIDUAL level, by group** (amended JI 2026-07-13, replacing the filing-unit
+comparison, which depended on the v0 ACS filing model): compare weighted counts
+of single adults, married adults, and children/dependents by state — IRS side
+from HT2 filing-status counts and N2 (married adults = 2·MARS2 + MFS residual;
+single = MARS1 + MARS4; dependents = N2 − returns − MARS2), ACS side by direct
+person-level tabulation (18+ × MARST for adults, under-18 for children). The
+difference IS the non-filer population by group and state, model-free.
+Implemented as `compare_individuals_acs_irs()`; 2022 results: married-adult
+coverage 85.6% national (74.5% MS – 95.3% SD), single-adult 77.6% (64.5% WV –
+86.3% MN), children 109.2% (IRS dependents include 18+ students; dependent
+filers double-count — documented construction gap). The plan's original
+`sum(weight · n_people)` Census-population total remains a secondary check.
 Caveats to document: ACS is residence-based vs HT2 filing-address-based (minor at
 state level); "non-filer" is not observed in ACS, so the imputed `filer` flag is the
 authority for *who* is a non-filer and ACS supplies only the geographic *margins*.

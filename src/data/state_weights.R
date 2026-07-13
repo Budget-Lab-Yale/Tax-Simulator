@@ -308,6 +308,62 @@ build_acs_margins <- function(acs, year, acs_year = NULL) {
        acs_year         = acs_year)
 }
 
+# -----------------------------------------------------------------------------
+# Individual-level IRS vs ACS comparison (reconciliation diagnostic).
+#
+# Compares weighted counts of PEOPLE -- single adults, married adults, and
+# children/dependents -- between HT2 (who appears on filed returns) and the
+# ACS (everyone), by state. Unlike the filing-unit comparison, this does not
+# depend on the v0 ACS tax-unit/filing model at all: the ACS side is a direct
+# person-level tabulation, and the difference ACS - IRS estimates the
+# non-filer population by group and state.
+#
+# Construction and documented approximations:
+#   IRS (HT2, stubs summed; PR/OA excluded to match ACS coverage):
+#     married adults = 2 * MARS2 + (N1 - MARS1 - MARS2 - MARS4)
+#                      [residual is MFS-dominated; QSS (~1M unmarried
+#                       returns) is misclassified as married]
+#     single adults  = MARS1 + MARS4
+#     dependents     = N2 - (N1 + MARS2)
+#                      [includes adult dependents; a dependent who files
+#                       their own return is double-counted (own return +
+#                       parent's N2); N2 = exemptions pre-2018]
+#   ACS (person-level PERWT sums):
+#     married adults = AGE >= 18 & MARST in (1,2)   [separated -> single,
+#                      matching filing rules]
+#     single adults  = AGE >= 18 & !married
+#     children       = AGE < 18   [vs IRS dependents, which include 18+
+#                      students/relatives -- expect ACS < IRS here for that
+#                      reason and the reverse from never-claimed children]
+# -----------------------------------------------------------------------------
+compare_individuals_acs_irs <- function(ht2, acs) {
+
+  irs <- dcast(as.data.table(ht2)[!(state %in% NONTAX_BUCKETS) &
+                                  variable %in% c("n_returns","n_single","n_joint","n_hoh","n_indiv"),
+                                  .(value = sum(value)), by = .(state, variable)],
+               state ~ variable, value.var = "value")
+  irs <- irs[, .(state,
+                 irs_married_adults = 2 * n_joint + (n_returns - n_single - n_joint - n_hoh),
+                 irs_single_adults  = n_single + n_hoh,
+                 irs_children       = n_indiv - (n_returns + n_joint))]
+
+  a <- as.data.table(acs)
+  a[, state := FIPS_TO_STATE[as.character(STATEFIP)]]
+  a <- a[!is.na(state)]
+  acs_tab <- a[, .(
+    acs_married_adults = sum(PERWT * (AGE >= 18 & MARST %in% 1:2)),
+    acs_single_adults  = sum(PERWT * (AGE >= 18 & !(MARST %in% 1:2))),
+    acs_children       = sum(PERWT * (AGE < 18))
+  ), by = state]
+
+  out <- merge(irs, acs_tab, by = "state")
+  for (g in c("married_adults", "single_adults", "children")) {
+    out[[paste0("nonfiler_", g)]] <- out[[paste0("acs_", g)]] - out[[paste0("irs_", g)]]
+    out[[paste0("irs_share_", g)]] <- out[[paste0("irs_", g)]] / out[[paste0("acs_", g)]]
+  }
+  out[order(state)]
+}
+
 # =============================================================================
 # PUF-SIDE TARGET ASSEMBLY (plan §2.1)
 #
