@@ -45,6 +45,25 @@ STATE_JURISDICTIONS <- c(
 NONTAX_BUCKETS <- c("PR","OA")          # carried, no state income tax calc
 
 # -----------------------------------------------------------------------------
+# Shared raw-data stores. Derived from the production output root in
+# config/interfaces/output_roots.yaml (raw_data is its sibling directory), so
+# no additional machine paths are hardcoded here.
+#   IRS-GEO: SOI by-geography mirror (github.com/johniselin-budget-lab/IRS-GEO;
+#            see NOTES.md at the store root for data caveats)
+#   ACS:     IPUMS USA 1-year fixed-width extracts, us{year}a/ vintages
+# -----------------------------------------------------------------------------
+raw_data_root <- function() {
+  file.path(yaml::read_yaml("./config/interfaces/output_roots.yaml")$production,
+            "raw_data")
+}
+ht2_path <- function(year) {
+  file.path(raw_data_root(), "IRS-GEO/state/HT2", sprintf("ht2_%d.csv.gz", year))
+}
+acs_extract_dir <- function(acs_year) {
+  file.path(raw_data_root(), "ACS/acs_common", sprintf("us%da", acs_year))
+}
+
+# -----------------------------------------------------------------------------
 # SOI HT2 AGI_STUB → [lower, upper) AGI bracket, in nominal dollars.
 # 10-class scheme, verified from the data (2017–2022 all carry stubs 1..10, with
 # stub 1 = "under $1": it holds negative AGI). A record's stub is found by
@@ -65,45 +84,61 @@ ht2_stub_breaks <- function(year) {
 # Returns a data.table: state, agi_stub, variable, value  (state totals, stub 0,
 # and the US row are dropped; only the 51 + PR + OA jurisdictions × stubs 1..K).
 # -----------------------------------------------------------------------------
+# SOI code -> target-series name. Counts: N1 total returns; MARS1/2/4
+# single/joint/HoH returns; N2 is "number of exemptions" through TY2017 and
+# "number of individuals" from TY2018 (TCJA; SOI kept the column name and
+# repointed the concept -- both count people represented on returns, and
+# calibration is within-year, so the relabel never crosses a target cell).
+# Amounts (A*) and their return counts (N*) follow the plan §2.1 target set:
+# AGI, wages, interest, dividends, capital gains, SALT income/sales tax,
+# real-estate tax, mortgage interest, EITC. Itemized-deduction items (18425/
+# 18500/19300) reflect post-TCJA itemizer collapse from 2018 -- within-year
+# targets, so levels are comparable to same-year PUF Schedule A amounts.
+HT2_TARGET_MAP <- c(
+  N1     = "n_returns", MARS1 = "n_single", MARS2 = "n_joint",
+  MARS4  = "n_hoh",     N2    = "n_indiv",
+  A00100 = "agi_amt",        N00200 = "n_wages",      A00200 = "wages_amt",
+  N00300 = "n_int",          A00300 = "int_amt",
+  N00600 = "n_div",          A00600 = "div_amt",
+  N01000 = "n_kg",           A01000 = "kg_amt",
+  N18425 = "n_salt_inc",     A18425 = "salt_inc_amt",
+  N18450 = "n_salt_sales",   A18450 = "salt_sales_amt",
+  N18500 = "n_re_tax",       A18500 = "re_tax_amt",
+  N19300 = "n_mort_int",     A19300 = "mort_int_amt",
+  N59660 = "n_eitc",         A59660 = "eitc_amt")
+
 read_ht2 <- function(path, year) {
 
-  d <- fread(path, colClasses = "character")
+  # Files in the IRS-GEO mirror are gzipped; quoted comma-formatted numbers
+  # are handled by fread + the comma-stripping parse below
+  d <- if (grepl("\\.gz$", path)) {
+    fread(cmd = paste("zcat", shQuote(path)), colClasses = "character")
+  } else {
+    fread(path, colClasses = "character")
+  }
   setnames(d, toupper(names(d)))
 
   parse_num <- function(x) as.numeric(str_replace_all(x, ",", ""))
 
-  # Core target columns, tolerant of cross-year naming drift.
-  # Counts: N1 total returns; MARS1/MARS2/MARS4 single/joint/HoH returns; N2 is
-  # "number of exemptions" through TY2017 and "number of individuals" from
-  # TY2018 (TCJA zeroed exemptions; SOI kept the column name and repointed the
-  # concept). Both count the people represented on returns, so N2 is carried
-  # as one consistent target series (n_indiv) with the pre-2018 vintages
-  # understood as exemption counts -- calibration is within-year against the
-  # same-year HT2 vintage, so the label change never crosses a target cell.
-  agi_col <- if ("A00100" %in% names(d)) "A00100" else "A001"   # AGI amount ($000s)
-  keep_counts  <- intersect(c("N1","MARS1","MARS2","MARS4","N2"), names(d))
-  keep_amounts <- intersect(c(agi_col, "A00200", "A59660"), names(d))  # AGI, wages, EITC amt
+  # Tolerate the pre-2014 AGI column name
+  if (!("A00100" %in% names(d)) && "A001" %in% names(d)) {
+    setnames(d, "A001", "A00100")
+  }
+  keep <- intersect(names(HT2_TARGET_MAP), names(d))
+  keep_amounts <- keep[startsWith(keep, "A")]
 
   d[, STATE := toupper(trimws(STATE))]
   d[, AGI_STUB := as.integer(AGI_STUB)]
   d <- d[!(STATE %in% c("US","")) & AGI_STUB != 0]              # drop US total & stub-0 total
 
-  num_cols <- c(keep_counts, keep_amounts)
-  d[, (num_cols) := lapply(.SD, parse_num), .SDcols = num_cols]
+  d[, (keep) := lapply(.SD, parse_num), .SDcols = keep]
 
-  long <- melt(d[, c("STATE","AGI_STUB", num_cols), with = FALSE],
+  long <- melt(d[, c("STATE","AGI_STUB", keep), with = FALSE],
                id.vars = c("STATE","AGI_STUB"),
                variable.name = "variable", value.name = "value")
-  # amounts → dollars
+  # amounts ($ thousands in HT2) -> dollars
   long[variable %in% keep_amounts, value := value * 1000]
-  long[, variable := fifelse(variable == agi_col, "agi_amt",
-                      fifelse(variable == "A00200", "wages_amt",
-                      fifelse(variable == "A59660", "eitc_amt",
-                      fifelse(variable == "N1", "n_returns",
-                      fifelse(variable == "MARS1", "n_single",
-                      fifelse(variable == "MARS2", "n_joint",
-                      fifelse(variable == "MARS4", "n_hoh",
-                      fifelse(variable == "N2", "n_indiv", as.character(variable)))))))))]
+  long[, variable := HT2_TARGET_MAP[as.character(variable)]]
   setnames(long, c("STATE","AGI_STUB"), c("state","agi_stub"))
   long[, year := year][]
 }
@@ -161,14 +196,48 @@ income_tier <- function(inc) {
       labels = c("neg_zero","1_10k","10_25k","25_50k","50k_plus"), right = FALSE)
 }
 
-#' Build ACS non-filer margins + state population totals from the local IPUMS extract.
+#' Read the needed variables from a shared IPUMS USA fixed-width extract
+#' (us{year}a/: usa_{year}a.dat.gz + variables.csv giving column positions).
+#' Applies implied-decimal scaling (PERWT carries 2) and recodes the IPUMS
+#' INCTOT N/A sentinel (9999999, the 7-digit max) to NA -- without which every
+#' child inflates unit income by ~$10M and everyone looks like a filer.
+read_acs_extract <- function(acs_year,
+                             cols = c("YEAR","STATEFIP","PERWT","PERNUM","SERIAL","SAMPLE",
+                                      "AGE","MARST","SPLOC","MOMLOC","POPLOC","INCTOT")) {
+
+  dir <- acs_extract_dir(acs_year)
+  v   <- fread(file.path(dir, "variables.csv"))
+  v   <- v[var_name %in% cols]
+  stopifnot(all(cols %in% v$var_name))
+
+  a <- readr::read_fwf(
+    file      = file.path(dir, sprintf("usa_%da.dat.gz", acs_year)),
+    col_positions = readr::fwf_positions(start = v$start, end = v$end,
+                                         col_names = v$var_name),
+    col_types = paste(rep("d", nrow(v)), collapse = ""),
+    progress  = FALSE
+  ) |> as.data.table()
+
+  # Implied decimals
+  for (i in which(v$imp_decim > 0)) {
+    nm <- v$var_name[i]
+    a[, (nm) := get(nm) / 10^v$imp_decim[i]]
+  }
+  # IPUMS N/A sentinel for INCTOT
+  if ("INCTOT" %in% cols) {
+    a[INCTOT >= 9999998, INCTOT := NA_real_]
+  }
+  a[]
+}
+
+#' Build ACS non-filer margins + state population totals from an IPUMS extract.
+#' @param acs data.table from read_acs_extract() (or any source with the same
+#'        columns); `year` is the TAX year the margins will target
 #' @return list(nonfiler_margins = dt[state, age_band, income_tier, n_units],
 #'              state_pop        = dt[state, pop])   both weighted to population.
-build_acs_margins <- function(ipums_csv, year, acs_year = NULL,
-                              cols = c("YEAR","STATEFIP","PERWT","PERNUM","SERIAL","SAMPLE",
-                                       "AGE","MARST","SPLOC","MOMLOC","POPLOC","INCTOT")) {
+build_acs_margins <- function(acs, year, acs_year = NULL) {
 
-  a <- fread(ipums_csv, select = cols)
+  a <- as.data.table(acs)
   # De-pool: the extract may stack multiple ACS 1-year samples (summing PERWT across
   # them double-counts population). Keep exactly one survey YEAR.
   yrs <- sort(unique(a$YEAR))
@@ -208,6 +277,14 @@ build_acs_margins <- function(ipums_csv, year, acs_year = NULL,
     n_dep       = sum(role == "dependent"),
     gross_inc   = sum(pmax(INCTOT, 0), na.rm = TRUE)   # unit gross income (loss-floored)
   ), by = tu_id]
+
+  # Drop malformed units (no resolvable head row -> NA weight/age; ~331 of
+  # 198M units in the 2022 extract, from edge cases in the pointer logic)
+  n_bad <- units[is.na(weight) | is.na(head_age), .N]
+  if (n_bad > 0) {
+    message("  dropping ", n_bad, " units with unresolved head (NA weight/age)")
+    units <- units[!is.na(weight) & !is.na(head_age)]
+  }
 
   units[, filing_status := fifelse(has_spouse, "joint",
                            fifelse(n_dep > 0, "hoh", "single"))]
