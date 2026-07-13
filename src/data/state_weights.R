@@ -73,6 +73,13 @@ read_ht2 <- function(path, year) {
   parse_num <- function(x) as.numeric(str_replace_all(x, ",", ""))
 
   # Core target columns, tolerant of cross-year naming drift.
+  # Counts: N1 total returns; MARS1/MARS2/MARS4 single/joint/HoH returns; N2 is
+  # "number of exemptions" through TY2017 and "number of individuals" from
+  # TY2018 (TCJA zeroed exemptions; SOI kept the column name and repointed the
+  # concept). Both count the people represented on returns, so N2 is carried
+  # as one consistent target series (n_indiv) with the pre-2018 vintages
+  # understood as exemption counts -- calibration is within-year against the
+  # same-year HT2 vintage, so the label change never crosses a target cell.
   agi_col <- if ("A00100" %in% names(d)) "A00100" else "A001"   # AGI amount ($000s)
   keep_counts  <- intersect(c("N1","MARS1","MARS2","MARS4","N2"), names(d))
   keep_amounts <- intersect(c(agi_col, "A00200", "A59660"), names(d))  # AGI, wages, EITC amt

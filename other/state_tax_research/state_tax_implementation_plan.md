@@ -52,8 +52,12 @@ so they are swappable behind `build_state_weights(method = c("calibration","grad
 Approach B and the A/B comparison harness are specified in
 `state_weights_ml_alternative.md`. Approach A (the baseline):
 1. Ingest SOI Historic Table 2 CSVs (latest published year, currently ~2022):
-   per-state × AGI-class return counts and amounts for AGI, wages, interest,
-   dividends, capital gains, SALT deductions, mortgage interest, EITC.
+   per-state × AGI-class return counts — total (N1) AND by filing status
+   (single MARS1, joint MARS2, HoH MARS4) — the number of individuals (N2;
+   labeled "exemptions" through TY2017, "individuals" from TY2018 — same
+   people-on-returns concept, calibrated within-year so the relabel never
+   crosses a cell), and amounts for AGI, wages, interest, dividends, capital
+   gains, SALT deductions, mortgage interest, EITC.
 2. Stratify PUF records into AGI classes matching HT2 (TPC uses 9 strata).
 3. Estimate initial `p(state | x)` from HT2 shares within stratum (x = AGI class ×
    filing status × Schedule-A-relevant indicators: has `salt_inc_sales`, has

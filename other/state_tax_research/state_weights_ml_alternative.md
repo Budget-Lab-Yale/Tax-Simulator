@@ -71,10 +71,13 @@ L(θ) = Σ_t λ_t · ((T̂_t(W) − T_t) / T_t)²          # target fidelity
 ```
 
 - Targets `t` are HT2 cells: (state s) × (AGI class c) × (variable v) — return
-  counts and dollar amounts for AGI, wages, interest, dividends, capital gains, SALT
-  income deduction, real-estate tax, mortgage interest, EITC. `T̂_t(W)` is the
-  weighted total over records in class `c`. `λ_t` lets us up-weight counts vs
-  amounts, or scarce cells.
+  counts (total and by filing status: single/joint/HoH), the number of
+  individuals (N2; = exemptions pre-2018, individuals 2018+ — within-year
+  calibration, so the relabel never crosses a cell), and dollar amounts for
+  AGI, wages, interest, dividends, capital gains, SALT income deduction,
+  real-estate tax, mortgage interest, EITC. `T̂_t(W)` is the weighted total
+  over records in class `c`. `λ_t` lets us up-weight counts vs amounts, or
+  scarce cells.
 - **Filers vs non-filers:** HT2 targets constrain filers only. Partition records by
   the exogenous `filer` flag and add **ACS/Census population-margin targets** (state ×
   age × income-tier) for the non-filer partition, plus a `sum(W·n_people)`-by-state
