@@ -3,7 +3,8 @@
 #----------------------------------------------------
 
 # Set return variables for function
-return_vars$calc_st_agi = c('st_additions', 'st_subtractions', 'st_agi')
+return_vars$calc_st_agi = c('st_additions', 'st_subtractions', 'st_retirement_excl',
+                            'st_agi')
 
 
 calc_st_agi = function(tax_unit, fill_missings = F) {
@@ -45,6 +46,20 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
     'txbl_ss',        # (dbl)  taxable Social Security benefits (federal)
     'txbl_pens_dist', # (dbl)  taxable pension distributions
     'txbl_ira_dist',  # (dbl)  taxable IRA distributions
+    'wages1',         # (dbl)  primary filer wages
+    'wages2',         # (dbl)  secondary filer wages
+    'sole_prop',      # (dbl)  sole proprietorship income or loss
+    'part_active',    # (dbl)  active partnership income or loss
+    'scorp',          # (dbl)  S-corporation income or loss
+    'farm',           # (dbl)  farm income or loss
+    'txbl_int',       # (dbl)  taxable interest income
+    'div_ord',        # (dbl)  ordinary dividends
+    'div_pref',       # (dbl)  qualified dividends
+    'kg_lt',          # (dbl)  long-term capital gains
+    'kg_st',          # (dbl)  short-term capital gains
+    'rent',           # (dbl)  rental income or loss
+    'part_passive',   # (dbl)  passive partnership income or loss
+    'other_inc',      # (dbl)  other taxable income
     'ot_ded',         # (dbl)  federal overtime deduction (post-federal calc)
     'char_cash',      # (dbl)  cash charitable contributions
     'char_noncash',   # (dbl)  non-cash charitable contributions
@@ -66,6 +81,11 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
     'st_agi.pension_excl_65plus',   # (dbl) per-person pension exclusion cap, 65+
     'st_agi.pension_excl_min_age',  # (dbl) minimum age for the pension exclusion
     'st_agi.pension_cap_incl_ss',   # (int) whether taxable SS counts within the cap
+    'st_agi.retirement_excl_style', # (int) 1 = per-person earned/unearned exclusion
+    'st_agi.retirement_excl_min_age', # (dbl) minimum age for broad exclusion
+    'st_agi.retirement_excl_under65', # (dbl) per-person cap below 65
+    'st_agi.retirement_excl_65plus',  # (dbl) per-person cap at 65+
+    'st_agi.retirement_excl_earned_cap', # (dbl) per-person portion usable for earned income
     'st_agi.sub_char_nonitem_floor', # (dbl) floor for non-itemizer charitable sub
     'st_agi.add_overtime_ded'       # (int) whether the federal OT deduction is added back
   )
@@ -123,6 +143,43 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
       st_sub_pens = pmin(pens_inc, pmax(0, pens_cap - st_sub_ss_cap)),
       st_sub_ss   = st_sub_ss_full + st_sub_ss_cap,
 
+      # Broad retirement exclusion (GA-style): each eligible spouse may use a
+      # limited amount against own earned income first and then against
+      # retirement-type unearned income. Jointly held non-wage income is split
+      # equally because ownership is not observed in the PUF.
+      st_retir_n = 1 + (filing_status == 2),
+      st_retir_other_earned = sole_prop + part_active + scorp + farm,
+      st_retir_unearned = txbl_int + div_ord + div_pref + kg_lt + kg_st +
+                          rent + part_passive + txbl_pens_dist + txbl_ira_dist +
+                          other_inc,
+      st_retir_cap1 = if_else(age1 >= st_agi.retirement_excl_min_age,
+                               if_else(age1 >= 65,
+                                       st_agi.retirement_excl_65plus,
+                                       st_agi.retirement_excl_under65), 0),
+      st_retir_cap2 = if_else(filing_status == 2 & !is.na(age2) &
+                               age2 >= st_agi.retirement_excl_min_age,
+                               if_else(age2 >= 65,
+                                       st_agi.retirement_excl_65plus,
+                                       st_agi.retirement_excl_under65), 0),
+      st_retir_earned1 = pmax(0, wages1 + st_retir_other_earned / st_retir_n),
+      st_retir_earned2 = pmax(0, wages2 + st_retir_other_earned / st_retir_n),
+      st_retir_earned_take1 = pmin(st_retir_cap1,
+                                   pmin(st_agi.retirement_excl_earned_cap,
+                                        st_retir_earned1)),
+      st_retir_earned_take2 = pmin(st_retir_cap2,
+                                   pmin(st_agi.retirement_excl_earned_cap,
+                                        st_retir_earned2)),
+      st_retir_unearned_each = pmax(0, st_retir_unearned / st_retir_n),
+      st_retirement_excl = if_else(
+        st_agi.retirement_excl_style == 1,
+        st_retir_earned_take1 + st_retir_earned_take2 +
+          pmin(pmax(0, st_retir_cap1 - st_retir_earned_take1),
+               st_retir_unearned_each) +
+          pmin(pmax(0, st_retir_cap2 - st_retir_earned_take2),
+               st_retir_unearned_each),
+        0
+      ),
+
       # Subtraction: charitable contributions for federal non-itemizers in
       # excess of the floor (CO)
       st_sub_char = if_else(itemizing != 1 & is.finite(st_agi.sub_char_nonitem_floor),
@@ -130,7 +187,8 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
                                     st_agi.sub_char_nonitem_floor),
                             0),
 
-      st_subtractions = st_sub_ref + st_sub_ss + st_sub_pens + st_sub_char,
+      st_subtractions = st_sub_ref + st_sub_ss + st_sub_pens + st_sub_char +
+                        st_retirement_excl,
 
       # State income base
       st_agi = st_start + st_additions - st_subtractions

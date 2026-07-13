@@ -1,0 +1,36 @@
+---
+# Kentucky starts with federal AGI; Schedule M modifications are limited here
+# to broad, observable interest, Social Security, and pension rules.
+start_point:
+  value: 1
+  reference: 'Kentucky Form 740, line 5 federal adjusted gross income; 2017-2025 packets'
+conformity_year:
+  value:
+    '2017': 2016
+    '2025': 2024
+  reference: 'Kentucky Form 740 instructions, Internal Revenue Code date; KRS 141.010(21)'
+add_exempt_int:
+  value: 1
+  reference: 'Kentucky Form 740 Schedule M, non-Kentucky municipal-interest addition, 2017-2025'
+own_state_exempt:
+  value: 1
+  reference: 'Kentucky Form 740 Schedule M, Kentucky municipal obligations exception, 2017-2025'
+sub_us_int:
+  value: 1
+  reference: 'Kentucky Form 740 Schedule M, U.S. government obligation interest subtraction, 2017-2025'
+ss_sub_share:
+  value: 1
+  reference: 'KRS 141.019(1)(e); Kentucky Form 740 instructions, Social Security exclusion'
+pension_excl_under65:
+  value:
+    '2017': 41110
+    '2018': 31110
+  reference: 'Kentucky Form 740 Schedule M pension-income exclusion, 2017-2025'
+pension_excl_65plus:
+  value:
+    '2017': 41110
+    '2018': 31110
+  reference: 'Kentucky Form 740 Schedule M pension-income exclusion, 2017-2025'
+pension_excl_min_age:
+  value: 0
+  reference: 'Kentucky pension-income exclusion has no general age threshold, subject to source-specific exceptions'

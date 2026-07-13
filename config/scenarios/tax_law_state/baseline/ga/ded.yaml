@@ -1,0 +1,55 @@
+---
+# Georgia follows the federal itemized election.  The generic federal-itemized
+# mode preserves the federal amount; the state-income-tax adjustment is a
+# documented PUF limitation rather than an implicit state-specific branch.
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_joint
+    '3': std_mfs
+    '4': std_single
+
+std_single:
+  value:
+    '2017': 2300
+    '2018': 4600
+    '2021': 5400
+    '2024': 12000
+  reference: 'Georgia Form 500 standard deduction instructions, 2017-2025'
+std_joint:
+  value:
+    '2017': 3000
+    '2018': 6000
+    '2021': 7100
+    '2024': 24000
+  reference: 'Georgia Form 500 standard deduction instructions, 2017-2025'
+std_mfs:
+  value:
+    '2017': 1500
+    '2018': 3000
+    '2021': 3550
+    '2024': 12000
+  reference: 'Georgia Form 500 standard deduction instructions, 2017-2025'
+std_aged_addl:
+  value:
+    '2017': 1300
+    '2024': 0
+  reference: 'Georgia Form 500 standard deduction instructions, 2017-2025'
+std_blind_addl:
+  value:
+    '2017': 1300
+    '2024': 0
+  reference: 'Georgia Form 500 standard deduction instructions, 2017-2025'
+item_allowed:
+  value: 1
+  reference: 'Georgia Form 500 Schedule 1, itemized deductions, 2017-2025'
+item_coupling:
+  value: 1
+  reference: 'Georgia Form 500 instructions require the federal itemized deduction election'
+item_component_style:
+  value: 2
+  reference: 'Georgia Form 500 uses federal Schedule A as the modeled itemized-deduction starting point'
+salt_addback:
+  value: 0
+  reference: 'Georgia Form 500 Schedule 1 state-income-tax deduction adjustment is documented in GA.md and not separately observable in the PUF'

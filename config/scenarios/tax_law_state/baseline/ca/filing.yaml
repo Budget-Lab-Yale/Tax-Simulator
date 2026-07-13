@@ -1,0 +1,10 @@
+---
+req_type:
+  value: 3
+  reference: 'California Form 540 filing requirement tables are age/dependent specific; federal-filer-or-liability proxy pending generic gross-income table support'
+req_income_thresh:
+  value: 0
+  reference: 'n/a for federal-filer-or-liability filing proxy'
+req_if_fed_filer:
+  value: 1
+  reference: 'California Form 540 filing requirements, 2017-2025; conservative proxy'

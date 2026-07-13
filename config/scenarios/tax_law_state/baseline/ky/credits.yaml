@@ -1,0 +1,48 @@
+---
+# Kentucky's family-size credit equals a table-selected share of preliminary
+# tax. The final bound is deliberately a finite sentinel for YAML portability.
+family_credit_style:
+  value: 1
+  reference: 'KRS 141.066; Kentucky Schedule ITC, Section C, 2017-2025'
+family_credit_f1_bounds:
+  value:
+    '2017': [12140, 12626, 13111, 13597, 14082, 14568, 15054, 15418, 15782, 16146, 999999999]
+    '2025': [15650, 16276, 16902, 17528, 18154, 18780, 19406, 19876, 20345, 20815, 999999999]
+  reference: 'Kentucky Schedule ITC, Table C, 2018 and 2025; 2017 uses the first available modeled-period table pending booklet transcription'
+family_credit_f2_bounds:
+  value:
+    '2017': [16460, 17118, 17777, 18435, 19094, 19752, 20410, 20904, 21398, 21892, 999999999]
+    '2025': [21150, 21996, 22842, 23688, 24534, 25380, 26226, 26861, 27495, 28130, 999999999]
+  reference: 'Kentucky Schedule ITC, Table C, 2018 and 2025; 2017 uses the first available modeled-period table pending booklet transcription'
+family_credit_f3_bounds:
+  value:
+    '2017': [20780, 21611, 22442, 23274, 24105, 24936, 25767, 26391, 27014, 27637, 999999999]
+    '2025': [26650, 27716, 28782, 29848, 30914, 31980, 33046, 33846, 34645, 35445, 999999999]
+  reference: 'Kentucky Schedule ITC, Table C, 2018 and 2025; 2017 uses the first available modeled-period table pending booklet transcription'
+family_credit_f4_bounds:
+  value:
+    '2017': [25100, 26104, 27108, 28112, 29116, 30120, 31124, 31877, 32630, 33383, 999999999]
+    '2025': [32150, 33436, 34722, 36008, 37294, 38580, 39866, 40831, 41695, 42760, 999999999]
+  reference: 'Kentucky Schedule ITC, Table C, 2018 and 2025; 2017 uses the first available modeled-period table pending booklet transcription'
+family_credit_f1_rates:
+  value:
+    '2017': [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0]
+  reference: 'Kentucky Schedule ITC, Table C credit percentages, 2017-2025'
+family_credit_f2_rates:
+  value:
+    '2017': [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0]
+  reference: 'Kentucky Schedule ITC, Table C credit percentages, 2017-2025'
+family_credit_f3_rates:
+  value:
+    '2017': [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0]
+  reference: 'Kentucky Schedule ITC, Table C credit percentages, 2017-2025'
+family_credit_f4_rates:
+  value:
+    '2017': [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0]
+  reference: 'Kentucky Schedule ITC, Table C credit percentages, 2017-2025'
+cdctc_match:
+  value: 0.20
+  reference: 'Kentucky Form 740, line 24; Kentucky child and dependent care credit, 2017-2025'
+cdctc_refundable:
+  value: 0
+  reference: 'Kentucky Form 740, line 24 reduces income tax liability and is not refundable'

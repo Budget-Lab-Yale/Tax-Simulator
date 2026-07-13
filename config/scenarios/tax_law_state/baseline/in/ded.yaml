@@ -1,0 +1,13 @@
+---
+std_amount:
+  value: 0
+  reference: 'Indiana IT-40 computation uses Indiana adjusted gross income less exemptions, not a standard deduction, 2017-2025'
+item_allowed:
+  value: 0
+  reference: 'Indiana IT-40 computation has no broad federal-style itemized deduction, 2017-2025'
+item_coupling:
+  value: 0
+  reference: 'n/a for Indiana (no broad itemized deduction)'
+salt_addback:
+  value: 0
+  reference: 'n/a for Indiana (no broad itemized deduction)'

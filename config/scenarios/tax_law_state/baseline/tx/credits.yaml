@@ -1,0 +1,6 @@
+---
+# Texas: no broad individual income tax.
+
+eitc_match:
+  value: 0
+  reference: 'No broad individual income tax or state EITC in v1 scope; Texas Constitution Art. VIII, Sec. 24; https://statutes.capitol.texas.gov/Docs/CN/htm/CN.8.htm#8.24'

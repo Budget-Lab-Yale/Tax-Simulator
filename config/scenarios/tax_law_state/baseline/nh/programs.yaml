@@ -1,0 +1,17 @@
+---
+# New Hampshire repealed its Interest & Dividends Tax for taxable periods
+# beginning on or after 2025-01-01. It is not a broad individual income tax.
+broad_iit:
+  value: 0
+  reference: 'NH DRA, Interest & Dividends Tax: https://www.revenue.nh.gov/taxes-glance/interest-dividends-tax'
+narrow_iit:
+  value:
+    '2017': 1
+    '2025': 0
+  reference: 'NH DRA, repeal effective for taxable periods beginning on or after January 1, 2025: https://www.revenue.nh.gov/news-and-media/repeal-nh-interest-and-dividends-tax-now-effect'
+ltcg_excise:
+  value: 0
+  reference: 'No Washington-style capital-gains excise tax in NH'
+wftc:
+  value: 0
+  reference: 'No Washington Working Families Tax Credit in NH'

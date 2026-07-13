@@ -1,0 +1,29 @@
+---
+filing_status_mapper:
+  std_amount:
+    '1': std_regular
+    '2': std_regular
+    '3': std_regular
+    '4': std_regular
+std_regular:
+  value:
+    '2017': 2530
+    '2019': 2650
+    '2020': 2690
+    '2021': 2770
+    '2023': 2980
+    '2024': 3160
+    '2025': 3270
+  reference: 'Kentucky Form 740 standard deduction, 2017-2025; TY2025 Form 740 packet'
+item_allowed:
+  value: 1
+  reference: 'Kentucky Form 740 Schedule A, standard or itemized deduction election, 2017-2025'
+item_coupling:
+  value: 1
+  reference: 'Kentucky Form 740 Schedule A follows the federal itemized-election proxy in this baseline'
+item_component_style:
+  value: 2
+  reference: 'Kentucky Form 740 Schedule A starts from federal itemized deductions; state-specific adjustments are documented in KY.md'
+salt_addback:
+  value: 0
+  reference: 'Kentucky Schedule A adjustments are not separately observable in the PUF and no generic salt addback is imposed'

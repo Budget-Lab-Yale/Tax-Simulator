@@ -1,0 +1,7 @@
+---
+personal_amount:
+  value: 0
+  reference: 'North Carolina has no general personal exemption in the modeled period; Form D-400, 2017-2025'
+dep_amount:
+  value: 0
+  reference: 'North Carolina child benefit is a separate child deduction, not a dependent exemption; G.S. 105-153.5(a1)'

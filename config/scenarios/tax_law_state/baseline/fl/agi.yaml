@@ -1,0 +1,7 @@
+---
+# Florida: no broad individual income tax. Zero-tax stub so states = all
+# includes FL without producing state individual income tax liability.
+
+start_point:
+  value: 1
+  reference: 'No tax upon income of natural persons; Fla. Const. Art. VII, s.5; https://www.leg.state.fl.us/statutes/index.cfm?submenu=3#A7S05'

@@ -1,0 +1,16 @@
+---
+# Shared federal reference-law contexts for states with fixed or selective IRC
+# conformity. Group 0 is rolling conformity. Positive groups are reusable
+# packages, never state-name branches in the calculator.
+0:
+  label: rolling
+  ready: true
+  reference_tax_law_id:
+1:
+  label: fixed_2015_selective
+  ready: false
+  reference_tax_law_id:
+2:
+  label: fixed_2025_selective
+  ready: false
+  reference_tax_law_id:

@@ -1,0 +1,34 @@
+---
+# Georgia starts from federal AGI and has a broad retirement-income exclusion.
+# The shared calculator applies the age-62 ordering rule with PUF ownership
+# proxies; the state source packet records unobservable exceptions.
+
+start_point:
+  value: 1
+  reference: 'Georgia Form 500 Schedule 1, 2017-2025; https://dor.georgia.gov/it-511-individual-income-tax-instruction-booklet'
+conformity_year:
+  value: 0
+  reference: 'O.C.G.A. 48-7-27; Georgia Form 500 federal-AGI starting point'
+sub_us_int:
+  value: 1
+  reference: 'Georgia Form 500 Schedule 1, interest on U.S. obligations subtraction, 2017-2025'
+ss_sub_share:
+  value: 1
+  reference: 'Georgia DOR Retirees FAQ; federally taxable Social Security and Railroad Retirement excluded'
+retirement_excl_style:
+  value: 1
+  reference: 'Georgia Form 500 Schedule 1 retirement income exclusion, 2017-2025'
+retirement_excl_min_age:
+  value: 62
+  reference: 'O.C.G.A. 48-7-27(a)(5); Georgia Form 500 Schedule 1 retirement income exclusion'
+retirement_excl_under65:
+  value: 35000
+  reference: 'Georgia Form 500 Schedule 1 retirement income exclusion, 2017-2025 (age 62-64)'
+retirement_excl_65plus:
+  value: 65000
+  reference: 'Georgia Form 500 Schedule 1 retirement income exclusion, 2017-2025 (age 65+)'
+retirement_excl_earned_cap:
+  value:
+    '2017': 4000
+    '2024': 5000
+  reference: 'Georgia Form 500 Schedule 1 retirement income exclusion examples, 2017-2025'

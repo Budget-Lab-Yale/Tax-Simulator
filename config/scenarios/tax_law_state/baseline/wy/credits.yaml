@@ -1,0 +1,6 @@
+---
+# Wyoming: no broad individual income tax.
+
+eitc_match:
+  value: 0
+  reference: 'No broad individual income tax or state EITC in v1 scope; Wyoming Department of Revenue tax programs; https://revenue.wyo.gov'

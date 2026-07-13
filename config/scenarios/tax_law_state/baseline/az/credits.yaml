@@ -1,0 +1,34 @@
+---
+# The dependent credit replaced Arizona's dependent exemption in TY2019.
+
+filing_status_mapper:
+  dep_credit_po_thresh:
+    '1': dep_credit_po_single
+    '2': dep_credit_po_joint
+    '3': dep_credit_po_single
+    '4': dep_credit_po_single
+
+dep_credit_style:
+  value:
+    '2017': 0
+    '2019': 1
+  reference: '2019 Form 140 booklet, Dependent Tax Credit; A.R.S. 43-1073.01'
+dep_credit_young_amount:
+  value:
+    '2017': 0
+    '2019': 100
+  reference: 'Arizona Form 140 Dependent Tax Credit worksheet, 2019-2025 ($100 per qualifying dependent under age 17)'
+dep_credit_other_amount:
+  value:
+    '2017': 0
+    '2019': 25
+  reference: 'Arizona Form 140 Dependent Tax Credit worksheet, 2019-2025 ($25 per other qualifying dependent)'
+dep_credit_po_single:
+  value: 200000
+  reference: 'Arizona Form 140 Dependent Tax Credit worksheet, 2019-2025'
+dep_credit_po_joint:
+  value: 400000
+  reference: 'Arizona Form 140 Dependent Tax Credit worksheet, 2019-2025'
+dep_credit_po_per_1k:
+  value: 0.05
+  reference: 'Arizona Form 140 Dependent Tax Credit worksheet, 2019-2025 (5 percentage points for each $1,000 or fraction of excess AGI)'

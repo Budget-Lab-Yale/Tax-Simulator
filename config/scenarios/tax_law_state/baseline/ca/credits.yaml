@@ -1,0 +1,213 @@
+---
+# California exemption amounts are nonrefundable credits. The shared phaseout
+# matches the Form 540 AGI Limitation Worksheet's $6-per-credit reduction.
+filing_status_mapper:
+  exempt_credit_po_thresh:
+    '1': exempt_credit_po_single
+    '2': exempt_credit_po_joint
+    '3': exempt_credit_po_single
+    '4': exempt_credit_po_head
+  exempt_credit_po_width:
+    '1': exempt_credit_po_width_regular
+    '2': exempt_credit_po_width_regular
+    '3': exempt_credit_po_width_mfs
+    '4': exempt_credit_po_width_regular
+exempt_credit_style:
+  value: 1
+  reference: 'California Form 540, line 32 exemption credits and AGI Limitation Worksheet, 2017-2025'
+exempt_credit_personal:
+  value:
+    '2017': 114
+    '2018': 118
+    '2019': 122
+    '2020': 124
+    '2021': 129
+    '2022': 140
+    '2023': 144
+    '2024': 149
+    '2025': 153
+  reference: 'California Form 540 booklets, personal exemption credit table, 2017-2025'
+exempt_credit_aged:
+  value:
+    '2017': 114
+    '2018': 118
+    '2019': 122
+    '2020': 124
+    '2021': 129
+    '2022': 140
+    '2023': 144
+    '2024': 149
+    '2025': 153
+  reference: 'California Form 540 booklets, senior exemption credit table, 2017-2025'
+exempt_credit_blind:
+  value:
+    '2017': 114
+    '2018': 118
+    '2019': 122
+    '2020': 124
+    '2021': 129
+    '2022': 140
+    '2023': 144
+    '2024': 149
+    '2025': 153
+  reference: 'California Form 540 booklets, blind exemption credit table, 2017-2025'
+exempt_credit_dep:
+  value:
+    '2017': 353
+    '2018': 367
+    '2019': 378
+    '2020': 383
+    '2021': 400
+    '2022': 433
+    '2023': 446
+    '2024': 461
+    '2025': 475
+  reference: 'California Form 540 booklets, dependent exemption credit table, 2017-2025'
+exempt_credit_po_single:
+  value:
+    '2017': 178706
+    '2018': 194504
+    '2019': 200534
+    '2020': 203341
+    '2021': 212288
+    '2022': 229908
+    '2023': 237035
+    '2024': 244857
+    '2025': 252203
+  reference: 'California Form 540 exemption-credit AGI limitation worksheet, 2017-2025'
+exempt_credit_po_joint:
+  value:
+    '2017': 357417
+    '2018': 389013
+    '2019': 401072
+    '2020': 406687
+    '2021': 424581
+    '2022': 459821
+    '2023': 474075
+    '2024': 489719
+    '2025': 504411
+  reference: 'California Form 540 exemption-credit AGI limitation worksheet, 2017-2025'
+exempt_credit_po_head:
+  value:
+    '2017': 268065
+    '2018': 291760
+    '2019': 300805
+    '2020': 305016
+    '2021': 318437
+    '2022': 344867
+    '2023': 355558
+    '2024': 367291
+    '2025': 378310
+  reference: 'California Form 540 exemption-credit AGI limitation worksheet, 2017-2025'
+exempt_credit_po_width_regular:
+  value: 2500
+  reference: 'California Form 540 AGI Limitation Worksheet, 2017-2025'
+exempt_credit_po_width_mfs:
+  value: 1250
+  reference: 'California Form 540 AGI Limitation Worksheet, 2017-2025'
+exempt_credit_po_per_step:
+  value: 6
+  reference: 'California Form 540 AGI Limitation Worksheet, $6 credit reduction per rounded-up phaseout step, 2017-2025'
+
+# The California EITC is its own earned-income schedule rather than a match
+# of federal EITC. Style 2 selects the annual $50 FTB 3514 tables from
+# credit_tables.csv, including the FTB safe-harbor rule for a second AGI lookup.
+earned_credit_style:
+  value: 2
+  reference: 'California FTB 3514 instructions/booklets, California Earned Income Tax Credit tables, 2017-2025'
+earned_credit_age_min:
+  value: 18
+  reference: 'California FTB 3514, childless filer age requirement, 2025'
+earned_credit_agi_limit:
+  value: 32901
+  reference: 'California FTB 3514, federal AGI eligibility limit, 2025'
+earned_credit_earned_limit:
+  value: 32901
+  reference: 'California FTB 3514, California earned-income eligibility limit, 2025'
+earned_credit_round:
+  value: 1
+  reference: 'California FTB 3514 EITC table reports whole-dollar credits'
+earned_credit_refundable:
+  value: 1
+  reference: 'California FTB 3514, refundable California EITC, 2025'
+earned_credit_agi_safe_harbor:
+  value:
+    '2017': [3446, 5175, 7265, 7265]
+    '2018': [3580, 5376, 7547, 7547]
+    '2019': [3705, 5564, 7811, 7811]
+    '2020': [3757, 5642, 7920, 7920]
+    '2021': [3922, 5890, 8268, 8268]
+    '2022': [4248, 6379, 8954, 8954]
+    '2023': [4380, 6577, 9232, 9232]
+    '2024': [4525, 6794, 9537, 9537]
+    '2025': [4661, 6998, 9823, 9823]
+  reference: 'California FTB 3514 instructions/booklets, earned-income versus federal-AGI lookup worksheet, 2017-2025'
+
+# The YCTC is one refundable credit per eligible return, not an amount for
+# each young child. A claimant needs a CalEITC-qualifying child under age six.
+# The 2022 zero/negative-earned-income expansion uses a current-year loss proxy
+# because Form 540 loss components are not completely available in the PUF.
+young_child_credit_style:
+  value:
+    '2017': 0
+    '2019': 1
+  reference: 'California FTB 3514 instructions/booklets, Young Child Tax Credit, 2019-2025'
+young_child_credit_amount:
+  value:
+    '2017': 0
+    '2019': 1000
+    '2022': 1083
+    '2023': 1117
+    '2024': 1154
+    '2025': 1189
+  reference: 'California FTB 3514 instructions/booklets, YCTC available credit, 2019-2025'
+young_child_credit_max_age:
+  value:
+    '2017': -1
+    '2019': 5
+  reference: 'California FTB 3514 instructions/booklets, qualifying child younger than six, 2019-2025'
+young_child_credit_phaseout_start:
+  value:
+    '2017': 0
+    '2019': 25000
+    '2023': 25775
+    '2024': 26626
+    '2025': 27425
+  reference: 'California FTB 3514 instructions/booklets, YCTC earned-income threshold, 2019-2025'
+young_child_credit_phaseout_per_100:
+  value:
+    '2017': 0
+    '2019': 20
+    '2022': 21.66
+    '2024': 21.67
+    '2025': 21.71
+  reference: 'California FTB 3514 instructions/booklets, YCTC line 27 reduction per $100, 2019-2025'
+young_child_credit_zero_income_enabled:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'California FTB 3514 instructions, zero-or-negative-earned-income YCTC expansion effective 2022'
+young_child_credit_zero_income_wage_limit:
+  value:
+    '2017': 0
+    '2022': 32490
+    '2023': 33497
+    '2024': 34602
+    '2025': 35640
+  reference: 'California FTB 3514 instructions/booklets, YCTC line 23a wage limit, 2022-2025'
+young_child_credit_zero_income_loss_limit:
+  value:
+    '2017': 0
+    '2022': 32490
+    '2023': 33497
+    '2024': 34602
+    '2025': 35640
+  reference: 'California FTB 3514 instructions/booklets, YCTC line 23b current-year total-net-loss limit, 2022-2025'
+young_child_credit_zero_income_agi_limit:
+  value:
+    '2017': 0
+    '2022': 30001
+    '2023': 30951
+    '2024': 31951
+    '2025': 32901
+  reference: 'California FTB 3514 instructions/booklets, CalEITC income eligibility limit for zero-income YCTC claimants, 2022-2025'

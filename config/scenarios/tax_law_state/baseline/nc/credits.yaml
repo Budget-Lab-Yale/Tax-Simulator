@@ -1,0 +1,8 @@
+---
+# No broad credit is encoded in this first-pass resident baseline.  Credits
+# requiring North Carolina-specific eligibility or out-of-state tax data are
+# tracked in the source packet.
+
+eitc_match:
+  value: 0
+  reference: 'North Carolina individual EITC repealed before the modeled period; Form D-400 instructions 2017-2025'

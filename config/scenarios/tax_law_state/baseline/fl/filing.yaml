@@ -1,0 +1,11 @@
+---
+# Florida: no broad individual income tax; do not flag federal filers as
+# state income tax filers.
+
+req_type:
+  value: 3
+  reference: 'No broad individual income tax return requirement; Fla. Const. Art. VII, s.5; https://www.leg.state.fl.us/statutes/index.cfm?submenu=3#A7S05'
+
+req_if_fed_filer:
+  value: 0
+  reference: 'No broad individual income tax return requirement; Fla. Const. Art. VII, s.5; https://www.leg.state.fl.us/statutes/index.cfm?submenu=3#A7S05'

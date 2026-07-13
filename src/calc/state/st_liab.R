@@ -3,14 +3,16 @@
 #------------------------------------------------------------
 
 # Set return variables for function
-return_vars$calc_st_liab = c('liab_st_iit', 'st_filer')
+return_vars$calc_st_liab = c('st_taxable_income_surtax', 'liab_st_iit',
+                              'st_filer')
 
 
 calc_st_liab = function(tax_unit, fill_missings = F) {
 
   #----------------------------------------------------------------------------
   # Calculates net state income tax liability (refundable credits may drive
-  # it negative, matching the federal liab_iit convention) and the
+  # it negative, matching the federal liab_iit convention), including a
+  # taxable-income surtax that is imposed after nonrefundable credits, and the
   # state-filer flag per the state's filing requirement (plan §6: federal
   # filers overcount state filers by 8-35% if unmodeled).
   #
@@ -21,6 +23,7 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
   #                            with 0s (used in testing, not in simulation)
   #
   # Returns: dataframe of following variables:
+  #   - st_taxable_income_surtax (dbl) : post-credit taxable-income surtax
   #   - liab_st_iit (dbl) : net state individual income tax liability
   #   - st_filer (bool)   : whether the unit files a state return
   #----------------------------------------------------------------------------
@@ -32,6 +35,7 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
     'dep_status',         # (bool) whether filer is a dependent
     'st_agi',             # (dbl)  state income base
     'st_exempt',          # (dbl)  state exemption allowance
+    'st_txbl_inc',        # (dbl)  state taxable income
     'st_tax_pre_credit',  # (dbl)  state tax before credits
     'st_credits_nonref',  # (dbl)  nonrefundable state credits
     'st_credits_ref',     # (dbl)  refundable state credits
@@ -40,15 +44,29 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
     'st_filing.req_type',            # (int) filing requirement type (see filing.yaml)
     'st_filing.req_income_thresh',   # (dbl) fixed income filing threshold
     'st_filing.req_income_thresh_dep', # (dbl) dependent-filer threshold
-    'st_filing.req_if_fed_filer'     # (int) whether federal filers must file
+    'st_filing.req_if_fed_filer',    # (int) whether federal filers must file
+    'st_programs.broad_iit',         # (int) broad individual income tax active
+    'st_surtax.taxable_income_threshold', # (dbl) taxable-income surtax trigger
+    'st_surtax.taxable_income_rate', # (dbl) taxable-income surtax rate
+    'st_surtax.taxable_income_round' # (int) whether to round the base to dollars
   )
 
   tax_unit %>%
     parse_calc_fn_input(req_vars, fill_missings) %>%
     mutate(
 
-      liab_st_iit = pmax(0, st_tax_pre_credit - st_credits_nonref) -
-                    st_credits_ref,
+      st_surtax_taxable_income = if_else(st_surtax.taxable_income_round == 1,
+                                          round(st_txbl_inc), st_txbl_inc),
+      st_taxable_income_surtax = pmax(
+        0,
+        st_surtax_taxable_income - st_surtax.taxable_income_threshold
+      ) * st_surtax.taxable_income_rate,
+      liab_st_iit = if_else(
+        st_programs.broad_iit == 1,
+        pmax(0, st_tax_pre_credit - st_credits_nonref) +
+          st_taxable_income_surtax - st_credits_ref,
+        0
+      ),
 
       # Filing requirement: federally-required filers must file where
       # req_if_fed_filer = 1, OR the state income test is met, OR the unit
@@ -64,10 +82,12 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
                                                    st_filing.req_income_thresh),
         TRUE                    ~ FALSE
       ),
-      st_filer = (filer == 1 & st_filing.req_if_fed_filer == 1) |
-                 (filer == 1 & st_filing.req_type == 0) |
-                 meets_income_test |
-                 liab_st_iit != 0
+      st_filer = st_programs.broad_iit == 1 & (
+        (filer == 1 & st_filing.req_if_fed_filer == 1) |
+          (filer == 1 & st_filing.req_type == 0) |
+          meets_income_test |
+          liab_st_iit != 0
+      )
     ) %>%
     select(all_of(return_vars$calc_st_liab)) %>%
     return()

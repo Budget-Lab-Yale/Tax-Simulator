@@ -1,0 +1,19 @@
+---
+start_point:
+  value: 1
+  reference: 'Michigan MI-1040 starts from federal adjusted gross income, 2017-2025'
+conformity_year:
+  value: 0
+  reference: 'Michigan MI-1040 federal-AGI starting point; federal conformity adjustments are separately scheduled'
+add_exempt_int:
+  value: 1
+  reference: 'Michigan MI-1040 Schedule 1, out-of-state municipal-interest addition, 2017-2025'
+own_state_exempt:
+  value: 1
+  reference: 'Michigan MI-1040 Schedule 1, Michigan municipal-obligation exception, 2017-2025'
+sub_us_int:
+  value: 1
+  reference: 'Michigan MI-1040 Schedule 1, U.S. government obligation interest subtraction, 2017-2025'
+ss_sub_share:
+  value: 1
+  reference: 'Michigan MI-1040 Schedule 1, Social Security benefits subtraction, 2017-2025'

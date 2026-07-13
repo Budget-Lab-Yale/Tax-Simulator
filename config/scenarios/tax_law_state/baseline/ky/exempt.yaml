@@ -1,0 +1,19 @@
+---
+personal_amount:
+  value: 0
+  reference: 'Kentucky Form 740 uses credits and deductions rather than a general personal exemption, 2018-2025'
+dep_amount:
+  value: 0
+  reference: 'Kentucky Form 740 uses credits and deductions rather than a general dependent exemption, 2018-2025'
+aged_addl:
+  value: 0
+  reference: 'Kentucky age/blind benefit is a $40 tax credit and is not encoded in this first-pass baseline'
+blind_addl:
+  value: 0
+  reference: 'Kentucky age/blind benefit is a $40 tax credit and is not encoded in this first-pass baseline'
+po_thresh:
+  value: .inf
+  reference: 'n/a for Kentucky (no modeled exemption allowance)'
+po_type:
+  value: 0
+  reference: 'n/a for Kentucky (no modeled exemption allowance)'

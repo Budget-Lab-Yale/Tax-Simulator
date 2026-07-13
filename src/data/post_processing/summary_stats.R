@@ -280,7 +280,8 @@ get_pr_totals = function(tax_units, yr) {
 
 
 get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr,
-                            detail_path = NULL) {
+                            detail_path = NULL, state_tax_contexts = list(),
+                            conformity_groups = load_state_conformity_groups()) {
 
   #----------------------------------------------------------------------------
   # Calculates state-level aggregates: runs the state calculator per
@@ -304,48 +305,66 @@ get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr,
   if (is.null(state_tax_law) || nrow(state_tax_law) == 0) {
     return(NULL)
   }
+  credit_tables = attr(state_tax_law, 'credit_tables')
   law_yr = state_tax_law %>%
     filter(year == yr)
   if (nrow(law_yr) == 0) {
     return(NULL)
   }
+  state_groups = state_conformity_groups_for_law(law_yr, conformity_groups)
 
   detail = list()
 
   totals = unique(law_yr$state) %>%
     map(.f = function(st) {
 
-      # Join this state's law, calculate, and reattach ids and weights
-      st_results = tax_units_calc %>%
+      group = state_groups %>% filter(state == st)
+      state_tax_context = state_tax_context_for_group(
+        tax_units_calc     = tax_units_calc,
+        conformity_group   = group$conformity_group,
+        group_ready        = group$ready,
+        state_tax_contexts = state_tax_contexts
+      )
+
+      # Join this state's law to its rolling or reference federal context,
+      # calculate, and reattach ids and weights.
+      st_results = state_tax_context %>%
         left_join(law_yr %>%
                     filter(state == st) %>%
                     select(-state),
                   by = c('year', 'filing_status')) %>%
-        do_state_taxes() %>%
-        mutate(id = tax_units_calc$id) %>%
+        do_state_taxes(
+          credit_tables = state_credit_tables_for_year(credit_tables, st, yr)
+        ) %>%
+        mutate(id = state_tax_context$id) %>%
         left_join(state_weights %>%
                     filter(state == st) %>%
                     select(id, st_weight = weight),
                   by = 'id') %>%
         mutate(st_weight = replace_na(st_weight, 0))
 
-      # Accumulate the per-record liability column for the detail matrix
+        # Accumulate the per-record net individual fiscal amount for detail
       if (!is.null(detail_path)) {
-        detail[[st]] <<- st_results %>%
-          select(id, !!st := liab_st_iit)
+          detail[[st]] <<- st_results %>%
+            select(id, !!st := liab_st_individual_net)
       }
 
       st_results %>%
 
         # Weighted aggregates
         summarise(
-          returns           = sum(st_weight * st_filer),
-          liab_st_iit       = sum(st_weight * liab_st_iit),
-          st_agi            = sum(st_weight * st_agi),
+            returns           = sum(st_weight * st_tax_filer),
+            liab_st_iit       = sum(st_weight * liab_st_iit),
+            liab_st_narrow_iit = sum(st_weight * liab_st_narrow_iit),
+            liab_st_ltcg_excise = sum(st_weight * liab_st_ltcg_excise),
+            st_refund_wftc    = sum(st_weight * st_refund_wftc),
+            liab_st_individual_net = sum(st_weight * liab_st_individual_net),
+            st_agi            = sum(st_weight * st_agi),
           st_txbl_inc       = sum(st_weight * st_txbl_inc),
           st_tax_pre_credit = sum(st_weight * st_tax_pre_credit),
           st_eitc           = sum(st_weight * st_eitc),
           st_ctc            = sum(st_weight * st_ctc),
+          st_yctc           = sum(st_weight * st_yctc),
           st_cdctc          = sum(st_weight * st_cdctc),
           st_credits_nonref = sum(st_weight * st_credits_nonref),
           st_credits_ref    = sum(st_weight * st_credits_ref)

@@ -1,0 +1,13 @@
+---
+# Exact Arizona filing thresholds vary by status, age, dependency, and gross
+# income.  Federal-filer requirement is a conservative first-pass proxy.
+
+req_type:
+  value: 3
+  reference: 'Arizona Form 140 instructions, Who Must File, 2017-2025; exact gross-income thresholds documented in AZ.md'
+req_income_thresh:
+  value: 0
+  reference: 'n/a for proxy filing rule'
+req_if_fed_filer:
+  value: 1
+  reference: 'Arizona Form 140 instructions, Who Must File, 2017-2025'

@@ -1,0 +1,66 @@
+---
+# North Carolina permits a state itemized election independent of the federal
+# election.  The component selector implements the D-400 permitted classes;
+# claim-of-right deductions and special federal-conformity adjustments remain
+# documented exceptions.
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_joint
+    '3': std_single
+    '4': std_head
+  item_prop_tax_cap:
+    '1': item_prop_tax_cap_regular
+    '2': item_prop_tax_cap_regular
+    '3': item_prop_tax_cap_mfs
+    '4': item_prop_tax_cap_regular
+
+std_single:
+  value:
+    '2017': 8750
+    '2018': 10000
+    '2020': 10750
+    '2022': 12750
+  reference: 'North Carolina Form D-400 standard deduction table, 2017-2025; G.S. 105-153.5(a)(2)'
+std_joint:
+  value:
+    '2017': 17500
+    '2018': 20000
+    '2020': 21500
+    '2022': 25500
+  reference: 'North Carolina Form D-400 standard deduction table, 2017-2025; G.S. 105-153.5(a)(2)'
+std_head:
+  value:
+    '2017': 14000
+    '2018': 15000
+    '2020': 16125
+    '2022': 19125
+  reference: 'North Carolina Form D-400 standard deduction table, 2017-2025; G.S. 105-153.5(a)(2)'
+item_allowed:
+  value: 1
+  reference: 'North Carolina Form D-400, choice of standard deduction or North Carolina itemized deductions, 2017-2025'
+item_coupling:
+  value: 0
+  reference: 'North Carolina Form D-400 instructions permit a North Carolina itemized-deduction election independent of federal itemization'
+item_component_style:
+  value: 1
+  reference: 'G.S. 105-153.5(a)(2); North Carolina itemized deduction categories'
+item_include_medical:
+  value: 1
+  reference: 'North Carolina Form D-400 Schedule S, medical and dental expenses allowed under IRC 213'
+item_include_mortgage:
+  value: 1
+  reference: 'North Carolina Form D-400 Schedule S, qualified residence interest allowed under IRC 163(h)'
+item_include_charity:
+  value: 1
+  reference: 'North Carolina Form D-400 Schedule S, charitable contributions allowed under IRC 170'
+item_include_prop_tax:
+  value: 1
+  reference: 'North Carolina Form D-400 Schedule S, real property tax deduction'
+item_prop_tax_cap_regular:
+  value: 10000
+  reference: 'G.S. 105-153.5(a)(2); North Carolina Form D-400 Schedule S (real property tax cap)'
+item_prop_tax_cap_mfs:
+  value: 5000
+  reference: 'G.S. 105-153.5(a)(2); North Carolina Form D-400 Schedule S (MFS real property tax cap)'

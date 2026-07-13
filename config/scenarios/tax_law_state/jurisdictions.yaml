@@ -1,0 +1,66 @@
+---
+# Runtime registry for the state-tax module. `states = all` resolves only to
+# enabled entries here, not to every directory under baseline/.
+AK:
+  profile: zero
+  enabled: true
+AZ:
+  profile: broad_iit
+  enabled: true
+# CA is calculated correctly under the federal baseline, but its fixed/selective
+# conformity groups (1, 2) have no reference-law bridge yet
+# (conformity_groups.yaml: ready=false), so validate_state_federal_conformity()
+# hard-stops any federal-reform run that requests CA. Excluded from `states=all`
+# until the reference overlays land, per ca_p1_readiness_analysis.md. Direct
+# `states=CA` selection still works for baseline-law runs.
+CA:
+  profile: broad_iit
+  enabled: false
+CO:
+  profile: broad_iit
+  enabled: true
+FL:
+  profile: zero
+  enabled: true
+GA:
+  profile: broad_iit
+  enabled: true
+IL:
+  profile: broad_iit
+  enabled: true
+IN:
+  profile: broad_iit
+  enabled: true
+KY:
+  profile: broad_iit
+  enabled: true
+MI:
+  profile: broad_iit
+  enabled: true
+NH:
+  profile: narrow_investment_iit
+  enabled: true
+NV:
+  profile: zero
+  enabled: true
+NY:
+  profile: broad_iit
+  enabled: true
+NC:
+  profile: broad_iit
+  enabled: true
+SD:
+  profile: zero
+  enabled: true
+TN:
+  profile: narrow_investment_iit
+  enabled: true
+TX:
+  profile: zero
+  enabled: true
+WA:
+  profile: capital_gains_and_transfer
+  enabled: true
+WY:
+  profile: zero
+  enabled: true

@@ -1,0 +1,10 @@
+---
+# Indiana EIC is refundable and equals a share of the federal EIC.
+eitc_match:
+  value:
+    '2017': 0.09
+    '2023': 0.10
+  reference: 'Indiana Code 6-3.1-21-6; Indiana DOR 2023 tax-season changes; Schedule IN-EIC instructions, 2017-2025'
+eitc_refundable:
+  value: 1
+  reference: 'IRS, States and local governments with EITC; Indiana Schedule IN-EIC, 2017-2025'

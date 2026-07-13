@@ -8,7 +8,7 @@
 #---------------------------------------------------------------------------
 
 
-do_state_taxes = function(tax_units) {
+do_state_taxes = function(tax_units, credit_tables = NULL) {
 
   #----------------------------------------------------------------------------
   # Calculates state individual income tax for all tax units under one
@@ -37,6 +37,9 @@ do_state_taxes = function(tax_units) {
     # Exemptions
     bind_cols(calc_st_exempt(.)) %>%
 
+    # State child deductions (North Carolina-style AGI tables)
+    bind_cols(calc_st_child_ded(.)) %>%
+
     # Taxable income
     bind_cols(calc_st_txbl(.)) %>%
 
@@ -44,10 +47,13 @@ do_state_taxes = function(tax_units) {
     bind_cols(calc_st_tax(.)) %>%
 
     # Credits
-    bind_cols(calc_st_credits(.)) %>%
+    bind_cols(calc_st_credits(., credit_tables = credit_tables)) %>%
 
     # Liability and state-filer flag
     bind_cols(calc_st_liab(.)) %>%
+
+    # Narrow taxes and state transfers that sit outside the broad IIT base
+    bind_cols(calc_st_special(.)) %>%
 
     # Return calculated state variables only
     select(all_of(unname(unlist(return_vars[str_detect(names(return_vars),
@@ -75,7 +81,14 @@ ensure_st_params = function(tax_units) {
 
   defaults = c(
 
+    # programs.yaml
+    'st_programs.broad_iit'        = 1,
+    'st_programs.narrow_iit'       = 0,
+    'st_programs.ltcg_excise'      = 0,
+    'st_programs.wftc'             = 0,
+
     # agi.yaml
+    'st_agi.start_point'           = 1,
     'st_agi.add_exempt_int'        = 0,
     'st_agi.own_state_exempt'      = 0,
     'st_agi.sub_us_int'            = 0,
@@ -88,17 +101,50 @@ ensure_st_params = function(tax_units) {
     'st_agi.pension_excl_65plus'   = 0,
     'st_agi.pension_excl_min_age'  = Inf,
     'st_agi.pension_cap_incl_ss'   = 0,
+    'st_agi.retirement_excl_style' = 0,
+    'st_agi.retirement_excl_min_age' = Inf,
+    'st_agi.retirement_excl_under65' = 0,
+    'st_agi.retirement_excl_65plus' = 0,
+    'st_agi.retirement_excl_earned_cap' = 0,
     'st_agi.sub_char_nonitem_floor' = Inf,
     'st_agi.add_overtime_ded'      = 0,
 
     # ded.yaml
     'st_ded.std_amount'            = 0,
     'st_ded.std_dependent'         = NA,   # falls back to std_amount
+    'st_ded.std_dependent_style'   = 0,
+    'st_ded.std_dependent_floor'   = 0,
+    'st_ded.std_dependent_earned_add' = 0,
+    'st_ded.std_aged_addl'          = 0,
+    'st_ded.std_blind_addl'         = 0,
+    'st_ded.std_char_share'         = 0,
+    'st_ded.std_char_floor'         = 0,
     'st_ded.item_allowed'          = 0,
     'st_ded.item_coupling'         = 0,
     'st_ded.salt_addback'          = 0,
+    'st_ded.item_component_style'  = 0,
+    'st_ded.item_include_medical'  = 0,
+    'st_ded.item_include_mortgage' = 0,
+    'st_ded.item_include_investment' = 0,
+    'st_ded.item_include_charity'  = 0,
+    'st_ded.item_include_casualty' = 0,
+    'st_ded.item_include_misc'     = 0,
+    'st_ded.item_include_other'    = 0,
+    'st_ded.item_include_prop_tax' = 0,
+    'st_ded.item_include_pers_tax' = 0,
+    'st_ded.item_include_income_sales_tax' = 0,
+    'st_ded.item_prop_tax_cap'     = Inf,
     'st_ded.pease'                 = 0,
     'st_ded.pease_thresh'          = Inf,
+    'st_ded.item_limit_style'      = 0,
+    'st_ded.item_limit_agi_base'   = 2,
+    'st_ded.item_limit_thresh'     = Inf,
+    'st_ded.item_limit_rate'       = 0,
+    'st_ded.item_limit_max_nonprotected_share' = 0,
+    'st_ded.item_limit_protect_medical' = 0,
+    'st_ded.item_limit_protect_investment' = 0,
+    'st_ded.item_limit_protect_casualty' = 0,
+    'st_ded.item_limit_protect_other' = 0,
     'st_ded.item_limit_po_thresh'  = Inf,
     'st_ded.item_limit_po_width'   = 50000,
     'st_ded.item_limit_share1'     = 0,
@@ -121,14 +167,29 @@ ensure_st_params = function(tax_units) {
     'st_exempt.po_thresh'          = Inf,
     'st_exempt.po_type'            = 0,
 
+    # child_ded.yaml (AGI-tabled deductions, e.g. North Carolina)
+    'st_child_ded.style'           = 0,
+
     # ord.yaml (recapture)
+    'st_ord.rates1'                = 0,
+    'st_ord.brackets1'             = 0,
     'st_ord.recapture_agi_start'   = Inf,
     'st_ord.recapture_width'       = 50000,
+
+    # surtax.yaml (post-nonrefundable-credit taxable-income surtax)
+    'st_surtax.taxable_income_threshold' = Inf,
+    'st_surtax.taxable_income_rate' = 0,
+    'st_surtax.taxable_income_round' = 0,
 
     # credits.yaml
     'st_credits.eitc_match'        = 0,
     'st_credits.eitc_refundable'   = 1,
     'st_credits.eitc_less_household_credit' = 0,
+    'st_credits.dep_credit_style'  = 0,
+    'st_credits.dep_credit_young_amount' = 0,
+    'st_credits.dep_credit_other_amount' = 0,
+    'st_credits.dep_credit_po_thresh' = Inf,
+    'st_credits.dep_credit_po_per_1k' = 0,
     'st_credits.ctc_style'         = 0,
     'st_credits.ctc_match_share'   = 0,
     'st_credits.ctc_fed_base_per_child' = 1000,
@@ -143,6 +204,7 @@ ensure_st_params = function(tax_units) {
     'st_credits.ctc_pct_of_eitc'   = 0,
     'st_credits.ctc_max_age'       = 16,
     'st_credits.cdctc_match'       = 0,
+    'st_credits.cdctc_refundable'  = 1,
     'st_credits.cdctc_style'       = 0,
     'st_credits.cdctc_rate_max'    = 0,
     'st_credits.cdctc_rate_floor'  = 0,
@@ -158,12 +220,83 @@ ensure_st_params = function(tax_units) {
     'st_credits.fatc_po_step'      = 5000,
     'st_credits.fatc_po_zero'      = 0,
     'st_credits.hh_mfs_half'       = 0,
+    'st_credits.family_credit_style' = 0,
+    'st_credits.exempt_credit_style' = 0,
+    'st_credits.exempt_credit_personal' = 0,
+    'st_credits.exempt_credit_aged' = 0,
+    'st_credits.exempt_credit_blind' = 0,
+    'st_credits.exempt_credit_dep' = 0,
+    'st_credits.exempt_credit_po_thresh' = Inf,
+    'st_credits.exempt_credit_po_width' = 1,
+    'st_credits.exempt_credit_po_per_step' = 0,
+    'st_credits.earned_credit_style' = 0,
+    'st_credits.earned_credit_age_min' = Inf,
+    'st_credits.earned_credit_agi_limit' = Inf,
+    'st_credits.earned_credit_earned_limit' = Inf,
+    'st_credits.earned_credit_round' = 0,
+    'st_credits.earned_credit_refundable' = 0,
+    'st_credits.young_child_credit_style' = 0,
+    'st_credits.young_child_credit_amount' = 0,
+    'st_credits.young_child_credit_max_age' = -1,
+    'st_credits.young_child_credit_phaseout_start' = Inf,
+    'st_credits.young_child_credit_phaseout_per_100' = 0,
+    'st_credits.young_child_credit_zero_income_enabled' = 0,
+    'st_credits.young_child_credit_zero_income_wage_limit' = -Inf,
+    'st_credits.young_child_credit_zero_income_loss_limit' = -Inf,
+    'st_credits.young_child_credit_zero_income_agi_limit' = -Inf,
 
     # filing.yaml
     'st_filing.req_type'           = 0,
     'st_filing.req_income_thresh'  = Inf,
     'st_filing.req_income_thresh_dep' = Inf,
-    'st_filing.req_if_fed_filer'   = 0
+    'st_filing.req_if_fed_filer'   = 0,
+
+    # investment_income.yaml (NH/TN-style narrow taxes)
+    'st_investment_income.interest_share' = 0,
+    'st_investment_income.ordinary_div_share' = 0,
+    'st_investment_income.qualified_div_share' = 0,
+    'st_investment_income.exemption_amount' = 0,
+    'st_investment_income.filing_threshold' = Inf,
+    'st_investment_income.age_exemption'  = 0,
+    'st_investment_income.blind_exemption' = 0,
+    'st_investment_income.rate'           = 0,
+    'st_investment_income.full_age_min_age' = Inf,
+    'st_investment_income.full_age_income_limit' = -Inf,
+    'st_investment_income.age_100_full_exempt' = 0,
+    'st_investment_income.blind_full_exempt' = 0,
+    'st_investment_income.blind_mfj_exempt_share' = 0,
+
+    # capital_gains.yaml (Washington-style excise tax)
+    'st_capital_gains.model_coverage_share' = 0,
+    'st_capital_gains.standard_deduction' = Inf,
+    'st_capital_gains.charitable_threshold' = Inf,
+    'st_capital_gains.charitable_max_deduction' = 0,
+    'st_capital_gains.base_rate' = 0,
+    'st_capital_gains.surtax_rate' = 0,
+    'st_capital_gains.surtax_threshold' = Inf,
+
+    # transfers.yaml (Washington Working Families Tax Credit)
+    'st_transfers.wftc_min_age' = Inf,
+    'st_transfers.wftc_max_age' = -Inf,
+    'st_transfers.wftc_mfs_eligible' = 0,
+    'st_transfers.wftc_inv_inc_limit' = -Inf,
+    'st_transfers.wftc_phaseout_width1' = 1,
+    'st_transfers.wftc_phaseout_width2' = 1,
+    'st_transfers.wftc_phaseout_width3' = 1,
+    'st_transfers.wftc_phaseout_width4' = 1,
+    'st_transfers.wftc_max_amount1' = 0,
+    'st_transfers.wftc_max_amount2' = 0,
+    'st_transfers.wftc_max_amount3' = 0,
+    'st_transfers.wftc_max_amount4' = 0,
+    'st_transfers.wftc_min_amount' = 0,
+    'st_transfers.wftc_max_income_single1' = 0,
+    'st_transfers.wftc_max_income_single2' = 0,
+    'st_transfers.wftc_max_income_single3' = 0,
+    'st_transfers.wftc_max_income_single4' = 0,
+    'st_transfers.wftc_max_income_joint1' = 0,
+    'st_transfers.wftc_max_income_joint2' = 0,
+    'st_transfers.wftc_max_income_joint3' = 0,
+    'st_transfers.wftc_max_income_joint4' = 0
   )
 
   # Add absent columns, then replace NAs with defaults
@@ -183,7 +316,8 @@ ensure_st_params = function(tax_units) {
   # Vector params (household credit tables, CTC tiers, CDCTC anchors) are
   # feature-gated on their first element existing; add sentinel if absent
   for (p in c('st_credits.hh_agi_bounds_single1', 'st_credits.hh_agi_bounds_other1',
-              'st_credits.ctc_tier1_bound')) {
+              'st_credits.ctc_tier1_bound', 'st_credits.family_credit_f1_bounds1',
+              'st_child_ded.agi_bounds1')) {
     if (!(p %in% colnames(tax_units))) {
       tax_units[[p]] = NA_real_
     }

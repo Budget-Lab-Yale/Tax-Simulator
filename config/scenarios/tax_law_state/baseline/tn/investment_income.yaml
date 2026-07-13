@@ -1,0 +1,76 @@
+---
+filing_status_mapper:
+  exemption_amount:
+    '1': exemption_single
+    '2': exemption_joint
+    '3': exemption_single
+    '4': exemption_single
+  filing_threshold:
+    '1': filing_threshold_single
+    '2': filing_threshold_joint
+    '3': filing_threshold_single
+    '4': filing_threshold_single
+  full_age_income_limit:
+    '1': full_age_income_limit_single
+    '2': full_age_income_limit_joint
+    '3': full_age_income_limit_single
+    '4': full_age_income_limit_single
+
+# This proxy includes the observed taxable interest and dividends. The Hall
+# tax's actual ownership, legal exemptions, and angel-investor credit require
+# data not present in the PUF; see the Tennessee source packet.
+interest_share:
+  value: 1
+  reference: 'Tennessee Hall Income Tax Manual (August 2021), tax base chapter: https://www.tn.gov/content/dam/tn/revenue/documents/tax_manuals/august-2021/Hall-Income-Tax.pdf'
+ordinary_div_share:
+  value: 1
+  reference: 'Tennessee Hall Income Tax Manual (August 2021), tax base chapter'
+qualified_div_share:
+  value: 1
+  reference: 'Tennessee Hall Income Tax Manual (August 2021), tax base chapter'
+exemption_single:
+  value: 1250
+  reference: 'Tennessee Hall Income Tax Manual, $1,250 individual exemption'
+exemption_joint:
+  value: 2500
+  reference: 'Tennessee Hall Income Tax Manual, $2,500 joint exemption'
+filing_threshold_single:
+  value: 1250
+  reference: 'Tennessee Hall Income Tax Manual, return threshold for individual filers'
+filing_threshold_joint:
+  value: 2500
+  reference: 'Tennessee Hall Income Tax Manual, return threshold for joint filers'
+age_exemption:
+  value: 0
+  reference: 'TN uses a full age-65 low-income exemption rather than an additional exemption'
+blind_exemption:
+  value: 0
+  reference: 'TN statutory blind exemption is modeled as full exemption'
+rate:
+  value:
+    '2017': 0.04
+    '2018': 0.03
+    '2019': 0.02
+    '2020': 0.01
+    '2021': 0
+  reference: 'Tennessee DOR Hall Income Tax rate history: https://revenue.support.tn.gov/hc/en-us/articles/360057355792-HIT-4-Hall-Income-Tax-Rate'
+full_age_min_age:
+  value: 65
+  reference: 'Tennessee Hall Income Tax Manual, age-65 exemption'
+full_age_income_limit_single:
+  value: 37000
+  reference: 'Tennessee Hall Income Tax Manual, full exemption at age 65 with total annual income at or below $37,000'
+full_age_income_limit_joint:
+  value: 68000
+  reference: 'Tennessee Hall Income Tax Manual, full exemption at age 65 with total annual income at or below $68,000 jointly'
+age_100_full_exempt:
+  value:
+    '2017': 0
+    '2018': 1
+  reference: 'Tennessee Hall Income Tax Manual, age-100 exemption beginning 2018'
+blind_full_exempt:
+  value: 1
+  reference: 'Tennessee Hall Income Tax Manual, legal blindness exemption'
+blind_mfj_exempt_share:
+  value: 0.5
+  reference: 'Tennessee Hall Income Tax Manual; PUF cannot allocate ownership for a jointly-filed blind-spouse exemption'

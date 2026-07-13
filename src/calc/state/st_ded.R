@@ -3,8 +3,8 @@
 #---------------------------------------------------------------
 
 # Set return variables for function
-return_vars$calc_st_ded = c('st_item_ded', 'st_std_ded', 'st_itemizing',
-                            'st_ded', 'st_addback')
+return_vars$calc_st_ded = c('st_item_ded', 'st_std_ded', 'st_std_char_add',
+                            'st_itemizing', 'st_ded', 'st_addback')
 
 
 calc_st_ded = function(tax_unit, fill_missings = F) {
@@ -44,6 +44,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'dep_status',         # (bool) whether filer is a dependent
     'item_ded',           # (dbl)  federal itemized deductions post-limitation
     'item_ded_ex_limits', # (dbl)  federal itemized deductions pre-limitation
+    'mort_int_item_ded',  # (dbl)  federal deductible mortgage interest
     'salt_item_ded',      # (dbl)  federal SALT deduction (capped)
     'salt_inc_sales',     # (dbl)  state/local income-or-sales taxes paid (post-workaround)
     'salt_prop',          # (dbl)  state/local real estate taxes paid
@@ -52,16 +53,54 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'inv_int_item_ded',   # (dbl)  federal deductible investment interest
     'casualty_item_ded',  # (dbl)  federal deductible casualty losses
     'char_item_ded',      # (dbl)  federal deductible charitable contributions
+    'misc_item_ded',      # (dbl)  federal miscellaneous itemized deductions
+    'other_item_ded',     # (dbl)  other federal itemized deductions
+    'char_cash',          # (dbl)  cash charitable contributions
+    'char_noncash',       # (dbl)  non-cash charitable contributions
+    'age1',               # (int)  age of primary filer
+    'age2',               # (int)  age of secondary filer
+    'blind1',             # (bool) whether primary filer is blind
+    'blind2',             # (bool) whether secondary filer is blind
     'std_ded',            # (dbl)  federal standard deduction
+    'ei1',                # (dbl)  primary earned income
+    'ei2',                # (dbl)  secondary earned income
 
     # State tax law
     'st_ded.std_amount',      # (dbl) state standard deduction (filing-status mapped)
     'st_ded.std_dependent',   # (dbl) standard deduction for dependent filers
+    'st_ded.std_dependent_style', # (int) 1 = floor/earned-income/cap worksheet
+    'st_ded.std_dependent_floor', # (dbl) minimum dependent standard deduction
+    'st_ded.std_dependent_earned_add', # (dbl) addition to dependent earned income
+    'st_ded.std_aged_addl',   # (dbl) extra standard deduction per age-65+ filer
+    'st_ded.std_blind_addl',  # (dbl) extra standard deduction per blind filer
+    'st_ded.std_char_share',  # (dbl) charitable share added to standard deduction
+    'st_ded.std_char_floor',  # (dbl) charitable floor for the standard add-on
     'st_ded.item_allowed',    # (int) whether state itemized deductions exist
     'st_ded.item_coupling',   # (int) 0 independent, 1 must match federal
     'st_ded.salt_addback',    # (int) whether state income tax is excluded/added back
+    'st_ded.item_component_style', # (int) 1 = select components; 2 = federal amount
+    'st_ded.item_include_medical',
+    'st_ded.item_include_mortgage',
+    'st_ded.item_include_investment',
+    'st_ded.item_include_charity',
+    'st_ded.item_include_casualty',
+    'st_ded.item_include_misc',
+    'st_ded.item_include_other',
+    'st_ded.item_include_prop_tax',
+    'st_ded.item_include_pers_tax',
+    'st_ded.item_include_income_sales_tax',
+    'st_ded.item_prop_tax_cap',
     'st_ded.pease',           # (int) whether a pre-TCJA Pease limitation applies
     'st_ded.pease_thresh',    # (dbl) Pease AGI threshold (filing-status mapped)
+    'st_ded.item_limit_style', # (int) 1 = protected-component limitation
+    'st_ded.item_limit_agi_base', # (int) 1 = federal AGI, 2 = state AGI
+    'st_ded.item_limit_thresh', # (dbl) limitation threshold
+    'st_ded.item_limit_rate', # (dbl) reduction rate above threshold
+    'st_ded.item_limit_max_nonprotected_share', # (dbl) maximum reduction share
+    'st_ded.item_limit_protect_medical',
+    'st_ded.item_limit_protect_investment',
+    'st_ded.item_limit_protect_casualty',
+    'st_ded.item_limit_protect_other',
     'st_ded.item_limit_po_thresh',   # (dbl) NY 615(f) phase start (state AGI)
     'st_ded.item_limit_po_width',    # (dbl) NY 615(f) phase width
     'st_ded.item_limit_share1',      # (dbl) first-tier reduction share
@@ -85,15 +124,49 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # State deduction (AGI-start states: IL, NY, ...)
       #------------------------------------------------
 
-      st_std_ded = if_else(dep_status == 1, st_ded.std_dependent, st_ded.std_amount),
+      n_std_aged = (age1 >= 65) + (filing_status == 2 & !is.na(age2) & age2 >= 65),
+      n_std_blind = coalesce(blind1, 0) +
+                    (filing_status == 2 & coalesce(blind2, 0)),
+      st_std_char_add = st_ded.std_char_share *
+                        pmax(0, char_cash + char_noncash - st_ded.std_char_floor),
+      st_std_dep = case_when(
+        st_ded.std_dependent_style == 1 ~ pmin(
+          st_ded.std_amount,
+          pmax(st_ded.std_dependent_floor,
+               pmax(0, ei1) + if_else(filing_status == 2, pmax(0, ei2), 0) +
+                 st_ded.std_dependent_earned_add)
+        ),
+        TRUE ~ st_ded.std_dependent
+      ),
+      st_std_ded = if_else(dep_status == 1, st_std_dep, st_ded.std_amount) +
+                   n_std_aged * st_ded.std_aged_addl +
+                   n_std_blind * st_ded.std_blind_addl +
+                   st_std_char_add,
 
       # State itemized base: pre-limitation federal itemized, SALT component
       # replaced by uncapped property taxes (income/sales excluded where
       # added back)
+      st_item_default =
+        item_ded_ex_limits - salt_item_ded + salt_prop + salt_pers +
+        if_else(st_ded.salt_addback == 1, 0, salt_inc_sales),
+      st_item_components =
+        st_ded.item_include_medical * med_item_ded +
+        st_ded.item_include_mortgage * mort_int_item_ded +
+        st_ded.item_include_investment * inv_int_item_ded +
+        st_ded.item_include_charity * char_item_ded +
+        st_ded.item_include_casualty * casualty_item_ded +
+        st_ded.item_include_misc * misc_item_ded +
+        st_ded.item_include_other * other_item_ded +
+        st_ded.item_include_prop_tax * pmin(salt_prop, st_ded.item_prop_tax_cap) +
+        st_ded.item_include_pers_tax * salt_pers +
+        st_ded.item_include_income_sales_tax * salt_inc_sales,
       st_item_base = if_else(
         st_ded.item_allowed == 1,
-        item_ded_ex_limits - salt_item_ded + salt_prop + salt_pers +
-          if_else(st_ded.salt_addback == 1, 0, salt_inc_sales),
+        case_when(
+          st_ded.item_component_style == 1 ~ st_item_components,
+          st_ded.item_component_style == 2 ~ item_ded,
+          TRUE ~ st_item_default
+        ),
         0
       ),
 
@@ -106,6 +179,28 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
                                    0.80 * pease_nonprot),
                               0),
       st_item_lim   = pmax(0, st_item_base - pease_red),
+
+      # Protected-component limitation (California-style): apply the smaller
+      # of the income-based reduction and a share of unprotected deductions.
+      item_limit_agi = if_else(st_ded.item_limit_agi_base == 1, agi, st_agi),
+      item_limit_protected =
+        st_ded.item_limit_protect_medical *
+          st_ded.item_include_medical * med_item_ded +
+        st_ded.item_limit_protect_investment *
+          st_ded.item_include_investment * inv_int_item_ded +
+        st_ded.item_limit_protect_casualty *
+          st_ded.item_include_casualty * casualty_item_ded +
+        st_ded.item_limit_protect_other *
+          st_ded.item_include_other * other_item_ded,
+      item_limit_nonprotected = pmax(0, st_item_lim - item_limit_protected),
+      item_limit_red = if_else(
+        st_ded.item_limit_style == 1,
+        pmin(st_ded.item_limit_max_nonprotected_share * item_limit_nonprotected,
+             st_ded.item_limit_rate *
+               pmax(0, item_limit_agi - st_ded.item_limit_thresh)),
+        0
+      ),
+      st_item_lim = pmax(0, st_item_lim - item_limit_red),
 
       # High-income itemized limitation (NY 615(f)): first-tier share phased
       # over the width above the threshold, second tier likewise

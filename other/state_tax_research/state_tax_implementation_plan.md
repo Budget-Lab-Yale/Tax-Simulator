@@ -209,13 +209,12 @@ config/scenarios/tax_law_state/
   - `st_agi.conformity_year`: 0 = rolling conformity (state base moves with the
     scenario's federal law); else the fixed IRC conformity date (e.g. CA ≈ 2015).
     **Encode from day one** (read off the same statutes as everything else), but v1
-    *mechanics* treat every state as rolling: the frozen-base computation for
-    fixed-date states under federal reforms (join *baseline* federal `agi` /
-    `txbl_inc` by id) is deferred to Phase 7 with the coupled mode. Until then, any
-    federal-reform run with states on emits a known-differences warning listing the
-    affected fixed-conformity states. State-static baseline estimates are unaffected
-    (baseline federal law = every conformity date's law for level purposes, absorbed
-    by the additions/subtractions parameters).
+    *mechanics* treat every state as rolling. Fixed-date mechanics are deferred to
+    Phase 7. The reference base must be calculated on the same post-behavior records
+    as the scenario, not joined from a baseline detail file; selective-conformity
+    states also need a configuration bridge. Until then, a federal-reform run that
+    requests a fixed-conformity state must hard-stop rather than publish a
+    rolling-conformity estimate.
   - `st_ded.item_coupling`: 0 = independent choice, 1 = must match federal,
     2 = federal itemizers may choose (NE-style)
   - `st_ded.fed_tax_ded_limit`: deduction cap for federal income tax paid
@@ -407,6 +406,16 @@ complexity ceiling). Sources: NBER historical forms archive + state DOR current
 forms; Tax Foundation tables as transcription cross-check only. Every parameter cites
 its form line/statute.
 
+**Standing workstream — state parameter packets (starts in Phase 2 and runs through
+Phase 6)**
+Do not wait for the weights to start state-law research. For any state, the following
+can proceed immediately and in parallel with Phases 1–5: source-packet assembly,
+baseline YAML drafting, `reference` cleanup, worksheet-style unit tests,
+known-differences notes, and TAXSIM / PolicyEngine spot checks. Only aggregate
+validation remains weights-blocked. Track the queue in
+`other/state_tax_research/state_parameter_rollout.csv` and use
+`other/state_tax_research/source_packets/TEMPLATE.md` for per-state documentation.
+
 **Phase 3 — State calculator (2–3 weeks)**
 `src/calc/state/` per §2.3, driven by the three pilot states. Federal return-var
 plumbing for uncapped itemized detail. Per-state unit tests from form worksheets
@@ -426,11 +435,17 @@ with a maintained known-differences list (recent-year TAXSIM state law is inflat
 totals vs HT2 "total tax" and vs state revenue-agency published estimates for pilot
 states.
 
-**Phase 6 — 50-state rollout (bulk of calendar time; parallelizable)**
+**Phase 6 — 50-state completion / backlog burn-down (bulk of calendar time; parallelizable)**
 Batch by structural family, easiest first, validating each batch through the Phase 5
-harness before the next:
-1. No-income-tax states (AK FL NV SD TN TX WA WY, NH interest/div phase-out) — config
-   stubs so `all` mode is total.
+harness before the next. By the time this phase starts, research packets and many YAML
+drafts should already exist; this phase should finish and validate the backlog rather
+than begin state discovery from zero:
+1. No-broad-income-tax states. Immediate zero-tax stubs apply only to jurisdictions
+   with no state individual fiscal program in the 2017-forward model window
+   (`AK FL NV SD TX WY`). `NH`, `TN`, and `WA` are now implemented through special
+   profiles: narrow investment-income tax for NH/TN, and capital-gains excise plus
+   Working Families Tax Credit transfer for WA. Their remaining Phase 6 work is
+   cross-model and aggregate validation, not initial law discovery.
 2. Flat-rate federal-AGI states (AZ CO* GA† ID† IN KY MI NC PA‡ UT …).
 3. Graduated federal-AGI states (largest group: CA VA MD‡‡ MN WI MO OH OK …).
 4. Federal-taxable-income states (ID MT ND OR SC …).
@@ -451,6 +466,23 @@ combined-MTR behavioral feedback; state distribution tables; state AMTs; histori
 years pre-2017; state population-projection aging of weights.
 
 ---
+
+**Current Phase 6 packet status (2026-07-13).** Indiana, Kentucky, and Michigan
+now have primary-source packets, baseline YAML, worksheet tests, and generic
+support for refundable EITC matches and Kentucky's family-size percentage-of-tax
+credit. California now has the same artifacts plus reusable exemption-credit and
+independent earned-income-credit support. All four remain pending cross-model and
+weights-dependent aggregate validation. California's exact $50 CalEITC lookup,
+full 2018-24 rate-bracket transcription, and California-specific index series are
+explicit follow-up items rather than complete claims.
+
+Illinois, Colorado, and New York source packets have now been normalized and
+their next-state research cohorts are documented in
+`other/state_tax_research/state_tax_batch_analysis.md`: `IL/IN/MI` for rolling
+federal-AGI flat-tax validation, `CO/ND/SC` for federal-taxable-income
+construction, and `NY/CT` for graduated federal-AGI schedules with high-income
+calculation layers. These are research batches, not claims that ND, SC, or CT
+are implemented.
 
 ## 4. Validation strategy (summary)
 

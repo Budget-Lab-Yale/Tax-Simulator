@@ -26,12 +26,14 @@ calc_st_txbl = function(tax_unit, fill_missings = F) {
     'st_agi',     # (dbl) state income base
     'st_ded',     # (dbl) state deduction
     'st_addback', # (dbl) state deduction addbacks
-    'st_exempt'   # (dbl) state exemption allowance
+    'st_exempt',  # (dbl) state exemption allowance
+    'st_child_ded' # (dbl) state child deduction
   )
 
   tax_unit %>%
     parse_calc_fn_input(req_vars, fill_missings) %>%
-    mutate(st_txbl_inc = pmax(0, st_agi - st_ded + st_addback - st_exempt)) %>%
+    mutate(st_txbl_inc = pmax(0, st_agi - st_ded + st_addback - st_exempt -
+                                st_child_ded)) %>%
     select(all_of(return_vars$calc_st_txbl)) %>%
     return()
 }

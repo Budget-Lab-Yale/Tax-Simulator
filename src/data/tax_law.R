@@ -25,52 +25,84 @@ build_tax_law = function(scenario_info, indexes) {
   # Returns: tibble wide in subparam, long in year and filing status (df).
   #----------------------------------------------------------------------------
   
-  # Read counterfactual tax law parameter changes
-  changes_from_baseline = scenario_info$tax_law_id %>% 
-    file.path('./config/scenarios/tax_law', .) %>% 
-    load_tax_law_input()
+  tax_law = build_tax_law_from_id(
+    tax_law_id = scenario_info$tax_law_id,
+    years      = scenario_info$years,
+    indexes    = indexes
+  )
+
+  # Write tax law then return
+  c('static', 'conventional') %>%
+    map(.f = ~ scenario_info$output_path %>%
+          file.path(.x, 'supplemental', 'tax_law.csv') %>%
+          write_csv(x = tax_law, file = .))
   
-  # Read baseline YAML files
-  tax_law = load_tax_law_input('./config/scenarios/tax_law/baseline') 
-  
-  # Overwrite baseline subparams with specified changes
+  return(tax_law)
+}
+
+
+
+build_tax_law_from_id = function(tax_law_id, years, indexes) {
+
+  #----------------------------------------------------------------------------
+  # Parses the federal baseline plus a named overlay without writing scenario
+  # output. State fixed/selective-conformity contexts use this builder to run
+  # one shared reference calculation per conformity group.
+  #
+  # Parameters:
+  #   - tax_law_id (str) : directory under config/scenarios/tax_law, or
+  #                        'baseline' for no overlay
+  #   - years (int[])    : simulation years to return
+  #   - indexes (df)     : long-format index series
+  #
+  # Returns: federal tax-law tibble, long in year and filing status (df).
+  #----------------------------------------------------------------------------
+
+  root = './config/scenarios/tax_law'
+  if (!identical(tax_law_id, 'baseline') &&
+      !dir.exists(file.path(root, tax_law_id))) {
+    stop('Cannot find the user-supplied tax law configuration directory')
+  }
+
+  # The baseline is already the base layer, so treating it as an overlay is
+  # unnecessary and would make the identity case less explicit.
+  changes_from_baseline = list()
+  if (!identical(tax_law_id, 'baseline')) {
+    changes_from_baseline = load_tax_law_input(file.path(root, tax_law_id))
+  }
+  tax_law = load_tax_law_input(file.path(root, 'baseline'))
+
+  # Reforms overwrite complete subparameter objects, matching the existing
+  # policy-configuration semantics.
   for (param in names(changes_from_baseline)) {
     for (subparam in names(changes_from_baseline[[param]])) {
       tax_law[[param]][[subparam]] = changes_from_baseline[[param]][[subparam]]
     }
   }
-  
-  # Parse all parameters and concatenate
-  tax_law %<>%   
-    map2(.f      = parse_param, 
-         .y      = names(.), 
-         years   = 2014:max(scenario_info$years),
-         indexes = indexes) %>% 
-    bind_rows() %>% 
 
-    # Split subparameters into scalars and vectors 
-    filter(!is.na(value)) %>% 
-    group_by(parameter, subparameter) %>% 
-    mutate(scalar = max(element) == 1) %>% 
-    ungroup() %>% 
-    
+  tax_law %>%
+    map2(.f      = parse_param,
+         .y      = names(.),
+         years   = 2014:max(years),
+         indexes = indexes) %>%
+    bind_rows() %>%
+
+    # Split subparameters into scalars and vectors
+    filter(!is.na(value)) %>%
+    group_by(parameter, subparameter) %>%
+    mutate(scalar = max(element) == 1) %>%
+    ungroup() %>%
+
     # Reshape wide
-    mutate(name = parameter %>% 
-             paste0('.') %>% 
-             paste0(subparameter) %>% 
-             paste0(ifelse(scalar, '', element))) %>% 
-    select(-contains('arameter'), -element, -scalar) %>% 
+    mutate(name = parameter %>%
+             paste0('.') %>%
+             paste0(subparameter) %>%
+             paste0(ifelse(scalar, '', element))) %>%
+    select(-contains('arameter'), -element, -scalar) %>%
     pivot_wider(names_from  = name,
-                values_from = value) %>% 
-    filter(year %in% scenario_info$years)
-
-  # Write tax law then return
-  c('static', 'conventional') %>% 
-    map(.f = ~ scenario_info$output_path %>% 
-          file.path(.x, 'supplemental', 'tax_law.csv') %>%
-          write_csv(x = tax_law, file = .))
-  
-  return(tax_law)
+                values_from = value) %>%
+    filter(year %in% years) %>%
+    return()
 }
 
 
@@ -600,8 +632,8 @@ replace_defaults = function(supplied, default) {
 parse_inf = function(value) {
   
   #----------------------------------------------------------------------------
-  # Helper function to replace string "Inf" with R's infinity (Inf) object in 
-  # a potentially multi-level nested list
+  # Helper function to replace string "Inf" / "-Inf" with R infinity objects
+  # in a potentially multi-level nested list
   #
   # Parameters:
   #   - value (list | any atomic) : value of raw input 
@@ -615,12 +647,12 @@ parse_inf = function(value) {
     # Named lists indicate year-value specification 
     if (!is.null(names(value))) {
       value %>% 
-        map(~ if (any(. == 'Inf')) { as.numeric(.) } else { . }) %>% 
+        map(~ if (any(. %in% c('Inf', '-Inf'))) { as.numeric(.) } else { . }) %>%
         return()
     
     # Unnamed lists indicate heterogeneous list YAML parsing  
     } else { 
-      if (any(value == 'Inf')) {
+      if (any(value %in% c('Inf', '-Inf'))) {
         return(as.numeric(value))
       }
       return(value)
@@ -628,7 +660,7 @@ parse_inf = function(value) {
   
   # Scalars
   } else {
-    if (any(value == 'Inf')) { 
+    if (any(value %in% c('Inf', '-Inf'))) {
       return(as.numeric(value))
     }
     return(value)

@@ -8,8 +8,8 @@
 build_state_rev_est = function(id) {
 
   #----------------------------------------------------------------------------
-  # Calculates state-level revenue estimates: deltas in state income tax
-  # liability versus baseline, by state and year, for each run type. No-op
+  # Calculates state-level net individual fiscal estimates: deltas in tax less
+  # standalone refundable transfers versus baseline, by state and year. No-op
   # when the scenario ran without state mode. Fails fast with a clear message
   # when the scenario has state totals but the baseline run does not (e.g., a
   # pre-existing baseline_vintage produced without the states column).
@@ -40,12 +40,12 @@ build_state_rev_est = function(id) {
 
     baseline = baseline_path %>%
       read_csv(show_col_types = F) %>%
-      filter(variable == 'liab_st_iit') %>%
+      filter(variable == 'liab_st_individual_net') %>%
       select(year, state, baseline = value)
 
     scenario_path %>%
       read_csv(show_col_types = F) %>%
-      filter(variable == 'liab_st_iit') %>%
+      filter(variable == 'liab_st_individual_net') %>%
       select(year, state, value) %>%
       left_join(baseline, by = c('year', 'state')) %>%
       mutate(delta = value - baseline) %>%
@@ -62,8 +62,8 @@ build_state_rev_est = function(id) {
 build_stacked_state_rev_est = function(counterfactual_ids) {
 
   #----------------------------------------------------------------------------
-  # Calculates stacked state revenue deltas: incremental change in state
-  # income tax liability by state and year, scenario-over-scenario in
+  # Calculates stacked state net individual fiscal deltas: incremental change
+  # in tax less standalone refundable transfers by state and year, scenario-over-scenario in
   # runscript order (mirroring calc_stacked_rev_est()). Scenarios that ran
   # without state mode are excluded from the stack; each included scenario's
   # delta is measured against the previous INCLUDED scenario. No-op when the
@@ -105,7 +105,7 @@ build_stacked_state_rev_est = function(counterfactual_ids) {
         }
         path %>%
           read_csv(show_col_types = F) %>%
-          filter(variable == 'liab_st_iit') %>%
+          filter(variable == 'liab_st_individual_net') %>%
           transmute(scenario_id = .x, year, state, value)
       }) %>%
       bind_rows()

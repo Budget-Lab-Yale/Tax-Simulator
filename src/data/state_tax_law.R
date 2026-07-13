@@ -57,6 +57,12 @@ build_state_tax_law = function(states, years, indexes,
     map(.f = ~ parse_one_state(.x, root, state_tax_law_id, years, indexes)) %>%
     bind_rows()
 
+  # Dense lookup schedules remain row data instead of becoming thousands of
+  # scalar YAML columns. The calculator selects the applicable table year.
+  attr(state_tax_law, 'credit_tables') = build_state_credit_tables(
+    states, root, state_tax_law_id
+  )
+
   # Write state tax law if output path supplied, then return
   if (!is.null(output_path)) {
     c('static', 'conventional') %>%
@@ -66,6 +72,329 @@ build_state_tax_law = function(states, years, indexes,
   }
 
   return(state_tax_law)
+}
+
+
+
+build_state_credit_tables = function(states, root, state_tax_law_id) {
+
+  #----------------------------------------------------------------------------
+  # Reads optional dense state-credit schedules. A credit_tables.csv file lives
+  # beside the state's YAML and uses one row per inclusive income range and
+  # child-count category. Reform files replace a baseline credit/year pair.
+  #
+  # Returns: tibble with credit_id, state, year, income_lower, income_upper,
+  #          child_count, and amount; empty tibble when no state has a table.
+  #----------------------------------------------------------------------------
+
+  required = c('credit_id', 'state', 'year', 'income_lower', 'income_upper',
+               'child_count', 'amount')
+  empty = tibble(
+    credit_id = character(), state = character(), year = integer(),
+    income_lower = double(), income_upper = double(), child_count = integer(),
+    amount = double()
+  )
+
+  read_one = function(path, st) {
+    if (!file.exists(path)) {
+      return(empty)
+    }
+    table = read_csv(
+      path,
+      col_types = cols(
+        credit_id = col_character(), state = col_character(), year = col_integer(),
+        income_lower = col_double(), income_upper = col_double(),
+        child_count = col_integer(), amount = col_double()
+      ),
+      show_col_types = FALSE
+    )
+    if (!identical(names(table), required)) {
+      stop('State credit table has an invalid schema: ', path)
+    }
+    if (any(toupper(table$state) != toupper(st)) ||
+        any(table$income_lower > table$income_upper) ||
+        any(table$child_count < 0) ||
+        anyDuplicated(table[c('credit_id', 'state', 'year', 'income_lower',
+                              'income_upper', 'child_count')])) {
+      stop('State credit table has invalid rows: ', path)
+    }
+    overlap = table %>%
+      arrange(credit_id, state, year, child_count, income_lower, income_upper) %>%
+      group_by(credit_id, state, year, child_count) %>%
+      summarise(
+        overlap = any(income_lower[-1] <= income_upper[-n()]),
+        .groups = 'drop'
+      )
+    if (any(overlap$overlap)) {
+      stop('State credit table has overlapping ranges: ', path)
+    }
+    table %>% mutate(state = toupper(state))
+  }
+
+  tables = map_dfr(toupper(states), function(st) {
+    baseline = read_one(file.path(root, 'baseline', tolower(st),
+                                  'credit_tables.csv'), st)
+    reform = if (state_tax_law_id != 'baseline') {
+      read_one(file.path(root, state_tax_law_id, tolower(st),
+                         'credit_tables.csv'), st)
+    } else {
+      empty
+    }
+    if (nrow(reform) == 0) {
+      return(baseline)
+    }
+    baseline %>%
+      anti_join(distinct(reform, credit_id, state, year),
+                by = c('credit_id', 'state', 'year')) %>%
+      bind_rows(reform)
+  })
+
+  return(tables)
+}
+
+
+
+state_credit_tables_for_year = function(credit_tables, state_code, tax_year) {
+
+  #----------------------------------------------------------------------------
+  # Selects each table's most recent published version on or before a
+  # simulation year. This makes a post-publication carry-forward visible in
+  # configuration and lets a reform introduce a later version without code.
+  #----------------------------------------------------------------------------
+
+  if (is.null(credit_tables) || nrow(credit_tables) == 0) {
+    return(credit_tables)
+  }
+
+  credit_tables %>%
+    filter(state == toupper(state_code), year <= tax_year) %>%
+    group_by(credit_id) %>%
+    filter(year == max(year)) %>%
+    ungroup()
+}
+
+
+
+load_state_conformity_groups = function(
+  config_path = './config/scenarios/tax_law_state/conformity_groups.yaml'
+) {
+
+  #----------------------------------------------------------------------------
+  # Loads the generic fixed/selective-conformity contract. Numeric group zero
+  # is rolling conformity; positive groups identify a shared federal
+  # reference-law overlay rather than a particular jurisdiction.
+  #----------------------------------------------------------------------------
+
+  if (!file.exists(config_path)) {
+    stop('Cannot find the state conformity-group configuration')
+  }
+  raw = read_yaml(config_path)
+  group_ids = suppressWarnings(as.integer(names(raw)))
+  if (length(raw) == 0 || anyNA(group_ids) || anyDuplicated(group_ids)) {
+    stop('State conformity groups must have unique numeric identifiers')
+  }
+
+  value_chr = function(x, field) {
+    value = x[[field]]
+    if (is.null(value) || length(value) == 0 || is.na(value) || value == '') {
+      NA_character_
+    } else {
+      as.character(value)
+    }
+  }
+  groups = imap_dfr(raw, function(x, id) {
+    if (!is.list(x)) {
+      stop('Each state conformity group must be a mapping')
+    }
+    tibble(
+      conformity_group    = as.integer(id),
+      label                = value_chr(x, 'label'),
+      ready                = isTRUE(x$ready),
+      reference_tax_law_id = value_chr(x, 'reference_tax_law_id')
+    )
+  }) %>%
+    arrange(conformity_group)
+
+  rolling = groups %>% filter(conformity_group == 0)
+  if (nrow(rolling) != 1 || !rolling$ready ||
+      !is.na(rolling$reference_tax_law_id)) {
+    stop('Conformity group 0 must be a ready rolling group with no reference law')
+  }
+  invalid_ready = groups %>%
+    filter(conformity_group != 0, ready, is.na(reference_tax_law_id))
+  if (nrow(invalid_ready) > 0) {
+    stop('Ready fixed/selective conformity groups need a reference_tax_law_id')
+  }
+
+  return(groups)
+}
+
+
+
+state_conformity_groups_for_law = function(state_tax_law, conformity_groups) {
+
+  #----------------------------------------------------------------------------
+  # Resolves each selected state to its one conformity group for the supplied
+  # year. The group lives in state-law YAML so a state can move to a new
+  # reference package over time without calculator changes.
+  #----------------------------------------------------------------------------
+
+  if (is.null(state_tax_law) || nrow(state_tax_law) == 0) {
+    return(tibble())
+  }
+  group_values = if ('st_agi.conformity_group' %in% names(state_tax_law)) {
+    state_tax_law$st_agi.conformity_group
+  } else {
+    rep(0, nrow(state_tax_law))
+  }
+  if (any(!is.finite(group_values)) || any(group_values != floor(group_values))) {
+    stop('State conformity_group values must be finite integers')
+  }
+
+  selected = state_tax_law %>%
+    transmute(state, conformity_group = as.integer(group_values)) %>%
+    distinct()
+  if (anyDuplicated(selected$state)) {
+    stop('A state must use one conformity group within a state-law build')
+  }
+
+  missing_groups = setdiff(selected$conformity_group,
+                           conformity_groups$conformity_group)
+  if (length(missing_groups) > 0) {
+    stop('State law references undefined conformity group(s): ',
+         paste(sort(missing_groups), collapse = ', '))
+  }
+
+  selected %>%
+    left_join(conformity_groups, by = 'conformity_group') %>%
+    return()
+}
+
+
+
+build_state_reference_tax_laws = function(state_tax_law, indexes,
+                                           conformity_groups) {
+
+  #----------------------------------------------------------------------------
+  # Builds exactly one federal reference law per ready conformity group. The
+  # caller caches the resulting contexts by group rather than calculating one
+  # per state.
+  #----------------------------------------------------------------------------
+
+  selected = state_conformity_groups_for_law(state_tax_law, conformity_groups) %>%
+    filter(conformity_group != 0, ready) %>%
+    distinct(conformity_group, reference_tax_law_id)
+  if (nrow(selected) == 0) {
+    return(list())
+  }
+
+  reference_laws = map(
+    selected$reference_tax_law_id,
+    ~ build_tax_law_from_id(
+      tax_law_id = .x,
+      years      = sort(unique(state_tax_law$year)),
+      indexes    = indexes
+    )
+  )
+  names(reference_laws) = as.character(selected$conformity_group)
+  return(reference_laws)
+}
+
+
+
+build_state_reference_contexts = function(tax_units_calc, normal_tax_law,
+                                           reference_tax_laws, vars_1040) {
+
+  #----------------------------------------------------------------------------
+  # Recalculates federal variables used by state law under each ready reference
+  # law. Input records already include static payroll pass-through or a single
+  # behavioral response from the scenario pass, so behavior is never repeated.
+  #----------------------------------------------------------------------------
+
+  if (length(reference_tax_laws) == 0) {
+    return(list())
+  }
+
+  normal_law_vars = setdiff(names(normal_tax_law), c('year', 'filing_status'))
+  calculated_vars = c(
+    fed_calc_vars(), 'expanded_inc', 'simple_filer', 'corp_tax_change'
+  )
+  reference_input = tax_units_calc %>%
+    select(-any_of(c(normal_law_vars, calculated_vars)),
+           -starts_with('mtr_'), -starts_with('liab_brac'))
+
+  if ('filing_status_input' %in% names(reference_input)) {
+    reference_input %<>%
+      mutate(filing_status = filing_status_input)
+  }
+
+  contexts = map(reference_tax_laws, function(reference_tax_law) {
+    reference_input %>%
+      left_join(reference_tax_law, by = c('year', 'filing_status')) %>%
+      do_taxes(
+        baseline_pr_er = NULL,
+        vars_1040      = vars_1040,
+        vars_payroll   = return_vars$calc_pr
+      )
+  })
+  return(contexts)
+}
+
+
+
+state_tax_context_for_group = function(tax_units_calc, conformity_group,
+                                        group_ready, state_tax_contexts) {
+
+  #----------------------------------------------------------------------------
+  # Chooses the scenario calculation for rolling or presently-unavailable
+  # groups, and a cached reference calculation for ready fixed/selective groups.
+  # Federal-reform safety for unavailable groups is enforced before this point.
+  #----------------------------------------------------------------------------
+
+  if (conformity_group == 0 || !group_ready) {
+    return(tax_units_calc)
+  }
+  context = state_tax_contexts[[as.character(conformity_group)]]
+  if (is.null(context)) {
+    stop('Missing reference-law calculation context for conformity group ',
+         conformity_group)
+  }
+  return(context)
+}
+
+
+
+validate_state_federal_conformity = function(state_tax_law, tax_law_id,
+                                              conformity_groups =
+                                                load_state_conformity_groups()) {
+
+  #----------------------------------------------------------------------------
+  # Stops a federal-reform calculation before its altered federal outputs can
+  # be used by a state whose fixed/selective reference-law group is not ready.
+  #----------------------------------------------------------------------------
+
+  if (is.null(state_tax_law) || nrow(state_tax_law) == 0 ||
+      identical(tax_law_id, 'baseline')) {
+    return(invisible(TRUE))
+  }
+
+  affected_states = state_conformity_groups_for_law(
+    state_tax_law, conformity_groups
+  ) %>%
+    filter(conformity_group != 0, !ready) %>%
+    pull(state)
+
+  if (length(affected_states) > 0) {
+    stop(
+      'Cannot calculate state results for a federal tax-law reform with ',
+      'fixed/selective federal conformity until the generic reference-law ',
+      'bridge is available. Affected states: ',
+      paste(affected_states, collapse = ', '),
+      '. Use the federal baseline tax law or exclude these jurisdictions.'
+    )
+  }
+
+  invisible(TRUE)
 }
 
 

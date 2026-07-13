@@ -356,6 +356,10 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     # Assign random numbers
     bind_cols(globals$random_numbers) %>%
 
+    # Preserve the filed status so a reference-law context can apply its own
+    # filing-status rules instead of inheriting a scenario-only recode.
+    mutate(filing_status_input = filing_status) %>%
+
     # Recode filing status if tax law departs from traditional options
     left_join(tax_law %>%
                 distinct(year, filing.repeal_hoh),
@@ -407,12 +411,21 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   # signature is unchanged and the SLURM worker needs no sync (CLAUDE.md)
   state_tax_law = NULL
   state_weights = NULL
+  state_conformity_groups = NULL
+  state_reference_tax_laws = list()
   if (!is.null(scenario_info$states)) {
     state_tax_law = build_state_tax_law(
       states           = scenario_info$states,
       years            = year,
       indexes          = indexes,
       state_tax_law_id = scenario_info$state_tax_law_id
+    )
+    state_conformity_groups = load_state_conformity_groups()
+    validate_state_federal_conformity(
+      state_tax_law, scenario_info$tax_law_id, state_conformity_groups
+    )
+    state_reference_tax_laws = build_state_reference_tax_laws(
+      state_tax_law, indexes, state_conformity_groups
     )
     state_weights = build_state_weights(
       tax_units = tax_units,
@@ -429,6 +442,12 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     do_taxes(baseline_pr_er = baseline_pr_er,
              vars_1040      = vars_1040,
              vars_payroll   = return_vars$calc_pr)
+  static_state_contexts = build_state_reference_contexts(
+    tax_units_calc       = tax_units_static,
+    normal_tax_law       = tax_law,
+    reference_tax_laws   = state_reference_tax_laws,
+    vars_1040            = vars_1040
+  )
 
   # Calculate static marginal tax rates
   static_mtrs_year = NULL
@@ -478,7 +497,9 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                         state         = get_state_totals(tax_units_static,
                                                          state_tax_law,
                                                          state_weights, year,
-                                                         static_state_detail_path))
+                                                         static_state_detail_path,
+                                                         static_state_contexts,
+                                                         state_conformity_groups))
 
 
   # --- CONVENTIONAL PASS ---
@@ -497,6 +518,12 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       do_taxes(baseline_pr_er = baseline_pr_er,
                vars_1040      = vars_1040,
                vars_payroll   = return_vars$calc_pr)
+    conv_state_contexts = build_state_reference_contexts(
+      tax_units_calc       = tax_units_conv,
+      normal_tax_law       = tax_law,
+      reference_tax_laws   = state_reference_tax_laws,
+      vars_1040            = vars_1040
+    )
 
     # Calculate conventional marginal tax rates
     if (!is.null(scenario_info$mtr_vars)) {
@@ -542,7 +569,9 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                                 state         = get_state_totals(tax_units_conv,
                                                                  state_tax_law,
                                                                  state_weights, year,
-                                                                 conv_state_detail_path))
+                                                                 conv_state_detail_path,
+                                                                 conv_state_contexts,
+                                                                 state_conformity_groups))
 
   } else if (scenario_info$ID != 'baseline') {
 

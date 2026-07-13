@@ -1,0 +1,20 @@
+---
+# Indiana starts with federal AGI and handles its major exclusions on Schedule 2.
+start_point:
+  value: 1
+  reference: 'Indiana IT-40 booklet and Schedule 1/2, 2017-2025; https://www.in.gov/dor/tax-forms/individual/current/'
+conformity_year:
+  value: 0
+  reference: 'Indiana IT-40 starts from federal adjusted gross income, 2017-2025'
+add_exempt_int:
+  value: 1
+  reference: 'Indiana IT-40 Schedule 1, tax-exempt interest add-back, 2017-2025'
+own_state_exempt:
+  value: 1
+  reference: 'Indiana IT-40 Schedule 1, Indiana municipal-obligation exception, 2017-2025'
+sub_us_int:
+  value: 1
+  reference: 'Indiana IT-40 Schedule 2, U.S. government obligation interest deduction, 2017-2025'
+ss_sub_share:
+  value: 1
+  reference: 'Indiana IT-40 Schedule 2, Social Security benefits deduction, 2017-2025'

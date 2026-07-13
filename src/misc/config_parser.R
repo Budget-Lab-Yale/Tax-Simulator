@@ -422,9 +422,9 @@ get_scenario_info = function(id) {
 parse_states_value = function(x) {
 
   #----------------------------------------------------------------------------
-  # Parses a runscript 'states' cell: 'all' expands to every jurisdiction with
-  # a baseline config directory; otherwise a space-delimited list of 2-letter
-  # postal codes.
+  # Parses a runscript 'states' cell: 'all' expands to enabled jurisdictions
+  # in the state registry; otherwise a space-delimited list of 2-letter postal
+  # codes.
   #
   # Parameters:
   #   - x (str) : raw cell value
@@ -434,14 +434,23 @@ parse_states_value = function(x) {
 
   x = str_trim(as.character(x))
   if (tolower(x) == 'all') {
-    return(
-      './config/scenarios/tax_law_state/baseline' %>%
-        list.dirs(recursive = F) %>%
-        basename() %>%
-        toupper()
-    )
+    return(get_enabled_state_jurisdictions())
   }
   return(toupper(str_split_1(x, ' ')))
+}
+
+
+
+get_enabled_state_jurisdictions = function() {
+
+  registry_path = './config/scenarios/tax_law_state/jurisdictions.yaml'
+  if (!file.exists(registry_path)) {
+    stop('Missing state-tax jurisdiction registry: ', registry_path)
+  }
+
+  registry = read_yaml(registry_path)
+  enabled = names(registry)[map_lgl(registry, ~ isTRUE(.x$enabled))]
+  return(toupper(enabled))
 }
 
 

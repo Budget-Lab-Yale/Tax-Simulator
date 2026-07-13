@@ -1,0 +1,6 @@
+---
+# Alaska: no broad individual income tax.
+
+eitc_match:
+  value: 0
+  reference: 'No broad individual income tax or state EITC in v1 scope; Alaska Department of Revenue Tax Division tax programs; https://tax.alaska.gov'

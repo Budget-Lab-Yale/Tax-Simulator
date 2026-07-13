@@ -1,0 +1,12 @@
+---
+# Georgia's child and dependent care credit is nonrefundable and matches a
+# share of the federal IRC 21 credit.  Other IND-CR credits are data-limited.
+
+cdctc_match:
+  value:
+    '2017': 0.30
+    '2025': 0.50
+  reference: 'O.C.G.A. 48-7-29.10; Georgia Form IND-CR 202, 2022-2025'
+cdctc_refundable:
+  value: 0
+  reference: 'Georgia Form IND-CR 202, 2022-2025 (credit is limited to current-year income tax liability)'

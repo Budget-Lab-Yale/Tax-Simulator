@@ -1,0 +1,28 @@
+---
+# California starts from federal AGI, but its detailed Schedule CA adjustments
+# require source and deduction information that is not yet fully available.
+start_point:
+  value: 1
+  reference: 'California Form 540, line 13 federal adjusted gross income, 2017-2025'
+conformity_year:
+  value:
+    '2017': 2015
+    '2025': 2025
+  reference: 'California FTB Form 540 booklets and conformity guidance: general IRC date January 1, 2015 through TY2024 and January 1, 2025 from TY2025, subject to specific statutory exceptions'
+conformity_group:
+  value:
+    '2017': 1
+    '2025': 2
+  reference: 'California conformity dates mapped to generic reference-law groups; group definitions and bridge readiness are in config/scenarios/tax_law_state/conformity_groups.yaml'
+add_exempt_int:
+  value: 1
+  reference: 'California Schedule CA (540), interest income additions for non-California municipal obligations, 2017-2025'
+own_state_exempt:
+  value: 1
+  reference: 'California Schedule CA (540), California municipal-obligation exception, 2017-2025'
+sub_state_ref:
+  value: 1
+  reference: 'California Schedule CA (540), state income-tax refund subtraction, 2017-2025'
+ss_sub_share:
+  value: 1
+  reference: 'California Schedule CA (540), taxable Social Security and Tier 1 railroad retirement subtraction, 2017-2025'

@@ -1,0 +1,19 @@
+---
+personal_amount:
+  value: 1000
+  reference: 'Indiana IT-40 Schedule 3; Indiana DOR Departmental Notice #1, 2017-2025'
+dep_amount:
+  value: 1500
+  reference: 'Indiana IT-40 Schedule 3; Indiana DOR Departmental Notice #1, 2017-2025'
+aged_addl:
+  value: 0
+  reference: 'Indiana IT-40 Schedule 3 elderly exemption is income-tested and omitted pending a generic income-tested exemption tool'
+blind_addl:
+  value: 0
+  reference: 'Indiana IT-40 Schedule 3 blind exemption is income-tested and omitted pending a generic income-tested exemption tool'
+po_thresh:
+  value: .inf
+  reference: 'Indiana personal and dependent exemptions have no broad AGI phaseout, 2017-2025'
+po_type:
+  value: 0
+  reference: 'n/a for Indiana (no broad AGI phaseout)'

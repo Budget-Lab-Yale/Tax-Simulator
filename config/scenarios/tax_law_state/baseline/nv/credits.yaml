@@ -1,0 +1,6 @@
+---
+# Nevada: no broad individual income tax.
+
+eitc_match:
+  value: 0
+  reference: 'No broad individual income tax or state EITC in v1 scope; Nevada Department of Taxation tax programs; https://tax.nv.gov'

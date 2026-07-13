@@ -1,0 +1,22 @@
+---
+# Arizona Form 140 begins with federal AGI.  Interest-source allocations and
+# state-specific additions not observable in the PUF are documented in AZ.md.
+
+start_point:
+  value: 1
+  reference: 'Arizona Form 140, line 12/line 27, 2017-2025; https://azdor.gov/forms/individual/form-140-arizona-resident-personal-income-tax-booklet'
+conformity_year:
+  value: 0
+  reference: 'A.R.S. 43-1001 and Form 140 instructions; rolling federal-AGI starting point'
+add_exempt_int:
+  value: 1
+  reference: 'Arizona Form 140, additions to income, 2017-2025 (non-Arizona municipal interest)'
+own_state_exempt:
+  value: 1
+  reference: 'A.R.S. 43-1022(2); Arizona municipal obligations excluded from the addback'
+sub_us_int:
+  value: 1
+  reference: 'A.R.S. 43-1022(2); Form 140 subtraction for U.S. government obligations'
+ss_sub_share:
+  value: 1
+  reference: 'Arizona Form 140, subtraction for federally taxable Social Security benefits, 2017-2025'

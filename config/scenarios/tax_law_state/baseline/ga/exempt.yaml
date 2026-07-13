@@ -1,0 +1,32 @@
+---
+# Personal exemptions ended in TY2024 (except the data-unobservable unborn
+# child exemption).  Joint returns need two $1,850 amounts to reproduce the
+# published $3,700 total; MFS receives the full $3,700 amount.
+
+filing_status_mapper:
+  personal_amount:
+    '1': personal_single
+    '2': personal_joint_each
+    '3': personal_mfs
+    '4': personal_single
+
+personal_single:
+  value:
+    '2017': 2700
+    '2024': 0
+  reference: 'Georgia Form 500 exemption instructions, 2017-2025'
+personal_joint_each:
+  value:
+    '2017': 1850
+    '2024': 0
+  reference: 'Georgia Form 500 exemption instructions, 2017-2025 ($3,700 joint amount represented per taxpayer)'
+personal_mfs:
+  value:
+    '2017': 3700
+    '2024': 0
+  reference: 'Georgia Form 500 exemption instructions, 2017-2025'
+dep_amount:
+  value:
+    '2017': 3000
+    '2024': 4000
+  reference: 'Georgia Form 500 dependent exemption instructions, 2017-2025'
