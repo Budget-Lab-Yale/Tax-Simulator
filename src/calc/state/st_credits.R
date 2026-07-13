@@ -246,7 +246,10 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                          tax_unit$age1 >= tax_unit$st_credits.earned_credit_age_min |
                          (tax_unit$filing_status == 2 & !is.na(tax_unit$age2) &
                           tax_unit$age2 >= tax_unit$st_credits.earned_credit_age_min)
-  earned_credit_eligible = earned_income > 0 &
+  # Dependents of another taxpayer are ineligible for the independent
+  # earned-income credit, mirroring the federal EITC (eitc.R) and the state
+  # exempt/household/WFTC credits; ei1/ei2 are never dependent-zeroed upstream.
+  earned_credit_eligible = tax_unit$dep_status != 1 & earned_income > 0 &
     earned_income < tax_unit$st_credits.earned_credit_earned_limit &
     agi < tax_unit$st_credits.earned_credit_agi_limit & earned_credit_age_ok
   earned_credit_table_earned = lookup_state_credit_table(

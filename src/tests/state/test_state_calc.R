@@ -367,6 +367,16 @@ test_state_calc = function() {
            expect = list(st_std_ded = 3450, st_txbl_inc = 6550),
            label = 'CA-8 dependent standard deduction worksheet')
 
+  # CA-8b: a dependent of another taxpayer is ineligible for the refundable
+  # CalEITC (and hence YCTC), mirroring the federal EITC. Pre-fix this filer
+  # wrongly received a childless CalEITC and a negative (refund) liability;
+  # post-fix they owe the ordinary tax on $6,550 taxable income (1% = $65.50)
+  # with no refundable credit.
+  run_case('CA', 2025, list(agi = 10000, dep_status = 1, ei1 = 3000),
+           expect = list(st_earned_credit = 0, st_yctc = 0,
+                         liab_st_individual_net = 65.5),
+           label = 'CA-8b dependent filer excluded from CalEITC')
+
   # CA-9: the Schedule CA limitation protects $20,000 medical, $10,000
   # investment interest, and $5,000 casualty deductions. The reduction is
   # the lesser of 80% of $160,000 unprotected deductions and 6% of the

@@ -49,7 +49,7 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
 
       n_taxpayers = 1 + (filing_status == 2),
       n_aged      = (age1 >= 65) + (filing_status == 2 & !is.na(age2) & age2 >= 65),
-      n_blind     = blind1 + (!is.na(blind2) & blind2),
+      n_blind     = coalesce(blind1, 0) + (!is.na(blind2) & blind2),
 
       st_exempt_gross = n_taxpayers * st_exempt.personal_amount +
                         n_dep       * st_exempt.dep_amount +

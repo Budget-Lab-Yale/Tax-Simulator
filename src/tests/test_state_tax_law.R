@@ -135,13 +135,27 @@ test_state_conformity_groups = function() {
     filter(ca_law, year == 2025), groups
   )
 
+  # Regression: a mixed list of a group-declaring state (CA) and a
+  # non-declaring rolling state (IL) leaves st_agi.conformity_group NA for IL
+  # after the wide pivot. Resolution must NOT error, and IL must map to the
+  # rolling group 0. build_state_reference_tax_laws exercises the same path.
+  mixed_law = build_state_tax_law(c('IL', 'CA'), 2025, indexes)
+  mixed = state_conformity_groups_for_law(mixed_law, groups)
+  mixed_refs = build_state_reference_tax_laws(mixed_law, indexes, groups)
+
   stopifnot(
     'rolling group is malformed' =
       nrow(filter(groups, conformity_group == 0, ready)) == 1,
     'California 2017-2024 group wrong' =
       ca_2017$conformity_group == 1 && !ca_2017$ready,
     'California 2025+ group wrong' =
-      ca_2025$conformity_group == 2 && !ca_2025$ready
+      ca_2025$conformity_group == 2 && !ca_2025$ready,
+    'IL in a mixed list must resolve to rolling group 0' =
+      mixed$conformity_group[mixed$state == 'IL'] == 0,
+    'CA in a mixed list must keep its declared group' =
+      mixed$conformity_group[mixed$state == 'CA'] == 2,
+    'mixed-list reference build must not error and skips unready CA' =
+      length(mixed_refs) == 0
   )
 
   message('test_state_conformity_groups: PASSED')

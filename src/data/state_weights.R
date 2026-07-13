@@ -2,9 +2,13 @@
 # state_weights.R  —  Phase 1 prototype: split state weights for the PUF
 #
 # Produces `state_weights_{year}.csv` (id, state, weight) that make the national
-# PUF-based microdata state-representative, subject to the per-record split
-# constraint  Σ_state W[i,state] = weight_i  (so federal aggregates are invariant
-# to the with-state / without-state mode switch).
+# PUF-based microdata state-representative. The real methods (calibration,
+# gradient) satisfy the per-record split constraint  Σ_state W[i,state] =
+# weight_i  over all 53 jurisdictions. The "placeholder" stopgap does NOT (see
+# build_state_weights). Either way, federal aggregates are invariant to the
+# with-state / without-state switch NOT because of this split constraint but
+# because the federal totals are computed from the untouched `weight` column;
+# state weights never enter them.
 #
 # Two interchangeable methods, selected by build_state_weights(method=):
 #   "calibration" — Approach A: classical raking / calibration to targets
@@ -948,16 +952,21 @@ fit_calibration <- function(w, P0, targets, n_iter = 200, tol = 1e-4,
 
 # -----------------------------------------------------------------------------
 # build_state_weights(): the runtime dispatcher (plan §2.1). Returns long
-# split weights (id, state, weight) satisfying Σ_state w_{i,state} = weight_i
-# across ALL jurisdictions -- so federal aggregates are invariant to the
-# with-state mode by construction.
+# split weights (id, state, weight). The real methods satisfy
+# Σ_state w_{i,state} = weight_i across ALL 53 jurisdictions; the placeholder
+# does not (see below). Federal aggregates are invariant to the with-state mode
+# regardless, because federal totals use the untouched `weight` column.
 #
 # Methods:
-#   "placeholder" -- UNIFORM split across the 53 jurisdictions. Exists so the
-#                    Phase 4 orchestration can run before the Phase 1 bake-off
-#                    lands; state LEVELS are meaningless (every state gets
-#                    1/53 of the nation) but the split-constraint invariant,
-#                    file contract, and all downstream machinery are real.
+#   "placeholder" -- gives EACH requested jurisdiction 1/53 of the national
+#                    weight (fixed denominator 53). Exists so the Phase 4
+#                    orchestration can run before the Phase 1 bake-off lands.
+#                    State LEVELS are meaningless (every state = 1/53 of the
+#                    nation) AND the emitted rows do NOT sum to weight_i when a
+#                    subset of states is requested: Σ over emitted states =
+#                    (n_states / 53) * weight_i. Do not reconstruct a national
+#                    total by summing state.csv under the placeholder. The file
+#                    contract and downstream machinery are real.
 #   "calibration" -- Approach A (fit_calibration); not yet wired to HT2/ACS
 #                    target ingestion at runtime.
 #   "gradient"    -- Approach B (fit_gradient); ditto.

@@ -243,7 +243,10 @@ state_conformity_groups_for_law = function(state_tax_law, conformity_groups) {
     return(tibble())
   }
   group_values = if ('st_agi.conformity_group' %in% names(state_tax_law)) {
-    state_tax_law$st_agi.conformity_group
+    # A state that does not declare a group is rolling conformity (group 0).
+    # In a mixed states list (e.g. CA + IL) the wide pivot leaves the column
+    # NA for every non-declaring state, so coalesce before the finite check.
+    coalesce(state_tax_law$st_agi.conformity_group, 0)
   } else {
     rep(0, nrow(state_tax_law))
   }
