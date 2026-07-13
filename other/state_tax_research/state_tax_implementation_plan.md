@@ -120,6 +120,21 @@ workplace-vs-residence signature unmistakable — DC 57.8%, MD 131.7%, VA
 117.1% vs their tight residence-based ACS ratios. QWI is therefore a
 STRUCTURAL cross-check and demographic-cell source, not a level anchor.
 
+**LODES resolves the residence problem** (JI 2026-07-13,
+https://lehd.ces.census.gov/data/lodes/): the same LEHD job frame published
+on both bases. RAC files aggregate to residence-based state employment
+directly — with age bands (≤29/30–54/55+) and monthly earnings bands — via
+`fetch_lodes_rac()`; verified 2022 that the residence ordering is restored
+where QWI diverged (DC 285k resident workers vs 485k workplace jobs; MD
+2.51M residents vs 2.16M in-state jobs). OD files give the state-to-state
+commuter matrix via `fetch_lodes_od_matrix()` — 2022: DC residents hold only
+31.0% of DC-workplace primary jobs (MD 39.0%, VA 25.9%), quantifying the
+QWI anomaly exactly — and serve as the reallocation operator for converting
+QWI workplace payroll to residence basis (OD shares × workplace earnings).
+Concept caveats: JT01 primary jobs are point-in-time (below any-wage-in-year
+ACS/IRS counts by construction), same UI universe as QWI, LODES8 runs
+through 2022.
+
 **Candidate person-level target dimensions (JI 2026-07-13).** The PUF splits
 wages by earner with demographics (`wages1/2` × `age1/2` × `male1/2`), so
 record-level x-vectors like "wage dollars earned by males 25–34" are

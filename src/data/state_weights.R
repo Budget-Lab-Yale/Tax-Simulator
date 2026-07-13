@@ -455,6 +455,68 @@ fetch_qwi <- function(year, sex = "0", agegrp = "A00",
     !is.na(state)][order(state, sex, agegrp)]
 }
 
+# -----------------------------------------------------------------------------
+# LODES (LEHD Origin-Destination Employment Statistics): the residence-basis
+# answer to QWI's workplace-basis problem (JI 2026-07-13). Same underlying
+# LEHD job frame as QWI, published both ways:
+#   RAC (Residence Area Characteristics): jobs by HOME census block --
+#     aggregated to state, this is residence-based employment directly,
+#     with age bands (CA01 <=29 / CA02 30-54 / CA03 55+) and monthly
+#     earnings bands (CE01 <=$1,250 / CE02 $1,251-3,333 / CE03 >$3,333).
+#   OD (main = in-state residents, aux = out-of-state residents): home x
+#     work block flows -- aggregated, the state-to-state commuter matrix
+#     that converts workplace payroll to residence basis. Verified 2022:
+#     only 31.0% of DC-workplace primary jobs are held by DC residents
+#     (MD 39.0%, VA 25.9%) -- the entire QWI DC/MD/VA anomaly, quantified.
+#
+# Concept notes: JT01 = primary jobs (one per worker, closest to persons);
+# point-in-time job counts sit below ACS/IRS any-wage-in-year earner counts
+# by construction. Same UI-covered universe as QWI. LODES8 covers through
+# 2022 on 2020 blocks. Block geocodes must be read as CHARACTER (15 digits;
+# integer64 breaks substr-based state extraction).
+# -----------------------------------------------------------------------------
+LODES_BASE <- "https://lehd.ces.census.gov/data/lodes/LODES8"
+
+#' Residence-based state employment from LODES RAC, with age/earnings bands.
+fetch_lodes_rac <- function(year, states = tolower(STATE_JURISDICTIONS),
+                            jt = "JT01") {
+  rbindlist(lapply(states, function(st) {
+    d <- tryCatch(
+      fread(sprintf("%s/%s/rac/%s_rac_S000_%s_%d.csv.gz",
+                    LODES_BASE, tolower(st), tolower(st), jt, year)),
+      error = function(e) NULL)
+    if (is.null(d)) {
+      message("  LODES RAC unavailable: ", st, " ", year)
+      return(NULL)
+    }
+    data.table(state = toupper(st),
+               workers_res  = sum(d$C000),
+               age_u30      = sum(d$CA01), age_30_54 = sum(d$CA02),
+               age_55p      = sum(d$CA03),
+               earn_low     = sum(d$CE01), earn_mid  = sum(d$CE02),
+               earn_high    = sum(d$CE03))
+  }))
+}
+
+#' State-to-state commuter matrix from LODES OD (jobs by work state x
+#' residence state). Downloads main + aux per WORK state requested.
+fetch_lodes_od_matrix <- function(year, work_states, jt = "JT01") {
+  rbindlist(lapply(work_states, function(st) {
+    od <- rbindlist(lapply(c("main", "aux"), function(part) {
+      tryCatch(
+        fread(sprintf("%s/%s/od/%s_od_%s_%s_%d.csv.gz",
+                      LODES_BASE, tolower(st), tolower(st), part, jt, year),
+              colClasses = list(character = c("w_geocode", "h_geocode")))[
+          , .(h_geocode, S000)],
+        error = function(e) NULL)
+    }))
+    if (nrow(od) == 0) return(NULL)
+    od[, res_state := FIPS_TO_STATE[as.character(as.integer(substr(h_geocode, 1, 2)))]]
+    od[, .(jobs = sum(S000)), by = res_state][
+      , `:=`(work_state = toupper(st), share = jobs / sum(jobs))][]
+  }))
+}
+
 # =============================================================================
 # PUF-SIDE TARGET ASSEMBLY (plan §2.1)
 #
