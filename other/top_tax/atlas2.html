@@ -139,6 +139,43 @@
   footer .mhead { font:600 11px/1 ui-monospace,monospace; letter-spacing:.13em; text-transform:uppercase; color:var(--muted); margin:0 0 6px; }
   footer .margins ul { margin:0; padding-left:16px; color:var(--ink-2); }
   footer .margins li { margin:3px 0; }
+
+  /* ---- shared chart tooltip (all charts) ------------------------------- */
+  .tt { position:fixed; z-index:60; pointer-events:none; opacity:0; transform:translateY(3px);
+    transition:opacity .12s ease, transform .12s ease; max-width:320px; }
+  .tt.show { opacity:1; transform:translateY(0); }
+  .ttcard { background:var(--surface); border:1px solid var(--hair); border-left-width:4px;
+    border-radius:9px; box-shadow:0 2px 6px rgba(20,19,15,.10),0 10px 34px rgba(20,19,15,.16);
+    padding:12px 14px 13px; overflow:hidden; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  @media (prefers-color-scheme: dark){ .ttcard{ box-shadow:0 2px 8px rgba(0,0,0,.5),0 14px 40px rgba(0,0,0,.55); } }
+  :root[data-theme="dark"] .ttcard{ box-shadow:0 2px 8px rgba(0,0,0,.5),0 14px 40px rgba(0,0,0,.55); }
+  :root[data-theme="light"] .ttcard{ box-shadow:0 2px 6px rgba(20,19,15,.10),0 10px 34px rgba(20,19,15,.16); }
+  .tt-eyebrow { display:flex; align-items:center; gap:7px; font:600 9.5px/1 ui-monospace,monospace;
+    letter-spacing:.11em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .tt-eyebrow .glyph { font-size:11px; line-height:1; }
+  .tt-num { display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; }
+  .tt-num .amt { font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; font-weight:700;
+    font-size:23px; line-height:1; letter-spacing:-.01em; }
+  .tt-num .base { font-weight:600; font-size:13px; color:var(--ink-2); }
+  .tt-meter { height:4px; border-radius:2px; background:var(--surface-2); margin:11px 0 0; position:relative; overflow:hidden; }
+  .tt-meter .fill { position:absolute; top:0; bottom:0; border-radius:2px; }
+  .tt-meterlab { font:500 10px/1.3 ui-monospace,monospace; color:var(--muted); margin-top:5px; }
+  .tt-rows { margin-top:11px; display:flex; flex-direction:column; gap:5px; }
+  .tt-row { display:flex; align-items:center; gap:8px; font-size:12px; }
+  .tt-row .k { width:14px; height:2.5px; border-radius:2px; flex:none; }
+  .tt-row .rl { color:var(--ink-2); }
+  .tt-row .rv { margin-left:auto; font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums;
+    font-weight:600; color:var(--ink); }
+  .tt-ctx { display:flex; align-items:center; gap:7px; margin-top:11px; font-size:11.5px; color:var(--ink-2); }
+  .tt-ctx .lchip { width:9px; height:9px; border-radius:2px; flex:none; }
+  .tt-ctx .dial { color:var(--muted); }
+  .tt-div { height:1px; background:var(--rule); margin:11px 0 10px; }
+  .tt-body { font-family:"YaleNew","Yale New",Georgia,serif; font-size:13.5px; line-height:1.5; color:var(--ink); }
+  .tt-body b { color:var(--ink); }
+  .tt-chiplab { font:600 9px/1 ui-monospace,monospace; letter-spacing:.11em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  .tt-chips { display:flex; flex-wrap:wrap; gap:5px; }
+  .tt-chip { font:600 10.5px/1.35 ui-monospace,monospace; font-variant-numeric:tabular-nums; color:var(--ink-2);
+    background:var(--surface-2); border:1px solid var(--hair); border-radius:5px; padding:2px 7px; white-space:nowrap; }
 </style>
 
 <div class="hero"><div class="wrap">
@@ -278,6 +315,8 @@
   <p id="footSource"><strong>Model output, interpolated.</strong> Figures come from the top-tax dials batch of the Budget Lab Tax-Simulator: each policy run at a set of anchor settings, every pair run together at reference settings, and the four policies that share the capital-gains-at-death channel also run three at a time. Any dial setting in between is interpolated with a solo + pairwise + triple decomposition, and the interpolation is validated against held-out model runs of full multi-policy packages at off-anchor settings; the badge states the verified bound. The corporate dial is linear between 21% and 28% by construction — the off-model corporate input is itself linear in the rate change. Interpolation is most stretched where an annual wealth tax and the estate tax are both pushed to their extreme settings at once: that combination carries a non-linear interaction the decomposition captures only approximately, so those far-corner packages can run up to roughly 2.6% off the corresponding full model run (vs. under 1% across the rest of the space); every setting shown remains a first-decade estimate within the badge's stated bound.</p>
   <p>Revenue figures are 10-year cumulative dollars over the decade selected at the top of the page (first, second, or third decade after enactment), with the share of GDP (10-yr revenue ÷ that decade's cumulative fiscal-year nominal GDP) shown alongside. The distribution card always shows 2027, the impact year, regardless of the selected decade. Policies, effective 2027: top ordinary rate · top capital-gains &amp; dividends rate · corporate rate · annual wealth tax (rate and threshold) · treatment of gains at death (step-up, carryover, or taxed at death) · estate tax (top rate and exemption) · repeal of the QBI deduction · elimination of the Social Security taxable maximum.</p>
 </div></footer>
+
+<div class="tt" id="tt" role="tooltip" aria-live="polite"></div>
 
 <script>
 var DATA=/*__ATLAS_DATA__*/null;
@@ -624,6 +663,96 @@ var DATA=/*__ATLAS_DATA__*/null;
 
   // ---- charts (segBars/spill/etr reused from atlas v1) ------------------------ //
   function svg(w,h){return '<svg viewBox="0 0 '+w+' '+h+'" role="img" preserveAspectRatio="xMidYMid meet">';}
+
+  // ---- shared rich tooltip (all charts) ----------------------------------- //
+  // Interactive marks carry a data-tip attribute holding a JSON cfg; one
+  // delegated listener reads it, so the card survives every innerHTML re-render.
+  // Card chrome (rail, eyebrow, number, divider, body) is constant across charts;
+  // only the middle sections vary (hero number / meter / readout rows).
+  function tipEnc(cfg){ return JSON.stringify(cfg)
+    .replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function tipAttr(cfg){ return "data-tip='"+tipEnc(cfg)+"'"; }
+  function tipCard(c){
+    var h='<div class="ttcard" style="border-left-color:'+(c.accent||'var(--rule)')+'">';
+    if(c.eyebrow) h+='<div class="tt-eyebrow">'+(c.glyph?'<span class="glyph" style="color:'+(c.glyphColor||'var(--muted)')+'">'+c.glyph+'</span>':'')+c.eyebrow+'</div>';
+    if(c.amount!=null) h+='<div class="tt-num"><span class="amt" style="color:'+(c.amountColor||'var(--ink)')+'">'+c.amount+'</span>'+(c.sub?'<span class="base">'+c.sub+'</span>':'')+'</div>';
+    if(c.meter) h+='<div class="tt-meter"><span class="fill" style="width:'+(Math.max(0,Math.min(1,c.meter.share))*100).toFixed(1)+'%;left:0;background:'+c.meter.color+'"></span></div>'+(c.meter.label?'<div class="tt-meterlab">'+c.meter.label+'</div>':'');
+    if(c.rows&&c.rows.length){ h+='<div class="tt-rows">'; c.rows.forEach(function(r){
+      h+='<div class="tt-row"><span class="k" style="background:'+(r.color||'var(--muted)')+'"></span><span class="rl">'+r.label+'</span><span class="rv">'+r.value+'</span></div>'; }); h+='</div>'; }
+    if(c.ctx) h+='<div class="tt-ctx">'+(c.ctx.chip?'<span class="lchip" style="background:'+c.ctx.chip+'"></span>':'')+c.ctx.text+(c.ctx.dial?' <span class="dial">· '+c.ctx.dial+'</span>':'')+'</div>';
+    if(c.chips&&c.chips.length) h+='<div class="tt-div"></div><div class="tt-chiplab">'+(c.chipLab||'Package')+'</div><div class="tt-chips">'+c.chips.map(function(x){return '<span class="tt-chip">'+x+'</span>';}).join('')+'</div>';
+    if(c.body) h+='<div class="tt-div"></div><div class="tt-body">'+c.body+'</div>';
+    return h+'</div>';
+  }
+  var TTEL=null, TTCUR=null;
+  function tipShow(cfg,x,y){ if(!TTEL)TTEL=$('#tt'); if(!TTEL)return; TTEL.innerHTML=tipCard(cfg); TTEL.classList.add('show'); tipMove(x,y); }
+  function tipMove(x,y){ if(!TTEL)return; var pad=15,tw=TTEL.offsetWidth,th=TTEL.offsetHeight,px=x+pad,py=y+pad;
+    if(px+tw>window.innerWidth-8)px=x-tw-pad; if(px<8)px=8; if(py+th>window.innerHeight-8)py=y-th-pad; if(py<8)py=8;
+    TTEL.style.left=px+'px'; TTEL.style.top=py+'px'; }
+  function tipHide(){ TTCUR=null; if(TTEL)TTEL.classList.remove('show'); }
+  document.addEventListener('mousemove',function(e){
+    var el=e.target&&e.target.closest?e.target.closest('[data-tip]'):null;
+    if(!el){ if(TTCUR)tipHide(); return; }
+    if(el!==TTCUR){ TTCUR=el; try{ tipShow(JSON.parse(el.getAttribute('data-tip')),e.clientX,e.clientY); }catch(_){ } }
+    else tipMove(e.clientX,e.clientY);
+  });
+
+  // ---- spillover mechanism copy (what causes each cross-base effect) ------- //
+  var HSHORT={iit:'Ordinary income',cg:'Capital gains',corp:'Corporate',est:'Estate',wealth:'Wealth',pay:'Payroll',other:'Other'};
+  var SPILL_OWN={ord:['iit'],cg:['cg'],corp:['corp'],wealth:['wealth'],deemed:['cg','iit'],estate:['est'],qbi:['iit'],taxmax:['pay']};
+  var SPILL_DESC={
+   'ord|corp':{tag:'Entity shifting',t:'With the top individual rate pushed above the 21% corporate rate, pass-through and wage income migrates into C-corporate form, where it is taxed at the corporate rate — so the corporate base grows even though the reform never touches the corporate rate.'},
+   'ord|cg':{tag:'Recharacterization',t:'A slice of the shifted income resurfaces later as dividends and realized gains, nudging the preferential-rate base upward.'},
+   'ord|pay':{tag:'Wage base',t:'Compensation that shifts out of salary into non-wage forms slightly thins the payroll base.'},
+   'cg|iit':{tag:'Lock-in',t:'Taxing gains and dividends harder triggers lock-in: high earners hold appreciated assets instead of selling, and firms retain earnings instead of distributing them. Less income is realized near-term, so the ordinary base gives revenue back even as the capital-gains base rises.'},
+   'cg|corp':{tag:'Form advantage',t:'As the preferential rate climbs toward the ordinary rate, the payoff to parking income inside C-corporate form to convert it into lightly-taxed dividends and gains shrinks, so income shifts out of the corporate base.'},
+   'corp|iit':{tag:'Incidence on flows',t:'A higher corporate rate leaves firms less after-tax cash to pay out. The dividends, interest, and rent reaching households shrink, and with them the individual income tax on that capital income.'},
+   'corp|cg':{tag:'Equity markdown',t:'Heavier corporate taxation lowers the value of corporate equity. With share prices marked down, the gains later realized on those shares are smaller — so capital-gains receipts fall.'},
+   'corp|est':{tag:'Markdown to estates',t:'The same equity markdown shrinks the value of corporate stock sitting in taxable estates.'},
+   'wealth|iit':{tag:'Base erosion',t:'An annual wealth tax is paid partly out of the wealth stock itself. A smaller capital base throws off less dividends, interest, and business income year after year. Concealment compounds it: assets hidden from the wealth tax also hide the income they earn.'},
+   'wealth|cg':{tag:'Base erosion',t:'A shrinking — and partly concealed — capital stock generates smaller realized gains over time.'},
+   'wealth|est':{tag:'Drains to estate',t:'Wealth drawn down (or hidden) to meet the annual levy leaves a smaller taxable estate at death. Concealment is modeled consistently across the wealth and estate bases, so it lands in both.'},
+   'wealth|corp':{tag:'Base erosion',t:'Less capital held in corporate equity feeds through to a smaller corporate base.'},
+   'deemed|est':{tag:'Deductible at death',t:'The income tax triggered by the deemed realization is deductible against the taxable estate, so a larger income-tax bill at death leaves a smaller estate to tax.'},
+   'deemed|corp':{tag:'Shifting incentives',t:'As the reward for deferring until death disappears, retention incentives shift and the corporate base gives back a little.'},
+   'estate|cg':{tag:'Less holding-till-death',t:'A heavier estate tax weakens the incentive to hold appreciated assets until death for the basis step-up. Some holders realize during life instead, lifting the capital-gains base.'},
+   'estate|iit':{tag:'Less holding-till-death',t:'The same unwinding of hold-till-death behavior surfaces a little more ordinary income.'},
+   'qbi|corp':{tag:'Entity shifting',t:'Repealing the 20% pass-through deduction raises the effective rate on pass-through business income, widening the gap against the 21% corporate rate. Business income shifts into C-corporate form and the corporate base grows.'},
+   'qbi|cg':{tag:'Recharacterization',t:'Some of the income shifting into corporate form later surfaces as dividends and gains.'},
+   'taxmax|iit':{tag:'Recharacterization',t:'Uncapping the 12.4% Social Security tax on high earnings makes it attractive to recharacterize wages as S-corporation distributions and other non-wage income that escapes payroll tax. The shrinking wage base — plus deductibility of the employer-side tax — pulls the income tax down.'},
+   'taxmax|corp':{tag:'Recharacterization',t:'Some recharacterized compensation lands in corporate form; a small give-back here.'},
+   'taxmax|cg':{tag:'Recharacterization',t:'A little of the recharacterized comp shows up as gains and dividends.'}
+  };
+  var SPILL_OWNDESC={
+   ord:'Higher statutory rate on top ordinary income — the intended base.',
+   cg:'Higher statutory rate on realized gains and qualified dividends — the intended base, already net of the realization response.',
+   corp:'Higher statutory corporate rate — the intended base.',
+   wealth:'The new annual levy on net worth above the threshold — the intended base.',
+   deemed:'Unrealized gains taxed at death lift both the ordinary and capital-gains bases above the mechanical estimate: with no reward for holding until a stepped-up basis, more is realized during life, and death itself books the gain.',
+   estate:'Higher estate-tax rate and lower exemption — the intended base.',
+   qbi:'Removing the 20% deduction raises tax on pass-through income — the intended base.',
+   taxmax:'Applying the 12.4% Social Security tax above the old wage cap — the intended base.'
+  };
+  function spillOwn(key,base){ return (SPILL_OWN[key]||[]).indexOf(base)>=0; }
+  function spillDesc(key,base){ return SPILL_DESC[key+'|'+base]||{tag:'Minor',t:'A small cross-base effect from behavioral reallocation.'}; }
+  function spillRank(row){ return HEADS_ORDER.filter(function(k){return !spillOwn(row.key,k)&&Math.abs(row.heads[k]||0)>=1;})
+      .map(function(k){return {k:k,v:row.heads[k]||0};}).sort(function(a,b){return Math.abs(b.v)-Math.abs(a.v);}); }
+  function ordName(k){ return k===1?'Largest':k===2?'2nd largest':k===3?'3rd largest':k+'th largest'; }
+  function ppl(v){ return (v>0?'+':(v<0?'−':''))+'$'+(Math.abs(v)>=1000?(Math.abs(v)/1000).toFixed(2)+'T':Math.round(Math.abs(v))+'B'); }
+  function spillCfg(r,k){
+    var v=r.heads[k]||0, own=spillOwn(r.key,k), drain=v<0, col=headColor(k);
+    var dirCol=own?'var(--ink)':(drain?'var(--warn)':'var(--good)'), glyph=own?'●':(drain?'▾':'▴');
+    var d=spillDesc(r.key,k);
+    var cfg={ accent:col, eyebrow:(own?'Intended base':((drain?'Drained from ':'Added to ')+HSHORT[k])),
+      glyph:glyph, glyphColor:dirCol, amount:ppl(v), amountColor:dirCol, sub:HSHORT[k],
+      ctx:{chip:LCOLOR[r.key], text:r.label, dial:r.dial||''},
+      body:(own?('<b>The policy’s direct target.</b> '+SPILL_OWNDESC[r.key]):('<b>'+d.tag+'.</b> '+d.t)) };
+    if(!own){ var sp=spillRank(r), maxV=sp.length?Math.abs(sp[0].v):1, rank=1;
+      for(var z=0;z<sp.length;z++){ if(sp[z].k===k){ rank=z+1; break; } }
+      cfg.meter={ share:Math.abs(v)/(maxV||1), color:col,
+        label:ordName(rank)+' of '+sp.length+' side-effect'+(sp.length===1?'':'s')+' · '+(drain?'drains':'adds to')+' this base' }; }
+    return cfg;
+  }
   function segBars(rows,w){
     var h=rows.length*46+6,bw=Math.max(60,w-224-130),x0=214;
     var s=svg(w,h);
@@ -634,7 +763,7 @@ var DATA=/*__ATLAS_DATA__*/null;
       s+='<rect x="'+x0+'" y="'+y+'" width="'+bw+'" height="32" rx="5" fill="var(--surface-2)"/>';
       var sc=bw/r.max,x=x0;
       r.segs.forEach(function(g2){ if(g2.val<=0)return; var wseg=g2.val*sc;
-        s+='<rect x="'+x.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,wseg-2).toFixed(1)+'" height="32" rx="3" fill="'+g2.color+'"><title>'+g2.tip+'</title></rect>';
+        s+='<rect x="'+x.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,wseg-2).toFixed(1)+'" height="32" rx="3" fill="'+g2.color+'" '+(g2.cfg?tipAttr(g2.cfg):tipAttr({accent:g2.color,body:g2.tip}))+'/>';
         x+=wseg; });
       s+='<text x="'+(x0+tot*sc+10).toFixed(1)+'" y="'+(y+21)+'" text-anchor="start" font-size="13" font-weight="600" font-family="ui-monospace,monospace" fill="var(--ink)">'+fmt(tot)+'</text>';
     });
@@ -659,9 +788,8 @@ var DATA=/*__ATLAS_DATA__*/null;
       var y=padT+i*rh+6,xp=xz,xn=xz,tot=0;
       s+='<text x="206" y="'+(y+17)+'" text-anchor="end" font-size="12.5" fill="var(--ink-2)" font-family="system-ui">'+r.label+'</text>';
       order.forEach(function(k){var v=r.heads[k]||0;tot+=v;var wseg=Math.abs(v)*sc;if(wseg<1)return;
-        var hn=HEADS.filter(function(z){return z.k===k;})[0],lab=(hn?hn.label:k)+': '+fmt(v);
-        if(v>0){s+='<rect x="'+xp.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,wseg-2).toFixed(1)+'" height="26" rx="3" fill="'+headColor(k)+'"><title>'+r.label+' · '+lab+'</title></rect>';xp+=wseg;}
-        else{xn-=wseg;s+='<rect x="'+xn.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,wseg-2).toFixed(1)+'" height="26" rx="3" fill="'+headColor(k)+'" opacity="0.85"><title>'+r.label+' · '+lab+' (drained from this base)</title></rect>';}
+        if(v>0){s+='<rect x="'+xp.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,wseg-2).toFixed(1)+'" height="26" rx="3" fill="'+headColor(k)+'" '+tipAttr(spillCfg(r,k))+'/>';xp+=wseg;}
+        else{xn-=wseg;s+='<rect x="'+xn.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,wseg-2).toFixed(1)+'" height="26" rx="3" fill="'+headColor(k)+'" opacity="0.85" '+tipAttr(spillCfg(r,k))+'/>';}
       });
       s+='<text x="'+(x0+bw+12)+'" y="'+(y+18)+'" text-anchor="start" font-size="12.5" font-weight="600" font-family="ui-monospace,monospace" fill="var(--ink-2)">'+usd(tot)+'</text>';
     });
@@ -691,10 +819,19 @@ var DATA=/*__ATLAS_DATA__*/null;
       var yb=Y(vb),ys=Y(vs),yc=Y(vc);
       var yTop=Math.min(yb,ys,yc),yBot=Math.max(yb,ys,yc);
       if(yBot-yTop>0.5)s+='<line x1="'+cx+'" x2="'+cx+'" y1="'+yTop.toFixed(1)+'" y2="'+yBot.toFixed(1)+'" stroke="var(--rule)" stroke-width="2"/>';
-      s+='<circle cx="'+cx+'" cy="'+yb.toFixed(1)+'" r="4" fill="var(--ink)"><title>'+PCTS[i]+' · baseline: '+vb.toFixed(1)+'%</title></circle>';
-      s+='<circle cx="'+cx+'" cy="'+yc.toFixed(1)+'" r="4.5" fill="var(--accent)"><title>'+PCTS[i]+' · conventional (collected): '+vc.toFixed(1)+'%</title></circle>';
-      s+='<circle cx="'+cx+'" cy="'+ys.toFixed(1)+'" r="4.5" fill="var(--surface)" fill-opacity="0.001" stroke="var(--accent)" stroke-width="2"><title>'+PCTS[i]+' · static (ask): '+vs.toFixed(1)+'%</title></circle>';
+      s+='<circle cx="'+cx+'" cy="'+yb.toFixed(1)+'" r="4" fill="var(--ink)"/>';
+      s+='<circle cx="'+cx+'" cy="'+yc.toFixed(1)+'" r="4.5" fill="var(--accent)"/>';
+      s+='<circle cx="'+cx+'" cy="'+ys.toFixed(1)+'" r="4.5" fill="var(--surface)" fill-opacity="0.001" stroke="var(--accent)" stroke-width="2"/>';
       s+='<text x="'+cx+'" y="'+(h-9)+'" text-anchor="middle" font-size="9.5" fill="var(--ink-2)" font-family="ui-monospace,monospace">'+PCTS[i]+'</text>';
+      var etrChg=vc-vb;
+      s+='<rect x="'+gx.toFixed(1)+'" y="'+pad.t+'" width="'+gw.toFixed(1)+'" height="'+ih+'" fill="transparent" '+tipAttr({
+        accent:'var(--accent)', eyebrow:PCTS[i],
+        amount:(etrChg>=0?'+':'−')+Math.abs(etrChg).toFixed(1)+' pp', amountColor:'var(--accent)', sub:'collected vs. current law',
+        rows:[{color:'var(--ink)',label:'Current law',value:vb.toFixed(1)+'%'},
+              {color:'var(--accent)',label:'The ask (static)',value:vs.toFixed(1)+'%'},
+              {color:'var(--accent)',label:'Collected (conv.)',value:vc.toFixed(1)+'%'}],
+        body:(Math.abs(vs-vc)>0.05?('<b>Avoidance gap: '+(vs-vc).toFixed(1)+' pp.</b> The rate the law asks for, minus what is collected once behavior responds.'):null)
+      })+'/>';
     }
     return s+'</svg>';
   }
@@ -742,13 +879,14 @@ var DATA=/*__ATLAS_DATA__*/null;
       if(i>=6){ var yt=Y(isNew?r.ask:r.income);
         s+='<text x="'+cx.toFixed(1)+'" y="'+(yt-6).toFixed(1)+'" text-anchor="middle" font-size="10" font-weight="600" fill="var(--accent)" font-family="ui-monospace,monospace">'+(isNew?'':'+')+usdShort(r.ask)+'</text>'; }
       s+='<text x="'+cx.toFixed(1)+'" y="'+(h-9)+'" text-anchor="middle" font-size="9.5" fill="var(--ink-2)" font-family="ui-monospace,monospace">'+r.bin+'</text>';
-      var pctI=function(x){return r.income>0?(100*x/r.income).toFixed(1)+'%':'—';};
-      s+='<rect x="'+gx.toFixed(1)+'" y="'+pad.t+'" width="'+gw.toFixed(1)+'" height="'+ih+'" fill="transparent"><title>'+r.bin
-        +'\nIncome held: '+usdShort(r.income)
-        +'\nCurrent law taxes: '+usdShort(r.taxbase)+' ('+pctI(r.taxbase)+')'
-        +'\nNew taxes (collected): '+usdShort(r.conv)+' ('+pctI(r.conv)+')'
-        +'\nLeakage (not paid): '+usdShort(r.avoid)
-        +'\nPlan ask: '+usdShort(r.ask)+' ('+pctI(r.ask)+')</title></rect>';
+      s+='<rect x="'+gx.toFixed(1)+'" y="'+pad.t+'" width="'+gw.toFixed(1)+'" height="'+ih+'" fill="transparent" '+tipAttr({
+        accent:'var(--accent)', eyebrow:r.bin,
+        amount:'+'+usdShort(r.ask), amountColor:'var(--accent)', sub:'the plan’s ask',
+        rows:[{color:'var(--accent)',label:'New taxes (collected)',value:usdShort(r.conv)},
+              {color:'var(--accent-2)',label:'Leakage (not paid)',value:usdShort(r.avoid)},
+              {color:'var(--curlaw)',label:'Current law taxes',value:usdShort(r.taxbase)},
+              {color:'var(--kept)',label:'Income held',value:usdShort(r.income)}]
+      })+'/>';
     });
     return s+'</svg>';
   }
@@ -974,7 +1112,13 @@ var DATA=/*__ATLAS_DATA__*/null;
     if(offCount)s+='<text x="'+(pad.l+8)+'" y="'+(h-pad.b-8)+'" font-size="9.5" fill="var(--muted)" font-family="ui-monospace,monospace">▼ '+offCount+' high-leakage packages off scale</text>';
     s+='<path d="'+front.map(function(p,i){return (i?'L':'M')+X(xf(p)).toFixed(1)+' '+Y(p.lk).toFixed(1);}).join(' ')+'" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0.75"/>';
     front.forEach(function(p){
-      s+='<circle cx="'+X(xf(p)).toFixed(1)+'" cy="'+Y(p.lk).toFixed(1)+'" r="5" fill="'+DOTFILL+'" stroke="var(--accent)" stroke-width="2"><title>'+p.name+' · '+usd(p.cv)+' ('+(p.cv/GDP*100).toFixed(2)+'% of GDP) · top 0.1% +'+p.ex.toFixed(1)+'pp at '+(p.lk>0?'+':'')+Math.round(p.lk)+'¢</title></circle>';
+      s+='<circle cx="'+X(xf(p)).toFixed(1)+'" cy="'+Y(p.lk).toFixed(1)+'" r="5" fill="'+DOTFILL+'" stroke="var(--accent)" stroke-width="2" '+tipAttr({
+        accent:'var(--accent)', eyebrow:'Package on the frontier',
+        amount:usd(p.cv), amountColor:'var(--accent)', sub:'· '+(p.cv/GDP*100).toFixed(2)+'% of GDP',
+        rows:[{color:'var(--accent)',label:'Top 0.1% ETR',value:'+'+p.ex.toFixed(1)+' pp'},
+              {color:(p.lk>=0?'var(--good)':'var(--warn)'),label:'Leakage',value:(p.lk>0?'+':'')+Math.round(p.lk)+'¢'}],
+        chips:p.name.split(' + ')
+      })+'/>';
     });
     return s+'</svg>';
   }
@@ -1029,18 +1173,24 @@ var DATA=/*__ATLAS_DATA__*/null;
     // scale over ALL drawn rows: under carryover/deemed, behavior ADDS revenue,
     // so the conventional sum and the package can exceed the static sum
     var mx=Math.max(d.staticParts,d.convParts,d.actual,1);
-    function segsOf(field){ return d.parts.map(function(p){var m=BYKEY[p.key];
-      return {name:m.label,val:p[field],color:LCOLOR[p.key],
-        tip:m.label+' ('+dialSummary(m)+') — standalone '+(field==='s'?'static':'conventional')+' score: '+fmt(p[field])}; }); }
+    function segsOf(field){ return d.parts.map(function(p){var m=BYKEY[p.key],val=p[field];
+      return {name:m.label,val:val,color:LCOLOR[p.key],
+        cfg:{ accent:LCOLOR[p.key], eyebrow:'Standalone · '+(field==='s'?'static':'conventional'),
+          amount:usd(val), amountColor:'var(--ink)', sub:'· '+pg(val)+' of GDP',
+          ctx:{chip:LCOLOR[p.key], text:m.label, dial:dialSummary(m)},
+          body:(field==='s'?'This policy on its own, holding behavior fixed — the mechanical score.':'This policy on its own, with its behavioral response.') } }; }); }
     var pkgSegs,note='';
     if(d.keys.length){
       var negs=d.keys.filter(function(k){return d.phi[k]<-0.5;});
       if(!negs.length){
-        pkgSegs=d.keys.map(function(k){var m=BYKEY[k],v=Math.max(0,d.phi[k]);
+        pkgSegs=d.keys.map(function(k){var m=BYKEY[k],v=Math.max(0,d.phi[k]),pctp=(d.actual>0?Math.round(100*v/d.actual):0);
           return {name:m.label,val:v,color:LCOLOR[k],
-            tip:m.label+' — contribution to the package: '+fmt(v)+' ('+(d.actual>0?Math.round(100*v/d.actual):0)+'% of package, Shapley)'}; });
+            cfg:{ accent:LCOLOR[k], eyebrow:'Shapley contribution', amount:usd(v), amountColor:'var(--ink)', sub:'· '+pg(v)+' of GDP',
+              meter:{share:(d.actual>0?v/d.actual:0),color:LCOLOR[k],label:pctp+'% of the combined package'},
+              ctx:{chip:LCOLOR[k], text:m.label, dial:dialSummary(m)},
+              body:'Marginal revenue averaged over every order in which the package could be assembled — so interaction effects are shared among the policies responsible.' } }; });
       } else {
-        pkgSegs=[{name:'pkg',val:d.actual,color:'var(--accent)',tip:'Combined package — '+fmt(d.actual)}];
+        pkgSegs=[{name:'pkg',val:d.actual,color:'var(--accent)',cfg:{accent:'var(--accent)',eyebrow:'Combined package',amount:usd(d.actual),sub:'· '+pg(d.actual)+' of GDP',body:'Contribution split suppressed — one or more policies contribute negatively at this selection, so a Shapley share would mislead.'}}];
         note='contribution split suppressed: '+negs.join(', ')+' contribute'+(negs.length===1?'s':'')+' negatively at this selection';
       }
     } else { pkgSegs=[]; }
@@ -1056,7 +1206,7 @@ var DATA=/*__ATLAS_DATA__*/null;
       var solo={}; solo[p.key]=d.s[p.key];
       var ch=evalQ('ch',solo),heads={},NH=HEADS_ORDER.length;
       HEADS_ORDER.forEach(function(hk,z){heads[hk]=ch[DEC*NH+z];});
-      return {label:BYKEY[p.key].label,heads:heads};});
+      return {key:p.key,label:BYKEY[p.key].label,dial:dialSummary(BYKEY[p.key]),heads:heads};});
     $('#spill').innerHTML=spillChart(sp,widthOf('spill'));
     $('#spillLegend').innerHTML=sp.length?HEADS.filter(function(hh){
         return sp.some(function(r){return Math.abs(r.heads[hh.k]||0)>0.5;});
