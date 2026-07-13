@@ -135,6 +135,17 @@ Concept caveats: JT01 primary jobs are point-in-time (below any-wage-in-year
 ACS/IRS counts by construction), same UI universe as QWI, LODES8 runs
 through 2022.
 
+Beyond the weights, **LODES is a candidate source for resolving cross-border
+tax liability** (JI 2026-07-13): states tax nonresidents on wages earned
+in-state, residents claim credits for taxes paid to other states, and
+reciprocity agreements (and DC's Home Rule nonresident-tax bar) rewire the
+DC/MD/VA-type flows entirely. Modeling any of that requires knowing where a
+resident's wages are EARNED — exactly the OD matrix. A future extension
+could impute a work-state distribution to each record's wage income from
+the OD shares (by residence state × earnings band), feeding nonresident
+returns, other-state credits, and reciprocity rules in the calculator.
+Added to the Phase 7 list.
+
 **Candidate person-level target dimensions (JI 2026-07-13).** The PUF splits
 wages by earner with demographics (`wages1/2` × `age1/2` × `male1/2`), so
 record-level x-vectors like "wage dollars earned by males 25–34" are
@@ -433,7 +444,9 @@ harness before the next:
 Coupled federal↔state iteration + sales-tax election imputation; frozen-base
 mechanics for fixed-date-conformity states under federal reforms (§2.2
 `st_agi.conformity_year`); local income taxes via county-level sub-state weights
-(§2.6 — NYC/Yonkers, MD counties first); state MTRs and
+(§2.6 — NYC/Yonkers, MD counties first); cross-border wage taxation
+(nonresident returns, other-state credits, reciprocity) with work-state
+imputation from the LODES OD matrix (§2.1); state MTRs and
 combined-MTR behavioral feedback; state distribution tables; state AMTs; historical
 years pre-2017; state population-projection aging of weights.
 
