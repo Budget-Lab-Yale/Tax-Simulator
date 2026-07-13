@@ -645,10 +645,16 @@ build_weight_inputs <- function(tax_units, year, ht2 = NULL, acs_margins = NULL,
     P0_f[stub == s10, ] <- matrix(shares, sum(stub == s10), S, byrow = TRUE)
   }
 
-  # Targets: PUF national totals per (stub, series), distributed by HT2 shares
+  # Targets: PUF national totals per (stub, series), distributed by HT2 shares.
+  # kg_amt is excluded: capital-gains x-vectors are sign-mixed within stubs
+  # and several (stub, state) HT2 cells are net-negative -- negative targets
+  # flip multiplicative-IPF cells negative and poison entire state columns
+  # (root-caused 2026-07-13; n_kg still binds; the gradient engine can
+  # reclaim kg_amt later since it has no positivity constraint)
   targets_f <- list()
   skipped <- character(0)
-  for (series in names(HT2_SERIES_FOR)) {
+  n_dropped_nonpos <- 0
+  for (series in setdiff(names(HT2_SERIES_FOR), "kg_amt")) {
     x_all <- puf_series_x(tu_f, series)
     if (is.null(x_all)) { skipped <- c(skipped, series); next }
     ht2_v <- ht2[variable %in% HT2_SERIES_FOR[[series]],
@@ -663,17 +669,21 @@ build_weight_inputs <- function(tax_units, year, ht2 = NULL, acs_margins = NULL,
       for (k in seq_len(nrow(cell))) {
         tgt <- puf_total * cell$value[k] / denom
         if (!is.finite(tgt)) next
+        # Non-positive targets (negative HT2 cells, e.g. agi_amt in stub 1)
+        # cannot be calibrated multiplicatively; drop and count
+        if (tgt <= 0) { n_dropped_nonpos <- n_dropped_nonpos + 1; next }
         targets_f[[length(targets_f) + 1]] <- list(
           rows = rows, state = st_idx[[cell$state[k]]], x = x,
-          target = tgt, lambda = 1)
+          target = tgt, lambda = 1,
+          # metadata (ignored by the engines; used by diagnostics)
+          series = series, stub = s10, state_code = cell$state[k])
       }
     }
   }
   if (verbose) {
-    message(sprintf("  filer targets: %d (%d records, %d series%s)",
-                    length(targets_f), nrow(tu_f),
-                    length(HT2_SERIES_FOR) - length(skipped),
-                    if (length(skipped)) paste0("; skipped: ",
+    message(sprintf("  filer targets: %d (%d records; %d non-positive dropped%s)",
+                    length(targets_f), nrow(tu_f), n_dropped_nonpos,
+                    if (length(skipped)) paste0("; series without inputs: ",
                                                 paste(skipped, collapse = " ")) else ""))
   }
 
@@ -712,7 +722,8 @@ build_weight_inputs <- function(tax_units, year, ht2 = NULL, acs_margins = NULL,
       if (tgt <= 0) next
       targets_n[[length(targets_n) + 1]] <- list(
         rows = rows, state = st_idx[[m_cl$state[k]]], x = x,
-        target = tgt, lambda = 1)
+        target = tgt, lambda = 1,
+        series = "n_units", cell = cl, state_code = m_cl$state[k])
     }
   }
   if (verbose) {
@@ -740,6 +751,12 @@ build_split_weights <- function(tax_units, year,
     p <- inputs[[part]]
     if (length(p$idx) == 0) next
     fit <- fit_fn(p$w, p$P0, p$targets, ...)
+
+    # The split constraint must hold EXACTLY here -- a violation is a defect
+    # (the 2026-07-13 leak came from negative P cells being dropped by the
+    # weight filter below; negative targets are now blocked at assembly)
+    stopifnot(all(fit$P >= 0), max(abs(rowSums(fit$P) - 1)) < 1e-8)
+
     W <- p$w * fit$P
     dt <- data.table(id = rep(tu$id[p$idx], ncol(W)),
                      state = rep(inputs$jurisdictions, each = nrow(W)),
@@ -809,25 +826,41 @@ fit_gradient <- function(w, P0, targets, beta = 1e-3,
 # --- Approach A: classical raking / IPF ---------------------------------------
 # Seeded at the prior P0, iteratively rescales each (target) so predicted totals
 # approach targets, then renormalizes rows to restore Σ_s P[i,s] = 1. Count and
-# amount targets are handled by the generic x-vector. Converges to a calibrated
-# split; the row renormalization is what enforces the split constraint each pass.
-fit_calibration <- function(w, P0, targets, n_iter = 50, tol = 1e-4, verbose = FALSE) {
+# amount targets are handled by the generic x-vector; targets and x must be
+# non-negative (enforced at assembly). Hardened 2026-07-13 after root-causing
+# the first full-scale fit:
+#   - DAMPED: the per-pass factor is clamped to [1/f_max, f_max] so no single
+#     extreme cell (OA/PR wages showed raw factors up to ~530) can distort the
+#     shared rows for every other target in one pass; convergence is
+#     geometric instead of cyclic
+#   - denominator floor: targets whose predicted total is vanishingly small
+#     relative to the target are skipped that pass and reported as unfittable
+#     if still starved at exit (never silently no-opped)
+fit_calibration <- function(w, P0, targets, n_iter = 200, tol = 1e-4,
+                            f_max = 2, floor_rel = 1e-9, verbose = FALSE) {
   P <- P0
   for (iter in seq_len(n_iter)) {
     maxrel <- 0
     for (t in targets) {
       That <- sum(w[t$rows] * P[t$rows, t$state] * t$x)
-      if (That > 0) {
-        f <- t$target / That
-        P[t$rows, t$state] <- P[t$rows, t$state] * f      # rescale toward target
-        maxrel <- max(maxrel, abs(f - 1))
+      if (That > floor_rel * t$target) {
+        f <- min(max(t$target / That, 1 / f_max), f_max)
+        P[t$rows, t$state] <- P[t$rows, t$state] * f      # damped rescale
+        maxrel <- max(maxrel, abs(t$target / That - 1))
       }
     }
     rs <- rowSums(P); P <- P / rs                          # restore row-sum = 1
-    if (verbose && iter %% 10 == 0) message(sprintf("  iter %d  max|f-1|=%.4f", iter, maxrel))
+    if (verbose && iter %% 10 == 0) message(sprintf("  iter %d  max|rel err|=%.4f", iter, maxrel))
     if (maxrel < tol) break
   }
-  list(P = P, iters = iter)
+  # Report targets still starved at exit
+  unfittable <- which(vapply(targets, function(t) {
+    sum(w[t$rows] * P[t$rows, t$state] * t$x) <= floor_rel * t$target
+  }, logical(1)))
+  if (verbose && length(unfittable) > 0) {
+    message("  unfittable targets at exit: ", length(unfittable))
+  }
+  list(P = P, iters = iter, maxrel = maxrel, unfittable = unfittable)
 }
 
 # --- self-test: gradient correctness (finite differences) + both engines ------

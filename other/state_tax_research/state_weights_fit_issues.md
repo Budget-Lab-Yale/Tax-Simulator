@@ -106,3 +106,45 @@ national weight under the prior rather than losing mass.
    hit rate reported per series, runtime.
 3. Vectorize `fit_gradient()` and run the A/B comparison harness
    (`state_weights_ml_alternative.md` §4) once A is stable.
+
+---
+
+## Resolution (2026-07-13, same day)
+
+**Issue 2 — CLOSED.** Root cause proven by direct diagnosis: the engine's
+renormalized rows always summed to exactly 1 (no NaN/zero rows; prior had
+zero dead cells). The leak came from **negative targets**: several HT2
+cells are net-negative (`kg_amt` in low stubs for AZ/MA/NV/RI; `agi_amt`
+stub 1), and `f = target/That < 0` flipped whole (stub, state) columns of P
+negative — negative weights were then silently dropped by the `weight > 0`
+filter. Fixes: assembly now blocks non-positive targets and excludes
+`kg_amt` from the calibration set (sign-mixed x; `n_kg` retained; the
+gradient engine can reclaim it — no positivity constraint); targets carry
+(series, stub, state) metadata; `build_split_weights()` asserts
+`P >= 0` and exact row sums. **Verified: invariant max error 1.1e-15.**
+The same negative factors also explain the poisoned zero-That columns, and
+the frozen ×157/×533 factors were OA/PR extreme cells (now damped:
+`f_max = 2` clamp + denominator floor + unfittable reporting).
+
+**Issue 1 — root-caused as STRUCTURAL, not a bug.** With the pathologies
+removed, the hardened engine still plateaus (9.8% within 2%, uniform
+~30-40% MARD across broad-support series, while concentrated-support series
+fit well: `eitc_amt` 93%, `mort_int_amt` 56%). Diagnosis: ~21 series impose
+constraints on the SAME (stub × state) cell, and a per-cell multiplier
+cannot satisfy 21 different factors — sequential per-target IPF is valid
+only with one constraint per cell. **Proof**: restricted to `n_returns`
+(one constraint per cell), the identical engine converges in ONE iteration
+to 100% within 2%, MARD 0.000%.
+
+**Architectural conclusion.** The correct classical estimator for
+multi-constraint calibration is Deville–Särndal raking / exponential
+tilting — `P[i,st] ∝ P0[i,st]·exp(Σ_v λ_{st,v} x_iv)` — which uses
+record-level x-heterogeneity to absorb cross-series differences, and is
+mathematically the same family as engine B's softmax objective. The
+bake-off is therefore reframed: **count-backbone IPF (valid, exact, fast)
+builds the prior; the vectorized gradient engine performs the joint
+multi-series fit.** "A vs B" becomes prior-only vs joint-fit, which is the
+comparison that was always economically meaningful.
+
+Remaining work: vectorize `fit_gradient()` (group targets by (stub, series)
+into matrix ops) and run the full harness.
