@@ -113,7 +113,9 @@ read_ht2 <- function(path, year) {
 #
 # HT2 covers filers only, so the non-filer PUF partition is targeted to ACS/Census
 # state × age × income margins instead (plan §2.1). This builds those margins from
-# the local IPUMS USA extract. The authority for WHO is a non-filer is the Tax-Data
+# the local IPUMS USA extract; shared cluster copies live at
+# /nfs/roberts/project/pi_nrs36/shared/raw_data/ACS/acs_common (us{year}a/
+# vintages 2006-2024: usa_{year}a.dat.gz + DDI xml + variables.csv). The authority for WHO is a non-filer is the Tax-Data
 # `filer` flag on the PUF; ACS supplies only the geographic MARGINS across which the
 # non-filer partition is spread — so the ACS filing model here need only be a
 # reasonable v0, refined against the reconciliation total (plan risk item).
