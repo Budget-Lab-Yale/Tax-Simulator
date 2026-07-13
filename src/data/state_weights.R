@@ -309,6 +309,238 @@ build_acs_margins <- function(acs, year, acs_year = NULL) {
 }
 
 # =============================================================================
+# PUF-SIDE TARGET ASSEMBLY (plan §2.1)
+#
+# Maps PUF records onto the ingested targets and builds the (w, P0, targets)
+# inputs both engines consume, per partition:
+#   filers     -> HT2 state x AGI-stub cells, one target per (state, stub,
+#                 series) with shared row/x vectors per (stub, series)
+#   non-filers -> ACS state x age-band x income-tier cells
+#
+# NORMALIZATION (key design point): split weights control only the GEOGRAPHIC
+# distribution -- national totals are fixed by construction. Raw HT2/ACS
+# levels differ from PUF nationals (coverage, vintage), which would make
+# level targets infeasible. So each target is the PUF's own national total
+# for that (cell, series), distributed across states by the HT2/ACS SHARES:
+#   target(st, cell, v) = PUF_total(cell, v) * share_HT2(st | cell, v).
+# Diagnostics against raw HT2 levels remain a separate validation step.
+#
+# v1 documented approximations:
+#   - capital gains in AGI proxied by kg_st + kg_lt with the $3,000 loss cap
+#   - SALT income+sales targeted combined (PUF salt_inc_sales is the greater-
+#     of election; HT2 splits A18425/A18450 -- elections are mutually
+#     exclusive per return, so counts/amounts add)
+#   - stub-1 (negative-AGI) amount targets are skipped by the calibration
+#     engine's positivity guard; count targets still bind there
+#   - non-filer gross income proxy mirrors the ACS INCTOT unit construction
+# =============================================================================
+
+# PUF x-vector for one HT2 target series (NULL if inputs absent)
+puf_series_x <- function(tu, series) {
+  has <- function(...) all(c(...) %in% names(tu))
+  kg_agi <- function() {
+    kg <- tu$kg_st + tu$kg_lt
+    fifelse(kg < 0, pmax(kg, -3000), kg)
+  }
+  switch(series,
+    n_returns  = rep(1, nrow(tu)),
+    n_single   = as.numeric(tu$filing_status == 1),
+    n_joint    = as.numeric(tu$filing_status == 2),
+    n_hoh      = as.numeric(tu$filing_status == 4),
+    n_indiv    = 1 + (tu$filing_status == 2) + tu$n_dep,
+    agi_amt    = if (has("agi")) tu$agi,
+    n_wages    = if (has("wages")) as.numeric(tu$wages != 0),
+    wages_amt  = if (has("wages")) tu$wages,
+    n_int      = if (has("txbl_int")) as.numeric(tu$txbl_int != 0),
+    int_amt    = if (has("txbl_int")) tu$txbl_int,
+    n_div      = if (has("div_ord","div_pref")) as.numeric(tu$div_ord + tu$div_pref != 0),
+    div_amt    = if (has("div_ord","div_pref")) tu$div_ord + tu$div_pref,
+    n_kg       = if (has("kg_st","kg_lt")) as.numeric(kg_agi() != 0),
+    kg_amt     = if (has("kg_st","kg_lt")) kg_agi(),
+    n_salt     = if (has("salt_inc_sales")) as.numeric(tu$salt_inc_sales != 0),
+    salt_amt   = if (has("salt_inc_sales")) tu$salt_inc_sales,
+    n_re_tax   = if (has("salt_prop")) as.numeric(tu$salt_prop != 0),
+    re_tax_amt = if (has("salt_prop")) tu$salt_prop,
+    n_mort_int = if (has("first_mort_int","second_mort_int"))
+                   as.numeric(tu$first_mort_int + tu$second_mort_int != 0),
+    mort_int_amt = if (has("first_mort_int","second_mort_int"))
+                   tu$first_mort_int + tu$second_mort_int,
+    n_eitc     = if (has("eitc")) as.numeric(tu$eitc > 0),
+    eitc_amt   = if (has("eitc")) tu$eitc,
+    NULL)
+}
+
+# HT2 series consumed per PUF series (salt combines income + sales elections)
+HT2_SERIES_FOR <- list(
+  n_returns = "n_returns", n_single = "n_single", n_joint = "n_joint",
+  n_hoh = "n_hoh", n_indiv = "n_indiv",
+  agi_amt = "agi_amt", n_wages = "n_wages", wages_amt = "wages_amt",
+  n_int = "n_int", int_amt = "int_amt", n_div = "n_div", div_amt = "div_amt",
+  n_kg = "n_kg", kg_amt = "kg_amt",
+  n_salt = c("n_salt_inc","n_salt_sales"), salt_amt = c("salt_inc_amt","salt_sales_amt"),
+  n_re_tax = "n_re_tax", re_tax_amt = "re_tax_amt",
+  n_mort_int = "n_mort_int", mort_int_amt = "mort_int_amt",
+  n_eitc = "n_eitc", eitc_amt = "eitc_amt")
+
+# Assign each record to its HT2 AGI stub (lower <= agi < upper)
+assign_ht2_stub <- function(agi, year) {
+  breaks <- ht2_stub_breaks(year)
+  findInterval(agi, c(breaks$lower, Inf), rightmost.closed = FALSE)
+}
+
+# Gross-income proxy for non-filer cell assignment, mirroring the ACS INCTOT
+# unit construction (sum of positive incomes)
+puf_gross_income <- function(tu) {
+  pmax(tu$wages, 0) + pmax(tu$txbl_int, 0) + pmax(tu$exempt_int, 0) +
+    pmax(tu$div_ord + tu$div_pref, 0) + pmax(tu$kg_st + tu$kg_lt, 0) +
+    pmax(tu$txbl_pens_dist, 0) + pmax(tu$txbl_ira_dist, 0) +
+    pmax(tu$gross_ss, 0) + pmax(tu$sole_prop, 0)
+}
+
+#' Assemble engine inputs for one year: partitions, priors, and targets.
+#' @param tax_units PUF records incl. baseline-calculated `agi` and `eitc`
+#'        (join from baseline detail when running standalone)
+#' @param ht2 long target table from read_ht2(); read from the store if NULL
+#' @param acs_margins list from build_acs_margins(); built if NULL (slow)
+#' @return list(jurisdictions, filers = list(idx, w, P0, targets),
+#'              nonfilers = list(idx, w, P0, targets))
+build_weight_inputs <- function(tax_units, year, ht2 = NULL, acs_margins = NULL,
+                                verbose = TRUE) {
+
+  tu <- as.data.table(tax_units)
+  if (is.null(ht2)) ht2 <- read_ht2(ht2_path(year), year)
+  if (is.null(acs_margins)) {
+    acs_margins <- build_acs_margins(read_acs_extract(min(year, 2022)), year)
+  }
+
+  # Jurisdiction order defines P0/engine state indices: HT2 areas as published
+  # (51 + OA, + PR from 2018), sorted for determinism
+  jurisdictions <- sort(unique(ht2$state))
+  S <- length(jurisdictions)
+  st_idx <- setNames(seq_len(S), jurisdictions)
+
+  #---------------------------
+  # Filer partition (HT2)
+  #---------------------------
+
+  idx_f <- which(tu$filer == 1)
+  tu_f  <- tu[idx_f]
+  stub  <- assign_ht2_stub(tu_f$agi, year)
+
+  # Prior: HT2 return shares within stub
+  ht2_ret <- dcast(ht2[variable == "n_returns"], agi_stub ~ state, value.var = "value")
+  P0_f <- matrix(0, nrow(tu_f), S)
+  for (s10 in sort(unique(stub))) {
+    shares <- as.numeric(ht2_ret[agi_stub == s10, ..jurisdictions])
+    shares <- pmax(shares, 0); shares <- shares / sum(shares)
+    P0_f[stub == s10, ] <- matrix(shares, sum(stub == s10), S, byrow = TRUE)
+  }
+
+  # Targets: PUF national totals per (stub, series), distributed by HT2 shares
+  targets_f <- list()
+  skipped <- character(0)
+  for (series in names(HT2_SERIES_FOR)) {
+    x_all <- puf_series_x(tu_f, series)
+    if (is.null(x_all)) { skipped <- c(skipped, series); next }
+    ht2_v <- ht2[variable %in% HT2_SERIES_FOR[[series]],
+                 .(value = sum(value)), by = .(state, agi_stub)]
+    for (s10 in sort(unique(stub))) {
+      rows  <- which(stub == s10)
+      x     <- x_all[rows]
+      puf_total <- sum(tu_f$weight[rows] * x)
+      cell  <- ht2_v[agi_stub == s10]
+      denom <- sum(cell$value)
+      if (denom <= 0 || puf_total == 0) next
+      for (k in seq_len(nrow(cell))) {
+        tgt <- puf_total * cell$value[k] / denom
+        if (!is.finite(tgt)) next
+        targets_f[[length(targets_f) + 1]] <- list(
+          rows = rows, state = st_idx[[cell$state[k]]], x = x,
+          target = tgt, lambda = 1)
+      }
+    }
+  }
+  if (verbose) {
+    message(sprintf("  filer targets: %d (%d records, %d series%s)",
+                    length(targets_f), nrow(tu_f),
+                    length(HT2_SERIES_FOR) - length(skipped),
+                    if (length(skipped)) paste0("; skipped: ",
+                                                paste(skipped, collapse = " ")) else ""))
+  }
+
+  #---------------------------
+  # Non-filer partition (ACS)
+  #---------------------------
+
+  idx_n <- which(tu$filer == 0)
+  tu_n  <- tu[idx_n]
+  nm    <- as.data.table(acs_margins$nonfiler_margins)
+  cell_n <- paste(age_band(tu_n$age1), income_tier(puf_gross_income(tu_n)), sep = "|")
+  nm[, cell := paste(age_band, income_tier, sep = "|")]
+
+  # Prior: ACS state shares within cell; fallback to overall non-filer shares
+  overall <- nm[, .(n = sum(n_units)), by = state]
+  overall_shares <- setNames(rep(0, S), jurisdictions)
+  overall_shares[overall$state] <- overall$n / sum(overall$n)
+
+  P0_n <- matrix(0, nrow(tu_n), S)
+  targets_n <- list()
+  for (cl in sort(unique(cell_n))) {
+    rows <- which(cell_n == cl)
+    m_cl <- nm[cell == cl]
+    if (nrow(m_cl) == 0) {
+      P0_n[rows, ] <- matrix(overall_shares, length(rows), S, byrow = TRUE)
+      next
+    }
+    shares <- setNames(rep(0, S), jurisdictions)
+    shares[m_cl$state] <- m_cl$n_units / sum(m_cl$n_units)
+    P0_n[rows, ] <- matrix(shares, length(rows), S, byrow = TRUE)
+
+    puf_total <- sum(tu_n$weight[rows])
+    x <- rep(1, length(rows))
+    for (k in seq_len(nrow(m_cl))) {
+      tgt <- puf_total * m_cl$n_units[k] / sum(m_cl$n_units)
+      if (tgt <= 0) next
+      targets_n[[length(targets_n) + 1]] <- list(
+        rows = rows, state = st_idx[[m_cl$state[k]]], x = x,
+        target = tgt, lambda = 1)
+    }
+  }
+  if (verbose) {
+    message(sprintf("  non-filer targets: %d (%d records, %d cells)",
+                    length(targets_n), nrow(tu_n), length(unique(cell_n))))
+  }
+
+  list(jurisdictions = jurisdictions,
+       filers    = list(idx = idx_f, w = tu_f$weight, P0 = P0_f, targets = targets_f),
+       nonfilers = list(idx = idx_n, w = tu_n$weight, P0 = P0_n, targets = targets_n))
+}
+
+#' Fit both partitions with the chosen engine and assemble long split weights.
+#' @return data.table(id, state, weight) with Σ_state weight = national weight
+build_split_weights <- function(tax_units, year,
+                                method = c("calibration", "gradient"),
+                                inputs = NULL, ...) {
+  method <- match.arg(method)
+  tu <- as.data.table(tax_units)
+  if (is.null(inputs)) inputs <- build_weight_inputs(tu, year)
+
+  fit_fn <- if (method == "gradient") fit_gradient else fit_calibration
+  out <- list()
+  for (part in c("filers", "nonfilers")) {
+    p <- inputs[[part]]
+    if (length(p$idx) == 0) next
+    fit <- fit_fn(p$w, p$P0, p$targets, ...)
+    W <- p$w * fit$P
+    dt <- data.table(id = rep(tu$id[p$idx], ncol(W)),
+                     state = rep(inputs$jurisdictions, each = nrow(W)),
+                     weight = as.vector(W))
+    out[[part]] <- dt[weight > 0]
+  }
+  rbindlist(out)
+}
+
+# =============================================================================
 # WEIGHTING ENGINES
 #
 # Both operate on a common problem: N records (a filer or non-filer partition),
