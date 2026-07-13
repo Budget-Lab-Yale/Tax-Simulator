@@ -359,7 +359,11 @@ if (typeof A.setDecade !== "function" || N_DEC < 2) {
 // ---- dist card correctness: REF dollars reproduce the stack_ref run --------------
 // The dollar views are surrogate ETR-delta × fixed baseline income. At the reference
 // dials this must reproduce the actual stack_ref run (top 0.01%: current-law $358B,
-// new taxes $206B, leakage $178B — from other/top_tax/dist_card_data.json).
+// new taxes $259B, leakage $121B). v2 (2026-07-12, top_tax_dials_30y_v2): re-pinned
+// from the v1 split ($206B new / $178B leak) — the estate-margins + wealth-carry
+// physics raised top-0.01% conventional survival (more collected, less leaked); total
+// ask ~flat ($384B->$380B). Verified against the REAL run via extract_atlas_data on
+// the expanded/fixed/wealth_cit_vat slice — surrogate reproduces it to <$0.4B.
 {
   const D = JSON.parse(fs.readFileSync(path.join(__dirname, "atlas2_data.json"), "utf8"));
   const lev = D.meta.levers, groups = D.meta.etr_groups, comps = D.meta.etr_comps;
@@ -374,7 +378,7 @@ if (typeof A.setDecade !== "function" || N_DEC < 2) {
   const baseRate = five.reduce((t, c) => t + base[c], 0);
   const statRate = rowTot(etrD), convRate = rowTot(etrcD);
   const clD = baseRate / 100 * inc, newD = (convRate - baseRate) / 100 * inc, leakD = (statRate - convRate) / 100 * inc;
-  const exp = { cl: 358.354, nw: 206.439, lk: 177.668 };
+  const exp = { cl: 358.354, nw: 258.910, lk: 121.321 };
   const near = (a, b, tol) => Math.abs(a - b) <= tol;
   if (!near(clD, exp.cl, 1)) problems.push(`dist REF: current-law $${clD.toFixed(1)}B vs stack_ref $${exp.cl}B`);
   if (!near(newD, exp.nw, 12)) problems.push(`dist REF: new taxes $${newD.toFixed(1)}B vs stack_ref $${exp.nw}B (surrogate tol)`);

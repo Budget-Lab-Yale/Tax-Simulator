@@ -3,7 +3,7 @@
 # Pure file I/O + node; login-node safe. Run when the SLURM pipeline drains.
 set -e
 cd "$(dirname "$0")/../.."
-ROOT=/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/top_tax_dials_30y_v1
+ROOT=/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/top_tax_dials_30y_v2
 
 echo "== fit =="
 python3 other/top_tax/fit_surrogate.py "$ROOT" other/top_tax/atlas2_data.json
