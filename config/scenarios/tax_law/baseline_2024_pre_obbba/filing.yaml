@@ -1,0 +1,6 @@
+---
+
+# Whether to repeal head of household filing status (forcing would-be
+# HoH tax units into filing single) 
+repeal_hoh:
+  value: 0

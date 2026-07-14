@@ -1,0 +1,22 @@
+---
+
+# Whether to repeal Foreign Tax Credit
+repeal_ftc:
+  value: 0
+
+# Whether to repeal residential energy credits
+repeal_res_energy:
+  value: 0
+  
+# Whether to repeal credit for the elderly/disabled
+repeal_old:
+  value: 0
+  
+# Whether to repeal general business credits
+repeal_gbc:
+  value: 0
+  
+# Whether to repeal all other nonrefundable credits
+repeal_other:
+  value: 0
+

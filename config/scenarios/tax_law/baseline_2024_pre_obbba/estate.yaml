@@ -1,0 +1,52 @@
+---
+#-------------------------------------------------------------------------------
+# Estate tax law parameters — PRE-OBBBA (TCJA-sunset) COUNTERFACTUAL.
+#
+# Identical to baseline/estate.yaml EXCEPT the 2026 basic-exclusion anchor is
+# reverted from OBBBA ($15M) to the TCJA-sunset level ($7.2M in 2026, chained-CPI
+# indexed thereafter) — the JCT OBBBA-vs-sunset scoring counterfactual. This is
+# the flat $7.2M validation-fixture value used in tests/estate_sunset/estate.yaml
+# (calibrator SUNSET_BEA_2026, JCT delta -6.5%). Everything else (rate ladder,
+# brackets, portability, income-tax-at-death deductibility) is unchanged, so the
+# OBBBA estate-exemption increase scores correctly as the 08-estate stack line.
+#
+# LAW ONLY: the measurement bridge lives in config/estate/estate_valuation_params.yaml.
+#-------------------------------------------------------------------------------
+
+# Basic exclusion amount (IRC §2010(c)(3)).
+#   - 2014-2017: pre-TCJA ($5M-in-2010 regime; 2014 published $5.34M, CPI-indexed)
+#   - 2018-2025: TCJA doubled base ($11.18M published 2018), chained CPI thereafter
+#   - 2026+: TCJA SUNSET — reverts to ~$7.2M (pre-TCJA regime restored),
+#     chained CPI off a 2025 base year. (Baseline has OBBBA $15M here instead.)
+exemption:
+  value:
+    '2014': 5340000
+    '2018': 11180000
+    '2026': 7200000
+  i_measure:
+    '2013': cpi
+    '2018': chained_cpi
+  i_base_year:
+    '2014': 2013
+    '2018': 2017
+    '2026': 2025
+  i_direction: -1
+  i_increment: 10000
+
+# Tentative tax schedule (IRC §2001(c)): graduated rates with bracket LOWER
+# bounds, fixed in nominal terms. The unified credit at the exemption makes
+# liability exactly 40% of the excess over the exemption (whole ladder < $1M).
+rates:
+  value: [0.18, 0.20, 0.22, 0.24, 0.26, 0.28, 0.30, 0.32, 0.34, 0.37, 0.39, 0.40]
+
+brackets:
+  value: [0, 10000, 20000, 40000, 60000, 80000, 100000, 150000, 250000, 500000, 750000, 1000000]
+
+# Portability of the deceased spousal unused exclusion (§2010(c)(4)-(5)).
+portability:
+  value: 1
+
+# Deductibility of the decedent's death-triggered income tax against the taxable
+# estate. No effect under current law (death triggers no income tax here).
+income_tax_ded:
+  value: 1
