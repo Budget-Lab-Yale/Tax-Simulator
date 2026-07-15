@@ -196,12 +196,22 @@ check('spec: folder beats scalar',
                                    s = 0.5))$kind == 'folder')
 
 # --- resolve the SHIPPED profiles --------------------------------------------
-# default: flat zero -> inactive no-op, identity M (model byte-identical today)
+# default: calibrated persistent-flow surface, active, identity M
 .pd = wealth_dyn_resolve_profile(list(wealth_financing = NA, s = NA))
-check('default: dims 63x100',  all(dim(.pd$s_mat) == c(length(.ages), .nb)))
-check('default: all zero',     all(.pd$s_mat == 0))
-check('default: inactive',     isFALSE(.pd$active))
-check('default: M identity',   isTRUE(.pd$fingerprint$M_is_identity))
+check('default: dims 63x100',      all(dim(.pd$s_mat) == c(length(.ages), .nb)))
+check('default: calibrated range', approx(.pd$fingerprint$s_min, 0.04) &&
+                                   approx(.pd$fingerprint$s_max, 0.80))
+check('default: active',           isTRUE(.pd$active))
+check('default: monotone by wealth percentile at every age',
+      all(apply(.pd$s_mat, 1, function(x) all(diff(x) >= 0))))
+check('default: representative calibrated cells',
+      approx(.pd$s_mat['18', 1], 0.040) &&
+      approx(.pd$s_mat['40', 50], 0.200) &&
+      approx(.pd$s_mat['55', 95], 0.565) &&
+      approx(.pd$s_mat['80', 99], 0.645))
+check('default: top percentile fixed at 0.80 across ages',
+      approx(.pd$s_mat[, 100], rep(0.80, length(.ages))))
+check('default: M identity',       isTRUE(.pd$fingerprint$M_is_identity))
 
 # scalar shorthand: flat s_mat == constant matrix the old scalar kernel used
 .p5 = wealth_dyn_resolve_profile(list(wealth_financing = NA, s = 0.5))
