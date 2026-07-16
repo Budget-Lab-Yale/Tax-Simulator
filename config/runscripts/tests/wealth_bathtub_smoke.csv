@@ -2,5 +2,5 @@ ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,s,dep.Tax-Data.vintage,d
 baseline,baseline,,2026:2031,,kg_lt net_worth estate,nextdollar nextdollar nextdollar,0,2026060918,baseline
 cg_5pp_s0,tests/kg_5pp_all,kg_dynamics/turnover,2026:2031,2026,kg_lt estate,nextdollar nextdollar,0,2026060918,baseline
 cg_5pp_s50,tests/kg_5pp_all,kg_dynamics/turnover,2026:2031,2026,kg_lt estate,nextdollar nextdollar,0.5,2026060918,baseline
-wealth_warren_s0,public/wealth_tax_warren,wealth/avoidance,2026:2031,2026,net_worth estate,nextdollar nextdollar,0,2026060918,baseline
-wealth_warren_s50,public/wealth_tax_warren,wealth/avoidance,2026:2031,2026,net_worth estate,nextdollar nextdollar,0.5,2026060918,baseline
+wealth_warren_s0,public/wealth_tax_warren,wealth/avoidance estate/avoidance,2026:2031,2026,net_worth estate,nextdollar nextdollar,0,2026060918,baseline
+wealth_warren_s50,public/wealth_tax_warren,wealth/avoidance estate/avoidance,2026:2031,2026,net_worth estate,nextdollar nextdollar,0.5,2026060918,baseline

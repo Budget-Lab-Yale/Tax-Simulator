@@ -166,8 +166,19 @@ for (t in years) {
   #--- (d) conservation identity from detail vs the module diagnostic ----------
   diagf = file.path(root_c, scen, 'conventional', 'supplemental',
                     paste0('hidden_ledger_', t, '.csv'))
+  # estate fields moved to the standalone estate/avoidance module's diag
+  # (2026-07-16 split); join them back for the print below
+  ediagf = file.path(root_c, scen, 'conventional', 'supplemental',
+                     paste0('estate_avoidance_', t, '.csv'))
   if (file.exists(diagf)) {
     hd = fread(diagf, showProgress = FALSE)
+    if (file.exists(ediagf)) {
+      ed = fread(ediagf, showProgress = FALSE)
+      hd$estate_concealed_frac_wmean = ed$estate_concealed_frac_wmean
+    } else {
+      hd$estate_concealed_frac_wmean = NA_real_
+      check(FALSE, sprintf('year %d (d): estate_avoidance diagnostic missing (%s)', t, ediagf))
+    }
     check(hd$conservation_max_leg_err < 1e-6,
           sprintf('year %d (d): module per-record conservation_max_leg_err %.2e < 1e-6',
                   t, hd$conservation_max_leg_err))

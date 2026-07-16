@@ -1,9 +1,11 @@
 #-------------------------------------------------------------------------------
 # EVASION_PROVENANCE
 #
-# Rate-driven income tax noncompliance (evasion), per DeBacker, Heim &
-# Yuskavage, "Marginal Tax Rates and Income Tax Noncompliance" (Treasury
-# OTA / NTA Annual Meetings, November 2025; NRP random-audit data 2006-2017).
+# Rate-driven income tax noncompliance (evasion), per DeBacker (U. of South
+# Carolina), Heim (U. of Central Florida) & Yuskavage (Treasury OTA),
+# "Marginal Tax Rates and Income Tax Noncompliance" (NTA Annual Meetings,
+# November 6, 2025; NRP random-audit data 2006-2017; findings are the
+# authors', not Treasury's).
 # DHY estimate the elasticity of noncompliance with respect to the net-of-tax
 # rate as a COMPONENT of the ETI (their slide 8: ETI = e_avoidance +
 # e_noncompliance), so the values below are applied here as net-of-tax-rate
@@ -127,6 +129,22 @@ do_evasion = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, inde
          'part_active rent", mtr_types = "nextdollar nextdollar nextdollar"). ',
          'The runscript for scenario "', scenario_info$ID, '" is missing: ',
          paste(missing, collapse = ', '), '.')
+  }
+
+  # --- Consistency contract (R3, loud warning): evaded income is supposed to
+  # leave the reported wealth and estate bases too. The estate leg lives in
+  # estate/avoidance (which reads the evasion_g_* factors persisted below);
+  # without it, evaded income silently stays visible to the estate tax --
+  # exactly the activation bug of 2026-07-16. Income-side-only calibration
+  # harnesses may ignore this warning; product runscripts must not (the
+  # top_tax lint enforces it statically).
+  ev_modules = scenario_info$behavior_modules %||% character()
+  if (!any(startsWith(ev_modules, 'estate/'))) {
+    warning('do_evasion(): no estate/ module in the behavior stack for ',
+            'scenario "', scenario_info$ID, '" -- evaded income will NOT be ',
+            'removed from the reported estate base. Add "estate/avoidance" ',
+            'after this module unless this is an income-side-only ',
+            'calibration run.', immediate. = TRUE)
   }
 
   message('do_evasion(): applying noncompliance elasticities (', EVASION_VERSION,

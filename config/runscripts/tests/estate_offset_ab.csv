@@ -3,4 +3,4 @@ baseline,baseline,,2026:2029,,kg_lt estate net_worth,nextdollar nextdollar nextd
 est2009_kg,tests/warren_estate2009,kg_dynamics/turnover,2026:2029,,kg_lt estate net_worth,nextdollar nextdollar nextdollar,none
 cg5pp_kg,tests/kg_dyn_rate_up_5pp,kg_dynamics/turnover,2026:2029,,kg_lt estate net_worth,nextdollar nextdollar nextdollar,none
 dr_noded_kg,tests/dr_prim_noded,kg_dynamics/turnover,2026:2029,,kg_lt estate net_worth,nextdollar nextdollar nextdollar,none
-est2009_avoid,tests/warren_estate2009,wealth/avoidance,2026:2029,,kg_lt estate net_worth,nextdollar nextdollar nextdollar,none
+est2009_avoid,tests/warren_estate2009,wealth/avoidance estate/avoidance,2026:2029,,kg_lt estate net_worth,nextdollar nextdollar nextdollar,none

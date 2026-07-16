@@ -36,8 +36,10 @@
 #       evaded share of a record's closely-held income pulls the matching share
 #       of its closely-held assets out of both reported stock bases (a
 #       consistency rule, not a new elasticity)
-#   R4  Concealed wealth also escapes the reported ESTATE at death (via the
-#       estate_concealed_frac column read by calc_estate)
+#   R4  Concealed wealth also escapes the reported ESTATE at death -- carried
+#       by estate/avoidance.R (REQUIRED later in the stack; hard-stop below),
+#       which combines it with income evasion and the KS own-rate response
+#       into the estate_concealed_frac column read by calc_estate
 #   R5  Homes keep the uniform 50/50 split (no home-specific chi)
 #   R6  Capital gains are IN v1 as a reporting-QUANTITY overlay: reported kg_lt
 #       scales by (1 - c_pub) AFTER the kg module sets realization behavior (the
@@ -47,78 +49,17 @@
 # The IRON RULE (from the audit): concealment touches ONLY tax-computation
 # inputs -- reported income-flow columns (they feed do_taxes and nothing else),
 # the materialized net_worth column (the documented isolation point calc_wealth
-# reads), and the optional estate_concealed_frac input to calc_estate. It NEVER
-# scales value.*, which every real-side channel reads as the true balance sheet.
+# reads), and -- through estate/avoidance.R -- the optional estate_concealed_frac
+# input to calc_estate. It NEVER scales value.*, which every real-side channel
+# reads as the true balance sheet.
 #-------------------------------------------------------------------------------
 
 WEALTH_AVOID_VERSION  = paste('2026-07-08 hidden-ledger (R1-R7);',
                               'elasticities author-accepted (seeded from standalone);',
-                              '2026-07-12 + estate own-rate response (KS)')
+                              '2026-07-16 estate response split out to estate/avoidance')
 WEALTH_AVOID_PUBLIC_E  = -7
 WEALTH_AVOID_PRIVATE_E = -17
 
-#-------------------------------------------------------------------------------
-# ESTATE_AVOID_PROVENANCE
-#
-# Reported-estate OWN-RATE response (estate-margins build part (b), plan
-# effervescent-plotting-wadler rev 3). Kopczuk-Slemrod (2001, "Dying to save
-# taxes", REStat 83(2)) estimate an elasticity of REPORTED estates with
-# respect to the net-of-estate-tax rate of ~0.16 (their preferred pooled
-# estimates run ~0.10-0.22 across specifications; publish the band, not the
-# point). The internally consistent finite-change functional form is the
-# EXACT net-of-tax power form
-#
-#   retained = ((1 - tau_S) / (1 - tau_B)) ^ ESTATE_REPORT_EPS
-#   f_estate = 1 - retained
-#
-# where tau_B / tau_S are the per-record UN-SWITCHED marginal estate rates
-# (mtr_estate) under the baseline and scenario legs, both clamped to
-# [0, 1 - 1e-6]. Exact for large reforms; handles newly taxable records
-# (tau_B = 0 -> retained = (1 - tau_S)^eps) without applying a top-rate
-# local derivative where the baseline rate is zero. (The earlier rev-2 local
-# semi-elasticity -0.27 = -0.16/0.60 at the 40% top rate is RETIRED; this
-# form replaces it and reproduces it to first order at the top rate.)
-#
-# KEY DESIGN RULE — the response keys off the CHANGE in the estate price
-# (tau_S vs tau_B), NEVER the level: the LEVEL of baseline avoidance is
-# already baked into the frozen valuation bridge (r, rho_pt, f_ded,
-# calibrated to actual SOI reported estates in estate_valuation_params.yaml);
-# a level response would double-count it. Baseline leg / unchanged estate
-# law -> ratio = 1 -> exact no-op. A reform toggling ONLY
-# estate.income_tax_ded cannot fire this response (mtr_estate is the
-# un-switched base rate by construction).
-#
-# NO CHI on the own-base response: the own base IS the estate — valuation
-# gaming and concealment both reduce estate_base through the same single
-# estate_concealed_frac column, so CHI*f would scale KS down with the
-# (1-CHI) share going nowhere. The FULL f_estate applies. CHI stays reserved
-# for cross-base propagation, of which the estate own-rate response has none
-# in v1 (realized at death; no during-life income-flow feedback). This is a
-# deliberate asymmetry with the wealth response above.
-#
-# Firewall (identical to the wealth concealment): reduces estate_base ONLY,
-# via estate_concealed_frac; estate_distributable (the heir allocator's
-# bequest ladder) and value.* stay invariant. Stacks MULTIPLICATIVELY on the
-# retained share with the existing wealth-concealment x income-evasion union
-# (one hidden ledger, now THREE drivers, never > 100% hidden).
-#
-# Source caveats: KS's 0.16 bundles timing, avoidance, valuation, and some
-# real accumulation; part of the observed reported-estate response IS
-# charitable planning, which this reduced form partially absorbs (a real
-# responsive-charity margin — deduction + heir resources + p_char moving
-# together — is a possible follow-up build, deliberately NOT this one).
-# Denominator convention: estate_concealed_frac applies to reported_gross,
-# while KS's elasticity is of the reported TAXABLE estate — a slight
-# overstatement above the exemption, same convention as the wealth
-# concealment, inside the published band.
-#
-# Magnitude reconciliation: at eps = 0.16 a 40% -> 55% top-rate hike gives
-# f ~= 1 - (0.45/0.60)^0.16 ~= 4.5% of the top-bracket reported estate — an
-# order of magnitude below the wealth-tax concealment response (public -7 /
-# private -17 imply ~19%/~40% at a 3% ANNUAL rate), as it should be: the
-# estate tax is a once-at-death levy, the wealth tax recurs.
-#-------------------------------------------------------------------------------
-ESTATE_REPORT_EPS = as.numeric(Sys.getenv('ESTATE_REPORT_EPS', unset = '0.16'))
 
 # Concealment shares (R7): the fraction of the avoidance RESPONSE that is
 # concealment as opposed to legal valuation gaming. Env-overridable for band
@@ -153,17 +94,11 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   #     closely-held wealth stops producing reported pass-through / rent income
   #     (SECA companions co-scaled, debacker pattern). Multiplicative,
   #     positive-leg gated. These columns feed only do_taxes.
-  # (4) Estate: estate_concealed_frac (wealth concealment union income-evasion
-  #     concealment, divided by gross assets) rides the record into calc_estate,
-  #     where it reduces estate_base but NOT estate_distributable (heirs inherit
-  #     the hidden wealth unchanged; the income-tax-at-death deduction uses the
-  #     exact same slot).
-  # (5) Estate OWN-RATE response (ESTATE_AVOID_PROVENANCE above): the exact
-  #     KS net-of-tax power form on the CHANGE in the un-switched marginal
-  #     estate rate (mtr_estate, scenario vs baseline leg) yields f_estate,
-  #     which stacks multiplicatively on the retained share with the union in
-  #     (4) — one hidden ledger, three drivers. Full strength (no CHI);
-  #     estate_base only; exact no-op when estate law is unchanged.
+  # (4) Estate propagation is DELEGATED: the concealment fractions are
+  #     persisted as wealth_c_pub / wealth_c_priv record columns and consumed
+  #     by estate/avoidance.R (required later in the stack; hard-stop below),
+  #     which combines them with income evasion and the KS own-rate response
+  #     into the single estate_concealed_frac column read by calc_estate.
   #
   # This is an "implement-any-logic" module (like employment/bastian.R), not a
   # one-line apply_mtr_elasticity() call, because the dual-class response scales
@@ -174,25 +109,21 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   # Parameters:
   #   - tax_units (df)       : tibble of tax units, pre tax calculation, with
   #                            the materialized net_worth column and raw value.*
-  #   - baseline_mtrs (df)   : baseline MTRs. mtr_net_worth is unused (the
-  #                            baseline wealth MTR is 0 by construction -- no
-  #                            wealth tax under current law) but mtr_estate is
-  #                            LOAD-BEARING: current law has a 40% top estate
-  #                            rate, so the baseline estate-MTR leg is genuinely
-  #                            nonzero and the own-rate response keys off the
-  #                            scenario-vs-baseline change
+  #   - baseline_mtrs (df)   : baseline MTRs (unused here -- the baseline
+  #                            wealth MTR is 0 by construction; the estate
+  #                            legs now live in estate/avoidance.R)
   #   - static_mtrs (df)     : static-counterfactual MTRs, must carry
   #                            mtr_net_worth (the statutory marginal wealth
-  #                            rate) and mtr_estate (the un-switched marginal
-  #                            estate rate)
+  #                            rate)
   #   - scenario_info (list) : get_scenario_info() object (ID + behavior_modules
   #                            for the order guard; output_path for diagnostics)
   #   - indexes (df)         : generate_indexes() object (unused here)
   #
   # Returns: full tax_units tibble with net_worth overwritten by the avoided
   #          (reported) base, reported income/gain legs concealed, and the
-  #          estate_concealed_frac column added for calc_estate. value.* and
-  #          kg_lt_basis / kg_deemed_full unchanged.
+  #          concealment fractions persisted as wealth_c_pub / wealth_c_priv
+  #          for estate/avoidance.R downstream. value.* and kg_lt_basis /
+  #          kg_deemed_full unchanged.
   #----------------------------------------------------------------------------
 
   modules = scenario_info$behavior_modules %||% character()
@@ -224,6 +155,20 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
          paste(modules, collapse = ' '), '.')
   }
 
+  # --- Activation contract: the wealth concealment must reach the reported
+  # estate, and that propagation lives in estate/avoidance (which also carries
+  # the KS own-rate response). Running wealth/avoidance without it would
+  # silently break the hidden-ledger consistency, so fail closed.
+  es_pos = which(startsWith(modules, 'estate/'))
+  if (length(es_pos) == 0 || (length(wl_pos) > 0 && max(es_pos) < min(wl_pos))) {
+    stop('do_wealth(): wealth/avoidance requires estate/avoidance LATER in the ',
+         'behavior stack (it consumes the persisted wealth_c_* concealment ',
+         'fractions and owns estate_concealed_frac). Add "estate/avoidance" ',
+         'after this module in the behavior column. Scenario "',
+         scenario_info$ID, '" has behavior modules: ',
+         paste(modules, collapse = ' '), '.')
+  }
+
   # --- Required-MTR guard. The wealth MTR must be registered for this module to
   # do anything. Fail loudly rather than silently skipping avoidance (which
   # would mislabel a static score as conventional).
@@ -234,31 +179,10 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
          'scenario "', scenario_info$ID, '" does not provide mtr_net_worth.')
   }
 
-  # --- Required-MTR guard, estate legs. The own-rate response needs the
-  # un-switched marginal estate rate on BOTH legs: unlike the wealth case the
-  # BASELINE estate MTR is genuinely nonzero (current law has a 40% top rate),
-  # so the baseline join is load-bearing. A missing baseline column usually
-  # means a PRE-BUILD baseline vintage -- re-run the baseline static pass with
-  # current code and "estate" registered in its mtr_vars.
-  if (is.null(static_mtrs) || !('mtr_estate' %in% names(static_mtrs))) {
-    stop('do_wealth(): the estate own-rate response requires a registered ',
-         'estate MTR (mtr_vars = "estate", mtr_types = "nextdollar") on the ',
-         'scenario row. The runscript for scenario "', scenario_info$ID,
-         '" does not provide mtr_estate in static MTRs.')
-  }
-  if (is.null(baseline_mtrs) || !('mtr_estate' %in% names(baseline_mtrs))) {
-    stop('do_wealth(): the estate own-rate response requires mtr_estate in ',
-         'BASELINE MTRs (register "estate" in the baseline row\'s mtr_vars). ',
-         'Missing there usually means a pre-build baseline vintage -- re-run ',
-         'the baseline static pass with current code. Scenario: "',
-         scenario_info$ID, '".')
-  }
-
   message('do_wealth(): applying wealth-avoidance + hidden-ledger concealment (',
           WEALTH_AVOID_VERSION, '; public_e=', WEALTH_AVOID_PUBLIC_E,
           ', private_e=', WEALTH_AVOID_PRIVATE_E, '; CHI_PUB=', WEALTH_CHI_PUB,
-          ', CHI_PRIV=', WEALTH_CHI_PRIV,
-          '; estate_report_eps=', ESTATE_REPORT_EPS, ')')
+          ', CHI_PRIV=', WEALTH_CHI_PRIV, ')')
 
   year = tax_units$year[1]
 
@@ -279,14 +203,9 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   }
 
   df = tax_units %>%
-    left_join(static_mtrs %>% select(id, year, mtr_net_worth,
-                                     mtr_estate_S = mtr_estate),
+    left_join(static_mtrs %>% select(id, year, mtr_net_worth),
               by = c('id', 'year')) %>%
-    left_join(baseline_mtrs %>% select(id, year, mtr_estate_B = mtr_estate),
-              by = c('id', 'year')) %>%
-    mutate(mtr_net_worth = replace_na(mtr_net_worth, 0),
-           mtr_estate_S  = replace_na(mtr_estate_S, 0),
-           mtr_estate_B  = replace_na(mtr_estate_B, 0))
+    mutate(mtr_net_worth = replace_na(mtr_net_worth, 0))
 
   #--- Economic balance-sheet component sums (raw value.*, UNTOUCHED) ----------
   mkt   = sum_cols(df, WEALTH_MARKETABLE_COLS)
@@ -301,6 +220,10 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   # Concealed fraction: the concealment share (CHI) of the avoidance response.
   c_pub  = WEALTH_CHI_PUB  * f_pub
   c_priv = WEALTH_CHI_PRIV * f_priv
+  # PERSISTED for estate/avoidance downstream (the R4 estate propagation);
+  # dropped from the frame there, mirroring the evasion_g_* convention.
+  df$wealth_c_pub  = c_pub
+  df$wealth_c_priv = c_priv
 
   #--- R3 evasion->wealth link -------------------------------------------------
   # Leg-weighted evaded income rate across the record's POSITIVE closely-held
@@ -405,42 +328,6 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   df$part_se1   = conceal_leg(df$part_se1,   c_priv, g_parta)
   df$part_se2   = conceal_leg(df$part_se2,   c_priv, g_parta)
 
-  #--- Estate concealment (R4 + R3 cross-base extension) -----------------------
-  # Wealth-tax concealment and income-tax evasion are two routes by which a
-  # closely-held asset leaves the authority's sight. Combine them as a
-  # multiplicative union: c_priv is hidden first, then evasion hides its share
-  # of the remaining visible balance. This carries the R3 evasion->wealth link
-  # through to the estate base without counting their overlap twice. Legal
-  # valuation avoidance (f_priv - c_priv) remains visible to the estate, as
-  # intended. The resulting fraction reduces estate_base but not
-  # estate_distributable; heirs still receive hidden assets.
-  estate_c_priv = c_priv + (1 - c_priv) * evaded
-  estate_union  = ifelse(gross > 0,
-                         (c_pub * mkt + estate_c_priv * clh) / gross, 0)
-
-  #--- Estate OWN-RATE response (part (b); ESTATE_AVOID_PROVENANCE header) -----
-  # Exact KS net-of-tax power form on the CHANGE in the un-switched marginal
-  # estate rate. Both legs clamped to [0, 1 - 1e-6] before the ratio; unchanged
-  # estate law -> ratio = 1 -> retained = 1 -> exact no-op (the baseline leg of
-  # a conventional run never executes this module at all). Newly taxable
-  # records (tau_B = 0) fall out of the same formula. A rate CUT gives
-  # retained > 1, i.e. negative f_estate -- previously-unreported estate
-  # surfaces (symmetric KS margin); the combined fraction below then boosts
-  # estate_base. FULL response, no CHI (own-base; see provenance block).
-  tau_eS = pmin(pmax(df$mtr_estate_S, 0), 1 - 1e-6)
-  tau_eB = pmin(pmax(df$mtr_estate_B, 0), 1 - 1e-6)
-  retained_estate = ((1 - tau_eS) / (1 - tau_eB)) ^ ESTATE_REPORT_EPS
-  f_estate = 1 - retained_estate
-
-  # Stack multiplicatively on the RETAINED share with the existing two-driver
-  # union: one hidden ledger, three drivers (wealth concealment, income
-  # evasion, estate own-rate), never > 100% hidden by construction
-  # (estate_union <= 1 and retained_estate > 0). Floor at -1 so a pathological
-  # rate cut can never more than double the reported base. Reduces (or, on
-  # cuts, boosts) estate_base ONLY -- estate_distributable and value.* stay
-  # invariant, same firewall as the wealth concealment.
-  df$estate_concealed_frac = pmax(1 - (1 - estate_union) * retained_estate, -1)
-
   #--- Conservation identity (hard assert) -------------------------------------
   # Per leg, reported (post) + hidden = pre-avoidance, recomputed independently
   # from the pre-snapshot and the concealment fraction. Catches wrong-column /
@@ -476,8 +363,8 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
          'RELATIVE reconciliation error = ', format(max_err, scientific = TRUE),
          '); reported + hidden != pre-avoidance for at least one flow class.')
   }
-  if (any(is.na(df$net_worth)) || any(is.na(df$estate_concealed_frac))) {
-    stop('do_wealth(): NA introduced in net_worth or estate_concealed_frac.')
+  if (any(is.na(df$net_worth))) {
+    stop('do_wealth(): NA introduced in net_worth.')
   }
 
   #--- Diagnostics -------------------------------------------------------------
@@ -499,7 +386,6 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
     weighted_records_pos_mtr      = sum(w[df$mtr_net_worth > 0]),
     concealed_wealth_marketable   = sum(w * c_pub  * mkt),
     concealed_wealth_closely_held = sum(w * c_priv * clh),
-    estate_hidden_from_evasion    = sum(w * (1 - c_priv) * evaded * clh),
     concealed_flow_txbl_int       = sum(w * hid_int),
     concealed_flow_div_ord        = sum(w * hid_dord),
     concealed_flow_div_pref       = sum(w * hid_dprf),
@@ -511,24 +397,6 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
     concealed_flow_sole_prop      = sum(w * hid_sole),
     concealed_flow_rent           = sum(w * hid_rent),
     evasion_link_clh_reduction    = sum(w * reduced_clh_from_evasion),
-    estate_concealed_frac_wmean   = if (sum(w * (gross > 0)) > 0)
-                                      sum(w * df$estate_concealed_frac) /
-                                      sum(w * (gross > 0)) else 0,
-    # Estate own-rate response (part b): parameter, per-leg gain in the
-    # estate price, and the response's own contribution net of the union
-    # drivers (f_estate is the multiplicative third driver)
-    estate_report_eps             = ESTATE_REPORT_EPS,
-    estate_mtr_B_wmean_grosspos   = if (sum(w * (gross > 0)) > 0)
-                                      sum(w * tau_eB * (gross > 0)) /
-                                      sum(w * (gross > 0)) else 0,
-    estate_mtr_S_wmean_grosspos   = if (sum(w * (gross > 0)) > 0)
-                                      sum(w * tau_eS * (gross > 0)) /
-                                      sum(w * (gross > 0)) else 0,
-    estate_own_rate_f_wmean       = if (sum(w * (gross > 0)) > 0)
-                                      sum(w * f_estate * (gross > 0)) /
-                                      sum(w * (gross > 0)) else 0,
-    estate_own_rate_hidden        = sum(w * f_estate * (1 - estate_union) *
-                                          gross),
     conservation_max_leg_err      = max_err)
 
   diag_dir = file.path(scenario_info$output_path, 'conventional', 'supplemental')
@@ -536,11 +404,10 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   write_csv(diag, file.path(diag_dir, paste0('hidden_ledger_', year, '.csv')))
 
   #--- Return ------------------------------------------------------------------
-  # Drop the joined MTR and the transient evasion factors; KEEP
-  # estate_concealed_frac (read by calc_estate via the frame -- do_taxes needs
-  # no change, per the parse_calc_fn_input contract).
+  # Drop the joined MTR only. The evasion_g_* factors and the persisted
+  # wealth_c_* fractions ride through to estate/avoidance (required later in
+  # the stack), which consumes and drops them.
   df %>%
-    select(-mtr_net_worth, -mtr_estate_S, -mtr_estate_B,
-           -any_of(c('evasion_g_schc', 'evasion_g_pt', 'evasion_g_rent'))) %>%
+    select(-mtr_net_worth) %>%
     return()
 }
