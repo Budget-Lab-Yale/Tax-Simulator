@@ -1,0 +1,1219 @@
+\documentclass[10pt,twocolumn]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{mathpazo}
+\usepackage[letterpaper,margin=0.85in,columnsep=0.3in]{geometry}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage[dvipsnames,table]{xcolor}
+\usepackage[colorlinks=true,linkcolor=black,urlcolor=NavyBlue,citecolor=NavyBlue]{hyperref}
+
+\definecolor{yaleblue}{HTML}{00356B}
+\definecolor{diagtint}{HTML}{E9EEF5}
+\definecolor{dnred}{HTML}{B3412C}
+
+% interaction-figure helpers: own-base tint, mechanical marker, direction arrows
+\newcommand{\own}[1]{\cellcolor{diagtint}\itshape #1}
+\newcommand{\mech}{\textsuperscript{\,\textdegree}}
+\newcommand{\up}{\textcolor{yaleblue}{\large$\blacktriangle$}\,}
+\newcommand{\dn}{\textcolor{dnred}{\large$\blacktriangledown$}\,}
+\newlength{\lblw}
+\newlength{\colw}
+
+\setcounter{secnumdepth}{1}
+\usepackage[skip=0.4em plus 2pt]{parskip}
+
+\newcommand{\tblgroup}[1]{\addlinespace[3pt]\multicolumn{4}{@{}l}{\textbf{\scriptsize\uppercase{#1}}}\\[1pt]}
+\newcommand{\bibentry}{\par\hangindent=1.3em\noindent}
+
+\title{\color{yaleblue}\textbf{An integrated model for scoring taxes at the top}}
+\author{\normalsize The Budget Lab at Yale}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{The idea}
+
+This memo describes the modeling enhancements we've made recently in service
+of producing more-accurate and internally consistent scores of packages aimed
+at taxing the rich. The basic idea is this:
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.25em]
+\item Top-tax packages often combine ordinary-income, capital-gains, business,
+estate, and/or wealth taxes in one proposal. \emph{Example: a proposal to
+increase the corporate rate, increase capital gains rates, and tax unrealized
+gains at death.}
+\item These tax bases overlap both mechanically (e.g., a dollar of taxes paid
+by a corporation reduces the shareholder tax base) and behaviorally (e.g.,
+reducing a tax rate differential across two substitutable tax bases should
+reduce avoidance opportunities). \emph{Example: the corporate tax rate hike
+reduces after-tax profits which in turn reduces the tax base for the capital
+gains tax, while at the same time the tax on gains at death reduces the
+incentive to defer realizations, which raises the capital gains tax base.}
+\item Some of these interactions have no empirical evidence to rely on, since
+they arise from combinations of policies that have never been enacted.
+\emph{Example: evidence on the realization elasticity is estimated solely
+under a policy regime of step-up; we have no directly observable estimate of
+how the elasticity changes if gains are taxed at death.}
+\item Therefore, to the extent possible, we should build one integrated
+microsimulation model with a ground-up, internally consistent representation
+of the relationship between business incomes, household incomes, household
+wealth, inheritance flows, etc., parameterized by behavioral rules grounded in
+economic theory and calibrated to current-law empirical elasticity moments.
+\end{enumerate}
+
+This approach represents an improvement over what we've done in the past,
+which is to build a set of standalone models and either ignore these
+interactions entirely or crudely assume relationships that might not hold
+under different policy regimes.
+
+In what follows we describe how we model these mechanical and behavioral
+interactions.
+
+\section{How the model is put together}
+
+This work is an extension of the Budget Lab's existing income and payroll tax
+microsimulation. Some of it is new data and some is new modeling.
+
+\subsection*{New data}
+
+We train a nonparametric machine learning model on the SCF and the Forbes
+billionaire list, where it estimates the joint distribution between
+demographics, income, and wealth. We use this model to produce conditional
+distributions of wealth and its composition for each record, then sample from
+it, generating a wealth profile (including unrealized gains) for each tax
+unit. We also fit annual mortality probabilities for each person, adjusted for
+demographics and income. These new data are prerequisites for the integration
+of tax bases: for each record, we can now calculate income and payroll taxes,
+expected estate and deemed-realization taxes in the case of death, and wealth
+taxes, and we can model adjustments to income and asset values when corporate
+taxes change.
+
+\subsection*{New modeling}
+
+With this data in hand, we build several new modules in this simulator. These
+modules are functions which map policy changes to tax base changes (behavioral
+responses), or tax base changes to other tax base changes (mechanical
+interactions). The modules apply in a fixed sequence on shared data; we do
+not iterate them to a joint fixed point. Figure~\ref{fig:interactions} maps the interactions these
+modules produce: each row is a tax increase, each column a base that moves in
+response. Appendix A gives the derivation behind each module.
+
+\begin{figure*}[p]
+\caption{How the tax bases interact}
+\label{fig:interactions}
+\vspace{0.4em}
+\footnotesize
+\renewcommand{\arraystretch}{2.2}
+\setlength{\tabcolsep}{4pt}
+\setlength{\lblw}{1.9cm}
+\setlength{\colw}{\dimexpr(\textwidth-\lblw-12\tabcolsep)/6\relax}
+\begin{tabular}{@{}>{\raggedright\arraybackslash\bfseries}p{\lblw}*{6}{>{\raggedright\arraybackslash}p{\colw}}@{}}
+\toprule
+ & \multicolumn{6}{c}{\textbf{\ldots moves this base}} \\
+\cmidrule(l){2-7}
+\textbf{An increase in\ldots} & Ordinary income & Capital gains & Corporate & Estate & Gains at death & Wealth \\
+\midrule
+Ordinary rates &
+\own{\dn Underreporting rises; giving responds} &
+\up Compensation converts into deferred equity gains &
+\up Income shifts into C-corporation form &
+\dn Evaders' assets leave the reported estate &
+\up Converted gains add to the stock later held at death &
+\dn Evaders' assets leave the reported wealth base \\
+
+Capital gains rates &
+\up Conversion unwinds; pay returns as salary &
+\own{\dn Realizations deferred; retiming around effective dates} &
+\dn All-in corporate rate rises; income shifts to pass-through &
+--- &
+\up Deferred gains accumulate and arrive at death\mech &
+--- \\
+
+The corporate rate &
+\dn Rates of return competed down; interest, rents, pass-through income fall\mech &
+\dn Equity marked down; later realizations shrink\mech &
+\own{\dn Income shifts toward pass-through form} &
+\dn Marked-down portfolios shrink estates\mech &
+\dn Unrealized gains absorb the markdown\mech &
+\dn Marked-down portfolios shrink the base\mech \\
+
+The estate tax &
+--- &
+\up Holding until death shelters less; realizations rise &
+--- &
+\own{\dn Reported estates shrink} &
+\dn Gains realized earlier leave less held at death &
+--- \\
+
+The tax on gains at death &
+\up Deferral worth less; conversion into gains unwinds &
+\up Deferral no longer escapes tax; realizations rise during life &
+\dn Retain-to-death shelter loses value; income shifts to pass-through &
+\dn Gains tax due at death is deductible from the estate\mech &
+\own{\dn Realizations pulled forward shrink the pool taxed at death} &
+--- \\
+
+The wealth tax &
+\dn Concealed assets' income leaves the return &
+\up Carrying a deferred gain costs wealth tax; realizations rise &
+--- &
+\dn Concealed assets leave the reported estate &
+\dn Earlier realizations leave fewer gains at death &
+\own{\dn Valuation discounts and concealment shrink reported wealth} \\
+\midrule
+\multicolumn{7}{@{}p{\dimexpr\textwidth-2\tabcolsep\relax}@{}}{%
+\emph{And any of them:} \dn every during-life tax increase is partly financed
+out of saving, and the forgone wealth compounds --- shrinking capital income,
+wealth, and estate bases in later years.\mech} \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.6em}
+{\scriptsize \up = the base grows; \dn = the base shrinks. Shaded = own-base
+response. \mech\ = mechanical interaction; others are behavioral responses.
+--- = no first-order channel in the model.}
+\end{figure*}
+
+\subsubsection*{\textit{Behavioral response:} Realizing or deferring gains}
+
+The biggest modeling innovation in this work is our new treatment of capital
+gains realization behavior: a structural model of the decision to realize or
+defer, embedded in the microsimulation. Households are grouped into
+representative cohorts by age, with each cohort's tax rates, mortality, and
+estate-tax exposure weighted by holdings of unrealized gains, so the cohort
+parameters reflect the wealthy households who actually hold the gains. Each
+agent weighs the tax costs of selling now against the value of deferral, which
+depends on the current capital gains rate, expected future rates, what happens
+to the gain at death, and expected time until death. Wealth and estate taxes
+also enter the value of deferral: an annual wealth tax falls on the deferred
+liability every year it is carried, and because income tax paid at death
+shrinks the taxable estate, the estate tax partly offsets the cost of taxing
+gains at death. The decision is structured as a Bellman problem where each
+dollar of unrealized gain carries a non-tax motive for selling (e.g.,
+liquidity or rebalancing) and the holder sells when that motive outweighs the
+tax wedge of realizing now rather than deferring. Behavior responds on two
+margins---a permanent margin that sets the level of realizations, and a
+short-run timing margin that lets a calibrated fraction of realizations shift
+a year in either direction around an anticipated rate change---mirroring the
+permanent/transitory distinction in the empirical literature. We calibrate the
+model so that responsiveness matches these elasticities under current law. The
+result, for a given policy change, is an implied yearly path of the change in realizations for each age group, distributed down to simulated tax
+units.
+
+This structure has three benefits over the old reduced-form approach where
+we'd simply apply an elasticity to the baseline path of gains. The first is
+endogenous behavior: both the level of realizations and the realization
+elasticity itself change with the policy environment, with no additional
+assumptions (such as judgmentally adjusting the elasticity for a change in
+step-up). The second is accounting consistency: the model tracks the stock of
+unrealized gains, so gains that go unrealized when taxes change do not
+disappear---they resurface later as sales during life or gains held at death.
+The third is a byproduct: an estimated tax benefit of deferral used in other
+behavioral calculations, like the business entity choice (where the value of a
+dollar in a C corp depends on the value of deferral).
+
+\subsubsection*{\textit{Behavioral response:} Converting ordinary income into gains}
+
+Owners of businesses and certain workers can structure labor compensation as
+deferred equity gains rather than salary. The amount converted responds to
+changes in the gap between the taxpayer's ordinary rate and the present value
+of tax on a dollar entering the deferred-gain state. That present value comes
+from the realization piece above, so any policy that makes deferral less
+attractive makes this margin of conversion less attractive as well.
+
+\subsubsection*{\textit{Behavioral response:} Moving between corporate and pass-through form}
+
+Business income shifts between pass-through and C-corporation form with the
+difference in their all-in tax rates. The C-corporation rate includes the
+entity-level tax plus shareholder-level tax on distribution, with retained
+earnings priced at the same deferral value as above. The value of sheltering
+in corporate form therefore falls when gains are taxed at death.
+
+\subsubsection*{\textit{Behavioral response:} Underreporting of income}
+
+When marginal tax rates rise, some income leaves the tax return through
+evasion. Following DeBacker, Heim, and Yuskavage (working paper presented at the National Tax Association meetings),
+reported income responds to the net-of-tax rate where the IRS lacks
+third-party information reporting, i.e., in self-employment, partnership and
+S-corporation income, etc. The model adjusts these income forms when rates
+change and removes a matching share of closely held assets from the reported
+wealth and estate bases (assuming that income hidden from the income tax is
+not then presented to the wealth tax or the estate tax).
+
+\subsubsection*{\textit{Behavioral response:} Charitable giving}
+
+Cash charitable giving responds to its tax price --- one minus the marginal
+subsidy rate --- on the intensive margin. Giving of appreciated assets, whose
+tax price also depends on the capital gains rate, is not yet modeled.
+
+\subsubsection*{\textit{Behavioral response:} Wealth tax avoidance and evasion}
+
+Evidence from other countries shows that reported wealth falls as the marginal
+tax rate on wealth rises. We assume this response is smaller for marketable
+assets than for closely held or other privately traded assets. We also assume
+that this response comes from two different margins. One is valuation
+discounts, which represent ways of lowering the assessed value of an asset
+that remains visible to the IRS. The other is concealment, for example the use
+of trust vehicles or offshore arrangements, which move the asset out of sight
+entirely, taking its income out of this record's income tax base and its value
+out of the potential estate. Marketable securities have market prices that
+cannot be argued down, so their response is all concealment; the size of the
+response from closely held assets is assumed to be split evenly between the
+two components.
+
+\subsubsection*{\textit{Behavioral response:} Estate tax avoidance and evasion}
+
+The estate tax is computed record by record from the same balance sheets used
+everywhere else, with valuation discounts, deductions, and spousal portability
+modeled explicitly and reported estates benchmarked to SOI filings (so
+avoidance already embedded in current-law estates is part of the baseline).
+When a reform raises the estate tax, reported estates shrink further. This is
+a pure reporting response (i.e., what heirs actually receive does not change),
+and the tax is passed to heirs in the microdata by matching large estates to
+large inheritances.
+
+\subsubsection*{\textit{Mechanical interaction:} Tax-driven dissaving}
+
+Taxes are paid out of either forgone consumption or forgone saving (assuming,
+as we do in conventional scores, that real income is fixed). If some fraction
+of new tax at time $t$ is paid out of saving --- that is, equivalently, if
+MPCs are less than 100\% --- then at time $t{+}1$, all else equal, there
+should be less private wealth (and lower estate value for those who die), less
+capital income flowing from that wealth, and thus less in income tax. Until
+this point, we implicitly assumed that all new taxes were paid out of
+consumption, since capital income flows were fixed across all scenarios.
+
+We now have the machinery to vary this parameter (the fraction of new tax
+financed by lower saving) so that changes in taxes affect the path of wealth
+going forward. We assume this parameter varies with wealth: near the bottom of
+the distribution, higher taxes mostly displace consumption (i.e., high MPCs),
+while at the top it is financed almost entirely out of saving (i.e., low
+MPCs). The financed share then compounds: wealth that is not accumulated stops
+earning returns, so the gap between baseline and policy wealth widens over
+time. The consequences land in other bases years later: less capital income to
+tax during life, a smaller wealth-tax base each year, and smaller estates at
+death. A large during-life tax therefore partially cannibalizes wealth-based
+revenue later in the budget window, and increasingly beyond it.
+
+\subsubsection*{\textit{Mechanical interaction:} Corporate tax incidence}
+
+A corporate tax rate increase reduces after-tax profits that get distributed
+to shareholders. Equity markets should reprice down as stock values fall by
+the PDV of lower profits. And corporate distributions (dividends and buybacks)
+should also fall. Per Harberger logic, the burden does not all stay on
+corporate equity: while profits from rents are simply capitalized into share
+prices, the normal return to capital is competed down economy-wide as capital
+reallocates, so the burden migrates to other assets like fixed income and
+noncorporate business. For a given corporate tax rate increase, we quantify
+the equity markdown, the reduction in corporate distributions, and the
+reduction in the pretax returns for noncorporate capital. Then we adjust each
+record's wealth and income based on portfolio composition. These changes flow
+into the rest of the calculator, reducing income tax, capital gains, estate
+taxes, wealth taxes, and so on.
+
+\section{How each piece is parameterized}
+
+Table~\ref{tab:params} lists the parameters, grouped by module. It also has
+an ``epistemic status'' column with a rough, gut-level assessment of how
+confident we are in each parameter value.
+
+Most are taken directly from the
+empirical literature but two are set differently. The first is $\eta$, the strength of the realization response in the realization model, calibrated so that the full model matches our preferred permanent realization elasticity of $-0.6$. The second is $\sigma$, the strength of ordinary-vs-gains income
+conversion, set residually in a calibration exercise that targets a total elasticity of taxable income (ETI) of 0.25: we run the model with all other behavioral margins turned on and find
+the value of $\sigma$ that delivers the target.
+
+Note that this model produces \emph{conventional} estimates, so substantive
+economic changes like labor supply or savings rate changes are excluded from
+the behavioral adjustment margins. (The dissaving channel is a mechanical
+description of how taxes are paid, not a model of how saving responds to rates
+of return.)
+
+\begin{table*}[p]
+\caption{Parameters, by module}
+\label{tab:params}
+\small
+\renewcommand{\arraystretch}{1.6}
+\newcommand{\pform}[1]{\newline{\scriptsize\itshape #1}}
+\begin{tabular}{@{}p{7.2cm}p{2.0cm}p{5.1cm}p{1.6cm}@{}}
+\toprule
+\textbf{Parameter} & \textbf{Value} & \textbf{Basis} & \textbf{Epistemic status} \\
+\midrule
+\tblgroup{Capital gains realization}
+Long-run response ($\eta$)\pform{realizations scale by $\exp(-\eta\times{}$change in the tax cost of realizing now versus deferring$)$} & 2.48 & Calibrated on the full model to our preferred realization elasticity of $-0.6$ & High \\
+\addlinespace[0.55em]
+Share of realizations that can retime $\pm 1$ year\pform{the fraction of each year's realizations free to shift one year toward the lower-rate year} & 0.25 & Calibrated to short-run elasticity of $-1.2$ & High \\
+\addlinespace[0.55em]
+Valuation/compliance discount under deemed realization at death\pform{gains deemed realized at death are scaled down by this fraction before tax} & 25\% & Calibrated to JCT score & Low \\
+\tblgroup{Income reporting and form}
+Income conversion ($\sigma$)\pform{percent of the eligible compensation pool converted per point of change in the ordinary-versus-deferred-gain wedge} & 0.16 & Residual: set so the total top ETI is 0.25 (Saez, Slemrod, and Giertz 2012) & Low \\
+\addlinespace[0.55em]
+Entity-shifting semi-elasticity\pform{percent of pass-through business income changing form per point of change in the all-in rate differential} & 0.63 & Prisinzano and Pearce (2018) & High \\
+\addlinespace[0.55em]
+Underreporting elasticities: self-employment / partnership \& S-corp / rent\pform{percent change in reported income per one percent change in the net-of-tax rate} & 0.046 / 0.052 / 0.040 & DeBacker, Heim, and Yuskavage; zero under third-party reporting & Medium \\
+\addlinespace[0.55em]
+Charitable giving price elasticity (cash)\pform{percent change in cash giving per one percent change in the price of giving} & $-0.5$ & Literature central value & Low \\
+\tblgroup{Wealth and estates}
+Reported-wealth semi-elasticity: marketable / closely held\pform{reported wealth scales by $\exp($elasticity${}\times{}$marginal wealth-tax rate$)$, by asset class} & $-7$ / $-17$ & Budget Lab review of international evidence & Low \\
+\addlinespace[0.55em]
+Concealment share of the avoidance response: marketable / closely held\pform{the concealed share exits the income and estate bases too; the valuation share exits reported wealth only} & 100\% / 50\% & Marketable assets have observable prices; private ones do not & Medium \\
+\addlinespace[0.55em]
+Reported-estate net-of-tax elasticity\pform{the reported estate retains the net-of-tax ratio raised to this power} & 0.16 & Kopczuk and Slemrod (2001); range 0.10--0.22 & Medium \\
+\tblgroup{Mechanical interactions}
+Share of new tax paid out of saving, by wealth rank\pform{the share of each new tax dollar paid out of saving; the forgone wealth compounds thereafter} & 0.04 $\rightarrow$ 0.80 & Consumption responses by wealth (Straub 2019 and related) & Medium \\
+\addlinespace[0.55em]
+Corporate incidence constants (e.g., normal-return share 0.375)\pform{exposure and repricing constants in the incidence formulas of Appendix A.8} & various & Provisional placeholders pending direct measurement & Low \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\clearpage
+\section*{Appendix A. Derivations for Section 2}
+
+The sections below follow the order of the modules in Section 2 (charitable
+giving, a one-parameter response, is documented in Appendix B). Each is
+self-contained: symbols are defined where they first appear and are local to
+their section.
+
+\subsection*{A.1 Realizing or deferring gains}
+
+\paragraph{Cohorts and the stock of unrealized gains.}
+The model operates on representative age cohorts (for joint returns, the older
+spouse's age), followed forward to age 119 using SSA life tables beyond the
+microdata's range. The state variable is the cohort's stock of unrealized
+gains. Each year the stock is drawn down by realizations and by death, where
+the death regime determines what happens to the decedent's gains: under
+step-up they are extinguished, under carryover they pass to heir cohorts
+(allocated by a dollar-weighted heir-age distribution from the SCF), and under
+deemed realization they are taxed. The model tracks the change in each
+cohort's stock relative to baseline, so a gain that goes unrealized when rates
+rise does not disappear; it remains in the stock and resurfaces as a later
+sale or as a gain held at death.
+
+Because unrealized gains are heavily concentrated, every cohort-level
+input---the marginal tax rate on gains, mortality, estate-tax exposure, the
+wealth-tax carrying cost defined below---is weighted by each household's share
+of the cohort's gains, so the cell parameters reflect the wealthy households
+who actually hold the gains. Mortality in particular is the probability that
+the marginal dollar's holder dies, well below the cohort's average. The
+cohort-level response is then distributed back to tax units in proportion to
+a blend of their realized gains and their unrealized holdings.
+
+\paragraph{The agent's problem.}
+Consider one dollar of unrealized gain. Its holder has some non-tax motive for
+selling---liquidity, rebalancing, consumption---summarized by a reservation
+benefit $b \geq 0$ drawn from an exponential distribution. The dollar is sold
+when $b$ exceeds the tax cost of realizing now rather than deferring, so the
+share of the stock realized in a year, $r$, is the survival function of that
+distribution evaluated at the tax wedge. Equivalently, the cohort chooses $r$
+subject to a realization cost $C(r)$ whose marginal is
+\begin{equation*}
+C'(r) = \frac{1}{\eta}\,\ln\!\left(\frac{r}{r_B}\right),
+\end{equation*}
+where $r_B$ is the cohort's baseline realization rate and $\eta$ governs
+response strength. The cost is zero at the margin under baseline policy,
+$C'(r_B) = 0$, so baseline behavior is reproduced exactly.
+
+The tax cost of realizing now rather than deferring is
+\begin{equation*}
+MC \;=\; \tau \;+\; \beta\,(1-m)\,\big(W_{\text{next}} - h\big) \;+\; \beta\, m\, F,
+\end{equation*}
+where $\tau$ is the current marginal tax rate on long-term gains (measured
+through the tax calculator, so it embeds surtaxes and interactions), $\beta$
+is the real discount factor built from the 10-year Treasury rate deflated by
+CPI inflation year by year, $m$ is mortality, $W_{\text{next}}$ is next year's
+continuation value of an unrealized dollar (the same problem solved one year
+and one age ahead), $h$ is the annual wealth-tax cost of carrying the deferred
+position, and $F$ is the value of the tax treatment at death. Setting the
+marginal non-tax benefit equal to the marginal cost gives a closed form for
+the scenario realization rate:
+\begin{equation*}
+r \;=\; r_B \,\exp\!\big(-\eta\,(MC - MC_B)\big), \qquad \text{capped at } 1,
+\end{equation*}
+where $MC_B$ is the marginal cost under baseline law. The response is a
+constant semi-elasticity in the full deferral wedge, not in the current-year
+rate alone.
+
+\paragraph{What enters the deferral wedge.}
+Expected future rates enter through $W_{\text{next}}$, which is solved by
+backward induction over ages and years, so a pre-announced rate change moves
+behavior before it takes effect. The remaining terms give precise form to the statement in Section 2 that wealth and estate taxes also affect the value of
+deferral.
+
+The death value is
+\begin{equation*}
+F \;=\; (1 - c_\varphi)\,\tau\,(1 - e).
+\end{equation*}
+Here $c_\varphi$ is the share of the gain's tax burden the holder bears at
+death: $0$ under step-up (death forgives the tax entirely), $1$ under deemed
+realization (death triggers the full tax, so $F = 0$ and deferral buys nothing
+at death), and an intermediate value under carryover, reflecting how much of
+the heir's eventual liability the holder internalizes. The regime can differ
+by asset class, and $c_\varphi$ is the gain-weighted mix; gains bequeathed to
+charity escape tax under any regime and are netted out. The factor $(1 - e)$
+is the estate-tax offset: capital-gains tax due at death is deductible from
+the taxable estate, so each dollar of forgiven gains tax is worth only
+$(1 - e)$, where $e$ is the household's marginal estate rate. Below the estate
+exemption, $e = 0$ and the term is inert.
+
+The carrying cost $h$ is the product of the household's marginal wealth-tax
+rate and its capital-gains rate, averaged with gain weights. Realizing today
+removes the tax from the wealth base, while deferring keeps the full pre-tax
+dollar in the base, so each year of continued deferral costs the wealth tax on
+the deferred liability. An annual wealth tax therefore raises realizations
+even with no change in the capital-gains schedule.
+
+The 25 percent valuation and compliance discount under deemed realization
+applies to the revenue collected from gains taxed at death, not to the
+holder's incentive: the deferral decision sees the full statutory burden.
+
+\paragraph{The short-run timing margin.}
+Retiming around an anticipated rate change is a separate overlay. A calibrated
+fraction of each year's realizations may shift by up to one year toward the
+adjacent year with the lowest rate, with the shifted share proportional to the
+rate gap. Under a permanent, uniform rate change every year looks the same and
+the overlay nets to zero, so the permanent margin and the timing margin can be
+calibrated independently.
+
+\paragraph{Calibration.}
+We calibrate $\eta$ on the full model rather than on the cohort problem in
+isolation, so that the target elasticity is hit after mortality, death
+treatment, discounting, and the allocation to tax units are all accounted for.
+We run the simulator under a permanent capital-gains rate increase, measure
+the proportional realization response at a thirty-year horizon per unit change
+in the rate, and repeat across a small grid of $\eta$ values. The measured
+response is linear in $\eta$ through the origin, so the calibration is an
+inversion of a fitted line. The target is our preferred permanent realization
+elasticity of $-0.6$, expressed as a semi-elasticity by dividing by the
+baseline top rate of about $0.238$; with a fitted slope of $1.0155$ this gives
+$\eta = 2.4825$, which we quote as $2.48$. The timeable fraction, $0.25$, is
+calibrated the same way to a short-run realization elasticity of $-1.2$ around
+an announced rate change. The deemed-realization discount of 25 percent is set
+so that the model's ten-year revenue from taxing gains at death matches the
+JCT score of that policy.
+
+\paragraph{The exported object: the value of deferral.}
+The realization model also produces, for each cohort and year, the expected
+present value of tax per dollar entering the deferred-gain state, which we
+write $\tau_{eq}$. It is computed by a backward recursion over the scenario's
+own realization path: in each future year a deferred dollar pays $\tau$ if
+realized, pays the death-triggered tax net of the estate offset if its holder
+dies under deemed realization, and pays the carrying cost $h$ if it survives
+unrealized under a wealth tax, all discounted at $\beta$. Under current law
+with step-up, $\tau_{eq}$ is well below the statutory rate; taxing gains at
+death pushes it toward $\tau$. This object is the price of the deferred-gain
+state used by the income-conversion and entity-form margins (Sections A.2 and
+A.3): any policy that makes deferral less valuable raises $\tau_{eq}$ and
+thereby discourages recharacterizing ordinary income as gains, with no
+separate assumption required.
+
+\subsection*{A.2 Converting ordinary income into gains}
+
+Owner-managers can take part of their compensation as appreciation in a
+business they control rather than as salary or current profit: below-market
+salary at a closely held C corporation, sweat equity realized on eventual
+sale, profits interests and carried interest, founder stock. Each of these
+routes trades a dollar taxed this year at ordinary rates for a dollar of
+unrealized gain taxed later, or never. We model them together as a single
+conversion margin.
+
+The price of the salary path is the taxpayer's own marginal rate on that
+compensation source, $m_{i\ell}$, measured through the calculator (payroll tax
+included) for each source $\ell$: own wages, spouse wages, and active
+partnership, S-corporation, and sole proprietorship income. The price of the
+equity path is $\tau_{eq}(a,t)$, the equivalent tax rate on a dollar entering
+the deferred-gain state: the expected present value of tax that dollar
+eventually generates through sales during life and its treatment at death,
+computed by the realization model of Section A.1 for each age group $a$ and
+year $t$. The wedge between the two paths is
+$W_{i\ell} = m_{i\ell} - \tau_{eq}(a_i, t)$, and the behavioral forcing is the
+reform-induced change in that wedge,
+\begin{equation*}
+\Delta W_{i\ell} \;=\; \Delta m_{i\ell} \;-\; \Delta\tau_{eq}(a_i, t),
+\end{equation*}
+so a higher top ordinary rate widens the wedge while a policy that taxes gains
+at death raises $\tau_{eq}$ and narrows it. The amount converted is
+\begin{equation*}
+\Delta c_{i\ell} \;=\; \sigma \,\Delta W_{i\ell}\, P_{i\ell},
+\end{equation*}
+where the pool $P_{i\ell}$ is wages in full and 75 percent of active
+pass-through income, the labor-content share estimated by Smith, Yagan, Zidar,
+and Zwick (2019). The response is recomputed each year from that year's wedge,
+runs in either direction, and is capped so no compensation source turns
+negative. Conversion is limited to tax units with taxable income at or above
+the top ordinary bracket threshold and some active business income; in 2026
+this is roughly one million tax units holding about \$1.5 trillion of
+compensation. Converted dollars leave wages and pass-through income
+immediately, shrinking the income and payroll tax bases, and enter the age
+cohort's stock of unrealized gains in the following year, where they are
+realized and taxed according to the dynamics of Section A.1 and meet whatever
+death regime the policy specifies; the later tax is attributed at the cohort
+level rather than traced back to the converting record.
+
+The response parameter $\sigma$ is set residually. The evidence that
+disciplines this margin is the elasticity of taxable income at the top, for
+which we adopt the Saez, Slemrod, and Giertz (2012) central value of 0.25. But
+the other reporting margins already generate most of that response: with
+evasion, entity shifting, and charitable giving turned on and conversion
+turned off, a five-point increase in the top ordinary rate produces a measured
+elasticity of top-bracket taxable income (excluding net capital gains) of
+about 0.20. Adding an independently estimated conversion elasticity on top
+would count the same behavior twice, since those estimates are themselves
+drawn from total-response evidence. We therefore run the full model with every
+other margin on and solve for the $\sigma$ that brings the total to 0.25.
+Because the converted amount is linear in $\sigma$, two runs pin the answer:
+$\sigma = 0.16$, meaning 0.16 percent of the pool converts per percentage
+point of wedge change, confirmed by a full run at that value. The calibration
+disciplines the product of $\sigma$ and the pool definition, so a narrower
+pool would simply imply a proportionally larger $\sigma$ with the same
+aggregate response. The value is conditional on the rest of the stack and is
+re-derived whenever the other margins change.
+
+\subsection*{A.3 Moving between corporate and pass-through form}
+
+Business income moves between pass-through and C-corporation form in response
+to the difference in their all-in tax rates, following Pearce and Prisinzano
+(2018). On the corporate side, a dollar of profit bears the entity-level tax
+and then a shareholder-level tax on what remains. We assume a share
+$\alpha = 0.45$ of after-tax corporate earnings is paid out currently and
+taxed at the shareholder's marginal rate on long-term gains, $\tau_g$
+(dividends and gains are assumed to face the same rate). The retained share is
+priced at $\tau_{eq}(a,t)$, the equivalent deferred-gain tax rate from Section
+A.1: a retained dollar is an unrealized gain in the shareholder's hands, and
+its tax cost is the expected present value of tax it generates through later
+realization and its treatment at death. The all-in corporate rate is
+\begin{equation*}
+\tau^{C}_i \;=\; \tau_c \;+\; (1-\tau_c)\,\big[\,\alpha\,\tau_{g,i} + (1-\alpha)\,\tau_{eq}(a_i,t)\,\big],
+\end{equation*}
+where $\tau_c$ is the statutory corporate rate. The pass-through side is the
+taxpayer's ordinary marginal rate on active pass-through income, $\tau^{P}_i$,
+inclusive of self-employment tax and any pass-through deduction.
+
+The share of business income that changes form responds to the change in the
+differential under the reform:
+\begin{equation*}
+\Delta q_i \;=\; \varepsilon\,\Delta\big(\tau^{C}_i - \tau^{P}_i\big), \qquad \varepsilon = 0.63,
+\end{equation*}
+a semi-elasticity: 0.63 percent of the taxpayer's business income shifts per
+percentage point change in the differential. The value comes from
+Prisinzano and Pearce's preferred estimate, rescaled by the pass-through sector's 60
+percent share of business income at which it was identified. The shifting base
+is each record's positive net pass-through business income across
+partnerships, S corporations, and sole proprietorships. When income shifts
+toward corporate form, it leaves the pass-through base, pays the entity-level
+tax, and returns to the shareholder as after-corporate-tax distributions, so
+the score records both the corporate receipts and the shareholder-level tax on
+what is paid out; dollars leaving one base arrive in the other. The
+shareholder-level tax on retained earnings is booked as a current-year
+adjustment to the record's capital gains priced at $\tau_{eq}$, rather than
+by adding retained dollars to the deferred-gain stock.
+
+Because $\tau_{eq}$ enters the all-in corporate rate, the value of corporate
+form as a shelter depends on the capital-gains and death-tax regime, not just
+on the entity rates. Under stepped-up basis, retained earnings held to death
+escape shareholder tax entirely and $\tau_{eq}$ is low, so corporate form
+shelters effectively. A policy that taxes unrealized gains at death raises
+$\tau_{eq}$, and with it $\tau^{C}$, even when no corporate parameter changes;
+the differential moves against corporate form and previously sheltered income
+shifts back toward pass-through status, where it is taxed currently. The model
+produces this unwinding automatically.
+
+\subsection*{A.4 Underreporting of income}
+
+When marginal rates rise, some income stops being reported. We follow
+DeBacker, Heim, and Yuskavage, who estimate the elasticity of noncompliance
+with respect to the net-of-tax rate from IRS random-audit data and treat it as
+a component of the elasticity of taxable income. For each income type $j$ with
+elasticity $e_j$, reported income under the reform is
+\begin{equation*}
+\tilde y_{ij} \;=\; y_{ij}\left[\,1 + e_j\!\left(\frac{1-m_{ij}}{1-m^0_{ij}} - 1\right)\right],
+\end{equation*}
+where $m_{ij}$ and $m^0_{ij}$ are the taxpayer's marginal rates on that income
+under the reform and under the baseline. Only income the IRS cannot see
+through third-party information returns responds: self-employment income
+(with farm income treated the same way), at 0.046; partnership and
+S-corporation income, at 0.052; and rent, at 0.040. Wages, interest, and
+dividends are covered by information reporting and do not respond; audit data
+show misreporting rates near one percent for wages against a large majority of
+unmatched sole proprietorship income. Only positive income responds---the
+overstatement of losses and deductions is not modeled---and because these
+estimates come from detected noncompliance in random audits, which miss some
+sophisticated evasion at the very top, they are best read as a floor.
+
+Evaded income does not vanish; it accumulates in the evader's hands, largely
+inside the closely held businesses whose income went unreported. The model
+keeps the balance sheet consistent with the tax return: a taxpayer who hides
+business income from the income tax does not then present the underlying
+assets to the wealth tax or the estate tax. For each record we form the evaded
+share of closely held income,
+\begin{equation*}
+u_i \;=\; \frac{\sum_{\ell}\big(y_{i\ell} - \tilde y_{i\ell}\big)}{\sum_{\ell} y_{i\ell}},
+\end{equation*}
+summing over the record's positive closely held income sources, and remove
+that share of its closely held assets from the reported wealth-tax base and
+from the reported estate at death. Where a wealth tax also induces concealment
+(Section A.5), the two are combined as a union,
+$1 - a_i = (1 - c_i)(1 - u_i)$, where $c_i$ is the concealed fraction from the
+wealth-tax response and $a_i$ the combined share removed, so an asset hidden
+through both routes is removed only once. The taxpayer's actual balance sheet
+is untouched: the assets still earn income, still enter the saving and
+realization dynamics, and still pass to heirs in full. What shrinks is only
+what the tax authority observes, which is what each reported base is computed
+from.
+
+\subsection*{A.5 Wealth tax avoidance and evasion}
+
+The wealth tax is assessed on net worth, assets less debts, under a graduated
+schedule whose exemption operates as a zero-rate bottom bracket. The marginal
+rate $\tau^w$ is therefore zero below the exemption, and the avoidance
+response is confined to households above it.
+
+Reported wealth falls with the marginal rate under a semi-elasticity
+specification applied separately to two asset classes: marketable assets
+(cash, listed equities, bonds, retirement accounts, life insurance, trusts,
+and other financial assets) and closely held assets (private business
+interests, homes, and other real estate and nonfinancial assets). The reported
+value of a household's class-$j$ assets is
+\begin{equation*}
+\tilde{W}_j = W_j \, e^{\varepsilon_j \tau^w},
+\end{equation*}
+where $W_j$ is the true value and $\varepsilon_j$ is the class
+semi-elasticity, $-7$ for marketable and $-17$ for closely held assets. The
+avoided fraction $f_j = 1 - e^{\varepsilon_j \tau^w}$ is approximately
+$-\varepsilon_j \tau^w$ at low rates: about 7 percent of marketable and 16
+percent of closely held wealth at a 1 percent marginal rate, and about 19 and
+40 percent at 3 percent. Debts are reported in full. These elasticities are
+carried over from the Budget Lab's standalone wealth-tax model and were
+reviewed and retained for this work; we treat them as central values and
+recommend sensitivity bands around them in published estimates.
+
+The response decomposes into a valuation component and a concealment
+component, with the concealment share set by asset class: 100 percent for
+marketable assets, whose exchange prices cannot be argued down, so avoiding
+them means hiding them; 50 percent for closely held assets, where legal
+valuation discounts do half the work. The two components exit different bases.
+A valuation discount lowers assessed wealth only: the asset's income still
+appears on the income tax return, and its full value still enters the reported
+estate. A concealed dollar leaves all three reported bases at once: it exits
+reported wealth, its income (interest, dividends, pass-through income, rent,
+and the gains realized when it is sold) exits the income tax base, and its
+value exits the reported estate at death. The one exception is distributions
+from retirement accounts, which remain fully reported because those accounts
+are subject to third-party information reporting. The same consistency runs in
+the other direction: income already hidden through the underreporting response
+of Section A.4 removes the matching share of closely held assets from the
+reported wealth and estate bases, and the two channels are combined so that
+overlap is counted once.
+
+These are reporting responses, not real ones. The household's true balance
+sheet is unchanged, and everything computed from it is untouched:
+mortality-weighted estates, the financing of taxes out of wealth, and exposure
+to the corporate channel all read the true values, and heirs inherit concealed
+wealth in full. Finally, the elasticities implicitly absorb migration and
+expatriation, so wealth tax revenue results are best read as an upper bound on
+that account.
+
+\subsection*{A.6 Estate tax avoidance and evasion}
+
+The estate tax is computed record by record from the same modeled balance
+sheet used everywhere else. Let $G$ denote a record's economic gross estate,
+the sum of its asset values. Reported gross estate applies a valuation
+mapping,
+\begin{equation*}
+\tilde{G} = G \cdot r \, \bigl[\, 1 + (\rho - 1)\, \theta \,\bigr],
+\end{equation*}
+where $\theta$ is the share of assets held in pass-through businesses, $r$ is
+an overall valuation factor, and $\rho$ is an additional discount concentrated
+in pass-through wealth, reflecting minority-interest and marketability
+discounts. The calibrated values are $r = 0.95$ and $\rho = 0.61$, chosen so
+that modeled taxable returns and tax match SOI filings across estate-size
+classes in the latest observed death year (2022). Debts $B$ are subtracted
+directly from the data; non-debt deductions, dominated by charitable and
+residual marital bequests, enter as a size-varying fraction $\delta$ of
+reported gross estimated from SOI filings, rising from about 7 percent below
+\$10 million to about 36 percent above \$50 million. The distributable estate
+is $D = \max(\tilde{G} - B - \delta \tilde{G},\, 0)$. The unified base adds
+lifetime taxable gifts back at a rate $\gamma \approx 0.09$ of reported gross,
+also estimated from filings, and subtracts the decedent's income tax due at
+death when current law makes it deductible. Liability applies the graduated
+tentative schedule $T(\cdot)$ with the unified credit taken at the exclusion
+amount $E$: $L(E) = \max\bigl(T(\text{base}) - T(E),\, 0\bigr)$.
+
+Spousal portability is handled as explicit branches. A married decedent with a
+living spouse is modeled at the event that both die, with liability $L(2E)$.
+For unmarried decedents, including widows and widowers, the calculator
+computes liability twice, once at the basic exclusion and once with the
+survivor's unused spousal exemption added, and weights the two by an estimated
+probability that such an exemption is available; two complete calculations are
+required because the credit introduces a kink that an expected exemption would
+misprice near the threshold. All of this is conditional on death. Expected
+revenue applies each household's mortality probability $m$ as a weight at
+aggregation: $\mathbb{E}[\text{tax}] = w\, m \,[\, p\, L_{\text{port}} +
+(1-p)\, L \,]$, where $w$ is the record weight and $p$ the portability
+probability.
+
+Reported estates also respond to the estate tax itself. Following Kopczuk and
+Slemrod (2001), the elasticity of the reported estate with respect to the
+net-of-tax rate is 0.16, with a plausible range of 0.10 to 0.22. We implement
+the exact finite-change form: the retained share of the reported base is
+$\bigl[(1-\tau_S)/(1-\tau_B)\bigr]^{0.16}$, where $\tau_B$ and $\tau_S$ are
+the record's marginal estate rates under baseline and reform, both measured
+through the calculator. The retained fraction is applied to reported gross
+estate rather than the taxable base --- the same convention as the wealth
+concealment --- which slightly overstates the response above the exemption,
+within the published range. The response keys off the change in the rate, never
+its level, because baseline-level avoidance is already embodied in the
+calibrated valuation factors; it is symmetric under rate cuts, and it reduces
+the taxable base without changing what heirs receive.
+
+Unrealized gains at death follow the regime being scored, set per asset class:
+under step-up the gain escapes income tax; under carryover it passes to heirs
+and resurfaces in their later sales; under deemed realization it is taxed on
+the decedent's final return, less a 25 percent valuation and compliance
+discount calibrated to the JCT score, with the resulting tax deductible
+against the estate. The regime feeds back into during-life realization
+behavior through the deferral model of Section A.1: the value of holding a
+gain until death is the income tax escaped, $\tau(1-e)$, where $e$ is the
+marginal estate rate, since income tax paid at death would have shrunk the
+taxable estate. Under current law this offset is about 18 percent of the
+death-tax value for the top decile of gain holders, so estate-only reforms
+move realizations during life.
+
+Estate tax reaches heirs by rank matching. Decedent estates, weighted by death
+probability and sorted by distributable value, and inheritances, sorted by
+size, form two cumulative-dollar ladders that are matched from the top down;
+each heir bears the average tax rate of the estates occupying the
+corresponding dollar interval, and the allocated total equals expected estate
+revenue each year. Allocating the tax in proportion to inheritance would be
+wrong for a tax with a high threshold: nearly all estates owe nothing, and a
+proportional rule would assign tax to small inheritances that come from exempt
+estates. The identifying assumption is that larger inheritances come from
+larger estates. Inheritance amounts are gross of estate tax, so they do not
+vary with policy; only the tax borne does. Deemed-realization tax at death,
+which has no threshold, is allocated in proportion to inheritance instead.
+
+Timing: estate tax on calendar-year-$t$ decedents is due nine months after
+death, so revenue is booked in fiscal year $t+1$.
+
+\subsection*{A.7 Tax-driven dissaving}
+
+A new tax bill has to be paid out of something. A household that owes more can
+consume less, or it can save less; there is no third option. This section
+describes the accounting we use to track the second case. Let $s$ denote the
+share of an additional dollar of tax financed out of saving rather than
+consumption. We assume $s$ rises with wealth: about 0.04 near
+the bottom of the within-age wealth distribution and 0.80 at the top, with a modest age
+pattern layered on top (lower for the young and for retirees of ordinary
+means, highest for peak earners, and flat at the top of the wealth
+distribution, where the elderly do not run down wealth with age).
+
+The profile is anchored to the evidence on consumption responses to persistent
+income changes. For a permanent change in after-tax income, consumption moves
+by the elasticity of consumption with respect to permanent income times the
+household's consumption-to-income ratio, so $s = 1 - \varepsilon \cdot (C/Y)$.
+With $\varepsilon \approx 0.7$ (Straub 2019) and a top-1-percent
+consumption-to-income ratio of roughly 0.3 (Mian, Straub, and Sufi 2021), the
+top of the distribution finances about 80 cents of a marginal tax dollar out
+of saving; near the bottom, where constrained households consume close to
+their income, the share is about 10 cents. Saving rates that reach half of
+income in the top percentile (Dynan, Skinner, and Zeldes 2004) are consistent
+with this gradient.
+
+The channel operates on cohorts: cells defined by age and by percentile of net
+worth within age. (Records with zero or negative net worth are left
+untouched.) For each cell we track $P_t$, the gap between baseline wealth and
+wealth under the policy, in dollars. Each year we measure, record by record,
+the extra tax the household owes under the policy relative to baseline during
+life (income, payroll, and any wealth tax), net of any change in the
+household's pre-tax income that the policy itself caused (relevant only for
+corporate reforms; see Section A.8). Call the cell total of this net cash-flow
+hit $F_t$. It is measured on a run with behavioral responses switched on but
+this channel switched off, so it reflects how households respond to the law
+but not the channel's own feedback. The gap then evolves as
+\begin{gather*}
+P_{t+1} \;=\; G_t\,P_t \;+\; s\,F_t,\\
+G_t \;=\; (1 + r_t) \;-\; s\,(\tau\,y + \tau_w),
+\end{gather*}
+where $r_t$ is the nominal growth rate of income per capita, which we use as
+the return at which cohort wealth compounds; $\tau$ is the marginal tax rate
+on the bundle of capital income the missing wealth would have generated
+(dividends, interest, realized gains, and a portion of pass-through income),
+measured through the tax calculator and aggregated to the cell; $y$ is the
+cell's capital income per dollar of gross wealth; and $\tau_w$ is the marginal
+wealth-tax rate. The subtraction inside $G_t$ is the feedback term: wealth
+that was never accumulated throws off no taxable income and owes no wealth
+tax, and that forgone tax is itself a cash-flow relief financed at the same
+share $s$.
+
+The accumulated gap is then pushed back onto records. Each record receives a
+share of its cell's $P_t$ in proportion to its net worth; its asset values,
+unrealized gains and their basis, capital income flows, and retirement
+distributions are scaled down accordingly, and net worth is recomputed.
+Because the wealth-tax and estate calculators run on the adjusted balance
+sheet, they collect less automatically: a smaller wealth-tax base each year
+and, weighted by each record's mortality, a smaller estate at death. This is
+how a large during-life tax partly cannibalizes wealth-based revenue later in
+the window and increasingly beyond it.
+
+Two statements of discipline. First, this is an accounting description of how
+taxes are paid, not a model of how saving responds to rates of return; nothing
+in it moves when after-tax returns change. Second, it enters only the
+behavioral (conventional) estimate. The static score, taxes under the new law
+with behavior held fixed, is never touched.
+
+\subsection*{A.8 Corporate tax incidence}
+
+The module is organized around a single shock. The input is the gross change
+in corporate receipts, before any individual-tax
+offset. Holding aggregate
+pre-tax income fixed, a corporate tax increase reduces after-tax profits
+dollar for dollar, so $w_t$ --- read directly from the scored receipts
+change --- corresponds conceptually to $\Delta\tau_t\,\Pi_t$ for pre-tax
+profit $\Pi_t$ and rate change $\Delta\tau_t$. Everything below traces this one reduction
+through the model: as current income flows, as asset values, and finally as
+its consequence for individual receipts.
+
+Income flows first. We split $w_t$ into a supernormal
+component, borne by corporate equity alone (returns to market power and ideas
+have no supply margin and are simply capitalized), and a normal-return
+component, which spreads across all capital as capital reallocates away from
+the corporate sector. We set the normal-return share at $\nu = 0.375$, leaving
+0.625 on supernormal returns, consistent with Treasury and Tax Policy Center
+estimates that about 60 percent of the corporate base is supernormal. The
+reallocation is not instant: the normal-return burden phases in with the
+replacement of the capital stock, $\lambda_t = 1 - (1 - 0.057)^t$, roughly
+half complete after twelve years. Corporate equity therefore bears
+\begin{equation*}
+h_t \;=\; (1-\nu)\,w_t \;+\; \nu\,w_t\,\big[(1-\lambda_t) + \lambda_t\,\kappa\big],
+\end{equation*}
+where $\kappa = 0.40$ is corporate equity's share of the economy-wide stock of
+normal capital: even in the long run, the single after-tax return that clears
+the capital market keeps that fraction of the normal burden on corporate
+capital. The remainder, $\nu\,w_t\,\lambda_t\,(1-\kappa)$, falls on
+noncorporate capital, so interest (phasing in as debt is rolled over at lower
+rates), rents, and a slice of pass-through income decline too. On each record,
+dividends scale with corporate equity's after-tax profit hit,
+$\phi_t = -h_t/\pi_t$, where $\pi_t$ is aggregate after-tax profit; at enactment,
+before reallocation has begun, this is the familiar
+$-\Delta\tau/(1-\tau)$.
+
+The same profit reduction is capitalized into asset values. The market value of corporate
+equity falls by the present value of the future after-tax profit reductions
+that remain priced into corporate shares, computed by backward recursion at a
+constant nominal rate, the 10-year Treasury yield at enactment plus a
+5-percentage-point equity premium, with a growing-perpetuity terminal value
+beyond the projection horizon. Expressed as a proportional discount $\mu_t$,
+the markdown is applied to directly held equity and to the equity share of
+funds, trusts, and retirement balances. Unrealized gains absorb the full price
+change, since basis does not move; later realizations shrink on both margins,
+the volume of sales (which tracks after-tax profits through repurchases) and
+the gain per dollar sold (which tracks the markdown). Retirement distributions
+scale with their marked-down balances, and estates reprice automatically
+because the estate calculator runs on the adjusted balance sheet. Under a
+permanent rate change the markdown decays toward the supernormal component as
+reallocation returns the normal burden to the whole capital stock; under a
+temporary change it is largest at announcement and unwinds by expiry.
+
+Last, the consequence for individual receipts. The declines in
+taxable dividends, interest, rents, gains, and retirement distributions flow
+through the individual tax calculator, and individual receipts fall by
+whatever the microsimulation produces given who actually holds the affected
+income. The offset is therefore an output of the model, not an assumed
+fraction of the corporate estimate. Household exposure is limited: we
+attribute about 85 percent of dividends and half of realized gains to
+corporate equity, and roughly 40
+percent of the total burden falls on foreign investors, nonprofits, and
+defined-benefit plans that do not appear on household returns. We do not
+force household records to absorb that share; a reconciliation report carries
+it as an unallocated remainder. The after-tax income losses also enter the dissaving channel of Section A.7, so part of the burden drains into smaller estates
+decades later.
+
+As in Section A.7, all of this affects only the behavioral estimate; the
+static score remains a clean statement of the law. The constants in this
+section (the supernormal split, $\kappa$, the exposure shares, the equity
+premium) are provisional placeholders pending direct measurement, and we
+present corporate-rate results as such.
+
+\section*{Appendix B. Sourcing for Table 1}
+
+This section expands the one-line ``Basis'' column of Table 1. For each
+parameter we give the underlying citation, describe how the published estimate
+maps into the model's units, and, where the value is calibrated rather than
+taken from the literature, describe the calibration and date it. Precise
+pinned values are given here; Table 1 rounds them.
+
+\medskip\noindent\textbf{\small CAPITAL GAINS REALIZATION}
+
+\textbf{Long-run response ($\eta$).} The pinned value is 2.4825; Table 1
+rounds to 2.48. $\eta$ is the semi-elasticity in the realization rule---each
+cell's discretionary realization rate scales by
+$\exp(-\eta \times \text{change in the marginal tax cost of realizing})$---and
+because the whole gain pool responds, it is also the model's aggregate
+long-run semi-elasticity. It is calibrated so that the full model reproduces
+our preferred permanent realization elasticity of $-0.6$, which sits inside
+the empirical range: Dowd, McClelland, and Muthitacharoen (2015) estimate a
+persistent elasticity of $-0.72$ (with a within-year elasticity of $-1.2$) on
+a large panel of returns, Agersnap and Zidar (2021) find ten-year revenue
+elasticities of $-0.3$ to $-0.5$ with revenue-maximizing rates of 38 to 47
+percent, and the JCT and CBO scoring conventions sit in the same neighborhood.
+The calibration (July 2026): we ran a permanent increase in the top statutory
+rate on gains to 25 percent through the full model at several trial values of
+$\eta$, measured the realized long-run response at simulation year 30, and
+found the measured response linear in $\eta$; inverting the fitted line at the
+target semi-elasticity of $-0.6/0.238 = -2.52$ (the elasticity converted at
+the 23.8 percent top federal rate on long-term gains) gives 2.4825. The fitted
+line's coefficients are kept in the calibration records so that future
+re-derivations are arithmetic.
+
+\textbf{Share of realizations that can retime $\pm 1$ year.} Pinned at 0.2542;
+Table 1 rounds to 0.25. This is the fraction of baseline realizations free to
+shift across adjacent years toward the lower-rate year, and it carries the
+model's short-run announcement response. It is calibrated (July 2026) to our
+preferred short-run elasticity of $-1.2$, which is the within-year estimate in
+Dowd, McClelland, and Muthitacharoen (2015). Because the retiming margin nets
+to zero under a uniform permanent rate change, $\eta$ is pinned first and
+independently; given $\eta$, the timing share is then found by a direct
+root-finding search on the full model against the short-run moment (target
+semi-elasticity $1.2/0.238 = 5.04$).
+
+\textbf{Valuation and compliance discount under deemed realization at death.}
+A measurement parameter, not a behavioral response: it scales down the gains
+deemed realized at death for valuation games and noncompliance that revenue
+estimators assume but the realization model itself does not produce. At the 25
+percent discount, the model's ten-year revenue from a
+deemed-realization-at-death regime comes in near \$695 billion, against
+roughly \$600 billion in JCT scoring of comparable proposals; a discount of 25
+to 33 percent is also consistent with the valuation discount our estate-tax
+calibration implies for pass-through assets. We intend eventually to replace
+this single number with the estate side's asset-class-specific reporting
+factors.
+
+\medskip\noindent\textbf{\small INCOME REPORTING AND FORM}
+
+\textbf{Income conversion ($\sigma$).} $\sigma = 0.16$ governs how much
+top-bracket labor-type compensation is restructured into unrealized equity
+gains when the wedge between the ordinary rate and the equity path's expected
+present-value tax rate widens: 0.16 percent of the eligible compensation pool
+converts per percentage point of wedge. It is the model's one residual
+parameter. With every other reporting margin active (realization, entity
+shifting, underreporting, charity), we run a five-point top-rate increase
+through the full model, measure the total elasticity of top taxable ordinary
+income, and set $\sigma$ so that this lands on 0.25---the central reading of
+Saez, Slemrod, and Giertz (2012), whose survey puts the best available
+estimates between 0.12 and 0.40. The value was re-derived in July 2026 after
+revisions to the entity-shifting and underreporting modules, yielding 0.157,
+shipped as 0.16; a confirmation run measures the total top ETI at 0.2508.
+Because $\sigma$ is residual, it is re-derived whenever any other margin in
+the stack changes; a standing check in the calibration records enforces this.
+
+\textbf{Entity-shifting semi-elasticity.} From a Penn Wharton Budget Model
+working paper by Prisinzano and Pearce (2018), who estimate how the share of
+business income accruing to corporations responds to the
+corporate/pass-through rate differential. We take their preferred estimate of
+0.3788 (their Table IV.B) and divide by the pass-through sector's roughly 60
+percent share of business income, giving a semi-elasticity of pass-through
+income of $0.3788/0.6 \approx 0.63$ per percentage point of rate differential.
+One departure from the paper's framework: where the realization model is
+active, the tax value of deferral on retained corporate earnings is priced by
+that model's expected present-value tax rate for the owner's age and the
+prevailing death regime, rather than by
+the paper's fixed approximation. The paper's identification comes from small
+historical movements in the rate differential, and it cautions against
+extrapolating far beyond them --- a caveat that applies to the large reforms
+scored here.
+
+\textbf{Underreporting elasticities.} From DeBacker, Heim, and Yuskavage
+(2025), presented at the National Tax Association annual meetings in November
+2025, using IRS National Research Program random-audit data from 2006 to 2017.
+They estimate the elasticity of noncompliance with respect to the net-of-tax
+rate as a component of the overall ETI, and we apply their values as
+net-of-tax-rate elasticities of reported income, which is the authors' own
+usage in their revenue illustration. The central values come from their pooled
+cross-section subsample estimates on federal rate variation: 0.046 for filers
+with self-employment income (applied to Schedules C and F) and 0.052 for
+filers with partnership income (applied to partnership and S-corporation
+income). The rent value, 0.040, is their Kansas difference-in-differences
+estimate for Schedule E filers, the weakest-identified of the three. Their
+quasi-experimental designs give larger values---0.09 for Schedule C filers in
+the Kansas reform and up to 0.26 for sole proprietors in the bunching
+design---so the centrals sit at the conservative end of the paper's
+0.02-to-0.26 range. Wages, interest, and dividends are assigned no response,
+reflecting third-party information reporting; only positive income is scaled,
+so the overstated-loss and deduction margins are not modeled (a documented
+omission---they find itemizer elasticities of 0.07 to 0.23).
+
+\textbf{Charitable giving price elasticity (cash).} A tax-price elasticity of
+$-0.5$ applied to cash contributions on the intensive margin, where the price
+of giving is one minus the marginal subsidy rate. The value matches Randolph
+(1995), who separates permanent from transitory price responses in panel data
+and finds a permanent price elasticity of about $-0.5$. Later panel estimates
+run somewhat larger---Bakija and Heim (2011) find persistent elasticities of
+roughly $-0.7$ to $-1$---so $-0.5$ is a conservative central value for a
+persistent response. The appreciated-asset giving margin, whose price depends
+on the capital gains rate, is a documented gap.
+
+\medskip\noindent\textbf{\small WEALTH AND ESTATES}
+
+\textbf{Reported-wealth semi-elasticities.} The values $-7$ for marketable and
+$-17$ for closely held wealth are assumptions carried over from our standalone
+wealth-tax model, reviewed and accepted in July 2026; they are not estimates
+from a single study. Units: reported wealth in each class scales by
+$\exp(\text{rate} \times e)$, so at a 3 percent marginal rate they imply
+roughly 19 percent erosion of reported marketable wealth and 40 percent of
+closely held. The quasi-experimental literature spans a wide range that
+brackets these values: Seim (2017) finds small, mainly reporting responses in
+Sweden; Jakobsen, Jakobsen, Kleven, and Zucman (2020) find sizable long-run
+responses at the top in Denmark; Br\"ulhart, Gruber, Krapf, and Schmidheiny
+(2022) find reported wealth about 43 percent higher per percentage-point rate
+cut in Switzerland, well above our assumption; and Londo\~no-V\'elez and
+\'Avila-Mahecha (2021) document that the wealthiest Colombians concealed about
+a third of their wealth offshore. These semi-elasticities also serve as a
+ceiling that absorbs migration and expatriation, which we do not model
+separately, and we recommend publishing sensitivity bands around them.
+
+\textbf{Concealment share of the avoidance response.} Structural assumptions,
+set in July 2026, splitting the avoidance response above into concealment (the
+asset and its income and estate value leave the reported bases entirely) and
+legal valuation gaming (the assessed value is lowballed but the income remains
+visible). Marketable assets have observable exchange prices, so their
+avoidance is treated as 100 percent concealment; closely held avoidance is
+split 50/50, since valuation discounts on private businesses are real and
+legal. The concealment reading is consistent with the Colombian evidence,
+where top-end evasion took the form of entire assets hidden offshore rather
+than shaded valuations.
+
+\textbf{Reported-estate net-of-tax elasticity.} From Kopczuk and Slemrod
+(2001), who regress reported estates on the estate tax rates prevailing over
+the decedent's life and find an elasticity with respect to the net-of-tax rate
+of about 0.16, with pooled estimates ranging from 0.10 to 0.22 across
+specifications; we carry the band into our sensitivity analysis. Adopted July
+2026 in an exact net-of-tax power form---the reported estate retains the
+fraction $((1 - \tau_{\text{scenario}})/(1 - \tau_{\text{baseline}}))^{0.16}$,
+evaluated at each record's marginal estate rate---which reproduces the local
+elasticity at the current top rate, remains exact for large reforms, and
+handles newly taxable estates.
+
+\medskip\noindent\textbf{\small MECHANICAL INTERACTIONS}
+
+\textbf{Share of new tax paid out of saving.} The profile---the share of a persistent above-baseline tax flow paid out of saving rather than
+consumption, by age and within-age wealth rank, running from about 0.04 at the
+bottom to 0.80 at the top---was calibrated in July 2026. The anchor is the
+bridge $s = 1 - \varepsilon \cdot (C/Y)$, with $\varepsilon \approx 0.7$ the
+elasticity of consumption to permanent income from Straub (2019) and
+consumption-to-income ratios by rank from Mian, Straub, and Sufi (2020): the
+top 1 percent's income share near 20 percent against a consumption share of 6
+to 7 percent gives $s \approx 0.8$ at the top, while hand-to-mouth behavior
+(Kaplan and Violante 2022) pulls the bottom toward zero. The gradient is
+cross-checked against the saving-rate gradient in lifetime income in Dynan,
+Skinner, and Zeldes (2004), whose top 1 percent saves about half of income
+across specifications, and against the liquidity gradient of transitory MPCs
+in Fagereng, Holm, and Natvik (2021); the age tilt is attenuated to zero at
+top ranks because high-income elderly households do not run down wealth (De
+Nardi, French, and Jones 2010). Validation runs in July 2026 put the
+dollar-weighted effective share for top-concentrated reforms at about 0.78, at
+the top of the predicted band.
+
+\textbf{Corporate incidence constants.} Provisional placeholders pending
+direct measurement, and we present corporate-rate results as such. The one
+anchored value is the normal-return share of the corporate wedge, 0.375:
+Treasury's distribution methodology attributes about 63 percent of the
+corporate tax to supernormal returns (Cronin, Lin, Power, and Cooper 2013) and
+the Tax Policy Center's about 60 percent (Nunns 2012), implying a normal share
+of 0.37 to 0.40; we sweep corners of 0 and 0.5. The remaining constants---the
+C-corporation share of the normal capital stock (0.40), the U.S.-taxable
+exposure scale, and the equity risk premium among them---carry stated priors
+rather than measurements. The normal-return share, the corporate share of
+normal capital, and the permanence of the priced-in change are exposed as
+sweep switches; the remaining constants are fixed in code.
+
+\subsection*{References}
+
+{\small
+\bibentry Agersnap, Ole, and Owen Zidar. 2021. ``The Tax Elasticity of
+Capital Gains and Revenue-Maximizing Rates.'' \emph{American Economic Review:
+Insights} 3 (4): 399--416.
+
+\bibentry Bakija, Jon, and Bradley T. Heim. 2011. ``How Does Charitable
+Giving Respond to Incentives and Income? New Estimates from Panel Data.''
+\emph{National Tax Journal} 64 (2, Part 2): 615--650.
+
+\bibentry Br\"ulhart, Marius, Jonathan Gruber, Matthias Krapf, and Kurt
+Schmidheiny. 2022. ``Behavioral Responses to Wealth Taxes: Evidence from
+Switzerland.'' \emph{American Economic Journal: Economic Policy} 14 (4):
+111--150.
+
+\bibentry Cronin, Julie Anne, Emily Y. Lin, Laura Power, and Michael Cooper.
+2013. ``Distributing the Corporate Income Tax: Revised U.S. Treasury
+Methodology.'' \emph{National Tax Journal} 66 (1): 239--262.
+
+\bibentry DeBacker, Jason, Bradley Heim, and Alexander Yuskavage. 2025.
+``Marginal Tax Rates and Income Tax Noncompliance.'' Presented at the
+National Tax Association annual meetings, November 2025.
+
+\bibentry De Nardi, Mariacristina, Eric French, and John B. Jones. 2010.
+``Why Do the Elderly Save? The Role of Medical Expenses.'' \emph{Journal of
+Political Economy} 118 (1): 39--75.
+
+\bibentry Dowd, Tim, Robert McClelland, and Athiphat Muthitacharoen. 2015.
+``New Evidence on the Tax Elasticity of Capital Gains.'' \emph{National Tax
+Journal} 68 (3): 511--544.
+
+\bibentry Dynan, Karen E., Jonathan Skinner, and Stephen P. Zeldes. 2004.
+``Do the Rich Save More?'' \emph{Journal of Political Economy} 112 (2):
+397--444.
+
+\bibentry Fagereng, Andreas, Martin B. Holm, and Gisle J. Natvik. 2021.
+``MPC Heterogeneity and Household Balance Sheets.'' \emph{American Economic
+Journal: Macroeconomics} 13 (4).
+
+\bibentry Jakobsen, Katrine, Kristian Jakobsen, Henrik Kleven, and Gabriel
+Zucman. 2020. ``Wealth Taxation and Wealth Accumulation: Theory and Evidence
+from Denmark.'' \emph{Quarterly Journal of Economics} 135 (1): 329--388.
+
+\bibentry Kaplan, Greg, and Giovanni L. Violante. 2022. ``The Marginal
+Propensity to Consume in Heterogeneous Agent Models.'' \emph{Annual Review of
+Economics} 14.
+
+\bibentry Kopczuk, Wojciech, and Joel Slemrod. 2001. ``The Impact of the
+Estate Tax on Wealth Accumulation and Avoidance Behavior.'' In
+\emph{Rethinking Estate and Gift Taxation}, edited by William G. Gale, James
+R. Hines Jr., and Joel Slemrod. Washington, DC: Brookings Institution Press.
+
+\bibentry Londo\~no-V\'elez, Juliana, and Javier \'Avila-Mahecha. 2021.
+``Enforcing Wealth Taxes in the Developing World: Quasi-Experimental Evidence
+from Colombia.'' \emph{American Economic Review: Insights} 3 (2): 131--148.
+
+\bibentry Mian, Atif, Ludwig Straub, and Amir Sufi. 2020. ``The Saving Glut
+of the Rich.'' NBER Working Paper 26941.
+
+\bibentry Nunns, Jim. 2012. ``How TPC Distributes the Corporate Income Tax.''
+Urban-Brookings Tax Policy Center.
+
+\bibentry Prisinzano, Richard, and James Pearce. 2018. ``Tax Based Switching
+of Business Income.'' Penn Wharton Budget Model Working Paper W2018-2.
+
+\bibentry Randolph, William C. 1995. ``Dynamic Income, Progressive Taxes, and
+the Timing of Charitable Contributions.'' \emph{Journal of Political Economy}
+103 (4): 709--738.
+
+\bibentry Saez, Emmanuel, Joel Slemrod, and Seth H. Giertz. 2012. ``The
+Elasticity of Taxable Income with Respect to Marginal Tax Rates: A Critical
+Review.'' \emph{Journal of Economic Literature} 50 (1): 3--50.
+
+\bibentry Seim, David. 2017. ``Behavioral Responses to Wealth Taxes: Evidence
+from Sweden.'' \emph{American Economic Journal: Economic Policy} 9 (4):
+395--421.
+
+\bibentry Smith, Matthew, Danny Yagan, Owen Zidar, and Eric Zwick. 2019.
+``Capitalists in the Twenty-First Century.'' \emph{Quarterly Journal of
+Economics} 134 (4): 1675--1745.
+
+\bibentry Straub, Ludwig. 2019. ``Consumption, Savings, and the Distribution
+of Permanent Income.'' Working paper, Harvard University.
+}
+
+\end{document}
