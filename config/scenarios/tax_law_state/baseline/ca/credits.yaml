@@ -130,6 +130,9 @@ earned_credit_round:
 earned_credit_refundable:
   value: 1
   reference: 'California FTB 3514, refundable California EITC, 2025'
+earned_credit_mfs_eligible:
+  value: 0
+  reference: 'CalEITC follows federal EITC filing-status rules; married-filing-separately barred, matching the federal model (eitc.yaml mfs_eligible = 0)'
 earned_credit_agi_safe_harbor:
   value:
     '2017': [3446, 5175, 7265, 7265]

@@ -2,7 +2,9 @@
 # Function to calculate state liability and state-filer flag
 #------------------------------------------------------------
 
-# Set return variables for function
+# Set return variables for function. NOTE: st_taxable_income_surtax is exposed
+# for reporting but is ALREADY included in liab_st_iit below -- do not add the
+# two together in any downstream aggregation.
 return_vars$calc_st_liab = c('st_taxable_income_surtax', 'liab_st_iit',
                               'st_filer')
 

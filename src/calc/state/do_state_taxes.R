@@ -235,6 +235,7 @@ ensure_st_params = function(tax_units) {
     'st_credits.earned_credit_earned_limit' = Inf,
     'st_credits.earned_credit_round' = 0,
     'st_credits.earned_credit_refundable' = 0,
+    'st_credits.earned_credit_mfs_eligible' = 0,
     'st_credits.young_child_credit_style' = 0,
     'st_credits.young_child_credit_amount' = 0,
     'st_credits.young_child_credit_max_age' = -1,

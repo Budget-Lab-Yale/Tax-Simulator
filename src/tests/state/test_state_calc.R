@@ -377,6 +377,12 @@ test_state_calc = function() {
                          liab_st_individual_net = 65.5),
            label = 'CA-8b dependent filer excluded from CalEITC')
 
+  # CA-8c: a married-filing-separately filer is barred from the refundable
+  # CalEITC (earned_credit_mfs_eligible = 0), mirroring the federal EITC.
+  run_case('CA', 2025, list(filing_status = 3, agi = 10000, ei1 = 3000),
+           expect = list(st_earned_credit = 0),
+           label = 'CA-8c MFS filer barred from CalEITC')
+
   # CA-9: the Schedule CA limitation protects $20,000 medical, $10,000
   # investment interest, and $5,000 casualty deductions. The reduction is
   # the lesser of 80% of $160,000 unprotected deductions and 6% of the

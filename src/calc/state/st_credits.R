@@ -28,10 +28,11 @@ lookup_state_credit_table = function(income, n_children, credit_tables,
     return(amount)
   }
 
-  child_count = pmin(
-    max(schedule$child_count),
-    pmax(min(schedule$child_count), coalesce(n_children, 0L))
-  )
+  # Cap at the top child-count column; do NOT floor up to the lowest present
+  # column. A count below the schedule's minimum bin (e.g. a childless filer
+  # when a table omits its zero-child rows) finds no matching band and returns
+  # zero, consistent with the omitted-tail semantics above.
+  child_count = pmin(max(schedule$child_count), coalesce(n_children, 0L))
   for (child_slot in unique(child_count)) {
     rows = which(child_count == child_slot)
     bands = schedule[schedule$child_count == child_slot, , drop = FALSE]
@@ -249,7 +250,12 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   # Dependents of another taxpayer are ineligible for the independent
   # earned-income credit, mirroring the federal EITC (eitc.R) and the state
   # exempt/household/WFTC credits; ei1/ei2 are never dependent-zeroed upstream.
-  earned_credit_eligible = tax_unit$dep_status != 1 & earned_income > 0 &
+  # MFS filers are barred unless the state opts them in (earned_credit_mfs_
+  # eligible == 1), mirroring the federal EITC's MFS treatment.
+  earned_credit_eligible = tax_unit$dep_status != 1 &
+    (tax_unit$filing_status != 3 |
+       tax_unit$st_credits.earned_credit_mfs_eligible == 1) &
+    earned_income > 0 &
     earned_income < tax_unit$st_credits.earned_credit_earned_limit &
     agi < tax_unit$st_credits.earned_credit_agi_limit & earned_credit_age_ok
   earned_credit_table_earned = lookup_state_credit_table(
@@ -326,9 +332,12 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     yctc_unrounded >= 1 ~ floor(yctc_unrounded + 0.5),
     TRUE ~ 0
   )
+  # FTB conditions the YCTC on CalEITC ELIGIBILITY, not on a strictly positive
+  # computed CalEITC amount, so a filer at the very top of the phase-out band
+  # (credit rounds to zero) with a young child still qualifies.
   st_yctc = if_else(
     tax_unit$st_credits.young_child_credit_style == 1 & n_young_child > 0 &
-      (st_earned_credit > 0 | yctc_zero_income_eligible),
+      (earned_credit_eligible | yctc_zero_income_eligible),
     yctc_amount, 0
   )
 

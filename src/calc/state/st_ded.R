@@ -40,6 +40,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     # Tax unit attributes
     'agi',                # (dbl)  federal AGI
     'st_agi',             # (dbl)  state income base (calc_st_agi)
+    'filing_status',      # (int)  1 single, 2 MFJ, 3 MFS, 4 HoH
     'itemizing',          # (bool) whether unit itemizes federally
     'dep_status',         # (bool) whether filer is a dependent
     'item_ded',           # (dbl)  federal itemized deductions post-limitation
