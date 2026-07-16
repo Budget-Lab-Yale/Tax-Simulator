@@ -97,6 +97,8 @@ ensure_st_params = function(tax_units) {
     'st_agi.ss_full_sub_65plus'    = 0,
     'st_agi.ss_full_sub_5564'      = 0,
     'st_agi.ss_5564_agi_limit'     = Inf,
+    'st_agi.ss_full_sub_allages'   = 0,
+    'st_agi.ss_allages_agi_limit'  = Inf,
     'st_agi.pension_excl_under65'  = 0,
     'st_agi.pension_excl_65plus'   = 0,
     'st_agi.pension_excl_min_age'  = Inf,
@@ -108,6 +110,8 @@ ensure_st_params = function(tax_units) {
     'st_agi.retirement_excl_earned_cap' = 0,
     'st_agi.sub_char_nonitem_floor' = Inf,
     'st_agi.add_overtime_ded'      = 0,
+    'st_agi.cap_gains_excl_share'  = 0,
+    'st_agi.div_excl_share'        = 0,
 
     # ded.yaml
     'st_ded.std_amount'            = 0,

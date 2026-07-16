@@ -21,7 +21,7 @@ test_state_calc = function() {
 
   law = build_state_tax_law(
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
-                'IN', 'KY', 'MI', 'CA'),
+                'IN', 'KY', 'MI', 'CA', 'ND', 'SC'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -510,6 +510,109 @@ test_state_calc = function() {
            label = 'WA-5 childless age limit')
 
   #--------------------------------------------------------------------------
+  # North Dakota (Form ND-1) -- federal-taxable-income start, graduated rates
+  #--------------------------------------------------------------------------
+
+  # ND-1: TY2020 single, ND taxable income $50,000. Pre-reform 5-bracket
+  # schedule: 1.10% x 40,125 + 2.04% x (50,000 - 40,125) = 441.375 + 201.45.
+  run_case('ND', 2020, list(agi = 50000, txbl_inc = 50000),
+           expect = list(st_agi = 50000, liab_st_iit = 642.825),
+           label = 'ND-1 2020 single pre-reform schedule')
+
+  # ND-2: TY2023 single, $100,000. HB1158 three-tier: 0% to 44,725, then
+  # 1.95% x (100,000 - 44,725) = 1,077.8625. Tests the zero-tax bottom bracket.
+  run_case('ND', 2023, list(agi = 100000, txbl_inc = 100000),
+           expect = list(liab_st_iit = 1077.8625),
+           label = 'ND-2 2023 single HB1158 three-tier')
+
+  # ND-3: TY2023 single with $10,000 net long-term gain. 40% exclusion drops
+  # the base to 96,000: 1.95% x (96,000 - 44,725) = 999.8625.
+  run_case('ND', 2023, list(agi = 100000, txbl_inc = 100000, kg_lt = 10000),
+           expect = list(st_agi = 96000, liab_st_iit = 999.8625),
+           label = 'ND-3 40% net long-term capital gain exclusion')
+
+  # ND-4: TY2024 single with $5,000 qualified dividends. 40% exclusion drops
+  # the base to 58,000: 1.95% x (58,000 - 47,150) = 211.575.
+  run_case('ND', 2024, list(agi = 60000, txbl_inc = 60000, div_pref = 5000),
+           expect = list(st_agi = 58000, liab_st_iit = 211.575),
+           label = 'ND-4 40% qualified dividend exclusion')
+
+  # ND-5: TY2019 age-40 single with $3,000 taxable SS and federal AGI $45,000
+  # (<= $50,000 cap): the SS exemption applies at ANY age, base 42,000.
+  # 1.10% x 39,450 + 2.04% x (42,000 - 39,450) = 433.95 + 52.02.
+  run_case('ND', 2019,
+           list(agi = 45000, txbl_inc = 45000, txbl_ss = 3000, age1 = 40),
+           expect = list(st_agi = 42000, liab_st_iit = 485.97),
+           label = 'ND-5 all-ages AGI-capped SS exemption (2019)')
+
+  # ND-5b: same filer with AGI $60,000 (> cap): no SS subtraction, base 45,000.
+  run_case('ND', 2019,
+           list(agi = 60000, txbl_inc = 45000, txbl_ss = 3000, age1 = 40),
+           expect = list(st_agi = 45000, liab_st_iit = 547.17),
+           label = 'ND-5b SS exemption denied above AGI cap')
+
+  # ND-6: TY2020 MFS uses its own schedule (not single/2). $50,000:
+  # 1.10% x 33,525 + 2.04% x (50,000 - 33,525) = 368.775 + 336.09.
+  run_case('ND', 2020, list(filing_status = 3, agi = 50000, txbl_inc = 50000),
+           expect = list(liab_st_iit = 704.865),
+           label = 'ND-6 2020 MFS distinct schedule')
+
+  # ND-7: TY2020 MFJ, $100,000: 1.10% x 67,050 + 2.04% x (100,000 - 67,050)
+  # = 737.55 + 672.18.
+  run_case('ND', 2020, list(filing_status = 2, agi = 100000, txbl_inc = 100000),
+           expect = list(liab_st_iit = 1409.73),
+           label = 'ND-7 2020 MFJ schedule')
+
+  #--------------------------------------------------------------------------
+  # South Carolina (SC1040) -- federal-taxable-income start, one schedule for
+  # all filing statuses
+  #--------------------------------------------------------------------------
+
+  # SC-1: TY2021 pre-reform six-bracket schedule, taxable income $50,000.
+  # 3/4/5/6% on each $3,110 band + 7% x (50,000 - 15,550) = 559.80 + 2,411.50.
+  run_case('SC', 2021, list(agi = 50000, txbl_inc = 50000),
+           expect = list(liab_st_iit = 2971.3),
+           label = 'SC-1 2021 pre-reform six-bracket schedule')
+
+  # SC-2: TY2024 reform three-bracket, $60,000. 3% x (17,350 - 3,460) + 6.2% x
+  # (60,000 - 17,350) = 6.2% x 60,000 - 659 (exact published constant) = 3,061.
+  run_case('SC', 2024, list(agi = 60000, txbl_inc = 60000),
+           expect = list(liab_st_iit = 3061.0),
+           label = 'SC-2 2024 reform schedule (exact constant C)')
+
+  # SC-3: TY2024 with $20,000 net long-term gain, 44% deduction -> base 51,200:
+  # 6.2% x 51,200 - 659 = 2,515.40.
+  run_case('SC', 2024, list(agi = 60000, txbl_inc = 60000, kg_lt = 20000),
+           expect = list(st_agi = 51200, liab_st_iit = 2515.4),
+           label = 'SC-3 44% net capital gain deduction')
+
+  # SC-4: SS fully exempt. TY2024, $40,000 base incl. $10,000 taxable SS ->
+  # base 30,000: 6.2% x 30,000 - 659 = 1,201.
+  run_case('SC', 2024,
+           list(agi = 40000, txbl_inc = 40000, txbl_ss = 10000, age1 = 67),
+           expect = list(st_agi = 30000, liab_st_iit = 1201.0),
+           label = 'SC-4 full Social Security exemption')
+
+  # SC-5: retirement-income deduction. Age 67 gets the $10,000 cap; $8,000 of
+  # pension is fully deducted -> base 32,000: 6.2% x 32,000 - 659 = 1,325.
+  run_case('SC', 2024,
+           list(agi = 40000, txbl_inc = 40000, txbl_pens_dist = 8000, age1 = 67),
+           expect = list(st_agi = 32000, liab_st_iit = 1325.0),
+           label = 'SC-5 age-65 retirement deduction ($10k cap)')
+
+  # SC-5b: under-65 filer gets only the $3,000 retirement cap -> base 37,000.
+  run_case('SC', 2024,
+           list(agi = 40000, txbl_inc = 40000, txbl_pens_dist = 8000, age1 = 50),
+           expect = list(st_agi = 37000),
+           label = 'SC-5b under-65 retirement deduction ($3k cap)')
+
+  # SC-6: nonrefundable SC EITC at 125% of the $1,000 federal EITC (TY2023).
+  # Tax before credits on $60,000 = 6.4% x 60,000 - 670 = 3,170; less $1,250.
+  run_case('SC', 2023, list(agi = 60000, txbl_inc = 60000, eitc = 1000),
+           expect = list(st_eitc = 1250, liab_st_iit = 1920.0),
+           label = 'SC-6 nonrefundable SC EITC (125% of federal)')
+
+  #--------------------------------------------------------------------------
   # Structural smoke test: a coarse grid of units through every broad-IIT
   # baseline state and several years must produce finite, non-NA results
   #--------------------------------------------------------------------------
@@ -540,7 +643,7 @@ test_state_calc = function() {
       ))
     })
 
-  for (st in c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI', 'CA')) {
+  for (st in c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI', 'CA', 'ND', 'SC')) {
     for (yr in c(2017, 2021, 2024, 2026, 2030)) {
       law_slice = law %>%
         filter(state == st, year == yr) %>%
@@ -555,7 +658,7 @@ test_state_calc = function() {
       )
     }
   }
-  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 10 states x 5 years)')
+  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 12 states x 5 years)')
 
   # Subset-states regression: a law table built WITHOUT a given state lacks
   # that state's feature columns entirely (not just NA cells); the calculator

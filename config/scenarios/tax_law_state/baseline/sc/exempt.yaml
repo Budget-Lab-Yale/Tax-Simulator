@@ -1,0 +1,26 @@
+---
+# South Carolina: exemptions. SC has no personal (taxpayer) exemption, but from
+# TY2018 (when TCJA suspended federal personal exemptions embedded in the base)
+# it added a per-dependent exemption (SC1040 subtraction line w; 12-6-1140),
+# chained-CPI indexed. In TY2017 the federal personal exemptions are still in
+# federal taxable income, so no separate SC dependent exemption applies.
+#
+# KNOWN-DIFFERENCE: a dependent under age 6 receives the amount TWICE (line t
+# doubles line w). The under-6 doubling is not modeled (needs dependent-age
+# detail keyed to the exemption); only the single per-dependent amount is taken.
+
+personal_amount:
+  value: 0
+  reference: 'SC1040 structure; no SC personal (taxpayer) exemption'
+dep_amount:
+  value:
+    '2017': 0
+    '2018': 4110
+    '2019': 4190
+    '2020': 4260
+    '2021': 4300
+    '2022': 4430
+    '2023': 4610
+    '2024': 4790
+    '2025': 4930
+  reference: 'S.C. Code 12-6-1140; SC1040 line w SC dependent exemption (chained-CPI indexed, $10 rounding). No line w in 2017 (federal personal exemptions still in the base)'

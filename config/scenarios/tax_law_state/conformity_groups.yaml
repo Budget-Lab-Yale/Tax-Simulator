@@ -14,3 +14,7 @@
   label: fixed_2025_selective
   ready: false
   reference_tax_law_id:
+3:
+  label: fixed_date_annual
+  ready: false
+  reference_tax_law_id:

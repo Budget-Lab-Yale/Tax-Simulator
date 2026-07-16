@@ -1,0 +1,80 @@
+---
+# North Dakota: base and additions/subtractions (Form ND-1; N.D.C.C.
+# 57-38-30.3(2)). ND tax = rate x (federal TAXABLE income + additions
+# - subtractions), so the federal standard/itemized deduction flows through the
+# starting point. ND is rolling-conformity.
+
+filing_status_mapper:
+  ss_allages_agi_limit:
+    '1': ss_allages_agi_limit_single
+    '2': ss_allages_agi_limit_joint
+    '3': ss_allages_agi_limit_single
+    '4': ss_allages_agi_limit_single
+
+# Starting point: 2 = federal taxable income (ND-1 line 1b, 2018+; line 1 in 2017)
+start_point:
+  value: 2
+  reference: 'ND-1 line 1b federal taxable income (line 1 in 2017); N.D.C.C. 57-38-30.3(2)'
+
+# IRC conformity: rolling ("Internal Revenue Code ... as amended")
+conformity_year:
+  value: 0
+  reference: 'N.D.C.C. 57-38-01(5),(13) and 57-38-30.3(2) (IRC as amended; rolling)'
+conformity_group:
+  value: 0
+  reference: 'Rolling conformity -> reference-law group 0 (conformity_groups.yaml)'
+
+# Municipal bond interest: ND has NO individual out-of-state muni addback
+# (57-38-30.3(2) has none; the addback in 57-38-01.3(1)(d) is CORPORATE only).
+# Because the base starts from federal taxable income (all IRC 103 interest
+# already excluded) and is never added back, ND effectively exempts ALL
+# municipal interest, in-state and out-of-state.
+add_exempt_int:
+  value: 0
+  reference: 'N.D.C.C. 57-38-30.3(2) (no individual muni-interest addback; all muni interest exempt)'
+
+# US government obligation interest subtraction (57-38-30.3(2)(a)). Carried as a
+# flag; the US-obligation share of taxable interest is unobserved in the PUF, so
+# no subtraction is taken (model-wide known-difference, same as CO)
+sub_us_int:
+  value: 1
+  reference: 'N.D.C.C. 57-38-30.3(2)(a) (US obligation interest); PUF share unobserved [known-difference]'
+
+# ND does not add back state income tax deducted federally, so the federal
+# itemized deduction (incl. SALT) flows through; the state income-tax refund
+# in federal taxable income is therefore NOT subtracted (no ND refund line)
+sub_state_ref:
+  value: 0
+  reference: 'N.D.C.C. 57-38-30.3(2) has no state income-tax refund subtraction (no state-tax addback either)'
+
+# Social Security subtraction (57-38-30.3(2)(s)):
+#   2017-2018: none.
+#   2019-2020: full exemption for ALL ages if federal AGI <= 50k single /
+#     100k joint (enacted 2019, 66th Assembly).
+#   2021+: full/unlimited, all ages (SB2351, Nov 2021 special session).
+ss_sub_share:
+  value:
+    '2017': 0
+    '2021': 1
+  reference: 'N.D.C.C. 57-38-30.3(2)(s); SB2351 (2021 special session) full SS exemption TY2021+'
+ss_full_sub_allages:
+  value:
+    '2017': 0
+    '2019': 1
+    '2021': 0
+  reference: '2019 (66th Assembly) AGI-capped full SS exemption for all ages, TY2019-2020 (superseded by unconditional exemption TY2021)'
+ss_allages_agi_limit_single:
+  value: 50000
+  reference: 'TY2019-2020 SS exemption federal-AGI cap, single/other (~$50,000)'
+ss_allages_agi_limit_joint:
+  value: 100000
+  reference: 'TY2019-2020 SS exemption federal-AGI cap, joint (~$100,000)'
+
+# Net long-term capital gain (40%) and qualified dividend (40%) exclusions
+# (57-38-30.3(2)(d); ND-1 Schedule ND-1SA/worksheet). Long-standing.
+cap_gains_excl_share:
+  value: 0.40
+  reference: 'N.D.C.C. 57-38-30.3(2)(d); ND-1 worksheet: 40% of net long-term capital gain (smaller of net LT gain and net LT gain less net ST loss)'
+div_excl_share:
+  value: 0.40
+  reference: 'N.D.C.C. 57-38-30.3(2)(d); ND-1 worksheet: 40% of qualified dividends (Form 1040 line 3a)'

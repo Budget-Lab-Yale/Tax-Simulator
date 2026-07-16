@@ -1,0 +1,21 @@
+---
+# South Carolina: deductions. No SC standard/itemized deduction -- the federal
+# deduction flows through the federal-taxable-income start. What SC has: the
+# state/local income (or general sales) tax ADDBACK for federal itemizers
+# (SC1040 line a; 12-6-1120). 2017 = full add-back; 2018+ = lesser of (itemized
+# over federal standard, SALT income/sales on Sch A, or $10,000 - $5,000 MFS
+# less deductible property tax). Modeled with the shared salt_addback mechanism
+# (the exact $10k-cap interaction is a documented known-difference vs the CO form).
+
+std_amount:
+  value: 0
+  reference: 'SC1040 structure (base = federal taxable income); no SC standard deduction'
+item_allowed:
+  value: 0
+  reference: 'SC1040 structure; no separate SC itemized deduction'
+item_coupling:
+  value: 1
+  reference: 'SC1040 structure (federal deduction embedded in the start)'
+salt_addback:
+  value: 1
+  reference: 'S.C. Code 12-6-1120; SC1040 addition line a (state/local income-or-sales tax deducted federally)'

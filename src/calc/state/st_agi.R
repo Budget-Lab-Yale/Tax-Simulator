@@ -77,6 +77,8 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
     'st_agi.ss_full_sub_65plus',    # (int) full SS subtraction at 65+ (CO-style)
     'st_agi.ss_full_sub_5564',      # (int) full SS subtraction at 55-64 under AGI limit
     'st_agi.ss_5564_agi_limit',     # (dbl) AGI limit for the 55-64 SS subtraction
+    'st_agi.ss_full_sub_allages',   # (int) full SS subtraction at any age under AGI limit
+    'st_agi.ss_allages_agi_limit',  # (dbl) AGI limit for the all-ages SS subtraction
     'st_agi.pension_excl_under65',  # (dbl) per-person pension exclusion cap, under 65
     'st_agi.pension_excl_65plus',   # (dbl) per-person pension exclusion cap, 65+
     'st_agi.pension_excl_min_age',  # (dbl) minimum age for the pension exclusion
@@ -87,7 +89,9 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
     'st_agi.retirement_excl_65plus',  # (dbl) per-person cap at 65+
     'st_agi.retirement_excl_earned_cap', # (dbl) per-person portion usable for earned income
     'st_agi.sub_char_nonitem_floor', # (dbl) floor for non-itemizer charitable sub
-    'st_agi.add_overtime_ded'       # (int) whether the federal OT deduction is added back
+    'st_agi.add_overtime_ded',      # (int) whether the federal OT deduction is added back
+    'st_agi.cap_gains_excl_share',  # (dbl) share of net LT capital gain excluded
+    'st_agi.div_excl_share'         # (dbl) share of qualified dividends excluded
   )
 
   # Assumed share of tax-exempt interest from own-state bonds for states that
@@ -117,7 +121,9 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
       # subtraction; primary age proxies the unit
       ss_age_full   = (st_agi.ss_full_sub_65plus == 1 & age1 >= 65) |
                       (st_agi.ss_full_sub_5564 == 1 & age1 >= 55 & age1 < 65 &
-                       agi <= st_agi.ss_5564_agi_limit),
+                       agi <= st_agi.ss_5564_agi_limit) |
+                      (st_agi.ss_full_sub_allages == 1 &
+                       agi <= st_agi.ss_allages_agi_limit),
       ss_full_share = pmax(st_agi.ss_sub_share, as.integer(ss_age_full)),
       st_sub_ss_full = txbl_ss * ss_full_share,
 
@@ -187,8 +193,16 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
                                     st_agi.sub_char_nonitem_floor),
                             0),
 
+      # Subtraction: partial exclusion of net long-term capital gain (ND 40%,
+      # SC 44%) and qualified dividends (ND 40%). The gain base is net LT gain
+      # in excess of net ST loss (the smaller of net LT gain and net LT gain
+      # less net ST loss), matching the ND/SC worksheets.
+      st_cap_gain_base = pmax(0, kg_lt + pmin(0, kg_st)),
+      st_sub_capgain = st_agi.cap_gains_excl_share * st_cap_gain_base +
+                       st_agi.div_excl_share * pmax(0, div_pref),
+
       st_subtractions = st_sub_ref + st_sub_ss + st_sub_pens + st_sub_char +
-                        st_retirement_excl,
+                        st_retirement_excl + st_sub_capgain,
 
       # State income base
       st_agi = st_start + st_additions - st_subtractions

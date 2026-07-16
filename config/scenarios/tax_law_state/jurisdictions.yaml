@@ -49,6 +49,16 @@ NY:
 NC:
   profile: broad_iit
   enabled: true
+ND:
+  profile: broad_iit
+  enabled: true
+# SC uses fixed-date IRC conformity (updated annually; conformity_group 3,
+# ready=false). Like CA, its reference-law bridge is not built, so it is
+# excluded from states=all and blocked for federal-reform runs until the
+# overlay lands. states=SC still works for baseline-law runs.
+SC:
+  profile: broad_iit
+  enabled: false
 SD:
   profile: zero
   enabled: true

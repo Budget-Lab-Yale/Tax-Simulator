@@ -1,0 +1,29 @@
+---
+# South Carolina: credits (SC1040; SC1040TC).
+# Encoded: the SC Earned Income Tax Credit (12-6-3632) -- NONREFUNDABLE, a
+# percentage of the federal EITC, phased in over six equal steps from TY2018
+# (20.83%) to 125% at TY2023.
+#
+# KNOWN-DIFFERENCES (not modeled):
+#   - Two Wage Earner Credit (12-6-3330): 0.7% x lesser spouse SC earned income,
+#     cap phased to $50,000 (max ~$350). Needs per-spouse SC earned income.
+#   - Child & Dependent Care Credit (12-6-3380): 7% of federal Sec.21 EXPENSES
+#     (not 7% of the federal credit), max $210/$420. Different base than the
+#     model's cdctc match; omitted to avoid an incorrect encoding.
+#   - Tuition Tax Credit (12-6-3385, refundable): needs student tuition data.
+#   - Nursing-home/family-care, motor-fuel (2018-2022), excess-premium credits.
+
+# SC EITC: nonrefundable % of the federal EITC (no credit before TY2018)
+eitc_match:
+  value:
+    '2017': 0
+    '2018': 0.2083
+    '2019': 0.4167
+    '2020': 0.625
+    '2021': 0.8333
+    '2022': 1.0417
+    '2023': 1.25
+  reference: 'S.C. Code 12-6-3632; Form TC-60. Six-step phase-in from 20.83% (TY2018) to 125% (TY2023+)'
+eitc_refundable:
+  value: 0
+  reference: 'S.C. Code 12-6-3632 (nonrefundable, full-year residents)'

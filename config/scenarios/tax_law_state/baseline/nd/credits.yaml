@@ -1,0 +1,17 @@
+---
+# North Dakota: credits. ND has NO state EITC and NO state CTC (never enacted).
+# Its individual credits are all nonrefundable and NOT representable in a PUF:
+#   - Marriage Penalty Credit (57-38-01.28): worksheet (MFJ tax vs two singles),
+#     indexed max (~$303 in TY2024). NOT repealed (HB1388 repeal failed 2025).
+#   - Family Member Care Credit (57-38-01.20): 20-30% of qualified care expense
+#     for an elderly/disabled family member, cap $2,000/member, $4,000/return.
+#   - Credit for tax paid to another state; Renaissance zone; planned-gift;
+#     seed/angel investment; etc.
+# The 2021-2022 $350/$700 residency relief credit (HB1515) was a one-time
+# non-earnings-based credit, expired after TY2022.
+# See source_packets/nd.md for the known-differences rationale.
+
+# Explicit no-op: ND has no earned-income credit (documents the absence)
+eitc_match:
+  value: 0
+  reference: 'ND has no state EITC (no ND-1/ND-1TC EITC line, any year)'
