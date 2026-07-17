@@ -21,7 +21,7 @@ test_state_calc = function() {
 
   law = build_state_tax_law(
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
-                'IN', 'KY', 'MI', 'CA', 'ND', 'SC'),
+                'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -613,6 +613,85 @@ test_state_calc = function() {
            label = 'SC-6 nonrefundable SC EITC (125% of federal)')
 
   #--------------------------------------------------------------------------
+  # Connecticut (CT-1040) -- federal-AGI start, graduated rates with stepped
+  # Table C add-back / Table D recapture, Table A exemption phase-out,
+  # Table E percentage-of-tax credit (all keyed to CT AGI)
+  #--------------------------------------------------------------------------
+
+  # CT-1: 2024 single, AGI 40,000. Exemption 15,000 - 10 x 1,000 = 5,000
+  # (Table A band (39,000, 40,000]); TI 35,000. Tax = 2% x 10,000 + 4.5% x
+  # 25,000 = 1,325. No add-back/recapture (< 56,500). Table E: 40,000 in
+  # (33,300, 60,000] -> 10% -> 132.50. Liab = 1,325 - 132.50
+  run_case('CT', 2024, list(agi = 40000),
+           expect = list(st_agi = 40000, st_exempt = 5000,
+                         st_txbl_inc = 35000, st_tax_pre_credit = 1325,
+                         st_pct_credit = 132.5, liab_st_iit = 1192.5),
+           label = 'CT-1 2024 exemption phase-out + Table E')
+
+  # CT-2: 2025 single, AGI 250,000. Exemption 0; TI 250,000. Schedule:
+  # 10,750 + 6.5% x 50,000 = 14,000. Table C: ceil(193,500/5,000) x 25 = 975
+  # -> capped 250. Tier 0: ceil(145,000/5,000) x 25 = 725 -> capped 250.
+  # Tier 1: ceil(50,000/5,000) x 90 = 900. No Table E above 64,500.
+  # Tax = 14,000 + 250 + 250 + 900 = 15,400
+  run_case('CT', 2025, list(agi = 250000),
+           expect = list(st_exempt = 0, st_tax_pre_credit = 15400,
+                         st_pct_credit = 0, liab_st_iit = 15400),
+           label = 'CT-2 2025 stepped add-back + two recapture tiers')
+
+  # CT-3: 2017 MFJ, AGI 110,000. Exemption 0 (> 71,000); TI 110,000. Old
+  # rates: 600 + 5% x 80,000 + 5.5% x 10,000 = 5,150. Table C: ceil(9,500/
+  # 5,000) x 40 = 80 (tier 0 inert pre-2024). No Table E above 100,500
+  run_case('CT', 2017, list(agi = 110000, filing_status = 2),
+           expect = list(st_tax_pre_credit = 5230, liab_st_iit = 5230),
+           label = 'CT-3 2017 rates + Table C add-back')
+
+  # CT-4: 2025 MFJ retirees (68/66), AGI 110,000 = SS 20,000 taxable (30,000
+  # gross) + pensions 40,000 + IRA 20,000 + interest 30,000. Above the SS
+  # limit: sub = 20,000 - 25% x 30,000 = 12,500. Phase-out factor at
+  # 110,000 (MFJ band 110,000-114,999) = 0.55: pension 40,000 x 1.0 + IRA
+  # 20,000 x 0.75 = 55,000 x 0.55 = 30,250. CT AGI = 67,250; exemption
+  # 24,000 - 20 x 1,000 = 4,000; TI 63,250. Tax = 400 + 4.5% x 43,250 =
+  # 2,346.25. Table E: 67,250 in (52,000, 96,000] -> 10% -> 234.625.
+  # Property tax credit: min(6,000, 300) x 1.0 (67,250 < 70,500) = 300.
+  # Liab = 2,346.25 - 234.625 - 300 = 1,811.625
+  run_case('CT', 2025,
+           list(agi = 110000, filing_status = 2, age1 = 68, age2 = 66,
+                gross_ss = 30000, txbl_ss = 20000, txbl_pens_dist = 40000,
+                txbl_ira_dist = 20000, txbl_int = 30000, salt_prop = 6000),
+           expect = list(st_agi = 67250, st_exempt = 4000,
+                         st_tax_pre_credit = 2346.25,
+                         liab_st_iit = 1811.625),
+           label = 'CT-4 SS cap + pension/IRA phase-out + property tax credit')
+
+  # CT-5: 2023 MFJ, AGI 26,000, 2 kids, federal EITC 6,000. Full exemption
+  # 24,000 -> TI 2,000; tax 3% x 2,000 = 60. Table E: 26,000 in (24,000,
+  # 30,000] -> 75% -> 45. CT EITC = 40% x 6,000 = 2,400 (refundable; no
+  # child bonus until 2025). Liab = (60 - 45) - 2,400 = -2,385
+  run_case('CT', 2023,
+           list(agi = 26000, filing_status = 2, n_dep = 2, n_dep_eitc = 2,
+                dep_age1 = 5, dep_age2 = 8, eitc = 6000),
+           expect = list(st_exempt = 24000, st_tax_pre_credit = 60,
+                         st_eitc = 2400, liab_st_iit = -2385),
+           label = 'CT-5 low-income EITC + 75% Table E')
+
+  # CT-6: 2025 MFS, AGI 60,000. Exemption 0 (> 35,000); single-schedule tax
+  # 200 + 4.5% x 40,000 + 5.5% x 10,000 = 2,550. Table C MFS: ceil(9,750/
+  # 2,500) x 25 = 100. No Table E above 52,500. Liab = 2,650
+  run_case('CT', 2025, list(agi = 60000, filing_status = 3),
+           expect = list(st_tax_pre_credit = 2650, liab_st_iit = 2650),
+           label = 'CT-6 MFS Table C increments')
+
+  # CT-7: 2025 single, AGI 20,000, 1 kid, federal EITC 3,000. Exemption
+  # 15,000 -> TI 5,000; tax 2% x 5,000 = 100. Table E: 20,000 in (19,800,
+  # 20,300] -> 60% -> 60. CT EITC = 40% x 3,000 + 250 child bonus = 1,450.
+  # Liab = (100 - 60) - 1,450 = -1,410
+  run_case('CT', 2025,
+           list(agi = 20000, n_dep = 1, n_dep_eitc = 1, dep_age1 = 5,
+                eitc = 3000),
+           expect = list(st_eitc = 1450, liab_st_iit = -1410),
+           label = 'CT-7 2025 EITC child bonus')
+
+  #--------------------------------------------------------------------------
   # Structural smoke test: a coarse grid of units through every broad-IIT
   # baseline state and several years must produce finite, non-NA results
   #--------------------------------------------------------------------------
@@ -643,7 +722,8 @@ test_state_calc = function() {
       ))
     })
 
-  for (st in c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI', 'CA', 'ND', 'SC')) {
+  for (st in c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI', 'CA', 'ND',
+               'SC', 'CT')) {
     for (yr in c(2017, 2021, 2024, 2026, 2030)) {
       law_slice = law %>%
         filter(state == st, year == yr) %>%
@@ -658,7 +738,7 @@ test_state_calc = function() {
       )
     }
   }
-  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 12 states x 5 years)')
+  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 13 states x 5 years)')
 
   # Subset-states regression: a law table built WITHOUT a given state lacks
   # that state's feature columns entirely (not just NA cells); the calculator

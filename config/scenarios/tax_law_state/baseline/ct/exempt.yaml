@@ -1,0 +1,59 @@
+---
+# Connecticut: personal exemption (Table A; CGS 12-702). One per-return
+# exemption varying only by filing status and CT AGI -- no dependent, aged,
+# or blind exemptions. Reduced $1,000 for each $1,000 (or fraction) of CT
+# AGI over the threshold (po_type 1 stepped phase-out on state AGI).
+# Bit-identical in all nine 2017-2025 booklets (not indexed).
+
+filing_status_mapper:
+  personal_amount:
+    '1': exempt_single
+    '2': exempt_married
+    '3': exempt_mfs
+    '4': exempt_head
+  po_thresh:
+    '1': po_thresh_single
+    '2': po_thresh_married
+    '3': po_thresh_mfs
+    '4': po_thresh_head
+
+exempt_single:
+  value: 15000
+  reference: '2017-2025 CT-1040 booklets Table A; CGS 12-702 (zero above $44,000 CT AGI)'
+# The calculator applies personal_amount PER TAXPAYER (x2 for MFJ); CT's
+# $24,000 joint exemption is per return, hence 12,000 here
+exempt_married:
+  value: 12000
+  reference: '2017-2025 CT-1040 booklets Table A ($24,000 per joint return; zero above $71,000)'
+exempt_mfs:
+  value: 12000
+  reference: '2017-2025 CT-1040 booklets Table A (zero above $35,000)'
+exempt_head:
+  value: 19000
+  reference: '2017-2025 CT-1040 booklets Table A (zero above $56,000)'
+
+po_thresh_single:
+  value: 30000
+  reference: '2017-2025 CT-1040 booklets Table A phase-out start'
+po_thresh_married:
+  value: 48000
+  reference: '2017-2025 CT-1040 booklets Table A phase-out start'
+po_thresh_mfs:
+  value: 24000
+  reference: '2017-2025 CT-1040 booklets Table A phase-out start'
+po_thresh_head:
+  value: 38000
+  reference: '2017-2025 CT-1040 booklets Table A phase-out start'
+
+po_type:
+  value: 1
+  reference: 'Table A band structure: $1,000 of exemption lost per $1,000 band ("more than / less than or equal to")'
+po_step:
+  value: 1000
+  reference: 'Table A $1,000 CT AGI bands'
+po_reduction_per_step:
+  value: 1000
+  reference: 'Table A: exemption falls $1,000 per band; CGS 12-702 ("or fraction thereof")'
+po_agi_base:
+  value: 2
+  reference: 'Table A is keyed to CT AGI (Tax Calculation Schedule Line 1), not federal AGI'

@@ -1,0 +1,101 @@
+---
+# Connecticut: credits -- personal tax credit (Table E, CGS 12-703), CT EITC
+# (Schedule CT-EITC, CGS 12-704e), and property tax credit (Schedule 3,
+# CGS 12-704c). Credit for taxes paid to other jurisdictions is out of
+# scope per project convention.
+
+filing_status_mapper:
+  pct_credit_agi_bounds:
+    '1': pct_bounds_single
+    '2': pct_bounds_married
+    '3': pct_bounds_mfs
+    '4': pct_bounds_head
+  prop_tax_credit_po_thresh:
+    '1': ptc_thresh_single
+    '2': ptc_thresh_married
+    '3': ptc_thresh_mfs
+    '4': ptc_thresh_head
+  prop_tax_credit_po_step:
+    '1': ptc_step_other
+    '2': ptc_step_other
+    '3': ptc_step_mfs
+    '4': ptc_step_other
+
+# CT EITC: share of the federal credit, fully refundable. 23% (2017-2020),
+# 30.5% (2021-2022, PA 21-2 JSS 430), 40% (2023+, PA 23-204 378). The
+# December 2021 retroactive enhancement of the 2020 credit to 41.5% was an
+# administrative transfer outside the return (liability under law = 23%)
+eitc_match:
+  value:
+    '2017': 0.23
+    '2021': 0.305
+    '2023': 0.4
+  reference: 'Schedule CT-EITC / CT-1040 Line 20a instructions 2017-2025; PA 21-2 JSS 430; PA 23-204 378; CGS 12-704e'
+eitc_refundable:
+  value: 1
+  reference: 'CT-1040 booklets ("excess is considered an overpayment and will be refunded"); CGS 12-704e'
+
+# Flat $250 per-return addition for CT EITC claimants with at least one
+# federal qualifying child (2025+)
+eitc_child_bonus:
+  value:
+    '2017': 0.0
+    '2025': 250.0
+  reference: 'PA 25-168 371; 2025 Schedule CT-EITC Line 15a; 2025 CT-1040 booklet Line 20a'
+
+# Personal tax credit (Table E): a percentage of tax after add-back and
+# recapture, by CT AGI band. Bit-identical in all nine 2017-2025 booklets
+# (not indexed). 28 band bounds, 27 rates; zero below the first bound
+# (exemption exhausts the base there) and above the last
+pct_bounds_single:
+  value: [15000, 18800, 19300, 19800, 20300, 20800, 21300, 21800, 22300, 25000, 25500, 26000, 26500, 31300, 31800, 32300, 32800, 33300, 60000, 60500, 61000, 61500, 62000, 62500, 63000, 63500, 64000, 64500]
+  reference: '2017 booklet p.52 / 2025 booklet p.23 Table E (single; hash-identical 2017-2025); CGS 12-703'
+pct_bounds_married:
+  value: [24000, 30000, 30500, 31000, 31500, 32000, 32500, 33000, 33500, 40000, 40500, 41000, 41500, 50000, 50500, 51000, 51500, 52000, 96000, 96500, 97000, 97500, 98000, 98500, 99000, 99500, 100000, 100500]
+  reference: '2017/2025 booklets Table E (MFJ/QSS)'
+pct_bounds_mfs:
+  value: [12000, 15000, 15500, 16000, 16500, 17000, 17500, 18000, 18500, 20000, 20500, 21000, 21500, 25000, 25500, 26000, 26500, 27000, 48000, 48500, 49000, 49500, 50000, 50500, 51000, 51500, 52000, 52500]
+  reference: '2017/2025 booklets Table E (MFS)'
+pct_bounds_head:
+  value: [19000, 24000, 24500, 25000, 25500, 26000, 26500, 27000, 27500, 34000, 34500, 35000, 35500, 44000, 44500, 45000, 45500, 46000, 74000, 74500, 75000, 75500, 76000, 76500, 77000, 77500, 78000, 78500]
+  reference: '2017/2025 booklets Table E (HoH)'
+pct_credit_rates:
+  value: [0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.14, 0.13, 0.12, 0.11, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]
+  reference: '2017/2025 booklets Table E decimal column (75% stepping down to 1%, then 0)'
+
+# Property tax credit: min(qualifying property tax, max credit), reduced 15%
+# per $10,000 ($5,000 MFS) of CT AGI over the threshold; nonrefundable.
+# $200 max and restricted to 65+/with-dependent filers 2017-2021; $300 and
+# all filers from 2022 (PA 22-118 408). Thresholds frozen. Data-limited:
+# salt_prop underobserves non-itemizers' property tax (known-difference)
+prop_tax_credit_max:
+  value:
+    '2017': 200
+    '2022': 300
+  reference: '2017-2021 booklets ($200); 2022-2025 booklets ($300); PA 22-118 408; CGS 12-704c ($350 proposal NOT enacted)'
+prop_tax_credit_restrict_aged_dep:
+  value:
+    '2017': 1
+    '2022': 0
+  reference: '2017-2021 booklets (65+ or claimed a federal dependent); PA 22-118 408 (all filers from 2022)'
+prop_tax_credit_po_rate:
+  value: 0.15
+  reference: 'Schedule 3 Property Tax Credit Table: credit reduced 15% per bracket (2017 and 2022-2025 booklets)'
+ptc_thresh_single:
+  value: 49500
+  reference: 'Property Tax Credit Table (single; frozen 2017-2025; no credit above $109,500)'
+ptc_thresh_married:
+  value: 70500
+  reference: 'Property Tax Credit Table (MFJ/QSS; no credit above $130,500)'
+ptc_thresh_mfs:
+  value: 35250
+  reference: 'Property Tax Credit Table (MFS; no credit above $65,250)'
+ptc_thresh_head:
+  value: 54500
+  reference: 'Property Tax Credit Table (HoH; no credit above $114,500)'
+ptc_step_other:
+  value: 10000
+  reference: 'Property Tax Credit Table: $10,000 CT AGI brackets (single/MFJ/HoH)'
+ptc_step_mfs:
+  value: 5000
+  reference: 'Property Tax Credit Table: $5,000 CT AGI brackets (MFS)'

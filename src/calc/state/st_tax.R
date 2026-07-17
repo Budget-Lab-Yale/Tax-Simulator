@@ -1,6 +1,7 @@
 #-------------------------------------------------------------
 # Function to calculate state tax before credits (rate
-# schedule plus tax-benefit recapture where applicable)
+# schedule plus tax-benefit recapture where applicable,
+# continuous NY-style or stepped CT-style)
 #-------------------------------------------------------------
 
 # Set return variables for function
@@ -25,6 +26,13 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
   # recaptured). Units with st_agi above the top bracket (the 25M rule,
   # 2022+) pay the top rate flat with no phase-in; the 2021-only $50k
   # phase above $25M is approximated by the same flat rule (negligible).
+  #
+  # Independently, CT-style STEPPED recapture segments (CT-1040 TCS phase-out
+  # add-back and tax recapture tables) add, for each encoded segment s with
+  # st_agi above its start:
+  #   min(ceil((st_agi - start_s) / incr_s) * amount_s, max_s)
+  # The segment vectors (st_ord.step_recap_*) are filing-status mapped and
+  # absent for states without the feature (gated on step_recap_start1).
   #
   # Parameters:
   #   - tax_unit (df | list) : either a dataframe or list containing required
@@ -74,6 +82,22 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     rowSums(rt * pmax(0, pmin(y, upper) - br), na.rm = T)
   }
 
+  # Stepped recapture segments (CT-style), zero when not encoded
+  step_recap = rep(0, nrow(tax_unit))
+  step_start_cols = str_subset(colnames(tax_unit),
+                               '^st_ord\\.step_recap_start[0-9]+$')
+  if (length(step_start_cols) > 0 &&
+      any(!is.na(tax_unit[[step_start_cols[1]]]))) {
+    n_seg  = max(as.integer(str_extract(step_start_cols, '[0-9]+$')))
+    s_strt = as.matrix(tax_unit[paste0('st_ord.step_recap_start',  1:n_seg)])
+    s_incr = as.matrix(tax_unit[paste0('st_ord.step_recap_incr',   1:n_seg)])
+    s_amt  = as.matrix(tax_unit[paste0('st_ord.step_recap_amount', 1:n_seg)])
+    s_max  = as.matrix(tax_unit[paste0('st_ord.step_recap_max',    1:n_seg)])
+    excess = pmax(0, tax_unit$st_agi - s_strt)
+    step_recap = rowSums(pmin(ceiling(excess / s_incr) * s_amt, s_max),
+                         na.rm = T)
+  }
+
   ti = tax_unit$st_txbl_inc
   i  = seq_along(ti)
   j  = pmax(1, rowSums(br <= ti, na.rm = T))   # taxpayer's bracket index
@@ -95,7 +119,7 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
         recap_on ~ st_tax_sched + recap_RB +
                    pmax(0, m * st_txbl_inc - st_tax_sched - recap_RB) * recap_phi,
         TRUE     ~ st_tax_sched
-      )
+      ) + step_recap
     ) %>%
     select(all_of(return_vars$calc_st_tax)) %>%
     return()

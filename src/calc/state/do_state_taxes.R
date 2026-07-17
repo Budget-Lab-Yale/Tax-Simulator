@@ -112,6 +112,9 @@ ensure_st_params = function(tax_units) {
     'st_agi.add_overtime_ded'      = 0,
     'st_agi.cap_gains_excl_share'  = 0,
     'st_agi.div_excl_share'        = 0,
+    'st_agi.ss_taxable_gross_cap_share' = Inf,
+    'st_agi.pension_sub_share'     = 0,
+    'st_agi.ira_sub_share'         = 0,
 
     # ded.yaml
     'st_ded.std_amount'            = 0,
@@ -170,6 +173,9 @@ ensure_st_params = function(tax_units) {
     'st_exempt.blind_addl'         = 0,
     'st_exempt.po_thresh'          = Inf,
     'st_exempt.po_type'            = 0,
+    'st_exempt.po_step'            = 1,
+    'st_exempt.po_reduction_per_step' = 0,
+    'st_exempt.po_agi_base'        = 1,
 
     # child_ded.yaml (AGI-tabled deductions, e.g. North Carolina)
     'st_child_ded.style'           = 0,
@@ -189,6 +195,7 @@ ensure_st_params = function(tax_units) {
     'st_credits.eitc_match'        = 0,
     'st_credits.eitc_refundable'   = 1,
     'st_credits.eitc_less_household_credit' = 0,
+    'st_credits.eitc_child_bonus'  = 0,
     'st_credits.dep_credit_style'  = 0,
     'st_credits.dep_credit_young_amount' = 0,
     'st_credits.dep_credit_other_amount' = 0,
@@ -216,6 +223,11 @@ ensure_st_params = function(tax_units) {
     'st_credits.cdctc_rate_po_start'  = Inf,
     'st_credits.prop_tax_credit_rate' = 0,
     'st_credits.credit_agi_limit'  = Inf,
+    'st_credits.prop_tax_credit_max' = 0,
+    'st_credits.prop_tax_credit_po_thresh' = Inf,
+    'st_credits.prop_tax_credit_po_step' = 1,
+    'st_credits.prop_tax_credit_po_rate' = 0,
+    'st_credits.prop_tax_credit_restrict_aged_dep' = 0,
     'st_credits.fatc_young_amount' = 0,
     'st_credits.fatc_old_amount'   = 0,
     'st_credits.fatc_young_age_limit' = 0,
@@ -322,7 +334,8 @@ ensure_st_params = function(tax_units) {
   # feature-gated on their first element existing; add sentinel if absent
   for (p in c('st_credits.hh_agi_bounds_single1', 'st_credits.hh_agi_bounds_other1',
               'st_credits.ctc_tier1_bound', 'st_credits.family_credit_f1_bounds1',
-              'st_child_ded.agi_bounds1')) {
+              'st_child_ded.agi_bounds1', 'st_credits.pct_credit_agi_bounds1',
+              'st_ord.step_recap_start1', 'st_agi.retire_sub_factor_bounds1')) {
     if (!(p %in% colnames(tax_units))) {
       tax_units[[p]] = NA_real_
     }

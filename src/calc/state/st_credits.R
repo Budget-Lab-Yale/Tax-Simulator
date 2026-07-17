@@ -6,6 +6,7 @@
 return_vars$calc_st_credits = c('st_hh_credit', 'st_eitc', 'st_ctc',
                                 'st_dep_credit', 'st_cdctc', 'st_family_credit',
                                 'st_exempt_credit', 'st_earned_credit', 'st_yctc',
+                                'st_pct_credit',
                                 'st_credits_nonref', 'st_credits_ref')
 
 
@@ -129,6 +130,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.eitc_match',
     'st_credits.eitc_refundable',
     'st_credits.eitc_less_household_credit',
+    'st_credits.eitc_child_bonus',
     'st_credits.dep_credit_style',
     'st_credits.dep_credit_young_amount',
     'st_credits.dep_credit_other_amount',
@@ -155,6 +157,11 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.cdctc_rate_po_start',
     'st_credits.prop_tax_credit_rate',
     'st_credits.credit_agi_limit',
+    'st_credits.prop_tax_credit_max',
+    'st_credits.prop_tax_credit_po_thresh',
+    'st_credits.prop_tax_credit_po_step',
+    'st_credits.prop_tax_credit_po_rate',
+    'st_credits.prop_tax_credit_restrict_aged_dep',
     'st_credits.fatc_young_amount',
     'st_credits.fatc_old_amount',
     'st_credits.fatc_young_age_limit',
@@ -373,6 +380,29 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     )
   }
 
+  #--------------------------------------------------
+  # Percentage-of-tax personal credit (CT Table E)
+  #--------------------------------------------------
+
+  # A filing-status-mapped step table of state-AGI bands and credit rates:
+  # the rate applies to the whole of tax before credits (schedule plus
+  # add-back/recapture). Zero below the first bound (where the exemption
+  # exhausts the base anyway) and above the last. Bounds are one longer
+  # than rates; unused tail rows pad with repeated bounds and zero rates.
+  pct_credit_rate = rep(0, n)
+  pct_rate_cols = str_subset(cn, '^st_credits\\.pct_credit_rates[0-9]+$')
+  if (length(pct_rate_cols) > 0 &&
+      any(!is.na(tax_unit$st_credits.pct_credit_agi_bounds1))) {
+    n_pct = max(as.integer(str_extract(pct_rate_cols, '[0-9]+$')))
+    pct_b = as.matrix(tax_unit[paste0('st_credits.pct_credit_agi_bounds',
+                                      1:(n_pct + 1))])
+    pct_r = as.matrix(tax_unit[paste0('st_credits.pct_credit_rates', 1:n_pct)])
+    pct_lb = pct_b[, 1:n_pct, drop = FALSE]
+    pct_ub = pct_b[, 2:(n_pct + 1), drop = FALSE]
+    pct_credit_rate = rowSums(pct_r * (tax_unit$st_agi > pct_lb &
+                                       tax_unit$st_agi <= pct_ub), na.rm = T)
+  }
+
   #-------------------------------
   # CDCTC share table (NY style 1)
   #-------------------------------
@@ -446,10 +476,13 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       st_yctc = st_yctc,
 
       # State EITC: match on the federal credit, less the household credit
-      # (capped at remaining tax) where flagged (NY IT-215 lines 13-16)
+      # (capped at remaining tax) where flagged (NY IT-215 lines 13-16),
+      # plus a flat per-return bonus for filers with a federal qualifying
+      # child (CT Schedule CT-EITC line 15a, 2025+)
       st_eitc = pmax(0, st_credits.eitc_match * eitc -
                         st_credits.eitc_less_household_credit *
-                        pmin(st_hh_credit, pmax(0, st_tax_pre_credit))),
+                        pmin(st_hh_credit, pmax(0, st_tax_pre_credit))) +
+                st_credits.eitc_child_bonus * (eitc > 0 & n_dep_eitc > 0),
 
       # Family-size credit: a table-selected percentage of preliminary tax.
       st_family_credit = if_else(st_credits.family_credit_style == 1,
@@ -548,17 +581,39 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       ),
       st_cdctc = st_credits.cdctc_match * (cdctc_nonref + cdctc_ref) + cdctc_ny,
 
-      # Property tax credit (IL): rate times property taxes, denied above the
-      # AGI limit
+      # Property tax credit, two generic styles (mutually exclusive by
+      # config): IL rate-style (rate times property taxes, denied above the
+      # AGI limit) and CT capped-style (min(property tax, max credit) reduced
+      # po_rate per po_step, or fraction, of state AGI over the threshold;
+      # optionally restricted to aged-65+/with-dependent filers, 2017-2021).
+      # Both are limited to observed salt_prop (known-difference: property
+      # taxes of federal non-itemizers are underobserved)
+      prop_credit_ct_eligible =
+        st_credits.prop_tax_credit_restrict_aged_dep == 0 |
+        age1 >= 65 |
+        (filing_status == 2 & !is.na(age2) & age2 >= 65) |
+        n_dep > 0,
+      prop_credit_ct_factor = pmax(
+        0,
+        1 - st_credits.prop_tax_credit_po_rate *
+          ceiling(pmax(0, st_agi - st_credits.prop_tax_credit_po_thresh) /
+                    st_credits.prop_tax_credit_po_step)
+      ),
       prop_credit = st_credits.prop_tax_credit_rate * salt_prop *
-                    (agi <= st_credits.credit_agi_limit),
+                    (agi <= st_credits.credit_agi_limit) +
+                    pmin(salt_prop, st_credits.prop_tax_credit_max) *
+                    prop_credit_ct_factor * prop_credit_ct_eligible,
+
+      # Percentage-of-tax personal credit (CT-1040 Table E): table rate times
+      # tax before credits. Nonrefundable
+      st_pct_credit = pct_credit_rate * pmax(0, st_tax_pre_credit),
 
       #------------
       # Aggregation
       #------------
 
       st_credits_nonref = st_hh_credit + prop_credit + st_dep_credit +
-                          st_family_credit + st_exempt_credit +
+                          st_family_credit + st_exempt_credit + st_pct_credit +
                           st_eitc * (1 - st_credits.eitc_refundable) +
                           st_earned_credit * (1 - st_credits.earned_credit_refundable) +
                           st_cdctc * (1 - st_credits.cdctc_refundable),

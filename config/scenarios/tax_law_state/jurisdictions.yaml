@@ -19,6 +19,11 @@ CA:
 CO:
   profile: broad_iit
   enabled: true
+# CT is rolling conformity (group 0): the CT base starts from current-law
+# federal AGI, so no reference-law bridge is needed
+CT:
+  profile: broad_iit
+  enabled: true
 FL:
   profile: zero
   enabled: true

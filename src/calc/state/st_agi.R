@@ -44,6 +44,7 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
     'exempt_int',     # (dbl)  tax-exempt interest income
     'state_ref',      # (dbl)  taxable refunds of state/local taxes
     'txbl_ss',        # (dbl)  taxable Social Security benefits (federal)
+    'gross_ss',       # (dbl)  gross Social Security benefits received
     'txbl_pens_dist', # (dbl)  taxable pension distributions
     'txbl_ira_dist',  # (dbl)  taxable IRA distributions
     'wages1',         # (dbl)  primary filer wages
@@ -79,6 +80,9 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
     'st_agi.ss_5564_agi_limit',     # (dbl) AGI limit for the 55-64 SS subtraction
     'st_agi.ss_full_sub_allages',   # (int) full SS subtraction at any age under AGI limit
     'st_agi.ss_allages_agi_limit',  # (dbl) AGI limit for the all-ages SS subtraction
+    'st_agi.ss_taxable_gross_cap_share', # (dbl) cap on taxable SS as share of gross (CT 0.25)
+    'st_agi.pension_sub_share',     # (dbl) share of pension income subtracted (CT-style)
+    'st_agi.ira_sub_share',         # (dbl) share of IRA distributions subtracted (CT-style)
     'st_agi.pension_excl_under65',  # (dbl) per-person pension exclusion cap, under 65
     'st_agi.pension_excl_65plus',   # (dbl) per-person pension exclusion cap, 65+
     'st_agi.pension_excl_min_age',  # (dbl) minimum age for the pension exclusion
@@ -98,8 +102,26 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
   # exempt them (unobserved in the PUF; known-difference)
   OWN_STATE_MUNI_SHARE = 0.75
 
+  tax_unit %<>%
+    parse_calc_fn_input(req_vars, fill_missings)
+
+  # CT-style share-based pension/IRA subtraction factor: a step table of
+  # federal-AGI band lower bounds and factors (filing-status mapped vectors).
+  # Encodes both an eligibility cliff (bounds [0, limit], factors [1, 0])
+  # and the CT 2024+ published phase-out table. Defaults to 1 where a state
+  # encodes no table (gated on retire_sub_factor_bounds1)
+  retire_factor = rep(1, nrow(tax_unit))
+  rf_cols = str_subset(colnames(tax_unit),
+                       '^st_agi\\.retire_sub_factor_bounds[0-9]+$')
+  if (length(rf_cols) > 0 && any(!is.na(tax_unit[[rf_cols[1]]]))) {
+    n_rf = max(as.integer(str_extract(rf_cols, '[0-9]+$')))
+    rf_b = as.matrix(tax_unit[paste0('st_agi.retire_sub_factor_bounds', 1:n_rf)])
+    rf_f = as.matrix(tax_unit[paste0('st_agi.retire_sub_factors',       1:n_rf)])
+    rf_j = pmax(1, rowSums(rf_b <= tax_unit$agi, na.rm = T))
+    retire_factor = coalesce(rf_f[cbind(seq_len(nrow(tax_unit)), rf_j)], 1)
+  }
+
   tax_unit %>%
-    parse_calc_fn_input(req_vars, fill_missings) %>%
     mutate(
 
       # Starting point
@@ -125,7 +147,20 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
                       (st_agi.ss_full_sub_allages == 1 &
                        agi <= st_agi.ss_allages_agi_limit),
       ss_full_share = pmax(st_agi.ss_sub_share, as.integer(ss_age_full)),
-      st_sub_ss_full = txbl_ss * ss_full_share,
+
+      # CT-style cap on taxable SS as a share of gross benefits: above the
+      # full-subtraction AGI limit, the CT-1040 SS Benefit Adjustment
+      # Worksheet taxes at most 25% of benefits, i.e. subtracts
+      # max(0, taxable SS - 0.25 x gross). The worksheet's min(gross, excess
+      # over federal base) is approximated by gross: above the CT AGI limits
+      # the federal excess-over-base is essentially always larger than gross
+      # benefits (documented known-difference)
+      ss_cap_extra = if_else(
+        is.finite(st_agi.ss_taxable_gross_cap_share),
+        pmax(0, txbl_ss - st_agi.ss_taxable_gross_cap_share * gross_ss),
+        0
+      ),
+      st_sub_ss_full = pmax(txbl_ss * ss_full_share, ss_cap_extra),
 
       # Subtraction: pension/IRA exclusion. Per-person caps summed across
       # qualifying spouses. Where SS shares the cap (CO): fully-subtracted SS
@@ -148,6 +183,15 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
                               0),
       st_sub_pens = pmin(pens_inc, pmax(0, pens_cap - st_sub_ss_cap)),
       st_sub_ss   = st_sub_ss_full + st_sub_ss_cap,
+
+      # CT-style share-based pension/annuity and IRA subtraction: statutory
+      # phase-in shares times the AGI-banded factor (the 2019-2023 cliff and
+      # the 2024+ published phase-out table; retire_factor computed above).
+      # Military/railroad/teacher pensions have separate CT subtractions but
+      # are unobservable subsets of pension income (known-difference)
+      st_sub_retire_share = retire_factor *
+        (st_agi.pension_sub_share * pmax(0, txbl_pens_dist) +
+         st_agi.ira_sub_share     * pmax(0, txbl_ira_dist)),
 
       # Broad retirement exclusion (GA-style): each eligible spouse may use a
       # limited amount against own earned income first and then against
@@ -202,7 +246,8 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
                        st_agi.div_excl_share * pmax(0, div_pref),
 
       st_subtractions = st_sub_ref + st_sub_ss + st_sub_pens + st_sub_char +
-                        st_retirement_excl + st_sub_capgain,
+                        st_retirement_excl + st_sub_capgain +
+                        st_sub_retire_share,
 
       # State income base
       st_agi = st_start + st_additions - st_subtractions

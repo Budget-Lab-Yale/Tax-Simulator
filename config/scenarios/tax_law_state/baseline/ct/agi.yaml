@@ -1,0 +1,119 @@
+---
+# Connecticut: base and additions/subtractions (Form CT-1040 Lines 1-5;
+# Schedule 1 Lines 31-50; CGS 12-701(a)(20)). CT AGI = federal AGI + CT
+# additions - CT subtractions. Rolling IRC conformity (no group declared).
+# Values transcribed from the 2017-2025 CT-1040 instruction booklets; see
+# other/state_tax_research/source_packets/ct.md for the full research record.
+
+filing_status_mapper:
+  ss_allages_agi_limit:
+    '1': ss_limit_single
+    '2': ss_limit_joint
+    '3': ss_limit_single
+    '4': ss_limit_joint
+  retire_sub_factor_bounds:
+    '1': retire_factor_bounds_single
+    '2': retire_factor_bounds_joint
+    '3': retire_factor_bounds_single
+    '4': retire_factor_bounds_single
+  sub_529_cap:
+    '1': sub_529_single
+    '2': sub_529_joint
+    '3': sub_529_single
+    '4': sub_529_single
+
+# Starting point for state base: 1 = federal AGI (CT-1040 Line 1)
+start_point:
+  value: 1
+  reference: 'Form CT-1040 Line 1; CGS 12-701(a)(19)-(20)'
+
+# Federally tax-exempt interest: CT adds back interest on NON-CT state/local
+# bonds only (Schedule 1 Lines 31-32; own-state bonds stay exempt)
+add_exempt_int:
+  value: 1
+  reference: 'CT-1040 Schedule 1 Line 31 (2025 booklet; all years); CGS 12-701(a)(20)(A)(i)'
+own_state_exempt:
+  value: 1
+  reference: 'CT-1040 Schedule 1 Line 31 (CT and PR/Guam/AS/USVI obligations excluded from addback)'
+
+# US government obligation interest subtracted (flag; see calc known-difference)
+sub_us_int:
+  value: 1
+  reference: 'CT-1040 Schedule 1 Line 39; CGS 12-701(a)(20)(B)(i)'
+
+# State income tax refunds included in federal AGI subtracted
+sub_state_ref:
+  value: 1
+  reference: 'CT-1040 Schedule 1 Line 42 (all years)'
+
+# Social Security: 100% subtraction below the AGI limit (all ages); above,
+# the SS Benefit Adjustment Worksheet caps CT-taxable SS at 25% of benefits
+# (ss_taxable_gross_cap_share below). Limits encoded as threshold - 1
+# because the worksheet applies AT or above the threshold ("$75,000 or
+# more") while the calc tests agi <= limit. 2017-2018: $50,000/$60,000;
+# 2019+: $75,000/$100,000 (PA 17-2 JSS). NOTE: HoH maps to the JOINT limit
+# for SS (unlike the pension/IRA phase-out, where HoH maps to single)
+ss_full_sub_allages:
+  value: 1
+  reference: 'CT-1040 Schedule 1 Line 41; Social Security Benefit Adjustment Worksheet (2017-2025 booklets)'
+ss_limit_single:
+  value:
+    '2017': 49999
+    '2019': 74999
+  reference: '2017/2018 booklets ($50,000); 2019-2025 booklets ($75,000); PA 17-2 JSS; OLR 2019-R-0098'
+ss_limit_joint:
+  value:
+    '2017': 59999
+    '2019': 99999
+  reference: '2017/2018 booklets ($60,000); 2019-2025 booklets ($100,000, incl. HoH); PA 17-2 JSS'
+ss_taxable_gross_cap_share:
+  value: 0.25
+  reference: 'SS Benefit Adjustment Worksheet Lines C-F (25% of the lesser of benefits or federal excess-over-base; gross-benefits approximation documented in ct.md); CGS 12-701(a)(20)(B)(x)'
+
+# Pension/annuity subtraction share: phased in 14/28/42% for 2019-2021, then
+# 100% from 2022 (PA 21-2 JSS acceleration; 56/70/84% never took effect)
+pension_sub_share:
+  value:
+    '2017': 0.0
+    '2019': 0.14
+    '2020': 0.28
+    '2021': 0.42
+    '2022': 1.0
+  reference: 'CT-1040 Schedule 1 Line 48b (2019-2025 booklets); PA 17-2 JSS; PA 21-2 JSS; OLR 2019-R-0098, 2023-R-0129'
+
+# IRA distribution subtraction share (non-Roth): 25/50/75% for 2023-2025,
+# 100% from 2026. Note OLR 2025-R-0152 misprints 25% for 2024; the 2024
+# booklet says 50%
+ira_sub_share:
+  value:
+    '2017': 0.0
+    '2023': 0.25
+    '2024': 0.5
+    '2025': 0.75
+    '2026': 1.0
+  reference: 'CT-1040 Schedule 1 Line 48b (2023-2025 booklets); PA 21-2 JSS; CGS 12-701(a)(20)(B)(xxix); OLR 2024-R-0130'
+
+# AGI-banded eligibility factor shared by the pension and IRA subtractions:
+# 2017-2023 an eligibility cliff at $75,000 single/MFS/HoH and $100,000 MFJ
+# (factors 1 then 0); 2024+ the PA 23-204 ten-band phase-out table. Bounds
+# are constant; only the factors change in 2024. Keyed to federal AGI
+retire_factor_bounds_single:
+  value: [0, 75000, 77500, 80000, 82500, 85000, 87500, 90000, 95000, 100000]
+  reference: '2024/2025 CT-1040 booklets, Pension and Annuity Worksheet phase-out table; 2019-2023 booklets (cliff at $75,000, "less than $75,000")'
+retire_factor_bounds_joint:
+  value: [0, 100000, 105000, 110000, 115000, 120000, 125000, 130000, 140000, 150000]
+  reference: '2024/2025 CT-1040 booklets, Pension and Annuity Worksheet phase-out table; 2019-2023 booklets (cliff at $100,000 MFJ)'
+retire_sub_factors:
+  value:
+    '2017': [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    '2024': [1.0, 0.85, 0.7, 0.55, 0.4, 0.25, 0.1, 0.05, 0.025, 0.0]
+  reference: '2019-2023 booklets (cliff); 2024 booklet p.28 / 2025 booklet pp.24-25 (decimals 1/.85/.70/.55/.40/.25/.10/.05/.025/0); PA 23-204 377; CGS 12-701(a)(20)(B)(xxi)-(xxii)'
+
+# CHET (CT 529) contribution subtraction (data-limited: contributions
+# unobserved in the PUF; encoded for completeness, not used by the calc)
+sub_529_single:
+  value: 5000
+  reference: 'CT-1040 Schedule 1 Line 48 (2017-2025 booklets); CGS 12-701(a)(20)(B)(xiii)'
+sub_529_joint:
+  value: 10000
+  reference: 'CT-1040 Schedule 1 Line 48 (2017-2025 booklets)'
