@@ -1,0 +1,315 @@
+<title>An integrated model for scoring taxes at the top</title>
+<style>
+:root{
+  --paper:#FBFAF7; --ink:#1E2530; --muted:#5C6570; --accent:#00356B; --rule:#DCDFE4; --card:#F3F2ED;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --paper:#13171F; --ink:#E5E8EE; --muted:#99A2B0; --accent:#8AAEDB; --rule:#2B323F; --card:#1A202B; }
+}
+:root[data-theme="dark"]{ --paper:#13171F; --ink:#E5E8EE; --muted:#99A2B0; --accent:#8AAEDB; --rule:#2B323F; --card:#1A202B; }
+:root[data-theme="light"]{ --paper:#FBFAF7; --ink:#1E2530; --muted:#5C6570; --accent:#00356B; --rule:#DCDFE4; --card:#F3F2ED; }
+
+html{background:var(--paper)}
+body{
+  background:var(--paper); color:var(--ink); margin:0;
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  font-size:17.5px; line-height:1.65;
+}
+.wrap{max-width:84ch; margin:0 auto; padding:3.2rem 1.6rem 5rem}
+
+.kicker{
+  font-family:ui-sans-serif,system-ui,sans-serif; font-size:.72rem; font-weight:600;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin:0 0 .9rem;
+}
+h1{font-size:1.75rem; font-weight:600; line-height:1.25; margin:0 0 .35rem; text-wrap:balance}
+.dateline{color:var(--muted); font-style:italic; margin:0 0 2.2rem}
+h2{font-size:1.16rem; font-weight:600; margin:2.6rem 0 .6rem; text-wrap:balance}
+h2 .no{color:var(--accent); margin-right:.5rem}
+h3{font-size:1.05rem; font-weight:700; margin:2.1rem 0 .5rem}
+h4{font-size:.98rem; font-weight:600; font-style:italic; margin:1.7rem 0 .4rem}
+p{margin:.8rem 0}
+strong{font-weight:600}
+em{font-style:italic}
+ol,ul{padding-left:1.5rem; margin:.8rem 0}
+li{margin:.55rem 0}
+
+.tblwrap{overflow-x:auto; margin:1.2rem 0 1.4rem; border:1px solid var(--rule); border-radius:5px}
+table{
+  border-collapse:collapse; width:100%; min-width:640px;
+  font-family:ui-sans-serif,system-ui,sans-serif; font-size:.82rem; line-height:1.5;
+  font-variant-numeric:tabular-nums;
+}
+caption{
+  text-align:left; padding:.65rem .8rem .3rem; font-size:.72rem; font-weight:700;
+  letter-spacing:.11em; text-transform:uppercase; color:var(--muted);
+}
+th{
+  text-align:left; font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--muted); background:var(--card); padding:.5rem .8rem; border-bottom:1px solid var(--rule);
+}
+td{padding:.5rem .8rem; border-bottom:1px solid var(--rule); vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.val{white-space:nowrap}
+tr.group td{
+  background:var(--card); font-family:ui-sans-serif,system-ui,sans-serif;
+  font-size:.68rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); padding:.45rem .8rem;
+}
+
+.foot{margin-top:3rem; padding-top:1rem; border-top:1px solid var(--rule); color:var(--muted); font-size:.88rem; font-style:italic}
+a{color:var(--accent)}
+</style>
+
+<div class="wrap">
+
+<p class="kicker">The Budget Lab at Yale &middot; Methodology memo</p>
+<h1>An integrated model for scoring taxes at the top</h1>
+<p class="dateline">First draft &middot; July 2026 &middot; appendix to follow</p>
+
+<h2><span class="no">1.</span>The idea</h2>
+
+<p>This memo describes the modeling enhancements we've made recently in
+service of producing more-accurate and internally consistent scores of
+packages aimed at taxing the rich. The basic idea is this:</p>
+
+<ol>
+<li>Top-tax packages often combine ordinary-income, capital-gains, business,
+estate, and/or wealth taxes in one proposal. <em>Example: a proposal to
+increase the corporate rate, increase capital gains rates, and tax unrealized
+gains at death.</em></li>
+<li>These tax bases overlap both mechanically (e.g., a dollar of taxes paid by
+a corporation reduces the shareholder tax base) and behaviorally (e.g.,
+reducing a tax rate differential across two substitutable tax bases should
+reduce avoidance opportunities). <em>Example: the corporate-rate increase
+reduces after-tax profits which in turn reduces the tax base for the capital
+gains tax, while at the same time the tax on gains at death reduces the
+incentive to defer realizations, which raises the capital gains tax
+base.</em></li>
+<li>Some of these interactions have no empirical evidence to rely on, since
+they arise from combinations of policies that have never been enacted.
+<em>Example: evidence on the realization elasticity is estimated solely under
+a policy regime of step-up; we have no directly observable estimate of how the
+elasticity changes if gains are taxed at death.</em></li>
+<li>Therefore, to the extent possible, we should build one integrated
+microsimulation model with a ground-up, internally consistent representation
+of the relationship between business incomes, household incomes, household
+wealth, inheritance flows, etc., parameterized by behavioral rules grounded in
+economic theory and calibrated to current-law empirical elasticity
+moments.</li>
+</ol>
+
+<p>This approach represents an improvement over what we've done in the past,
+which is to build a set of standalone models and either ignore these
+interactions entirely or crudely assume relationships that might not hold
+under different policy regimes.</p>
+
+<h2><span class="no">2.</span>How the model is put together</h2>
+
+<p>This work is an extension of the Budget Lab's existing income and payroll
+tax microsimulation. Some of it is new data and some is new modeling.</p>
+
+<h3>New data</h3>
+
+<p>We use the SCF, supplemented with the Forbes billionaire list, to estimate
+the joint distribution of demographics, income, assets, debts, and unrealized
+gains, then draw a complete balance sheet for each tax unit. We also assign
+each person an annual mortality probability and impute inheritances so that we
+can track transfers of gains and wealth across death and follow the burden of
+estate taxes and carryover basis on heirs. These new data are prerequisites
+for the integration of tax bases: for each record, we can now calculate income
+and payroll taxes, expected estate and deemed-realization taxes in the case of
+death, and wealth taxes, and we can model adjustments to income and asset
+values when corporate taxes change.</p>
+
+<h3>New modeling</h3>
+
+<p>With this data in hand, we build several new modules in this simulator.
+These modules are functions which map policy changes to tax base changes
+(behavioral responses), or tax base changes to other tax base changes
+(mechanical interactions).</p>
+
+<h4>Realizing or deferring gains</h4>
+
+<p>The biggest modeling innovation in this work is our new treatment of
+capital gains realization behavior: a structural model of the decision to
+realize or defer, embedded in the microsimulation. Households are grouped into
+representative cohorts by age and wealth. Each agent weighs the tax costs of
+selling now against the value of deferral, which depends on the current
+capital gains rate, expected future rates, what happens to the gain at death,
+and expected time until death. Wealth and estate taxes also affect the value
+of deferral. The decision is structured as a Bellman problem where each dollar
+of unrealized gain carries a non-tax motive for selling (e.g., liquidity or
+rebalancing) and the holder sells when that motive outweighs the tax wedge of
+realizing now rather than deferring. Behavior responds on two
+margins&mdash;a permanent margin that sets the level of realizations, and a
+short-run timing margin that lets a calibrated fraction of realizations shift
+a year in either direction around an anticipated rate change&mdash;mirroring
+the permanent/transitory distinction in the empirical literature. We calibrate
+the model so that responsiveness matches these elasticities under current law.
+The result, for a given policy change, is an implied yearly path of the change
+in realizations for each age and wealth group, distributed down to simulated
+tax units.</p>
+
+<p>This structure has three benefits over the old reduced-form. The first is
+endogenous behavior. Both the level of realizations and the realization
+elasticity itself change with the policy environment, with no additional
+assumptions (such as judgmentally adjusting the elasticity for a change in
+step-up). The second is accounting consistency. The model tracks the stock of
+unrealized gains, so gains that go unrealized when taxes change do not
+disappear&mdash;they resurface later as sales during life or gains held at
+death. The third is a byproduct: an estimated tax benefit of deferral used in
+other behavioral calculations, like the business entity choice (where the
+value of a dollar in a C corp depends on the value of deferral).</p>
+
+<h4>Converting ordinary income into gains</h4>
+
+<p>Owners of businesses and certain workers can structure labor compensation
+as deferred equity gains rather than salary. The amount converted depends on
+the gap between the taxpayer's ordinary rate and the present value of tax on a
+dollar entering the deferred-gain state. That present value comes from the
+realization piece above, so any policy that makes deferral less attractive
+makes this margin of conversion less attractive as well.</p>
+
+<h4>Moving between corporate and pass-through form</h4>
+
+<p>Business income shifts between pass-through and C-corporation form with the
+difference in their all-in tax rates. The C-corporation rate includes the
+entity-level tax plus shareholder-level tax on distribution, with retained
+earnings priced at the same deferral value as above. The value of sheltering
+in corporate form therefore falls when gains are taxed at death.</p>
+
+<h4>Underreporting of income</h4>
+
+<p>When marginal tax rates rise, some income leaves the tax return. Following
+DeBacker, Heim, and Yuskavage, reported income responds to the net-of-tax rate
+only where the IRS lacks third-party information reporting: self-employment
+income, partnership and S-corporation income, and rent. Wages, interest, and
+dividends do not respond. The elasticities are small&mdash;0.04 to
+0.05&mdash;but fall on the income types that dominate at the top. Evaded
+income still accumulates as wealth, so the model removes a matching share of
+closely held assets from the reported wealth and estate bases: income hidden
+from the income tax is not then presented to the wealth tax or the estate
+tax.</p>
+
+<h4>Wealth tax avoidance</h4>
+
+<p>Under a wealth tax, reported wealth falls as the marginal rate rises&mdash;by
+roughly 7 percent for marketable securities and 16 percent for closely held
+assets at a 1 percent marginal rate. The response has two components.
+Valuation discounts lower the assessed value of an asset that remains visible:
+its income still appears on the tax return, and its full value still enters
+the estate. Concealment removes the asset from sight entirely, taking its
+income out of the income tax base and its value out of the reported estate.
+Marketable securities have market prices that cannot be argued down, so their
+response is all concealment; closely held assets split evenly. A concealed
+dollar therefore escapes the wealth, income, and estate taxes together. Either
+way, these are reporting responses: the real balance sheets, and everything
+computed from them, are untouched. The elasticities also implicitly absorb
+migration and expatriation, so wealth tax results are best read as an upper
+bound on that account.</p>
+
+<h4>Death</h4>
+
+<p>The estate tax is computed record by record from the balance sheet, with
+reported estates benchmarked to SOI filings; estate tax is passed to heirs in
+the microdata by matching large estates to large inheritances. Reported
+estates shrink somewhat when the estate tax rises, following Kopczuk and
+Slemrod. The treatment of unrealized gains at death follows the policy being
+scored and, through the realization piece, feeds back into behavior during
+life.</p>
+
+<h4>Paying taxes out of wealth</h4>
+
+<p>Taxes have to be paid out of something&mdash;forgone consumption or forgone
+saving. We assume the split varies with wealth: near the bottom of the
+distribution a new tax bill mostly displaces consumption, while at the top it
+is financed almost entirely out of saving, consistent with the evidence on
+consumption responses by wealth. The financed share then compounds: wealth
+that is not accumulated stops earning returns, so the gap between baseline and
+policy wealth widens over time. The consequences land in other bases years
+later&mdash;less capital income to tax during life, a smaller wealth-tax base
+each year, and smaller estates at death. A large during-life tax therefore
+partially cannibalizes wealth-based revenue later in the budget window, and
+increasingly beyond it. This is a mechanical description of how taxes are
+paid, not a behavioral saving response.</p>
+
+<h4>Corporate incidence</h4>
+
+<p>A corporate rate increase reaches households through three channels. First,
+lower after-tax profits shrink the income that corporate capital throws off:
+dividends fall, and through ownership chains so do interest, rents, and some
+pass-through income. Second, equity values are marked down as markets reprice
+the future after-tax profit stream, which shrinks the capital gains realized
+later&mdash;and the estates and retirement balances that hold the stock.
+Third, the resulting declines in individual taxable income appear in the score
+as an individual-tax offset to the corporate revenue gain. Each record's
+exposure depends on its portfolio: directly held equity, funds, and retirement
+accounts. The constants governing these exposures are provisional placeholders
+pending direct measurement, and we present corporate-rate results as such.
+Both this and the financing channel affect only the behavioral estimate; the
+static score&mdash;taxes under the new law with behavior held fixed&mdash;remains
+a clean statement of the law.</p>
+
+<h2><span class="no">3.</span>How each piece is parameterized</h2>
+
+<p>Table 1 lists the parameters, grouped by module. Most are taken directly
+from the empirical literature but two are set differently. The first is
+&eta;, the strength of the realization response in the realization Bellman,
+calibrated so that the full model matches TBL's preferred permanent
+realization elasticity of &minus;0.6. The second is &sigma;, the strength of
+ordinary-vs-gains income conversion, set residually in a calibration exercise
+that targets a total ETI of 0.25: we run the model with all other behavioral
+margins turned on and find the value of &sigma; that delivers the target.</p>
+
+<p>Note that this model produces <em>conventional</em> estimates, so
+substantive economic changes like labor supply or savings rate changes are
+excluded from the behavioral adjustment margins. (The financing channel is a
+mechanical description of how taxes are paid rather than a model of how saving
+responds to rates of return.)</p>
+
+<div class="tblwrap"><table>
+<caption>Table 1 &middot; Parameters, by module</caption>
+<thead><tr><th>Parameter</th><th>Value</th><th>Basis</th></tr></thead>
+<tbody>
+<tr class="group"><td colspan="3">Capital gains realization</td></tr>
+<tr><td>Long-run response (&eta;)</td><td class="val">2.48</td><td>Calibrated on the full model to TBL's preferred realization elasticity of &minus;0.6</td></tr>
+<tr><td>Share of realizations that can retime &plusmn;1 year</td><td class="val">0.25</td><td>Calibrated to short-run elasticity of &minus;1.2</td></tr>
+<tr><td>Valuation/compliance discount under deemed realization at death</td><td class="val">25%</td><td>Calibrated to JCT score</td></tr>
+<tr class="group"><td colspan="3">Income reporting and form</td></tr>
+<tr><td>Income conversion (&sigma;)</td><td class="val">0.16</td><td>Residual: set so the total top ETI is 0.25 (SSG 2012)</td></tr>
+<tr><td>Entity-shifting semi-elasticity</td><td class="val">0.63</td><td>Pearce and Prisinzano (2018)</td></tr>
+<tr><td>Underreporting elasticities: self-employment / partnership &amp; S-corp / rent</td><td class="val">0.046 / 0.052 / 0.040</td><td>DeBacker, Heim, and Yuskavage; zero under third-party reporting</td></tr>
+<tr><td>Charitable giving price elasticity (cash)</td><td class="val">&minus;0.5</td><td>Literature central value</td></tr>
+<tr class="group"><td colspan="3">Wealth and estates</td></tr>
+<tr><td>Reported-wealth semi-elasticity: marketable / closely held</td><td class="val">&minus;7 / &minus;17</td><td>Carried over from our standalone wealth-tax model</td></tr>
+<tr><td>Concealment share of the avoidance response: marketable / closely held</td><td class="val">100% / 50%</td><td>Marketable assets have observable prices; private ones do not</td></tr>
+<tr><td>Reported-estate net-of-tax elasticity</td><td class="val">0.16</td><td>Kopczuk and Slemrod (2001); range 0.10&ndash;0.22</td></tr>
+<tr class="group"><td colspan="3">Mechanical channels</td></tr>
+<tr><td>Share of new tax paid out of saving, by wealth rank</td><td class="val">0.10 &rarr; 0.80</td><td>Consumption responses by wealth (Straub 2019 and related)</td></tr>
+<tr><td>Corporate incidence constants (e.g., supernormal share 0.375)</td><td class="val">various</td><td>Provisional placeholders pending direct measurement</td></tr>
+</tbody></table></div>
+
+<h2><span class="no">4.</span>Measuring the burden</h2>
+
+<p>Distributional results are stated as effective tax rates on a broad income
+measure: realized gains are replaced with accrued gains, so the denominator
+reflects economic income rather than what happens to be realized in a given
+year. The denominator and household ranking are fixed at baseline; only taxes
+change with policy. Measuring taxes two ways gives the two rates we report:
+taxes owed before any behavioral response approximate the burden the policy
+asks households to bear, and taxes actually collected are what the government
+receives. The gap between them is the part of the ask that avoidance
+dissipates.</p>
+
+<p>The public interactive is built on roughly two hundred model runs,
+interpolating between them with a fitted decomposition: a revenue curve for
+each lever alone plus measured two- and three-way interaction terms. On
+held-out packages the interpolation is within a few percent of the true run,
+least accurate when a large wealth tax and a large estate tax are
+combined&mdash;a limit the tool discloses.</p>
+
+<p class="foot">A technical appendix&mdash;derivations for Section 2 and
+fuller sourcing for Table 1&mdash;will follow once this structure is
+settled.</p>
+
+</div>
