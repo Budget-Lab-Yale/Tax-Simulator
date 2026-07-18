@@ -17,6 +17,15 @@ st_credits_household_req_vars = c(
   'st_credits.exempt_credit_po_thresh',
   'st_credits.exempt_credit_po_width',
   'st_credits.exempt_credit_po_per_step',
+  'st_credits.exempt_credit_po_base',
+  'st_credits.ded_credit_rate',
+  'st_credits.ded_credit_exempt_taxpayer',
+  'st_credits.ded_credit_exempt_dep',
+  'st_credits.ded_credit_dep_age0_extra',
+  'st_credits.ded_credit_salt_cap',
+  'st_credits.ded_credit_po_rate',
+  'st_credits.ded_credit_po_thresh',
+  'st_credits.ded_credit_po_base',
   'st_credits.prop_tax_credit_rate',
   'st_credits.credit_agi_limit',
   'st_credits.prop_tax_credit_max',
@@ -40,6 +49,7 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
   # Returns: list of per-row vectors --
   #   - st_hh_credit (dbl)       : NY-style household credit
   #   - st_exempt_credit (dbl)   : CA-style exemption credits
+  #   - st_ded_credit (dbl)      : UT-style credit in lieu of deductions
   #   - family_credit_rate (dbl) : KY-style table rate (share of tax)
   #   - pct_credit_rate (dbl)    : CT Table E rate (share of tax)
   #   - prop_credit (dbl)        : IL/CT property tax credit
@@ -62,14 +72,19 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
 
   # Exemption credits are a credit (rather than an income exemption) in
   # California. The common per-credit phaseout is generic and applies to
-  # personal, aged, blind, and dependent credits separately.
+  # personal, aged, blind, and dependent credits separately. The phase-out
+  # income base is configurable (CA: federal AGI; OH $20 credit: the
+  # means-test base less exemptions, with a one-step cliff)
   n_taxpayers = 1 + (tax_unit$filing_status == 2)
   n_aged = (tax_unit$age1 >= 65) +
            (tax_unit$filing_status == 2 & !is.na(tax_unit$age2) & tax_unit$age2 >= 65)
   n_blind = coalesce(tax_unit$blind1, 0) +
             (tax_unit$filing_status == 2 & coalesce(tax_unit$blind2, 0))
+  exempt_credit_po_income = st_income_base(
+    tax_unit, tax_unit$st_credits.exempt_credit_po_base
+  )
   credit_reduction = st_step_reduction(
-    agi, tax_unit$st_credits.exempt_credit_po_thresh,
+    exempt_credit_po_income, tax_unit$st_credits.exempt_credit_po_thresh,
     tax_unit$st_credits.exempt_credit_po_width,
     tax_unit$st_credits.exempt_credit_po_per_step
   )
@@ -82,6 +97,40 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
                      pmax(0, tax_unit$st_credits.exempt_credit_dep - credit_reduction)
   st_exempt_credit = if_else(tax_unit$st_credits.exempt_credit_style == 1,
                              taxpayer_credit + dependent_credit, 0)
+
+  #-------------------------------------------------------------------
+  # Credit in lieu of deductions/exemptions (UT taxpayer tax credit,
+  # 59-10-1018): rate times [per-taxpayer + per-dependent exemption
+  # amounts plus the federal standard deduction or (itemized deductions
+  # less the state/local income-tax component, capped)], reduced
+  # ded_credit_po_rate per dollar of the enum income base over the
+  # filing-status threshold. Dependents born during the year count
+  # twice where flagged (UT 2023+; proxied by dependents age 0)
+  #-------------------------------------------------------------------
+
+  ded_credit_salt = pmin(
+    pmax(0, tax_unit$salt_item_ded - tax_unit$salt_prop - tax_unit$salt_pers),
+    tax_unit$st_credits.ded_credit_salt_cap
+  )
+  ded_credit_fed_ded = if_else(tax_unit$itemizing == 1,
+                               pmax(0, tax_unit$item_ded - ded_credit_salt),
+                               tax_unit$std_ded)
+  ded_credit_n_dep = tax_unit$n_dep +
+    tax_unit$st_credits.ded_credit_dep_age0_extra * st_n_dep_in(tax_unit, 0, 0)
+  ded_credit_exempt =
+    (tax_unit$dep_status != 1) * n_taxpayers *
+      tax_unit$st_credits.ded_credit_exempt_taxpayer +
+    ded_credit_n_dep * tax_unit$st_credits.ded_credit_exempt_dep
+  ded_credit_po_income = st_income_base(
+    tax_unit, tax_unit$st_credits.ded_credit_po_base
+  )
+  st_ded_credit = pmax(
+    0,
+    tax_unit$st_credits.ded_credit_rate *
+      (ded_credit_exempt + ded_credit_fed_ded) -
+    tax_unit$st_credits.ded_credit_po_rate *
+      pmax(0, ded_credit_po_income - tax_unit$st_credits.ded_credit_po_thresh)
+  )
 
   #----------------------------
   # Household credit (NY-style)
@@ -154,6 +203,7 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
   list(
     st_hh_credit       = st_hh_credit,
     st_exempt_credit   = st_exempt_credit,
+    st_ded_credit      = st_ded_credit,
     family_credit_rate = family_credit_rate,
     pct_credit_rate    = pct_credit_rate,
     prop_credit        = prop_credit

@@ -1,0 +1,298 @@
+---
+# Utah credits: the taxpayer tax credit (UC 59-10-1018, TC-40 lines 11-20),
+# retirement credit (59-10-1019, TC-40A code 18), Social Security benefits
+# credit (59-10-1042, code AH), nonrefundable EITC (59-10-1044, code AM),
+# and nonrefundable child tax credit (59-10-1047, code AT). All amounts
+# transcribed from the 2017-2025 TC-40 instruction booklets and enrolled
+# bills (see source packet); 2026 enacted changes included (SB 60 rate flows
+# to ss_credit_rate; HB 290 CTC thresholds). Omitted: my529, at-home parent,
+# health benefit plan, military retirement (59-10-1043), solar/other credits.
+
+filing_status_mapper:
+  ded_credit_po_thresh:
+    '1': tpc_base_single
+    '2': tpc_base_single * 2
+    '3': tpc_base_single
+    '4': tpc_base_head
+  age_credit_po_thresh:
+    '1': retire_thresh_single
+    '2': retire_thresh_joint
+    '3': retire_thresh_mfs
+    '4': retire_thresh_joint
+  ss_credit_po_thresh:
+    '1': ss_thresh_single
+    '2': ss_thresh_joint
+    '3': ss_thresh_mfs
+    '4': ss_thresh_joint
+  ctc_po_thresh:
+    '1': ctc_thresh_single
+    '2': ctc_thresh_joint
+    '3': ctc_thresh_mfs
+    '4': ctc_thresh_single
+
+#---------------------------------------------------------------
+# Taxpayer tax credit (UC 59-10-1018): 6% of [Utah personal
+# exemption + federal standard deduction OR (federal itemized
+# deductions less the capped state/local income-tax component)],
+# reduced 1.3 cents per dollar of Utah taxable income (= state
+# AGI here; no base deductions) over the base amount
+#---------------------------------------------------------------
+
+ded_credit_rate:
+  value: 0.06
+  reference: 'UC 59-10-1018(2); TC-40 line 16, "multiply line 15 by 6% (.06)", 2017-2025'
+ded_credit_po_rate:
+  value: 0.013
+  reference: 'UC 59-10-1018(4); TC-40 line 19, "multiply line 18 by 1.3% (.013)", 2017-2025'
+ded_credit_po_base:
+  value: 2
+  reference: 'UC 59-10-1018(4)(a): phase-out on state taxable income (TC-40 line 9), equal to the modeled state AGI (Utah has no base deductions)'
+ded_credit_salt_cap:
+  value:
+    '2017': 999999999999
+    '2018': 10000
+  reference: 'UC 59-10-1018(1)(e) as enacted by HB 293 (2018): state/local income tax addback capped at $10,000; uncapped in 2017 (2017 TC-40 instr. line 14)'
+ded_credit_exempt_taxpayer:
+  value:
+    '2017': 3038
+    '2018': 0
+  reference: '2017: 75% of the $4,050 federal personal exemption per exemption incl. taxpayer/spouse (UC 59-10-1018(2)(b)(i), 2017 TC-40 instr. line 11); dependents-only from 2018 (HB 2003, 2018 2nd SS)'
+ded_credit_exempt_dep:
+  value:
+    '2017': 3038
+    '2018': 565
+    '2019': 579
+    '2020': 590
+    '2021': 1750
+    '2022': 1802
+    '2023': 1941
+    '2024': 2046
+    '2025': 2111
+  reference: 'UC 59-10-1018(1)(g); TC-40 instr. line 11, 2017-2025 (2021 jump = SB 153); IRC-24-eligible dependents'
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': NA
+    '2026': 2025
+  i_direction: 0
+  i_increment: 1
+ded_credit_dep_age0_extra:
+  value:
+    '2017': 0
+    '2023': 1
+  reference: 'UC 59-10-1018(1)(g) as amended by HB 54 (2023): an additional qualifying dependent in the year of a dependent''s birth; proxied by dependents age 0'
+tpc_base_single:
+  value:
+    '2017': 13978
+    '2018': 14256
+    '2019': 14601
+    '2020': 14879
+    '2021': 15095
+    '2022': 15548
+    '2023': 16742
+    '2024': 17652
+    '2025': 18213
+  reference: 'TC-40 instr. line 18 base amount table, 2017-2025 (single and MFS); UC 59-10-1018(5)-(6) CPI indexation, joint = 2x single'
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': NA
+    '2026': 2025
+  i_direction: 0
+  i_increment: 1
+tpc_base_head:
+  value:
+    '2017': 20968
+    '2018': 21384
+    '2019': 21902
+    '2020': 22318
+    '2021': 22643
+    '2022': 23322
+    '2023': 25114
+    '2024': 26478
+    '2025': 27320
+  reference: 'TC-40 instr. line 18 base amount table, 2017-2025 (head of household)'
+  i_measure:
+    '2017': cpi
+  i_base_year:
+    '2017': NA
+    '2026': 2025
+  i_direction: 0
+  i_increment: 1
+
+#---------------------------------------------------------------
+# Retirement credit (UC 59-10-1019): $450 per person born on or
+# before Dec 31, 1952 (frozen cohort encoded as a year-keyed
+# minimum age), reduced 2.5 cents per dollar of modified AGI
+# (approximated as federal AGI + state additions) over the
+# threshold. Values identical 2017-2025; not indexed
+#---------------------------------------------------------------
+
+age_credit_amount:
+  value: 450
+  reference: 'UC 59-10-1019(2)(b); TC-40C, 2017-2025'
+age_credit_min_age:
+  value:
+    '2017': 65
+    '2018': 66
+    '2019': 67
+    '2020': 68
+    '2021': 69
+    '2022': 70
+    '2023': 71
+    '2024': 72
+    '2025': 73
+    '2026': 74
+    '2027': 75
+    '2028': 76
+    '2029': 77
+    '2030': 78
+    '2031': 79
+    '2032': 80
+    '2033': 81
+    '2034': 82
+    '2035': 83
+  reference: 'UC 59-10-1019(1)(c): born on or before Dec 31, 1952; age-equivalent by tax year'
+age_credit_po_rate:
+  value: 0.025
+  reference: 'UC 59-10-1019(3); TC-40C worksheet, "multiply by 2.5% (.025)", 2017-2025'
+age_credit_income_base:
+  value: 3
+  reference: 'UC 59-10-1019(1)(b) modified AGI: total income (FAGI + additions) plus tax-exempt interest; modeled as federal AGI + state additions (known-difference)'
+retire_thresh_single:
+  value: 25000
+  reference: 'UC 59-10-1019(3)(b); TC-40C, 2017-2025; not indexed'
+retire_thresh_joint:
+  value: 32000
+  reference: 'UC 59-10-1019(3)(b): MFJ, QSS, and HoH threshold; TC-40C, 2017-2025'
+retire_thresh_mfs:
+  value: 16000
+  reference: 'UC 59-10-1019(3)(b); TC-40C, 2017-2025'
+
+#---------------------------------------------------------------
+# Social Security benefits credit (UC 59-10-1042; HB 86 2021,
+# TY2021+): the year's tax rate times taxable SS benefits,
+# reduced 2.5 cents per dollar of modified AGI over the
+# threshold. Return-level exclusivity with the retirement
+# credit (the unit takes the larger)
+#---------------------------------------------------------------
+
+ss_credit_rate:
+  value:
+    '2017': 0
+    '2021': 0.0495
+    '2022': 0.0485
+    '2023': 0.0465
+    '2024': 0.0455
+    '2025': 0.045
+    '2026': 0.0445
+  reference: 'UC 59-10-1042(2): credit equals the 59-10-104 rate times taxable SS; worksheet multipliers verified 2021-2025; 2026 = SB 60 rate'
+ss_credit_po_rate:
+  value: 0.025
+  reference: 'UC 59-10-1042(3); TC-40 SS credit worksheet, 2021-2025'
+ss_credit_income_base:
+  value: 3
+  reference: 'UC 59-10-1042(1) modified AGI; modeled as federal AGI + state additions (2025 worksheet base change to line 9 is a documented known-difference)'
+ss_age_credit_exclusive:
+  value: 1
+  reference: 'UC 59-10-1042(5)/59-10-1019(4): a return may not claim both the SS/military credit and the retirement credit; booklets apply at return level'
+ss_thresh_single:
+  value:
+    '2017': 999999999999
+    '2021': 30000
+    '2022': 37000
+    '2023': 45000
+    '2025': 54000
+  reference: 'UC 59-10-1042(3)(a); HB 86 (2021), SB 59 (2022), HB 54 (2023), SB 71 (2025); pre-2021 sentinel (credit rate is zero)'
+ss_thresh_joint:
+  value:
+    '2017': 999999999999
+    '2021': 50000
+    '2022': 62000
+    '2023': 75000
+    '2025': 90000
+  reference: 'UC 59-10-1042(3)(a): MFJ, QSS, and HoH threshold'
+ss_thresh_mfs:
+  value:
+    '2017': 999999999999
+    '2021': 25000
+    '2022': 31000
+    '2023': 37500
+    '2025': 45000
+  reference: 'UC 59-10-1042(3)(a)'
+
+#---------------------------------------------------------------
+# Utah EITC (UC 59-10-1044; SB 59 2022): nonrefundable match on
+# the federal EITC; 2023+ capped at W-2 wages (HB 54 2023)
+#---------------------------------------------------------------
+
+eitc_match:
+  value:
+    '2017': 0
+    '2022': 0.15
+    '2023': 0.20
+  reference: 'UC 59-10-1044; SB 59 (2022) 15%; HB 54 (2023) 20%; TC-40A code AM worksheets 2022-2025'
+eitc_refundable:
+  value: 0
+  reference: 'UC 59-10-1044(3): may not carry forward or back; nonrefundable, 2022-2025'
+eitc_wage_cap:
+  value:
+    '2017': 0
+    '2023': 1
+  reference: 'UC 59-10-1044 as amended by HB 54 (2023): claimant must earn Utah W-2 income; worksheet caps the credit at box-16 wages (total wages proxy; known-difference)'
+
+#---------------------------------------------------------------
+# Utah child tax credit (UC 59-10-1047; HB 170 2023, TY2024+):
+# $1,000 nonrefundable per qualifying child in the age band,
+# reduced 10 cents per dollar of modified AGI over the threshold
+#---------------------------------------------------------------
+
+ctc_style:
+  value:
+    '2017': 0
+    '2024': 3
+  reference: 'UC 59-10-1047, effective TY2024 (HB 170 2023); style 3 = flat per-child amount, continuous phase-out'
+ctc_young_amount:
+  value:
+    '2017': 0
+    '2024': 1000
+  reference: 'UC 59-10-1047(2): $1,000 per qualifying child; TC-40A code AT, 2024-2025'
+ctc_min_child_age:
+  value:
+    '2017': 0
+    '2024': 1
+    '2025': 0
+  reference: 'HB 170 (2023): at least 1 and under 4 for TY2024; HB 106 (2025): under 6 from TY2025 (age 0 eligible)'
+ctc_max_child_age:
+  value:
+    '2017': 16
+    '2024': 3
+    '2025': 5
+  reference: 'HB 170 (2023) ages 1-3; HB 106 (2025) ages 0-5; IRC 24-eligible children'
+ctc_po_rate:
+  value: 0.10
+  reference: 'UC 59-10-1047(3): reduced $.10 per $1 of modified AGI over the threshold; 2024-2025 worksheets'
+ctc_po_base:
+  value: 3
+  reference: 'UC 59-10-1047(1) modified AGI; modeled as federal AGI + state additions (known-difference)'
+ctc_refundable:
+  value: 0
+  reference: 'UC 59-10-1047(4): nonrefundable, no carryforward'
+ctc_thresh_single:
+  value:
+    '2017': 999999999999
+    '2024': 43000
+    '2026': 49000
+  reference: 'UC 59-10-1047(3)(a): single and HoH; HB 290 (2026) raised thresholds; pre-2024 sentinel (style inactive)'
+ctc_thresh_joint:
+  value:
+    '2017': 999999999999
+    '2024': 54000
+    '2026': 61000
+  reference: 'UC 59-10-1047(3)(a): MFJ and QSS'
+ctc_thresh_mfs:
+  value:
+    '2017': 999999999999
+    '2024': 27000
+    '2026': 30500
+  reference: 'UC 59-10-1047(3)(a)'

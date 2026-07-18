@@ -1,0 +1,10 @@
+---
+# Utah: exemptions. No exemption reduces Utah taxable income -- the Utah
+# personal exemption is an input to the taxpayer tax credit (credits.yaml
+# ded_credit_exempt_* parameters; UC 59-10-1018(1)(g)).
+personal_amount:
+  value: 0
+  reference: 'No exemption from Utah taxable income; TC-40 lines 4-9 structure, 2017-2025'
+dep_amount:
+  value: 0
+  reference: 'Utah personal exemption operates inside the taxpayer tax credit (UC 59-10-1018), not the base'

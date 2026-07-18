@@ -21,7 +21,7 @@ test_state_calc = function() {
 
   law = build_state_tax_law(
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
-                'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA'),
+                'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -838,6 +838,93 @@ test_state_calc = function() {
            label = 'VA-13 UI subtraction')
 
   #--------------------------------------------------------------------------
+  # Utah (TC-40)
+  #--------------------------------------------------------------------------
+
+  # UT-1: 2024 single, AGI 60,000, standard deduction 14,600. Taxable =
+  # 60,000 -> tax = 2,730. Taxpayer credit: 6% x 14,600 = 876, phase-out
+  # .013 x (60,000 - 17,652) = 550.524 -> 325.476.
+  # Liab = 2,730 - 325.476 = 2,404.524
+  run_case('UT', 2024, list(agi = 60000, std_ded = 14600),
+           expect = list(st_agi = 60000, st_ded_credit = 325.476,
+                         liab_st_iit = 2404.524),
+           label = 'UT-1 taxpayer credit phase-out')
+
+  # UT-2: 2024 MFJ, AGI 40,000, deps ages 2 and 5, std 29,200. Taxpayer
+  # credit: 6% x (29,200 + 2 x 2,046) = 1,997.52 minus .013 x (40,000 -
+  # 35,304) = 61.048 -> 1,936.472. CTC (2024 ages 1-3): one qualifying
+  # child x 1,000, MAGI 40,000 < 54,000 -> 1,000 NONREFUNDABLE.
+  # Tax = 1,820 < credits -> liab 0 (not negative)
+  run_case('UT', 2024,
+           list(agi = 40000, filing_status = 2, n_dep = 2, n_dep_ctc = 2,
+                dep_age1 = 2, dep_age2 = 5, std_ded = 29200),
+           expect = list(st_ded_credit = 1936.472, st_ctc = 1000,
+                         liab_st_iit = 0),
+           label = 'UT-2 CTC age band + nonrefundability')
+
+  # UT-3: 2025 single age 75, AGI 40,000 incl. taxable SS 10,000 (NOT
+  # subtracted from the base), std 15,000. SS credit = 4.5% x 10,000 = 450
+  # (no phase-out below 54,000) beats retirement credit 450 - .025 x
+  # (40,000 - 25,000) = 75. Taxpayer credit = 900 - .013 x (40,000 -
+  # 18,213) = 616.769. Liab = 1,800 - 450 - 616.769 = 733.231
+  run_case('UT', 2025,
+           list(agi = 40000, age1 = 75, txbl_ss = 10000, gross_ss = 12000,
+                std_ded = 15000),
+           expect = list(st_agi = 40000, st_age_credit = 450,
+                         liab_st_iit = 733.231),
+           label = 'UT-3 SS credit vs retirement credit')
+
+  # UT-4: 2023 MFJ itemizer, AGI 80,000; itemized 30,000 with SALT 10,000
+  # of which property 4,000 -> income-tax component 6,000 removed. Newborn
+  # (age 0) counts twice: 2 x 1,941 = 3,882. Credit = 6% x (24,000 + 3,882)
+  # = 1,672.92 minus .013 x (80,000 - 33,484) = 604.708 -> 1,068.212.
+  # No CTC in 2023. Liab = 3,720 - 1,068.212 = 2,651.788
+  run_case('UT', 2023,
+           list(agi = 80000, filing_status = 2, itemizing = 1,
+                item_ded = 30000, item_ded_ex_limits = 30000,
+                salt_item_ded = 10000, salt_prop = 4000,
+                salt_inc_sales = 6000, n_dep = 1, n_dep_ctc = 1,
+                dep_age1 = 0, std_ded = 27700),
+           expect = list(st_ded_credit = 1068.212, st_ctc = 0,
+                         liab_st_iit = 2651.788),
+           label = 'UT-4 itemizer SALT removal + newborn double exemption')
+
+  # UT-5: 2023 EITC W-2 wage cap. HoH, one EITC child, federal EITC 3,000.
+  # (a) SE-only (wages 0): UT EITC = min(20% x 3,000, 0) = 0.
+  # (b) wage earner: min(600, 15,000) = 600
+  run_case('UT', 2023,
+           list(agi = 15000, filing_status = 4, n_dep = 1, dep_age1 = 8,
+                n_dep_eitc = 1, eitc = 3000, sole_prop = 15000, ei1 = 15000,
+                std_ded = 20800),
+           expect = list(st_eitc = 0),
+           label = 'UT-5a EITC wage cap: SE-only')
+  run_case('UT', 2023,
+           list(agi = 15000, filing_status = 4, n_dep = 1, dep_age1 = 8,
+                n_dep_eitc = 1, eitc = 3000, wages1 = 15000, ei1 = 15000,
+                std_ded = 20800),
+           expect = list(st_eitc = 600, liab_st_iit = 0),
+           label = 'UT-5b EITC wage cap: wage earner')
+
+  # UT-6: 2017 pre-TCJA exemption: MFJ, AGI 50,000, 2 deps, std 12,700.
+  # Exemption = 4 x 3,038 = 12,152 (taxpayer+spouse+deps). Credit = 6% x
+  # 24,852 = 1,491.12 minus .013 x (50,000 - 27,956) = 286.572 ->
+  # 1,204.548. Liab = 2,500 - 1,204.548 = 1,295.452
+  run_case('UT', 2017,
+           list(agi = 50000, filing_status = 2, n_dep = 2, dep_age1 = 8,
+                dep_age2 = 10, std_ded = 12700),
+           expect = list(st_ded_credit = 1204.548, liab_st_iit = 1295.452),
+           label = 'UT-6 2017 taxpayer/spouse/dep exemption')
+
+  # UT-7: frozen retirement-credit cohort (born on/before 12/31/1952):
+  # 2024 single age 72 (born 1952) gets 450; age 71 (born 1953) gets 0
+  run_case('UT', 2024, list(agi = 20000, age1 = 72, std_ded = 14600),
+           expect = list(st_age_credit = 450),
+           label = 'UT-7a retirement credit cohort: eligible at 72')
+  run_case('UT', 2024, list(agi = 20000, age1 = 71, std_ded = 14600),
+           expect = list(st_age_credit = 0),
+           label = 'UT-7b retirement credit cohort: ineligible at 71')
+
+  #--------------------------------------------------------------------------
   # Structural smoke test: a coarse grid of units through every broad-IIT
   # baseline state and several years must produce finite, non-NA results
   #--------------------------------------------------------------------------
@@ -869,7 +956,7 @@ test_state_calc = function() {
     })
 
   for (st in c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI', 'CA', 'ND',
-               'SC', 'CT', 'VA')) {
+               'SC', 'CT', 'VA', 'UT')) {
     for (yr in c(2017, 2021, 2024, 2026, 2030)) {
       law_slice = law %>%
         filter(state == st, year == yr) %>%
@@ -884,7 +971,7 @@ test_state_calc = function() {
       )
     }
   }
-  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 14 states x 5 years)')
+  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 15 states x 5 years)')
 
   # Subset-states regression: a law table built WITHOUT a given state lacks
   # that state's feature columns entirely (not just NA cells); the calculator

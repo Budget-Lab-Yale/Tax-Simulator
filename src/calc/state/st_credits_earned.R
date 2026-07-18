@@ -13,6 +13,7 @@ st_credits_earned_req_vars = c(
   'st_credits.eitc_match_alt',
   'st_credits.eitc_refundable_alt',
   'st_credits.eitc_less_household_credit',
+  'st_credits.eitc_wage_cap',
   'st_credits.eitc_child_bonus',
   'st_credits.cli_amount',
   'st_credits.cli_poverty_addl',
@@ -172,12 +173,19 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   # State EITC: match on the federal credit, less the household credit
   # (capped at remaining tax) where flagged (NY IT-215 lines 13-16),
   # plus a flat per-return bonus for filers with a federal qualifying
-  # child (CT Schedule CT-EITC line 15a, 2025+)
+  # child (CT Schedule CT-EITC line 15a, 2025+), capped at W-2 wages
+  # where flagged (UT 59-10-1044 2023+ "earn income in Utah reported on
+  # a W-2"; total wages proxy Utah-source wages -- known-difference)
   st_eitc_main = pmax(0, tax_unit$st_credits.eitc_match * tax_unit$eitc -
                          tax_unit$st_credits.eitc_less_household_credit *
                          pmin(st_hh_credit, pmax(0, tax_unit$st_tax_pre_credit))) +
                  tax_unit$st_credits.eitc_child_bonus *
                    (tax_unit$eitc > 0 & tax_unit$n_dep_eitc > 0)
+  st_eitc_main = if_else(
+    tax_unit$st_credits.eitc_wage_cap == 1,
+    pmin(st_eitc_main, pmax(0, tax_unit$wages1 + tax_unit$wages2)),
+    st_eitc_main
+  )
 
   # Alternative state EITC option (VA: taxpayer claims the greater of a
   # nonrefundable match or, 2022+, a lower refundable match). Realized

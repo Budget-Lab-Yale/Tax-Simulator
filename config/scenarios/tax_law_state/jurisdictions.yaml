@@ -73,6 +73,12 @@ TN:
 TX:
   profile: zero
   enabled: true
+# UT starts from current federal AGI and its taxpayer tax credit references
+# the deductions claimed on the current federal return (UC 59-10-1018), so
+# rolling conformity (group 0) with no reference-law bridge needed
+UT:
+  profile: broad_iit
+  enabled: true
 # VA was fixed-date annual conformity through TY2022 (group 3), rolling for
 # TY2023-2025 (group 0), and re-fixed at Dec 31, 2025 by the 2026 GA (group
 # 4). Groups 3/4 have no reference-law bridge, so VA is excluded from

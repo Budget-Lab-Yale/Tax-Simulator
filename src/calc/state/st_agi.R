@@ -5,7 +5,7 @@
 # Set return variables for function
 return_vars$calc_st_agi = c('st_additions', 'st_subtractions', 'st_retirement_excl',
                             'st_agi', 'st_age_package_taken',
-                            'st_age_package_forgone')
+                            'st_age_package_forgone', 'st_bid', 'st_bus_excess')
 
 
 calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
@@ -109,6 +109,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.retire_sub_factor_income_base', # (int) factor-table income base (enum)
     'st_agi.age_excl_eitc',         # (int) age package and EITC/CLI mutually exclusive (VA)
     'st_agi.sub_ui_share',          # (dbl) share of unemployment benefits subtracted
+    'st_agi.bus_carveout',          # (int) OH-style business income carve-out active
+    'st_agi.bus_ded_cap',           # (dbl) business income deduction cap (mapped)
     'st_exempt.aged_addl',          # (dbl) aged exemption add-on (exclusivity choice)
     'st_exempt.blind_addl',         # (dbl) blind exemption add-on (exclusivity choice)
     'st_credits.eitc_match',        # (dbl) state EITC match (exclusivity choice)
@@ -330,9 +332,22 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       st_sub_capgain = st_agi.cap_gains_excl_share * st_cap_gain_base +
                        st_agi.div_excl_share * pmax(0, div_pref),
 
+      # Business income carve-out (OH IT BUS, ORC 5747.01(A)(28)): the first
+      # bus_ded_cap of positive business income is deducted; the excess stays
+      # in the base but is carved out of the graduated schedule and taxed at
+      # st_ord.bus_rate in calc_st_tax. st_bid is exposed for the modified-
+      # state-AGI addback (st_income_base 7/8; OH MAGI, 5747.01(JJ)). Business
+      # income proxied by Schedule C/F and pass-through components; rental
+      # income and >=20%-owner compensation reclassification are unobserved
+      # (documented known-differences)
+      st_bus_inc  = pmax(0, sole_prop + part_active + part_passive + scorp + farm),
+      st_bid      = st_agi.bus_carveout * pmin(st_bus_inc, st_agi.bus_ded_cap),
+      st_bus_excess = st_agi.bus_carveout *
+                      pmax(0, st_bus_inc - st_agi.bus_ded_cap),
+
       st_subtractions = st_sub_ref + st_sub_ss + st_sub_pens + st_sub_char +
                         st_retirement_excl + st_sub_capgain +
-                        st_sub_retire_share + st_sub_age + st_sub_ui,
+                        st_sub_retire_share + st_sub_age + st_sub_ui + st_bid,
 
       # State income base
       st_agi = st_start + st_additions - st_subtractions

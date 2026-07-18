@@ -47,6 +47,7 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
   req_vars = c(
     'st_agi',                    # (dbl) state income base
     'st_txbl_inc',               # (dbl) state taxable income
+    'st_bus_excess',             # (dbl) business income above the carve-out cap
     'wages1',                    # (dbl) primary wages (spouse tax adjustment)
     'wages2',                    # (dbl) secondary wages (spouse tax adjustment)
     'filing_status',             # (int) 1 single, 2 MFJ, 3 MFS, 4 HoH
@@ -59,6 +60,7 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     'st_ord.recapture_agi_start', # (dbl) recapture trigger (Inf = none)
     'st_ord.recapture_width',    # (dbl) recapture phase-in width
     'st_ord.sta_max',            # (dbl) spouse tax adjustment cap (VA; 0 = none)
+    'st_ord.bus_rate',           # (dbl) flat rate on carve-out excess (OH 3%)
     'st_exempt.personal_amount', # (dbl) per-taxpayer exemption (STA feeder)
     'st_exempt.aged_addl',       # (dbl) aged exemption add-on (STA feeder)
     'st_exempt.blind_addl'       # (dbl) blind exemption add-on (STA feeder)
@@ -67,7 +69,18 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
   tax_unit %<>%
     parse_calc_fn_input(req_vars, fill_missings)
 
-  # Schedule tax on taxable income
+  # Business carve-out split (OH): taxable income already nets exemptions
+  # against the whole base, so capping the carve-out at taxable income
+  # implements the ORC 5747.02(A)(4)(b) rule that unused exemptions offset
+  # business income; the schedule applies to the nonbusiness remainder and
+  # the excess is taxed flat at bus_rate below
+  tax_unit %<>%
+    mutate(
+      st_txbl_bus    = pmin(st_bus_excess, st_txbl_inc),
+      st_txbl_nonbus = st_txbl_inc - st_txbl_bus
+    )
+
+  # Schedule tax on (nonbusiness) taxable income
   tax_unit %<>%
     bind_cols(
       integrate_rates_brackets(
@@ -75,7 +88,7 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
         n_brackets      = NULL,
         prefix_brackets = 'st_ord.brackets',
         prefix_rates    = 'st_ord.rates',
-        y               = 'st_txbl_inc',
+        y               = 'st_txbl_nonbus',
         output_name     = 'st_tax_sched',
         by_bracket      = F
       )
@@ -113,11 +126,23 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     )
   }
 
-  ti = tax_unit$st_txbl_inc
+  ti = tax_unit$st_txbl_nonbus
   j  = st_band_index_lower(ti, br)             # taxpayer's bracket index
   m      = st_pick_slot(rt, j)
   B      = st_pick_slot(br, j)
   m_prev = st_pick_slot(rt, pmax(1, j - 1))
+
+  # Published base-amount schedule (OH 5747.02): where the base_amounts
+  # family is encoded, tax = base_j + rate_j x (TI - bracket_j) with the
+  # statutory base amounts transcribed as published. This preserves the
+  # form's discontinuities (the zero-bracket cliff and the 2025 $100,000
+  # jump) that a smooth marginal schedule cannot represent
+  base_amt = st_family_matrix(tax_unit, 'st_ord.base_amounts')
+  if (!is.null(base_amt)) {
+    sched_published = st_pick_slot(base_amt, j) + m * (ti - B)
+    tax_unit$st_tax_sched = if_else(is.na(sched_published),
+                                    tax_unit$st_tax_sched, sched_published)
+  }
 
   tax_unit %>%
     mutate(
@@ -159,11 +184,14 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
       ),
 
       st_tax_pre_credit = case_when(
-        flat_top ~ rt[, n_br] * st_txbl_inc,
+        flat_top ~ rt[, n_br] * st_txbl_nonbus,
         recap_on ~ st_tax_sched + recap_RB +
-                   pmax(0, m * st_txbl_inc - st_tax_sched - recap_RB) * recap_phi,
+                   pmax(0, m * st_txbl_nonbus - st_tax_sched - recap_RB) * recap_phi,
         TRUE     ~ st_tax_sched
-      ) + step_recap - st_sta
+      ) + step_recap - st_sta +
+
+        # Flat tax on business income above the carve-out cap (OH 3%)
+        st_ord.bus_rate * st_txbl_bus
     ) %>%
     select(all_of(return_vars$calc_st_tax)) %>%
     return()

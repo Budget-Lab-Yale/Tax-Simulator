@@ -6,28 +6,40 @@
 return_vars$calc_st_credits = c('st_hh_credit', 'st_eitc', 'st_ctc',
                                 'st_dep_credit', 'st_cdctc', 'st_family_credit',
                                 'st_exempt_credit', 'st_earned_credit', 'st_yctc',
-                                'st_pct_credit', 'st_cli',
+                                'st_pct_credit', 'st_cli', 'st_ded_credit',
+                                'st_age_credit', 'st_retire_credit',
+                                'st_senior_credit', 'st_jfc',
                                 'st_credits_nonref', 'st_credits_ref')
 
 
 calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
 
   #----------------------------------------------------------------------------
-  # Calculates state credits, orchestrating the four credit-family modules
+  # Calculates state credits, orchestrating the five credit-family modules
   # (2026-07-17 review item #6):
   #   - st_credits_household.R : NY household credit, CA exemption credits,
-  #                              CT Table E rate, KY family-size rate, IL/CT
-  #                              property tax credit
+  #                              UT taxpayer tax credit (credit in lieu of
+  #                              deductions), CT Table E rate, KY family-size
+  #                              rate, IL/CT property tax credit
   #   - st_credits_earned.R    : EITC matches (incl. the VA option choice and
   #                              CLI), CalEITC-style independent credits,
   #                              young-child credits
-  #   - st_credits_child.R     : IL/NY/CO child credits, CO FATC, AZ
+  #   - st_credits_child.R     : IL/NY/CO/UT child credits, CO FATC, AZ
   #                              dependent credit
   #   - st_credits_care.R      : CDCTC match and NY care-credit styles
+  #   - st_credits_senior.R    : UT retirement/SS credits, OH banded
+  #                              retirement + senior credits
   # Dense schedules are supplied through credit_tables instead of
   # state-specific code. Cross-family dependencies flow through arguments:
   # the household credit feeds the NY EITC offset, and the chosen state
   # EITC feeds the IL child credit.
+  #
+  # Two credits depend on REMAINING tax under the state's credit ordering
+  # and are computed here after the family modules: the OH joint filing
+  # credit (5747.05(E): banded share of tax net of the credits that precede
+  # it under 5747.98) and the OH 2017-18 EITC limitation (50% of the same
+  # remaining-tax quantity above the income threshold). For all other
+  # nonrefundable credits, ordering does not change final liability.
   #
   # v1 approximations (documented known-differences):
   #  - NY ESCC style 1 folds the pre-TCJA ACTC into full refundability
@@ -36,6 +48,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   #  - CO FATC's stepped phase-out is approximated linearly
   #  - MFS household credit uses own (not combined) AGI
   #  - NY college tuition and IL K-12 credits are data-limited (not computed)
+  #  - the OH JFC qualifying-income test uses each spouse's earned income
   #
   # Parameters:
   #   - tax_unit (df | list) : either a dataframe or list containing required
@@ -51,11 +64,16 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   #   - st_dep_credit (dbl)     : dependent credit (AZ-style)
   #   - st_cdctc (dbl)          : state child/dependent care credit
   #   - st_family_credit (dbl)  : family-size percentage-of-tax credit
-  #   - st_exempt_credit (dbl)  : exemption credits (CA-style)
+  #   - st_exempt_credit (dbl)  : exemption credits (CA/OH-style)
   #   - st_earned_credit (dbl)  : independent earned-income credit
   #   - st_yctc (dbl)           : state young-child credit
   #   - st_pct_credit (dbl)     : percentage-of-tax credit (CT Table E)
   #   - st_cli (dbl)            : credit for low-income individuals (VA)
+  #   - st_ded_credit (dbl)     : credit in lieu of deductions (UT)
+  #   - st_age_credit (dbl)     : retirement/SS credit (UT)
+  #   - st_retire_credit (dbl)  : banded retirement income credit (OH)
+  #   - st_senior_credit (dbl)  : senior citizen credit (OH)
+  #   - st_jfc (dbl)            : joint filing credit (OH)
   #   - st_credits_nonref (dbl) : total nonrefundable credits
   #   - st_credits_ref (dbl)    : total refundable credits
   #----------------------------------------------------------------------------
@@ -66,6 +84,8 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'agi',               # (dbl)  federal AGI
     'st_agi',            # (dbl)  state income base
     'st_additions',      # (dbl)  additions to the federal AGI base
+    'st_bid',            # (dbl)  business carve-out deduction (OH MAGI addback)
+    'st_exempt',         # (dbl)  state exemption allowance (means-test bases)
     'st_tax_pre_credit', # (dbl)  state tax before credits
     'st_age_package_taken', # (int) aged package claimed under exclusivity (calc_st_agi)
     'eitc',              # (dbl)  federal EITC
@@ -75,6 +95,14 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'cdctc_ref',         # (dbl)  federal CDCTC, refundable portion
     'care_exp',          # (dbl)  eligible dependent care expenses
     'salt_prop',         # (dbl)  state/local real estate taxes paid
+    'salt_pers',         # (dbl)  state/local personal property taxes paid
+    'salt_item_ded',     # (dbl)  federal SALT deduction, capped (UT ded credit)
+    'item_ded',          # (dbl)  federal itemized deductions post-limitation
+    'std_ded',           # (dbl)  federal standard deduction (UT ded credit)
+    'itemizing',         # (bool) whether unit itemizes federally
+    'txbl_ss',           # (dbl)  taxable Social Security benefits (UT SS credit)
+    'txbl_pens_dist',    # (dbl)  taxable pension distributions (OH retirement credit)
+    'txbl_ira_dist',     # (dbl)  taxable IRA distributions (OH retirement credit)
     'dep_age1',          # (int)  age of youngest dependent (NA if none)
     'dep_age2',          # (int)  age of second dependent (NA if none)
     'dep_age3',          # (int)  age of third dependent (NA if none)
@@ -100,17 +128,30 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     st_credits_household_req_vars,
     st_credits_earned_req_vars,
     st_credits_child_req_vars,
-    st_credits_care_req_vars
+    st_credits_care_req_vars,
+    st_credits_senior_req_vars,
+
+    # Ordered-credit parameters read here (JFC and the EITC liability cap)
+    'st_credits.jfc_cap',
+    'st_credits.jfc_min_each_income',
+    'st_credits.jfc_income_base',
+    'st_credits.jfc_magi_limit',
+    'st_credits.jfc_magi_limit_base',
+    'st_credits.eitc_liab_cap_thresh',
+    'st_credits.eitc_liab_cap_share',
+    'st_credits.eitc_liab_cap_base',
+    'st_credits.ctc_refundable'
   )
 
   tax_unit %<>%
     parse_calc_fn_input(req_vars, fill_missings)
 
   # Credit-family modules (cross-family inputs passed explicitly)
-  hh    = st_credits_household(tax_unit, credit_tables)
-  earn  = st_credits_earned(tax_unit, hh$st_hh_credit, credit_tables)
-  child = st_credits_child(tax_unit, earn$st_eitc)
-  care  = st_credits_care(tax_unit)
+  hh     = st_credits_household(tax_unit, credit_tables)
+  earn   = st_credits_earned(tax_unit, hh$st_hh_credit, credit_tables)
+  child  = st_credits_child(tax_unit, earn$st_eitc)
+  care   = st_credits_care(tax_unit)
+  senior = st_credits_senior(tax_unit)
 
   # Percentage-of-tax credits and aggregation
   st_family_credit = if_else(tax_unit$st_credits.family_credit_style == 1,
@@ -118,9 +159,53 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                              0)
   st_pct_credit = hh$pct_credit_rate * pmax(0, tax_unit$st_tax_pre_credit)
 
+  # Remaining tax after the credits that precede the JFC/EITC in the OH
+  # ordering (5747.98: retirement -> senior -> CDCTC -> exemption credit)
+  cdctc_nonref_part = care$st_cdctc *
+                      (1 - tax_unit$st_credits.cdctc_refundable)
+  remaining_pre_jfc = pmax(
+    0,
+    tax_unit$st_tax_pre_credit - senior$st_retire_credit -
+      senior$st_senior_credit - cdctc_nonref_part - hh$st_exempt_credit
+  )
+
+  # Joint filing credit (OH 5747.05(E)): a banded share of remaining tax,
+  # capped per return; MFJ only, each spouse needing the minimum qualifying
+  # income (earned-income proxy), and denied above the modified-income limit
+  st_jfc = rep(0, nrow(tax_unit))
+  jfc_ub = st_family_matrix(tax_unit, 'st_credits.jfc_bounds')
+  if (!is.null(jfc_ub)) {
+    jfc_rates  = st_family_matrix(tax_unit, 'st_credits.jfc_rates',
+                                  1:ncol(jfc_ub), require_sentinel = FALSE)
+    jfc_income = st_income_base(tax_unit, tax_unit$st_credits.jfc_income_base)
+    jfc_magi   = st_income_base(tax_unit,
+                                tax_unit$st_credits.jfc_magi_limit_base)
+    jfc_rate   = st_band_value(jfc_income, jfc_ub, jfc_rates)
+    jfc_elig   = tax_unit$filing_status == 2 &
+                 tax_unit$ei1 >= tax_unit$st_credits.jfc_min_each_income &
+                 tax_unit$ei2 >= tax_unit$st_credits.jfc_min_each_income &
+                 jfc_magi < tax_unit$st_credits.jfc_magi_limit
+    st_jfc = if_else(jfc_elig & !is.na(jfc_rate),
+                     pmin(tax_unit$st_credits.jfc_cap,
+                          jfc_rate * remaining_pre_jfc),
+                     0)
+  }
+
+  # EITC liability-share limitation (OH 2017-18: above the income threshold,
+  # the credit cannot exceed eitc_liab_cap_share of remaining pre-JFC tax)
+  eitc_liab_income = st_income_base(tax_unit,
+                                    tax_unit$st_credits.eitc_liab_cap_base)
+  st_eitc = if_else(
+    is.finite(tax_unit$st_credits.eitc_liab_cap_thresh) &
+      eitc_liab_income > tax_unit$st_credits.eitc_liab_cap_thresh,
+    pmin(earn$st_eitc,
+         tax_unit$st_credits.eitc_liab_cap_share * remaining_pre_jfc),
+    earn$st_eitc
+  )
+
   tibble(
     st_hh_credit     = hh$st_hh_credit,
-    st_eitc          = earn$st_eitc,
+    st_eitc          = st_eitc,
     st_ctc           = child$st_ctc,
     st_dep_credit    = child$st_dep_credit,
     st_cdctc         = care$st_cdctc,
@@ -130,16 +215,26 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     st_yctc          = earn$st_yctc,
     st_pct_credit    = st_pct_credit,
     st_cli           = earn$st_cli,
+    st_ded_credit    = hh$st_ded_credit,
+    st_age_credit    = senior$st_age_credit,
+    st_retire_credit = senior$st_retire_credit,
+    st_senior_credit = senior$st_senior_credit,
+    st_jfc           = st_jfc,
 
     st_credits_nonref = hh$st_hh_credit + hh$prop_credit + child$st_dep_credit +
                         st_family_credit + hh$st_exempt_credit + st_pct_credit +
-                        earn$st_cli +
-                        earn$st_eitc * (1 - earn$st_eitc_ref_share) +
+                        earn$st_cli + hh$st_ded_credit + senior$st_age_credit +
+                        senior$st_retire_credit + senior$st_senior_credit +
+                        st_jfc +
+                        st_eitc * (1 - earn$st_eitc_ref_share) +
+                        child$st_ctc *
+                          (1 - tax_unit$st_credits.ctc_refundable) +
                         earn$st_earned_credit *
                           (1 - tax_unit$st_credits.earned_credit_refundable) +
                         care$st_cdctc *
                           (1 - tax_unit$st_credits.cdctc_refundable),
-    st_credits_ref    = earn$st_eitc * earn$st_eitc_ref_share + child$st_ctc +
+    st_credits_ref    = st_eitc * earn$st_eitc_ref_share +
+                        child$st_ctc * tax_unit$st_credits.ctc_refundable +
                         earn$st_earned_credit *
                           tax_unit$st_credits.earned_credit_refundable +
                         earn$st_yctc +

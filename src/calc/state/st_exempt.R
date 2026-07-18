@@ -31,8 +31,10 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
     # Tax unit attributes
     'agi',            # (dbl)  federal AGI
     'st_agi',         # (dbl)  state income base (calculated upstream in the pipe)
+    'st_bid',         # (dbl)  business carve-out deduction (calc_st_agi; OH MAGI)
     'st_age_package_forgone', # (int) aged package forgone for EITC/CLI (calc_st_agi)
     'filing_status',  # (int)  filing status (1 single, 2 MFJ, 3 MFS, 4 HoH)
+    'dep_status',     # (bool) whether filer is a dependent
     'n_dep',          # (int)  number of dependents
     'age1',           # (int)  age of primary filer
     'age2',           # (int)  age of secondary filer (NA if none)
@@ -50,7 +52,9 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
     'st_exempt.po_type',         # (int) 0 = cliff, 1 = stepped reduction
     'st_exempt.po_step',         # (dbl) income step size for po_type 1
     'st_exempt.po_reduction_per_step', # (dbl) reduction per step for po_type 1
-    'st_exempt.po_agi_base'      # (int) phase-out income base (st_income_base enum)
+    'st_exempt.po_agi_base',     # (int) phase-out income base (st_income_base enum)
+    'st_exempt.tier_income_base', # (int) tiered-amount income base (enum)
+    'st_exempt.dep_filer_zero'   # (int) dependent filers get zero exemption (OH)
   )
 
   tax_unit %<>%
@@ -58,6 +62,20 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
 
   # Phase-out income base per the uniform enum (st_income_base)
   po_income_v = st_income_base(tax_unit, tax_unit$st_exempt.po_agi_base)
+
+  # Income-tiered per-exemption amount (OH 5747.025): where the tier family
+  # is encoded, one amount applies to taxpayer, spouse, and each dependent,
+  # selected by income band ((lower, upper] semantics; zero above the top
+  # bound encodes the HB 96 high-income denial). Overrides personal_amount
+  # and dep_amount
+  tier_amount_v = NULL
+  tier_ub = st_family_matrix(tax_unit, 'st_exempt.tier_bounds')
+  if (!is.null(tier_ub)) {
+    tier_amt = st_family_matrix(tax_unit, 'st_exempt.tier_amounts',
+                                1:ncol(tier_ub), require_sentinel = FALSE)
+    tier_income = st_income_base(tax_unit, tax_unit$st_exempt.tier_income_base)
+    tier_amount_v = st_band_value(tier_income, tier_ub, tier_amt)
+  }
 
   tax_unit %>%
     mutate(
@@ -77,10 +95,19 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
       addl_factor = if_else(st_exempt.aged_blind_addl_excl_eitc == 1 &
                               st_age_package_forgone == 1, 0, 1),
 
-      st_exempt_gross = n_taxpayers * st_exempt.personal_amount +
-                        n_dep       * st_exempt.dep_amount +
-                        n_aged      * st_exempt.aged_addl * addl_factor +
-                        n_blind     * st_exempt.blind_addl * addl_factor,
+      # Tiered per-exemption amount overrides the flat amounts where encoded;
+      # dependent filers get zero where flagged (OH 5747.025(B))
+      st_personal_v = if (is.null(tier_amount_v)) st_exempt.personal_amount
+                      else tier_amount_v,
+      st_dep_v      = if (is.null(tier_amount_v)) st_exempt.dep_amount
+                      else tier_amount_v,
+      dep_filer_factor = if_else(st_exempt.dep_filer_zero == 1 & dep_status == 1,
+                                 0, 1),
+
+      st_exempt_gross = (n_taxpayers * st_personal_v * dep_filer_factor +
+                         n_dep       * st_dep_v +
+                         n_aged      * st_exempt.aged_addl * addl_factor +
+                         n_blind     * st_exempt.blind_addl * addl_factor),
 
       # High-income disallowance: cliff (po_type 0) or stepped reduction of
       # po_reduction_per_step per po_step, or fraction thereof, of income

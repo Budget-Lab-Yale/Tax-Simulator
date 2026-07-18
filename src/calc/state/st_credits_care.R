@@ -12,7 +12,8 @@ st_credits_care_req_vars = c(
   'st_credits.cdctc_rate_max',
   'st_credits.cdctc_rate_floor',
   'st_credits.cdctc_rate_po_per_1k',
-  'st_credits.cdctc_rate_po_start'
+  'st_credits.cdctc_rate_po_start',
+  'st_credits.cdctc_share_income_base'
 )
 
 
@@ -36,7 +37,10 @@ st_credits_care = function(tax_unit) {
   if (!is.null(b_c)) {
     s0 = st_family_matrix(tax_unit, 'st_credits.cdctc_share_start', 1:6, F)
     s1 = st_family_matrix(tax_unit, 'st_credits.cdctc_share_end',   1:6, F)
-    cdctc_ny_share = st_band_interp(tax_unit$st_agi, b_c, s0, s1)
+    cdctc_share_income = st_income_base(
+      tax_unit, tax_unit$st_credits.cdctc_share_income_base
+    )
+    cdctc_ny_share = st_band_interp(cdctc_share_income, b_c, s0, s1)
   }
 
   #------------------------------------------------

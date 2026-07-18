@@ -253,9 +253,14 @@ st_income_base = function(tax_unit, code) {
   # instead of hard-coding one:
   #   1 = federal AGI
   #   2 = state AGI (only available downstream of calc_st_agi)
-  #   3 = federal AGI plus state additions (KY family credit)
+  #   3 = federal AGI plus state additions (KY family credit; UT MAGI proxy)
   #   4 = earned income (ei1 + ei2, floored at zero)
   #   5 = federal AGI less taxable Social Security (VA AFAGI)
+  #   6 = state AGI less exemptions (OH 2017-18 "income tax base";
+  #       downstream of calc_st_exempt)
+  #   7 = state AGI plus the business carve-out deduction addback (OH MAGI,
+  #       ORC 5747.01(JJ))
+  #   8 = modified state AGI (7) less exemptions (OH 2019+ means tests)
   # An unavailable base (e.g. state AGI requested inside calc_st_agi) or an
   # unknown code resolves to NA, which downstream comparisons surface.
   #
@@ -276,6 +281,9 @@ st_income_base = function(tax_unit, code) {
     code == 3 ~ tax_unit$agi + col_or_na('st_additions'),
     code == 4 ~ pmax(0, col_or_na('ei1')) + pmax(0, col_or_na('ei2')),
     code == 5 ~ tax_unit$agi - col_or_na('txbl_ss'),
+    code == 6 ~ col_or_na('st_agi') - col_or_na('st_exempt'),
+    code == 7 ~ col_or_na('st_agi') + col_or_na('st_bid'),
+    code == 8 ~ col_or_na('st_agi') + col_or_na('st_bid') - col_or_na('st_exempt'),
     TRUE      ~ NA_real_
   )
 }

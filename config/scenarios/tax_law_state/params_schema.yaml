@@ -69,6 +69,8 @@ scalars:
   st_agi.retire_sub_factor_income_base: 1   # st_income_base enum
   st_agi.age_excl_eitc: 0
   st_agi.sub_ui_share: 0
+  st_agi.bus_carveout: 0
+  st_agi.bus_ded_cap: .inf
 
   # ded.yaml
   st_ded.std_amount: 0
@@ -136,6 +138,8 @@ scalars:
   st_exempt.po_step: 1
   st_exempt.po_reduction_per_step: 0
   st_exempt.po_agi_base: 1
+  st_exempt.tier_income_base: 2   # st_income_base enum (OH: 2 then 7 from 2019)
+  st_exempt.dep_filer_zero: 0
 
   # child_ded.yaml (AGI-tabled deductions, e.g. North Carolina)
   st_child_ded.style: 0
@@ -146,6 +150,7 @@ scalars:
   st_ord.recapture_agi_start: .inf
   st_ord.recapture_width: 50000
   st_ord.sta_max: {default: 0, units: per_return}
+  st_ord.bus_rate: 0   # flat rate on business income above the carve-out cap (OH 3%)
 
   # surtax.yaml (post-nonrefundable-credit taxable-income surtax)
   st_surtax.taxable_income_threshold: .inf
@@ -157,6 +162,10 @@ scalars:
   st_credits.eitc_refundable: 1
   st_credits.eitc_match_alt: 0
   st_credits.eitc_refundable_alt: 0
+  st_credits.eitc_wage_cap: 0   # cap the match at W-2 wages (UT 2023+)
+  st_credits.eitc_liab_cap_thresh: .inf   # OH 2017-18 50%-of-remaining-tax limit
+  st_credits.eitc_liab_cap_share: 1
+  st_credits.eitc_liab_cap_base: 1   # st_income_base enum
   st_credits.cli_amount: {default: 0, units: per_exemption}
   st_credits.cli_poverty_addl: 0
   st_credits.eitc_cli_excl_age_package: 0
@@ -178,6 +187,8 @@ scalars:
   st_credits.ctc_old_amount: 0
   st_credits.ctc_po_thresh: .inf
   st_credits.ctc_po_rate: 0
+  st_credits.ctc_po_base: 1   # st_income_base enum (UT style 3 uses 3 = MAGI proxy)
+  st_credits.ctc_refundable: 1   # UT CTC is nonrefundable
   st_credits.ctc_pct_of_eitc: 0
   st_credits.ctc_max_age: 16
   st_credits.cdctc_match: 0
@@ -212,6 +223,41 @@ scalars:
   st_credits.exempt_credit_po_thresh: .inf
   st_credits.exempt_credit_po_width: 1
   st_credits.exempt_credit_po_per_step: 0
+  st_credits.exempt_credit_po_base: 1   # st_income_base enum (OH: 6 then 8)
+  # Credit in lieu of deductions/exemptions (UT taxpayer tax credit)
+  st_credits.ded_credit_rate: 0
+  st_credits.ded_credit_exempt_taxpayer: {default: 0, units: per_taxpayer}
+  st_credits.ded_credit_exempt_dep: {default: 0, units: per_dependent}
+  st_credits.ded_credit_dep_age0_extra: 0
+  st_credits.ded_credit_salt_cap: .inf
+  st_credits.ded_credit_po_rate: 0
+  st_credits.ded_credit_po_thresh: .inf
+  st_credits.ded_credit_po_base: 2   # st_income_base enum (UT: state taxable = state AGI)
+  # Retirement-age credit family (UT retirement/SS credits; OH banded
+  # retirement + senior credits)
+  st_credits.age_credit_amount: {default: 0, units: per_person}
+  st_credits.age_credit_min_age: .inf
+  st_credits.age_credit_po_thresh: .inf
+  st_credits.age_credit_po_rate: 0
+  st_credits.age_credit_income_base: 1   # st_income_base enum
+  st_credits.ss_credit_rate: 0
+  st_credits.ss_credit_po_thresh: .inf
+  st_credits.ss_credit_po_rate: 0
+  st_credits.ss_credit_income_base: 1   # st_income_base enum
+  st_credits.ss_age_credit_exclusive: 0
+  st_credits.retire_credit_income_limit: .inf
+  st_credits.retire_credit_income_base: 1   # st_income_base enum
+  st_credits.senior_credit_amount: {default: 0, units: per_return}
+  st_credits.senior_credit_min_age: 65
+  st_credits.senior_credit_income_limit: .inf
+  st_credits.senior_credit_income_base: 1   # st_income_base enum
+  # Joint filing credit (OH percentage-of-remaining-tax, banded)
+  st_credits.jfc_cap: .inf
+  st_credits.jfc_min_each_income: 0
+  st_credits.jfc_income_base: 1   # st_income_base enum
+  st_credits.jfc_magi_limit: .inf
+  st_credits.jfc_magi_limit_base: 1   # st_income_base enum
+  st_credits.cdctc_share_income_base: 2   # st_income_base enum (NY tables use state AGI)
   st_credits.earned_credit_style: 0
   st_credits.earned_credit_age_min: .inf
   st_credits.earned_credit_agi_limit: .inf
@@ -296,6 +342,10 @@ sentinels:
   - st_credits.ctc_tier1_bound
   - st_child_ded.agi_bounds1
   - st_ord.step_recap_start1
+  - st_ord.base_amounts1
+  - st_exempt.tier_bounds1
+  - st_credits.jfc_bounds1
+  - st_credits.retire_credit_bounds1
 
 # Vector-family name patterns (element count varies by state). The \d*
 # suffix is optional because a single-element vector parses to a
@@ -304,8 +354,16 @@ sentinels:
 families:
   - pattern: '^st_ord\.(rates|brackets)\d*$'
     consumer: st_tax.R   # rate schedule + NY-style recapture
+  - pattern: '^st_ord\.base_amounts\d*$'
+    consumer: st_tax.R   # OH-style published base-amount schedule (with cliffs)
   - pattern: '^st_ord\.step_recap_(start|incr|amount|max)\d*$'
     consumer: st_tax.R   # CT-style stepped recapture segments
+  - pattern: '^st_exempt\.tier_(bounds|amounts)\d*$'
+    consumer: st_exempt.R   # OH-style income-tiered per-exemption amounts
+  - pattern: '^st_credits\.jfc_(bounds|rates)\d*$'
+    consumer: st_credits.R   # OH joint filing credit rate bands
+  - pattern: '^st_credits\.retire_credit_(bounds|amounts)\d*$'
+    consumer: st_credits_senior.R   # OH banded retirement income credit
   - pattern: '^st_child_ded\.(agi_bounds|amounts)\d*$'
     consumer: st_child_ded.R   # NC-style AGI-tabled child deduction
   - pattern: '^st_credits\.hh_agi_bounds_(single|other)\d*$'
