@@ -245,6 +245,65 @@ st_step_reduction = function(x, thresh, step, per_step, round_up = TRUE) {
 
 
 
+st_n_dep_in = function(tax_unit, lo, hi) {
+
+  #----------------------------------------------------------------------------
+  # Counts tracked dependents with ages in [lo, hi] (vectors allowed),
+  # from the up-to-three dependent age slots -- consistent with the federal
+  # CTC calculator's dependent handling.
+  #
+  # Returns: per-row dependent count (int[]).
+  #----------------------------------------------------------------------------
+
+  (!is.na(tax_unit$dep_age1) &
+     tax_unit$dep_age1 >= lo & tax_unit$dep_age1 <= hi) +
+  (!is.na(tax_unit$dep_age2) &
+     tax_unit$dep_age2 >= lo & tax_unit$dep_age2 <= hi) +
+  (!is.na(tax_unit$dep_age3) &
+     tax_unit$dep_age3 >= lo & tax_unit$dep_age3 <= hi)
+}
+
+
+
+lookup_state_credit_table = function(income, n_children, credit_tables,
+                                     table_id) {
+
+  #----------------------------------------------------------------------------
+  # Looks up an independent state credit with inclusive income bands and
+  # capped child-count columns. Missing ranges intentionally return zero,
+  # which supports published tables that omit their zero-credit tails.
+  #----------------------------------------------------------------------------
+
+  amount = rep(0, length(income))
+  if (is.null(credit_tables) || nrow(credit_tables) == 0) {
+    return(amount)
+  }
+
+  schedule = credit_tables[credit_tables$credit_id == table_id, , drop = FALSE]
+  if (nrow(schedule) == 0) {
+    return(amount)
+  }
+
+  # Cap at the top child-count column; do NOT floor up to the lowest present
+  # column. A count below the schedule's minimum bin (e.g. a childless filer
+  # when a table omits its zero-child rows) finds no matching band and returns
+  # zero, consistent with the omitted-tail semantics above.
+  child_count = pmin(max(schedule$child_count), coalesce(n_children, 0L))
+  for (child_slot in unique(child_count)) {
+    rows = which(child_count == child_slot)
+    bands = schedule[schedule$child_count == child_slot, , drop = FALSE]
+    bands = bands[order(bands$income_lower), , drop = FALSE]
+    index = findInterval(income[rows], bands$income_lower)
+    valid = index > 0
+    valid[valid] = income[rows][valid] <= bands$income_upper[index[valid]]
+    amount[rows[valid]] = bands$amount[index[valid]]
+  }
+
+  return(amount)
+}
+
+
+
 st_band_interp = function(x, anchors, start_values, end_values) {
 
   #----------------------------------------------------------------------------
