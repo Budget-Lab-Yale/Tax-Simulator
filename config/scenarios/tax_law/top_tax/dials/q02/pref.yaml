@@ -27,3 +27,6 @@ kg_death_regime_re_fund:
   value:
     '2014': 0
     '2027': 2
+
+no_ord_cap:
+  value: 1

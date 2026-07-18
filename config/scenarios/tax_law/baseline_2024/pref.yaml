@@ -18,7 +18,13 @@ filing_status_mapper:
 tax_at_ord:
   value: 0
 
-# Preferred tax rate schedule 
+# Whether to remove the ordinary-rate ceiling on preferred-rate income (the
+# Schedule D worksheet's "not more than ordinary" limit). 0 = keep the limit
+# (current law); 1 = let the preferred rate exceed the ordinary rate.
+no_ord_cap:
+  value: 0
+
+# Preferred tax rate schedule
 rates:
   value: [0.0, 0.15, 0.20]
 

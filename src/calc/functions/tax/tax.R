@@ -48,9 +48,10 @@ calc_tax = function(tax_unit, fill_missings = F) {
     'ord.brackets[]',         # (int[]) brackets for ordinary-rate income
     'pref.rates[]',           # (dbl[]) preferred tax rate schedule
     'pref.brackets[]',        # (int[]) brackets for preferred-rate income
-    'pref.unrecapture_rate',  # (dbl)   tax rate on Section 1250 unrecaptured gain 
+    'pref.unrecapture_rate',  # (dbl)   tax rate on Section 1250 unrecaptured gain
     'pref.collectibles_rate', # (dbl)   tax rate on collectibles gain
-    'pref.tax_at_ord'         # (dbl)   whether long-term capital gains and qualified dividends are taxed at ordinary rates 
+    'pref.tax_at_ord',        # (dbl)   whether long-term capital gains and qualified dividends are taxed at ordinary rates
+    'pref.no_ord_cap'         # (dbl)   whether to REMOVE the ordinary-rate ceiling on preferred-rate income (0 = keep the Schedule D "not more than ordinary" limit; 1 = let the preferred rate exceed the ordinary rate)
   )
   
   tax_unit %>% 
@@ -152,27 +153,34 @@ calc_tax = function(tax_unit, fill_missings = F) {
     # Determine overall tax liability
     #---------------------------------
     
-    # Calculate ordinary-rate liability on all taxable income, as an upper bound 
-    # if preferred rates or in place or as actual liability if all income is 
+    # Calculate ordinary-rate liability on all taxable income, as an upper bound
+    # if preferred rates or in place or as actual liability if all income is
     # taxed at ordinary rates
     bind_cols(
       integrate_rates_brackets(
         df              = .,
-        n_brackets      = NULL, 
-        prefix_brackets = 'ord.brackets', 
-        prefix_rates    = 'ord.rates', 
+        n_brackets      = NULL,
+        prefix_brackets = 'ord.brackets',
+        prefix_rates    = 'ord.rates',
         y               = 'txbl_inc',
-        output_name     = 'liab_max', 
+        output_name     = 'liab_max',
         by_bracket      = F
       )
     ) %>%
-  
+
     mutate(
-      
-      # Calculate total liability 
-      liab = if_else(pref.tax_at_ord == 0, 
-                     pmin(liab_max, liab_ord + liab_pref + liab_1250 + liab_collect), 
-                     liab_max), 
+
+      # Calculate total liability. Ordinarily preferred-rate income is taxed at
+      # the smaller of (a) the preferred schedule or (b) ordinary rates on all
+      # income (liab_max) -- the Schedule D worksheet's "not more than ordinary"
+      # limit, which means a preferred top rate set above the ordinary top rate
+      # collects nothing extra. Setting pref.no_ord_cap != 0 removes that ceiling
+      # so the preferred rate can bind above the ordinary rate.
+      liab = case_when(
+        pref.tax_at_ord != 0 ~ liab_max,
+        pref.no_ord_cap  != 0 ~ liab_ord + liab_pref + liab_1250 + liab_collect,
+        TRUE                  ~ pmin(liab_max, liab_ord + liab_pref + liab_1250 + liab_collect)
+      ),
       
       # Update preferred-rate variables in the case where all income is taxed 
       # at ordinary rates
