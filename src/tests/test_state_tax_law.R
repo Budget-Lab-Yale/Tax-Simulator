@@ -756,6 +756,26 @@ test_state_param_validation = function() {
   test_indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
     mutate(growth = 0.025)
 
+  # Schema integrity (params_schema.yaml -> st_param_schema()): defaults
+  # resolve with correct .inf/-.inf/null handling, and every feature-gate
+  # sentinel is a member of a declared vector family
+  schema_defaults = st_param_defaults()
+  schema_registry = st_param_name_registry()
+  stopifnot(
+    'schema defaults are missing or unnamed' =
+      length(schema_defaults) > 150 && !is.null(names(schema_defaults)),
+    'schema .inf default did not parse as numeric infinity' =
+      is.infinite(schema_defaults[['st_agi.ss_5564_agi_limit']]) &&
+      schema_defaults[['st_agi.ss_5564_agi_limit']] > 0,
+    'schema -.inf default did not parse as negative infinity' =
+      schema_defaults[['st_transfers.wftc_max_age']] == -Inf,
+    'schema null default did not parse as NA' =
+      is.na(schema_defaults[['st_ded.std_dependent']]),
+    'a sentinel does not match any declared family pattern' =
+      all(map_lgl(st_param_vector_sentinels(),
+                  ~ any(str_detect(.x, schema_registry$families))))
+  )
+
   # (a) all configured states parse through the validator
   configured = list.dirs('./config/scenarios/tax_law_state/baseline',
                          recursive = FALSE) %>%

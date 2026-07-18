@@ -9,6 +9,99 @@
 #---------------------------------------------------------------------------
 
 
+st_param_schema = local({
+
+  #----------------------------------------------------------------------------
+  # Reads and caches params_schema.yaml, the single source of truth for the
+  # state law parameter contract (2026-07-17 review item #4): legal names,
+  # neutral defaults, vector-family patterns, and feature-gate sentinels.
+  # Cached per session because ensure_st_params() runs per state-year.
+  # Schema conventions: a bare value is the default (a {default: x} mapping
+  # is also legal); .inf/-.inf for infinities; null means NA.
+  #
+  # Returns: list with defaults (named num[]), sentinels (str[]), and
+  #          registry (list of scalars str[] and families regex str[]).
+  #----------------------------------------------------------------------------
+
+  cache = NULL
+  function(path = './config/scenarios/tax_law_state/params_schema.yaml') {
+    if (!is.null(cache)) {
+      return(cache)
+    }
+    raw = read_yaml(path)
+
+    defaults = map_dbl(raw$scalars, function(x) {
+      value = if (is.list(x)) x$default else x
+      if (is.null(value)) NA_real_ else as.numeric(value)
+    })
+    families = map_chr(raw$families, 'pattern')
+
+    if (length(defaults) == 0 || is.null(names(defaults)) ||
+        anyDuplicated(names(defaults)) || length(families) == 0) {
+      stop('params_schema.yaml is malformed: scalars must be uniquely ',
+           'named and at least one family pattern must be present')
+    }
+
+    cache <<- list(
+      defaults  = defaults,
+      sentinels = unlist(raw$sentinels),
+      registry  = list(
+        scalars  = c(names(defaults), unlist(raw$extra_scalars)),
+        families = families
+      )
+    )
+    cache
+  }
+})
+
+
+
+st_param_defaults = function() {
+
+  #----------------------------------------------------------------------------
+  # Neutral no-feature default for every optional scalar state law
+  # parameter, from params_schema.yaml. Doubles as the registry of legal
+  # scalar names (see st_param_name_registry()).
+  #
+  # Returns: named numeric vector of defaults (num[]).
+  #----------------------------------------------------------------------------
+
+  st_param_schema()$defaults
+}
+
+
+
+st_param_vector_sentinels = function() {
+
+  #----------------------------------------------------------------------------
+  # First-element column names that gate vector-family features, from
+  # params_schema.yaml. ensure_st_params() adds an NA sentinel when a
+  # state's law lacks the family entirely.
+  #
+  # Returns: character vector of column names (str[]).
+  #----------------------------------------------------------------------------
+
+  st_param_schema()$sentinels
+}
+
+
+
+st_param_name_registry = function() {
+
+  #----------------------------------------------------------------------------
+  # The complete set of state law parameter names the calculators read
+  # (exact scalar names plus vector-family regex patterns), from
+  # params_schema.yaml. Consumed by validate_state_param_names() to reject
+  # unknown/misspelled YAML parameters at load time (review items #1/#2).
+  #
+  # Returns: list with scalars (str[]) and families (regex str[]).
+  #----------------------------------------------------------------------------
+
+  st_param_schema()$registry
+}
+
+
+
 st_family_matrix = function(tax_unit, prefix, elements = NULL,
                             require_sentinel = TRUE) {
 
