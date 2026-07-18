@@ -73,6 +73,14 @@ TN:
 TX:
   profile: zero
   enabled: true
+# VA was fixed-date annual conformity through TY2022 (group 3), rolling for
+# TY2023-2025 (group 0), and re-fixed at Dec 31, 2025 by the 2026 GA (group
+# 4). Groups 3/4 have no reference-law bridge, so VA is excluded from
+# states=all and guarded for federal-reform runs (like SC/CA). Direct
+# states=VA selection works for baseline-law runs.
+VA:
+  profile: broad_iit
+  enabled: false
 WA:
   profile: capital_gains_and_transfer
   enabled: true

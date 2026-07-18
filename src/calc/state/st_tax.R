@@ -47,10 +47,21 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
   req_vars = c(
     'st_agi',                    # (dbl) state income base
     'st_txbl_inc',               # (dbl) state taxable income
+    'wages1',                    # (dbl) primary wages (spouse tax adjustment)
+    'wages2',                    # (dbl) secondary wages (spouse tax adjustment)
+    'filing_status',             # (int) 1 single, 2 MFJ, 3 MFS, 4 HoH
+    'age1',                      # (int) age of primary filer
+    'age2',                      # (int) age of secondary filer (NA if none)
+    'blind1',                    # (bool) whether primary filer is blind
+    'blind2',                    # (bool) whether secondary filer is blind
     'st_ord.rates[]',            # (dbl) state marginal rates
     'st_ord.brackets[]',         # (dbl) state bracket lower bounds
     'st_ord.recapture_agi_start', # (dbl) recapture trigger (Inf = none)
-    'st_ord.recapture_width'     # (dbl) recapture phase-in width
+    'st_ord.recapture_width',    # (dbl) recapture phase-in width
+    'st_ord.sta_max',            # (dbl) spouse tax adjustment cap (VA; 0 = none)
+    'st_exempt.personal_amount', # (dbl) per-taxpayer exemption (STA feeder)
+    'st_exempt.aged_addl',       # (dbl) aged exemption add-on (STA feeder)
+    'st_exempt.blind_addl'       # (dbl) blind exemption add-on (STA feeder)
   )
 
   tax_unit %<>%
@@ -76,9 +87,13 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
   br   = as.matrix(tax_unit[paste0('st_ord.brackets', 1:n_br)])
   rt   = as.matrix(tax_unit[paste0('st_ord.rates',    1:n_br)])
 
-  # Schedule tax at an arbitrary income vector
+  # Schedule tax at an arbitrary income vector. A state with fewer brackets
+  # than the widest state in the law slice carries trailing NA bracket
+  # columns; the NA upper bound would silently drop the top bracket's tax,
+  # so treat it as Inf (the NA brackets' own terms still drop via na.rm)
   sched_tax_at = function(y) {
     upper = cbind(br[, -1, drop = F], Inf)
+    upper[is.na(upper)] = Inf
     rowSums(rt * pmax(0, pmin(y, upper) - br), na.rm = T)
   }
 
@@ -114,12 +129,42 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
                                    st_ord.recapture_width)),
       flat_top  = recap_on & st_agi > br[, n_br] & br[, n_br] >= 5e6,
 
+      # Spouse tax adjustment (VA Form 760 Line 17 worksheet): MFJ couples
+      # recompute the schedule tax as if each spouse's share of taxable
+      # income were taxed separately, capped at sta_max. Each spouse's
+      # separate VAGI is own wages plus half of non-wage VAGI (joint asset
+      # ownership unobserved; documented approximation), less own personal
+      # and aged/blind exemptions; both nets must be positive. The notional
+      # split is capped at 50/50 per the worksheet's min/max against half of
+      # joint taxable income. Booklet tax-table rounding (the published $259
+      # vs the continuous $257.50 maximum) is a documented known-difference
+      sta_other = (st_agi - wages1 - wages2) / 2,
+      sta_pe1   = st_exempt.personal_amount +
+                  st_exempt.aged_addl * (age1 >= 65) +
+                  st_exempt.blind_addl * coalesce(blind1, 0),
+      sta_pe2   = st_exempt.personal_amount +
+                  st_exempt.aged_addl * (!is.na(age2) & age2 >= 65) +
+                  st_exempt.blind_addl * (!is.na(blind2) & blind2),
+      sta_net1  = wages1 + sta_other - sta_pe1,
+      sta_net2  = wages2 + sta_other - sta_pe2,
+      sta_low   = pmin(sta_net1, sta_net2),
+      sta_high  = st_txbl_inc - sta_low,
+      st_sta    = if_else(
+        st_ord.sta_max > 0 & filing_status == 2 &
+          sta_net1 > 0 & sta_net2 > 0,
+        pmin(st_ord.sta_max,
+             pmax(0, st_tax_sched -
+                     sched_tax_at(pmin(sta_low,  st_txbl_inc / 2)) -
+                     sched_tax_at(pmax(sta_high, st_txbl_inc / 2)))),
+        0
+      ),
+
       st_tax_pre_credit = case_when(
         flat_top ~ rt[, n_br] * st_txbl_inc,
         recap_on ~ st_tax_sched + recap_RB +
                    pmax(0, m * st_txbl_inc - st_tax_sched - recap_RB) * recap_phi,
         TRUE     ~ st_tax_sched
-      ) + step_recap
+      ) + step_recap - st_sta
     ) %>%
     select(all_of(return_vars$calc_st_tax)) %>%
     return()

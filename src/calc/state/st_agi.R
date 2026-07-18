@@ -4,7 +4,8 @@
 
 # Set return variables for function
 return_vars$calc_st_agi = c('st_additions', 'st_subtractions', 'st_retirement_excl',
-                            'st_agi')
+                            'st_agi', 'st_age_package_taken',
+                            'st_age_package_forgone')
 
 
 calc_st_agi = function(tax_unit, fill_missings = F) {
@@ -49,6 +50,10 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
     'txbl_ira_dist',  # (dbl)  taxable IRA distributions
     'wages1',         # (dbl)  primary filer wages
     'wages2',         # (dbl)  secondary filer wages
+    'ui',             # (dbl)  unemployment benefits (in federal AGI)
+    'eitc',           # (dbl)  federal EITC (post-federal calc)
+    'blind1',         # (bool) whether primary filer is blind
+    'blind2',         # (bool) whether secondary filer is blind
     'sole_prop',      # (dbl)  sole proprietorship income or loss
     'part_active',    # (dbl)  active partnership income or loss
     'scorp',          # (dbl)  S-corporation income or loss
@@ -95,7 +100,18 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
     'st_agi.sub_char_nonitem_floor', # (dbl) floor for non-itemizer charitable sub
     'st_agi.add_overtime_ded',      # (int) whether the federal OT deduction is added back
     'st_agi.cap_gains_excl_share',  # (dbl) share of net LT capital gain excluded
-    'st_agi.div_excl_share'         # (dbl) share of qualified dividends excluded
+    'st_agi.div_excl_share',        # (dbl) share of qualified dividends excluded
+    'st_agi.age_ded_amount',        # (dbl) per-person aged deduction (VA-style)
+    'st_agi.age_ded_min_age',       # (dbl) minimum age for the aged deduction
+    'st_agi.age_ded_no_test_min_age', # (dbl) age at/above which no income test applies
+    'st_agi.age_ded_po_thresh',     # (dbl) income threshold for $1-per-$1 reduction
+    'st_agi.age_ded_po_base',       # (int) 1 = fed AGI, 2 = fed AGI less taxable SS
+    'st_agi.age_excl_eitc',         # (int) age package and EITC/CLI mutually exclusive (VA)
+    'st_agi.sub_ui_share',          # (dbl) share of unemployment benefits subtracted
+    'st_exempt.aged_addl',          # (dbl) aged exemption add-on (exclusivity choice)
+    'st_exempt.blind_addl',         # (dbl) blind exemption add-on (exclusivity choice)
+    'st_credits.eitc_match',        # (dbl) state EITC match (exclusivity choice)
+    'st_credits.eitc_match_alt'     # (dbl) alternative EITC match (exclusivity choice)
   )
 
   # Assumed share of tax-exempt interest from own-state bonds for states that
@@ -104,6 +120,16 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
 
   tax_unit %<>%
     parse_calc_fn_input(req_vars, fill_missings)
+
+  # Top marginal schedule rate, used only to approximate the value of the
+  # aged deduction + aged/blind exemption package when a state makes it
+  # mutually exclusive with the EITC/CLI (VA; documented approximation)
+  rate_cols = str_subset(colnames(tax_unit), '^st_ord\\.rates[0-9]*$')
+  st_top_rate = if (length(rate_cols) > 0) {
+    reduce(map(rate_cols, ~ coalesce(tax_unit[[.x]], 0)), pmax)
+  } else {
+    rep(0, nrow(tax_unit))
+  }
 
   # CT-style share-based pension/IRA subtraction factor: a step table of
   # federal-AGI band lower bounds and factors (filing-status mapped vectors).
@@ -230,6 +256,58 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
         0
       ),
 
+      # Subtraction: flat per-person aged deduction with dollar-for-dollar
+      # income-based reduction (VA-style). Each spouse at/above the minimum
+      # age contributes the per-person amount; persons at/above the no-test
+      # age (VA: born on or before 1/1/1939, encoded as a year-keyed age)
+      # keep the full amount regardless of income. The remainder is reduced
+      # $1 for each $1 the phase-out income base (federal AGI, or federal AGI
+      # less taxable Social Security) exceeds the filing-status threshold.
+      # MFS combined-spouse income is unobserved (own income used;
+      # known-difference)
+      st_age_q1  = age1 >= st_agi.age_ded_min_age,
+      st_age_q2  = filing_status == 2 & !is.na(age2) &
+                   age2 >= st_agi.age_ded_min_age,
+      st_age_gf1 = st_age_q1 & age1 >= st_agi.age_ded_no_test_min_age,
+      st_age_gf2 = st_age_q2 & age2 >= st_agi.age_ded_no_test_min_age,
+      st_age_po_income = if_else(st_agi.age_ded_po_base == 2,
+                                 agi - txbl_ss, agi),
+      st_sub_age_pot = st_agi.age_ded_amount * (st_age_gf1 + st_age_gf2) +
+                       pmax(0, st_agi.age_ded_amount *
+                               ((st_age_q1 & !st_age_gf1) +
+                                (st_age_q2 & !st_age_gf2)) -
+                               pmax(0, st_age_po_income -
+                                       st_agi.age_ded_po_thresh)),
+
+      # Age-package vs EITC/CLI mutual exclusivity (VA Form 760 Line 4 /
+      # Schedule ADJ Line 17 rules): a return claiming the aged deduction or
+      # any aged/blind exemption add-on may not claim the CLI or state EITC,
+      # household-wide. The unit takes whichever side is worth more,
+      # approximating the package's value at the top schedule rate and the
+      # EITC side at the best available match rate (documented
+      # approximation; both uncapped by liability here). Downstream:
+      # st_exempt zeroes the add-ons when forgone; st_credits zeroes the
+      # EITC/CLI when taken
+      st_age_addl_pot = st_exempt.aged_addl *
+                          ((age1 >= 65) +
+                           (filing_status == 2 & !is.na(age2) & age2 >= 65)) +
+                        st_exempt.blind_addl *
+                          (coalesce(blind1, 0) + (!is.na(blind2) & blind2)),
+      st_age_package_exists = (st_sub_age_pot + st_age_addl_pot) > 0,
+      st_age_package_forgone = as.integer(
+        st_agi.age_excl_eitc == 1 & st_age_package_exists & eitc > 0 &
+          pmax(st_credits.eitc_match, st_credits.eitc_match_alt) * eitc >
+            st_top_rate * (st_sub_age_pot + st_age_addl_pot)
+      ),
+      st_age_package_taken = as.integer(
+        st_agi.age_excl_eitc == 1 & st_age_package_exists &
+          st_age_package_forgone == 0
+      ),
+      st_sub_age = st_sub_age_pot * (1 - st_age_package_forgone),
+
+      # Subtraction: unemployment benefits included in the federal base (VA)
+      st_sub_ui = st_agi.sub_ui_share * pmax(0, ui),
+
       # Subtraction: charitable contributions for federal non-itemizers in
       # excess of the floor (CO)
       st_sub_char = if_else(itemizing != 1 & is.finite(st_agi.sub_char_nonitem_floor),
@@ -247,7 +325,7 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
 
       st_subtractions = st_sub_ref + st_sub_ss + st_sub_pens + st_sub_char +
                         st_retirement_excl + st_sub_capgain +
-                        st_sub_retire_share,
+                        st_sub_retire_share + st_sub_age + st_sub_ui,
 
       # State income base
       st_agi = st_start + st_additions - st_subtractions

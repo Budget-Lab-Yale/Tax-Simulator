@@ -114,6 +114,13 @@ st_param_defaults = function() {
     'st_agi.ss_taxable_gross_cap_share' = Inf,
     'st_agi.pension_sub_share'     = 0,
     'st_agi.ira_sub_share'         = 0,
+    'st_agi.age_ded_amount'        = 0,
+    'st_agi.age_ded_min_age'       = Inf,
+    'st_agi.age_ded_no_test_min_age' = Inf,
+    'st_agi.age_ded_po_thresh'     = Inf,
+    'st_agi.age_ded_po_base'       = 1,
+    'st_agi.age_excl_eitc'         = 0,
+    'st_agi.sub_ui_share'          = 0,
 
     # ded.yaml
     'st_ded.std_amount'            = 0,
@@ -164,12 +171,17 @@ st_param_defaults = function() {
     'st_ded.addback_cap_thresh'    = Inf,
     'st_ded.addback_cap'           = Inf,
     'st_ded.addback_incl_std'      = 0,
+    'st_ded.care_exp_ded'          = 0,
+    'st_ded.care_exp_ded_per_dep_cap' = 0,
+    'st_ded.care_exp_ded_dep_limit'   = 0,
+    'st_ded.care_exp_ded_age_limit'   = -1,
 
     # exempt.yaml
     'st_exempt.personal_amount'    = 0,
     'st_exempt.dep_amount'         = 0,
     'st_exempt.aged_addl'          = 0,
     'st_exempt.blind_addl'         = 0,
+    'st_exempt.aged_blind_addl_excl_eitc' = 0,
     'st_exempt.po_thresh'          = Inf,
     'st_exempt.po_type'            = 0,
     'st_exempt.po_step'            = 1,
@@ -179,11 +191,12 @@ st_param_defaults = function() {
     # child_ded.yaml (AGI-tabled deductions, e.g. North Carolina)
     'st_child_ded.style'           = 0,
 
-    # ord.yaml (recapture)
+    # ord.yaml (recapture, spouse tax adjustment)
     'st_ord.rates1'                = 0,
     'st_ord.brackets1'             = 0,
     'st_ord.recapture_agi_start'   = Inf,
     'st_ord.recapture_width'       = 50000,
+    'st_ord.sta_max'               = 0,
 
     # surtax.yaml (post-nonrefundable-credit taxable-income surtax)
     'st_surtax.taxable_income_threshold' = Inf,
@@ -193,6 +206,11 @@ st_param_defaults = function() {
     # credits.yaml
     'st_credits.eitc_match'        = 0,
     'st_credits.eitc_refundable'   = 1,
+    'st_credits.eitc_match_alt'    = 0,
+    'st_credits.eitc_refundable_alt' = 0,
+    'st_credits.cli_amount'        = 0,
+    'st_credits.cli_poverty_addl'  = 0,
+    'st_credits.eitc_cli_excl_age_package' = 0,
     'st_credits.eitc_less_household_credit' = 0,
     'st_credits.eitc_child_bonus'  = 0,
     'st_credits.dep_credit_style'  = 0,
@@ -266,6 +284,7 @@ st_param_defaults = function() {
     'st_filing.req_income_thresh'  = Inf,
     'st_filing.req_income_thresh_dep' = Inf,
     'st_filing.req_if_fed_filer'   = 0,
+    'st_filing.no_tax_below_thresh' = 0,
 
     # investment_income.yaml (NH/TN-style narrow taxes)
     'st_investment_income.interest_share' = 0,
@@ -391,7 +410,10 @@ st_param_name_registry = function() {
 
       # st_credits.R: CalEITC-style earned credit, child-count-binned params
       paste0('^st_credits\\.earned_credit_(phasein_rate|max|phaseout_start|',
-             'phaseout_rate|agi_safe_harbor)\\d*$')
+             'phaseout_rate|agi_safe_harbor)\\d*$'),
+
+      # st_credits.R: VA-style CLI poverty guideline, family-size banded
+      '^st_credits\\.cli_poverty_bounds\\d*$'
     )
   )
 }

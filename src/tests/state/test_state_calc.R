@@ -21,7 +21,7 @@ test_state_calc = function() {
 
   law = build_state_tax_law(
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
-                'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT'),
+                'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -692,6 +692,140 @@ test_state_calc = function() {
            label = 'CT-7 2025 EITC child bonus')
 
   #--------------------------------------------------------------------------
+  # Virginia (Form 760)
+  #--------------------------------------------------------------------------
+
+  # VA-1: 2024 single, AGI 50,000, federal standard deduction. VAGI 50,000;
+  # std 8,500; exemption 930. TI = 40,570. Tax = 720 + 5.75% x 23,570 =
+  # 2,075.275
+  run_case('VA', 2024, list(agi = 50000),
+           expect = list(st_agi = 50000, st_ded = 8500, st_exempt = 930,
+                         st_txbl_inc = 40570, liab_st_iit = 2075.275),
+           label = 'VA-1 basic single')
+
+  # VA-2: 2024 single, VAGI 11,900 < $11,950 filing threshold -> tax is $0
+  # outright (Form 760 Line 9 cliff) and the unit is not a filer
+  run_case('VA', 2024, list(agi = 11900),
+           expect = list(liab_st_iit = 0, st_filer = 0),
+           label = 'VA-2 no-tax cliff')
+
+  # VA-3: 2024 single, AGI 14,000 (above threshold, below the $15,060
+  # poverty guideline for family size 1). TI = 14,000 - 8,500 - 930 =
+  # 4,570 -> tax 60 + 3% x 1,570 = 107.10. CLI = $300 x 1 exemption
+  # (nonrefundable) wipes the tax
+  run_case('VA', 2024, list(agi = 14000),
+           expect = list(st_cli = 300, liab_st_iit = 0),
+           label = 'VA-3 CLI')
+
+  # VA-4: 2024 HoH (files as single in VA), AGI 25,000, 2 deps, federal
+  # EITC 6,000. Std 8,500 (single amount); exemptions 3 x 930 = 2,790.
+  # TI = 13,710 -> tax 120 + 5% x 8,710 = 555.50. Choice: 20% nonref
+  # (benefit 555.50) vs 15% refundable (900) -> refundable 900. CLI (300 x
+  # 3 = 900 nonref, family of 3 under the 25,820 guideline) benefit 555.50
+  # loses. Liab = 555.50 - 900 = -344.50
+  run_case('VA', 2024,
+           list(filing_status = 4, agi = 25000, n_dep = 2, dep_age1 = 8,
+                dep_age2 = 10, eitc = 6000),
+           expect = list(st_ded = 8500, st_eitc = 900, st_cli = 0,
+                         liab_st_iit = -344.50),
+           label = 'VA-4 refundable EITC option')
+
+  # VA-5: 2022 single, AGI 30,000, 1 dep, federal EITC 1,500. TI = 30,000
+  # - 8,000 - 1,860 = 20,140 -> tax 720 + 5.75% x 3,140 = 900.55. Choice:
+  # 20% nonref (300) vs 15% refundable (225) -> nonrefundable 300.
+  # Liab = 600.55
+  run_case('VA', 2022,
+           list(agi = 30000, n_dep = 1, dep_age1 = 6, eitc = 1500),
+           expect = list(st_eitc = 300, liab_st_iit = 600.55),
+           label = 'VA-5 nonrefundable EITC wins')
+
+  # VA-6: 2025 MFJ both 70 (income-tested window), AGI 90,000 incl. 10,000
+  # taxable SS, no wages. AFAGI = 80,000 -> joint excess 5,000; age
+  # deduction pool 24,000 - 5,000 = 19,000. VAGI = 90,000 - 10,000 SS -
+  # 19,000 = 61,000. Std 17,500; exemptions 2 x 930 + 2 x 800 = 3,460.
+  # TI = 40,040 -> schedule tax 2,044.80. STA: each spouse nets (61,000/2
+  # - 1,730) = 28,770 > half TI 20,020 -> two pieces at 20,020 -> 2 x
+  # 893.65 = 1,787.30; STA = min(259, 257.50). Liab = 1,787.30
+  run_case('VA', 2025,
+           list(filing_status = 2, agi = 90000, age1 = 70, age2 = 70,
+                txbl_ss = 10000, txbl_pens_dist = 60000),
+           expect = list(st_agi = 61000, st_exempt = 3460,
+                         st_txbl_inc = 40040, st_tax_pre_credit = 1787.30,
+                         liab_st_iit = 1787.30),
+           label = 'VA-6 age deduction phase-out + STA')
+
+  # VA-7: 2020 single age 82 (born 1938, on/before 1/1/1939): flat 12,000
+  # age deduction with NO income test at AGI 100,000. VAGI 88,000; std
+  # 4,500; exemptions 930 + 800 = 1,730. TI = 81,770 -> tax = 720 +
+  # 5.75% x 64,770 = 4,444.275
+  run_case('VA', 2020, list(agi = 100000, age1 = 82),
+           expect = list(st_agi = 88000, liab_st_iit = 4444.275),
+           label = 'VA-7 grandfathered age deduction')
+
+  # VA-8: same as VA-7 but age 70 (income-tested): AFAGI 100,000 excess
+  # 50,000 wipes the 12,000 -> no age deduction. TI = 100,000 - 4,500 -
+  # 1,730 = 93,770 -> tax = 720 + 5.75% x 76,770 = 5,134.275
+  run_case('VA', 2020, list(agi = 100000, age1 = 70),
+           expect = list(st_agi = 100000, liab_st_iit = 5134.275),
+           label = 'VA-8 age deduction phased to zero')
+
+  # VA-9: 2024 single, AGI 400,000, itemizing federally (coupled): VA
+  # itemized = mortgage 20,000 + charity 10,000 + property tax 15,000
+  # (uncapped; income taxes excluded via addback). VA Pease: 3% x
+  # (400,000 - 323,650) = 2,290.50 (< 80% of 45,000) -> 42,709.50.
+  # TI = 400,000 - 42,709.50 - 930 = 356,360.50 -> tax = 720 + 5.75% x
+  # 339,360.50 = 20,233.23
+  run_case('VA', 2024,
+           list(agi = 400000, itemizing = 1, mort_int_item_ded = 20000,
+                char_item_ded = 10000, salt_prop = 15000,
+                salt_inc_sales = 30000, item_ded = 65000,
+                item_ded_ex_limits = 65000, salt_item_ded = 10000),
+           expect = list(st_item_ded = 42709.50, liab_st_iit = 20233.229),
+           label = 'VA-9 itemized + VA Pease')
+
+  # VA-10: 2023 MFJ, AGI 80,000, wages 40,000 each, 2 care-age deps,
+  # care expenses 8,000: deduction capped at 6,000 (2 x 3,000). Std
+  # 16,000; exemptions 4 x 930 = 3,720. TI = 54,280 -> schedule tax
+  # 2,863.60. STA: each nets 40,000 - 930 = 39,070 > half TI 27,140 ->
+  # 2 x T(27,140) = 2 x 1,303.05 -> STA 257.50. Liab = 2,606.10
+  run_case('VA', 2023,
+           list(filing_status = 2, agi = 80000, wages1 = 40000,
+                wages2 = 40000, ei1 = 40000, ei2 = 40000, n_dep = 2,
+                dep_age1 = 3, dep_age2 = 6, care_exp = 8000),
+           expect = list(st_ded = 22000, st_tax_pre_credit = 2606.10,
+                         liab_st_iit = 2606.10),
+           label = 'VA-10 care expense deduction + STA')
+
+  # VA-11: age package vs EITC exclusivity. 2024 MFJ (67/60), AGI 22,000,
+  # 1 dep, federal EITC 4,000. Package value approx 5.75% x (12,000 +
+  # 800) = 736 < best match 20% x 4,000 = 800 -> package forgone: no age
+  # deduction, no aged add-on (exemptions 3 x 930 = 2,790). VAGI 22,000 <
+  # 23,900 -> tax floored to 0; refundable 15% option (600) beats the
+  # nonref 20% (benefit 0). Liab = -600
+  run_case('VA', 2024,
+           list(filing_status = 2, agi = 22000, age1 = 67, age2 = 60,
+                n_dep = 1, dep_age1 = 4, eitc = 4000),
+           expect = list(st_age_package_forgone = 1, st_exempt = 2790,
+                         st_eitc = 600, liab_st_iit = -600),
+           label = 'VA-11 exclusivity: EITC side')
+
+  # VA-12: exclusivity, age side. 2024 single 67, AGI 40,000, federal
+  # EITC 500: package value 736 > 20% x 500 = 100 -> package kept, EITC
+  # and CLI denied. VAGI = 28,000; TI = 28,000 - 8,500 - 1,730 = 17,770
+  # -> tax = 720 + 5.75% x 770 = 764.275
+  run_case('VA', 2024, list(agi = 40000, age1 = 67, eitc = 500),
+           expect = list(st_age_package_taken = 1, st_eitc = 0,
+                         st_agi = 28000, liab_st_iit = 764.275),
+           label = 'VA-12 exclusivity: age side')
+
+  # VA-13: 2021 single, AGI 30,000 incl. 5,000 unemployment benefits:
+  # fully subtracted. VAGI 25,000; std 4,500; exemption 930. TI = 19,570
+  # -> tax = 720 + 5.75% x 2,570 = 867.775
+  run_case('VA', 2021, list(agi = 30000, ui = 5000),
+           expect = list(st_agi = 25000, liab_st_iit = 867.775),
+           label = 'VA-13 UI subtraction')
+
+  #--------------------------------------------------------------------------
   # Structural smoke test: a coarse grid of units through every broad-IIT
   # baseline state and several years must produce finite, non-NA results
   #--------------------------------------------------------------------------
@@ -723,7 +857,7 @@ test_state_calc = function() {
     })
 
   for (st in c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI', 'CA', 'ND',
-               'SC', 'CT')) {
+               'SC', 'CT', 'VA')) {
     for (yr in c(2017, 2021, 2024, 2026, 2030)) {
       law_slice = law %>%
         filter(state == st, year == yr) %>%
@@ -738,7 +872,7 @@ test_state_calc = function() {
       )
     }
   }
-  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 13 states x 5 years)')
+  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 14 states x 5 years)')
 
   # Subset-states regression: a law table built WITHOUT a given state lacks
   # that state's feature columns entirely (not just NA cells); the calculator
@@ -830,7 +964,7 @@ st_test_unit = function(overrides = list()) {
     casualty_item_ded = 0, char_item_ded = 0, misc_item_ded = 0,
     other_item_ded = 0, std_ded = 0,
     eitc = 0, ctc_nonref = 0, ctc_ref = 0, cdctc_nonref = 0,
-    cdctc_ref = 0, care_exp = 0
+    cdctc_ref = 0, care_exp = 0, ui = 0
   )
   for (v in names(overrides)) {
     unit[[v]] = overrides[[v]]

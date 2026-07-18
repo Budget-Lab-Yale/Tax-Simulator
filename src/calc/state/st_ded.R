@@ -65,6 +65,10 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'std_ded',            # (dbl)  federal standard deduction
     'ei1',                # (dbl)  primary earned income
     'ei2',                # (dbl)  secondary earned income
+    'dep_age1',           # (int)  age of youngest dependent (NA if none)
+    'dep_age2',           # (int)  age of second-youngest dependent (NA if none)
+    'dep_age3',           # (int)  age of oldest dependent (NA if none)
+    'care_exp',           # (dbl)  eligible dependent care expenses
 
     # State tax law
     'st_ded.std_amount',      # (dbl) state standard deduction (filing-status mapped)
@@ -114,7 +118,11 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.char_only_share2',       # (dbl) charitable share retained, tier 2
     'st_ded.addback_cap_thresh',     # (dbl) high-income addback AGI threshold
     'st_ded.addback_cap',            # (dbl) allowed federal deduction cap
-    'st_ded.addback_incl_std'        # (int) whether standard deduction is subject
+    'st_ded.addback_incl_std',       # (int) whether standard deduction is subject
+    'st_ded.care_exp_ded',           # (int) whether care expenses are deductible (VA)
+    'st_ded.care_exp_ded_per_dep_cap', # (dbl) per-qualifying-dependent expense cap
+    'st_ded.care_exp_ded_dep_limit', # (int) maximum number of qualifying dependents
+    'st_ded.care_exp_ded_age_limit'  # (int) maximum dependent age to qualify
   )
 
   tax_unit %>%
@@ -227,7 +235,28 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
         st_ded.item_coupling == 1 ~ itemizing == 1,
         TRUE                      ~ st_item_ded > st_std_ded
       ),
-      st_ded = if_else(st_itemizing, st_item_ded, st_std_ded),
+
+      # Dependent-care expense deduction (VA-style): expenses on which the
+      # federal CDCTC could be based, using state-side caps so a federal cap
+      # change (e.g. ARPA 2021) flows through only if the state conforms.
+      # Qualifying dependents counted by age (disabled dependents/spouses are
+      # unobserved; known-difference), expenses limited per federal mechanics
+      # to the lesser earner's earned income
+      st_care_n_qual = pmin(
+        (!is.na(dep_age1) & dep_age1 <= st_ded.care_exp_ded_age_limit) +
+        (!is.na(dep_age2) & dep_age2 <= st_ded.care_exp_ded_age_limit) +
+        (!is.na(dep_age3) & dep_age3 <= st_ded.care_exp_ded_age_limit),
+        st_ded.care_exp_ded_dep_limit
+      ),
+      st_care_ei_limit = pmax(0, if_else(filing_status == 2,
+                                         pmin(ei1, ei2), ei1)),
+      st_care_exp_ded = st_ded.care_exp_ded *
+        pmin(care_exp,
+             st_care_n_qual * st_ded.care_exp_ded_per_dep_cap,
+             st_care_ei_limit),
+
+      st_ded = if_else(st_itemizing, st_item_ded, st_std_ded) +
+               st_care_exp_ded,
 
       #--------------------------------------------------------
       # Deduction addbacks (taxable-income-start states: CO...)

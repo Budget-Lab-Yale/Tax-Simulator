@@ -47,6 +47,7 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
     'st_filing.req_income_thresh',   # (dbl) fixed income filing threshold
     'st_filing.req_income_thresh_dep', # (dbl) dependent-filer threshold
     'st_filing.req_if_fed_filer',    # (int) whether federal filers must file
+    'st_filing.no_tax_below_thresh', # (int) zero pre-credit tax below the threshold (VA)
     'st_programs.broad_iit',         # (int) broad individual income tax active
     'st_surtax.taxable_income_threshold', # (dbl) taxable-income surtax trigger
     'st_surtax.taxable_income_rate', # (dbl) taxable-income surtax rate
@@ -57,22 +58,10 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
     parse_calc_fn_input(req_vars, fill_missings) %>%
     mutate(
 
-      st_surtax_taxable_income = if_else(st_surtax.taxable_income_round == 1,
-                                          round(st_txbl_inc), st_txbl_inc),
-      st_taxable_income_surtax = pmax(
-        0,
-        st_surtax_taxable_income - st_surtax.taxable_income_threshold
-      ) * st_surtax.taxable_income_rate,
-      liab_st_iit = if_else(
-        st_programs.broad_iit == 1,
-        pmax(0, st_tax_pre_credit - st_credits_nonref) +
-          st_taxable_income_surtax - st_credits_ref,
-        0
-      ),
-
-      # Filing requirement: federally-required filers must file where
-      # req_if_fed_filer = 1, OR the state income test is met, OR the unit
-      # has nonzero state liability. Income test by type:
+      # Filing requirement income test (also gates the VA-style no-tax floor
+      # below). Federally-required filers must file where req_if_fed_filer =
+      # 1, OR the state income test is met, OR the unit has nonzero state
+      # liability. Income test by type:
       #  1 (IL): base income above the exemption allowance
       #  2 (NY): state base above the fixed threshold
       #  3 (CO): no separate income test (federal requirement or liability)
@@ -83,6 +72,27 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
                                                    st_filing.req_income_thresh_dep,
                                                    st_filing.req_income_thresh),
         TRUE                    ~ FALSE
+      ),
+
+      # No-tax floor (VA Form 760 Line 9): where flagged, income at or below
+      # the filing threshold owes zero pre-credit tax outright (a cliff, not
+      # an exemption). Refundable credits still pay out
+      st_tax_floored = if_else(
+        st_filing.no_tax_below_thresh == 1 & !meets_income_test,
+        0, st_tax_pre_credit
+      ),
+
+      st_surtax_taxable_income = if_else(st_surtax.taxable_income_round == 1,
+                                          round(st_txbl_inc), st_txbl_inc),
+      st_taxable_income_surtax = pmax(
+        0,
+        st_surtax_taxable_income - st_surtax.taxable_income_threshold
+      ) * st_surtax.taxable_income_rate,
+      liab_st_iit = if_else(
+        st_programs.broad_iit == 1,
+        pmax(0, st_tax_floored - st_credits_nonref) +
+          st_taxable_income_surtax - st_credits_ref,
+        0
       ),
       st_filer = st_programs.broad_iit == 1 & (
         (filer == 1 & st_filing.req_if_fed_filer == 1) |

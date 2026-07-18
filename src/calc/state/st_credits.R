@@ -6,7 +6,7 @@
 return_vars$calc_st_credits = c('st_hh_credit', 'st_eitc', 'st_ctc',
                                 'st_dep_credit', 'st_cdctc', 'st_family_credit',
                                 'st_exempt_credit', 'st_earned_credit', 'st_yctc',
-                                'st_pct_credit',
+                                'st_pct_credit', 'st_cli',
                                 'st_credits_nonref', 'st_credits_ref')
 
 
@@ -99,6 +99,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi',            # (dbl)  state income base
     'st_additions',      # (dbl)  additions to the federal AGI base
     'st_tax_pre_credit', # (dbl)  state tax before credits
+    'st_age_package_taken', # (int) aged package claimed under exclusivity (calc_st_agi)
     'eitc',              # (dbl)  federal EITC
     'ctc_nonref',        # (dbl)  federal CTC, nonrefundable portion
     'ctc_ref',           # (dbl)  federal CTC, refundable portion
@@ -129,8 +130,13 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     # State tax law (scalar; vector table params accessed by column name)
     'st_credits.eitc_match',
     'st_credits.eitc_refundable',
+    'st_credits.eitc_match_alt',
+    'st_credits.eitc_refundable_alt',
     'st_credits.eitc_less_household_credit',
     'st_credits.eitc_child_bonus',
+    'st_credits.cli_amount',
+    'st_credits.cli_poverty_addl',
+    'st_credits.eitc_cli_excl_age_package',
     'st_credits.dep_credit_style',
     'st_credits.dep_credit_young_amount',
     'st_credits.dep_credit_other_amount',
@@ -403,6 +409,22 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                                        tax_unit$st_agi <= pct_ub), na.rm = T)
   }
 
+  #--------------------------------------------------------
+  # CLI poverty guideline (VA), family-size banded (1-8 + increment)
+  #--------------------------------------------------------
+
+  cli_guideline = rep(-Inf, n)
+  cli_cols = paste0('st_credits.cli_poverty_bounds', 1:8)
+  if (all(cli_cols %in% cn) &&
+      any(!is.na(tax_unit$st_credits.cli_poverty_bounds1))) {
+    cli_b = as.matrix(tax_unit[cli_cols])
+    cli_fam = 1 + (tax_unit$filing_status == 2) + tax_unit$n_dep
+    cli_guideline = cli_b[cbind(seq_len(n), pmin(cli_fam, 8))] +
+                    pmax(0, cli_fam - 8) *
+                    tax_unit$st_credits.cli_poverty_addl
+    cli_guideline = coalesce(cli_guideline, -Inf)
+  }
+
   #-------------------------------
   # CDCTC share table (NY style 1)
   #-------------------------------
@@ -479,10 +501,59 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       # (capped at remaining tax) where flagged (NY IT-215 lines 13-16),
       # plus a flat per-return bonus for filers with a federal qualifying
       # child (CT Schedule CT-EITC line 15a, 2025+)
-      st_eitc = pmax(0, st_credits.eitc_match * eitc -
-                        st_credits.eitc_less_household_credit *
-                        pmin(st_hh_credit, pmax(0, st_tax_pre_credit))) +
-                st_credits.eitc_child_bonus * (eitc > 0 & n_dep_eitc > 0),
+      st_eitc_main = pmax(0, st_credits.eitc_match * eitc -
+                             st_credits.eitc_less_household_credit *
+                             pmin(st_hh_credit, pmax(0, st_tax_pre_credit))) +
+                     st_credits.eitc_child_bonus * (eitc > 0 & n_dep_eitc > 0),
+
+      # Alternative state EITC option (VA: taxpayer claims the greater of a
+      # nonrefundable match or, 2022+, a lower refundable match). Realized
+      # benefit of a nonrefundable credit is capped at pre-credit tax; the
+      # unit takes whichever option yields the larger benefit, keeping the
+      # main option on ties. Per-unit refundability follows the chosen option
+      st_eitc_alt_amt = st_credits.eitc_match_alt * eitc,
+      st_eitc_benefit_main = if_else(st_credits.eitc_refundable == 1,
+                                     st_eitc_main,
+                                     pmin(st_eitc_main,
+                                          pmax(0, st_tax_pre_credit))),
+      st_eitc_benefit_alt  = if_else(st_credits.eitc_refundable_alt == 1,
+                                     st_eitc_alt_amt,
+                                     pmin(st_eitc_alt_amt,
+                                          pmax(0, st_tax_pre_credit))),
+      st_eitc_use_alt = st_credits.eitc_match_alt > 0 &
+                        st_eitc_benefit_alt > st_eitc_benefit_main,
+      st_eitc = if_else(st_eitc_use_alt, st_eitc_alt_amt, st_eitc_main),
+      st_eitc_ref_share = if_else(st_eitc_use_alt,
+                                  st_credits.eitc_refundable_alt,
+                                  st_credits.eitc_refundable),
+
+      # Credit for low-income individuals (VA Schedule ADJ Lines 10-17): a
+      # flat amount per personal + dependent exemption (65+/blind add-ons
+      # excluded) for families with VAGI at or below the poverty guideline
+      # for their family size. Nonrefundable, and exclusive with the state
+      # EITC options -- the household claims whichever benefit is larger.
+      # Dependent income in family VAGI is unobserved (known-difference);
+      # dependent filers are ineligible
+      st_cli_amt = if_else(
+        st_credits.cli_amount > 0 & dep_status != 1 &
+          st_agi <= cli_guideline,
+        st_credits.cli_amount * (1 + (filing_status == 2) + n_dep),
+        0
+      ),
+      st_cli_benefit = pmin(st_cli_amt, pmax(0, st_tax_pre_credit)),
+      st_eitc_benefit_chosen = if_else(st_eitc_use_alt, st_eitc_benefit_alt,
+                                       st_eitc_benefit_main),
+      st_cli  = if_else(st_cli_benefit > st_eitc_benefit_chosen,
+                        st_cli_amt, 0),
+      st_eitc = if_else(st_cli > 0, 0, st_eitc),
+
+      # Age-package exclusivity (VA): a household claiming the aged
+      # deduction or aged/blind exemption add-ons may claim neither the CLI
+      # nor the state EITC (choice made in calc_st_agi)
+      st_age_excl = st_credits.eitc_cli_excl_age_package == 1 &
+                    st_age_package_taken == 1,
+      st_cli  = st_cli * !st_age_excl,
+      st_eitc = st_eitc * !st_age_excl,
 
       # Family-size credit: a table-selected percentage of preliminary tax.
       st_family_credit = if_else(st_credits.family_credit_style == 1,
@@ -614,10 +685,11 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
 
       st_credits_nonref = st_hh_credit + prop_credit + st_dep_credit +
                           st_family_credit + st_exempt_credit + st_pct_credit +
-                          st_eitc * (1 - st_credits.eitc_refundable) +
+                          st_cli +
+                          st_eitc * (1 - st_eitc_ref_share) +
                           st_earned_credit * (1 - st_credits.earned_credit_refundable) +
                           st_cdctc * (1 - st_credits.cdctc_refundable),
-      st_credits_ref    = st_eitc * st_credits.eitc_refundable + st_ctc +
+      st_credits_ref    = st_eitc * st_eitc_ref_share + st_ctc +
                           st_earned_credit * st_credits.earned_credit_refundable +
                           st_yctc +
                           st_cdctc * st_credits.cdctc_refundable

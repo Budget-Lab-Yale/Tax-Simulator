@@ -18,3 +18,7 @@
   label: fixed_date_annual
   ready: false
   reference_tax_law_id:
+4:
+  label: fixed_dec_2025_plus_extenders
+  ready: false
+  reference_tax_law_id:

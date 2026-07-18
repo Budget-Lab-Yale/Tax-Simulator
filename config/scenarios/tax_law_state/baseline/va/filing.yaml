@@ -1,0 +1,37 @@
+---
+# Virginia: filing requirement and no-tax floor (Form 760 Line 9; Va. Code
+# 58.1-321). VAGI at or above $11,950 single/MFS/HoH ($23,900 MFJ) must
+# file; BELOW the threshold Virginia tax is $0 outright (a cliff, not an
+# exemption; refunds of withholding still paid). Constant 2012-2025.
+# Encoded as threshold - 1 because the form tests "$11,950 or more" while
+# the calculator tests st_agi > threshold (CT-style threshold-1 convention).
+# HoH files as Single in Virginia (no HoH status exists).
+
+filing_status_mapper:
+  req_income_thresh:
+    '1': thresh_single
+    '2': thresh_joint
+    '3': thresh_single
+    '4': thresh_single
+
+req_type:
+  value: 2
+  reference: 'Form 760 Line 9 / "Who Must File" (2017-2025 booklets): fixed VAGI threshold test'
+thresh_single:
+  value: 11949
+  reference: 'Va. Code 58.1-321 ($11,950 single and MFS, TY2012+, unchanged through 2025); encoded as threshold - 1'
+thresh_joint:
+  value: 23899
+  reference: 'Va. Code 58.1-321 ($23,900 combined MFJ); encoded as threshold - 1'
+req_income_thresh_dep:
+  value: 11949
+  reference: 'No separate dependent-filer threshold on Form 760; same VAGI test applies'
+req_if_fed_filer:
+  value: 0
+  reference: 'Form 760 "Who Must File": the VAGI test governs; federal filing alone does not require a VA return'
+
+# Below-threshold income owes zero tax outright (Form 760 Line 9: "your
+# Virginia income tax is $0.00")
+no_tax_below_thresh:
+  value: 1
+  reference: 'Form 760 Line 9 instruction (identical text, 2017-2025 booklets); Va. Code 58.1-321'

@@ -1,0 +1,89 @@
+---
+# Virginia: CLI / EITC credit block (Schedule ADJ Lines 10-17 -> Form 760
+# Line 23; Line 24 in 2017-2018; Va. Code 58.1-339.8). The household claims
+# exactly ONE of: (a) CLI ($300 per personal+dependent exemption, family
+# VAGI at/below the poverty guideline, nonrefundable); (b) 20% of federal
+# EITC nonrefundable (dropped from the form in 2025 as dominated); (c) from
+# TY2022, a refundable federal-EITC match (15% for 2022-2024, 20% for
+# 2025+). None may be claimed if anyone on the return claims the age
+# deduction or 65+/blind exemption (see agi/exempt.yaml gates).
+# Known-differences: dependent income in family VAGI unobserved; MFS
+# one-spouse CLI rule and MFS EITC proration not modeled.
+
+# Main state EITC option: 20% of the federal credit, nonrefundable through
+# 2024; from 2025 the refundable 20% is the (dominant) form option
+eitc_match:
+  value: 0.20
+  reference: 'Schedule ADJ Line 15 (2017-2024 booklets); Va. Code 58.1-339.8(2); 2025 booklet: refundable portion increased to 20% (Line 16b)'
+eitc_refundable:
+  value:
+    '2017': 0
+    '2025': 1
+  reference: 'Nonrefundable 2017-2024 (Sch ADJ worksheet caps at tax); 2025 booklet: "increased the refundable portion... from 15% to 20%"; Va. Code 58.1-339.8(3); 2025 c. 725'
+
+# Alternative option (2022-2024): 15% of the federal EITC, REFUNDABLE; the
+# unit takes whichever option yields the larger benefit
+eitc_match_alt:
+  value:
+    '2017': 0.0
+    '2022': 0.15
+    '2025': 0.0
+  reference: '2022-2024 booklets, Sch ADJ Line 16b ("equal to 15 percent of the federal EITC", refundable); 2022 Sp. Sess. I cc. 1-2; superseded by the 20% refundable main option in 2025'
+eitc_refundable_alt:
+  value: 1
+  reference: 'Va. Code 58.1-339.8(3) (the alternative option is the refundable one; inert where eitc_match_alt = 0)'
+
+# Credit for Low-Income Individuals: $300 per personal + dependent
+# exemption (65+/blind add-ons excluded), family VAGI at/below the federal
+# poverty guideline for family size; nonrefundable
+cli_amount:
+  value: 300
+  reference: 'Schedule ADJ Lines 10-13 (2017-2025 booklets); Va. Code 58.1-339.8(1)'
+
+# Poverty guideline by family size (booklet-printed HHS guidelines for the
+# 48 contiguous states, January of the tax year). Sizes 1-8 plus the
+# per-additional-person increment. Carried forward after 2025 (published
+# annually; update on encoding pass)
+cli_poverty_bounds:
+  value:
+    '2017': [12060, 16240, 20420, 24600, 28780, 32960, 37140, 41320]
+    '2018': [12140, 16460, 20780, 25100, 29420, 33740, 38060, 42380]
+    '2019': [12490, 16910, 21330, 25750, 30170, 34590, 39010, 43430]
+    '2020': [12760, 17240, 21720, 26200, 30680, 35160, 39640, 44120]
+    '2021': [12880, 17420, 21960, 26500, 31040, 35580, 40120, 44660]
+    '2022': [13590, 18310, 23030, 27750, 32470, 37190, 41910, 46630]
+    '2023': [14580, 19720, 24860, 30000, 35140, 40280, 45420, 50560]
+    '2024': [15060, 20440, 25820, 31200, 36580, 41960, 47340, 52720]
+    '2025': [15650, 21150, 26650, 32150, 37650, 43150, 48650, 54150]
+  reference: 'Poverty Guideline Table, each 2017-2025 booklet (transcribed per year)'
+cli_poverty_addl:
+  value:
+    '2017': 4180
+    '2018': 4320
+    '2019': 4420
+    '2020': 4480
+    '2021': 4540
+    '2022': 4720
+    '2023': 5140
+    '2024': 5380
+    '2025': 5500
+  reference: 'Poverty Guideline Table "each additional person" row, each 2017-2025 booklet'
+
+# CLI/EITC barred when the household claims the age package
+eitc_cli_excl_age_package:
+  value: 1
+  reference: 'Schedule ADJ Line 17 eligibility rules (identical text, 2017-2025 booklets): no CLI/EITC if age deduction or 65+/blind exemption claimed, even filing separately'
+
+# Documentation-only entries: transcribed for completeness but NOT read by
+# the calculator (the parser skips this block)
+documented_not_modeled:
+  # Schedule CR / OSC credits: land preservation (transferable, annual
+  # claim caps), historic rehab, EISTC, R&D, PTET payment credit (2022+),
+  # firearm safety (2023+), credit for tax paid other states
+  schedule_cr_credits:
+    note: 'Nonrefundable/certificated credits and Schedule OSC are not modeled (data-limited or out of scope for a resident VAGI simulation)'
+    reference: '2017-2025 booklets, Schedule CR / Schedule OSC instructions'
+  # Political contributions credit sunset 2017-01-01 -- never applies
+  political_contributions_credit:
+    note: 'Sunset before the encoding window'
+    reference: '2017 booklet What''s New; former Va. Code 58.1-339.6'

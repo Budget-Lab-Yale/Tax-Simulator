@@ -31,6 +31,7 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
     # Tax unit attributes
     'agi',            # (dbl)  federal AGI
     'st_agi',         # (dbl)  state income base (calculated upstream in the pipe)
+    'st_age_package_forgone', # (int) aged package forgone for EITC/CLI (calc_st_agi)
     'filing_status',  # (int)  filing status (1 single, 2 MFJ, 3 MFS, 4 HoH)
     'n_dep',          # (int)  number of dependents
     'age1',           # (int)  age of primary filer
@@ -43,6 +44,7 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
     'st_exempt.dep_amount',      # (dbl) exemption per dependent
     'st_exempt.aged_addl',       # (dbl) additional exemption per person 65+
     'st_exempt.blind_addl',      # (dbl) additional exemption per blind person
+    'st_exempt.aged_blind_addl_excl_eitc', # (int) add-ons forgone with EITC/CLI (VA)
     'st_exempt.po_thresh',       # (dbl) AGI disallowance threshold (mapped)
     'st_exempt.po_type',         # (int) 0 = cliff, 1 = stepped reduction
     'st_exempt.po_step',         # (dbl) income step size for po_type 1
@@ -58,10 +60,16 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
       n_aged      = (age1 >= 65) + (filing_status == 2 & !is.na(age2) & age2 >= 65),
       n_blind     = coalesce(blind1, 0) + (!is.na(blind2) & blind2),
 
+      # Aged/blind add-ons are part of the age package where a state makes
+      # it mutually exclusive with the EITC/CLI (VA); zeroed when the unit
+      # took the EITC side of that choice (decided in calc_st_agi)
+      addl_factor = if_else(st_exempt.aged_blind_addl_excl_eitc == 1 &
+                              st_age_package_forgone == 1, 0, 1),
+
       st_exempt_gross = n_taxpayers * st_exempt.personal_amount +
                         n_dep       * st_exempt.dep_amount +
-                        n_aged      * st_exempt.aged_addl +
-                        n_blind     * st_exempt.blind_addl,
+                        n_aged      * st_exempt.aged_addl * addl_factor +
+                        n_blind     * st_exempt.blind_addl * addl_factor,
 
       # High-income disallowance: cliff (po_type 0) or stepped reduction of
       # po_reduction_per_step per po_step, or fraction thereof, of income

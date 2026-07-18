@@ -44,7 +44,7 @@ SD,in_progress,done,done,todo,blocked_weights,"No broad IIT; zero-tax stub encod
 TN,done,done,done,todo,blocked_weights,"Narrow Hall-tax profile encoded for 2017-2020 and repeal from 2021; senior/blind tests use PUF proxies"
 TX,in_progress,done,done,todo,blocked_weights,"No broad IIT; zero-tax stub encoded"
 UT,todo,todo,todo,todo,todo,""
-VA,todo,todo,todo,todo,todo,""
+VA,done,done,done,todo,blocked_weights,"Form 760 baseline TY2017-2025 (booklet-verified research packets in raw/); single rate schedule all statuses + Spouse Tax Adjustment ($259 cap, new sta_max param); std ded through statutory TY2030 reversion; coupled itemization w/ SALT addback + VA's own Pease TY2019+ (federal-status thresholds); age deduction ($12k, joint-AFAGI phase-out, pre-1939 grandfather via year-keyed age) mutually exclusive w/ CLI/EITC (new exclusivity machinery); full SS/UI subtractions; CDCTC expense deduction ($3k/$6k all years incl. 2021); CLI ($300/exemption, poverty table) vs 20% nonref vs 15%/20% refundable EITC choice; VAGI no-tax cliff ($11,950/$23,900). Known-differences: military subs (code 60 ramp to $40k), disability, 529, sales-tax electors, TY2018 SALT-cap flow-through, MFS combined-AFAGI"
 VT,todo,todo,todo,todo,todo,""
 WA,done,done,done,todo,blocked_weights,"Capital-gains excise and WFTC profiles encoded; capital-gains base and WFTC eligibility retain documented PUF limitations"
 WI,todo,todo,todo,todo,todo,""

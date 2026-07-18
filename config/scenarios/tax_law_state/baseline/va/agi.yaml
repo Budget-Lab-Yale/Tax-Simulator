@@ -1,0 +1,164 @@
+---
+# Virginia: base and additions/subtractions (Form 760 Lines 1-9; Schedule
+# ADJ; Va. Code 58.1-322.01/.02/.03). VAGI = federal AGI + additions - age
+# deduction - taxable SS - state refund - other subtractions. Values
+# transcribed from the 2017-2025 Form 760 instruction booklets; see
+# other/state_tax_research/raw/va_research_{core,mods_credits}.md and
+# source_packets/va.md for the research record.
+
+filing_status_mapper:
+  age_ded_po_thresh:
+    '1': age_po_single
+    '2': age_po_married
+    '3': age_po_married
+    '4': age_po_single
+
+# Starting point for state base: 1 = federal AGI (Form 760 Line 1)
+start_point:
+  value: 1
+  reference: 'Form 760 Line 1 (2017-2025 booklets); Va. Code 58.1-322'
+
+# IRC conformity: fixed-date advanced annually by "emergency conformity
+# bills" through TY2022 (group 3, like SC); ROLLING for TY2023-2025 (2023
+# GA, $15M guardrail); re-fixed at December 31, 2025 plus automatic
+# extender conformity by the 2026 GA (group 4). Reference-law bridges for
+# groups 3/4 are not built, so VA is enabled:false and guarded for
+# federal-reform runs outside the rolling window
+conformity_group:
+  value:
+    '2017': 3
+    '2023': 0
+    '2026': 4
+  reference: 'Va. Code 58.1-301; TB 23-1 (rolling from TY2023); 2026 GA c. 7 / Sp. Sess. I c. 1 (fixed Dec 31, 2025 for TY2026+); conformity_groups.yaml'
+
+# Federally tax-exempt interest: VA adds back interest on NON-VA state/local
+# bonds only (own-state obligations stay exempt)
+add_exempt_int:
+  value: 1
+  reference: 'Schedule ADJ Line 1 (2017-2025 booklets); Va. Code 58.1-322.01(1)'
+own_state_exempt:
+  value: 1
+  reference: 'Va. Code 58.1-322.01(1) (obligations of states other than Virginia); Sch ADJ subtraction code 20'
+
+# US government obligation interest subtracted (flag; see calc known-difference)
+sub_us_int:
+  value: 1
+  reference: 'Schedule ADJ Line 4 (2017-2025 booklets); Va. Code 58.1-322.02(1)'
+
+# State income tax refunds included in federal AGI subtracted
+sub_state_ref:
+  value: 1
+  reference: 'Form 760 Line 6 (2017-2025 booklets); Va. Code 58.1-322.02(5)'
+
+# Social Security: 100% of federally taxable SS (and Tier 1 RR) subtracted
+ss_sub_share:
+  value: 1
+  reference: 'Form 760 Line 5 (2017-2025 booklets); Va. Code 58.1-322.02(3)'
+
+# Unemployment compensation fully subtracted (all years, incl. 2020-2021)
+sub_ui_share:
+  value: 1
+  reference: 'Schedule ADJ subtraction code 37 (2017-2025 booklets); Va. Code 58.1-322.02(11)'
+
+# Age deduction (Form 760 Line 4): $12,000 per person 65+, unindexed.
+# Born on/before 1/1/1939 -> full amount with no income test (encoded as a
+# year-keyed end-of-year age, TY - 1938); born after -> the combined pool
+# (12,000 x claimants) is reduced $1-for-$1 by AFAGI (= FAGI less taxable
+# SS) over $50,000 single / $75,000 married-combined. MFS uses combined
+# spousal AFAGI on the form; own AGI is used here (known-difference).
+# Age 65 test approximated at end-of-year age 65 (form: 65 by Jan 1
+# following the tax year)
+age_ded_amount:
+  value: 12000
+  reference: 'Form 760 Line 4 and Age Deduction Worksheet (verbatim constant, 2017-2025 booklets); Va. Code 58.1-322.03(5)'
+age_ded_min_age:
+  value: 65
+  reference: 'Va. Code 58.1-322.03(5) ("attained the age of 65"); Form 760 Line 4 instructions'
+age_ded_no_test_min_age:
+  value:
+    '2017': 79
+    '2018': 80
+    '2019': 81
+    '2020': 82
+    '2021': 83
+    '2022': 84
+    '2023': 85
+    '2024': 86
+    '2025': 87
+    '2026': 88
+    '2027': 89
+    '2028': 90
+    '2029': 91
+    '2030': 92
+    '2031': 93
+    '2032': 94
+    '2033': 95
+    '2034': 96
+    '2035': 97
+    '2036': 98
+    '2037': 99
+    '2038': 100
+    '2039': 101
+    '2040': 102
+    '2041': 103
+    '2042': 104
+    '2043': 105
+    '2044': 106
+    '2045': 107
+  reference: 'Va. Code 58.1-322.03(5)(a) (born on or before January 1, 1939); encoded as end-of-year age = tax year - 1938'
+age_po_single:
+  value: 50000
+  reference: 'Va. Code 58.1-322.03(5)(b); Age Deduction Worksheet Line 9 (2017-2025 booklets, $50,000 single)'
+age_po_married:
+  value: 75000
+  reference: 'Va. Code 58.1-322.03(5)(b); Age Deduction Worksheet Line 9 ($75,000 all married, joint AFAGI, incl. MFS)'
+age_ded_po_base:
+  value: 2
+  reference: 'AFAGI = FAGI less taxable Social Security and Tier 1 Railroad Benefits (Age Deduction Worksheet Lines 2-8; Va. Code 58.1-322.03(5)(b))'
+
+# Age package (age deduction + aged/blind exemption add-ons) is mutually
+# exclusive with the CLI/state EITC, household-wide; the unit takes the
+# larger-benefit side (documented approximation in calc_st_agi)
+age_excl_eitc:
+  value: 1
+  reference: 'Form 760 Line 4 instructions and Schedule ADJ Line 17 eligibility rules (2017-2025 booklets): no age deduction if CLI/EITC claimed, and vice versa, even filing separately'
+
+# Documentation-only entries: transcribed from the forms for completeness
+# but NOT read by the calculator (the parser skips this block). Citations
+# are still enforced by the conventions test.
+documented_not_modeled:
+  # IRC conformity dates (informational; conformity is modeled via
+  # conformity_group): TY2017 Feb 9 2018; TY2018-2022 Dec 31 of the tax
+  # year (annual bills); TY2023-2025 rolling; TY2026+ fixed Dec 31 2025
+  conformity_dates:
+    note: 'TY2017: 2018-02-09 (medical floor excepted); TY2018-2022: Dec 31 of tax year; TY2023+: rolling with $15M guardrail; TY2026+: fixed 2025-12-31 plus extenders'
+    reference: '2017-2025 booklet What''s New sections; TB 19-1/20-1/21-4/22-1/23-1/26-1; Va. Code 58.1-301'
+  # Disability income subtraction, up to $20,000/person; per-person choice
+  # against the age deduction (disability wages unobserved in PUF)
+  disability_sub_cap:
+    value: 20000
+    reference: 'Schedule ADJ Line 5 (2017-2025 booklets, $20,000 constant); Va. Code 58.1-322.02(4)'
+  # Military: basic pay subtraction up to $15,000 (phased $1-for-$1 to zero
+  # at $30,000); National Guard $3,000/O3 (2017-2022) then $5,500/O6
+  # (2023+); Military Benefits Subtraction $10k/$20k/$30k/$40k (2022-2025+,
+  # age 55+ through 2023 only). Military status unobserved; growing
+  # known-difference on the pension margin
+  military_basic_pay_cap:
+    value: 15000
+    reference: 'Schedule ADJ code 38 (2017-2025 booklets)'
+  military_benefits_sub_cap:
+    value:
+      '2022': 10000
+      '2023': 20000
+      '2024': 30000
+      '2025': 40000
+    reference: 'Schedule ADJ code 60 (2022-2025 booklets); Va. Code 58.1-322.02(24); age-55 requirement removed TY2024'
+  # Virginia529 / Commonwealth Savers deduction, $4,000 per account
+  # (unlimited at 70+); contributions unobserved in PUF
+  sub_529_per_account:
+    value: 4000
+    reference: 'Schedule ADJ deduction code 104 (2017-2025 booklets); Va. Code 58.1-322.03(7)'
+  # Long-term care insurance premiums deduction (premiums unobserved)
+  ltc_premium_deduction:
+    value: 1
+    reference: 'Schedule ADJ deduction code 106 (2017-2025 booklets); Va. Code 58.1-322.03(10)'

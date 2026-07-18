@@ -1,0 +1,21 @@
+---
+# Virginia: rate schedule (Form 760 Tax Rate Schedule; Va. Code 58.1-320).
+# ONE schedule for all filing statuses including MFS -- character-identical
+# in every 2017-2025 booklet, unchanged since TY1990. The Spouse Tax
+# Adjustment below compensates MFJ couples for sharing the single schedule.
+rates:
+  value: [0.02, 0.03, 0.05, 0.0575]
+  reference: 'Form 760 Tax Rate Schedule (verbatim identical, 2017-2025 booklets); Va. Code 58.1-320'
+brackets:
+  value: [0, 3000, 5000, 17000]
+  reference: 'Form 760 Tax Rate Schedule (2017-2025 booklets); Va. Code 58.1-320 (brackets unchanged since TY1990)'
+
+# Spouse Tax Adjustment: MFJ couples recompute tax as if each spouse's
+# share of taxable income (capped at a 50/50 split) were taxed separately;
+# the credit is the difference, up to $259. Worksheet line-for-line
+# identical 2017-2025. Known-differences: joint non-wage income split 50/50
+# (ownership unobserved); the published $259 table-rounding cap vs the
+# continuous $257.50 maximum
+sta_max:
+  value: 259
+  reference: 'Form 760 Line 17 (Line 18 in 2017-2018) Spouse Tax Adjustment worksheet, cap $259 verified in all 2017-2025 booklets; Va. Code 58.1-324'
