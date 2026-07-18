@@ -59,9 +59,9 @@ test_state_credit_tables = function() {
   table = attr(law, 'credit_tables')
   lookup = function(table_year, table_children, income) {
     table %>%
-      filter(year == table_year, child_count == table_children,
+      filter(year == table_year, key_concept == table_children,
              income_lower <= income, income_upper >= income) %>%
-      pull(amount)
+      pull(value)
   }
 
   stopifnot(

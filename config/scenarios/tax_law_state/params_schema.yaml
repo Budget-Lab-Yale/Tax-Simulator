@@ -334,6 +334,4 @@ families:
   - pattern: '^st_credits\.family_credit_f\d+_(bounds|rates)\d*$'
     consumer: st_credits.R   # KY-style family-size credit tables
   - pattern: '^st_credits\.earned_credit_(phasein_rate|max|phaseout_start|phaseout_rate|agi_safe_harbor)\d*$'
-    consumer: st_credits.R   # CalEITC-style child-count-binned params
-  - pattern: '^st_credits\.cli_poverty_bounds\d*$'
-    consumer: st_credits.R   # VA-style CLI poverty guideline
+    consumer: st_credits_earned.R   # CalEITC-style child-count-binned params

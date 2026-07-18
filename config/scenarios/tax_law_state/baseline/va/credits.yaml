@@ -41,21 +41,12 @@ cli_amount:
   reference: 'Schedule ADJ Lines 10-13 (2017-2025 booklets); Va. Code 58.1-339.8(1)'
 
 # Poverty guideline by family size (booklet-printed HHS guidelines for the
-# 48 contiguous states, January of the tax year). Sizes 1-8 plus the
-# per-additional-person increment. Carried forward after 2025 (published
-# annually; update on encoding pass)
-cli_poverty_bounds:
-  value:
-    '2017': [12060, 16240, 20420, 24600, 28780, 32960, 37140, 41320]
-    '2018': [12140, 16460, 20780, 25100, 29420, 33740, 38060, 42380]
-    '2019': [12490, 16910, 21330, 25750, 30170, 34590, 39010, 43430]
-    '2020': [12760, 17240, 21720, 26200, 30680, 35160, 39640, 44120]
-    '2021': [12880, 17420, 21960, 26500, 31040, 35580, 40120, 44660]
-    '2022': [13590, 18310, 23030, 27750, 32470, 37190, 41910, 46630]
-    '2023': [14580, 19720, 24860, 30000, 35140, 40280, 45420, 50560]
-    '2024': [15060, 20440, 25820, 31200, 36580, 41960, 47340, 52720]
-    '2025': [15650, 21150, 26650, 32150, 37650, 43150, 48650, 54150]
-  reference: 'Poverty Guideline Table, each 2017-2025 booklet (transcribed per year)'
+# 48 contiguous states, January of the tax year): DENSE TABLE in
+# credit_tables.csv beside this file (credit_id cli_poverty_guideline,
+# key_concept = family size 1-8, per-row citations = the year's booklet
+# Poverty Guideline Table). Post-2025 years carry the latest table forward
+# (published annually; update on encoding pass). The per-additional-person
+# increment beyond size 8 stays here:
 cli_poverty_addl:
   value:
     '2017': 4180

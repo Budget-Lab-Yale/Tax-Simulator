@@ -154,19 +154,20 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   )
 
   #--------------------------------------------------------
-  # CLI poverty guideline (VA), family-size banded (1-8 + increment)
+  # CLI poverty guideline (VA): dense table keyed by family size
+  # (credit_tables id cli_poverty_guideline; HHS guidelines publish sizes
+  # 1-8 plus a per-additional-person increment, which stays in YAML as
+  # cli_poverty_addl). A state without the table gets -Inf (ineligible)
   #--------------------------------------------------------
 
-  cli_guideline = rep(-Inf, n)
-  cli_b = st_family_matrix(tax_unit, 'st_credits.cli_poverty_bounds', 1:8)
-  if (!is.null(cli_b)) {
-    cli_fam = 1 + (tax_unit$filing_status == 2) + tax_unit$n_dep
-    cli_guideline = coalesce(
-      st_pick_slot(cli_b, pmin(cli_fam, 8)) +
-        pmax(0, cli_fam - 8) * tax_unit$st_credits.cli_poverty_addl,
-      -Inf
-    )
-  }
+  cli_fam = 1 + (tax_unit$filing_status == 2) + tax_unit$n_dep
+  cli_base = lookup_state_credit_table(rep(0, n), cli_fam, credit_tables,
+                                       'cli_poverty_guideline')
+  cli_guideline = if_else(
+    cli_base > 0,
+    cli_base + pmax(0, cli_fam - 8) * tax_unit$st_credits.cli_poverty_addl,
+    -Inf
+  )
 
   # State EITC: match on the federal credit, less the household credit
   # (capped at remaining tax) where flagged (NY IT-215 lines 13-16),

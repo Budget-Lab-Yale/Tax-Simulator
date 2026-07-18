@@ -79,20 +79,24 @@ build_state_tax_law = function(states, years, indexes,
 build_state_credit_tables = function(states, root, state_tax_law_id) {
 
   #----------------------------------------------------------------------------
-  # Reads optional dense state-credit schedules. A credit_tables.csv file lives
-  # beside the state's YAML and uses one row per inclusive income range and
-  # child-count category. Reform files replace a baseline credit/year pair.
+  # Reads optional dense state-credit schedules. A credit_tables.csv file
+  # lives beside the state's YAML with one row per inclusive income range,
+  # generalized key concept (child count, family size, ... -- whatever the
+  # published table is keyed by), and filing status (0 = all statuses).
+  # Reform files replace a baseline credit/year pair (2026-07-17 review
+  # item #7: dense tables belong here, not in long YAML vectors).
   #
-  # Returns: tibble with credit_id, state, year, income_lower, income_upper,
-  #          child_count, and amount; empty tibble when no state has a table.
+  # Returns: tibble with credit_id, state, year, filing_status, key_concept,
+  #          income_lower, income_upper, and value; empty tibble when no
+  #          state has a table.
   #----------------------------------------------------------------------------
 
-  required = c('credit_id', 'state', 'year', 'income_lower', 'income_upper',
-               'child_count', 'amount')
+  required = c('credit_id', 'state', 'year', 'filing_status', 'key_concept',
+               'income_lower', 'income_upper', 'value')
   empty = tibble(
     credit_id = character(), state = character(), year = integer(),
-    income_lower = double(), income_upper = double(), child_count = integer(),
-    amount = double()
+    filing_status = integer(), key_concept = integer(),
+    income_lower = double(), income_upper = double(), value = double()
   )
 
   read_one = function(path, st) {
@@ -103,8 +107,9 @@ build_state_credit_tables = function(states, root, state_tax_law_id) {
       path,
       col_types = cols(
         credit_id = col_character(), state = col_character(), year = col_integer(),
+        filing_status = col_integer(), key_concept = col_integer(),
         income_lower = col_double(), income_upper = col_double(),
-        child_count = col_integer(), amount = col_double()
+        value = col_double()
       ),
       show_col_types = FALSE
     )
@@ -113,14 +118,16 @@ build_state_credit_tables = function(states, root, state_tax_law_id) {
     }
     if (any(toupper(table$state) != toupper(st)) ||
         any(table$income_lower > table$income_upper) ||
-        any(table$child_count < 0) ||
-        anyDuplicated(table[c('credit_id', 'state', 'year', 'income_lower',
-                              'income_upper', 'child_count')])) {
+        any(table$key_concept < 0) ||
+        any(!(table$filing_status %in% 0:4)) ||
+        anyDuplicated(table[c('credit_id', 'state', 'year', 'filing_status',
+                              'key_concept', 'income_lower', 'income_upper')])) {
       stop('State credit table has invalid rows: ', path)
     }
     overlap = table %>%
-      arrange(credit_id, state, year, child_count, income_lower, income_upper) %>%
-      group_by(credit_id, state, year, child_count) %>%
+      arrange(credit_id, state, year, filing_status, key_concept,
+              income_lower, income_upper) %>%
+      group_by(credit_id, state, year, filing_status, key_concept) %>%
       summarise(
         overlap = any(income_lower[-1] <= income_upper[-n()]),
         .groups = 'drop'

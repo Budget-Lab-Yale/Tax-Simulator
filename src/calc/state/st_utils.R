@@ -302,41 +302,48 @@ st_n_dep_in = function(tax_unit, lo, hi) {
 
 
 
-lookup_state_credit_table = function(income, n_children, credit_tables,
-                                     table_id) {
+lookup_state_credit_table = function(income, key, credit_tables, table_id) {
 
   #----------------------------------------------------------------------------
-  # Looks up an independent state credit with inclusive income bands and
-  # capped child-count columns. Missing ranges intentionally return zero,
-  # which supports published tables that omit their zero-credit tails.
+  # Looks up a dense state schedule with inclusive income bands keyed by a
+  # generalized concept (child count for CalEITC, family size for the VA
+  # poverty guideline, ...). Missing ranges intentionally return zero, which
+  # supports published tables that omit their zero-value tails.
+  # Filing-status-keyed rows (filing_status != 0) are not yet supported by
+  # this lookup -- the loader schema carries the column for the CT Table
+  # E-style migrations queued under review item #7.
   #----------------------------------------------------------------------------
 
-  amount = rep(0, length(income))
+  value = rep(0, length(income))
   if (is.null(credit_tables) || nrow(credit_tables) == 0) {
-    return(amount)
+    return(value)
   }
 
   schedule = credit_tables[credit_tables$credit_id == table_id, , drop = FALSE]
   if (nrow(schedule) == 0) {
-    return(amount)
+    return(value)
+  }
+  if (any(schedule$filing_status != 0)) {
+    stop('lookup_state_credit_table: filing-status-keyed rows are not yet ',
+         'supported (table ', table_id, ')')
   }
 
-  # Cap at the top child-count column; do NOT floor up to the lowest present
-  # column. A count below the schedule's minimum bin (e.g. a childless filer
-  # when a table omits its zero-child rows) finds no matching band and returns
+  # Cap at the top key value; do NOT floor up to the lowest present key. A
+  # key below the schedule's minimum bin (e.g. a childless filer when a
+  # table omits its zero-child rows) finds no matching band and returns
   # zero, consistent with the omitted-tail semantics above.
-  child_count = pmin(max(schedule$child_count), coalesce(n_children, 0L))
-  for (child_slot in unique(child_count)) {
-    rows = which(child_count == child_slot)
-    bands = schedule[schedule$child_count == child_slot, , drop = FALSE]
+  key = pmin(max(schedule$key_concept), coalesce(key, 0L))
+  for (key_slot in unique(key)) {
+    rows = which(key == key_slot)
+    bands = schedule[schedule$key_concept == key_slot, , drop = FALSE]
     bands = bands[order(bands$income_lower), , drop = FALSE]
     index = findInterval(income[rows], bands$income_lower)
     valid = index > 0
     valid[valid] = income[rows][valid] <= bands$income_upper[index[valid]]
-    amount[rows[valid]] = bands$amount[index[valid]]
+    value[rows[valid]] = bands$value[index[valid]]
   }
 
-  return(amount)
+  return(value)
 }
 
 
