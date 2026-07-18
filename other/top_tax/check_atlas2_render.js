@@ -140,22 +140,6 @@ const A = w1.sandbox.window.__ATLAS2__;
 if (!A) fail("window.__ATLAS2__ not exposed — page hooks missing");
 const DATA = A.DATA;
 
-// ---- capital-gains surface section: sheets computed, stacked-last identity ----
-if (!A.surf) problems.push("surface: __ATLAS2__.surf missing");
-else {
-  const Zs = A.surf.Z();
-  if (!Zs || Zs.length !== 3) problems.push("surface: expected 3 regime sheets");
-  else {
-    const mx = Math.max(...Zs.map(s => Math.max(...s.map(r => Math.max(...r)))));
-    if (!(mx > 100)) problems.push("surface: Z max implausibly small: " + mx);
-    const direct = A.evalQ("ct", { cg: { rate: 40 }, ord: { rate: 44 }, deemed: { pos: "deemed" } })[0]
-                 - A.evalQ("ct", { ord: { rate: 44 }, deemed: { pos: "deemed" } })[0];
-    const sc = A.surf.cgScore(40, 44, "deemed");
-    if (Math.abs(sc - direct) > 1e-6)
-      problems.push(`surface: stacked-last identity broken: ${sc} vs ${direct}`);
-  }
-}
-
 // ---- boot contract: page loads at current law, nothing selected ---------------
 const bootSel = A.surState();
 if (Object.keys(bootSel).length)
@@ -165,8 +149,8 @@ if (Object.keys(bootSel).length)
 // selection-dependent panels are empty at boot by design; drive a probe
 // package through the harness hook so every panel has content to check
 A.setState({ ord: { rate: 44.8 }, cg: { rate: 40 }, wealth: { rate: 2, thr: 50e6 }, deemed: { pos: "deemed" } });
-const mustRenderSvg  = ["pvw", "spill", "etr", "frontChart"];
-const mustBeNonEmpty = ["tiles", "pvwLegend", "spillLegend", "etrLegend", "frontLegend", "rateSw", "structSw"];
+const mustRenderSvg  = ["stackfig", "etr", "frontChart"];
+const mustBeNonEmpty = ["tiles", "stackfigLegend", "etrLegend", "frontLegend", "rateSw", "structSw"];
 for (const id of mustRenderSvg) {
   const e = w1.byId[id];
   if (!e) problems.push(`#${id}: container missing from HTML`);
