@@ -256,8 +256,8 @@ work now, a month at 40 states.
 
 | # | Item | Tier | Status |
 |---|------|------|--------|
-| 1 | Unknown-param silent default | Blocking-class hazard | OPEN |
-| 2 | Inert config indistinguishable from modeled | Blocking-class hazard | OPEN |
+| 1 | Unknown-param silent default | Blocking-class hazard | RESOLVED 2026-07-17: `validate_state_param_names()` in `state_tax_law.R`, registry from `st_param_name_registry()` (scalars = `st_param_defaults()` names + `conformity_group`; 15 vector-family regexes). Runs on every `parse_one_state()`. Retroactive audit of all 22 states clean. |
+| 2 | Inert config indistinguishable from modeled | Blocking-class hazard | RESOLVED 2026-07-17: top-level `documented_not_modeled:` key, skipped by the parser, citations enforced by the conventions test. All seven inert families quarantined (conformity_year x12, IL k12_*, NY tuition_*/govt_pension/item_base_pre_tcja/salt_cap_applies, NY+CT sub_529_* incl. mapper removal). `sub_us_int` left live (read-but-no-op; calculator-design question). `conformity_year` implementation deferred. |
 | 3 | Consolidate band/step-lookup primitives | Required | OPEN |
 | 4 | `ensure_st_params` -> schema-as-data | Required | OPEN |
 | 5 | Per-taxpayer vs per-return units in config | Required | OPEN |

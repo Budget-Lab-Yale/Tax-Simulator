@@ -152,16 +152,20 @@ cdctc_rate_po_start:
   value: 15000
   reference: 'Tax Law 606(c) (2026+)'
 
-# College tuition credit (Tax Law 606(t); IT-272): 4% of qualified
-# undergraduate tuition up to $10,000/student (max $400); if aggregate
-# expenses < $5,000, credit = min(expenses, $200). Refundable. Data-limited
-# (tuition unobserved in PUF); encoded for completeness
-tuition_credit_rate:
-  value: 0.04
-  reference: 'Form IT-272 (2024) Part 3; Tax Law 606(t)'
-tuition_expense_cap:
-  value: 10000
-  reference: 'Form IT-272 (2024) Part 1 line I'
-tuition_credit_max:
-  value: 400
-  reference: 'IT-272-I (2024): "$400 per eligible student"'
+# Documentation-only entries: transcribed from the forms for completeness but
+# NOT read by the calculator (the parser skips this block). Citations are
+# still enforced by the conventions test.
+documented_not_modeled:
+  # College tuition credit (Tax Law 606(t); IT-272): 4% of qualified
+  # undergraduate tuition up to $10,000/student (max $400); if aggregate
+  # expenses < $5,000, credit = min(expenses, $200). Refundable.
+  # Data-limited (tuition unobserved in PUF)
+  tuition_credit_rate:
+    value: 0.04
+    reference: 'Form IT-272 (2024) Part 3; Tax Law 606(t)'
+  tuition_expense_cap:
+    value: 10000
+    reference: 'Form IT-272 (2024) Part 1 line I'
+  tuition_credit_max:
+    value: 400
+    reference: 'IT-272-I (2024): "$400 per eligible student"'

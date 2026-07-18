@@ -8,11 +8,12 @@ start_point:
   value: 1
   reference: 'IL-1040 Line 1; 35 ILCS 5/203(a)(1); https://tax.illinois.gov'
 
-# IRC conformity: 0 = rolling (base moves with scenario federal law); else the
-# fixed conformity year. Illinois conforms on a rolling basis
-conformity_year:
-  value: 0
-  reference: '35 ILCS 5/203; rolling IRC conformity'
+# Documentation-only (parser skips this block): IRC conformity is rolling;
+# the date is informational and conformity is modeled via conformity_group
+documented_not_modeled:
+  conformity_year:
+    value: 0
+    reference: '35 ILCS 5/203; rolling IRC conformity'
 
 # Whether federally tax-exempt interest is added back to the state base.
 # Illinois adds back ALL muni interest (incl. most IL bonds; the specifically

@@ -441,8 +441,16 @@ parse_one_state = function(st, root, state_tax_law_id, years, indexes) {
     }
   }
 
+  # Documentation-only entries (top-level documented_not_modeled key) are
+  # transcription, not parameters: drop before parsing so they never become
+  # columns. Citations inside the block are enforced by the conventions test
+  tax_law = map(tax_law, function(param) {
+    param[['documented_not_modeled']] = NULL
+    param
+  })
+
   # Parse all parameters and concatenate; state law floor is 2017 (plan §5.1)
-  tax_law %>%
+  parsed = tax_law %>%
     map2(.f      = parse_param,
          .y      = names(.),
          years   = 2017:max(years),
@@ -466,6 +474,51 @@ parse_one_state = function(st, root, state_tax_law_id, years, indexes) {
                 values_from = value) %>%
     filter(year %in% years) %>%
     mutate(state = st) %>%
-    select(state, everything()) %>%
-    return()
+    select(state, everything())
+
+  # A name the calculators do not read must fail here, not no-op downstream
+  validate_state_param_names(names(parsed), st)
+
+  return(parsed)
+}
+
+
+
+validate_state_param_names = function(parsed_names, st) {
+
+  #----------------------------------------------------------------------------
+  # Guards against silently-inert configuration (2026-07-17 review items
+  # #1/#2). Every parsed subparameter column must be a name the calculators
+  # read: an unknown name would otherwise no-op while ensure_st_params()
+  # backfills the intended parameter with its neutral default, so a
+  # misspelled or renamed parameter becomes a wrong answer with no error
+  # anywhere. Legal names come from st_param_name_registry(); values encoded
+  # purely for documentation belong under a top-level documented_not_modeled
+  # key, which parse_one_state() skips.
+  #
+  # Parameters:
+  #   - parsed_names (str[]) : column names of one state's parsed law
+  #   - st (str)             : 2-letter postal code, for the error message
+  #
+  # Returns: TRUE invisibly (throws on unknown parameter names).
+  #----------------------------------------------------------------------------
+
+  registry = st_param_name_registry()
+  candidates = setdiff(parsed_names, c('state', 'year', 'filing_status'))
+  unknown = candidates %>%
+    setdiff(registry$scalars) %>%
+    keep(~ !any(str_detect(.x, registry$families)))
+
+  if (length(unknown) > 0) {
+    stop(
+      'Unknown state tax law parameter(s) for ', st, ': ',
+      paste(sort(unknown), collapse = ', '),
+      '. The calculators do not read these names, so they would silently ',
+      'have no effect while the intended parameters default to no-op ',
+      'values. Fix the name (see st_param_name_registry()), or move ',
+      'documentation-only entries under a documented_not_modeled key.'
+    )
+  }
+
+  invisible(TRUE)
 }

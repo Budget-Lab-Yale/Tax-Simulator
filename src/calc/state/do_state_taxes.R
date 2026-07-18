@@ -63,23 +63,22 @@ do_state_taxes = function(tax_units, credit_tables = NULL) {
 
 
 
-ensure_st_params = function(tax_units) {
+st_param_defaults = function() {
 
   #----------------------------------------------------------------------------
-  # Guarantees that every optional state law parameter column exists,
-  # defaulting to a neutral no-feature value. States encode only the
-  # parameters for features they have (plan §2.2 convention); bind_rows()
-  # across states yields NA for others, and single-state law slices may lack
-  # the columns entirely. Core parameters (st_agi.start_point, st_ord.*) are
-  # NOT defaulted here -- their absence is an error caught by req_vars.
+  # Neutral no-feature default for every optional scalar state law parameter.
+  # This named vector doubles as the registry of legal scalar parameter names:
+  # ensure_st_params() consumes it for backfilling, and
+  # st_param_name_registry() consumes it for load-time name validation
+  # (2026-07-17 review items #1/#2). A parameter read by any state calculator
+  # MUST appear here (or in a vector family below) or the name validator will
+  # reject every state that encodes it.
   #
-  # Parameters:
-  #   - tax_units (df) : tibble with one state's law columns joined
-  #
-  # Returns: tibble with all optional st_* parameter columns present (df).
+  # Returns: named numeric vector of defaults, names are full column names
+  #          (num[]).
   #----------------------------------------------------------------------------
 
-  defaults = c(
+  c(
 
     # programs.yaml
     'st_programs.broad_iit'        = 1,
@@ -315,6 +314,107 @@ ensure_st_params = function(tax_units) {
     'st_transfers.wftc_max_income_joint3' = 0,
     'st_transfers.wftc_max_income_joint4' = 0
   )
+}
+
+
+
+st_param_vector_sentinels = function() {
+
+  #----------------------------------------------------------------------------
+  # First-element column names that gate vector-family features. Vector params
+  # (household credit tables, CTC tiers, CDCTC anchors, stepped recapture,
+  # retirement factor tables) are feature-gated on their first element
+  # existing and being non-NA; ensure_st_params() adds an NA sentinel when a
+  # state's law lacks the family entirely.
+  #
+  # Returns: character vector of column names (str[]).
+  #----------------------------------------------------------------------------
+
+  c('st_credits.hh_agi_bounds_single1', 'st_credits.hh_agi_bounds_other1',
+    'st_credits.ctc_tier1_bound', 'st_credits.family_credit_f1_bounds1',
+    'st_child_ded.agi_bounds1', 'st_credits.pct_credit_agi_bounds1',
+    'st_ord.step_recap_start1', 'st_agi.retire_sub_factor_bounds1')
+}
+
+
+
+st_param_name_registry = function() {
+
+  #----------------------------------------------------------------------------
+  # The complete set of state law parameter names the calculators read,
+  # expressed as exact scalar names plus regex patterns for vector families
+  # (whose element count varies by state). Consumed by
+  # validate_state_param_names() to reject unknown/misspelled YAML parameters
+  # at load time (2026-07-17 review items #1/#2). The \d* suffix is optional
+  # because a single-element vector parses to a suffix-less column.
+  #
+  # Returns: list with scalars (str[]) and families (regex str[]).
+  #----------------------------------------------------------------------------
+
+  list(
+    scalars = c(
+      names(st_param_defaults()),
+
+      # Live parameters read outside the calculators
+      'st_agi.conformity_group'   # consumed by state_conformity_groups_for_law()
+    ),
+    families = c(
+      # st_tax.R: rate schedule + NY-style recapture, CT-style stepped recapture
+      '^st_ord\\.(rates|brackets)\\d*$',
+      '^st_ord\\.step_recap_(start|incr|amount|max)\\d*$',
+
+      # st_agi.R: CT-style retirement subtraction factor table
+      '^st_agi\\.retire_sub_factor_bounds\\d*$',
+      '^st_agi\\.retire_sub_factors\\d*$',
+
+      # st_child_ded.R: NC-style AGI-tabled child deduction
+      '^st_child_ded\\.(agi_bounds|amounts)\\d*$',
+
+      # st_credits.R: NY household credit tables
+      '^st_credits\\.hh_agi_bounds_(single|other)\\d*$',
+      '^st_credits\\.hh_amount_single\\d*$',
+      '^st_credits\\.hh_(base|incr)_other\\d*$',
+
+      # st_credits.R: CT-style percentage-of-tax credit table
+      '^st_credits\\.pct_credit_(agi_bounds|rates)\\d*$',
+
+      # st_credits.R: NY-style CDCTC share anchors and expense caps
+      '^st_credits\\.cdctc_share_(agi_bounds|start|end)\\d*$',
+      '^st_credits\\.cdctc_expense_caps\\d*$',
+
+      # st_credits.R: CO-style tiered CTC (tier anchor is mid-name)
+      '^st_credits\\.ctc_tier\\d+_bound$',
+      '^st_credits\\.ctc_tier_(shares|amounts)\\d*$',
+
+      # st_credits.R: KY-style family-size credit tables
+      '^st_credits\\.family_credit_f\\d+_(bounds|rates)\\d*$',
+
+      # st_credits.R: CalEITC-style earned credit, child-count-binned params
+      paste0('^st_credits\\.earned_credit_(phasein_rate|max|phaseout_start|',
+             'phaseout_rate|agi_safe_harbor)\\d*$')
+    )
+  )
+}
+
+
+
+ensure_st_params = function(tax_units) {
+
+  #----------------------------------------------------------------------------
+  # Guarantees that every optional state law parameter column exists,
+  # defaulting to a neutral no-feature value. States encode only the
+  # parameters for features they have (plan §2.2 convention); bind_rows()
+  # across states yields NA for others, and single-state law slices may lack
+  # the columns entirely. Core parameters (st_agi.start_point, st_ord.*) are
+  # NOT defaulted here -- their absence is an error caught by req_vars.
+  #
+  # Parameters:
+  #   - tax_units (df) : tibble with one state's law columns joined
+  #
+  # Returns: tibble with all optional st_* parameter columns present (df).
+  #----------------------------------------------------------------------------
+
+  defaults = st_param_defaults()
 
   # Add absent columns, then replace NAs with defaults
   for (p in names(defaults)) {
@@ -332,10 +432,7 @@ ensure_st_params = function(tax_units) {
 
   # Vector params (household credit tables, CTC tiers, CDCTC anchors) are
   # feature-gated on their first element existing; add sentinel if absent
-  for (p in c('st_credits.hh_agi_bounds_single1', 'st_credits.hh_agi_bounds_other1',
-              'st_credits.ctc_tier1_bound', 'st_credits.family_credit_f1_bounds1',
-              'st_child_ded.agi_bounds1', 'st_credits.pct_credit_agi_bounds1',
-              'st_ord.step_recap_start1', 'st_agi.retire_sub_factor_bounds1')) {
+  for (p in st_param_vector_sentinels()) {
     if (!(p %in% colnames(tax_units))) {
       tax_units[[p]] = NA_real_
     }

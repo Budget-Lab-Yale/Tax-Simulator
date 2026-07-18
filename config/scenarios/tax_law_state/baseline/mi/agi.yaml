@@ -2,9 +2,13 @@
 start_point:
   value: 1
   reference: 'Michigan MI-1040 starts from federal adjusted gross income, 2017-2025'
-conformity_year:
-  value: 0
-  reference: 'Michigan MI-1040 federal-AGI starting point; federal conformity adjustments are separately scheduled'
+# Documentation-only (parser skips this block): IRC conformity is treated as
+# rolling; the date is informational and conformity is modeled via
+# conformity_group
+documented_not_modeled:
+  conformity_year:
+    value: 0
+    reference: 'Michigan MI-1040 federal-AGI starting point; federal conformity adjustments are separately scheduled'
 add_exempt_int:
   value: 1
   reference: 'Michigan MI-1040 Schedule 1, out-of-state municipal-interest addition, 2017-2025'

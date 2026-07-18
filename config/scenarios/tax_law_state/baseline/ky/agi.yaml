@@ -4,11 +4,14 @@
 start_point:
   value: 1
   reference: 'Kentucky Form 740, line 5 federal adjusted gross income; 2017-2025 packets'
-conformity_year:
-  value:
-    '2017': 2016
-    '2025': 2024
-  reference: 'Kentucky Form 740 instructions, Internal Revenue Code date; KRS 141.010(21)'
+# Documentation-only (parser skips this block): IRC conformity date is
+# informational; conformity behavior is modeled via conformity_group
+documented_not_modeled:
+  conformity_year:
+    value:
+      '2017': 2016
+      '2025': 2024
+    reference: 'Kentucky Form 740 instructions, Internal Revenue Code date; KRS 141.010(21)'
 add_exempt_int:
   value: 1
   reference: 'Kentucky Form 740 Schedule M, non-Kentucky municipal-interest addition, 2017-2025'

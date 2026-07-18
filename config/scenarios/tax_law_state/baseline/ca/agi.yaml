@@ -4,11 +4,14 @@
 start_point:
   value: 1
   reference: 'California Form 540, line 13 federal adjusted gross income, 2017-2025'
-conformity_year:
-  value:
-    '2017': 2015
-    '2025': 2025
-  reference: 'California FTB Form 540 booklets and conformity guidance: general IRC date January 1, 2015 through TY2024 and January 1, 2025 from TY2025, subject to specific statutory exceptions'
+# Documentation-only (parser skips this block): IRC conformity date is
+# informational; conformity behavior is modeled via conformity_group
+documented_not_modeled:
+  conformity_year:
+    value:
+      '2017': 2015
+      '2025': 2025
+    reference: 'California FTB Form 540 booklets and conformity guidance: general IRC date January 1, 2015 through TY2024 and January 1, 2025 from TY2025, subject to specific statutory exceptions'
 conformity_group:
   value:
     '2017': 1

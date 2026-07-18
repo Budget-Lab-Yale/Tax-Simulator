@@ -15,10 +15,12 @@ start_point:
   value: 2
   reference: 'DR 0104 line 1, verified 2017-2025 booklets; C.R.S. 39-22-104'
 
-# IRC conformity: rolling
-conformity_year:
-  value: 0
-  reference: 'C.R.S. 39-22-104 (federal taxable income as defined in the IRC, rolling)'
+# Documentation-only (parser skips this block): IRC conformity is rolling;
+# the date is informational and conformity is modeled via conformity_group
+documented_not_modeled:
+  conformity_year:
+    value: 0
+    reference: 'C.R.S. 39-22-104 (federal taxable income as defined in the IRC, rolling)'
 
 # Non-Colorado state/local bond interest added back (CO bonds issued on/after
 # 1980-05-01 stay exempt)

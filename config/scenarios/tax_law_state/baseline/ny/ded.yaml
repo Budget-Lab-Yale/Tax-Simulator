@@ -61,19 +61,22 @@ item_coupling:
     '2018': 0
   reference: '2017 IT-201-I line 34; 2018+ IT-196-I p.1; Tax Law 615(a)'
 
-# Whether NY itemized components follow pre-TCJA federal rules (misc 2%-floor
-# deductions allowed, pre-TCJA mortgage limits, no SALT cap). Data-limited
-# components (misc 2%) flagged in known-differences
-item_base_pre_tcja:
-  value:
-    '2017': 0
-    '2018': 1
-  reference: 'Tax Law 615(a); IT-196-I ("IRC as it existed before ... Public Law 115-97")'
-
-# Whether the federal $10k SALT cap applies to state itemized (it does not)
-salt_cap_applies:
-  value: 0
-  reference: 'IT-196-I p.2 ("not subject to this federal limit")'
+# Documentation-only entries: transcribed from the forms for completeness but
+# NOT read by the calculator (the parser skips this block). Citations are
+# still enforced by the conventions test.
+documented_not_modeled:
+  # Whether NY itemized components follow pre-TCJA federal rules (misc
+  # 2%-floor deductions allowed, pre-TCJA mortgage limits, no SALT cap).
+  # Data-limited components (misc 2%) flagged in known-differences
+  item_base_pre_tcja:
+    value:
+      '2017': 0
+      '2018': 1
+    reference: 'Tax Law 615(a); IT-196-I ("IRC as it existed before ... Public Law 115-97")'
+  # Whether the federal $10k SALT cap applies to state itemized (it does not)
+  salt_cap_applies:
+    value: 0
+    reference: 'IT-196-I p.2 ("not subject to this federal limit")'
 
 # Whether state/local income (or sales) tax is subtracted from state itemized
 salt_addback:

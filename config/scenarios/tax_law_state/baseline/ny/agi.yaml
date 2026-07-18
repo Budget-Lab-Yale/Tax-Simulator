@@ -2,24 +2,10 @@
 # New York: base and additions/subtractions (IT-201 lines 19-33; Tax Law §612)
 # NY AGI = federal AGI + NY additions - NY subtractions.
 
-filing_status_mapper:
-  sub_529_cap:
-    '1': sub_529_single
-    '2': sub_529_joint
-    '3': sub_529_single
-    '4': sub_529_single
-
 # Starting point for state base: 1 = federal AGI (IT-201 line 19)
 start_point:
   value: 1
   reference: 'IT-201 line 19; Tax Law 612(a)'
-
-# IRC conformity: NY is rolling-conformity for PIT generally; the targeted
-# post-2020-03-01 CARES decoupling (recomputed FAGI, NOL/163(j) items) is a
-# known-difference, not a fixed conformity date
-conformity_year:
-  value: 0
-  reference: 'Tax Law 607; 2020-2022 "recomputed FAGI" line 19a treated as known-difference'
 
 # Federally tax-exempt interest: NY adds back interest on NON-NY state/local
 # bonds only (own-state bonds stay exempt; contrast IL which adds back all)
@@ -60,15 +46,27 @@ pension_excl_65plus:
 pension_excl_min_age:
   value: 60
   reference: 'Tax Law 612(c)(3-a) (age 59.5; integer-age approximation documented)'
-govt_pension_full_sub:
-  value: 1
-  reference: 'Tax Law 612(c)(3); IT-201-I line 26 (data-limited: pension type unobserved in PUF)'
-
-# NY 529 contribution subtraction (data-limited: contributions unobserved in
-# PUF; encoded for completeness)
-sub_529_single:
-  value: 5000
-  reference: 'Tax Law 612(c)(32)'
-sub_529_joint:
-  value: 10000
-  reference: 'Tax Law 612(c)(32)'
+# Documentation-only entries: transcribed from the forms for completeness but
+# NOT read by the calculator (the parser skips this block). Citations are
+# still enforced by the conventions test.
+documented_not_modeled:
+  # IRC conformity: NY is rolling-conformity for PIT generally; the targeted
+  # post-2020-03-01 CARES decoupling (recomputed FAGI, NOL/163(j) items) is a
+  # known-difference, not a fixed conformity date. Conformity behavior is
+  # modeled via conformity_group; this date is informational only
+  conformity_year:
+    value: 0
+    reference: 'Tax Law 607; 2020-2022 "recomputed FAGI" line 19a treated as known-difference'
+  # Government pensions (NYS/local/federal) fully exempt with no cap or age
+  # test (data-limited: pension type unobserved in PUF)
+  govt_pension_full_sub:
+    value: 1
+    reference: 'Tax Law 612(c)(3); IT-201-I line 26 (data-limited: pension type unobserved in PUF)'
+  # NY 529 contribution subtraction; cap $5,000 single/MFS/HoH, $10,000 MFJ
+  # (data-limited: contributions unobserved in PUF)
+  sub_529_single:
+    value: 5000
+    reference: 'Tax Law 612(c)(32)'
+  sub_529_joint:
+    value: 10000
+    reference: 'Tax Law 612(c)(32)'

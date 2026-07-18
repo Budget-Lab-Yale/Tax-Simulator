@@ -18,18 +18,21 @@ start_point:
 # IRC conformity: fixed-date, updated annually (amended-through Dec 31 prior).
 # Mapped to reference-law group 3 (fixed_date_annual, ready=false) so federal-
 # reform runs are guarded until the SC reference overlay is built (like CA).
-conformity_year:
-  value:
-    '2017': 2016
-    '2018': 2018
-    '2019': 2018
-    '2020': 2019
-    '2021': 2020
-    '2022': 2021
-    '2023': 2022
-    '2024': 2023
-    '2025': 2024
-  reference: 'S.C. Code 12-6-40(A)(1)(a); annual conformity Acts (2017 Act 4 ... 2025 Act 63). TY2018 = IRC amended through Feb 9, 2018'
+# The dated series below is documentation-only (parser skips the block);
+# conformity behavior is modeled via conformity_group.
+documented_not_modeled:
+  conformity_year:
+    value:
+      '2017': 2016
+      '2018': 2018
+      '2019': 2018
+      '2020': 2019
+      '2021': 2020
+      '2022': 2021
+      '2023': 2022
+      '2024': 2023
+      '2025': 2024
+    reference: 'S.C. Code 12-6-40(A)(1)(a); annual conformity Acts (2017 Act 4 ... 2025 Act 63). TY2018 = IRC amended through Feb 9, 2018'
 conformity_group:
   value: 3
   reference: 'Fixed-date annual conformity -> reference-law group 3 (conformity_groups.yaml)'

@@ -6,9 +6,13 @@
 start_point:
   value: 1
   reference: 'Georgia Form 500 Schedule 1, 2017-2025; https://dor.georgia.gov/it-511-individual-income-tax-instruction-booklet'
-conformity_year:
-  value: 0
-  reference: 'O.C.G.A. 48-7-27; Georgia Form 500 federal-AGI starting point'
+# Documentation-only (parser skips this block): IRC conformity is treated as
+# rolling; the date is informational and conformity is modeled via
+# conformity_group
+documented_not_modeled:
+  conformity_year:
+    value: 0
+    reference: 'O.C.G.A. 48-7-27; Georgia Form 500 federal-AGI starting point'
 sub_us_int:
   value: 1
   reference: 'Georgia Form 500 Schedule 1, interest on U.S. obligations subtraction, 2017-2025'

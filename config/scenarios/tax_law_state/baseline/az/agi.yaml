@@ -5,9 +5,12 @@
 start_point:
   value: 1
   reference: 'Arizona Form 140, line 12/line 27, 2017-2025; https://azdor.gov/forms/individual/form-140-arizona-resident-personal-income-tax-booklet'
-conformity_year:
-  value: 0
-  reference: 'A.R.S. 43-1001 and Form 140 instructions; rolling federal-AGI starting point'
+# Documentation-only (parser skips this block): IRC conformity is rolling;
+# the date is informational and conformity is modeled via conformity_group
+documented_not_modeled:
+  conformity_year:
+    value: 0
+    reference: 'A.R.S. 43-1001 and Form 140 instructions; rolling federal-AGI starting point'
 add_exempt_int:
   value: 1
   reference: 'Arizona Form 140, additions to income, 2017-2025 (non-Arizona municipal interest)'

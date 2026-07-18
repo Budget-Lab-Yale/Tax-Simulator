@@ -5,9 +5,13 @@
 start_point:
   value: 1
   reference: 'North Carolina Form D-400, line 6, 2017-2025; https://www.ncdor.gov/taxes-forms/individual-income-tax/individual-income-tax-forms-instructions'
-conformity_year:
-  value: 0
-  reference: 'G.S. 105-153.5; North Carolina taxable income begins with federal AGI'
+# Documentation-only (parser skips this block): IRC conformity is treated as
+# rolling; the date is informational and conformity is modeled via
+# conformity_group
+documented_not_modeled:
+  conformity_year:
+    value: 0
+    reference: 'G.S. 105-153.5; North Carolina taxable income begins with federal AGI'
 add_exempt_int:
   value: 1
   reference: 'North Carolina Form D-400 Schedule S, addition for non-North-Carolina municipal interest, 2017-2025'

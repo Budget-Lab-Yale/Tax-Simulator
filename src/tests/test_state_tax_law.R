@@ -27,6 +27,7 @@ test_state_tax_law = function() {
   test_reference_key_tolerance()
   test_state_registry()
   test_state_yaml_conventions()
+  test_state_param_validation()
   test_state_rollout_tracker()
   test_pilot_state_values()
   test_first_wave_state_values()
@@ -675,7 +676,24 @@ test_state_yaml_conventions = function() {
     for (yaml_file in list.files(state_dir, pattern = '\\.yaml$', full.names = TRUE)) {
       raw = read_yaml(yaml_file)
       param_names = setdiff(names(raw), c('indexation_defaults',
-                                          'filing_status_mapper'))
+                                          'filing_status_mapper',
+                                          'documented_not_modeled'))
+
+      # Documentation-only entries are skipped by the parser but must still
+      # carry citations (they are transcription, held to the same standard)
+      for (doc_name in names(raw$documented_not_modeled)) {
+        doc_entry = raw$documented_not_modeled[[doc_name]]
+        if (!is.list(doc_entry) ||
+            is.null(doc_entry$reference) ||
+            !nzchar(trimws(as.character(doc_entry$reference)))) {
+          convention_errors = c(
+            convention_errors,
+            paste0(basename(state_dir), '/', basename(yaml_file), ': ',
+                   'documented_not_modeled entry ', doc_name,
+                   ' missing reference')
+          )
+        }
+      }
 
       for (param_name in param_names) {
         subparam = raw[[param_name]]
@@ -716,6 +734,93 @@ test_state_yaml_conventions = function() {
   }
 
   message('test_state_yaml_conventions: PASSED')
+  invisible(TRUE)
+}
+
+
+
+test_state_param_validation = function() {
+
+  #----------------------------------------------------------------------------
+  # Exercises the load-time parameter-name validator (2026-07-17 review items
+  # #1/#2): (a) every configured state passes the validator -- the standing
+  # retroactive audit that no encoded YAML carries a name the calculators do
+  # not read; (b) documentation-only entries quarantined under
+  # documented_not_modeled never surface as parameter columns; (c) an
+  # unknown/misspelled parameter fails loudly at load time instead of
+  # silently defaulting the intended parameter to a no-op.
+  #
+  # Returns: TRUE invisibly if test passes (throws otherwise).
+  #----------------------------------------------------------------------------
+
+  test_indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
+    mutate(growth = 0.025)
+
+  # (a) all configured states parse through the validator
+  configured = list.dirs('./config/scenarios/tax_law_state/baseline',
+                         recursive = FALSE) %>%
+    basename() %>%
+    toupper()
+  law = build_state_tax_law(configured, 2017:2035, test_indexes)
+
+  # (b) quarantined documentation-only entries must not become columns
+  stopifnot(
+    'documented_not_modeled entries leaked into parsed law' =
+      !any(c('st_agi.conformity_year', 'st_agi.sub_529_single',
+             'st_agi.sub_529_joint', 'st_agi.sub_529_cap',
+             'st_agi.govt_pension_full_sub', 'st_credits.k12_credit_rate',
+             'st_credits.tuition_credit_rate', 'st_ded.item_base_pre_tcja',
+             'st_ded.salt_cap_applies') %in% names(law))
+  )
+
+  # (c) an unknown name fails at load time, identifying the state and name
+  tmp_root = file.path(tempdir(), 'state_param_validation')
+  on.exit(unlink(tmp_root, recursive = TRUE), add = TRUE)
+  zz_dir = file.path(tmp_root, 'baseline', 'zz')
+  dir.create(zz_dir, recursive = TRUE, showWarnings = FALSE)
+  writeLines(c('rates:',
+               '  value: 0.05',
+               "  reference: 'test schedule'"),
+             file.path(zz_dir, 'ord.yaml'))
+  writeLines(c('start_point:',
+               '  value: 1',
+               "  reference: 'test starting point'",
+               'pension_sub_shre:',
+               '  value: 1.0',
+               "  reference: 'test (misspelled on purpose)'",
+               'documented_not_modeled:',
+               '  doc_only_entry:',
+               '    value: 42',
+               "    reference: 'test doc-only entry'"),
+             file.path(zz_dir, 'agi.yaml'))
+
+  caught = tryCatch(
+    {
+      parse_one_state('ZZ', tmp_root, 'baseline', 2017:2020, test_indexes)
+      FALSE
+    },
+    error = function(e) {
+      str_detect(conditionMessage(e), 'Unknown state tax law parameter') &&
+        str_detect(conditionMessage(e), 'pension_sub_shre') &&
+        str_detect(conditionMessage(e), 'ZZ')
+    }
+  )
+
+  # Fixing the name must parse cleanly, with the doc-only entry skipped
+  fixed_yaml = readLines(file.path(zz_dir, 'agi.yaml')) %>%
+    str_replace('pension_sub_shre', 'pension_sub_share')
+  writeLines(fixed_yaml, file.path(zz_dir, 'agi.yaml'))
+  fixed = parse_one_state('ZZ', tmp_root, 'baseline', 2017:2020, test_indexes)
+
+  stopifnot(
+    'unknown parameter did not fail at load time' = caught,
+    'corrected parameter did not parse' =
+      'st_agi.pension_sub_share' %in% names(fixed),
+    'documentation-only entry became a column' =
+      !any(str_detect(names(fixed), 'doc_only_entry'))
+  )
+
+  message('test_state_param_validation: PASSED')
   invisible(TRUE)
 }
 

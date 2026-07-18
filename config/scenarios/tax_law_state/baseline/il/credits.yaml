@@ -47,18 +47,22 @@ prop_tax_credit_rate:
   value: 0.05
   reference: '35 ILCS 5/208; Schedule ICR Section A'
 
-# K-12 education expense credit: 25% of qualified expenses over $250, capped
-# at $750/family ($500 pre-2017); same AGI cliff. Data-limited (education
-# expenses unobserved in PUF); encoded for completeness
-k12_credit_rate:
-  value: 0.25
-  reference: '35 ILCS 5/201(m); Schedule ICR Section B'
-k12_credit_floor:
-  value: 250
-  reference: '35 ILCS 5/201(m)'
-k12_credit_max:
-  value: 750
-  reference: '35 ILCS 5/201(m): $750 for TY ending on/after 2017-12-31'
+# Documentation-only entries: transcribed from the forms for completeness but
+# NOT read by the calculator (the parser skips this block). Citations are
+# still enforced by the conventions test.
+documented_not_modeled:
+  # K-12 education expense credit: 25% of qualified expenses over $250,
+  # capped at $750/family ($500 pre-2017); same AGI cliff. Data-limited
+  # (education expenses unobserved in PUF)
+  k12_credit_rate:
+    value: 0.25
+    reference: '35 ILCS 5/201(m); Schedule ICR Section B'
+  k12_credit_floor:
+    value: 250
+    reference: '35 ILCS 5/201(m)'
+  k12_credit_max:
+    value: 750
+    reference: '35 ILCS 5/201(m): $750 for TY ending on/after 2017-12-31'
 
 # AGI cliff applying to the property tax and K-12 credits (and exemption;
 # see exempt.yaml). Not indexed
