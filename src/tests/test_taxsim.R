@@ -52,19 +52,27 @@ taxsim_check = function(tax_units) {
       return()
 }
 
-taxsim_crosswalk = function(tax_units) {
-  
+taxsim_crosswalk = function(tax_units, state = 'No state') {
+
   #----------------------------------------------------------------------------
   # Converts YBL Tax Simulator inputs and outputs into NBER Taxsim readable
-  # format. 
-  # 
+  # format.
+  #
   # Parameters:
   #   - tax_units (df) : dataframe of tax units after passing through calculator
+  #   - state (str)    : two-letter postal code for TAXSIM's state calculation,
+  #                      or 'No state' to disable it (default; federal-only)
   #
   # Returns: dataframe populated with the variables converted to Taxsim input
   #----------------------------------------------------------------------------
-  
-  tax_units %>% 
+
+  # Ensure a unique TAXSIM record id exists (PUF id when available)
+  if (!'taxsimid' %in% names(tax_units)) {
+    tax_units$taxsimid = if ('id' %in% names(tax_units)) tax_units$id
+                         else seq_len(nrow(tax_units))
+  }
+
+  tax_units %>%
     
     # Rename existing variables
     rename(
@@ -73,9 +81,9 @@ taxsim_crosswalk = function(tax_units) {
       page = age1,
       sage = age2,
       depx = n_dep,
-      age1 = dep_age_1,
-      age2 = dep_age_2,
-      age3 = dep_age_3,
+      age1 = dep_age1,
+      age2 = dep_age2,
+      age3 = dep_age3,
       
       # Earnings
       pwages = wages1,
@@ -86,10 +94,10 @@ taxsim_crosswalk = function(tax_units) {
       # Capital income
       dividends = div_pref,
       stcg      = kg_st, 
-      ltcg      = lg_lt, 
+      ltcg      = kg_lt,
       
-      # OASDI
-      ggsi = gross_ss,
+      # OASDI (TAXSIM-35 name is gssi; other spellings are silently dropped)
+      gssi = gross_ss,
       
       # Real estate SALT
       proptax = salt_prop,
@@ -106,28 +114,62 @@ taxsim_crosswalk = function(tax_units) {
       mstat = case_when(
         filing_status %in% c(1, 4) ~ "single",
         filing_status == 2         ~ "married, jointly",
-        filing_status == 3         ~ "married, seperately",
+        filing_status == 3         ~ "married, separately",
         T                          ~ NA
       ),
-      mstat = if_else(dep_status == 1, 8, mstat),
-      
+      mstat = if_else(dep_status == 1, 'dependent child', mstat),
+
       # State
-      state = 'No state',
-      
-      # Taxable interest and ordinary dividends 
+      state = .env$state,
+
+      # TAXSIM rejects spouse variables on non-joint returns: fold spouse
+      # amounts into primary and zero the spouse fields (no-op when already 0)
+      joint  = mstat == 'married, jointly',
+      pwages = if_else(joint, pwages, pwages + swages),
+      swages = if_else(joint, swages, 0),
+      psemp  = if_else(joint, psemp, psemp + ssemp),
+      ssemp  = if_else(joint, ssemp, 0),
+      sage   = if_else(joint, sage, 0),
+
+      # Taxable interest and ordinary dividends
       intrec = txbl_int + div_ord,
-      
+
       # Taxable retirement income distributions
       pensions = txbl_ira_dist + txbl_pens_dist,
+
+      # Imputation for ui benefits split (all to primary when no wages
+      # or on a non-joint return)
+      pui = if_else(joint & wages > 0, ui * pwages / wages, ui),
+      sui = pmax(0, ui - pui),   # pmax guards float residuals; TAXSIM rejects negatives
       
-      # Imputation for ui benefits split
-      pui = ui * (wages1 / wages),
-      sui = ui - pui,
-      
-      # Other income 
-      otherprop = sch_e - (part_passive - part_passive_loss + scorp_passive - scorp_active_loss), 
-      nonprop   = state_ref + alimony + nols + other_inc - ed_exp - hsa_contr - keogh_contr + 
-        se_health - early_penalty - alimony_exp - trad_contr_ira - sl_int_ded,
+      # Other property income, mirroring our AGI's Schedule E concept
+      # (calc_agi(): sch_e = part_scorp + net_rent + net_estate, pass-through
+      # losses clamped), less the SE portion of partnership income already
+      # counted in psemp/ssemp, plus Form 4797 gains (no TAXSIM input of
+      # their own; other_gains is in our AGI)
+      otherprop = sch_e - part_se + other_gains,
+
+      # Non-property income less above-the-line deductions, mirroring
+      # calc_agi(). Notes: nols is NOT in our AGI (AMT only); alimony is
+      # gated on pre-repeal divorces; TAXSIM computes its own 1/2 SECA
+      # deduction from psemp/ssemp so liab_seca_er is not subtracted here.
+      # State refunds are included only for federal-only runs: when a state
+      # is requested, TAXSIM cannot see the refund inside nonprop and so
+      # cannot apply the state's own-refund subtraction -- omitting it keeps
+      # the state calculation right at the cost of a small federal AGI gap
+      alimony_qualifies = !is.na(divorce_year) &
+        (divorce_year < agi.alimony_repeal_year),
+      nonprop = state_ref * (.env$state == 'No state') +
+        alimony * alimony_qualifies + other_inc -
+        char_above_ded - other_above_ded - ed_exp - hsa_contr - keogh_contr -
+        se_health - early_penalty - alimony_exp * alimony_qualifies -
+        trad_contr_ira - pmin(tuition_ded, agi.tuition_ded_limit) -
+        pmin(dpad, agi.dpad_limit) - sl_int_ded,
+
+      # TAXSIM requires nonprop >= 0; fold any negative remainder into
+      # otherprop (accepts negatives; both feed AGI identically)
+      otherprop = otherprop + pmin(0, nonprop),
+      nonprop   = pmax(0, nonprop),
       
       # Feenberg's medical deduction allocation (https://taxsim.nber.org/taxsim-calc9/medical_deduction.html)
       med_pref    = pmin(med_item_ded, pmax(0, agi) * 0.025),
@@ -140,9 +182,9 @@ taxsim_crosswalk = function(tax_units) {
       # QBI deduction variables...not sure what our setup will be. Will add after 
       # completing QBI calc function.
       scorp    = 0,
-      pbusinc  = 0, 
-      pprofin  = 0, 
-      sbusinc  = 0, 
+      pbusinc  = 0,
+      pprofinc = 0,
+      sbusinc  = 0,
       sprofinc = 0,
       
       # taxsim vars we don't care about
@@ -165,16 +207,16 @@ taxsim_crosswalk = function(tax_units) {
       intrec,
       stcg, ltcg,
       otherprop, nonprop,
-      pensions, 
-      ggsi, 
+      pensions,
+      gssi,
       pui, sui,
-      transfers, 
+      transfers,
       rentpaid,
-      proptax, 
-      otheritem, 
-      childcare, 
+      proptax,
+      otheritem,
+      childcare,
       mortgage,
-      scorp, pbusinc, pprofin, sbusinc, sprofinc
+      scorp, pbusinc, pprofinc, sbusinc, sprofinc
     ) %>%
     return()
 }
@@ -241,12 +283,12 @@ taxsim_check_against = function(test_cases, tax_units) {
       
       #AMT
       #amt_dif = v26_amt_income - tax_units$amt,
-      liab_amt_dif = v27_amt_liability - liab_amt,
+      liab_amt_dif = v27_amt_liability - tax_units$liab_amt,
       
       #Additional Federal
       #se_dif = v42_self_emp_income - tax_units$se,
       #medicare tax unearned income  capital income (niit) NOT INCLUDED IN FICA
-      liab_add_med_dif = v44_medicare_tax_earned_income - liab_add_med
+      liab_add_med_dif = v44_medicare_tax_earned_income - tax_units$liab_add_med
     ) %>%
     
     #Select differences to return
@@ -305,7 +347,7 @@ taxsim_pct_dif = function(tax_units, tol = .05) {
       
       #INCOME
       agi_off = abs(agi_dif)/agi>=tol,
-      ui_off = abs(ui_dif)/ugi>=tol,
+      ui_off = abs(ui_dif)/ui>=tol,
       ss_off = abs(ss_dif)/txbl_ss>=tol,
       #txbl_off = abs(txbl_dif)/ >=tol,
       #amt_off = abs(amt_dif)/amt>=tol,
@@ -323,7 +365,7 @@ taxsim_pct_dif = function(tax_units, tol = .05) {
       
       #OTHER FEDERAL
       #se_off = abs(se_dif)/se>=tol,
-      liab_add_med_off = abs(liab_add_med_diff)/liab_add_med>=tol
+      liab_add_med_off = abs(liab_add_med_dif)/liab_add_med>=tol
     ) %>%
     
     #Select percent changes to return
