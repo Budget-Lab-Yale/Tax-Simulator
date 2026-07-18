@@ -91,11 +91,25 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
 2. **CO child-care expenses credit** (DR 0347) — researched and encoded
    (TODO carried in `co/credits.yaml`); CO 2026 rate revisit after the
    TABOR certification (~Sept 2026).
-3. **Phase 5 — TAXSIM validation harness**: extend `test_taxsim.R` with
-   `usincometaxes` state comparisons for the pilots; aggregate benchmarks
-   vs HT2 total tax and pilot-state revenue-agency estimates;
-   known-differences list (v1 approximations are pre-documented in the
-   calculator headers).
+3. **Phase 5 — cross-model validation harness (record level: BUILT
+   2026-07-18; per-state triage remains).** Harness at
+   `other/state_tax_research/cross_model/` (see its README):
+   record × state × year design on unweighted PUF samples, TAXSIM-35
+   (usincometaxes WASM, 2017–2020) + PolicyEngine US (pinned venv, 2021+),
+   $15/$100 match rates plus a federally-aligned "clean" metric, stage
+   diagnosis from TAXSIM v32–v40, machine-readable known-differences list
+   with record-level predicates. Fixing the federal `taxsim_crosswalk`
+   took 12 latent-bug repairs plus income-concept alignment (other_gains,
+   part_se double-count, se_health sign, state_ref, gssi rename). Results
+   so far: 6 no-tax stubs + NH + TN + IL validate at ~100% clean match;
+   the other 13 broad-IIT states sit at 27–86% clean match@$100 with
+   per-state stage histograms as punch lists (dominant stages: exemptions
+   for AZ/IN, deductions for CA/VA/NY/KY, state AGI for
+   CO/ND/SC/GA/MI/NC/SC — the fed-taxable-start states' v32 labels are
+   partly a TAXSIM-semantics artifact, see README caveat). Remaining:
+   per-state mismatch triage (ours vs TAXSIM's error), aggregate
+   benchmarks vs HT2 total tax (weights-blocked), and revenue-agency
+   comparisons.
 4. **Phase 6 — 50-state rollout** by structural family (no-tax stubs → flat
    fed-AGI → graduated fed-AGI → fed-taxable → own-base → federal-
    deductibility), CA first (CalEITC as the credit-schema acceptance test;

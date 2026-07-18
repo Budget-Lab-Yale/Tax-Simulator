@@ -63,3 +63,6 @@ config/interfaces/output_roots.yaml
 
 # Per-user Claude Code settings
 .claude/settings.local.json
+# Cross-model validation harness: caches and per-record raw output
+other/state_tax_research/cross_model/cache/
+other/state_tax_research/cross_model/results/raw/
