@@ -245,6 +245,43 @@ st_step_reduction = function(x, thresh, step, per_step, round_up = TRUE) {
 
 
 
+st_income_base = function(tax_unit, code) {
+
+  #----------------------------------------------------------------------------
+  # Resolves a phase-out/table income base from the uniform enum (2026-07-17
+  # review item #8), so every banded feature declares its base in config
+  # instead of hard-coding one:
+  #   1 = federal AGI
+  #   2 = state AGI (only available downstream of calc_st_agi)
+  #   3 = federal AGI plus state additions (KY family credit)
+  #   4 = earned income (ei1 + ei2, floored at zero)
+  #   5 = federal AGI less taxable Social Security (VA AFAGI)
+  # An unavailable base (e.g. state AGI requested inside calc_st_agi) or an
+  # unknown code resolves to NA, which downstream comparisons surface.
+  #
+  # Parameters:
+  #   - tax_unit (df) : parsed tax unit tibble
+  #   - code (int[])  : per-row base selector (a law column or constant)
+  #
+  # Returns: per-row income base (dbl[]).
+  #----------------------------------------------------------------------------
+
+  n = nrow(tax_unit)
+  col_or_na = function(name) {
+    if (name %in% colnames(tax_unit)) tax_unit[[name]] else rep(NA_real_, n)
+  }
+  case_when(
+    code == 1 ~ tax_unit$agi,
+    code == 2 ~ col_or_na('st_agi'),
+    code == 3 ~ tax_unit$agi + col_or_na('st_additions'),
+    code == 4 ~ pmax(0, col_or_na('ei1')) + pmax(0, col_or_na('ei2')),
+    code == 5 ~ tax_unit$agi - col_or_na('txbl_ss'),
+    TRUE      ~ NA_real_
+  )
+}
+
+
+
 st_n_dep_in = function(tax_unit, lo, hi) {
 
   #----------------------------------------------------------------------------

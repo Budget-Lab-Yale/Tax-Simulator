@@ -105,7 +105,8 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
     'st_agi.age_ded_min_age',       # (dbl) minimum age for the aged deduction
     'st_agi.age_ded_no_test_min_age', # (dbl) age at/above which no income test applies
     'st_agi.age_ded_po_thresh',     # (dbl) income threshold for $1-per-$1 reduction
-    'st_agi.age_ded_po_base',       # (int) 1 = fed AGI, 2 = fed AGI less taxable SS
+    'st_agi.age_ded_po_base',       # (int) reduction income base (st_income_base enum)
+    'st_agi.retire_sub_factor_income_base', # (int) factor-table income base (enum)
     'st_agi.age_excl_eitc',         # (int) age package and EITC/CLI mutually exclusive (VA)
     'st_agi.sub_ui_share',          # (dbl) share of unemployment benefits subtracted
     'st_exempt.aged_addl',          # (dbl) aged exemption add-on (exclusivity choice)
@@ -141,9 +142,17 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
   if (!is.null(rf_b)) {
     rf_f = st_family_matrix(tax_unit, 'st_agi.retire_sub_factors',
                             elements = 1:ncol(rf_b), require_sentinel = FALSE)
-    rf_j = st_band_index_lower(tax_unit$agi, rf_b)
+    rf_j = st_band_index_lower(
+      st_income_base(tax_unit, tax_unit$st_agi.retire_sub_factor_income_base),
+      rf_b
+    )
     retire_factor = coalesce(st_pick_slot(rf_f, rf_j), 1)
   }
+
+  # Age-deduction reduction income base per the uniform enum (VA: 5 = AFAGI,
+  # federal AGI less taxable Social Security)
+  st_age_po_income_v = st_income_base(tax_unit,
+                                      tax_unit$st_agi.age_ded_po_base)
 
   tax_unit %>%
     mutate(
@@ -268,8 +277,7 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
                    age2 >= st_agi.age_ded_min_age,
       st_age_gf1 = st_age_q1 & age1 >= st_agi.age_ded_no_test_min_age,
       st_age_gf2 = st_age_q2 & age2 >= st_agi.age_ded_no_test_min_age,
-      st_age_po_income = if_else(st_agi.age_ded_po_base == 2,
-                                 agi - txbl_ss, agi),
+      st_age_po_income = st_age_po_income_v,
       st_sub_age_pot = st_agi.age_ded_amount * (st_age_gf1 + st_age_gf2) +
                        pmax(0, st_agi.age_ded_amount *
                                ((st_age_q1 & !st_age_gf1) +

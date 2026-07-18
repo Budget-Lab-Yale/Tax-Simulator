@@ -20,10 +20,8 @@ filing_status_mapper:
 exempt_single:
   value: 15000
   reference: '2017-2025 CT-1040 booklets Table A; CGS 12-702 (zero above $44,000 CT AGI)'
-# The calculator applies personal_amount PER TAXPAYER (x2 for MFJ); CT's
-# $24,000 joint exemption is per return, hence 12,000 here
 exempt_married:
-  value: 12000
+  value: 24000
   reference: '2017-2025 CT-1040 booklets Table A ($24,000 per joint return; zero above $71,000)'
 exempt_mfs:
   value: 12000
@@ -31,6 +29,12 @@ exempt_mfs:
 exempt_head:
   value: 19000
   reference: '2017-2025 CT-1040 booklets Table A (zero above $56,000)'
+
+# Table A amounts are PER RETURN (one exemption per return, varying by
+# filing status), so the values above transcribe the form directly
+personal_per_return:
+  value: 1
+  reference: 'CGS 12-702(a)-(c): one exemption per return by filing status; Table A amounts are return-level'
 
 po_thresh_single:
   value: 30000

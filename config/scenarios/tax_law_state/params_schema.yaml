@@ -17,6 +17,13 @@
 #   - .inf / -.inf for infinities (bare "Inf" would parse as a string)
 #   - null means NA (deferred default; only std_dependent, which falls back
 #     to std_amount inside ensure_st_params)
+#   - params named *_base / *_income_base use the uniform st_income_base
+#     enum (review item #8): 1 = federal AGI, 2 = state AGI, 3 = federal
+#     AGI + state additions, 4 = earned income, 5 = federal AGI less
+#     taxable Social Security
+#   - units metadata (review item #5) marks person/return-ambiguous
+#     amounts; the form's published unit governs what states transcribe
+#     (see st_exempt.personal_per_return for the CT per-return case)
 
 scalars:
 
@@ -38,15 +45,15 @@ scalars:
   st_agi.ss_5564_agi_limit: .inf
   st_agi.ss_full_sub_allages: 0
   st_agi.ss_allages_agi_limit: .inf
-  st_agi.pension_excl_under65: 0
-  st_agi.pension_excl_65plus: 0
+  st_agi.pension_excl_under65: {default: 0, units: per_person}
+  st_agi.pension_excl_65plus: {default: 0, units: per_person}
   st_agi.pension_excl_min_age: .inf
   st_agi.pension_cap_incl_ss: 0
   st_agi.retirement_excl_style: 0
   st_agi.retirement_excl_min_age: .inf
-  st_agi.retirement_excl_under65: 0
-  st_agi.retirement_excl_65plus: 0
-  st_agi.retirement_excl_earned_cap: 0
+  st_agi.retirement_excl_under65: {default: 0, units: per_person}
+  st_agi.retirement_excl_65plus: {default: 0, units: per_person}
+  st_agi.retirement_excl_earned_cap: {default: 0, units: per_person}
   st_agi.sub_char_nonitem_floor: .inf
   st_agi.add_overtime_ded: 0
   st_agi.cap_gains_excl_share: 0
@@ -54,11 +61,12 @@ scalars:
   st_agi.ss_taxable_gross_cap_share: .inf
   st_agi.pension_sub_share: 0
   st_agi.ira_sub_share: 0
-  st_agi.age_ded_amount: 0
+  st_agi.age_ded_amount: {default: 0, units: per_person}
   st_agi.age_ded_min_age: .inf
   st_agi.age_ded_no_test_min_age: .inf
   st_agi.age_ded_po_thresh: .inf
-  st_agi.age_ded_po_base: 1
+  st_agi.age_ded_po_base: 1   # st_income_base enum (VA uses 5 = AFAGI)
+  st_agi.retire_sub_factor_income_base: 1   # st_income_base enum
   st_agi.age_excl_eitc: 0
   st_agi.sub_ui_share: 0
 
@@ -68,8 +76,8 @@ scalars:
   st_ded.std_dependent_style: 0
   st_ded.std_dependent_floor: 0
   st_ded.std_dependent_earned_add: 0
-  st_ded.std_aged_addl: 0
-  st_ded.std_blind_addl: 0
+  st_ded.std_aged_addl: {default: 0, units: per_instance}
+  st_ded.std_blind_addl: {default: 0, units: per_instance}
   st_ded.std_char_share: 0
   st_ded.std_char_floor: 0
   st_ded.item_allowed: 0
@@ -117,10 +125,11 @@ scalars:
   st_ded.care_exp_ded_age_limit: -1
 
   # exempt.yaml
-  st_exempt.personal_amount: 0
-  st_exempt.dep_amount: 0
-  st_exempt.aged_addl: 0
-  st_exempt.blind_addl: 0
+  st_exempt.personal_amount: {default: 0, units: per_taxpayer unless personal_per_return}
+  st_exempt.personal_per_return: {default: 0, units: flag}
+  st_exempt.dep_amount: {default: 0, units: per_dependent}
+  st_exempt.aged_addl: {default: 0, units: per_instance}
+  st_exempt.blind_addl: {default: 0, units: per_instance}
   st_exempt.aged_blind_addl_excl_eitc: 0
   st_exempt.po_thresh: .inf
   st_exempt.po_type: 0
@@ -136,7 +145,7 @@ scalars:
   st_ord.brackets1: 0
   st_ord.recapture_agi_start: .inf
   st_ord.recapture_width: 50000
-  st_ord.sta_max: 0
+  st_ord.sta_max: {default: 0, units: per_return}
 
   # surtax.yaml (post-nonrefundable-credit taxable-income surtax)
   st_surtax.taxable_income_threshold: .inf
@@ -148,11 +157,11 @@ scalars:
   st_credits.eitc_refundable: 1
   st_credits.eitc_match_alt: 0
   st_credits.eitc_refundable_alt: 0
-  st_credits.cli_amount: 0
+  st_credits.cli_amount: {default: 0, units: per_exemption}
   st_credits.cli_poverty_addl: 0
   st_credits.eitc_cli_excl_age_package: 0
   st_credits.eitc_less_household_credit: 0
-  st_credits.eitc_child_bonus: 0
+  st_credits.eitc_child_bonus: {default: 0, units: per_return}
   st_credits.dep_credit_style: 0
   st_credits.dep_credit_young_amount: 0
   st_credits.dep_credit_other_amount: 0
@@ -194,6 +203,7 @@ scalars:
   st_credits.fatc_po_zero: 0
   st_credits.hh_mfs_half: 0
   st_credits.family_credit_style: 0
+  st_credits.family_credit_income_base: 3   # st_income_base enum (KY: AGI + additions)
   st_credits.exempt_credit_style: 0
   st_credits.exempt_credit_personal: 0
   st_credits.exempt_credit_aged: 0

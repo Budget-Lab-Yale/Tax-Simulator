@@ -98,7 +98,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.pease',           # (int) whether a pre-TCJA Pease limitation applies
     'st_ded.pease_thresh',    # (dbl) Pease AGI threshold (filing-status mapped)
     'st_ded.item_limit_style', # (int) 1 = protected-component limitation
-    'st_ded.item_limit_agi_base', # (int) 1 = federal AGI, 2 = state AGI
+    'st_ded.item_limit_agi_base', # (int) limitation income base (st_income_base enum)
     'st_ded.item_limit_thresh', # (dbl) limitation threshold
     'st_ded.item_limit_rate', # (dbl) reduction rate above threshold
     'st_ded.item_limit_max_nonprotected_share', # (dbl) maximum reduction share
@@ -125,8 +125,14 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.care_exp_ded_age_limit'  # (int) maximum dependent age to qualify
   )
 
+  tax_unit %<>%
+    parse_calc_fn_input(req_vars, fill_missings)
+
+  # Itemized-limitation income base per the uniform enum (st_income_base)
+  item_limit_agi_v = st_income_base(tax_unit,
+                                    tax_unit$st_ded.item_limit_agi_base)
+
   tax_unit %>%
-    parse_calc_fn_input(req_vars, fill_missings) %>%
     mutate(
 
       #------------------------------------------------
@@ -191,7 +197,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
 
       # Protected-component limitation (California-style): apply the smaller
       # of the income-based reduction and a share of unprotected deductions.
-      item_limit_agi = if_else(st_ded.item_limit_agi_base == 1, agi, st_agi),
+      item_limit_agi = item_limit_agi_v,
       item_limit_protected =
         st_ded.item_limit_protect_medical *
           st_ded.item_include_medical * med_item_ded +

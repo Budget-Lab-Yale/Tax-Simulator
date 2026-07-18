@@ -8,6 +8,7 @@
 st_credits_household_req_vars = c(
   'st_credits.hh_mfs_half',
   'st_credits.family_credit_style',
+  'st_credits.family_credit_income_base',
   'st_credits.exempt_credit_style',
   'st_credits.exempt_credit_personal',
   'st_credits.exempt_credit_aged',
@@ -48,7 +49,9 @@ st_credits_household = function(tax_unit) {
   # Kentucky-style credit a parameterized table, not a state module.
   family_credit_rate = rep(0, n)
   family_size = pmin(4L, 1L + (tax_unit$filing_status == 2) + tax_unit$n_dep)
-  family_income = tax_unit$agi + tax_unit$st_additions
+  family_income = st_income_base(
+    tax_unit, tax_unit$st_credits.family_credit_income_base
+  )
   for (f in 1:4) {
     bounds = st_family_matrix(
       tax_unit, paste0('st_credits.family_credit_f', f, '_bounds'), 1:11

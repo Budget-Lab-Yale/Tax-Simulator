@@ -113,8 +113,8 @@ age_po_married:
   value: 75000
   reference: 'Va. Code 58.1-322.03(5)(b); Age Deduction Worksheet Line 9 ($75,000 all married, joint AFAGI, incl. MFS)'
 age_ded_po_base:
-  value: 2
-  reference: 'AFAGI = FAGI less taxable Social Security and Tier 1 Railroad Benefits (Age Deduction Worksheet Lines 2-8; Va. Code 58.1-322.03(5)(b))'
+  value: 5
+  reference: 'st_income_base enum 5 = federal AGI less taxable Social Security: AFAGI per the Age Deduction Worksheet Lines 2-8 (Tier 1 RR included with SS); Va. Code 58.1-322.03(5)(b)'
 
 # Age package (age deduction + aged/blind exemption add-ons) is mutually
 # exclusive with the CLI/state EITC, household-wide; the unit takes the

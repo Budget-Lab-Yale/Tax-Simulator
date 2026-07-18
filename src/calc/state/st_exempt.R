@@ -40,7 +40,8 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
     'blind2',         # (bool) whether secondary filer is blind
 
     # State tax law
-    'st_exempt.personal_amount', # (dbl) exemption per taxpayer/spouse
+    'st_exempt.personal_amount', # (dbl) exemption per taxpayer (or per return)
+    'st_exempt.personal_per_return', # (int) personal_amount is per RETURN (CT)
     'st_exempt.dep_amount',      # (dbl) exemption per dependent
     'st_exempt.aged_addl',       # (dbl) additional exemption per person 65+
     'st_exempt.blind_addl',      # (dbl) additional exemption per blind person
@@ -49,14 +50,24 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
     'st_exempt.po_type',         # (int) 0 = cliff, 1 = stepped reduction
     'st_exempt.po_step',         # (dbl) income step size for po_type 1
     'st_exempt.po_reduction_per_step', # (dbl) reduction per step for po_type 1
-    'st_exempt.po_agi_base'      # (int) phase-out income: 1 fed AGI, 2 state AGI
+    'st_exempt.po_agi_base'      # (int) phase-out income base (st_income_base enum)
   )
 
+  tax_unit %<>%
+    parse_calc_fn_input(req_vars, fill_missings)
+
+  # Phase-out income base per the uniform enum (st_income_base)
+  po_income_v = st_income_base(tax_unit, tax_unit$st_exempt.po_agi_base)
+
   tax_unit %>%
-    parse_calc_fn_input(req_vars, fill_missings) %>%
     mutate(
 
-      n_taxpayers = 1 + (filing_status == 2),
+      # personal_amount is per TAXPAYER by default (x2 for MFJ); a state
+      # whose form publishes a per-RETURN amount (CT Table A) sets
+      # personal_per_return = 1 and transcribes the form value directly
+      # (2026-07-17 review item #5)
+      n_taxpayers = if_else(st_exempt.personal_per_return == 1,
+                            1, 1 + (filing_status == 2)),
       n_aged      = (age1 >= 65) + (filing_status == 2 & !is.na(age2) & age2 >= 65),
       n_blind     = coalesce(blind1, 0) + (!is.na(blind2) & blind2),
 
@@ -74,7 +85,7 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
       # High-income disallowance: cliff (po_type 0) or stepped reduction of
       # po_reduction_per_step per po_step, or fraction thereof, of income
       # over the threshold (po_type 1; CT-1040 Table A)
-      po_income = if_else(st_exempt.po_agi_base == 2, st_agi, agi),
+      po_income = po_income_v,
       st_exempt = case_when(
         st_exempt.po_type == 1 ~
           pmax(0, st_exempt_gross -
