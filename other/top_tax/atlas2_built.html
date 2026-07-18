@@ -233,6 +233,14 @@
       </div>
 
       <div class="card">
+        <div class="step">Where it comes from</div>
+        <h3>The package's revenue, base by base</h3>
+        <div class="cap">Each bar is one tax base. Segments show which policy raises revenue into that base (right of $0) or drains it (left), colored by policy; the net across all bases equals the combined-package total. The dashed outline behind each bar is the static <em>ask</em> for that base — where the collected fill falls short of it, the gap is revenue lost to behavior (and where the fill overshoots, the base collects more than it was mechanically asked). Raising one tax routinely drains another base — hover any segment for the mechanism. A neutral segment marks revenue that surfaces only when the policies act together.</div>
+        <figure><div id="basefig"></div></figure>
+        <div class="legend" id="basefigLegend"></div>
+      </div>
+
+      <div class="card">
         <div class="step">Spillovers</div>
         <h3>What each policy does to the other bases</h3>
         <div class="cap">Each selected policy on its own, at your dial settings, with behavioral responses: where its revenue comes from, by tax type. Segments right of the zero line are revenue raised; segments left of it are revenue drained from other bases as behavior responds. A wealth tax erodes the income-tax, capital-gains, and estate bases through saving and avoidance; a higher corporate rate marks down equity values and with them future capital-gains revenue. These spillovers are part of each policy's own standalone score, which is why they don't show up as package-level interaction above.</div>
@@ -795,6 +803,57 @@ var DATA={"meta":{"schema":3,"window":[2027,2056],"decades":[[2027,2036],[2037,2
     });
     return s+'</svg>';
   }
+  // ---- revenue by tax base: where the package's money lands, who put it there ----
+  // One diverging bar per tax base. Right of $0 = raised into that base, left =
+  // drained out of it; segments are colored by the POLICY responsible, and a
+  // neutral segment absorbs the cross-policy interaction that lands in the base.
+  // Net per base sums (across bases) to the combined package. Tooltip copy reuses
+  // the spillover mechanism catalog. rows: [{k,label,net,segs:[{key,val}]}] —
+  // key is a lever key, or null for the interaction residual.
+  function baseCfg(baseK,seg){
+    if(!seg.key){ var up=seg.val>=0;
+      return {accent:'var(--ink-2)',eyebrow:'Cross-policy interaction',glyph:up?'▴':'▾',
+        glyphColor:up?'var(--good)':'var(--warn)',amount:ppl(seg.val),amountColor:up?'var(--good)':'var(--warn)',
+        sub:'lands in the '+HSHORT[baseK]+' base',
+        body:'The part of this base’s revenue that appears only when the selected policies act together — not attributable to any one of them alone.'};
+    }
+    var own=spillOwn(seg.key,baseK),drain=seg.val<0,m=BYKEY[seg.key],dd=spillDesc(seg.key,baseK);
+    var dc=own?'var(--ink)':(drain?'var(--warn)':'var(--good)');
+    return {accent:LCOLOR[seg.key],eyebrow:(own?'Intended base':((drain?'Drained from ':'Added to ')+HSHORT[baseK])),
+      glyph:own?'●':(drain?'▾':'▴'),glyphColor:dc,amount:ppl(seg.val),amountColor:dc,sub:HSHORT[baseK]+' base',
+      ctx:{chip:LCOLOR[seg.key],text:m.label,dial:dialSummary(m)},
+      body:(own?('<b>The policy’s direct target.</b> '+SPILL_OWNDESC[seg.key]):('<b>'+dd.tag+'.</b> '+dd.t))};
+  }
+  function baseChart(rows,w){
+    if(!rows.length)return '';
+    var rh=40,padT=22,bw=Math.max(60,w-224-140),x0=214,h=rows.length*rh+padT+16,negX=0,posX=0;
+    rows.forEach(function(r){var n=0,p=0;r.segs.forEach(function(g){if(g.val<0)n-=g.val;else p+=g.val;});
+      if(r.ask>=5)p=Math.max(p,r.ask);   // positive ask ghost must fit
+      negX=Math.max(negX,n);posX=Math.max(posX,p);});
+    var sc=bw/((negX+posX)||1),xz=x0+negX*sc,s=svg(w,h);
+    s+='<line x1="'+xz.toFixed(1)+'" x2="'+xz.toFixed(1)+'" y1="'+(padT-4)+'" y2="'+(h-14)+'" stroke="var(--rule)" stroke-width="1.5"/>';
+    s+='<text x="'+xz.toFixed(1)+'" y="'+(padT-8)+'" text-anchor="middle" font-size="9.5" fill="var(--muted)" font-family="ui-monospace,monospace">$0</text>';
+    rows.forEach(function(r,i){
+      var y=padT+i*rh+6,xp=xz,xn=xz;
+      s+='<text x="206" y="'+(y+16)+'" text-anchor="end" font-size="12.5" fill="var(--ink-2)" font-family="system-ui">'+r.label+'</text>';
+      // ask ghost (static): drawn first, behind the collected fill. Where the fill
+      // stops short of it, the exposed dashed area is the leak; where the fill
+      // overshoots it, the base collects more than it was mechanically asked.
+      if(r.ask>=5){
+        var leak=r.ask-r.net,cents=Math.round(100*r.net/r.ask),aw=r.ask*sc;
+        s+='<rect x="'+xz.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,aw).toFixed(1)+'" height="24" rx="3" fill="var(--surface-2)" stroke="var(--rule)" stroke-width="1" stroke-dasharray="3 3" '+
+           tipAttr({accent:'var(--ink-2)',eyebrow:'The ask (static)',amount:usd(r.ask),sub:'asked in the '+HSHORT[r.k]+' base',
+             body:'Mechanically this base is asked for '+usd(r.ask)+'; after behavior it collects '+usd(r.net)+' — '+
+                  (leak>=0?('a leak of '+usd(leak)+' ('+cents+'¢ collected on the dollar)'):('a gain of '+usd(-leak)+' (collects '+cents+'¢ per dollar asked)'))+'.'})+'/>';
+      }
+      r.segs.forEach(function(g){ if(g.val<=0)return; var col=g.key?LCOLOR[g.key]:'var(--kept)',wseg=g.val*sc;
+        s+='<rect x="'+xp.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,wseg-2).toFixed(1)+'" height="24" rx="3" fill="'+col+'" '+tipAttr(baseCfg(r.k,g))+'/>'; xp+=wseg; });
+      r.segs.forEach(function(g){ if(g.val>=0)return; var col=g.key?LCOLOR[g.key]:'var(--kept)',wseg=(-g.val)*sc; xn-=wseg;
+        s+='<rect x="'+xn.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,wseg-2).toFixed(1)+'" height="24" rx="3" fill="'+col+'" opacity="0.85" '+tipAttr(baseCfg(r.k,g))+'/>'; });
+      s+='<text x="'+(x0+bw+12)+'" y="'+(y+17)+'" text-anchor="start" font-size="12.5" font-weight="600" font-family="ui-monospace,monospace" fill="'+(r.net<0?'var(--warn)':'var(--ink-2)')+'">'+usd(r.net)+'</text>';
+    });
+    return s+'</svg>';
+  }
   function combinedEtr(d,w){
     // Dumbbell per percentile: a stem connecting three total-ETR dots —
     // baseline (filled, ink), conventional/collected (filled, accent), and
@@ -1202,6 +1261,23 @@ var DATA={"meta":{"schema":3,"window":[2027,2056],"decades":[[2027,2036],[2037,2
     $('#pvwLegend').innerHTML=d.parts.map(function(p){var m=BYKEY[p.key];
       return '<span class="it"><span class="sw2" style="background:'+LCOLOR[p.key]+'"></span>'+m.label+'</span>';}).join('');
     $('#pvwNote').textContent=note;
+    // revenue by tax base: package net per base, attributed to the policies that
+    // raise/drain it (solo contributions) + a residual for cross-policy interaction.
+    if(d.keys.length){
+      var NHb=HEADS_ORDER.length,pkgH=evalQ('ch',d.s),statH=evalQ('sh',d.s),soloH={};
+      d.parts.forEach(function(p){var solo={};solo[p.key]=d.s[p.key];soloH[p.key]=evalQ('ch',solo);});
+      var baseRows=HEADS.map(function(hh){
+        var z=HEADS_ORDER.indexOf(hh.k),net=pkgH[DEC*NHb+z],ask=statH[DEC*NHb+z],segs=[],ssum=0;
+        d.parts.forEach(function(p){var v=soloH[p.key][DEC*NHb+z];if(Math.abs(v)>=1){segs.push({key:p.key,val:v});ssum+=v;}});
+        var resid=net-ssum; if(Math.abs(resid)>=1)segs.push({key:null,val:resid});
+        return {k:hh.k,label:hh.label,net:net,ask:ask,segs:segs};
+      }).filter(function(r){return Math.abs(r.net)>=1||Math.abs(r.ask)>=1||r.segs.length;});
+      $('#basefig').innerHTML=baseChart(baseRows,widthOf('basefig'));
+      $('#basefigLegend').innerHTML=d.parts.map(function(p){return '<span class="it"><span class="sw2" style="background:'+LCOLOR[p.key]+'"></span>'+BYKEY[p.key].label+'</span>';}).join('')
+        +'<span class="it"><span class="sw2" style="background:var(--kept)"></span>Interaction</span>'
+        +'<span class="it"><span class="sw2" style="background:var(--surface-2);border:1px dashed var(--rule)"></span>The ask (static)</span>'
+        +'<span class="it mono" style="color:var(--muted)">dashed = asked · fill = collected · gap = leak · left of $0 = drained</span>';
+    } else { $('#basefig').innerHTML=''; $('#basefigLegend').innerHTML=''; }
     var sp=d.parts.map(function(p){
       var solo={}; solo[p.key]=d.s[p.key];
       var ch=evalQ('ch',solo),heads={},NH=HEADS_ORDER.length;

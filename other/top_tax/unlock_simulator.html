@@ -1,0 +1,442 @@
+<title>Death taxes and the lock-in effect</title>
+<style>
+  :root {
+    --paper: #f9fafb; --ink: #1c2733; --muted: #5a6b7d;
+    --line: #dce3ea; --grid: #e8edf2; --axis: #b9c4ce;
+    --card: #ffffff; --accent: #1a5b9e; --accent-soft: #eaf1f8;
+    --code-bg: #edf1f5;
+    --s-heirs: #2a78d6; --s-wealth: #eda100; --s-estate: #4a3aa7; --s-cg: #eb6834;
+    --l-base: #2a78d6; --l-dial: #eb6834;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #131a22; --ink: #d9e1ea; --muted: #8da0b3;
+      --line: #2b3947; --grid: #223040; --axis: #45566a;
+      --card: #18212b; --accent: #7db0e0; --accent-soft: #1b2c3e;
+      --code-bg: #212c38;
+      --s-heirs: #3987e5; --s-wealth: #c98500; --s-estate: #9085e9; --s-cg: #d95926;
+      --l-base: #3987e5; --l-dial: #d95926;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #131a22; --ink: #d9e1ea; --muted: #8da0b3;
+    --line: #2b3947; --grid: #223040; --axis: #45566a;
+    --card: #18212b; --accent: #7db0e0; --accent-soft: #1b2c3e; --code-bg: #212c38;
+    --s-heirs: #3987e5; --s-wealth: #c98500; --s-estate: #9085e9; --s-cg: #d95926;
+    --l-base: #3987e5; --l-dial: #d95926;
+  }
+  :root[data-theme="light"] {
+    --paper: #f9fafb; --ink: #1c2733; --muted: #5a6b7d;
+    --line: #dce3ea; --grid: #e8edf2; --axis: #b9c4ce;
+    --card: #ffffff; --accent: #1a5b9e; --accent-soft: #eaf1f8; --code-bg: #edf1f5;
+    --s-heirs: #2a78d6; --s-wealth: #eda100; --s-estate: #4a3aa7; --s-cg: #eb6834;
+    --l-base: #2a78d6; --l-dial: #eb6834;
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--paper); }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
+    font-size: 16.5px; line-height: 1.6;
+  }
+  .sans { font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  .wrap { max-width: 52rem; margin: 0 auto; padding: 2.4rem 1.25rem 4.5rem; }
+  code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .82em;
+         background: var(--code-bg); padding: .06em .3em; border-radius: 3px; }
+
+  header { border-bottom: 2px solid var(--ink); padding-bottom: 1.2rem; margin-bottom: 1.3rem; }
+  .eyebrow { font-family: system-ui, sans-serif; font-size: .7rem; font-weight: 600;
+             letter-spacing: .13em; text-transform: uppercase; color: var(--accent); margin: 0 0 .55rem; }
+  h1 { font-size: 1.9rem; line-height: 1.16; margin: 0 0 .55rem; text-wrap: balance; }
+  .standfirst { color: var(--muted); font-style: italic; margin: 0; max-width: 42rem; }
+  h2 { font-size: 1.22rem; margin: 2.4rem 0 .35rem; text-wrap: balance; }
+  .subnote { color: var(--muted); font-size: .88rem; margin: 0 0 .9rem; }
+  p { margin: 0 0 .9rem; }
+
+  /* controls */
+  .controls {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: .8rem 1.4rem; background: var(--card); border: 1px solid var(--line);
+    border-radius: 8px; padding: 1rem 1.2rem; margin: 1.4rem 0 .4rem;
+    font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  }
+  .ctl label { display: flex; justify-content: space-between; align-items: baseline;
+               font-size: .8rem; font-weight: 600; margin-bottom: .25rem; }
+  .ctl output { font-variant-numeric: tabular-nums; color: var(--accent); font-size: .92rem; }
+  .ctl input[type=range] { width: 100%; accent-color: var(--accent); }
+  .ctl .hint { font-size: .7rem; color: var(--muted); margin-top: .1rem; }
+
+  /* cards + charts */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+          padding: 1.1rem 1.2rem 1.2rem; margin: .9rem 0; }
+  .legend { display: flex; flex-wrap: wrap; gap: .35rem 1.1rem;
+            font-family: system-ui, sans-serif; font-size: .76rem; color: var(--muted);
+            margin: .15rem 0 .7rem; }
+  .legend .key { display: inline-flex; align-items: center; gap: .4rem; }
+  .swatch { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+  svg text { font-family: system-ui, "Segoe UI", Roboto, sans-serif; }
+  .bar-note { font-size: .8rem; color: var(--muted); margin-top: .5rem; }
+
+  table.ledger {
+    border-collapse: collapse; width: 100%; margin-top: .8rem;
+    font-family: system-ui, sans-serif; font-size: .82rem; font-variant-numeric: tabular-nums;
+  }
+  table.ledger th { text-align: left; font-size: .68rem; text-transform: uppercase;
+                    letter-spacing: .05em; color: var(--muted);
+                    border-bottom: 1.5px solid var(--line); padding: .4rem .6rem; }
+  table.ledger td { padding: .35rem .6rem; border-bottom: 1px solid var(--grid); }
+  table.ledger td.num, table.ledger th.num { text-align: right; }
+  table.ledger tr.total td { font-weight: 700; border-top: 1.5px solid var(--line); border-bottom: none; }
+  .dotcell { display: inline-flex; align-items: center; gap: .45rem; }
+
+  /* tiles */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .9rem; }
+  .tile { background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+          padding: .95rem 1.1rem; font-family: system-ui, sans-serif; }
+  .tile .tl { font-size: .7rem; font-weight: 600; letter-spacing: .06em;
+              text-transform: uppercase; color: var(--muted); margin-bottom: .3rem; }
+  .tile .tv { font-size: 1.7rem; font-weight: 650; line-height: 1.1; }
+  .tile .ts { font-size: .76rem; color: var(--muted); margin-top: .3rem; line-height: 1.45; }
+
+  .notes { border-left: 3px solid var(--accent); background: var(--accent-soft);
+           border-radius: 0 8px 8px 0; padding: .9rem 1.15rem; margin: 1.6rem 0 0; font-size: .92rem; }
+  .notes p { margin: 0 0 .6rem; } .notes p:last-child { margin: 0; }
+
+  #tip { position: fixed; pointer-events: none; z-index: 10; display: none;
+         background: var(--ink); color: var(--paper); border-radius: 6px;
+         padding: .45rem .65rem; font-family: system-ui, sans-serif; font-size: .76rem;
+         line-height: 1.45; max-width: 240px; font-variant-numeric: tabular-nums; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  footer { margin-top: 2.6rem; padding-top: 1rem; border-top: 1px solid var(--line);
+           font-family: system-ui, sans-serif; font-size: .76rem; color: var(--muted); }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">Budget Lab · model intuition series</p>
+  <h1>Death taxes and the lock-in effect</h1>
+  <p class="standfirst">A one-dollar simulator of the choice between realizing a capital gain now and holding it until death. Step-up at death is the engine of lock-in; the estate tax and an annual wealth tax both shrink the prize for waiting. Auten and Joulfaian measured the estate-tax version of this in 1982 probate data — nothing new under the sun.</p>
+</header>
+
+<p>Take one dollar of unrealized gain with zero basis. Selling today pays the capital-gains
+tax; holding until death means the gain is forgiven by step-up, but along the way the full
+dollar sits in the wealth-tax base, and at death it lands in the estate-tax base. The
+simulator tracks both strategies to the end and asks what the holder's heirs actually
+receive. The gap between the two outcomes is the <strong>lock-in wedge</strong> — the tax
+saving a holder gives up by selling — and everything below is a consequence of how the
+dials move that wedge.</p>
+
+<div class="controls sans" aria-label="Policy dials">
+  <div class="ctl">
+    <label for="tau">Capital-gains rate τ <output id="tau-v">23.8%</output></label>
+    <input type="range" id="tau" min="5" max="50" step="0.1" value="23.8">
+    <div class="hint">top federal rate + NIIT under current law ≈ 23.8%</div>
+  </div>
+  <div class="ctl">
+    <label for="est">Marginal estate rate e <output id="est-v">40%</output></label>
+    <input type="range" id="est" min="0" max="60" step="1" value="40">
+    <div class="hint">0% below the exemption; 40% top statutory rate</div>
+  </div>
+  <div class="ctl">
+    <label for="wt">Annual wealth tax τ<sub>w</sub> <output id="wt-v">0.0%</output></label>
+    <input type="range" id="wt" min="0" max="5" step="0.1" value="0">
+    <div class="hint">marginal rate on net worth, paid every year held</div>
+  </div>
+  <div class="ctl">
+    <label for="yrs">Years until death T <output id="yrs-v">20</output></label>
+    <input type="range" id="yrs" min="1" max="40" step="1" value="20">
+    <div class="hint">deterministic here; the production model uses mortality</div>
+  </div>
+</div>
+
+<h2>Where the dollar ends up</h2>
+<p class="subnote">Per $1 of gain, in present value (discounted at the asset's own return, so pure
+timing effects wash out — the chart isolates the death-tax channels). Each bar sums to $1.00.</p>
+
+<div class="card">
+  <div class="legend" id="bar-legend"></div>
+  <svg id="bars" viewBox="0 0 720 190" width="100%" role="img"
+       aria-label="Stacked bars showing where one dollar of gain ends up under hold-to-death versus sell-now strategies"></svg>
+  <div class="bar-note" id="wedge-note"></div>
+  <table class="ledger" id="ledger" aria-label="Ledger of the two strategies"></table>
+</div>
+
+<h2>The wedge shrinks with every year of custody</h2>
+<p class="subnote">The lock-in wedge — cents kept per dollar of gain by holding to death rather than
+selling now — across horizons, at the dialed capital-gains and estate rates.</p>
+
+<div class="card">
+  <div class="legend" id="line-legend"></div>
+  <svg id="wedgeline" viewBox="0 0 720 320" width="100%" role="img"
+       aria-label="Line chart of the lock-in wedge in cents per dollar of gain against years until death"></svg>
+</div>
+
+<h2>What this does to selling</h2>
+<p class="subnote">The realization response uses the production model's calibrated long-run
+semi-elasticity (η = 2.48) applied to the change in the wedge. Illustrative — the production model
+solves the full dynamic problem with mortality and expected future rates.</p>
+
+<div class="tiles">
+  <div class="tile"><div class="tl">Lock-in wedge</div>
+    <div class="tv" id="t-wedge">—</div><div class="ts" id="t-wedge-s"></div></div>
+  <div class="tile"><div class="tl">Realizations vs. a no-death-tax world</div>
+    <div class="tv" id="t-real">—</div><div class="ts" id="t-real-s"></div></div>
+  <div class="tile"><div class="tl">Implied elasticity to the estate rate</div>
+    <div class="tv" id="t-elas">—</div><div class="ts" id="t-elas-s"></div></div>
+</div>
+
+<div class="notes">
+  <p><strong>Why the wedge is what it is.</strong> Holding to death keeps the government's
+  unpaid τ share invested in the holder's name. The estate tax takes e of that share once,
+  at death. A wealth tax charges τ<sub>w</sub> on it every year it is held — selling would
+  have removed it from the taxable base — so T years of custody scale the prize by
+  (1&nbsp;−&nbsp;τ<sub>w</sub>)<sup>T</sup>. The wedge is
+  τ&nbsp;·&nbsp;(1&nbsp;−&nbsp;e)&nbsp;·&nbsp;(1&nbsp;−&nbsp;τ<sub>w</sub>)<sup>T</sup>
+  per dollar of gain, against a full τ when death taxes leave this margin alone. In the
+  production model these are the death value F&nbsp;=&nbsp;τ(1&nbsp;−&nbsp;e) and the
+  annual carrying cost h&nbsp;=&nbsp;τ<sub>w</sub>·τ inside the realization model's
+  dynamic program.</p>
+  <p><strong>What the toy holds fixed.</strong> Zero basis; a known death date; wealth tax
+  paid out of the position; present values discounted at the asset's own return, which nets
+  out the ordinary time-value benefit of deferral and isolates the death-tax channels. The
+  regime is step-up throughout — under deemed realization the prize itself goes to zero and
+  this margin disappears.</p>
+  <p><strong>The evidence.</strong> Auten and Joulfaian (2001, <em>Journal of Public
+  Economics</em>) match income and estate tax returns for wealthy 1982 decedents across the
+  ERTA rate changes and estimate a realization elasticity with respect to the estate rate of
+  <strong>0.36</strong> (0.29–0.63 across specifications) — higher estate taxes unlock gains
+  during life. They describe two channels. Bequests become expensive relative to own
+  consumption when e&nbsp;&gt;&nbsp;τ, and the effective transaction cost of rebalancing
+  falls to τ(1&nbsp;−&nbsp;e) because gains tax paid shrinks the taxable estate. The
+  simulator (and the production model) prices the second channel; the first, a preference
+  margin over consumption versus bequests, sits outside a tax-cost model — one reason the
+  toy's implied elasticity runs below their point estimate.</p>
+</div>
+
+<footer>Companion to the top-tax methodology memo (§A.1, §A.6) · toy calculations run in your
+browser; nothing here is a scored estimate.</footer>
+</div>
+
+<div id="tip" role="status"></div>
+
+<script>
+(function () {
+  "use strict";
+  var ETA = 2.48;
+
+  var segs = [
+    { key: "heirs",  label: "To heirs",                cssVar: "--s-heirs"  },
+    { key: "wealth", label: "Wealth tax (custody)",    cssVar: "--s-wealth" },
+    { key: "estate", label: "Estate tax",              cssVar: "--s-estate" },
+    { key: "cg",     label: "Capital-gains tax",       cssVar: "--s-cg"     }
+  ];
+
+  var els = {
+    tau: document.getElementById("tau"), est: document.getElementById("est"),
+    wt: document.getElementById("wt"),   yrs: document.getElementById("yrs"),
+    tip: document.getElementById("tip")
+  };
+
+  function cvar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+  function fmtC(x) { return (100 * x).toFixed(1) + "¢"; }
+  function fmtP(x, d) { return (100 * x).toFixed(d === undefined ? 1 : d) + "%"; }
+
+  function params() {
+    return {
+      tau: +els.tau.value / 100, e: +els.est.value / 100,
+      w:   +els.wt.value / 100,  T: +els.yrs.value
+    };
+  }
+
+  // Present-value shares per $1 of gain; each path sums to exactly 1.
+  function paths(p) {
+    var keep = Math.pow(1 - p.w, p.T);
+    function split(v, cg) {
+      return { cg: cg, wealth: v * (1 - keep), estate: v * keep * p.e, heirs: v * keep * (1 - p.e) };
+    }
+    return { hold: split(1, 0), sell: split(1 - p.tau, p.tau) };
+  }
+  function wedgeAt(p, T) {
+    return p.tau * (1 - p.e) * Math.pow(1 - p.w, T);
+  }
+
+  function showTip(html, x, y) {
+    els.tip.innerHTML = html; els.tip.style.display = "block";
+    var r = els.tip.getBoundingClientRect();
+    els.tip.style.left = Math.min(x + 14, window.innerWidth - r.width - 8) + "px";
+    els.tip.style.top  = Math.max(8, y - r.height - 12) + "px";
+  }
+  function hideTip() { els.tip.style.display = "none"; }
+
+  /* ---------- stacked bars ---------- */
+  function drawBars(p) {
+    var svg = document.getElementById("bars");
+    var d = paths(p);
+    var W = 720, x0 = 118, x1 = 665, rows = [
+      { name: "Hold to death", v: d.hold, y: 34 },
+      { name: "Sell now",      v: d.sell, y: 112 }
+    ];
+    var bh = 40, out = [];
+    rows.forEach(function (row) {
+      out.push('<text x="' + x0 + '" y="' + (row.y - 9) + '" font-size="12" font-weight="600" fill="' + cvar("--ink") + '">' + row.name + "</text>");
+      var cx = x0;
+      segs.forEach(function (s) {
+        var val = row.v[s.key];
+        var wpx = val * (x1 - x0);
+        if (wpx <= 0.01) { return; }
+        var gap = wpx > 4 ? 2 : 0;
+        out.push('<rect class="seg" data-row="' + row.name + '" data-lab="' + s.label + '" data-val="' + val + '" x="' + (cx + gap / 2) + '" y="' + row.y + '" width="' + Math.max(0.5, wpx - gap) + '" height="' + bh + '" rx="3" fill="' + cvar(s.cssVar) + '"></rect>');
+        if (wpx > 52) {
+          var tcol = (s.key === "wealth") ? "#3a2f00" : "#ffffff";
+          out.push('<text x="' + (cx + wpx / 2) + '" y="' + (row.y + bh / 2 + 4) + '" font-size="11.5" font-weight="600" text-anchor="middle" fill="' + tcol + '" pointer-events="none">' + fmtC(val) + "</text>");
+        }
+        cx += wpx;
+      });
+    });
+    // heirs-difference bracket
+    var hx = x0 + d.sell.heirs * (x1 - x0), hx2 = x0 + d.hold.heirs * (x1 - x0);
+    if (hx2 - hx > 6) {
+      var ym = 88;
+      out.push('<line x1="' + hx + '" y1="' + ym + '" x2="' + hx2 + '" y2="' + ym + '" stroke="' + cvar("--ink") + '" stroke-width="1.5"></line>');
+      out.push('<line x1="' + hx + '" y1="' + (ym - 4) + '" x2="' + hx + '" y2="' + (ym + 4) + '" stroke="' + cvar("--ink") + '" stroke-width="1.5"></line>');
+      out.push('<line x1="' + hx2 + '" y1="' + (ym - 4) + '" x2="' + hx2 + '" y2="' + (ym + 4) + '" stroke="' + cvar("--ink") + '" stroke-width="1.5"></line>');
+      out.push('<text x="' + Math.min(hx2 + 8, 700) + '" y="' + (ym + 4) + '" font-size="11.5" font-weight="600" fill="' + cvar("--ink") + '">wedge ' + fmtC(d.hold.heirs - d.sell.heirs) + "</text>");
+    }
+    svg.innerHTML = out.join("");
+    Array.prototype.forEach.call(svg.querySelectorAll(".seg"), function (r) {
+      function over(ev) {
+        showTip("<strong>" + r.getAttribute("data-row") + "</strong><br>" + r.getAttribute("data-lab") + ": " + fmtC(+r.getAttribute("data-val")) + " per $1 of gain", ev.clientX, ev.clientY);
+      }
+      r.addEventListener("mousemove", over);
+      r.addEventListener("mouseleave", hideTip);
+    });
+
+    document.getElementById("wedge-note").innerHTML =
+      "Heirs keep <strong>" + fmtC(d.hold.heirs) + "</strong> per dollar by holding vs <strong>" +
+      fmtC(d.sell.heirs) + "</strong> after selling now — a lock-in wedge of <strong>" +
+      fmtC(d.hold.heirs - d.sell.heirs) + "</strong>. With no estate or wealth tax the wedge would be the full " + fmtC(p.tau) + ".";
+
+    // ledger table
+    var L = document.getElementById("ledger");
+    function dot(s) { return '<span class="dotcell"><span class="swatch" style="background:' + cvar(s.cssVar) + '"></span>' + s.label + "</span>"; }
+    var rowsHtml = segs.map(function (s) {
+      return "<tr><td>" + dot(s) + '</td><td class="num">' + fmtC(d.hold[s.key]) + '</td><td class="num">' + fmtC(d.sell[s.key]) + "</td></tr>";
+    }).join("");
+    L.innerHTML = "<tr><th>Destination (PV per $1 of gain)</th><th class='num'>Hold to death</th><th class='num'>Sell now</th></tr>" +
+      rowsHtml + '<tr class="total"><td>Total</td><td class="num">$1.00</td><td class="num">$1.00</td></tr>';
+  }
+
+  /* ---------- wedge-by-horizon line chart ---------- */
+  function drawLine(p) {
+    var svg = document.getElementById("wedgeline");
+    var W = 720, H = 320, m = { l: 52, r: 128, t: 16, b: 40 };
+    var xmax = 40, ymax = Math.max(10, Math.ceil(p.tau * 100 / 10) * 10);
+    function X(t) { return m.l + (t / xmax) * (W - m.l - m.r); }
+    function Y(c) { return H - m.b - (c / ymax) * (H - m.t - m.b); }
+
+    var seriesList = [{ w: 0, label: "no wealth tax", color: cvar("--l-base") }];
+    if (p.w > 0.0005) { seriesList.push({ w: p.w, label: "wealth tax " + fmtP(p.w, 1), color: cvar("--l-dial") }); }
+
+    var out = [];
+    for (var g = 0; g <= ymax; g += ymax / 5) {
+      out.push('<line x1="' + m.l + '" y1="' + Y(g) + '" x2="' + (W - m.r) + '" y2="' + Y(g) + '" stroke="' + cvar("--grid") + '" stroke-width="1"></line>');
+      out.push('<text x="' + (m.l - 8) + '" y="' + (Y(g) + 4) + '" font-size="11" text-anchor="end" fill="' + cvar("--muted") + '" font-variant-numeric="tabular-nums">' + g.toFixed(0) + "¢</text>");
+    }
+    for (var t = 0; t <= xmax; t += 10) {
+      out.push('<text x="' + X(t) + '" y="' + (H - m.b + 18) + '" font-size="11" text-anchor="middle" fill="' + cvar("--muted") + '">' + t + "</text>");
+    }
+    out.push('<line x1="' + m.l + '" y1="' + Y(0) + '" x2="' + (W - m.r) + '" y2="' + Y(0) + '" stroke="' + cvar("--axis") + '" stroke-width="1"></line>');
+    out.push('<text x="' + (m.l + (W - m.l - m.r) / 2) + '" y="' + (H - 6) + '" font-size="11" text-anchor="middle" fill="' + cvar("--muted") + '">years until death</text>');
+
+    seriesList.forEach(function (s) {
+      var pts = [];
+      for (var tt = 0; tt <= xmax; tt++) {
+        pts.push(X(tt).toFixed(1) + "," + Y(100 * wedgeAt({ tau: p.tau, e: p.e, w: s.w }, tt)).toFixed(1));
+      }
+      out.push('<polyline points="' + pts.join(" ") + '" fill="none" stroke="' + s.color + '" stroke-width="2" stroke-linejoin="round"></polyline>');
+      var endY = Y(100 * wedgeAt({ tau: p.tau, e: p.e, w: s.w }, xmax));
+      out.push('<text x="' + (W - m.r + 8) + '" y="' + (endY + 4) + '" font-size="11.5" font-weight="600" fill="' + s.color + '">' + s.label + "</text>");
+    });
+
+    // marker at dialed T on the dialed series
+    var cur = seriesList[seriesList.length - 1];
+    var cy = 100 * wedgeAt(p, p.T);
+    out.push('<circle cx="' + X(p.T) + '" cy="' + Y(cy) + '" r="5" fill="' + cur.color + '" stroke="' + cvar("--card") + '" stroke-width="2"></circle>');
+
+    // hover crosshair
+    out.push('<rect id="wl-hit" x="' + m.l + '" y="' + m.t + '" width="' + (W - m.l - m.r) + '" height="' + (H - m.t - m.b) + '" fill="transparent"></rect>');
+    out.push('<line id="wl-cross" x1="0" y1="' + m.t + '" x2="0" y2="' + (H - m.b) + '" stroke="' + cvar("--axis") + '" stroke-width="1" stroke-dasharray="3 3" visibility="hidden"></line>');
+    svg.innerHTML = out.join("");
+
+    var hit = svg.getElementById ? svg.getElementById("wl-hit") : svg.querySelector("#wl-hit");
+    var cross = svg.querySelector("#wl-cross");
+    hit.addEventListener("mousemove", function (ev) {
+      var box = svg.getBoundingClientRect();
+      var fx = (ev.clientX - box.left) * (W / box.width);
+      var tt = Math.round(((fx - m.l) / (W - m.l - m.r)) * xmax);
+      tt = Math.max(0, Math.min(xmax, tt));
+      cross.setAttribute("x1", X(tt)); cross.setAttribute("x2", X(tt));
+      cross.setAttribute("visibility", "visible");
+      var html = "<strong>" + tt + " years to death</strong>";
+      seriesList.forEach(function (s) {
+        html += "<br>" + s.label + ": " + (100 * wedgeAt({ tau: p.tau, e: p.e, w: s.w }, tt)).toFixed(1) + "¢";
+      });
+      showTip(html, ev.clientX, ev.clientY);
+    });
+    hit.addEventListener("mouseleave", function () { cross.setAttribute("visibility", "hidden"); hideTip(); });
+
+    document.getElementById("line-legend").innerHTML = seriesList.map(function (s) {
+      return '<span class="key"><span class="swatch" style="background:' + s.color + '"></span>' + s.label + "</span>";
+    }).join("") + '<span class="key">● marker = dialed horizon</span>';
+  }
+
+  /* ---------- response tiles ---------- */
+  function drawTiles(p) {
+    var wedge = wedgeAt(p, p.T);
+    var dW = p.tau - wedge;                        // wedge reduction vs no-death-tax world
+    var mult = Math.exp(ETA * dW);
+    var elas = p.e * ETA * p.tau * Math.pow(1 - p.w, p.T);
+
+    document.getElementById("t-wedge").textContent = fmtC(wedge);
+    document.getElementById("t-wedge-s").innerHTML =
+      "per $1 of gain, vs " + fmtC(p.tau) + " if death taxes left this margin alone. Estate tax claws back " +
+      fmtC(p.tau * p.e * Math.pow(1 - p.w, p.T)) + "; wealth-tax custody fees eat " + fmtC(p.tau * (1 - Math.pow(1 - p.w, p.T))) + ".";
+
+    document.getElementById("t-real").textContent = "+" + ((mult - 1) * 100).toFixed(0) + "%";
+    document.getElementById("t-real-s").textContent =
+      "realizations rise as the wedge falls: exp(η × Δwedge) with η = 2.48, the production calibration.";
+
+    document.getElementById("t-elas").textContent = elas.toFixed(2);
+    document.getElementById("t-elas-s").innerHTML =
+      "toy value at these dials. Auten–Joulfaian (2001) estimate <strong>0.36</strong> from 1982 probate data (0.29–0.63 across specifications) — same sign, and larger, since they also capture the consumption-vs-bequest margin.";
+  }
+
+  function legendInit() {
+    document.getElementById("bar-legend").innerHTML = segs.map(function (s) {
+      return '<span class="key"><span class="swatch" style="background:' + cvar(s.cssVar) + '"></span>' + s.label + "</span>";
+    }).join("");
+  }
+
+  function render() {
+    var p = params();
+    document.getElementById("tau-v").textContent = fmtP(p.tau, 1);
+    document.getElementById("est-v").textContent = fmtP(p.e, 0);
+    document.getElementById("wt-v").textContent = fmtP(p.w, 1);
+    document.getElementById("yrs-v").textContent = p.T;
+    legendInit();
+    drawBars(p); drawLine(p); drawTiles(p);
+  }
+
+  ["tau", "est", "wt", "yrs"].forEach(function (id) {
+    els[id].addEventListener("input", render);
+  });
+  var mq = window.matchMedia("(prefers-color-scheme: dark)");
+  if (mq.addEventListener) { mq.addEventListener("change", render); }
+  new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  render();
+})();
+</script>

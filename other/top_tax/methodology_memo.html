@@ -30,6 +30,10 @@ h4{font-size:.98rem; font-weight:600; font-style:italic; margin:1.7rem 0 .4rem}
 p{margin:.8rem 0}
 strong{font-weight:600}
 em{font-style:italic}
+
+.eq{margin:1.3rem 0; text-align:center; font-size:1.04em; line-height:1.45; overflow-x:auto}
+.eq .ub{display:inline-block; text-align:center; vertical-align:top}
+.eq .lbl{display:block; font-size:.66rem; font-family:ui-sans-serif,system-ui,sans-serif; color:var(--muted); letter-spacing:.04em; margin-top:.12rem}
 ol,ul{padding-left:1.5rem; margin:.8rem 0}
 li{margin:.55rem 0}
 
@@ -136,11 +140,35 @@ realize or defer, embedded in the microsimulation. Households are grouped into
 representative cohorts by age and wealth. Each agent weighs the tax costs of
 selling now against the value of deferral, which depends on the current
 capital gains rate, expected future rates, what happens to the gain at death,
-and expected time until death. Wealth and estate taxes also affect the value
-of deferral. The decision is structured as a Bellman problem where each dollar
-of unrealized gain carries a non-tax motive for selling (e.g., liquidity or
-rebalancing) and the holder sells when that motive outweighs the tax wedge of
-realizing now rather than deferring. Behavior responds on two
+and expected time until death. Estate and wealth taxes also enter the
+deferral value calculation, since selling assets triggers tax and reduces the
+size of taxable net worth during life (wealth tax) or death (estate
+tax).</p>
+
+<p>The decision is structured as a Bellman problem. Each dollar of unrealized
+gain carries a non-tax motive for selling (e.g., liquidity or rebalancing),
+summarized by a benefit <em>b</em>, and the value of the marginal unrealized
+dollar in year <em>t</em> reflects its holder's choice between realizing it
+and continuing to defer:</p>
+
+<div class="eq"><em>W<sub>t</sub></em>&nbsp;=&nbsp;E<sub><em>b</em></sub>&hairsp;[&thinsp;max{&thinsp;<span class="ub"><span><em>b</em> &minus; <em>&tau;<sub>t</sub></em></span><span class="lbl">realize now</span></span>&thinsp;,&ensp;<span class="ub"><span><em>&beta;<sub>t</sub></em>&hairsp;(1 &minus; <em>m<sub>t</sub></em>)(<em>W</em><sub><em>t</em>+1</sub> &minus; <em>h<sub>t</sub></em>) + <em>&beta;<sub>t</sub></em>&hairsp;<em>m<sub>t</sub></em>&hairsp;<em>F<sub>t</sub></em></span><span class="lbl">defer</span></span>&thinsp;}&hairsp;]</div>
+
+<p>Realizing collects the benefit and pays tax at this year's capital-gains
+rate <em>&tau;<sub>t</sub></em>. Deferring carries the dollar into next year's
+version of the same problem (the continuation value
+<em>W</em><sub><em>t</em>+1</sub>, discounted at
+<em>&beta;<sub>t</sub></em>) if the holder survives (mortality
+<em>m<sub>t</sub></em>), less the wealth-tax cost <em>h<sub>t</sub></em> of
+carrying the deferred position another year; if the holder dies, the dollar
+meets the tax treatment of gains at death, whose value <em>F<sub>t</sub></em>
+runs from full forgiveness under step-up basis to nothing under deemed
+realization, net of the estate-tax offset. The holder sells when the non-tax
+motive outweighs the tax wedge of realizing now rather than deferring, and
+expected future rates enter through <em>W</em><sub><em>t</em>+1</sub>, which
+is solved backward from the end of life. The technical appendix derives the
+realization rule from this equation and defines each term precisely.</p>
+
+<p>Behavior responds on two
 margins&mdash;a permanent margin that sets the level of realizations, and a
 short-run timing margin that lets a calibrated fraction of realizations shift
 a year in either direction around an anticipated rate change&mdash;mirroring
@@ -285,8 +313,8 @@ responds to rates of return.)</p>
 <tr><td>Concealment share of the avoidance response: marketable / closely held</td><td class="val">100% / 50%</td><td>Marketable assets have observable prices; private ones do not</td></tr>
 <tr><td>Reported-estate net-of-tax elasticity</td><td class="val">0.16</td><td>Kopczuk and Slemrod (2001); range 0.10&ndash;0.22</td></tr>
 <tr class="group"><td colspan="3">Mechanical channels</td></tr>
-<tr><td>Share of new tax paid out of saving, by wealth rank</td><td class="val">0.10 &rarr; 0.80</td><td>Consumption responses by wealth (Straub 2019 and related)</td></tr>
-<tr><td>Corporate incidence constants (e.g., supernormal share 0.375)</td><td class="val">various</td><td>Provisional placeholders pending direct measurement</td></tr>
+<tr><td>Share of new tax paid out of saving, by wealth rank</td><td class="val">0.04 &rarr; 0.80</td><td>Consumption responses by wealth (Straub 2019 and related)</td></tr>
+<tr><td>Corporate incidence constants (e.g., normal-return share 0.375)</td><td class="val">various</td><td>Provisional placeholders pending direct measurement</td></tr>
 </tbody></table></div>
 
 <h2><span class="no">4.</span>Measuring the burden</h2>

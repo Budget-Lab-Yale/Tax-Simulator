@@ -52,7 +52,17 @@ With this data in hand, we build several new modules in this simulator. These mo
 
 #### _Behavioral response:_ Realizing or deferring gains
 
-The biggest modeling innovation in this work is our new treatment of capital gains realization behavior: a structural model of the decision to realize or defer, embedded in the microsimulation. Households are grouped into representative cohorts by age, with each cohort's tax rates, mortality, and estate-tax exposure weighted by holdings of unrealized gains, so the cohort parameters reflect the wealthy households who actually hold the gains. Each agent weighs the tax costs of selling now against the value of deferral, which depends on the current capital gains rate, expected future rates, what happens to the gain at death, and expected time until death. Wealth and estate taxes also enter the value of deferral. An annual wealth tax falls on the deferred liability every year it is carried, and because income tax paid at death shrinks the taxable estate, the estate tax partly offsets the cost of taxing gains at death. The decision is structured as a Bellman problem where each dollar of unrealized gain carries a non-tax motive for selling (e.g., liquidity or rebalancing) and the holder sells when that motive outweighs the tax wedge of realizing now rather than deferring. Behavior responds on two margins — a permanent margin that sets the level of realizations, and a short-run timing margin that lets a calibrated fraction of realizations shift a year in either direction around an anticipated rate change — mirroring the permanent/transitory distinction in the empirical literature. We calibrate the model so that responsiveness matches these elasticities under current law. The result, for a given policy change, is an implied yearly path of the change in realizations for each age group, distributed down to simulated tax units.
+The biggest modeling innovation in this work is our new treatment of capital gains realization behavior: a structural model of the decision to realize or defer, embedded in the microsimulation. Households are grouped into representative cohorts by age, with each cohort's tax rates, mortality, and estate-tax exposure weighted by holdings of unrealized gains, so the cohort parameters reflect the wealthy households who actually hold the gains. Each agent weighs the tax costs of selling now against the value of deferral, which depends on the current capital gains rate, expected future rates, what happens to the gain at death, and expected time until death. Estate and wealth taxes also enter the deferral value calculation, since selling assets triggers tax and reduces the size of taxable net worth during life (wealth tax) or death (estate tax). 
+
+The decision is structured as a Bellman problem. Each dollar of unrealized gain carries a non-tax motive for selling (e.g., liquidity or rebalancing), summarized by a benefit $b$, and the value of the marginal unrealized dollar in year $t$ reflects its holder's choice between realizing it and continuing to defer:
+
+$$
+W_t \;=\; \mathbb{E}_b\!\left[\,\max\Big\{\;\underbrace{b \,-\, \tau_t}_{\text{realize now}}\;,\;\; \underbrace{\beta_t\,(1-m_t)\,\big(W_{t+1} - h_t\big) \;+\; \beta_t\, m_t\, F_t}_{\text{defer}}\;\Big\}\right].
+$$
+
+Realizing collects the benefit and pays tax at this year's capital-gains rate $\tau_t$. Deferring carries the dollar into next year's version of the same problem (the continuation value $W_{t+1}$, discounted at $\beta_t$) if the holder survives (mortality $m_t$), less the wealth-tax cost $h_t$ of carrying the deferred position another year; if the holder dies, the dollar meets the tax treatment of gains at death, whose value $F_t$ runs from full forgiveness under step-up basis to nothing under deemed realization, net of the estate-tax offset. The holder sells when the non-tax motive outweighs the tax wedge of realizing now rather than deferring, and expected future rates enter through $W_{t+1}$, which is solved backward from the end of life. Appendix A.1 derives the realization rule from this equation and defines each term precisely.
+
+Behavior responds on two margins — a permanent margin that sets the level of realizations, and a short-run timing margin that lets a calibrated fraction of realizations shift a year in either direction around an anticipated rate change — mirroring the permanent/transitory distinction in the empirical literature. We calibrate the model so that responsiveness matches these elasticities under current law. The result, for a given policy change, is an implied yearly path of the change in realizations for each age group, distributed down to simulated tax units.
 
 This structure has three benefits over the old reduced-form approach where we'd simply apply an elasticity to the baseline path of gains. The first is endogenous behavior. Both the level of realizations and the realization elasticity itself change with the policy environment, with no additional assumptions (such as judgmentally adjusting the elasticity for a change in step-up). The second is accounting consistency. The model tracks the stock of unrealized gains, so gains that go unrealized when taxes change do not disappear — they resurface later as sales during life or gains held at death. The third is a byproduct: an estimated tax benefit of deferral used in other behavioral calculations, like the business entity choice (where the value of a dollar in a C corp depends on the value of deferral).
 
@@ -162,41 +172,47 @@ Because unrealized gains are heavily concentrated, every cohort-level input — 
 
 #### The agent's problem
 
-Consider one dollar of unrealized gain. Its holder has some non-tax motive for selling — liquidity, rebalancing, consumption — summarized by a reservation benefit $b \geq 0$ drawn from an exponential distribution. The dollar is sold when $b$ exceeds the tax cost of realizing now rather than deferring, so the share of the stock realized in a year, $r$, is the survival function of that distribution evaluated at the tax wedge. Equivalently, the cohort chooses $r$ subject to a realization cost $C(r)$ whose marginal is
+Consider one dollar of unrealized gain in year $t$. Its holder has some non-tax motive for selling (e.g., liquidity, rebalancing, or consumption) summarized by a reservation benefit $b \geq 0$ drawn from an exponential distribution. The value of the marginal unrealized dollar, $W_t$, satisfies the Bellman equation
+
+$$
+W_t \;=\; \mathbb{E}_b\!\left[\,\max\Big\{\;\underbrace{b \,-\, \tau_t}_{\text{realize now}}\;,\;\; \underbrace{\beta_t\,(1-m_t)\,\big(W_{t+1} - h_t\big) \;+\; \beta_t\, m_t\, F_t}_{\text{defer}}\;\Big\}\right],
+$$
+
+where $\tau_t$ is the current marginal tax rate on long-term gains (measured through the tax calculator, so it embeds surtaxes and interactions), $\beta_t$ is the real discount factor built from the 10-year Treasury rate deflated by CPI inflation year by year, $m_t$ is mortality, $W_{t+1}$ is next year's continuation value of an unrealized dollar (the same problem solved one year and one age ahead; age subscripts are suppressed throughout), $h_t$ is the annual wealth-tax cost of carrying the deferred position, and $F_t$ is the value of the tax treatment at death. Realizing collects the benefit and pays this year's tax; deferring carries the dollar forward into the same choice next year if the holder survives, and into the death treatment if not.
+
+The dollar is sold when the realize branch wins — when $b$ exceeds the tax cost of realizing now rather than deferring, which is the tax paid today plus the deferral value forgone:
+
+$$
+MC_t \;=\; \tau_t \;+\; \beta_t\,(1-m_t)\,\big(W_{t+1} - h_t\big) \;+\; \beta_t\, m_t\, F_t.
+$$
+
+The share of the stock realized in a year, $r$, is therefore the survival function of the benefit distribution evaluated at this wedge. Equivalently, the cohort chooses $r$ subject to a realization cost $C(r)$ whose marginal is
 
 $$
 C'(r) = \frac{1}{\eta}\,\ln\!\left(\frac{r}{r_B}\right),
 $$
 
-where $r_B$ is the cohort's baseline realization rate and $\eta$ governs response strength. The cost is zero at the margin under baseline policy, $C'(r_B) = 0$, so baseline behavior is reproduced exactly.
-
-The tax cost of realizing now rather than deferring is
+where $r_B$ is the cohort's baseline realization rate and $\eta$ governs response strength. The cost is zero at the margin under baseline policy, $C'(r_B) = 0$, so baseline behavior is reproduced exactly. Setting the marginal non-tax benefit equal to the marginal cost gives a closed form for the scenario realization rate:
 
 $$
-MC \;=\; \tau \;+\; \beta\,(1-m)\,\big(W_{\text{next}} - h\big) \;+\; \beta\, m\, F,
+r \;=\; r_B \,\exp\!\big(-\eta\,(MC_t - MC_{B,t})\big), \qquad \text{capped at } 1,
 $$
 
-where $\tau$ is the current marginal tax rate on long-term gains (measured through the tax calculator, so it embeds surtaxes and interactions), $\beta$ is the real discount factor built from the 10-year Treasury rate deflated by CPI inflation year by year, $m$ is mortality, $W_{\text{next}}$ is next year's continuation value of an unrealized dollar (the same problem solved one year and one age ahead), $h$ is the annual wealth-tax cost of carrying the deferred position, and $F$ is the value of the tax treatment at death. Setting the marginal non-tax benefit equal to the marginal cost gives a closed form for the scenario realization rate:
-
-$$
-r \;=\; r_B \,\exp\!\big(-\eta\,(MC - MC_B)\big), \qquad \text{capped at } 1,
-$$
-
-where $MC_B$ is the marginal cost under baseline law. The response is a constant semi-elasticity in the full deferral wedge rather than in the current-year rate alone.
+where $MC_{B,t}$ is the marginal cost under baseline law. The response is a constant semi-elasticity in the full deferral wedge rather than in the current-year rate alone.
 
 #### What enters the deferral wedge
 
-Expected future rates enter through $W_{\text{next}}$, which is solved by backward induction over ages and years, so a pre-announced rate change moves behavior before it takes effect. The remaining terms are where wealth and estate taxes enter the value of deferral.
+Expected future rates enter through $W_{t+1}$, which is solved by backward induction over ages and years, so a pre-announced rate change moves behavior before it takes effect. The remaining terms are where wealth and estate taxes enter the value of deferral.
 
 The death value is
 
 $$
-F \;=\; (1 - c_\varphi)\,\tau\,(1 - e).
+F_t \;=\; (1 - c_\varphi)\,\tau_t\,(1 - e).
 $$
 
-Here $c_\varphi$ is the share of the gain's tax burden the holder bears at death: $0$ under step-up (death forgives the tax entirely), $1$ under deemed realization (death triggers the full tax, so $F = 0$ and deferral buys nothing at death), and an intermediate value under carryover, reflecting how much of the heir's eventual liability the holder internalizes. The regime can differ by asset class, and $c_\varphi$ is the gain-weighted mix; gains bequeathed to charity escape tax under any regime and are netted out. The factor $(1 - e)$ is the estate-tax offset: capital-gains tax due at death is deductible from the taxable estate, so each dollar of forgiven gains tax is worth only $(1 - e)$, where $e$ is the household's marginal estate rate. Below the estate exemption, $e = 0$ and the term is inert.
+Here $c_\varphi$ is the share of the gain's tax burden the holder bears at death: $0$ under step-up (death forgives the tax entirely), $1$ under deemed realization (death triggers the full tax, so $F_t = 0$ and deferral buys nothing at death), and an intermediate value under carryover, reflecting how much of the heir's eventual liability the holder internalizes. The regime can differ by asset class, and $c_\varphi$ is the gain-weighted mix; gains bequeathed to charity escape tax under any regime and are netted out. The factor $(1 - e)$ is the estate-tax offset: capital-gains tax due at death is deductible from the taxable estate, so each dollar of forgiven gains tax is worth only $(1 - e)$, where $e$ is the household's marginal estate rate. Below the estate exemption, $e = 0$ and the term is inert.
 
-The carrying cost $h$ is the product of the household's marginal wealth-tax rate and its capital-gains rate, averaged with gain weights. Realizing today removes the tax from the wealth base, while deferring keeps the full pre-tax dollar in the base, so each year of continued deferral costs the wealth tax on the deferred liability. An annual wealth tax therefore raises realizations even with no change in the capital-gains schedule.
+The carrying cost $h_t$ is the product of the household's marginal wealth-tax rate and its capital-gains rate, averaged with gain weights. Realizing today removes the tax from the wealth base, while deferring keeps the full pre-tax dollar in the base, so each year of continued deferral costs the wealth tax on the deferred liability. An annual wealth tax therefore raises realizations even with no change in the capital-gains schedule.
 
 The 25 percent valuation and compliance discount under deemed realization applies to the revenue collected from gains taxed at death rather than to the holder's incentive. The deferral decision sees the full statutory burden.
 
@@ -607,6 +623,8 @@ described in Section A.6.
 ## References
 
 Agersnap, Ole, and Owen Zidar. 2021. "The Tax Elasticity of Capital Gains and Revenue-Maximizing Rates." *American Economic Review: Insights* 3 (4): 399–416.
+
+Auten, Gerald, and David Joulfaian. 2001. "Bequest Taxes and Capital Gains Realizations." *Journal of Public Economics* 81 (2): 213–229.
 
 Bakija, Jon, and Bradley T. Heim. 2011. "How Does Charitable Giving Respond to Incentives and Income? New Estimates from Panel Data." *National Tax Journal* 64 (2, Part 2): 615–650.
 
