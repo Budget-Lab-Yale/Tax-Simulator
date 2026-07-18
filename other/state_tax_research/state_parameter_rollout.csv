@@ -34,7 +34,7 @@ NH,done,done,done,todo,blocked_weights,"Narrow investment-income profile encoded
 NJ,todo,todo,todo,todo,todo,""
 NM,todo,todo,todo,todo,todo,""
 NV,in_progress,done,done,todo,blocked_weights,"No broad IIT; zero-tax stub encoded"
-OH,todo,todo,todo,todo,todo,""
+OH,done,done,done,todo,blocked_weights,"IT 1040 baseline TY2017-2025 + enacted 2026 flat 2.75% (HB 96); base-amount rate schedules w/ published cliffs (zero-bracket base owed on first taxed dollar 2019+, 2025 $18.69 jump at 100k); FAGI base, full SS subtraction, NO deductions; income-tiered exemptions (MAGI base 2019+, HB 96 750k/500k denial); BID modeled (250k/125k carve-out + flat 3% + MAGI addback gating all means tests); ordered credit stack per 5747.98 (retirement table, senior $50, CDCTC 100%/25%, $20/exemption cliff, JFC 20/15/10/5% capped 650, EITC 10%->30% w/ 2017-18 50%-of-tax limitation). Known-differences: school-district/municipal taxes Phase 7, uniformed-services retirement omitted, JFC qualifying income = earned proxy, BID excludes rents, senior-credit filing prong unmodeled"
 OK,todo,todo,todo,todo,todo,""
 OR,todo,todo,todo,todo,todo,""
 PA,todo,todo,todo,todo,todo,""

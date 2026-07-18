@@ -21,7 +21,7 @@ test_state_calc = function() {
 
   law = build_state_tax_law(
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
-                'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT'),
+                'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -925,6 +925,99 @@ test_state_calc = function() {
            label = 'UT-7b retirement credit cohort: ineligible at 71')
 
   #--------------------------------------------------------------------------
+  # Ohio (IT 1040)
+  #--------------------------------------------------------------------------
+
+  # OH-1: 2024 single, OAGI 60,000. Exemption tier 2 (40-80k) = 2,150 ->
+  # TI = 57,850 -> tax = 360.69 + 2.75% x 31,800 = 1,235.19. $20 credit
+  # denied (base 57,850 > 30,000). Liab = 1,235.19
+  run_case('OH', 2024, list(agi = 60000),
+           expect = list(st_agi = 60000, st_exempt = 2150,
+                         liab_st_iit = 360.69 + 0.0275 * 31800),
+           label = 'OH-1 base-amount schedule')
+
+  # OH-2: zero-bracket cliff, 2024 single. OAGI 28,000: TI = 25,600 <=
+  # 26,050 -> tax 0. OAGI 30,000: TI = 27,600 -> tax = 360.69 + 2.75% x
+  # 1,550 = 403.315; $20 credit allowed (27,600 < 30,000) -> liab 383.315
+  run_case('OH', 2024, list(agi = 28000),
+           expect = list(liab_st_iit = 0, st_filer = 1),
+           label = 'OH-2a zero-bracket: no tax')
+  run_case('OH', 2024, list(agi = 30000),
+           expect = list(st_exempt_credit = 20,
+                         liab_st_iit = 360.69 + 0.0275 * 1550 - 20),
+           label = 'OH-2b zero-bracket cliff + $20 credit')
+
+  # OH-3: 2025 internal discontinuity at 100,000. Single OAGI 105,000:
+  # exemption 1,900 -> TI = 103,100 -> tax = 2,394.32 (statutory base, not
+  # the 2,375.63 continuation) + 3.125% x 3,100 = 2,491.195
+  run_case('OH', 2025, list(agi = 105000),
+           expect = list(liab_st_iit = 2394.32 + 0.03125 * 3100),
+           label = 'OH-3 2025 statutory base jump at 100k')
+
+  # OH-4: 2024 MFJ, both 67. Wages 30,000 + 20,000, pensions 6,000,
+  # taxable SS 15,000 (fully subtracted): OAGI = 56,000. Exemptions
+  # 2 x 2,150 = 4,300 -> TI = 51,700 -> tax = 360.69 + 2.75% x 25,650 =
+  # 1,066.065. Retirement credit 130 (income 6,000 in the 5-8k band;
+  # 51,700 < 100k), senior 50. $20 credit denied. JFC: remaining =
+  # 886.065, tier 50-75k -> 10% = 88.6065 (< 650 cap).
+  # Liab = 886.065 - 88.6065 = 797.4585
+  run_case('OH', 2024,
+           list(agi = 71000, filing_status = 2, age1 = 67, age2 = 67,
+                wages1 = 30000, wages2 = 20000, ei1 = 30000, ei2 = 20000,
+                txbl_ss = 15000, gross_ss = 18000, txbl_pens_dist = 6000),
+           expect = list(st_agi = 56000, st_retire_credit = 130,
+                         st_senior_credit = 50, st_jfc = 88.6065,
+                         liab_st_iit = 797.4585),
+           label = 'OH-4 retirement/senior/JFC ordering')
+
+  # OH-5: business income deduction. 2024 single, Schedule C 400,000:
+  # BID = 250,000 -> OAGI = 150,000; excess 150,000. Exemption: MAGI =
+  # 400,000 -> 1,900 -> TI = 148,100, all business (nonbusiness income is
+  # zero, exemptions offset business per 5747.02(A)(4)(b)).
+  # Tax = 3% x 148,100 = 4,443; no credits (MAGI-based tests fail)
+  run_case('OH', 2024, list(agi = 400000, sole_prop = 400000, ei1 = 400000),
+           expect = list(st_agi = 150000, st_bid = 250000,
+                         st_bus_excess = 150000,
+                         liab_st_iit = 0.03 * 148100),
+           label = 'OH-5 BID carve-out + flat 3%')
+
+  # OH-6: 2018 EITC limitation. Single, 2 deps, OAGI 30,000, federal EITC
+  # 5,000. Exemptions 3 x 2,350 = 7,050 -> TI = 22,950 -> tax = 323.41 +
+  # 2.969% x 1,200 = 359.038. $20 credit: 22,950 < 30,000 -> 60. Tax base
+  # 22,950 > 20,000 -> EITC = min(10% x 5,000, 50% x (359.038 - 60)) =
+  # 149.519. Liab = 359.038 - 60 - 149.519 = 149.519
+  run_case('OH', 2018,
+           list(agi = 30000, n_dep = 2, dep_age1 = 8, dep_age2 = 10,
+                n_dep_eitc = 2, eitc = 5000, filing_status = 4),
+           expect = list(st_exempt_credit = 60, st_eitc = 149.519,
+                         liab_st_iit = 149.519),
+           label = 'OH-6 2018 EITC 50%-limitation')
+
+  # OH-7: 2021 post-HB 110 top rate. Single OAGI 300,000: exemption 1,900
+  # -> TI = 298,100 -> tax = 3,123.05 + 3.99% x 187,450 = 10,602.305
+  run_case('OH', 2021, list(agi = 300000),
+           expect = list(liab_st_iit = 3123.05 + 0.0399 * 187450),
+           label = 'OH-7 2021 top-bracket elimination')
+
+  # OH-8: 2026 flat schedule. Single OAGI 50,000: exemption 2,150 ->
+  # TI = 47,850 -> tax = 332 + 2.75% x 21,800 = 931.50
+  run_case('OH', 2026, list(agi = 50000),
+           expect = list(liab_st_iit = 332 + 0.0275 * 21800),
+           label = 'OH-8 2026 flat 2.75%')
+
+  # OH-9: 2017 CDCTC tiers (OAGI base pre-2019). HoH, 1 dep, OAGI 30,000,
+  # federal CDCTC 1,200: 25% tier (20k <= OAGI < 40k) -> 300. Exemptions
+  # 2 x 2,300 = 4,600 -> TI = 25,400 -> tax = 317.48 + 2.969% x 4,050 =
+  # 437.725. $20 credit: 25,400 < 30,000 -> 40.
+  # Liab = 437.725 - 300 - 40 = 97.725
+  run_case('OH', 2017,
+           list(agi = 30000, filing_status = 4, n_dep = 1, dep_age1 = 4,
+                care_exp = 3000, cdctc_nonref = 1200),
+           expect = list(st_cdctc = 300, st_exempt_credit = 40,
+                         liab_st_iit = 97.725),
+           label = 'OH-9 2017 CDCTC tiers + $20 credit')
+
+  #--------------------------------------------------------------------------
   # Structural smoke test: a coarse grid of units through every broad-IIT
   # baseline state and several years must produce finite, non-NA results
   #--------------------------------------------------------------------------
@@ -956,7 +1049,7 @@ test_state_calc = function() {
     })
 
   for (st in c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI', 'CA', 'ND',
-               'SC', 'CT', 'VA', 'UT')) {
+               'SC', 'CT', 'VA', 'UT', 'OH')) {
     for (yr in c(2017, 2021, 2024, 2026, 2030)) {
       law_slice = law %>%
         filter(state == st, year == yr) %>%
@@ -971,7 +1064,7 @@ test_state_calc = function() {
       )
     }
   }
-  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 15 states x 5 years)')
+  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 16 states x 5 years)')
 
   # Subset-states regression: a law table built WITHOUT a given state lacks
   # that state's feature columns entirely (not just NA cells); the calculator

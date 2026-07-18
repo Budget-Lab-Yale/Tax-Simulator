@@ -1,0 +1,167 @@
+---
+# Ohio nonrefundable credit stack (Schedule of Credits), ordered by ORC
+# 5747.98: retirement income credit -> senior citizen credit -> CDCTC ->
+# $20 personal exemption credit -> joint filing credit -> EITC. The JFC is
+# a share of tax remaining after the credits preceding it; the 2017-18
+# EITC limitation uses the same remaining-tax quantity (both computed in
+# calc_st_credits). Means-test income base: Ohio income tax base (OAGI
+# less exemptions, enum 6) in 2017-18; MAGI less exemptions (enum 8,
+# HB 166) from 2019. Omitted credits: adoption, campaign contribution
+# (repealed after TY2025 by HB 96), displaced worker, home school/SGO/
+# nonchartered tuition, lump-sum retirement/distribution elections.
+
+#-------------------------------------------------------------
+# $20 personal exemption credit (ORC 5747.022): $20 per
+# exemption when the means-test income is under $30,000 (cliff)
+#-------------------------------------------------------------
+
+exempt_credit_style:
+  value: 1
+  reference: 'ORC 5747.022; Schedule of Credits line 9, 2017-2025'
+exempt_credit_personal:
+  value: 20
+  reference: 'ORC 5747.022: twenty dollars times the number of exemptions'
+exempt_credit_dep:
+  value: 20
+  reference: 'ORC 5747.022: same amount per dependent exemption'
+exempt_credit_po_thresh:
+  value: 29999
+  reference: 'ORC 5747.022: allowed only if the income measure is LESS THAN $30,000 (cliff encoded as denial above $29,999; incomes are whole-dollar on the form)'
+exempt_credit_po_width:
+  value: 1
+  reference: 'One-step cliff'
+exempt_credit_po_per_step:
+  value: 999999
+  reference: 'Finite sentinel: full denial above the threshold'
+exempt_credit_po_base:
+  value:
+    '2017': 6
+    '2019': 8
+  reference: 'Ohio income tax base (line 5) 2017-18 (2017 booklet Sch. of Credits line 9); MAGI less exemptions from 2019 (HB 166; 2019/2025 booklets)'
+
+#-------------------------------------------------------------
+# Joint filing credit (ORC 5747.05(E)): 20/15/10/5% of tax
+# after preceding credits by income tier, max $650; each spouse
+# needs $500+ of qualifying income (earned-income proxy)
+#-------------------------------------------------------------
+
+jfc_bounds:
+  value: [25000.0, 50000.0, 75000.0, 999999999999.0]
+  reference: 'ORC 5747.05(E); Schedule of Credits JFC table ($25,000 or less / $25,001-$50,000 / $50,001-$75,000 / more than $75,000), 2017-2025'
+jfc_rates:
+  value: [0.20, 0.15, 0.10, 0.05]
+  reference: 'ORC 5747.05(E); 20/15/10/5 percent of tax net of preceding credits'
+jfc_cap:
+  value: 650
+  reference: 'ORC 5747.05(E): maximum six hundred fifty dollars per return, all years'
+jfc_min_each_income:
+  value: 500
+  reference: 'ORC 5747.05(E): each spouse must have >= $500 of qualifying income (OAGI excl. interest, dividends/distributions, capital gains, rents/royalties and Schedule of Adjustments deductions); earned-income proxy (known-difference)'
+jfc_income_base:
+  value:
+    '2017': 6
+    '2019': 8
+  reference: 'Ohio income tax base (line 5) 2017-18; MAGI less exemptions from 2019 (HB 166)'
+jfc_magi_limit:
+  value:
+    '2017': 999999999999
+    '2025': 750000
+    '2026': 500000
+  reference: 'HB 96 (2025): JFC denied at MAGI >= $750,000 (2025 booklet top tier "$75,001-$749,999"); $500,000 from 2026 (LSC HB 96; boundary semantics TBD)'
+jfc_magi_limit_base:
+  value: 7
+  reference: 'Modified adjusted gross income (OAGI + BID, ORC 5747.01(JJ))'
+
+#-------------------------------------------------------------
+# Retirement income credit (ORC 5747.055(B)): banded amount by
+# qualifying retirement income (pensions + IRA distributions in
+# OAGI), max $200/return, denied at/above $100,000
+#-------------------------------------------------------------
+
+retire_credit_bounds:
+  value: [500.0, 1500.0, 3000.0, 5000.0, 8000.0, 999999999999.0]
+  reference: 'ORC 5747.055(B) / booklet Table 2: over $500 / $1,500 / $3,000 / $5,000 / $8,000 band uppers, 2017-2025'
+retire_credit_amounts:
+  value: [0, 25, 50, 80, 130, 200]
+  reference: 'ORC 5747.055(B): $25/$50/$80/$130/$200 by band; $0 at or below $500'
+retire_credit_income_limit:
+  value: 100000
+  reference: 'ORC 5747.055(B); Schedule of Credits line 2 eligibility: income measure less than $100,000'
+retire_credit_income_base:
+  value:
+    '2017': 6
+    '2019': 8
+  reference: 'Ohio income tax base (line 5) 2017-18; MAGI less exemptions from 2019 (HB 166)'
+
+#-------------------------------------------------------------
+# Senior citizen credit (ORC 5747.055(F)): $50 per return,
+# age 65+, same $100,000 means test
+#-------------------------------------------------------------
+
+senior_credit_amount:
+  value: 50
+  reference: 'ORC 5747.055(F): fifty dollars per return (once per return even if both spouses 65+), 2017-2025'
+senior_credit_min_age:
+  value: 65
+  reference: 'ORC 5747.055(F): 65 or older during the taxable year'
+senior_credit_income_limit:
+  value: 100000
+  reference: 'ORC 5747.055(F); same means test as the retirement income credit'
+senior_credit_income_base:
+  value:
+    '2017': 6
+    '2019': 8
+  reference: 'Ohio income tax base (line 5) 2017-18; MAGI less exemptions from 2019 (HB 166)'
+
+#-------------------------------------------------------------
+# Ohio EITC (ORC 5747.71): 10% of federal (2017-18, limited to
+# 50% of remaining pre-JFC tax when the tax base exceeds
+# $20,000); 30% with the limitation repealed from 2019 (HB 62).
+# Nonrefundable in all years
+#-------------------------------------------------------------
+
+eitc_match:
+  value:
+    '2017': 0.10
+    '2019': 0.30
+  reference: 'ORC 5747.71; 2017-18 booklets (10%); 2019 booklet "expanded... equal to 30%" (HB 62, eff. 7/3/2019)'
+eitc_refundable:
+  value: 0
+  reference: 'ORC 5747.71: nonrefundable, all years 2017-2025'
+eitc_liab_cap_thresh:
+  value:
+    '2017': 20000
+    '2019': 999999999999
+  reference: '2017-18: if Ohio income tax base > $20,000, credit limited to 50% of tax after credits preceding the JFC (2018 worksheet); limitation repealed 2019'
+eitc_liab_cap_share:
+  value: 0.5
+  reference: '2017-18 Schedule of Credits EITC worksheet: lesser of 10% of federal EITC or 50% of line 11'
+eitc_liab_cap_base:
+  value: 6
+  reference: 'Ohio income tax base (OAGI less exemptions, IT 1040 line 5)'
+
+#-------------------------------------------------------------
+# CDCTC (ORC 5747.054): 100% of the federal credit if the
+# income measure is under $20,000; 25% if under $40,000; else 0
+#-------------------------------------------------------------
+
+cdctc_style:
+  value: 1
+  reference: 'ORC 5747.054; share-of-federal-credit structure via the banded share table'
+cdctc_share_agi_bounds:
+  value: [0, 20000, 40000, 40000, 40000, 40000]
+  reference: 'ORC 5747.054: less than $20,000 / less than $40,000 / otherwise zero (bounds padded to the 6-anchor family)'
+cdctc_share_start:
+  value: [1.0, 0.25, 0.0, 0.0, 0.0, 0.0]
+  reference: 'ORC 5747.054: 100% under $20,000; 25% under $40,000'
+cdctc_share_end:
+  value: [1.0, 0.25, 0.0, 0.0, 0.0, 0.0]
+  reference: 'Step schedule (no interpolation within bands)'
+cdctc_share_income_base:
+  value:
+    '2017': 2
+    '2019': 7
+  reference: 'OAGI (line 3) 2017-18; modified AGI from 2019 (ORC 5747.054 as amended by HB 166)'
+cdctc_refundable:
+  value: 0
+  reference: 'ORC 5747.054: nonrefundable'

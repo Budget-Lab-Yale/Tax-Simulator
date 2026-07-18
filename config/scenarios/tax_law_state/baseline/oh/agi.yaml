@@ -1,0 +1,51 @@
+---
+# Ohio AGI (IT 1040 line 3): federal AGI plus/minus the Schedule of
+# Adjustments (ORC 5747.01(A)). Modeled items: full Social Security
+# subtraction, state/municipal refund subtraction, US-obligation interest,
+# non-Ohio municipal interest addition, and the business income deduction
+# (carve-out). Omitted (see source packet): uniformed-services retirement,
+# disability/survivor benefits, 529 contributions, medical expenses,
+# railroad retirement, military pay, depreciation addbacks, PTE addbacks.
+# Ohio TAXES unemployment compensation (no subtraction exists).
+# Conformity: fixed-date via ORC 5701.11 but updated at least annually with
+# taxpayer election for the prior version; treated as rolling (group 0)
+# like KY/IN/MI.
+
+filing_status_mapper:
+  bus_ded_cap:
+    '1': bus_cap_full
+    '2': bus_cap_full
+    '3': bus_cap_full / 2
+    '4': bus_cap_full
+
+start_point:
+  value: 1
+  reference: 'IT 1040 line 1 federal adjusted gross income; 2017-2025 booklets'
+ss_sub_share:
+  value: 1
+  reference: 'ORC 5747.01(A)(5); Schedule of Adjustments SS deduction line, verified in every booklet 2017-2025 (2017 Sch. A line 14; 2025 line 16)'
+sub_state_ref:
+  value: 1
+  reference: 'ORC 5747.01(A)(11)(a); state/municipal income tax overpayments deduction (2017 line 13; 2025 line 15)'
+sub_us_int:
+  value: 1
+  reference: 'ORC 5747.01(A)(3); interest/dividends on U.S. obligations deduction (2017 line 18; 2025 line 26)'
+add_exempt_int:
+  value: 1
+  reference: 'Non-Ohio state/local government interest and dividends addition (2017 Sch. A line 1; 2025 line 1)'
+own_state_exempt:
+  value: 1
+  reference: 'Ohio public obligation interest remains exempt; only non-Ohio municipal interest is added back'
+# Business income deduction (IT BUS; ORC 5747.01(A)(28)): 100% of the first
+# $250,000 ($125,000 MFS) of business income deducted; the excess is taxed
+# at the flat 3% rate (ord.yaml bus_rate) and added back into modified
+# adjusted gross income (5747.01(JJ)) for the 2019+ means tests (income
+# base enums 7/8). Business income proxied by Schedule C/F and pass-through
+# components; rental income and >=20%-owner compensation reclassification
+# unobserved (known-differences)
+bus_carveout:
+  value: 1
+  reference: 'ORC 5747.01(A)(28), 5747.02(A)(4); IT BUS 2017-2025; 2017 booklet p.5 confirms $250k/$125k/3%'
+bus_cap_full:
+  value: 250000
+  reference: 'ORC 5747.01(A)(28)(a): $250,000; $125,000 MFS (mapper), all years 2017-2026'

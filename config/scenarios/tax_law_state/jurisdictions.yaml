@@ -57,6 +57,12 @@ NC:
 ND:
   profile: broad_iit
   enabled: true
+# OH conformity is fixed-date via ORC 5701.11 but updated at least annually
+# with a taxpayer election for the prior version; treated as rolling
+# (group 0) like KY/IN/MI
+OH:
+  profile: broad_iit
+  enabled: true
 # SC uses fixed-date IRC conformity (updated annually; conformity_group 3,
 # ready=false). Like CA, its reference-law bridge is not built, so it is
 # excluded from states=all and blocked for federal-reform runs until the
