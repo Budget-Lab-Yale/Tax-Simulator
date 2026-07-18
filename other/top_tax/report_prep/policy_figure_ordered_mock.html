@@ -1,0 +1,212 @@
+<title>Ordered stacking — same package, two death regimes</title>
+<style>
+  :root {
+    --paper:#f9fafb; --ink:#1c2733; --ink2:#3c4a59; --muted:#5a6b7d; --line:#dce3ea; --grid:#e8edf2;
+    --axis:#8a99a8; --card:#ffffff; --accent:#1a5b9e;
+    --b-iit:#0072B2; --b-cg:#D55E00; --b-corp:#8f5cc8; --b-est:#009E73; --ghost:#8a99a8;
+    --up:#2f9e60; --down:#a8433a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper:#131a22; --ink:#e4ebf2; --ink2:#c3ccd6; --muted:#8da0b3; --line:#2b3947; --grid:#223040;
+      --axis:#556777; --card:#18212b; --accent:#7db0e0;
+      --b-iit:#3a90d0; --b-cg:#e8722a; --b-corp:#a884e0; --b-est:#1bb98a; --ghost:#6b7c8c;
+      --up:#40b877; --down:#e69a92; }
+  }
+  :root[data-theme="dark"] { --paper:#131a22; --ink:#e4ebf2; --ink2:#c3ccd6; --muted:#8da0b3; --line:#2b3947;
+    --grid:#223040; --axis:#556777; --card:#18212b; --accent:#7db0e0;
+    --b-iit:#3a90d0; --b-cg:#e8722a; --b-corp:#a884e0; --b-est:#1bb98a; --ghost:#6b7c8c;
+    --up:#40b877; --down:#e69a92; }
+  :root[data-theme="light"] { --paper:#f9fafb; --ink:#1c2733; --ink2:#3c4a59; --muted:#5a6b7d; --line:#dce3ea;
+    --grid:#e8edf2; --axis:#8a99a8; --card:#ffffff; --accent:#1a5b9e;
+    --b-iit:#0072B2; --b-cg:#D55E00; --b-corp:#8f5cc8; --b-est:#009E73; --ghost:#8a99a8;
+    --up:#2f9e60; --down:#a8433a; }
+
+  * { box-sizing:border-box; }
+  html { background:var(--paper); }
+  body { margin:0; background:var(--paper); color:var(--ink);
+    font-family:Charter,"Bitstream Charter",Cambria,Georgia,serif; font-size:16px; line-height:1.55; }
+  .wrap { max-width:60rem; margin:0 auto; padding:2rem 1.25rem 4rem; }
+  header { border-bottom:2px solid var(--ink); padding-bottom:.9rem; margin-bottom:1.2rem; }
+  .eyebrow { font-family:system-ui,sans-serif; font-size:.7rem; font-weight:600; letter-spacing:.13em;
+    text-transform:uppercase; color:var(--accent); margin:0 0 .5rem; }
+  h1 { font-size:1.6rem; margin:0 0 .35rem; line-height:1.2; }
+  .standfirst { color:var(--muted); font-style:italic; margin:0; max-width:52rem; }
+  .lede { max-width:52rem; margin:1rem 0 0; }
+  .lede p { margin:0 0 .6rem; } .lede b { color:var(--ink); }
+
+  .readme { display:flex; flex-wrap:wrap; gap:.5rem 1.3rem; font-family:system-ui,sans-serif; font-size:.76rem;
+    color:var(--ink2); background:var(--card); border:1px solid var(--line); border-radius:7px; padding:.6rem .9rem; margin:1rem 0 0; }
+  .readme b { color:var(--ink); }
+
+  .fig { background:var(--card); border:1px solid var(--line); border-radius:8px;
+    padding:1.3rem 1.4rem 1.05rem; margin:1.4rem 0; }
+  .opt { font-family:system-ui,sans-serif; font-size:.68rem; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--accent); margin:0 0 .4rem; }
+  .fig h2 { font-family:system-ui,"Segoe UI",sans-serif; font-size:1.05rem; font-weight:700;
+    margin:0 0 .15rem; line-height:1.35; text-wrap:balance; }
+  .fig .sub { font-family:system-ui,sans-serif; font-size:.79rem; color:var(--muted); margin:0 0 .5rem; }
+  .duo { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
+  @media (max-width:860px){ .duo{ grid-template-columns:1fr; } }
+  .pane .ph { font-family:system-ui,sans-serif; font-size:.82rem; font-weight:700; margin:0 0 .05rem; }
+  .pane .ps { font-family:system-ui,sans-serif; font-size:.72rem; color:var(--muted); margin:0 0 .2rem; }
+  .verdict { font-family:system-ui,sans-serif; font-size:.73rem; font-weight:600; margin:.15rem 0 .35rem;
+    display:inline-flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
+  .verdict .pill { font-size:.6rem; letter-spacing:.05em; text-transform:uppercase; padding:2px 7px; border-radius:999px; }
+  .pill.leak { background:color-mix(in srgb,var(--down) 15%,transparent); color:var(--down); }
+  .pill.gain { background:color-mix(in srgb,var(--up) 16%,transparent); color:var(--up); }
+  svg { width:100%; height:auto; display:block; }
+  svg text { font-family:system-ui,"Segoe UI",sans-serif; }
+  .legend { display:flex; flex-wrap:wrap; gap:.3rem 1.1rem; font-family:system-ui,sans-serif;
+    font-size:.74rem; color:var(--muted); margin:.6rem 0 0; align-items:center; }
+  .key { display:inline-flex; align-items:center; gap:.4rem; }
+  .sw { width:12px; height:12px; border-radius:2px; display:inline-block; }
+  .sw.hatch { background-image:repeating-linear-gradient(45deg,var(--b-cg) 0 2px,var(--card) 2px 4px); border:1px solid var(--b-cg); }
+  .sw.stat { opacity:.5; }
+  .cap { font-family:system-ui,sans-serif; font-size:.72rem; color:var(--muted);
+    border-top:1px solid var(--grid); margin-top:.8rem; padding-top:.55rem; line-height:1.5; }
+  .cap b { color:var(--ink); }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">Ordered stacking · corporate + capital gains, ± gains at death · dials-v2 numbers</p>
+  <h1>The same package, built on two different treatments of gains at death</h1>
+  <p class="standfirst">Each policy shows two bars: a slim, translucent <b>static</b> bar (what it asks
+  mechanically) above the full <b>collected</b> bar, both broken out by the tax base the money lands in.
+  With taxation at death as the first layer on the right, the capital-gains increase stacked on top
+  collects far more ($401B vs. $234B) — the same rate increase, no longer escapable.</p>
+</header>
+
+<div class="readme">
+  <span><b>How to read:</b> two bars per policy — slim translucent = <b>static ask</b>, full = <b>collected</b>.</span>
+  <span>Color = the tax base the revenue lands in; left of $0 = a base it drains.</span>
+  <span>Full bar shorter than the slim one = behavior <b style="color:var(--down)">leaked</b>; longer = <b style="color:var(--up)">added</b>.</span>
+  <span>Build order runs 0 → 2, top to bottom.</span>
+</div>
+
+<div class="fig">
+  <p class="opt">Figures 3 &amp; 4 · same policies, the death layer changes what they collect</p>
+  <h2>Put taxation at death underneath, and the rate increases stacked on top stop leaking</h2>
+  <p class="sub">Marginal revenue in build order, first decade (FY2027–36), $B · slim = static, full = collected · colored by destination base · shared scale</p>
+  <div class="duo">
+    <div class="pane">
+      <div class="ph">Under current law — step-up in basis</div>
+      <div class="ps">Corporate + capital gains, no death layer.</div>
+      <div class="verdict"><span class="pill leak">Package leaks — collects $685B of $1,061B</span></div>
+      <svg id="fig3" role="img" aria-label="Ordered build under step-up: capital gains then corporate; each full bar falls short of its slim static bar"></svg>
+    </div>
+    <div class="pane">
+      <div class="ph">With gains taxed at death</div>
+      <div class="ps">Same two rate increases, built on a death layer.</div>
+      <div class="verdict"><span class="pill gain">Package adds — collects $1,551B of $1,398B</span></div>
+      <svg id="fig4" role="img" aria-label="Ordered build with taxation at death first; the capital-gains bar collects far more than under step-up"></svg>
+    </div>
+  </div>
+  <div class="legend">
+    <span class="key"><span class="sw" style="background:var(--b-iit)"></span>Ordinary income</span>
+    <span class="key"><span class="sw" style="background:var(--b-cg)"></span>Capital gains (during life)</span>
+    <span class="key"><span class="sw hatch"></span>Gains at death</span>
+    <span class="key"><span class="sw" style="background:var(--b-corp)"></span>Corporate</span>
+    <span class="key"><span class="sw" style="background:var(--b-est)"></span>Estate</span>
+    <span class="key"><span class="sw stat" style="background:var(--ink2)"></span>slim = static ask</span>
+  </div>
+  <p class="cap"><b>Look at the capital-gains bar across the two panels.</b> Under step-up it collects $234B
+  of a $547B ask ($313B leaks). Stacked on taxation at death it collects <b>$401B</b> — the same rate
+  increase raising <b>$167B more</b>, because deferral no longer lets gains escape. The direct tax on gains
+  realized at death is now its own base (hatched), not ordinary income: it is a capital-gains tax collected
+  at death, so booking it as ordinary would misstate the base. Ordered stacking — each bar is <span
+  style="font-family:ui-monospace,monospace">package − the layers below</span> — so the bars sum to the
+  package. Source: Tax-Simulator dials-v2 surrogate. The gains-at-death carve is applied here in
+  post-processing (the deemed tax, folded into the income-tax head upstream, split back out); production
+  wants it carved in the extractor alongside the preferential-rate carve.</p>
+</div>
+
+<div class="lede">
+  <p style="font-size:.92rem"><b>On the two bars.</b> The slim translucent bar is the static ask, with the
+  same base breakout as the collected bar beneath it — so leakage and additions read as the full bar
+  falling short of, or pushing past, the slim one, base by base, instead of a single dashed outline. The
+  package row carries the same treatment: it is the sum of the policy rows above it, static and collected
+  alike.</p>
+</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  function cv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function usd(v){ var a=Math.abs(v),s=v<0?'−':''; return a>=1000?(s+'$'+(a/1000).toFixed(2)+'T'):(s+'$'+Math.round(a)+'B'); }
+  var BCOL={iit:'--b-iit',cg:'--b-cg',corp:'--b-corp',est:'--b-est'};
+  var ORDER=['gad','cg','iit','corp','est'];   // fixed stacking order
+  var XPOS=1650, XNEG=110;
+
+  function polFig(id, rows, total){
+    var W=474, mL=110, mR=104, rowH=68, padT=12, padB=26, sepGap=16, totH=64;
+    var H=padT+rows.length*rowH+sepGap+totH+padB;
+    var iw=W-mL-mR, span=XPOS+XNEG, sc=iw/span, xz=mL+XNEG*sc;
+    function X(v){ return xz+v*sc; }
+    var verm=cv('--b-cg'), card=cv('--card');
+    var o=['<defs><pattern id="gad-'+id+'" width="5" height="5" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">'
+      +'<rect width="5" height="5" fill="'+card+'"/><rect width="2.4" height="5" fill="'+verm+'"/></pattern></defs>'];
+    function fillOf(b){ return b==='gad' ? 'url(#gad-'+id+')' : cv(BCOL[b]); }
+    [0,500,1000,1500].forEach(function(g){ var x=X(g);
+      o.push('<line x1="'+x.toFixed(1)+'" y1="'+padT+'" x2="'+x.toFixed(1)+'" y2="'+(H-padB+2)+'" stroke="'+(g===0?cv('--axis'):cv('--grid'))+'" stroke-width="'+(g===0?1.5:1)+'"'+(g===0?'':' stroke-dasharray="2 3"')+'/>');
+      o.push('<text x="'+x.toFixed(1)+'" y="'+(H-padB+16)+'" font-size="9" text-anchor="middle" fill="'+cv('--muted')+'">'+(g>=1000?('$'+(g/1000)+'T'):('$'+g))+'</text>');
+    });
+    function drawBar(seg, yy, hh, op){
+      var xp=xz, xn=xz, s='';
+      ORDER.forEach(function(b){ var v=seg[b]||0; if(v>0){ var w=v*sc; s+='<rect x="'+xp.toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+Math.max(0.4,w-1).toFixed(1)+'" height="'+hh+'" rx="2" fill="'+fillOf(b)+'"'+(op<1?' opacity="'+op+'"':'')+'/>'; xp+=w; } });
+      ORDER.forEach(function(b){ var v=seg[b]||0; if(v<0){ var w=-v*sc; xn-=w; s+='<rect x="'+xn.toFixed(1)+'" y="'+yy.toFixed(1)+'" width="'+Math.max(0.4,w-1).toFixed(1)+'" height="'+hh+'" rx="2" fill="'+fillOf(b)+'" opacity="'+(op<1?op*0.9:0.82)+'"/>'; } });
+      return s;
+    }
+    function net(seg){ var t=0; ORDER.forEach(function(b){t+=seg[b]||0;}); return t; }
+    function rowBlock(r, yTop, bold){
+      var sY=yTop+7, cY=yTop+21, sH=10, cH=25;
+      var badgeY=cY+cH/2;
+      o.push('<circle cx="'+(mL-96).toFixed(1)+'" cy="'+badgeY.toFixed(1)+'" r="8.5" fill="none" stroke="'+cv('--muted')+'" stroke-width="1"/>');
+      o.push('<text x="'+(mL-96).toFixed(1)+'" y="'+(badgeY+3.3).toFixed(1)+'" font-size="9.5" font-weight="700" text-anchor="middle" fill="'+cv('--muted')+'">'+r.badge+'</text>');
+      o.push('<text x="'+(mL-8)+'" y="'+(cY+8).toFixed(1)+'" font-size="11.5" font-weight="'+(bold?800:600)+'" text-anchor="end" fill="'+cv('--ink')+'">'+r.label+'</text>');
+      if(r.sub) o.push('<text x="'+(mL-8)+'" y="'+(cY+19).toFixed(1)+'" font-size="8.5" text-anchor="end" fill="'+cv('--muted')+'">'+r.sub+'</text>');
+      if(r.empty){
+        o.push('<line x1="'+xz.toFixed(1)+'" y1="'+(cY+cH/2).toFixed(1)+'" x2="'+(xz+34).toFixed(1)+'" y2="'+(cY+cH/2).toFixed(1)+'" stroke="'+cv('--ghost')+'" stroke-width="1" stroke-dasharray="2 3"/>');
+        o.push('<text x="'+(xz+42).toFixed(1)+'" y="'+(cY+cH/2+3.5).toFixed(1)+'" font-size="9.5" text-anchor="start" fill="'+cv('--muted')+'" font-style="italic">not applied</text>');
+        o.push('<text x="'+(W-mR+8)+'" y="'+(cY+cH/2+3.5).toFixed(1)+'" font-size="11" font-weight="600" text-anchor="start" fill="'+cv('--muted')+'">—</text>');
+        return;
+      }
+      o.push(drawBar(r.stat, sY, sH, 0.5));
+      o.push(drawBar(r.conv, cY, cH, 1));
+      var nc=net(r.conv), ns=net(r.stat), d=nc-ns, leaked=d<0;
+      o.push('<text x="'+(W-mR+8)+'" y="'+(sY+9).toFixed(1)+'" font-size="8.5" text-anchor="start" fill="'+cv('--muted')+'">'+usd(ns)+' static</text>');
+      o.push('<text x="'+(W-mR+8)+'" y="'+(cY+13).toFixed(1)+'" font-size="'+(bold?12.5:11.5)+'" font-weight="'+(bold?800:700)+'" text-anchor="start" fill="'+cv('--ink')+'" font-variant-numeric="tabular-nums">'+usd(nc)+'</text>');
+      o.push('<text x="'+(W-mR+8)+'" y="'+(cY+24).toFixed(1)+'" font-size="9" font-weight="700" text-anchor="start" fill="'+cv(leaked?'--down':'--up')+'" font-variant-numeric="tabular-nums">'+(leaked?'▼ ':'▲ ')+usd(Math.abs(d))+'</text>');
+    }
+    rows.forEach(function(r,i){ rowBlock(r, padT+i*rowH, false); });
+    if(total){
+      var yBase=padT+rows.length*rowH, ySep=yBase+sepGap/2;
+      o.push('<line x1="'+(mL-2)+'" y1="'+ySep.toFixed(1)+'" x2="'+(W-6)+'" y2="'+ySep.toFixed(1)+'" stroke="'+cv('--line')+'" stroke-width="1"/>');
+      rowBlock(total, yBase+sepGap, true);
+    }
+    var svg=document.getElementById(id);
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    svg.innerHTML=o.join('');
+  }
+
+  // ---- REAL surrogate numbers, ordered marginals, deemed carved to 'gad' ------
+  // LEFT (step-up): death not applied, CG solo, Corporate marginal|cg (final)
+  polFig('fig3',[
+    {badge:0, label:'Gains at death', sub:'current law · step-up', empty:true},
+    {badge:1, label:'Capital gains', sub:'20→25%', conv:{iit:6,cg:262,corp:-33,est:-1}, stat:{cg:547}},
+    {badge:2, label:'+ Corporate', sub:'21→25% · added last', conv:{corp:514,iit:-26,cg:-34,est:-3}, stat:{corp:514}}
+  ], {badge:'Σ', label:'Package', sub:'corp + capital gains', conv:{iit:-20,cg:228,corp:481,est:-4}, stat:{cg:547,corp:514}});
+  // RIGHT (deemed): death first, CG marginal|death (raises more), Corporate marginal|cg,death (final)
+  polFig('fig4',[
+    {badge:0, label:'Gains at death', sub:'deferral closed · first', conv:{gad:452,cg:338,corp:-49,est:-35}, stat:{gad:325,est:-34}},
+    {badge:1, label:'+ Capital gains', sub:'20→25% · on top of death', conv:{cg:377,gad:78,corp:-46,est:-8}, stat:{cg:550,gad:50,est:-7}},
+    {badge:2, label:'+ Corporate', sub:'21→25% · added last', conv:{corp:514,iit:-28,cg:-40,est:-2}, stat:{corp:514}}
+  ], {badge:'Σ', label:'Package', sub:'all three', conv:{gad:530,cg:675,corp:419,iit:-28,est:-45}, stat:{gad:375,cg:550,corp:514,est:-41}});
+
+  var mq=window.matchMedia('(prefers-color-scheme: dark)');
+  function rr(){ location.reload(); }
+  if(mq.addEventListener) mq.addEventListener('change', rr);
+  new MutationObserver(rr).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+})();
+</script>

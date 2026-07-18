@@ -1,0 +1,229 @@
+<title>Base-centric figure — real surrogate numbers, leaked/added markers</title>
+<style>
+  :root {
+    --paper:#f9fafb; --ink:#1c2733; --ink2:#3c4a59; --muted:#5a6b7d; --line:#dce3ea; --grid:#e8edf2;
+    --axis:#8a99a8; --card:#ffffff; --accent:#1a5b9e;
+    --cg:#0f95b0; --corp:#c2417e; --deemed:#6d5bd0; --inter:#b3bcc6; --ghost:#8a99a8;
+    --up:#2f9e60; --down:#a8433a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper:#131a22; --ink:#e4ebf2; --ink2:#c3ccd6; --muted:#8da0b3; --line:#2b3947; --grid:#223040;
+      --axis:#556777; --card:#18212b; --accent:#7db0e0;
+      --cg:#2bb0cc; --corp:#e07bb0; --deemed:#9e8fee; --inter:#4a5765; --ghost:#6b7c8c; --up:#40b877; --down:#e69a92; }
+  }
+  :root[data-theme="dark"] { --paper:#131a22; --ink:#e4ebf2; --ink2:#c3ccd6; --muted:#8da0b3; --line:#2b3947;
+    --grid:#223040; --axis:#556777; --card:#18212b; --accent:#7db0e0;
+    --cg:#2bb0cc; --corp:#e07bb0; --deemed:#9e8fee; --inter:#4a5765; --ghost:#6b7c8c; --up:#40b877; --down:#e69a92; }
+  :root[data-theme="light"] { --paper:#f9fafb; --ink:#1c2733; --ink2:#3c4a59; --muted:#5a6b7d; --line:#dce3ea;
+    --grid:#e8edf2; --axis:#8a99a8; --card:#ffffff; --accent:#1a5b9e;
+    --cg:#0f95b0; --corp:#c2417e; --deemed:#6d5bd0; --inter:#b3bcc6; --ghost:#8a99a8; --up:#2f9e60; --down:#a8433a; }
+
+  * { box-sizing:border-box; }
+  html { background:var(--paper); }
+  body { margin:0; background:var(--paper); color:var(--ink);
+    font-family:Charter,"Bitstream Charter",Cambria,Georgia,serif; font-size:16px; line-height:1.55; }
+  .wrap { max-width:60rem; margin:0 auto; padding:2rem 1.25rem 4rem; }
+  header { border-bottom:2px solid var(--ink); padding-bottom:.9rem; margin-bottom:1.2rem; }
+  .eyebrow { font-family:system-ui,sans-serif; font-size:.7rem; font-weight:600; letter-spacing:.13em;
+    text-transform:uppercase; color:var(--accent); margin:0 0 .5rem; }
+  h1 { font-size:1.6rem; margin:0 0 .35rem; line-height:1.2; }
+  .standfirst { color:var(--muted); font-style:italic; margin:0; max-width:52rem; }
+  .lede { max-width:52rem; margin:1rem 0 0; }
+  .lede p { margin:0 0 .6rem; }
+  .lede b { color:var(--ink); }
+
+  .readme { display:flex; flex-wrap:wrap; gap:.5rem 1.3rem; font-family:system-ui,sans-serif; font-size:.76rem;
+    color:var(--ink2); background:var(--card); border:1px solid var(--line); border-radius:7px; padding:.6rem .9rem; margin:1rem 0 0; }
+  .readme b { color:var(--ink); }
+
+  .fig { background:var(--card); border:1px solid var(--line); border-radius:8px;
+    padding:1.3rem 1.4rem 1.05rem; margin:1.4rem 0; }
+  .opt { font-family:system-ui,sans-serif; font-size:.68rem; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--accent); margin:0 0 .4rem; }
+  .fig h2 { font-family:system-ui,"Segoe UI",sans-serif; font-size:1.05rem; font-weight:700;
+    margin:0 0 .15rem; line-height:1.35; text-wrap:balance; }
+  .fig .sub { font-family:system-ui,sans-serif; font-size:.79rem; color:var(--muted); margin:0 0 .5rem; }
+  .duo { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
+  @media (max-width:840px){ .duo{ grid-template-columns:1fr; } }
+  .pane .ph { font-family:system-ui,sans-serif; font-size:.82rem; font-weight:700; margin:0 0 .05rem; }
+  .pane .ps { font-family:system-ui,sans-serif; font-size:.72rem; color:var(--muted); margin:0 0 .2rem; }
+  .verdict { font-family:system-ui,sans-serif; font-size:.73rem; font-weight:600; margin:.15rem 0 .35rem;
+    display:inline-flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
+  .verdict .pill { font-size:.6rem; letter-spacing:.05em; text-transform:uppercase; padding:2px 7px; border-radius:999px; }
+  .pill.leak { background:color-mix(in srgb,var(--down) 15%,transparent); color:var(--down); }
+  .pill.gain { background:color-mix(in srgb,var(--up) 16%,transparent); color:var(--up); }
+  svg { width:100%; height:auto; display:block; }
+  svg text { font-family:system-ui,"Segoe UI",sans-serif; }
+  .legend { display:flex; flex-wrap:wrap; gap:.3rem 1.1rem; font-family:system-ui,sans-serif;
+    font-size:.74rem; color:var(--muted); margin:.6rem 0 0; }
+  .key { display:inline-flex; align-items:center; gap:.4rem; }
+  .sw { width:11px; height:11px; border-radius:2px; display:inline-block; }
+  .sw.gh { background:transparent; border:1.5px dashed var(--ghost); }
+  .cap { font-family:system-ui,sans-serif; font-size:.72rem; color:var(--muted);
+    border-top:1px solid var(--grid); margin-top:.8rem; padding-top:.55rem; line-height:1.5; }
+  .cap b { color:var(--ink); }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">Base-centric report figure · real dials-v2 surrogate numbers · first decade</p>
+  <h1>Where the package's revenue lands — and how far short of the ask it falls</h1>
+  <p class="standfirst">One row per tax base; each policy's contribution is a colored segment; the dashed
+  outline is the static ask. The gap between the ask and what's collected is labeled directly. Base,
+  policy, and static-vs-conventional, all in one static frame.</p>
+</header>
+
+<div class="readme">
+  <span><b>How to read a row:</b> the <b>dashed outline</b> is the static "ask."</span>
+  <span>The <b>colored fill</b> is what's collected, by policy.</span>
+  <span>The <b style="color:var(--down)">red tag</b> = revenue behavior <b>leaked</b>; <b style="color:var(--up)">green</b> = behavior <b>added</b>.</span>
+  <span>Segments left of $0 = a base being <b>drained</b>.</span>
+</div>
+
+<div class="fig">
+  <p class="opt">Figures 3 &amp; 4 · the sign flip, in one frame</p>
+  <h2>A rate-only package leaks in every base; taxing gains at death makes behavior add revenue</h2>
+  <p class="sub">Conventional revenue by tax base, first decade (FY2027–36), $B · segments colored by policy · dashed = static ask · shared scale</p>
+  <div class="duo">
+    <div class="pane">
+      <div class="ph">Figure 3 — Corporate + capital gains &amp; dividends, both to 25%</div>
+      <div class="ps">Rate-only package.</div>
+      <div class="verdict"><span class="pill leak">Every fill short of its ask</span> behavior leaks</div>
+      <svg id="fig3" role="img" aria-label="Revenue by base for the rate-only package: fill falls short of the static ask in every base"></svg>
+    </div>
+    <div class="pane">
+      <div class="ph">Figure 4 — Capital gains &amp; dividends to 25% + gains taxed at death</div>
+      <div class="ps">Base-broadening reform.</div>
+      <div class="verdict"><span class="pill gain">Fills push past their asks</span> behavior adds</div>
+      <svg id="fig4" role="img" aria-label="Revenue by base for the deemed-realization package: fills overshoot the static ask"></svg>
+    </div>
+  </div>
+  <div class="legend">
+    <span class="key"><span class="sw" style="background:var(--cg)"></span>Capital gains &amp; dividends</span>
+    <span class="key"><span class="sw" style="background:var(--corp)"></span>Corporate</span>
+    <span class="key"><span class="sw" style="background:var(--deemed)"></span>Gains taxed at death</span>
+    <span class="key"><span class="sw" style="background:var(--inter)"></span>Package interaction</span>
+    <span class="key"><span class="sw gh"></span>Static ask</span>
+  </div>
+  <p class="cap"><b>The flip lives in the capital-gains row.</b> In Figure 3 the capital-gains fill collects
+  $227B against a $550B ask — <b>$323B leaks</b> as investors defer under step-up — and corporate leaks a
+  little too. In Figure 4 the same rate increase, now paired with taxation at death, collects <b>$714B —
+  $164B more</b> than its ask: deferral no longer works, so realizations come forward. The deemed tax also
+  books into the ordinary-income row (+$151B over its ask). Both packages nick the estate and corporate
+  bases (drains, left of $0). Source: Tax-Simulator dials-v2 surrogate — static ask (<span
+  style="font-family:ui-monospace,monospace">sh</span>) and conventional (<span
+  style="font-family:ui-monospace,monospace">ch</span>) revenue by head, evaluated at each package;
+  interaction shown as the per-base residual. Interpolated within the tool's validated bound; corporate
+  25% is the linear 21→28 interpolation.</p>
+</div>
+
+<div class="lede">
+  <p style="font-size:.92rem"><b>On "do we need another run":</b> no. These are the real numbers from the
+  surrogate already behind the interactive — static-by-base, conventional-by-base, and per-policy, with the
+  interaction as a per-base residual. A direct model run would only shave the interpolation error (a few
+  percent) and let the interaction be labeled by policy-pair instead of lumped. This figure is publishable
+  as is, pending your sign-off on the form.</p>
+</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  function cv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function usd(v){ var a=Math.abs(v),s=v<0?'−':''; return a>=1000?(s+'$'+(a/1000).toFixed(2)+'T'):(s+'$'+Math.round(a)+'B'); }
+  var LCOL={cg:'--cg',corp:'--corp',deemed:'--deemed',inter:'--inter'};
+
+  // shared domain across both panels
+  var XPOS=760, XNEG=170;
+
+  function baseFig(id, rows, total){
+    var W=452, mL=86, mR=94, rowH=58, padT=12, padB=26, sepGap=16, totH=56;
+    var H=padT+rows.length*rowH+sepGap+totH+padB;
+    var iw=W-mL-mR, span=XPOS+XNEG, sc=iw/span, xz=mL+XNEG*sc;
+    function X(v){ return xz+v*sc; }
+    var o=[];
+    [0,250,500,750].forEach(function(g){ var x=X(g);
+      o.push('<line x1="'+x.toFixed(1)+'" y1="'+padT+'" x2="'+x.toFixed(1)+'" y2="'+(H-padB+2)+'" stroke="'+(g===0?cv('--axis'):cv('--grid'))+'" stroke-width="'+(g===0?1.5:1)+'"'+(g===0?'':' stroke-dasharray="2 3"')+'/>');
+      o.push('<text x="'+x.toFixed(1)+'" y="'+(H-padB+16)+'" font-size="9" text-anchor="middle" fill="'+cv('--muted')+'">'+(g===0?'$0':('$'+g))+'</text>');
+    });
+    rows.forEach(function(r,i){
+      var yTop=padT+i*rowH, y=yTop+20, bh=26;
+      var net=r.segs.reduce(function(a,s){return a+s.v;},0);
+      o.push('<text x="'+(mL-8)+'" y="'+(y+15).toFixed(1)+'" font-size="11.5" font-weight="600" text-anchor="end" fill="'+cv('--ink')+'">'+r.label+'</text>');
+      // ghost (static ask) — dashed outline 0..ask
+      if(r.ask>1){
+        o.push('<rect x="'+xz.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(r.ask*sc).toFixed(1)+'" height="'+bh+'" rx="3" fill="none" stroke="'+cv('--ghost')+'" stroke-width="1.4" stroke-dasharray="3 3"/>');
+      }
+      // segments: positives right, negatives left; interaction drawn last within its sign
+      var pos=r.segs.filter(function(s){return s.v>0;}), neg=r.segs.filter(function(s){return s.v<0;});
+      var xp=xz; pos.forEach(function(s){ var w=s.v*sc;
+        o.push('<rect x="'+xp.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+Math.max(0.5,w-1.5).toFixed(1)+'" height="'+bh+'" rx="2.5" fill="'+cv(LCOL[s.key])+'"/>'); xp+=w; });
+      var xn=xz; neg.forEach(function(s){ var w=(-s.v)*sc; xn-=w;
+        o.push('<rect x="'+xn.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+Math.max(0.5,w-1.5).toFixed(1)+'" height="'+bh+'" rx="2.5" fill="'+cv(LCOL[s.key])+'" opacity="0.8"/>'); });
+      // net marker (solid tick at collected value) — only for positive nets
+      if(net>1){
+        var nx=X(net);
+        o.push('<line x1="'+nx.toFixed(1)+'" y1="'+(y-4).toFixed(1)+'" x2="'+nx.toFixed(1)+'" y2="'+(y+bh+4).toFixed(1)+'" stroke="'+cv('--ink')+'" stroke-width="1.6"/>');
+      }
+      // leaked / added bracket + tag (only meaningful when there's a positive ask)
+      if(r.ask>1){
+        var diff=net-r.ask, leaked=diff<0, a=X(r.ask), b=X(net);
+        var lo=Math.min(a,b), hi=Math.max(a,b), midx=(lo+hi)/2, by=yTop+9;
+        o.push('<line x1="'+lo.toFixed(1)+'" y1="'+by.toFixed(1)+'" x2="'+hi.toFixed(1)+'" y2="'+by.toFixed(1)+'" stroke="'+cv(leaked?'--down':'--up')+'" stroke-width="1.2"/>');
+        o.push('<line x1="'+lo.toFixed(1)+'" y1="'+(by-3).toFixed(1)+'" x2="'+lo.toFixed(1)+'" y2="'+(by+3).toFixed(1)+'" stroke="'+cv(leaked?'--down':'--up')+'" stroke-width="1.2"/>');
+        o.push('<line x1="'+hi.toFixed(1)+'" y1="'+(by-3).toFixed(1)+'" x2="'+hi.toFixed(1)+'" y2="'+(by+3).toFixed(1)+'" stroke="'+cv(leaked?'--down':'--up')+'" stroke-width="1.2"/>');
+        o.push('<text x="'+midx.toFixed(1)+'" y="'+(by-4).toFixed(1)+'" font-size="9.5" font-weight="700" text-anchor="middle" fill="'+cv(leaked?'--down':'--up')+'" font-variant-numeric="tabular-nums">'+(leaked?'▼ ':'▲ ')+usd(Math.abs(diff))+(leaked?' leaked':' added')+'</text>');
+      }
+      // right label: net collected
+      o.push('<text x="'+(W-mR+8)+'" y="'+(y+11).toFixed(1)+'" font-size="11.5" font-weight="700" text-anchor="start" fill="'+(net<0?cv('--down'):cv('--ink'))+'" font-variant-numeric="tabular-nums">'+usd(net)+'</text>');
+      o.push('<text x="'+(W-mR+8)+'" y="'+(y+22).toFixed(1)+'" font-size="8.5" text-anchor="start" fill="'+cv('--muted')+'">collected</text>');
+    });
+    // ---- package total bar (below a divider) ----
+    if(total){
+      var yBase=padT+rows.length*rowH, ySep=yBase+sepGap/2;
+      o.push('<line x1="'+(mL-2)+'" y1="'+ySep.toFixed(1)+'" x2="'+(W-6)+'" y2="'+ySep.toFixed(1)+'" stroke="'+cv('--line')+'" stroke-width="1"/>');
+      var ty=yBase+sepGap+16, bh=28;
+      o.push('<text x="'+(mL-8)+'" y="'+(ty+13).toFixed(1)+'" font-size="11.5" font-weight="800" text-anchor="end" fill="'+cv('--ink')+'">Package</text>');
+      // ask ghost (heavier dashed)
+      o.push('<rect x="'+xz.toFixed(1)+'" y="'+ty.toFixed(1)+'" width="'+(total.ask*sc).toFixed(1)+'" height="'+bh+'" rx="3" fill="none" stroke="'+cv('--ghost')+'" stroke-width="1.6" stroke-dasharray="4 3"/>');
+      // collected fill (solid accent)
+      o.push('<rect x="'+xz.toFixed(1)+'" y="'+ty.toFixed(1)+'" width="'+Math.max(1,total.net*sc).toFixed(1)+'" height="'+bh+'" rx="3" fill="'+cv('--accent')+'"/>');
+      var nx=X(total.net);
+      o.push('<line x1="'+nx.toFixed(1)+'" y1="'+(ty-4).toFixed(1)+'" x2="'+nx.toFixed(1)+'" y2="'+(ty+bh+4).toFixed(1)+'" stroke="'+cv('--ink')+'" stroke-width="1.8"/>');
+      // aggregate leaked/added bracket + tag
+      var diff=total.net-total.ask, leaked=diff<0, a=X(total.ask), b=nx, lo=Math.min(a,b), hi=Math.max(a,b), midx=(lo+hi)/2, by=ty-7;
+      o.push('<line x1="'+lo.toFixed(1)+'" y1="'+by.toFixed(1)+'" x2="'+hi.toFixed(1)+'" y2="'+by.toFixed(1)+'" stroke="'+cv(leaked?'--down':'--up')+'" stroke-width="1.4"/>');
+      o.push('<line x1="'+lo.toFixed(1)+'" y1="'+(by-3).toFixed(1)+'" x2="'+lo.toFixed(1)+'" y2="'+(by+3).toFixed(1)+'" stroke="'+cv(leaked?'--down':'--up')+'" stroke-width="1.4"/>');
+      o.push('<line x1="'+hi.toFixed(1)+'" y1="'+(by-3).toFixed(1)+'" x2="'+hi.toFixed(1)+'" y2="'+(by+3).toFixed(1)+'" stroke="'+cv(leaked?'--down':'--up')+'" stroke-width="1.4"/>');
+      o.push('<text x="'+midx.toFixed(1)+'" y="'+(by-4).toFixed(1)+'" font-size="10" font-weight="800" text-anchor="middle" fill="'+cv(leaked?'--down':'--up')+'" font-variant-numeric="tabular-nums">'+(leaked?'▼ ':'▲ ')+usd(Math.abs(diff))+(leaked?' leaked':' added')+'</text>');
+      o.push('<text x="'+(W-mR+8)+'" y="'+(ty+12).toFixed(1)+'" font-size="12.5" font-weight="800" text-anchor="start" fill="'+cv('--accent')+'" font-variant-numeric="tabular-nums">'+usd(total.net)+'</text>');
+      o.push('<text x="'+(W-mR+8)+'" y="'+(ty+23).toFixed(1)+'" font-size="8.5" text-anchor="start" fill="'+cv('--muted')+'">of '+usd(total.ask)+' asked</text>');
+    }
+    var svg=document.getElementById(id);
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    svg.innerHTML=o.join('');
+  }
+
+  // ---- REAL surrogate numbers (first decade, $B) -----------------------------
+  // segs sum to net; interaction = per-base residual (net - sum of solos).
+  // FIG 3: corp 25% + cg 25%  (rows net: 227 -20 481 -3 = 685 = package conv; ask total 1061)
+  baseFig('fig3',[
+    {label:'Capital gains',   ask:550, segs:[{key:'cg',v:262},{key:'inter',v:-2},{key:'corp',v:-33}]},   // net 227
+    {label:'Ordinary',        ask:0,   segs:[{key:'cg',v:6},{key:'inter',v:2},{key:'corp',v:-28}]},        // net -20 (drain)
+    {label:'Corporate',       ask:514, segs:[{key:'corp',v:514},{key:'cg',v:-33}]},                        // net 481
+    {label:'Estate & other',  ask:0,   segs:[{key:'corp',v:-2},{key:'cg',v:-1}]}                            // net -3 (drain)
+  ], {ask:1061, net:685});
+  // FIG 4: cg 25% + gains taxed at death  (rows net: 714 526 -95 -39 = 1106 = package conv; ask total 883)
+  baseFig('fig4',[
+    {label:'Capital gains',   ask:550, segs:[{key:'cg',v:262},{key:'deemed',v:338},{key:'inter',v:114}]},  // net 714
+    {label:'Ordinary',        ask:375, segs:[{key:'deemed',v:449},{key:'cg',v:6},{key:'inter',v:71}]},      // net 526
+    {label:'Corporate',       ask:0,   segs:[{key:'cg',v:-33},{key:'deemed',v:-49},{key:'inter',v:-13}]},   // net -95 (drain)
+    {label:'Estate & other',  ask:0,   segs:[{key:'deemed',v:-31},{key:'cg',v:-1},{key:'inter',v:-7}]}      // net -39 (estate drain + payroll)
+  ], {ask:883, net:1106});
+
+  var mq=window.matchMedia('(prefers-color-scheme: dark)');
+  function rr(){ location.reload(); }
+  if(mq.addEventListener) mq.addEventListener('change', rr);
+  new MutationObserver(rr).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+})();
+</script>

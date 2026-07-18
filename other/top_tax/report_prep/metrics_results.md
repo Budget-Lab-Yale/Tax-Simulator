@@ -4,19 +4,16 @@
 
 ## 1. Income at the top, 2027 (baseline)
 
-| Group | Cash (expanded) $B | Accrual (Haig-Simons) $B | Accrual/cash |
-|---|---|---|---|
-| Quintile 5 | 15,022 | 22,424 | 1.49 |
-| Top 10% | 11,531 | 17,881 | 1.55 |
-| Top 5% | 8,960 | 13,983 | 1.56 |
-| Top 1% | 5,212 | 7,751 | 1.49 |
-| Top 0.1% | 2,520 | 3,426 | 1.36 |
-| Top 0.01% | 1,194 | 1,512 | 1.27 |
+| Group | Cash (expanded) $B | Share of cash income | Accrual (Haig-Simons) $B | Share of accrual income | Accrual/cash |
+|---|---|---|---|---|---|
+| Quintile 5 | 15,022 | 66.9% | 22,424 | 69.4% | 1.49 |
+| Top 10% | 11,531 | 51.3% | 17,881 | 55.3% | 1.55 |
+| Top 5% | 8,960 | 39.9% | 13,983 | 43.3% | 1.56 |
+| Top 1% | 5,212 | 23.2% | 7,751 | 24.0% | 1.49 |
+| Top 0.1% | 2,520 | 11.2% | 3,426 | 10.6% | 1.36 |
+| Top 0.01% | 1,194 | 5.3% | 1,512 | 4.7% | 1.27 |
 
-- Total income, all tax units 2027: cash **$22.5T**, accrual **$32.3T**.
-- Top 1% share: cash 23.2%, accrual 24.0%.
-- Top 0.1% share: cash 11.2%, accrual 10.6%.
-- Top 0.01% share: cash 5.3%, accrual 4.7%.
+- Total income, all tax units 2027: cash **$22.5T**, accrual **$32.3T** (shares are of these totals, which include the negative-income group).
 - Top 1% cash income ($5,212B) equals the combined cash income of roughly the **bottom 66%** of tax units (interp within quintiles).
 - On an accrual basis the top 1% ($7,751B) matches roughly the **bottom 71%**.
 

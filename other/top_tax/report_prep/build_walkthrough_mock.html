@@ -1,0 +1,330 @@
+<title>The build: stepping through top-tax policies, base by base</title>
+<style>
+  :root {
+    --paper:#f9fafb; --ink:#1c2733; --ink2:#3c4a59; --muted:#5a6b7d; --line:#dce3ea; --grid:#e8edf2;
+    --axis:#b9c4ce; --card:#ffffff; --accent:#1a5b9e;
+    --cg:#0f95b0; --corp:#c2417e; --deemed:#6d5bd0; --indiv:#b06a2a;
+    --held:#c3ccd6; --escape:#9aa7b4; --up:#2f9e60; --down:#a8433a;
+    --ghost:#aab6c2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper:#131a22; --ink:#e4ebf2; --ink2:#c3ccd6; --muted:#8da0b3; --line:#2b3947; --grid:#223040;
+      --axis:#45566a; --card:#18212b; --accent:#7db0e0;
+      --cg:#2bb0cc; --corp:#e07bb0; --deemed:#9e8fee; --indiv:#cf9445;
+      --held:#3a4653; --escape:#556777; --up:#40b877; --down:#e69a92; --ghost:#5a6b7d; }
+  }
+  :root[data-theme="dark"] { --paper:#131a22; --ink:#e4ebf2; --ink2:#c3ccd6; --muted:#8da0b3; --line:#2b3947;
+    --grid:#223040; --axis:#45566a; --card:#18212b; --accent:#7db0e0;
+    --cg:#2bb0cc; --corp:#e07bb0; --deemed:#9e8fee; --indiv:#cf9445;
+    --held:#3a4653; --escape:#556777; --up:#40b877; --down:#e69a92; --ghost:#5a6b7d; }
+  :root[data-theme="light"] { --paper:#f9fafb; --ink:#1c2733; --ink2:#3c4a59; --muted:#5a6b7d; --line:#dce3ea;
+    --grid:#e8edf2; --axis:#b9c4ce; --card:#ffffff; --accent:#1a5b9e;
+    --cg:#0f95b0; --corp:#c2417e; --deemed:#6d5bd0; --indiv:#b06a2a;
+    --held:#c3ccd6; --escape:#9aa7b4; --up:#2f9e60; --down:#a8433a; --ghost:#aab6c2; }
+
+  * { box-sizing:border-box; }
+  html { background:var(--paper); }
+  body { margin:0; background:var(--paper); color:var(--ink);
+    font-family:Charter,"Bitstream Charter",Cambria,Georgia,serif; font-size:16px; line-height:1.55; }
+  .wrap { max-width:64rem; margin:0 auto; padding:2rem 1.25rem 4rem; }
+  header { border-bottom:2px solid var(--ink); padding-bottom:.9rem; margin-bottom:1.2rem; }
+  .eyebrow { font-family:system-ui,sans-serif; font-size:.7rem; font-weight:600; letter-spacing:.13em;
+    text-transform:uppercase; color:var(--accent); margin:0 0 .5rem; }
+  h1 { font-size:1.7rem; margin:0 0 .35rem; line-height:1.2; }
+  .standfirst { color:var(--muted); font-style:italic; margin:0; max-width:52rem; }
+
+  .stage { background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:1.1rem 1.2rem 1.2rem; margin:1.3rem 0; }
+  /* narrator */
+  .narr { min-height:5.4rem; margin-bottom:.5rem; }
+  .narr .k { font-family:system-ui,sans-serif; font-size:.66rem; font-weight:700; letter-spacing:.12em;
+    text-transform:uppercase; margin:0 0 .3rem; }
+  .narr h2 { font-family:system-ui,"Segoe UI",sans-serif; font-size:1.16rem; font-weight:700; margin:0 0 .25rem;
+    line-height:1.3; text-wrap:balance; }
+  .narr p { margin:0; font-size:.95rem; color:var(--ink2); max-width:54rem; }
+  .narr .amt { font-family:ui-monospace,monospace; font-weight:700; }
+
+  /* two tracks */
+  .tracks { display:grid; grid-template-columns:1.15fr 1fr; gap:1.1rem; align-items:end; }
+  @media (max-width:780px){ .tracks{ grid-template-columns:1fr; } }
+  .track { border:1px solid var(--grid); border-radius:8px; padding:.55rem .6rem .35rem; }
+  .track .tt { font-family:system-ui,sans-serif; font-size:.72rem; font-weight:700; color:var(--ink);
+    letter-spacing:.02em; margin:0 0 .05rem; display:flex; justify-content:space-between; align-items:baseline; }
+  .track .tt .u { font-weight:600; color:var(--muted); font-size:.66rem; }
+  .plot { position:relative; height:250px; display:flex; align-items:flex-end; gap:.5rem; padding:14px 2px 0; }
+  .col { flex:1; position:relative; height:100%; display:flex; flex-direction:column; justify-content:flex-end;
+    align-items:center; min-width:0; }
+  .col.hidden { opacity:0; }
+  .barwrap { position:relative; width:100%; max-width:64px; margin:0 auto; height:100%; display:flex; flex-direction:column; justify-content:flex-end; }
+  .seg { width:100%; transition:height .7s cubic-bezier(.4,.05,.2,1), background .5s, opacity .4s;
+    border-radius:3px 3px 0 0; }
+  .seg + .seg { margin-bottom:2px; }
+  .ghost { position:absolute; left:0; right:0; bottom:0; width:100%; max-width:64px; margin:0 auto;
+    border:1.5px dashed var(--ghost); border-bottom:none; border-radius:4px 4px 0 0;
+    transition:height .7s cubic-bezier(.4,.05,.2,1), opacity .4s; pointer-events:none; }
+  .clab { font-family:system-ui,sans-serif; font-size:.68rem; color:var(--muted); margin-top:6px; text-align:center;
+    line-height:1.15; }
+  .cval { font-family:ui-monospace,monospace; font-size:.7rem; font-weight:700; color:var(--ink);
+    font-variant-numeric:tabular-nums; position:absolute; left:0; right:0; text-align:center;
+    transition:bottom .7s cubic-bezier(.4,.05,.2,1); pointer-events:none; }
+  .cval .d { font-size:.6rem; font-weight:600; }
+  /* reservoir tank on the left of the base track */
+  .baseplot { display:grid; grid-template-columns:96px 1fr; gap:.7rem; height:250px; align-items:end; }
+  .tank { position:relative; height:100%; border:2px solid var(--axis); border-top:none; border-radius:0 0 10px 10px;
+    display:flex; flex-direction:column-reverse; overflow:hidden; background:
+    color-mix(in srgb,var(--held) 22%, transparent); }
+  .tank .z { width:100%; transition:height .8s cubic-bezier(.4,.05,.2,1), background .5s; }
+  .tank .z.taxed { background:var(--cg); }
+  .tank .z.held { background:color-mix(in srgb,var(--held) 60%, transparent); }
+  .tank .z.escape { background:repeating-linear-gradient(45deg,var(--escape) 0 4px,transparent 4px 8px); }
+  .tanklab { font-family:system-ui,sans-serif; font-size:.62rem; color:var(--muted); text-align:center; margin-top:5px; line-height:1.2; }
+  .tankcap { position:absolute; top:4px; left:0; right:0; text-align:center; font-family:ui-monospace,monospace;
+    font-size:.64rem; color:var(--muted); z-index:2; }
+  /* total readout on revenue track */
+  .totrow { display:flex; align-items:baseline; gap:.5rem; margin:.2rem 0 .1rem; }
+  .totrow .tl { font-family:system-ui,sans-serif; font-size:.68rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+  .totrow .tv { font-family:ui-monospace,monospace; font-weight:700; font-size:1.35rem; color:var(--accent); font-variant-numeric:tabular-nums; }
+  .totrow .tg { font-family:ui-monospace,monospace; font-size:.72rem; color:var(--muted); }
+
+  /* flow chips: what just happened */
+  .flows { min-height:2.1rem; display:flex; flex-wrap:wrap; gap:.4rem; margin:.7rem 0 0; }
+  .chip { font-family:system-ui,sans-serif; font-size:.72rem; display:inline-flex; align-items:center; gap:.35rem;
+    border:1px solid var(--line); border-radius:999px; padding:3px 10px; background:var(--card); color:var(--ink2); }
+  .chip .g { font-weight:700; }
+  .chip.up .g { color:var(--up); } .chip.down .g { color:var(--down); }
+
+  /* controls */
+  .ctrl { display:flex; align-items:center; gap:.6rem; margin-top:1rem; flex-wrap:wrap; }
+  .pills { display:flex; gap:4px; flex:1; flex-wrap:wrap; }
+  .pill { font-family:ui-monospace,monospace; font-size:.66rem; font-weight:600; padding:5px 9px; border:1px solid var(--line);
+    border-radius:7px; background:var(--card); color:var(--muted); cursor:pointer; transition:.12s; }
+  .pill[aria-current="true"] { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .pill:hover { border-color:var(--accent); }
+  .nav { display:flex; gap:6px; }
+  .nav button { font-family:system-ui,sans-serif; font-size:.8rem; font-weight:600; padding:7px 14px; border:1px solid var(--line);
+    border-radius:8px; background:var(--card); color:var(--ink); cursor:pointer; transition:.12s; }
+  .nav button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+  .nav button:disabled { opacity:.4; cursor:default; }
+  .nav button.play { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+  .note { font-family:system-ui,sans-serif; font-size:.72rem; color:var(--muted); border-top:1px solid var(--grid);
+    margin-top:1rem; padding-top:.6rem; line-height:1.5; }
+  .note b { color:var(--ink); }
+  .schematic { display:inline-block; font-family:ui-monospace,monospace; font-size:.6rem; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--down); border:1px solid var(--down); border-radius:999px; padding:2px 8px; }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">Design mock · schematic numbers · the "guided build" concept</p>
+  <h1>The build: adding one policy at a time</h1>
+  <p class="standfirst">Start from the stock of unrealized gains. Layer policies in order — each with its
+  static effect, then its behavioral and cross-base response — and watch the bases and the revenue move.
+  The difference between a rate-only package and one that taxes gains at death is the last step you add.</p>
+</header>
+
+<div class="stage">
+  <div class="narr" id="narr"></div>
+
+  <div class="tracks">
+    <div class="track">
+      <p class="tt"><span>The bases — what there is to tax</span><span class="u">levels · $T · schematic</span></p>
+      <div class="baseplot">
+        <div>
+          <div class="tank" id="tank">
+            <div class="tankcap" id="tankcap"></div>
+            <div class="z taxed" id="z-taxed" style="height:20%"></div>
+            <div class="z held" id="z-held" style="height:53%"></div>
+            <div class="z escape" id="z-escape" style="height:27%"></div>
+          </div>
+          <div class="tanklab">Unrealized<br>gains stock</div>
+        </div>
+        <div class="plot" id="basePlot"></div>
+      </div>
+    </div>
+
+    <div class="track">
+      <p class="tt"><span>The revenue — what the reform raises</span><span class="u">10-yr Δ · $B · schematic</span></p>
+      <div class="totrow"><span class="tl">Package so far</span><span class="tv" id="totV">—</span><span class="tg" id="totG"></span></div>
+      <div class="plot" id="revPlot" style="height:206px"></div>
+    </div>
+  </div>
+
+  <div class="flows" id="flows"></div>
+
+  <div class="ctrl">
+    <div class="pills" id="pills"></div>
+    <div class="nav">
+      <button id="prev" type="button">‹ Back</button>
+      <button id="play" class="play" type="button">▶ Play</button>
+      <button id="next" type="button">Next ›</button>
+    </div>
+  </div>
+
+  <p class="note"><span class="schematic">Schematic</span> &nbsp;Numbers are illustrative placeholders to
+  judge the <b>form</b>, not estimates. In production each step is an <b>order-stacked</b> model run
+  (policy k's marginal effect given policies 1…k−1), so the last step is exactly the Figure-3-to-Figure-4
+  difference. <b>Bases hold fixed positions</b> so the eye tracks what moves; the dashed outline on a
+  revenue bar is the <b>static "ask,"</b> the solid fill is what's <b>collected</b> after behavior. On the
+  web this animates step-to-step; in the PDF the same seven states print as a small-multiples filmstrip.</p>
+</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $=function(id){return document.getElementById(id);};
+  // ---- flow bases shown in the base track (fixed order/position) --------------
+  var BASES=[
+    {k:'cg',   lab:'Realized<br>gains',   color:'--cg'},
+    {k:'corp', lab:'Corporate<br>profits', color:'--corp'},
+    {k:'indiv',lab:'Ordinary<br>income',  color:'--indiv'}
+  ];
+  var BASEMAX=4.0; // $T
+  // ---- revenue bars (fixed order/position) ------------------------------------
+  var REVS=[
+    {k:'cg',   lab:'Capital<br>gains',    color:'--cg'},
+    {k:'corp', lab:'Corporate',           color:'--corp'},
+    {k:'death',lab:'Gains at<br>death',   color:'--deemed'}
+  ];
+  var REVMAX=1000; // $B
+
+  // ---- the seven states -------------------------------------------------------
+  // tank zones as % of tank height (taxed+held+escape=100); base levels $T;
+  // rev {ghost(static), fill(conv)} $B; tot = running package conv $B.
+  var S=[
+    { k:'Current law', h:'A reservoir of unrealized gains',
+      p:'In 2027, households hold roughly <span class="amt">$30T</span> of unrealized capital gains. Each year a slice is sold and taxed at 20%; the rest waits — and any gain still held at death escapes income tax entirely through the step-up in basis.',
+      tank:{taxed:18,held:52,escape:30}, tankcap:'$30T',
+      base:{cg:2.0,corp:0,indiv:3.0},
+      rev:{cg:[0,0],corp:[0,0],death:[0,0]}, tot:0,
+      flows:[] },
+
+    { k:'Step 1 · capital gains +5pp', h:'Raise the rate, change nothing else',
+      p:'Lift the top capital-gains rate 5 points and hold behavior fixed. On the same base, that is <span class="amt">+$547B</span> over ten years — the mechanical, "static" score.',
+      tank:{taxed:18,held:52,escape:30}, tankcap:'$30T',
+      base:{cg:2.0,corp:0,indiv:3.0},
+      rev:{cg:[547,547],corp:[0,0],death:[0,0]}, tot:547,
+      flows:[{d:'up',g:'+$547B',t:'static capital-gains revenue'}] },
+
+    { k:'Step 1 · behavior', h:'But higher rates mean fewer sales',
+      p:'Investors realize less when the rate rises. The tap tightens, more gains wait for the step-up escape, and <span class="amt">$312B</span> of the mechanical gain never shows up. Collected: <span class="amt">$235B</span>.',
+      tank:{taxed:12,held:53,escape:35}, tankcap:'$30T',
+      base:{cg:1.4,corp:0,indiv:3.0},
+      rev:{cg:[547,235],corp:[0,0],death:[0,0]}, tot:235,
+      flows:[{d:'down',g:'−0.6T',t:'realized-gains base shrinks'},{d:'down',g:'−$312B',t:'leaks: gains wait for death'}] },
+
+    { k:'Step 2 · corporate +7pp', h:'Add the corporate rate',
+      p:'Now layer a corporate-rate increase on top. Statically that is <span class="amt">+$900B</span> from the corporate base.',
+      tank:{taxed:12,held:53,escape:35}, tankcap:'$30T',
+      base:{cg:1.4,corp:3.5,indiv:3.0},
+      rev:{cg:[547,235],corp:[900,900],death:[0,0]}, tot:1135,
+      flows:[{d:'up',g:'+$900B',t:'static corporate revenue'}] },
+
+    { k:'Step 2 · behavior', h:'Corporate leaks — and nicks the gains base too',
+      p:'Some activity shifts back to pass-throughs (into ordinary income), and lower share prices drag down dividends and future gains — Harberger. Corporate collects <span class="amt">$789B</span>, and the capital-gains base slips further.',
+      tank:{taxed:11,held:53,escape:36}, tankcap:'$30T',
+      base:{cg:1.3,corp:3.2,indiv:3.15},
+      rev:{cg:[547,215],corp:[900,789],death:[0,0]}, tot:1004,
+      flows:[{d:'down',g:'−$111B',t:'corporate avoided (entity shift + Harberger)'},{d:'up',g:'→ ordinary',t:'some corporate becomes pass-through'},{d:'down',g:'−$20B',t:'lower equity → fewer gains'}] },
+
+    { k:'Step 3 · gains taxed at death', h:'Close the escape valve',
+      p:'Make death a realization event. The step-up escape drain closes. Statically, the gains of those who die are finally taxed: <span class="amt">+$291B</span>.',
+      tank:{taxed:16,held:76,escape:8}, tankcap:'$30T',
+      base:{cg:1.5,corp:3.2,indiv:3.15},
+      rev:{cg:[547,215],corp:[900,789],death:[291,291]}, tot:1295,
+      flows:[{d:'up',g:'+$291B',t:'gains of decedents now taxed'},{d:'up',g:'valve closing',t:'less escapes at death'}] },
+
+    { k:'Step 3 · behavior', h:'No escape, no reason to wait — realizations surge',
+      p:'With the exit closed, deferral loses its point. Realizations surge, the reservoir drains into taxable flow, and behavior now <b>adds</b> revenue instead of leaking it. The package raises <span class="amt">more</span> than its parts — this is the Figure-3-to-Figure-4 flip.',
+      tank:{taxed:34,held:63,escape:3}, tankcap:'$29T',
+      base:{cg:2.7,corp:3.2,indiv:3.15},
+      rev:{cg:[547,520],corp:[900,789],death:[291,706]}, tot:2015,
+      flows:[{d:'up',g:'+1.4T',t:'realized-gains base refills and grows'},{d:'up',g:'+$415B',t:'death tax pulls realizations forward'}] }
+  ];
+
+  // ---- build DOM scaffolding --------------------------------------------------
+  var basePlot=$('basePlot'), revPlot=$('revPlot');
+  BASES.forEach(function(b){
+    basePlot.insertAdjacentHTML('beforeend',
+      '<div class="col" data-b="'+b.k+'"><div class="barwrap"><div class="cval" id="bval-'+b.k+'"></div>'+
+      '<div class="seg" id="bseg-'+b.k+'" style="background:var('+b.color+');height:0%"></div></div>'+
+      '<div class="clab">'+b.lab+'</div></div>');
+  });
+  REVS.forEach(function(r){
+    revPlot.insertAdjacentHTML('beforeend',
+      '<div class="col" data-r="'+r.k+'"><div class="barwrap">'+
+      '<div class="ghost" id="rghost-'+r.k+'" style="height:0%"></div>'+
+      '<div class="cval" id="rval-'+r.k+'"></div>'+
+      '<div class="seg" id="rseg-'+r.k+'" style="background:var('+r.color+');height:0%"></div></div>'+
+      '<div class="clab">'+r.lab+'</div></div>');
+  });
+  var pills=$('pills');
+  S.forEach(function(st,i){
+    pills.insertAdjacentHTML('beforeend','<button class="pill" data-i="'+i+'" type="button">'+(i)+'</button>');
+  });
+
+  var cur=0, timer=null;
+  function money(v){ var a=Math.abs(v),s=v<0?'−':'+'; return a>=1000?(s+'$'+(a/1000).toFixed(2)+'T'):(s+'$'+Math.round(a)+'B'); }
+  function plain(v){ var a=Math.abs(v); return a>=1000?('$'+(a/1000).toFixed(2)+'T'):('$'+Math.round(a)+'B'); }
+
+  function render(i){
+    var st=S[i];
+    // narrator
+    $('narr').innerHTML='<p class="k" style="color:var(--accent)">'+st.k+'</p><h2>'+st.h+'</h2><p>'+st.p+'</p>';
+    // tank
+    $('z-taxed').style.height=st.tank.taxed+'%';
+    $('z-held').style.height=st.tank.held+'%';
+    $('z-escape').style.height=st.tank.escape+'%';
+    $('tankcap').textContent=st.tankcap;
+    // base bars
+    BASES.forEach(function(b){
+      var v=st.base[b.k]||0, col=basePlot.querySelector('[data-b="'+b.k+'"]');
+      col.classList.toggle('hidden', v<=0 && i<3 && b.k==='corp');
+      var pct=Math.max(0,Math.min(100,v/BASEMAX*100));
+      $('bseg-'+b.k).style.height=pct+'%';
+      var val=$('bval-'+b.k); val.style.bottom='calc('+pct+'% + 4px)';
+      val.innerHTML=v>0?('$'+v.toFixed(1)+'T'):'';
+    });
+    // revenue bars (ghost=static ask, fill=conventional)
+    var runTot=0;
+    REVS.forEach(function(r){
+      var g=st.rev[r.k][0], f=st.rev[r.k][1]; runTot+=f;
+      var gp=Math.max(0,Math.min(100,g/REVMAX*100)), fp=Math.max(0,Math.min(100,f/REVMAX*100));
+      $('rghost-'+r.k).style.height=gp+'%';
+      $('rghost-'+r.k).style.opacity=(g>0 && Math.abs(g-f)>1)?'1':'0';
+      $('rseg-'+r.k).style.height=fp+'%';
+      var val=$('rval-'+r.k); val.style.bottom='calc('+Math.max(gp,fp)+'% + 4px)';
+      if(f>0){ var leak=f-g; val.innerHTML=plain(f)+(Math.abs(leak)>1?(' <span class="d" style="color:var(--'+(leak<0?'down':'up')+')">'+(leak<0?'▼':'▲')+plain(Math.abs(leak))+'</span>'):''); }
+      else val.innerHTML='';
+    });
+    $('totV').textContent=st.tot>0?plain(st.tot):'—';
+    $('totG').textContent=st.tot>0?('collected · vs. '+plain(st.rev.cg[0]+st.rev.corp[0]+st.rev.death[0])+' asked'):'';
+    // flow chips
+    $('flows').innerHTML=st.flows.map(function(fl){
+      return '<span class="chip '+fl.d+'"><span class="g">'+(fl.d==='up'?'▲':'▼')+' '+fl.g+'</span> '+fl.t+'</span>';
+    }).join('');
+    // pills + nav
+    Array.prototype.forEach.call(pills.children,function(b,bi){ b.setAttribute('aria-current', bi===i?'true':'false'); });
+    $('prev').disabled=(i===0); $('next').disabled=(i===S.length-1);
+    cur=i;
+  }
+  function go(i){ if(i<0||i>=S.length)return; render(i); }
+  $('prev').onclick=function(){ stop(); go(cur-1); };
+  $('next').onclick=function(){ stop(); go(cur+1); };
+  Array.prototype.forEach.call(pills.children,function(b){ b.onclick=function(){ stop(); go(+b.dataset.i); }; });
+  function stop(){ if(timer){ clearInterval(timer); timer=null; $('play').textContent='▶ Play'; } }
+  $('play').onclick=function(){
+    if(timer){ stop(); return; }
+    if(cur===S.length-1) go(0);
+    $('play').textContent='❚❚ Pause';
+    timer=setInterval(function(){ if(cur>=S.length-1){ stop(); return; } go(cur+1); }, 1900);
+  };
+  render(0);
+
+  var mq=window.matchMedia('(prefers-color-scheme: dark)');
+  function rr(){ location.reload(); }
+  if(mq.addEventListener) mq.addEventListener('change', rr);
+  new MutationObserver(rr).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+})();
+</script>

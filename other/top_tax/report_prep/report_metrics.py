@@ -88,20 +88,19 @@ print()
 # =============================================================== 1. incomes
 print("## 1. Income at the top, 2027 (baseline)")
 print()
-print("| Group | Cash (expanded) $B | Accrual (Haig-Simons) $B | Accrual/cash |")
-print("|---|---|---|---|")
-groups_show = ["Quintile 5", "Top 10%", "Top 5%", "Top 1%", "Top 0.1%", "Top 0.01%"]
-for g in groups_show:
-    c, h = inc_lv["expanded"][g], inc_lv["hs"][g]
-    print(f"| {g} | {fmt(c,0)} | {fmt(h,0)} | {h/c:.2f} |")
 tot_c = sum(inc_lv["expanded"][g] for g in
             ["Negative income","Quintile 1","Quintile 2","Quintile 3","Quintile 4","Quintile 5"])
 tot_h = sum(inc_lv["hs"][g] for g in
             ["Negative income","Quintile 1","Quintile 2","Quintile 3","Quintile 4","Quintile 5"])
+print("| Group | Cash (expanded) $B | Share of cash income | Accrual (Haig-Simons) $B | Share of accrual income | Accrual/cash |")
+print("|---|---|---|---|---|---|")
+groups_show = ["Quintile 5", "Top 10%", "Top 5%", "Top 1%", "Top 0.1%", "Top 0.01%"]
+for g in groups_show:
+    c, h = inc_lv["expanded"][g], inc_lv["hs"][g]
+    print(f"| {g} | {fmt(c,0)} | {100*c/tot_c:.1f}% | {fmt(h,0)} | {100*h/tot_h:.1f}% | {h/c:.2f} |")
 print()
-print(f"- Total income, all tax units 2027: cash **${fmt(tot_c/1000,1)}T**, accrual **${fmt(tot_h/1000,1)}T**.")
-for g in ["Top 1%", "Top 0.1%", "Top 0.01%"]:
-    print(f"- {g} share: cash {100*inc_lv['expanded'][g]/tot_c:.1f}%, accrual {100*inc_lv['hs'][g]/tot_h:.1f}%.")
+print(f"- Total income, all tax units 2027: cash **${fmt(tot_c/1000,1)}T**, accrual **${fmt(tot_h/1000,1)}T** "
+      "(shares are of these totals, which include the negative-income group).")
 # bottom-X crossover for top 1%
 cum = 0.0
 target = inc_lv["expanded"]["Top 1%"]
