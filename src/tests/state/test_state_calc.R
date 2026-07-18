@@ -691,6 +691,18 @@ test_state_calc = function() {
            expect = list(st_eitc = 1450, liab_st_iit = -1410),
            label = 'CT-7 2025 EITC child bonus')
 
+  # CT-8: fractional CT AGI rounds to whole dollars before the Table E
+  # lookup (the booklet's own instruction; adopted with the dense-table
+  # migration, review item #7). AGI 19,800.40 rounds to 19,800 -> band
+  # (19,300, 19,800] -> 65% (the old continuous-band encoding put
+  # 19,800.40 in the 60% band). Exemption 15,000; TI = 4,800.40; tax =
+  # 2% x 4,800.40 = 96.008; credit 65% -> liab = 96.008 x 0.35 = 33.6028
+  run_case('CT', 2024, list(agi = 19800.40),
+           expect = list(st_tax_pre_credit = 96.008,
+                         st_pct_credit = 96.008 * 0.65,
+                         liab_st_iit = 96.008 * 0.35),
+           tol = 0.001, label = 'CT-8 Table E whole-dollar rounding')
+
   #--------------------------------------------------------------------------
   # Virginia (Form 760)
   #--------------------------------------------------------------------------

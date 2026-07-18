@@ -107,7 +107,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     parse_calc_fn_input(req_vars, fill_missings)
 
   # Credit-family modules (cross-family inputs passed explicitly)
-  hh    = st_credits_household(tax_unit)
+  hh    = st_credits_household(tax_unit, credit_tables)
   earn  = st_credits_earned(tax_unit, hh$st_hh_credit, credit_tables)
   child = st_credits_child(tax_unit, earn$st_eitc)
   care  = st_credits_care(tax_unit)

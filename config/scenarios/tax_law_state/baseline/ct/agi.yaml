@@ -11,11 +11,6 @@ filing_status_mapper:
     '2': ss_limit_joint
     '3': ss_limit_single
     '4': ss_limit_joint
-  retire_sub_factor_bounds:
-    '1': retire_factor_bounds_single
-    '2': retire_factor_bounds_joint
-    '3': retire_factor_bounds_single
-    '4': retire_factor_bounds_single
 # Starting point for state base: 1 = federal AGI (CT-1040 Line 1)
 start_point:
   value: 1
@@ -89,19 +84,16 @@ ira_sub_share:
 
 # AGI-banded eligibility factor shared by the pension and IRA subtractions:
 # 2017-2023 an eligibility cliff at $75,000 single/MFS/HoH and $100,000 MFJ
-# (factors 1 then 0); 2024+ the PA 23-204 ten-band phase-out table. Bounds
-# are constant; only the factors change in 2024. Keyed to federal AGI
-retire_factor_bounds_single:
-  value: [0, 75000, 77500, 80000, 82500, 85000, 87500, 90000, 95000, 100000]
-  reference: '2024/2025 CT-1040 booklets, Pension and Annuity Worksheet phase-out table; 2019-2023 booklets (cliff at $75,000, "less than $75,000")'
-retire_factor_bounds_joint:
-  value: [0, 100000, 105000, 110000, 115000, 120000, 125000, 130000, 140000, 150000]
-  reference: '2024/2025 CT-1040 booklets, Pension and Annuity Worksheet phase-out table; 2019-2023 booklets (cliff at $100,000 MFJ)'
-retire_sub_factors:
-  value:
-    '2017': [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    '2024': [1.0, 0.85, 0.7, 0.55, 0.4, 0.25, 0.1, 0.05, 0.025, 0.0]
-  reference: '2019-2023 booklets (cliff); 2024 booklet p.28 / 2025 booklet pp.24-25 (decimals 1/.85/.70/.55/.40/.25/.10/.05/.025/0); PA 23-204 377; CGS 12-701(a)(20)(B)(xxi)-(xxii)'
+# (factors 1 then 0); 2024+ the PA 23-204 ten-band phase-out table. DENSE
+# TABLE in credit_tables.csv beside this file (credit_id
+# retirement_subtraction_factor, filing-status-keyed, two vintages 2017
+# and 2024; federal AGI rounded to whole dollars before the lookup).
+# Sources: 2019-2023 booklets (cliff); 2024 booklet p.28 / 2025 booklet
+# pp.24-25 (decimals 1/.85/.70/.55/.40/.25/.10/.05/.025/0); PA 23-204 377;
+# CGS 12-701(a)(20)(B)(xxi)-(xxii). The income base stays configurable:
+retire_sub_factor_income_base:
+  value: 1
+  reference: 'st_income_base enum 1 = federal AGI (Pension and Annuity Worksheet Line 1; 2024/2025 booklets)'
 
 # Documentation-only entries: transcribed from the forms for completeness but
 # NOT read by the calculator (the parser skips this block). Citations are

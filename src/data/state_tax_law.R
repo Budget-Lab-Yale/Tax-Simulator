@@ -135,6 +135,19 @@ build_state_credit_tables = function(states, root, state_tax_law_id) {
     if (any(overlap$overlap)) {
       stop('State credit table has overlapping ranges: ', path)
     }
+
+    # A table version must be all-statuses (0) or fully status-keyed --
+    # mixing would double-match units in the lookup
+    mixed = table %>%
+      group_by(credit_id, state, year) %>%
+      summarise(
+        mixed = any(filing_status == 0) & any(filing_status != 0),
+        .groups = 'drop'
+      )
+    if (any(mixed$mixed)) {
+      stop('State credit table mixes filing_status 0 with status-keyed ',
+           'rows within one table version: ', path)
+    }
     table %>% mutate(state = toupper(state))
   }
 

@@ -29,7 +29,7 @@ do_state_taxes = function(tax_units, credit_tables = NULL) {
     ensure_st_params() %>%
 
     # State AGI: starting point plus additions minus subtractions
-    bind_cols(calc_st_agi(.)) %>%
+    bind_cols(calc_st_agi(., credit_tables = credit_tables)) %>%
 
     # Deductions and addbacks
     bind_cols(calc_st_ded(.)) %>%

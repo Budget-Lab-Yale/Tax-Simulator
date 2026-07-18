@@ -294,11 +294,8 @@ sentinels:
   - st_credits.hh_agi_bounds_single1
   - st_credits.hh_agi_bounds_other1
   - st_credits.ctc_tier1_bound
-  - st_credits.family_credit_f1_bounds1
   - st_child_ded.agi_bounds1
-  - st_credits.pct_credit_agi_bounds1
   - st_ord.step_recap_start1
-  - st_agi.retire_sub_factor_bounds1
 
 # Vector-family name patterns (element count varies by state). The \d*
 # suffix is optional because a single-element vector parses to a
@@ -309,10 +306,6 @@ families:
     consumer: st_tax.R   # rate schedule + NY-style recapture
   - pattern: '^st_ord\.step_recap_(start|incr|amount|max)\d*$'
     consumer: st_tax.R   # CT-style stepped recapture segments
-  - pattern: '^st_agi\.retire_sub_factor_bounds\d*$'
-    consumer: st_agi.R   # CT-style retirement subtraction factor table
-  - pattern: '^st_agi\.retire_sub_factors\d*$'
-    consumer: st_agi.R
   - pattern: '^st_child_ded\.(agi_bounds|amounts)\d*$'
     consumer: st_child_ded.R   # NC-style AGI-tabled child deduction
   - pattern: '^st_credits\.hh_agi_bounds_(single|other)\d*$'
@@ -321,8 +314,6 @@ families:
     consumer: st_credits.R
   - pattern: '^st_credits\.hh_(base|incr)_other\d*$'
     consumer: st_credits.R
-  - pattern: '^st_credits\.pct_credit_(agi_bounds|rates)\d*$'
-    consumer: st_credits.R   # CT-style percentage-of-tax credit table
   - pattern: '^st_credits\.cdctc_share_(agi_bounds|start|end)\d*$'
     consumer: st_credits.R   # NY-style CDCTC share anchors
   - pattern: '^st_credits\.cdctc_expense_caps\d*$'
@@ -331,7 +322,5 @@ families:
     consumer: st_credits.R   # CO-style tiered CTC (tier anchor mid-name)
   - pattern: '^st_credits\.ctc_tier_(shares|amounts)\d*$'
     consumer: st_credits.R
-  - pattern: '^st_credits\.family_credit_f\d+_(bounds|rates)\d*$'
-    consumer: st_credits.R   # KY-style family-size credit tables
   - pattern: '^st_credits\.earned_credit_(phasein_rate|max|phaseout_start|phaseout_rate|agi_safe_harbor)\d*$'
     consumer: st_credits_earned.R   # CalEITC-style child-count-binned params

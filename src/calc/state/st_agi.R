@@ -8,7 +8,7 @@ return_vars$calc_st_agi = c('st_additions', 'st_subtractions', 'st_retirement_ex
                             'st_age_package_forgone')
 
 
-calc_st_agi = function(tax_unit, fill_missings = F) {
+calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
 
   #----------------------------------------------------------------------------
   # Calculates the state income base: federal starting point (AGI or taxable
@@ -132,21 +132,22 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
     rep(0, nrow(tax_unit))
   }
 
-  # CT-style share-based pension/IRA subtraction factor: a step table of
-  # federal-AGI band lower bounds and factors (filing-status mapped vectors).
-  # Encodes both an eligibility cliff (bounds [0, limit], factors [1, 0])
-  # and the CT 2024+ published phase-out table. Defaults to 1 where a state
-  # encodes no table (gated on retire_sub_factor_bounds1)
+  # CT-style share-based pension/IRA subtraction factor: a filing-status-
+  # keyed dense table (credit_tables id retirement_subtraction_factor)
+  # covering both the 2017-2023 eligibility cliff and the 2024+ published
+  # phase-out table, with income rounded to whole dollars per the worksheet
+  # before the lookup. Defaults to 1 where a state carries no table (a
+  # zero factor inside the table is real; absence is not)
   retire_factor = rep(1, nrow(tax_unit))
-  rf_b = st_family_matrix(tax_unit, 'st_agi.retire_sub_factor_bounds')
-  if (!is.null(rf_b)) {
-    rf_f = st_family_matrix(tax_unit, 'st_agi.retire_sub_factors',
-                            elements = 1:ncol(rf_b), require_sentinel = FALSE)
-    rf_j = st_band_index_lower(
-      st_income_base(tax_unit, tax_unit$st_agi.retire_sub_factor_income_base),
-      rf_b
+  if (!is.null(credit_tables) &&
+      any(credit_tables$credit_id == 'retirement_subtraction_factor')) {
+    rf_income = st_income_base(
+      tax_unit, tax_unit$st_agi.retire_sub_factor_income_base
     )
-    retire_factor = coalesce(st_pick_slot(rf_f, rf_j), 1)
+    retire_factor = lookup_state_credit_table(
+      floor(rf_income + 0.5), rep(0L, nrow(tax_unit)), credit_tables,
+      'retirement_subtraction_factor', filing_status = tax_unit$filing_status
+    )
   }
 
   # Age-deduction reduction income base per the uniform enum (VA: 5 = AFAGI,

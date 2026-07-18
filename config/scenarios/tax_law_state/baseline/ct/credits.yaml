@@ -5,11 +5,6 @@
 # scope per project convention.
 
 filing_status_mapper:
-  pct_credit_agi_bounds:
-    '1': pct_bounds_single
-    '2': pct_bounds_married
-    '3': pct_bounds_mfs
-    '4': pct_bounds_head
   prop_tax_credit_po_thresh:
     '1': ptc_thresh_single
     '2': ptc_thresh_married
@@ -44,24 +39,12 @@ eitc_child_bonus:
   reference: 'PA 25-168 371; 2025 Schedule CT-EITC Line 15a; 2025 CT-1040 booklet Line 20a'
 
 # Personal tax credit (Table E): a percentage of tax after add-back and
-# recapture, by CT AGI band. Bit-identical in all nine 2017-2025 booklets
-# (not indexed). 28 band bounds, 27 rates; zero below the first bound
-# (exemption exhausts the base there) and above the last
-pct_bounds_single:
-  value: [15000, 18800, 19300, 19800, 20300, 20800, 21300, 21800, 22300, 25000, 25500, 26000, 26500, 31300, 31800, 32300, 32800, 33300, 60000, 60500, 61000, 61500, 62000, 62500, 63000, 63500, 64000, 64500]
-  reference: '2017 booklet p.52 / 2025 booklet p.23 Table E (single; hash-identical 2017-2025); CGS 12-703'
-pct_bounds_married:
-  value: [24000, 30000, 30500, 31000, 31500, 32000, 32500, 33000, 33500, 40000, 40500, 41000, 41500, 50000, 50500, 51000, 51500, 52000, 96000, 96500, 97000, 97500, 98000, 98500, 99000, 99500, 100000, 100500]
-  reference: '2017/2025 booklets Table E (MFJ/QSS)'
-pct_bounds_mfs:
-  value: [12000, 15000, 15500, 16000, 16500, 17000, 17500, 18000, 18500, 20000, 20500, 21000, 21500, 25000, 25500, 26000, 26500, 27000, 48000, 48500, 49000, 49500, 50000, 50500, 51000, 51500, 52000, 52500]
-  reference: '2017/2025 booklets Table E (MFS)'
-pct_bounds_head:
-  value: [19000, 24000, 24500, 25000, 25500, 26000, 26500, 27000, 27500, 34000, 34500, 35000, 35500, 44000, 44500, 45000, 45500, 46000, 74000, 74500, 75000, 75500, 76000, 76500, 77000, 77500, 78000, 78500]
-  reference: '2017/2025 booklets Table E (HoH)'
-pct_credit_rates:
-  value: [0.75, 0.7, 0.65, 0.6, 0.55, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.14, 0.13, 0.12, 0.11, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]
-  reference: '2017/2025 booklets Table E decimal column (75% stepping down to 1%, then 0)'
+# recapture, by CT AGI band and filing status. DENSE TABLE in
+# credit_tables.csv beside this file (credit_id pct_of_tax_credit,
+# filing-status-keyed, inclusive whole-dollar bands; CT AGI is rounded to
+# whole dollars before the lookup, per the booklet). Bit-identical in all
+# nine 2017-2025 booklets (2017 booklet p.52 / 2025 booklet p.23; CGS
+# 12-703); zero below the first band and above the last.
 
 # Property tax credit: min(qualifying property tax, max credit), reduced 15%
 # per $10,000 ($5,000 MFS) of CT AGI over the threshold; nonrefundable.

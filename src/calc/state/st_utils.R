@@ -302,16 +302,28 @@ st_n_dep_in = function(tax_unit, lo, hi) {
 
 
 
-lookup_state_credit_table = function(income, key, credit_tables, table_id) {
+lookup_state_credit_table = function(income, key, credit_tables, table_id,
+                                     filing_status = NULL) {
 
   #----------------------------------------------------------------------------
   # Looks up a dense state schedule with inclusive income bands keyed by a
   # generalized concept (child count for CalEITC, family size for the VA
-  # poverty guideline, ...). Missing ranges intentionally return zero, which
-  # supports published tables that omit their zero-value tails.
-  # Filing-status-keyed rows (filing_status != 0) are not yet supported by
-  # this lookup -- the loader schema carries the column for the CT Table
-  # E-style migrations queued under review item #7.
+  # poverty guideline and KY Table C, none for CT Table E) and optionally
+  # by filing status (rows with filing_status 0 apply to every status).
+  # Missing ranges intentionally return zero, which supports published
+  # tables that omit their zero-value tails. Callers migrating a
+  # whole-dollar published table should round income first (the forms'
+  # own instruction) -- see the 2026-07-17 review item #7 notes.
+  #
+  # Parameters:
+  #   - income (dbl[])        : income measure (round if the form does)
+  #   - key (int[])           : key-concept value per unit
+  #   - credit_tables (df)    : year- and state-filtered schedule rows
+  #   - table_id (str)        : credit_id to look up
+  #   - filing_status (int[]) : per-unit filing status; NULL when the
+  #                             table is not status-keyed
+  #
+  # Returns: per-unit table value, zero outside the table (dbl[]).
   #----------------------------------------------------------------------------
 
   value = rep(0, length(income))
@@ -323,24 +335,29 @@ lookup_state_credit_table = function(income, key, credit_tables, table_id) {
   if (nrow(schedule) == 0) {
     return(value)
   }
-  if (any(schedule$filing_status != 0)) {
-    stop('lookup_state_credit_table: filing-status-keyed rows are not yet ',
-         'supported (table ', table_id, ')')
+  if (is.null(filing_status)) {
+    filing_status = rep(0L, length(income))
   }
 
-  # Cap at the top key value; do NOT floor up to the lowest present key. A
-  # key below the schedule's minimum bin (e.g. a childless filer when a
-  # table omits its zero-child rows) finds no matching band and returns
-  # zero, consistent with the omitted-tail semantics above.
-  key = pmin(max(schedule$key_concept), coalesce(key, 0L))
-  for (key_slot in unique(key)) {
-    rows = which(key == key_slot)
-    bands = schedule[schedule$key_concept == key_slot, , drop = FALSE]
-    bands = bands[order(bands$income_lower), , drop = FALSE]
-    index = findInterval(income[rows], bands$income_lower)
-    valid = index > 0
-    valid[valid] = income[rows][valid] <= bands$income_upper[index[valid]]
-    value[rows[valid]] = bands$value[index[valid]]
+  for (fs_slot in unique(schedule$filing_status)) {
+    sched_fs = schedule[schedule$filing_status == fs_slot, , drop = FALSE]
+    in_fs = if (fs_slot == 0) rep(TRUE, length(income))
+            else filing_status == fs_slot
+
+    # Cap at the top key value; do NOT floor up to the lowest present key.
+    # A key below the schedule's minimum bin (e.g. a childless filer when a
+    # table omits its zero-child rows) finds no matching band and returns
+    # zero, consistent with the omitted-tail semantics above.
+    key_fs = pmin(max(sched_fs$key_concept), coalesce(key, 0L))
+    for (key_slot in unique(key_fs[in_fs])) {
+      rows = which(in_fs & key_fs == key_slot)
+      bands = sched_fs[sched_fs$key_concept == key_slot, , drop = FALSE]
+      bands = bands[order(bands$income_lower), , drop = FALSE]
+      index = findInterval(income[rows], bands$income_lower)
+      valid = index > 0
+      valid[valid] = income[rows][valid] <= bands$income_upper[index[valid]]
+      value[rows[valid]] = bands$value[index[valid]]
+    }
   }
 
   return(value)

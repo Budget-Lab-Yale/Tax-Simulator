@@ -27,11 +27,15 @@ st_credits_household_req_vars = c(
 )
 
 
-st_credits_household = function(tax_unit) {
+st_credits_household = function(tax_unit, credit_tables = NULL) {
 
   #----------------------------------------------------------------------------
   # Calculates the household-structure credit family on a parsed tax unit
   # tibble (columns guaranteed by calc_st_credits).
+  #
+  # Parameters:
+  #   - tax_unit (df)      : parsed tax unit tibble
+  #   - credit_tables (df) : dense schedules (see build_state_credit_tables)
   #
   # Returns: list of per-row vectors --
   #   - st_hh_credit (dbl)       : NY-style household credit
@@ -44,31 +48,17 @@ st_credits_household = function(tax_unit) {
   n   = nrow(tax_unit)
   agi = tax_unit$agi
 
-  # A state can provide four family-size columns (one through four-or-more)
-  # of income bounds and preliminary-tax reduction shares. This keeps the
-  # Kentucky-style credit a parameterized table, not a state module.
-  family_credit_rate = rep(0, n)
+  # Family-size credit rate (KY Schedule ITC Table C): dense table keyed by
+  # family size (one through four-or-more), income rounded to whole dollars
+  # per the form before the lookup. States without the table get zero
   family_size = pmin(4L, 1L + (tax_unit$filing_status == 2) + tax_unit$n_dep)
   family_income = st_income_base(
     tax_unit, tax_unit$st_credits.family_credit_income_base
   )
-  for (f in 1:4) {
-    bounds = st_family_matrix(
-      tax_unit, paste0('st_credits.family_credit_f', f, '_bounds'), 1:11
-    )
-    rates = st_family_matrix(
-      tax_unit, paste0('st_credits.family_credit_f', f, '_rates'), 1:11,
-      require_sentinel = FALSE
-    )
-    if (!is.null(bounds) && !is.null(rates)) {
-      row = which(family_size == f)
-      if (length(row) > 0) {
-        index = st_band_index_upper(family_income[row],
-                                    bounds[row, , drop = FALSE])
-        family_credit_rate[row] = rates[cbind(row, index)]
-      }
-    }
-  }
+  family_credit_rate = lookup_state_credit_table(
+    floor(family_income + 0.5), family_size, credit_tables,
+    'family_size_tax_credit'
+  )
 
   # Exemption credits are a credit (rather than an income exemption) in
   # California. The common per-credit phaseout is generic and applies to
@@ -127,26 +117,15 @@ st_credits_household = function(tax_unit) {
   # Percentage-of-tax personal credit (CT Table E)
   #--------------------------------------------------
 
-  # A filing-status-mapped step table of state-AGI bands and credit rates:
+  # A filing-status-keyed dense table of state-AGI bands and credit rates:
   # the rate applies to the whole of tax before credits (schedule plus
-  # add-back/recapture). Zero below the first bound (where the exemption
-  # exhausts the base anyway) and above the last. Bounds are one longer
-  # than rates; unused tail rows pad with repeated bounds and zero rates.
-  pct_credit_rate = rep(0, n)
-  pct_r = st_family_matrix(tax_unit, 'st_credits.pct_credit_rates',
-                           require_sentinel = FALSE)
-  if (!is.null(pct_r) &&
-      any(!is.na(tax_unit$st_credits.pct_credit_agi_bounds1))) {
-    n_pct = ncol(pct_r)
-    pct_b = st_family_matrix(tax_unit, 'st_credits.pct_credit_agi_bounds',
-                             1:(n_pct + 1), require_sentinel = FALSE)
-    pct_credit_rate = st_band_value(
-      tax_unit$st_agi,
-      upper  = pct_b[, 2:(n_pct + 1), drop = FALSE],
-      values = pct_r,
-      lower  = pct_b[, 1:n_pct, drop = FALSE]
-    )
-  }
+  # add-back/recapture). Zero below the first band (where the exemption
+  # exhausts the base anyway) and above the last. Income rounded to whole
+  # dollars per the form before the lookup
+  pct_credit_rate = lookup_state_credit_table(
+    floor(tax_unit$st_agi + 0.5), rep(0L, n), credit_tables,
+    'pct_of_tax_credit', filing_status = tax_unit$filing_status
+  )
 
   # Property tax credit, two generic styles (mutually exclusive by
   # config): IL rate-style (rate times property taxes, denied above the
