@@ -101,6 +101,14 @@ stage label there does NOT imply a liability error — trust `siitax` and the
 match rates, and treat the stage tables as directional only. `staxbc` is
 unpopulated for some states (verified for IL) and is not used.
 
+## Companion documents
+
+- `federal_divergences.md` — federal-side divergences: **documented here,
+  then ignored by the state validation** (the clean-subset filter). Standing
+  handoff for separate analyst review (policy: JI, 2026-07-18).
+- `external_model_issues.md` — potential errors/concept questions in
+  TAXSIM-35 and PolicyEngine US, written to be shareable upstream.
+
 ## Known differences
 
 `known_differences.csv` is the machine-readable list of expected
