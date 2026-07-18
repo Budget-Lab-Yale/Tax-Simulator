@@ -22,20 +22,13 @@ calc_st_child_ded = function(tax_unit, fill_missings = F) {
 
   tax_unit %<>% parse_calc_fn_input(req_vars, fill_missings)
 
-  n = nrow(tax_unit)
-  cols = colnames(tax_unit)
-  bounds_cols = paste0('st_child_ded.agi_bounds', 1:7)
-  amount_cols = paste0('st_child_ded.amounts', 1:7)
-  st_child_ded = rep(0, n)
+  st_child_ded = rep(0, nrow(tax_unit))
+  upper   = st_family_matrix(tax_unit, 'st_child_ded.agi_bounds', 1:7)
+  amounts = st_family_matrix(tax_unit, 'st_child_ded.amounts', 1:7,
+                             require_sentinel = FALSE)
 
-  if (all(c(bounds_cols, amount_cols) %in% cols) &&
-      any(!is.na(tax_unit$st_child_ded.agi_bounds1))) {
-    upper = as.matrix(tax_unit[bounds_cols])
-    lower = cbind(-Inf, upper[, -7, drop = FALSE])
-    amounts = as.matrix(tax_unit[amount_cols])
-    per_child = rowSums(amounts *
-                          (tax_unit$agi > lower & tax_unit$agi <= upper),
-                         na.rm = TRUE)
+  if (!is.null(upper) && !is.null(amounts)) {
+    per_child = st_band_value(tax_unit$agi, upper, amounts)
     st_child_ded = if_else(tax_unit$st_child_ded.style == 1,
                            pmax(0, tax_unit$n_dep_ctc) * per_child, 0)
   }

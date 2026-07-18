@@ -59,17 +59,22 @@ calc_st_special = function(tax_unit, fill_missings = F) {
 
   tax_unit = parse_calc_fn_input(tax_unit, req_vars, fill_missings)
   n = nrow(tax_unit)
-  wftc_max_amounts = as.matrix(
-    tax_unit[paste0('st_transfers.wftc_max_amount', 1:4)]
+
+  # Child-count-binned WFTC parameter families (columns guaranteed by
+  # req_vars and ensure_st_params defaults; no feature gate needed)
+  wftc_max_amounts = st_family_matrix(
+    tax_unit, 'st_transfers.wftc_max_amount', 1:4, require_sentinel = FALSE
   )
-  wftc_phaseout_widths = as.matrix(
-    tax_unit[paste0('st_transfers.wftc_phaseout_width', 1:4)]
+  wftc_phaseout_widths = st_family_matrix(
+    tax_unit, 'st_transfers.wftc_phaseout_width', 1:4, require_sentinel = FALSE
   )
-  wftc_income_single = as.matrix(
-    tax_unit[paste0('st_transfers.wftc_max_income_single', 1:4)]
+  wftc_income_single = st_family_matrix(
+    tax_unit, 'st_transfers.wftc_max_income_single', 1:4,
+    require_sentinel = FALSE
   )
-  wftc_income_joint = as.matrix(
-    tax_unit[paste0('st_transfers.wftc_max_income_joint', 1:4)]
+  wftc_income_joint = st_family_matrix(
+    tax_unit, 'st_transfers.wftc_max_income_joint', 1:4,
+    require_sentinel = FALSE
   )
 
   tax_unit %>%
@@ -152,20 +157,13 @@ calc_st_special = function(tax_unit, fill_missings = F) {
         (filing_status == 2 & !is.na(age2) &
            age2 >= st_transfers.wftc_min_age & age2 <= st_transfers.wftc_max_age),
       st_wftc_mfs_ok = filing_status != 3 | st_transfers.wftc_mfs_eligible == 1,
-      st_wftc_max_amount = wftc_max_amounts[
-        cbind(seq_len(n), st_wftc_child_bin)
-      ],
-      st_wftc_phaseout_width = wftc_phaseout_widths[
-        cbind(seq_len(n), st_wftc_child_bin)
-      ],
+      st_wftc_max_amount     = st_pick_slot(wftc_max_amounts, st_wftc_child_bin),
+      st_wftc_phaseout_width = st_pick_slot(wftc_phaseout_widths,
+                                            st_wftc_child_bin),
       st_wftc_income_limit = if_else(
         filing_status == 2,
-        wftc_income_joint[
-          cbind(seq_len(n), st_wftc_child_bin)
-        ],
-        wftc_income_single[
-          cbind(seq_len(n), st_wftc_child_bin)
-        ]
+        st_pick_slot(wftc_income_joint,  st_wftc_child_bin),
+        st_pick_slot(wftc_income_single, st_wftc_child_bin)
       ),
       st_wftc_eligible = st_programs.wftc == 1 & filer == 1 & dep_status != 1 &
         st_wftc_age_ok & st_wftc_mfs_ok & st_wftc_earned_income > 0 &

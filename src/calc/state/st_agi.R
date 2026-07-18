@@ -137,14 +137,12 @@ calc_st_agi = function(tax_unit, fill_missings = F) {
   # and the CT 2024+ published phase-out table. Defaults to 1 where a state
   # encodes no table (gated on retire_sub_factor_bounds1)
   retire_factor = rep(1, nrow(tax_unit))
-  rf_cols = str_subset(colnames(tax_unit),
-                       '^st_agi\\.retire_sub_factor_bounds[0-9]+$')
-  if (length(rf_cols) > 0 && any(!is.na(tax_unit[[rf_cols[1]]]))) {
-    n_rf = max(as.integer(str_extract(rf_cols, '[0-9]+$')))
-    rf_b = as.matrix(tax_unit[paste0('st_agi.retire_sub_factor_bounds', 1:n_rf)])
-    rf_f = as.matrix(tax_unit[paste0('st_agi.retire_sub_factors',       1:n_rf)])
-    rf_j = pmax(1, rowSums(rf_b <= tax_unit$agi, na.rm = T))
-    retire_factor = coalesce(rf_f[cbind(seq_len(nrow(tax_unit)), rf_j)], 1)
+  rf_b = st_family_matrix(tax_unit, 'st_agi.retire_sub_factor_bounds')
+  if (!is.null(rf_b)) {
+    rf_f = st_family_matrix(tax_unit, 'st_agi.retire_sub_factors',
+                            elements = 1:ncol(rf_b), require_sentinel = FALSE)
+    rf_j = st_band_index_lower(tax_unit$agi, rf_b)
+    retire_factor = coalesce(st_pick_slot(rf_f, rf_j), 1)
   }
 
   tax_unit %>%

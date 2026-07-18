@@ -82,10 +82,10 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     )
 
   # Recapture via bracket matrices
-  bracket_cols = str_subset(colnames(tax_unit), '^st_ord\\.brackets[0-9]+$')
-  n_br = max(as.integer(str_extract(bracket_cols, '[0-9]+$')))
-  br   = as.matrix(tax_unit[paste0('st_ord.brackets', 1:n_br)])
-  rt   = as.matrix(tax_unit[paste0('st_ord.rates',    1:n_br)])
+  br = st_family_matrix(tax_unit, 'st_ord.brackets', require_sentinel = FALSE)
+  rt = st_family_matrix(tax_unit, 'st_ord.rates', elements = 1:ncol(br),
+                        require_sentinel = FALSE)
+  n_br = ncol(br)
 
   # Schedule tax at an arbitrary income vector. A state with fewer brackets
   # than the widest state in the law slice carries trailing NA bracket
@@ -97,28 +97,27 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     rowSums(rt * pmax(0, pmin(y, upper) - br), na.rm = T)
   }
 
-  # Stepped recapture segments (CT-style), zero when not encoded
+  # Stepped recapture segments (CT-style), zero when not encoded: for each
+  # segment, per-step add-back of st_agi above the segment start, capped at
+  # the segment maximum
   step_recap = rep(0, nrow(tax_unit))
-  step_start_cols = str_subset(colnames(tax_unit),
-                               '^st_ord\\.step_recap_start[0-9]+$')
-  if (length(step_start_cols) > 0 &&
-      any(!is.na(tax_unit[[step_start_cols[1]]]))) {
-    n_seg  = max(as.integer(str_extract(step_start_cols, '[0-9]+$')))
-    s_strt = as.matrix(tax_unit[paste0('st_ord.step_recap_start',  1:n_seg)])
-    s_incr = as.matrix(tax_unit[paste0('st_ord.step_recap_incr',   1:n_seg)])
-    s_amt  = as.matrix(tax_unit[paste0('st_ord.step_recap_amount', 1:n_seg)])
-    s_max  = as.matrix(tax_unit[paste0('st_ord.step_recap_max',    1:n_seg)])
-    excess = pmax(0, tax_unit$st_agi - s_strt)
-    step_recap = rowSums(pmin(ceiling(excess / s_incr) * s_amt, s_max),
-                         na.rm = T)
+  s_strt = st_family_matrix(tax_unit, 'st_ord.step_recap_start')
+  if (!is.null(s_strt)) {
+    seg    = 1:ncol(s_strt)
+    s_incr = st_family_matrix(tax_unit, 'st_ord.step_recap_incr',   seg, F)
+    s_amt  = st_family_matrix(tax_unit, 'st_ord.step_recap_amount', seg, F)
+    s_max  = st_family_matrix(tax_unit, 'st_ord.step_recap_max',    seg, F)
+    step_recap = rowSums(
+      pmin(st_step_reduction(tax_unit$st_agi, s_strt, s_incr, s_amt), s_max),
+      na.rm = T
+    )
   }
 
   ti = tax_unit$st_txbl_inc
-  i  = seq_along(ti)
-  j  = pmax(1, rowSums(br <= ti, na.rm = T))   # taxpayer's bracket index
-  m      = rt[cbind(i, j)]
-  B      = br[cbind(i, j)]
-  m_prev = rt[cbind(i, pmax(1, j - 1))]
+  j  = st_band_index_lower(ti, br)             # taxpayer's bracket index
+  m      = st_pick_slot(rt, j)
+  B      = st_pick_slot(br, j)
+  m_prev = st_pick_slot(rt, pmax(1, j - 1))
 
   tax_unit %>%
     mutate(

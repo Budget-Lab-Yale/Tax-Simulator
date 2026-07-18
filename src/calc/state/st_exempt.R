@@ -77,9 +77,10 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
       po_income = if_else(st_exempt.po_agi_base == 2, st_agi, agi),
       st_exempt = case_when(
         st_exempt.po_type == 1 ~
-          pmax(0, st_exempt_gross - st_exempt.po_reduction_per_step *
-                    ceiling(pmax(0, po_income - st_exempt.po_thresh) /
-                              st_exempt.po_step)),
+          pmax(0, st_exempt_gross -
+                  st_step_reduction(po_income, st_exempt.po_thresh,
+                                    st_exempt.po_step,
+                                    st_exempt.po_reduction_per_step)),
         po_income > st_exempt.po_thresh ~ 0,
         TRUE ~ st_exempt_gross
       )

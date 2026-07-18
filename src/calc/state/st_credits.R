@@ -215,16 +215,18 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   family_size = pmin(4L, 1L + (tax_unit$filing_status == 2) + tax_unit$n_dep)
   family_income = tax_unit$agi + tax_unit$st_additions
   for (f in 1:4) {
-    bound_cols = paste0('st_credits.family_credit_f', f, '_bounds', 1:11)
-    rate_cols  = paste0('st_credits.family_credit_f', f, '_rates', 1:11)
-    if (all(c(bound_cols, rate_cols) %in% cn) &&
-        any(!is.na(tax_unit[[bound_cols[1]]]))) {
-      bounds = as.matrix(tax_unit[bound_cols])
-      rates  = as.matrix(tax_unit[rate_cols])
-      row    = which(family_size == f)
+    bounds = st_family_matrix(
+      tax_unit, paste0('st_credits.family_credit_f', f, '_bounds'), 1:11
+    )
+    rates = st_family_matrix(
+      tax_unit, paste0('st_credits.family_credit_f', f, '_rates'), 1:11,
+      require_sentinel = FALSE
+    )
+    if (!is.null(bounds) && !is.null(rates)) {
+      row = which(family_size == f)
       if (length(row) > 0) {
-        index = rowSums(family_income[row] > bounds[row, , drop = FALSE]) + 1L
-        index = pmin(index, ncol(rates))
+        index = st_band_index_upper(family_income[row],
+                                    bounds[row, , drop = FALSE])
         family_credit_rate[row] = rates[cbind(row, index)]
       }
     }
@@ -234,14 +236,12 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   # triangular schedule; style 2 uses a dense row-based table for schedules
   # such as CalEITC.
   pick_earned_param = function(prefix) {
-    cols = paste0('st_credits.', prefix, 1:4)
-    out = rep(0, n)
-    if (!all(cols %in% cn)) {
-      return(out)
+    values = st_family_matrix(tax_unit, paste0('st_credits.', prefix), 1:4,
+                              require_sentinel = FALSE)
+    if (is.null(values)) {
+      return(rep(0, n))
     }
-    values = as.matrix(tax_unit[cols])
-    slot = pmin(4L, 1L + tax_unit$n_dep_eitc)
-    values[cbind(seq_len(n), slot)]
+    st_pick_slot(values, pmin(4L, 1L + tax_unit$n_dep_eitc))
   }
   earned_income_raw = tax_unit$ei1 + tax_unit$ei2
   earned_income = pmax(0, earned_income_raw)
@@ -302,9 +302,11 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
            (tax_unit$filing_status == 2 & !is.na(tax_unit$age2) & tax_unit$age2 >= 65)
   n_blind = coalesce(tax_unit$blind1, 0) +
             (tax_unit$filing_status == 2 & coalesce(tax_unit$blind2, 0))
-  credit_reduction = ceiling(pmax(0, agi - tax_unit$st_credits.exempt_credit_po_thresh) /
-                               tax_unit$st_credits.exempt_credit_po_width) *
-                     tax_unit$st_credits.exempt_credit_po_per_step
+  credit_reduction = st_step_reduction(
+    agi, tax_unit$st_credits.exempt_credit_po_thresh,
+    tax_unit$st_credits.exempt_credit_po_width,
+    tax_unit$st_credits.exempt_credit_po_per_step
+  )
   taxpayer_credit = (tax_unit$dep_status != 1) * (
     n_taxpayers * pmax(0, tax_unit$st_credits.exempt_credit_personal - credit_reduction) +
     n_aged * pmax(0, tax_unit$st_credits.exempt_credit_aged - credit_reduction) +
@@ -360,22 +362,20 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
 
   st_hh_credit = rep(0, n)
 
-  hh_single_cols = paste0('st_credits.hh_agi_bounds_single', 1:7)
-  if (all(hh_single_cols %in% cn) &&
-      any(!is.na(tax_unit$st_credits.hh_agi_bounds_single1))) {
+  hh_bounds_s = st_family_matrix(tax_unit, 'st_credits.hh_agi_bounds_single',
+                                 1:7)
+  if (!is.null(hh_bounds_s)) {
 
-    ub_s  = as.matrix(tax_unit[paste0('st_credits.hh_agi_bounds_single', 2:7)])
-    amt_s = as.matrix(tax_unit[paste0('st_credits.hh_amount_single', 1:6)])
-    lb_s  = cbind(-Inf, ub_s[, -6, drop = F])
-    hh_s  = rowSums(amt_s * (agi > lb_s & agi <= ub_s), na.rm = T)
+    ub_s  = hh_bounds_s[, 2:7, drop = F]
+    amt_s = st_family_matrix(tax_unit, 'st_credits.hh_amount_single', 1:6, F)
+    hh_s  = st_band_value(agi, ub_s, amt_s)
 
-    ub_o   = as.matrix(tax_unit[paste0('st_credits.hh_agi_bounds_other', 2:9)])
-    base_o = as.matrix(tax_unit[paste0('st_credits.hh_base_other', 1:8)])
-    incr_o = as.matrix(tax_unit[paste0('st_credits.hh_incr_other', 1:8)])
-    lb_o   = cbind(-Inf, ub_o[, -8, drop = F])
+    ub_o   = st_family_matrix(tax_unit, 'st_credits.hh_agi_bounds_other',
+                              2:9, F)
+    base_o = st_family_matrix(tax_unit, 'st_credits.hh_base_other', 1:8, F)
+    incr_o = st_family_matrix(tax_unit, 'st_credits.hh_incr_other', 1:8, F)
     n_ex   = 1 + (tax_unit$filing_status == 2) + tax_unit$n_dep
-    hh_o   = rowSums((base_o + incr_o * (n_ex - 1)) * (agi > lb_o & agi <= ub_o),
-                     na.rm = T)
+    hh_o   = st_band_value(agi, ub_o, base_o + incr_o * (n_ex - 1))
 
     st_hh_credit = case_when(
       tax_unit$dep_status == 1     ~ 0,
@@ -396,17 +396,19 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   # exhausts the base anyway) and above the last. Bounds are one longer
   # than rates; unused tail rows pad with repeated bounds and zero rates.
   pct_credit_rate = rep(0, n)
-  pct_rate_cols = str_subset(cn, '^st_credits\\.pct_credit_rates[0-9]+$')
-  if (length(pct_rate_cols) > 0 &&
+  pct_r = st_family_matrix(tax_unit, 'st_credits.pct_credit_rates',
+                           require_sentinel = FALSE)
+  if (!is.null(pct_r) &&
       any(!is.na(tax_unit$st_credits.pct_credit_agi_bounds1))) {
-    n_pct = max(as.integer(str_extract(pct_rate_cols, '[0-9]+$')))
-    pct_b = as.matrix(tax_unit[paste0('st_credits.pct_credit_agi_bounds',
-                                      1:(n_pct + 1))])
-    pct_r = as.matrix(tax_unit[paste0('st_credits.pct_credit_rates', 1:n_pct)])
-    pct_lb = pct_b[, 1:n_pct, drop = FALSE]
-    pct_ub = pct_b[, 2:(n_pct + 1), drop = FALSE]
-    pct_credit_rate = rowSums(pct_r * (tax_unit$st_agi > pct_lb &
-                                       tax_unit$st_agi <= pct_ub), na.rm = T)
+    n_pct = ncol(pct_r)
+    pct_b = st_family_matrix(tax_unit, 'st_credits.pct_credit_agi_bounds',
+                             1:(n_pct + 1), require_sentinel = FALSE)
+    pct_credit_rate = st_band_value(
+      tax_unit$st_agi,
+      upper  = pct_b[, 2:(n_pct + 1), drop = FALSE],
+      values = pct_r,
+      lower  = pct_b[, 1:n_pct, drop = FALSE]
+    )
   }
 
   #--------------------------------------------------------
@@ -414,15 +416,14 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   #--------------------------------------------------------
 
   cli_guideline = rep(-Inf, n)
-  cli_cols = paste0('st_credits.cli_poverty_bounds', 1:8)
-  if (all(cli_cols %in% cn) &&
-      any(!is.na(tax_unit$st_credits.cli_poverty_bounds1))) {
-    cli_b = as.matrix(tax_unit[cli_cols])
+  cli_b = st_family_matrix(tax_unit, 'st_credits.cli_poverty_bounds', 1:8)
+  if (!is.null(cli_b)) {
     cli_fam = 1 + (tax_unit$filing_status == 2) + tax_unit$n_dep
-    cli_guideline = cli_b[cbind(seq_len(n), pmin(cli_fam, 8))] +
-                    pmax(0, cli_fam - 8) *
-                    tax_unit$st_credits.cli_poverty_addl
-    cli_guideline = coalesce(cli_guideline, -Inf)
+    cli_guideline = coalesce(
+      st_pick_slot(cli_b, pmin(cli_fam, 8)) +
+        pmax(0, cli_fam - 8) * tax_unit$st_credits.cli_poverty_addl,
+      -Inf
+    )
   }
 
   #-------------------------------
@@ -430,20 +431,11 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   #-------------------------------
 
   cdctc_ny_share = rep(0, n)
-  cdctc_anchor_cols = paste0('st_credits.cdctc_share_agi_bounds', 1:6)
-  if (all(cdctc_anchor_cols %in% cn) &&
-      any(!is.na(tax_unit$st_credits.cdctc_share_agi_bounds1))) {
-
-    b_c = as.matrix(tax_unit[paste0('st_credits.cdctc_share_agi_bounds', 1:6)])
-    s0  = as.matrix(tax_unit[paste0('st_credits.cdctc_share_start', 1:6)])
-    s1  = as.matrix(tax_unit[paste0('st_credits.cdctc_share_end', 1:6)])
-    ub  = cbind(b_c[, -1, drop = F], Inf)
-    y   = tax_unit$st_agi
-    w   = ub - b_c
-    frac = ifelse(is.finite(w) & w > 0, (y - b_c) / w, 0)
-    seg  = (y >= b_c & y < ub)
-    cdctc_ny_share = rowSums((s0 + (s1 - s0) * pmin(1, pmax(0, frac))) * seg,
-                             na.rm = T)
+  b_c = st_family_matrix(tax_unit, 'st_credits.cdctc_share_agi_bounds', 1:6)
+  if (!is.null(b_c)) {
+    s0 = st_family_matrix(tax_unit, 'st_credits.cdctc_share_start', 1:6, F)
+    s1 = st_family_matrix(tax_unit, 'st_credits.cdctc_share_end',   1:6, F)
+    cdctc_ny_share = st_band_interp(tax_unit$st_agi, b_c, s0, s1)
   }
 
   #---------------------------------
@@ -456,11 +448,12 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
 
   n_care_v = n_dep_in(0, 12)
   cdctc_cap_vec = rep(0, n)
-  cap_cols = paste0('st_credits.cdctc_expense_caps', 1:5)
-  if (all(cap_cols %in% cn)) {
-    caps = as.matrix(tax_unit[cap_cols])
-    cdctc_cap_vec = caps[cbind(1:n, pmin(pmax(n_care_v, 1), 5))]
-    cdctc_cap_vec[is.na(cdctc_cap_vec)] = 0
+  caps = st_family_matrix(tax_unit, 'st_credits.cdctc_expense_caps', 1:5,
+                          require_sentinel = FALSE)
+  if (!is.null(caps)) {
+    cdctc_cap_vec = coalesce(
+      st_pick_slot(caps, pmin(pmax(n_care_v, 1), 5)), 0
+    )
   }
 
   co_tier = rep(0L, n)
@@ -478,12 +471,11 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   # case_when() evaluates all branches eagerly, so this must return zeros
   # (not error) when the tier columns are absent from this state's law slice
   pick_tier = function(prefix) {
-    cols = paste0(prefix, 1:3)
-    out  = rep(0, n)
-    if (!all(cols %in% cn)) {
+    m   = st_family_matrix(tax_unit, prefix, 1:3, require_sentinel = FALSE)
+    out = rep(0, n)
+    if (is.null(m)) {
       return(out)
     }
-    m  = as.matrix(tax_unit[cols])
     ok = co_tier > 0
     out[ok] = m[cbind(which(ok), co_tier[ok])]
     out
@@ -577,10 +569,11 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       n_young  = n_dep_in(0, st_credits.ctc_young_age_limit),
       n_old    = n_dep_in(st_credits.ctc_young_age_limit + 1,
                           st_credits.ctc_max_child_age),
-      ctc_po_up   = st_credits.ctc_po_rate * 1000 *
-                    ceiling(pmax(0, agi - st_credits.ctc_po_thresh) / 1000),
-      ctc_po_down = st_credits.ctc_po_rate * 1000 *
-                    floor(pmax(0, agi - st_credits.ctc_po_thresh) / 1000),
+      ctc_po_up   = st_step_reduction(agi, st_credits.ctc_po_thresh, 1000,
+                                      st_credits.ctc_po_rate * 1000),
+      ctc_po_down = st_step_reduction(agi, st_credits.ctc_po_thresh, 1000,
+                                      st_credits.ctc_po_rate * 1000,
+                                      round_up = FALSE),
       ctc_ny = case_when(
         ny_gate & st_credits.ctc_style == 1 ~
           pmax(st_credits.ctc_match_share *
@@ -629,8 +622,8 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                         st_credits.dep_credit_other_amount * pmax(0, n_dep - n_dep_ctc),
       dep_credit_factor = pmax(
         0,
-        1 - st_credits.dep_credit_po_per_1k *
-          ceiling(pmax(0, agi - st_credits.dep_credit_po_thresh) / 1000)
+        1 - st_step_reduction(agi, st_credits.dep_credit_po_thresh, 1000,
+                              st_credits.dep_credit_po_per_1k)
       ),
       st_dep_credit = if_else(st_credits.dep_credit_style == 1,
                               dep_credit_base * dep_credit_factor, 0),
@@ -666,9 +659,9 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
         n_dep > 0,
       prop_credit_ct_factor = pmax(
         0,
-        1 - st_credits.prop_tax_credit_po_rate *
-          ceiling(pmax(0, st_agi - st_credits.prop_tax_credit_po_thresh) /
-                    st_credits.prop_tax_credit_po_step)
+        1 - st_step_reduction(st_agi, st_credits.prop_tax_credit_po_thresh,
+                              st_credits.prop_tax_credit_po_step,
+                              st_credits.prop_tax_credit_po_rate)
       ),
       prop_credit = st_credits.prop_tax_credit_rate * salt_prop *
                     (agi <= st_credits.credit_agi_limit) +
