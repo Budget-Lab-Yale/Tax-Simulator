@@ -1,6 +1,6 @@
 # Cross-model validation: IL
 
-Class: broad | Generated: 2026-07-18 | Verdict: **PASS**
+Class: broad | Generated: 2026-07-19 | Verdict: **PASS**
 
 Acceptance: match@$100 >= 95% in every canonical-window cell
 (2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where
@@ -10,13 +10,13 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       | 14313|   10922|   0.8415|    0.9371|         0.9953|          1.0000|          0.1842|          0.0027|     71.8802|
+| 2017|taxsim       | 14313|   10754|   0.8318|    0.9306|         0.9955|          1.0000|          0.1842|          0.0028|     70.2124|
 | 2017|taxsim       |  6200|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       | 14144|   10853|   0.8389|    0.9301|         0.9951|          1.0000|          0.1871|          0.0029|     66.2877|
+| 2018|taxsim       | 14144|   10699|   0.8288|    0.9239|         0.9952|          1.0000|          0.1871|          0.0029|     64.1852|
 | 2018|taxsim       |  6371|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       | 14147|   10807|   0.8340|    0.9249|         0.9965|          1.0000|          0.1877|          0.0029|     89.7686|
+| 2019|taxsim       | 14147|   10651|   0.8238|    0.9189|         0.9965|          1.0000|          0.1878|          0.0029|     87.8731|
 | 2019|taxsim       |  6367|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       | 14000|   10321|   0.8066|    0.8978|         0.9953|          1.0000|          0.1857|          0.0029|    107.6002|
+| 2020|taxsim       | 14000|   10154|   0.7954|    0.8907|         0.9953|          1.0000|          0.1858|          0.0030|    105.8447|
 | 2020|taxsim       |  6513|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2021|policyengine |  1536|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2022|policyengine |  1530|     317|   0.6444|    0.7183|         0.9685|          0.9937|          0.0980|          0.0109|  -1631.9127|
@@ -27,26 +27,26 @@ defined (federally aligned records; see README).
 
 | year|fed_aligned |stage        |    n|
 |----:|:-----------|:------------|----:|
-| 2017|TRUE        |1 state AGI  |  115|
-| 2017|TRUE        |2 exemptions | 2471|
-| 2017|FALSE       |1 state AGI  | 4622|
-| 2017|FALSE       |2 exemptions |   83|
-| 2017|FALSE       |5 state EITC | 1170|
-| 2018|TRUE        |1 state AGI  |  139|
-| 2018|TRUE        |2 exemptions | 2564|
-| 2018|FALSE       |1 state AGI  | 4671|
-| 2018|FALSE       |2 exemptions |   77|
-| 2018|FALSE       |5 state EITC | 1192|
-| 2019|TRUE        |1 state AGI  |  144|
-| 2019|TRUE        |2 exemptions | 2519|
-| 2019|FALSE       |1 state AGI  | 4719|
-| 2019|FALSE       |2 exemptions |   79|
-| 2019|FALSE       |5 state EITC | 1248|
-| 2020|TRUE        |1 state AGI  |  147|
-| 2020|TRUE        |2 exemptions | 2650|
-| 2020|FALSE       |1 state AGI  | 5175|
-| 2020|FALSE       |2 exemptions |   82|
-| 2020|FALSE       |5 state EITC | 1158|
+| 2017|TRUE        |1 state AGI  |  111|
+| 2017|TRUE        |2 exemptions | 2275|
+| 2017|FALSE       |1 state AGI  | 4953|
+| 2017|FALSE       |2 exemptions |   79|
+| 2017|FALSE       |5 state EITC | 1174|
+| 2018|TRUE        |1 state AGI  |  131|
+| 2018|TRUE        |2 exemptions | 2364|
+| 2018|FALSE       |1 state AGI  | 5028|
+| 2018|FALSE       |2 exemptions |   67|
+| 2018|FALSE       |5 state EITC | 1189|
+| 2019|TRUE        |1 state AGI  |  141|
+| 2019|TRUE        |2 exemptions | 2332|
+| 2019|FALSE       |1 state AGI  | 5050|
+| 2019|FALSE       |2 exemptions |   72|
+| 2019|FALSE       |5 state EITC | 1250|
+| 2020|TRUE        |1 state AGI  |  145|
+| 2020|TRUE        |2 exemptions | 2430|
+| 2020|FALSE       |1 state AGI  | 5562|
+| 2020|FALSE       |2 exemptions |   70|
+| 2020|FALSE       |5 state EITC | 1159|
 
 ## Known differences applied
 

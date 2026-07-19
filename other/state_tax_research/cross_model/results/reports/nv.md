@@ -1,6 +1,6 @@
 # Cross-model validation: NV
 
-Class: stub | Generated: 2026-07-18 | Verdict: **PASS**
+Class: stub | Generated: 2026-07-19 | Verdict: **PASS**
 
 Acceptance: match@$100 >= 95% in every canonical-window cell
 (2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where
@@ -10,10 +10,10 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       | 20513|   13458|        1|         1|              1|               1|               1|               0|           0|
-| 2018|taxsim       | 20515|   13504|        1|         1|              1|               1|               1|               0|           0|
-| 2019|taxsim       | 20514|   13433|        1|         1|              1|               1|               1|               0|           0|
-| 2020|taxsim       | 20513|   13070|        1|         1|              1|               1|               1|               0|           0|
+| 2017|taxsim       | 20513|   13092|        1|         1|              1|               1|               1|               0|           0|
+| 2018|taxsim       | 20515|   13144|        1|         1|              1|               1|               1|               0|           0|
+| 2019|taxsim       | 20514|   13088|        1|         1|              1|               1|               1|               0|           0|
+| 2020|taxsim       | 20513|   12682|        1|         1|              1|               1|               1|               0|           0|
 | 2021|policyengine |  1536|     269|        1|         1|              1|               1|               1|               0|           0|
 | 2022|policyengine |  1530|     315|        1|         1|              1|               1|               1|               0|           0|
 | 2023|policyengine |  1533|     353|        1|         1|              1|               1|               1|               0|           0|

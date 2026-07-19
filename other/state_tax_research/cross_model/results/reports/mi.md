@@ -1,6 +1,6 @@
 # Cross-model validation: MI
 
-Class: broad | Generated: 2026-07-18 | Verdict: **NEEDS REVIEW**
+Class: broad | Generated: 2026-07-19 | Verdict: **NEEDS REVIEW**
 
 Acceptance: match@$100 >= 95% in every canonical-window cell
 (2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where
@@ -10,10 +10,10 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       | 20513|   13458|   0.3554|    0.4705|         0.4645|          0.5743|          0.0229|        140.8100|    2476.247|
-| 2018|taxsim       | 20515|   13504|   0.3460|    0.4617|         0.4542|          0.5657|          0.0228|        153.7136|    2547.995|
-| 2019|taxsim       | 20514|   13433|   0.3478|    0.4584|         0.4639|          0.5660|          0.0232|        163.9119|    2555.405|
-| 2020|taxsim       | 20513|   13070|   0.3288|    0.4388|         0.4500|          0.5572|          0.0241|        204.9200|    2934.310|
+| 2017|taxsim       | 20513|   13092|   0.3500|    0.4728|         0.4764|          0.5891|          0.0175|        134.1619|    2607.325|
+| 2018|taxsim       | 20515|   13144|   0.3407|    0.4656|         0.4644|          0.5810|          0.0174|        141.8182|    2704.148|
+| 2019|taxsim       | 20514|   13088|   0.3431|    0.4605|         0.4747|          0.5795|          0.0184|        152.1083|    2690.174|
+| 2020|taxsim       | 20513|   12682|   0.3239|    0.4406|         0.4620|          0.5726|          0.0188|        187.6844|    3075.422|
 | 2021|policyengine |  1536|     269|   0.2923|    0.4160|         0.4981|          0.5613|          0.0085|        220.3084|   -2735.638|
 | 2022|policyengine |  1530|     318|   0.2908|    0.3843|         0.4497|          0.5063|          0.0131|        343.2626|    2290.148|
 | 2023|policyengine |  1533|     358|   0.2851|    0.4025|         0.5223|          0.6257|          0.0130|        247.8027|   11851.943|
@@ -23,31 +23,31 @@ defined (federally aligned records; see README).
 
 | year|fed_aligned |stage           |    n|
 |----:|:-----------|:---------------|----:|
-| 2017|TRUE        |1 state AGI     | 4053|
-| 2017|TRUE        |2 exemptions    | 3154|
-| 2017|FALSE       |1 state AGI     | 4788|
-| 2017|FALSE       |2 exemptions    | 1228|
-| 2018|TRUE        |1 state AGI     | 4174|
-| 2018|TRUE        |3 deductions    | 1866|
-| 2018|TRUE        |6 other credits | 1330|
-| 2018|FALSE       |1 state AGI     | 4870|
-| 2018|FALSE       |3 deductions    |  208|
-| 2018|FALSE       |5 state EITC    |  791|
-| 2018|FALSE       |6 other credits |  178|
-| 2019|TRUE        |1 state AGI     | 4003|
-| 2019|TRUE        |3 deductions    | 1895|
+| 2017|TRUE        |1 state AGI     | 3703|
+| 2017|TRUE        |2 exemptions    | 3152|
+| 2017|FALSE       |1 state AGI     | 5153|
+| 2017|FALSE       |2 exemptions    | 1325|
+| 2018|TRUE        |1 state AGI     | 3845|
+| 2018|TRUE        |3 deductions    | 1864|
+| 2018|TRUE        |6 other credits | 1331|
+| 2018|FALSE       |1 state AGI     | 5199|
+| 2018|FALSE       |3 deductions    |  241|
+| 2018|FALSE       |5 state EITC    |  795|
+| 2018|FALSE       |6 other credits |  250|
+| 2019|TRUE        |1 state AGI     | 3679|
+| 2019|TRUE        |3 deductions    | 1893|
 | 2019|TRUE        |6 other credits | 1303|
-| 2019|FALSE       |1 state AGI     | 4895|
-| 2019|FALSE       |3 deductions    |  217|
-| 2019|FALSE       |5 state EITC    |  893|
-| 2019|FALSE       |6 other credits |  174|
-| 2020|TRUE        |1 state AGI     | 4107|
-| 2020|TRUE        |3 deductions    | 1832|
-| 2020|TRUE        |6 other credits | 1250|
-| 2020|FALSE       |1 state AGI     | 5386|
-| 2020|FALSE       |3 deductions    |  205|
-| 2020|FALSE       |5 state EITC    |  819|
-| 2020|FALSE       |6 other credits |  170|
+| 2019|FALSE       |1 state AGI     | 5212|
+| 2019|FALSE       |3 deductions    |  250|
+| 2019|FALSE       |5 state EITC    |  898|
+| 2019|FALSE       |6 other credits |  241|
+| 2020|TRUE        |1 state AGI     | 3745|
+| 2020|TRUE        |3 deductions    | 1829|
+| 2020|TRUE        |6 other credits | 1249|
+| 2020|FALSE       |1 state AGI     | 5750|
+| 2020|FALSE       |3 deductions    |  247|
+| 2020|FALSE       |5 state EITC    |  826|
+| 2020|FALSE       |6 other credits |  222|
 
 ## Known differences applied
 

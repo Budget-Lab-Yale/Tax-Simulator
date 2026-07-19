@@ -24,7 +24,7 @@
 cross_model_states = function() {
   list(
     broad  = c('AZ', 'CA', 'CO', 'CT', 'GA', 'IL', 'IN', 'KY', 'MI', 'NC',
-               'ND', 'NY', 'SC', 'VA'),
+               'ND', 'NY', 'OH', 'SC', 'UT', 'VA'),
     narrow = c('NH', 'TN'),           # interest/dividend (Hall-type) taxes
     excise = c('WA'),                 # LTCG excise + WFTC; not in TAXSIM
     stub   = c('AK', 'FL', 'NV', 'SD', 'TX', 'WY')  # no individual income tax

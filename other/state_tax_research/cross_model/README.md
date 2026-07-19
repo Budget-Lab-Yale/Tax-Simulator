@@ -133,9 +133,22 @@ A state's tracker row (`state_parameter_rollout.csv`) flips to `done` when:
 
 States failing the bar stay `in_progress` with the report as the punch list.
 
-Status as of 2026-07-18: **done** for AK FL NV SD TX WY (stubs), TN, NH,
+Status as of 2026-07-19: **done** for AK FL NV SD TX WY (stubs), TN, NH,
 and IL (TAXSIM window 100% clean; PE 2022–2024 at 99.2–99.5% clean; two
 residual IL records are exactly 5% of property tax — the Schedule ICR
 property-tax credit is a candidate encoding gap to research).
-**in_progress** (harness run, triage open) for the other 14 encoded states;
-dominant divergence stages per state are in the reports.
+**in_progress** (harness run, triage open) for the other 16 encoded states
+(OH and UT added 2026-07-19); dominant divergence stages per state are in
+the reports. Notable since the 2026-07-18 baseline: the QBI crosswalk
+repair (TAXSIM now computes QBID from mapped inputs) lifted the
+federal-taxable-start states CO/ND/SC by 3–5 points in 2018–2020; CO's PE
+window is now fully excluded (TABOR netting), so its verdict rests on the
+TAXSIM window; and neither TAXSIM nor PolicyEngine models the OH Business
+Income Deduction (excluded via `st_bid > 0` predicate — with it, OH passes
+the PE window at 96.6–98.7% and sits at ~91% clean vs TAXSIM, residuals
+documented as JFC-proxy and retirement-credit annotate rows).
+
+Heavy runs should go through `sbatch` — the login node's memory cgroup
+kills the federal pre-pass (~8 GB peak). A 48G/one-task script matching
+`slurm_run.sh` conventions is sufficient; the full TAXSIM window for all
+states takes ~10 minutes on one `day`-partition core.

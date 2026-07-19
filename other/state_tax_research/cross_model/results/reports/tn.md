@@ -1,6 +1,6 @@
 # Cross-model validation: TN
 
-Class: narrow | Generated: 2026-07-18 | Verdict: **PASS**
+Class: narrow | Generated: 2026-07-19 | Verdict: **PASS**
 
 Acceptance: match@$100 >= 95% in every canonical-window cell
 (2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where
@@ -10,10 +10,10 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       | 20513|   13458|   0.9894|    0.9924|         0.9913|          0.9944|          0.6429|               0|    -36.3925|
-| 2018|taxsim       | 20515|   13504|   0.9910|    0.9942|         0.9924|          0.9959|          0.6407|               0|    -32.7217|
-| 2019|taxsim       | 20514|   13433|   0.9906|    0.9948|         0.9924|          0.9968|          0.6285|               0|    -54.5583|
-| 2020|taxsim       | 20513|   13070|   0.9917|    0.9967|         0.9930|          0.9983|          0.6338|               0|    -21.0485|
+| 2017|taxsim       | 20513|   13092|   0.9919|    0.9945|         0.9920|          0.9953|          0.6437|               0|    -32.1224|
+| 2018|taxsim       | 20515|   13144|   0.9932|    0.9958|         0.9934|          0.9964|          0.6410|               0|    -31.4284|
+| 2019|taxsim       | 20514|   13088|   0.9934|    0.9966|         0.9940|          0.9976|          0.6294|               0|    -54.6433|
+| 2020|taxsim       | 20513|   12682|   0.9935|    0.9975|         0.9937|          0.9984|          0.6346|               0|    -21.0142|
 | 2021|policyengine |  1536|     270|   1.0000|    1.0000|         1.0000|          1.0000|          1.0000|               0|      0.0000|
 | 2022|policyengine |  1530|     314|   1.0000|    1.0000|         1.0000|          1.0000|          1.0000|               0|      0.0000|
 | 2023|policyengine |  1533|     352|   1.0000|    1.0000|         1.0000|          1.0000|          1.0000|               0|      0.0000|
@@ -23,17 +23,17 @@ defined (federally aligned records; see README).
 
 | year|fed_aligned |stage        |   n|
 |----:|:-----------|:------------|---:|
-| 2017|TRUE        |1 state AGI  | 114|
+| 2017|TRUE        |1 state AGI  | 102|
 | 2017|TRUE        |2 exemptions |   3|
-| 2017|FALSE       |1 state AGI  | 101|
-| 2018|TRUE        |1 state AGI  | 102|
+| 2017|FALSE       |1 state AGI  |  61|
+| 2018|TRUE        |1 state AGI  |  86|
 | 2018|TRUE        |2 exemptions |   1|
-| 2018|FALSE       |1 state AGI  |  82|
-| 2019|TRUE        |1 state AGI  | 102|
-| 2019|FALSE       |1 state AGI  |  91|
-| 2020|TRUE        |1 state AGI  |  90|
+| 2018|FALSE       |1 state AGI  |  53|
+| 2019|TRUE        |1 state AGI  |  78|
+| 2019|FALSE       |1 state AGI  |  57|
+| 2020|TRUE        |1 state AGI  |  79|
 | 2020|TRUE        |2 exemptions |   1|
-| 2020|FALSE       |1 state AGI  |  80|
+| 2020|FALSE       |1 state AGI  |  53|
 
 ## Known differences applied
 

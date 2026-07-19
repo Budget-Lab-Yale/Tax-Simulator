@@ -47,6 +47,17 @@ Hall-tax coding is exact in our tests.)
 out of scope by design (excise, not income tax) — a documentation note
 would remove ambiguity.
 
+### T5. Ohio Business Income Deduction not modeled
+
+The OH IT BUS deduction (R.C. 5747.01(A)(31)) — first $250,000 ($125,000
+MFS) of business income deducted, excess taxed at a flat 3% — is absent:
+TAXSIM taxes business income at regular schedule rates. In our 2017–2020
+samples, 74% of federally aligned OH mismatches have BID income, and for
+57% TAXSIM's `v32_state_agi` exceeds ours by exactly the BID amount. The
+resulting overstatement is large for pass-through owners (median $4.5k on
+affected records, unbounded in the tail). Given the BID's size (Ohio's
+largest income-tax expenditure), a coverage note would help users.
+
 Input limitations we worked around (not errors, but they bound what state
 validation TAXSIM can support): no tax-exempt interest input (state
 exempt-interest addbacks and the federal EITC investment-income test can
@@ -85,6 +96,17 @@ AK households receive an imputed PFD in federal AGI (verified: constant
 default, but it changes *federal* results based on state of residence even
 when the user supplies a complete income specification — an off switch or
 prominent documentation would help users doing controlled comparisons.
+
+### P4. Ohio Business Income Deduction not modeled
+
+Same gap as T5 on the PolicyEngine side, verified in `policyengine-us`
+1.775.7 package source: no IT BUS variable or parameter exists under
+`gov/states/oh` (modeled deductions are 529, medical, educator expense,
+federal conformity, §179 add-back, uniformed-services retirement). Business
+income is therefore taxed at regular rates. In our 2021–2024 samples, 104
+of 133 federally aligned OH mismatches carry BID income (95 with
+PolicyEngine higher, as expected). Flagging because the BID is central to
+any Ohio pass-through analysis.
 
 ## Corroboration worth passing along
 
