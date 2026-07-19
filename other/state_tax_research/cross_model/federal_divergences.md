@@ -48,15 +48,15 @@ on 2019 data. Untraced candidates: taxable-SS computation differences
 mixed wage/SE records. Raw material: any `results/raw/taxsim_{year}.csv`,
 records with `fed_aligned == FALSE` and `exempt_int == 0`.
 
-## 3. QBI is zeroed in the TAXSIM crosswalk (our input gap, fixable)
+## 3. QBI in the TAXSIM crosswalk — CLOSED 2026-07-19
 
-`taxsim_crosswalk()` sets `scorp/pbusinc/pprofinc/sbusinc/sprofinc = 0`
-(pre-existing TODO). TAXSIM therefore computes no QBID, so its federal
-taxable income runs high on pass-through records — this contaminates the
-federal-taxable-start states (CO, ND, SC) and the `pe_fed_taxable` analogue.
-**Action item**: map QBI inputs from our microdata (sole_prop/part/scorp
-splits exist) and re-run; this is the one federal divergence we can close
-ourselves.
+`taxsim_crosswalk()` now maps QBI inputs (SE income to `pbusinc`/`pprofinc`
+by SSTB share, non-SE QBI income to `scorp`, totals preserved; see
+`src/tests/test_taxsim.R`). The 2017–2020 rerun moved the
+federal-taxable-start states' clean match rates by +3 to +5 points in
+2018–2020 (2017 unchanged, as expected pre-TCJA). Remaining approximation:
+TAXSIM assumes a sufficient wage bill, so its QBID can exceed ours above
+the phase-out for low-wage-bill businesses.
 
 ## 4. PolicyEngine's federal return
 

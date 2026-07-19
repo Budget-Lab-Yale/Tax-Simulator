@@ -141,13 +141,47 @@ taxsim_crosswalk = function(tax_units, state = 'No state') {
       # or on a non-joint return)
       pui = if_else(joint & wages > 0, ui * pwages / wages, ui),
       sui = pmax(0, ui - pui),   # pmax guards float residuals; TAXSIM rejects negatives
+
+      # QBI input reallocation (Section 199A). Mirrors calc_qbi_ded()'s
+      # business-type aggregation: SE income (= se1/se2 = sole_prop + farm +
+      # part_se, currently in psemp/ssemp) moves to pbusinc (non-SSTB) or
+      # pprofinc (SSTB) -- both SECA-subject in TAXSIM, so the payroll base
+      # is unchanged. Non-SE QBI income (S corp + non-SE partnership,
+      # non-SSTB only) moves from otherprop into TAXSIM's scorp input
+      # (QBI-eligible, no SECA); SSTB non-SE income stays in otherprop
+      # because TAXSIM has no QBI-no-SECA SSTB slot (pprofinc would wrongly
+      # add SECA). Totals are preserved by construction. Remaining
+      # approximation: TAXSIM assumes a sufficient wage bill, so its QBID
+      # can exceed ours above the phaseout for low-wagebill businesses.
+      sstb_sp = coalesce(sstb_sole_prop, 0),
+      sstb_f  = coalesce(sstb_farm, 0),
+      sstb_p  = coalesce(sstb_part, 0),
+      sstb_s  = coalesce(sstb_scorp, 0),
+      qbi_scorp_input = scorp * (1 - sstb_s) + (part - part_se) * (1 - sstb_p),
+      pbusinc  = sole_prop1 * (1 - sstb_sp) + farm1 * (1 - sstb_f) +
+                 part_se1 * (1 - sstb_p),
+      pprofinc = sole_prop1 * sstb_sp + farm1 * sstb_f + part_se1 * sstb_p,
+      sbusinc  = sole_prop2 * (1 - sstb_sp) + farm2 * (1 - sstb_f) +
+                 part_se2 * (1 - sstb_p),
+      sprofinc = sole_prop2 * sstb_sp + farm2 * sstb_f + part_se2 * sstb_p,
+
+      # Fold spouse QBI income into primary on non-joint returns (TAXSIM
+      # rejects spouse fields there), and zero psemp/ssemp: all SE income
+      # is now carried by the QBI inputs
+      pbusinc  = if_else(joint, pbusinc, pbusinc + sbusinc),
+      pprofinc = if_else(joint, pprofinc, pprofinc + sprofinc),
+      sbusinc  = if_else(joint, sbusinc, 0),
+      sprofinc = if_else(joint, sprofinc, 0),
+      psemp = 0,
+      ssemp = 0,
       
       # Other property income, mirroring our AGI's Schedule E concept
       # (calc_agi(): sch_e = part_scorp + net_rent + net_estate, pass-through
       # losses clamped), less the SE portion of partnership income already
-      # counted in psemp/ssemp, plus Form 4797 gains (no TAXSIM input of
-      # their own; other_gains is in our AGI)
-      otherprop = sch_e - part_se + other_gains,
+      # counted in the SECA-subject inputs, less non-SE QBI income moved to
+      # the scorp input, plus Form 4797 gains (no TAXSIM input of their own;
+      # other_gains is in our AGI)
+      otherprop = sch_e - part_se + other_gains - qbi_scorp_input,
 
       # Non-property income less above-the-line deductions, mirroring
       # calc_agi(). Notes: nols is NOT in our AGI (AMT only); alimony is
@@ -179,14 +213,10 @@ taxsim_crosswalk = function(tax_units, state = 'No state') {
       otheritem = salt_inc_sales + salt_pers + med_pref + misc_item_ded,
       mortgage  = mort_int_item_ded + med_nonpref + char_item_ded + casualty_item_ded, 
       
-      # QBI deduction variables...not sure what our setup will be. Will add after 
-      # completing QBI calc function.
-      scorp    = 0,
-      pbusinc  = 0,
-      pprofinc = 0,
-      sbusinc  = 0,
-      sprofinc = 0,
-      
+      # Non-SE QBI-eligible income (computed in the reallocation block above;
+      # assigned here because `scorp` overwrites the derived frame column)
+      scorp = qbi_scorp_input,
+
       # taxsim vars we don't care about
       transfers = 0,
       rentpaid  = 0
