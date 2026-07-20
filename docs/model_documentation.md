@@ -38,13 +38,14 @@ supply). Full general-equilibrium dynamics are out of scope by design.
 ## 2. The model ecosystem
 
 Tax-Simulator is one node in a system of versioned models that communicate
-through files. `config/interfaces/interface_versions.yaml` pins the vintage of
-every dependency; `config/interfaces/output_roots.yaml` maps `local` and
+through files. A **vintage** is a timestamped snapshot of a model's output;
+`config/interfaces/interface_versions.yaml` pins the vintage of every
+dependency, and `config/interfaces/output_roots.yaml` maps the `local` and
 `production` filesystem roots. Every run reads dependency data from
 `{root}/model_data/{MODEL}/v{version}/{vintage}/{scenario}/` and writes its own
-output under a vintage stamp (timestamp by default). Runscripts can override
-any dependency vintage per scenario via `dep.{MODEL}.vintage` / `dep.{MODEL}.ID`
-columns.
+output under a new vintage stamp (timestamp by default). Runscripts can
+override any dependency vintage per scenario via `dep.{MODEL}.vintage` /
+`dep.{MODEL}.ID` columns.
 
 Current dependencies:
 
@@ -123,9 +124,14 @@ Rscript src/main.R <runscript> <scenario_id|NULL> <user_id> <local> \
     <delete_detail> <multicore>
 ```
 
-`multicore` parallelizes across `scenario` or `year` (`none` on Windows;
-`year` is unsafe for behavioral modules that require sequential years).
-`baseline_vintage` reuses an existing baseline run rather than recomputing.
+Argument meanings: `local` — write to the local (1) or production (0) root;
+`vintage` — output folder name (NULL = timestamp); `pct_sample` — fraction of
+records to simulate (1 for real runs); `stacked` — produce stacked reports
+across the runscript's reforms; `baseline_vintage` — reuse an existing
+baseline run rather than recomputing; `delete_detail` — purge the large
+per-unit detail files after post-processing; `multicore` — parallelize across
+`scenario` or `year` (`none` on Windows; `year` is unsafe for behavioral
+modules that require sequential years).
 
 ### 4.3 Execution flow
 
@@ -136,10 +142,12 @@ scenario, `do_scenario()`:
 1. Build price/wage indexes and offsets (`generate_indexes()`; VAT price and
    excess-growth offsets), then `build_tax_law()` from the scenario's YAML.
 2. `run_sim()` → `run_one_year()` per year: read microdata, join tax law by
-   year × filing status, apply the SALT-workaround, SS COLA, capital, and
-   excess-growth adjustments; run the **static pass** (`do_taxes()` + MTRs +
-   detail write + totals); if behavioral modules are configured, run the
-   **conventional pass** (feedback → `do_taxes()` again).
+   year × filing status, apply data adjustments — the SALT workaround
+   (reassigning entity-level pass-through-workaround amounts off individual
+   Schedule A), SS COLA, capital, and excess-growth scaling; run the
+   **static pass** (`do_taxes()` + MTRs + detail write + totals); if
+   behavioral modules are configured, run the **conventional pass**
+   (feedback → `do_taxes()` again).
 3. Post-processing: totals and receipts; then 1040 reports, revenue
    estimates, distribution, horizontal-equity, and time-burden tables
    (counterfactuals), or the CBO comparison (baseline only).
@@ -241,12 +249,14 @@ Per scenario, under `{output_root}/{ID}/`:
 ```
 {ID}/
 ├── static/                          # always
-│   ├── detail/{year}.csv            # per-unit microdata incl. mtr_* columns
+│   ├── detail/
+│   │   ├── {year}.csv               # per-unit microdata incl. mtr_* columns
 │   │   └── state/{year}.csv         # state mode + state_detail=1: id × per-state liability
 │   ├── totals/                      # payroll.csv, 1040.csv, 1040_by_agi.csv,
 │   │   ...                          # receipts.csv, state.csv (state mode)
 │   └── supplemental/
 │       ├── tax_law.csv              # the parsed law actually used
+│       ├── revenue_estimates.csv    # counterfactuals: deltas vs baseline
 │       ├── distribution.csv         # counterfactuals, dist_years only
 │       ├── horizontal.csv           # horizontal-equity ETR dispersion
 │       ├── time_burden.csv          # compliance time burden
@@ -254,13 +264,13 @@ Per scenario, under `{output_root}/{ID}/`:
 │       ├── 1040.xlsx                # 1040 report
 │       └── cbo_comparison.csv       # BASELINE ONLY: line-by-line vs CBO
 └── conventional/                    # counterfactuals (copied from static if no behavior)
-    └── (same tree; revenue estimates are conventional-aware)
+    └── (same tree, with its own supplemental/revenue_estimates.csv)
 ```
 
-Revenue estimates (`revenue_estimates.csv`, deltas vs. baseline) are written
-by `calc_rev_est()`; stacked variants land at the vintage root. Distribution
-is a static concept and exists only under `static/`. `delete_detail=1` purges
-the large detail files after post-processing.
+Distribution is a static concept and exists only under `static/`. The stacked
+reports (`stacked_rev_est_*.csv`, `stacked_state_rev_est_*.csv`, stacked 1040
+workbooks) land at the vintage root, above the scenario folders.
+`delete_detail=1` purges the large detail files after post-processing.
 
 ## 9. Validation and testing
 
@@ -275,8 +285,9 @@ the large detail files after post-processing.
   `other/state_tax_research/cross_model/federal_divergences.md` —
   notably un-root-caused EITC amount disagreements and a p99 federal-AGI
   tail vs. TAXSIM.
-- **Unit tests**: `src/tests/` (tax law parsing regression tests, state
-  worksheet tests, employment-elasticity module tests that run on source).
+- **Unit tests**: `src/tests/` — tax law parsing regressions, state
+  form-worksheet cases, and behavioral-module tests (some execute
+  automatically whenever the source tree is loaded).
 - **State cross-model harness**: §10.4.
 
 ## 10. The state income tax module
@@ -307,27 +318,40 @@ the federally-calculated units. Three structural commitments:
    iteration (TAXSIM does three rounds), no PTET modeling. Planned for
    Phase 7.
 
-Runscript surface: `states` (codes or `all`; baseline row must be a superset
-of every counterfactual — validated), `state_tax_law`, `state_detail`.
-Per year inside `run_one_year()`: build state law → validate federal
-conformity (fixed-date-conformity states like CA and SC are *guarded*: they
-are excluded from `states=all` and refuse federal-reform runs until frozen-
-base bridge law is available) → build reference contexts (re-running federal
-variables under the frozen law where needed) → build weights → static and
-conventional passes each call `get_state_totals()`, which loops states
-through `do_state_taxes()` — `calc_st_agi → st_ded → st_exempt → st_txbl →
-st_tax → st_credits → st_liab` plus `st_special` for narrow taxes (WA capital
-gains excise, WFTC; NH/TN interest-and-dividends taxes) — and aggregates with
-the split weights. Outputs: `totals/state.csv`, `supplemental/state_rev_est.csv`
-(counterfactual deltas), optional compact per-year state detail matrix, and
-stacked state revenue estimates.
+State mode is switched on by three runscript columns: `states` (2-letter
+codes or `all`; the baseline row must cover a superset of every
+counterfactual's states — validated at parse time), `state_tax_law` (a reform
+overlay directory), and `state_detail` (0/1).
+
+Within each year, `run_one_year()` then does the following, after the federal
+pass:
+
+1. **Build state law** for that year from the per-state YAML.
+2. **Validate federal conformity.** States that conform to the IRC as of a
+   fixed date (CA, SC) are *guarded*: they are excluded from `states=all` and
+   refuse federal-reform runs until frozen-federal-base bridge law is
+   encoded.
+3. **Build reference contexts** — for guarded-conformity situations, federal
+   variables are recomputed under the frozen law the state actually couples
+   to.
+4. **Build the split weights** (§10.3).
+5. In both the static and conventional passes, `get_state_totals()` loops
+   every requested state through `do_state_taxes()` — the chain
+   `calc_st_agi → st_ded → st_exempt → st_txbl → st_tax → st_credits →
+   st_liab`, plus `st_special` for narrow regimes (WA capital-gains excise
+   and WFTC; NH/TN interest-and-dividends taxes) — and aggregates each
+   state's results with that state's weight column.
+
+Outputs: `totals/state.csv`, `supplemental/state_rev_est.csv` (counterfactual
+deltas vs. baseline), the optional compact per-year state detail matrix, and
+stacked state revenue estimates at the vintage root.
 
 ### 10.2 What is encoded (Phase 2/3, done)
 
-25 states have baseline configs: 14 broad-income-tax states (AZ CA CO CT GA
-IL IN KY MI NC ND NY SC VA) plus OH and UT (added July 2026), the narrow-tax
-states NH/TN, WA's excise+credit regime, and six no-tax stubs (AK FL NV SD TX
-WY). Encodings run 2017-forward from forms and statutes, including structural
+25 states have baseline configs: 16 broad-income-tax states (AZ CA CO CT GA
+IL IN KY MI NC ND NY SC VA, plus OH and UT added July 2026), the narrow-tax
+states NH and TN, WA's excise+credit regime, and six no-tax stubs (AK FL NV
+SD TX WY). Encodings run 2017-forward from forms and statutes, including structural
 features like NY's tax-benefit recapture, CO's TABOR rate history, OH's
 Business Income Deduction and ordered credit stack, and UT's taxpayer tax
 credit. Each state's known modeling gaps are documented in
@@ -347,10 +371,11 @@ comparison):
   parameterization with KL anchor — the Deville–Särndal exponential-tilting
   family; per-target IPF was *proven structurally unable* to satisfy ~21
   constraints per cell).
-- Chosen configuration: β=1e-4, 3000 cosine-annealed Adam steps — **95.3% of
-  targets within 2% (MARD 0.43%)**, best untargeted generalization, healthy
-  weight diagnostics. Tighter anchors fit better on paper (96.9%) but
-  degrade held-out geography and weight quality — rejected as overfitting.
+- Chosen configuration: anchor strength β=1e-4 with 3,000 cosine-annealed
+  Adam steps — **95.3% of targets within 2% (MARD 0.43%)**, the best
+  untargeted generalization, and healthy weight diagnostics. Looser anchors
+  fit better on paper (96.9%) but degrade held-out geography and weight
+  quality — rejected as overfitting.
 - Pilot liability under candidate weights: IL within ~1% of external
   benchmarks; CO consistent once TABOR refunds are accounted for; NY
   overshoots even after the (large) PTET adjustment.
@@ -439,7 +464,8 @@ for both external models are drafted in
 - **Federal cross-model divergences** await review: EITC amount
   disagreements with TAXSIM are not root-caused; the federal AGI p99 tail
   (~+$14k vs TAXSIM) has untraced candidates (taxable SS, capital-loss
-  limitation interplay). See `cross_model/federal_divergences.md` — policy
+  limitation interplay). See
+  `other/state_tax_research/cross_model/federal_divergences.md` — policy
   is document-then-condition-away for state validation, but someone should
   confirm none indicates a bug in our federal calculator.
 - **PUF vintage**: the 2015 base is aged nine-plus years; distributional
