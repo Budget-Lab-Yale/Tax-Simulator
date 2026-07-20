@@ -800,7 +800,14 @@ build_split_weights <- function(tax_units, year,
 # Targets without metadata become singleton groups (still exact; used by the
 # self-test). Verified against finite differences in .state_weights_selftest().
 fit_gradient <- function(w, P0, targets, beta = 1e-3,
-                         lr = 0.1, n_steps = 500, verbose = FALSE) {
+                         lr = 0.1, n_steps = 500, verbose = FALSE,
+                         lr_schedule = c("constant", "cosine"),
+                         theta0 = NULL) {
+  # lr_schedule: "cosine" anneals lr from lr to ~0 over n_steps (half-cosine);
+  # theta0: optional warm-start logits (e.g. a prior run's theta). The KL
+  # anchor stays P0 regardless -- warm-starting changes the path, not the
+  # objective.
+  lr_schedule <- match.arg(lr_schedule)
   N <- length(w); S <- ncol(P0)
 
   # ---- group targets by shared rows (stub / cell metadata; else singleton)
@@ -833,7 +840,7 @@ fit_gradient <- function(w, P0, targets, beta = 1e-3,
     list(rows = rows, X = X, Tm = Tm, Lm = Lm, has = !is.na(Tm))
   })
 
-  theta <- log(pmax(P0, 1e-12))                          # warm start at the prior
+  theta <- if (is.null(theta0)) log(pmax(P0, 1e-12)) else theta0  # warm start at the prior
   m <- matrix(0, N, S); v <- matrix(0, N, S)             # Adam moments
   b1 <- 0.9; b2 <- 0.999; eps <- 1e-8
   softmax_rows <- function(z) { z <- z - apply(z, 1, max); e <- exp(z); e / rowSums(e) }
@@ -858,13 +865,14 @@ fit_gradient <- function(w, P0, targets, beta = 1e-3,
     m <- b1 * m + (1 - b1) * gtheta
     v <- b2 * v + (1 - b2) * gtheta^2
     mhat <- m / (1 - b1^step); vhat <- v / (1 - b2^step)
-    theta <- theta - lr * mhat / (sqrt(vhat) + eps)
+    lr_t <- if (lr_schedule == "cosine") lr * 0.5 * (1 + cos(pi * step / n_steps)) else lr
+    theta <- theta - lr_t * mhat / (sqrt(vhat) + eps)
     loss_kl <- beta * sum(P * (log(pmax(P,1e-12)) - log(pmax(P0,1e-12))))
     loss_hist[step] <- loss_fit + loss_kl
     if (verbose && step %% max(1, n_steps %/% 10) == 0)
       message(sprintf("  step %d  loss_fit=%.4e  loss_kl=%.4e", step, loss_fit, loss_kl))
   }
-  list(P = softmax_rows(theta), loss_hist = loss_hist)
+  list(P = softmax_rows(theta), loss_hist = loss_hist, theta = theta)
 }
 
 # --- Approach A: classical raking / IPF ---------------------------------------
