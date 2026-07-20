@@ -1,0 +1,26 @@
+---
+# Form-memo experiment 2: deemed realization at death across all asset classes
+# from 2027; rates unchanged (the shipped 25% deemed-avoidance haircut applies).
+# Primary-home contribution is §121-net (carve-out applied per record). Codes:
+# 0 = step-up (baseline), 1 = carryover, 2 = deemed_realization. Cloned from
+# tests/kg_dyn_deemed but year-keyed 2027.
+kg_death_regime_equities:
+  value:
+    '2014': 0
+    '2027': 2
+kg_death_regime_pass_throughs:
+  value:
+    '2014': 0
+    '2027': 2
+kg_death_regime_primary_home:
+  value:
+    '2014': 0
+    '2027': 2
+kg_death_regime_other_home:
+  value:
+    '2014': 0
+    '2027': 2
+kg_death_regime_re_fund:
+  value:
+    '2014': 0
+    '2027': 2

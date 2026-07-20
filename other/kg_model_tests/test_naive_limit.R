@@ -40,12 +40,12 @@ beta  = rep(0.96, ny_)
 TAU_B = 0.238
 tau_B = matrix(TAU_B, na_, ny_, dimnames = list(ac, yc))
 
-solve_pair = function(eta, tau_S_scalar) {
+solve_pair = function(eta, tau_S_scalar, form = 'levels') {
   tau_S = matrix(tau_S_scalar, na_, ny_, dimnames = list(ac, yc))
   p1 = kg_dyn_solve_bellman(grid, tau_B, c_phi_mat = 0, eta = eta,
-                            beta_by_year = beta)
+                            beta_by_year = beta, form = form)
   p2 = kg_dyn_solve_bellman(grid, tau_S, c_phi_mat = 0, kappa_mat = p1$kappa,
-                            eta = eta, beta_by_year = beta)
+                            eta = eta, beta_by_year = beta, form = form)
   list(p1 = p1, p2 = p2)
 }
 
@@ -89,5 +89,19 @@ cat('  revenue Laffer curve (tau : revenue / R_base):\n')
 print(data.frame(tau = tau_grid, rev = round(rev / R_base, 4)))
 cat(sprintf('  revmax argmax = %.3f   (naive 1/2.52 = %.3f)\n', argmax, 1 / 2.52))
 stopifnot(abs(argmax - 1 / 2.52) < 0.05)
+
+# ---- (c) logs pass: constant NET-OF-TAX slope holds under form = 'logs' ----
+# The levels identity above is the constant-semi property; the logs form
+# instead makes log(r_D) linear in log(1 - MC). Same grid, same shocks; the
+# implied net-of-tax slope must equal eta_tilde everywhere and across shocks.
+ETA_TILDE = 1.9
+for (s in shocks) {
+  res = solve_pair(ETA_TILDE, TAU_B + s, form = 'logs')
+  dlogNT = log(1 - res$p2$MC) - log(1 - res$p1$kappa)
+  lhs    = log(res$p2$r_D / res$p1$r_D)
+  stopifnot(max(abs(lhs - ETA_TILDE * dlogNT)) < 1e-10)
+  stopifnot(max(abs(lhs / dlogNT - ETA_TILDE)) < 1e-8)
+}
+cat('(c) logs form: constant net-of-tax slope holds to 1e-10 across +1/+5/+10pp\n')
 
 cat('naive-limit tests passed\n')

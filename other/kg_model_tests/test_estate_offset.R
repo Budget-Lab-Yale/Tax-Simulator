@@ -39,11 +39,18 @@ source('./src/calc/functions/tax/estate.R')
 fail = function(...) stop(sprintf(...), call. = FALSE)
 ok   = function(name) cat(sprintf('PASS  %s\n', name))
 
+# Form-specific scenario/baseline FOC factor r_D_S / r_D_B (E1 runs both forms;
+# the estate offset e enters death_cont, which is form-invariant).
+foc_factor = function(form, eta, mc_s, mc_b) {
+  if (identical(form, 'levels')) exp(-eta * (mc_s - mc_b))
+  else                          ((1 - mc_s) / (1 - mc_b))^eta
+}
+
 eta  = 2.4
 beta = 0.96
 
 #===============================================================================
-# E1: 1x1 estate-only reform hand-check
+# E1: 1x1 estate-only reform hand-check (both response forms)
 #===============================================================================
 
 ac = '80'; yc = '2026'
@@ -56,31 +63,32 @@ tau  = matrix(0.30, 1, 1, dimnames = list(ac, yc))
 e_S  = 0.35
 eS_m = matrix(e_S, 1, 1, dimnames = list(ac, yc))
 
-p1   = kg_dyn_solve_bellman(grid_11, tau, c_phi_mat = 0, eta = eta,
-                            beta_by_year = beta)              # e_B = 0
-p2_0 = kg_dyn_solve_bellman(grid_11, tau, c_phi_mat = 0, kappa_mat = p1$kappa,
-                            eta = eta, beta_by_year = beta)
-p2_e = kg_dyn_solve_bellman(grid_11, tau, c_phi_mat = 0, kappa_mat = p1$kappa,
-                            eta = eta, beta_by_year = beta, e_mat = eS_m)
+for (FORM in c('levels', 'logs')) {
+  p1   = kg_dyn_solve_bellman(grid_11, tau, c_phi_mat = 0, eta = eta,
+                              beta_by_year = beta, form = FORM)      # e_B = 0
+  p2_0 = kg_dyn_solve_bellman(grid_11, tau, c_phi_mat = 0, kappa_mat = p1$kappa,
+                              eta = eta, beta_by_year = beta, form = FORM)
+  p2_e = kg_dyn_solve_bellman(grid_11, tau, c_phi_mat = 0, kappa_mat = p1$kappa,
+                              eta = eta, beta_by_year = beta, e_mat = eS_m,
+                              form = FORM)
 
-# Top age, stationary terminal, c_phi = 0:
-#   MC_B = tau + beta*m*tau                (F_B = tau,        e_B = 0)
-#   MC_S = tau + beta*m*tau*(1 - e_S)      (F_S = tau*(1-e))
-#   =>  MC_S - MC_B = -beta*m*tau*e_S  exactly
-dMC      = p2_e$MC[1, 1] - p2_0$MC[1, 1]
-dMC_hand = -beta * 0.04 * 0.30 * e_S
-if (abs(dMC - dMC_hand) > 1e-15) {
-  fail('E1: MC wedge %.18f != hand value %.18f', dMC, dMC_hand)
+  # Top age, stationary terminal, c_phi = 0:
+  #   MC_B = tau + beta*m*tau                (F_B = tau,        e_B = 0)
+  #   MC_S = tau + beta*m*tau*(1 - e_S)      (F_S = tau*(1-e))
+  #   =>  MC_S - MC_B = -beta*m*tau*e_S  exactly (form-invariant)
+  dMC      = p2_e$MC[1, 1] - p2_0$MC[1, 1]
+  dMC_hand = -beta * 0.04 * 0.30 * e_S
+  if (abs(dMC - dMC_hand) > 1e-15)
+    fail('E1 [%s]: MC wedge %.18f != hand value %.18f', FORM, dMC, dMC_hand)
+  foc_hand = foc_factor(FORM, eta, p2_e$MC[1, 1], p2_0$MC[1, 1])
+  foc_got  = p2_e$r_D[1, 1] / p2_0$r_D[1, 1]
+  if (abs(foc_got - foc_hand) > 1e-15)
+    fail('E1 [%s]: FOC factor %.18f != hand %.18f', FORM, foc_got, foc_hand)
+  if (!(p2_e$r_D[1, 1] > p2_0$r_D[1, 1]))
+    fail('E1 [%s]: realizations did not rise under an estate-only hike', FORM)
+  ok(sprintf('E1 [%s] estate-only: dMC = -beta*m*tau*e_S exactly; realizations rise',
+             FORM))
 }
-foc_hand = exp(-eta * dMC)
-foc_got  = p2_e$r_D[1, 1] / p2_0$r_D[1, 1]
-if (abs(foc_got - foc_hand) > 1e-15) {
-  fail('E1: FOC factor %.18f != exp(-eta*dMC) %.18f', foc_got, foc_hand)
-}
-if (!(p2_e$r_D[1, 1] > p2_0$r_D[1, 1])) {
-  fail('E1: realizations did not rise under an estate-only hike')
-}
-ok('E1 estate-only reform: dMC = -beta*m*tau*e_S exactly; realizations rise')
 
 #===============================================================================
 # E2: matched legs (e_B = e_S) + tau_S = tau_B  =>  r_D == r_B exactly

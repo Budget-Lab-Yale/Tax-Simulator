@@ -24,5 +24,7 @@ module load R/4.4.1-foss-2022b
 Rscript other/kg_model_tests/test_planned_timing.R
 Rscript other/kg_model_tests/test_terminal_charity.R
 Rscript other/kg_model_tests/test_provenance_guard.R
+Rscript other/kg_model_tests/test_naive_limit.R
+Rscript other/kg_model_tests/test_logs_form.R
 
 echo "ALL KG UNIT TESTS PASSED"

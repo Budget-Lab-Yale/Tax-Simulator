@@ -27,7 +27,9 @@ fail = function(...) stop(sprintf(...), call. = FALSE)
 ok   = function(name) cat(sprintf('PASS  %s\n', name))
 
 #===============================================================================
-# T1a: 1x1 grid hand-check
+# T1a / T1b run under BOTH response forms (levels + logs). The wealth-carry h
+# enters death_cont, which is form-invariant, so the MC-wedge algebra is
+# identical across forms; only the FOC factor and the realization cost differ.
 #===============================================================================
 
 ac = '80'; yc = '2026'
@@ -40,39 +42,6 @@ tau  = matrix(0.30, 1, 1, dimnames = list(ac, yc))
 beta = 0.96
 h    = 0.003   # 1% wealth tax x 30% CG rate
 eta  = 2.4
-
-p1   = kg_dyn_solve_bellman(grid_11, tau, c_phi_mat = 0, eta = eta,
-                            beta_by_year = beta)
-p2_0 = kg_dyn_solve_bellman(grid_11, tau, c_phi_mat = 0, kappa_mat = p1$kappa,
-                            eta = eta, beta_by_year = beta)
-p2_h = kg_dyn_solve_bellman(grid_11, tau, c_phi_mat = 0, kappa_mat = p1$kappa,
-                            eta = eta, beta_by_year = beta,
-                            h_mat = matrix(h, 1, 1, dimnames = list(ac, yc)))
-
-# Top age, stationary terminal: W_next = 0, so
-#   MC_B = tau + beta*m*tau          (death_cont_B = bm*F, F = tau at c_phi=0)
-#   MC_S = tau + beta*(1-m)*(0 - h) + beta*m*tau
-#   =>  MC_S - MC_B = -beta*(1-m)*h  exactly
-dMC      = p2_h$MC[1, 1] - p2_0$MC[1, 1]
-dMC_hand = -beta * (1 - 0.04) * h
-if (abs(dMC - dMC_hand) > 1e-15) {
-  fail('T1a: MC wedge %.18f != hand value %.18f', dMC, dMC_hand)
-}
-ok('T1a MC_S - MC_B = -beta*(1-m)*h (|err| <= 1e-15)')
-
-# FOC factor: r_D_S = r_D_B * exp(-eta * dMC), dMC < 0 => factor > 1
-foc_hand = exp(-eta * dMC)
-foc_got  = p2_h$r_D[1, 1] / p2_0$r_D[1, 1]
-if (abs(foc_got - foc_hand) > 1e-15) {
-  fail('T1a: FOC factor %.18f != exp(-eta*dMC) %.18f', foc_got, foc_hand)
-}
-if (!(p2_h$r_D[1, 1] > p2_0$r_D[1, 1])) fail('T1a: r_D did not rise under h')
-if (!(p2_h$W[1, 1]   < p2_0$W[1, 1]))   fail('T1a: W did not fall under h')
-ok('T1a FOC factor exp(-eta*dMC) to 1e-15; r_D up; W down')
-
-#===============================================================================
-# T1b: 2-age stationary chain, hand-computed from the algebra
-#===============================================================================
 
 ages2 = c(79, 80); ac2 = as.character(ages2)
 m2    = c(0.03, 0.05)
@@ -88,9 +57,16 @@ grid_2 = list(
 tau_m2 = matrix(tau2, 2, 1, dimnames = list(ac2, yc))
 h_m2   = matrix(h2,   2, 1, dimnames = list(ac2, yc))
 
+# Form-specific scenario/baseline FOC factor r_D_S / r_D_B.
+foc_factor = function(form, eta, mc_s, mc_b) {
+  if (identical(form, 'levels')) exp(-eta * (mc_s - mc_b))
+  else                          ((1 - mc_s) / (1 - mc_b))^eta
+}
+
 # Independent re-implementation of the sweep algebra (baseline then scenario
 # with h), single stationary year: backward in age, W_next from same sweep.
-hand_sweep = function(h_vec, kappa_vec = NULL) {
+# Parametrized by form so the hand chain exercises the active cost primitive.
+hand_sweep = function(h_vec, kappa_vec = NULL, form = 'levels') {
   n = 2
   W = MC = rD = kap = numeric(n)
   bs = beta * (1 - m2); bm = beta * m2
@@ -99,12 +75,19 @@ hand_sweep = function(h_vec, kappa_vec = NULL) {
     W_next = if (i == n) 0 else W[i + 1]
     dc  = bs[i] * (W_next - h_vec[i]) + bm[i] * F_[i]
     MCi = tau2[i] + dc
-    if (is.null(kappa_vec)) {     # pass 1: r_D = r_B, kappa = MC
+    if (is.null(kappa_vec)) {     # pass 1: r_D = r_B, kappa = MC (both forms)
       rDi = rB2[i]; kapi = MCi; Ci = 0
-    } else {                      # pass 2: FOC closed form + entropy cost
+    } else {                      # pass 2: FOC closed form + form's cost
       kapi = kappa_vec[i]
-      rDi  = min(rB2[i] * exp(-eta * (MCi - kapi)), 1)
-      Ci   = (rDi * log(rDi / rB2[i]) - rDi + rB2[i]) / eta
+      if (identical(form, 'levels')) {
+        rDi = min(rB2[i] * exp(-eta * (MCi - kapi)), 1)
+        Ci  = (rDi * log(rDi / rB2[i]) - rDi + rB2[i]) / eta
+      } else {
+        rDi = min(rB2[i] * ((1 - MCi) / (1 - kapi))^eta, 1)
+        Ci  = (1 - kapi) * ((eta / (eta + 1)) * rB2[i] *
+                            (rDi / rB2[i])^((eta + 1) / eta) - rDi +
+                            rB2[i] / (eta + 1))
+      }
     }
     W[i]  = kapi * rDi - Ci - tau2[i] * rDi + max(1 - rDi, 0) * dc
     MC[i] = MCi; rD[i] = rDi; kap[i] = kapi
@@ -112,30 +95,61 @@ hand_sweep = function(h_vec, kappa_vec = NULL) {
   list(W = W, MC = MC, r_D = rD, kappa = kap)
 }
 
-hb = hand_sweep(rep(0, 2))                      # baseline: h never enters
-hs = hand_sweep(h2, kappa_vec = hb$kappa)       # scenario with h
+for (FORM in c('levels', 'logs')) {
 
-q1 = kg_dyn_solve_bellman(grid_2, tau_m2, c_phi_mat = 0, eta = eta,
-                          beta_by_year = beta)
-q2 = kg_dyn_solve_bellman(grid_2, tau_m2, c_phi_mat = 0, kappa_mat = q1$kappa,
-                          eta = eta, beta_by_year = beta, h_mat = h_m2)
+  #--- T1a: 1x1 grid hand-check ------------------------------------------------
+  p1   = kg_dyn_solve_bellman(grid_11, tau, c_phi_mat = 0, eta = eta,
+                              beta_by_year = beta, form = FORM)
+  p2_0 = kg_dyn_solve_bellman(grid_11, tau, c_phi_mat = 0, kappa_mat = p1$kappa,
+                              eta = eta, beta_by_year = beta, form = FORM)
+  p2_h = kg_dyn_solve_bellman(grid_11, tau, c_phi_mat = 0, kappa_mat = p1$kappa,
+                              eta = eta, beta_by_year = beta,
+                              h_mat = matrix(h, 1, 1, dimnames = list(ac, yc)),
+                              form = FORM)
 
-for (nm in c('W', 'MC', 'r_D')) {
-  err = max(abs(hs[[nm]] - as.numeric(q2[[nm]][, 1])))
-  if (err > 1e-14) fail('T1b: %s mismatch vs hand chain (max err %.3e)', nm, err)
+  # Top age, stationary terminal (W_next = 0): MC_S - MC_B = -beta*(1-m)*h,
+  # form-invariant (MC does not depend on the cost form).
+  dMC      = p2_h$MC[1, 1] - p2_0$MC[1, 1]
+  dMC_hand = -beta * (1 - 0.04) * h
+  if (abs(dMC - dMC_hand) > 1e-15)
+    fail('T1a [%s]: MC wedge %.18f != hand value %.18f', FORM, dMC, dMC_hand)
+
+  foc_hand = foc_factor(FORM, eta, p2_h$MC[1, 1], p2_0$MC[1, 1])
+  foc_got  = p2_h$r_D[1, 1] / p2_0$r_D[1, 1]
+  if (abs(foc_got - foc_hand) > 1e-15)
+    fail('T1a [%s]: FOC factor %.18f != hand %.18f', FORM, foc_got, foc_hand)
+  if (!(p2_h$r_D[1, 1] > p2_0$r_D[1, 1])) fail('T1a [%s]: r_D did not rise under h', FORM)
+  if (!(p2_h$W[1, 1]   < p2_0$W[1, 1]))   fail('T1a [%s]: W did not fall under h', FORM)
+  ok(sprintf('T1a [%s] MC wedge -beta*(1-m)*h; FOC factor to 1e-15; r_D up; W down',
+             FORM))
+
+  #--- T1b: 2-age stationary chain, hand-computed from the algebra -------------
+  hb = hand_sweep(rep(0, 2), form = FORM)              # baseline: h never enters
+  hs = hand_sweep(h2, kappa_vec = hb$kappa, form = FORM)  # scenario with h
+
+  q1 = kg_dyn_solve_bellman(grid_2, tau_m2, c_phi_mat = 0, eta = eta,
+                            beta_by_year = beta, form = FORM)
+  q2 = kg_dyn_solve_bellman(grid_2, tau_m2, c_phi_mat = 0, kappa_mat = q1$kappa,
+                            eta = eta, beta_by_year = beta, h_mat = h_m2,
+                            form = FORM)
+
+  for (nm in c('W', 'MC', 'r_D')) {
+    err = max(abs(hs[[nm]] - as.numeric(q2[[nm]][, 1])))
+    if (err > 1e-14)
+      fail('T1b [%s]: %s mismatch vs hand chain (max err %.3e)', FORM, nm, err)
+  }
+  # The younger cell's MC wedge compounds its own h debit + the inherited W_next
+  # drop (dMC79 = bs*(dW80 - h), form-invariant relation).
+  dMC79      = q2$MC['79', 1] - q1$MC['79', 1]
+  dW80       = q2$W['80', 1] - q1$W['80', 1]
+  dMC79_hand = beta * (1 - m2[1]) * (dW80 - h2[1])
+  if (abs(dMC79 - dMC79_hand) > 1e-14)
+    fail('T1b [%s]: age-79 wedge %.18f != bs*(dW80 - h) %.18f', FORM, dMC79, dMC79_hand)
+  if (!(abs(dMC79) > beta * (1 - m2[1]) * h2[1]))
+    fail('T1b [%s]: age-79 wedge does not exceed its direct debit', FORM)
+  ok(sprintf('T1b [%s] 2-age stationary chain matches hand algebra; h compounds',
+             FORM))
 }
-# The younger cell's MC wedge must compound BOTH its own h debit and the
-# W_next drop inherited from the older cell:
-dMC79      = q2$MC['79', 1] - q1$MC['79', 1]
-dW80       = q2$W['80', 1] - q1$W['80', 1]      # < 0
-dMC79_hand = beta * (1 - m2[1]) * (dW80 - h2[1])
-if (abs(dMC79 - dMC79_hand) > 1e-14) {
-  fail('T1b: age-79 wedge %.18f != bs*(dW80 - h) %.18f', dMC79, dMC79_hand)
-}
-if (!(abs(dMC79) > beta * (1 - m2[1]) * h2[1])) {
-  fail('T1b: age-79 wedge does not exceed its direct debit (no compounding?)')
-}
-ok('T1b 2-age stationary chain matches hand algebra; h compounds via W_next')
 
 #===============================================================================
 # T2: exact bitwise no-op at h = 0

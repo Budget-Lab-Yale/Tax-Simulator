@@ -53,8 +53,21 @@ AGES_BELLMAN = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX_BELLMAN
 LONG_RUN_PERTURB = 0.01
 LONG_RUN_OFFSET  = 29
 F_REF            = 0.5
-ETA_CURRENT      = KG_DYN_DEFAULT_ETA
-if (!is.finite(ETA_CURRENT)) stop('KG_DYN_DEFAULT_ETA is not set (NA).')
+
+# Active-form parametrization (Tier-A watch covers BOTH etas). The internal
+# long-run moment is recomputed at the shipped eta for the LIVE form
+# (KG_RESPONSE_FORM); the eval_long_run solves below pick up the form through
+# kg_dyn_solve_bellman's default (= KG_DYN_RESPONSE_FORM), so a logs run
+# exercises the power cost automatically. The reference row compared against is
+# the form's own constant in calibration_reference.csv.
+FORM         = KG_DYN_RESPONSE_FORM
+CONST_NAME   = if (identical(FORM, 'logs')) 'KG_DYN_DEFAULT_ETA_LOGS' else
+                                            'KG_DYN_DEFAULT_ETA'
+ETA_CURRENT  = kg_dyn_active_eta()
+if (!is.finite(ETA_CURRENT))
+  stop(sprintf('%s (the %s-form eta) is not set (NA) -- pin it first.',
+               CONST_NAME, FORM))
+cat(sprintf('response form: %s  |  checking constant: %s\n', FORM, CONST_NAME))
 
 detail_files = list.files(file.path(BASELINE_ROOT, 'baseline/static/detail'),
                           pattern = '^[0-9]+\\.csv$')
@@ -157,8 +170,9 @@ ref = suppressWarnings(tryCatch(read_csv(REF_CSV, show_col_types = FALSE),
                                 error = function(e) NULL))
 if (is.null(ref) || !('constant' %in% names(ref)))
   stop(sprintf('cannot read %s (run with a valid reference file)', REF_CSV))
-row_i = which(ref$constant == 'KG_DYN_DEFAULT_ETA')
-if (length(row_i) != 1) stop('calibration_reference.csv needs exactly one KG_DYN_DEFAULT_ETA row')
+row_i = which(ref$constant == CONST_NAME)
+if (length(row_i) != 1)
+  stop(sprintf('calibration_reference.csv needs exactly one %s row', CONST_NAME))
 
 code_sha = tryCatch(system('git rev-parse --short HEAD', intern = TRUE),
                     error = function(e) NA_character_)
@@ -168,15 +182,16 @@ if (SEED) {
   ref$derived_date[row_i]     = as.character(Sys.Date())
   if (!is.na(code_sha)) ref$code_sha[row_i] = code_sha
   write_csv(ref, REF_CSV)
-  cat(sprintf('SEEDED: wrote reference moment %.4f to %s (eta row, sha %s)\n',
-              moment, REF_CSV, code_sha))
+  cat(sprintf('SEEDED: wrote reference moment %.4f to %s (%s row, sha %s)\n',
+              moment, REF_CSV, CONST_NAME, code_sha))
   quit(status = 0)
 }
 
 ref_str = ref$reference_moment[row_i]
 ref_val = suppressWarnings(as.numeric(sub('.*=', '', ref_str)))
 if (!is.finite(ref_val))
-  stop(sprintf('KG_DYN_DEFAULT_ETA reference_moment not parseable: "%s" -- seed first', ref_str))
+  stop(sprintf('%s reference_moment not parseable: "%s" -- seed first',
+               CONST_NAME, ref_str))
 drift = (moment - ref_val) / abs(ref_val)
 cat(sprintf('reference moment: %.4f (%s, %s)\n',
             ref_val, ref$derived_date[row_i], ref$code_sha[row_i]))

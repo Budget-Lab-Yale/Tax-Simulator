@@ -12,13 +12,19 @@ files = c('src/sim/kg_dynamics.R', 'src/sim/run.R',
 for (f in files) { invisible(parse(f)); cat('PARSE OK:', f, '\n') }
 
 source('src/sim/kg_dynamics.R')
-cat('\nlive KG_DYN_APPLIER_ALLOCATION =', KG_DYN_APPLIER_ALLOCATION,
-    '| KG_DYN_DEFAULT_ETA =', KG_DYN_DEFAULT_ETA,
-    '| KG_DYN_TIMEABLE_SHARE =', KG_DYN_TIMEABLE_SHARE, '\n\n')
+cat('\nlive KG_RESPONSE_FORM =', KG_DYN_RESPONSE_FORM,
+    '| active eta =', kg_dyn_active_eta(),
+    '| active timeable_share =', kg_dyn_active_timeable_share(),
+    '\n  (levels eta =', KG_DYN_DEFAULT_ETA, ', logs eta =', KG_DYN_DEFAULT_ETA_LOGS,
+    ')\n\n')
+
+# The guard compares the LIVE form's calibrated pair + Tax-Data vintage. Under
+# the default (levels) form that vintage is 2026070814.
+cal_td_vintage = KG_DYN_CALIB_PROVENANCE$forms[[KG_DYN_RESPONSE_FORM]]$tax_data_vintage
 
 mk = function(td, macro) list(interface_paths = list(`Tax-Data` = td,
                                                       `Macro-Projections` = macro))
-matchv = mk('/x/Tax-Data/v1/2026050315/baseline',
+matchv = mk(sprintf('/x/Tax-Data/v1/%s/baseline', cal_td_vintage),
             '/x/Macro-Projections/v3/2026022522/baseline')
 badv   = mk('/x/Tax-Data/v1/2099999999/baseline',
             '/x/Macro-Projections/v3/2026022522/baseline')

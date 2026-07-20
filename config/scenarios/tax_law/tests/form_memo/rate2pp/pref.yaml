@@ -1,0 +1,9 @@
+---
+# Form-memo experiment 1: +2pp across-the-board on preferred rates (LTCG +
+# qualified dividends) from 2027; step-up retained, NIIT unchanged. Cloned from
+# tests/kg_dyn_rate_up_2pp but year-keyed 2027 for a coherent effective date
+# matching the deemed leg (all three form-memo experiments key at 2027).
+rates:
+  value:
+    '2014': [0.0, 0.15, 0.20]
+    '2027': [0.02, 0.17, 0.22]
