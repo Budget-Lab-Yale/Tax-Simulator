@@ -1,6 +1,6 @@
 constant,shipped,tier,reference_moment,derived_date,code_sha,invalidation_files,taxdata_vintage,macro_vintage
-KG_DYN_DEFAULT_ETA,2.4825,A,internal_long_run_semi=-2.2849,2026-07-12,9b235824a,src/sim/kg_dynamics.R,2026070814,2026022522
-KG_DYN_TIMEABLE_SHARE,0.2542,A,full_sim_short_run_semi=5.04,2026-07-09,9b235824a,src/sim/kg_dynamics.R,2026050315,2026022522
-KG_DYN_DEFAULT_ETA_LOGS,1.6625,A,internal_long_run_semi=-2.2393,2026-07-19,fb73c5fc0,src/sim/kg_dynamics.R,2026070814,2026022522
-KG_DYN_TIMEABLE_SHARE_LOGS,0.2542,A,full_sim_short_run_semi=5.04,2026-07-19,fb73c5fc0,src/sim/kg_dynamics.R,2026070814,2026022522
+KG_DYN_DEFAULT_ETA,2.4825,A,internal_long_run_semi=-2.2849,2026-07-12,3c948509e,src/sim/kg_dynamics.R,2026070814,2026022522
+KG_DYN_TIMEABLE_SHARE,0.2542,A,full_sim_short_run_semi=5.04,2026-07-09,3c948509e,src/sim/kg_dynamics.R,2026050315,2026022522
+KG_DYN_DEFAULT_ETA_LOGS,1.6625,A,internal_long_run_semi=-2.2393,2026-07-19,3c948509e,src/sim/kg_dynamics.R,2026070814,2026022522
+KG_DYN_TIMEABLE_SHARE_LOGS,0.2542,A,full_sim_short_run_semi=5.04,2026-07-19,3c948509e,src/sim/kg_dynamics.R,2026070814,2026022522
 SIGMA_CONV,0.16,B,top_ordinary_ETI=0.25,2026-07-12,ff5fd8037,config/scenarios/behavior/entity_shifting/pearce_prisinzano.R;config/scenarios/behavior/evasion/debacker.R;config/scenarios/behavior/charity/100.R;src/sim/sigma_conversion.R,2026050315,2026022522
