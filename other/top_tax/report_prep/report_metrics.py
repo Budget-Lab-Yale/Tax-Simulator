@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
 report_metrics.py -- key metrics for the top-tax public report, computed from
-top_tax_dials_30y_v2 (current physics, 2026-07-12), kg_v3_revmax (stale kg
-spec-v3 physics, direct death-regime grid), and atlas2_data.json (surrogate
-over dials v2).
+top_tax_dials_30y_v3 (current physics, 2026-07-18: uncapped CG + corp
+entity-shifting + estate-avoidance fix), kg_v3_revmax (stale kg spec-v3
+physics, direct death-regime grid), and atlas2_data.json (surrogate over
+dials v3).
 
 Pure stdlib (no pandas on login node). All revenue figures are $B,
 scenario-minus-baseline, FY windows 2027-2036 ("10y") and 2027-2056 ("30y")
@@ -14,7 +15,8 @@ External constants (NOT model output) are marked EXTERNAL with their source.
 import csv, json, os, sys
 from collections import OrderedDict
 
-V2   = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/top_tax_dials_30y_v2"
+# NB: variable still named V2 for minimal edit surface; it now points at the v3 vintage.
+V2   = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/top_tax_dials_30y_v3"
 RVMX = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_v3_revmax"
 ATLAS = "/nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator/other/top_tax/atlas2_data.json"
 
@@ -78,11 +80,11 @@ gdp_dec = atlas["meta"]["gdp_fy_decades"]  # $B cumulative FY GDP per decade
 
 print("# Metrics for the top-tax report")
 print()
-print(f"*Source vintages: dials `{os.path.basename(V2)}` (current physics, run 2026-07-12: "
-      "eta=2.4825, sigma=0.16, wealth-carry + estate-margins Tier 1.1/1.2 in; estate-avoidance "
-      f"activation bug still present on estate-lever rows), revmax grid `{os.path.basename(RVMX)}` "
-      "(kg spec-v3, eta=2.3992, pre-Tier-1 -- flagged stale). All $ figures $B unless noted; "
-      "windows FY2027-2036 and FY2027-2056.*")
+print(f"*Source vintages: dials `{os.path.basename(V2)}` (current physics, run 2026-07-18: "
+      "eta=2.4825, sigma=0.16, wealth-carry + estate-margins Tier 1.1/1.2 in; NEW in v3: "
+      "uncapped CG rate (no_ord_cap), corp.rate entity-shifting fix, estate-avoidance fix), "
+      f"revmax grid `{os.path.basename(RVMX)}` (kg spec-v3, eta=2.3992, pre-Tier-1 AND pre-uncap "
+      "-- flagged stale). All $ figures $B unless noted; windows FY2027-2036 and FY2027-2056.*")
 print()
 
 # =============================================================== 1. incomes
@@ -211,7 +213,7 @@ print(f"- Same calc on ACCRUAL ETR (2027 accrual ETR "
 print()
 
 # ============================================ 5. solo lever scores (direct)
-print("## 5. Standalone lever scores (direct runs, dials v2)")
+print("## 5. Standalone lever scores (direct runs, dials v3)")
 print()
 solos = [
     ("s_ord_r39p6",       "Top ordinary rate 37% -> 39.6%"),
@@ -352,7 +354,7 @@ if "byPos" in res_cd and "deemed" in res_cd["byPos"] and "ct" in res_cd["byPos"]
 elif "ct" in res_cd:
     g_cg = sur["g"]["cg"][1][0]
     inter4 = g_cg * res_cd["ct"][0]
-print(f"- Current-physics (dials v2, surrogate composition at cg=25):")
+print(f"- Current-physics (dials v3, surrogate composition at cg=25):")
 print(f"  - Sum of standalone static:       ${fmt(naive_s4,0)}B   (cg25 {fmt(c25_s10,0)} + deemed {fmt(d_s10,0)})")
 print(f"  - Sum of standalone conventional: ${fmt(naive_c4,0)}B   (cg25 {fmt(c25_c10,0)} + deemed {fmt(d_c10,0)})")
 print(f"  - Package conventional estimate:  **${fmt(naive_c4 + inter4,0)}B** (interaction {fmt(inter4,1)})")
@@ -373,7 +375,7 @@ print()
 # ================================================== 8. Laffer curves
 print("## 8. Capital-gains Laffer curves by death regime")
 print()
-print("### 8a. Current physics (dials v2): step-up direct; deemed/carryover via surrogate composition")
+print("### 8a. Current physics (dials v3, uncapped CG): step-up direct; deemed/carryover via surrogate composition")
 print()
 knots = [25, 30, 35, 40, 45, 50]
 print("| Top CG rate | Step-up 10y conv | Deemed-conditional 10y conv delta* | Carryover-conditional* | Step-up 30y conv |")

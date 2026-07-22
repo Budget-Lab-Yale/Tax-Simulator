@@ -1,6 +1,6 @@
 # Metrics for the top-tax report
 
-*Source vintages: dials `top_tax_dials_30y_v2` (current physics, run 2026-07-12: eta=2.4825, sigma=0.16, wealth-carry + estate-margins Tier 1.1/1.2 in; estate-avoidance activation bug still present on estate-lever rows), revmax grid `kg_v3_revmax` (kg spec-v3, eta=2.3992, pre-Tier-1 -- flagged stale). All $ figures $B unless noted; windows FY2027-2036 and FY2027-2056.*
+*Source vintages: dials `top_tax_dials_30y_v3` (current physics, run 2026-07-18: eta=2.4825, sigma=0.16, wealth-carry + estate-margins Tier 1.1/1.2 in; NEW in v3: uncapped CG rate (no_ord_cap), corp.rate entity-shifting fix, estate-avoidance fix), revmax grid `kg_v3_revmax` (kg spec-v3, eta=2.3992, pre-Tier-1 AND pre-uncap -- flagged stale). All $ figures $B unless noted; windows FY2027-2036 and FY2027-2056.*
 
 ## 1. Income at the top, 2027 (baseline)
 
@@ -53,27 +53,27 @@
 - So the frozen-base doubling closes **66%** of the 10-year deficit.
 - Same calc on ACCRUAL ETR (2027 accrual ETR 17.6%): doubling that rate on accrual income is the same +$16.1T.
 
-## 5. Standalone lever scores (direct runs, dials v2)
+## 5. Standalone lever scores (direct runs, dials v3)
 
 | Lever | 10y static | 10y conv | conv/static | 30y conv |
 |---|---|---|---|---|
-| Top ordinary rate 37% -> 39.6% | 483 | 421 | 0.87 | 2,110 |
-| Top ordinary rate 37% -> 44.8% (REF) | 1,449 | 1,226 | 0.85 | 6,144 |
-| Top ordinary rate 37% -> 50% | 2,416 | 1,979 | 0.82 | 9,928 |
+| Top ordinary rate 37% -> 39.6% | 483 | 421 | 0.87 | 2,109 |
+| Top ordinary rate 37% -> 44.8% (REF) | 1,449 | 1,225 | 0.85 | 6,139 |
+| Top ordinary rate 37% -> 50% | 2,416 | 1,977 | 0.82 | 9,919 |
 | CG & div top rate 20% -> 25% | 547 | 235 | 0.43 | 1,086 |
-| CG & div top rate 20% -> 30% | 1,088 | 404 | 0.37 | 1,885 |
-| CG & div top rate 20% -> 35% | 1,624 | 517 | 0.32 | 2,444 |
-| CG & div top rate 20% -> 40% (REF) | 1,891 | 556 | 0.29 | 2,637 |
-| CG & div top rate 20% -> 45% | 1,925 | 563 | 0.29 | 2,660 |
-| CG & div top rate 20% -> 50% | 1,942 | 564 | 0.29 | 2,659 |
-| Corporate rate 21% -> 28% | 900 | 789 | 0.88 | 3,518 |
+| CG & div top rate 20% -> 30% | 1,095 | 404 | 0.37 | 1,886 |
+| CG & div top rate 20% -> 35% | 1,642 | 514 | 0.31 | 2,431 |
+| CG & div top rate 20% -> 40% (REF) | 2,190 | 575 | 0.26 | 2,768 |
+| CG & div top rate 20% -> 45% | 2,738 | 598 | 0.22 | 2,932 |
+| CG & div top rate 20% -> 50% | 3,286 | 591 | 0.18 | 2,966 |
+| Corporate rate 21% -> 28% | 900 | 721 | 0.80 | 3,227 |
 | Wealth tax 1% > $50M | 2,944 | 2,044 | 0.69 | 10,038 |
 | Wealth tax 2% > $50M (REF) | 5,888 | 3,267 | 0.55 | 15,571 |
 | Carryover basis at death (no rate change) | 40 | 252 | 6.35 | 1,334 |
-| Deemed realization at death (no rate change) | 291 | 706 | 2.43 | 3,183 |
-| Estate tax 40->50%, exemption $15.4M->$8.46M (REF) | 317 | 370 | 1.17 | 1,900 |
-| Estate tax 40->60%, exemption -> $5M | 722 | 853 | 1.18 | 4,343 |
-| Repeal QBI (199A) | 896 | 886 | 0.99 | 3,907 |
+| Deemed realization at death (no rate change) | 291 | 707 | 2.43 | 3,187 |
+| Estate tax 40->50%, exemption $15.4M->$8.46M (REF) | 317 | 315 | 0.99 | 1,587 |
+| Estate tax 40->60%, exemption -> $5M | 722 | 691 | 0.96 | 3,482 |
+| Repeal QBI (199A) | 896 | 886 | 0.99 | 3,906 |
 | Eliminate SS taxable max | 2,520 | 2,503 | 0.99 | 11,361 |
 
 ## 6. Destination ledgers -- receipts-by-head deltas, FY2028-2036 conventional ($B)
@@ -82,16 +82,16 @@
 
 | Scenario | income tax | payroll | corporate | estate | wealth | credits (outlay) | TOTAL |
 |---|---|---|---|---|---|---|---|
-| s_cg_r40 | 617 | 1 | -96 | -1 | 0 | -0 | 520 |
+| s_cg_r40 | 652 | 1 | -111 | -2 | 0 | -0 | 541 |
 | s_cg_r25 | 248 | 0 | -31 | -1 | 0 | -0 | 217 |
-| s_corp_r28 | -98 | -0 | 851 | -4 | 0 | 0 | 748 |
+| s_corp_r28 | 116 | 3 | 570 | -5 | 0 | -0 | 685 |
 | s_wealth_r2_t50 | -450 | 0 | -43 | -87 | 3,879 | -0 | 3,299 |
 | s_wealth_r1_t50 | -252 | 0 | -22 | -48 | 2,383 | -0 | 2,062 |
-| s_deemed_deemed | 716 | 2 | -45 | -35 | 0 | -0 | 638 |
-| s_ord_r44p8 | 1,033 | -5 | 117 | -2 | 0 | 0 | 1,143 |
-| s_estate_r50_e8p46 | 49 | 0 | -2 | 317 | 0 | 0 | 364 |
+| s_deemed_deemed | 716 | 2 | -45 | -34 | 0 | -0 | 639 |
+| s_ord_r44p8 | 1,033 | -5 | 117 | -3 | 0 | 0 | 1,142 |
+| s_estate_r50_e8p46 | 49 | 0 | -2 | 262 | 0 | 0 | 309 |
 | s_taxmax_on | -398 | 2,766 | -25 | -2 | 0 | 0 | 2,342 |
-| stack_ref | 2,874 | 2,766 | 750 | 50 | 3,718 | -1 | 10,160 |
+| stack_ref | 3,100 | 2,773 | 466 | 50 | 3,715 | -2 | 10,106 |
 
 (Note: 'TOTAL' here = sum of revenue heads minus credit outlays; small differences vs revenue_estimates.csv reflect the FY booking conventions inside calc_receipts.)
 
@@ -99,47 +99,47 @@
 
 **Full 8-lever reference stack (stack_ref) vs sum of its 8 solos** (10y unless noted)
 
-- Sum of standalone STATIC scores:        $14,152B
-- Sum of standalone CONVENTIONAL scores:  $10,303B
-- Package STATIC:                         $14,612B
-- Package CONVENTIONAL (the truth):       $10,643B
-- Package interaction (pkg conv - sum conv): $340B (+3.3% of the naive conventional sum)
-- Behavioral survival: naive 73%, package 73%
-- 30y: naive conv $48,220B vs package conv $47,925B (-0.6%)
+- Sum of standalone STATIC scores:        $14,451B
+- Sum of standalone CONVENTIONAL scores:  $10,199B
+- Package STATIC:                         $14,644B
+- Package CONVENTIONAL (the truth):       $10,583B
+- Package interaction (pkg conv - sum conv): $384B (+3.8% of the naive conventional sum)
+- Behavioral survival: naive 71%, package 72%
+- 30y: naive conv $47,746B vs package conv $47,624B (-0.3%)
 
 **Corporate 21->28% + CG/div 20->30% (pc_corpr28_cgr30)** (10y unless noted)
 
-- Sum of standalone STATIC scores:        $1,988B
-- Sum of standalone CONVENTIONAL scores:  $1,193B
-- Package STATIC:                         $1,988B
-- Package CONVENTIONAL (the truth):       $1,189B
-- Package interaction (pkg conv - sum conv): $-5B (-0.4% of the naive conventional sum)
-- Behavioral survival: naive 60%, package 60%
-- 30y: naive conv $5,404B vs package conv $5,385B (-0.4%)
+- Sum of standalone STATIC scores:        $1,994B
+- Sum of standalone CONVENTIONAL scores:  $1,125B
+- Package STATIC:                         $1,994B
+- Package CONVENTIONAL (the truth):       $1,104B
+- Package interaction (pkg conv - sum conv): $-20B (-1.8% of the naive conventional sum)
+- Behavioral survival: naive 56%, package 55%
+- 30y: naive conv $5,113B vs package conv $5,010B (-2.0%)
 
 **CG/div 20->40% + deemed realization at death (pr_cg_deemed)** (10y unless noted)
 
-- Sum of standalone STATIC scores:        $2,182B
-- Sum of standalone CONVENTIONAL scores:  $1,262B
-- Package STATIC:                         $2,341B
-- Package CONVENTIONAL (the truth):       $1,832B
-- Package interaction (pkg conv - sum conv): $570B (+45.1% of the naive conventional sum)
-- Behavioral survival: naive 58%, package 78%
-- 30y: naive conv $5,820B vs package conv $8,459B (+45.3%)
+- Sum of standalone STATIC scores:        $2,481B
+- Sum of standalone CONVENTIONAL scores:  $1,283B
+- Package STATIC:                         $2,658B
+- Package CONVENTIONAL (the truth):       $1,933B
+- Package interaction (pkg conv - sum conv): $650B (+50.7% of the naive conventional sum)
+- Behavioral survival: naive 52%, package 73%
+- 30y: naive conv $5,955B vs package conv $8,979B (+50.8%)
 
 **Draft Figure 3 as written -- corporate AND CG/div all to 25% (surrogate-style estimate; no direct run)**
 
 - Sum of standalone static:       $1,061B  (cg25 547 + corp25 514, corp linear-scaled 4/7 of corp28)
-- Sum of standalone conventional: $686B  (cg25 235 + corp25 451)
-- Package conventional (surrogate: sum + g-scaled cg|corp interaction -1.2): **$685B**
+- Sum of standalone conventional: $647B  (cg25 235 + corp25 412)
+- Package conventional (surrogate: sum + g-scaled cg|corp interaction -5.4): **$642B**
 - Surrogate validation context: quiz max err 2.5%, corners 2.4% -- treat as +/- a few percent.
 
 **Draft Figure 4 -- CG/div 20->25% + deemed realization at death**
 
-- Current-physics (dials v2, surrogate composition at cg=25):
+- Current-physics (dials v3, surrogate composition at cg=25):
   - Sum of standalone static:       $838B   (cg25 547 + deemed 291)
-  - Sum of standalone conventional: $942B   (cg25 235 + deemed 706)
-  - Package conventional estimate:  **$1,106B** (interaction 164.8)
+  - Sum of standalone conventional: $942B   (cg25 235 + deemed 707)
+  - Package conventional estimate:  **$1,105B** (interaction 162.5)
 - Direct runs (kg_v3_revmax, STALE eta=2.3992 physics), 10y:
   - Parts static:  cg+5pp 547 + deemed 288 = $835B
   - Parts conv:    cg+5pp 338 + deemed 748 = $1,086B
@@ -147,16 +147,16 @@
 
 ## 8. Capital-gains Laffer curves by death regime
 
-### 8a. Current physics (dials v2): step-up direct; deemed/carryover via surrogate composition
+### 8a. Current physics (dials v3, uncapped CG): step-up direct; deemed/carryover via surrogate composition
 
 | Top CG rate | Step-up 10y conv | Deemed-conditional 10y conv delta* | Carryover-conditional* | Step-up 30y conv |
 |---|---|---|---|---|
-| 25% | 235 | 400 | 290 | 1,086 |
-| 30% | 404 | 732 | 513 | 1,885 |
-| 35% | 517 | 1,006 | 680 | 2,444 |
-| 40% | 556 | 1,126 | 746 | 2,637 |
-| 45% | 563 | 1,143 | 756 | 2,660 |
-| 50% | 564 | 1,149 | 759 | 2,659 |
+| 25% | 235 | 398 | 289 | 1,086 |
+| 30% | 404 | 729 | 512 | 1,886 |
+| 35% | 514 | 1,002 | 676 | 2,431 |
+| 40% | 575 | 1,226 | 791 | 2,768 |
+| 45% | 598 | 1,411 | 868 | 2,932 |
+| 50% | 591 | 1,567 | 915 | 2,966 |
 
 *Conditional columns = the CG-rate increase's own 10y conventional yield when the death regime is already in place (solo cg + g-scaled cg|deemed interaction residual; the regime's own revenue is NOT included). Surrogate-composed -- +/- a few percent.*
 
@@ -184,27 +184,27 @@ Leakage sign check (static minus conventional, 10y): positive = behavior loses r
 |---|---|---|---|---|
 | **accrual denominator** | | | | |
 | Quintile 5 | 15.4% | 20.9% | 19.5% | 1.4 |
-| Top 1% | 17.6% | 30.8% | 27.0% | 3.7 |
-| Top 0.1% | 21.5% | 42.0% | 35.6% | 6.4 |
+| Top 1% | 17.6% | 30.8% | 27.2% | 3.6 |
+| Top 0.1% | 21.5% | 42.1% | 35.8% | 6.3 |
 | Top 0.01% | 23.7% | 48.9% | 40.9% | 8.0 |
 | **cash denominator** | | | | |
-| Quintile 5 | 22.9% | 31.2% | 29.0% | 2.1 |
-| Top 1% | 26.2% | 45.7% | 40.2% | 5.5 |
-| Top 0.1% | 29.2% | 57.1% | 48.4% | 8.7 |
-| Top 0.01% | 30.0% | 61.9% | 51.7% | 10.2 |
+| Quintile 5 | 22.9% | 31.2% | 29.1% | 2.0 |
+| Top 1% | 26.2% | 45.8% | 40.4% | 5.3 |
+| Top 0.1% | 29.2% | 57.1% | 48.6% | 8.5 |
+| Top 0.01% | 30.0% | 61.9% | 51.8% | 10.1 |
 
 ## 10. Decade profile of the full stack
 
 | Decade | Static $B | Conv $B | Survival | Conv % of GDP |
 |---|---|---|---|---|
-| 2027-2036 | 14,612 | 10,643 | 73% | 2.68% |
-| 2037-2046 | 23,319 | 15,628 | 67% | 2.72% |
-| 2047-2056 | 35,196 | 21,654 | 62% | 2.63% |
+| 2027-2036 | 14,644 | 10,583 | 72% | 2.66% |
+| 2037-2046 | 23,364 | 15,533 | 66% | 2.70% |
+| 2047-2056 | 35,265 | 21,508 | 61% | 2.62% |
 
 ## 11. Realization-model color (kg_dynamics_summary)
 
-- **s_cg_r40**: implied realization semi-elasticity mean -2.48 (range -2.81 to -2.32) deemed_realized 10y 0.0 (units as stored)
-- **pr_cg_deemed**: implied realization semi-elasticity mean 1.22 (range 0.33 to 1.42) gains deemed-realized at death 10y 3,312B
-- **stack_ref**: implied realization semi-elasticity mean 1.28 (range 0.54 to 1.44) gains deemed-realized at death 10y 3,305B
+- **s_cg_r40**: implied realization semi-elasticity mean -2.50 (range -2.83 to -2.35) deemed_realized 10y 0.0 (units as stored)
+- **pr_cg_deemed**: implied realization semi-elasticity mean 0.86 (range 0.02 to 1.05) gains deemed-realized at death 10y 3,321B
+- **stack_ref**: implied realization semi-elasticity mean 1.24 (range 0.49 to 1.40) gains deemed-realized at death 10y 3,306B
 
 *(Interpretation note: the implied semi-elasticity is an OUTPUT here -- compare it across regimes to quantify 'policy chooses its own elasticity'.)*

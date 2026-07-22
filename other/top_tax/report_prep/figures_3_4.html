@@ -51,13 +51,12 @@
 
 <div class="wrap">
 <header>
-  <p class="eyebrow">Report placeholders · third decade (FY2047–56) · % of GDP · dials-v2 surrogate</p>
+  <p class="eyebrow">Figures 3 &amp; 4 · third decade (FY2047–56) · % of GDP · dials-v3 surrogate</p>
   <h1>Figures 3 and 4</h1>
   <p class="standfirst">The same corporate and capital-gains rate increases, added one policy at a
   time — first under current law, then on a base that also taxes gains at death. Bars show each policy's
   static and collected revenue as a share of GDP, colored by the tax base where the revenue is collected.
-  Shown for the third decade, once the long-run realization response has largely played out. All are
-  placeholders pending the post-fix re-run.</p>
+  Shown for the third decade, once the long-run realization response has largely played out.</p>
 </header>
 
 <div class="fig">
@@ -73,9 +72,11 @@
   </div>
   <svg id="fig3" role="img" aria-label="Capital gains then corporate, each shown as a static estimate and collected revenue, broken out by tax base"></svg>
   <p class="cap">In the third decade the capital-gains rate increase has a static estimate of 0.14% of
-  GDP but collects 0.06%; the difference reflects deferral of realizations under step-up in basis. Both
-  policies reduce estate revenue slightly (shown left of zero). Source: The Budget Lab Tax-Simulator,
-  dials-v2 surrogate. PLACEHOLDER.</p>
+  GDP but collects 0.07%; the difference reflects deferral of realizations under step-up in basis. The
+  corporate rate increase asks 0.13% of GDP but collects 0.08%: as the rate rises, some C-corporate
+  income is recharacterized as pass-through, which drains corporate revenue and lifts ordinary-income
+  revenue (the blue segment). Both policies also reduce estate revenue slightly (shown left of zero).
+  Source: The Budget Lab Tax-Simulator, dials-v3 surrogate.</p>
 </div>
 
 <div class="fig">
@@ -90,11 +91,11 @@
     <span class="key"><span class="sw stat" style="background:var(--ink)"></span>slim bar = static estimate</span>
   </div>
   <svg id="fig4" role="img" aria-label="Taxation at death first, then the same capital-gains and corporate increases, shown as static estimate and collected revenue by tax base"></svg>
-  <p class="cap">When gains are taxed at death, the same capital-gains rate increase collects 0.10% of
-  GDP against 0.06% under step-up, and the package as a whole still collects slightly more than its
+  <p class="cap">When gains are taxed at death, the same capital-gains rate increase collects 0.12% of
+  GDP against 0.07% under step-up, and the package as a whole still collects slightly more than its
   static estimate — where the rate-only version in Figure 3 falls short. Revenue from gains taxed at
-  death is included in the capital-gains base. Source: The Budget Lab Tax-Simulator, dials-v2 surrogate.
-  PLACEHOLDER.</p>
+  death is folded into the capital-gains base. The corporate increase behaves as in Figure 3, shifting
+  income into the pass-through (ordinary) base. Source: The Budget Lab Tax-Simulator, dials-v3 surrogate.</p>
 </div>
 </div>
 
@@ -158,23 +159,28 @@
   }
 
   // ---- REAL surrogate numbers, third decade (FY2047-56), % of GDP; ordered marginals; ---------
-  // gains at death folded into capital gains. Evaluated from atlas2_data.json (decade index 2),
-  // deemed portion of the iit head carved into the cg base, divided by gdp_fy_decades[2].
+  // gains at death folded into capital gains. Evaluated from atlas2_data.json v3 (decade index 2)
+  // via report_prep/figdata_34.py: deemed portion of the iit head carved into the cg base, divided
+  // by gdp_fy_decades[2]. v3 = uncapped CG + corp entity-shifting; the corporate row now leaks to
+  // pass-through (corp down, ordinary/iit up), where v2 (pre-fix) showed corp collecting its full ask.
   // FIG 3 (step-up): capital gains, then corporate added last. No death layer.
+  function render(){
   polFig('fig3',[
     {label:'Capital gains', sub:'20 → 25%', conv:{iit:0.003,cg:0.068,corp:-0.009,est:-0.001}, stat:{cg:0.136}},
-    {label:'+ Corporate',   sub:'21 → 25%', conv:{corp:0.129,iit:-0.008,cg:-0.008,est:-0.001}, stat:{corp:0.129}}
-  ], {label:'Package', sub:'corporate + capital gains', conv:{iit:-0.005,cg:0.060,corp:0.120,est:-0.002}, stat:{cg:0.136,corp:0.129}});
+    {label:'+ Corporate',   sub:'21 → 25%', conv:{corp:0.084,iit:0.031,cg:-0.012,est:-0.001}, stat:{corp:0.129}}
+  ], {label:'Package', sub:'corporate + capital gains', conv:{iit:0.034,cg:0.056,corp:0.075,est:-0.002}, stat:{cg:0.136,corp:0.129}});
 
   // FIG 4 (deemed): death first, then the same capital-gains and corporate increases on top.
   polFig('fig4',[
-    {label:'Gains at death', sub:'deferral closed', conv:{cg:0.201,iit:0.001,corp:-0.013,est:-0.012}, stat:{cg:0.106,est:-0.011}},
+    {label:'Gains at death', sub:'deferral closed', conv:{cg:0.201,corp:-0.013,est:-0.012}, stat:{cg:0.106,est:-0.011}},
     {label:'+ Capital gains',sub:'20 → 25%',        conv:{cg:0.117,iit:0.003,corp:-0.013,est:-0.004}, stat:{cg:0.153,est:-0.002}},
-    {label:'+ Corporate',    sub:'21 → 25%',        conv:{corp:0.129,iit:-0.008,cg:-0.009,est:-0.001}, stat:{corp:0.129}}
-  ], {label:'Package', sub:'all three', conv:{cg:0.309,iit:-0.004,corp:0.104,est:-0.017}, stat:{cg:0.259,corp:0.129,est:-0.013}});
+    {label:'+ Corporate',    sub:'21 → 25%',        conv:{corp:0.082,iit:0.031,cg:-0.013,est:-0.001}, stat:{corp:0.129}}
+  ], {label:'Package', sub:'all three', conv:{cg:0.305,iit:0.034,corp:0.056,est:-0.017}, stat:{cg:0.259,corp:0.129,est:-0.013}});
+  }
+  render();
 
   var mq=window.matchMedia('(prefers-color-scheme: dark)');
-  function rr(){ location.reload(); }
+  function rr(){ render(); }
   if(mq.addEventListener) mq.addEventListener('change', rr);
   new MutationObserver(rr).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 })();

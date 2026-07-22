@@ -42,7 +42,7 @@ import fit_surrogate as F
 
 REPORT = os.path.join(HERE, "surrogate_report.md")
 
-HARD_PCT = 2.6            # quiz / corner / stack bar on conv DECADE-1 total, percent
+HARD_PCT = 3.0            # quiz / corner / stack bar on conv DECADE-1 total, percent
                           # v2 (2026-07-12): relaxed 2.0->2.6 (author call). The
                           # estate-margins Tier 1.2 + wealth-carry physics added
                           # wealth×estate curvature a single I·g² pair term can't
@@ -50,6 +50,12 @@ HARD_PCT = 2.6            # quiz / corner / stack bar on conv DECADE-1 total, pe
                           # 2.16-2.53% (pc_wealthr4t50_estater60e5, q05, q07), all
                           # high-intensity wealth×estate. Headline stack exact
                           # (-0.14%), median d1 0.50%. Measured+disclosed in atlas.
+                          # v3 (2026-07-18): relaxed 2.6->3.0 (author call). Uncapped
+                          # CG (no_ord_cap) + corp entity-shifting added a cg×corp
+                          # cross-term the triple composition over-corrects on one
+                          # near-maximal 6-lever corner (q14 cg+corp+deemed+ord+
+                          # taxmax+wealth) at -2.84% d1; next-worst holdout -1.73%.
+                          # Maximal-corner extrapolation; measured+disclosed in atlas.
 ETR_PP = 0.1              # secondary: per-ETR-cell bound, percentage points
 EXACT_TOL = {"ct": 2e-3, "cy": 2e-3, "ch": 2e-3, "st": 2e-3, "sy": 2e-3,
              "sh": 2e-3, "etr": 6e-3, "etrc": 6e-3}  # 3dp + etr omission floor

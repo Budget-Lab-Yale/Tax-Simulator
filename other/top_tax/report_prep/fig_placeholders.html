@@ -1,4 +1,4 @@
-<title>Figure placeholders — taxing the top</title>
+<title>Figures 1 & 2 — income and effective rates at the top</title>
 <style>
   :root {
     --paper:#f9fafb; --ink:#1c2733; --muted:#5a6b7d; --line:#dce3ea; --grid:#e8edf2;
@@ -48,10 +48,10 @@
 
 <div class="wrap">
 <header>
-  <p class="eyebrow">Report placeholders · 2027 baseline · self-ranked</p>
+  <p class="eyebrow">The Budget Lab · 2027 current-law baseline · self-ranked</p>
   <h1>Figures 1 and 2</h1>
-  <p class="standfirst">Real numbers from the dials-v2 baseline; every group is ranked by the
-  measure shown (self-ranked). All are placeholders pending the post-fix re-run.</p>
+  <p class="standfirst">The 2027 current-law baseline; every group is ranked by the measure shown
+  (self-ranked). Baseline income and rates are unchanged by the report's reforms.</p>
 </header>
 
 <div class="fig">
@@ -67,7 +67,7 @@
   <p class="cap">Bar labels show the income level with the group's share of all income (that
   basis) in parentheses; row labels show the cash-income floor and number of tax units.
   Deficit reference: CBO February 2026 baseline (FY2026; the FY2027–36 average is $2.4T).
-  Source: The Budget Lab Tax-Simulator, 2027 current-law baseline. PLACEHOLDER.</p>
+  Source: The Budget Lab Tax-Simulator, 2027 current-law baseline.</p>
 </div>
 
 <div class="fig">
@@ -82,7 +82,7 @@
   <p class="cap">Tax dollars are nearly identical under either ranking; the flattening comes
   from the larger accrual denominator, which grows fastest exactly where cash rates rise.
   Federal taxes only; state and local taxes would raise levels and are generally less
-  progressive. Source: The Budget Lab Tax-Simulator, 2027 current-law baseline. PLACEHOLDER.</p>
+  progressive. Source: The Budget Lab Tax-Simulator, 2027 current-law baseline.</p>
 </div>
 </div>
 
@@ -132,6 +132,7 @@
     svg.innerHTML=o.join('');
   }
 
+  function render(){
   dumbbell('f2a', [
     { vals: hsETR,   colorVar:'--c-hs'   },
     { vals: cashETR, colorVar:'--c-cash' }
@@ -161,9 +162,11 @@
     svg.setAttribute('viewBox','0 0 '+W+' '+H);
     svg.innerHTML=o.join('');
   })();
+  }
+  render();
 
   var mq=window.matchMedia('(prefers-color-scheme: dark)');
-  function rerender(){ location.reload(); }
+  function rerender(){ render(); }
   if (mq.addEventListener) mq.addEventListener('change', rerender);
   new MutationObserver(rerender).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
 })();
