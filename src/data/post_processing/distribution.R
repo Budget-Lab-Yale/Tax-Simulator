@@ -640,10 +640,16 @@ get_other_taxes = function(id, baseline_id) {
   # Read baseline off-model revenue deltas (0 if actual baseline). The corporate
   # allocation (corp_alloc.R) applies a fixed normal/supernormal split with no
   # labor-share phase-in, so only the total delta is needed here.
+  #
+  # The distribution table is a STATIC concept (reform_leg = 'static'), so both
+  # legs read the STATIC corporate stream (`corporate_static`) via ome_corp_col,
+  # not the conventional `corporate` column that the on-model incidence channel
+  # uses. Pre-v5 vintages lacking corporate_static hard-stop there.
   other_corp_delta = interface_root('Off-Model-Estimates', baseline_id) %>%
     file.path('revenues.csv') %>%
     read_csv(show_col_types = F) %>%
-    select(year, baseline = corporate) %>%
+    ome_corp_col(static = TRUE) %>%
+    rename(baseline = corporate) %>%
     filter(year >= first_year, year <= last_year) %>%
 
     # Read counterfactual scenario off-model revenues
@@ -651,7 +657,8 @@ get_other_taxes = function(id, baseline_id) {
       scenario_info$interface_paths$`Off-Model-Estimates` %>%
         file.path('revenues.csv') %>%
         read_csv(show_col_types = F) %>%
-        select(year, reform = corporate),
+        ome_corp_col(static = TRUE) %>%
+        rename(reform = corporate),
       by = 'year'
     ) %>%
 

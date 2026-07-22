@@ -29,6 +29,47 @@ add_receipts_total = function(receipts, name) {
 
 
 
+ome_corp_col = function(ome_df, static) {
+
+  #----------------------------------------------------------------------------
+  # Resolves the pass-appropriate corporate Off-Model-Estimates revenue series.
+  # The corporate OME is a two-stream interface (as of interface version 5):
+  #   - conventional leg (static = FALSE): the `corporate` column, which carries
+  #     the modeled corporate behavioral response and is gross of the on-model
+  #     individual-tax offset.
+  #   - static leg (static = TRUE): the `corporate_static` column, the mechanical
+  #     (no-behavioral-response) corporate revenue change. Consumed by static
+  #     receipts booking and the (static) distribution smear only; the on-model
+  #     record incidence stays on the conventional stream (D5).
+  #
+  # The static stream is MANDATORY: a static-leg read of a revenues.csv lacking
+  # `corporate_static` is a hard error (a pre-v5 vintage). Non-corporate runs
+  # read the baseline OME, whose v5 revenues.csv carries a zero-valued
+  # `corporate_static`, so they resolve cleanly.
+  #
+  # Parameters:
+  #   - ome_df (df)   : an Off-Model-Estimates revenues.csv, read as-is
+  #   - static (lgl)  : TRUE for the static leg, FALSE for conventional
+  #
+  # Returns: a two-column tibble (year, corporate) holding the resolved series.
+  #----------------------------------------------------------------------------
+
+  if (static) {
+    if (!'corporate_static' %in% names(ome_df)) {
+      stop('Off-Model-Estimates revenues.csv lacks a `corporate_static` column: ',
+           'static-leg corporate receipts and the distribution smear require the ',
+           'two-stream (interface v5+) structure. Point dep.Off-Model-Estimates ',
+           'at a v5 vintage, or regenerate the vintage with a corporate_static ',
+           'stream.', call. = FALSE)
+    }
+    return(ome_df %>% transmute(year, corporate = corporate_static))
+  }
+
+  ome_df %>% transmute(year, corporate = corporate)
+}
+
+
+
 read_receipts_long = function(path, values_to) {
 
   #----------------------------------------------------------------------------
@@ -114,7 +155,8 @@ style_rev_sheet = function(wb, sheet, n_cols, comma_rows, pct_rows,
 
 
 calc_receipts = function(totals, scenario_root, vat_root, other_root,
-                         cost_recovery_root, off_model_root, excess_growth_all_rev) {
+                         cost_recovery_root, off_model_root, excess_growth_all_rev,
+                         static) {
   
   #----------------------------------------------------------------------------
   # Calculates a scenario's receipts 
@@ -135,6 +177,9 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   #   - cost_recovery_root    (str) : Cost-Recovery-Simulator director for this scenario
   #   - off_model_root        (str) : directory for miscellaneous off-model deltas for this scenario
   #   - excess_growth_all_rev (int) : whether to apply excess growth to all revenue or just IIT/payroll/corporate taxes
+  #   - static                (lgl) : TRUE when writing the static pass, FALSE for
+  #        conventional. Selects the corporate off-model stream: static books
+  #        `corporate_static` (mechanical), conventional books `corporate`.
   #
   # Returns:  void, writes a dataframe for the scenario containing values for:
   #   - Fiscal year
@@ -167,6 +212,16 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   deltas_off_model = off_model_root %>%
     file.path('revenues.csv') %>%
     read_csv(show_col_types = F)
+
+  # Corporate off-model booking is pass-aware: the static pass books the static
+  # corporate stream (`corporate_static`), the conventional pass books
+  # `corporate`. Resolve here and swap into `corporate` before the downstream
+  # join/booking, which is stream-agnostic. select(-any_of(...)) drops both raw
+  # columns first so the rejoin cannot produce a corporate.x/.y collision.
+  corp_series = ome_corp_col(deltas_off_model, static = static)
+  deltas_off_model = deltas_off_model %>%
+    select(-any_of(c('corporate', 'corporate_static'))) %>%
+    left_join(corp_series, by = 'year')
 
   # Read the model-baseline estate tax series. Estate revenue is presented as
   # the CBO LEVEL plus an on-model DELTA (scenario minus model-baseline), so

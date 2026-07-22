@@ -253,7 +253,8 @@ write_pass_outputs = function(output, root, totals_slot,
       other_root            = scenario_info$interface_paths$`Macro-Projections`,
       cost_recovery_root    = scenario_info$interface_paths$`Cost-Recovery-Simulator`,
       off_model_root        = scenario_info$interface_paths$`Off-Model-Estimates`,
-      excess_growth_all_rev = scenario_info$excess_growth_all_rev
+      excess_growth_all_rev = scenario_info$excess_growth_all_rev,
+      static                = (totals_slot == 'static_totals')
     )
 
   invisible(NULL)

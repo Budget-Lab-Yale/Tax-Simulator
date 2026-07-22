@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Off-Model-Estimates.vintage,dep.Off-Model-Estimates.ID,wealth_financing
+baseline,baseline,,2026:2033,2028:2028,,,20260722,baseline,none
+corp_2stream,baseline,,2026:2033,2028:2028,,,20260722,corp_28_2027_2stream,none
+noncorp_ord,tests/corp_2stream_smoke/ord_top40,,2026:2033,2028:2028,,,20260722,baseline,none
