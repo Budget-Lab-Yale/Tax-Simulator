@@ -19,7 +19,7 @@ cat('\nlive KG_RESPONSE_FORM =', KG_DYN_RESPONSE_FORM,
     ')\n\n')
 
 # The guard compares the LIVE form's calibrated pair + Tax-Data vintage. Under
-# the default (levels) form that vintage is 2026070814.
+# the default (logs, since 2026-07-20) form that vintage is 2026070814.
 cal_td_vintage = KG_DYN_CALIB_PROVENANCE$forms[[KG_DYN_RESPONSE_FORM]]$tax_data_vintage
 
 mk = function(td, macro) list(interface_paths = list(`Tax-Data` = td,
