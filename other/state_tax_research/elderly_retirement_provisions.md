@@ -100,9 +100,11 @@ and TAXSIM omits it too.
 
 ## Recommended actions (priority order)
 
-1. **DONE (this survey): NC SS deduction** — encoded, test NC-4; NC
-   cross-model should be rerun (expect a jump: the "state AGI" stage
-   dominance for NC likely reflected this gap for every SS-receiving record).
+1. **DONE (this survey): NC SS deduction** — encoded, test NC-4. Rerun
+   verified the fix: TAXSIM-window clean match@$100 rose 59.4→66.9 (2017),
+   66.0→75.0 (2019), 65.8→74.9 (2020); the PolicyEngine window now sits at
+   93.4–97.0% clean, with 2021–22 above the 95% acceptance bar. 2018
+   remains an NC-specific outlier (53.5%) for the standing triage.
 2. **MI retirement subtraction** — encode the 2023-26 phase-in
    (25/50/75/100% of the Tier-1 cap, all cohorts, at 67+... verify exact
    age gate) with `pension_excl_*`; approximate pre-2023 tiers via
