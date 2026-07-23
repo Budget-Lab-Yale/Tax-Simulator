@@ -9,6 +9,7 @@ return_vars$calc_st_credits = c('st_hh_credit', 'st_eitc', 'st_ctc',
                                 'st_pct_credit', 'st_cli', 'st_ded_credit',
                                 'st_age_credit', 'st_retire_credit',
                                 'st_senior_credit', 'st_jfc',
+                                'st_forgive_credit', 'st_percap_credit',
                                 'st_credits_nonref', 'st_credits_ref')
 
 
@@ -74,6 +75,8 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   #   - st_retire_credit (dbl)  : banded retirement income credit (OH)
   #   - st_senior_credit (dbl)  : senior citizen credit (OH)
   #   - st_jfc (dbl)            : joint filing credit (OH)
+  #   - st_forgive_credit (dbl) : poverty-based forgiveness credit (PA)
+  #   - st_percap_credit (dbl)  : per-person credit (ID grocery credit)
   #   - st_credits_nonref (dbl) : total nonrefundable credits
   #   - st_credits_ref (dbl)    : total refundable credits
   #----------------------------------------------------------------------------
@@ -82,6 +85,8 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
 
     # Tax unit attributes
     'agi',               # (dbl)  federal AGI
+    'exempt_int',        # (dbl)  tax-exempt interest (PA forgiveness income)
+    'alimony',           # (dbl)  alimony received (PA forgiveness income)
     'st_agi',            # (dbl)  state income base
     'st_additions',      # (dbl)  additions to the federal AGI base
     'st_bid',            # (dbl)  business carve-out deduction (OH MAGI addback)
@@ -140,7 +145,8 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.eitc_liab_cap_thresh',
     'st_credits.eitc_liab_cap_share',
     'st_credits.eitc_liab_cap_base',
-    'st_credits.ctc_refundable'
+    'st_credits.ctc_refundable',
+    'st_credits.percap_refundable'
   )
 
   tax_unit %<>%
@@ -220,12 +226,16 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     st_retire_credit = senior$st_retire_credit,
     st_senior_credit = senior$st_senior_credit,
     st_jfc           = st_jfc,
+    st_forgive_credit = earn$st_forgive_credit,
+    st_percap_credit  = hh$st_percap_credit,
 
     st_credits_nonref = hh$st_hh_credit + hh$prop_credit + child$st_dep_credit +
                         st_family_credit + hh$st_exempt_credit + st_pct_credit +
                         earn$st_cli + hh$st_ded_credit + senior$st_age_credit +
                         senior$st_retire_credit + senior$st_senior_credit +
-                        st_jfc +
+                        st_jfc + earn$st_forgive_credit +
+                        hh$st_percap_credit *
+                          (1 - tax_unit$st_credits.percap_refundable) +
                         st_eitc * (1 - earn$st_eitc_ref_share) +
                         child$st_ctc *
                           (1 - tax_unit$st_credits.ctc_refundable) +
@@ -238,7 +248,9 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                         earn$st_earned_credit *
                           tax_unit$st_credits.earned_credit_refundable +
                         earn$st_yctc +
-                        care$st_cdctc * tax_unit$st_credits.cdctc_refundable
+                        care$st_cdctc * tax_unit$st_credits.cdctc_refundable +
+                        hh$st_percap_credit *
+                          tax_unit$st_credits.percap_refundable
   ) %>%
     select(all_of(return_vars$calc_st_credits)) %>%
     return()

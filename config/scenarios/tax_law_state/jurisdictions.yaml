@@ -30,6 +30,15 @@ FL:
 GA:
   profile: broad_iit
   enabled: true
+# ID re-enacts IRC conformity every session, retroactively to Jan 1 of (or
+# following) the tax year -- verified in every packet 2017-2025, incl. TY2025
+# conforming to the Jan 1, 2026 IRC (capturing OBBBA). Unlike SC's frozen
+# past date, Idaho never lags current law at filing time, so it is modeled
+# as rolling (group 0); the one-session enactment lag is documented in
+# baseline/id/agi.yaml documented_not_modeled
+ID:
+  profile: broad_iit
+  enabled: true
 IL:
   profile: broad_iit
   enabled: true
@@ -61,6 +70,12 @@ ND:
 # with a taxpayer election for the prior version; treated as rolling
 # (group 0) like KY/IN/MI
 OH:
+  profile: broad_iit
+  enabled: true
+# PA is an own-base state (start_point 0): its eight income classes have no
+# IRC linkage at all, so conformity is moot (group 0 trivially). Federal
+# credits feeding the PA CDCTC/WPTC matches are scenario outputs by design
+PA:
   profile: broad_iit
   enabled: true
 # SC uses fixed-date IRC conformity (updated annually; conformity_group 3,

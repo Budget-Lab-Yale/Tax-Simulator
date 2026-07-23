@@ -21,7 +21,8 @@ test_state_calc = function() {
 
   law = build_state_tax_law(
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
-                'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH'),
+                'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
+                'PA', 'ID'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -1018,6 +1019,159 @@ test_state_calc = function() {
            label = 'OH-9 2017 CDCTC tiers + $20 credit')
 
   #--------------------------------------------------------------------------
+  # Pennsylvania (PA-40) -- own-base state: eight income classes, class-level
+  # loss floors, flat 3.07%, Tax Forgiveness (Schedule SP)
+  #--------------------------------------------------------------------------
+
+  # PA-1: 2024 single, wages 50,000. Own base = 50,000 x 3.07% = 1,535
+  run_case('PA', 2024, list(wages1 = 50000),
+           expect = list(st_agi = 50000, liab_st_iit = 1535),
+           label = 'PA-1 basic flat rate')
+
+  # PA-2: 2024 single, class-level loss floors. Wages 60,000; business loss
+  # -20,000 (floored); rents +5,000; capital loss -3,000 (floored).
+  # Base = 65,000 x 3.07% = 1,995.50
+  run_case('PA', 2024,
+           list(wages1 = 60000, sole_prop = -20000, rent = 5000, kg_lt = -3000),
+           expect = list(st_agi = 65000, liab_st_iit = 65000 * 0.0307),
+           label = 'PA-2 no cross-class loss offset')
+
+  # PA-3: 2024 MFJ retirees. Pensions 40,000, taxable SS 20,000, UI 5,000 all
+  # PA-exempt; wages 10,000 -> base 10,000, tax 307. Eligibility income
+  # 10,000 <= 13,000 (married, 0 dep) -> 100% forgiveness -> liab 0
+  run_case('PA', 2024,
+           list(filing_status = 2, age1 = 68, age2 = 66, wages1 = 10000,
+                txbl_pens_dist = 40000, txbl_ss = 20000, gross_ss = 25000,
+                ui = 5000),
+           expect = list(st_agi = 10000, st_forgive_credit = 307,
+                         liab_st_iit = 0),
+           label = 'PA-3 exclusions + full forgiveness')
+
+  # PA-4: 2024 single, wages 7,000. Tax 214.90. Excess over 6,500 = 500 ->
+  # 2 steps of 250 -> 80% forgiveness (SP Table 1: 7,000 is in the 80%
+  # column). Credit 171.92; liab 42.98
+  run_case('PA', 2024, list(wages1 = 7000),
+           expect = list(st_forgive_credit = 214.90 * 0.8,
+                         liab_st_iit = 214.90 * 0.2),
+           label = 'PA-4 forgiveness step-down')
+
+  # PA-5: 2024 MFJ, 2 deps, wages 30,000, exempt interest 2,000. Base =
+  # 30,000 + 25% x 2,000 (other-state muni share) = 30,500, tax 936.35.
+  # Eligibility income = 30,500 + 75% x 2,000 = 32,000 = Table 2 100% limit
+  # (13,000 + 2 x 9,500) -> full forgiveness
+  run_case('PA', 2024,
+           list(filing_status = 2, age2 = 40, n_dep = 2, dep_age1 = 5,
+                dep_age2 = 9, wages1 = 30000, exempt_int = 2000),
+           expect = list(st_agi = 30500, liab_st_iit = 0),
+           label = 'PA-5 forgiveness at exact limit w/ exempt interest')
+
+  # PA-6: CDCTC enhancement. MFJ, 1 dep, wages 40,000, federal CDCTC 600:
+  # tax 1,228; no forgiveness (40,000 > 22,500 + 2,250). 2023+: 100% match
+  # -> refundable 600 -> liab 628. 2022: 30% match -> 180 -> liab 1,048
+  run_case('PA', 2023,
+           list(filing_status = 2, age2 = 40, n_dep = 1, dep_age1 = 4,
+                wages1 = 25000, wages2 = 15000, care_exp = 3000,
+                cdctc_nonref = 600),
+           expect = list(st_cdctc = 600, liab_st_iit = 1228 - 600),
+           label = 'PA-6a 2023 CDCTC 100%')
+  run_case('PA', 2022,
+           list(filing_status = 2, age2 = 40, n_dep = 1, dep_age1 = 4,
+                wages1 = 25000, wages2 = 15000, care_exp = 3000,
+                cdctc_nonref = 600),
+           expect = list(st_cdctc = 180, liab_st_iit = 1228 - 180),
+           label = 'PA-6b 2022 CDCTC 30%')
+
+  # PA-7: Working Pennsylvanians Tax Credit (TY2025+): 10% of federal EITC,
+  # refundable. Single, 1 dep, wages 20,000, federal EITC 2,000: tax 614, no
+  # forgiveness (20,000 > 16,000 + 2,250). 2025: liab = 614 - 200 = 414;
+  # 2024: no WPTC -> 614
+  run_case('PA', 2025,
+           list(n_dep = 1, n_dep_eitc = 1, dep_age1 = 8, wages1 = 20000,
+                ei1 = 20000, eitc = 2000),
+           expect = list(st_eitc = 200, liab_st_iit = 614 - 200),
+           label = 'PA-7a 2025 WPTC')
+  run_case('PA', 2024,
+           list(n_dep = 1, n_dep_eitc = 1, dep_age1 = 8, wages1 = 20000,
+                ei1 = 20000, eitc = 2000),
+           expect = list(st_eitc = 0, liab_st_iit = 614),
+           label = 'PA-7b 2024 no WPTC')
+
+  #--------------------------------------------------------------------------
+  # Idaho (Form 40 / 39R) -- federal-taxable start, SALT addback, four rate
+  # regimes incl. the 2023+ indexed-zero-bracket flat tax, grocery credit,
+  # $205 CTC, $10 Permanent Building Fund excise
+  #--------------------------------------------------------------------------
+
+  # ID-1: 2017 single, federal taxable income 50,000 (7-bracket schedule):
+  # schedule tax at 11,043 = 563.198; + 7.4% x 38,957 = 3,446.016. Grocery
+  # credit 100 (refundable); PBF +10. Liab = 3,356.016
+  run_case('ID', 2017, list(txbl_inc = 50000),
+           expect = list(st_percap_credit = 100,
+                         liab_st_iit = 3446.016 - 100 + 10),
+           label = 'ID-1 2017 seven brackets + grocery + PBF')
+
+  # ID-2: 2020 MFJ, federal taxable 30,000 incl. taxable SS 10,000 (fully
+  # subtracted) -> ID taxable 20,000. 2020 married schedule: 35.28 + 98.00 +
+  # 113.68 + 145.04 + 176.40 + 6.625% x 4,320 = 854.60. Grocery 2 x 100;
+  # PBF 10 -> liab 664.60
+  run_case('ID', 2020,
+           list(filing_status = 2, age2 = 40, txbl_inc = 30000,
+                txbl_ss = 10000, gross_ss = 12000),
+           expect = list(st_agi = 20000, liab_st_iit = 854.60 - 200 + 10),
+           label = 'ID-2 2020 SS subtraction + married schedule')
+
+  # ID-3: 2024 single itemizer, federal taxable 100,000; capped SALT 10,000
+  # of which property 4,000 -> income-tax addback 6,000 (< itemized-over-
+  # standard 10,400). Taxable 106,000; flat tax = 5.695% x (106,000 - 4,673).
+  # Grocery 120; PBF 10
+  run_case('ID', 2024,
+           list(txbl_inc = 100000, itemizing = 1, item_ded = 25000,
+                item_ded_ex_limits = 25000, salt_item_ded = 10000,
+                salt_prop = 4000, salt_inc_sales = 8000, std_ded = 14600),
+           expect = list(st_addback = 6000,
+                         liab_st_iit = 0.05695 * 101327 - 120 + 10),
+           label = 'ID-3 SALT addback + 2024 flat tax')
+
+  # ID-4: 2023 MFJ, 2 kids (5, 8), federal taxable 60,000; care expenses
+  # 8,000 capped at 6,000 deduction (2 x 3,000, under lesser earner 20,000).
+  # Taxable 54,000; tax = 5.8% x (54,000 - 8,978) = 2,611.276. CTC 2 x 205
+  # nonref; grocery 4 x 120; PBF 10 -> liab 1,731.276
+  run_case('ID', 2023,
+           list(filing_status = 2, age2 = 40, txbl_inc = 60000, n_dep = 2,
+                n_dep_ctc = 2, dep_age1 = 5, dep_age2 = 8, care_exp = 8000,
+                ei1 = 40000, ei2 = 20000),
+           expect = list(st_ctc = 410, st_percap_credit = 480,
+                         liab_st_iit = 0.058 * 45022 - 410 - 480 + 10),
+           label = 'ID-4 care deduction + CTC + family grocery')
+
+  # ID-5: 2025 single age 70, federal taxable 40,000 incl. taxable SS
+  # 15,000 -> ID taxable 25,000; tax = 5.3% x (25,000 - 4,811) = 1,070.017.
+  # Grocery 155 flat (aged add-on eliminated 2025); PBF 10
+  run_case('ID', 2025,
+           list(age1 = 70, txbl_inc = 40000, txbl_ss = 15000,
+                gross_ss = 18000),
+           expect = list(st_percap_credit = 155,
+                         liab_st_iit = 0.053 * 20189 - 155 + 10),
+           label = 'ID-5 2025 flat 5.3% + $155 grocery')
+
+  # ID-6: 2024 single legally blind, federal taxable 3,000 (under the 4,673
+  # zero bracket): tax 0; grocery 120 refundable; PBF exempt (blind) ->
+  # liab -120
+  run_case('ID', 2024, list(blind1 = 1, txbl_inc = 3000),
+           expect = list(liab_st_iit = -120),
+           label = 'ID-6 refundable grocery + blind PBF exemption')
+
+  # ID-7: 2021 HoH uses the MARRIED schedule (Idaho tax-table convention).
+  # Federal taxable 30,000, 1 kid (10): married 2021 schedule tax = 31.76 +
+  # 196.85 + 142.92 + 174.68 + 6.5% x 14,122 = 1,464.14. CTC 205; grocery
+  # 2 x 100; PBF 10 -> liab 1,069.14
+  run_case('ID', 2021,
+           list(filing_status = 4, txbl_inc = 30000, n_dep = 1,
+                n_dep_ctc = 1, dep_age1 = 10),
+           expect = list(liab_st_iit = 1464.14 - 205 - 200 + 10),
+           label = 'ID-7 2021 HoH on married schedule + CTC')
+
+  #--------------------------------------------------------------------------
   # Structural smoke test: a coarse grid of units through every broad-IIT
   # baseline state and several years must produce finite, non-NA results
   #--------------------------------------------------------------------------
@@ -1049,7 +1203,7 @@ test_state_calc = function() {
     })
 
   for (st in c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI', 'CA', 'ND',
-               'SC', 'CT', 'VA', 'UT', 'OH')) {
+               'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID')) {
     for (yr in c(2017, 2021, 2024, 2026, 2030)) {
       law_slice = law %>%
         filter(state == st, year == yr) %>%
@@ -1064,7 +1218,7 @@ test_state_calc = function() {
       )
     }
   }
-  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 16 states x 5 years)')
+  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 18 states x 5 years)')
 
   # Subset-states regression: a law table built WITHOUT a given state lacks
   # that state's feature columns entirely (not just NA cells); the calculator
@@ -1146,7 +1300,8 @@ st_test_unit = function(overrides = list()) {
     exempt_int = 0, state_ref = 0, gross_ss = 0, txbl_ss = 0,
     txbl_int = 0, div_ord = 0, div_pref = 0, kg_lt = 0, kg_st = 0,
     txbl_kg = 0, wages1 = 0, wages2 = 0, sole_prop = 0, part_active = 0,
-    part_passive = 0, scorp = 0, farm = 0, rent = 0, other_inc = 0,
+    part_passive = 0, scorp = 0, farm = 0, rent = 0, other_gains = 0,
+    alimony = 0, other_inc = 0,
     sch_e = 0, part_scorp = 0, ei1 = 0, ei2 = 0, n_dep_eitc = 0,
     txbl_pens_dist = 0,
     txbl_ira_dist = 0, ot_ded = 0, char_cash = 0, char_noncash = 0,

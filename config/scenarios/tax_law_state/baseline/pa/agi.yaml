@@ -1,0 +1,86 @@
+---
+# Pennsylvania: OWN-BASE state (72 P.S. 7303(a); PA-40 lines 1-8). PA taxable
+# income is the sum of eight income classes, each computed separately and
+# floored at zero at the class level: a loss in one class never offsets income
+# in another class, never offsets a spouse's income (even within a class), and
+# never carries forward or back (PA-40 booklet, "Reporting Net Income, Gains,
+# and Losses on Lines 4, 5, and 6 Only", identical 2017-2025). Class shares
+# map PUF concepts:
+#   compensation = wages1 + wages2 (401(k)/403(b)/457 elective deferrals are
+#     PA-taxable compensation when made but unobserved in the PUF, so PA
+#     wages are understated for deferring workers -- known-difference)
+#   business = sole_prop + part_active + part_passive + scorp + farm
+#     (PA-40 line 4 net profits, incl. partnership/PA S-corp shares)
+#   gains = kg_lt + kg_st + other_gains (PA-40 line 5; no preferential rate,
+#     no carryover -- the PUF net gain embeds federal carryovers, and the
+#     principal-residence exclusion is shared with the federal base --
+#     known-differences)
+#   within-class spousal and per-activity netting is approximated at the
+#   unit level (PUF reports netted schedule totals) -- known-difference
+# PA has NO federal starting point and no IRC conformity linkage; rolling
+# group 0 applies trivially (federal credits feeding PA matches are scenario
+# outputs by design).
+
+start_point:
+  value: 0
+  reference: '72 P.S. 7303(a) (eight enumerated classes); PA-40 booklet 2017-2025, PA Income Classes (2024 booklet p.8): no federal AGI/taxable-income starting point'
+
+ob_class_floor:
+  value: 1
+  reference: 'PA-40 booklet 2017-2025 (2024 p.15): "You may not offset income in one PA income class with a loss in any other PA income class"; losses reportable only on lines 4/5/6; no carryforward/carryback'
+
+ob_comp_share:
+  value: 1
+  reference: 'PA-40 line 1a compensation; 72 P.S. 7303(a)(1). Elective deferrals PA-taxable when made (2024 booklet p.11, Contributions) but unobserved in the PUF [known-difference]'
+
+ob_int_share:
+  value: 1
+  reference: 'PA-40 line 2 interest (Schedule A), gross class; 72 P.S. 7303(a)(2)'
+
+ob_div_share:
+  value: 1
+  reference: 'PA-40 line 3 dividends and capital gains distributions (Schedule B), gross class; 72 P.S. 7303(a)(3)'
+
+ob_bus_share:
+  value: 1
+  reference: 'PA-40 line 4 net profits (Schedules C/F, partnership and PA S-corp shares via RK-1); 72 P.S. 7303(a)(2.1)'
+
+ob_gains_share:
+  value: 1
+  reference: 'PA-40 line 5 net gain from disposition of property (Schedule D); 72 P.S. 7303(a)(3.1). PA principal-residence exclusion (2-of-5 test, no dollar cap) is largely embedded in the federal gain concept [known-difference]'
+
+ob_rent_share:
+  value: 1
+  reference: 'PA-40 line 6 net income from rents, royalties, patents, copyrights (Schedule E); 72 P.S. 7303(a)(4)'
+
+ob_retirement_share:
+  value: 0
+  reference: 'PA-40 booklet 2017-2025 (2024 p.8, p.11): qualifying employer-plan retirement distributions and IRA distributions at 59.5+ are not taxable; early distributions above basis are taxable under cost recovery but basis/age codes are unobserved [known-difference]'
+
+ob_ss_share:
+  value: 0
+  reference: 'PA-40 booklet 2017-2025 (2024 p.8): Social Security and Railroad Retirement benefits not taxable'
+
+ob_ui_share:
+  value: 0
+  reference: 'PA-40 booklet 2017-2025 (2024 p.8): unemployment compensation and public assistance not taxable'
+
+ob_alimony_share:
+  value: 0
+  reference: 'PA-40 booklet 2017-2025 (2024 p.8): alimony not taxable under PA PIT (counted in Schedule SP eligibility income instead)'
+
+ob_other_share:
+  value: 1
+  reference: 'PA-40 lines 7-8: estate/trust income (Schedule J) and gambling/lottery winnings (Schedule T; PA Lottery cash prizes taxable from 2016), proxied by PUF other income [known-difference: other_inc includes some non-PA-taxable items]'
+
+# Other-state municipal interest is TAXABLE (PA Schedule A adds federal
+# tax-exempt interest, then subtracts only US and PA/PA-local obligations).
+# The own-state share of exempt interest is unobserved; the model-wide
+# convention adds (1 - 0.75) = 25% of exempt interest
+add_exempt_int:
+  value: 1
+  reference: 'PA-40 Schedule A 2017-2025 (2024: line 2 adds federal tax-exempt interest; lines 6-7 subtract PA/PA-local and US direct obligations): obligations of other states and countries taxable'
+
+own_state_exempt:
+  value: 1
+  reference: 'PA-40 Schedule A lines 6-7: PA and PA political-subdivision obligations exempt; own-state share unobserved in the PUF, model convention 75% [known-difference]'

@@ -11,9 +11,9 @@ return_vars$calc_st_agi = c('st_additions', 'st_subtractions', 'st_retirement_ex
 calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
 
   #----------------------------------------------------------------------------
-  # Calculates the state income base: federal starting point (AGI or taxable
-  # income per st_agi.start_point) plus state additions minus state
-  # subtractions.
+  # Calculates the state income base: starting point per st_agi.start_point
+  # (0 = own gross-income-class base, 1 = federal AGI, 2 = federal taxable
+  # income) plus state additions minus state subtractions.
   #
   # Documented v1 approximations (plan known-differences):
   #  - own-state share of tax-exempt interest is unobserved; states exempting
@@ -65,6 +65,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'kg_st',          # (dbl)  short-term capital gains
     'rent',           # (dbl)  rental income or loss
     'part_passive',   # (dbl)  passive partnership income or loss
+    'other_gains',    # (dbl)  other gains or losses (Form 4797)
+    'alimony',        # (dbl)  alimony received
     'other_inc',      # (dbl)  other taxable income
     'ot_ded',         # (dbl)  federal overtime deduction (post-federal calc)
     'char_cash',      # (dbl)  cash charitable contributions
@@ -76,6 +78,18 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
 
     # State tax law
     'st_agi.start_point',           # (int) 0 own base, 1 fed AGI, 2 fed taxable income
+    'st_agi.ob_class_floor',        # (int) floor each own-base class at zero
+    'st_agi.ob_comp_share',         # (dbl) own-base share: compensation
+    'st_agi.ob_int_share',          # (dbl) own-base share: taxable interest
+    'st_agi.ob_div_share',          # (dbl) own-base share: dividends
+    'st_agi.ob_bus_share',          # (dbl) own-base share: business/pass-through
+    'st_agi.ob_gains_share',        # (dbl) own-base share: capital/other gains
+    'st_agi.ob_rent_share',         # (dbl) own-base share: rents/royalties
+    'st_agi.ob_retirement_share',   # (dbl) own-base share: pension/IRA distributions
+    'st_agi.ob_ss_share',           # (dbl) own-base share: taxable Social Security
+    'st_agi.ob_ui_share',           # (dbl) own-base share: unemployment benefits
+    'st_agi.ob_alimony_share',      # (dbl) own-base share: alimony received
+    'st_agi.ob_other_share',        # (dbl) own-base share: other income
     'st_agi.add_exempt_int',        # (int) whether exempt interest is added back
     'st_agi.own_state_exempt',      # (int) whether own-state bonds stay exempt
     'st_agi.sub_state_ref',         # (int) whether state refunds are subtracted
@@ -157,11 +171,40 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   st_age_po_income_v = st_income_base(tax_unit,
                                       tax_unit$st_agi.age_ded_po_base)
 
+  # Own-base starting point (start_point 0): class shares times PUF income
+  # concepts, each class floored at zero after the share where
+  # ob_class_floor = 1 -- the PA/NJ gross-income-class rule that a loss in
+  # one class never offsets income in another (and never carries forward).
+  # Within-class netting happens at the unit level, a documented
+  # approximation of the per-taxpayer/per-activity form rules (spousal and
+  # cross-activity netting inside a class are unobserved in the PUF)
+  ob_floor = function(x) {
+    if_else(tax_unit$st_agi.ob_class_floor == 1, pmax(0, x), x)
+  }
+  st_own_base_v = with(tax_unit,
+    ob_floor(st_agi.ob_comp_share       * (wages1 + wages2)) +
+    ob_floor(st_agi.ob_int_share        * txbl_int) +
+    ob_floor(st_agi.ob_div_share        * (div_ord + div_pref)) +
+    ob_floor(st_agi.ob_bus_share        * (sole_prop + part_active +
+                                           part_passive + scorp + farm)) +
+    ob_floor(st_agi.ob_gains_share      * (kg_lt + kg_st + other_gains)) +
+    ob_floor(st_agi.ob_rent_share       * rent) +
+    ob_floor(st_agi.ob_retirement_share * (txbl_pens_dist + txbl_ira_dist)) +
+    ob_floor(st_agi.ob_ss_share         * txbl_ss) +
+    ob_floor(st_agi.ob_ui_share         * ui) +
+    ob_floor(st_agi.ob_alimony_share    * alimony) +
+    ob_floor(st_agi.ob_other_share      * other_inc)
+  )
+
   tax_unit %>%
     mutate(
 
       # Starting point
-      st_start = if_else(st_agi.start_point == 2, txbl_inc, agi),
+      st_start = case_when(
+        st_agi.start_point == 0 ~ st_own_base_v,
+        st_agi.start_point == 2 ~ txbl_inc,
+        TRUE                    ~ agi
+      ),
 
       # Additions: tax-exempt interest (own-state carve-out approximated) and
       # the federal overtime deduction where added back (CO 2026+; only

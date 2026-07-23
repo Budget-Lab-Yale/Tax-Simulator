@@ -35,6 +35,9 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
     # Tax unit attributes
     'filer',              # (bool) whether unit files a federal return
     'dep_status',         # (bool) whether filer is a dependent
+    'filing_status',      # (int)  1 single, 2 MFJ, 3 MFS, 4 HoH
+    'blind1',             # (bool) whether primary filer is blind
+    'blind2',             # (bool) whether secondary filer is blind
     'st_agi',             # (dbl)  state income base
     'st_exempt',          # (dbl)  state exemption allowance
     'st_txbl_inc',        # (dbl)  state taxable income
@@ -51,7 +54,9 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
     'st_programs.broad_iit',         # (int) broad individual income tax active
     'st_surtax.taxable_income_threshold', # (dbl) taxable-income surtax trigger
     'st_surtax.taxable_income_rate', # (dbl) taxable-income surtax rate
-    'st_surtax.taxable_income_round' # (int) whether to round the base to dollars
+    'st_surtax.taxable_income_round', # (int) whether to round the base to dollars
+    'st_surtax.per_return_amount',   # (dbl) flat per-return excise on required filers
+    'st_surtax.per_return_blind_exempt' # (int) blind filers exempt from the excise
   )
 
   tax_unit %>%
@@ -88,10 +93,23 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
         0,
         st_surtax_taxable_income - st_surtax.taxable_income_threshold
       ) * st_surtax.taxable_income_rate,
+
+      # Flat per-return excise on units required to file (ID Permanent
+      # Building Fund tax, 63-3082): like the taxable-income surtax it sits
+      # outside the nonrefundable credit stack (Form 40 "other taxes").
+      # Legally blind filers are exempt where flagged; the public-assistance
+      # exemption is unobserved (known-difference)
+      st_per_return_blind = st_surtax.per_return_blind_exempt == 1 & (
+        coalesce(blind1, 0) == 1 |
+          (filing_status == 2 & coalesce(blind2, 0) == 1)
+      ),
+      st_per_return_tax = st_surtax.per_return_amount *
+        ((filer == 1 & st_filing.req_if_fed_filer == 1) | meets_income_test) *
+        (1 - st_per_return_blind),
       liab_st_iit = if_else(
         st_programs.broad_iit == 1,
         pmax(0, st_tax_floored - st_credits_nonref) +
-          st_taxable_income_surtax - st_credits_ref,
+          st_taxable_income_surtax + st_per_return_tax - st_credits_ref,
         0
       ),
       st_filer = st_programs.broad_iit == 1 & (

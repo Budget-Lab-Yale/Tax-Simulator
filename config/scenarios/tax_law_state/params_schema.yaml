@@ -71,6 +71,22 @@ scalars:
   st_agi.sub_ui_share: 0
   st_agi.bus_carveout: 0
   st_agi.bus_ded_cap: .inf
+  # Own-base income classes (start_point 0 states: PA; later NJ/AL/AR/MS).
+  # Class shares multiply PUF income concepts; ob_class_floor = 1 floors
+  # each class at zero after the share (no cross-class loss offsets -- the
+  # PA/NJ gross-income-class rule)
+  st_agi.ob_class_floor: 0
+  st_agi.ob_comp_share: 0
+  st_agi.ob_int_share: 0
+  st_agi.ob_div_share: 0
+  st_agi.ob_bus_share: 0
+  st_agi.ob_gains_share: 0
+  st_agi.ob_rent_share: 0
+  st_agi.ob_retirement_share: 0
+  st_agi.ob_ss_share: 0
+  st_agi.ob_ui_share: 0
+  st_agi.ob_alimony_share: 0
+  st_agi.ob_other_share: 0
 
   # ded.yaml
   st_ded.std_amount: 0
@@ -156,6 +172,8 @@ scalars:
   st_surtax.taxable_income_threshold: .inf
   st_surtax.taxable_income_rate: 0
   st_surtax.taxable_income_round: 0
+  st_surtax.per_return_amount: {default: 0, units: per_return}
+  st_surtax.per_return_blind_exempt: 0
 
   # credits.yaml
   st_credits.eitc_match: 0
@@ -274,6 +292,23 @@ scalars:
   st_credits.young_child_credit_zero_income_wage_limit: -.inf
   st_credits.young_child_credit_zero_income_loss_limit: -.inf
   st_credits.young_child_credit_zero_income_agi_limit: -.inf
+
+  # Poverty-based forgiveness credit (PA Schedule SP): share of pre-credit
+  # tax, 100% at/below the family-size eligibility-income limit, stepping
+  # down forgive_step_share per forgive_step (or fraction thereof) above it
+  st_credits.forgive_style: 0
+  st_credits.forgive_base: {default: 0, units: per_return}
+  st_credits.forgive_dep_amount: {default: 0, units: per_dependent}
+  st_credits.forgive_step: 1
+  st_credits.forgive_step_share: 0
+  st_credits.forgive_income_base: 2   # st_income_base enum (PA: state AGI)
+  st_credits.forgive_add_exempt_int: 0   # share of exempt interest added
+  st_credits.forgive_add_alimony: 0      # share of alimony received added
+  # Per-person credit (ID grocery credit): flat amount per taxpayer and
+  # dependent, with an aged add-on per 65+ filer
+  st_credits.percap_amount: {default: 0, units: per_person}
+  st_credits.percap_aged_addl: {default: 0, units: per_instance}
+  st_credits.percap_refundable: 1
 
   # filing.yaml
   st_filing.req_type: 0

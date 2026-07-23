@@ -1,0 +1,71 @@
+---
+# Idaho: base and additions/subtractions (Form 40; Idaho Code 63-3011B and
+# 63-3022). Idaho taxable income = federal TAXABLE income + adjustments: the
+# Form 40 operationalizes this from federal AGI but rebuilds the federal
+# deduction stack unchanged (federal standard or itemized deduction incl.
+# aged/blind add-ons, the full federal QBI deduction, and -- 2017 only --
+# federal personal exemptions with PEP), so the federal-taxable-income start
+# is exact up to the SALT addback encoded in ded.yaml.
+#
+# IRC conformity: ANNUAL FIXED-DATE (63-3004), re-enacted each session to
+# Jan 1 of (or following) the tax year -- every packet 2017-2025 confirms the
+# then-current IRC, incl. the 2025 date of Jan 1, 2026 capturing OBBBA.
+# Treated as rolling (group 0) with the one-session enactment lag documented.
+# Known decouplings: bonus depreciation (63-3022O; unobservable at the micro
+# level) and the TY2020 ARPA UI exclusion (no addback needed here because the
+# federal calculator does not model that exclusion).
+
+# Starting point: 2 = federal taxable income
+start_point:
+  value: 2
+  reference: 'Idaho Code 63-3011B, 63-3022 (federal taxable income + adjustments); Form 40 lines 7-19 rebuild (fed AGI + 39R adjustments - federal std/itemized incl. QBI), verified 2017-2025 packets'
+
+documented_not_modeled:
+  conformity_year:
+    value: 0
+    reference: 'Idaho Code 63-3004: annual conformity re-enactment; packets confirm IRC as of Jan 1, 2017/.../Jan 1, 2024 and (TY2025) Jan 1, 2026. Modeled as rolling; the one-session lag on late federal changes is a documented approximation'
+  bonus_depreciation:
+    value: 0
+    reference: 'Idaho Code 63-3022O; every packet 2017-2025: no conformity to IRC 168(k) for property acquired after 2009 (39R Part A line 5 addback / Part B mirror subtraction). Unobservable in the PUF; omitted'
+  retirement_benefits_deduction:
+    value: 0
+    reference: 'Idaho Code 63-3022A; Form 39R Part B line 8: capped deduction ($68,796 MFJ / $45,864 single in 2024) for CSRS pre-1984, military, and Idaho police/fire annuities only, 65+ (62+ disabled), reduced dollar-for-dollar by SS received. Pension source is unobserved in the PUF and the SS offset makes the net deduction small; omitted [known-difference]'
+  capital_gains_deduction:
+    value: 0
+    reference: 'Idaho Code 63-3022H; Form CG: 60% of capital gain net income from qualifying IDAHO-situs property (no stocks/intangibles). Situs unobservable in the PUF; omitted [known-difference, biases liability up for gain-heavy returns]'
+  id_529_msa_deductions:
+    value: 0
+    reference: 'Form 39R Part B: IDeal 529 contributions ($6,000/$12,000 cap) and Idaho MSA ($10,000/$20,000 cap); contributions unobserved in the PUF; omitted'
+
+conformity_group:
+  value: 0
+  reference: 'Annual fixed-date conformity treated as rolling -> reference-law group 0 (conformity_groups.yaml); see documented_not_modeled.conformity_year'
+
+# Non-Idaho state/local bond interest is added back (39R Part A line 3);
+# Idaho munis stay exempt. Own-state share unobserved: model convention 75%
+add_exempt_int:
+  value: 1
+  reference: 'Form 39R Part A line 3 (2022 numbering): interest/dividends on obligations of other states and their subdivisions, verified 2017-2025'
+
+own_state_exempt:
+  value: 1
+  reference: 'Form 39R Part A line 3 excludes Idaho obligations; own-state share unobserved in the PUF, model convention 75% [known-difference]'
+
+# US government obligation interest subtraction (39R Part B line 3). Carried
+# as a flag; the US-obligation share of taxable interest is unobserved, so no
+# subtraction is taken (model-wide known-difference, same as CO/ND)
+sub_us_int:
+  value: 1
+  reference: 'Form 39R Part B line 3 (2022 numbering): interest from US government obligations; PUF share unobserved [known-difference]'
+
+# State income tax refunds in federal income are subtracted (39R Part B
+# line 2), pairing with the ded.yaml SALT addback
+sub_state_ref:
+  value: 1
+  reference: 'Form 39R Part B line 2 (2022 numbering): state income tax refund included in federal income, verified 2017-2025'
+
+# Social Security and Railroad Retirement benefits: the federally taxable
+# amount is fully subtracted, all years
+ss_sub_share:
+  value: 1
+  reference: 'Form 39R Part B line 7 (2022 numbering): subtract taxable Social Security and RRB benefits (Form 1040 line 6b), verified 2017-2025; SS fully exempt in Idaho'

@@ -106,14 +106,32 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    per-state stage histograms as punch lists (dominant stages: exemptions
    for AZ/IN, deductions for CA/VA/NY/KY, state AGI for
    CO/ND/SC/GA/MI/NC/SC — the fed-taxable-start states' v32 labels are
-   partly a TAXSIM-semantics artifact, see README caveat). Remaining:
-   per-state mismatch triage (ours vs TAXSIM's error), aggregate
-   benchmarks vs HT2 total tax (weights-blocked), and revenue-agency
-   comparisons.
+   partly a TAXSIM-semantics artifact, see README caveat). PA/ID initial
+   runs 2026-07-23: PA 60-63% clean vs TAXSIM (dominant wedge: TAXSIM nets
+   losses across PA's floored income classes; TAXSIM DOES model Tax
+   Forgiveness — verified) and 81-88% vs PE; ID 59-71% vs TAXSIM (PBF
+   filing-edge ±$10, CTC −$205 cluster, fed-taxable v32 wedge flipping
+   sign at TCJA) and 43-58% vs PE, where PolicyEngine does not net the
+   grocery credit into state_income_tax (whole-window annotate; candidate
+   exclusion). Remaining: per-state mismatch triage (ours vs TAXSIM's
+   error), aggregate benchmarks vs HT2 total tax (weights-blocked), and
+   revenue-agency comparisons.
 4. **Phase 6 — 50-state rollout** by structural family (no-tax stubs → flat
    fed-AGI → graduated fed-AGI → fed-taxable → own-base → federal-
    deductibility), CA first (CalEITC as the credit-schema acceptance test;
    CA CPI indexation series).
+   **PA + ID encoded 2026-07-23** (25 → 27 jurisdictions): PA is the first
+   OWN-BASE state — new generic components landed for class-share bases
+   with per-class loss floors (`st_agi.ob_*`, reusable for NJ/AL/AR/MS),
+   the poverty-forgiveness credit family (Schedule SP), the per-person
+   credit family (ID grocery credit), and a per-return excise (ID PBF —
+   never repealed, contrary to prior belief). ID is fed-taxable with a
+   CPI-indexed flat-tax zero bracket (not the statutory $2,500/$5,000),
+   MFS on the single schedule and HoH on the MARRIED schedule. Research
+   surprises: PA enacted a TY2025 state EITC (Working Pennsylvanians Tax
+   Credit, 10% federal match, refundable) and a TY2025 student-loan
+   deduction; ID's CTC sunsets after TY2025. Worksheet tests PA-1..7b,
+   ID-1..7 pass; cross-model triage started (see rollout tracker rows).
 5. **Phase 7 — later scope**: coupled federal↔state iteration + sales-tax
    election imputation; frozen-base mechanics for fixed-date conformity;
    locality weights from SOI county data (§2.6; NYC first); cross-border

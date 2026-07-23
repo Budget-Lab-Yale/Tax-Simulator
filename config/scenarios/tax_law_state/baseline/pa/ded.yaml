@@ -1,0 +1,28 @@
+---
+# Pennsylvania: deductions. PA allows no standard deduction, no itemized
+# deductions, and no personal-expense deductions in any year (PA-40 booklet
+# 2017-2025, "Deductions", 2024 p.9). The only deductions (PA-40 line 10,
+# Schedule O) are 529/MSA/HSA/ABLE contributions and, from TY2025, student
+# loan interest up to $2,500 -- all unobserved or unmapped in the PUF and
+# omitted below (known-difference; the omission overstates PA tax modestly).
+
+std_amount:
+  value: 0
+  reference: 'PA-40 booklet 2017-2025 (2024 p.9): "PA law does not allow standard deductions, deductions for personal exemptions, itemized deductions, or deductions for personal expenses"'
+
+item_allowed:
+  value: 0
+  reference: 'PA-40 booklet 2017-2025 (2024 p.9), same provision'
+
+item_coupling:
+  value: 0
+  reference: 'n/a for Pennsylvania (no broad deductions)'
+
+salt_addback:
+  value: 0
+  reference: 'n/a for Pennsylvania (own base; no federal deduction to add back)'
+
+documented_not_modeled:
+  schedule_o_deductions:
+    value: 0
+    reference: 'PA-40 Schedule O 2017-2025: 529 contributions capped at the federal gift exclusion per beneficiary per spouse ($14k 2017, $15k 2018-21, $16k 2022, $17k 2023, $18k 2024, $19k 2025), Archer MSA and HSA contributions allowed federally, ABLE contributions; 2025 Schedule O line 7 adds student loan interest up to $2,500. Contributions unobserved in the PUF; deduction capped at own line 9 income (cannot create a loss)'

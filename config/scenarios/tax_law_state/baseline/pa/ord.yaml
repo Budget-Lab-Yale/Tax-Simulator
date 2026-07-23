@@ -1,0 +1,12 @@
+---
+# Pennsylvania: flat 3.07% on each dollar of PA taxable income, all filing
+# statuses, unchanged 2017-2025 (rate in force since 2004). No brackets, no
+# preferential rates, no recapture. PA-40 line 12 = line 11 x 0.0307.
+
+rates:
+  value: [0.0307, 0.0307, 0.0307, 0.0307, 0.0307, 0.0307, 0.0307, 0.0307, 0.0307, 0.0307]
+  reference: '72 P.S. 7302 ("three and seven hundredths per cent"); PA-40 booklet p.1, verified verbatim every year 2017-2025; no enacted change through TY2026'
+
+brackets:
+  value: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  reference: 'PA personal income tax is a flat-rate tax on the whole base, 2017-2025'

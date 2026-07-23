@@ -3,7 +3,8 @@
 # federal-EITC matches (with the NY minus-household-credit mechanic and the
 # VA nonrefundable-vs-refundable option choice), independent earned-income
 # credits (CalEITC-style curves and dense tables), refundable young-child
-# credits, the VA CLI, and the VA age-package exclusivity gate.
+# credits, the VA CLI, the VA age-package exclusivity gate, and the
+# poverty-based forgiveness credit (PA Schedule SP).
 #---------------------------------------------------------------------------
 
 # Law parameters this family reads (assembled into calc_st_credits req_vars)
@@ -32,7 +33,15 @@ st_credits_earned_req_vars = c(
   'st_credits.young_child_credit_zero_income_enabled',
   'st_credits.young_child_credit_zero_income_wage_limit',
   'st_credits.young_child_credit_zero_income_loss_limit',
-  'st_credits.young_child_credit_zero_income_agi_limit'
+  'st_credits.young_child_credit_zero_income_agi_limit',
+  'st_credits.forgive_style',
+  'st_credits.forgive_base',
+  'st_credits.forgive_dep_amount',
+  'st_credits.forgive_step',
+  'st_credits.forgive_step_share',
+  'st_credits.forgive_income_base',
+  'st_credits.forgive_add_exempt_int',
+  'st_credits.forgive_add_alimony'
 )
 
 
@@ -54,6 +63,7 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   #   - st_eitc (dbl)           : state EITC (chosen option)
   #   - st_eitc_ref_share (dbl) : refundability of the chosen option (0/1)
   #   - st_cli (dbl)            : credit for low-income individuals (VA)
+  #   - st_forgive_credit (dbl) : poverty-based forgiveness credit (PA)
   #----------------------------------------------------------------------------
 
   n   = nrow(tax_unit)
@@ -236,11 +246,41 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   st_cli  = st_cli * !st_age_excl
   st_eitc = st_eitc * !st_age_excl
 
+  # Poverty-based forgiveness credit (PA Schedule SP): a share of
+  # pre-credit tax, 100% at or below the family-size eligibility-income
+  # limit (per-return base, filing-status mapped, plus a per-dependent
+  # amount), dropping forgive_step_share for each forgive_step -- or
+  # fraction thereof -- above it (PA: 10pp per $250). Eligibility income
+  # is the enum base plus configured shares of tax-exempt interest and
+  # alimony received -- the observable slice of the form's nontaxable
+  # additions; gifts, support received, and inheritances are unobserved,
+  # and MFS units use own rather than combined-spouse income (documented
+  # known-differences).
+  # Dependent filers are ineligible (a dependent's forgiveness follows the
+  # parents' eligibility, unobservable across units). Nonrefundable
+  forgive_income = st_income_base(
+    tax_unit, tax_unit$st_credits.forgive_income_base
+  ) + tax_unit$st_credits.forgive_add_exempt_int * tax_unit$exempt_int +
+      tax_unit$st_credits.forgive_add_alimony * tax_unit$alimony
+  forgive_limit = tax_unit$st_credits.forgive_base +
+                  tax_unit$st_credits.forgive_dep_amount * tax_unit$n_dep
+  forgive_share = pmax(
+    0, 1 - st_step_reduction(forgive_income, forgive_limit,
+                             tax_unit$st_credits.forgive_step,
+                             tax_unit$st_credits.forgive_step_share)
+  )
+  st_forgive_credit = if_else(
+    tax_unit$st_credits.forgive_style == 1 & tax_unit$dep_status != 1,
+    forgive_share * pmax(0, tax_unit$st_tax_pre_credit),
+    0
+  )
+
   list(
     st_earned_credit  = st_earned_credit,
     st_yctc           = st_yctc,
     st_eitc           = st_eitc,
     st_eitc_ref_share = st_eitc_ref_share,
-    st_cli            = st_cli
+    st_cli            = st_cli,
+    st_forgive_credit = st_forgive_credit
   )
 }

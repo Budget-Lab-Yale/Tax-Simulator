@@ -32,7 +32,9 @@ st_credits_household_req_vars = c(
   'st_credits.prop_tax_credit_po_thresh',
   'st_credits.prop_tax_credit_po_step',
   'st_credits.prop_tax_credit_po_rate',
-  'st_credits.prop_tax_credit_restrict_aged_dep'
+  'st_credits.prop_tax_credit_restrict_aged_dep',
+  'st_credits.percap_amount',
+  'st_credits.percap_aged_addl'
 )
 
 
@@ -53,6 +55,7 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
   #   - family_credit_rate (dbl) : KY-style table rate (share of tax)
   #   - pct_credit_rate (dbl)    : CT Table E rate (share of tax)
   #   - prop_credit (dbl)        : IL/CT property tax credit
+  #   - st_percap_credit (dbl)   : per-person credit (ID grocery credit)
   #----------------------------------------------------------------------------
 
   n   = nrow(tax_unit)
@@ -200,12 +203,27 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
                 pmin(tax_unit$salt_prop, tax_unit$st_credits.prop_tax_credit_max) *
                 prop_credit_ct_factor * prop_credit_ct_eligible
 
+  #--------------------------------------------------
+  # Per-person credit (ID grocery credit, 63-3024A)
+  #--------------------------------------------------
+
+  # Flat amount per taxpayer and dependent plus an aged add-on per 65+
+  # filer. Dependent filers are ineligible (their amount is claimed on the
+  # claiming return via n_dep). Part-year residence and the SNAP-months
+  # proration are unobserved (documented known-differences); refundability
+  # is split in calc_st_credits via percap_refundable
+  st_percap_credit = (tax_unit$dep_status != 1) * (
+    tax_unit$st_credits.percap_amount * (n_taxpayers + tax_unit$n_dep) +
+    tax_unit$st_credits.percap_aged_addl * n_aged
+  )
+
   list(
     st_hh_credit       = st_hh_credit,
     st_exempt_credit   = st_exempt_credit,
     st_ded_credit      = st_ded_credit,
     family_credit_rate = family_credit_rate,
     pct_credit_rate    = pct_credit_rate,
-    prop_credit        = prop_credit
+    prop_credit        = prop_credit,
+    st_percap_credit   = st_percap_credit
   )
 }
