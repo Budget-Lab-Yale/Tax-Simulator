@@ -110,10 +110,17 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    runs 2026-07-23: PA 60-63% clean vs TAXSIM (dominant wedge: TAXSIM nets
    losses across PA's floored income classes; TAXSIM DOES model Tax
    Forgiveness — verified) and 81-88% vs PE; ID 59-71% vs TAXSIM (PBF
-   filing-edge ±$10, CTC −$205 cluster, fed-taxable v32 wedge flipping
-   sign at TCJA) and 43-58% vs PE, where PolicyEngine does not net the
-   grocery credit into state_income_tax (whole-window annotate; candidate
-   exclusion). Remaining: per-state mismatch triage (ours vs TAXSIM's
+   filing-edge ±$10, CTC −$205 cluster) and 43-58% vs PE, where
+   PolicyEngine does not net the grocery credit into state_income_tax
+   (whole-window annotate; candidate exclusion). ID's fed-taxable wedge
+   RESOLVED (2026-07-23 dive, results/reports/id.md): non-itemizers agree
+   (84.5-93.6% at wedge=0 — base machinery confirmed); the wedge is
+   TAXSIM's itemizer deduction rebuild (2018+: v35 median $21.8k below
+   ours + 36% spurious standard elections, consistent with removing full
+   computed state tax instead of the Form 40 line 14 capped
+   property-first formula; 2017: the reverse, cor −0.745 with the SALT
+   income component). QBID-omission hypothesis refuted; TAXSIM
+   care-deduction cap (> the form's 3k/6k) is a candidate upstream issue. Remaining: per-state mismatch triage (ours vs TAXSIM's
    error), aggregate benchmarks vs HT2 total tax (weights-blocked), and
    revenue-agency comparisons.
 4. **Phase 6 — 50-state rollout** by structural family (no-tax stubs → flat

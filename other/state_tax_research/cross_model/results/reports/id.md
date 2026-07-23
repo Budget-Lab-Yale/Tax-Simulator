@@ -59,8 +59,32 @@ defined (federally aligned records; see README).
   against a pre-credit PE variable or exclude the window (CO/TABOR
   precedent). The PE cells' 43-58% clean rates should be read through
   this lens.
-- **Fed-taxable deduction-stack wedge** (large, high-income, sign flips at
-  TCJA: +12k mean 2017, -9k 2018+): same v32-semantics family as CO/ND/SC;
-  our schedules are pinned to the published forms by worksheet tests ID-1,
-  ID-2, ID-7. Next step: regress the wedge on itemized components and QBI
-  as done for CO.
+- **Fed-taxable deduction wedge — RESOLVED to the itemizer deduction
+  rebuild (2026-07-23 dive).** Liability diffs are taxable-income-level
+  end to end: cor(diff, taxable wedge x v41 bracket rate) = 1.000 both
+  eras. Non-itemizers agree (84.5% of no-QBID non-itemizers at wedge = 0
+  in 2019; 93.6% in 2017; v33 exemptions and v34 standard deduction match
+  ours to dollars) — the base machinery, schedules, and zero brackets are
+  confirmed. The wedge lives on ITEMIZERS with opposite signs by era:
+  - 2018-2020 (ours lower): TAXSIM's state itemized rebuild (v35) runs a
+    median $21.8k below our (item_ded − line-14 addback) and TAXSIM flips
+    36% of our itemizers to the standard deduction — consistent with
+    removing its full computed state income tax (SALT circularity)
+    instead of the Form 40 line 14 capped property-first-fill formula
+    (our encoding matches the published worksheet; test ID-3).
+  - 2017 (ours higher): our pre-cap addback = the reported income/sales
+    component capped at itemized-over-standard; TAXSIM removes less
+    (computed-state-tax concept, possibly Pease-prorated) — item wedge
+    cor −0.745 with the SALT income component, p10 −$95k.
+  - QBID hypothesis REFUTED: TAXSIM includes QBID (median QBID
+    non-itemizer wedge/QBID ratio 0.035); a ~10% subset shows wedge =
+    −QBID exactly (suspected wage/SSTB-limit divergence) — small
+    annotate row.
+  - Residual non-itemizer cluster: care-expense records 3.6x
+    over-represented, median wedge +$1.8k — TAXSIM allows more dependent
+    care than the Form 39R $3,000/$6,000 worksheet caps (possibly the
+    statutory-$12,000 reading of 63-3022D that appears on no published
+    worksheet). Candidate upstream issue.
+  - Pension-age records are UNDER-represented in the residual — TAXSIM
+    does not model the 63-3022A retirement-benefits deduction either, so
+    our documented omission is not a cross-model wedge.
