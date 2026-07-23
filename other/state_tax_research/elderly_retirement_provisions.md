@@ -105,10 +105,18 @@ and TAXSIM omits it too.
    66.0→75.0 (2019), 65.8→74.9 (2020); the PolicyEngine window now sits at
    93.4–97.0% clean, with 2021–22 above the 95% acceptance bar. 2018
    remains an NC-specific outlier (53.5%) for the standing triage.
-2. **MI retirement subtraction** — encode the 2023-26 phase-in
-   (25/50/75/100% of the Tier-1 cap, all cohorts, at 67+... verify exact
-   age gate) with `pension_excl_*`; approximate pre-2023 tiers via
-   year-keyed cohort ages. Needs a research packet refresh first.
+2. **DONE (2026-07-23): MI retirement subtraction** — encoded via a new
+   per-return, older-spouse age-band family (`pension_excl_band_*`):
+   birth-year tiers as year-keyed ages (Tier 1 born <1946 at the indexed
+   Form 4884 cap; Tier 2 $20k/$40k), the PA 4 of 2023 phase-in with its
+   expanding birth-year windows (NOT age-free: born 1946-1958/-62/-66 for
+   2023/24/25; everyone 59+ from 2026), and the senior investment income
+   subtraction (born <1946). Research: raw/mi_retirement_research.md
+   (PolicyEngine parameter values match ours exactly for every year).
+   Tests MI-2..MI-7; cross-model rerun pending. Key correction from
+   research: the phase-in percentages apply to that year's indexed cap
+   with expanding cohort windows, and the older spouse's birth year
+   controls the whole return (per-return caps, not per-person).
 3. **SC age-65 deduction** — add a `age_ded_offset_pension` coupling to the
    VA-style machinery ($15k/person less the retirement deduction claimed).
 4. **IN income-tested elderly exemption** — fold into a generic

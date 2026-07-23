@@ -302,6 +302,57 @@ test_state_calc = function() {
                          liab_st_iit = (50000 - 5800) * 0.0425 - 300),
            label = 'MI-1 exemption and refundable EITC')
 
+  # MI-2: 2019 Tier 1 (born before 1946 = age 74+): single 75, pension
+  # 60,000 capped at the Form 4884 maximum 52,808; senior investment cap
+  # (11,771) fully absorbed by the retirement subtraction. AGI 65,000 ->
+  # MI base 12,192; exemption 4,400 -> tax 4.25% x 7,792
+  run_case('MI', 2019,
+           list(agi = 65000, age1 = 75, txbl_pens_dist = 60000,
+                txbl_int = 5000),
+           expect = list(st_agi = 65000 - 52808,
+                         liab_st_iit = (65000 - 52808 - 4400) * 0.0425),
+           label = 'MI-2 Tier 1 pension cap')
+
+  # MI-3: 2019 Tier 2 (born 1946-1952 = ages 67-73): single 68, pension
+  # 30,000 capped at 20,000 (the 67+ Michigan Standard Deduction amount,
+  # modeled as a pension-only subtraction)
+  run_case('MI', 2019, list(agi = 40000, age1 = 68, txbl_pens_dist = 30000),
+           expect = list(st_agi = 20000),
+           label = 'MI-3 Tier 2 $20k cap')
+
+  # MI-4: 2019 Tier 3 (born after 1952, under 67): no retirement
+  # subtraction at all
+  run_case('MI', 2019, list(agi = 40000, age1 = 60, txbl_pens_dist = 20000),
+           expect = list(st_agi = 40000),
+           label = 'MI-4 Tier 3 no subtraction')
+
+  # MI-5: 2024 phase-in (50%, born 1946-1962 = ages 62-78; older spouse
+  # controls per return): MFJ 66/64, pensions 80,000 capped at the printed
+  # joint maximum 64,040. Exemptions 2 x 5,600
+  run_case('MI', 2024,
+           list(agi = 100000, filing_status = 2, age1 = 66, age2 = 64,
+                txbl_pens_dist = 80000),
+           expect = list(st_agi = 100000 - 64040,
+                         liab_st_iit = (100000 - 64040 - 11200) * 0.0425),
+           label = 'MI-5 2024 phase-in, older-spouse joint cap')
+
+  # MI-6: 2026 fully phased in (everyone 59+): single 60, pension 70,000
+  # capped at the carried 2025 maximum 65,897
+  run_case('MI', 2026, list(agi = 75000, age1 = 60, txbl_pens_dist = 70000),
+           expect = list(st_agi = 75000 - 65897),
+           label = 'MI-6 2026 full restoration')
+
+  # MI-7: 2024 senior investment income subtraction (born before 1946 =
+  # age 79+): MFJ 80/78, pension 20,000 (fully subtracted, Tier 1 joint
+  # cap 128,080), investment income 10,000 int + 8,000 div + 20,000 LTCG;
+  # cap 28,548 less the 20,000 retirement subtraction -> 8,548
+  run_case('MI', 2024,
+           list(agi = 60000, filing_status = 2, age1 = 80, age2 = 78,
+                wages1 = 2000, txbl_pens_dist = 20000, txbl_int = 10000,
+                div_ord = 8000, kg_lt = 20000),
+           expect = list(st_agi = 60000 - 20000 - 8548),
+           label = 'MI-7 senior investment income subtraction')
+
   # CA-1: the $9,825 row of FTB 3514's 2025 EITC table gives a two-child
   # credit of $3,339. Exemption credits (153 + 2 x 475) are nonrefundable,
   # so the broad-IIT liability is the refundable CalEITC only. Neither child

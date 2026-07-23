@@ -105,6 +105,9 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.pension_excl_under65',  # (dbl) per-person pension exclusion cap, under 65
     'st_agi.pension_excl_65plus',   # (dbl) per-person pension exclusion cap, 65+
     'st_agi.pension_excl_min_age',  # (dbl) minimum age for the pension exclusion
+    'st_agi.pension_excl_band_per_return', # (int) banded caps per return, older-spouse age
+    'st_agi.senior_inv_cap',        # (dbl) senior investment income cap (MI)
+    'st_agi.senior_inv_min_age',    # (dbl) minimum (older-spouse) age for the cap
     'st_agi.pension_cap_incl_ss',   # (int) whether taxable SS counts within the cap
     'st_agi.retirement_excl_style', # (int) 1 = per-person earned/unearned exclusion
     'st_agi.retirement_excl_min_age', # (dbl) minimum age for broad exclusion
@@ -170,6 +173,56 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   # federal AGI less taxable Social Security)
   st_age_po_income_v = st_income_base(tax_unit,
                                       tax_unit$st_agi.age_ded_po_base)
+
+  # Pension/IRA exclusion caps. Default path: the scalar per-person
+  # min-age/under-65/65-plus parameters. Age-BANDED path (MI Form 4884
+  # tiers): where the pension_excl_band family is encoded, the cap is the
+  # amount of the highest band the relevant age reaches -- bands are lower
+  # age bounds, year-keyed so a birth cohort (age = year - birth year) and
+  # a phase-in window are pure configuration. Convention: band 1 is age 0
+  # (amount 0 where younger filers get nothing), so the closed-lower band
+  # lookup needs no outside-the-table case. Two modes:
+  #   per_return = 1 (MI): amounts are per-return (filing-status mapped in
+  #     YAML) and the OLDER spouse's age controls (MCL 206.30(9): the older
+  #     spouse's birth year governs the joint return)
+  #   per_return = 0: per-person amounts, each spouse's own age
+  cap1_v = with(tax_unit, if_else(
+    age1 >= st_agi.pension_excl_min_age,
+    if_else(age1 >= 65, st_agi.pension_excl_65plus,
+                        st_agi.pension_excl_under65), 0))
+  cap2_v = with(tax_unit, if_else(
+    filing_status == 2 & !is.na(age2) &
+      age2 >= st_agi.pension_excl_min_age,
+    if_else(age2 >= 65, st_agi.pension_excl_65plus,
+                        st_agi.pension_excl_under65), 0))
+  band_ages = st_family_matrix(tax_unit, 'st_agi.pension_excl_band_ages')
+  if (!is.null(band_ages)) {
+    band_amts = st_family_matrix(
+      tax_unit, 'st_agi.pension_excl_band_amounts',
+      1:ncol(band_ages), require_sentinel = FALSE
+    )
+    band_cap = function(age) {
+      st_pick_slot(band_amts, st_band_index_lower(coalesce(age, 0), band_ages))
+    }
+    has_band   = !is.na(band_ages[, 1])   # rows of the banded state in a mixed slice
+    per_return = tax_unit$st_agi.pension_excl_band_per_return == 1
+    older_age  = pmax(tax_unit$age1,
+                      if_else(tax_unit$filing_status == 2 &
+                                !is.na(tax_unit$age2),
+                              tax_unit$age2, tax_unit$age1))
+    cap1_v = if_else(
+      has_band,
+      band_cap(if_else(per_return, older_age, tax_unit$age1)),
+      cap1_v
+    )
+    cap2_v = if_else(
+      has_band,
+      if_else(!per_return & tax_unit$filing_status == 2 &
+                !is.na(tax_unit$age2),
+              band_cap(tax_unit$age2), 0),
+      cap2_v
+    )
+  }
 
   # Own-base starting point (start_point 0): class shares times PUF income
   # concepts, each class floored at zero after the share where
@@ -242,16 +295,12 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       st_sub_ss_full = pmax(txbl_ss * ss_full_share, ss_cap_extra),
 
       # Subtraction: pension/IRA exclusion. Per-person caps summed across
-      # qualifying spouses. Where SS shares the cap (CO): fully-subtracted SS
-      # reduces the cap dollar-for-dollar; otherwise SS claims cap room first
+      # qualifying spouses (scalar or age-banded path, computed above).
+      # Where SS shares the cap (CO): fully-subtracted SS reduces the cap
+      # dollar-for-dollar; otherwise SS claims cap room first
       pens_inc  = txbl_pens_dist + txbl_ira_dist,
-      cap1      = if_else(age1 >= st_agi.pension_excl_min_age,
-                          if_else(age1 >= 65, st_agi.pension_excl_65plus,
-                                              st_agi.pension_excl_under65), 0),
-      cap2      = if_else(filing_status == 2 & !is.na(age2) &
-                          age2 >= st_agi.pension_excl_min_age,
-                          if_else(age2 >= 65, st_agi.pension_excl_65plus,
-                                              st_agi.pension_excl_under65), 0),
+      cap1      = cap1_v,
+      cap2      = cap2_v,
       pens_cap  = case_when(
         st_agi.pension_cap_incl_ss == 0 ~ cap1 + cap2,
         ss_full_share >= 1              ~ pmax(0, cap1 + cap2 - txbl_ss),
@@ -262,6 +311,20 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                               0),
       st_sub_pens = pmin(pens_inc, pmax(0, pens_cap - st_sub_ss_cap)),
       st_sub_ss   = st_sub_ss_full + st_sub_ss_cap,
+
+      # Subtraction: senior investment income (MI Schedule 1, MCL
+      # 206.30(1)(p), born-before-1946 only -- encoded as a year-keyed
+      # minimum age on the older spouse). Interest, dividends, and positive
+      # net capital gains up to a per-return cap (filing-status mapped)
+      # reduced by the retirement subtraction taken; the military/railroad
+      # and elderly-credit reductions are unobserved (known-difference)
+      st_sub_senior_inv = if_else(
+        pmax(age1, if_else(filing_status == 2 & !is.na(age2), age2, age1)) >=
+          st_agi.senior_inv_min_age,
+        pmin(pmax(0, txbl_int + div_ord + div_pref + pmax(0, kg_lt + kg_st)),
+             pmax(0, st_agi.senior_inv_cap - st_sub_pens)),
+        0
+      ),
 
       # CT-style share-based pension/annuity and IRA subtraction: statutory
       # phase-in shares times the AGI-banded factor (the 2019-2023 cliff and
@@ -390,7 +453,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
 
       st_subtractions = st_sub_ref + st_sub_ss + st_sub_pens + st_sub_char +
                         st_retirement_excl + st_sub_capgain +
-                        st_sub_retire_share + st_sub_age + st_sub_ui + st_bid,
+                        st_sub_retire_share + st_sub_age + st_sub_ui +
+                        st_sub_senior_inv + st_bid,
 
       # State income base
       st_agi = st_start + st_additions - st_subtractions

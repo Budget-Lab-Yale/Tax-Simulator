@@ -21,3 +21,150 @@ sub_us_int:
 ss_sub_share:
   value: 1
   reference: 'Michigan MI-1040 Schedule 1, Social Security benefits subtraction, 2017-2025'
+
+# ---------------------------------------------------------------------------
+# Retirement/pension subtraction (Form 4884; MCL 206.30(9)-(11)), encoded as
+# per-return age bands on the OLDER spouse (the statutory birth-year tiers
+# expressed as year-keyed ages: a cohort born in year b is age t - b in year
+# t). Bands are lower age bounds; a return takes the amount of the highest
+# band its older-spouse age reaches; band 1 is age 0/amount 0 by convention.
+#
+# Structure per year (full derivation in raw/mi_retirement_research.md):
+#   2017-2022: [Tier 3 under-67: 0][Tier 2 (born 1946-52): 20,000/40,000]
+#              [Tier 1 (born <1946): indexed cap, e.g. 50,509/101,019 in
+#              2017]. Tier-2 67+ filers' $20k/$40k Michigan Standard
+#              Deduction (against ALL income) is approximated by the
+#              pension-only band; the Tier-3 67+ netted standard deduction
+#              (reduced by taxable SS and exemptions, tiny 2020-22 cohort)
+#              is omitted [known-differences].
+#   2023-2025 (PA 4 of 2023 phase-in, elective vs the tier rules; the bands
+#              take the better option per age): 25/50/75% of that year's
+#              Tier-1 cap for the expanding birth-year windows (2023: born
+#              1946-58 = ages 65-77; 2024: 1946-62 = ages 62-78; 2025:
+#              1946-66 = ages 59-79), printed amounts 15,380/30,759 ->
+#              32,020/64,040 -> 49,423/98,846; Tier-2 ages keep the better
+#              20,000/40,000 in 2023; Tier 1 keeps the full cap.
+#   2026+:     100% phase-in, everyone -- encoded from age 59 (the IRA
+#              59.5 rule and the retire-under-plan-provisions test make
+#              younger distributions non-qualifying), at the 2025 cap
+#              carried forward (CPI-indexed in law; published amounts
+#              transcribed through 2025) [known-difference].
+#
+# Known-differences (documented in mi.md): public pensions (unlimited for
+# Tier 1) treated as private/capped -- source unobservable; 457/TSP and
+# unmatched-401(k) amounts in the PUF pension concept would not qualify;
+# military/railroad cap reductions unobserved (offsetting: military
+# retirement is also not separately exempted); SSA-exempt, fire/police
+# (2023+), and surviving-spouse elections unobservable.
+
+filing_status_mapper:
+  pension_excl_band_amounts:
+    '1': pension_excl_band_amounts_single
+    '2': pension_excl_band_amounts_joint
+    '3': pension_excl_band_amounts_single
+    '4': pension_excl_band_amounts_single
+  senior_inv_cap:
+    '1': senior_inv_cap_single
+    '2': senior_inv_cap_joint
+    '3': senior_inv_cap_single
+    '4': senior_inv_cap_single
+
+pension_excl_band_per_return:
+  value: 1
+  reference: 'MCL 206.30(9): limits are per return and the older spouse''s birth year controls; Form 4884 Part 2, verified 2017-2025 instructions'
+
+pension_excl_band_ages:
+  value:
+    '2017': [0, 65, 72, 72]
+    '2018': [0, 66, 73, 73]
+    '2019': [0, 67, 74, 74]
+    '2020': [0, 68, 75, 75]
+    '2021': [0, 69, 76, 76]
+    '2022': [0, 70, 77, 77]
+    '2023': [0, 65, 71, 78]
+    '2024': [0, 62, 79, 79]
+    '2025': [0, 59, 80, 80]
+    '2026': [0, 59, 59, 59]
+  reference: 'Birth-year tiers as ages: Tier 2 = born 1946-1952, Tier 1 = born before 1946 (MCL 206.30(9)); PA 4 of 2023 phase-in windows born 1946-1958/-1962/-1966 (MCL 206.30(10), Form 4884 line 19 instructions 2023-2025); 2026+ no birth-year restriction, floored at age 59 for the IRA 59.5/plan-retirement qualification rules'
+
+pension_excl_band_amounts_single:
+  value:
+    '2017': [0, 20000, 50509, 50509]
+    '2018': [0, 20000, 51570, 51570]
+    '2019': [0, 20000, 52808, 52808]
+    '2020': [0, 20000, 53759, 53759]
+    '2021': [0, 20000, 54404, 54404]
+    '2022': [0, 20000, 56961, 56961]
+    '2023': [0, 15380, 20000, 61518]
+    '2024': [0, 32020, 64040, 64040]
+    '2025': [0, 49423, 65897, 65897]
+    '2026': [0, 65897, 65897, 65897]
+  reference: 'Form 4884 printed maximums, single/MFS: Tier-1 cap line 8/9 each year 2017-2025 (50,509 / 51,570 / 52,808 / 53,759 / 54,404 / 56,961 / 61,518 / 64,040 / 65,897); Tier-2 $20,000 (MCL 206.30(9)(b), frozen); phase-in line 19 amounts 15,380 / 32,020 / 49,423 (25/50/75% of the cap); 2026+ carries the 2025 cap [known-difference: CPI-indexed in law]'
+
+pension_excl_band_amounts_joint:
+  value:
+    '2017': [0, 40000, 101019, 101019]
+    '2018': [0, 40000, 103140, 103140]
+    '2019': [0, 40000, 105615, 105615]
+    '2020': [0, 40000, 107517, 107517]
+    '2021': [0, 40000, 108808, 108808]
+    '2022': [0, 40000, 113922, 113922]
+    '2023': [0, 30759, 40000, 123036]
+    '2024': [0, 64040, 128080, 128080]
+    '2025': [0, 98846, 131794, 131794]
+    '2026': [0, 131794, 131794, 131794]
+  reference: 'Form 4884 printed maximums, joint: Tier-1 caps 101,019 / 103,140 / 105,615 / 107,517 / 108,808 / 113,922 / 123,036 / 128,080 / 131,794; Tier-2 $40,000; phase-in 30,759 / 64,040 / 98,846; 2026+ carries the 2025 cap'
+
+# Senior investment income subtraction (MCL 206.30(1)(p); Schedule 1 line 28
+# in 2023+ numbering): interest, dividends, and capital gains for
+# born-before-1946 filers, capped per return and reduced by the retirement
+# subtraction taken. The military/railroad and elderly-credit reductions are
+# unobserved (known-difference)
+senior_inv_min_age:
+  value:
+    '2017': 72
+    '2018': 73
+    '2019': 74
+    '2020': 75
+    '2021': 76
+    '2022': 77
+    '2023': 78
+    '2024': 79
+    '2025': 80
+    '2026': 81
+    '2027': 82
+    '2028': 83
+    '2029': 84
+    '2030': 85
+    '2031': 86
+    '2032': 87
+    '2033': 88
+    '2034': 89
+    '2035': 90
+  reference: 'MCL 206.30(1)(p): not available to a senior citizen born after 1945; expressed as older-spouse age = year - 1945'
+
+senior_inv_cap_single:
+  value:
+    '2017': 11259
+    '2018': 11495
+    '2019': 11771
+    '2020': 11983
+    '2021': 12127
+    '2022': 12697
+    '2023': 13712
+    '2024': 14274
+    '2025': 14688
+  reference: 'Schedule 1 instructions (line 26/28 worksheets) 2020-2025; Treasury per-year Retirement & Pension Information pages 2017-2019; single/MFS amounts. 2026+ carries 2025 [known-difference: CPI-indexed in law]'
+
+senior_inv_cap_joint:
+  value:
+    '2017': 22518
+    '2018': 22991
+    '2019': 23542
+    '2020': 23966
+    '2021': 24254
+    '2022': 25394
+    '2023': 27424
+    '2024': 28548
+    '2025': 29376
+  reference: 'Same sources, joint amounts'

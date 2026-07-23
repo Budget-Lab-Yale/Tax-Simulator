@@ -22,7 +22,7 @@ LA,todo,todo,todo,todo,todo,NA
 MA,todo,todo,todo,todo,todo,NA
 MD,todo,todo,todo,todo,todo,NA
 ME,todo,todo,todo,todo,todo,NA
-MI,done,done,done,in_progress,blocked_weights,MI-1040 baseline through TY2025; exemptions and refundable EITC covered; retirement subtraction and homestead credit remain documented
+MI,done,done,done,in_progress,blocked_weights,"MI-1040 baseline through TY2025; exemptions and refundable EITC covered. Retirement subtraction ENCODED 2026-07-23 (elderly survey): per-return older-spouse age bands (new pension_excl_band_* family) for the Form 4884 birth-year tiers (Tier 1 indexed cap 50,509->65,897 single; Tier 2 20k/40k) + PA 4 of 2023 phase-in (25/50/75/100%, expanding windows, everyone 59+ from 2026); senior investment income subtraction (born <1946) also encoded; tests MI-2..7. Known-differences: public-pension source, 457/TSP/unmatched-401k in the PUF pension pool, Tier-2/3 all-income std deduction approximated pension-only, SSA-exempt/fire-police/surviving-spouse elections. Homestead credit remains documented"
 MN,todo,todo,todo,todo,todo,NA
 MO,todo,todo,todo,todo,todo,NA
 MS,todo,todo,todo,todo,todo,NA

@@ -54,6 +54,9 @@ scalars:
   st_agi.retirement_excl_under65: {default: 0, units: per_person}
   st_agi.retirement_excl_65plus: {default: 0, units: per_person}
   st_agi.retirement_excl_earned_cap: {default: 0, units: per_person}
+  st_agi.pension_excl_band_per_return: 0   # band amounts per return, older-spouse age (MI)
+  st_agi.senior_inv_cap: {default: 0, units: per_return}
+  st_agi.senior_inv_min_age: .inf
   st_agi.sub_char_nonitem_floor: .inf
   st_agi.add_overtime_ded: 0
   st_agi.cap_gains_excl_share: 0
@@ -372,6 +375,7 @@ extra_scalars:
 # ensure_st_params() adds an NA sentinel when a state's law lacks the
 # family entirely, so calculators can test any(!is.na(col1))
 sentinels:
+  - st_agi.pension_excl_band_ages1
   - st_credits.hh_agi_bounds_single1
   - st_credits.hh_agi_bounds_other1
   - st_credits.ctc_tier1_bound
@@ -387,6 +391,8 @@ sentinels:
 # suffix-less column. `consumer` names the calculator file that reads the
 # family (documentation only)
 families:
+  - pattern: '^st_agi\.pension_excl_band_(ages|amounts)\d*$'
+    consumer: st_agi.R   # age-banded per-person retirement exclusion (MI tiers)
   - pattern: '^st_ord\.(rates|brackets)\d*$'
     consumer: st_tax.R   # rate schedule + NY-style recapture
   - pattern: '^st_ord\.base_amounts\d*$'
