@@ -68,6 +68,11 @@ filing_status_mapper:
     '2': senior_inv_cap_joint
     '3': senior_inv_cap_single
     '4': senior_inv_cap_single
+  senior_std_amount:
+    '1': senior_std_amount_single
+    '2': senior_std_amount_joint
+    '3': senior_std_amount_single
+    '4': senior_std_amount_single
 
 pension_excl_band_per_return:
   value: 1
@@ -168,3 +173,85 @@ senior_inv_cap_joint:
     '2024': 28548
     '2025': 29376
   reference: 'Same sources, joint amounts'
+
+# Michigan Standard Deduction (Schedule 1 line 25/26; MCL 206.30(9)(b),(e)):
+# $20,000/$40,000 against ALL income for returns whose older spouse is 67+
+# and born after 1945 (born-before-1946 filers use Form 4884 instead). Tier 2
+# ages (born 1946-1952, at/above the no-net age) take the full amount; Tier 3
+# ages net taxable Social Security (suspended by PA 4 for 2026-2028) and the
+# exemption amounts per the Worksheet 2 netting. Mutually exclusive with the
+# Form 4884 subtraction -- the calculator takes the better. Cross-model
+# evidence this is material: pre-encoding MI mismatches showed +$850/+$1,700
+# point masses = 20k/40k x 4.25% on 67+ records without pension income.
+
+senior_std_amount_single:
+  value: 20000
+  reference: 'MCL 206.30(9)(b),(e): $20,000 single/MFS, frozen (not indexed), 2017-2025; Schedule 1 line 25/26 worksheets'
+
+senior_std_amount_joint:
+  value: 40000
+  reference: 'MCL 206.30(9)(b),(e): $40,000 joint, frozen, 2017-2025'
+
+senior_std_min_age:
+  value: 67
+  reference: 'MCL 206.30(9)(b),(e): "After that person reaches the age of 67"; older spouse controls'
+
+# Tier 2 (born 1946-1952) takes the full amount: age >= year - 1952
+senior_std_no_net_min_age:
+  value:
+    '2017': 65
+    '2018': 66
+    '2019': 67
+    '2020': 68
+    '2021': 69
+    '2022': 70
+    '2023': 71
+    '2024': 72
+    '2025': 73
+    '2026': 74
+    '2027': 75
+    '2028': 76
+    '2029': 77
+    '2030': 78
+    '2031': 79
+    '2032': 80
+    '2033': 81
+    '2034': 82
+    '2035': 83
+  reference: 'MCL 206.30(9)(b) (born 1946-1952 = Tier 2, no SS/exemption netting; Worksheet 2 nets only military items), expressed as older-spouse age = year - 1952'
+
+# Tier 1 (born before 1946) is ineligible for the standard deduction:
+# age >= year - 1945 (same series as senior_inv_min_age)
+senior_std_ineligible_min_age:
+  value:
+    '2017': 72
+    '2018': 73
+    '2019': 74
+    '2020': 75
+    '2021': 76
+    '2022': 77
+    '2023': 78
+    '2024': 79
+    '2025': 80
+    '2026': 81
+    '2027': 82
+    '2028': 83
+    '2029': 84
+    '2030': 85
+    '2031': 86
+    '2032': 87
+    '2033': 88
+    '2034': 89
+    '2035': 90
+  reference: 'MCL 206.30(9)(a): born-before-1946 filers use the subsection (1)(f) subtraction, not the standard deduction; 2019 Form 4884 header routes them to the form'
+
+# Tier 3 netting of taxable Social Security (Worksheet 2 line 8), suspended
+# by PA 4 of 2023 for tax years 2026-2028 (MCL 206.30(9)(e): the SS-forgo
+# applies "for tax years that begin before January 1, 2026 and after
+# December 31, 2028")
+senior_std_net_ss_share:
+  value:
+    '2017': 1
+    '2026': 0
+    '2029': 1
+  reference: 'MCL 206.30(9)(e) as amended by PA 4 of 2023; Worksheet 2 line 8 (2020-2025 instructions). Exemption netting (Worksheet 2 line 9) applies in all years'

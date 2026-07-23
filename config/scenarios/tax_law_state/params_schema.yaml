@@ -57,6 +57,14 @@ scalars:
   st_agi.pension_excl_band_per_return: 0   # band amounts per return, older-spouse age (MI)
   st_agi.senior_inv_cap: {default: 0, units: per_return}
   st_agi.senior_inv_min_age: .inf
+  # Senior standard deduction against ALL income (MI Tier 2/3 Michigan
+  # Standard Deduction), mutually exclusive with the pension subtraction
+  # (the unit takes the better); ages test the OLDER spouse
+  st_agi.senior_std_amount: {default: 0, units: per_return}
+  st_agi.senior_std_min_age: .inf
+  st_agi.senior_std_no_net_min_age: .inf   # at/above: full amount (MI Tier 2)
+  st_agi.senior_std_ineligible_min_age: .inf   # at/above: not eligible (MI Tier 1)
+  st_agi.senior_std_net_ss_share: 0   # share of taxable SS netted below no_net age
   st_agi.sub_char_nonitem_floor: .inf
   st_agi.add_overtime_ded: 0
   st_agi.cap_gains_excl_share: 0

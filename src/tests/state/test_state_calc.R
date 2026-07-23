@@ -353,6 +353,34 @@ test_state_calc = function() {
            expect = list(st_agi = 60000 - 20000 - 8548),
            label = 'MI-7 senior investment income subtraction')
 
+  # MI-8: Tier 2 Michigan Standard Deduction against ALL income: 2019
+  # single 68 (born 1951), wages 40,000, NO pension -> full 20,000 off the
+  # base (Schedule 1 line 23); taxable = 20,000 - 4,400 exemption
+  run_case('MI', 2019, list(agi = 40000, age1 = 68, wages1 = 40000),
+           expect = list(st_agi = 20000,
+                         liab_st_iit = (20000 - 4400) * 0.0425),
+           label = 'MI-8 Tier 2 standard deduction, no pension')
+
+  # MI-9: Tier 3 netted standard deduction: 2021 single 68 (born 1953,
+  # below the no-net age 69), wages 30,000 + taxable SS 8,000. Worksheet 2:
+  # 20,000 - 8,000 SS - 4,900 exemption = 7,100, claimed alongside the
+  # normal SS subtraction and exemption. Base = 38,000 - 8,000 - 7,100
+  run_case('MI', 2021,
+           list(agi = 38000, age1 = 68, wages1 = 30000, txbl_ss = 8000,
+                gross_ss = 10000),
+           expect = list(st_agi = 38000 - 8000 - 7100,
+                         liab_st_iit = (22900 - 4900) * 0.0425),
+           label = 'MI-9 Tier 3 netted standard deduction')
+
+  # MI-10: Tier 1 (born before 1946) is INELIGIBLE for the standard
+  # deduction: 2019 single 75, wages 50,000, pension 1,000 -> only the
+  # 1,000 pension subtraction (guards the std-deduction overgrant)
+  run_case('MI', 2019,
+           list(agi = 51000, age1 = 75, wages1 = 50000,
+                txbl_pens_dist = 1000),
+           expect = list(st_agi = 50000),
+           label = 'MI-10 Tier 1 std-deduction ineligibility')
+
   # CA-1: the $9,825 row of FTB 3514's 2025 EITC table gives a two-child
   # credit of $3,339. Exemption credits (153 + 2 x 475) are nonrefundable,
   # so the broad-IIT liability is the refundable CalEITC only. Neither child

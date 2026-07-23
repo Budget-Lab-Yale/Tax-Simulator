@@ -113,10 +113,18 @@ and TAXSIM omits it too.
    2023/24/25; everyone 59+ from 2026), and the senior investment income
    subtraction (born <1946). Research: raw/mi_retirement_research.md
    (PolicyEngine parameter values match ours exactly for every year).
-   Tests MI-2..MI-7; cross-model rerun pending. Key correction from
-   research: the phase-in percentages apply to that year's indexed cap
-   with expanding cohort windows, and the older spouse's birth year
-   controls the whole return (per-return caps, not per-person).
+   Tests MI-2..MI-10. Key corrections from research: the phase-in
+   percentages apply to that year's indexed cap with expanding cohort
+   windows (not age-free), and the older spouse's birth year controls the
+   whole return (per-return caps, not per-person). The 67+ Michigan
+   Standard Deduction was then also implemented properly as an ALL-income
+   deduction with the Tier-3 SS/exemption netting after the first rerun
+   showed +$850/+$1,700 point masses (20k/40k x 4.25%) on 67+ no-pension
+   records. Cumulative cross-model effect: TAXSIM-window clean match@$100
+   58.9/58.1/57.9/57.3 -> 64.7/64.3/64.2/63.9; PE window 56.1-62.6 ->
+   56.3-68.4. Largest remaining MI residual: an unexplained +$386 point
+   mass (~370 records/yr in 2019, a constant ~$9,082 TAXSIM-side
+   deduction) plus the homestead credit — next MI triage items.
 3. **SC age-65 deduction** — add a `age_ded_offset_pension` coupling to the
    VA-style machinery ($15k/person less the retirement deduction claimed).
 4. **IN income-tested elderly exemption** — fold into a generic

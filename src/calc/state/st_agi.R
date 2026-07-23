@@ -74,6 +74,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'itemizing',      # (bool) whether unit itemizes on the federal return
     'age1',           # (int)  age of primary filer
     'age2',           # (int)  age of secondary filer (NA if none)
+    'n_dep',          # (int)  number of dependents
     'filing_status',  # (int)  filing status (1 single, 2 MFJ, 3 MFS, 4 HoH)
 
     # State tax law
@@ -108,6 +109,13 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.pension_excl_band_per_return', # (int) banded caps per return, older-spouse age
     'st_agi.senior_inv_cap',        # (dbl) senior investment income cap (MI)
     'st_agi.senior_inv_min_age',    # (dbl) minimum (older-spouse) age for the cap
+    'st_agi.senior_std_amount',     # (dbl) senior all-income standard deduction (MI)
+    'st_agi.senior_std_min_age',    # (dbl) minimum older-spouse age (MI: 67)
+    'st_agi.senior_std_no_net_min_age', # (dbl) at/above: no netting (MI Tier 2 ages)
+    'st_agi.senior_std_ineligible_min_age', # (dbl) at/above: ineligible (MI Tier 1 ages)
+    'st_agi.senior_std_net_ss_share', # (dbl) share of taxable SS netted (MI Tier 3)
+    'st_exempt.personal_amount',    # (dbl) exemption feeders for the Tier-3 netting
+    'st_exempt.dep_amount',         # (dbl)
     'st_agi.pension_cap_incl_ss',   # (int) whether taxable SS counts within the cap
     'st_agi.retirement_excl_style', # (int) 1 = per-person earned/unearned exclusion
     'st_agi.retirement_excl_min_age', # (dbl) minimum age for broad exclusion
@@ -309,7 +317,36 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       st_sub_ss_cap = if_else(st_agi.pension_cap_incl_ss == 1 & ss_full_share < 1,
                               pmin(txbl_ss * (1 - ss_full_share), pens_cap),
                               0),
-      st_sub_pens = pmin(pens_inc, pmax(0, pens_cap - st_sub_ss_cap)),
+      st_sub_pens_raw = pmin(pens_inc, pmax(0, pens_cap - st_sub_ss_cap)),
+
+      # Senior standard deduction against ALL income (MI Tier 2/3 Michigan
+      # Standard Deduction, MCL 206.30(9)(b)/(e)): a per-return amount
+      # (filing-status mapped) for units whose OLDER spouse is at least
+      # senior_std_min_age and below the ineligible age (MI Tier 1 uses the
+      # pension subtraction instead). Below the no-net age (MI Tier 3, born
+      # after 1952), the amount is reduced by taxable Social Security (the
+      # 2026-2028 statutory suspension enters via net_ss_share) and the
+      # exemption amounts, replicating the Worksheet 2 netting; at/above it
+      # (MI Tier 2) the full amount applies. Mutually exclusive with the
+      # pension subtraction on the form -- the unit takes the better. The
+      # military-pay/military-retirement reductions are unobserved
+      # (known-difference)
+      senior_std_age = pmax(age1, if_else(filing_status == 2 & !is.na(age2),
+                                          age2, age1)),
+      senior_std_exempt_amt = st_exempt.personal_amount *
+                                (1 + (filing_status == 2)) +
+                              st_exempt.dep_amount * n_dep,
+      st_senior_std = case_when(
+        senior_std_age < st_agi.senior_std_min_age ~ 0,
+        senior_std_age >= st_agi.senior_std_ineligible_min_age ~ 0,
+        senior_std_age >= st_agi.senior_std_no_net_min_age ~
+          st_agi.senior_std_amount,
+        TRUE ~ pmax(0, st_agi.senior_std_amount -
+                       st_agi.senior_std_net_ss_share * txbl_ss -
+                       senior_std_exempt_amt)
+      ),
+
+      st_sub_pens = pmax(st_sub_pens_raw, st_senior_std),
       st_sub_ss   = st_sub_ss_full + st_sub_ss_cap,
 
       # Subtraction: senior investment income (MI Schedule 1, MCL
