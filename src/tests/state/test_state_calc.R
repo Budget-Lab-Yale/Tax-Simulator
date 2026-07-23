@@ -269,6 +269,14 @@ test_state_calc = function() {
            expect = list(liab_st_iit = (50000 - 12750) * 0.0399),
            label = 'NC-3 enacted 2026 rate')
 
+  # NC-4: taxable Social Security fully deducted (G.S. 105-153.5(b)(6);
+  # regression for the 2026-07-23 survey finding). Single 68, AGI 50,000
+  # incl. taxable SS 20,000: NC AGI 30,000 - std 12,750 = 17,250 x 4.5%
+  run_case('NC', 2024,
+           list(agi = 50000, age1 = 68, txbl_ss = 20000, gross_ss = 24000),
+           expect = list(st_agi = 30000, liab_st_iit = 17250 * 0.045),
+           label = 'NC-4 Social Security deduction')
+
   #--------------------------------------------------------------------------
   # Second broad-IIT rollout states
   #--------------------------------------------------------------------------

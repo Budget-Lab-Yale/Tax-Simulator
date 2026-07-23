@@ -37,7 +37,7 @@ Last updated: `2026-07-13`
 ## Known differences
 
 - Taxable and tax-exempt interest do not reveal U.S. obligation or North Carolina-bond sources; existing generic flags preserve the legal rule but cannot fully allocate the base.
-- Schedule S additions/subtractions, including Bailey settlement treatment, military retirement, claim-of-right, and numerous federal-conformity items, need further component-level data and are omitted.
+- Schedule S additions/subtractions, including Bailey settlement treatment, military retirement, claim-of-right, and numerous federal-conformity items, need further component-level data and are omitted. EXCEPTION (2026-07-23 elderly-provisions survey): the taxable Social Security / Railroad Retirement deduction (G.S. 105-153.5(b)(6)) was found missing despite being fully modelable — now encoded (`ss_sub_share = 1`, test NC-4). Bailey and military-retirement pension deductions remain omitted (pension source unobservable; both bias NC liability UP for affected retirees).
 - The generic itemizer uses federal deductible component inputs; some North Carolina-specific qualification/limitation details still need cross-model review.
 - Filing thresholds are based on gross income and differ for dependents and older taxpayers. `st_filer` is a documented AGI proxy, not an official returns estimate.
 - The 2027+ rate-reduction triggers depend on annual revenue certifications and are deliberately not assumed in the baseline.

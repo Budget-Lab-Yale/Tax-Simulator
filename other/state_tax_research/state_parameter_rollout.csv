@@ -27,7 +27,7 @@ MN,todo,todo,todo,todo,todo,NA
 MO,todo,todo,todo,todo,todo,NA
 MS,todo,todo,todo,todo,todo,NA
 MT,todo,todo,todo,todo,todo,NA
-NC,done,done,done,in_progress,blocked_weights,D-400 baseline through TY2026; generic child-deduction table and component itemization covered; post-2026 contingent rate triggers and Schedule S exceptions remain documented
+NC,done,done,done,in_progress,blocked_weights,"D-400 baseline through TY2026; generic child-deduction table and component itemization covered; post-2026 contingent rate triggers and Schedule S exceptions remain documented. SS deduction (105-153.5(b)(6)) was MISSING and added 2026-07-23 (elderly survey; test NC-4) -- expect NC cross-model rates to improve on rerun"
 ND,done,done,done,in_progress,blocked_weights,"Form ND-1 baseline through TY2025; federal-taxable-income start, rolling conformity; graduated schedule (distinct MFS) + HB1158 three-tier from 2023; 40% net-LTCG and 40% qualified-dividend exclusions (new shared cap_gains/div_excl params); SS none/2019-20 AGI-capped-all-ages (new ss_full_sub_allages param)/full 2021+. Known-differences: US-obligation subtraction (PUF share unobserved), military pay/retirement, marriage-penalty and family-member-care credits (not representable)"
 NE,todo,todo,todo,todo,todo,NA
 NH,done,done,done,done,blocked_weights,Narrow investment-income profile encoded through 2024 repeal; PUF base omits some NH taxable distributions and federally exempt interest
