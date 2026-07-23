@@ -439,10 +439,16 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
   microdata %>%
     mutate(
       liab_corp =
-        allocate_corp_dollars(other_corp_delta,    sigma_n, weight, labor,
+        allocate_corp_dollars(other_corp_delta,        sigma_n, weight, labor,
                               base_supernormal = corp_equity,
                               base_normal      = net_capital) +
-        allocate_corp_dollars(cost_recovery_delta, 1,       weight, labor,
+        allocate_corp_dollars(cost_recovery_delta,     1,       weight, labor,
+                              base_supernormal = corp_equity,
+                              base_normal      = net_capital) +
+        # On-model statutory-rate delta: hits normal + supernormal returns, so
+        # allocated at the sigma_N knob like the off-model corporate delta (NOT
+        # the pure-normal sigma = 1 that cost recovery uses)
+        allocate_corp_dollars(corp_rate_static_delta,  sigma_n, weight, labor,
                               base_supernormal = corp_equity,
                               base_normal      = net_capital)
     ) %>%
@@ -670,9 +676,31 @@ get_other_taxes = function(id, baseline_id) {
       ) %>%
       select(year, other_corp_delta)
 
+  #-----------------------------------
+  # On-model corporate statutory-rate change
+  #-----------------------------------
+
+  # The STATIC statutory-rate revenue delta ((t - t0) * B0), computed on-model
+  # (src/sim/corp_rate.R) from corp.rate + the CBO rev_corp level. The
+  # distribution table is a static concept, so this is the mechanical (no
+  # base-erosion) delta. It replaces the rate portion of other_corp_delta now
+  # that statutory rate is scored on-model rather than through OME (OME vintages
+  # must be regenerated ex-rate or the rate delta double-counts).
+  corp_rate_static_delta = corp_rate_delta(
+    rate_series = corp_rate_read_series(
+      file.path(globals$output_root, id, 'static/supplemental/tax_law.csv')),
+    rev_corp = read_macro_spliced(scenario_info$interface_paths$`Macro-Projections`) %>%
+      distinct(year, .keep_all = TRUE) %>%
+      transmute(year, rev_corp),
+    static = TRUE
+  ) %>%
+    filter(year >= first_year, year <= last_year) %>%
+    rename(corp_rate_static_delta = delta)
+
   # Combine and return
   vat_price_offset %>%
-    left_join(cost_recovery_delta, by = 'year') %>%
-    left_join(other_corp_delta,    by = 'year') %>%
+    left_join(cost_recovery_delta,     by = 'year') %>%
+    left_join(other_corp_delta,        by = 'year') %>%
+    left_join(corp_rate_static_delta,  by = 'year') %>%
     return()
 }

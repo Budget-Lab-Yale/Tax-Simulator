@@ -191,14 +191,21 @@ corp_ome_roots = function(scenario_info) {
 
 
 
-corp_read_wedge = function(scenario_info) {
+corp_read_ome_wedge = function(scenario_info) {
 
   #----------------------------------------------------------------------------
-  # The corporate wedge w_t = corporate_reform - corporate_baseline ($B, CY),
-  # over the FULL horizon of the OME files (not just sim years -- the seesaw
-  # guard and the enactment clock need the whole declared path). Mirrors
+  # The RESIDUAL OME corporate wedge w_t = corporate_reform - corporate_baseline
+  # ($B, CY), over the FULL horizon of the OME files (not just sim years -- the
+  # seesaw guard and the enactment clock need the whole declared path). Mirrors
   # distribution.R's other_corp_delta reader minus the VAT deflation (the
   # run-compat guard refuses VAT scenarios outright).
+  #
+  # NOTE: as of the on-model statutory-rate module, this is the "ex rate, ex
+  # depreciation" corporate residual (international, credits, base-broadeners).
+  # Statutory-rate revenue is now on-model (corp_rate_incidence_wedge below);
+  # OME vintages must be regenerated to EXCLUDE the rate portion, or the rate
+  # wedge is double-counted. (Pure-rate scenarios read an all-zeros OME, so no
+  # double-count in the interim.)
   #
   # Returns: tibble(year, w) over the union of file years.
   #----------------------------------------------------------------------------
@@ -219,6 +226,81 @@ corp_read_wedge = function(scenario_info) {
     arrange(year) %>%
     transmute(year,
               w = replace_na(reform, 0) - replace_na(baseline, 0))
+}
+
+
+
+corp_rate_incidence_wedge = function(scenario_info) {
+
+  #----------------------------------------------------------------------------
+  # The on-model corporate statutory-rate incidence wedge: the CONVENTIONAL
+  # (Form A base-eroded) rate revenue delta (src/sim/corp_rate.R), $B, over the
+  # FULL Macro-Projections horizon. This is the on-model replacement for the
+  # rate portion of the OME `corporate` wedge that corp_incidence used to read;
+  # the entire downstream paths machinery (markdown recursion, kappa split, kg
+  # glue, bathtub forcing) consumes it unchanged.
+  #
+  # The scenario rate comes from this scenario's tax_law.csv sidecar (sim years);
+  # it is extended across the full macro horizon by forward-filling the last
+  # in-window (t0, t) -- 'extend'/permanent semantics. Pre-policy years (leading
+  # NA) carry no change (delta 0). The CY rate delta is booked on the FY rev_corp
+  # level, matching corp_incidence's existing CY/FY convention (pi_at = gdp_corp
+  # [CY] - rev_corp [FY]).
+  #
+  # Returns: tibble(year, w) over the macro horizon, or NULL when there is no
+  #          rate change / the tax_law sidecars are unavailable.
+  #----------------------------------------------------------------------------
+
+  rate_series = corp_rate_read_series(
+    file.path(globals$output_root, scenario_info$ID,
+              'static/supplemental/tax_law.csv'))
+  if (is.null(rate_series)) return(NULL)
+
+  rev_corp = read_macro_spliced(scenario_info$interface_paths$`Macro-Projections`) %>%
+    distinct(year, .keep_all = TRUE) %>%
+    arrange(year) %>%
+    transmute(year, rev_corp)
+
+  # Extend the rate series across the full macro horizon (permanence forward;
+  # leading pre-policy years stay NA -> corp_rate_delta returns 0 there).
+  full_rate = rev_corp %>%
+    select(year) %>%
+    left_join(rate_series, by = 'year') %>%
+    arrange(year) %>%
+    fill(t0, t, .direction = 'down')
+
+  w = corp_rate_delta(full_rate, rev_corp, static = FALSE) %>%
+    rename(w = delta)
+
+  if (!any(abs(w$w) > CORP_EPS)) return(NULL)
+  w
+}
+
+
+
+corp_read_wedge = function(scenario_info) {
+
+  #----------------------------------------------------------------------------
+  # The total corporate incidence wedge = on-model statutory-rate delta
+  # (corp_rate_incidence_wedge) + residual OME corporate wedge
+  # (corp_read_ome_wedge), summed over the union of years ($B, CY). For a
+  # pure-rate scenario the OME residual is all-zeros and this is just the rate
+  # wedge; for a residual-only OME scenario it is just the OME wedge (the
+  # pre-existing behavior).
+  #
+  # Returns: tibble(year, w) over the union of years.
+  #----------------------------------------------------------------------------
+
+  ome  = corp_read_ome_wedge(scenario_info)
+  rate = corp_rate_incidence_wedge(scenario_info)
+
+  if (is.null(rate)) return(ome)
+
+  ome %>%
+    rename(w_ome = w) %>%
+    full_join(rate %>% rename(w_rate = w), by = 'year') %>%
+    arrange(year) %>%
+    transmute(year, w = replace_na(w_ome, 0) + replace_na(w_rate, 0))
 }
 
 
@@ -365,7 +447,22 @@ scenario_uses_corp_incidence = function(scenario_info) {
   wedge  = corp_read_wedge(scenario_info)
   has_w  = any(abs(wedge$w) > CORP_EPS)
   roots  = corp_ome_roots(scenario_info)
-  meta   = corp_read_meta(roots$scenario)   # hard-stops if present-but-invalid
+
+  # A nonzero on-model statutory-rate change SELF-DECLARES the eligibility
+  # contract: it is a rate provision by construction (provision_type 'rate'),
+  # gross of the endogenous individual offset (a pure corporate receipts number),
+  # and permanent past the horizon (beyond_horizon 'extend'). No
+  # corporate_meta.yaml is required for it -- the file governs only a residual
+  # OME corporate wedge. When only an OME residual is present (no rate change),
+  # the original OME meta contract applies unchanged.
+  rate_wedge  = corp_rate_incidence_wedge(scenario_info)
+  rate_active = !is.null(rate_wedge)
+  if (rate_active) {
+    meta = list(gross_of_offset = TRUE, provision_type = 'rate',
+                beyond_horizon = 'extend', produced_by = 'on-model corp_rate')
+  } else {
+    meta = corp_read_meta(roots$scenario)   # hard-stops if present-but-invalid
+  }
 
   active = FALSE
   if (!has_w) {

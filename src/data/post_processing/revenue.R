@@ -223,6 +223,21 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     select(-any_of(c('corporate', 'corporate_static'))) %>%
     left_join(corp_series, by = 'year')
 
+  # On-model corporate statutory-rate revenue delta (src/sim/corp_rate.R): the
+  # rate portion moved out of OME onto the model, booked on top of the CBO
+  # rev_corp level. Pass-aware: the static pass books the mechanical (t-t0)*B0
+  # change, conventional the Form A base-eroded change. Scenario rate comes from
+  # this pass's tax_law.csv sidecar; the baseline rate and rev_corp are read
+  # inside the helpers. Booked FY-direct beside cost recovery below (rev_corp is
+  # already FY, so no CY->FY smear is needed, unlike corp_tax_change).
+  deltas_corp_rate = corp_rate_delta(
+    rate_series = corp_rate_read_series(
+      file.path(scenario_root, 'supplemental', 'tax_law.csv')),
+    rev_corp    = revenues_other %>% select(year, rev_corp = revenues_corp_tax),
+    static      = static
+  ) %>%
+    rename(delta_revenues_corp_rate = delta)
+
   # Read the model-baseline estate tax series. Estate revenue is presented as
   # the CBO LEVEL plus an on-model DELTA (scenario minus model-baseline), so
   # baseline receipts stay CBO-anchored and the model contributes only reform
@@ -338,8 +353,15 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     mutate(revenues_corp_tax = revenues_corp_tax + delta_revenues_corp_tax) %>% 
     
     # Join deltas from cost recovery changes
-    left_join(deltas_cost_recovery, by = 'year') %>% 
-    mutate(revenues_corp_tax = revenues_corp_tax + delta_revenues_cost_recovery) %>% 
+    left_join(deltas_cost_recovery, by = 'year') %>%
+    mutate(revenues_corp_tax = revenues_corp_tax + delta_revenues_cost_recovery) %>%
+
+    # Join the on-model corporate statutory-rate delta (booked like cost
+    # recovery: onto the corporate line before the excess-growth factor, which
+    # matches how the OME rate wedge it replaces was treated)
+    left_join(deltas_corp_rate, by = 'year') %>%
+    mutate(revenues_corp_tax = revenues_corp_tax +
+             coalesce(delta_revenues_corp_rate, 0)) %>%
     
     # Join off-model estimates (deltas) and aggregate, applying excess growth offset where necessary
     left_join(deltas_off_model, by = 'year') %>% 

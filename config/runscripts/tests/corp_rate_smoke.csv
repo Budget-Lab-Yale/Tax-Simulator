@@ -1,0 +1,3 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Off-Model-Estimates.ID,wealth_financing
+baseline,baseline,,2026:2034,,,,baseline,none
+corp_rate_28,tests/corp_rate_28,,2026:2034,2028:2028,,,baseline,none

@@ -174,9 +174,13 @@ process_for_etrs = function(id, baseline_id, yr, other_taxes, rev_corp,
     list(
       level = allocate_corp_dollars(md$rev_corp_level, sigma_rate, md$weight,
                                     md$labor, super_base, normal_base),
-      delta = allocate_corp_dollars(md$other_corp_delta,    sigma_rate, md$weight,
+      delta = allocate_corp_dollars(md$other_corp_delta,       sigma_rate, md$weight,
                                     md$labor, super_base, normal_base) +
-              allocate_corp_dollars(md$cost_recovery_delta, 1,          md$weight,
+              allocate_corp_dollars(md$cost_recovery_delta,    1,          md$weight,
+                                    md$labor, super_base, normal_base) +
+              # on-model statutory-rate delta (static), sigma_n like the off-model
+              # rate delta it replaces
+              allocate_corp_dollars(md$corp_rate_static_delta, sigma_rate, md$weight,
                                     md$labor, super_base, normal_base)
     )
   }
