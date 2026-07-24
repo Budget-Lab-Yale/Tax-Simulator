@@ -1,0 +1,196 @@
+---
+# Wisconsin: SLIDING standard deduction (71.05(22)): max less a fixed
+# per-status rate (12% single, 19.778% MFJ/MFS, 22.515% HoH) times WI
+# income over the phase-out start, floored at zero; HoH floors at the
+# single-filer schedule (second sliding pair). No WI itemized deduction --
+# the itemized-deduction CREDIT lives in credits.yaml. Maxima/starts
+# indexed (71.05(22)(ds)); odd-year phase-out starts recovered from the
+# published tables [flagged (t) in the research notes]. 2026+ carries 2025.
+
+filing_status_mapper:
+  std_amount:
+    '1': std_max_single
+    '2': std_max_married
+    '3': std_max_mfs
+    '4': std_max_head
+  std_po_thresh:
+    '1': po_start_single
+    '2': po_start_married
+    '3': po_start_mfs
+    '4': po_start_single
+  std_po_rate:
+    '1': rate_single
+    '2': rate_married
+    '3': rate_married
+    '4': rate_head
+  std_amount2:
+    '1': zero2
+    '2': zero2
+    '3': zero2
+    '4': std_max_single
+  std_po_rate2:
+    '1': zero2
+    '2': zero2
+    '3': zero2
+    '4': rate_single
+
+std_max_single:
+  value:
+    '2017': 10380
+    '2018': 10580
+    '2019': 10860
+    '2020': 11050
+    '2021': 11200
+    '2022': 11790
+    '2023': 12760
+    '2024': 13230
+    '2025': 13560
+  reference: 'Form 1 Standard Deduction Tables / LFB Informational Paper 2, single maxima 2017-2025'
+
+std_max_married:
+  value:
+    '2017': 19210
+    '2018': 19580
+    '2019': 20110
+    '2020': 20470
+    '2021': 20730
+    '2022': 21820
+    '2023': 23620
+    '2024': 24490
+    '2025': 25110
+  reference: 'MFJ maxima'
+
+std_max_mfs:
+  value:
+    '2017': 9130
+    '2018': 9300
+    '2019': 9550
+    '2020': 9720
+    '2021': 9850
+    '2022': 10370
+    '2023': 11220
+    '2024': 11630
+    '2025': 11930
+  reference: 'MFS maxima'
+
+std_max_head:
+  value:
+    '2017': 13400
+    '2018': 13660
+    '2019': 14030
+    '2020': 14280
+    '2021': 14470
+    '2022': 15230
+    '2023': 16480
+    '2024': 17090
+    '2025': 17520
+  reference: 'HoH maxima (floored at the single schedule via the second sliding pair)'
+
+po_start_single:
+  value:
+    '2017': 14960
+    '2018': 15250
+    '2019': 15660
+    '2020': 15940
+    '2021': 16150
+    '2022': 16990
+    '2023': 18400
+    '2024': 19070
+    '2025': 19550
+  reference: 'Phase-out starts, single/HoH (odd years table-recovered, fit <= $3)'
+
+po_start_married:
+  value:
+    '2017': 21590
+    '2018': 22010
+    '2019': 22600
+    '2020': 23000
+    '2021': 23300
+    '2022': 24520
+    '2023': 26550
+    '2024': 27520
+    '2025': 28210
+  reference: 'Phase-out starts, MFJ'
+
+po_start_mfs:
+  value:
+    '2017': 10250
+    '2018': 10450
+    '2019': 10730
+    '2020': 10920
+    '2021': 11060
+    '2022': 11640
+    '2023': 12600
+    '2024': 13060
+    '2025': 13390
+  reference: 'Phase-out starts, MFS'
+
+rate_single:
+  value: 0.12
+  reference: 'Wis. Stat. 71.05(22): 12% phase-out rate, single (statutory, fixed)'
+
+rate_married:
+  value: 0.19778
+  reference: '19.778% phase-out rate, MFJ/MFS'
+
+rate_head:
+  value: 0.22515
+  reference: '22.515% phase-out rate, HoH'
+
+zero2:
+  value: 0
+  reference: 'Second sliding pair used only by HoH (single-schedule floor)'
+
+std_po_base:
+  value: 2
+  reference: 'Phase-out measured on Wisconsin income (state AGI)'
+
+std_dependent_style:
+  value: 1
+  reference: 'Standard Deduction Worksheet for Dependents: min(table SD, max(floor, earned + $350))'
+
+std_dependent_floor:
+  value:
+    '2017': 1050
+    '2019': 1100
+    '2022': 1150
+    '2023': 1250
+    '2024': 1300
+    '2025': 1350
+  reference: 'Tracks the federal dependent floor (endpoints verified; interior years follow federal [UNVERIFIED individually])'
+
+std_dependent_earned_add:
+  value: 350
+  reference: 'Dependent worksheet earned-income addition'
+
+item_allowed:
+  value: 0
+  reference: 'No Wisconsin itemized deduction; the 5% itemized-deduction CREDIT is in credits.yaml'
+
+item_coupling:
+  value: 0
+  reference: 'n/a'
+
+salt_addback:
+  value: 0
+  reference: 'n/a (federal-AGI start)'
+
+# Dependent-care expense SUBTRACTION 2017-2021 (replaced by a credit from
+# 2022; see credits.yaml)
+care_exp_ded:
+  value:
+    '2017': 1
+    '2022': 0
+  reference: 'WI 71.05(6)(b)28: care-expense subtraction up to 3,000/6,000, TY2017-2021; replaced by the 50%-of-federal credit from TY2022 (2021 Act 58)'
+
+care_exp_ded_per_dep_cap:
+  value: 3000
+  reference: 'Same provision'
+
+care_exp_ded_dep_limit:
+  value: 2
+  reference: 'Cap 6,000 = 2 x 3,000'
+
+care_exp_ded_age_limit:
+  value: 12
+  reference: 'IRC 21 qualifying child under 13'

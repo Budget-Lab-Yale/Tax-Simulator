@@ -1,0 +1,99 @@
+---
+# Wisconsin: credits.
+#   - Itemized deduction credit (71.07(5)): 5% of the excess of allowed
+#     federal-style components (medical after floor, mortgage + investment
+#     interest, charitable, disaster casualty -- NO taxes) over the WI
+#     standard deduction; nonrefundable; available regardless of the
+#     federal election. WI medical floor is 10% in 2017/2019/2020 vs the
+#     federal 7.5% used here [known-difference].
+#   - Married couple credit (71.07(6)): 3% of the lesser spouse's
+#     qualified earned income (base capped $16,000), max $480,
+#     nonrefundable, all years.
+#   - WI EITC (71.07(9e)): 4/11/34% of the federal EITC by child count,
+#     0% childless, refundable, all years (the pre-ARPA federal base for
+#     2021-22 is a documented known-difference).
+#   - School property tax/rent credit (71.07(9)): 12% of the first $2,500
+#     of property taxes (rent at 25/20% -- unobserved, owners only), max
+#     $300 ($150 MFS), nonrefundable.
+#   - Dependent care: subtraction 2017-21 (ded.yaml); 50% of the federal
+#     credit 2022-23; the expanded WI-2441 credit from 2024 approximated
+#     at 100% of the federal credit (the 10k/20k expense caps exceed the
+#     federal base [known-difference]).
+#   - Homestead credit (Schedule H) NOT modeled (income/rent inputs);
+#     PolicyEngine includes it -- expected one-sided low-income divergence.
+
+filing_status_mapper:
+  prop_tax_credit_rate_cap:
+    '1': prop_cap_regular
+    '2': prop_cap_regular
+    '3': prop_cap_mfs
+    '4': prop_cap_regular
+
+# Itemized deduction credit
+item_credit_rate:
+  value: 0.05
+  reference: 'Wis. Stat. 71.07(5); Form 1 Schedule 1, all years 2017-2025'
+
+item_credit_incl_medical:
+  value: 1
+  reference: 'Allowed component (WI floor 10% in 2017/2019/2020 vs federal amount used [known-difference])'
+
+item_credit_incl_mortgage:
+  value: 1
+  reference: 'Allowed component'
+
+item_credit_incl_investment:
+  value: 1
+  reference: 'Allowed component'
+
+item_credit_incl_charity:
+  value: 1
+  reference: 'Allowed component'
+
+item_credit_incl_casualty:
+  value: 1
+  reference: 'Allowed component (federally declared disaster losses)'
+
+# Married couple credit
+twoearner_rate:
+  value: 0.03
+  reference: 'Wis. Stat. 71.07(6); Form 1 Schedule 2: 3% of the lesser-earning spouse''s qualified earned income, all years'
+
+twoearner_max:
+  value: 480
+  reference: 'Same provision: $16,000 base cap = $480 maximum, unchanged'
+
+# WI EITC: child-count-keyed match, refundable
+eitc_match_by_kids:
+  value:
+    '2017': [0, 0.04, 0.11, 0.34]
+  reference: 'Wis. Stat. 71.07(9e): 4% (1 child), 11% (2), 34% (3+), none childless, all years 2017-2025; pre-ARPA federal base 2021-22 [known-difference]'
+
+eitc_refundable:
+  value: 1
+  reference: 'Refundable, all years'
+
+# School property tax credit (rate-style with a cap; renters unobserved)
+prop_tax_credit_rate:
+  value: 0.12
+  reference: 'Wis. Stat. 71.07(9): 12% of the first $2,500 of property taxes/rent-constituting-taxes; owners modeled from salt_prop [renters unobserved, known-difference]'
+
+prop_cap_regular:
+  value: 300
+  reference: 'Maximum $300 (= 12% x 2,500)'
+
+prop_cap_mfs:
+  value: 150
+  reference: 'Maximum $150 MFS'
+
+# Dependent care credit (2022+; subtraction before -- ded.yaml)
+cdctc_match:
+  value:
+    '2017': 0
+    '2022': 0.5
+    '2024': 1
+  reference: '2021 Act 58: 50% of the federal CDCTC for TY2022-23; expanded WI-2441 credit from TY2024 approximated at 100% of the federal credit (WI 10k/20k expense caps exceed the federal 3k/6k base [known-difference])'
+
+cdctc_refundable:
+  value: 0
+  reference: 'Nonrefundable'

@@ -105,6 +105,8 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.std_po_thresh',   # (dbl) sliding std deduction phase-out start (WI)
     'st_ded.std_po_rate',     # (dbl) reduction per dollar above the threshold
     'st_ded.std_po_base',     # (int) phase-out income base (st_income_base enum)
+    'st_ded.std_amount2',     # (dbl) second sliding pair maximum (WI HoH floor)
+    'st_ded.std_po_rate2',    # (dbl) second sliding pair rate
     'st_ded.std_pct_rate',    # (dbl) percent-of-income standard deduction rate (MD)
     'st_ded.std_pct_min',     # (dbl) minimum (filing-status mapped)
     'st_ded.std_pct_max',     # (dbl) maximum (filing-status mapped)
@@ -206,10 +208,14 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
 
       # Sliding standard deduction (WI 71.05(22)): reduced std_po_rate per
       # dollar of the enum income base above the threshold, to zero (the
-      # threshold and rate are filing-status mapped in YAML)
+      # threshold and rate are filing-status mapped in YAML). Where a
+      # second (max, rate) pair is encoded, the deduction is the larger of
+      # the two slides (WI HoH floors at the single-filer schedule)
       st_std_ded = pmax(
-        0, st_std_ded - st_ded.std_po_rate *
-             pmax(0, std_po_income_v - st_ded.std_po_thresh)
+        pmax(0, st_std_ded - st_ded.std_po_rate *
+                pmax(0, std_po_income_v - st_ded.std_po_thresh)),
+        pmax(0, st_ded.std_amount2 - st_ded.std_po_rate2 *
+                pmax(0, std_po_income_v - st_ded.std_po_thresh))
       ),
 
       # State itemized base: pre-limitation federal itemized, SALT component

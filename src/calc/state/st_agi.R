@@ -123,6 +123,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_exempt.dep_amount',         # (dbl)
     'st_agi.pension_cap_incl_ss',   # (int) whether taxable SS counts within the cap
     'st_agi.pension_excl_incl_ira', # (int) whether IRA distributions are eligible (MD 0)
+    'st_agi.pension_excl_agi_limit', # (dbl) AGI cliff for the exclusion (WI)
     'st_agi.pension_cap_less_gross_ss', # (int) cap reduced by GROSS SS received (MD)
     'st_agi.sub_ui_agi_limit',      # (dbl) AGI cliff for the UI subtraction (MD RELIEF)
     'st_agi.twoearner_sub_max',     # (dbl) two-income couple subtraction cap (MD)
@@ -213,6 +214,10 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       age2 >= st_agi.pension_excl_min_age,
     if_else(age2 >= 65, st_agi.pension_excl_65plus,
                         st_agi.pension_excl_under65), 0))
+  # AGI-cliff gate on the scalar exclusion (WI 71.05(1)(ae): $5,000 at 65+
+  # only when FAGI is under the limit)
+  cap1_v = cap1_v * (tax_unit$agi < tax_unit$st_agi.pension_excl_agi_limit)
+  cap2_v = cap2_v * (tax_unit$agi < tax_unit$st_agi.pension_excl_agi_limit)
   band_ages = st_family_matrix(tax_unit, 'st_agi.pension_excl_band_ages')
   if (!is.null(band_ages)) {
     band_amts = st_family_matrix(

@@ -22,7 +22,7 @@ test_state_calc = function() {
   law = build_state_tax_law(
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
-                'PA', 'ID', 'MN', 'MD'),
+                'PA', 'ID', 'MN', 'MD', 'WI'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -1479,6 +1479,86 @@ test_state_calc = function() {
            label = 'MD-9 two-income subtraction + itemized')
 
   #--------------------------------------------------------------------------
+  # Wisconsin (Form 1) -- sliding standard deduction (HoH single-floor),
+  # 30% LTCG exclusion, itemized-deduction credit, married couple credit,
+  # child-keyed EITC, school property tax credit, $5k retirement exclusion
+  #--------------------------------------------------------------------------
+
+  # WI-1: 2024 single, WI income 50,000. SD = 13,230 - 12% x 30,930 =
+  # 9,518.40; exemption 700 -> taxable 39,781.60
+  run_case('WI', 2024, list(agi = 50000, wages1 = 50000, ei1 = 50000),
+           expect = list(st_ded = 13230 - 0.12 * 30930,
+                         liab_st_iit = 14320 * 0.035 + 14320 * 0.044 +
+                                       (39781.6 - 28640) * 0.053),
+           label = 'WI-1 sliding standard deduction')
+
+  # WI-2: 2024 HoH floors at the single schedule: WI income 80,000 -> HoH
+  # slide 3,371.61 < single slide 5,918.40 -> SD 5,918.40; exemptions
+  # 2 x 700; single rate schedule
+  run_case('WI', 2024,
+           list(agi = 80000, filing_status = 4, n_dep = 1, dep_age1 = 10,
+                wages1 = 80000, ei1 = 80000),
+           expect = list(st_ded = 13230 - 0.12 * 60930,
+                         liab_st_iit = 14320 * 0.035 + 14320 * 0.044 +
+                                       (80000 - 5918.4 - 1400 - 28640) * 0.053),
+           label = 'WI-2 HoH single-schedule floor')
+
+  # WI-3: 2022 30% LTCG exclusion: 40,000 wages + 20,000 LTCG -> exclusion
+  # 6,000; WI income 54,000; SD 7,348.80; taxable 45,951.20
+  run_case('WI', 2022,
+           list(agi = 60000, wages1 = 40000, ei1 = 40000, kg_lt = 20000),
+           expect = list(st_agi = 54000,
+                         liab_st_iit = 12760 * 0.0354 + 12760 * 0.0465 +
+                                       (45951.2 - 25520) * 0.053),
+           label = 'WI-3 30% capital gain exclusion')
+
+  # WI-4: 2024 itemized-deduction credit + married couple credit: MFJ
+  # 60k/30k wages, charitable 8,000 + mortgage 9,000. SD 12,132.71;
+  # credit = 5% x (17,000 - 12,132.71); married couple = min(3% x 30,000,
+  # 480) = 480
+  run_case('WI', 2024,
+           list(agi = 90000, filing_status = 2, age2 = 40, wages1 = 60000,
+                wages2 = 30000, ei1 = 60000, ei2 = 30000,
+                char_item_ded = 8000, mort_int_item_ded = 9000),
+           expect = list(st_item_credit = 0.05 * (17000 - (24490 - 0.19778 * 62480)),
+                         st_twoearner_credit = 480,
+                         liab_st_iit = 19090 * 0.035 + 19100 * 0.044 +
+                                       (90000 - (24490 - 0.19778 * 62480) -
+                                        1400 - 38190) * 0.053 -
+                                       0.05 * (17000 - (24490 - 0.19778 * 62480)) -
+                                       480),
+           label = 'WI-4 itemized credit + married couple credit')
+
+  # WI-5: 2021 EITC by child count: HoH, 2 kids, federal EIC 5,000 ->
+  # 11% = 550 refundable. SD (HoH slide binds) 13,603.17; taxable
+  # 4,296.83 at 3.54%
+  run_case('WI', 2021,
+           list(agi = 20000, filing_status = 4, n_dep = 2, n_dep_eitc = 2,
+                dep_age1 = 6, dep_age2 = 9, wages1 = 20000, ei1 = 20000,
+                eitc = 5000),
+           expect = list(st_eitc = 550,
+                         liab_st_iit = (20000 - (14470 - 0.22515 * 3850) -
+                                        2100) * 0.0354 - 550),
+           label = 'WI-5 child-keyed EITC')
+
+  # WI-6: 2019 one-time rates + school property tax credit: single WI
+  # income 40,000, property taxes 3,000 -> credit min(360, 300) = 300;
+  # SD 7,939.20; taxable 31,360.80 at 3.86/5.04/6.27
+  run_case('WI', 2019,
+           list(agi = 40000, wages1 = 40000, ei1 = 40000, salt_prop = 3000),
+           expect = list(liab_st_iit = 11760 * 0.0386 + 11760 * 0.0504 +
+                                       (31360.8 - 23520) * 0.0627 - 300),
+           label = 'WI-6 2019 rates + school property tax credit')
+
+  # WI-7: 2019 $5,000 retirement exclusion at 65+ under the FAGI cliff:
+  # single 70, pension 14,000 (FAGI < 15,000) -> WI income 9,000; SD
+  # above income -> zero tax
+  run_case('WI', 2019,
+           list(agi = 14000, age1 = 70, txbl_pens_dist = 14000),
+           expect = list(st_agi = 9000, liab_st_iit = 0),
+           label = 'WI-7 retirement exclusion cliff')
+
+  #--------------------------------------------------------------------------
   # Structural smoke test: a coarse grid of units through every broad-IIT
   # baseline state and several years must produce finite, non-NA results
   #--------------------------------------------------------------------------
@@ -1510,7 +1590,7 @@ test_state_calc = function() {
     })
 
   for (st in c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI', 'CA', 'ND',
-               'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID', 'MN', 'MD')) {
+               'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID', 'MN', 'MD', 'WI')) {
     for (yr in c(2017, 2021, 2024, 2026, 2030)) {
       law_slice = law %>%
         filter(state == st, year == yr) %>%
@@ -1525,7 +1605,7 @@ test_state_calc = function() {
       )
     }
   }
-  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 20 states x 5 years)')
+  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 21 states x 5 years)')
 
   # Subset-states regression: a law table built WITHOUT a given state lacks
   # that state's feature columns entirely (not just NA cells); the calculator

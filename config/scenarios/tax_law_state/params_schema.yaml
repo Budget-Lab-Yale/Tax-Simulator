@@ -50,6 +50,7 @@ scalars:
   st_agi.pension_excl_min_age: .inf
   st_agi.pension_cap_incl_ss: 0
   st_agi.pension_excl_incl_ira: 1   # 0 = IRA distributions ineligible (MD)
+  st_agi.pension_excl_agi_limit: .inf   # AGI cliff for the exclusion (WI $5k at 65+)
   st_agi.pension_cap_less_gross_ss: 0   # cap reduced by GROSS SS received (MD)
   st_agi.sub_ui_agi_limit: .inf   # AGI cliff for the UI subtraction (MD RELIEF)
   # Two-income married couple subtraction (MD): the lesser earner's
@@ -154,6 +155,8 @@ scalars:
   st_ded.std_po_thresh: .inf
   st_ded.std_po_rate: 0
   st_ded.std_po_base: 2   # st_income_base enum (WI: state AGI)
+  st_ded.std_amount2: 0   # second sliding pair; deduction = max of the two (WI HoH floor)
+  st_ded.std_po_rate2: 0
   # Percent-of-income standard deduction (MD 15% of state AGI, bounded)
   st_ded.std_pct_rate: 0
   st_ded.std_pct_min: {default: 0, units: per_return}
