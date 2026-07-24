@@ -127,6 +127,21 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    fed-AGI → graduated fed-AGI → fed-taxable → own-base → federal-
    deductibility), CA first (CalEITC as the credit-schema acceptance test;
    CA CPI indexation series).
+   **MN encoded 2026-07-23** (28th jurisdiction, ~$15bn IIT — largest since
+   the pilots): eight new generic components (two-tier deduction
+   limitation incl. the standard deduction, share-based exemption
+   phase-out, sliding + stepped SS subtraction regimes with automatic
+   greater-of, non-itemizer charitable share, combined CTC+WFC credit
+   with joint phase-out, two-earner marriage credit on single-schedule
+   shares, dependent-care income cap, net-investment-income surtax).
+   Fed-taxable start 2017 → FAGI 2018+ (the switch was TY2018, not 2019);
+   the TY2018 TCJA-nonconformity year encoded as TCJA FAGI + MN's own
+   pre-TCJA stack — and it validates BEST of the TAXSIM years (67.3%
+   clean). Initial cross-model: TAXSIM 49-67% clean (base machinery
+   confirmed: median taxable wedge 0, exemptions to $6; residuals are
+   std-deduction detail, WFC schedule edges, credit point masses), PE
+   75-82% (2024 low = renter's credit, excluded by design). Tests
+   MN-1..MN-11.
    **PA + ID encoded 2026-07-23** (25 → 27 jurisdictions): PA is the first
    OWN-BASE state — new generic components landed for class-share bases
    with per-class loss floors (`st_agi.ob_*`, reusable for NJ/AL/AR/MS),
