@@ -51,6 +51,14 @@ KY:
 MI:
   profile: broad_iit
   enabled: true
+# MN conformity is fixed-date but updated regularly (Dec 31 2018 by the
+# 2019 act, May 1 2023 by the 2023 act); the current gap's AGI-level
+# footprint on PUF individuals is minimal (OBBBA marquee items are
+# below-AGI and MN carries its own deduction stack), so MN is modeled as
+# rolling (group 0) with the M1NC caveat documented in baseline/mn/agi.yaml
+MN:
+  profile: broad_iit
+  enabled: true
 NH:
   profile: narrow_investment_iit
   enabled: true

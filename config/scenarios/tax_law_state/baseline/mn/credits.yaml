@@ -1,0 +1,341 @@
+---
+# Minnesota: credits.
+#   - Working Family Credit 2017-2022 (290.0671, Schedule M1WFC): an
+#     independent EITC-analog encoded with the CalEITC-style triangular
+#     machinery -- phase-in rate x earned income up to a cap, phased out on
+#     the GREATER of earned income or AGI (the machinery's min-of-curves).
+#     Refundable. 2017-18 federal-EIC eligibility gate approximated by the
+#     age window alone [known-difference]; childless 64+ upper age limit
+#     unmodeled [known-difference].
+#   - 2023+ (HF1938, Schedule M1CWFC): combined CTC ($1,750 per child
+#     under 18) + WFC (4% of capped earned income + fixed older-child
+#     amounts) with ONE 12% joint phase-out (9% when no under-18 children)
+#     on max(earned income, AGI) -- the new cwfc machinery. Refundable;
+#     older children proxied by dependents aged 18-23; advance-payment/
+#     minimum-credit timing ignored [documented].
+#   - Marriage credit (290.0892, M1MA): joint-schedule tax less each
+#     spouse's single-schedule tax on imputed shares; nonrefundable.
+#   - Dependent care (290.067, M1CD): federal-formula credit capped above
+#     the income threshold at $600/person (max 2) less 5% of excess AGI;
+#     refundable. MN did NOT adopt the 2021 ARPA expansion -- our federal
+#     2021 credit is ARPA-law [known-difference, 2021 only].
+#   - Not modeled: K-12 education credit, student loan credit, 529 credit,
+#     past-military-service credit, long-term-care credit (data limits);
+#     renter's credit (2024+ ON the M1 via M1RENT -- no rent data;
+#     STRUCTURAL totals difference from 2024, PolicyEngine includes it).
+
+filing_status_mapper:
+  earned_credit_phaseout_start1:
+    '1': wfc_po_start_other1
+    '2': wfc_po_start_mfj1
+    '3': wfc_po_start_other1
+    '4': wfc_po_start_other1
+  earned_credit_phaseout_start2:
+    '1': wfc_po_start_other2
+    '2': wfc_po_start_mfj2
+    '3': wfc_po_start_other2
+    '4': wfc_po_start_other2
+  earned_credit_phaseout_start3:
+    '1': wfc_po_start_other3
+    '2': wfc_po_start_mfj3
+    '3': wfc_po_start_other3
+    '4': wfc_po_start_other3
+  earned_credit_phaseout_start4:
+    '1': wfc_po_start_other4
+    '2': wfc_po_start_mfj4
+    '3': wfc_po_start_other4
+    '4': wfc_po_start_other4
+  cwfc_po_thresh:
+    '1': cwfc_po_thresh_other
+    '2': cwfc_po_thresh_mfj
+    '3': cwfc_po_thresh_other
+    '4': cwfc_po_thresh_other
+
+# ---- Working Family Credit, 2017-2022 ----
+earned_credit_style:
+  value:
+    '2017': 1
+    '2023': 0
+  reference: 'Schedule M1WFC 2017-2022 (replaced by M1CWFC from 2023)'
+
+earned_credit_refundable:
+  value: 1
+  reference: 'M1WFC via Schedule M1REF, refundable all years'
+
+earned_credit_age_min:
+  value:
+    '2017': 25
+    '2019': 21
+  reference: '290.0671: childless age window 25-64 (2017-18, federal-EIC-coupled), expanded to 21-64 from 2019; the 64 upper limit is unmodeled [known-difference]'
+
+earned_credit_mfs_eligible:
+  value: 0
+  reference: 'M1WFC: MFS ineligible (federal EIC rule)'
+
+earned_credit_phasein_rate:
+  value:
+    '2017': [0.021, 0.0935, 0.11, 0.11]
+    '2019': [0.039, 0.0935, 0.11, 0.125]
+  reference: 'DOR WFC Computation Steps TY2017/2018 (3 tiers; 2+ children in slots 3-4) and TY2019/2021 (4 tiers, 0/1/2/3+ children)'
+
+earned_credit_max:
+  value:
+    '2017': [134, 1070, 2064, 2064]
+    '2018': [136, 1091, 2104, 2104]
+    '2019': [279, 1117, 2156, 2500]
+    '2020': [284, 1136, 2191, 2541]
+    '2021': [286, 1147, 2213, 2566]
+    '2022': [295, 1183, 2283, 2646]
+  reference: 'WFC maxima: DOR steps sheets 2017-2019/2021; 2020 booklet table plateaus; 2022 MN House Research sseitcwfc.pdf [secondary; UNVERIFIED]'
+
+earned_credit_phaseout_rate:
+  value:
+    '2017': [0.0201, 0.0602, 0.1082, 0.1082]
+    '2019': [0.02, 0.06, 0.105, 0.105]
+  reference: 'DOR WFC steps sheets: phase-out rates by child count'
+
+wfc_po_start_other1:
+  value:
+    '2017': 8360
+    '2018': 8530
+    '2019': 8730
+    '2020': 8870
+    '2021': 8960
+    '2022': 9240
+  reference: 'WFC phase-out starts, 0 children, non-MFJ (steps sheets / M1WFC line 4)'
+
+wfc_po_start_other2:
+  value:
+    '2017': 21800
+    '2018': 22230
+    '2019': 22770
+    '2020': 23150
+    '2021': 23380
+    '2022': 24110
+  reference: 'WFC phase-out starts, 1 child, non-MFJ'
+
+wfc_po_start_other3:
+  value:
+    '2017': 25850
+    '2018': 26360
+    '2019': 27000
+    '2020': 27450
+    '2021': 27720
+    '2022': 28590
+  reference: 'WFC phase-out starts, 2 children, non-MFJ'
+
+wfc_po_start_other4:
+  value:
+    '2017': 25850
+    '2018': 26360
+    '2019': 27300
+    '2020': 27750
+    '2021': 28030
+    '2022': 28900
+  reference: 'WFC phase-out starts, 3+ children, non-MFJ (3-tier years use the 2-child values)'
+
+wfc_po_start_mfj1:
+  value:
+    '2017': 13950
+    '2018': 14230
+    '2019': 14570
+    '2020': 14810
+    '2021': 14960
+    '2022': 15430
+  reference: 'WFC phase-out starts, 0 children, MFJ (non-MFJ + marriage offset)'
+
+wfc_po_start_mfj2:
+  value:
+    '2017': 27390
+    '2018': 27930
+    '2019': 28610
+    '2020': 29080
+    '2021': 29380
+    '2022': 30290
+  reference: 'WFC phase-out starts, 1 child, MFJ'
+
+wfc_po_start_mfj3:
+  value:
+    '2017': 31440
+    '2018': 32060
+    '2019': 32840
+    '2020': 33380
+    '2021': 33720
+    '2022': 34770
+  reference: 'WFC phase-out starts, 2 children, MFJ'
+
+wfc_po_start_mfj4:
+  value:
+    '2017': 31440
+    '2018': 32060
+    '2019': 33140
+    '2020': 33690
+    '2021': 34030
+    '2022': 35090
+  reference: 'WFC phase-out starts, 3+ children, MFJ'
+
+# ---- Combined CTC + WFC, 2023+ ----
+cwfc_style:
+  value:
+    '2017': 0
+    '2023': 1
+  reference: 'Schedule M1CWFC from TY2023 (HF1938; 290.0661/290.0671)'
+
+cwfc_ctc_amount:
+  value:
+    '2017': 0
+    '2023': 1750
+  reference: '290.0661: $1,750 per qualifying child under 18, no child limit (dependent slots track up to three -- data limit); not indexed through 2025 (DOR memo: statutory year 2025)'
+
+cwfc_ctc_max_age:
+  value: 17
+  reference: '290.0661: qualifying child under age 18'
+
+cwfc_wfc_rate:
+  value:
+    '2017': 0
+    '2023': 0.04
+  reference: 'M1CWFC: 4% of the first X of earned income'
+
+cwfc_wfc_earned_cap:
+  value:
+    '2017': 0
+    '2023': 8750
+    '2024': 9220
+    '2025': 9480
+  reference: 'M1CWFC lines 3-4 earned-income caps (max 4% credit 350/369/379)'
+
+cwfc_older_amounts:
+  value:
+    '2017': [0, 0, 0]
+    '2023': [925, 2100, 2500]
+    '2024': [970, 2210, 2630]
+    '2025': [1000, 2270, 2710]
+  reference: 'M1CWFC qualifying-older-child amounts by count (1/2/3+); older children proxied by dependents aged 18-23 [known-difference]'
+
+cwfc_po_rate:
+  value:
+    '2017': 0
+    '2023': 0.12
+  reference: '290.0661 subd. 4: combined credit reduced 12% of the greater of earned income or AGI over the threshold'
+
+cwfc_po_rate_older_only:
+  value:
+    '2017': 0
+    '2023': 0.09
+  reference: 'Same provision: 9% where there are no under-18 qualifying children (applied to older-only and childless units [childless rate UNVERIFIED])'
+
+cwfc_po_thresh_mfj:
+  value:
+    '2017': .inf
+    '2023': 35000
+    '2024': 36880
+    '2025': 37910
+  reference: 'M1CWFC phase-out thresholds, MFJ'
+
+cwfc_po_thresh_other:
+  value:
+    '2017': .inf
+    '2023': 29500
+    '2024': 31090
+    '2025': 31950
+  reference: 'M1CWFC phase-out thresholds, all other statuses'
+
+ctc_refundable:
+  value: 1
+  reference: 'M1CWFC fully refundable (Schedule M1REF)'
+
+# ---- Marriage credit ----
+mc_style:
+  value: 1
+  reference: 'Schedule M1MA (290.0892), all years 2017-2025'
+
+mc_min_lesser_income:
+  value:
+    '2017': 23000
+    '2019': 25000
+    '2021': 26000
+    '2023': 28000
+    '2024': 30000
+    '2025': 31000
+  reference: 'M1MA eligibility: lesser-earning spouse income minimum, per year'
+
+mc_min_joint_txbl:
+  value:
+    '2017': 38000
+    '2019': 39000
+    '2020': 40000
+    '2022': 42000
+    '2023': 44000
+    '2024': 47000
+    '2025': 48000
+  reference: 'M1MA eligibility: joint taxable income minimum, per year'
+
+mc_max:
+  value:
+    '2017': 1433
+    '2018': 1462
+    '2019': 1508
+    '2020': 1533
+    '2021': 1548
+    '2022': 1596
+    '2023': 1710
+    '2024': 1801
+    '2025': 1851
+  reference: 'M1MA maximum credit, per year (line 19 caps / DOR computation sheets)'
+
+mc_share_offset:
+  value:
+    '2017': 10400
+    '2018': 10650
+    '2019': 12200
+    '2020': 12400
+    '2021': 12525
+    '2022': 12900
+    '2023': 13825
+    '2024': 14575
+    '2025': 14950
+  reference: 'DOR Computation of the Marriage Credit (TY2017/TY2022): lesser earner''s share = earned income less half the MFJ standard deduction (2017-18: plus one personal exemption -- 12,700/2 + 4,050 and 13,000/2 + 4,150)'
+
+mc_single_brackets:
+  value:
+    '2017': [0, 25390, 83400, 156900]
+    '2018': [0, 25890, 85060, 160020]
+    '2019': [0, 26520, 87110, 161720]
+    '2020': [0, 26960, 88550, 164400]
+    '2021': [0, 27230, 89440, 166040]
+    '2022': [0, 28080, 92230, 171220]
+    '2023': [0, 30070, 98760, 183340]
+    '2024': [0, 31690, 104090, 193240]
+    '2025': [0, 32570, 106990, 198630]
+  reference: 'Single rate-schedule brackets (ord.yaml brackets_single), used for the M1MA single-schedule tax on each spouse''s imputed share'
+
+# ---- Dependent care ----
+cdctc_match:
+  value: 1
+  reference: '290.067 / Schedule M1CD: the federal-formula credit (federal expense caps and 35%-20% percentage), all years; MN did not adopt ARPA 2021 [known-difference for 2021]'
+
+cdctc_refundable:
+  value: 1
+  reference: 'M1CD refundable via Schedule M1REF, all years'
+
+cdctc_cap_amount:
+  value: 600
+  reference: 'M1CD: above the income threshold the credit is capped at $600 per qualifying person (max 2) less the phase-out'
+
+cdctc_cap_thresh:
+  value:
+    '2017': 50000
+    '2018': 50990
+    '2019': 52230
+    '2020': 53100
+    '2021': 53630
+    '2022': 55300
+    '2023': 59210
+    '2024': 62410
+    '2025': 64150
+  reference: 'M1CD income limits per year (DOR memos 290.067 subd. 1)'
+
+cdctc_cap_po_rate:
+  value: 0.05
+  reference: 'M1CD: cap reduced 5% of AGI over the threshold (fully gone 12,000/24,000 above)'

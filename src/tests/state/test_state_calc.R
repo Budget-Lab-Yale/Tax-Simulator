@@ -22,7 +22,7 @@ test_state_calc = function() {
   law = build_state_tax_law(
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
-                'PA', 'ID'),
+                'PA', 'ID', 'MN'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -1259,6 +1259,128 @@ test_state_calc = function() {
            label = 'ID-7 2021 HoH on married schedule + CTC')
 
   #--------------------------------------------------------------------------
+  # Minnesota (Form M1) -- fed-taxable start 2017 / FAGI 2018+, MN standard
+  # deduction with the high-income limitation, dependent exemptions, dual
+  # SS regimes, WFC/M1CWFC, marriage credit, M1CD cap, NIIT
+  #--------------------------------------------------------------------------
+
+  # MN-1: 2024 single, FAGI 50,000 wages. Std 14,575 -> taxable 35,425;
+  # tax = 5.35% x 31,690 + 6.80% x 3,735
+  run_case('MN', 2024, list(agi = 50000, wages1 = 50000, ei1 = 50000),
+           expect = list(st_ded = 14575,
+                         liab_st_iit = 31690 * 0.0535 + 3735 * 0.068),
+           label = 'MN-1 2024 basic')
+
+  # MN-2: 2017 federal-taxable start + SALT addback. Single itemizer,
+  # federal taxable 60,000, SALT income component 8,000 (< item - std) ->
+  # MN taxable 68,000; tax = 5.35% x 25,390 + 7.05% x 42,610
+  run_case('MN', 2017,
+           list(agi = 80000, txbl_inc = 60000, itemizing = 1,
+                item_ded = 20000, item_ded_ex_limits = 20000,
+                salt_item_ded = 8000, salt_inc_sales = 8000, std_ded = 6350),
+           expect = list(st_addback = 8000,
+                         liab_st_iit = 25390 * 0.0535 + 42610 * 0.0705),
+           label = 'MN-2 2017 taxable-income start + SALT addback')
+
+  # MN-3: 2018 nonconformity stack: TCJA FAGI + MN pre-TCJA deductions.
+  # MFJ, FAGI 100,000, 2 deps: std 13,000 + exemptions 4 x 4,150 = 16,600
+  # -> taxable 70,400; tax = 5.35% x 37,850 + 7.05% x 32,550
+  run_case('MN', 2018,
+           list(agi = 100000, filing_status = 2, age2 = 40, n_dep = 2,
+                dep_age1 = 5, dep_age2 = 9, wages1 = 100000, ei1 = 100000),
+           expect = list(st_ded = 13000, st_exempt = 16600,
+                         liab_st_iit = 37850 * 0.0535 + 32550 * 0.0705),
+           label = 'MN-3 2018 pre-TCJA stack on FAGI')
+
+  # MN-4: 2021 sliding SS subtraction: MFJ both 70, AGI 60,000 incl.
+  # taxable SS 20,000 (gross 25,000). Provisional = 40,000 + 12,500 =
+  # 52,500 < 80,270 -> full max 5,290 subtracted. Std 25,050 + 2 x 1,300
+  # aged; taxable = 54,710 - 27,650 = 27,060 x 5.35%
+  run_case('MN', 2021,
+           list(agi = 60000, filing_status = 2, age1 = 70, age2 = 70,
+                txbl_ss = 20000, gross_ss = 25000),
+           expect = list(st_agi = 60000 - 5290,
+                         liab_st_iit = 27060 * 0.0535),
+           label = 'MN-4 sliding SS subtraction + aged std add-ons')
+
+  # MN-5: 2024 simplified SS with stepped phase-out: single 68, AGI 90,000
+  # incl. taxable SS 30,000. Excess 7,810 over 82,190 -> 2 steps -> 80%
+  # share = 24,000 (beats the frozen sliding method's 2,910). Std 14,575 +
+  # 1,950 aged; taxable = 66,000 - 16,525 = 49,475
+  run_case('MN', 2024,
+           list(agi = 90000, age1 = 68, txbl_ss = 30000, gross_ss = 35000),
+           expect = list(st_agi = 66000,
+                         liab_st_iit = 31690 * 0.0535 + 17785 * 0.068),
+           label = 'MN-5 simplified SS stepped phase-out')
+
+  # MN-6: 2023 two-tier deduction limitation + exemption phase-out. MFJ
+  # wages/AGI 340,000, 2 deps. Std reduction = 3% x 84,320 + 10% x 35,030
+  # = 6,032.60 (< 80% cap) -> std 21,617.40. Exemptions 9,600 reduced 8%
+  # (4 steps x 2%) -> 8,832. Taxable 309,550.60
+  run_case('MN', 2023,
+           list(agi = 340000, filing_status = 2, age2 = 40, n_dep = 2,
+                dep_age1 = 5, dep_age2 = 9, wages1 = 340000, ei1 = 340000),
+           expect = list(st_ded = 27650 - 6032.6, st_exempt = 8832,
+                         liab_st_iit = 43950 * 0.0535 + 130660 * 0.068 +
+                                       130360 * 0.0785 + 4580.6 * 0.0985),
+           label = 'MN-6 two-tier limitation + exemption phase-out')
+
+  # MN-7: 2021 Working Family Credit: single, 2 kids, earned = AGI =
+  # 15,000: 11% phase-in -> 1,650 (< max 2,213, below phase-out).
+  # Deductions/exemptions zero the tax; refundable credit nets -1,650
+  run_case('MN', 2021,
+           list(agi = 15000, wages1 = 15000, ei1 = 15000, n_dep = 2,
+                n_dep_eitc = 2, dep_age1 = 8, dep_age2 = 10),
+           expect = list(st_earned_credit = 1650, liab_st_iit = -1650),
+           label = 'MN-7 WFC triangular schedule')
+
+  # MN-8: 2024 M1CWFC: MFJ, 2 kids under 18, earned = AGI = 50,000:
+  # 2 x 1,750 + 4% x 9,220 = 3,868.80, less 12% x (50,000 - 36,880) =
+  # 1,574.40 -> 2,294.40 refundable. Taxable = 50,000 - 29,150 - 10,100
+  # = 10,750 -> tax 575.125
+  run_case('MN', 2024,
+           list(agi = 50000, filing_status = 2, age2 = 40, n_dep = 2,
+                n_dep_ctc = 2, n_dep_eitc = 2, dep_age1 = 5, dep_age2 = 8,
+                wages1 = 30000, wages2 = 20000, ei1 = 30000, ei2 = 20000),
+           expect = list(st_ctc = 2294.4,
+                         liab_st_iit = 10750 * 0.0535 - 2294.4),
+           label = 'MN-8 M1CWFC combined credit')
+
+  # MN-9: 2022 marriage credit: MFJ earned 60,000/40,000, AGI 100,000.
+  # Taxable 74,200; share1 = 40,000 - 12,900 = 27,100 (single tax
+  # 1,449.85), share2 = 47,100 (single tax 2,795.64); joint tax 4,450.375
+  # -> credit 204.885, nonrefundable
+  run_case('MN', 2022,
+           list(agi = 100000, filing_status = 2, age2 = 40,
+                wages1 = 60000, wages2 = 40000, ei1 = 60000, ei2 = 40000),
+           expect = list(st_marriage_credit = 204.885,
+                         liab_st_iit = 4450.375 - 204.885),
+           label = 'MN-9 marriage credit')
+
+  # MN-10: 2024 NIIT + flat 80% deduction cut: single, AGI 2.1M (NII =
+  # 1.65M -> 1% x 650,000 = 6,500); AGI > 1,053,750 -> std = 20% x 14,575
+  run_case('MN', 2024,
+           list(agi = 2100000, wages1 = 450000, ei1 = 450000,
+                kg_lt = 1500000, div_ord = 100000, txbl_int = 50000),
+           expect = list(st_ded = 0.20 * 14575,
+                         liab_st_iit = 31690 * 0.0535 + 72400 * 0.068 +
+                                       89150 * 0.0785 + 1903845 * 0.0985 +
+                                       6500),
+           label = 'MN-10 NIIT + flat 80% limitation')
+
+  # MN-11: 2023 dependent care cap: MFJ AGI 70,000, federal CDCTC 1,200:
+  # cap = 1,200 - 5% x 10,790 = 660.50. M1CWFC fully phased out at this
+  # income (3,850 - 4,200 < 0). Taxable = 70,000 - 27,650 - 9,600
+  run_case('MN', 2023,
+           list(agi = 70000, filing_status = 2, age2 = 40, n_dep = 2,
+                n_dep_ctc = 2, n_dep_eitc = 2, dep_age1 = 5, dep_age2 = 8,
+                wages1 = 40000, wages2 = 30000, ei1 = 40000, ei2 = 30000,
+                care_exp = 6000, cdctc_nonref = 1200),
+           expect = list(st_cdctc = 660.5, st_ctc = 0,
+                         liab_st_iit = 32750 * 0.0535 - 660.5),
+           label = 'MN-11 dependent care cap')
+
+  #--------------------------------------------------------------------------
   # Structural smoke test: a coarse grid of units through every broad-IIT
   # baseline state and several years must produce finite, non-NA results
   #--------------------------------------------------------------------------
@@ -1290,7 +1412,7 @@ test_state_calc = function() {
     })
 
   for (st in c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI', 'CA', 'ND',
-               'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID')) {
+               'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID', 'MN')) {
     for (yr in c(2017, 2021, 2024, 2026, 2030)) {
       law_slice = law %>%
         filter(state == st, year == yr) %>%
@@ -1305,7 +1427,7 @@ test_state_calc = function() {
       )
     }
   }
-  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 18 states x 5 years)')
+  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 19 states x 5 years)')
 
   # Subset-states regression: a law table built WITHOUT a given state lacks
   # that state's feature columns entirely (not just NA cells); the calculator

@@ -52,6 +52,7 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
     'st_exempt.po_type',         # (int) 0 = cliff, 1 = stepped reduction
     'st_exempt.po_step',         # (dbl) income step size for po_type 1
     'st_exempt.po_reduction_per_step', # (dbl) reduction per step for po_type 1
+    'st_exempt.po_share_per_step', # (dbl) share of the gross exemption per step (MN 2%)
     'st_exempt.po_agi_base',     # (int) phase-out income base (st_income_base enum)
     'st_exempt.tier_income_base', # (int) tiered-amount income base (enum)
     'st_exempt.dep_filer_zero'   # (int) dependent filers get zero exemption (OH)
@@ -118,7 +119,11 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
           pmax(0, st_exempt_gross -
                   st_step_reduction(po_income, st_exempt.po_thresh,
                                     st_exempt.po_step,
-                                    st_exempt.po_reduction_per_step)),
+                                    st_exempt.po_reduction_per_step) -
+                  st_exempt_gross *
+                    pmin(1, st_step_reduction(po_income, st_exempt.po_thresh,
+                                              st_exempt.po_step,
+                                              st_exempt.po_share_per_step))),
         po_income > st_exempt.po_thresh ~ 0,
         TRUE ~ st_exempt_gross
       )

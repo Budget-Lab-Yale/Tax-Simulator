@@ -10,6 +10,7 @@ return_vars$calc_st_credits = c('st_hh_credit', 'st_eitc', 'st_ctc',
                                 'st_age_credit', 'st_retire_credit',
                                 'st_senior_credit', 'st_jfc',
                                 'st_forgive_credit', 'st_percap_credit',
+                                'st_marriage_credit',
                                 'st_credits_nonref', 'st_credits_ref')
 
 
@@ -77,6 +78,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   #   - st_jfc (dbl)            : joint filing credit (OH)
   #   - st_forgive_credit (dbl) : poverty-based forgiveness credit (PA)
   #   - st_percap_credit (dbl)  : per-person credit (ID grocery credit)
+  #   - st_marriage_credit (dbl): two-earner marriage credit (MN)
   #   - st_credits_nonref (dbl) : total nonrefundable credits
   #   - st_credits_ref (dbl)    : total refundable credits
   #----------------------------------------------------------------------------
@@ -88,6 +90,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'exempt_int',        # (dbl)  tax-exempt interest (PA forgiveness income)
     'alimony',           # (dbl)  alimony received (PA forgiveness income)
     'st_agi',            # (dbl)  state income base
+    'st_txbl_inc',       # (dbl)  state taxable income (MN marriage credit)
     'st_additions',      # (dbl)  additions to the federal AGI base
     'st_bid',            # (dbl)  business carve-out deduction (OH MAGI addback)
     'st_exempt',         # (dbl)  state exemption allowance (means-test bases)
@@ -146,7 +149,12 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.eitc_liab_cap_share',
     'st_credits.eitc_liab_cap_base',
     'st_credits.ctc_refundable',
-    'st_credits.percap_refundable'
+    'st_credits.percap_refundable',
+    'st_credits.mc_style',
+    'st_credits.mc_min_lesser_income',
+    'st_credits.mc_min_joint_txbl',
+    'st_credits.mc_max',
+    'st_credits.mc_share_offset'
   )
 
   tax_unit %<>%
@@ -197,6 +205,47 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                      0)
   }
 
+  # Two-earner marriage credit (MN Schedule M1MA, 290.0892): the joint
+  # MFJ-schedule tax on state taxable income, less the SINGLE-schedule tax
+  # on each spouse's imputed share -- the lesser earner's share is their
+  # earned income less the share offset (half the MFJ standard deduction;
+  # plus one exemption pre-2019), remainder to the other spouse. Both
+  # eligibility floors must be met; result floored at zero and capped at
+  # the published maximum. Earned income proxies the M1MA lines 1-5
+  # concept (taxable pension/SS elements unobserved; known-difference).
+  # The single-schedule brackets come in as the mc_single_brackets family
+  # (the unit's own st_ord.brackets are its filing-status-mapped MFJ
+  # schedule); rates are shared across statuses. Nonrefundable
+  st_marriage_credit = rep(0, nrow(tax_unit))
+  mc_br = st_family_matrix(tax_unit, 'st_credits.mc_single_brackets')
+  if (!is.null(mc_br)) {
+    mc_rt = st_family_matrix(tax_unit, 'st_ord.rates', 1:ncol(mc_br),
+                             require_sentinel = FALSE)
+    jt_br = st_family_matrix(tax_unit, 'st_ord.brackets', 1:ncol(mc_br),
+                             require_sentinel = FALSE)
+    mc_sched = function(y, br) {
+      upper = cbind(br[, -1, drop = FALSE], Inf)
+      upper[is.na(upper)] = Inf
+      rowSums(mc_rt * pmax(0, pmin(y, upper) - br), na.rm = TRUE)
+    }
+    mc_ei_lo  = pmin(pmax(0, tax_unit$ei1), pmax(0, tax_unit$ei2))
+    mc_share1 = pmax(0, pmin(mc_ei_lo - tax_unit$st_credits.mc_share_offset,
+                             tax_unit$st_txbl_inc))
+    mc_share2 = tax_unit$st_txbl_inc - mc_share1
+    mc_elig   = tax_unit$st_credits.mc_style == 1 &
+                tax_unit$filing_status == 2 &
+                mc_ei_lo >= tax_unit$st_credits.mc_min_lesser_income &
+                tax_unit$st_txbl_inc >= tax_unit$st_credits.mc_min_joint_txbl
+    st_marriage_credit = if_else(
+      mc_elig & !is.na(mc_br[, 1]),
+      pmin(tax_unit$st_credits.mc_max,
+           pmax(0, mc_sched(tax_unit$st_txbl_inc, jt_br) -
+                   mc_sched(mc_share1, mc_br) -
+                   mc_sched(mc_share2, mc_br))),
+      0
+    )
+  }
+
   # EITC liability-share limitation (OH 2017-18: above the income threshold,
   # the credit cannot exceed eitc_liab_cap_share of remaining pre-JFC tax)
   eitc_liab_income = st_income_base(tax_unit,
@@ -228,12 +277,13 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     st_jfc           = st_jfc,
     st_forgive_credit = earn$st_forgive_credit,
     st_percap_credit  = hh$st_percap_credit,
+    st_marriage_credit = st_marriage_credit,
 
     st_credits_nonref = hh$st_hh_credit + hh$prop_credit + child$st_dep_credit +
                         st_family_credit + hh$st_exempt_credit + st_pct_credit +
                         earn$st_cli + hh$st_ded_credit + senior$st_age_credit +
                         senior$st_retire_credit + senior$st_senior_credit +
-                        st_jfc + earn$st_forgive_credit +
+                        st_jfc + earn$st_forgive_credit + st_marriage_credit +
                         hh$st_percap_credit *
                           (1 - tax_unit$st_credits.percap_refundable) +
                         st_eitc * (1 - earn$st_eitc_ref_share) +

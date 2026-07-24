@@ -97,6 +97,10 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.item_prop_tax_cap',
     'st_ded.pease',           # (int) whether a pre-TCJA Pease limitation applies
     'st_ded.pease_thresh',    # (dbl) Pease AGI threshold (filing-status mapped)
+    'st_ded.pease_thresh2',   # (dbl) second-tier threshold (MN 2023+)
+    'st_ded.pease_rate2',     # (dbl) second-tier rate (MN 0.10)
+    'st_ded.pease_flat_thresh', # (dbl) AGI above which the flat 80% cut applies
+    'st_ded.pease_incl_std',  # (int) limitation also reduces the standard deduction
     'st_ded.item_limit_style', # (int) 1 = protected-component limitation
     'st_ded.item_limit_agi_base', # (int) limitation income base (st_income_base enum)
     'st_ded.item_limit_thresh', # (dbl) limitation threshold
@@ -139,6 +143,14 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # State deduction (AGI-start states: IL, NY, ...)
       #------------------------------------------------
 
+      # Income-based limitation amount shared by the itemized and (where
+      # flagged) standard deductions: 3% of AGI above the threshold, plus a
+      # second-tier rate above thresh2 (MN 2023+ two-tier structure); the
+      # 80% cap and the flat-80% override are applied at each use
+      pease_income_red = 0.03 * pmax(0, pmin(agi, st_ded.pease_thresh2) -
+                                        st_ded.pease_thresh) +
+                         st_ded.pease_rate2 * pmax(0, agi - st_ded.pease_thresh2),
+
       n_std_aged = (age1 >= 65) + (filing_status == 2 & !is.na(age2) & age2 >= 65),
       n_std_blind = coalesce(blind1, 0) +
                     (filing_status == 2 & coalesce(blind2, 0)),
@@ -157,6 +169,17 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
                    n_std_aged * st_ded.std_aged_addl +
                    n_std_blind * st_ded.std_blind_addl +
                    st_std_char_add,
+
+      # High-income limitation applied to the standard deduction itself
+      # (MN 290.0123 subd. 5, same tiers as the itemized limitation;
+      # 80% maximum reduction, flat 80% above the flat threshold)
+      st_std_ded = if_else(
+        st_ded.pease == 1 & st_ded.pease_incl_std == 1,
+        if_else(agi > st_ded.pease_flat_thresh,
+                0.20 * st_std_ded,
+                pmax(0.20 * st_std_ded, st_std_ded - pease_income_red)),
+        st_std_ded
+      ),
 
       # State itemized base: pre-limitation federal itemized, SALT component
       # replaced by uncapped property taxes (income/sales excluded where
@@ -186,12 +209,15 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       ),
 
       # Pre-TCJA Pease limitation (state-indexed thresholds; medical,
-      # investment interest, and casualty are protected)
+      # investment interest, and casualty are protected), extended with the
+      # MN 2023+ second tier and flat-80% override via pease_income_red
       pease_nonprot = pmax(0, st_item_base - med_item_ded - inv_int_item_ded -
                               casualty_item_ded),
       pease_red     = if_else(st_ded.pease == 1,
-                              pmin(0.03 * pmax(0, agi - st_ded.pease_thresh),
-                                   0.80 * pease_nonprot),
+                              if_else(agi > st_ded.pease_flat_thresh,
+                                      0.80 * pease_nonprot,
+                                      pmin(pease_income_red,
+                                           0.80 * pease_nonprot)),
                               0),
       st_item_lim   = pmax(0, st_item_base - pease_red),
 

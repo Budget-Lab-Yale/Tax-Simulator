@@ -30,7 +30,15 @@ st_credits_child_req_vars = c(
   'st_credits.fatc_young_age_limit',
   'st_credits.fatc_max_child_age',
   'st_credits.fatc_po_start',
-  'st_credits.fatc_po_zero'
+  'st_credits.fatc_po_zero',
+  'st_credits.cwfc_style',
+  'st_credits.cwfc_ctc_amount',
+  'st_credits.cwfc_ctc_max_age',
+  'st_credits.cwfc_wfc_rate',
+  'st_credits.cwfc_wfc_earned_cap',
+  'st_credits.cwfc_po_rate',
+  'st_credits.cwfc_po_rate_older_only',
+  'st_credits.cwfc_po_thresh'
 )
 
 
@@ -155,7 +163,47 @@ st_credits_child = function(tax_unit, st_eitc) {
   fatc = (tax_unit$st_credits.fatc_young_amount * n_fatc_young +
           tax_unit$st_credits.fatc_old_amount   * n_fatc_old) * fatc_factor
 
-  st_ctc = ctc_il + ctc_ny + ctc_co + fatc
+  # Combined child + working-family credit (MN Schedule M1CWFC, 2023+):
+  # ctc_amount per child under 18 (no child limit -- dependent slots cap
+  # tracked children at three, a documented data limit), plus wfc_rate on
+  # earned income up to the cap, plus a fixed amount keyed by the count of
+  # qualifying OLDER children (proxied by dependents aged max_age+1 to 23;
+  # student/disabled status unobserved), less ONE joint phase-out of
+  # po_rate (po_rate_older_only when no under-18 children) on the greater
+  # of earned income or AGI over the threshold. Refundable via
+  # ctc_refundable; MFS and dependent filers ineligible
+  cwfc = rep(0, n)
+  if (any(tax_unit$st_credits.cwfc_style == 1)) {
+    n_cwfc_young = st_n_dep_in(tax_unit, 0, tax_unit$st_credits.cwfc_ctc_max_age)
+    n_cwfc_older = pmin(3L, st_n_dep_in(tax_unit,
+                                        tax_unit$st_credits.cwfc_ctc_max_age + 1,
+                                        23))
+    older_amts = st_family_matrix(tax_unit, 'st_credits.cwfc_older_amounts',
+                                  1:3, require_sentinel = FALSE)
+    cwfc_older_amt = rep(0, n)
+    if (!is.null(older_amts)) {
+      ok = n_cwfc_older > 0 & !is.na(older_amts[, 1])
+      cwfc_older_amt[ok] = older_amts[cbind(which(ok), n_cwfc_older[ok])]
+    }
+    cwfc_earned = pmax(0, tax_unit$ei1) + pmax(0, tax_unit$ei2)
+    cwfc_base = tax_unit$st_credits.cwfc_ctc_amount * n_cwfc_young +
+      tax_unit$st_credits.cwfc_wfc_rate *
+        pmin(cwfc_earned, tax_unit$st_credits.cwfc_wfc_earned_cap) +
+      cwfc_older_amt
+    cwfc_po_rate = if_else(n_cwfc_young > 0,
+                           tax_unit$st_credits.cwfc_po_rate,
+                           tax_unit$st_credits.cwfc_po_rate_older_only)
+    cwfc = if_else(
+      tax_unit$st_credits.cwfc_style == 1 & tax_unit$dep_status != 1 &
+        tax_unit$filing_status != 3,
+      pmax(0, cwfc_base - cwfc_po_rate *
+                pmax(0, pmax(cwfc_earned, agi) -
+                        tax_unit$st_credits.cwfc_po_thresh)),
+      0
+    )
+  }
+
+  st_ctc = ctc_il + ctc_ny + ctc_co + fatc + cwfc
 
   # Dependent credit: separate qualifying-child and other-dependent
   # amounts, then a common percentage-point reduction for each $1,000 of

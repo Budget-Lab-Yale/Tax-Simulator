@@ -13,7 +13,10 @@ st_credits_care_req_vars = c(
   'st_credits.cdctc_rate_floor',
   'st_credits.cdctc_rate_po_per_1k',
   'st_credits.cdctc_rate_po_start',
-  'st_credits.cdctc_share_income_base'
+  'st_credits.cdctc_share_income_base',
+  'st_credits.cdctc_cap_amount',
+  'st_credits.cdctc_cap_thresh',
+  'st_credits.cdctc_cap_po_rate'
 )
 
 
@@ -71,6 +74,19 @@ st_credits_care = function(tax_unit) {
   )
   st_cdctc = tax_unit$st_credits.cdctc_match *
                (tax_unit$cdctc_nonref + tax_unit$cdctc_ref) + cdctc_ny
+
+  # Income-capped variant (MN M1CD): above the threshold, the credit is
+  # limited to cap_amount per qualifying person (up to two) less po_rate
+  # times the excess AGI (a cliff at the threshold, as the form computes)
+  st_cdctc = if_else(
+    is.finite(tax_unit$st_credits.cdctc_cap_thresh) &
+      tax_unit$agi > tax_unit$st_credits.cdctc_cap_thresh,
+    pmin(st_cdctc,
+         pmax(0, tax_unit$st_credits.cdctc_cap_amount * pmin(2, n_care_v) -
+                 tax_unit$st_credits.cdctc_cap_po_rate *
+                   (tax_unit$agi - tax_unit$st_credits.cdctc_cap_thresh))),
+    st_cdctc
+  )
 
   list(st_cdctc = st_cdctc)
 }

@@ -38,6 +38,13 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
     'filing_status',      # (int)  1 single, 2 MFJ, 3 MFS, 4 HoH
     'blind1',             # (bool) whether primary filer is blind
     'blind2',             # (bool) whether secondary filer is blind
+    'txbl_int',           # (dbl)  taxable interest (investment-income tax base)
+    'div_ord',            # (dbl)  ordinary dividends
+    'div_pref',           # (dbl)  qualified dividends
+    'kg_lt',              # (dbl)  long-term capital gains
+    'kg_st',              # (dbl)  short-term capital gains
+    'other_gains',        # (dbl)  other gains (Form 4797)
+    'rent',               # (dbl)  rental/royalty income
     'st_agi',             # (dbl)  state income base
     'st_exempt',          # (dbl)  state exemption allowance
     'st_txbl_inc',        # (dbl)  state taxable income
@@ -56,7 +63,9 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
     'st_surtax.taxable_income_rate', # (dbl) taxable-income surtax rate
     'st_surtax.taxable_income_round', # (int) whether to round the base to dollars
     'st_surtax.per_return_amount',   # (dbl) flat per-return excise on required filers
-    'st_surtax.per_return_blind_exempt' # (int) blind filers exempt from the excise
+    'st_surtax.per_return_blind_exempt', # (int) blind filers exempt from the excise
+    'st_surtax.inv_income_rate',     # (dbl) net-investment-income add-on rate (MN 1%)
+    'st_surtax.inv_income_thresh'    # (dbl) net-investment-income threshold (MN $1M)
   )
 
   tax_unit %>%
@@ -106,10 +115,21 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
       st_per_return_tax = st_surtax.per_return_amount *
         ((filer == 1 & st_filing.req_if_fed_filer == 1) | meets_income_test) *
         (1 - st_per_return_blind),
+
+      # Net-investment-income add-on tax (MN Schedule NIIT, 2024+): rate on
+      # investment income above the threshold. Base proxied by interest +
+      # dividends + positive net gains + positive rents (royalty/annuity
+      # detail and the agricultural-land carve-out are unobserved;
+      # known-difference)
+      st_nii = txbl_int + div_ord + div_pref +
+               pmax(0, kg_lt + kg_st + other_gains) + pmax(0, rent),
+      st_inv_income_tax = st_surtax.inv_income_rate *
+        pmax(0, st_nii - st_surtax.inv_income_thresh),
       liab_st_iit = if_else(
         st_programs.broad_iit == 1,
         pmax(0, st_tax_floored - st_credits_nonref) +
-          st_taxable_income_surtax + st_per_return_tax - st_credits_ref,
+          st_taxable_income_surtax + st_per_return_tax +
+          st_inv_income_tax - st_credits_ref,
         0
       ),
       st_filer = st_programs.broad_iit == 1 & (

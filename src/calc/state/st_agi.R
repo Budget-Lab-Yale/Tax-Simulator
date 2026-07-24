@@ -100,6 +100,11 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.ss_5564_agi_limit',     # (dbl) AGI limit for the 55-64 SS subtraction
     'st_agi.ss_full_sub_allages',   # (int) full SS subtraction at any age under AGI limit
     'st_agi.ss_allages_agi_limit',  # (dbl) AGI limit for the all-ages SS subtraction
+    'st_agi.ss_allages_po_step',    # (dbl) stepped phase-out step above the limit (MN)
+    'st_agi.ss_allages_po_share',   # (dbl) share lost per step (MN 0.10)
+    'st_agi.ss_partial_max',        # (dbl) sliding partial SS subtraction maximum (MN)
+    'st_agi.ss_partial_thresh',     # (dbl) provisional-income threshold (MN)
+    'st_agi.ss_partial_rate',       # (dbl) phase-out rate on provisional income (MN 0.20)
     'st_agi.ss_taxable_gross_cap_share', # (dbl) cap on taxable SS as share of gross (CT 0.25)
     'st_agi.pension_sub_share',     # (dbl) share of pension income subtracted (CT-style)
     'st_agi.ira_sub_share',         # (dbl) share of IRA distributions subtracted (CT-style)
@@ -123,6 +128,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.retirement_excl_65plus',  # (dbl) per-person cap at 65+
     'st_agi.retirement_excl_earned_cap', # (dbl) per-person portion usable for earned income
     'st_agi.sub_char_nonitem_floor', # (dbl) floor for non-itemizer charitable sub
+    'st_agi.sub_char_nonitem_share', # (dbl) share of the excess subtracted (MN 0.5)
     'st_agi.add_overtime_ded',      # (int) whether the federal OT deduction is added back
     'st_agi.cap_gains_excl_share',  # (dbl) share of net LT capital gain excluded
     'st_agi.div_excl_share',        # (dbl) share of qualified dividends excluded
@@ -278,15 +284,40 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       # Subtraction: state refunds included in the federal base
       st_sub_ref = st_agi.sub_state_ref * state_ref,
 
-      # Subtraction: Social Security. Full-subtraction share is the greater of
-      # the flat share (IL/NY = 1) and the CO-style age-conditional full
-      # subtraction; primary age proxies the unit
+      # Subtraction: Social Security. Full-subtraction share is the greater
+      # of the flat share (IL/NY = 1), the CO-style age-conditional full
+      # subtraction (primary age proxies the unit), and the all-ages
+      # subtraction -- which is a cliff at the AGI limit by default, or
+      # phases down po_share per po_step (or fraction) above the limit
+      # where a step is encoded (MN 2023+ simplified method: 10% per $4,000)
       ss_age_full   = (st_agi.ss_full_sub_65plus == 1 & age1 >= 65) |
                       (st_agi.ss_full_sub_5564 == 1 & age1 >= 55 & age1 < 65 &
-                       agi <= st_agi.ss_5564_agi_limit) |
-                      (st_agi.ss_full_sub_allages == 1 &
-                       agi <= st_agi.ss_allages_agi_limit),
-      ss_full_share = pmax(st_agi.ss_sub_share, as.integer(ss_age_full)),
+                       agi <= st_agi.ss_5564_agi_limit),
+      ss_allages_share = case_when(
+        st_agi.ss_full_sub_allages != 1           ~ 0,
+        agi <= st_agi.ss_allages_agi_limit        ~ 1,
+        is.finite(st_agi.ss_allages_po_step)      ~
+          pmax(0, 1 - st_agi.ss_allages_po_share *
+                      ceiling((agi - st_agi.ss_allages_agi_limit) /
+                                st_agi.ss_allages_po_step)),
+        TRUE                                      ~ 0
+      ),
+      ss_full_share = pmax(st_agi.ss_sub_share, as.integer(ss_age_full),
+                           ss_allages_share),
+
+      # Sliding partial SS subtraction (MN 2017-2022; the frozen 2023+
+      # alternative method): min(taxable SS, max amount less rate x excess
+      # of provisional income over the threshold), provisional income =
+      # AGI less taxable SS plus 50% of gross benefits plus exempt
+      # interest (M1M worksheet). The unit takes the better of this and
+      # the full-share path below (the statutory greater-of election)
+      ss_partial_provisional = agi - txbl_ss + 0.5 * gross_ss + exempt_int,
+      st_sub_ss_partial = pmin(
+        txbl_ss,
+        pmax(0, st_agi.ss_partial_max -
+                st_agi.ss_partial_rate *
+                  pmax(0, ss_partial_provisional - st_agi.ss_partial_thresh))
+      ),
 
       # CT-style cap on taxable SS as a share of gross benefits: above the
       # full-subtraction AGI limit, the CT-1040 SS Benefit Adjustment
@@ -300,7 +331,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
         pmax(0, txbl_ss - st_agi.ss_taxable_gross_cap_share * gross_ss),
         0
       ),
-      st_sub_ss_full = pmax(txbl_ss * ss_full_share, ss_cap_extra),
+      st_sub_ss_full = pmax(txbl_ss * ss_full_share, ss_cap_extra,
+                            st_sub_ss_partial),
 
       # Subtraction: pension/IRA exclusion. Per-person caps summed across
       # qualifying spouses (scalar or age-banded path, computed above).
@@ -460,11 +492,13 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       # Subtraction: unemployment benefits included in the federal base (VA)
       st_sub_ui = st_agi.sub_ui_share * pmax(0, ui),
 
-      # Subtraction: charitable contributions for federal non-itemizers in
-      # excess of the floor (CO)
+      # Subtraction: a share of charitable contributions for federal
+      # non-itemizers in excess of the floor (CO 100%; MN 50% -- MN keys on
+      # MN itemizing, proxied by the federal election [known-difference])
       st_sub_char = if_else(itemizing != 1 & is.finite(st_agi.sub_char_nonitem_floor),
-                            pmax(0, char_cash + char_noncash -
-                                    st_agi.sub_char_nonitem_floor),
+                            st_agi.sub_char_nonitem_share *
+                              pmax(0, char_cash + char_noncash -
+                                      st_agi.sub_char_nonitem_floor),
                             0),
 
       # Subtraction: partial exclusion of net long-term capital gain (ND 40%,

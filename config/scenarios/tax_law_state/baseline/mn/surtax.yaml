@@ -1,0 +1,18 @@
+---
+# Minnesota: net-investment-income tax (2024+; Schedule NIIT; Minn. Stat.
+# 290.033): 1% add-on tax on net investment income over $1,000,000
+# (interest, dividends, capital gains, rental/royalty; class 2a
+# agricultural-land gains excluded -- unobservable, known-difference).
+# Threshold encoded unindexed through 2025 [indexation UNVERIFIED].
+
+inv_income_rate:
+  value:
+    '2017': 0
+    '2024': 0.01
+  reference: '2024 M1 booklet What''s New; Schedule NIIT; Minn. Stat. 290.033 (1% over $1M, TY2024+)'
+
+inv_income_thresh:
+  value:
+    '2017': .inf
+    '2024': 1000000
+  reference: 'Same provision; unindexed through 2025 as encoded'
