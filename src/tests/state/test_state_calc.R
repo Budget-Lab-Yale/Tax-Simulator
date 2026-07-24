@@ -22,7 +22,7 @@ test_state_calc = function() {
   law = build_state_tax_law(
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
-                'PA', 'ID', 'MN'),
+                'PA', 'ID', 'MN', 'MD'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -1381,6 +1381,104 @@ test_state_calc = function() {
            label = 'MN-11 dependent care cap')
 
   #--------------------------------------------------------------------------
+  # Maryland (Form 502, state lines only) -- 15%-of-AGI std deduction,
+  # banded exemptions, pension exclusion less gross SS, EITC options,
+  # CTC, senior credit, 2025 brackets + capital-gains surtax
+  #--------------------------------------------------------------------------
+
+  # MD-1: 2024 single, FAGI 50,000. Std = clamp(7,500; 1,800-2,700) =
+  # 2,700; exemption 3,200 -> taxable 44,100; tax = 90 + 4.75% x 41,100
+  run_case('MD', 2024, list(agi = 50000, wages1 = 50000, ei1 = 50000),
+           expect = list(st_ded = 2700, st_exempt = 3200,
+                         liab_st_iit = 90 + 0.0475 * 41100),
+           label = 'MD-1 percent std deduction')
+
+  # MD-2: 2019 pension exclusion less GROSS SS: single 70, pension 30,000,
+  # gross SS 20,000 (taxable 10,000), FAGI 40,000. Exclusion = min(30,000,
+  # 31,100 - 20,000) = 11,100; MD AGI = 18,900; std = 2,250 (max);
+  # exemptions 3,200 + 1,000 aged -> taxable 12,450
+  run_case('MD', 2019,
+           list(agi = 40000, age1 = 70, txbl_pens_dist = 30000,
+                txbl_ss = 10000, gross_ss = 20000),
+           expect = list(st_agi = 18900,
+                         liab_st_iit = 90 + 0.0475 * 9450),
+           label = 'MD-2 pension exclusion with gross-SS offset')
+
+  # MD-3: 2023 exemption bands: MFJ FAGI 160,000, 2 deps -> $1,600 per
+  # exemption (150-175k band) x 4 = 6,400; std max 5,150; taxable 148,450
+  run_case('MD', 2023,
+           list(agi = 160000, filing_status = 2, age2 = 40, n_dep = 2,
+                dep_age1 = 8, dep_age2 = 10, wages1 = 160000, ei1 = 160000),
+           expect = list(st_exempt = 6400, st_ded = 5150,
+                         liab_st_iit = 90 + 0.0475 * 145450),
+           label = 'MD-3 banded exemption phase-down')
+
+  # MD-4: 2021 childless EITC (18A.1): single 30, federal EIC 1,000 ->
+  # 100% capped at 530, refundable. FAGI 15,000: taxable 9,550, tax
+  # 401.125 -> liab -128.875
+  run_case('MD', 2021,
+           list(agi = 15000, age1 = 30, wages1 = 15000, ei1 = 15000,
+                eitc = 1000),
+           expect = list(st_eitc = 530,
+                         liab_st_iit = (90 + 0.0475 * 6550) - 530),
+           label = 'MD-4 childless EITC capped')
+
+  # MD-5: 2023 EITC option choice: HoH, 2 kids, federal EIC 6,000, FAGI
+  # 25,000. Tax 500.875; alt (45% refundable = 2,700) beats the capped
+  # nonrefundable benefit -> refundable 2,700. CTC zero (FAGI > 15,000)
+  run_case('MD', 2023,
+           list(agi = 25000, filing_status = 4, n_dep = 2, n_dep_eitc = 2,
+                n_dep_ctc = 2, dep_age1 = 3, dep_age2 = 5, wages1 = 25000,
+                ei1 = 25000, eitc = 6000),
+           expect = list(st_eitc = 2700, st_ctc = 0,
+                         liab_st_iit = (90 + 0.0475 * 8650) - 2700),
+           label = 'MD-5 refundable EITC option + CTC cliff')
+
+  # MD-6: 2023 CTC eligible: single, 1 child age 2, FAGI 12,000 <= 15,000
+  # -> $500 refundable; EITC alt 45% x 3,000 = 1,350 beats min(tax, 1,500)
+  run_case('MD', 2023,
+           list(agi = 12000, n_dep = 1, n_dep_eitc = 1, n_dep_ctc = 1,
+                dep_age1 = 2, wages1 = 12000, ei1 = 12000, eitc = 3000),
+           expect = list(st_ctc = 500, st_eitc = 1350,
+                         liab_st_iit = (90 + 0.0475 * 800) - 1350 - 500),
+           label = 'MD-6 CTC under-6')
+
+  # MD-7: 2022 senior credit, one-65+ joint tier: MFJ 70/62, FAGI 80,000
+  # -> $1,000 (not 1,750); std 4,850, exemptions 6,400 + 1,000 aged
+  run_case('MD', 2022,
+           list(agi = 80000, filing_status = 2, age1 = 70, age2 = 62,
+                wages1 = 80000, ei1 = 80000),
+           expect = list(st_senior_credit = 1000,
+                         liab_st_iit = (90 + 0.0475 * 64750) - 1000),
+           label = 'MD-7 senior credit one-65 tier')
+
+  # MD-8: 2025 new brackets + 2% capital-gains surtax: single FAGI 1.5M
+  # (300k wages + 1.2M LTCG); flat std 3,350; exemptions 0. Tax at
+  # 1,496,650 = 58,385 + 6.5% x 496,650; surtax 2% x 1.2M
+  run_case('MD', 2025,
+           list(agi = 1500000, wages1 = 300000, ei1 = 300000,
+                kg_lt = 1200000),
+           expect = list(st_ded = 3350,
+                         liab_st_iit = 58385 + 0.065 * 496650 +
+                                       0.02 * 1200000),
+           label = 'MD-8 2025 brackets + capital-gains surtax')
+
+  # MD-9: 2019 two-income subtraction + itemized: MFJ 60k/40k wages,
+  # itemizers with 20,000 of MD-allowed components (mortgage 8,000 +
+  # charity 6,000 + property 6,000); MD AGI = 100,000 - 1,200; itemized
+  # beats std 4,550; taxable 72,400
+  run_case('MD', 2019,
+           list(agi = 100000, filing_status = 2, age2 = 40, wages1 = 60000,
+                wages2 = 40000, ei1 = 60000, ei2 = 40000, itemizing = 1,
+                item_ded = 24000, item_ded_ex_limits = 24000,
+                salt_item_ded = 10000, salt_prop = 6000,
+                salt_inc_sales = 7000, mort_int_item_ded = 8000,
+                char_item_ded = 6000, std_ded = 24400),
+           expect = list(st_agi = 98800, st_ded = 20000,
+                         liab_st_iit = 90 + 0.0475 * 69400),
+           label = 'MD-9 two-income subtraction + itemized')
+
+  #--------------------------------------------------------------------------
   # Structural smoke test: a coarse grid of units through every broad-IIT
   # baseline state and several years must produce finite, non-NA results
   #--------------------------------------------------------------------------
@@ -1412,7 +1510,7 @@ test_state_calc = function() {
     })
 
   for (st in c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI', 'CA', 'ND',
-               'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID', 'MN')) {
+               'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID', 'MN', 'MD')) {
     for (yr in c(2017, 2021, 2024, 2026, 2030)) {
       law_slice = law %>%
         filter(state == st, year == yr) %>%
@@ -1427,7 +1525,7 @@ test_state_calc = function() {
       )
     }
   }
-  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 19 states x 5 years)')
+  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 20 states x 5 years)')
 
   # Subset-states regression: a law table built WITHOUT a given state lacks
   # that state's feature columns entirely (not just NA cells); the calculator

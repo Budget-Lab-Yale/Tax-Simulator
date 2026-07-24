@@ -82,6 +82,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.std_char_floor',  # (dbl) charitable floor for the standard add-on
     'st_ded.item_allowed',    # (int) whether state itemized deductions exist
     'st_ded.item_coupling',   # (int) 0 independent, 1 must match federal
+    'st_ded.item_fed_gate',   # (int) federal itemizers only, best-of election (MD)
     'st_ded.salt_addback',    # (int) whether state income tax is excluded/added back
     'st_ded.item_component_style', # (int) 1 = select components; 2 = federal amount
     'st_ded.item_include_medical',
@@ -101,6 +102,12 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.pease_rate2',     # (dbl) second-tier rate (MN 0.10)
     'st_ded.pease_flat_thresh', # (dbl) AGI above which the flat 80% cut applies
     'st_ded.pease_incl_std',  # (int) limitation also reduces the standard deduction
+    'st_ded.std_po_thresh',   # (dbl) sliding std deduction phase-out start (WI)
+    'st_ded.std_po_rate',     # (dbl) reduction per dollar above the threshold
+    'st_ded.std_po_base',     # (int) phase-out income base (st_income_base enum)
+    'st_ded.std_pct_rate',    # (dbl) percent-of-income standard deduction rate (MD)
+    'st_ded.std_pct_min',     # (dbl) minimum (filing-status mapped)
+    'st_ded.std_pct_max',     # (dbl) maximum (filing-status mapped)
     'st_ded.item_limit_style', # (int) 1 = protected-component limitation
     'st_ded.item_limit_agi_base', # (int) limitation income base (st_income_base enum)
     'st_ded.item_limit_thresh', # (dbl) limitation threshold
@@ -136,6 +143,9 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
   item_limit_agi_v = st_income_base(tax_unit,
                                     tax_unit$st_ded.item_limit_agi_base)
 
+  # Sliding standard deduction phase-out income base (WI: state AGI)
+  std_po_income_v = st_income_base(tax_unit, tax_unit$st_ded.std_po_base)
+
   tax_unit %>%
     mutate(
 
@@ -170,6 +180,19 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
                    n_std_blind * st_ded.std_blind_addl +
                    st_std_char_add,
 
+      # Percent-of-income standard deduction (MD 10-217: 15% of state AGI
+      # bounded by filing-status min/max, 2017-2024; the 2025 flat amounts
+      # revert to std_amount with the rate zeroed)
+      st_std_ded = if_else(
+        st_ded.std_pct_rate > 0,
+        pmin(st_ded.std_pct_max,
+             pmax(st_ded.std_pct_min,
+                  st_ded.std_pct_rate * pmax(0, st_agi))) +
+          n_std_aged * st_ded.std_aged_addl +
+          n_std_blind * st_ded.std_blind_addl,
+        st_std_ded
+      ),
+
       # High-income limitation applied to the standard deduction itself
       # (MN 290.0123 subd. 5, same tiers as the itemized limitation;
       # 80% maximum reduction, flat 80% above the flat threshold)
@@ -179,6 +202,14 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
                 0.20 * st_std_ded,
                 pmax(0.20 * st_std_ded, st_std_ded - pease_income_red)),
         st_std_ded
+      ),
+
+      # Sliding standard deduction (WI 71.05(22)): reduced std_po_rate per
+      # dollar of the enum income base above the threshold, to zero (the
+      # threshold and rate are filing-status mapped in YAML)
+      st_std_ded = pmax(
+        0, st_std_ded - st_ded.std_po_rate *
+             pmax(0, std_po_income_v - st_ded.std_po_thresh)
       ),
 
       # State itemized base: pre-limitation federal itemized, SALT component
@@ -264,6 +295,9 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # federal election
       st_itemizing = case_when(
         st_ded.item_allowed == 0 ~ FALSE,
+        # MD: only federal itemizers MAY itemize, but they take the better
+        # of the state standard and itemized deductions
+        st_ded.item_fed_gate == 1 ~ itemizing == 1 & st_item_ded > st_std_ded,
         st_ded.item_coupling == 1 ~ itemizing == 1,
         TRUE                      ~ st_item_ded > st_std_ded
       ),

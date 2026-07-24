@@ -1,0 +1,17 @@
+---
+# Maryland: TY2025 2% net capital gain surtax (BRFA HB352; Form 502CG,
+# Form 502 lines 20a/21b): filers with FAGI > $350,000 pay 2% on net
+# capital gain income. The 502CG retirement-account/primary-residence
+# exceptions are unobserved [UNVERIFIED detail; known-difference].
+
+kg_rate:
+  value:
+    '2017': 0
+    '2025': 0.02
+  reference: 'BRFA of 2025 (HB352); 2025 booklet Instr. 16/17: "Multiply the amount on Line 20a by .02"'
+
+kg_agi_thresh:
+  value:
+    '2017': .inf
+    '2025': 350000
+  reference: '2025 booklet: applies when federal AGI exceeds $350,000'

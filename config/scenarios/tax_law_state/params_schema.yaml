@@ -49,6 +49,12 @@ scalars:
   st_agi.pension_excl_65plus: {default: 0, units: per_person}
   st_agi.pension_excl_min_age: .inf
   st_agi.pension_cap_incl_ss: 0
+  st_agi.pension_excl_incl_ira: 1   # 0 = IRA distributions ineligible (MD)
+  st_agi.pension_cap_less_gross_ss: 0   # cap reduced by GROSS SS received (MD)
+  st_agi.sub_ui_agi_limit: .inf   # AGI cliff for the UI subtraction (MD RELIEF)
+  # Two-income married couple subtraction (MD): the lesser earner's
+  # earned income up to the cap
+  st_agi.twoearner_sub_max: {default: 0, units: per_return}
   st_agi.retirement_excl_style: 0
   st_agi.retirement_excl_min_age: .inf
   st_agi.retirement_excl_under65: {default: 0, units: per_person}
@@ -123,6 +129,7 @@ scalars:
   st_ded.std_char_floor: 0
   st_ded.item_allowed: 0
   st_ded.item_coupling: 0
+  st_ded.item_fed_gate: 0   # itemizing allowed ONLY for federal itemizers, best-of election (MD)
   st_ded.salt_addback: 0
   st_ded.item_component_style: 0
   st_ded.item_include_medical: 0
@@ -142,6 +149,15 @@ scalars:
   st_ded.pease_rate2: 0        # second tier rate (MN 0.10)
   st_ded.pease_flat_thresh: .inf   # above: flat 80% reduction (MN $1M-indexed)
   st_ded.pease_incl_std: 0     # limitation also reduces the standard deduction (MN)
+  # Sliding standard deduction (WI 71.05(22)): reduced std_po_rate per
+  # dollar of the enum income base above the threshold, to zero
+  st_ded.std_po_thresh: .inf
+  st_ded.std_po_rate: 0
+  st_ded.std_po_base: 2   # st_income_base enum (WI: state AGI)
+  # Percent-of-income standard deduction (MD 15% of state AGI, bounded)
+  st_ded.std_pct_rate: 0
+  st_ded.std_pct_min: {default: 0, units: per_return}
+  st_ded.std_pct_max: .inf
   st_ded.item_limit_style: 0
   st_ded.item_limit_agi_base: 2
   st_ded.item_limit_thresh: .inf
@@ -205,10 +221,29 @@ scalars:
   # Net-investment-income add-on tax (MN 2024+: 1% over $1,000,000)
   st_surtax.inv_income_rate: 0
   st_surtax.inv_income_thresh: .inf
+  # Capital-gains surtax gated on federal AGI (MD 2025+: 2% over $350k FAGI)
+  st_surtax.kg_rate: 0
+  st_surtax.kg_agi_thresh: .inf
 
   # credits.yaml
   st_credits.eitc_match: 0
   st_credits.eitc_refundable: 1
+  # Childless-filer EITC override (MD 2021+: 100% of the federal EIC,
+  # capped, refundable, replacing both regular options)
+  st_credits.eitc_childless_match: 0
+  st_credits.eitc_childless_cap: .inf
+  # Two-earner credit (WI married couple credit): rate x the lesser
+  # earner's earned income, capped
+  st_credits.twoearner_rate: 0
+  st_credits.twoearner_max: 0
+  # Itemized-deduction credit (WI 71.07(5)): rate x the excess of the
+  # component sum (flags below) over the state standard deduction
+  st_credits.item_credit_rate: 0
+  st_credits.item_credit_incl_medical: 0
+  st_credits.item_credit_incl_mortgage: 0
+  st_credits.item_credit_incl_investment: 0
+  st_credits.item_credit_incl_charity: 0
+  st_credits.item_credit_incl_casualty: 0
   st_credits.eitc_match_alt: 0
   st_credits.eitc_refundable_alt: 0
   st_credits.eitc_wage_cap: 0   # cap the match at W-2 wages (UT 2023+)
@@ -248,6 +283,7 @@ scalars:
   st_credits.cdctc_rate_po_per_1k: 0
   st_credits.cdctc_rate_po_start: .inf
   st_credits.prop_tax_credit_rate: 0
+  st_credits.prop_tax_credit_rate_cap: .inf   # cap on the rate-style credit (WI $300)
   st_credits.credit_agi_limit: .inf
   st_credits.prop_tax_credit_max: 0
   st_credits.prop_tax_credit_po_thresh: .inf
@@ -297,6 +333,7 @@ scalars:
   st_credits.retire_credit_income_limit: .inf
   st_credits.retire_credit_income_base: 1   # st_income_base enum
   st_credits.senior_credit_amount: {default: 0, units: per_return}
+  st_credits.senior_credit_one65_amount: null   # NA: falls back to senior_credit_amount (MD joint one-spouse-65 tier)
   st_credits.senior_credit_min_age: 65
   st_credits.senior_credit_income_limit: .inf
   st_credits.senior_credit_income_base: 1   # st_income_base enum
@@ -429,6 +466,7 @@ extra_scalars:
 # family entirely, so calculators can test any(!is.na(col1))
 sentinels:
   - st_agi.pension_excl_band_ages1
+  - st_credits.eitc_match_by_kids1
   - st_credits.hh_agi_bounds_single1
   - st_credits.hh_agi_bounds_other1
   - st_credits.ctc_tier1_bound
@@ -478,5 +516,7 @@ families:
     consumer: st_credits_earned.R   # CalEITC-style child-count-binned params
   - pattern: '^st_credits\.cwfc_older_amounts\d*$'
     consumer: st_credits_child.R   # MN M1CWFC older-child amounts (1/2/3+)
+  - pattern: '^st_credits\.eitc_match_by_kids\d*$'
+    consumer: st_credits_earned.R   # child-count-keyed EITC match (WI/MD)
   - pattern: '^st_credits\.mc_single_brackets\d*$'
     consumer: st_credits.R   # MN marriage credit single-schedule brackets

@@ -41,7 +41,9 @@ st_credits_earned_req_vars = c(
   'st_credits.forgive_step_share',
   'st_credits.forgive_income_base',
   'st_credits.forgive_add_exempt_int',
-  'st_credits.forgive_add_alimony'
+  'st_credits.forgive_add_alimony',
+  'st_credits.eitc_childless_match',
+  'st_credits.eitc_childless_cap'
 )
 
 
@@ -180,13 +182,25 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
     -Inf
   )
 
+  # Child-count-keyed EITC match (WI 4/11/34% by children; MD childless
+  # match): where the by-kids family is encoded, it overrides the scalar
+  # match per row; slots are 0/1/2/3+ federal qualifying children
+  eitc_match_v = tax_unit$st_credits.eitc_match
+  match_kids = st_family_matrix(tax_unit, 'st_credits.eitc_match_by_kids')
+  if (!is.null(match_kids)) {
+    kid_slot = pmin(4L, 1L + coalesce(tax_unit$n_dep_eitc, 0L))
+    eitc_match_v = if_else(!is.na(match_kids[, 1]),
+                           st_pick_slot(match_kids, kid_slot),
+                           eitc_match_v)
+  }
+
   # State EITC: match on the federal credit, less the household credit
   # (capped at remaining tax) where flagged (NY IT-215 lines 13-16),
   # plus a flat per-return bonus for filers with a federal qualifying
   # child (CT Schedule CT-EITC line 15a, 2025+), capped at W-2 wages
   # where flagged (UT 59-10-1044 2023+ "earn income in Utah reported on
   # a W-2"; total wages proxy Utah-source wages -- known-difference)
-  st_eitc_main = pmax(0, tax_unit$st_credits.eitc_match * tax_unit$eitc -
+  st_eitc_main = pmax(0, eitc_match_v * tax_unit$eitc -
                          tax_unit$st_credits.eitc_less_household_credit *
                          pmin(st_hh_credit, pmax(0, tax_unit$st_tax_pre_credit))) +
                  tax_unit$st_credits.eitc_child_bonus *
@@ -217,6 +231,20 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   st_eitc_ref_share = if_else(st_eitc_use_alt,
                               tax_unit$st_credits.eitc_refundable_alt,
                               tax_unit$st_credits.eitc_refundable)
+
+  # Childless-filer EITC override (MD Worksheet 18A.1, 2021+): a separate
+  # match of the federal EIC, capped, fully refundable, REPLACING both
+  # regular options for non-joint filers without qualifying children
+  childless_gate = tax_unit$st_credits.eitc_childless_match > 0 &
+                   coalesce(tax_unit$n_dep_eitc, 0L) == 0 &
+                   tax_unit$eitc > 0 & tax_unit$filing_status != 2
+  st_eitc = if_else(
+    childless_gate,
+    pmin(tax_unit$st_credits.eitc_childless_match * tax_unit$eitc,
+         tax_unit$st_credits.eitc_childless_cap),
+    st_eitc
+  )
+  st_eitc_ref_share = if_else(childless_gate, 1, st_eitc_ref_share)
 
   # Credit for low-income individuals (VA Schedule ADJ Lines 10-17): a
   # flat amount per personal + dependent exemption (65+/blind add-ons

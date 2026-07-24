@@ -1,0 +1,109 @@
+---
+# Maryland: base and subtractions (Form 502; raw/md_research_core.md).
+# Federal AGI start, rolling conformity with automatic decoupling of
+# large-impact federal business provisions (Tax-Gen 10-108; 2025: three
+# OBBBA business items) -- individual side conforms; modeled rolling.
+
+start_point:
+  value: 1
+  reference: 'Form 502 line 1 = federal adjusted gross income, verified 2017-2025 booklets'
+
+documented_not_modeled:
+  conformity:
+    value: 0
+    reference: 'Tax-Gen 10-108 automatic decoupling (2025: OBBBA business provisions only; 500DM bonus-depreciation decoupling is business-side); individual AGI conforms -- modeled rolling group 0'
+  military_pension:
+    value: 0
+    reference: '502SU code u: military retirement 5,000/10,000 (2017), 5,000/15,000 at 55 (2018-22), 12,500/20,000 (2023+); military share of PUF pensions unobservable; omitted [known-difference, one-sided]'
+  public_safety_pension:
+    value: 0
+    reference: 'Hometown Heroes (code v / Worksheet 13E, correctional officers added by HB296 of 2018): $15,000 at 55+ for police/fire/EMS retirement; occupation unobservable; omitted [known-difference]'
+  dependent_aged_extra_exemption:
+    value: 0
+    reference: 'Form 502B: 65+ dependents get one extra (phased) $3,200 exemption; small population; omitted'
+  century_club:
+    value: 0
+    reference: 'Code ya: 100+ year olds subtract up to $100,000 (first seen 2025 booklet); omitted'
+
+add_exempt_int:
+  value: 1
+  reference: 'Form 502 line 6 addition: non-Maryland state/municipal bond interest, all years'
+
+own_state_exempt:
+  value: 1
+  reference: 'MD-source municipal interest not added back; own-state share unobserved, model convention 75% [known-difference]'
+
+sub_us_int:
+  value: 1
+  reference: '502SU code ab: US-obligation interest subtraction; PUF share unobserved [known-difference]'
+
+sub_state_ref:
+  value: 1
+  reference: 'Form 502 line 12: state/local income tax refunds included in FAGI subtracted, all years'
+
+# Social Security / Railroad Retirement: fully exempt
+ss_sub_share:
+  value: 1
+  reference: 'Form 502 line 11: entire federally taxed SS/RR amount subtracted ("exempt from state tax"), all years 2017-2025'
+
+# Pension exclusion (Tax-Gen 10-209; Worksheet 13A): per-person cap at
+# 65+, employee-retirement-plan income ONLY (IRA/SEP/Keogh excluded --
+# observable in the PUF), cap reduced dollar-for-dollar by GROSS SS/RR
+# received. Under-65 disabled eligibility unobservable [known-difference]
+pension_excl_65plus:
+  value:
+    '2017': 29900
+    '2018': 30600
+    '2019': 31100
+    '2020': 33100
+    '2021': 34300
+    '2023': 36200
+    '2024': 39500
+    '2025': 41200
+  reference: 'Worksheet 13A line 2 caps per year (Resident Booklets; 2022 = 34,300 unchanged). 2026+ carries 2025 [indexed in law]'
+
+pension_excl_under65:
+  value: 0
+  reference: 'Worksheet 13A: 65+ (or totally disabled -- unobservable) only'
+
+pension_excl_min_age:
+  value: 65
+  reference: 'Tax-Gen 10-209; Worksheet 13A eligibility'
+
+pension_excl_incl_ira:
+  value: 0
+  reference: '2021 booklet Instr. 13 line 10a: traditional/Roth IRA, SEP, Keogh explicitly NOT qualifying (same all years)'
+
+pension_cap_less_gross_ss:
+  value: 1
+  reference: 'Worksheet 13A line 2: cap less TOTAL SS/RR benefits received whether or not federally taxable; per-spouse SS attribution unobserved [known-difference]'
+
+# Two-income married couple subtraction (Worksheet 13D): lesser earner's
+# modified income up to $1,200, earned income proxying the attribution
+twoearner_sub_max:
+  value: 1200
+  reference: 'Form 502 line 14 / Worksheet 13D: up to $1,200, unchanged 2017-2025; TAXSIM implements it (probe-verified)'
+
+# RELIEF Act UI subtraction (SB496, Ch. 39 of 2021): full subtraction of
+# UI in FAGI for TY2020-2021, cliff-gated by FAGI
+filing_status_mapper:
+  sub_ui_agi_limit:
+    '1': ui_limit_single
+    '2': ui_limit_joint
+    '3': ui_limit_single
+    '4': ui_limit_joint
+
+sub_ui_share:
+  value:
+    '2017': 0
+    '2020': 1
+    '2022': 0
+  reference: 'RELIEF Act (SB496, 2021), retroactive to TY2020; 502SU code yy; expired after TY2021. MD-source UI requirement unobservable [known-difference]'
+
+ui_limit_single:
+  value: 75000
+  reference: 'RELIEF Act: FAGI < $75,000 for single/MFS/dependent (cliff)'
+
+ui_limit_joint:
+  value: 100000
+  reference: 'RELIEF Act: FAGI < $100,000 for MFJ/HoH/QSS (cliff)'

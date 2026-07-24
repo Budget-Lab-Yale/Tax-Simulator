@@ -1,0 +1,209 @@
+---
+# Maryland: deductions. TY2017-2024: standard deduction = 15% of MD AGI
+# bounded by filing-status min/max (Tax-Gen 10-217; indexed from 2019);
+# TY2025: flat amounts (BRFA HB352). Itemizing allowed ONLY for federal
+# itemizers, who take the better of the MD standard and MD itemized =
+# federal itemized less the income-tax component of (capped) SALT (Form
+# 502 line 17b; income-first cap allocation, documented assumption).
+# TY2025 adds a 7.5% phase-out of itemized deductions above $200k FAGI
+# (Worksheet 14A), encoded with the protected-component limitation
+# machinery (nothing protected).
+# Group A = single/MFS/dependent; Group B = MFJ/HoH/QSS (HoH gets the
+# JOINT bounds -- unusual, booklet-verified).
+
+filing_status_mapper:
+  std_pct_min:
+    '1': std_min_a
+    '2': std_min_b
+    '3': std_min_a
+    '4': std_min_b
+  std_pct_max:
+    '1': std_max_a
+    '2': std_max_b
+    '3': std_max_a
+    '4': std_max_b
+  std_amount:
+    '1': std_flat_a
+    '2': std_flat_b
+    '3': std_flat_a
+    '4': std_flat_b
+  item_prop_tax_cap:
+    '1': prop_cap_regular
+    '2': prop_cap_regular
+    '3': prop_cap_mfs
+    '4': prop_cap_regular
+  item_limit_thresh:
+    '1': item_limit_regular
+    '2': item_limit_regular
+    '3': item_limit_mfs
+    '4': item_limit_regular
+
+std_pct_rate:
+  value:
+    '2017': 0.15
+    '2025': 0
+  reference: 'Tax-Gen 10-217: 15% of Maryland AGI bounded, TY2017-2024; flat from TY2025 (BRFA HB352; 2025 booklet Instr. 16)'
+
+std_min_a:
+  value:
+    '2017': 1500
+    '2020': 1550
+    '2022': 1600
+    '2023': 1700
+    '2024': 1800
+    '2025': 0
+  reference: 'Instruction 16 minima, Group A (single/MFS/dependent), per year'
+
+std_max_a:
+  value:
+    '2017': 2000
+    '2018': 2250
+    '2020': 2300
+    '2021': 2350
+    '2022': 2400
+    '2023': 2550
+    '2024': 2700
+    '2025': .inf
+  reference: 'Instruction 16 maxima, Group A (2018 act raised and indexed from 2019, $50 rounding)'
+
+std_min_b:
+  value:
+    '2017': 3000
+    '2019': 3050
+    '2020': 3100
+    '2022': 3200
+    '2023': 3450
+    '2024': 3650
+    '2025': 0
+  reference: 'Instruction 16 minima, Group B (MFJ/HoH/QSS)'
+
+std_max_b:
+  value:
+    '2017': 4000
+    '2018': 4500
+    '2019': 4550
+    '2020': 4650
+    '2021': 4700
+    '2022': 4850
+    '2023': 5150
+    '2024': 5450
+    '2025': .inf
+  reference: 'Instruction 16 maxima, Group B'
+
+std_flat_a:
+  value:
+    '2017': 0
+    '2025': 3350
+  reference: '2025 booklet Instr. 16: flat $3,350 single/dependent/MFS (BRFA HB352)'
+
+std_flat_b:
+  value:
+    '2017': 0
+    '2025': 6700
+  reference: '2025 booklet Instr. 16: flat $6,700 MFJ/HoH/QSS'
+
+item_allowed:
+  value: 1
+  reference: 'Form 502 line 17; all years'
+
+item_fed_gate:
+  value: 1
+  reference: 'Instruction 16, all years: "You may itemize your deductions only if you itemized deductions on your federal return"; federal itemizers take the better of MD standard and MD itemized'
+
+item_coupling:
+  value: 0
+  reference: 'Superseded by item_fed_gate (best-of election within the federal-itemizer gate)'
+
+item_component_style:
+  value: 1
+  reference: 'MD itemized = federal itemized less line 17b state/local income taxes: components below (income/sales taxes excluded; property taxes capped at the federal SALT cap as the income-first allocation)'
+
+item_include_medical:
+  value: 1
+  reference: 'Federal Schedule A medical flows through line 17a'
+
+item_include_mortgage:
+  value: 1
+  reference: 'Federal Schedule A mortgage interest'
+
+item_include_investment:
+  value: 1
+  reference: 'Federal Schedule A investment interest'
+
+item_include_charity:
+  value: 1
+  reference: 'Federal Schedule A charitable'
+
+item_include_casualty:
+  value: 1
+  reference: 'Federal Schedule A casualty'
+
+item_include_misc:
+  value: 1
+  reference: 'Federal Schedule A miscellaneous (pre-TCJA years; zero after)'
+
+item_include_other:
+  value: 1
+  reference: 'Federal Schedule A other deductions'
+
+item_include_prop_tax:
+  value: 1
+  reference: 'Real estate taxes stay deductible (17b removes income taxes only)'
+
+item_include_pers_tax:
+  value: 1
+  reference: 'Personal property taxes stay deductible'
+
+item_include_income_sales_tax:
+  value: 0
+  reference: 'Form 502 line 17b: state and local income taxes deducted federally are removed (income-first allocation against the SALT cap -- ordering UNVERIFIED in the booklet, documented assumption)'
+
+prop_cap_regular:
+  value:
+    '2017': .inf
+    '2018': 10000
+    '2025': 40000
+  reference: 'Property taxes within the federal SALT cap ($10,000 2018-2024; $40,000 2025 via OBBBA conformity -- booklet FAQ)'
+
+prop_cap_mfs:
+  value:
+    '2017': .inf
+    '2018': 5000
+    '2025': 20000
+  reference: 'MFS SALT cap halves'
+
+# TY2025 itemized phase-out (Worksheet 14A): 7.5% of FAGI over the
+# threshold, nothing protected, may exhaust the deduction
+item_limit_style:
+  value:
+    '2017': 0
+    '2025': 1
+  reference: 'BRFA HB352; 2025 booklet Instr. 14 + Worksheet 14A'
+
+item_limit_agi_base:
+  value: 1
+  reference: 'Phase-out measured on federal AGI'
+
+item_limit_regular:
+  value:
+    '2017': .inf
+    '2025': 200000
+  reference: '2025 threshold, all statuses except MFS'
+
+item_limit_mfs:
+  value:
+    '2017': .inf
+    '2025': 100000
+  reference: '2025 threshold, MFS'
+
+item_limit_rate:
+  value:
+    '2017': 0
+    '2025': 0.075
+  reference: '7.5% of excess FAGI'
+
+item_limit_max_nonprotected_share:
+  value:
+    '2017': 0
+    '2025': 1
+  reference: 'No protected components; reduction may exhaust the deduction (floor at zero assumed -- UNVERIFIED beyond worksheet arithmetic)'

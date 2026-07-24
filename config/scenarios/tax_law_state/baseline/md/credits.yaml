@@ -1,0 +1,147 @@
+---
+# Maryland: credits (state lines only; local EITC/poverty credits ride the
+# county tax and are out of scope).
+#   - EITC (Tax-Gen 10-704): 50% of the federal EIC nonrefundable, OR the
+#     refundable option (p x federal EIC less state tax) -- the VA-style
+#     dual-option machinery reproduces the worksheet outcomes exactly.
+#     Childless non-joint filers (2021+): 100% of the federal EIC, capped,
+#     fully refundable, replacing both options (Worksheet 18A.1).
+#   - CTC (10-751): $500/child under 6 for FAGI <= $15,000 from 2023
+#     (SB552), 2025 phase-out $50 per $1,000 (BRFA). The 2021-2022
+#     disabled-child-only version (FAGI <= $6,000) is unobservable and
+#     de-minimis; omitted [documented].
+#   - Senior tax credit (SB405, 2022+): $1,000 single / $1,750 joint
+#     (joint with one 65+ spouse: $1,000), FAGI cliffs 100k/150k,
+#     nonrefundable.
+#   - Poverty level credit (10-709): 5% of earned income for sub-poverty
+#     households, nonrefundable -- binding only when tax exceeds 50% of
+#     the federal EIC; omitted as de-minimis [documented].
+
+filing_status_mapper:
+  senior_credit_amount:
+    '1': senior_amount_single
+    '2': senior_amount_joint
+    '3': senior_amount_single
+    '4': senior_amount_joint
+  senior_credit_income_limit:
+    '1': senior_limit_single
+    '2': senior_limit_joint
+    '3': senior_limit_single
+    '4': senior_limit_joint
+
+# 50% nonrefundable option
+eitc_match:
+  value: 0.5
+  reference: 'Form 502 line 22: 50% of the federal EIC, nonrefundable, all years 2017-2025'
+
+eitc_refundable:
+  value: 0
+  reference: 'Line 22 credit is nonrefundable (the refundable piece is the alt option)'
+
+# Refundable option (Worksheet 18A): p x federal EIC less state tax
+eitc_match_alt:
+  value:
+    '2017': 0.27
+    '2018': 0.28
+    '2020': 0.45
+  reference: 'Refundable EIC percentage: 27% (2017), 28% (2018-19), 45% TY2020-2022 (RELIEF Act SB496, retroactive), 45% permanent from 2023 (Family Prosperity Act SB552)'
+
+eitc_refundable_alt:
+  value: 1
+  reference: 'Worksheet 18A refundable option'
+
+# Childless non-joint filers, 2021+ (Worksheet 18A.1)
+eitc_childless_match:
+  value:
+    '2017': 0
+    '2021': 1
+  reference: 'SB218 (2021): 100% of the federal EIC for childless single/HoH/QSS filers, refundable; TY2020 applicability UNVERIFIED (first worksheet appearance TY2021)'
+
+eitc_childless_cap:
+  value:
+    '2017': .inf
+    '2021': 530
+    '2023': 600
+    '2024': .inf
+  reference: 'Caps: $530 (2021-22), $600 (2023), none 2024+ (booklets)'
+
+# MD CTC (10-751), modelable from 2023
+ctc_style:
+  value:
+    '2017': 0
+    '2023': 3
+  reference: 'Family Prosperity Act (SB552, 2023): $500 per child under 6, FAGI <= $15,000; refundable (502CR Part CC). 2021-22 disabled-child version omitted [unobservable, de-minimis]'
+
+ctc_young_amount:
+  value:
+    '2017': 0
+    '2023': 500
+  reference: '10-751: $500 per qualified child'
+
+ctc_min_child_age:
+  value: 0
+  reference: '10-751 (2023+): child under 6'
+
+ctc_max_child_age:
+  value: 5
+  reference: '10-751 (2023+): under 6 (the over-5 disabled category is unobservable; omitted)'
+
+ctc_po_thresh:
+  value:
+    '2017': .inf
+    '2023': 15000
+  reference: 'FAGI limit $15,000 (cliff 2023-24; phase-out start 2025)'
+
+ctc_po_rate:
+  value:
+    '2017': 0
+    '2023': 500
+    '2025': 0.05
+  reference: '2023-24: cliff (encoded as an immediate full reduction above the threshold); 2025 (BRFA): $50 per $1,000 of excess, gone at $24,001 (continuous approximation of the rounded-up step [documented])'
+
+ctc_po_base:
+  value: 1
+  reference: 'Phase-out on federal AGI'
+
+ctc_refundable:
+  value: 1
+  reference: '10-751: refundable (Worksheet 21C)'
+
+# Senior tax credit (SB405 of 2022), nonrefundable
+senior_amount_single:
+  value:
+    '2017': 0
+    '2022': 1000
+  reference: '2022+ booklets Instr. 18: $1,000 for 65+ single (MFS inclusion UNVERIFIED; encoded eligible)'
+
+senior_amount_joint:
+  value:
+    '2017': 0
+    '2022': 1750
+  reference: '$1,750 MFJ/QSS/HoH with both spouses 65+'
+
+senior_credit_one65_amount:
+  value:
+    '2017': 0
+    '2022': 1000
+  reference: 'Joint returns where only one spouse is 65+: $1,000'
+
+senior_credit_min_age:
+  value: 65
+  reference: 'SB405: residents age 65+'
+
+senior_credit_income_base:
+  value: 1
+  reference: 'FAGI cliffs'
+
+senior_limit_single:
+  value:
+    '2017': 0
+    '2022': 100000
+  reference: 'FAGI <= $100,000 (single tier)'
+
+senior_limit_joint:
+  value:
+    '2017': 0
+    '2022': 150000
+  reference: 'FAGI <= $150,000 (joint/HoH tier)'

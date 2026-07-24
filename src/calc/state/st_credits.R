@@ -10,7 +10,8 @@ return_vars$calc_st_credits = c('st_hh_credit', 'st_eitc', 'st_ctc',
                                 'st_age_credit', 'st_retire_credit',
                                 'st_senior_credit', 'st_jfc',
                                 'st_forgive_credit', 'st_percap_credit',
-                                'st_marriage_credit',
+                                'st_marriage_credit', 'st_twoearner_credit',
+                                'st_item_credit',
                                 'st_credits_nonref', 'st_credits_ref')
 
 
@@ -79,6 +80,8 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   #   - st_forgive_credit (dbl) : poverty-based forgiveness credit (PA)
   #   - st_percap_credit (dbl)  : per-person credit (ID grocery credit)
   #   - st_marriage_credit (dbl): two-earner marriage credit (MN)
+  #   - st_twoearner_credit (dbl): married couple credit (WI)
+  #   - st_item_credit (dbl)    : itemized-deduction credit (WI)
   #   - st_credits_nonref (dbl) : total nonrefundable credits
   #   - st_credits_ref (dbl)    : total refundable credits
   #----------------------------------------------------------------------------
@@ -154,7 +157,21 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.mc_min_lesser_income',
     'st_credits.mc_min_joint_txbl',
     'st_credits.mc_max',
-    'st_credits.mc_share_offset'
+    'st_credits.mc_share_offset',
+    'st_credits.twoearner_rate',
+    'st_credits.twoearner_max',
+    'st_credits.item_credit_rate',
+    'st_credits.item_credit_incl_medical',
+    'st_credits.item_credit_incl_mortgage',
+    'st_credits.item_credit_incl_investment',
+    'st_credits.item_credit_incl_charity',
+    'st_credits.item_credit_incl_casualty',
+    'st_std_ded',        # (dbl) state standard deduction (WI itemized credit)
+    'med_item_ded',      # (dbl) federal deductible medical (WI itemized credit)
+    'mort_int_item_ded', # (dbl) federal deductible mortgage interest
+    'inv_int_item_ded',  # (dbl) federal deductible investment interest
+    'char_item_ded',     # (dbl) federal deductible charitable
+    'casualty_item_ded'  # (dbl) federal deductible casualty losses
   )
 
   tax_unit %<>%
@@ -246,6 +263,30 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     )
   }
 
+  # Two-earner credit (WI married couple credit, 71.07(6)): rate times the
+  # lesser-earning spouse's earned income, capped; MFJ only, nonrefundable
+  st_twoearner_credit = if_else(
+    tax_unit$filing_status == 2 & tax_unit$st_credits.twoearner_rate > 0,
+    pmin(tax_unit$st_credits.twoearner_max,
+         tax_unit$st_credits.twoearner_rate *
+           pmin(pmax(0, tax_unit$ei1), pmax(0, tax_unit$ei2))),
+    0
+  )
+
+  # Itemized-deduction credit (WI 71.07(5)): rate times the excess of the
+  # selected federal-style components (no taxes) over the state standard
+  # deduction; nonrefundable. Component amounts use the federal-floor
+  # definitions (documented approximation)
+  st_item_credit = tax_unit$st_credits.item_credit_rate * pmax(
+    0,
+    tax_unit$st_credits.item_credit_incl_medical * tax_unit$med_item_ded +
+      tax_unit$st_credits.item_credit_incl_mortgage * tax_unit$mort_int_item_ded +
+      tax_unit$st_credits.item_credit_incl_investment * tax_unit$inv_int_item_ded +
+      tax_unit$st_credits.item_credit_incl_charity * tax_unit$char_item_ded +
+      tax_unit$st_credits.item_credit_incl_casualty * tax_unit$casualty_item_ded -
+      tax_unit$st_std_ded
+  )
+
   # EITC liability-share limitation (OH 2017-18: above the income threshold,
   # the credit cannot exceed eitc_liab_cap_share of remaining pre-JFC tax)
   eitc_liab_income = st_income_base(tax_unit,
@@ -278,12 +319,15 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     st_forgive_credit = earn$st_forgive_credit,
     st_percap_credit  = hh$st_percap_credit,
     st_marriage_credit = st_marriage_credit,
+    st_twoearner_credit = st_twoearner_credit,
+    st_item_credit    = st_item_credit,
 
     st_credits_nonref = hh$st_hh_credit + hh$prop_credit + child$st_dep_credit +
                         st_family_credit + hh$st_exempt_credit + st_pct_credit +
                         earn$st_cli + hh$st_ded_credit + senior$st_age_credit +
                         senior$st_retire_credit + senior$st_senior_credit +
                         st_jfc + earn$st_forgive_credit + st_marriage_credit +
+                        st_twoearner_credit + st_item_credit +
                         hh$st_percap_credit *
                           (1 - tax_unit$st_credits.percap_refundable) +
                         st_eitc * (1 - earn$st_eitc_ref_share) +

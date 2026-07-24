@@ -122,6 +122,10 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_exempt.personal_amount',    # (dbl) exemption feeders for the Tier-3 netting
     'st_exempt.dep_amount',         # (dbl)
     'st_agi.pension_cap_incl_ss',   # (int) whether taxable SS counts within the cap
+    'st_agi.pension_excl_incl_ira', # (int) whether IRA distributions are eligible (MD 0)
+    'st_agi.pension_cap_less_gross_ss', # (int) cap reduced by GROSS SS received (MD)
+    'st_agi.sub_ui_agi_limit',      # (dbl) AGI cliff for the UI subtraction (MD RELIEF)
+    'st_agi.twoearner_sub_max',     # (dbl) two-income couple subtraction cap (MD)
     'st_agi.retirement_excl_style', # (int) 1 = per-person earned/unearned exclusion
     'st_agi.retirement_excl_min_age', # (dbl) minimum age for broad exclusion
     'st_agi.retirement_excl_under65', # (dbl) per-person cap below 65
@@ -338,10 +342,16 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       # qualifying spouses (scalar or age-banded path, computed above).
       # Where SS shares the cap (CO): fully-subtracted SS reduces the cap
       # dollar-for-dollar; otherwise SS claims cap room first
-      pens_inc  = txbl_pens_dist + txbl_ira_dist,
+      pens_inc  = txbl_pens_dist +
+                  st_agi.pension_excl_incl_ira * txbl_ira_dist,
       cap1      = cap1_v,
       cap2      = cap2_v,
       pens_cap  = case_when(
+        # MD Worksheet 13A: the cap is reduced by GROSS SS/RR benefits
+        # received (whether or not federally taxable); per-spouse SS
+        # attribution is unobserved, so the unit's combined cap nets total
+        # gross benefits (documented approximation)
+        st_agi.pension_cap_less_gross_ss == 1 ~ pmax(0, cap1 + cap2 - gross_ss),
         st_agi.pension_cap_incl_ss == 0 ~ cap1 + cap2,
         ss_full_share >= 1              ~ pmax(0, cap1 + cap2 - txbl_ss),
         TRUE                            ~ cap1 + cap2
@@ -489,8 +499,21 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       ),
       st_sub_age = st_sub_age_pot * (1 - st_age_package_forgone),
 
-      # Subtraction: unemployment benefits included in the federal base (VA)
-      st_sub_ui = st_agi.sub_ui_share * pmax(0, ui),
+      # Subtraction: unemployment benefits included in the federal base
+      # (VA; MD RELIEF Act 2020-21 adds an AGI cliff)
+      st_sub_ui = st_agi.sub_ui_share * pmax(0, ui) *
+                  (agi < st_agi.sub_ui_agi_limit),
+
+      # Subtraction: two-income married couple (MD Form 502 line 14 /
+      # 10-207(y)): the lesser-earning spouse's income up to the cap,
+      # earned income proxying the form's income-attribution worksheet
+      st_sub_twoearner = if_else(
+        filing_status == 2,
+        pmin(st_agi.twoearner_sub_max,
+             pmax(0, pmin(pmax(0, wages1 + st_retir_other_earned / 2),
+                          pmax(0, wages2 + st_retir_other_earned / 2)))),
+        0
+      ),
 
       # Subtraction: a share of charitable contributions for federal
       # non-itemizers in excess of the floor (CO 100%; MN 50% -- MN keys on
@@ -525,7 +548,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       st_subtractions = st_sub_ref + st_sub_ss + st_sub_pens + st_sub_char +
                         st_retirement_excl + st_sub_capgain +
                         st_sub_retire_share + st_sub_age + st_sub_ui +
-                        st_sub_senior_inv + st_bid,
+                        st_sub_senior_inv + st_sub_twoearner + st_bid,
 
       # State income base
       st_agi = st_start + st_additions - st_subtractions

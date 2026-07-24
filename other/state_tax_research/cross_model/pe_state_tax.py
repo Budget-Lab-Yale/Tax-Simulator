@@ -66,6 +66,15 @@ PRIMARY_VARS = {
     "charitable_noncash": ["charitable_non_cash_donations"],
     "childcare_expenses": ["tax_unit_childcare_expenses", "childcare_expenses"],
 }
+# PE's generic state_income_tax INCLUDES local piggyback taxes for some
+# states. For MD, with no county input, PE defaults the county to
+# first-in-state (Allegany, ~3%), silently adding a county tax to every
+# record - so the MD comparison must use PE's state-only variable
+# (verified empirically 2026-07-24, see raw/md_research_core.md §11).
+STATE_ONLY_LIAB_VARS = {
+    "MD": "md_income_tax",
+}
+
 OUTPUT_VARS = {
     "pe_state_income_tax": ["state_income_tax"],
     "pe_wa_ltcg_excise": ["wa_capital_gains_tax"],
@@ -196,17 +205,23 @@ def main():
         sim = Simulation(situation=situation)
 
         liab = sim.calculate(liab_var, year)
+        state_only = {}
+        for st_code, var in STATE_ONLY_LIAB_VARS.items():
+            if any(r["state"] == st_code for r in batch):
+                state_only[st_code] = sim.calculate(var, year)
         extras = {}
         for out_col, var in extra_vars.items():
             extras[out_col] = sim.calculate(var, year) if var else [0.0] * len(batch)
 
         # tax_units insertion order == batch row order
         for i, row in enumerate(batch):
+            liab_i = (state_only[row["state"]][i]
+                      if row["state"] in state_only else liab[i])
             out = {
                 "rec_id": row["rec_id"],
                 "state": row["state"],
                 "year": year,
-                "pe_state_income_tax": round(float(liab[i]), 2),
+                "pe_state_income_tax": round(float(liab_i), 2),
             }
             for out_col in extra_vars:
                 out[out_col] = round(float(extras[out_col][i]), 2)

@@ -22,6 +22,7 @@ st_credits_senior_req_vars = c(
   'st_credits.retire_credit_income_limit',
   'st_credits.retire_credit_income_base',
   'st_credits.senior_credit_amount',
+  'st_credits.senior_credit_one65_amount',
   'st_credits.senior_credit_min_age',
   'st_credits.senior_credit_income_limit',
   'st_credits.senior_credit_income_base'
@@ -107,7 +108,19 @@ st_credits_senior = function(tax_unit) {
   senior_test_income = st_income_base(
     tax_unit, tax_unit$st_credits.senior_credit_income_base
   )
-  st_senior_credit = tax_unit$st_credits.senior_credit_amount *
+  # MD SB405 tier: a joint return where only ONE spouse meets the age test
+  # takes the (lower) one65 amount; defaults to the regular amount (NA)
+  senior_both_ok = tax_unit$filing_status == 2 &
+                   tax_unit$age1 >= tax_unit$st_credits.senior_credit_min_age &
+                   coalesce(tax_unit$age2, -1) >=
+                     tax_unit$st_credits.senior_credit_min_age
+  senior_amount = if_else(
+    tax_unit$filing_status == 2 & !senior_both_ok,
+    coalesce(tax_unit$st_credits.senior_credit_one65_amount,
+             tax_unit$st_credits.senior_credit_amount),
+    tax_unit$st_credits.senior_credit_amount
+  )
+  st_senior_credit = senior_amount *
     senior_age_ok *
     (senior_test_income < tax_unit$st_credits.senior_credit_income_limit)
 

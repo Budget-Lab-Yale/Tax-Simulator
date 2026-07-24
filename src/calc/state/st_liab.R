@@ -65,7 +65,10 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
     'st_surtax.per_return_amount',   # (dbl) flat per-return excise on required filers
     'st_surtax.per_return_blind_exempt', # (int) blind filers exempt from the excise
     'st_surtax.inv_income_rate',     # (dbl) net-investment-income add-on rate (MN 1%)
-    'st_surtax.inv_income_thresh'    # (dbl) net-investment-income threshold (MN $1M)
+    'st_surtax.inv_income_thresh',   # (dbl) net-investment-income threshold (MN $1M)
+    'st_surtax.kg_rate',             # (dbl) capital-gains surtax rate (MD 2%)
+    'st_surtax.kg_agi_thresh',       # (dbl) federal-AGI gate for the surtax (MD $350k)
+    'agi'                            # (dbl) federal AGI (surtax gate)
   )
 
   tax_unit %>%
@@ -125,11 +128,17 @@ calc_st_liab = function(tax_unit, fill_missings = F) {
                pmax(0, kg_lt + kg_st + other_gains) + pmax(0, rent),
       st_inv_income_tax = st_surtax.inv_income_rate *
         pmax(0, st_nii - st_surtax.inv_income_thresh),
+
+      # Capital-gains surtax gated on federal AGI (MD Form 502CG, 2025+:
+      # 2% of net capital gain when FAGI > $350k; the 502CG retirement-
+      # account/primary-residence exceptions are unobserved)
+      st_kg_surtax = st_surtax.kg_rate * pmax(0, kg_lt + kg_st) *
+                     (agi > st_surtax.kg_agi_thresh),
       liab_st_iit = if_else(
         st_programs.broad_iit == 1,
         pmax(0, st_tax_floored - st_credits_nonref) +
           st_taxable_income_surtax + st_per_return_tax +
-          st_inv_income_tax - st_credits_ref,
+          st_inv_income_tax + st_kg_surtax - st_credits_ref,
         0
       ),
       st_filer = st_programs.broad_iit == 1 & (

@@ -27,6 +27,7 @@ st_credits_household_req_vars = c(
   'st_credits.ded_credit_po_thresh',
   'st_credits.ded_credit_po_base',
   'st_credits.prop_tax_credit_rate',
+  'st_credits.prop_tax_credit_rate_cap',
   'st_credits.credit_agi_limit',
   'st_credits.prop_tax_credit_max',
   'st_credits.prop_tax_credit_po_thresh',
@@ -198,7 +199,8 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
                           tax_unit$st_credits.prop_tax_credit_po_step,
                           tax_unit$st_credits.prop_tax_credit_po_rate)
   )
-  prop_credit = tax_unit$st_credits.prop_tax_credit_rate * tax_unit$salt_prop *
+  prop_credit = pmin(tax_unit$st_credits.prop_tax_credit_rate * tax_unit$salt_prop,
+                     tax_unit$st_credits.prop_tax_credit_rate_cap) *
                 (agi <= tax_unit$st_credits.credit_agi_limit) +
                 pmin(tax_unit$salt_prop, tax_unit$st_credits.prop_tax_credit_max) *
                 prop_credit_ct_factor * prop_credit_ct_eligible
