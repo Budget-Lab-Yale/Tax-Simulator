@@ -154,7 +154,13 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    Credit, 10% federal match, refundable) and a TY2025 student-loan
    deduction; ID's CTC sunsets after TY2025. Worksheet tests PA-1..7b,
    ID-1..7 pass; cross-model triage started (see rollout tracker rows).
-5. **Phase 7 — later scope**: coupled federal↔state iteration + sales-tax
+5. **Data extensions/imputations** — scoped 2026-07-24 in
+   `state_data_imputation_plan.md`: tenure/rent/property-tax (homestead
+   family incl. the MN 2024+ on-form renter credit), pension source
+   split (the recurring elderly gap), household-resources income,
+   deferral wage-base, dependent detail — tiered, ACS-driven,
+   sequenced after the Phase 1 weights swap-in.
+6. **Phase 7 — later scope**: coupled federal↔state iteration + sales-tax
    election imputation; frozen-base mechanics for fixed-date conformity;
    locality weights from SOI county data (§2.6; NYC first); cross-border
    wage taxation via the LODES OD matrix; state MTRs and combined-MTR
