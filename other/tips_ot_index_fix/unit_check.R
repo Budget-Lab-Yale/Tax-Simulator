@@ -265,6 +265,20 @@ if (is.data.frame(base_parsed)) {
               class(sentinel)))
 }
 
+# --- (2a-iii) sentinel-then-resume must not trip the guard -------------------
+# public/ctc/wyden_smith sets i_measure NA at 2023 and back to chained_cpi at
+# 2026. cumprod() can't recover from the sentinel's NA, so the index stays NA
+# from 2023 on even though the 2026+ measure is live. That is pre-existing
+# behavior, not a broken chain -- the guard must stay quiet. (Found by the
+# 912-config sweep after a first version of the guard hard-stopped it.)
+for (d in c('./config/scenarios/tax_law/public/ctc/wyden_smith/indexation',
+            './config/scenarios/tax_law/public/ctc/wyden_smith/refund_amount')) {
+  res = tryCatch({ parse_config(d, years_ok, idx_ok); NA_character_ },
+                 error = function(e) conditionMessage(e))
+  check(sprintf('sentinel-then-resume parses (%s)', basename(d)),
+        is.na(res), if (is.na(res)) '' else as.character(res))
+}
+
 # --- (2a-ii) an unknown measure name IS a broken chain and must stop ---------
 # A typo'd series name produces an all-NA index and, pre-guard, silently
 # un-indexed the parameter. Distinguishable from the NA sentinel.
@@ -318,15 +332,25 @@ check('apply_indexation maps NA index to base_value (the averted bug)',
 reform_dirs = list.dirs('./config/scenarios/tax_law', recursive = TRUE) %>%
   keep(~ length(list.files(.x, pattern = '\\.ya?ml$')) > 0) %>%
   discard(~ .x == './config/scenarios/tax_law/baseline')
-cat(sprintf('\n  sweeping %d reform config dirs...\n', length(reform_dirs)))
+n_cores = max(1, as.integer(Sys.getenv('SLURM_CPUS_PER_TASK', '1')))
+cat(sprintf('\n  sweeping %d reform config dirs on %d cores...\n',
+            length(reform_dirs), n_cores))
 
-sweep = reform_dirs %>%
-  imap_dfr(function(d, i) {
-    if (i %% 100 == 0) cat(sprintf('    ...%d/%d\n', i, length(reform_dirs)))
+# Full coverage, forked across cores: each dir is an independent read+parse, so
+# there is no shared state to race on. Serially this is ~8s/dir (~2h).
+sweep = mclapply(reform_dirs, mc.cores = n_cores, FUN = function(d) {
     res = tryCatch({ parse_config(d, years_ok, idx_ok); NA_character_ },
                    error = function(e) conditionMessage(e))
     tibble(dir = d, err = res)
-  })
+  }) %>%
+  bind_rows()
+
+# mclapply returns a try-error object rather than throwing if a fork dies; a
+# short result would silently shrink coverage, so require every dir to report.
+if (nrow(sweep) != length(reform_dirs)) {
+  stop('sweep covered ', nrow(sweep), ' of ', length(reform_dirs),
+       ' dirs -- a forked worker died, results are incomplete')
+}
 failed = sweep %>% filter(!is.na(err))
 guard_failed = failed %>% filter(str_detect(err, 'Indexation series for subparameter'))
 

@@ -480,11 +480,27 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
   # An NA i_measure is NOT a broken chain -- it is the deliberate "stop
   # indexing as of this year" sentinel (e.g. ed.llc_po_thresh_single, frozen
   # from 2020 by TCJA), and the NA index it produces is exactly how that
-  # freeze is expressed. So only flag years whose measure names a live series.
+  # freeze is expressed. Two consequences for the guard:
+  #
+  #   1. Years whose own measure is NA are never flagged.
+  #   2. Neither is any LATER year, even one whose measure returns to a live
+  #      series (public/ctc/wyden_smith does exactly this: NA at 2023, back to
+  #      chained_cpi at 2026). cumprod() cannot recover from the sentinel's NA,
+  #      so the parameter stays unindexed from the sentinel year onward -- that
+  #      is pre-existing behavior this guard deliberately does not change. NB
+  #      it also means a "resume indexation later" config does not actually
+  #      resume; harmless where it appears today (the affected subparams carry
+  #      Inf values), but worth knowing before writing a new one.
+  #
+  # What is left to flag is the case the guard exists for: a chain broken by
+  # MISSING DATA -- a live measure with no growth rate for that year, i.e. the
+  # simulation running past the end of the index series, a gap in it, or a
+  # measure naming a series that isn't there at all.
   measure_is_live = !is.na(i_info$i_measure$value) &
     i_info$i_measure$value != 'NA'
+  sentinel_reached = cumsum(!measure_is_live) > 0
   na_index_years = i_info$i_measure %>%
-    filter(measure_is_live, year %in% years, is.na(index)) %>%
+    filter(measure_is_live, !sentinel_reached, year %in% years, is.na(index)) %>%
     pull(year) %>%
     unique() %>%
     sort()
