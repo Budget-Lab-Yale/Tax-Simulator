@@ -731,11 +731,26 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
       if (var %in% c('farm1', 'farm2')) {
         other_vars = c('farm')
       }
-      if (var %in% c('tips1', 'ot1')) {
-        other_vars = c('wages1', 'wages')
+
+      # Tips and OT are components of wages AND carry their own household-level
+      # aggregate column, so both must be decremented -- same set of columns the
+      # nextdollar branch increments above, and the same convention as the
+      # wages1/wages2 branches. No calculator currently reads the bare tips/ot
+      # aggregates (the deductions in below_ded.R and payroll in pr.R all read
+      # tips1/tips2 and ot1/ot2), so leaving them stale did not bias any MTR;
+      # keeping the record internally consistent means a calculator that does
+      # read them later won't silently inherit the bug.
+      if (var == 'tips1') {
+        other_vars = c('wages1', 'wages', 'tips')
       }
-      if (var %in% c('tips2', 'ot2')) {
-        other_vars = c('wages2', 'wages')
+      if (var == 'tips2') {
+        other_vars = c('wages2', 'wages', 'tips')
+      }
+      if (var == 'ot1') {
+        other_vars = c('wages1', 'wages', 'ot')
+      }
+      if (var == 'ot2') {
+        other_vars = c('wages2', 'wages', 'ot')
       }
       if (var %in% c('part_active', 'part_active_loss')) {
         other_vars = c('part_se1')

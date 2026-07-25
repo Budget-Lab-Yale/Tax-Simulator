@@ -341,10 +341,42 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
                           years = i_years, 
                           name  = names(i_info)))
   
-  # Create unified index series 
+  # Create unified index series
   i_info$i_measure %<>%
     left_join(indexes, by = c('value' = 'series', 'year')) %>%
-    mutate(index = cumprod(1 + growth)) %>%
+    mutate(index = cumprod(1 + growth))
+
+  # Hard-stop on a BROKEN index chain instead of silently un-indexing the
+  # parameter. cumprod() propagates NA forward from the first missing growth
+  # rate, and apply_indexation() maps an NA index to base_value -- so if the
+  # simulation window runs past the end of the index series (the
+  # Macro-Projections horizon), or the measure names a series that isn't in
+  # the index data at all, an indexed parameter snaps back to its raw nominal
+  # base-year value rather than freezing at its last projected level.
+  # Silently: a std deduction reverting toward $12,000.
+  #
+  # An NA i_measure is NOT a broken chain -- it is the deliberate "stop
+  # indexing as of this year" sentinel (e.g. ed.llc_po_thresh_single, frozen
+  # from 2020 by TCJA), and the NA index it produces is exactly how that
+  # freeze is expressed. So only flag years whose measure names a live series.
+  measure_is_live = !is.na(i_info$i_measure$value) &
+    i_info$i_measure$value != 'NA'
+  na_index_years = i_info$i_measure %>%
+    filter(measure_is_live, year %in% years, is.na(index)) %>%
+    pull(year) %>%
+    unique() %>%
+    sort()
+  if (length(na_index_years) > 0) {
+    stop('Indexation series for subparameter "', name, '" (measure "',
+         paste(unique(i_info$i_measure$value[measure_is_live]), collapse = '/'),
+         '") is NA in simulation year(s) ', paste(na_index_years, collapse = ', '),
+         '. Either the simulation window extends past the end of the index ',
+         'series, the series has a gap, or the measure names a series absent ',
+         'from the index data. An NA index silently reverts the parameter to ',
+         'its nominal base-year value.')
+  }
+
+  i_info$i_measure %<>%
     select(year, index)
   
   # Create series of indexation scaling factors. First, unnest list-cols

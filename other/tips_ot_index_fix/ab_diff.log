@@ -1,0 +1,36 @@
+
+The following have been reloaded with a version change:
+  1) GCCcore/13.3.0 => GCCcore/12.2.0
+  2) ICU/75.1-GCCcore-13.3.0 => ICU/72.1-GCCcore-12.2.0
+  3) OpenSSL/3 => OpenSSL/1.1
+  4) nodejs/24.12.0-GCCcore-13.3.0 => nodejs/20.11.1-GCCcore-12.2.0
+
+
+== detail-file MTR comparison ==
+  baseline/static/2026 record universe                             PASS
+  baseline/static/2026 MTRs identical (6 cols)                     PASS  [max |diff| 0.000e+00]
+  baseline/static/2026 liabilities identical (15 cols)             PASS
+  baseline/static/2027 record universe                             PASS
+  baseline/static/2027 MTRs identical (6 cols)                     PASS  [max |diff| 0.000e+00]
+  baseline/static/2027 liabilities identical (15 cols)             PASS
+  repeal_tips/static/2026 record universe                          PASS
+  repeal_tips/static/2026 MTRs identical (6 cols)                  PASS  [max |diff| 0.000e+00]
+  repeal_tips/static/2026 liabilities identical (15 cols)          PASS
+  repeal_tips/static/2027 record universe                          PASS
+  repeal_tips/static/2027 MTRs identical (6 cols)                  PASS  [max |diff| 0.000e+00]
+  repeal_tips/static/2027 liabilities identical (15 cols)          PASS
+  repeal_tips/conventional/2026 record universe                    PASS
+  repeal_tips/conventional/2026 MTRs identical (6 cols)            PASS  [max |diff| 0.000e+00]
+  repeal_tips/conventional/2026 liabilities identical (15 cols)    PASS
+  repeal_tips/conventional/2027 record universe                    PASS
+  repeal_tips/conventional/2027 MTRs identical (6 cols)            PASS  [max |diff| 0.000e+00]
+  repeal_tips/conventional/2027 liabilities identical (15 cols)    PASS
+
+== totals comparison ==
+  baseline/static totals identical (7 files)                       PASS
+  baseline/conventional totals identical (0 files)                 PASS
+  repeal_tips/static totals identical (7 files)                    PASS
+  repeal_tips/conventional totals identical (7 files)              PASS
+
+== 0 failure(s) ==
+A/B IDENTICAL -- fix is inert on current law, as claimed
