@@ -171,9 +171,18 @@ All passed. Plus a full pre/post `main.R` byte-diff on `tests/simplify_smoke`.
 
 ### 2.2 The MTR loop is 75% of a year-task and is trivially parallel
 
-`src/sim/run.R:645` (static pass) and `src/sim/run.R:995` (conventional pass)
-map `calc_mtrs` over `mtr_vars` with a serial `map2`. Each iteration is a full
-independent `do_taxes` recompute on a perturbed copy of the frame.
+**Status: done 2026-07-25 (two-core trial).** Year workers now request two
+cores / 24 GB and `run_mtr_block()` uses the allocation for a forked MTR pool;
+local scenario/year parallelism stays single-core inside each outer fork.
+A paired full-sample, 10-MTR static worker benchmark on one node measured
+36.5s serial vs 25.0s two-core (**31.3% less wall time**, 1.46x), with strict
+`identical()` results, MTRs and totals and byte-identical detail CSVs in both
+rounds. Peak RSS was 7.7 GB. Harness:
+`other/performance/benchmark_mtr_parallel.{R,sbatch}`.
+
+Before this change, the static and conventional passes mapped `calc_mtrs` over
+`mtr_vars` with a serial `map2`. Each iteration is a full independent
+`do_taxes` recompute on a perturbed copy of the frame.
 
 Purity was verified, not assumed:
 
@@ -452,9 +461,9 @@ output).
    §2.5 memoize the distribution microdata is the remaining half of this line —
    small, safe, pure waste elimination.
 4. §2.4 per-scenario DAG chains — wall clock only, no CPU cost, no results risk.
-5. §2.2 fork the MTR loop — the largest remaining item by share of a year-task
-   (75%), verified fork-safe; needs a `--mem` bump and `mclapply` error handling.
-   Buys wall clock, not CPU-hours.
+5. ~~§2.2 fork the MTR loop~~ — **DONE 2026-07-25, 31.3% less worker wall
+   time with two cores, strict/byte-identical outputs.** Buys wall clock, not
+   CPU-hours.
 6. §2.5 fan out the Phase 3b products.
 7. §2.8 MTR frame-stacking — reduces CPU-hours rather than wall clock, but
    invasive; only if the above prove insufficient.

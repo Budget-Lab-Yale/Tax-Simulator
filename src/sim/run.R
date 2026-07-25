@@ -401,6 +401,34 @@ calc_one_mtr = function(frame, actuals, var, baseline_pr_er = NULL,
 
 
 
+mtr_worker_count = function(n_tasks) {
+
+  #----------------------------------------------------------------------------
+  # Resolves the number of local workers available to the independent MTR
+  # recomputes. SLURM exposes the allocation through SLURM_CPUS_PER_TASK;
+  # TAXSIM_MTR_CORES is an explicit override for focused local/benchmark runs.
+  #
+  # Do not introduce a second fork layer under main.R's scenario/year
+  # parallelism. SLURM workers set globals$multicore = 'none', so they can use
+  # their within-task CPU allocation safely.
+  #----------------------------------------------------------------------------
+
+  if (.Platform$OS.type == 'windows' || globals$multicore != 'none') {
+    return(1L)
+  }
+
+  requested = Sys.getenv(
+    'TAXSIM_MTR_CORES',
+    unset = Sys.getenv('SLURM_CPUS_PER_TASK', unset = '1')
+  )
+  requested = suppressWarnings(as.integer(requested))
+  if (is.na(requested) || requested < 1L) requested = 1L
+
+  min(as.integer(n_tasks), requested)
+}
+
+
+
 run_mtr_block = function(taxed, scenario_info, year, baseline_pr_er) {
 
   #----------------------------------------------------------------------------
@@ -435,21 +463,70 @@ run_mtr_block = function(taxed, scenario_info, year, baseline_pr_er) {
   actuals = mtr_actuals(taxed)
   frame   = strip_calc_vars(taxed)
 
-  mtrs = scenario_info$mtr_vars %>%
-    map2(.y = scenario_info$mtr_types,
-         .f = ~ calc_mtrs(
-           tax_units            = frame,
-           actual_liab_iit      = actuals$liab_iit,
-           actual_liab_pr       = actuals$liab_pr,
-           actual_liab_wealth   = actuals$liab_wealth,
-           actual_liab_estate   = actuals$liab_estate,
-           actual_estate_p_dsue = actuals$estate_p_dsue,
-           baseline_pr_er       = baseline_pr_er,
-           var                  = .x,
-           pr                   = F,
-           type                 = .y
-         )
-    ) %>%
+  calc_one = function(var, type) {
+    calc_mtrs(
+      tax_units            = frame,
+      actual_liab_iit      = actuals$liab_iit,
+      actual_liab_pr       = actuals$liab_pr,
+      actual_liab_wealth   = actuals$liab_wealth,
+      actual_liab_estate   = actuals$liab_estate,
+      actual_estate_p_dsue = actuals$estate_p_dsue,
+      baseline_pr_er       = baseline_pr_er,
+      var                  = var,
+      pr                   = F,
+      type                 = type
+    )
+  }
+
+  n_workers = mtr_worker_count(length(scenario_info$mtr_vars))
+  if (n_workers == 1L) {
+    mtr_parts = map2(scenario_info$mtr_vars, scenario_info$mtr_types, calc_one)
+  } else {
+    cat(paste0('Calculating ', length(scenario_info$mtr_vars), ' MTRs with ',
+               n_workers, ' local workers\n'))
+
+    # Return errors as data so the parent can report the exact failed MTR.
+    # mclapply otherwise warns and embeds a try-error that is easy to overlook.
+    mtr_parts = parallel::mclapply(
+      X = seq_along(scenario_info$mtr_vars),
+      FUN = function(i) {
+        tryCatch(
+          list(ok = TRUE,
+               value = calc_one(scenario_info$mtr_vars[i],
+                                scenario_info$mtr_types[i])),
+          error = function(e) list(ok = FALSE, error = conditionMessage(e))
+        )
+      },
+      mc.cores       = n_workers,
+      mc.preschedule = TRUE,
+      mc.set.seed    = FALSE
+    )
+
+    failed = which(vapply(
+      mtr_parts,
+      function(x) inherits(x, 'try-error') || !is.list(x) || !isTRUE(x$ok),
+      logical(1)
+    ))
+    if (length(failed) > 0) {
+      i = failed[1]
+      detail = if (is.list(mtr_parts[[i]]) &&
+                   !is.null(mtr_parts[[i]]$error)) {
+                 mtr_parts[[i]]$error
+               } else {
+                 as.character(mtr_parts[[i]])
+               }
+      stop('Parallel MTR worker failed for var=', scenario_info$mtr_vars[i],
+           ', type=', scenario_info$mtr_types[i], ': ', detail)
+    }
+    mtr_parts = map(mtr_parts, 'value')
+  }
+
+  # Fork results cross a serialization boundary, while the one-core results do
+  # not. Rebuild each one-column tibble from its bare vector so irrelevant
+  # serialization-only dataframe attributes cannot differ between the paths.
+  mtr_parts = map(mtr_parts, ~ as_tibble(set_names(list(.x[[1]]), names(.x))))
+
+  mtrs = mtr_parts %>%
     bind_cols() %>%
     mutate(id   = taxed$id,
            year = year) %>%

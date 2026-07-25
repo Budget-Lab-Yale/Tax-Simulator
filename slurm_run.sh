@@ -79,8 +79,10 @@ echo "  Counterfactual scenarios: ${N_SCENARIOS}"
 echo "  Stacked: ${STACKED}"
 echo ""
 
-# Common sbatch flags
+# Common sbatch flags. Year workers get two cores for the independent MTR
+# recomputes; sequential pre/post-processing jobs remain single-core.
 SBATCH_COMMON="--partition=day -c 1"
+SBATCH_YEAR="--partition=day -c 2"
 
 
 #-------------------------------------------
@@ -91,7 +93,7 @@ P1_DEP=""
 if [ "$N_PHASE1" -gt 0 ]; then
   echo "Phase 1: Submitting ${N_PHASE1} baseline year jobs..."
   P1=$(sbatch --parsable --array=1-${N_PHASE1} \
-    ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
+    ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
     --job-name=taxsim-baseline \
     --output="${STAGING_DIR}/logs/p1_%A_%a.log" \
     --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
@@ -141,7 +143,7 @@ P2A_DEP=""
 if [ "$N_PHASE2A" -gt 0 ]; then
   echo "Phase 2A: Submitting ${N_PHASE2A} CF static-only year jobs..."
   P2A=$(sbatch --parsable --array=1-${N_PHASE2A} ${P2A_PRE_DEP} \
-    ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
+    ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
     --job-name=taxsim-cf-static \
     --output="${STAGING_DIR}/logs/p2a_%A_%a.log" \
     --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
@@ -184,7 +186,7 @@ P2N_ID=""
 if [ "$N_PHASE2N" -gt 0 ]; then
   echo "Phase 2N: Submitting ${N_PHASE2N} CF conv-no-wealth year jobs..."
   P2N=$(sbatch --parsable --array=1-${N_PHASE2N} ${P2B_DEP} \
-    ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
+    ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
     --job-name=taxsim-cf-convnw \
     --output="${STAGING_DIR}/logs/p2n_%A_%a.log" \
     --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
@@ -248,7 +250,7 @@ P2C_DEP=""
 if [ "$N_PHASE2C" -gt 0 ]; then
   echo "Phase 2C: Submitting ${N_PHASE2C} CF conventional-only year jobs..."
   P2C=$(sbatch --parsable --array=1-${N_PHASE2C} ${P2C_PRE_DEP} \
-    ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
+    ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
     --job-name=taxsim-cf-conv \
     --output="${STAGING_DIR}/logs/p2c_%A_%a.log" \
     --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
