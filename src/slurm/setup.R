@@ -268,6 +268,79 @@ saveRDS(return_vars,        file.path(staging_dir, 'return_vars.rds'))
 saveRDS(counterfactual_ids, file.path(staging_dir, 'counterfactual_ids.rds'))
 saveRDS(manifest,           file.path(staging_dir, 'manifest.rds'))
 
+# Shell-facing submission map. Each phase keeps its existing global manifest
+# indices, but slurm_run.sh submits only the contiguous slice belonging to one
+# scenario. That lets each scenario advance as soon as its own prerequisites
+# finish instead of waiting at a phase-wide array barrier.
+indexed_manifest = manifest %>%
+  group_by(phase) %>%
+  mutate(task_id = row_number()) %>%
+  ungroup()
+
+phase_bounds = function(sid, phase_name) {
+  ids = indexed_manifest %>%
+    filter(phase == phase_name, scenario == sid) %>%
+    pull(task_id)
+
+  if (length(ids) == 0) {
+    return(list(first = NA_integer_, last = NA_integer_))
+  }
+  if (!identical(ids, seq.int(min(ids), max(ids)))) {
+    stop('Non-contiguous manifest tasks for scenario=', sid,
+         ', phase=', phase_name)
+  }
+  list(first = min(ids), last = max(ids))
+}
+
+submission_plan = tibble(
+  scenario         = character(),
+  phase1b_task     = integer(),
+  phase2a_first    = integer(),
+  phase2a_last     = integer(),
+  phase2b_task     = integer(),
+  phase2n_first    = integer(),
+  phase2n_last     = integer(),
+  phase2w_task     = integer(),
+  phase2c_first    = integer(),
+  phase2c_last     = integer(),
+  aggregate_task   = integer(),
+  postprocess_task = integer()
+)
+
+if (length(counterfactual_ids) > 0) {
+  submission_plan = map2_dfr(
+    counterfactual_ids,
+    seq_along(counterfactual_ids),
+    function(sid, scenario_index) {
+      p1b = phase_bounds(sid, '1B')
+      p2a = phase_bounds(sid, '2A')
+      p2b = phase_bounds(sid, '2B')
+      p2n = phase_bounds(sid, '2N')
+      p2w = phase_bounds(sid, '2W')
+      p2c = phase_bounds(sid, '2C')
+
+      tibble(
+        scenario         = sid,
+        phase1b_task     = p1b$first,
+        phase2a_first    = p2a$first,
+        phase2a_last     = p2a$last,
+        phase2b_task     = p2b$first,
+        phase2n_first    = p2n$first,
+        phase2n_last     = p2n$last,
+        phase2w_task     = p2w$first,
+        phase2c_first    = p2c$first,
+        phase2c_last     = p2c$last,
+        aggregate_task   = scenario_index + as.integer(has_baseline),
+        postprocess_task = scenario_index
+      )
+    }
+  )
+}
+
+write_tsv(submission_plan,
+          file.path(staging_dir, 'submission_plan.tsv'),
+          na = 'NA')
+
 saveRDS(
   list(stacked       = stacked,
        delete_detail = delete_detail),

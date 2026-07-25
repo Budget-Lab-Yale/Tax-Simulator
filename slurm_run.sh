@@ -84,12 +84,32 @@ echo ""
 SBATCH_COMMON="--partition=day -c 1"
 SBATCH_YEAR="--partition=day -c 2"
 
+# Populate AFTEROK with either one dependency argument or no arguments. Keeping
+# this as an array avoids word-splitting bugs when a phase has no prerequisites.
+set_afterok () {
+  local ids=()
+  local job_id
+  local joined
+
+  for job_id in "$@"; do
+    if [ -n "$job_id" ]; then
+      ids+=("$job_id")
+    fi
+  done
+
+  AFTEROK=()
+  if [ "${#ids[@]}" -gt 0 ]; then
+    joined=$(IFS=:; echo "${ids[*]}")
+    AFTEROK=("--dependency=afterok:${joined}")
+  fi
+}
+
 
 #-------------------------------------------
 # Phase 1: Baseline (skip if N_PHASE1 == 0)
 #-------------------------------------------
 
-P1_DEP=""
+P1=""
 if [ "$N_PHASE1" -gt 0 ]; then
   echo "Phase 1: Submitting ${N_PHASE1} baseline year jobs..."
   P1=$(sbatch --parsable --array=1-${N_PHASE1} \
@@ -99,255 +119,173 @@ if [ "$N_PHASE1" -gt 0 ]; then
     --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
             Rscript src/slurm/worker.R ${STAGING_DIR} 1")
   echo "  Job ID: ${P1}"
-  P1_DEP="--dependency=afterok:${P1}"
 fi
 
 
 #-------------------------------------------
-# Phase 1B: CF frozen mechanical pass (one job per CF; no dependencies —
-# needs only Tax-Data and the staged tax law, so it runs alongside Phase 1)
+# Baseline aggregation: shared full-precision prerequisite for every
+# counterfactual aggregation. It can run as soon as the baseline year array
+# finishes, independently of all counterfactual work.
 #-------------------------------------------
 
-P1B_ID=""
-if [ "$N_PHASE1B" -gt 0 ]; then
-  echo "Phase 1B: Submitting ${N_PHASE1B} CF frozen mechanical jobs..."
-  P1B=$(sbatch --parsable --array=1-${N_PHASE1B} \
+P3A_BASE=""
+if [ "$N_PHASE1" -gt 0 ]; then
+  set_afterok "$P1"
+  echo "Phase 3a: Submitting baseline aggregation job..."
+  P3A_BASE=$(sbatch --parsable --array=1-1 "${AFTEROK[@]}" \
     ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
-    --job-name=taxsim-frozen \
-    --output="${STAGING_DIR}/logs/p1b_%A_%a.log" \
+    --job-name=taxsim-agg \
+    --output="${STAGING_DIR}/logs/p3a_%A_%a.log" \
     --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
-            Rscript src/slurm/frozen.R ${STAGING_DIR}")
-  echo "  Job ID: ${P1B}"
-  P1B_ID="${P1B}"
+            Rscript src/slurm/aggregate.R ${STAGING_DIR} 3a")
+  echo "  Job ID: ${P3A_BASE}"
 fi
 
 
 #-------------------------------------------
-# Phase 2A: CF static-only year tasks (depends on Phase 1 baseline AND
-# Phase 1B frozen state — static workers inject the mechanical state)
+# Counterfactual chains
+#
+# Phase 0 emits the existing global manifest indices belonging to each
+# scenario. Submit one dependency chain per scenario so a fast scenario can
+# reach aggregation and post-processing without waiting for unrelated work:
+#
+#   1B -> 2A -> 2B -> [2N -> 2W] -> 2C -> 3a -> 3b
+#
+# Phase 1 and baseline aggregation remain shared prerequisites where required.
 #-------------------------------------------
 
-P2A_PREREQS=""
-if [ "$N_PHASE1" -gt 0 ]; then
-  P2A_PREREQS="${P2A_PREREQS}:${P1}"
-fi
-if [ -n "$P1B_ID" ]; then
-  P2A_PREREQS="${P2A_PREREQS}:${P1B_ID}"
-fi
-P2A_PRE_DEP=""
-if [ -n "$P2A_PREREQS" ]; then
-  P2A_PRE_DEP="--dependency=afterok${P2A_PREREQS}"
+SUBMISSION_PLAN="${STAGING_DIR}/submission_plan.tsv"
+if [ ! -f "$SUBMISSION_PLAN" ]; then
+  echo "ERROR: missing Phase 0 submission plan: ${SUBMISSION_PLAN}" >&2
+  exit 1
 fi
 
-P2A_DEP=""
-if [ "$N_PHASE2A" -gt 0 ]; then
-  echo "Phase 2A: Submitting ${N_PHASE2A} CF static-only year jobs..."
-  P2A=$(sbatch --parsable --array=1-${N_PHASE2A} ${P2A_PRE_DEP} \
-    ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
-    --job-name=taxsim-cf-static \
-    --output="${STAGING_DIR}/logs/p2a_%A_%a.log" \
-    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
-            Rscript src/slurm/worker.R ${STAGING_DIR} 2A")
-  echo "  Job ID: ${P2A}"
-  P2A_DEP="--dependency=afterok:${P2A}"
-fi
+P3B_IDS=()
 
+{
+  # Discard the TSV header. NA placeholders keep every row field-aligned.
+  IFS= read -r _
 
-#-------------------------------------------
-# Phase 2B: CF bathtub pre-pass (one job per CF; sequential within job)
-#-------------------------------------------
+  while IFS=$'\t' read -r \
+      SCENARIO P1B_TASK P2A_FIRST P2A_LAST P2B_TASK \
+      P2N_FIRST P2N_LAST P2W_TASK P2C_FIRST P2C_LAST \
+      P3A_TASK P3B_TASK; do
 
-P2B_DEP=""
-if [ "$N_PHASE2B" -gt 0 ]; then
-  # Bathtub depends on Phase 1 (baseline cells from Tax-Data + tax_law) and
-  # in v2 will additionally depend on Phase 2A (cell MTRs). For v1 the 2A
-  # dependency is harmless and keeps the DAG monotone.
-  echo "Phase 2B: Submitting ${N_PHASE2B} CF bathtub jobs..."
-  # 30 min (was 15): sigma-conversion scenarios add per-year raw Tax-Data +
-  # detail reads and the tau_eq recursion inside the bathtub pass.
-  P2B=$(sbatch --parsable --array=1-${N_PHASE2B} ${P2A_DEP} \
-    ${SBATCH_COMMON} --time=0:30:00 --mem=8G \
-    --job-name=taxsim-bathtub \
-    --output="${STAGING_DIR}/logs/p2b_%A_%a.log" \
-    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
-            Rscript src/slurm/bathtub.R ${STAGING_DIR}")
-  echo "  Job ID: ${P2B}"
-  P2B_DEP="--dependency=afterok:${P2B}"
-fi
+    if [ -z "$SCENARIO" ]; then
+      continue
+    fi
 
+    echo "Scenario ${SCENARIO}: submitting independent chain..."
 
-#-------------------------------------------
-# Phase 2N: CF conv-no-wealth year tasks (only s>0 wealth scenarios). Depends on
-# Phase 2B (kg bathtub state, when both channels are active) — which
-# transitively covers Phase 2A's static MTRs the behavior modules read.
-#-------------------------------------------
+    # Phase 1B needs only Tax-Data and staged law, so it runs alongside Phase 1.
+    P1B=$(sbatch --parsable --array=${P1B_TASK}-${P1B_TASK} \
+      ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
+      --job-name=taxsim-frozen \
+      --output="${STAGING_DIR}/logs/p1b_%A_%a.log" \
+      --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+              Rscript src/slurm/frozen.R ${STAGING_DIR}")
+    echo "  Phase 1B job ID: ${P1B}"
 
-P2N_ID=""
-if [ "$N_PHASE2N" -gt 0 ]; then
-  echo "Phase 2N: Submitting ${N_PHASE2N} CF conv-no-wealth year jobs..."
-  P2N=$(sbatch --parsable --array=1-${N_PHASE2N} ${P2B_DEP} \
-    ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
-    --job-name=taxsim-cf-convnw \
-    --output="${STAGING_DIR}/logs/p2n_%A_%a.log" \
-    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
-            Rscript src/slurm/worker.R ${STAGING_DIR} 2N")
-  echo "  Job ID: ${P2N}"
-  P2N_ID="${P2N}"
-fi
+    # Static workers consume both the baseline detail/MTRs and this scenario's
+    # frozen mechanical state.
+    set_afterok "$P1" "$P1B"
+    P2A=$(sbatch --parsable --array=${P2A_FIRST}-${P2A_LAST} "${AFTEROK[@]}" \
+      ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+      --job-name=taxsim-cf-static \
+      --output="${STAGING_DIR}/logs/p2a_%A_%a.log" \
+      --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+              Rscript src/slurm/worker.R ${STAGING_DIR} 2A")
+    echo "  Phase 2A job ID: ${P2A}"
 
+    # The sequential kg recurrence needs every static year for this scenario.
+    set_afterok "$P2A"
+    P2B=$(sbatch --parsable --array=${P2B_TASK}-${P2B_TASK} "${AFTEROK[@]}" \
+      ${SBATCH_COMMON} --time=0:30:00 --mem=8G \
+      --job-name=taxsim-bathtub \
+      --output="${STAGING_DIR}/logs/p2b_%A_%a.log" \
+      --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+              Rscript src/slurm/bathtub.R ${STAGING_DIR}")
+    echo "  Phase 2B job ID: ${P2B}"
 
-#-------------------------------------------
-# Phase 2W: CF wealth bathtub pre-pass (one job per s>0 scenario; sequential
-# recurrence within the job). Depends on Phase 2N (conv-no-wealth detail) AND
-# Phase 1 (baseline static detail, the ΔT⁰ baseline leg) when the baseline ran.
-#-------------------------------------------
+    P2W=""
+    if [ "$P2N_FIRST" != "NA" ]; then
+      set_afterok "$P2B"
+      P2N=$(sbatch --parsable --array=${P2N_FIRST}-${P2N_LAST} "${AFTEROK[@]}" \
+        ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+        --job-name=taxsim-cf-convnw \
+        --output="${STAGING_DIR}/logs/p2n_%A_%a.log" \
+        --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+                Rscript src/slurm/worker.R ${STAGING_DIR} 2N")
+      echo "  Phase 2N job ID: ${P2N}"
 
-P2W_ID=""
-if [ "$N_PHASE2W" -gt 0 ]; then
-  P2W_PREREQS=""
-  if [ -n "$P2N_ID" ]; then
-    P2W_PREREQS="${P2W_PREREQS}:${P2N_ID}"
-  fi
-  if [ "$N_PHASE1" -gt 0 ]; then
-    P2W_PREREQS="${P2W_PREREQS}:${P1}"
-  fi
-  P2W_PRE_DEP=""
-  if [ -n "$P2W_PREREQS" ]; then
-    P2W_PRE_DEP="--dependency=afterok${P2W_PREREQS}"
-  fi
+      # Wealth recurrence reads all conv-no-wealth years and baseline detail.
+      set_afterok "$P2N" "$P1"
+      P2W=$(sbatch --parsable --array=${P2W_TASK}-${P2W_TASK} "${AFTEROK[@]}" \
+        ${SBATCH_COMMON} --time=0:15:00 --mem=8G \
+        --job-name=taxsim-wealth \
+        --output="${STAGING_DIR}/logs/p2w_%A_%a.log" \
+        --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+                Rscript src/slurm/wealth.R ${STAGING_DIR}")
+      echo "  Phase 2W job ID: ${P2W}"
+    fi
 
-  echo "Phase 2W: Submitting ${N_PHASE2W} CF wealth bathtub jobs..."
-  P2W=$(sbatch --parsable --array=1-${N_PHASE2W} ${P2W_PRE_DEP} \
-    ${SBATCH_COMMON} --time=0:15:00 --mem=8G \
-    --job-name=taxsim-wealth \
-    --output="${STAGING_DIR}/logs/p2w_%A_%a.log" \
-    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
-            Rscript src/slurm/wealth.R ${STAGING_DIR}")
-  echo "  Job ID: ${P2W}"
-  P2W_ID="${P2W}"
-fi
+    set_afterok "$P2B" "$P2W"
+    P2C=$(sbatch --parsable --array=${P2C_FIRST}-${P2C_LAST} "${AFTEROK[@]}" \
+      ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+      --job-name=taxsim-cf-conv \
+      --output="${STAGING_DIR}/logs/p2c_%A_%a.log" \
+      --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+              Rscript src/slurm/worker.R ${STAGING_DIR} 2C")
+    echo "  Phase 2C job ID: ${P2C}"
 
-
-#-------------------------------------------
-# Phase 2C: CF conventional-only year tasks. Depends on the kg bathtub (2B) AND
-# the wealth deficit state (2W, when present). 2W transitively covers 2N -> 2B,
-# so :${P2B} + :${P2W} gates the whole upstream DAG.
-#-------------------------------------------
-
-P2C_PREREQS=""
-if [ "$N_PHASE2B" -gt 0 ]; then
-  P2C_PREREQS="${P2C_PREREQS}:${P2B}"
-fi
-if [ -n "$P2W_ID" ]; then
-  P2C_PREREQS="${P2C_PREREQS}:${P2W_ID}"
-fi
-P2C_PRE_DEP=""
-if [ -n "$P2C_PREREQS" ]; then
-  P2C_PRE_DEP="--dependency=afterok${P2C_PREREQS}"
-fi
-
-P2C_DEP=""
-if [ "$N_PHASE2C" -gt 0 ]; then
-  echo "Phase 2C: Submitting ${N_PHASE2C} CF conventional-only year jobs..."
-  P2C=$(sbatch --parsable --array=1-${N_PHASE2C} ${P2C_PRE_DEP} \
-    ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
-    --job-name=taxsim-cf-conv \
-    --output="${STAGING_DIR}/logs/p2c_%A_%a.log" \
-    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
-            Rscript src/slurm/worker.R ${STAGING_DIR} 2C")
-  echo "  Job ID: ${P2C}"
-  P2C_DEP="--dependency=afterok:${P2C}"
-fi
-
-
-#-------------------------------------------
-# Phase 3a: Aggregation (all scenarios)
-#-------------------------------------------
-
-# Count total scenarios for aggregation: baseline (if ran) + counterfactuals
-N_AGG=0
-if [ "$N_PHASE1" -gt 0 ]; then
-  N_AGG=$((N_AGG + 1))
-fi
-N_AGG=$((N_AGG + N_SCENARIOS))
-
-P3A_DEP=""
-if [ "$N_AGG" -gt 0 ]; then
-
-  # Combine dependencies from Phase 1 (baseline) and Phase 2C (conv outputs).
-  # Phase 2A and 2B feed into 2C, so transitively they're already gated.
-  ALL_DEPS="${P1_DEP} ${P2C_DEP}"
-
-  # The baseline aggregation (array task 1) runs BEFORE the counterfactual
-  # aggregations: scenario receipts read the baseline's totals/estate.csv,
-  # and racing it in one parallel array makes them fall back to rebuilding
-  # the series from detail CSVs -- last-bit float drift vs main.R (detail
-  # files carry 15 significant digits, not full doubles)
-  SCEN_DEPS="${ALL_DEPS}"
-  if [ "$N_PHASE1" -gt 0 ]; then
-    echo "Phase 3a: Submitting baseline aggregation job..."
-    P3A_BASE=$(sbatch --parsable --array=1-1 ${ALL_DEPS} \
+    # Counterfactual receipts require the baseline aggregation's full-precision
+    # totals. With a supplied baseline vintage, P3A_BASE is empty because those
+    # outputs already exist.
+    set_afterok "$P2C" "$P3A_BASE"
+    P3A=$(sbatch --parsable --array=${P3A_TASK}-${P3A_TASK} "${AFTEROK[@]}" \
       ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
       --job-name=taxsim-agg \
       --output="${STAGING_DIR}/logs/p3a_%A_%a.log" \
       --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
               Rscript src/slurm/aggregate.R ${STAGING_DIR} 3a")
-    echo "  Job ID: ${P3A_BASE}"
-    SCEN_DEPS="--dependency=afterok:${P3A_BASE}"
-    P3A_DEP="--dependency=afterok:${P3A_BASE}"
-  fi
+    echo "  Phase 3a job ID: ${P3A}"
 
-  if [ "$N_SCENARIOS" -gt 0 ]; then
-    FIRST_SCEN_TASK=$((N_AGG - N_SCENARIOS + 1))
-    echo "Phase 3a: Submitting ${N_SCENARIOS} counterfactual aggregation jobs..."
-    P3A=$(sbatch --parsable --array=${FIRST_SCEN_TASK}-${N_AGG} ${SCEN_DEPS} \
-      ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
-      --job-name=taxsim-agg \
-      --output="${STAGING_DIR}/logs/p3a_%A_%a.log" \
-      --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
-              Rscript src/slurm/aggregate.R ${STAGING_DIR} 3a")
-    echo "  Job ID: ${P3A}"
-    P3A_DEP="--dependency=afterok:${P3A}"
-  fi
-
-
-  #-------------------------------------------
-  # Phase 3b: Post-processing (counterfactuals)
-  #-------------------------------------------
-
-  P4_DEP="${P3A_DEP}"
-  if [ "$N_SCENARIOS" -gt 0 ]; then
-    echo "Phase 3b: Submitting ${N_SCENARIOS} post-processing jobs..."
-    P3B=$(sbatch --parsable --array=1-${N_SCENARIOS} ${P3A_DEP} \
+    set_afterok "$P3A"
+    P3B=$(sbatch --parsable --array=${P3B_TASK}-${P3B_TASK} "${AFTEROK[@]}" \
       ${SBATCH_COMMON} --time=1:00:00 --mem=16G \
       --job-name=taxsim-postproc \
       --output="${STAGING_DIR}/logs/p3b_%A_%a.log" \
       --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
               Rscript src/slurm/aggregate.R ${STAGING_DIR} 3b")
-    echo "  Job ID: ${P3B}"
-    P4_DEP="--dependency=afterok:${P3B}"
+    echo "  Phase 3b job ID: ${P3B}"
+    P3B_IDS+=("$P3B")
+  done
+} < "$SUBMISSION_PLAN"
+
+
+#-------------------------------------------
+# Phase 4: Stacked + optional detail purge
+#-------------------------------------------
+
+# This is deliberately the one all-scenario success barrier. A failed scenario
+# does not stop unrelated post-processing, but stacked output and destructive
+# detail cleanup must not run on a partial vintage.
+DELETE_DETAIL="${9}"
+if [ "$STACKED" == "1" ] || [ "$DELETE_DETAIL" == "1" ]; then
+  if [ "${#P3B_IDS[@]}" -gt 0 ]; then
+    set_afterok "${P3B_IDS[@]}"
+  else
+    set_afterok "$P3A_BASE"
   fi
 
-
-  #-------------------------------------------
-  # Phase 4: Stacked + optional detail purge (single job)
-  #-------------------------------------------
-
-  # Submitted whenever there is stacked work OR a detail purge to do --
-  # aggregate.R gates each internally on the runtime args. main.R runs
-  # purge_detail() regardless of stacked, so gating Phase 4 on STACKED alone
-  # would silently leave detail files on disk when delete_detail=1, stacked=0.
-  DELETE_DETAIL="${9}"
-  if [ "$STACKED" == "1" ] || [ "$DELETE_DETAIL" == "1" ]; then
-    echo "Phase 4: Submitting stacked/cleanup post-processing job..."
-    P4=$(sbatch --parsable ${P4_DEP} \
-      ${SBATCH_COMMON} --time=0:30:00 --mem=8G \
-      --job-name=taxsim-stacked \
-      --output="${STAGING_DIR}/logs/p4.log" \
-      --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
-              Rscript src/slurm/aggregate.R ${STAGING_DIR} 4")
-    echo "  Job ID: ${P4}"
-  fi
+  echo "Phase 4: Submitting stacked/cleanup post-processing job..."
+  P4=$(sbatch --parsable "${AFTEROK[@]}" \
+    ${SBATCH_COMMON} --time=0:30:00 --mem=8G \
+    --job-name=taxsim-stacked \
+    --output="${STAGING_DIR}/logs/p4.log" \
+    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+            Rscript src/slurm/aggregate.R ${STAGING_DIR} 4")
+  echo "  Job ID: ${P4}"
 fi
 
 echo ""
