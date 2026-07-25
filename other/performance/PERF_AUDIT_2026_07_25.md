@@ -359,7 +359,44 @@ parameters, plus baseline at 28.)
 Parallelizing the loop (`mclapply`, or a Phase 0 array job) also works and is
 simpler, but still burns 199 full parses of login-node CPU. The two compose.
 
-### 2.7 Full-file `fread()` where a handful of columns are needed
+### 2.7 Full-file `fread()` where a handful of columns are needed — FIXED 2026-07-25
+
+**Status: done.** Detail files measured at 91-94 columns / 132-137MB per
+scenario-year (the 98 below was the schema at audit time). Four sites narrowed,
+two of the "check" entries turned out not to be detail reads at all:
+
+| site | columns | full read | selected | verdict |
+|---|---|---:|---:|---|
+| `wealth_dyn_read_convnw_detail` | 16 of 94 | 1.75-2.55s | 0.31s | narrowed |
+| `wealth_dyn_read_baseline_detail` | 4 of 91 | 1.46-2.48s | 0.26s | narrowed |
+| baseline payroll read, `src/sim/run.R` | 3 of 91 | 0.50-0.62s | 0.26s | narrowed |
+| baseline MTR prebuild, `src/slurm/setup.R` | `id` + `mtr_*` of 91 | 0.56-0.63s | 0.27s | narrowed |
+| `src/sim/wealth_dynamics.R:267` | 3 of 3 | — | — | not a detail file: a profile `s.csv` |
+| `src/data/post_processing/distribution.R:287` | 3 of 4 | — | — | Estate-Tax-Distribution heir file, 4 cols / 8.8MB; not worth it |
+
+The selected read is a flat ~0.3s; the spread in the full-read column is page-cache
+warmth, so the cold-cache saving is roughly 1.5-2.2s per read on the two wealth
+sites (5.7-9.5x) and ~0.3s on the two narrow ones. The wealth reads are the ones
+that matter for CPU-hours: two per scenario-year in the 2W pre-pass. The other two
+are once per year-task and once per run respectively.
+
+Each site follows the existing header-check pattern (`fread(path, nrows = 0)` for
+the column inventory, then `select =`), which preserves the current
+missing-column error messages and keeps optional columns (`liab_deemed`,
+`corp_dY_exog`, `liab_wealth`) optional.
+
+Verified: all four selections `identical()` to full-read-then-subset on every
+real detail file in a full-sample smoke vintage (strict, `single.NA = FALSE`);
+full-sample `tests/simplify_smoke` end-to-end pre vs post **BYTE-IDENTICAL** (96
+files plus 10 xlsx); and Phase 0 with a supplied `baseline_vintage` (the only
+path that runs the MTR prebuild) produces an `identical()` `baseline_mtrs.rds`.
+One wrinkle worth knowing: that `.rds` is not byte-identical run to run, because
+`.internal.selfref` -- data.table's over-allocation pointer -- carries a name
+vector sized by the read it came from. Strip that attribute and the
+serializations match exactly. It holds no data, is rebuilt on load, and
+`compare_smoke.sh` excludes `_slurm_staging` anyway.
+
+Text below describes the problem as found.
 
 Detail files are 98 columns / 150MB per scenario-year. Unselected reads:
 
@@ -411,8 +448,9 @@ output).
 1. ~~§2.1 QBI reshape~~ — **DONE 2026-07-25, 29.6% per year-task, bit-identical.**
 2. ~~§2.6 memoize `parse_param` across scenarios in Phase 0~~ — **DONE
    2026-07-25, 42m46s → 11m55s on `top_tax/dials`, byte-identical.**
-3. §2.7 selective `fread` + §2.5 memoize the distribution microdata — small,
-   safe, pure waste elimination.
+3. ~~§2.7 selective `fread`~~ — **DONE 2026-07-25, 4 sites, byte-identical.**
+   §2.5 memoize the distribution microdata is the remaining half of this line —
+   small, safe, pure waste elimination.
 4. §2.4 per-scenario DAG chains — wall clock only, no CPU cost, no results risk.
 5. §2.2 fork the MTR loop — the largest remaining item by share of a year-task
    (75%), verified fork-safe; needs a `--mem` bump and `mclapply` error handling.

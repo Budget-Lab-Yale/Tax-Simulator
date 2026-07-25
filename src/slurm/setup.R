@@ -157,13 +157,20 @@ if (!has_baseline) {
 
   baseline_mtrs = cf_years %>%
     map(
-      ~ globals$baseline_root %>%
-        file.path('baseline/static/detail', paste0(.x, '.csv')) %>%
-        fread() %>%
-        tibble() %>%
-        mutate(year = .x) %>%
-        select(id, year, starts_with('mtr_')) %>%
-        return()
+      ~ {
+        # id plus the mtr_ columns only, resolved from the header: detail files
+        # are 98 columns / ~150MB (perf audit §2.7)
+        path = globals$baseline_root %>%
+          file.path('baseline/static/detail', paste0(.x, '.csv'))
+        keep = names(fread(path, nrows = 0)) %>%
+          `[`(. == 'id' | startsWith(., 'mtr_'))
+        path %>%
+          fread(select = keep) %>%
+          tibble() %>%
+          mutate(year = .x) %>%
+          select(id, year, starts_with('mtr_')) %>%
+          return()
+      }
     ) %>%
     bind_rows()
 

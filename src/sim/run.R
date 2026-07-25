@@ -832,9 +832,11 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   # Read baseline payroll taxes
   baseline_pr_er = NULL
   if (scenario_info$ID != 'baseline') {
+    # 3 columns of ~98: detail files are ~150MB and this read happens once per
+    # year-task on every pass (perf audit §2.7)
     baseline_pr_er = globals$baseline_root %>%
       file.path('baseline/static/detail', paste0(year, '.csv')) %>%
-      fread() %>%
+      fread(select = c('id', 'liab_fica_er1', 'liab_fica_er2')) %>%
       tibble() %>%
       select(id, baseline1 = liab_fica_er1, baseline2 = liab_fica_er2)
   }

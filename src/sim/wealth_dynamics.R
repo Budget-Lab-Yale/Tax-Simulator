@@ -967,16 +967,24 @@ wealth_dyn_read_convnw_detail = function(scenario_info, year) {
     stop('wealth_dynamics pre-pass: conv-no-wealth detail missing: ', path,
          ' (was Phase 2N run for this scenario-year?)')
   }
-  d = path %>% fread() %>% tibble()
   need = c('id', 'weight', 'dep_status', 'filing_status', 'age1', 'age2',
            'net_worth', 'net_worth_raw', 'liab_iit_net', 'liab_pr', 'liab_wealth',
            'estate_m', 'economic_gross', 'cap_bundle_F', 'mtr_cap_bundle',
            'mtr_net_worth')
-  missing = setdiff(need, names(d))
+  optional = c('liab_deemed', 'corp_dY_exog')
+
+  # Read the header alone first, then only the columns the pre-pass uses (18 of
+  # ~98). Detail files are ~150MB, so parsing the rest is pure waste -- see
+  # other/performance/PERF_AUDIT_2026_07_25.md §2.7.
+  have = names(fread(path, nrows = 0))
+  missing = setdiff(need, have)
   if (length(missing) > 0) {
     stop('wealth_dynamics pre-pass: conv-no-wealth detail ', path,
          ' is missing required column(s): ', paste(missing, collapse = ', '))
   }
+  d = path %>%
+    fread(select = c(need, intersect(optional, have))) %>%
+    tibble()
   if (!('liab_deemed' %in% names(d))) d$liab_deemed = 0
   # Corporate-incidence external-income shock (generalized forcing income leg).
   # Absent for non-corp scenarios and for detail written before the corporate
@@ -1002,13 +1010,19 @@ wealth_dyn_read_baseline_detail = function(year, has_baseline) {
   if (!file.exists(path)) {
     stop('wealth_dynamics pre-pass: baseline static detail missing: ', path)
   }
-  d = path %>% fread() %>% tibble()
-  need = c('id', 'liab_iit_net', 'liab_pr')
-  missing = setdiff(need, names(d))
+  need     = c('id', 'liab_iit_net', 'liab_pr')
+  optional = c('liab_deemed', 'liab_wealth')
+
+  # Header first, then 3-5 columns of ~98 (perf audit §2.7)
+  have = names(fread(path, nrows = 0))
+  missing = setdiff(need, have)
   if (length(missing) > 0) {
     stop('wealth_dynamics pre-pass: baseline detail ', path,
          ' is missing required column(s): ', paste(missing, collapse = ', '))
   }
+  d = path %>%
+    fread(select = c(need, intersect(optional, have))) %>%
+    tibble()
   if (!('liab_deemed' %in% names(d))) d$liab_deemed = 0
   if (!('liab_wealth' %in% names(d))) d$liab_wealth = 0
   d %>%
