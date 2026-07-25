@@ -41,7 +41,7 @@
 
 #-------------------------------------------------------------------------------
 # Constants and provenance (hardcoded, WEALTH_CAP_FLOWS style; sweep corners via
-# env overrides ONLY for CORP_SIGMA_N / CORP_KAPPA / CORP_PRICED_AS_PERMANENT)
+# scenario overrides via assumption.corp.sigma_n / .kappa / .priced_as_permanent)
 #-------------------------------------------------------------------------------
 
 CORP_SPEC_VERSION = 1L
@@ -51,12 +51,12 @@ CORP_SPEC_VERSION = 1L
 # IN (external income; the applied dollar deltas accumulate into the per-record
 # detail column `corp_dY_exog`, consumed by the wealth bathtub forcing
 # F = dT - dY_exog):
-#   - dividends (div_ord, div_pref), at the CORP_OMEGA_DIV exposure
+#   - dividends (div_ord, div_pref), at the corp.omega_div exposure
 #   - interest (txbl_int, exempt_int), on the debt rollover ramp
 #   - rent (rent, rent_loss -- the NET pair scales together)
 #   - pass-through lines at the 0.2 capital weight; the column list is
 #     WEALTH_CAP_FLOWS_PT + WEALTH_CAP_FLOWS_SE_COMPANIONS and the weight is
-#     WEALTH_CAP_FLOWS_PT_WEIGHT (src/sim/wealth_dynamics.R) -- referenced at
+#     wealth.cap_flows_pt_weight (src/sim/wealth_dynamics.R) -- referenced at
 #     RUNTIME (not here) because source order is alphabetical.
 #
 # OUT (internal conversions -- tax leg only, automatically via dT; adding any
@@ -82,60 +82,58 @@ CORP_FLOWS_INTERNAL = c('kg_st', 'kg_lt', 'kg_1250', 'kg_collect',
 # unallocated residual (D10).
 # PLACEHOLDER CENTRALS (Phase 0c status table, PHASE0_NOTES.md): equities 1.0
 # by construction; dc/trusts/re_fund from SCF + ICI equity-share imputations,
-# pending external measurement. Update in place when measured.
-CORP_ASSET_EXPOSURE = c(
-  'value.equities' = 1.00,
-  'value.dc'       = 0.55,
-  'value.trusts'   = 0.50,
-  'value.re_fund'  = 0.30
-)
+# pending external measurement.
+# Values and provenance: config/assumptions/corp.yaml (corp.asset_exposure_*),
+# assembled by corp_asset_exposure().
+corp_asset_exposure = function() {
+  c('value.equities' = assumption('corp', 'asset_exposure_equities'),
+    'value.dc'       = assumption('corp', 'asset_exposure_dc'),
+    'value.trusts'   = assumption('corp', 'asset_exposure_trusts'),
+    'value.re_fund'  = assumption('corp', 'asset_exposure_re_fund'))
+}
 
-# C-corp share of dividends (excludes REIT / bond-fund distributions).
-# PLACEHOLDER pending ICI/SOI measurement (PHASE0_NOTES.md).
-CORP_OMEGA_DIV = 0.85
+# C-corp share of dividends: config/assumptions/corp.yaml (corp.omega_div).
 
 # C-corp equity share of realized LTCG (stock + fund shares vs pass-through
 # sales / real estate / other). PLACEHOLDER ~0.5 prior pending SOI
-# sale-of-capital-assets measurement (PHASE0_NOTES.md).
-CORP_OMEGA_KG = 0.50
+# sale-of-capital-assets measurement: config/assumptions/corp.yaml (corp.omega_kg).
 
 # Normal-return share sigma_N of the corporate wedge ("taxes on margins get
 # shifted; taxes on rents get capitalized", D14/D15). Central 0.375 from OTA
 # 63% / TPC 60% supernormal; corners {0, 0.5} (house VAT convention = upper).
-# Env override CORP_SIGMA_N for sweeps.
-CORP_SIGMA_N_DEFAULT = 0.375
+# Value and provenance: config/assumptions/corp.yaml (corp.sigma_n).
 
 # kappa: C-corp share of the economy-wide normal-capital stock (D15). The
 # migrated normal burden splits (1-kappa) to noncorporate lines and kappa
 # retained on corporate flows. PLACEHOLDER 0.40 prior pending the Fed Z.1 pull;
 # the owner-occupied-housing definitional fork sets the sweep corners
-# {~0.25, ~0.4, ~0.5}. Env override CORP_KAPPA for sweeps.
-CORP_KAPPA_DEFAULT = 0.40
+# {~0.25, ~0.4, ~0.5}. Value and provenance: config/assumptions/corp.yaml
+# (corp.kappa).
 
 # theta: US-taxable exposure scale on the flow factor phi = -theta * h_c / pi.
 # Absorbs the NIPA-economic vs US-taxable profit wedge (Phase 0c). PLACEHOLDER
 # 1.0 (pro-rata: every distribution scales by the aggregate after-tax-profit
 # hit share) pending Rosenthal-Austin / Z.1 measurement.
-CORP_THETA = 1.0
+# Value and provenance: config/assumptions/corp.yaml (corp.theta).
 
 # theta_res: foreign / nonprofit / DB residual share of the wedge, used ONLY by
 # the conservation diagnostic's B_res line (D3/D10 -- the honest unallocated
 # remainder; no gross-up forces household hits to sum to the revenue line).
 # PLACEHOLDER 0.40 (Rosenthal-Austin: ~26% foreign + nonprofits/insurers + the
 # DB slice) pending Phase 0c measurement.
-CORP_THETA_RES = 0.40
+# Value and provenance: config/assumptions/corp.yaml (corp.theta_res).
 
 # Vintaging: NIPA economic depreciation rate; the reallocation clock IS the
 # replacement clock (D14), same 0.057 as do_capital_adjustment
 # (src/data/economy.R). eta(t) = 1 - (1 - 0.057)^(t - t0).
-CORP_DELTA_NIPA = 0.057
+# Value and provenance: config/assumptions/corp.yaml (corp.delta_nipa).
 
 # Equity discount rate r = nominal tsy_10y (Macro-Projections, enactment year)
 # + this fixed equity risk premium. Distributions are nominal, so r is nominal
 # (the house Fisher-deflation convention applies to real-utility discounting,
 # not nominal-flow PV -- plan note). mu is r-free in the permanent central
 # case; r shapes temporary-shock annuities and the migration PV only.
-CORP_EQUITY_PREMIUM = 0.05
+# Value and provenance: config/assumptions/corp.yaml (corp.equity_premium).
 
 # PV grid: paths are built through max(sim years) + this many tail years, with
 # a Gordon growing-perpetuity terminal beyond (guarded r > g).
@@ -617,39 +615,36 @@ corp_rollover_ramp = function() {
 corp_env_knobs = function() {
 
   #----------------------------------------------------------------------------
-  # Sweep-corner env overrides (the ONLY runtime knobs; everything else is a
-  # code edit by design): CORP_SIGMA_N, CORP_KAPPA, CORP_PRICED_AS_PERMANENT.
-  # Returns list(sigma_n, kappa, priced_as_permanent) with messages when
-  # overridden.
+  # Sweep corners are now scenario assumptions rather than env knobs: override
+  # assumption.corp.sigma_n / .kappa / .priced_as_permanent in the runscript, so
+  # the corner is recorded in the vintage's assumptions.csv instead of vanishing
+  # with the shell that launched the run.
+  # Returns list(sigma_n, kappa, priced_as_permanent).
   #----------------------------------------------------------------------------
 
-  read_num = function(env, default, lo, hi) {
-    v = Sys.getenv(env, unset = NA)
-    if (is.na(v) || !nzchar(v)) return(default)
-    x = suppressWarnings(as.numeric(v))
+  read_num = function(name, lo, hi) {
+    x = suppressWarnings(as.numeric(assumption('corp', name)))
     if (!is.finite(x) || x < lo || x > hi) {
-      stop('corp_incidence: env override ', env, ' = "', v,
+      stop('corp_incidence: assumption corp.', name, ' = "', x,
            '" is not a number in [', lo, ', ', hi, '].')
     }
-    message(sprintf('corp_incidence: env override %s = %s (default %s)',
-                    env, x, default))
     x
   }
 
   list(
-    sigma_n = read_num('CORP_SIGMA_N', CORP_SIGMA_N_DEFAULT, 0, 1),
-    kappa   = read_num('CORP_KAPPA',   CORP_KAPPA_DEFAULT,   0, 1),
-    priced_as_permanent = identical(Sys.getenv('CORP_PRICED_AS_PERMANENT'), '1')
+    sigma_n = read_num('sigma_n', 0, 1),
+    kappa   = read_num('kappa',   0, 1),
+    priced_as_permanent = isTRUE(as.logical(assumption('corp', 'priced_as_permanent')))
   )
 }
 
 
 
 corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
-                                 sigma_n, kappa, theta = CORP_THETA,
-                                 omega_div = CORP_OMEGA_DIV,
-                                 delta_nipa = CORP_DELTA_NIPA,
-                                 erp = CORP_EQUITY_PREMIUM,
+                                 sigma_n, kappa, theta = assumption('corp', 'theta'),
+                                 omega_div = assumption('corp', 'omega_div'),
+                                 delta_nipa = assumption('corp', 'delta_nipa'),
+                                 erp = assumption('corp', 'equity_premium'),
                                  priced_as_permanent = FALSE,
                                  roll_fn = NULL,
                                  pt_weight = NULL) {
@@ -663,7 +658,7 @@ corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
   #            gdp_proprietors)
   #   sim_years, beyond_horizon ('extend'|'zero'), sigma_n, kappa, theta, ...
   #   roll_fn: function(t_since) -> cumulative debt-rollover share
-  #   pt_weight: pass-through capital weight (WEALTH_CAP_FLOWS_PT_WEIGHT at
+  #   pt_weight: pass-through capital weight (wealth.cap_flows_pt_weight at
   #            runtime; parameterized for the self-checks)
   #
   # Grid: min(sim_years) .. max(sim_years) + CORP_PV_TAIL_YEARS, with Gordon
@@ -702,7 +697,7 @@ corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
   #               g_tail, knobs).
   #----------------------------------------------------------------------------
 
-  if (is.null(pt_weight)) pt_weight = WEALTH_CAP_FLOWS_PT_WEIGHT
+  if (is.null(pt_weight)) pt_weight = wealth_cap_flows_pt_weight()
   if (is.null(roll_fn))   roll_fn   = corp_rollover_ramp()
 
   w_by_year = setNames(wedge$w, as.character(wedge$year))
@@ -788,7 +783,7 @@ corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
     stop(sprintf(paste0('corp_incidence: discount rate r = %.3f is not ',
                         'safely above the tail growth rate g = %.3f; the ',
                         'Gordon terminal PV diverges. Check tsy_10y / ',
-                        'CORP_EQUITY_PREMIUM / the pi series.'),
+                        'corp.equity_premium / the pi series.'),
                  r, g_tail))
   }
 
@@ -880,7 +875,7 @@ corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
          'to the aggregate income bases; refusing to clamp silently.')
   }
 
-  omega_dc = unname(CORP_ASSET_EXPOSURE['value.dc'])
+  omega_dc = unname(corp_asset_exposure()['value.dc'])
   by_year = tibble(
     year = grid, w = w_grid, pi_at = pi_grid, eta = eta, roll = roll,
     w_rent = w_rent, w_norm = w_norm, h_c = h_c, phi = phi,
@@ -1007,7 +1002,7 @@ corp_resolve_paths = function(scenario_info) {
     kappa               = knobs$kappa,
     priced_as_permanent = knobs$priced_as_permanent,
     roll_fn             = corp_rollover_ramp(),
-    pt_weight           = WEALTH_CAP_FLOWS_PT_WEIGHT
+    pt_weight           = wealth_cap_flows_pt_weight()
   )
   corp_assert_paths(paths)
 

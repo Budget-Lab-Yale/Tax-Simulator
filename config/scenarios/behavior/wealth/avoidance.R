@@ -57,19 +57,20 @@
 WEALTH_AVOID_VERSION  = paste('2026-07-08 hidden-ledger (R1-R7);',
                               'elasticities author-accepted (seeded from standalone);',
                               '2026-07-16 estate response split out to estate/avoidance')
-WEALTH_AVOID_PUBLIC_E  = -7
-WEALTH_AVOID_PRIVATE_E = -17
+# Values and provenance: config/assumptions/wealth.yaml (wealth.avoid_public_e,
+# wealth.avoid_private_e).
 
 
 # Concealment shares (R7): the fraction of the avoidance RESPONSE that is
 # concealment as opposed to legal valuation gaming. Env-overridable for band
-# sweeps (sweep WEALTH_CHI_PRIV 0.25 / 0.5 / 0.75 for the interaction rows).
+# sweeps (sweep assumption.wealth.chi_priv 0.25 / 0.5 / 0.75 for the
+# interaction rows).
 # CHI_PUB = CHI_PRIV = 0 reproduces pre-hidden-ledger behavior exactly: reported
 # net_worth still shrinks by the FULL avoidance response, but the flow / kg /
 # estate concealment overlays vanish (c_pub = c_priv = 0), and with evasion
 # absent the evasion->wealth link is inert.
-WEALTH_CHI_PUB  = as.numeric(Sys.getenv('WEALTH_CHI_PUB',  unset = '1.0'))
-WEALTH_CHI_PRIV = as.numeric(Sys.getenv('WEALTH_CHI_PRIV', unset = '0.5'))
+# Values and provenance: config/assumptions/wealth.yaml (wealth.chi_pub,
+# wealth.chi_priv).
 
 
 do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, indexes) {
@@ -180,9 +181,11 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   }
 
   message('do_wealth(): applying wealth-avoidance + hidden-ledger concealment (',
-          WEALTH_AVOID_VERSION, '; public_e=', WEALTH_AVOID_PUBLIC_E,
-          ', private_e=', WEALTH_AVOID_PRIVATE_E, '; CHI_PUB=', WEALTH_CHI_PUB,
-          ', CHI_PRIV=', WEALTH_CHI_PRIV, ')')
+          WEALTH_AVOID_VERSION,
+          '; public_e=',  assumption('wealth', 'avoid_public_e'),
+          ', private_e=', assumption('wealth', 'avoid_private_e'),
+          '; chi_pub=',   assumption('wealth', 'chi_pub'),
+          ', chi_priv=',  assumption('wealth', 'chi_priv'), ')')
 
   year = tax_units$year[1]
 
@@ -215,11 +218,11 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
 
   #--- Avoided and concealed fractions ----------------------------------------
   # Avoided fraction of each class (semi-elasticity, baseline wealth MTR = 0).
-  f_pub  = 1 - exp(df$mtr_net_worth * WEALTH_AVOID_PUBLIC_E)
-  f_priv = 1 - exp(df$mtr_net_worth * WEALTH_AVOID_PRIVATE_E)
+  f_pub  = 1 - exp(df$mtr_net_worth * assumption('wealth', 'avoid_public_e'))
+  f_priv = 1 - exp(df$mtr_net_worth * assumption('wealth', 'avoid_private_e'))
   # Concealed fraction: the concealment share (CHI) of the avoidance response.
-  c_pub  = WEALTH_CHI_PUB  * f_pub
-  c_priv = WEALTH_CHI_PRIV * f_priv
+  c_pub  = assumption('wealth', 'chi_pub')  * f_pub
+  c_priv = assumption('wealth', 'chi_priv') * f_priv
   # PERSISTED for estate/avoidance downstream (the R4 estate propagation);
   # dropped from the frame there, mirroring the evasion_g_* convention.
   df$wealth_c_pub  = c_pub
@@ -247,8 +250,8 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   # FULL avoidance response (valuation + concealment) shrinks the reported base
   # exactly as before; the R3 link further shaves the reported CLOSELY-HELD
   # component by the evaded income share. Debts are not avoided (no incentive).
-  df$net_worth = mkt * exp(df$mtr_net_worth * WEALTH_AVOID_PUBLIC_E) +
-                 clh * exp(df$mtr_net_worth * WEALTH_AVOID_PRIVATE_E) * (1 - evaded) -
+  df$net_worth = mkt * exp(df$mtr_net_worth * assumption('wealth', 'avoid_public_e')) +
+                 clh * exp(df$mtr_net_worth * assumption('wealth', 'avoid_private_e')) * (1 - evaded) -
                  debts
 
   #--- Flow concealment --------------------------------------------------------
@@ -374,13 +377,13 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   # sequential (run_one_year) and SLURM pipelines, so the persisted file always
   # reflects the final conventional frame.
   w = df$weight
-  reduced_clh_from_evasion = clh * exp(df$mtr_net_worth * WEALTH_AVOID_PRIVATE_E) * evaded
+  reduced_clh_from_evasion = clh * exp(df$mtr_net_worth * assumption('wealth', 'avoid_private_e')) * evaded
   diag = tibble(
     year                          = year,
-    chi_pub                       = WEALTH_CHI_PUB,
-    chi_priv                      = WEALTH_CHI_PRIV,
-    public_e                      = WEALTH_AVOID_PUBLIC_E,
-    private_e                     = WEALTH_AVOID_PRIVATE_E,
+    chi_pub                       = assumption('wealth', 'chi_pub'),
+    chi_priv                      = assumption('wealth', 'chi_priv'),
+    public_e                      = assumption('wealth', 'avoid_public_e'),
+    private_e                     = assumption('wealth', 'avoid_private_e'),
     version                       = WEALTH_AVOID_VERSION,
     n_records_pos_wealth_mtr      = sum(df$mtr_net_worth > 0),
     weighted_records_pos_mtr      = sum(w[df$mtr_net_worth > 0]),

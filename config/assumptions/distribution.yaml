@@ -1,0 +1,37 @@
+# Distribution-table incidence conventions -- src/data/post_processing/corp_alloc.R
+#
+# Model ASSUMPTIONS, not tax law. Override per scenario with the runscript column
+# assumption.distribution.{name}. See src/misc/assumptions.R.
+
+corp_foreign_share:
+  value: 0.40
+  kind: sourced
+  citation: >
+    Foreign-borne share of the corporate burden, excluded from the distribution
+    tables under the JCT convention (JCX-14-13 excludes 20.6% as foreign-borne;
+    CBO, OTA and TPC instead allocate 100% to US households). Value is the
+    foreign share of total US corporate equity -- FDI plus portfolio, publicly
+    traded plus closely held -- at 42% end-2022 (Rosenthal and Mucciolo, Tax
+    Notes Federal 183, 2024-04-01), rounded down.
+  note: >
+    The denominator includes S-corp equity that foreigners are statutorily
+    barred from holding, which biases the C-corp share DOWN. The labor leg is
+    NOT haircut: wage incidence lands on US workers regardless of who owns the
+    equity. Tables no longer sum to the corporate revenue line by construction;
+    the remainder is foreign-borne. Equal to corp.theta_res by coincidence --
+    do NOT merge them.
+
+housing_structure_share:
+  value: 0.70
+  kind: judgment
+  note: >
+    Structure share of owner-occupied housing. Under Harberger the mobile-capital
+    margin is reproducible STRUCTURES, not residential LAND (a fixed factor whose
+    incidence runs through capitalization, not through capital flowing into
+    land), so owner-occupied housing enters the all-capital base only as
+    structure_share * net home equity. 0.70 is a national-average simplification:
+    the BEA current-cost net stock of residential structures is roughly
+    two-thirds to low-70s of the Fed's owner-occupied real estate aggregate, and
+    the Fed measure is broader (it includes vacant land and mobile homes).
+    PLACEHOLDER pending a per-record or geography-varying split. Sensitivity
+    cases: 0.60 conservative, 1.00 no land split.

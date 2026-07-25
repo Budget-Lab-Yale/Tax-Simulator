@@ -8,8 +8,8 @@
 kg_dyn_build_planned_timing = function(baseline_cells, tau_S_mat, years,
                                        tau_B_mat = NULL,
                                        timeable_share = kg_dyn_active_timeable_share(),
-                                       timing_window = KG_DYN_TIMING_WINDOW,
-                                       ref_wedge     = KG_DYN_TIMING_REF_WEDGE,
+                                       timing_window = assumption('kg', 'timing_window'),
+                                       ref_wedge     = assumption('kg', 'timing_ref_wedge'),
                                        ages_bathtub = KG_DYN_AGE_MIN:
                                                       KG_DYN_AGE_MAX,
                                        tie_tol = 1e-12) {

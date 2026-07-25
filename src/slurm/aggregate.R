@@ -69,6 +69,10 @@ tryCatch({
     config = readRDS(file.path(staging_dir, scenario_id, 'config.rds'))
     scenario_info = config$scenario_info
 
+    # See src/misc/assumptions.R: aggregation reads assumptions too (the
+    # corporate distribution smear and the housing structure share).
+    assumptions_activate(scenario_info$assumptions)
+
     # Read all per-year results. For baseline, results live in year_{y}.rds
     # (Phase 1 writes both static + null conventional via pass_type='both').
     # For counterfactuals, Phase 2A writes year_{y}_static.rds (mtrs +
@@ -141,6 +145,10 @@ tryCatch({
 
     scenario_id = counterfactual_ids[task_id]
     cat(paste0('Phase 3b: post-processing scenario=', scenario_id, '\n'))
+
+    # Post-processing reads assumptions (distribution.corp_foreign_share,
+    # distribution.housing_structure_share), so activate before the first call.
+    assumptions_activate(get_scenario_info(scenario_id)$assumptions)
 
     # Formatted 1040 report
     build_1040_report(scenario_id)

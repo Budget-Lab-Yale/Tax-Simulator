@@ -24,7 +24,7 @@
 #       to the net-of-estate-tax rate of ~0.16 (pooled estimates ~0.10-0.22;
 #       publish the band, not the point). Exact net-of-tax power form:
 #
-#         retained = ((1 - tau_S) / (1 - tau_B)) ^ ESTATE_REPORT_EPS
+#         retained = ((1 - tau_S) / (1 - tau_B)) ^ estate.report_eps
 #         f_estate = 1 - retained
 #
 #       where tau_B / tau_S are the per-record UN-SWITCHED marginal estate
@@ -69,7 +69,7 @@
 #-------------------------------------------------------------------------------
 
 ESTATE_AVOID_VERSION = '2026-07-16 standalone estate reporting module (split from wealth/avoidance)'
-ESTATE_REPORT_EPS    = as.numeric(Sys.getenv('ESTATE_REPORT_EPS', unset = '0.16'))
+# Value and provenance: config/assumptions/estate.yaml (estate.report_eps).
 
 
 do_estate = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, indexes) {
@@ -142,7 +142,8 @@ do_estate = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   }
 
   message('do_estate(): applying estate reporting response (',
-          ESTATE_AVOID_VERSION, '; estate_report_eps=', ESTATE_REPORT_EPS, ')')
+          ESTATE_AVOID_VERSION, '; estate_report_eps=',
+          assumption('estate', 'report_eps'), ')')
 
   year = tax_units$year[1]
 
@@ -217,7 +218,7 @@ do_estate = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   # unreported estate surfaces (symmetric KS margin).
   tau_eS = pmin(pmax(df$mtr_estate_S, 0), 1 - 1e-6)
   tau_eB = pmin(pmax(df$mtr_estate_B, 0), 1 - 1e-6)
-  retained_estate = ((1 - tau_eS) / (1 - tau_eB)) ^ ESTATE_REPORT_EPS
+  retained_estate = ((1 - tau_eS) / (1 - tau_eB)) ^ assumption('estate', 'report_eps')
   f_estate = 1 - retained_estate
 
   # Stack multiplicatively on the RETAINED share: one hidden ledger, three
@@ -236,7 +237,7 @@ do_estate = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   diag = tibble(
     year                        = year,
     version                     = ESTATE_AVOID_VERSION,
-    estate_report_eps           = ESTATE_REPORT_EPS,
+    estate_report_eps           = assumption('estate', 'report_eps'),
     estate_union_wmean_grosspos = if (sum(w * (gross > 0)) > 0)
                                     sum(w * estate_union * (gross > 0)) /
                                     sum(w * (gross > 0)) else 0,

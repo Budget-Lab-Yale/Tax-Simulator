@@ -179,6 +179,16 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     runscript$s = NA_real_
   }
 
+  # Model assumptions (src/misc/assumptions.R). Defaults live in
+  # config/assumptions/{channel}.yaml; a scenario overrides them either with an
+  # `assumptions` folder (the tax_law pattern) or with assumption.{channel}.{name}
+  # columns (the dep.{interface}.vintage pattern). Loading validates the schema,
+  # so a malformed or under-documented entry fails here rather than mid-run.
+  assumption_defaults = assumptions_load_defaults()
+  if (!('assumptions' %in% colnames(runscript))) {
+    runscript$assumptions = NA_character_
+  }
+
   # Subset runscript to specified ID, if supplied. The baseline row is always
   # retained: whether baseline actually RUNS is governed by baseline_vintage
   # (main.R / src/slurm/setup.R), but its interface paths and scenario info
@@ -218,10 +228,32 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   
   
   # Write Tax-Simulator-specific behavioral assumptions
-  runscript %>% 
+  runscript %>%
     select(ID, tax_law, behavior) %>%
     write_csv(file.path(output_root, 'behavioral_assumptions.csv'))
-  
+
+  # Write the resolved assumption manifest: every economic assumption actually
+  # used by each scenario, its kind, and whether the scenario overrode it. This
+  # is what lets a vintage be traced back to the assumptions that produced it --
+  # previously only the module NAMES were recorded, not the numbers they ran on.
+  runscript$ID %>%
+    map(.f = ~ assumptions_manifest(
+                 defaults = assumption_defaults,
+                 resolved = assumptions_resolve(
+                              defaults        = assumption_defaults,
+                              runscript_items = runscript %>% filter(ID == .x) %>% as.list()),
+                 id       = .x)) %>%
+    bind_rows() %>%
+    write_csv(file.path(output_root, 'assumptions.csv'))
+
+  # Record the code version the run was produced under. Without this, the
+  # defaults in git cannot be reconstructed for a past vintage.
+  tibble(
+    commit = system2('git', c('rev-parse', 'HEAD'), stdout = TRUE, stderr = FALSE),
+    dirty  = length(system2('git', c('status', '--porcelain'), stdout = TRUE, stderr = FALSE)) > 0
+  ) %>%
+    write_csv(file.path(output_root, 'code_version.csv'))
+
   
   # Create filepaths for data interfaces
   interface_paths = dependencies %>%     
@@ -309,16 +341,17 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   
   
   # Return runtime args and interface paths
-  return(list(random_numbers  = random_numbers,
-              random_seed     = random_seed,
-              runscript       = runscript,
-              interface_paths = interface_paths,
-              output_root     = output_root,
-              baseline_root   = baseline_root,
-              pct_sample      = pct_sample,
-              sample_ids      = sample_ids,
-              detail_vars     = detail_vars,
-              multicore       = multicore))
+  return(list(random_numbers      = random_numbers,
+              random_seed         = random_seed,
+              runscript           = runscript,
+              interface_paths     = interface_paths,
+              output_root         = output_root,
+              baseline_root       = baseline_root,
+              pct_sample          = pct_sample,
+              sample_ids          = sample_ids,
+              detail_vars         = detail_vars,
+              multicore           = multicore,
+              assumption_defaults = assumption_defaults))
 }
 
 
@@ -441,6 +474,23 @@ get_scenario_info = function(id) {
     s = NA_real_
   }
 
+  # Model assumptions: defaults overridden by this scenario's `assumptions`
+  # folder and assumption.{channel}.{name} columns. Activated (not merely
+  # returned) by do_scenario / the SLURM worker before any calculation runs.
+  assumptions = assumptions_resolve(defaults        = globals$assumption_defaults,
+                                    runscript_items = runscript_items)
+
+  # Interface vintages in play, keyed to match the derived_under block of a
+  # calibrated assumption (interface name lowercased, hyphens to underscores).
+  assumption_vintages = runscript_items %>%
+    keep(.p = names(.) %>% str_detect('^dep[.].+[.]vintage$')) %>%
+    set_names(names(.) %>%
+                str_remove('^dep[.]') %>%
+                str_remove('[.]vintage$') %>%
+                str_to_lower() %>%
+                str_replace_all('-', '_')) %>%
+    map(as.character)
+
   # Return as named list
   return(list(ID                       = id,
               output_path              = output_root,
@@ -455,7 +505,9 @@ get_scenario_info = function(id) {
               excess_growth_start_year = excess_growth_start_year,
               excess_growth_all_rev    = excess_growth_all_rev,
               s                        = s,
-              wealth_financing         = wealth_financing))
+              wealth_financing         = wealth_financing,
+              assumptions              = assumptions,
+              assumption_vintages      = assumption_vintages))
 }
 
 

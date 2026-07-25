@@ -45,16 +45,17 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset) {
   }
 
   # Applier-only deemed avoidance haircut. Data-calibration constant
-  # (KG_DYN_DEEMED_AVOIDANCE), NOT tax law. Scales the per-record deemed
+  # (assumption kg.deemed_avoidance), NOT tax law. Scales the per-record deemed
   # contribution to reflect noncompliance / valuation games; does not touch
   # c_phi or the Bellman.
-  if (!is.finite(KG_DYN_DEEMED_AVOIDANCE) ||
-      KG_DYN_DEEMED_AVOIDANCE < 0 || KG_DYN_DEEMED_AVOIDANCE > 1) {
+  deemed_avoidance = assumption('kg', 'deemed_avoidance')
+  if (!is.finite(deemed_avoidance) ||
+      deemed_avoidance < 0 || deemed_avoidance > 1) {
     stop(sprintf(
-      'kg_dyn_apply_to_records: KG_DYN_DEEMED_AVOIDANCE must be in [0, 1]; got %s.',
-      format(KG_DYN_DEEMED_AVOIDANCE)))
+      'kg_dyn_apply_to_records: assumption kg.deemed_avoidance must be in [0, 1]; got %s.',
+      format(deemed_avoidance)))
   }
-  avoidance_keep = 1 - KG_DYN_DEEMED_AVOIDANCE
+  avoidance_keep = 1 - deemed_avoidance
 
   # The avoidance haircut is a VALUE discount (valuation games mark down the
   # asset value; basis is unchanged), applied PER RECORD so cross-sectional
@@ -90,13 +91,14 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset) {
 
   # Resolve the allocation knob to a numeric weight on the G (holdings)
   # share: 'R' = 0 (historical), 'G' = 1, or a numeric blend in [0, 1].
-  alpha_G = switch(KG_DYN_APPLIER_ALLOCATION,
+  applier_allocation = as.character(assumption('kg', 'applier_allocation'))
+  alpha_G = switch(applier_allocation,
                    R = 0,
                    G = 1,
-                   suppressWarnings(as.numeric(KG_DYN_APPLIER_ALLOCATION)))
+                   suppressWarnings(as.numeric(applier_allocation)))
   if (!is.finite(alpha_G) || alpha_G < 0 || alpha_G > 1) {
-    stop("kg_dyn_apply_to_records: KG_DYN_APPLIER_ALLOCATION must be 'R', ",
-         "'G', or a number in [0, 1]; got '", KG_DYN_APPLIER_ALLOCATION, "'.")
+    stop("kg_dyn_apply_to_records: assumption kg.applier_allocation must be 'R', ",
+         "'G', or a number in [0, 1]; got '", applier_allocation, "'.")
   }
 
   tax_units %>%

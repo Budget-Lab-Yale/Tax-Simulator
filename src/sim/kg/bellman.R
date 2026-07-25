@@ -72,7 +72,7 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
                                      c_phi_col, p_char_col, eta, beta,
                                      kappa_col = NULL, stationary = FALSE,
                                      h_col = NULL, e_col = NULL,
-                                     form = KG_DYN_RESPONSE_FORM) {
+                                     form = kg_dyn_response_form()) {
 
   # One age-backward sweep through [a_min, a_max] for a single year column.
   #
@@ -111,7 +111,7 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
   # MC_S = MC_B => no response), the exact margin this term exists to
   # price. NULL = zeros (isolated solver unit tests only).
   #
-  # form selects the realization cost primitive (see KG_DYN_RESPONSE_FORM).
+  # form selects the realization cost primitive (see kg_dyn_response_form).
   # BOTH have C'(r_D_B) = 0, so Pass 1 is form-invariant (kappa = MC exactly)
   # and the levels path is bit-identical to the pre-toggle code:
   #   'levels' -- ENTROPY / KL cost C(r_D) = (1/eta)*[r_D*ln(r_D/r_D_B) - r_D +
@@ -250,12 +250,12 @@ kg_dyn_bellman_sweep_age = function(W_next, m_col, r_B_col, tau_col,
 
 kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
                                 kappa_mat     = NULL,
-                                eta           = KG_DYN_DEFAULT_ETA,
+                                eta           = kg_dyn_active_eta(),
                                 beta_by_year  = NULL,
                                 c_phi         = NULL,
                                 h_mat         = NULL,
                                 e_mat         = NULL,
-                                form          = KG_DYN_RESPONSE_FORM) {
+                                form          = kg_dyn_response_form()) {
 
   #----------------------------------------------------------------------------
   # Backward induction over (age, year) cells.
@@ -266,7 +266,7 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
   # c_phi_mat is typically all-zero under current-law step-up.
   #
   # When kappa_mat is supplied: Pass 2 (scenario). Solves the FOC closed form
-  # for the active form (see kg_dyn_bellman_sweep_age / KG_DYN_RESPONSE_FORM):
+  # for the active form (see kg_dyn_bellman_sweep_age / kg_dyn_response_form):
   # levels r_D = clip(r_D_B*exp(-eta*(MC - MC_B)), 0, 1); logs
   # r_D = clip(r_D_B*((1 - MC)/(1 - MC_B))^eta, 0, 1). eta is the active form's
   # constant (semi-elasticity for levels, net-of-tax elasticity for logs).
@@ -278,7 +278,7 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
   # broadcast to a constant matrix.
   #
   # beta_by_year[j] discounts between year j and j+1; NULL falls back to a
-  # constant KG_DYN_BETA vector for isolated solver unit tests.
+  # constant kg.beta_fallback vector for isolated solver unit tests.
   #
   # h_mat is the [n_ages, n_years] wealth-tax carrying-cost matrix (see
   # kg_dyn_bellman_sweep_age): per-cell gain-weighted mean of the record
@@ -303,7 +303,7 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
   n_ages  = nrow(m_mat); n_years = ncol(m_mat)
   ages_chr  = rownames(m_mat); years_chr = colnames(m_mat)
 
-  if (is.null(beta_by_year)) beta_by_year = rep(KG_DYN_BETA, n_years)
+  if (is.null(beta_by_year)) beta_by_year = rep(assumption('kg', 'beta_fallback'), n_years)
   stopifnot(length(beta_by_year) == n_years)
 
   if (missing(c_phi_mat) || is.null(c_phi_mat)) {

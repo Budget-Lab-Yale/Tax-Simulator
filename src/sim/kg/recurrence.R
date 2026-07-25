@@ -17,7 +17,7 @@ kg_dyn_cell_m_eff = function(baseline_t) {
   # large negative within-cell Cov(m, G_unit) (wealth-mortality gradient).
   # Allocating dG_i proportional to X_i and summing analytically gives an
   # exact per-record sum, not an approximation. Two rules via
-  # KG_DYN_DG_ALLOCATION: "G" (X = G_unit) or "R" (X = pmax(kg_lt, 0),
+  # assumption kg.dg_allocation: "G" (X = G_unit) or "R" (X = pmax(kg_lt, 0),
   # falling back to "G" when R_B = 0).
   #
   # Shared by kg_dyn_step_recurrence and the tau_eq machinery
@@ -29,10 +29,11 @@ kg_dyn_cell_m_eff = function(baseline_t) {
   m_eff_R = if_else(baseline_t$R_B > 0,
                     baseline_t$mR_record / baseline_t$R_B, m_eff_G)
 
-  m_eff = switch(KG_DYN_DG_ALLOCATION,
+  dg_allocation = as.character(assumption('kg', 'dg_allocation'))
+  m_eff = switch(dg_allocation,
                  G = m_eff_G,
                  R = m_eff_R,
-                 stop("Unknown KG_DYN_DG_ALLOCATION rule: ", KG_DYN_DG_ALLOCATION))
+                 stop("Unknown kg.dg_allocation rule: ", dg_allocation))
   pmin(pmax(m_eff, 0), 1)
 }
 
@@ -287,7 +288,7 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
   # pattern (all-zero for every non-wealth run — byte-diff tooling should
   # compare revenue/detail CSVs, not the kg state/diagnostic files).
   # carry_h is the h the Bellman/tau_eq actually consumed (post-
-  # KG_WEALTH_CARRY_SCALE); tau_w is the plain gain-weighted mtr_net_worth
+  # kg.wealth_carry_scale); tau_w is the plain gain-weighted mtr_net_worth
   # mean, diagnostics only.
   if (is.null(carry_h_col)) {
     carry_h_col = setNames(rep(0, length(ages_chr)), ages_chr)
@@ -375,11 +376,11 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
 kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                     baseline_tau, reform_tau,
                                     reform_tau_timing, heir_dist,
-                                    form  = KG_DYN_RESPONSE_FORM,
+                                    form  = kg_dyn_response_form(),
                                     eta   = kg_dyn_active_eta(form),
                                     timeable_share = kg_dyn_active_timeable_share(form),
-                                    timing_window = KG_DYN_TIMING_WINDOW,
-                                    ref_wedge     = KG_DYN_TIMING_REF_WEDGE,
+                                    timing_window = assumption('kg', 'timing_window'),
+                                    ref_wedge     = assumption('kg', 'timing_ref_wedge'),
                                     corp_debit_by_year = NULL,
                                     sigma_ctx = NULL,
                                     reform_carry = NULL,
@@ -407,7 +408,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   # from kg_dyn_aggregate_cell_carry (via kg_dyn_load_bathtub_inputs) — the
   # wealth-tax deferral carrying cost. h is packed onto the Bellman grid
   # (age-80 repeated forward, kg_dyn_pack_tau), scaled by the
-  # KG_WEALTH_CARRY_SCALE env var (default 1; a DISCLOSED, uncalibrated
+  # kg.wealth_carry_scale assumption (default 1; a DISCLOSED, uncalibrated
   # statutory-vs-effective sensitivity knob — e.g. set to the
   # retained-reported share under avoidance), and threaded into Pass 2 of
   # the Bellman and the scenario-side tau_eq recursion. Pass 1 (baseline)
@@ -466,13 +467,12 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   # like the historical eta = NA bootstrap for levels.
   if (!form %in% c('levels', 'logs'))
     stop(sprintf("kg_dynamics: form must be 'levels' or 'logs'; got '%s'.", form))
-  eta_const  = if (identical(form, 'logs')) 'KG_DYN_DEFAULT_ETA_LOGS' else
-                                            'KG_DYN_DEFAULT_ETA'
-  frac_const = if (identical(form, 'logs')) 'KG_DYN_TIMEABLE_SHARE_LOGS' else
-                                            'KG_DYN_TIMEABLE_SHARE'
+  eta_const  = if (identical(form, 'logs')) 'kg.eta_logs' else 'kg.eta'
+  frac_const = if (identical(form, 'logs')) 'kg.timeable_share_logs' else
+                                            'kg.timeable_share'
   if (!is.finite(eta)) {
     stop(sprintf(paste0('kg_dynamics: %s (the %s-form eta) is not set. Pin it ',
-         'via the eta_dial protocol under KG_RESPONSE_FORM=%s ',
+         'via the eta_dial protocol under kg.response_form=%s ',
          '(other/top_tax/eta_dial/) and paste the calibrated value into the ',
          'constants block at the top of src/sim/kg/constants.R.'),
          eta_const, form, form))
@@ -480,7 +480,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   if (!is.finite(timeable_share)) {
     stop(sprintf(paste0('kg_dynamics: %s (the %s-form timeable share) is not ',
          'set. Pin it against the short-run announcement moment under ',
-         'KG_RESPONSE_FORM=%s and paste the calibrated value into the ',
+         'kg.response_form=%s and paste the calibrated value into the ',
          'constants block at the top of src/sim/kg/constants.R.'),
          frac_const, form, form))
   }
@@ -518,12 +518,12 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                      ages_bellman = ages_bellman)
 
   # Step 2b: wealth-carry matrix (scenario side only; see reform_carry doc).
-  # KG_WEALTH_CARRY_SCALE applies at pack time so every consumer (Bellman,
+  # kg.wealth_carry_scale applies at pack time so every consumer (Bellman,
   # tau_eq, guard slack, state-file carry_h column) sees the scaled h.
-  carry_scale = as.numeric(Sys.getenv('KG_WEALTH_CARRY_SCALE', unset = '1'))
+  carry_scale = as.numeric(assumption('kg', 'wealth_carry_scale'))
   if (!is.finite(carry_scale) || carry_scale < 0) {
-    stop('kg_dynamics: KG_WEALTH_CARRY_SCALE must be a finite nonnegative ',
-         'number; got "', Sys.getenv('KG_WEALTH_CARRY_SCALE'), '".')
+    stop('kg_dynamics: assumption kg.wealth_carry_scale must be a finite ',
+         'nonnegative number; got "', carry_scale, '".')
   }
   years_chr_all = as.character(years)
   if (is.null(reform_carry)) {

@@ -12,7 +12,7 @@
 #   - the foreign-borne haircut on the capital legs,
 #   - the owner-occupied-housing land/structure split.
 #
-# Reuses the src/sim/corp/ constants (CORP_ASSET_EXPOSURE, sigma_N via
+# Reuses the src/sim/corp/ assumptions (corp.asset_exposure_*, sigma_N via
 # corp_env_knobs()) and the estate/wealth balance-sheet column vectors
 # (ESTATE_ASSET_COLS / ESTATE_DEBT_COLS, src/calc/functions/tax/estate.R) so
 # the net-capital base stays in lockstep with what estate + wealth call
@@ -29,12 +29,13 @@
 # note the denominator includes S-corp equity that foreigners are statutorily
 # barred from holding, biasing the C-corp share DOWN. The labor leg is NOT
 # haircut: wage incidence lands on US workers regardless of who owns the
-# equity. Conceptually distinct from CORP_THETA_RES = 0.40 (src/sim/corp/:
+# equity. Conceptually distinct from corp.theta_res = 0.40 (src/sim/corp/:
 # foreign + nonprofit + DB residual, conservation diagnostic only) -- equal by
 # coincidence; do not merge. Tables no longer sum to the corporate revenue
 # line by construction (the remainder is foreign-borne). Moved here from
 # distribution.R so the delta and levels tables share one definition.
-DIST_CORP_FOREIGN_SHARE = 0.40
+# Value and provenance: config/assumptions/distribution.yaml
+# (distribution.corp_foreign_share).
 
 
 # Owner-occupied-housing structure share. Under Harberger, capital migrates
@@ -48,9 +49,9 @@ DIST_CORP_FOREIGN_SHARE = 0.40
 # roughly two-thirds to low-70s of the Fed's owner-occupied real estate
 # aggregate; the Fed measure is broader, including vacant land and mobile
 # homes). PLACEHOLDER pending a per-record or geography-varying split.
-# Env override DIST_HOUSING_STRUCTURE_SHARE sweeps the 0.60 / 1.00 sensitivity
-# cases (1.00 = no land split, full net home equity).
-DIST_HOUSING_STRUCTURE_SHARE_DEFAULT = 0.70
+# Override assumption.distribution.housing_structure_share to sweep the 0.60 /
+# 1.00 sensitivity cases (1.00 = no land split, full net home equity).
+# Value and provenance: config/assumptions/distribution.yaml.
 
 
 # Owner-occupied residential real estate on the asset side, and the mortgages
@@ -67,23 +68,19 @@ DIST_HOUSING_DEBT_COLS  = c('value.primary_mortgage', 'value.other_mortgage')
 dist_housing_structure_share = function() {
 
   #----------------------------------------------------------------------------
-  # Structure share of owner-occupied housing, with env override for the
-  # land-split sensitivity sweep (0.60 conservative / 0.70 central / 1.00 no
-  # split). Mirrors corp_env_knobs(): the ONLY runtime knob; everything else is
-  # a code edit.
+  # Structure share of owner-occupied housing. Override per scenario with
+  # assumption.distribution.housing_structure_share for the land-split
+  # sensitivity sweep (0.60 conservative / 0.70 central / 1.00 no split).
   #
   # Returns: structure share in [0, 1] (dbl).
   #----------------------------------------------------------------------------
 
-  v = Sys.getenv('DIST_HOUSING_STRUCTURE_SHARE', unset = NA)
-  if (is.na(v) || !nzchar(v)) return(DIST_HOUSING_STRUCTURE_SHARE_DEFAULT)
-  x = suppressWarnings(as.numeric(v))
+  x = suppressWarnings(as.numeric(assumption('distribution',
+                                             'housing_structure_share')))
   if (!is.finite(x) || x < 0 || x > 1) {
-    stop('corp_alloc: env override DIST_HOUSING_STRUCTURE_SHARE = "', v,
+    stop('corp_alloc: assumption distribution.housing_structure_share = "', x,
          '" is not a number in [0, 1].')
   }
-  message(sprintf('corp_alloc: env override DIST_HOUSING_STRUCTURE_SHARE = %s (default %s)',
-                  x, DIST_HOUSING_STRUCTURE_SHARE_DEFAULT))
   x
 }
 
@@ -148,14 +145,16 @@ read_corp_alloc_stock_keys = function(baseline_id, yr) {
   # be defensive). rowSums(across(...)) mirrors run.R:546 / src/sim/corp/apply.R (was src/sim/corp/:1151).
   z0 = function(x) replace_na(x, 0)
 
+  .corp_exposure = corp_asset_exposure()
+
   td %>%
     mutate(
 
-      # Supernormal base: equity-exposed stock (CORP_ASSET_EXPOSURE-weighted)
-      corp_equity = z0(value.equities) * unname(CORP_ASSET_EXPOSURE['value.equities']) +
-                    z0(value.dc)       * unname(CORP_ASSET_EXPOSURE['value.dc'])       +
-                    z0(value.trusts)   * unname(CORP_ASSET_EXPOSURE['value.trusts'])   +
-                    z0(value.re_fund)  * unname(CORP_ASSET_EXPOSURE['value.re_fund']),
+      # Supernormal base: equity-exposed stock (corp.asset_exposure_*-weighted)
+      corp_equity = z0(value.equities) * unname(.corp_exposure['value.equities']) +
+                    z0(value.dc)       * unname(.corp_exposure['value.dc'])       +
+                    z0(value.trusts)   * unname(.corp_exposure['value.trusts'])   +
+                    z0(value.re_fund)  * unname(.corp_exposure['value.re_fund']),
 
       # Net home equity, then its structure component (residential land excluded)
       net_home_equity   = (z0(value.primary_home) + z0(value.other_home)) -
@@ -347,7 +346,7 @@ allocate_corp_dollars = function(amount_billion, sigma_n, weight, labor,
   if (is.na(amount_billion) || amount_billion == 0) return(rep(0, n))
 
   A       = amount_billion * 1e9
-  foreign = DIST_CORP_FOREIGN_SHARE
+  foreign = assumption('distribution', 'corp_foreign_share')
 
   # A weighted-share leg: amount * base / sum(base * weight), guarding an empty
   # (all-zero) base so the leg contributes nothing rather than NaN

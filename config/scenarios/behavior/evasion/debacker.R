@@ -14,21 +14,22 @@
 #
 # Central values and sources (elasticity magnitudes; sign handled by the
 # 'netoftax' form — reported income falls when the MTR rises):
-#   - EVASION_E_SCHC = 0.046 : Schedule C/F (sole prop + farm). DHY pooled
+#   - evasion.e_schc = 0.046 : Schedule C/F (sole prop + farm). DHY pooled
 #         cross-section, sole-proprietor subsample, federal MTR. Kansas DiD
 #         Schedule C gives 0.09; bunching (EITC-kink sole props) 0.26 — both
 #         alternative anchors for the env-var sweep, not centrals (the
-#         bunching estimate is a low-income population).
-#   - EVASION_E_PT   = 0.052 : partnership + S-corp income. DHY pooled
+#         bunching estimate is a low-income population; sweep them via
+#         assumption.evasion.e_schc).
+#   - evasion.e_pt   = 0.052 : partnership + S-corp income. DHY pooled
 #         cross-section, partnership subsample, federal MTR.
-#   - EVASION_E_RENT = 0.040 : rent (Schedule E ex pass-through). DHY Kansas
+#   - evasion.e_rent = 0.040 : rent (Schedule E ex pass-through). DHY Kansas
 #         DiD Schedule E (not significant; weakest-identified value here).
 #   - Wages, interest, dividends: NO response by design. Information reporting
 #         makes these visible (DHY Table: nonzero audit-adjustment rates ~7%
 #         for wages vs ~74% for sole-prop income); the tax-gap literature puts
 #         wage misreporting near 1%.
 #
-# EVASION_TOPEND_MULT (default 1.0) is an underdetection sweep knob: NRP
+# evasion.topend_mult (default 1.0) is an underdetection sweep knob: NRP
 # random audits underdetect sophisticated top-end evasion (offshore, tiered
 # partnerships — Guyton, Langetieg, Reck, Risch & Zucman 2021), so
 # detected-noncompliance elasticities are a FLOOR for the top tail. Sweep
@@ -48,10 +49,8 @@
 #-------------------------------------------------------------------------------
 
 EVASION_VERSION     = '2026-07-07 DHY (NTA 2025) centrals, seeded from slides'
-EVASION_E_SCHC      = as.numeric(Sys.getenv('EVASION_E_SCHC',      unset = '0.046'))
-EVASION_E_PT        = as.numeric(Sys.getenv('EVASION_E_PT',        unset = '0.052'))
-EVASION_E_RENT      = as.numeric(Sys.getenv('EVASION_E_RENT',      unset = '0.040'))
-EVASION_TOPEND_MULT = as.numeric(Sys.getenv('EVASION_TOPEND_MULT', unset = '1'))
+# Values and provenance: config/assumptions/evasion.yaml (evasion.e_schc,
+# evasion.e_pt, evasion.e_rent, evasion.topend_mult).
 EVASION_MAX_ADJ     = 1
 EVASION_NET_RATE_EPS = 1e-12
 
@@ -68,7 +67,7 @@ evasion_response_factor = function(mtr, mtr_baseline, e) {
           abs(net_base) > EVASION_NET_RATE_EPS
 
   pct_chg = rep(NA_real_, length(net_base))
-  pct_chg[valid] = e * EVASION_TOPEND_MULT *
+  pct_chg[valid] = e * assumption('evasion', 'topend_mult') *
                    ((1 - mtr[valid]) / net_base[valid] - 1)
   pct_chg = pmax(-EVASION_MAX_ADJ, pmin(pct_chg, EVASION_MAX_ADJ))
   if_else(is.na(pct_chg), 1, 1 + pct_chg)
@@ -148,8 +147,10 @@ do_evasion = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, inde
   }
 
   message('do_evasion(): applying noncompliance elasticities (', EVASION_VERSION,
-          '; schc=', EVASION_E_SCHC, ', pt=', EVASION_E_PT,
-          ', rent=', EVASION_E_RENT, ', topend_mult=', EVASION_TOPEND_MULT, ')')
+          '; schc=', assumption('evasion', 'e_schc'),
+          ', pt=',   assumption('evasion', 'e_pt'),
+          ', rent=', assumption('evasion', 'e_rent'),
+          ', topend_mult=', assumption('evasion', 'topend_mult'), ')')
 
   # Net-of-tax response factor, clamped at +/- EVASION_MAX_ADJ. NA in either
   # MTR frame (or a degenerate baseline rate of 1) means no response.
@@ -173,9 +174,9 @@ do_evasion = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, inde
       # evasion->wealth consistency link (an income evader under a wealth tax
       # should not report the assets whose income he hides). Not registered in
       # detail_vars, so they do not leak into the written detail.
-      evasion_g_schc = evasion_response_factor(mtr_sole_prop1,  mtr_sole_prop1_baseline,  EVASION_E_SCHC),
-      evasion_g_pt   = evasion_response_factor(mtr_part_active, mtr_part_active_baseline, EVASION_E_PT),
-      evasion_g_rent = evasion_response_factor(mtr_rent,        mtr_rent_baseline,        EVASION_E_RENT),
+      evasion_g_schc = evasion_response_factor(mtr_sole_prop1,  mtr_sole_prop1_baseline,  assumption('evasion', 'e_schc')),
+      evasion_g_pt   = evasion_response_factor(mtr_part_active, mtr_part_active_baseline, assumption('evasion', 'e_pt')),
+      evasion_g_rent = evasion_response_factor(mtr_rent,        mtr_rent_baseline,        assumption('evasion', 'e_rent')),
 
       # Positive-income gates, evaluated BEFORE any leg is scaled so the
       # companions always ride with their parent

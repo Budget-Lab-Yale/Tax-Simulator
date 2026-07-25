@@ -23,7 +23,8 @@
 #
 # No phase-in phi(t): a memoryless annual response to the current-year wedge
 # gap, the same convention as entity shifting and evasion. sigma central =
-# 0.08 (percent of pool per pp of wedge, env knob SIGMA_CONV), CALIBRATED
+# 0.08 (percent of pool per pp of wedge; the shipped value and its provenance
+# live in config/assumptions/sigma.yaml), CALIBRATED
 # 2026-07-08 to a top-subset ETI of 0.25 (the SSG central, taxable income
 # excl. gains) on the +5pp top-ordinary validation leg with the full stack
 # running — the residual conversion margin after entity shifting and evasion
@@ -119,7 +120,7 @@ do_conversion = function(tax_units, baseline_mtrs, static_mtrs,
   state = readRDS(state_path)
 
   message('do_conversion(): applying sigma income conversion (',
-          SIGMA_CONV_VERSION, '; sigma = ', SIGMA_CONV, ')')
+          SIGMA_CONV_VERSION, '; sigma = ', assumption('sigma', 'conv'), ')')
 
   conv = sigma_module_recompute(
     tax_units     = tax_units,

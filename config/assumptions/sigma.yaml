@@ -1,0 +1,56 @@
+# Income conversion (sigma channel) -- src/sim/sigma_conversion.R
+#
+# Model ASSUMPTIONS, not tax law. Defaults here; a scenario overrides one with
+# the runscript column assumption.sigma.{name}, or a whole set with an
+# `assumptions` override folder. See src/misc/assumptions.R.
+
+conv:
+  value: 0.16
+  kind: calibrated
+  set: '2026-07-12'
+  target: >
+    Top-subset ETI of 0.25 (Saez-Slemrod-Giertz central; taxable income
+    EXCLUDING net capital gains, after deductions) measured on the +5pp
+    top-ordinary validation leg (tests/topord_plus5, 2025:2035) with the full
+    behavior stack running. sigma is the RESIDUAL conversion margin: entity
+    shifting and evasion supply ~0.22 of the target on their own.
+  derived_under:
+    tax_data: '2026070814'
+    macro_projections: '2026022522'
+  invalidated_by:
+    - config/scenarios/behavior/entity_shifting/pearce_prisinzano.R
+    - config/scenarios/behavior/evasion/debacker.R
+    - config/scenarios/behavior/charity/100.R
+    - src/sim/sigma_conversion.R
+  invalidated_by_hashes:
+    config/scenarios/behavior/entity_shifting/pearce_prisinzano.R: e887c0327cadfe28f5f4bf7502787a82
+    config/scenarios/behavior/evasion/debacker.R: 5eef30cf0f14d80b0bd43898bc5e2cd4
+    config/scenarios/behavior/charity/100.R: 3e6d30228a38e970360e2e80acb6b4d7
+    src/sim/sigma_conversion.R: e82e26b0fd48ecea7966074b665040ef
+  rederive: other/top_tax/archive/tests/compute_top_eti.R
+  note: >
+    History 0.08 -> 0.157 -> 0.16. The 2026-07-12 move was driven by
+    entity-shifting tau_eq repricing plus the evasion cross-base fix, not by the
+    estate build. Method and measured legs: other/top_tax/sigma_explainer.md.
+    The kg Bellman calibration is orthogonal (disjoint base: ordinary income
+    excludes realizations) unless the pool ever starts taxing gains.
+    NOTE: the rederive script sits under other/top_tax/archive/ -- the path
+    quoted in src/sim/sigma_conversion.R points at a location that no longer
+    exists.
+    VINTAGE CORRECTED 2026-07-25 (author): the inherited record in
+    calibration_reference.csv said Tax-Data 2026050315, but the 2026-07-12
+    re-derivation ran AFTER the 2026-07-08 Tax-Data bump and therefore used
+    2026070814. The old row was stale bookkeeping, not a stale calibration.
+    HASH RE-PIN 2026-07-25: debacker.R and sigma_conversion.R changed in the
+    assumptions-layer refactor (constants moved to config, read at point of use).
+    The refactor is intended to be behavior-preserving, so the hashes were
+    re-pinned rather than treating sigma as re-derivable. This is CONDITIONAL on
+    the byte-identical verification run; if that run shows any output diff, the
+    refactor changed behavior and sigma must actually be re-derived.
+
+pt_labor_share:
+  value: 0.75
+  kind: sourced
+  citation: >
+    Smith, Yagan, Zidar and Zwick labor-content share of active pass-through
+    income; applied to the active pass-through legs of the conversion pool.

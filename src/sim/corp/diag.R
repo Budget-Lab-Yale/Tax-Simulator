@@ -79,7 +79,7 @@ corp_write_conservation_diag = function(pre, post, paths, year, conv_root) {
   # Household markdown position, re-measured from the exposed value.* deltas
   # (independent of the applier's internal markdown_amt).
   md = rep(0, nrow(pre))
-  for (a in intersect(names(CORP_ASSET_EXPOSURE), names(pre))) {
+  for (a in intersect(names(corp_asset_exposure()), names(pre))) {
     md = md + (replace_na(pre[[a]], 0) - replace_na(post[[a]], 0))
   }
   markdown_position_hh = sum(w8 * md) * toB
@@ -94,7 +94,7 @@ corp_write_conservation_diag = function(pre, post, paths, year, conv_root) {
     roll  = p$roll,
     sigma_n   = knobs$sigma_n,
     kappa     = knobs$kappa,
-    theta_res = CORP_THETA_RES,
+    theta_res = assumption('corp', 'theta_res'),
     dY_div_realized   = dY_div_realized,
     dY_int_realized   = dY_int_realized,
     dY_rent_realized  = dY_rent_realized,
@@ -103,10 +103,10 @@ corp_write_conservation_diag = function(pre, post, paths, year, conv_root) {
     dY_total_analytic = dY_total_analytic,
     B_flow_hh            = -dY_total_analytic,
     markdown_position_hh = markdown_position_hh,
-    B_res_theta          = CORP_THETA_RES * p$w,
+    B_res_theta          = assumption('corp', 'theta_res') * p$w,
     drho_int             = p$drho_int,
     residual_unallocated = p$w + dY_total_analytic -
-                           CORP_THETA_RES * p$w - p$drho_int
+                           assumption('corp', 'theta_res') * p$w - p$drho_int
   )
 
   # The testable content: analytic accumulation vs frame-measured realization.
@@ -182,7 +182,7 @@ corp_selfcheck_paths = function() {
     stop('corp_selfcheck: permanent rent-only mu is not constant (range ',
          min(live$mu), ' .. ', max(live$mu), ').')
   }
-  if (abs(mean(live$mu) - w_share * CORP_THETA) > 1e-3) {
+  if (abs(mean(live$mu) - w_share * assumption('corp', 'theta')) > 1e-3) {
     stop('corp_selfcheck: permanent rent-only mu = ', mean(live$mu),
          ' differs from the flow share ', w_share,
          ' (the Delta-tau/(1-tau) equivalent).')

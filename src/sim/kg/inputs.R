@@ -61,13 +61,13 @@ kg_dyn_attach_record_attrs = function(tax_units, cpiu_by_year = NULL) {
     }
     cpiu_years = names(cpiu_by_year)
     needed = unique(c(as.character(tax_units$year),
-                      as.character(KG_DYN_CHAR_BASE_YEAR)))
+                      as.character(assumption('kg', 'char_base_year'))))
     missing_cpiu = setdiff(needed, cpiu_years)
     if (length(missing_cpiu) > 0) {
       stop('kg_dyn_attach_record_attrs: cpiu_by_year missing years ',
            paste(missing_cpiu, collapse = ', '))
     }
-    cpiu_base = as.numeric(cpiu_by_year[as.character(KG_DYN_CHAR_BASE_YEAR)])
+    cpiu_base = as.numeric(cpiu_by_year[as.character(assumption('kg', 'char_base_year'))])
     cpiu_cur  = as.numeric(cpiu_by_year[as.character(tax_units$year)])
     if (!is.finite(cpiu_base) || any(!is.finite(cpiu_cur))) {
       stop('kg_dyn_attach_record_attrs: cpiu_by_year has non-finite CPI-U ',
@@ -82,12 +82,12 @@ kg_dyn_attach_record_attrs = function(tax_units, cpiu_by_year = NULL) {
   p_char_extensive = rep(0, length(estate_2026_m))
   p_char_intensive = rep(0, length(estate_2026_m))
   p_char_extensive[has_estate] = plogis(
-    KG_DYN_CHAR_EXTENSIVE_INTERCEPT +
-      KG_DYN_CHAR_EXTENSIVE_LN_SLOPE * log_estate[has_estate]
+    assumption('kg', 'char_extensive_intercept') +
+      assumption('kg', 'char_extensive_ln_slope') * log_estate[has_estate]
   )
   p_char_intensive[has_estate] = plogis(
-    KG_DYN_CHAR_INTENSIVE_INTERCEPT +
-      KG_DYN_CHAR_INTENSIVE_LN_SLOPE * log_estate[has_estate]
+    assumption('kg', 'char_intensive_intercept') +
+      assumption('kg', 'char_intensive_ln_slope') * log_estate[has_estate]
   )
 
   out = tax_units %>%
@@ -365,7 +365,7 @@ kg_dyn_load_beta_series = function(macro_root, years) {
 
 
 kg_dyn_load_cpiu_levels = function(macro_root, years,
-                                   base_year = KG_DYN_CHAR_BASE_YEAR) {
+                                   base_year = assumption('kg', 'char_base_year')) {
 
   needed_years = unique(c(years, base_year))
   cpiu = c('historical.csv', 'projections.csv') %>%

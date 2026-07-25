@@ -110,14 +110,15 @@ corp_apply_to_records = function(tax_units, paths, year,
 
   # Record-effective markdown (diagnostic) and the retirement source split,
   # both on the PRE-markdown balance sheet.
-  exposure_cols = intersect(names(CORP_ASSET_EXPOSURE), names(tax_units))
+  asset_exposure = corp_asset_exposure()
+  exposure_cols = intersect(names(asset_exposure), names(tax_units))
   markdown_amt  = rep(0, nrow(tax_units))
   for (a in exposure_cols) {
-    markdown_amt = markdown_amt + CORP_ASSET_EXPOSURE[[a]] * p$mu * g(a)
+    markdown_amt = markdown_amt + asset_exposure[[a]] * p$mu * g(a)
   }
   gross_pre = wealth_dyn_economic_gross(tax_units)
 
-  omega_dc = unname(CORP_ASSET_EXPOSURE['value.dc'])
+  omega_dc = unname(asset_exposure['value.dc'])
   dc  = g('value.dc')
   db  = g('value.db')
   dc_share = if_else(dc + db > CORP_EPS, dc / (dc + db), 0)
@@ -125,7 +126,7 @@ corp_apply_to_records = function(tax_units, paths, year,
   fac_pens = 1 - omega_dc * p$mu * dc_share
 
   # kg adjustments (non-kg runs only; see docstring)
-  omega_kg = CORP_OMEGA_KG
+  omega_kg = assumption('corp', 'omega_kg')
   kg_quantity_fac = 1 + omega_kg * p$phi
   kg_lt_delta = omega_kg * (p$phi * g('kg_lt') -
                             p$mu * pmax(g('kg_lt') + g('kg_lt_basis'), 0))
@@ -154,7 +155,7 @@ corp_apply_to_records = function(tax_units, paths, year,
 
   # Exposed stocks: column-specific markdown.
   for (a in exposure_cols) {
-    out[[a]] = out[[a]] * (1 - CORP_ASSET_EXPOSURE[[a]] * p$mu)
+    out[[a]] = out[[a]] * (1 - asset_exposure[[a]] * p$mu)
   }
 
   # Gains (non-kg runs).
@@ -186,7 +187,7 @@ corp_kg_state_exposed_value = function(tax_units) {
   #----------------------------------------------------------------------------
   # Per-record omega-weighted C-corp equity VALUE underlying the kg gain
   # state: only the kg asset classes with corporate exposure (the
-  # CORP_ASSET_EXPOSURE names intersected with value.{KG_DYN_ASSET_CLASSES} --
+  # corp.asset_exposure_* names intersected with value.{KG_DYN_ASSET_CLASSES} --
   # equities and re_fund; dc/trusts are exposed assets but NOT kg classes, so
   # their markdown never enters the kg state). kg_dyn_aggregate_cells sums
   # this to cells; the corporate gain-state debit is then
@@ -197,11 +198,12 @@ corp_kg_state_exposed_value = function(tax_units) {
   # Returns: numeric vector, one row per record.
   #----------------------------------------------------------------------------
 
-  kg_value_cols = intersect(names(CORP_ASSET_EXPOSURE),
+  asset_exposure = corp_asset_exposure()
+  kg_value_cols = intersect(names(asset_exposure),
                             paste0('value.', KG_DYN_ASSET_CLASSES))
   v = rep(0, nrow(tax_units))
   for (a in kg_value_cols) {
-    v = v + CORP_ASSET_EXPOSURE[[a]] * wealth_dyn_safe_col(tax_units, a)
+    v = v + asset_exposure[[a]] * wealth_dyn_safe_col(tax_units, a)
   }
   v
 }
@@ -272,7 +274,7 @@ corp_apply_kg_quantity_to_records = function(tax_units, paths, year) {
     stop('corp_incidence: no path row for year ', year, ' (kg quantity term).')
   }
   p = paths$sim[i, ]
-  fac = 1 + CORP_OMEGA_KG * p$phi
+  fac = 1 + assumption('corp', 'omega_kg') * p$phi
   if (abs(fac - 1) < CORP_EPS) return(tax_units)
 
   for (col in intersect(c('kg_lt', 'kg_st', 'kg_lt_basis'), names(tax_units))) {

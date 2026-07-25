@@ -101,7 +101,8 @@ WEALTH_CAP_FLOWS_PT = c(
   'part_passive_loss', 'part_179', 'scorp_active', 'scorp_passive',
   'scorp_active_loss', 'scorp_passive_loss', 'scorp_179', 'farm'
 )
-WEALTH_CAP_FLOWS_PT_WEIGHT = 0.2
+# Value and provenance: config/assumptions/wealth.yaml (wealth.cap_flows_pt_weight).
+wealth_cap_flows_pt_weight = function() assumption('wealth', 'cap_flows_pt_weight')
 
 # SECA/NIIT earner-split companions of the pass-through aggregates. Co-scaled
 # with WEALTH_CAP_FLOWS_PT (same 0.2 factor) so the NIIT/SECA active-vs-passive
@@ -569,7 +570,7 @@ wealth_dyn_capital_total = function(df) {
               g('scorp_active_loss') - g('scorp_passive_loss') - g('scorp_179')) +
              g('farm')
 
-  f_pure + WEALTH_CAP_FLOWS_PT_WEIGHT * f_pt_net
+  f_pure + wealth_cap_flows_pt_weight() * f_pt_net
 }
 
 
@@ -638,7 +639,7 @@ calc_cap_bundle_mtr = function(tax_units, actual_liab_iit, baseline_pr_er,
 
   bumped = tax_units %>%
     mutate(across(all_of(pure_cols), ~ . * (1 + eps)),
-           across(all_of(pt_cols),   ~ . * (1 + WEALTH_CAP_FLOWS_PT_WEIGHT * eps)))
+           across(all_of(pt_cols),   ~ . * (1 + wealth_cap_flows_pt_weight() * eps)))
 
   taxed_bumped = bumped %>%
     do_taxes(baseline_pr_er   = baseline_pr_er,
@@ -1135,7 +1136,7 @@ wealth_dyn_apply_to_records = function(tax_units, state, params = NULL,
   asset_cols = intersect(ESTATE_ASSET_COLS, names(tax_units))
 
   f_pure = 1 - f
-  f_pt   = 1 - WEALTH_CAP_FLOWS_PT_WEIGHT * f
+  f_pt   = 1 - wealth_cap_flows_pt_weight() * f
 
   # Debts are untouched by the haircut: compute the stock once from the original
   # frame, subtract it after the assets are eroded.

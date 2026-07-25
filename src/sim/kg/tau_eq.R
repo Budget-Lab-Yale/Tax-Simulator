@@ -72,7 +72,7 @@ kg_dyn_tau_eq_primitives = function(baseline_cells, years, r_S_by_year,
   #   - A, omega (mat)        : aging and heir-routing operators
   #   - h_bt_mat (mat|NULL)   : [age, year] wealth-tax carrying cost
   #                             (bathtub slice of the packed h matrix,
-  #                             post-KG_WEALTH_CARRY_SCALE); NULL = zeros
+  #                             post-kg.wealth_carry_scale); NULL = zeros
   #                             (baseline side — h_B == 0 by law, asserted
   #                             in kg_dyn_load_bathtub_inputs; and every
   #                             non-wealth scenario)

@@ -39,7 +39,9 @@
 #     negative (or more than doubles, on the negative side).
 #   - sigma central = 0.16, calibrated to a top-subset ETI-0.25 target on the
 #     +5pp validation leg. It is a RESIDUAL margin: see SIGMA_CALIB_PROVENANCE
-#     below for the method and the staleness conditions. Env knob SIGMA_CONV.
+#     below for the method and the staleness conditions. The value and its
+#     provenance live in config/assumptions/sigma.yaml; a scenario overrides it
+#     with the runscript column assumption.sigma.conv.
 #   - Composition (conversion into gain state vs entity shifting into the
 #     corporate base) is an OUTPUT (tracker diagnostics), not a dial.
 #     Sequential module order prevents double-moves.
@@ -87,12 +89,13 @@ SIGMA_CONV_VERSION = paste('2026-07-12 re-derivation to ETI-0.25 (0.08 -> 0.16;'
 # channels actually support conversion).
 #-------------------------------------------------------------------------------
 
-# Response parameter: percent of pool converted per percentage point of
-# wedge change (so a +5pp wedge at sigma = 0.16 converts 0.8% of the pool).
-SIGMA_CONV = as.numeric(Sys.getenv('SIGMA_CONV', unset = '0.16'))
-
-# SYZZ labor-content share applied to active pass-through legs in the pool.
-SIGMA_PT_LABOR_SHARE = 0.75
+# Response parameter (percent of pool converted per percentage point of wedge
+# change, so a +5pp wedge at sigma = 0.16 converts 0.8% of the pool) and the
+# SYZZ labor-content share applied to active pass-through legs in the pool now
+# live in config/assumptions/sigma.yaml, with their provenance attached, and are
+# read at the point of use via assumption('sigma', ...). They are scenario-
+# scoped: a scenario may override either through the runscript, so they must
+# NOT be captured here at source time.
 
 # Per-record dump knob (smoke/validation/debug only): writes
 # {scenario}/conventional/supplemental/sigma_conversion_dump/{year}.csv from
@@ -209,7 +212,8 @@ sigma_check_mtr_registration = function(scenario_info) {
 
 
 sigma_build_ctx = function(scenario_info, tax_law, baseline_root,
-                           sample_ids, pct_sample, sigma = SIGMA_CONV) {
+                           sample_ids, pct_sample,
+                           sigma = assumption('sigma', 'conv')) {
 
   #----------------------------------------------------------------------------
   # Builds the sigma-conversion context consumed by the bathtub pre-pass
@@ -219,8 +223,8 @@ sigma_build_ctx = function(scenario_info, tax_law, baseline_root,
   #----------------------------------------------------------------------------
 
   if (!is.finite(sigma) || sigma < 0 || sigma > 5) {
-    stop('sigma_conversion: SIGMA_CONV must be a finite nonnegative value ',
-         '(percent of pool per pp of wedge); got ', format(sigma), '.')
+    stop('sigma_conversion: assumption sigma.conv must be a finite nonnegative ',
+         'value (percent of pool per pp of wedge); got ', format(sigma), '.')
   }
   sigma_check_mtr_registration(scenario_info)
 
@@ -330,6 +334,8 @@ sigma_compute_conversions = function(pool, thresholds_t,
   dtau_eq = as.numeric(tau_eq_S_col[as.character(pool$age_cohort)]) -
             as.numeric(tau_eq_B_col[as.character(pool$age_cohort)])
 
+  pt_labor_share = assumption('sigma', 'pt_labor_share')
+
   out = pool %>%
     left_join(thresholds_t, by = 'filing_status') %>%
     mutate(
@@ -347,11 +353,11 @@ sigma_compute_conversions = function(pool, thresholds_t,
       pool_w1    = if_else(gate & !is.na(wages1) & wages1 > 0, wages1, 0),
       pool_w2    = if_else(gate & !is.na(wages2) & wages2 > 0, wages2, 0),
       pool_part  = if_else(gate & !is.na(part_active) & part_active > 0,
-                           SIGMA_PT_LABOR_SHARE * part_active, 0),
+                           pt_labor_share * part_active, 0),
       pool_scorp = if_else(gate & !is.na(scorp_active) & scorp_active > 0,
-                           SIGMA_PT_LABOR_SHARE * scorp_active, 0),
+                           pt_labor_share * scorp_active, 0),
       pool_sole  = if_else(gate & !is.na(sole_prop) & sole_prop > 0,
-                           SIGMA_PT_LABOR_SHARE * sole_prop, 0),
+                           pt_labor_share * sole_prop, 0),
       pool_total = pool_w1 + pool_w2 + pool_part + pool_scorp + pool_sole,
 
       # Per-leg wedge changes (static reform vs baseline, both sides net of
@@ -532,10 +538,11 @@ sigma_module_recompute = function(tax_units, baseline_mtrs, static_mtrs,
          '(it computes conversions and injects the gain-state inflow); ',
          're-run the pipeline with the current runscript.')
   }
-  if (!isTRUE(all.equal(tracker$sigma, SIGMA_CONV))) {
-    stop('sigma_conversion: SIGMA_CONV drift between the pre-pass (',
-         tracker$sigma, ') and the behavior module (', SIGMA_CONV, '). ',
-         'The env knob must be identical across pipeline phases.')
+  if (!isTRUE(all.equal(tracker$sigma, assumption('sigma', 'conv')))) {
+    stop('sigma_conversion: sigma.conv drift between the pre-pass (',
+         tracker$sigma, ') and the behavior module (',
+         assumption('sigma', 'conv'), '). The resolved assumption must be ',
+         'identical across pipeline phases.')
   }
 
   tau_eq_B_col = setNames(cell_table$tau_eq_B, as.character(cell_table$age))
@@ -569,7 +576,7 @@ sigma_module_recompute = function(tax_units, baseline_mtrs, static_mtrs,
     thresholds_t = tracker$thresholds,
     tau_eq_B_col = tau_eq_B_col,
     tau_eq_S_col = tau_eq_S_col,
-    sigma        = SIGMA_CONV
+    sigma        = assumption('sigma', 'conv')
   )
 
   # Conservation: the module's recomputed conversions must match the cell

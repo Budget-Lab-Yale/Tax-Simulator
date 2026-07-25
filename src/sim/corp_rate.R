@@ -18,7 +18,7 @@
 # no dep.* runscript columns.
 #
 # METHOD (all per year; t0 = baseline corp.rate, t = scenario corp.rate,
-# R0 = CBO rev_corp level, e = CORP_RATE_ETI, B0 = R0 / t0):
+# R0 = CBO rev_corp level, e = corp.rate_eti, B0 = R0 / t0):
 #   Revenue Laffer curve with a CONSTANT NET-OF-TAX elasticity (Coles-Patel-
 #   Seegert-Smith 2022 "Form A"):
 #     B(t) = B0 * [(1 - t) / (1 - t0)] ^ e
@@ -28,7 +28,7 @@
 #        R0 * ( (t/t0) * ((1 - t)/(1 - t0))^e  -  1 )
 #   Both are 0 when t == t0 (dormant). Revenue-max statutory rate t* = 1/(1+e).
 #
-# ELASTICITY (CORP_RATE_ETI = 0.367): the CPSS (2022, JAR 60(3)) AVOIDANCE-only
+# ELASTICITY (corp.rate_eti = 0.367): the CPSS (2022, JAR 60(3)) AVOIDANCE-only
 # taxable-income response (Table 5: 5.96% income change) re-based onto the
 # STATUTORY net-of-tax denominator (16.25%). This is NOT their headline
 # effective-rate CETI (0.91 = 8.93/9.76), NOR the total statutory (0.55), NOR
@@ -52,15 +52,15 @@
 #       receipts as levied at the statutory rate; it includes CAMT / GILTI /
 #       BEAT that are not, so the rate-sensitive base is overstated.
 #
-# Sweeps: override the elasticity via the CORP_RATE_ETI env var (mirrors the
-# CORP_SIGMA_N / CORP_KAPPA convention in src/sim/corp/). Menu of
+# Sweeps: override the elasticity via assumption.corp.rate_eti in the runscript
+# (mirrors the corp.sigma_n / corp.kappa convention). Menu of
 # self-consistent statutory-based values for reference: economic 0.182,
 # avoidance 0.367 (default), total 0.549.
 #-------------------------------------------------------------------------------
 
 # Statutory net-of-tax elasticity of the corporate tax base (default: CPSS 2022
 # avoidance component, re-based to the statutory denominator). Env-overridable.
-CORP_RATE_ETI = as.numeric(Sys.getenv('CORP_RATE_ETI', unset = '0.367'))
+# Value and provenance: config/assumptions/corp.yaml (corp.rate_eti).
 
 # Below this |t - t0| the rate change is treated as no change (dormant).
 CORP_RATE_EPS = 1e-12
@@ -102,7 +102,8 @@ corp_rate_read_series = function(scenario_tax_law_path) {
 
 
 
-corp_rate_delta = function(rate_series, rev_corp, static, eti = CORP_RATE_ETI) {
+corp_rate_delta = function(rate_series, rev_corp, static,
+                           eti = assumption('corp', 'rate_eti')) {
 
   #----------------------------------------------------------------------------
   # The pass-appropriate corporate statutory-rate revenue delta ($B), via the

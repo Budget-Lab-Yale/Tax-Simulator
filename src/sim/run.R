@@ -28,6 +28,18 @@ do_scenario = function(ID, baseline_mtrs) {
   # Get scenario info
   scenario_info = get_scenario_info(ID)
 
+  # Install this scenario's resolved assumptions as the active set, then confirm
+  # no calibrated value has gone stale relative to the inputs it was derived
+  # under. Both must precede any calculation: assumption() reads the active set,
+  # and a stale calibration should stop the run before it produces output.
+  assumptions_activate(scenario_info$assumptions)
+  assumptions_check_staleness(
+    defaults           = globals$assumption_defaults,
+    resolved           = scenario_info$assumptions,
+    interface_vintages = scenario_info$assumption_vintages,
+    enforce            = ASSUMPTIONS_ENFORCE_STALENESS
+  )
+
 
   #-----------------
   # Initialize data
@@ -1334,9 +1346,9 @@ kg_dyn_check_run_compat = function(scenario_info, vat_price_offset,
   check_raw_data_channel_compat('kg_dynamics', scenario_info,
                                 vat_price_offset, excess_growth_offset)
 
-  # Loudly flag a stale calibration (e.g. applier-rule flip or new Tax-Data
-  # vintage without recalibration). Warns by default; KG_STRICT_CALIB=1 stops.
-  kg_dyn_check_calibration_provenance(scenario_info)
+  # Calibration staleness is no longer checked here: it is enforced model-wide
+  # for every calibrated assumption by assumptions_check_staleness(), called
+  # once per scenario at the head of do_scenario (src/misc/assumptions.R).
 
   invisible(TRUE)
 }
