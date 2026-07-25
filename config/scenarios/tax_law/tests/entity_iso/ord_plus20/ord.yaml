@@ -1,0 +1,7 @@
+# Top ordinary rate +20pp starting 2026 (permanent). Entity-shifting
+# isolation experiment; all other brackets unchanged.
+rates:
+  value:
+    '2014': [0.1, 0.15, 0.25, 0.28, 0.33, 0.35, 0.396]
+    '2018': [0.1, 0.12, 0.22, 0.24, 0.32, 0.35, 0.37]
+    '2026': [0.1, 0.12, 0.22, 0.24, 0.32, 0.35, 0.57]
