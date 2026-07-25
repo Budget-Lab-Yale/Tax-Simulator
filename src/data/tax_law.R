@@ -1,8 +1,112 @@
 #------------------------------------------------------------------
 # tax_law.R
-# 
+#
 # Contains functions to read and parse tax law configuration files
 #------------------------------------------------------------------
+
+
+
+# Process-local cache of the baseline tax law: the raw YAML list, and its
+# parsed form for a given (years, indexes) pair. Phase 0 of the SLURM
+# pipeline (src/slurm/setup.R) builds one config per scenario in a single
+# process, and a reform overrides ~2 of 28 parameters, so without this the
+# other ~26 parses -- byte-identical every time -- are recomputed once per
+# scenario. Holds at most 28 parsed parameters plus one raw YAML list
+# regardless of scenario count.
+#
+# The whole parse chain below is pure: no reference to globals, no <<-, no
+# RNG, no time or environment dependence. parse_param(raw_input, name,
+# years, indexes) is therefore a function of its arguments alone, so a
+# cached parse is reusable whenever all four match.
+#
+# Set TAX_LAW_CACHE=0 in the environment to disable (for A/B verification
+# or when debugging tax law).
+.tax_law_cache = new.env(parent = emptyenv())
+
+
+
+tax_law_cache_enabled = function() {
+
+  #----------------------------------------------------------------------------
+  # Whether the baseline tax law cache is active.
+  #
+  # Parameters: (none)
+  #
+  # Returns: TRUE unless TAX_LAW_CACHE=0 is set in the environment (bool).
+  #----------------------------------------------------------------------------
+
+  !identical(Sys.getenv('TAX_LAW_CACHE'), '0')
+}
+
+
+
+load_baseline_tax_law_input = function(config_path = './config/scenarios/tax_law/baseline') {
+
+  #----------------------------------------------------------------------------
+  # Cached wrapper around load_tax_law_input() for the baseline tax law
+  # directory. Keyed on the path plus the modification times of its YAML
+  # files, so an edit between runs (or within one, in an interactive session)
+  # invalidates the cache -- 28 stat calls in place of 28 YAML reads.
+  #
+  # Parameters:
+  #   - config_path (str) : filepath to baseline tax law config folder
+  #
+  # Returns: list of raw tax parameter inputs, indexed by tax parameter name
+  #          (list).
+  #----------------------------------------------------------------------------
+
+  if (!tax_law_cache_enabled()) {
+    return(load_tax_law_input(config_path))
+  }
+
+  yaml_files = list.files(config_path, pattern = '.yaml', full.names = T)
+  stamp = list(path   = config_path,
+               files  = yaml_files,
+               mtimes = file.mtime(yaml_files))
+
+  if (!identical(.tax_law_cache$raw_stamp, stamp)) {
+    .tax_law_cache$raw       = load_tax_law_input(config_path)
+    .tax_law_cache$raw_stamp = stamp
+
+    # Parses of the previous raw input are no longer valid
+    .tax_law_cache$parsed     = NULL
+    .tax_law_cache$parse_stamp = NULL
+  }
+
+  return(.tax_law_cache$raw)
+}
+
+
+
+get_parsed_baseline = function(baseline_raw, years, indexes) {
+
+  #----------------------------------------------------------------------------
+  # Returns the parsed baseline tax law for the given years and indexes,
+  # parsing it only when those differ from the cached pair. One identical()
+  # comparison on the indexes dataframe per scenario, no hashing.
+  #
+  # Parameters:
+  #   - baseline_raw (list) : raw baseline input, per load_tax_law_input()
+  #   - years (int[])       : years for which to generate parameters
+  #   - indexes (df)        : long-format dataframe of index growth rates
+  #
+  # Returns: list of parsed parameter dataframes indexed by parameter name
+  #          (list).
+  #----------------------------------------------------------------------------
+
+  stamp = list(years = years, indexes = indexes)
+
+  if (!identical(.tax_law_cache$parse_stamp, stamp)) {
+    .tax_law_cache$parsed = baseline_raw %>%
+      map2(.f      = parse_param,
+           .y      = names(.),
+           years   = years,
+           indexes = indexes)
+    .tax_law_cache$parse_stamp = stamp
+  }
+
+  return(.tax_law_cache$parsed)
+}
 
 
 
@@ -30,9 +134,10 @@ build_tax_law = function(scenario_info, indexes) {
     file.path('./config/scenarios/tax_law', .) %>% 
     load_tax_law_input()
   
-  # Read baseline YAML files
-  tax_law = load_tax_law_input('./config/scenarios/tax_law/baseline') 
-  
+  # Read baseline YAML files (cached; see .tax_law_cache above)
+  baseline_raw = load_baseline_tax_law_input()
+  tax_law      = baseline_raw
+
   # Overwrite baseline subparams with specified changes. Each reform
   # subparameter object replaces the baseline one WHOLESALE (value plus all
   # indexation fields together), never merged field-by-field: a reform that
@@ -41,14 +146,31 @@ build_tax_law = function(scenario_info, indexes) {
   for (param in names(changes_from_baseline)) {
     tax_law[[param]][names(changes_from_baseline[[param]])] = changes_from_baseline[[param]]
   }
-  
-  # Parse all parameters and concatenate
-  tax_law %<>%   
-    map2(.f      = parse_param, 
-         .y      = names(.), 
-         years   = 2014:max(scenario_info$years),
-         indexes = indexes) %>% 
-    bind_rows() %>% 
+
+  # Parse all parameters and concatenate, reusing the cached baseline parse
+  # for every parameter the reform leaves untouched. The test is on CONTENT,
+  # not on whether the parameter was listed as overridden: that way the
+  # baseline scenario itself (whose tax_law_id restates all 28 parameters
+  # identically) and any reform that restates a parameter unchanged both hit
+  # the cache.
+  years_to_parse  = 2014:max(scenario_info$years)
+  parsed_baseline = if (tax_law_cache_enabled()) {
+    get_parsed_baseline(baseline_raw, years_to_parse, indexes)
+  } else {
+    NULL
+  }
+
+  tax_law %<>%
+    imap(.f = ~ if (!is.null(parsed_baseline) &&
+                    identical(.x, baseline_raw[[.y]])) {
+                  parsed_baseline[[.y]]
+                } else {
+                  parse_param(raw_input = .x,
+                              name      = .y,
+                              years     = years_to_parse,
+                              indexes   = indexes)
+                }) %>%
+    bind_rows() %>%
 
     # Split subparameters into scalars and vectors 
     filter(!is.na(value)) %>% 
