@@ -196,26 +196,52 @@ partition will give them. It is most valuable for the long-tail tasks
 (`cf-static` max 329s) and for interactive/iterative single-scenario work, and it
 composes with §2.3 rather than substituting for it.
 
-### 2.3 MTRs are computed for variables nobody reads
+### 2.3 MTRs computed for variables nobody reads — SMALL for the top-tax runscripts (revised)
 
 All 10 `mtr_vars` are computed for every scenario-year on both the static and
 conventional passes, regardless of which behavior modules a given scenario
-actually registers. Each unused variable costs roughly 7% of a year-task
+registers. Each unused variable costs roughly 7% of a year-task
 (39.4s / 10 vars / 53.2s), times two passes, times every year.
 
-What the modules actually reference (`grep -ho 'mtr_[a-z0-9_]*'` over
-`config/scenarios/behavior/`): `mtr_net_worth`, `mtr_kg_lt`, `mtr_estate`,
-`mtr_estate_ded`, `mtr_part_active`, `mtr_sole_prop1`, `mtr_rent`,
-`mtr_scorp_active`, `mtr_wages1`, `mtr_wages2`, `mtr_char_cash`, plus
-tips/OT/auto variants in modules not used by the top-tax runscripts.
+**Revised down after tracing actual consumption.** This was initially ranked as
+the largest remaining CPU win. It is not, for the runscripts in use. Modules
+consume MTRs two ways -- by name (`mtr_part_active`) and by STRING ARGUMENT to
+`apply_mtr_elasticity`, which builds the name internally as
+`paste0('mtr_', var)` (`src/sim/behavior.R:95`). A name-only grep undercounts.
+Tracing both for the six modules the `top_tax/dials` scenarios run
+(`kg_dynamics/turnover conversion/sigma entity_shifting/pearce_prisinzano
+evasion/debacker charity/50 estate/avoidance`):
 
-The needed set could be derived per scenario from its registered behavior
-modules, keeping the existing guaranteed kg/wealth `net_worth` / `estate`
-fallbacks and the union requirement on the baseline leg (the baseline cannot know
-which scenarios will consume its detail, and `read_mtr` in `kg_dynamics.R`
-already hard-stops when the baseline is missing `estate`). Downstream readers of
-`mtr_*` columns in detail (distribution, diagnostics) need auditing before this
-is safe.
+| registered variable | consumed by |
+|---|---|
+| `part_active`  | sigma, entity_shifting, evasion |
+| `sole_prop1`   | sigma, evasion |
+| `scorp_active` | sigma |
+| `wages1`       | sigma |
+| `kg_lt`        | entity_shifting (+ the kg Bellman) |
+| `rent`         | evasion |
+| `estate`       | estate/avoidance |
+| `char_cash`    | charity/50, via the `apply_mtr_elasticity` string argument |
+| `net_worth`    | the kg wealth-carry aggregator (guaranteed fallback anyway) |
+| `wages2`       | **no consumer found** |
+
+So for the dials runscript the prunable set is 1 of 10 -- about 7% of a
+year-task, not the ~30% first implied. The win is large only for runscripts that
+declare a broad superset while running few modules.
+
+**There is also an output-schema cost.** `summary_stats.R:199` aggregates
+`across(starts_with('mtr_'))` into the 1040 summary totals, so pruning a variable
+REMOVES a column from those files. This is not an invisible speedup: it makes
+vintages less comparable. Combined with the 7%, this belongs near the bottom of
+the priority list, not the top.
+
+If pursued: derive the needed set per scenario from its registered modules
+(catching both the by-name and by-string-argument forms), keep the guaranteed
+kg/wealth `net_worth` / `estate` fallbacks, and keep the union requirement on the
+baseline leg -- the baseline cannot know which scenarios will consume its detail
+(`main.R:99` and `setup.R:165` both harvest `starts_with('mtr_')` from baseline
+static detail, and `read_mtr` in `kg_dynamics.R` already hard-stops when the
+baseline is missing `estate`).
 
 ### 2.4 SLURM DAG uses global array barriers, so every phase runs at the speed of the slowest scenario
 
@@ -264,13 +290,39 @@ Additionally, everything in Phase 3b is serial inside one job (observed max
 inside the distribution builders, serial loops over `dist_years` and over the 21
 `dist_cuts`. Candidates for an array over (scenario × product) or an `mclapply`.
 
-### 2.6 Phase 0 setup is serial on the login node
+### 2.6 Phase 0 setup: ~80 minutes of serial login-node time on a 199-scenario runscript (revised up)
 
 `src/slurm/setup.R:105` loops over scenarios building `vat_price_offset`,
 `excess_growth_offset`, `indexes` and `build_tax_law` one at a time before any
-job is submitted. Measured at roughly 30s per scenario in the probe. A
-30-scenario runscript therefore spends ~15 minutes of serial login-node time as a
-prologue. `mclapply` over scenarios, or promote it to a Phase 0 array job.
+job is submitted. Measured at roughly 25-30s per scenario.
+`config/runscripts/top_tax/dials.csv` has **199 scenarios**, so this is about
+**80 minutes of serial login-node work before a single job is submitted** -- not
+the ~15 minutes first estimated.
+
+**The redundancy is the point, not the serialism.** `build_tax_law`
+(`src/data/tax_law.R:29-51`) does this per scenario:
+
+1. loads the reform's YAML overrides,
+2. loads **all 28** baseline parameter files
+   (`load_tax_law_input('./config/scenarios/tax_law/baseline')`),
+3. overwrites the handful of overridden subparameters,
+4. runs `parse_param` over EVERY parameter for `2014:max(years)` -- the
+   indexation / rounding / time-series expansion, which is the expensive step.
+
+A typical dials reform overrides **one or two** of those 28 files
+(`s_ord_r39p6`: `ord.yaml` only; `pc_ordr50_cgr30`: `ord.yaml` + `pref.yaml`).
+Steps 2 and 4 therefore produce byte-identical output for 26-27 parameters, 199
+times over.
+
+**Preferred fix: memoize, don't parallelize.** `parse_param` is already applied
+per-parameter via `map2`, so its result can be cached on (parameter content, year
+range, `indexes`). Phase 0 then becomes one full parse plus 199 cheap ones --
+minutes instead of an hour and twenty. Caveat: `indexes` differs by scenario when
+a scenario carries a VAT or excess-growth offset, so the cache must key on it (or
+engage only when it matches the baseline's).
+
+Parallelizing the loop (`mclapply`, or a Phase 0 array job) also works and is
+simpler, but still burns 199 full parses of login-node CPU. The two compose.
 
 ### 2.7 Full-file `fread()` where a handful of columns are needed
 
@@ -315,15 +367,27 @@ mostly in the 2W and 2B jobs (~150 CPU-hours combined) and in Phase 0.
 
 ## 3. Recommended order
 
+Revised 2026-07-25 after tracing §2.3 and §2.6 properly: §2.6 moves up sharply
+(80 minutes of serial prologue on a 199-scenario runscript, and the fix is
+memoization rather than parallelism), §2.3 moves to the bottom (1 of 10 variables
+prunable on the runscripts in use, and pruning drops columns from the summary
+output).
+
 1. ~~§2.1 QBI reshape~~ — **DONE 2026-07-25, 29.6% per year-task, bit-identical.**
-2. §2.7 selective `fread` + §2.5 memoize the distribution microdata — small,
+2. §2.6 memoize `parse_param` across scenarios in Phase 0 — ~80 min of serial
+   login-node time on `top_tax/dials`, reducible to minutes. No results risk
+   (same parse, cached).
+3. §2.7 selective `fread` + §2.5 memoize the distribution microdata — small,
    safe, pure waste elimination.
-3. §2.4 per-scenario DAG chains — wall clock only, no CPU cost, no results risk.
-4. §2.2 fork the MTR loop — needs a `--mem` bump; wall clock only.
-5. §2.3 prune unused `mtr_vars` — largest remaining CPU win but needs an audit of
-   every downstream `mtr_*` reader first.
-6. §2.6 parallelize Phase 0, §2.5 fan out Phase 3b products.
-7. §2.8 MTR frame-stacking, only if §2.1 through §2.5 prove insufficient.
+4. §2.4 per-scenario DAG chains — wall clock only, no CPU cost, no results risk.
+5. §2.2 fork the MTR loop — the largest remaining item by share of a year-task
+   (75%), verified fork-safe; needs a `--mem` bump and `mclapply` error handling.
+   Buys wall clock, not CPU-hours.
+6. §2.5 fan out the Phase 3b products.
+7. §2.8 MTR frame-stacking — reduces CPU-hours rather than wall clock, but
+   invasive; only if the above prove insufficient.
+8. §2.3 prune unused `mtr_vars` — smallest win of the set and it changes the
+   summary-output schema.
 
 ---
 
