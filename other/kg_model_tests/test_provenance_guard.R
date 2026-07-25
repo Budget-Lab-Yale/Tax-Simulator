@@ -11,7 +11,7 @@ files = c('src/sim/kg_dynamics.R', 'src/sim/run.R',
           'other/kg_model_tests/calibrate.R')
 for (f in files) { invisible(parse(f)); cat('PARSE OK:', f, '\n') }
 
-source('src/sim/kg_dynamics.R')
+for (f in sort(list.files('./src/sim/kg', full.names = TRUE))) source(f)
 cat('\nlive KG_RESPONSE_FORM =', KG_DYN_RESPONSE_FORM,
     '| active eta =', kg_dyn_active_eta(),
     '| active timeable_share =', kg_dyn_active_timeable_share(),

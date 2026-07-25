@@ -20,7 +20,7 @@
 #-------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({ library(tidyverse) })
-source('./src/sim/kg_dynamics.R')
+for (f in sort(list.files('./src/sim/kg', full.names = TRUE))) source(f)
 
 # ---- synthetic grid --------------------------------------------------------
 ages  = 60:80

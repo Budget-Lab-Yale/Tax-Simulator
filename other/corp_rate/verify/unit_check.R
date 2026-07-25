@@ -11,7 +11,9 @@ repo = '/nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator'
 
 cat('== (1) parse-check ==\n')
 files = c('src/sim/corp_rate.R',
-          'src/sim/corp_incidence.R',
+          'src/sim/corp/paths.R',
+          'src/sim/corp/apply.R',
+          'src/sim/corp/diag.R',
           'src/data/post_processing/revenue.R',
           'src/data/post_processing/distribution.R',
           'src/data/post_processing/distribution_etrs.R')

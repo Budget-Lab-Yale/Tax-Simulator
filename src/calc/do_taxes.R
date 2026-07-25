@@ -585,8 +585,7 @@ calc_mtrs = function(tax_units, actual_liab_iit, actual_liab_pr, var, pr = T,
   #                                      income-tax effect of the extra wage
   #                                      shift into the $1 numerator (garbage
   #                                      MTRs up to 1e7 on taxmax / entity-
-  #                                      shifted records; found 2026-07-09,
-  #                                      double-rescale variant 2026-07-10).
+  #                                      shifted records).
   #
   # Returns: tibble of MTRs (df).
   #----------------------------------------------------------------------------

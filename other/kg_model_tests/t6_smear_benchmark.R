@@ -34,7 +34,7 @@
 #-------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({ library(tidyverse); library(data.table) })
-source('./src/sim/kg_dynamics.R')
+for (f in sort(list.files('./src/sim/kg', full.names = TRUE))) source(f)
 
 VROOT = '/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/top_tax_dials_30y_v1'
 YEAR  = 2036

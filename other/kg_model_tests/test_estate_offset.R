@@ -32,7 +32,7 @@
 #-------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({ library(tidyverse); library(magrittr) })
-source('./src/sim/kg_dynamics.R')
+for (f in sort(list.files('./src/sim/kg', full.names = TRUE))) source(f)
 source('./src/calc/utils.R')
 source('./src/calc/functions/tax/estate.R')
 

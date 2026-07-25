@@ -21,7 +21,7 @@ Rscript -e '
   suppressPackageStartupMessages({library(tidyverse); library(data.table); library(magrittr)})
   source("./src/calc/functions/tax/estate.R")
   source("./src/sim/cohort_bathtub.R")
-  source("./src/sim/kg_dynamics.R")
+  for (f in sort(list.files("./src/sim/kg", full.names = TRUE))) source(f)
 
   stopifnot(exists("ESTATE_ASSET_COLS"), exists("build_aging_matrix"))
   cat("SYMBOLS_RESOLVE: ESTATE_ASSET_COLS (n=", length(ESTATE_ASSET_COLS),

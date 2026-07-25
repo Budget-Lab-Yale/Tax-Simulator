@@ -1,0 +1,4 @@
+ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,wealth_financing
+baseline,baseline,,2025:2027,,wages1 wages2,nextdollar nextdollar,none
+sd_bump_10k,tests/sd_bump_10k,,2025:2027,2026:2026,wages1 wages2,nextdollar nextdollar,none
+char_above,tests/char_above_smoke,,2025:2027,2026:2026,wages1 wages2,nextdollar nextdollar,none

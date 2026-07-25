@@ -262,6 +262,279 @@ write_pass_outputs = function(output, root, totals_slot,
 
 
 
+#-------------------------------------------------------------------------------
+# Per-pass helpers shared by the static and conventional bodies of
+# run_one_year(). The two passes differ in their inputs, not in how they compute
+# MTRs, assemble totals, or write detail, so those steps live here once.
+#-------------------------------------------------------------------------------
+
+# Channel columns that ride any_of() onto a detail file: present only on the
+# pass that produces them, so dormancy is preserved for scenarios that don't
+# run the channel. The two lists differ -- the static frame never carries the
+# conventional-only channel output (wealth haircut, corp markdown, conv-no-
+# wealth forcing ingredients).
+DETAIL_COLS_OPTIONAL_STATIC = c('kg_lockin', 'kg_deemed', 'liab_deemed',
+                                'estate_income_tax_ded')
+
+DETAIL_COLS_OPTIONAL_CONV = c(DETAIL_COLS_OPTIONAL_STATIC,
+                              'estate_concealed_frac',
+                              'economic_gross', 'cap_bundle_F',
+                              'net_worth_raw', 'nw_pctile', 'D_alloc',
+                              'wealth_haircut',
+                              'corp_dY_exog', 'corp_markdown',
+                              'corp_flow_factor')
+
+
+
+strip_calc_vars = function(df, drop_mtrs = FALSE, strict = TRUE) {
+
+  #----------------------------------------------------------------------------
+  # Drops the calculated tax variables from a frame, recovering the exogenous-
+  # variable frame calc_mtrs() expects.
+  #
+  # Parameters:
+  #   - df (df)           : tax unit frame
+  #   - drop_mtrs (bool)  : also drop any mtr_* columns already joined on
+  #   - strict (bool)     : TRUE requires every calculated variable to be
+  #                         present (a POST-do_taxes frame); FALSE tolerates
+  #                         absence (a PRE-do_taxes frame, which carries none)
+  #
+  # Returns: the frame less the calculated variables (df).
+  #----------------------------------------------------------------------------
+
+  calc_vars = return_vars %>% unlist() %>% set_names(NULL)
+
+  df = if (strict) {
+    df %>% select(-all_of(calc_vars))
+  } else {
+    df %>% select(-any_of(calc_vars))
+  }
+
+  if (drop_mtrs) {
+    df = df %>% select(-starts_with('mtr_'))
+  }
+  df
+}
+
+
+
+mtr_actuals = function(taxed) {
+
+  #----------------------------------------------------------------------------
+  # The actual-liability vectors calc_mtrs() differences against, read off the
+  # SAME frame the recompute will run on. actual_liab_estate is the DSUE blend
+  #   E[liab] = p_dsue * liab_dsue + (1 - p_dsue) * liab_nodsue
+  # and must never come from the baseline: the delta has to be measured on the
+  # frame the recompute runs on. The wealth and estate entries are consumed only
+  # by their own MTR var and ignored otherwise.
+  #
+  # Parameters:
+  #   - taxed (df) : post-do_taxes frame carrying liabilities and estate output
+  #
+  # Returns: named list of actuals vectors.
+  #----------------------------------------------------------------------------
+
+  # A frame taxed with calc_estate_flag / calc_wealth_flag = FALSE carries no
+  # estate or wealth output. calc_mtrs defaults those actuals to NULL, so
+  # omitting them here is equivalent to not supplying them -- and any MTR var
+  # that would actually read them refuses a NULL.
+  has = function(col) col %in% names(taxed)
+
+  list(
+    liab_iit      = taxed$liab_iit_net,
+    liab_pr       = taxed$liab_pr,
+    liab_wealth   = if (has('liab_wealth')) taxed$liab_wealth else NULL,
+    liab_estate   = if (has('estate_p_dsue')) {
+                      taxed$estate_p_dsue * taxed$liab_estate_dsue +
+                        (1 - taxed$estate_p_dsue) * taxed$liab_estate_nodsue
+                    } else NULL,
+    estate_p_dsue = if (has('estate_p_dsue')) taxed$estate_p_dsue else NULL
+  )
+}
+
+
+
+calc_one_mtr = function(frame, actuals, var, baseline_pr_er = NULL,
+                        type = 'nextdollar') {
+
+  #----------------------------------------------------------------------------
+  # One MTR as a bare vector. Used by the guaranteed-column fallbacks, which
+  # compute a single MTR outside the registered mtr_vars loop.
+  #
+  # Parameters:
+  #   - frame (df)          : exogenous-variable frame (see strip_calc_vars)
+  #   - actuals (list)      : output of mtr_actuals() for the frame the actual
+  #                           liabilities were computed on
+  #   - var (str)           : variable to perturb
+  #   - baseline_pr_er (df) : NULL for a POST-do_taxes frame, the real value for
+  #                           a PRE-do_taxes one (see the calc_mtrs param doc)
+  #   - type (str)          : 'nextdollar' (default) or 'extensive'
+  #
+  # Returns: numeric vector of MTRs.
+  #----------------------------------------------------------------------------
+
+  calc_mtrs(
+    tax_units            = frame,
+    actual_liab_iit      = actuals$liab_iit,
+    actual_liab_pr       = actuals$liab_pr,
+    actual_liab_wealth   = actuals$liab_wealth,
+    actual_liab_estate   = actuals$liab_estate,
+    actual_estate_p_dsue = actuals$estate_p_dsue,
+    baseline_pr_er       = baseline_pr_er,
+    var                  = var,
+    pr                   = F,
+    type                 = type
+  )[[paste0('mtr_', var)]]
+}
+
+
+
+run_mtr_block = function(taxed, scenario_info, year, baseline_pr_er) {
+
+  #----------------------------------------------------------------------------
+  # Computes every MTR the runscript registers, joins them onto the frame, and
+  # derives the switch-gated estate MTR. Shared by the static and conventional
+  # passes.
+  #
+  # mtr_estate_ded = estate.income_tax_ded x mtr_estate is derived here while
+  # the law column is still in the frame -- one perturbation, two emitted
+  # columns. mtr_estate stays the raw un-switched base rate (consumed by the
+  # wealth-avoidance estate response); mtr_estate_ded is what the kg Bellman /
+  # tau_eq exposure aggregator reads, so the deductibility interaction vanishes
+  # when a reform sets estate.income_tax_ded = 0 while mtr_estate is unchanged.
+  #
+  # Parameters:
+  #   - taxed (df)           : post-do_taxes frame for this pass
+  #   - scenario_info (list) : supplies mtr_vars / mtr_types
+  #   - year (int)           : simulation year, stamped onto the MTR tibble
+  #   - baseline_pr_er (df)  : REQUIRED, no default. `taxed` is a post-do_taxes
+  #                            frame whose wages already carry the er-payroll
+  #                            rescale, so this must be NULL for every caller
+  #                            passing such a frame; threading the real value
+  #                            rescales a second time and produces garbage MTRs
+  #                            (see the calc_mtrs parameter doc). It stays an
+  #                            explicit argument so the pre-frame callers that
+  #                            legitimately thread it are visible at the call
+  #                            site.
+  #
+  # Returns: list(taxed = frame with mtr_* joined on, mtrs = the MTR tibble).
+  #----------------------------------------------------------------------------
+
+  actuals = mtr_actuals(taxed)
+  frame   = strip_calc_vars(taxed)
+
+  mtrs = scenario_info$mtr_vars %>%
+    map2(.y = scenario_info$mtr_types,
+         .f = ~ calc_mtrs(
+           tax_units            = frame,
+           actual_liab_iit      = actuals$liab_iit,
+           actual_liab_pr       = actuals$liab_pr,
+           actual_liab_wealth   = actuals$liab_wealth,
+           actual_liab_estate   = actuals$liab_estate,
+           actual_estate_p_dsue = actuals$estate_p_dsue,
+           baseline_pr_er       = baseline_pr_er,
+           var                  = .x,
+           pr                   = F,
+           type                 = .y
+         )
+    ) %>%
+    bind_cols() %>%
+    mutate(id   = taxed$id,
+           year = year) %>%
+    relocate(id, year)
+
+  taxed %<>%
+    left_join(mtrs %>%
+                select(-year),
+              by = 'id')
+
+  if ('estate' %in% scenario_info$mtr_vars) {
+    taxed %<>%
+      mutate(mtr_estate_ded = estate.income_tax_ded * mtr_estate)
+  }
+
+  list(taxed = taxed, mtrs = mtrs)
+}
+
+
+
+collect_totals = function(taxed, year) {
+
+  #----------------------------------------------------------------------------
+  # The level aggregations written to a pass's totals/ directory and fed to
+  # calc_receipts().
+  #
+  # Parameters:
+  #   - taxed (df) : post-do_taxes frame for this pass
+  #   - year (int) : simulation year
+  #
+  # Returns: named list of totals tibbles.
+  #----------------------------------------------------------------------------
+
+  list(pr            = get_pr_totals(taxed, year),
+       `1040`        = get_1040_totals(taxed, year),
+       `1040_by_agi` = get_1040_totals(taxed, year, T),
+       estate        = get_estate_totals(taxed, year),
+       wealth        = get_wealth_totals(taxed, year))
+}
+
+
+
+write_detail = function(taxed, path, optional = character(0)) {
+
+  #----------------------------------------------------------------------------
+  # Writes a pass's tax unit detail file.
+  #
+  # Parameters:
+  #   - taxed (df)       : post-do_taxes frame for this pass
+  #   - path (str)       : output CSV path (parent directory created if absent)
+  #   - optional (str[]) : channel columns to include when present; one of
+  #                        DETAIL_COLS_OPTIONAL_STATIC / _CONV
+  #
+  # Returns: invisible NULL.
+  #----------------------------------------------------------------------------
+
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+
+  taxed %>%
+    select(all_of(globals$detail_vars), starts_with('mtr_'), any_of(optional)) %>%
+    write_csv(path)
+
+  invisible(NULL)
+}
+
+
+
+fold_deemed = function(taxed, liab_deemed = NULL) {
+
+  #----------------------------------------------------------------------------
+  # Folds the expected tax on mechanical deemed death gains into reported
+  # liability. Called AFTER the MTR block, which anchors on the alive-leg
+  # liability. Receipts are built from the pmt_* payment-timing variables rather
+  # than liab_iit_net, so the fold lands there too: deemed tax is a final-return
+  # capital gains bill, i.e. nonwithheld income tax paid at filing.
+  #
+  # Parameters:
+  #   - taxed (df)           : frame carrying a liab_deemed column, or one to
+  #                            which `liab_deemed` will be attached
+  #   - liab_deemed (dbl[])  : optional vector to attach first (the conventional
+  #                            pass holds it aside across the MTR block)
+  #
+  # Returns: the frame with liab_deemed folded into liability and payments.
+  #----------------------------------------------------------------------------
+
+  if (!is.null(liab_deemed)) {
+    taxed$liab_deemed = liab_deemed
+  }
+
+  taxed %>%
+    mutate(liab_iit_net        = liab_iit_net        + liab_deemed,
+           liab_iit            = liab_iit            + liab_deemed,
+           pmt_iit_nonwithheld = pmt_iit_nonwithheld + liab_deemed)
+}
+
+
+
 run_sim = function(scenario_info, tax_law, baseline_mtrs,
                    indexes, vat_price_offset, excess_growth_offset,
                    pass_type = c('both', 'static', 'conventional',
@@ -377,7 +650,7 @@ kg_dyn_recompute_deemed_tax = function(taxed, input, baseline_pr_er,
   #----------------------------------------------------------------------------
   # Expected income tax on mechanical deemed death gains, plus the Sec. 2053
   # estate-deduction reprice. Shared verbatim by the static and conventional
-  # passes of run_one_year() (previously copy-pasted in both). Computes the
+  # passes of run_one_year(). Computes the
   # exact decedent/survivor copy-split expectation without row duplication:
   #   liab_deemed = m_household * [T(y + kg_deemed_full) - T(y)]
   # via a second full-frame do_taxes() recompute (the "dead leg") with the full
@@ -633,59 +906,19 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     static_mtrs_year = NULL
     if (!is.null(scenario_info$mtr_vars)) {
 
-      # Same-frame expected estate liability (the get_estate_totals DSUE
-      # blend) for the estate MTR; consumed by calc_mtrs only when 'estate'
-      # is registered. NEVER the baseline's -- the delta must be measured on
-      # the frame the recompute runs on.
-      actual_liab_estate_static =
-        tax_units_static$estate_p_dsue * tax_units_static$liab_estate_dsue +
-        (1 - tax_units_static$estate_p_dsue) * tax_units_static$liab_estate_nodsue
+      # baseline_pr_er = NULL, NOT the pass-level value: tax_units_static is a
+      # POST-do_taxes frame, so its wages already carry the er-payroll rescale
+      # (see the calc_mtrs parameter doc)
+      static_mtr_out   = run_mtr_block(taxed          = tax_units_static,
+                                       scenario_info  = scenario_info,
+                                       year           = year,
+                                       baseline_pr_er = NULL)
+      tax_units_static = static_mtr_out$taxed
+      static_mtrs_year = static_mtr_out$mtrs
 
-      static_mtrs_year = scenario_info$mtr_vars %>%
-        map2(.y = scenario_info$mtr_types,
-             .f = ~ calc_mtrs(
-               tax_units          = tax_units_static %>%
-                                      select(-all_of(return_vars %>%
-                                      unlist() %>%
-                                      set_names(NULL))),
-               actual_liab_iit    = tax_units_static$liab_iit_net,
-               actual_liab_pr     = tax_units_static$liab_pr,
-               actual_liab_wealth = tax_units_static$liab_wealth,
-               actual_liab_estate = actual_liab_estate_static,
-               actual_estate_p_dsue = tax_units_static$estate_p_dsue,
-               # NULL, NOT the pass-level baseline_pr_er: tax_units_static is
-               # a POST-do_taxes frame, so its wages already carry the er-
-               # payroll rescale (see calc_mtrs parameter doc)
-               baseline_pr_er     = NULL,
-               var                = .x,
-               pr                 = F,
-               type               = .y
-            )
-        ) %>%
-        bind_cols() %>%
-        mutate(id   = tax_units_static$id,
-               year = year) %>%
-        relocate(id, year)
-
-      # Add MTRs to static tax units dataframe
-      tax_units_static %<>%
-        left_join(static_mtrs_year %>%
-                    select(-year),
-                  by = 'id')
-
-      # Switch-gated estate MTR for the kg death value (part (a) of the
-      # estate-margins build): mtr_estate_ded = estate.income_tax_ded x
-      # mtr_estate, derived per record while the law column is in the frame
-      # -- one perturbation, two emitted columns. mtr_estate stays the raw
-      # un-switched base rate (consumed by the wealth-avoidance estate
-      # response); mtr_estate_ded is what the kg Bellman/tau_eq exposure
-      # aggregator reads (the deductibility interaction must vanish when a
-      # reform sets estate.income_tax_ded = 0 while mtr_estate itself is
-      # unchanged).
-      if ('estate' %in% scenario_info$mtr_vars) {
-        tax_units_static %<>%
-          mutate(mtr_estate_ded = estate.income_tax_ded * mtr_estate)
-      }
+      # Same-frame actuals, reused by the guaranteed-column fallbacks below
+      # (the MTR join adds only mtr_* columns, so liabilities are unchanged)
+      static_actuals = mtr_actuals(tax_units_static)
 
       # Law-only kg_lt MTR for the planned-timing wedge: same reform law,
       # computed on the PRE-injection frame. The mech injection above adds
@@ -709,20 +942,11 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                    calc_estate_flag = FALSE,    # only liab_iit_net/liab_pr read for the law-only MTR
                    calc_wealth_flag = FALSE)
         stopifnot(identical(tax_units_raw$id, tax_units_static$id))
-        tax_units_static$mtr_kg_lt_lawonly = calc_mtrs(
-          tax_units       = tax_units_raw %>%
-                              select(-all_of(return_vars %>%
-                              unlist() %>%
-                              set_names(NULL))),
-          actual_liab_iit = tax_units_raw$liab_iit_net,
-          actual_liab_pr  = tax_units_raw$liab_pr,
-          # NULL: tax_units_raw is a POST-do_taxes frame (wages already
-          # rescaled once; see calc_mtrs parameter doc)
-          baseline_pr_er  = NULL,
-          var             = 'kg_lt',
-          pr              = F,
-          type            = 'nextdollar'  # kg_dynamics tau is nextdollar-only
-        )$mtr_kg_lt
+        # baseline_pr_er = NULL: tax_units_raw is a POST-do_taxes frame
+        tax_units_static$mtr_kg_lt_lawonly = calc_one_mtr(
+          frame   = strip_calc_vars(tax_units_raw),
+          actuals = mtr_actuals(tax_units_raw),
+          var     = 'kg_lt')
       }
 
       # Guaranteed mtr_net_worth for wealth-active kg scenarios: the kg
@@ -735,28 +959,15 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       # any year) keeps the detail schema stable across phase-in years.
       if (uses_kg_mech && kg_dyn_wealth_law_active(tax_law) &&
           !('net_worth' %in% scenario_info$mtr_vars)) {
-        tax_units_static$mtr_net_worth = calc_mtrs(
-          # Drop the just-joined mtr_* columns too: this recovers exactly
-          # the frame the generic loop above ran on, so the fallback column
-          # matches a runscript-registered mtr_net_worth bit-for-bit.
-          tax_units          = tax_units_static %>%
-                                 select(-all_of(return_vars %>%
-                                 unlist() %>%
-                                 set_names(NULL)),
-                                 -starts_with('mtr_')),
-          actual_liab_iit    = tax_units_static$liab_iit_net,
-          actual_liab_pr     = tax_units_static$liab_pr,
-          actual_liab_wealth = tax_units_static$liab_wealth,
-          # NULL, NOT the pass-level baseline_pr_er: tax_units_static is a
-          # POST-do_taxes frame, so its wages already carry the er-payroll
-          # rescale (double-rescale trap; see calc_mtrs parameter doc).
-          # Deliberately NOT copied from the conv-no-wealth block below,
-          # whose frame is PRE-do_taxes and correctly threads baseline_pr_er.
-          baseline_pr_er     = NULL,
-          var                = 'net_worth',
-          pr                 = F,
-          type               = 'nextdollar'
-        )$mtr_net_worth
+        # drop_mtrs recovers exactly the frame the generic loop ran on, so the
+        # fallback column matches a runscript-registered mtr_net_worth
+        # bit-for-bit. baseline_pr_er = NULL: POST-do_taxes frame. Deliberately
+        # NOT copied from the conv-no-wealth block below, whose frame is
+        # PRE-do_taxes and correctly threads baseline_pr_er.
+        tax_units_static$mtr_net_worth = calc_one_mtr(
+          frame   = strip_calc_vars(tax_units_static, drop_mtrs = TRUE),
+          actuals = static_actuals,
+          var     = 'net_worth')
       }
 
       # Guaranteed mtr_estate / mtr_estate_ded for kg scenarios: the kg
@@ -769,57 +980,27 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       # skipped. NOTE the fallback exists only on the SCENARIO leg: the
       # BASELINE pass cannot know a kg scenario will consume its detail, so
       # baseline rows of kg/wealth runscripts must register 'estate' in
-      # mtr_vars (read_mtr in kg_dynamics.R hard-stops with that message).
+      # mtr_vars (read_mtr in src/sim/kg/ hard-stops with that message).
       if (uses_kg_mech && !('estate' %in% scenario_info$mtr_vars)) {
-        tax_units_static$mtr_estate = calc_mtrs(
-          tax_units          = tax_units_static %>%
-                                 select(-all_of(return_vars %>%
-                                 unlist() %>%
-                                 set_names(NULL)),
-                                 -starts_with('mtr_')),
-          actual_liab_iit    = tax_units_static$liab_iit_net,
-          actual_liab_pr     = tax_units_static$liab_pr,
-          actual_liab_wealth = tax_units_static$liab_wealth,
-          actual_liab_estate = actual_liab_estate_static,
-          actual_estate_p_dsue = tax_units_static$estate_p_dsue,
-          # NULL: POST-do_taxes frame (see the net_worth fallback above)
-          baseline_pr_er     = NULL,
-          var                = 'estate',
-          pr                 = F,
-          type               = 'nextdollar'
-        )$mtr_estate
+        tax_units_static$mtr_estate = calc_one_mtr(
+          frame   = strip_calc_vars(tax_units_static, drop_mtrs = TRUE),
+          actuals = static_actuals,
+          var     = 'estate')
         tax_units_static %<>%
           mutate(mtr_estate_ded = estate.income_tax_ded * mtr_estate)
       }
     }
 
-    # Fold the expected deemed tax into reported liability (after MTRs,
-    # which anchor on the alive-leg liability). Receipts are built from the
-    # pmt_* payment-timing variables, not liab_iit_net, so fold there too:
-    # deemed tax is a final-return capital gains bill, i.e. nonwithheld
-    # income tax paid at filing (pmt_iit itself is dropped by remit_taxes).
     if (uses_kg_mech) {
-      tax_units_static %<>%
-        mutate(liab_iit_net        = liab_iit_net        + liab_deemed,
-               liab_iit            = liab_iit            + liab_deemed,
-               pmt_iit_nonwithheld = pmt_iit_nonwithheld + liab_deemed)
+      tax_units_static = fold_deemed(tax_units_static)
     }
 
-    # Write static detail (kg_dynamics mechanical columns included when
-    # present: kg_lockin, kg_deemed, liab_deemed, estate_income_tax_ded)
-    tax_units_static %>%
-      select(all_of(globals$detail_vars), starts_with('mtr_'),
-             any_of(c('kg_lockin', 'kg_deemed', 'liab_deemed',
-                      'estate_income_tax_ded'))) %>%
-      write_csv(file.path(scenario_info$output_path, 'static', 'detail',
-                          paste0(year, '.csv')))
+    write_detail(tax_units_static,
+                 file.path(scenario_info$output_path, 'static', 'detail',
+                           paste0(year, '.csv')),
+                 optional = DETAIL_COLS_OPTIONAL_STATIC)
 
-    # Get static totals
-    static_totals = list(pr            = get_pr_totals(tax_units_static, year),
-                          `1040`        = get_1040_totals(tax_units_static, year),
-                          `1040_by_agi` = get_1040_totals(tax_units_static, year, T),
-                          estate        = get_estate_totals(tax_units_static, year),
-                          wealth        = get_wealth_totals(tax_units_static, year))
+    static_totals = collect_totals(tax_units_static, year)
   }
 
 
@@ -852,7 +1033,7 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       # On-model corporate incidence: a fixed step at the head of EVERY
       # conventional-side pass (incl. conv-no-wealth), BEFORE the wealth
       # haircut and the behavior modules, so the kg/wealth machinery runs on
-      # the shocked frame (corp_incidence.R; FORMAL_MODEL section 7). Scales
+      # the shocked frame (src/sim/corp/; FORMAL_MODEL section 7). Scales
       # the D16 external-income lines (accumulating the analytic corp_dY_exog
       # the wealth bathtub forcing consumes), marks down exposed value.*
       # stocks and recomputes net_worth (so calc_estate / calc_wealth reprice),
@@ -963,21 +1144,15 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
         # break. tax_units is the raw frame, row-aligned to tax_units_conv.
         stopifnot(identical(tax_units_conv$id, tax_units$id))
         tax_units_conv$net_worth_raw  = tax_units$net_worth
-        tax_units_conv$mtr_net_worth  = calc_mtrs(
-          tax_units          = conv_input %>%
-                                 select(-any_of(return_vars %>%
-                                 unlist() %>%
-                                 set_names(NULL))),
-          actual_liab_iit    = tax_units_conv$liab_iit_net,
-          actual_liab_pr     = tax_units_conv$liab_pr,
-          actual_liab_wealth = tax_units_conv$liab_wealth,
-          # conv_input is the PRE-do_taxes frame (un-rescaled wages), so the
-          # recompute must apply the same rescale as the actuals run -- thread
-          # baseline_pr_er (2026-07-09 fix; see calc_mtrs parameter doc)
-          baseline_pr_er     = baseline_pr_er,
-          var                = 'net_worth',
-          pr                 = F,
-          type               = 'nextdollar')$mtr_net_worth
+        # conv_input is the PRE-do_taxes frame: it carries none of the
+        # calculated variables (strict = FALSE) and its wages are un-rescaled,
+        # so the recompute must apply the same rescale as the actuals run --
+        # thread baseline_pr_er (see the calc_mtrs parameter doc)
+        tax_units_conv$mtr_net_worth  = calc_one_mtr(
+          frame          = strip_calc_vars(conv_input, strict = FALSE),
+          actuals        = mtr_actuals(tax_units_conv),
+          var            = 'net_worth',
+          baseline_pr_er = baseline_pr_er)
       }
 
       # Calculate conventional marginal tax rates (skip on the conv-no-wealth
@@ -985,87 +1160,29 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       # the mtr_cap_bundle / mtr_net_worth computed above)
       if (!is.null(scenario_info$mtr_vars) && !is_convnw) {
 
-        # Same-frame expected estate liability (DSUE blend) for the estate
-        # MTR -- see the static-pass comment
-        actual_liab_estate_conv =
-          tax_units_conv$estate_p_dsue * tax_units_conv$liab_estate_dsue +
-          (1 - tax_units_conv$estate_p_dsue) * tax_units_conv$liab_estate_nodsue
-
-        conv_mtrs = scenario_info$mtr_vars %>%
-          map2(.y = scenario_info$mtr_types,
-               .f = ~ calc_mtrs(
-                 tax_units          = tax_units_conv %>%
-                                        select(-all_of(return_vars %>%
-                                        unlist() %>%
-                                        set_names(NULL))),
-                 actual_liab_iit    = tax_units_conv$liab_iit_net,
-                 actual_liab_pr     = tax_units_conv$liab_pr,
-                 actual_liab_wealth = tax_units_conv$liab_wealth,
-                 actual_liab_estate = actual_liab_estate_conv,
-                 actual_estate_p_dsue = tax_units_conv$estate_p_dsue,
-                 # NULL, NOT baseline_pr_er: tax_units_conv is a POST-do_taxes
-                 # frame (wages already rescaled; see calc_mtrs parameter doc).
-                 # The convnw mtr_net_worth call above differs deliberately:
-                 # it passes the PRE-do_taxes conv_input, so it must thread
-                 # baseline_pr_er.
-                 baseline_pr_er     = NULL,
-                 var                = .x,
-                 pr                 = F,
-                 type               = .y
-              )
-          ) %>%
-          bind_cols() %>%
-          mutate(id   = tax_units_conv$id,
-                 year = year) %>%
-          relocate(id, year)
-
-        tax_units_conv %<>%
-          left_join(conv_mtrs %>%
-                      select(-year),
-                    by = 'id')
-
-        # Switch-gated estate MTR (see the static-pass comment)
-        if ('estate' %in% scenario_info$mtr_vars) {
-          tax_units_conv %<>%
-            mutate(mtr_estate_ded = estate.income_tax_ded * mtr_estate)
-        }
+        # baseline_pr_er = NULL, NOT the pass-level value: tax_units_conv is a
+        # POST-do_taxes frame (wages already rescaled). The convnw
+        # mtr_net_worth call above differs deliberately -- it passes the
+        # PRE-do_taxes conv_input, so it must thread baseline_pr_er.
+        tax_units_conv = run_mtr_block(taxed          = tax_units_conv,
+                                       scenario_info  = scenario_info,
+                                       year           = year,
+                                       baseline_pr_er = NULL)$taxed
       }
 
-      # Fold the expected deemed tax into reported liability (after MTRs,
-      # which anchor on the alive-leg liability), including the pmt_*
-      # payment-timing variables receipts are built from (nonwithheld
-      # income tax paid at filing, like any final-return gains bill)
       if (!is.null(conv_liab_deemed)) {
-        tax_units_conv %<>%
-          mutate(liab_deemed         = conv_liab_deemed,
-                 liab_iit_net        = liab_iit_net        + liab_deemed,
-                 liab_iit            = liab_iit            + liab_deemed,
-                 pmt_iit_nonwithheld = pmt_iit_nonwithheld + liab_deemed)
+        tax_units_conv = fold_deemed(tax_units_conv, conv_liab_deemed)
       }
 
-      # Write detail to this pass's root (conv-no-wealth detail lives in its own
-      # tree so it never clobbers the final conventional detail). The wealth
-      # forcing/diagnostic columns ride any_of() -- present only on the relevant
-      # pass -- so dormancy is preserved byte-for-byte for non-wealth scenarios.
-      dir.create(file.path(conv_root, 'detail'), recursive = TRUE,
-                 showWarnings = FALSE)
-      tax_units_conv %>%
-        select(all_of(globals$detail_vars), starts_with('mtr_'),
-               any_of(c('kg_lockin', 'kg_deemed', 'liab_deemed',
-                        'estate_income_tax_ded', 'estate_concealed_frac',
-                        'economic_gross', 'cap_bundle_F',
-                        'net_worth_raw', 'nw_pctile', 'D_alloc', 'wealth_haircut',
-                        'corp_dY_exog', 'corp_markdown', 'corp_flow_factor'))) %>%
-        write_csv(conv_detail_path)
+      # conv-no-wealth detail lives in its own tree so it never clobbers the
+      # final conventional detail
+      write_detail(tax_units_conv, conv_detail_path,
+                   optional = DETAIL_COLS_OPTIONAL_CONV)
 
-      # Conventional totals (skip the conv-no-wealth pass -- intermediate, no
-      # totals/receipts; run_sim does not aggregate it either)
+      # Skip totals on the conv-no-wealth pass -- intermediate, no
+      # totals/receipts; run_sim does not aggregate it either
       if (!is_convnw) {
-        conventional_totals = list(pr            = get_pr_totals(tax_units_conv, year),
-                                    `1040`        = get_1040_totals(tax_units_conv, year),
-                                    `1040_by_agi` = get_1040_totals(tax_units_conv, year, T),
-                                    estate        = get_estate_totals(tax_units_conv, year),
-                                    wealth        = get_wealth_totals(tax_units_conv, year))
+        conventional_totals = collect_totals(tax_units_conv, year)
       }
 
     } else if (scenario_info$ID != 'baseline') {
@@ -1075,9 +1192,7 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       # 'conventional' mode we copy the already-written static csv directly.
       conv_path = conv_detail_path
       if (!is.null(tax_units_static)) {
-        tax_units_static %>%
-          select(all_of(globals$detail_vars), starts_with('mtr_')) %>%
-          write_csv(conv_path)
+        write_detail(tax_units_static, conv_path)
       } else {
         static_path = file.path(scenario_info$output_path, 'static', 'detail',
                                 paste0(year, '.csv'))
@@ -1198,14 +1313,11 @@ kg_dyn_check_run_compat = function(scenario_info, vat_price_offset,
                                    excess_growth_offset) {
 
   #----------------------------------------------------------------------------
-  # Shared preconditions for the kg_dynamics pre-passes (frozen mechanical
-  # and conventional bathtub). Both read raw Tax-Data CSVs directly (for
-  # value.*/basis.*/q_death*, which aren't in detail_vars), so both refuse
-  # VAT and excess-growth scenarios: raw-dollar cell state would mix with
-  # adjusted per-record kg_lt and put the carry channels in the wrong unit
-  # system. Full sample is required because realization-rate cells are too
-  # sparse otherwise; the kg_lt MTR registration is required by the bathtub
-  # (checked here too so the pipeline fails before any pass runs).
+  # Preconditions for the kg_dynamics pre-passes (frozen mechanical and
+  # conventional bathtub). Both read raw Tax-Data CSVs directly (for
+  # value.*/basis.*/q_death*, which aren't in detail_vars), so both take the
+  # shared raw-dollar channel guard. On top of that the bathtub needs the kg_lt
+  # MTR registered -- checked here so the pipeline fails before any pass runs.
   #
   # Returns: invisibly TRUE; stops on violation.
   #----------------------------------------------------------------------------
@@ -1217,34 +1329,8 @@ kg_dyn_check_run_compat = function(scenario_info, vat_price_offset,
          'static detail. Scenario "', scenario_info$ID, '" does not.')
   }
 
-  if (!isTRUE(all.equal(globals$pct_sample, 1))) {
-    stop('kg_dynamics requires pct_sample = 1 (full sample). ',
-         'Realization-rate cells are too sparse at smaller samples to ',
-         'support the bathtub recurrence; sparse-cell fallbacks would mask ',
-         'sampling noise as policy response. Re-run with pct_sample = 1.')
-  }
-
-  vat_active = !is.null(vat_price_offset) &&
-               'cpi_factor' %in% colnames(vat_price_offset) &&
-               any(abs(vat_price_offset$cpi_factor - 1) > 1e-10, na.rm = TRUE)
-  if (vat_active) {
-    stop('kg_dynamics is not currently compatible with VAT scenarios. ',
-         'The pre-passes read raw Tax-Data and would mix raw-dollar lock-in ',
-         'carry with VAT-scaled per-record kg_lt. Run the kg_dynamics ',
-         'reform without a VAT, or extend the bathtub to read from static ',
-         'detail (which is post-VAT).')
-  }
-
-  growth_active = isTRUE(scenario_info$excess_growth != 0) &&
-                  is.finite(scenario_info$excess_growth_start_year)
-  if (growth_active) {
-    stop('kg_dynamics is not currently compatible with excess-growth ',
-         'scenarios (excess_growth = ', scenario_info$excess_growth, ', ',
-         'start_year = ', scenario_info$excess_growth_start_year, '). ',
-         'Same reason as VAT: raw cell state would not match growth-',
-         'adjusted per-record kg_lt. Either disable excess growth on this ',
-         'scenario or extend the bathtub to read from static detail.')
-  }
+  check_raw_data_channel_compat('kg_dynamics', scenario_info,
+                                vat_price_offset, excess_growth_offset)
 
   # Loudly flag a stale calibration (e.g. applier-rule flip or new Tax-Data
   # vintage without recalibration). Warns by default; KG_STRICT_CALIB=1 stops.

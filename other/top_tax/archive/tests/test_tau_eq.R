@@ -27,7 +27,7 @@ suppressPackageStartupMessages({
 # build_aging_matrix; its corp/estate references live inside functions this
 # test never calls).
 source('./src/sim/cohort_bathtub.R')
-source('./src/sim/kg_dynamics.R')
+for (f in sort(list.files('./src/sim/kg', full.names = TRUE))) source(f)
 
 n_fail = 0
 check = function(ok, label) {

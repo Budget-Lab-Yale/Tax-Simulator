@@ -157,7 +157,7 @@ scenario_uses_wealth_dynamics = function(scenario_info) {
   # the behavior column. Active iff any cell's saving share is positive, so a
   # flat-zero profile (e.g. an explicit scalar s = 0) is dormant and skips the
   # ~2x split-pass compute. NB: the auto-applied 'default' profile carries a
-  # CALIBRATED nonzero surface as of 2026-07 (persistent-flow anchor; see
+  # CALIBRATED nonzero surface (persistent-flow anchor; see
   # other/wealth_dynamics/default_s_calibration.md), so unconfigured scenarios
   # run with the channel ON -- opt out with wealth_financing = none. A
   # malformed/missing profile errors here (loudly), by design.
@@ -215,7 +215,7 @@ wealth_dyn_load_params = function() {
 #
 # The channel is ACTIVE iff the resolved s_mat has any positive entry (so a
 # flat-zero profile is a no-op and the ~2x split-pass compute is skipped).
-# The shipped 'default' profile is CALIBRATED (nonzero) as of 2026-07, so path
+# The shipped 'default' profile is CALIBRATED (nonzero), so path
 # 4 activates the channel; force it off with wealth_financing = none. The
 # resolved profile is memoized per (kind, value, grid) within a process.
 #-------------------------------------------------------------------------------
@@ -498,42 +498,17 @@ wealth_dyn_check_run_compat = function(scenario_info, vat_price_offset,
                                        excess_growth_offset) {
 
   #----------------------------------------------------------------------------
-  # Shared preconditions for the wealth bathtub pre-pass and the applier. The
-  # pre-pass forms cell state in raw wealth dollars (net_worth, economic_gross)
-  # while ΔT⁰ is in adjusted tax dollars; mixing raw-dollar wealth with VAT/
-  # excess-growth-adjusted bases would put the channels in inconsistent units.
-  # Full sample is required because the 63x100 cells are sparse (sparser than
-  # kg's 63 age cells), so subsample noise is worst in the top cells. Mirrors
-  # kg_dyn_check_run_compat (minus the kg_lt mtr_vars requirement). Stops on
-  # violation; ends with the provenance check.
+  # Preconditions for the wealth bathtub pre-pass and the applier. The pre-pass
+  # forms cell state in raw wealth dollars (net_worth, economic_gross) while ΔT⁰
+  # is in adjusted tax dollars, and the 63x100 (age x within-age percentile)
+  # cells are sparser than kg's 63 age cells -- so it takes the shared
+  # raw-dollar channel guard, then checks calibration provenance.
   #
-  # Returns: invisibly TRUE.
+  # Returns: invisibly TRUE; stops on violation.
   #----------------------------------------------------------------------------
 
-  if (!isTRUE(all.equal(globals$pct_sample, 1))) {
-    stop('wealth_dynamics (s > 0) requires pct_sample = 1 (full sample). The ',
-         '63x100 (age x within-age percentile) cells are too sparse at smaller ',
-         'samples; sparse-cell noise would masquerade as policy response. ',
-         'Re-run with pct_sample = 1.')
-  }
-
-  vat_active = !is.null(vat_price_offset) &&
-               'cpi_factor' %in% colnames(vat_price_offset) &&
-               any(abs(vat_price_offset$cpi_factor - 1) > 1e-10, na.rm = TRUE)
-  if (vat_active) {
-    stop('wealth_dynamics is not currently compatible with VAT scenarios: raw-',
-         'dollar wealth cell state would mix with VAT-scaled bases. Run without ',
-         'a VAT.')
-  }
-
-  growth_active = isTRUE(scenario_info$excess_growth != 0) &&
-                  is.finite(scenario_info$excess_growth_start_year)
-  if (growth_active) {
-    stop('wealth_dynamics is not currently compatible with excess-growth ',
-         'scenarios (excess_growth = ', scenario_info$excess_growth, '). Raw ',
-         'wealth cell state would not match growth-adjusted bases. Disable ',
-         'excess growth on this scenario.')
-  }
+  check_raw_data_channel_compat('wealth_dynamics (s > 0)', scenario_info,
+                                vat_price_offset, excess_growth_offset)
 
   wealth_dyn_check_provenance(scenario_info)
   invisible(TRUE)
@@ -550,7 +525,7 @@ wealth_dyn_age_cohort = function(tax_units) {
   #----------------------------------------------------------------------------
   # The (age x percentile) cell's age key. Joint records use max(age1, age2)
   # (the both-die event the couple's estate_m already carries), applied BEFORE
-  # the 80+ topcode -- identical to kg_dynamics.R:404-407 and distribution.R:173
+  # the 80+ topcode -- identical to src/sim/kg/ (was src/sim/kg/:404-407) and distribution.R:173
   # (plan D16). The pre-pass and the applier MUST compute this identically.
   #----------------------------------------------------------------------------
 
@@ -705,7 +680,7 @@ wealth_dyn_read_rtotal = function(scenario_info, params) {
   # that boundary year (and of any pre-projection lead-in year, e.g. a sim that
   # starts a year before the policy to capture FY revenue) has no t-1 predecessor
   # and is undefined. Splicing differences the boundary growth off the real prior
-  # actual year, mirroring kg_dynamics.R's cpiu/tsy loaders. Matches the
+  # actual year, mirroring src/sim/kg/'s cpiu/tsy loaders. Matches the
   # calibration diagnostic other/wealth_dynamics/cohort_wealth_growth.R. Plus the
   # optional additive path-delta knob (default 0, a one-time sensitivity test).
   #
@@ -784,7 +759,7 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
   #       = Δ(liab_iit_pr + liab_wealth) - corp_dY_exog
   # (ΔY_exog is the analytic external-income shock accumulated by
   # corp_apply_to_records on the conv-no-wealth pass; 0 for every non-corp
-  # scenario, so this is numerically identical to the old tax-only ΔT⁰ there;
+  # scenario, so the generalized forcing reduces to the tax-only ΔT⁰ there;
   # the baseline leg has no income shock by construction), forms the
   # cell-aggregate yield y, the bundle MTR tau, and the wealth-tax MTR tau_w,
   # and runs the per-living-record recurrence

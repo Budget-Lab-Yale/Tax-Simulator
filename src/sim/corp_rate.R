@@ -8,7 +8,7 @@
 # sidecar). A crude single-elasticity module maps a change in that rate to a
 # corporate revenue delta on top of the CBO baseline corporate receipts line
 # (`rev_corp`). The same delta feeds the corp_incidence wedge (conventional
-# stream; see src/sim/corp_incidence.R corp_read_wedge) and the distribution
+# stream; see src/sim/corp/ corp_read_wedge) and the distribution
 # smear (static stream; see distribution.R get_other_taxes). After this change
 # OME carries only "corporate changes ex depreciation AND ex statutory rate".
 #
@@ -53,7 +53,7 @@
 #       BEAT that are not, so the rate-sensitive base is overstated.
 #
 # Sweeps: override the elasticity via the CORP_RATE_ETI env var (mirrors the
-# CORP_SIGMA_N / CORP_KAPPA convention in corp_incidence.R). Menu of
+# CORP_SIGMA_N / CORP_KAPPA convention in src/sim/corp/). Menu of
 # self-consistent statutory-based values for reference: economic 0.182,
 # avoidance 0.367 (default), total 0.549.
 #-------------------------------------------------------------------------------

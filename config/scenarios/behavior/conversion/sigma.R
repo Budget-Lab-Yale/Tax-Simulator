@@ -5,7 +5,7 @@
 # repackage top salary and active pass-through compensation as unrealized
 # equity appreciation when the ordinary-vs-equity-path wedge widens. Live
 # design rulings: other/top_tax/DESIGN_LOCK.md; machinery in
-# src/sim/sigma_conversion.R (shared pure function) and src/sim/kg_dynamics.R
+# src/sim/sigma_conversion.R (shared pure function) and src/sim/kg/
 # (tau_eq recursion + gain-state injection).
 #
 # Forcing/object pair: the forcing is the per-record, per-leg WEDGE CHANGE

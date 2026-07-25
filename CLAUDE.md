@@ -287,7 +287,7 @@ estate tax and wealth-tax ↔ capital-income tax. Code: `src/sim/wealth_dynamics
 
 ### On-Model Corporate Incidence
 
-A **mechanical, conventional-side, REVENUE-side** channel (`src/sim/corp_incidence.R`)
+A **mechanical, conventional-side, REVENUE-side** channel (`src/sim/corp/`)
 that maps the gross corporate receipts delta from Off-Model-Estimates onto records:
 flow cuts (dividends/interest/rent/pt), an equity markdown on exposed `value.*`
 stocks, kg gain adjustments, bathtub dissaving, and an **endogenous individual-tax
@@ -537,7 +537,7 @@ The SLURM pipeline duplicates orchestration logic from `main.R`, `run_sim()`, an
 | New global free variables used by post-processing   | `src/slurm/common.R` `reconstitute_environment()` |
 | `run_one_year()` signature                          | `src/slurm/worker.R` |
 
-Safe changes that need NO SLURM updates: anything inside `run_one_year()`, tax calculation functions, behavioral modules, YAML configs, runscripts. The corporate-incidence channel (`src/sim/corp_incidence.R`) is in this category by construction: its applier lives inside `run_one_year()`, its kg glue inside `run_bathtub_pass()`/`kg_dyn_run_bathtub_pass()`, its paths are analytic (recomputed per worker, no serialized state), and `reconstitute_environment()` sources all of `src/` recursively — no manifest, phase, or worker changes.
+Safe changes that need NO SLURM updates: anything inside `run_one_year()`, tax calculation functions, behavioral modules, YAML configs, runscripts. The corporate-incidence channel (`src/sim/corp/`) is in this category by construction: its applier lives inside `run_one_year()`, its kg glue inside `run_bathtub_pass()`/`kg_dyn_run_bathtub_pass()`, its paths are analytic (recomputed per worker, no serialized state), and `reconstitute_environment()` sources all of `src/` recursively — no manifest, phase, or worker changes.
 
 ## Notes and Best Practices
 

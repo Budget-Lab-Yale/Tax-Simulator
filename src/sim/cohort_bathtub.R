@@ -4,7 +4,7 @@
 # Generic helpers for cohort-level "bathtub" recurrences over (age x within-age
 # percentile) cells. These are deliberately model-agnostic: the wealth-dynamics
 # channel (src/sim/wealth_dynamics.R) consumes them now, and the kg_dynamics
-# bathtub (src/sim/kg_dynamics.R) can be pointed at them later. Nothing here
+# bathtub (src/sim/kg/) can be pointed at them later. Nothing here
 # knows about wealth, gains, taxes, or estates -- only ages, percentiles,
 # weights, transition matrices, and per-year state IO.
 #

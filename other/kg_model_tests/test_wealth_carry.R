@@ -21,7 +21,7 @@
 #-------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({ library(tidyverse) })
-source('./src/sim/kg_dynamics.R')
+for (f in sort(list.files('./src/sim/kg', full.names = TRUE))) source(f)
 
 fail = function(...) stop(sprintf(...), call. = FALSE)
 ok   = function(name) cat(sprintf('PASS  %s\n', name))

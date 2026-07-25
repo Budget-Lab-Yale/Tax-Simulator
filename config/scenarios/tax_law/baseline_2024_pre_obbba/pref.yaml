@@ -87,7 +87,7 @@ index_kg_no_loss:
 #   1 = carryover          (gain transfers to heirs with original basis)
 #   2 = deemed_realization (gain forcibly realized on decedent's final return)
 # Cell-level mixing aggregates regime codes via per-asset gain shares; see
-# kg_dyn_build_regime_mix in src/sim/kg_dynamics.R.
+# kg_dyn_build_regime_mix in src/sim/kg/recurrence.R.
 kg_death_regime_equities:
   value: 0
 kg_death_regime_pass_throughs:

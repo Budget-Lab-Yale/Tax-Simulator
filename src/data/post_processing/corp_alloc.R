@@ -12,7 +12,7 @@
 #   - the foreign-borne haircut on the capital legs,
 #   - the owner-occupied-housing land/structure split.
 #
-# Reuses the corp_incidence.R constants (CORP_ASSET_EXPOSURE, sigma_N via
+# Reuses the src/sim/corp/ constants (CORP_ASSET_EXPOSURE, sigma_N via
 # corp_env_knobs()) and the estate/wealth balance-sheet column vectors
 # (ESTATE_ASSET_COLS / ESTATE_DEBT_COLS, src/calc/functions/tax/estate.R) so
 # the net-capital base stays in lockstep with what estate + wealth call
@@ -29,7 +29,7 @@
 # note the denominator includes S-corp equity that foreigners are statutorily
 # barred from holding, biasing the C-corp share DOWN. The labor leg is NOT
 # haircut: wage incidence lands on US workers regardless of who owns the
-# equity. Conceptually distinct from CORP_THETA_RES = 0.40 (corp_incidence.R:
+# equity. Conceptually distinct from CORP_THETA_RES = 0.40 (src/sim/corp/:
 # foreign + nonprofit + DB residual, conservation diagnostic only) -- equal by
 # coincidence; do not merge. Tables no longer sum to the corporate revenue
 # line by construction (the remainder is foreign-borne). Moved here from
@@ -145,7 +145,7 @@ read_corp_alloc_stock_keys = function(baseline_id, yr) {
 
   # Zero-fill any missing balance-sheet cell before summing (a genuine NA in an
   # allocation base would poison group sums; Tax-Data carries these dense, but
-  # be defensive). rowSums(across(...)) mirrors run.R:546 / corp_incidence.R:1151.
+  # be defensive). rowSums(across(...)) mirrors run.R:546 / src/sim/corp/apply.R (was src/sim/corp/:1151).
   z0 = function(x) replace_na(x, 0)
 
   td %>%

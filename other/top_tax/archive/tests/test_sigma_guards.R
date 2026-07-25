@@ -24,7 +24,7 @@ suppressPackageStartupMessages({
 `%||%` = function(a, b) if (is.null(a)) b else a
 
 source('./src/sim/cohort_bathtub.R')
-source('./src/sim/kg_dynamics.R')
+for (f in sort(list.files('./src/sim/kg', full.names = TRUE))) source(f)
 source('./src/sim/sigma_conversion.R')
 sys.source('./config/scenarios/behavior/conversion/sigma.R',
            envir = environment())

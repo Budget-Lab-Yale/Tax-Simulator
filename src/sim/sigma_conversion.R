@@ -26,7 +26,7 @@
 # Design rulings this file implements (see DESIGN_LOCK):
 #   - Per-record wedge W_i = own-leg calculator MTR - tau_eq(age_i, t);
 #     forcing = Delta W_i, static-reform-vs-baseline (standard MTR-frame
-#     convention). Equity leg from the tau_eq recursion (kg_dynamics.R),
+#     convention). Equity leg from the tau_eq recursion (src/sim/kg/),
 #     keyed on the kg age convention (pmax(age1, age2), 80+ topcode).
 #   - Pool (ruling 4): gate = (any active business income) AND (static
 #     taxable income >= top-bracket threshold, filing-status-specific,
@@ -37,14 +37,9 @@
 #     wedge gap. Delta conv_i(t) = sigma * Delta W_i(t) * pool_i. The wedge
 #     can narrow => negative conversion allowed, clamped so no leg goes
 #     negative (or more than doubles, on the negative side).
-#   - sigma central = 0.16, re-derived 2026-07-12 to the same top-subset
-#     ETI-0.25 target on the +5pp validation leg (author-sanctioned; the
-#     2026-07-08 central 0.08 went stale when the entity-shifting tau_eq
-#     repricing and the evasion cross-base fix landed without the
-#     staleness-rule re-run — both shrank the non-sigma stack's ETI
-#     contribution, roughly doubling the residual conversion margin).
-#     See SIGMA_CALIB_PROVENANCE below for method, measured legs, and the
-#     staleness conditions. Env knob SIGMA_CONV.
+#   - sigma central = 0.16, calibrated to a top-subset ETI-0.25 target on the
+#     +5pp validation leg. It is a RESIDUAL margin: see SIGMA_CALIB_PROVENANCE
+#     below for the method and the staleness conditions. Env knob SIGMA_CONV.
 #   - Composition (conversion into gain state vs entity shifting into the
 #     corporate base) is an OUTPUT (tracker diagnostics), not a dial.
 #     Sequential module order prevents double-moves.
@@ -58,46 +53,21 @@ SIGMA_CONV_VERSION = paste('2026-07-12 re-derivation to ETI-0.25 (0.08 -> 0.16;'
 #-------------------------------------------------------------------------------
 # SIGMA_CALIB_PROVENANCE
 #
-# Central sigma = 0.08 (author-directed recalibration, 2026-07-08; supersedes
-# the original asserted central 0.6 and the 0.2/0.9 bands, which are STALE).
-#
 # Method: the +5pp top-ordinary validation leg (tests/topord_plus5, 2025:2035,
 # full behavior stack kg_dynamics + sigma + entity_shifting + evasion +
 # charity, wealth_financing = none) is targeted to a top-subset ETI of 0.25 —
 # the Saez-Slemrod-Giertz central (taxable income EXCLUDING net capital
-# gains, after deductions; brackets 0.12-0.40). Measured:
-#   - full stack at sigma = 0.60 : ETI 0.431  (vintage sigma_validation)
-#   - stack WITHOUT sigma        : ETI 0.2229 (vintage sigma_calib_nosigma)
-#   - solved sigma* = 0.6*(0.25 - 0.2229)/(0.431 - 0.2229) = 0.078 -> 0.08
-#   - CONFIRMED at sigma = 0.08  : ETI 0.2505 (vintage sigma_calib_confirm)
-# Measurement script: other/top_tax/tests/compute_top_eti.R.
+# gains, after deductions; brackets 0.12-0.40). sigma is solved from two legs,
+# the full stack at a reference sigma and the stack without sigma, by linear
+# interpolation onto the target, then confirmed at the shipped value.
+# Measurement script: other/top_tax/tests/compute_top_eti.R; measured legs and
+# solved values for each derivation are recorded there and in
+# other/top_tax/sigma_explainer.md.
 #
-# RE-DERIVED under the spec-v2 kg calibration (2026-07-08, entropy cost,
-# eta=4.4984 / omega=0.5132; vintage sigma_recal_eta). Result: UNCHANGED at
-# 0.08. Both legs reproduced the original within 0.0001 (sigma=0.60 -> ETI
-# 0.4312; no-sigma -> ETI 0.2229; solved sigma* = 0.6*(0.25-0.2229)/
-# (0.4312-0.2229) = 0.078 -> 0.08; CONFIRMED at sigma=0.08 -> ETI 0.2505,
-# vintage sigma_confirm_eta). This is expected and reassuring: the target
-# is the top ORDINARY-income ETI (O = txbl_inc - net gains), which EXCLUDES
-# capital-gains realizations, so the kg realization recalibration is orthogonal
-# to it. sigma and the kg Bellman calibrate on disjoint bases.
-#
-# RE-DERIVED 2026-07-12 (vintage sigma_recal_estate; protocol run triggered
-# by the estate-margins build): sigma* MOVED to 0.157 -> central updated to
-# 0.16 (author-sanctioned 2026-07-12). Measured: full stack at sigma=0.60 ->
-# ETI 0.4041; stack WITHOUT sigma -> 0.1955; solved sigma* =
-# 0.6*(0.25-0.1955)/(0.4041-0.1955) = 0.157; CONFIRMED at sigma=0.1568 ->
-# ETI 0.2497 (vintage sigma_confirm_estate) AND at the SHIPPED 0.16 ->
-# ETI 0.2508 (vintage sigma_confirm_016). ATTRIBUTION: NOT the estate margins --
-# the calibration leg is a step-up regime where the tau_eq death-realize
-# term has realize = 0, and the ETI base excludes gains. The drivers are
-# two staleness-list changes that landed after the 07-08 derivation without
-# their required re-run: the entity-shifting tau_eq repricing
-# (pearce_prisinzano.R, 4e95d0904) and the evasion cross-base consistency
-# fix (debacker.R, 88bbdd5fc). Both reduced the non-sigma stack's ETI
-# contribution (0.223 -> 0.196), roughly doubling the residual conversion
-# margin. ETI outputs: other/kg_model_tests/sigma_recal_estate_eti_*.out /
-# sigma_confirm_estate_eti_*.out.
+# The kg Bellman calibration is ORTHOGONAL to this one: the target is the top
+# ORDINARY-income ETI (O = txbl_inc - net gains), which excludes realizations,
+# so the two calibrate on disjoint bases. Re-check only if the pool ever starts
+# taxing gains.
 #
 # STALENESS WARNING (kg-provenance-guard spirit): this value is CONDITIONAL
 # ON THE REST OF THE STACK. Entity shifting and evasion supply ~0.22 of the
@@ -106,8 +76,8 @@ SIGMA_CONV_VERSION = paste('2026-07-12 re-derivation to ETI-0.25 (0.08 -> 0.16;'
 # of the following change: the entity-shifting elasticity/parameters
 # (pearce_prisinzano.R), the evasion centrals (debacker.R), the charity
 # elasticity, the pool definition/gate in this file, or the Tax-Data vintage
-# (calibrated on 2026050315). (KG_DYN_* calibration proved orthogonal in the
-# 2026-07-08 re-derivation, but re-check if the pool ever starts taxing gains.)
+# (the calibration vintage is tracked in
+# other/kg_model_tests/calibration_reference.csv).
 #
 # Substantive reading: the ETI evidence disciplines the TOTAL top response;
 # with P-P and DHY already in the stack, a large independent conversion
@@ -147,28 +117,21 @@ SIGMA_TD_COLS = c('id', 'weight', 'filing_status', 'age1', 'age2',
 # the persisted cell inflow. Loose enough to absorb the small pass-through
 # leg drift when the wealth haircut / corporate applier ran ahead of the
 # behavior stack (they scale PT flows); tight enough to catch real drift.
-# 2026-07-09: 0.01 -> 0.015 after the top_tax factorial: the deepest stacks
-# with both channels on (wealth+corp+deemed+ord+qbi, c093/c125) hit 1.001e-2
-# in the 2037 lead-out year -- the documented benign drift, marginally over.
-# 2026-07-10 (30-yr dials batch): 0.015 -> 0.05. The benign wedge between the
-# frozen pre-pass frame and the haircut-eroded conventional frame COMPOUNDS
-# with horizon (the wealth haircut scales PT legs a bit more every year), so
-# a fixed 1.5% bar that clears year 11 fails year 24: t_cg_wealth_qbi hit
-# rel 1.98e-2 / $52M in 2050. Real frame/threshold mismatches (the failure
-# class this guard exists for) diverge at O(50-100%), not O(2%), so 5%
-# preserves the guard's power at any horizon we run.
+# Sized for horizon: the benign wedge between the frozen pre-pass frame and the
+# haircut-eroded conventional frame COMPOUNDS (the wealth haircut scales PT legs
+# a little more every year), so a bar tight enough for decade 1 fails in the
+# out-years. Real frame/threshold mismatches -- the failure class this guard
+# exists for -- diverge at O(50-100%), not O(2%), so 5% keeps the guard's power
+# at any horizon we run.
 SIGMA_CONSERVE_RTOL = 0.05
 
 # Absolute companion tolerance: the check fails only when the divergence
 # exceeds BOTH the relative and absolute bars. Needed because conv_total is a
 # NET flow that can sit near zero (opposing rate wedges in a package), so the
 # $1e6 denominator floor lets an immaterial dollar drift read as a huge
-# relative one. 2026-07-10 (top_tax dials, post calc_mtrs fix): the restored
-# wealth haircut scales PT legs harder, and q04 failed at rel 1.9e-2 on a
-# $1.2M absolute gap (conv_total -$0.06B); tco_wealth_qbi_deemed at 1.501e-2
-# on $6.7M. Real frame/threshold divergence bugs show up at $B scale.
-# 2026-07-10 (30-yr batch): 5e7 -> 2.5e8, same horizon-compounding logic —
-# out-year nominal flows are ~2.5x decade-1 levels.
+# relative one. Real frame/threshold divergence bugs show up at $B scale, well
+# clear of this bar. Sized for the 30-year horizon, where out-year nominal flows
+# run a few times decade-1 levels.
 SIGMA_CONSERVE_ATOL = 2.5e8
 
 
