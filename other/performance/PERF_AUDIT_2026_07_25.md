@@ -290,11 +290,38 @@ Additionally, everything in Phase 3b is serial inside one job (observed max
 inside the distribution builders, serial loops over `dist_years` and over the 21
 `dist_cuts`. Candidates for an array over (scenario × product) or an `mclapply`.
 
-### 2.6 Phase 0 setup: ~80 minutes of serial login-node time on a 199-scenario runscript (revised up)
+### 2.6 Phase 0 setup: 43 minutes of serial login-node time on a 199-scenario runscript — FIXED 2026-07-25
+
+**Status: done** (`aa86b887c`). Measured outcome, Phase 0 alone on 199
+scenarios, one core, same node class, pre-change worktree vs post-change repo
+(`/nfs/roberts/scratch/pi_nrs36/jar335/perf_probe/taxlaw/phase0_{pre,post}.log`):
+
+| | before | after |
+|---|---:|---:|
+| Phase 0 wall clock, 199 scenarios | 42m46s | 11m55s |
+| per scenario | 12.9s | 3.6s |
+
+**30m51s saved, 72%.** Verified identical: all 398 emitted `tax_law.csv` files
+byte-identical, every serialized `config.rds` tax law slot `identical()`, and a
+full-sample `tests/simplify_smoke` end-to-end run byte-identical pre vs post.
+
+The **~80 minutes** quoted below was an extrapolation from an assumed 25-30s per
+scenario and was too high; the measured pre-change figure is 12.9s per scenario,
+so 43 minutes. Composition of a per-scenario build, profiled before the change
+(`profile_phase0.R`, 6 dials scenarios, 12.6s mean): `parse_param` **82.7%**
+(10.4s), `generate_indexes` 10.1% (1.3s), `get_vat_price_offset` 5.4% (0.7s),
+YAML reads 0.2%, reshape and `write_csv` 1.0%.
+
+The cache removes essentially all of the `parse_param` term for untouched
+parameters; the residual 3.6s per scenario is now dominated by
+`generate_indexes` plus `get_vat_price_offset`, which re-read Macro-Projections
+per scenario and would be the next target if Phase 0 mattered again.
+
+Text below describes the problem as found.
 
 `src/slurm/setup.R:105` loops over scenarios building `vat_price_offset`,
 `excess_growth_offset`, `indexes` and `build_tax_law` one at a time before any
-job is submitted. Measured at roughly 25-30s per scenario.
+job is submitted, at roughly 25-30s per scenario as first estimated.
 `config/runscripts/top_tax/dials.csv` has **199 scenarios**, so this is about
 **80 minutes of serial login-node work before a single job is submitted** -- not
 the ~15 minutes first estimated.
@@ -320,6 +347,14 @@ range, `indexes`). Phase 0 then becomes one full parse plus 199 cheap ones --
 minutes instead of an hour and twenty. Caveat: `indexes` differs by scenario when
 a scenario carries a VAT or excess-growth offset, so the cache must key on it (or
 engage only when it matches the baseline's).
+
+(As shipped: one cached parse of the baseline parameter set keyed on
+(`years`, `indexes`), reused per parameter whenever the merged object is
+`identical()` to baseline's -- no hashing, and the baseline scenario's own
+all-28-restated case hits the cache. `TAX_LAW_CACHE=0` disables it. Average
+override count across the 199 dials scenarios, measured: **2.45 of 28**;
+distribution 64 / 53 / 66 / 5 / 3 / 7 scenarios at 1 / 2 / 3 / 5 / 6 / 7
+parameters, plus baseline at 28.)
 
 Parallelizing the loop (`mclapply`, or a Phase 0 array job) also works and is
 simpler, but still burns 199 full parses of login-node CPU. The two compose.
@@ -368,15 +403,14 @@ mostly in the 2W and 2B jobs (~150 CPU-hours combined) and in Phase 0.
 ## 3. Recommended order
 
 Revised 2026-07-25 after tracing §2.3 and §2.6 properly: §2.6 moves up sharply
-(80 minutes of serial prologue on a 199-scenario runscript, and the fix is
+(a 43-minute serial prologue on a 199-scenario runscript, and the fix is
 memoization rather than parallelism), §2.3 moves to the bottom (1 of 10 variables
 prunable on the runscripts in use, and pruning drops columns from the summary
 output).
 
 1. ~~§2.1 QBI reshape~~ — **DONE 2026-07-25, 29.6% per year-task, bit-identical.**
-2. §2.6 memoize `parse_param` across scenarios in Phase 0 — ~80 min of serial
-   login-node time on `top_tax/dials`, reducible to minutes. No results risk
-   (same parse, cached).
+2. ~~§2.6 memoize `parse_param` across scenarios in Phase 0~~ — **DONE
+   2026-07-25, 42m46s → 11m55s on `top_tax/dials`, byte-identical.**
 3. §2.7 selective `fread` + §2.5 memoize the distribution microdata — small,
    safe, pure waste elimination.
 4. §2.4 per-scenario DAG chains — wall clock only, no CPU cost, no results risk.
