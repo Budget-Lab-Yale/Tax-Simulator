@@ -67,7 +67,6 @@ You need to supply these cmd line args when running from bash:
 
 - `runscript_names`: path of runscript, relative to ./config/runscripts, include the name but exclude the ".csv" 
 - `scenario_id`: name of a single scenario to run; if NULL, all scenarios in runscript execute
-- `user_id`: User identifier for tracking runs (string, typically use "user_test" for local runs)
 - `local`: whether to write to local (1) or production (0). Do local unless prompt specifies otherwise
 - `vintage`: specific folder name to write to; if NULL, uses timestamp. Do NULL unless prompt specifies otherwise
 - `pct_sample` = fraction of records to use in simulation, floating point number b/n 0 and 1. Do 1 unless prompt specifies otherwise
@@ -82,10 +81,12 @@ You need to supply these cmd line args when running from bash:
   Examples:
 
   # Local run with 10% sample
-  Rscript src/main.R private/my_scenario NULL user_test 1 NULL 0.1 1 NULL 0 none
+  Rscript src/main.R private/my_scenario NULL 1 NULL 0.1 1 NULL 0 none
 
   # Production run with full sample
-  Rscript src/main.R public/my_scenario scenario_id user_test 0 vintage_name 1 1 baseline_vintage 1 none
+  Rscript src/main.R public/my_scenario scenario_id 0 vintage_name 1 1 baseline_vintage 1 none
+
+  (The old `user_id` argument — position 3 — was retired 2026-07-25; it was never read.)
 
   **Important Notes:**
   - **Windows limitation**: Multicore parallelization is not supported on Windows due to R's parallel processing limitations. Always use `'none'` on Windows.
@@ -575,7 +576,7 @@ Use the `/policy-config` skill to create reform configurations. It contains deta
 
 **Usage:**
 ```bash
-bash slurm_run.sh <runscript> <scenario_id> <user_id> <local> <vintage> <pct_sample> <stacked> <baseline_vintage> <delete_detail>
+bash slurm_run.sh <runscript> <scenario_id> <local> <vintage> <pct_sample> <stacked> <baseline_vintage> <delete_detail>
 ```
 Arguments are the same as `main.R` except `multicore` is omitted (SLURM handles parallelism).
 

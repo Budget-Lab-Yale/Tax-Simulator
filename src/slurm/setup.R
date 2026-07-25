@@ -6,10 +6,9 @@
 # to .rds files for downstream SLURM array jobs. Runs synchronously on
 # the login node.
 #
-# CLI args: same as main.R except multicore
-#   Rscript src/slurm/setup.R <runscript> <scenario_id> <user_id>
-#           <local> <vintage> <pct_sample> <stacked> <baseline_vintage>
-#           <delete_detail>
+# CLI args: same as main.R except multicore (parsed by parse_cli_args)
+#   Rscript src/slurm/setup.R <runscript> <scenario_id> <local> <vintage>
+#           <pct_sample> <stacked> <baseline_vintage> <delete_detail>
 #-----------------------------------------------------------------------
 
 
@@ -40,24 +39,20 @@ list.files('./src', recursive = T) %>%
 #------------------------
 
 args = commandArgs(trailingOnly = T)
-if (length(args) < 9) {
-  stop('Usage: Rscript src/slurm/setup.R <runscript> <scenario_id> <user_id> ',
-       '<local> <vintage> <pct_sample> <stacked> <baseline_vintage> <delete_detail>')
-}
+cli  = parse_cli_args(args, context = 'slurm_setup')
 
-runscript_name  = args[1]
+runscript_name  = cli$runscript_names
 if (grepl('____', runscript_name, fixed = TRUE)) {
   stop('Multi-runscript invocations (____-separated) are not supported by ',
        'the SLURM pipeline; submit one slurm_run.sh per runscript')
 }
-scenario_id     = if (args[2] == 'NULL') NULL else args[2]
-user_id         = args[3]
-local           = as.integer(args[4])
-vintage         = if (args[5] == 'NULL') NULL else args[5]
-pct_sample      = as.numeric(args[6])
-stacked         = as.integer(args[7])
-baseline_vintage = if (args[8] == 'NULL') NULL else args[8]
-delete_detail   = as.integer(args[9])
+scenario_id      = cli$scenario_id
+local            = cli$local
+vintage          = cli$vintage
+pct_sample       = cli$pct_sample
+stacked          = cli$stacked
+baseline_vintage = cli$baseline_vintage
+delete_detail    = cli$delete_detail
 
 
 #--------------------------------------

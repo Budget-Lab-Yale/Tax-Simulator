@@ -28,7 +28,7 @@ list.files('./src', recursive = T) %>%
 #------------------------
 
 
-runscript_names  = 'baseline/baseline_2024'
+runscript_names  = 'baseline/baseline'
 scenario_id      = NULL
 local            = 1
 vintage          = NULL
@@ -42,17 +42,17 @@ multicore        = 'none'   # one of 'none', 'scenario', or 'year'
 # Override default runtime args if executed from the command line
 args = commandArgs(trailingOnly = T)
 if (length(args) > 0) {
-  runscript_names                         = args[1]
-  if (args[2] == 'NULL') scenario_id      = NULL else scenario_id = args[2]
-  user_id                                 = args[3]
-  local                                   = as.integer(args[4])
-  if (args[5] == 'NULL') vintage          = NULL else vintage = args[5]
-  pct_sample                              = as.numeric(args[6])
-  stacked                                 = as.integer(args[7])
-  if (args[8] == 'NULL') baseline_vintage = NULL else baseline_vintage = args[8]
-  delete_detail                           = as.integer(args[9])
-  multicore                               = args[10]
-} 
+  cli              = parse_cli_args(args, context = 'main')
+  runscript_names  = cli$runscript_names
+  scenario_id      = cli$scenario_id
+  local            = cli$local
+  vintage          = cli$vintage
+  pct_sample       = cli$pct_sample
+  stacked          = cli$stacked
+  baseline_vintage = cli$baseline_vintage
+  delete_detail    = cli$delete_detail
+  multicore        = cli$multicore
+}
 
 
 #----------------------

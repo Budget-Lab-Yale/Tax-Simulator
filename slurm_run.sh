@@ -32,19 +32,24 @@
 #   Phase 4  — Stacked (single SLURM job): stacked reports + cleanup
 #
 # Usage:
-#   bash slurm_run.sh <runscript> <scenario_id> <user_id> <local>
-#                     <vintage> <pct_sample> <stacked>
-#                     <baseline_vintage> <delete_detail>
+#   bash slurm_run.sh <runscript> <scenario_id> <local> <vintage>
+#                     <pct_sample> <stacked> <baseline_vintage>
+#                     <delete_detail>
 #
 # Arguments are identical to main.R except multicore is omitted
-# (parallelization is handled by SLURM).
+# (parallelization is handled by SLURM). The user_id argument was retired
+# 2026-07-25 (it was never read); remove it from old invocations.
 #-----------------------------------------------------------------------
 
 set -euo pipefail
 
 # Validate arguments
-if [ "$#" -lt 9 ]; then
-  echo "Usage: bash slurm_run.sh <runscript> <scenario_id> <user_id> <local> <vintage> <pct_sample> <stacked> <baseline_vintage> <delete_detail>"
+if [ "$#" -eq 9 ]; then
+  echo "Got 9 args -- the user_id argument was retired 2026-07-25; remove it (old position 3)."
+  exit 1
+fi
+if [ "$#" -lt 8 ]; then
+  echo "Usage: bash slurm_run.sh <runscript> <scenario_id> <local> <vintage> <pct_sample> <stacked> <baseline_vintage> <delete_detail>"
   exit 1
 fi
 
@@ -270,7 +275,7 @@ P3B_IDS=()
 # This is deliberately the one all-scenario success barrier. A failed scenario
 # does not stop unrelated post-processing, but stacked output and destructive
 # detail cleanup must not run on a partial vintage.
-DELETE_DETAIL="${9}"
+DELETE_DETAIL="${8}"
 if [ "$STACKED" == "1" ] || [ "$DELETE_DETAIL" == "1" ]; then
   if [ "${#P3B_IDS[@]}" -gt 0 ]; then
     set_afterok "${P3B_IDS[@]}"
