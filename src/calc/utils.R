@@ -134,17 +134,22 @@ integrate_schedule = function(df, n_brackets, prefix_brackets, prefix_rates,
   #----------------------------------------------------------------------------
 
   # Remove all-NA rate/bracket columns -- indicates that in a prior or future
-  # year there are more brackets
-  defunct_brackets = df %>%
-    summarise(across(.cols = c(starts_with(prefix_brackets), starts_with(prefix_rates)),
-                     .fns = ~ sum(is.na(.)) / n())) %>%
-    pivot_longer(cols = everything()) %>%
-    filter(value == 1) %>%
-    select(name) %>%
-    deframe()
-
-  df %<>%
-    select(-all_of(defunct_brackets))
+  # year there are more brackets. This helper is called repeatedly on the full
+  # microdata frame, so inspect only the schedule columns and avoid constructing
+  # a one-row summary, pivoting it long, and copying the entire frame through
+  # select().
+  schedule_cols = names(df)[
+    startsWith(names(df), prefix_brackets) |
+      startsWith(names(df), prefix_rates)
+  ]
+  if (nrow(df) > 0 && length(schedule_cols) > 0) {
+    defunct_brackets = schedule_cols[
+      vapply(df[schedule_cols], function(x) all(is.na(x)), logical(1))
+    ]
+    if (length(defunct_brackets) > 0) {
+      df[defunct_brackets] = NULL
+    }
+  }
 
 
   # If number of brackets isn't supplied by user, ascertain it
@@ -164,22 +169,25 @@ integrate_schedule = function(df, n_brackets, prefix_brackets, prefix_rates,
   # Add (n+1)th bracket, used to calculate taxable income in excess of top bracket
   df[[paste0(prefix_brackets, n_brackets + 1)]] = Inf
 
-  # Generate bracket-specific output names
-  bracket_output_names = paste0(output_name, 1:n_brackets)
+  # Calculate each bracket. Most callers need only the total, in which case
+  # accumulate directly into one vector rather than allocating a bracket-wide
+  # tibble and scanning it again with rowSums().
+  bracket_output_names = paste0(output_name, seq_len(n_brackets))
+  if (!by_bracket) {
+    total = numeric(nrow(df))
+    for (i in seq_len(n_brackets)) {
+      total = total + bracket_fn(df, i)
+    }
+    return(tibble(!!output_name := total))
+  }
 
-  # Iterate over brackets, stored with associated output prefix
-  1:n_brackets %>%
-    set_names(bracket_output_names) %>%
-
-    # Calculate tax attributable to each bracket
-    map_df(~ bracket_fn(df, .x)) %>%
-
-    # Generate total output column
-    mutate(!!output_name := rowSums(.)) %>%
-
-    # Remove intermediate bracket-level calculations if specified
-    select(all_of(output_name),
-           if (by_bracket) all_of(bracket_output_names) else c()) %>%
+  bracket_output = lapply(seq_len(n_brackets), function(i) bracket_fn(df, i))
+  names(bracket_output) = bracket_output_names
+  bracket_output = as_tibble(bracket_output)
+  bind_cols(
+    tibble(!!output_name := rowSums(bracket_output)),
+    bracket_output
+  ) %>%
     return()
 }
 
@@ -335,7 +343,6 @@ get_n_cols = function(df, prefix) {
     length() %>% 
     return()
 }
-
 
 
 
