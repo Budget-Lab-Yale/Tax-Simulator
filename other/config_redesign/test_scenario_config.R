@@ -33,10 +33,11 @@ expect_error = function(label, expr, pattern) {
 
 root = file.path(tempdir(), 'cfgtest')
 unlink(root, recursive = TRUE)
-for (d in c('economy/default', 'economy/alt', 'economy/sets/nested',
-            'economy/badset', 'economy/lockedset', 'economy/novalue',
-            'economy/warnonly',
-            'behavior/default', 'behavior/stack'))
+for (d in c('economy/default', 'economy/alternatives/alt',
+            'economy/alternatives/sets/nested',
+            'economy/alternatives/badset', 'economy/alternatives/lockedset',
+            'economy/alternatives/novalue', 'economy/alternatives/warnonly',
+            'behavior/default', 'behavior/alternatives/stack'))
   dir.create(file.path(root, d), recursive = TRUE)
 
 # A dependency file + a pointer target for calibrated entries
@@ -78,15 +79,15 @@ write_yaml(list(
                  rederive = 'script.R')
 ), file.path(root, 'economy/default/corp.yaml'))
 
-write_yaml(list(sigma_n = list(value = 0.5)), file.path(root, 'economy/alt/corp.yaml'))
+write_yaml(list(sigma_n = list(value = 0.5)), file.path(root, 'economy/alternatives/alt/corp.yaml'))
 write_yaml(list(sigma_n = list(value = 0.61), eta = list(value = 3.1)),
-           file.path(root, 'economy/sets/nested/corp.yaml'))
+           file.path(root, 'economy/alternatives/sets/nested/corp.yaml'))
 write_yaml(list(eta = list(value = 3.1), profile = list(value = 'default')),
-           file.path(root, 'economy/warnonly/corp.yaml'))
-write_yaml(list(nope    = list(value = 1)),   file.path(root, 'economy/badset/corp.yaml'))
-write_yaml(list(bridge  = list(value = 'y')), file.path(root, 'economy/lockedset/corp.yaml'))
+           file.path(root, 'economy/alternatives/warnonly/corp.yaml'))
+write_yaml(list(nope    = list(value = 1)),   file.path(root, 'economy/alternatives/badset/corp.yaml'))
+write_yaml(list(bridge  = list(value = 'y')), file.path(root, 'economy/alternatives/lockedset/corp.yaml'))
 write_yaml(list(sigma_n = list(note = 'no value here')),
-           file.path(root, 'economy/novalue/corp.yaml'))
+           file.path(root, 'economy/alternatives/novalue/corp.yaml'))
 
 write_yaml(list(
   e = list(value = -0.5, kind = 'judgment', note = 'central'),
@@ -97,9 +98,7 @@ write_yaml(list(
                      rederive = 'script.R',
                      conditioned_on = list(`behavior.charity.e` = -1.0))
 ), file.path(root, 'behavior/default/charity.yaml'))
-write_yaml(list(active = list()), file.path(root, 'behavior/default/behavior.yaml'))
-write_yaml(list(active = list('charity')), file.path(root, 'behavior/stack/behavior.yaml'))
-write_yaml(list(e = list(value = -1.0)), file.path(root, 'behavior/stack/charity.yaml'))
+write_yaml(list(e = list(value = -1.0)), file.path(root, 'behavior/alternatives/stack/charity.yaml'))
 
 CONFIG_LEG_ROOTS = list(economy = file.path(root, 'economy'),
                         behavior = file.path(root, 'behavior'))
@@ -114,7 +113,6 @@ check('economy channels loaded',        setequal(names(eco$entries), c('interfac
 check('channel role recorded',          identical(eco$roles$corp, 'transmission'))
 check('entry-level role override',      identical(eco$entries$corp$mixed$role, 'state'))
 check('entry inherits channel role',    identical(eco$entries$corp$sigma_n$role, 'transmission'))
-check('behavior default active empty',  identical(beh$active_default, character(0)))
 
 # Validation failures
 bad = eco; bad$entries$corp$sigma_n$kind = 'vibes'
@@ -132,28 +130,28 @@ r0 = config_resolve('economy', eco)
 check('default resolve value',      identical(r0$values$corp$sigma_n, 0.375))
 check('default resolve no overrides', nrow(r0$overrides) == 0)
 
-r1 = config_resolve('economy', eco, set_name = 'alt')
-check('set override applies',       identical(r1$values$corp$sigma_n, 0.5))
-check('set override recorded',      r1$overrides$source[1] == 'set:alt')
+r1 = config_resolve('economy', eco, alternative = 'alt')
+check('alternative override applies',  identical(r1$values$corp$sigma_n, 0.5))
+check('alternative override recorded', r1$overrides$source[1] == 'alternative:alt')
 
-r2 = config_resolve('economy', eco, set_name = 'sets/nested')
-check('nested set name resolves',   identical(r2$values$corp$sigma_n, 0.61))
-check('set keeps default type',     is.numeric(r2$values$corp$sigma_n))
+r2 = config_resolve('economy', eco, alternative = 'sets/nested')
+check('nested alternative resolves', identical(r2$values$corp$sigma_n, 0.61))
+check('alternative keeps default type', is.numeric(r2$values$corp$sigma_n))
 check('unset entries keep default', identical(r2$values$corp$mixed, 1L) ||
                                     identical(r2$values$corp$mixed, 1))
 
-expect_error('unknown set errors',  config_resolve('economy', eco, set_name = 'nope'),
-             'Unknown economy set')
-expect_error('unknown entry errors', config_resolve('economy', eco, set_name = 'badset'),
+expect_error('unknown alternative errors',
+             config_resolve('economy', eco, alternative = 'nope'),
+             'Unknown economy alternative')
+expect_error('unknown entry errors', config_resolve('economy', eco, alternative = 'badset'),
              'unknown economy entry')
 expect_error('locked entry refuses override',
-             config_resolve('economy', eco, set_name = 'lockedset'), 'locked')
-expect_error('set entry without value errors',
-             config_resolve('economy', eco, set_name = 'novalue'), 'must supply a `value`')
+             config_resolve('economy', eco, alternative = 'lockedset'), 'locked')
+expect_error('alternative entry without value errors',
+             config_resolve('economy', eco, alternative = 'novalue'), 'must supply a `value`')
 
-rb = config_resolve('behavior', beh, set_name = 'stack')
-check('behavior set active list',   identical(rb$active, 'charity'))
-check('behavior set param override', identical(rb$values$charity$e, -1.0))
+rb = config_resolve('behavior', beh, alternative = 'stack')
+check('behavior alternative param override', identical(rb$values$charity$e, -1.0))
 
 #------------
 # Activation / accessors / pass guard
@@ -162,7 +160,6 @@ check('behavior set param override', identical(rb$values$charity$e, -1.0))
 config_activate(economy = r0, behavior = rb)
 check('economy_param reads',   identical(economy_param('corp', 'sigma_n'), 0.375))
 check('behavior_param reads',  identical(behavior_param('charity', 'e'), -1.0))
-check('active responses read', identical(behavior_active_responses(), 'charity'))
 
 config_set_pass('static')
 expect_error('transmission read refused on static pass',
@@ -199,13 +196,14 @@ f_h = suppressWarnings(config_check_staleness('economy', eco, r0, iv, enforce = 
 check('hash arm trips', any(grepl('has changed since', f_h)))
 writeLines('x = 1', dep_file)
 
-# a set override suppresses that entry's check (overriding IS the acknowledgment)
+# an alternative's override suppresses that entry's check (overriding IS the
+# acknowledgment)
 f_ov = config_check_staleness('economy', eco, r2, iv_stale, enforce = FALSE) %>% suppressWarnings()
-check('set override suppresses that entry',
+check('alternative override suppresses that entry',
       !any(grepl('corp.eta:', f_ov, fixed = TRUE)))
 
 # enforcement: warn -- warns and is returned, but never stops
-r_warn = config_resolve('economy', eco, set_name = 'warnonly')
+r_warn = config_resolve('economy', eco, alternative = 'warnonly')
 f_soft = tryCatch({
   withCallingHandlers(
     config_check_staleness('economy', eco, r_warn, list(tax_data = '2099010101'),
@@ -247,9 +245,21 @@ expect_error('year empty', parse_year_spec(''), 'Empty')
 m = config_manifest('economy', eco, r2, 'test_scenario')
 check('manifest rows cover entries', nrow(m) == 8)
 check('manifest records override source',
-      m$source[m$channel == 'corp' & m$name == 'sigma_n'] == 'set:sets/nested')
+      m$source[m$channel == 'corp' & m$name == 'sigma_n'] == 'alternative:sets/nested')
 check('manifest carries role column', all(c('state', 'transmission') %in% m$role))
-check('manifest set column', all(m$set == 'sets/nested'))
+check('manifest alternative column', all(m$alternative == 'sets/nested'))
+
+#------------
+# Reserved default name
+#------------
+
+dir.create(file.path(root, 'economy/alternatives/default'), recursive = TRUE)
+expect_error('alternatives/default is refused',
+             config_load_defaults('economy'), 'reserved runscript cell value')
+unlink(file.path(root, 'economy/alternatives/default'), recursive = TRUE)
+check('reserved word resolves to the default layer',
+      identical(config_resolve('economy', config_load_defaults('economy'),
+                               alternative = 'default')$alternative, 'default'))
 
 cat(sprintf('\n%d passed, %d failed\n', n_pass, n_fail))
 if (n_fail > 0) stop('scenario_config tests FAILED') else cat('ALL_TESTS_PASS\n')
