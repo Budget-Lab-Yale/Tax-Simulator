@@ -1,11 +1,14 @@
 # Config rebuild v2 — full status
 
-*Branch `config-rebuild`, off `wealth` at `324a7cd38`. Phases 0 through 4 built
-2026-07-26. All three legs are live: a runscript row is now an ID, three folder
-pointers and the computational scope, and nothing else. Both top-tax generators
-reproduce everything they write, tax_law trees included. Phases 5 and 6 remain.
-Plan of record: `~/.claude/plans/cheerful-zooming-star.md`, which carries a
-status header pointing back here.*
+*Branch `config-rebuild`, off `wealth` at `324a7cd38`. Phases 0 through 4 and the
+first half of Phase 5 built 2026-07-26. All three legs are live: a runscript row is
+an ID, three folder pointers and the computational scope, and nothing else. The kg
+calibrations have moved into config/calibrations/ and are checked at parse time
+against the data, the code and the settings they were derived under. What remains
+is Phase 5's second half -- making the calibrators WRITE those files -- plus the
+Phase 6 docs sweep. Plan of record:
+`~/.claude/plans/cheerful-zooming-star.md`, which carries a status header pointing
+back here.*
 
 This document is meant to be enough to resume cold. It is in four parts: what
 the branch contains now, what was verified and how, the decisions taken without
@@ -31,7 +34,12 @@ the author present, and what each remaining phase now involves.
 | `6891c48de` | 4.1 | Behavior module code moves `config/scenarios/behavior/` → `src/behavior/`. 22 renames. |
 | `2014f7f31` | 4.2 | The behavior leg goes live: behavior.yaml loader, 19 alternatives, five order guards deleted. |
 | `60038ed6c` | 4.3 | Nine module-only parameters inlined into their modules; `evasion.yaml` deleted. |
-| `823f8fd93`, `88a2e882c` | — | This document. |
+| `efc2f79f8` | 4 gate | Six scenarios byte-identical; the Phase 4 re-pins confirmed. |
+| `e6f8955a5` | 5a | The four kg calibration files land, dormant, value-verified against the old copies. |
+| `dcd7b21ce` | 5b | They go live; `kg.yaml`/`sigma.yaml` deleted; parse-time calibration check + negative test. |
+| `160cd5f9f` | 5b fix | Entity shifting's numbers go back in its module (author ruling). |
+| `ba26fa5be` | 5 gate | Six scenarios byte-identical; all three conditional re-pins confirmed. |
+| `823f8fd93`, `88a2e882c`, `c2ed2840d` | — | This document. |
 
 ## Phase 1 — what the excess-growth removal touched
 
@@ -462,6 +470,106 @@ round-trips the YAML through `write_yaml()` and would delete every comment in
 files that are mostly comment, the comments being the provenance. **Still do not
 call it.** Phase 5 retires it.
 
+## Phase 5, first half — the calibrations move and get checked
+
+Two commits plus a correction. The values did not change; where they live, and
+whether anything notices when they go stale, did.
+
+### The files
+
+```
+config/calibrations/kg/
+├── bathtub.yaml      GENERATED. eta, eta_logs, timeable_share,
+│                     timeable_share_logs -- the four calibrated response
+│                     parameters
+├── conversion.yaml   GENERATED. sigma, plus the SYZZ labor-content share
+└── settings.yaml     HAND-EDITABLE. the model-form switches and judgment calls:
+                      response_form, the two allocation rules, the timing window
+                      and reference wedge, wealth_carry_scale, beta_fallback,
+                      deemed_avoidance, the four char_* logits and their base year
+```
+
+The kg channel split along a line nobody had drawn before: numbers a PROCEDURE
+produces, in a file a calibrator writes, versus choices a PERSON made, in a file a
+person owns. Only the first kind can be stale, and conflating them is why three
+provenance ledgers in this repo disagreed with each other.
+
+`config/scenarios/economy/default/{kg,sigma}.yaml` are deleted.
+
+### Bound versus fixed
+
+The distinction that makes a sweep recordable:
+
+| | Reached how | For | Read by |
+|---|---|---|---|
+| BOUND | the scenario's behavior leg names the file, via `kg_dynamics` | values a scenario may legitimately differ on | `kg_bathtub()`, `kg_conversion()` |
+| FIXED | one path, every scenario | the switches the calibrations are conditioned on, which cannot vary underneath them | `kg_setting()` |
+
+Both accessors are fail-closed: reading a bound value in a scenario that never
+bound the file is an error, because the alternative is a number nobody chose.
+
+This is what an eta sweep becomes. Today it is an environment variable
+(`KG_ETA_LOGS=1.9`) that leaves no trace in the vintage and, on this branch, does
+not work at all -- see Part 4. Tomorrow it is a generated file bound by its own
+behavior alternative, and therefore recorded.
+
+**A sweep file must keep the BASE NAME of the file it stands in for** --
+`.../sweeps/eta_15/bathtub.yaml`, never `.../eta_15.yaml`. Entries are labelled
+`{file stem}.{entry}`, so renaming the file renames every label and any waiver
+written against `bathtub.*` silently stops applying. Found by the negative test,
+now documented in `calibrations.R` and asserted in that test.
+
+### The conditioning set became machine-readable
+
+This is the part with teeth. The kg calibrations were derived under particular
+settings, and that fact used to be prose inside a note -- "conditioned on
+applier_allocation = 0.5, timing_ref_wedge = 0.05, timing_window = 1" -- which
+cost nothing to violate. Each calibrated entry now carries a `conditioned_on`
+block naming those settings and their values, and the parse-time check compares
+the block against the live `settings.yaml`. Change a switch and every
+capital-gains run stops until the affected value is re-derived or waived.
+
+`conditioned_on` keys gained `settings` alongside `economy` and `behavior` as a
+valid source.
+
+### One staleness implementation, not two
+
+A calibration file is handed to `config_check_staleness()` as the degenerate case
+of a leg: one channel, named for the file, nothing overridden. So the three arms --
+data vintages, dependency file contents, conditioned-on values -- are the same code
+the economy leg runs, and there is no second implementation to drift.
+
+`calib_check_staleness()` is called from `resolve_all_scenarios()`, next to the
+economy leg's check, for the same reason: parse time is the one place both the
+`main.R` path and the SLURM path pass through.
+
+### Waivers live in the pointing file
+
+`behavior.yaml` gains an optional `waivers` section keyed `{file stem}.{entry}`.
+The reasoning: a calibration file is rewritten by its calibrator, so a waiver
+inside it would be erased by the next re-derivation. That is RIGHT for a waiver the
+re-derivation resolves, and WRONG for one that says "this scenario knowingly runs
+against an older data vintage". The smoke fixture's four kg waivers moved there out
+of its economy alternative, and its passing is what demonstrates the path works.
+
+### The negative test
+
+`other/config_redesign/test_stamp_negative.R`, 10 checks. Corrupt one thing at a
+time in a scratch copy and confirm the run stops naming what moved: a data vintage,
+a dependency file's contents, a conditioned-on setting. Then that a dated waiver
+gets past the stop loudly, that waiving one entry does not waive its neighbours,
+and that a waiver keyed to the wrong file stem does not apply.
+
+Every other check in this suite proves a CLEAN configuration passes, which is the
+less important half of the claim. A staleness check nobody has watched fail is a
+check nobody should trust.
+
+### The manifest
+
+`calibrations.csv` at the vintage root: per scenario, every calibration value in
+use, its file, its kind, and whether the scenario bound the file or read it from a
+fixed path. So a past run can be read back without the code that produced it.
+
 ---
 
 # Part 2 — What was verified
@@ -592,6 +700,13 @@ family, which `mapping_check.py` is responsible for. Two added this session:
   and reports its file count on every invocation.
 - `assumptions.csv` is golden-only; the candidate writes `scenario_config.csv`
   in its place.
+- `calibrations.csv` is the mirror case, candidate-only, added in Phase 5. **The
+  Phase 5 gate reported all five full-sample scenarios as failures on the first
+  pass for exactly this reason** -- a new file is a file-set mismatch -- and not
+  one of them was a number. Excusing it is only safe if it is actually being
+  written, so the comparator now ASSERTS it present with a header and at least one
+  row. An exclusion that also tolerates absence would quietly cover the manifest
+  disappearing, which is the failure this project exists to prevent.
 
 ## Verification NOT yet done
 
@@ -784,7 +899,30 @@ reported estate — so it stayed fatal, just moved earlier. Its two companion
 ORDER guards became guarantees of the sort instead of checks, since the sort
 cannot produce a violating order.
 
-### 15. `kg_dynamics` accepts a list as well as a mapping
+### 15. REVERSED BY THE AUTHOR -- entity shifting's numbers belong in its module
+
+I put entity shifting's four constants in a calibration file of their own, on the
+strength of a line in the 25 July plan that said to. The author reversed it on
+2026-07-26, and was right: every behavioral number a pluggable module reads lives
+in that module's file, with no exceptions.
+
+The carve-out was wrong on its own terms. Evasion, estate and wealth all had their
+parameters moved INTO their modules earlier the same day for exactly the reason that
+applies here -- one module reads them -- so it turned one rule into a rule plus an
+exception and left neighbouring modules doing the same thing two ways. It also had a
+second defect: entity shifting runs in scenarios with no bathtub, so a per-scenario
+binding had nothing to bind to there, and the module would have failed looking for a
+number.
+
+The numbers are back in `pearce_prisinzano.R` with their sources beside them,
+`entity_shifting.yaml` and `kg_entity()` are gone, and `calibrations.R` carries a
+WHAT IS NOT HERE note so the idea is not re-derived from the plan document.
+
+**The rule, stated once:** if a pluggable behavior module reads a number, that
+number is in the module's file. `config/calibrations/` holds only what the kg
+machinery itself calibrates, and the switches those calibrations are conditioned on.
+
+### 16. `kg_dynamics` accepts a list as well as a mapping
 
 The plan describes the section as a mapping of piece to stamped file. Those files
 do not exist until Phase 5, and pointing the mapping at today's homes would have
@@ -792,78 +930,99 @@ meant writing a path to a module file as though it were a calibration stamp, in
 nineteen folders, to be rewritten in a fortnight. The list form says exactly what
 is true now — these pieces are bound — and the loader accepts both from the
 start, so Phase 5 adds paths without touching code. If a reader prefers only one
-form to exist, deleting the list branch after Phase 5 is a five-line change.
+form to exist, deleting the list branch is a five-line change. (The 19 shipped
+alternatives were converted to the mapping form in Phase 5b, so the list branch is
+now unused by anything in the tree.)
 
 ---
 
 # Part 4 — What is left
 
-Phase 5 and Phase 6. Nothing from Phases 0 through 4 is open.
+Phase 5's second half, and Phase 6. Nothing from Phases 0 through 4 is open, and
+nothing from Phase 5's first half.
 
-## Phase 5 — calibration stamps
+## Phase 5, second half — make the calibrators write their own files
 
-The actual point of the project, and over half the remaining work. The
-inventory run for the plan found that **not one of the five calibrated values
-in the model is written by its calibration script** — all were hand-copied from
-logs — **four of five "how to re-derive this" pointers are broken**, sigma was
-calibrated under a charity elasticity production does not use, and three
-provenance ledgers disagree with each other.
+This is the actual point of the project and it is still ahead. The inventory run for
+the plan found that **not one of the five calibrated values in the model is written
+by its calibration script** — all were hand-copied out of logs — and **four of five
+"how to re-derive this" pointers were broken**. The files now exist, are read at the
+point of use, and are checked before every run. But a human still put the numbers in
+them, so the original defect is intact.
 
-**(i)** `stamp_check()` extending `config_check_staleness()` at parse time, plus
-the stamp schemas (scalar YAML, and a table sidecar for the CSV-valued ones).
+DONE, in Phase 5's first half:
+- `bathtub.yaml`, `conversion.yaml`, `settings.yaml` written from the current pinned
+  values with no re-derivation, and value-verified against the copies they replaced
+- the conditioning set made machine-readable and enforced
+- the parse-time check, the manifest, the waiver path, the negative test
+- `kg.yaml` and `sigma.yaml` gone from `economy/default/`
+- `entity_shifting.yaml` written, then DELETED — its numbers belong in the module
+  (Part 3, decision 15)
 
-**(ii)** Write the stamps from CURRENT pinned values, no re-derivation:
-- `config/calibrations/kg/bathtub.yaml` — `eta` 2.4825 (levels form, dormant,
-  inherited waiver), `eta_logs` 1.6625 (live), `timeable_share` 0.2542
-  (inherited waiver, "solver demoted 2026-07-12"), `timeable_share_logs` (live).
-  Conditions record the kg conditioning set, now machine-readable.
-- `config/calibrations/kg/conversion.yaml` — sigma 0.16, with conditions
-  recording `charity/100` (the −1.0 it was actually derived under) plus a dated
-  waiver, so `charity/50` product runs pass with a visible banner until the
-  sanctioned re-derivation.
-- `config/calibrations/kg/entity_shifting.yaml` — `sourced` kind: 0.3788/0.6,
-  alpha 0.45, beta_legacy 0.25, Pearce-Prisinzano 2018. The module reads them
-  from here.
-- `config/calibrations/kg/settings.yaml` — the one hand-editable file in the
-  calibrations tree: the structural and judgment knobs (`response_form`,
-  `applier_allocation`, `dg_allocation`, `timing_window`, `timing_ref_wedge`,
-  `wealth_carry_scale`, `beta_fallback`, `deemed_avoidance`, the `char_*`
-  logits and base year). The `char_*` entries carry their honest "no source
-  recorded" note as judgment entries. The bathtub stamp records the settings it
-  was calibrated under, so changing a knob stops kg runs until re-calibration
-  or a waiver.
-- `config/calibrations/estate/bridge.yaml` regenerated with a full stamp.
-- Sidecar `provenance.yaml` for each wealth profile folder.
-- `kg.yaml` and `sigma.yaml` leave `economy/default/`.
+STILL TO DO:
 
-**(iii)** Rewire every calibrator to END by writing its stamp:
-`measure_efull_by_eta.R` and `form_ab/measure_efull_logs.R` → `bathtub.yaml`
-(their hardcoded scratch roots at lines 29-38 need parameterizing); the sigma
-pipeline (two `topord_plus5` legs, the top-ETI measurement, the interpolation) →
-`conversion.yaml`; `calibrate_estate_v2.R` writes its fitted r/rho_pt/cluster-cap
-directly and `write_frozen_params.R` becomes the downstream merge emitting
-`bridge.yaml`, retiring the hand-written
-`other/estate_tax/estate_valuation_params.yaml` intermediate;
-`write_profiles.py` emits its sidecar.
+**(a) Rewire the calibrators.** Each ends by writing its own file, so no number is
+ever hand-copied from a log again:
 
-**(iv)** Proving re-runs, each of which must reproduce the pinned value, with
-any drift going to the author rather than being silently re-pinned: the estate
-calibration (one job), the `eta_logs` batch (**three staged full-sample
-vintages — the single largest compute item in the project**), and the profile
-regeneration (seconds).
+- `other/kg_model_tests/form_ab/measure_efull_logs.R` and
+  `other/top_tax/eta_dial/measure_efull_by_eta.R` → `bathtub.yaml`. Their hardcoded
+  scratch roots need parameterizing.
+- the sigma pipeline — two `topord_plus5` legs, the top-ETI measurement, the
+  interpolation — → `conversion.yaml`.
+- `calibrate_estate_v2.R` writes its fitted r / rho_pt / cluster cap directly, and
+  `write_frozen_params.R` becomes the downstream merge emitting
+  `config/calibrations/estate/bridge.yaml`, retiring the hand-written
+  `other/estate_tax/estate_valuation_params.yaml` intermediate.
+- `other/wealth_dynamics/write_profiles.py` emits a `provenance.yaml` sidecar per
+  profile folder, which is how a TABLE-valued calibration joins the staleness net.
 
-**(v)** Retire what the stamps absorb: the `estate.R:49-61` warn,
-`WEALTH_DYN_PROVENANCE` / `wealth_dyn_check_provenance()` /
-`WEALTH_STRICT_CALIB`, the `KG_DYN_SPEC_VERSION` check,
-`other/kg_model_tests/calibration_reference.csv`, and
-`config_repin_hashes()` (decision 1).
+**FIRST, though: the eta launcher does not run on this branch.**
+`other/kg_model_tests/form_ab/launch_eta_dial_logs.sh` sets the parameter through
+`KG_RESPONSE_FORM` / `KG_ETA_LOGS` / `KG_TIMEABLE_SHARE_LOGS` environment variables,
+which this rebuild retired, and passes the `user_id` argument retired on 2026-07-25.
+It has been unrunnable for a while and nobody would have found out until they tried
+to recalibrate — which is the project's thesis in one file. Ported form: three
+generated sweep files under `config/calibrations/kg/sweeps/eta_logs_{15,19,23}/bathtub.yaml`,
+each bound by its own behavior alternative, and the launcher naming those
+alternatives instead of exporting variables. Note the base-name rule in Part 1.
 
-Gate: the six runs stay byte-identical (stamps are metadata), plus a deliberate
-negative test — corrupt a stamp condition in a scratch copy, show the hard stop
-fires.
+**(b) The proving re-runs.** Each rewired calibrator runs once and must reproduce its
+pinned value; drift goes to the author rather than being silently re-pinned.
 
-Rough size: 1.5 to 2 days of work, plus the `eta_logs` compute batch, which
-should be launched early since it gates the sign-off.
+The plan budgeted three full-sample vintages here, and that turned out to be
+avoidable. **The eta_logs measurement already reproduces its pinned value exactly**
+— re-run 2026-07-26, `efull_logs.csv` and `eta_tilde_fit.csv` came back
+byte-identical, `eta_tilde_pw` = 1.6625392632517335 — because the three vintages it
+reads (`eta_dial_logs_{15,19,23}`, plus `eta_dial_c_v2` for the form-invariant base)
+are still on scratch at 5.1G each. What that does NOT prove is that re-SIMULATING
+those vintages would reproduce their detail files; the gate chain implies it, since
+every phase of this rebuild came back byte-identical including the scenarios that
+run the bathtub, but that is an inference.
+
+**Author ruled 2026-07-26: re-run ONE of the three as a spot check**, confirm its
+2055 detail file matches what is on disk, and let the other two follow by the same
+argument. A third of the cost, and it converts the inference into a measurement.
+Blocked on the launcher port above.
+
+Still owed: the estate calibration (one job) and the profile regeneration (seconds).
+
+**(c) Retire what the new check absorbs.** Each of these is a partial,
+hand-maintained version of what `calib_check_staleness()` now does uniformly, and
+leaving them in place means two mechanisms disagreeing:
+
+- the point-of-use warn in `src/sim/estate.R:49-61`
+- `WEALTH_DYN_PROVENANCE`, `wealth_dyn_check_provenance()`, `WEALTH_STRICT_CALIB`
+- the `KG_DYN_SPEC_VERSION` check
+- `other/kg_model_tests/calibration_reference.csv` — one of the three disagreeing
+  ledgers
+- `config_repin_hashes()`, the comment-stripping hazard. **Until it is deleted, do
+  not call it.** All three re-pins in this project were done by text substitution
+  on the hash lines for that reason.
+
+Gate: the six runs stay byte-identical, since none of this changes a number.
+
+Rough size: half a day for the launcher port and the rewiring, plus the spot-check
+run's wall time.
 
 ## Phase 6 — docs and final sweep
 
@@ -876,20 +1035,17 @@ Rough size: a few hours.
 
 ## Total
 
-A day and a half to two and a half working days, Phase 5 being nearly all of it.
-Phase 5 is what to do next, and the `eta_logs` compute batch inside it should be
-launched as early as possible: it is three full-sample vintages and it gates the
-sign-off.
+Under a day of work left, plus the spot-check run's wall time. In order:
 
-Two things Phase 5 should pick up that Phase 4 left in a deliberate half-state:
+1. Port the eta launcher to sweep files bound by behavior alternatives — it does not
+   run on this branch at all, and everything else in (b) waits behind it.
+2. Launch the spot check.
+3. Rewire the four calibrators to write their own files.
+4. Retire the five superseded provenance mechanisms.
+5. Phase 6: the docs sweep.
 
-- The `kg_dynamics` sections in the nineteen behavior alternatives are written in
-  the LIST form (piece names, no paths). Turning them into mappings that point at
-  the stamped files is the moment those files come into existence, and needs no
-  loader change (decision 15).
-- Ten dependency hashes were re-pinned conditionally on the Phase 4 gate. If that
-  gate is clean the notes in `kg.yaml`, `sigma.yaml` and `wealth.yaml` can be
-  collapsed into one line; Phase 5 rewrites those entries as stamps anyway.
+CLAUDE.md was already corrected for the behavior leg in `c2ed2840d`, so Phase 6 is
+smaller than the plan assumed.
 
 ## Follow-ups the plan puts outside this project
 
