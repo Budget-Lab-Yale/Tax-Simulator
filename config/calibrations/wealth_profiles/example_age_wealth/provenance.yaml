@@ -1,0 +1,26 @@
+# GENERATED FILE -- do not hand-edit. Written by other/wealth_dynamics/write_profiles.py.
+#
+# Provenance for a TABLE-valued calibration: the saving-share surface and
+# transition matrix in this folder. The tables cannot carry their own
+# metadata, so it lives here, in the same vocabulary the scalar
+# calibration files use.
+#
+# The md5 of each table is recorded below. A table edited by hand after
+# generation no longer matches its hash, which is the one thing a
+# generated data file cannot tell you about itself.
+
+_channel:
+  role: state
+
+financing_profile:
+  value: example_age_wealth
+  kind: judgment
+  set: '2026-06-24'
+  tables:
+    s.csv: 8f27b9f6601c95537678699134a93043
+    M.csv: f69080edc998607de4a401f01cecc732
+  note: >
+    ILLUSTRATIVE, not calibrated. A placeholder age x wealth-rank shape that
+    exists to exercise the bracket machinery and to show the file format. No
+    scenario should ship results from it. Kept as judgment rather than
+    calibrated precisely because there is no derivation to record.

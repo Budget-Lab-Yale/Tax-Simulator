@@ -2,10 +2,11 @@
 """
 write_profiles.py -- generate the wealth-dynamics financing PROFILE folders.
 
-A financing profile (config/wealth/profiles/<name>/) is the per-scenario input
-to the wealth bathtub: a bracket-varying saving share s(age, net-worth pctile)
-and a within-age percentile transition matrix M. This script writes the two
-shipped profiles deterministically so they can be regenerated/diffed:
+A financing profile (config/calibrations/wealth_profiles/<name>/) is the
+per-scenario input to the wealth bathtub: a bracket-varying saving share
+s(age, net-worth pctile) and a within-age percentile transition matrix M. This
+script writes the two shipped profiles deterministically so they can be
+regenerated/diffed:
 
   default/           CALIBRATED persistent-flow s surface + identity M
                      (auto-applied; calibration 2026-07-07 -- see s_default and
@@ -19,19 +20,40 @@ File contracts (see wealth_dyn_resolve_profile in src/sim/wealth_dynamics.R):
   s.csv : header age,nw_pctile,s ; one row per (age, pctile) cell; every cell of
           the AGES x N_PCTILES grid present exactly once; s in [0, 1] (= 1 - MPC)
   M.csv : headerless N_PCTILES x N_PCTILES grid (raked to doubly-stochastic on load)
+  provenance.yaml : the sidecar. A profile is a TABLE-valued calibration, and a
+          table cannot carry its own provenance the way a scalar entry in a YAML
+          file can, so the metadata that would otherwise sit beside the value
+          lives next to the files instead: what the surface targets, what it was
+          derived under, what invalidates it, and the md5 of each table. Written
+          here, by the script that writes the tables, for the same reason the kg
+          calibrators now write their own entries -- so that a shipped table and
+          the derivation behind it cannot drift apart unnoticed.
+
+NOTE, config/calibrations/wealth_profiles/s1_uniform/ is NOT written by this
+script and nothing generates it. It is the s=1, uniform-M corner from the
+2026-06 bounding sweep, written by hand or by a script since removed, and as of
+2026-07-26 no runscript, economy alternative or script in the repository refers
+to it. It is left in place because CLAUDE.md describes it as the uniform-M
+counterpart to the identity default, but it has no provenance and cannot be
+regenerated. Worth a decision: give it a generator, or delete it.
 
 Usage:  python3 other/wealth_dynamics/write_profiles.py
 """
 
 import csv
+import datetime
+import hashlib
 import os
 
-# Must match WEALTH_DYN_AGE_MIN/MAX and n_pctiles (wealth_financing_params.yaml).
+# Must match WEALTH_DYN_AGE_MIN/MAX and economy.wealth.n_pctiles.
 AGE_MIN, AGE_MAX = 18, 80
 N_PCTILES = 100
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-PROFILES_ROOT = os.path.join(REPO, 'config', 'wealth', 'profiles')
+PROFILES_ROOT = os.path.join(REPO, 'config', 'calibrations', 'wealth_profiles')
+
+# This script, as the repository sees it -- named in the sidecars it writes.
+THIS_SCRIPT = 'other/wealth_dynamics/write_profiles.py'
 
 AGES = list(range(AGE_MIN, AGE_MAX + 1))
 PCTILES = list(range(1, N_PCTILES + 1))
@@ -147,16 +169,141 @@ def s_example(age, p):
     return max(0.0, min(1.0, base + tilt))
 
 
+def md5(path):
+    h = hashlib.md5()
+    with open(path, 'rb') as f:
+        for chunk in iter(lambda: f.read(1 << 16), b''):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+# The provenance each shipped profile owes, in the same vocabulary the scalar
+# calibration files use (kind / set / target / derived_under / invalidated_by /
+# rederive), so one reader and one checker cover both.
+#
+# `derived_under` is EMPTY for both, and that is the honest answer rather than an
+# omission: neither surface is fitted to model data. The default is a formula over
+# published elasticities, evaluated in this script, with no Tax-Data or
+# Macro-Projections input anywhere in it -- so no upstream vintage can make it
+# stale. What CAN make it stale is this script changing, which is why the script
+# is what it declares itself invalidated by.
+SIDECAR_META = {
+    'default': dict(
+        kind='calibrated',
+        set='2026-07-07',
+        target=(
+            'Saving share s = 1 - MPC out of a PERSISTENT net income change, by '
+            'age and within-age net-worth percentile. Anchored on the '
+            'cross-sectional elasticity of consumption to permanent income '
+            '(Straub 2019, eps ~ 0.7) applied to consumption-to-income ratios by '
+            'wealth rank (Mian-Straub-Sufi 2021), giving s ~ 0.10 at the bottom '
+            'rising to ~0.80 at the top percentile; age tilt from '
+            'Fagereng-Holm-Natvik 2021, attenuated to zero at top ranks per '
+            'De Nardi-French-Jones 2010. Gradient shape cross-checked against '
+            'Dynan-Skinner-Zeldes 2004. Full memo: '
+            'other/wealth_dynamics/default_s_calibration.md.'),
+        note=(
+            'This profile is applied model-wide to any scenario whose economy leg '
+            'does not set financing_profile to none, so it is the single largest '
+            'lever on the wealth-bathtub channel. derived_under is deliberately '
+            'empty: the surface is a literature bridge computed in the generating '
+            'script, not a fit to model data, so no upstream data vintage can '
+            'invalidate it.'),
+    ),
+    'example_age_wealth': dict(
+        kind='judgment',
+        set='2026-06-24',
+        target=None,
+        note=(
+            'ILLUSTRATIVE, not calibrated. A placeholder age x wealth-rank shape '
+            'that exists to exercise the bracket machinery and to show the file '
+            'format. No scenario should ship results from it. Kept as judgment '
+            'rather than calibrated precisely because there is no derivation to '
+            'record.'),
+    ),
+}
+
+
+def write_sidecar(name, tables):
+    """provenance.yaml for one profile folder.
+
+    Written as text rather than through a YAML library on purpose. These files are
+    read by people as much as by the model, the explanatory prose is the point,
+    and a YAML round-trip reflows it. Same reasoning as
+    src/misc/calibration_writer.R, which does the scalar half of this job.
+    """
+    meta = SIDECAR_META[name]
+    path = os.path.join(PROFILES_ROOT, name, 'provenance.yaml')
+
+    def wrap(text, indent='    ', width=76):
+        words, lines, cur = text.split(), [], indent
+        for w in words:
+            if len(cur) > len(indent) and len(cur) + 1 + len(w) > width:
+                lines.append(cur)
+                cur = indent + w
+            else:
+                cur = f'{cur} {w}' if len(cur) > len(indent) else cur + w
+        lines.append(cur)
+        return '\n'.join(lines)
+
+    out = [
+        f'# GENERATED FILE -- do not hand-edit. Written by {THIS_SCRIPT}.',
+        '#',
+        '# Provenance for a TABLE-valued calibration: the saving-share surface and',
+        '# transition matrix in this folder. The tables cannot carry their own',
+        '# metadata, so it lives here, in the same vocabulary the scalar',
+        '# calibration files use.',
+        '#',
+        '# The md5 of each table is recorded below. A table edited by hand after',
+        '# generation no longer matches its hash, which is the one thing a',
+        '# generated data file cannot tell you about itself.',
+        '',
+        '_channel:',
+        '  role: state',
+        '',
+        'financing_profile:',
+        f'  value: {name}',
+        f'  kind: {meta["kind"]}',
+        f'  set: \'{meta["set"]}\'',
+    ]
+
+    if meta.get('target'):
+        out += ['  target: >', wrap(meta['target'])]
+
+    if meta['kind'] == 'calibrated':
+        out += ['  derived_under: {}',
+                '  invalidated_by:',
+                f'    - {THIS_SCRIPT}',
+                '  invalidated_by_hashes:',
+                f'    {THIS_SCRIPT}: {md5(os.path.join(REPO, THIS_SCRIPT))}',
+                f'  rederive: {THIS_SCRIPT}']
+
+    out += ['  tables:']
+    for t in tables:
+        out.append(f'    {t}: {md5(os.path.join(PROFILES_ROOT, name, t))}')
+
+    out += ['  note: >', wrap(meta['note']), '']
+
+    with open(path, 'w', newline='\n') as f:
+        f.write('\n'.join(out))
+    return path
+
+
 def write_profile(name, s_fn):
     d = os.path.join(PROFILES_ROOT, name)
     os.makedirs(d, exist_ok=True)
     write_s_csv(os.path.join(d, 's.csv'), s_fn)
     write_M_identity(os.path.join(d, 'M.csv'))
+    write_sidecar(name, ['s.csv', 'M.csv'])
     print(f'wrote {name}/s.csv ({len(AGES) * len(PCTILES)} cells) + M.csv '
-          f'({N_PCTILES}x{N_PCTILES} identity)')
+          f'({N_PCTILES}x{N_PCTILES} identity) + provenance.yaml')
 
 
 if __name__ == '__main__':
     write_profile('default', s_default)
     write_profile('example_age_wealth', s_example)
     print('profiles root:', PROFILES_ROOT)
+    print('\nRegenerate-and-diff is the check; an empty `git status --short '
+          'config/` is the pass.\n'
+          'Note the hash of this script appears in the sidecars it writes, so '
+          'editing it\nrequires one regeneration to settle.')
