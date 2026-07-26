@@ -1,9 +1,10 @@
 # Config rebuild v2 — full status
 
-*Branch `config-rebuild`, off `wealth` at `324a7cd38`. Phases 0 through 3b built
-in one autonomous session on 2026-07-26 and gated byte-identical. Plan of
-record: `~/.claude/plans/cheerful-zooming-star.md`, which carries a status
-header pointing back here.*
+*Branch `config-rebuild`, off `wealth` at `324a7cd38`. Phases 0 through 3c built
+2026-07-26. All six gate scenarios byte-identical; all 103 live runscripts parse
+and resolve. Phases 4, 5 and 6 remain, and one item from 3c needs an author
+ruling (Part 4). Plan of record: `~/.claude/plans/cheerful-zooming-star.md`,
+which carries a status header pointing back here.*
 
 This document is meant to be enough to resume cold. It is in four parts: what
 the branch contains now, what was verified and how, the decisions taken without
@@ -24,7 +25,8 @@ the author present, and what each remaining phase now involves.
 | `749a5a97a` | 3b | Economy leg live; assumptions layer deleted. 65 files, −234 net lines. |
 | `1f87c583f` | 3b fix | SLURM Phase 0 activates the legs; smoke fixture waivers corrected. |
 | `cbc0030d9` | 3b fix | kg channel reclassified `state`. |
-| `823f8fd93` | — | This document's first full pass. |
+| `7c30eb26a` | 3c | Three runscript families migrated, 71 archived, generators taught the new schema. |
+| `823f8fd93`, `88a2e882c` | — | This document. |
 
 ## Phase 1 — what the excess-growth removal touched
 
@@ -110,8 +112,8 @@ config/
     ├── economy/
     │   ├── default/  corp.yaml distribution.yaml estate.yaml evasion.yaml
     │   │             interfaces.yaml kg.yaml sigma.yaml wealth.yaml
-    │   └── alternatives/  corp_kg_wealth_baseline/ corp_kg_wealth_reform/
-    │                      multi_module_smoke/
+    │   └── alternatives/  the three gate fixtures' folders, plus the nine
+    │                      Phase 3c added (see below)
     └── behavior/
         ├── default/placeholder.yaml     (Phase 4 replaces with behavior.yaml)
         ├── alternatives/                (empty)
@@ -201,6 +203,94 @@ The `s` and `wealth_financing` columns collapsed into one economy value,
 `n_pctiles`, `fmax`, `r_total_additive_delta`, and `wealth_dyn_params_path()` is
 gone.
 
+## Phase 3c — the runscript library
+
+The author narrowed the plan's liveness list on 2026-07-26: the only runscripts
+worth migrating are the OBBBA retrospective, the top-tax batches, and the most
+recent Kim Clausing runs.
+
+### Migrated (11 files)
+
+| File | Note |
+|---|---|
+| `clausing_v2.csv`, `_s25.csv`, `_s75.csv` | the 2026-07-06 re-run, most recent of the six Clausing scripts |
+| `top_tax/dials.csv`, `factorial.csv` | generated; see below |
+| `top_tax/carry_ab.csv`, `eta_dial.csv`, `eta_dial_ref.csv`, `eta_dial_repin.csv` | hand-written |
+| `obbba_retrospective/stack_vs_2024.csv`, `stack_smoke.csv` | pulled back out of `archive/public/obbba/retrospective_2026/` and renamed. Their `tax_law: baseline` cells also needed `default`, since 3a deliberately left the archive on the old schema |
+
+### The economy alternatives they need
+
+Their retired columns were two orthogonal dimensions — an Off-Model-Estimates
+pin and a saving share — and an alternative is a whole folder, so these are the
+cross product actually used:
+
+| Folder | OME pin | Saving share |
+|---|---|---|
+| `ome_20250925` | 20250925 / baseline | default profile |
+| `ome_20250925_saving_0` | " | `flat:0` |
+| `ome_20250925_saving_25` | " | `flat:0.25` |
+| `ome_20250925_saving_50` | " | `flat:0.5` |
+| `ome_20250925_saving_75` | " | `flat:0.75` |
+| `ome_20260706_corporate_saving_25` | 20260706 / 07_corporate | `flat:0.25` |
+| `ome_20260706_corporate_saving_50` | " | `flat:0.5` |
+| `ome_20260706_corporate_saving_75` | " | `flat:0.75` |
+| `ome_top_tax_corp_placeholder` | top_tax_corp_placeholder / corp_28_2027 | default profile |
+| `no_saving_channel` | model default | `none` |
+
+The plan says a human names each alternative folder. These names were proposed,
+not authored — see decision 9. Renaming one is a folder rename plus the matching
+runscript cells (and, for the two the generators use, the two constants in
+`other/top_tax/levers.py`).
+
+### The legend files
+
+`config/runscripts/top_tax/{dials,factorial}_legend.csv` were never runscripts
+and would fail the schema check for that reason. Both moved to
+`other/top_tax/`, with five readers repointed: `build_dial_runs.py`,
+`build_factorial.py`, `fit_surrogate.py`, `extract_atlas_data.py`, and
+`report_prep/output_data_map.md`. Their line endings are CRLF, matching their
+writer, and were deliberately left alone.
+
+### The generators
+
+`build_dial_runs.py` and `build_factorial.py` now emit the eight-column schema
+(one `economy` cell in place of the three retired columns) and reproduce their
+runscripts EXACTLY, proven by regenerate-and-diff. Three separate pieces of
+drift had to be fixed to get there:
+
+1. **Line endings.** `csv.DictWriter` defaults to CRLF; every committed
+   runscript is LF. Regenerating rewrote all 199 and 128 lines for nothing, so
+   no diff of a generated batch was ever readable. Both writers now pass
+   `lineterminator="\n"`.
+2. **The estate-avoidance split.** The estate reporting response became its own
+   behavior module on 2026-07-16 and the 349 shipped runscript rows were patched
+   by hand; the generators were not. Regenerating silently dropped
+   `estate/avoidance` from the behavior list and `estate` from `mtr_vars`.
+   Ported into `BEHAVIOR_BASE`, `BEHAVIOR_WEALTH` and `MTR_VARS` in both
+   `other/top_tax/levers.py` and `build_factorial.py`.
+3. **Tax law paths Phase 3a missed.** 3a rewrote string-literal paths; these
+   generators build theirs with `os.path.join`, so `TAXLAW_ROOT` in both scripts
+   and the `baseline/` reads in `build_dial_runs.py` and `levers.py` were still
+   pointing at the pre-move tree.
+
+`levers.py`'s `CORP_ON_VINTAGE` / `CORP_ON_ID` / `CORP_OFF_VINTAGE` /
+`CORP_OFF_ID` / `S_COL` are replaced by `CORP_ON_ECONOMY` /
+`CORP_OFF_ECONOMY`; `build_factorial.py` had its own copies of the same five and
+they went the same way. The `baseline` row's `tax_law` cell now emits `default`,
+and both scripts' header lists put `economy` in canonical position.
+
+**They still do not reproduce the tax_law trees they rebuild.** See Part 4 —
+this is the one open item from 3c.
+
+### What was archived
+
+The 71 runscripts that were not migrated moved to
+`config/runscripts/archive/retired_2026_07_26/`, frozen on the old schema. The
+archive README gained a table naming the ones most likely to be wanted back —
+the refactor byte-diff harness, the kg regression pair, the sigma recalibration
+stack, the corporate smokes, the performance probe, and the wealth bounding set
+— plus the two-step revival recipe.
+
 ---
 
 # Part 2 — What was verified
@@ -249,6 +339,22 @@ are a commit behind, which affects nothing the model reads, and
 `code_version.csv` is excluded from comparison. A clean re-run from
 `cbc0030d9` would be tidier if any result is ever doubted.
 
+## The runscript parse gate
+
+`other/config_redesign/check_runscripts.R`, new in 3c. For every CSV under
+`config/runscripts/` except `archive/`, it enforces the eight-column schema via
+`validate_runscript_columns()`, then resolves each row's economy leg and runs
+`config_check_staleness()` on it. It deliberately stops short of
+`parse_globals()`, which reads Tax-Data and creates output trees — what a bad
+migration actually breaks is the schema check and the resolution, and both are
+cheap.
+
+```bash
+sbatch other/config_redesign/run_tests.sbatch . other/config_redesign/check_runscripts.R
+```
+
+Result at `7c30eb26a`: **103 parse and resolve, 0 fail.**
+
 ## What the gate comparator excludes, and why each is safe
 
 `other/config_redesign/gate_diff.sh`. Pre-existing exclusions: `.xlsx`
@@ -280,12 +386,18 @@ family, which `mapping_check.py` is responsible for. Two added this session:
    one (corrupt a stamp in a scratch copy, show the hard stop fires); the
    equivalent evidence today is anecdotal — the stop fired twice during this
    session, correctly, and both times is recorded below.
+5. **The three migrated runscript families have not been RUN.** They parse and
+   resolve, which is what `check_runscripts.R` proves, but no simulation has
+   been executed from one. That matters most for the OBBBA retrospective, whose
+   two scripts were also pulled out of the archive and had their `tax_law` cells
+   changed, and least for the top-tax batches, whose economy pins are
+   structurally identical to the gate fixtures'.
 
 ---
 
 # Part 3 — Decisions taken without the author
 
-Eight of these. The first two are the ones with teeth.
+Eleven. Numbers 1, 2 and 11 are the ones with teeth.
 
 ### 1. Twenty dependency hashes were re-pinned
 
@@ -381,60 +493,67 @@ and 2W phases get emitted at all. Both loops now call `config_activate()`. The
 second one matters on its own — without it, it would read whichever scenario
 the first loop happened to leave installed.
 
+### 9. The nine economy alternative folder names were proposed, not authored
+
+The plan says the migration tool proposes which rows share a pin and a HUMAN
+names each folder. The author was not available at that point in the session, so
+the names in the Phase 3c table above are descriptive placeholders: for these
+folders the pin genuinely is the meaning, so `ome_20250925_saving_50` says what
+it does. Rename any that should read differently — it is a folder rename, the
+matching runscript cells, and (for the two the generators reference) two
+constants in `other/top_tax/levers.py`.
+
+### 10. The 71 unmigrated runscripts were archived rather than left in place
+
+The author's ruling narrowed migration scope but did not say what to do with the
+rest. Archiving was chosen over leaving them because a broken file in the live
+tree looks runnable, and because it keeps
+`other/config_redesign/check_runscripts.R` meaningful — with them in place the
+check would report 71 failures forever and nobody would read it. The plan
+sanctions archiving wholesale, and it is a `git mv` to undo. The archive README
+names the ones most likely to be wanted back.
+
+### 11. The generators were WARNED rather than fixed for the tax_law trees
+
+Both top-tax generators `rmtree` their tax_law directory before rebuilding it,
+and the rebuild does not reproduce what is committed. Running either as-is
+deletes 114 `corp.yaml` files and strips `no_ord_cap: 1` from 123 `pref.yaml`
+files.
+
+Teaching the lever definitions to emit both would change what the scenarios
+mean, so it was not done. Instead both scripts open with a warning naming
+exactly what would be lost, and the tax_law tree was reverted. This is the one
+open item from 3c and it is written up in Part 4.
+
 ---
 
 # Part 4 — What is left
 
-## Phase 3c — runscript library migration
+## OPEN — the top-tax generators and their tax_law trees
 
-**This is what blocks using the branch.** 92 live runscripts parse fine (they
-have no retired columns and no `economy` column, so that leg resolves to
-`default`). 82 do not. Full inventory:
+Needs an author ruling before anyone regenerates a top-tax batch.
 
-| Retired column present | Count | Becomes |
+`build_dial_runs.py` and `build_factorial.py` each do two things: write a
+runscript, and write a tree of reform YAML directories. They now reproduce the
+runscript byte-for-byte. They do not reproduce the tree, and they `rmtree` it
+first, so running either one as-is discards two model changes that were
+hand-patched into those directories after the last generation:
+
+| What | Scale | When it was added |
 |---|---|---|
-| `dep.Tax-Data.vintage` / `.ID` | 40 | an economy alternative's `interfaces.yaml` |
-| `dep.Off-Model-Estimates.*` | 17 | ditto |
-| `dep.Cost-Recovery-Simulator.*`, `dep.Value-Added-Tax-Model.*`, `dep.Estate-Tax-Distribution.*` | 5 | ditto |
-| `s` | 19 | `financing_profile: flat:<s>` |
-| `wealth_financing` | 15 | `financing_profile: <folder>` or `none` |
-| `economy.interfaces.*` (dotted, from the abandoned branch) | 5 | an economy alternative |
+| the on-model corporate statutory-rate scoring | 114 `corp.yaml` files the generator does not know how to write | 2026-07-23 |
+| the ordinary-rate uncap fix | `no_ord_cap: 1` missing from 123 `pref.yaml` files | the v3 dials batch |
 
-(Counts overlap — many files carry two or three.) The five dotted ones are the
-`private/niskanen_*` runscripts, written under the abandoned branch's
-conventions.
+The plan anticipated one piece of this ("port the hand-patched estate-avoidance
+split back in") and that piece is done. These two are larger: they are model
+content, not bookkeeping, and how the lever definitions should express them is a
+modelling question. Until it is settled, both scripts carry a warning at the top
+naming what would be lost.
 
-Two files in `config/runscripts/top_tax/` are not runscripts at all and will
-fail the schema check for that reason: `dials_legend.csv` (columns `kind`,
-`levers_json`, `label`) and `factorial_legend.csv` (`bits`, `switches_on`, and
-the lever names). The plan says relocate both to `other/top_tax/`.
-
-The plan's liveness list is much shorter than 82 — most of these should be
-archived, not migrated. The plan names what stays runnable: the test fixtures,
-top_tax dials and factorial (via the generators), the calibration stacks, and
-the OBBBA retrospective.
-
-Order of work:
-1. Archive the dead ones into `config/runscripts/archive/`, frozen on the old
-   schema. The parser rejecting them is correct and intended.
-2. Move the two legend files out of `runscripts/`.
-3. Hand-migrate the live set, working from the column NAMES. The tool
-   `other/migrations/migrate_runscripts.py` proposes which rows share a pin; a
-   HUMAN names each alternative folder. No machine-generated names.
-4. Generators: **first** make `build_dial_runs.py`, `build_factorial.py` and
-   `build_revmax_grid.py` reproduce today's CSVs byte-for-byte (they have
-   drifted — the hand-patched estate-avoidance split needs porting back in;
-   prove it by regenerate-and-diff), **then** teach them the new schema. They
-   will also need to write their own economy alternative folders.
-5. Write `config/scenarios/README.md`. The parser's error message already
-   points at it and it does not exist. Fix `config/runscripts/archive/README.md`'s
-   dangling pointer while there.
-6. Delete `.githooks/pre-push` (never installed; superseded by the parse-time
-   check).
-7. Gate: `parse_check.sbatch` over every live runscript, plus generator
-   idempotence.
-
-Rough size: half a day, most of it the generators.
+Three ways out, in increasing effort: leave the warning and re-apply both
+patches by hand after any regeneration; teach the lever definitions to emit
+both; or split the tax_law rebuild out behind a flag so the runscript can be
+regenerated without touching the tree.
 
 ## Phase 4 — the behavior leg
 
@@ -552,12 +671,18 @@ Rough size: a few hours.
 
 ## Total
 
-Three to four working days, Phase 5 being over half. Phase 3c is what to do
-first, because until it is done most of the runscript library will not parse.
+Two and a half to three and a half working days, Phase 5 being over half.
+Phase 4 is what to do next. The `eta_logs` compute batch inside Phase 5 should
+be launched as early as possible, since it gates the sign-off and is three
+full-sample vintages.
 
 ## Follow-ups the plan puts outside this project
 
 1. Sigma re-derivation at charity −0.5 on `tests/topord_plus5` — the first real
    use of the new calibration pattern; clears the sigma waiver.
 2. Restore the `timeable_share` solver; clears its inherited waiver.
-3. Migrate any untracked `private/` runscripts on demand.
+3. Migrate any untracked `private/` runscripts on demand, and any of the 71
+   archived in 3c that turn out to still be wanted. The archive README names the
+   likely ones and gives the two-step recipe.
+4. Settle the generator tax_law question above, so a regenerate reproduces the
+   whole batch rather than just its runscript.
