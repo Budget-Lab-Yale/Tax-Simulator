@@ -1,0 +1,134 @@
+# HAND-EDITABLE. The one file in config/calibrations/ that a human owns.
+#
+# The capital-gains machinery's model-form switches and judgment calls -- the
+# choices that are made rather than measured. They are not calibration outputs,
+# so no calibrator writes this file.
+#
+# But they ARE part of what the calibrations assumed. The bathtub stamp records
+# the settings it was calibrated under, and the parse-time check compares that
+# record against this file, so changing a knob here stops every capital-gains run
+# until the affected value is re-derived or the entry carries a dated waiver.
+# That is the intended friction: these knobs were previously changeable with no
+# consequence and no record.
+
+_channel:
+  role: state
+
+
+response_form:
+  value: logs
+  kind: structural
+  note: >
+    Which cost primitive the scenario-side FOC uses to extrapolate away from the
+    calibrated local moment. 'logs' (default since 2026-07-22) is a constant
+    NET-OF-TAX elasticity, the Agersnap-Zidar preferred spec and the
+    better-motivated prior for revenue-maximizing-rate questions; it lowers the
+    step-up revmax relative to 'levels'. 'levels' is a constant SEMI-elasticity.
+    Both cross at the baseline point by construction, so the baseline pass is
+    form-invariant, but vintages are NOT comparable across forms.
+
+applier_allocation:
+  value: '0.5'
+  kind: structural
+  note: >
+    Within-cell rule for distributing the lock-in/carryover stock realization
+    across records: 'R' proportional to positive kg_lt (targets active
+    realizers), 'G' proportional to gain stock (targets holders), or a numeric
+    blend in [0, 1]. Default 0.5 because a realized carryover dollar needs a
+    holder who sells, so neither proxy alone is right. Carryover mechanical
+    revenue is monotone in this knob; deemed is invariant to it. The eta and
+    timeable_share calibrations are CONDITIONED on 0.5 -- changing it requires
+    a re-pin of both.
+
+dg_allocation:
+  value: G
+  kind: structural
+  note: >
+    Within-cell allocation of policy-induced dG, controlling the effective cell
+    mortality m_eff in the death/survivor channels. 'G' is the inheritance-flow
+    story (m_eff gain-weighted); 'R' is the lock-in story. Stays on 'G'
+    regardless of applier_allocation: whose dollars DIE follows holdings, while
+    whose dollars get SOLD is the applier's question. Only affects
+    carryover/deemed; step-up is unchanged.
+
+timing_window:
+  value: 1
+  kind: structural
+  note: >
+    Half-width in years over which timeable realizations may retime. Part of the
+    conditioning set for the timeable-share calibration.
+
+timing_ref_wedge:
+  value: 0.05
+  kind: structural
+  note: >
+    Reference wedge for the timing overlay: the fraction of planned dollars that
+    move toward the best year in the window is clamp(rate change / ref_wedge, 0,
+    1), so 5pp moves the full bucket and 1pp moves 20%. Part of the conditioning
+    set for both calibrations.
+
+wealth_carry_scale:
+  value: 1
+  kind: structural
+  note: >
+    Multiplier on the wealth-tax deferral carrying cost h before it enters the
+    Bellman, tau_eq, the guard slack and the state file. Default 1 (no scaling).
+    A DISCLOSED, uncalibrated sensitivity dial, not a measured magnitude.
+
+beta_fallback:
+  value: 0.978
+  kind: structural
+  note: >
+    Fallback annual discount factor used ONLY when no year-varying series is
+    supplied, i.e. isolated solver unit tests. Production paths build the series
+    from tsy_10y Fisher-deflated by year-t YoY CPI-U
+    (kg_dyn_load_beta_series), so this value does not enter any simulation.
+
+#-------------------------------------------------------------------------------
+# Judgment -- chosen, with no recorded derivation
+#-------------------------------------------------------------------------------
+
+deemed_avoidance:
+  value: 0.25
+  kind: judgment
+  note: >
+    Applier-only valuation/noncompliance haircut on deemed realization at death:
+    the per-record deemed amount is scaled by (1 - this). Chosen for consistency
+    with the estate-side pass-through valuation discount (rho_pt ~ 0.65) and
+    with the discounts JCT and Treasury assume, but no derivation is recorded.
+    TODO already in the code: this is the same object as the estate-tax
+    asset-class reporting factor, and the two should be concorded on a shared
+    per-asset-class rho_k.
+
+char_extensive_intercept:
+  value: -2.415
+  kind: judgment
+  note: >
+    Logit intercept for the probability that a decedent makes ANY charitable
+    bequest, on log(gross estate in char_base_year dollars, millions). NO SOURCE
+    RECORDED anywhere in the repository. The four char_* coefficients look like
+    a fitted two-equation logit (most likely on SOI estate data) but neither the
+    fit nor the data is documented. Flagged during the 2026-07-25 inventory.
+
+char_extensive_ln_slope:
+  value: 0.458
+  kind: judgment
+  note: Log-estate slope of the extensive charitable-bequest logit. See char_extensive_intercept -- no source recorded.
+
+char_intensive_intercept:
+  value: -1.872
+  kind: judgment
+  note: Logit intercept for the charitable share conditional on giving. See char_extensive_intercept -- no source recorded.
+
+char_intensive_ln_slope:
+  value: 0.468
+  kind: judgment
+  note: Log-estate slope of the intensive charitable-bequest logit. See char_extensive_intercept -- no source recorded.
+
+char_base_year:
+  value: 2026
+  kind: structural
+  note: >
+    CPI-U base year the gross estate is deflated to before entering the
+    charitable logits. Must match the year the coefficients were fitted in;
+    since that fit is undocumented, this cannot currently be verified.

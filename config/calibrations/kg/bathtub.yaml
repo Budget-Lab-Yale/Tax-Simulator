@@ -1,0 +1,158 @@
+# GENERATED FILE -- do not hand-edit.
+#
+# The capital-gains bathtub's calibrated response parameters. Written by the
+# calibrator that measures them, so that a shipped number and the run that
+# produced it can never drift apart the way they did before: every one of these
+# values was previously hand-copied out of a log.
+#
+# Written by : other/kg_model_tests/form_ab/measure_efull_logs.R   (eta_logs)
+#              other/top_tax/eta_dial/measure_efull_by_eta.R       (eta)
+#              other/kg_model_tests/form_ab/confirm_efull_logs.R   (timeable_share_logs)
+# Read by    : the behavior leg. A scenario reaches these values by binding the
+#              `bathtub` piece of kg_dynamics to this file; a sweep binds a
+#              different file with the same shape, which is how an eta grid gets
+#              recorded in the vintage instead of vanishing with a shell
+#              variable.
+#
+# The `conditions` block on each entry is the machine-readable statement of what
+# the calibration assumed. The parse-time check compares it against what the run
+# actually resolves, so a scenario that changes one of those assumptions stops
+# rather than quietly using a number derived under different ones. Getting past a
+# stop takes one of three visible things: re-derive and re-pin, override the value
+# in an alternative, or put a dated waiver on the entry in the file that points
+# here.
+
+_channel:
+  role: state
+
+eta:
+  value: 2.4825
+  kind: calibrated
+  set: '2026-07-12'
+  target: >
+    Long-run realization semi-elasticity. Pinned on the FULL SIMULATOR: the
+    eta_dial grid measures E_full(eta) = dlog(R)/dtau at sim-year 30 across a
+    few eta values and inverts the linear-through-origin line for
+    eta* = |E_full_target| / slope, with E_full_target = -0.6 / 0.238 = -2.52
+    (literature realization elasticity at the top-rate divisor). Internal
+    long-run semi at the shipped value: -2.2849.
+  derived_under:
+    tax_data: '2026070814'
+    macro_projections: '2026022522'
+  invalidated_by:
+    - src/sim/kg/constants.R
+    - src/sim/kg/bellman.R
+    - src/sim/kg/recurrence.R
+    - src/sim/kg/timing.R
+    - src/sim/kg/apply.R
+  invalidated_by_hashes:
+    src/sim/kg/constants.R: 6d96164e9721c0cf75aa781a1597a552
+    src/sim/kg/bellman.R: e46275d07b083f26b542b014da53a927
+    src/sim/kg/recurrence.R: 9f179e2f18efa3e1969f1f42310f6226
+    src/sim/kg/timing.R: 145b353488bd511e87f6ee66f22027a8
+    src/sim/kg/apply.R: a3e97d02b0f013b697a0e69d2b76bc22
+  rederive: other/top_tax/eta_dial/measure_efull_by_eta.R
+  active_when:
+    kg.response_form: levels
+  note: >
+    Live only when response_form = 'levels'. History 4.4984 (spec-v2 nested) ->
+    2.3992 (spec-v3 single pool) -> 2.4825 (full-sim E_full inversion,
+    2026-07-12). Response is INCREASING in |eta|. The calibration is conditioned
+    on applier_allocation = 0.5, timing_ref_wedge = 0.05, timing_window = 1 and
+    spec_version 3; changing any of those requires a re-pin. apply.R is listed
+    as a dependency because the applier rule feeds the measured E_full -- an
+    applier-rule change once biased every conventional kg estimate by ~37% on a
+    5pp gains-rate score before it was caught. Fitted grid:
+    other/top_tax/eta_dial/eta_repin_fit.csv, so a re-pin is arithmetic.
+
+eta_logs:
+  value: 1.6625
+  kind: calibrated
+  set: '2026-07-19'
+  target: >
+    Constant net-of-tax elasticity dlog(r_D)/dlog(1 - MC). Same protocol and
+    same local moment as the levels eta. Internal long-run semi at the shipped
+    value: -2.2393.
+  derived_under:
+    tax_data: '2026070814'
+    macro_projections: '2026022522'
+  invalidated_by:
+    - src/sim/kg/constants.R
+    - src/sim/kg/bellman.R
+    - src/sim/kg/recurrence.R
+    - src/sim/kg/timing.R
+    - src/sim/kg/apply.R
+  invalidated_by_hashes:
+    src/sim/kg/constants.R: 6d96164e9721c0cf75aa781a1597a552
+    src/sim/kg/bellman.R: e46275d07b083f26b542b014da53a927
+    src/sim/kg/recurrence.R: 9f179e2f18efa3e1969f1f42310f6226
+    src/sim/kg/timing.R: 145b353488bd511e87f6ee66f22027a8
+    src/sim/kg/apply.R: a3e97d02b0f013b697a0e69d2b76bc22
+  rederive: other/top_tax/eta_dial/measure_efull_by_eta.R
+  active_when:
+    kg.response_form: logs
+  note: >
+    LIVE by default (response_form = 'logs' since 2026-07-22). Lower than the
+    levels eta because the net-of-tax full-sim slope is steeper, so the same
+    E_full needs a smaller eta_tilde. Grid + fit:
+    other/kg_model_tests/form_ab/eta_tilde_fit.csv.
+
+timeable_share:
+  value: 0.2542
+  kind: calibrated
+  set: '2026-07-09'
+  target: >
+    Short-run announcement moment: full-sim short-run semi-elasticity of +5.04
+    (twice the long-run magnitude, sign flipped -- future-tax-up implies
+    realize-today), measured at the announcement year under a +5pp delayed
+    permanent shock. Identified GIVEN eta, since the long-run moment is
+    timeable-share invariant (the overlay nets to zero under a uniform
+    permanent shock).
+  derived_under:
+    tax_data: '2026050315'
+    macro_projections: '2026022522'
+  invalidated_by:
+    - src/sim/kg/constants.R
+    - src/sim/kg/timing.R
+    - src/sim/kg/recurrence.R
+  invalidated_by_hashes:
+    src/sim/kg/constants.R: 6d96164e9721c0cf75aa781a1597a552
+    src/sim/kg/timing.R: 145b353488bd511e87f6ee66f22027a8
+    src/sim/kg/recurrence.R: 9f179e2f18efa3e1969f1f42310f6226
+  rederive: other/kg_model_tests/calibrate.R
+  active_when:
+    kg.response_form: levels
+  note: >
+    Live only when response_form = 'levels'. Derived under an EARLIER Tax-Data
+    vintage (2026050315) than the rest of the kg calibration (2026070814). The
+    code asserts the timing overlay is robust to the Tax-Data vintage; that
+    assertion is the reason this does not currently read as stale, and it has
+    not been re-tested. NOTE: other/kg_model_tests/calibrate.R was DEMOTED to a
+    drift diagnostic on 2026-07-12 and no longer ships values -- re-deriving the
+    timeable share means running the short-run leg by hand. Flagged for the
+    author.
+
+timeable_share_logs:
+  value: 0.2542
+  kind: calibrated
+  set: '2026-07-19'
+  target: >
+    Same short-run announcement moment as the levels share (+5.04), calibrated
+    independently for the net-of-tax form given eta_logs. The timing overlay is
+    a mechanical fraction rather than a Bellman response, so it is nearly
+    form-robust -- hence the same numeric value.
+  derived_under:
+    tax_data: '2026070814'
+    macro_projections: '2026022522'
+  invalidated_by:
+    - src/sim/kg/constants.R
+    - src/sim/kg/timing.R
+    - src/sim/kg/recurrence.R
+  invalidated_by_hashes:
+    src/sim/kg/constants.R: 6d96164e9721c0cf75aa781a1597a552
+    src/sim/kg/timing.R: 145b353488bd511e87f6ee66f22027a8
+    src/sim/kg/recurrence.R: 9f179e2f18efa3e1969f1f42310f6226
+  rederive: other/kg_model_tests/form_ab/confirm_efull_logs.R
+  active_when:
+    kg.response_form: logs
+  note: LIVE by default (response_form = 'logs').
