@@ -1,5 +1,12 @@
 # Capital-gains realization dynamics -- src/sim/kg/
 #
+# Economy-leg STATE channel, not transmission: the kg mechanical injection
+# (carryover and deemed quantities, and the charitable-bequest logits that feed
+# it) is deliberately applied on the STATIC pass, so that the policy's
+# mechanical content lands in static liabilities, static MTRs and the
+# distribution tables. Only the bathtub's behavioral response is
+# conventional-only, and that runs through the behavior modules.
+#
 # TEMPORARY HOME. This channel moves out of the economy leg later in the
 # rebuild: kg and sigma become calibration stamps under config/calibrations/kg/
 # (read through the behavior leg), and the module-only parameters below get
@@ -7,7 +14,7 @@
 # here now so exactly one configuration engine is live at a time.
 
 _channel:
-  role: transmission
+  role: state
 
 eta:
   value: 2.4825
