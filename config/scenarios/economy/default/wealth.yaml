@@ -1,53 +1,23 @@
-# Wealth bathtub and wealth-tax avoidance -- src/sim/wealth_dynamics.R
+# Wealth bathtub -- src/sim/wealth_dynamics.R
 #
 # Economy-leg TRANSMISSION channel: how above-baseline during-life tax flows
 # are financed out of wealth and drain into the estate and capital-income
-# bases. The avoidance entries below are module-only and get inlined into
-# their module file later in the rebuild.
-
+# bases. The wealth-tax avoidance elasticities and concealment shares that used
+# to sit here moved into src/behavior/wealth/avoidance.R, their only reader.
+#
+# HASH RE-PIN 2026-07-26 (behavior leg, step 3): the dependency hashes of the
+# calibrated entries in this file were re-pinned after COMMENT-ONLY edits to the
+# files they depend on -- module-only parameters moved out to their module files,
+# and pointers to the deleted config/assumptions/ tree were corrected to name
+# this tree. No value, formula or threshold moved. CONDITIONAL: this re-pin
+# stands only if the six-scenario byte-identity gate is clean, and becomes a real
+# re-derivation if it is not.
 _channel:
   role: transmission
-
-avoid_public_e:
-  value: -7
-  kind: judgment
-  note: >
-    Semi-elasticity of REPORTED marketable (publicly valued) wealth with respect
-    to the marginal wealth rate: reported stock scales by exp(mtr_net_worth * e).
-    Author-accepted, seeded from the standalone Wealth-Tax-Simulator, and
-    described in the module header as uncalibrated. Large enough to matter for
-    any wealth-tax score -- a priority for the sensitivity ranking.
-
-avoid_private_e:
-  value: -17
-  kind: judgment
-  note: >
-    Same, for closely held (privately valued) wealth, where valuation discretion
-    is greater. Author-accepted, uncalibrated, and the largest single
-    behavioral magnitude in the model. See avoid_public_e.
 
 #-------------------------------------------------------------------------------
 # Structural
 #-------------------------------------------------------------------------------
-
-chi_pub:
-  value: 1.0
-  kind: structural
-  note: >
-    Share of the public-wealth avoidance response that is CONCEALMENT (and so
-    shrinks the income and estate bases too) rather than pure valuation.
-    Default 1.0: marketable wealth that disappears from the reported balance
-    sheet is treated as concealed consistently across bases (hidden-ledger
-    R1-R7).
-
-chi_priv:
-  value: 0.5
-  kind: structural
-  note: >
-    Same for closely held wealth. Default 0.5, i.e. half of the private-wealth
-    response is concealment and half is valuation discretion that does not move
-    the income base. Sweep 0.25 / 0.5 / 0.75 for the cross-base interaction
-    rows.
 
 cap_flows_pt_weight:
   value: 0.2
@@ -83,7 +53,7 @@ financing_profile:
   invalidated_by_hashes:
     config/calibrations/wealth_profiles/default/s.csv: 05e353bfd1a82c9135a4af1b07ebac8f
     config/calibrations/wealth_profiles/default/M.csv: f69080edc998607de4a401f01cecc732
-    src/sim/wealth_dynamics.R: 4cf373fa49833303076f2a09b76291f7
+    src/sim/wealth_dynamics.R: f61c76cfce5407b3500dad6242daec53
     other/wealth_dynamics/write_profiles.py: 305966e8951bef5126d9463022014965
   rederive: other/wealth_dynamics/write_profiles.py
   # src/sim/wealth_dynamics.R's hash was re-pinned 2026-07-25 after the

@@ -83,7 +83,7 @@ CORP_FLOWS_INTERNAL = c('kg_st', 'kg_lt', 'kg_1250', 'kg_collect',
 # PLACEHOLDER CENTRALS (Phase 0c status table, PHASE0_NOTES.md): equities 1.0
 # by construction; dc/trusts/re_fund from SCF + ICI equity-share imputations,
 # pending external measurement.
-# Values and provenance: config/assumptions/corp.yaml (corp.asset_exposure_*),
+# Values and provenance: config/scenarios/economy/default/corp.yaml (corp.asset_exposure_*),
 # assembled by corp_asset_exposure().
 corp_asset_exposure = function() {
   c('value.equities' = economy_param('corp', 'asset_exposure_equities'),
@@ -92,48 +92,48 @@ corp_asset_exposure = function() {
     'value.re_fund'  = economy_param('corp', 'asset_exposure_re_fund'))
 }
 
-# C-corp share of dividends: config/assumptions/corp.yaml (corp.omega_div).
+# C-corp share of dividends: config/scenarios/economy/default/corp.yaml (corp.omega_div).
 
 # C-corp equity share of realized LTCG (stock + fund shares vs pass-through
 # sales / real estate / other). PLACEHOLDER ~0.5 prior pending SOI
-# sale-of-capital-assets measurement: config/assumptions/corp.yaml (corp.omega_kg).
+# sale-of-capital-assets measurement: config/scenarios/economy/default/corp.yaml (corp.omega_kg).
 
 # Normal-return share sigma_N of the corporate wedge ("taxes on margins get
 # shifted; taxes on rents get capitalized", D14/D15). Central 0.375 from OTA
 # 63% / TPC 60% supernormal; corners {0, 0.5} (house VAT convention = upper).
-# Value and provenance: config/assumptions/corp.yaml (corp.sigma_n).
+# Value and provenance: config/scenarios/economy/default/corp.yaml (corp.sigma_n).
 
 # kappa: C-corp share of the economy-wide normal-capital stock (D15). The
 # migrated normal burden splits (1-kappa) to noncorporate lines and kappa
 # retained on corporate flows. PLACEHOLDER 0.40 prior pending the Fed Z.1 pull;
 # the owner-occupied-housing definitional fork sets the sweep corners
-# {~0.25, ~0.4, ~0.5}. Value and provenance: config/assumptions/corp.yaml
+# {~0.25, ~0.4, ~0.5}. Value and provenance: config/scenarios/economy/default/corp.yaml
 # (corp.kappa).
 
 # theta: US-taxable exposure scale on the flow factor phi = -theta * h_c / pi.
 # Absorbs the NIPA-economic vs US-taxable profit wedge (Phase 0c). PLACEHOLDER
 # 1.0 (pro-rata: every distribution scales by the aggregate after-tax-profit
 # hit share) pending Rosenthal-Austin / Z.1 measurement.
-# Value and provenance: config/assumptions/corp.yaml (corp.theta).
+# Value and provenance: config/scenarios/economy/default/corp.yaml (corp.theta).
 
 # theta_res: foreign / nonprofit / DB residual share of the wedge, used ONLY by
 # the conservation diagnostic's B_res line (D3/D10 -- the honest unallocated
 # remainder; no gross-up forces household hits to sum to the revenue line).
 # PLACEHOLDER 0.40 (Rosenthal-Austin: ~26% foreign + nonprofits/insurers + the
 # DB slice) pending Phase 0c measurement.
-# Value and provenance: config/assumptions/corp.yaml (corp.theta_res).
+# Value and provenance: config/scenarios/economy/default/corp.yaml (corp.theta_res).
 
 # Vintaging: NIPA economic depreciation rate; the reallocation clock IS the
 # replacement clock (D14), same 0.057 as do_capital_adjustment
 # (src/data/economy.R). eta(t) = 1 - (1 - 0.057)^(t - t0).
-# Value and provenance: config/assumptions/corp.yaml (corp.delta_nipa).
+# Value and provenance: config/scenarios/economy/default/corp.yaml (corp.delta_nipa).
 
 # Equity discount rate r = nominal tsy_10y (Macro-Projections, enactment year)
 # + this fixed equity risk premium. Distributions are nominal, so r is nominal
 # (the house Fisher-deflation convention applies to real-utility discounting,
 # not nominal-flow PV -- plan note). mu is r-free in the permanent central
 # case; r shapes temporary-shock annuities and the migration PV only.
-# Value and provenance: config/assumptions/corp.yaml (corp.equity_premium).
+# Value and provenance: config/scenarios/economy/default/corp.yaml (corp.equity_premium).
 
 # PV grid: paths are built through max(sim years) + this many tail years, with
 # a Gordon growing-perpetuity terminal beyond (guarded r > g).

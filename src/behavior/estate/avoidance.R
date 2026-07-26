@@ -69,7 +69,18 @@
 #-------------------------------------------------------------------------------
 
 ESTATE_AVOID_VERSION = '2026-07-16 standalone estate reporting module (split from wealth/avoidance)'
-# Value and provenance: config/assumptions/estate.yaml (estate.report_eps).
+
+# --- The own-rate elasticity ---------------------------------------------------
+# Lives here because this module is its only reader. Kopczuk and Slemrod (2001,
+# "The Impact of the Estate Tax on Wealth Accumulation and Avoidance Behavior")
+# put the elasticity of the REPORTED estate with respect to the net-of-estate-tax
+# rate at about 0.16, with pooled estimates spanning 0.10 to 0.22 -- publish the
+# band, not the point. Author-sanctioned at 0.16 on 2026-07-12. The caveats are
+# in ESTATE_AVOID_PROVENANCE above: the estimate bundles timing, avoidance,
+# valuation and some real response, and it is an elasticity of the reported
+# TAXABLE estate applied here to the reported GROSS estate, a mismatch that
+# slightly overstates above the exemption and is accepted and disclosed.
+ESTATE_REPORT_EPS = 0.16
 
 
 do_estate = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, indexes) {
@@ -134,7 +145,7 @@ do_estate = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
 
   message('do_estate(): applying estate reporting response (',
           ESTATE_AVOID_VERSION, '; estate_report_eps=',
-          economy_param('estate', 'report_eps'), ')')
+          ESTATE_REPORT_EPS, ')')
 
   year = tax_units$year[1]
 
@@ -209,7 +220,7 @@ do_estate = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   # unreported estate surfaces (symmetric KS margin).
   tau_eS = pmin(pmax(df$mtr_estate_S, 0), 1 - 1e-6)
   tau_eB = pmin(pmax(df$mtr_estate_B, 0), 1 - 1e-6)
-  retained_estate = ((1 - tau_eS) / (1 - tau_eB)) ^ economy_param('estate', 'report_eps')
+  retained_estate = ((1 - tau_eS) / (1 - tau_eB)) ^ ESTATE_REPORT_EPS
   f_estate = 1 - retained_estate
 
   # Stack multiplicatively on the RETAINED share: one hidden ledger, three
@@ -228,7 +239,7 @@ do_estate = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   diag = tibble(
     year                        = year,
     version                     = ESTATE_AVOID_VERSION,
-    estate_report_eps           = economy_param('estate', 'report_eps'),
+    estate_report_eps           = ESTATE_REPORT_EPS,
     estate_union_wmean_grosspos = if (sum(w * (gross > 0)) > 0)
                                     sum(w * estate_union * (gross > 0)) /
                                     sum(w * (gross > 0)) else 0,

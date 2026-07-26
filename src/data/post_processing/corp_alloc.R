@@ -34,7 +34,7 @@
 # coincidence; do not merge. Tables no longer sum to the corporate revenue
 # line by construction (the remainder is foreign-borne). Moved here from
 # distribution.R so the delta and levels tables share one definition.
-# Value and provenance: config/assumptions/distribution.yaml
+# Value and provenance: config/scenarios/economy/default/distribution.yaml
 # (distribution.corp_foreign_share).
 
 
@@ -51,7 +51,7 @@
 # homes). PLACEHOLDER pending a per-record or geography-varying split.
 # Override assumption.distribution.housing_structure_share to sweep the 0.60 /
 # 1.00 sensitivity cases (1.00 = no land split, full net home equity).
-# Value and provenance: config/assumptions/distribution.yaml.
+# Value and provenance: config/scenarios/economy/default/distribution.yaml.
 
 
 # Owner-occupied residential real estate on the asset side, and the mortgages

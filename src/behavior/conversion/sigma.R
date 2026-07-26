@@ -22,23 +22,25 @@
 # the cell machinery.
 #
 # No phase-in phi(t): a memoryless annual response to the current-year wedge
-# gap, the same convention as entity shifting and evasion. sigma central =
-# 0.08 (percent of pool per pp of wedge; the shipped value and its provenance
-# live in config/assumptions/sigma.yaml), CALIBRATED
-# 2026-07-08 to a top-subset ETI of 0.25 (the SSG central, taxable income
-# excl. gains) on the +5pp top-ordinary validation leg with the full stack
-# running — the residual conversion margin after entity shifting and evasion
-# supply ~0.22 of the target on their own. This resolved DESIGN_LOCK ruling
-# 2's double-count caveat (the original asserted 0.6 central was a
-# total-response anchor and overshot: full-stack ETI 0.431). Full provenance
-# + staleness conditions: SIGMA_CALIB_PROVENANCE in src/sim/sigma_conversion.R.
+# gap, the same convention as entity shifting and evasion. sigma is CALIBRATED
+# as the residual conversion margin -- entity shifting and evasion supply about
+# 0.22 of the 0.25 top-subset ETI target on their own -- against the +5pp
+# top-ordinary validation leg with the full stack running. It was 0.08 when
+# first derived on 2026-07-08 and 0.16 after the 2026-07-12 re-derivation; the
+# shipped value and its provenance live in the economy leg's sigma.yaml, and the
+# method and staleness conditions are in SIGMA_CALIB_PROVENANCE in
+# src/sim/sigma_conversion.R. Calibrating it this way is what resolved
+# DESIGN_LOCK ruling 2's double-count caveat, the original asserted 0.6 central
+# having been a total-response anchor that overshot (full-stack ETI 0.431).
 #
-# Module order is PINNED and asserted: kg_dynamics -> conversion/sigma ->
-# entity_shifting -> evasion (charity may sit anywhere). kg must run first
-# (this module consumes its state file, and the kg applier must not see
-# sigma-reduced legs it never modeled); entity shifting and evasion must run
-# after so their responses operate on the post-conversion compensation base
-# (sequential order is what prevents double-moving the same dollar).
+# ORDER. This module needs the bathtub to have run first -- it consumes the kg
+# state file, and the kg applier must not see sigma-reduced legs it never
+# modeled -- and needs entity shifting and evasion to run after, so their
+# responses operate on the post-conversion compensation base. Running them in
+# sequence is what stops the same dollar being moved twice. None of that is
+# enforced here any more: the loader sorts every stack against one pinned family
+# order and refuses a conversion module without the bathtub, before the run
+# starts (src/sim/behavior.R).
 #-------------------------------------------------------------------------------
 
 do_conversion = function(tax_units, baseline_mtrs, static_mtrs,

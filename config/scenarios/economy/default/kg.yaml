@@ -12,7 +12,14 @@
 # (read through the behavior leg), and the module-only parameters below get
 # inlined into the behavior module files that are their only readers. It sits
 # here now so exactly one configuration engine is live at a time.
-
+#
+# HASH RE-PIN 2026-07-26 (behavior leg, step 3): the dependency hashes of the
+# calibrated entries in this file were re-pinned after COMMENT-ONLY edits to the
+# files they depend on -- module-only parameters moved out to their module files,
+# and pointers to the deleted config/assumptions/ tree were corrected to name
+# this tree. No value, formula or threshold moved. CONDITIONAL: this re-pin
+# stands only if the six-scenario byte-identity gate is clean, and becomes a real
+# re-derivation if it is not.
 _channel:
   role: state
 
@@ -37,7 +44,7 @@ eta:
     - src/sim/kg/timing.R
     - src/sim/kg/apply.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: f288154a8081f478729e1a0115eb53a6
+    src/sim/kg/constants.R: 6d96164e9721c0cf75aa781a1597a552
     src/sim/kg/bellman.R: e46275d07b083f26b542b014da53a927
     src/sim/kg/recurrence.R: 9f179e2f18efa3e1969f1f42310f6226
     src/sim/kg/timing.R: 145b353488bd511e87f6ee66f22027a8
@@ -74,7 +81,7 @@ eta_logs:
     - src/sim/kg/timing.R
     - src/sim/kg/apply.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: f288154a8081f478729e1a0115eb53a6
+    src/sim/kg/constants.R: 6d96164e9721c0cf75aa781a1597a552
     src/sim/kg/bellman.R: e46275d07b083f26b542b014da53a927
     src/sim/kg/recurrence.R: 9f179e2f18efa3e1969f1f42310f6226
     src/sim/kg/timing.R: 145b353488bd511e87f6ee66f22027a8
@@ -107,7 +114,7 @@ timeable_share:
     - src/sim/kg/timing.R
     - src/sim/kg/recurrence.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: f288154a8081f478729e1a0115eb53a6
+    src/sim/kg/constants.R: 6d96164e9721c0cf75aa781a1597a552
     src/sim/kg/timing.R: 145b353488bd511e87f6ee66f22027a8
     src/sim/kg/recurrence.R: 9f179e2f18efa3e1969f1f42310f6226
   rederive: other/kg_model_tests/calibrate.R
@@ -140,7 +147,7 @@ timeable_share_logs:
     - src/sim/kg/timing.R
     - src/sim/kg/recurrence.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: f288154a8081f478729e1a0115eb53a6
+    src/sim/kg/constants.R: 6d96164e9721c0cf75aa781a1597a552
     src/sim/kg/timing.R: 145b353488bd511e87f6ee66f22027a8
     src/sim/kg/recurrence.R: 9f179e2f18efa3e1969f1f42310f6226
   rederive: other/kg_model_tests/form_ab/confirm_efull_logs.R

@@ -12,28 +12,16 @@
 # elasticities of REPORTED income — the authors' own usage in their OBBBA
 # revenue illustration.
 #
-# Central values and sources (elasticity magnitudes; sign handled by the
-# 'netoftax' form — reported income falls when the MTR rises):
-#   - evasion.e_schc = 0.046 : Schedule C/F (sole prop + farm). DHY pooled
-#         cross-section, sole-proprietor subsample, federal MTR. Kansas DiD
-#         Schedule C gives 0.09; bunching (EITC-kink sole props) 0.26 — both
-#         alternative anchors for the env-var sweep, not centrals (the
-#         bunching estimate is a low-income population; sweep them via
-#         assumption.evasion.e_schc).
-#   - evasion.e_pt   = 0.052 : partnership + S-corp income. DHY pooled
-#         cross-section, partnership subsample, federal MTR.
-#   - evasion.e_rent = 0.040 : rent (Schedule E ex pass-through). DHY Kansas
-#         DiD Schedule E (not significant; weakest-identified value here).
-#   - Wages, interest, dividends: NO response by design. Information reporting
-#         makes these visible (DHY Table: nonzero audit-adjustment rates ~7%
-#         for wages vs ~74% for sole-prop income); the tax-gap literature puts
-#         wage misreporting near 1%.
+# The four values are defined below with their sources. Sign is handled by the
+# 'netoftax' form: reported income falls when the MTR rises. A band or a sweep
+# is a copy of this file with different numbers, listed by a different behavior
+# alternative -- there is no config cell to override and no environment
+# variable, both of which used to exist and left no record of what was run.
 #
-# evasion.topend_mult (default 1.0) is an underdetection sweep knob: NRP
-# random audits underdetect sophisticated top-end evasion (offshore, tiered
-# partnerships — Guyton, Langetieg, Reck, Risch & Zucman 2021), so
-# detected-noncompliance elasticities are a FLOOR for the top tail. Sweep
-# 1.5-2.0 for the high band.
+# Wages, interest and dividends get NO response, by design. Information
+# reporting makes them visible: DHY find nonzero audit-adjustment rates around
+# 7% for wages against about 74% for sole-proprietor income, and the tax-gap
+# literature puts wage misreporting near 1%.
 #
 # Omitted margins (accepted, revisit if they bind): overstated losses and
 # itemized deductions (DHY find itemizer elasticities 0.069-0.23; deduction-
@@ -49,10 +37,37 @@
 #-------------------------------------------------------------------------------
 
 EVASION_VERSION     = '2026-07-07 DHY (NTA 2025) centrals, seeded from slides'
-# Values and provenance: config/assumptions/evasion.yaml (evasion.e_schc,
-# evasion.e_pt, evasion.e_rent, evasion.topend_mult).
 EVASION_MAX_ADJ     = 1
 EVASION_NET_RATE_EPS = 1e-12
+
+# --- The elasticities themselves ----------------------------------------------
+# These live here, in the module, because this module is their only reader. A
+# variant is a separate file in this folder, not a value in a config cell: that
+# is what keeps a behavior module a self-contained statement of one assumption.
+# Sources are in EVASION_PROVENANCE above; the one-line summaries repeat them
+# only so a reader of this block does not have to scroll.
+
+# Schedule C/F -- sole proprietors and farms. DHY pooled cross-section,
+# sole-proprietor subsample, federal MTR. Alternative anchors, for a band rather
+# than a central: 0.09 (Kansas difference-in-differences, Schedule C) and 0.26
+# (bunching at EITC kinks, a low-income population).
+EVASION_E_SCHC = 0.046
+
+# Partnership and S-corp income. DHY pooled cross-section, partnership
+# subsample, federal MTR.
+EVASION_E_PT = 0.052
+
+# Rent -- Schedule E excluding pass-through. DHY Kansas difference-in-
+# differences. Not statistically significant, and the weakest-identified value
+# in this module.
+EVASION_E_RENT = 0.040
+
+# Underdetection multiplier on all three. NRP random audits underdetect
+# sophisticated top-end evasion (offshore structures, tiered partnerships --
+# Guyton, Langetieg, Reck, Risch and Zucman 2021), so detected-noncompliance
+# elasticities are a floor for the top tail. 1 means no adjustment; a high-band
+# variant of this module would set 1.5 to 2.0.
+EVASION_TOPEND_MULT = 1
 
 
 evasion_response_factor = function(mtr, mtr_baseline, e) {
@@ -67,7 +82,7 @@ evasion_response_factor = function(mtr, mtr_baseline, e) {
           abs(net_base) > EVASION_NET_RATE_EPS
 
   pct_chg = rep(NA_real_, length(net_base))
-  pct_chg[valid] = e * economy_param('evasion', 'topend_mult') *
+  pct_chg[valid] = e * EVASION_TOPEND_MULT *
                    ((1 - mtr[valid]) / net_base[valid] - 1)
   pct_chg = pmax(-EVASION_MAX_ADJ, pmin(pct_chg, EVASION_MAX_ADJ))
   if_else(is.na(pct_chg), 1, 1 + pct_chg)
@@ -138,10 +153,10 @@ do_evasion = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, inde
   # on every year of every pass.
 
   message('do_evasion(): applying noncompliance elasticities (', EVASION_VERSION,
-          '; schc=', economy_param('evasion', 'e_schc'),
-          ', pt=',   economy_param('evasion', 'e_pt'),
-          ', rent=', economy_param('evasion', 'e_rent'),
-          ', topend_mult=', economy_param('evasion', 'topend_mult'), ')')
+          '; schc=', EVASION_E_SCHC,
+          ', pt=',   EVASION_E_PT,
+          ', rent=', EVASION_E_RENT,
+          ', topend_mult=', EVASION_TOPEND_MULT, ')')
 
   # Net-of-tax response factor, clamped at +/- EVASION_MAX_ADJ. NA in either
   # MTR frame (or a degenerate baseline rate of 1) means no response.
@@ -165,9 +180,9 @@ do_evasion = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, inde
       # evasion->wealth consistency link (an income evader under a wealth tax
       # should not report the assets whose income he hides). Not registered in
       # detail_vars, so they do not leak into the written detail.
-      evasion_g_schc = evasion_response_factor(mtr_sole_prop1,  mtr_sole_prop1_baseline,  economy_param('evasion', 'e_schc')),
-      evasion_g_pt   = evasion_response_factor(mtr_part_active, mtr_part_active_baseline, economy_param('evasion', 'e_pt')),
-      evasion_g_rent = evasion_response_factor(mtr_rent,        mtr_rent_baseline,        economy_param('evasion', 'e_rent')),
+      evasion_g_schc = evasion_response_factor(mtr_sole_prop1,  mtr_sole_prop1_baseline,  EVASION_E_SCHC),
+      evasion_g_pt   = evasion_response_factor(mtr_part_active, mtr_part_active_baseline, EVASION_E_PT),
+      evasion_g_rent = evasion_response_factor(mtr_rent,        mtr_rent_baseline,        EVASION_E_RENT),
 
       # Positive-income gates, evaluated BEFORE any leg is scaled so the
       # companions always ride with their parent

@@ -101,7 +101,7 @@ WEALTH_CAP_FLOWS_PT = c(
   'part_passive_loss', 'part_179', 'scorp_active', 'scorp_passive',
   'scorp_active_loss', 'scorp_passive_loss', 'scorp_179', 'farm'
 )
-# Value and provenance: config/assumptions/wealth.yaml (wealth.cap_flows_pt_weight).
+# Value and provenance: config/scenarios/economy/default/wealth.yaml (wealth.cap_flows_pt_weight).
 wealth_cap_flows_pt_weight = function() economy_param('wealth', 'cap_flows_pt_weight')
 
 # SECA/NIIT earner-split companions of the pass-through aggregates. Co-scaled

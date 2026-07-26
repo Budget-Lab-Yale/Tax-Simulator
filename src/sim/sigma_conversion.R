@@ -15,7 +15,7 @@
 #      ONLY the cell-level tracker in the kg state file (DESIGN_LOCK ruling
 #      7 — no per-record persistence for normal runs; a per-record dump
 #      exists behind SIGMA_RECORD_DUMP=1 for smoke/validation).
-#   2. BEHAVIOR MODULE (config/scenarios/behavior/conversion/sigma.R):
+#   2. BEHAVIOR MODULE (src/behavior/conversion/sigma.R):
 #      recomputes record-level conversions via the SAME shared pure function
 #      (sigma_compute_conversions) from the same inputs (static/baseline
 #      MTRs + the persisted tau_eq cell table + the persisted thresholds),
@@ -40,8 +40,8 @@
 #   - sigma central = 0.16, calibrated to a top-subset ETI-0.25 target on the
 #     +5pp validation leg. It is a RESIDUAL margin: see SIGMA_CALIB_PROVENANCE
 #     below for the method and the staleness conditions. The value and its
-#     provenance live in config/assumptions/sigma.yaml; a scenario overrides it
-#     with the runscript column assumption.sigma.conv.
+#     provenance live in the economy leg's sigma.yaml; a scenario changes it by
+#     naming an economy alternative that overrides the entry.
 #   - Composition (conversion into gain state vs entity shifting into the
 #     corporate base) is an OUTPUT (tracker diagnostics), not a dial.
 #     Sequential module order prevents double-moves.
@@ -91,11 +91,11 @@ SIGMA_CONV_VERSION = paste('2026-07-12 re-derivation to ETI-0.25 (0.08 -> 0.16;'
 
 # Response parameter (percent of pool converted per percentage point of wedge
 # change, so a +5pp wedge at sigma = 0.16 converts 0.8% of the pool) and the
-# SYZZ labor-content share applied to active pass-through legs in the pool now
-# live in config/assumptions/sigma.yaml, with their provenance attached, and are
-# read at the point of use via economy_param('sigma', ...). They are scenario-
-# scoped: a scenario may override either through the runscript, so they must
-# NOT be captured here at source time.
+# SYZZ labor-content share applied to active pass-through legs in the pool live
+# in the economy leg's sigma.yaml with their provenance attached, and are read at
+# the point of use via economy_param('sigma', ...). They are scenario-scoped -- an
+# economy alternative may override either -- so they must NOT be captured here at
+# source time.
 
 # Per-record dump knob (smoke/validation/debug only): writes
 # {scenario}/conventional/supplemental/sigma_conversion_dump/{year}.csv from
@@ -511,7 +511,7 @@ sigma_compute_year = function(ctx, year, tau_eq_B_col, tau_eq_S_col,
 
 
 #-------------------------------------------------------------------------------
-# Module-side helpers (called by config/scenarios/behavior/conversion/sigma.R)
+# Module-side helpers (called by src/behavior/conversion/sigma.R)
 #-------------------------------------------------------------------------------
 
 sigma_module_recompute = function(tax_units, baseline_mtrs, static_mtrs,

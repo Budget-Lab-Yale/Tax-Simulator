@@ -1,26 +1,13 @@
-# Estate measurement -- src/sim/estate.R and the estate avoidance module
+# Estate measurement -- src/sim/estate.R
 #
-# Economy-leg STATE channel. The valuation bridge MEASURES THE DATA; it is not
-# a counterfactual, which is why it is locked against scenario override.
+# Economy-leg STATE channel, and after the behavior leg went live it holds one
+# entry: the valuation bridge, which MEASURES THE DATA rather than describing a
+# counterfactual, which is why it is locked against scenario override. The
+# estate reporting elasticity that used to sit here moved into
+# src/behavior/estate/avoidance.R, its only reader.
 
 _channel:
   role: state
-
-report_eps:
-  value: 0.16
-  kind: sourced
-  citation: >
-    Kopczuk and Slemrod, "Dying to Save Taxes": elasticity of the REPORTED
-    estate with respect to the net-of-estate-tax rate, central ~0.16 (pooled
-    estimates 0.10-0.22). Applied as
-    retained = ((1 - tau_S) / (1 - tau_B)) ^ eps.
-  note: >
-    Source caveats recorded at the call site: the KS estimate bundles timing,
-    avoidance, valuation and some real response, and their elasticity is of the
-    reported TAXABLE estate while this is applied to the reported GROSS estate
-    -- a slight mismatch, accepted. Magnitude check: at 0.16 a 40% -> 55%
-    top-rate hike shrinks the top-bracket reported estate by about 4.5%.
-    Author-sanctioned at 0.16 on 2026-07-12.
 
 valuation_bridge:
   value: config/calibrations/estate/bridge.yaml

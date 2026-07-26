@@ -60,7 +60,7 @@
 
 # Statutory net-of-tax elasticity of the corporate tax base (default: CPSS 2022
 # avoidance component, re-based to the statutory denominator). Env-overridable.
-# Value and provenance: config/assumptions/corp.yaml (corp.rate_eti).
+# Value and provenance: config/scenarios/economy/default/corp.yaml (corp.rate_eti).
 
 # Below this |t - t0| the rate change is treated as no change (dormant).
 CORP_RATE_EPS = 1e-12
