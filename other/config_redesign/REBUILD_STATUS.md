@@ -4,15 +4,19 @@
 first half of Phase 5 built 2026-07-26. All three legs are live: a runscript row is
 an ID, three folder pointers and the computational scope, and nothing else. The kg
 calibrations have moved into config/calibrations/ and are checked at parse time
-against the data, the code and the settings they were derived under. What remains
-is Phase 5's second half -- making the calibrators WRITE those files -- plus the
+against the data, the code and the settings they were derived under. The FIRST of
+the four calibrators now writes its own value, and the eta sweep that feeds it is a
+set of files rather than a set of shell variables (Part 5). What remains is the
+other three calibrators, retiring the five superseded provenance mechanisms, and the
 Phase 6 docs sweep. Plan of record:
 `~/.claude/plans/cheerful-zooming-star.md`, which carries a status header pointing
 back here.*
 
-This document is meant to be enough to resume cold. It is in four parts: what
+This document is meant to be enough to resume cold. It is in five parts: what
 the branch contains now, what was verified and how, the decisions taken without
-the author present, and what each remaining phase now involves.
+the author present, what each remaining phase involves, and — Part 5 — the eta
+sweep and the first calibrator that writes its own value, which is where the
+project stands as of the last session.
 
 ---
 
@@ -39,6 +43,10 @@ the author present, and what each remaining phase now involves.
 | `dcd7b21ce` | 5b | They go live; `kg.yaml`/`sigma.yaml` deleted; parse-time calibration check + negative test. |
 | `160cd5f9f` | 5b fix | Entity shifting's numbers go back in its module (author ruling). |
 | `ba26fa5be` | 5 gate | Six scenarios byte-identical; all three conditional re-pins confirmed. |
+| `b4479729b` | 5c | The eta sweep becomes three files instead of three shell variables. |
+| `ab5b85e9b` | 5c | An sbatch wrapper for the eta-dial launcher. |
+| `181884ea4` | 5c | The eta_logs calibrator ends by writing its own entry; the writer and its 28 tests. |
+| `161ec866f` | 5c gate | The eta spot check: the pinned value survives re-simulation. |
 | `823f8fd93`, `88a2e882c`, `c2ed2840d` | — | This document. |
 
 ## Phase 1 — what the excess-growth removal touched
@@ -962,11 +970,19 @@ DONE, in Phase 5's first half:
 STILL TO DO:
 
 **(a) Rewire the calibrators.** Each ends by writing its own file, so no number is
-ever hand-copied from a log again:
+ever hand-copied from a log again.
 
-- `other/kg_model_tests/form_ab/measure_efull_logs.R` and
-  `other/top_tax/eta_dial/measure_efull_by_eta.R` → `bathtub.yaml`. Their hardcoded
-  scratch roots need parameterizing.
+DONE — **the eta launcher port and the eta_logs calibrator** (`b4479729b`,
+`ab5b85e9b`, `181884ea4`, `161ec866f`). Written up in Part 5 below.
+
+STILL OWED:
+
+- `other/top_tax/eta_dial/measure_efull_by_eta.R` → `bathtub.yaml`'s `eta` entry.
+  The writer it needs already exists (`calib_write_entry`, below); what it does not
+  have is a launcher, because the levels eta-dial was run by hand and never had
+  one. It needs the same sweep treatment `eta_logs` just got — three generated
+  `bathtub.yaml` files varying `eta`, bound by their own behavior alternatives.
+  `write_eta_logs_sweep.py` is the template and most of it generalizes.
 - the sigma pipeline — two `topord_plus5` legs, the top-ETI measurement, the
   interpolation — → `conversion.yaml`.
 - `calibrate_estate_v2.R` writes its fitted r / rho_pt / cluster cap directly, and
@@ -975,36 +991,31 @@ ever hand-copied from a log again:
   `other/estate_tax/estate_valuation_params.yaml` intermediate.
 - `other/wealth_dynamics/write_profiles.py` emits a `provenance.yaml` sidecar per
   profile folder, which is how a TABLE-valued calibration joins the staleness net.
+  Small and self-contained; a good first piece for the next session.
 
-**FIRST, though: the eta launcher does not run on this branch.**
-`other/kg_model_tests/form_ab/launch_eta_dial_logs.sh` sets the parameter through
-`KG_RESPONSE_FORM` / `KG_ETA_LOGS` / `KG_TIMEABLE_SHARE_LOGS` environment variables,
-which this rebuild retired, and passes the `user_id` argument retired on 2026-07-25.
-It has been unrunnable for a while and nobody would have found out until they tried
-to recalibrate — which is the project's thesis in one file. Ported form: three
-generated sweep files under `config/calibrations/kg/sweeps/eta_logs_{15,19,23}/bathtub.yaml`,
-each bound by its own behavior alternative, and the launcher naming those
-alternatives instead of exporting variables. Note the base-name rule in Part 1.
+**Three sibling launchers are broken the same way the eta one was, and are NOT
+ported.** `launch_form_laffer.sh`, `launch_form_memo.sh` and
+`launch_timeable_logs.sh` all still export retired `KG_*` variables and pass the
+retired `user_id` argument. Their runscripts (`tests/form_{laffer,memo,timeable}`)
+are live and migrated, so the runscripts are fine; the launchers are not.
+
+Two of the three need something this design does not currently offer, and it is an
+author question rather than an oversight. `form_laffer` and `form_memo` are A/B
+runs across `response_form`, which is now a FIXED setting in
+`config/calibrations/kg/settings.yaml` — one path, every scenario, by deliberate
+design, because the calibrations are conditioned on it. So a form A/B is no longer
+expressible as two scenarios: it is edit `settings.yaml`, run one leg, edit back,
+run the other. That may be the right answer (the two forms produce vintages that
+are not comparable anyway, which is exactly what a fixed switch is for), but it
+should be a ruling rather than a discovery. `launch_timeable_logs.sh` is portable
+with the sweep pattern as it stands, and is deferred with the `timeable_share`
+solver restoration it belongs to (follow-up 2).
 
 **(b) The proving re-runs.** Each rewired calibrator runs once and must reproduce its
 pinned value; drift goes to the author rather than being silently re-pinned.
 
-The plan budgeted three full-sample vintages here, and that turned out to be
-avoidable. **The eta_logs measurement already reproduces its pinned value exactly**
-— re-run 2026-07-26, `efull_logs.csv` and `eta_tilde_fit.csv` came back
-byte-identical, `eta_tilde_pw` = 1.6625392632517335 — because the three vintages it
-reads (`eta_dial_logs_{15,19,23}`, plus `eta_dial_c_v2` for the form-invariant base)
-are still on scratch at 5.1G each. What that does NOT prove is that re-SIMULATING
-those vintages would reproduce their detail files; the gate chain implies it, since
-every phase of this rebuild came back byte-identical including the scenarios that
-run the bathtub, but that is an inference.
-
-**Author ruled 2026-07-26: re-run ONE of the three as a spot check**, confirm its
-2055 detail file matches what is on disk, and let the other two follow by the same
-argument. A third of the cost, and it converts the inference into a measurement.
-Blocked on the launcher port above.
-
-Still owed: the estate calibration (one job) and the profile regeneration (seconds).
+DONE for eta_logs — see Part 5. Still owed: the estate calibration (one job), the
+profile regeneration (seconds), and the sigma legs when that pipeline is rewired.
 
 **(c) Retire what the new check absorbs.** Each of these is a partial,
 hand-maintained version of what `calib_check_staleness()` now does uniformly, and
@@ -1035,17 +1046,164 @@ Rough size: a few hours.
 
 ## Total
 
-Under a day of work left, plus the spot-check run's wall time. In order:
+Most of a day left. In order:
 
-1. Port the eta launcher to sweep files bound by behavior alternatives — it does not
-   run on this branch at all, and everything else in (b) waits behind it.
-2. Launch the spot check.
-3. Rewire the four calibrators to write their own files.
+1. ~~Port the eta launcher~~ — DONE, `b4479729b` / `ab5b85e9b`.
+2. ~~Launch the spot check~~ — DONE, `161ec866f`. Part 5.
+3. Rewire the remaining THREE calibrators (levels eta, sigma, estate) and the
+   profile sidecar. The writer they need is built and tested; what each still needs
+   is its own wiring and, for the levels eta, a sweep generator it never had.
+   Suggested order: the profile sidecar (small, self-contained), then the estate
+   calibration (one job), then sigma, then the levels eta.
 4. Retire the five superseded provenance mechanisms.
 5. Phase 6: the docs sweep.
 
+Items 3 through 5 all end in the six-scenario byte-identical gate, and 4 in
+particular changes files that calibrated entries are pinned against, so it needs
+the re-pin discipline: verify byte-identical FIRST, then re-pin the hashes. Budget
+one gate cycle of cluster time for the batch rather than one per commit.
+
 CLAUDE.md was already corrected for the behavior leg in `c2ed2840d`, so Phase 6 is
 smaller than the plan assumed.
+
+---
+
+# Part 5 — the eta sweep, and the first calibrator that writes its own value
+
+Four commits, 2026-07-26, closing items 1 and 2 of the list above and a quarter of
+item 3.
+
+## The launcher port
+
+`launch_eta_dial_logs.sh` set the trial eta_tilde by exporting `KG_ETA_LOGS`,
+`KG_RESPONSE_FORM` and `KG_TIMEABLE_SHARE_LOGS` into the submitting shell and
+letting the sbatch phases inherit them, and passed the `user_id` argument retired on
+2026-07-25. Both back doors are gone, so it had been unrunnable since — and nobody
+would have found out until they tried to recalibrate.
+
+A trial value is now three generated artifacts per grid point, written by
+`other/kg_model_tests/form_ab/write_eta_logs_sweep.py`:
+
+| Artifact | What it is |
+|---|---|
+| `config/calibrations/kg/sweeps/eta_logs_<tag>/bathtub.yaml` | the shipped `bathtub.yaml` with `eta_logs` and only `eta_logs` replaced |
+| `config/scenarios/behavior/alternatives/top_tax_full_eta_logs_<tag>/behavior.yaml` | the `top_tax_full` stack with the bathtub bound to that file |
+| `config/runscripts/top_tax/eta_dial_logs_<tag>.csv` | `eta_dial_repin.csv` naming that alternative |
+
+Regenerate-and-diff is the check; an empty `git status --short config/` is the pass.
+
+Four things about the shape are load-bearing rather than stylistic:
+
+- **The sweep file keeps the base name `bathtub.yaml`** inside a differently-named
+  folder. Entries are labelled `{file stem}.{entry}`, so `eta_logs_15.yaml` would
+  relabel every entry and detach any waiver written against `bathtub.eta_logs`.
+- **The trial entry is `kind: judgment`, not `calibrated`.** It has no derivation to
+  go stale: it is an INPUT to the calibration, not an output of one. The other three
+  entries travel verbatim with their own provenance, so the sweep file goes stale
+  under exactly the conditions the shipped one does.
+- **One runscript per grid point**, not one runscript with three rows, because
+  `measure_efull_logs.R` reads three separate VINTAGES whose shock scenario is
+  called `s_cg_r25`, and the vintages on scratch already have that shape.
+- **The launcher takes tags and a `VINTAGE_SUFFIX`.** The vintage name derives from
+  the tag, so re-running tag 19 without a suffix would write over
+  `eta_dial_logs_19` — the very thing the spot check compares against. A
+  verification that overwrites its own reference is not one.
+
+`launch_eta_dial_logs.sbatch` is new: `slurm_run.sh`'s Phase 0 runs `setup.R` in
+process, which is real R work and does not belong on a login node.
+
+## The Off-Model-Estimates pin had to go, and the reason is not the rebuild
+
+The first launch died in Phase 0. `eta_dial_repin.csv` pins OME `20250925`, which
+has been unreachable since the interface went to v5 on 2026-07-22: `20250925`
+exists only under `v4`, and a v4 vintage hard-stops in post-processing anyway for
+want of a `corporate_static` column (`revenue.R:59`). **That runscript had not been
+runnable for four days, and resolving it does not reveal that**, because resolution
+checks that a vintage is named, not that it exists. Verification gap 5 in Part 2 —
+"the migrated families have not been RUN" — is exactly what caught it.
+
+The generated runscripts therefore name `economy: default`. The dial does not care:
+OME is read in receipts, the distribution smear and the corporate incidence
+channel, none of which touches the per-record detail files E_full is measured from,
+and the corporate wedge is identically zero here because both rows name the same
+OME ID. The reasoning is recorded in the generator, next to the code that drops it.
+
+Worth an author view, since it will recur: an economy alternative can pin an
+interface VINTAGE but not the interface VERSION, which is repo-pinned in
+`config/interfaces/interface_versions.yaml` as plumbing. A vintage lives *under* a
+version, so the two are not independent, and every runscript pinning a
+pre-v5 OME vintage is now silently unrunnable the same way. There is a real
+argument for leaving it — v4 and v5 have different schemas, so the version is
+code-coupled rather than scenario-coupled, and the hard stop is honest — but the
+population of affected runscripts should be checked rather than discovered one at a
+time.
+
+## The writer
+
+`src/misc/calibration_writer.R`. One entry of a calibration file replaced, every
+other byte copied through. Textual, not a YAML round-trip, for the same reason
+`config_repin_hashes()` is unusable: in these files the comments are the provenance
+and `write_yaml()` deletes them. The round-trip is asserted byte-exact against the
+real shipped file.
+
+**The asymmetry is the design.** A re-run that REPRODUCES its pinned value writes in
+place, refreshing the dependency hashes and the `set` date against the code that
+just ran. One that does NOT writes `<file>.proposed` and stops with a banner naming
+both numbers. A calibrated value moving means the model moved, the data moved, or
+the calibration is less identified than it looks; the author reads the diff and
+moves the file if the drift is real. Either way the number travels as a file rather
+than a transcription, but no estimate changes without someone seeing it.
+
+`other/config_redesign/test_calibration_writer.R`, 28 checks: the byte-exact round
+trip, that only the named entry moves, that a vintage stays a string rather than
+becoming an integer, that hashes are computed from the files at write time and land
+directly after the list they describe, both directions of the reproduce/drift
+branch, the tolerance, and the four refusals.
+
+`measure_efull_logs.R` now ends in that call. Its scratch root and vintage suffix
+come from the environment, so a spot check is measurable without editing the script
+— editing the script being the old way a calibration got re-run. Its `rederive`
+pointer, which named the LEVELS script, now names itself: one of the four broken
+pointers the opening inventory counted.
+
+## The spot check
+
+Author ruled one of the three grid points re-run.
+`sbatch other/kg_model_tests/form_ab/spot_check_eta19.sbatch` compares
+`eta_dial_logs_19_spot` against `eta_dial_logs_19`.
+
+**The measured moment reproduces to 1.4e-13 relative.** E_full agrees to ten
+decimals with the value shipped in `efull_logs.csv`, which moves eta_tilde by about
+3e-12 against a value carried to four decimals. Records align exactly, 221,831 of
+them, in order.
+
+**The detail files are NOT byte-identical, and expecting them to be was the wrong
+frame.** 47 of 95 numeric columns differ at relative magnitudes of 1e-6 and below;
+the two columns reported at relative 1 and 2 are sign noise on absolute magnitudes
+of 1e-10 and 5e-6. The vintage on scratch was written on 2026-07-19 and the model
+has moved since for reasons unrelated to this project — the `calc_mtrs` tips/OT
+aggregate fix, the QBI and bracket-schedule rewrites, the corporate statutory rate
+going on-model, the OME two-stream change. `mtr_cap_bundle` is the worst-differing
+column and `calc_mtrs` is one of the things that changed, which fits. The rebuild's
+own gate is byte-exact because it compares against goldens taken at the branch
+point, not against a week-old vintage.
+
+The script reports rather than asserts, because the useful output is the size of the
+difference, not a pass light.
+
+## Verification at this point
+
+- `check_runscripts.R`: **80 parse, resolve and validate, 0 fail** (77 before, plus
+  the three generated eta-dial runscripts).
+- `test_calibration_writer.R`: **28 passed, 0 failed**.
+- `test_stamp_negative.R`: 10/10. `test_behavior_leg.R`: 29/29.
+- The spot check above.
+- NOT re-run: the six-scenario gate. Nothing in these four commits changes a number
+  — the new `src/` file only defines functions, and no shipped value moved — but the
+  gate has not been re-run since `ba26fa5be` and the next batch of work should
+  include it.
+
+---
 
 ## Follow-ups the plan puts outside this project
 
