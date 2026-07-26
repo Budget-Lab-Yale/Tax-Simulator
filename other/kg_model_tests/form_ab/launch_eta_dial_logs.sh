@@ -32,6 +32,14 @@
 # After all three finish (Phase 2N/3b), measure + invert:
 #   sbatch other/kg_model_tests/form_ab/measure_efull_logs.sbatch
 #
+# SUBMIT THIS THROUGH ITS SBATCH WRAPPER, not from the login node:
+#
+#   sbatch other/kg_model_tests/form_ab/launch_eta_dial_logs.sbatch [tag ...]
+#
+# slurm_run.sh's Phase 0 runs setup.R in process -- parsing globals, reading
+# Tax-Data, serializing the configs -- which is real R work and does not belong on
+# a login node.
+#
 # Usage (from repo root):
 #   bash other/kg_model_tests/form_ab/launch_eta_dial_logs.sh          # whole grid
 #   bash other/kg_model_tests/form_ab/launch_eta_dial_logs.sh 19       # one point
