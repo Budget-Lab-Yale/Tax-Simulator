@@ -18,24 +18,25 @@ Tax-Simulator is a policy microsimulation model for analyzing the budgetary, dis
 
 ```
 Tax-Simulator/
-├── config/
+├── config/                          # configuration only -- no executable code
+│   ├── output_roots.yaml            # Output path configuration
 │   ├── interfaces/
-│   │   ├── interface_versions.yaml  # Dependent model versions
-│   │   └── output_roots.yaml        # Output path configuration
+│   │   └── interface_versions.yaml  # Dependent model type + version (vintages live in the economy leg)
+│   ├── calibrations/                # machine-written stamped files; never hand-edited
+│   │   ├── estate/bridge.yaml       #   the estate valuation bridge
+│   │   └── wealth_profiles/         #   per-profile s.csv + M.csv
 │   ├── runscripts/                  # Simulation configuration CSV files
-│   └── scenarios/
-│       ├── behavior/                # Behavioral feedback modules (.R files)
-│       └── tax_law/                 # Tax law configuration directories
-│           ├── baseline/            # Current law baseline tax parameters
-│           ├── baseline_2024/       # 2024 baseline tax parameters
-│           ├── public/              # Public policy reform scenarios
-│           ├── private/             # Internal/private policy scenarios
-│           └── tests/               # Test scenarios
+│   └── scenarios/                   # the three legs, each default/ + alternatives/
+│       ├── tax_law/                 #   what is the policy
+│       ├── economy/                 #   how does the world work
+│       └── behavior/                #   how do agents respond (behavior.yaml per folder)
 ├── src/
+│   ├── behavior/                    # Behavior MODULE code, by family (charity/, evasion/, ...)
 │   ├── sim/
-│   │   └── behavior.R               # Behavioral helper functions (e.g., apply_mtr_elasticity)
+│   │   └── behavior.R               # The behavior-leg loader + apply_mtr_elasticity
 │   └── misc/
-│       └── config_parser.R          # Runscript parser (parse_globals, get_scenario_info)
+│       ├── config_parser.R          # Runscript parser (parse_globals, get_scenario_info)
+│       └── scenario_config.R        # Economy/behavior leg resolution engine
 └── other/                           # Utility scripts and analysis tools
 ```
 
@@ -51,7 +52,7 @@ and any other column is a parse error whose message names the replacement:
 - `ID`: Scenario identifier (e.g., "TCJA_full_extension"). Reserved word: "baseline"
 - `tax_law`: `default`, or a path under `config/scenarios/tax_law/alternatives/`
 - `economy`: `default`, or a path under `config/scenarios/economy/alternatives/`
-- `behavior`: Path to behavioral feedback module (relative to `config/scenarios/behavior/`, omit `.R` extension)
+- `behavior`: `default` (no response), or a path under `config/scenarios/behavior/alternatives/`. The folder holds one `behavior.yaml` naming the response stack — NOT a module path
 - `years`: Simulation years in format `{start_year}:{end_year}` (e.g., "2024:2034")
 - `dist_years`: Years for full distribution table calculation (computationally intensive)
 - `mtr_vars`: Space-delimited list of variables for marginal tax rate calculation (e.g., "wages kg_lt tips1")
@@ -100,9 +101,9 @@ You need to supply these cmd line args when running from bash:
 
 **Example:**
 ```csv
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2024:2034,,tips1 tips2,nextdollar nextdollar
-income_tax,public/tips/income_tax,,2024:2034,2025:2026,tips1 tips2,nextdollar nextdollar
+ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,default,default,default,2024:2034,,tips1 tips2,nextdollar nextdollar
+income_tax,public/tips/income_tax,default,default,2024:2034,2025:2026,tips1 tips2,nextdollar nextdollar
 ```
 
 ### Tax Law Configuration
@@ -175,7 +176,7 @@ A scenario is three pointers, and each of them names a FOLDER:
 |---|---|---|
 | `tax_law` | what is the policy | `config/scenarios/tax_law/` |
 | `economy` | how does the world work | `config/scenarios/economy/` |
-| `behavior` | how do agents respond | `config/scenarios/behavior/` |
+| `behavior` | how do agents respond | `config/scenarios/behavior/` (`behavior.yaml`; module code in `src/behavior/`) |
 
 Every leg has the same shape: a complete `default/` layer, plus sparse deltas
 under `alternatives/` (nesting arbitrary, folders human-named). A runscript cell
@@ -233,7 +234,8 @@ it is recorded in the vintage instead of vanishing with the shell.
 **Every vintage carries a manifest** at its root: `dependencies.csv` (interface
 versions), `scenarios.csv` (the three leg pointers per scenario),
 `scenario_config.csv` (every resolved value, its kind and role, and whether the
-scenario overrode it), `behavioral_assumptions.csv` (tax law + modules), and
+scenario overrode it), `behavioral_assumptions.csv` (tax law + the resolved
+behavior stack: alternative, kg pieces, ordered module paths), and
 `code_version.csv` (git commit + dirty flag).
 
 **SLURM:** `globals` and `scenario_info` already serialize wholesale, so nothing
@@ -303,18 +305,18 @@ estate tax and wealth-tax ↔ capital-income tax. Code: `src/sim/wealth_dynamics
   transition matrix `M` — resolved by `wealth_dyn_resolve_profile()` from a
   **folder** under `config/calibrations/wealth_profiles/<name>/` (two files: `s.csv` =
   per-cell `s = 1 − MPC`; `M.csv` = the `n_pctiles × n_pctiles` transition,
-  absent ⇒ identity). Two runscript columns select it: `wealth_financing` (a
-  profile folder name, or `none`/`off` to force off) and the back-compatible
-  scalar `s` (a FLAT shorthand: constant `s_mat`, identity `M`). Precedence:
-  `none/off` > folder > scalar `s` > the **auto-applied `default` profile**
-  (used when neither column is set). `scenario_uses_wealth_dynamics()` keys off
-  `max(s_mat) > 0` (so a flat-zero profile — for example, an explicit `s = 0` —
-  is dormant and skips the ~2× split-pass compute), NOT the `behavior` column.
+  absent ⇒ identity). One economy value selects it,
+  `wealth.financing_profile`, taking a profile folder name, `none`/`off` to force
+  it off, or the `flat:<s>` shorthand (constant `s_mat`, identity `M`). The old
+  `s` and `wealth_financing` runscript columns are retired.
+  `scenario_uses_wealth_dynamics()` keys off
+  `max(s_mat) > 0` (so a flat-zero profile — `flat:0` — is dormant and skips the
+  ~2× split-pass compute), NOT the `behavior` column.
   The shipped `default` is **calibrated**
   (2026-07-07, persistent-flow anchor: s ≈ 0.1 bottom → 0.80 top percentile,
   age-tilted; memo at `other/wealth_dynamics/default_s_calibration.md`), so the
-  channel is ON model-wide for any scenario that doesn't set
-  `wealth_financing = none`. `example_age_wealth/` is an illustrative (not calibrated) bracket
+  channel is ON model-wide for any scenario whose economy leg does not set
+  `financing_profile: none`. `example_age_wealth/` is an illustrative (not calibrated) bracket
   profile. The haircut applier (`wealth_dyn_apply_to_records()`) is invoked
   **directly as a fixed step at the head of the final conventional pass** in
   `run_one_year()`, before the behavior modules and `do_taxes`; it consumes the
@@ -322,7 +324,8 @@ estate tax and wealth-tax ↔ capital-income tax. Code: `src/sim/wealth_dynamics
 - **Conventional-only.** Static stays the clean law-only counterfactual; the
   interaction surfaces as the `static − conventional` estate/capital-income
   delta, reported via **receipts** (distribution tables stay static-sourced, D20).
-  Composes with kg: a scenario sets `behavior = kg_dynamics` *and* `s = 0.5`; the
+  Composes with kg: a scenario names a behavior alternative that binds the kg
+  bathtub *and* an economy alternative with `financing_profile: flat:0.5`; the
   haircut applies first, kg runs on the haircut frame.
 - **Cells** = (age cohort × within-age net-worth percentile). Joint key
   `pmax(age1,age2)` pre-80+-topcode (matches kg / distribution). Ranking **drops
@@ -431,12 +434,57 @@ the channel contributes reform **deltas only**. Design docs:
 Behavioral modules are R scripts that simulate taxpayer responses to policy changes. They enable conventional and partial dynamic revenue estimates.
 
 **Module Organization:**
-- Location: `config/scenarios/behavior/`
-- Organized in subfolders by behavior type (e.g., `/charity`, `/employment`)
-- Module filename describes what it does (e.g., `100.R` = elasticity of -1.0)
+- Location: `src/behavior/{family}/*.R` — module code is executable, so it lives
+  under `src/`. It is still loaded BY PATH at scenario time, never sourced at
+  startup, which is why `main.R`, `src/slurm/setup.R` and `src/slurm/common.R`
+  all skip `behavior/` when they walk `src/` recursively. Keep those three in
+  lockstep.
+- Organized in subfolders by behavior FAMILY (e.g. `charity/`, `employment/`).
+  The family is the parent folder name and determines the hook: a file in
+  `charity/` must define `do_charity()`.
+- Module filename describes what it does (e.g. `100.R` = elasticity of -1.0)
+- **Modules are self-contained.** Their parameters are hardcoded in the file with
+  citations, because the module is the only reader. A variant is a SEPARATE FILE
+  (`charity/50.R` vs `charity/100.R`), never a config override — which is what
+  makes the assumption traceable to a file in git rather than to a CSV cell.
+
+**Selecting modules: the behavior leg.** A scenario's `behavior` cell names a
+folder holding one `behavior.yaml` with two sections:
+
+```yaml
+kg_dynamics: [bathtub, conversion, entity_shifting]   # or: none
+modules:
+  - src/behavior/conversion/sigma.R
+  - src/behavior/entity_shifting/pearce_prisinzano.R
+  - src/behavior/evasion/debacker.R
+  - src/behavior/charity/50.R
+  - src/behavior/estate/avoidance.R
+```
+
+- `modules` is a bare list of paths. There is NO registry and no list of known
+  names: the loader takes any path that exists. Adding a behavior is writing one
+  file and listing it.
+- `kg_dynamics` is `none` or the pieces of the gains bathtub the scenario binds
+  (`bathtub` is required when active). Writable as a list of piece names or as a
+  mapping of piece → stamped calibration file. The applier
+  (`src/behavior/kg_dynamics/turnover.R`) is injected automatically and listing
+  it by hand is an error.
+- **Execution order is not the listed order.** The loader stable-sorts against
+  one pinned family order — `kg_dynamics → conversion → entity_shifting →
+  evasion → wealth → charity → estate` — because later families read what earlier
+  ones wrote. Families outside that list are order-insensitive and run last, in
+  the order listed. Nothing is ever rejected for being unfamiliar.
+- Parse-time checks (`behavior_validate_spec`, `src/sim/behavior.R`) stop the run
+  before it starts on: a listed path that does not exist, a duplicate, a bound kg
+  piece with no module or a module with an unbound piece, conversion without the
+  bathtub, wealth without estate, or the applier listed by hand. Evasion without
+  an estate module warns loudly. These replaced five hand-written order guards
+  that used to fire mid-run.
+- `scenario_uses_kg_dynamics()` and `scenario_uses_sigma()` read the resolved
+  spec, not a module-name prefix.
 
 **Module Structure:**
-Every module must contain a function named `do_{subfolder_name}()`:
+Every module must contain a function named `do_{family}()`:
 
 ```r
 do_behavior_name = function(tax_units, ...) {
@@ -558,15 +606,19 @@ Use the `/policy-config` skill to create reform configurations. It contains deta
 ### Running a Simulation
 1. Create or modify runscript CSV with scenario parameters
 2. Ensure tax law YAML files exist for each scenario's `tax_law` value
-3. If using behavioral feedback, ensure module exists at specified `behavior` path
+3. If using behavioral feedback, ensure the behavior alternative folder exists and lists modules that exist
 4. Execute model with runscript as input
 
 ### Creating a Behavioral Module
-1. Choose appropriate subfolder in `config/scenarios/behavior/` (or create new)
+1. Choose appropriate family subfolder in `src/behavior/` (or create new)
 2. Create `.R` file with descriptive name
-3. Implement `do_{subfolder_name}()` function with required signature
-4. Add formatted documentation
-5. Reference module in runscript's `behavior` column as `{subfolder}/{filename}`
+3. Implement `do_{family}()` function with required signature
+4. Add formatted documentation, and hardcode the module's parameters in the file
+   with their citations
+5. Add its path to a behavior alternative's `behavior.yaml`, and name that folder
+   in the runscript's `behavior` column. If the new family must run before or
+   after an existing one, add it to `BEHAVIOR_FAMILY_ORDER` in
+   `src/sim/behavior.R`; if order does not matter, leave it out and it runs last.
 
 ### Debugging Tax Calculations
 - Check relevant YAML files for parameter values in simulation years
@@ -619,8 +671,9 @@ The SLURM pipeline duplicates orchestration logic from `main.R`, `run_sim()`, an
 | A new SLURM driver script                           | must call `config_activate(economy = scenario_info$resolved_economy, behavior = scenario_info$resolved_behavior)` after loading `config.rds` |
 | New global free variables used by post-processing   | `src/slurm/common.R` `reconstitute_environment()` |
 | `run_one_year()` signature                          | `src/slurm/worker.R` |
+| The `src/` startup source-walk predicate            | all three copies together: `src/main.R`, `src/slurm/setup.R`, `src/slurm/common.R` (they skip `main.R`, `slurm/`, `tests/` and `behavior/`) |
 
-Safe changes that need NO SLURM updates: anything inside `run_one_year()`, tax calculation functions, behavioral modules, YAML configs, runscripts. The corporate-incidence channel (`src/sim/corp/`) is in this category by construction: its applier lives inside `run_one_year()`, its kg glue inside `run_bathtub_pass()`/`kg_dyn_run_bathtub_pass()`, its paths are analytic (recomputed per worker, no serialized state), and `reconstitute_environment()` sources all of `src/` recursively — no manifest, phase, or worker changes.
+Safe changes that need NO SLURM updates: anything inside `run_one_year()`, tax calculation functions, behavioral modules, YAML configs, runscripts. The corporate-incidence channel (`src/sim/corp/`) is in this category by construction: its applier lives inside `run_one_year()`, its kg glue inside `run_bathtub_pass()`/`kg_dyn_run_bathtub_pass()`, its paths are analytic (recomputed per worker, no serialized state), and `reconstitute_environment()` sources `src/` recursively — no manifest, phase, or worker changes. (That walk skips `src/behavior/`: behavior modules are loaded by path at scenario time, so adding one still needs no SLURM change, but CHANGING the walk predicate does — see the table row above.)
 
 ## Notes and Best Practices
 

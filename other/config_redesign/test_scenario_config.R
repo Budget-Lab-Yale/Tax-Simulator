@@ -249,6 +249,25 @@ check('manifest records override source',
 check('manifest carries role column', all(c('state', 'transmission') %in% m$role))
 check('manifest alternative column', all(m$alternative == 'sets/nested'))
 
+# A leg with no value entries at all is the behavior leg's normal state once its
+# modules carry their own parameters. The manifest still has to produce a
+# well-formed (empty) table: bind_rows() over nothing gives a 0x0 tibble, and
+# the run died writing scenario_config.csv the first time this was not handled.
+m_empty = config_manifest('behavior', list(entries = list()),
+                          list(leg = 'behavior', alternative = 'default',
+                               values = list(), roles = NULL,
+                               overrides = tibble(channel = character(),
+                                                  name = character(),
+                                                  source = character()),
+                               waivers = list()),
+                          'baseline')
+check('manifest of an entry-less leg is an empty typed table',
+      nrow(m_empty) == 0 &&
+      all(c('ID', 'leg', 'alternative', 'channel', 'name', 'value', 'kind',
+            'role', 'overridden', 'source') %in% names(m_empty)))
+check('an entry-less leg binds with a populated one',
+      nrow(bind_rows(m, m_empty)) == nrow(m))
+
 #------------
 # Reserved default name
 #------------

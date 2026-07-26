@@ -1,11 +1,11 @@
 # Config rebuild v2 — full status
 
-*Branch `config-rebuild`, off `wealth` at `324a7cd38`. Phases 0 through 3c built
-2026-07-26. All six gate scenarios byte-identical; all 103 live runscripts parse
-and resolve; both top-tax generators reproduce everything they write, tax_law
-trees included. Nothing from 3c is left open. Phases 4, 5 and 6 remain. Plan of
-record: `~/.claude/plans/cheerful-zooming-star.md`,
-which carries a status header pointing back here.*
+*Branch `config-rebuild`, off `wealth` at `324a7cd38`. Phases 0 through 4 built
+2026-07-26. All three legs are live: a runscript row is now an ID, three folder
+pointers and the computational scope, and nothing else. Both top-tax generators
+reproduce everything they write, tax_law trees included. Phases 5 and 6 remain.
+Plan of record: `~/.claude/plans/cheerful-zooming-star.md`, which carries a
+status header pointing back here.*
 
 This document is meant to be enough to resume cold. It is in four parts: what
 the branch contains now, what was verified and how, the decisions taken without
@@ -27,6 +27,10 @@ the author present, and what each remaining phase now involves.
 | `1f87c583f` | 3b fix | SLURM Phase 0 activates the legs; smoke fixture waivers corrected. |
 | `cbc0030d9` | 3b fix | kg channel reclassified `state`. |
 | `7c30eb26a` | 3c | Three runscript families migrated, 71 archived, generators taught the new schema. |
+| `180fbd3a2` | 3c | Generators taught the on-model corporate rate and the cap lift; tax_law trees reproduce. |
+| `6891c48de` | 4.1 | Behavior module code moves `config/scenarios/behavior/` → `src/behavior/`. 22 renames. |
+| `2014f7f31` | 4.2 | The behavior leg goes live: behavior.yaml loader, 19 alternatives, five order guards deleted. |
+| `60038ed6c` | 4.3 | Nine module-only parameters inlined into their modules; `evasion.yaml` deleted. |
 | `823f8fd93`, `88a2e882c` | — | This document. |
 
 ## Phase 1 — what the excess-growth removal touched
@@ -313,6 +317,151 @@ the refactor byte-diff harness, the kg regression pair, the sigma recalibration
 stack, the corporate smokes, the performance probe, and the wealth bounding set
 — plus the two-step revival recipe.
 
+## Phase 4 — the behavior leg
+
+Three commits, in the order they had to happen.
+
+### 4.1 — the module files move
+
+`config/scenarios/behavior/{family}/*.R` → `src/behavior/{family}/*.R`, 22 files,
+every one a pure rename. config/ stops containing executable code.
+
+They are still loaded BY PATH at scenario time, never sourced at startup, and
+that distinction is load-bearing: `charity/50.R` and `charity/100.R` both define
+`do_charity()`, so sourcing the folder would leave whichever came last in scope.
+`main.R`, `src/slurm/setup.R` and `src/slurm/common.R` all skip `behavior/` when
+they walk src/ recursively — three predicates that have to stay in lockstep, as
+CLAUDE.md already says of the other two exclusions.
+
+Path references followed the files: the legacy entity-shifting selector's
+`sys.source`, the dependency lists in the economy leg's `sigma.yaml` and
+`evasion.yaml`, one comment in `calc_estate`, and three harnesses under `other/`.
+The four pinned md5 hashes in `sigma.yaml` were re-checked and unchanged, which
+is the whole point of doing the move on its own: it touched locations, not
+contents.
+
+### 4.2 — the leg goes live
+
+`behavior.yaml` in a folder the runscript names. Two sections:
+
+```yaml
+kg_dynamics: [bathtub, conversion, entity_shifting]
+modules:
+  - src/behavior/conversion/sigma.R
+  - src/behavior/entity_shifting/pearce_prisinzano.R
+  - src/behavior/evasion/debacker.R
+  - src/behavior/charity/50.R
+  - src/behavior/estate/avoidance.R
+```
+
+`modules` is a bare list of paths. There is no registry and no known-names list:
+the loader takes any path that exists, sources it, and calls `do_{family}` where
+family is the parent folder name. Closing that interface is what killed the
+previous attempt at this redesign, and it has not been reintroduced.
+
+`kg_dynamics` is `none` or the pieces of the gains machinery the scenario binds.
+It accepts two written forms and treats them identically downstream: a LIST of
+piece names, meaning the pieces are bound and their parameters are still wherever
+they live today, or a MAPPING of piece to its stamped calibration file. Phase 5
+turns the lists into mappings; the loader already handles both, so that is a
+config edit with no code behind it. The bathtub applier
+(`src/behavior/kg_dynamics/turnover.R`) is injected whenever the machinery is on
+and listing it by hand is an error — binding the machinery and running its
+applier were never two decisions.
+
+**Order.** Execution order is not the listed order. The loader stable-sorts
+against one pinned family order, declared once in `src/sim/behavior.R`:
+
+    kg_dynamics → conversion → entity_shifting → evasion → wealth → charity → estate
+
+Families outside it are order-insensitive and run last, in the order listed.
+Nothing is ever rejected for being unfamiliar — unranked is not unwelcome.
+
+That one sort replaced five hand-written guards, each enforcing a different
+subset of the same rule from inside a module, an hour into the run:
+
+| Deleted | What it enforced | Now |
+|---|---|---|
+| `conversion/sigma.R` guards 1–2 | kg required; pinned order | parse-time check + the sort |
+| `entity_shifting/pearce_prisinzano.R` | pinned order | the sort |
+| `evasion/debacker.R` | warn if no estate module | parse-time warning |
+| `wealth/avoidance.R` × 3 | evasion before, kg before, estate after | the sort + parse-time check |
+| `estate/avoidance.R` | upstream families before | the sort |
+| `run.R` early stop | conversion without kg | parse-time check |
+
+The new parse-time checks (`behavior_validate_spec`) run on every scenario in the
+runscript before the run starts: a bound piece with no module and a module with
+an unbound piece both stop, wealth without estate stops, evasion without estate
+warns loudly, a listed path that does not exist stops, listing the applier stops,
+and the error message prints the order the stack would have run in.
+
+**`charity` had to join the pinned order.** In the top-tax stacks charity sits
+between wealth and estate, and leaving it unranked would have moved it after
+estate. This is the only judgement call in the order and it is verified rather
+than asserted — see Part 2.
+
+Nineteen behavior alternatives cover every distinct stack in the live runscripts,
+and 33 runscripts had their behavior cell rewritten to name one. The two top-tax
+generators emit folder names and still reproduce their runscripts and reform trees
+byte-for-byte.
+
+Also in this commit: the activation predicates key on the kg binding rather than
+on a module prefix appearing in a list (`scenario_uses_kg_dynamics`,
+`scenario_uses_sigma`); `behavioral_assumptions.csv` records the resolved stack,
+not just the cell, so an old vintage still says what actually ran; the behavior
+leg is permitted to carry no value entries, which is now its normal state; and
+`check_runscripts.R` resolves and validates the behavior leg too, skipping
+`private/` for the same reason it skips `archive/`.
+
+### 4.3 — the module-only parameters come home
+
+Nine values had exactly one reader each, and that reader was a behavior module:
+
+| Was | Now |
+|---|---|
+| `evasion.e_schc`, `e_pt`, `e_rent`, `topend_mult` | `src/behavior/evasion/debacker.R` |
+| `estate.report_eps` | `src/behavior/estate/avoidance.R` |
+| `wealth.avoid_public_e`, `avoid_private_e`, `chi_pub`, `chi_priv` | `src/behavior/wealth/avoidance.R` |
+
+`economy/default/evasion.yaml` is deleted; every entry in it was module-only.
+`estate.yaml` keeps only the locked valuation bridge. `wealth.yaml` keeps the
+three structural bathtub knobs, the financing profile, and
+`cap_flows_pt_weight`, which the corporate channel also reads.
+
+The citations moved with the values, not a pointer to them: the DHY source for
+each evasion elasticity with its alternative anchors, the Kopczuk-Slemrod band
+and the two accepted caveats, and the honest statement that the two wealth
+elasticities are author-accepted rather than calibrated — the private one being
+the largest single behavioral magnitude in the model.
+
+A variant is now a copy of the module file with different numbers, listed by a
+different alternative. There is no config cell and no environment variable to
+override one silently, which is the property the whole rebuild is for.
+
+Sixteen comments across `corp_alloc.R`, `corp_rate.R`, `corp/paths.R`,
+`wealth_dynamics.R` and `kg/constants.R` still pointed at `config/assumptions/`,
+which Phase 3b deleted. Fixed here, since these files were open and the re-pin
+covers them.
+
+### The conditional hash re-pins
+
+Deleting the guards and moving the parameters changed files that calibrated
+entries are pinned against. Ten hashes were re-pinned across the two commits —
+`pearce_prisinzano.R`, `debacker.R` and `sigma_conversion.R` for `sigma.conv`,
+`kg/constants.R` for the four kg entries, `wealth_dynamics.R` for
+`financing_profile`.
+
+Every underlying edit is a deleted guard, a moved value keeping its number, or
+comment text. Each touched file carries a dated note saying exactly that, and
+saying that **the re-pin stands only if the six-scenario gate is byte-identical
+and becomes a real re-derivation if it is not.** That is the order CLAUDE.md
+requires and the same pattern Phase 3b used (decision 1).
+
+The re-pins were done by text substitution on the hash lines. `config_repin_hashes()`
+round-trips the YAML through `write_yaml()` and would delete every comment in
+files that are mostly comment, the comments being the provenance. **Still do not
+call it.** Phase 5 retires it.
+
 ---
 
 # Part 2 — What was verified
@@ -363,19 +512,59 @@ are a commit behind, which affects nothing the model reads, and
 
 ## The runscript parse gate
 
-`other/config_redesign/check_runscripts.R`, new in 3c. For every CSV under
-`config/runscripts/` except `archive/`, it enforces the eight-column schema via
-`validate_runscript_columns()`, then resolves each row's economy leg and runs
-`config_check_staleness()` on it. It deliberately stops short of
-`parse_globals()`, which reads Tax-Data and creates output trees — what a bad
-migration actually breaks is the schema check and the resolution, and both are
-cheap.
+`other/config_redesign/check_runscripts.R`, new in 3c and extended in Phase 4.
+For every CSV under `config/runscripts/` except `archive/` and `private/`, it
+enforces the eight-column schema via `validate_runscript_columns()`, resolves each
+row's economy leg and runs `config_check_staleness()`, then resolves and validates
+each row's behavior leg — the folder exists, its module files exist, the stack is
+a shape the model can run. That last part is what the deleted in-module order
+guards used to catch, one scenario at a time, mid-run.
+
+It deliberately stops short of `parse_globals()`, which reads Tax-Data and creates
+output trees. That is a real limit and it cost something: the behavior leg having
+no value entries broke `write_run_manifest()`, which is inside `parse_globals()`,
+so the first Phase 4 gate launch died in setup with all six checks green. The fix
+is one guard in `config_manifest()` and two unit tests that would have caught it.
 
 ```bash
 sbatch other/config_redesign/run_tests.sbatch . other/config_redesign/check_runscripts.R
 ```
 
-Result at `7c30eb26a`: **103 parse and resolve, 0 fail.**
+Result at `60038ed6c`: **77 parse, resolve and validate, 0 fail.** The count fell
+from 103 because the 26 `private/` files are now skipped rather than passing a
+weaker check.
+
+## The behavior-order assertion
+
+`other/config_redesign/check_behavior_order.R`, new in Phase 4, and the reason the
+`charity` ordering decision is a verified claim rather than a hope. It reads the
+PRE-MIGRATION behavior cells straight out of git at `6891c48de`, resolves each
+one's new folder through the live loader, and compares the resulting module
+sequence to the sequence that was written in the cell.
+
+Result: **500 cells checked, 500 resolve to the identical order.** Not one
+migrated runscript's stack was reordered.
+
+Three stacks WOULD reorder, and all three are in untracked `private/` runscripts
+that the rebuild migrates on demand: `private/peterson/with_behavior.csv` and
+`private/wsj/ot.csv` write `charity/50` before `entity_shifting`, where the pinned
+order puts it after; `private/vanhollen/surtax.csv` writes `kg/62` before
+`entity_shifting`, and the simple `kg` family is unranked so it moves last. No
+single family order satisfies both these and the top-tax stacks — charity is
+before entity shifting in one and after it in the other — so the top-tax product
+runs won. Whoever migrates those three should expect the reorder and decide
+whether it moves anything.
+
+## The behavior loader tests
+
+`other/config_redesign/test_behavior_leg.R`, 27 checks, new in Phase 4. Builds a
+synthetic behavior tree and throwaway module files in a temp dir, so the tests say
+what the loader does rather than what today's stacks happen to contain. Covers
+both written forms of `kg_dynamics`, the sort (pinned order, unranked-last,
+stability), applier injection, and every parse-time refusal.
+
+The engine tests (`test_scenario_config.R`) are now 47, the two added covering the
+entry-less leg that broke the first gate launch.
 
 ## What the gate comparator excludes, and why each is safe
 
@@ -402,18 +591,23 @@ family, which `mapping_check.py` is responsible for. Two added this session:
    runscripts. It was recovered but not adapted: line 170 still iterates over
    the deleted `excess_growth*` fields, and it calls `config_resolve()` with
    the old `set_name =` argument.
-3. **The unit tests do not cover the new waiver path.** 45 checks pass, none of
-   them exercise a `waiver` block.
+3. **The unit tests do not cover the waiver path.** 47 engine checks pass, none
+   of them exercise a `waiver` block. (The behavior loader's 27 checks are a
+   separate file and do cover every refusal it can make.)
 4. **No negative test exists yet** for the staleness stop. Phase 5 calls for
    one (corrupt a stamp in a scratch copy, show the hard stop fires); the
    equivalent evidence today is anecdotal — the stop fired twice during this
    session, correctly, and both times is recorded below.
-5. **The three migrated runscript families have not been RUN.** They parse and
-   resolve, which is what `check_runscripts.R` proves, but no simulation has
-   been executed from one. That matters most for the OBBBA retrospective, whose
-   two scripts were also pulled out of the archive and had their `tax_law` cells
-   changed, and least for the top-tax batches, whose economy pins are
-   structurally identical to the gate fixtures'.
+5. **The three migrated runscript families have not been RUN.** They parse,
+   resolve and validate, which is what `check_runscripts.R` proves, but no
+   simulation has been executed from one. That matters most for the OBBBA
+   retrospective, whose two scripts were also pulled out of the archive and had
+   their `tax_law` cells changed, and least for the top-tax batches, whose
+   economy pins are structurally identical to the gate fixtures'.
+6. **`private/` is unmigrated and now skipped by the parse check.** The 26 files
+   there are untracked one-off work; their behavior cells still name module
+   lists and would fail resolution. Three of them will reorder when migrated
+   (see the order assertion above).
 
 ---
 
@@ -550,49 +744,48 @@ logically belongs — it rides the cg lever and would read better inside the cg
 block. It stays at the end because that is where the hand patch put it, and
 moving it would break byte-identity against every shipped vintage for no gain.
 
+### 12. `charity` was added to the pinned family order
+
+The plan pinned six families; the top-tax stacks run charity between wealth and
+estate, so leaving it unranked would have moved it after estate. Adding it is the
+choice that reproduces every tracked runscript exactly, and the order assertion
+in Part 2 is the evidence rather than the argument. The cost is that two private
+runscripts, which write charity BEFORE entity shifting, will reorder when someone
+migrates them — no single order satisfies both, and the product runs won.
+
+### 13. The nineteen behavior alternative folder names were proposed, not authored
+
+Same status as decision 9's economy folders. Most are stack-descriptive
+(`kg_entity_shifting`, `employment_child_earnings`, `wealth_estate_avoidance`);
+three are named for what uses them, because the stack itself is a mouthful
+(`top_tax_full`, `top_tax_full_wealth`, `top_tax_no_estate`) and one keeps its
+fixture name (`multi_module_smoke`). Renaming one is a folder rename, the matching
+runscript cells, and — for the two the generators reference — two constants in
+`other/top_tax/levers.py`.
+
+### 14. The wealth-without-estate contract became a parse-time stop, not a warning
+
+`wealth/avoidance.R` hard-stopped mid-run when no estate module followed it. That
+contract is real — the concealment fractions it persists have to reach the
+reported estate — so it stayed fatal, just moved earlier. Its two companion
+ORDER guards became guarantees of the sort instead of checks, since the sort
+cannot produce a violating order.
+
+### 15. `kg_dynamics` accepts a list as well as a mapping
+
+The plan describes the section as a mapping of piece to stamped file. Those files
+do not exist until Phase 5, and pointing the mapping at today's homes would have
+meant writing a path to a module file as though it were a calibration stamp, in
+nineteen folders, to be rewritten in a fortnight. The list form says exactly what
+is true now — these pieces are bound — and the loader accepts both from the
+start, so Phase 5 adds paths without touching code. If a reader prefers only one
+form to exist, deleting the list branch after Phase 5 is a five-line change.
+
 ---
 
 # Part 4 — What is left
 
-## Phase 4 — the behavior leg
-
-Three sub-steps, each gated on the six runs:
-
-**(i)** New loader in `src/sim/behavior.R`. `behavior.yaml` has two sections:
-`kg_dynamics` (either `none` or a mapping of paths to stamped calibration
-files) and `modules` (a bare list of file paths). The loader sources each listed
-path — the existing `load_behavior_module()` / `sys.source` pattern carries over
-— and calls `do_{family}` where family is the file's parent folder name. No
-registry, no known-names list: that closure is what killed the previous
-attempt. Execution order comes from stable-sorting the list against one pinned
-family order (`kg_dynamics → conversion → entity_shifting → evasion → wealth →
-estate`); unknown families run last, in listed order, and nothing is ever
-rejected for being unknown. Migration safety: for every migrated runscript,
-assert the sorted order equals today's literal order and flag any difference
-rather than silently reordering.
-
-**(ii)** Move the modules from `config/scenarios/behavior/{family}/*.R` to
-`src/behavior/{family}/*.R` so config stops holding executable code. Delete the
-five hand-written order guards (`conversion/sigma.R:70-97` guards 1–2 only —
-input guards 3–4 stay; `pearce_prisinzano.R:52-65`; `run.R:84-90`;
-`debacker.R`'s introspection, which becomes a parse warning; and the order
-blocks in `wealth/avoidance.R` and `estate/avoidance.R`). Re-key the activation
-predicates from "module prefix appears in the list" to "`kg_dynamics != none`":
-`scenario_uses_kg_dynamics` (`src/sim/kg/state.R:36-40`), `run.R:77` and `:944`,
-`frozen.R:55`, `bathtub.R:56`; `scenario_uses_sigma`
-(`sigma_conversion.R:141-145`) keys on the conversion family being listed.
-
-**(iii)** Inline the module-only parameters into their module files with
-citations — evasion's `e_schc`/`e_pt`/`e_rent`/`topend_mult`, estate's
-`report_eps`, wealth's `avoid_*`/`chi_*` — and delete those entries from the
-temporary economy files.
-
-New parse-time cross-checks replace the deleted guards: conversion listed
-without kg_dynamics stops; a kg_dynamics sub-entry inconsistent with its module
-stops; evasion without the estate module warns loudly; a listed path that does
-not exist stops.
-
-Rough size: a day.
+Phase 5 and Phase 6. Nothing from Phases 0 through 4 is open.
 
 ## Phase 5 — calibration stamps
 
@@ -670,10 +863,20 @@ Rough size: a few hours.
 
 ## Total
 
-Two and a half to three and a half working days, Phase 5 being over half.
-Phase 4 is what to do next. The `eta_logs` compute batch inside Phase 5 should
-be launched as early as possible, since it gates the sign-off and is three
-full-sample vintages.
+A day and a half to two and a half working days, Phase 5 being nearly all of it.
+Phase 5 is what to do next, and the `eta_logs` compute batch inside it should be
+launched as early as possible: it is three full-sample vintages and it gates the
+sign-off.
+
+Two things Phase 5 should pick up that Phase 4 left in a deliberate half-state:
+
+- The `kg_dynamics` sections in the nineteen behavior alternatives are written in
+  the LIST form (piece names, no paths). Turning them into mappings that point at
+  the stamped files is the moment those files come into existence, and needs no
+  loader change (decision 15).
+- Ten dependency hashes were re-pinned conditionally on the Phase 4 gate. If that
+  gate is clean the notes in `kg.yaml`, `sigma.yaml` and `wealth.yaml` can be
+  collapsed into one line; Phase 5 rewrites those entries as stamps anyway.
 
 ## Follow-ups the plan puts outside this project
 
@@ -682,7 +885,9 @@ full-sample vintages.
 2. Restore the `timeable_share` solver; clears its inherited waiver.
 3. Migrate any untracked `private/` runscripts on demand, and any of the 71
    archived in 3c that turn out to still be wanted. The archive README names the
-   likely ones and gives the two-step recipe.
+   likely ones and gives the two-step recipe. Three of the private files will
+   reorder their behavior stack when migrated — see the order assertion in Part 2
+   before assuming their old numbers still hold.
 4. If the top-tax batches are ever rebuilt from scratch, consider moving
    `no_ord_cap` inside the cg lever's own block, where it belongs. It sits at
    the end of `pref.yaml` today only to preserve byte-identity with the shipped

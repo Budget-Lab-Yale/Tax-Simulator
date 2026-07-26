@@ -802,8 +802,17 @@ config_manifest = function(leg, defaults, resolved, id) {
   # kind and role, whether the scenario overrode it, and from where.
   #
   # Returns: tibble of ID, leg, alternative, channel, name, value, kind, role,
-  #          overridden, source
+  #          overridden, source -- zero rows for a leg that carries no value
+  #          entries, which is the behavior leg's normal state (its content is
+  #          the module stack, recorded in behavioral_assumptions.csv)
   #----------------------------------------------------------------------------
+
+  if (length(resolved$values) == 0) {
+    return(tibble(ID = character(), leg = character(), alternative = character(),
+                  channel = character(), name = character(), value = character(),
+                  kind = character(), role = character(),
+                  overridden = logical(), source = character()))
+  }
 
   overrides = resolved$overrides %>%
     select(channel, name, source)
