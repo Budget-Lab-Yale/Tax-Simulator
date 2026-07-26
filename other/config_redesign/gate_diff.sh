@@ -15,8 +15,10 @@ fail=0
 # code_version.csv are excluded from byte comparison (content-checked / by
 # construction different). assumptions.csv is a golden-only manifest: the
 # candidate writes scenario_config.csv in its place, and mapping_check.py is
-# what confirms the two carry the same values.
-EXCLUDE_RE='(^|/)(code_version\.csv|assumptions\.csv|behavioral_assumptions\.csv|scenarios\.csv|scenario_config\.csv|dependencies\.csv)$|\.xlsx$'
+# what confirms the two carry the same values. calibrations.csv is the mirror
+# case -- candidate-only, added by the config rebuild -- and is asserted present
+# and non-empty below rather than merely ignored.
+EXCLUDE_RE='(^|/)(code_version\.csv|assumptions\.csv|behavioral_assumptions\.csv|scenarios\.csv|scenario_config\.csv|dependencies\.csv|calibrations\.csv)$|\.xlsx$'
 
 list_files () {
   (cd "$1" && find . -type f ! -path './_slurm_staging/*' | sort)
@@ -44,7 +46,7 @@ egrowth_neutral_check
 
 # 1. File-set comparison (full sets, before exclusions -- a missing xlsx is
 #    still a failure even though its content is compared differently)
-comm -3 <(list_files "$CAND" | grep -Ev '(^|/)(scenarios\.csv|scenario_config\.csv)$') \
+comm -3 <(list_files "$CAND" | grep -Ev '(^|/)(scenarios\.csv|scenario_config\.csv|calibrations\.csv)$') \
         <(list_files "$GOLD" | grep -Ev "$GOLD_ONLY_RE" \
                                  | grep -Ev '(^|/)assumptions\.csv$') > /tmp/gate_diff_sets.$$ || true
 if [ -s /tmp/gate_diff_sets.$$ ]; then
@@ -84,6 +86,21 @@ done < <(list_files "$GOLD" | grep '\.xlsx$')
 
 # 5. Positive assertions, listed by name so the exclusion list can't rot
 echo "--- positive assertions ---"
+
+# calibrations.csv is candidate-only: it is a manifest the config rebuild added,
+# recording which calibration file supplied which value. Excusing it from the
+# file-set comparison is only safe if it is actually being WRITTEN -- an exclusion
+# that also tolerates absence would quietly cover the manifest silently
+# disappearing. So require it, non-empty, with a header and at least one row.
+if [ ! -s "$CAND/calibrations.csv" ]; then
+  echo "ASSERT FAIL calibrations.csv missing or empty in the candidate"
+  fail=1
+elif [ "$(wc -l < "$CAND/calibrations.csv")" -lt 2 ]; then
+  echo "ASSERT FAIL calibrations.csv has a header but no rows"
+  fail=1
+else
+  echo "ASSERT OK  ./calibrations.csv ($(($(wc -l < "$CAND/calibrations.csv") - 1)) rows)"
+fi
 for f in $(list_files "$GOLD" | grep 'tax_law\.csv$'); do
   if cmp -s "$CAND/$f" "$GOLD/$f"; then echo "ASSERT OK  $f"; else { echo "ASSERT FAIL $f"; fail=1; }; fi
 done

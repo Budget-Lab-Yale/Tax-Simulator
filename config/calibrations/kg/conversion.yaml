@@ -24,8 +24,8 @@
 # HASH RE-PIN 2026-07-26 (calibration switchover): the dependency hashes below
 # were re-pinned after two of the files sigma is pinned against changed -- the
 # entity module's parameter comments were rewritten, and sigma_conversion.R's
-# accessor for sigma itself changed name. No number moved in either. CONDITIONAL on
-# the six-scenario gate, like the earlier re-pins in this project.
+# accessor for sigma itself changed name. No number moved in either. CONFIRMED
+# 2026-07-26 by the six-scenario gate coming back byte-identical.
 
 _channel:
   role: state

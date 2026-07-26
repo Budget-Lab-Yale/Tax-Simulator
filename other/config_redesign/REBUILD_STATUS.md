@@ -468,14 +468,16 @@ call it.** Phase 5 retires it.
 
 ## The six-scenario gate, all passing at `cbc0030d9` (Phase 3b) and again at `60038ed6c` (Phase 4)
 
-| | Runscript | How | Golden | 3b | Phase 4 candidate | Phase 4 |
+| | Runscript | How | Golden | 3b | Phase 4 | Phase 5 |
 |---|---|---|---|---|---|---|
-| S1 | `baseline/baseline` | `main.R`, pct 0.05 | `golds1` | pass | `rb_p4_s1b` | pass |
-| S2 | `rebate_2025` | SLURM, pct 1 | `golds2` | pass | `rb_p4_s2b` | pass |
-| S3 | `tests/multi_module_smoke` | SLURM, pct 1 | `golds3` | pass | `rb_p4_s3b` | pass |
-| S4 | `tests/corp_kgwealth_verify` | SLURM, pct 1 | `golds4` | pass | `rb_p4_s4b` | pass |
-| S6 | `wealth_tax`, scenario `wealth_tax_warren` | SLURM, pct 1 | `golds6` | pass | `rb_p4_s6b` | pass |
-| S7 | `estate_2009` | SLURM, pct 1 | `golds7` | pass | `rb_p4_s7b` | pass |
+| S1 | `baseline/baseline` | `main.R`, pct 0.05 | `golds1` | pass | pass | pass |
+| S2 | `rebate_2025` | SLURM, pct 1 | `golds2` | pass | pass | pass |
+| S3 | `tests/multi_module_smoke` | SLURM, pct 1 | `golds3` | pass | pass | pass |
+| S4 | `tests/corp_kgwealth_verify` | SLURM, pct 1 | `golds4` | pass | pass | pass |
+| S6 | `wealth_tax`, scenario `wealth_tax_warren` | SLURM, pct 1 | `golds6` | pass | pass | pass |
+| S7 | `estate_2009` | SLURM, pct 1 | `golds7` | pass | pass | pass |
+
+Candidate vintages: `rb_p4_s{1..7}b` for Phase 4, `rb_p5b_s{1..7}` for Phase 5.
 
 The Phase 4 column is what settles the ten conditional hash re-pins: they stand,
 and the guard deletions and parameter relocation were behavior-preserving as

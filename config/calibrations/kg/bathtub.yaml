@@ -27,9 +27,9 @@
 # were re-pinned after the kg source files changed in one respect only -- the
 # accessor for these very values changed from economy_param('kg', ...) to
 # kg_bathtub() / kg_setting(), reading the same numbers from their new home. No
-# formula, threshold or magnitude moved. CONDITIONAL, as the two earlier re-pins
-# in this project were: it stands only if the six-scenario byte-identity gate is
-# clean, and becomes a real re-derivation if it is not.
+# formula, threshold or magnitude moved. CONFIRMED 2026-07-26: the six-scenario
+# gate came back byte-identical, including both scenarios that run the bathtub end
+# to end, so the re-pin stands and none of these values needs re-deriving.
 
 _channel:
   role: state
