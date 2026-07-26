@@ -1,0 +1,5 @@
+# Gate fixture S4, baseline leg: the saving-financing channel is off so the
+# baseline is the clean comparison frame for the reform leg's s = 0.5.
+
+financing_profile:
+  value: 'flat:0'

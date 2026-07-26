@@ -49,12 +49,12 @@ tryCatch({
   # Load scenario config
   config = readRDS(file.path(staging_dir, task$scenario, 'config.rds'))
 
-  # Install this scenario's resolved assumptions as the active set. A SLURM
-  # worker is a fresh R process that never runs do_scenario, so without this
-  # every assumption() read errors (fail-closed by design -- see
-  # src/misc/assumptions.R). scenario_info rides in on config.rds, so nothing
-  # extra is serialized.
-  assumptions_activate(config$scenario_info$assumptions)
+  # Install this scenario's resolved configuration. A SLURM worker is a fresh R
+  # process that never runs do_scenario, so without this every economy_param()
+  # read errors (fail-closed by design -- see src/misc/scenario_config.R).
+  # scenario_info rides in on config.rds, so nothing extra is serialized.
+  config_activate(economy  = config$scenario_info$resolved_economy,
+                  behavior = config$scenario_info$resolved_behavior)
 
   # Load baseline MTRs (needed for the behavior modules on the conventional and
   # conv-no-wealth passes)

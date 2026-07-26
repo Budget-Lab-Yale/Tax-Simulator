@@ -1,3 +1,3 @@
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,default,,2025:2034,,,
-estate_2009,public/estate_2009,,2025:2034,,,
+ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,default,default,,2025:2034,,,
+estate_2009,public/estate_2009,default,,2025:2034,,,

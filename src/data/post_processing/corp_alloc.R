@@ -75,7 +75,7 @@ dist_housing_structure_share = function() {
   # Returns: structure share in [0, 1] (dbl).
   #----------------------------------------------------------------------------
 
-  x = suppressWarnings(as.numeric(assumption('distribution',
+  x = suppressWarnings(as.numeric(economy_param('distribution',
                                              'housing_structure_share')))
   if (!is.finite(x) || x < 0 || x > 1) {
     stop('corp_alloc: assumption distribution.housing_structure_share = "', x,
@@ -346,7 +346,7 @@ allocate_corp_dollars = function(amount_billion, sigma_n, weight, labor,
   if (is.na(amount_billion) || amount_billion == 0) return(rep(0, n))
 
   A       = amount_billion * 1e9
-  foreign = assumption('distribution', 'corp_foreign_share')
+  foreign = economy_param('distribution', 'corp_foreign_share')
 
   # A weighted-share leg: amount * base / sum(base * weight), guarding an empty
   # (all-zero) base so the leg contributes nothing rather than NaN

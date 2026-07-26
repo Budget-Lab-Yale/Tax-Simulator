@@ -49,10 +49,11 @@ tryCatch({
 
   # Install this scenario's resolved assumptions as the active set. A SLURM
   # worker is a fresh R process that never runs do_scenario, so without this
-  # every assumption() read errors (fail-closed by design -- see
-  # src/misc/assumptions.R). scenario_info rides in on config.rds, so nothing
+  # every economy_param() read errors (fail-closed by design -- see
+  # src/misc/scenario_config.R). scenario_info rides in on config.rds, so nothing
   # extra is serialized.
-  assumptions_activate(scenario_info$assumptions)
+  config_activate(economy  = scenario_info$resolved_economy,
+                  behavior = scenario_info$resolved_behavior)
 
   if (!scenario_uses_wealth_dynamics(scenario_info)) {
     cat(paste0('Phase 2W: scenario=', task$scenario,

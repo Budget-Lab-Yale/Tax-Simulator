@@ -67,7 +67,7 @@ evasion_response_factor = function(mtr, mtr_baseline, e) {
           abs(net_base) > EVASION_NET_RATE_EPS
 
   pct_chg = rep(NA_real_, length(net_base))
-  pct_chg[valid] = e * assumption('evasion', 'topend_mult') *
+  pct_chg[valid] = e * economy_param('evasion', 'topend_mult') *
                    ((1 - mtr[valid]) / net_base[valid] - 1)
   pct_chg = pmax(-EVASION_MAX_ADJ, pmin(pct_chg, EVASION_MAX_ADJ))
   if_else(is.na(pct_chg), 1, 1 + pct_chg)
@@ -147,10 +147,10 @@ do_evasion = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, inde
   }
 
   message('do_evasion(): applying noncompliance elasticities (', EVASION_VERSION,
-          '; schc=', assumption('evasion', 'e_schc'),
-          ', pt=',   assumption('evasion', 'e_pt'),
-          ', rent=', assumption('evasion', 'e_rent'),
-          ', topend_mult=', assumption('evasion', 'topend_mult'), ')')
+          '; schc=', economy_param('evasion', 'e_schc'),
+          ', pt=',   economy_param('evasion', 'e_pt'),
+          ', rent=', economy_param('evasion', 'e_rent'),
+          ', topend_mult=', economy_param('evasion', 'topend_mult'), ')')
 
   # Net-of-tax response factor, clamped at +/- EVASION_MAX_ADJ. NA in either
   # MTR frame (or a degenerate baseline rate of 1) means no response.
@@ -174,9 +174,9 @@ do_evasion = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, inde
       # evasion->wealth consistency link (an income evader under a wealth tax
       # should not report the assets whose income he hides). Not registered in
       # detail_vars, so they do not leak into the written detail.
-      evasion_g_schc = evasion_response_factor(mtr_sole_prop1,  mtr_sole_prop1_baseline,  assumption('evasion', 'e_schc')),
-      evasion_g_pt   = evasion_response_factor(mtr_part_active, mtr_part_active_baseline, assumption('evasion', 'e_pt')),
-      evasion_g_rent = evasion_response_factor(mtr_rent,        mtr_rent_baseline,        assumption('evasion', 'e_rent')),
+      evasion_g_schc = evasion_response_factor(mtr_sole_prop1,  mtr_sole_prop1_baseline,  economy_param('evasion', 'e_schc')),
+      evasion_g_pt   = evasion_response_factor(mtr_part_active, mtr_part_active_baseline, economy_param('evasion', 'e_pt')),
+      evasion_g_rent = evasion_response_factor(mtr_rent,        mtr_rent_baseline,        economy_param('evasion', 'e_rent')),
 
       # Positive-income gates, evaluated BEFORE any leg is scaled so the
       # companions always ride with their parent

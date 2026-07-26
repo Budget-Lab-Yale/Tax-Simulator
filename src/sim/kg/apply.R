@@ -48,7 +48,7 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset) {
   # (assumption kg.deemed_avoidance), NOT tax law. Scales the per-record deemed
   # contribution to reflect noncompliance / valuation games; does not touch
   # c_phi or the Bellman.
-  deemed_avoidance = assumption('kg', 'deemed_avoidance')
+  deemed_avoidance = economy_param('kg', 'deemed_avoidance')
   if (!is.finite(deemed_avoidance) ||
       deemed_avoidance < 0 || deemed_avoidance > 1) {
     stop(sprintf(
@@ -91,7 +91,7 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset) {
 
   # Resolve the allocation knob to a numeric weight on the G (holdings)
   # share: 'R' = 0 (historical), 'G' = 1, or a numeric blend in [0, 1].
-  applier_allocation = as.character(assumption('kg', 'applier_allocation'))
+  applier_allocation = as.character(economy_param('kg', 'applier_allocation'))
   alpha_G = switch(applier_allocation,
                    R = 0,
                    G = 1,

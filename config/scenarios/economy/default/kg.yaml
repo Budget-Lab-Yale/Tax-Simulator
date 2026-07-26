@@ -1,18 +1,13 @@
-# Capital-gains dynamics (kg_dynamics) -- src/sim/kg/
+# Capital-gains realization dynamics -- src/sim/kg/
 #
-# Model ASSUMPTIONS, not tax law. Defaults here; a scenario overrides one with
-# the runscript column assumption.kg.{name}, or a whole set with an
-# `assumptions` override folder. See src/misc/assumptions.R.
-#
-# The two calibrated pairs are PER RESPONSE FORM. Each form is an independent
-# calibration to the same local moment (E_full = -2.52); response_form selects
-# which pair is live, and only the live form's pair is staleness-checked in
-# practice because the other is not read. Vintages are NOT comparable across
-# forms -- regenerate before comparing.
+# TEMPORARY HOME. This channel moves out of the economy leg later in the
+# rebuild: kg and sigma become calibration stamps under config/calibrations/kg/
+# (read through the behavior leg), and the module-only parameters below get
+# inlined into the behavior module files that are their only readers. It sits
+# here now so exactly one configuration engine is live at a time.
 
-#-------------------------------------------------------------------------------
-# Calibrated
-#-------------------------------------------------------------------------------
+_channel:
+  role: transmission
 
 eta:
   value: 2.4825
@@ -35,11 +30,11 @@ eta:
     - src/sim/kg/timing.R
     - src/sim/kg/apply.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: 38ba1e69dd4c8fc532336fe7723111df
-    src/sim/kg/bellman.R: 561b587d23a1d9e3d3fedd67d624a0c4
-    src/sim/kg/recurrence.R: 692a5185403059c9a00e40b0c4eeeb8c
-    src/sim/kg/timing.R: 00cfed749cf0eab05038d10aeff5034a
-    src/sim/kg/apply.R: f22e5d06355141302c42ce698ec20151
+    src/sim/kg/constants.R: f288154a8081f478729e1a0115eb53a6
+    src/sim/kg/bellman.R: e46275d07b083f26b542b014da53a927
+    src/sim/kg/recurrence.R: 9f179e2f18efa3e1969f1f42310f6226
+    src/sim/kg/timing.R: 145b353488bd511e87f6ee66f22027a8
+    src/sim/kg/apply.R: a3e97d02b0f013b697a0e69d2b76bc22
   rederive: other/top_tax/eta_dial/measure_efull_by_eta.R
   active_when:
     kg.response_form: levels
@@ -72,11 +67,11 @@ eta_logs:
     - src/sim/kg/timing.R
     - src/sim/kg/apply.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: 38ba1e69dd4c8fc532336fe7723111df
-    src/sim/kg/bellman.R: 561b587d23a1d9e3d3fedd67d624a0c4
-    src/sim/kg/recurrence.R: 692a5185403059c9a00e40b0c4eeeb8c
-    src/sim/kg/timing.R: 00cfed749cf0eab05038d10aeff5034a
-    src/sim/kg/apply.R: f22e5d06355141302c42ce698ec20151
+    src/sim/kg/constants.R: f288154a8081f478729e1a0115eb53a6
+    src/sim/kg/bellman.R: e46275d07b083f26b542b014da53a927
+    src/sim/kg/recurrence.R: 9f179e2f18efa3e1969f1f42310f6226
+    src/sim/kg/timing.R: 145b353488bd511e87f6ee66f22027a8
+    src/sim/kg/apply.R: a3e97d02b0f013b697a0e69d2b76bc22
   rederive: other/top_tax/eta_dial/measure_efull_by_eta.R
   active_when:
     kg.response_form: logs
@@ -105,9 +100,9 @@ timeable_share:
     - src/sim/kg/timing.R
     - src/sim/kg/recurrence.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: 38ba1e69dd4c8fc532336fe7723111df
-    src/sim/kg/timing.R: 00cfed749cf0eab05038d10aeff5034a
-    src/sim/kg/recurrence.R: 692a5185403059c9a00e40b0c4eeeb8c
+    src/sim/kg/constants.R: f288154a8081f478729e1a0115eb53a6
+    src/sim/kg/timing.R: 145b353488bd511e87f6ee66f22027a8
+    src/sim/kg/recurrence.R: 9f179e2f18efa3e1969f1f42310f6226
   rederive: other/kg_model_tests/calibrate.R
   active_when:
     kg.response_form: levels
@@ -138,9 +133,9 @@ timeable_share_logs:
     - src/sim/kg/timing.R
     - src/sim/kg/recurrence.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: 38ba1e69dd4c8fc532336fe7723111df
-    src/sim/kg/timing.R: 00cfed749cf0eab05038d10aeff5034a
-    src/sim/kg/recurrence.R: 692a5185403059c9a00e40b0c4eeeb8c
+    src/sim/kg/constants.R: f288154a8081f478729e1a0115eb53a6
+    src/sim/kg/timing.R: 145b353488bd511e87f6ee66f22027a8
+    src/sim/kg/recurrence.R: 9f179e2f18efa3e1969f1f42310f6226
   rederive: other/kg_model_tests/form_ab/confirm_efull_logs.R
   active_when:
     kg.response_form: logs

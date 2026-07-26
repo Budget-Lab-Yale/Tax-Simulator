@@ -86,10 +86,10 @@ CORP_FLOWS_INTERNAL = c('kg_st', 'kg_lt', 'kg_1250', 'kg_collect',
 # Values and provenance: config/assumptions/corp.yaml (corp.asset_exposure_*),
 # assembled by corp_asset_exposure().
 corp_asset_exposure = function() {
-  c('value.equities' = assumption('corp', 'asset_exposure_equities'),
-    'value.dc'       = assumption('corp', 'asset_exposure_dc'),
-    'value.trusts'   = assumption('corp', 'asset_exposure_trusts'),
-    'value.re_fund'  = assumption('corp', 'asset_exposure_re_fund'))
+  c('value.equities' = economy_param('corp', 'asset_exposure_equities'),
+    'value.dc'       = economy_param('corp', 'asset_exposure_dc'),
+    'value.trusts'   = economy_param('corp', 'asset_exposure_trusts'),
+    'value.re_fund'  = economy_param('corp', 'asset_exposure_re_fund'))
 }
 
 # C-corp share of dividends: config/assumptions/corp.yaml (corp.omega_div).
@@ -622,7 +622,7 @@ corp_env_knobs = function() {
   #----------------------------------------------------------------------------
 
   read_num = function(name, lo, hi) {
-    x = suppressWarnings(as.numeric(assumption('corp', name)))
+    x = suppressWarnings(as.numeric(economy_param('corp', name)))
     if (!is.finite(x) || x < lo || x > hi) {
       stop('corp_incidence: assumption corp.', name, ' = "', x,
            '" is not a number in [', lo, ', ', hi, '].')
@@ -633,17 +633,17 @@ corp_env_knobs = function() {
   list(
     sigma_n = read_num('sigma_n', 0, 1),
     kappa   = read_num('kappa',   0, 1),
-    priced_as_permanent = isTRUE(as.logical(assumption('corp', 'priced_as_permanent')))
+    priced_as_permanent = isTRUE(as.logical(economy_param('corp', 'priced_as_permanent')))
   )
 }
 
 
 
 corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
-                                 sigma_n, kappa, theta = assumption('corp', 'theta'),
-                                 omega_div = assumption('corp', 'omega_div'),
-                                 delta_nipa = assumption('corp', 'delta_nipa'),
-                                 erp = assumption('corp', 'equity_premium'),
+                                 sigma_n, kappa, theta = economy_param('corp', 'theta'),
+                                 omega_div = economy_param('corp', 'omega_div'),
+                                 delta_nipa = economy_param('corp', 'delta_nipa'),
+                                 erp = economy_param('corp', 'equity_premium'),
                                  priced_as_permanent = FALSE,
                                  roll_fn = NULL,
                                  pt_weight = NULL) {

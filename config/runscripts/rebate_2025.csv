@@ -1,3 +1,3 @@
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,default,,2025:2027,,,
-rebate_2025,public/rebate_2025,,2025:2027,,,
+ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,default,default,,2025:2027,,,
+rebate_2025,public/rebate_2025,default,,2025:2027,,,

@@ -1,2 +1,2 @@
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,default,,2021:2035,,,
+ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,default,default,,2021:2035,,,

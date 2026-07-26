@@ -2,7 +2,7 @@
 # write_frozen_params.R
 #
 # Generates the on-model frozen estate measurement resource
-# (config/estate/estate_valuation_params.yaml) from:
+# (config/calibrations/estate/bridge.yaml) from:
 #   - the calibrated valuation parameters in
 #     other/estate_tax/estate_valuation_params.yaml (r, rho_pt, cluster cap)
 #   - the SOI-estimated per-bin inputs at the forward-year convention: death
@@ -46,7 +46,7 @@ bins = soi_fwd %>%
             f_dsue = round(f_dsue, 6))
 gamma = round(soi_fwd$gamma[1], 6)
 
-out_path = file.path(repo_root, 'config', 'estate', 'estate_valuation_params.yaml')
+out_path = file.path(repo_root, 'config', 'calibrations', 'estate', 'bridge.yaml')
 dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
 
 header = c(

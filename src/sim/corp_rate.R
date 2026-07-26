@@ -103,7 +103,7 @@ corp_rate_read_series = function(scenario_tax_law_path) {
 
 
 corp_rate_delta = function(rate_series, rev_corp, static,
-                           eti = assumption('corp', 'rate_eti')) {
+                           eti = economy_param('corp', 'rate_eti')) {
 
   #----------------------------------------------------------------------------
   # The pass-appropriate corporate statutory-rate revenue delta ($B), via the

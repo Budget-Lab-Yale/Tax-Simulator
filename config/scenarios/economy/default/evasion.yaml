@@ -1,18 +1,13 @@
-# Noncompliance / evasion -- config/scenarios/behavior/evasion/debacker.R
+# Income-evasion responses -- config/scenarios/behavior/evasion/debacker.R
 #
-# Model ASSUMPTIONS, not tax law. Override per scenario with the runscript column
-# assumption.evasion.{name}. See src/misc/assumptions.R.
-#
-# These are net-of-tax-rate elasticities of REPORTED income (reported income
-# falls when the MTR rises), applied through the 'netoftax' form. Wages,
-# interest and dividends have NO response by design: information reporting makes
-# them visible (DHY report audit-adjustment rates around 7% for wages against
-# ~74% for sole-proprietor income, and the tax-gap literature puts wage
-# misreporting near 1%).
-#
-# Do NOT stack this module with any generic ETI adjustment -- that double-counts
-# the noncompliance component. Note also that sigma.conv is calibrated as a
-# RESIDUAL given these values, so changing one of them invalidates sigma.
+# TEMPORARY HOME. This channel moves out of the economy leg later in the
+# rebuild: kg and sigma become calibration stamps under config/calibrations/kg/
+# (read through the behavior leg), and the module-only parameters below get
+# inlined into the behavior module files that are their only readers. It sits
+# here now so exactly one configuration engine is live at a time.
+
+_channel:
+  role: transmission
 
 e_schc:
   value: 0.046

@@ -25,20 +25,18 @@ do_scenario = function(ID, baseline_mtrs) {
     print(paste0("Running scenario ", "'", ID, "'"))
   }
   
-  # Get scenario info
+  # Get scenario info and create the scenario's output directory tree (a pure
+  # lookup no longer does this as a side effect; see ensure_scenario_dirs)
   scenario_info = get_scenario_info(ID)
+  ensure_scenario_dirs(scenario_info)
 
-  # Install this scenario's resolved assumptions as the active set, then confirm
-  # no calibrated value has gone stale relative to the inputs it was derived
-  # under. Both must precede any calculation: assumption() reads the active set,
-  # and a stale calibration should stop the run before it produces output.
-  assumptions_activate(scenario_info$assumptions)
-  assumptions_check_staleness(
-    defaults           = globals$assumption_defaults,
-    resolved           = scenario_info$assumptions,
-    interface_vintages = scenario_info$assumption_vintages,
-    enforce            = ASSUMPTIONS_ENFORCE_STALENESS
-  )
+  # Install this scenario's resolved configuration. It must precede any
+  # calculation: economy_param() reads whatever config_activate() installed and
+  # errors if nothing is active. Staleness was already checked, once, at parse
+  # time (parse_globals -> resolve_all_scenarios), which is also what covers
+  # the SLURM path.
+  config_activate(economy  = scenario_info$resolved_economy,
+                  behavior = scenario_info$resolved_behavior)
 
 
   #-----------------
@@ -810,6 +808,14 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
 
   pass_type = match.arg(pass_type)
 
+  # Pass tagging for the economy-leg role gate (config_set_pass): each pass
+  # block below declares itself as it starts -- 'both' mode runs the static
+  # block then the conventional block, so a single top-of-function mapping
+  # would mislabel one of them. The data-load section runs untagged (NA),
+  # matching activation-time state. Always clear on exit so no pass label
+  # leaks across year-tasks.
+  on.exit(config_set_pass(NA), add = TRUE)
+
   if (globals$multicore != 'year') {
     print(paste0('Running ', year, ' (', pass_type, ') for scenario ',
                  "'", scenario_info$ID, "'"))
@@ -918,6 +924,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   uses_corp        = scenario_info$ID != 'baseline' &&
                      scenario_uses_corp_incidence(scenario_info)
   if (pass_type %in% c('both', 'static')) {
+
+    config_set_pass('static')
 
     # kg_dynamics scenarios: inject the mechanical (frozen-realization)
     # carryover/deemed quantities into records BEFORE tax calculation, so the
@@ -1071,6 +1079,9 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   conventional_totals = NULL
 
   if (pass_type %in% c('both', 'conventional', 'conventional_no_wealth')) {
+
+    # conv-no-wealth is a conventional-side pass (behavior on, haircut off)
+    config_set_pass('conventional')
 
     is_convnw     = pass_type == 'conventional_no_wealth'
     # The final conventional pass applies the wealth haircut; the conv-no-wealth
@@ -1388,8 +1399,8 @@ kg_dyn_check_run_compat = function(scenario_info, vat_price_offset) {
                                 vat_price_offset)
 
   # Calibration staleness is no longer checked here: it is enforced model-wide
-  # for every calibrated assumption by assumptions_check_staleness(), called
-  # once per scenario at the head of do_scenario (src/misc/assumptions.R).
+  # for every calibrated value by config_check_staleness(), called once per
+  # scenario at parse time (src/misc/config_parser.R).
 
   invisible(TRUE)
 }

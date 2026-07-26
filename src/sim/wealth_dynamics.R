@@ -102,7 +102,7 @@ WEALTH_CAP_FLOWS_PT = c(
   'scorp_active_loss', 'scorp_passive_loss', 'scorp_179', 'farm'
 )
 # Value and provenance: config/assumptions/wealth.yaml (wealth.cap_flows_pt_weight).
-wealth_cap_flows_pt_weight = function() assumption('wealth', 'cap_flows_pt_weight')
+wealth_cap_flows_pt_weight = function() economy_param('wealth', 'cap_flows_pt_weight')
 
 # SECA/NIIT earner-split companions of the pass-through aggregates. Co-scaled
 # with WEALTH_CAP_FLOWS_PT (same 0.2 factor) so the NIIT/SECA active-vs-passive
@@ -160,7 +160,7 @@ scenario_uses_wealth_dynamics = function(scenario_info) {
   # ~2x split-pass compute. NB: the auto-applied 'default' profile carries a
   # CALIBRATED nonzero surface (persistent-flow anchor; see
   # other/wealth_dynamics/default_s_calibration.md), so unconfigured scenarios
-  # run with the channel ON -- opt out with wealth_financing = none. A
+  # run with the channel ON -- opt out with financing_profile: none. A
   # malformed/missing profile errors here (loudly), by design.
   #----------------------------------------------------------------------------
 
@@ -169,27 +169,23 @@ scenario_uses_wealth_dynamics = function(scenario_info) {
 
 
 
-wealth_dyn_params_path = function() {
-  file.path('./config/wealth/wealth_financing_params.yaml')
-}
-
 wealth_dyn_load_params = function() {
 
   #----------------------------------------------------------------------------
-  # Loads the operational params (NOT reform tax law; never scenario-overridden).
-  # Returns a list with n_pctiles, fmax, and r_total (source + additive_delta).
-  # The saving share s and the transition operator M are NOT here -- they live
-  # in a per-scenario FINANCING PROFILE folder (config/wealth/profiles/<name>/);
-  # see wealth_dyn_resolve_profile().
+  # The bathtub's operational knobs, read from the economy leg's wealth channel.
+  # Returns a list with n_pctiles, fmax, and r_total (source + additive_delta),
+  # the shape the rest of the file already expects. The saving share s and the
+  # transition operator M are NOT here -- they live in a per-scenario FINANCING
+  # PROFILE folder; see wealth_dyn_resolve_profile().
   #----------------------------------------------------------------------------
 
-  p = read_yaml(wealth_dyn_params_path())
-  # Coerce/default the fields the code relies on.
-  p$n_pctiles = as.integer(p$n_pctiles %||% 100L)
-  p$fmax      = as.numeric(p$fmax %||% 0.9)
-  if (is.null(p$r_total)) p$r_total = list()
-  p$r_total$additive_delta = as.numeric(p$r_total$additive_delta %||% 0)
-  p
+  list(
+    n_pctiles = as.integer(economy_param('wealth', 'n_pctiles')),
+    fmax      = as.numeric(economy_param('wealth', 'fmax')),
+    r_total   = list(source         = 'macro_gdp_per_capita',
+                     additive_delta = as.numeric(
+                       economy_param('wealth', 'r_total_additive_delta')))
+  )
 }
 
 
@@ -198,7 +194,7 @@ wealth_dyn_load_params = function() {
 # Financing profile: the bracket-varying saving share s(age, percentile) and the
 # transition operator M, resolved per scenario from a profile FOLDER.
 #
-# A profile folder (config/wealth/profiles/<name>/) holds exactly two files:
+# A profile folder (config/calibrations/wealth_profiles/<name>/) holds two files:
 #   - s.csv : one row per (age, nw_pctile) cell -- columns age, nw_pctile, s --
 #             covering the full WEALTH_DYN age grid x n_pctiles grid (every cell
 #             present exactly once; s in [0, 1] = 1 - MPC).
@@ -207,21 +203,22 @@ wealth_dyn_load_params = function() {
 #             (M.rds -- a matrix or a per-age list -- is also accepted; an absent
 #             M file means identity / full persistence.)
 #
-# Resolution precedence for a scenario (wealth_dyn_profile_spec):
-#   1. wealth_financing = 'none'/'off'   -> channel forced OFF (s == 0 everywhere)
-#   2. wealth_financing = <folder name>  -> that profile (the bracket-varying path)
-#   3. scalar runscript column s set     -> FLAT profile (s_mat = s, M = identity);
-#                                           the back-compatible shorthand
-#   4. nothing specified                 -> the auto-applied 'default' profile
+# The profile is named by ONE economy-leg value, economy.wealth
+# .financing_profile, which takes one of three forms:
+#   'none' / 'off'   -> channel forced OFF (s == 0 everywhere)
+#   'flat:<s>'       -> FLAT profile (constant s_mat, identity M), the
+#                       shorthand that replaced the retired scalar `s` column
+#   <folder name>    -> that profile folder (the bracket-varying path)
 #
 # The channel is ACTIVE iff the resolved s_mat has any positive entry (so a
 # flat-zero profile is a no-op and the ~2x split-pass compute is skipped).
-# The shipped 'default' profile is CALIBRATED (nonzero), so path
-# 4 activates the channel; force it off with wealth_financing = none. The
-# resolved profile is memoized per (kind, value, grid) within a process.
+# The shipped 'default' profile is CALIBRATED (nonzero), so a scenario that
+# says nothing runs with the channel on; force it off with
+# financing_profile: none. The resolved profile is memoized per
+# (kind, value, grid) within a process.
 #-------------------------------------------------------------------------------
 
-WEALTH_PROFILES_ROOT   = './config/wealth/profiles'
+WEALTH_PROFILES_ROOT   = './config/calibrations/wealth_profiles'
 WEALTH_DEFAULT_PROFILE = 'default'
 
 # Per-process memo of resolved profiles (keyed by resolution signature). Each
@@ -234,23 +231,26 @@ wealth_dyn_profile_spec = function(scenario_info) {
   #----------------------------------------------------------------------------
   # Decide WHICH profile source a scenario resolves to, cheaply (no matrices
   # built). Returns list(kind, value) with kind in {'off','folder','scalar'}.
-  # See the precedence note above.
+  # See the note above for the three forms the value can take.
   #----------------------------------------------------------------------------
 
-  wf = scenario_info$wealth_financing
-  wf = if (is.null(wf) || length(wf) == 0 || all(is.na(wf))) NA_character_
-       else trimws(as.character(wf)[1])
+  wf = trimws(as.character(economy_param('wealth', 'financing_profile'))[1])
 
-  if (!is.na(wf) && nzchar(wf)) {
-    if (tolower(wf) %in% c('none', 'off')) return(list(kind = 'off', value = NA))
-    return(list(kind = 'folder', value = wf))
+  if (is.na(wf) || !nzchar(wf)) {
+    return(list(kind = 'folder', value = WEALTH_DEFAULT_PROFILE))
   }
-
-  s = suppressWarnings(as.numeric(scenario_info$s))
-  s = if (length(s) == 0) NA_real_ else s[1]
-  if (!is.na(s)) return(list(kind = 'scalar', value = s))
-
-  list(kind = 'folder', value = WEALTH_DEFAULT_PROFILE)   # auto-applied default
+  if (tolower(wf) %in% c('none', 'off')) {
+    return(list(kind = 'off', value = NA))
+  }
+  if (startsWith(wf, 'flat:')) {
+    s = suppressWarnings(as.numeric(str_remove(wf, '^flat:')))
+    if (is.na(s)) {
+      stop("economy.wealth.financing_profile = '", wf, "' -- the flat shorthand ",
+           'is flat:<number>, e.g. flat:0.5')
+    }
+    return(list(kind = 'scalar', value = s))
+  }
+  list(kind = 'folder', value = wf)
 }
 
 
@@ -363,8 +363,9 @@ wealth_dyn_load_profile_folder = function(name, ages, n_bins) {
   dir = file.path(WEALTH_PROFILES_ROOT, name)
   if (!dir.exists(dir)) {
     stop(sprintf(paste0("wealth_dynamics: financing profile '%s' not found at %s. ",
-                        'Set wealth_financing to a folder under %s, or supply the ',
-                        "scalar `s` column, or ship the '%s' profile."),
+                        'Point economy.wealth.financing_profile at a folder ',
+                        "under %s, use the flat:<s> shorthand, or ship the '%s' ",
+                        'profile.'),
                  name, dir, WEALTH_PROFILES_ROOT, WEALTH_DEFAULT_PROFILE))
   }
   s_path = file.path(dir, 's.csv')
@@ -481,7 +482,7 @@ wealth_dyn_check_provenance = function(scenario_info, params = NULL) {
       'wealth_dynamics PROVENANCE STALE -- conventional estimates may be off-target\n',
       'The wealth bathtub defaults were pinned under conditions that no longer\n',
       'match this run:\n  - ', paste(msgs, collapse = '\n  - '), '\n',
-      'Fix: re-pin WEALTH_DYN_PROVENANCE / wealth_financing_params.yaml, or (for a\n',
+      'Fix: re-pin WEALTH_DYN_PROVENANCE, or (for a\n',
       'deliberate sensitivity test) ignore. Set WEALTH_STRICT_CALIB=1 to hard-stop.\n',
       '=======================================================================')
     if (identical(Sys.getenv('WEALTH_STRICT_CALIB'), '1')) stop(banner)

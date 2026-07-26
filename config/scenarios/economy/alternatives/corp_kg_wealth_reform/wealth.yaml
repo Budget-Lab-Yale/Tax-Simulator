@@ -1,0 +1,6 @@
+# Gate fixture S4, reform leg: half of the net above-baseline during-life tax
+# is financed out of wealth (the flat shorthand for the retired s = 0.5
+# runscript column).
+
+financing_profile:
+  value: 'flat:0.5'

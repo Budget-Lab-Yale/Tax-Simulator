@@ -1,16 +1,11 @@
-# Corporate incidence + statutory-rate scoring -- src/sim/corp/, src/sim/corp_rate.R
+# Corporate incidence channel -- src/sim/corp/
 #
-# Model ASSUMPTIONS, not tax law. Override per scenario with the runscript column
-# assumption.corp.{name}. See src/misc/assumptions.R.
-#
-# Design docs: other/corporate_incidence/{CONSIDERATIONS,FORMAL_MODEL}.md
-# (rulings D1-D18, P1-P14). Several entries below are Phase-0c PLACEHOLDERS the
-# code itself flags as pending measurement -- they are marked `judgment` and say
-# what measurement would replace them.
+# Economy-leg TRANSMISSION channel: how a corporate tax change lands on
+# households. Override per scenario by naming an economy alternative folder in
+# the runscript's `economy` column.
 
-#-------------------------------------------------------------------------------
-# Sourced
-#-------------------------------------------------------------------------------
+_channel:
+  role: transmission
 
 sigma_n:
   value: 0.375

@@ -1,5 +1,5 @@
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,default,,2025:2031,,estate,nextdollar
-wealth_tax_warren,public/wealth_tax_warren,wealth/avoidance estate/avoidance,2025:2031,2026:2027,net_worth estate,nextdollar nextdollar
-wealth_tax_nickel_dime,public/wealth_tax_nickel_dime,wealth/avoidance estate/avoidance,2025:2031,2026:2027,net_worth estate,nextdollar nextdollar
-wealth_tax_nickel_dime_flat,public/wealth_tax_nickel_dime_flat,wealth/avoidance estate/avoidance,2025:2031,2026:2027,net_worth estate,nextdollar nextdollar
+ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,default,default,,2025:2031,,estate,nextdollar
+wealth_tax_warren,public/wealth_tax_warren,default,wealth/avoidance estate/avoidance,2025:2031,2026:2027,net_worth estate,nextdollar nextdollar
+wealth_tax_nickel_dime,public/wealth_tax_nickel_dime,default,wealth/avoidance estate/avoidance,2025:2031,2026:2027,net_worth estate,nextdollar nextdollar
+wealth_tax_nickel_dime_flat,public/wealth_tax_nickel_dime_flat,default,wealth/avoidance estate/avoidance,2025:2031,2026:2027,net_worth estate,nextdollar nextdollar

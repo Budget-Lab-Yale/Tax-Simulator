@@ -126,7 +126,7 @@ corp_apply_to_records = function(tax_units, paths, year,
   fac_pens = 1 - omega_dc * p$mu * dc_share
 
   # kg adjustments (non-kg runs only; see docstring)
-  omega_kg = assumption('corp', 'omega_kg')
+  omega_kg = economy_param('corp', 'omega_kg')
   kg_quantity_fac = 1 + omega_kg * p$phi
   kg_lt_delta = omega_kg * (p$phi * g('kg_lt') -
                             p$mu * pmax(g('kg_lt') + g('kg_lt_basis'), 0))
@@ -274,7 +274,7 @@ corp_apply_kg_quantity_to_records = function(tax_units, paths, year) {
     stop('corp_incidence: no path row for year ', year, ' (kg quantity term).')
   }
   p = paths$sim[i, ]
-  fac = 1 + assumption('corp', 'omega_kg') * p$phi
+  fac = 1 + economy_param('corp', 'omega_kg') * p$phi
   if (abs(fac - 1) < CORP_EPS) return(tax_units)
 
   for (col in intersect(c('kg_lt', 'kg_st', 'kg_lt_basis'), names(tax_units))) {

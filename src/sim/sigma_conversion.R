@@ -93,7 +93,7 @@ SIGMA_CONV_VERSION = paste('2026-07-12 re-derivation to ETI-0.25 (0.08 -> 0.16;'
 # change, so a +5pp wedge at sigma = 0.16 converts 0.8% of the pool) and the
 # SYZZ labor-content share applied to active pass-through legs in the pool now
 # live in config/assumptions/sigma.yaml, with their provenance attached, and are
-# read at the point of use via assumption('sigma', ...). They are scenario-
+# read at the point of use via economy_param('sigma', ...). They are scenario-
 # scoped: a scenario may override either through the runscript, so they must
 # NOT be captured here at source time.
 
@@ -213,7 +213,7 @@ sigma_check_mtr_registration = function(scenario_info) {
 
 sigma_build_ctx = function(scenario_info, tax_law, baseline_root,
                            sample_ids, pct_sample,
-                           sigma = assumption('sigma', 'conv')) {
+                           sigma = economy_param('sigma', 'conv')) {
 
   #----------------------------------------------------------------------------
   # Builds the sigma-conversion context consumed by the bathtub pre-pass
@@ -334,7 +334,7 @@ sigma_compute_conversions = function(pool, thresholds_t,
   dtau_eq = as.numeric(tau_eq_S_col[as.character(pool$age_cohort)]) -
             as.numeric(tau_eq_B_col[as.character(pool$age_cohort)])
 
-  pt_labor_share = assumption('sigma', 'pt_labor_share')
+  pt_labor_share = economy_param('sigma', 'pt_labor_share')
 
   out = pool %>%
     left_join(thresholds_t, by = 'filing_status') %>%
@@ -538,10 +538,10 @@ sigma_module_recompute = function(tax_units, baseline_mtrs, static_mtrs,
          '(it computes conversions and injects the gain-state inflow); ',
          're-run the pipeline with the current runscript.')
   }
-  if (!isTRUE(all.equal(tracker$sigma, assumption('sigma', 'conv')))) {
+  if (!isTRUE(all.equal(tracker$sigma, economy_param('sigma', 'conv')))) {
     stop('sigma_conversion: sigma.conv drift between the pre-pass (',
          tracker$sigma, ') and the behavior module (',
-         assumption('sigma', 'conv'), '). The resolved assumption must be ',
+         economy_param('sigma', 'conv'), '). The resolved assumption must be ',
          'identical across pipeline phases.')
   }
 
@@ -576,7 +576,7 @@ sigma_module_recompute = function(tax_units, baseline_mtrs, static_mtrs,
     thresholds_t = tracker$thresholds,
     tau_eq_B_col = tau_eq_B_col,
     tau_eq_S_col = tau_eq_S_col,
-    sigma        = assumption('sigma', 'conv')
+    sigma        = economy_param('sigma', 'conv')
   )
 
   # Conservation: the module's recomputed conversions must match the cell

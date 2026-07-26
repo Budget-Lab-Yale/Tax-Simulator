@@ -34,7 +34,7 @@ get_estate_params = function(tax_data_path = NULL) {
   #          p_dsue, f_dsue, sorted by lo and tiling [0, Inf))
   #----------------------------------------------------------------------------
 
-  params = read_yaml('./config/estate/estate_valuation_params.yaml')
+  params = read_yaml(economy_param('estate', 'valuation_bridge'))
   params$bins = as_tibble(params$bins) %>%
     mutate(hi = if_else(is.na(hi) | hi == 'Inf', Inf, as.numeric(hi))) %>%
     arrange(lo)
@@ -44,7 +44,7 @@ get_estate_params = function(tax_data_path = NULL) {
       !is.infinite(params$bins$hi[nrow(params$bins)]) ||
       any(head(params$bins$hi, -1) != tail(params$bins$lo, -1))) {
     stop('Estate valuation parameter bins do not tile [0, Inf); regenerate ',
-         'config/estate/estate_valuation_params.yaml')
+         'config/calibrations/estate/bridge.yaml')
   }
 
   if (!is.null(tax_data_path) &&
@@ -55,7 +55,7 @@ get_estate_params = function(tax_data_path = NULL) {
              'and deltas are STALE for this vintage — r/rho_pt and the ',
              'donor-clone cluster cap are vintage-specific. Re-run the ',
              'calibration (other/estate_tax/calibrate_estate_v2.R) and ',
-             'regenerate config/estate/estate_valuation_params.yaml before ',
+             'regenerate config/calibrations/estate/bridge.yaml before ',
              'using estate results.'),
       params$tax_data_vintage, tax_data_path))
   }
@@ -81,7 +81,7 @@ calc_estate_mortality = function(tax_units, cluster_cap, cluster_floor = 5e6) {
   # members' m scaled down so the cluster totals the cap. Only the few
   # pathological mega-clusters trip an absolute threshold; everything else
   # stays exactly raw. The cap VALUE is re-derived per Tax-Data vintage
-  # (frozen in estate_valuation_params.yaml); the RULE is generic.
+  # (frozen in config/calibrations/estate/bridge.yaml); the RULE is generic.
   #
   # This is a cross-RECORD operation (cluster grouping over the full year
   # population) — the reason it lives here and not in the pure calculator.

@@ -45,9 +45,12 @@ Tax-Simulator/
 
 Runscripts are CSV files that define simulation parameters. Think of them as "recipes" for running the model.
 
-**Required Columns:**
+**A runscript names FILES, never values.** The schema is exactly eight columns
+and any other column is a parse error whose message names the replacement:
+
 - `ID`: Scenario identifier (e.g., "TCJA_full_extension"). Reserved word: "baseline"
-- `tax_law`: Path to tax law YAML directory (relative to `config/scenarios/tax_law/`)
+- `tax_law`: `default`, or a path under `config/scenarios/tax_law/alternatives/`
+- `economy`: `default`, or a path under `config/scenarios/economy/alternatives/`
 - `behavior`: Path to behavioral feedback module (relative to `config/scenarios/behavior/`, omit `.R` extension)
 - `years`: Simulation years in format `{start_year}:{end_year}` (e.g., "2024:2034")
 - `dist_years`: Years for full distribution table calculation (computationally intensive)
@@ -56,10 +59,12 @@ Runscripts are CSV files that define simulation parameters. Think of them as "re
 
 Note: if you want to run a policy change starting in t, always start the simulation via `years` earlier -- at least t - 1. 
 
-**Optional Columns:**
-- `dep.{MODEL_NAME}.vintage`: Override dependent model vintage
-- `dep.{MODEL_NAME}.ID`: Override dependent model scenario ID
-- Custom columns can be added if you modify `get_scenario_info()` in `src/misc/config_parser.R`
+Retired columns and where they went: `dep.{MODEL}.vintage` / `dep.{MODEL}.ID`
+→ an economy alternative's `interfaces.yaml`; `s` / `wealth_financing` → an
+economy alternative's `wealth.yaml` (`financing_profile`, which accepts a
+profile folder name, `none`, or the `flat:<s>` shorthand); `assumptions` and
+`assumption.{channel}.{name}` → an economy alternative folder;
+`excess_growth*` → nothing, the machinery was removed from the model.
 
 **Runtime Parameters (command-line arguments, not in runscript CSV):**
 
@@ -162,27 +167,35 @@ Reform YAML files override baseline at the **subparameter level** — the entire
 
 **Detailed override rules, common mistakes, and examples are in the `/policy-config` skill** (`.claude/skills/policy-config/SKILL.md`).
 
-### Model Assumptions
+### Scenario Configuration: the three legs
 
-Tax law says what the policy IS. **Assumptions** say how the world WORKS: η, σ,
-the corporate incidence shares, the evasion elasticities, the estate reporting
-response, the saving profile. They live in `config/assumptions/{channel}.yaml`,
-one file per channel, and are read at the point of use through
-`assumption('kg', 'eta')` — never captured at source time, because they are
-scenario-scoped. Machinery: `src/misc/assumptions.R`.
+A scenario is three pointers, and each of them names a FOLDER:
 
-**A scenario is any counterfactual**, not only a policy change, so any assumption
-is scenario-overridable. Two mechanisms, mirroring the two the runscript already
-had:
-
-| Shape | Mechanism | Follows |
+| Leg | Answers | Where |
 |---|---|---|
-| One value | `assumption.{channel}.{name}` column | `dep.{Interface}.vintage` |
-| A set | `assumptions` column naming a folder under `config/assumptions/` | `tax_law` |
+| `tax_law` | what is the policy | `config/scenarios/tax_law/` |
+| `economy` | how does the world work | `config/scenarios/economy/` |
+| `behavior` | how do agents respond | `config/scenarios/behavior/` |
 
-Precedence: dotted column > folder > default. The wealth saving profile `s` and
-its transition matrix `M` are a TABLE and keep their existing
-`wealth_financing` folder mechanism.
+Every leg has the same shape: a complete `default/` layer, plus sparse deltas
+under `alternatives/` (nesting arbitrary, folders human-named). A runscript cell
+is the reserved word `default` or a path under that leg's `alternatives/`.
+Resolution machinery for the economy and behavior legs is
+`src/misc/scenario_config.R`; tax law keeps its own subparameter-replacement
+parser (`src/data/tax_law.R`), reached through `tax_law_path()`.
+
+Economy values — η, σ, the corporate incidence shares, the evasion
+elasticities, the estate reporting response, the interface vintages, the saving
+profile — are read at the point of use through `economy_param('kg', 'eta')`,
+never captured at source time, because they are scenario-scoped. Override
+granularity is the whole named entry: an alternative's file replaces value,
+kind and provenance together, never merges within an entry. `locked: true`
+entries (the estate valuation bridge) refuse override outright.
+
+Each economy channel file declares a `_channel` role. A `transmission` channel
+is conventional-side only, and reading one on the static pass is an error —
+which is what makes "static results are law-only" a machine-checked property
+rather than a convention. `state` channels are readable on both passes.
 
 **Every entry declares a `kind`, and each kind owes different provenance.** The
 schema check at load time is what stops an undocumented number being added.
@@ -195,41 +208,41 @@ schema check at load time is what stops an undocumented number being added.
 | `structural` | a model-form switch | `note` | no |
 
 Only `calibrated` values can go stale, because only they have inputs. A stale
-value **HARD STOPS the run** (`ASSUMPTIONS_ENFORCE_STALENESS`), on either of two
-arms: the data vintages in `derived_under` no longer match the run's, or a file
-in `invalidated_by` has changed content since the value was pinned. Three
-legitimate ways past a stop, all visible in the output: re-derive and re-pin,
-override the value in the runscript, or add a dated `acknowledged: {date, reason}`
-block. Two optional fields: `active_when` marks an entry the live configuration
-does not read (the kg per-form pairs), and `acknowledged` is the waiver.
+value **HARD STOPS the run** (`CONFIG_ENFORCE_STALENESS`), on three arms: the
+data vintages in `derived_under` no longer match the run's, a file in
+`invalidated_by` has changed content since the value was pinned, or a
+`conditioned_on` configuration value has moved. The check runs ONCE, at parse
+time (`parse_globals` → `resolve_all_scenarios`), which is also what covers the
+SLURM path. Three legitimate ways past a stop, all visible in the output:
+re-derive and re-pin, override the value in an alternative, or put a dated
+`waiver: {date, reason}` block on the entry in the POINTING alternative file.
+`active_when` marks an entry the live configuration does not read (the kg
+per-form pairs).
 
 **After a behavior-preserving refactor** that touches a file listed in some
-`invalidated_by`, verify byte-identical output first, then run
-`assumptions_repin_hashes()` — never the other way round.
+`invalidated_by`, verify byte-identical output first, then re-pin the hash —
+never the other way round.
 
-**What does NOT go here:** numerical plumbing (epsilons, tolerances), guard caps
-(`fmax`, `CORP_MU_MAX`), structural bounds (age topcodes), operational toggles,
-and the estate MEASUREMENT bridge in
-`config/estate/estate_valuation_params.yaml` (it measures the data, not a
-counterfactual, and is generated by a script).
+**What does NOT go here:** numerical plumbing (epsilons, tolerances), structural
+bounds (age topcodes), and operational toggles.
 
 **Environment variables are retired.** The nineteen `KG_ETA`/`SIGMA_CONV`/
-`CORP_KAPPA`-style back doors are gone, along with the warn-only
-`KG_DYN_CALIB_PROVENANCE` / `WEALTH_DYN_PROVENANCE` stamps, `KG_STRICT_CALIB`,
-and `other/kg_model_tests/calibration_reference.csv`. A sweep is now a scenario,
-which means it is recorded in the vintage instead of vanishing with the shell.
+`CORP_KAPPA`-style back doors are gone. A sweep is now a scenario, which means
+it is recorded in the vintage instead of vanishing with the shell.
 
-**Every vintage carries a four-file manifest** at its root: `dependencies.csv`
-(interface versions), `behavioral_assumptions.csv` (tax law + modules),
-`assumptions.csv` (every resolved value, its kind, and whether the scenario
-overrode it), and `code_version.csv` (git commit + dirty flag).
+**Every vintage carries a manifest** at its root: `dependencies.csv` (interface
+versions), `scenarios.csv` (the three leg pointers per scenario),
+`scenario_config.csv` (every resolved value, its kind and role, and whether the
+scenario overrode it), `behavioral_assumptions.csv` (tax law + modules), and
+`code_version.csv` (git commit + dirty flag).
 
 **SLURM:** `globals` and `scenario_info` already serialize wholesale, so nothing
-extra is staged — but every driver must call
-`assumptions_activate(scenario_info$assumptions)` after loading `config.rds`,
-because `assumption()` is fail-closed and errors if no scenario is active. This
-is already done in `worker.R`, `frozen.R`, `bathtub.R`, `wealth.R` and both
-`aggregate.R` phases; a NEW driver must do it too.
+extra is staged — but every driver must call `config_activate(economy =
+scenario_info$resolved_economy, behavior = scenario_info$resolved_behavior)`
+after loading `config.rds`, because `economy_param()` is fail-closed and errors
+if no scenario is active. This is already done in `worker.R`, `frozen.R`,
+`bathtub.R`, `wealth.R` and both `aggregate.R` phases; a NEW driver must do it
+too.
 
 ### On-Model Estate Tax
 
@@ -242,7 +255,7 @@ each death year is independent, expected-value). Key facts:
   parameter. The MEASUREMENT bridge from Tax-Data economic wealth to reported
   gross estate (valuation factors r/rho_pt, per-bin deduction/DSUE fractions, gift
   add-back gamma, donor-clone cluster cap) lives in
-  `config/estate/estate_valuation_params.yaml` and must NEVER be overridden by a
+  `config/calibrations/estate/bridge.yaml` and must NEVER be overridden by a
   reform. Regenerate it with `other/estate_tax/write_frozen_params.R` (sbatch)
   after any re-calibration; it is pinned to a Tax-Data vintage and the sim warns
   on mismatch.
@@ -288,7 +301,7 @@ estate tax and wealth-tax ↔ capital-income tax. Code: `src/sim/wealth_dynamics
   channel is configured by a per-scenario **FINANCING PROFILE** — a
   bracket-varying saving share `s(age, net-worth percentile)` plus a within-age
   transition matrix `M` — resolved by `wealth_dyn_resolve_profile()` from a
-  **folder** under `config/wealth/profiles/<name>/` (two files: `s.csv` =
+  **folder** under `config/calibrations/wealth_profiles/<name>/` (two files: `s.csv` =
   per-cell `s = 1 − MPC`; `M.csv` = the `n_pctiles × n_pctiles` transition,
   absent ⇒ identity). Two runscript columns select it: `wealth_financing` (a
   profile folder name, or `none`/`off` to force off) and the back-compatible
@@ -344,9 +357,8 @@ estate tax and wealth-tax ↔ capital-income tax. Code: `src/sim/wealth_dynamics
 - **Guards** (mirror kg): `wealth_dyn_check_run_compat()` hard-stops `pct_sample ≠
   1` / VAT / excess-growth; `wealth_dyn_check_provenance()` (`WEALTH_DYN_PROVENANCE`
   stamp) warns on a stale Macro vintage (`WEALTH_STRICT_CALIB=1` stops).
-- **Operational params** in `config/wealth/wealth_financing_params.yaml` (`fmax`,
-  `n_pctiles`, `r_total` additive-delta) — NOT a reform file, never
-  scenario-overridden. `s` and `M` are NOT here: they live in the per-scenario
+- **Operational params** in the economy leg's `wealth.yaml` (`fmax`,
+  `n_pctiles`, `r_total_additive_delta`) — structural knobs, not a reform file. `s` and `M` are NOT here: they live in the per-scenario
   financing **profile** folder (above). Profiles are regenerated by
   `other/wealth_dynamics/write_profiles.py`. (NB: the old global
   `transition_matrix_file` YAML knob and the `bounding_orchestrator.sh` that
@@ -604,7 +616,7 @@ The SLURM pipeline duplicates orchestration logic from `main.R`, `run_sim()`, an
 | `do_scenario()` wealth/conv-no-wealth pass sequencing or a new `pass_type` | `src/slurm/worker.R` (2N dispatch), `src/slurm/setup.R` (2N/2W manifest + `N_PHASE2N`/`N_PHASE2W`), `slurm_run.sh` (2N/2W phases + 2C deps) |
 | `main.R` stacked post-processing or `purge_detail()` | `src/slurm/aggregate.R` Phase 4 |
 | `parse_globals()` return structure                  | `src/slurm/setup.R` serialization |
-| A new SLURM driver script                           | must call `assumptions_activate(scenario_info$assumptions)` after loading `config.rds` |
+| A new SLURM driver script                           | must call `config_activate(economy = scenario_info$resolved_economy, behavior = scenario_info$resolved_behavior)` after loading `config.rds` |
 | New global free variables used by post-processing   | `src/slurm/common.R` `reconstitute_environment()` |
 | `run_one_year()` signature                          | `src/slurm/worker.R` |
 

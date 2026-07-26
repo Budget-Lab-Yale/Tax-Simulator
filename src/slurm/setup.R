@@ -103,8 +103,10 @@ for (sid in scenarios_to_build) {
   scenario_staging = file.path(staging_dir, sid)
   dir.create(scenario_staging, recursive = T, showWarnings = F)
 
-  # Get scenario info (also creates output directories)
+  # Get scenario info and create the output directory tree (build_tax_law
+  # below writes into supplemental/; get_scenario_info is a pure lookup)
   scenario_info = get_scenario_info(sid)
+  ensure_scenario_dirs(scenario_info)
 
   # Calculate offsets
   vat_price_offset = get_vat_price_offset(

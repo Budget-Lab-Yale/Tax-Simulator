@@ -120,7 +120,7 @@ do_conversion = function(tax_units, baseline_mtrs, static_mtrs,
   state = readRDS(state_path)
 
   message('do_conversion(): applying sigma income conversion (',
-          SIGMA_CONV_VERSION, '; sigma = ', assumption('sigma', 'conv'), ')')
+          SIGMA_CONV_VERSION, '; sigma = ', economy_param('sigma', 'conv'), ')')
 
   conv = sigma_module_recompute(
     tax_units     = tax_units,

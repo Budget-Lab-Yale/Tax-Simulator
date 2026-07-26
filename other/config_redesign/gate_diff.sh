@@ -13,7 +13,9 @@ fail=0
 
 # Manifest families are verified by the mapping check, not here. xlsx and
 # code_version.csv are excluded from byte comparison (content-checked / by
-# construction different).
+# construction different). assumptions.csv is a golden-only manifest: the
+# candidate writes scenario_config.csv in its place, and mapping_check.py is
+# what confirms the two carry the same values.
 EXCLUDE_RE='(^|/)(code_version\.csv|assumptions\.csv|behavioral_assumptions\.csv|scenarios\.csv|scenario_config\.csv|dependencies\.csv)$|\.xlsx$'
 
 list_files () {
@@ -43,7 +45,8 @@ egrowth_neutral_check
 # 1. File-set comparison (full sets, before exclusions -- a missing xlsx is
 #    still a failure even though its content is compared differently)
 comm -3 <(list_files "$CAND" | grep -Ev '(^|/)(scenarios\.csv|scenario_config\.csv)$') \
-        <(list_files "$GOLD" | grep -Ev "$GOLD_ONLY_RE") > /tmp/gate_diff_sets.$$ || true
+        <(list_files "$GOLD" | grep -Ev "$GOLD_ONLY_RE" \
+                                 | grep -Ev '(^|/)assumptions\.csv$') > /tmp/gate_diff_sets.$$ || true
 if [ -s /tmp/gate_diff_sets.$$ ]; then
   echo "FILE-SET MISMATCH (left-only = candidate, right-only = golden):"
   cat /tmp/gate_diff_sets.$$

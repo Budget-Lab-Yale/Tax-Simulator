@@ -1,83 +1,224 @@
 #-----------------------------------------------------------------------
-# config_parser.R 
-# 
-# Contains functions to parse runtime options and build interface paths
+# config_parser.R
+#
+# Parses runtime options and the runscript, resolves each scenario's
+# three-leg configuration (tax_law pointer, economy leg, behavior leg),
+# builds version-consistent interface paths, and writes the run manifest.
+#
+# A scenario row is exactly: ID + three leg pointers (tax_law, economy,
+# behavior) + computational scope (years, dist_years, mtr_vars, mtr_types).
+# It names FILES, never values -- every value the runscript used to carry
+# now lives in a folder under config/scenarios/{leg}/alternatives/, which is
+# what gives it provenance. Any other column is fatal, with a message naming
+# its replacement (see config/scenarios/README.md).
 #-----------------------------------------------------------------------
 
 
+# The runscript schema, in full. Anything else is fatal: a value that used to
+# be a CSV cell now belongs in an alternative folder, and a typo should die at
+# parse rather than silently do nothing.
+RUNSCRIPT_FIXED_COLS = c('ID', 'tax_law', 'economy', 'behavior', 'years',
+                         'dist_years', 'mtr_vars', 'mtr_types')
+
+# Retired column -> replacement, for the hard-error message.
+ALT_HINT = paste0('an economy alternative folder ',
+                  '(config/scenarios/economy/alternatives/<name>/')
+GONE = 'nothing -- the excess-growth machinery was removed from the model'
+RUNSCRIPT_RETIRED = c(
+  'dep.{X}.vintage'        = paste0(ALT_HINT, 'interfaces.yaml -> {x}_vintage)'),
+  'dep.{X}.ID'             = paste0(ALT_HINT, 'interfaces.yaml -> {x}_id)'),
+  'assumptions'            = 'the economy / behavior columns',
+  'assumption.{ch}.{nm}'   = 'an economy or behavior alternative folder entry {ch}.{nm} (see config/scenarios/README.md)',
+  's'                      = paste0(ALT_HINT, 'wealth.yaml -> financing_profile: flat:<s>)'),
+  'wealth_financing'       = paste0(ALT_HINT, 'wealth.yaml -> financing_profile)'),
+  'excess_growth'          = GONE,
+  'excess_growth_start_year' = GONE,
+  'excess_growth_all_rev'  = GONE,
+  'corp_incidence_phasein' = 'nothing (it was never read)',
+  'first_year'             = 'the years column ({start}:{end})',
+  'last_year'              = 'the years column ({start}:{end})'
+)
 
 
-parse_globals = function(runscript_name, scenario_id, local, vintage, 
-                         baseline_vintage, pct_sample, multicore) {
-  
+
+validate_runscript_columns = function(runscript, runscript_name) {
+
   #----------------------------------------------------------------------------
-  # Parses data interface versioning requirements and runscript; generates 
-  # scenario-specific, version-consistent filepaths for data interfaces. 
-  # Confirms that these filepaths exist. 
-  # 
+  # Enforces the three-leg runscript schema: the eight fixed columns and
+  # nothing else. Collects ALL violations and stops once, mapping each retired
+  # column to its replacement.
+  #----------------------------------------------------------------------------
+
+  cols = colnames(runscript)
+  bad  = c()
+
+  describe_retired = function(col) {
+    if (str_detect(col, '^dep[.].+[.]vintage$')) {
+      iface = col %>% str_remove('^dep[.]') %>% str_remove('[.]vintage$')
+      key   = iface %>% str_to_lower() %>% str_replace_all('[ -]', '_')
+      return(paste0(col, ' : name an economy alternative whose interfaces.yaml ',
+                    'gives ', key, '_vintage'))
+    }
+    if (str_detect(col, '^dep[.].+[.]ID$')) {
+      iface = col %>% str_remove('^dep[.]') %>% str_remove('[.]ID$')
+      key   = iface %>% str_to_lower() %>% str_replace_all('[ -]', '_')
+      return(paste0(col, ' : name an economy alternative whose interfaces.yaml ',
+                    'gives ', key, '_id'))
+    }
+    if (str_detect(col, '^(economy|behavior)[.]')) {
+      return(paste0(col, ' : per-value override columns were removed -- ',
+                    'put the value in an alternative folder and name the ',
+                    'folder in the ', str_extract(col, '^(economy|behavior)'),
+                    ' column'))
+    }
+    if (str_detect(col, '^assumption[.]')) {
+      return(paste0(col, ' : use ', RUNSCRIPT_RETIRED[['assumption.{ch}.{nm}']]))
+    }
+    if (col %in% names(RUNSCRIPT_RETIRED)) {
+      return(paste0(col, ' : use ', RUNSCRIPT_RETIRED[[col]]))
+    }
+    paste0(col, ' : unknown column (the runscript schema is a strict whitelist)')
+  }
+
+  for (col in setdiff(cols, RUNSCRIPT_FIXED_COLS)) {
+    bad = c(bad, describe_retired(col))
+  }
+
+  missing = setdiff(c('ID', 'tax_law', 'years'), cols)
+  if (length(missing) > 0) {
+    bad = c(bad, paste0('missing required column(s): ', paste(missing, collapse = ', ')))
+  }
+
+  if (length(bad) > 0) {
+    stop(paste0(
+      "Invalid runscript '", runscript_name, "':\n  - ",
+      paste(bad, collapse = '\n  - '), '\n',
+      'A runscript names FILES, not values: the schema is exactly\n  ',
+      paste(RUNSCRIPT_FIXED_COLS, collapse = ', '), '\n',
+      'Every per-value column mechanism (dep.*, assumption.*, s /\n',
+      'wealth_financing, excess_growth*, and the dotted {leg}.{channel}.{name}\n',
+      'form) was removed in the three-leg redesign; there is no fallback.\n',
+      'Mapping table and auto-rewrite: config/scenarios/README.md,\n',
+      '  python3 other/migrations/migrate_runscripts.py --check <runscript>\n'))
+  }
+
+  invisible(TRUE)
+}
+
+
+
+read_runscript = function(runscript_name, scenario_id) {
+
+  #----------------------------------------------------------------------------
+  # Reads and validates a runscript CSV, fills absent optional leg columns,
+  # and subsets to the requested scenario. The baseline row is always
+  # retained: whether baseline actually RUNS is governed by baseline_vintage
+  # (main.R / src/slurm/setup.R), but its interface paths and scenario info
+  # must remain resolvable either way -- post-processing looks them up by
+  # ID == 'baseline' (e.g. get_other_taxes() in distribution.R), and dropping
+  # the row crashes Phase 3b in scenario-subset runs.
+  #----------------------------------------------------------------------------
+
+  runscript = runscript_name %>%
+    paste0('.csv') %>%
+    file.path('./config/runscripts/', .) %>%
+    read_csv(show_col_types = FALSE)
+
+  validate_runscript_columns(runscript, runscript_name)
+
+  for (col in c('economy', 'behavior', 'dist_years', 'mtr_vars', 'mtr_types')) {
+    if (!(col %in% colnames(runscript))) {
+      runscript[[col]] = NA_character_
+    }
+  }
+
+  if (!is.null(scenario_id)) {
+    if (!(scenario_id %in% runscript$ID)) {
+      stop("Scenario ID '", scenario_id, "' not found in runscript")
+    }
+    runscript %<>%
+      filter(ID %in% c('baseline', scenario_id))
+  }
+
+  runscript
+}
+
+
+
+parse_globals = function(runscript_name, scenario_id, local, vintage,
+                         baseline_vintage, pct_sample, multicore) {
+
+  #----------------------------------------------------------------------------
+  # Parses data interface versioning requirements and the runscript, resolves
+  # every scenario's economy and behavior legs, generates version-consistent
+  # interface filepaths (confirming they exist), and writes the run manifest.
+  #
   # Parameters:
-  #   - runscript_name (str)   : name of runscript CSV file 
-  #   - scenario_id (str)      : optional name of scenario ID contained in 
-  #                              the runscript; "NULL" indicates all 
+  #   - runscript_name (str)   : name of runscript CSV file
+  #   - scenario_id (str)      : optional name of scenario ID contained in
+  #                              the runscript; "NULL" indicates all
   #   - local (int)            : whether this is a local run (1) or a production
-  #                              run (0)  
-  #   - vintage (str)          : optional argument (NULL if not provided) to 
-  #                              manually supply output vintage folder rather 
+  #                              run (0)
+  #   - vintage (str)          : optional argument (NULL if not provided) to
+  #                              manually supply output vintage folder rather
   #                              than being dynamically generated. Of the format
   #                              YYYYMMDDHHMM.
-  #   - baseline_vintage (str) : optional argument (NULL if not provided) to 
+  #   - baseline_vintage (str) : optional argument (NULL if not provided) to
   #                              skip the baseline run and instead use an existing
-  #                              baseline run for MTRs and revenue estimates. Of 
-  #                              the format YYYYMMDDHHMM. 
-  #   - pct_sample (dbl)       : share of records used in simulation 
+  #                              baseline run for MTRs and revenue estimates. Of
+  #                              the format YYYYMMDDHHMM.
+  #   - pct_sample (dbl)       : share of records used in simulation
   #   - multicore (str)        : dimension across which to parallelize code. One
-  #                              of three values: 'none', 'scenario', or 'year'. 
-  #                              Given enough cores, choose the dimension with 
+  #                              of three values: 'none', 'scenario', or 'year'.
+  #                              Given enough cores, choose the dimension with
   #                              the largest N (generally 'year'). But note that
   #                              some behavioral feedback modules require
   #                              sequential calculation of year, in which case
   #                              'year' is not a valid option and will result in
   #                              a race condition. Always review before running!
   #
-  # Returns: list of 8:
-  #   - random_numbers (df)  : tibble of random numbers used across simulations
-  #   - runscript (df)       : tibble representation of the runscripts CSV
-  #   - interface_paths (df) : tibble with ID-interface-filepath info in rows 
-  #   - output_root (str)    : path where output data is written
-  #   - baseline_root (str)  : path where baseline data is written/read from
-  #   - pct_sample (dbl)     : share of records used in simulation 
-  #   - sample_ids (int[])   : vector of tax unit IDs comprising the
-  #                            sample population (all IDs for 100%)
-  #   - detail_vars (str[])  : vector of microdata output column names
-  #   - multicore (str)      : parallelization setting (see arguments)
+  # Returns: list of:
+  #   - random_numbers (df)   : tibble of random numbers used across simulations
+  #   - random_seed (int)     : the seed those draws were made under
+  #   - runscript (df)        : tibble representation of the runscript CSV
+  #   - scenario_configs (list): per-ID resolved configuration (economy leg,
+  #                             behavior leg, interface paths)
+  #   - interface_paths (df)  : tibble with ID-interface-filepath info in rows
+  #   - output_root (str)     : path where output data is written
+  #   - baseline_root (str)   : path where baseline data is written/read from
+  #   - pct_sample (dbl)      : share of records used in simulation
+  #   - sample_ids (int[])    : vector of tax unit IDs comprising the
+  #                             sample population (all IDs for 100%)
+  #   - detail_vars (str[])   : vector of microdata output column names
+  #   - multicore (str)       : parallelization setting (see arguments)
+  #   - economy_defaults / behavior_defaults : each leg's default layer
   #----------------------------------------------------------------------------
-  
+
   # Set random seed. Stored in the returned globals so behavior modules can
   # re-seed before RNG use (the CLAUDE.md module convention) and so SLURM
   # workers -- fresh R processes that never run this function -- can seed
-  # identically (src/slurm/common.R)
+  # identically (src/slurm/common.R). This block stays FIRST: nothing between
+  # here and the sample_frac/runif block below may consume RNG, or every draw
+  # in the model shifts.
   random_seed = 76
   set.seed(random_seed)
-  
-  # Read and parse data dependency interface file paths
-  output_roots           = read_yaml('./config/interfaces/output_roots.yaml')
+
+  # Read interface metadata: type + version per interface. (Interface VINTAGES
+  # are economy-leg configuration; the version is repo-pinned here because it
+  # tracks code compatibility, not world description.)
+  output_roots           = read_yaml('./config/output_roots.yaml')
   interface_versions_raw = read_yaml('./config/interfaces/interface_versions.yaml')
-  interface_versions = interface_versions_raw %>%
-    map2(.x = ., 
-         .y = names(.), 
-         .f = ~ file.path(output_roots$production, 
-                          .x$type, 
-                          .y, 
-                          paste0('v', .x$version))) %>% 
-    as_tibble() %>% 
-    pivot_longer(cols      = everything(), 
-                 names_to  = 'interface', 
-                 values_to = 'path') %>% 
-    filter(interface != 'Tax-Simulator')
-  
-  # Get default vintages/scenario IDs
-  interface_defaults = interface_versions_raw %>%
-    map(.f = ~ .x[c('default_vintage', 'default_id')])
+  interface_meta = names(interface_versions_raw) %>%
+    discard(.p = ~ .x == 'Tax-Simulator') %>%
+    set_names(.) %>%
+    map(.f = ~ list(
+      key  = str_to_lower(str_replace_all(.x, '[ -]', '_')),
+      root = file.path(output_roots$production,
+                       interface_versions_raw[[.x]]$type,
+                       .x,
+                       paste0('v', interface_versions_raw[[.x]]$version)),
+      version = interface_versions_raw[[.x]]$version
+    ))
 
   # Set model version and vintage
   version = interface_versions_raw$`Tax-Simulator`$version
@@ -92,165 +233,59 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     output_root = file.path(output_roots$local, 'model_data', output_branch)
   }
   dir.create(output_root, recursive = T, showWarnings = F)
-  
-  # Determine baseline output path 
+
+  # Determine baseline output path
   if (is.null(baseline_vintage)) {
     baseline_root = output_root
   } else {
-    baseline_root = output_root %>% 
-      str_remove(paste0('/',vintage)) %>% 
+    baseline_root = output_root %>%
+      str_remove(paste0('/',vintage)) %>%
       file.path(baseline_vintage)
-    
+
     if (!dir.exists(baseline_root)) {
       stop('User-supplied vintage for baseline does not exist!')
     }
-    
+
     if(baseline_vintage != vintage) {
       dir.create(file.path(output_root, 'baseline'), showWarnings = T)
-      
+
       file.copy(
         list.files(file.path(baseline_root, 'baseline'), full.names = T),
         file.path(output_root, 'baseline'),
         recursive = T
-      ) 
+      )
     }
   }
-  
-  # Read runscript
-  runscript = runscript_name %>% 
-    paste0('.csv') %>%
-    file.path('./config/runscripts/', .) %>% 
-    read_csv(show_col_types = F)
-  
-  # Add nonspecified default vintages and scenario IDs to runscript
-  for (dep in names(interface_defaults)) {
-    
-    # Skip specified interfaces
-    if (dep == 'Tax-Simulator' | (paste0('dep.', dep, '.vintage') %in% colnames(runscript))) {
-      if (dep == 'Tax-Simulator' | (paste0('dep.', dep, '.ID') %in% colnames(runscript))) {
-        next
-      } else {
-        stop('Users specifying which vintage to use must also supply an ID within that directory.')
-      }
-    } 
-    
-    if (dep == 'Tax-Simulator' | (paste0('dep.', dep, '.ID') %in% colnames(runscript))) {
-      if (dep == 'Tax-Simulator' | (paste0('dep.', dep, '.vintage') %in% colnames(runscript))) {
-        next
-      } else {
-        runscript[[paste0('dep.', dep, '.vintage')]] = interface_defaults[[dep]]$default_vintage
-        next
-      }
-    }
-    
-    # Add columns
-    runscript[[paste0('dep.', dep, '.vintage')]] = interface_defaults[[dep]]$default_vintage
-    runscript[[paste0('dep.', dep, '.ID')]]      = interface_defaults[[dep]]$default_id
-  }
-  
-  # Wealth-dynamics financing inputs (src/sim/wealth_dynamics.R). The channel is
-  # configured by a per-scenario FINANCING PROFILE -- a bracket-varying saving
-  # share s(age, net-worth percentile) plus a transition matrix M -- resolved by
-  # wealth_dyn_resolve_profile(). Two runscript columns feed it:
-  #   - wealth_financing : a profile FOLDER name under config/wealth/profiles/
-  #                        (the bracket-varying path), or 'none'/'off' to force
-  #                        the channel off. Absent => the auto-applied 'default'
-  #                        profile (unless the scalar `s` below is set).
-  #   - s                : the back-compatible FLAT shorthand (s = 1 - MPC, applied
-  #                        uniformly with identity M). Absent => NA (not 0), so an
-  #                        explicit s = 0 -- a deliberate "channel off" -- is
-  #                        distinguishable from an unset column that falls back to
-  #                        the default profile.
-  if (!('wealth_financing' %in% colnames(runscript))) {
-    runscript$wealth_financing = NA_character_
-  }
-  if (!('s' %in% colnames(runscript))) {
-    runscript$s = NA_real_
-  }
 
-  # Model assumptions (src/misc/assumptions.R). Defaults live in
-  # config/assumptions/{channel}.yaml; a scenario overrides them either with an
-  # `assumptions` folder (the tax_law pattern) or with assumption.{channel}.{name}
-  # columns (the dep.{interface}.vintage pattern). Loading validates the schema,
-  # so a malformed or under-documented entry fails here rather than mid-run.
-  assumption_defaults = assumptions_load_defaults()
-  if (!('assumptions' %in% colnames(runscript))) {
-    runscript$assumptions = NA_character_
-  }
+  # Read and validate runscript (strict three-leg schema; baseline row retained)
+  runscript = read_runscript(runscript_name, scenario_id)
 
-  # Subset runscript to specified ID, if supplied. The baseline row is always
-  # retained: whether baseline actually RUNS is governed by baseline_vintage
-  # (main.R / src/slurm/setup.R), but its interface paths and scenario info
-  # must remain resolvable either way — post-processing looks them up by
-  # ID == 'baseline' (e.g. get_other_taxes() in distribution.R), and dropping
-  # the row crashes Phase 3b in scenario-subset runs.
-  if (!is.null(scenario_id)) {
-    if (!(scenario_id %in% runscript$ID)) {
-      stop("Scenario ID '", scenario_id, "' not found in runscript")
-    }
-    runscript %<>%
-      filter(ID %in% c('baseline', scenario_id))
-  }
-  
-  # Write dependencies CSV; this is a vintage-level file which lists all 
-  # other model vintages on which these Tax-Simmulator results are dependent
-  dependencies = runscript %>% 
-    select(TaxSimulatorID = ID, starts_with('dep.')) %>% 
-    mutate(across(.cols = everything(),
-                  .fns  = as.character)) %>% 
-    pivot_longer(cols         = -TaxSimulatorID, 
-                 names_prefix = 'dep.', 
-                 names_sep    = '[.]', 
-                 names_to     = c('interface', 'series')) %>% 
-    pivot_wider(names_from  = series, 
-                values_from = value) %>% 
-    left_join(interface_versions_raw %>%
-                map(~ .$version) %>%
-                as_tibble() %>% 
-                pivot_longer(cols      = everything(), 
-                             names_to  = 'interface', 
-                             values_to = 'version'), 
-              by = 'interface') %>% 
-    rename(scenario = ID, ID = TaxSimulatorID) %>% 
-    relocate(version, .before = vintage) %>% 
-    write_csv(file.path(output_root, 'dependencies.csv'))
-  
-  
-  # Write Tax-Simulator-specific behavioral assumptions
-  runscript %>%
-    select(ID, tax_law, behavior) %>%
-    write_csv(file.path(output_root, 'behavioral_assumptions.csv'))
+  # Load each leg's default layer.
+  economy_defaults  = config_load_defaults('economy')
+  behavior_defaults = config_load_defaults('behavior')
 
-  # Write the resolved assumption manifest: every economic assumption actually
-  # used by each scenario, its kind, and whether the scenario overrode it. This
-  # is what lets a vintage be traced back to the assumptions that produced it --
-  # previously only the module NAMES were recorded, not the numbers they ran on.
-  runscript$ID %>%
-    map(.f = ~ assumptions_manifest(
-                 defaults = assumption_defaults,
-                 resolved = assumptions_resolve(
-                              defaults        = assumption_defaults,
-                              runscript_items = runscript %>% filter(ID == .x) %>% as.list()),
-                 id       = .x)) %>%
-    bind_rows() %>%
-    write_csv(file.path(output_root, 'assumptions.csv'))
+  # Resolve every scenario's legs and interface paths, and run the parse-time
+  # staleness check (once, here, rather than per worker mid-array).
+  scenario_configs = resolve_all_scenarios(
+    runscript         = runscript,
+    economy_defaults  = economy_defaults,
+    behavior_defaults = behavior_defaults,
+    interface_meta    = interface_meta
+  )
 
-  # Record the code version the run was produced under. Without this, the
-  # defaults in git cannot be reconstructed for a past vintage.
-  tibble(
-    commit = system2('git', c('rev-parse', 'HEAD'), stdout = TRUE, stderr = FALSE),
-    dirty  = length(system2('git', c('status', '--porcelain'), stdout = TRUE, stderr = FALSE)) > 0
-  ) %>%
-    write_csv(file.path(output_root, 'code_version.csv'))
+  # Flat ID-interface-path view, in runscript row order then interface_meta
+  # order. Row 1 is the baseline row's first interface by convention
+  # (interface_root() relies on the baseline row leading).
+  interface_paths = names(scenario_configs) %>%
+    map(.f = function(id) {
+      tibble(
+        ID        = id,
+        interface = names(scenario_configs[[id]]$interface_paths),
+        path      = unlist(scenario_configs[[id]]$interface_paths, use.names = FALSE)
+      )
+    }) %>%
+    bind_rows()
 
-  
-  # Create filepaths for data interfaces
-  interface_paths = dependencies %>%     
-    left_join(interface_versions, by = 'interface') %>% 
-    mutate(path = file.path(path, vintage, scenario)) %>% 
-    select(ID, interface, path)
-
-  
   # Confirm that each path exists, throwing exception if not
   for (path in interface_paths$path) {
     if (!dir.exists(path)) {
@@ -259,12 +294,22 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
       stop(msg)
     }
   }
-  
+
+  # Write the run manifest
+  write_run_manifest(
+    output_root       = output_root,
+    runscript         = runscript,
+    scenario_configs  = scenario_configs,
+    interface_meta    = interface_meta,
+    economy_defaults  = economy_defaults,
+    behavior_defaults = behavior_defaults
+  )
+
   # Confirm that user has supplied valid multicore argument
   if (!(multicore %in% c('none', 'scenario', 'year'))) {
     stop("Invalid argument for 'multicore' runtime parameter")
   }
-  
+
   # Tax unit IDs in sample. The id universe is the UNION of ids across all
   # simulation years: Tax-Data adds records in projection years (e.g. new
   # top-tail entrants absent from earlier files), so an id set built from any
@@ -272,6 +317,9 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   # (Caught 2026-06-10 via the estate tax: the previous 2017-based id set
   # dropped 935 weight-1 records on vintage 2026060918 — all with gross
   # wealth above $50M, $8.2T in total — depressing expected estate tax ~30%.)
+  # KNOWN LIMITATION (pre-dates the redesign, preserved for byte-identity):
+  # the universe is read from the FIRST runscript row's Tax-Data root even if
+  # another scenario overrides the Tax-Data vintage.
   tax_data_root = interface_paths %>%
     filter(interface == 'Tax-Data') %>%
     slice(1) %>%
@@ -306,33 +354,34 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     r.behavior3       = runif(length(sample_ids)),             # Spare random number for use in behavioral modules
     r.eitc_precert    = runif(length(sample_ids))              # For EITC pre-certification check
   )
-  
+
   # Specifiy microdata output variable
   detail_vars = c(
-    'id', 'weight', 'filer', 'dep_status', 'filing_status', 'male1', 'male2', 
-    'age1', 'age2', 'n_dep','n_dep_ctc', 'dep_age1', 'dep_age2', 'dep_age3', 
-    'wages1', 'wages2', 'wages', 'txbl_int', 'exempt_int', 'se', 'div_ord', 
-    'div_pref', 'txbl_kg', 'kg_st', 'kg_lt', 'sole_prop', 'sch_e', 'farm', 
-    'part_scorp', 'gross_ss', 'txbl_ss', 'auto_int_ded', 'above_ded', 'agi', 
-    'expanded_inc', 'std_ded', 'item_ded', 'med_item_ded', 'salt_item_ded', 
-    'first_mort_int', 'mort_int_item_ded', 'inv_int_item_ded', 'int_item_ded', 
-    'char_item_ded', 'casualty_item_ded', 'misc_item_ded', 'other_item_ded', 
-    'item_ded_ex_limits', 'itemizing', 'pe_ded', 'qbi_ded', 'tip_ded', 'ot_ded', 
-    'senior_ded', 'txbl_inc', 'liab_ord', 'liab_pref', 'liab_amt', 'liab_bc', 
-    'cdctc_nonref', 'ctc_nonref', 'ed_nonref', 'nonref', 'ed_ref', 'eitc', 
-    'cdctc_ref', 'ctc_ref', 'rebate', 'ref', 'liab_niit', 'liab_iit', 
+    'id', 'weight', 'filer', 'dep_status', 'filing_status', 'male1', 'male2',
+    'age1', 'age2', 'n_dep','n_dep_ctc', 'dep_age1', 'dep_age2', 'dep_age3',
+    'wages1', 'wages2', 'wages', 'txbl_int', 'exempt_int', 'se', 'div_ord',
+    'div_pref', 'txbl_kg', 'kg_st', 'kg_lt', 'sole_prop', 'sch_e', 'farm',
+    'part_scorp', 'gross_ss', 'txbl_ss', 'auto_int_ded', 'above_ded', 'agi',
+    'expanded_inc', 'std_ded', 'item_ded', 'med_item_ded', 'salt_item_ded',
+    'first_mort_int', 'mort_int_item_ded', 'inv_int_item_ded', 'int_item_ded',
+    'char_item_ded', 'casualty_item_ded', 'misc_item_ded', 'other_item_ded',
+    'item_ded_ex_limits', 'itemizing', 'pe_ded', 'qbi_ded', 'tip_ded', 'ot_ded',
+    'senior_ded', 'txbl_inc', 'liab_ord', 'liab_pref', 'liab_amt', 'liab_bc',
+    'cdctc_nonref', 'ctc_nonref', 'ed_nonref', 'nonref', 'ed_ref', 'eitc',
+    'cdctc_ref', 'ctc_ref', 'rebate', 'ref', 'liab_niit', 'liab_iit',
     'liab_iit_net', 'liab_fica_er1', 'liab_fica_er2', 'liab_seca', 'liab_pr_ee',
     'liab_pr', 'simple_filer', 'number_of_credits', 'kg_lt_infl_adj',
     'alt_max_cap_binds', 'decedent_flag', 'estate_m', 'estate_p_dsue',
     'liab_estate_nodsue', 'liab_estate_dsue', 'estate_distributable',
     'net_worth', 'liab_wealth'
   )
-  
-  
-  # Return runtime args and interface paths
+
+
+  # Return runtime args, resolved configurations, and interface paths
   return(list(random_numbers      = random_numbers,
               random_seed         = random_seed,
               runscript           = runscript,
+              scenario_configs    = scenario_configs,
               interface_paths     = interface_paths,
               output_root         = output_root,
               baseline_root       = baseline_root,
@@ -340,156 +389,232 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
               sample_ids          = sample_ids,
               detail_vars         = detail_vars,
               multicore           = multicore,
-              assumption_defaults = assumption_defaults))
+              economy_defaults    = economy_defaults,
+              behavior_defaults   = behavior_defaults,
+              config_schema       = 3L))
 }
 
 
 
-get_scenario_info = function(id) {
-  
+resolve_all_scenarios = function(runscript, economy_defaults, behavior_defaults,
+                                 interface_meta) {
+
   #----------------------------------------------------------------------------
-  # Given a scenario ID, retrieves and transforms scenario-specific runtime
-  # arguments and interface file paths.
-  # 
-  # Parameters:
-  #   - id (str) : scenario ID 
+  # Resolves every runscript row's economy and behavior legs, builds the
+  # scenario's interface paths from the resolved vintages, and runs the
+  # parse-time staleness check for the economy leg. (Behavior-leg staleness,
+  # including conditioned_on, arms when that leg goes live in Phase 4 -- until
+  # then the behavior column still names modules and the leg's resolved values
+  # ride along dormant.)
   #
-  # Returns: list of 3: 
-  #   - id (str)                 : scenario ID
-  #   - tax_law_id (str)         : str
-  #   - output_path (str)        : path to root of output folder
-  #   - interface_paths (list)   : list of scenario-specific interface paths
-  #   - years (int[])            : years to run
-  #   - dist_years (int[])       : years for which to generate microdata output
-  #                                and distribution tables 
-  #   - mtr_vars (str[])         : variables to calculate MTRs for
-  #   - mtr_vars (str[])         : MTR types (same index as mtr_vars)
-  #   - behavior_modules (str[]) : names of behavioral feedback modules to run
+  # Returns: named-by-ID list of
+  #   - economy, behavior : config_resolve() outputs
+  #   - interface_paths   : named list, interface name -> path
   #----------------------------------------------------------------------------
-  
-  # Scenario-specific output paths
-  output_root = file.path(ifelse(id == 'baseline', 
-                                 globals$baseline_root, 
-                                 globals$output_root), 
-                          id)
-  for (type in c('static', 'conventional')) {
-    dir.create(file.path(output_root, type, 'detail'),       
-               recursive    = T, 
-               showWarnings = F)
-    dir.create(file.path(output_root, type, 'totals'),
-               recursive    = T, 
-               showWarnings = F)
-    dir.create(file.path(output_root, type, 'supplemental'),
-               recursive    = T, 
-               showWarnings = F)
+
+  out = list()
+
+  for (i in seq_len(nrow(runscript))) {
+    id  = runscript$ID[i]
+    row = runscript %>% slice(i) %>% as.list()
+
+    economy = config_resolve('economy', economy_defaults,
+                             alternative = row$economy)
+    # The behavior column still names MODULES ({family}/{module}) until the
+    # behavior-leg flip; the leg resolves on its default layer and rides along
+    # dormant. That phase switches this to the behavior column.
+    behavior = config_resolve('behavior', behavior_defaults, alternative = NULL)
+
+    # Interface paths from the resolved vintages/IDs
+    interface_paths = interface_meta %>%
+      map(.f = function(m) {
+        v  = economy$values$interfaces[[paste0(m$key, '_vintage')]]
+        sid = economy$values$interfaces[[paste0(m$key, '_id')]]
+        if (is.null(v) || is.null(sid)) {
+          stop('economy interfaces channel is missing entries for ', m$key)
+        }
+        file.path(m$root, as.character(v), as.character(sid))
+      })
+
+    config_check_staleness(
+      leg                = 'economy',
+      defaults           = economy_defaults,
+      resolved           = economy,
+      interface_vintages = config_interface_vintages(economy),
+      cross_values       = list(economy  = economy$values,
+                                behavior = behavior$values),
+      enforce            = CONFIG_ENFORCE_STALENESS
+    )
+
+    out[[id]] = list(economy         = economy,
+                     behavior        = behavior,
+                     interface_paths = interface_paths)
   }
-  dir.create(file.path(output_root, 'static/supplemental/child_earnings'), 
+
+  out
+}
+
+
+
+write_run_manifest = function(output_root, runscript, scenario_configs,
+                              interface_meta, economy_defaults,
+                              behavior_defaults) {
+
+  #----------------------------------------------------------------------------
+  # Writes the vintage-root manifest:
+  #   - dependencies.csv       : interface version/vintage/scenario per row
+  #                              (derived view of the economy leg's interfaces
+  #                              channel; kept for downstream tooling)
+  #   - scenarios.csv          : one row per scenario, the three leg pointers
+  #                              plus computational scope
+  #   - scenario_config.csv    : every resolved value across both legs with
+  #                              kind, role, override flag and source
+  #   - behavioral_assumptions.csv : the tax law + behavior module record,
+  #                              unchanged until the behavior leg flips
+  #   - code_version.csv       : git commit + dirty flag
+  #----------------------------------------------------------------------------
+
+  # dependencies.csv -- deterministic order: runscript row order x
+  # interface_meta order. Columns match the historical shape.
+  names(scenario_configs) %>%
+    map(.f = function(id) {
+      eco = scenario_configs[[id]]$economy
+      tibble(
+        ID        = id,
+        interface = names(interface_meta),
+        version   = map_chr(interface_meta, .f = ~ as.character(.x$version)),
+        vintage   = map_chr(interface_meta,
+                            .f = ~ as.character(eco$values$interfaces[[paste0(.x$key, '_vintage')]])),
+        scenario  = map_chr(interface_meta,
+                            .f = ~ as.character(eco$values$interfaces[[paste0(.x$key, '_id')]]))
+      )
+    }) %>%
+    bind_rows() %>%
+    write_csv(file.path(output_root, 'dependencies.csv'))
+
+  # scenarios.csv -- the composition record
+  runscript %>%
+    mutate(economy  = replace_na(as.character(economy), 'default'),
+           behavior = as.character(behavior)) %>%
+    select(ID, tax_law, economy, behavior, years, dist_years, mtr_vars, mtr_types) %>%
+    write_csv(file.path(output_root, 'scenarios.csv'))
+
+  # scenario_config.csv -- every resolved value, both legs
+  names(scenario_configs) %>%
+    map(.f = ~ bind_rows(
+      config_manifest('economy',  economy_defaults,
+                      scenario_configs[[.x]]$economy,  .x),
+      config_manifest('behavior', behavior_defaults,
+                      scenario_configs[[.x]]$behavior, .x))) %>%
+    bind_rows() %>%
+    write_csv(file.path(output_root, 'scenario_config.csv'))
+
+  # behavioral_assumptions.csv -- unchanged until the behavior leg flips
+  runscript %>%
+    select(ID, tax_law, behavior) %>%
+    write_csv(file.path(output_root, 'behavioral_assumptions.csv'))
+
+  # Record the code version the run was produced under. Without this, the
+  # defaults in git cannot be reconstructed for a past vintage.
+  tibble(
+    commit = system2('git', c('rev-parse', 'HEAD'), stdout = TRUE, stderr = FALSE),
+    dirty  = length(system2('git', c('status', '--porcelain'), stdout = TRUE, stderr = FALSE)) > 0
+  ) %>%
+    write_csv(file.path(output_root, 'code_version.csv'))
+
+  invisible(NULL)
+}
+
+
+
+ensure_scenario_dirs = function(scenario_info) {
+
+  #----------------------------------------------------------------------------
+  # Creates a scenario's output directory tree. Called once per scenario by
+  # do_scenario() and src/slurm/setup.R -- get_scenario_info() itself is a
+  # pure lookup and no longer touches the filesystem.
+  #----------------------------------------------------------------------------
+
+  for (type in c('static', 'conventional')) {
+    dir.create(file.path(scenario_info$output_path, type, 'detail'),
+               recursive = T, showWarnings = F)
+    dir.create(file.path(scenario_info$output_path, type, 'totals'),
+               recursive = T, showWarnings = F)
+    dir.create(file.path(scenario_info$output_path, type, 'supplemental'),
+               recursive = T, showWarnings = F)
+  }
+  dir.create(file.path(scenario_info$output_path, 'static/supplemental/child_earnings'),
              showWarnings = F)
-  
-  # List of interface paths, named by interface
-  interface_paths = globals$interface_paths %>% 
-    filter(ID == id) %>% 
-    distinct(interface, path) %>% 
-    pivot_wider(names_from  = interface, 
-                values_from = path) %>% 
+
+  invisible(NULL)
+}
+
+
+
+get_scenario_info = function(id, g = globals) {
+
+  #----------------------------------------------------------------------------
+  # Given a scenario ID, assembles scenario-specific runtime information from
+  # the resolutions cached in globals. Pure lookup: no filesystem side
+  # effects (see ensure_scenario_dirs) and no re-resolution.
+  #
+  # Parameters:
+  #   - id (str) : scenario ID
+  #   - g (list) : the globals object (defaulted; passed explicitly where a
+  #                worker holds it under another name)
+  #
+  # Returns: named list (see below)
+  #----------------------------------------------------------------------------
+
+  # Scenario-specific output root
+  output_root = file.path(ifelse(id == 'baseline',
+                                 g$baseline_root,
+                                 g$output_root),
+                          id)
+
+  config = g$scenario_configs[[id]]
+  if (is.null(config)) {
+    stop("Scenario ID '", id, "' has no resolved configuration (not in this runscript?)")
+  }
+
+  # List of scenario-specific runscript row, named by column name
+  runscript_items = g$runscript %>%
+    filter(ID == id) %>%
     as.list()
-  
-  # List of scenario-specific runscript, named by column name
-  runscript_items = globals$runscript %>% 
-    filter(ID == id) %>% 
-    as.list()
-  
-  # Name of tax law scenario
-  tax_law_id = runscript_items$tax_law
-  
+
   # Behavioral feedback module names (formatted as {var}/{module})
   behavior_modules = NULL
   if (!is.na(runscript_items$behavior)) {
     behavior_modules = str_split_1(runscript_items$behavior, ' ')
   }
-  
-  # Years to run. Parse based on format supplied
-  years_input = as.character(runscript_items$years)
-  if (str_detect(years_input, ':')) {
-    years_input = str_split_1(years_input, ':') 
-  }
-  if (length(years_input) == 1) {
-    years = c(as.integer(years_input))
-  } else if (length(years_input) == 2) {
-    years = as.integer(years_input[1]):as.integer(years_input[2])
-  } else {
-    stop('Invalid input for years column in runscript_items')
-  }
-  
-  # Distribution table and microdata output years
-  if (is.na(runscript_items$dist_years)) {
-    dist_years = years
-  } else if (str_detect(as.character(runscript_items$dist_years), ':')) {
-    dist_years_input = str_split_1(as.character(runscript_items$dist_years), ':')
-    dist_years = as.integer(dist_years_input[1]):as.integer(dist_years_input[2]) 
-  } else {
-    dist_years = runscript_items$dist_years %>%
-      as.character() %>%
-      str_split_1(' ') %>% 
-      as.integer()
-  }
-  
+
+  # Years to run; distribution/microdata years default to all years
+  years      = parse_year_spec(runscript_items$years)
+  dist_years = if (is.na(runscript_items$dist_years)) years
+               else parse_year_spec(runscript_items$dist_years)
+
   # Names of variables for which to calculate marginal tax rates
   mtr_vars = NULL
   if (!is.na(runscript_items$mtr_vars)) {
     mtr_vars = str_split_1(runscript_items$mtr_vars, ' ')
   }
-   
+
   # Types of MTRs, with same index as MTR vars above
   mtr_types = NULL
   if (!is.na(runscript_items$mtr_types)) {
     mtr_types = str_split_1(runscript_items$mtr_types, ' ')
   }
-  
-  # Wealth-dynamics financing inputs (resolved by wealth_dyn_resolve_profile()).
-  # `wealth_financing` is a profile folder name (or 'none'/'off'); `s` is the flat
-  # shorthand (s = 1 - MPC). Both pass through verbatim -- including s = NA (unset,
-  # falls back to the default profile) vs an explicit s = 0 (channel forced off).
-  wealth_financing = runscript_items$wealth_financing
-  wealth_financing = if (is.null(wealth_financing) || length(wealth_financing) == 0)
-                       NA_character_ else as.character(wealth_financing)[1]
-  s = suppressWarnings(as.numeric(runscript_items$s))
-  if (length(s) == 0) {
-    s = NA_real_
-  }
-
-  # Model assumptions: defaults overridden by this scenario's `assumptions`
-  # folder and assumption.{channel}.{name} columns. Activated (not merely
-  # returned) by do_scenario / the SLURM worker before any calculation runs.
-  assumptions = assumptions_resolve(defaults        = globals$assumption_defaults,
-                                    runscript_items = runscript_items)
-
-  # Interface vintages in play, keyed to match the derived_under block of a
-  # calibrated assumption (interface name lowercased, hyphens to underscores).
-  assumption_vintages = runscript_items %>%
-    keep(.p = names(.) %>% str_detect('^dep[.].+[.]vintage$')) %>%
-    set_names(names(.) %>%
-                str_remove('^dep[.]') %>%
-                str_remove('[.]vintage$') %>%
-                str_to_lower() %>%
-                str_replace_all('-', '_')) %>%
-    map(as.character)
 
   # Return as named list
   return(list(ID                       = id,
               output_path              = output_root,
-              interface_paths          = interface_paths,
-              tax_law_id               = tax_law_id,
+              interface_paths          = config$interface_paths,
+              tax_law_id               = runscript_items$tax_law,
               behavior_modules         = behavior_modules,
               years                    = years,
               dist_years               = dist_years,
               mtr_vars                 = mtr_vars,
               mtr_types                = mtr_types,
-              s                        = s,
-              wealth_financing         = wealth_financing,
-              assumptions              = assumptions,
-              assumption_vintages      = assumption_vintages))
+              resolved_economy         = config$economy,
+              resolved_behavior        = config$behavior))
 }
-
-
-

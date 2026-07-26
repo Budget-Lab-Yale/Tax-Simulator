@@ -353,6 +353,8 @@ config_resolve = function(leg, defaults, alternative = NULL) {
   #   - values           : channel -> name -> resolved value
   #   - roles            : channel -> name -> role (economy leg)
   #   - overrides        : tibble(channel, name, default, value, source)
+  #   - waivers          : named list, '{channel}.{name}' -> {date, reason},
+  #                        the dated acknowledgments this alternative carries
   #----------------------------------------------------------------------------
 
   leg = match.arg(leg, names(CONFIG_LEG_ROOTS))
@@ -370,6 +372,7 @@ config_resolve = function(leg, defaults, alternative = NULL) {
   overrides = tibble(channel = character(), name = character(),
                      default = character(), value = character(),
                      source  = character())
+  waivers   = list()
 
   record = function(overrides, channel, name, new_value, source) {
     bind_rows(overrides, tibble(
@@ -409,10 +412,24 @@ config_resolve = function(leg, defaults, alternative = NULL) {
       alt_entries = read_yaml(f)
       for (nm in names(alt_entries)) {
         check_known(channel, nm, label)
+
+        # A dated waiver: the alternative accepts a staleness finding on this
+        # entry rather than changing its value. Humans write these; they show
+        # up in the manifest and print a banner at parse time.
+        waiver = alt_entries[[nm]]$waiver
+        if (!is.null(waiver)) {
+          if (!all(c('date', 'reason') %in% names(waiver))) {
+            stop(label, ' waiver on ', channel, '.', nm,
+                 ' requires both `date` and `reason`')
+          }
+          waivers[[paste(channel, nm, sep = '.')]] = waiver
+        }
+
         new_value = alt_entries[[nm]]$value
         if (is.null(new_value)) {
+          if (!is.null(waiver)) next          # waiver-only entry, value unchanged
           stop(label, ' override ', channel, '.', nm,
-               ' must supply a `value`')
+               ' must supply a `value` (or a dated `waiver` block)')
         }
         overrides = record(overrides, channel, nm, new_value,
                            paste0('alternative:', alternative))
@@ -422,7 +439,7 @@ config_resolve = function(leg, defaults, alternative = NULL) {
   }
 
   list(leg = leg, alternative = alternative, values = values, roles = roles,
-       overrides = overrides)
+       overrides = overrides, waivers = waivers)
 }
 
 
@@ -583,6 +600,15 @@ config_check_staleness = function(leg, defaults, resolved, interface_vintages,
       label = paste(channel, nm, sep = '.')
       if (label %in% overridden) next
 
+      # A dated waiver from the pointing alternative: recorded loudly, checked
+      # no further.
+      waiver = resolved$waivers[[label]]
+      if (!is.null(waiver)) {
+        notes = c(notes, sprintf('%s: WAIVED (%s) -- %s', label,
+                                 waiver$date, waiver$reason))
+        next
+      }
+
       entry_findings = c()
 
       # Skip entries the live configuration does not read (see assumptions.R
@@ -687,8 +713,10 @@ config_check_staleness = function(leg, defaults, resolved, interface_vintages,
 
   if (length(notes) > 0) {
     message(paste0(
-      '\nAcknowledged-stale calibrations in this run (', leg, ' leg):\n  - ',
-      paste(notes, collapse = '\n  - '), '\n'))
+      '\n', strrep('-', 78), '\n',
+      'WAIVED / ACKNOWLEDGED-STALE CALIBRATIONS (', leg, ' leg)\n\n  - ',
+      paste(notes, collapse = '\n  - '), '\n',
+      strrep('-', 78), '\n'))
   }
 
   if (length(findings) > 0) {

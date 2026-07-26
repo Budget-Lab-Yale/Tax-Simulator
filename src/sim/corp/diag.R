@@ -94,7 +94,7 @@ corp_write_conservation_diag = function(pre, post, paths, year, conv_root) {
     roll  = p$roll,
     sigma_n   = knobs$sigma_n,
     kappa     = knobs$kappa,
-    theta_res = assumption('corp', 'theta_res'),
+    theta_res = economy_param('corp', 'theta_res'),
     dY_div_realized   = dY_div_realized,
     dY_int_realized   = dY_int_realized,
     dY_rent_realized  = dY_rent_realized,
@@ -103,10 +103,10 @@ corp_write_conservation_diag = function(pre, post, paths, year, conv_root) {
     dY_total_analytic = dY_total_analytic,
     B_flow_hh            = -dY_total_analytic,
     markdown_position_hh = markdown_position_hh,
-    B_res_theta          = assumption('corp', 'theta_res') * p$w,
+    B_res_theta          = economy_param('corp', 'theta_res') * p$w,
     drho_int             = p$drho_int,
     residual_unallocated = p$w + dY_total_analytic -
-                           assumption('corp', 'theta_res') * p$w - p$drho_int
+                           economy_param('corp', 'theta_res') * p$w - p$drho_int
   )
 
   # The testable content: analytic accumulation vs frame-measured realization.
@@ -182,7 +182,7 @@ corp_selfcheck_paths = function() {
     stop('corp_selfcheck: permanent rent-only mu is not constant (range ',
          min(live$mu), ' .. ', max(live$mu), ').')
   }
-  if (abs(mean(live$mu) - w_share * assumption('corp', 'theta')) > 1e-3) {
+  if (abs(mean(live$mu) - w_share * economy_param('corp', 'theta')) > 1e-3) {
     stop('corp_selfcheck: permanent rent-only mu = ', mean(live$mu),
          ' differs from the flow share ', w_share,
          ' (the Delta-tau/(1-tau) equivalent).')

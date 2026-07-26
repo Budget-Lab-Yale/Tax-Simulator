@@ -1,0 +1,17 @@
+# The smoke test exercises the behavior modules, not the saving-financing
+# channel, so the bathtub is off and the run stays a single conventional pass.
+
+financing_profile:
+  value: none
+
+# The Tax-Data pin above is older than the vintage every calibrated value in
+# the model was derived under. That is deliberate for a fixture whose whole job
+# is to reproduce a recorded result, so the findings are waived rather than
+# re-derived. Anything read off this scenario is a smoke signal, not an
+# estimate.
+n_pctiles:
+  waiver:
+    date: '2026-07-26'
+    reason: >
+      Gate fixture pinned to Tax-Data 2026050315 on purpose; calibrated values
+      derived under 2026070814 are knowingly stale here.

@@ -95,7 +95,7 @@ KG_DYN_AGE_MAX_BELLMAN  = 119     # SSA PerLifeTables hit q(x)=1 at 119
 # baseline pass is form-invariant. Vintages are NOT comparable across forms --
 # regenerate before comparing.
 kg_dyn_response_form = function() {
-  v = assumption('kg', 'response_form')
+  v = economy_param('kg', 'response_form')
   if (!v %in% c('levels', 'logs'))
     stop(sprintf(paste0("kg_dynamics: assumption kg.response_form must be ",
                         "'levels' or 'logs'; got '%s'."), v))
@@ -209,13 +209,13 @@ kg_dyn_as_pinned = function(v) {
 }
 kg_dyn_active_eta = function(form = kg_dyn_response_form()) {
   kg_dyn_as_pinned(
-    if (identical(form, 'logs')) assumption('kg', 'eta_logs')
-    else                         assumption('kg', 'eta'))
+    if (identical(form, 'logs')) economy_param('kg', 'eta_logs')
+    else                         economy_param('kg', 'eta'))
 }
 kg_dyn_active_timeable_share = function(form = kg_dyn_response_form()) {
   kg_dyn_as_pinned(
-    if (identical(form, 'logs')) assumption('kg', 'timeable_share_logs')
-    else                         assumption('kg', 'timeable_share'))
+    if (identical(form, 'logs')) economy_param('kg', 'timeable_share_logs')
+    else                         economy_param('kg', 'timeable_share'))
 }
 
 # Within-cell allocation rule for policy-induced dG, controlling the
@@ -299,7 +299,7 @@ KG_DYN_REGIME_TRIPLET = list(
 #
 # Those dependencies now live in config/assumptions/kg.yaml as each calibrated
 # entry's derived_under (data vintages) and invalidated_by (code files, checked
-# by content hash), and assumptions_check_staleness() HARD STOPS the run rather
+# by content hash), and config_check_staleness() HARD STOPS the run rather
 # than warning. The old warn-only stamp and its KG_STRICT_CALIB escape hatch are
 # gone; a deliberate sweep now overrides the value in the runscript, which
 # records the choice in the vintage's assumptions.csv.
@@ -320,8 +320,8 @@ KG_DYN_SPEC_VERSION = 3L
 
 kg_dyn_validate_timing_params = function(
     timeable_share = kg_dyn_active_timeable_share(),
-    timing_window  = assumption('kg', 'timing_window'),
-    ref_wedge      = assumption('kg', 'timing_ref_wedge')) {
+    timing_window  = economy_param('kg', 'timing_window'),
+    ref_wedge      = economy_param('kg', 'timing_ref_wedge')) {
 
   # Single-pool (spec v3) timing parameters. timeable_share is the fraction of
   # ALL realizations that retimes across the window. NA is permitted here

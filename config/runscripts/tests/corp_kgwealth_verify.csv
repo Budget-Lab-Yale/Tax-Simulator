@@ -1,3 +1,3 @@
-ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,s,dep.Off-Model-Estimates.vintage,dep.Off-Model-Estimates.ID
-baseline,default,,2026:2031,,kg_lt net_worth estate,nextdollar nextdollar nextdollar,0,20260722,baseline
-corp_kg_wealth,default,kg_dynamics/turnover,2026:2031,2028:2028,kg_lt estate,nextdollar nextdollar,0.5,20260722,corp_28_2027_2stream
+ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,default,corp_kg_wealth_baseline,,2026:2031,,kg_lt net_worth estate,nextdollar nextdollar nextdollar
+corp_kg_wealth,default,corp_kg_wealth_reform,kg_dynamics/turnover,2026:2031,2028:2028,kg_lt estate,nextdollar nextdollar

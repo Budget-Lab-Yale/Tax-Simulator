@@ -1,0 +1,69 @@
+# Dependent-model interface pins -- which vintage and scenario ID of each
+# upstream model this run reads. Defaults mirror
+# config/interfaces/interface_versions.yaml; a scenario overrides one by naming
+# an economy SET folder (in the runscript's `economy` column) whose
+# interfaces.yaml re-declares the entry -- this replaces the retired
+# dep.{Interface}.vintage / dep.{Interface}.ID columns.
+
+_channel:
+  role: state
+
+tax_data_vintage:
+  value: '2026070814'
+  kind: structural
+  note: Pins the Tax-Data vintage (microdata input) the simulation reads.
+
+tax_data_id:
+  value: baseline
+  kind: structural
+  note: Pins the Tax-Data scenario ID the simulation reads.
+
+macro_projections_vintage:
+  value: '2026022522'
+  kind: structural
+  note: Pins the Macro-Projections vintage (economic/demographic projections) the simulation reads.
+
+macro_projections_id:
+  value: baseline
+  kind: structural
+  note: Pins the Macro-Projections scenario ID the simulation reads.
+
+value_added_tax_model_vintage:
+  value: '2024050121'
+  kind: structural
+  note: Pins the Value-Added-Tax-Model vintage the simulation reads.
+
+value_added_tax_model_id:
+  value: baseline
+  kind: structural
+  note: Pins the Value-Added-Tax-Model scenario ID the simulation reads.
+
+off_model_estimates_vintage:
+  value: '20260722'
+  kind: structural
+  note: Pins the Off-Model-Estimates vintage (off-model revenue lines) the simulation reads.
+
+off_model_estimates_id:
+  value: baseline
+  kind: structural
+  note: Pins the Off-Model-Estimates scenario ID the simulation reads.
+
+cost_recovery_simulator_vintage:
+  value: '202509251222'
+  kind: structural
+  note: Pins the Cost-Recovery-Simulator vintage the simulation reads.
+
+cost_recovery_simulator_id:
+  value: baseline
+  kind: structural
+  note: Pins the Cost-Recovery-Simulator scenario ID the simulation reads.
+
+estate_tax_distribution_vintage:
+  value: '2025092512'
+  kind: structural
+  note: Pins the Estate-Tax-Distribution vintage (heir structure input) the simulation reads.
+
+estate_tax_distribution_id:
+  value: baseline
+  kind: structural
+  note: Pins the Estate-Tax-Distribution scenario ID the simulation reads.
