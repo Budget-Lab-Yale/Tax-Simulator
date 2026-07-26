@@ -23,14 +23,14 @@ conv:
     tax_data: '2026070814'
     macro_projections: '2026022522'
   invalidated_by:
-    - config/scenarios/behavior/entity_shifting/pearce_prisinzano.R
-    - config/scenarios/behavior/evasion/debacker.R
-    - config/scenarios/behavior/charity/100.R
+    - src/behavior/entity_shifting/pearce_prisinzano.R
+    - src/behavior/evasion/debacker.R
+    - src/behavior/charity/100.R
     - src/sim/sigma_conversion.R
   invalidated_by_hashes:
-    config/scenarios/behavior/entity_shifting/pearce_prisinzano.R: e887c0327cadfe28f5f4bf7502787a82
-    config/scenarios/behavior/evasion/debacker.R: fa7b40c3d30676703a967c476e30017a
-    config/scenarios/behavior/charity/100.R: 3e6d30228a38e970360e2e80acb6b4d7
+    src/behavior/entity_shifting/pearce_prisinzano.R: e887c0327cadfe28f5f4bf7502787a82
+    src/behavior/evasion/debacker.R: fa7b40c3d30676703a967c476e30017a
+    src/behavior/charity/100.R: 3e6d30228a38e970360e2e80acb6b4d7
     src/sim/sigma_conversion.R: 8d1b8f686d66b011f68441548057f90c
   rederive: other/top_tax/archive/tests/compute_top_eti.R
   note: >

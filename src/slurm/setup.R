@@ -24,11 +24,13 @@ suppressPackageStartupMessages(
   ))
 )
 
-# Source all function scripts
+# Source all function scripts. behavior/ is skipped for the reason main.R gives:
+# those modules are loaded by path at scenario time.
 return_vars = list()
 list.files('./src', recursive = T) %>%
   walk(.f = ~ {
-    if (!(.x %in% c('main.R')) && !startsWith(.x, 'slurm/') && !startsWith(.x, 'tests/')) {
+    if (!(.x %in% c('main.R')) && !startsWith(.x, 'slurm/') &&
+        !startsWith(.x, 'tests/') && !startsWith(.x, 'behavior/')) {
       source(file.path('./src/', .x))
     }
   })

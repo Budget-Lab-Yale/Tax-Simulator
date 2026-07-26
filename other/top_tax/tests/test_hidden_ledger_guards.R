@@ -2,7 +2,7 @@
 # test_hidden_ledger_guards.R
 #
 # Unit tests for the hidden-ledger build across its THREE modules
-# (config/scenarios/behavior/evasion/debacker.R, wealth/avoidance.R, and
+# (src/behavior/evasion/debacker.R, wealth/avoidance.R, and
 # estate/avoidance.R -- the estate reporting response was split into its own
 # module 2026-07-16): concealment-fraction math, positive-leg flow scaling with
 # SECA companions, the R6 kg_lt overlay, the R4 estate_concealed_frac column,
@@ -45,8 +45,8 @@ expect_error = function(expr, pattern, label) {
 # Source the modules with default env (no CHI overrides set)
 Sys.unsetenv('WEALTH_CHI_PUB'); Sys.unsetenv('WEALTH_CHI_PRIV')
 src_avoidance = function() {
-  sys.source('./config/scenarios/behavior/wealth/avoidance.R', envir = globalenv())
-  sys.source('./config/scenarios/behavior/estate/avoidance.R', envir = globalenv())
+  sys.source('./src/behavior/wealth/avoidance.R', envir = globalenv())
+  sys.source('./src/behavior/estate/avoidance.R', envir = globalenv())
 }
 src_avoidance()
 
@@ -333,7 +333,7 @@ check(!is.null(out_wo_ev) && abs(out_wo_ev$estate_concealed_frac[3] -
 # 10. Evasion net-of-tax denominator guard
 #-------------------------------------------------------------------------------
 
-sys.source('./config/scenarios/behavior/evasion/debacker.R', envir = globalenv())
+sys.source('./src/behavior/evasion/debacker.R', envir = globalenv())
 g_guard = evasion_response_factor(
   mtr          = c(0.4, 0.4, NA_real_, Inf),
   mtr_baseline = c(1.0, 1 - EVASION_NET_RATE_EPS / 2, 0.3, 0.3),

@@ -61,8 +61,6 @@ cat('\n== every assumption named in code exists in config ==\n')
 defaults = assumptions_load_defaults()
 src_text = list.files('./src', recursive = T, full.names = TRUE,
                       pattern = '[.]R$') %>%
-  c(list.files('./config/scenarios/behavior', recursive = T,
-               full.names = TRUE, pattern = '[.]R$')) %>%
   map(readLines, warn = FALSE) %>%
   unlist()
 refs = str_match_all(paste(src_text, collapse = '\n'),

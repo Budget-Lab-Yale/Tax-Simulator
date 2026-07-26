@@ -93,8 +93,8 @@ calc_estate = function(tax_unit, estate_params, fill_missings = FALSE) {
   #   - estate_concealed_frac (dbl) : share of gross assets concealed from the
   #                                   tax authority under a wealth tax, set by
   #                                   the conventional-pass wealth-avoidance
-  #                                   module (config/scenarios/behavior/wealth/
-  #                                   avoidance.R; hidden-ledger ruling R4).
+  #                                   module (src/behavior/wealth/avoidance.R;
+  #                                   hidden-ledger ruling R4).
   #                                   Concealed wealth escapes the reported
   #                                   estate: it enters the BASE only (as
   #                                   estate_concealed_frac * reported_gross),

@@ -122,6 +122,15 @@ apply_mtr_elasticity = function(tax_units, var, baseline_mtrs, static_mtrs, max_
 
 
 
+# Where behavior module code lives. The modules are executable code, so they
+# sit under src/ rather than in config/ -- but they are still loaded BY PATH at
+# scenario time, not sourced at startup, which is what keeps them pluggable
+# (two files in one family both define do_{family}, and only the one a scenario
+# names may be in scope). main.R, src/slurm/setup.R and src/slurm/common.R skip
+# this folder when they source src/ recursively.
+BEHAVIOR_MODULE_ROOT = './src/behavior'
+
+
 load_behavior_module = function(path, envir) { 
   
   #----------------------------------------------------------------------------
@@ -137,7 +146,7 @@ load_behavior_module = function(path, envir) {
 
   path %>% 
     paste0('.R') %>% 
-    file.path('./config/scenarios/behavior/', .) %>% 
+    file.path(BEHAVIOR_MODULE_ROOT, .) %>% 
     sys.source(envir)
 }
 

@@ -1,0 +1,14 @@
+# Behavior leg -- default layer: no response at all.
+#
+# This is the counterfactual the whole model is measured against. A scenario
+# resolving to this layer is a pure law change: taxpayers are taken exactly as
+# Tax-Data reports them, and the conventional pass differs from the static pass
+# only through the mechanical channels (corporate incidence, the wealth
+# bathtub), which are the economy leg's business, not this leg's.
+#
+# An alternative under alternatives/ replaces these two sections wholesale.
+# See config/scenarios/README.md for the shape, and src/sim/behavior.R for how
+# the module list is ordered and loaded.
+
+kg_dynamics: none
+modules: []

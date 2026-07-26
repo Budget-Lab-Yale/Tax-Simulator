@@ -29,14 +29,16 @@ reconstitute_environment = function(staging_dir) {
 
   # Source all function scripts (defines functions + populates return_vars).
   # Mirror main.R / setup.R exactly: skip the entry point, the slurm drivers,
-  # and src/tests/ (test files, one of which runs assertions at source time).
+  # src/tests/ (test files, one of which runs assertions at source time), and
+  # src/behavior/ (modules are loaded by path at scenario time, and sourcing
+  # them all would leave the last variant of a family defining do_{family}).
   # Keeping this predicate in lockstep with main.R is the 'workers operate
   # identically to main.R' contract (see CLAUDE.md).
   return_vars <<- list()
   list.files('./src', recursive = T) %>%
     walk(.f = ~ {
       if (.x != 'main.R' && !startsWith(.x, 'slurm/') &&
-          !startsWith(.x, 'tests/')) {
+          !startsWith(.x, 'tests/') && !startsWith(.x, 'behavior/')) {
         source(file.path('./src/', .x))
       }
     })

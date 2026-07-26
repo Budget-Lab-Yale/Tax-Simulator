@@ -17,10 +17,12 @@ suppressPackageStartupMessages(
   ))
 )
 
-# Source all function scripts
+# Source all function scripts. behavior/ is skipped deliberately: those modules
+# are loaded by path at scenario time (see load_behavior_module), and sourcing
+# them all here would leave whichever variant came last defining do_{family}.
 return_vars = list()
 list.files('./src', recursive = T) %>%
-  walk(.f = ~ if (.x != 'main.R' && !startsWith(.x, 'slurm/') && !startsWith(.x, 'tests/')) source(file.path('./src/', .x)))
+  walk(.f = ~ if (.x != 'main.R' && !startsWith(.x, 'slurm/') && !startsWith(.x, 'tests/') && !startsWith(.x, 'behavior/')) source(file.path('./src/', .x)))
 
 
 #------------------------

@@ -26,7 +26,7 @@ module load R/4.4.1-foss-2022b
 Rscript -e 'for (f in c("src/sim/kg_dynamics.R", "src/sim/run.R",
                         "src/calc/do_taxes.R",
                         "src/calc/functions/tax/estate.R",
-                        "config/scenarios/behavior/wealth/avoidance.R"))
+                        "src/behavior/wealth/avoidance.R"))
               invisible(parse(f)); cat("PARSE OK\n")'
 
 # New estate-offset tests (Bellman/tau_eq/aggregator/calc_estate bump)

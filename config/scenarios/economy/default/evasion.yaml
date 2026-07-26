@@ -1,4 +1,4 @@
-# Income-evasion responses -- config/scenarios/behavior/evasion/debacker.R
+# Income-evasion responses -- src/behavior/evasion/debacker.R
 #
 # TEMPORARY HOME. This channel moves out of the economy leg later in the
 # rebuild: kg and sigma become calibration stamps under config/calibrations/kg/
