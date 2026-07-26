@@ -27,8 +27,8 @@
 # 0.22 of the 0.25 top-subset ETI target on their own -- against the +5pp
 # top-ordinary validation leg with the full stack running. It was 0.08 when
 # first derived on 2026-07-08 and 0.16 after the 2026-07-12 re-derivation; the
-# shipped value and its provenance live in the economy leg's sigma.yaml, and the
-# method and staleness conditions are in SIGMA_CALIB_PROVENANCE in
+# shipped value and its provenance live in config/calibrations/kg/conversion.yaml,
+# and the method and staleness conditions are in SIGMA_CALIB_PROVENANCE in
 # src/sim/sigma_conversion.R. Calibrating it this way is what resolved
 # DESIGN_LOCK ruling 2's double-count caveat, the original asserted 0.6 central
 # having been a total-response anchor that overshot (full-stack ETI 0.431).
@@ -99,7 +99,7 @@ do_conversion = function(tax_units, baseline_mtrs, static_mtrs,
   state = readRDS(state_path)
 
   message('do_conversion(): applying sigma income conversion (',
-          SIGMA_CONV_VERSION, '; sigma = ', economy_param('sigma', 'conv'), ')')
+          SIGMA_CONV_VERSION, '; sigma = ', kg_conversion('conv'), ')')
 
   conv = sigma_module_recompute(
     tax_units     = tax_units,

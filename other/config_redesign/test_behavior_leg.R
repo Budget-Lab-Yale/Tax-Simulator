@@ -77,10 +77,17 @@ wr = function(alt, body) {
 
 wr('default', c('kg_dynamics: none', 'modules: []'))
 
+# Real calibration files, so the bound-piece existence check has something true to
+# find. Which file is irrelevant here -- these tests are about the loader.
+BATH = 'config/calibrations/kg/bathtub.yaml'
+CONV = 'config/calibrations/kg/conversion.yaml'
+
 # The full stack, deliberately written OUT of execution order so the sort has
 # something to do: estate before evasion, charity first.
 wr('full', c(
-  'kg_dynamics: [bathtub, conversion, entity_shifting]',
+  'kg_dynamics:',
+  paste0('  bathtub: ', BATH),
+  paste0('  conversion: ', CONV),
   'modules:',
   paste0('  - ', m('charity')),
   paste0('  - ', m('estate')),
@@ -88,8 +95,8 @@ wr('full', c(
   paste0('  - ', m('entity_shifting')),
   paste0('  - ', m('conversion'))))
 
-wr('list_form', c('kg_dynamics: [bathtub]', 'modules: []'))
-wr('map_form',  c('kg_dynamics:', '  bathtub: requirements.txt', 'modules: []'))
+wr('list_form', c('kg_dynamics: [bathtub]', 'modules: []'))   # the legacy form
+wr('map_form',  c('kg_dynamics:', paste0('  bathtub: ', BATH), 'modules: []'))
 wr('no_kg',     c('kg_dynamics: none',
                   'modules:', paste0('  - ', m('employment'))))
 # Unranked families keep the order they are listed in, after the ranked ones
@@ -98,16 +105,18 @@ wr('unranked', c('kg_dynamics: none', 'modules:',
                  paste0('  - ', m('employment')),
                  paste0('  - ', m('charity'))))
 
-wr('lists_applier', c('kg_dynamics: [bathtub]', 'modules:',
+wr('lists_applier', c('kg_dynamics:', paste0('  bathtub: ', BATH), 'modules:',
                       paste0('  - ', m('kg_dynamics'))))
 wr('conv_no_kg', c('kg_dynamics: none', 'modules:',
                    paste0('  - ', m('conversion'))))
-wr('piece_no_module', c('kg_dynamics: [bathtub, conversion]', 'modules: []'))
-wr('module_no_piece', c('kg_dynamics: [bathtub]', 'modules:',
+wr('piece_no_module', c('kg_dynamics:', paste0('  bathtub: ', BATH),
+                        paste0('  conversion: ', CONV), 'modules: []'))
+wr('module_no_piece', c('kg_dynamics:', paste0('  bathtub: ', BATH), 'modules:',
                         paste0('  - ', m('conversion'))))
-wr('no_bathtub', c('kg_dynamics: [conversion]', 'modules:',
+wr('no_bathtub', c('kg_dynamics:', paste0('  conversion: ', CONV), 'modules:',
                    paste0('  - ', m('conversion'))))
-wr('bad_piece', c('kg_dynamics: [bathtub, teapot]', 'modules: []'))
+wr('bad_piece', c('kg_dynamics:', paste0('  bathtub: ', BATH),
+                  '  teapot: requirements.txt', 'modules: []'))
 wr('wealth_no_estate', c('kg_dynamics: none', 'modules:',
                          paste0('  - ', m('wealth'))))
 wr('evasion_no_estate', c('kg_dynamics: none', 'modules:',
@@ -175,10 +184,9 @@ check('the list form names pieces with no stamp path', {
   identical(s$kg_pieces, 'bathtub') && identical(s$kg_dynamics$bathtub, '')
 })
 
-check('the mapping form carries each piece its stamp path', {
+check('the mapping form carries each piece its calibration file', {
   s = behavior_resolve('map_form')
-  identical(s$kg_pieces, 'bathtub') &&
-    identical(s$kg_dynamics$bathtub, 'requirements.txt')
+  identical(s$kg_pieces, 'bathtub') && identical(s$kg_dynamics$bathtub, BATH)
 })
 
 check('both kg forms mean the same thing to the activation predicate', {
@@ -228,6 +236,17 @@ bad('a module file that does not exist is refused', 'missing_file',
     'module file does not exist')
 bad('the same module twice is refused', 'dup',
     'listed twice')
+
+for (d in c('alternatives/bound_missing_file', 'alternatives/bound_no_path'))
+  dir.create(file.path(root, 'behavior', d), recursive = TRUE, showWarnings = FALSE)
+wr('bound_missing_file',
+   c('kg_dynamics:', '  bathtub: config/calibrations/kg/nope.yaml', 'modules: []'))
+wr('bound_no_path', c('kg_dynamics:', '  bathtub:', 'modules: []'))
+
+bad('a bound piece naming a file that does not exist is refused',
+    'bound_missing_file', 'calibration file that does not exist')
+bad('a bound piece with no file named is refused',
+    'bound_no_path', 'without naming a calibration file')
 
 check('evasion without estate warns rather than stopping', {
   w = NULL

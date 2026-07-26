@@ -8,7 +8,7 @@ while true; do
   if [ "${n:-0}" -eq 0 ]; then
     for tag in s2 s3 s4 s6 s7; do
       g=${tag#s}
-      out=$(bash other/config_redesign/gate_diff.sh "$V/rb_p4_${tag}b" "$V/golds${g}" 2>&1 | tail -1)
+      out=$(bash other/config_redesign/gate_diff.sh "$V/rb_p5_${tag}" "$V/golds${g}" 2>&1 | tail -1)
       case "$out" in
         GATE_PASS*) echo "GATE $tag PASS" ;;
         *)          echo "GATE $tag FAIL: $(echo "$out" | cut -c1-160)" ;;

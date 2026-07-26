@@ -64,19 +64,26 @@ do_entity_shifting = function(tax_units, baseline_mtrs, static_mtrs,
          paste(missing, collapse = ', '), '.')
   }
 
-  # Set semi elasticity, starting with Pearce and Prisinzano's Table IV.B preferred
-  # results, evaluated at pass-through's share of business income
-  e = 0.3788 / 0.6
+  # Parameters, with their sources, in
+  # config/calibrations/kg/entity_shifting.yaml. Read from a fixed path rather
+  # than bound per scenario: they are published constants, so there is nothing
+  # about them to vary and nothing that can go stale, and this module also runs
+  # in entity-only scenarios where no bathtub exists to bind to.
+  #
+  # e     : the Pearce-Prisinzano Table IV.B semi-elasticity, evaluated at
+  #         pass-through's share of business income.
+  # alpha : the share of corporate earnings assumed paid out currently. That
+  #         leg's tax is still proxied by mtr_kg_lt -- the historical module's
+  #         dividends-equal-gains simplification. The retained share is priced
+  #         properly by tau_eq when the bathtub is running: expected present-value
+  #         tax per dollar newly entering the unrealized-gain state, by age, year
+  #         and policy/death regime.
+  # beta_legacy : the superseded 25%-of-statutory deferral proxy, used only for
+  #         entity-only runs and the explicit legacy comparison module.
+  e = kg_entity('semi_elasticity_raw') / kg_entity('pt_share_of_business_income')
 
-  # Set other parameters.  Forty-five percent of corporate earnings are
-  # assumed paid currently.  Their tax is still proxied by mtr_kg_lt (the
-  # historical module's dividend=gains simplification).  The retained share
-  # is priced by tau_eq when kg dynamics is available: expected present-value
-  # tax per dollar newly entering the unrealized-gain state, by age/year and
-  # policy/death regime.  beta_legacy is retained only for entity-only and
-  # explicit legacy comparison runs.
-  alpha       = 0.45
-  beta_legacy = 0.25
+  alpha       = kg_entity('current_payout_share')
+  beta_legacy = kg_entity('beta_legacy')
 
   tax_units_with_tau_eq = if (use_tau_eq) {
     if (!'age_cohort' %in% names(tax_units)) {

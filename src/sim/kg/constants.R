@@ -71,7 +71,7 @@ KG_DYN_AGE_MAX_BELLMAN  = 119     # SSA PerLifeTables hit q(x)=1 at 119
 # Fallback annual discount factor for isolated solver unit tests. Production
 # paths build a year-varying real-rate series via kg_dyn_load_beta_series
 # (tsy_10y Fisher-deflated by year-t YoY CPI-U).
-# Value and provenance: config/scenarios/economy/default/kg.yaml (kg.beta_fallback).
+# Value and provenance: config/calibrations/kg/settings.yaml (beta_fallback).
 
 # Realization RESPONSE FORM -- how the scenario-side FOC extrapolates away from
 # the calibrated local moment. The entropy Bellman admits two cost primitives
@@ -95,7 +95,7 @@ KG_DYN_AGE_MAX_BELLMAN  = 119     # SSA PerLifeTables hit q(x)=1 at 119
 # baseline pass is form-invariant. Vintages are NOT comparable across forms --
 # regenerate before comparing.
 kg_dyn_response_form = function() {
-  v = economy_param('kg', 'response_form')
+  v = kg_setting('response_form')
   if (!v %in% c('levels', 'logs'))
     stop(sprintf(paste0("kg_dynamics: assumption kg.response_form must be ",
                         "'levels' or 'logs'; got '%s'."), v))
@@ -129,14 +129,14 @@ KG_DYN_LOGS_MC_CAP      = 0.98
 #       invariant). 'NA' forces the unpinned bootstrap -- the finite guard in
 #       kg_dyn_run_bathtub_pass hard-stops any sim reaching the Bellman with it
 #       unset. Override per scenario via assumption.kg.timeable_share.
-#       Value and provenance: config/scenarios/economy/default/kg.yaml (kg.timeable_share).
+#       Value and provenance: config/calibrations/kg/bathtub.yaml (timeable_share).
 # Net-of-tax ('logs') timeable share -- its OWN calibration (the short-run
 # announcement moment given eta_tilde), independent of the levels share above.
 # kg_dyn_active_timeable_share() surfaces it only when kg.response_form = 'logs'.
 # The timing overlay is a mechanical fraction, not a Bellman response, so it is
 # nearly form-robust; the long-run moment is timeable-invariant, so eta_tilde and
 # this share identify sequentially. Override via assumption.kg.timeable_share_logs.
-# Value and provenance: config/scenarios/economy/default/kg.yaml (kg.timeable_share_logs).
+# Value and provenance: config/calibrations/kg/bathtub.yaml (timeable_share_logs).
 
 # Applier-only deemed-realization avoidance haircut: a data-calibration
 # parameter (valuation games / noncompliance that JCT and Treasury assume but
@@ -149,7 +149,7 @@ KG_DYN_LOGS_MC_CAP      = 0.98
 # TODO: this is the same object as the estate-tax asset-class reporting factor
 # (a valuation discount on closely-held/illiquid assets) -- concord the two on a
 # shared per-asset-class rho_k.
-# Value and provenance: config/scenarios/economy/default/kg.yaml (kg.deemed_avoidance).
+# Value and provenance: config/calibrations/kg/settings.yaml (deemed_avoidance).
 
 # Fraction of planned dollars that move toward the best year in the window
 # is clamp((tau_S - tau_B between source and destination) / ref_wedge, 0, 1).
@@ -158,7 +158,7 @@ KG_DYN_LOGS_MC_CAP      = 0.98
 # wedge is exactly zero when the living-side schedule is unchanged --
 # post-injection MTRs would drift a few bp from the income effect of
 # mechanically-routed carryover realizations and retime against noise.
-# Value and provenance: config/scenarios/economy/default/kg.yaml (kg.timing_ref_wedge).
+# Value and provenance: config/calibrations/kg/settings.yaml (timing_ref_wedge).
 
 # Static resource: dollar-weighted heir-age distribution derived from SCF
 # 2022 inheritance data (filtered to non-gift transfers, weighted by
@@ -185,7 +185,7 @@ KG_DYN_HEIR_DISTRIBUTION_PATH = './resources/heir_distribution_scf2022.csv'
 # 'NA' forces the unpinned bootstrap: the finite-eta guard in
 # kg_dyn_run_bathtub_pass hard-stops any sim that reaches the Bellman with eta
 # unset (intended -- prevents accidental sims on an uncalibrated model).
-# Value and provenance: config/scenarios/economy/default/kg.yaml (kg.eta).
+# Value and provenance: config/calibrations/kg/bathtub.yaml (eta).
 
 # eta_tilde -- the NET-OF-TAX ('logs') cost precision. Under the power cost it
 # is the constant net-of-tax elasticity dlog(r_D)/dlog(1 - MC) = eta_tilde.
@@ -195,7 +195,7 @@ KG_DYN_HEIR_DISTRIBUTION_PATH = './resources/heir_distribution_scf2022.csv'
 # because the net-of-tax full-sim slope is steeper, so the same E_full needs a
 # smaller eta_tilde. Override via assumption.kg.eta_logs ('NA' forces the
 # unpinned bootstrap hard-stop).
-# Value and provenance: config/scenarios/economy/default/kg.yaml (kg.eta_logs).
+# Value and provenance: config/calibrations/kg/bathtub.yaml (eta_logs).
 
 # Active-form resolvers: the single place that maps the response form to that
 # form's calibrated pair. Consumed by kg_dyn_run_bathtub_pass (arg defaults) and
@@ -209,13 +209,13 @@ kg_dyn_as_pinned = function(v) {
 }
 kg_dyn_active_eta = function(form = kg_dyn_response_form()) {
   kg_dyn_as_pinned(
-    if (identical(form, 'logs')) economy_param('kg', 'eta_logs')
-    else                         economy_param('kg', 'eta'))
+    if (identical(form, 'logs')) kg_bathtub('eta_logs')
+    else                         kg_bathtub('eta'))
 }
 kg_dyn_active_timeable_share = function(form = kg_dyn_response_form()) {
   kg_dyn_as_pinned(
-    if (identical(form, 'logs')) economy_param('kg', 'timeable_share_logs')
-    else                         economy_param('kg', 'timeable_share'))
+    if (identical(form, 'logs')) kg_bathtub('timeable_share_logs')
+    else                         kg_bathtub('timeable_share'))
 }
 
 # Within-cell allocation rule for policy-induced dG, controlling the
@@ -225,7 +225,7 @@ kg_dyn_active_timeable_share = function(form = kg_dyn_response_form()) {
 #   "R" — dG allocated proportional to positive kg_lt; m_eff = sum(w*m*R)/sum(w*R).
 #         Lock-in story. Falls back to "G" when R_B = 0.
 # Only affects carryover/deemed; step-up is unchanged (death channel off).
-# Value and provenance: config/scenarios/economy/default/kg.yaml (kg.dg_allocation).
+# Value and provenance: config/calibrations/kg/settings.yaml (dg_allocation).
 
 # Within-cell allocation rule used by the per-record APPLIER to distribute the
 # lock-in/carryover stock realization (extra_R) across records in an age cell.
@@ -248,7 +248,7 @@ kg_dyn_active_timeable_share = function(form = kg_dyn_response_form()) {
 # knob (R gives the most, G the least); deemed is invariant to it.
 # NOTE: the Bellman calibration (eta/timeable_share) is conditioned on this 0.5
 # default -- re-pin if it changes.
-# Value and provenance: config/scenarios/economy/default/kg.yaml (kg.applier_allocation).
+# Value and provenance: config/calibrations/kg/settings.yaml (applier_allocation).
 
 KG_DYN_ASSET_CLASSES    = c('equities', 'pass_throughs',
                             'primary_home', 'other_home', 're_fund')
@@ -262,7 +262,7 @@ KG_DYN_ASSET_GAIN_COLS  = paste0('gain.',  KG_DYN_ASSET_CLASSES)
 # counts as a gross-estate asset.
 
 # Terminal-charity logit coefficients on log(gross estate, 2026 $M) and the
-# deflation base year: config/scenarios/economy/default/kg.yaml (kg.char_*). NOTE: no source
+# deflation base year: config/calibrations/kg/settings.yaml (char_*). NOTE: no source
 # for the four fitted coefficients is recorded anywhere in the repository --
 # flagged in the config for the author to fill in.
 
@@ -297,7 +297,7 @@ KG_DYN_REGIME_TRIPLET = list(
 # applier-rule change once biased every conventional kg estimate by ~37% on a
 # 5pp gains-rate score before it was caught.
 #
-# Those dependencies now live in config/scenarios/economy/default/kg.yaml as each calibrated
+# Those dependencies now live in config/calibrations/kg/bathtub.yaml as each calibrated
 # entry's derived_under (data vintages) and invalidated_by (code files, checked
 # by content hash), and config_check_staleness() HARD STOPS the run rather
 # than warning. The old warn-only stamp and its KG_STRICT_CALIB escape hatch are
@@ -320,8 +320,8 @@ KG_DYN_SPEC_VERSION = 3L
 
 kg_dyn_validate_timing_params = function(
     timeable_share = kg_dyn_active_timeable_share(),
-    timing_window  = economy_param('kg', 'timing_window'),
-    ref_wedge      = economy_param('kg', 'timing_ref_wedge')) {
+    timing_window  = kg_setting('timing_window'),
+    ref_wedge      = kg_setting('timing_ref_wedge')) {
 
   # Single-pool (spec v3) timing parameters. timeable_share is the fraction of
   # ALL realizations that retimes across the window. NA is permitted here

@@ -303,7 +303,7 @@ kg_dyn_solve_bellman = function(grid_packed, tau_mat, c_phi_mat,
   n_ages  = nrow(m_mat); n_years = ncol(m_mat)
   ages_chr  = rownames(m_mat); years_chr = colnames(m_mat)
 
-  if (is.null(beta_by_year)) beta_by_year = rep(economy_param('kg', 'beta_fallback'), n_years)
+  if (is.null(beta_by_year)) beta_by_year = rep(kg_setting('beta_fallback'), n_years)
   stopifnot(length(beta_by_year) == n_years)
 
   if (missing(c_phi_mat) || is.null(c_phi_mat)) {

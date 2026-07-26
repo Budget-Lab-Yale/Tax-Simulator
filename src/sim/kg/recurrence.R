@@ -29,7 +29,7 @@ kg_dyn_cell_m_eff = function(baseline_t) {
   m_eff_R = if_else(baseline_t$R_B > 0,
                     baseline_t$mR_record / baseline_t$R_B, m_eff_G)
 
-  dg_allocation = as.character(economy_param('kg', 'dg_allocation'))
+  dg_allocation = as.character(kg_setting('dg_allocation'))
   m_eff = switch(dg_allocation,
                  G = m_eff_G,
                  R = m_eff_R,
@@ -379,8 +379,8 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                     form  = kg_dyn_response_form(),
                                     eta   = kg_dyn_active_eta(form),
                                     timeable_share = kg_dyn_active_timeable_share(form),
-                                    timing_window = economy_param('kg', 'timing_window'),
-                                    ref_wedge     = economy_param('kg', 'timing_ref_wedge'),
+                                    timing_window = kg_setting('timing_window'),
+                                    ref_wedge     = kg_setting('timing_ref_wedge'),
                                     corp_debit_by_year = NULL,
                                     sigma_ctx = NULL,
                                     reform_carry = NULL,
@@ -520,7 +520,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   # Step 2b: wealth-carry matrix (scenario side only; see reform_carry doc).
   # kg.wealth_carry_scale applies at pack time so every consumer (Bellman,
   # tau_eq, guard slack, state-file carry_h column) sees the scaled h.
-  carry_scale = as.numeric(economy_param('kg', 'wealth_carry_scale'))
+  carry_scale = as.numeric(kg_setting('wealth_carry_scale'))
   if (!is.finite(carry_scale) || carry_scale < 0) {
     stop('kg_dynamics: assumption kg.wealth_carry_scale must be a finite ',
          'nonnegative number; got "', carry_scale, '".')

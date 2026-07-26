@@ -281,11 +281,17 @@ config_validate = function(leg, entries) {
         problems = c(problems, sprintf(
           '%s: active_when keys must be {channel}.{name}', label))
       }
+      # `settings` joins the two legs as a valid conditioned_on source: the kg
+      # calibrations are conditioned on the model-form switches in
+      # config/calibrations/kg/settings.yaml, and that dependency is exactly what
+      # makes changing a switch stop the run rather than silently reuse a value
+      # derived under a different one.
       if (!is.null(entry$conditioned_on) &&
-          !all(grepl('^(economy|behavior)[.][a-z0-9_]+[.][a-z0-9_]+$',
+          !all(grepl('^(economy|behavior|settings)[.][a-z0-9_]+[.][a-z0-9_]+$',
                      names(entry$conditioned_on)))) {
         problems = c(problems, sprintf(
-          '%s: conditioned_on keys must be {leg}.{channel}.{name}', label))
+          '%s: conditioned_on keys must be {economy|behavior|settings}.{channel}.{name}',
+          label))
       }
       if (!is.null(entry$role) && !(entry$role %in% CONFIG_ROLES)) {
         problems = c(problems, sprintf(

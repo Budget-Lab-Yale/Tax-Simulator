@@ -10,12 +10,15 @@
 # against one pinned family order, because some responses read what an earlier
 # one wrote. See that file for the order and the reasons.
 
-# kg_dynamics names the pieces of the gains machinery this scenario binds. The
-# bathtub applier is not listed under modules: it is the machinery itself and
-# comes in automatically. Each piece gets a path to its stamped calibration file
-# once those files exist; until then naming the piece is the whole declaration.
+# kg_dynamics binds the pieces of the gains machinery this scenario uses, each to
+# the calibration file carrying its value and provenance. The bathtub applier is
+# not listed under modules: it is the machinery itself and comes in automatically.
+# A sweep binds a different file of the same shape, which is how the sweep ends up
+# recorded in the vintage.
 
-kg_dynamics: [bathtub, conversion, entity_shifting]
+kg_dynamics:
+  bathtub: config/calibrations/kg/bathtub.yaml
+  conversion: config/calibrations/kg/conversion.yaml
 
 modules:
   - src/behavior/conversion/sigma.R

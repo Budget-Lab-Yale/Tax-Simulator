@@ -444,13 +444,25 @@ resolve_all_scenarios = function(runscript, economy_defaults, behavior_defaults,
         file.path(m$root, as.character(v), as.character(sid))
       })
 
+    interface_vintages = config_interface_vintages(economy)
+
     config_check_staleness(
       leg                = 'economy',
       defaults           = economy_defaults,
       resolved           = economy,
-      interface_vintages = config_interface_vintages(economy),
+      interface_vintages = interface_vintages,
       cross_values       = list(economy  = economy$values,
                                 behavior = behavior$values),
+      enforce            = CONFIG_ENFORCE_STALENESS
+    )
+
+    # The same check over every calibration file this scenario points at. It runs
+    # here, next to the economy leg's, for the same reason: parse time is the one
+    # place both the main.R path and the SLURM path pass through, so a stale
+    # calibration cannot reach a cluster run unnoticed.
+    calib_check_staleness(
+      behavior_spec      = behavior$spec,
+      interface_vintages = interface_vintages,
       enforce            = CONFIG_ENFORCE_STALENESS
     )
 
@@ -477,6 +489,9 @@ write_run_manifest = function(output_root, runscript, scenario_configs,
   #                              plus computational scope
   #   - scenario_config.csv    : every resolved value across both legs with
   #                              kind, role, override flag and source
+  #   - calibrations.csv       : per scenario, every calibration value in use,
+  #                              its file, its kind, and whether the scenario
+  #                              bound the file or read it from a fixed path
   #   - behavioral_assumptions.csv : per scenario, the tax law, the behavior
   #                              alternative, and the stack it resolved to
   #                              (kg pieces + ordered module paths)
@@ -517,6 +532,14 @@ write_run_manifest = function(output_root, runscript, scenario_configs,
                       scenario_configs[[.x]]$behavior, .x))) %>%
     bind_rows() %>%
     write_csv(file.path(output_root, 'scenario_config.csv'))
+
+  # calibrations.csv -- which calibration file supplied which value, and whether
+  # the scenario bound it or read it from a fixed path. Written so a past vintage
+  # can be read back without the code that produced it.
+  names(scenario_configs) %>%
+    map(.f = ~ calib_manifest(scenario_configs[[.x]]$behavior$spec, .x)) %>%
+    bind_rows() %>%
+    write_csv(file.path(output_root, 'calibrations.csv'))
 
   # behavioral_assumptions.csv -- the response record. The behavior cell names a
   # folder now, so the folder name alone would not tell a reader of an old

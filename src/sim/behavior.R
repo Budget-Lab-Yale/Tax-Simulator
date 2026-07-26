@@ -11,6 +11,14 @@
 #                 this scenario binds -- see behavior_read_yaml() for the two
 #                 forms the value may take
 #   modules     : a bare list of paths to module files under src/behavior/
+#   waivers     : optional. Dated acceptances of a staleness finding on a value
+#                 in one of the calibration files this scenario binds. They live
+#                 HERE, in the pointing file, and not in the calibration file
+#                 itself, for one reason: a calibration file is written by its
+#                 calibrator, so a waiver in it would be erased by the next
+#                 re-derivation -- which is right for a waiver that the
+#                 re-derivation resolves, and wrong for one that says "this
+#                 scenario knowingly runs against an older data vintage".
 #
 # Modules stay PLUGGABLE. There is no registry and no list of known names: the
 # loader takes any path that exists, sources it, and calls do_{family}, where
@@ -52,10 +60,16 @@ BEHAVIOR_FAMILY_ORDER = c('kg_dynamics', 'conversion', 'entity_shifting',
 # step that translates bathtub state into per-record realizations.
 BEHAVIOR_KG_APPLIER = 'src/behavior/kg_dynamics/turnover.R'
 
-# The pieces of the kg machinery a scenario may bind. `bathtub` is the state
-# recurrence itself and is required whenever kg_dynamics is active; the other
-# two are the responses built on top of it.
-BEHAVIOR_KG_PIECES = c('bathtub', 'conversion', 'entity_shifting')
+# The pieces of the kg machinery a scenario may BIND -- that is, name a
+# calibration file for. `bathtub` is the state recurrence itself and is required
+# whenever kg_dynamics is active; `conversion` is the response built on top of it.
+#
+# Entity shifting is deliberately NOT here, even though it does read the bathtub's
+# tau_eq when one is running. Its parameters are published constants, so there is
+# nothing about them to vary per scenario and nothing that can go stale, and the
+# module also runs in entity-only scenarios where no bathtub exists to bind to.
+# It reads them from a fixed path instead (src/misc/calibrations.R).
+BEHAVIOR_KG_PIECES = c('bathtub', 'conversion')
 
 
 do_behavioral_feedback = function(tax_units, behavior_modules, baseline_mtrs,
@@ -178,6 +192,8 @@ behavior_resolve = function(alternative = NULL) {
   #   - listed       : the module paths as written, before ordering (kept so
   #                    the migration can assert the sort changed nothing)
   #   - families     : families of `modules`, in execution order
+  #   - waivers      : named list, '{calibration file stem}.{entry}' ->
+  #                    {date, reason}
   #----------------------------------------------------------------------------
 
   alternative = if (is.null(alternative) || length(alternative) == 0 ||
@@ -223,12 +239,22 @@ behavior_resolve = function(alternative = NULL) {
   modules = if (length(kg_pieces) > 0) c(BEHAVIOR_KG_APPLIER, listed) else listed
   modules = behavior_order(modules)
 
+  waivers = spec$waivers %||% list()
+  for (key in names(waivers)) {
+    if (!all(c('date', 'reason') %in% names(waivers[[key]]))) {
+      stop('Behavior alternative "', alternative, '" has a waiver on ', key,
+           ' without both `date` and `reason`. An undated waiver is ',
+           'indistinguishable from a finding nobody has looked at.')
+    }
+  }
+
   list(alternative = alternative,
        kg_dynamics = kg_dynamics,
        kg_pieces   = kg_pieces,
        modules     = modules,
        listed      = listed,
-       families    = behavior_family(modules))
+       families    = behavior_family(modules),
+       waivers     = waivers)
 }
 
 
@@ -278,6 +304,23 @@ behavior_validate_spec = function(spec, id = NULL) {
       ' -- the pieces are ', paste(BEHAVIOR_KG_PIECES, collapse = ', ')))
   }
 
+  # A bound piece must name a file, and the file must exist. Without this the
+  # run gets as far as the first read of that value before failing.
+  if (length(spec$kg_pieces) > 0) {
+    for (piece in spec$kg_pieces) {
+      path = spec$kg_dynamics[[piece]]
+      if (is.null(path) || !nzchar(as.character(path))) {
+        problems = c(problems, paste0(
+          'kg_dynamics binds `', piece, '` without naming a calibration file ',
+          '-- write it as `', piece, ': <path>`'))
+      } else if (!file.exists(as.character(path))) {
+        problems = c(problems, paste0(
+          'kg_dynamics binds `', piece, '` to a calibration file that does not ',
+          'exist: ', path))
+      }
+    }
+  }
+
   kg_on = length(spec$kg_pieces) > 0
   if (kg_on && !('bathtub' %in% spec$kg_pieces)) {
     problems = c(problems, paste0(
@@ -288,7 +331,7 @@ behavior_validate_spec = function(spec, id = NULL) {
   # Each optional piece must agree with the module that uses it, in both
   # directions: a bound piece nobody runs is dead configuration, and a module
   # whose piece is unbound would read a value from nowhere.
-  for (piece in c('conversion', 'entity_shifting')) {
+  for (piece in c('conversion')) {
     has_module = piece %in% spec$families
     has_piece  = piece %in% spec$kg_pieces
     if (kg_on && has_module && !has_piece) {

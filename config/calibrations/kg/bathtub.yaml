@@ -22,6 +22,15 @@
 # in an alternative, or put a dated waiver on the entry in the file that points
 # here.
 
+#
+# HASH RE-PIN 2026-07-26 (calibration switchover): the dependency hashes below
+# were re-pinned after the kg source files changed in one respect only -- the
+# accessor for these very values changed from economy_param('kg', ...) to
+# kg_bathtub() / kg_setting(), reading the same numbers from their new home. No
+# formula, threshold or magnitude moved. CONDITIONAL, as the two earlier re-pins
+# in this project were: it stands only if the six-scenario byte-identity gate is
+# clean, and becomes a real re-derivation if it is not.
+
 _channel:
   role: state
 
@@ -46,11 +55,15 @@ eta:
     - src/sim/kg/timing.R
     - src/sim/kg/apply.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: 6d96164e9721c0cf75aa781a1597a552
-    src/sim/kg/bellman.R: e46275d07b083f26b542b014da53a927
-    src/sim/kg/recurrence.R: 9f179e2f18efa3e1969f1f42310f6226
-    src/sim/kg/timing.R: 145b353488bd511e87f6ee66f22027a8
-    src/sim/kg/apply.R: a3e97d02b0f013b697a0e69d2b76bc22
+    src/sim/kg/constants.R: 28f9a1da56837b8f6a09f983f97fc429
+    src/sim/kg/bellman.R: 24520852179a1d8830a8430446a245f8
+    src/sim/kg/recurrence.R: 72f808f7c5a288ba0912c29621bb604e
+    src/sim/kg/timing.R: 1350e269e70924db5b550b107821a8cf
+    src/sim/kg/apply.R: 0e0eb6d9813f994fec7c86bc453023ca
+  conditioned_on:
+    settings.kg.applier_allocation: '0.5'
+    settings.kg.timing_ref_wedge: 0.05
+    settings.kg.timing_window: 1
   rederive: other/top_tax/eta_dial/measure_efull_by_eta.R
   active_when:
     kg.response_form: levels
@@ -83,11 +96,15 @@ eta_logs:
     - src/sim/kg/timing.R
     - src/sim/kg/apply.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: 6d96164e9721c0cf75aa781a1597a552
-    src/sim/kg/bellman.R: e46275d07b083f26b542b014da53a927
-    src/sim/kg/recurrence.R: 9f179e2f18efa3e1969f1f42310f6226
-    src/sim/kg/timing.R: 145b353488bd511e87f6ee66f22027a8
-    src/sim/kg/apply.R: a3e97d02b0f013b697a0e69d2b76bc22
+    src/sim/kg/constants.R: 28f9a1da56837b8f6a09f983f97fc429
+    src/sim/kg/bellman.R: 24520852179a1d8830a8430446a245f8
+    src/sim/kg/recurrence.R: 72f808f7c5a288ba0912c29621bb604e
+    src/sim/kg/timing.R: 1350e269e70924db5b550b107821a8cf
+    src/sim/kg/apply.R: 0e0eb6d9813f994fec7c86bc453023ca
+  conditioned_on:
+    settings.kg.applier_allocation: '0.5'
+    settings.kg.timing_ref_wedge: 0.05
+    settings.kg.timing_window: 1
   rederive: other/top_tax/eta_dial/measure_efull_by_eta.R
   active_when:
     kg.response_form: logs
@@ -116,9 +133,13 @@ timeable_share:
     - src/sim/kg/timing.R
     - src/sim/kg/recurrence.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: 6d96164e9721c0cf75aa781a1597a552
-    src/sim/kg/timing.R: 145b353488bd511e87f6ee66f22027a8
-    src/sim/kg/recurrence.R: 9f179e2f18efa3e1969f1f42310f6226
+    src/sim/kg/constants.R: 28f9a1da56837b8f6a09f983f97fc429
+    src/sim/kg/timing.R: 1350e269e70924db5b550b107821a8cf
+    src/sim/kg/recurrence.R: 72f808f7c5a288ba0912c29621bb604e
+  conditioned_on:
+    settings.kg.timing_window: 1
+    settings.kg.timing_ref_wedge: 0.05
+    settings.kg.applier_allocation: '0.5'
   rederive: other/kg_model_tests/calibrate.R
   active_when:
     kg.response_form: levels
@@ -149,9 +170,13 @@ timeable_share_logs:
     - src/sim/kg/timing.R
     - src/sim/kg/recurrence.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: 6d96164e9721c0cf75aa781a1597a552
-    src/sim/kg/timing.R: 145b353488bd511e87f6ee66f22027a8
-    src/sim/kg/recurrence.R: 9f179e2f18efa3e1969f1f42310f6226
+    src/sim/kg/constants.R: 28f9a1da56837b8f6a09f983f97fc429
+    src/sim/kg/timing.R: 1350e269e70924db5b550b107821a8cf
+    src/sim/kg/recurrence.R: 72f808f7c5a288ba0912c29621bb604e
+  conditioned_on:
+    settings.kg.timing_window: 1
+    settings.kg.timing_ref_wedge: 0.05
+    settings.kg.applier_allocation: '0.5'
   rederive: other/kg_model_tests/form_ab/confirm_efull_logs.R
   active_when:
     kg.response_form: logs

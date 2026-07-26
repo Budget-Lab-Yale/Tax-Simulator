@@ -1,7 +1,0 @@
-# Waiver only: see kg.yaml in this folder.
-
-conv:
-  waiver:
-    date: '2026-07-26'
-    reason: >
-      Gate fixture pinned to Tax-Data 2026050315 on purpose.

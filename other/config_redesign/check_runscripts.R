@@ -62,6 +62,14 @@ for (f in files) {
       behavior = if ('behavior' %in% names(rs)) rs$behavior[i] else NA_character_
       spec = behavior_resolve(behavior)
       suppressWarnings(behavior_validate_spec(spec, rs$ID[i]))
+
+      # And the calibration files this scenario points at: are the values in them
+      # still consistent with the data vintages, the code and the settings this
+      # run would use?
+      suppressMessages(suppressWarnings(calib_check_staleness(
+        behavior_spec      = spec,
+        interface_vintages = config_interface_vintages(eco),
+        enforce            = CONFIG_ENFORCE_STALENESS)))
     }
     'ok'
   }, error = function(e) conditionMessage(e))
