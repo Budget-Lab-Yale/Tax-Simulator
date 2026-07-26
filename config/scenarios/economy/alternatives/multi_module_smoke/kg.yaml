@@ -1,0 +1,26 @@
+# Waivers only: the fixture's older Tax-Data pin makes every kg calibration
+# read stale, deliberately. No value changes.
+
+eta:
+  waiver:
+    date: '2026-07-26'
+    reason: >
+      Gate fixture pinned to Tax-Data 2026050315 on purpose.
+
+eta_logs:
+  waiver:
+    date: '2026-07-26'
+    reason: >
+      Gate fixture pinned to Tax-Data 2026050315 on purpose.
+
+timeable_share:
+  waiver:
+    date: '2026-07-26'
+    reason: >
+      Gate fixture pinned to Tax-Data 2026050315 on purpose.
+
+timeable_share_logs:
+  waiver:
+    date: '2026-07-26'
+    reason: >
+      Gate fixture pinned to Tax-Data 2026050315 on purpose.

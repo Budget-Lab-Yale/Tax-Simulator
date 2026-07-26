@@ -108,6 +108,12 @@ for (sid in scenarios_to_build) {
   scenario_info = get_scenario_info(sid)
   ensure_scenario_dirs(scenario_info)
 
+  # Setup reads configuration too (build_tax_law, and the channel predicates
+  # further down decide which SLURM phases get emitted), so activate this
+  # scenario's legs before anything reads a value.
+  config_activate(economy  = scenario_info$resolved_economy,
+                  behavior = scenario_info$resolved_behavior)
+
   # Calculate offsets
   vat_price_offset = get_vat_price_offset(
     macro_root = scenario_info$interface_paths$`Macro-Projections`,
@@ -206,6 +212,12 @@ if (has_baseline) {
 # Phase 1B and 2B: one task per counterfactual scenario
 for (sid in counterfactual_ids) {
   si = get_scenario_info(sid)
+
+  # scenario_uses_wealth_dynamics() below reads the economy leg, and the loop
+  # above may have left another scenario's legs installed.
+  config_activate(economy  = si$resolved_economy,
+                  behavior = si$resolved_behavior)
+
   manifest = manifest %>%
     bind_rows(tibble(
       phase    = '1B',

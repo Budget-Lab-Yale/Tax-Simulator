@@ -1,0 +1,8 @@
+# Waiver only: the valuation bridge is locked, so waiving is the only escape
+# available to a fixture that pins an older Tax-Data vintage on purpose.
+
+valuation_bridge:
+  waiver:
+    date: '2026-07-26'
+    reason: >
+      Gate fixture pinned to Tax-Data 2026050315 on purpose.

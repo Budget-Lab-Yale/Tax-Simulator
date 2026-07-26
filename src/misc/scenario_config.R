@@ -384,14 +384,16 @@ config_resolve = function(leg, defaults, alternative = NULL) {
       source  = source))
   }
 
-  check_known = function(channel, nm, source) {
+  check_known = function(channel, nm, source, waiver_only = FALSE) {
     if (!(channel %in% names(defaults$entries))) {
       stop(source, " names an unknown ", leg, " channel: ", channel)
     }
     if (!(nm %in% names(defaults$entries[[channel]]))) {
       stop(source, " names an unknown ", leg, " entry: ", channel, '.', nm)
     }
-    if (isTRUE(defaults$entries[[channel]][[nm]]$locked)) {
+    # A waiver accepts a staleness finding; it does not change the value, so
+    # `locked` has nothing to protect against.
+    if (isTRUE(defaults$entries[[channel]][[nm]]$locked) && !waiver_only) {
       stop(channel, '.', nm, ' is locked (', source, ' tried to override it). ',
            'Locked entries are never scenario-overridable.')
     }
@@ -411,7 +413,8 @@ config_resolve = function(leg, defaults, alternative = NULL) {
       channel = tools::file_path_sans_ext(basename(f))
       alt_entries = read_yaml(f)
       for (nm in names(alt_entries)) {
-        check_known(channel, nm, label)
+        check_known(channel, nm, label,
+                    waiver_only = is.null(alt_entries[[nm]]$value))
 
         # A dated waiver: the alternative accepts a staleness finding on this
         # entry rather than changing its value. Humans write these; they show
