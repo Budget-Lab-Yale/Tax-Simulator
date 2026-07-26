@@ -3,7 +3,7 @@
 # Estate tax law parameters. LAW ONLY: the measurement bridge from Tax-Data
 # economic wealth to reported gross estate (valuation factors, deduction
 # fractions, DSUE incidence, gift add-back) is NOT tax law and lives in
-# config/estate/estate_valuation_params.yaml — reforms must never touch it.
+# config/calibrations/estate/bridge.yaml — reforms must never touch it.
 #
 # Consumed by calc_estate() (src/calc/functions/tax/estate.R). Estate liability
 # is expected-value per record: these parameters apply to the decedent's

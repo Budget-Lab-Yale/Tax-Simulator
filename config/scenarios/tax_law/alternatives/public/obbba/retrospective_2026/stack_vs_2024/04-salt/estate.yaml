@@ -10,7 +10,7 @@
 # brackets, portability, income-tax-at-death deductibility) is unchanged, so the
 # OBBBA estate-exemption increase scores correctly as the 08-estate stack line.
 #
-# LAW ONLY: the measurement bridge lives in config/estate/estate_valuation_params.yaml.
+# LAW ONLY: the measurement bridge lives in config/calibrations/estate/bridge.yaml.
 #-------------------------------------------------------------------------------
 
 # Basic exclusion amount (IRC §2010(c)(3)).
