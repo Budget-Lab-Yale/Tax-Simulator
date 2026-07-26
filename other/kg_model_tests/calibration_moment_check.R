@@ -44,7 +44,7 @@ if (length(args) < 1) {
 BASELINE_ROOT = args[1]
 MACRO_ROOT    = '/nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections/v3/2026022522/baseline'
 TAX_DATA_ROOT = '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1/2026070814/baseline'
-REF_CSV       = 'other/kg_model_tests/calibration_reference.csv'
+REF_CSV       = 'other/kg_model_tests/moment_reference.csv'
 DRIFT_TOL     = 0.01
 
 AGES_BATHTUB = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX
@@ -59,7 +59,16 @@ F_REF            = 0.5
 # (KG_RESPONSE_FORM); the eval_long_run solves below pick up the form through
 # kg_dyn_solve_bellman's default (= KG_DYN_RESPONSE_FORM), so a logs run
 # exercises the power cost automatically. The reference row compared against is
-# the form's own constant in calibration_reference.csv.
+# the form's own constant in moment_reference.csv.
+#
+# That file replaced calibration_reference.csv on 2026-07-26. The old one also
+# carried each constant's shipped value, the files it was pinned against, and the
+# data vintages it was derived under -- all of which config/calibrations/kg/ now
+# owns, and all of which had drifted out of agreement with it (its sigma row named
+# a different Tax-Data vintage than conversion.yaml, and its file paths still
+# pointed at config/scenarios/behavior/). What is left is the one thing only this
+# diagnostic knows: the reference moment to compare a recomputation against. The
+# shipped eta is read from the live configuration instead of duplicated.
 FORM         = KG_DYN_RESPONSE_FORM
 CONST_NAME   = if (identical(FORM, 'logs')) 'KG_DYN_DEFAULT_ETA_LOGS' else
                                             'KG_DYN_DEFAULT_ETA'
@@ -172,7 +181,7 @@ if (is.null(ref) || !('constant' %in% names(ref)))
   stop(sprintf('cannot read %s (run with a valid reference file)', REF_CSV))
 row_i = which(ref$constant == CONST_NAME)
 if (length(row_i) != 1)
-  stop(sprintf('calibration_reference.csv needs exactly one %s row', CONST_NAME))
+  stop(sprintf('moment_reference.csv needs exactly one %s row', CONST_NAME))
 
 code_sha = tryCatch(system('git rev-parse --short HEAD', intern = TRUE),
                     error = function(e) NA_character_)

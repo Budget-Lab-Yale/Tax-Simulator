@@ -53,9 +53,29 @@ financing_profile:
   invalidated_by_hashes:
     config/calibrations/wealth_profiles/default/s.csv: 05e353bfd1a82c9135a4af1b07ebac8f
     config/calibrations/wealth_profiles/default/M.csv: f69080edc998607de4a401f01cecc732
-    src/sim/wealth_dynamics.R: f61c76cfce5407b3500dad6242daec53
-    other/wealth_dynamics/write_profiles.py: 305966e8951bef5126d9463022014965
+    src/sim/wealth_dynamics.R: 42a23e848d7b8dfbc6ccdfd8c282ea66
+    other/wealth_dynamics/write_profiles.py: df5f1cdc3142fa6ff888601dcb31621a
   rederive: other/wealth_dynamics/write_profiles.py
+  # Re-pinned again 2026-07-26, two files:
+  #   src/sim/wealth_dynamics.R -- WEALTH_DYN_PROVENANCE and
+  #     wealth_dyn_check_provenance() were removed. That stamp held its own copy
+  #     of the Macro vintage, fmax and n_pctiles and warned when they moved; the
+  #     parse-time check does that job for every calibrated value now, so keeping
+  #     it meant two mechanisms with separate expectations. Deleted code only, no
+  #     value touched.
+  #   other/wealth_dynamics/write_profiles.py -- its output path was corrected
+  #     (it still wrote to the pre-Phase-3b config/wealth/profiles/) and it now
+  #     writes a provenance.yaml beside each profile's tables. Verified directly:
+  #     regenerating reproduces both s.csv and both M.csv byte-for-byte, so the
+  #     surfaces this entry is pinned against did not move.
+  # Both re-pins stand only if the six-scenario gate is byte-identical; if it is
+  # not, they become real re-derivations.
+  #
+  # NOTE on coverage: the hashes below watch the DEFAULT profile's tables, which
+  # is what this default entry can see. A scenario pointing at another profile
+  # folder gets its provenance from that folder's provenance.yaml, which is
+  # recorded but not compared at parse time.
+  #
   # src/sim/wealth_dynamics.R's hash was re-pinned 2026-07-25 after the
   # profile-spec refactor (it reads economy.wealth.financing_profile instead of
   # the retired s / wealth_financing columns). Verification came first: the P3b

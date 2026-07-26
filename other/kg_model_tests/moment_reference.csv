@@ -1,0 +1,6 @@
+constant,reference_moment,derived_date,code_sha
+KG_DYN_DEFAULT_ETA,internal_long_run_semi=-2.2849,2026-07-12,697f2e155
+KG_DYN_TIMEABLE_SHARE,full_sim_short_run_semi=5.04,2026-07-09,697f2e155
+KG_DYN_DEFAULT_ETA_LOGS,internal_long_run_semi=-2.2393,2026-07-19,697f2e155
+KG_DYN_TIMEABLE_SHARE_LOGS,full_sim_short_run_semi=5.04,2026-07-19,697f2e155
+SIGMA_CONV,top_ordinary_ETI=0.25,2026-07-12,697f2e155

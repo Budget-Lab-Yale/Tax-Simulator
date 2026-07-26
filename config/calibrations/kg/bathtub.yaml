@@ -23,6 +23,13 @@
 # here.
 
 #
+# HASH RE-PIN 2026-07-26 (second, KG_DYN_SPEC_VERSION removal): constants.R's
+# hash moved because KG_DYN_SPEC_VERSION was deleted. It was a hand-maintained
+# integer meant to be bumped whenever the Bellman primitives changed, and nothing
+# read it -- no state file wrote it and no consumer compared it. The job it
+# described is done by the invalidated_by hashes below. Dead code only; stands if
+# the six-scenario gate is byte-identical.
+#
 # HASH RE-PIN 2026-07-26 (calibration switchover): the dependency hashes below
 # were re-pinned after the kg source files changed in one respect only -- the
 # accessor for these very values changed from economy_param('kg', ...) to
@@ -55,7 +62,7 @@ eta:
     - src/sim/kg/timing.R
     - src/sim/kg/apply.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: 28f9a1da56837b8f6a09f983f97fc429
+    src/sim/kg/constants.R: 5022893f3ec2ec1fdb78bb1bfe3feecb
     src/sim/kg/bellman.R: 24520852179a1d8830a8430446a245f8
     src/sim/kg/recurrence.R: 72f808f7c5a288ba0912c29621bb604e
     src/sim/kg/timing.R: 1350e269e70924db5b550b107821a8cf
@@ -96,7 +103,7 @@ eta_logs:
     - src/sim/kg/timing.R
     - src/sim/kg/apply.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: 28f9a1da56837b8f6a09f983f97fc429
+    src/sim/kg/constants.R: 5022893f3ec2ec1fdb78bb1bfe3feecb
     src/sim/kg/bellman.R: 24520852179a1d8830a8430446a245f8
     src/sim/kg/recurrence.R: 72f808f7c5a288ba0912c29621bb604e
     src/sim/kg/timing.R: 1350e269e70924db5b550b107821a8cf
@@ -133,7 +140,7 @@ timeable_share:
     - src/sim/kg/timing.R
     - src/sim/kg/recurrence.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: 28f9a1da56837b8f6a09f983f97fc429
+    src/sim/kg/constants.R: 5022893f3ec2ec1fdb78bb1bfe3feecb
     src/sim/kg/timing.R: 1350e269e70924db5b550b107821a8cf
     src/sim/kg/recurrence.R: 72f808f7c5a288ba0912c29621bb604e
   conditioned_on:
@@ -170,7 +177,7 @@ timeable_share_logs:
     - src/sim/kg/timing.R
     - src/sim/kg/recurrence.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: 28f9a1da56837b8f6a09f983f97fc429
+    src/sim/kg/constants.R: 5022893f3ec2ec1fdb78bb1bfe3feecb
     src/sim/kg/timing.R: 1350e269e70924db5b550b107821a8cf
     src/sim/kg/recurrence.R: 72f808f7c5a288ba0912c29621bb604e
   conditioned_on:

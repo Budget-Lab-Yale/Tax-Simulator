@@ -47,18 +47,11 @@ get_estate_params = function(tax_data_path = NULL) {
          'config/calibrations/estate/bridge.yaml')
   }
 
-  if (!is.null(tax_data_path) &&
-      !grepl(params$tax_data_vintage, tax_data_path, fixed = TRUE)) {
-    warning(sprintf(
-      paste0('estate: frozen valuation parameters were calibrated on ',
-             'Tax-Data vintage %s but this run uses %s. Estate tax levels ',
-             'and deltas are STALE for this vintage — r/rho_pt and the ',
-             'donor-clone cluster cap are vintage-specific. Re-run the ',
-             'calibration (other/estate_tax/calibrate_estate_v2.R) and ',
-             'regenerate config/calibrations/estate/bridge.yaml before ',
-             'using estate results.'),
-      params$tax_data_vintage, tax_data_path))
-  }
+  # The Tax-Data vintage mismatch warning that used to be here was removed on
+  # 2026-07-26. The economy leg's `estate.valuation_bridge` entry carries the
+  # vintage the bridge was calibrated under and is checked at parse time, at
+  # warn level, so the same mismatch is reported before the run starts instead
+  # of once per year-task in the middle of it.
 
   return(params)
 }

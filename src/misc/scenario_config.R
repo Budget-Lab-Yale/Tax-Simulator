@@ -757,13 +757,30 @@ config_check_staleness = function(leg, defaults, resolved, interface_vintages,
 
 
 
-config_repin_hashes = function(leg, layer = CONFIG_DEFAULT_NAME, channel = NULL) {
+config_repin_hashes = function(leg, layer = CONFIG_DEFAULT_NAME, channel = NULL,
+                               dry_run = FALSE) {
 
   #----------------------------------------------------------------------------
-  # Records the current content hash of every calibrated entry's
-  # invalidated_by files in one layer of one leg. Run AFTER re-deriving a value
-  # (or after a verified behavior-preserving refactor of a dependency) -- it
-  # is the acknowledgment step, never wired into a run.
+  # Updates the recorded content hash of every calibrated entry's
+  # invalidated_by files in one layer of one leg. Run AFTER re-deriving a value,
+  # or after a refactor of a dependency that has been VERIFIED to leave output
+  # byte-identical. It is the acknowledgment step and is never wired into a run.
+  #
+  # Rewritten 2026-07-26 to edit the hash lines as TEXT. The previous version
+  # parsed each file with read_yaml() and wrote it back with write_yaml(), which
+  # discarded every comment in it. In these files the comments are the record of
+  # where each number came from, so calling it destroyed the thing the file
+  # exists for -- which is why every re-pin during the config rebuild was done
+  # by hand instead. This version only replaces the hash values on the lines
+  # that hold them and leaves the rest of the file alone, byte for byte.
+  #
+  # Parameters:
+  #   - leg (str)      : 'economy' or 'behavior'
+  #   - layer (str)    : 'default', or an alternative's path
+  #   - channel (chr)  : optional, restrict to these channel files
+  #   - dry_run (bool) : report what would change without writing
+  #
+  # Returns: invisibly, a tibble of the hashes that changed
   #----------------------------------------------------------------------------
 
   leg  = match.arg(leg, names(CONFIG_LEG_ROOTS))
@@ -776,27 +793,56 @@ config_repin_hashes = function(leg, layer = CONFIG_DEFAULT_NAME, channel = NULL)
     if (length(files) == 0) stop('No ', leg, ' channel file for: ', channel)
   }
 
-  for (f in files) {
-    entries = read_yaml(f)
-    touched = FALSE
+  changed = list()
 
+  for (f in files) {
+    lines   = readLines(f, warn = FALSE)
+    entries = read_yaml(f)
+
+    # Which files each entry is pinned against, and their current hashes. The
+    # YAML parse is used only to LOOK UP what needs hashing; the file itself is
+    # edited as text.
+    wanted = list()
     for (nm in names(entries)) {
       if (nm == '_channel') next
       if (!identical(entries[[nm]]$kind, 'calibrated')) next
-      hashes = entries[[nm]]$invalidated_by %>%
-        set_names(.) %>%
-        map(config_file_hash)
-      entries[[nm]]$invalidated_by_hashes = hashes
-      touched = TRUE
+      for (dep in unlist(entries[[nm]]$invalidated_by)) {
+        wanted[[dep]] = config_file_hash(dep)
+      }
+    }
+    if (length(wanted) == 0) next
+
+    # A hash line looks like '    path/to/file.R: <32 hex chars>'. Matching on
+    # the dependency path plus a hex value keeps this off anything else that
+    # happens to mention the same path, a comment above the entry included.
+    for (dep in names(wanted)) {
+      esc     = gsub('([.|()\\^{}+$*?\\[\\]])', '\\\\\\1', dep)
+      pattern = paste0('^(\\s+)', esc, ':\\s*([0-9a-f]{32})\\s*$')
+      hits    = grep(pattern, lines)
+      for (i in hits) {
+        old = sub(pattern, '\\2', lines[i])
+        if (identical(old, wanted[[dep]])) next
+        lines[i] = sub(pattern, paste0('\\1', dep, ': ', wanted[[dep]]), lines[i])
+        changed[[length(changed) + 1]] = tibble(
+          file = f, line = i, dependency = dep,
+          old_hash = old, new_hash = wanted[[dep]])
+      }
     }
 
-    if (touched) {
-      write_yaml(entries, f)
-      message('Re-pinned dependency hashes in ', f)
-    }
+    if (length(changed) > 0 && !dry_run) writeLines(lines, f)
   }
 
-  invisible(NULL)
+  out = bind_rows(changed)
+
+  if (nrow(out) == 0) {
+    message('No dependency hashes needed re-pinning in ', root)
+  } else {
+    message(if (dry_run) 'Would re-pin ' else 'Re-pinned ', nrow(out),
+            ' dependency hash(es) in ', root)
+    print(as.data.frame(out %>% select(file, dependency, old_hash, new_hash)))
+  }
+
+  invisible(out)
 }
 
 

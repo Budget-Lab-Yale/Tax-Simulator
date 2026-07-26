@@ -305,14 +305,13 @@ KG_DYN_REGIME_TRIPLET = list(
 # records the choice in the vintage's assumptions.csv.
 #-------------------------------------------------------------------------------
 
-# Bump whenever the Bellman primitives, pool structure, or apply-to-records
-# logic change in a way that invalidates eta/timeable_share. Carried on every
-# kg state file so a bathtub state written under one spec is never consumed
-# under another.
-# Do NOT bump for a change that provably reproduces the calibration conditions
-# (the wealth-tax carrying cost, for instance: h == 0 under tau_w = 0, so the
-# calibration stands and a bump would only make the guard cry wolf every run).
-KG_DYN_SPEC_VERSION = 3L
+# KG_DYN_SPEC_VERSION was removed on 2026-07-26. It was a hand-maintained integer
+# meant to be bumped whenever the Bellman primitives or apply-to-records logic
+# changed in a way that invalidated eta, and to be carried on every kg state file.
+# Nothing read it: no state file wrote it and no consumer compared it. The job it
+# describes is done by the invalidated_by hashes on the kg entries in
+# config/calibrations/kg/bathtub.yaml, which are checked at parse time and cannot
+# be forgotten the way a manual bump can.
 
 #-------------------------------------------------------------------------------
 # Three-bucket realization timing helpers

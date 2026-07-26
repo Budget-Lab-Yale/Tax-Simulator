@@ -130,20 +130,12 @@ WEALTH_RET_DIST_FLOWS = c(
   'txbl_ira_dist', 'txbl_pens_dist', 'gross_pens_dist'
 )
 
-# Staleness stamp, mirroring KG_DYN_CALIB_PROVENANCE. Records the conditions the
-# channel's defaults were pinned under; wealth_dyn_check_provenance() compares
-# the live Macro-Projections vintage (r_total source) and the operational params
-# and warns (WEALTH_STRICT_CALIB=1 -> stops). The default Macro vintage is
-# pinned, so the guard mainly catches per-runscript dep.Macro-Projections.vintage
-# overrides.
-WEALTH_DYN_PROVENANCE = list(
-  date           = '2026-06-24',
-  spec_version   = 1L,
-  macro_vintage  = '2026022522',  # vintage r_total (nominal GDP/capita) is derived from
-  fmax           = 0.9,           # expected applier clamp
-  n_pctiles      = 100L           # expected within-age bin count
-)
-
+# The channel's staleness stamp (WEALTH_DYN_PROVENANCE) and its checker were
+# removed on 2026-07-26. They compared the live Macro-Projections vintage and the
+# operational params against values hardcoded here, and warned on a mismatch. The
+# parse-time check in src/misc/scenario_config.R now does the same job for every
+# calibrated value in the model, including the saving-share profile, so keeping
+# this one meant two mechanisms with separate copies of the same expectations.
 
 
 #-------------------------------------------------------------------------------
@@ -441,60 +433,8 @@ wealth_dyn_resolve_profile = function(scenario_info, params = NULL,
 
 
 #-------------------------------------------------------------------------------
-# Refusal gate and provenance (mirror kg_dyn_check_run_compat /
-# kg_dyn_check_calibration_provenance)
+# Refusal gate
 #-------------------------------------------------------------------------------
-
-wealth_dyn_check_provenance = function(scenario_info, params = NULL) {
-
-  #----------------------------------------------------------------------------
-  # Warns (loudly) when the live configuration no longer matches the conditions
-  # the channel's defaults were pinned under -- chiefly a Macro-Projections
-  # vintage override (r_total is derived from it) or a hand-edited param file.
-  # Warning by default; WEALTH_STRICT_CALIB=1 hard-stops (production scoring).
-  # Returns TRUE iff everything matches.
-  #----------------------------------------------------------------------------
-
-  if (is.null(params)) params = wealth_dyn_load_params()
-  p    = WEALTH_DYN_PROVENANCE
-  msgs = character(0)
-  num_mismatch = function(live, cal) !isTRUE(all.equal(as.numeric(live),
-                                                       as.numeric(cal)))
-
-  if (!identical(as.integer(WEALTH_DYN_SPEC_VERSION), as.integer(p$spec_version)))
-    msgs = c(msgs, sprintf('spec_version: live %d vs pinned %d (channel logic changed?)',
-                           WEALTH_DYN_SPEC_VERSION, p$spec_version))
-  if (num_mismatch(params$fmax, p$fmax))
-    msgs = c(msgs, sprintf('fmax: live %s vs pinned %s', params$fmax, p$fmax))
-  if (num_mismatch(params$n_pctiles, p$n_pctiles))
-    msgs = c(msgs, sprintf('n_pctiles: live %s vs pinned %s',
-                           params$n_pctiles, p$n_pctiles))
-
-  macro = scenario_info$interface_paths$`Macro-Projections`
-  if (!is.null(macro) && !grepl(p$macro_vintage, macro, fixed = TRUE))
-    msgs = c(msgs, sprintf(paste0("Macro-Projections vintage: run uses '%s', ",
-                                  "r_total pinned on '%s'"),
-                           macro, p$macro_vintage))
-
-  if (length(msgs) > 0) {
-    banner = paste0(
-      '\n=======================================================================\n',
-      'wealth_dynamics PROVENANCE STALE -- conventional estimates may be off-target\n',
-      'The wealth bathtub defaults were pinned under conditions that no longer\n',
-      'match this run:\n  - ', paste(msgs, collapse = '\n  - '), '\n',
-      'Fix: re-pin WEALTH_DYN_PROVENANCE, or (for a\n',
-      'deliberate sensitivity test) ignore. Set WEALTH_STRICT_CALIB=1 to hard-stop.\n',
-      '=======================================================================')
-    if (identical(Sys.getenv('WEALTH_STRICT_CALIB'), '1')) stop(banner)
-    message(banner)
-    warning('wealth_dynamics provenance is stale (see banner); estimates may ',
-            'be off-target.')
-    return(invisible(FALSE))
-  }
-  invisible(TRUE)
-}
-
-
 
 wealth_dyn_check_run_compat = function(scenario_info, vat_price_offset) {
 
@@ -503,15 +443,15 @@ wealth_dyn_check_run_compat = function(scenario_info, vat_price_offset) {
   # forms cell state in raw wealth dollars (net_worth, economic_gross) while ΔT⁰
   # is in adjusted tax dollars, and the 63x100 (age x within-age percentile)
   # cells are sparser than kg's 63 age cells -- so it takes the shared
-  # raw-dollar channel guard, then checks calibration provenance.
+  # raw-dollar channel guard.
+  #
+  # Staleness of the saving-share profile is checked at parse time, not here.
   #
   # Returns: invisibly TRUE; stops on violation.
   #----------------------------------------------------------------------------
 
   check_raw_data_channel_compat('wealth_dynamics (s > 0)', scenario_info,
                                 vat_price_offset)
-
-  wealth_dyn_check_provenance(scenario_info)
   invisible(TRUE)
 }
 

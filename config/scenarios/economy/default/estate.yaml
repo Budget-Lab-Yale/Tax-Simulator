@@ -25,11 +25,22 @@ valuation_bridge:
     tax_data: '2026070814'
   invalidated_by:
     - config/calibrations/estate/bridge.yaml
+    - config/calibrations/estate/valuation_fit.yaml
+    - config/calibrations/estate/settings.yaml
     - other/estate_tax/write_frozen_params.R
   invalidated_by_hashes:
-    config/calibrations/estate/bridge.yaml: 04e169fa8cbfa2c311847267f5562f61
-    other/estate_tax/write_frozen_params.R: 37c4a0c3a735a60a03ecaeb8408ffb2b
+    config/calibrations/estate/bridge.yaml: 929aeb4a2d0bf1df86b57555f81b6ce6
+    config/calibrations/estate/valuation_fit.yaml: 8c9b7a1baa7506e125d00b2fe59bbc5f
+    config/calibrations/estate/settings.yaml: 46da94161caa4fcb0fdc779c8add5c57
+    other/estate_tax/write_frozen_params.R: ca41eb83d71c69d2c2c81404d96c7060
   rederive: other/estate_tax/write_frozen_params.R
+  # Re-pinned 2026-07-26. write_frozen_params.R now reads the fitted r/rho_pt from
+  # config/calibrations/estate/valuation_fit.yaml (written by the calibrator) and
+  # the chosen inputs from settings.yaml, instead of the hand-written
+  # other/estate_tax/estate_valuation_params.yaml, which is deleted. Both new
+  # files join the list above. bridge.yaml's hash moved because its header
+  # comment changed and two record-keeping fields reformatted; verified directly
+  # that every value the model reads is identical.
   note: >
     Value is a PATH POINTER to the frozen measurement-parameter file. This is a
     measurement bridge, never reform-overridable: reforms change estate LAW,
