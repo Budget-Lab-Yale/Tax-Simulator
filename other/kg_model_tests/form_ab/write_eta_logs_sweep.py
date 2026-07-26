@@ -185,10 +185,29 @@ def build_behavior(tag, value):
 
 
 def build_runscript(tag, value):
+    """eta_dial_repin.csv with the behavior cell swapped, and the OME pin dropped.
+
+    The base runscript pins Off-Model-Estimates 20250925, inherited from the
+    top-tax exercise it was written alongside. That pin is now unreachable and the
+    reason has nothing to do with the eta dial: the OME interface went to v5 on
+    2026-07-22 (the two-stream corporate revenue change), 20250925 exists only
+    under v4, and a v4 vintage hard-stops in post-processing anyway because it has
+    no `corporate_static` column. So eta_dial_repin.csv itself has not been
+    runnable since that date -- discovered by running it, since resolving a
+    runscript does not check that the vintage exists.
+
+    The eta dial does not care. Off-Model-Estimates is read in three places --
+    receipts, the distribution smear, and the corporate incidence channel -- and
+    none of them touches the per-record detail files E_full is measured from. The
+    corporate channel does not even activate here: both rows name the same OME ID,
+    so the corporate wedge is identically zero. Dropping the pin to the model
+    default leaves the measurement unchanged and makes the runscript run.
+    """
     base = read(os.path.join(RUNSCRIPT_ROOT, BASE_RUNSCRIPT))
     lines = base.rstrip('\n').split('\n')
     header = lines[0].split(',')
     behavior_col = header.index('behavior')
+    economy_col = header.index('economy')
 
     out = [lines[0]]
     rewritten = 0
@@ -197,6 +216,7 @@ def build_runscript(tag, value):
         if cells[behavior_col] == BASE_BEHAVIOR:
             cells[behavior_col] = f'{BASE_BEHAVIOR}_eta_logs_{tag}'
             rewritten += 1
+        cells[economy_col] = 'default'
         out.append(','.join(cells))
 
     if rewritten != 1:

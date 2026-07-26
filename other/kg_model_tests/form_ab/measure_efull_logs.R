@@ -23,16 +23,33 @@ suppressPackageStartupMessages({
   library(data.table)
 })
 
-LOCAL_ROOT = '/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1'
+source('src/misc/calibration_writer.R')
+
+# The output tree the eta-dial vintages were written to. Overridable, because a
+# spot check writes its vintages beside the originals under suffixed names and
+# has to be measurable without editing this script -- which is the sort of edit
+# that used to be how a calibration got re-run.
+LOCAL_ROOT = Sys.getenv('KG_CALIB_OUTPUT_ROOT',
+                        '/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1')
+VINTAGE_SUFFIX = Sys.getenv('VINTAGE_SUFFIX', '')
 YEAR       = 2055
 SHOCK      = 's_cg_r25'
 
+# Where the measured value lands. Written by this script rather than copied out
+# of its log by hand: see src/misc/calibration_writer.R for why that distinction
+# is the point of the exercise.
+CALIB_FILE = 'config/calibrations/kg/bathtub.yaml'
+
+# The grid. These tags, the sweep files under config/calibrations/kg/sweeps/ and
+# launch_eta_dial_logs.sh all have to agree; the launcher's generator
+# (write_eta_logs_sweep.py) declares the same three points.
 runs = tribble(
   ~eta_tilde, ~vintage,
   1.5,        'eta_dial_logs_15',
   1.9,        'eta_dial_logs_19',
   2.3,        'eta_dial_logs_23'
-)
+) %>%
+  mutate(vintage = paste0(vintage, VINTAGE_SUFFIX))
 # Base R_base + dtau come from the LEVELS re-pin central vintage (eta_dial_c_v2,
 # kept with full detail). Two reasons this is correct, not a shortcut:
 #   (1) the baseline scenario has no behavior -> its realizations are
@@ -133,3 +150,60 @@ fit_out = tibble(
 )
 write_csv(fit_out, 'other/kg_model_tests/form_ab/eta_tilde_fit.csv')
 cat('wrote other/kg_model_tests/form_ab/eta_tilde_fit.csv\n')
+
+#-------------------------------------------------------------------------------
+# Write the value into the calibration file. This is the last step of the
+# calibration, not a separate chore: the number that ships is the number this
+# script measured, and nobody transcribes it.
+#
+# The piecewise inversion is the one that ships, per the note above -- the
+# net-of-tax curve need not be linear through the origin, so forcing it would
+# bias the pin. Four decimals, because that is the precision the moment supports
+# and the precision the shipped value has always carried.
+#
+# If this re-run does not reproduce the shipped value, the writer leaves the file
+# alone and puts its version at bathtub.yaml.proposed with a banner. That is
+# deliberate: a calibrated value moving is a finding for the author, not a commit.
+#-------------------------------------------------------------------------------
+
+if (is.na(eta_pw)) {
+  stop('The grid does not bracket the target moment (E_full = ', round(E_FULL_TARGET, 4),
+       '), so there is no piecewise inversion to ship. Widen the grid in ',
+       'other/kg_model_tests/form_ab/write_eta_logs_sweep.py and re-run it.')
+}
+
+calib_write_entry(
+  path   = CALIB_FILE,
+  entry  = 'eta_logs',
+  value  = round(eta_pw, 4),
+  fields = list(
+    kind = 'calibrated',
+    set  = format(Sys.Date()),
+    target = calib_prose(sprintf(
+      'Constant net-of-tax elasticity dlog(r_D)/dlog(1 - MC). Same protocol and
+       same local moment as the levels eta: E_full measured at sim-year %d on the
+       +5pp gains shock across the trial grid (%s), inverted piecewise for the
+       eta_tilde that hits E_full = %.4f (= -0.6/%.3f, the author-locked top-rate
+       divisor). Measured E_full at each grid point: %s.',
+      YEAR, paste(results$eta_tilde, collapse = ' '), E_FULL_TARGET, 0.238,
+      paste(sprintf('%.4f', results$E_full), collapse = ' '))),
+    derived_under = list(tax_data           = fit_out$tax_data_vintage,
+                         macro_projections  = '2026022522'),
+    invalidated_by = c('src/sim/kg/constants.R',
+                       'src/sim/kg/bellman.R',
+                       'src/sim/kg/recurrence.R',
+                       'src/sim/kg/timing.R',
+                       'src/sim/kg/apply.R'),
+    conditioned_on = list(settings.kg.applier_allocation = '0.5',
+                          settings.kg.timing_ref_wedge   = 0.05,
+                          settings.kg.timing_window      = 1),
+    rederive    = 'other/kg_model_tests/form_ab/measure_efull_logs.R',
+    active_when = list(kg.response_form = 'logs'),
+    note = calib_prose(sprintf(
+      "LIVE by default (response_form = 'logs' since 2026-07-22). Lower than the
+       levels eta because the net-of-tax full-sim slope is steeper, so the same
+       E_full needs a smaller eta_tilde. Through-origin inversion for comparison:
+       %.4f (residuals %s) -- the shipped value is the piecewise one. Grid + fit:
+       other/kg_model_tests/form_ab/eta_tilde_fit.csv, and the trial values
+       themselves are config/calibrations/kg/sweeps/eta_logs_*/bathtub.yaml.",
+      eta_lin0, paste(sprintf('%+.4f', resid0), collapse = ' ')))))
