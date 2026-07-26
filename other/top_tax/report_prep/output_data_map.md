@@ -11,8 +11,8 @@ All top_tax generators live in `/nfs/roberts/project/pi_nrs36/jar335/Repositorie
 | Script | Emits runscript | Emits tax_law dirs | Drives output vintage(s) |
 |---|---|---|---|
 | `levers.py` | (data module, imported by the two below) | — | — |
-| `build_dial_runs.py` | `config/runscripts/top_tax/dials.csv` (+ `dials_legend.csv`) | `config/scenarios/tax_law/top_tax/dials/{id}/` | `top_tax_dials_30y_v1`, `top_tax_dials_30y_v2` |
-| `build_factorial.py` | `config/runscripts/top_tax/factorial.csv` (+ `factorial_legend.csv`) | `config/scenarios/tax_law/top_tax/factorial/c{NNN}/` | `top_tax_v1` |
+| `build_dial_runs.py` | `config/runscripts/top_tax/dials.csv` (+ `other/top_tax/dials_legend.csv`) | `config/scenarios/tax_law/top_tax/dials/{id}/` | `top_tax_dials_30y_v1`, `top_tax_dials_30y_v2` |
+| `build_factorial.py` | `config/runscripts/top_tax/factorial.csv` (+ `other/top_tax/factorial_legend.csv`) | `config/scenarios/tax_law/top_tax/factorial/c{NNN}/` | `top_tax_v1` |
 | `build_revmax_grid.py` | `config/runscripts/tests/revmax_cg.csv` | `config/scenarios/tax_law/tests/revmax/{id}/` | `kg_v3_revmax`, `revmax_eta_v1` |
 | `extract_atlas_data.py` | reads factorial output → `atlas_data.json` (v1 atlas) | — | reads `top_tax_v1` |
 | `fit_surrogate.py` | reads dials output → `atlas2_data.json` | — | reads `top_tax_dials_30y_v2` |

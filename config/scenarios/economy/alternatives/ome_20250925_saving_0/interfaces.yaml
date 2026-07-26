@@ -1,0 +1,9 @@
+# Off-Model-Estimates 20250925 / baseline -- the reference off-model vintage for
+# the Clausing v2 re-run and the top-tax exercise. Both were scored against it,
+# so they stay pinned to it rather than drifting with the model default.
+
+off_model_estimates_vintage:
+  value: '20250925'
+
+off_model_estimates_id:
+  value: baseline

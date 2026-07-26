@@ -42,20 +42,27 @@ YEARS = "2027:2057"          # SURPRISE-ENACTMENT convention (author call 2026-0
                              # FY-lagged estate/wealth legs.
 DIST_YEARS = "2027 2036"     # distribution years; the atlas2 ETR panel ships 2027 only
                              # (heir files end 2055 — dist_years must stay <= 2055)
-BEHAVIOR_BASE = "kg_dynamics/turnover conversion/sigma entity_shifting/pearce_prisinzano evasion/debacker charity/50"
-BEHAVIOR_WEALTH = "kg_dynamics/turnover conversion/sigma entity_shifting/pearce_prisinzano evasion/debacker wealth/avoidance charity/50"
-MTR_VARS = "wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent char_cash net_worth"
+# The estate reporting response (Kopczuk-Slemrod) was split out of the estate
+# machinery into its own behavior module on 2026-07-16. The 349 runscript rows
+# in the shipped batches were patched by hand at the time and these generators
+# were not, so regenerating silently dropped `estate/avoidance` and the `estate`
+# MTR. Ported back in 2026-07-26; regenerate-and-diff is now clean.
+BEHAVIOR_BASE = "kg_dynamics/turnover conversion/sigma entity_shifting/pearce_prisinzano evasion/debacker charity/50 estate/avoidance"
+BEHAVIOR_WEALTH = "kg_dynamics/turnover conversion/sigma entity_shifting/pearce_prisinzano evasion/debacker wealth/avoidance charity/50 estate/avoidance"
+MTR_VARS = "wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent char_cash net_worth estate"
 MTR_TYPES = " ".join(["nextdollar"] * len(MTR_VARS.split()))
 
-# Corporate OME dependency columns. The dial batch reuses the factorial's
-# REAL author wedge (write_corp_ome.py installed it under the placeholder
-# vintage name; path/ID kept for continuity). Corp stays single-anchor at 28.
-CORP_ON_VINTAGE = "top_tax_corp_placeholder"
-CORP_ON_ID = "corp_28_2027"
-CORP_OFF_VINTAGE = "20250925"
-CORP_OFF_ID = "baseline"
-
-S_COL = ""   # blank -> calibrated default wealth-financing profile stays on
+# Economy alternatives naming the corporate OME pin. The dial batch reuses the
+# factorial's REAL author wedge (write_corp_ome.py installed it under the
+# placeholder vintage name; the pin is kept for continuity). Corp stays
+# single-anchor at 28.
+#
+# These name FOLDERS under config/scenarios/economy/alternatives/, which is what
+# replaced the retired dep.Off-Model-Estimates.vintage / .ID and `s` columns.
+# Neither alternative overrides the wealth channel, so the calibrated default
+# financing profile stays on -- what the old blank `s` column meant.
+CORP_ON_ECONOMY = "ome_top_tax_corp_placeholder"
+CORP_OFF_ECONOMY = "ome_20250925"
 
 # --------------------------------------------------------------------------- #
 # Current-law 2027 estate exemption, computed (NOT hardcoded — indexation).
@@ -79,7 +86,7 @@ def _ccpiu_irs(year):
 
 
 def current_estate_exemption_2027():
-    path = os.path.join(REPO, "config", "scenarios", "tax_law", "baseline", "estate.yaml")
+    path = os.path.join(REPO, "config", "scenarios", "tax_law", "default", "estate.yaml")
     with open(path) as fh:
         raw = yaml.safe_load(fh)
     ex = raw["exemption"]

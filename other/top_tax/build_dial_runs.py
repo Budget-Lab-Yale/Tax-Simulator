@@ -5,7 +5,7 @@ Build the top_tax DIALS batch (atlas v2 surrogate) from levers.py.
 Emits, under the repo:
   - config/scenarios/tax_law/alternatives/top_tax/dials/{id}/     (one reform dir per scenario)
   - config/runscripts/top_tax/dials.csv              (baseline + ~97 scenarios)
-  - config/runscripts/top_tax/dials_legend.csv       (ID, kind, levers_json, label)
+  - other/top_tax/dials_legend.csv                   (ID, kind, levers_json, label)
 
 Scenario kinds: solo (per-lever anchor curves), pair (all C(8,2) at REF),
 pairco (the 7 deemed pairs re-measured at carryover), triple (ALL C(8,3) at
@@ -23,6 +23,25 @@ Do NOT import build_factorial.py — the factorial is frozen; this generator is
 self-contained on levers.py. Pure file I/O — safe on the login node.
 """
 
+# ---------------------------------------------------------------------------
+# DRIFT WARNING -- read before running this script (2026-07-26)
+#
+# This generator reproduces its RUNSCRIPT byte-for-byte, verified by
+# regenerate-and-diff. It does NOT reproduce the tax_law directories it writes,
+# and it deletes the tree before rebuilding it, so running it as-is DISCARDS
+# two model changes that were hand-patched into those directories after the
+# last generation:
+#
+#   - the on-model corporate statutory-rate scoring (2026-07-23): 114 corp.yaml
+#     files this script does not know how to write
+#   - the ordinary-rate uncap fix: `no_ord_cap: 1` in 123 pref.yaml files
+#
+# Teaching the lever definitions to emit both is unfinished work and needs an
+# author ruling, because it changes what the scenarios mean. Until then, either
+# run with the tax_law rebuild disabled, or re-apply both patches afterwards and
+# diff the tree before committing.
+# ---------------------------------------------------------------------------
+
 import csv
 import itertools
 import json
@@ -37,15 +56,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import levers as L
 
 REPO = L.REPO
-TAXLAW_ROOT = os.path.join(REPO, "config", "scenarios", "tax_law", "top_tax", "dials")
+TAXLAW_ROOT = os.path.join(REPO, "config", "scenarios", "tax_law", "alternatives", "top_tax", "dials")
 RUNSCRIPT_DIR = os.path.join(REPO, "config", "runscripts", "top_tax")
 RUNSCRIPT = os.path.join(RUNSCRIPT_DIR, "dials.csv")
-LEGEND = os.path.join(RUNSCRIPT_DIR, "dials_legend.csv")
+LEGEND = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dials_legend.csv")
 TAXLAW_REL = "top_tax/dials"
 
-HEADER = ["ID", "tax_law", "behavior", "years", "dist_years", "mtr_vars",
-          "mtr_types", "dep.Off-Model-Estimates.vintage",
-          "dep.Off-Model-Estimates.ID", "s"]
+HEADER = ["ID", "tax_law", "economy", "behavior", "years", "dist_years",
+          "mtr_vars", "mtr_types"]
 
 
 # --------------------------------------------------------------------------- #
@@ -137,9 +155,7 @@ def runscript_row(scen_id, scenario):
         "behavior": L.BEHAVIOR_WEALTH if wealth_on else L.BEHAVIOR_BASE,
         "years": L.YEARS, "dist_years": L.DIST_YEARS,
         "mtr_vars": L.MTR_VARS, "mtr_types": L.MTR_TYPES,
-        "dep.Off-Model-Estimates.vintage": L.CORP_ON_VINTAGE if corp_on else L.CORP_OFF_VINTAGE,
-        "dep.Off-Model-Estimates.ID": L.CORP_ON_ID if corp_on else L.CORP_OFF_ID,
-        "s": L.S_COL,
+        "economy": L.CORP_ON_ECONOMY if corp_on else L.CORP_OFF_ECONOMY,
     }
 
 
@@ -276,7 +292,7 @@ def self_check(scenarios):
             problems.append(f"{key}: bilinear grid incomplete: missing {want - got}")
 
     # taxmax template validated against baseline pr.yaml structure
-    with open(os.path.join(REPO, "config", "scenarios", "tax_law", "baseline", "pr.yaml")) as fh:
+    with open(os.path.join(REPO, "config", "scenarios", "tax_law", "default", "pr.yaml")) as fh:
         base_pr = yaml.safe_load(fh)
     tm = yaml.safe_load("".join(L.taxmax_files({"on": 1})["pr.yaml"]))
     for sub, block in tm.items():
@@ -314,17 +330,15 @@ def emit(scenarios, runscript_path, legend_path, include_baseline=True):
     rows = []
     if include_baseline:
         rows.append({
-            "ID": "baseline", "tax_law": "baseline", "behavior": "",
+            "ID": "baseline", "tax_law": "default", "behavior": "",
             "years": L.YEARS, "dist_years": "",
             "mtr_vars": L.MTR_VARS, "mtr_types": L.MTR_TYPES,
-            "dep.Off-Model-Estimates.vintage": L.CORP_OFF_VINTAGE,
-            "dep.Off-Model-Estimates.ID": L.CORP_OFF_ID,
-            "s": L.S_COL,
+            "economy": L.CORP_OFF_ECONOMY,
         })
     for scen_id, _, scen in scenarios:
         rows.append(runscript_row(scen_id, scen))
     with open(runscript_path, "w", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=HEADER)
+        w = csv.DictWriter(fh, fieldnames=HEADER, lineterminator="\n")
         w.writeheader()
         w.writerows(rows)
     with open(legend_path, "w", newline="") as fh:
@@ -343,7 +357,8 @@ def main():
             sys.exit(f"levers.PATCHES[{n!r}] is empty — nothing to patch")
         scenarios = [(p["id"], p.get("kind", "patch"), p["levers"]) for p in L.PATCHES[n]]
         path = os.path.join(RUNSCRIPT_DIR, f"dials_patch{n}.csv")
-        legend = os.path.join(RUNSCRIPT_DIR, f"dials_patch{n}_legend.csv")
+        legend = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              f"dials_patch{n}_legend.csv")
         # baseline row REQUIRED: Phase 3b post-processing (get_other_taxes)
         # resolves the baseline OME interface from the runscript's own rows
         # — without it every distribution build errors out (patch-1 lesson)

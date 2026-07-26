@@ -29,3 +29,34 @@ Contents:
 Note: `config/runscripts/private/` is untracked by design (.gitignore) and is
 therefore not archived here; it remains in place. Its runscripts are also
 old-schema and will hit the same retirement errors if run.
+
+## `retired_2026_07_26/`
+
+71 runscripts retired during Phase 3c of the rebuild. Each still carries at
+least one retired column (`dep.{Model}.vintage` / `.ID`, `s`,
+`wealth_financing`, or the dotted `economy.interfaces.*` form from the abandoned
+branch), so all of them hard-error at parse. That is intended: the author ruled
+on 2026-07-26 that the only runscripts worth migrating were the OBBBA
+retrospective, the top-tax batches, and the most recent Kim Clausing runs.
+
+Several of these were development or verification tooling rather than finished
+analyses, and are the ones most likely to be wanted back:
+
+| File | What it was for |
+|---|---|
+| `tests/simplify_smoke_fast.csv` | the fast leg of the refactor byte-diff harness |
+| `tests/kg_item1_regression.csv`, `_v2.csv` | the kg regression pair |
+| `tests/sigma_recal_eta.csv` | the sigma recalibration stack |
+| `tests/hidden_ledger_smoke.csv` | hidden-ledger verification |
+| `tests/corp_incidence.csv`, `corp_rate_smoke.csv`, `corp_2stream_smoke.csv` | corporate channel smokes |
+| `tests/mtr_extensive_tips_ot.csv` | extensive-margin MTR check |
+| `tests/perf_probe.csv` | the performance probe |
+| `tests/wealth_bathtub_smoke.csv`, `warren_*`, `cgcarry_bound_*` | the wealth bounding set |
+
+Reviving one is two steps: `git mv` it back out of this folder, then replace its
+retired columns with an `economy` cell naming a folder under
+`config/scenarios/economy/alternatives/`. Several of the pins these files use
+already have an alternative folder (`ome_20250925`, `ome_20250925_saving_*`,
+`multi_module_smoke` for the older Tax-Data vintage), so the migration is often
+just picking the right one. `other/config_redesign/check_runscripts.R` confirms
+the result parses and resolves.

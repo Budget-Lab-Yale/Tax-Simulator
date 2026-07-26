@@ -1,0 +1,4 @@
+# No saving-financing channel: the flat shorthand for the retired s = 0 column.
+
+financing_profile:
+  value: 'flat:0'

@@ -1,0 +1,17 @@
+ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types,economy.interfaces.tax_data_id,economy.interfaces.tax_data_vintage
+baseline,default,,,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+co_prim,private/niskanen_housing/co_prim,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+co_resid,private/niskanen_housing/co_resid,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+co_allre,private/niskanen_housing/co_allre,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+dr_prim,private/niskanen_housing/dr_prim,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+dr_allre,private/niskanen_housing/dr_allre,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+co_prim_x2,private/niskanen_housing/co_prim_x2,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+co_resid_x2,private/niskanen_housing/co_resid_x2,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+co_allre_x2,private/niskanen_housing/co_allre_x2,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+dr_prim_x2,private/niskanen_housing/dr_prim_x2,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+dr_allre_x2,private/niskanen_housing/dr_allre_x2,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+co_prim_unl,private/niskanen_housing/co_prim_unl,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+co_resid_unl,private/niskanen_housing/co_resid_unl,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+co_allre_unl,private/niskanen_housing/co_allre_unl,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+dr_prim_unl,private/niskanen_housing/dr_prim_unl,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918
+dr_allre_unl,private/niskanen_housing/dr_allre_unl,,kg_dynamics/turnover,2026:2035,,kg_lt estate,nextdollar nextdollar,baseline,2026060918

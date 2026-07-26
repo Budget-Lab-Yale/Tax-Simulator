@@ -25,6 +25,25 @@ Run from the repo root:  python3 other/top_tax/build_factorial.py
 (Pure file I/O -- safe on the login node; no R/compute.)
 """
 
+# ---------------------------------------------------------------------------
+# DRIFT WARNING -- read before running this script (2026-07-26)
+#
+# This generator reproduces its RUNSCRIPT byte-for-byte, verified by
+# regenerate-and-diff. It does NOT reproduce the tax_law directories it writes,
+# and it deletes the tree before rebuilding it, so running it as-is DISCARDS
+# two model changes that were hand-patched into those directories after the
+# last generation:
+#
+#   - the on-model corporate statutory-rate scoring (2026-07-23): 114 corp.yaml
+#     files this script does not know how to write
+#   - the ordinary-rate uncap fix: `no_ord_cap: 1` in 123 pref.yaml files
+#
+# Teaching the lever definitions to emit both is unfinished work and needs an
+# author ruling, because it changes what the scenarios mean. Until then, either
+# run with the tax_law rebuild disabled, or re-apply both patches afterwards and
+# diff the tree before committing.
+# ---------------------------------------------------------------------------
+
 import csv
 import os
 import shutil
@@ -33,7 +52,7 @@ import shutil
 # Paths
 # --------------------------------------------------------------------------- #
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-TAXLAW_ROOT = os.path.join(REPO, "config", "scenarios", "tax_law", "top_tax", "factorial")
+TAXLAW_ROOT = os.path.join(REPO, "config", "scenarios", "tax_law", "alternatives", "top_tax", "factorial")
 RUNSCRIPT_DIR = os.path.join(REPO, "config", "runscripts", "top_tax")
 RUNSCRIPT = os.path.join(RUNSCRIPT_DIR, "factorial.csv")
 # tax_law column is relative to config/scenarios/tax_law/alternatives/
@@ -47,24 +66,29 @@ DIST_YEARS = "2027 2036"     # ETR/distribution display years: impact year + ful
 # Behavior modules (behavior scout, 2026-07-09). Pinned order kg -> conversion
 # -> entity -> evasion; charity + wealth/avoidance order-free. wealth/avoidance
 # added only when the wealth-tax switch is on.
-BEHAVIOR_BASE = "kg_dynamics/turnover conversion/sigma entity_shifting/pearce_prisinzano evasion/debacker charity/50"
-BEHAVIOR_WEALTH = "kg_dynamics/turnover conversion/sigma entity_shifting/pearce_prisinzano evasion/debacker wealth/avoidance charity/50"
+# The estate reporting response (Kopczuk-Slemrod) was split out of the estate
+# machinery into its own behavior module on 2026-07-16. The 349 runscript rows
+# in the shipped batches were patched by hand at the time and these generators
+# were not, so regenerating silently dropped `estate/avoidance` and the `estate`
+# MTR. Ported back in 2026-07-26; regenerate-and-diff is now clean.
+BEHAVIOR_BASE = "kg_dynamics/turnover conversion/sigma entity_shifting/pearce_prisinzano evasion/debacker charity/50 estate/avoidance"
+BEHAVIOR_WEALTH = "kg_dynamics/turnover conversion/sigma entity_shifting/pearce_prisinzano evasion/debacker wealth/avoidance charity/50 estate/avoidance"
 # MTRs the modules read (net_worth for wealth/avoidance + bathtub). Full list on
 # every row so baseline_mtrs covers every module's needs.
-MTR_VARS = "wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent char_cash net_worth"
+MTR_VARS = "wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent char_cash net_worth estate"
 MTR_TYPES = " ".join(["nextdollar"] * len(MTR_VARS.split()))
 
-# Corporate OME dependency columns.
+# Economy alternatives naming the corporate OME pin -- folders under
+# config/scenarios/economy/alternatives/, which replaced the retired
+# dep.Off-Model-Estimates.vintage / .ID and `s` columns.
 # ON  -> the placeholder vintage (make_placeholder_ome.py): activates the channel.
 # OFF -> the default OME (all-zero corporate) -> channel dormant, no warning.
-CORP_ON_VINTAGE = "top_tax_corp_placeholder"
-CORP_ON_ID = "corp_28_2027"
-CORP_OFF_VINTAGE = "20250925"
-CORP_OFF_ID = "baseline"
-
-# Wealth financing: leave blank so the auto-applied calibrated `default` profile
-# runs (bathtub on model-wide). Set to "none" to force off.
-S_COL = ""
+# Neither overrides the wealth channel, so the auto-applied calibrated `default`
+# financing profile runs (bathtub on model-wide) -- what the blank `s` meant.
+# To force the bathtub off, point at an alternative whose wealth.yaml says
+# financing_profile: none.
+CORP_ON_ECONOMY = "ome_top_tax_corp_placeholder"
+CORP_OFF_ECONOMY = "ome_20250925"
 
 # --------------------------------------------------------------------------- #
 # Switch definitions.  Each YAML switch maps target-filename -> YAML text block
@@ -245,20 +269,16 @@ def main():
     os.makedirs(RUNSCRIPT_DIR, exist_ok=True)
 
     header = [
-        "ID", "tax_law", "behavior", "years", "dist_years",
+        "ID", "tax_law", "economy", "behavior", "years", "dist_years",
         "mtr_vars", "mtr_types",
-        "dep.Off-Model-Estimates.vintage", "dep.Off-Model-Estimates.ID",
-        "s",
     ]
     rows = []
     # combo 0 = all-off = baseline
     rows.append({
-        "ID": "baseline", "tax_law": "baseline", "behavior": "",
+        "ID": "baseline", "tax_law": "default", "behavior": "",
         "years": YEARS, "dist_years": "",
         "mtr_vars": MTR_VARS, "mtr_types": MTR_TYPES,
-        "dep.Off-Model-Estimates.vintage": CORP_OFF_VINTAGE,
-        "dep.Off-Model-Estimates.ID": CORP_OFF_ID,
-        "s": S_COL,
+        "economy": CORP_OFF_ECONOMY,
     })
     for bits in range(1, 1 << N_SWITCHES):
         taxlaw = write_combo_dir(bits, bits)
@@ -270,18 +290,16 @@ def main():
             "behavior": BEHAVIOR_WEALTH if wealth_on else BEHAVIOR_BASE,
             "years": YEARS, "dist_years": DIST_YEARS,
             "mtr_vars": MTR_VARS, "mtr_types": MTR_TYPES,
-            "dep.Off-Model-Estimates.vintage": CORP_ON_VINTAGE if on else CORP_OFF_VINTAGE,
-            "dep.Off-Model-Estimates.ID": CORP_ON_ID if on else CORP_OFF_ID,
-            "s": S_COL,
+            "economy": CORP_ON_ECONOMY if on else CORP_OFF_ECONOMY,
         })
 
     with open(RUNSCRIPT, "w", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=header)
+        w = csv.DictWriter(fh, fieldnames=header, lineterminator="\n")
         w.writeheader()
         w.writerows(rows)
 
     # Also emit a legend mapping ID <-> switches on (for the atlas/explorer).
-    legend = os.path.join(RUNSCRIPT_DIR, "factorial_legend.csv")
+    legend = os.path.join(os.path.dirname(os.path.abspath(__file__)), "factorial_legend.csv")
     with open(legend, "w", newline="") as fh:
         w = csv.writer(fh)
         w.writerow(["ID", "bits", "switches_on"] + [s[0] for s in SWITCHES])

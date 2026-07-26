@@ -38,7 +38,7 @@ REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DEFAULT_ROOT = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/top_tax_v1"
 DEFAULT_OUT = os.path.join(REPO, "other", "top_tax", "atlas_data.json")
 MACRO = "/nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections/v3/2026022522/baseline/projections.csv"
-LEGEND = os.path.join(REPO, "config", "runscripts", "top_tax", "factorial_legend.csv")
+LEGEND = os.path.join(REPO, "other", "top_tax", "factorial_legend.csv")
 
 WINDOW = list(range(2027, 2037))          # 10-yr budget window (v1 atlas)
 # Decade windows for the dials/atlas2 track (32-yr batches, 2026:2057).

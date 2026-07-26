@@ -59,7 +59,7 @@ import extract_atlas_data as X
 
 DEFAULT_ROOT = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/top_tax_dials_v1"
 DEFAULT_OUT = os.path.join(HERE, "atlas2_data.json")
-LEGEND = os.path.join(L.REPO, "config", "runscripts", "top_tax", "dials_legend.csv")
+LEGEND = os.path.join(L.REPO, "other", "top_tax", "dials_legend.csv")
 
 DECADES = X.DECADES                    # [(2027,2036), (2037,2046), (2047,2056)]
 SPAN = list(range(DECADES[0][0], DECADES[-1][1] + 1))   # 2027..2056

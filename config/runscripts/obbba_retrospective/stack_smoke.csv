@@ -1,0 +1,5 @@
+ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,baseline_2024_pre_obbba,no_saving_channel,,2024:2027,2026,part_active kg_lt tips1 tips2 ot1 ot2 auto_int_exp,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar
+01-rates,public/obbba/retrospective_2026/stack_vs_2024/01-rates,no_saving_channel,entity_shifting/pearce_prisinzano tips/fringe_low ot/france auto/hanson,2024:2027,2026,part_active kg_lt tips1 tips2 ot1 ot2 auto_int_exp,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar
+08-estate,public/obbba/retrospective_2026/stack_vs_2024/08-estate,no_saving_channel,entity_shifting/pearce_prisinzano tips/fringe_low ot/france auto/hanson,2024:2027,2026,part_active kg_lt tips1 tips2 ot1 ot2 auto_int_exp,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar
+full_check,default,no_saving_channel,entity_shifting/pearce_prisinzano tips/fringe_low ot/france auto/hanson,2024:2027,2026,part_active kg_lt tips1 tips2 ot1 ot2 auto_int_exp,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar

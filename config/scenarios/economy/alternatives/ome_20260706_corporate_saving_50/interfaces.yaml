@@ -1,0 +1,8 @@
+# Off-Model-Estimates 20260706 / 07_corporate -- the corporate provision of the
+# Clausing v2 package, which is scored off-model and needs its own OME scenario.
+
+off_model_estimates_vintage:
+  value: '20260706'
+
+off_model_estimates_id:
+  value: 07_corporate
