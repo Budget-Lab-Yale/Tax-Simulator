@@ -40,7 +40,30 @@ tax_law_cache_enabled = function() {
 
 
 
-load_baseline_tax_law_input = function(config_path = './config/scenarios/tax_law/baseline') {
+TAX_LAW_ROOT = './config/scenarios/tax_law'
+
+
+tax_law_path = function(name) {
+
+  #----------------------------------------------------------------------------
+  # Folder holding one tax law layer, from a runscript cell. The reserved word
+  # `default` names the baseline law; anything else is a path under
+  # alternatives/ (nesting is arbitrary and human-named). Same shape as the
+  # economy and behavior legs; see src/misc/scenario_config.R.
+  #
+  # Parameters:
+  #   - name (str) : the runscript's tax_law cell
+  #
+  # Returns: filepath (str).
+  #----------------------------------------------------------------------------
+
+  if (identical(as.character(name), 'default')) file.path(TAX_LAW_ROOT, 'default')
+  else file.path(TAX_LAW_ROOT, 'alternatives', as.character(name))
+}
+
+
+
+load_baseline_tax_law_input = function(config_path = tax_law_path('default')) {
 
   #----------------------------------------------------------------------------
   # Cached wrapper around load_tax_law_input() for the baseline tax law
@@ -131,7 +154,7 @@ build_tax_law = function(scenario_info, indexes) {
   
   # Read counterfactual tax law parameter changes
   changes_from_baseline = scenario_info$tax_law_id %>% 
-    file.path('./config/scenarios/tax_law', .) %>% 
+    tax_law_path() %>% 
     load_tax_law_input()
   
   # Read baseline YAML files (cached; see .tax_law_cache above)

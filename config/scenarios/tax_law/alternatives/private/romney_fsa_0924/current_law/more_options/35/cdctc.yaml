@@ -1,0 +1,8 @@
+---
+# Maximum credit-eligible expenses per qualifying dependent 
+exp_limit:
+  value: 
+    '2014': 3000
+    '2021': 8000
+    '2022': 3000
+    '2026': 0

@@ -1,0 +1,22 @@
+---
+# Niskanen housing menu: Carryover basis at death for inherited primary residences only, effective 1/1/2026.
+# SS121 exclusion at current law (250k/500k, frozen).
+# Death regimes: 0=step-up (current law), 1=carryover, 2=deemed realization.
+
+kg_death_regime_equities:
+  value: 0
+
+kg_death_regime_pass_throughs:
+  value: 0
+
+kg_death_regime_primary_home:
+  value:
+    '2014': 0
+    '2026': 1
+
+kg_death_regime_other_home:
+  value: 0
+
+kg_death_regime_re_fund:
+  value: 0
+

@@ -1,4 +1,4 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,s,dep.Tax-Data.vintage,dep.Tax-Data.ID
-baseline,baseline,,2026:2036,,kg_lt net_worth estate,nextdollar nextdollar nextdollar,0,2026060918,baseline
+baseline,default,,2026:2036,,kg_lt net_worth estate,nextdollar nextdollar nextdollar,0,2026060918,baseline
 warren_s50,public/wealth_tax_warren,wealth/avoidance estate/avoidance,2026:2036,2026,net_worth estate,nextdollar nextdollar,0.5,2026060918,baseline
 warren_s100,public/wealth_tax_warren,wealth/avoidance estate/avoidance,2026:2036,2026,net_worth estate,nextdollar nextdollar,1,2026060918,baseline

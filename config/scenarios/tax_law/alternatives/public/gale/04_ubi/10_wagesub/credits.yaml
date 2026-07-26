@@ -1,0 +1,13 @@
+---
+
+# Whether to repeal credit for the elderly/disabled
+repeal_old:
+  value: 
+    '2014': 0 
+    '2025': 1
+  
+# Whether to repeal all other nonrefundable credits
+repeal_other:
+  value: 
+    '2014': 0 
+    '2025': 1

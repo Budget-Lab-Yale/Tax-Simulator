@@ -1,5 +1,5 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,wealth_financing
-baseline,baseline,,2025:2032,,kg_lt part_active,nextdollar nextdollar,none
+baseline,default,,2025:2032,,kg_lt part_active,nextdollar nextdollar,none
 ord_plus1,tests/entity_iso/ord_plus1,entity_shifting/pearce_prisinzano,2025:2032,,kg_lt part_active,nextdollar nextdollar,none
 ord_plus5,tests/entity_iso/ord_plus5,entity_shifting/pearce_prisinzano,2025:2032,,kg_lt part_active,nextdollar nextdollar,none
 ord_plus10,tests/entity_iso/ord_plus10,entity_shifting/pearce_prisinzano,2025:2032,,kg_lt part_active,nextdollar nextdollar,none

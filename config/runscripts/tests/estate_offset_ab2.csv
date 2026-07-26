@@ -1,4 +1,4 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,wealth_financing
-baseline,baseline,,2026:2029,,kg_lt estate net_worth,nextdollar nextdollar nextdollar,none
+baseline,default,,2026:2029,,kg_lt estate net_worth,nextdollar nextdollar nextdollar,none
 est2009_pure_kg,tests/estate2009_only,kg_dynamics/turnover,2026:2029,,kg_lt estate net_worth,nextdollar nextdollar nextdollar,none
 est2009_pure_avoid,tests/estate2009_only,wealth/avoidance estate/avoidance,2026:2029,,kg_lt estate net_worth,nextdollar nextdollar nextdollar,none

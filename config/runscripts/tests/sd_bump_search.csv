@@ -1,5 +1,5 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2025:2026,,,
+baseline,default,,2025:2026,,,
 sd_bump_2k,tests/sd_bump_2k,,2025:2026,,,
 sd_bump_4k,tests/sd_bump_4k,,2025:2026,,,
 sd_bump_6k,tests/sd_bump_6k,,2025:2026,,,

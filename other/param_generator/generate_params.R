@@ -17,7 +17,7 @@ project_name = 'ctc_simulator'
 
 # output folders
 output_runscripts = './config/runscripts/policy_runs/ctc/simulator'
-output_taxlaw     = './config/scenarios/tax_law/policy_runs/ctc/interactive'
+output_taxlaw     = './config/scenarios/tax_law/alternatives/policy_runs/ctc/interactive'
 
 # Run script defaults
 corp_tax_vintage          = 2024021816

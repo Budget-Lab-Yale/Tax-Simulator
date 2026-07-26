@@ -1,0 +1,33 @@
+---
+# Niskanen housing menu: Deemed realization at death of primary-residence gains (above the SS121 exclusion), effective 1/1/2026.
+# Paired with unlimited SS121 exclusion (all primary-residence gains exempt) from 2026.
+# Death regimes: 0=step-up (current law), 1=carryover, 2=deemed realization.
+
+kg_death_regime_equities:
+  value: 0
+
+kg_death_regime_pass_throughs:
+  value: 0
+
+kg_death_regime_primary_home:
+  value:
+    '2014': 0
+    '2026': 2
+
+kg_death_regime_other_home:
+  value: 0
+
+kg_death_regime_re_fund:
+  value: 0
+
+# Unlimited SS121 exclusion from 2026: all primary-residence gain is exempt
+# at deemed realization / excluded from the carryover-routed stock.
+kg_sec121_excl_single:
+  value:
+    '2014': 250000
+    '2026': Inf
+
+kg_sec121_excl_married:
+  value:
+    '2014': 500000
+    '2026': Inf

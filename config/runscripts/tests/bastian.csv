@@ -1,5 +1,5 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2025:2026,,wages1 wages2,extensive extensive 
+baseline,default,,2025:2026,,wages1 wages2,extensive extensive 
 arpa_ctc,policy_runs/ctc/perm_arpa_ctc/04-age,employment/bastian,2025:2026,,wages1 wages2,extensive extensive
 edelberg_kearney,policy_runs/ctc/edelberg_kearney,employment/bastian,2025:2026,,wages1 wages2,extensive extensive
 romney_ctc,policy_runs/ctc/fsa_2.0/ctc,employment/bastian,2025:2026,,wages1 wages2,extensive extensive

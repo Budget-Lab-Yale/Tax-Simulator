@@ -1,3 +1,3 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Tax-Data.vintage,dep.Tax-Data.ID
-baseline,baseline,,2026:2026,,kg_lt part_active estate,nextdollar nextdollar nextdollar,2026050315,baseline
+baseline,default,,2026:2026,,kg_lt part_active estate,nextdollar nextdollar nextdollar,2026050315,baseline
 pearce_priz_legacy,tests/top_rate_396,kg_dynamics/turnover entity_shifting/pearce_prisinzano_legacy,2026:2026,,kg_lt part_active estate,nextdollar nextdollar nextdollar,2026050315,baseline

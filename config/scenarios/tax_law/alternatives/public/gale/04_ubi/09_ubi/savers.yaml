@@ -1,0 +1,7 @@
+---
+
+# Whether credit is repealed
+repeal:
+  value: 
+    '2014': 0
+    '2025': 1

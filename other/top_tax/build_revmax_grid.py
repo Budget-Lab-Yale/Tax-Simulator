@@ -28,7 +28,7 @@ import os
 import textwrap
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-TAXLAW_DIR = os.path.join(REPO, "config/scenarios/tax_law/tests/revmax")
+TAXLAW_DIR = os.path.join(REPO, "config/scenarios/tax_law/alternatives/tests/revmax")
 RUNSCRIPT = os.path.join(REPO, "config/runscripts/tests/revmax_cg.csv")
 
 ENACT = 2027

@@ -1,5 +1,5 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Tax-Data.vintage,dep.Tax-Data.ID
-baseline,baseline,,2026:2035,,kg_lt part_active estate,nextdollar nextdollar nextdollar,2026050315,baseline
+baseline,default,,2026:2035,,kg_lt part_active estate,nextdollar nextdollar nextdollar,2026050315,baseline
 01_clinton_rates,clausing_2026/01_clinton_rates,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2026:2035,2026,kg_lt part_active estate,nextdollar nextdollar nextdollar,2026050315,baseline
 02_restore_bottom_rates,clausing_2026/02_restore_bottom_rates,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2026:2035,2026,kg_lt part_active estate,nextdollar nextdollar nextdollar,2026050315,baseline
 03_199a,clausing_2026/03_199a,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2026:2035,2026,kg_lt part_active estate,nextdollar nextdollar nextdollar,2026050315,baseline

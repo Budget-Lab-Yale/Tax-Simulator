@@ -1,4 +1,4 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2025:2026,,,
+baseline,default,,2025:2026,,,
 cvh,public/cvh-watca/stacked/02-surtax,,2025:2026,2026,,
 booker,public/booker-kypa/stacked/std_eitc_ctc_ord,,2025:2026,2026,,

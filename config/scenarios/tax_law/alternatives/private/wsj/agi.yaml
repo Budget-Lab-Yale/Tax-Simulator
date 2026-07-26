@@ -1,0 +1,26 @@
+---
+
+# Whether FLSA-eligible overtime income is deductible from gross income
+ot_deduction:
+  value: 
+    '2014': 0
+    '2026': 1
+    
+# Maximum deductible OT, non-joint returns
+ot_deduction_cap_single:
+  value:
+    '2014': Inf
+    '2026': 10000
+    
+# AGI threshold for OT deduction phaseout, non-joint returns
+ot_deduction_po_thresh_single:
+  value:
+    '2014': Inf
+    '2026': 100000
+    
+# Phaseout rate for OT deduction
+ot_deduction_po_rate:
+  value:
+    '2014': 0
+    '2026': 0.05
+    

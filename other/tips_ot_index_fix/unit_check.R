@@ -207,7 +207,7 @@ build_indexes = function(years) {
 
 # Replicates build_tax_law()'s parse step without the output-path writes
 parse_config = function(dir, years, indexes) {
-  tax_law = load_tax_law_input('./config/scenarios/tax_law/baseline')
+  tax_law = load_tax_law_input(tax_law_path('default'))
   if (!is.null(dir)) {
     changes = load_tax_law_input(dir)
     for (param in names(changes)) {
@@ -257,7 +257,7 @@ if (is.data.frame(base_parsed)) {
 
   # How the sentinel arrives from YAML -- string 'NA' vs NA_character_ decides
   # which test the guard needs; it handles both, this just records which it is.
-  ed_raw = load_tax_law_input('./config/scenarios/tax_law/baseline')$ed
+  ed_raw = load_tax_law_input(tax_law_path('default'))$ed
   sentinel = ed_raw$llc_po_thresh_single$i_measure[['2020']]
   cat(sprintf('       (sentinel parses as %s, class %s)\n',
               if (is.na(sentinel)) 'NA' else paste0("'", sentinel, "'"),
@@ -270,8 +270,8 @@ if (is.data.frame(base_parsed)) {
 # from 2023 on even though the 2026+ measure is live. That is pre-existing
 # behavior, not a broken chain -- the guard must stay quiet. (Found by the
 # 912-config sweep after a first version of the guard hard-stopped it.)
-for (d in c('./config/scenarios/tax_law/public/ctc/wyden_smith/indexation',
-            './config/scenarios/tax_law/public/ctc/wyden_smith/refund_amount')) {
+for (d in c('./config/scenarios/tax_law/alternatives/public/ctc/wyden_smith/indexation',
+            './config/scenarios/tax_law/alternatives/public/ctc/wyden_smith/refund_amount')) {
   res = tryCatch({ parse_config(d, years_ok, idx_ok); NA_character_ },
                  error = function(e) conditionMessage(e))
   check(sprintf('sentinel-then-resume parses (%s)', basename(d)),
@@ -328,9 +328,9 @@ check('apply_indexation maps NA index to base_value (the averted bug)',
 
 # --- (2c) full sweep: every reform config parses inside the horizon ----------
 # Slowest check by far (a full baseline parse per config dir), so it runs last.
-reform_dirs = list.dirs('./config/scenarios/tax_law', recursive = TRUE) %>%
+reform_dirs = list.dirs('./config/scenarios/tax_law/alternatives', recursive = TRUE) %>%
   keep(~ length(list.files(.x, pattern = '\\.ya?ml$')) > 0) %>%
-  discard(~ .x == './config/scenarios/tax_law/baseline')
+  discard(~ .x == './config/scenarios/tax_law/alternatives')
 n_cores = max(1, as.integer(Sys.getenv('SLURM_CPUS_PER_TASK', '1')))
 cat(sprintf('\n  sweeping %d reform config dirs on %d cores...\n',
             length(reform_dirs), n_cores))

@@ -3,7 +3,7 @@
 Build the top_tax 7-switch binary factorial (VISION.md v3, D8).
 
 Emits, under the repo:
-  - config/scenarios/tax_law/top_tax/factorial/c{NNN}/   (127 reform dirs)
+  - config/scenarios/tax_law/alternatives/top_tax/factorial/c{NNN}/   (127 reform dirs)
   - config/runscripts/top_tax/factorial.csv               (128 rows incl. baseline)
 
 Each of 127 non-empty switch combinations gets a tax_law directory containing
@@ -36,7 +36,7 @@ REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 TAXLAW_ROOT = os.path.join(REPO, "config", "scenarios", "tax_law", "top_tax", "factorial")
 RUNSCRIPT_DIR = os.path.join(REPO, "config", "runscripts", "top_tax")
 RUNSCRIPT = os.path.join(RUNSCRIPT_DIR, "factorial.csv")
-# tax_law column is relative to config/scenarios/tax_law/
+# tax_law column is relative to config/scenarios/tax_law/alternatives/
 TAXLAW_REL = "top_tax/factorial"
 
 # --------------------------------------------------------------------------- #

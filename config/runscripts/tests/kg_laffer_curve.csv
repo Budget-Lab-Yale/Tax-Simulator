@@ -1,5 +1,5 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types
-baseline,baseline,,2024:2026,,kg_lt,nextdollar
+baseline,default,,2024:2026,,kg_lt,nextdollar
 kg_top_1pp_e62,tests/kg_top_1pp,kg/62,2024:2026,,kg_lt,nextdollar
 kg_top_1pp_e72,tests/kg_top_1pp,kg/72,2024:2026,,kg_lt,nextdollar
 kg_top_2pp_e62,tests/kg_top_2pp,kg/62,2024:2026,,kg_lt,nextdollar

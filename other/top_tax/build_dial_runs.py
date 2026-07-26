@@ -3,7 +3,7 @@
 Build the top_tax DIALS batch (atlas v2 surrogate) from levers.py.
 
 Emits, under the repo:
-  - config/scenarios/tax_law/top_tax/dials/{id}/     (one reform dir per scenario)
+  - config/scenarios/tax_law/alternatives/top_tax/dials/{id}/     (one reform dir per scenario)
   - config/runscripts/top_tax/dials.csv              (baseline + ~97 scenarios)
   - config/runscripts/top_tax/dials_legend.csv       (ID, kind, levers_json, label)
 

@@ -1,3 +1,3 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,dep.Off-Model-Estimates.vintage,dep.Off-Model-Estimates.ID,s
-baseline,baseline,,2026:2029,,kg_lt,nextdollar,corp_test_20260703,baseline,
-corp_perm,baseline,,2026:2029,2028:2028,,,corp_test_20260703,corp_rate_perm,
+baseline,default,,2026:2029,,kg_lt,nextdollar,corp_test_20260703,baseline,
+corp_perm,default,,2026:2029,2028:2028,,,corp_test_20260703,corp_rate_perm,

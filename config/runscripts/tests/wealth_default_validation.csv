@@ -1,5 +1,5 @@
 ID,tax_law,behavior,years,dist_years,mtr_vars,mtr_types,s,wealth_financing,dep.Tax-Data.vintage,dep.Tax-Data.ID
-baseline,baseline,,2026:2036,,kg_lt net_worth estate,nextdollar nextdollar nextdollar,0,,2026060918,baseline
+baseline,default,,2026:2036,,kg_lt net_worth estate,nextdollar nextdollar nextdollar,0,,2026060918,baseline
 cg5_off,tests/kg_5pp_all,kg_dynamics/turnover,2026:2036,2026,kg_lt estate,nextdollar nextdollar,0,,2026060918,baseline
 cg5_flat50,tests/kg_5pp_all,kg_dynamics/turnover,2026:2036,2026,kg_lt estate,nextdollar nextdollar,0.5,,2026060918,baseline
 cg5_default,tests/kg_5pp_all,kg_dynamics/turnover,2026:2036,2026,kg_lt estate,nextdollar nextdollar,,,2026060918,baseline

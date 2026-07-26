@@ -41,10 +41,10 @@ neutral_vat    = tibble(year = 1900:2100, cpi_factor = 1, gdp_deflator_factor = 
 indexes = generate_indexes(MACRO_ROOT, neutral_vat)
 
 parse_estate = function(tax_law_id) {
-  baseline = load_tax_law_input('./config/scenarios/tax_law/baseline')
+  baseline = load_tax_law_input(tax_law_path('default'))
   raw = baseline$estate
   if (tax_law_id != 'baseline') {
-    changes = load_tax_law_input(file.path('./config/scenarios/tax_law', tax_law_id))
+    changes = load_tax_law_input(tax_law_path(tax_law_id))
     for (subparam in names(changes$estate)) {
       raw[[subparam]] = changes$estate[[subparam]]
     }
