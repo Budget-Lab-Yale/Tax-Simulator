@@ -14,7 +14,7 @@
 | 1 — excess-growth rip-out | `66c37a14c` | S1 byte-identical vs golds1 |
 | 2 — resolution engine, dormant | `28ecf4f33` | 45/45 unit tests |
 | 3a — tax law default/alternatives | `09c7e54f4` | S1 byte-identical vs golds1 |
-| 3b — economy leg live, assumptions layer deleted | `749a5a97a` | S1 byte-identical; S2/S3/S4/S6/S7 launched, see below |
+| 3b — economy leg live, assumptions layer deleted | `749a5a97a`, `1f87c583f`, `cbc0030d9` | all six gate scenarios byte-identical |
 
 ## Not started
 
@@ -24,29 +24,36 @@ the three-leg layout as part of 3b, so Phase 6's doc work is partly done.
 
 ---
 
-## The gate as it stands
+## The gate
 
-S1 (baseline, pct 0.05, `main.R` path) passed byte-identical against `golds1`
-after each of phases 1, 3a and 3b. The five full-sample SLURM runs for 3b —
-S2 `rebate_2025`, S3 `tests/multi_module_smoke`, S4
-`tests/corp_kgwealth_verify`, S6 `wealth_tax`, S7 `estate_2009` — were launched
-against `/nfs/roberts/scratch/pi_nrs36/jar335/cfg_rb_p3b` at the end of the
-session and had not finished. **Check them first.**
+All six scenarios pass at `cbc0030d9`:
+
+| | scenario | how | result |
+|---|---|---|---|
+| S1 | `baseline/baseline` | `main.R`, pct 0.05 | pass vs `golds1` |
+| S2 | `rebate_2025` | SLURM, pct 1 | pass vs `golds2` |
+| S3 | `tests/multi_module_smoke` | SLURM, pct 1 | pass vs `golds3` |
+| S4 | `tests/corp_kgwealth_verify` | SLURM, pct 1 | pass vs `golds4` |
+| S6 | `wealth_tax` (scenario `wealth_tax_warren`) | SLURM, pct 1 | pass vs `golds6` |
+| S7 | `estate_2009` | SLURM, pct 1 | pass vs `golds7` |
+
+Candidate vintages are `…/model_data/Tax-Simulator/v1/rb_p3b_s{1..7}`. Rerun any
+of them with:
 
 ```bash
-ls /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/rb_p3b_s*
-for n in 2 3 4 6 7; do
-  bash other/config_redesign/gate_diff.sh \
-    /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/rb_p3b_s$n \
-    /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/golds$n
-done
+bash other/config_redesign/gate_diff.sh \
+  /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/rb_p3b_sN \
+  /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/goldsN
 ```
 
-Caveat on the runs in flight: the `cfg_rb_p3b` worktree holds the Phase 3b
-`src/` and `config/` (rsynced) on top of a Phase 3a checkout, so its `other/`
-and `CLAUDE.md` are one commit behind. Neither affects model output, and
-`code_version.csv` is excluded from the comparison. If a gate fails, re-run it
-from a clean checkout of `749a5a97a` before believing the failure.
+Note that S6 must be launched with `wealth_tax_warren` as the scenario_id —
+that is how its golden was produced, and running all four wealth-tax scenarios
+changes the stacked reports.
+
+The runs were executed from `/nfs/roberts/scratch/pi_nrs36/jar335/cfg_rb_p3b`,
+a worktree carrying the Phase 3b `src/` and `config/` (rsynced) on a Phase 3a
+checkout, so its `other/` and `CLAUDE.md` are a commit behind. Neither affects
+model output, and `code_version.csv` is excluded from the comparison.
 
 Two sanctioned exclusions were added to `gate_diff.sh` this session, both
 narrow:
@@ -102,11 +109,20 @@ narrow:
    `wealth_dyn_load_params()` rather than configured, because it was never
    anything but `macro_gdp_per_capita`.
 
-7. **`estate.valuation_bridge` reads warn-level stale** on every run right now:
-   `other/estate_tax/write_frozen_params.R` changed when its output path was
-   repointed to `config/calibrations/estate/bridge.yaml`. Its hash was
-   re-pinned too, so this should be clean at `749a5a97a`; if it reappears,
-   the tree being run is behind.
+7. **The kg economy channel is `state`, not `transmission`.** The full-sample
+   gate caught this: `kg_dyn_apply_mech_to_records` runs inside the static
+   block by design, so the values it reads — including the charitable-bequest
+   logits — are read on the static pass. Only the bathtub's behavioral
+   response is conventional-only, and that runs through the modules. The
+   abandoned branch had split the logits into a separate `bequest.yaml`
+   state channel; declaring the whole kg channel state reaches the same place
+   with one file.
+
+8. **SLURM Phase 0 activates the legs itself**, in both of `setup.R`'s
+   per-scenario loops. It reads configuration before any worker starts
+   (`build_tax_law`, and the channel predicates that decide which phases get
+   emitted), and the second loop would otherwise read whichever scenario the
+   first left installed.
 
 ## Next steps, in order
 
