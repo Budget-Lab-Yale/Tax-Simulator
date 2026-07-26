@@ -466,16 +466,27 @@ call it.** Phase 5 retires it.
 
 # Part 2 — What was verified
 
-## The six-scenario gate, all passing at `cbc0030d9`
+## The six-scenario gate, all passing at `cbc0030d9` (Phase 3b) and again at `60038ed6c` (Phase 4)
 
-| | Runscript | How | Golden | Result |
-|---|---|---|---|---|
-| S1 | `baseline/baseline` | `main.R`, pct 0.05 | `golds1` | pass |
-| S2 | `rebate_2025` | SLURM, pct 1 | `golds2` | pass |
-| S3 | `tests/multi_module_smoke` | SLURM, pct 1 | `golds3` | pass |
-| S4 | `tests/corp_kgwealth_verify` | SLURM, pct 1 | `golds4` | pass |
-| S6 | `wealth_tax`, scenario `wealth_tax_warren` | SLURM, pct 1 | `golds6` | pass |
-| S7 | `estate_2009` | SLURM, pct 1 | `golds7` | pass |
+| | Runscript | How | Golden | 3b | Phase 4 candidate | Phase 4 |
+|---|---|---|---|---|---|---|
+| S1 | `baseline/baseline` | `main.R`, pct 0.05 | `golds1` | pass | `rb_p4_s1b` | pass |
+| S2 | `rebate_2025` | SLURM, pct 1 | `golds2` | pass | `rb_p4_s2b` | pass |
+| S3 | `tests/multi_module_smoke` | SLURM, pct 1 | `golds3` | pass | `rb_p4_s3b` | pass |
+| S4 | `tests/corp_kgwealth_verify` | SLURM, pct 1 | `golds4` | pass | `rb_p4_s4b` | pass |
+| S6 | `wealth_tax`, scenario `wealth_tax_warren` | SLURM, pct 1 | `golds6` | pass | `rb_p4_s6b` | pass |
+| S7 | `estate_2009` | SLURM, pct 1 | `golds7` | pass | `rb_p4_s7b` | pass |
+
+The Phase 4 column is what settles the ten conditional hash re-pins: they stand,
+and the guard deletions and parameter relocation were behavior-preserving as
+intended. The notes in `kg.yaml`, `sigma.yaml` and `wealth.yaml` say so and are
+dated. Note this gate is stronger for Phase 4 than for 3b, because S3, S4 and S6
+are exactly the scenarios that run behavior stacks — four families, the bathtub
+with entity shifting, and the wealth/estate concealment pair.
+
+The Phase 4 runs were executed from the project tree itself at `60038ed6c`, not
+from a scratch worktree, so `code_version.csv` is the only thing that could
+differ by construction and it is excluded.
 
 Between them these exercise the kg bathtub, the corporate incidence channel,
 the wealth bathtub, the estate tax, and the multi-module behavior stack.

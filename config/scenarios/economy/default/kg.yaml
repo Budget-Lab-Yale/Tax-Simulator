@@ -17,9 +17,10 @@
 # calibrated entries in this file were re-pinned after COMMENT-ONLY edits to the
 # files they depend on -- module-only parameters moved out to their module files,
 # and pointers to the deleted config/assumptions/ tree were corrected to name
-# this tree. No value, formula or threshold moved. CONDITIONAL: this re-pin
-# stands only if the six-scenario byte-identity gate is clean, and becomes a real
-# re-derivation if it is not.
+# this tree. No value, formula or threshold moved. CONFIRMED 2026-07-26: the
+# six-scenario gate came back byte-identical, including the two scenarios that
+# run the bathtub end to end, so the re-pin stands and no value needs
+# re-deriving.
 _channel:
   role: state
 

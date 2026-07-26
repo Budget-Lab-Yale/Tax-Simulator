@@ -63,6 +63,11 @@ conv:
     again, in comment text only -- the evasion elasticities moved into their
     module file and stale config/assumptions/ pointers were corrected. Same
     condition as above.
+    BOTH 2026-07-26 RE-PINS CONFIRMED: the six-scenario gate came back
+    byte-identical, so the guard deletions and the parameter relocation were
+    behavior-preserving as intended and sigma does not need re-deriving. (The
+    charity-elasticity condition recorded above is a separate matter and still
+    stands: sigma was derived under charity/100 and product runs use charity/50.)
 
 pt_labor_share:
   value: 0.75
