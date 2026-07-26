@@ -47,13 +47,29 @@ source(file.path(dirname(sub('--file=', '', grep('--file=', commandArgs(), value
 # Configuration
 #-------------------------------------------------------------------------------
 
-TAX_DATA_ROOT = '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1/2026070814/baseline'
-MACRO_ROOT    = '/nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections/v3/2026022522/baseline'
+# Upstream data. Overridable so a re-fit on a new vintage does not need this file
+# edited -- editing the calibrator to re-run it is how the old numbers came loose
+# from their provenance in the first place. The vintage that actually gets used is
+# what lands in the fit's `derived_under`, read back off these paths.
+TAX_DATA_ROOT = Sys.getenv(
+  'ESTATE_TAX_DATA_ROOT',
+  '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1/2026070814/baseline')
+MACRO_ROOT    = Sys.getenv(
+  'ESTATE_MACRO_ROOT',
+  '/nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections/v3/2026022522/baseline')
 SCRIPT_DIR    = dirname(sub('--file=', '', grep('--file=', commandArgs(), value = TRUE)))
+REPO_ROOT     = normalizePath(file.path(SCRIPT_DIR, '..', '..'))
 SOI_PATH      = file.path(SCRIPT_DIR, 'estate_tax_filed_2016_2023.csv')
 SCORE_PATH    = file.path(SCRIPT_DIR, 'score_targets_estate_gift.csv')
 
-CLUSTER_CAP = 300
+# Where the fit lands, and where the chosen inputs come from. The cluster cap is
+# an input to this fit, not a result of it, so it is read rather than declared: one
+# source of truth, and the fit records the value it was made under.
+CALIB_DIR = file.path(REPO_ROOT, 'config', 'calibrations', 'estate')
+FIT_PATH  = file.path(CALIB_DIR, 'valuation_fit.yaml')
+
+estate_settings = yaml::read_yaml(file.path(CALIB_DIR, 'settings.yaml'))
+CLUSTER_CAP     = estate_settings$cluster_death_weight_cap$value
 
 # FRED TNWBSHNO annual averages (only ratios used); BEA by death year
 NW = c('2015' = 89147806,  '2016' = 93433605,  '2017' = 100706809,
@@ -330,4 +346,77 @@ era_table = function(years, label) {
 era_table(HOLDOUT_YEARS, 'PRE-TCJA HELD-OUT VALIDATION (death years 2015-2017)')
 era_table(SHAPE_YEARS,   'POST-TCJA (death years 2018-2022, in objective)')
 
+#-------------------------------------------------------------------------------
+# Write the fit. This is the last step of the calibration rather than a separate
+# chore: r and rho_pt used to be read off this script's output and typed into
+# other/estate_tax/estate_valuation_params.yaml by hand, and that transcription
+# is the whole thing the configuration rebuild exists to remove.
+#
+# The writer refuses to overwrite a value it did not reproduce -- it puts its
+# version at valuation_fit.yaml.proposed and says so loudly instead. A fitted
+# parameter moving is a finding: it means the data moved, the objective moved, or
+# the fit is less identified than it looks. Read the difference before accepting
+# it. See src/misc/calibration_writer.R.
+#
+# Three decimals, which is the precision these values have always shipped at and
+# about what the SOI shape supports.
+#-------------------------------------------------------------------------------
+
+source(file.path(REPO_ROOT, 'src', 'misc', 'calibration_writer.R'))
+
+fit_fields = function(what, target_text, note_text) {
+  list(
+    kind   = 'calibrated',
+    set    = format(Sys.Date()),
+    target = calib_prose(target_text),
+    derived_under = list(
+      tax_data          = basename(dirname(TAX_DATA_ROOT)),
+      macro_projections = basename(dirname(MACRO_ROOT))),
+    invalidated_by = c('other/estate_tax/calibrate_estate_v2.R',
+                       'other/estate_tax/estate_module.R'),
+    conditioned_on = list(settings.estate.cluster_death_weight_cap = CLUSTER_CAP),
+    rederive = 'other/estate_tax/calibrate_estate_v2.R',
+    note     = calib_prose(note_text))
+}
+
+calib_write_entry(
+  path   = FIT_PATH,
+  entry  = 'r',
+  value  = round(r_hat, 3),
+  fields = fit_fields(
+    'r',
+    sprintf('Uniform valuation haircut in reported_gross = economic_gross * r *
+             [1 + (rho_pt - 1) * s_pt]. Fitted jointly with rho_pt against the
+             SOI shape over death years %s, with deadbands on the post-TCJA SOI
+             level, the JCT OBBBA-versus-sunset delta, and CBO receipts for
+             FY%s only. Death years %s are held out of the objective and
+             reported as out-of-sample validation. Objective at the fit: %.5f.',
+            paste(range(SHAPE_YEARS), collapse = '-'),
+            paste(range(CBO_TARGET_YEARS), collapse = '-'),
+            paste(range(HOLDOUT_YEARS), collapse = '-'),
+            final$value),
+    sprintf('Conditioned on the donor-clone cluster cap (%d), which is an INPUT
+             to the objective rather than a result of it -- move the cap and this
+             has to be refitted. Post-TCJA five-year SOI tax level at the fit:
+             %+.1f%%. Residuals and open issues:
+             other/estate_tax/new_estate_modeling_thoughts.md section 10h.',
+            CLUSTER_CAP, 100 * final$soi_level_err)))
+
+calib_write_entry(
+  path   = FIT_PATH,
+  entry  = 'rho_pt',
+  value  = round(rho_hat, 3),
+  fields = fit_fields(
+    'rho_pt',
+    'Additional valuation discount on the pass-through slice of the balance
+     sheet, entering as [1 + (rho_pt - 1) * s_pt]. Fitted jointly with r; bounded
+     below at 0.5 during the fit to keep the discount economically plausible.',
+    'Closely related to the applier-side deemed-realization haircut
+     (kg settings.yaml, deemed_avoidance) and to the estate-side asset-class
+     reporting factor. There is a standing TODO to concord the three on a shared
+     per-asset-class rho_k rather than carrying three separately chosen
+     discounts.'))
+
+cat('\nNext: regenerate the bridge the model actually reads --\n')
+cat('  sbatch other/estate_tax/write_frozen_params.sbatch\n')
 cat('\nDone.\n')

@@ -1,0 +1,80 @@
+# GENERATED FILE -- do not hand-edit.
+#
+# The two fitted parameters of the estate measurement bridge. Written by
+# other/estate_tax/calibrate_estate_v2.R, which is the optimizer that produces
+# them, so that the shipped number and the run behind it cannot drift apart. Both
+# were previously hand-copied out of a calibration log into
+# other/estate_tax/estate_valuation_params.yaml, an intermediate this file retires.
+#
+# Read by : other/estate_tax/write_frozen_params.R, which merges these with the
+#           SOI per-bin table and the chosen inputs in settings.yaml to emit
+#           config/calibrations/estate/bridge.yaml -- the file the model actually
+#           reads. This one is upstream of the model, not read by it.
+#
+# The bridge is a MEASUREMENT, not tax law, and a reform must never override it.
+# Estate tax law lives in config/scenarios/tax_law/default/estate.yaml.
+#
+# SEEDED 2026-07-26 from the values then shipped in estate_valuation_params.yaml,
+# with no re-derivation -- same treatment the kg calibration files got when they
+# landed. The calibrator rewrites this file from here on, and the first re-run is
+# what turns these from transcribed numbers into measured ones.
+
+_channel:
+  role: state
+
+
+r:
+  value: 0.951
+  kind: calibrated
+  set: '2026-07-08'
+  target: >
+    Uniform valuation haircut in reported_gross = economic_gross * r * [1 +
+    (rho_pt - 1) * s_pt]. Fitted jointly with rho_pt against the SOI shape over
+    death years 2018-2022, with deadbands on the post-TCJA SOI level, the JCT
+    OBBBA-versus-sunset delta, and CBO receipts for FY2026-2028 only. Death years
+    2015-2017 are held out and validate within about 15% on tax.
+  derived_under:
+    tax_data: '2026070814'
+    macro_projections: '2026022522'
+  invalidated_by:
+    - other/estate_tax/calibrate_estate_v2.R
+    - other/estate_tax/estate_module.R
+  invalidated_by_hashes:
+    other/estate_tax/calibrate_estate_v2.R: 233b9306143aeb8b174c4e17a7589472
+    other/estate_tax/estate_module.R: 851848320ded94c864bf49e842ceadab
+  conditioned_on:
+    settings.estate.cluster_death_weight_cap: 300
+  rederive: other/estate_tax/calibrate_estate_v2.R
+  note: >
+    UNCHANGED from the 2026060918 fit: the wealth and balance-sheet columns are
+    identical between that vintage and 2026070814, so the fit is invariant and the
+    2026-07-08 run only re-pinned the guard. Conditioned on the donor-clone
+    cluster cap, which is an input to the objective rather than a result of it --
+    move the cap and this has to be refitted. Residuals and open issues:
+    other/estate_tax/new_estate_modeling_thoughts.md section 10h.
+
+rho_pt:
+  value: 0.612
+  kind: calibrated
+  set: '2026-07-08'
+  target: >
+    Additional valuation discount on the pass-through slice of the balance sheet,
+    entering as [1 + (rho_pt - 1) * s_pt]. Fitted jointly with r; bounded below at
+    0.5 during the fit to keep the discount economically plausible.
+  derived_under:
+    tax_data: '2026070814'
+    macro_projections: '2026022522'
+  invalidated_by:
+    - other/estate_tax/calibrate_estate_v2.R
+    - other/estate_tax/estate_module.R
+  invalidated_by_hashes:
+    other/estate_tax/calibrate_estate_v2.R: 233b9306143aeb8b174c4e17a7589472
+    other/estate_tax/estate_module.R: 851848320ded94c864bf49e842ceadab
+  conditioned_on:
+    settings.estate.cluster_death_weight_cap: 300
+  rederive: other/estate_tax/calibrate_estate_v2.R
+  note: >
+    Closely related to the applier-side deemed-realization haircut
+    (kg settings.yaml, deemed_avoidance = 0.25) and to the estate-side asset-class
+    reporting factor. There is a standing TODO to concord the three on a shared
+    per-asset-class rho_k rather than carrying three separately chosen discounts.
