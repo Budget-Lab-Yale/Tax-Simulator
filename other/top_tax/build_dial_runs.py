@@ -24,22 +24,16 @@ self-contained on levers.py. Pure file I/O — safe on the login node.
 """
 
 # ---------------------------------------------------------------------------
-# DRIFT WARNING -- read before running this script (2026-07-26)
+# Regeneration is SAFE and verified: this script reproduces both its runscript
+# and its tax_law tree byte-for-byte against what is committed. It is worth
+# re-proving after any edit, because the tree is deleted before it is rebuilt:
 #
-# This generator reproduces its RUNSCRIPT byte-for-byte, verified by
-# regenerate-and-diff. It does NOT reproduce the tax_law directories it writes,
-# and it deletes the tree before rebuilding it, so running it as-is DISCARDS
-# two model changes that were hand-patched into those directories after the
-# last generation:
+#   python3 other/top_tax/build_dial_runs.py && git status --short config/
 #
-#   - the on-model corporate statutory-rate scoring (2026-07-23): 114 corp.yaml
-#     files this script does not know how to write
-#   - the ordinary-rate uncap fix: `no_ord_cap: 1` in 123 pref.yaml files
-#
-# Teaching the lever definitions to emit both is unfinished work and needs an
-# author ruling, because it changes what the scenarios mean. Until then, either
-# run with the tax_law rebuild disabled, or re-apply both patches afterwards and
-# diff the tree before committing.
+# An empty status is the pass. Three separate drifts were fixed on 2026-07-26 to
+# get here -- CRLF line endings, the 2026-07-16 estate-avoidance module split,
+# and the on-model corporate rate plus the ordinary-rate cap lift -- each of
+# which had been silently discarding real model content on every regeneration.
 # ---------------------------------------------------------------------------
 
 import csv
@@ -132,10 +126,16 @@ def write_scenario_dir(scen_id, scenario):
         if key not in scenario:
             continue
         lv = L.BY_KEY[key]
-        if lv["kind"] != "yaml":
+        if lv["files"] is None:            # off-model-only lever, writes no YAML
             continue
         for fname, blocks in lv["files"](scenario[key]).items():
             per_file.setdefault(fname, []).extend(blocks)
+
+    # The ordinary-rate cap lift rides the cg lever, appended last (see
+    # L.NO_ORD_CAP_BLOCK for why the position is what it is).
+    if "cg" in scenario:
+        per_file.setdefault("pref.yaml", []).append(L.NO_ORD_CAP_BLOCK)
+
     for fname, blocks in per_file.items():
         parts = ["---\n"]
         for blk in blocks:

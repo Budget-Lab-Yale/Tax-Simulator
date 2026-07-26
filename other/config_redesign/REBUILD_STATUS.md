@@ -2,8 +2,9 @@
 
 *Branch `config-rebuild`, off `wealth` at `324a7cd38`. Phases 0 through 3c built
 2026-07-26. All six gate scenarios byte-identical; all 103 live runscripts parse
-and resolve. Phases 4, 5 and 6 remain, and one item from 3c needs an author
-ruling (Part 4). Plan of record: `~/.claude/plans/cheerful-zooming-star.md`,
+and resolve; both top-tax generators reproduce everything they write, tax_law
+trees included. Nothing from 3c is left open. Phases 4, 5 and 6 remain. Plan of
+record: `~/.claude/plans/cheerful-zooming-star.md`,
 which carries a status header pointing back here.*
 
 This document is meant to be enough to resume cold. It is in four parts: what
@@ -279,8 +280,29 @@ drift had to be fixed to get there:
 they went the same way. The `baseline` row's `tax_law` cell now emits `default`,
 and both scripts' header lists put `economy` in canonical position.
 
-**They still do not reproduce the tax_law trees they rebuild.** See Part 4 —
-this is the one open item from 3c.
+A fourth drift was then fixed as well, so the generators now reproduce their
+tax_law trees too:
+
+4. **The on-model corporate rate and the ordinary-rate cap lift.** The corporate
+   rate went on-model on 2026-07-23; before that a corp scenario was purely an
+   off-model switch and wrote no YAML, which both scripts still believed. The
+   114 `corp.yaml` files the change needs, and `no_ord_cap: 1` in 123
+   `pref.yaml` files, had been patched in by hand. The rules turned out to be
+   exact, with zero exceptions across all 198 dial and 128 factorial scenarios:
+   `corp.yaml` exists if and only if the corp lever is on, and `no_ord_cap`
+   appears if and only if the cg lever is on. Both are now generated. The corp
+   lever's `kind` becomes `'both'` (it writes YAML *and* names the off-model
+   pin) and the YAML gate keys on `files is None` rather than on `kind`;
+   `no_ord_cap` is appended to `pref.yaml` last, which is where the hand patch
+   left it and where it has to stay for regenerate-and-diff to be clean.
+
+**Both generators now reproduce everything they write.** The check is one
+command, and an empty result is the pass:
+
+```bash
+python3 other/top_tax/build_dial_runs.py && python3 other/top_tax/build_factorial.py \
+  && git status --short config/
+```
 
 ### What was archived
 
@@ -513,47 +535,24 @@ check would report 71 failures forever and nobody would read it. The plan
 sanctions archiving wholesale, and it is a `git mv` to undo. The archive README
 names the ones most likely to be wanted back.
 
-### 11. The generators were WARNED rather than fixed for the tax_law trees
+### 11. The generators were taught the on-model corporate rate and the cap lift
 
-Both top-tax generators `rmtree` their tax_law directory before rebuilding it,
-and the rebuild does not reproduce what is committed. Running either as-is
-deletes 114 `corp.yaml` files and strips `no_ord_cap: 1` from 123 `pref.yaml`
-files.
+Initially these were left as a warning, on the grounds that emitting them
+changes what the scenarios mean. The author ruled to fix them, and it turned out
+not to be a modelling judgment at all: both rules are exact functions of which
+lever is on, with zero exceptions across all 326 scenarios in the two batches.
+So the generators encode the rule rather than a guess, and both now reproduce
+their tax_law trees as well as their runscripts.
 
-Teaching the lever definitions to emit both would change what the scenarios
-mean, so it was not done. Instead both scripts open with a warning naming
-exactly what would be lost, and the tax_law tree was reverted. This is the one
-open item from 3c and it is written up in Part 4.
+What remains a judgment, and is recorded in the code: `no_ord_cap` is appended
+to the END of `pref.yaml`, after the deemed block, which is not where it
+logically belongs — it rides the cg lever and would read better inside the cg
+block. It stays at the end because that is where the hand patch put it, and
+moving it would break byte-identity against every shipped vintage for no gain.
 
 ---
 
 # Part 4 — What is left
-
-## OPEN — the top-tax generators and their tax_law trees
-
-Needs an author ruling before anyone regenerates a top-tax batch.
-
-`build_dial_runs.py` and `build_factorial.py` each do two things: write a
-runscript, and write a tree of reform YAML directories. They now reproduce the
-runscript byte-for-byte. They do not reproduce the tree, and they `rmtree` it
-first, so running either one as-is discards two model changes that were
-hand-patched into those directories after the last generation:
-
-| What | Scale | When it was added |
-|---|---|---|
-| the on-model corporate statutory-rate scoring | 114 `corp.yaml` files the generator does not know how to write | 2026-07-23 |
-| the ordinary-rate uncap fix | `no_ord_cap: 1` missing from 123 `pref.yaml` files | the v3 dials batch |
-
-The plan anticipated one piece of this ("port the hand-patched estate-avoidance
-split back in") and that piece is done. These two are larger: they are model
-content, not bookkeeping, and how the lever definitions should express them is a
-modelling question. Until it is settled, both scripts carry a warning at the top
-naming what would be lost.
-
-Three ways out, in increasing effort: leave the warning and re-apply both
-patches by hand after any regeneration; teach the lever definitions to emit
-both; or split the tax_law rebuild out behind a flag so the runscript can be
-regenerated without touching the tree.
 
 ## Phase 4 — the behavior leg
 
@@ -684,5 +683,7 @@ full-sample vintages.
 3. Migrate any untracked `private/` runscripts on demand, and any of the 71
    archived in 3c that turn out to still be wanted. The archive README names the
    likely ones and gives the two-step recipe.
-4. Settle the generator tax_law question above, so a regenerate reproduces the
-   whole batch rather than just its runscript.
+4. If the top-tax batches are ever rebuilt from scratch, consider moving
+   `no_ord_cap` inside the cg lever's own block, where it belongs. It sits at
+   the end of `pref.yaml` today only to preserve byte-identity with the shipped
+   vintages.

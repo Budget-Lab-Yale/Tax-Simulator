@@ -9,13 +9,15 @@ Emits, under the repo:
 Each of 127 non-empty switch combinations gets a tax_law directory containing
 ONLY the changed YAML files (baseline supplies the rest via subparameter merge).
 Switches that target the same file (CG rate + deemed both touch pref.yaml) are
-MERGED into one file. The corporate switch is NOT a YAML — it toggles the
-Off-Model-Estimates dependency columns in the runscript.
+MERGED into one file. The corporate switch does two things: it writes corp.yaml
+(the on-model rate, which feeds entity shifting) AND it selects the economy
+alternative naming the corporate off-model pin (which carries the revenue).
 
 Switch bit order (bit i = 2**i):
   0 ord     top ordinary rate +5pp   (37% -> 42%), 2027
   1 cg      top CG/qual-div rate -> 39.6% statutory, 2027
-  2 corp    corporate rate -> 28% via OME (runscript dep columns), 2027
+  2 corp    corporate rate -> 28%: corp.yaml on-model + the corporate
+            off-model pin via the economy column, 2027
   3 wealth  1% annual net-worth tax above $50M, 2027
   4 deemed  deemed realization at death (all asset classes), 2027
   5 estate  Clausing-Sarin estate: $5M exemption, flat 45% top, 2027
@@ -26,22 +28,16 @@ Run from the repo root:  python3 other/top_tax/build_factorial.py
 """
 
 # ---------------------------------------------------------------------------
-# DRIFT WARNING -- read before running this script (2026-07-26)
+# Regeneration is SAFE and verified: this script reproduces both its runscript
+# and its tax_law tree byte-for-byte against what is committed. It is worth
+# re-proving after any edit, because the tree is deleted before it is rebuilt:
 #
-# This generator reproduces its RUNSCRIPT byte-for-byte, verified by
-# regenerate-and-diff. It does NOT reproduce the tax_law directories it writes,
-# and it deletes the tree before rebuilding it, so running it as-is DISCARDS
-# two model changes that were hand-patched into those directories after the
-# last generation:
+#   python3 other/top_tax/build_factorial.py && git status --short config/
 #
-#   - the on-model corporate statutory-rate scoring (2026-07-23): 114 corp.yaml
-#     files this script does not know how to write
-#   - the ordinary-rate uncap fix: `no_ord_cap: 1` in 123 pref.yaml files
-#
-# Teaching the lever definitions to emit both is unfinished work and needs an
-# author ruling, because it changes what the scenarios mean. Until then, either
-# run with the tax_law rebuild disabled, or re-apply both patches afterwards and
-# diff the tree before committing.
+# An empty status is the pass. Three separate drifts were fixed on 2026-07-26 to
+# get here -- CRLF line endings, the 2026-07-16 estate-avoidance module split,
+# and the on-model corporate rate plus the ordinary-rate cap lift -- each of
+# which had been silently discarding real model content on every regeneration.
 # ---------------------------------------------------------------------------
 
 import csv
@@ -111,6 +107,30 @@ rates:
   value:
     '2014': [0.0, 0.15, 0.20]
     '2027': [0.0, 0.15, 0.396]
+"""
+
+# The corporate rate became an ON-MODEL parameter on 2026-07-23, so a corp
+# scenario now needs this file as well as the off-model pin. See
+# other/top_tax/levers.py for the history.
+CORP_RATE = """\
+# top_tax corp dial: top corporate rate 21% -> 28% from 2027.
+# Parameterizes the entity-shifting wedge only -- corp.rate feeds
+# do_entity_shifting, NOT corporate revenue (that comes from the OME channel).
+# Full baseline series retained (subparameter-override replaces wholesale).
+rate:
+  value:
+    '2014': 0.35
+    '2018': 0.21
+    '2027': 0.28
+"""
+
+# Appended to pref.yaml, LAST, whenever the cg switch is on. Lifts the cap that
+# holds the preferred rate schedule below the ordinary one. Position at the end
+# of the file is where the hand patch put it; staying there keeps
+# regenerate-and-diff clean.
+NO_ORD_CAP = """\
+no_ord_cap:
+  value: 1
 """
 
 DEEMED_REGIME = """\
@@ -217,10 +237,13 @@ min_value:
 """
 
 # Switch table: (short, bit, is_corp, {filename: [text blocks]})
+# is_corp marks the switch that ALSO selects the corporate off-model pin (the
+# economy column). It used to mean "writes no YAML" as well; since the rate went
+# on-model it writes corp.yaml too.
 SWITCHES = [
     ("ord",    0, False, {"ord.yaml":    [ORD_RATES]}),
     ("cg",     1, False, {"pref.yaml":   [CG_RATES]}),
-    ("corp",   2, True,  {}),                                   # OME dep, not YAML
+    ("corp",   2, True,  {"corp.yaml":   [CORP_RATE]}),
     ("wealth", 3, False, {"wealth.yaml": [WEALTH_YAML]}),
     ("deemed", 4, False, {"pref.yaml":   [DEEMED_REGIME]}),
     ("estate", 5, False, {"estate.yaml": [ESTATE_YAML]}),
@@ -242,10 +265,15 @@ def write_combo_dir(idx, bits):
     # Collect YAML blocks per filename across all on-switches.
     per_file = {}
     for short, bit, is_corp, files in SWITCHES:
-        if not (bits & (1 << bit)) or is_corp:
+        if not (bits & (1 << bit)):
             continue
         for fname, blocks in files.items():
             per_file.setdefault(fname, []).append((short, blocks))
+
+    # The ordinary-rate cap lift rides the cg switch, appended last (see
+    # NO_ORD_CAP for why the position is what it is).
+    if bits & (1 << 1):
+        per_file.setdefault("pref.yaml", []).append(("no_ord_cap", [NO_ORD_CAP]))
     for fname, contribs in per_file.items():
         parts = ["---\n"]
         for short, blocks in contribs:

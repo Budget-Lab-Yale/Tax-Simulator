@@ -17,7 +17,8 @@ and g_i(x) = the lever's static solo total10 at x divided by its ref value.
 
 YAML text blocks reuse the factorial's idioms verbatim (build_factorial.py):
 cg + deemed co-habit pref.yaml; wealth/estate re-anchor indexation the same
-way; corp is an OME dependency-column switch, not YAML.
+way. corp is BOTH: it names the corporate off-model pin (the economy
+column) and writes corp.yaml for the on-model rate.
 """
 
 import math
@@ -108,6 +109,39 @@ ESTATE_M2 = round((ESTATE_CUR + 2 * 5_000_000) / 3, -4)
 # lever at the given param values. Blocks from co-habiting levers targeting
 # the same file are concatenated by the generator (factorial convention).
 # --------------------------------------------------------------------------- #
+
+CORP_RATE_COMMENT = (
+    '# top_tax corp dial: top corporate rate 21% -> {pct}% from 2027.\n'
+    '# Parameterizes the entity-shifting wedge only -- corp.rate feeds\n'
+    '# do_entity_shifting, NOT corporate revenue (that comes from the OME channel).\n'
+    '# Full baseline series retained (subparameter-override replaces wholesale).\n')
+
+# The corporate rate became an ON-MODEL parameter on 2026-07-23. Before that a
+# corp scenario was purely an off-model switch and wrote no YAML, which is what
+# these generators used to believe; the 114 files the change needs were patched
+# in by hand and the generators were not told until 2026-07-26. The lever now
+# does BOTH: it writes this file AND names the corporate off-model pin.
+def corp_files(vals):
+    r = _pct(vals["rate"])
+    return {"corp.yaml": [CORP_RATE_COMMENT.format(pct=f"{vals['rate']:g}") + f"""\
+rate:
+  value:
+    '2014': 0.35
+    '2018': 0.21
+    '2027': {r}
+"""]}
+
+
+# Appended to pref.yaml, LAST, whenever the cg lever is on: lifting the cap that
+# holds the preferred rate schedule below the ordinary one, without which a top
+# preferred rate above the top ordinary rate cannot bind. Position at the end of
+# the file is not meaningful -- it is where the hand patch put it, and staying
+# there is what keeps regenerate-and-diff clean.
+NO_ORD_CAP_BLOCK = """\
+no_ord_cap:
+  value: 1
+"""
+
 
 def _pct(x):
     """Rate in percent -> YAML decimal string (39.6 -> '0.396')."""
@@ -258,7 +292,8 @@ oasdi_er_rates:
 #
 # Per lever:
 #   key/label/grp     : identity + UI grouping ('rate' | 'struct')
-#   kind              : 'yaml' | 'ome'
+#   kind              : 'yaml' (writes reform YAML) | 'ome' (switches the
+#                       off-model pin) | 'both'
 #   cluster           : triples flag
 #   wealth_behavior   : insert wealth/avoidance into the behavior stack
 #   interp            : 'linear1d' | 'bilinear' | 'ladder' | 'binary'
@@ -280,8 +315,8 @@ LEVERS = [
          params=[dict(key="rate", label="Top rate", unit="%", fmt="pct",
                       off=20.0, min=20.0, max=50.0,
                       anchors=[25.0, 30.0, 35.0, 40.0, 45.0, 50.0], ref=40.0)]),
-    dict(key="corp", label="Corporate rate", grp="rate", kind="ome",
-         cluster=False, wealth_behavior=False, interp="linear1d", files=None,
+    dict(key="corp", label="Corporate rate", grp="rate", kind="both",
+         cluster=False, wealth_behavior=False, interp="linear1d", files=corp_files,
          params=[dict(key="rate", label="Rate", unit="%", fmt="pct",
                       off=21.0, min=21.0, max=28.0,
                       anchors=[28.0], ref=28.0)]),
