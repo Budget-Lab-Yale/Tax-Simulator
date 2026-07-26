@@ -148,17 +148,6 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     runscript[[paste0('dep.', dep, '.ID')]]      = interface_defaults[[dep]]$default_id
   }
   
-  # Add nonspecified excess growth scenario
-  if (!('excess_growth' %in% colnames(runscript))) {
-    runscript$excess_growth = 0
-  }
-  if (!('excess_growth_start_year' %in% colnames(runscript))) {
-    runscript$excess_growth_start_year = Inf
-  }
-  if (!('excess_growth_all_rev' %in% colnames(runscript))) {
-    runscript$excess_growth_all_rev = 0
-  }
-
   # Wealth-dynamics financing inputs (src/sim/wealth_dynamics.R). The channel is
   # configured by a per-scenario FINANCING PROFILE -- a bracket-varying saving
   # share s(age, net-worth percentile) plus a transition matrix M -- resolved by
@@ -457,11 +446,6 @@ get_scenario_info = function(id) {
     mtr_types = str_split_1(runscript_items$mtr_types, ' ')
   }
   
-  # Excess growth scenario
-  excess_growth            = runscript_items$excess_growth
-  excess_growth_start_year = runscript_items$excess_growth_start_year
-  excess_growth_all_rev    = runscript_items$excess_growth_all_rev
-
   # Wealth-dynamics financing inputs (resolved by wealth_dyn_resolve_profile()).
   # `wealth_financing` is a profile folder name (or 'none'/'off'); `s` is the flat
   # shorthand (s = 1 - MPC). Both pass through verbatim -- including s = NA (unset,
@@ -501,9 +485,6 @@ get_scenario_info = function(id) {
               dist_years               = dist_years,
               mtr_vars                 = mtr_vars,
               mtr_types                = mtr_types,
-              excess_growth            = excess_growth,
-              excess_growth_start_year = excess_growth_start_year,
-              excess_growth_all_rev    = excess_growth_all_rev,
               s                        = s,
               wealth_financing         = wealth_financing,
               assumptions              = assumptions,

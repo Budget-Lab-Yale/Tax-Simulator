@@ -113,17 +113,10 @@ for (sid in scenarios_to_build) {
     years      = scenario_info$years
   )
 
-  excess_growth_offset = get_excess_growth_offset(
-    excess_growth = scenario_info$excess_growth,
-    start_year    = scenario_info$excess_growth_start_year,
-    years         = scenario_info$years
-  )
-
   # Generate indexes
   indexes = generate_indexes(
-    macro_root           = scenario_info$interface_paths$`Macro-Projections`,
-    vat_price_offset     = vat_price_offset,
-    excess_growth_offset = excess_growth_offset
+    macro_root       = scenario_info$interface_paths$`Macro-Projections`,
+    vat_price_offset = vat_price_offset
   )
 
   # Build tax law (also writes tax_law.csv to supplemental as side effect)
@@ -131,11 +124,10 @@ for (sid in scenarios_to_build) {
 
   # Serialize config
   saveRDS(
-    list(scenario_info        = scenario_info,
-         tax_law              = tax_law,
-         indexes              = indexes,
-         vat_price_offset     = vat_price_offset,
-         excess_growth_offset = excess_growth_offset),
+    list(scenario_info    = scenario_info,
+         tax_law          = tax_law,
+         indexes          = indexes,
+         vat_price_offset = vat_price_offset),
     file.path(scenario_staging, 'config.rds')
   )
 }

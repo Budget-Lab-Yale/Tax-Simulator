@@ -109,7 +109,6 @@ tryCatch({
       root                 = file.path(scenario_info$output_path, 'static'),
       totals_slot          = 'static_totals',
       vat_price_offset     = config$vat_price_offset,
-      excess_growth_offset = config$excess_growth_offset,
       scenario_info        = scenario_info
     )
 
@@ -120,7 +119,6 @@ tryCatch({
         root                 = file.path(scenario_info$output_path, 'conventional'),
         totals_slot          = 'conventional_totals',
         vat_price_offset     = config$vat_price_offset,
-        excess_growth_offset = config$excess_growth_offset,
         scenario_info        = scenario_info
       )
     }

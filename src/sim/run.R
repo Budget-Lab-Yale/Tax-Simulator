@@ -52,18 +52,10 @@ do_scenario = function(ID, baseline_mtrs) {
     years      = scenario_info$years
   )
   
-  # Calculate excess growth offset
-  excess_growth_offset = get_excess_growth_offset(
-    excess_growth = scenario_info$excess_growth, 
-    start_year    = scenario_info$excess_growth_start_year, 
-    years         = scenario_info$years
-  )
-  
   # Get price and wage index series
   indexes = generate_indexes(
-    macro_root           = scenario_info$interface_paths$`Macro-Projections`, 
-    vat_price_offset     = vat_price_offset, 
-    excess_growth_offset = excess_growth_offset
+    macro_root       = scenario_info$interface_paths$`Macro-Projections`, 
+    vat_price_offset = vat_price_offset
   )
   
   # Build (and write) tax law
@@ -106,8 +98,7 @@ do_scenario = function(ID, baseline_mtrs) {
 
     if (uses_kg) {
       run_frozen_pass(scenario_info, tax_law,
-                      vat_price_offset     = vat_price_offset,
-                      excess_growth_offset = excess_growth_offset)
+                      vat_price_offset = vat_price_offset)
     }
 
     static_mtrs = run_sim(scenario_info        = scenario_info,
@@ -115,13 +106,11 @@ do_scenario = function(ID, baseline_mtrs) {
                           baseline_mtrs        = baseline_mtrs,
                           indexes              = indexes,
                           vat_price_offset     = vat_price_offset,
-                          excess_growth_offset = excess_growth_offset,
                           pass_type            = 'static')
 
     if (uses_kg) {
       run_bathtub_pass(scenario_info, tax_law,
-                       vat_price_offset     = vat_price_offset,
-                       excess_growth_offset = excess_growth_offset)
+                       vat_price_offset = vat_price_offset)
     }
 
     if (uses_wealth) {
@@ -132,13 +121,11 @@ do_scenario = function(ID, baseline_mtrs) {
               baseline_mtrs        = baseline_mtrs,
               indexes              = indexes,
               vat_price_offset     = vat_price_offset,
-              excess_growth_offset = excess_growth_offset,
               pass_type            = 'conventional_no_wealth',
               static_mtrs_all      = static_mtrs)
 
       run_wealth_bathtub_pass(scenario_info, tax_law,
-                              vat_price_offset     = vat_price_offset,
-                              excess_growth_offset = excess_growth_offset)
+                              vat_price_offset = vat_price_offset)
     }
 
     run_sim(scenario_info        = scenario_info,
@@ -146,7 +133,6 @@ do_scenario = function(ID, baseline_mtrs) {
             baseline_mtrs        = baseline_mtrs,
             indexes              = indexes,
             vat_price_offset     = vat_price_offset,
-            excess_growth_offset = excess_growth_offset,
             pass_type            = 'conventional',
             static_mtrs_all      = static_mtrs)
 
@@ -154,12 +140,11 @@ do_scenario = function(ID, baseline_mtrs) {
 
     # Fused static/conventional simulation (current behavior for non-
     # kg_dynamics scenarios and baseline).
-    static_mtrs = run_sim(scenario_info        = scenario_info,
-                          tax_law              = tax_law,
-                          baseline_mtrs        = baseline_mtrs,
-                          indexes              = indexes,
-                          vat_price_offset     = vat_price_offset,
-                          excess_growth_offset = excess_growth_offset)
+    static_mtrs = run_sim(scenario_info    = scenario_info,
+                          tax_law          = tax_law,
+                          baseline_mtrs    = baseline_mtrs,
+                          indexes          = indexes,
+                          vat_price_offset = vat_price_offset)
   }
   
   
@@ -201,7 +186,7 @@ do_scenario = function(ID, baseline_mtrs) {
 
 
 write_pass_outputs = function(output, root, totals_slot,
-                              vat_price_offset, excess_growth_offset,
+                              vat_price_offset,
                               scenario_info) {
 
   #----------------------------------------------------------------------------
@@ -219,16 +204,13 @@ write_pass_outputs = function(output, root, totals_slot,
   #   - totals_slot (str)         : 'static_totals' or 'conventional_totals' —
   #                                 which per-year totals list to aggregate
   #   - vat_price_offset (df)     : VAT price offset series, written to supplemental
-  #   - excess_growth_offset (df) : excess-growth offset series, written to supplemental
-  #   - scenario_info (list)      : scenario info (interface paths, excess_growth_all_rev)
+  #   - scenario_info (list)      : scenario info (interface paths)
   #
   # Returns: invisible NULL (writes files as a side effect)
   #----------------------------------------------------------------------------
 
   vat_price_offset %>%
     write_csv(file.path(root, 'supplemental', 'vat_price_offset.csv'))
-  excess_growth_offset %>%
-    write_csv(file.path(root, 'supplemental', 'excess_growth_offset.csv'))
 
   totals_pr = output %>%
     map(.f = ~ .x[[totals_slot]]$pr) %>%
@@ -265,7 +247,6 @@ write_pass_outputs = function(output, root, totals_slot,
       other_root            = scenario_info$interface_paths$`Macro-Projections`,
       cost_recovery_root    = scenario_info$interface_paths$`Cost-Recovery-Simulator`,
       off_model_root        = scenario_info$interface_paths$`Off-Model-Estimates`,
-      excess_growth_all_rev = scenario_info$excess_growth_all_rev,
       static                = (totals_slot == 'static_totals')
     )
 
@@ -625,7 +606,7 @@ fold_deemed = function(taxed, liab_deemed = NULL) {
 
 
 run_sim = function(scenario_info, tax_law, baseline_mtrs,
-                   indexes, vat_price_offset, excess_growth_offset,
+                   indexes, vat_price_offset,
                    pass_type = c('both', 'static', 'conventional',
                                  'conventional_no_wealth'),
                    static_mtrs_all = NULL) {
@@ -659,8 +640,6 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
   #                                 indexes ; see generate_indexes()
   #   - vat_price_offset (df)     : series of price level adjustment factors to
   #                                 reflect introduction of a VAT
-  #   - excess_growth_offset (df) : income adjustment factors reflecting excess
-  #                                 real GDP growth scenario
   #   - pass_type (str)           : 'both' (default), 'static', or 'conventional'
   #   - static_mtrs_all (df)      : combined static MTRs across years (required
   #                                 when pass_type='conventional' and the
@@ -684,7 +663,6 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
                  baseline_mtrs        = baseline_mtrs,
                  indexes              = indexes,
                  vat_price_offset     = vat_price_offset,
-                 excess_growth_offset = excess_growth_offset,
                  pass_type            = pass_type,
                  static_mtrs_year     = smy)
   }
@@ -707,7 +685,6 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
       root                 = file.path(scenario_info$output_path, 'static'),
       totals_slot          = 'static_totals',
       vat_price_offset     = vat_price_offset,
-      excess_growth_offset = excess_growth_offset,
       scenario_info        = scenario_info
     )
   }
@@ -719,7 +696,6 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
       root                 = file.path(scenario_info$output_path, 'conventional'),
       totals_slot          = 'conventional_totals',
       vat_price_offset     = vat_price_offset,
-      excess_growth_offset = excess_growth_offset,
       scenario_info        = scenario_info
     )
   }
@@ -793,7 +769,7 @@ kg_dyn_recompute_deemed_tax = function(taxed, input, baseline_pr_er,
 
 
 run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
-                        indexes, vat_price_offset, excess_growth_offset,
+                        indexes, vat_price_offset,
                         pass_type = c('both', 'static', 'conventional',
                                       'conventional_no_wealth'),
                         static_mtrs_year = NULL) {
@@ -824,8 +800,6 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   #                                 indexes ; see generate_indexes()
   #   - vat_price_offset (df)     : series of price level adjustment factors to
   #                                 reflect introduction of a VAT
-  #   - excess_growth_offset (df) : income adjustment factors reflecting excess
-  #                                 real GDP growth scenario
   #   - pass_type (str)           : 'both', 'static', or 'conventional'
   #   - static_mtrs_year (df)     : pre-computed static MTRs (only required in
   #                                 pass_type='conventional' when has_behavior)
@@ -880,9 +854,6 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
 
     # Adjust capital income for VAT-drive price level increase
     do_capital_adjustment(year, vat_price_offset) %>%
-
-    # Adjust intensive-margin variables for excess real GDP growth
-    do_excess_growth(scenario_info, excess_growth_offset) %>%
 
     # Compute CPI ratio for capital gains basis indexation
     calc_kg_cpi_ratio(indexes, year)
@@ -1133,8 +1104,7 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       # never sees this (D5).
       conv_base = tax_units
       if (uses_corp) {
-        corp_check_run_compat(scenario_info, vat_price_offset,
-                              excess_growth_offset)
+        corp_check_run_compat(scenario_info, vat_price_offset)
         conv_base = corp_apply_to_records(
           tax_units          = conv_base,
           paths              = corp_get_paths(scenario_info),
@@ -1306,8 +1276,7 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
 
 
 run_bathtub_pass = function(scenario_info, tax_law,
-                             vat_price_offset     = NULL,
-                             excess_growth_offset = NULL) {
+                            vat_price_offset = NULL) {
 
   #----------------------------------------------------------------------------
   # Orchestrates the kg_dynamics bathtub pre-pass for one scenario. Aggregates
@@ -1327,15 +1296,11 @@ run_bathtub_pass = function(scenario_info, tax_law,
   #                                   joined tax law tibble
   #   - vat_price_offset (df)       : VAT price offset tibble; used only to
   #                                   refuse the run when VAT is active
-  #   - excess_growth_offset (df)   : excess-growth offset tibble; used only
-  #                                   to refuse the run when growth offset
-  #                                   is active
   #
   # Returns: invisibly NULL.
   #----------------------------------------------------------------------------
 
-  kg_dyn_check_run_compat(scenario_info, vat_price_offset,
-                          excess_growth_offset)
+  kg_dyn_check_run_compat(scenario_info, vat_price_offset)
 
   # Reuse the frozen pass's Tax-Data sweep when available (same scenario,
   # same pipeline run) instead of re-reading the wide wealth columns.
@@ -1400,8 +1365,7 @@ run_bathtub_pass = function(scenario_info, tax_law,
 
 
 
-kg_dyn_check_run_compat = function(scenario_info, vat_price_offset,
-                                   excess_growth_offset) {
+kg_dyn_check_run_compat = function(scenario_info, vat_price_offset) {
 
   #----------------------------------------------------------------------------
   # Preconditions for the kg_dynamics pre-passes (frozen mechanical and
@@ -1421,7 +1385,7 @@ kg_dyn_check_run_compat = function(scenario_info, vat_price_offset,
   }
 
   check_raw_data_channel_compat('kg_dynamics', scenario_info,
-                                vat_price_offset, excess_growth_offset)
+                                vat_price_offset)
 
   # Calibration staleness is no longer checked here: it is enforced model-wide
   # for every calibrated assumption by assumptions_check_staleness(), called
@@ -1433,8 +1397,7 @@ kg_dyn_check_run_compat = function(scenario_info, vat_price_offset,
 
 
 run_frozen_pass = function(scenario_info, tax_law,
-                            vat_price_offset     = NULL,
-                            excess_growth_offset = NULL) {
+                           vat_price_offset = NULL) {
 
   #----------------------------------------------------------------------------
   # Orchestrates the kg_dynamics frozen mechanical pre-pass for one scenario.
@@ -1452,8 +1415,7 @@ run_frozen_pass = function(scenario_info, tax_law,
   # Returns: invisibly NULL.
   #----------------------------------------------------------------------------
 
-  kg_dyn_check_run_compat(scenario_info, vat_price_offset,
-                          excess_growth_offset)
+  kg_dyn_check_run_compat(scenario_info, vat_price_offset)
 
   cells_inputs = kg_dyn_load_cells_inputs(
     scenario_info = scenario_info,

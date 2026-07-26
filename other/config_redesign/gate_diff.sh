@@ -20,10 +20,30 @@ list_files () {
   (cd "$1" && find . -type f ! -path './_slurm_staging/*' | sort)
 }
 
+# The excess-growth machinery was removed in the config rebuild's Phase 1, so
+# supplemental/excess_growth_offset.csv exists only on the golden side. That is
+# only a safe exclusion if every golden copy is the neutral series -- an
+# income_factor of exactly 1 in every year means the offset never moved a
+# number. Check that before excusing the missing files.
+GOLD_ONLY_RE='(^|/)excess_growth_offset\.csv$'
+egrowth_neutral_check () {
+  local n=0
+  while IFS= read -r f; do
+    n=$((n + 1))
+    if awk -F, 'NR == 1 { for (i = 1; i <= NF; i++) if ($i == "income_factor") c = i; next }
+                $c != 1 { bad = 1 } END { exit bad ? 1 : 0 }' "$GOLD/$f"; then :; else
+      echo "GOLDEN EXCESS GROWTH NOT NEUTRAL: $f"
+      fail=1
+    fi
+  done < <(list_files "$GOLD" | grep -E "$GOLD_ONLY_RE")
+  echo "--- excess-growth neutrality: $n golden file(s) checked ---"
+}
+egrowth_neutral_check
+
 # 1. File-set comparison (full sets, before exclusions -- a missing xlsx is
 #    still a failure even though its content is compared differently)
 comm -3 <(list_files "$CAND" | grep -Ev '(^|/)(scenarios\.csv|scenario_config\.csv)$') \
-        <(list_files "$GOLD") > /tmp/gate_diff_sets.$$ || true
+        <(list_files "$GOLD" | grep -Ev "$GOLD_ONLY_RE") > /tmp/gate_diff_sets.$$ || true
 if [ -s /tmp/gate_diff_sets.$$ ]; then
   echo "FILE-SET MISMATCH (left-only = candidate, right-only = golden):"
   cat /tmp/gate_diff_sets.$$
@@ -36,7 +56,7 @@ while IFS= read -r f; do
     echo "BYTE DIFF: $f"
     fail=1
   fi
-done < <(list_files "$GOLD" | grep -Ev "$EXCLUDE_RE")
+done < <(list_files "$GOLD" | grep -Ev "$EXCLUDE_RE" | grep -Ev "$GOLD_ONLY_RE")
 
 # 3. dependencies.csv: content equality, order-insensitive (header preserved)
 for side in dependencies.csv; do

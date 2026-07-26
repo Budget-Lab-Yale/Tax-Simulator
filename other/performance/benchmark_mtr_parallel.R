@@ -30,7 +30,6 @@ run_once = function(n_cores, label) {
     baseline_mtrs        = NULL,
     indexes              = config$indexes,
     vat_price_offset     = config$vat_price_offset,
-    excess_growth_offset = config$excess_growth_offset,
     pass_type            = 'static'
   )
   elapsed = proc.time()[['elapsed']] - started

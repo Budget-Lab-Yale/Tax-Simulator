@@ -61,8 +61,7 @@ tryCatch({
 
   # Run the bathtub pre-pass (defined in src/sim/run.R)
   run_bathtub_pass(scenario_info, config$tax_law,
-                   vat_price_offset     = config$vat_price_offset,
-                   excess_growth_offset = config$excess_growth_offset)
+                   vat_price_offset = config$vat_price_offset)
 
   cat(paste0('Phase 2B: completed bathtub for scenario=', task$scenario, '\n'))
 

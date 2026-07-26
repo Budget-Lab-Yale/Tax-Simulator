@@ -62,8 +62,7 @@ tryCatch({
 
   # Run the wealth bathtub pre-pass (defined in src/sim/wealth_dynamics.R)
   run_wealth_bathtub_pass(scenario_info, config$tax_law,
-                          vat_price_offset     = config$vat_price_offset,
-                          excess_growth_offset = config$excess_growth_offset)
+                          vat_price_offset = config$vat_price_offset)
 
   cat(paste0('Phase 2W: completed wealth bathtub pass for scenario=',
              task$scenario, '\n'))

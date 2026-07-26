@@ -200,9 +200,8 @@ cat(sprintf('  index-series horizon: %d\n', horizon))
 
 build_indexes = function(years) {
   generate_indexes(
-    macro_root           = macro_root,
-    vat_price_offset     = get_vat_price_offset(macro_root, vat_root, years),
-    excess_growth_offset = get_excess_growth_offset(0, min(years), years)
+    macro_root       = macro_root,
+    vat_price_offset = get_vat_price_offset(macro_root, vat_root, years)
   )
 }
 

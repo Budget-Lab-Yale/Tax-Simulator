@@ -60,8 +60,7 @@ tryCatch({
 
   # Run the frozen pre-pass (defined in src/sim/run.R)
   run_frozen_pass(scenario_info, config$tax_law,
-                  vat_price_offset     = config$vat_price_offset,
-                  excess_growth_offset = config$excess_growth_offset)
+                  vat_price_offset = config$vat_price_offset)
 
   cat(paste0('Phase 1B: completed frozen pass for scenario=',
              task$scenario, '\n'))

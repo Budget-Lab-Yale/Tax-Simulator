@@ -5,28 +5,26 @@
 # national aggregates rather than the post-adjustment record frame: kg_dynamics,
 # the wealth bathtub, and corporate incidence. Each channel keeps its own
 # *_check_run_compat() wrapper for its channel-specific requirements and calls
-# this for the three conditions all of them share.
+# this for the conditions all of them share.
 #-------------------------------------------------------------------------------
 
 
 
 check_raw_data_channel_compat = function(channel, scenario_info,
-                                         vat_price_offset,
-                                         excess_growth_offset) {
+                                         vat_price_offset) {
 
   #----------------------------------------------------------------------------
   # Refuses a run whose global settings are incompatible with a raw-dollar
   # channel. All three channels form state (or analytic paths) in raw dollars
-  # while the per-record bases they land on are VAT- and growth-adjusted, so
-  # either adjustment would put the channel in an inconsistent unit system.
+  # while the per-record bases they land on are VAT-adjusted, so that
+  # adjustment would put the channel in an inconsistent unit system.
   # Full sample is required because every channel's cell aggregates -- and the
   # corporate conservation diagnostic -- assume full-population weights.
   #
   # Parameters:
   #   - channel (str)             : channel name, used in the error messages
-  #   - scenario_info (list)      : supplies the excess-growth settings
+  #   - scenario_info (list)      : scenario info; see get_scenario_info()
   #   - vat_price_offset (df)     : VAT price offset series, or NULL
-  #   - excess_growth_offset (df) : excess-growth offset series, or NULL
   #
   # Returns: invisibly TRUE; stops on violation.
   #----------------------------------------------------------------------------
@@ -44,16 +42,6 @@ check_raw_data_channel_compat = function(channel, scenario_info,
     stop(channel, ' is not currently compatible with VAT scenarios: its ',
          'raw-dollar state would mix with VAT-scaled per-record bases. Run ',
          'the reform without a VAT.')
-  }
-
-  growth_active = isTRUE(scenario_info$excess_growth != 0) &&
-                  is.finite(scenario_info$excess_growth_start_year)
-  if (growth_active) {
-    stop(channel, ' is not currently compatible with excess-growth scenarios ',
-         '(excess_growth = ', scenario_info$excess_growth, ', start_year = ',
-         scenario_info$excess_growth_start_year, '). Same reason as VAT: ',
-         'raw-dollar state would not match growth-adjusted per-record bases. ',
-         'Disable excess growth on this scenario.')
   }
 
   invisible(TRUE)

@@ -495,8 +495,7 @@ wealth_dyn_check_provenance = function(scenario_info, params = NULL) {
 
 
 
-wealth_dyn_check_run_compat = function(scenario_info, vat_price_offset,
-                                       excess_growth_offset) {
+wealth_dyn_check_run_compat = function(scenario_info, vat_price_offset) {
 
   #----------------------------------------------------------------------------
   # Preconditions for the wealth bathtub pre-pass and the applier. The pre-pass
@@ -509,7 +508,7 @@ wealth_dyn_check_run_compat = function(scenario_info, vat_price_offset,
   #----------------------------------------------------------------------------
 
   check_raw_data_channel_compat('wealth_dynamics (s > 0)', scenario_info,
-                                vat_price_offset, excess_growth_offset)
+                                vat_price_offset)
 
   wealth_dyn_check_provenance(scenario_info)
   invisible(TRUE)
@@ -748,8 +747,7 @@ wealth_dyn_convnw_detail_path = function(scenario_info, year) {
 #-------------------------------------------------------------------------------
 
 run_wealth_bathtub_pass = function(scenario_info, tax_law,
-                                   vat_price_offset     = NULL,
-                                   excess_growth_offset = NULL) {
+                                   vat_price_offset = NULL) {
 
   #----------------------------------------------------------------------------
   # Orchestrates the wealth bathtub pre-pass for one scenario. For each year:
@@ -778,7 +776,7 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
   # Returns: invisibly NULL.
   #----------------------------------------------------------------------------
 
-  wealth_dyn_check_run_compat(scenario_info, vat_price_offset, excess_growth_offset)
+  wealth_dyn_check_run_compat(scenario_info, vat_price_offset)
 
   params  = wealth_dyn_load_params()
   ages    = WEALTH_DYN_AGE_MIN:WEALTH_DYN_AGE_MAX

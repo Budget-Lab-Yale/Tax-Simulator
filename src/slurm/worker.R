@@ -112,7 +112,6 @@ tryCatch({
     baseline_mtrs        = baseline_mtrs,
     indexes              = config$indexes,
     vat_price_offset     = config$vat_price_offset,
-    excess_growth_offset = config$excess_growth_offset,
     pass_type            = pass_type,
     static_mtrs_year     = static_mtrs_year
   )

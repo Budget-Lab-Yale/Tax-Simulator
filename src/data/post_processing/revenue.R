@@ -155,7 +155,7 @@ style_rev_sheet = function(wb, sheet, n_cols, comma_rows, pct_rows,
 
 
 calc_receipts = function(totals, scenario_root, vat_root, other_root,
-                         cost_recovery_root, off_model_root, excess_growth_all_rev,
+                         cost_recovery_root, off_model_root,
                          static) {
   
   #----------------------------------------------------------------------------
@@ -176,7 +176,6 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   #   - other_root            (str) : Macro-Projections root (for other taxes)
   #   - cost_recovery_root    (str) : Cost-Recovery-Simulator director for this scenario
   #   - off_model_root        (str) : directory for miscellaneous off-model deltas for this scenario
-  #   - excess_growth_all_rev (int) : whether to apply excess growth to all revenue or just IIT/payroll/corporate taxes
   #   - static                (lgl) : TRUE when writing the static pass, FALSE for
   #        conventional. Selects the corporate off-model stream: static books
   #        `corporate_static` (mechanical), conventional books `corporate`.
@@ -282,19 +281,6 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     }
   }
   
-  # Read excess growth offset (on CY basis) and convert to FY basis
-  excess_growth_offset_cy = scenario_root %>% 
-    file.path('/supplemental/excess_growth_offset.csv') %>% 
-    read_csv(show_col_types = F)
-  
-  # Convert CY excess growth offset to FY basis using 75%/25% weighting
-  # FY factor = 75% of current CY factor + 25% of previous CY factor
-  excess_growth_offset_fy = excess_growth_offset_cy %>%
-    mutate(
-      income_factor_fy = 0.75 * income_factor + 0.25 * lag(income_factor, default = 1)
-    ) %>%
-    select(year, income_factor_fy)
-  
   totals %>%
 
     # Join the model-baseline estate series (delta 0 when unavailable)
@@ -357,37 +343,22 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     mutate(revenues_corp_tax = revenues_corp_tax + delta_revenues_cost_recovery) %>%
 
     # Join the on-model corporate statutory-rate delta (booked like cost
-    # recovery: onto the corporate line before the excess-growth factor, which
-    # matches how the OME rate wedge it replaces was treated)
+    # recovery: onto the corporate line, which matches how the OME rate wedge
+    # it replaces was treated)
     left_join(deltas_corp_rate, by = 'year') %>%
     mutate(revenues_corp_tax = revenues_corp_tax +
              coalesce(delta_revenues_corp_rate, 0)) %>%
     
-    # Join off-model estimates (deltas) and aggregate, applying excess growth offset where necessary
-    left_join(deltas_off_model, by = 'year') %>% 
-    left_join(excess_growth_offset_fy, by = 'year') %>% 
-    mutate(revenues_payroll_tax = revenues_payroll_tax + (payroll * income_factor_fy),
-           revenues_income_tax = revenues_income_tax + (individual * income_factor_fy),
-           revenues_corp_tax   = (revenues_corp_tax + corporate) * income_factor_fy,
-           revenues_vat        = revenues_vat + vat) %>%
+    # Join off-model estimates (deltas) and aggregate
+    left_join(deltas_off_model, by = 'year') %>%
+    mutate(revenues_payroll_tax = revenues_payroll_tax + payroll,
+           revenues_income_tax  = revenues_income_tax + individual,
+           revenues_corp_tax    = revenues_corp_tax + corporate,
+           revenues_vat         = revenues_vat + vat,
 
-    # Apply excess growth to non-IIT/payroll/corporate revenues if applicable.
-    # Only the CBO estate LEVEL takes the factor: the on-model delta is added
-    # after this block because est_tax_exp is computed on micro data that
-    # already embed the excess-growth adjustment (do_excess_growth), so
-    # scaling it again would double-count -- the same exemption the on-model
-    # wealth tax gets above
-    mutate(
-      all_rev = excess_growth_all_rev,
-      across(
-        .cols = c(revenues_estate_tax, revenues_vat, revenues_other),
-        .fns  = ~ . * if_else(all_rev == 1, income_factor_fy, 1)
-      ),
-
-      # CBO level plus the on-model delta. The off-model `estate` column
-      # is superseded by the on-model estate tax and no longer applied.
-      revenues_estate_tax = revenues_estate_tax + delta_revenues_estate_tax
-    ) %>%
+           # CBO level plus the on-model delta. The off-model `estate` column
+           # is superseded by the on-model estate tax and no longer applied.
+           revenues_estate_tax  = revenues_estate_tax + delta_revenues_estate_tax) %>%
     
     # Final column selection
     select(year, revenues_payroll_tax, revenues_income_tax, outlays_tax_credits,

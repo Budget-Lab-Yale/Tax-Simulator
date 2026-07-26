@@ -38,8 +38,7 @@ BEA_PUBLISHED = c(
 
 # Neutral offsets (no VAT, no excess growth)
 neutral_vat    = tibble(year = 1900:2100, cpi_factor = 1, gdp_deflator_factor = 1)
-neutral_growth = tibble(year = 1900:2100, income_factor = 1)
-indexes = generate_indexes(MACRO_ROOT, neutral_vat, neutral_growth)
+indexes = generate_indexes(MACRO_ROOT, neutral_vat)
 
 parse_estate = function(tax_law_id) {
   baseline = load_tax_law_input('./config/scenarios/tax_law/baseline')

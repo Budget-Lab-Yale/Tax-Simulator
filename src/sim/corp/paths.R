@@ -511,8 +511,7 @@ scenario_uses_corp_incidence = function(scenario_info) {
 
 
 
-corp_check_run_compat = function(scenario_info, vat_price_offset,
-                                 excess_growth_offset) {
+corp_check_run_compat = function(scenario_info, vat_price_offset) {
 
   #----------------------------------------------------------------------------
   # Refusal gate for an ACTIVE corporate channel. The paths are formed from
@@ -525,7 +524,7 @@ corp_check_run_compat = function(scenario_info, vat_price_offset,
   #----------------------------------------------------------------------------
 
   check_raw_data_channel_compat('corp_incidence', scenario_info,
-                                vat_price_offset, excess_growth_offset)
+                                vat_price_offset)
 }
 
 

@@ -6,7 +6,7 @@
 #---------------------------------------------------------
 
 
-generate_indexes = function(macro_root, vat_price_offset, excess_growth_offset) {
+generate_indexes = function(macro_root, vat_price_offset) {
   
   #----------------------------------------------------------------------------
   # Gets growth rates, both historical and projected for this economic 
@@ -16,10 +16,8 @@ generate_indexes = function(macro_root, vat_price_offset, excess_growth_offset) 
   # Parameters:
   #   - macro_root (str)          : path for Macro-Projections scenario 
   #                                 interface
-  #   - vat_price_offset (df)     : series of price level adjustment factors to 
+  #   - vat_price_offset (df)     : series of price level adjustment factors to
   #                                 reflect introduction of a VAT
-  #   - excess_growth_offset (df) : income adjustment factors reflecting excess 
-  #                                 real GDP growth scenario
   #
   # Returns: tibble of growth rates by series (df). 
   #----------------------------------------------------------------------------
@@ -42,16 +40,12 @@ generate_indexes = function(macro_root, vat_price_offset, excess_growth_offset) 
                  names_to  = 'series',
                  values_to = 'value') %>% 
     
-    # Adjust price level for VAT/excess growth
-    left_join(vat_price_offset, by = 'year') %>% 
-    mutate(value = if_else(series %in% c('cpi', 'chained_cpi'), 
-                           value * replace_na(cpi_factor, 1), 
-                           value)) %>% 
-    left_join(excess_growth_offset, by = 'year') %>% 
-    mutate(value = if_else(series == 'awi', 
-                           value * replace_na(income_factor, 1),
-                           value)) %>%   
-    select(-cpi_factor, -gdp_deflator_factor, -income_factor) %>% 
+    # Adjust price level for VAT
+    left_join(vat_price_offset, by = 'year') %>%
+    mutate(value = if_else(series %in% c('cpi', 'chained_cpi'),
+                           value * replace_na(cpi_factor, 1),
+                           value)) %>%
+    select(-cpi_factor, -gdp_deflator_factor) %>%
     
     # Express in growth rates
     group_by(series) %>% 
@@ -376,122 +370,6 @@ calc_kg_cpi_ratio = function(tax_units, indexes, year) {
       )
     ) %>%
     select(-.purchase_year, -.purchase_level) %>%
-    return()
-}
-
-
-
-get_excess_growth_offset = function(excess_growth, start_year, years) {
-  
-  #----------------------------------------------------------------------------
-  # Calculates the amount by which the level of real GDP exceeds its 
-  # baseline value in relative terms, given an excess growth rate and a start
-  # year. 
-  # 
-  # Parameters:
-  #   - excess_growth (dbl) : annual real growth rate in excess of baseline 
-  #   - start_year (int)    : year when excess growth starts
-  #   - years (int[])       : years for which to run simulation
-  #
-  # Returns: tibble of income adjustment factors over time (df). 
-  #----------------------------------------------------------------------------
-  
-  tibble(year = years) %>% 
-    mutate(income_factor = cumprod(1 + if_else(year >= start_year, excess_growth, 0))) %>% 
-    return()
-}
-
-
-
-do_excess_growth = function(tax_units, scenario_info, excess_growth_offset) {
-  
-  #----------------------------------------------------------------------------
-  # Adjusts intensive-margin variables for excess real GDP growth
-  # 
-  # Parameters:
-  #   - tax_units (df)             : tibble of tax units
-  #   - scenario_info (list)       : scenario info object; see get_scenario_info()
-  #   - excess_growth_offset (dbl) : income adjustment factors reflecting  
-  #                                  excess real GDP growth scenario
-  # 
-  # Returns: tax units tibble with updated values for intensive-margin 
-  #          variables (df). 
-  #----------------------------------------------------------------------------
-  
-  # Read info on variables and the growth factors used in projecting Tax-Data
-  variable_guide = scenario_info$interface_paths$`Tax-Data` %>% 
-    file.path('./variable_guide.csv') %>% 
-    read_csv(show_col_types = F)
-  
-  gdp_vars = variable_guide %>% 
-    filter(
-      (variable %in% colnames(tax_units)) & 
-        !is.na(grow_with) & 
-        grow_with != 'ss' & 
-        grow_with != 'pensions'
-    ) %>%
-    select(variable) %>% 
-    deframe()
-  
-  oasdi_vars = variable_guide %>% 
-    filter(
-      (variable %in% colnames(tax_units)) & 
-        (grow_with == 'ss')
-    ) %>%
-    select(variable) %>% 
-    deframe()
-  
-  pension_vars = variable_guide %>% 
-    filter(
-      (variable %in% colnames(tax_units)) & 
-        (grow_with == 'pensions')
-    ) %>%
-    select(variable) %>% 
-    deframe()
-  
-  # Adjust variables
-  tax_units %>%
-    left_join(excess_growth_offset, by = 'year') %>% 
-    mutate(
-      
-      # For Social Security and pensions, getting cumulative income factor as of
-      # age 60 for the record (mimicking AIME computation) for all records 60 and
-      # over as of current year. If less than 60: 
-      # -- For Social Security, we assume this is SSDI income and that the claiming
-      #    year was 3 years prior (currently a placeholder for average vintage of current
-      #    SSDI claims).
-      # -- For pensions, we make no adjustments.
-      age_avg = ceil(ifelse(!is.na(age2),((age1 + age2)/2), age1)),
-      wedge_factor_60 = (1 + scenario_info$excess_growth)^(60 - age_avg),
-      wedge_factor_oasdi = case_when(
-        age_avg < 60  ~ (1 + scenario_info$excess_growth)^(-pmin(year - scenario_info$excess_growth_start_year, 3)),
-        age_avg >= 60 ~ wedge_factor_60,
-        TRUE ~ 1
-      ),
-      wedge_factor_pension = case_when(
-        age_avg < 60  ~ 1,
-        age_avg >= 60 ~ wedge_factor_60,
-        TRUE ~ 1
-      ),
-      
-      # For OASDI and pension growth variables, multiply by wedge factor and adjustment factor
-      across(
-        .cols = all_of(oasdi_vars), 
-        .fns  = ~ . * pmax(wedge_factor_oasdi * income_factor,1)
-      ),   
-      across(
-        .cols = all_of(pension_vars), 
-        .fns  = ~ . * pmax(wedge_factor_pension * income_factor,1)
-      ),        
-      
-      # For GDP growth variables, multiply by income adjustment factor
-      across(
-        .cols = all_of(gdp_vars), 
-        .fns  = ~ . * income_factor
-      )
-      
-    ) %>%
-    select(-age_avg, -wedge_factor_60, -wedge_factor_oasdi, -wedge_factor_pension, -income_factor) %>%
     return()
 }
 
