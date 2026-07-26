@@ -12,11 +12,12 @@ Phase 6 docs sweep. Plan of record:
 `~/.claude/plans/cheerful-zooming-star.md`, which carries a status header pointing
 back here.*
 
-This document is meant to be enough to resume cold. It is in five parts: what
+This document is meant to be enough to resume cold. It is in six parts: what
 the branch contains now, what was verified and how, the decisions taken without
-the author present, what each remaining phase involves, and — Part 5 — the eta
-sweep and the first calibrator that writes its own value, which is where the
-project stands as of the last session.
+the author present, and what each remaining phase involves. Parts 5 and 6 cover
+the most recent session: the eta sweep and the first calibrator to write its own
+value, then the wealth profiles, the estate chain, and the retirement of the
+superseded staleness mechanisms.
 
 ---
 
@@ -47,6 +48,9 @@ project stands as of the last session.
 | `ab5b85e9b` | 5c | An sbatch wrapper for the eta-dial launcher. |
 | `181884ea4` | 5c | The eta_logs calibrator ends by writing its own entry; the writer and its 28 tests. |
 | `161ec866f` | 5c gate | The eta spot check: the pinned value survives re-simulation. |
+| `b58faeefe` | 5d | Wealth profiles get provenance files; their generator's output path fixed. |
+| `1734452ce` | 5d | The estate fitting script writes its own two numbers; hand-written intermediate deleted. |
+| `7a6ad2df5` | 5e | Four superseded staleness mechanisms retired; `config_repin_hashes()` rewritten rather than deleted. |
 | `823f8fd93`, `88a2e882c`, `c2ed2840d` | — | This document. |
 
 ## Phase 1 — what the excess-growth removal touched
@@ -1017,23 +1021,17 @@ pinned value; drift goes to the author rather than being silently re-pinned.
 DONE for eta_logs — see Part 5. Still owed: the estate calibration (one job), the
 profile regeneration (seconds), and the sigma legs when that pipeline is rewired.
 
-**(c) Retire what the new check absorbs.** Each of these is a partial,
-hand-maintained version of what `calib_check_staleness()` now does uniformly, and
-leaving them in place means two mechanisms disagreeing:
+**(c) Retire what the new check absorbs.** DONE, `7a6ad2df5` — see Part 6.
 
-- the point-of-use warn in `src/sim/estate.R:49-61`
-- `WEALTH_DYN_PROVENANCE`, `wealth_dyn_check_provenance()`, `WEALTH_STRICT_CALIB`
-- the `KG_DYN_SPEC_VERSION` check
-- `other/kg_model_tests/calibration_reference.csv` — one of the three disagreeing
-  ledgers
-- `config_repin_hashes()`, the comment-stripping hazard. **Until it is deleted, do
-  not call it.** All three re-pins in this project were done by text substitution
-  on the hash lines for that reason.
+The four that were deleted: the point-of-use warn in `src/sim/estate.R`;
+`WEALTH_DYN_PROVENANCE` / `wealth_dyn_check_provenance()` / `WEALTH_STRICT_CALIB`;
+`KG_DYN_SPEC_VERSION` (which turned out to be dead code); and
+`other/kg_model_tests/calibration_reference.csv`, replaced by the much narrower
+`moment_reference.csv`.
 
-Gate: the six runs stay byte-identical, since none of this changes a number.
-
-Rough size: half a day for the launcher port and the rewiring, plus the spot-check
-run's wall time.
+`config_repin_hashes()` was REWRITTEN rather than deleted, which is a deviation
+from the plan and wants a ruling. Reasoning in Part 6. **It is now safe to call**
+— it edits only the hash lines as text.
 
 ## Phase 6 — docs and final sweep
 
@@ -1046,25 +1044,29 @@ Rough size: a few hours.
 
 ## Total
 
-Most of a day left. In order:
-
 1. ~~Port the eta launcher~~ — DONE, `b4479729b` / `ab5b85e9b`.
 2. ~~Launch the spot check~~ — DONE, `161ec866f`. Part 5.
-3. Rewire the remaining THREE calibrators (levels eta, sigma, estate) and the
-   profile sidecar. The writer they need is built and tested; what each still needs
-   is its own wiring and, for the levels eta, a sweep generator it never had.
-   Suggested order: the profile sidecar (small, self-contained), then the estate
-   calibration (one job), then sigma, then the levels eta.
-4. Retire the five superseded provenance mechanisms.
-5. Phase 6: the docs sweep.
+3. Rewire the calibrators. TWO of four done: **eta_logs** (`181884ea4`) and
+   **estate** (`1734452ce`), plus the **wealth profile** provenance files
+   (`b58faeefe`). Two remain, and both are blocked on a full-sample run rather
+   than on code:
+   - **sigma.** The measurement script (`compute_top_eti.R`, currently under
+     `other/top_tax/archive/tests/`) measures one leg; the interpolation onto the
+     ETI target was done by hand. It needs the same sweep treatment `eta_logs`
+     got — generated `conversion.yaml` files at trial sigma values, bound by their
+     own behavior alternatives — plus a driver that interpolates and calls
+     `calib_write_entry`. **Deliberately not run:** the plan defers sigma's proving
+     run to the charity −0.5 re-derivation, which is the first follow-up after
+     this project and will change the shipped value.
+   - **levels eta.** `measure_efull_by_eta.R` needs the same treatment. It has no
+     launcher at all — that dial was run by hand — so it needs a sweep generator
+     too. `write_eta_logs_sweep.py` is the template and most of it generalizes.
+4. ~~Retire the superseded mechanisms~~ — DONE, `7a6ad2df5`. Part 6.
+5. Phase 6: the docs sweep. Now the main thing left, and bigger than it was: see
+   Part 6 for the comment-volume instruction, which is a repo-wide job the author
+   intends to hand to a separate pass.
 
-Items 3 through 5 all end in the six-scenario byte-identical gate, and 4 in
-particular changes files that calibrated entries are pinned against, so it needs
-the re-pin discipline: verify byte-identical FIRST, then re-pin the hashes. Budget
-one gate cycle of cluster time for the batch rather than one per commit.
-
-CLAUDE.md was already corrected for the behavior leg in `c2ed2840d`, so Phase 6 is
-smaller than the plan assumed.
+CLAUDE.md was already corrected for the behavior leg in `c2ed2840d`.
 
 ---
 
@@ -1202,6 +1204,162 @@ difference, not a pass light.
   — the new `src/` file only defines functions, and no shipped value moved — but the
   gate has not been re-run since `ba26fa5be` and the next batch of work should
   include it.
+
+---
+
+# Part 6 — the wealth profiles, the estate chain, and the mechanism retirements
+
+Three commits, 2026-07-26, after Part 5.
+
+## The wealth profile provenance files (`b58faeefe`)
+
+`write_profiles.py` was writing to `config/wealth/profiles/`, which Phase 3b moved
+to `config/calibrations/wealth_profiles/`. Running it would have created the old
+directory again and left the live one untouched, printing success either way. That
+is the third broken calibration path this session found by running something rather
+than reading it.
+
+Each profile folder now has a `provenance.yaml` written by the generator. A CSV
+cannot say where it came from, so the file records what the surface targets, the
+date, the md5 of `s.csv` and `M.csv`, and what invalidates it.
+
+`derived_under` is empty on the default profile and that is the answer, not a gap.
+The surface is a formula over published elasticities evaluated inside the generator
+— Straub for the permanent-income elasticity, Mian-Straub-Sufi for
+consumption-to-income by rank, Fagereng-Holm-Natvik for the age tilt, and
+De Nardi-French-Jones for attenuating that tilt at the top. There is no Tax-Data or
+Macro input anywhere in it, so no upstream vintage can make it stale. The generator
+changing is what can, and that is what it declares.
+
+Verified: regenerating reproduces both shipped `s.csv` and both `M.csv` byte for
+byte. Coverage limit worth knowing: the parse-time check watches the DEFAULT
+profile's tables, because that is what a default entry can see. A scenario pointing
+at another folder gets that folder's `provenance.yaml`, which is recorded but not
+compared.
+
+`config/calibrations/wealth_profiles/s1_uniform/` has no generator and nothing in
+the repository refers to it — the s=1, uniform-M corner from the June bounding
+sweep. Left in place because CLAUDE.md describes it. It cannot be regenerated and
+wants a decision.
+
+## The estate chain (`1734452ce`)
+
+It used to be: the fitting script printed r and rho_pt, a human typed them into
+`other/estate_tax/estate_valuation_params.yaml`, and `write_frozen_params.R` read
+that to build the bridge. The typing step is gone.
+
+- `calibrate_estate_v2.R` ends by writing
+  `config/calibrations/estate/valuation_fit.yaml`, recording the Tax-Data and Macro
+  vintages it actually read and the cluster cap it was fitted under. Its data paths
+  are overridable by environment variable, so a re-fit on a new vintage does not
+  need the script edited — editing the script to re-run it is how these numbers came
+  loose from their provenance in the first place.
+- `config/calibrations/estate/settings.yaml` is new and person-owned: the four
+  numbers somebody chose rather than measured (cluster cap 300, gift-pooling factor
+  1.5, SOI death year 2022, exemption $12.06M). The cluster cap now has one home
+  instead of two — the calibrator reads it from here rather than declaring its own.
+- `write_frozen_params.R` reads those two files, and errors if the fit's two
+  entries disagree about the run they came from. They are fitted jointly, so a
+  disagreement means one is left over from an earlier run.
+- The hand-written intermediate is deleted. `write_frozen_params.sbatch` is new;
+  the script was documented as sbatch-run and had no wrapper.
+
+Verified by regenerating `bridge.yaml`: every value the model reads is identical.
+The only non-comment changes are `soi_death_year` 2022.0 → 2022 and
+`soi_exemption` 1.206e+07 → 12060000 — same numbers, formatted differently now that
+they come from YAML rather than R literals, and nothing in `src/` reads either
+field.
+
+`valuation_fit.yaml` is seeded from the values that were shipped, not re-derived,
+the same treatment the kg files got. The estate re-fit is still owed.
+
+## The mechanism retirements (`7a6ad2df5`)
+
+Four deleted. Each held its own copy of expectations the parse-time check now
+holds once.
+
+| Removed | What it did | Why it could go |
+|---|---|---|
+| `WEALTH_DYN_PROVENANCE` + `wealth_dyn_check_provenance()` + `WEALTH_STRICT_CALIB` | kept its own Macro vintage, fmax and n_pctiles and warned mid-run | the profile is a calibrated entry now, checked at parse time |
+| the Tax-Data warn in `src/sim/estate.R` | warned once per year-task on a vintage mismatch | `estate.valuation_bridge` carries the vintage and is checked at parse time, at warn level, before the run |
+| `KG_DYN_SPEC_VERSION` | documented as bumped when the Bellman primitives changed, and carried on every state file | it was dead. Nothing read it, no state file wrote it |
+| `calibration_reference.csv` | a per-constant ledger | it duplicated the shipped value, the invalidation list and the vintages, and had drifted from all three |
+
+That last one is the "three disagreeing ledgers" problem visible in one file: its
+sigma row named Tax-Data 2026050315 where `conversion.yaml` says 2026070814, and its
+file paths still pointed at `config/scenarios/behavior/`, a tree Phase 4 moved. It
+is replaced by `moment_reference.csv`, holding only the reference MOMENT — the one
+thing that diagnostic uniquely knows. The shipped eta is read from the live
+configuration instead of copied.
+
+### The deviation: `config_repin_hashes()` was rewritten, not deleted
+
+The plan lists it among the mechanisms to retire. I kept it, and this should be
+ruled on.
+
+Its defect was never redundancy. The parse-time check DETECTS staleness; re-pinning
+ACKNOWLEDGES it, and somebody still has to do that: the two calibrated entries in
+the economy leg — `financing_profile` and `valuation_bridge` — are not written by
+any calibrator, so after a verified behavior-preserving refactor their hashes need
+updating by hand. This commit needed exactly that, six times.
+
+What was actually wrong with it is that it parsed each file with `read_yaml()` and
+wrote it back with `write_yaml()`, deleting every comment. In these files the
+comments are the record of where each number came from, so calling it destroyed
+what the file is for. That is why every re-pin in this project was a manual `sed`.
+
+It now edits only the hash lines, as text, and has a `dry_run` mode.
+`other/config_redesign/test_repin.R` confirms it across every economy channel file:
+line count unchanged, comments and structure unchanged, only hex values differ.
+**It is safe to call.** If you would rather it not exist, deleting it is fine — the
+alternative is a `sed`, which is what everyone was doing anyway.
+
+### The six re-pins, and what licenses them
+
+| File | Dependency | What moved |
+|---|---|---|
+| `wealth.yaml` | `src/sim/wealth_dynamics.R` | the provenance stamp and checker deleted |
+| `wealth.yaml` | `write_profiles.py` | output path fixed, provenance files added; tables verified byte-identical |
+| `estate.yaml` | `bridge.yaml` | header comment plus two reformatted record-keeping fields |
+| `estate.yaml` | `valuation_fit.yaml`, `settings.yaml` | new inputs, added to the list |
+| `estate.yaml` | `write_frozen_params.R` | reads the two new files instead of the old intermediate |
+| the four kg files | `src/sim/kg/constants.R` | `KG_DYN_SPEC_VERSION` deleted (by hand — `config_repin_hashes` walks the economy leg, not `config/calibrations/`) |
+
+Every one is a deletion of dead or superseded code, or a change whose output was
+verified identical directly. Each carries a dated note in its file saying so, and
+saying the re-pin stands only if the gate is byte-identical.
+
+## Verification at this point
+
+- 114 unit checks green: 47 engine, 29 behavior leg, 10 negative, 28 writer.
+- 80 runscripts parse, resolve and validate with the new hashes — so the staleness
+  check is clean, which is itself the check on the re-pins being complete.
+- `test_repin.R`: the re-pinner changes hash values and nothing else.
+- The six-scenario gate was launched at `7a6ad2df5` as vintages `rb_p5c_s{1,2,3,4,6,7}`.
+  **Its result is not recorded here — whoever picks this up should check it before
+  trusting the six re-pins**, with:
+
+```bash
+bash other/config_redesign/gate_diff.sh \
+  /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/rb_p5c_sN \
+  /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/goldsN
+```
+
+## An instruction about comments, recorded because it is repo-wide
+
+The author's standing instruction is plain language in specs and code comments
+(plan ruling 12). On 2026-07-26 they restated it much more sharply: there are far
+too many comments, written in a register that reads as machine-generated. Volume is
+part of the complaint, not only style — a long comment block explaining the
+philosophy of a function is the problem even when every sentence is plain. A
+separate cleanup pass is intended.
+
+**One warning for that pass.** In `config/calibrations/**` and
+`config/scenarios/economy/**` the comments are the data. They hold the provenance
+of every calibrated number, which is why those files must never be round-tripped
+through a YAML library and why `config_repin_hashes()` had to be rewritten as text
+editing. Trimming comments there would delete the content the files exist to carry.
+`src/` and `other/` are fair game.
 
 ---
 
