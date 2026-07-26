@@ -1,0 +1,12 @@
+# Behavior leg alternative -- ot_france_full
+#
+# Overtime response, fully phased in from the first year.
+#
+# Order of execution is NOT the order below: src/sim/behavior.R sorts the list
+# against one pinned family order, because some responses read what an earlier
+# one wrote. See that file for the order and the reasons.
+
+kg_dynamics: none
+
+modules:
+  - src/behavior/ot/france_full.R

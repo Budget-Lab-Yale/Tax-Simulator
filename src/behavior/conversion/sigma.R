@@ -64,39 +64,16 @@ do_conversion = function(tax_units, baseline_mtrs, static_mtrs,
   #          conversion response (SECA companions co-scaled).
   #----------------------------------------------------------------------------
 
-  year    = tax_units$year[1]
-  modules = scenario_info$behavior_modules %||% character()
+  year = tax_units$year[1]
 
-  # --- Guard 1: sigma requires kg_dynamics (the gain state IS the kg
-  # bathtub; tau_eq comes from its machinery). No fallbacks.
-  if (!any(startsWith(modules, 'kg_dynamics/'))) {
-    stop('do_conversion(): the sigma conversion module requires kg_dynamics ',
-         'in the behavior column (the converted dollars live in the kg ',
-         'bathtub gain state and the equity-leg wedge tau_eq is computed by ',
-         'its machinery). Scenario "', scenario_info$ID, '" has: ',
-         paste(modules, collapse = ' '), '.')
-  }
+  # This module used to open with two guards: that kg_dynamics was present, and
+  # that the families ran in the pinned order. Both are now settled before the
+  # run starts -- the loader sorts the stack and behavior_validate_spec()
+  # refuses a conversion module without the bathtub (src/sim/behavior.R). The
+  # input guards below stay, because they are about this scenario's MTRs rather
+  # than the shape of the stack.
 
-  # --- Guard 2: pinned relative order for whichever of the four families
-  # are present: kg_dynamics -> conversion -> entity_shifting -> evasion.
-  fam_pos = function(prefix) {
-    i = which(startsWith(modules, prefix))
-    if (length(i) == 0) NA_integer_ else min(i)
-  }
-  order_req = c(kg_dynamics = fam_pos('kg_dynamics/'),
-                conversion  = fam_pos('conversion/'),
-                entity      = fam_pos('entity_shifting/'),
-                evasion     = fam_pos('evasion/'))
-  present = order_req[!is.na(order_req)]
-  if (is.unsorted(present, strictly = TRUE)) {
-    stop('do_conversion(): behavior modules must run in the pinned order ',
-         'kg_dynamics -> conversion/sigma -> entity_shifting -> evasion ',
-         '(sequential order prevents double-moving the same dollar). ',
-         'Scenario "', scenario_info$ID, '" has: ',
-         paste(modules, collapse = ' '), '.')
-  }
-
-  # --- Guard 3: required MTRs registered and present in both frames.
+  # --- Guard: required MTRs registered and present in both frames.
   required = SIGMA_REQUIRED_MTRS
   missing  = if (is.null(static_mtrs) || is.null(baseline_mtrs)) required else
              setdiff(required, intersect(names(static_mtrs),
@@ -109,7 +86,7 @@ do_conversion = function(tax_units, baseline_mtrs, static_mtrs,
          '" is missing: ', paste(missing, collapse = ', '), '.')
   }
 
-  # --- Guard 4: the year's kg state file with the sigma tracker.
+  # --- Guard: the year's kg state file with the sigma tracker.
   state_path = kg_dyn_state_path(scenario_info, year)
   if (!file.exists(state_path)) {
     stop('do_conversion(): missing kg bathtub state file at ', state_path,

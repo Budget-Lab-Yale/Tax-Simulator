@@ -1,0 +1,17 @@
+# Behavior leg alternative -- obbba_stack
+#
+# The response stack the OBBBA retrospective scores under: entity shifting,
+# the tips fringe response, overtime hours, and the auto-loan interest
+# response.
+#
+# Order of execution is NOT the order below: src/sim/behavior.R sorts the list
+# against one pinned family order, because some responses read what an earlier
+# one wrote. See that file for the order and the reasons.
+
+kg_dynamics: none
+
+modules:
+  - src/behavior/entity_shifting/pearce_prisinzano.R
+  - src/behavior/tips/fringe_low.R
+  - src/behavior/ot/france.R
+  - src/behavior/auto/hanson.R

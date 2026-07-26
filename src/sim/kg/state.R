@@ -33,10 +33,12 @@ kg_dyn_inputs_cache_path = function(scenario_info) {
   file.path(kg_dyn_mech_state_dir(scenario_info), 'inputs_cache.rds')
 }
 
-# Does this scenario's behavior set include any kg_dynamics module?
+# Has this scenario bound the gains bathtub machinery? Keyed on the behavior
+# leg's kg_dynamics section rather than on a module name appearing in a list:
+# the applier is injected by the loader precisely because binding the machinery
+# and running its applier are the same decision (see src/sim/behavior.R).
 scenario_uses_kg_dynamics = function(scenario_info) {
-  any(startsWith(scenario_info$behavior_modules %||% character(),
-                 'kg_dynamics/'))
+  length(scenario_info$resolved_behavior$spec$kg_pieces %||% character()) > 0
 }
 
 

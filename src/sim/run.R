@@ -67,15 +67,10 @@ do_scenario = function(ID, baseline_mtrs) {
   uses_kg     = ID != 'baseline' && scenario_uses_kg_dynamics(scenario_info)
   uses_wealth = ID != 'baseline' && scenario_uses_wealth_dynamics(scenario_info)
 
-  # sigma income conversion is built ON the kg bathtub (gain-state injection,
-  # tau_eq wedge): hard-stop early rather than failing later in the
-  # conventional pass. (SLURM mode reaches the same stop via the module's
-  # own guard in do_conversion().)
-  if (ID != 'baseline' && scenario_uses_sigma(scenario_info) && !uses_kg) {
-    stop('Scenario "', ID, '" registers a conversion/ behavior module but ',
-         'no kg_dynamics/ module. sigma requires kg_dynamics (pinned order ',
-         'kg_dynamics -> conversion/sigma -> entity_shifting -> evasion).')
-  }
+  # (The early stop for a conversion module without the bathtub used to sit
+  # here. It now fires at parse time, for every scenario in the runscript at
+  # once rather than for this one at the moment it starts -- see
+  # behavior_validate_spec() in src/sim/behavior.R.)
 
   if (uses_kg || uses_wealth) {
 

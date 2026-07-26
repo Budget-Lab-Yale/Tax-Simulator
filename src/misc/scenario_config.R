@@ -177,8 +177,15 @@ config_load_defaults = function(leg) {
 
   files = list.files(root, pattern = '[.]yaml$', full.names = TRUE)
   files = files[basename(files) != 'behavior.yaml']
-  if (length(files) == 0) {
+  if (length(files) == 0 && leg != 'behavior') {
     stop('No channel files found under ', root)
+  }
+  # The behavior leg carries no value entries at all: its content is
+  # behavior.yaml (the kg binding plus the module list), which
+  # src/sim/behavior.R reads, and its modules keep their own parameters. So an
+  # empty entry set is the normal state there, not a missing file.
+  if (length(files) == 0) {
+    return(list(entries = list(), roles = NULL))
   }
 
   raw = files %>%

@@ -43,26 +43,12 @@ do_entity_shifting = function(tax_units, baseline_mtrs, static_mtrs,
   # the former Pearce--Prisinzano 25%-of-statutory-rate approximation for
   # A/B comparisons.  Entity-only scenarios retain that approximation because
   # no tau_eq state exists to price their deferred gain.
-  legacy_module = any(modules == 'entity_shifting/pearce_prisinzano_legacy')
-  uses_kg       = any(startsWith(modules, 'kg_dynamics/'))
+  legacy_module = any(basename(modules) == 'pearce_prisinzano_legacy.R')
+  uses_kg       = scenario_uses_kg_dynamics(scenario_info)
   use_tau_eq    = uses_kg && !legacy_module
 
-  # Order guard: entity shifting must run after kg_dynamics and
-  # conversion/sigma (when present) and before evasion (when present) —
-  # the pinned order that prevents double-moving the same dollar.
-  fam_pos = function(prefix) {
-    i = which(startsWith(modules, prefix))
-    if (length(i) == 0) NA_integer_ else min(i)
-  }
-  order_req = c(fam_pos('kg_dynamics/'), fam_pos('conversion/'),
-                fam_pos('entity_shifting/'), fam_pos('evasion/'))
-  present = order_req[!is.na(order_req)]
-  if (is.unsorted(present, strictly = TRUE)) {
-    stop('do_entity_shifting(): behavior modules must run in the pinned ',
-         'order kg_dynamics -> conversion/sigma -> entity_shifting -> ',
-         'evasion. Scenario "', scenario_info$ID, '" has: ',
-         paste(modules, collapse = ' '), '.')
-  }
+  # The pinned-order guard that used to sit here is gone: the loader puts the
+  # families in that order before anything runs (src/sim/behavior.R).
 
   # Required-MTR guard: fail loudly rather than silently skipping the
   # response (which would mislabel a static score as conventional).

@@ -1,0 +1,25 @@
+# Behavior leg alternative -- top_tax_full
+#
+# The full response stack used for the top-tax work: the gains bathtub, income
+# conversion into the gain pool, entity shifting, income evasion, charitable
+# giving at -0.5, and the estate reporting response. Every margin except the
+# wealth-tax concealment, which only applies when there is a wealth tax to
+# conceal from.
+#
+# Order of execution is NOT the order below: src/sim/behavior.R sorts the list
+# against one pinned family order, because some responses read what an earlier
+# one wrote. See that file for the order and the reasons.
+
+# kg_dynamics names the pieces of the gains machinery this scenario binds. The
+# bathtub applier is not listed under modules: it is the machinery itself and
+# comes in automatically. Each piece gets a path to its stamped calibration file
+# once those files exist; until then naming the piece is the whole declaration.
+
+kg_dynamics: [bathtub, conversion, entity_shifting]
+
+modules:
+  - src/behavior/conversion/sigma.R
+  - src/behavior/entity_shifting/pearce_prisinzano.R
+  - src/behavior/evasion/debacker.R
+  - src/behavior/charity/50.R
+  - src/behavior/estate/avoidance.R

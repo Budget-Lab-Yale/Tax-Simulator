@@ -62,13 +62,17 @@ DIST_YEARS = "2027 2036"     # ETR/distribution display years: impact year + ful
 # Behavior modules (behavior scout, 2026-07-09). Pinned order kg -> conversion
 # -> entity -> evasion; charity + wealth/avoidance order-free. wealth/avoidance
 # added only when the wealth-tax switch is on.
-# The estate reporting response (Kopczuk-Slemrod) was split out of the estate
-# machinery into its own behavior module on 2026-07-16. The 349 runscript rows
-# in the shipped batches were patched by hand at the time and these generators
-# were not, so regenerating silently dropped `estate/avoidance` and the `estate`
-# MTR. Ported back in 2026-07-26; regenerate-and-diff is now clean.
-BEHAVIOR_BASE = "kg_dynamics/turnover conversion/sigma entity_shifting/pearce_prisinzano evasion/debacker charity/50 estate/avoidance"
-BEHAVIOR_WEALTH = "kg_dynamics/turnover conversion/sigma entity_shifting/pearce_prisinzano evasion/debacker wealth/avoidance charity/50 estate/avoidance"
+# Behavior-leg alternatives: folders under config/scenarios/behavior/
+# alternatives/ naming the response stack, one cell in place of the old
+# space-delimited module list. top_tax_full is the bathtub, conversion, entity
+# shifting, evasion, charity at -0.5 and the estate reporting response;
+# top_tax_full_wealth adds wealth-tax concealment. What each contains, and the
+# order it runs in, is in the folder's behavior.yaml and in src/sim/behavior.R.
+# (The estate reporting response was split into its own module on 2026-07-16 and
+# the shipped rows patched by hand; that is part of top_tax_full now, so the
+# drift cannot recur.)
+BEHAVIOR_BASE = "top_tax_full"
+BEHAVIOR_WEALTH = "top_tax_full_wealth"
 # MTRs the modules read (net_worth for wealth/avoidance + bathtub). Full list on
 # every row so baseline_mtrs covers every module's needs.
 MTR_VARS = "wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent char_cash net_worth estate"

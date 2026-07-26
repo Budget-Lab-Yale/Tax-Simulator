@@ -1,0 +1,19 @@
+# Behavior leg alternative -- kg_entity_shifting
+#
+# The capital-gains bathtub plus entity shifting. With the bathtub on, the
+# retained-earnings leg is priced off its expected-PV wedge rather than the
+# legacy approximation.
+#
+# Order of execution is NOT the order below: src/sim/behavior.R sorts the list
+# against one pinned family order, because some responses read what an earlier
+# one wrote. See that file for the order and the reasons.
+
+# kg_dynamics names the pieces of the gains machinery this scenario binds. The
+# bathtub applier is not listed under modules: it is the machinery itself and
+# comes in automatically. Each piece gets a path to its stamped calibration file
+# once those files exist; until then naming the piece is the whole declaration.
+
+kg_dynamics: [bathtub, entity_shifting]
+
+modules:
+  - src/behavior/entity_shifting/pearce_prisinzano.R

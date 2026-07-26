@@ -1,3 +1,3 @@
 ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types
 baseline,default,corp_kg_wealth_baseline,,2026:2031,,kg_lt net_worth estate,nextdollar nextdollar nextdollar
-corp_kg_wealth,default,corp_kg_wealth_reform,kg_dynamics/turnover,2026:2031,2028:2028,kg_lt estate,nextdollar nextdollar
+corp_kg_wealth,default,corp_kg_wealth_reform,kg_dynamics_only,2026:2031,2028:2028,kg_lt estate,nextdollar nextdollar

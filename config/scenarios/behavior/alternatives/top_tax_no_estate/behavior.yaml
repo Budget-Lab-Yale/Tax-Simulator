@@ -1,0 +1,24 @@
+# Behavior leg alternative -- top_tax_no_estate
+#
+# top_tax_full with the estate reporting response left off. Used by the
+# capital-gains functional-form and revenue-maximising-rate exercises, which
+# measure an income-side margin and do not want the estate leg moving
+# underneath it. Runs evasion without an estate module on purpose, which is
+# what the loader warns about.
+#
+# Order of execution is NOT the order below: src/sim/behavior.R sorts the list
+# against one pinned family order, because some responses read what an earlier
+# one wrote. See that file for the order and the reasons.
+
+# kg_dynamics names the pieces of the gains machinery this scenario binds. The
+# bathtub applier is not listed under modules: it is the machinery itself and
+# comes in automatically. Each piece gets a path to its stamped calibration file
+# once those files exist; until then naming the piece is the whole declaration.
+
+kg_dynamics: [bathtub, conversion, entity_shifting]
+
+modules:
+  - src/behavior/conversion/sigma.R
+  - src/behavior/entity_shifting/pearce_prisinzano.R
+  - src/behavior/evasion/debacker.R
+  - src/behavior/charity/50.R

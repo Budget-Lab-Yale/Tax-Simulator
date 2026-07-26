@@ -139,8 +139,7 @@ SIGMA_CONSERVE_ATOL = 2.5e8
 
 
 scenario_uses_sigma = function(scenario_info) {
-  any(startsWith(scenario_info$behavior_modules %||% character(),
-                 'conversion/'))
+  'conversion' %in% (scenario_info$resolved_behavior$spec$families %||% character())
 }
 
 

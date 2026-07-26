@@ -1,10 +1,10 @@
 ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types
 baseline,default,ome_20250925,,2030:2040,,kg_lt part_active estate,nextdollar nextdollar nextdollar
-01_clinton_rates,clausing/01_clinton_rates,ome_20250925_saving_50,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2040,2030:2039,kg_lt part_active estate,nextdollar nextdollar nextdollar
-02_restore_bottom_rates,clausing/02_restore_bottom_rates,ome_20250925_saving_50,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2040,2030:2039,kg_lt part_active estate,nextdollar nextdollar nextdollar
-03_199a,clausing/03_199a,ome_20250925_saving_50,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2040,2030:2039,kg_lt part_active estate,nextdollar nextdollar nextdollar
-04_carryover_basis,clausing/04_carryover_basis,ome_20250925_saving_50,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2040,2030:2039,kg_lt part_active estate,nextdollar nextdollar nextdollar
-05_pref_rates,clausing/05_pref_rates,ome_20250925_saving_50,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2040,2030:2039,kg_lt part_active estate,nextdollar nextdollar nextdollar
-06_niit_reform,clausing/06_niit_reform,ome_20250925_saving_50,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2040,2030:2039,kg_lt part_active estate,nextdollar nextdollar nextdollar
-07_estate,clausing/07_estate,ome_20250925_saving_50,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2040,2030:2039,kg_lt part_active estate,nextdollar nextdollar nextdollar
-08_corporate,clausing/07_estate,ome_20260706_corporate_saving_50,kg_dynamics/turnover entity_shifting/pearce_prisinzano,2030:2040,2030:2039,kg_lt part_active estate,nextdollar nextdollar nextdollar
+01_clinton_rates,clausing/01_clinton_rates,ome_20250925_saving_50,kg_entity_shifting,2030:2040,2030:2039,kg_lt part_active estate,nextdollar nextdollar nextdollar
+02_restore_bottom_rates,clausing/02_restore_bottom_rates,ome_20250925_saving_50,kg_entity_shifting,2030:2040,2030:2039,kg_lt part_active estate,nextdollar nextdollar nextdollar
+03_199a,clausing/03_199a,ome_20250925_saving_50,kg_entity_shifting,2030:2040,2030:2039,kg_lt part_active estate,nextdollar nextdollar nextdollar
+04_carryover_basis,clausing/04_carryover_basis,ome_20250925_saving_50,kg_entity_shifting,2030:2040,2030:2039,kg_lt part_active estate,nextdollar nextdollar nextdollar
+05_pref_rates,clausing/05_pref_rates,ome_20250925_saving_50,kg_entity_shifting,2030:2040,2030:2039,kg_lt part_active estate,nextdollar nextdollar nextdollar
+06_niit_reform,clausing/06_niit_reform,ome_20250925_saving_50,kg_entity_shifting,2030:2040,2030:2039,kg_lt part_active estate,nextdollar nextdollar nextdollar
+07_estate,clausing/07_estate,ome_20250925_saving_50,kg_entity_shifting,2030:2040,2030:2039,kg_lt part_active estate,nextdollar nextdollar nextdollar
+08_corporate,clausing/07_estate,ome_20260706_corporate_saving_50,kg_entity_shifting,2030:2040,2030:2039,kg_lt part_active estate,nextdollar nextdollar nextdollar

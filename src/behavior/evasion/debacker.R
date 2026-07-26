@@ -130,21 +130,12 @@ do_evasion = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, inde
          paste(missing, collapse = ', '), '.')
   }
 
-  # --- Consistency contract (R3, loud warning): evaded income is supposed to
-  # leave the reported wealth and estate bases too. The estate leg lives in
-  # estate/avoidance (which reads the evasion_g_* factors persisted below);
-  # without it, evaded income silently stays visible to the estate tax --
-  # exactly the activation bug of 2026-07-16. Income-side-only calibration
-  # harnesses may ignore this warning; product runscripts must not (the
-  # top_tax lint enforces it statically).
-  ev_modules = scenario_info$behavior_modules %||% character()
-  if (!any(startsWith(ev_modules, 'estate/'))) {
-    warning('do_evasion(): no estate/ module in the behavior stack for ',
-            'scenario "', scenario_info$ID, '" -- evaded income will NOT be ',
-            'removed from the reported estate base. Add "estate/avoidance" ',
-            'after this module unless this is an income-side-only ',
-            'calibration run.', immediate. = TRUE)
-  }
+  # The R3 consistency contract -- evaded income must also leave the reported
+  # wealth and estate bases, and the estate leg of that lives in
+  # estate/avoidance, which reads the evasion_g_* factors persisted below -- is
+  # now checked once at parse time for every scenario in the runscript
+  # (behavior_validate_spec, src/sim/behavior.R) rather than warned about here
+  # on every year of every pass.
 
   message('do_evasion(): applying noncompliance elasticities (', EVASION_VERSION,
           '; schc=', economy_param('evasion', 'e_schc'),

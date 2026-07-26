@@ -37,9 +37,10 @@
 #       of its closely-held assets out of both reported stock bases (a
 #       consistency rule, not a new elasticity)
 #   R4  Concealed wealth also escapes the reported ESTATE at death -- carried
-#       by estate/avoidance.R (REQUIRED later in the stack; hard-stop below),
-#       which combines it with income evasion and the KS own-rate response
-#       into the estate_concealed_frac column read by calc_estate
+#       by estate/avoidance.R, which a stack containing this module is refused
+#       without (checked at parse time), and which combines it with income
+#       evasion and the KS own-rate response into the estate_concealed_frac
+#       column read by calc_estate
 #   R5  Homes keep the uniform 50/50 split (no home-specific chi)
 #   R6  Capital gains are IN v1 as a reporting-QUANTITY overlay: reported kg_lt
 #       scales by (1 - c_pub) AFTER the kg module sets realization behavior (the
@@ -97,7 +98,7 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   #     positive-leg gated. These columns feed only do_taxes.
   # (4) Estate propagation is DELEGATED: the concealment fractions are
   #     persisted as wealth_c_pub / wealth_c_priv record columns and consumed
-  #     by estate/avoidance.R (required later in the stack; hard-stop below),
+  #     by estate/avoidance.R (required in the stack; checked at parse time),
   #     which combines them with income evasion and the KS own-rate response
   #     into the single estate_concealed_frac column read by calc_estate.
   #
@@ -116,8 +117,8 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   #   - static_mtrs (df)     : static-counterfactual MTRs, must carry
   #                            mtr_net_worth (the statutory marginal wealth
   #                            rate)
-  #   - scenario_info (list) : get_scenario_info() object (ID + behavior_modules
-  #                            for the order guard; output_path for diagnostics)
+  #   - scenario_info (list) : get_scenario_info() object (ID for messages;
+  #                            output_path for diagnostics)
   #   - indexes (df)         : generate_indexes() object (unused here)
   #
   # Returns: full tax_units tibble with net_worth overwritten by the avoided
@@ -127,48 +128,13 @@ do_wealth = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   #          kg_deemed_full unchanged.
   #----------------------------------------------------------------------------
 
-  modules = scenario_info$behavior_modules %||% character()
-
-  # --- Order guard (R3 / design 4.5): the evasion->wealth link reads evasion's
-  # per-record response factors, so an evasion/ module -- when present -- must
-  # run BEFORE wealth/avoidance. Mirrors the sigma.R pinned-order stop.
-  ev_pos = which(startsWith(modules, 'evasion/'))
-  wl_pos = which(startsWith(modules, 'wealth/'))
-  if (length(ev_pos) > 0 && length(wl_pos) > 0 && min(ev_pos) > min(wl_pos)) {
-    stop('do_wealth(): when an evasion/ module is present it must run BEFORE ',
-         'wealth/avoidance (the R3 evasion->wealth consistency link reads ',
-         "evasion's per-record response factors). Scenario \"",
-         scenario_info$ID, '" has behavior modules: ',
-         paste(modules, collapse = ' '), '.')
-  }
-
-  # --- Order guard (R6): kg_dynamics must run BEFORE wealth/avoidance. The R6
-  # reporting-quantity overlay scales the REPORTED kg_lt after the kg module has
-  # set realization behavior (kg overwrites kg_lt each pass); running avoidance
-  # first would let kg clobber the concealment. Only transitively guaranteed via
-  # the sigma/evasion guards when those modules are present, so enforce directly.
-  kg_pos = which(startsWith(modules, 'kg_dynamics/'))
-  if (length(kg_pos) > 0 && length(wl_pos) > 0 && min(kg_pos) > min(wl_pos)) {
-    stop('do_wealth(): kg_dynamics must run BEFORE wealth/avoidance (the R6 ',
-         'reported-kg_lt concealment overlay scales the realized gain the kg ',
-         'module sets; running avoidance first would let kg overwrite the ',
-         'concealment). Scenario "', scenario_info$ID, '" has behavior modules: ',
-         paste(modules, collapse = ' '), '.')
-  }
-
-  # --- Activation contract: the wealth concealment must reach the reported
-  # estate, and that propagation lives in estate/avoidance (which also carries
-  # the KS own-rate response). Running wealth/avoidance without it would
-  # silently break the hidden-ledger consistency, so fail closed.
-  es_pos = which(startsWith(modules, 'estate/'))
-  if (length(es_pos) == 0 || (length(wl_pos) > 0 && max(es_pos) < min(wl_pos))) {
-    stop('do_wealth(): wealth/avoidance requires estate/avoidance LATER in the ',
-         'behavior stack (it consumes the persisted wealth_c_* concealment ',
-         'fractions and owns estate_concealed_frac). Add "estate/avoidance" ',
-         'after this module in the behavior column. Scenario "',
-         scenario_info$ID, '" has behavior modules: ',
-         paste(modules, collapse = ' '), '.')
-  }
+  # Three guards used to sit here: that evasion runs before this module (R3 --
+  # the link reads evasion's per-record factors), that the bathtub runs before
+  # it (R6 -- the reported-gain overlay would otherwise be overwritten), and
+  # that an estate module runs after it (the concealment has to reach the
+  # reported estate). The first two are now guaranteed by the pinned family
+  # order and the third is checked at parse time; both live in
+  # src/sim/behavior.R.
 
   # --- Required-MTR guard. The wealth MTR must be registered for this module to
   # do anything. Fail loudly rather than silently skipping avoidance (which

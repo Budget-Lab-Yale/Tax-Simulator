@@ -1,0 +1,14 @@
+# Behavior leg alternative -- entity_shifting
+#
+# Entity shifting alone: business income moves between the pass-through and
+# corporate forms with the tax differential. No gain-state machinery, so the
+# retained-earnings leg is priced with the legacy deferral approximation.
+#
+# Order of execution is NOT the order below: src/sim/behavior.R sorts the list
+# against one pinned family order, because some responses read what an earlier
+# one wrote. See that file for the order and the reasons.
+
+kg_dynamics: none
+
+modules:
+  - src/behavior/entity_shifting/pearce_prisinzano.R

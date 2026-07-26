@@ -1,0 +1,15 @@
+# Behavior leg alternative -- wealth_estate_avoidance
+#
+# The hidden ledger without the income-side margins: net worth is concealed
+# from a wealth tax, and that concealment carries through to the reported
+# estate, where the own-rate reporting response also applies.
+#
+# Order of execution is NOT the order below: src/sim/behavior.R sorts the list
+# against one pinned family order, because some responses read what an earlier
+# one wrote. See that file for the order and the reasons.
+
+kg_dynamics: none
+
+modules:
+  - src/behavior/wealth/avoidance.R
+  - src/behavior/estate/avoidance.R

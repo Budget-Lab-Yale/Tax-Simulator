@@ -62,10 +62,10 @@
 # order of magnitude below the wealth-tax concealment response, as it should
 # be: the estate tax is a once-at-death levy, the wealth tax recurs.
 #
-# ACTIVATION CONTRACT: wealth/avoidance hard-stops when this module is not
-# later in the same behavior stack; evasion/debacker warns. The runscript lint
-# (other/top_tax/tests/lint_estate_module.R) enforces it statically for the
-# top_tax product runscripts.
+# ACTIVATION CONTRACT: a behavior stack with a wealth module and no estate
+# module is refused at parse time, and one with an evasion module and no estate
+# module warns loudly (behavior_validate_spec, src/sim/behavior.R). Both used to
+# be checked inside the modules themselves, mid-run.
 #-------------------------------------------------------------------------------
 
 ESTATE_AVOID_VERSION = '2026-07-16 standalone estate reporting module (split from wealth/avoidance)'
@@ -83,8 +83,8 @@ do_estate = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   # never touched (heirs inherit hidden assets in full).
   #
   # Must run AFTER evasion/ and wealth/ modules when they are present (it
-  # reads their persisted per-record outputs); order-guarded below. With
-  # neither present it reduces to the pure own-rate response, and with
+  # reads their persisted per-record outputs), which the pinned family order
+  # in src/sim/behavior.R guarantees. With
   # unchanged estate law it is an exact no-op — so it is safe (and intended)
   # to load in every conventional run.
   #
@@ -97,8 +97,8 @@ do_estate = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   #                            (current law has a 40% top estate rate)
   #   - static_mtrs (df)     : static-counterfactual MTRs; must carry
   #                            mtr_estate (the un-switched marginal estate rate)
-  #   - scenario_info (list) : get_scenario_info() object (ID + behavior_modules
-  #                            for the order guards; output_path for diagnostics)
+  #   - scenario_info (list) : get_scenario_info() object (ID for messages;
+  #                            output_path for diagnostics)
   #   - indexes (df)         : generate_indexes() object (unused here)
   #
   # Returns: full tax_units tibble with the estate_concealed_frac column set
@@ -106,20 +106,11 @@ do_estate = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, index
   #          dropped. All other columns unchanged.
   #----------------------------------------------------------------------------
 
-  modules = scenario_info$behavior_modules %||% character()
-
-  # --- Order guards: upstream modules must already have run, since this module
-  # reads their persisted per-record outputs.
-  es_pos = which(startsWith(modules, 'estate/'))
-  for (up in c('evasion/', 'wealth/')) {
-    up_pos = which(startsWith(modules, up))
-    if (length(up_pos) > 0 && length(es_pos) > 0 && min(up_pos) > min(es_pos)) {
-      stop('do_estate(): when a ', up, ' module is present it must run BEFORE ',
-           'estate/avoidance (this module reads its persisted per-record ',
-           'outputs). Scenario "', scenario_info$ID, '" has behavior modules: ',
-           paste(modules, collapse = ' '), '.')
-    }
-  }
+  # The guards that used to sit here -- evasion and wealth must already have run,
+  # since this module reads their persisted per-record outputs -- are guaranteed
+  # by the pinned family order in src/sim/behavior.R, which puts estate last of
+  # the chain. The defaulting below still covers the case where those modules are
+  # not in the stack at all.
 
   # --- Required-MTR guards. The own-rate response needs the un-switched
   # marginal estate rate on BOTH legs: the BASELINE estate MTR is genuinely

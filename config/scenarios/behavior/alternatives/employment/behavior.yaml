@@ -1,0 +1,12 @@
+# Behavior leg alternative -- employment
+#
+# Extensive-margin employment response (Bastian).
+#
+# Order of execution is NOT the order below: src/sim/behavior.R sorts the list
+# against one pinned family order, because some responses read what an earlier
+# one wrote. See that file for the order and the reasons.
+
+kg_dynamics: none
+
+modules:
+  - src/behavior/employment/bastian.R

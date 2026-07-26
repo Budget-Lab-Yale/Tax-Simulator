@@ -1,0 +1,14 @@
+# Behavior leg alternative -- employment_child_earnings
+#
+# Extensive-margin employment response, plus the effect of family income on
+# children's later earnings.
+#
+# Order of execution is NOT the order below: src/sim/behavior.R sorts the list
+# against one pinned family order, because some responses read what an earlier
+# one wrote. See that file for the order and the reasons.
+
+kg_dynamics: none
+
+modules:
+  - src/behavior/employment/bastian.R
+  - src/behavior/child_earnings/34.R

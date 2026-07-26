@@ -28,10 +28,10 @@ conv:
     - src/behavior/charity/100.R
     - src/sim/sigma_conversion.R
   invalidated_by_hashes:
-    src/behavior/entity_shifting/pearce_prisinzano.R: e887c0327cadfe28f5f4bf7502787a82
-    src/behavior/evasion/debacker.R: fa7b40c3d30676703a967c476e30017a
+    src/behavior/entity_shifting/pearce_prisinzano.R: 309cc92f32c0ee6836ee4b4b31a2bf8e
+    src/behavior/evasion/debacker.R: bf7b26db17367a764d0247fab704f65e
     src/behavior/charity/100.R: 3e6d30228a38e970360e2e80acb6b4d7
-    src/sim/sigma_conversion.R: 8d1b8f686d66b011f68441548057f90c
+    src/sim/sigma_conversion.R: e1acff024442941cd1946911efcaddc2
   rederive: other/top_tax/archive/tests/compute_top_eti.R
   note: >
     History 0.08 -> 0.157 -> 0.16. The 2026-07-12 move was driven by
@@ -52,6 +52,13 @@ conv:
     re-pinned rather than treating sigma as re-derivable. This is CONDITIONAL on
     the byte-identical verification run; if that run shows any output diff, the
     refactor changed behavior and sigma must actually be re-derived.
+    HASH RE-PIN 2026-07-26 (behavior leg): pearce_prisinzano.R, debacker.R and
+    sigma_conversion.R changed again, all three in the same one respect -- the
+    hand-written module-order and activation guards were deleted, because the
+    behavior loader now settles order before the run starts and checks the same
+    contracts at parse time. No elasticity, formula or threshold moved. Same
+    condition as the line above: this re-pin stands only if the six-scenario
+    gate is byte-identical, and is reverted to a real re-derivation if not.
 
 pt_labor_share:
   value: 0.75

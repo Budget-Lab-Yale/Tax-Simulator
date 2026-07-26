@@ -402,13 +402,17 @@ resolve_all_scenarios = function(runscript, economy_defaults, behavior_defaults,
   #----------------------------------------------------------------------------
   # Resolves every runscript row's economy and behavior legs, builds the
   # scenario's interface paths from the resolved vintages, and runs the
-  # parse-time staleness check for the economy leg. (Behavior-leg staleness,
-  # including conditioned_on, arms when that leg goes live in Phase 4 -- until
-  # then the behavior column still names modules and the leg's resolved values
-  # ride along dormant.)
+  # parse-time checks: economy staleness, and the shape of the behavior stack.
+  #
+  # Both legs resolve here rather than at scenario time so that a runscript
+  # naming a folder that does not exist, a module file that was deleted, or an
+  # inconsistent kg binding fails in the first seconds of the run instead of an
+  # hour in. The behavior spec rides inside the resolved behavior object, so
+  # every SLURM driver that already carries scenario_info gets it for free.
   #
   # Returns: named-by-ID list of
-  #   - economy, behavior : config_resolve() outputs
+  #   - economy, behavior : config_resolve() outputs; behavior$spec is the
+  #                         resolved module stack (see behavior_resolve())
   #   - interface_paths   : named list, interface name -> path
   #----------------------------------------------------------------------------
 
@@ -420,10 +424,14 @@ resolve_all_scenarios = function(runscript, economy_defaults, behavior_defaults,
 
     economy = config_resolve('economy', economy_defaults,
                              alternative = row$economy)
-    # The behavior column still names MODULES ({family}/{module}) until the
-    # behavior-leg flip; the leg resolves on its default layer and rides along
-    # dormant. That phase switches this to the behavior column.
-    behavior = config_resolve('behavior', behavior_defaults, alternative = NULL)
+
+    # The behavior leg holds no value entries (its modules carry their own
+    # parameters), so config_resolve() here only validates the folder; the
+    # stack itself comes from behavior.yaml via the loader.
+    behavior      = config_resolve('behavior', behavior_defaults,
+                                   alternative = row$behavior)
+    behavior$spec = behavior_resolve(row$behavior)
+    behavior_validate_spec(behavior$spec, id)
 
     # Interface paths from the resolved vintages/IDs
     interface_paths = interface_meta %>%
@@ -469,8 +477,9 @@ write_run_manifest = function(output_root, runscript, scenario_configs,
   #                              plus computational scope
   #   - scenario_config.csv    : every resolved value across both legs with
   #                              kind, role, override flag and source
-  #   - behavioral_assumptions.csv : the tax law + behavior module record,
-  #                              unchanged until the behavior leg flips
+  #   - behavioral_assumptions.csv : per scenario, the tax law, the behavior
+  #                              alternative, and the stack it resolved to
+  #                              (kg pieces + ordered module paths)
   #   - code_version.csv       : git commit + dirty flag
   #----------------------------------------------------------------------------
 
@@ -509,9 +518,22 @@ write_run_manifest = function(output_root, runscript, scenario_configs,
     bind_rows() %>%
     write_csv(file.path(output_root, 'scenario_config.csv'))
 
-  # behavioral_assumptions.csv -- unchanged until the behavior leg flips
-  runscript %>%
-    select(ID, tax_law, behavior) %>%
+  # behavioral_assumptions.csv -- the response record. The behavior cell names a
+  # folder now, so the folder name alone would not tell a reader of an old
+  # vintage what actually ran: the resolved stack is written out alongside it,
+  # in execution order.
+  names(scenario_configs) %>%
+    map(.f = function(id) {
+      spec = scenario_configs[[id]]$behavior$spec
+      tibble(
+        ID          = id,
+        tax_law     = runscript$tax_law[runscript$ID == id],
+        behavior    = spec$alternative,
+        kg_dynamics = if (length(spec$kg_pieces) == 0) 'none'
+                      else paste(spec$kg_pieces, collapse = ' '),
+        modules     = paste(spec$modules, collapse = ' '))
+    }) %>%
+    bind_rows() %>%
     write_csv(file.path(output_root, 'behavioral_assumptions.csv'))
 
   # Record the code version the run was produced under. Without this, the
@@ -582,11 +604,12 @@ get_scenario_info = function(id, g = globals) {
     filter(ID == id) %>%
     as.list()
 
-  # Behavioral feedback module names (formatted as {var}/{module})
-  behavior_modules = NULL
-  if (!is.na(runscript_items$behavior)) {
-    behavior_modules = str_split_1(runscript_items$behavior, ' ')
-  }
+  # Module paths for this scenario's behavioral feedback, already in execution
+  # order with the kg applier injected (see behavior_resolve()). NULL rather
+  # than character(0) when there is no response: run.R tests length() and the
+  # distinction never mattered, but NULL is what it has always been handed.
+  behavior_modules = config$behavior$spec$modules
+  if (length(behavior_modules) == 0) behavior_modules = NULL
 
   # Years to run; distribution/microdata years default to all years
   years      = parse_year_spec(runscript_items$years)

@@ -31,8 +31,12 @@ invisible(lapply(
 
 economy_defaults = config_load_defaults('economy')
 
+# archive/ is frozen on the old schema on purpose, and private/ is untracked
+# one-off work that the rebuild migrates on demand rather than up front (see
+# other/config_redesign/REBUILD_STATUS.md). Neither is expected to pass, and a
+# check that always reports failures is a check nobody reads.
 files = list.files('./config/runscripts', pattern = '[.]csv$', recursive = TRUE) %>%
-  purrr::discard(~ startsWith(.x, 'archive/'))
+  purrr::discard(~ startsWith(.x, 'archive/') || startsWith(.x, 'private/'))
 
 n_ok = 0; n_bad = 0; bad_names = c()
 
@@ -51,6 +55,13 @@ for (f in files) {
         interface_vintages = config_interface_vintages(eco),
         cross_values       = list(economy = eco$values),
         enforce            = CONFIG_ENFORCE_STALENESS))
+
+      # The behavior leg: does the folder exist, do its module files exist, and
+      # is the stack a shape the model can run? This is what the deleted
+      # in-module order guards used to catch, one scenario at a time, mid-run.
+      behavior = if ('behavior' %in% names(rs)) rs$behavior[i] else NA_character_
+      spec = behavior_resolve(behavior)
+      suppressWarnings(behavior_validate_spec(spec, rs$ID[i]))
     }
     'ok'
   }, error = function(e) conditionMessage(e))
