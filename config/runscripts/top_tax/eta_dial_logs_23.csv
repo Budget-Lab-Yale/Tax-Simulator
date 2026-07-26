@@ -1,0 +1,3 @@
+ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,default,ome_20250925,,2026:2057,,wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent char_cash net_worth estate,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar
+s_cg_r25,top_tax/dials/s_cg_r25,ome_20250925,top_tax_full_eta_logs_23,2026:2057,2027 2036,wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent char_cash net_worth estate,nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar nextdollar
