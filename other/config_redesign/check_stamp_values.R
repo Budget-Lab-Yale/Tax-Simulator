@@ -43,7 +43,6 @@ old_sigma = from_git('config/scenarios/economy/default/sigma.yaml')
 new_bathtub  = strip_meta(read_yaml('config/calibrations/kg/bathtub.yaml'))
 new_settings = strip_meta(read_yaml('config/calibrations/kg/settings.yaml'))
 new_conv     = strip_meta(read_yaml('config/calibrations/kg/conversion.yaml'))
-new_entity   = strip_meta(read_yaml('config/calibrations/kg/entity_shifting.yaml'))
 
 #-------------------------------------------------------------------------------
 # 1. Every kg entry lands in exactly one of the two new files, unchanged
@@ -102,51 +101,46 @@ for (nm in names(old_sigma)) {
 }
 
 #-------------------------------------------------------------------------------
-# 3. The entity-shifting constants match what the module still hardcodes
+# 3. Entity shifting keeps its numbers in its own module file
 #
-# These had no config entry to compare against -- they were literals in the module
-# file. So the reference is the module AS IT STOOD AT REF, read out of git: the
-# working copy now reads the calibration file, which is the change being checked.
-# Read the numbers out of that source rather than restating them here, which would
-# only prove the test agrees with itself.
+# Every number a pluggable behavior module reads lives in that module's file, with
+# no exceptions -- the same rule as evasion, estate and wealth. Entity shifting
+# briefly had its constants in a calibration file; this asserts they are back where
+# the rule puts them, and unchanged, by comparing against the module AS IT STOOD AT
+# REF rather than restating the numbers here.
 #-------------------------------------------------------------------------------
 
-mod = suppressWarnings(system2(
-  'git', c('show', paste0(REF, ':src/behavior/entity_shifting/pearce_prisinzano.R')),
-  stdout = TRUE, stderr = FALSE))
-if (length(mod) == 0) stop('could not read the entity module at ', REF)
-num_after = function(pattern) {
-  hit = grep(pattern, mod, value = TRUE)[1]
+num_after = function(txt, pattern) {
+  hit = grep(pattern, txt, value = TRUE)[1]
   if (is.na(hit)) return(NA_real_)
   as.numeric(regmatches(hit, regexpr('[0-9]+[.]?[0-9]*', hit)))
 }
 
-check('entity semi-elasticity numerator matches the module',
-      isTRUE(all.equal(new_entity$semi_elasticity_raw$value,
-                       num_after('^\\s*e\\s*=\\s*0[.]3788'))))
-check('entity denominator matches the module',
-      isTRUE(all.equal(new_entity$pt_share_of_business_income$value, 0.6)) &&
-      any(grepl('0[.]3788\\s*/\\s*0[.]6', mod)))
-check('entity alpha matches the module',
-      isTRUE(all.equal(new_entity$current_payout_share$value,
-                       num_after('^\\s*alpha\\s*='))))
-check('entity beta_legacy matches the module',
-      isTRUE(all.equal(new_entity$beta_legacy$value,
-                       num_after('^\\s*beta_legacy\\s*='))))
-
+ref_mod = suppressWarnings(system2(
+  'git', c('show', paste0(REF, ':src/behavior/entity_shifting/pearce_prisinzano.R')),
+  stdout = TRUE, stderr = FALSE))
+if (length(ref_mod) == 0) stop('could not read the entity module at ', REF)
 live_mod = readLines('src/behavior/entity_shifting/pearce_prisinzano.R',
                      warn = FALSE)
-check('the entity module no longer hardcodes its parameters',
-      !any(grepl('^\\s*(alpha|beta_legacy)\\s*=\\s*[0-9]', live_mod)) &&
-      !any(grepl('^\\s*e\\s*=\\s*0[.]3788', live_mod)))
-check('the entity module reads them from the calibration file',
-      sum(grepl('kg_entity\\(', live_mod)) >= 3)
+
+for (nm in c('alpha', 'beta_legacy')) {
+  check(sprintf('entity %s is in the module and unchanged', nm),
+        isTRUE(all.equal(num_after(live_mod, paste0('^\\s*', nm, '\\s*=')),
+                         num_after(ref_mod,  paste0('^\\s*', nm, '\\s*=')))))
+}
+check('entity elasticity is in the module and unchanged',
+      any(grepl('^\\s*e\\s*=\\s*0[.]3788\\s*/\\s*0[.]6', live_mod)) &&
+      any(grepl('^\\s*e\\s*=\\s*0[.]3788\\s*/\\s*0[.]6', ref_mod)))
+check('no calibration file holds a behavior module parameter',
+      !file.exists('config/calibrations/kg/entity_shifting.yaml'))
+check('the module cites its source next to the number',
+      any(grepl('Pearce and Prisinzano', live_mod)))
 
 #-------------------------------------------------------------------------------
 # 4. Shape checks on the new files
 #-------------------------------------------------------------------------------
 
-for (f in c('bathtub', 'settings', 'conversion', 'entity_shifting')) {
+for (f in c('bathtub', 'settings', 'conversion')) {
   path = file.path('config/calibrations/kg', paste0(f, '.yaml'))
   d = read_yaml(path)
   check(sprintf('%s.yaml declares a channel role', f),

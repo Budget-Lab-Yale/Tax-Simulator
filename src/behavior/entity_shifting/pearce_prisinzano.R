@@ -64,26 +64,31 @@ do_entity_shifting = function(tax_units, baseline_mtrs, static_mtrs,
          paste(missing, collapse = ', '), '.')
   }
 
-  # Parameters, with their sources, in
-  # config/calibrations/kg/entity_shifting.yaml. Read from a fixed path rather
-  # than bound per scenario: they are published constants, so there is nothing
-  # about them to vary and nothing that can go stale, and this module also runs
-  # in entity-only scenarios where no bathtub exists to bind to.
+  # --- Parameters -------------------------------------------------------------
+  # Here, in the module, because this module is their only reader. A variant is a
+  # copy of this file with different numbers, listed by a different behavior
+  # alternative -- the same rule every other behavior module follows.
   #
-  # e     : the Pearce-Prisinzano Table IV.B semi-elasticity, evaluated at
-  #         pass-through's share of business income.
-  # alpha : the share of corporate earnings assumed paid out currently. That
-  #         leg's tax is still proxied by mtr_kg_lt -- the historical module's
-  #         dividends-equal-gains simplification. The retained share is priced
-  #         properly by tau_eq when the bathtub is running: expected present-value
-  #         tax per dollar newly entering the unrealized-gain state, by age, year
-  #         and policy/death regime.
-  # beta_legacy : the superseded 25%-of-statutory deferral proxy, used only for
-  #         entity-only runs and the explicit legacy comparison module.
-  e = kg_entity('semi_elasticity_raw') / kg_entity('pt_share_of_business_income')
+  # The semi-elasticity of the pass-through share of business income with respect
+  # to the corporate-versus-pass-through tax differential. Pearce and Prisinzano
+  # (2018), Table IV.B preferred results, evaluated at pass-through's 0.6 share of
+  # business income.
+  e = 0.3788 / 0.6
 
-  alpha       = kg_entity('current_payout_share')
-  beta_legacy = kg_entity('beta_legacy')
+  # Share of corporate earnings assumed paid out currently rather than retained.
+  # A judgment call with no recorded derivation. That leg's tax is still proxied
+  # by mtr_kg_lt -- the historical module's dividends-equal-gains simplification,
+  # carried forward. The retained share is priced properly by tau_eq whenever the
+  # bathtub is running: expected present-value tax per dollar newly entering the
+  # unrealized-gain state, by age, year and policy/death regime.
+  alpha = 0.45
+
+  # The superseded retained-earnings deferral proxy: 25 percent of the statutory
+  # rate. tau_eq replaced it. It survives for the two cases where tau_eq does not
+  # exist or is deliberately not used -- an entity-only scenario with no bathtub,
+  # and the explicit legacy comparison module that exists to measure what the
+  # tau_eq change did.
+  beta_legacy = 0.25
 
   tax_units_with_tau_eq = if (use_tau_eq) {
     if (!'age_cohort' %in% names(tax_units)) {

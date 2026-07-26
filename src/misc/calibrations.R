@@ -29,11 +29,18 @@
 #            renaming the file renames every label, and a waiver written against
 #            `bathtub.eta_logs` would quietly stop applying.
 #
-#   FIXED    one path, the same for every scenario. For values there is no
-#            sensible per-scenario version of: a published constant, or a
-#            model-form switch that the calibrations are conditioned on and so
+#   FIXED    one path, the same for every scenario. For the model-form switches
+#            and judgment calls that the calibrations are conditioned on, and so
 #            cannot vary underneath them.
-#            -> settings.yaml, entity_shifting.yaml
+#            -> settings.yaml
+#
+# WHAT IS NOT HERE. A behavioral module's own parameters. Every number a pluggable
+# behavior module reads lives in that module's file, with its citation, and a
+# variant is a copy of the file -- no exceptions. Entity shifting briefly had its
+# published constants in a file here and it was wrong twice over: it split one rule
+# into a rule plus a carve-out, and the module also runs in scenarios with no
+# bathtub to bind to. What belongs here is the machinery's own calibration, read by
+# src/sim/kg/, not a module's assumptions.
 #
 # Both accessors are FAIL-CLOSED. Reading a bound value in a scenario that never
 # bound the file is an error, not a default, because a default here would be a
@@ -181,11 +188,6 @@ kg_setting = function(name) {
   calib_entry(calib_load(path), name, path)
 }
 
-kg_entity = function(name) {
-  path = file.path(CALIB_KG_ROOT, 'entity_shifting.yaml')
-  calib_entry(calib_load(path), name, path)
-}
-
 
 
 calib_settings_values = function() {
@@ -232,10 +234,9 @@ calib_check_staleness = function(behavior_spec, interface_vintages,
   # Returns: character vector of findings (empty if clean)
   #----------------------------------------------------------------------------
 
-  # Fixed-path files are checked on every scenario; bound files only when this
+  # The fixed-path file is checked on every scenario; bound files only when this
   # scenario actually binds them, since an unbound file is not in use.
-  paths = c(file.path(CALIB_KG_ROOT, 'entity_shifting.yaml'),
-            file.path(CALIB_KG_ROOT, 'settings.yaml'))
+  paths = file.path(CALIB_KG_ROOT, 'settings.yaml')
   for (piece in intersect(CALIB_BOUND_PIECES, behavior_spec$kg_pieces)) {
     p = behavior_spec$kg_dynamics[[piece]]
     if (!is.null(p) && nzchar(as.character(p))) paths = c(paths, as.character(p))
@@ -368,7 +369,6 @@ calib_manifest = function(behavior_spec, id) {
   }
 
   rows[['settings']] = add(file.path(CALIB_KG_ROOT, 'settings.yaml'), 'fixed')
-  rows[['entity']]   = add(file.path(CALIB_KG_ROOT, 'entity_shifting.yaml'), 'fixed')
   for (piece in intersect(CALIB_BOUND_PIECES, behavior_spec$kg_pieces)) {
     p = behavior_spec$kg_dynamics[[piece]]
     if (!is.null(p) && nzchar(as.character(p))) {

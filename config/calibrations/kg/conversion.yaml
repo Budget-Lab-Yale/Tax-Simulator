@@ -23,10 +23,9 @@
 
 # HASH RE-PIN 2026-07-26 (calibration switchover): the dependency hashes below
 # were re-pinned after two of the files sigma is pinned against changed -- the
-# entity module now reads its published constants from
-# config/calibrations/kg/entity_shifting.yaml instead of hardcoding them, and
-# sigma_conversion.R's accessor for sigma itself changed. Same numbers, new homes.
-# CONDITIONAL on the six-scenario gate, like the earlier re-pins in this project.
+# entity module's parameter comments were rewritten, and sigma_conversion.R's
+# accessor for sigma itself changed name. No number moved in either. CONDITIONAL on
+# the six-scenario gate, like the earlier re-pins in this project.
 
 _channel:
   role: state
@@ -50,7 +49,7 @@ conv:
     - src/behavior/charity/100.R
     - src/sim/sigma_conversion.R
   invalidated_by_hashes:
-    src/behavior/entity_shifting/pearce_prisinzano.R: e07a09d83c38f0fe851c791c4578f059
+    src/behavior/entity_shifting/pearce_prisinzano.R: bd39a87c54b2b6cbebf013465833868f
     src/behavior/evasion/debacker.R: 5a18248b8e7a5d29e9dd44a3b04fdbd3
     src/behavior/charity/100.R: 3e6d30228a38e970360e2e80acb6b4d7
     src/sim/sigma_conversion.R: 6e0d38766fe8d9906d47ada9b6f1fa77
