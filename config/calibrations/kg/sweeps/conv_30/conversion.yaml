@@ -1,0 +1,44 @@
+# GENERATED FILE -- do not hand-edit. Written by other/top_tax/sigma_calib/write_sigma_sweep.py.
+#
+# SWEEP POINT: conv = 0.30. One point on the trial grid {0.0, 0.16, 0.30} used to
+# pin the conversion margin.
+# This is not a shipped calibration and no scenario should bind it except the
+# sigma-calibration runscript generated alongside it.
+#
+# Everything here is the shipped config/calibrations/kg/conversion.yaml with
+# exactly one entry replaced -- conv -- because a sweep varies one thing and holds
+# the rest fixed. pt_labor_share keeps its own provenance verbatim.
+#
+# Bound by  : config/scenarios/behavior/alternatives/sigma_calib_100_conv_30/
+# Measured by: other/top_tax/sigma_calib/measure_sigma.R
+#
+# The file name matters. It has to stay `conversion.yaml` inside a
+# differently-named FOLDER, because entries are labelled '{file stem}.{entry}'
+# -- calling it conv_30.yaml would relabel every entry in it and detach any
+# waiver written against `conversion.conv`.
+
+_channel:
+  role: state
+
+conv:
+  value: 0.30
+  kind: judgment
+  note: >
+    SWEEP TRIAL, not a calibrated value -- which is why the kind is judgment
+    rather than calibrated. It has no derivation to go stale: it is an INPUT to
+    the calibration that pins conv, one of the points on the grid
+    {0.0, 0.16, 0.30}. The measurement script reads the vintages this grid
+    produces, measures the top-subset ordinary ETI at each, and interpolates for
+    the sigma that hits the target ETI of 0.25. The result of that
+    interpolation is the shipped value in config/calibrations/kg/conversion.yaml;
+    this number is scaffolding for producing it.
+    The 0.0 point is the floor: the ETI entity shifting and evasion produce with
+    no conversion at all, which is what makes sigma a residual rather than an
+    independent estimate. Measured by: other/top_tax/sigma_calib/measure_sigma.R
+
+pt_labor_share:
+  value: 0.75
+  kind: sourced
+  citation: >
+    Smith, Yagan, Zidar and Zwick labor-content share of active pass-through
+    income; applied to the active pass-through legs of the conversion pool.

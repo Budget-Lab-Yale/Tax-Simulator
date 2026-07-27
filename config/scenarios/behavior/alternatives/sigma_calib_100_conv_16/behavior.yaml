@@ -1,0 +1,28 @@
+# GENERATED FILE -- do not hand-edit. Written by other/top_tax/sigma_calib/write_sigma_sweep.py.
+#
+# The sigma CALIBRATION stack at conv = 0.16. Not a product stack: it exists to
+# reproduce the conditions sigma is derived under, which is why the charity
+# elasticity is pinned explicitly at charity/100 rather than inherited.
+#
+# charity/100 is load-bearing. The shipped sigma of 0.16 was derived under
+# charity/100, while product runs use charity/50, and that mismatch is recorded as a
+# dated waiver on the conversion.conv entry. Whichever this stack names is the basis
+# of whatever the measurement writes, so it is stated here rather than assumed.
+#
+# Named by: config/runscripts/tests/sigma_calib_100_conv_16.csv
+# Measured by: other/top_tax/sigma_calib/measure_sigma.R
+#
+# Order of execution is NOT the order below: src/sim/behavior.R sorts the list
+# against one pinned family order, because later families read what earlier ones
+# wrote.
+
+kg_dynamics:
+  bathtub: config/calibrations/kg/bathtub.yaml
+  conversion: config/calibrations/kg/sweeps/conv_16/conversion.yaml
+
+modules:
+  - src/behavior/conversion/sigma.R
+  - src/behavior/entity_shifting/pearce_prisinzano.R
+  - src/behavior/evasion/debacker.R
+  - src/behavior/charity/100.R
+  - src/behavior/estate/avoidance.R
