@@ -1,8 +1,0 @@
-# Off-Model-Estimates top_tax_corp_placeholder / corp_28_2027 -- the placeholder
-# corporate wedge the top-tax dials and factorial use for their corporate lever.
-
-off_model_estimates_vintage:
-  value: top_tax_corp_placeholder
-
-off_model_estimates_id:
-  value: corp_28_2027

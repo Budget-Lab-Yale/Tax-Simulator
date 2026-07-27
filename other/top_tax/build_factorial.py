@@ -78,17 +78,17 @@ BEHAVIOR_WEALTH = "top_tax_full_wealth"
 MTR_VARS = "wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent char_cash net_worth estate"
 MTR_TYPES = " ".join(["nextdollar"] * len(MTR_VARS.split()))
 
-# Economy alternatives naming the corporate OME pin -- folders under
-# config/scenarios/economy/alternatives/, which replaced the retired
-# dep.Off-Model-Estimates.vintage / .ID and `s` columns.
-# ON  -> the placeholder vintage (make_placeholder_ome.py): activates the channel.
-# OFF -> the default OME (all-zero corporate) -> channel dormant, no warning.
-# Neither overrides the wealth channel, so the auto-applied calibrated `default`
-# financing profile runs (bathtub on model-wide) -- what the blank `s` meant.
-# To force the bathtub off, point at an alternative whose wealth.yaml says
-# financing_profile: none.
-CORP_ON_ECONOMY = "ome_top_tax_corp_placeholder"
-CORP_OFF_ECONOMY = "ome_20250925"
+# NO OFF-MODEL ESTIMATES IN THIS BATCH. Author instruction, 2026-07-26; the
+# reasoning is in other/top_tax/levers.py beside the same two constants. Short
+# version: the corporate rate is scored on-model as of 2026-07-23, receipts add
+# the off-model wedge on top of it, so keeping the pin double-counts the rate hike.
+#
+# Both states name the model default economy, which does not override the wealth
+# channel, so the calibrated `default` financing profile runs (bathtub on
+# model-wide) -- what the blank `s` column used to mean. To force the bathtub off,
+# point at an alternative whose wealth.yaml says financing_profile: none.
+CORP_ON_ECONOMY = "default"
+CORP_OFF_ECONOMY = "default"
 
 # --------------------------------------------------------------------------- #
 # Switch definitions.  Each YAML switch maps target-filename -> YAML text block

@@ -1,7 +1,8 @@
 ---
 # top_tax corp dial: top corporate rate 21% -> 28% from 2027.
-# Parameterizes the entity-shifting wedge only -- corp.rate feeds
-# do_entity_shifting, NOT corporate revenue (that comes from the OME channel).
+# This rate is the WHOLE corporate story now: src/sim/corp_rate.R scores it
+# against the CBO corporate level, and it feeds the entity-shifting wedge.
+# No off-model estimate is involved.
 # Full baseline series retained (subparameter-override replaces wholesale).
 rate:
   value:

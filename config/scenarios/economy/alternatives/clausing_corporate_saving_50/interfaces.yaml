@@ -1,0 +1,14 @@
+# Clausing corporate reform, interface v5.
+#
+# The v4 pin this replaces (20260706 / 07_corporate) became unreachable when
+# Off-Model-Estimates went to v5 on 2026-07-22: a vintage lives under a version
+# directory. The v5 re-issue copies the six original columns unchanged and sets
+# corporate_static equal to the conventional corporate column, on author
+# instruction 2026-07-26 -- so this scenario's static leg carries the corporate
+# behavioral response. The reasoning is in the vintage's own corporate_meta.yaml.
+
+off_model_estimates_vintage:
+  value: '20260726'
+
+off_model_estimates_id:
+  value: 07_corporate

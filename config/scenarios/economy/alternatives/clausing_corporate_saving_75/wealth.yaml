@@ -1,0 +1,4 @@
+# Saving share held at 0.75: the flat shorthand for the retired s column.
+
+financing_profile:
+  value: 'flat:0.75'

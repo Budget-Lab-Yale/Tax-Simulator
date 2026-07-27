@@ -57,17 +57,28 @@ BEHAVIOR_WEALTH = "top_tax_full_wealth"
 MTR_VARS = "wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent char_cash net_worth estate"
 MTR_TYPES = " ".join(["nextdollar"] * len(MTR_VARS.split()))
 
-# Economy alternatives naming the corporate OME pin. The dial batch reuses the
-# factorial's REAL author wedge (write_corp_ome.py installed it under the
-# placeholder vintage name; the pin is kept for continuity). Corp stays
-# single-anchor at 28.
+# THE TOP-TAX BATCHES USE NO OFF-MODEL ESTIMATES AT ALL. Author instruction,
+# 2026-07-26. Both lever states name the model default economy.
 #
-# These name FOLDERS under config/scenarios/economy/alternatives/, which is what
-# replaced the retired dep.Off-Model-Estimates.vintage / .ID and `s` columns.
-# Neither alternative overrides the wealth channel, so the calibrated default
-# financing profile stays on -- what the old blank `s` column meant.
-CORP_ON_ECONOMY = "ome_top_tax_corp_placeholder"
-CORP_OFF_ECONOMY = "ome_20250925"
+# The corporate rate went ON-MODEL on 2026-07-23 (src/sim/corp_rate.R): the rate
+# in corp.yaml is scored against the CBO corporate level, statically as the
+# mechanical (t-t0)*B0 change and conventionally with the CPSS avoidance ETI. So
+# the off-model wedge these two folders used to pin is now a SECOND source for
+# revenue the model already produces, and receipts add both. A corp scenario
+# naming the old placeholder pin double-counts the rate hike -- roughly $49B in
+# 2027 rising to $96B, twice.
+#
+# The corp-OFF pin cost nothing to drop: v4 20250925/baseline is all zeros, as is
+# the v5 default, so that state was always a no-op. The corp-ON pin is the real
+# change, and dropping it is the point -- it hands the corporate rate to the
+# on-model machinery, which is where it now belongs.
+#
+# Naming the default also un-strands these batches. An economy alternative can pin
+# an interface VINTAGE but not its VERSION, and a vintage lives under a version
+# directory, so both old pins became unreachable when Off-Model-Estimates went to
+# v5 on 2026-07-22 and nothing said so until launch.
+CORP_ON_ECONOMY = "default"
+CORP_OFF_ECONOMY = "default"
 
 # --------------------------------------------------------------------------- #
 # Current-law 2027 estate exemption, computed (NOT hardcoded — indexation).
@@ -116,15 +127,17 @@ ESTATE_M2 = round((ESTATE_CUR + 2 * 5_000_000) / 3, -4)
 
 CORP_RATE_COMMENT = (
     '# top_tax corp dial: top corporate rate 21% -> {pct}% from 2027.\n'
-    '# Parameterizes the entity-shifting wedge only -- corp.rate feeds\n'
-    '# do_entity_shifting, NOT corporate revenue (that comes from the OME channel).\n'
+    '# This rate is the WHOLE corporate story now: src/sim/corp_rate.R scores it\n'
+    '# against the CBO corporate level, and it feeds the entity-shifting wedge.\n'
+    '# No off-model estimate is involved.\n'
     '# Full baseline series retained (subparameter-override replaces wholesale).\n')
 
 # The corporate rate became an ON-MODEL parameter on 2026-07-23. Before that a
 # corp scenario was purely an off-model switch and wrote no YAML, which is what
 # these generators used to believe; the 114 files the change needs were patched
-# in by hand and the generators were not told until 2026-07-26. The lever now
-# does BOTH: it writes this file AND names the corporate off-model pin.
+# in by hand and the generators were not told until 2026-07-26. The lever writes
+# this file and NOTHING else -- the off-model pin was dropped the same day, since
+# with the rate on-model the two sources add and the hike gets counted twice.
 def corp_files(vals):
     r = _pct(vals["rate"])
     return {"corp.yaml": [CORP_RATE_COMMENT.format(pct=f"{vals['rate']:g}") + f"""\
