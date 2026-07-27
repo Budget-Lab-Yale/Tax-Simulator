@@ -8,9 +8,8 @@
 pivot_1040_long = function(df, id_cols, names_to = 'series') {
 
   #----------------------------------------------------------------------------
-  # Reshapes a wide 1040 totals dataframe long in (series, Variable): n_*
-  # columns become count.*, all other value columns amount.*, then pivots on
-  # the "." separator.
+  # Reshapes a wide 1040 totals dataframe long in series and variable. Count
+  # columns are prefixed count and the rest amount, then pivoted on the separator.
   #
   # Parameters:
   #   - df (df)          : wide 1040 totals dataframe

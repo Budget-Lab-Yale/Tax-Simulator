@@ -1,4 +1,4 @@
-# GENERATED FILE -- do not hand-edit. Written by other/top_tax/sigma_calib/write_sigma_sweep.py.
+# Generated file -- written by other/top_tax/sigma_calib/write_sigma_sweep.py.
 #
 # The sigma CALIBRATION stack at conv = 0.0. Not a product stack: it exists to
 # reproduce the conditions sigma is derived under, which is why the charity
@@ -12,7 +12,7 @@
 # Named by: config/runscripts/tests/sigma_calib_50_conv_00.csv
 # Measured by: other/top_tax/sigma_calib/measure_sigma.R
 #
-# Order of execution is NOT the order below: src/sim/behavior.R sorts the list
+# Execution order is not the order below: src/sim/behavior.R sorts the list
 # against one pinned family order, because later families read what earlier ones
 # wrote.
 

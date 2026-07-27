@@ -1,8 +1,8 @@
 # Corporate incidence channel -- src/sim/corp/
 #
-# Economy-leg TRANSMISSION channel: how a corporate tax change lands on
-# households. Override per scenario by naming an economy alternative folder in
-# the runscript's `economy` column.
+# A transmission channel: how a corporate tax change lands on households.
+# Override per scenario by naming an economy alternative folder in the runscript's
+# `economy` column.
 
 _channel:
   role: transmission
@@ -11,109 +11,117 @@ sigma_n:
   value: 0.375
   kind: sourced
   citation: >
-    Normal-return share of the corporate wedge (D14/D15: taxes on margins get
-    shifted, taxes on rents get capitalized). Central 0.375 implied by OTA's 63%
-    and TPC's 60% supernormal shares. Sweep corners {0, 0.5}, the upper being
-    the house VAT convention.
+    Normal-return share of the corporate wedge: tax on the margin is shifted and
+    tax on rents is capitalized. The central 0.375 is implied by the supernormal
+    shares of 63% at OTA and 60% at TPC. Sweep corners are 0 and 0.5, the upper
+    being the house VAT convention.
 
 delta_nipa:
   value: 0.057
   kind: sourced
   citation: >
-    NIPA economic depreciation rate. The reallocation clock IS the replacement
-    clock (D14), so eta(t) = 1 - (1 - 0.057)^(t - t0). Same 0.057 used by
-    do_capital_adjustment in src/data/economy.R -- change both together.
+    NIPA economic depreciation rate. Capital reallocates on the replacement clock:
+
+      eta(t) = 1 - (1 - 0.057) ^ (t - t0)
+
+    do_capital_adjustment in src/data/economy.R uses the same 0.057, so change both
+    together.
 
 rate_eti:
   value: 0.367
   kind: sourced
   citation: >
-    Corporate AVOIDANCE-only semi-elasticity from Coles, Patel, Seegert and
-    Smith (2022, JAR 60(3)). Deliberately NOT the effective-rate CETI (0.91 =
-    8.93/9.76) and NOT the total statutory elasticity (0.549) -- see the menu in
-    src/sim/corp_rate.R. Treating the full 0.367 as a permanent base elasticity
-    overstates the long-run response, a caveat recorded at the call site.
+    Corporate avoidance semi-elasticity from Coles, Patel, Seegert and Smith
+    (2022, JAR 60(3)). It is the avoidance margin alone, not the effective-rate
+    elasticity of 0.91 and not the total statutory elasticity of 0.549; the menu is
+    in src/sim/corp_rate.R. Read as a permanent base elasticity it overstates the
+    long-run response, a caveat recorded at the call site.
 
 #-------------------------------------------------------------------------------
-# Judgment -- Phase-0c placeholders pending measurement
+# Judgment -- placeholders pending measurement
 #-------------------------------------------------------------------------------
 
 omega_div:
   value: 0.85
   kind: judgment
   note: >
-    C-corp share of dividends, excluding REIT and bond-fund distributions.
-    PLACEHOLDER pending ICI/SOI measurement (PHASE0_NOTES.md).
+    C corporation share of dividends, excluding REIT and bond fund distributions.
+    A placeholder pending measurement against ICI and SOI data.
 
 omega_kg:
   value: 0.50
   kind: judgment
   note: >
-    C-corp equity share of realized long-term capital gains (stock and fund
-    shares, versus pass-through sales, real estate and other). PLACEHOLDER ~0.5
-    prior pending SOI sale-of-capital-assets measurement (PHASE0_NOTES.md).
+    C corporation equity share of realized long-term capital gains, being stock and
+    fund shares against pass-through sales, real estate and the rest. A placeholder
+    prior pending measurement against the SOI sales of capital assets data.
 
 kappa:
   value: 0.40
   kind: judgment
   note: >
-    C-corp share of the economy-wide normal-capital stock (D15). The migrated
-    normal burden splits (1 - kappa) to noncorporate lines and retains kappa on
-    corporate flows. PLACEHOLDER 0.40 prior pending the Fed Z.1 pull; the
-    owner-occupied-housing definitional fork sets sweep corners {~0.25, ~0.4,
-    ~0.5}.
+    C corporation share of the economy-wide normal capital stock. The migrated
+    normal burden retains this share on corporate flows and splits the rest to
+    noncorporate lines. A placeholder prior pending the Fed Z.1 pull; how
+    owner-occupied housing is defined sets the sweep corners, near 0.25, 0.4 and
+    0.5.
 
 theta:
   value: 1.0
   kind: judgment
   note: >
-    US-taxable exposure scale on the flow factor phi = -theta * h_c / pi.
-    Absorbs the NIPA-economic versus US-taxable profit wedge. PLACEHOLDER 1.0
-    (pro-rata: every distribution scales by the aggregate after-tax-profit hit
-    share) pending Rosenthal-Austin / Z.1 measurement.
+    US-taxable exposure scale on the flow factor:
+
+      phi = -theta * h_c / pi
+
+    It absorbs the wedge between NIPA economic and US-taxable profit. A placeholder
+    at 1.0, scaling every distribution by the aggregate after-tax profit hit,
+    pending measurement against Rosenthal-Austin and Z.1.
 
 theta_res:
   value: 0.40
   kind: judgment
   note: >
-    Foreign / nonprofit / DB residual share of the wedge. Used ONLY by the
-    conservation diagnostic's B_res line (D3/D10 -- the honest unallocated
-    remainder; nothing grosses up to force household hits to sum to the revenue
-    line). PLACEHOLDER 0.40 from Rosenthal-Austin (~26% foreign, plus
-    nonprofits/insurers and the DB slice) pending Phase-0c measurement. Equal to
-    distribution.corp_foreign_share by coincidence -- do NOT merge them.
+    Share of the wedge borne by foreign owners, nonprofits and defined benefit
+    plans. Only the conservation diagnostic's residual line reads it, as the
+    unallocated remainder; nothing is grossed up to make the household hits sum to
+    the revenue line. A placeholder from Rosenthal-Austin, 26% foreign plus
+    nonprofits, insurers and the defined benefit slice, pending measurement. It
+    equals distribution.corp_foreign_share by coincidence; they are separate
+    values.
 
 equity_premium:
   value: 0.05
   kind: judgment
   note: >
-    Fixed equity risk premium added to nominal tsy_10y (Macro-Projections,
-    enactment year) to form the equity discount rate. Distributions are nominal,
-    so r is nominal -- the house Fisher-deflation convention applies to
-    real-utility discounting, not nominal-flow PV. mu is r-free in the permanent
-    central case; r shapes only temporary-shock annuities and the migration PV.
+    Equity risk premium added to the nominal ten-year Treasury rate in the
+    enactment year to form the equity discount rate. Distributions are nominal so
+    the rate is nominal; the house convention of deflating by expected inflation
+    applies to discounting real utility, not to a present value of nominal flows.
+    The markdown does not depend on the rate in the permanent case: the rate shapes
+    only the temporary-shock annuities and the migration present value.
 
 asset_exposure_equities:
   value: 1.00
   kind: judgment
   note: >
-    Corporate-equity exposure of value.equities, used for the balance-sheet
-    markdown. PLACEHOLDER pending external measurement.
+    Corporate equity exposure of value.equities, used for the balance sheet
+    markdown. A placeholder pending external measurement.
 
 asset_exposure_dc:
   value: 0.55
   kind: judgment
-  note: Corporate-equity exposure of value.dc. PLACEHOLDER pending external measurement.
+  note: Corporate equity exposure of value.dc. A placeholder pending measurement.
 
 asset_exposure_trusts:
   value: 0.50
   kind: judgment
-  note: Corporate-equity exposure of value.trusts. PLACEHOLDER pending external measurement.
+  note: Corporate equity exposure of value.trusts. A placeholder pending measurement.
 
 asset_exposure_re_fund:
   value: 0.30
   kind: judgment
-  note: Corporate-equity exposure of value.re_fund. PLACEHOLDER pending external measurement.
+  note: Corporate equity exposure of value.re_fund. A placeholder pending measurement.
 
 #-------------------------------------------------------------------------------
 # Structural
@@ -123,5 +131,5 @@ priced_as_permanent:
   value: false
   kind: structural
   note: >
-    Sweep corner: when true, a temporary wedge is priced by the equity market as
-    if permanent. Default false (the market sees the sunset).
+    When true, the equity market prices a temporary wedge as if it were permanent.
+    The default is that the market sees the sunset.

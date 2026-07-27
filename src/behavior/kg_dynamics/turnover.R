@@ -2,30 +2,20 @@ do_kg_dynamics = function(tax_units, baseline_mtrs, static_mtrs,
                           scenario_info, indexes) {
 
   #----------------------------------------------------------------------------
-  # Pure allocator: reads the precomputed bathtub state for this year and
-  # applies the cell-level rate / lock-in / deemed quantities to records via
-  # kg_dyn_apply_to_records().
+  # Reads the year's state file and applies the cell results to records. All of the
+  # work is done in the pre-pass; this module only allocates.
   #
-  # The bathtub pre-pass runs in run_bathtub_pass() (src/sim/run.R) for
-  # main.R sequential mode and in src/slurm/bathtub.R for the SLURM pipeline.
-  # That pre-pass solves the representative-cell Bellman backward induction
-  # on the extended age grid [18, 119] to produce a scenario realization
-  # rate r_D_S(a, t), then runs the bathtub recurrence
-  # (kg_dyn_step_recurrence) on the bathtub grid [18, 80] for dG evolution
-  # and channel decomposition. Per-year state files are at:
+  # The pre-pass runs in run_bathtub_pass() in sequential mode and in
+  # src/slurm/bathtub.R under SLURM. It solves each cell's realization choice, steps
+  # the stock of unrealized gains forward, and writes one file per year to the
+  # scenario's conventional supplemental folder. Each file carries the year's
+  # treatment of gains at death and a table of cells, holding both the three
+  # quantities the allocation needs and the diagnostics behind them.
   #
-  #   {scenario_output}/conventional/supplemental/kg_dynamics_state/{year}.rds
+  # Not compatible with the simple elasticity modules under src/behavior/kg/.
   #
-  # Each state file is list(regime, cell_table). The cell_table carries the
-  # Bellman diagnostics (W_B, W_S, MC_B, MC_S, kappa, r_D_B, r_D_S), the
-  # single-pool level/timing rate diagnostics (r_ordinary_*, r_planned_*), and
-  # the applier inputs (rate_factor, extra_R, deemed_factor). All math is in
-  # the bathtub; this module does no recurrence work.
-  #
-  # NOT compatible with the legacy kg/*.R modules.
-  #
-  # Returns: tibble of tax units with adjusted kg_lt (deemed enters as the
-  #          mortality-weighted expectation; no stochastic decedent draw).
+  # Returns: tax units with kg_lt adjusted. Gains at death enter as an expectation
+  #          weighted by mortality, not by drawing decedents (df).
   #----------------------------------------------------------------------------
 
   year       = tax_units$year[1]

@@ -1,7 +1,7 @@
 #-------------------------------------------------------------------------------
 # timing.R
 #
-# Short-run realization timing overlay (planned-timing schedule, r_S).
+# Contains functions to retime realizations across nearby years
 #-------------------------------------------------------------------------------
 
 
@@ -14,16 +14,21 @@ kg_dyn_build_planned_timing = function(baseline_cells, tau_S_mat, years,
                                                       KG_DYN_AGE_MAX,
                                        tie_tol = 1e-12) {
 
-  # The short-run timing overlay. For each (age, source-year u), the
-  # timeable share of baseline dollars (timeable_share * R_B, drawn from the
-  # WHOLE pool) looks at the policy-induced wedge tau_S - tau_B over [u-H, u+H]
-  # and routes toward the best year v* (lowest wedge; ties broken by nearest,
-  # then earlier). Move fraction = clamp((wedge[u] - wedge[v*]) / ref_wedge, 0,
-  # 1); the complement stays at u. Using tau_S - tau_B (not just tau_S) keeps
-  # the rule policy-driven so baseline-only runs don't retime dollars.
-  # Callers pass the LAW-ONLY reform tau (aggregated from mtr_kg_lt_lawonly) as
-  # tau_S_mat, so the wedge is statutory-only and identically zero when the
-  # living-side schedule matches baseline.
+  # Moves retimeable realizations toward whichever nearby year is cheapest.
+  #
+  # For each age and year, the retimeable share of that year's baseline
+  # realizations compares the rate change across the window of years on either
+  # side and looks for the lowest. Ties go to the nearest year, and then to the
+  # earlier one. The share that actually moves is the rate saving over the
+  # reference wedge, capped at 1; the rest stays put.
+  #
+  # The comparison is on the change in the rate rather than its level, so a
+  # baseline run retimes nothing. Callers pass rates measured on law alone, which
+  # makes the change exactly zero when the schedule faced during life is
+  # unchanged.
+  #
+  # Returns: list of baseline and scenario retimeable realizations, and the
+  #          difference between them.
 
   kg_dyn_validate_timing_params(timeable_share = timeable_share,
                                 timing_window  = timing_window,
@@ -88,18 +93,23 @@ kg_dyn_build_planned_timing = function(baseline_cells, tau_S_mat, years,
 kg_dyn_build_scenario_rate = function(baseline_t, r_ordinary_S,
                                       R_planned_B_col, R_planned_S_col) {
 
+  # Combines the long-run response with the retiming to give the scenario's
+  # realization rate for one year.
+  #
+  # Returns: list of the rate, its unclipped value, which cells were clipped, and
+  #          the retimed and long-run pieces it was built from.
+
   G_B = baseline_t$G_B
   r_B = baseline_t$r_B
 
   r_planned_B  = ifelse(G_B > 0, R_planned_B_col / G_B, 0)
   r_planned_S  = ifelse(G_B > 0, R_planned_S_col / G_B, 0)
-  # Single pool: the level rate the Bellman anchors on is the full baseline rate.
   r_ordinary_B = r_B
 
-  # Full-pool Bellman level response (r_ordinary_S = pass2 r_D) plus the NET
-  # short-run timing shift. The shift nets to zero under a uniform permanent
-  # shock (no year is cheaper), so it leaves the long-run level response intact;
-  # at baseline r_ordinary_S = r_B and r_planned_S = r_planned_B, so r_S = r_B.
+  # The long-run response plus the net retiming. Under a permanent uniform rate
+  # change no year is cheaper than another, so the retiming nets to zero and the
+  # long-run response stands alone. At the baseline both pieces cancel and the
+  # rate is the baseline rate.
   r_S_unclipped = r_ordinary_S + (r_planned_S - r_planned_B)
   r_S           = pmin(pmax(r_S_unclipped, 0), 1)
 

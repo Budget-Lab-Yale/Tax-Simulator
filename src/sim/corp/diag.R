@@ -1,48 +1,45 @@
 #-------------------------------------------------------------------------------
 # diag.R
 #
-# Conservation diagnostic and the analytic path self-check.
+# Contains functions to reconcile the corporate channel and to check its paths
 #-------------------------------------------------------------------------------
 
 
 #-------------------------------------------------------------------------------
-# Conservation diagnostic (FORMAL_MODEL section 4, as amended by the external
-# review: the three-way identity w = B_flow + B_accr + B_res is a REPORT --
-# B_res is residually defined -- while the TESTABLE content is the per-line
-# analytic-intended vs record-realized reconciliation. WARN-level; promote to
-# hard-error only after the permanent + windowed test scenarios pin sign
-# behavior and tolerances. Invariant 2 (markdown telescoping) is already a
-# hard assert inside corp_resolve_paths.)
+# Reconciliation
+#
+# The corporate revenue change ought to equal what households lose in flows, plus
+# what they lose in asset value, plus what falls on foreign owners, nonprofits and
+# pension sponsors. That is a report rather than a test: the last piece is defined
+# as whatever is left over.
+#
+# What can actually be tested is each line separately: what the paths said would
+# be applied against what the records show was applied. That runs at warning level.
+# Promote it to an error once the permanent and windowed test scenarios have pinned
+# down the signs and tolerances. The one hard check, that the markdown is
+# consistent with itself, already runs inside corp_resolve_paths().
 #-------------------------------------------------------------------------------
 
 corp_write_conservation_diag = function(pre, post, paths, year, conv_root) {
 
   #----------------------------------------------------------------------------
-  # Writes conventional/supplemental/corp_conservation_diag_{t}.csv (estate-
-  # allocator-diag precedent) for one CY year, from the pre- and post-applier
-  # frames (row-aligned; final conventional pass only).
+  # Writes one reconciliation file per year, from the record frames before and
+  # after the corporate step. Runs on the final conventional pass only.
   #
-  # Columns:
-  #   - inputs/paths: w, phi, mu, eta, roll, sigma_n/kappa/theta_res knobs
-  #   - per-line reconciliation ($B): dY_{div,int,rent,pt}_realized (measured
-  #     by differencing the frames -- INDEPENDENT of the applier's analytic
-  #     accumulation) vs their sum dY_total_analytic (= sum w*corp_dY_exog,
-  #     the applier's accumulated column). A gap flags a weights bug, a
-  #     missed/overwritten line, or clamping. WARN beyond tolerance.
-  #   - B_flow_hh = -sum(w * corp_dY_exog): the household external-income
-  #     burden flow (positive under a hike);
-  #   - markdown_position_hh = sum(w * per-record markdown dollars): the
-  #     household PV markdown POSITION at t (a stock; its year-over-year
-  #     movement is the B_accr flow -- difference the per-year files, or see
-  #     the bathtub state's corp_gain_debit for the kg slice);
-  #   - B_res_theta = theta_res * w (D3/D10 foreign/nonprofit/DB slice) and
-  #     drho_int (the named delta-rho revaluation line: undelivered unrolled-
-  #     interest compression, D15/P14);
-  #   - residual_unallocated = w - B_flow_hh - B_res_theta - drho_int: the
-  #     honest unallocated remainder REPORT (no gross-up forces this to zero;
-  #     it also absorbs the accrual flow not measured here).
+  # The file carries the year's inputs and paths, then the reconciliation itself:
+  # what was applied to each income line, measured by differencing the two frames,
+  # against the total the step accumulated as it went. A gap between them points to
+  # a weighting error, a line that was missed or overwritten, or something being
+  # clamped.
   #
-  # Returns: invisibly the one-row diag tibble.
+  # It then carries the household loss in flows, the household markdown position,
+  # the share falling on foreign owners, nonprofits and pension sponsors, the
+  # revaluation of debt that has not yet rolled over, and finally whatever is
+  # unaccounted for. Nothing is grossed up to force that last figure to zero. It
+  # also absorbs the change in asset values, which is not measured here: the
+  # markdown position is a stock, so difference it across years to get the flow.
+  #
+  # Returns: invisibly the one-row table.
   #----------------------------------------------------------------------------
 
   i = match(year, paths$sim$year)
@@ -76,8 +73,8 @@ corp_write_conservation_diag = function(pre, post, paths, year, conv_root) {
 
   dY_total_analytic = sum(w8 * replace_na(post$corp_dY_exog, 0)) * toB
 
-  # Household markdown position, re-measured from the exposed value.* deltas
-  # (independent of the applier's internal markdown_amt).
+  # The household markdown, measured again from the change in asset values rather
+  # than taken from the step that applied it.
   md = rep(0, nrow(pre))
   for (a in intersect(names(corp_asset_exposure()), names(pre))) {
     md = md + (replace_na(pre[[a]], 0) - replace_na(post[[a]], 0))
@@ -109,7 +106,7 @@ corp_write_conservation_diag = function(pre, post, paths, year, conv_root) {
                            economy_param('corp', 'theta_res') * p$w - p$drho_int
   )
 
-  # The testable content: analytic accumulation vs frame-measured realization.
+  # The part that is actually a test: what the paths said against what happened.
   gap = abs(dY_total_realized - dY_total_analytic)
   if (gap > max(0.05, 0.005 * abs(dY_total_analytic))) {
     warning(sprintf(paste0(
@@ -130,27 +127,30 @@ corp_write_conservation_diag = function(pre, post, paths, year, conv_root) {
 
 
 #-------------------------------------------------------------------------------
-# Self-checks on synthetic inputs (callable from the test harness / sbatch
-# verification; NOT run at source time)
+# Checks on made-up inputs, called by the test harness rather than at source time
 #-------------------------------------------------------------------------------
 
 corp_selfcheck_paths = function() {
 
   #----------------------------------------------------------------------------
-  # Drives corp_build_paths_core with synthetic series and asserts the plan's
-  # unit properties:
-  #   1. PERMANENT, sigma_n = 0 (rent-only corner): mu_t constant across the
-  #      live window and equal to theta * (w/pi share) -- the Delta-tau/(1-tau)
-  #      equivalent (P1); dividend factor mirrors it via omega_div.
-  #   2. PERMANENT, sigma_n > 0: mu_t decays MONOTONICALLY toward the
-  #      rent-share floor sigma-split (P14/D14): late-horizon mu ->
-  #      (1 - sigma_n) * (w/pi constant share).
-  #   3. WINDOWED (zero beyond horizon): M_t = 0 (and mu_t = 0) for all years
-  #      at/after expiry (P3); under priced_as_permanent the same input keeps
-  #      mu > 0 through the window's end.
-  #   4. Telescoping + pre-enactment inertness via corp_assert_paths.
+  # Drives the path builder with made-up series, where the right answer is known,
+  # and checks four things.
   #
-  # Returns: TRUE invisibly; stops with a message on any violation.
+  # Under a permanent change falling entirely on above-normal returns, the markdown
+  # is constant over the window and equals the share of profit lost. The cut to
+  # dividends mirrors it.
+  #
+  # Under a permanent change with some of it on normal returns, the markdown falls
+  # steadily as that capital migrates away, toward the share falling on
+  # above-normal returns alone.
+  #
+  # Under a change that expires, the markdown is zero from the year of expiry
+  # onward. If markets are assumed not to believe the expiry, it stays positive
+  # through the window instead.
+  #
+  # And the markdown is consistent with itself, and nothing moves before enactment.
+  #
+  # Returns: invisibly TRUE; stops with a message on any violation.
   #----------------------------------------------------------------------------
 
   years_all = 2024:2200
@@ -172,7 +172,7 @@ corp_selfcheck_paths = function() {
                                   w_share * macro$pi_at[match(year, macro$year)],
                                   0))
 
-  # --- 1. permanent, rent-only ------------------------------------------------
+  # Permanent, entirely on above-normal returns
   p1 = corp_build_paths_core(perm_wedge, macro, sim_years, 'extend',
                              sigma_n = 0, kappa = 0.4, roll_fn = roll_fn,
                              pt_weight = 0.2)
@@ -188,7 +188,7 @@ corp_selfcheck_paths = function() {
          ' (the Delta-tau/(1-tau) equivalent).')
   }
 
-  # --- 2. permanent, migrating ------------------------------------------------
+  # Permanent, with capital migrating away
   sig = 0.375; kap = 0.4
   p2 = corp_build_paths_core(perm_wedge, macro, sim_years, 'extend',
                              sigma_n = sig, kappa = kap, roll_fn = roll_fn,
@@ -199,14 +199,14 @@ corp_selfcheck_paths = function() {
     stop('corp_selfcheck: permanent migrating mu is not weakly decaying.')
   }
   floor_share = (1 - sig) * w_share
-  # far tail: eta ~ 1 -> mu -> rent floor (+ small residual from the ramp)
+  # Once capital has fully turned over, only the above-normal share is left
   tail_mu = p2$by_year %>% filter(year == max(year)) %>% pull(mu)
   if (tail_mu < floor_share - 1e-3 || tail_mu > floor_share + 0.3 * sig * w_share) {
     stop('corp_selfcheck: far-tail mu = ', tail_mu,
          ' is not at the rent-share floor ', floor_share, '.')
   }
 
-  # --- 3. windowed ------------------------------------------------------------
+  # Expiring
   win_wedge = tibble(year = 2024:2040,
                      w = if_else(year >= 2026 & year <= 2031,
                                  w_share * macro$pi_at[match(year, macro$year)],

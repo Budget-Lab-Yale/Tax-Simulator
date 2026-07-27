@@ -1,13 +1,11 @@
-# GENERATED FILE -- do not hand-edit. Written by other/wealth_dynamics/write_profiles.py.
+# Generated file -- written by other/wealth_dynamics/write_profiles.py.
 #
-# Provenance for a TABLE-valued calibration: the saving-share surface and
-# transition matrix in this folder. The tables cannot carry their own
-# metadata, so it lives here, in the same vocabulary the scalar
-# calibration files use.
+# Provenance for the saving surface and transition matrix in this folder.
+# The tables cannot carry their own metadata, so it lives here, in the
+# same vocabulary the scalar calibration files use.
 #
-# The md5 of each table is recorded below. A table edited by hand after
-# generation no longer matches its hash, which is the one thing a
-# generated data file cannot tell you about itself.
+# The md5 of each table is recorded below, so that a table edited by hand
+# after generation no longer matches its hash.
 
 _channel:
   role: state
@@ -17,28 +15,28 @@ financing_profile:
   kind: calibrated
   set: '2026-07-07'
   target: >
-    Saving share s = 1 - MPC out of a PERSISTENT net income change, by age
-    and within-age net-worth percentile. Anchored on the cross-sectional
-    elasticity of consumption to permanent income (Straub 2019, eps ~ 0.7)
-    applied to consumption-to-income ratios by wealth rank (Mian-Straub-Sufi
-    2021), giving s ~ 0.10 at the bottom rising to ~0.80 at the top
-    percentile; age tilt from Fagereng-Holm-Natvik 2021, attenuated to zero
-    at top ranks per De Nardi-French-Jones 2010. Gradient shape
-    cross-checked against Dynan-Skinner-Zeldes 2004. Full memo:
+    Saving share, one less the marginal propensity to consume out of a
+    persistent net income change, by age and within-age net-worth
+    percentile. Anchored on the cross-sectional elasticity of consumption to
+    permanent income (Straub 2019, eps ~ 0.7) applied to
+    consumption-to-income ratios by wealth rank (Mian-Straub-Sufi 2021),
+    giving s ~ 0.10 at the bottom rising to ~0.80 at the top percentile; age
+    tilt from Fagereng-Holm-Natvik 2021, attenuated to zero at top ranks per
+    De Nardi-French-Jones 2010. Gradient shape cross-checked against
+    Dynan-Skinner-Zeldes 2004. Full memo:
     other/wealth_dynamics/default_s_calibration.md.
   derived_under: {}
   invalidated_by:
     - other/wealth_dynamics/write_profiles.py
   invalidated_by_hashes:
-    other/wealth_dynamics/write_profiles.py: df5f1cdc3142fa6ff888601dcb31621a
+    other/wealth_dynamics/write_profiles.py: 32852e31eaa6009612c6de2f867f1a18
   rederive: other/wealth_dynamics/write_profiles.py
   tables:
     s.csv: 05e353bfd1a82c9135a4af1b07ebac8f
     M.csv: f69080edc998607de4a401f01cecc732
   note: >
-    This profile is applied model-wide to any scenario whose economy leg
-    does not set financing_profile to none, so it is the single largest
-    lever on the wealth-bathtub channel. derived_under is deliberately
-    empty: the surface is a literature bridge computed in the generating
-    script, not a fit to model data, so no upstream data vintage can
-    invalidate it.
+    Applied to every scenario whose economy leg does not set
+    financing_profile to none, so it is the largest single lever on the
+    wealth bathtub. derived_under is empty because the surface is a bridge
+    from published elasticities computed in the generating script, not a fit
+    to model data, so no data vintage can invalidate it.

@@ -1,64 +1,65 @@
 #----------------------------------------------------------------------------
 # corp_alloc.R
 #
-# Shared, stock-based corporate-incidence allocator for the distribution
-# post-processing (distribution.R delta table and distribution_etrs.R levels
-# table). Single source of truth for:
-#   - which capital STOCKS bear the corporate tax (the Harberger base: the tax
-#     lowers the net return by Dr, so the burden is Dr*K, proportional to the
-#     STOCK; agencies use capital INCOME only because tax data lack a wealth
-#     measure -- we have one, so we use it),
-#   - the normal/supernormal split by provision type (sigma_N),
-#   - the foreign-borne haircut on the capital legs,
-#   - the owner-occupied-housing land/structure split.
+# Contains functions to spread corporate tax across households for the
+# distribution tables
+#-------------------------------------------------------------------------------
+
+# A corporate tax lowers the net return on capital, so the burden on a household is
+# that fall in the return times the capital it holds. It is therefore proportional
+# to the stock of capital, not to capital income. Other agencies allocate by capital
+# income because tax data carry no measure of wealth; this model has one.
 #
-# Reuses the src/sim/corp/ assumptions (corp.asset_exposure_*, sigma_N via
-# corp_env_knobs()) and the estate/wealth balance-sheet column vectors
-# (ESTATE_ASSET_COLS / ESTATE_DEBT_COLS, src/calc/functions/tax/estate.R) so
-# the net-capital base stays in lockstep with what estate + wealth call
-# "net worth". No phase-in: the split is fixed for both level and delta.
+# This file defines, for both the level and the delta tables, which capital stocks
+# bear the tax, how the burden splits between normal and above-normal returns, how
+# much of it falls on foreign owners, and how owner-occupied housing splits between
+# land and structures.
+#
+# The exposures and the normal-return share come from src/sim/corp/, and the balance
+# sheet from the estate tax's definition, so that the base here means the same thing
+# as net worth does elsewhere.
 #----------------------------------------------------------------------------
 
 
-# Foreign-borne share of the CAPITAL leg of corporate tax changes, excluded
-# from distribution tables rather than allocated to US households (the JCT
-# convention: JCX-14-13 excludes 20.6% as foreign-borne; CBO/OTA/TPC instead
-# allocate 100% to US households). Value = foreign share of total US corporate
-# equity, FDI + portfolio, publicly traded + closely held: 42% at end-2022
-# (Rosenthal & Mucciolo, Tax Notes Federal 183, 2024-04-01), rounded down --
-# note the denominator includes S-corp equity that foreigners are statutorily
-# barred from holding, biasing the C-corp share DOWN. The labor leg is NOT
-# haircut: wage incidence lands on US workers regardless of who owns the
-# equity. Conceptually distinct from corp.theta_res = 0.40 (src/sim/corp/:
-# foreign + nonprofit + DB residual, conservation diagnostic only) -- equal by
-# coincidence; do not merge. Tables no longer sum to the corporate revenue
-# line by construction (the remainder is foreign-borne). Moved here from
-# distribution.R so the delta and levels tables share one definition.
-# Value and provenance: config/scenarios/economy/default/distribution.yaml
-# (distribution.corp_foreign_share).
+# The share of the capital burden falling on foreign owners, which is left out of
+# the distribution tables rather than allocated to US households. That follows JCT,
+# which excludes a foreign share; CBO, OTA and TPC instead allocate all of it
+# domestically.
+#
+# The value is the foreign share of US corporate equity, direct and portfolio,
+# publicly traded and closely held: 42% at the end of 2022 (Rosenthal and Mucciolo,
+# Tax Notes Federal 183, April 2024), rounded down. Note that the denominator there
+# includes S corporation equity, which foreigners may not hold, so the share of
+# C corporation equity is understated.
+#
+# The labor burden is not reduced: wages fall on US workers whoever owns the equity.
+#
+# This is a different quantity from corp.theta_res, which covers foreign owners,
+# nonprofits and pension sponsors together and is used only in the reconciliation.
+# The two happen to be close; do not merge them.
+#
+# Because of this the tables no longer sum to the corporate revenue line. The
+# difference is the foreign share. Value in the economy leg's distribution.yaml.
 
 
-# Owner-occupied-housing structure share. Under Harberger, capital migrates
-# across sectors until after-tax returns equalize; the mobile-capital margin is
-# reproducible STRUCTURES, not residential LAND (a fixed factor whose incidence
-# runs through capitalization/asset prices, not through capital flowing "into"
-# land). So owner-occupied housing enters the all-capital base only to the
-# extent of its structure component: structure_share * net home equity.
-# Residential land (1 - structure_share) is excluded. 0.70 is a national-average
-# simplification (BEA current-cost net stock of residential structures is
-# roughly two-thirds to low-70s of the Fed's owner-occupied real estate
-# aggregate; the Fed measure is broader, including vacant land and mobile
-# homes). PLACEHOLDER pending a per-record or geography-varying split.
-# Override assumption.distribution.housing_structure_share to sweep the 0.60 /
-# 1.00 sensitivity cases (1.00 = no land split, full net home equity).
-# Value and provenance: config/scenarios/economy/default/distribution.yaml.
+# How much of owner-occupied housing counts as capital that can move between uses.
+# Capital shifts across sectors until after-tax returns equalize, and what moves is
+# reproducible structures, not residential land. Land is a fixed factor: a tax on it
+# is capitalized into its price rather than driving capital out of it. So a home
+# enters the capital base only to the extent of its structure component.
+#
+# The 0.70 is a national average and a simplification. The BEA net stock of
+# residential structures is roughly two thirds to low seventies of the Fed's
+# owner-occupied real estate figure, which is broader and includes vacant land and
+# mobile homes. A placeholder pending a split that varies by record or geography.
+# Set it to 1 to include the whole of net home equity. Value in the economy leg's
+# distribution.yaml.
 
 
-# Owner-occupied residential real estate on the asset side, and the mortgages
-# secured against it on the debt side. The structure share applies to net home
-# equity = (homes) - (mortgages); value.re_fund is deliberately NOT here (it is
-# investment/pooled real estate, reproducible mobile capital, kept at full
-# weight). Derived from the estate/wealth balance-sheet vectors so there is one
+# Homes on the asset side and the mortgages against them on the debt side. The
+# structure share applies to the equity between them. Pooled real estate investment
+# is deliberately excluded, being mobile capital and kept at full weight. Derived
+# from the balance sheet definition so there is one
 # definition of the household balance sheet.
 DIST_HOUSING_ASSET_COLS = c('value.primary_home', 'value.other_home')
 DIST_HOUSING_DEBT_COLS  = c('value.primary_mortgage', 'value.other_mortgage')
@@ -68,9 +69,9 @@ DIST_HOUSING_DEBT_COLS  = c('value.primary_mortgage', 'value.other_mortgage')
 dist_housing_structure_share = function() {
 
   #----------------------------------------------------------------------------
-  # Structure share of owner-occupied housing. Override per scenario with
-  # assumption.distribution.housing_structure_share for the land-split
-  # sensitivity sweep (0.60 conservative / 0.70 central / 1.00 no split).
+  # Structure share of owner-occupied housing. An economy alternative overrides
+  # distribution.housing_structure_share for the land-split sensitivity, at 0.60,
+  # the central 0.70, or 1.00 for no split.
   #
   # Returns: structure share in [0, 1] (dbl).
   #----------------------------------------------------------------------------
@@ -97,9 +98,9 @@ read_corp_alloc_stock_keys = function(baseline_id, yr) {
   # single Tax-Data read serves both the allocator and the income defs.
   #
   # Parameters:
-  #   - baseline_id (str) : baseline scenario ID (its Tax-Data interface path is
-  #                         used even under a dep.Tax-Data.ID override, so the
-  #                         base is a fixed reference balance sheet)
+  #   - baseline_id (str) : baseline scenario ID. Its Tax-Data path is read even
+  #                         when a scenario pins a different one, so the base is a
+  #                         fixed reference balance sheet
   #   - yr          (int) : year of the tax_units_<yr>.csv file
   #
   # Returns: tibble keyed by id with

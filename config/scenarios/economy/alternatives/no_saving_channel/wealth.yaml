@@ -1,6 +1,6 @@
-# Saving-financing channel off, everything else at the model default. Used by the
-# OBBBA retrospective smoke fixture, which is checking the reversion stack rather
-# than the wealth channel.
+# Saving-financing channel off, with everything else at the model default. Read by
+# the OBBBA retrospective fixture, which checks the reversion stack rather than the
+# wealth channel.
 
 financing_profile:
   value: none

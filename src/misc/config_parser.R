@@ -1,26 +1,25 @@
 #-----------------------------------------------------------------------
 # config_parser.R
 #
-# Parses runtime options and the runscript, resolves each scenario's
-# three-leg configuration (tax_law pointer, economy leg, behavior leg),
-# builds version-consistent interface paths, and writes the run manifest.
+# Contains functions to parse the runscript and resolve each scenario's
+# configuration
 #
-# A scenario row is exactly: ID + three leg pointers (tax_law, economy,
-# behavior) + computational scope (years, dist_years, mtr_vars, mtr_types).
-# It names FILES, never values -- every value the runscript used to carry
-# now lives in a folder under config/scenarios/{leg}/alternatives/, which is
-# what gives it provenance. Any other column is fatal, with a message naming
-# its replacement (see config/scenarios/README.md).
+# A scenario row is an ID, pointers to its tax law, economy and behavior, and the
+# scope of the computation: which years to run, which to build distribution tables
+# for, and which marginal tax rates to calculate. It names folders, never values.
+# Every value a runscript used to carry now lives in a folder instead, which is
+# what gives it a record of where it came from. Any other column stops the run,
+# with a message naming what replaced it.
 #-----------------------------------------------------------------------
 
 
-# The runscript schema, in full. Anything else is fatal: a value that used to
-# be a CSV cell now belongs in an alternative folder, and a typo should die at
-# parse rather than silently do nothing.
+# The whole runscript schema. Anything else stops the run: a value now belongs in
+# an alternative folder, and a misspelled column should fail rather than be
+# ignored.
 RUNSCRIPT_FIXED_COLS = c('ID', 'tax_law', 'economy', 'behavior', 'years',
                          'dist_years', 'mtr_vars', 'mtr_types')
 
-# Retired column -> replacement, for the hard-error message.
+# What each retired column was replaced by, for the error message
 ALT_HINT = paste0('an economy alternative folder ',
                   '(config/scenarios/economy/alternatives/<name>/')
 GONE = 'nothing -- the excess-growth machinery was removed from the model'
@@ -44,9 +43,8 @@ RUNSCRIPT_RETIRED = c(
 validate_runscript_columns = function(runscript, runscript_name) {
 
   #----------------------------------------------------------------------------
-  # Enforces the three-leg runscript schema: the eight fixed columns and
-  # nothing else. Collects ALL violations and stops once, mapping each retired
-  # column to its replacement.
+  # Checks the runscript's columns: the eight above and nothing else. Collects
+  # every problem and stops once, naming what replaced each retired column.
   #----------------------------------------------------------------------------
 
   cols = colnames(runscript)
@@ -110,13 +108,13 @@ validate_runscript_columns = function(runscript, runscript_name) {
 read_runscript = function(runscript_name, scenario_id) {
 
   #----------------------------------------------------------------------------
-  # Reads and validates a runscript CSV, fills absent optional leg columns,
-  # and subsets to the requested scenario. The baseline row is always
-  # retained: whether baseline actually RUNS is governed by baseline_vintage
-  # (main.R / src/slurm/setup.R), but its interface paths and scenario info
-  # must remain resolvable either way -- post-processing looks them up by
-  # ID == 'baseline' (e.g. get_other_taxes() in distribution.R), and dropping
-  # the row crashes Phase 3b in scenario-subset runs.
+  # Reads and checks a runscript, filling in any leg column left out and cutting to
+  # the requested scenario.
+  #
+  # The baseline row is always kept. Whether the baseline actually runs depends on
+  # whether an existing one was supplied, but its paths must stay resolvable either
+  # way: post-processing looks the baseline up by name, and dropping the row breaks
+  # a run of a single scenario.
   #----------------------------------------------------------------------------
 
   runscript = runscript_name %>%
@@ -149,9 +147,9 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
                          baseline_vintage, pct_sample, multicore) {
 
   #----------------------------------------------------------------------------
-  # Parses data interface versioning requirements and the runscript, resolves
-  # every scenario's economy and behavior legs, generates version-consistent
-  # interface filepaths (confirming they exist), and writes the run manifest.
+  # Parses the runtime arguments and the runscript, resolves every scenario's
+  # economy and behavior legs, builds and checks the paths to the input data, and
+  # writes the run manifest.
   #
   # Parameters:
   #   - runscript_name (str)   : name of runscript CSV file
@@ -194,18 +192,18 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
   #   - economy_defaults / behavior_defaults : each leg's default layer
   #----------------------------------------------------------------------------
 
-  # Set random seed. Stored in the returned globals so behavior modules can
-  # re-seed before RNG use (the CLAUDE.md module convention) and so SLURM
-  # workers -- fresh R processes that never run this function -- can seed
-  # identically (src/slurm/common.R). This block stays FIRST: nothing between
-  # here and the sample_frac/runif block below may consume RNG, or every draw
-  # in the model shifts.
+  # Set the random seed. It is returned so that behavior modules can re-seed before
+  # drawing, and so that SLURM workers, which are new R processes that never run
+  # this function, seed the same way.
+  #
+  # This block stays first. Nothing between here and the draws below may use the
+  # generator, or every random number in the model shifts.
   random_seed = 76
   set.seed(random_seed)
 
-  # Read interface metadata: type + version per interface. (Interface VINTAGES
-  # are economy-leg configuration; the version is repo-pinned here because it
-  # tracks code compatibility, not world description.)
+  # Read each input interface's type and version. The vintage is scenario
+  # configuration, but the version is pinned here, because it tracks which code the
+  # interface is compatible with rather than anything about the world.
   output_roots           = read_yaml('./config/output_roots.yaml')
   interface_versions_raw = read_yaml('./config/interfaces/interface_versions.yaml')
   interface_meta = names(interface_versions_raw) %>%
@@ -257,15 +255,15 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     }
   }
 
-  # Read and validate runscript (strict three-leg schema; baseline row retained)
+  # Read and check the runscript
   runscript = read_runscript(runscript_name, scenario_id)
 
   # Load each leg's default layer.
   economy_defaults  = config_load_defaults('economy')
   behavior_defaults = config_load_defaults('behavior')
 
-  # Resolve every scenario's legs and interface paths, and run the parse-time
-  # staleness check (once, here, rather than per worker mid-array).
+  # Resolve every scenario's legs and input paths, and check for stale
+  # calibrations. Done once here rather than in each worker.
   scenario_configs = resolve_all_scenarios(
     runscript         = runscript,
     economy_defaults  = economy_defaults,
@@ -273,9 +271,8 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     interface_meta    = interface_meta
   )
 
-  # Flat ID-interface-path view, in runscript row order then interface_meta
-  # order. Row 1 is the baseline row's first interface by convention
-  # (interface_root() relies on the baseline row leading).
+  # One row per scenario and interface, in runscript order. The baseline row comes
+  # first, which interface_root() relies on.
   interface_paths = names(scenario_configs) %>%
     map(.f = function(id) {
       tibble(
@@ -310,16 +307,14 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     stop("Invalid argument for 'multicore' runtime parameter")
   }
 
-  # Tax unit IDs in sample. The id universe is the UNION of ids across all
-  # simulation years: Tax-Data adds records in projection years (e.g. new
-  # top-tail entrants absent from earlier files), so an id set built from any
-  # single year silently drops them from every year of the simulation.
-  # (Caught 2026-06-10 via the estate tax: the previous 2017-based id set
-  # dropped 935 weight-1 records on vintage 2026060918 — all with gross
-  # wealth above $50M, $8.2T in total — depressing expected estate tax ~30%.)
-  # KNOWN LIMITATION (pre-dates the redesign, preserved for byte-identity):
-  # the universe is read from the FIRST runscript row's Tax-Data root even if
-  # another scenario overrides the Tax-Data vintage.
+  # Which tax units are in the sample. Take the union of IDs across all simulation
+  # years: Tax-Data adds records in projection years, including new entrants at the
+  # top of the distribution, so an ID set built from any single year drops them from
+  # every year of the run. Building it from 2017 alone once dropped 935 records
+  # holding $8.2T in wealth, which cut expected estate tax by about a third.
+  #
+  # Note that the universe is read from the first runscript row's Tax-Data even
+  # where another scenario uses a different vintage.
   tax_data_root = interface_paths %>%
     filter(interface == 'Tax-Data') %>%
     slice(1) %>%
@@ -339,9 +334,9 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     sample_frac(size = pct_sample) %>%
     get_vector('id')
 
-  # Precalculate random numbers for consistency across scenarios. Keyed by
-  # id and JOINED to tax units each year (run_one_year): the per-year id
-  # universe varies, so positional binding would misalign draws.
+  # Draw the random numbers up front so they are the same across scenarios. Keyed
+  # by ID and joined to tax units each year: the set of IDs varies by year, so
+  # binding them by position would misalign the draws.
   random_numbers = tibble(
     id                = sample_ids,
     r.bus_loss        = runif(length(sample_ids)),             # Excess business loss limitation eligibility rate
@@ -400,20 +395,17 @@ resolve_all_scenarios = function(runscript, economy_defaults, behavior_defaults,
                                  interface_meta) {
 
   #----------------------------------------------------------------------------
-  # Resolves every runscript row's economy and behavior legs, builds the
-  # scenario's interface paths from the resolved vintages, and runs the
-  # parse-time checks: economy staleness, and the shape of the behavior stack.
+  # Resolves every scenario's economy and behavior legs, builds its input paths
+  # from the resolved vintages, and runs the checks: stale calibrations, and the
+  # shape of the behavior list.
   #
-  # Both legs resolve here rather than at scenario time so that a runscript
-  # naming a folder that does not exist, a module file that was deleted, or an
-  # inconsistent kg binding fails in the first seconds of the run instead of an
-  # hour in. The behavior spec rides inside the resolved behavior object, so
-  # every SLURM driver that already carries scenario_info gets it for free.
+  # Both legs resolve here rather than when the scenario runs, so that a runscript
+  # naming a folder that does not exist, a module that was deleted, or an
+  # inconsistent gains binding fails in the first seconds rather than an hour in.
+  # The resolved behavior list travels inside the scenario object, so every SLURM
+  # driver already has it.
   #
-  # Returns: named-by-ID list of
-  #   - economy, behavior : config_resolve() outputs; behavior$spec is the
-  #                         resolved module stack (see behavior_resolve())
-  #   - interface_paths   : named list, interface name -> path
+  # Returns: list by scenario ID of the two resolved legs and the input paths.
   #----------------------------------------------------------------------------
 
   out = list()
@@ -425,15 +417,15 @@ resolve_all_scenarios = function(runscript, economy_defaults, behavior_defaults,
     economy = config_resolve('economy', economy_defaults,
                              alternative = row$economy)
 
-    # The behavior leg holds no value entries (its modules carry their own
-    # parameters), so config_resolve() here only validates the folder; the
-    # stack itself comes from behavior.yaml via the loader.
+    # The behavior leg holds no values, since its modules carry their own
+    # parameters, so this only checks the folder. The module list itself comes from
+    # behavior.yaml.
     behavior      = config_resolve('behavior', behavior_defaults,
                                    alternative = row$behavior)
     behavior$spec = behavior_resolve(row$behavior)
     behavior_validate_spec(behavior$spec, id)
 
-    # Interface paths from the resolved vintages/IDs
+    # Input paths, from the resolved vintages
     interface_paths = interface_meta %>%
       map(.f = function(m) {
         v  = economy$values$interfaces[[paste0(m$key, '_vintage')]]
@@ -456,10 +448,10 @@ resolve_all_scenarios = function(runscript, economy_defaults, behavior_defaults,
       enforce            = CONFIG_ENFORCE_STALENESS
     )
 
-    # The same check over every calibration file this scenario points at. It runs
-    # here, next to the economy leg's, for the same reason: parse time is the one
-    # place both the main.R path and the SLURM path pass through, so a stale
-    # calibration cannot reach a cluster run unnoticed.
+    # The same check over every calibration file the scenario points at, run here
+    # for the same reason: parse time is the one place both the sequential and the
+    # SLURM paths pass through, so a stale calibration cannot reach a cluster run
+    # unnoticed.
     calib_check_staleness(
       behavior_spec      = behavior$spec,
       interface_vintages = interface_vintages,
@@ -481,25 +473,16 @@ write_run_manifest = function(output_root, runscript, scenario_configs,
                               behavior_defaults) {
 
   #----------------------------------------------------------------------------
-  # Writes the vintage-root manifest:
-  #   - dependencies.csv       : interface version/vintage/scenario per row
-  #                              (derived view of the economy leg's interfaces
-  #                              channel; kept for downstream tooling)
-  #   - scenarios.csv          : one row per scenario, the three leg pointers
-  #                              plus computational scope
-  #   - scenario_config.csv    : every resolved value across both legs with
-  #                              kind, role, override flag and source
-  #   - calibrations.csv       : per scenario, every calibration value in use,
-  #                              its file, its kind, and whether the scenario
-  #                              bound the file or read it from a fixed path
-  #   - behavioral_assumptions.csv : per scenario, the tax law, the behavior
-  #                              alternative, and the stack it resolved to
-  #                              (kg pieces + ordered module paths)
-  #   - code_version.csv       : git commit + dirty flag
+  # Writes the manifest at the root of the vintage, in six files: the input
+  # versions and vintages, the three leg pointers per scenario, every resolved
+  # value with its kind and whether the scenario overrode it, every calibration in
+  # use and where it came from, the behavior list each scenario resolved to, and
+  # the git commit the run was produced under.
+  #
+  # Returns: invisible NULL (writes files as a side effect)
   #----------------------------------------------------------------------------
 
-  # dependencies.csv -- deterministic order: runscript row order x
-  # interface_meta order. Columns match the historical shape.
+  # The input versions and vintages, in runscript order
   names(scenario_configs) %>%
     map(.f = function(id) {
       eco = scenario_configs[[id]]$economy
@@ -516,14 +499,14 @@ write_run_manifest = function(output_root, runscript, scenario_configs,
     bind_rows() %>%
     write_csv(file.path(output_root, 'dependencies.csv'))
 
-  # scenarios.csv -- the composition record
+  # What each scenario is made of
   runscript %>%
     mutate(economy  = replace_na(as.character(economy), 'default'),
            behavior = as.character(behavior)) %>%
     select(ID, tax_law, economy, behavior, years, dist_years, mtr_vars, mtr_types) %>%
     write_csv(file.path(output_root, 'scenarios.csv'))
 
-  # scenario_config.csv -- every resolved value, both legs
+  # Every resolved value, from both legs
   names(scenario_configs) %>%
     map(.f = ~ bind_rows(
       config_manifest('economy',  economy_defaults,
@@ -533,18 +516,17 @@ write_run_manifest = function(output_root, runscript, scenario_configs,
     bind_rows() %>%
     write_csv(file.path(output_root, 'scenario_config.csv'))
 
-  # calibrations.csv -- which calibration file supplied which value, and whether
-  # the scenario bound it or read it from a fixed path. Written so a past vintage
-  # can be read back without the code that produced it.
+  # Which calibration file supplied which value, and whether the scenario chose
+  # that file or read it from a fixed path. Written so that an old vintage can be
+  # read back without the code that produced it.
   names(scenario_configs) %>%
     map(.f = ~ calib_manifest(scenario_configs[[.x]]$behavior$spec, .x)) %>%
     bind_rows() %>%
     write_csv(file.path(output_root, 'calibrations.csv'))
 
-  # behavioral_assumptions.csv -- the response record. The behavior cell names a
-  # folder now, so the folder name alone would not tell a reader of an old
-  # vintage what actually ran: the resolved stack is written out alongside it,
-  # in execution order.
+  # What responses each scenario ran. The runscript names a folder, and the folder
+  # name alone would not tell a later reader what was in it, so the resolved list
+  # is written out too, in the order it ran.
   names(scenario_configs) %>%
     map(.f = function(id) {
       spec = scenario_configs[[id]]$behavior$spec
@@ -559,8 +541,8 @@ write_run_manifest = function(output_root, runscript, scenario_configs,
     bind_rows() %>%
     write_csv(file.path(output_root, 'behavioral_assumptions.csv'))
 
-  # Record the code version the run was produced under. Without this, the
-  # defaults in git cannot be reconstructed for a past vintage.
+  # The code the run was produced under, without which the configuration behind an
+  # old vintage cannot be recovered.
   tibble(
     commit = system2('git', c('rev-parse', 'HEAD'), stdout = TRUE, stderr = FALSE),
     dirty  = length(system2('git', c('status', '--porcelain'), stdout = TRUE, stderr = FALSE)) > 0
@@ -575,9 +557,8 @@ write_run_manifest = function(output_root, runscript, scenario_configs,
 ensure_scenario_dirs = function(scenario_info) {
 
   #----------------------------------------------------------------------------
-  # Creates a scenario's output directory tree. Called once per scenario by
-  # do_scenario() and src/slurm/setup.R -- get_scenario_info() itself is a
-  # pure lookup and no longer touches the filesystem.
+  # Creates a scenario's output folders. Called once per scenario;
+  # get_scenario_info() is a lookup and does not touch the filesystem.
   #----------------------------------------------------------------------------
 
   for (type in c('static', 'conventional')) {
@@ -599,9 +580,9 @@ ensure_scenario_dirs = function(scenario_info) {
 get_scenario_info = function(id, g = globals) {
 
   #----------------------------------------------------------------------------
-  # Given a scenario ID, assembles scenario-specific runtime information from
-  # the resolutions cached in globals. Pure lookup: no filesystem side
-  # effects (see ensure_scenario_dirs) and no re-resolution.
+  # Assembles one scenario's runtime information from what was already resolved at
+  # parse time. A lookup: it neither re-resolves anything nor touches the
+  # filesystem.
   #
   # Parameters:
   #   - id (str) : scenario ID
@@ -627,14 +608,13 @@ get_scenario_info = function(id, g = globals) {
     filter(ID == id) %>%
     as.list()
 
-  # Module paths for this scenario's behavioral feedback, already in execution
-  # order with the kg applier injected (see behavior_resolve()). NULL rather
-  # than character(0) when there is no response: run.R tests length() and the
-  # distinction never mattered, but NULL is what it has always been handed.
+  # The scenario's behavior modules, in the order they run and with the gains
+  # module added. NULL rather than an empty vector where there is no response, which
+  # is what run.R has always been given.
   behavior_modules = config$behavior$spec$modules
   if (length(behavior_modules) == 0) behavior_modules = NULL
 
-  # Years to run; distribution/microdata years default to all years
+  # Years to run. Distribution years default to all of them.
   years      = parse_year_spec(runscript_items$years)
   dist_years = if (is.na(runscript_items$dist_years)) years
                else parse_year_spec(runscript_items$dist_years)

@@ -15,9 +15,9 @@ do_employment = function(tax_units, ...) {
   # Returns: tibble of tax units with post-adjustment wage earnings values.
   #----------------------------------------------------------------------------
 
-  # Seed the RNG stream: the potential-wages draw below uses sample(), so
-  # without this the module's results depend on stream position (scenario /
-  # year order in main.R) and are non-reproducible in fresh worker processes
+  # Seed the random number generator. The draw below uses sample(), so without this
+  # the results depend on how much randomness has already been consumed, and differ
+  # between a sequential run and a fresh worker process
   set.seed(globals$random_seed)
 
   # Set elasticities

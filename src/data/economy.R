@@ -54,14 +54,13 @@ generate_indexes = function(macro_root, vat_price_offset) {
     select(series, year, growth) %>% 
     arrange(series, year)
 
-  # Prepend historical CPI growth rates (for capital gains basis indexation).
-  # The historical file also supplies the splice-year growth rate: the macro
-  # series' first year (1970) has NA growth -- there is no prior-year level to
-  # chain from -- so without the historical row that year's ~5.7% inflation
-  # would silently drop out of any chain spanning the splice (e.g. the CPI
-  # ratio for gains purchased before 1970). Keep a historical row for every
-  # year the macro cpi series lacks a valid growth rate, and drop the macro
-  # rows it replaces so (series, year) stays unique.
+  # Prepend historical CPI growth rates, used for capital gains basis indexation.
+  # The historical file also supplies the growth rate at the splice: the macro
+  # series' first year, 1970, has no prior-year level to chain from and so no
+  # growth rate, and without the historical row that year's 5.7% inflation drops
+  # out of any chain spanning the splice. Keep a historical row for every year the
+  # macro series lacks a valid growth rate, and drop the macro rows they replace so
+  # that series and year stay unique.
   cpi_splice = pre1970_cpi %>%
     anti_join(macro %>% filter(series == 'cpi', !is.na(growth)), by = 'year')
   macro %>%

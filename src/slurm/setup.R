@@ -24,8 +24,8 @@ suppressPackageStartupMessages(
   ))
 )
 
-# Source all function scripts. behavior/ is skipped for the reason main.R gives:
-# those modules are loaded by path at scenario time.
+# Source all function scripts. Behavior modules are loaded by path at scenario
+# time, for the reason main.R gives.
 return_vars = list()
 list.files('./src', recursive = T) %>%
   walk(.f = ~ {
@@ -105,14 +105,14 @@ for (sid in scenarios_to_build) {
   scenario_staging = file.path(staging_dir, sid)
   dir.create(scenario_staging, recursive = T, showWarnings = F)
 
-  # Get scenario info and create the output directory tree (build_tax_law
-  # below writes into supplemental/; get_scenario_info is a pure lookup)
+  # Get scenario info and create the output directory tree, which build_tax_law
+  # below writes into
   scenario_info = get_scenario_info(sid)
   ensure_scenario_dirs(scenario_info)
 
-  # Setup reads configuration too (build_tax_law, and the channel predicates
-  # further down decide which SLURM phases get emitted), so activate this
-  # scenario's legs before anything reads a value.
+  # Activate this scenario's legs before anything reads a value: build_tax_law
+  # reads configuration, and so do the channel predicates below that decide which
+  # phases are emitted.
   config_activate(economy  = scenario_info$resolved_economy,
                   behavior = scenario_info$resolved_behavior)
 
@@ -129,7 +129,7 @@ for (sid in scenarios_to_build) {
     vat_price_offset = vat_price_offset
   )
 
-  # Build tax law (also writes tax_law.csv to supplemental as side effect)
+  # Build tax law, which also writes tax_law.csv to supplemental
   tax_law = build_tax_law(scenario_info, indexes)
 
   # Serialize config
@@ -155,8 +155,8 @@ if (!has_baseline) {
   baseline_mtrs = cf_years %>%
     map(
       ~ {
-        # id plus the mtr_ columns only, resolved from the header: detail files
-        # are 98 columns / ~150MB (perf audit §2.7)
+        # Read id and the MTR columns only, resolved from the header. Detail
+        # files run to 98 columns and 150MB
         path = globals$baseline_root %>%
           file.path('baseline/static/detail', paste0(.x, '.csv'))
         keep = names(fread(path, nrows = 0)) %>%
@@ -181,25 +181,21 @@ if (!has_baseline) {
 # Build manifest
 #------------------
 
-# Phase encoding (string for clarity; old integer scheme is gone):
-#   '1'   baseline-year tasks         (parallel array; static-only)
-#   '1B'  cf frozen mechanical pass   (one job per cf; sequential within job;
-#                                      no-op for non-kg_dynamics scenarios;
-#                                      must precede 2A — static workers inject
-#                                      its state)
-#   '2A'  cf static-only year tasks   (parallel array)
-#   '2B'  cf bathtub pre-pass         (one job per cf; sequential within job;
-#                                      no-op for non-kg_dynamics scenarios)
-#   '2N'  cf conv-no-wealth year      (parallel array; only for s>0 wealth
-#                                      scenarios; produces ΔT⁰ ingredients +
-#                                      mtr_cap_bundle on the un-eroded base)
-#   '2W'  cf wealth bathtub pre-pass  (one job per s>0 cf; sequential within
-#                                      job; reads 2N + baseline detail, writes
-#                                      the per-year deficit state 2C applies)
-#   '2C'  cf conventional-only year   (parallel array)
+# The phases, in dependency order. A parallel array runs one task per scenario
+# and year; a pre-pass runs one job per scenario, sequentially within the job.
+#
+#   '1'   baseline years, static, parallel array
+#   '1B'  frozen mechanical pre-pass, before 2A, whose workers inject its state
+#   '2A'  counterfactual years, static, parallel array
+#   '2B'  gains bathtub pre-pass
+#   '2N'  counterfactual years, conv-no-wealth, parallel array. Measures the
+#         forcing and the capital bundle MTR on the base before erosion
+#   '2W'  wealth bathtub pre-pass. Reads the 2N and baseline detail and writes
+#         the per-year deficit state 2C applies
+#   '2C'  counterfactual years, conventional, parallel array
 manifest = tibble(phase = character(), scenario = character(), year = integer())
 
-# Phase 1: baseline year tasks (skip if baseline_vintage provided)
+# Phase 1: baseline year tasks, skipped when a baseline vintage was supplied
 if (has_baseline) {
   baseline_info = get_scenario_info('baseline')
   manifest = manifest %>%
@@ -210,13 +206,13 @@ if (has_baseline) {
     ))
 }
 
-# Phase 2A and 2C: counterfactual × year tasks (static and conventional)
-# Phase 1B and 2B: one task per counterfactual scenario
+# Phases 2A and 2C: one task per counterfactual scenario and year
+# Phases 1B and 2B: one task per counterfactual scenario
 for (sid in counterfactual_ids) {
   si = get_scenario_info(sid)
 
-  # scenario_uses_wealth_dynamics() below reads the economy leg, and the loop
-  # above may have left another scenario's legs installed.
+  # Activate this scenario's legs: scenario_uses_wealth_dynamics below reads the
+  # economy leg, and the loop above may have left another scenario's installed
   config_activate(economy  = si$resolved_economy,
                   behavior = si$resolved_behavior)
 
@@ -242,10 +238,8 @@ for (sid in counterfactual_ids) {
       year     = si$years
     ))
 
-  # Wealth bathtub: the conv-no-wealth year-array (2N) and the sequential
-  # pre-pass (2W), emitted only for s>0 scenarios (a year-array of no-op tasks
-  # for every non-wealth scenario would be wasteful; the in-worker gate is a
-  # belt-and-suspenders no-op anyway).
+  # Emit the wealth bathtub's year array and pre-pass only for scenarios that
+  # activate the channel. The workers would no-op for the rest anyway
   if (scenario_uses_wealth_dynamics(si)) {
     manifest = manifest %>%
       bind_rows(tibble(
@@ -271,10 +265,10 @@ saveRDS(return_vars,        file.path(staging_dir, 'return_vars.rds'))
 saveRDS(counterfactual_ids, file.path(staging_dir, 'counterfactual_ids.rds'))
 saveRDS(manifest,           file.path(staging_dir, 'manifest.rds'))
 
-# Shell-facing submission map. Each phase keeps its existing global manifest
-# indices, but slurm_run.sh submits only the contiguous slice belonging to one
-# scenario. That lets each scenario advance as soon as its own prerequisites
-# finish instead of waiting at a phase-wide array barrier.
+# Write the submission map the shell reads. Each phase keeps its global manifest
+# indices, and slurm_run.sh submits only the slice belonging to one scenario, so
+# that a scenario advances as soon as its own prerequisites finish rather than
+# waiting at a phase-wide barrier.
 indexed_manifest = manifest %>%
   group_by(phase) %>%
   mutate(task_id = row_number()) %>%

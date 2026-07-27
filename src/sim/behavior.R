@@ -1,7 +1,8 @@
 #-------------------------------------------------------------------------------
 # behavior.R
 #
-# The behavior leg: which responses a scenario runs, and in what order.
+# Contains functions to load and run a scenario's behavioral responses
+#-------------------------------------------------------------------------------
 #
 # A scenario's behavior cell names a FOLDER under config/scenarios/behavior/
 # (the reserved word `default`, or a path under alternatives/), and that folder
@@ -20,55 +21,49 @@
 #                 re-derivation resolves, and wrong for one that says "this
 #                 scenario knowingly runs against an older data vintage".
 #
-# Modules stay PLUGGABLE. There is no registry and no list of known names: the
-# loader takes any path that exists, sources it, and calls do_{family}, where
-# family is the file's parent folder name. Adding a behavior is writing one
-# file and listing it. Nothing is ever rejected for being unfamiliar.
+# There is no registry of modules and no list of known names. The loader takes any
+# path that exists, sources it, and calls do_{family}, where the family is the
+# file's parent folder. Adding a behavior means writing one file and listing it,
+# and nothing is rejected for being unfamiliar.
 #
-# Their parameters live inside the module files, with citations, because the
-# module is their only reader. Variants are separate files -- charity/50.R and
-# charity/100.R are the -0.5 and -1.0 elasticities, and that is the whole
-# mechanism.
+# Each module's parameters live in its own file, with citations, because the module
+# is the only thing that reads them. A variant is a separate file: charity/50.R and
+# charity/100.R are the two elasticities, and that is the whole mechanism.
 #
-# Execution ORDER is not the order they are listed in. Some responses read what
-# an earlier one wrote (the hidden-ledger chain: evasion, then wealth, then
-# estate; conversion needs the bathtub gain state), so the loader sorts the
-# list against one pinned family order, declared once below. Families outside
-# that order are order-insensitive and run last, in the order listed. This
-# single sort replaces five hand-written order guards that used to live in the
-# module files and each stopped the run on a different subset of the same rule.
+# Modules do not run in the order they are listed. Some read what an earlier one
+# wrote, so the loader sorts them against the fixed order below. Families not in
+# that list do not care about order and run last, as listed.
 #-------------------------------------------------------------------------------
 
 
-# The pinned execution order. Every family here has a reason to precede the
+# The order responses run in. Each family here has a reason to come before the
 # ones after it:
-#   kg_dynamics     -- writes the gain state the next two read
-#   conversion      -- moves ordinary dollars into the gain pool
-#   entity_shifting -- moves pass-through dollars, priced off the gain state
-#   evasion         -- hides a share of reported income
-#   wealth          -- hides a share of reported net worth, reading evasion's
-#                      per-record factors
-#   charity         -- responds to the income-side rates the moves above settle
-#   estate          -- terminal consumer of the concealment factors above
-# A family absent from a scenario simply drops out; relative order is what
-# matters, not position.
+#   kg_dynamics     writes the stock of gains the next two read
+#   conversion      moves ordinary income into that stock
+#   entity_shifting moves pass-through income, priced off that stock
+#   evasion         hides a share of reported income
+#   wealth          hides a share of reported net worth, reading what evasion hid
+#   charity         responds to the income tax rates the moves above settle on
+#   estate          reads everything hidden above
+# A family a scenario does not run drops out. What matters is the relative order,
+# not the position.
 BEHAVIOR_FAMILY_ORDER = c('kg_dynamics', 'conversion', 'entity_shifting',
                           'evasion', 'wealth', 'charity', 'estate')
 
-# The kg bathtub applier. Injected automatically whenever kg_dynamics is
-# active, so a scenario never lists it: it is not an optional response but the
-# step that translates bathtub state into per-record realizations.
+# The module that turns the gains model's results into record-level realizations.
+# Added automatically whenever the gains model runs, so a scenario never lists it:
+# it is not an optional response but part of the machinery.
 BEHAVIOR_KG_APPLIER = 'src/behavior/kg_dynamics/turnover.R'
 
-# The pieces of the kg machinery a scenario may BIND -- that is, name a
-# calibration file for. `bathtub` is the state recurrence itself and is required
-# whenever kg_dynamics is active; `conversion` is the response built on top of it.
+# The pieces of the gains machinery a scenario can name a calibration file for.
+# The recurrence itself is required whenever the gains model runs; conversion is
+# the response built on top of it.
 #
-# Entity shifting is deliberately NOT here, even though it does read the bathtub's
-# tau_eq when one is running. Its parameters are published constants, so there is
-# nothing about them to vary per scenario and nothing that can go stale, and the
-# module also runs in entity-only scenarios where no bathtub exists to bind to.
-# It reads them from a fixed path instead (src/misc/calibrations.R).
+# Entity shifting is deliberately absent, even though it reads the priced gain when
+# the gains model is running. Its parameters are published constants, so there is
+# nothing to vary per scenario and nothing that can go stale, and it also runs in
+# scenarios with no gains model to bind to. It reads them from a fixed path
+# instead.
 BEHAVIOR_KG_PIECES = c('bathtub', 'conversion')
 
 
@@ -120,9 +115,8 @@ do_behavioral_feedback = function(tax_units, behavior_modules, baseline_mtrs,
 behavior_family = function(paths) {
 
   #----------------------------------------------------------------------------
-  # A module's family is its parent folder name: src/behavior/charity/50.R is
-  # family `charity` and defines do_charity(). This is the whole of the
-  # convention binding a file to a hook.
+  # A module's family is its parent folder: src/behavior/charity/50.R is family
+  # charity and defines do_charity(). That is the whole convention.
   #----------------------------------------------------------------------------
 
   basename(dirname(paths))
@@ -149,10 +143,9 @@ behavior_order = function(modules) {
 behavior_read_yaml = function(alternative) {
 
   #----------------------------------------------------------------------------
-  # Reads one behavior.yaml. The alternative's sections REPLACE the default's
-  # wholesale -- a behavior spec is a stack, and half a stack overlaid on
-  # another half is not a thing anyone means. A section the alternative omits
-  # is inherited from the default layer.
+  # Reads one behavior.yaml. An alternative's sections replace the default's
+  # outright rather than merging: half one list of responses laid over half another
+  # is not something anyone means. A section the alternative leaves out is inherited.
   #
   # Parameters:
   #   - alternative (str) : reserved word `default`, or a path under
@@ -174,9 +167,8 @@ behavior_read_yaml = function(alternative) {
 behavior_resolve = function(alternative = NULL) {
 
   #----------------------------------------------------------------------------
-  # Resolves one scenario's behavior spec: which kg machinery it binds and
-  # which module files it runs, in execution order with the kg applier
-  # injected.
+  # Resolves one scenario's responses: which gains machinery it binds and which
+  # modules it runs, in the order they run and with the gains module added.
   #
   # Parameters:
   #   - alternative (str) : the runscript's behavior cell. NULL/NA/'' or
@@ -209,18 +201,11 @@ behavior_resolve = function(alternative = NULL) {
 
   listed = as.character(spec$modules %||% character())
 
-  # kg_dynamics takes one of three written forms, all meaning the same thing to
-  # everything downstream:
-  #   none                              -- the machinery is off
-  #   [bathtub, conversion]             -- these pieces are bound, and their
-  #                                        parameters are still wherever they
-  #                                        live today (no stamp file yet)
-  #   {bathtub: path/to/stamp.yaml}     -- these pieces are bound, each to the
-  #                                        calibration file that carries its
-  #                                        value and provenance
-  # The list form exists so the pieces could be declared before the stamped
-  # files existed; the mapping form is where this is going, and adding paths to
-  # a list form needs no code change here.
+  # The gains section can be written three ways, all the same downstream: none, a
+  # list of the pieces bound, or a mapping of each piece to the calibration file
+  # holding its value. The list form let the pieces be declared before those files
+  # existed; the mapping form is where this is headed, and moving from one to the
+  # other needs no change here.
   kg = spec$kg_dynamics
   if (is.null(kg) || identical(as.character(kg), 'none')) {
     kg_dynamics = 'none'
@@ -233,9 +218,8 @@ behavior_resolve = function(alternative = NULL) {
     kg_dynamics = kg
   }
 
-  # The applier is the machinery, not a response: it goes in whenever the
-  # machinery is on, and a scenario that lists it by hand is caught in
-  # behavior_validate_spec().
+  # The gains module is part of the machinery rather than a response, so it goes in
+  # whenever the machinery is on. A scenario that lists it by hand is caught below.
   modules = if (length(kg_pieces) > 0) c(BEHAVIOR_KG_APPLIER, listed) else listed
   modules = behavior_order(modules)
 
@@ -262,23 +246,22 @@ behavior_resolve = function(alternative = NULL) {
 behavior_validate_spec = function(spec, id = NULL) {
 
   #----------------------------------------------------------------------------
-  # Parse-time checks on one resolved behavior spec. These replace the five
-  # order guards that used to sit inside the module files: the difference is
-  # that these run before the run starts, on every scenario in the runscript,
-  # rather than an hour in when a module happens to execute.
+  # Checks one scenario's resolved responses before the run starts, on every
+  # scenario in the runscript, rather than an hour in when a module happens to
+  # execute.
   #
-  # Everything here is about the SHAPE of the stack. Nothing is rejected for
-  # naming an unfamiliar family -- that would close the pluggable interface,
-  # which is the mistake this design exists to avoid.
+  # Everything here is about the shape of the list. Nothing is rejected for naming
+  # an unfamiliar family: closing that interface is the mistake this design exists
+  # to avoid.
   #
-  # Returns: TRUE invisibly; stops on any violation, warns on the evasion
-  #          consistency contract
+  # Returns: invisibly TRUE; stops on a violation, and warns where evasion runs
+  #          without the estate response.
   #----------------------------------------------------------------------------
 
   where    = if (is.null(id)) '' else paste0(' (scenario "', id, '")')
   problems = c()
 
-  # A path that does not exist would otherwise fail an hour into the run
+  # A module that does not exist would otherwise fail an hour into the run
   for (m in spec$modules) {
     if (!file.exists(m)) {
       problems = c(problems, paste0('module file does not exist: ', m))
@@ -290,7 +273,7 @@ behavior_validate_spec = function(spec, id = NULL) {
       paste(unique(spec$modules[duplicated(spec$modules)]), collapse = ', ')))
   }
 
-  # The applier comes from kg_dynamics being on, never from the module list
+  # The gains module is added by the machinery, never listed
   if (BEHAVIOR_KG_APPLIER %in% spec$listed) {
     problems = c(problems, paste0(
       BEHAVIOR_KG_APPLIER, ' must not be listed under modules: it is the kg ',
@@ -304,8 +287,8 @@ behavior_validate_spec = function(spec, id = NULL) {
       ' -- the pieces are ', paste(BEHAVIOR_KG_PIECES, collapse = ', ')))
   }
 
-  # A bound piece must name a file, and the file must exist. Without this the
-  # run gets as far as the first read of that value before failing.
+  # A bound piece must name a file that exists. Otherwise the run gets as far as
+  # the first read of that value.
   if (length(spec$kg_pieces) > 0) {
     for (piece in spec$kg_pieces) {
       path = spec$kg_dynamics[[piece]]
@@ -328,9 +311,9 @@ behavior_validate_spec = function(spec, id = NULL) {
       'recurrence the other pieces are built on'))
   }
 
-  # Each optional piece must agree with the module that uses it, in both
-  # directions: a bound piece nobody runs is dead configuration, and a module
-  # whose piece is unbound would read a value from nowhere.
+  # Each optional piece and the module that uses it must agree both ways: a bound
+  # piece nobody runs is dead configuration, and a module whose piece is unbound
+  # would read a value from nowhere.
   for (piece in c('conversion')) {
     has_module = piece %in% spec$families
     has_piece  = piece %in% spec$kg_pieces
@@ -346,8 +329,8 @@ behavior_validate_spec = function(spec, id = NULL) {
     }
   }
 
-  # Conversion is built ON the bathtub: the dollars it moves land in the gain
-  # state, and its price wedge comes out of the same machinery.
+  # Conversion is built on the recurrence: the income it moves lands in the stock of
+  # gains, and it is priced off the same machinery.
   if (!kg_on && 'conversion' %in% spec$families) {
     problems = c(problems, paste0(
       'a conversion/ module is listed but kg_dynamics is none -- the converted ',
@@ -355,10 +338,9 @@ behavior_validate_spec = function(spec, id = NULL) {
       'computed by its machinery, so conversion cannot run without it'))
   }
 
-  # Wealth concealment has to reach the reported estate, and that propagation
-  # lives in the estate module (which also owns estate_concealed_frac). Wealth
-  # without estate would silently leave concealed wealth visible to the estate
-  # tax, so this one is fatal rather than a warning.
+  # Concealed wealth has to reach the reported estate, and the estate module is what
+  # carries it there. Wealth without estate would leave concealed wealth visible to
+  # the estate tax, so this stops the run rather than warning.
   if ('wealth' %in% spec$families && !('estate' %in% spec$families)) {
     problems = c(problems, paste0(
       'a wealth/ module is listed with no estate/ module -- the wealth ',
@@ -373,9 +355,9 @@ behavior_validate_spec = function(spec, id = NULL) {
                 paste(spec$modules, collapse = ' -> '), '\n'))
   }
 
-  # Not fatal: an income-side-only calibration run legitimately omits the
-  # estate leg. A product run must not -- evaded income that stays visible to
-  # the estate tax was the activation bug of 2026-07-16.
+  # A warning rather than an error: a calibration run on the income side alone may
+  # legitimately leave the estate response out. A scored run may not, since evaded
+  # income would stay visible to the estate tax.
   if ('evasion' %in% spec$families && !('estate' %in% spec$families)) {
     warning('Behavior spec "', spec$alternative, '"', where, ' runs an evasion/ ',
             'module with no estate/ module: evaded income will NOT be removed ',
@@ -462,12 +444,11 @@ apply_mtr_elasticity = function(tax_units, var, baseline_mtrs, static_mtrs, max_
 load_behavior_module = function(path, envir) {
 
   #----------------------------------------------------------------------------
-  # Executes one behavior module file, defining its do_{family} function in a
-  # given environment. Modules are loaded here, by path, at scenario time --
-  # never sourced at startup, which is what lets two files in one family both
-  # define do_{family} while only the one this scenario names is in scope.
-  # main.R, src/slurm/setup.R and src/slurm/common.R skip src/behavior/ when
-  # they source src/ recursively, for that reason.
+  # Runs one module file, defining its do_{family} function in the given
+  # environment. Modules are loaded by path when the scenario runs, never sourced at
+  # startup. That is what lets two files in one family both define the same function
+  # while only the one this scenario names is in scope, and it is why main.R and the
+  # two SLURM setup files skip src/behavior/ when they source src/ recursively.
   #
   # Parameters:
   #   - path (str)  : repo-relative module path, e.g.

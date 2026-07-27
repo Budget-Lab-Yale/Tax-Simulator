@@ -1,10 +1,4 @@
-# Saving share held at zero, and nothing else overridden. The flat shorthand for
-# the retired s = 0 column.
-#
-# Split out of ome_20250925_saving_0 on 2026-07-26, when the top-tax batches
-# dropped off-model estimates entirely. That folder pinned an all-zero OME
-# vintage as well, which stranded it when the interface went to v5; the saving
-# share was the only part doing any work.
+# Saving share held at zero, with nothing else overridden.
 
 financing_profile:
   value: 'flat:0'

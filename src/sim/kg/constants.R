@@ -1,62 +1,49 @@
 #-------------------------------------------------------------------------------
-# kg/constants.R -- module overview + declared constants
+# kg/constants.R
 #
-# Capital-gains dynamics behavioral module. Implements the law of motion for
-# the policy-induced delta in unrealized capital gains via a representative-
-# cell Bellman whose control is the discretionary realization rate r_D
-# directly; see other/kg_model_tests/representative_cell_bellman_proposal.md.
-#
-# Architecture:
-#   1. Bathtub pre-pass (kg_dyn_run_bathtub_pass): for each scenario, build an
-#      extended age grid [18, A_max_bellman=119] using PerLifeTables mortality
-#      past age 80; solve the baseline Bellman once (Pass 1) to recover
-#      kappa(a,t), W_B(a,t), MC_B(a,t); then for each year solve the scenario
-#      Bellman (Pass 2) to get r_D,S(a,t); apply the bathtub recurrence
-#      (survivor + inheritance flows); persist one state file per year per
-#      scenario.
-#   2. Behavior module (src/behavior/kg_dynamics/turnover.R):
-#      pure allocator. Reads its year's state file and translates cell-level
-#      quantities to per-record kg_lt adjustments via kg_dyn_apply_to_records.
-#
-# Bellman primitives (ENTROPY realization cost, SINGLE POOL).
-# The representative cell maximizes per dollar of unrealized gain:
-#   W^j(a,t) = max_{r_D in [0, 1]} {
-#       kappa(a,t)*r_D - C(r_D; r_D_B)
-#     - tau^j(a,t)*r_D
-#     + (1 - r_D) *
-#         [beta*(1-m) W^j(a+1,t+1) + beta*m*F^j(a,t)]
-#   }
-# where r_D_B = clip(r_B, 0, 1) is the cell's baseline discretionary rate: the
-# WHOLE baseline realization rate is discretionary, with no r_exog carve-out,
-# no responsive/inert split, and no fixed floor. F^j =
-# (1 - c_phi^j)*tau^j is the death-state tax-liability forgiveness value
-# (c_phi^j is the regime's holder-internalized burden share: 0 step-up, theta
-# carryover, 1 deemed). Marginal cost of realization:
-#   MC^j(a,t) = tau^j + beta*(1-m)*W^j(a+1,t+1) + beta*m*F^j.
-#
-# The realization cost is the entropy (KL / Bregman) form anchored at the
-# cell's baseline rate r_D_B:
-#   C(r_D; r_D_B) = (1/eta) * [ r_D*ln(r_D/r_D_B) - r_D + r_D_B ],
-# so C'(r_D) = (1/eta)*ln(r_D/r_D_B) and C'(r_D_B) = 0 exactly.
-#   * Pass 1 (baseline inversion): C'(r_D_B) = 0 => kappa = MC^B EXACTLY,
-#     interior AND corner.
-#   * Pass 2 (scenario FOC): kappa - MC^j = C'(r_D) => the closed form
-#       r_D^j = r_D_B * exp(-eta * (MC^j - MC^B)),   clipped to [0, 1].
-#     Only the upper clip can bind; r_D_B = 0 cells stay 0. This is a GLOBALLY
-#     constant-semi-elasticity response in the structural wedge: dln(r_D)/dMC =
-#     -eta everywhere. Since the whole pool responds, eta IS the aggregate
-#     long-run semi-elasticity, and the aggregate revenue-maximizing rate is the
-#     naive CBO/JCT ~1/eta (no inert floor pushing it out).
-#
-# The short-run timing margin is a SEPARATE overlay (kg_dyn_build_planned_timing
-# + kg_dyn_build_scenario_rate): a calibrated fraction KG_DYN_TIMEABLE_SHARE of
-# ALL baseline realizations retimes across the +/-TIMING_WINDOW years, composed
-# as r_S = r_ordinary_S + (r_planned_S - r_planned_B). It nets to zero under a
-# uniform permanent shock, so it leaves the long-run (level) response untouched.
-#
-# Current implementation collapses the five tracked wealth classes into a
-# single asset bucket; per-asset-class disaggregation is on the roadmap.
+# Contains constants for the capital gains realization model
 #-------------------------------------------------------------------------------
+
+# Taxpayers choose how much of their unrealized gain to realize each year. The
+# model solves that choice for a representative cell of each age, and tracks the
+# resulting change in the stock of unrealized gains over time.
+#
+# Per dollar of unrealized gain, the cell chooses a realization rate r to
+# maximize
+#
+#   W(a,t) = max_r { kappa*r - C(r) - tau*r
+#                    + (1 - r) * [beta*(1-m)*W(a+1,t+1) + beta*m*F(a,t)] }
+#
+# where kappa is the benefit of realizing, tau the tax rate on the gain, m the
+# mortality rate, beta the discount factor, and F the value of the tax forgiven
+# at death. C is the cost of realizing away from the cell's baseline rate. The
+# marginal cost of realizing is then
+#
+#   MC(a,t) = tau + beta*(1-m)*W(a+1,t+1) + beta*m*F
+#
+# The whole baseline realization rate responds. There is no split between a
+# responsive and an inert share and no floor.
+#
+# The cost C is anchored so that its derivative is zero at the baseline rate.
+# That has two convenient consequences: solving the baseline recovers kappa
+# exactly, and the scenario's realization rate has a closed form. Which form C
+# takes is set by kg.response_form in the kg settings; see below.
+#
+# Short-run retiming is handled separately, as an overlay: a calibrated share of
+# all baseline realizations moves across a window of years around the reform.
+# The overlay nets to zero under a permanent uniform rate change, so it leaves
+# the long-run response alone.
+#
+# The work is split in two. kg_dyn_run_bathtub_pass() solves the baseline once,
+# then solves each scenario year and steps the stock of gains forward, writing
+# one state file per scenario-year. The behavior module in
+# src/behavior/kg_dynamics/turnover.R then reads those files and turns the cell
+# quantities into per-record adjustments to kg_lt.
+#
+# The five tracked asset classes are currently pooled into one. Splitting them
+# out is on the roadmap.
+#
+# Notes: other/kg_model_tests/
 
 
 
@@ -65,35 +52,28 @@
 #-------------------------------------------------------------------------------
 
 KG_DYN_AGE_MIN          = 18
-KG_DYN_AGE_MAX          = 80      # bathtub topcode (matches simulator)
-KG_DYN_AGE_MAX_BELLMAN  = 119     # SSA PerLifeTables hit q(x)=1 at 119
+KG_DYN_AGE_MAX          = 80      # top code, matching the rest of the model
+KG_DYN_AGE_MAX_BELLMAN  = 119     # SSA life tables reach certain death at 119
 
-# Fallback annual discount factor for isolated solver unit tests. Production
-# paths build a year-varying real-rate series via kg_dyn_load_beta_series
-# (tsy_10y Fisher-deflated by year-t YoY CPI-U).
-# Value and provenance: config/calibrations/kg/settings.yaml (beta_fallback).
+# The discount factor used when the solver runs on its own in unit tests is
+# beta_fallback in the kg settings. A simulation instead builds a year-varying
+# real rate from the 10-year Treasury rate, deflated by CPI-U growth.
 
-# Realization RESPONSE FORM -- how the scenario-side FOC extrapolates away from
-# the calibrated local moment. The entropy Bellman admits two cost primitives
-# that fit the SAME local elasticity equally well but extrapolate differently
-# (first-order for revenue-maximizing-rate questions); the choice is an
-# extrapolation prior, set by the assumption kg.response_form (overridable per
-# scenario via the runscript column assumption.kg.response_form):
-#   'logs' (DEFAULT) -- constant NET-OF-TAX elasticity (Agersnap-Zidar's
-#       preferred spec): log(r_D) is linear in log(1 - MC),
-#       r_D = r_D_B * ((1 - MC)/(1 - MC_B))^eta_tilde. Generated by a convex
-#       power cost with the same C'(r_D_B) = 0 anchor, so Pass-1 inversion,
-#       appliers, tau_eq, and the h/e legs all carry over unchanged. Carries its
-#       own independent calibration (eta_tilde AND timeable share). Net-of-tax is
-#       the better-motivated extrapolation prior for revenue-maximizing-rate
-#       questions and lowers the step-up revmax relative to the semi form.
-#   'levels' -- constant SEMI-elasticity: log(r_D) is linear in the structural
-#       wedge MC, r_D = r_D_B * exp(-eta*(MC - MC_B)). The joint consequence of a
-#       linear payoff + KL/entropy realization cost; eta IS the long-run
-#       semi-elasticity.
-# Both forms cross at the baseline point by construction (C'(r_D_B) = 0), so the
-# baseline pass is form-invariant. Vintages are NOT comparable across forms --
-# regenerate before comparing.
+# Two functional forms are available for the cost of realizing away from the
+# baseline rate. Both fit the same local elasticity, and both give the same
+# answer at the baseline, so they differ only in how far they extrapolate away
+# from it. That matters most for the revenue-maximizing rate. Which one is used
+# is set by response_form in the kg settings.
+#
+#   'logs'   assumes a constant elasticity with respect to the net-of-tax rate,
+#            the specification Agersnap and Zidar prefer:
+#            r = r_B * ((1 - MC) / (1 - MC_B)) ^ eta_tilde
+#   'levels' assumes a constant semi-elasticity, so that log realizations are
+#            linear in the marginal cost:
+#            r = r_B * exp(-eta * (MC - MC_B))
+#
+# Each form carries its own calibrated pair of parameters. Results are not
+# comparable across forms, so regenerate a vintage before comparing.
 kg_dyn_response_form = function() {
   v = kg_setting('response_form')
   if (!v %in% c('levels', 'logs'))
@@ -102,108 +82,71 @@ kg_dyn_response_form = function() {
   v
 }
 
-# Net-of-tax domain cap: the 'logs' response (1 - MC)^eta_tilde is undefined as
-# MC -> 1. Refuse to run (never clamp silently) if any cell's marginal cost MC
-# or baseline marginal cost MC_B reaches this. Production MCs sit well below
-# (tau ~ 0.238 plus a discounted continuation); a hit signals a broken discount
-# series or death-continuation, not a real economy. Levels is unconstrained.
+# The net-of-tax form is undefined as the marginal cost approaches 1. Refuse to
+# run, rather than clamp, if any cell reaches this. Marginal costs in practice
+# sit far below it, so a hit means the discount series or the death continuation
+# is broken. The levels form has no such limit.
 KG_DYN_LOGS_MC_CAP      = 0.98
 
-# Timeable share -- SINGLE POOL. There is no responsive/inert split and no fixed
-# floor: the entropy realization cost is a reservation-benefit spectrum
-# (exponential b: many easily-deterred dollars, a thin tail of robust sellers)
-# that already embeds the "first dollar easier to sell than the last"
-# heterogeneity, so a discrete inert carve-out would be a vestige of a
-# quadratic (tail-less) cost. Two margins:
-#   * LEVEL -- ALL gains respond on the permanent margin via the entropy
-#     Bellman (r_D_B = r_B, no r_exog carve-out); eta IS the long-run
-#     semi-elasticity directly.
-#   * TIMING -- a single calibrated fraction of ALL baseline realizations
-#     retimes across the +/-TIMING_WINDOW years (short-run overlay,
-#     r_S = r_ordinary_S + (r_planned_S - r_planned_B)).
+# The model has two margins. On the permanent margin, all gains respond through
+# the choice of realization rate, so eta is the long-run elasticity directly. On
+# the short-run margin, a calibrated share of all baseline realizations retimes
+# across a window of years around the reform.
 #
-#   KG_DYN_TIMEABLE_SHARE -- fraction of ALL realizations that is mechanically
-#       timeable. CALIBRATED against the short-run announcement moment GIVEN eta
-#       (the long-run moment pins eta independently: the timing overlay nets to
-#       zero under a uniform permanent shock, so long-run is timeable-share
-#       invariant). 'NA' forces the unpinned bootstrap -- the finite guard in
-#       kg_dyn_run_bathtub_pass hard-stops any sim reaching the Bellman with it
-#       unset. Override per scenario via assumption.kg.timeable_share.
-#       Value and provenance: config/calibrations/kg/bathtub.yaml (timeable_share).
-# Net-of-tax ('logs') timeable share -- its OWN calibration (the short-run
-# announcement moment given eta_tilde), independent of the levels share above.
-# kg_dyn_active_timeable_share() surfaces it only when kg.response_form = 'logs'.
-# The timing overlay is a mechanical fraction, not a Bellman response, so it is
-# nearly form-robust; the long-run moment is timeable-invariant, so eta_tilde and
-# this share identify sequentially. Override via assumption.kg.timeable_share_logs.
-# Value and provenance: config/calibrations/kg/bathtub.yaml (timeable_share_logs).
+# That timeable share is calibrated against the short-run announcement moment,
+# taking eta as given. The two identify separately: the retiming overlay nets to
+# zero under a permanent uniform rate change, so the long-run moment does not
+# depend on the share. Each response form has its own share. Both live in
+# config/calibrations/kg/bathtub.yaml, and a value of NA there leaves the model
+# uncalibrated, which kg_dyn_run_bathtub_pass() refuses to simulate.
 
-# Applier-only deemed-realization avoidance haircut: a data-calibration
-# parameter (valuation games / noncompliance that JCT and Treasury assume but
-# the Bellman doesn't), NOT tax law. Scales the per-record deemed contribution
-# by (1 - KG_DYN_DEEMED_AVOIDANCE) in kg_dyn_apply_to_records; does NOT enter
-# c_phi (lifetime realization still sees the full deemed burden). Set to 0 for
-# no haircut.
-# Default 0.25 (a 25% value discount), consistent with the estate-side
-# pass-through discount (rho_pt ~ 0.65).
-# TODO: this is the same object as the estate-tax asset-class reporting factor
-# (a valuation discount on closely-held/illiquid assets) -- concord the two on a
-# shared per-asset-class rho_k.
-# Value and provenance: config/calibrations/kg/settings.yaml (deemed_avoidance).
+# Deemed realizations are scaled down by deemed_avoidance in the kg settings, for
+# the valuation games and noncompliance that JCT and Treasury assume and this
+# model does not represent. This is a measurement parameter rather than tax law.
+# It applies only when allocating to records, and not to the burden the taxpayer
+# internalizes when choosing whether to realize during life. The default of 0.25
+# matches the estate side's discount on closely held assets.
+#
+# TODO: this is the same object as the estate tax's reporting factor by asset
+# class. The two should be reconciled on one discount per class.
 
-# Fraction of planned dollars that move toward the best year in the window
-# is clamp((tau_S - tau_B between source and destination) / ref_wedge, 0, 1).
-# 5pp moves the full bucket; 1pp moves 20%. tau_S here is the LAW-ONLY tau
-# (mtr_kg_lt_lawonly: reform MTRs on the pre-mech-injection frame), so the
-# wedge is exactly zero when the living-side schedule is unchanged --
-# post-injection MTRs would drift a few bp from the income effect of
-# mechanically-routed carryover realizations and retime against noise.
-# Value and provenance: config/calibrations/kg/settings.yaml (timing_ref_wedge).
+# The share of retimeable dollars that actually moves toward the best year in the
+# window is the rate difference between the two years over timing_ref_wedge in
+# the kg settings, capped at 1. At the shipped wedge, 5 points moves the whole
+# bucket and 1 point moves a fifth of it. The rate difference is measured on law
+# alone, so it is exactly zero when the schedule faced during life is unchanged.
+# Measuring it after the mechanical adjustments instead would let a few basis
+# points of income effect retime dollars against noise.
 
-# Static resource: dollar-weighted heir-age distribution derived from SCF
-# 2022 inheritance data (filtered to non-gift transfers, weighted by
-# Gale-Sabelhaus 2024 recency probabilities for the current-year flow).
-# Built by other/kg_model_tests/build_heir_distribution.R; see that script
-# for the filter definitions. Treated as a model constant because the
-# upstream survey is not year-varying at the projection horizons we use.
+# Age distribution of heirs, weighted by dollars inherited, from the 2022 SCF.
+# Restricted to transfers at death and weighted by the recency probabilities in
+# Gale and Sabelhaus (2024). Built by
+# other/kg_model_tests/build_heir_distribution.R, which defines the filters.
+# Treated as a constant because the survey does not vary by year over the
+# projection horizon.
 KG_DYN_HEIR_DISTRIBUTION_PATH = './resources/heir_distribution_scf2022.csv'
 
-# eta -- the entropy-cost precision. In the SINGLE POOL eta IS the long-run CG
-# semi-elasticity directly (the Bellman responds on the whole pool, so there is
-# no responsive-half deflation). Pinned on the FULL SIMULATOR, not internally:
-# the eta_dial grid measures E_full(eta) = dlog(R)/dtau at sim-year 30 across a
-# few eta values and inverts the (linear-through-origin) line for
-# eta* = |E_full_target| / slope, with E_full_target = -0.6 / 0.238 = -2.52
-# (literature realization elasticity at the top-rate divisor). Protocol and the
-# fitted grid: other/top_tax/eta_dial/ (measure_efull_by_eta.R,
-# eta_repin_fit.csv), so a re-pin is arithmetic. The timeable share is calibrated
-# against the short-run announcement moment GIVEN this eta. Response is
-# INCREASING in |eta|. Re-pin whenever Tax-Data vintage, the timeable share,
-# ref_wedge, the discount series, the apply-to-records logic, or any Bellman
-# primitive changes -- the provenance guard below flags a mismatch.
+# The elasticity parameters, eta for the levels form and eta_logs for the
+# net-of-tax form, are in config/calibrations/kg/bathtub.yaml. Both are pinned by
+# running the full simulator across a grid of candidate values, measuring the
+# realized elasticity at simulation year 30, and inverting for the value that
+# hits a target of -2.52, the literature realization elasticity of -0.6 divided
+# by a top rate of 0.238. Re-pinning is arithmetic given the grid; the protocol
+# and the fitted grids are in other/top_tax/eta_dial/ and
+# other/kg_model_tests/form_ab/.
 #
-# 'NA' forces the unpinned bootstrap: the finite-eta guard in
-# kg_dyn_run_bathtub_pass hard-stops any sim that reaches the Bellman with eta
-# unset (intended -- prevents accidental sims on an uncalibrated model).
-# Value and provenance: config/calibrations/kg/bathtub.yaml (eta).
+# Response is increasing in the size of eta. Re-pin whenever the Tax-Data
+# vintage, the timeable share, the reference wedge, the discount series, the
+# allocation to records, or the choice problem itself changes. The staleness
+# check on the entries in bathtub.yaml catches this at parse time.
+#
+# The net-of-tax parameter is smaller than the levels one because the full-sim
+# slope is steeper in that form, so a smaller value reaches the same target.
 
-# eta_tilde -- the NET-OF-TAX ('logs') cost precision. Under the power cost it
-# is the constant net-of-tax elasticity dlog(r_D)/dlog(1 - MC) = eta_tilde.
-# Pinned on the full simulator by the SAME protocol and against the SAME local
-# moment as the levels eta; grid + fit in
-# other/kg_model_tests/form_ab/eta_tilde_fit.csv. Lower than the levels eta
-# because the net-of-tax full-sim slope is steeper, so the same E_full needs a
-# smaller eta_tilde. Override via assumption.kg.eta_logs ('NA' forces the
-# unpinned bootstrap hard-stop).
-# Value and provenance: config/calibrations/kg/bathtub.yaml (eta_logs).
-
-# Active-form resolvers: the single place that maps the response form to that
-# form's calibrated pair. Consumed by kg_dyn_run_bathtub_pass (arg defaults) and
-# kg_dyn_build_planned_timing so every downstream consumer sees the right form's
-# values without threading the form name everywhere. A YAML value of the string
-# 'NA' forces the unpinned bootstrap, which the finite guard in
-# kg_dyn_run_bathtub_pass then hard-stops on -- deliberate, so an uncalibrated
-# model cannot be simulated by accident.
+# Resolve the calibrated pair for whichever response form is active, so that
+# nothing downstream has to know which form it is running under. A value of NA
+# leaves the model uncalibrated, which kg_dyn_run_bathtub_pass() then refuses to
+# simulate.
 kg_dyn_as_pinned = function(v) {
   if (identical(as.character(v), 'NA')) NA_real_ else as.numeric(v)
 }
@@ -218,37 +161,24 @@ kg_dyn_active_timeable_share = function(form = kg_dyn_response_form()) {
     else                         kg_bathtub('timeable_share'))
 }
 
-# Within-cell allocation rule for policy-induced dG, controlling the
-# effective cell mortality m_eff used in the death/survivor channels.
-#   "G" — dG allocated proportional to G_unit; m_eff = sum(w*m*G)/sum(w*G).
-#         Inheritance-flow story.
-#   "R" — dG allocated proportional to positive kg_lt; m_eff = sum(w*m*R)/sum(w*R).
-#         Lock-in story. Falls back to "G" when R_B = 0.
-# Only affects carryover/deemed; step-up is unchanged (death channel off).
-# Value and provenance: config/calibrations/kg/settings.yaml (dg_allocation).
-
-# Within-cell allocation rule used by the per-record APPLIER to distribute the
-# lock-in/carryover stock realization (extra_R) across records in an age cell.
-#   "R" (= 0)  — proportional to positive kg_lt (falls back to G_unit share
-#                when R_B = 0). Historical behavior: targets active realizers
-#                (trading-propensity proxy).
-#   "G" (= 1)  — proportional to G_unit (falls back to kg_lt share when
-#                G_B = 0). Holdings-based: targets holders of unrealized
-#                gains.
-#   numeric a in [0, 1] — convex blend: (1-a)*R_share + a*G_share. The
-#                realized carryover dollar needs a holder (G) who sells (R);
-#                a blend is the reduced-form compromise between the proxies.
-# Note the recurrence's death-channel m_eff stays on KG_DYN_DG_ALLOCATION
-# ('G') regardless: whose dollars DIE follows holdings; whose dollars get
-# SOLD is what this knob controls. Overridable per scenario via the runscript
-# column assumption.kg.applier_allocation for comparison runs.
+# Two settings control how the change in the stock of gains is spread within an
+# age cell. Both are in config/calibrations/kg/settings.yaml.
 #
-# Default 0.5: the realized carryover dollar requires a holder who sells, so
-# neither proxy alone is right. Carryover mechanical revenue is monotone in this
-# knob (R gives the most, G the least); deemed is invariant to it.
-# NOTE: the Bellman calibration (eta/timeable_share) is conditioned on this 0.5
-# default -- re-pin if it changes.
-# Value and provenance: config/calibrations/kg/settings.yaml (applier_allocation).
+# dg_allocation sets the effective mortality rate the death and survivor flows
+# use. Under 'G' the change is spread in proportion to holdings of unrealized
+# gains, and under 'R' in proportion to realizations, falling back to holdings
+# where there are none. It matters only where gains are taxed at death, since
+# under step-up the death channel is off.
+#
+# applier_allocation sets how the realized stock is spread across the records in
+# a cell: 0 in proportion to realizations, 1 in proportion to holdings, or a
+# blend in between. A realized dollar needs a holder who sells, so neither proxy
+# is right on its own and the shipped value is the midpoint. Revenue under
+# carryover is monotone in this, highest at 0; revenue under deemed realization
+# does not depend on it. Note that the death flows keep using dg_allocation
+# regardless: whose gains die follows holdings, while this controls whose get
+# sold. The elasticity calibration is conditioned on the shipped 0.5, so re-pin
+# if it changes.
 
 KG_DYN_ASSET_CLASSES    = c('equities', 'pass_throughs',
                             'primary_home', 'other_home', 're_fund')
@@ -256,29 +186,23 @@ KG_DYN_ASSET_VALUE_COLS = paste0('value.', KG_DYN_ASSET_CLASSES)
 KG_DYN_ASSET_BASIS_COLS = paste0('basis.', KG_DYN_ASSET_CLASSES)
 KG_DYN_ASSET_GAIN_COLS  = paste0('gain.',  KG_DYN_ASSET_CLASSES)
 
-# Estate gross-asset value columns: the canonical list is ESTATE_ASSET_COLS
-# (src/calc/functions/tax/estate.R), which wealth_dynamics.R also consumes.
-# kg references it directly so the three channels stay in lockstep on what
-# counts as a gross-estate asset.
+# Gross estate assets are listed once, as ESTATE_ASSET_COLS in
+# src/calc/functions/tax/estate.R. This file and wealth_dynamics.R both read it
+# from there, so that all three agree on what counts as an estate asset.
 
-# Terminal-charity logit coefficients on log(gross estate, 2026 $M) and the
-# deflation base year: config/calibrations/kg/settings.yaml (char_*). NOTE: no source
-# for the four fitted coefficients is recorded anywhere in the repository --
-# flagged in the config for the author to fill in.
+# The coefficients giving the probability that an estate goes to charity are
+# char_* in config/calibrations/kg/settings.yaml. No source for the four fitted
+# coefficients is recorded anywhere in the repository; the config flags this.
 
-# Trustees Report Alternative 2, 50/50 male/female blend (cohort module is
-# gender-blind). Supplies the 81+ tail of the Bellman extended grid.
+# Trustees Report Alternative 2, averaged over men and women, since the model
+# does not distinguish them. Supplies mortality past age 80.
 KG_DYN_LIFE_TABLE_M_PATH = './resources/PerLifeTables_M_Alt2_TR2024.csv'
 KG_DYN_LIFE_TABLE_F_PATH = './resources/PerLifeTables_F_Alt2_TR2024.csv'
 
 
-# Per-asset death-regime codes. The YAML carries one
-# pref.kg_death_regime_{class} per asset class; kg_dyn_build_regime_mix
-# resolves them at the cell level via gain-stock-weighted averaging.
-# c_phi(a,t) (death-state burden share the holder internalizes) is the
-# share of cell gain stock taxed at death given the regime mix, theta on
-# carryover-routed shares, and the cell-level §121 utilization aggregate
-# G_B_primary_above_cap / G_B_primary on primary_home dollars.
+# How gains are treated at death, by asset class. Tax law carries one
+# pref.kg_death_regime_{class} per class, and kg_dyn_build_regime_mix() averages
+# them to the cell, weighting by the stock of gains held.
 KG_DYN_REGIME_TRIPLET = list(
   '0' = list(vanish = 1, route = 0, realize = 0),  # step_up
   '1' = list(vanish = 0, route = 1, realize = 0),  # carryover
@@ -288,33 +212,7 @@ KG_DYN_REGIME_TRIPLET = list(
 
 
 #-------------------------------------------------------------------------------
-# Calibration provenance + staleness guard
-#
-# SUPERSEDED by the model-wide assumptions layer (src/misc/assumptions.R).
-# eta/timeable_share are valid only for the conditions they were calibrated
-# under -- Tax-Data vintage, ref_wedge, discount series, apply-to-records logic,
-# Bellman primitives. Left in comments alone those dependencies go unnoticed: an
-# applier-rule change once biased every conventional kg estimate by ~37% on a
-# 5pp gains-rate score before it was caught.
-#
-# Those dependencies now live in config/calibrations/kg/bathtub.yaml as each calibrated
-# entry's derived_under (data vintages) and invalidated_by (code files, checked
-# by content hash), and config_check_staleness() HARD STOPS the run rather
-# than warning. The old warn-only stamp and its KG_STRICT_CALIB escape hatch are
-# gone; a deliberate sweep now overrides the value in the runscript, which
-# records the choice in the vintage's assumptions.csv.
-#-------------------------------------------------------------------------------
-
-# KG_DYN_SPEC_VERSION was removed on 2026-07-26. It was a hand-maintained integer
-# meant to be bumped whenever the Bellman primitives or apply-to-records logic
-# changed in a way that invalidated eta, and to be carried on every kg state file.
-# Nothing read it: no state file wrote it and no consumer compared it. The job it
-# describes is done by the invalidated_by hashes on the kg entries in
-# config/calibrations/kg/bathtub.yaml, which are checked at parse time and cannot
-# be forgotten the way a manual bump can.
-
-#-------------------------------------------------------------------------------
-# Three-bucket realization timing helpers
+# Realization timing
 #-------------------------------------------------------------------------------
 
 kg_dyn_validate_timing_params = function(
@@ -322,31 +220,30 @@ kg_dyn_validate_timing_params = function(
     timing_window  = kg_setting('timing_window'),
     ref_wedge      = kg_setting('timing_ref_wedge')) {
 
-  # Single-pool (spec v3) timing parameters. timeable_share is the fraction of
-  # ALL realizations that retimes across the window. NA is permitted here
-  # (uncalibrated) and hard-stopped later in kg_dyn_run_bathtub_pass -- so the
-  # source-time self-call below validates only structure. A non-NA share must be
-  # a finite scalar in [0, 1].
+  # Checks the timing parameters. The timeable share is the fraction of all
+  # realizations that retimes across the window, and must be a single number
+  # between 0 and 1. NA is allowed here, meaning uncalibrated, and
+  # kg_dyn_run_bathtub_pass() stops on it later.
   if (!is.na(timeable_share) &&
       (length(timeable_share) != 1 || !is.finite(timeable_share) ||
        timeable_share < 0 || timeable_share > 1)) {
-    stop(sprintf(paste0('kg_dynamics: assumption kg.timeable_share must be a ',
+    stop(sprintf(paste0('kg_dynamics: kg.timeable_share must be a ',
                         'finite scalar in [0, 1] (or NA when uncalibrated); got %s.'),
                  paste(format(timeable_share), collapse = ', ')))
   }
   if (length(timing_window) != 1 || is.na(timing_window) ||
       timing_window < 0 || timing_window != as.integer(timing_window)) {
-    stop('kg_dynamics: assumption kg.timing_window must be a nonnegative integer.')
+    stop('kg_dynamics: kg.timing_window must be a nonnegative integer.')
   }
   if (length(ref_wedge) != 1 || !is.finite(ref_wedge) || ref_wedge <= 0) {
-    stop('kg_dynamics: assumption kg.timing_ref_wedge must be a positive finite number.')
+    stop('kg_dynamics: kg.timing_ref_wedge must be a positive finite number.')
   }
 
   invisible(TRUE)
 }
 
-# NOTE: no source-time self-call. Assumptions are scenario-scoped and are not
-# active when this file is sourced; kg_dyn_run_bathtub_pass validates instead.
+# Not called at source time: these values belong to a scenario and no scenario is
+# active yet. kg_dyn_run_bathtub_pass() calls it instead.
 
 
 

@@ -1,20 +1,16 @@
 #-----------------------------------------------------------------------
-# wealth.R — Phase 2W worker
+# wealth.R
 #
-# Runs the wealth bathtub pre-pass for a single counterfactual scenario.
-# Reads the scenario's conv-no-wealth detail (Phase 2N) and the baseline
-# static detail (Phase 1), assigns (age x net-worth-percentile) cells,
-# builds the conventional forcing ΔT⁰ = Δ(liab_iit_pr + liab_wealth), and
-# runs the per-living-record deficit recurrence sequentially across years
-# (the recurrence depends on year t-1, so it is NOT year-parallel). Writes
-# the per-year deficit state under the scenario's
-# conventional/supplemental/wealth_dynamics_state/ directory, which the
-# Phase 2C final conventional workers apply as the wealth haircut.
+# Phase 2W worker. Runs the wealth bathtub pre-pass for a single
+# counterfactual scenario: reads the conv-no-wealth detail from Phase 2N
+# and the baseline static detail from Phase 1, assigns age-percentile
+# cells, builds the conventional forcing, and runs the per-living-record
+# deficit recurrence across years. Writes the per-year deficit state under
+# the scenario's conventional/supplemental/wealth_dynamics_state/, which
+# the Phase 2C workers apply as the wealth haircut.
 #
-# Must run AFTER Phase 2N (conv-no-wealth detail) and Phase 1 (baseline
-# detail), and BEFORE Phase 2C. One job per s>0 scenario.
-#
-# No-op for scenarios that do not activate the channel (s = 0).
+# The recurrence depends on year t-1, so years run sequentially. Runs
+# after Phases 2N and 1 and before Phase 2C, one job per scenario.
 #
 # CLI args:
 #   Rscript src/slurm/wealth.R <staging_dir>
@@ -47,11 +43,9 @@ tryCatch({
   config        = readRDS(file.path(staging_dir, task$scenario, 'config.rds'))
   scenario_info = config$scenario_info
 
-  # Install this scenario's resolved assumptions as the active set. A SLURM
-  # worker is a fresh R process that never runs do_scenario, so without this
-  # every economy_param() read errors (fail-closed by design -- see
-  # src/misc/scenario_config.R). scenario_info rides in on config.rds, so nothing
-  # extra is serialized.
+  # Install this scenario's resolved configuration. A SLURM worker is a fresh R
+  # process that never runs do_scenario, so without this every economy_param()
+  # read errors. See src/misc/scenario_config.R.
   config_activate(economy  = scenario_info$resolved_economy,
                   behavior = scenario_info$resolved_behavior)
 

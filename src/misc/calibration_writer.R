@@ -1,55 +1,48 @@
 #-------------------------------------------------------------------------------
 # calibration_writer.R
 #
-# Writing a calibration entry from the script that measured it.
-#
-# WHY THIS EXISTS. The inventory that opened the config rebuild found that not one
-# of the five calibrated values in this model was written by its own calibration
-# script. Every one had been read off a log and typed into a config file by hand,
-# which is how a shipped number and the run behind it came to disagree, and how
-# four of the five "how to re-derive this" pointers came to be broken. The files
-# now exist and are checked before every run, but a checked number that a human
-# still transcribes is only half a fix. This is the other half: the calibrator
-# ends by writing its own entry, and the number is never retyped.
-#
-# TWO PROPERTIES THIS HAS TO HAVE, and they pull against each other.
-#
-#   The comments must survive. In a calibration file the comments ARE the
-#   provenance -- what the value targets, what it was derived under, why it is
-#   what it is. Round-tripping the YAML through write_yaml() deletes all of them,
-#   which is why config_repin_hashes() was never usable and why every re-pin in
-#   this project was done as text substitution. So this writer is textual too: it
-#   replaces one top-level block and copies every other byte through.
-#
-#   A changed value must not land silently. `calibrated` means "a procedure
-#   produced this", and a re-run that produces something different is a finding,
-#   not a routine update -- it can mean the model moved, the data moved, or the
-#   calibration is not identified as well as it looks. So a re-run that reproduces
-#   the shipped value writes in place, and one that does NOT writes `<file>.proposed`
-#   beside it and stops with a banner. The author reads the two files and moves the
-#   new one into place if the drift is real. The number still travels as a file,
-#   never as a transcription, but nobody's estimate changes without someone
-#   noticing.
-#
-# Sourced at startup with the rest of src/misc, but it has no model dependencies:
-# a calibrator that does not otherwise load the model can source this file alone.
+# Contains functions to let a calibration script write its own result
 #-------------------------------------------------------------------------------
+
+# A calibrated value should never be retyped. The calibrator ends by writing its
+# own entry, so the number travels as a file rather than through a log and someone's
+# hands. Every one of the model's calibrated values used to be transcribed that way,
+# which is how a shipped number and the run behind it came to disagree.
+#
+# Two requirements pull against each other here.
+#
+# The comments have to survive. In a calibration file the comments are the record of
+# where the value came from: what it targets, what it was derived under, and why it
+# is what it is. Writing the file back out through a YAML writer deletes all of them.
+# So this writer works on text, replacing one block and copying every other byte
+# through.
+#
+# And a changed value must not land quietly. Calibrated means a procedure produced
+# the number, so a re-run that produces a different one is a finding rather than a
+# routine update: the model may have moved, the data may have moved, or the
+# calibration may be less well identified than it looks. A re-run that reproduces the
+# shipped value writes in place. One that does not writes its result alongside and
+# stops, so that the author can compare the two and move the new one into place if
+# the change is real.
+#
+# Sourced at startup with the rest of src/misc, but it depends on nothing else, so a
+# calibration script that does not otherwise load the model can source it alone.
 
 
 
 calib_split_blocks = function(text) {
 
   #----------------------------------------------------------------------------
-  # A calibration file's top-level blocks, in order.
+  # Splits a calibration file into its entries, in order.
   #
-  # A block runs from its key line to the line before the next key at column
-  # zero, so the comments and blank lines above an entry travel with the entry
-  # below them. That is the convention these files are written in.
+  # An entry runs from its key to the line before the next key, so the comments
+  # above an entry travel with the entry below them, which is how these files are
+  # written.
   #
   # Parameters:
   #   - text (str) : the whole file
   #
-  # Returns: list(preamble = str, keys = chr, blocks = list of str)
+  # Returns: list of the preamble, the keys, and the blocks.
   #----------------------------------------------------------------------------
 
   lines  = strsplit(text, '\n', fixed = TRUE)[[1]]
@@ -71,7 +64,7 @@ calib_split_blocks = function(text) {
 calib_wrap = function(text, indent = '    ', width = 76) {
 
   #----------------------------------------------------------------------------
-  # Prose wrapped for a YAML block scalar, so a generated note reads like the
+  # Wraps prose for a YAML block, so a generated note reads like the
   # hand-written ones next to it.
   #----------------------------------------------------------------------------
 
@@ -228,8 +221,7 @@ calib_write_entry = function(path, entry, value, fields, tol = 0) {
   #                     calib_prose(). Pass invalidated_by and this function
   #                     hashes it for you.
   #   - tol (num)     : relative tolerance for calling the value reproduced.
-  #                     0 means exactly, which is what byte-identical
-  #                     measurement scripts should ask for.
+  #                     0 means exactly.
   #
   # Returns: the path actually written, invisibly
   #----------------------------------------------------------------------------

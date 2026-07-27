@@ -1,26 +1,19 @@
 #-------------------------------------------------------------------------------
 # wealth.R
 #
-# Totals contract for the annual net-worth (wealth) tax: per-year aggregation
-# of the per-record liability column into the weighted level consumed by
-# calc_receipts() and SLURM Phase 3a.
-#
-# The liability calculation itself is calc_wealth() in
-# src/calc/functions/tax/wealth.R -- pure and weight-free. Unlike the estate
-# tax there is no mortality / weights side: a wealth tax is assessed on the
-# LIVING population every year, so the only population operation is the
-# weighted sum here (no estate_m, no cluster cap, no DSUE blend).
+# Contains functions to aggregate wealth tax liability to yearly totals
+#-------------------------------------------------------------------------------
+
+# Liability itself is calculated per record by calc_wealth(). Unlike the estate
+# tax there is no mortality to apply: a wealth tax falls on the living every year,
+# so all that happens here is a weighted sum.
 #-------------------------------------------------------------------------------
 
 
 get_wealth_totals = function(tax_units, year) {
 
   #----------------------------------------------------------------------------
-  # Aggregates per-record wealth detail into the per-year totals contract:
-  # expected calendar-year wealth tax liability and the count of taxable
-  # returns. Pure weights-times-liability arithmetic on the persisted
-  # liab_wealth column -- also reconstructable from detail files (SLURM Phase
-  # 3a, get_wealth_from_detail()).
+  # Sums wealth tax liability and taxable returns for one year.
   #
   # Parameters:
   #   - tax_units (df) : records with weight and liab_wealth
@@ -42,10 +35,9 @@ get_wealth_totals = function(tax_units, year) {
 get_wealth_from_detail = function(detail_root, years) {
 
   #----------------------------------------------------------------------------
-  # Rebuilds the per-year wealth totals contract from already-written detail
-  # files. Mirrors get_estate_totals_from_detail(): a fallback for any caller
-  # that has detail but not the totals CSV (e.g. ad-hoc re-aggregation). Detail
-  # weights are already rescaled by 1 / pct_sample at write time.
+  # Rebuilds those totals from detail files already written, for a caller that has
+  # the detail but not the totals. Detail weights are already rescaled on the way
+  # out, so no further adjustment is needed.
   #
   # Parameters:
   #   - detail_root (str) : directory containing {year}.csv detail files

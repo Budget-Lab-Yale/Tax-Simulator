@@ -1,14 +1,13 @@
 #----------------------------------------------------------------------------
 # distribution.R
 #
-# Post-processing functions to generate distributional tables for a scenario.
+# Post-processing functions to generate distributional tables for a scenario
 #
-# The per-record microdata is built once by build_distribution_microdata()
-# (shared with distribution_etrs.R): it reads both legs, enforces the record
-# universe, allocates estate tax to heirs, and attaches the capital-STOCK
-# allocation bases (from corp_alloc.R) and the income-definition cores. The
-# corporate incidence is stock-based (Harberger) with no phase-in -- see
-# corp_alloc.R.
+# build_distribution_microdata builds the per-record frame both this file and
+# distribution_etrs.R work from: it reads the two legs, enforces the record
+# universe, allocates estate tax to heirs, and attaches the capital stock
+# allocation bases and the income definition cores. Corporate incidence is
+# allocated on stocks, with no phase-in; see corp_alloc.R.
 #----------------------------------------------------------------------------
 
 
@@ -30,11 +29,11 @@ build_distribution_tables = function(id, baseline_id) {
   # Get info on VAT, corporate rate, and cost recovery changes
   other_taxes = get_other_taxes(id, baseline_id)
 
-  # One entry per cut of the table: the grouping variable (NULL = whole
-  # population), the reported dimension label, and NA handling -- 'keep'
-  # groups as-is, 'drop' removes the non-member NA group after aggregation
-  # (top-X cuts, where NA shares still enter the group's share-of-total
-  # denominator), any other string labels the NA group (negative-rank records)
+  # One entry per cut of the table: the grouping variable, NULL for the whole
+  # population; the reported dimension label; and how to handle the NA group.
+  # 'keep' groups it as it is, 'drop' removes it after aggregation, so that on a
+  # top-X cut its shares still enter the denominator, and any other string labels
+  # it, for the records of negative rank.
   dist_cuts = list(
     list(var = NULL,           dim = 'Overall',       na = 'keep'),
     list(var = 'age_group',    dim = 'Age',           na = 'keep'),
@@ -101,19 +100,16 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
                                         reform_leg = 'static') {
 
   #----------------------------------------------------------------------------
-  # Reads and cleans input data for a scenario and its "baseline", producing
-  # the per-record microdata frame shared by the distribution delta table
-  # (process_for_distribution) and the ETR levels table (process_for_etrs).
+  # Reads and cleans input data for a scenario and its "baseline", producing the
+  # per-record microdata frame the delta table (process_for_distribution) and the
+  # effective rate levels table (process_for_etrs) share.
   #
-  # This is everything EXCEPT the tax-inclusion tiers: both legs are read, the
-  # record universe is enforced, estate tax is allocated to heirs, the heir
-  # copy-split is applied, deemed-realization tax is reattributed to heirs, and
-  # reform amounts are expressed in baseline (consumer) dollars. It also
-  # attaches the capital-STOCK allocation bases (corp_alloc.R) and the three
-  # income-definition cores (AGI / expanded / Haig-Simons accrual).
-  #
-  # Callers add the tax-inclusion tiers and the corporate-tax allocation on top
-  # of the returned per-record frame.
+  # It reads both legs, enforces the record universe, allocates estate tax to
+  # heirs, applies the heir copy-split, reattributes deemed realization tax to
+  # heirs, and expresses reform amounts in baseline dollars. It also attaches the
+  # capital stock allocation bases and the three income definition cores, being
+  # adjusted gross, expanded, and Haig-Simons accrual income. Callers add the
+  # tax-inclusion tiers and the corporate tax allocation themselves.
   #
   # Parameters:
   #   - id          (str)  : scenario ID
@@ -123,51 +119,46 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
   #   - yr          (int)  : year to calculate metrics for
   #   - other_taxes (df)   : tibble of CIT/VAT metrics (see get_other_taxes())
   #   - write_supplemental (lgl) : whether to write the per-year estate heir
-  #                          liabilities and allocator diagnostics (TRUE for the
-  #                          delta table; FALSE for the ETR table, which reuses
-  #                          the same allocation but must not re-emit the files)
-  #   - reform_leg  (str)  : which run-type leg supplies the REFORM tax
-  #                          numerators: 'static' (default, the law-only ask)
-  #                          or 'conventional' (realized, with behavior). The
-  #                          baseline leg, income cores, rankings, and stock
-  #                          bases are baseline-static regardless — swapping
-  #                          the leg swaps NUMERATORS only (realized-ETR
-  #                          variant, VISION §"welfare vs realized")
+  #                          liabilities and allocator diagnostics. The delta
+  #                          table writes them; the effective rate table reuses
+  #                          the same allocation and does not re-emit them
+  #   - reform_leg  (str)  : which leg supplies the reform tax numerators,
+  #                          'static' for the law-only measure or 'conventional'
+  #                          for the realized one. The baseline leg, the income
+  #                          cores, the rankings and the stock bases come from the
+  #                          baseline static leg either way, so the leg changes
+  #                          the numerators alone
   #
-  # Returns: ungrouped per-record microdata (df), post heir copy-split.
+  # Returns: ungrouped per-record microdata after the heir copy-split (df).
   #----------------------------------------------------------------------------
 
 
-  # Read baseline microdata. liab_deemed (tax on deemed realization at death,
-  # kg_dynamics scenarios only) is stripped from decedent records here and
-  # reattributed to heirs below
+  # Read baseline microdata. Tax on deemed realization at death is stripped from
+  # decedent records here and reattributed to heirs below
   baseline_detail = read_static_detail(baseline_id, yr)
   if (!('liab_deemed' %in% names(baseline_detail))) {
     baseline_detail$liab_deemed = 0
   }
-  # Annual wealth tax: a living tax borne by the owner's own record (like income
-  # tax), 0 under baseline law. Default for detail predating the wealth column.
+  # The annual wealth tax is borne by the owner's own record, like income tax, and
+  # is zero under baseline law. Default it for detail predating the column
   if (!('liab_wealth' %in% names(baseline_detail))) {
     baseline_detail$liab_wealth = 0
   }
-  # Economic net worth, the grouping variable for the by-wealth distribution
-  # view (baseline stock, like income/AGI cuts use baseline income). Default 0
-  # for detail predating the column.
+  # Economic net worth is the grouping variable for the net worth cuts, taken from
+  # the baseline stock as the income and AGI cuts take baseline income. Default it
+  # to zero for detail predating the column.
   #
-  # Wealth-bathtub schema note (src/sim/wealth_dynamics.R): distribution stays
-  # STATIC-sourced (D20), so net_worth here is the UN-ERODED stock. Under the
-  # channel (s > 0), CONVENTIONAL detail's net_worth is POST-haircut (~1% lower)
-  # while STATIC is un-haircut; the erosion surfaces via receipts, not the
-  # distribution tables (the ~1% haircut barely moves rank-order). The by-wealth
-  # ranking keeps net_worth >= 0 (zero-NW kept) here, which DIFFERS from the
-  # bathtub's cell ranking (net_worth > 0, zero excluded; plan D17) -- the
-  # bathtub deliberately drops zero-NW records (no stock to draw, no estate).
+  # These tables read static detail, so this is the stock before the wealth
+  # bathtub's erosion. Conventional detail carries net worth about a percent lower
+  # under the channel, which barely moves rank order; the erosion is reported
+  # through receipts instead. The ranking here keeps records of zero net worth,
+  # unlike the bathtub's own cell ranking, which has no stock to draw on for them.
   if (!('net_worth' %in% names(baseline_detail))) {
     baseline_detail$net_worth = 0
   }
 
-  # Per-record capital-stock allocation bases + Haig-Simons income pieces, from
-  # the BASELINE leg's raw Tax-Data (scenario-invariant balance sheet)
+  # Read the capital stock allocation bases and the Haig-Simons income pieces from
+  # the baseline leg's raw Tax-Data. The balance sheet does not vary by scenario
   stock_keys = read_corp_alloc_stock_keys(baseline_id, yr)
 
   microdata = baseline_detail %>%
@@ -196,9 +187,8 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
       )
     )
 
-  # The stock/HS keys must cover every filer: a missing id would flow NA into an
-  # allocation base or an income definition and silently poison group sums.
-  # Fail loudly (mirror the record-universe guard below).
+  # The keys must cover every filer. A missing id would flow NA into an allocation
+  # base or an income definition and poison the group sums
   missing_keys = setdiff(microdata$id, stock_keys$id)
   if (length(missing_keys) > 0) {
     stop('distribution: ', length(missing_keys), ' records in ', yr,
@@ -209,13 +199,15 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
   microdata %<>%
     left_join(stock_keys, by = 'id') %>%
     mutate(
-      # Income-definition cores (baseline-sourced; pre-gross-up, pre-inheritance).
-      #   AGI      : statutory adjusted gross income
-      #   expanded : gross realized income + employer payroll (do_taxes.R:182)
-      #   HS       : expanded income with realized gains swapped for accruals and
-      #              the DC accrual/withdrawal double-count removed (subtract
-      #              txbl_ira_dist in full and the DC share of pension
-      #              distributions; DB stays -- it has no accruals.* counterpart)
+      # The three income definitions, taken from the baseline leg before the
+      # gross-up and before inheritance:
+      #
+      #   AGI          : statutory adjusted gross income
+      #   expanded     : gross realized income plus employer payroll, per do_taxes.R
+      #   Haig-Simons  : expanded income with realized gains replaced by accruals,
+      #                  less the defined-contribution accrual and withdrawal
+      #                  double-count. Defined benefit plans have no accruals
+      #                  counterpart and so stay.
       inc_agi_core = agi,
       inc_exp_core = expanded_inc,
       inc_hs_core  = expanded_inc - (kg_st + kg_lt + other_gains) + accruals_sum -
@@ -228,8 +220,8 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
            corp_equity, net_capital, net_worth_stock,
            liab_iit_net, liab_pr, liab_deemed, liab_wealth, liab_iit_pr)
 
-  # Read counterfactual reform scenario tax microdata, stripping deemed
-  # realization tax from decedents same as the baseline leg above
+  # Read counterfactual reform scenario tax microdata, stripping deemed realization
+  # tax from decedents as on the baseline leg above
   reform_detail = read_static_detail(id, yr, leg = reform_leg)
   if (!('liab_deemed' %in% names(reform_detail))) {
     reform_detail$liab_deemed = 0
@@ -238,11 +230,10 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
     reform_detail$liab_wealth = 0
   }
 
-  # The two legs must share the same record universe: a baseline id missing
-  # from the reform detail would flow NA through liab_delta and silently
-  # poison every group aggregate (no na.rm downstream), and a reform-only id
-  # would be silently dropped by the join. Mismatches mean the legs come from
-  # incompatible vintages (e.g. different sample universes) -- fail loudly
+  # The two legs must share the same record universe. A baseline id missing from
+  # the reform detail would flow NA through the liability delta into every group
+  # aggregate, and a reform-only id would be dropped by the join. A mismatch means
+  # the legs come from incompatible vintages.
   base_ids   = unique(microdata$id)
   reform_ids = reform_detail$id[reform_detail$dep_status == 0]
   if (length(setdiff(base_ids, reform_ids)) > 0 |
@@ -268,13 +259,11 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
       by = 'id'
     )
 
-  # Estate tax incidence: heir structure (p_inheritance, inheritance) comes
-  # from the BASELINE Estate-Tax-Distribution interface; liability comes from
-  # the on-model rank-matching allocator (estate_allocator.R), run
-  # independently on each leg's detail file so reform estate law flows
-  # through to heirs. Inheritance is GROSS of estate tax (scenario-invariant);
-  # only the liability column differs across legs. No scenario-specific
-  # upstream file is needed anymore
+  # Allocate estate tax to heirs. The heir structure comes from the baseline
+  # Estate-Tax-Distribution interface, and liability from the rank-matching
+  # allocator in estate_allocator.R, run on each leg's detail file so that reform
+  # estate law reaches heirs. Inheritance is gross of estate tax and does not vary
+  # by scenario, so only the liability column differs between the legs.
   baseline_estate_path = interface_root('Estate-Tax-Distribution') %>%
     file.path(paste0('estate_tax_detail_', yr, '.csv'))
 
@@ -291,10 +280,8 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
     alloc_baseline = allocate_estate_to_heirs(baseline_detail, heir_px, yr, baseline_id)
     alloc_reform   = allocate_estate_to_heirs(reform_detail,   heir_px, yr, id)
 
-    # Persist this scenario's heir-level liabilities (4-column upstream
-    # schema) and the allocator diagnostics, per year for idempotence. Only the
-    # delta-table caller writes these; the ETR table reuses the same allocation
-    # but must not re-emit the files (write_supplemental = FALSE).
+    # Write this scenario's heir-level liabilities, in the upstream interface's
+    # schema, and the allocator diagnostics, one file per year
     if (write_supplemental) {
       supp_root = file.path(globals$output_root, id, 'static/supplemental')
       heir_px %>%
@@ -334,9 +321,9 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
       )
   }
 
-  # Records absent from the Estate-Tax-Distribution detail (e.g. ids new to a
-  # later Tax-Data vintage) get NA from the join; treat them as non-heirs and
-  # keep them in the table (NA weight would silently drop them) but warn
+  # Records absent from the Estate-Tax-Distribution detail, such as ids new to a
+  # later Tax-Data vintage, come out of the join with NA. Treat them as non-heirs
+  # and keep them in the table, since an NA weight would drop them
   n_unmatched = n_distinct(microdata$id[is.na(microdata$p_inheritance)])
   if (n_unmatched > 0) {
     warning(n_unmatched, ' records in ', yr, ' detail are missing from the ',
@@ -350,8 +337,8 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
       )
   }
 
-  # Heir reattribution of deemed realization tax requires inheritance data:
-  # fail loudly rather than silently dropping decedents' stripped liab_deemed
+  # Reattributing deemed realization tax to heirs needs inheritance data. Stop
+  # rather than drop the liability stripped from decedents above
   if (sum((microdata$liab_deemed + microdata$liab_deemed_reform) * microdata$weight, na.rm = T) > 0) {
     if (sum(microdata$inheritance * microdata$p_inheritance * microdata$weight) <= 0) {
       stop('Deemed realization tax present in ', yr, ' but no Estate-Tax-',
@@ -383,10 +370,9 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
       across(.cols = ends_with('_reform'), .fns  = ~ . / vat_price_offset),
 
       # Reattribute deemed realization tax from decedents to heir copies in
-      # proportion to inheritance, revenue-neutral within year. National
-      # aggregate, invariant to the tax-inclusion tier -- computed once here.
-      # Like the estate tax it enters only the estate-inclusive presentations;
-      # no income is reattributed (the deemed gain accrued to the decedent)
+      # proportion to inheritance, holding the annual total fixed. Like the estate
+      # tax it enters only the presentations that include tax at death. No income
+      # moves with it: the deemed gain accrued to the decedent.
       liab_deemed_heir = if_else(
         inheritance > 0,
         sum(liab_deemed * weight) * inheritance / sum(inheritance * weight),
@@ -407,9 +393,9 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
 process_for_distribution = function(id, baseline_id, yr, other_taxes) {
 
   #----------------------------------------------------------------------------
-  # Builds the per-record microdata (build_distribution_microdata) and adds the
-  # tax-inclusion tiers, the stock-based corporate-tax allocation, and the
-  # rank-group columns for the delta distribution table.
+  # Builds the per-record microdata and adds the tax-inclusion tiers, the
+  # stock-based corporate tax allocation, and the rank-group columns the delta
+  # distribution table needs.
   #
   # Parameters:
   #   - id          (str) : scenario ID
@@ -427,13 +413,12 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
   microdata = build_distribution_microdata(id, baseline_id, yr, other_taxes,
                                            write_supplemental = TRUE)
 
-  # Stock-based corporate incidence (equity_supernormal headline convention),
-  # replacing the legacy capital-INCOME allocation and the labor-share phase-in
-  # (corp_alloc.R). sigma_N by provision type: the off-model rate delta at the
-  # sigma_N knob (0.375 default), the cost-recovery delta at sigma_N = 1 (pure
-  # normal: no supernormal leg, 50/50 labor/all-capital). The foreign-borne
-  # haircut on the capital legs happens inside allocate_corp_dollars. National
-  # aggregate, invariant to the tax-inclusion tier -- computed once, ungrouped.
+  # Allocate the corporate tax on stocks, under the supernormal-equity convention
+  # in corp_alloc.R. The normal-return share sigma_N varies by provision type: the
+  # off-model rate delta takes the configured value, 0.375 by default, and the
+  # cost-recovery delta takes 1, which is pure normal return and so splits half to
+  # labor and half across all capital. allocate_corp_dollars applies the
+  # foreign-borne haircut to the capital legs.
   sigma_n = corp_env_knobs()$sigma_n
 
   microdata %>%
@@ -445,9 +430,9 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
         allocate_corp_dollars(cost_recovery_delta,     1,       weight, labor,
                               base_supernormal = corp_equity,
                               base_normal      = net_capital) +
-        # On-model statutory-rate delta: hits normal + supernormal returns, so
-        # allocated at the sigma_N knob like the off-model corporate delta (NOT
-        # the pure-normal sigma = 1 that cost recovery uses)
+        # The on-model statutory rate delta hits normal and supernormal returns
+        # alike, so it is allocated at the configured sigma_N, as the off-model
+        # corporate delta is
         allocate_corp_dollars(corp_rate_static_delta,  sigma_n, weight, labor,
                               base_supernormal = corp_equity,
                               base_normal      = net_capital)
@@ -467,12 +452,11 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
       # others won't; compositional differences determine distributional impact
       liab_vat = income - income_reform,
 
-      # Calculate liability under each scenario. The annual wealth tax is a
-      # living tax attached to the owner's OWN record (like income tax), so it
-      # enters every presentation tier directly -- NOT through the estate heir
-      # allocator (whose rank match exists only because estate lands on a
-      # decedent != beneficiary). Baseline liab_wealth is 0, so the wealth-tax
-      # burden falls out of liab_reform - liab.
+      # Calculate liability under each scenario. The annual wealth tax attaches to
+      # the owner's own record, like income tax, so it enters every tier directly
+      # rather than through the heir allocator, which exists because the estate tax
+      # falls on a decedent and not on the beneficiary. Baseline wealth tax is
+      # zero, so the burden falls out of the reform less the baseline.
       liab = case_when(
         taxes_included == 'iit_pr_wealth'               ~ liab_iit_pr + liab_wealth,
         taxes_included == 'iit_pr_death_wealth'         ~ liab_iit_pr + liab_wealth + liab_estate + liab_deemed_heir,
@@ -499,12 +483,11 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
     # Add AGI-based income percentile measures
     add_rank_groups('agi', 'agi_pctile', 'agi_') %>%
 
-    # Add net-worth-based percentile measures. This is the natural lens for a
-    # wealth tax — it ranks by the balance sheet, not the income statement, so a
-    # wealthy-but-low-income unit (e.g. a retiree living off principal) lands in
-    # the right group. Computed on baseline economic net worth, mirroring the
-    # income/AGI cuts above (only the non-negative-net-worth population is
-    # ranked). Produced for every scenario; most informative for wealth reforms.
+    # Add net worth percentile measures, the natural cut for a wealth tax: they
+    # rank on the balance sheet rather than the income statement, so a retiree
+    # living off principal lands in the right group. Computed on baseline economic
+    # net worth, as the income and AGI cuts above are, and ranking the
+    # non-negative-net-worth population only.
     add_rank_groups('net_worth', 'nw_pctile', 'nw_') %>%
 
     ungroup() %>%
@@ -529,9 +512,8 @@ calc_dist_metrics = function(grouped_microdata) {
   grouped_microdata %>%
     summarise(
 
-      # Group-metric-specific summary stats (lower edge of each group on each
-      # ranking variable; net_worth_cutoff is the meaningful one for the
-      # 'Net worth' dimension, as income/agi cutoffs are for their dimensions)
+      # Lower edge of each group on each ranking variable. Each dimension reads
+      # its own cutoff
       income_cutoff    = round(min(income) / 5) * 5,
       agi_cutoff       = round(min(agi) / 5) * 5,
       net_worth_cutoff = round(min(net_worth)),
@@ -586,8 +568,8 @@ get_other_taxes = function(id, baseline_id) {
   #   - id (str)          : counterfactual scenario ID
   #   - baseline_id (str) : ID of scenario against which changes are measured
   #
-  # Returns: list of three dataframes: VAT price effecvt, corporate rate
-  #.         delta, and cost recovery delta (lst).
+  # Returns: tibble of the VAT price effect, the cost recovery delta, the
+  #          off-model corporate delta, and the statutory rate delta, by year (df).
   #----------------------------------------------------------------------------
 
   # Get scenario info for counterfactual scenario
@@ -643,14 +625,13 @@ get_other_taxes = function(id, baseline_id) {
   # Other corporate tax changes
   #-----------------------------
 
-  # Read baseline off-model revenue deltas (0 if actual baseline). The corporate
-  # allocation (corp_alloc.R) applies a fixed normal/supernormal split with no
-  # labor-share phase-in, so only the total delta is needed here.
+  # Read baseline off-model revenue deltas, zero against the actual baseline. The
+  # allocation in corp_alloc.R splits the total between normal and supernormal
+  # returns, so only the total delta is needed here.
   #
-  # The distribution table is a STATIC concept (reform_leg = 'static'), so both
-  # legs read the STATIC corporate stream (`corporate_static`) via ome_corp_col,
-  # not the conventional `corporate` column that the on-model incidence channel
-  # uses. Pre-v5 vintages lacking corporate_static hard-stop there.
+  # The distribution table is a static concept, so both legs read the static
+  # corporate stream through ome_corp_col rather than the conventional column the
+  # on-model incidence channel reads.
   other_corp_delta = interface_root('Off-Model-Estimates', baseline_id) %>%
     file.path('revenues.csv') %>%
     read_csv(show_col_types = F) %>%
@@ -676,16 +657,15 @@ get_other_taxes = function(id, baseline_id) {
       ) %>%
       select(year, other_corp_delta)
 
-  #-----------------------------------
-  # On-model corporate statutory-rate change
-  #-----------------------------------
+  #------------------------------------------
+  # On-model corporate statutory rate change
+  #------------------------------------------
 
-  # The STATIC statutory-rate revenue delta ((t - t0) * B0), computed on-model
-  # (src/sim/corp_rate.R) from corp.rate + the CBO rev_corp level. The
-  # distribution table is a static concept, so this is the mechanical (no
-  # base-erosion) delta. It replaces the rate portion of other_corp_delta now
-  # that statutory rate is scored on-model rather than through OME (OME vintages
-  # must be regenerated ex-rate or the rate delta double-counts).
+  # Calculate the static statutory rate revenue delta from the rate series and the
+  # CBO corporate receipts level; see src/sim/corp_rate.R. The distribution table
+  # is a static concept, so this carries no base erosion.
+  # It stands in for the rate portion of the off-model corporate delta, which the
+  # Off-Model-Estimates vintage must therefore be generated without.
   corp_rate_static_delta = corp_rate_delta(
     rate_series = corp_rate_read_series(
       file.path(globals$output_root, id, 'static/supplemental/tax_law.csv')),

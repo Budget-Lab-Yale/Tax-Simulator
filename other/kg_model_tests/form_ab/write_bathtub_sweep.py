@@ -113,11 +113,10 @@ FORMS = {
     # permanent shock).
     #
     # The grid straddles the shipped 0.2542 widely, because this is the one kg
-    # parameter whose solver was DEMOTED for instability: the 2026-07-12 note says
-    # the bathtub dilution is unstable in the share, which is why it was iterated by
-    # hand instead of solved. A wide grid is what makes non-monotonicity visible
-    # rather than silently interpolated through, and the measurement script refuses
-    # to interpolate if the curve is not monotone.
+    # parameter whose solver was demoted for instability: the bathtub dilution is
+    # unstable in the share, so it was iterated by hand rather than solved. A wide
+    # grid shows non-monotonicity, and the measurement script refuses to interpolate
+    # if the curve is not monotone.
     'timeable_logs': dict(
         entry='timeable_share_logs',
         form_value='logs',
@@ -184,23 +183,22 @@ def split_blocks(text):
 
 def sweep_header(spec, tag, value):
     entry = spec['entry']
-    return f"""# GENERATED FILE -- do not hand-edit. Written by {THIS_SCRIPT}.
+    return f"""# Generated file -- written by {THIS_SCRIPT}.
 #
-# SWEEP POINT: {entry} = {value}. One point on the trial grid used to pin
+# One sweep point, {entry} = {value}, on the trial grid used to pin
 # {spec['target_desc']}.
-# This is not a shipped calibration and no scenario should bind it except the
-# eta-dial runscript generated alongside it.
+# This is not a shipped calibration, and no scenario should bind it except the
+# runscript generated alongside it.
 #
-# Everything here is the shipped config/calibrations/kg/bathtub.yaml with exactly
-# one entry replaced -- {entry} -- because a sweep varies one thing and holds the
-# rest fixed. The other three entries keep their own provenance verbatim, so this
-# file goes stale under the same conditions the shipped one does.
+# This is the shipped config/calibrations/kg/bathtub.yaml with the {entry} entry
+# replaced. The other three keep their own provenance, so this file goes stale
+# under the same conditions the shipped one does.
 #
 # Bound by  : config/scenarios/behavior/alternatives/{BASE_BEHAVIOR}_{entry}_{tag}/
 # Measured by: {spec['measure_script']}
 #
-# The file name matters. It has to stay `bathtub.yaml` inside a differently-named
-# FOLDER, because entries are labelled '{{file stem}}.{{entry}}' -- calling it
+# The file name matters. It stays `bathtub.yaml` inside a differently named folder,
+# because entries are labelled '{{file stem}}.{{entry}}', so calling it
 # {entry}_{tag}.yaml would relabel every entry in it and detach any waiver
 # written against `bathtub.{entry}`.
 """
@@ -215,14 +213,13 @@ def trial_block(spec, value):
   active_when:
     kg.response_form: {spec['form_value']}
   note: >
-    SWEEP TRIAL, not a calibrated value -- which is why the kind is judgment
-    rather than calibrated. It has no derivation to go stale: it is an INPUT to
-    the calibration that pins {entry}, one of three points on the grid
-    {{{grid_set}}}. The measurement script reads the three vintages this
-    grid produces, measures E_full at each, and inverts for the value that
-    hits E_full = -2.52. The result of that inversion is the shipped value in
-    config/calibrations/kg/bathtub.yaml; this number is scaffolding for
-    producing it. Measured by: {spec['measure_script']}
+    A sweep trial rather than a calibrated value, which is why the kind is
+    judgment. It has no derivation to go stale: it is an input to the calibration
+    that pins {entry}, one of three points on the grid {{{grid_set}}}. The
+    measurement script reads the three vintages the grid produces, measures the
+    full-simulation elasticity at each, and inverts for the value hitting -2.52.
+    That inversion is the shipped value in config/calibrations/kg/bathtub.yaml.
+    Measured by: {spec['measure_script']}
 """
 
 
@@ -255,12 +252,12 @@ def build_behavior(spec, tag, value):
                         f'# The stack below is inherited from the {BASE_BEHAVIOR} '
                         'alternative, comments and all:\n', 1)
 
-    header = f"""# GENERATED FILE -- do not hand-edit. Written by {THIS_SCRIPT}.
+    header = f"""# Generated file -- written by {THIS_SCRIPT}.
 #
 # The {BASE_BEHAVIOR} stack with the bathtub bound to the {entry} = {value} sweep
-# point instead of to the shipped calibration. Everything else about the stack is
-# the product configuration, because the eta-dial measurement only means something
-# if the trial value is the one thing that differs.
+# point rather than to the shipped calibration. The rest of the stack is the
+# product configuration, since the measurement means something only if the trial
+# value is the one thing that differs.
 #
 # Named by: {rs_root(spec)}/{spec['runscript_stem']}_{tag}.csv
 #

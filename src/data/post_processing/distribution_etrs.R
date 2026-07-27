@@ -1,31 +1,28 @@
 #----------------------------------------------------------------------------
 # distribution_etrs.R
 #
-# Builds distribution_etrs.csv: effective tax rates (ETR = tax / pre-tax income)
-# reported as LEVELS, for baseline AND policy side by side, by income group,
-# under multiple income definitions and multiple corporate-incidence
-# conventions. Answers: how progressive is the system under this policy when
-# gains are marked to accrual (Haig-Simons) instead of realization, and under
-# different corporate-incidence assumptions?
+# Contains functions to build the effective tax rate tables
+#-------------------------------------------------------------------------------
+
+# The distribution tables report how a policy changes taxes. This reports the level
+# of effective tax rates instead, for the baseline and the policy side by side, so
+# the question it answers is how progressive the system is rather than how the
+# policy changes it.
 #
-# Mirrors build_distribution_tables: reads static detail via the shared
-# build_distribution_microdata(), loops dist_years, reuses add_rank_groups()
-# for the percentile families, and the estate allocator path for the death
-# tier. It differs in the numerators (ETR levels for BOTH legs, not deltas),
-# the income denominators (three definitions, with a corporate-tax gross-up),
-# and the corporate allocation (three stock-based conventions from corp_alloc.R,
-# plus the corporate BASELINE LEVEL).
+# Rates are reported under three definitions of income, including one that counts
+# capital gains as they accrue rather than when they are realized, and under three
+# conventions for who bears the corporate tax.
 #
-# Output is long, keyed by:
-#   year x income_definition{agi,expanded,hs} x ranking{fixed,self,n/a}
-#     x taxes_included{iit, iit_pr, death, wealth_cit_vat, other}
-#     x corp_convention{equity_supernormal, capital_income, uniform_networth, n/a}
-#     x group_dimension{Overall, Age, Parent status, Income percentile,
-#       Net worth} x group
-# with, per cell: n_tax_units, income_cutoff, income_/tax_/etr_ for {baseline,
-# reform}, and component ETR columns that decompose etr_ into tax types.
-# corp_convention varies ONLY the CIT-inclusive tier; ranking is 'n/a' for the
-# non-percentile dimensions.
+# It follows the same path as the delta tables: the same per-record microdata, the
+# same loop over years, the same percentile groupings, and the same estate
+# allocation. What differs is that the numerators are levels rather than changes,
+# that there are three income denominators with a corporate tax gross-up, and that
+# the corporate baseline level enters as well as the reform delta.
+#
+# The output is long, one row per year, income definition, ranking, set of taxes
+# included, corporate convention, and group. Each row carries the number of tax
+# units, the income cutoff, and the income, tax and rate for both legs, plus the
+# rate broken down by type of tax.
 #----------------------------------------------------------------------------
 
 
@@ -43,11 +40,10 @@ ETR_CONVENTIONS = c('equity_supernormal', 'capital_income', 'uniform_networth')
 ETR_CONV_SUFFIX = c(equity_supernormal = 'es', capital_income = 'ci',
                     uniform_networth = 'nw')
 
-# Tax-inclusion tiers. The first four are nested (each adds a tax type). `other`
-# is a STANDALONE tier -- combined state+local+federal-excise "other taxes"
-# (dina_other_taxes_rate) ONLY, no federal tax in the numerator -- so it reads
-# as an isolated regressive-burden ETR. Present in BOTH legs (exogenous to
-# federal law), unlike VAT/wealth which are reform-only.
+# Which taxes are included. The first four nest, each adding a type. The last
+# stands alone: state and local taxes plus federal excises, with no federal income
+# tax in the numerator, so it reads as a regressive burden on its own. It appears in
+# both legs, being outside federal law, unlike the VAT and the wealth tax.
 ETR_TIERS = c('iit', 'iit_pr', 'death', 'wealth_cit_vat', 'other')
 
 
@@ -68,20 +64,18 @@ build_distribution_etrs = function(id) {
   # VAT/corporate deltas (shared reader with the delta table)
   other_taxes = get_other_taxes(id, baseline_id)
 
-  # Corporate BASELINE LEVEL (rev_corp, $B, CBO corporate receipts): read the
-  # baseline Macro-Projections directly -- do NOT reuse corp_read_macro(), which
-  # transmutes rev_corp into pi_at and does not return it.
+  # The baseline level of corporate receipts. Read the macro projections directly:
+  # corp_read_macro() turns this into after-tax profit and does not return it.
   rev_corp = read_macro_spliced(interface_root('Macro-Projections', baseline_id)) %>%
     select(year, rev_corp_level = rev_corp)
 
-  # Loop over years x reform leg, build per-record microdata, aggregate the
-  # cube. reform_leg keys WHICH leg supplies the reform tax numerators:
-  #   static       — the law-only ask (welfare ETR, envelope theorem)
-  #   conventional — realized collections with behavior (numerator-only swap;
-  #                  denominators/rankings stay baseline-static in both)
-  # Baseline columns are identical across the two legs (baseline has no
-  # behavior). The conventional rows are skipped when the leg's detail is
-  # absent (static-only runs, purged vintages).
+  # Loop over years and over which pass supplies the reform numerators. The static
+  # pass gives what the law asks for; the conventional pass gives what is actually
+  # collected once taxpayers respond. Only the numerator changes between the two:
+  # the denominators and the rankings stay on the baseline static frame in both.
+  #
+  # The baseline columns are the same either way, the baseline having no behavior.
+  # Conventional rows are skipped where that detail is absent.
   etr_tables = list()
   for (yr in get_scenario_info(id)$dist_years) {
     for (leg in c('static', 'conventional')) {
@@ -111,11 +105,10 @@ process_for_etrs = function(id, baseline_id, yr, other_taxes, rev_corp,
                             reform_leg = 'static') {
 
   #----------------------------------------------------------------------------
-  # Builds the per-record ETR microdata: the shared distribution microdata plus
-  # the per-record income-definition pieces, the tax numerators for every tier
-  # (both legs), the three corporate-incidence allocations (baseline level +
-  # reform delta), the state+local+excise other-tax dollars, and the fixed/self
-  # rank-group columns.
+  # Builds the per-record data the tables are aggregated from: the shared
+  # distribution microdata, the pieces of each income definition, the tax for every
+  # tier and both legs, the three corporate allocations, the state and local taxes,
+  # and the grouping columns.
   #
   # Parameters:
   #   - id          (str) : scenario ID
@@ -127,9 +120,9 @@ process_for_etrs = function(id, baseline_id, yr, other_taxes, rev_corp,
   # Returns: ungrouped per-record microdata with all pieces + rank groups (df).
   #----------------------------------------------------------------------------
 
-  # Shared builder: both legs, universe check, estate heir allocation + copy
-  # split, stock bases, income-definition cores. Do NOT re-emit the estate
-  # supplemental files (the delta table already wrote them).
+  # The shared builder does both legs, the estate allocation, the capital stocks and
+  # the income definitions. It does not rewrite the estate diagnostics, which the
+  # delta tables already wrote.
   md = build_distribution_microdata(id, baseline_id, yr, other_taxes,
                                     write_supplemental = FALSE,
                                     reform_leg = reform_leg) %>%
@@ -140,13 +133,10 @@ process_for_etrs = function(id, baseline_id, yr, other_taxes, rev_corp,
          'for ', yr, ' in Macro-Projections.')
   }
 
-  # Combined state+local+federal-excise "other taxes" per record: imputed rate x
-  # reconstructed broad income (the base the rate was divided by). Keyed by id
-  # from the BASELINE Tax-Data; exogenous to federal law, so it is identical in
-  # the baseline and reform legs (the heir copy-split just re-weights the same
-  # value). One row per id on the right -> the split rows join cleanly. If the
-  # baseline vintage predates the imputation, the reader returns NULL and the
-  # `other` tier is dropped downstream (has_other = FALSE).
+  # State and local taxes plus federal excises, as the imputed rate times the income
+  # it was measured against. Read from the baseline Tax-Data and identical in both
+  # legs, being outside federal law. Where the baseline vintage predates the
+  # imputation this is absent and the tier is dropped.
   other_tax_tbl = read_other_taxes_base(baseline_id, yr)
   has_other = !is.null(other_tax_tbl)
   if (has_other) {
@@ -163,13 +153,12 @@ process_for_etrs = function(id, baseline_id, yr, other_taxes, rev_corp,
 
   sigma_rate = corp_env_knobs()$sigma_n   # rate/level split; cost-recovery = 1
 
-  # Per-convention corporate allocation: the baseline LEVEL (rev_corp, sigma_n)
-  # and the reform DELTA (off-model rate delta at sigma_n + cost-recovery delta
-  # at sigma_n = 1). Reform total = level + delta (allocation is linear in the
-  # amount at fixed sigma_n). The convention picks the capital bases:
-  #   equity_supernormal : supernormal = corp-equity stock ; normal = net-capital
-  #   capital_income     : both legs = capital INCOME (agency reconciliation)
-  #   uniform_networth   : both legs = baseline net worth (floored)
+  # The corporate allocation under each convention: the baseline level, and the
+  # reform's change. The reform total is the sum of the two, the allocation being
+  # linear in the amount. The convention chooses what the burden is spread over:
+  # corporate equity for the above-normal part and net capital for the normal part;
+  # or capital income for both, which is how other agencies do it; or net worth for
+  # both.
   cit_alloc = function(super_base, normal_base) {
     list(
       level = allocate_corp_dollars(md$rev_corp_level, sigma_rate, md$weight,
@@ -178,8 +167,8 @@ process_for_etrs = function(id, baseline_id, yr, other_taxes, rev_corp,
                                     md$labor, super_base, normal_base) +
               allocate_corp_dollars(md$cost_recovery_delta,    1,          md$weight,
                                     md$labor, super_base, normal_base) +
-              # on-model statutory-rate delta (static), sigma_n like the off-model
-              # rate delta it replaces
+              # the rate change scored on-model, split the same way as the
+              # off-model figure it replaces
               allocate_corp_dollars(md$corp_rate_static_delta, sigma_rate, md$weight,
                                     md$labor, super_base, normal_base)
     )
@@ -191,8 +180,8 @@ process_for_etrs = function(id, baseline_id, yr, other_taxes, rev_corp,
   md = md %>%
     mutate(
 
-      # --- Tax numerators, per leg (iit strips the deemed-realization tax; it
-      # re-enters as the heir-reattributed liab_deemed_heir in the death tier) ---
+      # Tax by leg. The income tax figure excludes tax on gains deemed realized at
+      # death, which re-enters attributed to heirs in the death tier.
       iit_base    = liab_iit_pr - liab_pr,
       iit_reform  = liab_iit_pr_reform - liab_pr_reform,
       pr_base     = liab_pr,
@@ -203,14 +192,14 @@ process_for_etrs = function(id, baseline_id, yr, other_taxes, rev_corp,
       dh_reform   = liab_deemed_heir_reform,
       wealth_reform = liab_wealth_reform,          # baseline wealth tax is 0
 
-      # VAT burden = real income loss on expanded income (incl. inheritance in
-      # the death-inclusive top tier); a fixed per-record tax used as a numerator
-      # across all income definitions (baseline VAT is 0)
+      # The VAT burden is the loss of real income, including inheritance in the tiers
+      # that count it. One figure per record, used with every income definition. The
+      # baseline has no VAT.
       vat = (income + inheritance) - (income_reform + inheritance_reform),
 
-      # Ranking bases. Fixed income ranking is expanded income plus inheritance,
-      # so heirs are grouped by income after inheritance receipt. Self rankings
-      # use the same convention for expanded/HS; AGI remains statutory.
+      # What records are ranked on. The fixed ranking uses expanded income plus
+      # inheritance, so heirs are grouped by their income after receiving it. Ranking
+      # each definition on itself does the same, except that AGI stays statutory.
       inc_exp_rank = inc_exp_core + inheritance,
       inc_hs_rank  = inc_hs_core  + inheritance,
 
@@ -220,10 +209,9 @@ process_for_etrs = function(id, baseline_id, yr, other_taxes, rev_corp,
       citbase_nw  = a_nw$level, citdelta_nw = a_nw$delta
     )
 
-  # Rank-group columns. Ranks are over the whole (ungrouped) population; call on
-  # the ungrouped frame. Fixed ranking: all definitions ranked by inheritance-
-  # inclusive expanded income. Self ranking: each definition ranked by its own
-  # income, with inheritance included for expanded and HS.
+  # The grouping columns. Ranks are taken over the whole population, so call this
+  # before grouping. Either every definition is ranked on expanded income including
+  # inheritance, or each is ranked on its own income.
   out = md %>%
     add_rank_groups('inc_exp_rank', 'fx_pctile',            'fx_')            %>%
     add_rank_groups('inc_agi_core', 'self_agi_pctile',      'self_agi_')      %>%
@@ -241,10 +229,9 @@ process_for_etrs = function(id, baseline_id, yr, other_taxes, rev_corp,
 etr_group_sums = function(md, group_col) {
 
   #----------------------------------------------------------------------------
-  # Weighted group sums of every income/tax piece needed to compose the ETR
-  # cube. Computed ONCE per grouping; the definition x tier x convention combos
-  # are then composed arithmetically (compose_etr_rows), so the ~72-way cube is
-  # never materialized at the record level.
+  # Sums every income and tax piece within each group. Done once per grouping, after
+  # which the combinations of income definition, tier and convention are assembled
+  # from those sums. The full set of about 72 combinations is never built per record.
   #
   # Parameters:
   #   - md        (df)   : per-record ETR microdata (process_for_etrs())
@@ -260,7 +247,7 @@ etr_group_sums = function(md, group_col) {
     summarise(
       n_tax_units = sum(weight),
 
-      # Income-definition cores and the inheritance / gross-up add-ons
+      # The income definitions, and the inheritance and gross-up added to them
       S_agi_core = sum(inc_agi_core * weight),
       S_exp_core = sum(inc_exp_core * weight),
       S_hs_core  = sum(inc_hs_core  * weight),
@@ -275,14 +262,13 @@ etr_group_sums = function(md, group_col) {
       S_vat           = sum(vat           * weight),
       S_other         = sum(other_tax     * weight),   # state+local+excise
 
-      # Corporate allocations (level + delta), per convention -- these enter both
-      # the numerator (as a tax) and the denominator (as a gross-up)
+      # The corporate allocations, which enter the numerator as a tax and the
+      # denominator as a gross-up
       S_citbase_es = sum(citbase_es * weight), S_citdelta_es = sum(citdelta_es * weight),
       S_citbase_ci = sum(citbase_ci * weight), S_citdelta_ci = sum(citdelta_ci * weight),
       S_citbase_nw = sum(citbase_nw * weight), S_citdelta_nw = sum(citdelta_nw * weight),
 
-      # Lower edge of the group on each income definition (meaningful for the
-      # income-percentile cuts; matches distribution.csv's rounding)
+      # The bottom of each group, which means something for the percentile cuts
       cutoff_agi = round(min(inc_agi_core) / 5) * 5,
       cutoff_exp = round(min(inc_exp_core) / 5) * 5,
       cutoff_hs  = round(min(inc_hs_core)  / 5) * 5,
@@ -301,19 +287,17 @@ compose_etr_rows = function(sums, def, ranking, group_dimension, cutoff_col,
                             include_other = TRUE) {
 
   #----------------------------------------------------------------------------
-  # Composes long ETR rows for one income definition from a group-sum frame,
-  # across the tax tiers (four nested federal tiers + the standalone `other`
-  # state+local+excise tier) and, for the CIT tier only, the three corporate
-  # conventions. All arithmetic is vectorized across the sum frame's groups.
+  # Assembles the rows for one income definition, across the tax tiers and, in the
+  # tier that includes the corporate tax, across the three conventions.
   #
-  # Denominator rules:
-  #   - AGI is statutory: no inheritance, no CIT gross-up, in every tier.
-  #   - expanded / HS: + inheritance in the death-inclusive tiers; + the
-  #     convention's CIT allocation (baseline level for the baseline leg; level
-  #     + delta for the reform leg) in the CIT tier.
-  # Numerator rules mirror the tier nesting; VAT and the reform wealth tax enter
-  # the reform leg only; the CIT amount matches the gross-up so the assignment is
-  # internally consistent.
+  # On the denominators: AGI is statutory, so it takes neither inheritance nor the
+  # corporate gross-up in any tier. The other two definitions add inheritance in the
+  # tiers that count death, and add the corporate allocation in the tier that
+  # includes it.
+  #
+  # The numerators follow the nesting of the tiers. The VAT and the wealth tax appear
+  # in the reform leg only. The corporate amount in the numerator matches the
+  # gross-up in the denominator, so the two are consistent.
   #
   # Returns: long tibble of ETR rows (df).
   #----------------------------------------------------------------------------

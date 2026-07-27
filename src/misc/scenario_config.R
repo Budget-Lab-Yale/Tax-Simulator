@@ -1,88 +1,73 @@
 #-------------------------------------------------------------------------------
 # scenario_config.R
 #
-# The scenario-configuration resolution engine for the three-leg architecture:
-# a scenario is (tax_law, economy, behavior). Tax law keeps its own machinery
-# (src/data/tax_law.R); this file serves the other two legs with ONE shared
-# implementation, generalized from src/misc/assumptions.R:
+# Contains functions to resolve a scenario's economy and behavior configuration
+#-------------------------------------------------------------------------------
+
+# A scenario is three things: its tax law, its economy, and its behavior. Tax law
+# has its own parser, in src/data/tax_law.R, because it replaces subparameters
+# rather than whole values. This file serves the other two.
 #
-#   - economy  : exogenous world description + mechanical transmission.
-#                Channels under config/scenarios/economy/. Each channel carries
-#                a role -- 'state' (read on both run types) or 'transmission'
-#                (conventional-only; reading one on the static pass is an error,
-#                which is what makes "static = law-only" a checked definition).
-#   - behavior : agent responses to tax changes, relative to baseline. Its
-#                module list has its own loader (src/sim/behavior.R); this
-#                engine serves the behavior leg's folder shape only.
+# The economy leg describes the world the policy acts on. Its files are grouped
+# into channels, and each channel is one of two kinds. A state channel can be read
+# on either pass. A transmission channel describes how a tax change propagates, so
+# reading one on the static pass is an error.
 #
-# Every leg has the same folder shape, the one tax law already uses:
+# The behavior leg lists how agents respond. Its module list has its own loader in
+# src/sim/behavior.R; what this file handles is the folder shape.
 #
-#   config/scenarios/{leg}/default/          -- a complete specification
-#   config/scenarios/{leg}/alternatives/...  -- sparse deltas over it
+# Both legs are laid out the way tax law already is: a default folder holding a
+# complete specification, and alternative folders holding sparse changes to it. A
+# runscript cell names either the default or one of those folders. There are only
+# two layers, and the alternative wins.
 #
-# A runscript cell is either the reserved word `default` or a path under that
-# leg's alternatives/ (nesting is arbitrary and human-named). Precedence within
-# a scenario is exactly two layers:
+# A runscript names folders, never values. A cell in a spreadsheet carries no
+# record of where a number came from; an entry in a folder does. A sweep is
+# therefore a set of generated folders, written by whatever writes the runscript
+# rows.
 #
-#   the alternative's files > the default files
+# Values belong to a scenario, so read them where they are used, through
+# economy_param() or behavior_param(), which resolve against whichever scenario
+# config_activate() installed. Never read one at source time.
 #
-# A runscript names FILES, never values: there is no per-value override
-# column. A CSV cell carries no provenance; an entry in an alternative folder
-# does. Sweeps and A/B corners are generated alternative folders, written by
-# the same generator that writes the runscript rows.
+# Every entry declares what kind of number it is and owes provenance accordingly:
+# a calibrated value owes the conditions it was derived under, a sourced value a
+# citation, and a judgment or structural value a note. Calibrated values can go
+# stale, which is checked against the data vintages they were derived under, the
+# hashes of the files they depend on, and any configuration values they were
+# conditioned on. That last check exists because a calibration can depend on
+# another configured number, which no file hash would catch.
 #
-# Values are SCENARIO-scoped: read them at the point of use via
-# economy_param() / behavior_param(), which resolve against the scenario
-# installed by config_activate(). Never capture one at source time.
-#
-# Provenance schema is inherited from the assumptions layer unchanged (kinds
-# calibrated / sourced / judgment / structural, staleness on derived_under +
-# invalidated_by hashes, dated `acknowledged` waivers, `active_when` guards),
-# with three additions:
-#   - role        : 'state' | 'transmission', economy leg only; declared per
-#                   channel via a reserved `_channel:` block, overridable per
-#                   entry
-#   - locked      : entry can never be overridden by an alternative (the estate
-#                   valuation bridge)
-#   - enforcement : 'stop' (default) | 'warn', how hard a staleness finding
-#                   for this entry lands. 'warn' exists for the estate
-#                   measurement bridge, which the model deliberately runs
-#                   against older Tax-Data vintages (historical comparisons);
-#                   src/sim/estate.R has warned at the point of use since
-#                   before the redesign, and a locked entry has no override
-#                   escape hatch
-#   - pointer values : a calibrated entry's value may be a folder/file pointer
-#                   (with optional pointer_root); its staleness rides the
-#                   invalidated_by file hashes like any other, which is how a
-#                   TABLE-valued calibration (the wealth s-profile) joins the
-#                   staleness net
-#   - conditioned_on : map of {leg}.{channel}.{name}: value on a calibrated
-#                   entry; checked at staleness time against the live resolved
-#                   values (a calibration conditioned on a config magnitude --
-#                   e.g. sigma on charity.e = -1 -- can no longer be caught by
-#                   file hashes once magnitudes are config)
+# Four things can also be declared per entry. A role, on the economy leg, marking
+# the channel as state or transmission. A lock, meaning no alternative may override
+# it, which the estate valuation bridge uses. An enforcement level, so that a stale
+# finding warns instead of stopping: the estate bridge is deliberately run against
+# older Tax-Data vintages for historical comparisons, and being locked it has no
+# override to fall back on. And a pointer, where the value names a file or folder
+# rather than a number, which is how the table-valued wealth saving profile is
+# covered by the staleness check.
 #-------------------------------------------------------------------------------
 
 
-# Leg roots. tax_law is deliberately absent: it has different (subparameter-
-# replacement) semantics and its own parser.
+# Where each leg lives. Tax law is absent on purpose: it replaces subparameters
+# rather than values, and has its own parser.
 CONFIG_LEG_ROOTS = list(
   economy  = './config/scenarios/economy',
   behavior = './config/scenarios/behavior'
 )
 
-# The reserved cell value naming the default layer. A folder of this name under
-# alternatives/ would be unreachable, so it is an error rather than a silent
-# shadow.
+# The reserved name for the default layer. A folder of the same name under
+# alternatives would be unreachable, so it is an error rather than ignored.
 CONFIG_DEFAULT_NAME = 'default'
 
 
 config_leg_path = function(leg, name) {
 
   #----------------------------------------------------------------------------
-  # Folder holding one layer of one leg: the reserved word `default` maps to
-  # {root}/default, anything else to {root}/alternatives/{name}. The one place
-  # the two-folder shape is written down.
+  # Locates one layer of one leg. The only place the two-folder shape is written
+  # down.
+  #
+  # Returns: path to the folder (str).
   #----------------------------------------------------------------------------
 
   root = CONFIG_LEG_ROOTS[[leg]]
@@ -90,11 +75,10 @@ config_leg_path = function(leg, name) {
   else file.path(root, 'alternatives', name)
 }
 
-# Whether a stale calibration halts the run (see assumptions.R for the history
-# of this switch; it carried over TRUE).
+# Whether a stale calibration stops the run.
 CONFIG_ENFORCE_STALENESS = TRUE
 
-# Required fields by kind -- identical to ASSUMPTION_SCHEMA.
+# What each kind of entry must declare
 CONFIG_ENTRY_SCHEMA = list(
   calibrated = c('value', 'kind', 'set', 'target', 'derived_under',
                  'invalidated_by', 'rederive'),
@@ -105,16 +89,15 @@ CONFIG_ENTRY_SCHEMA = list(
 
 CONFIG_ROLES = c('state', 'transmission')
 
-# How hard a staleness finding lands, per entry (see the header note).
+# How hard a stale finding lands
 CONFIG_ENFORCEMENTS = c('stop', 'warn')
 
-# Run-scoped store of the active scenario's resolved legs (and the current
-# pass). An environment rather than a global binding so a forked worker
-# (multicore = 'scenario') mutates only its own copy.
+# The active scenario's resolved legs, and which pass is running. An environment
+# rather than a global, so that a forked worker changes only its own copy.
 .scenario_config_active = new.env(parent = emptyenv())
 
-# Run-scoped state that is not configuration (e.g. estate measurement params
-# loaded once per run). Replaces ad-hoc `globals$x <<-` mutation.
+# Run-level state that is not configuration, such as the estate measurement
+# parameters, loaded once per run.
 .run_state = new.env(parent = emptyenv())
 
 
@@ -134,7 +117,7 @@ run_state_set = function(name, value) {
 run_state_get = function(name) {
 
   #----------------------------------------------------------------------------
-  # Reads a run-scoped object stored by run_state_set(); fail-closed.
+  # Reads an object stored by run_state_set(); errors if it was never set.
   #----------------------------------------------------------------------------
 
   if (!exists(name, envir = .run_state, inherits = FALSE)) {
@@ -148,16 +131,13 @@ run_state_get = function(name) {
 config_load_defaults = function(leg) {
 
   #----------------------------------------------------------------------------
-  # Reads the default layer of a leg: every channel YAML under
-  # {leg root}/default/, validated.
+  # Reads and checks a leg's default layer: every channel file under it.
   #
   # Parameters:
   #   - leg (str) : 'economy' or 'behavior'
   #
-  # Returns: list of
-  #   - entries : channel -> name -> entry list (entry-level `role` filled in
-  #               from the channel `_channel` block)
-  #   - roles   : channel -> channel-default role (economy leg; NULL otherwise)
+  # Returns: list of the entries by channel and name, with each entry's role
+  #          filled in from its channel, and the channel roles themselves.
   #----------------------------------------------------------------------------
 
   leg  = match.arg(leg, names(CONFIG_LEG_ROOTS))
@@ -166,9 +146,8 @@ config_load_defaults = function(leg) {
     stop('No default layer found for the ', leg, ' leg (expected ', root, ')')
   }
 
-  # `default` is the reserved cell value, so a folder of that name under
-  # alternatives/ could never be selected. Catch it here rather than let it sit
-  # there looking usable.
+  # A folder named default under alternatives could never be selected, since that
+  # name is reserved. Catch it here rather than leave it sitting there.
   shadow = file.path(CONFIG_LEG_ROOTS[[leg]], 'alternatives', CONFIG_DEFAULT_NAME)
   if (dir.exists(shadow)) {
     stop('`default` is a reserved runscript cell value naming the ', leg,
@@ -180,10 +159,9 @@ config_load_defaults = function(leg) {
   if (length(files) == 0 && leg != 'behavior') {
     stop('No channel files found under ', root)
   }
-  # The behavior leg carries no value entries at all: its content is
-  # behavior.yaml (the kg binding plus the module list), which
-  # src/sim/behavior.R reads, and its modules keep their own parameters. So an
-  # empty entry set is the normal state there, not a missing file.
+  # The behavior leg carries no values. Its content is behavior.yaml, which
+  # src/sim/behavior.R reads, and its modules hold their own parameters. So no
+  # entries is the normal state there, not a missing file.
   if (length(files) == 0) {
     return(list(entries = list(), roles = NULL))
   }
@@ -192,8 +170,8 @@ config_load_defaults = function(leg) {
     set_names(tools::file_path_sans_ext(basename(.))) %>%
     map(read_yaml)
 
-  # Peel the reserved `_channel` block off each file and stamp its role onto
-  # entries that do not declare their own.
+  # Take the channel block off each file and give its role to any entry that does
+  # not declare one.
   roles   = list()
   entries = list()
   for (channel in names(raw)) {
@@ -231,9 +209,9 @@ config_load_defaults = function(leg) {
 config_validate = function(leg, entries) {
 
   #----------------------------------------------------------------------------
-  # Confirms every entry declares a known kind and carries the fields that kind
-  # requires, plus the leg-specific additions (role, locked, pointer paths).
-  # Errors list all problems at once.
+  # Checks that every entry declares a known kind and carries what that kind
+  # requires, along with the role, lock and pointer fields. Reports every problem
+  # at once rather than the first.
   #
   # Parameters:
   #   - leg (str)      : 'economy' or 'behavior'
@@ -281,11 +259,9 @@ config_validate = function(leg, entries) {
         problems = c(problems, sprintf(
           '%s: active_when keys must be {channel}.{name}', label))
       }
-      # `settings` joins the two legs as a valid conditioned_on source: the kg
-      # calibrations are conditioned on the model-form switches in
-      # config/calibrations/kg/settings.yaml, and that dependency is exactly what
-      # makes changing a switch stop the run rather than silently reuse a value
-      # derived under a different one.
+      # The kg settings count as a third source a calibration can be conditioned
+      # on, alongside the two legs. The kg calibrations depend on the model-form
+      # switches there, so changing a switch stops the run.
       if (!is.null(entry$conditioned_on) &&
           !all(grepl('^(economy|behavior|settings)[.][a-z0-9_]+[.][a-z0-9_]+$',
                      names(entry$conditioned_on)))) {
@@ -313,9 +289,9 @@ config_validate = function(leg, entries) {
           '%s: kind `%s` requires %s', label, kind, paste(missing, collapse = ', ')))
       }
 
-      # A calibrated entry's dependency list is what the staleness check reads;
-      # a path that does not exist would silently never trip it. Same for a
-      # pointer value: a dangling pointer should die at load, not mid-run.
+      # The staleness check reads these paths, so one that does not exist would
+      # never trip it. A pointer to a missing file should fail at load rather than
+      # midway through a run.
       if (identical(kind, 'calibrated')) {
         for (f in entry$invalidated_by) {
           if (!file.exists(f)) {
@@ -349,25 +325,18 @@ config_validate = function(leg, entries) {
 config_resolve = function(leg, defaults, alternative = NULL) {
 
   #----------------------------------------------------------------------------
-  # Resolves one scenario's configuration for one leg: the default layer,
-  # overlaid by the alternative the runscript cell names (if any). Those two
-  # layers are the whole of the precedence rule -- runscripts name files, not
-  # values.
+  # Resolves one leg for one scenario: the default layer, with the alternative the
+  # runscript names laid over it. Those two layers are the whole of the rule.
   #
   # Parameters:
   #   - leg (str)         : 'economy' or 'behavior'
-  #   - defaults (list)   : output of config_load_defaults(leg)
-  #   - alternative (str) : path under the leg's alternatives/ (nesting
-  #                         allowed); NULL/NA/'' or 'default' means the default
-  #                         layer alone
+  #   - defaults (list)   : the leg's default layer
+  #   - alternative (str) : path under the leg's alternatives; the default layer
+  #                         alone if absent
   #
-  # Returns: list of
-  #   - leg, alternative : identifiers
-  #   - values           : channel -> name -> resolved value
-  #   - roles            : channel -> name -> role (economy leg)
-  #   - overrides        : tibble(channel, name, default, value, source)
-  #   - waivers          : named list, '{channel}.{name}' -> {date, reason},
-  #                        the dated acknowledgments this alternative carries
+  # Returns: list of the resolved values, their roles, a table of what the
+  #          scenario overrode and from where, and any dated waivers the
+  #          alternative carries.
   #----------------------------------------------------------------------------
 
   leg = match.arg(leg, names(CONFIG_LEG_ROOTS))
@@ -404,15 +373,15 @@ config_resolve = function(leg, defaults, alternative = NULL) {
     if (!(nm %in% names(defaults$entries[[channel]]))) {
       stop(source, " names an unknown ", leg, " entry: ", channel, '.', nm)
     }
-    # A waiver accepts a staleness finding; it does not change the value, so
-    # `locked` has nothing to protect against.
+    # A waiver accepts a stale finding without changing the value, so a lock has
+    # nothing to prevent here.
     if (isTRUE(defaults$entries[[channel]][[nm]]$locked) && !waiver_only) {
       stop(channel, '.', nm, ' is locked (', source, ' tried to override it). ',
            'Locked entries are never scenario-overridable.')
     }
   }
 
-  # The alternative: a sparse delta over the default layer
+  # The alternative, holding only what it changes
   if (!identical(alternative, CONFIG_DEFAULT_NAME)) {
     alt_path = config_leg_path(leg, alternative)
     if (!dir.exists(alt_path)) {
@@ -429,9 +398,9 @@ config_resolve = function(leg, defaults, alternative = NULL) {
         check_known(channel, nm, label,
                     waiver_only = is.null(alt_entries[[nm]]$value))
 
-        # A dated waiver: the alternative accepts a staleness finding on this
-        # entry rather than changing its value. Humans write these; they show
-        # up in the manifest and print a banner at parse time.
+        # A dated waiver, accepting a stale finding rather than changing the
+        # value. Written by hand, recorded in the manifest, and announced at
+        # parse time.
         waiver = alt_entries[[nm]]$waiver
         if (!is.null(waiver)) {
           if (!all(c('date', 'reason') %in% names(waiver))) {
@@ -463,9 +432,9 @@ config_resolve = function(leg, defaults, alternative = NULL) {
 config_activate = function(economy = NULL, behavior = NULL) {
 
   #----------------------------------------------------------------------------
-  # Installs a scenario's resolved legs as the active configuration. Call once
-  # per scenario, before any calculation reads a value. Either leg may be NULL
-  # (its accessor then fail-closes), which the phased migration relies on.
+  # Installs a scenario's resolved legs as the active configuration. Call once per
+  # scenario, before anything reads a value. Either leg may be absent, in which
+  # case reading from it is an error.
   #----------------------------------------------------------------------------
 
   assign('economy',  economy,  envir = .scenario_config_active)
@@ -481,9 +450,9 @@ config_activate = function(economy = NULL, behavior = NULL) {
 config_set_pass = function(pass) {
 
   #----------------------------------------------------------------------------
-  # Declares which run type is executing ('static' or 'conventional'). The
-  # economy accessor uses it to refuse transmission-channel reads on the
-  # static pass. Set at the top of each pass; NA between passes.
+  # Records which pass is running, so that reading a transmission channel on the
+  # static pass can be refused. Set at the top of each pass, and empty between
+  # them.
   #----------------------------------------------------------------------------
 
   if (!is.na(pass)) pass = match.arg(pass, c('static', 'conventional'))
@@ -496,8 +465,8 @@ config_set_pass = function(pass) {
 config_param = function(leg, channel, name) {
 
   #----------------------------------------------------------------------------
-  # Reads one resolved value from the active scenario. Internal; use
-  # economy_param() / behavior_param().
+  # Reads one value from the active scenario. Use economy_param() or
+  # behavior_param() instead of calling this.
   #----------------------------------------------------------------------------
 
   if (!exists(leg, envir = .scenario_config_active, inherits = FALSE) ||
@@ -539,13 +508,12 @@ behavior_param = function(channel, name) config_param('behavior', channel, name)
 config_interface_vintages = function(resolved_economy) {
 
   #----------------------------------------------------------------------------
-  # Derives the interface-vintage list the staleness check compares
-  # derived_under blocks against, from the resolved economy leg itself
-  # ({name}_vintage entries of the interfaces channel). This is the
-  # simplification the fold buys: the pins and the live values live in the
-  # same system.
+  # Collects the data vintages this run uses, from the economy leg's interfaces
+  # channel. The staleness check compares each calibration's recorded vintages
+  # against these. Both live in the same place, which is why no separate
+  # bookkeeping is needed.
   #
-  # Returns: named list, interface key -> vintage (character)
+  # Returns: named list of interface to vintage.
   #----------------------------------------------------------------------------
 
   entries = resolved_economy$values$interfaces
@@ -563,8 +531,8 @@ config_interface_vintages = function(resolved_economy) {
 config_file_hash = function(path) {
 
   #----------------------------------------------------------------------------
-  # Content hash of a dependency file (md5 rather than a git blob hash so the
-  # check works in a dirty tree and outside git).
+  # Hashes a file's contents. md5 rather than a git hash, so the check works in a
+  # dirty tree and outside a repository.
   #----------------------------------------------------------------------------
 
   unname(tools::md5sum(path))
@@ -577,13 +545,13 @@ config_check_staleness = function(leg, defaults, resolved, interface_vintages,
                                   enforce = CONFIG_ENFORCE_STALENESS) {
 
   #----------------------------------------------------------------------------
-  # For every entry of kind `calibrated`, confirms that (a) the data vintages
-  # it was derived under match the ones this run resolves to, (b) the files in
-  # invalidated_by have not changed since it was pinned, and (c) any
-  # conditioned_on config values match the live resolved values.
+  # Checks every calibrated entry three ways: that the data vintages it was derived
+  # under are the ones this run uses, that the files it depends on have not changed
+  # since it was pinned, and that any configuration values it was conditioned on
+  # still hold.
   #
-  # A value the scenario deliberately overrode is skipped: overriding IS the
-  # acknowledgment, and the override is recorded in the manifest.
+  # An entry the scenario overrode is skipped. Overriding it is the acknowledgment,
+  # and the override is recorded in the manifest.
   #
   # Parameters:
   #   - leg (str)                 : 'economy' or 'behavior'
@@ -616,8 +584,8 @@ config_check_staleness = function(leg, defaults, resolved, interface_vintages,
       label = paste(channel, nm, sep = '.')
       if (label %in% overridden) next
 
-      # A dated waiver from the pointing alternative: recorded loudly, checked
-      # no further.
+      # A dated waiver from the alternative that named this entry. Announced, and
+      # checked no further.
       waiver = resolved$waivers[[label]]
       if (!is.null(waiver)) {
         notes = c(notes, sprintf('%s: WAIVED (%s) -- %s', label,
@@ -627,8 +595,7 @@ config_check_staleness = function(leg, defaults, resolved, interface_vintages,
 
       entry_findings = c()
 
-      # Skip entries the live configuration does not read (see assumptions.R
-      # for the kg response-form history of active_when).
+      # Skip entries the live configuration does not read.
       if (!is.null(entry$active_when)) {
         inactive = FALSE
         for (cond in names(entry$active_when)) {
@@ -642,7 +609,7 @@ config_check_staleness = function(leg, defaults, resolved, interface_vintages,
         if (inactive) next
       }
 
-      # An explicit, dated waiver, carried into the manifest.
+      # A dated waiver, carried into the manifest
       if (!is.null(entry$acknowledged)) {
         notes = c(notes, sprintf(
           '%s: ACKNOWLEDGED STALE (%s) -- %s', label,
@@ -651,7 +618,7 @@ config_check_staleness = function(leg, defaults, resolved, interface_vintages,
         next
       }
 
-      # (a) data vintages
+      # The data vintages
       for (dep in names(entry$derived_under)) {
         pinned = as.character(entry$derived_under[[dep]])
         live   = interface_vintages[[dep]]
@@ -668,7 +635,7 @@ config_check_staleness = function(leg, defaults, resolved, interface_vintages,
         }
       }
 
-      # (b) dependency file contents
+      # The files it depends on
       recorded = entry$invalidated_by_hashes
       if (is.null(recorded)) {
         entry_findings = c(entry_findings, sprintf(
@@ -690,7 +657,7 @@ config_check_staleness = function(leg, defaults, resolved, interface_vintages,
         }
       }
 
-      # (c) conditioned-on config values
+      # The configuration values it was conditioned on
       for (cond in names(entry$conditioned_on)) {
         parts = str_split_1(cond, '[.]')       # leg.channel.name
         live_leg = cross_values[[parts[1]]]
@@ -761,26 +728,22 @@ config_repin_hashes = function(leg, layer = CONFIG_DEFAULT_NAME, channel = NULL,
                                dry_run = FALSE) {
 
   #----------------------------------------------------------------------------
-  # Updates the recorded content hash of every calibrated entry's
-  # invalidated_by files in one layer of one leg. Run AFTER re-deriving a value,
-  # or after a refactor of a dependency that has been VERIFIED to leave output
-  # byte-identical. It is the acknowledgment step and is never wired into a run.
+  # Re-records the hashes of the files each calibrated entry depends on. Run it
+  # after re-deriving a value, or after changing one of those files in a way that
+  # has been verified to leave the model's output identical. It is never called
+  # during a run.
   #
-  # Rewritten 2026-07-26 to edit the hash lines as TEXT. The previous version
-  # parsed each file with read_yaml() and wrote it back with write_yaml(), which
-  # discarded every comment in it. In these files the comments are the record of
-  # where each number came from, so calling it destroyed the thing the file
-  # exists for -- which is why every re-pin during the config rebuild was done
-  # by hand instead. This version only replaces the hash values on the lines
-  # that hold them and leaves the rest of the file alone, byte for byte.
+  # The hash lines are edited as text, leaving the rest of each file untouched. The
+  # comments in these files are the record of where each number came from, so
+  # parsing and rewriting the YAML would destroy what the file exists for.
   #
   # Parameters:
   #   - leg (str)      : 'economy' or 'behavior'
   #   - layer (str)    : 'default', or an alternative's path
-  #   - channel (chr)  : optional, restrict to these channel files
-  #   - dry_run (bool) : report what would change without writing
+  #   - channel (chr)  : optional, restrict to these channels
+  #   - dry_run (bool) : report what would change without writing it
   #
-  # Returns: invisibly, a tibble of the hashes that changed
+  # Returns: invisibly, a tibble of the hashes that changed.
   #----------------------------------------------------------------------------
 
   leg  = match.arg(leg, names(CONFIG_LEG_ROOTS))
@@ -799,9 +762,8 @@ config_repin_hashes = function(leg, layer = CONFIG_DEFAULT_NAME, channel = NULL,
     lines   = readLines(f, warn = FALSE)
     entries = read_yaml(f)
 
-    # Which files each entry is pinned against, and their current hashes. The
-    # YAML parse is used only to LOOK UP what needs hashing; the file itself is
-    # edited as text.
+    # Which files each entry is pinned against, and what they hash to now. The
+    # parse is used only to find out what needs hashing.
     wanted = list()
     for (nm in names(entries)) {
       if (nm == '_channel') next
@@ -812,9 +774,8 @@ config_repin_hashes = function(leg, layer = CONFIG_DEFAULT_NAME, channel = NULL,
     }
     if (length(wanted) == 0) next
 
-    # A hash line looks like '    path/to/file.R: <32 hex chars>'. Matching on
-    # the dependency path plus a hex value keeps this off anything else that
-    # happens to mention the same path, a comment above the entry included.
+    # A hash line is a path followed by 32 hex characters. Matching on both keeps
+    # this off anything else naming the same path, including a comment.
     for (dep in names(wanted)) {
       esc     = gsub('([.|()\\^{}+$*?\\[\\]])', '\\\\\\1', dep)
       pattern = paste0('^(\\s+)', esc, ':\\s*([0-9a-f]{32})\\s*$')
@@ -850,13 +811,11 @@ config_repin_hashes = function(leg, layer = CONFIG_DEFAULT_NAME, channel = NULL,
 config_manifest = function(leg, defaults, resolved, id) {
 
   #----------------------------------------------------------------------------
-  # Flattens one scenario's resolved leg into manifest rows: every value, its
-  # kind and role, whether the scenario overrode it, and from where.
+  # Flattens one resolved leg into manifest rows: every value, its kind and role,
+  # and whether the scenario overrode it.
   #
-  # Returns: tibble of ID, leg, alternative, channel, name, value, kind, role,
-  #          overridden, source -- zero rows for a leg that carries no value
-  #          entries, which is the behavior leg's normal state (its content is
-  #          the module stack, recorded in behavioral_assumptions.csv)
+  # Returns: tibble of one row per value. No rows for the behavior leg, which
+  #          carries none; its module list is recorded separately.
   #----------------------------------------------------------------------------
 
   if (length(resolved$values) == 0) {
@@ -905,11 +864,10 @@ config_manifest = function(leg, defaults, resolved, id) {
 parse_year_spec = function(x) {
 
   #----------------------------------------------------------------------------
-  # Parses a runscript year specification: '2030', '2026:2035', or a
-  # space-delimited list '2027 2030 2033'. The single implementation that
-  # replaces the two divergent parsers in config_parser.R.
+  # Parses a runscript's years, given as a single year, a range, or a
+  # space-separated list.
   #
-  # Returns: sorted integer vector; stops on anything malformed
+  # Returns: sorted integer vector; stops on anything malformed.
   #----------------------------------------------------------------------------
 
   x = trimws(as.character(x))
@@ -936,11 +894,9 @@ parse_year_spec = function(x) {
     unique() %>%
     sort()
 
-  # Keep a contiguous range as a compact sequence, which is what the old
-  # `{start}:{end}` parser produced. Values are identical either way, but the
-  # compact form's deferred as.character() serializes differently, and year
-  # labels reach disk inside .rds state files (kg's life-table extension) --
-  # so materializing here would break byte-identity against pre-redesign runs
-  # for no gain.
+  # Return a contiguous range as a sequence rather than an expanded vector. The
+  # values are the same either way, but the two serialize differently, and year
+  # labels reach disk inside the state files. Expanding here would change those
+  # files for no gain.
   if (length(out) > 1 && all(diff(out) == 1L)) out[1]:out[length(out)] else out
 }

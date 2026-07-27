@@ -1,43 +1,35 @@
 #-------------------------------------------------------------------------------
-# Function to calculate annual net-worth (wealth) tax liability, per record.
+# Function to calculate annual wealth tax liability, per record
 #
-# A wealth tax is structurally "the estate tax minus death": a balance-sheet /
-# stock tax that lives in the do_taxes() chain, aggregates with weights, books
-# receipts, and feeds distribution — but stripped of mortality, DSUE /
-# portability / both-die, the gift / Sec. 2053 / valuation death-time
-# adjustments, and the FY death-year+1 receipts lag. It taxes ECONOMIC net worth
-# directly (raw Sigma assets - Sigma debts, no valuation discount, no
-# measurement file), so unlike calc_estate() it takes no frozen-parameter
-# argument.
+# A wealth tax is the estate tax without the death: a tax on a stock rather than a
+# flow, computed inside do_taxes(), aggregated with weights, booked to receipts and
+# fed to the distribution tables. What it does without is mortality, portability
+# between spouses, the death-time adjustments for gifts and the decedent's income
+# tax, and the lag in booking receipts.
 #
-# calc_wealth() reads the MATERIALIZED net_worth column (assembled once in
-# run_one_year, src/sim/run.R), NOT the raw value.* columns. That single column
-# serves three roles: (1) calculator input here; (2) the +$1 MTR bump target in
-# calc_mtrs() (registering mtr_var = net_worth reprices the marginal statutory
-# wealth rate without touching value.* / estate); (3) the isolation point the
-# conventional-pass avoidance module overwrites with the avoided base (leaving
-# value.* — hence estate and capital income — intact).
+# It taxes economic net worth directly, assets less debts, with no valuation
+# discount, so unlike the estate tax it needs no measurement parameters.
 #
-# Like calc_estate(), it is deliberately NOT registered in return_vars:
-# calc_mtrs() rebuilds vars_1040 from that registry, and wealth columns must not
-# enter do_1040()'s final select. do_taxes() instead drops and rebinds
-# WEALTH_OUTPUT_COLS (gated by calc_wealth_flag), keeping the section idempotent
-# under MTR recomputes. liab_wealth stays a SEPARATE column (like liab_estate_*),
-# never folded into liab_iit.
+# It reads the materialized net worth column rather than the asset columns. That
+# column does three jobs: it is the input here; it is what calc_mtrs() bumps to
+# price the marginal wealth rate, which leaves the assets and the estate alone; and
+# it is what the avoidance module overwrites with the avoided base, again leaving
+# the assets, and so the estate and capital income, intact.
+#
+# As with the estate tax, this is deliberately not registered in return_vars, and
+# liability stays in its own column rather than being folded into the income tax.
 #-------------------------------------------------------------------------------
 
-# Net-worth column definitions. estate.R is the single source of truth for the
-# economic balance sheet (it is sourced before this file — alphabetical order
-# within src/calc/functions/tax/); alias here so estate + wealth stay in
-# lockstep on what "net worth" means.
+# The balance sheet is defined once, in estate.R, which is sourced first. Aliased
+# here so the two taxes agree on what net worth means.
 WEALTH_ASSET_COLS = ESTATE_ASSET_COLS
 WEALTH_DEBT_COLS  = ESTATE_DEBT_COLS
 
-# Marketable (publicly traded / liquid) vs closely-held (private business and
-# other nonfinancial) asset partition, used by the avoidance module's dual
-# elasticities (the standalone Wealth-Tax-Simulator's public_e / private_e
-# split, sim.R::do_avoidance). The retirement class maps to BOTH Tax-Data
-# columns value.dc + value.db. Together these two vectors tile WEALTH_ASSET_COLS.
+# Assets split into marketable, meaning publicly traded and liquid, and closely
+# held, meaning private business and other nonfinancial wealth. The avoidance module
+# applies a different elasticity to each. Retirement wealth covers both the
+# defined-contribution and defined-benefit columns. Between them the two lists cover
+# every asset.
 WEALTH_MARKETABLE_COLS = c(
   'value.cash', 'value.equities', 'value.bonds', 'value.dc', 'value.db',
   'value.life_ins', 'value.annuities', 'value.trusts', 'value.other_fin'
@@ -47,20 +39,19 @@ WEALTH_CLOSELY_HELD_COLS = c(
   'value.re_fund', 'value.other_nonfin'
 )
 
-# Columns produced by calc_wealth(). do_taxes() drops these before rebinding
-# (MTR-loop frames already carry them from the prior pass)
+# What calc_wealth() produces. do_taxes() drops these before rebinding, since a
+# frame in the marginal rate loop already carries them.
 WEALTH_OUTPUT_COLS = c('liab_wealth')
 
 
 calc_wealth = function(tax_unit, fill_missings = FALSE) {
 
   #----------------------------------------------------------------------------
-  # Calculates per-record annual wealth tax liability under the scenario's
-  # wealth law (wealth.* columns, joined via the standard tax law join).
+  # Calculates each record's annual wealth tax liability under the scenario's wealth
+  # law.
   #
-  # Per-record pipeline (no death state, no valuation bridge): the graduated
-  # schedule is applied DIRECTLY to absolute net worth via
-  # integrate_rates_brackets — there is no separate exemption term. A 0%-rated
+  # The graduated schedule applies directly to net worth, with no exemption term of
+  # its own and no valuation discount. A bracket rated at zero
   # bottom bracket (wealth.brackets1 = 0, wealth.rates1 = 0) plays the role of
   # the exemption: everything below the first positive-rate threshold is
   # untaxed, so the exemption indexes together with the rest of the schedule

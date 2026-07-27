@@ -1,18 +1,16 @@
 #-----------------------------------------------------------------------
-# frozen.R — Phase 1B worker
+# frozen.R
 #
-# Runs the kg_dynamics frozen mechanical pre-pass for a single
-# counterfactual scenario. Aggregates baseline cells from Tax-Data, runs
-# the frozen-realization recurrence (r_S = r_B, no Bellman), and persists
-# per-year mechanical state files under the scenario's
-# static/supplemental/kg_dynamics_mech_state/ directory, plus the
-# inputs cache reused by Phase 2B's bathtub pass.
+# Phase 1B worker. Runs the kg_dynamics frozen mechanical pre-pass for a
+# single counterfactual scenario: aggregates baseline cells from Tax-Data,
+# runs the frozen-realization recurrence holding scenario realization rates
+# at baseline, and writes per-year mechanical state files under the
+# scenario's static/supplemental/kg_dynamics_mech_state/, plus the inputs
+# cache Phase 2B reuses.
 #
-# Must complete before Phase 2A (the static workers inject the mechanical
-# state into records). Needs only Tax-Data and the staged tax law, so it
-# runs in parallel with Phase 1.
-#
-# No-op for scenarios that don't include any kg_dynamics/ behavior module.
+# Runs before Phase 2A, whose static workers inject the mechanical state
+# into records. Needs only Tax-Data and the staged tax law, so it runs in
+# parallel with Phase 1.
 #
 # CLI args:
 #   Rscript src/slurm/frozen.R <staging_dir>
@@ -45,11 +43,9 @@ tryCatch({
   config        = readRDS(file.path(staging_dir, task$scenario, 'config.rds'))
   scenario_info = config$scenario_info
 
-  # Install this scenario's resolved assumptions as the active set. A SLURM
-  # worker is a fresh R process that never runs do_scenario, so without this
-  # every economy_param() read errors (fail-closed by design -- see
-  # src/misc/scenario_config.R). scenario_info rides in on config.rds, so nothing
-  # extra is serialized.
+  # Install this scenario's resolved configuration. A SLURM worker is a fresh R
+  # process that never runs do_scenario, so without this every economy_param()
+  # read errors. See src/misc/scenario_config.R.
   config_activate(economy  = scenario_info$resolved_economy,
                   behavior = scenario_info$resolved_behavior)
 

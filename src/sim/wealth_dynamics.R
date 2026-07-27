@@ -1,141 +1,111 @@
 #-------------------------------------------------------------------------------
 # wealth_dynamics.R
 #
-# The wealth bathtub: a MECHANICAL, conventional-side saving-financing channel.
-# A share s = 1 - MPC of the net above-baseline DURING-LIFE after-tax cash-flow
-# shock F = ΔT⁰ - ΔY_exog -- the during-life tax delta (income + payroll -
-# deemed + wealth) minus any exogenous external-income shock (today: the
-# corporate channel's corp_dY_exog; 0 elsewhere) -- is financed out of wealth
-# rather than consumption. That deficit compounds over time and drains into the
-# estate (and capital-income) base at death, so the model can quantify
-# interactions like capital-gains-during-life <-> estate tax, wealth-tax <->
-# capital-income tax, and corporate-tax <-> estate/wealth-tax.
-#
-# This is NOT a behavior module: there is no do_wealth_dynamics() hook. The
-# applier (wealth_dyn_apply_to_records) is invoked DIRECTLY as a built-in step
-# at the head of the final conventional pass (src/sim/run.R), before the
-# behavior modules and before do_taxes. `s > 0` (a runscript COLUMN) activates
-# the channel; absent/0 leaves it dormant (byte-identical output).
-#
-# Longitudinal dynamics live at the COHORT level (synthetic cohorts), exactly
-# like kg_dynamics: cells = (age x within-age net-worth percentile), a per-year
-# forward recurrence over those cells (run_wealth_bathtub_pass), per-year .rds
-# state, and a per-record applier. Generic cohort primitives live in
-# src/sim/cohort_bathtub.R.
-#
-# See the plan at .claude/plans/purrfect-weaving-toucan.md and the decision log
-# at other/wealth_dynamics/plan_review_decisions.md (D1-D33).
+# Contains functions to simulate saving responses to tax changes and their
+# effect on the estate tax base
 #-------------------------------------------------------------------------------
+
+# Assume that a share s of any increase in taxes paid during life is financed
+# out of wealth rather than consumption. The shortfall compounds over time and
+# reduces the estate at death. s is set by the scenario's financing profile.
+# Conventional runs only.
+
+# Accounting is done by cohort rather than by tax unit. Cells are age by net
+# worth percentile within age, stepped forward one year at a time by
+# run_wealth_bathtub_pass(), then applied back to the records in each cell by
+# wealth_dyn_apply_to_records(). Cohort helpers are shared with the capital
+# gains bathtub and live in src/sim/cohort_bathtub.R.
+
+# Notes and calibration: other/wealth_dynamics/
 
 
 
 #-------------------------------------------------------------------------------
-# Constants and provenance
+# Constants
 #-------------------------------------------------------------------------------
 
-# Cohort age grid. Single 80+ topcode, matching kg and the Tax-Data age1
-# topcode. Declared independently of kg's constants (do NOT assume they match).
+# Cohort age grid, top-coded at 80 to match the capital gains bathtub and the
+# Tax-Data age1 top code. Declared separately from the capital gains constants.
 WEALTH_DYN_AGE_MIN = 18L
 WEALTH_DYN_AGE_MAX = 80L
 
 WEALTH_DYN_SPEC_VERSION = 1L
 
-# Proportional bump used to MEASURE the capital-income bundle MTR through the
-# calculator (the directional derivative of tax along the haircut direction).
+# Proportional bump used to measure the capital income bundle MTR through the
+# calculator.
 WEALTH_DYN_MTR_BUMP = 0.01
 
-# |F| floor as a fraction of gross assets: records whose taxable capital income
-# is negligible relative to their balance sheet get mtr_cap_bundle = 0 (no
-# meaningful capital-income margin to measure). Scales across the $10k-$10B
-# range (D7).
+# Minimum capital income, as a share of gross assets, for a record to get a
+# measured bundle MTR. Below it there is no meaningful margin and the MTR is 0.
 WEALTH_DYN_F_FLOOR = 1e-4
 
-# Upper bound on the cell capital-income yield y = ΣF/Σgross in the kernel
-# feedback. y is meant to be a recurring taxable YIELD (~r), but realized gains
-# (kg_lt) are a one-time stock-depleting flow that can dwarf gross assets in
-# sparse low-net-worth cells, spiking y >> 1. Such cells carry negligible
-# deficit (∝ their tiny NW), so capping y here keeps the headline (high-NW
-# cells, y ~ r) exact while preventing an unphysical feedback. PLACEHOLDER: a
-# portfolio-resolved recurring yield would not need this.
+# Cap on capital income as a share of assets: a one-time gain in a small cell
+# can otherwise push this far above a plausible yearly return.
 WEALTH_DYN_Y_MAX = 1.0
 
-# Physical floor for the kernel growth factor G. Feedback can only damp growth;
-# G must stay positive (a cell's deficit cannot shrink to <=0 in one year from
-# tax feedback alone). Clamping binds only in the sparse low-NW lumpy-realization
-# cells described above.
+# Floor for the growth factor G. Tax feedback damps growth but cannot turn it
+# negative. Binds only in the sparse cells described above.
 WEALTH_DYN_G_FLOOR = 1e-6
 
-# Numerical floor for denominators (cell weighted-NW sums, gross assets).
+# Numerical floor for denominators (cell net worth sums, gross assets).
 WEALTH_DYN_EPS = 1e-8
 
-# WEALTH_CAP_FLOWS -- the SINGLE SOURCE OF TRUTH for which capital-income flows
-# the channel touches and at what weight (plan D6). The MTR bump and the applier
-# haircut MUST scale exactly these columns by these weights, or the measured
-# yield/MTR is inconsistent with the erosion.
+# The capital income flows the channel touches, and their weights. The MTR bump
+# and the applier haircut scale exactly these columns by these weights; if they
+# diverge, the measured MTR no longer matches the erosion.
 #
-# Pure-capital (weight 1.0): interest, dividends, and the four taxed-gain
-# classes, plus the rental and estate/trust NET pairs. The loss leg of each pair
-# is scaled together with its gain leg so the NET scales proportionally and a
-# haircut unambiguously shrinks taxable capital income. (rent/rent_loss and
-# estate/estate_loss are raw Tax-Data columns; derive_vars() recombines them
-# into sch_e inside every do_taxes() call, so scaling the raw legs propagates.)
+# Pure capital flows carry weight 1: interest, dividends, the four taxed gain
+# classes, and the rental and estate/trust pairs. Each loss leg is scaled with
+# its income leg so the net scales proportionally. rent/rent_loss and
+# estate/estate_loss are raw Tax-Data columns, which derive_vars() recombines
+# into sch_e inside do_taxes(), so scaling the raw legs carries through.
 WEALTH_CAP_FLOWS_PURE = c(
   'txbl_int', 'exempt_int', 'div_ord', 'div_pref',
   'kg_st', 'kg_lt', 'kg_1250', 'kg_collect',
   'rent', 'rent_loss', 'estate', 'estate_loss'
 )
 
-# kg_lt's basis is scaled with kg_lt (same pure-capital factor) so the TAXABLE
-# gain scales proportionally. Scale kg_lt_basis, NOT the derived kg_lt_infl_adj
-# (which derive/calc recompute -- scaling it no-ops and can drive kg_lt_adj
-# negative under indexed-basis law).
+# Basis is scaled with kg_lt so that the taxable gain scales proportionally.
+# Scale kg_lt_basis rather than kg_lt_infl_adj, which derive_vars() recomputes;
+# scaling the latter has no effect and can drive kg_lt_adj negative under
+# indexed-basis law.
 WEALTH_CAP_FLOWS_PURE_BASIS = c('kg_lt_basis')
 
-# Pass-through capital slice (weight 0.2): the economy.R:287-289 raw
-# disaggregated business-income list, under the model's 20%-capital/80%-labor
-# split. derive_vars() recombines these into part/scorp/pt/sch_e inside
-# do_taxes(), so scaling the raw legs propagates. The loss legs ride along with
-# their income legs (same 0.2 factor) so the net pass-through scales.
+# Pass-through flows carry weight 0.2, the capital share of business income
+# under the model's 20/80 capital-labor split. This is the raw disaggregated
+# business income list from economy.R. derive_vars() recombines these into
+# part/scorp/pt/sch_e inside do_taxes(), so scaling the raw legs carries
+# through. Loss legs are scaled with their income legs.
 WEALTH_CAP_FLOWS_PT = c(
   'sole_prop', 'part_active', 'part_passive', 'part_active_loss',
   'part_passive_loss', 'part_179', 'scorp_active', 'scorp_passive',
   'scorp_active_loss', 'scorp_passive_loss', 'scorp_179', 'farm'
 )
-# Value and provenance: config/scenarios/economy/default/wealth.yaml (wealth.cap_flows_pt_weight).
+# Weight on pass-through flows; see config/scenarios/economy/default/wealth.yaml
 wealth_cap_flows_pt_weight = function() economy_param('wealth', 'cap_flows_pt_weight')
 
-# SECA/NIIT earner-split companions of the pass-through aggregates. Co-scaled
-# with WEALTH_CAP_FLOWS_PT (same 0.2 factor) so the NIIT/SECA active-vs-passive
-# frame stays consistent under the bump/haircut (D7). Caveat (F18/D23): with
-# pr = F in the bundle MTR, the SECA response of this slice is omitted (<1% at
-# the top tail), accepted as O(curvature).
+# Earner-split companions of the pass-through aggregates, scaled by the same
+# 0.2 weight so the SECA and NIIT active-passive split stays consistent. Note
+# that the bundle MTR is income tax only, so the SECA response of this slice is
+# omitted; it is under 1% at the top of the distribution.
 WEALTH_CAP_FLOWS_SE_COMPANIONS = c(
   'part_se1', 'part_se2', 'sole_prop1', 'sole_prop2', 'farm1', 'farm2'
 )
 
-# Retirement distributions, co-scaled with the balance-sheet haircut (1 - f).
-# The uniform value.* scaling marks down retirement balances (value.dc /
-# value.db are ESTATE_ASSET_COLS), so proportional draws from those balances
-# must scale with the markdown or the erosion is silently undone by relatively
-# faster drawdown (corporate-incidence FORMAL_MODEL P7, the two-pocket lemma).
-# Deliberately NOT part of WEALTH_CAP_FLOWS: distributions are internal
-# conversions (pocket-to-pocket), so they never enter the bundle MTR or any
-# forcing income term (D16) -- their tax consequence arrives only through
-# do_taxes on the final conventional pass. Known approximation: the kernel's
-# tau*y drag prices tax forgone on missing CAPITAL income only; the ordinary-
-# income relief on eroded distributions is outside the drag (accepted).
-# gross_pens_dist rides along so expanded_inc / simple-filer / SALT-share
-# metrics stay consistent with the taxable legs.
+# Retirement distributions, scaled with the balance sheet haircut. The haircut
+# marks down retirement balances, so proportional draws from those balances must
+# scale too, or faster drawdown undoes the erosion. These are not part of
+# WEALTH_CAP_FLOWS: a distribution moves money between pockets rather than
+# generating income, so it enters neither the bundle MTR nor the forcing, and
+# its tax consequence arrives only through do_taxes. gross_pens_dist is scaled
+# along with the taxable legs so that expanded income and the derived
+# distributional metrics stay consistent.
+#
+# Note that the kernel's tax drag prices only tax forgone on capital income, so
+# the ordinary income relief on eroded distributions is left out.
 WEALTH_RET_DIST_FLOWS = c(
   'txbl_ira_dist', 'txbl_pens_dist', 'gross_pens_dist'
 )
-
-# The channel's staleness stamp (WEALTH_DYN_PROVENANCE) and its checker were
-# removed on 2026-07-26. They compared the live Macro-Projections vintage and the
-# operational params against values hardcoded here, and warned on a mismatch. The
-# parse-time check in src/misc/scenario_config.R now does the same job for every
-# calibrated value in the model, including the saving-share profile, so keeping
-# this one meant two mechanisms with separate copies of the same expectations.
 
 
 #-------------------------------------------------------------------------------
@@ -145,15 +115,15 @@ WEALTH_RET_DIST_FLOWS = c(
 scenario_uses_wealth_dynamics = function(scenario_info) {
 
   #----------------------------------------------------------------------------
-  # The channel is keyed off the scenario's resolved FINANCING PROFILE (the
-  # bracket-varying s(age, percentile) -- see wealth_dyn_resolve_profile), NOT
-  # the behavior column. Active iff any cell's saving share is positive, so a
-  # flat-zero profile (e.g. an explicit scalar s = 0) is dormant and skips the
-  # ~2x split-pass compute. NB: the auto-applied 'default' profile carries a
-  # CALIBRATED nonzero surface (persistent-flow anchor; see
-  # other/wealth_dynamics/default_s_calibration.md), so unconfigured scenarios
-  # run with the channel ON -- opt out with financing_profile: none. A
-  # malformed/missing profile errors here (loudly), by design.
+  # Reports whether the channel runs for a scenario, based on its financing
+  # profile rather than its behavior column. Active if any cell's saving share
+  # is positive, so a profile of all zeros is dormant and skips the second
+  # simulation pass. The default profile is calibrated and nonzero, so a
+  # scenario that says nothing runs with the channel on; set financing_profile
+  # to none to opt out.
+  #
+  # Returns: TRUE if the channel is active for this scenario (bool). Errors on a
+  #          missing or malformed profile.
   #----------------------------------------------------------------------------
 
   isTRUE(wealth_dyn_resolve_profile(scenario_info)$active)
@@ -164,11 +134,11 @@ scenario_uses_wealth_dynamics = function(scenario_info) {
 wealth_dyn_load_params = function() {
 
   #----------------------------------------------------------------------------
-  # The bathtub's operational knobs, read from the economy leg's wealth channel.
-  # Returns a list with n_pctiles, fmax, and r_total (source + additive_delta),
-  # the shape the rest of the file already expects. The saving share s and the
-  # transition operator M are NOT here -- they live in a per-scenario FINANCING
-  # PROFILE folder; see wealth_dyn_resolve_profile().
+  # Reads the operational parameters from the economy leg's wealth channel. The
+  # saving share s and the transition matrix M are not among them; they come
+  # from the scenario's financing profile, via wealth_dyn_resolve_profile().
+  #
+  # Returns: list of n_pctiles, fmax, and r_total.
   #----------------------------------------------------------------------------
 
   list(
@@ -183,47 +153,42 @@ wealth_dyn_load_params = function() {
 
 
 #-------------------------------------------------------------------------------
-# Financing profile: the bracket-varying saving share s(age, percentile) and the
-# transition operator M, resolved per scenario from a profile FOLDER.
+# Financing profile: the saving share s by age and percentile, and the
+# percentile transition matrix M
 #
-# A profile folder (config/calibrations/wealth_profiles/<name>/) holds two files:
-#   - s.csv : one row per (age, nw_pctile) cell -- columns age, nw_pctile, s --
-#             covering the full WEALTH_DYN age grid x n_pctiles grid (every cell
-#             present exactly once; s in [0, 1] = 1 - MPC).
-#   - M.csv : the n_pctiles x n_pctiles within-age percentile transition (single
-#             matrix applied to every age), raked to doubly-stochastic on load.
-#             (M.rds -- a matrix or a per-age list -- is also accepted; an absent
-#             M file means identity / full persistence.)
+# A profile is a folder under config/calibrations/wealth_profiles/ holding two
+# files:
+#   - s.csv : one row per cell, with columns age, nw_pctile, and s. Covers every
+#             cell of the age by percentile grid exactly once, with s in [0, 1].
+#   - M.csv : the within-age percentile transition, one n_pctiles by n_pctiles
+#             matrix applied at every age, raked to doubly stochastic on load.
+#             M.rds is also accepted, either as a matrix or as a list by age. If
+#             no M file is present the transition is the identity.
 #
-# The profile is named by ONE economy-leg value, economy.wealth
-# .financing_profile, which takes one of three forms:
-#   'none' / 'off'   -> channel forced OFF (s == 0 everywhere)
-#   'flat:<s>'       -> FLAT profile (constant s_mat, identity M), the
-#                       shorthand that replaced the retired scalar `s` column
-#   <folder name>    -> that profile folder (the bracket-varying path)
+# The economy value wealth.financing_profile names the profile, and takes one of
+# three forms:
+#   'none' or 'off'  -> the channel is off, s = 0 everywhere
+#   'flat:<s>'       -> a constant s at every cell, with identity transition
+#   <folder name>    -> that profile folder
 #
-# The channel is ACTIVE iff the resolved s_mat has any positive entry (so a
-# flat-zero profile is a no-op and the ~2x split-pass compute is skipped).
-# The shipped 'default' profile is CALIBRATED (nonzero), so a scenario that
-# says nothing runs with the channel on; force it off with
-# financing_profile: none. The resolved profile is memoized per
-# (kind, value, grid) within a process.
+# The resolved profile is cached per process.
 #-------------------------------------------------------------------------------
 
 WEALTH_PROFILES_ROOT   = './config/calibrations/wealth_profiles'
 WEALTH_DEFAULT_PROFILE = 'default'
 
-# Per-process memo of resolved profiles (keyed by resolution signature). Each
-# SLURM worker is its own process and rebuilds its own cache.
+# Cache of resolved profiles, keyed by profile and grid. Each SLURM worker is a
+# separate process and builds its own.
 .wealth_profile_cache = new.env(parent = emptyenv())
 
 
 wealth_dyn_profile_spec = function(scenario_info) {
 
   #----------------------------------------------------------------------------
-  # Decide WHICH profile source a scenario resolves to, cheaply (no matrices
-  # built). Returns list(kind, value) with kind in {'off','folder','scalar'}.
-  # See the note above for the three forms the value can take.
+  # Determines which profile source a scenario resolves to, without building any
+  # matrices. See the note above for the three forms the value can take.
+  #
+  # Returns: list of kind ('off', 'folder', or 'scalar') and value.
   #----------------------------------------------------------------------------
 
   wf = trimws(as.character(economy_param('wealth', 'financing_profile'))[1])
@@ -250,11 +215,13 @@ wealth_dyn_profile_spec = function(scenario_info) {
 wealth_dyn_load_s_csv = function(path, ages, n_bins) {
 
   #----------------------------------------------------------------------------
-  # Load a profile's s.csv (full per-cell grid: columns age, nw_pctile, s) into
-  # an (n_ages x n_bins) saving-share matrix. Validates HARD: required columns,
-  # s in [0, 1], age/pctile in range, no duplicate cells, and complete coverage
-  # of every (age, pctile) cell -- a partial grid would silently zero some cells'
-  # saving response, so it is an error, not a fill.
+  # Reads a profile's s.csv into a saving share matrix of age by percentile.
+  # Checks the required columns, the range of s, the range of age and percentile,
+  # duplicate cells, and coverage of every cell. An incomplete grid is an error
+  # rather than a fill, since it would otherwise zero out some cells' response
+  # without saying so.
+  #
+  # Returns: matrix of saving shares, ages on rows and percentiles on columns.
   #----------------------------------------------------------------------------
 
   d = path %>% fread() %>% tibble()
@@ -310,11 +277,12 @@ wealth_dyn_load_s_csv = function(path, ages, n_bins) {
 wealth_dyn_load_M = function(dir, n_bins) {
 
   #----------------------------------------------------------------------------
-  # Load a profile's transition operator M. Prefers M.csv (a plain headerless
-  # n_bins x n_bins numeric grid, the diffable canonical form); falls back to
-  # M.rds (a single matrix OR a per-age named list); an absent M file means the
-  # identity (full persistence). Single matrices and list elements are raked to
-  # doubly-stochastic (sinkhorn_rake).
+  # Reads a profile's transition matrix M. Prefers M.csv, a headerless numeric
+  # grid, and falls back to M.rds, either a matrix or a list by age. An absent M
+  # file means the identity, or full persistence. Matrices are raked to doubly
+  # stochastic on the way in.
+  #
+  # Returns: transition matrix, or a list of them by age.
   #----------------------------------------------------------------------------
 
   csv = file.path(dir, 'M.csv')
@@ -344,14 +312,15 @@ wealth_dyn_load_M = function(dir, n_bins) {
     return(sinkhorn_rake(M))
   }
 
-  diag(n_bins)                          # absent M file -> identity
+  diag(n_bins)                          # no M file, so full persistence
 }
 
 
 
 wealth_dyn_load_profile_folder = function(name, ages, n_bins) {
 
-  # Load a profile folder's s.csv (+ M.csv/M.rds) into {s_mat, M}.
+  # Reads a profile folder's s.csv and M file into a saving share matrix and a
+  # transition matrix.
   dir = file.path(WEALTH_PROFILES_ROOT, name)
   if (!dir.exists(dir)) {
     stop(sprintf(paste0("wealth_dynamics: financing profile '%s' not found at %s. ",
@@ -375,16 +344,15 @@ wealth_dyn_resolve_profile = function(scenario_info, params = NULL,
                                       ages = NULL, n_bins = NULL) {
 
   #----------------------------------------------------------------------------
-  # Resolve a scenario to its financing profile {s_mat [n_ages x n_bins], M},
-  # following wealth_dyn_profile_spec()'s precedence. The scalar `s` column and
-  # the 'off' sentinel synthesize their profiles in memory (flat / zero, identity
-  # M); a folder name is loaded from disk. Memoized per (kind, value, grid).
+  # Resolves a scenario to its financing profile, following the precedence in
+  # wealth_dyn_profile_spec(). The flat and off forms are built in memory; a
+  # folder name is read from disk. Results are cached.
   #
-  # Adds: $active (any s_mat > 0 -- the gate), $ages, $n_bins, $source, and a
-  # cheap $fingerprint (for state stamping / logging, NOT a provenance gate --
-  # profiles are intended to vary per scenario).
+  # Also attaches active (whether any cell saves), ages, n_bins, source, and a
+  # fingerprint used for logging and state stamping. The fingerprint is not a
+  # provenance check, since profiles are meant to vary across scenarios.
   #
-  # Returns: the profile list.
+  # Returns: list of s_mat and M, plus the fields above.
   #----------------------------------------------------------------------------
 
   if (is.null(params)) params = wealth_dyn_load_params()
@@ -439,13 +407,11 @@ wealth_dyn_resolve_profile = function(scenario_info, params = NULL,
 wealth_dyn_check_run_compat = function(scenario_info, vat_price_offset) {
 
   #----------------------------------------------------------------------------
-  # Preconditions for the wealth bathtub pre-pass and the applier. The pre-pass
-  # forms cell state in raw wealth dollars (net_worth, economic_gross) while ΔT⁰
-  # is in adjusted tax dollars, and the 63x100 (age x within-age percentile)
-  # cells are sparser than kg's 63 age cells -- so it takes the shared
-  # raw-dollar channel guard.
-  #
-  # Staleness of the saving-share profile is checked at parse time, not here.
+  # Checks the preconditions for the pre-pass and the applier. Cell state is in
+  # raw wealth dollars while the tax delta is in adjusted dollars, and the cells
+  # are sparser than the capital gains bathtub's, so the channel takes the shared
+  # guard for raw-dollar channels. Staleness of the profile is checked at parse
+  # time instead.
   #
   # Returns: invisibly TRUE; stops on violation.
   #----------------------------------------------------------------------------
@@ -458,16 +424,18 @@ wealth_dyn_check_run_compat = function(scenario_info, vat_price_offset) {
 
 
 #-------------------------------------------------------------------------------
-# Cohort key and capital-income bundle helpers
+# Cohort key and capital income helpers
 #-------------------------------------------------------------------------------
 
 wealth_dyn_age_cohort = function(tax_units) {
 
   #----------------------------------------------------------------------------
-  # The (age x percentile) cell's age key. Joint records use max(age1, age2)
-  # (the both-die event the couple's estate_m already carries), applied BEFORE
-  # the 80+ topcode -- identical to src/sim/kg/ (was src/sim/kg/:404-407) and distribution.R:173
-  # (plan D16). The pre-pass and the applier MUST compute this identically.
+  # Assigns each record its cell's age. Joint records take the older of the two
+  # ages, the both-die event their mortality rate already reflects, applied
+  # before the top code. Matches the capital gains bathtub and distribution.R.
+  # The pre-pass and the applier have to compute this the same way.
+  #
+  # Returns: integer vector of cohort ages.
   #----------------------------------------------------------------------------
 
   a = if_else(tax_units$filing_status == 2,
@@ -480,7 +448,7 @@ wealth_dyn_age_cohort = function(tax_units) {
 
 wealth_dyn_safe_col = function(df, col) {
 
-  # Returns df[[col]] with NAs -> 0, or a 0 vector if the column is absent.
+  # Returns a column with NAs set to 0, or a vector of 0s if it is absent.
   if (col %in% names(df)) replace_na(df[[col]], 0) else rep(0, nrow(df))
 }
 
@@ -489,11 +457,12 @@ wealth_dyn_safe_col = function(df, col) {
 wealth_dyn_capital_total = function(df) {
 
   #----------------------------------------------------------------------------
-  # F = the taxable capital-income content of the WEALTH_CAP_FLOWS bundle, in
-  # native dollars: F = sum_c w_c * flow_c. Pure-capital flows enter at weight 1
-  # (rental and estate/trust as NET pairs); the pass-through slice enters at
-  # weight 0.2 (capital share of business income), as the signed net. Robust to
-  # missing columns (treated as 0).
+  # Calculates each record's taxable capital income, as the weighted sum of the
+  # flows above. Pure capital flows enter at weight 1, with rental and
+  # estate/trust income net of losses; pass-through income enters net at weight
+  # 0.2. Missing columns are treated as 0.
+  #
+  # Returns: numeric vector of capital income in dollars.
   #----------------------------------------------------------------------------
 
   g = function(col) wealth_dyn_safe_col(df, col)
@@ -517,14 +486,14 @@ wealth_dyn_capital_total = function(df) {
 
 wealth_dyn_economic_gross = function(df) {
 
-  # Gross assets = sum of the 14 value.* asset columns (= ESTATE_ASSET_COLS),
-  # computed in-memory. Same object calc_estate() forms inline.
+  # Sums the asset columns to gross assets, the same quantity calc_estate()
+  # forms inline.
   rowSums(cols_matrix(df, ESTATE_ASSET_COLS))
 }
 
 cols_matrix = function(df, cols) {
-  # A numeric matrix of the requested columns with NAs -> 0 and missing columns
-  # dropped (suitable for rowSums). Always returns a matrix with nrow(df) rows.
+  # Returns the requested columns as a numeric matrix, with NAs set to 0 and
+  # absent columns dropped. Always has one row per record.
   present = intersect(cols, names(df))
   if (length(present) == 0) return(matrix(0, nrow(df), 1))
   m = as.matrix(df[present])
@@ -538,34 +507,32 @@ calc_cap_bundle_mtr = function(tax_units, actual_liab_iit, baseline_pr_er,
                                vars_1040, vars_payroll) {
 
   #----------------------------------------------------------------------------
-  # Composition-weighted bundle MTR: the marginal income-tax response to scaling
-  # the record's entire WEALTH_CAP_FLOWS bundle along the EXACT direction the
-  # haircut moves it (pure-capital and kg_lt_basis by the same factor;
-  # pass-through + SE companions by the 0.2-weighted factor). MEASURED through
-  # the calculator (not assigned from statutory classes), so reforms to QBI /
-  # muni exclusion / gain rates are reflected automatically.
+  # Calculates each record's marginal income tax rate on its capital income as a
+  # whole. Scales the record's capital flows in the same proportions the haircut
+  # scales them, recalculates taxes, and differences:
   #
-  #   tau_i = dT_i / (bump * F_i),   dT = liab_iit_net(bumped) - actual
+  #   tau = (liab_iit_net(scaled) - liab_iit_net) / (bump * capital income)
   #
-  # which equals the plan's sum_c (w_c flow_c / F) MTR_c (the directional
-  # derivative). Income tax ONLY (pr = F): capital-income-triggered spillovers
-  # (SS taxability, AGI phaseouts, NIIT, QBI) are correctly included; the
-  # pass-through SECA slice is omitted (<1%, documented).
+  # Measuring the rate through the calculator rather than assigning it from
+  # statutory rates means reforms to QBI, the municipal bond exclusion or the
+  # gain rates are picked up without further work, as are the effects capital
+  # income has elsewhere on the return through Social Security taxability, AGI
+  # phaseouts and the NIIT. Income tax only, so the SECA response on
+  # pass-through income is left out.
   #
-  # Frame: must be the same conv-no-wealth pre-do_taxes frame ΔT⁰ is measured
-  # on; run BEFORE the deemed fold. Mirrors mtr_kg_lt_lawonly (run.R:626-645):
-  # full-frame recompute (never a subset -- positional random_numbers),
-  # calc_estate_flag = calc_wealth_flag = FALSE.
+  # Must run on the same frame the tax delta is measured on, before deemed
+  # realizations are folded in, and over the whole frame rather than a subset,
+  # since random numbers are assigned by position.
   #
   # Parameters:
-  #   - tax_units (df)         : pre-do_taxes frame (raw + behavioral feedback)
-  #   - actual_liab_iit (dbl[]): liab_iit_net on the un-bumped frame (alive-leg,
-  #                              pre-deemed-fold)
-  #   - baseline_pr_er (df)    : baseline employer payroll (passed to do_taxes)
-  #   - vars_1040 / vars_payroll : do_taxes variable lists
+  #   - tax_units (df)          : tax units before do_taxes
+  #   - actual_liab_iit (dbl[]) : liab_iit_net on the unscaled frame
+  #   - baseline_pr_er (df)     : baseline employer-side payroll liabilities
+  #   - vars_1040 (str[])       : names of 1040 variables to return
+  #   - vars_payroll (str[])    : names of payroll tax variables to return
   #
-  # Returns: tibble with mtr_cap_bundle and cap_bundle_F (one row per record,
-  #          aligned to tax_units$id).
+  # Returns: tibble of mtr_cap_bundle and cap_bundle_F, one row per record in
+  #          the order of tax_units (df).
   #----------------------------------------------------------------------------
 
   eps   = WEALTH_DYN_MTR_BUMP
@@ -591,8 +558,8 @@ calc_cap_bundle_mtr = function(tax_units, actual_liab_iit, baseline_pr_er,
   stopifnot(identical(taxed_bumped$id, tax_units$id))
 
   dT  = taxed_bumped$liab_iit_net - actual_liab_iit
-  # F floor as a fraction of gross; net-capital-loss (F < 0) records get 0 (zero
-  # feedback, per D7 -- y is clamped >= 0 at the cell level too).
+  # Records with too little capital income to measure against, and those with a
+  # net capital loss, get no rate.
   ok  = F >= pmax(WEALTH_DYN_F_FLOOR * gross, WEALTH_DYN_EPS)
   mtr = if_else(ok, dT / (eps * F), 0)
 
@@ -602,31 +569,29 @@ calc_cap_bundle_mtr = function(tax_units, actual_liab_iit, baseline_pr_er,
 
 
 #-------------------------------------------------------------------------------
-# r_total(t) and transition operator
+# Wealth growth rate
 #-------------------------------------------------------------------------------
 
 wealth_dyn_read_rtotal = function(scenario_info, params) {
 
   #----------------------------------------------------------------------------
-  # r_total(t) = nominal GDP-per-capita growth, per year, spliced across the
-  # Macro-Projections historical.csv + projections.csv series. NOMINAL (matches
-  # the nominal wealth stock/flows):
-  #   r_total(t) = (gdp_t / gdp_{t-1}) / (pop_t / pop_{t-1}) - 1
-  # where `gdp` is nominal GDP and population is the sum of the per-age
-  # unmarried_* + married_* tax-unit-count columns. (NOTE: do NOT use gdp_c --
-  # that is the CONSUMPTION component of GDP, not GDP per capita.)
+  # Calculates the growth rate of wealth by year, taken to be growth in nominal
+  # GDP per capita:
   #
-  # We splice historical+projections rather than reading projections.csv alone:
-  # projections.csv begins in the first projection year, so the YoY growth of
-  # that boundary year (and of any pre-projection lead-in year, e.g. a sim that
-  # starts a year before the policy to capture FY revenue) has no t-1 predecessor
-  # and is undefined. Splicing differences the boundary growth off the real prior
-  # actual year, mirroring src/sim/kg/'s cpiu/tsy loaders. Matches the
-  # calibration diagnostic other/wealth_dynamics/cohort_wealth_growth.R. Plus the
-  # optional additive path-delta knob (default 0, a one-time sensitivity test).
+  #   r_total = (gdp_t / gdp_t-1) / (pop_t / pop_t-1) - 1
   #
-  # Returns: a named numeric vector r_total[as.character(year)] over
-  #          scenario_info$years.
+  # Nominal, to match the nominal wealth stock. Population is the sum of the
+  # married and unmarried tax unit counts by age. Note that gdp_c is the
+  # consumption component of GDP, not GDP per capita, and is not what is wanted
+  # here.
+  #
+  # Historical and projected series are spliced rather than reading projections
+  # alone. Projections start in the first projection year, so the growth rate of
+  # that year, and of any earlier lead-in year, has no prior year to difference
+  # against. Splicing gives the boundary year a real predecessor, as the CPI and
+  # Treasury rate loaders in src/sim/kg/ also do.
+  #
+  # Returns: named numeric vector of growth rates by year.
   #----------------------------------------------------------------------------
 
   macro_root = scenario_info$interface_paths$`Macro-Projections`
@@ -641,10 +606,9 @@ wealth_dyn_read_rtotal = function(scenario_info, params) {
                       pop = rowSums(across(all_of(pop_cols), ~ replace_na(., 0))))
   }
 
-  # Splice historical (through the last actual year) ahead of projections so
-  # every requested year -- including a lead-in or the projection boundary -- has
-  # a real t-1 predecessor for the YoY growth difference. distinct() keeps the
-  # historical (actual) row if the two series ever overlap on a year.
+  # Splice historical ahead of projections so that every requested year has a
+  # prior year to difference against. Where the two series overlap, distinct()
+  # keeps the historical row.
   macro = bind_rows(read_gdp_pop('historical.csv'),
                     read_gdp_pop('projections.csv')) %>%
     distinct(year, .keep_all = TRUE) %>%
@@ -667,13 +631,13 @@ wealth_dyn_read_rtotal = function(scenario_info, params) {
 
 
 #-------------------------------------------------------------------------------
-# Detail IO for the conv-no-wealth pass
+# Detail files for the pass measuring the tax change
 #-------------------------------------------------------------------------------
 
 wealth_dyn_convnw_detail_dir = function(scenario_info) {
-  # Distinct pass root so the conv-no-wealth detail never clobbers the final
-  # conventional detail (which distribution and receipts read). No totals /
-  # receipts are written for this intermediate pass.
+  # A separate output root, so this intermediate pass never overwrites the final
+  # conventional detail that distribution and receipts read. No totals or
+  # receipts are written for it.
   file.path(scenario_info$output_path, 'conventional_no_wealth', 'detail')
 }
 
@@ -684,35 +648,43 @@ wealth_dyn_convnw_detail_path = function(scenario_info, year) {
 
 
 #-------------------------------------------------------------------------------
-# Pre-pass: per-living-record deficit P over (age, percentile) cells
+# Pre-pass: accumulating the wealth shortfall by cell
 #-------------------------------------------------------------------------------
 
 run_wealth_bathtub_pass = function(scenario_info, tax_law,
                                    vat_price_offset = NULL) {
 
   #----------------------------------------------------------------------------
-  # Orchestrates the wealth bathtub pre-pass for one scenario. For each year:
-  # reads the scenario CONV-NO-WEALTH detail and the baseline static detail,
-  # assigns (age x net-worth-percentile) cells, builds the GENERALIZED
-  # CONVENTIONAL forcing (corporate-incidence FORMAL_MODEL P8/P9, D11/D16)
-  #     F = ΔT⁰ - ΔY_exog
-  #       = Δ(liab_iit_pr + liab_wealth) - corp_dY_exog
-  # (ΔY_exog is the analytic external-income shock accumulated by
-  # corp_apply_to_records on the conv-no-wealth pass; 0 for every non-corp
-  # scenario, so the generalized forcing reduces to the tax-only ΔT⁰ there;
-  # the baseline leg has no income shock by construction), forms the
-  # cell-aggregate yield y, the bundle MTR tau, and the wealth-tax MTR tau_w,
-  # and runs the per-living-record recurrence
-  #     P(a,p,t) = G(a,p,t) * [aged + percentile-transitioned P(t-1)]
-  #                + s * F(a,p,t)
-  # with the feedback growth kernel
-  #     G(a,p,t) = (1 + r_total(t)) - s*(tau(a,p,t)*y(a,p) + tau_w(a,p,t)).
-  # There is NO (1-m) survival factor (deaths handled at aggregation via each
-  # record's estate_m; D1). Writes P + the per-age percentile cutoffs to
-  # {scenario}/conventional/supplemental/wealth_dynamics_state/{year}.rds.
+  # Runs the wealth shortfall recurrence for one scenario, one year at a time.
+  # For each year, reads the scenario's detail from the pass that excludes this
+  # channel along with the baseline static detail, assigns cells, and forms the
+  # forcing each cell faces:
   #
-  # Depends on the conv-no-wealth scenario detail (this scenario) AND the
-  # baseline static detail (Phase 1) being present.
+  #   F = change in during-life tax - change in outside income
+  #     = change in (income tax + payroll - deemed + wealth tax) - corp_dY_exog
+  #
+  # The income term is the corporate channel's shock to income from outside the
+  # tax system, and is 0 for any scenario without a corporate provision, leaving
+  # the forcing as the tax change alone. The baseline leg carries no such shock.
+  # A gain realized during life or a retirement distribution is not outside
+  # income: the household already loses those resources through the balance
+  # sheet, so only their tax consequence enters here.
+  #
+  # The shortfall then accumulates over cells as
+  #
+  #   P(t) = G(t) * [P(t-1), aged and moved across percentiles] + s * F(t)
+  #
+  # where growth is damped by the tax the eroded wealth no longer generates,
+  #
+  #   G(t) = (1 + r_total(t)) - s * (tau * y + tau_w)
+  #
+  # with y the cell's capital income per dollar of assets, tau its marginal rate
+  # on that income, and tau_w its marginal wealth tax rate. There is no survival
+  # term: deaths enter only at aggregation, through each record's mortality rate.
+  #
+  # Writes the shortfall and the percentile cutoffs by year to the scenario's
+  # conventional/supplemental/wealth_dynamics_state/. Requires that both this
+  # scenario's no-wealth detail and the baseline static detail already exist.
   #
   # Returns: invisibly NULL.
   #----------------------------------------------------------------------------
@@ -724,10 +696,7 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
   n_ages  = length(ages)
   n_bins  = params$n_pctiles
 
-  # Resolve the bracket-varying financing profile: s_mat[age, pctile] (the
-  # saving share per cell) and the within-age transition M. A flat scalar `s`
-  # resolves to a constant s_mat with identity M (byte-identical to the old
-  # scalar path); a folder gives the full age x net-worth-rank surface.
+  # Get the saving share by cell and the percentile transition
   profile = wealth_dyn_resolve_profile(scenario_info, params, ages, n_bins)
   s_mat   = profile$s_mat
   M       = profile$M
@@ -742,8 +711,8 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
 
   has_baseline = !is.null(globals$baseline_root)
 
-  # Deficit state P[age, percentile], in dollars (cell total). Boundary: 0
-  # before any reform year (ΔT⁰ = 0 there since scenario law = baseline law).
+  # Cell shortfall in dollars. Zero before the first reform year, where scenario
+  # law and baseline law agree and the tax change is zero.
   P = matrix(0, n_ages, n_bins, dimnames = list(ages, NULL))
 
   for (t in years) {
@@ -751,17 +720,15 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
     scen = wealth_dyn_read_convnw_detail(scenario_info, t)
     base = wealth_dyn_read_baseline_detail(t, has_baseline)
 
-    # Match distribution.R's liab_iit_pr forcing population: dependent returns
-    # are excluded (distribution.R filters dep_status == 0 before forming
-    # liab_iit_pr). The applier excludes them too (no cell), so the forced and
-    # drained populations agree.
+    # Drop dependent returns, matching the population distribution.R forms the
+    # during-life tax over. The applier drops them too, so the records that are
+    # forced and the records that are drained are the same.
     scen = scen %>% filter(dep_status == 0)
 
-    # Cohort key + within-age percentile cutoffs/bins on the RAW (pre-behavior)
-    # net worth, positive-NW only (D17). net_worth_raw, not the detail's
-    # net_worth column, which a behavior module (e.g. wealth avoidance) may have
-    # overwritten -- the applier ranks on the raw stock, so the pre-pass must
-    # too (else cells/conservation break; review HIGH finding).
+    # Assign cells, ranking on positive raw net worth. Rank on net_worth_raw
+    # rather than net_worth, which a behavior module such as wealth avoidance
+    # may have overwritten. The applier ranks on the raw stock, so the pre-pass
+    # has to as well, or the cells disagree and the shortfall is not conserved.
     scen$age_cohort = wealth_dyn_age_cohort(scen)
     cutoffs = compute_within_age_cutoffs(scen$net_worth_raw, scen$weight,
                                          scen$age_cohort, ages, n_bins,
@@ -769,19 +736,12 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
     scen$bin = assign_within_age_bin(scen$net_worth_raw, scen$age_cohort, cutoffs,
                                      n_bins, positive_only = TRUE)
 
-    # Per-record generalized forcing F = ΔT⁰ - ΔY_exog (CONVENTIONAL,
-    # wealth-excluding):
-    #   liab_iit_pr = liab_iit_net + liab_pr - liab_deemed   (distribution.R:176)
-    #   tax leg     = Δ(liab_iit_pr + liab_wealth), scenario - baseline
-    #   income leg  = corp_dY_exog (the corporate channel's analytic external-
-    #                 income shock on this record; NEGATIVE for a hike, so the
-    #                 forcing turns POSITIVE -- the household dissaves to defend
-    #                 consumption against the lost income net of the tax rebate,
-    #                 P8's sign theorem. Baseline leg carries none: the channel
-    #                 is reform-delta-only.)
-    # Internal conversions (kg, retirement distributions) are deliberately NOT
-    # income legs (D16) -- their resource loss is already the balance-sheet /
-    # gain-state markdown; only their tax consequence enters, via ΔT⁰.
+    # Forcing per record: the change in during-life tax, less the change in
+    # income from outside the tax system. During-life tax is income tax plus
+    # payroll less deemed realizations, plus the wealth tax. The outside income
+    # shock is negative for a tax increase, which makes the forcing positive:
+    # the household draws down wealth to hold consumption up against the income
+    # it has lost, net of the tax it no longer owes on it.
     scen = scen %>%
       mutate(liab_iit_pr_scen = liab_iit_net + liab_pr - coalesce(liab_deemed, 0)) %>%
       left_join(base %>% select(id, liab_iit_pr_base, liab_wealth_base),
@@ -792,7 +752,8 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
                              (liab_iit_pr_base + liab_wealth_base) -
                              coalesce(corp_dY_exog, 0)))
 
-    # Cell aggregates (drop records with no cell: NA bin = neg/zero NW).
+    # Aggregate to cells, dropping records with no cell (zero or negative net
+    # worth).
     cells = scen %>%
       filter(!is.na(bin)) %>%
       group_by(age_cohort, bin) %>%
@@ -806,15 +767,15 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
         nwmtr    = sum(weight * pmax(net_worth_raw, 0) * mtr_net_worth, na.rm = TRUE),
         .groups  = 'drop') %>%
       mutate(
-        # y_cell = capital income per $ gross, clamped to [0, Y_MAX] (D13 + the
-        # realized-gains cap above); tau_cell = F-weighted bundle MTR; tau_w_cell
-        # = NW-weighted marginal wealth rate.
+        # Capital income per dollar of assets, capped as described above; the
+        # income-weighted marginal rate on capital income; and the net
+        # worth-weighted marginal wealth tax rate.
         y    = pmin(pmax(if_else(gross > WEALTH_DYN_EPS, F_signed / gross, 0), 0),
                     WEALTH_DYN_Y_MAX),
         tau  = if_else(F_pos  > WEALTH_DYN_EPS, Fmtr_pos / F_pos,  0),
         tau_w= if_else(nw_pos > WEALTH_DYN_EPS, nwmtr    / nw_pos, 0))
 
-    # Scatter cell quantities into [n_ages x n_bins] matrices.
+    # Scatter the cell quantities into matrices of age by percentile.
     dT0_mat = matrix(0, n_ages, n_bins, dimnames = list(ages, NULL))
     y_mat   = matrix(0, n_ages, n_bins)
     tau_mat = matrix(0, n_ages, n_bins)
@@ -827,16 +788,15 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
     tau_mat[idx] = cells$tau
     tw_mat[idx]  = cells$tau_w
 
-    # Feedback growth kernel. The income term needs the yield conversion
-    # tau*y; the wealth tax is already a rate on wealth so tau_w enters with
-    # coefficient 1 (NOT routed through y). Both feedback terms are clamped >= 0:
-    # the feedback is "tax foregone as wealth erodes", which cannot be negative
-    # (a cell whose F-weighted bundle MTR is negative -- refundable-credit /
-    # phase-in interactions -- would otherwise push G above 1+r_total).
+    # Growth factor. The income tax term is a rate on income, so it is converted
+    # to a rate on wealth by the yield; the wealth tax is already a rate on
+    # wealth and enters directly. Both terms are the tax forgone as wealth
+    # erodes, which cannot be negative, so both are floored at zero. Without
+    # that, a cell whose marginal rate is negative through a refundable credit
+    # or a phase-in would grow faster than the economy.
     rt = unname(r_total[as.character(t)])
-    # s_mat is the per-cell saving share (constant under a flat scalar/default).
     G  = (1 + rt) - s_mat * (pmax(tau_mat * y_mat, 0) + pmax(tw_mat, 0))
-    # A non-finite G means a genuinely mis-scaled input (NaN/Inf): abort loudly.
+    # A non-finite growth factor means an input was mis-scaled.
     if (any(!is.finite(G))) {
       bad = which(!is.finite(G), arr.ind = TRUE)
       stop(sprintf(paste0('wealth_dynamics: non-finite kernel G in %d cell(s) ',
@@ -844,12 +804,10 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
                           'tau/y/tau_w input.'),
                    nrow(bad), t, ages[bad[1, 1]], bad[1, 2]))
     }
-    # Clamp G to the physical range (0, 1+r_total]. With the y-cap and the >=0
-    # feedback clamps this binds only in sparse low-NW cells with lumpy one-time
-    # realizations (y spikes), whose deficit is negligible (∝ tiny NW) and which
-    # cannot move the headline (top-NW cells have y ~ r and never bind). Logged,
-    # not silent (no silent truncation); the count flags a systematic problem if
-    # it is ever large.
+    # Hold G inside its plausible range. Given the cap on y and the floors
+    # above, this binds only in sparse low net worth cells with a large one-time
+    # realization, which hold too little of the shortfall to matter. Warn rather
+    # than clamp silently: a large count would mean something is mis-scaled.
     n_clamp = sum(G < WEALTH_DYN_G_FLOOR)
     if (n_clamp > 0) {
       warning(sprintf(paste0('wealth_dynamics: clamped kernel G to >= %.0e in ',
@@ -861,10 +819,9 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
     }
     G = pmin(pmax(G, WEALTH_DYN_G_FLOOR), 1 + rt)
 
-    # Recurrence: carried deficit (aged + percentile-transitioned) grows by G;
-    # fresh inflow s*F (F = ΔT⁰ - ΔY_exog, the dT0_mat above) enters at face
-    # value (end-of-year saving, D24). Both the kernel feedback and this inflow
-    # use the cell's own s_mat[a, p].
+    # Step forward: the shortfall carried in from last year, aged and moved
+    # across percentiles, grows by G, and this year's saving out of the tax
+    # change enters at face value, since it is assumed to happen at year end.
     P = cohort_recurrence_step(P_prev = P, growth = G, inflow = s_mat * dT0_mat,
                                A = A, M_by_age = M)
 
@@ -875,16 +832,15 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
                    n_bins       = n_bins,
                    year         = t,
                    r_total      = rt,
-                   # s_mat is the full per-cell saving share; s is the scalar
-                   # summary (the flat value, or NA for a non-flat profile) kept
-                   # for back-compatible diagnostics.
+                   # s is the flat saving share where there is one, and NA
+                   # otherwise. Kept for diagnostics that predate s_mat.
                    s_mat        = s_mat,
                    s            = if (isTRUE(all.equal(min(s_mat), max(s_mat))))
                                     s_mat[1] else NA_real_,
                    profile_src  = profile$source,
                    profile_fp   = profile$fingerprint,
                    spec_version = WEALTH_DYN_SPEC_VERSION,
-                   # diagnostics for verification (closed-form kernel check, etc.)
+                   # Diagnostics, used to check the recurrence by hand
                    diag         = list(y = y_mat, tau = tau_mat, tau_w = tw_mat,
                                        G = G, dT0 = dT0_mat)),
       scenario_info = scenario_info,
@@ -899,9 +855,9 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
 
 wealth_dyn_read_convnw_detail = function(scenario_info, year) {
 
-  # Reads one year of the scenario's conv-no-wealth detail and the columns the
-  # pre-pass needs. Defensive: hard-error on a missing file or missing columns
-  # (a partial/old CSV would silently zero the forcing).
+  # Reads the columns the pre-pass needs from one year of the scenario's
+  # no-wealth detail. Errors on a missing file or missing columns, since an old
+  # or partial file would zero out the forcing without saying so.
   path = wealth_dyn_convnw_detail_path(scenario_info, year)
   if (!file.exists(path)) {
     stop('wealth_dynamics pre-pass: conv-no-wealth detail missing: ', path,
@@ -913,9 +869,8 @@ wealth_dyn_read_convnw_detail = function(scenario_info, year) {
            'mtr_net_worth')
   optional = c('liab_deemed', 'corp_dY_exog')
 
-  # Read the header alone first, then only the columns the pre-pass uses (18 of
-  # ~98). Detail files are ~150MB, so parsing the rest is pure waste -- see
-  # other/performance/PERF_AUDIT_2026_07_25.md §2.7.
+  # Read the header first, then only the 18 columns of about 98 that are needed.
+  # Detail files run to 150MB, so parsing the rest is wasted time.
   have = names(fread(path, nrows = 0))
   missing = setdiff(need, have)
   if (length(missing) > 0) {
@@ -926,10 +881,9 @@ wealth_dyn_read_convnw_detail = function(scenario_info, year) {
     fread(select = c(need, intersect(optional, have))) %>%
     tibble()
   if (!('liab_deemed' %in% names(d))) d$liab_deemed = 0
-  # Corporate-incidence external-income shock (generalized forcing income leg).
-  # Absent for non-corp scenarios and for detail written before the corporate
-  # channel existed: 0 keeps the forcing tax-only, byte-identical to the old
-  # behavior.
+  # The corporate channel's shock to outside income. Absent for scenarios
+  # without a corporate provision, and for detail written before the channel
+  # existed; zero leaves the forcing as the tax change alone.
   if (!('corp_dY_exog' %in% names(d))) d$corp_dY_exog = 0
   d
 }
@@ -938,12 +892,13 @@ wealth_dyn_read_convnw_detail = function(scenario_info, year) {
 
 wealth_dyn_read_baseline_detail = function(year, has_baseline) {
 
-  # Reads the baseline static detail's during-life tax for the forcing's
-  # baseline leg. Baseline has no behavior/no wealth, so baseline static =
-  # baseline conv-no-wealth. liab_deemed / liab_wealth default to 0.
+  # Reads during-life tax from the baseline static detail, for the baseline side
+  # of the forcing. The baseline runs with no behavior and no wealth channel, so
+  # its static and no-wealth detail are the same thing. Deemed realizations and
+  # the wealth tax default to zero.
   if (!has_baseline) {
-    stop('wealth_dynamics pre-pass: no baseline_root available, but ΔT⁰ is ',
-         'measured as (scenario - baseline). Supply a baseline.')
+    stop('wealth_dynamics pre-pass: no baseline_root available, but the tax ',
+         'change is measured as scenario less baseline. Supply a baseline.')
   }
   path = globals$baseline_root %>%
     file.path('baseline/static/detail', paste0(year, '.csv'))
@@ -953,7 +908,7 @@ wealth_dyn_read_baseline_detail = function(year, has_baseline) {
   need     = c('id', 'liab_iit_net', 'liab_pr')
   optional = c('liab_deemed', 'liab_wealth')
 
-  # Header first, then 3-5 columns of ~98 (perf audit §2.7)
+  # Header first, then the handful of columns needed
   have = names(fread(path, nrows = 0))
   missing = setdiff(need, have)
   if (length(missing) > 0) {
@@ -974,45 +929,44 @@ wealth_dyn_read_baseline_detail = function(year, has_baseline) {
 
 
 #-------------------------------------------------------------------------------
-# Applier (built-in conventional-pass step)
+# Applier: draining the shortfall out of records
 #-------------------------------------------------------------------------------
 
 wealth_dyn_apply_to_records = function(tax_units, state, params = NULL,
                                        rank_value = NULL) {
 
   #----------------------------------------------------------------------------
-  # The mechanical haircut: drains each record's share of its cell's deficit
-  # P(a,p,t) out of wealth, before the behavior modules and do_taxes run on the
-  # conventional frame. Per record i in cell (a_i, p_i):
+  # Takes each record's share of its cell's accumulated shortfall out of its
+  # wealth, before the behavior modules and do_taxes run. The share is
+  # proportional to net worth:
   #
-  #   D_alloc_i = P[a,p] * NW_i / sum_cell(w * max(NW, 0))       (proportional to NW)
-  #   f_i       = clamp(D_alloc_i / economic_gross_i, -fmax, fmax)
+  #   allocated  = P * net worth / cell total weighted positive net worth
+  #   f          = allocated / gross assets, clamped to plus or minus fmax
   #
-  # then scale the 14 value.* asset columns UNIFORMLY by (1 - f) (so s_pt and the
-  # frozen rho_pt valuation discount stay invariant -- the WHOLE balance sheet
-  # shrinks), scale the WEALTH_CAP_FLOWS income flows (pure by (1-f),
-  # pass-through + SE companions by (1 - 0.2 f)), kg_lt_basis by (1-f), and the
-  # WEALTH_RET_DIST_FLOWS retirement distributions by (1-f) (draws sourced from
-  # the marked-down balances scale with the markdown; P7), and
-  # recompute net_worth (debts untouched). The eroded value.* flow into
-  # calc_estate (estate base falls) and calc_wealth (wealth tax reprices on the
-  # eroded net_worth). Records with no cell (neg/zero NW) are untouched (f = 0).
+  # Assets are then scaled by (1 - f). Every asset column is scaled by the same
+  # factor, so that the whole balance sheet shrinks and the pass-through share
+  # and its frozen valuation discount are left where they are. Capital income
+  # flows and basis scale the same way, pass-through flows and their earner
+  # splits at the 0.2 weight, and retirement distributions with the balances
+  # they are drawn from. Net worth is then recomputed, leaving debts alone.
+  #
+  # The eroded assets feed calc_estate, lowering the estate base, and calc_wealth,
+  # which reprices the wealth tax on the smaller stock. Records with no cell, at
+  # zero or negative net worth, are left alone.
   #
   # Parameters:
-  #   - tax_units (df)   : the conventional-pass base frame (pre-behavior)
-  #   - state (list)     : the year's wealth_dynamics_state (P + cutoffs)
-  #   - params (list)    : wealth params (for fmax); loaded if NULL
-  #   - rank_value (dbl[]): the net-worth vector to RANK/BIN on; defaults to
-  #                        tax_units$net_worth. Callers that transform the
-  #                        frame before the haircut (the corporate-incidence
-  #                        markdown) must pass the RAW pre-transform stock so
-  #                        binning matches the pre-pass's net_worth_raw
-  #                        cutoffs. The D_alloc denominator still uses the
-  #                        live frame's net worth (conservation is within-cell
-  #                        and unaffected by which consistent stock allocates).
+  #   - tax_units (df)    : conventional-pass tax units, before behavior
+  #   - state (list)      : the year's saved shortfall and percentile cutoffs
+  #   - params (list)     : wealth parameters; loaded if NULL
+  #   - rank_value (dbl[]): net worth to rank on, defaulting to the frame's own.
+  #                         A caller that has already transformed the frame, as
+  #                         the corporate markdown does, passes the raw stock so
+  #                         that records land in the cells the pre-pass gave
+  #                         them. The allocation denominator still uses the live
+  #                         frame, which does not affect conservation.
   #
-  # Returns: tax_units with eroded value.*/flows/basis, recomputed net_worth,
-  #          and the diagnostic columns nw_pctile, D_alloc, wealth_haircut.
+  # Returns: tax units with eroded assets, flows and basis, recomputed net
+  #          worth, and the columns nw_pctile, D_alloc and wealth_haircut (df).
   #----------------------------------------------------------------------------
 
   if (is.null(params)) params = wealth_dyn_load_params()
@@ -1023,17 +977,14 @@ wealth_dyn_apply_to_records = function(tax_units, state, params = NULL,
 
   n = nrow(tax_units)
   age_cohort = wealth_dyn_age_cohort(tax_units)
-  # Rank on the RAW pre-behavior net worth -- the applier runs at the head of the
-  # conventional pass (before behavior), so tax_units$net_worth IS the raw
-  # materialized stock, matching the pre-pass's net_worth_raw cutoffs (unless
-  # the caller passes the raw stock explicitly via rank_value, e.g. when the
-  # corporate markdown has already transformed the frame).
+  # Rank on raw net worth. The applier runs before the behavior modules, so the
+  # frame's own net worth is still the raw stock the pre-pass ranked on, unless
+  # the caller has passed the raw stock explicitly.
   if (is.null(rank_value)) rank_value = tax_units$net_worth
   stopifnot(length(rank_value) == n)
   bin = assign_within_age_bin(rank_value, age_cohort, state$cutoffs,
                               n_bins, positive_only = TRUE)
-  # Exclude dependent returns (no cell), matching the pre-pass forcing
-  # population (distribution.R filters dep_status == 0).
+  # Drop dependent returns, matching the pre-pass.
   if ('dep_status' %in% names(tax_units)) {
     bin[tax_units$dep_status != 0] = NA_integer_
   }
@@ -1041,7 +992,7 @@ wealth_dyn_apply_to_records = function(tax_units, state, params = NULL,
   gross = wealth_dyn_economic_gross(tax_units)
   nw_pos = pmax(tax_units$net_worth, 0)
 
-  # Cell deficit per record (P[a,p]) and cell denominator sum_cell(w * NW+).
+  # Each record's cell shortfall, and its cell's total weighted net worth.
   P_i        = rep(0, n)
   cell_denom = rep(0, n)
   has_cell   = !is.na(bin)
@@ -1049,7 +1000,7 @@ wealth_dyn_apply_to_records = function(tax_units, state, params = NULL,
     ri = match(age_cohort[has_cell], ages)
     ci = bin[has_cell]
     P_i[has_cell] = P[cbind(ri, ci)]
-    # Weighted positive-NW sum within each (age, bin) cell.
+    # Weighted positive net worth by cell
     denom_tbl = tibble(age_cohort = age_cohort[has_cell],
                        bin        = ci,
                        wnw        = tax_units$weight[has_cell] * nw_pos[has_cell]) %>%
@@ -1060,8 +1011,8 @@ wealth_dyn_apply_to_records = function(tax_units, state, params = NULL,
     cell_denom[has_cell] = key$denom
   }
 
-  # D_alloc proportional to net worth; guard zero/tiny cell denominator and
-  # zero gross. f symmetric clamp.
+  # Allocate in proportion to net worth, guarding against an empty cell or a
+  # record with no assets.
   D_alloc = if_else(cell_denom > WEALTH_DYN_EPS & has_cell,
                     P_i * nw_pos / cell_denom, 0)
   f = if_else(gross > WEALTH_DYN_EPS, D_alloc / gross, 0)
@@ -1077,8 +1028,8 @@ wealth_dyn_apply_to_records = function(tax_units, state, params = NULL,
   f_pure = 1 - f
   f_pt   = 1 - wealth_cap_flows_pt_weight() * f
 
-  # Debts are untouched by the haircut: compute the stock once from the original
-  # frame, subtract it after the assets are eroded.
+  # Debts are left alone, so take them off the original frame and subtract them
+  # back after the assets are eroded.
   debts = rowSums(cols_matrix(tax_units, WEALTH_DEBT_COLS))
 
   out = tax_units %>%
@@ -1087,12 +1038,12 @@ wealth_dyn_apply_to_records = function(tax_units, state, params = NULL,
       across(all_of(pure_cols),  ~ . * f_pure),
       across(all_of(ret_cols),   ~ . * f_pure),
       across(all_of(pt_cols),    ~ . * f_pt)) %>%
-    # Recompute the stored net-worth stock from the (now eroded) balance sheet,
-    # mirroring run_one_year:505-507 / avoidance.R:90-92, so calc_wealth
-    # reprices liab_wealth and calc_estate the estate base on the eroded stock.
+    # Recompute net worth off the eroded balance sheet, as run_one_year() and
+    # the wealth avoidance module also do, so that calc_wealth and calc_estate
+    # both price off the smaller stock.
     mutate(
       net_worth      = rowSums(across(all_of(asset_cols), ~ replace_na(., 0))) - debts,
-      # Diagnostics (non-baseline detail only; dormant when s = 0).
+      # Diagnostics, written to non-baseline detail only
       nw_pctile      = bin,
       D_alloc        = D_alloc,
       wealth_haircut = f)

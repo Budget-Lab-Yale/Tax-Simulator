@@ -1,79 +1,62 @@
 #-------------------------------------------------------------------------------
 # apply.R
 #
-# Record appliers: the flow / stock / kg hits, and the kg bathtub glue.
+# Contains functions to apply the corporate tax change to records
 #-------------------------------------------------------------------------------
 
 
 #-------------------------------------------------------------------------------
-# Record applier (built-in conventional-pass step, run_one_year)
+# Applying the shock to records
 #-------------------------------------------------------------------------------
 
 corp_apply_to_records = function(tax_units, paths, year,
                                  kg_dynamics_active = FALSE) {
 
   #----------------------------------------------------------------------------
-  # Applies the year's corporate shock to the record frame, at the head of a
-  # conventional-side pass (BEFORE the wealth haircut applier and the behavior
-  # modules -- FORMAL_MODEL section 7; static side never sees this, D5).
+  # Applies the year's corporate tax change to records. Runs at the head of a
+  # conventional pass, before the wealth haircut and the behavior modules. The
+  # static pass never sees it.
   #
-  # Flows (the D16 IN-list; every applied dollar accumulates analytically into
-  # the detail column corp_dY_exog, NEVER by differencing files):
-  #   - div_ord/div_pref            x fac_div  = 1 + omega_div * phi_t
-  #   - txbl_int/exempt_int         x fac_int  (rollover-ramped)
-  #   - rent/rent_loss (net pair)   x fac_rent
-  #   - pass-through lines + SE companions (WEALTH_CAP_FLOWS_PT[_WEIGHT])
-  #                                 x fac_pt   = 1 - 0.2 * g_ptcap
+  # Income flows are cut: dividends, interest, rent net of losses, and the
+  # pass-through lines. Interest is ramped, since debt reprices only as it rolls
+  # over. Every dollar cut is accumulated into corp_dY_exog, computed here rather
+  # than recovered later by differencing files.
   #
-  # Stocks: exposed value.* columns x (1 - omega_a * mu_t) -- column-specific,
-  # NOT the wealth channel's uniform (1 - f) (different design goal: the
-  # haircut must keep s_pt/rho_pt invariant; the markdown is an equity-price
-  # event). net_worth is recomputed from the marked-down balance sheet (debts
-  # untouched) so calc_wealth reprices liab_wealth and calc_estate the estate
-  # base. BASIS NEVER SCALES (P5).
+  # Asset values are marked down, each column by its own exposure to corporate
+  # equity. This differs from the wealth haircut, which scales the whole balance
+  # sheet by one factor: that has to leave the pass-through share and its valuation
+  # discount alone, whereas this is a change in the price of equity. Basis never
+  # scales. Net worth is recomputed so that the wealth tax and the estate base
+  # reprice on the smaller stock.
   #
-  # Gains (D18, one rule, two entry points):
-  #   - non-kg runs (kg_dynamics_active = FALSE): the exact per-record form
-  #       kg_lt'       = kg_lt + omega_kg * [phi_t * kg_lt
-  #                                          - mu_t * max(kg_lt + kg_lt_basis, 0)]
-  #       kg_lt_basis' = kg_lt_basis * (1 + omega_kg * phi_t)
-  #       kg_st'       = kg_st * (1 + omega_kg * phi_t)
-  #     (quantity margin phi co-scales basis -- fewer buyback-forced sales;
-  #      the price margin mu hits the SALE VALUE, basis fixed).
-  #   - kg runs (kg_dynamics_active = TRUE): kg columns are NOT touched here.
-  #     The price margin enters as the bathtub gain-state debit and the phi
-  #     quantity term is applied AFTER kg_dyn_apply_to_records in
-  #     run_one_year -- applying either here too would double-count.
-  #   kg deltas stay OUT of corp_dY_exog (internal conversions, P9).
+  # Capital gains move two ways, and which one applies depends on whether the
+  # scenario also runs the gains model. Without it, both margins are applied here
+  # per record: fewer shares are sold because payouts fall, which scales the flow
+  # and its basis together, and each share sells for less, which cuts the gain
+  # while leaving basis alone. With the gains model, neither is applied here. The
+  # price margin instead debits the stock of gains, and the quantity margin is
+  # applied after the gains model has run. Doing both would count them twice.
   #
-  # Retirement (P7 two-pocket lemma; OUT of corp_dY_exog). P7 as stated:
-  # every cash flow sourced from a MARKED-DOWN stock must scale with the
-  # markdown -- so the scaling conditions on the record's OBSERVED source
-  # balance (a distribution with no marked-down balance behind it gets no
-  # phantom cut; the markdown is proportional, so balance SIZE never matters,
-  # only the source mix):
-  #   - txbl_ira_dist x (1 - omega_dc * mu_t * 1{value.dc > 0}) -- IRA/DC
-  #     draws are definitionally dc-type; scale iff a dc balance exists;
-  #   - txbl_pens_dist/gross_pens_dist x (1 - omega_dc * mu_t * dc_share_i),
-  #     dc_share_i = value.dc / (value.dc + value.db) on the PRE-markdown
-  #     balance sheet: DB-sourced pensions are defined benefits whose balance
-  #     is never debited (D10), so scaling them would create a phantom income
-  #     cut with no booked resource loss (the reverse P7 violation).
+  # Retirement distributions scale with the balances they are drawn from. IRA
+  # withdrawals come from defined-contribution balances, so they scale where such
+  # a balance exists. Pensions scale by the record's defined-contribution share of
+  # the two, measured before the markdown, because a defined benefit is never
+  # marked down and scaling it would cut income with no matching loss of wealth.
   #
-  # Diagnostics (conventional detail only): corp_dY_exog (per-record UNWEIGHTED
-  # dollars, negative for a hike), corp_markdown (record-effective markdown
-  # fraction of gross assets), corp_flow_factor (phi_t).
+  # Gains and retirement distributions stay out of corp_dY_exog. Neither is income
+  # from outside the tax system; both move resources the household already holds.
   #
-  # Pre-enactment years return the frame UNTOUCHED (byte-exact dormancy).
+  # A year before enactment returns the frame untouched.
   #
   # Parameters:
-  #   - tax_units (df)       : conventional-pass base frame (pre-behavior)
-  #   - paths (list)         : corp_get_paths(scenario_info)
-  #   - year (int)           : simulation year
-  #   - kg_dynamics_active   : TRUE when the scenario runs kg_dynamics (the
-  #                            gain adjustments then route through the bathtub)
+  #   - tax_units (df)          : conventional-pass tax units, before behavior
+  #   - paths (list)            : the scenario's corporate paths
+  #   - year (int)              : simulation year
+  #   - kg_dynamics_active (bool) : whether the scenario runs the gains model
   #
-  # Returns: transformed tax_units (+ diagnostic columns).
+  # Returns: tax units with flows cut, assets marked down, net worth recomputed,
+  #          and the diagnostic columns corp_dY_exog, corp_markdown and
+  #          corp_flow_factor (df).
   #----------------------------------------------------------------------------
 
   i = match(year, paths$sim$year)
@@ -83,7 +66,7 @@ corp_apply_to_records = function(tax_units, paths, year,
   }
   p = paths$sim[i, ]
 
-  # Byte-exact dormancy before enactment (and for any inert year).
+  # Nothing to do before enactment, or in any year where the paths are flat.
   inert = abs(p$mu) < CORP_EPS &&
           abs(p$fac_div - 1) < CORP_EPS && abs(p$fac_int - 1) < CORP_EPS &&
           abs(p$fac_rent - 1) < CORP_EPS && abs(p$fac_pt - 1) < CORP_EPS &&
@@ -92,10 +75,11 @@ corp_apply_to_records = function(tax_units, paths, year,
 
   g = function(col) wealth_dyn_safe_col(tax_units, col)
 
-  # --- everything reads PRE values first --------------------------------------
-  # Analytic dY_exog from the applied scalings (D16 rider). The pass-through
-  # net mirrors wealth_dyn_capital_total's f_pt_net (income legs only; the SE
-  # companions are payroll-base bookkeeping, not cash income).
+  # Everything below reads values from before the change.
+  #
+  # The income cut, computed directly from the factors about to be applied. The
+  # pass-through net matches the one wealth_dynamics.R forms, over income legs
+  # only: the earner splits are payroll bookkeeping rather than cash income.
   pt_net = g('sole_prop') +
            (g('part_active') + g('part_passive') -
             g('part_active_loss') - g('part_passive_loss') - g('part_179')) +
@@ -108,8 +92,8 @@ corp_apply_to_records = function(tax_units, paths, year,
             (p$fac_rent - 1) * (g('rent') - g('rent_loss')) +
             (p$fac_pt   - 1) * pt_net
 
-  # Record-effective markdown (diagnostic) and the retirement source split,
-  # both on the PRE-markdown balance sheet.
+  # The record's overall markdown, for diagnostics, and the split between
+  # retirement balance types, both measured before the markdown.
   asset_exposure = corp_asset_exposure()
   exposure_cols = intersect(names(asset_exposure), names(tax_units))
   markdown_amt  = rep(0, nrow(tax_units))
@@ -125,13 +109,13 @@ corp_apply_to_records = function(tax_units, paths, year,
   fac_ira  = 1 - omega_dc * p$mu * as.numeric(dc > CORP_EPS)
   fac_pens = 1 - omega_dc * p$mu * dc_share
 
-  # kg adjustments (non-kg runs only; see docstring)
+  # Gains, for runs without the gains model
   omega_kg = economy_param('corp', 'omega_kg')
   kg_quantity_fac = 1 + omega_kg * p$phi
   kg_lt_delta = omega_kg * (p$phi * g('kg_lt') -
                             p$mu * pmax(g('kg_lt') + g('kg_lt_basis'), 0))
 
-  # --- column lists (intersect for robustness, wealth-applier style) ----------
+  # Column lists, intersected so a missing column is skipped
   div_cols  = intersect(CORP_FLOWS_DIV,  names(tax_units))
   int_cols  = intersect(CORP_FLOWS_INT,  names(tax_units))
   rent_cols = intersect(CORP_FLOWS_RENT, names(tax_units))
@@ -141,7 +125,7 @@ corp_apply_to_records = function(tax_units, paths, year,
   pens_cols = intersect(c('txbl_pens_dist', 'gross_pens_dist'), names(tax_units))
   asset_cols = intersect(ESTATE_ASSET_COLS, names(tax_units))
 
-  # Debts untouched: compute once from the original frame.
+  # Debts are left alone, so take them off the original frame.
   debts = rowSums(cols_matrix(tax_units, WEALTH_DEBT_COLS))
 
   out = tax_units %>%
@@ -153,12 +137,12 @@ corp_apply_to_records = function(tax_units, paths, year,
       across(all_of(ira_cols),  ~ . * fac_ira),
       across(all_of(pens_cols), ~ . * fac_pens))
 
-  # Exposed stocks: column-specific markdown.
+  # Mark down each exposed asset column by its own exposure.
   for (a in exposure_cols) {
     out[[a]] = out[[a]] * (1 - asset_exposure[[a]] * p$mu)
   }
 
-  # Gains (non-kg runs).
+  # Gains, only where the gains model is not running
   if (!kg_dynamics_active) {
     if ('kg_lt' %in% names(out))       out$kg_lt = out$kg_lt + kg_lt_delta
     if ('kg_lt_basis' %in% names(out)) out$kg_lt_basis = out$kg_lt_basis * kg_quantity_fac
@@ -167,9 +151,8 @@ corp_apply_to_records = function(tax_units, paths, year,
 
   out %>%
     mutate(
-      # Recompute the stored net-worth stock from the marked-down balance
-      # sheet (same recipe as wealth_dyn_apply_to_records / run_one_year), so
-      # calc_wealth and calc_estate reprice on the post-markdown stock.
+      # Recompute net worth off the marked-down balance sheet, as the wealth
+      # haircut also does, so the wealth tax and estate base reprice on it.
       net_worth = rowSums(across(all_of(asset_cols), ~ replace_na(., 0))) - debts,
       corp_dY_exog     = dY_exog,
       corp_markdown    = if_else(gross_pre > CORP_EPS, markdown_amt / gross_pre, 0),
@@ -179,23 +162,23 @@ corp_apply_to_records = function(tax_units, paths, year,
 
 
 #-------------------------------------------------------------------------------
-# kg_dynamics glue (D18: one rule, two entry points)
+# Handing the gain adjustments to the gains model
 #-------------------------------------------------------------------------------
 
 corp_kg_state_exposed_value = function(tax_units) {
 
   #----------------------------------------------------------------------------
-  # Per-record omega-weighted C-corp equity VALUE underlying the kg gain
-  # state: only the kg asset classes with corporate exposure (the
-  # corp.asset_exposure_* names intersected with value.{KG_DYN_ASSET_CLASSES} --
-  # equities and re_fund; dc/trusts are exposed assets but NOT kg classes, so
-  # their markdown never enters the kg state). kg_dyn_aggregate_cells sums
-  # this to cells; the corporate gain-state debit is then
-  #     D_a(t) = mu_t * V_corp_exposed_a(t)
-  # -- the dollar value markdown, which debits the gain state dollar-for-
-  # dollar (P5: basis fixed, the gain absorbs the entire price hit).
+  # Values the corporate equity behind each record's unrealized gains, weighting
+  # each asset class by its exposure. Only the classes the gains model tracks
+  # count: retirement balances and trusts are exposed to corporate equity but the
+  # gains model does not follow them, so their markdown never reaches the stock of
+  # gains.
   #
-  # Returns: numeric vector, one row per record.
+  # The gains model sums this to cells and debits the stock by the markdown times
+  # this value. The debit is dollar for dollar because basis does not move, so the
+  # gain absorbs the whole price change.
+  #
+  # Returns: numeric vector, one per record.
   #----------------------------------------------------------------------------
 
   asset_exposure = corp_asset_exposure()
@@ -213,13 +196,14 @@ corp_kg_state_exposed_value = function(tax_units) {
 corp_kg_state_debit_by_year = function(scenario_info, baseline_cells) {
 
   #----------------------------------------------------------------------------
-  # The per-year corporate gain-state debit vectors for the kg bathtub
-  # (kg_dyn_run_bathtub_pass): for each sim year t, a vector over the bathtub
-  # ages of D_a(t) = mu_t * V_corp_exposed_a(t), in gain dollars (>= 0 for a
-  # hike). RECOMPUTED FROM THE CURRENT mu_t EACH YEAR, never accumulated
-  # through the recurrence -- the credit-back as the markdown shrinks (P3's
-  # recovery appreciation) is automatic. Returns NULL when the corporate
-  # channel is not active for the scenario.
+  # Builds the debit to the stock of gains, one vector over ages per year, as the
+  # year's markdown times the exposed equity value in each cell.
+  #
+  # Recomputed from the current markdown each year rather than accumulated through
+  # the recurrence. That way, as the markdown shrinks and prices recover, the
+  # credit back happens on its own.
+  #
+  # Returns: list of vectors by year, or NULL where the channel is off.
   #----------------------------------------------------------------------------
 
   if (scenario_info$ID == 'baseline' ||
@@ -233,9 +217,9 @@ corp_kg_state_debit_by_year = function(scenario_info, baseline_cells) {
     bt = baseline_cells[[as.character(t)]]
     if (is.null(bt) || is.null(bt$V_corp_exposed)) {
       stop('corp_incidence: baseline kg cells for year ', t, ' lack the ',
-           'V_corp_exposed column. The kg cell aggregation predates the ',
-           'corporate channel -- re-run the kg frozen pass (a stale ',
-           'inputs_cache.rds is the usual cause).')
+           'V_corp_exposed column, so they predate the corporate channel. ',
+           'Re-run the kg frozen pass; a stale inputs_cache.rds is the usual ',
+           'cause.')
     }
     mu_t = paths$sim$mu[match(t, paths$sim$year)]
     if (is.na(mu_t)) mu_t = 0
@@ -250,23 +234,22 @@ corp_kg_state_debit_by_year = function(scenario_info, baseline_cells) {
 corp_apply_kg_quantity_to_records = function(tax_units, paths, year) {
 
   #----------------------------------------------------------------------------
-  # The D18 QUANTITY margin in kg_dynamics runs: buyback-forced sale volume
-  # tracks after-tax payouts -- a margin the kg_dynamics realization rule
-  # (which knows MTRs and mortality, not payout policy) cannot produce. Scales
-  # the realization flow kg_lt / kg_st by (1 + omega_kg * phi_t) and co-scales
-  # kg_lt_basis (fewer lots sold; the taxable gain ratio is preserved). The
-  # PRICE margin deliberately does NOT appear here: in kg runs it enters as
-  # the bathtub gain-state debit (corp_kg_state_debit_by_year), which is exact
-  # because the state is gain-denominated.
+  # Scales realized gains for the change in sale volume, in runs with the gains
+  # model. Shares sold back to the company track after-tax payouts, which the
+  # gains model cannot produce on its own: it knows marginal rates and mortality,
+  # not payout policy. Basis scales with the flow, since fewer lots are sold and
+  # the taxable share of each is unchanged.
   #
-  # ENTRY-POINT EXCLUSIVITY: applied in run_one_year AFTER
-  # kg_dyn_apply_to_records, and ONLY when the scenario runs kg_dynamics; the
-  # non-kg entry point is corp_apply_to_records' kg block (skipped there via
-  # kg_dynamics_active = TRUE). Applying both double-counts the phi term.
-  # Deemed death gains (kg_deemed_full / kg_deemed) are left untouched: death
-  # is not a buyback-driven sale.
+  # The price side is deliberately absent here. In these runs it debits the stock
+  # of gains instead, which is exact because that stock is measured in gains.
   #
-  # Returns: tax_units with scaled kg_lt / kg_st / kg_lt_basis.
+  # Runs after the gains model has allocated to records, and only where the gains
+  # model is running. Without it, both margins are applied inside
+  # corp_apply_to_records() instead. Applying both would count this twice.
+  #
+  # Gains at death are left alone: death is not a sale.
+  #
+  # Returns: tax units with realized gains and basis scaled (df).
   #----------------------------------------------------------------------------
 
   i = match(year, paths$sim$year)

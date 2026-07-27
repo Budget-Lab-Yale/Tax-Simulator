@@ -1,28 +1,29 @@
 #-------------------------------------------------------------------------------
 # estate_allocator.R
 #
-# Stage-2 estate tax incidence: the rank-matching allocator that passes each
-# scenario's on-model estate tax through to heirs (thoughts doc §10d, §12).
-# Replaces the upstream Estate-Tax-Distribution liability column while keeping
-# its inheritance amounts (p, x): decedent estates and heir inheritances are
-# each sorted by size and matched by cumulative DOLLAR mass, so each estate's
-# average tax rate lands on the heirs of (rank-)corresponding inheritances.
-# Identifying assumption: bigger inheritances come from bigger estates.
+# Contains functions to pass estate tax through to heirs
+#-------------------------------------------------------------------------------
+
+# The estate tax is paid by estates but borne by heirs, so it has to be attributed
+# to them. Estates and inheritances are each sorted by size and matched by
+# cumulative dollars, so that each estate's average tax rate lands on the heirs of
+# correspondingly large inheritances. The assumption that identifies this is that
+# bigger inheritances come from bigger estates.
 #
-# The allocator is a pure function of one leg-scenario's detail file plus the
-# baseline heir data — called independently for the baseline and reform legs
-# inside process_for_distribution(), so it needs no cross-scenario files and
-# cannot race in the SLURM Phase 3b array.
+# This replaces the liability in the upstream heir data while keeping its
+# inheritance amounts. Those are gross of estate tax, which the upstream file itself
+# supports: its largest ratio of tax to inheritance is below the top rate, which
+# would be impossible if inheritances were net. So inheritances do not vary by
+# scenario and only the liability does.
 #
-# x (inheritance) is GROSS of estate tax — supported by the old upstream file
-# (max tax/inheritance = 0.392 < 0.40, impossible under a net convention) —
-# so inheritance is scenario-invariant and only liability differs across legs.
+# The function depends on one scenario's detail file and the baseline heir data, and
+# is called separately for each leg, so it needs no file from another scenario and
+# cannot race when the legs run in parallel.
 #
-# NOTE: deemed-realization tax (kg_dynamics) deliberately does NOT use this
-# allocator. Deemed realization has no exemption threshold — it applies to all
-# transfers at death — so the proportional-to-inheritance smear in
-# distribution.R is the conceptually correct incidence for it. The rank match
-# exists because the estate tax is threshold'd.
+# Note that tax on gains deemed realized at death deliberately does not go through
+# this. That tax has no exemption, applying to every transfer at death, so spreading
+# it in proportion to inheritance is the right treatment. The rank matching exists
+# because the estate tax has a threshold.
 #-------------------------------------------------------------------------------
 
 
@@ -33,28 +34,23 @@ ESTATE_DETAIL_COLS = c('estate_m', 'estate_p_dsue', 'liab_estate_dsue',
 allocate_estate_to_heirs = function(leg_detail, heir_px, yr, leg_id) {
 
   #----------------------------------------------------------------------------
-  # Allocates one leg-scenario's expected estate tax to heirs by rank-matching
-  # cumulative dollar mass.
+  # Allocates one leg's expected estate tax to heirs.
   #
-  # Decedent side: each record contributes up to two ladder entries — the DSUE
-  # and no-DSUE latent states, with death weights d·p and d·(1−p) — because
-  # the unified-credit kink makes taxable status branch-specific (an expected
-  # blend would dilute rates near the kink and flatten the λ/x profile; same
-  # logic as the per-branch indicator blend in get_estate_totals()). Married
-  # records have estate_p_dsue = 0, so the branch machinery covers them with
-  # no special case. Entries are sorted by distributable estate descending;
-  # entry j carries bequest mass b_j = d_j·n_j at average rate T_j/n_j.
+  # On the estate side, a single filer contributes two entries rather than one:
+  # whether an unused spousal exemption is available changes whether the estate is
+  # taxable at all, and averaging over that would dilute rates near the exemption and
+  # flatten the profile. A married record has no such branch, so the same machinery
+  # covers it. Entries are sorted by distributable estate, largest first, each
+  # carrying its bequest dollars at its own average rate.
   #
-  # Heir side: inheritance mass μ_h = w_h·p_h·x_h, sorted by x descending.
-  # The walk matches the two cumulative-mass ladders top-down: each heir's
-  # blended rate is the bequest-mass-weighted average of the estate rates
-  # over [cum_lo_h, cum_hi_h); heirs entirely below the last taxed bequest
-  # dollar get λ = 0. λ_h = x_h × blended rate. By construction the aggregate
-  # identity Σ w_h·p_h·λ_h = Σ d_j·T_j holds (and equals the year's
-  # est_tax_exp in totals/estate.csv).
+  # On the heir side, inheritances are sorted the same way. Walking the two sorted
+  # lists together, each heir's rate is the average of the estate rates over the
+  # range of dollars it spans. Heirs below the last taxed dollar of bequest pay
+  # nothing. Their tax is their inheritance times that rate, which by construction
+  # sums to the estate tax the revenue side booked.
   #
-  # Hard error if taxed bequest mass exceeds total heir inheritance mass:
-  # incidence is never fabricated by scaling rates up ("absorb").
+  # Stops if the taxed bequests exceed the inheritances available, rather than
+  # scaling rates up to absorb the difference.
   #
   # Parameters:
   #   - leg_detail (df) : this leg's FULL detail-file year extract (no

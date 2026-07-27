@@ -1,6 +1,6 @@
 # Distribution-table incidence conventions -- src/data/post_processing/corp_alloc.R
 #
-# Economy-leg STATE channel: who bears burdens in the reporting tables.
+# A state channel: who bears burdens in the reporting tables.
 
 _channel:
   role: state
@@ -16,24 +16,23 @@ corp_foreign_share:
     traded plus closely held -- at 42% end-2022 (Rosenthal and Mucciolo, Tax
     Notes Federal 183, 2024-04-01), rounded down.
   note: >
-    The denominator includes S-corp equity that foreigners are statutorily
-    barred from holding, which biases the C-corp share DOWN. The labor leg is
-    NOT haircut: wage incidence lands on US workers regardless of who owns the
-    equity. Tables no longer sum to the corporate revenue line by construction;
-    the remainder is foreign-borne. Equal to corp.theta_res by coincidence --
-    do NOT merge them.
+    The denominator includes S corporation equity that foreigners are barred from
+    holding, which biases the C corporation share down. The labor leg takes no
+    haircut: wage incidence lands on US workers whoever owns the equity. So the
+    tables do not sum to the corporate revenue line, and the remainder is
+    foreign-borne. It equals corp.theta_res by coincidence; they are separate
+    values.
 
 housing_structure_share:
   value: 0.70
   kind: judgment
   note: >
-    Structure share of owner-occupied housing. Under Harberger the mobile-capital
-    margin is reproducible STRUCTURES, not residential LAND (a fixed factor whose
-    incidence runs through capitalization, not through capital flowing into
-    land), so owner-occupied housing enters the all-capital base only as
-    structure_share * net home equity. 0.70 is a national-average simplification:
-    the BEA current-cost net stock of residential structures is roughly
-    two-thirds to low-70s of the Fed's owner-occupied real estate aggregate, and
-    the Fed measure is broader (it includes vacant land and mobile homes).
-    PLACEHOLDER pending a per-record or geography-varying split. Sensitivity
-    cases: 0.60 conservative, 1.00 no land split.
+    Structure share of owner-occupied housing. In the Harberger model the mobile
+    capital margin is reproducible structures rather than residential land, a fixed
+    factor whose incidence runs through capitalization, so owner-occupied housing
+    enters the all-capital base as this share of net home equity. 0.70 is a national
+    average: the BEA current-cost net stock of residential structures is between two
+    thirds and low seventy percent of the Fed's owner-occupied real estate
+    aggregate, which is broader in including vacant land and mobile homes. A
+    placeholder pending a split that varies by record or geography. Sensitivity
+    cases are 0.60, and 1.00 for no land split.

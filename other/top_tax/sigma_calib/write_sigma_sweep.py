@@ -121,24 +121,23 @@ def write(path, text):
 
 def sweep_header(tag, value, charity):
     grid_set = ', '.join(v for _, v in GRID)
-    return f"""# GENERATED FILE -- do not hand-edit. Written by {THIS_SCRIPT}.
+    return f"""# Generated file -- written by {THIS_SCRIPT}.
 #
-# SWEEP POINT: conv = {value}. One point on the trial grid {{{grid_set}}} used to
-# pin the conversion margin.
-# This is not a shipped calibration and no scenario should bind it except the
-# sigma-calibration runscript generated alongside it.
+# One sweep point, conv = {value}, on the trial grid {{{grid_set}}} used to pin the
+# conversion margin.
+# This is not a shipped calibration, and no scenario should bind it except the
+# runscript generated alongside it.
 #
-# Everything here is the shipped config/calibrations/kg/conversion.yaml with
-# exactly one entry replaced -- conv -- because a sweep varies one thing and holds
-# the rest fixed. pt_labor_share keeps its own provenance verbatim.
+# This is the shipped config/calibrations/kg/conversion.yaml with the conv entry
+# replaced. pt_labor_share keeps its own provenance.
 #
 # Bound by  : config/scenarios/behavior/alternatives/sigma_calib_{charity}_conv_{tag}/
 # Measured by: {MEASURE_SCRIPT}
 #
-# The file name matters. It has to stay `conversion.yaml` inside a
-# differently-named FOLDER, because entries are labelled '{{file stem}}.{{entry}}'
-# -- calling it conv_{tag}.yaml would relabel every entry in it and detach any
-# waiver written against `conversion.conv`.
+# The file name matters. It stays `conversion.yaml` inside a differently named
+# folder, because entries are labelled '{{file stem}}.{{entry}}', so calling it
+# conv_{tag}.yaml would relabel every entry in it and detach any waiver written
+# against `conversion.conv`.
 """
 
 
@@ -148,17 +147,16 @@ def trial_block(value):
   value: {value}
   kind: judgment
   note: >
-    SWEEP TRIAL, not a calibrated value -- which is why the kind is judgment
-    rather than calibrated. It has no derivation to go stale: it is an INPUT to
-    the calibration that pins conv, one of the points on the grid
-    {{{grid_set}}}. The measurement script reads the vintages this grid
-    produces, measures the top-subset ordinary ETI at each, and interpolates for
-    the sigma that hits the target ETI of {TARGET_ETI}. The result of that
-    interpolation is the shipped value in config/calibrations/kg/conversion.yaml;
-    this number is scaffolding for producing it.
-    The 0.0 point is the floor: the ETI entity shifting and evasion produce with
-    no conversion at all, which is what makes sigma a residual rather than an
-    independent estimate. Measured by: {MEASURE_SCRIPT}
+    A sweep trial rather than a calibrated value, which is why the kind is
+    judgment. It has no derivation to go stale: it is an input to the calibration
+    that pins conv, one of the points on the grid {{{grid_set}}}. The measurement
+    script reads the vintages the grid produces, measures the top-subset ordinary
+    elasticity of taxable income at each, and interpolates for the sigma hitting the
+    target of {TARGET_ETI}. That interpolation is the shipped value in
+    config/calibrations/kg/conversion.yaml. The zero point is the floor, the
+    elasticity entity shifting and evasion produce with no conversion, so sigma is a
+    residual rather than an independent estimate.
+    Measured by: {MEASURE_SCRIPT}
 """
 
 
@@ -176,23 +174,22 @@ def build_calibration(tag, value, charity):
 def build_behavior(tag, value, charity):
     sweep_path = f'{SWEEP_ROOT}/conv_{tag}/conversion.yaml'
     modules = '\n'.join(f'  - {m.format(charity=charity)}' for m in MODULES)
-    return f"""# GENERATED FILE -- do not hand-edit. Written by {THIS_SCRIPT}.
+    return f"""# Generated file -- written by {THIS_SCRIPT}.
 #
-# The sigma CALIBRATION stack at conv = {value}. Not a product stack: it exists to
-# reproduce the conditions sigma is derived under, which is why the charity
-# elasticity is pinned explicitly at charity/{charity} rather than inherited.
+# The sigma calibration stack at conv = {value}. It is not a product stack: it
+# reproduces the conditions sigma is derived under, which is why the charitable
+# elasticity is named at charity/{charity} rather than inherited.
 #
-# charity/{charity} is load-bearing. The shipped sigma of 0.16 was derived under
-# charity/100, while product runs use charity/50, and that mismatch is recorded as a
-# dated waiver on the conversion.conv entry. Whichever this stack names is the basis
-# of whatever the measurement writes, so it is stated here rather than assumed.
+# That choice is load-bearing. The shipped sigma was derived under charity/100 where
+# product runs use charity/50, and the mismatch is recorded as a dated waiver on the
+# conversion.conv entry. Whichever this stack names is the basis of what the
+# measurement writes.
 #
 # Named by: {RUNSCRIPT_ROOT}/sigma_calib_{charity}_conv_{tag}.csv
 # Measured by: {MEASURE_SCRIPT}
 #
-# Order of execution is NOT the order below: src/sim/behavior.R sorts the list
-# against one pinned family order, because later families read what earlier ones
-# wrote.
+# Execution order is not the order below: src/sim/behavior.R sorts the list against
+# one pinned family order, because later families read what earlier ones wrote.
 
 kg_dynamics:
   bathtub: config/calibrations/kg/bathtub.yaml

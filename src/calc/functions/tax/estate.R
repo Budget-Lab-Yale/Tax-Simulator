@@ -1,28 +1,26 @@
 #-------------------------------------------------------------------------------
-# Function to calculate estate tax liability (expected-value, per record)
+# Function to calculate estate tax liability, per record
 #
-# Locked-spec reduced form (other/estate_tax/new_estate_modeling_thoughts.md §2,
-# §10c-h), ported from other/estate_tax/estate_module.R. Pure and weight-free:
-# liability is computed CONDITIONAL on the record's death event this year;
-# mortality enters only as a weight at aggregation (see src/sim/estate.R).
+# Liability is computed conditional on the record dying this year. Mortality enters
+# only later, as a weight, in src/sim/estate.R.
 #
-# calc_estate() runs inside the do_taxes() chain (the "Estate tax" section
-# there) so that each pass -- and any behavioral repricing -- recomputes
-# estate liability on its own frame. Unlike the 1040 calc functions it is
-# deliberately NOT registered in return_vars: calc_mtrs() rebuilds vars_1040
-# from that registry, and estate columns must not enter do_1040()'s final
-# select. do_taxes() instead drops and rebinds ESTATE_OUTPUT_COLS, keeping
-# the section idempotent under MTR recomputes. The frozen measurement
-# parameters arrive as an argument (globals$estate_params) so that reforms
-# structurally cannot override them.
+# This runs inside do_taxes(), so that each pass, and any behavioral repricing,
+# recomputes liability on its own frame. Unlike the 1040 functions it is
+# deliberately not registered in return_vars: calc_mtrs() rebuilds the 1040
+# variable list from that registry, and estate columns must not end up in do_1040()'s
+# final select. do_taxes() drops and rebinds the estate columns instead, which keeps
+# the section repeatable when marginal rates are recomputed.
+#
+# The measurement parameters arrive as an argument, so that a reform cannot
+# override them.
 #-------------------------------------------------------------------------------
 
-# Tax-Data wealth and debt columns (estate_module.R constants). Gross estate
-# is the sum of asset values; debts are subtracted explicitly (the SOI-derived
-# f_ded covers only non-debt deductions). These are the single source of truth
-# for the economic balance sheet: the wealth tax aliases them as
-# WEALTH_ASSET_COLS / WEALTH_DEBT_COLS (src/calc/functions/tax/wealth.R) so
-# estate + wealth stay in lockstep on what "net worth" means.
+# The asset and debt columns. Gross estate is the sum of the asset values, with
+# debts subtracted separately, since the deduction share estimated from SOI data
+# covers only non-debt deductions.
+#
+# These are the one definition of the balance sheet. The wealth tax aliases them, so
+# that the two agree on what net worth means.
 ESTATE_ASSET_COLS = c(
   'value.cash', 'value.equities', 'value.bonds', 'value.dc', 'value.db',
   'value.life_ins', 'value.annuities', 'value.trusts', 'value.other_fin',
@@ -35,8 +33,8 @@ ESTATE_DEBT_COLS = c(
   'value.credit_cards', 'value.installment_debt', 'value.other_debt'
 )
 
-# Columns produced by calc_estate(). do_taxes() drops these before rebinding
-# (MTR-loop frames already carry them from the prior pass)
+# What calc_estate() produces. do_taxes() drops these before rebinding, since a
+# frame in the marginal rate loop already carries them from the previous pass.
 ESTATE_OUTPUT_COLS = c(
   'liab_estate_nodsue', 'liab_estate_dsue', 'estate_p_dsue',
   'estate_distributable'
@@ -46,18 +44,15 @@ ESTATE_OUTPUT_COLS = c(
 calc_estate = function(tax_unit, estate_params, fill_missings = FALSE) {
 
   #----------------------------------------------------------------------------
-  # Calculates per-record estate tax liability conditional on death this year,
-  # under the scenario's estate law (estate.* columns, joined via the standard
-  # tax law join) and the frozen measurement bridge (estate_params).
+  # Calculates each record's estate tax liability if it dies this year, under the
+  # scenario's estate law and the measurement parameters.
   #
-  # Per-record pipeline:
-  #   reported = economic_gross * r * [1 + (rho_pt - 1) * s_pt]   [valuation]
-  #   taxable  = max(reported - debts - f_ded(bin) * reported, 0) [deductions]
-  #   base     = max(taxable - switch * income_tax_ded, 0) [Sec. 2053 ded.,
-  #              + gamma * reported              gift add-back; switch = the
-  #                                              estate.income_tax_ded lever]
-  #   L(base, excl) = max(T(base) - T(excl), 0), T = graduated tentative
-  #                   schedule (unified credit as a credit at the exclusion)
+  # Economic wealth first becomes a reported estate, discounted by the valuation
+  # factors, with closely held assets discounted further. Debts and the estimated
+  # deduction share come off, gifts made during life are added back, and the
+  # decedent's own income tax at death is deducted where law allows it. Tax is then
+  # the graduated schedule applied to that base, less the same schedule applied at
+  # the exclusion, which is how the unified credit works.
   #
   # State structure (latent, blended downstream by probability weights):
   #   joint (filing_status == 2 & q_death2 > 0), both-die event:

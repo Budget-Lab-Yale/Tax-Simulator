@@ -1,7 +1,8 @@
 #-------------------------------------------------------------------------------
 # inputs.R
 #
-# Cell aggregation, record attributes, and the Tax-Data / Macro / heir loaders.
+# Contains functions to build the inputs the gains model needs, from Tax-Data,
+# the macro projections, and the heir distribution
 #-------------------------------------------------------------------------------
 
 
@@ -11,20 +12,17 @@
 
 kg_dyn_attach_record_attrs = function(tax_units, cpiu_by_year = NULL) {
 
-  # Adds per-record columns the bathtub recurrence and applier need:
-  #   gain.{class}            : per-asset unrealized gain, max(0, value_k - basis_k)
-  #   G_unit                  : sum over asset classes of gain.{class}
-  #   gain.primary_home_above_cap : pmax(0, gain.primary_home -
-  #                             pref.kg_sec121_excl); the §121-net primary-home
-  #                             gain that would be taxable at deemed realization
-  #   m_household             : q_death1 * q_death2 for joint filers; q_death1
-  #                             otherwise
-  #   age_cohort              : max(age1, age2) for joint, age1 otherwise;
-  #                             clipped to [KG_DYN_AGE_MIN, KG_DYN_AGE_MAX]
+  # Adds the record-level columns the rest of the model needs: the unrealized gain
+  # on each asset class and their total, the primary home gain above the §121
+  # exclusion, the chance the household dies, and the cohort age.
   #
-  # Requires tax_units to carry pref.kg_sec121_excl per record (filing-status
-  # mapped). load_bathtub_inputs joins it in for the bathtub pass; the
-  # simulator runtime already has it on tax_units from the tax_law merge.
+  # Joint filers die when both do, and take the older age. Ages are clipped to the
+  # cohort grid.
+  #
+  # Requires the §121 cap on each record. The pre-pass joins it in; the simulator
+  # already has it from the tax law merge.
+  #
+  # Returns: tax units with those columns added (df).
 
   if (!('pref.kg_sec121_excl' %in% names(tax_units))) {
     stop('kg_dyn_attach_record_attrs: tax_units missing column ',
@@ -125,32 +123,25 @@ kg_dyn_attach_record_attrs = function(tax_units, cpiu_by_year = NULL) {
 
 
 #-------------------------------------------------------------------------------
-# Cell aggregation (with sparse-cell fallback)
+# Aggregating records to cells
 #-------------------------------------------------------------------------------
 
 kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
-  # Weight-aggregates per-record gain stocks, kg_lt, and m_household to age
-  # cells. tax_units must already have the gain.{class} columns,
-  # gain.primary_home_above_cap, G_unit, m_household, and age_cohort
-  # attached by kg_dyn_attach_record_attrs.
+  # Sums gains, realizations and mortality across records within each age cell.
+  # Requires the columns kg_dyn_attach_record_attrs() adds.
   #
-  # Returns per-cell: G_B (sum across assets), R_B, r_B, m, mG_record,
-  # mR_record, per-asset G_B_{class}, G_B_primary_above_cap (the
-  # §121-net primary-home stock used in the Bellman's cell-level c_phi
-  # when primary_home is in a deemed regime), and V_corp_exposed (the
-  # omega-weighted C-corp equity VALUE underlying the kg state, sizing the
-  # corporate-incidence gain-state debit -- corp_kg_state_debit_by_year).
+  # Realizations are summed over positive values only, so the realization rate
+  # cannot go negative and the record shares used later sum to 1.
   #
-  # R_B uses positive-only sums of kg_lt so r_B >= 0 and per-record
-  # allocation shares (pmax(kg_lt, 0) / R_B) sum to 1.
+  # A cell that holds gains but realizes none inherits the overall realization
+  # rate. Without that, young heirs receiving inherited gains would never realize
+  # anything.
   #
-  # Sparse-cell fallback (spec §5.1): cells with G_B > 0 but R_B = 0 inherit
-  # the gain-stock-weighted aggregate r_B. Prevents young heir cohorts
-  # (carryover / deemed inflows) from getting r_S = 0 forever.
+  # Returns: tibble of one row per age cell (df).
 
-  # Corporate-exposure value per record (src/sim/corp/ helper; plain
-  # column so the grouped summarise below can weight-sum it).
+  # Value of corporate equity behind each record's gains, which sizes the
+  # corporate markdown's debit. Materialized as a column so it can be summed.
   tax_units$corp_exposed_value = corp_kg_state_exposed_value(tax_units)
 
   agg = tax_units %>%
@@ -204,11 +195,9 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
                                             estate_2026_m_num / mG_record,
                                             NA_real_))
 
-  # Pooled rate for sparse cells: only consider cells with R_B > 0 so the
-  # cells we're imputing don't drag the imputation toward zero. Should be a
-  # no-op under the full-sample requirement enforced in run_bathtub_pass(),
-  # but kept for safety on edge cases (e.g. carryover heir cohorts at the
-  # youngest ages, where a single-year sample may still be empty).
+  # Take the pooled rate over cells that realize something, so the cells being
+  # imputed do not pull the imputation toward zero. This should do nothing at full
+  # sample, but young heir cohorts can still be empty in a single year.
   ok         = out$R_B > 0
   r_B_pooled = if (any(ok)) sum(out$R_B[ok]) / sum(out$G_B[ok]) else 0
 
@@ -225,24 +214,22 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
 
 
 #-------------------------------------------------------------------------------
-# Aging and heir matrices
+# The heir routing matrix
 #-------------------------------------------------------------------------------
 
 kg_dyn_build_heir_matrix = function(heir_dist,
                                     ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
-  # Row-stochastic omega[a, h] = share of decedent-age-a gains routed to
-  # heir-age h. Every row is a copy of the empirical dollar-weighted
-  # heir-age distribution heir_dist, sourced from
-  # kg_dyn_load_heir_distribution (which reads the static SCF-derived
-  # resource at KG_DYN_HEIR_DISTRIBUTION_PATH).
+  # Builds the matrix routing gains from a decedent's age to the ages of the heirs.
+  # Every row is the same, being the observed distribution of heir ages weighted by
+  # dollars inherited.
   #
-  # This is equivalent to assuming heir age is independent of decedent age
-  # conditional on inheritance. Marginal heir flow matches the data
-  # exactly; conditional dispersion is the part the marginals don't pin
-  # down. Compare to a Gaussian-shift prior + IPF, which would let the
-  # conditional vary at the cost of an external prior — for revenue scoring
-  # under carryover the marginal-only rule is the right default.
+  # That amounts to assuming heir age does not depend on the decedent's age. The
+  # overall flow to each heir age matches the data exactly, and what the data do
+  # not pin down is how that varies with the decedent's age. Letting it vary would
+  # take an outside assumption, which for revenue scoring is not worth it.
+  #
+  # Returns: matrix of decedent age by heir age, rows summing to 1.
 
   n = length(ages)
   if (length(heir_dist) != n) {
@@ -268,15 +255,14 @@ kg_dyn_build_heir_matrix = function(heir_dist,
 
 
 
-# NOTE: the deterministic age-shift operator lives in cohort_bathtub.R as the
-# shared build_aging_matrix() (A[a, h] = 1 if h = a + 1; A[a_max, a_max] = 1 so
-# the topcode age self-loops; spec §3.4). kg calls it directly at the two use
-# sites in kg_dyn_run_bathtub_pass() / kg_dyn_run_frozen_pass().
+# The aging operator is shared with the wealth model and lives in
+# cohort_bathtub.R as build_aging_matrix(). It moves each age to the next, with
+# the top-coded age pointing at itself.
 
 
 
 #-------------------------------------------------------------------------------
-# Life-table extension (ages 81 to A_max_bellman, year-varying)
+# Mortality past the top-coded age
 #-------------------------------------------------------------------------------
 
 kg_dyn_load_life_table_extension = function(years,
@@ -285,13 +271,15 @@ kg_dyn_load_life_table_extension = function(years,
                                             path_M = KG_DYN_LIFE_TABLE_M_PATH,
                                             path_F = KG_DYN_LIFE_TABLE_F_PATH) {
 
-  # Supplies the post-topcode mortality tail [81, 119] that the Bellman
-  # needs for a true terminal condition (q(119) = 1 in the SSA tables).
-  # Returns a [age, year] matrix of gender-blended q(x).
+  # Reads mortality for the ages past the top code, which the realization choice
+  # needs so that it has a real terminal condition: the SSA tables reach certain
+  # death at 119.
+  #
+  # Returns: matrix of mortality rates by age and year, averaged over sex.
 
   load_one = function(path) {
-    # PerLifeTables files: 4 metadata lines, then header (Year,x,q(x),...),
-    # then data. Column names are odd ("q(x)", "12a(x)"); slice by position.
+    # These files carry four metadata lines, then a header, then the data. The
+    # column names are awkward, so take them by position.
     raw = fread(path, skip = 4, header = TRUE, showProgress = FALSE)
     out = data.table(year = as.integer(raw[[1]]),
                      x    = as.integer(raw[[2]]),
@@ -320,19 +308,22 @@ kg_dyn_load_life_table_extension = function(years,
 
 
 #-------------------------------------------------------------------------------
-# Real-rate discount factor series (year-varying)
+# Discount factors
 #-------------------------------------------------------------------------------
 
 kg_dyn_load_beta_series = function(macro_root, years) {
 
-  # Per-year Bellman discount built from Macro-Projections: Fisher-deflated
-  # 10-year Treasury yield.
-  #   infl_t   = cpiu_t / cpiu_{t-1} - 1
-  #   r_real_t = (1 + tsy_10y_t / 100) / (1 + infl_t) - 1
-  #   beta_t   = 1 / (1 + r_real_t)
-  # Inflation cancels in the realize-now vs. hold-and-pay-on-nominally-larger-
-  # gain trade-off, so the economically correct discount is real; using
-  # nominal tsy_10y would double-count inflation.
+  # Builds the discount factor for each year from the 10-year Treasury rate,
+  # deflated by CPI-U growth:
+  #
+  #   r_real = (1 + tsy_10y) / (1 + inflation) - 1
+  #   beta   = 1 / (1 + r_real)
+  #
+  # The rate must be real. In the choice between realizing now and holding a gain
+  # that grows in nominal terms, inflation cancels, so discounting at the nominal
+  # rate would count it twice.
+  #
+  # Returns: numeric vector of discount factors by year.
 
   cpiu_tsy = c('historical.csv', 'projections.csv') %>%
     file.path(macro_root, .) %>%
@@ -397,16 +388,15 @@ kg_dyn_build_extended_grid = function(baseline_cells, life_ext, years,
                                        ages_bellman = KG_DYN_AGE_MIN:
                                                       KG_DYN_AGE_MAX_BELLMAN) {
 
-  # Stitches the simulator's [18, 80] cell aggregates together with the
-  # SSA life-table tail [81, 119] into a per-year extended grid. The
-  # bathtub recurrence stays on [18, 80]; only the Bellman uses the
-  # extended grid (for a true mortality-driven terminal condition).
+  # Joins the model's cells to the life table tail, giving one extended grid per
+  # year. Only the realization choice uses the extended ages; the stock of gains is
+  # tracked over the ordinary grid.
   #
-  # For ages 81+: m comes from life_ext; r_B is held flat at r_B(80, t),
-  # the topcode-pool rate (otherwise the Bellman's continuation value at
-  # age 80 would be purely death-driven and over-state regime-induced
-  # acceleration in older cohorts under deemed). G_B/R_B stay 0 since the
-  # per-dollar Bellman doesn't need cell totals.
+  # Past the top code, mortality comes from the life table and the realization rate
+  # is held at its age-80 value. Holding the rate flat matters: otherwise the value
+  # of continuing at age 80 would be driven entirely by death, which overstates how
+  # much older cohorts accelerate realizations when gains are taxed at death. Cell
+  # totals stay zero, since the choice is solved per dollar.
 
   ages_ext = setdiff(ages_bellman, KG_DYN_AGE_MIN:KG_DYN_AGE_MAX)
 
@@ -443,16 +433,15 @@ kg_dyn_build_extended_grid = function(baseline_cells, life_ext, years,
 
 
 #-------------------------------------------------------------------------------
-# Bathtub pre-pass orchestration
+# Loading the pass inputs
 #-------------------------------------------------------------------------------
 
 kg_dyn_load_heir_distribution = function(path = KG_DYN_HEIR_DISTRIBUTION_PATH,
                                           ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
-  # Reads the precomputed dollar-weighted heir-age distribution from a
-  # static SCF-derived resource. Built by
-  # other/kg_model_tests/build_heir_distribution.R; re-run that script
-  # when the SCF vintage updates.
+  # Reads the distribution of heir ages. Built from the SCF by
+  # other/kg_model_tests/build_heir_distribution.R; re-run that when the survey
+  # vintage changes.
 
   if (!file.exists(path)) {
     stop('kg_dynamics: heir distribution resource missing at ', path,
@@ -489,20 +478,19 @@ kg_dyn_load_cells_inputs = function(scenario_info, tax_law,
                                      sample_ids, pct_sample,
                                      ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
-  # Single Tax-Data pass producing baseline_cells (per-year G_B, R_B, r_B, m,
-  # mG_record, mR_record, per-asset G_B_{class}, G_B_primary_above_cap over
-  # ages 18-80), the slim per-record frames the tau aggregator consumes
-  # (td_slim_by_year: id/weight/kg_lt/age_cohort/G_unit), and heir_dist.
-  # Cell aggregates come straight from Tax-Data csvs (the wealth
-  # value.*/basis.* and q_death* columns live only there).
+  # Reads Tax-Data once and returns the baseline cells by year, a slim record frame
+  # for the rate aggregation, and the heir distribution. Cells are built straight
+  # from Tax-Data, since the asset values, bases and mortality columns exist only
+  # there.
   #
-  # tax_law is consumed only to merge the filing-status-mapped §121 cap
-  # (pref.kg_sec121_excl) onto records before kg_dyn_attach_record_attrs
-  # computes gain.primary_home_above_cap.
+  # Tax law is used only to put the §121 cap on each record, which the gain columns
+  # need.
   #
-  # Called by the frozen mechanical pass (which persists the result to
-  # kg_dyn_inputs_cache_path) and by kg_dyn_load_bathtub_inputs when no
-  # cache is available.
+  # The frozen pass calls this and caches the result; the conventional pass reuses
+  # that cache where it exists.
+  #
+  # Returns: list of the cells by year, the record frames, and the heir
+  #          distribution.
 
   tax_data_root = scenario_info$interface_paths$`Tax-Data`
   macro_root    = scenario_info$interface_paths$`Macro-Projections`
@@ -543,9 +531,9 @@ kg_dyn_load_cells_inputs = function(scenario_info, tax_law,
 
     baseline_cells[[as.character(t)]] = kg_dyn_aggregate_cells(td, ages)
 
-    # mtr aggregator only needs id/weight/kg_lt/age_cohort/G_unit; slim
-    # before the joins so we don't drag the asset value.*/basis.* columns
-    # through two hash joins on ~220k records.
+    # Drop to the five columns the rate aggregation needs before joining, so the
+    # asset value and basis columns are not carried through two joins on 220,000
+    # records.
     td_slim_by_year[[as.character(t)]] =
       td %>% select(id, weight, kg_lt, age_cohort, G_unit)
   }
@@ -562,38 +550,26 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
                                        ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX,
                                        cells_inputs = NULL) {
 
-  # Builds the full bathtub input set: baseline_cells plus baseline_tau,
-  # reform_tau, and reform_tau_timing (per-year realization-weighted
-  # mtr_kg_lt / mtr_kg_lt_lawonly vectors read from each side's static
-  # detail). The Tax-Data sweep is delegated to
-  # kg_dyn_load_cells_inputs; pass a precomputed cells_inputs (e.g. the
-  # frozen mechanical pass's inputs cache) to skip the second sweep.
+  # Assembles everything the pass needs: the baseline cells, and the marginal rate
+  # on gains for each leg, read from that leg's static detail and averaged to cells.
+  # A third rate vector measured on law alone drives the retiming. The Tax-Data read
+  # is delegated; pass the frozen pass's cache to avoid doing it twice.
   #
-  # Both sides aggregate over all records. Deemed death gains never enter
-  # kg_lt (priced via the two-leg expected-tax recompute in run_one_year),
-  # so reform-side MTRs are pure inter-vivos margins — no decedent
-  # exclusion needed.
+  # Both legs aggregate over every record. Gains at death never enter kg_lt, so the
+  # rates here are the rates a living taxpayer faces and no decedents need excluding.
   #
-  # When the scenario levies a wealth tax (kg_dyn_wealth_law_active), the
-  # reform side additionally reads mtr_net_worth and builds reform_carry:
-  # per-year, per-age-cell gain-weighted means of the RECORD-LEVEL product
-  # mtr_net_worth * mtr_kg_lt — the wealth-tax carrying cost of deferral h
-  # consumed by the Bellman and the tau_eq recursion. The BASELINE side is
-  # never read for h: h_B == 0 by law (current law has no wealth tax), an
-  # INVARIANT asserted against the baseline tax_law.csv below, not an
-  # assumption.
+  # Where the scenario levies a wealth tax, the scenario leg also reads the marginal
+  # wealth rate and builds the cost of deferring. The baseline leg never does:
+  # current law has no wealth tax, which is checked against the baseline tax law
+  # below rather than assumed.
   #
-  # BOTH sides additionally read mtr_estate_ded (the switch-gated marginal
-  # estate rate written by run.R's static pass) and build LEG-PAIRED estate
-  # exposure vectors baseline_estate / reform_estate
-  # (kg_dyn_aggregate_cell_estate) — the (1 - e) offset on the kg death
-  # value in the Bellman and on the tau_eq death-realize term. Unlike h,
-  # the estate exposure is NONZERO UNDER CURRENT LAW (the estate tax
-  # exists in baseline), so the baseline leg is genuinely load-bearing: a
-  # single shared matrix would zero out estate-only reforms. The scenario
-  # leg is guaranteed by run.R's kg fallback; the BASELINE leg requires
-  # 'estate' registered in the baseline row's mtr_vars — stale baseline
-  # detail hard-stops in read_mtr below.
+  # Both legs read the marginal estate rate and build the estate offset separately.
+  # Unlike the wealth tax, this is nonzero under current law, so the baseline leg
+  # carries real weight and sharing one matrix would kill estate-only reforms. The
+  # scenario leg is always available; the baseline leg needs 'estate' in the
+  # baseline's mtr_vars, and stale baseline detail stops the run below.
+  #
+  # Returns: list of the cells, rate vectors, wealth cost and estate offsets.
 
   years = scenario_info$years
 
@@ -665,9 +641,8 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
         as_tibble()
     }
 
-    # Verify the static detail covers every kg-active record in td_slim.
-    # left_join + na.rm = TRUE in kg_dyn_aggregate_cell_mtr would silently
-    # treat a missing mtr_kg_lt as zero, biasing tau downward toward 0.
+    # Check the static detail covers every record holding gains. A missing rate
+    # would otherwise be read as zero and pull the cell average down.
     check_mtr_coverage = function(joined, side, year) {
       missing = joined %>% filter(pmax(kg_lt, 0) > 0 & is.na(mtr_kg_lt))
       if (nrow(missing) > 0) {
@@ -680,9 +655,8 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
       }
     }
 
-    # Estate-exposure coverage stop, mirroring check_mtr_coverage on the
-    # GAIN side: a silently-NA mtr_estate_ded on a gain-holding record
-    # would bias e toward zero (i.e. toward the pre-build no-offset model).
+    # Same check for the estate rate: a missing value would pull the offset toward
+    # zero, which is the model without the offset at all.
     check_estate_coverage = function(joined, side, year) {
       missing = joined %>% filter(G_unit > 0 & is.na(mtr_estate_ded))
       if (nrow(missing) > 0) {
@@ -721,23 +695,18 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
     reform_estate[[as.character(t)]] =
       kg_dyn_aggregate_cell_estate(reform_joined, ages)
 
-    # Per-year estate-exposure diagnostic: the cell aggregation above
-    # compresses a very skewed record-level distribution (within-age
-    # gain x estate-exposure correlation is strong at the top, and the 80+
-    # cell concentrates the donor-clone records). Write the record-level
-    # gain-weighted distribution next to the state files so the compression
-    # is visible, per leg: overall mean / zero-exposure share / near-top-
-    # rate share, and the mean by (weighted) gain decile.
+    # The cell averages above compress a very skewed distribution: gains and
+    # estate exposure are strongly correlated at the top, and the 80-and-over cell
+    # concentrates the donor-clone records. Write the record-level distribution
+    # next to the state files so that compression is visible.
     kg_dyn_write_estate_exposure_diag(
       baseline_joined = baseline_joined,
       reform_joined   = reform_joined,
       scenario_info   = scenario_info,
       year            = t)
 
-    # Wealth-carry cell aggregation (gain-weighted record-level product;
-    # zeros when no wealth tax is active). Coverage stop mirrors
-    # check_mtr_coverage on the GAIN side: a silently-NA mtr_net_worth on a
-    # gain-holding record would bias h toward zero.
+    # Average the cost of deferring to cells, zero without a wealth tax. Same
+    # coverage check as above, for the same reason.
     if (wealth_active) {
       missing_nw = reform_joined %>%
         filter(G_unit > 0 & is.na(mtr_net_worth))
@@ -757,11 +726,10 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
       reform_carry[[as.character(t)]] = list(h = zero, tau_w = zero)
     }
 
-    # Law-only tau for the planned-timing wedge: identical records and
-    # weights, but MTRs evaluated on the pre-mech-injection frame (see the
-    # static pass in run.R). tau_S - tau_B built from this column isolates
-    # statutory price changes; the post-injection reform_tau above retains
-    # the mech income effect for the Bellman.
+    # The same rates measured on law alone, over the same records and weights.
+    # Differencing these isolates the change in the statutory rate, which is what
+    # should drive retiming. The rates above instead keep the income effect of the
+    # mechanical adjustments, which is what the realization choice should see.
     lawonly_joined = reform_joined %>%
       mutate(mtr_kg_lt = mtr_kg_lt_lawonly)
     check_mtr_coverage(lawonly_joined, 'reform (law-only)', t)

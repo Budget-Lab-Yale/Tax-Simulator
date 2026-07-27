@@ -1,9 +1,4 @@
-# Saving share held at 0.50, and nothing else overridden. The flat shorthand for
-# the retired s = 0.50 column.
-#
-# Split out of ome_20250925_saving_50 on 2026-07-26. That folder also pinned an
-# all-zero Off-Model-Estimates vintage, which stranded it when the interface went
-# to v5; the saving share was the only part doing any work.
+# Saving share held at 0.50, with nothing else overridden.
 
 financing_profile:
   value: 'flat:0.50'

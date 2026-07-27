@@ -1,72 +1,52 @@
 #-------------------------------------------------------------------------------
-# corp/paths.R -- module overview + analytic path construction
+# corp/paths.R
 #
-# On-model corporate incidence: a MECHANICAL, conventional-side, REVENUE-side
-# channel that takes the gross corporate receipts delta from Off-Model-Estimates
-# and produces (a) record-level flow cuts (dividends / interest / rent /
-# pass-through), (b) an equity markdown on value.* stocks (basis never scales),
-# (c) a kg gain-state adjustment, (d) bathtub dissaving via the generalized
-# forcing F = dT - dY_exog, and (e) the endogenous individual-tax offset, which
-# simply materializes in conventional receipts deltas. Static stays the clean
-# law-only counterfactual (D5); distribution tables and the smear are untouched
-# (D4); the channel contributes reform DELTAS only (P1/F4).
-#
-# Design documents (single source of truth for the economics):
-#   - other/corporate_incidence/CONSIDERATIONS.md  (rulings D1-D18)
-#   - other/corporate_incidence/FORMAL_MODEL.md    (primitives/propositions P1-P14)
-#
-# Like the wealth bathtub, this is NOT a behavior module: the record applier
-# (corp_apply_to_records, built on top of the paths computed here) runs as a
-# fixed step at the head of every conventional-side pass in run_one_year(),
-# BEFORE the wealth haircut applier and the behavior modules, so the kg/wealth
-# machinery runs on the shocked frame (FORMAL_MODEL section 7).
-#
-# ACTIVATION IS FAIL-CLOSED (D13/section 8.14): the channel turns on only when
-# the scenario's Off-Model-Estimates vintage carries an explicit metadata
-# declaration (corporate_meta.yaml next to revenues.csv: gross_of_offset = true,
-# provision_type = rate) AND the receipts path passes a mechanical seesaw guard
-# (depreciation-signature rejection; the old-capital revaluation of timing
-# provisions is SIGN-FLIPPED relative to the rate case, D13/P13'). Absent
-# metadata -> channel OFF, status quo (off-model receipts line + distribution
-# smear), one loud warning. Metadata PRESENT but invalid or contradicted by the
-# receipts path -> hard stop (a false declaration is an input error, not an
-# opt-out).
-#
-# Everything here is analytic and cheap: paths are deterministic functions of
-# the OME wedge, Macro-Projections aggregates, and hardcoded CORP_* constants.
-# No serialized state, no new SLURM phase -- any worker can recompute the paths.
+# Contains functions to work out who bears a corporate tax change, and by how
+# much, in each year
 #-------------------------------------------------------------------------------
+
+# A corporate tax increase reaches households five ways. Dividends, interest, rent
+# and pass-through income are cut. The value of corporate equity is marked down.
+# Capital gains change, both because fewer shares are sold and because each sells
+# for less. Households save less, which the wealth model then carries. And the
+# individual income tax on all of that falls, which shows up on its own in the
+# conventional revenue estimate.
+#
+# The paths here are all analytic: deterministic functions of the corporate
+# revenue change, the macro projections, and the parameters in the economy leg's
+# corp.yaml. Nothing is saved between passes, so any worker can recompute them.
+#
+# Conventional runs only. The static pass keeps the reform's law and nothing else,
+# and the distribution tables are unaffected.
+#
+# Notes: other/corporate_incidence/
 
 
 
 #-------------------------------------------------------------------------------
-# Constants and provenance (hardcoded, WEALTH_CAP_FLOWS style; sweep corners via
-# scenario overrides via assumption.corp.sigma_n / .kappa / .priced_as_permanent)
+# Constants
+#
+# The economic parameters live in the economy leg's corp.yaml, where they can be
+# overridden per scenario. What is left here is numerical.
 #-------------------------------------------------------------------------------
 
 CORP_SPEC_VERSION = 1L
 
-# --- The D16 column contract: what enters the generalized forcing ------------
+# Which flows count as income from outside the tax system, and so enter the
+# wealth model's forcing through corp_dY_exog:
 #
-# IN (external income; the applied dollar deltas accumulate into the per-record
-# detail column `corp_dY_exog`, consumed by the wealth bathtub forcing
-# F = dT - dY_exog):
-#   - dividends (div_ord, div_pref), at the corp.omega_div exposure
-#   - interest (txbl_int, exempt_int), on the debt rollover ramp
-#   - rent (rent, rent_loss -- the NET pair scales together)
-#   - pass-through lines at the 0.2 capital weight; the column list is
-#     WEALTH_CAP_FLOWS_PT + WEALTH_CAP_FLOWS_SE_COMPANIONS and the weight is
-#     wealth.cap_flows_pt_weight (src/sim/wealth_dynamics.R) -- referenced at
-#     RUNTIME (not here) because source order is alphabetical.
+#   in   dividends, interest on the debt rollover ramp, rent net of losses, and
+#        the pass-through lines at their capital weight
+#   out  realized gains, retirement distributions, and the proceeds of selling any
+#        marked-down asset
 #
-# OUT (internal conversions -- tax leg only, automatically via dT; adding any
-# of these to dY_exog double-counts the balance-sheet/gain-state markdown, the
-# two-pocket lemma P7/P9):
-#   - realized gains kg_st / kg_lt / kg_1250 / kg_collect (and kg_lt_basis)
-#   - retirement distributions txbl_ira_dist / txbl_pens_dist / gross_pens_dist
-#   - sale proceeds of any marked-down asset
-# Do NOT add these to the dY_exog accumulation later. This list exists so the
-# contract is greppable; the applier never scales-and-accumulates them.
+# The ones left out are not income at all: they move resources the household
+# already holds. Their tax consequence still arrives, through the change in tax.
+# Adding them to the income side as well would count the markdown twice.
+#
+# The pass-through column list and weight are read at runtime from
+# src/sim/wealth_dynamics.R rather than here, because files are sourced
+# alphabetically.
 CORP_FLOWS_DIV  = c('div_ord', 'div_pref')
 CORP_FLOWS_INT  = c('txbl_int', 'exempt_int')
 CORP_FLOWS_RENT = c('rent', 'rent_loss')
@@ -74,17 +54,15 @@ CORP_FLOWS_INTERNAL = c('kg_st', 'kg_lt', 'kg_1250', 'kg_collect',
                         'kg_lt_basis', 'txbl_ira_dist', 'txbl_pens_dist',
                         'gross_pens_dist')
 
-# --- Exposure vector omega_a: equity share of each value.* column ------------
-# Only these columns take the markdown; everything else (incl. ALL pass-through
-# value.* columns) is deliberately 0 -- the migration leg is flows-only (P14),
-# which keeps the frozen estate-valuation bridge (rho_pt, s_pt) invariant.
-# value.db is NEVER debited: DB shortfalls land on plan sponsors and join the
-# unallocated residual (D10).
-# PLACEHOLDER CENTRALS (Phase 0c status table, PHASE0_NOTES.md): equities 1.0
-# by construction; dc/trusts/re_fund from SCF + ICI equity-share imputations,
-# pending external measurement.
-# Values and provenance: config/scenarios/economy/default/corp.yaml (corp.asset_exposure_*),
-# assembled by corp_asset_exposure().
+# How exposed each asset column is to corporate equity, which is what decides how
+# much of the markdown it takes. Columns not listed take none, including every
+# pass-through asset: leaving those alone keeps the estate valuation bridge frozen.
+# Defined benefit balances are never marked down, since a shortfall there falls on
+# the plan sponsor and joins the unallocated remainder.
+#
+# Equities are fully exposed by construction. The others are imputed from the SCF
+# and ICI equity shares and are placeholders pending outside measurement. Values in
+# the economy leg's corp.yaml.
 corp_asset_exposure = function() {
   c('value.equities' = economy_param('corp', 'asset_exposure_equities'),
     'value.dc'       = economy_param('corp', 'asset_exposure_dc'),
@@ -92,62 +70,55 @@ corp_asset_exposure = function() {
     'value.re_fund'  = economy_param('corp', 'asset_exposure_re_fund'))
 }
 
-# C-corp share of dividends: config/scenarios/economy/default/corp.yaml (corp.omega_div).
+# The corporate share of dividends is corp.omega_div.
 
-# C-corp equity share of realized LTCG (stock + fund shares vs pass-through
-# sales / real estate / other). PLACEHOLDER ~0.5 prior pending SOI
-# sale-of-capital-assets measurement: config/scenarios/economy/default/corp.yaml (corp.omega_kg).
+# The corporate equity share of realized long-term gains, as against sales of
+# pass-through interests, real estate and everything else, is corp.omega_kg. A
+# placeholder of about a half, pending SOI measurement.
 
-# Normal-return share sigma_N of the corporate wedge ("taxes on margins get
-# shifted; taxes on rents get capitalized", D14/D15). Central 0.375 from OTA
-# 63% / TPC 60% supernormal; corners {0, 0.5} (house VAT convention = upper).
-# Value and provenance: config/scenarios/economy/default/corp.yaml (corp.sigma_n).
+# The share of the corporate tax change falling on normal rather than
+# above-normal returns is corp.sigma_n. Taxes on normal returns get shifted; taxes
+# on rents get capitalized into asset prices. The shipped 0.375 follows OTA at 63%
+# and TPC at 60% supernormal.
 
-# kappa: C-corp share of the economy-wide normal-capital stock (D15). The
-# migrated normal burden splits (1-kappa) to noncorporate lines and kappa
-# retained on corporate flows. PLACEHOLDER 0.40 prior pending the Fed Z.1 pull;
-# the owner-occupied-housing definitional fork sets the sweep corners
-# {~0.25, ~0.4, ~0.5}. Value and provenance: config/scenarios/economy/default/corp.yaml
-# (corp.kappa).
+# The corporate share of the economy's normal capital stock is corp.kappa. What
+# shifts away from normal returns is split by it: the corporate share stays on
+# corporate flows and the rest lands on noncorporate ones. A placeholder of 0.40
+# pending the Flow of Funds pull. Whether owner-occupied housing counts moves it
+# between roughly a quarter and a half.
 
-# theta: US-taxable exposure scale on the flow factor phi = -theta * h_c / pi.
-# Absorbs the NIPA-economic vs US-taxable profit wedge (Phase 0c). PLACEHOLDER
-# 1.0 (pro-rata: every distribution scales by the aggregate after-tax-profit
-# hit share) pending Rosenthal-Austin / Z.1 measurement.
-# Value and provenance: config/scenarios/economy/default/corp.yaml (corp.theta).
+# corp.theta scales the cut to flows, absorbing the difference between economic
+# profit as the national accounts measure it and profit that is taxable in the US.
+# The placeholder of 1 makes every distribution fall in proportion to the hit to
+# aggregate after-tax profit, pending measurement.
 
-# theta_res: foreign / nonprofit / DB residual share of the wedge, used ONLY by
-# the conservation diagnostic's B_res line (D3/D10 -- the honest unallocated
-# remainder; no gross-up forces household hits to sum to the revenue line).
-# PLACEHOLDER 0.40 (Rosenthal-Austin: ~26% foreign + nonprofits/insurers + the
-# DB slice) pending Phase 0c measurement.
-# Value and provenance: config/scenarios/economy/default/corp.yaml (corp.theta_res).
+# corp.theta_res is the share of the tax change borne by foreign owners,
+# nonprofits and defined benefit plans. It is used only by the reconciliation
+# diagnostic, as the honest remainder: nothing grosses the household side up to
+# match the revenue line. A placeholder of 0.40, following Rosenthal and Austin's
+# 26% foreign plus nonprofits, insurers and the defined benefit slice.
 
-# Vintaging: NIPA economic depreciation rate; the reallocation clock IS the
-# replacement clock (D14), same 0.057 as do_capital_adjustment
-# (src/data/economy.R). eta(t) = 1 - (1 - 0.057)^(t - t0).
-# Value and provenance: config/scenarios/economy/default/corp.yaml (corp.delta_nipa).
+# Capital shifts between uses only as it is replaced, so the speed of that is the
+# economic depreciation rate, corp.delta_nipa. The same 0.057 that
+# do_capital_adjustment() uses in src/data/economy.R.
 
-# Equity discount rate r = nominal tsy_10y (Macro-Projections, enactment year)
-# + this fixed equity risk premium. Distributions are nominal, so r is nominal
-# (the house Fisher-deflation convention applies to real-utility discounting,
-# not nominal-flow PV -- plan note). mu is r-free in the permanent central
-# case; r shapes temporary-shock annuities and the migration PV only.
-# Value and provenance: config/scenarios/economy/default/corp.yaml (corp.equity_premium).
+# Equity is discounted at the 10-year Treasury rate in the enactment year plus
+# corp.equity_premium. Nominal, because the distributions being discounted are
+# nominal. The markdown does not depend on this rate for a permanent change; it
+# matters only for temporary ones and for the present value of capital shifting.
 
-# PV grid: paths are built through max(sim years) + this many tail years, with
-# a Gordon growing-perpetuity terminal beyond (guarded r > g).
+# Paths run this many years past the simulation, with a growing perpetuity beyond
+# that.
 CORP_PV_TAIL_YEARS = 80L
 
-# Seesaw guard (D13/P13' depreciation signature): reject when the smaller-signed
-# mass of the wedge path exceeds this fraction of the larger-signed mass (and
-# the absolute floor, $B, so rounding wobble on a rate path never trips it).
+# Reject a revenue path that runs materially both ways, which is the signature of
+# a depreciation provision rather than a rate change. The absolute floor keeps
+# rounding wobble from tripping it.
 CORP_SEESAW_RETRACE_MAX = 0.10
 CORP_SEESAW_ABS_FLOOR   = 0.5
 
-# Sanity bound on the proportional equity markdown |mu|. The naive ceiling for
-# a 21->28 hike is ~8.9% (Delta-tau/(1-tau)); anything approaching 50% means
-# mis-scaled inputs (units, wrong baseline leg), not policy.
+# Bound on the markdown. Going from a 21% to a 28% rate implies about 9%, so
+# anything near 50% means the inputs are mis-scaled rather than the policy large.
 CORP_MU_MAX = 0.5
 
 CORP_EPS = 1e-9
@@ -155,24 +126,22 @@ CORP_EPS = 1e-9
 
 
 #-------------------------------------------------------------------------------
-# Input contract: wedge + metadata + guards (fail-closed gate)
+# Reading the inputs, and deciding whether the channel runs at all
 #-------------------------------------------------------------------------------
 
-# Per-process memo of gate decisions and resolved paths (keyed by scenario ID).
-# Each SLURM worker is its own process and rebuilds its own cache; everything
-# cached here is a cheap deterministic function of on-disk inputs.
+# Cache of decisions and resolved paths, by scenario. Each SLURM worker is a
+# separate process and builds its own; everything here is a cheap function of
+# files on disk.
 .corp_cache = new.env(parent = emptyenv())
 
 
 corp_ome_roots = function(scenario_info) {
 
   #----------------------------------------------------------------------------
-  # The two Off-Model-Estimates legs: the scenario's own vintage/ID (reform)
-  # and the baseline leg (house convention: interface_root() defaults resolve
-  # the baseline scenario's interface versions; mirror distribution.R's
-  # other_corp_delta reader).
+  # Locates the off-model estimates for both legs: this scenario's own, and the
+  # baseline's.
   #
-  # Returns: list(scenario = path, baseline = path).
+  # Returns: list of the two paths.
   #----------------------------------------------------------------------------
 
   scen = scenario_info$interface_paths$`Off-Model-Estimates`
@@ -192,20 +161,17 @@ corp_ome_roots = function(scenario_info) {
 corp_read_ome_wedge = function(scenario_info) {
 
   #----------------------------------------------------------------------------
-  # The RESIDUAL OME corporate wedge w_t = corporate_reform - corporate_baseline
-  # ($B, CY), over the FULL horizon of the OME files (not just sim years -- the
-  # seesaw guard and the enactment clock need the whole declared path). Mirrors
-  # distribution.R's other_corp_delta reader minus the VAT deflation (the
-  # run-compat guard refuses VAT scenarios outright).
+  # Reads the off-model corporate revenue change, scenario less baseline, in
+  # billions by calendar year. Reads the whole horizon of the files rather than
+  # just the simulation years, since the eligibility guard and the enactment date
+  # need the full declared path.
   #
-  # NOTE: as of the on-model statutory-rate module, this is the "ex rate, ex
-  # depreciation" corporate residual (international, credits, base-broadeners).
-  # Statutory-rate revenue is now on-model (corp_rate_incidence_wedge below);
-  # OME vintages must be regenerated to EXCLUDE the rate portion, or the rate
-  # wedge is double-counted. (Pure-rate scenarios read an all-zeros OME, so no
-  # double-count in the interim.)
+  # Since the statutory rate moved on-model, what is left here is everything else:
+  # international provisions, credits and base-broadeners. An off-model vintage
+  # must be regenerated to exclude the rate, or the rate is counted twice. A
+  # pure-rate scenario reads zeros, so nothing is double-counted in the meantime.
   #
-  # Returns: tibble(year, w) over the union of file years.
+  # Returns: tibble of year and the revenue change.
   #----------------------------------------------------------------------------
 
   roots = corp_ome_roots(scenario_info)
@@ -231,22 +197,16 @@ corp_read_ome_wedge = function(scenario_info) {
 corp_rate_incidence_wedge = function(scenario_info) {
 
   #----------------------------------------------------------------------------
-  # The on-model corporate statutory-rate incidence wedge: the CONVENTIONAL
-  # (Form A base-eroded) rate revenue delta (src/sim/corp_rate.R), $B, over the
-  # FULL Macro-Projections horizon. This is the on-model replacement for the
-  # rate portion of the OME `corporate` wedge;
-  # the entire downstream paths machinery (markdown recursion, kappa split, kg
-  # glue, bathtub forcing) consumes it unchanged.
+  # Computes the revenue change from a statutory rate change on-model, in billions
+  # over the whole macro horizon. This replaces the rate portion of the off-model
+  # estimate, and everything downstream consumes it the same way.
   #
-  # The scenario rate comes from this scenario's tax_law.csv sidecar (sim years);
-  # it is extended across the full macro horizon by forward-filling the last
-  # in-window (t0, t) -- 'extend'/permanent semantics. Pre-policy years (leading
-  # NA) carry no change (delta 0). The CY rate delta is booked on the FY rev_corp
-  # level, matching corp_incidence's existing CY/FY convention (pi_at = gdp_corp
-  # [CY] - rev_corp [FY]).
+  # The rate comes from this scenario's tax law, over the simulation years, and is
+  # held at its last in-window value thereafter. Years before the policy carry no
+  # change.
   #
-  # Returns: tibble(year, w) over the macro horizon, or NULL when there is no
-  #          rate change / the tax_law sidecars are unavailable.
+  # Returns: tibble of year and the revenue change, or NULL where the rate does
+  #          not change or the tax law files are unavailable.
   #----------------------------------------------------------------------------
 
   rate_series = corp_rate_read_series(
@@ -259,8 +219,8 @@ corp_rate_incidence_wedge = function(scenario_info) {
     arrange(year) %>%
     transmute(year, rev_corp)
 
-  # Extend the rate series across the full macro horizon (permanence forward;
-  # leading pre-policy years stay NA -> corp_rate_delta returns 0 there).
+  # Hold the rate at its last value past the simulation window. Years before the
+  # policy stay empty, which reads as no change.
   full_rate = rev_corp %>%
     select(year) %>%
     left_join(rate_series, by = 'year') %>%
@@ -279,14 +239,10 @@ corp_rate_incidence_wedge = function(scenario_info) {
 corp_read_wedge = function(scenario_info) {
 
   #----------------------------------------------------------------------------
-  # The total corporate incidence wedge = on-model statutory-rate delta
-  # (corp_rate_incidence_wedge) + residual OME corporate wedge
-  # (corp_read_ome_wedge), summed over the union of years ($B, CY). For a
-  # pure-rate scenario the OME residual is all-zeros and this is just the rate
-  # wedge; for a residual-only OME scenario it is just the OME wedge (the
-  # pre-existing behavior).
+  # Sums the on-model rate change and the off-model residual into the total
+  # corporate revenue change the channel works from.
   #
-  # Returns: tibble(year, w) over the union of years.
+  # Returns: tibble of year and the revenue change.
   #----------------------------------------------------------------------------
 
   ome  = corp_read_ome_wedge(scenario_info)
@@ -311,28 +267,22 @@ corp_meta_path = function(ome_root) {
 corp_read_meta = function(ome_root) {
 
   #----------------------------------------------------------------------------
-  # Reads and validates the fail-closed input declaration corporate_meta.yaml
-  # sitting NEXT TO the OME vintage's revenues.csv (additive to interface v4;
-  # no version bump). Two distinct failure behaviors (section 8.14):
-  #   - file ABSENT           -> returns NULL (caller: channel OFF, loud warning)
-  #   - file PRESENT, invalid -> hard stop (a false declaration is an input
-  #                              error, not an opt-out)
+  # Reads the declaration the channel requires before it will run, which sits next
+  # to the off-model revenue file. An absent file returns NULL and the caller turns
+  # the channel off with a warning. A file that is present but wrong stops the run:
+  # a false declaration is an input error, not a way of opting out.
   #
-  # Required fields:
-  #   gross_of_offset : must be TRUE (D1 -- the input is gross by construction;
-  #                     a JCT-benchmark-net input double-counts the endogenous
-  #                     offset and must be re-derived/grossed up first)
-  #   provision_type  : must be 'rate' (D13 -- the receipts path is a valid
-  #                     year-by-year proxy for the after-tax profit path;
-  #                     depreciation/transition provisions fail gate (G))
-  #   beyond_horizon  : 'extend' or 'zero' -- permanence past the file horizon
-  #                     (needed for the perfect-foresight PV)
-  # Optional fields:
-  #   delta_tau       : named year->Delta-tau map for the w ~= Delta-tau * Pi
-  #                     cross-check (WARN-level)
-  #   produced_by, date : provenance strings (not validated)
+  # Three fields are required. gross_of_offset must be true, meaning the revenue
+  # figure does not already net out the individual tax the change induces; a figure
+  # that does would count that offset twice. provision_type must name a rate
+  # change, since only then does the revenue path stand in for the path of
+  # after-tax profit. beyond_horizon says whether the change persists past the end
+  # of the file, which the present value needs.
   #
-  # Returns: validated metadata list, or NULL when the file is absent.
+  # A rate change per year may also be given, which is cross-checked against the
+  # revenue figure at warning level, along with free-text provenance.
+  #
+  # Returns: the validated declaration, or NULL where the file is absent.
   #----------------------------------------------------------------------------
 
   path = corp_meta_path(ome_root)
@@ -383,16 +333,17 @@ corp_read_meta = function(ome_root) {
 corp_seesaw_check = function(w_path) {
 
   #----------------------------------------------------------------------------
-  # Mechanical eligibility guard (D13 gate (G), enforced): reject receipts
-  # paths whose signed mass materially runs BOTH ways -- the timing-seesaw
-  # signature of depreciation-type provisions (e.g. bonus: -$61B in 2026
-  # reversing to +$35B by 2030), whose old-capital revaluation is SIGN-FLIPPED
-  # (P13'). A rate change on a fixed base moves receipts one way (plus rounding
-  # wobble); the absolute floor keeps tiny wobble from tripping the guard.
-  # This also catches cumulative-delta sign reversals: a path that reverses
-  # sign necessarily carries offsetting signed mass.
+  # Rejects a revenue path that runs materially in both directions. That pattern
+  # means a timing provision rather than a rate change: bonus depreciation, for
+  # instance, costs $61B in 2026 and then raises $35B by 2030. Such a provision
+  # revalues existing capital in the opposite direction to a rate change, so the
+  # machinery here would get the sign wrong.
   #
-  # Returns: list(ok, retrace, msg).
+  # A rate change on a fixed base moves receipts one way, give or take rounding, so
+  # the absolute floor keeps small wobble from tripping this.
+  #
+  # Returns: list of whether it passed, how much offsetting mass there was, and a
+  #          message.
   #----------------------------------------------------------------------------
 
   pos = sum(pmax(w_path, 0), na.rm = TRUE)
@@ -420,20 +371,19 @@ corp_seesaw_check = function(w_path) {
 scenario_uses_corp_incidence = function(scenario_info) {
 
   #----------------------------------------------------------------------------
-  # The activation rule (auto-on from input metadata; no runscript column):
-  # a non-baseline scenario with (i) a nonzero corporate wedge somewhere,
-  # (ii) valid corporate_meta.yaml present on the scenario's OME vintage, and
-  # (iii) the seesaw guard passing, runs the channel. Absent metadata with a
-  # nonzero wedge -> OFF with ONE loud warning naming the reason (status quo:
-  # off-model receipts line + distribution smear -- the smear is a
-  # distribution fallback; the revenue status quo is simply "no on-model
-  # offset"). Present-but-contradicting metadata -> hard stop (inside
-  # corp_read_meta / here).
+  # Decides whether the channel runs. There is no switch to set: it turns on when a
+  # non-baseline scenario has a corporate revenue change somewhere, carries a valid
+  # declaration, and passes the eligibility guard.
   #
-  # Memoized per scenario ID (per process); A/B runs use the existing
-  # dep.Off-Model-Estimates.vintage/.ID runscript overrides.
+  # A revenue change with no declaration leaves the channel off, with one warning
+  # naming the reason. The scenario then falls back to the off-model revenue line
+  # and the distributional smear, with no on-model offset. A declaration that is
+  # present but contradicted stops the run.
   #
-  # Returns: TRUE/FALSE.
+  # Cached per scenario. To compare with and without, point the scenario at a
+  # different off-model vintage.
+  #
+  # Returns: TRUE if the channel runs for this scenario (bool).
   #----------------------------------------------------------------------------
 
   if (scenario_info$ID == 'baseline') return(FALSE)
@@ -514,11 +464,10 @@ scenario_uses_corp_incidence = function(scenario_info) {
 corp_check_run_compat = function(scenario_info, vat_price_offset) {
 
   #----------------------------------------------------------------------------
-  # Refusal gate for an ACTIVE corporate channel. The paths are formed from
-  # raw-dollar national aggregates and the record hits land on raw-dollar
-  # flows/stocks; the conservation diagnostic additionally assumes
-  # full-population aggregates. No channel-specific conditions beyond the
-  # shared raw-dollar guard.
+  # Checks the preconditions for an active channel. The paths are built from raw
+  # dollar national aggregates and land on raw dollar flows and stocks, and the
+  # reconciliation diagnostic assumes the full population, so the channel takes the
+  # shared guard for raw-dollar channels and nothing further.
   #
   # Returns: invisibly TRUE; stops on violation.
   #----------------------------------------------------------------------------
@@ -530,25 +479,24 @@ corp_check_run_compat = function(scenario_info, vat_price_offset) {
 
 
 #-------------------------------------------------------------------------------
-# Aggregate series readers (Macro-Projections)
+# Reading the macro aggregates
 #-------------------------------------------------------------------------------
 
 corp_read_macro = function(scenario_info) {
 
   #----------------------------------------------------------------------------
-  # Reads the Macro-Projections series the paths need, spliced across
-  # historical.csv + projections.csv (helpers.R read_macro_spliced pattern;
-  # gdp_corp exists only in projections, which is fine -- pre-enactment years
-  # never need pi):
-  #   - gdp_corp (NIPA pre-tax corporate profits, $B, CY)
-  #   - rev_corp (CBO corporate receipts, $B, FY)   => pi = gdp_corp - rev_corp
-  #   - tsy_10y  (percent)                          => r = tsy_10y/100 + ERP
-  #   - gdp_interest / gdp_rent / gdp_proprietors   => noncorporate line bases
+  # Reads the macro series the paths need, splicing historical and projected
+  # values. After-tax corporate profit is pre-tax profit less corporate receipts.
+  # The Treasury rate gives the discount rate, and the interest, rent and
+  # proprietors' income aggregates give the bases for the noncorporate lines.
   #
-  # Returns: tibble(year, pi_at, tsy_10y, gdp_interest, gdp_rent,
-  #          gdp_proprietors). Named pi_at (after-tax profits), never `pi`:
-  #          a missing `pi` column would silently resolve to base::pi inside
-  #          dplyr verbs.
+  # Pre-tax profit exists only in the projections, which is fine, since years
+  # before enactment never need it.
+  #
+  # Note that after-tax profit is returned as pi_at rather than pi. A missing
+  # column named pi would silently resolve to the constant instead of erroring.
+  #
+  # Returns: tibble of the series by year.
   #----------------------------------------------------------------------------
 
   macro_root = scenario_info$interface_paths$`Macro-Projections`
@@ -567,7 +515,7 @@ corp_read_macro = function(scenario_info) {
          ' lacks required column(s): ',
          paste(c(missing, setdiff('gdp_corp', names(raw))), collapse = ', '),
          '. gdp_corp (NIPA pre-tax corporate profits) ships in projections.csv',
-         ' of current vintages; check dep.Macro-Projections.vintage.')
+         " of current vintages; check the economy leg's interfaces.yaml.")
   }
 
   raw %>%
@@ -582,10 +530,11 @@ corp_read_macro = function(scenario_info) {
 corp_rollover_ramp = function() {
 
   #----------------------------------------------------------------------------
-  # Cumulative share of debt rolled over `tenor` years after enactment, from
-  # resources/debt_maturities.csv (same source do_capital_adjustment uses;
-  # ~fully rolled by year 10). Returns a function roll(t_since) with
-  # roll(<=0) = 0 and roll(beyond table) = 1.
+  # Builds the share of debt that has rolled over by a given number of years after
+  # enactment, from the maturity schedule do_capital_adjustment() also uses. Debt is
+  # roughly fully rolled by year ten.
+  #
+  # Returns: function of years since enactment, giving the cumulative share.
   #----------------------------------------------------------------------------
 
   sched = read_csv('./resources/debt_maturities.csv', show_col_types = FALSE) %>%
@@ -597,9 +546,8 @@ corp_rollover_ramp = function() {
     pos = t_since >= 1
     idx = pmin(t_since[pos], max(sched$tenor))
     out[pos] = sched$cum[match(idx, sched$tenor)]
-    # Beyond the table (or missing tenors) debt is fully rolled: exactly 1,
-    # matching do_capital_adjustment's replace_na(1) convention (and avoiding
-    # the cumsum's terminal float dust).
+    # Past the end of the schedule, and for any missing maturity, treat debt as
+    # fully rolled. Exactly 1, which also avoids the running sum's rounding dust.
     out[pos][is.na(out[pos]) | t_since[pos] > max(sched$tenor)] = 1
     out
   }
@@ -608,17 +556,18 @@ corp_rollover_ramp = function() {
 
 
 #-------------------------------------------------------------------------------
-# Path computation (pure core + file-backed wrapper)
+# Building the paths
 #-------------------------------------------------------------------------------
 
 corp_env_knobs = function() {
 
   #----------------------------------------------------------------------------
-  # Sweep corners are now scenario assumptions rather than env knobs: override
-  # assumption.corp.sigma_n / .kappa / .priced_as_permanent in the runscript, so
-  # the corner is recorded in the vintage's assumptions.csv instead of vanishing
-  # with the shell that launched the run.
-  # Returns list(sigma_n, kappa, priced_as_permanent).
+  # Reads the three parameters a sensitivity run is most likely to move. They live
+  # in the economy leg, so a scenario overrides them in an alternative folder and
+  # the choice is recorded in the vintage.
+  #
+  # Returns: list of the normal-return share, the corporate capital share, and
+  #          whether markets price the change as permanent.
   #----------------------------------------------------------------------------
 
   read_num = function(name, lo, hi) {
@@ -649,51 +598,42 @@ corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
                                  pt_weight = NULL) {
 
   #----------------------------------------------------------------------------
-  # The analytic shock pipeline (FORMAL_MODEL sections 6.2 and 7), pure in its
-  # inputs so the self-checks can drive it with synthetic series.
+  # Turns the corporate revenue change into the year-by-year paths the record step
+  # needs. Pure in its inputs, so the self-checks can drive it with made-up series.
   #
-  #   wedge  : tibble(year, w) -- the OME corporate wedge, $B CY (full horizon)
-  #   macro  : tibble(year, pi_at, tsy_10y, gdp_interest, gdp_rent,
-  #            gdp_proprietors)
-  #   sim_years, beyond_horizon ('extend'|'zero'), sigma_n, kappa, theta, ...
-  #   roll_fn: function(t_since) -> cumulative debt-rollover share
-  #   pt_weight: pass-through capital weight (wealth.cap_flows_pt_weight at
-  #            runtime; parameterized for the self-checks)
+  # The steps, for each year after enactment:
   #
-  # Grid: min(sim_years) .. max(sim_years) + CORP_PV_TAIL_YEARS, with Gordon
-  # growing-perpetuity terminals beyond (guarded r > g). Beyond each series'
-  # own horizon:
-  #   - w  : 'extend' -> grows with pi from its last file value (a rate change
-  #          on a growing base); 'zero' -> 0 (legislated sunset)
-  #   - pi : grows at its trailing 5-year average rate
+  #   1. Split the revenue change into the part falling on above-normal returns
+  #      and the part falling on normal returns.
+  #   2. Work out how much capital has turned over since enactment. Only replaced
+  #      capital can shift between corporate and noncorporate use, so this sets how
+  #      much of the normal-return burden has migrated.
+  #   3. Add up what still lands on corporate flows, and divide by after-tax profit
+  #      to get the proportional cut to distributions.
+  #   4. Take the part of the burden that is capitalized into share prices, and
+  #      discount it forward to get the markdown. Capital that has migrated away is
+  #      excluded: it is no longer priced in corporate equity.
+  #   5. Allocate what migrated across interest, rent and pass-through income in
+  #      proportion to their national totals. Interest delivers only the rolled-over
+  #      share as a cut to flows, since existing contracts are fixed; the rest shows
+  #      up in the reconciliation as a revaluation.
   #
-  # Per year t (t0 = enactment = first nonzero-w year; all pre-t0 rows inert):
-  #   eta(t)   = 1 - (1 - delta_nipa)^(t - t0)             [vintaging ramp]
-  #   w_rent   = (1 - sigma_n) w ;  w_norm = sigma_n w     [wedge split]
-  #   h_c      = w_rent + w_norm ((1 - eta) + eta kappa)   [corporate flow hit]
-  #   phi      = -theta h_c / pi                           [flow factor]
-  #   price    = w_rent + (1 - kappa)(1 - eta) w_norm      [price-relevant hit;
-  #              excludes the kappa-retained slice, P14; under
-  #              priced_as_permanent the sunset is ignored here]
-  #   M_t      = PV_t[price_{s>t}] (backward recursion, constant r)
-  #   V_t      = PV_t[pi_{s>t}]  ;  mu_t = M_t / V_t
-  #   N_t      = (1 - kappa) eta w_norm                    [noncorporate hit]
-  #     split across interest/rent/pt in proportion to gdp_interest / gdp_rent
-  #     / pt_weight*gdp_proprietors (Macro aggregates -- the documented
-  #     implementation choice); the interest slice DELIVERS only roll(t) of
-  #     its share as flow (contract rigidity), the rest is the named delta-rho
-  #     revaluation line in the conservation residual (D15/P14)
+  # Beyond the end of the revenue file, the change either persists, growing with
+  # profit, or drops to zero, according to the declaration. Profit itself grows at
+  # its trailing five-year rate. Past the end of the grid a growing perpetuity
+  # closes the present values.
   #
-  # Record-applier factors (per sim year):
-  #   fac_div  = 1 + omega_div * phi
-  #   fac_int  = 1 - H_int_delivered / gdp_interest
-  #   fac_rent = 1 - H_rent / gdp_rent
-  #   g_ptcap  = H_pt / (pt_weight * gdp_proprietors)  [proportional hit to the
-  #              pass-through CAPITAL slice; lines scale by 1 - pt_weight*g_ptcap]
-  #   mu_ret   = omega_dc * mu  (retirement markdown; dc exposure)
+  # Parameters:
+  #   - wedge (df)          : the corporate revenue change by year, in billions
+  #   - macro (df)          : the macro series
+  #   - sim_years (int[])   : simulation years
+  #   - beyond_horizon (str): 'extend' or 'zero'
+  #   - roll_fn (function)  : cumulative debt rollover by years since enactment
+  #   - pt_weight (dbl)     : capital weight on pass-through income
   #
-  # Returns: list(by_year = full-grid tibble, sim = sim-year slice, r, t0,
-  #               g_tail, knobs).
+  # Returns: list of the full-grid paths, the simulation-year slice, the discount
+  #          rate, the enactment year, the tail growth rate, and the parameters
+  #          used.
   #----------------------------------------------------------------------------
 
   if (is.null(pt_weight)) pt_weight = wealth_cap_flows_pt_weight()
@@ -705,7 +645,7 @@ corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
 
   grid = min(sim_years):(max(sim_years) + CORP_PV_TAIL_YEARS)
 
-  # --- pi on the grid (extend at trailing growth beyond the macro horizon) ---
+  # Profit over the grid, extended at its trailing growth rate
   pi_known = macro %>% filter(is.finite(pi_at))
   if (nrow(pi_known) < 6) {
     stop('corp_incidence: fewer than 6 years of pi = gdp_corp - rev_corp in ',
@@ -724,15 +664,15 @@ corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
     pi_grid[beyond] = pi_last * (1 + g_tail)^(grid[beyond] - last_known)
   }
 
-  # --- w on the grid ---------------------------------------------------------
+  # The revenue change over the grid
   w_grid = w_by_year[as.character(grid)]
   file_last = max(wedge$year)
-  # Years on the grid before the file horizon but absent from the file are 0.
+  # A year inside the file's range but absent from it carries no change.
   w_grid[is.na(w_grid) & grid <= file_last] = 0
   if (beyond_horizon == 'zero') {
     w_grid[is.na(w_grid)] = 0
   } else {
-    # 'extend': continue the last file value, growing with pi.
+    # Continue the last value in the file, growing with profit.
     w_last = w_by_year[as.character(file_last)]
     ext = which(is.na(w_grid))
     if (length(ext) > 0) {
@@ -746,7 +686,7 @@ corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
   }
   w_grid = unname(w_grid)
 
-  # pi must exist wherever the wedge is live.
+  # Profit has to exist wherever the revenue change is nonzero.
   need_pi = abs(w_grid) > CORP_EPS
   if (any(need_pi & !is.finite(pi_grid))) {
     bad = grid[need_pi & !is.finite(pi_grid)][1]
@@ -755,7 +695,7 @@ corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
          'Macro-Projections projections.csv; check the vintage.')
   }
 
-  # --- clocks and split ------------------------------------------------------
+  # Capital turnover since enactment, and the split of the revenue change
   t_since = pmax(grid - t0, 0)
   eta  = if_else(grid < t0, 0, 1 - (1 - delta_nipa)^t_since)
   roll = roll_fn(pmax(grid - t0, 0))
@@ -767,11 +707,12 @@ corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
   phi = if_else(abs(w_grid) > CORP_EPS & is.finite(pi_grid) & pi_grid > 0,
                 -theta * h_c / pi_grid, 0)
 
-  # --- price-relevant hit and the PV objects (constant r from enactment) ----
+  # The capitalized part, and the present values, discounted at a rate fixed at
+  # enactment
   tsy_t0 = macro$tsy_10y[match(t0, macro$year)]
   if (!is.finite(tsy_t0)) {
-    # Fall back to the first sim year with a rate (t0 can precede the macro
-    # projection start only in exotic vintages; pre-t0 rows are inert anyway).
+    # Fall back to the first simulation year that has a rate. Enactment can only
+    # precede the projections in unusual vintages, and those years are inert.
     tsy_t0 = macro$tsy_10y[match(min(sim_years), macro$year)]
   }
   if (!is.finite(tsy_t0)) {
@@ -788,9 +729,9 @@ corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
 
   price_w = w_grid
   if (priced_as_permanent) {
-    # Sunset-disbelief corner: for the PRICE path only, markets ignore the
-    # legislated sunset -- the wedge continues from its last nonzero level,
-    # growing with pi. Flow factors still follow the statute.
+    # Markets are assumed not to believe the sunset, so for pricing the change
+    # continues from its last nonzero level, growing with profit. The cut to flows
+    # still follows the statute.
     live = which(abs(w_grid) > CORP_EPS)
     if (length(live) > 0) {
       last_live = max(live)
@@ -807,14 +748,14 @@ corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
   n = length(grid)
   M = numeric(n)
   V = numeric(n)
-  # Gordon terminals: value of the growing tail beyond the grid.
+  # Value of the growing tail past the end of the grid
   M[n] = price_hit[n] * (1 + g_tail) / (r - g_tail)
   V[n] = pi_grid[n]   * (1 + g_tail) / (r - g_tail)
   for (i in (n - 1):1) {
     M[i] = (price_hit[i + 1] + M[i + 1]) / (1 + r)
     V[i] = (pi_grid[i + 1]   + V[i + 1]) / (1 + r)
   }
-  # Enactment-year surprise (D7): no pre-announcement capitalization.
+  # The change is a surprise at enactment, so nothing is priced in beforehand.
   M[grid < t0] = 0
 
   mu = if_else(V > CORP_EPS, M / V, 0)
@@ -828,7 +769,7 @@ corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
                  max(abs(mu)), bad, CORP_MU_MAX))
   }
 
-  # --- noncorporate allocation ----------------------------------------------
+  # Allocating the migrated burden across the noncorporate lines
   base_int  = macro$gdp_interest    [match(grid, macro$year)]
   base_rent = macro$gdp_rent        [match(grid, macro$year)]
   base_pt   = macro$gdp_proprietors [match(grid, macro$year)] * pt_weight
@@ -837,7 +778,7 @@ corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
   need_bases = abs(N) > CORP_EPS
   if (any(need_bases & (!is.finite(base_int) | !is.finite(base_rent) |
                         !is.finite(base_pt)))) {
-    # Only sim years matter for record factors; the PV tail never uses bases.
+    # Only simulation years need these; the present value tail does not.
     in_sim = need_bases & grid %in% sim_years
     if (any(in_sim & (!is.finite(base_int) | !is.finite(base_rent) |
                       !is.finite(base_pt)))) {
@@ -858,7 +799,7 @@ corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
   H_rent    = N * sh_rent
   H_pt      = N * sh_pt
 
-  # --- record-applier factors ------------------------------------------------
+  # The factors the record step applies
   fac_div  = 1 + omega_div * phi
   g_int    = if_else(is.finite(base_int)  & base_int  > 0, H_int  / base_int,  0)
   g_rent   = if_else(is.finite(base_rent) & base_rent > 0, H_rent / base_rent, 0)
@@ -902,26 +843,29 @@ corp_build_paths_core = function(wedge, macro, sim_years, beyond_horizon,
 corp_assert_paths = function(paths) {
 
   #----------------------------------------------------------------------------
-  # Model-internal hard invariants on a built path set (Invariant 2 of the
-  # conservation section; runs on every resolve, cheap):
+  # Checks two things that must hold on any set of built paths. Runs on every
+  # resolve, and is cheap.
   #
-  #  1. Markdown telescoping: M_t (1 + r) = price_hit_{t+1} + M_{t+1} on every
-  #     interior grid year (P4) -- plus an INDEPENDENT direct-PV-sum spot
-  #     check from several live years, so a vector-alignment bug in the
-  #     recursion cannot self-certify.
-  #  2. Inertness before enactment: mu = 0 and all factors = 1 for t < t0.
-  # (The behavioral properties -- permanent-constant mu, rent-share floor
-  # decay, windowed expiry -- are asserted on synthetic inputs by
-  # corp_selfcheck_paths, where the truth values are known in closed form.)
+  # First, the markdown must be consistent with itself: this year's value, carried
+  # forward one year at the discount rate, has to equal next year's price hit plus
+  # next year's markdown. That is checked on every interior year, and then again by
+  # summing the present value directly from several years, so that a misaligned
+  # index in the recursion cannot certify itself.
   #
-  # Stops on violation; returns invisibly TRUE.
+  # Second, nothing may move before enactment.
+  #
+  # The behavior of the paths themselves, such as the markdown being constant under
+  # a permanent change, is checked on made-up inputs by corp_selfcheck_paths(),
+  # where the right answer is known in closed form.
+  #
+  # Returns: invisibly TRUE; stops on violation.
   #----------------------------------------------------------------------------
 
   b = paths$by_year
   r = paths$r
   n = nrow(b)
 
-  # (1) telescoping, interior years
+  # The markdown against itself, on interior years
   lhs = b$M[-n] * (1 + r)
   rhs = b$price_hit[-1] + b$M[-1]
   live = b$year[-n] >= paths$t0
@@ -930,7 +874,7 @@ corp_assert_paths = function(paths) {
          'FAILED (max abs dev ', max(abs(lhs[live] - rhs[live])), '). ',
          'Internal path-construction bug.')
   }
-  # direct-sum spot check from up to 5 evenly spaced live years
+  # And against a directly summed present value, from up to five years
   live_idx = which(b$year >= paths$t0 & b$year < max(b$year))
   if (length(live_idx) > 0) {
     for (i in unique(round(seq(min(live_idx), max(live_idx), length.out = 5)))) {
@@ -946,7 +890,7 @@ corp_assert_paths = function(paths) {
     }
   }
 
-  # (2) pre-enactment inertness
+  # Nothing moves before enactment
   pre = b$year < paths$t0
   if (any(pre)) {
     inert = all(abs(b$mu[pre]) < 1e-12) &&
@@ -968,13 +912,12 @@ corp_assert_paths = function(paths) {
 corp_resolve_paths = function(scenario_info) {
 
   #----------------------------------------------------------------------------
-  # File-backed wrapper: reads the wedge + metadata (from the memoized gate
-  # entry when available), the Macro-Projections aggregates, and the debt
-  # rollover schedule; resolves the env sweep knobs; builds and hard-checks
-  # the paths. Deterministic and cheap -- callable from any worker with no
-  # serialized state (the design's no-new-SLURM-phase property).
+  # Reads everything from disk and builds the paths: the revenue change and its
+  # declaration, the macro aggregates, and the debt rollover schedule. Then checks
+  # them. Deterministic and cheap, so any worker can call it without anything
+  # having been saved for it.
   #
-  # Returns: the corp_build_paths_core() list, plus $meta and $wedge.
+  # Returns: the paths, plus the declaration and the revenue change they came from.
   #----------------------------------------------------------------------------
 
   gate_key = paste0('gate|', scenario_info$ID)
@@ -1005,9 +948,9 @@ corp_resolve_paths = function(scenario_info) {
   )
   corp_assert_paths(paths)
 
-  # Optional WARN-level cross-check: w_t ~= Delta-tau_t * Pi_t when the
-  # metadata declares the legislated rate path. Pi = pi / (1 - tau) needs the
-  # baseline rate; both must be supplied to check.
+  # Where the declaration gives the legislated rate change, check the revenue
+  # figure against the rate times pre-tax profit, at warning level. Recovering
+  # pre-tax profit needs the baseline rate, so both must be given.
   if (!is.null(gate$meta$delta_tau) && !is.null(gate$meta$tau_baseline)) {
     dt   = gate$meta$delta_tau
     tau0 = as.numeric(gate$meta$tau_baseline)
@@ -1039,8 +982,8 @@ corp_resolve_paths = function(scenario_info) {
 
 corp_get_paths = function(scenario_info) {
 
-  # Memoized corp_resolve_paths (per process, keyed by scenario ID). Env knobs
-  # are process-constant, so caching across years/passes is safe.
+  # Caches the resolved paths by scenario. The parameters do not change within a
+  # process, so one set of paths serves every year and pass.
   key = paste0('paths|', scenario_info$ID)
   hit = .corp_cache[[key]]
   if (!is.null(hit)) return(hit)

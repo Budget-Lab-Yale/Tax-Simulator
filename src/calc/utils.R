@@ -106,11 +106,10 @@ integrate_schedule = function(df, n_brackets, prefix_brackets, prefix_rates,
                               output_name, by_bracket, bracket_fn) {
 
   #----------------------------------------------------------------------------
-  # Shared engine for the two schedule integrators below. Handles the
-  # boilerplate common to both: removing defunct (all-NA) rate/bracket
-  # columns, ascertaining the number of brackets when not supplied, appending
-  # the (n+1)th Inf bracket, mapping the per-bracket tax function over
-  # brackets, and assembling the total/by-bracket output columns.
+  # Runs the work the two schedule integrators below share: removing defunct
+  # rate and bracket columns, ascertaining the number of brackets when it is not
+  # supplied, appending the infinite top bracket, mapping the per-bracket tax
+  # function over brackets, and assembling the output columns.
   #
   # Parameters:
   #   - df (df)               : a tibble with an income column and columns for
@@ -133,11 +132,9 @@ integrate_schedule = function(df, n_brackets, prefix_brackets, prefix_rates,
   #          column for each bracket (df).
   #----------------------------------------------------------------------------
 
-  # Remove all-NA rate/bracket columns -- indicates that in a prior or future
-  # year there are more brackets. This helper is called repeatedly on the full
-  # microdata frame, so inspect only the schedule columns and avoid constructing
-  # a one-row summary, pivoting it long, and copying the entire frame through
-  # select().
+  # Remove all-NA rate and bracket columns, which mean a prior or future year has
+  # more brackets. This runs repeatedly on the full microdata frame, so inspect
+  # only the schedule columns rather than copying the frame.
   schedule_cols = names(df)[
     startsWith(names(df), prefix_brackets) |
       startsWith(names(df), prefix_rates)
@@ -169,9 +166,8 @@ integrate_schedule = function(df, n_brackets, prefix_brackets, prefix_rates,
   # Add (n+1)th bracket, used to calculate taxable income in excess of top bracket
   df[[paste0(prefix_brackets, n_brackets + 1)]] = Inf
 
-  # Calculate each bracket. Most callers need only the total, in which case
-  # accumulate directly into one vector rather than allocating a bracket-wide
-  # tibble and scanning it again with rowSums().
+  # Calculate each bracket. Most callers need only the total, so accumulate into
+  # one vector rather than building a tibble per bracket and summing across it.
   bracket_output_names = paste0(output_name, seq_len(n_brackets))
   if (!by_bracket) {
     total = numeric(nrow(df))
@@ -307,11 +303,10 @@ integrate_conditional_rates_brackets = function(df, n_brackets, prefix_brackets,
       # Calculate excess of x over adjusted bracket
       excess_x = pmax(0, pmin(adj_next_bracket, x) - adj_bracket)
 
-      # When x is part of y, the preferred-rate income occupies the top x
-      # dollars of y, i.e. the band [max(0, y - x), y]. Tax it over the brackets
-      # that band actually spans, rather than stacking x above y and capping
-      # per-bracket (which drops lower brackets when ordinary income y - x is
-      # small but y sits high in the schedule).
+      # When x is part of y it occupies the top x dollars of y, the band from
+      # max(0, y - x) to y. Tax it over the brackets that band spans, rather than
+      # stacking x above y and capping each bracket, which drops the lower brackets
+      # when y - x is small but y sits high in the schedule.
       if (inclusive) {
         lo       = pmax(0, y - x)
         excess_x = pmax(0, pmin(next_bracket, y) - pmax(bracket, lo))

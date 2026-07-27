@@ -1,28 +1,31 @@
 #-------------------------------------------------------------------------------
 # recurrence.R
 #
-# Bathtub recurrence: the step, the regime mix, the cell table, and the bathtub / frozen pass drivers.
+# Contains functions to step the stock of unrealized gains forward, and the
+# drivers that run the pass
 #-------------------------------------------------------------------------------
 
 
 #-------------------------------------------------------------------------------
-# Bathtub recurrence step
+# Stepping the stock forward
 #-------------------------------------------------------------------------------
 
 kg_dyn_cell_m_eff = function(baseline_t) {
 
-  # Effective cell mortality m_eff = sum(w*m*X) / sum(w*X). The death
-  # channel needs sum_i w_i * m_i * (G_unit_i + dG_i); the naive cell-mean
-  # form m * (G_B + dG) overstates that by ~2.7x in our data due to a
-  # large negative within-cell Cov(m, G_unit) (wealth-mortality gradient).
-  # Allocating dG_i proportional to X_i and summing analytically gives an
-  # exact per-record sum, not an approximation. Two rules via
-  # assumption kg.dg_allocation: "G" (X = G_unit) or "R" (X = pmax(kg_lt, 0),
-  # falling back to "G" when R_B = 0).
+  # Averages mortality within a cell, weighting by whatever the change in gains
+  # is assumed to follow. Weighting by taxpayer instead overstates the death flow
+  # by a factor of about 2.7 in this data, because within a cell mortality and
+  # holdings are strongly negatively correlated. Spreading the change over records
+  # in proportion to their holdings and then summing is exact rather than
+  # approximate.
   #
-  # Shared by kg_dyn_step_recurrence and the tau_eq machinery
-  # (kg_dyn_tau_eq_primitives) so the two stay in lockstep on what
-  # mortality the delta stock experiences.
+  # The kg setting dg_allocation chooses the weight: holdings, or realizations
+  # falling back to holdings where a cell realizes nothing.
+  #
+  # Shared with the tau_eq machinery, so that the two agree on what mortality the
+  # change in gains faces.
+  #
+  # Returns: numeric vector of mortality rates by cell.
 
   m_eff_G = if_else(baseline_t$G_B > 0,
                     baseline_t$mG_record / baseline_t$G_B, baseline_t$m)
@@ -43,24 +46,29 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
                                   r_S_vec, delta_route_vec,
                                   conv_inflow_vec = NULL) {
 
-  # One-step bathtub recurrence for delta_G on the [18, 80] grid. r_S_vec is
-  # the scenario realization rate: the full-pool Bellman level response plus
-  # the retimed short-run timing overlay.
-  # delta_route_vec is a length-n_ages cell-level share of the dying stock
-  # that routes to heirs (carryover); under per-asset regime mixing it's
-  # produced by kg_dyn_build_regime_mix as sum_k share_k(a) * route_k.
+  # Steps the change in the stock of unrealized gains forward one year.
   #
-  # conv_inflow_vec (optional): length-n_ages vector of sigma-conversion
-  # dollars entering the gain state at END of year t (the inheritance-inflow
-  # convention, DESIGN_LOCK R6): it joins delta_next directly, participating
-  # in realization/death dynamics from t+1 onward. NULL = no conversion
-  # channel (identical output).
+  # Three things happen. Survivors keep the share they do not realize, and age.
+  # Gains held by decedents leave the stock, and under carryover the routed share
+  # of them arrives in the heirs' cells. Compensation converted into equity, if
+  # that module is running, enters at year end.
   #
-  # Topcode caveat: the age=80 cell pools all 80+ taxpayers with a single
-  # weight-averaged m_80, refreshed from each year's Tax-Data. Within-pool
-  # heterogeneity (e.g., 15-year topcode residents vs. newly aged-in) is
-  # smoothed out — small effect in practice but worth flagging if reforms
-  # shift the topcode age mix.
+  # Parameters:
+  #   - delta_prev (dbl[])       : last year's change in the stock, by age
+  #   - baseline_t (df)          : the year's baseline cells
+  #   - A, omega (matrix)        : the aging and heir-routing operators
+  #   - r_S_vec (dbl[])          : scenario realization rate by age
+  #   - delta_route_vec (dbl[])  : share of the dying stock routed to heirs
+  #   - conv_inflow_vec (dbl[])  : converted compensation entering at year end;
+  #                                NULL for none
+  #
+  # Note that the age-80 cell pools everyone 80 and older behind one average
+  # mortality rate, refreshed each year from Tax-Data. That smooths over the
+  # difference between someone who has been in the pool fifteen years and someone
+  # who just turned 80. The effect is small, but worth remembering for a reform
+  # that shifts the age mix within the pool.
+  #
+  # Returns: list of the new change in the stock and the flows behind it.
 
   G_B       = baseline_t$G_B
   r_B       = baseline_t$r_B
@@ -70,14 +78,13 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
 
   r_S = pmin(pmax(r_S_vec, 0), 1)
 
-  # Survivor flow (spec §3.2)
+  # Survivors
   inner      = (1 - r_S) * delta_prev + G_B * (r_B - r_S)
   contrib_a  = (1 - m_eff) * inner
   delta_surv = as.numeric(crossprod(A, contrib_a))
 
-  # Inheritance flow (spec §3.3.1). delta_route_vec is per-cell so a cell
-  # whose regime mix has no carryover share contributes nothing to the
-  # routing crossprod even when adjacent cells do.
+  # Inheritances. The routed share is per cell, so a cell whose assets all get a
+  # step-up contributes nothing here even where neighboring cells do.
   decedent_stock      = m_eff * (G_B + delta_prev)
   terminal_char_stock = p_char * decedent_stock
   taxable_death_stock = (1 - p_char) * decedent_stock
@@ -88,8 +95,8 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
     delta_inh = rep(0, length(delta_prev))
   }
 
-  # Sigma-conversion inflow: converted compensation enters the gain state at
-  # end of year (participates from t+1, like the inheritance inflow).
+  # Converted compensation, entering at year end so that it starts realizing and
+  # dying next year, as inheritances do.
   conv_inflow = if (is.null(conv_inflow_vec)) {
     rep(0, length(delta_prev))
   } else {
@@ -110,32 +117,29 @@ kg_dyn_step_recurrence = function(delta_prev, baseline_t, A, omega,
 
 
 #-------------------------------------------------------------------------------
-# Cell-level regime mix (per-asset codes → per-age vanish/route/realize + c_phi)
+# Mixing the treatment of gains at death across asset classes
 #-------------------------------------------------------------------------------
 
 kg_dyn_build_regime_mix = function(regime_codes, theta, baseline_t,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
-  # Aggregates per-asset regime codes into cell-level multipliers via
-  # gain-stock-weighted shares:
-  #   share_k(a)              = G_B_k(a) / G_B(a)
-  #   share_primary_above_cap = G_B_primary_above_cap(a) / G_B(a)
-  #   delta_{vanish,route,realize}(a) = sum_k share_k(a) * triplet_k$*
+  # Averages the treatment of gains at death across asset classes within a cell,
+  # weighting each class by its share of the cell's gains. That gives, per cell,
+  # the share of gains that is forgiven, the share routed to heirs, and the share
+  # taxed at death.
   #
-  # c_phi(a) (share of cell gain stock taxed at death, the death-state
-  # burden share the holder internalizes in the Bellman):
-  #   c_phi(a) = sum_{k, deemed}            live_share_k(a)
-  #            + theta * sum_{k, carryover} live_share_k(a)   (route internalized)
-  # where live_share_k = share_primary_above_cap for primary_home (§121-net),
-  # share_k otherwise. §121 nets the exclusion cap under BOTH deemed and
-  # carryover (see live_share in the regime loop below).
+  # It also gives the share of the cell's gains the holder expects to be taxed if
+  # they die, which is what enters the realization choice. Gains taxed at death
+  # count in full; gains routed to heirs count only in proportion to how much the
+  # holder cares about the heir's tax bill.
   #
-  # regime_codes : named list of 5 integer codes (one per asset class).
-  # theta        : scalar bequest motive in [0, 1].
-  # baseline_t   : per-cell tibble with G_B, G_B_{class}, G_B_primary_above_cap.
+  # Parameters:
+  #   - regime_codes (list) : treatment code per asset class
+  #   - theta (dbl)         : weight the holder puts on the heir's tax bill
+  #   - baseline_t (df)      : the year's cells, with gains by asset class
   #
-  # Returns tibble keyed by age with delta_vanish, delta_route, delta_realize,
-  # c_phi — each on the bathtub grid [18, 80].
+  # Returns: tibble by age of the forgiven, routed and taxed shares, and the share
+  #          the holder internalizes.
 
   asset_classes = KG_DYN_ASSET_CLASSES
 
@@ -173,24 +177,20 @@ kg_dyn_build_regime_mix = function(regime_codes, theta, baseline_t,
   for (k in asset_classes) {
     tr = triplets[[k]]
 
-    # §121 primary-residence exclusion. Under BOTH deemed realization and
-    # carryover, only the above-cap primary-home gain is "live": deemed taxes
-    # it on the decedent's final return; carryover routes it to heirs. Both are
-    # modeled as a death-time basis step-up of up to the §121 cap, so the
-    # below-cap portion never enters the taxable/routed stock. Under step-up the
-    # whole home gain is forgiven, so §121 is moot (delta_vanish keeps the full
-    # share). live_share is §121-net for primary_home, the full share otherwise.
+    # On a primary home, only the gain above the §121 exclusion is at stake.
+    # Whether the gain is taxed at death or routed to the heir, the exclusion is
+    # modeled as a step-up in basis up to the cap, so the portion below it never
+    # enters either stock. Where the whole gain is forgiven anyway the exclusion
+    # does not matter. Every other asset class puts its full share at stake.
     live_share = if (k == 'primary_home') share_primary_above_cap else share[[k]]
 
     delta_vanish  = delta_vanish  + share[[k]] * tr$vanish
     delta_route   = delta_route   + live_share * tr$route
     delta_realize = delta_realize + live_share * tr$realize
 
-    # Carryover internalization: holder values theta of the routed stock
-    # (§121-net for primary_home).
+    # The holder counts the routed gain only in part, and the gain taxed at death
+    # in full.
     c_phi = c_phi + theta * tr$route * live_share
-
-    # Deemed realization burden share (§121-net for primary_home).
     c_phi = c_phi + tr$realize * live_share
   }
 
@@ -224,26 +224,20 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
                                     estate_e_S_col = NULL,
                                     ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
-  # Assembles per-cell quantities the applier needs:
-  #   rate_factor   = r_S / r_B           (clamped to 1 when r_B = 0)
-  #   extra_R       = r_S * (dG - corp_gain_debit)  (lock-in stock realized
-  #                   at r_S; the corporate-incidence gain-state debit -- the
-  #                   PRICE margin of the equity markdown, D18 -- reduces the
-  #                   realized deviation stock. It is a per-year LEVEL
-  #                   adjustment recomputed from the current markdown
-  #                   (corp_kg_state_debit_by_year), NEVER accumulated through
-  #                   the recurrence, and deliberately NOT in deemed_factor:
-  #                   deemed gains already carry the markdown through the
-  #                   record-level value.* columns the corporate applier
-  #                   scaled on the conventional frame.)
-  #   deemed_factor = (G_B + dG) / G_B    (clamped >= 0; CLEAN dG)
-  # Plus diagnostic columns used by kg_dyn_build_summary: per-asset
-  # G_B_{class}, G_B_primary_above_cap, cell-level regime-mix outputs
-  # (delta_vanish/route/realize, c_phi). Bellman matrices are sliced from
-  # the extended grid to the bathtub grid [18, 80] before persisting.
+  # Assembles the three quantities the record allocation needs, along with the
+  # diagnostic columns the summary reads.
   #
-  # corp_debit: optional named (by age) vector of gain-state debit dollars
-  # (>= 0 for a hike); NULL for non-corporate scenarios (identical output).
+  # rate_factor is the ratio of the scenario realization rate to the baseline one.
+  # extra_R is the realized part of the change in the stock of gains. deemed_factor
+  # scales gains at death to the changed stock.
+  #
+  # Under a corporate reform, the equity markdown reduces the change in the stock
+  # before it is realized. That debit is recomputed from the current markdown each
+  # year rather than carried through the recurrence, and it deliberately does not
+  # enter deemed_factor: gains at death already see the markdown through the asset
+  # values the corporate step scaled on the record.
+  #
+  # Returns: tibble of one row per cell (df).
 
   ages_chr = as.character(ages_bathtub)
   diag_or = function(name, default) {
@@ -272,8 +266,7 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
     corp_debit = setNames(rep(0, length(ages_chr)), ages_chr)
   }
 
-  # tau_eq / sigma-conversion columns: additive diagnostics (zeros when the
-  # tau_eq recursion or the conversion channel is off).
+  # Diagnostic columns, zero when the module that fills them is not running.
   if (is.null(tau_eq_B_col)) {
     tau_eq_B_col = setNames(rep(0, length(ages_chr)), ages_chr)
   }
@@ -284,12 +277,9 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
     conv_inflow_vec = setNames(rep(0, length(ages_chr)), ages_chr)
   }
 
-  # Wealth-carry columns: additive diagnostics on the same zero-default
-  # pattern (all-zero for every non-wealth run — byte-diff tooling should
-  # compare revenue/detail CSVs, not the kg state/diagnostic files).
-  # carry_h is the h the Bellman/tau_eq actually consumed (post-
-  # kg.wealth_carry_scale); tau_w is the plain gain-weighted mtr_net_worth
-  # mean, diagnostics only.
+  # Wealth tax columns, zero for every run without a wealth tax. carry_h is the
+  # carrying cost the realization choice actually used; tau_w is the plain average
+  # wealth rate, for diagnostics only.
   if (is.null(carry_h_col)) {
     carry_h_col = setNames(rep(0, length(ages_chr)), ages_chr)
   }
@@ -345,13 +335,10 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            estate_e_S    = as.numeric(estate_e_S_col [as.character(age)]),
            estate_e_S    = if_else(is.na(estate_e_S), 0, estate_e_S),
            rate_factor   = if_else(r_B > 0, r_S / r_B, 1),
-           # Clamp the lock-in stock to the cell's gain stock: under
-           # permanent rate hikes dG can run sufficiently negative that
-           # r_S * dG would subtract more from kg_lt than the cell holds.
-           # pmax(., -G_B) caps the drawdown at full depletion of G_B,
-           # consistent with deemed_factor's >=0 clamp below. The corporate
-           # gain-state debit reduces the realized deviation stock here (and
-           # ONLY here -- see docstring).
+           # Cap the drawdown at the cell's whole stock of gains. Under a
+           # permanent rate increase the change in the stock can go negative
+           # enough that realizing at the scenario rate would take out more than
+           # the cell holds. The clamp below on gains at death does the same.
            extra_R       = r_S * pmax(dG - corp_gain_debit, -G_B),
            deemed_factor = if_else(G_B > 0,
                                    pmax(0, (G_B + dG) / G_B),
@@ -390,81 +377,58 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
                                     ages_bellman = KG_DYN_AGE_MIN:
                                                     KG_DYN_AGE_MAX_BELLMAN) {
 
-  # Runs the bathtub recurrence across scenario_info$years and persists one
-  # state file per year — the contract consumed by the kg_dynamics behavior
-  # module's per-record applier. State at kg_dynamics_state/{t}.rds is
-  # list(regime, cell_table) plus, for sigma-conversion scenarios, a
-  # cell-level sigma tracker (DESIGN_LOCK ruling 7).
+  # Runs the whole pass for one scenario and writes one state file per year, which
+  # is what the behavior module then reads to adjust records.
   #
-  # corp_debit_by_year (optional): per-year named vectors of the corporate
-  # gain-state debit (corp_kg_state_debit_by_year; NULL = no corporate
-  # channel). Threaded into kg_dyn_build_cell_table's extra_R only -- the
-  # RECURRENCE runs on the clean behavioral delta by design (the debit is a
-  # level adjustment recomputed each year from the current markdown; routing
-  # it through delta would compound it and double-count heirs' markdown,
-  # which next year's recomputed debit already covers).
+  # The order of work is:
   #
-  # reform_carry (optional): per-year list(h, tau_w) of named age vectors
-  # from kg_dyn_aggregate_cell_carry (via kg_dyn_load_bathtub_inputs) — the
-  # wealth-tax deferral carrying cost. h is packed onto the Bellman grid
-  # (age-80 repeated forward, kg_dyn_pack_tau), scaled by the
-  # kg.wealth_carry_scale assumption (default 1; a DISCLOSED, uncalibrated
-  # statutory-vs-effective sensitivity knob — e.g. set to the
-  # retained-reported share under avoidance), and threaded into Pass 2 of
-  # the Bellman and the scenario-side tau_eq recursion. Pass 1 (baseline)
-  # and prims_B NEVER receive h: h_B == 0 by law, asserted in the loader.
-  # NULL or all-zero h (every non-wealth scenario) leaves the channel dormant,
-  # bar the all-zero carry_h/tau_w diagnostic columns.
+  #   1. build the baseline cells, over the age grid extended past 80
+  #   2. assemble the marginal rate matrices for both legs
+  #   3. solve the baseline realization choice, recovering the benefit of
+  #      realizing
+  #   4. resolve each year's treatment of gains at death and solve the scenario
+  #   5. build the retiming schedule, combine it with the long-run response into a
+  #      realization rate per year, and price a dollar of gain for both legs
+  #   6. for each year, compute any conversions, step the stock forward, build the
+  #      cell table and write it out
   #
-  # baseline_estate / reform_estate (optional): per-year named age vectors
-  # from kg_dyn_aggregate_cell_estate (via kg_dyn_load_bathtub_inputs) —
-  # the LEG-PAIRED estate exposure of the kg death value (cell-aggregated
-  # switch-gated mtr_estate_ded, clamped [0, 1]). Packed onto the Bellman
-  # grid like tau (age-80 repeated forward). Pass 1 and prims_B receive
-  # e_B; Pass 2 and prims_S receive e_S — NEVER a single shared matrix
-  # (that would zero out estate-only reforms: e_S > e_B with tau unchanged
-  # would give MC_S = MC_B and no realization response). Unlike h there is
-  # no zero-baseline invariant: current law HAS an estate tax, so e_B > 0
-  # for estate-taxable cells — which also means (1 - e_B) touches the
-  # CURRENT-LAW Bellman and hence the eta long-run-elasticity anchor
-  # (re-check it when this channel changes). NULL = zeros (unit tests /
-  # pre-build callers), leaving the channel dormant bar the all-zero
-  # estate_e_B/estate_e_S state columns.
+  # Parameters worth explaining:
   #
-  # Baseline-regime assumption: Pass 1 hard-codes step-up (c_phi = 0,
-  # mix_list = NULL); adding baseline estate exposure e_B is correct IN
-  # CONJUNCTION with that convention (F_B = tau_B * (1 - e_B), and prims_B
-  # has realize = 0 so e_B enters tau_eq_B only through... nothing — the
-  # death-realize term is zero under step-up; e_B's bite is in the Bellman).
-  # If baselines ever carry carryover/deemed regimes, revisit the
-  # baseline-side construction here.
+  #   - corp_debit_by_year : the corporate equity markdown's debit to the stock of
+  #                          gains. Enters the realized stock only. The recurrence
+  #                          itself runs on the clean change in gains: routing the
+  #                          debit through it would compound it year over year and
+  #                          double-count the markdown heirs already see, which
+  #                          next year's recomputed debit covers anyway.
+  #   - reform_carry       : the wealth tax cost of deferring, by year. Scaled by
+  #                          the kg.wealth_carry_scale setting, which is an
+  #                          uncalibrated sensitivity knob, then used in the
+  #                          scenario solve and the scenario pricing. The baseline
+  #                          never receives it, since a baseline has no wealth tax.
+  #   - baseline_estate,
+  #     reform_estate      : the estate tax offset on gains taxed at death, one per
+  #                          leg. These must stay separate. Sharing one would
+  #                          silently kill estate-only reforms, where the gains
+  #                          rate is unchanged and the estate offset is the only
+  #                          thing that moves. Note that unlike the wealth tax cost
+  #                          this is nonzero in the baseline, since current law has
+  #                          an estate tax, which means it touches the baseline
+  #                          solve and so the elasticity anchor. Re-check the
+  #                          calibration when this changes.
+  #   - sigma_ctx          : context for the income conversion module, when the
+  #                          scenario runs it. Conversions are computed per record,
+  #                          aggregated to cells, and added to the stock at year
+  #                          end. Only the cell totals are written out; the module
+  #                          recomputes the record-level conversions itself.
   #
-  # sigma_ctx (optional): sigma-conversion context built by
-  # sigma_build_ctx() (src/sim/sigma_conversion.R) when the scenario runs
-  # the conversion/sigma behavior module. Per year, the pass computes
-  # per-record conversions from the per-leg MTR wedges against tau_eq,
-  # aggregates them to age cells, and injects the cell inflow into the
-  # recurrence's delta_next (end-of-year entry). Only the cell tracker is
-  # persisted; the behavior module recomputes record conversions from the
-  # same inputs (ruling 7). NULL = no conversion channel.
+  # The baseline solve assumes step-up on everything. The baseline estate offset is
+  # consistent with that, but if a baseline ever carries carryover or deemed
+  # realization, revisit how the baseline side is built here.
   #
-  # Flow:
-  #   1. Build extended-grid baseline cells (bathtub + 81-119 SSA tail).
-  #   2. Pack tau matrices (baseline + reform).
-  #   3. Pass 1 Bellman (baseline): recover kappa.
-  #   4. Resolve per-year scenario regime; Pass 2 Bellman using kappa.
-  #   5. Build planned-timing schedule from law-only tau_S minus tau_B
-  #      (reform_tau_timing: pre-mech-injection MTRs, so the wedge is
-  #      statutory-only; the Bellman's tau_S keeps the mech income effect).
-  #   5b. Combine buckets into per-year r_S vectors; run the tau_eq
-  #      recursion (baseline + scenario policies) on the bathtub grid.
-  #   6. Per year: sigma conversions (when active), run
-  #      kg_dyn_step_recurrence with the conversion inflow, build
-  #      cell_table, persist.
+  # Returns: invisibly NULL.
 
-  # Finite-parameter guards check the ACTIVE form's pair: selecting 'logs'
-  # before eta_tilde / timeable_share_logs are pinned hard-stops here exactly
-  # like the historical eta = NA bootstrap for levels.
+  # Check the active form's parameters are pinned. Choosing a form whose pair has
+  # not been calibrated stops here rather than simulating an uncalibrated model.
   if (!form %in% c('levels', 'logs'))
     stop(sprintf("kg_dynamics: form must be 'levels' or 'logs'; got '%s'.", form))
   eta_const  = if (identical(form, 'logs')) 'kg.eta_logs' else 'kg.eta'
@@ -473,15 +437,15 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   if (!is.finite(eta)) {
     stop(sprintf(paste0('kg_dynamics: %s (the %s-form eta) is not set. Pin it ',
          'via the eta_dial protocol under kg.response_form=%s ',
-         '(other/top_tax/eta_dial/) and paste the calibrated value into the ',
-         'constants block at the top of src/sim/kg/constants.R.'),
+         '(other/top_tax/eta_dial/) and record the calibrated value in ',
+         'config/calibrations/kg/bathtub.yaml.'),
          eta_const, form, form))
   }
   if (!is.finite(timeable_share)) {
     stop(sprintf(paste0('kg_dynamics: %s (the %s-form timeable share) is not ',
          'set. Pin it against the short-run announcement moment under ',
-         'kg.response_form=%s and paste the calibrated value into the ',
-         'constants block at the top of src/sim/kg/constants.R.'),
+         'kg.response_form=%s and record the calibrated value in ',
+         'config/calibrations/kg/bathtub.yaml.'),
          frac_const, form, form))
   }
   kg_dyn_validate_timing_params(timeable_share = timeable_share,
@@ -492,37 +456,33 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
   state_dir = kg_dyn_state_dir(scenario_info)
   dir.create(state_dir, recursive = TRUE, showWarnings = FALSE)
 
-  # Step 0: build per-year real-rate discount factors from Macro-Projections
+  # Build the discount factors, from real interest rates
   macro_root = scenario_info$interface_paths$`Macro-Projections`
   if (is.null(macro_root)) {
     stop('kg_dynamics: scenario_info$interface_paths$`Macro-Projections` is ',
-         'NULL. The bathtub pre-pass needs the Macro-Projections vintage to ',
-         'derive the real-rate discount factor for the Bellman.')
+         'NULL. The pre-pass needs it to derive the real interest rate the ',
+         'realization choice discounts at.')
   }
   beta_by_year = kg_dyn_load_beta_series(macro_root, years)
 
-  # Step 1: extended grid (mortality tail 81-119)
+  # Extend the age grid past 80 with life table mortality
   life_ext = kg_dyn_load_life_table_extension(years = years)
   grid_ext = kg_dyn_build_extended_grid(baseline_cells, life_ext, years,
                                         ages_bellman = ages_bellman)
   grid_packed = kg_dyn_pack_baseline_grid(grid_ext, years,
                                           ages_bellman = ages_bellman)
 
-  # (Single pool: no r_exog carve-out, so r_D_B = clip(r_B, 0, 1) is always well
-  # defined; cells with measured r_B > 1 clip to r_D_B = 1 and still respond.)
-
-  # Step 2: tau matrices
+  # Marginal rates on gains, by leg
   tau_B_mat = kg_dyn_pack_tau(baseline_tau, years, ages_bellman = ages_bellman)
   tau_S_mat = kg_dyn_pack_tau(reform_tau,   years, ages_bellman = ages_bellman)
   tau_S_timing_mat = kg_dyn_pack_tau(reform_tau_timing, years,
                                      ages_bellman = ages_bellman)
 
-  # Step 2b: wealth-carry matrix (scenario side only; see reform_carry doc).
-  # kg.wealth_carry_scale applies at pack time so every consumer (Bellman,
-  # tau_eq, guard slack, state-file carry_h column) sees the scaled h.
+  # The wealth tax cost of deferring, on the scenario side only. Scale it here,
+  # so that everything downstream sees the same scaled value.
   carry_scale = as.numeric(kg_setting('wealth_carry_scale'))
   if (!is.finite(carry_scale) || carry_scale < 0) {
-    stop('kg_dynamics: assumption kg.wealth_carry_scale must be a finite ',
+    stop('kg_dynamics: kg.wealth_carry_scale must be a finite ',
          'nonnegative number; got "', carry_scale, '".')
   }
   years_chr_all = as.character(years)
@@ -540,10 +500,8 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     tau_w_diag = lapply(reform_carry, `[[`, 'tau_w')
   }
 
-  # Step 2c: LEG-PAIRED estate-exposure matrices (see the parameter doc).
-  # Same pack as tau (age-80 repeated forward across [81, 119]); the
-  # aggregator already clamped each cell to [0, 1]. NULL (unit tests /
-  # pre-build callers) = zeros = channel dormant.
+  # The estate tax offset, one matrix per leg. Absent for unit tests and for
+  # callers that predate the channel, which leaves it dormant.
   zeros_bellman = function() {
     matrix(0, length(ages_bellman), length(years),
            dimnames = list(as.character(ages_bellman), years_chr_all))
@@ -555,19 +513,15 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     kg_dyn_pack_tau(reform_estate, years, ages_bellman = ages_bellman)
   }
 
-  # Step 3: baseline Bellman pass (c_phi = 0 across the whole grid under
-  # current-law step-up — every asset gets step-up forgiveness). e_mat is
-  # the BASELINE-law exposure e_B: current law has an estate tax, so the
-  # baseline death value is F_B = tau_B * (1 - e_B) (leg-paired, unlike h).
+  # Solve the baseline. Nothing is taxed at death, since current law gives every
+  # asset a step-up in basis, but the baseline estate offset still applies.
   pass1 = kg_dyn_solve_bellman(grid_packed, tau_B_mat, c_phi_mat = 0,
                                eta = eta,
                                beta_by_year = beta_by_year,
                                e_mat = e_B_mat,
                                form = form)
 
-  # Step 4: resolve year-by-year per-asset regime codes, build cell-level
-  # regime mix (c_phi, delta_vanish/route/realize), and pack the Bellman
-  # c_phi matrix on the extended grid.
+  # Resolve each year's treatment of gains at death and average it to cells
   ages_bathtub_chr = as.character(ages_bathtub)
   ages_ext_chr     = as.character(setdiff(ages_bellman, ages_bathtub))
   ages_bellman_chr = as.character(ages_bellman)
@@ -585,9 +539,7 @@ kg_dyn_run_bathtub_pass = function(scenario_info, tax_law, baseline_cells,
     regime_list[[j]] = res$regime
     mix_list[[j]]    = mix
 
-    # Pack c_phi onto the extended Bellman grid: bathtub values from the
-    # mix, age-80 value repeated forward across [81, 119] (same pattern as
-    # tau_mat in kg_dyn_pack_tau).
+    # Carry the age-80 value forward over the extended ages, as the rates are
     c_phi_bt_named = setNames(mix$c_phi, as.character(mix$age))
     c_phi_S_mat[ages_bathtub_chr, j] = c_phi_bt_named[ages_bathtub_chr]
     if (length(ages_ext_chr) > 0) {

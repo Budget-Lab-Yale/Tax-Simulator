@@ -1,22 +1,22 @@
 #-----------------------------------------------------------------------
 # worker.R
 #
-# Phase 1, 2A, and 2C workers. Phase 2B has its own driver (bathtub.R).
-# Each SLURM array task calls run_one_year() for a single (scenario, year)
-# combination with the appropriate pass_type:
+# Phase 1, 2A, 2N, and 2C workers. Phases 2B and 2W have their own drivers
+# (bathtub.R and wealth.R). Each SLURM array task calls run_one_year() for a
+# single scenario and year, with the phase's pass_type:
 #
-#   Phase 1   : baseline year, pass_type = 'both' (no behavior modules)
-#   Phase 2A  : cf year, pass_type = 'static'      (static + MTRs only)
-#   Phase 2C  : cf year, pass_type = 'conventional' (reads precomputed
-#               static MTRs from year_{y}_static.rds and bathtub state
-#               from kg_dynamics_state/{y}.rds for kg_dynamics scenarios)
+#   Phase 1   : baseline year, pass_type = 'both'
+#   Phase 2A  : counterfactual year, pass_type = 'static'
+#   Phase 2N  : counterfactual year, pass_type = 'conventional_no_wealth'
+#   Phase 2C  : counterfactual year, pass_type = 'conventional'
 #
-# Per-year .rds files use phase-specific suffixes so Phase 3a aggregation
-# can read both static and conventional outputs:
+# Per-year .rds files carry phase-specific suffixes so Phase 3a can read the
+# static and conventional outputs separately:
 #
-#   Phase 1   : year_{y}.rds        (legacy name; baseline static + null conv)
-#   Phase 2A  : year_{y}_static.rds (mtrs + static_totals)
-#   Phase 2C  : year_{y}_conv.rds   (conventional_totals)
+#   Phase 1   : year_{y}.rds        (baseline static, null conventional)
+#   Phase 2A  : year_{y}_static.rds (MTRs and static totals)
+#   Phase 2N  : year_{y}_convnw.rds (no totals, detail read by Phase 2W)
+#   Phase 2C  : year_{y}_conv.rds   (conventional totals)
 #
 # CLI args:
 #   Rscript src/slurm/worker.R <staging_dir> <phase>
@@ -51,8 +51,7 @@ tryCatch({
 
   # Install this scenario's resolved configuration. A SLURM worker is a fresh R
   # process that never runs do_scenario, so without this every economy_param()
-  # read errors (fail-closed by design -- see src/misc/scenario_config.R).
-  # scenario_info rides in on config.rds, so nothing extra is serialized.
+  # read errors. See src/misc/scenario_config.R.
   config_activate(economy  = config$scenario_info$resolved_economy,
                   behavior = config$scenario_info$resolved_behavior)
 
@@ -78,11 +77,10 @@ tryCatch({
     }
   }
 
-  # For Phase 2C/2N: load this scenario's static_mtrs from Phase 2A's per-year
-  # .rds. Every 2C/2N task has a matching 2A task that wrote this file, so a
-  # missing file means a broken/partial staging dir (e.g. a manual phase
-  # re-run after cleanup) -- fail here rather than silently handing behavior
-  # modules static_mtrs = NULL (main.R always threads the in-memory MTRs)
+  # Read this scenario's static MTRs from the Phase 2A per-year file. Every 2C
+  # and 2N task has a matching 2A task that wrote it, so a missing file means a
+  # partial staging directory -- stop rather than hand the behavior modules a
+  # null set of static MTRs
   static_mtrs_year = NULL
   if (phase %in% c('2C', '2N')) {
     static_rds = file.path(staging_dir, task$scenario,
@@ -116,9 +114,8 @@ tryCatch({
     static_mtrs_year     = static_mtrs_year
   )
 
-  # Save result with phase-appropriate filename. The conv-no-wealth (2N) result
-  # carries no totals (intermediate pass; its detail is consumed by the wealth
-  # pre-pass 2W from disk) -- saved for symmetry, not read by Phase 3a.
+  # Save result under the phase's filename. The conv-no-wealth result carries no
+  # totals: Phase 2W reads its detail from disk instead.
   out_path = switch(phase,
     '1'  = paste0('year_', task$year, '.rds'),
     '2A' = paste0('year_', task$year, '_static.rds'),

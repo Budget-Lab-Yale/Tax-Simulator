@@ -1,57 +1,43 @@
 #-------------------------------------------------------------------------------
-# SIGMA_PROVENANCE
+# conversion/sigma.R
 #
-# Income-conversion response (the top-tax exercise's sigma): owner-managers
-# repackage top salary and active pass-through compensation as unrealized
-# equity appreciation when the ordinary-vs-equity-path wedge widens. Live
-# design rulings: other/top_tax/DESIGN_LOCK.md; machinery in
-# src/sim/sigma_conversion.R (shared pure function) and src/sim/kg/
-# (tau_eq recursion + gain-state injection).
-#
-# Forcing/object pair: the forcing is the per-record, per-leg WEDGE CHANGE
-# Delta W = Delta(mtr_leg) - Delta(tau_eq(age)) — ordinary legs from the
-# record's own calculator-measured MTRs (static reform vs baseline, the
-# standard MTR-frame convention), equity leg from the tau_eq recursion (the
-# expected PV tax per dollar entering the kg gain state, priced by finite
-# difference against the exact bathtub recurrence dynamics). The object that
-# moves is the payment FORM of labor compensation: gated records' wage/PT
-# legs shrink and the converted dollars enter the kg bathtub's deviation
-# stock, where they realize at the holder's age-specific rate and meet the
-# death regime like any other gain. Nothing is added to record kg_lt here —
-# converted gains are unrealized; taxation arrives in later years through
-# the cell machinery.
-#
-# No phase-in phi(t): a memoryless annual response to the current-year wedge
-# gap, the same convention as entity shifting and evasion. sigma is CALIBRATED
-# as the residual conversion margin -- entity shifting and evasion supply about
-# 0.22 of the 0.25 top-subset ETI target on their own -- against the +5pp
-# top-ordinary validation leg with the full stack running. It was 0.08 when
-# first derived on 2026-07-08 and 0.16 after the 2026-07-12 re-derivation; the
-# shipped value and its provenance live in config/calibrations/kg/conversion.yaml,
-# and the method and staleness conditions are in SIGMA_CALIB_PROVENANCE in
-# src/sim/sigma_conversion.R. Calibrating it this way is what resolved
-# DESIGN_LOCK ruling 2's double-count caveat, the original asserted 0.6 central
-# having been a total-response anchor that overshot (full-stack ETI 0.431).
-#
-# ORDER. This module needs the bathtub to have run first -- it consumes the kg
-# state file, and the kg applier must not see sigma-reduced legs it never
-# modeled -- and needs entity shifting and evasion to run after, so their
-# responses operate on the post-conversion compensation base. Running them in
-# sequence is what stops the same dollar being moved twice. None of that is
-# enforced here any more: the loader sorts every stack against one pinned family
-# order and refuses a conversion module without the bathtub, before the run
-# starts (src/sim/behavior.R).
+# Contains the income conversion response
 #-------------------------------------------------------------------------------
+
+# Assume that owner-managers can take top salary and active pass-through income as
+# unrealized equity appreciation instead, and do more of it as the tax advantage of
+# doing so widens. The machinery is in src/sim/sigma_conversion.R, which this module
+# calls, and the gains model prices the equity side.
+#
+# What moves is the form in which labor is paid. A record's wage and pass-through
+# legs shrink, and the converted dollars enter the stock of unrealized gains, where
+# they realize at that holder's rate and meet whatever happens to gains at death.
+# Nothing is added to realized gains here: converted gains are unrealized, and the
+# tax on them arrives in later years.
+#
+# The response is to the current year's change in the advantage, with no phase-in,
+# the same convention entity shifting and evasion use.
+#
+# The response parameter is calibrated as a residual, since entity shifting and
+# evasion supply most of the target on their own. The value and its provenance are in
+# config/calibrations/kg/conversion.yaml, and the method is described in
+# src/sim/sigma_conversion.R. Calibrating it this way is what settled the concern
+# that the response would double-count what those two modules already do: the value
+# originally asserted was a total-response figure and overshot.
+#
+# On order: this needs the gains model to have run first, since it reads its state
+# and the gains model must not see legs this module has already reduced. And entity
+# shifting and evasion need to run after, so that they respond to what is left.
+# Running them in sequence is what stops the same dollar moving twice. The loader
+# enforces all of that before the run starts.
 
 do_conversion = function(tax_units, baseline_mtrs, static_mtrs,
                          scenario_info, indexes) {
 
   #----------------------------------------------------------------------------
-  # Applies the sigma income-conversion response. Record-level conversions
-  # are recomputed here via the SAME shared pure function the bathtub
-  # pre-pass used (sigma_compute_conversions; DESIGN_LOCK ruling 7 — only
-  # the cell tracker is persisted), then hard-checked for conservation
-  # against the cell inflow the pre-pass injected into the gain state.
+  # Applies the conversion response. The record-level conversions are recomputed here
+  # through the same function the pre-pass used, since only the cell totals were
+  # written out, and then checked against those totals.
   #
   # Parameters:
   #   - tax_units (df)       : tibble of tax units with calculated variables

@@ -1,51 +1,41 @@
 #-------------------------------------------------------------------------------
-# EVASION_PROVENANCE
+# evasion/debacker.R
 #
-# Rate-driven income tax noncompliance (evasion), per DeBacker (U. of South
-# Carolina), Heim (U. of Central Florida) & Yuskavage (Treasury OTA),
-# "Marginal Tax Rates and Income Tax Noncompliance" (NTA Annual Meetings,
-# November 6, 2025; NRP random-audit data 2006-2017; findings are the
-# authors', not Treasury's).
-# DHY estimate the elasticity of noncompliance with respect to the net-of-tax
-# rate as a COMPONENT of the ETI (their slide 8: ETI = e_avoidance +
-# e_noncompliance), so the values below are applied here as net-of-tax-rate
-# elasticities of REPORTED income — the authors' own usage in their OBBBA
-# revenue illustration.
-#
-# The four values are defined below with their sources. Sign is handled by the
-# 'netoftax' form: reported income falls when the MTR rises. A band or a sweep
-# is a copy of this file with different numbers, listed by a different behavior
-# alternative -- there is no config cell to override and no environment
-# variable, both of which used to exist and left no record of what was run.
-#
-# Wages, interest and dividends get NO response, by design. Information
-# reporting makes them visible: DHY find nonzero audit-adjustment rates around
-# 7% for wages against about 74% for sole-proprietor income, and the tax-gap
-# literature puts wage misreporting near 1%.
-#
-# Omitted margins (accepted, revisit if they bind): overstated losses and
-# itemized deductions (DHY find itemizer elasticities 0.069-0.23; deduction-
-# side evasion is not modeled here — only positive income legs respond), and
-# any enforcement-recovery offset (audit recoveries are outside the model).
-#
-# Role in the top-tax ETI decomposition: this module is the EVASION leg —
-# income that LEAVES the tax system (a leak). It is distinct from the planned
-# cross-base shifting parameter (a conservation flow into the kg gain state)
-# and from modeled legal avoidance (realization, entity shifting, charity).
-# Do NOT stack this module with any generic ETI adjustment: that would
-# double-count the noncompliance component.
+# Contains the income tax noncompliance response
 #-------------------------------------------------------------------------------
+
+# Assume that reported income falls as the marginal rate rises, because some of it
+# is not reported at all. The elasticities are from DeBacker, Heim and Yuskavage,
+# "Marginal Tax Rates and Income Tax Noncompliance" (National Tax Association
+# meetings, November 2025), estimated on random audit data from 2006 to 2017. The
+# findings are the authors' own and not Treasury's.
+#
+# Those authors treat noncompliance as one component of the elasticity of taxable
+# income, alongside avoidance, and the values are used here the same way: as
+# elasticities of reported income with respect to the net-of-tax rate. That is their
+# own usage in their illustration of the 2025 act.
+#
+# Wages, interest and dividends do not respond, by design. Third parties report
+# them, so they are visible: the authors find audit adjustments on about 7% of wages
+# against about 74% of sole proprietor income, and the tax gap literature puts wage
+# misreporting near 1%.
+#
+# Two margins are left out. Overstated losses and deductions, where the authors do
+# find a response; only positive income legs move here. And any recovery through
+# enforcement, which the model does not represent.
+#
+# This is income leaving the tax system altogether. It is distinct from income
+# moving between bases, which entity shifting and conversion handle, and from legal
+# avoidance. Do not run it alongside a general elasticity of taxable income, which
+# would count noncompliance twice.
 
 EVASION_VERSION     = '2026-07-07 DHY (NTA 2025) centrals, seeded from slides'
 EVASION_MAX_ADJ     = 1
 EVASION_NET_RATE_EPS = 1e-12
 
-# --- The elasticities themselves ----------------------------------------------
-# These live here, in the module, because this module is their only reader. A
-# variant is a separate file in this folder, not a value in a config cell: that
-# is what keeps a behavior module a self-contained statement of one assumption.
-# Sources are in EVASION_PROVENANCE above; the one-line summaries repeat them
-# only so a reader of this block does not have to scroll.
+# The elasticities. Here because this module is the only thing that reads them. A
+# variant is another file in this folder rather than a value in a config file, so
+# the assumption is traceable to a file in git.
 
 # Schedule C/F -- sole proprietors and farms. DHY pooled cross-section,
 # sole-proprietor subsample, federal MTR. Alternative anchors, for a band rather
@@ -62,21 +52,20 @@ EVASION_E_PT = 0.052
 # in this module.
 EVASION_E_RENT = 0.040
 
-# Underdetection multiplier on all three. NRP random audits underdetect
-# sophisticated top-end evasion (offshore structures, tiered partnerships --
-# Guyton, Langetieg, Reck, Risch and Zucman 2021), so detected-noncompliance
-# elasticities are a floor for the top tail. 1 means no adjustment; a high-band
-# variant of this module would set 1.5 to 2.0.
+# A multiplier on all three, for evasion the audits do not detect. Random audits
+# miss sophisticated arrangements at the top, such as offshore structures and tiered
+# partnerships (Guyton, Langetieg, Reck, Risch and Zucman 2021), so an elasticity
+# measured from detected noncompliance is a floor there. At 1 there is no adjustment;
+# a high variant of this module would set 1.5 to 2.
 EVASION_TOPEND_MULT = 1
 
 
 evasion_response_factor = function(mtr, mtr_baseline, e) {
 
-  # A net-of-tax elasticity is undefined when the baseline net-of-tax rate is
-  # zero. Treat that degenerate price (and any non-finite MTR input) as no
-  # measured response, matching the module's documented convention. Guard the
-  # denominator BEFORE division: Inf would otherwise survive the NA fallback,
-  # hit the adjustment clamp, and spuriously zero or double reported income.
+  # The elasticity is undefined where the baseline net-of-tax rate is zero. Treat
+  # that, and any missing rate, as no response. Guard the
+  # denominator before dividing, since an infinity would survive the fallback, hit
+  # the clamp, and either zero or double reported income.
   net_base = 1 - mtr_baseline
   valid = is.finite(mtr) & is.finite(mtr_baseline) &
           abs(net_base) > EVASION_NET_RATE_EPS
@@ -92,31 +81,19 @@ evasion_response_factor = function(mtr, mtr_baseline, e) {
 do_evasion = function(tax_units, baseline_mtrs, static_mtrs, scenario_info, indexes) {
 
   #----------------------------------------------------------------------------
-  # Models rate-driven noncompliance: when the marginal tax rate on a
-  # low-visibility income type rises, reported income of that type falls (and
-  # vice versa), per the DHY elasticities documented in EVASION_PROVENANCE.
-  # Applies a net-of-tax-rate response by income-visibility group:
+  # Reduces reported income where its marginal rate rises, in three groups by how
+  # visible the income is: sole proprietorships and farms, pass-through income, and
+  # rent. Each group responds to one representative rate, which includes
+  # self-employment tax where that applies.
   #
-  #   - Schedule C/F group : sole_prop, farm — factor from mtr_sole_prop1
-  #                          (the SECA-inclusive Schedule C rate; calc_mtrs
-  #                          bumps sole_prop alongside sole_prop1)
-  #   - Pass-through group : part_active, part_passive, scorp_active,
-  #                          scorp_passive — factor from mtr_part_active
-  #                          (calc_mtrs bumps part_se1 alongside, so SECA is in)
-  #   - Rent               : rent — factor from mtr_rent
+  # Only positive legs respond, since underreporting shrinks reported income. Losses
+  # and the expensing legs are untouched. The earner splits scale with their parent
+  # aggregate, so the payroll base stays consistent. derive_vars() recombines the raw
+  # legs inside do_taxes(), so scaling them carries through.
   #
-  # Only POSITIVE income legs respond (underreporting shrinks reported income;
-  # the overstated-loss/deduction margin is deliberately omitted — see
-  # provenance block). Loss and Sec. 179 legs are untouched. SECA/NIIT
-  # earner-split companions (sole_prop1/2, farm1/2, part_se1/2) co-scale with
-  # their parent aggregate so the payroll frame stays consistent, mirroring
-  # the WEALTH_CAP_FLOWS_SE_COMPANIONS convention. derive_vars() recombines
-  # the raw legs into part/scorp/pt/sch_e inside do_taxes(), so scaling the
-  # legs propagates.
-  #
-  # This is an "implement-any-logic" module (like wealth/avoidance.R), not an
-  # apply_mtr_elasticity() call, because one shared group factor scales many
-  # legs plus companions; the netoftax formula is identical to the helper's.
+  # This is written out rather than being a call to apply_mtr_elasticity(), because
+  # one factor per group scales many legs at once. The formula is the same as the
+  # helper's.
   #
   # Parameters:
   #   - tax_units (df)       : tibble of tax units with calculated variables

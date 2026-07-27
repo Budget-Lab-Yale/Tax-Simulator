@@ -1,11 +1,13 @@
 #-------------------------------------------------------------------------------
 # channels.R
 #
-# Shared preconditions for the mechanical channels that read raw Tax-Data /
-# national aggregates rather than the post-adjustment record frame: kg_dynamics,
-# the wealth bathtub, and corporate incidence. Each channel keeps its own
-# *_check_run_compat() wrapper for its channel-specific requirements and calls
-# this for the conditions all of them share.
+# Contains the preconditions shared by the mechanical channels
+#-------------------------------------------------------------------------------
+
+# The gains model, the wealth model and corporate incidence all read raw Tax-Data
+# and national aggregates rather than the adjusted record frame, so they share a
+# set of requirements. Each keeps its own wrapper for what is particular to it and
+# calls this for the rest.
 #-------------------------------------------------------------------------------
 
 
@@ -14,12 +16,10 @@ check_raw_data_channel_compat = function(channel, scenario_info,
                                          vat_price_offset) {
 
   #----------------------------------------------------------------------------
-  # Refuses a run whose global settings are incompatible with a raw-dollar
-  # channel. All three channels form state (or analytic paths) in raw dollars
-  # while the per-record bases they land on are VAT-adjusted, so that
-  # adjustment would put the channel in an inconsistent unit system.
-  # Full sample is required because every channel's cell aggregates -- and the
-  # corporate conservation diagnostic -- assume full-population weights.
+  # Refuses a run whose settings do not suit these channels. Each of them works in
+  # raw dollars while the record-level bases they land on are adjusted for a VAT, so
+  # a VAT scenario would leave the channel in inconsistent units. And the full sample
+  # is required, because their cell aggregates assume the whole population.
   #
   # Parameters:
   #   - channel (str)             : channel name, used in the error messages

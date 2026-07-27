@@ -1,35 +1,32 @@
 #-------------------------------------------------------------------------------
 # apply.R
 #
-# Per-record appliers (pure allocators) and the cell-level MTR / carry / estate aggregators they pair with.
+# Contains functions to allocate cell-level results to records, and to aggregate
+# records up to cells
 #-------------------------------------------------------------------------------
 
 
 #-------------------------------------------------------------------------------
-# Per-record applier (pure allocator). Reads the precomputed cell_table from
-# the bathtub state file and translates cell-level quantities into per-record
-# kg_lt adjustments via three channels (spec §7.3):
-#   rate     : kg_lt > 0 → kg_lt * rate_factor (= r_S/r_B, clamped to 1)
-#   lock-in  : extra_R = r_S * dG, allocated by positive-kg_lt share if
-#              R_B > 0, else by G_unit share, else skip
-#   deemed   : asset-aware. For each asset class k:
-#                contribution_k = realize_k * gain_k_i        (k ≠ primary)
-#                contribution_primary = realize_primary *
-#                                       pmax(0, gain_primary_i - sec121_i)
-#              Summed and scaled by (G_B + dG)/G_B (deemed_factor) into
-#              kg_deemed_full; kg_deemed = m_household * kg_deemed_full.
-#              realize_k comes from regime$realize, the year-level per-asset
-#              deemed indicators from the regime mix. Deemed gains do NOT
-#              enter kg_lt — run_one_year prices them via a two-leg
-#              expected-tax recompute (see kg_deemed comment below).
+# Spreading the cell results over records changes kg_lt three ways:
+#
+#   rate      records with gains scale by the ratio of the scenario realization
+#             rate to the baseline one
+#   lock-in   the cell's realized change in the stock of gains is spread over
+#             records in proportion to realizations, or to holdings where the
+#             cell realized nothing
+#   at death  gains deemed realized at death are summed by asset class, netting
+#             the §121 exclusion off a primary home, and scaled to the changed
+#             stock of gains
+#
+# Gains deemed realized at death do not go into kg_lt. See the note in the
+# function on why.
 #-------------------------------------------------------------------------------
 
 kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset) {
 
-  # Pull just the columns the applier consumes from cell_table via a
-  # vectorized match() — avoids hash-joining the ~35-column diagnostics
-  # table (with all the Bellman/timing/regime columns) onto 220k records
-  # per scenario-year.
+  # Take only the columns needed, by position rather than by joining. The cell
+  # table carries about 35 diagnostic columns and there are 220,000 records per
+  # scenario-year, so a join here is expensive for no reason.
   idx           = match(tax_units$age_cohort, cell_table$age)
   rate_factor   = cell_table$rate_factor  [idx]
   extra_R       = cell_table$extra_R      [idx]
@@ -44,30 +41,24 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset) {
          paste(missing, collapse = ', '))
   }
 
-  # Applier-only deemed avoidance haircut. Data-calibration constant
-  # (assumption kg.deemed_avoidance), NOT tax law. Scales the per-record deemed
-  # contribution to reflect noncompliance / valuation games; does not touch
-  # c_phi or the Bellman.
+  # Scale down gains realized at death for noncompliance and valuation games.
+  # This is a measurement parameter, not tax law, and it does not affect what the
+  # taxpayer takes into account when deciding whether to realize during life.
   deemed_avoidance = kg_setting('deemed_avoidance')
   if (!is.finite(deemed_avoidance) ||
       deemed_avoidance < 0 || deemed_avoidance > 1) {
     stop(sprintf(
-      'kg_dyn_apply_to_records: assumption kg.deemed_avoidance must be in [0, 1]; got %s.',
+      'kg_dyn_apply_to_records: kg.deemed_avoidance must be in [0, 1]; got %s.',
       format(deemed_avoidance)))
   }
   avoidance_keep = 1 - deemed_avoidance
 
-  # The avoidance haircut is a VALUE discount (valuation games mark down the
-  # asset value; basis is unchanged), applied PER RECORD so cross-sectional
-  # dispersion in basis/value is preserved: discounted gain = pmax(0, keep*value
-  # - basis). A uniform average basis/value ratio would (Jensen, at the pmax(0)
-  # kink) zero out a whole class once the mean basis/value exceeds keep, even
-  # though the low-basis tail still has taxable gain. value.*/basis.* are on
-  # tax_units (read by kg_dyn_attach_record_attrs); the result is a dollar gain
-  # amount, so it still rides deemed_factor = (G_B + dG)/G_B for the dG
-  # evolution -- we only need baseline value/basis at the record, never through
-  # the recurrence. Equals the full gain stock at keep = 1. primary_home nets
-  # the §121 exclusion off the discounted gain.
+  # The haircut discounts asset value, leaving basis alone, so the discounted
+  # gain is the marked-down value less basis, floored at zero. Do this per record
+  # rather than on a cell average: because of the floor, an average basis-to-value
+  # ratio above the haircut would zero out a whole asset class, even though the
+  # records with the lowest basis still have a taxable gain. At no haircut this
+  # returns the full gain. A primary home nets its §121 exclusion afterward.
   needed = c(KG_DYN_ASSET_VALUE_COLS, KG_DYN_ASSET_BASIS_COLS)
   miss = setdiff(needed, names(tax_units))
   if (length(miss) > 0) {
@@ -89,23 +80,22 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset) {
       realize_by_asset[['other_home']]    * disc_gain('other_home') +
       realize_by_asset[['re_fund']]       * disc_gain('re_fund')
 
-  # Resolve the allocation knob to a numeric weight on the G (holdings)
-  # share: 'R' = 0 (historical), 'G' = 1, or a numeric blend in [0, 1].
+  # Weight on the holdings share: 0 spreads by realizations, 1 by holdings, and
+  # anything between blends the two.
   applier_allocation = as.character(kg_setting('applier_allocation'))
   alpha_G = switch(applier_allocation,
                    R = 0,
                    G = 1,
                    suppressWarnings(as.numeric(applier_allocation)))
   if (!is.finite(alpha_G) || alpha_G < 0 || alpha_G > 1) {
-    stop("kg_dyn_apply_to_records: assumption kg.applier_allocation must be 'R', ",
+    stop("kg_dyn_apply_to_records: kg.applier_allocation must be 'R', ",
          "'G', or a number in [0, 1]; got '", applier_allocation, "'.")
   }
 
   tax_units %>%
     mutate(
-      # Each share sums to 1 within an age cell (with cross-fallbacks when a
-      # cell has no realizations / no gain stock), so any convex blend does
-      # too.
+      # Each share sums to 1 within a cell, falling back to the other where a
+      # cell has no realizations or holds no gains, so any blend of them does too.
       share_R = case_when(
         R_B > 0 ~ pmax(kg_lt, 0) / R_B,
         G_B > 0 ~ G_unit         / G_B,
@@ -117,30 +107,22 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset) {
         TRUE    ~ 0
       ),
       allocation = (1 - alpha_G) * share_R + alpha_G * share_G,
-      # Decomposition columns:
-      #   kg_lockin      — this record's share of the cell's realized dG stock
-      #                    (extra_R). In the conventional pass this blends
-      #                    lock-in and carryover survival; in the mechanical
-      #                    frozen pass (r_S = r_B) it is pure carryover
-      #                    realization. Enters kg_lt directly.
-      #   kg_deemed_full — the record's full deemed death gain (post-
-      #                    avoidance, §121-net, scaled by deemed_factor):
-      #                    what lands on the final return IF the household
-      #                    dies this year. NOT added to kg_lt here.
-      #   kg_deemed      — m_household * kg_deemed_full, the expected deemed
-      #                    gain (diagnostics / ETR denominators / heir
-      #                    reattribution identification).
-      # Deemed death gains deliberately do NOT enter kg_lt. A stochastic
-      # decedent draw puts ~±50% sampling error on deemed revenue (expected
-      # death gains are concentrated in a few records, and a draw fixed
-      # across years makes the error persistent); a fractional m*G injection
-      # linearizes the rate schedule (Jensen: taxes m*G at the inter-vivos
-      # margin instead of averaging the alive/dead outcomes). Instead,
-      # run_one_year computes liab_deemed = m * [T(y + kg_deemed_full) -
-      # T(y)] via a second full-frame recompute — the exact expectation with
-      # record-level nonlinearity intact — and folds it into liab_iit_net.
-      # The kg_lt frame stays alive-leg, so MTRs and tau are pure
-      # inter-vivos margins.
+      # Three columns come out of this. kg_lockin is the record's share of the
+      # cell's realized change in the stock of gains, and goes into kg_lt. In the
+      # conventional pass it mixes the lock-in and carryover effects; in the
+      # frozen pass, where the realization rate does not move, it is carryover
+      # alone. kg_deemed_full is what would land on the final return if the
+      # household died this year, and kg_deemed is that times the chance it does.
+      #
+      # Neither death column goes into kg_lt. Drawing decedents at random would
+      # put roughly plus or minus half on deemed revenue, since expected death
+      # gains sit in a few records and a draw held fixed across years makes the
+      # error persist. Adding the expected gain instead would linearize the rate
+      # schedule, taxing a fraction of the gain at the during-life margin rather
+      # than averaging the outcomes for living and dead. So run_one_year() prices
+      # it properly, as the chance of death times the difference in tax with and
+      # without the gain, computed over the whole frame. That leaves kg_lt as the
+      # living taxpayer's frame, which is what the marginal rates should measure.
       kg_lockin      = extra_R * allocation,
       kg_deemed_full = (1 - p_char) * deemed_factor * deemed_per_record,
       kg_deemed      = m_household * kg_deemed_full,
@@ -154,15 +136,14 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset) {
 
 kg_dyn_apply_mech_to_records = function(tax_units, scenario_info, year) {
 
-  # Static-pass injection: reads the year's mechanical state file and applies
-  # it to records via the same applier the conventional behavior module uses
-  # (kg_dyn_apply_to_records). With rate_factor = 1 the rate channel is
-  # inert; what lands on records is the carryover realization (kg_lockin)
-  # and the mechanical deemed death gains (kg_deemed). Returns tax_units
-  # with adjusted kg_lt plus the kg_lockin / kg_deemed columns and
-  # decedent_flag (same RNG draw as the conventional pass, so the two
-  # passes stamp identical decedents and conventional − static decomposes
-  # record by record).
+  # Applies the frozen pass's results to records on the static pass, through the
+  # same function the conventional pass uses. The realization rate does not move
+  # here, so the rate channel does nothing and what reaches records is the
+  # carryover realization and the gains deemed realized at death. Decedents are
+  # drawn the same way as on the conventional pass, so the two passes mark the
+  # same records and their difference can be read record by record.
+  #
+  # Returns: tax units with kg_lt adjusted and the decomposition columns (df).
 
   state_path = kg_dyn_mech_state_path(scenario_info, year)
   if (!file.exists(state_path)) {
@@ -191,21 +172,22 @@ kg_dyn_apply_mech_to_records = function(tax_units, scenario_info, year) {
 
 
 #-------------------------------------------------------------------------------
-# Cell-MTR tau builder
+# Aggregating record rates to cells
 #
-# Each cohort uses its own gain-stock-weighted average effective MTR on
-# kg_lt, pulled from the simulator's static detail. This is the only
-# supported tau parameterization; flat top-rate proxies are not.
+# Each cell gets its own average marginal rate on gains, measured through the
+# simulator rather than proxied by a flat top rate.
 #-------------------------------------------------------------------------------
 
 kg_dyn_aggregate_cell_mtr = function(records_with_attrs,
                                       ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
-  # Realization-weighted cell-MTR aggregation: per cell
-  #   tau(a) = sum(w * pmax(kg_lt, 0) * mtr_kg_lt) / sum(w * pmax(kg_lt, 0))
-  # The right anchor for elasticity calibration — average MTR on the dollars
-  # that realize. Falls back to gain-stock weighting when R = 0 (e.g., young
-  # heir cohorts under carryover), then to 0 when both are zero.
+  # Averages the marginal rate on gains within each cell, weighting by
+  # realizations. That is the right anchor for calibrating an elasticity, since it
+  # is the rate on the dollars that actually realize. Falls back to weighting by
+  # holdings in cells that realize nothing, such as young heirs under carryover,
+  # and to zero where a cell has neither.
+  #
+  # Returns: named numeric vector of rates by age.
 
   agg = records_with_attrs %>%
     mutate(kg_pos = pmax(kg_lt, 0)) %>%
@@ -236,18 +218,18 @@ kg_dyn_aggregate_cell_mtr = function(records_with_attrs,
 kg_dyn_aggregate_cell_carry = function(records_with_attrs,
                                         ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
-  # Gain-weighted cell aggregation of the wealth-tax deferral carrying cost:
-  #   h(a) = sum(w * G_unit * mtr_net_worth * mtr_kg_lt) / sum(w * G_unit)
-  # The numerator is the RECORD-LEVEL PRODUCT h_i = tau_w,i * tau_cg,i —
-  # never the product of separately averaged rates: Cov(tau_w, tau_cg) > 0
-  # (the >$50M records are also the top-bracket/NIIT CG records), so
-  # mean(tau_w)*mean(tau_cg) understates mean(tau_w*tau_cg).
+  # Averages the wealth tax cost of deferring a gain within each cell, weighting
+  # by holdings. The average is taken of each record's own wealth rate times its
+  # own gains rate, not of the two rates separately: the records above $50M in net
+  # worth are also the ones in the top bracket paying the NIIT, so the product of
+  # the averages understates the average of the product.
   #
-  # Pure gain-weighting, no realization-weighted branch (unlike
-  # kg_dyn_aggregate_cell_mtr): h prices the dollars that STAY deferred,
-  # not the dollars that realize. Cells with zero gain stock get h = 0.
-  # Also emits the plain gain-weighted tau_w mean — DIAGNOSTICS ONLY (state
-  # file / age-profile column); nothing downstream prices off it.
+  # Weighted by holdings throughout, with no fallback to realizations, because
+  # this prices the dollars that stay deferred rather than the ones that realize.
+  # Cells holding no gains get zero. The plain average wealth rate is also
+  # returned, for diagnostics only.
+  #
+  # Returns: list of the carrying cost and the average wealth rate, by age.
 
   agg = records_with_attrs %>%
     group_by(age_cohort) %>%
@@ -276,30 +258,24 @@ kg_dyn_aggregate_cell_carry = function(records_with_attrs,
 kg_dyn_aggregate_cell_estate = function(records_with_attrs,
                                          ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
-  # Gain-weighted cell aggregation of the estate exposure of the death value:
-  #   e(a) = sum(w * G_unit * mtr_estate_ded) / sum(w * G_unit)
-  # mtr_estate_ded is the SWITCH-GATED marginal estate rate
-  # (estate.income_tax_ded x mtr_estate, derived in run.R's static pass):
-  # per-record, per-leg-law by construction, so a reform that sets
-  # estate.income_tax_ded = 0 zeroes this exposure while the raw mtr_estate
-  # is unchanged.
+  # Averages the estate tax offset within each cell, weighting by holdings. The
+  # record-level rate is the marginal estate rate times the law switch for whether
+  # income tax at death is deductible, so a reform that turns the deduction off
+  # zeroes this without touching the estate rate itself.
   #
-  # Pure gain-weighting, no realization-weighted branch (same reasoning as
-  # kg_dyn_aggregate_cell_carry): e prices the dollars that STAY deferred
-  # and die, not the dollars that realize. Cells with zero gain stock get
-  # e = 0. Records below the estate exemption have mtr_estate_ded = 0, so
-  # below-exemption cells are exact no-ops.
+  # Weighted by holdings, for the same reason as the carrying cost: this prices
+  # the dollars that stay deferred until death. Cells holding no gains get zero,
+  # and so do cells below the estate exemption.
   #
-  # CLAMPED to [0, 1] per cell: numerical MTR noise near the unified-credit
-  # kink must never create negative death-tax costs or (1 - e) < 0 in the
-  # Bellman / tau_eq. (Record-level mtr_estate is a right-derivative of a
-  # graduated schedule, so cell means live in [0, top rate] anyway; the
-  # clamp is a guard, not a correction.)
+  # Capped at 1 per cell, so that numerical noise in the rate near the
+  # unified-credit kink can never make the offset exceed the tax it offsets. Cell
+  # averages sit inside the range anyway; the cap is a guard.
   #
-  # Gain-weighting note (see the per-year exposure diagnostic written by
-  # kg_dyn_load_bathtub_inputs): within-age gain x estate-exposure
-  # correlation is strong at the top, so the cell mean compresses a very
-  # skewed record-level distribution — the diagnostic makes that visible.
+  # Note that holdings and estate exposure are strongly correlated at the top, so
+  # this average compresses a very skewed distribution across records. The
+  # per-year diagnostic written by kg_dyn_load_bathtub_inputs() shows that.
+  #
+  # Returns: named numeric vector of the offset by age.
 
   agg = records_with_attrs %>%
     group_by(age_cohort) %>%

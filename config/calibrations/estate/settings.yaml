@@ -1,22 +1,19 @@
-# HAND-EDITABLE. The estate measurement bridge's chosen inputs -- the counterpart
-# to config/calibrations/kg/settings.yaml, and the same split for the same reason.
+# Hand-edited. The estate measurement bridge's chosen inputs, split from its fitted
+# ones the same way config/calibrations/kg/settings.yaml is.
 #
 # Two kinds of number go into the bridge from Tax-Data economic wealth to reported
-# gross estate. Some are FITTED: r and rho_pt come out of an optimizer, and they
-# live in valuation_fit.yaml, which the calibrator writes. The rest are CHOSEN --
-# a guard threshold, a pooling rule, which death year to freeze at -- and they live
-# here, in a file a person owns.
+# gross estate. The valuation factors r and rho_pt come out of an optimizer and live
+# in valuation_fit.yaml, which the calibrator writes. A guard threshold, a pooling
+# rule and which death year to freeze at are chosen rather than fitted, and live
+# here.
 #
-# Keeping them apart is what makes staleness meaningful. Only a fitted value can be
-# stale, because only a fitted value has inputs; and the fit records which of these
-# choices it was made under, so changing one of them stops estate runs until the
-# fit is redone or the entry carries a dated waiver. Before this split, all of these
-# numbers sat together in a hand-written file and nothing distinguished the measured
-# from the decided.
+# Only a fitted value can go stale, since only a fitted value has inputs. The fit
+# records which of these choices it was made under, so changing one stops estate
+# runs until the fit is redone or the entry carries a dated waiver.
 #
-# Read by : other/estate_tax/calibrate_estate_v2.R (the cluster cap, which is an
-#           input to the fit, not an output of it) and
-#           other/estate_tax/write_frozen_params.R (all four).
+# Read by : other/estate_tax/calibrate_estate_v2.R, for the cluster cap, which is an
+#           input to the fit rather than an output of it, and
+#           other/estate_tax/write_frozen_params.R, for all four.
 
 _channel:
   role: state
@@ -26,40 +23,39 @@ cluster_death_weight_cap:
   value: 300
   kind: judgment
   note: >
-    Absolute cap on the expected deaths in one exact-gross cluster (n >= 2, gross
-    above $5M). Tax-Data replicates donor records, and in the top tail those
-    replicas form clusters that would otherwise contribute a multiple of the real
-    death weight -- an artifact of the data, not a feature of the population. The
-    RULE is generic; the VALUE is re-derived per Tax-Data vintage from the
-    cluster-size distribution, where the legitimate scale was about 240 on vintage
-    2026060918. Validated against pre-TCJA death years. This is an INPUT to the
-    r/rho_pt fit rather than an output of it, which is why it is here: the fit is
-    conditioned on it and would have to be redone if it moved.
+    Cap on the expected deaths in one cluster of records sharing an exact gross
+    estate above $5M. Tax-Data replicates donor records, and in the top tail those
+    replicas form clusters contributing a multiple of the real death weight, which is
+    an artifact of the data rather than a feature of the population. The rule is
+    generic and the value is re-derived per Tax-Data vintage from the cluster size
+    distribution, where the legitimate scale was about 240 on vintage 2026060918.
+    Validated against pre-TCJA death years. It is an input to the valuation fit
+    rather than an output of it, so the fit is conditioned on it and would be redone
+    if it moved.
 
 gamma_pool_factor:
   value: 1.5
   kind: judgment
   note: >
-    Selection guard on the lifetime-gift add-back. gamma is pooled only from SOI
-    size bins whose lower bound is at least this multiple of the exemption. Bins
-    near the exemption are contaminated by returns that are taxable BECAUSE of
-    gifts, so pooling them would attribute to gifts what selection put there. 1.5
-    is a judgment about where that contamination stops mattering, with no
-    derivation recorded.
+    Selection guard on the lifetime gift add-back. The add-back is pooled only from
+    SOI size bins whose lower bound is at least this multiple of the exemption. Bins
+    near the exemption hold returns that are taxable because of gifts, so pooling
+    them would attribute to gifts what selection put there. Where that contamination
+    stops mattering is a judgment, and no derivation is recorded.
 
 soi_death_year:
   value: 2022
   kind: structural
   note: >
-    The death year the per-bin SOI parameters are frozen at: the latest year with
-    observed filings. A forward-looking convention rather than a measurement --
-    the model applies these fractions to future death years, and the alternative
-    would be extrapolating them.
+    The death year the per-bin SOI parameters are frozen at, being the latest year
+    with observed filings. It is a convention rather than a measurement: the model
+    applies these fractions to future death years, where the alternative is
+    extrapolating them.
 
 soi_exemption:
   value: 12060000
   kind: structural
   note: >
-    The exemption in force in soi_death_year, in dollars. Pinned alongside the
-    death year because the per-bin fractions are conditional on it; the two move
-    together or not at all.
+    The exemption in force in soi_death_year, in dollars. It is pinned alongside the
+    death year because the per-bin fractions are conditional on it, so the two move
+    together.

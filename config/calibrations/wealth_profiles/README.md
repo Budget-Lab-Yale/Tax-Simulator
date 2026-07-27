@@ -1,53 +1,54 @@
 # Wealth-dynamics financing profiles
 
-A **financing profile** is the per-scenario input to the wealth bathtub
-(`src/sim/wealth_dynamics.R`): a **bracket-varying saving share** `s(age,
-net-worth percentile)` and a **within-age percentile transition matrix** `M`.
-Each profile is a folder under `config/wealth/profiles/` holding two files.
+A financing profile is the per-scenario input to the wealth bathtub
+(`src/sim/wealth_dynamics.R`): a bracket-varying saving share `s(age, net-worth
+percentile)` and a within-age percentile transition matrix `M`. Each profile is a
+folder under `config/calibrations/wealth_profiles/` holding two files.
 
-These are **operational inputs, not reform tax law** — never override them from
-a scenario YAML.
+These are operational inputs rather than tax law, and a reform must never
+override them.
 
 ## Files
 
 | File    | Format | Meaning |
 |---------|--------|---------|
-| `s.csv` | header `age,nw_pctile,s`; one row per cell | saving share `s = 1 − MPC ∈ [0, 1]`. Must cover **every** cell of the `18..80` (age) × `1..n_pctiles` grid **exactly once** (the loader hard-errors on gaps, duplicates, or out-of-range values). |
-| `M.csv` | headerless `n_pctiles × n_pctiles` grid | within-age percentile transition, applied to every age; raked to doubly-stochastic on load. Identity = full persistence (the realistic near-truth); uniform `1/n` = extreme diffusion. **Absent ⇒ identity.** A per-age `M` may instead be supplied as `M.rds` (a named-by-age list of matrices). |
+| `s.csv` | header `age,nw_pctile,s`; one row per cell | saving share `s = 1 − MPC ∈ [0, 1]`. Must cover every cell of the `18..80` (age) × `1..n_pctiles` grid exactly once; the loader stops on a gap, a duplicate, or an out-of-range value. |
+| `M.csv` | headerless `n_pctiles × n_pctiles` grid | within-age percentile transition, applied to every age and raked to doubly-stochastic on load. The identity is full persistence, and a uniform `1/n` is extreme diffusion. Absent means the identity. A per-age `M` may instead be supplied as `M.rds`, a list of matrices named by age. |
 
-`age` is `pmax(age1, age2)` for joint records, topcoded to `[18, 80]`;
-`nw_pctile` is the within-age net-worth percentile bin (positive net worth
-only), matching the cells the pre-pass and applier rank into.
+`age` is `pmax(age1, age2)` for joint records, topcoded to `[18, 80]`.
+`nw_pctile` is the within-age net-worth percentile bin, over positive net worth
+only, matching the cells the pre-pass and the applier rank into.
 
 ## How a scenario selects a profile
 
-Resolved by `wealth_dyn_resolve_profile()`, precedence high→low:
+An economy alternative sets `wealth.financing_profile`, which
+`wealth_dyn_resolve_profile()` reads. It takes one of three forms:
 
-1. `wealth_financing = none` / `off` → channel **forced off**.
-2. `wealth_financing = <folder>` → that profile (the bracket-varying path).
-3. scalar `s` column set → **flat** profile (`s` everywhere, identity `M`) — the
-   back-compatible shorthand; `s = 0` is a deliberate "off".
-4. nothing specified → the **`default`** profile (auto-applied).
+1. `none` or `off` forces the channel off.
+2. A profile folder name selects that profile.
+3. `flat:<s>` is shorthand for a constant share everywhere and an identity `M`.
+   `flat:0` is a deliberate way to switch the channel off.
 
-The channel is **active** iff the resolved `s` has any positive cell, so a
-flat-zero profile is a no-op and skips the ~2× split-pass compute.
+A scenario that overrides nothing gets the `default` profile.
+
+The channel is active when the resolved surface has any positive cell, so a
+flat-zero profile does nothing and skips the roughly doubled split-pass compute.
 
 ## Shipped profiles
 
-- **`default/`** — **CALIBRATED** (2026-07-07) persistent-flow `s` surface,
-  identity `M`. Auto-applied, so the channel is **on model-wide**: any scenario
-  that names no profile and sets no scalar `s` gets this surface (and the ~2×
-  split-pass compute). Opt out with `wealth_financing = none`. Concept:
-  `s = 1 − MPC` out of a *persistent* net income change, anchored to Straub
-  (2019), Mian–Straub–Sufi (2021), Dynan–Skinner–Zeldes (2004),
-  Fagereng–Holm–Natvik (2021), De Nardi–French–Jones (2010) — rises from ~0.1
-  (bottom of within-age net worth) to 0.80 (top percentile), hump-shaped in age
-  with the tilt attenuated to zero at top ranks. Sourcing memo:
-  `other/wealth_dynamics/default_s_calibration.md`; generator: `s_default()` in
+- **`default/`** — the calibrated saving surface with an identity `M`, applied to
+  every scenario that does not override the setting, along with the extra compute
+  that entails. The share is one less the marginal propensity to consume out of a
+  persistent net income change, anchored to Straub (2019), Mian–Straub–Sufi
+  (2021), Dynan–Skinner–Zeldes (2004), Fagereng–Holm–Natvik (2021) and
+  De Nardi–French–Jones (2010). It rises from about 0.1 at the bottom of
+  within-age net worth to 0.80 at the top percentile, hump-shaped in age with the
+  tilt attenuated to zero at top ranks. Sourcing memo:
+  `other/wealth_dynamics/default_s_calibration.md`. Generated by `s_default()` in
   `other/wealth_dynamics/write_profiles.py`.
-- **`example_age_wealth/`** — an **ILLUSTRATIVE** (not calibrated) `s` surface
-  that rises with net-worth rank and is hump-shaped in age, with identity `M`.
-  Point a scenario at it to exercise the bracket machinery.
+- **`example_age_wealth/`** — an illustrative surface, not calibrated, rising with
+  net worth rank and hump-shaped in age, with an identity `M`. Point a scenario at
+  it to exercise the bracket machinery.
 
 ## Regenerating
 

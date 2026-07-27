@@ -1,58 +1,47 @@
 #-------------------------------------------------------------------------------
 # calibrations.R
 #
-# Reading the calibration files under config/calibrations/, and checking at parse
-# time that the values in them still match the world the run is about to happen
-# in.
-#
-# WHY THIS EXISTS. Before the rebuild, not one of the five calibrated values in
-# this model was written by the script that calibrated it -- every one had been
-# hand-copied out of a log -- and four of the five "how to re-derive this"
-# pointers were broken. A number and the run that produced it could drift apart
-# silently, and did. A calibration file is the fix: the calibrator writes it, and
-# it carries enough about its own derivation that the model can refuse to use it
-# when that derivation no longer describes the run.
-#
-# TWO WAYS A FILE IS REACHED, and the difference is not cosmetic:
-#
-#   BOUND    the scenario's behavior leg names the file, through the kg_dynamics
-#            section. Values that a scenario may legitimately want to differ on
-#            live here, because binding is what puts the choice in the run
-#            manifest. This is how an eta sweep works: a generated file with the
-#            same shape, bound by its own behavior alternative, so the sweep is
-#            recorded in the vintage instead of vanishing with a shell variable.
-#            -> bathtub.yaml, conversion.yaml
-#
-#            A generated sweep file must keep the same BASE NAME as the file it
-#            stands in for -- config/calibrations/kg/sweeps/eta_15/bathtub.yaml,
-#            not .../eta_15.yaml. Entries are labelled '{file stem}.{entry}', so
-#            renaming the file renames every label, and a waiver written against
-#            `bathtub.eta_logs` would quietly stop applying.
-#
-#   FIXED    one path, the same for every scenario. For the model-form switches
-#            and judgment calls that the calibrations are conditioned on, and so
-#            cannot vary underneath them.
-#            -> settings.yaml
-#
-# WHAT IS NOT HERE. A behavioral module's own parameters. Every number a pluggable
-# behavior module reads lives in that module's file, with its citation, and a
-# variant is a copy of the file -- no exceptions. Entity shifting briefly had its
-# published constants in a file here and it was wrong twice over: it split one rule
-# into a rule plus a carve-out, and the module also runs in scenarios with no
-# bathtub to bind to. What belongs here is the machinery's own calibration, read by
-# src/sim/kg/, not a module's assumptions.
-#
-# Both accessors are FAIL-CLOSED. Reading a bound value in a scenario that never
-# bound the file is an error, not a default, because a default here would be a
-# number nobody chose.
+# Contains functions to read the calibration files and check them against the run
 #-------------------------------------------------------------------------------
+
+# A calibration file is written by the script that calibrated the value, and
+# carries enough about how it was derived that the model can refuse to use it once
+# that derivation no longer describes the run. Before this existed, none of the
+# five calibrated values in the model was written by its own script; each had been
+# copied out of a log by hand, and four of the five pointers to how to re-derive
+# them were broken.
+#
+# A file is reached one of two ways, and the difference matters.
+#
+# A scenario's behavior leg can name the file. Values a scenario might legitimately
+# want to differ on live in those files, because naming one is what puts the choice
+# in the run manifest. That is how a sweep works: a generated file of the same
+# shape, named by its own behavior alternative, so the sweep is recorded in the
+# vintage rather than lost with the shell that launched it. Such a generated file
+# must keep the same base name as the file it stands in for, since entries are
+# labelled by file and entry, and renaming it would rename every label and quietly
+# stop any waiver against them from applying.
+#
+# Otherwise a file sits at one fixed path, the same for every scenario. That is
+# where the model-form switches and judgment calls go: the calibrations are
+# conditioned on them, so they cannot vary underneath them.
+#
+# A behavior module's own parameters do not belong here. Every number a module reads
+# lives in that module's file, with its citation, and a variant is a copy of the
+# file. Entity shifting briefly had its published constants here, which was wrong
+# twice over: it split one rule into a rule and an exception, and the module also
+# runs in scenarios with no gains model to bind to. What belongs here is the
+# machinery's own calibration.
+#
+# Reading a value from a file the scenario never named is an error rather than a
+# default, since a default here would be a number nobody chose.
 
 
 CALIB_ROOT    = './config/calibrations'
 CALIB_KG_ROOT = file.path(CALIB_ROOT, 'kg')
 
-# Which kg_dynamics pieces are BOUND (see the header). `entity_shifting` is a
-# piece a scenario declares -- the module prices its retained-earnings leg off the
+# Which pieces a scenario names a file for. Entity shifting is a piece a scenario
+# declares, since the module prices its retained-earnings leg off the
 # bathtub when one is running -- but its values are published constants read from
 # a fixed path, because there is nothing about them to vary or to go stale.
 CALIB_BOUND_PIECES = c('bathtub', 'conversion')
@@ -221,10 +210,9 @@ calib_check_staleness = function(behavior_spec, interface_vintages,
   #   - a file it declares itself invalidated by has changed content since the
   #     value was pinned
   #   - a configuration value it was conditioned on has moved
-  # The third arm is what makes the model-form switches in settings.yaml
-  # load-bearing: a calibration records the settings it was derived under, and
-  # changing one of those settings stops every capital-gains run until the value
-  # is re-derived or the entry carries a dated waiver.
+  # The third arm covers the model-form switches in settings.yaml: a calibration
+  # records the settings it was derived under, and changing one stops every capital
+  # gains run until the value is re-derived or the entry carries a dated waiver.
   #
   # Parameters:
   #   - behavior_spec (list)      : behavior_resolve() output for this scenario

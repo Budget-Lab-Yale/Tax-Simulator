@@ -39,12 +39,11 @@ build_horizontal_table = function(id) {
       # Remove dependent returns and negative/zero income
       filter(dep_status == 0, expanded_inc > 0) %>%
 
-      # Join baseline income for consistent percentile ranking. Records with
-      # no positive-income baseline anchor are dropped: scenario static
-      # detail can now carry different expanded_inc than baseline (kg
-      # mechanical injection adds heir/decedent gains), so the two filtered
-      # sets no longer coincide and an unmatched join would put NA etr into
-      # wtd.quantile.
+      # Join baseline income so the percentile ranking is consistent across
+      # scenarios, dropping records with no positive-income baseline to anchor to.
+      # Scenario static detail can carry different expanded income than baseline,
+      # since the mechanical gains injection adds heirs' and decedents' gains, so
+      # an unmatched join would put an NA rate into the quantiles.
       left_join(
         baseline %>%
           filter(dep_status == 0, expanded_inc > 0) %>%

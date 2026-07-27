@@ -6,21 +6,17 @@
 
 
 
-# Process-local cache of the baseline tax law: the raw YAML list, and its
-# parsed form for a given (years, indexes) pair. Phase 0 of the SLURM
-# pipeline (src/slurm/setup.R) builds one config per scenario in a single
-# process, and a reform overrides ~2 of 28 parameters, so without this the
-# other ~26 parses -- byte-identical every time -- are recomputed once per
-# scenario. Holds at most 28 parsed parameters plus one raw YAML list
-# regardless of scenario count.
+# Cache of the baseline tax law within one process: the raw YAML list, and its
+# parsed form for one pairing of years and indexes. Phase 0 of the SLURM pipeline
+# builds every scenario's config in a single process, and a reform overrides two
+# or three of the 28 parameters, so without this the rest are reparsed once per
+# scenario to the same result.
 #
-# The whole parse chain below is pure: no reference to globals, no <<-, no
-# RNG, no time or environment dependence. parse_param(raw_input, name,
-# years, indexes) is therefore a function of its arguments alone, so a
-# cached parse is reusable whenever all four match.
+# The parse chain below is a function of its arguments alone: it reads no globals,
+# assigns nothing outside itself, and draws no random numbers. A cached parse is
+# reusable whenever the arguments match.
 #
-# Set TAX_LAW_CACHE=0 in the environment to disable (for A/B verification
-# or when debugging tax law).
+# Set TAX_LAW_CACHE=0 in the environment to disable it.
 .tax_law_cache = new.env(parent = emptyenv())
 
 
@@ -46,10 +42,10 @@ TAX_LAW_ROOT = './config/scenarios/tax_law'
 tax_law_path = function(name) {
 
   #----------------------------------------------------------------------------
-  # Folder holding one tax law layer, from a runscript cell. The reserved word
-  # `default` names the baseline law; anything else is a path under
-  # alternatives/ (nesting is arbitrary and human-named). Same shape as the
-  # economy and behavior legs; see src/misc/scenario_config.R.
+  # Resolves a runscript's tax law cell to the folder holding that layer. The
+  # reserved word `default` names the baseline law and anything else is a path
+  # under alternatives/. The economy and behavior legs take the same shape; see
+  # src/misc/scenario_config.R.
   #
   # Parameters:
   #   - name (str) : the runscript's tax_law cell
@@ -66,10 +62,9 @@ tax_law_path = function(name) {
 load_baseline_tax_law_input = function(config_path = tax_law_path('default')) {
 
   #----------------------------------------------------------------------------
-  # Cached wrapper around load_tax_law_input() for the baseline tax law
-  # directory. Keyed on the path plus the modification times of its YAML
-  # files, so an edit between runs (or within one, in an interactive session)
-  # invalidates the cache -- 28 stat calls in place of 28 YAML reads.
+  # Reads the baseline tax law directory through the cache. The key is the path
+  # plus the modification times of its YAML files, so editing one invalidates the
+  # cache, at the cost of a stat call per file in place of a read.
   #
   # Parameters:
   #   - config_path (str) : filepath to baseline tax law config folder
@@ -91,7 +86,7 @@ load_baseline_tax_law_input = function(config_path = tax_law_path('default')) {
     .tax_law_cache$raw       = load_tax_law_input(config_path)
     .tax_law_cache$raw_stamp = stamp
 
-    # Parses of the previous raw input are no longer valid
+    # Discard parses of the previous raw input
     .tax_law_cache$parsed     = NULL
     .tax_law_cache$parse_stamp = NULL
   }
@@ -104,9 +99,8 @@ load_baseline_tax_law_input = function(config_path = tax_law_path('default')) {
 get_parsed_baseline = function(baseline_raw, years, indexes) {
 
   #----------------------------------------------------------------------------
-  # Returns the parsed baseline tax law for the given years and indexes,
-  # parsing it only when those differ from the cached pair. One identical()
-  # comparison on the indexes dataframe per scenario, no hashing.
+  # Returns the parsed baseline tax law for the given years and indexes, parsing
+  # it only when either differs from what the cache holds.
   #
   # Parameters:
   #   - baseline_raw (list) : raw baseline input, per load_tax_law_input()
@@ -157,25 +151,23 @@ build_tax_law = function(scenario_info, indexes) {
     tax_law_path() %>% 
     load_tax_law_input()
   
-  # Read baseline YAML files (cached; see .tax_law_cache above)
+  # Read baseline YAML files
   baseline_raw = load_baseline_tax_law_input()
   tax_law      = baseline_raw
 
-  # Overwrite baseline subparams with specified changes. Each reform
-  # subparameter object replaces the baseline one WHOLESALE (value plus all
-  # indexation fields together), never merged field-by-field: a reform that
-  # omits an indexation field must reset it to NULL, not inherit baseline's
-  # (which rules out modifyList here -- it merges nested lists recursively)
+  # Overwrite baseline subparams with specified changes. A reform subparameter
+  # replaces the baseline one entire, value and indexation fields together, rather
+  # than field by field: a reform that omits an indexation field resets it to NULL
+  # instead of inheriting the baseline's. modifyList merges nested lists
+  # recursively and so cannot be used here.
   for (param in names(changes_from_baseline)) {
     tax_law[[param]][names(changes_from_baseline[[param]])] = changes_from_baseline[[param]]
   }
 
-  # Parse all parameters and concatenate, reusing the cached baseline parse
-  # for every parameter the reform leaves untouched. The test is on CONTENT,
-  # not on whether the parameter was listed as overridden: that way the
-  # baseline scenario itself (whose tax_law_id restates all 28 parameters
-  # identically) and any reform that restates a parameter unchanged both hit
-  # the cache.
+  # Parse all parameters and concatenate, reusing the cached baseline parse for
+  # every parameter the reform leaves untouched. The test is on content rather than
+  # on whether the parameter was listed as an override, so that a reform restating
+  # a parameter unchanged still hits the cache.
   years_to_parse  = 2014:max(scenario_info$years)
   parsed_baseline = if (tax_law_cache_enabled()) {
     get_parsed_baseline(baseline_raw, years_to_parse, indexes)
@@ -491,34 +483,21 @@ parse_subparam = function(raw_input, indexation_defaults, years, indexes, name) 
     left_join(indexes, by = c('value' = 'series', 'year')) %>%
     mutate(index = cumprod(1 + growth))
 
-  # Hard-stop on a BROKEN index chain instead of silently un-indexing the
-  # parameter. cumprod() propagates NA forward from the first missing growth
-  # rate, and apply_indexation() maps an NA index to base_value -- so if the
-  # simulation window runs past the end of the index series (the
-  # Macro-Projections horizon), or the measure names a series that isn't in
-  # the index data at all, an indexed parameter snaps back to its raw nominal
-  # base-year value rather than freezing at its last projected level.
-  # Silently: a std deduction reverting toward $12,000.
+  # Stop on an index chain broken by missing data: a live measure with no growth
+  # rate for a simulation year, which happens when the window runs past the end of
+  # the index series, when the series has a gap, or when the measure names a series
+  # absent from the index data. cumprod carries the NA forward from the first
+  # missing rate, and apply_indexation reads an NA index as the base value, so the
+  # parameter reverts to its nominal base-year level rather than holding at its
+  # last projected one.
   #
-  # An NA i_measure is NOT a broken chain -- it is the deliberate "stop
-  # indexing as of this year" sentinel (e.g. ed.llc_po_thresh_single, frozen
-  # from 2020 by TCJA), and the NA index it produces is exactly how that
-  # freeze is expressed. Two consequences for the guard:
-  #
-  #   1. Years whose own measure is NA are never flagged.
-  #   2. Neither is any LATER year, even one whose measure returns to a live
-  #      series (public/ctc/wyden_smith does exactly this: NA at 2023, back to
-  #      chained_cpi at 2026). cumprod() cannot recover from the sentinel's NA,
-  #      so the parameter stays unindexed from the sentinel year onward -- that
-  #      is pre-existing behavior this guard deliberately does not change. NB
-  #      it also means a "resume indexation later" config does not actually
-  #      resume; harmless where it appears today (the affected subparams carry
-  #      Inf values), but worth knowing before writing a new one.
-  #
-  # What is left to flag is the case the guard exists for: a chain broken by
-  # MISSING DATA -- a live measure with no growth rate for that year, i.e. the
-  # simulation running past the end of the index series, a gap in it, or a
-  # measure naming a series that isn't there at all.
+  # An NA measure is not a broken chain. It is how a config stops indexation as of
+  # a year, as TCJA froze the lifetime learning credit phaseout from 2020, and the
+  # NA index it produces is the freeze. So neither the year carrying the sentinel
+  # nor any later year is flagged, even one whose measure names a live series
+  # again: cumprod cannot recover from the NA, so a config that means to resume
+  # indexation does not in fact resume. That is worth knowing before writing one,
+  # though the subparameters doing it today carry infinite values.
   measure_is_live = !is.na(i_info$i_measure$value) &
     i_info$i_measure$value != 'NA'
   sentinel_reached = cumsum(!measure_is_live) > 0

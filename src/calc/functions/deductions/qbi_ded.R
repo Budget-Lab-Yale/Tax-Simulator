@@ -67,19 +67,16 @@ calc_qbi_ded = function(tax_unit, fill_missings = F) {
     # Derive taxable income without regard to QBI deduction 
     mutate(txbl_inc = pmax(0, agi - pmax(std_ded, item_ded) - pe_ded))
   
-  # Business types over which the QBI deduction is calculated separately (data
-  # limitations require that business aggregation happens at the business type
-  # level). Order matters: the aggregation in the final mutate below sums the
-  # per-business columns in this order.
+  # Business types over which the deduction is calculated separately. Data
+  # limitations require aggregating at the business type level. The final mutate
+  # below sums the per-business columns in this order.
   business_types = c('sole_prop', 'part', 'scorp', 'farm')
 
-  # Per-business QBI calculation, wide form: three columns per business type
-  # (income, deduction, OBBB step 1). Computed as vectors rather than by
-  # reshaping the frame long in business type -- the per-business math has no
-  # cross-business dependency, so the long form bought nothing and the
-  # pivot/rejoin round trip was 28% of total model runtime (this function runs
-  # once per calculator pass, i.e. ~11-14 times per scenario-year). See
-  # other/performance/PERF_AUDIT_2026_07_25.md section 2.1.
+  # Calculate the deduction per business type, three columns each, as vectors on
+  # the wide frame. The per-business math has no cross-business dependency, so
+  # reshaping long and rejoining bought nothing and cost 28% of model runtime; the
+  # calculator runs this a dozen times per scenario year. See
+  # other/performance/PERF_AUDIT_2026_07_25.md.
   qbi_by_business = business_types %>%
     map(.f = function(business_type) {
 

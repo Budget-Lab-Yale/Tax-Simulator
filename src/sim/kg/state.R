@@ -1,13 +1,14 @@
 #-------------------------------------------------------------------------------
 # state.R
 #
-# State-file paths, scenario activation, and per-year regime resolution.
+# Contains functions to locate state files and resolve the year's tax treatment
+# of gains at death
 #-------------------------------------------------------------------------------
 
 
-# Conventional bathtub state: thin wrappers over the shared cohort-state IO
-# helpers (cohort_bathtub.R) with kg's subdir/pass fixed. Path is
-# {output_path}/conventional/supplemental/kg_dynamics_state/{year}.rds.
+# State written by the conventional pass, under the scenario's conventional
+# supplemental folder, one file per year. These wrap the shared helpers in
+# cohort_bathtub.R.
 kg_dyn_state_dir = function(scenario_info) {
   cohort_state_dir(scenario_info, 'kg_dynamics_state', 'conventional')
 }
@@ -16,11 +17,10 @@ kg_dyn_state_path = function(scenario_info, year) {
   cohort_state_path(scenario_info, 'kg_dynamics_state', year, 'conventional')
 }
 
-# Mechanical (frozen-realization) state: consumed by the STATIC pass, so it
-# lives under static/supplemental. One {year}.rds per year, same
-# list(regime, cell_table) contract as the conventional bathtub state, plus
-# inputs_cache.rds (baseline cells + slim per-record frames) reused by the
-# full bathtub pass to avoid a second Tax-Data sweep.
+# State written by the frozen pass, which the static pass reads, so it lives
+# under static instead. Same contents as above, plus a cache of the baseline
+# cells and record frames that the conventional pass reuses rather than reading
+# Tax-Data a second time.
 kg_dyn_mech_state_dir = function(scenario_info) {
   cohort_state_dir(scenario_info, 'kg_dynamics_mech_state', 'static')
 }
@@ -33,10 +33,9 @@ kg_dyn_inputs_cache_path = function(scenario_info) {
   file.path(kg_dyn_mech_state_dir(scenario_info), 'inputs_cache.rds')
 }
 
-# Has this scenario bound the gains bathtub machinery? Keyed on the behavior
-# leg's kg_dynamics section rather than on a module name appearing in a list:
-# the applier is injected by the loader precisely because binding the machinery
-# and running its applier are the same decision (see src/sim/behavior.R).
+# Reports whether a scenario runs the gains model. Reads the behavior leg's
+# kg_dynamics section rather than looking for a module name in a list, since the
+# loader adds the module itself once the machinery is bound.
 scenario_uses_kg_dynamics = function(scenario_info) {
   length(scenario_info$resolved_behavior$spec$kg_pieces %||% character()) > 0
 }
@@ -44,20 +43,19 @@ scenario_uses_kg_dynamics = function(scenario_info) {
 
 
 #-------------------------------------------------------------------------------
-# Per-year regime resolution (shared by the conventional bathtub pass and the
-# mechanical frozen pass)
+# Tax treatment of gains at death, by year
 #-------------------------------------------------------------------------------
 
 kg_dyn_resolve_year_regime = function(tax_law, year, baseline_t,
                                        ages_bathtub = KG_DYN_AGE_MIN:
                                                       KG_DYN_AGE_MAX) {
 
-  # Extracts the year's per-asset death-regime codes, bequest motive theta,
-  # and §121 caps from the joined tax law, validates them, and builds the
-  # cell-level regime mix. Returns list(regime, mix) where regime is the
-  # metadata object persisted in state files (codes, theta, sec121 caps,
-  # per-asset realize indicators) and mix is the output of
-  # kg_dyn_build_regime_mix on the bathtub grid.
+  # Reads the year's treatment of gains at death out of tax law: the treatment by
+  # asset class, the weight the holder puts on the heir's tax bill, and the §121
+  # exclusion caps. Checks them and averages the treatment to the cell.
+  #
+  # Returns: list of the year's treatment, which is written into the state files,
+  #          and the cell-level mix of it.
 
   tlt = tax_law %>% filter(year == !!year)
   if (nrow(tlt) == 0) {
@@ -76,9 +74,9 @@ kg_dyn_resolve_year_regime = function(tax_law, year, baseline_t,
   if (length(theta) != 1 || !is.finite(theta) || theta < 0 || theta > 1) {
     stop(sprintf(
       paste0('kg_dynamics: pref.kg_bequest_motive must be a finite ',
-             'scalar in [0, 1]; got %s for year %d. theta drives c_phi ',
-             'under carryover and feeds the Bellman; out-of-range or NA ',
-             'values silently produce nonsensical W/MC/kappa.'),
+             'scalar in [0, 1]; got %s for year %d. It sets how much of the ',
+             "heir's tax bill the holder counts under carryover, and an ",
+             'out-of-range value gives a meaningless realization choice.'),
       format(theta), year))
   }
 
@@ -94,7 +92,7 @@ kg_dyn_resolve_year_regime = function(tax_law, year, baseline_t,
 
   mix = kg_dyn_build_regime_mix(regime_codes, theta, baseline_t, ages_bathtub)
 
-  # Per-asset realize indicators (year-level scalars from the regime codes)
+  # Whether each asset class is realized at death
   realize_by_asset = lapply(KG_DYN_ASSET_CLASSES, function(k) {
     KG_DYN_REGIME_TRIPLET[[as.character(regime_codes[[k]])]]$realize
   })

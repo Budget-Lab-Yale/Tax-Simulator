@@ -43,12 +43,10 @@ tryCatch({
 
     task_id = as.integer(Sys.getenv('SLURM_ARRAY_TASK_ID'))
 
-    # Build ordered list of scenarios: baseline (if ran THIS run) +
-    # counterfactuals. Derived from the manifest, not from probing
-    # baseline/config.rds on disk: the staging dir persists across runs of
-    # the same vintage, so a stale baseline config from an earlier run would
-    # otherwise shift the array indexing and silently drop the last
-    # counterfactual (slurm_run.sh sizes the array from this run's counts)
+    # Build the ordered scenario list from the manifest rather than by looking for
+    # a baseline config on disk. The staging directory persists across runs of one
+    # vintage, so a baseline config left by an earlier run would shift the array
+    # indexing and drop the last counterfactual
     manifest = readRDS(file.path(staging_dir, 'manifest.rds'))
     all_scenarios = c()
     if (any(manifest$phase == '1')) {
@@ -69,17 +67,15 @@ tryCatch({
     config = readRDS(file.path(staging_dir, scenario_id, 'config.rds'))
     scenario_info = config$scenario_info
 
-    # See src/misc/scenario_config.R: aggregation reads configuration too (the
-    # corporate distribution smear and the housing structure share).
+    # Activate the scenario's legs: aggregation reads configuration too, for the
+    # corporate distribution smear and the housing structure share
     config_activate(economy  = scenario_info$resolved_economy,
                     behavior = scenario_info$resolved_behavior)
 
-    # Read all per-year results. For baseline, results live in year_{y}.rds
-    # (Phase 1 writes both static + null conventional via pass_type='both').
-    # For counterfactuals, Phase 2A writes year_{y}_static.rds (mtrs +
-    # static_totals) and Phase 2C writes year_{y}_conv.rds (conventional_totals).
-    # We synthesize a per-year list with the same shape as the legacy
-    # monolithic result so the rest of this function is unchanged.
+    # Read all per-year results and assemble a per-year list of the shape run_sim
+    # produces in one process. Baseline results are in year_{y}.rds, holding the
+    # static totals and a null conventional; a counterfactual's are split across
+    # the Phase 2A and Phase 2C files.
     output = scenario_info$years %>% map(function(y) {
       if (scenario_id == 'baseline') {
         readRDS(file.path(staging_dir, scenario_id, paste0('year_', y, '.rds')))
@@ -91,8 +87,8 @@ tryCatch({
         s_res = readRDS(static_rds)
         c_res = readRDS(conv_rds)
 
-        # If conv_totals is NULL (no-behavior CF), fall back to static_totals
-        # so downstream aggregation has something to write.
+        # A scenario with no behavior has no conventional totals; fall back to the
+        # static ones so the aggregation has something to write
         ct = c_res$conventional_totals
         if (is.null(ct)) ct = s_res$static_totals
 
@@ -103,8 +99,7 @@ tryCatch({
     })
 
     # --- Write static outputs ---
-    # Shared with run_sim() via write_pass_outputs() (src/sim/run.R), sourced
-    # into this process by reconstitute_environment().
+    # Write through the same helper run_sim uses; see src/sim/run.R
     write_pass_outputs(
       output               = output,
       root                 = file.path(scenario_info$output_path, 'static'),
@@ -145,8 +140,8 @@ tryCatch({
     scenario_id = counterfactual_ids[task_id]
     cat(paste0('Phase 3b: post-processing scenario=', scenario_id, '\n'))
 
-    # Post-processing reads configuration (distribution.corp_foreign_share,
-    # distribution.housing_structure_share), so activate before the first call.
+    # Activate the scenario's legs: post-processing reads the corporate foreign
+    # share and the housing structure share
     .si = get_scenario_info(scenario_id)
     config_activate(economy  = .si$resolved_economy,
                     behavior = .si$resolved_behavior)
@@ -160,8 +155,8 @@ tryCatch({
     # Distribution tables
     build_distribution_tables(scenario_id, baseline_id = 'baseline')
 
-    # ETR-levels distribution supplemental (accrual income defs + stock-based
-    # corporate-incidence conventions)
+    # Effective tax rate levels, under accrual income definitions and the
+    # stock-based corporate incidence conventions
     build_distribution_etrs(scenario_id)
 
     # Time burden tables
@@ -170,7 +165,7 @@ tryCatch({
     # Horizontal equity
     build_horizontal_table(scenario_id)
 
-    # KG dynamics bathtub diagnostics (no-op for non-kg_dynamics scenarios)
+    # Capital gains bathtub diagnostics
     scenario_info = get_scenario_info(scenario_id)
     kg_dyn_build_summary(scenario_info)
 

@@ -1,51 +1,35 @@
 #-------------------------------------------------------------------------------
 # sigma_conversion.R
 #
-# Sigma: the income-conversion response for the top-tax interaction exercise
-# (other/top_tax/DESIGN_LOCK.md is the live-design source of truth; build plan
-# at other/top_tax/sigma_build_plan.md). Owner-managers repackage top salary /
-# active pass-through income as unrealized equity appreciation when the
-# ordinary-vs-equity-path tax wedge widens.
+# Contains functions to convert labor income into unrealized capital gains
+#-------------------------------------------------------------------------------
+
+# Assume that owner-managers can take top salary and active pass-through income as
+# unrealized equity appreciation instead, and do more of it as the tax advantage of
+# doing so widens. The advantage is the record's own marginal rate on the income
+# less the tax a dollar of unrealized gain eventually pays, which the gains model
+# prices.
 #
-# Architecture (two halves, one shared pure function):
-#   1. PRE-PASS (inside kg_dyn_run_bathtub_pass, via sigma_compute_year):
-#      per year, compute per-record per-leg conversions from the MTR wedges
-#      against tau_eq, aggregate to age cells, inject the cell inflow into
-#      the kg bathtub recurrence (delta_next, end-of-year entry), and persist
-#      ONLY the cell-level tracker in the kg state file (DESIGN_LOCK ruling
-#      7 — no per-record persistence for normal runs; a per-record dump
-#      exists behind SIGMA_RECORD_DUMP=1 for smoke/validation).
-#   2. BEHAVIOR MODULE (src/behavior/conversion/sigma.R):
-#      recomputes record-level conversions via the SAME shared pure function
-#      (sigma_compute_conversions) from the same inputs (static/baseline
-#      MTRs + the persisted tau_eq cell table + the persisted thresholds),
-#      applies them to records (wage legs down, PT legs down with SECA
-#      companions co-scaled), and hard-asserts conservation against the
-#      persisted cell inflow.
+# Who can do this: a record with some active business income whose taxable income
+# reaches the top bracket. That is a threshold rather than a marginal rate, because
+# QBI and similar provisions push measured rates below the statutory top rate. What
+# they can convert is all wages plus three quarters of active pass-through income,
+# the labor content of it. The pool is known to be too broad on the pass-through
+# legs; the composition diagnostic reports it.
 #
-# Design rulings this file implements (see DESIGN_LOCK):
-#   - Per-record wedge W_i = own-leg calculator MTR - tau_eq(age_i, t);
-#     forcing = Delta W_i, static-reform-vs-baseline (standard MTR-frame
-#     convention). Equity leg from the tau_eq recursion (src/sim/kg/),
-#     keyed on the kg age convention (pmax(age1, age2), 80+ topcode).
-#   - Pool (ruling 4): gate = (any active business income) AND (static
-#     taxable income >= top-bracket threshold, filing-status-specific,
-#     threshold-based NOT MTR-based); pool = all wages + 0.75 * active PT
-#     (SYZZ labor-content share). Known over-breadth accepted; the
-#     pool-composition diagnostic is the visibility mechanism.
-#   - No phase-in phi(t): memoryless annual response to the current-year
-#     wedge gap. Delta conv_i(t) = sigma * Delta W_i(t) * pool_i. The wedge
-#     can narrow => negative conversion allowed, clamped so no leg goes
-#     negative (or more than doubles, on the negative side).
-#   - sigma central = 0.16, calibrated to a top-subset ETI-0.25 target on the
-#     +5pp validation leg. It is a RESIDUAL margin: see SIGMA_CALIB_PROVENANCE
-#     below for the method and the staleness conditions. The value and its
-#     provenance live in config/calibrations/kg/conversion.yaml, which a scenario
-#     reaches by binding the `conversion` piece of kg_dynamics; a sweep binds a
-#     different file of the same shape.
-#   - Composition (conversion into gain state vs entity shifting into the
-#     corporate base) is an OUTPUT (tracker diagnostics), not a dial.
-#     Sequential module order prevents double-moves.
+# The response is to the current year's change in the advantage, with no phase-in.
+# A narrowing advantage converts income back, clamped so that no leg goes negative.
+#
+# The work happens in two places, through one shared function so the two cannot
+# disagree. The pre-pass computes conversions per record, aggregates them to age
+# cells, and adds the result to the stock of gains at year end, writing out only
+# the cell totals. The behavior module then recomputes the same conversions from
+# the same inputs, applies them to records, and checks the total against what the
+# pre-pass wrote.
+#
+# How much converts is calibrated; how it splits between this and entity shifting
+# is an output, not a setting. Running the two in sequence is what stops the same
+# dollar moving twice.
 #-------------------------------------------------------------------------------
 
 SIGMA_CONV_VERSION = paste('2026-07-12 re-derivation to ETI-0.25 (0.08 -> 0.16;',
@@ -54,88 +38,65 @@ SIGMA_CONV_VERSION = paste('2026-07-12 re-derivation to ETI-0.25 (0.08 -> 0.16;'
                            'estate-margins build)')
 
 #-------------------------------------------------------------------------------
-# SIGMA_CALIB_PROVENANCE
+# How the response is calibrated
 #
-# Method: the +5pp top-ordinary validation leg (tests/topord_plus5, 2025:2035,
-# full behavior stack kg_dynamics + sigma + entity_shifting + evasion +
-# charity, wealth_financing = none) is targeted to a top-subset ETI of 0.25 —
-# the Saez-Slemrod-Giertz central (taxable income EXCLUDING net capital
-# gains, after deductions; brackets 0.12-0.40). sigma is solved from two legs,
-# the full stack at a reference sigma and the stack without sigma, by linear
-# interpolation onto the target, then confirmed at the shipped value.
-# Measurement script: other/top_tax/tests/compute_top_eti.R; measured legs and
-# solved values for each derivation are recorded there and in
-# other/top_tax/sigma_explainer.md.
+# A five point increase in the top ordinary rate is run with the whole behavior
+# stack and targeted to an elasticity of taxable income of 0.25 for the top group,
+# the Saez, Slemrod and Giertz central estimate. Taxable income here excludes net
+# capital gains. The response is solved by running that reform twice, once with
+# conversion and once without, and interpolating onto the target.
 #
-# The kg Bellman calibration is ORTHOGONAL to this one: the target is the top
-# ORDINARY-income ETI (O = txbl_inc - net gains), which excludes realizations,
-# so the two calibrate on disjoint bases. Re-check only if the pool ever starts
-# taxing gains.
+# The gains model's own calibration is separate: its target is realizations and
+# this one excludes them, so the two are fitted on different bases.
 #
-# STALENESS WARNING (kg-provenance-guard spirit): this value is CONDITIONAL
-# ON THE REST OF THE STACK. Entity shifting and evasion supply ~0.22 of the
-# 0.25 target by themselves, so sigma is calibrated as the RESIDUAL
-# conversion margin. Re-derive sigma (rerun the two legs above) whenever any
-# of the following change: the entity-shifting elasticity/parameters
-# (pearce_prisinzano.R), the evasion centrals (debacker.R), the charity
-# elasticity, the pool definition/gate in this file, or the Tax-Data vintage.
-# Those dependencies are no longer prose: conversion.yaml declares them, and the
-# parse-time check stops the run when one of them has moved.
+# The value is conditional on the rest of the stack. Entity shifting and evasion
+# supply about 0.22 of the 0.25 target on their own, so what is calibrated here is
+# the residual. Re-derive it whenever the entity-shifting parameters, the evasion
+# elasticities, the charity elasticity, the pool defined below, or the Tax-Data
+# vintage changes. Those dependencies are declared in the calibration file, and the
+# parse-time check stops the run when one of them moves.
 #
-# Substantive reading: the ETI evidence disciplines the TOTAL top response;
-# with P-P and DHY already in the stack, a large independent conversion
-# margin would double-count (the DESIGN_LOCK R2 caveat, resolved here).
-# A small sigma is also the defensible position given the pool's known
-# over-breadth on pass-through legs (see sigma_explainer.md on which legal
-# channels actually support conversion).
+# On the economics: the evidence on taxable income disciplines the total response at
+# the top. With entity shifting and evasion already in the stack, a large
+# independent conversion margin would count the same behavior twice. A small value
+# is also the defensible reading given that the pool above is too broad on the
+# pass-through legs.
 #-------------------------------------------------------------------------------
 
-# Response parameter (percent of pool converted per percentage point of wedge
-# change, so a +5pp wedge at sigma = 0.16 converts 0.8% of the pool) and the
-# SYZZ labor-content share applied to active pass-through legs in the pool live in
-# config/calibrations/kg/conversion.yaml with their provenance attached, and are
-# read at the point of use via kg_conversion(). They are scenario-scoped -- the
-# scenario's behavior leg decides which file is bound -- so they must NOT be
-# captured here at source time.
+# The response parameter, and the labor share applied to active pass-through
+# income, live in the calibration file with their provenance. They belong to a
+# scenario, so read them where they are used rather than capturing them here.
 
-# Per-record dump knob (smoke/validation/debug only): writes
-# {scenario}/conventional/supplemental/sigma_conversion_dump/{year}.csv from
-# the pre-pass. Normal runs persist only the cell tracker (ruling 7).
+# Set this to write out the record-level conversions, for validation. An ordinary
+# run writes only the cell totals.
 SIGMA_RECORD_DUMP = identical(Sys.getenv('SIGMA_RECORD_DUMP'), '1')
 
-# Required per-leg MTR registrations (both baseline and static frames). The
-# ordinary legs of the wedge; mtr_part_active / mtr_sole_prop1 are
-# SECA-inclusive by construction (calc_mtrs bumps the SE companions).
+# The marginal rates this needs on both legs, one per income line. The
+# pass-through rates include self-employment tax, since calc_mtrs() bumps the
+# earner splits alongside.
 SIGMA_REQUIRED_MTRS = c('mtr_wages1', 'mtr_wages2', 'mtr_part_active',
                         'mtr_sole_prop1', 'mtr_scorp_active')
 SIGMA_REQUIRED_MTR_VARS = c('wages1', 'wages2', 'part_active',
                             'sole_prop1', 'scorp_active')
 
-# Raw Tax-Data columns the pool/gate legs come from (DESIGN_LOCK ruling 7:
-# gate/pool legs from raw Tax-Data; txbl_inc + mtr_* from detail files).
+# The columns the pool comes from, read out of raw Tax-Data. Taxable income and
+# the marginal rates come from the detail files instead.
 SIGMA_TD_COLS = c('id', 'weight', 'filing_status', 'age1', 'age2',
                   'wages1', 'wages2', 'part_active', 'scorp_active',
                   'sole_prop')
 
-# Hard conservation tolerance (relative) for the module-side recompute vs
-# the persisted cell inflow. Loose enough to absorb the small pass-through
-# leg drift when the wealth haircut / corporate applier ran ahead of the
-# behavior stack (they scale PT flows); tight enough to catch real drift.
-# Sized for horizon: the benign wedge between the frozen pre-pass frame and the
-# haircut-eroded conventional frame COMPOUNDS (the wealth haircut scales PT legs
-# a little more every year), so a bar tight enough for decade 1 fails in the
-# out-years. Real frame/threshold mismatches -- the failure class this guard
-# exists for -- diverge at O(50-100%), not O(2%), so 5% keeps the guard's power
-# at any horizon we run.
+# How far the module's recomputed total may sit from what the pre-pass wrote.
+# Loose enough to absorb the small drift in pass-through legs when the wealth
+# haircut or the corporate step ran before the behavior modules, since both scale
+# those legs. That drift compounds over the horizon, so a tolerance tight enough
+# for the first decade fails in the out-years. The errors this guard exists to
+# catch diverge by half or more, not a few percent.
 SIGMA_CONSERVE_RTOL = 0.05
 
-# Absolute companion tolerance: the check fails only when the divergence
-# exceeds BOTH the relative and absolute bars. Needed because conv_total is a
-# NET flow that can sit near zero (opposing rate wedges in a package), so the
-# $1e6 denominator floor lets an immaterial dollar drift read as a huge
-# relative one. Real frame/threshold divergence bugs show up at $B scale, well
-# clear of this bar. Sized for the 30-year horizon, where out-year nominal flows
-# run a few times decade-1 levels.
+# The check fails only if the divergence exceeds this as well as the relative bar.
+# The total is a net flow that can sit near zero, when a package moves rates in
+# opposite directions, and then a trivial dollar difference reads as a large
+# relative one. A real error here is in the billions.
 SIGMA_CONSERVE_ATOL = 2.5e8
 
 
@@ -148,13 +109,11 @@ scenario_uses_sigma = function(scenario_info) {
 sigma_top_thresholds = function(tax_law, years) {
 
   #----------------------------------------------------------------------------
-  # Extracts the top-ordinary-bracket threshold per (year, filing status)
-  # from the joined tax law: the highest-indexed ord.brackets{n} column with
-  # a finite value in that row. Threshold-based gating (NOT MTR-based),
-  # because QBI etc. push measured MTRs below the statutory top rate
-  # (ruling 4).
+  # Finds where the top ordinary bracket starts, per year and filing status, as the
+  # highest bracket with a value. A threshold rather than a marginal rate, because
+  # QBI and similar provisions push measured rates below the statutory top rate.
   #
-  # Returns: tibble(year, filing_status, sigma_thresh).
+  # Returns: tibble of year, filing status and threshold.
   #----------------------------------------------------------------------------
 
   bracket_cols = grep('^ord\\.brackets\\d+$', names(tax_law), value = TRUE)
@@ -194,9 +153,8 @@ sigma_top_thresholds = function(tax_law, years) {
 
 sigma_check_mtr_registration = function(scenario_info) {
 
-  # Hard stop unless the runscript registers every ordinary-leg MTR the
-  # wedge needs (evasion-module convention: fail loudly rather than
-  # silently mislabeling a static score as conventional).
+  # Stop unless the runscript registers every marginal rate this needs, rather than
+  # silently labelling a static score as conventional.
   missing = setdiff(SIGMA_REQUIRED_MTR_VARS,
                     scenario_info$mtr_vars %||% character())
   if (length(missing) > 0) {
@@ -216,10 +174,9 @@ sigma_build_ctx = function(scenario_info, tax_law, baseline_root,
                            sigma = kg_conversion('conv')) {
 
   #----------------------------------------------------------------------------
-  # Builds the sigma-conversion context consumed by the bathtub pre-pass
-  # (kg_dyn_run_bathtub_pass -> sigma_compute_year). Validates parameters
-  # and MTR registration and resolves the per-year gate thresholds; year
-  # inputs are loaded lazily (one Tax-Data + two detail reads per year).
+  # Assembles what the pre-pass needs to compute conversions. Checks the parameters
+  # and the registered marginal rates, and resolves the thresholds by year. Each
+  # year's own inputs are read when that year comes up.
   #----------------------------------------------------------------------------
 
   if (!is.finite(sigma) || sigma < 0 || sigma > 5) {
@@ -243,13 +200,10 @@ sigma_build_ctx = function(scenario_info, tax_law, baseline_root,
 sigma_load_year_inputs = function(ctx, year) {
 
   #----------------------------------------------------------------------------
-  # Assembles the pre-pass pool frame for one year (DESIGN_LOCK ruling 7
-  # input contract):
-  #   - gate/pool legs + demographics from raw Tax-Data (kg refuses VAT /
-  #     excess-growth scenarios, so raw dollars are the right unit system);
-  #   - txbl_inc (gate) from the scenario's STATIC detail;
-  #   - per-leg MTRs from baseline static detail (suffix _baseline) and
-  #     scenario static detail.
+  # Assembles one year's pool. The income legs and demographics come from raw
+  # Tax-Data, which is the right unit system since these channels refuse a VAT
+  # scenario. Taxable income and the marginal rates come from the two legs' static
+  # detail.
   #----------------------------------------------------------------------------
 
   scenario_info = ctx$scenario_info
@@ -293,8 +247,8 @@ sigma_load_year_inputs = function(ctx, year) {
 
 sigma_age_cohort = function(filing_status, age1, age2) {
 
-  # kg age convention (kg_dyn_attach_record_attrs): joint records key on the
-  # older spouse; clipped to the [18, 80] bathtub grid (80+ topcode).
+  # Same age convention as the gains model: joint records take the older spouse,
+  # clipped to the cohort grid.
   age = if_else(filing_status == 2, pmax(age1, age2, na.rm = TRUE), age1)
   pmax(KG_DYN_AGE_MIN, pmin(KG_DYN_AGE_MAX, age))
 }
@@ -305,30 +259,25 @@ sigma_compute_conversions = function(pool, thresholds_t,
                                      tau_eq_B_col, tau_eq_S_col, sigma) {
 
   #----------------------------------------------------------------------------
-  # THE shared pure function (DESIGN_LOCK ruling 7): both the pre-pass and
-  # the behavior module compute record-level conversions through this exact
-  # code path, from the same inputs.
+  # The shared function. Both the pre-pass and the behavior module compute
+  # conversions through this, from the same inputs, so the two cannot disagree.
+  #
+  # For each income leg, the change in the tax advantage of converting is the change
+  # in that leg's own marginal rate less the change in the tax a dollar of unrealized
+  # gain pays. Conversion is the response parameter times that, times the leg,
+  # clamped so no leg can go negative. A missing rate leaves that leg alone.
   #
   # Parameters:
-  #   - pool (df)          : one row per record with id, weight,
-  #                          filing_status, age_cohort, the five pool legs
-  #                          (wages1, wages2, part_active, scorp_active,
-  #                          sole_prop), txbl_inc (STATIC-side, the gate),
-  #                          and the ten MTR columns (five per side;
-  #                          baseline suffixed _baseline)
-  #   - thresholds_t (df)  : tibble(filing_status, sigma_thresh) for the year
-  #   - tau_eq_B_col (dbl[]) : named-by-age tau_eq under baseline policy
-  #   - tau_eq_S_col (dbl[]) : named-by-age tau_eq under scenario policy
-  #   - sigma (dbl)        : conversion response (% of pool per pp of wedge)
+  #   - pool (df)            : one row per record, with the five income legs, taxable
+  #                            income, and the marginal rate on each leg under both
+  #                            the baseline and the scenario
+  #   - thresholds_t (df)    : the top bracket threshold by filing status
+  #   - tau_eq_B_col (dbl[]) : tax on a dollar of gain by age, baseline
+  #   - tau_eq_S_col (dbl[]) : the same under the scenario
+  #   - sigma (dbl)          : the response parameter
   #
-  # Per-leg forcing: Delta W_leg = (mtr_leg_S - mtr_leg_B) -
-  # (tau_eq_S(age) - tau_eq_B(age)). Conversion = sigma * Delta W * pool_leg
-  # on gated records, clamped to |conv| <= leg so no leg goes negative (or
-  # more than doubles on a narrowing wedge). NA MTRs => no response for
-  # that leg.
-  #
-  # Returns: per-record frame (id, weight, age_cohort, gate, per-leg conv_*,
-  #          conv_total, pool_total, dW diagnostics).
+  # Returns: one row per record, with the conversion on each leg, the total, the pool
+  #          and the wedge changes behind them.
   #----------------------------------------------------------------------------
 
   dtau_eq = as.numeric(tau_eq_S_col[as.character(pool$age_cohort)]) -
@@ -341,15 +290,15 @@ sigma_compute_conversions = function(pool, thresholds_t,
     mutate(
       dtau_eq = dtau_eq,
 
-      # Ruling 4 gate: any active business income AND static taxable income
-      # at or above the top ordinary bracket threshold.
+      # Who can convert: some active business income, and taxable income at or above
+      # the top bracket.
       has_active = (!is.na(part_active)  & part_active  > 0) |
                    (!is.na(scorp_active) & scorp_active > 0) |
                    (!is.na(sole_prop)    & sole_prop    > 0),
       gate = has_active & !is.na(txbl_inc) & !is.na(sigma_thresh) &
              txbl_inc >= sigma_thresh,
 
-      # Positive pool legs (a leg only participates when positive)
+      # A leg only participates when it is positive
       pool_w1    = if_else(gate & !is.na(wages1) & wages1 > 0, wages1, 0),
       pool_w2    = if_else(gate & !is.na(wages2) & wages2 > 0, wages2, 0),
       pool_part  = if_else(gate & !is.na(part_active) & part_active > 0,
@@ -360,15 +309,14 @@ sigma_compute_conversions = function(pool, thresholds_t,
                            pt_labor_share * sole_prop, 0),
       pool_total = pool_w1 + pool_w2 + pool_part + pool_scorp + pool_sole,
 
-      # Per-leg wedge changes (static reform vs baseline, both sides net of
-      # the equity leg)
+      # The change in each leg's advantage, scenario against baseline
       dW_w1    = (mtr_wages1       - mtr_wages1_baseline)       - dtau_eq,
       dW_w2    = (mtr_wages2       - mtr_wages2_baseline)       - dtau_eq,
       dW_part  = (mtr_part_active  - mtr_part_active_baseline)  - dtau_eq,
       dW_scorp = (mtr_scorp_active - mtr_scorp_active_baseline) - dtau_eq,
       dW_sole  = (mtr_sole_prop1   - mtr_sole_prop1_baseline)   - dtau_eq,
 
-      # Conversions: sigma * dW * pool_leg, NA-safe, clamped to the leg
+      # The conversion itself, clamped to the leg
       conv_w1    = sigma_leg_conv(sigma, dW_w1,    pool_w1,    wages1),
       conv_w2    = sigma_leg_conv(sigma, dW_w2,    pool_w2,    wages2),
       conv_part  = sigma_leg_conv(sigma, dW_part,  pool_part,  part_active),
@@ -388,7 +336,7 @@ sigma_compute_conversions = function(pool, thresholds_t,
 
 sigma_leg_conv = function(sigma, dW, pool_leg, leg_value) {
 
-  # sigma * dW * pool_leg with NA-safe wedges and the |conv| <= leg clamp.
+  # The response times the wedge change times the leg, clamped to the leg
   leg = replace_na(as.numeric(leg_value), 0)
   conv = if_else(is.na(dW) | pool_leg <= 0, 0, sigma * dW * pool_leg)
   pmin(pmax(conv, -abs(leg)), abs(leg))
@@ -399,11 +347,9 @@ sigma_leg_conv = function(sigma, dW, pool_leg, leg_value) {
 sigma_aggregate_inflow = function(conv,
                                   ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
-  # Weighted cell inflow by age cohort (the recurrence injection), zero-
-  # filled over the full bathtub grid. NA cohorts (missing ages upstream)
-  # carry zero conversion by construction (their tau_eq lookup is NA, so
-  # every leg wedge is NA-gated to zero) — drop them rather than let a
-  # stray "NA" name corrupt the named vector.
+  # Sum to cells, over the whole age grid. A record with no age converts nothing
+  # anyway, since its priced gain is missing and every leg is left alone, so drop
+  # those rather than carry an unnamed entry.
   agg = conv %>%
     filter(!is.na(age_cohort)) %>%
     group_by(age_cohort) %>%
@@ -419,9 +365,9 @@ sigma_aggregate_inflow = function(conv,
 sigma_make_tracker = function(conv, conv_inflow, sigma, thresholds_t, year) {
 
   #----------------------------------------------------------------------------
-  # The cell-level tracker persisted in the kg state file (ruling 7): the
-  # injection vector, pool size/composition, mean wedges, thresholds, and
-  # the sigma stamp the behavior module validates against.
+  # What gets written into the state file: the cell totals, the size and composition
+  # of the pool, the average wedges, the thresholds, and the response parameter,
+  # which the behavior module checks against its own.
   #----------------------------------------------------------------------------
 
   gated = conv %>% filter(gate)
@@ -462,12 +408,10 @@ sigma_compute_year = function(ctx, year, tau_eq_B_col, tau_eq_S_col,
                               ages_bathtub = KG_DYN_AGE_MIN:KG_DYN_AGE_MAX) {
 
   #----------------------------------------------------------------------------
-  # Pre-pass orchestration for one year: load inputs, compute conversions
-  # via the shared pure function, aggregate to the cell inflow, build the
-  # tracker (and the optional per-record dump). Called inside the bathtub
-  # year loop with the year's tau_eq columns.
+  # Runs one year of the pre-pass: read the inputs, compute the conversions, sum them
+  # to cells, and assemble what gets written out.
   #
-  # Returns: list(conv_inflow (named dbl[]), tracker (list)).
+  # Returns: list of the cell totals and the record of them.
   #----------------------------------------------------------------------------
 
   thresholds_t = ctx$thresholds %>%
@@ -512,18 +456,17 @@ sigma_compute_year = function(ctx, year, tau_eq_B_col, tau_eq_S_col,
 
 
 #-------------------------------------------------------------------------------
-# Module-side helpers (called by src/behavior/conversion/sigma.R)
+# Helpers for the behavior module
 #-------------------------------------------------------------------------------
 
 sigma_module_recompute = function(tax_units, baseline_mtrs, static_mtrs,
                                   scenario_info, state, year) {
 
   #----------------------------------------------------------------------------
-  # Recomputes record-level conversions inside the behavior module from the
-  # same inputs the pre-pass used (ruling 7): live-frame pool legs, the
-  # year's baseline/static MTR frames, the persisted tau_eq cell table, and
-  # the persisted gate thresholds. Hard-asserts conservation against the
-  # persisted cell inflow.
+  # Recomputes the conversions inside the behavior module, from the same inputs the
+  # pre-pass used: the live frame's income legs, the year's marginal rates, and the
+  # priced gain and thresholds the pre-pass wrote out. Checks the total against what
+  # the pre-pass wrote.
   #
   # Returns: the conv frame (one row per tax_units row, original order).
   #----------------------------------------------------------------------------
@@ -548,8 +491,8 @@ sigma_module_recompute = function(tax_units, baseline_mtrs, static_mtrs,
   tau_eq_B_col = setNames(cell_table$tau_eq_B, as.character(cell_table$age))
   tau_eq_S_col = setNames(cell_table$tau_eq_S, as.character(cell_table$age))
 
-  # Gate txbl_inc: STATIC detail (same source as the pre-pass; the live
-  # conventional frame has no txbl_inc before do_taxes).
+  # Taxable income comes from the static detail, as it does in the pre-pass. The
+  # live frame has none before do_taxes() has run.
   static_txbl = file.path(scenario_info$output_path, 'static', 'detail',
                           paste0(year, '.csv')) %>%
     fread(select = c('id', 'txbl_inc'), showProgress = FALSE) %>%
@@ -579,10 +522,9 @@ sigma_module_recompute = function(tax_units, baseline_mtrs, static_mtrs,
     sigma        = kg_conversion('conv')
   )
 
-  # Conservation: the module's recomputed conversions must match the cell
-  # inflow the pre-pass injected into the bathtub. Exact when the live frame
-  # legs equal raw Tax-Data (no wealth haircut / corporate applier ahead of
-  # the stack); the tolerance absorbs those channels' small PT-flow scaling.
+  # The recomputed conversions must match what the pre-pass added to the stock of
+  # gains. Exact where the live frame's legs still equal raw Tax-Data; the tolerance
+  # absorbs the small scaling the wealth and corporate steps apply ahead of this.
   module_total = sum(conv$weight * conv$conv_total)
   prepass_total = tracker$conv_total
   denom = max(abs(prepass_total), 1e6)
@@ -612,13 +554,12 @@ sigma_module_recompute = function(tax_units, baseline_mtrs, static_mtrs,
 sigma_apply_conversions = function(tax_units, conv) {
 
   #----------------------------------------------------------------------------
-  # Applies per-record conversions to the live frame: wage legs down (wages
-  # adjusted coherently, preserving the Tax-Data wages residual), PT legs
-  # down with SECA earner-split companions co-scaled (evasion-module
-  # convention: sole_prop rides with sole_prop1/2; part_active with
-  # part_se1/2; scorp_active has no SECA companion). Converted dollars do
-  # NOT enter record kg_lt: they are unrealized, and taxation arrives in
-  # later years through the kg cell machinery (recurrence injection).
+  # Takes the conversions off the live frame. Wages come down together, preserving
+  # the residual between the total and the two earners' shares. Pass-through legs come
+  # down with their earner splits, where they have them.
+  #
+  # The converted dollars do not appear in realized gains. They are unrealized, and
+  # the tax on them arrives in later years through the gains model.
   #----------------------------------------------------------------------------
 
   stopifnot(identical(conv$id, tax_units$id))

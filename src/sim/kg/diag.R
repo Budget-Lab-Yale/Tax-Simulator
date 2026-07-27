@@ -1,18 +1,19 @@
 #-------------------------------------------------------------------------------
 # diag.R
 #
-# Diagnostics: estate-exposure dump, bathtub summary, and the wealth-law predicate.
+# Contains functions to write diagnostics on the gains model
 #-------------------------------------------------------------------------------
 
 
 kg_dyn_write_estate_exposure_diag = function(baseline_joined, reform_joined,
                                               scenario_info, year) {
 
-  # Per-year, per-leg record-level estate-exposure diagnostic (see the call
-  # site in kg_dyn_load_bathtub_inputs). One CSV per year at
-  # conventional/supplemental/kg_estate_exposure_diag_{t}.csv with rows =
-  # (leg x gain-decile) plus a per-leg 'all' summary row carrying the
-  # zero-exposure / near-top-rate gain-dollar shares and the 80+ cell mean.
+  # Writes one file per year showing how estate exposure is spread across
+  # records, by leg and by decile of gains held, with a summary row per leg. The
+  # cell averages the model uses compress a skewed distribution, and this makes
+  # that visible.
+  #
+  # Returns: invisible NULL (writes files as a side effect)
 
   leg_diag = function(joined, leg) {
     d = joined %>%
@@ -21,8 +22,7 @@ kg_dyn_write_estate_exposure_diag = function(baseline_joined, reform_joined,
              gw    = weight * G_unit)
     if (nrow(d) == 0) return(NULL)
 
-    # Weighted (population-weight) gain deciles: sort by gain stock, split
-    # on cumulative weight
+    # Deciles of gains held, cut on cumulative population weight
     d = d %>%
       arrange(G_unit) %>%
       mutate(decile = pmin(floor(cumsum(weight) / sum(weight) * 10) + 1, 10))
@@ -70,11 +70,12 @@ kg_dyn_write_estate_exposure_diag = function(baseline_joined, reform_joined,
 
 kg_dyn_wealth_law_active = function(tax_law) {
 
-  # TRUE iff the scenario's joined tax law levies a nonzero annual wealth
-  # tax in ANY year (keeps the static detail schema stable across phase-in
-  # years: the guaranteed mtr_net_worth column is written for every year of
-  # a wealth scenario, not just post-enactment years). Baseline wealth.yaml
-  # is a single 0% bracket, so every non-wealth scenario returns FALSE.
+  # Reports whether the scenario's tax law levies a wealth tax in any year. Asking
+  # about any year rather than this one keeps the detail file columns the same
+  # across a phase-in. The baseline has a single zero bracket, so every scenario
+  # without a wealth tax returns FALSE.
+  #
+  # Returns: TRUE if the scenario has a wealth tax (bool).
 
   rate_cols = grep('^wealth\\.rates[0-9]*$', names(tax_law), value = TRUE)
   if (length(rate_cols) == 0) return(FALSE)
@@ -84,17 +85,17 @@ kg_dyn_wealth_law_active = function(tax_law) {
 
 
 #-------------------------------------------------------------------------------
-# Post-processing: bathtub diagnostics summary
+# Summarizing the pass
 #-------------------------------------------------------------------------------
 
 kg_dyn_build_summary = function(scenario_info) {
 
-  # Reads all per-year bathtub state files and writes:
-  #   kg_dynamics_age_profile.csv : long (year × age) dump of cell_table
-  #   kg_dynamics_summary.csv     : year-level rollup with regime, weighted
-  #                                 means, channel decomposition, decedent
-  #                                 stock, implied semi-elasticity.
-  # No-op if the scenario has no bathtub state directory.
+  # Reads every year's state file and writes two summaries: one row per year and
+  # age, and a rollup by year carrying the weighted averages, the decomposition
+  # into channels, and the elasticity the run implies. Does nothing for a scenario
+  # that never ran the pass.
+  #
+  # Returns: invisible NULL (writes files as a side effect)
 
   state_dir = kg_dyn_state_dir(scenario_info)
   if (!dir.exists(state_dir)) return(invisible(NULL))
@@ -106,9 +107,8 @@ kg_dyn_build_summary = function(scenario_info) {
   states = lapply(years, function(t) readRDS(file.path(state_dir, paste0(t, '.rds'))))
   names(states) = as.character(years)
 
-  # Long-format age profile: stamp the per-year regime codes onto every
-  # cell row for diagnostic convenience (cell_table itself carries the
-  # cell-level c_phi / delta_* mix).
+  # Stamp the year's treatment of gains at death onto every row, which is
+  # redundant but convenient to read.
   age_profile = bind_rows(lapply(seq_along(years), function(i) {
     s = states[[i]]
     codes = s$regime$codes
@@ -130,7 +130,7 @@ kg_dyn_build_summary = function(scenario_info) {
                         'conventional', 'supplemental',
                         'kg_dynamics_age_profile.csv'))
 
-  # Year-level regime metadata table (per-asset codes + theta + §121 cap).
+  # The year's treatment of gains at death, by asset class
   regime_df = bind_rows(lapply(seq_along(years), function(i) {
     r = states[[i]]$regime
     tibble(year                 = years[i],
@@ -144,8 +144,8 @@ kg_dyn_build_summary = function(scenario_info) {
            sec121_excl_married  = r$sec121_excl_married)
   }))
 
-  # Weighted means with a default when the weight column sums to zero.
-  # r_B and r_S default to 0; everything else to NA.
+  # Weighted averages, defaulting to zero for the realization rates and NA for
+  # everything else where the weights sum to zero.
   wmean = function(x, w, default = NA_real_) {
     s = sum(w)
     if (s > 0) sum(x * w) / s else default

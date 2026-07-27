@@ -51,7 +51,7 @@ calc_tax = function(tax_unit, fill_missings = F) {
     'pref.unrecapture_rate',  # (dbl)   tax rate on Section 1250 unrecaptured gain
     'pref.collectibles_rate', # (dbl)   tax rate on collectibles gain
     'pref.tax_at_ord',        # (dbl)   whether long-term capital gains and qualified dividends are taxed at ordinary rates
-    'pref.no_ord_cap'         # (dbl)   whether to REMOVE the ordinary-rate ceiling on preferred-rate income (0 = keep the Schedule D "not more than ordinary" limit; 1 = let the preferred rate exceed the ordinary rate)
+    'pref.no_ord_cap'         # (dbl)   whether to remove the Schedule D limit holding preferred-rate tax to no more than ordinary rates
   )
   
   tax_unit %>% 
@@ -170,12 +170,11 @@ calc_tax = function(tax_unit, fill_missings = F) {
 
     mutate(
 
-      # Calculate total liability. Ordinarily preferred-rate income is taxed at
-      # the smaller of (a) the preferred schedule or (b) ordinary rates on all
-      # income (liab_max) -- the Schedule D worksheet's "not more than ordinary"
-      # limit, which means a preferred top rate set above the ordinary top rate
-      # collects nothing extra. Setting pref.no_ord_cap != 0 removes that ceiling
-      # so the preferred rate can bind above the ordinary rate.
+      # Calculate total liability. Preferred-rate income is ordinarily taxed at the
+      # lesser of the preferred schedule and ordinary rates on all income, which is
+      # the Schedule D worksheet's limit, so a preferred top rate set above the
+      # ordinary top rate collects nothing extra. Setting pref.no_ord_cap removes
+      # the limit and lets the preferred rate bind above the ordinary one.
       liab = case_when(
         pref.tax_at_ord != 0 ~ liab_max,
         pref.no_ord_cap  != 0 ~ liab_ord + liab_pref + liab_1250 + liab_collect,

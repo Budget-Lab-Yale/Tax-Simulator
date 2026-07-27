@@ -25,16 +25,13 @@ do_scenario = function(ID, baseline_mtrs) {
     print(paste0("Running scenario ", "'", ID, "'"))
   }
   
-  # Get scenario info and create the scenario's output directory tree (a pure
-  # lookup no longer does this as a side effect; see ensure_scenario_dirs)
+  # Get scenario info and create the scenario's output directory tree
   scenario_info = get_scenario_info(ID)
   ensure_scenario_dirs(scenario_info)
 
-  # Install this scenario's resolved configuration. It must precede any
-  # calculation: economy_param() reads whatever config_activate() installed and
-  # errors if nothing is active. Staleness was already checked, once, at parse
-  # time (parse_globals -> resolve_all_scenarios), which is also what covers
-  # the SLURM path.
+  # Install this scenario's resolved configuration, before any calculation:
+  # economy_param() reads whatever config_activate() installed and errors if
+  # nothing is active. Staleness was checked at parse time, in parse_globals.
   config_activate(economy  = scenario_info$resolved_economy,
                   behavior = scenario_info$resolved_behavior)
 
@@ -67,27 +64,19 @@ do_scenario = function(ID, baseline_mtrs) {
   uses_kg     = ID != 'baseline' && scenario_uses_kg_dynamics(scenario_info)
   uses_wealth = ID != 'baseline' && scenario_uses_wealth_dynamics(scenario_info)
 
-  # (The early stop for a conversion module without the bathtub used to sit
-  # here. It now fires at parse time, for every scenario in the runscript at
-  # once rather than for this one at the moment it starts -- see
-  # behavior_validate_spec() in src/sim/behavior.R.)
-
   if (uses_kg || uses_wealth) {
 
-    # Split-pass orchestration for the cohort-dynamics channels (kg and/or the
-    # wealth bathtub), computed INDEPENDENTLY (4 combinations, not a 5th
-    # branch). Chain:
-    #   [frozen (kg)] -> static -> [kg bathtub] -> [conv-no-wealth + wealth
-    #   bathtub] -> final conventional.
+    # Run the cohort dynamics channels as separate passes, each channel switched
+    # on independently:
     #
-    # The kg frozen pass needs only Tax-Data cells + tax law and writes the
-    # mechanical state the static pass injects. The static pass is always the
-    # measurement baseline (the clean law-only counterfactual). The wealth
-    # bathtub's forcing ΔT⁰ is CONVENTIONAL (wealth-excluding), so it needs an
-    # extra conv-no-wealth pass (behavior on, haircut off) BEFORE the pre-pass;
-    # the final conventional pass then applies the haircut (and runs kg behavior
-    # on the haircut frame when both channels are active). behavioral =
-    # conventional − static.
+    #   [frozen] -> static -> [kg bathtub] -> [conv-no-wealth, wealth bathtub]
+    #     -> conventional
+    #
+    # The frozen pass needs only Tax-Data cells and tax law, and writes the
+    # mechanical state the static pass injects. The wealth bathtub's forcing
+    # excludes the wealth tax, so it takes its own pass with behavior on and the
+    # haircut off; the conventional pass then applies the haircut, running kg
+    # behavior on the eroded frame when both channels are active.
 
     if (uses_kg) {
       run_frozen_pass(scenario_info, tax_law,
@@ -107,8 +96,8 @@ do_scenario = function(ID, baseline_mtrs) {
     }
 
     if (uses_wealth) {
-      # Conv-no-wealth pass: produces ΔT⁰ ingredients + mtr_cap_bundle /
-      # mtr_net_worth / economic_gross on the un-eroded conventional base.
+      # Measure the forcing and the capital-bundle and net worth MTRs on the
+      # conventional base before any erosion
       run_sim(scenario_info        = scenario_info,
               tax_law              = tax_law,
               baseline_mtrs        = baseline_mtrs,
@@ -131,8 +120,7 @@ do_scenario = function(ID, baseline_mtrs) {
 
   } else {
 
-    # Fused static/conventional simulation (current behavior for non-
-    # kg_dynamics scenarios and baseline).
+    # Run the static and conventional passes together
     static_mtrs = run_sim(scenario_info    = scenario_info,
                           tax_law          = tax_law,
                           baseline_mtrs    = baseline_mtrs,
@@ -156,8 +144,8 @@ do_scenario = function(ID, baseline_mtrs) {
     # Distribution tables
     build_distribution_tables(ID, baseline_id = 'baseline')
 
-    # ETR-levels distribution supplemental (accrual income defs + stock-based
-    # corporate-incidence conventions)
+    # Effective tax rate levels, under accrual income definitions and the
+    # stock-based corporate incidence conventions
     build_distribution_etrs(ID)
 
     # Time burden tables
@@ -166,7 +154,7 @@ do_scenario = function(ID, baseline_mtrs) {
     # Horizontal equity
     build_horizontal_table(ID)
 
-    # KG dynamics bathtub diagnostics (no-op for non-kg_dynamics scenarios)
+    # Capital gains bathtub diagnostics
     kg_dyn_build_summary(scenario_info)
   }
   
@@ -183,19 +171,16 @@ write_pass_outputs = function(output, root, totals_slot,
                               scenario_info) {
 
   #----------------------------------------------------------------------------
-  # Writes one pass's (static or conventional) supplemental offsets, totals
-  # CSVs, and receipts for a scenario. Shared by run_sim() (in-process) and
-  # SLURM aggregate.R Phase 3a, which assemble `output` to the same shape. The
-  # two passes differ only in `root`, `totals_slot`, and the offset source, so
-  # factoring this here keeps the two call paths in lockstep (see the SLURM
-  # sync table in CLAUDE.md).
+  # Writes one pass's supplemental offsets, totals CSVs, and receipts for a
+  # scenario. Called by run_sim() and by Phase 3a of the SLURM pipeline, which
+  # assemble output to the same shape.
   #
   # Parameters:
   #   - output (list)             : per-year results; each element carries
   #                                 $static_totals and/or $conventional_totals
   #   - root (str)                : pass output root (…/static or …/conventional)
-  #   - totals_slot (str)         : 'static_totals' or 'conventional_totals' —
-  #                                 which per-year totals list to aggregate
+  #   - totals_slot (str)         : which per-year totals list to aggregate,
+  #                                 'static_totals' or 'conventional_totals'
   #   - vat_price_offset (df)     : VAT price offset series, written to supplemental
   #   - scenario_info (list)      : scenario info (interface paths)
   #
@@ -249,16 +234,14 @@ write_pass_outputs = function(output, root, totals_slot,
 
 
 #-------------------------------------------------------------------------------
-# Per-pass helpers shared by the static and conventional bodies of
-# run_one_year(). The two passes differ in their inputs, not in how they compute
-# MTRs, assemble totals, or write detail, so those steps live here once.
+# Helpers shared by the static and conventional bodies of run_one_year(). The
+# two passes differ in their inputs, not in how they compute MTRs, assemble
+# totals, or write detail.
 #-------------------------------------------------------------------------------
 
-# Channel columns that ride any_of() onto a detail file: present only on the
-# pass that produces them, so dormancy is preserved for scenarios that don't
-# run the channel. The two lists differ -- the static frame never carries the
-# conventional-only channel output (wealth haircut, corp markdown, conv-no-
-# wealth forcing ingredients).
+# Channel columns written to a detail file through any_of(), so that a scenario
+# not running the channel writes no column. The wealth haircut, the corporate
+# markdown and the forcing measurements appear on conventional passes only.
 DETAIL_COLS_OPTIONAL_STATIC = c('kg_lockin', 'kg_deemed', 'liab_deemed',
                                 'estate_income_tax_ded')
 
@@ -282,8 +265,8 @@ strip_calc_vars = function(df, drop_mtrs = FALSE, strict = TRUE) {
   #   - df (df)           : tax unit frame
   #   - drop_mtrs (bool)  : also drop any mtr_* columns already joined on
   #   - strict (bool)     : TRUE requires every calculated variable to be
-  #                         present (a POST-do_taxes frame); FALSE tolerates
-  #                         absence (a PRE-do_taxes frame, which carries none)
+  #                         present, as on a frame that has been through
+  #                         do_taxes; FALSE tolerates their absence
   #
   # Returns: the frame less the calculated variables (df).
   #----------------------------------------------------------------------------
@@ -307,12 +290,13 @@ strip_calc_vars = function(df, drop_mtrs = FALSE, strict = TRUE) {
 mtr_actuals = function(taxed) {
 
   #----------------------------------------------------------------------------
-  # The actual-liability vectors calc_mtrs() differences against, read off the
-  # SAME frame the recompute will run on. actual_liab_estate is the DSUE blend
+  # Assembles the actual-liability vectors calc_mtrs() differences against, read
+  # off the same frame the recompute runs on. Estate liability is the expected
+  # value over the two DSUE branches:
+  #
   #   E[liab] = p_dsue * liab_dsue + (1 - p_dsue) * liab_nodsue
-  # and must never come from the baseline: the delta has to be measured on the
-  # frame the recompute runs on. The wealth and estate entries are consumed only
-  # by their own MTR var and ignored otherwise.
+  #
+  # The wealth and estate entries are read only by their own MTR variables.
   #
   # Parameters:
   #   - taxed (df) : post-do_taxes frame carrying liabilities and estate output
@@ -320,10 +304,9 @@ mtr_actuals = function(taxed) {
   # Returns: named list of actuals vectors.
   #----------------------------------------------------------------------------
 
-  # A frame taxed with calc_estate_flag / calc_wealth_flag = FALSE carries no
-  # estate or wealth output. calc_mtrs defaults those actuals to NULL, so
-  # omitting them here is equivalent to not supplying them -- and any MTR var
-  # that would actually read them refuses a NULL.
+  # A frame taxed with calc_estate_flag or calc_wealth_flag off carries no estate
+  # or wealth output. calc_mtrs defaults those actuals to NULL and refuses a NULL
+  # for any MTR variable that reads them.
   has = function(col) col %in% names(taxed)
 
   list(
@@ -344,16 +327,16 @@ calc_one_mtr = function(frame, actuals, var, baseline_pr_er = NULL,
                         type = 'nextdollar') {
 
   #----------------------------------------------------------------------------
-  # One MTR as a bare vector. Used by the guaranteed-column fallbacks, which
-  # compute a single MTR outside the registered mtr_vars loop.
+  # Calculates one MTR as a bare vector, for the columns computed outside the
+  # loop over the scenario's mtr_vars.
   #
   # Parameters:
   #   - frame (df)          : exogenous-variable frame (see strip_calc_vars)
   #   - actuals (list)      : output of mtr_actuals() for the frame the actual
   #                           liabilities were computed on
   #   - var (str)           : variable to perturb
-  #   - baseline_pr_er (df) : NULL for a POST-do_taxes frame, the real value for
-  #                           a PRE-do_taxes one (see the calc_mtrs param doc)
+  #   - baseline_pr_er (df) : NULL for a frame that has been through do_taxes,
+  #                           the real value otherwise (see calc_mtrs)
   #   - type (str)          : 'nextdollar' (default) or 'extensive'
   #
   # Returns: numeric vector of MTRs.
@@ -378,13 +361,15 @@ calc_one_mtr = function(frame, actuals, var, baseline_pr_er = NULL,
 mtr_worker_count = function(n_tasks) {
 
   #----------------------------------------------------------------------------
-  # Resolves the number of local workers available to the independent MTR
-  # recomputes. SLURM exposes the allocation through SLURM_CPUS_PER_TASK;
-  # TAXSIM_MTR_CORES is an explicit override for focused local/benchmark runs.
+  # Resolves the number of local workers available to the MTR recomputes. SLURM
+  # exposes the allocation through SLURM_CPUS_PER_TASK, and TAXSIM_MTR_CORES
+  # overrides it for benchmark runs. Returns 1 under main.R's own scenario or
+  # year parallelism, to avoid a second layer of forks.
   #
-  # Do not introduce a second fork layer under main.R's scenario/year
-  # parallelism. SLURM workers set globals$multicore = 'none', so they can use
-  # their within-task CPU allocation safely.
+  # Parameters:
+  #   - n_tasks (int) : number of MTR recomputes to distribute
+  #
+  # Returns: number of workers (int).
   #----------------------------------------------------------------------------
 
   if (.Platform$OS.type == 'windows' || globals$multicore != 'none') {
@@ -406,30 +391,26 @@ mtr_worker_count = function(n_tasks) {
 run_mtr_block = function(taxed, scenario_info, year, baseline_pr_er) {
 
   #----------------------------------------------------------------------------
-  # Computes every MTR the runscript registers, joins them onto the frame, and
-  # derives the switch-gated estate MTR. Shared by the static and conventional
-  # passes.
+  # Computes every MTR the runscript registers and joins them onto the frame.
+  # Two estate columns come out of the one perturbation, derived here while the
+  # law column is still in the frame:
   #
-  # mtr_estate_ded = estate.income_tax_ded x mtr_estate is derived here while
-  # the law column is still in the frame -- one perturbation, two emitted
-  # columns. mtr_estate stays the raw un-switched base rate (consumed by the
-  # wealth-avoidance estate response); mtr_estate_ded is what the kg Bellman /
-  # tau_eq exposure aggregator reads, so the deductibility interaction vanishes
-  # when a reform sets estate.income_tax_ded = 0 while mtr_estate is unchanged.
+  #   mtr_estate_ded = estate.income_tax_ded * mtr_estate
+  #
+  # mtr_estate is the base rate, read by the wealth avoidance response.
+  # mtr_estate_ded is read by the capital gains Bellman and its equivalent-rate
+  # exposure aggregator, and goes to zero when a reform turns off deductibility
+  # of the decedent's income tax.
   #
   # Parameters:
   #   - taxed (df)           : post-do_taxes frame for this pass
   #   - scenario_info (list) : supplies mtr_vars / mtr_types
   #   - year (int)           : simulation year, stamped onto the MTR tibble
-  #   - baseline_pr_er (df)  : REQUIRED, no default. `taxed` is a post-do_taxes
-  #                            frame whose wages already carry the er-payroll
-  #                            rescale, so this must be NULL for every caller
-  #                            passing such a frame; threading the real value
-  #                            rescales a second time and produces garbage MTRs
-  #                            (see the calc_mtrs parameter doc). It stays an
-  #                            explicit argument so the pre-frame callers that
-  #                            legitimately thread it are visible at the call
-  #                            site.
+  #   - baseline_pr_er (df)  : has no default. A frame that has been through
+  #                            do_taxes already carries the employer payroll wage
+  #                            rescale, so callers passing such a frame must pass
+  #                            NULL; the real value rescales a second time. See
+  #                            calc_mtrs.
   #
   # Returns: list(taxed = frame with mtr_* joined on, mtrs = the MTR tibble).
   #----------------------------------------------------------------------------
@@ -459,8 +440,8 @@ run_mtr_block = function(taxed, scenario_info, year, baseline_pr_er) {
     cat(paste0('Calculating ', length(scenario_info$mtr_vars), ' MTRs with ',
                n_workers, ' local workers\n'))
 
-    # Return errors as data so the parent can report the exact failed MTR.
-    # mclapply otherwise warns and embeds a try-error that is easy to overlook.
+    # Return errors as data so the parent can name the MTR that failed. mclapply
+    # otherwise warns and embeds a try-error that is easy to overlook.
     mtr_parts = parallel::mclapply(
       X = seq_along(scenario_info$mtr_vars),
       FUN = function(i) {
@@ -495,9 +476,9 @@ run_mtr_block = function(taxed, scenario_info, year, baseline_pr_er) {
     mtr_parts = map(mtr_parts, 'value')
   }
 
-  # Fork results cross a serialization boundary, while the one-core results do
-  # not. Rebuild each one-column tibble from its bare vector so irrelevant
-  # serialization-only dataframe attributes cannot differ between the paths.
+  # Rebuild each one-column tibble from its bare vector. Fork results cross a
+  # serialization boundary and the one-core results do not, so this is what keeps
+  # dataframe attributes from differing between the two paths.
   mtr_parts = map(mtr_parts, ~ as_tibble(set_names(list(.x[[1]]), names(.x))))
 
   mtrs = mtr_parts %>%
@@ -524,7 +505,7 @@ run_mtr_block = function(taxed, scenario_info, year, baseline_pr_er) {
 collect_totals = function(taxed, year) {
 
   #----------------------------------------------------------------------------
-  # The level aggregations written to a pass's totals/ directory and fed to
+  # Builds the level aggregations written to a pass's totals directory and fed to
   # calc_receipts().
   #
   # Parameters:
@@ -550,9 +531,9 @@ write_detail = function(taxed, path, optional = character(0)) {
   #
   # Parameters:
   #   - taxed (df)       : post-do_taxes frame for this pass
-  #   - path (str)       : output CSV path (parent directory created if absent)
-  #   - optional (str[]) : channel columns to include when present; one of
-  #                        DETAIL_COLS_OPTIONAL_STATIC / _CONV
+  #   - path (str)       : output CSV path; parent directory created if absent
+  #   - optional (str[]) : channel columns to include when present, either
+  #                        DETAIL_COLS_OPTIONAL_STATIC or DETAIL_COLS_OPTIONAL_CONV
   #
   # Returns: invisible NULL.
   #----------------------------------------------------------------------------
@@ -571,17 +552,17 @@ write_detail = function(taxed, path, optional = character(0)) {
 fold_deemed = function(taxed, liab_deemed = NULL) {
 
   #----------------------------------------------------------------------------
-  # Folds the expected tax on mechanical deemed death gains into reported
-  # liability. Called AFTER the MTR block, which anchors on the alive-leg
-  # liability. Receipts are built from the pmt_* payment-timing variables rather
-  # than liab_iit_net, so the fold lands there too: deemed tax is a final-return
-  # capital gains bill, i.e. nonwithheld income tax paid at filing.
+  # Folds the expected tax on deemed death gains into reported liability. Called
+  # after the MTR block, which anchors on the liability of the surviving leg.
+  # Receipts are built from the payment-timing variables rather than from
+  # liab_iit_net, so the fold lands there too: deemed tax is a capital gains bill
+  # on a final return, and so nonwithheld income tax paid at filing.
   #
   # Parameters:
   #   - taxed (df)           : frame carrying a liab_deemed column, or one to
-  #                            which `liab_deemed` will be attached
-  #   - liab_deemed (dbl[])  : optional vector to attach first (the conventional
-  #                            pass holds it aside across the MTR block)
+  #                            which liab_deemed will be attached
+  #   - liab_deemed (dbl[])  : optional vector to attach first; the conventional
+  #                            pass holds it aside across the MTR block
   #
   # Returns: the frame with liab_deemed folded into liability and payments.
   #----------------------------------------------------------------------------
@@ -605,23 +586,16 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
                    static_mtrs_all = NULL) {
 
   #----------------------------------------------------------------------------
-  # Runs simulation for all years of a scenario. Three modes (mirroring
-  # run_one_year):
+  # Runs simulation for all years of a scenario, in one of the pass types
+  # run_one_year takes:
   #
-  #   pass_type = 'both' (default): static + conventional in one pass per year,
-  #     writes both totals files. Returns combined static MTRs.
-  #
-  #   pass_type = 'static': static-only across all years; writes static totals
-  #     and receipts. Returns combined static MTRs.
-  #
-  #   pass_type = 'conventional': conventional-only across all years; writes
-  #     conventional totals and receipts. Caller must supply static_mtrs_all
-  #     (combined across years from a prior 'static' run); the loop filters
-  #     per year and threads to run_one_year.
-  #
-  # Used by do_scenario() for the kg_dynamics 3-step (static, bathtub,
-  # conventional) and by SLURM aggregate.R Phase 3a indirectly via per-year
-  # workers.
+  #   'both'         : static and conventional in one pass per year, writing both
+  #                    totals files. Returns the combined static MTRs.
+  #   'static'       : static across all years, writing static totals and
+  #                    receipts. Returns the combined static MTRs.
+  #   'conventional' : conventional across all years, writing conventional totals
+  #                    and receipts. Takes static_mtrs_all from an earlier static
+  #                    run and filters it by year.
   #
   # Parameters:
   #   - scenario_info (list)      : scenario info object; see get_scenario_info()
@@ -633,11 +607,11 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
   #                                 indexes ; see generate_indexes()
   #   - vat_price_offset (df)     : series of price level adjustment factors to
   #                                 reflect introduction of a VAT
-  #   - pass_type (str)           : 'both' (default), 'static', or 'conventional'
-  #   - static_mtrs_all (df)      : combined static MTRs across years (required
-  #                                 when pass_type='conventional' and the
-  #                                 scenario has behavior modules that consume
-  #                                 static_mtrs)
+  #   - pass_type (str)           : 'both' (default), 'static', 'conventional',
+  #                                 or 'conventional_no_wealth'
+  #   - static_mtrs_all (df)      : combined static MTRs across years, required on
+  #                                 a conventional pass whose behavior modules
+  #                                 read them
   #
   # Returns: tibble of marginal tax rates (only when pass_type %in% c('both',
   #          'static')); invisible NULL otherwise.
@@ -671,7 +645,7 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
     }
   }
 
-  # --- Write static outputs (only when this run actually ran the static pass) ---
+  # Write static outputs, if this call ran the static pass
   if (pass_type %in% c('both', 'static')) {
     write_pass_outputs(
       output               = output,
@@ -682,7 +656,8 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
     )
   }
 
-  # --- Write conventional outputs (skip for baseline; only when conv pass ran) ---
+  # Write conventional outputs, if this call ran the conventional pass. Baseline
+  # has none
   if (pass_type %in% c('both', 'conventional') && scenario_info$ID != 'baseline') {
     write_pass_outputs(
       output               = output,
@@ -693,7 +668,7 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
     )
   }
 
-  # Return combined MTRs (only meaningful when static pass ran in this call)
+  # Return combined MTRs, if this call ran the static pass
   if (pass_type %in% c('both', 'static')) {
     return(output %>% map(.f = ~ .x$mtrs) %>% bind_rows())
   }
@@ -706,38 +681,34 @@ kg_dyn_recompute_deemed_tax = function(taxed, input, baseline_pr_er,
                                        vars_1040, vars_payroll, estate_params) {
 
   #----------------------------------------------------------------------------
-  # Expected income tax on mechanical deemed death gains, plus the Sec. 2053
-  # estate-deduction reprice. Shared verbatim by the static and conventional
-  # passes of run_one_year(). Computes the
-  # exact decedent/survivor copy-split expectation without row duplication:
-  #   liab_deemed = m_household * [T(y + kg_deemed_full) - T(y)]
-  # via a second full-frame do_taxes() recompute (the "dead leg") with the full
-  # (Sec.121-net, post-avoidance) death gain added to kg_lt, both legs under
-  # reform law (so rate reforms flow through automatically). The decedent's
-  # deemed-realization tax is then applied as a deductible against the taxable
-  # estate (the in-chain estate ran with ded = 0) and estate liabilities are
-  # repriced; estate_distributable is unchanged by construction (the deduction
-  # enters the base only).
+  # Calculates expected income tax on deemed death gains and reprices the Sec.
+  # 2053 estate deduction. Takes the expectation over the death event without
+  # duplicating rows:
   #
-  # The recompute runs on the FULL frame (never a subset): calc functions index
-  # globals$random_numbers positionally (e.g. the EITC pre-certification draw),
-  # so subsetting rows breaks alignment. Non-holders have kg_deemed_full = 0 and
-  # an exactly-zero delta. The dead-leg pass skips the estate calc
-  # (calc_estate_flag = FALSE): only its liab_iit_net is read; estate is
-  # repriced here separately. The caller folds liab_deemed into reported
-  # liability AFTER the MTR block (MTRs anchor on the alive-leg liability).
+  #   liab_deemed = m_household * [T(y + kg_deemed_full) - T(y)]
+  #
+  # The second term comes from a second do_taxes() recompute with the death gain,
+  # net of Sec. 121 and of avoidance, added to kg_lt. Both legs run under reform
+  # law, so rate reforms flow through. The decedent's tax is then deducted against
+  # the taxable estate, which the in-chain estate calculation ran with turned off,
+  # and estate liabilities are repriced. The deduction enters the base only, so
+  # estate_distributable does not move.
+  #
+  # The recompute runs on the whole frame rather than a subset, because the calc
+  # functions index globals$random_numbers positionally and subsetting rows breaks
+  # the alignment. Records holding no gains have a delta of exactly zero. Only
+  # liab_iit_net is read off the recompute, so it skips the estate calculation.
   #
   # Parameters:
-  #   - taxed (df)          : already-taxed alive-leg frame (carries liab_iit_net,
-  #                           id, estate inputs); modified and returned
-  #   - input (df)          : pre-tax input frame for this pass, same row order
-  #                           (carries kg_lt, kg_deemed_full, m_household)
+  #   - taxed (df)          : taxed surviving-leg frame, modified and returned
+  #   - input (df)          : pre-tax input frame for this pass, same row order,
+  #                           carrying kg_lt, kg_deemed_full and m_household
   #   - baseline_pr_er (df) : baseline employer payroll, passed to do_taxes()
   #   - vars_1040 (str[])   : 1040 return vars for do_taxes()
   #   - vars_payroll (str[]): payroll return vars for do_taxes()
-  #   - estate_params       : frozen estate measurement params
+  #   - estate_params       : estate measurement parameters
   #
-  # Returns: `taxed` with liab_deemed attached and ESTATE_OUTPUT_COLS repriced.
+  # Returns: taxed with liab_deemed attached and the estate output repriced (df).
   #----------------------------------------------------------------------------
 
   dead_leg = input %>%
@@ -746,7 +717,7 @@ kg_dyn_recompute_deemed_tax = function(taxed, input, baseline_pr_er,
              vars_1040        = vars_1040,
              vars_payroll     = vars_payroll,
              calc_estate_flag = FALSE,
-             calc_wealth_flag = FALSE)   # only liab_iit_net read; wealth discarded
+             calc_wealth_flag = FALSE)   # only liab_iit_net is read
   stopifnot(identical(dead_leg$id, taxed$id))
 
   liab_deemed_cond  = dead_leg$liab_iit_net - taxed$liab_iit_net
@@ -768,19 +739,17 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                         static_mtrs_year = NULL) {
 
   #----------------------------------------------------------------------------
-  # Runs a single year of tax simulation. Three modes:
+  # Runs a single year of tax simulation, in one of four pass types:
   #
-  #   pass_type = 'both' (default, used by main.R sequential and SLURM Phase 1):
-  #     Loads tax_units, runs static pass + conventional pass in one process,
-  #     writes both detail files. Returns mtrs + static_totals + conventional_totals.
-  #
-  #   pass_type = 'static' (SLURM Phase 2A): runs only the static pass,
-  #     including MTR calc. Returns mtrs + static_totals.
-  #
-  #   pass_type = 'conventional' (SLURM Phase 2C): runs only the conventional
-  #     pass. Caller must supply `static_mtrs_year` (typically read from the
-  #     Phase 2A per-year .rds) so behavioral modules see correct static MTRs.
-  #     Returns conventional_totals.
+  #   'both'         : static and conventional in one process, writing both
+  #                    detail files. Returns the MTRs and both sets of totals.
+  #   'static'       : the static pass, including MTRs. Returns the MTRs and the
+  #                    static totals.
+  #   'conventional' : the conventional pass, taking static_mtrs_year so the
+  #                    behavior modules see this scenario's static MTRs. Returns
+  #                    the conventional totals.
+  #   'conventional_no_wealth' : as conventional, with the wealth haircut off.
+  #                    Writes detail only, for the wealth bathtub to read.
   #
   # Parameters:
   #   - year (int)                : year to run
@@ -793,22 +762,20 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   #                                 indexes ; see generate_indexes()
   #   - vat_price_offset (df)     : series of price level adjustment factors to
   #                                 reflect introduction of a VAT
-  #   - pass_type (str)           : 'both', 'static', or 'conventional'
-  #   - static_mtrs_year (df)     : pre-computed static MTRs (only required in
-  #                                 pass_type='conventional' when has_behavior)
+  #   - pass_type (str)           : 'both' (default), 'static', 'conventional',
+  #                                 or 'conventional_no_wealth'
+  #   - static_mtrs_year (df)     : static MTRs for this year, required on a
+  #                                 conventional pass with behavior modules
   #
-  # Returns: list with subset of {mtrs, static_totals, conventional_totals}
-  # depending on pass_type.
+  # Returns: list holding some of mtrs, static_totals and conventional_totals,
+  #          depending on the pass type.
   #----------------------------------------------------------------------------
 
   pass_type = match.arg(pass_type)
 
-  # Pass tagging for the economy-leg role gate (config_set_pass): each pass
-  # block below declares itself as it starts -- 'both' mode runs the static
-  # block then the conventional block, so a single top-of-function mapping
-  # would mislabel one of them. The data-load section runs untagged (NA),
-  # matching activation-time state. Always clear on exit so no pass label
-  # leaks across year-tasks.
+  # Each pass block below tags itself with config_set_pass, which the economy
+  # leg's role gate reads. A single tag here would mislabel one of the two blocks
+  # a 'both' run executes. Clear the tag on exit so no label leaks across years.
   on.exit(config_set_pass(NA), add = TRUE)
 
   if (globals$multicore != 'year') {
@@ -832,8 +799,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
            year          = year,
            decedent_flag = 0L) %>%
 
-    # Assign random numbers (id-keyed: the per-year id universe varies, so a
-    # positional bind would misalign draws and break on years with new ids)
+    # Assign random numbers, keyed on id: the id universe varies by year, so a
+    # positional bind would misalign the draws
     left_join(globals$random_numbers, by = 'id') %>%
 
     # Recode filing status if tax law departs from traditional options
@@ -859,28 +826,23 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     # Compute CPI ratio for capital gains basis indexation
     calc_kg_cpi_ratio(indexes, year)
 
-  # Estate tax setup. Liability itself is computed in-chain by do_taxes()
-  # (per pass, so behavioral modules and pass-specific state reprice it);
-  # here we (1) load the frozen measurement parameters into globals, where
-  # every do_taxes() call -- including MTR-loop recomputes -- can see them,
-  # and (2) compute the household death-event probability (the weights side,
-  # incl. the donor-clone cluster cap), a population-level operation that
-  # stays out of the per-record calculator chain. Wealth stays in raw
-  # dollars: the VAT / excess-growth income adjustments don't apply to
-  # balance-sheet stocks, so under those scenarios the estate base is
-  # intentionally in pre-adjustment units.
+  # Set up the estate tax. Liability is computed in the calculator chain by
+  # do_taxes, once per pass, so behavioral modules reprice it. Two things happen
+  # here instead: the measurement parameters go into globals, where every
+  # do_taxes call including the MTR recomputes can see them, and the household
+  # death probability is computed, which is a weights operation and includes the
+  # donor-clone cluster cap. Wealth stays in raw dollars, since the VAT price
+  # adjustment applies to income and not to balance sheet stocks.
   globals$estate_params <<- get_estate_params(scenario_info$interface_paths$`Tax-Data`)
   tax_units$estate_m = calc_estate_mortality(
     tax_units, globals$estate_params$cluster_death_weight_cap)
 
-  # Materialize economic net worth (Sigma assets - Sigma debts, raw dollars,
-  # no valuation discount) as a STORED column, computed once here so it can
-  # serve three roles downstream: (1) the wealth-tax base read by calc_wealth();
-  # (2) the +$1 bump target for the net_worth MTR (calc_mtrs operates on stored
-  # columns, and net_worth is derived); (3) the isolation point the conventional
-  # avoidance module overwrites with the avoided base. value.* stay intact, so
-  # estate and capital income are unaffected. Like the estate base, wealth stays
-  # in raw (non-VAT-adjusted) dollars by construction.
+  # Store economic net worth, assets less debts in raw dollars with no valuation
+  # discount, as a column. It is computed once here because three things read it:
+  # calc_wealth, as the wealth tax base; calc_mtrs, which perturbs stored columns
+  # and so needs net worth to be one; and the avoidance module, which overwrites
+  # it with the avoided base. The asset columns themselves are untouched, so
+  # estate and capital income are unaffected.
   tax_units %<>%
     mutate(net_worth = rowSums(across(all_of(WEALTH_ASSET_COLS), ~ replace_na(., 0))) -
                        rowSums(across(all_of(WEALTH_DEBT_COLS),  ~ replace_na(., 0))))
@@ -893,8 +855,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   # Read baseline payroll taxes
   baseline_pr_er = NULL
   if (scenario_info$ID != 'baseline') {
-    # 3 columns of ~98: detail files are ~150MB and this read happens once per
-    # year-task on every pass (perf audit §2.7)
+    # Read 3 columns of about 98. Detail files run to 150MB and every pass reads
+    # this once per year
     baseline_pr_er = globals$baseline_root %>%
       file.path('baseline/static/detail', paste0(year, '.csv')) %>%
       fread(select = c('id', 'liab_fica_er1', 'liab_fica_er2')) %>%
@@ -909,7 +871,10 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     set_names(NULL)
 
 
-  # --- STATIC PASS ---
+  #-------------
+  # Static pass
+  #-------------
+
   static_totals    = NULL
   tax_units_static = NULL
   uses_kg_mech     = scenario_info$ID != 'baseline' &&
@@ -922,38 +887,26 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
 
     config_set_pass('static')
 
-    # kg_dynamics scenarios: inject the mechanical (frozen-realization)
-    # carryover/deemed quantities into records BEFORE tax calculation, so the
-    # policy's mechanical content lands in static liabilities, static MTRs
-    # (post-injection by design), and the distribution tables. The original
-    # tax_units stays unmodified for the conventional pass, whose behavior
-    # module applies the full bathtub state itself.
+    # Inject the frozen-realization carryover and deemed quantities into records
+    # before tax calculation, so that the policy's mechanical content lands in
+    # static liabilities, static MTRs and the distribution tables. tax_units
+    # itself is left alone for the conventional pass, whose behavior module
+    # applies the full bathtub state.
     static_input = tax_units
     if (uses_kg_mech) {
       static_input = kg_dyn_apply_mech_to_records(tax_units, scenario_info,
                                                   year)
     }
 
-    # Use %>% (not %<>%) so original tax_units stays unmodified for conventional pass
     tax_units_static = static_input %>%
       do_taxes(baseline_pr_er = baseline_pr_er,
                vars_1040      = vars_1040,
                vars_payroll   = return_vars$calc_pr)
 
-    # Expected tax on mechanical deemed death gains, preserving record-level
-    # nonlinearity without splitting records:
-    #   liab_deemed = m * [T(y + kg_deemed_full) - T(y)]
-    # where the dead leg is a second recompute with the full (§121-net,
-    # post-avoidance) death gain on the return, both legs under reform law
-    # (so rate reforms flow through automatically). This is the exact
-    # decedent/survivor copy-split expectation, computed with two full-frame
-    # passes instead of row duplication. The recompute runs on the FULL
-    # frame (never a subset): calc functions index globals$random_numbers
-    # positionally (e.g. the EITC pre-certification draw), so subsetting
-    # rows breaks alignment. Non-holders have kg_deemed_full = 0, hence
-    # identical inputs and an exactly-zero delta. The main frame's kg_lt is
-    # alive-leg (no deemed), so MTRs and tau are pure inter-vivos margins;
-    # liab_deemed is folded into liab_iit_net AFTER the MTR block below.
+    # Calculate expected tax on deemed death gains. The main frame's kg_lt holds
+    # no deemed gain, so MTRs and tau price the inter-vivos margin alone, and
+    # liab_deemed is folded into liability after the MTR block below. See
+    # kg_dyn_recompute_deemed_tax.
     if (uses_kg_mech) {
       tax_units_static = tax_units_static %>% mutate(liab_deemed = 0)
       if (any(static_input$kg_deemed_full > 0)) {
@@ -971,9 +924,9 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     static_mtrs_year = NULL
     if (!is.null(scenario_info$mtr_vars)) {
 
-      # baseline_pr_er = NULL, NOT the pass-level value: tax_units_static is a
-      # POST-do_taxes frame, so its wages already carry the er-payroll rescale
-      # (see the calc_mtrs parameter doc)
+      # Pass baseline_pr_er = NULL rather than the pass-level value: this frame
+      # has been through do_taxes, so its wages already carry the employer
+      # payroll rescale. See calc_mtrs.
       static_mtr_out   = run_mtr_block(taxed          = tax_units_static,
                                        scenario_info  = scenario_info,
                                        year           = year,
@@ -981,71 +934,55 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       tax_units_static = static_mtr_out$taxed
       static_mtrs_year = static_mtr_out$mtrs
 
-      # Same-frame actuals, reused by the guaranteed-column fallbacks below
-      # (the MTR join adds only mtr_* columns, so liabilities are unchanged)
+      # Read the actuals off this frame, for the fallback columns below. The MTR
+      # join adds only mtr_ columns, so liabilities are unchanged
       static_actuals = mtr_actuals(tax_units_static)
 
-      # Law-only kg_lt MTR for the planned-timing wedge: same reform law,
-      # computed on the PRE-injection frame. The mech injection above adds
-      # mechanically-routed carryover realizations to heir records' kg_lt,
-      # which moves their bracket/NIIT/phaseout positions and drifts the
-      # cell-average tau by single-digit bp even when the living-side
-      # schedule is unchanged -- and the argmin planned-timing rule
-      # (kg_dyn_build_planned_timing) would retime ~1-3% of a ~$600B bucket
-      # against that composition drift, putting a +/-$2-4B sawtooth on
-      # otherwise-smooth annual paths. Only the timing wedge consumes this
-      # column; the Bellman keeps the post-injection tau above, where the
-      # income effect is real signal. Full-frame recompute (never a subset)
-      # for the same positional-random_numbers reason as the deemed dead
-      # leg. Cost: two extra full-frame passes per kg scenario-year,
-      # accepted for unconditional simplicity (no law-identity gating).
+      # Calculate the kg_lt MTR under reform law on the frame before the
+      # mechanical injection, read only by the planned-timing wedge. The
+      # injection adds carryover realizations to heirs' kg_lt, which moves their
+      # bracket and phaseout positions and drifts the cell average rate by a few
+      # basis points; kg_dyn_build_planned_timing takes an argmin over years and
+      # would retime a few percent of the bucket against that drift. The Bellman
+      # keeps the post-injection rate, where the income effect is signal.
       if (uses_kg_mech) {
         tax_units_raw = tax_units %>%
           do_taxes(baseline_pr_er   = baseline_pr_er,
                    vars_1040        = vars_1040,
                    vars_payroll     = return_vars$calc_pr,
-                   calc_estate_flag = FALSE,    # only liab_iit_net/liab_pr read for the law-only MTR
+                   calc_estate_flag = FALSE,    # only liab_iit_net and liab_pr are read
                    calc_wealth_flag = FALSE)
         stopifnot(identical(tax_units_raw$id, tax_units_static$id))
-        # baseline_pr_er = NULL: tax_units_raw is a POST-do_taxes frame
+        # This frame has been through do_taxes, so baseline_pr_er is NULL
         tax_units_static$mtr_kg_lt_lawonly = calc_one_mtr(
           frame   = strip_calc_vars(tax_units_raw),
           actuals = mtr_actuals(tax_units_raw),
           var     = 'kg_lt')
       }
 
-      # Guaranteed mtr_net_worth for wealth-active kg scenarios: the kg
-      # bathtub's wealth-carry aggregator (kg_dyn_aggregate_cell_carry)
-      # prices deferral off the record product mtr_net_worth * mtr_kg_lt
-      # read from THIS static detail. When the runscript already registers
-      # net_worth in mtr_vars (e.g. top_tax dials), the generic loop above
-      # wrote it and this branch is skipped — those static legs stay
-      # byte-identical. The wealth-law gate (any nonzero wealth.rates* in
-      # any year) keeps the detail schema stable across phase-in years.
+      # Supply mtr_net_worth when the scenario's wealth law is active and the
+      # runscript did not register it. kg_dyn_aggregate_cell_carry prices
+      # deferral off the product of mtr_net_worth and mtr_kg_lt read from this
+      # static detail. The gate on wealth law being active in any year keeps the
+      # detail schema stable across phase-in years.
       if (uses_kg_mech && kg_dyn_wealth_law_active(tax_law) &&
           !('net_worth' %in% scenario_info$mtr_vars)) {
-        # drop_mtrs recovers exactly the frame the generic loop ran on, so the
-        # fallback column matches a runscript-registered mtr_net_worth
-        # bit-for-bit. baseline_pr_er = NULL: POST-do_taxes frame. Deliberately
-        # NOT copied from the conv-no-wealth block below, whose frame is
-        # PRE-do_taxes and correctly threads baseline_pr_er.
+        # drop_mtrs recovers the frame the loop above ran on, so this column
+        # matches a registered mtr_net_worth. The frame has been through
+        # do_taxes, so baseline_pr_er is NULL -- unlike the conv-no-wealth block
+        # below, which measures on a frame that has not and threads it.
         tax_units_static$mtr_net_worth = calc_one_mtr(
           frame   = strip_calc_vars(tax_units_static, drop_mtrs = TRUE),
           actuals = static_actuals,
           var     = 'net_worth')
       }
 
-      # Guaranteed mtr_estate / mtr_estate_ded for kg scenarios: the kg
-      # bathtub's estate-exposure aggregator (kg_dyn_aggregate_cell_estate)
-      # prices the death value's estate offset off mtr_estate_ded read from
-      # THIS static detail. Same guarantee pattern as mtr_net_worth above,
-      # but with NO law gate -- estate law is always active. When the
-      # runscript registers 'estate' in mtr_vars the generic loop already
-      # wrote both columns (bit-identical to this path) and this branch is
-      # skipped. NOTE the fallback exists only on the SCENARIO leg: the
-      # BASELINE pass cannot know a kg scenario will consume its detail, so
-      # baseline rows of kg/wealth runscripts must register 'estate' in
-      # mtr_vars (read_mtr in src/sim/kg/ hard-stops with that message).
+      # Supply mtr_estate and mtr_estate_ded when the runscript did not register
+      # them. kg_dyn_aggregate_cell_estate prices the death value's estate offset
+      # off mtr_estate_ded read from this static detail. There is no law gate:
+      # estate law is always active. The fallback runs on the scenario leg only,
+      # since a baseline pass cannot know a kg scenario will read its detail, so
+      # baseline rows of a kg runscript have to register estate in mtr_vars.
       if (uses_kg_mech && !('estate' %in% scenario_info$mtr_vars)) {
         tax_units_static$mtr_estate = calc_one_mtr(
           frame   = strip_calc_vars(tax_units_static, drop_mtrs = TRUE),
@@ -1069,19 +1006,22 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   }
 
 
-  # --- CONVENTIONAL PASS (and the wealth conv-no-wealth pre-pass) ---
+  #-------------------
+  # Conventional pass
+  #-------------------
+
   has_behavior        = length(scenario_info$behavior_modules) > 0
   conventional_totals = NULL
 
   if (pass_type %in% c('both', 'conventional', 'conventional_no_wealth')) {
 
-    # conv-no-wealth is a conventional-side pass (behavior on, haircut off)
+    # The conv-no-wealth pass is a conventional-side pass, with behavior on
     config_set_pass('conventional')
 
     is_convnw     = pass_type == 'conventional_no_wealth'
-    # The final conventional pass applies the wealth haircut; the conv-no-wealth
-    # pass deliberately does NOT (it measures ΔT⁰ / mtr_cap_bundle on the
-    # un-eroded base, the frame independent of the deficit).
+    # Only the final conventional pass applies the wealth haircut. The
+    # conv-no-wealth pass measures the forcing on the base before erosion, which
+    # is the frame that does not depend on the deficit.
     apply_haircut = uses_wealth && !is_convnw
     conv_root     = if (is_convnw) {
                       file.path(scenario_info$output_path, 'conventional_no_wealth')
@@ -1090,24 +1030,17 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                     }
     conv_detail_path = file.path(conv_root, 'detail', paste0(year, '.csv'))
 
-    # The full do_taxes path runs whenever there is a behavior module OR the
-    # wealth channel OR the corporate channel is active: the conv-no-wealth
-    # pass needs liabilities + mtr_cap_bundle, the final conv pass needs the
-    # haircut applied, and a corporate scenario needs its shocked frame taxed.
-    # Only a plain no-behavior, no-wealth, no-corp scenario takes the
-    # copy-static shortcut.
+    # Run the calculator whenever there is a behavior module or either mechanical
+    # channel is active. A scenario with none of the three copies its static
+    # detail instead.
     if (has_behavior || uses_wealth || uses_corp) {
 
-      # On-model corporate incidence: a fixed step at the head of EVERY
-      # conventional-side pass (incl. conv-no-wealth), BEFORE the wealth
-      # haircut and the behavior modules, so the kg/wealth machinery runs on
-      # the shocked frame (src/sim/corp/; FORMAL_MODEL section 7). Scales
-      # the D16 external-income lines (accumulating the analytic corp_dY_exog
-      # the wealth bathtub forcing consumes), marks down exposed value.*
-      # stocks and recomputes net_worth (so calc_estate / calc_wealth reprice),
-      # and adjusts kg flows in non-kg runs (kg runs route gains through the
-      # bathtub state debit + the post-behavior phi term instead). Static side
-      # never sees this (D5).
+      # Apply corporate incidence at the head of every conventional-side pass,
+      # before the wealth haircut and the behavior modules, so that the gains and
+      # wealth machinery runs on the shocked frame. The step scales the external
+      # income lines, accumulating the corp_dY_exog the wealth forcing reads,
+      # marks down exposed asset stocks and recomputes net worth, and adjusts
+      # gains flows on runs without the gains bathtub. See src/sim/corp/.
       conv_base = tax_units
       if (uses_corp) {
         corp_check_run_compat(scenario_info, vat_price_offset)
@@ -1117,9 +1050,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
           year               = year,
           kg_dynamics_active = uses_kg_mech)
 
-        # Conservation diagnostic (WARN-level reconciliation REPORT; the
-        # per-line testable content is analytic-vs-realized, measured here by
-        # differencing the pre/post frames). Final conventional pass only.
+        # Report the conservation diagnostic, comparing the analytic paths
+        # against what the applier realized by differencing the two frames
         if (!is_convnw) {
           corp_write_conservation_diag(
             pre = tax_units, post = conv_base,
@@ -1128,22 +1060,20 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
         }
       }
 
-      # Mechanical wealth haircut: a fixed conventional-pass step BEFORE the
-      # behavior modules / do_taxes. Drains each record's (age x net-worth-
-      # percentile) cell deficit out of wealth (value.* / capital flows / basis)
-      # and recomputes net_worth, so calc_estate sees a smaller estate base and
-      # calc_wealth reprices liab_wealth on the eroded stock. Final conv only.
-      # Ranking/binning uses the RAW pre-corp net worth (tax_units, row-aligned
-      # to conv_base): the pre-pass cutoffs were computed on net_worth_raw, and
-      # the corporate markdown must not shift records across cells.
+      # Apply the wealth haircut, before the behavior modules and do_taxes. It
+      # drains each record's cell deficit out of the asset stocks, the capital
+      # flows and basis, and recomputes net worth, so that calc_estate sees a
+      # smaller estate base and calc_wealth reprices on the eroded stock. Records
+      # are ranked on net worth before the corporate markdown, which is what the
+      # pre-pass computed its cutoffs on.
       if (apply_haircut) {
         wealth_state = read_cohort_state(scenario_info, 'wealth_dynamics_state', year)
         conv_base    = wealth_dyn_apply_to_records(conv_base, wealth_state,
                                                    rank_value = tax_units$net_worth)
       }
 
-      # Behavioral feedback (identity passthrough when no behavior module). When
-      # both channels are active, kg runs on the post-haircut frame.
+      # Run behavioral feedback. With both channels active, the gains modules see
+      # the frame after the haircut
       if (has_behavior) {
         conv_input = conv_base %>%
           do_behavioral_feedback(behavior_modules = scenario_info$behavior_modules,
@@ -1155,12 +1085,10 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
         conv_input = conv_base
       }
 
-      # Corporate D18 quantity margin for kg_dynamics runs: buyback-forced
-      # sale volume tracks after-tax payouts, applied AFTER
-      # kg_dyn_apply_to_records (the realization rule knows MTRs and
-      # mortality, not payout policy). Mutually exclusive with the record
-      # applier's non-kg kg block (skipped there via kg_dynamics_active);
-      # the price margin rides the bathtub gain-state debit, never this step.
+      # Apply the corporate quantity margin, the buyback-forced sale volume that
+      # tracks after-tax payouts. It runs after the bathtub applier, whose
+      # realization rule reads MTRs and mortality rather than payout policy. On
+      # these runs the price margin enters as a gain-state debit instead.
       if (uses_corp && uses_kg_mech) {
         conv_input = corp_apply_kg_quantity_to_records(
           conv_input, corp_get_paths(scenario_info), year)
@@ -1171,9 +1099,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                  vars_1040      = vars_1040,
                  vars_payroll   = return_vars$calc_pr)
 
-      # kg_dynamics: expected tax on deemed death gains via the same two-leg
-      # full-frame recompute as the static pass (see comment there); folded
-      # into liab_iit_net after the MTR block below
+      # Calculate expected tax on deemed death gains, as on the static pass, and
+      # fold it into liability after the MTR block below
       conv_liab_deemed = NULL
       if (uses_kg_mech && 'kg_deemed_full' %in% names(conv_input) &&
           any(conv_input$kg_deemed_full > 0)) {
@@ -1187,12 +1114,11 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
         conv_liab_deemed = tax_units_conv$liab_deemed
       }
 
-      # Wealth bathtub forcing ingredients (conv-no-wealth pass only): the
-      # composition-weighted capital-income bundle MTR + capital total, the
-      # marginal wealth-tax rate, and gross assets -- all on this un-eroded
-      # frame and BEFORE the deemed fold (so tau is a pure inter-vivos margin,
-      # mirroring mtr_kg_lt_lawonly). The wealth pre-pass reads these from this
-      # pass's detail.
+      # Measure what the wealth bathtub forcing needs: the composition-weighted
+      # capital income bundle MTR and its capital total, the marginal wealth rate,
+      # and gross assets. All are read off this un-eroded frame, before the deemed
+      # fold, so the rate prices the inter-vivos margin alone. The wealth pre-pass
+      # reads them from this pass's detail.
       if (is_convnw) {
         bundle = calc_cap_bundle_mtr(
           tax_units       = conv_input,
@@ -1203,18 +1129,15 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
         tax_units_conv$mtr_cap_bundle = bundle$mtr_cap_bundle
         tax_units_conv$cap_bundle_F   = bundle$cap_bundle_F
         tax_units_conv$economic_gross = wealth_dyn_economic_gross(conv_input)
-        # Raw (pre-behavior) economic net worth, the cell ranking + denominator
-        # variable. A net_worth-overwriting behavior module (e.g. wealth
-        # avoidance) mutates conv_input$net_worth on this frame, but the applier
-        # ranks on the RAW pre-behavior net_worth (it runs before behavior), so
-        # the pre-pass must rank on the same raw stock or cells/conservation
-        # break. tax_units is the raw frame, row-aligned to tax_units_conv.
+        # Store economic net worth before behavior, the variable cells are ranked
+        # and scaled by. The wealth avoidance module overwrites net_worth on this
+        # frame, but the applier runs before behavior and so ranks on the raw
+        # stock; the pre-pass has to rank on the same one.
         stopifnot(identical(tax_units_conv$id, tax_units$id))
         tax_units_conv$net_worth_raw  = tax_units$net_worth
-        # conv_input is the PRE-do_taxes frame: it carries none of the
-        # calculated variables (strict = FALSE) and its wages are un-rescaled,
-        # so the recompute must apply the same rescale as the actuals run --
-        # thread baseline_pr_er (see the calc_mtrs parameter doc)
+        # conv_input has not been through do_taxes: it carries none of the
+        # calculated variables and its wages are not rescaled, so thread
+        # baseline_pr_er to apply the same rescale the actuals ran under
         tax_units_conv$mtr_net_worth  = calc_one_mtr(
           frame          = strip_calc_vars(conv_input, strict = FALSE),
           actuals        = mtr_actuals(tax_units_conv),
@@ -1222,15 +1145,12 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
           baseline_pr_er = baseline_pr_er)
       }
 
-      # Calculate conventional marginal tax rates (skip on the conv-no-wealth
-      # pass -- its detail is read only by the wealth pre-pass, which needs only
-      # the mtr_cap_bundle / mtr_net_worth computed above)
+      # Calculate conventional marginal tax rates. The conv-no-wealth pass needs
+      # none: the wealth pre-pass reads only the two MTRs measured above
       if (!is.null(scenario_info$mtr_vars) && !is_convnw) {
 
-        # baseline_pr_er = NULL, NOT the pass-level value: tax_units_conv is a
-        # POST-do_taxes frame (wages already rescaled). The convnw
-        # mtr_net_worth call above differs deliberately -- it passes the
-        # PRE-do_taxes conv_input, so it must thread baseline_pr_er.
+        # This frame has been through do_taxes and its wages are already rescaled,
+        # so pass baseline_pr_er = NULL rather than the pass-level value
         tax_units_conv = run_mtr_block(taxed          = tax_units_conv,
                                        scenario_info  = scenario_info,
                                        year           = year,
@@ -1241,22 +1161,21 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
         tax_units_conv = fold_deemed(tax_units_conv, conv_liab_deemed)
       }
 
-      # conv-no-wealth detail lives in its own tree so it never clobbers the
-      # final conventional detail
+      # Write detail. The conv-no-wealth pass has its own output tree, so it never
+      # overwrites the final conventional detail
       write_detail(tax_units_conv, conv_detail_path,
                    optional = DETAIL_COLS_OPTIONAL_CONV)
 
-      # Skip totals on the conv-no-wealth pass -- intermediate, no
-      # totals/receipts; run_sim does not aggregate it either
+      # Collect totals. The conv-no-wealth pass is intermediate and has none
       if (!is_convnw) {
         conventional_totals = collect_totals(tax_units_conv, year)
       }
 
     } else if (scenario_info$ID != 'baseline') {
 
-      # No behavior (and no wealth channel): copy static detail to conventional
-      # output. In 'both' mode we have tax_units_static in memory; in
-      # 'conventional' mode we copy the already-written static csv directly.
+      # With no behavior and neither channel active, copy the static detail to the
+      # conventional output. A 'both' pass has the frame in memory; a conventional
+      # pass copies the CSV the static pass already wrote.
       conv_path = conv_detail_path
       if (!is.null(tax_units_static)) {
         write_detail(tax_units_static, conv_path)
@@ -1266,9 +1185,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
         file.copy(static_path, conv_path, overwrite = TRUE)
       }
 
-      # In 'both' mode static_totals is in scope; in 'conventional' mode the
-      # caller (worker) is responsible for substituting the static_totals from
-      # Phase 2A's per-year .rds. We return NULL here.
+      # On a 'both' pass the static totals are in scope. On a conventional pass
+      # they are NULL, and the caller substitutes the ones Phase 2A wrote.
       conventional_totals = static_totals
     }
   }
@@ -1285,31 +1203,26 @@ run_bathtub_pass = function(scenario_info, tax_law,
                             vat_price_offset = NULL) {
 
   #----------------------------------------------------------------------------
-  # Orchestrates the kg_dynamics bathtub pre-pass for one scenario. Aggregates
-  # baseline cells from Tax-Data, builds gain-stock-weighted cell-MTR tau
-  # lists from baseline + reform static detail, and runs the sequential
-  # year-by-year recurrence via kg_dyn_run_bathtub_pass(). Side effect: writes
-  # per-year state files under
-  # {scenario_output}/conventional/supplemental/kg_dynamics_state/.
-  #
-  # Called by do_scenario() for non-baseline scenarios that include any
-  # behavior module under kg_dynamics/. The behavior module then reads its
-  # year's state file in the conventional pass.
+  # Runs the capital gains bathtub pre-pass for one scenario. Aggregates baseline
+  # cells from Tax-Data, builds gain-stock-weighted cell rates from the baseline
+  # and reform static detail, and runs the year-by-year recurrence. Writes
+  # per-year state files under the scenario's
+  # conventional/supplemental/kg_dynamics_state/, which the behavior module reads
+  # on the conventional pass.
   #
   # Parameters:
   #   - scenario_info (list)        : output of get_scenario_info()
-  #   - tax_law (df)                : output of build_tax_law() — reform's
-  #                                   joined tax law tibble
-  #   - vat_price_offset (df)       : VAT price offset tibble; used only to
-  #                                   refuse the run when VAT is active
+  #   - tax_law (df)                : joined tax law tibble; see build_tax_law()
+  #   - vat_price_offset (df)       : VAT price offset tibble, read only to refuse
+  #                                   the run when a VAT is active
   #
-  # Returns: invisibly NULL.
+  # Returns: invisible NULL (writes files as a side effect).
   #----------------------------------------------------------------------------
 
   kg_dyn_check_run_compat(scenario_info, vat_price_offset)
 
-  # Reuse the frozen pass's Tax-Data sweep when available (same scenario,
-  # same pipeline run) instead of re-reading the wide wealth columns.
+  # Reuse the frozen pass's Tax-Data sweep where it exists, rather than reading
+  # the wide wealth columns a second time
   cache_path   = kg_dyn_inputs_cache_path(scenario_info)
   cells_inputs = if (file.exists(cache_path)) readRDS(cache_path) else NULL
 
@@ -1322,12 +1235,11 @@ run_bathtub_pass = function(scenario_info, tax_law,
     cells_inputs  = cells_inputs
   )
 
-  # sigma income-conversion context (NULL when the scenario doesn't run the
-  # conversion/sigma module): the bathtub pass computes per-record
-  # conversions per year, injects the cell inflow into the recurrence, and
-  # persists the cell tracker in the state files. Pool legs come from raw
-  # Tax-Data; txbl_inc + per-leg MTRs from the baseline/scenario static
-  # detail, both available here (the bathtub already requires them).
+  # Build the income-conversion context. The bathtub pass computes per-record
+  # conversions each year, injects the cell inflow into the recurrence, and writes
+  # the cell tracker into the state files. Pool legs come from raw Tax-Data, and
+  # taxable income and the per-leg MTRs from the baseline and scenario static
+  # detail.
   sigma_ctx = NULL
   if (scenario_uses_sigma(scenario_info)) {
     sigma_ctx = sigma_build_ctx(
@@ -1347,21 +1259,21 @@ run_bathtub_pass = function(scenario_info, tax_law,
     reform_tau        = inputs$reform_tau,
     reform_tau_timing = inputs$reform_tau_timing,
     heir_dist         = inputs$heir_dist,
-    # Corporate gain-state debit (D18 price margin in kg runs): per-year
-    # level adjustments D_a(t) = mu_t * V_corp_exposed_a(t), recomputed from
-    # the current markdown each year (credit-back automatic). NULL when the
-    # corporate channel is inactive -- byte-identical state files then.
+    # Corporate price margin, as a per-year debit to the cell gain state:
+    #
+    #   D(a, t) = mu(t) * V_corp_exposed(a, t)
+    #
+    # recomputed from the current markdown each year, and NULL when the corporate
+    # channel is inactive
     corp_debit_by_year = corp_kg_state_debit_by_year(scenario_info,
                                                      inputs$baseline_cells),
     sigma_ctx          = sigma_ctx,
-    # Wealth-tax deferral carrying cost h (per-year cell vectors; all-zero
-    # when the scenario levies no wealth tax) -- prices the wealth x CG
-    # margin in the Bellman and tau_eq.
+    # Wealth tax carrying cost of deferral, per-year cell vectors, all zero when
+    # the scenario levies no wealth tax
     reform_carry       = inputs$reform_carry,
-    # Leg-paired estate exposure of the kg death value (per-year cell
-    # vectors of switch-gated mtr_estate_ded) -- prices the estate x CG
-    # margin: (1 - e) on the Bellman death value F and on the tau_eq
-    # death-realize term. e_B rides Pass 1 / prims_B, e_S Pass 2 / prims_S.
+    # Estate exposure of the death value, per-year cell vectors of mtr_estate_ded
+    # by leg. It enters as (1 - e) on the Bellman death value and on the
+    # death-realize term of the equivalent rate.
     baseline_estate    = inputs$baseline_estate,
     reform_estate      = inputs$reform_estate
   )
@@ -1374,13 +1286,16 @@ run_bathtub_pass = function(scenario_info, tax_law,
 kg_dyn_check_run_compat = function(scenario_info, vat_price_offset) {
 
   #----------------------------------------------------------------------------
-  # Preconditions for the kg_dynamics pre-passes (frozen mechanical and
-  # conventional bathtub). Both read raw Tax-Data CSVs directly (for
-  # value.*/basis.*/q_death*, which aren't in detail_vars), so both take the
-  # shared raw-dollar channel guard. On top of that the bathtub needs the kg_lt
-  # MTR registered -- checked here so the pipeline fails before any pass runs.
+  # Checks preconditions for the capital gains pre-passes. Both read raw Tax-Data
+  # CSVs directly, for the asset, basis and death columns detail files do not
+  # carry, so both take the shared raw-dollar channel guard. The bathtub also
+  # needs the kg_lt MTR registered.
   #
-  # Returns: invisibly TRUE; stops on violation.
+  # Parameters:
+  #   - scenario_info (list)  : output of get_scenario_info()
+  #   - vat_price_offset (df) : VAT price offset tibble
+  #
+  # Returns: invisible TRUE, stopping if a precondition fails.
   #----------------------------------------------------------------------------
 
   if (is.null(scenario_info$mtr_vars) ||
@@ -1393,10 +1308,6 @@ kg_dyn_check_run_compat = function(scenario_info, vat_price_offset) {
   check_raw_data_channel_compat('kg_dynamics', scenario_info,
                                 vat_price_offset)
 
-  # Calibration staleness is no longer checked here: it is enforced model-wide
-  # for every calibrated value by config_check_staleness(), called once per
-  # scenario at parse time (src/misc/config_parser.R).
-
   invisible(TRUE)
 }
 
@@ -1406,19 +1317,19 @@ run_frozen_pass = function(scenario_info, tax_law,
                            vat_price_offset = NULL) {
 
   #----------------------------------------------------------------------------
-  # Orchestrates the kg_dynamics frozen mechanical pre-pass for one scenario.
-  # Runs BEFORE the static pass (it needs only Tax-Data cell aggregates and
-  # the joined tax law — no Bellman, no MTRs). Side effects:
-  #   - per-year mechanical state files under
-  #     {scenario_output}/static/supplemental/kg_dynamics_mech_state/
-  #   - inputs_cache.rds in the same directory (baseline cells + slim
-  #     per-record frames), reused by run_bathtub_pass to skip its own
-  #     Tax-Data sweep.
+  # Runs the frozen mechanical pre-pass for one scenario, before the static pass.
+  # It needs only Tax-Data cell aggregates and the joined tax law. Writes per-year
+  # mechanical state files under the scenario's
+  # static/supplemental/kg_dynamics_mech_state/, along with the baseline cells and
+  # slim per-record frames run_bathtub_pass reuses in place of its own Tax-Data
+  # sweep.
   #
-  # Called by do_scenario() for non-baseline kg_dynamics scenarios (main.R
-  # sequential mode) and by src/slurm/frozen.R (SLURM Phase 1B).
+  # Parameters:
+  #   - scenario_info (list)  : output of get_scenario_info()
+  #   - tax_law (df)          : joined tax law tibble; see build_tax_law()
+  #   - vat_price_offset (df) : VAT price offset tibble
   #
-  # Returns: invisibly NULL.
+  # Returns: invisible NULL (writes files as a side effect).
   #----------------------------------------------------------------------------
 
   kg_dyn_check_run_compat(scenario_info, vat_price_offset)

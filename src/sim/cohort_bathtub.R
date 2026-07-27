@@ -1,17 +1,18 @@
 #-------------------------------------------------------------------------------
 # cohort_bathtub.R
 #
-# Generic helpers for cohort-level "bathtub" recurrences over (age x within-age
-# percentile) cells. These are deliberately model-agnostic: the wealth-dynamics
-# channel (src/sim/wealth_dynamics.R) consumes them now, and the kg_dynamics
-# bathtub (src/sim/kg/) can be pointed at them later. Nothing here
-# knows about wealth, gains, taxes, or estates -- only ages, percentiles,
-# weights, transition matrices, and per-year state IO.
+# Contains general functions for stepping cohort state forward over cells of age
+# by percentile
+#-------------------------------------------------------------------------------
+
+# Nothing here knows about wealth, gains, taxes or estates: only ages,
+# percentiles, weights, transition matrices, and reading and writing state by
+# year. The wealth model uses these now, and the gains model could be pointed at
+# them later.
 #
-# The pattern (mirrors kg_dynamics): cell-level state, a deterministic age-shift
-# composed with a stochastic within-age percentile transition, a forward
-# recurrence, and per-year .rds state. See run_wealth_bathtub_pass() for the
-# concrete recurrence that wires these together.
+# The pattern is the same in both: state held per cell, aged one year at a time
+# and moved across percentiles, with a fresh inflow each year, and one state file
+# per year. run_wealth_bathtub_pass() is the concrete case.
 #-------------------------------------------------------------------------------
 
 
@@ -19,19 +20,16 @@
 build_aging_matrix = function(ages) {
 
   #----------------------------------------------------------------------------
-  # Deterministic age-shift operator on a contiguous integer age grid.
-  # A[a, h] = 1 if h = a + 1; the top age self-loops (A[a_max, a_max] = 1) so
-  # the topcode pool accumulates. Formerly duplicated as kg's private
-  # kg_dyn_build_aging_matrix() (now removed); this is the shared primitive
-  # both the wealth and kg channels call.
+  # Builds the operator that moves each age to the next. The top-coded age points
+  # at itself, so that pool accumulates. Shared by the wealth and gains models.
   #
-  # The shift is applied as crossprod(A, X) (i.e. t(A) %*% X): row a of the
-  # result gathers from row a-1 of X, with the top age also gathering itself.
+  # Applied as crossprod(A, X), so that each row gathers from the row below it and
+  # the top age also gathers itself.
   #
   # Parameters:
-  #   - ages (int[]) : contiguous, increasing age grid (e.g. 18:80)
+  #   - ages (int[]) : contiguous, increasing age grid
   #
-  # Returns: an (n x n) 0/1 matrix with dimnames = ages.
+  # Returns: square matrix of zeros and ones, labelled by age.
   #----------------------------------------------------------------------------
 
   stopifnot(length(ages) >= 1, all(diff(ages) == 1))
@@ -47,24 +45,19 @@ build_aging_matrix = function(ages) {
 weighted_quantile_cuts = function(values, weights, probs) {
 
   #----------------------------------------------------------------------------
-  # Weighted quantile cut points. Returns the values at which the cumulative
-  # weight fraction (over the supplied, already-subsetted population) first
-  # reaches each probability in `probs`. Used to draw equal-weighted-headcount
-  # percentile boundaries within an age cohort.
+  # Finds weighted quantiles: the value at which the cumulative share of weight
+  # first reaches each of the given probabilities. Used to split an age cohort into
+  # percentiles holding equal weighted headcount.
   #
-  # Convention: cut[k] = smallest value v such that
-  #   sum(weights[values <= v]) / sum(weights) >= probs[k].
-  # A record is then placed in bin findInterval(value, cuts) + 1, so a record
-  # exactly at a boundary lands in the lower bin (left-closed intervals),
-  # matching findInterval's default (rightmost.closed = FALSE).
+  # A record exactly on a boundary falls in the lower bin.
   #
   # Parameters:
-  #   - values  (dbl[]) : ranking values (e.g. net worth), positive population only
-  #   - weights (dbl[]) : record weights, same length as values
-  #   - probs   (dbl[]) : increasing probabilities in (0, 1)
+  #   - values  (dbl[]) : the ranking value per record
+  #   - weights (dbl[]) : record weights
+  #   - probs   (dbl[]) : increasing probabilities between 0 and 1
   #
-  # Returns: numeric vector of length(probs) cut points (monotone nondecreasing).
-  #          Returns rep(Inf, length(probs)) when the population is empty.
+  # Returns: numeric vector of cut points, or infinities where the population is
+  #          empty.
   #----------------------------------------------------------------------------
 
   if (length(values) == 0 || sum(weights) <= 0) {
@@ -74,7 +67,7 @@ weighted_quantile_cuts = function(values, weights, probs) {
   v   = values[ord]
   w   = weights[ord]
   cum = cumsum(w) / sum(w)
-  # For each prob, first value whose cumulative fraction reaches it.
+  # For each probability, the first value whose cumulative share reaches it
   idx = findInterval(probs, cum, left.open = TRUE) + 1L
   idx = pmin(idx, length(v))
   v[idx]
@@ -86,33 +79,29 @@ compute_within_age_cutoffs = function(value, weight, age_cohort,
                                       ages, n_bins, positive_only = TRUE) {
 
   #----------------------------------------------------------------------------
-  # Per-age within-cohort percentile cut points (the n_bins - 1 interior
-  # boundaries that split each age cohort into n_bins equal-weighted-headcount
-  # bins, ranked by `value`).
+  # Finds the boundaries that split each age cohort into percentiles of equal
+  # weighted headcount.
   #
-  # When positive_only = TRUE (the wealth convention, plan D17), records with
-  # value <= 0 are EXCLUDED from the ranking: they fall in no cell. NOTE this
-  # deliberately diverges from distribution.R's by-wealth view, which keeps
-  # value == 0 (it uses value >= 0 / value < 0). A zero-net-worth record has no
-  # stock to draw down and leaves no taxable estate, so excluding it is the
-  # correct treatment for the saving-financing channel and keeps conservation
-  # exact over the positive-NW population.
+  # Where positive_only is set, records at or below zero are dropped from the
+  # ranking and fall in no cell. Note that this differs from distribution.R, which
+  # keeps records at exactly zero. A record with no net worth has nothing to draw
+  # down and leaves no taxable estate, so dropping it is right for the saving
+  # channel and keeps the accounting exact over the records that do have wealth.
   #
-  # Storing cut points (rather than bin assignments) lets the pre-pass and the
-  # applier assign IDENTICAL percentiles from the same boundaries -- the records
-  # are the same un-eroded cross-section in both, so the cells line up.
+  # Boundaries are stored rather than bin assignments, so that the pre-pass and the
+  # applier can assign the same percentiles from the same boundaries. Both see the
+  # same records before any erosion, so the cells line up.
   #
   # Parameters:
-  #   - value         (dbl[]) : ranking value per record (e.g. net worth)
+  #   - value         (dbl[]) : the ranking value per record
   #   - weight        (dbl[]) : record weight
-  #   - age_cohort    (int[]) : topcoded age cohort per record (already keyed)
+  #   - age_cohort    (int[]) : cohort age per record
   #   - ages          (int[]) : the age grid
-  #   - n_bins        (int)   : number of equal-headcount percentile bins
-  #   - positive_only (bool)  : drop value <= 0 from the ranking
+  #   - n_bins        (int)   : number of percentiles
+  #   - positive_only (bool)  : drop records at or below zero
   #
-  # Returns: a named list keyed by as.character(age); each element a numeric
-  #          vector of length (n_bins - 1) of interior cut points (or
-  #          rep(Inf, n_bins - 1) for an empty/degenerate cohort).
+  # Returns: named list by age of the interior cut points, or infinities for an
+  #          empty cohort.
   #----------------------------------------------------------------------------
 
   probs = (seq_len(n_bins - 1)) / n_bins
@@ -134,22 +123,22 @@ assign_within_age_bin = function(value, age_cohort, cutoffs,
                                  n_bins, positive_only = TRUE) {
 
   #----------------------------------------------------------------------------
-  # Assign each record to its within-age percentile bin [1, n_bins] using the
-  # cut points from compute_within_age_cutoffs(). Records with value <= 0 (under
-  # positive_only) or an unknown age cohort get NA (no cell).
+  # Assigns each record to its percentile within its age, using the boundaries from
+  # compute_within_age_cutoffs(). A record at or below zero, or of unknown age, gets
+  # no cell.
   #
-  # The pre-pass and the applier both call this with the SAME cutoffs, so a
-  # record lands in the same cell in both -- a hard requirement for the haircut
-  # to drain the exact deficit that record's cell accrued.
+  # The pre-pass and the applier both call this with the same boundaries, so a
+  # record lands in the same cell in both. That is required for the applier to drain
+  # exactly what that record's cell accumulated.
   #
   # Parameters:
-  #   - value         (dbl[]) : ranking value per record
-  #   - age_cohort    (int[]) : topcoded age cohort per record
-  #   - cutoffs       (list)  : output of compute_within_age_cutoffs()
-  #   - n_bins        (int)   : number of bins
-  #   - positive_only (bool)  : value <= 0 -> NA (no cell)
+  #   - value         (dbl[]) : the ranking value per record
+  #   - age_cohort    (int[]) : cohort age per record
+  #   - cutoffs       (list)  : the boundaries
+  #   - n_bins        (int)   : number of percentiles
+  #   - positive_only (bool)  : records at or below zero get no cell
   #
-  # Returns: integer vector of bin indices in [1, n_bins], NA where no cell.
+  # Returns: integer vector of percentiles, NA where there is no cell.
   #----------------------------------------------------------------------------
 
   bin = rep(NA_integer_, length(value))
@@ -172,28 +161,27 @@ assign_within_age_bin = function(value, age_cohort, cutoffs,
 sinkhorn_rake = function(M, max_iter = 1000, tol = 1e-10) {
 
   #----------------------------------------------------------------------------
-  # Rake a nonnegative square matrix to doubly-stochastic (rows AND columns sum
-  # to 1) via Sinkhorn iteration. The recurrence operates in percentile-index
-  # space where each percentile holds an equal weighted headcount, so the
-  # uniform headcount marginal must be preserved across the re-gridding -- a
-  # row-stochastic transition alone conserves dollar mass, but doubly-stochastic
-  # also conserves the equal-headcount marginal. A properly-defined within-age
-  # percentile transition matrix already (approximately) satisfies this; the
-  # rake makes it exact and is a no-op (to tolerance) on the identity and on the
-  # uniform 1/n matrix.
+  # Scales a nonnegative square matrix until both its rows and its columns sum to
+  # one, by alternating between the two.
+  #
+  # The recurrence works in percentile space, where each percentile holds an equal
+  # weighted headcount, so the transition has to preserve that. Rows summing to one
+  # conserves dollars; columns summing to one also conserves the equal headcount. A
+  # properly built transition matrix nearly satisfies this already, and this makes it
+  # exact. It does nothing to the identity or to a uniform matrix.
   #
   # Parameters:
-  #   - M        (matrix) : nonnegative n x n matrix
+  #   - M        (matrix) : nonnegative square matrix
   #   - max_iter (int)    : iteration cap
-  #   - tol      (dbl)    : convergence tolerance on row/col sum deviation
+  #   - tol      (dbl)    : tolerance on the row and column sums
   #
-  # Returns: doubly-stochastic n x n matrix (same dimnames).
+  # Returns: the scaled matrix.
   #----------------------------------------------------------------------------
 
   stopifnot(nrow(M) == ncol(M), all(M >= 0))
   n  = nrow(M)
   W  = M
-  # Guard fully-empty rows/cols (degenerate input): seed with uniform.
+  # An empty row or column cannot be scaled, so seed it as uniform.
   if (any(rowSums(W) == 0) || any(colSums(W) == 0)) {
     W = W + 1e-12
   }
@@ -202,8 +190,7 @@ sinkhorn_rake = function(M, max_iter = 1000, tol = 1e-10) {
     W = sweep(W, 2, colSums(W), '/')
     if (max(abs(rowSums(W) - 1)) < tol && max(abs(colSums(W) - 1)) < tol) break
   }
-  # Final row normalization so rows sum to exactly 1 (row-stochastic is the
-  # property the recurrence's mass conservation relies on).
+  # Normalize rows last, since it is rows summing to one that conserves dollars.
   W = W / rowSums(W)
   dimnames(W) = dimnames(M)
   W
@@ -214,19 +201,16 @@ sinkhorn_rake = function(M, max_iter = 1000, tol = 1e-10) {
 apply_percentile_transition = function(P, M_by_age) {
 
   #----------------------------------------------------------------------------
-  # Apply a within-age percentile transition to a cell-state matrix, in
-  # percentile-index space. For each age row a, the next-period percentile
-  # distribution of that cohort's mass is P[a, ] %*% M_a (M_a[q, p] = P(p next |
-  # q now)). This IS the re-binning onto the fresh percentile grid; no separate
-  # re-binning step is needed (plan D12).
+  # Moves each age cohort's state across percentiles. This is also the re-binning
+  # onto the new percentile grid, so no separate step is needed.
   #
   # Parameters:
-  #   - P        (matrix) : (n_ages x n_bins) cell-state, rows = ages
-  #   - M_by_age (list)   : named (by age) list of n_bins x n_bins row-stochastic
-  #                         matrices, OR a single n_bins x n_bins matrix applied
-  #                         to every age. Identity = full persistence.
+  #   - P        (matrix) : cell state, ages on rows
+  #   - M_by_age (list)   : the transition, either one matrix applied at every age
+  #                         or a list of them by age. The identity means everyone
+  #                         stays where they are.
   #
-  # Returns: (n_ages x n_bins) matrix, the post-transition state (pre age-shift).
+  # Returns: the state after the transition, before aging.
   #----------------------------------------------------------------------------
 
   n_ages = nrow(P)
@@ -248,19 +232,17 @@ apply_percentile_transition = function(P, M_by_age) {
 cohort_recurrence_step = function(P_prev, growth, inflow, A, M_by_age) {
 
   #----------------------------------------------------------------------------
-  # One step of a cohort bathtub recurrence over (age x percentile) cells:
+  # Steps cell state forward one year:
   #
-  #   P_next = growth (.) [ t(A) %*% (P_prev applied through M) ]  +  inflow
+  #   next = growth * [aged and moved state] + inflow
   #
-  # i.e. the carried-in state is first re-gridded across percentiles (M), then
-  # aged one year (crossprod(A, .) = t(A) %*% . : row a gathers from a-1, with
-  # the top age self-looping), then grown element-wise by `growth`; finally the
-  # fresh `inflow` enters at face value (end-of-year convention -- it does NOT
-  # grow in its arrival year). NO survival/mortality factor (deaths are handled
-  # at aggregation; plan D1). All of growth, inflow, P_prev are (n_ages x n_bins)
-  # matrices conformable with A (n_ages x n_ages).
+  # The state carried in moves across percentiles, then ages a year, then grows.
+  # This year's inflow enters at face value and does not grow in its first year.
+  # There is no mortality term: deaths are handled at aggregation instead.
   #
-  # Pure and side-effect-free, so the recurrence can be unit-tested on toy cells.
+  # Side-effect free, so the recurrence can be tested on made-up cells.
+  #
+  # Returns: the new cell state.
   #----------------------------------------------------------------------------
 
   PM      = apply_percentile_transition(P_prev, M_by_age)
@@ -273,16 +255,15 @@ cohort_recurrence_step = function(P_prev, growth, inflow, A, M_by_age) {
 cohort_state_dir = function(scenario_info, subdir, pass = 'conventional') {
 
   #----------------------------------------------------------------------------
-  # Directory for a cohort bathtub's per-year state, under a pass root. Mirrors
-  # kg_dyn_state_dir() but parameterized by subdir/pass so different channels
-  # (and passes) keep separate state trees.
+  # Locates a channel's state folder for one pass. Taking the folder and the pass as
+  # arguments keeps the channels' state separate.
   #
   # Parameters:
-  #   - scenario_info (list) : output of get_scenario_info()
-  #   - subdir        (str)  : channel-specific subdir (e.g. 'wealth_dynamics_state')
-  #   - pass          (str)  : 'conventional' (default) or 'static'
+  #   - scenario_info (list) : the scenario
+  #   - subdir        (str)  : the channel's folder name
+  #   - pass          (str)  : 'conventional' or 'static'
   #
-  # Returns: directory path (str).
+  # Returns: path to the folder (str).
   #----------------------------------------------------------------------------
 
   file.path(scenario_info$output_path, pass, 'supplemental', subdir)

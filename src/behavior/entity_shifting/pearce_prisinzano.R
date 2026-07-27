@@ -2,23 +2,14 @@ do_entity_shifting = function(tax_units, baseline_mtrs, static_mtrs,
                               scenario_info, indexes) {
 
   #----------------------------------------------------------------------------
-  # Models business income shifting across entity type as a function of
-  # the tax differential between corporate and pass-through taxation. Based on
-  # Pearce and Prisinzano (2018) working paper. Assumptions are detailed below.
+  # Models business income moving between corporate and pass-through form, as a
+  # function of the tax difference between the two. Based on Pearce and Prisinzano
+  # (2018). Assumptions are detailed below.
   #
-  # Hardened 2026-07-08 per other/top_tax/DESIGN_LOCK.md ruling 5 (before the
-  # sigma validation runs): SECA companion co-scaling (evasion-module
-  # pattern), order/required-MTR guards, and a conservation diagnostic. The
-  # dividends=gains offset assumption is retained (verified gap, no ruling
-  # to change it).
-  #
-  # Role in the top-tax decomposition: this module is the ENTITY-FORM leg —
-  # business income moving between the corporate base and the pass-through
-  # base (a conservation flow, offset in corporate receipts + shareholder
-  # distributions). It is distinct from the sigma conversion leg (payment
-  # FORM of labor compensation moving into the kg gain state) and runs AFTER
-  # it in the pinned order kg_dynamics -> conversion/sigma ->
-  # entity_shifting -> evasion, so the two never move the same dollar twice.
+  # This is business income changing entity form: what leaves the pass-through base
+  # arrives in the corporate base, offset in corporate receipts and shareholder
+  # distributions. That differs from the conversion module, which changes the form in
+  # which labor is paid. This runs after it, so the two never move the same dollar.
   #
   # Parameters:
   #   - tax_units (df)       : tibble of tax units with calculated variables
@@ -38,16 +29,15 @@ do_entity_shifting = function(tax_units, baseline_mtrs, static_mtrs,
 
   modules = scenario_info$behavior_modules %||% character()
 
-  # The retained-earnings leg uses the kg bathtub's expected-PV tax price
-  # whenever that machinery is active.  The explicit legacy module preserves
-  # the former Pearce--Prisinzano 25%-of-statutory-rate approximation for
-  # A/B comparisons.  Entity-only scenarios retain that approximation because
-  # no tau_eq state exists to price their deferred gain.
+  # Retained earnings are priced off the gains model where it is running. The older
+  # module keeps the approximation of a quarter of the statutory rate, for comparison.
+  # A scenario with no gains model keeps that approximation too, there being nothing
+  # to price the deferred gain with.
   legacy_module = any(basename(modules) == 'pearce_prisinzano_legacy.R')
   uses_kg       = scenario_uses_kg_dynamics(scenario_info)
   use_tau_eq    = uses_kg && !legacy_module
 
-  # The pinned-order guard that used to sit here is gone: the loader puts the
+  # Ordering is handled by the loader, which puts the
   # families in that order before anything runs (src/sim/behavior.R).
 
   # Required-MTR guard: fail loudly rather than silently skipping the

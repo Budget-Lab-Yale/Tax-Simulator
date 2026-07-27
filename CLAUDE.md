@@ -196,12 +196,12 @@ kind and provenance together, never merges within an entry. `locked: true`
 entries (the estate valuation bridge) refuse override outright.
 
 Each economy channel file declares a `_channel` role. A `transmission` channel
-is conventional-side only, and reading one on the static pass is an error —
-which is what makes "static results are law-only" a machine-checked property
-rather than a convention. `state` channels are readable on both passes.
+is conventional-side only, and reading one on the static pass is an error, so
+"static results are law-only" is checked rather than assumed. `state` channels are
+readable on both passes.
 
 **Every entry declares a `kind`, and each kind owes different provenance.** The
-schema check at load time is what stops an undocumented number being added.
+schema check at load time rejects an entry missing its required fields.
 
 | kind | meaning | required | staleness-checked |
 |---|---|---|---|
@@ -452,9 +452,9 @@ Behavioral modules are R scripts that simulate taxpayer responses to policy chan
   `charity/` must define `do_charity()`.
 - Module filename describes what it does (e.g. `100.R` = elasticity of -1.0)
 - **Modules are self-contained.** Their parameters are hardcoded in the file with
-  citations, because the module is the only reader. A variant is a SEPARATE FILE
-  (`charity/50.R` vs `charity/100.R`), never a config override — which is what
-  makes the assumption traceable to a file in git rather than to a CSV cell.
+  citations, because the module is the only reader. A variant is a separate file
+  (`charity/50.R` vs `charity/100.R`), never a config override, so the assumption
+  is traceable to a file in git rather than to a CSV cell.
 
 **Selecting modules: the behavior leg.** A scenario's `behavior` cell names a
 folder holding one `behavior.yaml` with two sections:
@@ -576,6 +576,88 @@ folders. Files and key things to know:
     - total: level aggregations of the detail files
     - supplemental: other files including revenue estimates (deltas), distribution (exists only for static because distribution is a static concept), etc
   - note that baseline lacks the deltas-related files because deltas are relative to baseline
+
+## Comment and Prose Style
+
+**This is a hard requirement, not a preference.** Every comment, docstring, error
+message, and YAML `note:` / `target:` field in this repository is written in one
+voice: the voice of the pre-2026 code on `main`. Full rules and worked examples
+are in `other/style/comment_style.md`. Read it before writing prose here. The
+reference files are `src/data/tax_law.R`, `src/calc/do_taxes.R`, and
+`src/data/post_processing/distribution.R` — open one and match it.
+
+**The four shapes:**
+
+1. **File header: three lines.** Name the file, say what is in it, stop.
+   ```r
+   #-------------------------------------------------------------------------------
+   # wealth_dynamics.R
+   #
+   # Contains functions to simulate saving responses to tax changes and their
+   # effect on the estate tax base
+   #-------------------------------------------------------------------------------
+   ```
+   Where the file rests on an assumption a reader could not recover from the
+   code, add one short paragraph below the banner stating the assumption and its
+   number — modelled on the 85% fringe-benefit note in `do_taxes.R`. Nothing
+   else goes in a header: no design rationale, no history, no list of what the
+   file does not do.
+
+2. **Function docstring: verb first, third person.** "Calculates payroll and
+   individual income taxes for all tax units." Then the existing `Parameters:` /
+   `Returns:` blocks. Every function gets a `Returns:` line.
+
+3. **Inline comment: names the action, one line, verb first.** "Read baseline
+   YAML files". "Overwrite baseline subparams with specified changes". "Loop over
+   years". "Add age cuts". Two or three lines are fine where a number or an
+   assumption needs stating.
+
+4. **Citations and formulas: the number, the source, flat.** Formula on its own
+   indented line. No range of estimates, no note about which other paper is the
+   wrong one, no discussion of what the choice implies.
+   ```r
+   # Assume an elasticity of reported estates with respect to the net-of-tax
+   # rate of 0.16 (Kopczuk and Slemrod 2001).
+   #
+   #   retained = ((1 - tau_S) / (1 - tau_B)) ^ report_eps
+   ```
+
+**Never write these:**
+
+- **Capital letters for emphasis.** Not `MECHANICAL`, not `NOT`, not `MUST`, not
+  `do NOT`. Rewrite the sentence instead.
+- **Stacked hyphenated modifiers.** "the net above-baseline during-life
+  after-tax cash-flow shock" is four modifiers and one noun.
+- **References a reader cannot follow.** `(D7)`, `(P1/F4)`, `spec §3.2`,
+  `DESIGN_LOCK R6`, `ruling 4`, plan filenames, `.claude/plans/*`.
+- **Line numbers in other files.** They are wrong the moment they are written.
+  Name the file, never the line.
+- **Invented terms used as if established.** Name the thing plainly every time.
+- **Changelogs and self-assessment.** When a value was re-pinned, that a
+  refactor came back identical, "byte-identical", "verified", "smoke-verified",
+  "clean", "exact". That is commit-message content.
+- **Closing flourishes** of the form "which is what makes X a Y rather than a
+  Z", or "and that is the whole mechanism".
+- **Notation in running prose.** `ΔT⁰`, `ΣF/Σgross`, `Σw·p·λ`. A formula on its
+  own line reads; the same symbols mid-sentence do not.
+- **Statements of what the code does not do**, unless a reader would otherwise
+  reach for it.
+
+**Length ceiling: about six lines per comment block.** Past that, the content
+belongs in a memo under `other/` with a one-line pointer from the code. The one
+exception is a function whose entire job is an equation — the recurrence in
+`wealth_dynamics.R` or `kg/recurrence.R` — where the displayed formulas earn
+their space.
+
+**Applies equally to YAML.** The `note:` and `target:` fields in
+`config/scenarios/economy/` and `config/calibrations/` are prose and follow the
+same rules. Keep the numbers, citations and dependency lists byte-exact; only the
+prose around them changes.
+
+**When you touch a stale comment, fix the fact, do not translate it.** A comment
+describing a retired runscript column, a deleted file, or an environment variable
+that no longer exists is wrong, not just badly written. Correct it and say so in
+your summary.
 
 ## Coding Conventions
 

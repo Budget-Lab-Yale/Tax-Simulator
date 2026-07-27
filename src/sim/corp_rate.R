@@ -1,68 +1,60 @@
 #-------------------------------------------------------------------------------
-# On-model corporate statutory-rate revenue module
+# corp_rate.R
 #
-# Moves the revenue estimation for corporate STATUTORY-RATE changes ONTO the
-# model, out of Off-Model-Estimates (OME) -- exactly as depreciation lives in
-# the Cost-Recovery-Simulator interface. Rate policy is configured through the
-# existing `corp.yaml` `rate` parameter (`corp.rate` in the written tax_law.csv
-# sidecar). A crude single-elasticity module maps a change in that rate to a
-# corporate revenue delta on top of the CBO baseline corporate receipts line
-# (`rev_corp`). The same delta feeds the corp_incidence wedge (conventional
-# stream; see src/sim/corp/ corp_read_wedge) and the distribution
-# smear (static stream; see distribution.R get_other_taxes). After this change
-# OME carries only "corporate changes ex depreciation AND ex statutory rate".
-#
-# NO NEW INTERFACE: unlike cost recovery (external repo, pre-baked deltas), the
-# rate delta is a pure function of `corp.rate` (baseline vs scenario, from the
-# tax_law.csv sidecars) and `rev_corp` (Macro-Projections / CBO). No vintage,
-# no dep.* runscript columns.
-#
-# METHOD (all per year; t0 = baseline corp.rate, t = scenario corp.rate,
-# R0 = CBO rev_corp level, e = corp.rate_eti, B0 = R0 / t0):
-#   Revenue Laffer curve with a CONSTANT NET-OF-TAX elasticity (Coles-Patel-
-#   Seegert-Smith 2022 "Form A"):
-#     B(t) = B0 * [(1 - t) / (1 - t0)] ^ e
-#     R(t) = t * B(t)
-#   Static delta       (base held at baseline) : (t - t0) * B0 = R0 * (t/t0 - 1)
-#   Conventional delta (Form A base erosion)   : R(t) - R0 =
-#        R0 * ( (t/t0) * ((1 - t)/(1 - t0))^e  -  1 )
-#   Both are 0 when t == t0 (dormant). Revenue-max statutory rate t* = 1/(1+e).
-#
-# ELASTICITY (corp.rate_eti = 0.367): the CPSS (2022, JAR 60(3)) AVOIDANCE-only
-# taxable-income response (Table 5: 5.96% income change) re-based onto the
-# STATUTORY net-of-tax denominator (16.25%). This is NOT their headline
-# effective-rate CETI (0.91 = 8.93/9.76), NOR the total statutory (0.55), NOR
-# the economic-only piece (0.30). The value is WELDED to the statutory rate
-# concept: an elasticity is response-per-unit-of-a-rate-concept, and our policy
-# lever is the statutory rate, so the denominator must be the statutory
-# net-of-tax change. (Using the effective-based 0.91 against a statutory rate
-# move would double-count the effective/statutory wedge.)
-#
-# KNOWN BIASES / HEALTH WARNINGS (never silently drop these when quoting):
-#   (1) UPPER BOUND on the steady-state effect. The avoidance elasticity is a
-#       bunching estimate at the $0 kink: it measures the CONTEMPORANEOUS
-#       one-year taxable-income reduction and cannot observe intertemporal
-#       reversal. Timing shifting arbitrages a rate DIFFERENTIAL across periods
-#       (CPSS identify it off the permanent within-year 0%/15% kink); a flat
-#       statutory-rate LEVEL change has no steady-state differential to
-#       arbitrage (only a one-time transition-year shift at enactment). So
-#       treating the full 0.367 as a permanent base elasticity overstates the
-#       persistent response, all else equal.
-#   (2) WHOLE-rev_corp base. B0 = rev_corp / t0 treats ALL CBO corporate
-#       receipts as levied at the statutory rate; it includes CAMT / GILTI /
-#       BEAT that are not, so the rate-sensitive base is overstated.
-#
-# Sweeps: override the elasticity via assumption.corp.rate_eti in the runscript
-# (mirrors the corp.sigma_n / corp.kappa convention). Menu of
-# self-consistent statutory-based values for reference: economic 0.182,
-# avoidance 0.367 (default), total 0.549.
+# Contains functions to score a change in the corporate statutory rate
 #-------------------------------------------------------------------------------
 
-# Statutory net-of-tax elasticity of the corporate tax base (default: CPSS 2022
-# avoidance component, re-based to the statutory denominator). Env-overridable.
-# Value and provenance: config/scenarios/economy/default/corp.yaml (corp.rate_eti).
+# The corporate rate is scored on-model rather than off it, as depreciation is
+# scored in the cost recovery interface. Rate policy is set through the rate
+# parameter in corp.yaml, and this file maps a change in it to a change in
+# corporate revenue on top of the CBO baseline receipts line. The same change
+# feeds the incidence channel on the conventional side and the distributional
+# smear on the static side. What remains off-model is corporate changes other than
+# the rate and depreciation.
+#
+# No new interface is involved: the revenue change is a function of the baseline
+# and scenario rates and the CBO receipts level, all of which the model already
+# has.
+#
+# Assume that the corporate tax base has a constant elasticity with respect to the
+# net-of-tax rate, following Coles, Patel, Seegert and Smith (2022). Writing the
+# baseline rate t0, the scenario rate t, baseline receipts R0 and the elasticity
+# e, the base and revenue are
+#
+#   B(t) = (R0 / t0) * ((1 - t) / (1 - t0)) ^ e
+#   R(t) = t * B(t)
+#
+# The static estimate holds the base at its baseline level, so it is simply the
+# rate change times that base. The conventional estimate lets the base erode.
+# Revenue is maximized at a rate of 1 / (1 + e).
+#
+# The elasticity of 0.367 is the avoidance-only taxable income response those
+# authors report, re-based onto the statutory rather than the effective net-of-tax
+# rate. It is deliberately not their headline effective-rate figure of 0.91, nor
+# the total statutory response of 0.55, nor the economic-only piece of 0.30. An
+# elasticity is a response per unit change in a particular rate, and the policy
+# lever here is the statutory rate, so the denominator has to match. Using the
+# effective-based figure against a statutory change would count the gap between
+# the two twice.
+#
+# Two known biases, which should be stated whenever the estimate is quoted.
+#
+# The estimate is an upper bound on the lasting effect. The elasticity is measured
+# by bunching at the zero-income kink, so it captures the reduction in taxable
+# income within a single year and cannot see it reversed later. Shifting income
+# between years requires a rate difference between them, and a flat change in the
+# statutory rate leaves no such difference in the long run, only a one-time shift
+# at enactment. Treating the whole elasticity as permanent therefore overstates
+# the persistent response.
+#
+# And the base is too large. Dividing all CBO corporate receipts by the statutory
+# rate treats every dollar of them as taxed at that rate, which includes the
+# minimum tax and the international provisions that are not.
+#
+# The elasticity is corp.rate_eti in the economy leg. Other self-consistent
+# statutory values, for reference: 0.182 economic, 0.549 total.
 
-# Below this |t - t0| the rate change is treated as no change (dormant).
+# A rate change smaller than this counts as no change.
 CORP_RATE_EPS = 1e-12
 
 
@@ -70,18 +62,16 @@ CORP_RATE_EPS = 1e-12
 corp_rate_read_series = function(scenario_tax_law_path) {
 
   #----------------------------------------------------------------------------
-  # Reads the per-year baseline vs scenario statutory corporate rate from the
-  # written supplemental/tax_law.csv sidecars (the aggregate access point; the
-  # same reads used by distribution.R get_other_taxes and the entity-shifting
-  # module pearce_prisinzano.R). The scenario rate comes from the passed path;
-  # the baseline rate always from globals$baseline_root's baseline tax law.
+  # Reads the baseline and scenario corporate rates by year, from the written tax
+  # law files. The same files distribution.R and the entity-shifting module read.
+  # The scenario rate comes from the path given; the baseline rate always from the
+  # baseline run's own tax law.
   #
   # Parameters:
   #   - scenario_tax_law_path (str) : path to this scenario's tax_law.csv
   #
-  # Returns: tibble(year, t0, t) -- t0 = baseline corp.rate, t = scenario
-  #          corp.rate. NULL if either sidecar is unavailable (caller treats
-  #          a missing series as no rate change).
+  # Returns: tibble of year and the two rates, or NULL where either file is
+  #          missing, which the caller reads as no rate change.
   #----------------------------------------------------------------------------
 
   base_path = file.path(globals$baseline_root,
@@ -106,19 +96,17 @@ corp_rate_delta = function(rate_series, rev_corp, static,
                            eti = economy_param('corp', 'rate_eti')) {
 
   #----------------------------------------------------------------------------
-  # The pass-appropriate corporate statutory-rate revenue delta ($B), via the
-  # Form A revenue Laffer curve (see module header). Pure and unit-testable.
+  # Computes the change in corporate revenue for the pass being run, in billions,
+  # from the relationship in the header.
   #
   # Parameters:
-  #   - rate_series (df|NULL) : tibble(year, t0, t) from corp_rate_read_series
-  #   - rev_corp (df)         : tibble(year, rev_corp) -- CBO baseline corporate
-  #                             receipts level, $B, over the years to book
-  #   - static (lgl)          : TRUE -> mechanical static delta (t-t0)*B0;
-  #                             FALSE -> Form A conventional (base-eroded) delta
-  #   - eti (dbl)             : statutory net-of-tax base elasticity
+  #   - rate_series (df|NULL) : the two rates by year; NULL for no rate change
+  #   - rev_corp (df)         : CBO baseline corporate receipts by year, billions
+  #   - static (bool)         : TRUE holds the base fixed; FALSE lets it erode
+  #   - eti (dbl)             : elasticity of the base to the net-of-tax rate
   #
-  # Returns: tibble(year, delta) aligned to rev_corp$year (0 where the rate is
-  #          unchanged, the series is NULL, or t/t0 is unavailable).
+  # Returns: tibble of year and the revenue change, zero where the rate does not
+  #          move or a rate is unavailable.
   #----------------------------------------------------------------------------
 
   if (is.null(rate_series)) {

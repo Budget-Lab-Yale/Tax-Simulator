@@ -1,17 +1,9 @@
 # Wealth bathtub -- src/sim/wealth_dynamics.R
 #
-# Economy-leg TRANSMISSION channel: how above-baseline during-life tax flows
-# are financed out of wealth and drain into the estate and capital-income
-# bases. The wealth-tax avoidance elasticities and concealment shares that used
-# to sit here moved into src/behavior/wealth/avoidance.R, their only reader.
-#
-# HASH RE-PIN 2026-07-26 (behavior leg, step 3): the dependency hashes of the
-# calibrated entries in this file were re-pinned after COMMENT-ONLY edits to the
-# files they depend on -- module-only parameters moved out to their module files,
-# and pointers to the deleted config/assumptions/ tree were corrected to name
-# this tree. No value, formula or threshold moved. CONFIRMED 2026-07-26: the
-# six-scenario gate came back byte-identical, including the wealth-tax scenario
-# that exercises the saving channel, so the re-pin stands.
+# A transmission channel: how tax paid above baseline during life is financed out
+# of wealth, and drains into the estate and capital income bases. The wealth tax
+# avoidance elasticities and concealment shares are in
+# src/behavior/wealth/avoidance.R, their only reader.
 _channel:
   role: transmission
 
@@ -23,10 +15,10 @@ cap_flows_pt_weight:
   value: 0.2
   kind: structural
   note: >
-    Weight on pass-through flows in the capital-income bundle, for both the MTR
-    bump and the wealth haircut (pure-capital flows carry 1.0). Matches the raw
-    pass-through list in src/data/economy.R -- change both together. Also
-    consumed by the corporate channel via wealth_cap_flows_pt_weight().
+    Weight on pass-through flows in the capital income bundle, for both the MTR
+    bump and the wealth haircut. Pure capital flows carry 1.0. It matches the raw
+    pass-through list in src/data/economy.R, so change both together. The corporate
+    channel reads it through wealth_cap_flows_pt_weight().
 
 financing_profile:
   value: default
@@ -53,70 +45,41 @@ financing_profile:
   invalidated_by_hashes:
     config/calibrations/wealth_profiles/default/s.csv: 05e353bfd1a82c9135a4af1b07ebac8f
     config/calibrations/wealth_profiles/default/M.csv: f69080edc998607de4a401f01cecc732
-    src/sim/wealth_dynamics.R: 42a23e848d7b8dfbc6ccdfd8c282ea66
-    other/wealth_dynamics/write_profiles.py: df5f1cdc3142fa6ff888601dcb31621a
+    src/sim/wealth_dynamics.R: 0e15c01e43c539df376054d538c1920c
+    other/wealth_dynamics/write_profiles.py: 32852e31eaa6009612c6de2f867f1a18
   rederive: other/wealth_dynamics/write_profiles.py
-  # Re-pinned again 2026-07-26, two files:
-  #   src/sim/wealth_dynamics.R -- WEALTH_DYN_PROVENANCE and
-  #     wealth_dyn_check_provenance() were removed. That stamp held its own copy
-  #     of the Macro vintage, fmax and n_pctiles and warned when they moved; the
-  #     parse-time check does that job for every calibrated value now, so keeping
-  #     it meant two mechanisms with separate expectations. Deleted code only, no
-  #     value touched.
-  #   other/wealth_dynamics/write_profiles.py -- its output path was corrected
-  #     (it still wrote to the pre-Phase-3b config/wealth/profiles/) and it now
-  #     writes a provenance.yaml beside each profile's tables. Verified directly:
-  #     regenerating reproduces both s.csv and both M.csv byte-for-byte, so the
-  #     surfaces this entry is pinned against did not move.
-  # CONFIRMED 2026-07-26: the six-scenario gate came back byte-identical, so both
-  # re-pins stand and neither value needs re-deriving.
-  #
-  # NOTE on coverage: the hashes below watch the DEFAULT profile's tables, which
-  # is what this default entry can see. A scenario pointing at another profile
-  # folder gets its provenance from that folder's provenance.yaml, which is
-  # recorded but not compared at parse time.
-  #
-  # src/sim/wealth_dynamics.R's hash was re-pinned 2026-07-25 after the
-  # profile-spec refactor (it reads economy.wealth.financing_profile instead of
-  # the retired s / wealth_financing columns). Verification came first: the P3b
-  # gate suite -- six reference simulations, byte-identical to the pre-redesign
-  # golden vintages -- is what licensed the re-pin. Only the dependency hash
-  # moved; the calibration itself is untouched, so `set` stays 2026-07-07.
+  # The hashes above watch the default profile's tables, which is what this entry
+  # can see. A scenario pointing at another profile folder takes its provenance
+  # from that folder's provenance.yaml, which is recorded but not compared at
+  # parse time.
   note: >
-    Value is a POINTER to a profile folder under config/calibrations/wealth_profiles/<name>/
-    (s.csv = per-cell saving share; M.csv = within-age transition matrix,
-    absent means identity). 'none' disables the channel; 'flat:<s>' is the
-    flat-share shorthand (constant s, identity M). This entry replaces the
-    retired `s` and `wealth_financing` runscript columns and the
-    WEALTH_DYN_PROVENANCE warn-only stamp. Generated by s_default() in
-    other/wealth_dynamics/write_profiles.py.
+    Points to a profile folder under config/calibrations/wealth_profiles/, holding
+    s.csv, the per-cell saving share, and M.csv, the within-age transition matrix,
+    which is the identity when absent. 'none' disables the channel and 'flat:<s>'
+    is shorthand for a constant share and an identity transition. Generated by
+    s_default() in other/wealth_dynamics/write_profiles.py.
 
 n_pctiles:
   value: 100
   kind: structural
   role: state
   note: >
-    Number of equal-weighted-headcount within-age net-worth percentile bins the
-    bathtub's cells are cut into. Absorbed 2026-07-26 from the retired
-    config/wealth/wealth_financing_params.yaml.
+    Number of within-age net worth percentile bins, of equal headcount weight,
+    the bathtub's cells are cut into.
 
 fmax:
   value: 0.9
   kind: structural
   note: >
-    Symmetric per-record gross-asset shrink clamp, |f| <= fmax. The clamp lets
-    cuts (a negative deficit) scale wealth up and hikes scale it down. It is
-    around 1% of wealth in normal operation, so it rarely binds, but it can
-    bind for low-net-worth high-income payers. Absorbed 2026-07-26 from the
-    retired config/wealth/wealth_financing_params.yaml.
+    Clamp on the per-record gross asset shrink, symmetric so that a tax cut scales
+    wealth up and a hike scales it down. The shrink runs around 1% of wealth in
+    normal operation and rarely binds, but it can for a payer of low net worth and
+    high income.
 
 r_total_additive_delta:
   value: 0.0
   kind: structural
   note: >
-    Additive shift (in decimal percentage points) applied to the whole
-    r_total(t) path, for a one-time external sensitivity test. The central path
-    is nominal GDP-per-capita growth read per year from Macro-Projections
-    (projections.csv gdp_c), never a flat peak. A default of 0 leaves
-    production runs untouched; there is no standing multi-run sweep. Absorbed
-    2026-07-26 from the retired config/wealth/wealth_financing_params.yaml.
+    Shift applied to the whole return path, in decimal percentage points, for a
+    sensitivity test. The central path is nominal GDP per capita growth, read per
+    year from the Macro-Projections gdp_c series.

@@ -33,19 +33,16 @@ ome_corp_col = function(ome_df, static) {
 
   #----------------------------------------------------------------------------
   # Resolves the pass-appropriate corporate Off-Model-Estimates revenue series.
-  # The corporate OME is a two-stream interface (as of interface version 5):
-  #   - conventional leg (static = FALSE): the `corporate` column, which carries
-  #     the modeled corporate behavioral response and is gross of the on-model
-  #     individual-tax offset.
-  #   - static leg (static = TRUE): the `corporate_static` column, the mechanical
-  #     (no-behavioral-response) corporate revenue change. Consumed by static
-  #     receipts booking and the (static) distribution smear only; the on-model
-  #     record incidence stays on the conventional stream (D5).
+  # From interface version 5 the corporate off-model estimate carries two streams.
+  # The conventional leg reads the corporate column, which holds the modeled
+  # corporate behavioral response gross of the on-model individual tax offset. The
+  # static leg reads corporate_static, the mechanical revenue change, which the
+  # static receipts booking and the distribution smear consume. The record
+  # incidence channel stays on the conventional stream.
   #
-  # The static stream is MANDATORY: a static-leg read of a revenues.csv lacking
-  # `corporate_static` is a hard error (a pre-v5 vintage). Non-corporate runs
-  # read the baseline OME, whose v5 revenues.csv carries a zero-valued
-  # `corporate_static`, so they resolve cleanly.
+  # A static-leg read of a revenues.csv without the static column stops the run.
+  # Scenarios with no corporate provision read the baseline off-model estimate,
+  # whose static column is zero.
   #
   # Parameters:
   #   - ome_df (df)   : an Off-Model-Estimates revenues.csv, read as-is
@@ -58,9 +55,9 @@ ome_corp_col = function(ome_df, static) {
     if (!'corporate_static' %in% names(ome_df)) {
       stop('Off-Model-Estimates revenues.csv lacks a `corporate_static` column: ',
            'static-leg corporate receipts and the distribution smear require the ',
-           'two-stream (interface v5+) structure. Point dep.Off-Model-Estimates ',
-           'at a v5 vintage, or regenerate the vintage with a corporate_static ',
-           'stream.', call. = FALSE)
+           'two-stream structure of interface version 5 or later. Point the ',
+           "economy leg's interfaces.yaml at a later vintage, or regenerate the ",
+           'vintage with a corporate_static stream.', call. = FALSE)
     }
     return(ome_df %>% transmute(year, corporate = corporate_static))
   }
@@ -120,10 +117,9 @@ style_rev_sheet = function(wb, sheet, n_cols, comma_rows, pct_rows,
                            border_rows, bold_rows, center_rows) {
 
   #----------------------------------------------------------------------------
-  # Applies the shared revenue-workbook styling (number formats, borders, bold
-  # headers, centering, column widths) to a sheet. Callers supply row
-  # positions, which differ between the fixed-layout single-scenario report
-  # and the nrow-dependent stacked report.
+  # Applies the revenue workbook's number formats, borders, bold headers,
+  # centering, and column widths to a sheet. Callers supply the row positions,
+  # which differ between the single-scenario report and the stacked one.
   #
   # Parameters:
   #   - wb (Workbook)     : openxlsx workbook object (modified in place)
@@ -176,9 +172,9 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   #   - other_root            (str) : Macro-Projections root (for other taxes)
   #   - cost_recovery_root    (str) : Cost-Recovery-Simulator director for this scenario
   #   - off_model_root        (str) : directory for miscellaneous off-model deltas for this scenario
-  #   - static                (lgl) : TRUE when writing the static pass, FALSE for
-  #        conventional. Selects the corporate off-model stream: static books
-  #        `corporate_static` (mechanical), conventional books `corporate`.
+  #   - static                (lgl) : TRUE when writing the static pass. Selects
+  #        the corporate off-model stream, the mechanical one on the static pass
+  #        and the behavioral one on the conventional pass
   #
   # Returns:  void, writes a dataframe for the scenario containing values for:
   #   - Fiscal year
@@ -212,23 +208,20 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     file.path('revenues.csv') %>%
     read_csv(show_col_types = F)
 
-  # Corporate off-model booking is pass-aware: the static pass books the static
-  # corporate stream (`corporate_static`), the conventional pass books
-  # `corporate`. Resolve here and swap into `corporate` before the downstream
-  # join/booking, which is stream-agnostic. select(-any_of(...)) drops both raw
-  # columns first so the rejoin cannot produce a corporate.x/.y collision.
+  # Resolve the pass's corporate stream and put it in the corporate column, so
+  # that the booking below reads one name either way. Both raw columns are dropped
+  # first so the rejoin cannot collide.
   corp_series = ome_corp_col(deltas_off_model, static = static)
   deltas_off_model = deltas_off_model %>%
     select(-any_of(c('corporate', 'corporate_static'))) %>%
     left_join(corp_series, by = 'year')
 
-  # On-model corporate statutory-rate revenue delta (src/sim/corp_rate.R): the
-  # rate portion moved out of OME onto the model, booked on top of the CBO
-  # rev_corp level. Pass-aware: the static pass books the mechanical (t-t0)*B0
-  # change, conventional the Form A base-eroded change. Scenario rate comes from
-  # this pass's tax_law.csv sidecar; the baseline rate and rev_corp are read
-  # inside the helpers. Booked FY-direct beside cost recovery below (rev_corp is
-  # already FY, so no CY->FY smear is needed, unlike corp_tax_change).
+  # Calculate the on-model corporate statutory rate delta, booked on top of the
+  # CBO corporate receipts level. The static pass takes the mechanical change and
+  # the conventional pass the base-eroded one; see src/sim/corp_rate.R. The
+  # scenario's rate comes from this pass's tax law file. Receipts are already on a
+  # fiscal year basis, so this books directly beside cost recovery below with no
+  # calendar year smear.
   deltas_corp_rate = corp_rate_delta(
     rate_series = corp_rate_read_series(
       file.path(scenario_root, 'supplemental', 'tax_law.csv')),
@@ -237,11 +230,11 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   ) %>%
     rename(delta_revenues_corp_rate = delta)
 
-  # Read the model-baseline estate tax series. Estate revenue is presented as
-  # the CBO LEVEL plus an on-model DELTA (scenario minus model-baseline), so
-  # baseline receipts stay CBO-anchored and the model contributes only reform
-  # deltas — the quantity it is validated on (JCT sunset delta). The baseline
-  # leg is always the baseline's STATIC totals (baseline has no conventional).
+  # Read the model baseline estate tax series. Estate revenue is reported as the
+  # CBO level plus the on-model delta of scenario against model baseline, so that
+  # baseline receipts stay anchored to CBO and the model supplies only reform
+  # deltas, which is the quantity it is validated on. The baseline leg is always
+  # the baseline's static totals.
   baseline_estate_path = globals$baseline_root %>%
     file.path('baseline/static/totals/estate.csv')
   baseline_estate = NULL
@@ -250,20 +243,19 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
       read_csv(show_col_types = F) %>%
       select(year, est_tax_exp_baseline = est_tax_exp)
 
-    # A totals file covering only a subset of this scenario's years (baseline
-    # run over a shorter window) would silently zero the estate delta for the
-    # uncovered years via the coalesce() below -- fall back to rebuilding from
-    # detail instead
+    # A totals file covering only part of this scenario's years, from a baseline
+    # run over a shorter window, would zero the estate delta for the uncovered
+    # years in the coalesce below. Rebuild from detail instead
     if (!all(totals$year %in% baseline_estate$year)) {
       baseline_estate = NULL
     }
   }
   if (is.null(baseline_estate)) {
 
-    # SLURM Phase 3a runs scenarios as a parallel array, so the baseline's
-    # totals may not be written yet when a counterfactual's receipts job
-    # runs; rebuild the baseline series from its detail files, which Phase 2
-    # guarantees exist (counterfactual years read baseline detail)
+    # Phase 3a of the SLURM pipeline runs scenarios as a parallel array, so the
+    # baseline totals may not be written when a counterfactual's receipts job
+    # runs. Rebuild the series from the baseline detail files, which Phase 2
+    # guarantees exist
     baseline_estate = get_estate_totals_from_detail(
       detail_root = file.path(globals$baseline_root, 'baseline/static/detail'),
       years       = totals$year
@@ -283,18 +275,17 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   
   totals %>%
 
-    # Join the model-baseline estate series (delta 0 when unavailable)
+    # Join the model baseline estate series, taking a zero delta when unavailable
     { if (!is.null(baseline_estate)) left_join(., baseline_estate, by = 'year')
       else mutate(., est_tax_exp_baseline = est_tax_exp) } %>%
     mutate(
 
-      # FY receipts: nonwithheld tax plus 75% of current CY withheld tax plus
-      # 25% of previous CY withheld. lag default=0 zero-imputes the missing
-      # prior CY when the sim starts at year t with no t-1 lead-in. For
-      # deltas, this is unbiased whenever ΔCY (t-1) = 0 (i.e., a reform whose
-      # effect starts at CY t). The partial-FY first-year row is written
-      # only to the internal receipts_full.csv used by calc_rev_est; the
-      # public receipts.csv still drops it.
+      # Fiscal year receipts are nonwithheld tax plus 75% of the current calendar
+      # year's withheld tax plus 25% of the prior year's. The lag default imputes
+      # zero for the missing prior year when the simulation starts at the year the
+      # policy takes effect, which is unbiased for a delta whenever that prior
+      # year's change is zero. The resulting partial first-year row is written to
+      # receipts_full.csv and dropped from receipts.csv.
       outlays_tax_credits = 0.75 * pmt_refund_withheld +
         0.25 * lag(pmt_refund_withheld, default = 0) +
         pmt_refund_nonwithheld,
@@ -310,23 +301,19 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
       delta_revenues_corp_tax = 0.75 * corp_tax_change +
         0.25 * lag(corp_tax_change, default = 0),
 
-      # On-model estate tax delta on an FY basis: CY t decedents' liability is
-      # due 9 months after death (Form 706), so it books entirely in FY t + 1.
-      # lag(default = 0) zero-imputes the missing prior CY in the first sim
-      # year — same lead-in convention as the withheld splits above.
+      # Book the estate tax delta a year late. Liability on a decedent dying in
+      # calendar year t is due nine months after death on Form 706, so it falls
+      # entirely in fiscal year t + 1. The lag imputes zero for the first
+      # simulation year, as the withheld splits above do.
       delta_revenues_estate_tax = lag(
         coalesce(est_tax_exp - est_tax_exp_baseline, 0), default = 0),
 
-      # On-model annual wealth tax: a pure LEVEL (no CBO anchor, unlike estate's
-      # level+delta — there is no current-law wealth tax to anchor to). Like any
-      # NON-WITHHELD tax it is paid at filing in the spring AFTER the assessment
-      # year (CY t net worth → return filed Jan–Apr CY t+1 → FY t+1), so it books
-      # entirely in FY t+1: revenues_wealth_tax[FY t] = wealth_tax[CY t-1]. This
-      # matches the estate t+1 lag mechanically (lag with zero-imputed prior CY),
-      # NOT the in-year booking the model currently uses for ordinary nonwithheld
-      # income tax (a known simplification in remit_taxes/calc_receipts). It is
-      # on-model (computed on already-adjusted data), so it does NOT take the
-      # excess-growth `all_rev` factor below.
+      # Book the annual wealth tax a year late, as a level. There is no current-law
+      # wealth tax to anchor to, so unlike the estate tax it is not a delta against
+      # a CBO series. Being nonwithheld, it is paid at filing in the spring after
+      # the assessment year, so net worth in calendar year t is remitted in fiscal
+      # year t + 1. The model books ordinary nonwithheld income tax in year, which
+      # is a simplification in calc_receipts.
       revenues_wealth_tax = lag(coalesce(wealth_tax, 0), default = 0)
     ) %>%
     
@@ -342,9 +329,8 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     left_join(deltas_cost_recovery, by = 'year') %>%
     mutate(revenues_corp_tax = revenues_corp_tax + delta_revenues_cost_recovery) %>%
 
-    # Join the on-model corporate statutory-rate delta (booked like cost
-    # recovery: onto the corporate line, which matches how the OME rate wedge
-    # it replaces was treated)
+    # Join the on-model statutory rate delta onto the corporate line, where the
+    # off-model rate wedge it replaces was booked
     left_join(deltas_corp_rate, by = 'year') %>%
     mutate(revenues_corp_tax = revenues_corp_tax +
              coalesce(delta_revenues_corp_rate, 0)) %>%
@@ -356,8 +342,8 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
            revenues_corp_tax    = revenues_corp_tax + corporate,
            revenues_vat         = revenues_vat + vat,
 
-           # CBO level plus the on-model delta. The off-model `estate` column
-           # is superseded by the on-model estate tax and no longer applied.
+           # CBO level plus the on-model delta. The off-model estate column is
+           # superseded by the on-model estate tax
            revenues_estate_tax  = revenues_estate_tax + delta_revenues_estate_tax) %>%
     
     # Final column selection
@@ -366,13 +352,12 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
            revenues_vat, revenues_other) ->
     fy_receipts
 
-  # Internal sidecar: keeps the partial first sim year so calc_rev_est can
-  # produce an FY t delta when sim starts at the policy effective year t.
+  # Write the internal file, keeping the partial first year so that calc_rev_est
+  # can produce a delta for it when the simulation starts at the effective year
   fy_receipts %>%
     write_csv(file.path(scenario_root, 'totals', 'receipts_full.csv'))
 
-  # Public file: drops the partial first year (preserves existing format
-  # for external readers / analysis scripts).
+  # Write the public file, dropping the partial first year
   fy_receipts %>%
     filter(year != min(year)) %>%
     write_csv(file.path(scenario_root, 'totals', 'receipts.csv'))
@@ -404,7 +389,7 @@ calc_rev_est = function(id) {
     return()
   }
   
-  # Read baseline receipts (sidecar: includes partial first sim year)
+  # Read baseline receipts, including the partial first year
   baseline = file.path(globals$baseline_root,
                        'baseline',
                        'static',
@@ -417,8 +402,7 @@ calc_rev_est = function(id) {
 
   for (static in c(T, F)) {
 
-    # Read in counterfactual scenario receipts (sidecar: includes partial
-    # first sim year)
+    # Read in counterfactual scenario receipts, including the partial first year
     scenario = file.path(globals$output_root,
                          id,
                          if_else(static, 'static', 'conventional'),
@@ -505,7 +489,7 @@ calc_rev_est = function(id) {
     writeData(wb = wb, sheet = as.character(id), startRow = 23, 
               x = 'FY budget effects of policy change, share of GDP')
     
-    # Format numbers and cells (fixed layout: 9 series rows per block)
+    # Format numbers and cells, nine series rows per block
     style_rev_sheet(
       wb          = wb,
       sheet       = as.character(id),
@@ -559,8 +543,7 @@ calc_stacked_rev_est = function(counterfactual_ids) {
 
     stacked_rev_est = c('baseline', counterfactual_ids) %>%
 
-      # Read scenario receipts file and store (sidecar: includes partial
-      # first sim year)
+      # Read scenario receipts file, including the partial first year
       map(.f = ~ file.path(if_else(.x == 'baseline', globals$baseline_root, globals$output_root),
                            .x,
                            if_else(static | .x == 'baseline', 'static', 'conventional'),
@@ -643,7 +626,7 @@ calc_stacked_rev_est = function(counterfactual_ids) {
               x = 'Stacked FY budget effects of policy changes, share of GDP')
     
     
-    # Format numbers and cells (nrow-dependent layout)
+    # Format numbers and cells, at row positions that depend on the table size
     style_rev_sheet(
       wb          = wb,
       sheet       = 'Stacked revenue estimates',

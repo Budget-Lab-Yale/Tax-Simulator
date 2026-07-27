@@ -1,9 +1,7 @@
-# Dependent-model interface pins -- which vintage and scenario ID of each
-# upstream model this run reads. Defaults mirror
-# config/interfaces/interface_versions.yaml; a scenario overrides one by naming
-# an economy SET folder (in the runscript's `economy` column) whose
-# interfaces.yaml re-declares the entry -- this replaces the retired
-# dep.{Interface}.vintage / dep.{Interface}.ID columns.
+# Dependent-model interface pins: which vintage and scenario ID of each upstream
+# model this run reads. The defaults mirror
+# config/interfaces/interface_versions.yaml. A scenario overrides one by naming an
+# economy alternative folder whose interfaces.yaml re-declares the entry.
 
 _channel:
   role: state

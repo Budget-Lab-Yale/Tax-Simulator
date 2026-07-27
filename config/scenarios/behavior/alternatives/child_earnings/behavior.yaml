@@ -2,7 +2,7 @@
 #
 # Children's later earnings respond to family income; nothing else moves.
 #
-# Order of execution is NOT the order below: src/sim/behavior.R sorts the list
+# Execution order is not the order below: src/sim/behavior.R sorts the list
 # against one pinned family order, because some responses read what an earlier
 # one wrote. See that file for the order and the reasons.
 

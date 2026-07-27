@@ -1,20 +1,16 @@
 #-----------------------------------------------------------------------
-# bathtub.R — Phase 2B worker
+# bathtub.R
 #
-# Runs the kg_dynamics bathtub pre-pass for a single counterfactual
-# scenario. Aggregates baseline cells from Tax-Data, builds tau lists from
-# baseline + reform tax law, runs the sequential year-by-year recurrence,
-# and persists per-year state files under the scenario's
-# conventional/supplemental/kg_dynamics_state/ directory.
+# Phase 2B worker. Runs the kg_dynamics bathtub pre-pass for a single
+# counterfactual scenario: aggregates baseline cells from Tax-Data, builds
+# tau lists from baseline and reform tax law, runs the year-by-year
+# recurrence, and writes per-year state files under the scenario's
+# conventional/supplemental/kg_dynamics_state/.
 #
-# sigma income-conversion scenarios (conversion/sigma in the behavior
-# column) need no extra handling here: run_bathtub_pass() builds the sigma
-# context internally (raw Tax-Data pool legs + baseline/scenario static
-# detail MTRs — both available, since Phase 2B depends on 2A which depends
-# on Phase 1) and the bathtub pass computes conversions, injects the
-# gain-state inflow, and persists the cell tracker in the state files.
-#
-# No-op for scenarios that don't include any kg_dynamics/ behavior module.
+# Income-conversion scenarios need no extra handling here.
+# run_bathtub_pass() builds the conversion context itself from the raw
+# Tax-Data pool legs and the baseline and scenario static detail MTRs, all
+# of which Phase 2A has already written.
 #
 # CLI args:
 #   Rscript src/slurm/bathtub.R <staging_dir>
@@ -46,11 +42,9 @@ tryCatch({
   config        = readRDS(file.path(staging_dir, task$scenario, 'config.rds'))
   scenario_info = config$scenario_info
 
-  # Install this scenario's resolved assumptions as the active set. A SLURM
-  # worker is a fresh R process that never runs do_scenario, so without this
-  # every economy_param() read errors (fail-closed by design -- see
-  # src/misc/scenario_config.R). scenario_info rides in on config.rds, so nothing
-  # extra is serialized.
+  # Install this scenario's resolved configuration. A SLURM worker is a fresh R
+  # process that never runs do_scenario, so without this every economy_param()
+  # read errors. See src/misc/scenario_config.R.
   config_activate(economy  = scenario_info$resolved_economy,
                   behavior = scenario_info$resolved_behavior)
 
