@@ -1501,20 +1501,58 @@ If the equivalence check is ever wanted, its pre-3b worktree is one
 `git worktree add` at `28ecf4f33` (Phase 2), not the deleted one, which sat on
 the abandoned branch.
 
+## The author's rulings, 2026-07-26 (all but one closed)
+
+**Off-model estimates leave the top-tax batches entirely** (`c254bf72e`). The
+corporate rate is on-model as of 2026-07-23, so the off-model wedge was a second
+source for revenue the model already produces, and receipts add both: a corp
+scenario regenerated today would have counted the 21→28 hike TWICE, about $49B in
+2027 rising to $96B. The generators' comment still claimed corporate revenue
+"comes from the OME channel", written before the change and saying the opposite of
+what the code does. Both lever states now name `default`. The corp-OFF pin cost
+nothing to drop (v4 20250925/baseline is all zeros, same as the v5 default).
+
+**Clausing gets a real v5 vintage**, because its corporate scenario carries
+genuine off-model revenue ($337B in 2030). `20260726/07_corporate`: six columns
+copied byte-for-byte from v4 `20260706/07_corporate`, `corporate_static` set EQUAL
+to the conventional `corporate` column. Verified across all 25 years. **That
+equality is deliberate and breaks the usual convention** — this scenario's static
+leg carries the corporate behavioral response, where static is elsewhere law-only,
+so its static-minus-conventional corporate reading is identically zero. The source
+is a single published conventional series with no mechanical counterpart. Recorded
+in the vintage's own `corporate_meta.yaml`.
+
+Clausing's other seven scenarios pinned the all-zero OME and now name `default`;
+their saving shares live in four new alternatives (`saving_0/25/50/75`) that
+override the financing profile and nothing else. The nine orphaned `ome_*`
+alternatives are deleted.
+
+**The `private/` runscripts are archived**, all 26, into
+`config/runscripts/private/retired_2026_07_26/`. That path is gitignored
+("Code associated with private analyses"), so they were NOT moved into the tracked
+`archive/` tree — doing so would have committed private client work. Their README
+warns that three of them will reorder their behavior stack if revived.
+
+**`s1_uniform` deleted; `equivalence_check.R` deleted; `config_repin_hashes()`
+kept** (`58edd1740`). One correction to this document: it said no script could
+regenerate `s1_uniform`. Wrong —
+`other/wealth_dynamics/write_extreme_profile.py s1_uniform 1.0` rebuilds it
+exactly, which is what made the deletion cheap.
+
+**Still open:** the three sibling launchers (`launch_form_laffer.sh`,
+`launch_form_memo.sh`, `launch_timeable_logs.sh`). Two A/B across `response_form`,
+now a fixed setting, so a form A/B is two hand edits to `kg/settings.yaml` rather
+than two scenarios. That may be right by design and wants a view.
+
 ## What is left
 
-1. **Merge the branch.** The biggest item and it is not code. Diverging from
-   `wealth` since 2026-07-25. The 26 untracked `private/` runscripts hard-error
-   on the new schema until migrated, and three of them will reorder their
-   behavior stack when they are.
+1. **Merge the branch.** The only substantial item, and it is not code.
 2. **σ and levels-η**, both blocked on a full-sample run rather than on code.
    σ's proving run IS the charity −0.5 re-derivation, deliberately deferred as
    the first follow-up.
 3. **The comment cleanup**, a separate repo-wide pass. Warn it: in
    `config/calibrations/**` and `config/scenarios/economy/**` the comments are the
    data.
-4. **Four author rulings**, listed in the plan header. Item 1 now has the numbers
-   above; item 4, the `s1_uniform` orphan, is unchanged.
 
 ---
 
