@@ -1555,7 +1555,7 @@ This was the actual point of the project and the last part of it to land.
 | r 0.951, rho_pt 0.612 | `calibrate_estate_v2.R` | writes itself (`1734452ce`) |
 | s (the saving surface) | `write_profiles.py` | writes a provenance file per profile (`b58faeefe`) |
 | **eta 2.4825** | `measure_efull_by_eta.R` | **writes itself; REPRODUCED exactly** (`662471d81`) |
-| **sigma 0.16** | `measure_sigma.R` | **pipeline built, deliberately not run** (`0b15fc9e0`) |
+| **sigma 0.2002** | `measure_sigma.R` | **re-derived at charity/50 and adopted; was 0.16** (`62bb683c0`) |
 | timeable_share 0.2542 | — | solver still demoted; follow-up 2, dated waiver in place |
 
 ### eta needed no new simulation
@@ -1600,11 +1600,35 @@ run. And the interpolation is piecewise-linear, not through the origin, because 
 ETI at sigma = 0 is already about 0.22; that intercept is what makes sigma a residual
 and a through-origin fit would bury it.
 
+### sigma was then re-derived, and it moved
+
+Author instruction, 2026-07-26. Three full-sample legs at trial sigma 0 / 0.16 /
+0.30 measured top-subset ordinary ETI 0.1820 / 0.2363 / 0.2840, and interpolating
+onto the 0.25 target gives **sigma = 0.2002**, up 25% from 0.16. The target falls
+between the middle two grid points, so it is a bracketed interpolation.
+
+The direction has a clean explanation. The floor -- the ETI produced with no
+conversion at all -- is 0.1820 under charity/50, against the ~0.22 the old
+provenance recorded under charity/100. Charity absorbs less of the response, so
+sigma closes a wider gap.
+
+The writer refused to overwrite the shipped file and wrote `.proposed` with a
+banner, which is the contract working as designed: a 25% move in a behavioral
+parameter is a finding, not a routine update. Adopted on instruction.
+
+**What this invalidates.** Any shipped top-tax vintage scored with sigma 0.16 is no
+longer comparable for top ordinary-rate reforms. The nine behavior alternatives
+binding conversion are all top_tax stacks; NONE of the six gate fixtures binds it,
+so the byte-identical goldens are unaffected and remain valid.
+
+**eta was NOT re-derived**, and the reason is documented rather than assumed: the
+two calibrations act on disjoint bases (conversion on ordinary income, the bathtub
+on realizations), and eta is measured on a capital-gains shock that leaves ordinary
+rates untouched.
+
 ## What is left
 
-1. **Run sigma's re-derivation** when the author wants it (follow-up 1). Everything
-   it needs exists; it is three full-sample legs plus one measurement job.
-2. **Restore the `timeable_share` solver** (follow-up 2), which clears the last
+1. **Restore the `timeable_share` solver** (follow-up 2), which clears the last
    inherited waiver.
 3. **The comment cleanup**, a separate repo-wide pass. Warn it: in
    `config/calibrations/**` and `config/scenarios/economy/**` the comments are the
