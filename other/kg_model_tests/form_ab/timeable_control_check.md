@@ -43,3 +43,37 @@ solved. Same model, same data, better arithmetic.
 The grid was monotone (+2.6877 / +5.2636 / +8.8133) and the long-run moment was flat
 across it (0.96% spread), so both guards in `measure_timeable.R` passed and the
 sequential identification they exist to check is holding.
+
+---
+
+## What the two gate fixtures did after adoption
+
+`tm_s3` (multi_module_smoke) and `tm_s4` (corp_kgwealth_verify) re-run against
+`golds3` / `golds4`, which predate both the sigma and timing-share re-derivations.
+
+**Every CSV is byte-identical in both.** The differences appear only inside the
+xlsx, which carry more decimal places than the CSVs report:
+
+| | values differing | largest relative difference |
+|---|---|---|
+| S3 multi_module_smoke | 45 of 123 | 3.4e-05, on ETR-like figures (28.4280 vs 28.4271) |
+| S4 corp_kgwealth_verify | 57 of 213 | 2.7e-02, but on a magnitude of 1.4e-09 -- float noise near zero. Substantive values agree to 12 significant figures |
+
+So the timing-share change moves these fixtures by at most about three
+thousandths of one percent, and not at all at the precision the CSVs record. It
+nets out almost entirely, which is what the overlay is supposed to do absent a
+gains-rate change.
+
+The gate reports GATE_FAIL, for two reasons and neither is a defect:
+
+1. `mapping_check.py` flags `kg.timeable_share_logs` 0.2542 -> 0.2452 and
+   `sigma.conv` 0.16 -> 0.2002. That is the check working -- it exists to notice a
+   calibrated value moving, and two of them deliberately did.
+2. The xlsx content differences above.
+
+**The goldens are therefore superseded.** They capture the model as it stood before
+the two re-derivations, and no re-run can match them again. The config rebuild's own
+byte-identity claim is unaffected: it was verified at `rb_p6_s*` on 2026-07-26,
+BEFORE either calibration changed. New goldens are needed for the gate to keep
+working, and taking them is a decision rather than a cleanup, because it discards
+the reference the whole rebuild was checked against.
