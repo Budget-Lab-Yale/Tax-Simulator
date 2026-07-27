@@ -994,7 +994,7 @@ STILL OWED:
   have is a launcher, because the levels eta-dial was run by hand and never had
   one. It needs the same sweep treatment `eta_logs` just got — three generated
   `bathtub.yaml` files varying `eta`, bound by their own behavior alternatives.
-  `write_eta_logs_sweep.py` is the template and most of it generalizes.
+  `write_eta_sweep.py` is the template and most of it generalizes.
 - the sigma pipeline — two `topord_plus5` legs, the top-ETI measurement, the
   interpolation — → `conversion.yaml`.
 - `calibrate_estate_v2.R` writes its fitted r / rho_pt / cluster cap directly, and
@@ -1068,7 +1068,7 @@ Rough size: a few hours.
      this project and will change the shipped value.
    - **levels eta.** `measure_efull_by_eta.R` needs the same treatment. It has no
      launcher at all — that dial was run by hand — so it needs a sweep generator
-     too. `write_eta_logs_sweep.py` is the template and most of it generalizes.
+     too. `write_eta_sweep.py` is the template and most of it generalizes.
 4. ~~Retire the superseded mechanisms~~ — DONE, `7a6ad2df5`. Part 6.
 5. Phase 6: the docs sweep. Now the main thing left, and bigger than it was: see
    Part 6 for the comment-volume instruction, which is a repo-wide job the author
@@ -1092,7 +1092,7 @@ letting the sbatch phases inherit them, and passed the `user_id` argument retire
 would have found out until they tried to recalibrate.
 
 A trial value is now three generated artifacts per grid point, written by
-`other/kg_model_tests/form_ab/write_eta_logs_sweep.py`:
+`other/kg_model_tests/form_ab/write_eta_sweep.py`:
 
 | Artifact | What it is |
 |---|---|
@@ -1544,15 +1544,73 @@ exactly, which is what made the deletion cheap.
 now a fixed setting, so a form A/B is two hand edits to `kg/settings.yaml` rather
 than two scenarios. That may be right by design and wants a view.
 
+## The calibrators, all four (2026-07-26, after the merge)
+
+Every calibrated value in the model is now written by the script that measures it.
+This was the actual point of the project and the last part of it to land.
+
+| Value | Writer | State |
+|---|---|---|
+| eta_logs 1.6625 | `measure_efull_logs.R` | writes itself; re-simulation reproduced the moment to 1.4e-13 (`161ec866f`) |
+| r 0.951, rho_pt 0.612 | `calibrate_estate_v2.R` | writes itself (`1734452ce`) |
+| s (the saving surface) | `write_profiles.py` | writes a provenance file per profile (`b58faeefe`) |
+| **eta 2.4825** | `measure_efull_by_eta.R` | **writes itself; REPRODUCED exactly** (`662471d81`) |
+| **sigma 0.16** | `measure_sigma.R` | **pipeline built, deliberately not run** (`0b15fc9e0`) |
+| timeable_share 0.2542 | — | solver still demoted; follow-up 2, dated waiver in place |
+
+### eta needed no new simulation
+
+The three vintages the 2026-07-12 re-pin wrote are still on scratch, so re-running
+the measurement against them is a real proving run rather than a reconstruction. It
+returned eta* = 2.4825, the shipped value, from slope 1.01551 and grid E_full
+-2.0483 / -2.4395 / -3.0325 -- so `calib_write_entry` wrote in place rather than to
+`.proposed`.
+
+`write_eta_logs_sweep.py` became `write_eta_sweep.py` and serves both response forms
+instead of being copied. The logs grid is unchanged; only the generator's own name
+and two comment lines move in its output.
+
+`launch_eta_dial_levels.sh` is new -- the levels dial had never had a launcher,
+having been run by hand through an environment variable. It REFUSES to run unless
+`response_form` is `levels` in `settings.yaml`, reading the setting rather than
+trusting the operator, because a levels sweep executed under the logs form would
+produce a plausible-looking number measured under the wrong model.
+
+**One caution about generated provenance.** Rewriting an entry rewrites its prose,
+and the first attempt silently dropped things the old hand-written note carried: the
+value's history (4.4984 -> 2.3992 -> 2.4825) and the reason `apply.R` is in the
+dependency list (an applier-rule change once biased every conventional kg estimate
+by about 37% on a 5pp score). Both were put back into the script's note text. A
+generated file is only as good as what its generator was told to say, and this is
+the failure mode to watch for in the other three.
+
+### sigma is built and NOT run, on purpose
+
+Generating a calibration's inputs is not the same as deciding to re-derive it. The
+shipped 0.16 was derived under charity/100 while every product run uses charity/50,
+which is the dated waiver on the entry and the reason the re-derivation is follow-up
+1. So the charity elasticity is an explicit flag: `--charity 100` reproduces the
+conditions behind 0.16, `--charity 50` is the deferred job. The tree ships the 100
+grid, unrun.
+
+Two design choices in it are worth not re-litigating. The grid's floor is sigma = 0
+with the conversion module still BOUND rather than dropped, so the leg writes its own
+sigma gate thresholds -- the old no-sigma leg had none and borrowed them from another
+run. And the interpolation is piecewise-linear, not through the origin, because the
+ETI at sigma = 0 is already about 0.22; that intercept is what makes sigma a residual
+and a through-origin fit would bury it.
+
 ## What is left
 
-1. **Merge the branch.** The only substantial item, and it is not code.
-2. **σ and levels-η**, both blocked on a full-sample run rather than on code.
-   σ's proving run IS the charity −0.5 re-derivation, deliberately deferred as
-   the first follow-up.
+1. **Run sigma's re-derivation** when the author wants it (follow-up 1). Everything
+   it needs exists; it is three full-sample legs plus one measurement job.
+2. **Restore the `timeable_share` solver** (follow-up 2), which clears the last
+   inherited waiver.
 3. **The comment cleanup**, a separate repo-wide pass. Warn it: in
    `config/calibrations/**` and `config/scenarios/economy/**` the comments are the
    data.
+
+The branch is MERGED: `wealth` and `origin/wealth` both carry this work.
 
 ---
 
