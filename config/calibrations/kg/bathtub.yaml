@@ -172,14 +172,22 @@ timeable_share:
     author.
 
 timeable_share_logs:
-  value: 0.2542
+  value: 0.2452
   kind: calibrated
-  set: '2026-07-19'
+  set: '2026-07-27'
   target: >
-    Same short-run announcement moment as the levels share (+5.04), calibrated
-    independently for the net-of-tax form given eta_logs. The timing overlay is
-    a mechanical fraction rather than a Bellman response, so it is nearly
-    form-robust -- hence the same numeric value.
+    Short-run announcement moment: full-sim short-run semi-elasticity of
+    +5.04 (twice the long-run magnitude with the sign flipped --
+    future-tax-up implies realize-today), measured at the announcement year
+    2026 under a +2pp DELAYED permanent shock whose rate rises in 2027.
+    Because 2026 law is unchanged, movement in that year is pure retiming,
+    which is what separates the overlay from the elasticity. Identified
+    GIVEN eta: the long-run moment is share-invariant (the overlay nets to
+    zero under a uniform permanent shock), and that invariance was checked
+    across this grid rather than assumed -- long-run E_full came out -2.6677
+    -2.6792 -2.6934. Grid share 0.15 0.2542 0.4 gave short-run E_full
+    +2.6877 +5.2636 +8.8133; the pin is the piecewise-linear interpolation
+    onto the target, and the grid was verified monotone before inverting.
   derived_under:
     tax_data: '2026070814'
     macro_projections: '2026022522'
@@ -188,14 +196,27 @@ timeable_share_logs:
     - src/sim/kg/timing.R
     - src/sim/kg/recurrence.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: 5022893f3ec2ec1fdb78bb1bfe3feecb
-    src/sim/kg/timing.R: 1350e269e70924db5b550b107821a8cf
-    src/sim/kg/recurrence.R: 72f808f7c5a288ba0912c29621bb604e
+    src/sim/kg/constants.R: '5022893f3ec2ec1fdb78bb1bfe3feecb'
+    src/sim/kg/timing.R: '1350e269e70924db5b550b107821a8cf'
+    src/sim/kg/recurrence.R: '72f808f7c5a288ba0912c29621bb604e'
   conditioned_on:
     settings.kg.timing_window: 1
     settings.kg.timing_ref_wedge: 0.05
     settings.kg.applier_allocation: '0.5'
-  rederive: other/kg_model_tests/form_ab/confirm_efull_logs.R
+  rederive: other/kg_model_tests/form_ab/measure_timeable.R
   active_when:
     kg.response_form: logs
-  note: LIVE by default (response_form = 'logs').
+  note: >
+    LIVE by default (response_form = 'logs'). This entry had NO working
+    re-derivation path between 2026-07-12 and 2026-07-26.
+    other/kg_model_tests/calibrate.R used to solve for eta and this share
+    together in a standalone Bellman miniature; when eta moved onto the full
+    simulator that script was demoted to a drift diagnostic, and the share
+    was left to be iterated by hand. measure_timeable.R replaces the hand
+    step, and unlike the abandoned auto-loop it CHECKS the grid is monotone
+    before inverting -- the instability that got the old solver demoted
+    would otherwise be interpolated straight through. Measured from
+    vintages: form_timeable_logs_15 form_timeable_logs_25
+    form_timeable_logs_40. Per-point measurements:
+    other/kg_model_tests/form_ab/timeable_logs.csv.
+
