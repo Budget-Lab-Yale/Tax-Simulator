@@ -278,3 +278,26 @@ Scratch worktrees (`/nfs/roberts/scratch/pi_nrs36/jar335/cfg_*`) and the golden
 output trees (`.../model_data/Tax-Simulator/v1/golds*`) still exist and can be
 deleted; the golden md5 manifests in `other/config_redesign/golden/` at
 `cfg-p3b` are the durable record.
+
+---
+
+## Closing note, 2026-07-26
+
+The redesign was rebuilt, on branch `config-rebuild` off `wealth`, and it
+landed. Same problem, same three-leg shape, most of the same engine — the
+resolution core, the gate harness and the migration tooling were all recovered
+from `cfg-p3b` rather than rewritten.
+
+What changed was the one thing this document says was fatal. The behavior leg
+kept the pluggable interface: `behavior.yaml` lists module paths, the loader
+takes any path that exists, and there is no registry and no list of known names.
+Execution order became one pinned family sort, which let five hand-written
+in-module order guards go, and 500 pre-migration behavior cells were checked to
+resolve to the identical module sequence before any of them were rewritten.
+
+The rest went the way §5 recommends: one live configuration engine at a time,
+with a six-scenario byte-identical gate after every model-facing phase.
+
+- The layout, and how to add to it: `config/scenarios/README.md`.
+- The full record, including what is still owed: `REBUILD_STATUS.md` in this
+  folder.

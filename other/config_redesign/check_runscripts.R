@@ -31,6 +31,46 @@ invisible(lapply(
 
 economy_defaults = config_load_defaults('economy')
 
+# Interface metadata, replicated from parse_globals(). Interfaces always read
+# from the production root regardless of where output goes.
+interface_versions_raw = read_yaml('./config/interfaces/interface_versions.yaml')
+output_roots           = read_yaml('./config/output_roots.yaml')
+interface_meta = names(interface_versions_raw) %>%
+  purrr::discard(~ .x == 'Tax-Simulator') %>%
+  purrr::set_names(.) %>%
+  purrr::map(~ list(
+    key  = stringr::str_to_lower(stringr::str_replace_all(.x, '[ -]', '_')),
+    root = file.path(output_roots$production, interface_versions_raw[[.x]]$type,
+                     .x, paste0('v', interface_versions_raw[[.x]]$version))
+  ))
+
+# Does every interface directory this row names actually exist? parse_globals()
+# checks this, but only once a run is under way -- and this gate deliberately
+# stops short of parse_globals(), so a runscript naming a vintage that is not
+# there resolves clean here and dies in SLURM Phase 0 instead.
+#
+# The failure is not hypothetical. An economy alternative can pin an interface
+# VINTAGE but not its VERSION, which is repo-pinned in interface_versions.yaml as
+# plumbing; a vintage lives UNDER a version, so bumping a version strands every
+# alternative pinning an older vintage of that interface. Off-Model-Estimates
+# going to v5 on 2026-07-22 stranded nine of them, and nothing said so.
+missing_interfaces = function(eco) {
+  purrr::keep(names(interface_meta), function(nm) {
+    m = interface_meta[[nm]]
+    v = eco$values$interfaces[[paste0(m$key, '_vintage')]]
+    i = eco$values$interfaces[[paste0(m$key, '_id')]]
+    if (is.null(v) || is.null(i)) return(TRUE)
+    !dir.exists(file.path(m$root, as.character(v), as.character(i)))
+  })
+}
+
+# Reported separately from the parse tally, and deliberately not fatal: the fix
+# is a decision about the pins (regenerate the vintages under the new version, or
+# retire the runscripts), not about the runscript files themselves. Folding it
+# into the pass/fail count would leave this gate permanently red, which is how a
+# check stops being read.
+unreachable = list()
+
 # archive/ is frozen on the old schema on purpose, and private/ is untracked
 # one-off work that the rebuild migrates on demand rather than up front (see
 # other/config_redesign/REBUILD_STATUS.md). Neither is expected to pass, and a
@@ -48,6 +88,16 @@ for (f in files) {
     validate_runscript_columns(rs, f)
     for (i in seq_len(nrow(rs))) {
       eco = config_resolve('economy', economy_defaults, alternative = rs$economy[i])
+
+      gone = missing_interfaces(eco)
+      if (length(gone) > 0) {
+        # tryCatch() evaluates this block in the caller's frame, which is the
+        # global environment, so a plain assignment lands where the tally is
+        # read. (`<<-` here would skip globalenv and look for the name among the
+        # attached packages.)
+        unreachable[[f]] = sort(unique(c(unreachable[[f]], gone)))
+      }
+
       suppressMessages(config_check_staleness(
         leg                = 'economy',
         defaults           = economy_defaults,
@@ -87,4 +137,17 @@ cat(sprintf('\n%d runscripts parse and resolve; %d do not\n', n_ok, n_bad))
 if (n_bad > 0) {
   cat('Failing:\n  - ', paste(bad_names, collapse = '\n  - '), '\n', sep = '')
 }
+
+if (length(unreachable) > 0) {
+  cat(sprintf(paste0('\n%d runscripts resolve but name an interface vintage that ',
+                     'does not exist on disk.\nThey will die in SLURM Phase 0. ',
+                     'See the note at the top of this file.\n'),
+              length(unreachable)))
+  for (f in names(unreachable)) {
+    cat('  - ', f, ': ', paste(unreachable[[f]], collapse = ', '), '\n', sep = '')
+  }
+} else {
+  cat('\nEvery interface directory named by a live runscript exists.\n')
+}
+
 cat('RUNSCRIPT_CHECK_DONE\n')
