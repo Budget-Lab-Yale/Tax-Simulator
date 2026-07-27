@@ -1,4 +1,4 @@
-# GENERATED FILE -- do not hand-edit. Written by other/kg_model_tests/form_ab/write_eta_sweep.py.
+# GENERATED FILE -- do not hand-edit. Written by other/kg_model_tests/form_ab/write_bathtub_sweep.py.
 #
 # SWEEP POINT: eta = 2.0. One point on the trial grid used to pin
 # eta for the semi-elasticity response form.

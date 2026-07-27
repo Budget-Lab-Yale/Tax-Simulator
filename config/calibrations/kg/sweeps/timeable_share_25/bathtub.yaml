@@ -1,22 +1,22 @@
 # GENERATED FILE -- do not hand-edit. Written by other/kg_model_tests/form_ab/write_bathtub_sweep.py.
 #
-# SWEEP POINT: eta_logs = 2.3. One point on the trial grid used to pin
-# eta_tilde for the net-of-tax response form.
+# SWEEP POINT: timeable_share = 0.2542. One point on the trial grid used to pin
+# the short-run retiming share for the semi-elasticity response form.
 # This is not a shipped calibration and no scenario should bind it except the
 # eta-dial runscript generated alongside it.
 #
 # Everything here is the shipped config/calibrations/kg/bathtub.yaml with exactly
-# one entry replaced -- eta_logs -- because a sweep varies one thing and holds the
+# one entry replaced -- timeable_share -- because a sweep varies one thing and holds the
 # rest fixed. The other three entries keep their own provenance verbatim, so this
 # file goes stale under the same conditions the shipped one does.
 #
-# Bound by  : config/scenarios/behavior/alternatives/top_tax_full_eta_logs_23/
-# Measured by: other/kg_model_tests/form_ab/measure_efull_logs.R
+# Bound by  : config/scenarios/behavior/alternatives/top_tax_full_timeable_share_25/
+# Measured by: other/kg_model_tests/form_ab/measure_timeable.R
 #
 # The file name matters. It has to stay `bathtub.yaml` inside a differently-named
 # FOLDER, because entries are labelled '{file stem}.{entry}' -- calling it
-# eta_logs_23.yaml would relabel every entry in it and detach any waiver
-# written against `bathtub.eta_logs`.
+# timeable_share_25.yaml would relabel every entry in it and detach any waiver
+# written against `bathtub.timeable_share`.
 
 _channel:
   role: state
@@ -77,58 +77,55 @@ eta:
     eta_dial_e30_v2.
 
 eta_logs:
-  value: 2.3
-  kind: judgment
-  active_when:
-    kg.response_form: logs
-  note: >
-    SWEEP TRIAL, not a calibrated value -- which is why the kind is judgment
-    rather than calibrated. It has no derivation to go stale: it is an INPUT to
-    the calibration that pins eta_logs, one of three points on the grid
-    {1.5, 1.9, 2.3}. The measurement script reads the three vintages this
-    grid produces, measures E_full at each, and inverts for the value that
-    hits E_full = -2.52. The result of that inversion is the shipped value in
-    config/calibrations/kg/bathtub.yaml; this number is scaffolding for
-    producing it. Measured by: other/kg_model_tests/form_ab/measure_efull_logs.R
-
-timeable_share:
-  value: 0.2542
+  value: 1.6625
   kind: calibrated
-  set: '2026-07-09'
+  set: '2026-07-19'
   target: >
-    Short-run announcement moment: full-sim short-run semi-elasticity of +5.04
-    (twice the long-run magnitude, sign flipped -- future-tax-up implies
-    realize-today), measured at the announcement year under a +5pp delayed
-    permanent shock. Identified GIVEN eta, since the long-run moment is
-    timeable-share invariant (the overlay nets to zero under a uniform
-    permanent shock).
+    Constant net-of-tax elasticity dlog(r_D)/dlog(1 - MC). Same protocol and
+    same local moment as the levels eta. Internal long-run semi at the shipped
+    value: -2.2393.
   derived_under:
-    tax_data: '2026050315'
+    tax_data: '2026070814'
     macro_projections: '2026022522'
   invalidated_by:
     - src/sim/kg/constants.R
-    - src/sim/kg/timing.R
+    - src/sim/kg/bellman.R
     - src/sim/kg/recurrence.R
+    - src/sim/kg/timing.R
+    - src/sim/kg/apply.R
   invalidated_by_hashes:
     src/sim/kg/constants.R: 5022893f3ec2ec1fdb78bb1bfe3feecb
-    src/sim/kg/timing.R: 1350e269e70924db5b550b107821a8cf
+    src/sim/kg/bellman.R: 24520852179a1d8830a8430446a245f8
     src/sim/kg/recurrence.R: 72f808f7c5a288ba0912c29621bb604e
+    src/sim/kg/timing.R: 1350e269e70924db5b550b107821a8cf
+    src/sim/kg/apply.R: 0e0eb6d9813f994fec7c86bc453023ca
   conditioned_on:
-    settings.kg.timing_window: 1
-    settings.kg.timing_ref_wedge: 0.05
     settings.kg.applier_allocation: '0.5'
-  rederive: other/kg_model_tests/calibrate.R
+    settings.kg.timing_ref_wedge: 0.05
+    settings.kg.timing_window: 1
+  rederive: other/top_tax/eta_dial/measure_efull_by_eta.R
+  active_when:
+    kg.response_form: logs
+  note: >
+    LIVE by default (response_form = 'logs' since 2026-07-22). Lower than the
+    levels eta because the net-of-tax full-sim slope is steeper, so the same
+    E_full needs a smaller eta_tilde. Grid + fit:
+    other/kg_model_tests/form_ab/eta_tilde_fit.csv.
+
+timeable_share:
+  value: 0.2542
+  kind: judgment
   active_when:
     kg.response_form: levels
   note: >
-    Live only when response_form = 'levels'. Derived under an EARLIER Tax-Data
-    vintage (2026050315) than the rest of the kg calibration (2026070814). The
-    code asserts the timing overlay is robust to the Tax-Data vintage; that
-    assertion is the reason this does not currently read as stale, and it has
-    not been re-tested. NOTE: other/kg_model_tests/calibrate.R was DEMOTED to a
-    drift diagnostic on 2026-07-12 and no longer ships values -- re-deriving the
-    timeable share means running the short-run leg by hand. Flagged for the
-    author.
+    SWEEP TRIAL, not a calibrated value -- which is why the kind is judgment
+    rather than calibrated. It has no derivation to go stale: it is an INPUT to
+    the calibration that pins timeable_share, one of three points on the grid
+    {0.15, 0.2542, 0.40}. The measurement script reads the three vintages this
+    grid produces, measures E_full at each, and inverts for the value that
+    hits E_full = -2.52. The result of that inversion is the shipped value in
+    config/calibrations/kg/bathtub.yaml; this number is scaffolding for
+    producing it. Measured by: other/kg_model_tests/form_ab/measure_timeable.R
 
 timeable_share_logs:
   value: 0.2542

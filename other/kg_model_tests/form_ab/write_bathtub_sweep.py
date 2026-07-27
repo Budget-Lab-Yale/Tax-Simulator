@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
-"""Write an eta sweep grid: calibration files, behavior alternatives, runscripts.
+"""Write a bathtub-calibration sweep grid: calibration files, behavior alternatives, runscripts.
 
-Serves BOTH response forms. The gains bathtub has two of them, each with its own
-calibrated elasticity, and pinning either means running the same +5pp
-capital-gains shock at three trial values of the parameter and inverting the
-measured E_full curve:
+Serves all four calibrated entries of config/calibrations/kg/bathtub.yaml. Two are
+response elasticities and two are the short-run retiming overlay, one of each per
+response form:
 
-  logs    eta_logs = 1.6625   constant net-of-tax elasticity   LIVE by default
-  levels  eta      = 2.4825   constant semi-elasticity         dormant
+  logs           eta_logs = 1.6625             LIVE by default
+  levels         eta = 2.4825                  dormant
+  timeable_logs  timeable_share_logs = 0.2542  LIVE by default
+  timeable       timeable_share = 0.2542       dormant
+
+Pinning an elasticity means running the same +5pp capital-gains shock at three
+trial values and inverting the measured long-run E_full curve. Pinning a timeable
+share means the same thing against the SHORT-RUN announcement moment, on a
+DELAYED shock -- the rate rises a year after it is announced, so the only thing
+moving realizations in the announcement year is retiming.
 
 Both used to be swept by exporting an environment variable into the submitting
 shell, which left no trace of the trial value in the vintage it produced and, once
@@ -43,9 +50,9 @@ that setting flipped to `levels` before launching and back afterwards. The level
 launcher says so and refuses to run until it is.
 
 Usage (from repo root):
-    python3 other/kg_model_tests/form_ab/write_eta_sweep.py           # both forms
-    python3 other/kg_model_tests/form_ab/write_eta_sweep.py logs      # one form
-    python3 other/kg_model_tests/form_ab/write_eta_sweep.py levels
+    python3 other/kg_model_tests/form_ab/write_bathtub_sweep.py                  # all four
+    python3 other/kg_model_tests/form_ab/write_bathtub_sweep.py logs             # one
+    python3 other/kg_model_tests/form_ab/write_bathtub_sweep.py timeable_logs
 
 Regenerate-and-diff is the check: an empty `git status --short` after running it
 means the tree matches what the script would write.
@@ -62,9 +69,10 @@ SOURCE_CALIB = 'config/calibrations/kg/bathtub.yaml'
 SWEEP_ROOT = 'config/calibrations/kg/sweeps'
 BEHAVIOR_ROOT = 'config/scenarios/behavior/alternatives'
 BASE_BEHAVIOR = 'top_tax_full'
+# Default runscript home; a form may override it with runscript_root.
 RUNSCRIPT_ROOT = 'config/runscripts/top_tax'
 
-THIS_SCRIPT = 'other/kg_model_tests/form_ab/write_eta_sweep.py'
+THIS_SCRIPT = 'other/kg_model_tests/form_ab/write_bathtub_sweep.py'
 
 # The two forms. `grid` tags are the trial value with its decimal point dropped
 # (logs) or the vintage shorthand already on scratch (levels) -- in both cases the
@@ -82,6 +90,7 @@ FORMS = {
         base_runscript='eta_dial_repin.csv',
         measure_script='other/kg_model_tests/form_ab/measure_efull_logs.R',
         target_desc='eta_tilde for the net-of-tax response form',
+        expect_rows=1,
     ),
     'levels': dict(
         entry='eta',
@@ -95,8 +104,47 @@ FORMS = {
         base_runscript='eta_dial_repin.csv',
         measure_script='other/top_tax/eta_dial/measure_efull_by_eta.R',
         target_desc='eta for the semi-elasticity response form',
+        expect_rows=1,
+    ),
+    # The two timeable shares. Their moment is the ANNOUNCEMENT-year jump on a
+    # delayed shock, so they share one runscript (tests/form_timeable: baseline, a
+    # delayed leg, and a permanent leg that sanity-checks the long-run moment has
+    # not moved -- it should not, the overlay nets to zero under a uniform
+    # permanent shock).
+    #
+    # The grid straddles the shipped 0.2542 widely, because this is the one kg
+    # parameter whose solver was DEMOTED for instability: the 2026-07-12 note says
+    # the bathtub dilution is unstable in the share, which is why it was iterated by
+    # hand instead of solved. A wide grid is what makes non-monotonicity visible
+    # rather than silently interpolated through, and the measurement script refuses
+    # to interpolate if the curve is not monotone.
+    'timeable_logs': dict(
+        entry='timeable_share_logs',
+        form_value='logs',
+        grid=[('15', '0.15'), ('25', '0.2542'), ('40', '0.40')],
+        runscript_stem='form_timeable_logs',
+        runscript_root='config/runscripts/tests',
+        base_runscript='form_timeable.csv',
+        measure_script='other/kg_model_tests/form_ab/measure_timeable.R',
+        target_desc='the short-run retiming share for the net-of-tax response form',
+        expect_rows=2,
+    ),
+    'timeable': dict(
+        entry='timeable_share',
+        form_value='levels',
+        grid=[('15', '0.15'), ('25', '0.2542'), ('40', '0.40')],
+        runscript_stem='form_timeable_levels',
+        runscript_root='config/runscripts/tests',
+        base_runscript='form_timeable.csv',
+        measure_script='other/kg_model_tests/form_ab/measure_timeable.R',
+        target_desc='the short-run retiming share for the semi-elasticity response form',
+        expect_rows=2,
     ),
 }
+
+
+def rs_root(spec):
+    return spec.get('runscript_root', RUNSCRIPT_ROOT)
 
 
 def read(path):
@@ -214,7 +262,7 @@ def build_behavior(spec, tag, value):
 # the product configuration, because the eta-dial measurement only means something
 # if the trial value is the one thing that differs.
 #
-# Named by: {RUNSCRIPT_ROOT}/{spec['runscript_stem']}_{tag}.csv
+# Named by: {rs_root(spec)}/{spec['runscript_stem']}_{tag}.csv
 #
 """
     return header + body
@@ -230,11 +278,13 @@ def build_runscript(spec, tag, value):
     read in receipts, the distribution smear and the corporate incidence channel,
     none of which touches the per-record detail files E_full is measured from.
     """
-    base = read(os.path.join(RUNSCRIPT_ROOT, spec['base_runscript']))
+    base = read(os.path.join(rs_root(spec), spec['base_runscript']))
     lines = base.rstrip('\n').split('\n')
     header = lines[0].split(',')
     behavior_col = header.index('behavior')
-    economy_col = header.index('economy')
+    # `economy` is optional: a runscript without it resolves that leg to default,
+    # which is what these sweeps want anyway.
+    economy_col = header.index('economy') if 'economy' in header else None
 
     out = [lines[0]]
     rewritten = 0
@@ -243,12 +293,16 @@ def build_runscript(spec, tag, value):
         if cells[behavior_col] == BASE_BEHAVIOR:
             cells[behavior_col] = f"{BASE_BEHAVIOR}_{spec['entry']}_{tag}"
             rewritten += 1
-        cells[economy_col] = 'default'
+        if economy_col is not None:
+            cells[economy_col] = 'default'
         out.append(','.join(cells))
 
-    if rewritten != 1:
-        sys.exit(f"{spec['base_runscript']}: expected exactly one row naming "
-                 f'{BASE_BEHAVIOR}, found {rewritten}.')
+    # Every shock row naming the base stack is rewritten -- the timeable runscript
+    # has two of them (the delayed leg and the permanent one that sanity-checks the
+    # long-run moment is still on target), the eta ones have one.
+    if rewritten != spec['expect_rows']:
+        sys.exit(f"{spec['base_runscript']}: expected {spec['expect_rows']} row(s) "
+                 f'naming {BASE_BEHAVIOR}, found {rewritten}.')
     return '\n'.join(out) + '\n'
 
 
@@ -268,14 +322,14 @@ def main():
                 f"{BEHAVIOR_ROOT}/{BASE_BEHAVIOR}_{spec['entry']}_{tag}/behavior.yaml",
                 build_behavior(spec, tag, value)))
             written.append(write(
-                f"{RUNSCRIPT_ROOT}/{spec['runscript_stem']}_{tag}.csv",
+                f"{rs_root(spec)}/{spec['runscript_stem']}_{tag}.csv",
                 build_runscript(spec, tag, value)))
 
         print(f'--- {name} form ({spec["entry"]}) ---')
         for path in written:
             print('  wrote', os.path.relpath(path, REPO))
 
-    if 'levels' in which:
+    if any(FORMS[n]['form_value'] == 'levels' for n in which):
         print('\nLEVELS SWEEP NEEDS ONE MANUAL STEP: set response_form to '
               '`levels` in\nconfig/calibrations/kg/settings.yaml before '
               'launching, and back to `logs`\nafterwards. It is a fixed setting '

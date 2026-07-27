@@ -1,11 +1,11 @@
 # GENERATED FILE -- do not hand-edit. Written by other/kg_model_tests/form_ab/write_bathtub_sweep.py.
 #
-# The top_tax_full stack with the bathtub bound to the eta = 2.3992 sweep
+# The top_tax_full stack with the bathtub bound to the timeable_share_logs = 0.2542 sweep
 # point instead of to the shipped calibration. Everything else about the stack is
 # the product configuration, because the eta-dial measurement only means something
 # if the trial value is the one thing that differs.
 #
-# Named by: config/runscripts/top_tax/eta_dial_levels_c.csv
+# Named by: config/runscripts/tests/form_timeable_logs_25.csv
 #
 # The stack below is inherited from the top_tax_full alternative, comments and all:
 #
@@ -26,7 +26,7 @@
 # recorded in the vintage.
 
 kg_dynamics:
-  bathtub: config/calibrations/kg/sweeps/eta_c/bathtub.yaml
+  bathtub: config/calibrations/kg/sweeps/timeable_share_logs_25/bathtub.yaml
   conversion: config/calibrations/kg/conversion.yaml
 
 modules:
