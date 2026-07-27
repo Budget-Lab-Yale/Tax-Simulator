@@ -42,7 +42,7 @@ CALIB_FILE = 'config/calibrations/kg/bathtub.yaml'
 
 # The grid. These tags, the sweep files under config/calibrations/kg/sweeps/ and
 # launch_eta_dial_logs.sh all have to agree; the launcher's generator
-# (write_eta_sweep.py) declares the same three points.
+# (write_bathtub_sweep.py) declares the same three points.
 runs = tribble(
   ~eta_tilde, ~vintage,
   1.5,        'eta_dial_logs_15',
@@ -169,7 +169,7 @@ cat('wrote other/kg_model_tests/form_ab/eta_tilde_fit.csv\n')
 if (is.na(eta_pw)) {
   stop('The grid does not bracket the target moment (E_full = ', round(E_FULL_TARGET, 4),
        '), so there is no piecewise inversion to ship. Widen the grid in ',
-       'other/kg_model_tests/form_ab/write_eta_sweep.py and re-run it.')
+       'other/kg_model_tests/form_ab/write_bathtub_sweep.py and re-run it.')
 }
 
 calib_write_entry(

@@ -994,7 +994,7 @@ STILL OWED:
   have is a launcher, because the levels eta-dial was run by hand and never had
   one. It needs the same sweep treatment `eta_logs` just got — three generated
   `bathtub.yaml` files varying `eta`, bound by their own behavior alternatives.
-  `write_eta_sweep.py` is the template and most of it generalizes.
+  `write_bathtub_sweep.py` is the template and most of it generalizes.
 - the sigma pipeline — two `topord_plus5` legs, the top-ETI measurement, the
   interpolation — → `conversion.yaml`.
 - `calibrate_estate_v2.R` writes its fitted r / rho_pt / cluster cap directly, and
@@ -1068,7 +1068,7 @@ Rough size: a few hours.
      this project and will change the shipped value.
    - **levels eta.** `measure_efull_by_eta.R` needs the same treatment. It has no
      launcher at all — that dial was run by hand — so it needs a sweep generator
-     too. `write_eta_sweep.py` is the template and most of it generalizes.
+     too. `write_bathtub_sweep.py` is the template and most of it generalizes.
 4. ~~Retire the superseded mechanisms~~ — DONE, `7a6ad2df5`. Part 6.
 5. Phase 6: the docs sweep. Now the main thing left, and bigger than it was: see
    Part 6 for the comment-volume instruction, which is a repo-wide job the author
@@ -1092,7 +1092,7 @@ letting the sbatch phases inherit them, and passed the `user_id` argument retire
 would have found out until they tried to recalibrate.
 
 A trial value is now three generated artifacts per grid point, written by
-`other/kg_model_tests/form_ab/write_eta_sweep.py`:
+`other/kg_model_tests/form_ab/write_bathtub_sweep.py`:
 
 | Artifact | What it is |
 |---|---|

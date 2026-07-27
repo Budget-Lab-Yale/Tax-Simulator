@@ -15,7 +15,7 @@ bound by its own behavior alternative, named by its own runscript, and the answe
 written into config/calibrations/kg/conversion.yaml by the script that measures it.
 
 Three artifacts per grid point, mirroring the eta sweep
-(other/kg_model_tests/form_ab/write_eta_sweep.py, whose block splitter this reuses):
+(other/kg_model_tests/form_ab/write_bathtub_sweep.py, whose block splitter this reuses):
 
   config/calibrations/kg/sweeps/conv_<tag>/conversion.yaml
       the shipped conversion calibration with `conv` replaced by the trial value.
@@ -61,12 +61,12 @@ import sys
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))))
 
-# The eta sweep's block splitter, imported rather than copied: both scripts are
+# The bathtub sweep's block splitter, imported rather than copied: both scripts are
 # rewriting one entry of a calibration file textually, for the same reason (the
 # comments in those files ARE the provenance, and a YAML round-trip deletes them).
 _eta_path = os.path.join(REPO, 'other', 'kg_model_tests', 'form_ab',
-                         'write_eta_sweep.py')
-_spec = importlib.util.spec_from_file_location('write_eta_sweep', _eta_path)
+                         'write_bathtub_sweep.py')
+_spec = importlib.util.spec_from_file_location('write_bathtub_sweep', _eta_path)
 _eta = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_eta)
 split_blocks = _eta.split_blocks

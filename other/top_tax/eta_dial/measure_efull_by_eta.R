@@ -49,7 +49,7 @@ CALIB_FILE = 'config/calibrations/kg/bathtub.yaml'
 # names are accepted and whichever is present is used -- the values are what the
 # grid is, not the folder they landed in. The tags, the sweep folders under
 # config/calibrations/kg/sweeps/ and the launcher all declare the same three points;
-# write_eta_sweep.py is where the grid is defined.
+# write_bathtub_sweep.py is where the grid is defined.
 runs = tribble(
   ~eta,   ~tag,   ~legacy_vintage,
   2.0,    'e20',  'eta_dial_e20_v2',
