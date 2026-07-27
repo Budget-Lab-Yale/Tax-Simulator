@@ -40,7 +40,8 @@ valuation_bridge:
   # other/estate_tax/estate_valuation_params.yaml, which is deleted. Both new
   # files join the list above. bridge.yaml's hash moved because its header
   # comment changed and two record-keeping fields reformatted; verified directly
-  # that every value the model reads is identical.
+  # that every value the model reads is identical. CONFIRMED 2026-07-26: the
+  # six-scenario gate came back byte-identical, including the estate scenario.
   note: >
     Value is a PATH POINTER to the frozen measurement-parameter file. This is a
     measurement bridge, never reform-overridable: reforms change estate LAW,

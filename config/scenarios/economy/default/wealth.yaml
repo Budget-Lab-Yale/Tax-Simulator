@@ -68,8 +68,8 @@ financing_profile:
   #     writes a provenance.yaml beside each profile's tables. Verified directly:
   #     regenerating reproduces both s.csv and both M.csv byte-for-byte, so the
   #     surfaces this entry is pinned against did not move.
-  # Both re-pins stand only if the six-scenario gate is byte-identical; if it is
-  # not, they become real re-derivations.
+  # CONFIRMED 2026-07-26: the six-scenario gate came back byte-identical, so both
+  # re-pins stand and neither value needs re-deriving.
   #
   # NOTE on coverage: the hashes below watch the DEFAULT profile's tables, which
   # is what this default entry can see. A scenario pointing at another profile

@@ -27,8 +27,8 @@
 # hash moved because KG_DYN_SPEC_VERSION was deleted. It was a hand-maintained
 # integer meant to be bumped whenever the Bellman primitives changed, and nothing
 # read it -- no state file wrote it and no consumer compared it. The job it
-# described is done by the invalidated_by hashes below. Dead code only; stands if
-# the six-scenario gate is byte-identical.
+# described is done by the invalidated_by hashes below. Dead code only. CONFIRMED
+# 2026-07-26: the six-scenario gate came back byte-identical, so the re-pin stands.
 #
 # HASH RE-PIN 2026-07-26 (calibration switchover): the dependency hashes below
 # were re-pinned after the kg source files changed in one respect only -- the
