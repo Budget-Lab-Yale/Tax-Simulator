@@ -1,23 +1,24 @@
 # Config rebuild v2 — full status
 
-*Branch `config-rebuild`, off `wealth` at `324a7cd38`. Phases 0 through 4 and the
-first half of Phase 5 built 2026-07-26. All three legs are live: a runscript row is
-an ID, three folder pointers and the computational scope, and nothing else. The kg
-calibrations have moved into config/calibrations/ and are checked at parse time
-against the data, the code and the settings they were derived under. The FIRST of
-the four calibrators now writes its own value, and the eta sweep that feeds it is a
-set of files rather than a set of shell variables (Part 5). What remains is the
-other three calibrators, retiring the five superseded provenance mechanisms, and the
-Phase 6 docs sweep. Plan of record:
+*Branch `config-rebuild`, off `wealth` at `324a7cd38`. **All six phases are built
+and the verification is complete**, as of 2026-07-26 at `a15e24db9`. All three legs
+are live: a runscript row is an ID, three folder pointers and the computational
+scope, and nothing else. The kg calibrations live in config/calibrations/ and are
+checked at parse time against the data, the code and the settings they were derived
+under. Two of the four calibrators write their own values; the other two are blocked
+on a full-sample run rather than on code, and one of those is deliberately deferred.
+What is left is not code: the branch merge, those two calibrators, and the author's
+repo-wide comment cleanup. Plan of record:
 `~/.claude/plans/cheerful-zooming-star.md`, which carries a status header pointing
 back here.*
 
-This document is meant to be enough to resume cold. It is in six parts: what
+This document is meant to be enough to resume cold. It is in seven parts: what
 the branch contains now, what was verified and how, the decisions taken without
-the author present, and what each remaining phase involves. Parts 5 and 6 cover
-the most recent session: the eta sweep and the first calibrator to write its own
-value, then the wealth profiles, the estate chain, and the retirement of the
-superseded staleness mechanisms.
+the author present, and what remains. Parts 5 through 7 cover the last session:
+the eta sweep and the first calibrator to write its own value; the wealth profiles,
+the estate chain and the retirement of the superseded staleness mechanisms; then
+Phase 6, the closing gate, and the two verification gaps that turned out to want
+rewriting rather than running.
 
 ---
 
@@ -51,7 +52,10 @@ superseded staleness mechanisms.
 | `b58faeefe` | 5d | Wealth profiles get provenance files; their generator's output path fixed. |
 | `1734452ce` | 5d | The estate fitting script writes its own two numbers; hand-written intermediate deleted. |
 | `7a6ad2df5` | 5e | Four superseded staleness mechanisms retired; `config_repin_hashes()` rewritten rather than deleted. |
-| `823f8fd93`, `88a2e882c`, `c2ed2840d` | — | This document. |
+| `aa9915fc2` | 5 gate | Six scenarios byte-identical; the Part 6 re-pins stand. |
+| `2c4313ce3` | 6 | The scenario README, the postmortem's closing note, and the interface-existence check in the parse gate. |
+| `a15e24db9` | 6 | `mapping_check.py` rewritten for the design that shipped, and called by the gate comparator. |
+| `823f8fd93`, `88a2e882c`, `c2ed2840d`, `8f9276792` | — | This document. |
 
 ## Phase 1 — what the excess-growth removal touched
 
@@ -722,32 +726,36 @@ family, which `mapping_check.py` is responsible for. Two added this session:
 
 ## Verification NOT yet done
 
-1. **`mapping_check.py` has never been run against a 3b vintage.** It is the
-   thing that confirms `scenario_config.csv` carries what `assumptions.csv`
-   did. Until it runs, that manifest swap is unverified.
-2. **The equivalence check has not been run.**
-   `other/config_redesign/equivalence_check.R` compares the old parser (in a
-   detached pre-3b worktree) against the new resolution over the migrated
-   runscripts. It was recovered but not adapted: line 170 still iterates over
-   the deleted `excess_growth*` fields, and it calls `config_resolve()` with
-   the old `set_name =` argument.
-3. **The unit tests do not cover the waiver path.** 47 engine checks pass, none
-   of them exercise a `waiver` block. (The behavior loader's 27 checks are a
-   separate file and do cover every refusal it can make.)
-4. **No negative test exists yet** for the staleness stop. Phase 5 calls for
-   one (corrupt a stamp in a scratch copy, show the hard stop fires); the
-   equivalent evidence today is anecdotal — the stop fired twice during this
-   session, correctly, and both times is recorded below.
-5. **The three migrated runscript families have not been RUN.** They parse,
-   resolve and validate, which is what `check_runscripts.R` proves, but no
-   simulation has been executed from one. That matters most for the OBBBA
-   retrospective, whose two scripts were also pulled out of the archive and had
-   their `tax_law` cells changed, and least for the top-tax batches, whose
-   economy pins are structurally identical to the gate fixtures'.
-6. **`private/` is unmigrated and now skipped by the parse check.** The 26 files
+*Rewritten at the close of Phase 6. Items 1 and 4 are done, 2 is superseded, and
+3 turned out to be wrong when written.*
+
+1. ~~`mapping_check.py` has never been run against a 3b vintage.~~ **CLOSED**,
+   but by rewriting the tool rather than running it — the recovered version
+   targets the abandoned design. 495 relocated values checked across the six
+   closing vintages, all equal. Part 7.
+2. ~~The equivalence check has not been run.~~ **SUPERSEDED.** It targets the
+   abandoned shape, and what it would prove is now proven better twice over:
+   six byte-identical simulations plus the mapping check on the values
+   themselves. Recommend deleting `equivalence_check.R`; see Part 7.
+3. ~~The unit tests do not cover the waiver path.~~ This was wrong when written.
+   `test_stamp_negative.R` covers three waiver behaviours: that a dated waiver
+   gets past the stop under a banner, that waiving one entry does not waive its
+   neighbours, and that a waiver keyed to the wrong file stem does not apply.
+4. ~~No negative test exists yet for the staleness stop.~~ **DONE** in Phase 5:
+   `test_stamp_negative.R`, 10 checks, one corruption at a time in a scratch
+   copy.
+5. **The three migrated runscript families have not been RUN.** Still true, and
+   Part 7 says what happened when one was tried: 9 of the 80 live runscripts
+   cannot run at all, because they pin Off-Model-Estimates vintages that exist
+   only under v4. The parse gate now reports them. Nothing has been run from the
+   OBBBA retrospective, which is the family this most matters for — its economy
+   pin is the model default, so it is not affected by the OME problem, but its
+   two scripts were pulled out of the archive and had their `tax_law` cells
+   changed.
+6. **`private/` is unmigrated and skipped by the parse check.** The 26 files
    there are untracked one-off work; their behavior cells still name module
-   lists and would fail resolution. Three of them will reorder when migrated
-   (see the order assertion above).
+   lists and would fail resolution. Three will reorder when migrated (see the
+   order assertion above).
 
 ---
 
@@ -1367,6 +1375,146 @@ of every calibrated number, which is why those files must never be round-tripped
 through a YAML library and why `config_repin_hashes()` had to be rewritten as text
 editing. Trimming comments there would delete the content the files exist to carry.
 `src/` and `other/` are fair game.
+
+---
+
+---
+
+# Part 7 — Phase 6, and two verification gaps closed
+
+Two commits, 2026-07-26, after Part 6. **Phase 6 is done and the project's
+verification is complete.** What is left is not code: the branch merge, the two
+calibrators that are blocked on a full-sample run, and the author's repo-wide
+comment cleanup.
+
+| Commit | Scope |
+|---|---|
+| `2c4313ce3` | `config/scenarios/README.md`; the postmortem's closing note; the interface-existence check in the parse gate |
+| `a15e24db9` | `mapping_check.py` rewritten for the design that shipped, and called by `gate_diff.sh` |
+
+## The closing gate
+
+Vintages `rb_p6_s{1,2,3,4,6,7}` against `golds{1,2,3,4,6,7}`: **all six
+byte-identical** under the sanctioned exclusions, and each now also passing the
+manifest mapping check inside the comparator. Run from the project tree at
+`2c4313ce3`.
+
+```bash
+bash other/config_redesign/gate_diff.sh \
+  /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/rb_p6_sN \
+  /nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/goldsN
+```
+
+Everything else in the closing sweep: 114 unit checks green (47 engine, 29
+behavior leg, 10 negative, 28 writer, plus `test_repin`); 80 runscripts parse,
+resolve and validate, 0 fail; all four generators idempotent; `grep
+'assumption('` empty across `src/` and `config/`.
+
+## Gap 1 closed: the mapping check
+
+Running the recovered `mapping_check.py` was never the fix, which is why it sat
+open through five phases. It encodes the ABANDONED branch's target: it maps
+module-only parameters onto a behavior leg that carries VALUES, and expects to
+find `behavior.evasion.e_schc` in a manifest. This design has no such row — by
+author ruling those nine parameters live in their module's file, and no manifest
+mentions them. The tool could not have validated the thing that shipped.
+
+The question it should ask is not whether one manifest maps onto another but
+**whether any assumption value changed while being relocated**. The old
+`assumptions.csv` carried all 45 for every scenario; they now sit in three
+places, and the rewrite follows each to whichever one owns it:
+
+| Destination | Checked against |
+|---|---|
+| economy leg | `scenario_config.csv` in the candidate vintage |
+| kg calibration | `calibrations.csv`, or the calibration FILE when the scenario binds no kg pieces |
+| behavior module | a top-level constant in the module's `.R` file |
+
+That middle row has a wrinkle worth keeping in mind: a bound calibration appears
+in `calibrations.csv` only for the scenarios that bind it, so a baseline row's
+`kg.eta` is legitimately absent from the manifest and is checked against the file.
+
+**Result: 495 old manifest rows across the six vintages, every one located and
+equal.** This is the first evidence that the relocation was value-preserving
+rather than merely gated — the byte gate proves the model computes the same
+numbers, not that each number is where its provenance says it is.
+
+The check is not vacuous. Perturbing one value of each destination kind in a
+scratch copy of a golden manifest produces three failures, each naming its
+destination. And `gate_diff.sh` now CALLS it rather than carrying a comment
+saying it is responsible: the manifest families are excused from the byte
+comparison because their shape changed, which only excuses them if something
+still checks their content.
+
+## Gap 2: the equivalence check is superseded, not owed
+
+`equivalence_check.R` compared the old parser against the new resolution. It is
+obsolete for the same reason `mapping_check.py` had to be rewritten — it targets
+the abandoned shape, calling `config_resolve()` with `set_name =` and iterating
+over the deleted `excess_growth*` fields — and what it would prove is now proven
+better twice over: six byte-identical simulations, and the mapping check on the
+values themselves. Adapting it would be work in service of weaker evidence.
+Recommend deleting it; left in place pending a view.
+
+## The nine unrunnable runscripts
+
+Ruling item 1 has an answer, and it is worse than the status header implied.
+`check_runscripts.R` now asks whether the interface directories a row names
+actually exist. `parse_globals()` already checked that, but only once a run is
+under way, and the parse gate deliberately stops short of `parse_globals()` — so
+a runscript pinning a vintage that is not there resolved clean and died in SLURM
+Phase 0.
+
+Off-Model-Estimates v5 holds exactly one vintage, `20260722`, with two IDs
+(`baseline` and `corp_28_2027_2stream`). Every other pin in the tree — `20250925`,
+`20260706`, `top_tax_corp_placeholder` — exists only under v4. So **9 of the 80
+live runscripts cannot run**: all three `clausing_v2*` scripts and all six
+`top_tax` batches, 229 rows on `ome_20250925` alone.
+
+| Alternative | Pin | Live runscripts |
+|---|---|---|
+| `ome_20250925` (+ `_saving_{0,25,50,75}`) | 20250925 / baseline | 9 files, 229 rows |
+| `ome_20260706_corporate_saving_{25,50,75}` | 20260706 / 07_corporate | 1 file each |
+| `ome_top_tax_corp_placeholder` | top_tax_corp_placeholder | 3 files, 115 rows |
+| `corp_kg_wealth_reform` | ID only, inherits the v5 default | runnable (gate fixture S4) |
+
+The cause is structural and will recur: an economy alternative can pin an
+interface VINTAGE but not its VERSION, which is repo-pinned in
+`interface_versions.yaml` as plumbing, and a vintage lives UNDER a version. There
+is a real argument for leaving it that way — v4 and v5 have different schemas, so
+the version is code-coupled rather than scenario-coupled, and a hard stop is
+honest. What was wrong was that nothing said so until launch. Now the parse gate
+does, reported separately from the pass/fail tally and deliberately not fatal:
+the fix is a decision about the pins (regenerate those vintages under v5, or
+retire the runscripts), not about the runscript files.
+
+## The scratch worktrees are pruned
+
+All eight `cfg_*` worktrees removed, ~260MB. Two were dirty and were checked
+first: `cfg_rb_p3b`'s changes were the rsynced Phase 3b tree, all superseded by
+committed work, and `cfg_p3b_equiv`'s were abandoned-branch material in the
+`sets/` shape this rebuild rejected — its `economy_sets.py` and
+`migrate_runscripts.py` are already in the branch from Phase 0. The golden output
+trees were NOT touched.
+
+If the equivalence check is ever wanted, its pre-3b worktree is one
+`git worktree add` at `28ecf4f33` (Phase 2), not the deleted one, which sat on
+the abandoned branch.
+
+## What is left
+
+1. **Merge the branch.** The biggest item and it is not code. Diverging from
+   `wealth` since 2026-07-25. The 26 untracked `private/` runscripts hard-error
+   on the new schema until migrated, and three of them will reorder their
+   behavior stack when they are.
+2. **σ and levels-η**, both blocked on a full-sample run rather than on code.
+   σ's proving run IS the charity −0.5 re-derivation, deliberately deferred as
+   the first follow-up.
+3. **The comment cleanup**, a separate repo-wide pass. Warn it: in
+   `config/calibrations/**` and `config/scenarios/economy/**` the comments are the
+   data.
+4. **Four author rulings**, listed in the plan header. Item 1 now has the numbers
+   above; item 4, the `s1_uniform` orphan, is unchanged.
 
 ---
 
