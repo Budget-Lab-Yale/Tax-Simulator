@@ -1335,9 +1335,16 @@ saying the re-pin stands only if the gate is byte-identical.
 - 80 runscripts parse, resolve and validate with the new hashes — so the staleness
   check is clean, which is itself the check on the re-pins being complete.
 - `test_repin.R`: the re-pinner changes hash values and nothing else.
-- The six-scenario gate was launched at `7a6ad2df5` as vintages `rb_p5c_s{1,2,3,4,6,7}`.
-  **Its result is not recorded here — whoever picks this up should check it before
-  trusting the six re-pins**, with:
+- All four generators idempotent: the two top-tax batches (runscripts and tax law
+  trees), the wealth profiles, and the eta sweep files.
+- **The six-scenario gate PASSED**, vintages `rb_p5c_s{1,2,3,4,6,7}` vs
+  `golds{1,2,3,4,6,7}`, all byte-identical under the sanctioned exclusions
+  (`aa9915fc2`). That settles every conditional re-pin in Part 6; the notes in
+  `wealth.yaml`, `estate.yaml` and the kg calibration files now say so
+  unconditionally. Coverage is what makes it meaningful: S3 runs a four-family
+  behavior stack, S4 the corporate, kg and wealth channels together, S6 the wealth
+  tax, S7 the estate tax — so both deletions that could have changed behavior (the
+  wealth provenance checker, the estate point-of-use warn) were exercised.
 
 ```bash
 bash other/config_redesign/gate_diff.sh \
