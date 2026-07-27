@@ -165,7 +165,7 @@ applier listed by hand. Evasion without an estate module warns loudly.
 A sweep is a family of generated folders, so it is recorded in the vintage rather
 than vanishing with the shell that set it. Whatever writes the runscript rows
 writes the folders too;
-`other/kg_model_tests/form_ab/write_eta_logs_sweep.py` is the worked example.
+`other/kg_model_tests/form_ab/write_eta_sweep.py` is the worked example.
 There are no environment-variable back doors — the nineteen that used to exist
 are gone.
 

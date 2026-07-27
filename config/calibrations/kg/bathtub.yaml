@@ -44,14 +44,16 @@ _channel:
 eta:
   value: 2.4825
   kind: calibrated
-  set: '2026-07-12'
+  set: '2026-07-26'
   target: >
-    Long-run realization semi-elasticity. Pinned on the FULL SIMULATOR: the
-    eta_dial grid measures E_full(eta) = dlog(R)/dtau at sim-year 30 across a
-    few eta values and inverts the linear-through-origin line for
-    eta* = |E_full_target| / slope, with E_full_target = -0.6 / 0.238 = -2.52
-    (literature realization elasticity at the top-rate divisor). Internal
-    long-run semi at the shipped value: -2.2849.
+    Constant SEMI-elasticity of realizations with respect to the gains rate.
+    E_full measured at sim-year 2055 on the +5pp gains shock across the
+    trial grid (2 2.3992 3), inverted through the origin for the eta that
+    hits E_full = -2.5210 (= -0.6/0.238, the author-locked top-rate
+    divisor). The single-pool entropy model makes E_full linear through the
+    origin in eta, which is what licenses the through-origin fit here where
+    the net-of-tax form needs a piecewise one. Measured E_full at each grid
+    point: -2.0483 -2.4395 -3.0325. Fitted slope 1.01551.
   derived_under:
     tax_data: '2026070814'
     macro_projections: '2026022522'
@@ -62,11 +64,11 @@ eta:
     - src/sim/kg/timing.R
     - src/sim/kg/apply.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: 5022893f3ec2ec1fdb78bb1bfe3feecb
-    src/sim/kg/bellman.R: 24520852179a1d8830a8430446a245f8
-    src/sim/kg/recurrence.R: 72f808f7c5a288ba0912c29621bb604e
-    src/sim/kg/timing.R: 1350e269e70924db5b550b107821a8cf
-    src/sim/kg/apply.R: 0e0eb6d9813f994fec7c86bc453023ca
+    src/sim/kg/constants.R: '5022893f3ec2ec1fdb78bb1bfe3feecb'
+    src/sim/kg/bellman.R: '24520852179a1d8830a8430446a245f8'
+    src/sim/kg/recurrence.R: '72f808f7c5a288ba0912c29621bb604e'
+    src/sim/kg/timing.R: '1350e269e70924db5b550b107821a8cf'
+    src/sim/kg/apply.R: '0e0eb6d9813f994fec7c86bc453023ca'
   conditioned_on:
     settings.kg.applier_allocation: '0.5'
     settings.kg.timing_ref_wedge: 0.05
@@ -75,15 +77,24 @@ eta:
   active_when:
     kg.response_form: levels
   note: >
-    Live only when response_form = 'levels'. History 4.4984 (spec-v2 nested) ->
-    2.3992 (spec-v3 single pool) -> 2.4825 (full-sim E_full inversion,
-    2026-07-12). Response is INCREASING in |eta|. The calibration is conditioned
-    on applier_allocation = 0.5, timing_ref_wedge = 0.05, timing_window = 1 and
-    spec_version 3; changing any of those requires a re-pin. apply.R is listed
-    as a dependency because the applier rule feeds the measured E_full -- an
-    applier-rule change once biased every conventional kg estimate by ~37% on a
-    5pp gains-rate score before it was caught. Fitted grid:
-    other/top_tax/eta_dial/eta_repin_fit.csv, so a re-pin is arithmetic.
+    DORMANT under the shipped configuration: response_form is 'logs' since
+    2026-07-22, so the live elasticity is eta_logs and this value is read
+    only by a run that flips that setting. Higher than eta_logs because the
+    semi-elastic full-sim slope is flatter, so the same E_full needs a
+    larger eta. Response is INCREASING in |eta|. History: 4.4984 (spec-v2
+    nested) -> 2.3992 (spec-v3 single pool) -> 2.4825 (full-sim E_full
+    inversion, 2026-07-12, reproduced 2026-07-26 by this script writing its
+    own value for the first time). apply.R is listed as a dependency because
+    the applier rule feeds the measured E_full -- an applier-rule change
+    once biased every conventional kg estimate by about 37% on a 5pp
+    gains-rate score before it was caught. That is the reason the dependency
+    list is wider than the Bellman itself. Grid + fit:
+    other/top_tax/eta_dial/eta_repin_fit.csv. The trial values are
+    config/calibrations/kg/sweeps/eta_*/bathtub.yaml, and the sweep is
+    launched by other/top_tax/eta_dial/launch_eta_dial_levels.sh -- which
+    requires response_form flipped to 'levels' first and refuses to run
+    otherwise. Measured from vintages: eta_dial_e20_v2 eta_dial_c_v2
+    eta_dial_e30_v2.
 
 eta_logs:
   value: 1.6625

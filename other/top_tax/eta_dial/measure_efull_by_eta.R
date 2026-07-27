@@ -24,19 +24,45 @@ suppressPackageStartupMessages({
   library(data.table)
 })
 
-LOCAL_ROOT = '/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1'
+source('src/misc/calibration_writer.R')
+
+# The output tree the eta-dial vintages were written to. Overridable, because a
+# re-run writes its vintages beside the originals under suffixed names and has to
+# be measurable without editing this script -- editing the script being the old
+# way a calibration got re-run, and the reason these numbers came loose from their
+# provenance in the first place.
+LOCAL_ROOT = Sys.getenv('KG_CALIB_OUTPUT_ROOT',
+                        '/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1')
+VINTAGE_SUFFIX = Sys.getenv('VINTAGE_SUFFIX', '')
 YEAR       = 2055
 SHOCK      = 's_cg_r25'
 
+# Where the measured value lands. Written by this script rather than copied out of
+# its log by hand: see src/misc/calibration_writer.R for why that is the point.
+CALIB_FILE = 'config/calibrations/kg/bathtub.yaml'
+
 # 2026-07-12 re-pin grid: 3 fresh vintages on current code (estate offset live),
 # Tax-Data 2026070814 (production default). Straddle the ~2.5 expectation.
+#
+# The `_v2` vintages are the ones the 2026-07-12 re-pin wrote by hand. A re-run
+# through launch_eta_dial_levels.sh writes `eta_dial_levels_<tag>` instead, so both
+# names are accepted and whichever is present is used -- the values are what the
+# grid is, not the folder they landed in. The tags, the sweep folders under
+# config/calibrations/kg/sweeps/ and the launcher all declare the same three points;
+# write_eta_sweep.py is where the grid is defined.
 runs = tribble(
-  ~eta,   ~vintage,
-  2.0,    'eta_dial_e20_v2',
-  2.3992, 'eta_dial_c_v2',
-  3.0,    'eta_dial_e30_v2'
-)
-CENTRAL_VINTAGE = 'eta_dial_c_v2'   # supplies the shared baseline + dtau
+  ~eta,   ~tag,   ~legacy_vintage,
+  2.0,    'e20',  'eta_dial_e20_v2',
+  2.3992, 'c',    'eta_dial_c_v2',
+  3.0,    'e30',  'eta_dial_e30_v2'
+) %>%
+  mutate(vintage = map2_chr(tag, legacy_vintage, function(tag, legacy) {
+    fresh = paste0('eta_dial_levels_', tag, VINTAGE_SUFFIX)
+    if (dir.exists(file.path(LOCAL_ROOT, fresh))) fresh else legacy
+  }))
+
+CENTRAL_TAG = 'c'   # its vintage supplies the shared baseline + dtau
+CENTRAL_VINTAGE = runs$vintage[runs$tag == CENTRAL_TAG]
 
 agg = function(f, with_mtr = TRUE) {
   cols = c('weight', 'kg_lt', if (with_mtr) 'mtr_kg_lt')
@@ -67,6 +93,7 @@ s_central = agg(file.path(LOCAL_ROOT, CENTRAL_VINTAGE, SHOCK,
 dtau = s_central$tau_rw - base$tau_rw
 
 results = runs %>%
+  select(eta, vintage) %>%
   pmap_dfr(function(eta, vintage) {
     s = agg(file.path(LOCAL_ROOT, vintage, SHOCK, 'conventional_no_wealth',
                       'detail', paste0(YEAR, '.csv')), with_mtr = FALSE)
@@ -107,7 +134,7 @@ cat(sprintf('target E_full         : %.4f   (= -0.6 / 0.238, top-rate divisor)\n
 cat(sprintf('per-point -E_full/eta  : %s\n',
             paste(sprintf('%.4f', with(results, -E_full / eta)), collapse = ', ')))
 cat(sprintf('fitted slope (0-int)   : %.5f  (-E_full = slope * eta)\n', slope))
-cat(sprintf('eta*  = |target|/slope : %.4f   (current shipped 2.3992)\n', eta_star))
+cat(sprintf('eta*  = |target|/slope : %.4f\n', eta_star))
 cat('----------------------------------------------------------------\n')
 
 fit_out = tibble(
@@ -122,3 +149,66 @@ fit_out = tibble(
 fit_path = 'other/top_tax/eta_dial/eta_repin_fit.csv'
 write_csv(fit_out, fit_path)
 cat(sprintf('wrote %s\n', fit_path))
+
+#-------------------------------------------------------------------------------
+# Write the value into the calibration file. This is the last step of the
+# calibration, not a separate chore: the number that ships is the number this
+# script measured, and nobody transcribes it.
+#
+# Four decimals, which is the precision the moment supports and the precision the
+# shipped value has always carried.
+#
+# If this re-run does not reproduce the shipped value, the writer leaves the file
+# alone and puts its version at bathtub.yaml.proposed with a banner. That is
+# deliberate: a calibrated value moving means the model moved, the data moved, or
+# the calibration is less identified than it looks, and the author reads the diff.
+#-------------------------------------------------------------------------------
+
+calib_write_entry(
+  path   = CALIB_FILE,
+  entry  = 'eta',
+  value  = round(eta_star, 4),
+  fields = list(
+    kind = 'calibrated',
+    set  = format(Sys.Date()),
+    target = calib_prose(sprintf(
+      'Constant SEMI-elasticity of realizations with respect to the gains rate.
+       E_full measured at sim-year %d on the +5pp gains shock across the trial grid
+       (%s), inverted through the origin for the eta that hits E_full = %.4f
+       (= -0.6/%.3f, the author-locked top-rate divisor). The single-pool entropy
+       model makes E_full linear through the origin in eta, which is what licenses
+       the through-origin fit here where the net-of-tax form needs a piecewise one.
+       Measured E_full at each grid point: %s. Fitted slope %.5f.',
+      YEAR, paste(results$eta, collapse = ' '), E_FULL_TARGET, 0.238,
+      paste(sprintf('%.4f', results$E_full), collapse = ' '), slope)),
+    derived_under = list(tax_data          = fit_out$tax_data_vintage,
+                         macro_projections = '2026022522'),
+    invalidated_by = c('src/sim/kg/constants.R',
+                       'src/sim/kg/bellman.R',
+                       'src/sim/kg/recurrence.R',
+                       'src/sim/kg/timing.R',
+                       'src/sim/kg/apply.R'),
+    conditioned_on = list(settings.kg.applier_allocation = '0.5',
+                          settings.kg.timing_ref_wedge   = 0.05,
+                          settings.kg.timing_window      = 1),
+    rederive    = 'other/top_tax/eta_dial/measure_efull_by_eta.R',
+    active_when = list(kg.response_form = 'levels'),
+    note = calib_prose(sprintf(
+      "DORMANT under the shipped configuration: response_form is 'logs' since
+       2026-07-22, so the live elasticity is eta_logs and this value is read only by
+       a run that flips that setting. Higher than eta_logs because the semi-elastic
+       full-sim slope is flatter, so the same E_full needs a larger eta. Response is
+       INCREASING in |eta|.
+       History: 4.4984 (spec-v2 nested) -> 2.3992 (spec-v3 single pool) -> 2.4825
+       (full-sim E_full inversion, 2026-07-12, reproduced 2026-07-26 by this script
+       writing its own value for the first time).
+       apply.R is listed as a dependency because the applier rule feeds the measured
+       E_full -- an applier-rule change once biased every conventional kg estimate by
+       about 37%% on a 5pp gains-rate score before it was caught. That is the reason
+       the dependency list is wider than the Bellman itself.
+       Grid + fit: other/top_tax/eta_dial/eta_repin_fit.csv. The trial values are
+       config/calibrations/kg/sweeps/eta_*/bathtub.yaml, and the sweep is launched by
+       other/top_tax/eta_dial/launch_eta_dial_levels.sh -- which requires
+       response_form flipped to 'levels' first and refuses to run otherwise.
+       Measured from vintages: %s.",
+      paste(results$vintage, collapse = ' ')))))
