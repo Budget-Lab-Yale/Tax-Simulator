@@ -9,7 +9,7 @@
 # exactly one entry replaced -- conv -- because a sweep varies one thing and holds
 # the rest fixed. pt_labor_share keeps its own provenance verbatim.
 #
-# Bound by  : config/scenarios/behavior/alternatives/sigma_calib_100_conv_16/
+# Bound by  : config/scenarios/behavior/alternatives/sigma_calib_50_conv_16/
 # Measured by: other/top_tax/sigma_calib/measure_sigma.R
 #
 # The file name matters. It has to stay `conversion.yaml` inside a
