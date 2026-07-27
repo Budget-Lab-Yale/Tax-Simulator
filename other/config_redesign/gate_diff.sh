@@ -105,6 +105,23 @@ for f in $(list_files "$GOLD" | grep 'tax_law\.csv$'); do
   if cmp -s "$CAND/$f" "$GOLD/$f"; then echo "ASSERT OK  $f"; else { echo "ASSERT FAIL $f"; fail=1; }; fi
 done
 
+# 6. The manifest families are excluded above because their SHAPE changed. That
+# only excuses them if something still checks their CONTENT, so run the mapping
+# check here rather than leaving it to whoever remembers: every value the old
+# assumptions.csv carried must still be findable, and equal, in the manifest,
+# calibration file or behavior module that now owns it.
+echo "--- manifest mapping ---"
+if [ -f "$GOLD/assumptions.csv" ]; then
+  if python3 "$(dirname "$0")/mapping_check.py" "$GOLD" "$CAND"; then
+    :
+  else
+    echo "ASSERT FAIL mapping_check.py"
+    fail=1
+  fi
+else
+  echo "skipped: golden has no assumptions.csv (nothing to map from)"
+fi
+
 rm -f /tmp/gate_diff_sets.$$
 if [ "$fail" -eq 0 ]; then echo "GATE_PASS: $CAND == $GOLD (under sanctioned exclusions)"; else echo "GATE_FAIL"; fi
 exit $fail
