@@ -1,0 +1,924 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wealth Branch Review — July 27, 2026</title>
+  <style>
+    :root {
+      --ink: #18212b;
+      --muted: #566475;
+      --paper: #ffffff;
+      --page: #f3f6f8;
+      --line: #d9e0e7;
+      --navy: #183b5b;
+      --red: #a62b2b;
+      --red-bg: #fff1f0;
+      --amber: #8a5700;
+      --amber-bg: #fff8e7;
+      --blue: #165a79;
+      --blue-bg: #edf7fb;
+      --green: #24663e;
+      --green-bg: #eef8f1;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--page);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      font-size: 17px;
+      line-height: 1.65;
+    }
+
+    main {
+      width: min(1080px, calc(100% - 32px));
+      margin: 32px auto 72px;
+    }
+
+    header, section {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 5px 18px rgba(23, 45, 64, 0.05);
+    }
+
+    header {
+      padding: 42px 48px;
+      border-top: 7px solid var(--navy);
+    }
+
+    section {
+      padding: 34px 42px;
+      margin-top: 22px;
+    }
+
+    h1, h2, h3 {
+      line-height: 1.22;
+      color: var(--navy);
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      letter-spacing: -0.035em;
+    }
+
+    h2 {
+      margin: 0 0 18px;
+      font-size: 1.65rem;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 1.25rem;
+    }
+
+    p { margin: 10px 0 16px; }
+
+    a { color: #075f91; }
+
+    .subtitle {
+      max-width: 780px;
+      color: var(--muted);
+      font-size: 1.12rem;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 24px;
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .verdict {
+      padding: 18px 20px;
+      margin-top: 25px;
+      border-left: 5px solid var(--red);
+      border-radius: 6px;
+      background: var(--red-bg);
+    }
+
+    .verdict strong { color: var(--red); }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 22px 0;
+    }
+
+    .summary-card {
+      padding: 18px 14px;
+      text-align: center;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fafcfd;
+    }
+
+    .summary-card .number {
+      display: block;
+      color: var(--navy);
+      font-size: 2rem;
+      font-weight: 750;
+      line-height: 1;
+    }
+
+    .summary-card .label {
+      display: block;
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.3;
+    }
+
+    nav ol {
+      columns: 2;
+      gap: 48px;
+      padding-left: 24px;
+    }
+
+    nav li {
+      padding: 4px 0;
+      break-inside: avoid;
+    }
+
+    .finding {
+      padding: 26px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .finding:first-of-type {
+      padding-top: 6px;
+      border-top: 0;
+    }
+
+    .finding-title {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .badge {
+      flex: 0 0 auto;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 0.73rem;
+      font-weight: 750;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .critical { color: var(--red); background: var(--red-bg); }
+    .important { color: var(--amber); background: var(--amber-bg); }
+    .cleanup { color: var(--blue); background: var(--blue-bg); }
+    .healthy { color: var(--green); background: var(--green-bg); }
+
+    .plain-box, .decision-box, .evidence-box {
+      padding: 15px 18px;
+      margin: 14px 0;
+      border-radius: 8px;
+    }
+
+    .technical-box {
+      padding: 16px 18px;
+      margin: 14px 0;
+      border: 1px solid #cbd6df;
+      border-radius: 8px;
+      background: #f5f8fa;
+    }
+
+    .technical-box code {
+      color: #163f59;
+      background: #e6edf2;
+    }
+
+    .plain-box {
+      background: var(--blue-bg);
+      border-left: 4px solid var(--blue);
+    }
+
+    .decision-box {
+      background: var(--amber-bg);
+      border-left: 4px solid #c18416;
+    }
+
+    .evidence-box {
+      color: var(--muted);
+      background: #f7f8fa;
+      border: 1px solid var(--line);
+      font-size: 0.9rem;
+    }
+
+    .box-label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--ink);
+      font-size: 0.8rem;
+      font-weight: 750;
+      letter-spacing: 0.035em;
+      text-transform: uppercase;
+    }
+
+    ul, ol { padding-left: 24px; }
+    li { margin: 6px 0; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0;
+      font-size: 0.94rem;
+    }
+
+    th, td {
+      padding: 12px 13px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      color: var(--navy);
+      background: #f4f7f9;
+    }
+
+    code {
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: #edf0f3;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.88em;
+    }
+
+    details {
+      margin-top: 12px;
+      color: var(--muted);
+    }
+
+    summary {
+      cursor: pointer;
+      color: #075f91;
+      font-weight: 650;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    @media (max-width: 760px) {
+      header, section { padding: 28px 24px; }
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      nav ol { columns: 1; }
+      .finding-title { display: block; }
+      .badge { display: inline-block; margin-bottom: 8px; }
+    }
+
+    @media print {
+      body { background: white; font-size: 11pt; }
+      main { width: 100%; margin: 0; }
+      header, section {
+        border: 0;
+        box-shadow: none;
+        page-break-inside: avoid;
+      }
+      .finding { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Review of the wealth branch</h1>
+    <p class="subtitle">
+      A technical review of recent changes, written to remain readable without
+      requiring day-to-day familiarity with the code. It covers incorrect
+      results, incomplete audit records, test failures, and structural cleanup.
+    </p>
+    <div class="meta">
+      <span><strong>Review date:</strong> July 27, 2026</span>
+      <span><strong>Branch:</strong> wealth</span>
+      <span><strong>Review type:</strong> read-only</span>
+      <span><strong>Compared with:</strong> the branch point from origin/main</span>
+    </div>
+    <div class="verdict">
+      <strong>Overall conclusion:</strong> I found two defects that can change
+      which records enter a simulation, one defect in calibration provenance,
+      and a group of tests that no longer exercise the current interfaces.
+      I recommend resolving those four areas before treating this branch as
+      production-ready.
+    </div>
+    <div class="plain-box">
+      <strong>Implementation update — July 27, 2026:</strong> Findings 1 and 2
+      have now been fixed in the working tree. The population is built from every
+      scenario-specific Tax-Data path/year pair, and that process uses the shared
+      year parser. Focused regression tests and the surrounding configuration
+      suites pass. The remaining findings are unchanged.
+    </div>
+  </header>
+
+  <section>
+    <h2>At a glance</h2>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <span class="number">3</span>
+        <span class="label">result or record-keeping problems</span>
+      </div>
+      <div class="summary-card">
+        <span class="number">1</span>
+        <span class="label">major test-suite problem</span>
+      </div>
+      <div class="summary-card">
+        <span class="number">2</span>
+        <span class="label">additional safety gaps</span>
+      </div>
+      <div class="summary-card">
+        <span class="number">6</span>
+        <span class="label">useful simplifications</span>
+      </div>
+    </div>
+    <p>
+      The first four findings deserve attention first. For each finding below,
+      the report separates the observed behavior, the code mechanism, the likely
+      consequence, and the recommended implementation. The remaining items are
+      lower-risk changes that would reduce duplicated logic and avoid differences
+      between local and cluster execution.
+    </p>
+  </section>
+
+  <section>
+    <h2>Contents</h2>
+    <nav>
+      <ol>
+        <li><a href="#different-data">Scenarios using different data versions can lose people</a></li>
+        <li><a href="#year-lists">Some accepted year lists fail later</a></li>
+        <li><a href="#waiver-record">Calibration exceptions are recorded incorrectly</a></li>
+        <li><a href="#tests">The tests are no longer a dependable safety net</a></li>
+        <li><a href="#alternative-record">Scenario records do not match the documentation</a></li>
+        <li><a href="#input-checking">Bad run settings are accepted too easily</a></li>
+        <li><a href="#cluster-jobs">The cluster launches work that does nothing</a></li>
+        <li><a href="#shared-setup">The same setup process is written several times</a></li>
+        <li><a href="#behavior-files">Many behavior files repeat the same method</a></li>
+        <li><a href="#repeat-reading">Unchanging information is read repeatedly</a></li>
+        <li><a href="#artifacts">Temporary output is mixed into the branch</a></li>
+        <li><a href="#checks">What I checked</a></li>
+      </ol>
+    </nav>
+  </section>
+
+  <section>
+    <h2>Problems that can affect results or records</h2>
+
+    <article class="finding" id="different-data">
+      <div class="finding-title">
+        <span class="badge healthy">Fixed + tested</span>
+        <h3>1. Scenarios using different Tax-Data versions can silently lose people</h3>
+      </div>
+      <div class="plain-box">
+        <span class="box-label">In everyday language</span>
+        A run may compare several scenarios that use different versions of the
+        underlying household data. The simulator makes one master list of people
+        to include, but it builds that list using only the first scenario's data.
+        Anyone who exists only in another scenario's data is then removed from
+        that scenario without a warning.
+      </div>
+      <p>
+        This is especially concerning for newly added people near the top of the
+        wealth distribution. The code itself documents a previous case where an
+        incomplete list removed 935 records holding $8.2 trillion in wealth and
+        reduced expected estate tax by roughly one third. The present code fixed
+        that problem across years within one data version, but not across
+        different data versions.
+      </p>
+      <p>
+        This can happen even when the user asks for the full sample. The results
+        can therefore look complete while actually excluding records.
+      </p>
+      <div class="technical-box">
+        <span class="box-label">Technical mechanism</span>
+        In <code>parse_globals()</code>, <code>interface_paths</code> is filtered
+        to <code>Tax-Data</code> and then reduced with <code>slice(1)</code>.
+        The code reads IDs for the requested years from that one
+        <code>tax_data_root</code> and stores them in
+        <code>globals$sample_ids</code>. Later, <code>run_one_year()</code> reads
+        each scenario's own Tax-Data file but immediately applies
+        <code>filter(id %in% globals$sample_ids)</code>. Thus the per-scenario
+        input path is respected, but its population is restricted to IDs found
+        in the first path.
+      </div>
+      <p>
+        <strong>Failure mode:</strong> suppose the baseline uses vintage A and a
+        reform uses vintage B. If vintage B adds ID 9001, ID 9001 is absent from
+        the global universe and is removed from the reform. No subsequent
+        comparison can recover it. Because both outputs have already been
+        restricted, later checks for matching populations may still pass.
+      </p>
+      <div class="decision-box">
+        <span class="box-label">Recommended decision</span>
+        If mixed Tax-Data vintages are supported, collect IDs from each distinct
+        Tax-Data root and year before sampling, then draw one reproducible sample
+        from the union. If comparable populations are a design requirement,
+        reject mixed universes explicitly and report the differing paths and ID
+        counts. Add a regression test with an ID present only in the second
+        vintage.
+      </div>
+      <details>
+        <summary>Technical evidence</summary>
+        <div class="evidence-box">
+          Primary locations: the population is taken from the first Tax-Data path in
+          <a href="../src/misc/config_parser.R">src/misc/config_parser.R</a>,
+          around lines 310–335. All later scenario data is restricted to that
+          population in <a href="../src/sim/run.R">src/sim/run.R</a>, around
+          lines 792–804.
+        </div>
+      </details>
+    </article>
+
+    <article class="finding" id="year-lists">
+      <div class="finding-title">
+        <span class="badge healthy">Fixed + tested</span>
+        <h3>2. A valid list of years can be accepted in one place and fail in another</h3>
+      </div>
+      <div class="plain-box">
+        <span class="box-label">In everyday language</span>
+        The simulator says that years may be entered as one year, a continuous
+        range, or a list with gaps. One part of the simulator understands all
+        three forms. Another part understands only continuous ranges.
+      </div>
+      <p>
+        For example, a request for 2026 and 2028—but not 2027—is considered valid
+        when the scenario is first read. Later, while choosing the household
+        sample, that same request can fail or turn into missing values.
+      </p>
+      <p>
+        The underlying cause is straightforward: two separate pieces of code
+        interpret the year entry differently.
+      </p>
+      <div class="technical-box">
+        <span class="box-label">Technical mechanism</span>
+        <code>parse_year_spec()</code> correctly recognizes a scalar year, a
+        colon range such as <code>2026:2028</code>, and a whitespace list such
+        as <code>2026 2028</code>. However, <code>parse_globals()</code> splits
+        the same field only on <code>:</code>, converts the result to integers,
+        and constructs <code>x[1]:x[length(x)]</code>. A whitespace list is
+        therefore converted as one invalid integer rather than two years.
+      </div>
+      <p>
+        <strong>Failure mode:</strong> the scenario-level parser accepts the
+        runscript, but global sample construction later emits a coercion warning,
+        creates <code>NA</code>, or fails while constructing a sequence. This is
+        a split contract: whether an input is “valid” depends on which part of
+        initialization is reading it.
+      </p>
+      <div class="decision-box">
+        <span class="box-label">Recommended decision</span>
+        Replace the bespoke year parsing in <code>parse_globals()</code> with
+        <code>map(runscript$years, parse_year_spec)</code>, followed by
+        <code>unlist()</code> and <code>unique()</code>. Add coverage for a
+        scalar, a range, a non-contiguous list, and malformed mixtures.
+      </div>
+      <details>
+        <summary>Technical evidence</summary>
+        <div class="evidence-box">
+          The full year reader is <code>parse_year_spec()</code> in
+          <a href="../src/misc/scenario_config.R">src/misc/scenario_config.R</a>,
+          around line 864. A second, range-only interpretation appears in
+          <a href="../src/misc/config_parser.R">src/misc/config_parser.R</a>,
+          around lines 322–327.
+        </div>
+      </details>
+    </article>
+
+    <article class="finding" id="waiver-record">
+      <div class="finding-title">
+        <span class="badge critical">Fix first</span>
+        <h3>3. Some approved calibration exceptions are recorded as if no exception existed</h3>
+      </div>
+      <div class="plain-box">
+        <span class="box-label">In everyday language</span>
+        A calibration may be older than the inputs it depends on. A scenario can
+        deliberately approve that situation by giving a dated explanation. The
+        simulator correctly allows the run, but the final record can incorrectly
+        say that no exception was used.
+      </div>
+      <p>
+        This does not necessarily change the numerical answer. It does weaken the
+        audit trail: someone reviewing an old run may believe every calibration
+        was current when the run actually relied on an approved exception.
+      </p>
+      <p>
+        The simulator supports two places for these exceptions. The safety check
+        considers both places, while the final report considers only one.
+      </p>
+      <div class="technical-box">
+        <span class="box-label">Technical mechanism</span>
+        <code>calib_check_staleness()</code> forms the effective waiver set with
+        <code>modifyList(calib_waivers(...), calib_pointed_waivers(...))</code>.
+        By contrast, <code>calib_manifest()</code> calculates each
+        <code>waived</code> value using only
+        <code>!is.null(entries[[name]]$waiver)</code>. It never consults
+        <code>behavior_spec$waivers</code>, although those waivers may have been
+        the reason the staleness check allowed the run.
+      </div>
+      <p>
+        <strong>Failure mode:</strong> a behavior alternative carries a durable,
+        dated waiver for <code>bathtub.eta_logs</code>. The run proceeds, but the
+        corresponding row in <code>calibrations.csv</code> has
+        <code>waived = FALSE</code>. The numerical result is unchanged; the
+        reproducibility record is false.
+      </p>
+      <div class="decision-box">
+        <span class="box-label">Recommended decision</span>
+        Factor the effective-waiver calculation into one helper used by both
+        staleness checking and manifest creation. The manifest should ideally
+        store the waiver source, date, and reason—not only a Boolean—so the run
+        can be audited without reopening scenario files.
+      </div>
+      <details>
+        <summary>Technical evidence</summary>
+        <div class="evidence-box">
+          The two waiver sources are combined for the safety check in
+          <a href="../src/misc/calibrations.R">src/misc/calibrations.R</a>,
+          around lines 245–261. The final manifest checks only the calibration
+          file itself around lines 327–367.
+        </div>
+      </details>
+    </article>
+  </section>
+
+  <section id="tests">
+    <h2>4. The tests are no longer a dependable safety net</h2>
+    <div class="finding-title">
+      <span class="badge critical">Fix first</span>
+      <h3>Several tests fail before they test the behavior they were meant to protect</h3>
+    </div>
+    <p>
+      A test is valuable only when a failure tells us that current behavior has
+      broken. Several tests on this branch instead fail because they still use
+      old function names, old settings, or an old command format.
+    </p>
+    <div class="technical-box">
+      <span class="box-label">Technical assessment</span>
+      The newer configuration-focused tests are healthy, but the broader test
+      directory is not aligned with the configuration refactor. This is more than
+      cosmetic test debt: the SLURM dependency test exits at launcher argument
+      validation, while multiple model tests stop on missing symbols or inactive
+      configuration before reaching their numerical assertions. Those paths
+      therefore lack meaningful regression coverage.
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Area</th>
+          <th>What happens now</th>
+          <th>Why that matters</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>General source test</td>
+          <td>It expects retired functions including <code>assumption()</code> and <code>assumptions_load_defaults()</code>.</td>
+          <td>It stops before completing its intended checks.</td>
+        </tr>
+        <tr>
+          <td>Configuration stamp test</td>
+          <td>It reports 23 failures because it expects values and wording from an earlier stage of the redesign.</td>
+          <td>Real regressions are difficult to distinguish from deliberately changed expectations.</td>
+        </tr>
+        <tr>
+          <td>Cluster dependency test</td>
+          <td>Its <code>run_launcher()</code> passes the retired <code>user_id</code>, producing nine arguments; <code>slurm_run.sh</code> rejects that form.</td>
+          <td>It exits before checking whether cluster jobs depend on one another correctly.</td>
+        </tr>
+        <tr>
+          <td>KG and wealth tests</td>
+          <td>Several refer to retired globals such as <code>KG_DYN_CHAR_EXTENSIVE_INTERCEPT</code> and <code>WEALTH_CHI_PUB</code>, or call <code>kg_setting()</code>/<code>economy_param()</code> before configuration activation.</td>
+          <td>Important model behavior is not being tested through the current public interface.</td>
+        </tr>
+        <tr>
+          <td>Calibration writer</td>
+          <td>27 of 28 checks pass; one fails because of an extra blank line at the end of a shipped file.</td>
+          <td>This is minor, but it leaves the suite red and makes future failures less noticeable.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="decision-box">
+      <span class="box-label">Recommended decision</span>
+      Define one documented test entry point. Update active tests to construct and
+      activate a minimal scenario through the current configuration API. Move
+      migration snapshots to a clearly historical directory or delete them after
+      approval. Make the entry point fail on any active test failure so a clean
+      run has an unambiguous meaning.
+    </div>
+    <details>
+      <summary>Examples and locations</summary>
+      <div class="evidence-box">
+        Examples include <code>other/agent_workflow/test_source_all.R</code>,
+        <code>other/config_redesign/check_stamp_values.R</code>, several files in
+        <code>other/kg_model_tests/</code>, and
+        <a href="performance/test_slurm_dependency_graph.sh">other/performance/test_slurm_dependency_graph.sh</a>.
+        The cluster test passes nine arguments around lines 80–83, while the
+        launcher now rejects that old form.
+      </div>
+    </details>
+  </section>
+
+  <section>
+    <h2>Other safety and record-keeping gaps</h2>
+
+    <article class="finding" id="alternative-record">
+      <div class="finding-title">
+        <span class="badge important">Important</span>
+        <h3>5. The scenario record does not behave as its documentation says</h3>
+      </div>
+      <div class="plain-box">
+        <span class="box-label">In everyday language</span>
+        The documentation says that when a scenario changes an assumption, it
+        replaces the value and the descriptive information attached to that
+        value. The code replaces the value but continues to use some descriptive
+        information from the default scenario.
+      </div>
+      <p>
+        This creates ambiguity when reviewing a run later. The number came from
+        the alternative scenario, but its category or explanation may still look
+        as though it came from the default.
+      </p>
+      <div class="technical-box">
+        <span class="box-label">Technical mechanism</span>
+        <code>config_resolve()</code> reads an alternative entry's
+        <code>value</code>, records the alternative as the override source, and
+        replaces only <code>values[[channel]][[name]]</code>.
+        <code>config_manifest()</code> later takes <code>kind</code> from
+        <code>defaults$entries</code>. The README, however, says value, kind, and
+        provenance are replaced together. Current files mostly contain sparse
+        value overrides, so the implementation and the written contract disagree.
+      </div>
+      <div class="decision-box">
+        <span class="box-label">Choice to make</span>
+        If alternatives are intended to contain only changed numbers, update the
+        documentation and make their source unmistakable in the run record. If
+        they are intended to replace the entire entry, require and use the
+        accompanying descriptive information.
+      </div>
+    </article>
+
+    <article class="finding" id="input-checking">
+      <div class="finding-title">
+        <span class="badge important">Important</span>
+        <h3>6. Incorrect run settings are accepted too easily</h3>
+      </div>
+      <div class="plain-box">
+        <span class="box-label">In everyday language</span>
+        Several settings are converted into numbers but are not checked to make
+        sure those numbers make sense. A sample percentage can be negative or
+        greater than 100%, yes/no choices can contain unrelated numbers, and
+        malformed run labels are accepted until later.
+      </div>
+      <p>
+        These mistakes will often produce an error eventually, but the error may
+        occur after files have been prepared and may not explain the actual
+        mistake. In other cases, an unexpected value can quietly select the wrong
+        behavior.
+      </p>
+      <div class="technical-box">
+        <span class="box-label">Technical mechanism</span>
+        The CLI layer primarily uses <code>as.integer()</code> and
+        <code>as.numeric()</code>. It does not immediately check for
+        <code>NA</code>, bounds, enumerated values, or the documented vintage
+        format. The <code>multicore</code> value is validated later in
+        <code>parse_globals()</code>, after some initialization. MTR variable and
+        MTR type lists are also parsed independently, even though later
+        <code>map2()</code> processing requires compatible lengths.
+      </div>
+      <div class="decision-box">
+        <span class="box-label">Recommended decision</span>
+        Add one early validator before output-directory or manifest creation.
+        Require <code>0 &lt; pct_sample &lt;= 1</code>, restrict Boolean-like
+        flags to their accepted values, validate <code>multicore</code> and the
+        vintage format, and require equal MTR list lengths. Error messages should
+        name the bad value and the accepted form.
+      </div>
+    </article>
+  </section>
+
+  <section>
+    <h2>Simplification opportunities</h2>
+
+    <article class="finding" id="cluster-jobs">
+      <div class="finding-title">
+        <span class="badge cleanup">Simplify</span>
+        <h3>7. The cluster launches preparation jobs that do nothing</h3>
+      </div>
+      <p>
+        Every comparison scenario receives two KG preparation jobs, including
+        scenarios that do not use the KG model. Those jobs start R, load the
+        project, discover that no work applies, and exit.
+      </p>
+      <p>
+        Launching them only when KG behavior is present would reduce scheduler
+        traffic and make the run plan easier to inspect. The wealth preparation
+        work is already added conditionally, so there is a model to follow.
+      </p>
+      <div class="technical-box">
+        <span class="box-label">Current structure</span>
+        <code>src/slurm/setup.R</code> emits Phase 1B and Phase 2B task ranges for
+        every counterfactual. <code>slurm_run.sh</code> submits those arrays and
+        makes later work depend on them. For a scenario without the relevant KG
+        configuration, <code>src/slurm/frozen.R</code> and
+        <code>src/slurm/bathtub.R</code> load the R environment and exit without
+        producing scenario work.
+      </div>
+      <p>
+        The three small preparation programs for frozen, bathtub, and wealth work
+        also repeat nearly identical startup code. One program with a named mode
+        could replace all three.
+      </p>
+      <div class="decision-box">
+        <span class="box-label">Suggested implementation</span>
+        Build task ranges from scenario capabilities: emit 1B/2B only for KG,
+        retain the existing conditional 2N/2W wealth logic, and represent an
+        absent range explicitly in the submission plan. Replace the three
+        pre-pass entry files with one dispatcher taking a validated phase name.
+        Extend the dependency-graph test to cover ordinary-only, KG, wealth, and
+        mixed runs.
+      </div>
+    </article>
+
+    <article class="finding" id="shared-setup">
+      <div class="finding-title">
+        <span class="badge cleanup">Simplify</span>
+        <h3>8. Local runs and cluster runs repeat the same setup process</h3>
+      </div>
+      <p>
+        Important preparation steps are written separately in the ordinary
+        runner and the cluster runner. These include preparing tax law, indexes,
+        VAT offsets, and baseline marginal-tax information.
+      </p>
+      <p>
+        They currently appear broadly consistent, but every future change must be
+        made in both places. A shared preparation function would make it much
+        harder for local and cluster results to drift apart.
+      </p>
+      <div class="technical-box">
+        <span class="box-label">Repeated responsibilities</span>
+        <code>main.R</code> and <code>src/slurm/setup.R</code> both assemble the
+        scenario context: VAT-offset decisions, indexes, tax law, and baseline
+        MTR inputs. Bootstrap/source predicates are also repeated in
+        <code>main.R</code>, <code>src/slurm/setup.R</code>, and
+        <code>src/slurm/common.R</code>. These are control-flow decisions, so
+        divergence would change results rather than merely style.
+      </div>
+      <div class="decision-box">
+        <span class="box-label">Suggested implementation</span>
+        Extract a side-effect-limited <code>prepare_scenario_context()</code>
+        returning a named object consumed by both runners. Keep cluster submission
+        outside that helper. Centralize project bootstrapping in one sourced file.
+      </div>
+    </article>
+
+    <article class="finding" id="behavior-files">
+      <div class="finding-title">
+        <span class="badge cleanup">Simplify</span>
+        <h3>9. Many behavior files repeat the same method with different numbers</h3>
+      </div>
+      <p>
+        Several KG, charitable-giving, and overtime variants contain nearly the
+        same calculations. Most differences are a small set of assumptions.
+      </p>
+      <p>
+        Keeping one reviewed calculation and separate, readable assumption files
+        would reduce the chance that a bug fix is applied to one variant but
+        missed in another. The assumption files can remain explicit enough for
+        researchers to audit.
+      </p>
+      <div class="technical-box">
+        <span class="box-label">Candidate families</span>
+        The repeated families include multiple KG numbered variants, the
+        charitable-giving 50/100 variants, and the overtime France variants.
+        The safe refactor is not to hide these choices in generic metaprogramming:
+        retain named scenario modules, but have them call one shared calculation
+        with an explicit parameter list.
+      </div>
+    </article>
+
+    <article class="finding" id="repeat-reading">
+      <div class="finding-title">
+        <span class="badge cleanup">Simplify</span>
+        <h3>10. Some unchanging information is reread for every year</h3>
+      </div>
+      <p>
+        Estate-tax settings are read again while processing each year, even when
+        all those years use the same underlying data. Reading them once for each
+        data version would make the flow clearer and save repeated work in
+        multi-year local runs.
+      </p>
+      <div class="technical-box">
+        <span class="box-label">Suggested implementation</span>
+        Cache <code>get_estate_params()</code> by the normalized Tax-Data root,
+        or load it while preparing the scenario context and pass the result into
+        <code>run_one_year()</code>. Prefer the latter if explicit data flow is
+        more important than a process-level cache.
+      </div>
+    </article>
+
+    <article class="finding" id="artifacts">
+      <div class="finding-title">
+        <span class="badge cleanup">Housekeeping</span>
+        <h3>11. Temporary output is mixed into a very large branch</h3>
+      </div>
+      <p>
+        The branch contains roughly 5,000 changed files, including about 4,000
+        YAML files. It also contains scheduler output, log files, LaTeX build
+        products, a compiled Python cache file, and a ZIP archive.
+      </p>
+      <p>
+        Some final reports may be worth preserving, but temporary build output
+        makes the branch harder to review and search. Ignore rules do not remove
+        files that were already added to version control.
+      </p>
+      <div class="technical-box">
+        <span class="box-label">Observed file classes</span>
+        The branch diff contains 49 <code>.out</code> files, 9
+        <code>.log</code> files, LaTeX <code>.aux</code> output, a tracked
+        <code>.pyc</code> cache file, and a ZIP archive. There are also many
+        legitimate CSV, HTML, and PDF research products, which should be
+        distinguished from disposable execution output rather than removed
+        wholesale.
+      </div>
+      <div class="decision-box">
+        <span class="box-label">Recommended decision</span>
+        Keep intentional research products in a clearly named results area with a
+        short explanation of how they were produced. Remove temporary logs,
+        caches, and build products from version control in a later, approved
+        cleanup.
+      </div>
+    </article>
+  </section>
+
+  <section id="checks">
+    <h2>What I checked</h2>
+    <p>
+      This was a read-only review. I traced the main configuration, sampling,
+      simulation, calibration, and cluster-submission paths and ran targeted
+      checks without changing the branch.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Check</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>All 99 R files under <code>src/</code> can be read as valid R code</td>
+          <td><span class="badge healthy">Passed</span></td>
+        </tr>
+        <tr>
+          <td>All 95 current runscript files can be read and point to existing data-interface directories</td>
+          <td><span class="badge healthy">Passed</span></td>
+        </tr>
+        <tr>
+          <td>Scenario configuration tests</td>
+          <td><span class="badge healthy">47 of 47 passed</span></td>
+        </tr>
+        <tr>
+          <td>Behavior configuration tests</td>
+          <td><span class="badge healthy">29 of 29 passed</span></td>
+        </tr>
+        <tr>
+          <td>Tests that deliberately feed bad configuration stamps</td>
+          <td><span class="badge healthy">10 of 10 passed</span></td>
+        </tr>
+        <tr>
+          <td>Calibration writer tests</td>
+          <td><span class="badge important">27 of 28 passed</span></td>
+        </tr>
+        <tr>
+          <td>Older general, cluster, KG, and wealth test scripts</td>
+          <td><span class="badge critical">Several are outdated or fail early</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      I also found widespread extra spaces and blank lines in generated files and
+      a handful of source files. This is mostly cosmetic, although one extra
+      ending blank line currently causes the calibration writer's exact-copy
+      test to fail.
+    </p>
+    <p class="small">
+      Confidence note: this branch is unusually large, so this is a targeted
+      review of the highest-risk paths rather than a formal proof that every
+      calculation is correct. The findings above are based on direct code paths
+      and repeatable test results.
+    </p>
+  </section>
+</main>
+</body>
+</html>

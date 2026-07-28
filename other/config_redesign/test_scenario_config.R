@@ -5,7 +5,8 @@
 # Builds a synthetic leg tree under a temp dir, swaps CONFIG_LEG_ROOTS to point
 # at it, and exercises load / validate / resolve / precedence / locked / roles /
 # pass guard / staleness (vintage arm, hash arm, conditioned_on, pointer) /
-# parse_year_spec. Run via sbatch (never the login node):
+# parse_year_spec / Tax-Data sample-universe construction. Run via sbatch
+# (never the login node):
 #   sbatch other/config_redesign/run_tests.sbatch
 #-------------------------------------------------------------------------------
 
@@ -15,6 +16,7 @@ suppressPackageStartupMessages(
   ))
 )
 source('./src/misc/scenario_config.R')
+source('./src/misc/config_parser.R')
 
 n_pass = 0; n_fail = 0
 check = function(label, expr) {
@@ -237,6 +239,48 @@ check('year range',   identical(parse_year_spec('2026:2028'), 2026:2028))
 check('year list',    identical(parse_year_spec('2033 2027 2030'), c(2027L, 2030L, 2033L)))
 expect_error('year malformed', parse_year_spec('2026:2027:2028'), 'Malformed')
 expect_error('year empty', parse_year_spec(''), 'Empty')
+
+#----------------------------------
+# Tax-Data sample-universe building
+#----------------------------------
+
+# The two roots deliberately have different years and IDs. Missing cross-product
+# files (A/2027, B/2026) ensure the helper reads only each scenario's requested
+# path/year pairs. The baseline's non-contiguous year list also exercises the
+# canonical year parser through the real population-building path.
+tax_a = file.path(root, 'tax_a')
+tax_b = file.path(root, 'tax_b')
+dir.create(tax_a)
+dir.create(tax_b)
+fwrite(tibble(id = c(1L, 2L)), file.path(tax_a, 'tax_units_2026.csv'))
+fwrite(tibble(id = c(2L, 4L)), file.path(tax_a, 'tax_units_2028.csv'))
+fwrite(tibble(id = c(3L, 4L)), file.path(tax_b, 'tax_units_2027.csv'))
+fwrite(tibble(id = c(4L, 5L)), file.path(tax_b, 'tax_units_2028.csv'))
+
+sample_interfaces = tibble(
+  ID        = c('baseline', 'baseline', 'reform'),
+  interface = c('Tax-Data', 'Macro-Projections', 'Tax-Data'),
+  path      = c(tax_a, '/unused/macro/path', tax_b)
+)
+sample_runscript = tibble(
+  ID    = c('baseline', 'reform'),
+  years = c('2026 2028', '2027:2028')
+)
+
+sample_universe = tax_data_sample_universe(sample_interfaces, sample_runscript)
+check('sample universe unions IDs across Tax-Data vintages and years',
+      setequal(sample_universe, 1:5))
+check('sample universe contains each ID once',
+      length(sample_universe) == length(unique(sample_universe)))
+expect_error(
+  'sample universe rejects a Tax-Data row without runscript years',
+  tax_data_sample_universe(
+    bind_rows(sample_interfaces,
+              tibble(ID = 'orphan', interface = 'Tax-Data', path = tax_a)),
+    sample_runscript
+  ),
+  'no runscript years found for orphan'
+)
 
 #------------
 # Manifest

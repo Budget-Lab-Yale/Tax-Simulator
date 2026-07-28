@@ -143,6 +143,51 @@ read_runscript = function(runscript_name, scenario_id) {
 
 
 
+tax_data_sample_universe = function(interface_paths, runscript) {
+
+  #----------------------------------------------------------------------------
+  # Builds the population from every Tax-Data path/year pair used by the run.
+  #
+  # Tax-Data vintages do not necessarily contain the same IDs, and projection
+  # years can add new IDs within a vintage. Pairing each scenario's path with its
+  # own year specification includes both kinds of additions without trying to
+  # read irrelevant path/year combinations.
+  #
+  # Returns: unique vector of tax-unit IDs, before sampling.
+  #----------------------------------------------------------------------------
+
+  tax_data_sources = interface_paths %>%
+    filter(interface == 'Tax-Data') %>%
+    select(ID, path) %>%
+    left_join(runscript %>% select(ID, years), by = 'ID')
+
+  if (nrow(tax_data_sources) == 0) {
+    stop('Cannot build the sample universe: the run has no Tax-Data paths')
+  }
+  if (any(is.na(tax_data_sources$years))) {
+    missing_ids = tax_data_sources$ID[is.na(tax_data_sources$years)]
+    stop('Cannot build the sample universe: no runscript years found for ',
+         paste(unique(missing_ids), collapse = ', '))
+  }
+
+  tax_data_files = tax_data_sources %>%
+    mutate(year = map(years, parse_year_spec)) %>%
+    select(path, year) %>%
+    unnest_longer(year) %>%
+    distinct(path, year)
+
+  map2(
+    tax_data_files$path,
+    tax_data_files$year,
+    ~ fread(file.path(.x, paste0('tax_units_', .y, '.csv')),
+            select = 'id', showProgress = FALSE)$id
+  ) %>%
+    unlist(use.names = FALSE) %>%
+    unique()
+}
+
+
+
 parse_globals = function(runscript_name, scenario_id, local, vintage,
                          baseline_vintage, pct_sample, multicore) {
 
@@ -307,29 +352,12 @@ parse_globals = function(runscript_name, scenario_id, local, vintage,
     stop("Invalid argument for 'multicore' runtime parameter")
   }
 
-  # Which tax units are in the sample. Take the union of IDs across all simulation
-  # years: Tax-Data adds records in projection years, including new entrants at the
-  # top of the distribution, so an ID set built from any single year drops them from
-  # every year of the run. Building it from 2017 alone once dropped 935 records
-  # holding $8.2T in wealth, which cut expected estate tax by about a third.
-  #
-  # Note that the universe is read from the first runscript row's Tax-Data even
-  # where another scenario uses a different vintage.
-  tax_data_root = interface_paths %>%
-    filter(interface == 'Tax-Data') %>%
-    slice(1) %>%
-    get_vector('path')
-  sim_years = runscript$years %>%
-    as.character() %>%
-    map(.f = ~ as.integer(str_split_1(.x, ':'))) %>%
-    map(.f = ~ .x[1]:.x[length(.x)]) %>%
-    unlist() %>%
-    unique()
-  sample_ids = sim_years %>%
-    map(.f = ~ fread(file.path(tax_data_root, paste0('tax_units_', .x, '.csv')),
-                     select = 'id', showProgress = FALSE)$id) %>%
-    unlist() %>%
-    unique() %>%
+  # Which tax units are in the sample. Take the union across every Tax-Data
+  # path/year pair the run uses: vintages can contain different IDs, and projection
+  # years can add new entrants within a vintage. Building the universe from 2017
+  # alone once dropped 935 records holding $8.2T in wealth, which cut expected
+  # estate tax by about a third.
+  sample_ids = tax_data_sample_universe(interface_paths, runscript) %>%
     tibble(id = .) %>%
     sample_frac(size = pct_sample) %>%
     get_vector('id')
