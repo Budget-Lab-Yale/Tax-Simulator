@@ -730,9 +730,9 @@ Use the `/policy-config` skill to create reform configurations. It contains deta
 
 **Usage:**
 ```bash
-bash slurm_run.sh <runscript> <scenario_id> <local> <vintage> <pct_sample> <stacked> <baseline_vintage> <delete_detail>
+bash slurm_run.sh <runscript> <scenario_id> <local> <vintage> <pct_sample> <stacked> <baseline_vintage> <delete_detail> [submit_mode]
 ```
-Arguments are the same as `main.R` except `multicore` is omitted (SLURM handles parallelism).
+Arguments are the same as `main.R` except `multicore` is omitted (SLURM handles parallelism). The optional `submit_mode` is `chains` (default: one dependency chain per scenario, eight sbatch calls each — the cluster refuses submissions beyond 200/hour, so this caps out near 25 scenarios) or `batch` (one array per phase spanning all scenarios with a barrier between phases, about ten sbatch calls total — use for large homogeneous batches).
 
 **Pipeline phases:**
 1. Phase 0 (login node): `src/slurm/setup.R` — parses globals, builds configs, serializes to `.rds`

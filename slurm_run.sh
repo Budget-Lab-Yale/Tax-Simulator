@@ -34,24 +34,36 @@
 # Usage:
 #   bash slurm_run.sh <runscript> <scenario_id> <local> <vintage>
 #                     <pct_sample> <stacked> <baseline_vintage>
-#                     <delete_detail>
+#                     <delete_detail> [submit_mode]
 #
 # Arguments are identical to main.R except multicore is omitted
 # (parallelization is handled by SLURM). The user_id argument was retired
 # 2026-07-25 (it was never read); remove it from old invocations.
+#
+# submit_mode chooses the submission shape:
+#   chains (default) : one dependency chain per scenario, so a fast scenario
+#                      reaches post-processing without waiting for unrelated
+#                      work. Costs eight sbatch calls per scenario, and the
+#                      cluster refuses submissions beyond 200 per hour.
+#   batch            : one array per phase spanning every scenario, with a
+#                      barrier between phases. About ten sbatch calls for the
+#                      whole runscript regardless of size. Use for large
+#                      homogeneous batches; the barriers cost little there.
 #-----------------------------------------------------------------------
 
 set -euo pipefail
 
 # Validate arguments
-if [ "$#" -eq 9 ]; then
+if [ "$#" -eq 9 ] && [ "$9" != "chains" ] && [ "$9" != "batch" ]; then
   echo "Got 9 args -- the user_id argument was retired 2026-07-25; remove it (old position 3)."
+  echo "(A ninth argument is read only as submit_mode: 'chains' or 'batch'.)"
   exit 1
 fi
 if [ "$#" -lt 8 ]; then
-  echo "Usage: bash slurm_run.sh <runscript> <scenario_id> <local> <vintage> <pct_sample> <stacked> <baseline_vintage> <delete_detail>"
+  echo "Usage: bash slurm_run.sh <runscript> <scenario_id> <local> <vintage> <pct_sample> <stacked> <baseline_vintage> <delete_detail> [chains|batch]"
   exit 1
 fi
+SUBMIT_MODE="${9:-chains}"
 
 module load R/4.4.1-foss-2022b
 
@@ -167,6 +179,103 @@ fi
 
 P3B_IDS=()
 
+#-------------------------------------------
+# Batch mode: one array per phase spanning every scenario, a barrier between
+# phases. Task ranges come from the submission plan's columns, so the manifest
+# numbering stays the single source of truth.
+#-------------------------------------------
+if [ "$SUBMIT_MODE" == "batch" ]; then
+
+  # min-max of a plan column, NA rows skipped; empty when the column is all NA.
+  plan_range () {
+    awk -F'\t' -v lo_col="$1" -v hi_col="$2" 'NR > 1 && $lo_col != "NA" {
+      if (lo == "" || $lo_col < lo) lo = $lo_col
+      if (hi == "" || $hi_col > hi) hi = $hi_col
+    } END { if (lo != "") print lo "-" hi }' "$SUBMISSION_PLAN"
+  }
+
+  R1B=$(plan_range 2 2);  R2A=$(plan_range 3 4);  R2B=$(plan_range 5 5)
+  R2N=$(plan_range 6 7);  R2W=$(plan_range 8 8);  R2C=$(plan_range 9 10)
+  R3A=$(plan_range 11 11); R3B=$(plan_range 12 12)
+
+  echo "Batch mode: submitting one array per phase..."
+
+  P1B=$(sbatch --parsable --array=${R1B} \
+    ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
+    --job-name=taxsim-frozen \
+    --output="${STAGING_DIR}/logs/p1b_%A_%a.log" \
+    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+            Rscript src/slurm/frozen.R ${STAGING_DIR}")
+  echo "  Phase 1B job ID: ${P1B} (tasks ${R1B})"
+
+  set_afterok "$P1" "$P1B"
+  P2A=$(sbatch --parsable --array=${R2A} "${AFTEROK[@]}" \
+    ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+    --job-name=taxsim-cf-static \
+    --output="${STAGING_DIR}/logs/p2a_%A_%a.log" \
+    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+            Rscript src/slurm/worker.R ${STAGING_DIR} 2A")
+  echo "  Phase 2A job ID: ${P2A} (tasks ${R2A})"
+
+  set_afterok "$P2A"
+  P2B=$(sbatch --parsable --array=${R2B} "${AFTEROK[@]}" \
+    ${SBATCH_COMMON} --time=0:30:00 --mem=8G \
+    --job-name=taxsim-bathtub \
+    --output="${STAGING_DIR}/logs/p2b_%A_%a.log" \
+    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+            Rscript src/slurm/bathtub.R ${STAGING_DIR}")
+  echo "  Phase 2B job ID: ${P2B} (tasks ${R2B})"
+
+  P2W=""
+  if [ -n "$R2N" ]; then
+    set_afterok "$P2B"
+    P2N=$(sbatch --parsable --array=${R2N} "${AFTEROK[@]}" \
+      ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+      --job-name=taxsim-cf-convnw \
+      --output="${STAGING_DIR}/logs/p2n_%A_%a.log" \
+      --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+              Rscript src/slurm/worker.R ${STAGING_DIR} 2N")
+    echo "  Phase 2N job ID: ${P2N} (tasks ${R2N})"
+
+    set_afterok "$P2N" "$P1"
+    P2W=$(sbatch --parsable --array=${R2W} "${AFTEROK[@]}" \
+      ${SBATCH_COMMON} --time=0:15:00 --mem=8G \
+      --job-name=taxsim-wealth \
+      --output="${STAGING_DIR}/logs/p2w_%A_%a.log" \
+      --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+              Rscript src/slurm/wealth.R ${STAGING_DIR}")
+    echo "  Phase 2W job ID: ${P2W} (tasks ${R2W})"
+  fi
+
+  set_afterok "$P2B" "$P2W"
+  P2C=$(sbatch --parsable --array=${R2C} "${AFTEROK[@]}" \
+    ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+    --job-name=taxsim-cf-conv \
+    --output="${STAGING_DIR}/logs/p2c_%A_%a.log" \
+    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+            Rscript src/slurm/worker.R ${STAGING_DIR} 2C")
+  echo "  Phase 2C job ID: ${P2C} (tasks ${R2C})"
+
+  set_afterok "$P2C" "$P3A_BASE"
+  P3A=$(sbatch --parsable --array=${R3A} "${AFTEROK[@]}" \
+    ${SBATCH_COMMON} --time=0:30:00 --mem=16G \
+    --job-name=taxsim-agg \
+    --output="${STAGING_DIR}/logs/p3a_%A_%a.log" \
+    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+            Rscript src/slurm/aggregate.R ${STAGING_DIR} 3a")
+  echo "  Phase 3a job ID: ${P3A} (tasks ${R3A})"
+
+  set_afterok "$P3A"
+  P3B=$(sbatch --parsable --array=${R3B} "${AFTEROK[@]}" \
+    ${SBATCH_COMMON} --time=1:00:00 --mem=16G \
+    --job-name=taxsim-postproc \
+    --output="${STAGING_DIR}/logs/p3b_%A_%a.log" \
+    --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+            Rscript src/slurm/aggregate.R ${STAGING_DIR} 3b")
+  echo "  Phase 3b job ID: ${P3B} (tasks ${R3B})"
+  P3B_IDS+=("$P3B")
+
+else
 {
   # Discard the TSV header. NA placeholders keep every row field-aligned.
   IFS= read -r _
@@ -266,6 +375,7 @@ P3B_IDS=()
     P3B_IDS+=("$P3B")
   done
 } < "$SUBMISSION_PLAN"
+fi
 
 
 #-------------------------------------------
