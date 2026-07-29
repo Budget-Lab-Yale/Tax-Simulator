@@ -61,8 +61,8 @@ build_1040_report = function(id) {
     pivot_wider(names_from  = series,
                 values_from = value)
   
-  # Read in counterfactual scenario 1040 totals 
-  scenario = c('static', 'conventional') %>% 
+  # Read in counterfactual scenario 1040 totals, one block per reportable rung
+  scenario = REPORTING_LEGS %>% 
     map(.f = ~ file.path(globals$output_root, 
                          id, 
                          .x,
@@ -95,10 +95,10 @@ build_1040_report = function(id) {
     # Rename variables
     recode_1040_vars() %>%
     filter(!is.na(Variable)) %>% 
-    select(year, Variable, baseline_count, baseline_amount, count_static, 
-           amount_static, diff_count_static, diff_amount_static, 
-           count_conventional, amount_conventional, diff_count_conventional, 
-           diff_amount_conventional)
+    select(year, Variable, baseline_count, baseline_amount,
+           all_of(as.vector(outer(
+             c('count', 'amount', 'diff_count', 'diff_amount'),
+             REPORTING_LEGS, paste, sep = '_'))))
   
   
   # Convert to year-indexed list
@@ -118,42 +118,46 @@ build_1040_report = function(id) {
     # Create worksheet
     addWorksheet(wb = wb, sheetName = as.character(yr))
     
+    # Each rung gets a four-column block, separated from the one before it by a
+    # narrow spacer column, so the layout follows the number of rungs
+    leg_col   = 5 + (seq_along(REPORTING_LEGS) - 1) * 5
+    last_col  = max(leg_col) + 3
+
     # Write data
     writeData(wb       = wb, 
               sheet    = as.character(yr), 
               x        = scenario[[i]] %>% 
                            select(Variable, baseline_count, baseline_amount), 
               startRow = 3)
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = scenario[[i]] %>%
-                           select(count_static, amount_static, 
-                                  diff_count_static, diff_amount_static),
-              startRow = 3,
-              startCol = 5)
-    writeData(wb       = wb, 
-              sheet    = as.character(yr), 
-              x        = scenario[[i]] %>%
-                           select(count_conventional, amount_conventional, 
-                                  diff_count_conventional, diff_amount_conventional),
-              startRow = 3,
-              startCol = 10)
+    for (k in seq_along(REPORTING_LEGS)) {
+      writeData(wb       = wb, 
+                sheet    = as.character(yr), 
+                x        = scenario[[i]] %>%
+                             select(all_of(paste0(
+                               c('count', 'amount', 'diff_count', 'diff_amount'),
+                               '_', REPORTING_LEGS[k]))),
+                startRow = 3,
+                startCol = leg_col[k])
+    }
+
     # Write column headers
-    headers = tribble(
-      ~text,                                          ~col, ~row,
-      'Baseline',                                        2,    2,
-      'Policy reform, static',                           5,    2,
-      'Policy reform, conventional',                    10,    2,
-      'Number of returns',                               2,    3,
-      'Amount',                                          3,    3,
-      'Number of returns',                               5,    3,
-      'Amount',                                          6,    3,
-      'Number of returns, difference from baseline',     7,    3,
-      'Amount, difference from baseline',                8,    3,
-      'Number of returns',                              10,    3,
-      'Amount',                                         11,    3,
-      'Number of returns, difference from baseline',    12,    3,
-      'Amount, difference from baseline',               13,    3
+    headers = bind_rows(
+      tribble(
+        ~text,                                          ~col, ~row,
+        'Baseline',                                        2,    2,
+        'Number of returns',                               2,    3,
+        'Amount',                                          3,    3
+      ),
+      seq_along(REPORTING_LEGS) %>%
+        map(.f = ~ tibble(
+          text = c(paste0('Policy reform, ', REPORTING_LEGS[.x]),
+                   'Number of returns',
+                   'Amount',
+                   'Number of returns, difference from baseline',
+                   'Amount, difference from baseline'),
+          col  = leg_col[.x] + c(0, 0, 1, 2, 3),
+          row  = c(2, 3, 3, 3, 3))) %>%
+        bind_rows()
     )
     for (j in 1:nrow(headers)) {
       writeData(wb    = wb,
@@ -168,10 +172,11 @@ build_1040_report = function(id) {
     
     
     # Format numbers and cells 
+    header_cols = c(2:3, leg_col %>% map(.f = ~ .x + 0:3) %>% unlist())
     addStyle(wb         = wb,
              sheet      = as.character(yr),
              rows       = 4:(nrow(scenario[[i]]) + 4),
-             cols       = 2:13,
+             cols       = 2:last_col,
              gridExpand = T,
              style      = createStyle(numFmt = 'NUMBER'),
              stack      = T)
@@ -179,25 +184,23 @@ build_1040_report = function(id) {
                sheet = as.character(yr),
                rows  = 2,
                cols  = 2:3)
-    mergeCells(wb    = wb,
-               sheet = as.character(yr),
-               rows  = 2,
-               cols  = 5:8)
-    mergeCells(wb    = wb,
-               sheet = as.character(yr),
-               rows  = 2,
-               cols  = 10:13)
+    for (k in seq_along(REPORTING_LEGS)) {
+      mergeCells(wb    = wb,
+                 sheet = as.character(yr),
+                 rows  = 2,
+                 cols  = leg_col[k] + 0:3)
+    }
     addStyle(wb         = wb,
              sheet      = as.character(yr),
              rows       = 2:(nrow(scenario[[i]]) + 4),
-             cols       = 2:13,
+             cols       = 2:last_col,
              gridExpand = T,
              style      = createStyle(halign = 'center'),
              stack      = T)
     addStyle(wb         = wb,
              sheet      = as.character(yr),
              rows       = 1:100,
-             cols       = 1:13,
+             cols       = 1:last_col,
              gridExpand = T,
              style      = createStyle(fontSize = 10,
                                       wrapText = T), 
@@ -205,14 +208,15 @@ build_1040_report = function(id) {
     addStyle(wb         = wb,
              sheet      = as.character(yr),
              rows       = 2,
-             cols       = c(2:3, 5:8, 10:13),
+             cols       = header_cols,
              gridExpand = T,
              style      = createStyle(border = 'bottom'),
              stack      = T)
     setColWidths(wb     = wb,
                  sheet  = as.character(yr),
-                 cols   = 1:13,
-                 widths = c(47, 10, 10, 2, 10, 10, 10, 10, 2, 10, 10, 10, 10))
+                 cols   = 1:last_col,
+                 widths = c(47, 10, 10,
+                            rep(c(2, 10, 10, 10, 10), length(REPORTING_LEGS))))
 
   }
   
@@ -231,7 +235,7 @@ build_1040_report = function(id) {
       deleteData(wb         = wb, 
                  sheet      = i, 
                  rows       = 1:(nrow(scenario[[i]]) + 4),
-                 cols       = 4:13, 
+                 cols       = 4:(max(5 + (length(REPORTING_LEGS) - 1) * 5) + 3), 
                  gridExpand = T)
       addStyle(wb         = wb, 
                sheet      = i, 

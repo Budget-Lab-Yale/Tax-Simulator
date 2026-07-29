@@ -78,12 +78,14 @@ build_distribution_etrs = function(id) {
   # the denominators and the rankings stay on the baseline static frame in both.
   #
   # The baseline columns are the same either way, the baseline having no behavior.
-  # Conventional rows are skipped where that detail is absent.
+  # A rung whose detail is absent is skipped: the mechanical rung's detail exists
+  # only where a transmission channel is live, and the conventional rung's only
+  # where the calculator ran on it.
   etr_tables = list()
   for (yr in get_scenario_info(id)$dist_years) {
-    for (leg in c('static', 'conventional')) {
-      if (leg == 'conventional' &&
-          !file.exists(file.path(globals$output_root, id, 'conventional/detail',
+    for (leg in REPORTING_LEGS) {
+      if (leg != 'static' &&
+          !file.exists(file.path(globals$output_root, id, leg, 'detail',
                                  paste0(yr, '.csv')))) {
         next
       }

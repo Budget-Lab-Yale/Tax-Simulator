@@ -6,6 +6,12 @@
 
 
 
+# The reportable rungs, in ladder order. Every counterfactual carries all three:
+# a rung that cannot differ from the one below reports that rung's totals.
+REPORTING_LEGS = c('static', 'mechanical', 'conventional')
+
+
+
 add_receipts_total = function(receipts, name) {
 
   #----------------------------------------------------------------------------
@@ -410,12 +416,15 @@ calc_rev_est = function(id) {
   # Read VAT price offset for baseline dollars calculation
   vat_price_offset = read_vat_offset(id)
 
-  for (static in c(T, F)) {
+  # One estimate per reportable rung. The mechanical rung's totals are written for
+  # every counterfactual, from the static ones where the rung was skipped, so the
+  # loop needs no special case.
+  for (leg in REPORTING_LEGS) {
 
     # Read in counterfactual scenario receipts, including the partial first year
     scenario = file.path(globals$output_root,
                          id,
-                         if_else(static, 'static', 'conventional'),
+                         leg,
                          'totals',
                          'receipts_full.csv') %>%
       read_receipts_long(values_to = 'counterfactual')
@@ -478,7 +487,7 @@ calc_rev_est = function(id) {
       mutate(year = as.integer(year)) %>% 
       write_csv(file.path(globals$output_root, 
                           id, 
-                          if_else(static, 'static', 'conventional'),
+                          leg,
                           'supplemental', 
                           'revenue_estimates.csv'))
 
@@ -515,7 +524,7 @@ calc_rev_est = function(id) {
     saveWorkbook(wb   = wb, 
                  file = file.path(globals$output_root, 
                                   as.character(id), 
-                                  if_else(static, 'static', 'conventional'),
+                                  leg,
                                   'supplemental', 
                                   'revenue_estimates.xlsx'), 
                  overwrite = T)
@@ -549,14 +558,15 @@ calc_stacked_rev_est = function(counterfactual_ids) {
     ) %>%
     bind_rows()
 
-  for (static in c(T, F)) {
+  for (leg in REPORTING_LEGS) {
 
     stacked_rev_est = c('baseline', counterfactual_ids) %>%
 
-      # Read scenario receipts file, including the partial first year
+      # Read scenario receipts file, including the partial first year. Baseline has
+      # one rung only
       map(.f = ~ file.path(if_else(.x == 'baseline', globals$baseline_root, globals$output_root),
                            .x,
-                           if_else(static | .x == 'baseline', 'static', 'conventional'),
+                           if_else(.x == 'baseline', 'static', leg),
                            'totals',
                            'receipts_full.csv') %>%
             read_csv(show_col_types = F) %>%
@@ -656,7 +666,7 @@ calc_stacked_rev_est = function(counterfactual_ids) {
     saveWorkbook(wb   = wb, 
                  file = file.path(globals$output_root, 
                                   counterfactual_ids[length(counterfactual_ids)], 
-                                  if_else(static, 'static', 'conventional'),
+                                  leg,
                                   'supplemental', 
                                   'stacked_revenue_estimates.xlsx'), 
                  overwrite = T)
