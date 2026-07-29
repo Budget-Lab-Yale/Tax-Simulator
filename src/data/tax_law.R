@@ -204,7 +204,7 @@ build_tax_law = function(scenario_info, indexes) {
     filter(year %in% scenario_info$years)
 
   # Write tax law then return
-  c('static', 'conventional') %>% 
+  c('static', 'mechanical', 'conventional') %>%
     map(.f = ~ scenario_info$output_path %>% 
           file.path(.x, 'supplemental', 'tax_law.csv') %>%
           write_csv(x = tax_law, file = .))

@@ -634,15 +634,17 @@ wealth_dyn_read_rtotal = function(scenario_info, params) {
 # Detail files for the pass measuring the tax change
 #-------------------------------------------------------------------------------
 
-wealth_dyn_convnw_detail_dir = function(scenario_info) {
+wealth_dyn_convnw_detail_dir = function(scenario_info, leg = 'conventional') {
   # A separate output root, so this intermediate pass never overwrites the final
-  # conventional detail that distribution and receipts read. No totals or
-  # receipts are written for it.
-  file.path(scenario_info$output_path, 'conventional_no_wealth', 'detail')
+  # detail that distribution and receipts read. No totals or receipts are written
+  # for it. The mechanical and conventional rungs each measure their own forcing,
+  # so each has its own no-wealth tree.
+  file.path(scenario_info$output_path, paste0(leg, '_no_wealth'), 'detail')
 }
 
-wealth_dyn_convnw_detail_path = function(scenario_info, year) {
-  file.path(wealth_dyn_convnw_detail_dir(scenario_info), paste0(year, '.csv'))
+wealth_dyn_convnw_detail_path = function(scenario_info, year,
+                                         leg = 'conventional') {
+  file.path(wealth_dyn_convnw_detail_dir(scenario_info, leg), paste0(year, '.csv'))
 }
 
 
@@ -652,7 +654,8 @@ wealth_dyn_convnw_detail_path = function(scenario_info, year) {
 #-------------------------------------------------------------------------------
 
 run_wealth_bathtub_pass = function(scenario_info, tax_law,
-                                   vat_price_offset = NULL) {
+                                   vat_price_offset = NULL,
+                                   leg = c('conventional', 'mechanical')) {
 
   #----------------------------------------------------------------------------
   # Runs the wealth shortfall recurrence for one scenario, one year at a time.
@@ -661,11 +664,14 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
   # forcing each cell faces:
   #
   #   F = change in during-life tax - change in outside income
-  #     = change in (income tax + payroll - deemed + wealth tax) - corp_dY_exog
+  #     = change in (income tax + payroll - deemed + wealth tax)
+  #         - corp_dY_exog - pr_dY_exog
   #
-  # The income term is the corporate channel's shock to income from outside the
-  # tax system, and is 0 for any scenario without a corporate provision, leaving
-  # the forcing as the tax change alone. The baseline leg carries no such shock.
+  # The two income terms are shocks to income from outside the tax system: the
+  # corporate channel's cut to dividends, interest and rent, and the employer
+  # payroll adjustment's shave to wages. Each is 0 for a scenario without the
+  # provision that produces it, leaving the forcing as the tax change alone. The
+  # baseline leg carries no such shock.
   # A gain realized during life or a retirement distribution is not outside
   # income: the household already loses those resources through the balance
   # sheet, so only their tax consequence enters here.
@@ -683,11 +689,22 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
   # term: deaths enter only at aggregation, through each record's mortality rate.
   #
   # Writes the shortfall and the percentile cutoffs by year to the scenario's
-  # conventional/supplemental/wealth_dynamics_state/. Requires that both this
-  # scenario's no-wealth detail and the baseline static detail already exist.
+  # {leg}/supplemental/wealth_dynamics_state/. Requires that both this scenario's
+  # no-wealth detail for the leg and the baseline static detail already exist.
+  #
+  # Parameters:
+  #   - scenario_info (list)  : output of get_scenario_info()
+  #   - tax_law (df)          : joined tax law tibble; see build_tax_law()
+  #   - vat_price_offset (df) : VAT price offset tibble
+  #   - leg (str)             : which rung's forcing to measure, 'conventional'
+  #                             (default) or 'mechanical'. The mechanical rung
+  #                             measures the forcing with behavior off, so its
+  #                             drawdown compounds the static tax change.
   #
   # Returns: invisibly NULL.
   #----------------------------------------------------------------------------
+
+  leg = match.arg(leg)
 
   wealth_dyn_check_run_compat(scenario_info, vat_price_offset)
 
@@ -717,7 +734,7 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
 
   for (t in years) {
 
-    scen = wealth_dyn_read_convnw_detail(scenario_info, t)
+    scen = wealth_dyn_read_convnw_detail(scenario_info, t, leg)
     base = wealth_dyn_read_baseline_detail(t, has_baseline)
 
     # Drop dependent returns, matching the population distribution.R forms the
@@ -750,7 +767,8 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
              liab_wealth_base = coalesce(liab_wealth_base, 0),
              dT0 = weight * ((liab_iit_pr_scen + liab_wealth) -
                              (liab_iit_pr_base + liab_wealth_base) -
-                             coalesce(corp_dY_exog, 0)))
+                             coalesce(corp_dY_exog, 0) -
+                             coalesce(pr_dY_exog, 0)))
 
     # Aggregate to cells, dropping records with no cell (zero or negative net
     # worth).
@@ -845,7 +863,8 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
                                        G = G, dT0 = dT0_mat)),
       scenario_info = scenario_info,
       subdir        = 'wealth_dynamics_state',
-      year          = t)
+      year          = t,
+      pass          = leg)
   }
 
   invisible(NULL)
@@ -853,28 +872,29 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
 
 
 
-wealth_dyn_read_convnw_detail = function(scenario_info, year) {
+wealth_dyn_read_convnw_detail = function(scenario_info, year,
+                                          leg = 'conventional') {
 
   # Reads the columns the pre-pass needs from one year of the scenario's
   # no-wealth detail. Errors on a missing file or missing columns, since an old
   # or partial file would zero out the forcing without saying so.
-  path = wealth_dyn_convnw_detail_path(scenario_info, year)
+  path = wealth_dyn_convnw_detail_path(scenario_info, year, leg)
   if (!file.exists(path)) {
-    stop('wealth_dynamics pre-pass: conv-no-wealth detail missing: ', path,
-         ' (was Phase 2N run for this scenario-year?)')
+    stop('wealth_dynamics pre-pass: ', leg, ' no-wealth detail missing: ', path,
+         ' (was the no-wealth phase run for this scenario-year?)')
   }
   need = c('id', 'weight', 'dep_status', 'filing_status', 'age1', 'age2',
            'net_worth', 'net_worth_raw', 'liab_iit_net', 'liab_pr', 'liab_wealth',
            'estate_m', 'economic_gross', 'cap_bundle_F', 'mtr_cap_bundle',
            'mtr_net_worth')
-  optional = c('liab_deemed', 'corp_dY_exog')
+  optional = c('liab_deemed', 'corp_dY_exog', 'pr_dY_exog')
 
   # Read the header first, then only the 18 columns of about 98 that are needed.
   # Detail files run to 150MB, so parsing the rest is wasted time.
   have = names(fread(path, nrows = 0))
   missing = setdiff(need, have)
   if (length(missing) > 0) {
-    stop('wealth_dynamics pre-pass: conv-no-wealth detail ', path,
+    stop('wealth_dynamics pre-pass: ', leg, ' no-wealth detail ', path,
          ' is missing required column(s): ', paste(missing, collapse = ', '))
   }
   d = path %>%
@@ -885,6 +905,9 @@ wealth_dyn_read_convnw_detail = function(scenario_info, year) {
   # without a corporate provision, and for detail written before the channel
   # existed; zero leaves the forcing as the tax change alone.
   if (!('corp_dY_exog' %in% names(d))) d$corp_dY_exog = 0
+  # The employer payroll wage adjustment's shave to cash wages, under the same
+  # contract. Absent for scenarios not touching employer payroll law.
+  if (!('pr_dY_exog' %in% names(d)))   d$pr_dY_exog = 0
   d
 }
 

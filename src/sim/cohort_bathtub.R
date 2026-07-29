@@ -261,7 +261,7 @@ cohort_state_dir = function(scenario_info, subdir, pass = 'conventional') {
   # Parameters:
   #   - scenario_info (list) : the scenario
   #   - subdir        (str)  : the channel's folder name
-  #   - pass          (str)  : 'conventional' or 'static'
+  #   - pass          (str)  : 'static', 'mechanical' or 'conventional'
   #
   # Returns: path to the folder (str).
   #----------------------------------------------------------------------------
