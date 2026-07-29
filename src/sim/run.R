@@ -255,6 +255,53 @@ DETAIL_COLS_OPTIONAL_CONV = c(DETAIL_COLS_OPTIONAL_STATIC,
 
 
 
+#-------------------------------------------------------------------------------
+# Specifications for the counterfactual passes run_one_year() executes after the
+# static one. All of them run the same body and differ only in their inputs and
+# in where their output goes:
+#
+#   root            : output subfolder under the scenario's output path
+#   config_pass     : label recorded by config_set_pass, read by the economy
+#                     leg's role gate
+#   behavior        : run the behavior modules
+#   haircut         : apply the wealth haircut where the channel is active
+#   state_pass      : leg whose cohort state the haircut reads
+#   measurement     : compute the columns the wealth pre-pass reads
+#   mtrs            : run the MTR block
+#   totals_slot     : totals list this pass fills, NA for an intermediate pass
+#   corp_diag       : write the corporate conservation diagnostic
+#   detail_optional : channel columns written to detail when present
+#-------------------------------------------------------------------------------
+
+PASS_SPECS = list(
+
+  conventional_no_wealth = list(
+    root            = 'conventional_no_wealth',
+    config_pass     = 'conventional',
+    behavior        = TRUE,
+    haircut         = FALSE,
+    state_pass      = 'conventional',
+    measurement     = TRUE,
+    mtrs            = FALSE,
+    totals_slot     = NA_character_,
+    corp_diag       = FALSE,
+    detail_optional = DETAIL_COLS_OPTIONAL_CONV),
+
+  conventional = list(
+    root            = 'conventional',
+    config_pass     = 'conventional',
+    behavior        = TRUE,
+    haircut         = TRUE,
+    state_pass      = 'conventional',
+    measurement     = FALSE,
+    mtrs            = TRUE,
+    totals_slot     = 'conventional_totals',
+    corp_diag       = TRUE,
+    detail_optional = DETAIL_COLS_OPTIONAL_CONV)
+)
+
+
+
 strip_calc_vars = function(df, drop_mtrs = FALSE, strict = TRUE) {
 
   #----------------------------------------------------------------------------
@@ -1026,34 +1073,40 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   }
 
 
-  #-------------------
-  # Conventional pass
-  #-------------------
+  #----------------------------------------------
+  # Counterfactual passes after the static one
+  #----------------------------------------------
 
-  has_behavior        = length(scenario_info$behavior_modules) > 0
-  conventional_totals = NULL
+  has_behavior = length(scenario_info$behavior_modules) > 0
 
-  if (pass_type %in% c('both', 'conventional', 'conventional_no_wealth')) {
+  # Totals by slot, filled by whichever pass runs below. An absent slot reads
+  # NULL, which is what a pass that writes no totals returns.
+  pass_totals = list()
 
-    # The conv-no-wealth pass is a conventional-side pass, with behavior on
-    config_set_pass('conventional')
+  # A 'both' run pairs the static pass with the conventional one; every other
+  # pass type names its own pass. The static pass alone runs no second body.
+  pass_name = switch(pass_type,
+                     'both'   = 'conventional',
+                     'static' = NA_character_,
+                     pass_type)
 
-    is_convnw     = pass_type == 'conventional_no_wealth'
-    # Only the final conventional pass applies the wealth haircut. The
-    # conv-no-wealth pass measures the forcing on the base before erosion, which
-    # is the frame that does not depend on the deficit.
-    apply_haircut = uses_wealth && !is_convnw
-    conv_root     = if (is_convnw) {
-                      file.path(scenario_info$output_path, 'conventional_no_wealth')
-                    } else {
-                      file.path(scenario_info$output_path, 'conventional')
-                    }
+  if (!is.na(pass_name)) {
+
+    spec = PASS_SPECS[[pass_name]]
+
+    config_set_pass(spec$config_pass)
+
+    # Only a pass that applies the haircut reads the deficit state. The no-wealth
+    # passes measure the forcing on the base before erosion, which is the frame
+    # that does not depend on the deficit.
+    apply_haircut    = uses_wealth && spec$haircut
+    conv_root        = file.path(scenario_info$output_path, spec$root)
     conv_detail_path = file.path(conv_root, 'detail', paste0(year, '.csv'))
 
-    # Run the calculator whenever there is a behavior module or either mechanical
-    # channel is active. A scenario with none of the three copies its static
-    # detail instead.
-    if (has_behavior || uses_wealth || uses_corp) {
+    # Run the calculator whenever this pass can differ from the static one:
+    # behavior on a pass that takes it, or either mechanical channel active. A
+    # scenario with none of the three copies its static detail instead.
+    if ((spec$behavior && has_behavior) || uses_wealth || uses_corp) {
 
       # Apply corporate incidence at the head of every conventional-side pass,
       # before the wealth haircut and the behavior modules, so that the gains and
@@ -1072,7 +1125,7 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
 
         # Report the conservation diagnostic, comparing the analytic paths
         # against what the applier realized by differencing the two frames
-        if (!is_convnw) {
+        if (spec$corp_diag) {
           corp_write_conservation_diag(
             pre = tax_units, post = conv_base,
             paths = corp_get_paths(scenario_info),
@@ -1087,14 +1140,15 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       # are ranked on net worth before the corporate markdown, which is what the
       # pre-pass computed its cutoffs on.
       if (apply_haircut) {
-        wealth_state = read_cohort_state(scenario_info, 'wealth_dynamics_state', year)
+        wealth_state = read_cohort_state(scenario_info, 'wealth_dynamics_state',
+                                         year, pass = spec$state_pass)
         conv_base    = wealth_dyn_apply_to_records(conv_base, wealth_state,
                                                    rank_value = tax_units$net_worth)
       }
 
       # Run behavioral feedback. With both channels active, the gains modules see
       # the frame after the haircut
-      if (has_behavior) {
+      if (spec$behavior && has_behavior) {
         conv_input = conv_base %>%
           do_behavioral_feedback(behavior_modules = scenario_info$behavior_modules,
                                  baseline_mtrs    = baseline_mtrs,
@@ -1139,7 +1193,7 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       # and gross assets. All are read off this un-eroded frame, before the deemed
       # fold, so the rate prices the inter-vivos margin alone. The wealth pre-pass
       # reads them from this pass's detail.
-      if (is_convnw) {
+      if (spec$measurement) {
         bundle = calc_cap_bundle_mtr(
           tax_units       = conv_input,
           actual_liab_iit = tax_units_conv$liab_iit_net,
@@ -1165,9 +1219,9 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
           baseline_pr_er = baseline_pr_er)
       }
 
-      # Calculate conventional marginal tax rates. The conv-no-wealth pass needs
-      # none: the wealth pre-pass reads only the two MTRs measured above
-      if (!is.null(scenario_info$mtr_vars) && !is_convnw) {
+      # Calculate this pass's marginal tax rates. The no-wealth passes need none:
+      # the wealth pre-pass reads only the two MTRs measured above
+      if (!is.null(scenario_info$mtr_vars) && spec$mtrs) {
 
         # This frame has been through do_taxes and its wages are already rescaled,
         # so pass baseline_pr_er = NULL rather than the pass-level value
@@ -1181,21 +1235,21 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
         tax_units_conv = fold_deemed(tax_units_conv, conv_liab_deemed)
       }
 
-      # Write detail. The conv-no-wealth pass has its own output tree, so it never
-      # overwrites the final conventional detail
+      # Write detail. Each pass has its own output tree, so an intermediate pass
+      # never overwrites the final conventional detail
       write_detail(tax_units_conv, conv_detail_path,
-                   optional = DETAIL_COLS_OPTIONAL_CONV)
+                   optional = spec$detail_optional)
 
-      # Collect totals. The conv-no-wealth pass is intermediate and has none
-      if (!is_convnw) {
-        conventional_totals = collect_totals(tax_units_conv, year)
+      # Collect totals. An intermediate pass has none
+      if (!is.na(spec$totals_slot)) {
+        pass_totals[[spec$totals_slot]] = collect_totals(tax_units_conv, year)
       }
 
     } else if (scenario_info$ID != 'baseline') {
 
-      # With no behavior and neither channel active, copy the static detail to the
-      # conventional output. A 'both' pass has the frame in memory; a conventional
-      # pass copies the CSV the static pass already wrote.
+      # With no behavior and neither channel active, copy the static detail to
+      # this pass's output. A 'both' pass has the frame in memory; a single-pass
+      # run copies the CSV the static pass already wrote.
       conv_path = conv_detail_path
       if (!is.null(tax_units_static)) {
         write_detail(tax_units_static, conv_path)
@@ -1205,16 +1259,18 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
         file.copy(static_path, conv_path, overwrite = TRUE)
       }
 
-      # On a 'both' pass the static totals are in scope. On a conventional pass
-      # they are NULL, and the caller substitutes the ones Phase 2A wrote.
-      conventional_totals = static_totals
+      # On a 'both' pass the static totals are in scope. On a single-pass run they
+      # are NULL, and the caller substitutes the ones the static phase wrote.
+      if (!is.na(spec$totals_slot)) {
+        pass_totals[[spec$totals_slot]] = static_totals
+      }
     }
   }
 
   # Return required data
   return(list(mtrs                = static_mtrs_year,
               static_totals       = static_totals,
-              conventional_totals = conventional_totals))
+              conventional_totals = pass_totals$conventional_totals))
 }
 
 

@@ -589,7 +589,7 @@ ensure_scenario_dirs = function(scenario_info) {
   # get_scenario_info() is a lookup and does not touch the filesystem.
   #----------------------------------------------------------------------------
 
-  for (type in c('static', 'conventional')) {
+  for (type in c('static', 'mechanical', 'conventional')) {
     dir.create(file.path(scenario_info$output_path, type, 'detail'),
                recursive = T, showWarnings = F)
     dir.create(file.path(scenario_info$output_path, type, 'totals'),

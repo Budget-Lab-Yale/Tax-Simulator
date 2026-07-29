@@ -455,7 +455,9 @@ config_set_pass = function(pass) {
   # them.
   #----------------------------------------------------------------------------
 
-  if (!is.na(pass)) pass = match.arg(pass, c('static', 'conventional'))
+  if (!is.na(pass)) {
+    pass = match.arg(pass, c('static', 'mechanical', 'conventional'))
+  }
   assign('pass', pass, envir = .scenario_config_active)
   invisible(NULL)
 }
