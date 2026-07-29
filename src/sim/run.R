@@ -845,6 +845,14 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   # a 'both' run executes. Clear the tag on exit so no label leaks across years.
   on.exit(config_set_pass(NA), add = TRUE)
 
+  # Name the counterfactual pass this call runs after the static one. A 'both' run
+  # pairs the static pass with the conventional one; every other pass type names
+  # its own pass, and the static pass alone runs no second body.
+  pass_name = switch(pass_type,
+                     'both'   = 'conventional',
+                     'static' = NA_character_,
+                     pass_type)
+
   if (globals$multicore != 'year') {
     print(paste0('Running ', year, ' (', pass_type, ') for scenario ',
                  "'", scenario_info$ID, "'"))
@@ -919,9 +927,10 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   # Do taxes
   #----------
 
-  # Read baseline payroll taxes
+  # Read baseline payroll taxes, for the wage adjustment on the passes that apply
+  # it. A static-only run does not, and skips a 150MB read per year.
   baseline_pr_er = NULL
-  if (scenario_info$ID != 'baseline') {
+  if (scenario_info$ID != 'baseline' && !is.na(pass_name)) {
     # Read 3 columns of about 98. Detail files run to 150MB and every pass reads
     # this once per year
     baseline_pr_er = globals$baseline_root %>%
@@ -954,6 +963,13 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
 
     config_set_pass('static')
 
+    # The employer payroll wage adjustment holds total employer cost fixed and
+    # lets wages absorb the employer tax change, which moves the income tax base
+    # in response to a payroll provision. It runs on the mechanical and
+    # conventional passes, so this pass hands do_taxes no baseline employer
+    # payroll table. See src/sim/payroll.R.
+    static_pr_er = NULL
+
     # Inject the frozen-realization carryover and deemed quantities into records
     # before tax calculation, so that the policy's mechanical content lands in
     # static liabilities, static MTRs and the distribution tables. tax_units
@@ -966,7 +982,7 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     }
 
     tax_units_static = static_input %>%
-      do_taxes(baseline_pr_er = baseline_pr_er,
+      do_taxes(baseline_pr_er = static_pr_er,
                vars_1040      = vars_1040,
                vars_payroll   = return_vars$calc_pr)
 
@@ -980,7 +996,7 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
         tax_units_static = kg_dyn_recompute_deemed_tax(
           taxed          = tax_units_static,
           input          = static_input,
-          baseline_pr_er = baseline_pr_er,
+          baseline_pr_er = static_pr_er,
           vars_1040      = vars_1040,
           vars_payroll   = return_vars$calc_pr,
           estate_params  = globals$estate_params)
@@ -991,9 +1007,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     static_mtrs_year = NULL
     if (!is.null(scenario_info$mtr_vars)) {
 
-      # Pass baseline_pr_er = NULL rather than the pass-level value: this frame
-      # has been through do_taxes, so its wages already carry the employer
-      # payroll rescale. See calc_mtrs.
+      # This pass applies no employer payroll wage rescale, and the frame has
+      # been through do_taxes in any case, so pass NULL. See calc_mtrs.
       static_mtr_out   = run_mtr_block(taxed          = tax_units_static,
                                        scenario_info  = scenario_info,
                                        year           = year,
@@ -1014,13 +1029,13 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       # keeps the post-injection rate, where the income effect is signal.
       if (uses_kg_mech) {
         tax_units_raw = tax_units %>%
-          do_taxes(baseline_pr_er   = baseline_pr_er,
+          do_taxes(baseline_pr_er   = static_pr_er,
                    vars_1040        = vars_1040,
                    vars_payroll     = return_vars$calc_pr,
                    calc_estate_flag = FALSE,    # only liab_iit_net and liab_pr are read
                    calc_wealth_flag = FALSE)
         stopifnot(identical(tax_units_raw$id, tax_units_static$id))
-        # This frame has been through do_taxes, so baseline_pr_er is NULL
+        # This frame has been through do_taxes, so pass no employer payroll table
         tax_units_static$mtr_kg_lt_lawonly = calc_one_mtr(
           frame   = strip_calc_vars(tax_units_raw),
           actuals = mtr_actuals(tax_units_raw),
@@ -1036,8 +1051,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
           !('net_worth' %in% scenario_info$mtr_vars)) {
         # drop_mtrs recovers the frame the loop above ran on, so this column
         # matches a registered mtr_net_worth. The frame has been through
-        # do_taxes, so baseline_pr_er is NULL -- unlike the conv-no-wealth block
-        # below, which measures on a frame that has not and threads it.
+        # do_taxes, so pass no employer payroll table -- unlike the no-wealth
+        # block below, which measures on a frame that has not and threads it.
         tax_units_static$mtr_net_worth = calc_one_mtr(
           frame   = strip_calc_vars(tax_units_static, drop_mtrs = TRUE),
           actuals = static_actuals,
@@ -1082,13 +1097,6 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   # Totals by slot, filled by whichever pass runs below. An absent slot reads
   # NULL, which is what a pass that writes no totals returns.
   pass_totals = list()
-
-  # A 'both' run pairs the static pass with the conventional one; every other
-  # pass type names its own pass. The static pass alone runs no second body.
-  pass_name = switch(pass_type,
-                     'both'   = 'conventional',
-                     'static' = NA_character_,
-                     pass_type)
 
   if (!is.na(pass_name)) {
 
