@@ -20,10 +20,10 @@
 # is called separately for each leg, so it needs no file from another scenario and
 # cannot race when the legs run in parallel.
 #
-# Note that tax on gains deemed realized at death deliberately does not go through
-# this. That tax has no exemption, applying to every transfer at death, so spreading
-# it in proportion to inheritance is the right treatment. The rank matching exists
-# because the estate tax has a threshold.
+# Tax on gains deemed realized at death goes through the same match, as a
+# second call with its own ladder. The deemed tax detail column is already an
+# expectation over the death event, so each record contributes one entry whose
+# death weight and conditional liability multiply back to it.
 #-------------------------------------------------------------------------------
 
 
@@ -31,10 +31,12 @@ ESTATE_DETAIL_COLS = c('estate_m', 'estate_p_dsue', 'liab_estate_dsue',
                        'liab_estate_nodsue', 'estate_distributable')
 
 
-allocate_estate_to_heirs = function(leg_detail, heir_px, yr, leg_id) {
+allocate_estate_to_heirs = function(leg_detail, heir_px, yr, leg_id,
+                                    tax = c('estate', 'deemed')) {
 
   #----------------------------------------------------------------------------
-  # Allocates one leg's expected estate tax to heirs.
+  # Allocates one leg's expected tax at death to heirs: the estate tax, or the
+  # income tax on gains deemed realized at death.
   #
   # On the estate side, a single filer contributes two entries rather than one:
   # whether an unused spousal exemption is available changes whether the estate is
@@ -43,11 +45,22 @@ allocate_estate_to_heirs = function(leg_detail, heir_px, yr, leg_id) {
   # covers it. Entries are sorted by distributable estate, largest first, each
   # carrying its bequest dollars at its own average rate.
   #
+  # On the deemed side, each record contributes one entry: liab_deemed is
+  # already the expectation over the death event, so the entry's conditional
+  # liability is liab_deemed / estate_m and the product restores the expected
+  # tax exactly. Estates owing no deemed tax stay on the ladder, unlike the
+  # estate side: an estate without unrealized gains can be of any size, so
+  # removing it would shift the taxed bequest dollars onto larger heirs and
+  # zero out the smaller ones. Each heir instead bears the average deemed
+  # rate of estates near their inheritance's size. Entries with negative
+  # conditional liability cannot sit on a monotone ladder; they are dropped
+  # and surfaced in diagnostics.
+  #
   # On the heir side, inheritances are sorted the same way. Walking the two sorted
   # lists together, each heir's rate is the average of the estate rates over the
   # range of dollars it spans. Heirs below the last taxed dollar of bequest pay
   # nothing. Their tax is their inheritance times that rate, which by construction
-  # sums to the estate tax the revenue side booked.
+  # sums to the tax the revenue side booked.
   #
   # Stops if the taxed bequests exceed the inheritances available, rather than
   # scaling rates up to absorb the difference.
@@ -56,13 +69,15 @@ allocate_estate_to_heirs = function(leg_detail, heir_px, yr, leg_id) {
   #   - leg_detail (df) : this leg's FULL detail-file year extract (no
   #                       dep_status filter — the identity ties to the revenue
   #                       side), with id, weight (already 1/pct_sample-scaled
-  #                       at write time), and the five estate columns
+  #                       at write time), the five estate columns, and
+  #                       liab_deemed when tax = 'deemed'
   #   - heir_px (df)    : id, p_inheritance, inheritance from the BASELINE
   #                       Estate-Tax-Distribution interface (heir structure is
   #                       baseline-only; ids absent from leg_detail get no
   #                       weight and drop out)
   #   - yr (int)        : calendar (death) year, for the diagnostics row
   #   - leg_id (str)    : scenario ID of this leg, for the diagnostics row
+  #   - tax (str)       : which tax to allocate, 'estate' or 'deemed'
   #
   # Returns: list with
   #   - heirs (df) : id, estate_tax_liability (λ, conditional on inheriting;
@@ -71,32 +86,56 @@ allocate_estate_to_heirs = function(leg_detail, heir_px, yr, leg_id) {
   #                  taxed-heir counts, rate profile, dropped tax mass)
   #----------------------------------------------------------------------------
 
+  tax = match.arg(tax)
+
   # Decedent ladder: branch entries with positive death weight, tax, and
   # distributable estate. Zero-distributable taxed estates (possible when
   # debts wipe out the estate but the gift add-back alone exceeds the
   # exemption) carry tax mass with no bequest mass to pin it to; they are
   # dropped from the ladder and surfaced in diagnostics
-  estates = leg_detail %>%
-    select(id, weight, all_of(ESTATE_DETAIL_COLS)) %>%
-    mutate(d = weight * estate_m) %>%
-    filter(d > 0) %>%
-    pivot_longer(
-      cols      = c(liab_estate_dsue, liab_estate_nodsue),
-      names_to  = 'branch',
-      values_to = 'liab'
-    ) %>%
-    mutate(
-      dw = d * if_else(branch == 'liab_estate_dsue',
-                       estate_p_dsue, 1 - estate_p_dsue)
-    ) %>%
-    filter(dw > 0, liab > 0)
+  if (tax == 'estate') {
+    estates = leg_detail %>%
+      select(id, weight, all_of(ESTATE_DETAIL_COLS)) %>%
+      mutate(d = weight * estate_m) %>%
+      filter(d > 0) %>%
+      pivot_longer(
+        cols      = c(liab_estate_dsue, liab_estate_nodsue),
+        names_to  = 'branch',
+        values_to = 'liab'
+      ) %>%
+      mutate(
+        dw = d * if_else(branch == 'liab_estate_dsue',
+                         estate_p_dsue, 1 - estate_p_dsue)
+      ) %>%
+      filter(dw > 0, liab > 0)
+  } else {
+    estates = leg_detail %>%
+      select(id, weight, estate_m, estate_distributable, liab_deemed) %>%
+      mutate(d = weight * estate_m) %>%
+      filter(d > 0) %>%
+      mutate(branch = 'liab_deemed',
+             dw     = d,
+             liab   = liab_deemed / estate_m)
+
+    dropped_negative_tax = estates %>%
+      filter(liab < 0) %>%
+      summarise(tau = sum(dw * liab)) %>%
+      pull(tau)
+    if (dropped_negative_tax < 0) {
+      warning('deemed allocator (', leg_id, ', ', yr, '): $',
+              round(abs(dropped_negative_tax) / 1e6, 1), 'M of expected ',
+              'deemed tax is negative and cannot sit on the rank-match ',
+              'ladder; left unallocated')
+    }
+    estates %<>% filter(liab >= 0)
+  }
 
   dropped_zero_n_tax = estates %>%
     filter(estate_distributable <= 0) %>%
     summarise(tau = sum(dw * liab)) %>%
     pull(tau)
   if (dropped_zero_n_tax > 0) {
-    warning('estate allocator (', leg_id, ', ', yr, '): $',
+    warning(tax, ' allocator (', leg_id, ', ', yr, '): $',
             round(dropped_zero_n_tax / 1e6, 1), 'M of expected estate tax ',
             'sits on estates with zero distributable value (gift add-back ',
             'only) and cannot be rank-matched to heirs; left unallocated')
@@ -121,12 +160,14 @@ allocate_estate_to_heirs = function(leg_detail, heir_px, yr, leg_id) {
   total_tau = sum(estates$tau)
   total_mu  = sum(heirs$mu)
 
-  # Degenerate case: no taxed estates (e.g. estate tax repealed)
-  if (nrow(estates) == 0) {
+  # Degenerate case: no tax to allocate, because no estates survive the
+  # filters (estate tax repealed) or the ladder carries only zero-tax
+  # entries (the baseline deemed leg)
+  if (nrow(estates) == 0 || total_tau == 0) {
     return(list(
       heirs = heirs %>% transmute(id, estate_tax_liability = 0),
       diag  = tibble(
-        year = yr, leg = leg_id, n_taxed_branches = 0,
+        year = yr, leg = leg_id, tax = tax, n_taxed_branches = 0,
         bequest_mass = 0, heir_mass = total_mu, tax_mass = 0,
         allocated_tax = 0, dropped_zero_n_tax = dropped_zero_n_tax,
         identity_resid = 0, cutoff_x = NA_real_, n_taxed_heirs = 0,
@@ -140,7 +181,7 @@ allocate_estate_to_heirs = function(leg_detail, heir_px, yr, leg_id) {
   # mass (pathologically low exemptions). Never scale rates up to absorb the
   # excess — fail loudly
   if (total_b > total_mu) {
-    stop('estate allocator (', leg_id, ', ', yr, '): taxed bequest mass ($',
+    stop(tax, ' allocator (', leg_id, ', ', yr, '): taxed bequest mass ($',
          round(total_b / 1e9, 1), 'B) exceeds total heir inheritance mass ($',
          round(total_mu / 1e9, 1), 'B); the heir ladder is exhausted and the ',
          'rank match cannot allocate this scenario\'s estate tax')
@@ -169,13 +210,14 @@ allocate_estate_to_heirs = function(leg_detail, heir_px, yr, leg_id) {
   # interpolation arithmetic only)
   allocated = sum(heirs$tax_mass)
   if (abs(allocated - total_tau) > 1e-6 * max(total_tau, 1)) {
-    stop('estate allocator (', leg_id, ', ', yr, '): aggregate identity ',
+    stop(tax, ' allocator (', leg_id, ', ', yr, '): aggregate identity ',
          'violated — allocated $', allocated, ' vs expected tax $', total_tau)
   }
 
   diag = tibble(
     year               = yr,
     leg                = leg_id,
+    tax                = tax,
     n_taxed_branches   = nrow(estates),
     bequest_mass       = total_b,
     heir_mass          = total_mu,

@@ -22,10 +22,11 @@ check = function(label, cond) {
 # Helper: detail rows. Heirs must exist in detail to carry weight; non-decedent
 # rows get estate_m = 0
 detail_row = function(id, weight = 1, dep_status = 0, m = 0, p_dsue = 0,
-                      T_dsue = 0, T_nodsue = 0, n = 0) {
+                      T_dsue = 0, T_nodsue = 0, n = 0, T_deemed = 0) {
   tibble(id = id, weight = weight, dep_status = dep_status, estate_m = m,
          estate_p_dsue = p_dsue, liab_estate_dsue = T_dsue,
-         liab_estate_nodsue = T_nodsue, estate_distributable = n)
+         liab_estate_nodsue = T_nodsue, estate_distributable = n,
+         liab_deemed = T_deemed)
 }
 
 
@@ -181,6 +182,58 @@ heir_px = tibble(id = 101, p_inheritance = 1, inheritance = 5e6)
 res = allocate_estate_to_heirs(detail, heir_px, 2030, 'test8')
 check('8a: zero liabilities', all(res$heirs$estate_tax_liability == 0))
 check('8b: zero diag tax',    res$diag$tax_mass == 0)
+
+#-------------------------------------------------------------------------------
+# 9. Deemed ladder keeps zero-tax estates: a large gainless estate holds its
+#    place in the sort, so its heir pays zero and the smaller taxed estate's
+#    tax lands on the correspondingly smaller heir
+#-------------------------------------------------------------------------------
+
+detail = bind_rows(
+  detail_row(1, m = 1, n = 10e6, T_deemed = 2e6),
+  detail_row(2, m = 1, n = 8e6,  T_deemed = 0),
+  detail_row(3, m = 1, n = 5e6,  T_deemed = 1e6),
+  detail_row(101), detail_row(102), detail_row(103)
+)
+heir_px = tibble(id            = c(101, 102, 103),
+                 p_inheritance = 1,
+                 inheritance   = c(10e6, 8e6, 5e6))
+res = allocate_estate_to_heirs(detail, heir_px, 2030, 'test9', tax = 'deemed')
+lam = res$heirs %>% arrange(id) %>% pull(estate_tax_liability)
+check('9a: top heir bears top estate tax',      abs(lam[1] - 2e6) < 1e-3)
+check('9b: gainless-estate heir bears nothing', lam[2] == 0)
+check('9c: small taxed estate reaches small heir', abs(lam[3] - 1e6) < 1e-3)
+check('9d: identity', abs(res$diag$allocated_tax - 3e6) < 1e-3)
+
+#-------------------------------------------------------------------------------
+# 10. Negative deemed tax: dropped with warning, remainder allocated
+#-------------------------------------------------------------------------------
+
+detail = bind_rows(
+  detail_row(1, m = 1, n = 10e6, T_deemed = 2e6),
+  detail_row(2, m = 1, n = 8e6,  T_deemed = -5e5),
+  detail_row(101)
+)
+heir_px = tibble(id = 101, p_inheritance = 1, inheritance = 20e6)
+warned = FALSE
+res = withCallingHandlers(
+  allocate_estate_to_heirs(detail, heir_px, 2030, 'test10', tax = 'deemed'),
+  warning = function(w) {
+    warned <<- grepl('negative', conditionMessage(w)); invokeRestart('muffleWarning')
+  }
+)
+check('10a: warns on negative deemed tax', warned)
+check('10b: rest still allocated', abs(res$diag$allocated_tax - 2e6) < 1e-3)
+
+#-------------------------------------------------------------------------------
+# 11. All-zero deemed tax (the baseline leg): zeros everywhere, no error
+#-------------------------------------------------------------------------------
+
+detail = bind_rows(detail_row(1, m = 1, n = 10e6, T_deemed = 0), detail_row(101))
+heir_px = tibble(id = 101, p_inheritance = 1, inheritance = 5e6)
+res = allocate_estate_to_heirs(detail, heir_px, 2030, 'test11', tax = 'deemed')
+check('11a: zero liabilities', all(res$heirs$estate_tax_liability == 0))
+check('11b: zero diag tax',    res$diag$tax_mass == 0)
 
 #-------------------------------------------------------------------------------
 
