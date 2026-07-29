@@ -553,6 +553,44 @@ pct_chg = case_when(
 
 ## Model Execution Flow
 
+### The three reportable rungs
+
+Every counterfactual scenario reports up to three passes, each a superset of the
+one below it. The specifications live in `PASS_SPECS` (`src/sim/run.R`), which one
+generic body consumes.
+
+| rung | is | output |
+|---|---|---|
+| `static` | new law on baseline behavior and baseline bases, no cross-base transmission | `{scenario}/static/` |
+| `mechanical` | static plus every transmission channel: corporate incidence, the wealth drawdown, the employer payroll wage adjustment. No behavior | `{scenario}/mechanical/` |
+| `conventional` | mechanical plus the behavior modules | `{scenario}/conventional/` |
+
+The conventional wedge against static decomposes as `(mechanical − static)` plus
+`(conventional − mechanical)`, transmission first and behavior on the transmitted
+frame. That is already the order of operations inside the conventional pass.
+
+The kg frozen-realization injection is on the static and mechanical rungs: it is
+baseline realization behavior priced under the new law, which is law arithmetic
+rather than transmission. The conventional rung takes the full bathtub state
+through its behavior module instead.
+
+**A rung is skipped when it cannot differ from the one below.** The mechanical
+rung runs only where a transmission channel is live — corporate incidence active,
+a wealth financing profile with a nonzero saving share, or a reform changing
+employer-side payroll law (`scenario_uses_er_payroll_reform()`,
+`src/sim/payroll.R`). The conventional rung runs only where the behavior stack is
+non-empty. A skipped rung writes nothing, and the reporting layer reads the rung
+below in its place.
+
+Each rung that applies the wealth haircut needs its own drawdown forcing, so
+`run_wealth_bathtub_pass()` takes the rung it serves, reads that rung's
+`{rung}_no_wealth/detail/`, and writes state under `{rung}/supplemental/`. The
+mechanical rung measures its forcing with behavior off.
+
+The forcing's external-income term is the sum of the corporate channel's flow cut
+(`corp_dY_exog`) and the payroll adjustment's wage shave (`pr_dY_exog`), both
+detail columns.
+
 1. **Static Mode** (for non-baseline scenarios):
    - Input attributes held fixed at baseline levels
    - Calculate taxes under policy reform
@@ -570,7 +608,8 @@ There is lots of post-processing for each scenario out of the box. If the user i
 asking you a question about a specific variable, it likely exists already in the output 
 folders. Files and key things to know:
   - within the interface root, you will see all scenario folders
-  - within a scenario folder, you will see two options: static and conventional
+  - within a scenario folder, you will see the rungs that ran: static, mechanical
+    (only where a transmission channel is live) and conventional
   - within each of those run-types, you will see:
     - detail: individual tax unit detail files by year
     - total: level aggregations of the detail files
@@ -732,17 +771,18 @@ Use the `/policy-config` skill to create reform configurations. It contains deta
 ```bash
 bash slurm_run.sh <runscript> <scenario_id> <local> <vintage> <pct_sample> <stacked> <baseline_vintage> <delete_detail> [submit_mode]
 ```
-Arguments are the same as `main.R` except `multicore` is omitted (SLURM handles parallelism). The optional `submit_mode` is `chains` (default: one dependency chain per scenario, eight sbatch calls each — the cluster refuses submissions beyond 200/hour, so this caps out near 25 scenarios) or `batch` (one array per phase spanning all scenarios with a barrier between phases, about ten sbatch calls total — use for large homogeneous batches).
+Arguments are the same as `main.R` except `multicore` is omitted (SLURM handles parallelism). The optional `submit_mode` is `chains` (default: one dependency chain per scenario, up to eleven sbatch calls each — the cluster refuses submissions beyond 200/hour, so this caps out near 18 scenarios) or `batch` (one array per phase spanning all scenarios with a barrier between phases, about ten sbatch calls total — use for large homogeneous batches).
 
 **Pipeline phases:**
 1. Phase 0 (login node): `src/slurm/setup.R` — parses globals, builds configs, serializes to `.rds`
 2. Phase 1 (SLURM array): `src/slurm/worker.R` — runs `run_one_year()` for each baseline year
 3. Phase 1B (SLURM array): `src/slurm/frozen.R` — kg_dynamics frozen mechanical pre-pass per scenario (writes static-side mech state consumed by Phase 2A; no-op for non-kg scenarios)
 4. Phase 2A/2B/2C (SLURM array): `src/slurm/worker.R` (2A static, 2C conventional) + `src/slurm/bathtub.R` (2B kg bathtub) — `run_one_year()` for each counterfactual × year
-5. Phase 2N/2W (SLURM array, **only for `s>0` wealth scenarios**): `src/slurm/worker.R` 2N (conv-no-wealth, the `ΔT⁰`/`mtr_cap_bundle` pass) + `src/slurm/wealth.R` 2W (wealth bathtub pre-pass). DAG: 2A → 2B → 2N → 2W → 2C; 2W also depends on Phase 1 baseline
-6. Phase 3a (SLURM array): `src/slurm/aggregate.R` — writes totals CSVs and receipts per scenario
-5. Phase 3b (SLURM array): `src/slurm/aggregate.R` — post-processing (1040, revenue, distribution, time burden)
-6. Phase 4 (single job): `src/slurm/aggregate.R` — stacked reports and optional detail purge
+5. Phase 2MN/2MW/2M (SLURM array, **only for scenarios with a live transmission channel**): `src/slurm/worker.R` 2MN (mech-no-wealth, the mechanical rung's forcing pass; wealth scenarios only) + `src/slurm/mech_wealth.R` 2MW (mechanical wealth bathtub pre-pass; wealth scenarios only) + `src/slurm/worker.R` 2M (mechanical). DAG: 2A → 2MN → 2MW → 2M → 2B; 2MW also depends on Phase 1 baseline
+6. Phase 2N/2W (SLURM array, **only for `s>0` wealth scenarios**): `src/slurm/worker.R` 2N (conv-no-wealth, the `ΔT⁰`/`mtr_cap_bundle` pass) + `src/slurm/wealth.R` 2W (wealth bathtub pre-pass). DAG: 2B → 2N → 2W → 2C; 2W also depends on Phase 1 baseline
+7. Phase 3a (SLURM array): `src/slurm/aggregate.R` — writes totals CSVs and receipts per scenario, per rung
+8. Phase 3b (SLURM array): `src/slurm/aggregate.R` — post-processing (1040, revenue, distribution, time burden)
+9. Phase 4 (single job): `src/slurm/aggregate.R` — stacked reports and optional detail purge
 
 **CRITICAL — keeping the SLURM pipeline in sync:**
 
@@ -754,8 +794,9 @@ The SLURM pipeline duplicates orchestration logic from `main.R`, `run_sim()`, an
 | `do_scenario()` post-processing calls               | `src/slurm/aggregate.R` Phase 3b |
 | `do_scenario()` pre-simulation setup (offsets, indexes, tax law) | `src/slurm/setup.R` |
 | `run_frozen_pass()` or the kg mechanical state contract | `src/slurm/frozen.R` (Phase 1B) |
-| `run_wealth_bathtub_pass()` or the wealth state/detail contract | `src/slurm/wealth.R` (Phase 2W) |
-| `do_scenario()` wealth/conv-no-wealth pass sequencing or a new `pass_type` | `src/slurm/worker.R` (2N dispatch), `src/slurm/setup.R` (2N/2W manifest + `N_PHASE2N`/`N_PHASE2W`), `slurm_run.sh` (2N/2W phases + 2C deps) |
+| `run_wealth_bathtub_pass()` or the wealth state/detail contract | `src/slurm/wealth.R` (Phase 2W) and `src/slurm/mech_wealth.R` (Phase 2MW) |
+| A `PASS_SPECS` entry, or `do_scenario()` pass sequencing, or a new `pass_type` | `src/slurm/worker.R` (phase dispatch), `src/slurm/setup.R` (manifest rows + `submission_plan` columns + `N_PHASE*`), `slurm_run.sh` (phase blocks, `plan_range` column indices, the chains-mode `read` destructuring, downstream deps), `other/performance/test_slurm_dependency_graph.sh` |
+| A totals slot or a `calc_receipts()` leg | `src/slurm/aggregate.R` Phase 3a (per-rung `readRDS` + `write_pass_outputs`) |
 | `main.R` stacked post-processing or `purge_detail()` | `src/slurm/aggregate.R` Phase 4 |
 | `parse_globals()` return structure                  | `src/slurm/setup.R` serialization |
 | A new SLURM driver script                           | must call `config_activate(economy = scenario_info$resolved_economy, behavior = scenario_info$resolved_behavior)` after loading `config.rds` |

@@ -1,20 +1,24 @@
 #-----------------------------------------------------------------------
 # worker.R
 #
-# Phase 1, 2A, 2N, and 2C workers. Phases 2B and 2W have their own drivers
-# (bathtub.R and wealth.R). Each SLURM array task calls run_one_year() for a
-# single scenario and year, with the phase's pass_type:
+# Phase 1, 2A, 2MN, 2M, 2N, and 2C workers. Phases 2B, 2MW and 2W have their own
+# drivers (bathtub.R, mech_wealth.R and wealth.R). Each SLURM array task calls
+# run_one_year() for a single scenario and year, with the phase's pass_type:
 #
 #   Phase 1   : baseline year, pass_type = 'both'
 #   Phase 2A  : counterfactual year, pass_type = 'static'
+#   Phase 2MN : counterfactual year, pass_type = 'mechanical_no_wealth'
+#   Phase 2M  : counterfactual year, pass_type = 'mechanical'
 #   Phase 2N  : counterfactual year, pass_type = 'conventional_no_wealth'
 #   Phase 2C  : counterfactual year, pass_type = 'conventional'
 #
-# Per-year .rds files carry phase-specific suffixes so Phase 3a can read the
-# static and conventional outputs separately:
+# Per-year .rds files carry phase-specific suffixes so Phase 3a can read each
+# rung's outputs separately:
 #
 #   Phase 1   : year_{y}.rds        (baseline static, null conventional)
 #   Phase 2A  : year_{y}_static.rds (MTRs and static totals)
+#   Phase 2MN : year_{y}_mechnw.rds (no totals, detail read by Phase 2MW)
+#   Phase 2M  : year_{y}_mech.rds   (mechanical totals)
 #   Phase 2N  : year_{y}_convnw.rds (no totals, detail read by Phase 2W)
 #   Phase 2C  : year_{y}_conv.rds   (conventional totals)
 #
@@ -95,10 +99,12 @@ tryCatch({
 
   # Map phase to pass_type
   pass_type = switch(phase,
-    '1'  = 'both',
-    '2A' = 'static',
-    '2N' = 'conventional_no_wealth',
-    '2C' = 'conventional',
+    '1'   = 'both',
+    '2A'  = 'static',
+    '2MN' = 'mechanical_no_wealth',
+    '2M'  = 'mechanical',
+    '2N'  = 'conventional_no_wealth',
+    '2C'  = 'conventional',
     stop('Unknown phase: ', phase)
   )
 
@@ -117,10 +123,12 @@ tryCatch({
   # Save result under the phase's filename. The conv-no-wealth result carries no
   # totals: Phase 2W reads its detail from disk instead.
   out_path = switch(phase,
-    '1'  = paste0('year_', task$year, '.rds'),
-    '2A' = paste0('year_', task$year, '_static.rds'),
-    '2N' = paste0('year_', task$year, '_convnw.rds'),
-    '2C' = paste0('year_', task$year, '_conv.rds')
+    '1'   = paste0('year_', task$year, '.rds'),
+    '2A'  = paste0('year_', task$year, '_static.rds'),
+    '2MN' = paste0('year_', task$year, '_mechnw.rds'),
+    '2M'  = paste0('year_', task$year, '_mech.rds'),
+    '2N'  = paste0('year_', task$year, '_convnw.rds'),
+    '2C'  = paste0('year_', task$year, '_conv.rds')
   )
   saveRDS(result, file.path(staging_dir, task$scenario, out_path))
 

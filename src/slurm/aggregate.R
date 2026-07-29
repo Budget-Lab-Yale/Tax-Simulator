@@ -82,18 +82,27 @@ tryCatch({
       } else {
         static_rds = file.path(staging_dir, scenario_id,
                                 paste0('year_', y, '_static.rds'))
+        mech_rds   = file.path(staging_dir, scenario_id,
+                                paste0('year_', y, '_mech.rds'))
         conv_rds   = file.path(staging_dir, scenario_id,
                                 paste0('year_', y, '_conv.rds'))
         s_res = readRDS(static_rds)
         c_res = readRDS(conv_rds)
 
+        # The mechanical rung runs only where a transmission channel is live. Where
+        # it did not, it equals the static rung and is reported from those totals
+        mt = NULL
+        if (file.exists(mech_rds)) mt = readRDS(mech_rds)$mechanical_totals
+        if (is.null(mt)) mt = s_res$static_totals
+
         # A scenario with no behavior has no conventional totals; fall back to the
-        # static ones so the aggregation has something to write
+        # rung below
         ct = c_res$conventional_totals
-        if (is.null(ct)) ct = s_res$static_totals
+        if (is.null(ct)) ct = mt
 
         list(mtrs                = s_res$mtrs,
              static_totals       = s_res$static_totals,
+             mechanical_totals   = mt,
              conventional_totals = ct)
       }
     })
@@ -107,6 +116,17 @@ tryCatch({
       vat_price_offset     = config$vat_price_offset,
       scenario_info        = scenario_info
     )
+
+    # --- Write mechanical outputs (skip for baseline) ---
+    if (scenario_id != 'baseline') {
+      write_pass_outputs(
+        output               = output,
+        root                 = file.path(scenario_info$output_path, 'mechanical'),
+        totals_slot          = 'mechanical_totals',
+        vat_price_offset     = config$vat_price_offset,
+        scenario_info        = scenario_info
+      )
+    }
 
     # --- Write conventional outputs (skip for baseline) ---
     if (scenario_id != 'baseline') {

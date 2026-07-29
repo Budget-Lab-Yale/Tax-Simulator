@@ -89,3 +89,4 @@ wine.sif
 # Python bytecode + generated Netlify Drop staging copy (rebuilt from atlas2_built.html)
 __pycache__/
 other/top_tax/netlify_drop/
+other/mechanical_pass/logs/

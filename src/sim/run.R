@@ -68,10 +68,7 @@ do_scenario = function(ID, baseline_mtrs) {
   # runs only where one of them is live. A reform touching employer payroll law
   # counts: the wage adjustment moves the income tax base and is applied on this
   # rung and not on the static one.
-  uses_mech = ID != 'baseline' &&
-              (uses_wealth ||
-               scenario_uses_corp_incidence(scenario_info) ||
-               scenario_uses_er_payroll_reform(scenario_info))
+  uses_mech = scenario_runs_mechanical(scenario_info)
 
   if (uses_kg || uses_wealth || uses_mech) {
 
@@ -198,9 +195,31 @@ do_scenario = function(ID, baseline_mtrs) {
 
 
 
+scenario_runs_mechanical = function(scenario_info) {
+
+  #----------------------------------------------------------------------------
+  # Reports whether the mechanical rung differs from the static one for a
+  # scenario, which is so where any transmission channel is live: corporate
+  # incidence, a wealth financing profile with a nonzero saving share, or a reform
+  # changing employer-side payroll law.
+  #
+  # Parameters:
+  #   - scenario_info (list) : output of get_scenario_info()
+  #
+  # Returns: TRUE if the mechanical pass runs for this scenario (bool).
+  #----------------------------------------------------------------------------
+
+  scenario_info$ID != 'baseline' &&
+    (scenario_uses_wealth_dynamics(scenario_info) ||
+     scenario_uses_corp_incidence(scenario_info) ||
+     scenario_uses_er_payroll_reform(scenario_info))
+}
+
+
+
 write_pass_outputs = function(output, root, totals_slot,
                               vat_price_offset,
-                              scenario_info) {
+                              scenario_info, leg = NULL) {
 
   #----------------------------------------------------------------------------
   # Writes one pass's supplemental offsets, totals CSVs, and receipts for a
@@ -214,8 +233,10 @@ write_pass_outputs = function(output, root, totals_slot,
   #                                 …/conventional)
   #   - totals_slot (str)         : which per-year totals list to aggregate, one of
   #                                 'static_totals', 'mechanical_totals' or
-  #                                 'conventional_totals'. Its stem also names the
-  #                                 leg calc_receipts books
+  #                                 'conventional_totals'
+  #   - leg (str)                 : leg calc_receipts books; defaults to the
+  #                                 totals_slot's stem. Given explicitly where a
+  #                                 rung reports the totals of the rung below
   #   - vat_price_offset (df)     : VAT price offset series, written to supplemental
   #   - scenario_info (list)      : scenario info (interface paths)
   #
@@ -260,7 +281,7 @@ write_pass_outputs = function(output, root, totals_slot,
       other_root            = scenario_info$interface_paths$`Macro-Projections`,
       cost_recovery_root    = scenario_info$interface_paths$`Cost-Recovery-Simulator`,
       off_model_root        = scenario_info$interface_paths$`Off-Model-Estimates`,
-      leg                   = str_remove(totals_slot, '_totals$')
+      leg                   = leg %||% str_remove(totals_slot, '_totals$')
     )
 
   invisible(NULL)
@@ -769,6 +790,22 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
       totals_slot          = 'static_totals',
       vat_price_offset     = vat_price_offset,
       scenario_info        = scenario_info
+    )
+  }
+
+  # Where no transmission channel is live the mechanical rung equals the static
+  # one. Report it from the static totals anyway, so every counterfactual carries
+  # all three rungs and the reporting layer needs no special case
+  if (pass_type %in% c('both', 'static') &&
+      scenario_info$ID != 'baseline' &&
+      !scenario_runs_mechanical(scenario_info)) {
+    write_pass_outputs(
+      output               = output,
+      root                 = file.path(scenario_info$output_path, 'mechanical'),
+      totals_slot          = 'static_totals',
+      vat_price_offset     = vat_price_offset,
+      scenario_info        = scenario_info,
+      leg                  = 'mechanical'
     )
   }
 
