@@ -198,23 +198,34 @@ other/performance/test_slurm_dependency_graph.sh had been passing the retired
 user_id argument since 2026-07-25, tripping the arity guard so that every case
 exited 1 unnoticed.
 
+## The re-derivation
+
+Done 2026-07-29. Three full-sample thirty-year vintages on the logs grid, written
+beside the pre-change ones under the _mech suffix so the two conventions stay
+comparable. eta_logs moves from 1.6625 to 1.6692, a rise of 0.40 percent, which is
+the size the crossing diagnostic predicted. E_full at the trial values 1.5, 1.9
+and 2.3 came out at -2.2730, -2.8594 and -3.4508, monotone, and the piecewise
+inversion is the shipped one.
+
+The measurement script did not list src/sim/kg/inputs.R among the files the value
+is invalidated by -- the file that decides which rung the rates come from, and so
+the reason the re-derivation was owed. Accepting its output as written would have
+dropped that dependency. Added to the script, and the pin carries the file's
+current content.
+
+timeable_share_logs is acknowledged stale rather than re-derived. The long-run
+moment eta is measured from does not depend on the share, which was checked across
+the grid, so the shipped eta does not inherit the staleness; the share's own drift
+is expected to be of the same order as eta's. Re-deriving it means three more
+full-sample vintages through measure_timeable.R. The two levels-form entries are
+dormant under the shipped response form, which the staleness check skips, so
+flipping the form stops the run until they are re-derived.
+
 ## Outstanding
 
-The gains elasticity has not been re-derived under the new marginal rate
-convention. Both eta entries and both timeable_share entries in
-config/calibrations/kg/bathtub.yaml are pinned to src/sim/kg/inputs.R as it was
-before the change, so they report stale and any kg run stops until they are
-re-derived. That is the intended state: the numbers were measured with the
-reform-side cell rates read off the static rung, and they are now read off the
-mechanical rung.
-
-Re-deriving means three full-sample thirty-year vintages per form and then the
-inversion, through the entry's own `rederive` script -- for the shipped form,
-
-    other/kg_model_tests/form_ab/measure_efull_logs.R
-
-with the sweep launched by its launcher first. Until that is done the branch
-should not merge: kg results on it are not comparable with anything.
+The branch is mergeable. Two calibrations are carried rather than re-derived, both
+recorded on their entries and announced at parse time: timeable_share_logs, and
+the levels-form pair a run reaches only by flipping the response form.
 
 The plan expected the drift to be small, on the reasoning that the two
 conventions part company only for records a mechanical income change moves across
