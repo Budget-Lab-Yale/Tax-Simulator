@@ -59,10 +59,22 @@ tryCatch({
   config_activate(economy  = config$scenario_info$resolved_economy,
                   behavior = config$scenario_info$resolved_behavior)
 
-  # Load baseline MTRs (needed for the behavior modules on the conventional and
-  # conv-no-wealth passes)
-  baseline_mtrs = NULL
+  # Load the two MTR sets the behavior modules difference. Where the mechanical
+  # rung ran, both come from its frame: reform law on one side, baseline law on the
+  # other. Where it did not, the mechanical frame is the static frame, so the
+  # baseline scenario's MTRs and the Phase 2A static ones stand in unchanged.
+  mech_mtr_path = NULL
   if (phase %in% c('2C', '2N')) {
+    mech_mtr_path = file.path(staging_dir, task$scenario,
+                              paste0('year_', task$year, '_mech.rds'))
+    if (!file.exists(mech_mtr_path)) mech_mtr_path = NULL
+  }
+
+  baseline_mtrs = NULL
+  if (phase %in% c('2C', '2N') && !is.null(mech_mtr_path)) {
+    baseline_mtrs = readRDS(mech_mtr_path)$mtrs_baseline_law
+  }
+  if (phase %in% c('2C', '2N') && is.null(baseline_mtrs)) {
     prebuilt_path = file.path(staging_dir, 'baseline', 'baseline_mtrs.rds')
     if (file.exists(prebuilt_path)) {
       baseline_mtrs = readRDS(prebuilt_path)
@@ -85,8 +97,13 @@ tryCatch({
   # and 2N task has a matching 2A task that wrote it, so a missing file means a
   # partial staging directory -- stop rather than hand the behavior modules a
   # null set of static MTRs
+  # Phase 2M reads them too, not for a behavior module -- it runs none -- but so
+  # the crossing diagnostic can difference the two frames
   static_mtrs_year = NULL
-  if (phase %in% c('2C', '2N')) {
+  if (phase %in% c('2C', '2N') && !is.null(mech_mtr_path)) {
+    static_mtrs_year = readRDS(mech_mtr_path)$pass_mtrs
+  }
+  if (phase %in% c('2C', '2N', '2M') && is.null(static_mtrs_year)) {
     static_rds = file.path(staging_dir, task$scenario,
                            paste0('year_', task$year, '_static.rds'))
     if (!file.exists(static_rds)) {
@@ -117,7 +134,8 @@ tryCatch({
     indexes              = config$indexes,
     vat_price_offset     = config$vat_price_offset,
     pass_type            = pass_type,
-    static_mtrs_year     = static_mtrs_year
+    static_mtrs_year     = static_mtrs_year,
+    tax_law_baseline     = config$tax_law_baseline
   )
 
   # Save result under the phase's filename. The conv-no-wealth result carries no

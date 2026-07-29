@@ -132,10 +132,19 @@ for (sid in scenarios_to_build) {
   # Build tax law, which also writes tax_law.csv to supplemental
   tax_law = build_tax_law(scenario_info, indexes)
 
+  # Baseline law over the same years, which the mechanical pass prices its second
+  # set of marginal rates under. Only that pass reads it
+  tax_law_baseline = NULL
+  if (scenario_runs_mechanical(scenario_info) &&
+      !is.null(scenario_info$mtr_vars)) {
+    tax_law_baseline = build_baseline_tax_law(scenario_info, indexes)
+  }
+
   # Serialize config
   saveRDS(
     list(scenario_info    = scenario_info,
          tax_law          = tax_law,
+         tax_law_baseline = tax_law_baseline,
          indexes          = indexes,
          vat_price_offset = vat_price_offset),
     file.path(scenario_staging, 'config.rds')

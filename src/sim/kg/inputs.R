@@ -651,7 +651,7 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
                                        cells_inputs = NULL) {
 
   # Assembles everything the pass needs: the baseline cells, and the marginal rate
-  # on gains for each leg, read from that leg's static detail and averaged to cells.
+  # on gains for each leg, read from that leg's detail and averaged to cells.
   # A third rate vector measured on law alone drives the retiming. The Tax-Data read
   # is delegated; pass the frozen pass's cache to avoid doing it twice.
   #
@@ -706,6 +706,12 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
     )
   }
 
+  # The realization choice is priced at the circumstances the taxpayer has after
+  # everything outside his control has happened to him, so the reform-side rates
+  # come from the mechanical rung where it ran. Where it did not, that rung is the
+  # static one. The baseline leg has no mechanical rung and always reads static.
+  reform_leg = if (scenario_runs_mechanical(scenario_info)) 'mechanical' else 'static'
+
   baseline_cells    = cells_inputs$baseline_cells
   baseline_tau      = list()
   reform_tau        = list()
@@ -725,31 +731,29 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
       missing_cols = setdiff(cols, have)
       if (length(missing_cols) > 0) {
         stop(sprintf(
-          paste0('kg_dynamics: static detail %s lacks column(s): %s. ',
-                 'mtr_kg_lt_lawonly is written by the static pass (run.R) ',
-                 'for kg_dynamics scenarios; mtr_net_worth is ',
-                 'guaranteed there for wealth-active kg scenarios and ',
-                 'mtr_estate_ded for ALL kg scenarios (either ',
-                 'registered in the runscript mtr_vars or via the run.R ',
-                 'fallback). The BASELINE leg has no fallback: its row ',
-                 'must register "estate" in mtr_vars. A missing column ',
-                 'means STALE static detail — re-run the baseline/',
-                 'scenario static pass with current code.'),
+          paste0('kg_dynamics: detail %s lacks column(s): %s. ',
+                 'add_kg_bathtub_mtrs (run.R) supplies mtr_kg_lt_lawonly, ',
+                 'mtr_net_worth for wealth-active kg scenarios and ',
+                 'mtr_estate_ded for every kg scenario, on the static and ',
+                 'mechanical rungs. The baseline leg has no fallback: its ',
+                 'runscript row must register "estate" in mtr_vars. A missing ',
+                 'column means stale detail -- re-run the pass with current ',
+                 'code.'),
           f, paste(missing_cols, collapse = ', ')))
       }
       fread(f, select = cols, showProgress = FALSE) %>%
         as_tibble()
     }
 
-    # Check the static detail covers every record holding gains. A missing rate
+    # Check the detail covers every record holding gains. A missing rate
     # would otherwise be read as zero and pull the cell average down.
     check_mtr_coverage = function(joined, side, year) {
       missing = joined %>% filter(pmax(kg_lt, 0) > 0 & is.na(mtr_kg_lt))
       if (nrow(missing) > 0) {
         stop(sprintf(
           paste0('kg_dynamics: %d records with kg_lt > 0 missing ',
-                 'mtr_kg_lt in %s static detail for year %d. This biases ',
-                 'tau toward zero. Check that the static run wrote ',
+                 'mtr_kg_lt in %s detail for year %d. This biases ',
+                 'tau toward zero. Check that the run wrote ',
                  'mtr_kg_lt for every sample id.'),
           nrow(missing), side, year))
       }
@@ -762,9 +766,9 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
       if (nrow(missing) > 0) {
         stop(sprintf(
           paste0('kg_dynamics: %d records with G_unit > 0 missing ',
-                 'mtr_estate_ded in %s static detail for year %d. This ',
+                 'mtr_estate_ded in %s detail for year %d. This ',
                  'biases the estate death-value exposure e toward zero. ',
-                 'Check that the static run wrote mtr_estate_ded for ',
+                 'Check that the run wrote mtr_estate_ded for ',
                  'every sample id.'),
           nrow(missing), side, year))
       }
@@ -784,7 +788,7 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
     reform_cols = c('id', 'mtr_kg_lt', 'mtr_kg_lt_lawonly', 'mtr_estate_ded')
     if (wealth_active) reform_cols = c(reform_cols, 'mtr_net_worth')
     reform_joined = td_slim %>%
-      left_join(read_mtr(file.path(scenario_info$output_path, 'static',
+      left_join(read_mtr(file.path(scenario_info$output_path, reform_leg,
                                    'detail'),
                          cols = reform_cols),
                 by = 'id')
@@ -813,9 +817,9 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
       if (nrow(missing_nw) > 0) {
         stop(sprintf(
           paste0('kg_dynamics: %d records with G_unit > 0 missing ',
-                 'mtr_net_worth in reform static detail for year %d. This ',
+                 'mtr_net_worth in reform detail for year %d. This ',
                  'biases the wealth carrying cost h toward zero. Check ',
-                 'that the static run wrote mtr_net_worth for every ',
+                 'that the run wrote mtr_net_worth for every ',
                  'sample id.'),
           nrow(missing_nw), t))
       }
