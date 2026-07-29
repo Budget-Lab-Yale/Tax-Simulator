@@ -41,12 +41,14 @@ eta:
     - src/sim/kg/recurrence.R
     - src/sim/kg/timing.R
     - src/sim/kg/apply.R
+    - src/sim/kg/inputs.R
   invalidated_by_hashes:
     src/sim/kg/constants.R: '54f11bfc9f9d613373cd39e453f09168'
     src/sim/kg/bellman.R: '1aa6776c70f4d508eec34de176318dd7'
-    src/sim/kg/recurrence.R: '95e893be21eeb0778a06ecb0333238d6'
+    src/sim/kg/recurrence.R: '996464e2be1f5ba854712d6463c3a785'
     src/sim/kg/timing.R: 'cda95c0c59a0f210ae6dc1d606c3b82e'
-    src/sim/kg/apply.R: '11fe1873b7c431b74f8c02bb3b5fe272'
+    src/sim/kg/apply.R: '7c492eed46072763e8de8b2994f0de10'
+    src/sim/kg/inputs.R: '116c27b0e84b9569cf1db5381e91a981'
   conditioned_on:
     settings.kg.applier_allocation: '0.5'
     settings.kg.timing_ref_wedge: 0.05
@@ -102,10 +104,12 @@ timeable_share:
     - src/sim/kg/constants.R
     - src/sim/kg/timing.R
     - src/sim/kg/recurrence.R
+    - src/sim/kg/inputs.R
   invalidated_by_hashes:
     src/sim/kg/constants.R: 54f11bfc9f9d613373cd39e453f09168
     src/sim/kg/timing.R: cda95c0c59a0f210ae6dc1d606c3b82e
-    src/sim/kg/recurrence.R: 95e893be21eeb0778a06ecb0333238d6
+    src/sim/kg/recurrence.R: '996464e2be1f5ba854712d6463c3a785'
+    src/sim/kg/inputs.R: '116c27b0e84b9569cf1db5381e91a981'
   conditioned_on:
     settings.kg.timing_window: 1
     settings.kg.timing_ref_wedge: 0.05
@@ -144,10 +148,22 @@ timeable_share_logs:
     - src/sim/kg/constants.R
     - src/sim/kg/timing.R
     - src/sim/kg/recurrence.R
+    - src/sim/kg/inputs.R
   invalidated_by_hashes:
     src/sim/kg/constants.R: '54f11bfc9f9d613373cd39e453f09168'
     src/sim/kg/timing.R: 'cda95c0c59a0f210ae6dc1d606c3b82e'
-    src/sim/kg/recurrence.R: '95e893be21eeb0778a06ecb0333238d6'
+    src/sim/kg/recurrence.R: '996464e2be1f5ba854712d6463c3a785'
+    src/sim/kg/inputs.R: '116c27b0e84b9569cf1db5381e91a981'
+  acknowledged:
+    date: '2026-07-29'
+    reason: >
+      Pinned to inputs.R before the reform-side cell rates moved to the mechanical
+      rung, and not re-derived. eta_logs was re-derived under the new convention on
+      the same day and moved 0.40 percent, from 1.6625 to 1.6692, so this share's
+      own drift is expected to be of that order. The long-run moment eta is measured
+      from does not depend on the share, which was checked across the grid, so the
+      shipped eta does not inherit the staleness. Re-deriving means three
+      full-sample vintages through measure_timeable.R.
   conditioned_on:
     settings.kg.timing_window: 1
     settings.kg.timing_ref_wedge: 0.05
@@ -165,4 +181,3 @@ timeable_share_logs:
     form_timeable_logs_15 form_timeable_logs_25.
     form_timeable_logs_40. Per-point measurements:
     other/kg_model_tests/form_ab/timeable_logs.csv.
-
