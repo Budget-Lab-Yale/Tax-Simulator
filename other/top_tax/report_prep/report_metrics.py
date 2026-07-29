@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 report_metrics.py -- key metrics for the top-tax public report, computed from
-top_tax_dials_30y_v3 (current physics, 2026-07-18: uncapped CG + corp
-entity-shifting + estate-avoidance fix), kg_v3_revmax (stale kg spec-v3
-physics, direct death-regime grid), and atlas2_data.json (surrogate over
-dials v3).
+top_tax_dials_30y_v5 (current physics, 2026-07-28: net-of-tax realization
+form, on-model corporate rate to 35, estate-avoidance fix, death-gain
+exclusion dial), kg_v3_revmax (stale kg spec-v3 physics, direct death-regime
+grid), and atlas2_data.json (surrogate over dials v5).
 
 Pure stdlib (no pandas on login node). All revenue figures are $B,
 scenario-minus-baseline, FY windows 2027-2036 ("10y") and 2027-2056 ("30y")
@@ -15,8 +15,8 @@ External constants (NOT model output) are marked EXTERNAL with their source.
 import csv, json, os, sys
 from collections import OrderedDict
 
-# NB: variable still named V2 for minimal edit surface; it now points at the v3 vintage.
-V2   = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/top_tax_dials_30y_v3"
+# NB: variable still named V2 for minimal edit surface; it now points at the v5 vintage.
+V2   = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/top_tax_dials_30y_v5"
 RVMX = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_v3_revmax"
 ATLAS = "/nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator/other/top_tax/atlas2_data.json"
 

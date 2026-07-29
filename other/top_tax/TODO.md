@@ -54,13 +54,16 @@ built + full-sample smoke-verified; OME bumped v4→v5, `corporate_static` colum
 - [x] Wire the static stream into the static-vs-conventional revenue breakout (pass-aware `calc_receipts`; static books `corporate_static`, conventional books `corporate`; atlas2 python already reads both legs, so `sh`/`ch` corp vectors will differ after a real re-run — no python change)
 - [x] Update downstream machinery to carry both streams (receipts booking + distribution carry both; `corp_incidence.R` record incidence deliberately stays on the conventional stream — D5)
 
-*(2) Re-run + reproduce:* **not done** — only a fictitious-data smoke test
-(`corporate_static = 1.1×corporate`) has been run. Real static numbers come from
-upstream OME; the full re-run + figure/interactive/report regen folds into the
-net-of-tax vintage regen (item 1). CAVEAT: v5 bump means any runscript with a
-`dep.Off-Model-Estimates` override to a v4 vintage needs a v5 equivalent first.
-- [ ] Re-run with the new two-stream corporate inputs
-- [ ] Reproduce figures, the interactive, and all downstream deliverables
+*(2) Re-run + reproduce:* **rescoped 2026-07-28 — not a top-tax item.** The
+corporate rate has been scored on-model since 2026-07-23 (`src/sim/corp_rate.R`;
+the dial scenarios run the default economy leg, whose Off-Model-Estimates
+pointer is baseline, zero deltas), so the top-tax batch never reads the
+corporate OME streams. The open re-run applies only to scenarios whose
+corporate revenue arrives through OME (cost recovery, international, package
+scoring). Only a fictitious-data smoke test (`corporate_static =
+1.1×corporate`) has been run there.
+- [ ] Re-run an OME-scored corporate scenario with real two-stream inputs when
+      one next arises (not gating top-tax go-live)
 
 ### 3. Reframe the "rate required to close the deficit" calculation
 
@@ -97,6 +100,21 @@ economic income is ~half")? If we still want the exact above-threshold cut
 gains per record aren't in the flat detail file (built via `inc_hs_core` in
 `distribution.R`: expanded − realized gains + `accruals_sum` − retirement
 double-count).
+
+### Housing-excluded accrual ETRs in the figure and the tool (added 2026-07-28)
+
+The ETR-levels supplemental now carries a fourth income definition,
+`hs_ex_home`: Haig-Simons accrual income less the accrued gain on a primary
+residence ($2.3T of the $12.5T 2027 accrual flow, concentrated in the middle
+of the distribution). It is in every `distribution_etrs.csv` from v5 onward
+but nothing downstream reads it yet.
+
+- [ ] Consider adding the `hs_ex_home` series to the accrual-vs-cash ETR
+      figure (middle-quintile accrual ETRs rise; the top barely moves, since
+      primary-residence gains are mostly §121-shielded and unreachable by
+      realization-margin policy)
+- [ ] Consider wiring it into the interactive (dist card / atlas ETR views) as
+      an income-basis option alongside cash and accrual
 
 ---
 
