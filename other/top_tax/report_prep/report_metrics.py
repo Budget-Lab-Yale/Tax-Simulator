@@ -3,7 +3,7 @@
 report_metrics.py -- key metrics for the top-tax public report, computed from
 top_tax_dials_30y_v5 (current physics, 2026-07-28: net-of-tax realization
 form, on-model corporate rate to 35, estate-avoidance fix, death-gain
-exclusion dial), kg_v3_revmax (stale kg spec-v3 physics, direct death-regime
+exclusion dial), kg_v5_revmax (current physics, direct death-regime
 grid), and atlas2_data.json (surrogate over dials v5).
 
 Pure stdlib (no pandas on login node). All revenue figures are $B,
@@ -17,7 +17,7 @@ from collections import OrderedDict
 
 # NB: variable still named V2 for minimal edit surface; it now points at the v5 vintage.
 V2   = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/top_tax_dials_30y_v5"
-RVMX = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_v3_revmax"
+RVMX = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/kg_v5_revmax"
 ATLAS = "/nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator/other/top_tax/atlas2_data.json"
 
 W10 = range(2027, 2037)
@@ -80,11 +80,12 @@ gdp_dec = atlas["meta"]["gdp_fy_decades"]  # $B cumulative FY GDP per decade
 
 print("# Metrics for the top-tax report")
 print()
-print(f"*Source vintages: dials `{os.path.basename(V2)}` (current physics, run 2026-07-18: "
-      "eta=2.4825, sigma=0.16, wealth-carry + estate-margins Tier 1.1/1.2 in; NEW in v3: "
-      "uncapped CG rate (no_ord_cap), corp.rate entity-shifting fix, estate-avoidance fix), "
-      f"revmax grid `{os.path.basename(RVMX)}` (kg spec-v3, eta=2.3992, pre-Tier-1 AND pre-uncap "
-      "-- flagged stale). All $ figures $B unless noted; windows FY2027-2036 and FY2027-2056.*")
+print(f"*Source vintages: dials `{os.path.basename(V2)}` (current physics, run 2026-07-28: "
+      "net-of-tax realization form eta_tilde=1.6625, sigma=0.16, on-model corporate rate to 35, "
+      "uncapped CG rate, estate-avoidance fix, death-gain exclusion dial; deemed heir attribution "
+      "is the full-ladder rank match, not comparable to the v3 smear), "
+      f"revmax grid `{os.path.basename(RVMX)}` (same physics, direct death-regime grid to +30pp). "
+      "All $ figures $B unless noted; windows FY2027-2036 and FY2027-2056.*")
 print()
 
 # =============================================================== 1. incomes
@@ -225,7 +226,10 @@ solos = [
     ("s_cg_r40",          "CG & div top rate 20% -> 40% (REF)"),
     ("s_cg_r45",          "CG & div top rate 20% -> 45%"),
     ("s_cg_r50",          "CG & div top rate 20% -> 50%"),
-    ("s_corp_r28",        "Corporate rate 21% -> 28%"),
+    ("s_corp_r24p5",      "Corporate rate 21% -> 24.5%"),
+    ("s_corp_r28",        "Corporate rate 21% -> 28% (REF)"),
+    ("s_corp_r31p5",      "Corporate rate 21% -> 31.5%"),
+    ("s_corp_r35",        "Corporate rate 21% -> 35%"),
     ("s_wealth_r1_t50",   "Wealth tax 1% > $50M"),
     ("s_wealth_r2_t50",   "Wealth tax 2% > $50M (REF)"),
     ("s_deemed_carryover","Carryover basis at death (no rate change)"),
@@ -305,7 +309,7 @@ def pvw(label, part_ids, whole_id):
           f"({100*(wc30-pc30)/pc30:+.1f}%)")
     print()
 
-for p in ["pr_cg_corp", "pr_cg_deemed", "prco_cg_deemed", "pc_corpr28_cgr30"]:
+for p in ["pr_cg_corp", "pr_cg_deemed", "prco_cg_deemed", "pc_corpr35_cgr30"]:
     pass  # direct pair availability noted below
 
 # 7a. full stack vs 8 solos
@@ -314,8 +318,8 @@ REF_SOLOS = ["s_ord_r44p8", "s_cg_r40", "s_corp_r28", "s_wealth_r2_t50",
 pvw("Full 8-lever reference stack (stack_ref) vs sum of its 8 solos", REF_SOLOS, "stack_ref")
 
 # 7b. corp28 + cg30 package (the closest direct analogue of the draft's Figure 3)
-pvw("Corporate 21->28% + CG/div 20->30% (pc_corpr28_cgr30)",
-    ["s_corp_r28", "s_cg_r30"], "pc_corpr28_cgr30")
+pvw("Corporate 21->35% + CG/div 20->30% (pc_corpr35_cgr30)",
+    ["s_corp_r35", "s_cg_r30"], "pc_corpr35_cgr30")
 
 # 7c. cg40 x deemed (crown pair, both at REF)
 pvw("CG/div 20->40% + deemed realization at death (pr_cg_deemed)",
@@ -362,7 +366,7 @@ try:
     st_su  = read_rev(RVMX, "cg_05pp_stepup", "static");  cv_su = read_rev(RVMX, "cg_05pp_stepup", "conventional")
     st_d0  = read_rev(RVMX, "cg_00pp_deemed", "static");  cv_d0 = read_rev(RVMX, "cg_00pp_deemed", "conventional")
     st_d5  = read_rev(RVMX, "cg_05pp_deemed", "static");  cv_d5 = read_rev(RVMX, "cg_05pp_deemed", "conventional")
-    print(f"- Direct runs (kg_v3_revmax, STALE eta=2.3992 physics), 10y:")
+    print(f"- Direct runs (kg_v5_revmax, current physics), 10y:")
     print(f"  - Parts static:  cg+5pp {fmt(wsum(st_su,W10),0)} + deemed {fmt(wsum(st_d0,W10),0)} = "
           f"${fmt(wsum(st_su,W10)+wsum(st_d0,W10),0)}B")
     print(f"  - Parts conv:    cg+5pp {fmt(wsum(cv_su,W10),0)} + deemed {fmt(wsum(cv_d0,W10),0)} = "
@@ -375,7 +379,7 @@ print()
 # ================================================== 8. Laffer curves
 print("## 8. Capital-gains Laffer curves by death regime")
 print()
-print("### 8a. Current physics (dials v3, uncapped CG): step-up direct; deemed/carryover via surrogate composition")
+print("### 8a. Current physics (dials v5, uncapped CG): step-up direct; deemed/carryover via surrogate composition")
 print()
 knots = [25, 30, 35, 40, 45, 50]
 print("| Top CG rate | Step-up 10y conv | Deemed-conditional 10y conv delta* | Carryover-conditional* | Step-up 30y conv |")
@@ -403,7 +407,7 @@ print("*Conditional columns = the CG-rate increase's own 10y conventional yield 
       "revenue is NOT included). Surrogate-composed -- +/- a few percent.*")
 print()
 
-print("### 8b. Direct grid (kg_v3_revmax, stale physics, eta=2.3992): total 10y conventional by cell")
+print("### 8b. Direct grid (kg_v5_revmax, current physics): total 10y conventional by cell")
 print()
 print("| Top CG rate | Step-up | Carryover | Deemed | Step-up static | Deemed static |")
 print("|---|---|---|---|---|---|")

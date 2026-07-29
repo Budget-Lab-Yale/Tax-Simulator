@@ -443,7 +443,7 @@ def fit(root, out_path):
 
     runs = {}          # state_key -> quantities (fitted scenarios only)
     id_of = {}
-    for kind in ("solo", "pair", "triple", "pairco", "tripco"):
+    for kind in ("solo", "pair", "triple", "pairco", "tripco", "pairexem"):
         for scen_id, state in by_kind.get(kind, []):
             runs[state_key(state)] = read(scen_id)
             id_of[state_key(state)] = scen_id
