@@ -181,6 +181,15 @@ what it described:
    and the corporate overlay already carries it, so a scenario running both
    channels gets no payroll overlay and a warning.
 
+Baseline law is the runscript's baseline row, not the default layer. Both the
+employer payroll predicate and the mechanical rung's second set of marginal rates
+first read the default layer, which is the same thing only where the baseline row
+names it. A retrospective run scores against prior law by naming an alternative
+there, so the rates handed to the behavior modules would have been differenced
+against the wrong law. Both sites read baseline_tax_law_id(); the predicate
+compares effective values, each side's own entry where it has one and the
+default's otherwise, because both laws are sparse deltas over that layer.
+
 Two things found along the way. The wage rescale ended by setting wages to the sum
 of the two earners' wages, which is not bit-identical to the column Tax-Data
 supplies, and it ran on the reform static pass but not the baseline one; taking it

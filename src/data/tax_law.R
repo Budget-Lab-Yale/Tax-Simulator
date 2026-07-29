@@ -221,13 +221,40 @@ build_tax_law = function(scenario_info, indexes, write = TRUE) {
 
 
 
+baseline_tax_law_id = function(g = globals) {
+
+  #----------------------------------------------------------------------------
+  # Returns the tax law layer named by the runscript's baseline row (str).
+  #
+  # The baseline row's law is not always the default layer: a retrospective run
+  # scores against prior law by naming an alternative there. Anything comparing a
+  # reform against baseline law reads it here rather than assuming the default.
+  #
+  # Parameters:
+  #   - g (list) : the globals object (defaulted; passed explicitly where a
+  #                worker holds it under another name)
+  #----------------------------------------------------------------------------
+
+  row = g$runscript %>%
+    filter(ID == 'baseline')
+
+  if (nrow(row) != 1) {
+    stop('Expected one baseline row in the runscript, found ', nrow(row),
+         '. read_runscript always keeps it')
+  }
+
+  as.character(row$tax_law)
+}
+
+
+
 build_baseline_tax_law = function(scenario_info, indexes) {
 
   #----------------------------------------------------------------------------
   # Builds the baseline law table over a scenario's years and filing statuses, for
-  # pricing a second set of marginal rates on the mechanical frame. Baseline law is
-  # the default layer, so this is the scenario's own call with the tax law cell
-  # replaced, and nothing is written to the scenario's output.
+  # pricing a second set of marginal rates on the mechanical frame. This is the
+  # scenario's own call with the tax law cell replaced by the runscript's baseline
+  # row, and nothing is written to the scenario's output.
   #
   # Parameters:
   #   - scenario_info (list) : scenario info object; see get_scenario_info()
@@ -237,7 +264,7 @@ build_baseline_tax_law = function(scenario_info, indexes) {
   #----------------------------------------------------------------------------
 
   si = scenario_info
-  si$tax_law_id = 'default'
+  si$tax_law_id = baseline_tax_law_id()
   build_tax_law(si, indexes, write = FALSE)
 }
 
