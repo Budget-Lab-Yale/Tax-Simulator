@@ -112,6 +112,8 @@ read_corp_alloc_stock_keys = function(baseline_id, yr) {
   #   - net_worth_stock : gross assets less all debts, floored at 0 (uniform_
   #                       networth convention base)
   #   - accruals_sum    : sum of the 7 accruals.* columns (HS income)
+  #   - accruals_ph     : the accruals.primary_home column alone, subtracted back
+  #                       out for the owner-occupied-housing-excluded HS income
   #   - other_gains, txbl_ira_dist, gross_pens_dist : HS realized-gain removal /
   #                       DC-distribution double-count fix pieces
   #   - dc_share        : value.dc / (value.dc + value.db), zero-guarded (HS
@@ -179,6 +181,7 @@ read_corp_alloc_stock_keys = function(baseline_id, yr) {
 
       # Haig-Simons pieces
       accruals_sum = rowSums(across(all_of(accrual_cols), z0)),
+      accruals_ph  = z0(accruals.primary_home),
       dc_share     = if_else(z0(value.dc) + z0(value.db) > 0,
                              z0(value.dc) / (z0(value.dc) + z0(value.db)),
                              0),
@@ -187,7 +190,8 @@ read_corp_alloc_stock_keys = function(baseline_id, yr) {
       gross_pens_dist = z0(gross_pens_dist)
     ) %>%
     select(id, corp_equity, net_capital, net_worth_stock,
-           accruals_sum, dc_share, other_gains, txbl_ira_dist, gross_pens_dist)
+           accruals_sum, accruals_ph, dc_share, other_gains, txbl_ira_dist,
+           gross_pens_dist)
 }
 
 

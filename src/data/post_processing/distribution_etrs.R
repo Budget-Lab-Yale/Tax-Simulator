@@ -9,8 +9,9 @@
 # the question it answers is how progressive the system is rather than how the
 # policy changes it.
 #
-# Rates are reported under three definitions of income, including one that counts
-# capital gains as they accrue rather than when they are realized, and under three
+# Rates are reported under four definitions of income, including one that counts
+# capital gains as they accrue rather than when they are realized and a variant of
+# it that leaves out the accrued gain on a primary residence, and under three
 # conventions for who bears the corporate tax.
 #
 # It follows the same path as the delta tables: the same per-record microdata, the
@@ -26,15 +27,17 @@
 #----------------------------------------------------------------------------
 
 
-ETR_INCOME_DEFS = c('agi', 'expanded', 'hs')
+ETR_INCOME_DEFS = c('agi', 'expanded', 'hs', 'hs_ex_home')
 
 # income-definition core column suffixes in the group-sum frame
-ETR_CORE_SUFFIX = c(agi = 'agi', expanded = 'exp', hs = 'hs')
-ETR_CUTOFF_COL  = c(agi = 'cutoff_agi', expanded = 'cutoff_exp', hs = 'cutoff_hs')
+ETR_CORE_SUFFIX = c(agi = 'agi', expanded = 'exp', hs = 'hs',
+                    hs_ex_home = 'hsx')
+ETR_CUTOFF_COL  = c(agi = 'cutoff_agi', expanded = 'cutoff_exp', hs = 'cutoff_hs',
+                    hs_ex_home = 'cutoff_hsx')
 ETR_SELF_RANK_PREFIX = c(agi = 'self_agi_', expanded = 'self_expanded_',
-                         hs = 'self_hs_')
+                         hs = 'self_hs_', hs_ex_home = 'self_hsx_')
 ETR_SELF_CUTOFF_COL = c(agi = 'cutoff_agi', expanded = 'cutoff_exp_rank',
-                        hs = 'cutoff_hs_rank')
+                        hs = 'cutoff_hs_rank', hs_ex_home = 'cutoff_hsx_rank')
 
 ETR_CONVENTIONS = c('equity_supernormal', 'capital_income', 'uniform_networth')
 ETR_CONV_SUFFIX = c(equity_supernormal = 'es', capital_income = 'ci',
@@ -202,6 +205,7 @@ process_for_etrs = function(id, baseline_id, yr, other_taxes, rev_corp,
       # each definition on itself does the same, except that AGI stays statutory.
       inc_exp_rank = inc_exp_core + inheritance,
       inc_hs_rank  = inc_hs_core  + inheritance,
+      inc_hsx_rank = inc_hsx_core + inheritance,
 
       # --- Corporate allocations (baseline level + reform delta), per convention ---
       citbase_es  = a_es$level, citdelta_es = a_es$delta,
@@ -217,6 +221,7 @@ process_for_etrs = function(id, baseline_id, yr, other_taxes, rev_corp,
     add_rank_groups('inc_agi_core', 'self_agi_pctile',      'self_agi_')      %>%
     add_rank_groups('inc_exp_rank', 'self_expanded_pctile', 'self_expanded_') %>%
     add_rank_groups('inc_hs_rank',  'self_hs_pctile',       'self_hs_')       %>%
+    add_rank_groups('inc_hsx_rank', 'self_hsx_pctile',      'self_hsx_')      %>%
     add_rank_groups('net_worth',    'nw_pctile',            'nw_')            %>%
     mutate(nw_billionaire = if_else(net_worth >= 1e9, 'Billionaires', NA_character_)) %>%
     ungroup()
@@ -251,6 +256,7 @@ etr_group_sums = function(md, group_col) {
       S_agi_core = sum(inc_agi_core * weight),
       S_exp_core = sum(inc_exp_core * weight),
       S_hs_core  = sum(inc_hs_core  * weight),
+      S_hsx_core = sum(inc_hsx_core * weight),
       S_inh      = sum(inheritance  * weight),
 
       # Tax numerators (per leg)
@@ -272,8 +278,10 @@ etr_group_sums = function(md, group_col) {
       cutoff_agi = round(min(inc_agi_core) / 5) * 5,
       cutoff_exp = round(min(inc_exp_core) / 5) * 5,
       cutoff_hs  = round(min(inc_hs_core)  / 5) * 5,
+      cutoff_hsx = round(min(inc_hsx_core) / 5) * 5,
       cutoff_exp_rank = round(min(inc_exp_rank) / 5) * 5,
       cutoff_hs_rank  = round(min(inc_hs_rank)  / 5) * 5,
+      cutoff_hsx_rank = round(min(inc_hsx_rank) / 5) * 5,
       cutoff_nw = round(min(net_worth)),
 
       .groups = 'drop'

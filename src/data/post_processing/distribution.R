@@ -208,15 +208,20 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
       #                  less the defined-contribution accrual and withdrawal
       #                  double-count. Defined benefit plans have no accruals
       #                  counterpart and so stay.
+      #
+      # The fourth definition is Haig-Simons less the accrued gain on a primary
+      # residence, which is mostly excluded from tax at realization and so
+      # depresses measured accrual rates in the middle of the distribution.
       inc_agi_core = agi,
       inc_exp_core = expanded_inc,
       inc_hs_core  = expanded_inc - (kg_st + kg_lt + other_gains) + accruals_sum -
-                     txbl_ira_dist - gross_pens_dist * dc_share
+                     txbl_ira_dist - gross_pens_dist * dc_share,
+      inc_hsx_core = inc_hs_core - accruals_ph
     ) %>%
     select(year, id, weight, n_people, filing_status, age, age_group, parent_group,
            labor, capital, agi, net_worth,
            income = expanded_inc,
-           inc_agi_core, inc_exp_core, inc_hs_core,
+           inc_agi_core, inc_exp_core, inc_hs_core, inc_hsx_core,
            corp_equity, net_capital, net_worth_stock,
            liab_iit_net, liab_pr, liab_deemed, liab_wealth, liab_iit_pr)
 
@@ -280,6 +285,15 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
     alloc_baseline = allocate_estate_to_heirs(baseline_detail, heir_px, yr, baseline_id)
     alloc_reform   = allocate_estate_to_heirs(reform_detail,   heir_px, yr, id)
 
+    # Allocate the tax on gains deemed realized at death through the same rank
+    # match, one call per leg. The baseline leg carries no deemed tax under
+    # current law and returns zeros through the allocator's degenerate case
+    alloc_deemed_baseline = allocate_estate_to_heirs(baseline_detail, heir_px,
+                                                     yr, baseline_id,
+                                                     tax = 'deemed')
+    alloc_deemed_reform   = allocate_estate_to_heirs(reform_detail, heir_px,
+                                                     yr, id, tax = 'deemed')
+
     # Write this scenario's heir-level liabilities, in the upstream interface's
     # schema, and the allocator diagnostics, one file per year
     if (write_supplemental) {
@@ -287,7 +301,8 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
       heir_px %>%
         left_join(alloc_reform$heirs, by = 'id') %>%
         write_csv(file.path(supp_root, paste0('estate_tax_detail_', yr, '.csv')))
-      bind_rows(alloc_baseline$diag, alloc_reform$diag) %>%
+      bind_rows(alloc_baseline$diag, alloc_reform$diag,
+                alloc_deemed_baseline$diag, alloc_deemed_reform$diag) %>%
         write_csv(file.path(supp_root, paste0('estate_allocator_diag_', yr, '.csv')))
     }
 
@@ -303,6 +318,16 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
           rename(liab_estate_reform = estate_tax_liability),
         by = 'id'
       ) %>%
+      left_join(
+        alloc_deemed_baseline$heirs %>%
+          rename(liab_deemed_heir = estate_tax_liability),
+        by = 'id'
+      ) %>%
+      left_join(
+        alloc_deemed_reform$heirs %>%
+          rename(liab_deemed_heir_reform = estate_tax_liability),
+        by = 'id'
+      ) %>%
       mutate(inheritance_reform = inheritance)
 
   } else {
@@ -313,11 +338,13 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
     }
     microdata %<>%
       mutate(
-        p_inheritance      = 0,
-        inheritance        = 0,
-        inheritance_reform = 0,
-        liab_estate        = 0,
-        liab_estate_reform = 0
+        p_inheritance           = 0,
+        inheritance             = 0,
+        inheritance_reform      = 0,
+        liab_estate             = 0,
+        liab_estate_reform      = 0,
+        liab_deemed_heir        = 0,
+        liab_deemed_heir_reform = 0
       )
   }
 
@@ -331,7 +358,8 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
     microdata %<>%
       mutate(
         across(
-          .cols = c(p_inheritance, starts_with('inheritance'), starts_with('liab_estate')),
+          .cols = c(p_inheritance, starts_with('inheritance'),
+                    starts_with('liab_estate'), starts_with('liab_deemed_heir')),
           .fns  = ~ replace_na(., 0)
         )
       )
@@ -348,12 +376,17 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
 
   microdata %<>%
 
-    # Split records based on probability of inheritance
+    # Split records based on probability of inheritance. The rank-matched
+    # deemed tax rides the heir copy the same way the estate tax does: like the
+    # estate tax it enters only the presentations that include tax at death,
+    # and no income moves with it, since the deemed gain accrued to the
+    # decedent.
     expand_grid(copy_id = 1:2) %>%
     mutate(
       weight = weight * if_else(copy_id == 1, p_inheritance, 1 - p_inheritance),
       across(
-        .cols = c(starts_with('inheritance'), starts_with('liab_estate')),
+        .cols = c(starts_with('inheritance'), starts_with('liab_estate'),
+                  starts_with('liab_deemed_heir')),
         .fns  = ~ . * (copy_id == 1)
       )
     ) %>%
@@ -367,22 +400,7 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
       # Express counterfactual reform variables in baseline dollars to account
       # for VAT (all reform tax amounts and inheritance are deflated together)
       income_reform = income,
-      across(.cols = ends_with('_reform'), .fns  = ~ . / vat_price_offset),
-
-      # Reattribute deemed realization tax from decedents to heir copies in
-      # proportion to inheritance, holding the annual total fixed. Like the estate
-      # tax it enters only the presentations that include tax at death. No income
-      # moves with it: the deemed gain accrued to the decedent.
-      liab_deemed_heir = if_else(
-        inheritance > 0,
-        sum(liab_deemed * weight) * inheritance / sum(inheritance * weight),
-        0
-      ),
-      liab_deemed_heir_reform = if_else(
-        inheritance > 0,
-        sum(liab_deemed_reform * weight) * inheritance / sum(inheritance * weight),
-        0
-      )
+      across(.cols = ends_with('_reform'), .fns  = ~ . / vat_price_offset)
     )
 
   return(microdata)
