@@ -7,9 +7,9 @@ build_dial_runs.py (scenario generation) and fit_surrogate.py /
 validate_surrogate.py (fitting + holdout validation). No compute — safe to
 import on the login node.
 
-Author-final lever list (2026-07-09), 10 parameters = 8 levers. Off-state =
-current law everywhere; increases only. The surrogate formula these anchors
-feed is
+Author-final lever list (2026-07-09), 11 parameters = 8 levers (the death
+lever gained an exclusion sub-axis 2026-07-28). Off-state = current law
+everywhere; increases only. The surrogate formula these anchors feed is
     V(x) = sum_i f_i(x_i) + sum_{i<j} I_ij g_i g_j + sum_flagged T_ijk g_i g_j g_k
 with f_i piecewise-linear through the solo anchors (bilinear for the 2-param
 levers, ladder for discrete), I_ij measured once per pair at the REF settings,
@@ -17,8 +17,8 @@ and g_i(x) = the lever's static solo total10 at x divided by its ref value.
 
 YAML text blocks reuse the factorial's idioms verbatim (build_factorial.py):
 cg + deemed co-habit pref.yaml; wealth/estate re-anchor indexation the same
-way. corp is BOTH: it names the corporate off-model pin (the economy
-column) and writes corp.yaml for the on-model rate.
+way. corp writes corp.yaml only — the rate is scored on-model
+(src/sim/corp_rate.R) and no lever touches the economy column.
 """
 
 import math
@@ -200,7 +200,27 @@ def deemed_files(vals):
         blk.append("  value:")
         blk.append("    '2014': 0")
         blk.append(f"    '2027': {code}")
-    return {"pref.yaml": ["\n".join(blk) + "\n"]}
+    parts = ["\n".join(blk) + "\n"]
+    # Per-decedent exclusion on top of §121: the first dollars of gain at death
+    # keep step-up, married amounts double via the filing-status mapper. Zero
+    # is current law for this parameter and writes nothing, which is what
+    # keeps pre-exclusion scenario dirs byte-identical on regeneration.
+    exem = float(vals.get("exem", 0.0))
+    if exem:
+        e = int(exem)
+        parts.append(f"""\
+# top_tax dial DEEMED exclusion: first ${e:,} of gain at death per decedent
+# keeps step-up (on top of Sec. 121); married amount is double
+kg_death_gain_excl_single:
+  value:
+    '2014': 0
+    '2027': {e}
+kg_death_gain_excl_married:
+  value:
+    '2014': 0
+    '2027': {e * 2}
+""")
+    return {"pref.yaml": parts}
 
 
 def wealth_files(vals):
@@ -332,11 +352,15 @@ LEVERS = [
          params=[dict(key="rate", label="Top rate", unit="%", fmt="pct",
                       off=20.0, min=20.0, max=50.0,
                       anchors=[25.0, 30.0, 35.0, 40.0, 45.0, 50.0], ref=40.0)]),
-    dict(key="corp", label="Corporate rate", grp="rate", kind="both",
+    # Corp anchors extended past 28 on 2026-07-27, once the rate went on-model:
+    # the single-anchor grid dated from the off-model wedge, which was linear in
+    # the rate change by construction. Ref stays 28 so pairs and triples remain
+    # comparable across vintages.
+    dict(key="corp", label="Corporate rate", grp="rate", kind="yaml",
          cluster=False, wealth_behavior=False, interp="linear1d", files=corp_files,
          params=[dict(key="rate", label="Rate", unit="%", fmt="pct",
-                      off=21.0, min=21.0, max=28.0,
-                      anchors=[28.0], ref=28.0)]),
+                      off=21.0, min=21.0, max=35.0,
+                      anchors=[24.5, 28.0, 31.5, 35.0], ref=28.0)]),
     # Wealth anchors DENSIFIED by the 2026-07-09 patch loop (quiz failures):
     # the original rate {1..5} x thr {50M, 500M, 1B} grid overpredicted by
     # +5-11% at thresholds interior to the 50M->500M log segment (true
@@ -350,10 +374,19 @@ LEVERS = [
                  dict(key="thr", label="Threshold", unit="$", fmt="usd", scale="log",
                       off=50e6, min=50e6, max=1000e6,
                       anchors=[50e6, 100e6, 150e6, 250e6, 500e6, 1000e6], ref=50e6)]),
+    # The exclusion axis was added 2026-07-28 (reviewer ask): a per-decedent
+    # dollar exclusion under carryover or deemed realization, on top of §121.
+    # interp='ladder_x' is the hybrid — discrete positions are still never
+    # g-scaled (a real run per position), while the exclusion sub-axis
+    # interpolates within a position via the within-position solo ratio.
+    # exem ref stays 0 so every pre-exclusion pair/triple/stack remains valid.
     dict(key="deemed", label="Gains at death", grp="struct", kind="yaml",
-         cluster=True, wealth_behavior=False, interp="ladder", files=deemed_files,
+         cluster=True, wealth_behavior=False, interp="ladder_x", files=deemed_files,
          params=[dict(key="pos", label="Treatment", unit="", fmt="pos",
-                      positions=["off", "carryover", "deemed"], off="off", ref="deemed")]),
+                      positions=["off", "carryover", "deemed"], off="off", ref="deemed"),
+                 dict(key="exem", label="Exclusion", unit="$", fmt="usd",
+                      off=0.0, min=0.0, max=5e6,
+                      anchors=[0.0, 1e6, 5e6], ref=0.0)]),
     dict(key="estate", label="Estate tax", grp="struct", kind="yaml",
          cluster=True, wealth_behavior=False, interp="bilinear", files=estate_files,
          params=[dict(key="rate", label="Top rate", unit="%", fmt="pct",
@@ -382,7 +415,7 @@ REF = {
     "cg":     {"rate": 40.0},
     "corp":   {"rate": 28.0},
     "wealth": {"rate": 2.0, "thr": 50e6},
-    "deemed": {"pos": "deemed"},
+    "deemed": {"pos": "deemed", "exem": 0.0},
     "estate": {"rate": 50.0, "exem": float(ESTATE_M2)},
     "qbi":    {"on": 1},
     "taxmax": {"on": 1},
@@ -394,6 +427,8 @@ def is_off(key, vals):
     lv = BY_KEY[key]
     if lv["interp"] == "bilinear" and key == "wealth":
         return vals["rate"] == 0.0                       # rate-0 edge is identically 0
+    if lv["interp"] == "ladder_x":
+        return vals["pos"] == "off"                      # exclusion is moot when off
     return all(vals[p["key"]] == p["off"] for p in lv["params"])
 
 
@@ -417,6 +452,11 @@ def solo_cells(key):
                 for a1 in p1["anchors"] for a2 in p2["anchors"]]
     if lv["interp"] == "ladder":
         return [({"pos": p}, True) for p in lv["params"][0]["positions"] if p != "off"]
+    if lv["interp"] == "ladder_x":
+        p_pos, p_x = lv["params"]
+        return [({"pos": p, p_x["key"]: a}, True)
+                for p in p_pos["positions"] if p != "off"
+                for a in p_x["anchors"]]
     if lv["interp"] == "binary":
         return [({"on": 1}, True)]
     raise ValueError(lv["interp"])
@@ -436,16 +476,24 @@ PAIR_CORNERS = [
     ("wealth", {"rate": 1.0, "thr": 1000e6}, "deemed", {"pos": "deemed"}),
     ("ord", {"rate": 50.0}, "cg", {"rate": 30.0}),
     ("ord", {"rate": 50.0}, "qbi", {"on": 1}),
-    ("corp", {"rate": 28.0}, "cg", {"rate": 30.0}),
+    ("corp", {"rate": 35.0}, "cg", {"rate": 30.0}),
+    # Exclusion corners (2026-07-28): test that the within-position exclusion
+    # ratio scales the deemed pair terms away from exem = 0.
+    ("cg", {"rate": 50.0}, "deemed", {"pos": "deemed", "exem": 5e6}),
+    ("wealth", {"rate": 2.0, "thr": 50e6}, "deemed", {"pos": "carryover", "exem": 1e6}),
 ]
 
 # Quiz: seeded holdout packages, strictly excluded from fitting. Drawn in
 # build_dial_runs.py (deterministic under seed): sizes 3-8, continuous params
 # OFF-anchor at presentable values, >=4 packages with >=3 cluster members,
-# >=2 with deemed=carryover inside a 3+ stack. corp enters at 28 only (single
-# OME wedge); deemed/qbi/taxmax at their discrete positions.
+# >=2 with deemed=carryover inside a 3+ stack. deemed/qbi/taxmax enter at
+# their discrete positions.
 QUIZ = dict(seed=20260709, n=16, size_min=3, size_max=8,
-            min_cluster_heavy=4, min_carryover=2)
+            min_cluster_heavy=4, min_carryover=2,
+            # Exclusion quiz packages (2026-07-28), drawn from their own seeded
+            # stream so the original sixteen stay byte-identical: each contains
+            # the death lever at an off-anchor exclusion inside a stack.
+            n_exem=4, seed_exem=20260728)
 
 # Patch scenarios appended after quiz failures (validate names the offending
 # lever/pair -> add targeted anchors/corners here -> build_dial_runs.py
@@ -529,3 +577,18 @@ def _patch3():
 
 
 PATCHES["3"] = _patch3()
+
+# Patch 4 (2026-07-28, first v5 quiz round): the exclusion sub-axis broke the
+# within-position ratio scaling of pair vectors — pc_cgr50_deemede5 missed by
+# -30% and every failing quiz stacked cg with an excluded deemed regime. The
+# ratio moves the interaction the way it moves the solo, but a large exclusion
+# guts the interacting base faster than the solo. So extend the discrete
+# principle to the exclusion anchors: measure every deemed pair at each
+# nonzero exclusion anchor with a real run (kind='pairexem'); the evaluator
+# interpolates between measured anchors instead of ratio-scaling.
+PATCHES["4"] = [
+    dict(id=f"prx_{a}_deemed_e{int(e / 1e6)}", kind="pairexem",
+         levers={a: REF[a], "deemed": {"pos": "deemed", "exem": float(e)}})
+    for a in LEVER_KEYS if a != "deemed"
+    for e in (1e6, 5e6)
+]

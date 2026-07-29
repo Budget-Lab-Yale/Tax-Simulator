@@ -1,5 +1,5 @@
 ---
-# top_tax corp dial: top corporate rate 21% -> 28% from 2027.
+# top_tax corp dial: top corporate rate 21% -> 27.5% from 2027.
 # This rate is the WHOLE corporate story now: src/sim/corp_rate.R scores it
 # against the CBO corporate level, and it feeds the entity-shifting wedge.
 # No off-model estimate is involved.
@@ -8,4 +8,4 @@ rate:
   value:
     '2014': 0.35
     '2018': 0.21
-    '2027': 0.28
+    '2027': 0.275

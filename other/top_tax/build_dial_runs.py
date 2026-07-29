@@ -77,16 +77,19 @@ def vals_slug(key, vals, sep="_"):
         es = "cur" if e == L.ESTATE_CUR else num_slug(e / 1e6)
         return f"r{num_slug(vals['rate'])}{sep}e{es}"
     if key == "deemed":
-        return vals["pos"]
+        exem = float(vals.get("exem", 0.0))
+        return vals["pos"] + (f"{sep}e{num_slug(exem / 1e6)}" if exem else "")
     if key in ("qbi", "taxmax"):
         return "on"
     return f"r{num_slug(vals['rate'])}"
 
 
 def compact_slug(key, vals):
-    """Corner-style: cg50, wealth3t500, estate60e5, deemed, qbi."""
+    """Corner-style: cg50, wealth3t500, estate60e5, deemed, deemede5, qbi."""
     if key == "deemed":
-        return "deemed" if vals["pos"] == "deemed" else "deemedco"
+        base = "deemed" if vals["pos"] == "deemed" else "deemedco"
+        exem = float(vals.get("exem", 0.0))
+        return base + (f"e{num_slug(exem / 1e6)}" if exem else "")
     if key in ("qbi", "taxmax"):
         return key
     return key + vals_slug(key, vals, sep="")
@@ -106,7 +109,9 @@ def vals_label(key, vals):
         es = "current" if e == L.ESTATE_CUR else f"${e / 1e6:g}M"
         return f"estate {vals['rate']:g}% / {es}"
     if key == "deemed":
-        return f"deemed:{vals['pos']}"
+        exem = float(vals.get("exem", 0.0))
+        lbl = f"deemed:{vals['pos']}"
+        return lbl + (f" excl ${exem / 1e6:g}M" if exem else "")
     return key
 
 
@@ -179,7 +184,7 @@ def _quiz_vals(rng, key, force_pos=None):
     if key == "cg":
         return {"rate": _presentable_rate(rng, 22.0, 50.0, lv["params"][0]["anchors"])}
     if key == "corp":
-        return {"rate": 28.0}                       # single OME wedge — 28 only
+        return {"rate": _presentable_rate(rng, 22.0, 35.0, lv["params"][0]["anchors"])}
     if key == "wealth":
         thr = rng.choice([75e6, 100e6, 150e6, 200e6, 300e6, 700e6, 800e6])
         return {"rate": _presentable_rate(rng, 0.5, 5.0, [1, 2, 3, 4, 5], step=0.25),
@@ -192,7 +197,7 @@ def _quiz_vals(rng, key, force_pos=None):
                 "exem": exem}
     if key == "deemed":
         pos = force_pos or ("carryover" if rng.random() < 0.3 else "deemed")
-        return {"pos": pos}
+        return {"pos": pos, "exem": 0.0}
     return {"on": 1}
 
 
@@ -219,6 +224,21 @@ def make_quiz():
         keys = [k for k in L.LEVER_KEYS if k in keys]     # canonical order
         packages.append({k: _quiz_vals(rng, k, force_pos if k == "deemed" else None)
                          for k in keys})
+
+    # Exclusion packages, from their own seeded stream so the packages above
+    # never reshuffle: the death lever at an off-anchor exclusion inside a
+    # stack, alternating positions.
+    rng2 = random.Random(cfg["seed_exem"])
+    for i in range(cfg["n_exem"]):
+        size = rng2.randint(3, 5)
+        keys = ["deemed"] + rng2.sample([k for k in L.LEVER_KEYS if k != "deemed"],
+                                        size - 1)
+        keys = [k for k in L.LEVER_KEYS if k in keys]
+        pos = "carryover" if i % 2 else "deemed"
+        exem = _presentable_rate(rng2, 0.25, 4.75, [0.0, 1.0, 5.0], step=0.25) * 1e6
+        pkg = {k: _quiz_vals(rng2, k, None) for k in keys}
+        pkg["deemed"] = {"pos": pos, "exem": exem}
+        packages.append(pkg)
     return packages
 
 

@@ -1,0 +1,15 @@
+ID,kind,levers_json,label
+prx_ord_deemed_e1,pairexem,"{""deemed"": {""exem"": 1000000.0, ""pos"": ""deemed""}, ""ord"": {""rate"": 44.8}}",ord 44.8% + deemed:deemed excl $1M
+prx_ord_deemed_e5,pairexem,"{""deemed"": {""exem"": 5000000.0, ""pos"": ""deemed""}, ""ord"": {""rate"": 44.8}}",ord 44.8% + deemed:deemed excl $5M
+prx_cg_deemed_e1,pairexem,"{""cg"": {""rate"": 40.0}, ""deemed"": {""exem"": 1000000.0, ""pos"": ""deemed""}}",cg 40% + deemed:deemed excl $1M
+prx_cg_deemed_e5,pairexem,"{""cg"": {""rate"": 40.0}, ""deemed"": {""exem"": 5000000.0, ""pos"": ""deemed""}}",cg 40% + deemed:deemed excl $5M
+prx_corp_deemed_e1,pairexem,"{""corp"": {""rate"": 28.0}, ""deemed"": {""exem"": 1000000.0, ""pos"": ""deemed""}}",corp 28% + deemed:deemed excl $1M
+prx_corp_deemed_e5,pairexem,"{""corp"": {""rate"": 28.0}, ""deemed"": {""exem"": 5000000.0, ""pos"": ""deemed""}}",corp 28% + deemed:deemed excl $5M
+prx_wealth_deemed_e1,pairexem,"{""deemed"": {""exem"": 1000000.0, ""pos"": ""deemed""}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + deemed:deemed excl $1M
+prx_wealth_deemed_e5,pairexem,"{""deemed"": {""exem"": 5000000.0, ""pos"": ""deemed""}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + deemed:deemed excl $5M
+prx_estate_deemed_e1,pairexem,"{""deemed"": {""exem"": 1000000.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}}",deemed:deemed excl $1M + estate 50% / $8.46M
+prx_estate_deemed_e5,pairexem,"{""deemed"": {""exem"": 5000000.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}}",deemed:deemed excl $5M + estate 50% / $8.46M
+prx_qbi_deemed_e1,pairexem,"{""deemed"": {""exem"": 1000000.0, ""pos"": ""deemed""}, ""qbi"": {""on"": 1}}",deemed:deemed excl $1M + qbi
+prx_qbi_deemed_e5,pairexem,"{""deemed"": {""exem"": 5000000.0, ""pos"": ""deemed""}, ""qbi"": {""on"": 1}}",deemed:deemed excl $5M + qbi
+prx_taxmax_deemed_e1,pairexem,"{""deemed"": {""exem"": 1000000.0, ""pos"": ""deemed""}, ""taxmax"": {""on"": 1}}",deemed:deemed excl $1M + taxmax
+prx_taxmax_deemed_e5,pairexem,"{""deemed"": {""exem"": 5000000.0, ""pos"": ""deemed""}, ""taxmax"": {""on"": 1}}",deemed:deemed excl $5M + taxmax

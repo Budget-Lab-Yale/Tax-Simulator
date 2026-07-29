@@ -1,0 +1,43 @@
+---
+# top_tax dial CG: top preferred (LTCG/qual-div) rate -> 42.5% from 2027
+rates:
+  value:
+    '2014': [0.0, 0.15, 0.20]
+    '2027': [0.0, 0.15, 0.425]
+
+# top_tax dial DEEMED: deemed at death, all asset classes, from 2027
+# (code 0=step-up baseline, 1=carryover, 2=deemed_realization)
+kg_death_regime_equities:
+  value:
+    '2014': 0
+    '2027': 2
+kg_death_regime_pass_throughs:
+  value:
+    '2014': 0
+    '2027': 2
+kg_death_regime_primary_home:
+  value:
+    '2014': 0
+    '2027': 2
+kg_death_regime_other_home:
+  value:
+    '2014': 0
+    '2027': 2
+kg_death_regime_re_fund:
+  value:
+    '2014': 0
+    '2027': 2
+
+# top_tax dial DEEMED exclusion: first $1,250,000 of gain at death per decedent
+# keeps step-up (on top of Sec. 121); married amount is double
+kg_death_gain_excl_single:
+  value:
+    '2014': 0
+    '2027': 1250000
+kg_death_gain_excl_married:
+  value:
+    '2014': 0
+    '2027': 2500000
+
+no_ord_cap:
+  value: 1

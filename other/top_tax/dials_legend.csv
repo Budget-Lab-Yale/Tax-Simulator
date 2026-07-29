@@ -8,7 +8,10 @@ s_cg_r35,solo,"{""cg"": {""rate"": 35.0}}",cg 35%
 s_cg_r40,solo,"{""cg"": {""rate"": 40.0}}",cg 40%
 s_cg_r45,solo,"{""cg"": {""rate"": 45.0}}",cg 45%
 s_cg_r50,solo,"{""cg"": {""rate"": 50.0}}",cg 50%
+s_corp_r24p5,solo,"{""corp"": {""rate"": 24.5}}",corp 24.5%
 s_corp_r28,solo,"{""corp"": {""rate"": 28.0}}",corp 28%
+s_corp_r31p5,solo,"{""corp"": {""rate"": 31.5}}",corp 31.5%
+s_corp_r35,solo,"{""corp"": {""rate"": 35.0}}",corp 35%
 s_wealth_r0p5_t50,solo,"{""wealth"": {""rate"": 0.5, ""thr"": 50000000.0}}",wealth 0.5% > $50M
 s_wealth_r0p5_t100,solo,"{""wealth"": {""rate"": 0.5, ""thr"": 100000000.0}}",wealth 0.5% > $100M
 s_wealth_r0p5_t150,solo,"{""wealth"": {""rate"": 0.5, ""thr"": 150000000.0}}",wealth 0.5% > $150M
@@ -45,8 +48,12 @@ s_wealth_r5_t150,solo,"{""wealth"": {""rate"": 5.0, ""thr"": 150000000.0}}",weal
 s_wealth_r5_t250,solo,"{""wealth"": {""rate"": 5.0, ""thr"": 250000000.0}}",wealth 5% > $250M
 s_wealth_r5_t500,solo,"{""wealth"": {""rate"": 5.0, ""thr"": 500000000.0}}",wealth 5% > $500M
 s_wealth_r5_t1000,solo,"{""wealth"": {""rate"": 5.0, ""thr"": 1000000000.0}}",wealth 5% > $1000M
-s_deemed_carryover,solo,"{""deemed"": {""pos"": ""carryover""}}",deemed:carryover
-s_deemed_deemed,solo,"{""deemed"": {""pos"": ""deemed""}}",deemed:deemed
+s_deemed_carryover,solo,"{""deemed"": {""exem"": 0.0, ""pos"": ""carryover""}}",deemed:carryover
+s_deemed_carryover_e1,solo,"{""deemed"": {""exem"": 1000000.0, ""pos"": ""carryover""}}",deemed:carryover excl $1M
+s_deemed_carryover_e5,solo,"{""deemed"": {""exem"": 5000000.0, ""pos"": ""carryover""}}",deemed:carryover excl $5M
+s_deemed_deemed,solo,"{""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}}",deemed:deemed
+s_deemed_deemed_e1,solo,"{""deemed"": {""exem"": 1000000.0, ""pos"": ""deemed""}}",deemed:deemed excl $1M
+s_deemed_deemed_e5,solo,"{""deemed"": {""exem"": 5000000.0, ""pos"": ""deemed""}}",deemed:deemed excl $5M
 s_estate_r40_e5,solo,"{""estate"": {""exem"": 5000000.0, ""rate"": 40.0}}",estate 40% / $5M
 s_estate_r40_e8p46,solo,"{""estate"": {""exem"": 8460000.0, ""rate"": 40.0}}",estate 40% / $8.46M
 s_estate_r40_e11p93,solo,"{""estate"": {""exem"": 11930000.0, ""rate"": 40.0}}",estate 40% / $11.93M
@@ -63,28 +70,28 @@ s_taxmax_on,solo,"{""taxmax"": {""on"": 1}}",taxmax
 pr_ord_cg,pair,"{""cg"": {""rate"": 40.0}, ""ord"": {""rate"": 44.8}}",ord 44.8% + cg 40%
 pr_ord_corp,pair,"{""corp"": {""rate"": 28.0}, ""ord"": {""rate"": 44.8}}",ord 44.8% + corp 28%
 pr_ord_wealth,pair,"{""ord"": {""rate"": 44.8}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",ord 44.8% + wealth 2% > $50M
-pr_ord_deemed,pair,"{""deemed"": {""pos"": ""deemed""}, ""ord"": {""rate"": 44.8}}",ord 44.8% + deemed:deemed
+pr_ord_deemed,pair,"{""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""ord"": {""rate"": 44.8}}",ord 44.8% + deemed:deemed
 pr_ord_estate,pair,"{""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""ord"": {""rate"": 44.8}}",ord 44.8% + estate 50% / $8.46M
 pr_ord_qbi,pair,"{""ord"": {""rate"": 44.8}, ""qbi"": {""on"": 1}}",ord 44.8% + qbi
 pr_ord_taxmax,pair,"{""ord"": {""rate"": 44.8}, ""taxmax"": {""on"": 1}}",ord 44.8% + taxmax
 pr_cg_corp,pair,"{""cg"": {""rate"": 40.0}, ""corp"": {""rate"": 28.0}}",cg 40% + corp 28%
 pr_cg_wealth,pair,"{""cg"": {""rate"": 40.0}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",cg 40% + wealth 2% > $50M
-pr_cg_deemed,pair,"{""cg"": {""rate"": 40.0}, ""deemed"": {""pos"": ""deemed""}}",cg 40% + deemed:deemed
+pr_cg_deemed,pair,"{""cg"": {""rate"": 40.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}}",cg 40% + deemed:deemed
 pr_cg_estate,pair,"{""cg"": {""rate"": 40.0}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}}",cg 40% + estate 50% / $8.46M
 pr_cg_qbi,pair,"{""cg"": {""rate"": 40.0}, ""qbi"": {""on"": 1}}",cg 40% + qbi
 pr_cg_taxmax,pair,"{""cg"": {""rate"": 40.0}, ""taxmax"": {""on"": 1}}",cg 40% + taxmax
 pr_corp_wealth,pair,"{""corp"": {""rate"": 28.0}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",corp 28% + wealth 2% > $50M
-pr_corp_deemed,pair,"{""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""deemed""}}",corp 28% + deemed:deemed
+pr_corp_deemed,pair,"{""corp"": {""rate"": 28.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}}",corp 28% + deemed:deemed
 pr_corp_estate,pair,"{""corp"": {""rate"": 28.0}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}}",corp 28% + estate 50% / $8.46M
 pr_corp_qbi,pair,"{""corp"": {""rate"": 28.0}, ""qbi"": {""on"": 1}}",corp 28% + qbi
 pr_corp_taxmax,pair,"{""corp"": {""rate"": 28.0}, ""taxmax"": {""on"": 1}}",corp 28% + taxmax
-pr_wealth_deemed,pair,"{""deemed"": {""pos"": ""deemed""}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + deemed:deemed
+pr_wealth_deemed,pair,"{""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + deemed:deemed
 pr_wealth_estate,pair,"{""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + estate 50% / $8.46M
 pr_wealth_qbi,pair,"{""qbi"": {""on"": 1}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + qbi
 pr_wealth_taxmax,pair,"{""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + taxmax
-pr_deemed_estate,pair,"{""deemed"": {""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}}",deemed:deemed + estate 50% / $8.46M
-pr_deemed_qbi,pair,"{""deemed"": {""pos"": ""deemed""}, ""qbi"": {""on"": 1}}",deemed:deemed + qbi
-pr_deemed_taxmax,pair,"{""deemed"": {""pos"": ""deemed""}, ""taxmax"": {""on"": 1}}",deemed:deemed + taxmax
+pr_deemed_estate,pair,"{""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}}",deemed:deemed + estate 50% / $8.46M
+pr_deemed_qbi,pair,"{""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""qbi"": {""on"": 1}}",deemed:deemed + qbi
+pr_deemed_taxmax,pair,"{""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""taxmax"": {""on"": 1}}",deemed:deemed + taxmax
 pr_estate_qbi,pair,"{""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""qbi"": {""on"": 1}}",estate 50% / $8.46M + qbi
 pr_estate_taxmax,pair,"{""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""taxmax"": {""on"": 1}}",estate 50% / $8.46M + taxmax
 pr_qbi_taxmax,pair,"{""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}}",qbi + taxmax
@@ -97,59 +104,59 @@ prco_qbi_deemed,pairco,"{""deemed"": {""pos"": ""carryover""}, ""qbi"": {""on"":
 prco_taxmax_deemed,pairco,"{""deemed"": {""pos"": ""carryover""}, ""taxmax"": {""on"": 1}}",deemed:carryover + taxmax
 t_ord_cg_corp,triple,"{""cg"": {""rate"": 40.0}, ""corp"": {""rate"": 28.0}, ""ord"": {""rate"": 44.8}}",ord 44.8% + cg 40% + corp 28%
 t_ord_cg_wealth,triple,"{""cg"": {""rate"": 40.0}, ""ord"": {""rate"": 44.8}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",ord 44.8% + cg 40% + wealth 2% > $50M
-t_ord_cg_deemed,triple,"{""cg"": {""rate"": 40.0}, ""deemed"": {""pos"": ""deemed""}, ""ord"": {""rate"": 44.8}}",ord 44.8% + cg 40% + deemed:deemed
+t_ord_cg_deemed,triple,"{""cg"": {""rate"": 40.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""ord"": {""rate"": 44.8}}",ord 44.8% + cg 40% + deemed:deemed
 t_ord_cg_estate,triple,"{""cg"": {""rate"": 40.0}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""ord"": {""rate"": 44.8}}",ord 44.8% + cg 40% + estate 50% / $8.46M
 t_ord_cg_qbi,triple,"{""cg"": {""rate"": 40.0}, ""ord"": {""rate"": 44.8}, ""qbi"": {""on"": 1}}",ord 44.8% + cg 40% + qbi
 t_ord_cg_taxmax,triple,"{""cg"": {""rate"": 40.0}, ""ord"": {""rate"": 44.8}, ""taxmax"": {""on"": 1}}",ord 44.8% + cg 40% + taxmax
 t_ord_corp_wealth,triple,"{""corp"": {""rate"": 28.0}, ""ord"": {""rate"": 44.8}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",ord 44.8% + corp 28% + wealth 2% > $50M
-t_ord_corp_deemed,triple,"{""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""deemed""}, ""ord"": {""rate"": 44.8}}",ord 44.8% + corp 28% + deemed:deemed
+t_ord_corp_deemed,triple,"{""corp"": {""rate"": 28.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""ord"": {""rate"": 44.8}}",ord 44.8% + corp 28% + deemed:deemed
 t_ord_corp_estate,triple,"{""corp"": {""rate"": 28.0}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""ord"": {""rate"": 44.8}}",ord 44.8% + corp 28% + estate 50% / $8.46M
 t_ord_corp_qbi,triple,"{""corp"": {""rate"": 28.0}, ""ord"": {""rate"": 44.8}, ""qbi"": {""on"": 1}}",ord 44.8% + corp 28% + qbi
 t_ord_corp_taxmax,triple,"{""corp"": {""rate"": 28.0}, ""ord"": {""rate"": 44.8}, ""taxmax"": {""on"": 1}}",ord 44.8% + corp 28% + taxmax
-t_ord_wealth_deemed,triple,"{""deemed"": {""pos"": ""deemed""}, ""ord"": {""rate"": 44.8}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",ord 44.8% + wealth 2% > $50M + deemed:deemed
+t_ord_wealth_deemed,triple,"{""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""ord"": {""rate"": 44.8}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",ord 44.8% + wealth 2% > $50M + deemed:deemed
 t_ord_wealth_estate,triple,"{""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""ord"": {""rate"": 44.8}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",ord 44.8% + wealth 2% > $50M + estate 50% / $8.46M
 t_ord_wealth_qbi,triple,"{""ord"": {""rate"": 44.8}, ""qbi"": {""on"": 1}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",ord 44.8% + wealth 2% > $50M + qbi
 t_ord_wealth_taxmax,triple,"{""ord"": {""rate"": 44.8}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",ord 44.8% + wealth 2% > $50M + taxmax
-t_ord_deemed_estate,triple,"{""deemed"": {""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""ord"": {""rate"": 44.8}}",ord 44.8% + deemed:deemed + estate 50% / $8.46M
-t_ord_deemed_qbi,triple,"{""deemed"": {""pos"": ""deemed""}, ""ord"": {""rate"": 44.8}, ""qbi"": {""on"": 1}}",ord 44.8% + deemed:deemed + qbi
-t_ord_deemed_taxmax,triple,"{""deemed"": {""pos"": ""deemed""}, ""ord"": {""rate"": 44.8}, ""taxmax"": {""on"": 1}}",ord 44.8% + deemed:deemed + taxmax
+t_ord_deemed_estate,triple,"{""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""ord"": {""rate"": 44.8}}",ord 44.8% + deemed:deemed + estate 50% / $8.46M
+t_ord_deemed_qbi,triple,"{""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""ord"": {""rate"": 44.8}, ""qbi"": {""on"": 1}}",ord 44.8% + deemed:deemed + qbi
+t_ord_deemed_taxmax,triple,"{""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""ord"": {""rate"": 44.8}, ""taxmax"": {""on"": 1}}",ord 44.8% + deemed:deemed + taxmax
 t_ord_estate_qbi,triple,"{""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""ord"": {""rate"": 44.8}, ""qbi"": {""on"": 1}}",ord 44.8% + estate 50% / $8.46M + qbi
 t_ord_estate_taxmax,triple,"{""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""ord"": {""rate"": 44.8}, ""taxmax"": {""on"": 1}}",ord 44.8% + estate 50% / $8.46M + taxmax
 t_ord_qbi_taxmax,triple,"{""ord"": {""rate"": 44.8}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}}",ord 44.8% + qbi + taxmax
 t_cg_corp_wealth,triple,"{""cg"": {""rate"": 40.0}, ""corp"": {""rate"": 28.0}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",cg 40% + corp 28% + wealth 2% > $50M
-t_cg_corp_deemed,triple,"{""cg"": {""rate"": 40.0}, ""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""deemed""}}",cg 40% + corp 28% + deemed:deemed
+t_cg_corp_deemed,triple,"{""cg"": {""rate"": 40.0}, ""corp"": {""rate"": 28.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}}",cg 40% + corp 28% + deemed:deemed
 t_cg_corp_estate,triple,"{""cg"": {""rate"": 40.0}, ""corp"": {""rate"": 28.0}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}}",cg 40% + corp 28% + estate 50% / $8.46M
 t_cg_corp_qbi,triple,"{""cg"": {""rate"": 40.0}, ""corp"": {""rate"": 28.0}, ""qbi"": {""on"": 1}}",cg 40% + corp 28% + qbi
 t_cg_corp_taxmax,triple,"{""cg"": {""rate"": 40.0}, ""corp"": {""rate"": 28.0}, ""taxmax"": {""on"": 1}}",cg 40% + corp 28% + taxmax
-t_cg_wealth_deemed,triple,"{""cg"": {""rate"": 40.0}, ""deemed"": {""pos"": ""deemed""}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",cg 40% + wealth 2% > $50M + deemed:deemed
+t_cg_wealth_deemed,triple,"{""cg"": {""rate"": 40.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",cg 40% + wealth 2% > $50M + deemed:deemed
 t_cg_wealth_estate,triple,"{""cg"": {""rate"": 40.0}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",cg 40% + wealth 2% > $50M + estate 50% / $8.46M
 t_cg_wealth_qbi,triple,"{""cg"": {""rate"": 40.0}, ""qbi"": {""on"": 1}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",cg 40% + wealth 2% > $50M + qbi
 t_cg_wealth_taxmax,triple,"{""cg"": {""rate"": 40.0}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",cg 40% + wealth 2% > $50M + taxmax
-t_cg_deemed_estate,triple,"{""cg"": {""rate"": 40.0}, ""deemed"": {""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}}",cg 40% + deemed:deemed + estate 50% / $8.46M
-t_cg_deemed_qbi,triple,"{""cg"": {""rate"": 40.0}, ""deemed"": {""pos"": ""deemed""}, ""qbi"": {""on"": 1}}",cg 40% + deemed:deemed + qbi
-t_cg_deemed_taxmax,triple,"{""cg"": {""rate"": 40.0}, ""deemed"": {""pos"": ""deemed""}, ""taxmax"": {""on"": 1}}",cg 40% + deemed:deemed + taxmax
+t_cg_deemed_estate,triple,"{""cg"": {""rate"": 40.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}}",cg 40% + deemed:deemed + estate 50% / $8.46M
+t_cg_deemed_qbi,triple,"{""cg"": {""rate"": 40.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""qbi"": {""on"": 1}}",cg 40% + deemed:deemed + qbi
+t_cg_deemed_taxmax,triple,"{""cg"": {""rate"": 40.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""taxmax"": {""on"": 1}}",cg 40% + deemed:deemed + taxmax
 t_cg_estate_qbi,triple,"{""cg"": {""rate"": 40.0}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""qbi"": {""on"": 1}}",cg 40% + estate 50% / $8.46M + qbi
 t_cg_estate_taxmax,triple,"{""cg"": {""rate"": 40.0}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""taxmax"": {""on"": 1}}",cg 40% + estate 50% / $8.46M + taxmax
 t_cg_qbi_taxmax,triple,"{""cg"": {""rate"": 40.0}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}}",cg 40% + qbi + taxmax
-t_corp_wealth_deemed,triple,"{""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""deemed""}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",corp 28% + wealth 2% > $50M + deemed:deemed
+t_corp_wealth_deemed,triple,"{""corp"": {""rate"": 28.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",corp 28% + wealth 2% > $50M + deemed:deemed
 t_corp_wealth_estate,triple,"{""corp"": {""rate"": 28.0}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",corp 28% + wealth 2% > $50M + estate 50% / $8.46M
 t_corp_wealth_qbi,triple,"{""corp"": {""rate"": 28.0}, ""qbi"": {""on"": 1}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",corp 28% + wealth 2% > $50M + qbi
 t_corp_wealth_taxmax,triple,"{""corp"": {""rate"": 28.0}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",corp 28% + wealth 2% > $50M + taxmax
-t_corp_deemed_estate,triple,"{""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}}",corp 28% + deemed:deemed + estate 50% / $8.46M
-t_corp_deemed_qbi,triple,"{""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""deemed""}, ""qbi"": {""on"": 1}}",corp 28% + deemed:deemed + qbi
-t_corp_deemed_taxmax,triple,"{""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""deemed""}, ""taxmax"": {""on"": 1}}",corp 28% + deemed:deemed + taxmax
+t_corp_deemed_estate,triple,"{""corp"": {""rate"": 28.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}}",corp 28% + deemed:deemed + estate 50% / $8.46M
+t_corp_deemed_qbi,triple,"{""corp"": {""rate"": 28.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""qbi"": {""on"": 1}}",corp 28% + deemed:deemed + qbi
+t_corp_deemed_taxmax,triple,"{""corp"": {""rate"": 28.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""taxmax"": {""on"": 1}}",corp 28% + deemed:deemed + taxmax
 t_corp_estate_qbi,triple,"{""corp"": {""rate"": 28.0}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""qbi"": {""on"": 1}}",corp 28% + estate 50% / $8.46M + qbi
 t_corp_estate_taxmax,triple,"{""corp"": {""rate"": 28.0}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""taxmax"": {""on"": 1}}",corp 28% + estate 50% / $8.46M + taxmax
 t_corp_qbi_taxmax,triple,"{""corp"": {""rate"": 28.0}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}}",corp 28% + qbi + taxmax
-t_wealth_deemed_estate,triple,"{""deemed"": {""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + deemed:deemed + estate 50% / $8.46M
-t_wealth_deemed_qbi,triple,"{""deemed"": {""pos"": ""deemed""}, ""qbi"": {""on"": 1}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + deemed:deemed + qbi
-t_wealth_deemed_taxmax,triple,"{""deemed"": {""pos"": ""deemed""}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + deemed:deemed + taxmax
+t_wealth_deemed_estate,triple,"{""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + deemed:deemed + estate 50% / $8.46M
+t_wealth_deemed_qbi,triple,"{""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""qbi"": {""on"": 1}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + deemed:deemed + qbi
+t_wealth_deemed_taxmax,triple,"{""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + deemed:deemed + taxmax
 t_wealth_estate_qbi,triple,"{""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""qbi"": {""on"": 1}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + estate 50% / $8.46M + qbi
 t_wealth_estate_taxmax,triple,"{""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + estate 50% / $8.46M + taxmax
 t_wealth_qbi_taxmax,triple,"{""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + qbi + taxmax
-t_deemed_estate_qbi,triple,"{""deemed"": {""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""qbi"": {""on"": 1}}",deemed:deemed + estate 50% / $8.46M + qbi
-t_deemed_estate_taxmax,triple,"{""deemed"": {""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""taxmax"": {""on"": 1}}",deemed:deemed + estate 50% / $8.46M + taxmax
-t_deemed_qbi_taxmax,triple,"{""deemed"": {""pos"": ""deemed""}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}}",deemed:deemed + qbi + taxmax
+t_deemed_estate_qbi,triple,"{""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""qbi"": {""on"": 1}}",deemed:deemed + estate 50% / $8.46M + qbi
+t_deemed_estate_taxmax,triple,"{""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""taxmax"": {""on"": 1}}",deemed:deemed + estate 50% / $8.46M + taxmax
+t_deemed_qbi_taxmax,triple,"{""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}}",deemed:deemed + qbi + taxmax
 t_estate_qbi_taxmax,triple,"{""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}}",estate 50% / $8.46M + qbi + taxmax
 tco_ord_cg_deemed,tripco,"{""cg"": {""rate"": 40.0}, ""deemed"": {""pos"": ""carryover""}, ""ord"": {""rate"": 44.8}}",ord 44.8% + cg 40% + deemed:carryover
 tco_ord_corp_deemed,tripco,"{""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""carryover""}, ""ord"": {""rate"": 44.8}}",ord 44.8% + corp 28% + deemed:carryover
@@ -179,21 +186,27 @@ pc_wealthr4t50_estater60e5,corner,"{""estate"": {""exem"": 5000000.0, ""rate"": 
 pc_wealthr1t1000_deemed,corner,"{""deemed"": {""pos"": ""deemed""}, ""wealth"": {""rate"": 1.0, ""thr"": 1000000000.0}}",wealth 1% > $1000M + deemed:deemed
 pc_ordr50_cgr30,corner,"{""cg"": {""rate"": 30.0}, ""ord"": {""rate"": 50.0}}",ord 50% + cg 30%
 pc_ordr50_qbi,corner,"{""ord"": {""rate"": 50.0}, ""qbi"": {""on"": 1}}",ord 50% + qbi
-pc_corpr28_cgr30,corner,"{""cg"": {""rate"": 30.0}, ""corp"": {""rate"": 28.0}}",cg 30% + corp 28%
-q01,quiz,"{""cg"": {""rate"": 26.5}, ""deemed"": {""pos"": ""deemed""}, ""estate"": {""exem"": 14000000.0, ""rate"": 52.0}, ""ord"": {""rate"": 42.0}, ""qbi"": {""on"": 1}, ""wealth"": {""rate"": 1.25, ""thr"": 150000000.0}}",ord 42% + cg 26.5% + wealth 1.25% > $150M + deemed:deemed + estate 52% / $14M + qbi
-q02,quiz,"{""cg"": {""rate"": 38.5}, ""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""deemed""}, ""estate"": {""exem"": 12000000.0, ""rate"": 47.0}, ""ord"": {""rate"": 46.0}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 1.25, ""thr"": 150000000.0}}",ord 46% + cg 38.5% + corp 28% + wealth 1.25% > $150M + deemed:deemed + estate 47% / $12M + qbi + taxmax
-q03,quiz,"{""cg"": {""rate"": 26.5}, ""deemed"": {""pos"": ""deemed""}, ""estate"": {""exem"": 8750000.0, ""rate"": 45.0}}",cg 26.5% + deemed:deemed + estate 45% / $8.75M
-q04,quiz,"{""cg"": {""rate"": 35.5}, ""deemed"": {""pos"": ""deemed""}, ""estate"": {""exem"": 10500000.0, ""rate"": 53.0}, ""ord"": {""rate"": 43.0}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 1.25, ""thr"": 100000000.0}}",ord 43% + cg 35.5% + wealth 1.25% > $100M + deemed:deemed + estate 53% / $10.5M + qbi + taxmax
-q05,quiz,"{""cg"": {""rate"": 44.0}, ""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""carryover""}, ""estate"": {""exem"": 8250000.0, ""rate"": 43.0}, ""ord"": {""rate"": 46.5}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 3.25, ""thr"": 700000000.0}}",ord 46.5% + cg 44% + corp 28% + wealth 3.25% > $700M + deemed:carryover + estate 43% / $8.25M + qbi + taxmax
-q06,quiz,"{""cg"": {""rate"": 29.5}, ""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""carryover""}, ""estate"": {""exem"": 7750000.0, ""rate"": 41.0}, ""ord"": {""rate"": 43.5}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}}",ord 43.5% + cg 29.5% + corp 28% + deemed:carryover + estate 41% / $7.75M + qbi + taxmax
-q07,quiz,"{""corp"": {""rate"": 28.0}, ""estate"": {""exem"": 8000000.0, ""rate"": 58.0}, ""ord"": {""rate"": 45.0}, ""qbi"": {""on"": 1}, ""wealth"": {""rate"": 1.25, ""thr"": 75000000.0}}",ord 45% + corp 28% + wealth 1.25% > $75M + estate 58% / $8M + qbi
-q08,quiz,"{""cg"": {""rate"": 42.0}, ""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""deemed""}, ""estate"": {""exem"": 12250000.0, ""rate"": 57.0}, ""ord"": {""rate"": 46.5}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 0.75, ""thr"": 100000000.0}}",ord 46.5% + cg 42% + corp 28% + wealth 0.75% > $100M + deemed:deemed + estate 57% / $12.25M + qbi + taxmax
-q09,quiz,"{""cg"": {""rate"": 27.0}, ""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""carryover""}, ""estate"": {""exem"": 11500000.0, ""rate"": 56.0}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 4.5, ""thr"": 150000000.0}}",cg 27% + corp 28% + wealth 4.5% > $150M + deemed:carryover + estate 56% / $11.5M + qbi + taxmax
-q10,quiz,"{""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""deemed""}, ""estate"": {""exem"": 9750000.0, ""rate"": 47.0}, ""ord"": {""rate"": 44.5}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 1.25, ""thr"": 700000000.0}}",ord 44.5% + corp 28% + wealth 1.25% > $700M + deemed:deemed + estate 47% / $9.75M + qbi + taxmax
-q11,quiz,"{""cg"": {""rate"": 34.0}, ""deemed"": {""pos"": ""deemed""}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 3.75, ""thr"": 700000000.0}}",cg 34% + wealth 3.75% > $700M + deemed:deemed + taxmax
-q12,quiz,"{""cg"": {""rate"": 49.0}, ""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""carryover""}, ""estate"": {""exem"": 13500000.0, ""rate"": 52.0}, ""ord"": {""rate"": 42.0}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 0.75, ""thr"": 700000000.0}}",ord 42% + cg 49% + corp 28% + wealth 0.75% > $700M + deemed:carryover + estate 52% / $13.5M + qbi + taxmax
-q13,quiz,"{""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""deemed""}, ""estate"": {""exem"": 9250000.0, ""rate"": 47.0}, ""qbi"": {""on"": 1}, ""wealth"": {""rate"": 2.5, ""thr"": 100000000.0}}",corp 28% + wealth 2.5% > $100M + deemed:deemed + estate 47% / $9.25M + qbi
-q14,quiz,"{""cg"": {""rate"": 34.5}, ""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""deemed""}, ""ord"": {""rate"": 46.0}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 4.5, ""thr"": 200000000.0}}",ord 46% + cg 34.5% + corp 28% + wealth 4.5% > $200M + deemed:deemed + taxmax
-q15,quiz,"{""cg"": {""rate"": 29.0}, ""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""deemed""}, ""estate"": {""exem"": 5250000.0, ""rate"": 43.0}, ""ord"": {""rate"": 40.5}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 4.75, ""thr"": 700000000.0}}",ord 40.5% + cg 29% + corp 28% + wealth 4.75% > $700M + deemed:deemed + estate 43% / $5.25M + qbi + taxmax
-q16,quiz,"{""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""deemed""}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 0.75, ""thr"": 150000000.0}}",corp 28% + wealth 0.75% > $150M + deemed:deemed + qbi + taxmax
-stack_ref,stack,"{""cg"": {""rate"": 40.0}, ""corp"": {""rate"": 28.0}, ""deemed"": {""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""ord"": {""rate"": 44.8}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",ord 44.8% + cg 40% + corp 28% + wealth 2% > $50M + deemed:deemed + estate 50% / $8.46M + qbi + taxmax
+pc_corpr35_cgr30,corner,"{""cg"": {""rate"": 30.0}, ""corp"": {""rate"": 35.0}}",cg 30% + corp 35%
+pc_cgr50_deemede5,corner,"{""cg"": {""rate"": 50.0}, ""deemed"": {""exem"": 5000000.0, ""pos"": ""deemed""}}",cg 50% + deemed:deemed excl $5M
+pc_wealthr2t50_deemedcoe1,corner,"{""deemed"": {""exem"": 1000000.0, ""pos"": ""carryover""}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",wealth 2% > $50M + deemed:carryover excl $1M
+q01,quiz,"{""cg"": {""rate"": 26.5}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 14000000.0, ""rate"": 52.0}, ""ord"": {""rate"": 42.0}, ""qbi"": {""on"": 1}, ""wealth"": {""rate"": 1.25, ""thr"": 150000000.0}}",ord 42% + cg 26.5% + wealth 1.25% > $150M + deemed:deemed + estate 52% / $14M + qbi
+q02,quiz,"{""cg"": {""rate"": 38.5}, ""corp"": {""rate"": 26.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 12000000.0, ""rate"": 47.0}, ""ord"": {""rate"": 46.0}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 1.25, ""thr"": 700000000.0}}",ord 46% + cg 38.5% + corp 26% + wealth 1.25% > $700M + deemed:deemed + estate 47% / $12M + qbi + taxmax
+q03,quiz,"{""cg"": {""rate"": 26.5}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 8750000.0, ""rate"": 45.0}}",cg 26.5% + deemed:deemed + estate 45% / $8.75M
+q04,quiz,"{""cg"": {""rate"": 35.5}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 10500000.0, ""rate"": 53.0}, ""ord"": {""rate"": 43.0}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 1.25, ""thr"": 100000000.0}}",ord 43% + cg 35.5% + wealth 1.25% > $100M + deemed:deemed + estate 53% / $10.5M + qbi + taxmax
+q05,quiz,"{""cg"": {""rate"": 44.0}, ""corp"": {""rate"": 23.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""carryover""}, ""estate"": {""exem"": 13500000.0, ""rate"": 57.0}, ""ord"": {""rate"": 46.5}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 3.25, ""thr"": 100000000.0}}",ord 46.5% + cg 44% + corp 23% + wealth 3.25% > $100M + deemed:carryover + estate 57% / $13.5M + qbi + taxmax
+q06,quiz,"{""cg"": {""rate"": 46.5}, ""corp"": {""rate"": 28.5}, ""deemed"": {""exem"": 0.0, ""pos"": ""carryover""}, ""estate"": {""exem"": 6750000.0, ""rate"": 52.0}, ""ord"": {""rate"": 44.5}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}}",ord 44.5% + cg 46.5% + corp 28.5% + deemed:carryover + estate 52% / $6.75M + qbi + taxmax
+q07,quiz,"{""deemed"": {""exem"": 0.0, ""pos"": ""carryover""}, ""ord"": {""rate"": 41.5}, ""taxmax"": {""on"": 1}}",ord 41.5% + deemed:carryover + taxmax
+q08,quiz,"{""cg"": {""rate"": 42.0}, ""corp"": {""rate"": 34.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 12250000.0, ""rate"": 57.0}, ""ord"": {""rate"": 46.5}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 0.75, ""thr"": 100000000.0}}",ord 46.5% + cg 42% + corp 34% + wealth 0.75% > $100M + deemed:deemed + estate 57% / $12.25M + qbi + taxmax
+q09,quiz,"{""cg"": {""rate"": 27.0}, ""corp"": {""rate"": 25.5}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 14750000.0, ""rate"": 52.0}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 1.75, ""thr"": 75000000.0}}",cg 27% + corp 25.5% + wealth 1.75% > $75M + deemed:deemed + estate 52% / $14.75M + qbi + taxmax
+q10,quiz,"{""cg"": {""rate"": 27.5}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""ord"": {""rate"": 49.0}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 2.25, ""thr"": 300000000.0}}",ord 49% + cg 27.5% + wealth 2.25% > $300M + deemed:deemed + taxmax
+q11,quiz,"{""cg"": {""rate"": 34.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 3.75, ""thr"": 700000000.0}}",cg 34% + wealth 3.75% > $700M + deemed:deemed + taxmax
+q12,quiz,"{""cg"": {""rate"": 49.0}, ""corp"": {""rate"": 25.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 12750000.0, ""rate"": 45.0}, ""ord"": {""rate"": 42.0}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 4.25, ""thr"": 700000000.0}}",ord 42% + cg 49% + corp 25% + wealth 4.25% > $700M + deemed:deemed + estate 45% / $12.75M + qbi + taxmax
+q13,quiz,"{""cg"": {""rate"": 46.0}, ""corp"": {""rate"": 23.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""qbi"": {""on"": 1}, ""wealth"": {""rate"": 2.75, ""thr"": 700000000.0}}",cg 46% + corp 23% + wealth 2.75% > $700M + deemed:deemed + qbi
+q14,quiz,"{""cg"": {""rate"": 34.5}, ""corp"": {""rate"": 27.5}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""ord"": {""rate"": 46.0}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 4.75, ""thr"": 75000000.0}}",ord 46% + cg 34.5% + corp 27.5% + wealth 4.75% > $75M + deemed:deemed + taxmax
+q15,quiz,"{""cg"": {""rate"": 38.0}, ""corp"": {""rate"": 31.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 13750000.0, ""rate"": 48.0}, ""ord"": {""rate"": 42.5}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}}",ord 42.5% + cg 38% + corp 31% + deemed:deemed + estate 48% / $13.75M + qbi + taxmax
+q16,quiz,"{""cg"": {""rate"": 28.0}, ""corp"": {""rate"": 34.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}}",cg 28% + corp 34% + deemed:deemed
+q17,quiz,"{""deemed"": {""exem"": 750000.0, ""pos"": ""deemed""}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 4.25, ""thr"": 700000000.0}}",wealth 4.25% > $700M + deemed:deemed excl $0.75M + taxmax
+q18,quiz,"{""deemed"": {""exem"": 3000000.0, ""pos"": ""carryover""}, ""estate"": {""exem"": 12750000.0, ""rate"": 42.0}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 4.75, ""thr"": 150000000.0}}",wealth 4.75% > $150M + deemed:carryover excl $3M + estate 42% / $12.75M + qbi + taxmax
+q19,quiz,"{""cg"": {""rate"": 42.5}, ""corp"": {""rate"": 23.5}, ""deemed"": {""exem"": 1250000.0, ""pos"": ""deemed""}, ""ord"": {""rate"": 45.5}}",ord 45.5% + cg 42.5% + corp 23.5% + deemed:deemed excl $1.25M
+q20,quiz,"{""deemed"": {""exem"": 500000.0, ""pos"": ""carryover""}, ""ord"": {""rate"": 45.5}, ""taxmax"": {""on"": 1}}",ord 45.5% + deemed:carryover excl $0.5M + taxmax
+stack_ref,stack,"{""cg"": {""rate"": 40.0}, ""corp"": {""rate"": 28.0}, ""deemed"": {""exem"": 0.0, ""pos"": ""deemed""}, ""estate"": {""exem"": 8460000.0, ""rate"": 50.0}, ""ord"": {""rate"": 44.8}, ""qbi"": {""on"": 1}, ""taxmax"": {""on"": 1}, ""wealth"": {""rate"": 2.0, ""thr"": 50000000.0}}",ord 44.8% + cg 40% + corp 28% + wealth 2% > $50M + deemed:deemed + estate 50% / $8.46M + qbi + taxmax

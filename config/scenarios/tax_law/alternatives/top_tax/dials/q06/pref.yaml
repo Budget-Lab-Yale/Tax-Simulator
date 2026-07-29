@@ -1,9 +1,9 @@
 ---
-# top_tax dial CG: top preferred (LTCG/qual-div) rate -> 29.5% from 2027
+# top_tax dial CG: top preferred (LTCG/qual-div) rate -> 46.5% from 2027
 rates:
   value:
     '2014': [0.0, 0.15, 0.20]
-    '2027': [0.0, 0.15, 0.295]
+    '2027': [0.0, 0.15, 0.465]
 
 # top_tax dial DEEMED: carryover at death, all asset classes, from 2027
 # (code 0=step-up baseline, 1=carryover, 2=deemed_realization)

@@ -290,7 +290,7 @@
   </div>
   <p>Not included: labor-supply responses, macroeconomic feedback, and changes to tax enforcement.</p>
   <p style="margin-bottom:8px"><span class="synthetic" id="dataBadge">Model output</span></p>
-  <p id="footSource"><strong>Model output, interpolated.</strong> Figures come from the top-tax dials batch of the Budget Lab Tax-Simulator: each policy run at a set of anchor settings, every pair run together at reference settings, and the four policies that share the capital-gains-at-death channel also run three at a time. Any dial setting in between is interpolated with a solo + pairwise + triple decomposition, and the interpolation is validated against held-out model runs of full multi-policy packages at off-anchor settings; the badge states the verified bound. The corporate dial is linear between 21% and 28% by construction — the off-model corporate input is itself linear in the rate change. Interpolation is most stretched where an annual wealth tax and the estate tax are both pushed to their extreme settings at once: that combination carries a non-linear interaction the decomposition captures only approximately, so those far-corner packages can run up to roughly 2.6% off the corresponding full model run (vs. under 1% across the rest of the space); every setting shown remains a first-decade estimate within the badge's stated bound.</p>
+  <p id="footSource"><strong>Model output, interpolated.</strong> Figures come from the top-tax dials batch of the Budget Lab Tax-Simulator: each policy run at a set of anchor settings, every pair run together at reference settings, and the four policies that share the capital-gains-at-death channel also run three at a time. Any dial setting in between is interpolated with a solo + pairwise + triple decomposition, and the interpolation is validated against held-out model runs of full multi-policy packages at off-anchor settings; the badge states the verified bound. The corporate dial is interpolated between anchor runs at 24.5%, 28%, 31.5% and 35%, like the other rate dials; the rate is scored inside the model against the CBO corporate receipts baseline. Interpolation is most stretched where an annual wealth tax and the estate tax are both pushed to their extreme settings at once: that combination carries a non-linear interaction the decomposition captures only approximately, so those far-corner packages can run up to roughly 2.6% off the corresponding full model run (vs. under 1% across the rest of the space); every setting shown remains a first-decade estimate within the badge's stated bound.</p>
   <p>Revenue figures are 10-year cumulative dollars over the decade selected at the top of the page (first, second, or third decade after enactment), with the share of GDP (10-yr revenue ÷ that decade's cumulative fiscal-year nominal GDP) shown alongside. The distribution card always shows 2027, the impact year, regardless of the selected decade. Policies, effective 2027: top ordinary rate · top capital-gains &amp; dividends rate · corporate rate · annual wealth tax (rate and threshold) · treatment of gains at death (step-up, carryover, or taxed at death) · estate tax (top rate and exemption) · repeal of the QBI deduction · elimination of the Social Security taxable maximum.</p>
 </div></footer>
 
@@ -337,17 +337,21 @@ var DATA=/*__ATLAS_DATA__*/null;
     return [k.length-1,0];
   }
   function evalGrid(lv,rows,vals){
+    // A param the state omits sits at its off value (exclusion 0 on states
+    // that predate the sub-axis)
     var axes=lv.params;
+    function vOf(p){ return vals[p.key]!==undefined?vals[p.key]:p.off; }
     if(axes.length===1){
-      var p=axes[0],x=vals[p.key];
+      var p=axes[0],x=vOf(p);
       if(p.scale==='pos'){ return rows[p.knots.indexOf(x)].slice(); }
       var it=locate(p.knots,x,p.scale),i=it[0],t=it[1];
       if(t===0)return rows[i].slice();
       return rows[i].map(function(a,z){return (1-t)*a+t*rows[i+1][z];});
     }
     var p1=axes[0],p2=axes[1],n2=p2.knots.length;
-    var l1=locate(p1.knots,vals[p1.key],p1.scale),i1=l1[0],t1=l1[1];
-    var l2=locate(p2.knots,vals[p2.key],p2.scale),i2=l2[0],t2=l2[1];
+    function loc(p){ return p.scale==='pos'?[p.knots.indexOf(vOf(p)),0]:locate(p.knots,vOf(p),p.scale); }
+    var l1=loc(p1),i1=l1[0],t1=l1[1];
+    var l2=loc(p2),i2=l2[0],t2=l2[1];
     function row(a,b){return rows[a*n2+b];}
     if(t1===0&&t2===0)return row(i1,i2).slice();
     var j1=Math.min(i1+1,p1.knots.length-1),j2=Math.min(i2+1,n2-1);
@@ -368,10 +372,43 @@ var DATA=/*__ATLAS_DATA__*/null;
     else { var per=m/NDEC; for(var dd=0;dd<NDEC;dd++)for(x=0;x<per;x++)out.push(dd); }
     DECI[qid]=out;
   });
+  // Within-position exclusion ratio g_deemed(pos,exem)/g_deemed(pos,0), per
+  // decade: scales the byPos vectors, which were measured at exem 0. Positions
+  // themselves are never g-scaled; 1 everywhere at exem 0. Mirrors
+  // fit_surrogate._ladder_ratio.
+  function ladderRatio(s){
+    var vals=s.deemed,v0={},k;
+    for(k in vals)v0[k]=vals[k];
+    v0.exem=0;
+    var gx=gOf('deemed',vals),g0=gOf('deemed',v0);
+    return gx.map(function(a,z){return Math.abs(g0[z])>1e-9?a/g0[z]:0;});
+  }
+  // Interpolate a pair vector linearly in the exclusion between measured
+  // anchors: exem 0 (the byPos vector) and the byExem anchors. Clamps above
+  // the top anchor; anchors missing qid count as zero vectors. Mirrors
+  // fit_surrogate._exem_interp.
+  function exemInterp(byExem,vec0,qid,exem){
+    var knots=[[0,vec0||null]],e;
+    for(e in byExem)knots.push([parseFloat(e),byExem[e][qid]||null]);
+    knots.sort(function(a,b){return a[0]-b[0];});
+    var m=null;
+    knots.forEach(function(k){ if(k[1]&&m===null)m=k[1].length; });
+    if(m===null)return null;
+    var vecs=knots.map(function(k){ if(k[1])return k[1];
+      var z=[]; for(var i=0;i<m;i++)z.push(0); return z; });
+    var xs=knots.map(function(k){return k[0];});
+    if(exem>=xs[xs.length-1])return vecs[vecs.length-1];
+    var i=0; for(var j=0;j<xs.length;j++)if(xs[j]<=exem)i=j;
+    var t=(exem-xs[i])/(xs[i+1]-xs[i]);
+    return vecs[i].map(function(a,z){return (1-t)*a+t*vecs[i+1][z];});
+  }
   // Pair term honoring per-position vectors (the discrete-lever escape hatch):
   // when the pair carries byPos and one lever is the ladder (deemed), use the
-  // position-specific vector scaled by the OTHER lever's g only. Weights are
-  // per-decade vectors — element x uses the weight of its own decade.
+  // position-specific vector scaled by the OTHER lever's g. At a nonzero
+  // exclusion, a measured byExem vector interpolated in the exclusion
+  // replaces the within-position solo-ratio scaling; the ratio remains the
+  // fallback for positions with no measured anchors. Weights are per-decade
+  // vectors — element x uses the weight of its own decade.
   function pairTerm(a,b,qid,s,g){
     var pe=SUR.pairs[a+'|'+b];
     if(!pe)return null;
@@ -380,19 +417,28 @@ var DATA=/*__ATLAS_DATA__*/null;
       var pos=s[ladder].pos;
       if(pe.byPos[pos]){
         var other=(a===ladder)?b:a;
+        var exem=+(s[ladder].exem||0);
+        var bx=(pe.byExem||{})[pos];
+        if(bx&&exem>0){
+          var vx=exemInterp(bx,pe.byPos[pos][qid],qid,exem);
+          return vx?{vec:vx,w:g[other].slice()}:null;
+        }
         var v=pe.byPos[pos][qid];
-        return v?{vec:v,w:g[other].slice()}:null;
+        var r=ladderRatio(s);
+        return v?{vec:v,w:g[other].map(function(x,z){return x*r[z];})}:null;
       }
     }
     return pe[qid]?{vec:pe[qid],w:g[a].map(function(x,z){return x*g[b][z];})}:null;
   }
   // Triple term with the same per-position rule: byPos + deemed member ->
-  // position vector scaled by the product of the other two levers' g.
+  // position vector scaled by the product of the other two levers' g times
+  // the within-position exclusion ratio.
   function tripleTerm(entry,ks,qid,s,g){
     var w=[],z; for(z=0;z<NDEC;z++)w.push(1);
     if(entry.byPos&&ks.indexOf('deemed')>=0){
       var pos=s.deemed.pos;
       if(entry.byPos[pos]){
+        w=ladderRatio(s);
         ks.forEach(function(k){ if(k!=='deemed')for(z=0;z<NDEC;z++)w[z]*=g[k][z]; });
         var v=entry.byPos[pos][qid];
         return v?{vec:v,w:w}:null;
@@ -492,12 +538,34 @@ var DATA=/*__ATLAS_DATA__*/null;
     if(isNaN(x))return lawVal(p);
     return clampParam(p,p.unit==='$'? x*DOLLAR : x);
   }
+  function dialRow(l,p){
+    var row=document.createElement('div'); row.className='drow';
+    var sp=document.createElement('span'); sp.className='dlab';
+    sp.textContent=p.label+(p.unit==='$'?' ($M)':'');
+    row.appendChild(sp);
+    var inp=document.createElement('input');
+    inp.type='number'; inp.dataset.lever=l.key; inp.dataset.param=p.key;
+    inp.min=fmtIn(p,p.min); inp.max=fmtIn(p,p.max);
+    inp.step=p.unit==='$'?1:0.1;
+    inp.value=fmtIn(p,state[l.key].vals[p.key]);
+    inp.onchange=function(){
+      var v=parseIn(p,inp.value);
+      state[l.key].vals[p.key]=v;
+      inp.value=fmtIn(p,v);          // clamp reflected in the box
+      renderAll();
+    };
+    row.appendChild(inp);
+    var un=document.createElement('span'); un.className='dunit';
+    un.textContent=p.unit==='$'?'M':p.unit;
+    row.appendChild(un);
+    return row;
+  }
   function renderControls(){
     ['rate','struct'].forEach(function(gname){
       var host=$(gname==='rate'?'#rateSw':'#structSw'); host.innerHTML='';
       LEVERS.filter(function(l){return l.grp===gname;}).forEach(function(l){
         var wrapEl=document.createElement('div'); wrapEl.className='lever'; wrapEl.dataset.key=l.key;
-        if(l.interp==='ladder'){
+        if(l.interp==='ladder'||l.interp==='ladder_x'){
           var box=document.createElement('div'); box.className='swseg';
           var slab=document.createElement('span'); slab.className='slab';
           slab.textContent=l.label; box.appendChild(slab);
@@ -517,6 +585,14 @@ var DATA=/*__ATLAS_DATA__*/null;
           });
           box.appendChild(seg);
           wrapEl.appendChild(box);
+          if(l.interp==='ladder_x'){
+            // the exclusion dial, shown only while a non-off position is
+            // selected (renderAll toggles it)
+            var xdials=document.createElement('div'); xdials.className='dials';
+            xdials.dataset.xdials=l.key;
+            l.params.slice(1).forEach(function(p){ xdials.appendChild(dialRow(l,p)); });
+            wrapEl.appendChild(xdials);
+          }
         } else {
           var b=document.createElement('button'); b.className='sw'; b.type='button';
           b.setAttribute('aria-pressed','false'); b.dataset.key=l.key;
@@ -525,28 +601,7 @@ var DATA=/*__ATLAS_DATA__*/null;
           wrapEl.appendChild(b);
           if(l.kind==='continuous'){
             var dials=document.createElement('div'); dials.className='dials';
-            l.params.forEach(function(p){
-              var row=document.createElement('div'); row.className='drow';
-              var sp=document.createElement('span'); sp.className='dlab';
-              sp.textContent=p.label+(p.unit==='$'?' ($M)':'');
-              row.appendChild(sp);
-              var inp=document.createElement('input');
-              inp.type='number'; inp.dataset.lever=l.key; inp.dataset.param=p.key;
-              inp.min=fmtIn(p,p.min); inp.max=fmtIn(p,p.max);
-              inp.step=p.unit==='$'?1:0.1;
-              inp.value=fmtIn(p,state[l.key].vals[p.key]);
-              inp.onchange=function(){
-                var v=parseIn(p,inp.value);
-                state[l.key].vals[p.key]=v;
-                inp.value=fmtIn(p,v);          // clamp reflected in the box
-                renderAll();
-              };
-              row.appendChild(inp);
-              var un=document.createElement('span'); un.className='dunit';
-              un.textContent=p.unit==='$'?'M':p.unit;
-              row.appendChild(un);
-              dials.appendChild(row);
-            });
+            l.params.forEach(function(p){ dials.appendChild(dialRow(l,p)); });
             wrapEl.appendChild(dials);
           }
         }
@@ -821,7 +876,7 @@ var DATA=/*__ATLAS_DATA__*/null;
       var list=[null];                            // null = off
       if(l.interp==='linear1d'){
         var p=l.params[0],vals=[];
-        if(p.knots.length<=2){ vals=[p.max]; }    // corp: off/on
+        if(p.knots.length<=2){ vals=[p.max]; }    // single-anchor dial: off/on
         else { [1/3,2/3,1].forEach(function(f){vals.push(+(p.min+f*(p.max-p.min)).toFixed(2));}); }
         vals.forEach(function(v){var o={};o[p.key]=v;list.push(o);});
       } else if(l.interp==='bilinear'){
@@ -836,6 +891,13 @@ var DATA=/*__ATLAS_DATA__*/null;
         l.params[0].positions.forEach(function(pos){
           if(pos==='off')return;
           var o={};o[l.params[0].key]=pos;list.push(o);});
+      } else if(l.interp==='ladder_x'){
+        // each non-off position at no exclusion and at the max exclusion
+        var px=l.params[1];
+        l.params[0].positions.forEach(function(pos){
+          if(pos==='off')return;
+          [px.off,px.max].forEach(function(e){
+            var o={};o[l.params[0].key]=pos;o[px.key]=e;list.push(o);});});
       } else { var o2={};o2[l.params[0].key]=1;list.push(o2); }
       opts[l.key]=list;
     });
@@ -860,6 +922,10 @@ var DATA=/*__ATLAS_DATA__*/null;
   function optLabel(l,vals){
     if(!vals)return l.key;
     if(l.interp==='ladder')return String(vals[l.params[0].key]);
+    if(l.interp==='ladder_x'){
+      var ex=vals[l.params[1].key]||0;
+      return String(vals[l.params[0].key])+(ex?' $'+(ex/1e6).toFixed(1).replace(/\.0$/,'')+'M excl':'');
+    }
     if(l.interp==='binary')return l.key;
     return l.key+' '+l.params.map(function(p){
       var v=vals[p.key];
@@ -872,12 +938,20 @@ var DATA=/*__ATLAS_DATA__*/null;
     var opts=latticeOptions();
     var tabs=LEVERS.map(function(l){
       return opts[l.key].map(function(o){
-        if(o===null)return {fct:0,fst:0,fe:0,g:0,g0:0,on:false,vals:null};
+        if(o===null)return {fct:0,fst:0,fe:0,g:0,g0:0,r:1,r0:1,on:false,vals:null};
         var st1={}; st1[l.key]=o;
-        return {fct:evalQ('ct',st1)[dec],fst:evalQ('st',st1)[dec],
+        var cell={fct:evalQ('ct',st1)[dec],fst:evalQ('st',st1)[dec],
                 fe:etrcTopSum(evalQ('etrc',st1)),      // Δ top 0.1% ETR (impact-year)
                 g:gOf(l.key,o)[dec],g0:gOf(l.key,o)[0],// money g at dec; etr g at d1
-                on:true,vals:o};
+                r:1,r0:1,on:true,vals:o};
+        if(l.interp==='ladder_x'){
+          // within-position exclusion ratio for the byPos terms below
+          var v0={},k; for(k in o)v0[k]=o[k]; v0[l.params[1].key]=0;
+          var gx=gOf(l.key,o),g0v=gOf(l.key,v0);
+          cell.r =Math.abs(g0v[dec])>1e-9?gx[dec]/g0v[dec]:0;
+          cell.r0=Math.abs(g0v[0])>1e-9?gx[0]/g0v[0]:0;
+        }
+        return cell;
       });
     });
     // pair/triple lookup tables keyed by lever index (money at dec; etr at d1)
@@ -935,20 +1009,22 @@ var DATA=/*__ATLAS_DATA__*/null;
             if(gv[i]&&gv[j]){ var w=gv[i]*gv[j]; ct+=pairCT[i][j]*w; st+=pairST[i][j]*w; }
             if(gv0[i]&&gv0[j]){ ex+=pairE[i][j]*gv0[i]*gv0[j]; } } }
         if(DIDX!==undefined&&tabs[DIDX][idx[DIDX]].on){
-          var dpos=tabs[DIDX][idx[DIDX]].vals[LEVERS[DIDX].params[0].key];
+          var dcell=tabs[DIDX][idx[DIDX]];
+          var dpos=dcell.vals[LEVERS[DIDX].params[0].key];
           bpp.forEach(function(e){
             var v=e.tab[dpos];
-            if(v){ var go=gv[e.o],go0=gv0[e.o];
+            if(v){ var go=gv[e.o]*dcell.r,go0=gv0[e.o]*dcell.r0;
               if(go){ ct+=v.ct*go; st+=v.st*go; }
               if(go0){ ex+=v.e*go0; } }
           });
         }
         trips.forEach(function(t){
           if(t.byPos&&DIDX!==undefined&&tabs[DIDX][idx[DIDX]].on){
-            var tpos=tabs[DIDX][idx[DIDX]].vals[LEVERS[DIDX].params[0].key];
+            var dc=tabs[DIDX][idx[DIDX]];
+            var tpos=dc.vals[LEVERS[DIDX].params[0].key];
             if(t.byPos[tpos]){
-              var wo=gv[t.others[0]]*gv[t.others[1]];
-              var wo0=gv0[t.others[0]]*gv0[t.others[1]];
+              var wo=gv[t.others[0]]*gv[t.others[1]]*dc.r;
+              var wo0=gv0[t.others[0]]*gv0[t.others[1]]*dc.r0;
               if(wo){ ct+=t.byPos[tpos].ct*wo; st+=t.byPos[tpos].st*wo; }
               if(wo0){ ex+=t.byPos[tpos].e*wo0; }
               return;
@@ -1063,7 +1139,11 @@ var DATA=/*__ATLAS_DATA__*/null;
     return l.params.map(function(p){
       var v=st.vals[p.key];
       if(p.fmt==='pct')return p.label.toLowerCase()+' '+(+v).toFixed(1).replace(/\.0$/,'')+'%';
-      if(p.fmt==='usd')return '$'+(v/1e6).toFixed(2).replace(/\.?0+$/,'')+'M';
+      if(p.fmt==='usd'){
+        if(!v)return '';    // the exclusion dial at 0 is current law, unshown
+        var ds='$'+(v/1e6).toFixed(2).replace(/\.?0+$/,'')+'M';
+        return l.key==='deemed'?ds+' excl':ds;
+      }
       if(p.fmt==='pos')return v;
       return '';
     }).filter(Boolean).join(' · ');
@@ -1195,12 +1275,14 @@ var DATA=/*__ATLAS_DATA__*/null;
       if(host)host.className='lever'+(state[l.key].on?' on':'');
       var b=document.querySelector('.sw[data-key="'+l.key+'"]');
       if(b)b.setAttribute('aria-pressed',state[l.key].on?'true':'false');
-      if(l.interp==='ladder'){
+      if(l.interp==='ladder'||l.interp==='ladder_x'){
         var pos=state[l.key].on?state[l.key].vals[l.params[0].key]:'off';
         l.params[0].positions.forEach(function(pp){
           var sb=document.querySelector('.seg button[data-key="'+l.key+'"][data-pos="'+pp+'"]');
           if(sb)sb.setAttribute('aria-pressed',pp===pos?'true':'false');
         });
+        var xd=document.querySelector('.dials[data-xdials="'+l.key+'"]');
+        if(xd)xd.style.display=(pos==='off')?'none':'';
       }
     });
     var d=compute(),any=d.keys.length>0;

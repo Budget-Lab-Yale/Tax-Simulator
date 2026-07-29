@@ -46,6 +46,7 @@ and JS implementations are checked against the same holdout fixtures.
 """
 
 import csv
+import datetime
 import json
 import math
 import os
@@ -110,11 +111,19 @@ def lever_grid_states(key):
 
 def _is_zero_state(key, vals):
     lv = L.BY_KEY[key]
-    if lv["interp"] in ("ladder", "binary"):
+    if lv["interp"] in ("ladder", "ladder_x", "binary"):
         return vals[lv["params"][0]["key"]] == lv["params"][0]["off"]
     if key == "wealth":
         return vals["rate"] == 0.0
     return L.is_off(key, vals)
+
+
+def _param_off(key, pk):
+    """A param's off value — the default when a state omits the param."""
+    for p in L.BY_KEY[key]["params"]:
+        if p["key"] == pk:
+            return p["off"]
+    raise KeyError((key, pk))
 
 
 def state_key(state):
@@ -127,7 +136,10 @@ def state_key(state):
 # no interpolation arithmetic.
 # --------------------------------------------------------------------------- #
 def _locate(knots, x, scale):
-    """(index, t) on a numeric knot axis; x clamped to [knots0, knots-1]."""
+    """(index, t) on a knot axis; x clamped to [knots0, knots-1]. A position
+    axis is exact-match only."""
+    if scale == "pos":
+        return knots.index(x), 0.0
     if scale == "log":
         knots = [math.log(k) for k in knots]
         x = math.log(max(x, 1e-12))
@@ -144,11 +156,13 @@ def _locate(knots, x, scale):
 
 
 def eval_grid(key, rows, state_vals):
-    """Interpolate a stored grid (list of rows, row = list) at state_vals."""
+    """Interpolate a stored grid (list of rows, row = list) at state_vals.
+    A param the state omits sits at its off value (exclusion 0 on states
+    that predate the sub-axis)."""
     axes = lever_axes(key)
     if len(axes) == 1:
         pk, knots, scale = axes[0]
-        x = state_vals[pk]
+        x = state_vals.get(pk, _param_off(key, pk))
         if scale == "pos":
             i = knots.index(x)
             return list(rows[i])
@@ -157,8 +171,8 @@ def eval_grid(key, rows, state_vals):
             return list(rows[i])
         return [(1 - t) * a + t * b for a, b in zip(rows[i], rows[i + 1])]
     (p1, k1, s1), (p2, k2, s2) = axes
-    i1, t1 = _locate(k1, state_vals[p1], s1)
-    i2, t2 = _locate(k2, state_vals[p2], s2)
+    i1, t1 = _locate(k1, state_vals.get(p1, _param_off(key, p1)), s1)
+    i2, t2 = _locate(k2, state_vals.get(p2, _param_off(key, p2)), s2)
     n2 = len(k2)
 
     def row(a, b):
@@ -184,12 +198,46 @@ def dec_of(data, qid):
     return [d for d in range(nd) for _ in range(per)]
 
 
+def _ladder_ratio(sur, state):
+    """Within-position exclusion ratio g_deemed(pos, exem) / g_deemed(pos, 0),
+    per decade. Scales the byPos vectors, which were measured at exem = 0 —
+    the exclusion moves the interaction the way it moves the solo, while
+    positions themselves are never g-scaled. 1 everywhere at exem = 0."""
+    vals = dict(state["deemed"])
+    g_x = eval_grid("deemed", sur["g"]["deemed"], vals)
+    vals["exem"] = 0.0
+    g_0 = eval_grid("deemed", sur["g"]["deemed"], vals)
+    return [a / b if abs(b) > 1e-9 else 0.0 for a, b in zip(g_x, g_0)]
+
+
+def _exem_interp(by_exem, vec0, qid, exem):
+    """Interpolate a pair vector linearly in the exclusion between measured
+    anchors: exem 0 (the byPos vector) and the byExem anchors. Clamps above
+    the top anchor. Anchors missing qid (dropped below tolerance) count as
+    zero vectors."""
+    knots = [(0.0, vec0)] + sorted(
+        (float(e), v.get(qid)) for e, v in by_exem.items())
+    m = next((len(v) for _, v in knots if v), None)
+    if m is None:
+        return None
+    vecs = [v if v else [0.0] * m for _, v in knots]
+    xs = [x for x, _ in knots]
+    if exem >= xs[-1]:
+        return vecs[-1]
+    i = max(j for j in range(len(xs)) if xs[j] <= exem)
+    t = (exem - xs[i]) / (xs[i + 1] - xs[i])
+    return [(1 - t) * a + t * b for a, b in zip(vecs[i], vecs[i + 1])]
+
+
 def _pair_term(sur, a, b, qid, state, gval):
     """(vector, per-decade weights) for pair a|b at qid, honoring byPos
     vectors: when the pair carries per-position vectors and one lever is the
     ladder (deemed), use the position-specific vector scaled by the OTHER
-    lever's g only. Weights are n_dec-vectors — element x of the quantity
-    uses the weight of its own decade."""
+    lever's g. At a nonzero exclusion, a measured byExem vector interpolated
+    in the exclusion replaces the within-position solo-ratio scaling; the
+    ratio remains the fallback for positions with no measured anchors.
+    Weights are n_dec-vectors — element x of the quantity uses the weight of
+    its own decade."""
     entry = sur["pairs"].get(f"{a}|{b}")
     if not entry:
         return None, None
@@ -199,22 +247,29 @@ def _pair_term(sur, a, b, qid, state, gval):
         pos = state[ladder]["pos"]
         if pos in by_pos:
             other = b if a == ladder else a
+            exem = float(state[ladder].get("exem", 0.0) or 0.0)
+            by_exem = (entry.get("byExem") or {}).get(pos)
+            if by_exem and exem > 0.0:
+                vec = _exem_interp(by_exem, by_pos[pos].get(qid), qid, exem)
+                return vec, list(gval[other])
             vec = by_pos[pos].get(qid)
-            return vec, list(gval[other])
+            ratio = _ladder_ratio(sur, state)
+            return vec, [x * r for x, r in zip(gval[other], ratio)]
     vec = entry.get(qid)
     return vec, [x * y for x, y in zip(gval[a], gval[b])]
 
 
-def _triple_term(entry, keys, qid, state, gval):
+def _triple_term(entry, keys, qid, state, gval, sur=None):
     """(vector, per-decade weights) for a triple, honoring byPos: with
     per-position vectors and the ladder (deemed) among the members, use the
-    position vector scaled by the product of the OTHER two levers' g."""
+    position vector scaled by the product of the OTHER two levers' g times
+    the within-position exclusion ratio."""
     by_pos = entry.get("byPos")
     nd = len(next(iter(gval.values())))
     if by_pos and "deemed" in keys:
         pos = state["deemed"]["pos"]
         if pos in by_pos:
-            w = [1.0] * nd
+            w = _ladder_ratio(sur, state) if sur else [1.0] * nd
             for k in keys:
                 if k != "deemed":
                     w = [a * b for a, b in zip(w, gval[k])]
@@ -249,7 +304,7 @@ def eval_state(data, qid, state):
     for trip, qs in sur["triples"].items():
         keys = trip.split("|")
         if all(k in gval for k in keys):
-            vec, w = _triple_term(qs, keys, qid, state, gval)
+            vec, w = _triple_term(qs, keys, qid, state, gval, sur)
             if vec:
                 for x in range(m):
                     tot[x] += vec[x] * w[deci[x]]
@@ -275,7 +330,7 @@ def shapley(data, state, d=0):
     for trip, qs in sur["triples"].items():
         ks = trip.split("|")
         if all(k in gval and k in phi for k in ks):
-            vec, w = _triple_term(qs, ks, "ct", state, gval)
+            vec, w = _triple_term(qs, ks, "ct", state, gval, sur)
             if vec:
                 third = vec[d] * w[d] / 3.0
                 for k in ks:
@@ -477,6 +532,32 @@ def fit(root, out_path):
             vec_ref[qid] = ref_i if ref_i else [0.0] * m_of[qid]
         by_pos[pos] = vec_pos
         by_pos["deemed"] = vec_ref
+
+    # Exclusion-anchored pair vectors (patch 4): pairexem runs measure a
+    # deemed pair at a nonzero exclusion anchor, so the evaluator can
+    # interpolate between measured anchors instead of scaling the exem = 0
+    # vector by the solo ratio (which understated cg x deemed by 30% at the
+    # $5M exclusion corner). Keyed by position, then exclusion anchor.
+    for scen_id, state in by_kind.get("pairexem", []):
+        others = [k for k in state if k != "deemed"]
+        assert len(others) == 1, f"{scen_id}: pairexem must be lever+deemed"
+        other = others[0]
+        assert state[other] == L.REF[other], f"{scen_id}: pairexem other lever off-ref"
+        pos = state["deemed"]["pos"]
+        exem = float(state["deemed"]["exem"])
+        a, b = sorted([other, "deemed"], key=L.LEVER_KEYS.index)
+        entry = pairs.setdefault(f"{a}|{b}", {})
+        by_exem = entry.setdefault("byExem", {}).setdefault(pos, {})
+        sk = state_key(state)
+        if sk not in runs:
+            sys.exit(f"missing pairexem run {scen_id}")
+        vec_e = {}
+        for qid in QIDS:
+            fo = f_at_ref(other, qid)
+            fd = eval_grid("deemed", solo["deemed"][qid], state["deemed"])
+            vec_e[qid] = [round(v - x - y, 3)
+                          for v, x, y in zip(runs[sk][qid], fo, fd)]
+        by_exem[str(int(exem))] = vec_e
     data_stub["surrogate"]["pairs"] = pairs
 
     # ---- triples (every kind='triple' run in the legend; deemed at its ref
@@ -579,7 +660,8 @@ def fit(root, out_path):
                 pm["anchors"] = p["anchors"]
             params.append(pm)
         kind = {"linear1d": "continuous", "bilinear": "continuous",
-                "ladder": "discrete", "binary": "binary"}[lv["interp"]]
+                "ladder": "discrete", "ladder_x": "discrete",
+                "binary": "binary"}[lv["interp"]]
         lever_meta.append(dict(key=lv["key"], label=lv["label"], grp=lv["grp"],
                                kind=kind, interp=lv["interp"], cluster=lv["cluster"],
                                params=params))
@@ -596,10 +678,12 @@ def fit(root, out_path):
                        cluster=L.CLUSTER,
                        validation=None, checks=None),
         provenance=dict(
-            vintage=root, git_sha=sha, date="2026-07-10",
+            vintage=root, git_sha=sha,
+            date=datetime.date.today().isoformat(),
             n_scenarios=n_scen,
-            corp_note=("corp dial linear 21->28 by construction: single OME wedge "
-                       "at 28, and the OME itself is linear in delta-tau")),
+            corp_note=("corp rate scored on-model (src/sim/corp_rate.R); dial "
+                       "piecewise-linear through the solo anchors like every "
+                       "other continuous lever")),
         units="$B; ETRs in percent (deltas in pp)",
         placeholder=None,
     )

@@ -1,15 +1,15 @@
 ---
-# top_tax dial WEALTH: 1.25% annual net-worth tax above $700,000,000 from 2027
+# top_tax dial WEALTH: 2.25% annual net-worth tax above $300,000,000 from 2027
 # (threshold applied per tax unit for all filing statuses)
 rates:
   value:
     '2014': [0.0, 0.0]
-    '2027': [0.0, 0.0125]
+    '2027': [0.0, 0.0225]
 
 brackets_single:
   value:
-    '2014': [0, 700000000]
-    '2027': [0, 700000000]
+    '2014': [0, 300000000]
+    '2027': [0, 300000000]
   i_measure: default
   i_base_year: default
   i_direction: default
@@ -17,8 +17,8 @@ brackets_single:
 
 brackets_married:
   value:
-    '2014': [0, 700000000]
-    '2027': [0, 700000000]
+    '2014': [0, 300000000]
+    '2027': [0, 300000000]
   i_measure: default
   i_base_year: default
   i_direction: default
@@ -26,8 +26,8 @@ brackets_married:
 
 brackets_head:
   value:
-    '2014': [0, 700000000]
-    '2027': [0, 700000000]
+    '2014': [0, 300000000]
+    '2027': [0, 300000000]
   i_measure: default
   i_base_year: default
   i_direction: default
