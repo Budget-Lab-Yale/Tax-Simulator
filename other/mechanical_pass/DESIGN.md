@@ -1,7 +1,8 @@
 # The mechanical pass
 
 2026-07-29. Signed off in conversation; this note records the decisions and the
-build plan. Nothing here is implemented yet.
+build plan. Built on branch `mechanical-pass`, except the gains elasticity
+re-derivation -- see As built at the end.
 
 ## Motivation
 
@@ -155,3 +156,63 @@ transmission channel pay nothing.
 6. Regression against the smoke-diff harness; re-pin any invalidated
    calibration hashes only after verifying identical output on non-payroll,
    non-transmission scenarios.
+
+
+## As built
+
+Six commits on `mechanical-pass`, off `wealth`. Regression record:
+other/mechanical_pass/regression_notes.md.
+
+Departures from the plan, both places where the plan's recipe would not have given
+what it described:
+
+1. The plan had a skipped mechanical rung write nothing, with the reporting layer
+   falling back to the static rung. Its totals and receipts are written instead,
+   from the static totals where the rung did not run, so every counterfactual
+   carries all three rungs and no report needs a special case. Detail is still not
+   copied: it would be a large file carrying no information, so the products built
+   from detail guard on its presence.
+
+2. The plan read the payroll overlay as the difference between the mechanical and
+   static rungs. That difference carries every channel live on the rung, not the
+   wage adjustment alone, so it would have included the wealth drawdown the same
+   plan excludes. The overlay is read off the rung's no-wealth tree where the
+   wealth channel is on. Corporate incidence cannot be separated this way at all,
+   and the corporate overlay already carries it, so a scenario running both
+   channels gets no payroll overlay and a warning.
+
+Two things found along the way. The wage rescale ended by setting wages to the sum
+of the two earners' wages, which is not bit-identical to the column Tax-Data
+supplies, and it ran on the reform static pass but not the baseline one; taking it
+off the static pass removes that disagreement. And
+other/performance/test_slurm_dependency_graph.sh had been passing the retired
+user_id argument since 2026-07-25, tripping the arity guard so that every case
+exited 1 unnoticed.
+
+## Outstanding
+
+The gains elasticity has not been re-derived under the new marginal rate
+convention. Both eta entries and both timeable_share entries in
+config/calibrations/kg/bathtub.yaml are pinned to src/sim/kg/inputs.R as it was
+before the change, so they report stale and any kg run stops until they are
+re-derived. That is the intended state: the numbers were measured with the
+reform-side cell rates read off the static rung, and they are now read off the
+mechanical rung.
+
+Re-deriving means three full-sample thirty-year vintages per form and then the
+inversion, through the entry's own `rederive` script -- for the shipped form,
+
+    other/kg_model_tests/form_ab/measure_efull_logs.R
+
+with the sweep launched by its launcher first. Until that is done the branch
+should not merge: kg results on it are not comparable with anything.
+
+The plan expected the drift to be small, on the reasoning that the two
+conventions part company only for records a mechanical income change moves across
+a bracket. The mechanical rung writes mtr_crossing_diag_{year}.csv, which counts
+and weights those records per MTR variable and reports the mean rate change each
+convention hands a behavior module, so the expectation is checkable before the
+sweep is paid for. On a five point gains increase with the wealth channel on it
+holds: a quarter of a percent of weight sits on a moved record, and the mean rate
+change moves by under one percent of itself. Numbers in
+other/mechanical_pass/regression_notes.md.

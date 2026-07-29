@@ -18,6 +18,16 @@
 # different ones. Three things get past a stop: re-deriving and re-pinning,
 # overriding the value in an alternative, or putting a dated waiver on the entry in
 # the file that points here.
+#
+# Every entry below reports stale, deliberately. The reform-side rates the
+# calibration reads now come from the mechanical rung rather than the static one,
+# which moves the measured moments, and inputs.R is pinned to its content before
+# that change so the check says so. Re-derive with each entry's `rederive` script
+# before using these numbers. Notes at other/mechanical_pass/DESIGN.md.
+#
+# inputs.R is a dependency because it decides which rung's detail the cell rates
+# are read from, which feeds the measured elasticity as directly as the Bellman
+# does.
 
 _channel:
   role: state
@@ -43,12 +53,14 @@ eta:
     - src/sim/kg/recurrence.R
     - src/sim/kg/timing.R
     - src/sim/kg/apply.R
+    - src/sim/kg/inputs.R
   invalidated_by_hashes:
     src/sim/kg/constants.R: '54f11bfc9f9d613373cd39e453f09168'
     src/sim/kg/bellman.R: '1aa6776c70f4d508eec34de176318dd7'
     src/sim/kg/recurrence.R: '996464e2be1f5ba854712d6463c3a785'
     src/sim/kg/timing.R: 'cda95c0c59a0f210ae6dc1d606c3b82e'
     src/sim/kg/apply.R: '7c492eed46072763e8de8b2994f0de10'
+    src/sim/kg/inputs.R: '116c27b0e84b9569cf1db5381e91a981'
   conditioned_on:
     settings.kg.applier_allocation: '0.5'
     settings.kg.timing_ref_wedge: 0.05
@@ -89,12 +101,14 @@ eta_logs:
     - src/sim/kg/recurrence.R
     - src/sim/kg/timing.R
     - src/sim/kg/apply.R
+    - src/sim/kg/inputs.R
   invalidated_by_hashes:
     src/sim/kg/constants.R: 54f11bfc9f9d613373cd39e453f09168
     src/sim/kg/bellman.R: 1aa6776c70f4d508eec34de176318dd7
     src/sim/kg/recurrence.R: '996464e2be1f5ba854712d6463c3a785'
     src/sim/kg/timing.R: cda95c0c59a0f210ae6dc1d606c3b82e
     src/sim/kg/apply.R: '7c492eed46072763e8de8b2994f0de10'
+    src/sim/kg/inputs.R: '116c27b0e84b9569cf1db5381e91a981'
   conditioned_on:
     settings.kg.applier_allocation: '0.5'
     settings.kg.timing_ref_wedge: 0.05
@@ -126,10 +140,12 @@ timeable_share:
     - src/sim/kg/constants.R
     - src/sim/kg/timing.R
     - src/sim/kg/recurrence.R
+    - src/sim/kg/inputs.R
   invalidated_by_hashes:
     src/sim/kg/constants.R: 54f11bfc9f9d613373cd39e453f09168
     src/sim/kg/timing.R: cda95c0c59a0f210ae6dc1d606c3b82e
     src/sim/kg/recurrence.R: '996464e2be1f5ba854712d6463c3a785'
+    src/sim/kg/inputs.R: '116c27b0e84b9569cf1db5381e91a981'
   conditioned_on:
     settings.kg.timing_window: 1
     settings.kg.timing_ref_wedge: 0.05
@@ -168,10 +184,12 @@ timeable_share_logs:
     - src/sim/kg/constants.R
     - src/sim/kg/timing.R
     - src/sim/kg/recurrence.R
+    - src/sim/kg/inputs.R
   invalidated_by_hashes:
     src/sim/kg/constants.R: '54f11bfc9f9d613373cd39e453f09168'
     src/sim/kg/timing.R: 'cda95c0c59a0f210ae6dc1d606c3b82e'
     src/sim/kg/recurrence.R: '996464e2be1f5ba854712d6463c3a785'
+    src/sim/kg/inputs.R: '116c27b0e84b9569cf1db5381e91a981'
   conditioned_on:
     settings.kg.timing_window: 1
     settings.kg.timing_ref_wedge: 0.05
