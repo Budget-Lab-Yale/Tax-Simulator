@@ -36,6 +36,7 @@ records = tibble(
   q_death1 = c(0.1, 0.2),
   q_death2 = c(NA_real_, NA_real_),
   `pref.kg_sec121_excl` = c(250000, 250000),
+  `pref.kg_death_gain_excl` = c(0, 0),
   year = c(2026, 2026)
 )
 

@@ -10,23 +10,37 @@
 # Record-level helpers
 #-------------------------------------------------------------------------------
 
-kg_dyn_attach_record_attrs = function(tax_units, cpiu_by_year = NULL) {
+kg_dyn_attach_record_attrs = function(tax_units, cpiu_by_year = NULL,
+                                      death_excl_married = NULL) {
 
   # Adds the record-level columns the rest of the model needs: the unrealized gain
-  # on each asset class and their total, the primary home gain above the §121
-  # exclusion, the chance the household dies, and the cohort age.
+  # on each asset class and their total, the per-class gain above the §121 cap and
+  # the death-gain exclusion, the widowhood probability, the chance the household
+  # dies, and the cohort age.
   #
   # Joint filers die when both do, and take the older age. Ages are clipped to the
   # cohort grid.
   #
-  # Requires the §121 cap on each record. The pre-pass joins it in; the simulator
-  # already has it from the tax law merge.
+  # The death-gain exclusion is per decedent and applies pro-rata by gain across
+  # the asset classes whose death regime is carryover or deemed realization,
+  # after §121. A single filer who is widowed can claim the married amount, so
+  # both amounts are computed and blended by the widowhood probability.
+  #
+  # Requires the §121 cap and the death-gain exclusion on each record. The
+  # pre-pass joins them in; the simulator already has them from the tax law
+  # merge. death_excl_married is the married exclusion amount, required only
+  # when the exclusion is nonzero.
   #
   # Returns: tax units with those columns added (df).
 
   if (!('pref.kg_sec121_excl' %in% names(tax_units))) {
     stop('kg_dyn_attach_record_attrs: tax_units missing column ',
          '`pref.kg_sec121_excl`. Merge it in via filing_status before ',
+         'calling this helper.')
+  }
+  if (!('pref.kg_death_gain_excl' %in% names(tax_units))) {
+    stop('kg_dyn_attach_record_attrs: tax_units missing column ',
+         '`pref.kg_death_gain_excl`. Merge it in via filing_status before ',
          'calling this helper.')
   }
 
@@ -46,6 +60,60 @@ kg_dyn_attach_record_attrs = function(tax_units, cpiu_by_year = NULL) {
   gain_primary = diffs[, 'gain.primary_home']
   sec121       = as.numeric(tax_units$`pref.kg_sec121_excl`)
   sec121[is.na(sec121)] = 0
+
+  # The gain at stake at death by class, netting §121 off a primary home. The
+  # death-gain exclusion then removes its first dollars pro-rata across the
+  # classes whose regime is carryover or deemed realization; every other class
+  # keeps its full stake. A single filer's two amounts (own and married, the
+  # latter available through a survivor election) are blended by the widowhood
+  # probability, giving the expected gain above the exclusion per record.
+  stakes = diffs
+  stakes[, 'gain.primary_home'] = pmax(0, gain_primary - sec121)
+
+  excl_own = as.numeric(tax_units$`pref.kg_death_gain_excl`)
+  excl_own[is.na(excl_own)] = 0
+  excl_active = any(excl_own > 0) ||
+    (!is.null(death_excl_married) &&
+       isTRUE(as.numeric(death_excl_married) > 0))
+
+  p_widow    = rep(0, nrow(tax_units))
+  above_excl = stakes
+  if (excl_active) {
+    regime_cols = paste0('pref.kg_death_regime_', KG_DYN_ASSET_CLASSES)
+    miss_regime = setdiff(regime_cols, names(tax_units))
+    if (length(miss_regime) > 0) {
+      stop('kg_dyn_attach_record_attrs: the death-gain exclusion is active ',
+           'but tax_units is missing regime columns: ',
+           paste(miss_regime, collapse = ', '))
+    }
+    if (is.null(death_excl_married) ||
+        !is.finite(as.numeric(death_excl_married))) {
+      stop('kg_dyn_attach_record_attrs: the death-gain exclusion is active ',
+           'but death_excl_married was not supplied.')
+    }
+    miss_widow = setdiff(c('male1', 'divorce_year'), names(tax_units))
+    if (length(miss_widow) > 0) {
+      stop('kg_dyn_attach_record_attrs: the death-gain exclusion is active ',
+           'but tax_units is missing columns: ',
+           paste(miss_widow, collapse = ', '))
+    }
+
+    eligible = sapply(KG_DYN_ASSET_CLASSES, function(k) {
+      as.numeric(tax_units[[paste0('pref.kg_death_regime_', k)]][1]) %in% c(1, 2)
+    })
+
+    p_widow = calc_p_widow(tax_units, get_widowhood_table())
+    excl_2x = if_else(tax_units$filing_status %in% c(1, 4),
+                      as.numeric(death_excl_married), excl_own)
+
+    elig_cols = KG_DYN_ASSET_GAIN_COLS[eligible]
+    pool      = rowSums(stakes[, elig_cols, drop = FALSE])
+    f_x       = ifelse(pool > 0, pmax(0, pool - excl_own) / pool, 0)
+    f_2x      = ifelse(pool > 0, pmax(0, pool - excl_2x) / pool, 0)
+    f_blend   = p_widow * f_2x + (1 - p_widow) * f_x
+    above_excl[, elig_cols] = stakes[, elig_cols, drop = FALSE] * f_blend
+  }
+  colnames(above_excl) = paste0(KG_DYN_ASSET_GAIN_COLS, '_above_excl')
 
   estate = as.matrix(tax_units[, ESTATE_ASSET_COLS])
   estate[is.na(estate)] = 0
@@ -90,9 +158,11 @@ kg_dyn_attach_record_attrs = function(tax_units, cpiu_by_year = NULL) {
 
   out = tax_units %>%
     bind_cols(as_tibble(diffs)) %>%
+    bind_cols(as_tibble(above_excl)) %>%
     mutate(
       G_unit                      = rowSums(diffs),
       gain.primary_home_above_cap = pmax(0, gain_primary - sec121),
+      p_widow                     = p_widow,
       estate_2026_m               = estate_2026_m,
       p_char_extensive            = p_char_extensive,
       p_char_intensive            = p_char_intensive,
@@ -159,6 +229,16 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
               G_B_re_fund           = sum(weight * gain.re_fund,           na.rm = TRUE),
               G_B_primary_above_cap = sum(weight * gain.primary_home_above_cap,
                                           na.rm = TRUE),
+              G_B_equities_above_excl      = sum(weight * gain.equities_above_excl,
+                                                 na.rm = TRUE),
+              G_B_pass_throughs_above_excl = sum(weight * gain.pass_throughs_above_excl,
+                                                 na.rm = TRUE),
+              G_B_primary_home_above_excl  = sum(weight * gain.primary_home_above_excl,
+                                                 na.rm = TRUE),
+              G_B_other_home_above_excl    = sum(weight * gain.other_home_above_excl,
+                                                 na.rm = TRUE),
+              G_B_re_fund_above_excl       = sum(weight * gain.re_fund_above_excl,
+                                                 na.rm = TRUE),
               V_corp_exposed        = sum(weight * corp_exposed_value,
                                           na.rm = TRUE),
               p_char_num = sum(weight * m_household * G_unit * p_char,
@@ -178,6 +258,9 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
   zero_fill_cols = c('G_B', 'R_B', 'm_num', 'mG_record', 'mR_record', 'w_total',
                      'G_B_equities', 'G_B_pass_throughs', 'G_B_primary_home',
                      'G_B_other_home', 'G_B_re_fund', 'G_B_primary_above_cap',
+                     'G_B_equities_above_excl', 'G_B_pass_throughs_above_excl',
+                     'G_B_primary_home_above_excl', 'G_B_other_home_above_excl',
+                     'G_B_re_fund_above_excl',
                      'V_corp_exposed', 'p_char_num', 'p_char_extensive_num',
                      'p_char_intensive_num', 'estate_2026_m_num')
 
@@ -207,6 +290,9 @@ kg_dyn_aggregate_cells = function(tax_units, ages = KG_DYN_AGE_MIN:KG_DYN_AGE_MA
            p_char, p_char_extensive, p_char_intensive, estate_2026_m_avg_dgw,
            G_B_equities, G_B_pass_throughs, G_B_primary_home,
            G_B_other_home, G_B_re_fund, G_B_primary_above_cap,
+           G_B_equities_above_excl, G_B_pass_throughs_above_excl,
+           G_B_primary_home_above_excl, G_B_other_home_above_excl,
+           G_B_re_fund_above_excl,
            V_corp_exposed) %>%
     arrange(age)
 }
@@ -423,6 +509,11 @@ kg_dyn_build_extended_grid = function(baseline_cells, life_ext, years,
                  G_B_other_home        = 0,
                  G_B_re_fund           = 0,
                  G_B_primary_above_cap = 0,
+                 G_B_equities_above_excl      = 0,
+                 G_B_pass_throughs_above_excl = 0,
+                 G_B_primary_home_above_excl  = 0,
+                 G_B_other_home_above_excl    = 0,
+                 G_B_re_fund_above_excl       = 0,
                  V_corp_exposed        = 0)
     out[[key]] = bind_rows(inner, ext %>% select(names(inner))) %>%
       arrange(age)
@@ -483,8 +574,8 @@ kg_dyn_load_cells_inputs = function(scenario_info, tax_law,
   # from Tax-Data, since the asset values, bases and mortality columns exist only
   # there.
   #
-  # Tax law is used only to put the §121 cap on each record, which the gain columns
-  # need.
+  # Tax law is used only to put the §121 cap, the death-gain exclusion and the
+  # death regime codes on each record, which the gain columns need.
   #
   # The frozen pass calls this and caches the result; the conventional pass reuses
   # that cache where it exists.
@@ -504,21 +595,29 @@ kg_dyn_load_cells_inputs = function(scenario_info, tax_law,
   heir_dist = kg_dyn_load_heir_distribution(ages = ages)
   cpiu_by_year = kg_dyn_load_cpiu_levels(macro_root, years)
 
-  td_cols = c('id', 'weight', 'filing_status', 'age1', 'age2',
-              'kg_lt', 'q_death1', 'q_death2',
+  td_cols = c('id', 'weight', 'filing_status', 'age1', 'age2', 'male1',
+              'divorce_year', 'kg_lt', 'q_death1', 'q_death2',
               ESTATE_ASSET_COLS,
               KG_DYN_ASSET_VALUE_COLS, KG_DYN_ASSET_BASIS_COLS) %>%
     unique()
+
+  excl_law_cols = c('pref.kg_sec121_excl', 'pref.kg_death_gain_excl',
+                    paste0('pref.kg_death_regime_', KG_DYN_ASSET_CLASSES))
 
   baseline_cells  = list()
   td_slim_by_year = list()
 
   for (t in years) {
 
-    sec121_t = tax_law %>%
+    excl_t = tax_law %>%
       filter(year == t) %>%
-      select(filing_status, `pref.kg_sec121_excl`) %>%
+      select(filing_status, all_of(excl_law_cols)) %>%
       distinct()
+
+    death_excl_married_t = excl_t %>%
+      filter(filing_status == 2) %>%
+      pull(`pref.kg_death_gain_excl`) %>%
+      first()
 
     td = file.path(tax_data_root, paste0('tax_units_', t, '.csv')) %>%
       fread(select = td_cols, showProgress = FALSE) %>%
@@ -526,8 +625,9 @@ kg_dyn_load_cells_inputs = function(scenario_info, tax_law,
       filter(id %in% sample_ids) %>%
       mutate(weight = weight / pct_sample,
              year = t) %>%
-      left_join(sec121_t, by = 'filing_status') %>%
-      kg_dyn_attach_record_attrs(cpiu_by_year = cpiu_by_year)
+      left_join(excl_t, by = 'filing_status') %>%
+      kg_dyn_attach_record_attrs(cpiu_by_year       = cpiu_by_year,
+                                 death_excl_married = death_excl_married_t)
 
     baseline_cells[[as.character(t)]] = kg_dyn_aggregate_cells(td, ages)
 

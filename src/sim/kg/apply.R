@@ -22,7 +22,9 @@
 # function on why.
 #-------------------------------------------------------------------------------
 
-kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset) {
+kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset,
+                                   regime_codes = NULL,
+                                   death_excl_married = NULL) {
 
   # Take only the columns needed, by position rather than by joining. The cell
   # table carries about 35 diagnostic columns and there are 220,000 records per
@@ -73,12 +75,48 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset) {
   sec121 = replace_na(as.numeric(tax_units$`pref.kg_sec121_excl`), 0)
   g_primary_above_cap = pmax(0, disc_gain('primary_home') - sec121)
 
-  deemed_per_record =
-      realize_by_asset[['equities']]      * disc_gain('equities') +
-      realize_by_asset[['pass_throughs']] * disc_gain('pass_throughs') +
-      realize_by_asset[['primary_home']]  * g_primary_above_cap +
-      realize_by_asset[['other_home']]    * disc_gain('other_home') +
-      realize_by_asset[['re_fund']]       * disc_gain('re_fund')
+  stakes = cbind(equities      = disc_gain('equities'),
+                 pass_throughs = disc_gain('pass_throughs'),
+                 primary_home  = g_primary_above_cap,
+                 other_home    = disc_gain('other_home'),
+                 re_fund       = disc_gain('re_fund'))
+  realize_vec = unlist(realize_by_asset[colnames(stakes)])
+
+  # The death-gain exclusion removes the first dollars of the decedent's gain
+  # pro-rata across the classes whose regime is carryover or deemed
+  # realization, after the haircut and §121, so only the taxed share of the
+  # excess lands on the final return. A single filer's own and married
+  # amounts give two branches, which run_one_year() prices separately and
+  # blends by the widowhood probability.
+  excl_own = if ('pref.kg_death_gain_excl' %in% names(tax_units)) {
+    replace_na(as.numeric(tax_units$`pref.kg_death_gain_excl`), 0)
+  } else {
+    rep(0, nrow(tax_units))
+  }
+  excl_active = any(excl_own > 0) ||
+    (!is.null(death_excl_married) &&
+       isTRUE(as.numeric(death_excl_married) > 0))
+
+  if (excl_active) {
+    if (is.null(regime_codes) || is.null(death_excl_married) ||
+        !is.finite(as.numeric(death_excl_married))) {
+      stop('kg_dyn_apply_to_records: the death-gain exclusion is active but ',
+           'regime_codes or death_excl_married was not supplied.')
+    }
+    eligible = sapply(colnames(stakes),
+                      function(k) as.numeric(regime_codes[[k]]) %in% c(1, 2))
+    excl_2x  = if_else(tax_units$filing_status %in% c(1, 4),
+                       as.numeric(death_excl_married), excl_own)
+    pool = rowSums(stakes[, eligible, drop = FALSE])
+    f_x  = ifelse(pool > 0, pmax(0, pool - excl_own) / pool, 0)
+    f_2x = ifelse(pool > 0, pmax(0, pool - excl_2x) / pool, 0)
+  } else {
+    f_x = f_2x = rep(1, nrow(tax_units))
+  }
+
+  taxed_stake         = stakes %*% realize_vec
+  deemed_per_record_x  = as.numeric(taxed_stake) * f_x
+  deemed_per_record_2x = as.numeric(taxed_stake) * f_2x
 
   # Weight on the holdings share: 0 spreads by realizations, 1 by holdings, and
   # anything between blends the two.
@@ -113,6 +151,9 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset) {
       # frozen pass, where the realization rate does not move, it is carryover
       # alone. kg_deemed_full is what would land on the final return if the
       # household died this year, and kg_deemed is that times the chance it does.
+      # Under the death-gain exclusion the two branches, own and married
+      # amounts, are kept separately as kg_deemed_full_x and kg_deemed_full_2x;
+      # kg_deemed_full is their expectation over the widowhood probability.
       #
       # Neither death column goes into kg_lt. Drawing decedents at random would
       # put roughly plus or minus half on deemed revenue, since expected death
@@ -123,9 +164,13 @@ kg_dyn_apply_to_records = function(tax_units, cell_table, realize_by_asset) {
       # it properly, as the chance of death times the difference in tax with and
       # without the gain, computed over the whole frame. That leaves kg_lt as the
       # living taxpayer's frame, which is what the marginal rates should measure.
-      kg_lockin      = extra_R * allocation,
-      kg_deemed_full = (1 - p_char) * deemed_factor * deemed_per_record,
-      kg_deemed      = m_household * kg_deemed_full,
+      kg_lockin         = extra_R * allocation,
+      p_widow           = if ('p_widow' %in% names(tax_units)) p_widow else 0,
+      kg_deemed_full_x  = (1 - p_char) * deemed_factor * deemed_per_record_x,
+      kg_deemed_full_2x = (1 - p_char) * deemed_factor * deemed_per_record_2x,
+      kg_deemed_full    = p_widow * kg_deemed_full_2x +
+                          (1 - p_widow) * kg_deemed_full_x,
+      kg_deemed         = m_household * kg_deemed_full,
       kg_lt = if_else(kg_lt > 0, kg_lt * rate_factor, kg_lt) +
               kg_lockin
     ) %>%
@@ -159,13 +204,18 @@ kg_dyn_apply_mech_to_records = function(tax_units, scenario_info, year) {
     scenario_info$interface_paths$`Macro-Projections`,
     years = year
   )
-  tax_units = kg_dyn_attach_record_attrs(tax_units,
-                                         cpiu_by_year = cpiu_by_year)
+  tax_units = kg_dyn_attach_record_attrs(
+    tax_units,
+    cpiu_by_year       = cpiu_by_year,
+    death_excl_married = state$regime$death_excl_married
+  )
 
   kg_dyn_apply_to_records(
-    tax_units        = tax_units,
-    cell_table       = state$cell_table,
-    realize_by_asset = state$regime$realize
+    tax_units          = tax_units,
+    cell_table         = state$cell_table,
+    realize_by_asset   = state$regime$realize,
+    regime_codes       = state$regime$codes,
+    death_excl_married = state$regime$death_excl_married
   )
 }
 

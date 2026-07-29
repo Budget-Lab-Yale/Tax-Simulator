@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+"""Build the self-contained house-style table:
+'what rate would it take to close the deficit from the top alone' (FY2027)."""
+import json, os
+
+HERE = os.path.dirname(__file__)
+D = json.load(open(os.path.join(HERE, "mtr_table_data.json")))
+OUT = os.path.join(HERE, "mtr_deficit_table.html")
+
+
+def thr(v):
+    return f"${v/1e6:.1f}M" if v >= 1e6 else f"${v/1e3:.0f}k"
+
+
+def rate(v, flag=True):
+    return f"<td>{v:,.0f}%</td>"
+
+
+rows_html = []
+for r in D["rows"]:
+    rows_html.append(
+        "<tr>"
+        f'<th scope="row">{r["group"]}</th>'
+        f'<td class="dim">{thr(r["thr"])}</td>'
+        f'<td>{r["cash_etr"]:.0f}%</td>'
+        f'{rate(r["needed_etr"])}'
+        f'{rate(r["ord_req"])}'
+        f'{rate(r["agi_req"])}'
+        "</tr>")
+ROWS = "\n".join(rows_html)
+
+HTML = f"""<title>What it would take to close the deficit from the top alone</title>
+<style>
+  :root {{
+    --paper:#f9fafb; --ink:#1c2733; --ink2:#3c4a59; --muted:#5a6b7d; --line:#dce3ea; --grid:#eef2f6;
+    --card:#ffffff; --accent:#1a5b9e; --danger:#a8433a; --dangerbg:#fbeeec; --head:#eef2f6;
+  }}
+  @media (prefers-color-scheme: dark) {{
+    :root {{ --paper:#131a22; --ink:#e4ebf2; --ink2:#c3ccd6; --muted:#8da0b3; --line:#2b3947; --grid:#1e2937;
+      --card:#18212b; --accent:#7db0e0; --danger:#e69a92; --dangerbg:#3a2422; --head:#1e2937; }}
+  }}
+  :root[data-theme="dark"] {{ --paper:#131a22; --ink:#e4ebf2; --ink2:#c3ccd6; --muted:#8da0b3; --line:#2b3947;
+    --grid:#1e2937; --card:#18212b; --accent:#7db0e0; --danger:#e69a92; --dangerbg:#3a2422; --head:#1e2937; }}
+  :root[data-theme="light"] {{ --paper:#f9fafb; --ink:#1c2733; --ink2:#3c4a59; --muted:#5a6b7d; --line:#dce3ea;
+    --grid:#eef2f6; --card:#ffffff; --accent:#1a5b9e; --danger:#a8433a; --dangerbg:#fbeeec; --head:#eef2f6; }}
+
+  * {{ box-sizing:border-box; }}
+  html {{ background:var(--paper); }}
+  body {{ margin:0; background:var(--paper); color:var(--ink);
+    font-family:Charter,"Bitstream Charter",Cambria,Georgia,serif; font-size:16px; line-height:1.55; }}
+  .wrap {{ max-width:52rem; margin:0 auto; padding:2rem 1.25rem 4rem; }}
+  header {{ border-bottom:2px solid var(--ink); padding-bottom:.9rem; margin-bottom:1.3rem; }}
+  .eyebrow {{ font-family:system-ui,sans-serif; font-size:.7rem; font-weight:600; letter-spacing:.13em;
+    text-transform:uppercase; color:var(--accent); margin:0 0 .5rem; }}
+  h1 {{ font-size:1.5rem; margin:0 0 .35rem; line-height:1.22; text-wrap:balance; }}
+  .standfirst {{ color:var(--muted); font-style:italic; margin:0; max-width:46rem; }}
+  .opt {{ font-family:system-ui,sans-serif; font-size:.68rem; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--accent); margin:1.5rem 0 .45rem; }}
+  .card {{ background:var(--card); border:1px solid var(--line); border-radius:9px; padding:.4rem .4rem 0; margin:0 0 1.3rem; overflow-x:auto; }}
+  table {{ border-collapse:collapse; width:100%; font-family:system-ui,"Segoe UI",sans-serif; }}
+  th, td {{ padding:.62rem .8rem; text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }}
+  thead th {{ font-size:.74rem; font-weight:700; color:var(--ink2); line-height:1.25; vertical-align:bottom;
+    border-bottom:1.5px solid var(--line); }}
+  thead tr:first-child th {{ font-size:.64rem; letter-spacing:.06em; text-transform:uppercase; color:var(--accent);
+    font-weight:700; padding-bottom:.3rem; }}
+  .grouphead {{ border-bottom:2px solid var(--accent); text-align:center; }}
+  tbody th[scope="row"] {{ text-align:left; font-weight:700; color:var(--ink); font-size:.92rem; }}
+  tbody td {{ font-size:.95rem; }}
+  tbody td.dim {{ color:var(--muted); font-weight:500; }}
+  tbody tr + tr th, tbody tr + tr td {{ border-top:1px solid var(--grid); }}
+  .note {{ font-family:system-ui,sans-serif; font-size:.72rem; color:var(--muted); line-height:1.55; margin:1rem 0 0; }}
+  .note b {{ color:var(--ink); }}
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">The Budget Lab · static illustration · FY2027</p>
+  <h1>What tax rate would it take to close the deficit from the top alone?</h1>
+  <p class="standfirst">For each group, a new top bracket set at that group's cash-income threshold and
+  applied only to income above it — nothing below is touched — sized to raise the entire $1.9&nbsp;trillion
+  FY2027 deficit on a static basis. The effective rate is the average over the group's income; the marginal
+  rates are what the top bracket itself must be, shown for a narrow (ordinary-income) and a broad (AGI) base.</p>
+</header>
+
+<p class="opt">Table 1</p>
+<div class="card">
+<table>
+  <thead>
+    <tr>
+      <th></th><th></th><th></th>
+      <th class="grouphead" colspan="3">Rate needed to close the FY2027 deficit</th>
+    </tr>
+    <tr>
+      <th scope="col" style="text-align:left">Income group</th>
+      <th scope="col">Cash-income<br>threshold</th>
+      <th scope="col">Current<br>cash ETR</th>
+      <th scope="col">Effective<br>rate</th>
+      <th scope="col">Marginal rate,<br>ordinary income</th>
+      <th scope="col">Marginal rate,<br>AGI</th>
+    </tr>
+  </thead>
+  <tbody>
+{ROWS}
+  </tbody>
+</table>
+</div>
+
+<p class="note">
+  <b>How to read it.</b> Reading down, the narrower the slice you confine the tax to, the higher the required
+  rate: taxing all income above the top-10% line needs a ~67% marginal rate on AGI, but confining it to the
+  top 1% needs ~100%+, and the top 0.01% alone would need rates in the hundreds of percent. The ordinary-income
+  column is always far higher than the AGI column because the top's income is disproportionately capital gains,
+  which sit outside the ordinary base. Any figure above 100% is a mathematical
+  impossibility — you cannot take more than the last dollar.
+</p>
+<p class="note">
+  <b>Method.</b> FY2027, static (the tax base is held fixed; behavioral responses would push every rate higher).
+  Groups and thresholds are by cash (expanded) income; the effective rate is on the group's full cash income,
+  the marginal rate is on income above the threshold. Source: The Budget Lab Tax-Simulator, v3, 2027 baseline.
+</p>
+</div>
+"""
+
+open(OUT, "w").write(HTML)
+print("wrote", OUT, os.path.getsize(OUT), "bytes")

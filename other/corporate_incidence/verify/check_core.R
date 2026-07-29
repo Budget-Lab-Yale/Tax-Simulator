@@ -233,6 +233,9 @@ bt_syn = tibble(
   estate_2026_m_avg_dgw = NA_real_,
   G_B_equities = 600, G_B_pass_throughs = 200, G_B_primary_home = 100,
   G_B_other_home = 50, G_B_re_fund = 50, G_B_primary_above_cap = 80,
+  G_B_equities_above_excl = 600, G_B_pass_throughs_above_excl = 200,
+  G_B_primary_home_above_excl = 80, G_B_other_home_above_excl = 50,
+  G_B_re_fund_above_excl = 50,
   V_corp_exposed = 800)
 vec  = function(x) setNames(rep(x, nA), ages_chr)
 mix_syn = tibble(age = ages_bt, delta_vanish = 1, delta_route = 0,

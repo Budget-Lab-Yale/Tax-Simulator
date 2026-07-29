@@ -71,6 +71,7 @@ for (t in YEARS) {
     fread(select = td_cols, showProgress = FALSE) %>%
     as_tibble() %>%
     mutate(`pref.kg_sec121_excl` = if_else(filing_status == 2, 500000, 250000),
+           `pref.kg_death_gain_excl` = 0,
            year = t) %>%
     kg_dyn_attach_record_attrs(cpiu_by_year = cpiu_by_year)
   bl = file.path(BASELINE_ROOT, 'baseline', 'static', 'detail',

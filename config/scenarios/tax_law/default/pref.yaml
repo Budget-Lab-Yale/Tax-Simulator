@@ -18,6 +18,11 @@ filing_status_mapper:
     '2': kg_sec121_excl_married
     '3': kg_sec121_excl_married / 2
     '4': kg_sec121_excl_single
+  kg_death_gain_excl:
+    '1': kg_death_gain_excl_single
+    '2': kg_death_gain_excl_married
+    '3': kg_death_gain_excl_married / 2
+    '4': kg_death_gain_excl_single
 
 # Whether to tax long-term capital gains and qualified dividends at ordinary rates
 tax_at_ord:
@@ -114,3 +119,15 @@ kg_sec121_excl_single:
   value: 250000
 kg_sec121_excl_married:
   value: 500000
+
+# Per-decedent exclusion of gain at death, on top of Section 121 (not
+# indexed; current law has none). Consumed only by kg_dynamics: the first
+# dollars of a household's unrealized gain keep step-up treatment, pro-rata
+# by gain across the asset classes whose death regime is carryover or deemed
+# realization, and only the excess is routed or taxed. Married amounts apply
+# at the both-die event; single filers who may be widowed get the married
+# amount with probability p_widow.
+kg_death_gain_excl_single:
+  value: 0
+kg_death_gain_excl_married:
+  value: 0

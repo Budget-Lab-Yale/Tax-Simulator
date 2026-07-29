@@ -51,8 +51,9 @@ kg_dyn_resolve_year_regime = function(tax_law, year, baseline_t,
                                                       KG_DYN_AGE_MAX) {
 
   # Reads the year's treatment of gains at death out of tax law: the treatment by
-  # asset class, the weight the holder puts on the heir's tax bill, and the §121
-  # exclusion caps. Checks them and averages the treatment to the cell.
+  # asset class, the weight the holder puts on the heir's tax bill, the §121
+  # exclusion caps, and the death-gain exclusion. Checks them and averages the
+  # treatment to the cell.
   #
   # Returns: list of the year's treatment, which is written into the state files,
   #          and the cell-level mix of it.
@@ -90,6 +91,17 @@ kg_dyn_resolve_year_regime = function(tax_law, year, baseline_t,
   if (length(sec121_single)  == 0) sec121_single  = NA_real_
   if (length(sec121_married) == 0) sec121_married = NA_real_
 
+  # The death-gain exclusion, per filing status, on top of §121
+  death_excl_by_fs = tlt %>%
+    select(filing_status, `pref.kg_death_gain_excl`) %>%
+    distinct()
+  death_excl_single = death_excl_by_fs %>%
+    filter(filing_status == 1) %>% pull(`pref.kg_death_gain_excl`)
+  death_excl_married = death_excl_by_fs %>%
+    filter(filing_status == 2) %>% pull(`pref.kg_death_gain_excl`)
+  if (length(death_excl_single)  == 0) death_excl_single  = NA_real_
+  if (length(death_excl_married) == 0) death_excl_married = NA_real_
+
   mix = kg_dyn_build_regime_mix(regime_codes, theta, baseline_t, ages_bathtub)
 
   # Whether each asset class is realized at death
@@ -104,6 +116,8 @@ kg_dyn_resolve_year_regime = function(tax_law, year, baseline_t,
       theta               = theta,
       sec121_excl_single  = sec121_single[1],
       sec121_excl_married = sec121_married[1],
+      death_excl_single   = death_excl_single[1],
+      death_excl_married  = death_excl_married[1],
       realize             = realize_by_asset
     ),
     mix = mix

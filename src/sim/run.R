@@ -688,11 +688,17 @@ kg_dyn_recompute_deemed_tax = function(taxed, input, baseline_pr_er,
   #   liab_deemed = m_household * [T(y + kg_deemed_full) - T(y)]
   #
   # The second term comes from a second do_taxes() recompute with the death gain,
-  # net of Sec. 121 and of avoidance, added to kg_lt. Both legs run under reform
-  # law, so rate reforms flow through. The decedent's tax is then deducted against
-  # the taxable estate, which the in-chain estate calculation ran with turned off,
-  # and estate liabilities are repriced. The deduction enters the base only, so
-  # estate_distributable does not move.
+  # net of Sec. 121, the death-gain exclusion and avoidance, added to kg_lt. Both
+  # legs run under reform law, so rate reforms flow through. The decedent's tax is
+  # then deducted against the taxable estate, which the in-chain estate
+  # calculation ran with turned off, and estate liabilities are repriced. The
+  # deduction enters the base only, so estate_distributable does not move.
+  #
+  # Under a nonzero death-gain exclusion a single filer's death gain has two
+  # branches, at the own and married amounts, and the dead leg runs once per
+  # branch. The expectation over whether the filer is widowed blends the two:
+  #
+  #   liab_deemed_cond = p_widow * dT_2x + (1 - p_widow) * dT_x
   #
   # The recompute runs on the whole frame rather than a subset, because the calc
   # functions index globals$random_numbers positionally and subsetting rows breaks
@@ -702,7 +708,8 @@ kg_dyn_recompute_deemed_tax = function(taxed, input, baseline_pr_er,
   # Parameters:
   #   - taxed (df)          : taxed surviving-leg frame, modified and returned
   #   - input (df)          : pre-tax input frame for this pass, same row order,
-  #                           carrying kg_lt, kg_deemed_full and m_household
+  #                           carrying kg_lt, kg_deemed_full, its two branches,
+  #                           p_widow and m_household
   #   - baseline_pr_er (df) : baseline employer payroll, passed to do_taxes()
   #   - vars_1040 (str[])   : 1040 return vars for do_taxes()
   #   - vars_payroll (str[]): payroll return vars for do_taxes()
@@ -711,16 +718,29 @@ kg_dyn_recompute_deemed_tax = function(taxed, input, baseline_pr_er,
   # Returns: taxed with liab_deemed attached and the estate output repriced (df).
   #----------------------------------------------------------------------------
 
-  dead_leg = input %>%
-    mutate(kg_lt = kg_lt + kg_deemed_full) %>%
-    do_taxes(baseline_pr_er   = baseline_pr_er,
-             vars_1040        = vars_1040,
-             vars_payroll     = vars_payroll,
-             calc_estate_flag = FALSE,
-             calc_wealth_flag = FALSE)   # only liab_iit_net is read
-  stopifnot(identical(dead_leg$id, taxed$id))
+  dead_leg_delta = function(deemed_gain) {
+    dead_leg = input %>%
+      mutate(kg_lt = kg_lt + !!deemed_gain) %>%
+      do_taxes(baseline_pr_er   = baseline_pr_er,
+               vars_1040        = vars_1040,
+               vars_payroll     = vars_payroll,
+               calc_estate_flag = FALSE,
+               calc_wealth_flag = FALSE)   # only liab_iit_net is read
+    stopifnot(identical(dead_leg$id, taxed$id))
+    dead_leg$liab_iit_net - taxed$liab_iit_net
+  }
 
-  liab_deemed_cond  = dead_leg$liab_iit_net - taxed$liab_iit_net
+  two_branch = all(c('kg_deemed_full_x', 'kg_deemed_full_2x', 'p_widow') %in%
+                     names(input)) &&
+    any(input$kg_deemed_full_2x != input$kg_deemed_full_x)
+
+  if (two_branch) {
+    dT_x  = dead_leg_delta(input$kg_deemed_full_x)
+    dT_2x = dead_leg_delta(input$kg_deemed_full_2x)
+    liab_deemed_cond = input$p_widow * dT_2x + (1 - input$p_widow) * dT_x
+  } else {
+    liab_deemed_cond = dead_leg_delta(input$kg_deemed_full)
+  }
   taxed$liab_deemed = input$m_household * liab_deemed_cond
 
   taxed$estate_income_tax_ded = pmax(liab_deemed_cond, 0)

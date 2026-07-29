@@ -81,7 +81,8 @@ echo ""
 #-------------------------------------------
 
 echo "Phase 0: Running setup..."
-METADATA=$(cd "$REPO_DIR" && Rscript src/slurm/setup.R "$@")
+# Setup takes the eight model arguments; submit_mode is this script's alone.
+METADATA=$(cd "$REPO_DIR" && Rscript src/slurm/setup.R "${@:1:8}")
 eval "$METADATA"
 
 echo "  Staging dir: ${STAGING_DIR}"

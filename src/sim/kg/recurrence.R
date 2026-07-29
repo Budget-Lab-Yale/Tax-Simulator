@@ -166,7 +166,10 @@ kg_dyn_build_regime_mix = function(regime_codes, theta, baseline_t,
   share = lapply(asset_classes,
                  function(k) safe_share(baseline_t[[paste0('G_B_', k)]]))
   names(share) = asset_classes
-  share_primary_above_cap = safe_share(baseline_t$G_B_primary_above_cap)
+  share_above_excl = lapply(asset_classes, function(k) {
+    safe_share(baseline_t[[paste0('G_B_', k, '_above_excl')]])
+  })
+  names(share_above_excl) = asset_classes
 
   n_cells       = length(G_B)
   delta_vanish  = rep(0, n_cells)
@@ -177,12 +180,13 @@ kg_dyn_build_regime_mix = function(regime_codes, theta, baseline_t,
   for (k in asset_classes) {
     tr = triplets[[k]]
 
-    # On a primary home, only the gain above the §121 exclusion is at stake.
-    # Whether the gain is taxed at death or routed to the heir, the exclusion is
-    # modeled as a step-up in basis up to the cap, so the portion below it never
-    # enters either stock. Where the whole gain is forgiven anyway the exclusion
-    # does not matter. Every other asset class puts its full share at stake.
-    live_share = if (k == 'primary_home') share_primary_above_cap else share[[k]]
+    # Only the gain above the exclusions is at stake: §121 on a primary home,
+    # plus the per-decedent death-gain exclusion on every class whose regime is
+    # carryover or deemed realization. Whether the gain is taxed at death or
+    # routed to the heir, an exclusion is modeled as a step-up in basis up to
+    # its cap, so the portion below it never enters either stock. Where the
+    # whole gain is forgiven anyway the exclusions do not matter.
+    live_share = share_above_excl[[k]]
 
     delta_vanish  = delta_vanish  + share[[k]] * tr$vanish
     delta_route   = delta_route   + live_share * tr$route
@@ -350,6 +354,9 @@ kg_dyn_build_cell_table = function(baseline_t, year_idx,
            p_char, p_char_extensive, p_char_intensive, estate_2026_m_avg_dgw,
            G_B_equities, G_B_pass_throughs, G_B_primary_home,
            G_B_other_home, G_B_re_fund, G_B_primary_above_cap,
+           G_B_equities_above_excl, G_B_pass_throughs_above_excl,
+           G_B_primary_home_above_excl, G_B_other_home_above_excl,
+           G_B_re_fund_above_excl,
            delta_vanish, delta_route, delta_realize, c_phi,
            decedent_stock, terminal_char_stock, taxable_death_stock,
            tau_B, tau_S, W_B, W_S, MC_B, MC_S, kappa, r_D_B, r_D_S,
@@ -832,6 +839,9 @@ kg_dyn_run_frozen_pass = function(scenario_info, tax_law, baseline_cells,
              p_char, p_char_extensive, p_char_intensive,
              G_B_equities, G_B_pass_throughs, G_B_primary_home,
              G_B_other_home, G_B_re_fund, G_B_primary_above_cap,
+             G_B_equities_above_excl, G_B_pass_throughs_above_excl,
+             G_B_primary_home_above_excl, G_B_other_home_above_excl,
+             G_B_re_fund_above_excl,
              delta_vanish, delta_route, delta_realize, c_phi,
              decedent_stock, terminal_char_stock, taxable_death_stock,
              delta_inh, rate_factor, extra_R, deemed_factor)

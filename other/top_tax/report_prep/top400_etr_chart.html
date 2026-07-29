@@ -1,0 +1,320 @@
+<title>Effective federal tax rates: cash vs. accrual, with the top 400</title>
+<style>
+  :root {
+    --surface: #fcfcfb;
+    --page: #f9f9f7;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --band: #f1f0ec;
+    --border: rgba(11,11,11,0.10);
+    --cash: #2a78d6;
+    --accrual: #eb6834;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      --surface: #1a1a19;
+      --page: #0d0d0d;
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --band: #222220;
+      --border: rgba(255,255,255,0.10);
+      --cash: #3987e5;
+      --accrual: #d95926;
+    }
+  }
+  :root[data-theme="dark"] {
+    --surface: #1a1a19;
+    --page: #0d0d0d;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --band: #222220;
+    --border: rgba(255,255,255,0.10);
+    --cash: #3987e5;
+    --accrual: #d95926;
+  }
+  :root[data-theme="light"] {
+    --surface: #fcfcfb;
+    --page: #f9f9f7;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --band: #f1f0ec;
+    --border: rgba(11,11,11,0.10);
+    --cash: #2a78d6;
+    --accrual: #eb6834;
+  }
+  html { background: var(--page); }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--ink);
+    margin: 0;
+    padding: 32px 16px 64px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  h1 {
+    font-size: 22px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  .sub { color: var(--ink-2); font-size: 14px; margin: 0 0 20px; max-width: 72ch; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 16px 8px;
+  }
+  .legend {
+    display: flex; gap: 20px; align-items: center;
+    font-size: 13px; color: var(--ink-2);
+    padding: 0 8px 6px;
+  }
+  .legend .key { display: flex; gap: 7px; align-items: center; }
+  .legend .swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  .legend .swatch.dot { width: 9px; height: 9px; border-radius: 50%; }
+  figure { margin: 0; position: relative; }
+  svg { display: block; width: 100%; height: auto; }
+  svg text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .tick-label { fill: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .x-label { fill: var(--ink-2); font-size: 11.5px; }
+  .series-label { font-size: 12.5px; font-weight: 600; }
+  .value-label { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .band-label { fill: var(--muted); font-size: 11px; letter-spacing: 0.04em; }
+  .hoverband { fill: transparent; outline: none; }
+  .hoverband:focus-visible + .focus-ring, .hoverband:hover + .focus-ring { opacity: 1; }
+  .focus-ring { opacity: 0; pointer-events: none; }
+  #tooltip {
+    position: absolute;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.14);
+    padding: 10px 12px;
+    font-size: 12.5px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 90ms linear;
+    min-width: 240px;
+    z-index: 3;
+  }
+  @media (prefers-reduced-motion: reduce) { #tooltip { transition: none; } }
+  #tooltip.show { opacity: 1; }
+  #tooltip h3 { margin: 0 0 6px; font-size: 12.5px; font-weight: 650; }
+  #tooltip .tt-sub { color: var(--muted); font-weight: 400; }
+  #tooltip table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  #tooltip th { text-align: right; font-weight: 600; color: var(--ink-2); padding: 1px 0 3px 12px; }
+  #tooltip th:first-child { text-align: left; padding-left: 0; }
+  #tooltip td { text-align: right; padding: 1px 0 1px 12px; color: var(--ink); }
+  #tooltip td:first-child { text-align: left; padding-left: 0; color: var(--ink-2); }
+  #tooltip tr.total td { border-top: 1px solid var(--grid); font-weight: 650; padding-top: 3px; }
+  .notes { font-size: 12.5px; color: var(--ink-2); margin-top: 18px; max-width: 78ch; }
+  .notes p { margin: 0 0 8px; }
+  .notes .n { color: var(--muted); }
+  details { margin-top: 16px; font-size: 13px; }
+  summary { cursor: pointer; color: var(--ink-2); font-weight: 600; }
+  .tblwrap { overflow-x: auto; margin-top: 10px; }
+  table.data {
+    border-collapse: collapse; font-size: 12.5px; min-width: 640px;
+    font-variant-numeric: tabular-nums;
+  }
+  table.data th, table.data td { padding: 5px 10px; text-align: right; border-bottom: 1px solid var(--grid); }
+  table.data th:first-child, table.data td:first-child { text-align: left; }
+  table.data th { color: var(--ink-2); font-weight: 600; border-bottom: 1px solid var(--axis); }
+</style>
+
+<div class="wrap">
+  <h1>Effective federal tax rates under current law: cash vs. accrual income, 2027</h1>
+  <p class="sub">
+    All federal taxes (individual income, payroll, expected estate tax at death, and
+    allocated corporate tax) as a share of pre-tax income, Budget Lab Tax-Simulator
+    static baseline. Income groups are ranked by cash (expanded) income; the rightmost
+    group is the model&rsquo;s 400 wealthiest tax units, ranked by net worth.
+  </p>
+
+  <div class="card">
+    <div class="legend">
+      <span class="key"><span class="swatch" style="background:var(--cash)"></span>Cash income (realized)</span>
+      <span class="key"><span class="swatch" style="background:var(--accrual)"></span>Accrual income (Haig&ndash;Simons)</span>
+    </div>
+    <figure id="fig">
+      <svg id="chart" viewBox="0 0 960 470" role="img"
+           aria-label="Line chart of effective federal tax rates by income group under cash and accrual income concepts, with a separate top-400-by-wealth group at right"></svg>
+      <div id="tooltip" role="status"></div>
+    </figure>
+  </div>
+
+  <div class="notes">
+    <p><span class="n">Concepts.</span> Cash = expanded income as realized (wages, dividends,
+      interest, realized capital gains, transfers, etc.). Accrual = Haig&ndash;Simons: accrued
+      capital gains replace realizations in the denominator. Both denominators include each
+      group&rsquo;s allocated share of corporate tax; numerators are identical dollars, so the
+      two lines differ only in the income concept.</p>
+    <p><span class="n">Taxes included.</span> Individual income tax (net of refundable credits
+      &mdash; the bottom quintile&rsquo;s income-tax component is negative), payroll tax,
+      expected estate tax at death, and baseline corporate receipts allocated in proportion to
+      capital income. Current law has no wealth tax or VAT. State and local taxes are excluded.</p>
+    <p><span class="n">Top 400.</span> The 400 highest-net-worth tax units in the model
+      (minimum net worth $4.1&nbsp;billion; combined $7.7&nbsp;trillion), the model&rsquo;s
+      Forbes-400 analog. Their estate-tax component rounds to zero because the estate module
+      caps the death weights of these cloned records (the cluster guard), so expected estate
+      tax does not register in a single-year snapshot. Ranking this group by wealth while the
+      rest of the chart ranks by income follows the convention of Saez&ndash;Zucman-style
+      presentations.</p>
+    <p><span class="n">Comparison.</span> The White House CEA (2021) estimated the top 400
+      paid 8.2% of income including unrealized gains in federal <em>individual income</em> tax
+      (2010&ndash;2018 average). The comparable component here is 6.5%; the 8.1% shown adds
+      payroll and allocated corporate tax.</p>
+  </div>
+
+  <details>
+    <summary>Table view</summary>
+    <div class="tblwrap"><table class="data" id="datatable"></table></div>
+  </details>
+</div>
+
+<script>
+const DATA = [
+  {g:"P0–20",       gl:["Bottom","20%"],      cash:{etr:0.04427,inc:452.4,comp:{it:-0.06481,pr:0.10357,es:0,co:0.00551}}, acc:{etr:0.03321,inc:603.2,comp:{it:-0.04862,pr:0.07769,es:0,co:0.00414}}, tax:20.0,  n:37097541},
+  {g:"P20–40",      gl:["20–40"],         cash:{etr:0.07137,inc:1252.5,comp:{it:-0.03395,pr:0.09958,es:0,co:0.00574}}, acc:{etr:0.05876,inc:1521.3,comp:{it:-0.02795,pr:0.08198,es:0,co:0.00473}}, tax:89.4,  n:37098627},
+  {g:"P40–60",      gl:["40–60"],         cash:{etr:0.14747,inc:2281.2,comp:{it:0.03219,pr:0.10954,es:0,co:0.00574}},  acc:{etr:0.12150,inc:2768.8,comp:{it:0.02652,pr:0.09025,es:0,co:0.00473}},  tax:336.4, n:37100096},
+  {g:"P60–80",      gl:["60–80"],         cash:{etr:0.17841,inc:4060.8,comp:{it:0.06566,pr:0.10662,es:0,co:0.00613}},  acc:{etr:0.14490,inc:5000.0,comp:{it:0.05333,pr:0.08659,es:0,co:0.00498}},  tax:724.5, n:37098267},
+  {g:"P80–90",      gl:["80–90"],         cash:{etr:0.19537,inc:3491.1,comp:{it:0.09845,pr:0.08997,es:0,co:0.00695}},  acc:{etr:0.15015,inc:4542.5,comp:{it:0.07566,pr:0.06915,es:0,co:0.00534}},  tax:682.1, n:18551069},
+  {g:"P90–95",      gl:["90–95"],         cash:{etr:0.21710,inc:2571.0,comp:{it:0.11873,pr:0.08932,es:0,co:0.00904}},  acc:{etr:0.14318,inc:3898.3,comp:{it:0.07831,pr:0.05891,es:0,co:0.00596}},  tax:558.2, n:9274803},
+  {g:"P95–99",      gl:["95–99"],         cash:{etr:0.22354,inc:3748.5,comp:{it:0.14519,pr:0.06641,es:0,co:0.01194}},  acc:{etr:0.13446,inc:6231.6,comp:{it:0.08734,pr:0.03995,es:0,co:0.00718}},  tax:837.9, n:7420103},
+  {g:"P99–99.9",    gl:["99–99.9"],       cash:{etr:0.23406,inc:2691.5,comp:{it:0.18850,pr:0.02756,es:0,co:0.01800}},  acc:{etr:0.14565,inc:4325.4,comp:{it:0.11730,pr:0.01715,es:0,co:0.01120}},  tax:630.0, n:1669679},
+  {g:"P99.9–99.99", gl:["99.9–","99.99"], cash:{etr:0.28489,inc:1326.4,comp:{it:0.24291,pr:0.01207,es:0.00046,co:0.02944}}, acc:{etr:0.19739,inc:1914.4,comp:{it:0.16831,pr:0.00837,es:0.00032,co:0.02040}}, tax:377.9, n:166938},
+  {g:"Top 0.01%",        gl:["Top","0.01%"],        cash:{etr:0.30016,inc:1193.9,comp:{it:0.21892,pr:0.00491,es:0.03123,co:0.04510}}, acc:{etr:0.23708,inc:1511.5,comp:{it:0.17291,pr:0.00388,es:0.02467,co:0.03562}}, tax:358.4, n:18558},
+];
+const TOP400 = {g:"Top 400", gl:["Top 400"],
+  cash:{etr:0.31750,inc:181.5,comp:{it:0.25380,pr:0.00180,es:0,co:0.06190}},
+  acc:{etr:0.08133,inc:708.6,comp:{it:0.06502,pr:0.00046,es:0,co:0.01586}},
+  tax:57.6, n:400};
+
+const W=960, H=470, ML=52, MR=14, MT=18, MB=64;
+const BAND_W=118, GAP=26;                       // top-400 band on the right
+const plotR = W-MR, plotL = ML;
+const bandL = plotR-BAND_W;                     // shaded wealth band
+const incR  = bandL-GAP;                        // income-group region
+const YMAX=0.35, plotB=H-MB, plotT=MT;
+const y = v => plotB-(v/YMAX)*(plotB-plotT);
+const xi = i => plotL+16+((i+0.5)/DATA.length)*(incR-plotL-24);
+const x400 = bandL+BAND_W/2;
+
+const svg = document.getElementById('chart');
+const NS='http://www.w3.org/2000/svg';
+function el(tag, attrs, parent){
+  const e=document.createElementNS(NS,tag);
+  for(const k in attrs) e.setAttribute(k,attrs[k]);
+  (parent||svg).appendChild(e); return e;
+}
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+// wealth band
+el('rect',{x:bandL,y:plotT,width:BAND_W,height:plotB-plotT,fill:'var(--band)',rx:4});
+el('text',{x:x400,y:plotB+46,'text-anchor':'middle',class:'band-label'}).textContent='RANKED BY WEALTH';
+
+// gridlines + y ticks
+for(let v=0; v<=YMAX+1e-9; v+=0.05){
+  el('line',{x1:plotL,x2:plotR,y1:y(v),y2:y(v),stroke:v===0?'var(--axis)':'var(--grid)','stroke-width':1});
+  el('text',{x:plotL-8,y:y(v)+4,'text-anchor':'end',class:'tick-label'}).textContent=Math.round(v*100)+'%';
+}
+
+// x labels
+DATA.forEach((d,i)=>{
+  d.gl.forEach((line,j)=>{
+    el('text',{x:xi(i),y:plotB+18+j*13,'text-anchor':'middle',class:'x-label'}).textContent=line;
+  });
+});
+el('text',{x:x400,y:plotB+18,'text-anchor':'middle',class:'x-label','font-weight':600}).textContent='Top 400';
+el('text',{x:(plotL+incR)/2,y:plotB+46,'text-anchor':'middle',class:'band-label'}).textContent='RANKED BY CASH INCOME · PERCENTILES OF TAX UNITS';
+
+// series lines
+function path(key){
+  return DATA.map((d,i)=>(i?'L':'M')+xi(i).toFixed(1)+','+y(d[key].etr).toFixed(1)).join(' ');
+}
+el('path',{d:path('cash'),fill:'none',stroke:'var(--cash)','stroke-width':2,'stroke-linejoin':'round'});
+el('path',{d:path('acc'),fill:'none',stroke:'var(--accrual)','stroke-width':2,'stroke-linejoin':'round'});
+
+// markers (2px surface ring via stroke)
+DATA.forEach((d,i)=>{
+  el('circle',{cx:xi(i),cy:y(d.cash.etr),r:4,fill:'var(--cash)',stroke:'var(--surface)','stroke-width':2});
+  el('circle',{cx:xi(i),cy:y(d.acc.etr),r:4,fill:'var(--accrual)',stroke:'var(--surface)','stroke-width':2});
+});
+// top-400 dots
+el('circle',{cx:x400,cy:y(TOP400.cash.etr),r:5.5,fill:'var(--cash)',stroke:'var(--surface)','stroke-width':2});
+el('circle',{cx:x400,cy:y(TOP400.acc.etr),r:5.5,fill:'var(--accrual)',stroke:'var(--surface)','stroke-width':2});
+
+// selective direct labels
+const lbl=(x_,y_,t,color,anchor)=>{
+  const e=el('text',{x:x_,y:y_, 'text-anchor':anchor||'middle',class:'value-label',fill:color});
+  e.textContent=t; return e;
+};
+lbl(x400,y(TOP400.cash.etr)-11,'31.8%','var(--cash)');
+lbl(x400,y(TOP400.acc.etr)+21,'8.1%','var(--accrual)');
+const li=DATA.length-1;
+const sl1=el('text',{x:xi(li)+10,y:y(DATA[li].cash.etr)-12,class:'series-label',fill:'var(--cash)','text-anchor':'end'}); sl1.textContent='Cash';
+const sl2=el('text',{x:xi(li)+10,y:y(DATA[li].acc.etr)+22,class:'series-label',fill:'var(--accrual)','text-anchor':'end'}); sl2.textContent='Accrual';
+
+// hover layer
+const tooltip=document.getElementById('tooltip');
+const fig=document.getElementById('fig');
+const pct=v=>(v*100).toFixed(1)+'%';
+function ttHTML(d){
+  const rows=[['Individual income tax','it'],['Payroll tax','pr'],['Estate tax (expected)','es'],['Corporate tax (allocated)','co']];
+  let h='<h3>'+d.g+' <span class="tt-sub">· '+d.n.toLocaleString()+' tax units</span></h3>';
+  h+='<table><tr><th></th><th>Cash</th><th>Accrual</th></tr>';
+  for(const [name,k] of rows){
+    h+='<tr><td>'+name+'</td><td>'+pct(d.cash.comp[k])+'</td><td>'+pct(d.acc.comp[k])+'</td></tr>';
+  }
+  h+='<tr class="total"><td>All federal taxes</td><td>'+pct(d.cash.etr)+'</td><td>'+pct(d.acc.etr)+'</td></tr>';
+  h+='<tr><td>Income ($B)</td><td>'+d.cash.inc.toLocaleString(undefined,{maximumFractionDigits:0})+'</td><td>'+d.acc.inc.toLocaleString(undefined,{maximumFractionDigits:0})+'</td></tr>';
+  h+='</table>';
+  return h;
+}
+function showTT(d, cx){
+  tooltip.innerHTML=ttHTML(d);
+  tooltip.classList.add('show');
+  const fw=fig.clientWidth, scale=fw/W;
+  let left=cx*scale+14;
+  if(left+270>fw) left=cx*scale-270-6;
+  tooltip.style.left=Math.max(4,left)+'px';
+  tooltip.style.top='30px';
+}
+function hideTT(){ tooltip.classList.remove('show'); }
+
+const ALL=[...DATA.map((d,i)=>({d,cx:xi(i)})), {d:TOP400,cx:x400}];
+const slotW=(incR-plotL)/DATA.length;
+ALL.forEach(({d,cx})=>{
+  const w=d===TOP400?BAND_W:slotW;
+  const band=el('rect',{x:cx-w/2,y:plotT,width:w,height:plotB-plotT,class:'hoverband',tabindex:0,
+    role:'img','aria-label':d.g+': cash '+pct(d.cash.etr)+', accrual '+pct(d.acc.etr)});
+  const ring=el('line',{x1:cx,x2:cx,y1:plotT,y2:plotB,stroke:'var(--axis)','stroke-width':1,class:'focus-ring'});
+  band.addEventListener('mouseenter',()=>showTT(d,cx));
+  band.addEventListener('focus',()=>showTT(d,cx));
+  band.addEventListener('mouseleave',hideTT);
+  band.addEventListener('blur',hideTT);
+});
+
+// table view
+const tbl=document.getElementById('datatable');
+let th='<tr><th>Group</th><th>Tax units</th><th>Cash income ($B)</th><th>Accrual income ($B)</th><th>Federal tax ($B)</th><th>Cash ETR</th><th>Accrual ETR</th></tr>';
+let body=[...DATA,TOP400].map(d=>'<tr><td>'+d.g+'</td><td>'+d.n.toLocaleString()+'</td><td>'+
+  d.cash.inc.toLocaleString(undefined,{maximumFractionDigits:0})+'</td><td>'+
+  d.acc.inc.toLocaleString(undefined,{maximumFractionDigits:0})+'</td><td>'+
+  d.tax.toLocaleString(undefined,{maximumFractionDigits:0})+'</td><td>'+
+  pct(d.cash.etr)+'</td><td>'+pct(d.acc.etr)+'</td></tr>').join('');
+tbl.innerHTML=th+body;
+</script>

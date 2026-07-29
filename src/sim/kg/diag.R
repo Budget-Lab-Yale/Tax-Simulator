@@ -121,7 +121,9 @@ kg_dyn_build_summary = function(scenario_info) {
              regime_re_fund                = codes$re_fund,
              theta                         = s$regime$theta,
              sec121_excl_single            = s$regime$sec121_excl_single,
-             sec121_excl_married           = s$regime$sec121_excl_married) %>%
+             sec121_excl_married           = s$regime$sec121_excl_married,
+             death_excl_single             = s$regime$death_excl_single %||% NA_real_,
+             death_excl_married            = s$regime$death_excl_married %||% NA_real_) %>%
       relocate(year, age)
   }))
 
@@ -141,7 +143,9 @@ kg_dyn_build_summary = function(scenario_info) {
            regime_re_fund       = r$codes$re_fund,
            theta                = r$theta,
            sec121_excl_single   = r$sec121_excl_single,
-           sec121_excl_married  = r$sec121_excl_married)
+           sec121_excl_married  = r$sec121_excl_married,
+           death_excl_single    = r$death_excl_single %||% NA_real_,
+           death_excl_married   = r$death_excl_married %||% NA_real_)
   }))
 
   # Weighted averages, defaulting to zero for the realization rates and NA for
@@ -163,6 +167,11 @@ kg_dyn_build_summary = function(scenario_info) {
       G_B_other_home_total        = sum(G_B_other_home),
       G_B_re_fund_total           = sum(G_B_re_fund),
       G_B_primary_above_cap_total = sum(G_B_primary_above_cap),
+      G_B_equities_above_excl_total      = sum(G_B_equities_above_excl),
+      G_B_pass_throughs_above_excl_total = sum(G_B_pass_throughs_above_excl),
+      G_B_primary_home_above_excl_total  = sum(G_B_primary_home_above_excl),
+      G_B_other_home_above_excl_total    = sum(G_B_other_home_above_excl),
+      G_B_re_fund_above_excl_total       = sum(G_B_re_fund_above_excl),
       m_avg_gw            = wmean(m,            G_B),
       estate_2026_m_avg_dgw =
         wmean(estate_2026_m_avg_dgw, mG_record),
@@ -217,6 +226,7 @@ kg_dyn_build_summary = function(scenario_info) {
            regime_equities, regime_pass_throughs, regime_primary_home,
            regime_other_home, regime_re_fund,
            theta, sec121_excl_single, sec121_excl_married,
+           death_excl_single, death_excl_married,
            c_phi_avg_gw,
            estate_2026_m_avg_dgw,
            p_char_extensive_avg_dgw, p_char_intensive_avg_dgw,
@@ -226,6 +236,9 @@ kg_dyn_build_summary = function(scenario_info) {
            G_B_equities_total, G_B_pass_throughs_total,
            G_B_primary_home_total, G_B_other_home_total,
            G_B_re_fund_total, G_B_primary_above_cap_total,
+           G_B_equities_above_excl_total, G_B_pass_throughs_above_excl_total,
+           G_B_primary_home_above_excl_total, G_B_other_home_above_excl_total,
+           G_B_re_fund_above_excl_total,
            m_avg_gw, r_B_avg_gw, r_S_avg_gw,
            r_planned_B_avg_gw, r_planned_S_avg_gw,
            r_ordinary_B_avg_gw, r_ordinary_S_avg_gw,

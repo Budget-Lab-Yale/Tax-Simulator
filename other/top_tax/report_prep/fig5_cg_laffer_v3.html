@@ -1,0 +1,166 @@
+<title>Figure 5 — capital-gains Laffer curves by treatment of gains at death</title>
+<style>
+  :root {
+    --paper:#f9fafb; --ink:#1c2733; --ink2:#3c4a59; --muted:#5a6b7d; --line:#dce3ea; --grid:#e8edf2;
+    --axis:#8a99a8; --card:#ffffff; --accent:#1a5b9e;
+    --b-iit:#0072B2; --b-cg:#D55E00; --b-corp:#8f5cc8; --b-est:#009E73; --ghost:#8a99a8;
+    --up:#2f9e60; --down:#a8433a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper:#131a22; --ink:#e4ebf2; --ink2:#c3ccd6; --muted:#8da0b3; --line:#2b3947; --grid:#223040;
+      --axis:#556777; --card:#18212b; --accent:#7db0e0;
+      --b-iit:#3a90d0; --b-cg:#e8722a; --b-corp:#a884e0; --b-est:#1bb98a; --ghost:#6b7c8c;
+      --up:#40b877; --down:#e69a92; }
+  }
+  :root[data-theme="dark"] { --paper:#131a22; --ink:#e4ebf2; --ink2:#c3ccd6; --muted:#8da0b3; --line:#2b3947;
+    --grid:#223040; --axis:#556777; --card:#18212b; --accent:#7db0e0;
+    --b-iit:#3a90d0; --b-cg:#e8722a; --b-corp:#a884e0; --b-est:#1bb98a; --ghost:#6b7c8c;
+    --up:#40b877; --down:#e69a92; }
+  :root[data-theme="light"] { --paper:#f9fafb; --ink:#1c2733; --ink2:#3c4a59; --muted:#5a6b7d; --line:#dce3ea;
+    --grid:#e8edf2; --axis:#8a99a8; --card:#ffffff; --accent:#1a5b9e;
+    --b-iit:#0072B2; --b-cg:#D55E00; --b-corp:#8f5cc8; --b-est:#009E73; --ghost:#8a99a8;
+    --up:#2f9e60; --down:#a8433a; }
+
+  * { box-sizing:border-box; }
+  html { background:var(--paper); }
+  body { margin:0; background:var(--paper); color:var(--ink);
+    font-family:Charter,"Bitstream Charter",Cambria,Georgia,serif; font-size:16px; line-height:1.55; }
+  .wrap { max-width:60rem; margin:0 auto; padding:2rem 1.25rem 4rem; }
+  header { border-bottom:2px solid var(--ink); padding-bottom:.9rem; margin-bottom:1.2rem; }
+  .eyebrow { font-family:system-ui,sans-serif; font-size:.7rem; font-weight:600; letter-spacing:.13em;
+    text-transform:uppercase; color:var(--accent); margin:0 0 .5rem; }
+  h1 { font-size:1.6rem; margin:0 0 .35rem; line-height:1.2; }
+  .standfirst { color:var(--muted); font-style:italic; margin:0; max-width:52rem; }
+
+  .readme { display:flex; flex-wrap:wrap; gap:.5rem 1.3rem; font-family:system-ui,sans-serif; font-size:.76rem;
+    color:var(--ink2); background:var(--card); border:1px solid var(--line); border-radius:7px; padding:.6rem .9rem; margin:1rem 0 0; }
+  .readme b { color:var(--ink); }
+
+  .fig { background:var(--card); border:1px solid var(--line); border-radius:8px;
+    padding:1.3rem 1.4rem 1.05rem; margin:1.4rem 0; }
+  .opt { font-family:system-ui,sans-serif; font-size:.68rem; font-weight:700; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--accent); margin:0 0 .4rem; }
+  .fig h2 { font-family:system-ui,"Segoe UI",sans-serif; font-size:1.05rem; font-weight:700;
+    margin:0 0 .15rem; line-height:1.35; text-wrap:balance; }
+  .fig .sub { font-family:system-ui,sans-serif; font-size:.79rem; color:var(--muted); margin:0 0 .5rem; }
+  svg { width:100%; height:auto; display:block; }
+  svg text { font-family:system-ui,"Segoe UI",sans-serif; }
+  .legend { display:flex; flex-wrap:wrap; gap:.3rem 1.1rem; font-family:system-ui,sans-serif;
+    font-size:.74rem; color:var(--muted); margin:.6rem 0 0; align-items:center; }
+  .key { display:inline-flex; align-items:center; gap:.4rem; }
+  .sw { width:16px; height:3px; border-radius:2px; display:inline-block; }
+  .cap { font-family:system-ui,sans-serif; font-size:.72rem; color:var(--muted);
+    border-top:1px solid var(--grid); margin-top:.8rem; padding-top:.55rem; line-height:1.5; }
+  .cap b { color:var(--ink); }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">Figure 5 · capital-gains Laffer curves by treatment of gains at death · dials-v3, % of GDP</p>
+  <h1>How much a higher capital-gains rate can raise depends on what happens at death</h1>
+  <p class="standfirst">Third-decade revenue (FY2047–56, as a share of GDP) from raising the top rate on capital
+  gains and dividends, traced out under three treatments of unrealized gains at death. Under current-law step-up
+  the curve flattens in the mid-40s near 0.17% of GDP; replacing step-up lifts both the starting level and how far
+  the rate can climb before it stops paying.</p>
+</header>
+
+<div class="readme">
+  <span><b>How to read:</b> horizontal axis = the top capital-gains &amp; dividend rate.</span>
+  <span>Vertical axis = conventional revenue as a share of GDP, third projection decade (FY2047–56), all federal sources.</span>
+  <span>One line per treatment of gains at death; the left end (20%) is the current rate.</span>
+</div>
+
+<div class="fig">
+  <p class="opt">Figure 5 · revenue vs. the top rate, three death regimes</p>
+  <h2>Step-up caps the capital-gains rate as a revenue tool; reforming it raises the ceiling</h2>
+  <p class="sub">Conventional revenue as % of GDP, third decade (FY2047–56) · behavioral responses included · shared scale</p>
+  <svg id="fig5" role="img" aria-label="Three revenue curves rising with the top capital-gains rate. The deemed-realization curve is far above the carryover curve, which is far above the flat, low current-law step-up curve."></svg>
+  <div class="legend">
+    <span class="key"><span class="sw" style="background:var(--b-est)"></span>Deemed realization at death</span>
+    <span class="key"><span class="sw" style="background:var(--b-iit)"></span>Carryover basis</span>
+    <span class="key"><span class="sw" style="background:var(--b-cg)"></span>Current law — step-up in basis</span>
+  </div>
+  <p class="cap"><b>Under step-up, the capital-gains rate flattens out as a revenue tool in the mid-40s.</b>
+  Revenue rises to about <b>0.17% of GDP</b> around a 45–50% rate and then <b>stops climbing</b> — extra rate
+  barely adds anything, because it pushes more gains to be held until death and escape tax entirely under
+  step-up. (This plateau is behavioral: the old mechanical ceiling that held the effective rate at the 37%
+  ordinary top rate has been removed, so the rate is free to bite higher before behavior flattens the curve.)
+  Reforming step-up changes the picture two ways. It <b>raises the starting level</b>: at today's 20% rate,
+  taxing gains at death already collects ~<b>0.18% of GDP</b> (carryover ~0.08%) with no rate change at all.
+  And it <b>keeps the rate productive</b>: with deferral closed, the same rate increases keep pulling in
+  revenue, reaching ~<b>0.60% of GDP</b> at 50% — roughly <b>3.2× the step-up curve</b> at a 40% rate.
+  Carryover sits between the two. Source: Tax-Simulator dials-v3 (current physics, η=2.4825, uncapped
+  capital-gains rate); values are total conventional revenue over the third projection decade (FY2047–56)
+  as a share of cumulative GDP over that decade. The step-up curve is direct solo-rate runs; the carryover
+  and deemed curves are surrogate-composed (solo rate + cg×death-regime interaction, anchored to direct
+  package runs). Curves are total revenue, so they include the death regime's own yield; the shape, not any
+  single number, is the point.</p>
+</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  function cv(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function fmtP(v){ return v===0 ? '0%' : v.toFixed(2)+'%'; }
+  function gLbl(g){ return g===0 ? '0%' : g.toFixed(1)+'%'; }
+
+  var rates =[20,25,30,35,40,45,50];
+  // values = third-decade (FY2047-56) conventional revenue as % of cumulative FY GDP
+  var SERIES=[
+    {key:'deemed', name:'Deemed realization', col:'--b-est', v:[0.177,0.280,0.368,0.441,0.504,0.557,0.602]},
+    {key:'carry',  name:'Carryover basis',    col:'--b-iit', v:[0.080,0.154,0.212,0.256,0.289,0.312,0.328]},
+    {key:'stepup', name:'Current law (step-up)', col:'--b-cg', v:[0.000,0.061,0.106,0.137,0.157,0.167,0.170]}
+  ];
+
+  function draw(){
+    var W=720, H=452, mL=70, mR=176, mT=30, mB=58;
+    var x0=mL, x1=W-mR, y0=H-mB, y1=mT;
+    var rMin=20, rMax=50, vMax=0.7;
+    function X(r){ return x0+(r-rMin)/(rMax-rMin)*(x1-x0); }
+    function Y(v){ return y0-v/vMax*(y0-y1); }
+    var o=[];
+
+    // horizontal gridlines + y labels
+    [0,0.2,0.4,0.6].forEach(function(g){
+      var y=Y(g);
+      o.push('<line x1="'+x0+'" y1="'+y.toFixed(1)+'" x2="'+x1+'" y2="'+y.toFixed(1)+'" stroke="'+(g===0?cv('--axis'):cv('--grid'))+'" stroke-width="'+(g===0?1.5:1)+'"/>');
+      o.push('<text x="'+(x0-9)+'" y="'+(y+3.5).toFixed(1)+'" font-size="10" text-anchor="end" fill="'+cv('--muted')+'">'+gLbl(g)+'</text>');
+    });
+    // x ticks + labels
+    rates.forEach(function(r){
+      var x=X(r);
+      o.push('<line x1="'+x.toFixed(1)+'" y1="'+y0+'" x2="'+x.toFixed(1)+'" y2="'+(y0+5)+'" stroke="'+cv('--axis')+'" stroke-width="1"/>');
+      o.push('<text x="'+x.toFixed(1)+'" y="'+(y0+18)+'" font-size="10.5" text-anchor="middle" fill="'+cv('--muted')+'"'+(r===20?' font-weight="700"':'')+'>'+r+'%</text>');
+    });
+    o.push('<text x="'+((x0+x1)/2).toFixed(1)+'" y="'+(y0+40)+'" font-size="11.5" text-anchor="middle" fill="'+cv('--ink2')+'">Top capital-gains &amp; dividend rate</text>');
+    o.push('<text x="'+(X(20)).toFixed(1)+'" y="'+(y0+33)+'" font-size="8.5" text-anchor="middle" fill="'+cv('--muted')+'" font-style="italic">current</text>');
+
+    // series lines + markers + end labels
+    SERIES.forEach(function(s){
+      var col=cv(s.col);
+      var pts=rates.map(function(r,i){ return X(r).toFixed(1)+','+Y(s.v[i]).toFixed(1); }).join(' ');
+      o.push('<polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>');
+      rates.forEach(function(r,i){
+        o.push('<circle cx="'+X(r).toFixed(1)+'" cy="'+Y(s.v[i]).toFixed(1)+'" r="3.4" fill="'+col+'" stroke="'+cv('--card')+'" stroke-width="1"/>');
+      });
+      // intercept value (left end, at 20%)
+      var y20=Y(s.v[0]);
+      o.push('<text x="'+(x0+7)+'" y="'+(y20-6).toFixed(1)+'" font-size="9.5" font-weight="700" text-anchor="start" fill="'+col+'" font-variant-numeric="tabular-nums">'+fmtP(s.v[0])+'</text>');
+      // end label (right end, at 50%)
+      var ye=Y(s.v[6]);
+      o.push('<circle cx="'+X(50).toFixed(1)+'" cy="'+ye.toFixed(1)+'" r="4" fill="'+col+'"/>');
+      o.push('<text x="'+(x1+12)+'" y="'+(ye+2).toFixed(1)+'" font-size="11" font-weight="700" text-anchor="start" fill="'+col+'">'+s.name+'</text>');
+    });
+
+    var svg=document.getElementById('fig5');
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    svg.innerHTML=o.join('');
+  }
+  draw();
+
+  var mq=window.matchMedia('(prefers-color-scheme: dark)');
+  if(mq.addEventListener) mq.addEventListener('change', draw);
+  new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+})();
+</script>
