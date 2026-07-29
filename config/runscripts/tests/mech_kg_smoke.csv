@@ -1,0 +1,4 @@
+ID,tax_law,economy,behavior,years,dist_years,mtr_vars,mtr_types
+baseline,default,default,default,2026:2029,,kg_lt estate,nextdollar nextdollar
+kg_plain,tests/kg_5pp_all,no_saving_channel,kg_dynamics_only,2026:2029,2027:2027,kg_lt estate,nextdollar nextdollar
+kg_wealth,tests/kg_5pp_all,default,kg_dynamics_only,2026:2029,2027:2027,kg_lt estate,nextdollar nextdollar

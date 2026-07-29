@@ -127,7 +127,7 @@ get_parsed_baseline = function(baseline_raw, years, indexes) {
 
 
 
-build_tax_law = function(scenario_info, indexes) {
+build_tax_law = function(scenario_info, indexes, write = TRUE) {
   
   #----------------------------------------------------------------------------
   # Executes all tax law parsing functions, generating the final tax law
@@ -142,6 +142,11 @@ build_tax_law = function(scenario_info, indexes) {
   #                            in globals.R
   #   - indexes (df)         : long-format dataframe containing growth rates 
   #                            of index measures
+  #   - write (bool)         : write the law to the scenario's output tree. FALSE
+  #                            for the baseline-law table the mechanical pass
+  #                            prices its second set of MTRs under, which is not
+  #                            this scenario's law and does not belong in its
+  #                            supplemental output
   #
   # Returns: tibble wide in subparam, long in year and filing status (df).
   #----------------------------------------------------------------------------
@@ -204,12 +209,96 @@ build_tax_law = function(scenario_info, indexes) {
     filter(year %in% scenario_info$years)
 
   # Write tax law then return
-  c('static', 'conventional') %>% 
-    map(.f = ~ scenario_info$output_path %>% 
-          file.path(.x, 'supplemental', 'tax_law.csv') %>%
-          write_csv(x = tax_law, file = .))
+  if (write) {
+    c('static', 'mechanical', 'conventional') %>%
+      map(.f = ~ scenario_info$output_path %>% 
+            file.path(.x, 'supplemental', 'tax_law.csv') %>%
+            write_csv(x = tax_law, file = .))
+  }
   
   return(tax_law)
+}
+
+
+
+baseline_tax_law_id = function(g = globals) {
+
+  #----------------------------------------------------------------------------
+  # Returns the tax law layer named by the runscript's baseline row (str).
+  #
+  # The baseline row's law is not always the default layer: a retrospective run
+  # scores against prior law by naming an alternative there. Anything comparing a
+  # reform against baseline law reads it here rather than assuming the default.
+  #
+  # Parameters:
+  #   - g (list) : the globals object (defaulted; passed explicitly where a
+  #                worker holds it under another name)
+  #----------------------------------------------------------------------------
+
+  row = g$runscript %>%
+    filter(ID == 'baseline')
+
+  if (nrow(row) != 1) {
+    stop('Expected one baseline row in the runscript, found ', nrow(row),
+         '. read_runscript always keeps it')
+  }
+
+  as.character(row$tax_law)
+}
+
+
+
+build_baseline_tax_law = function(scenario_info, indexes) {
+
+  #----------------------------------------------------------------------------
+  # Builds the baseline law table over a scenario's years and filing statuses, for
+  # pricing a second set of marginal rates on the mechanical frame. This is the
+  # scenario's own call with the tax law cell replaced by the runscript's baseline
+  # row, and nothing is written to the scenario's output.
+  #
+  # Parameters:
+  #   - scenario_info (list) : scenario info object; see get_scenario_info()
+  #   - indexes (df)         : long-format dataframe of index growth rates
+  #
+  # Returns: tibble wide in subparam, long in year and filing status (df).
+  #----------------------------------------------------------------------------
+
+  si = scenario_info
+  si$tax_law_id = baseline_tax_law_id()
+  build_tax_law(si, indexes, write = FALSE)
+}
+
+
+
+TAX_LAW_KEYS = c('year', 'filing_status')
+
+
+
+swap_tax_law = function(tax_units, tax_law) {
+
+  #----------------------------------------------------------------------------
+  # Replaces a frame's tax law columns with another law's, holding every
+  # economic variable fixed. Used to price the mechanical frame under baseline law,
+  # so that the marginal rate change the behavior modules read is the price change
+  # from the law at the circumstances the taxpayer has after everything outside his
+  # control has happened to him.
+  #
+  # Filing status is not re-derived. A reform repealing head of household recodes
+  # it when the data are loaded, and that recoding is part of the frame, not of the
+  # law being priced.
+  #
+  # Parameters:
+  #   - tax_units (df) : pre-tax frame carrying joined tax law columns
+  #   - tax_law (df)   : law to join, long in year and filing status
+  #
+  # Returns: the frame with the other law's parameter columns (df).
+  #----------------------------------------------------------------------------
+
+  law_cols = setdiff(names(tax_law), TAX_LAW_KEYS)
+
+  tax_units %>%
+    select(-any_of(law_cols)) %>%
+    left_join(tax_law, by = TAX_LAW_KEYS)
 }
 
 

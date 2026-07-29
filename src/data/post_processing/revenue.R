@@ -6,6 +6,12 @@
 
 
 
+# The reportable rungs, in ladder order. Every counterfactual carries all three:
+# a rung that cannot differ from the one below reports that rung's totals.
+REPORTING_LEGS = c('static', 'mechanical', 'conventional')
+
+
+
 add_receipts_total = function(receipts, name) {
 
   #----------------------------------------------------------------------------
@@ -152,7 +158,7 @@ style_rev_sheet = function(wb, sheet, n_cols, comma_rows, pct_rows,
 
 calc_receipts = function(totals, scenario_root, vat_root, other_root,
                          cost_recovery_root, off_model_root,
-                         static) {
+                         leg = c('static', 'mechanical', 'conventional')) {
   
   #----------------------------------------------------------------------------
   # Calculates a scenario's receipts 
@@ -172,9 +178,12 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   #   - other_root            (str) : Macro-Projections root (for other taxes)
   #   - cost_recovery_root    (str) : Cost-Recovery-Simulator director for this scenario
   #   - off_model_root        (str) : directory for miscellaneous off-model deltas for this scenario
-  #   - static                (lgl) : TRUE when writing the static pass. Selects
-  #        the corporate off-model stream, the mechanical one on the static pass
-  #        and the behavioral one on the conventional pass
+  #   - leg                   (str) : 'static', 'mechanical' or 'conventional'.
+  #        Selects the corporate off-model stream and the on-model rate delta: the
+  #        mechanical corporate change on the static and mechanical legs, the
+  #        behavioral one on the conventional leg. There is no corporate-level
+  #        avoidance on the mechanical rung, which carries the individual-side
+  #        channels alone.
   #
   # Returns:  void, writes a dataframe for the scenario containing values for:
   #   - Fiscal year
@@ -186,6 +195,12 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   #   - Value added tax revenues
   #----------------------------------------------------------------------------
   
+  leg = match.arg(leg)
+
+  # The corporate streams come in two forms, mechanical and behavioral, and the
+  # mechanical leg reads the same one the static leg does.
+  corp_mechanical = leg %in% c('static', 'mechanical')
+
   # Read VAT receipts
   revenues_vat = vat_root %>%
     file.path('revenues.csv') %>% 
@@ -211,14 +226,15 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
   # Resolve the pass's corporate stream and put it in the corporate column, so
   # that the booking below reads one name either way. Both raw columns are dropped
   # first so the rejoin cannot collide.
-  corp_series = ome_corp_col(deltas_off_model, static = static)
+  corp_series = ome_corp_col(deltas_off_model, static = corp_mechanical)
   deltas_off_model = deltas_off_model %>%
     select(-any_of(c('corporate', 'corporate_static'))) %>%
     left_join(corp_series, by = 'year')
 
   # Calculate the on-model corporate statutory rate delta, booked on top of the
-  # CBO corporate receipts level. The static pass takes the mechanical change and
-  # the conventional pass the base-eroded one; see src/sim/corp_rate.R. The
+  # CBO corporate receipts level. The static and mechanical passes take the
+  # mechanical change and the conventional pass the base-eroded one; see
+  # src/sim/corp_rate.R. The
   # scenario's rate comes from this pass's tax law file. Receipts are already on a
   # fiscal year basis, so this books directly beside cost recovery below with no
   # calendar year smear.
@@ -226,7 +242,7 @@ calc_receipts = function(totals, scenario_root, vat_root, other_root,
     rate_series = corp_rate_read_series(
       file.path(scenario_root, 'supplemental', 'tax_law.csv')),
     rev_corp    = revenues_other %>% select(year, rev_corp = revenues_corp_tax),
-    static      = static
+    static      = corp_mechanical
   ) %>%
     rename(delta_revenues_corp_rate = delta)
 
@@ -400,12 +416,15 @@ calc_rev_est = function(id) {
   # Read VAT price offset for baseline dollars calculation
   vat_price_offset = read_vat_offset(id)
 
-  for (static in c(T, F)) {
+  # One estimate per reportable rung. The mechanical rung's totals are written for
+  # every counterfactual, from the static ones where the rung was skipped, so the
+  # loop needs no special case.
+  for (leg in REPORTING_LEGS) {
 
     # Read in counterfactual scenario receipts, including the partial first year
     scenario = file.path(globals$output_root,
                          id,
-                         if_else(static, 'static', 'conventional'),
+                         leg,
                          'totals',
                          'receipts_full.csv') %>%
       read_receipts_long(values_to = 'counterfactual')
@@ -468,7 +487,7 @@ calc_rev_est = function(id) {
       mutate(year = as.integer(year)) %>% 
       write_csv(file.path(globals$output_root, 
                           id, 
-                          if_else(static, 'static', 'conventional'),
+                          leg,
                           'supplemental', 
                           'revenue_estimates.csv'))
 
@@ -505,7 +524,7 @@ calc_rev_est = function(id) {
     saveWorkbook(wb   = wb, 
                  file = file.path(globals$output_root, 
                                   as.character(id), 
-                                  if_else(static, 'static', 'conventional'),
+                                  leg,
                                   'supplemental', 
                                   'revenue_estimates.xlsx'), 
                  overwrite = T)
@@ -539,14 +558,15 @@ calc_stacked_rev_est = function(counterfactual_ids) {
     ) %>%
     bind_rows()
 
-  for (static in c(T, F)) {
+  for (leg in REPORTING_LEGS) {
 
     stacked_rev_est = c('baseline', counterfactual_ids) %>%
 
-      # Read scenario receipts file, including the partial first year
+      # Read scenario receipts file, including the partial first year. Baseline has
+      # one rung only
       map(.f = ~ file.path(if_else(.x == 'baseline', globals$baseline_root, globals$output_root),
                            .x,
-                           if_else(static | .x == 'baseline', 'static', 'conventional'),
+                           if_else(.x == 'baseline', 'static', leg),
                            'totals',
                            'receipts_full.csv') %>%
             read_csv(show_col_types = F) %>%
@@ -646,7 +666,7 @@ calc_stacked_rev_est = function(counterfactual_ids) {
     saveWorkbook(wb   = wb, 
                  file = file.path(globals$output_root, 
                                   counterfactual_ids[length(counterfactual_ids)], 
-                                  if_else(static, 'static', 'conventional'),
+                                  leg,
                                   'supplemental', 
                                   'stacked_revenue_estimates.xlsx'), 
                  overwrite = T)

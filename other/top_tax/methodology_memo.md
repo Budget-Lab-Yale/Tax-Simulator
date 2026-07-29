@@ -135,6 +135,57 @@ the behavioral adjustment margins. (The dissaving channel is a mechanical
 description of how taxes are paid rather than a model of how saving responds to rates
 of return.)
 
+### Three reportable estimates
+
+The model reports each policy on three rungs, each one a superset of the one below
+it, so that the mechanical interactions in Figure 1 can be read separately from
+the behavioral responses.
+
+The **static** estimate is the new law priced on baseline behavior and baseline
+bases, with no base moving in response to another. The **mechanical** estimate
+adds every mechanical interaction: corporate incidence, the tax-driven dissaving
+channel, and the employer payroll wage adjustment. The **conventional** estimate
+adds the behavioral responses.
+
+The wedge between static and conventional therefore decomposes as
+(mechanical − static) plus (conventional − mechanical), with one fixed ordering:
+the mechanical interactions first, and behavior priced on the transmitted bases.
+That is already the order in which the modules run, so the decomposition
+introduces no new order-dependence. A policy with no mechanical interaction live
+reports the same number on the first two rungs.
+
+The employer payroll wage adjustment belongs on the mechanical rung for the same
+reason the others do, and it used to sit inside the static pass. Holding total
+employer cost fixed, a change in the employer payroll tax is absorbed by wages,
+which moves the income tax base -- an interaction between two bases, not a
+statement of the law. Moving it makes the treatment of the three mechanical
+channels consistent.
+
+A behavioral response is priced against the mechanical bases. The rate change
+feeding an elasticity is the marginal rate under the new law less the rate under
+current law, both evaluated on the household's mechanical-rung circumstances: the
+price change from the law, at the position the household occupies after
+everything outside its control has happened to it. The two evaluations differ
+only for a household that a mechanical income change moves across a bracket.
+
+### What the distribution tables carry
+
+Distribution tables are built from the static bases, with the mechanical channels
+added as explicit per-record overlays rather than folded into the frame.
+
+The corporate overlay distributes the corporate revenue change by the rules in
+Section A.8. A payroll overlay carries each worker's income tax offset from his
+own wage adjustment; with total employer cost fixed, the worker's compensation
+loss equals the employer tax change, so attributing that tax to his record and
+measuring his income loss net of tax offsets are the same number, provided the
+income tax change is computed on adjusted wages.
+
+Tax-driven dissaving gets no overlay. Its later-year income decline is the echo
+of taxes already counted as burden in the years they were paid, so counting the
+decline again would double-count in present value. It is reported through
+revenue, where the interaction is the point, and not through burden. Behavioral
+changes in income are excluded as they always have been.
+
 **Table 1 · Parameters, by module**
 
 | Parameter | Value | Basis |
@@ -325,7 +376,7 @@ where $r_t$ is the nominal growth rate of income per capita, which we use as the
 
 The accumulated gap is then pushed back onto records. Each record receives a share of its cell's $P_t$ in proportion to its net worth; its asset values, unrealized gains and their basis, capital income flows, and retirement distributions are scaled down accordingly, and net worth is recomputed. Because the wealth-tax and estate calculators run on the adjusted balance sheet, they collect less automatically: a smaller wealth-tax base each year and, weighted by each record's mortality, a smaller estate at death. This is how a large during-life tax partly cannibalizes wealth-based revenue later in the window and increasingly beyond it.
 
-Two restrictions keep the channel within a conventional score. It is an accounting description of how taxes are paid rather than a model of how saving responds to rates of return, so nothing in it moves when after-tax returns change. And it enters only the behavioral estimate; the static score, taxes under the new law with behavior held fixed, is never touched.
+Two restrictions keep the channel within a conventional score. It is an accounting description of how taxes are paid rather than a model of how saving responds to rates of return, so nothing in it moves when after-tax returns change. And it enters the mechanical and conventional estimates only; the static score, taxes under the new law with every base held at its baseline value, is never touched.
 
 ### A.8 Corporate tax incidence
 
@@ -341,7 +392,7 @@ The same profit reduction is capitalized into asset values. The market value of 
 
 The last step is the consequence for individual receipts. The declines in taxable dividends, interest, rents, gains, and retirement distributions flow through the individual tax calculator, and individual receipts fall by whatever the microsimulation produces given who actually holds the affected income. The offset is therefore an output of the model rather than an assumed fraction of the corporate estimate. Household exposure is limited. We attribute about 85 percent of dividends and half of realized gains to corporate equity, and roughly 40 percent of the total burden falls on foreign investors, nonprofits, and defined-benefit plans that do not appear on household returns. We do not force household records to absorb that share; a reconciliation report carries it as an unallocated remainder. The after-tax income losses also enter the dissaving channel of Section A.7, so part of the burden drains into smaller estates decades later.
 
-As in Section A.7, all of this affects only the behavioral estimate; the static score remains a clean statement of the law. The constants in this section (the supernormal split, $\kappa$, the exposure shares, the equity premium) are provisional placeholders pending direct measurement, and we present corporate-rate results as such.
+As in Section A.7, all of this enters the mechanical and conventional estimates only; the static score remains a clean statement of the law. The constants in this section (the supernormal split, $\kappa$, the exposure shares, the equity premium) are provisional placeholders pending direct measurement, and we present corporate-rate results as such.
 
 
 ## Appendix B. Sourcing for Table 1

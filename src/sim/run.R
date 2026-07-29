@@ -64,19 +64,25 @@ do_scenario = function(ID, baseline_mtrs) {
   uses_kg     = ID != 'baseline' && scenario_uses_kg_dynamics(scenario_info)
   uses_wealth = ID != 'baseline' && scenario_uses_wealth_dynamics(scenario_info)
 
-  if (uses_kg || uses_wealth) {
+  # The mechanical rung is the static one plus the transmission channels, so it
+  # runs only where one of them is live. A reform touching employer payroll law
+  # counts: the wage adjustment moves the income tax base and is applied on this
+  # rung and not on the static one.
+  uses_mech = scenario_runs_mechanical(scenario_info)
 
-    # Run the cohort dynamics channels as separate passes, each channel switched
-    # on independently:
+  if (uses_kg || uses_wealth || uses_mech) {
+
+    # Run the transmission channels and the cohort dynamics as separate passes,
+    # each channel switched on independently:
     #
-    #   [frozen] -> static -> [kg bathtub] -> [conv-no-wealth, wealth bathtub]
-    #     -> conventional
+    #   [frozen] -> static -> [mech-no-wealth, mech bathtub] -> [mechanical]
+    #     -> [kg bathtub] -> [conv-no-wealth, wealth bathtub] -> conventional
     #
     # The frozen pass needs only Tax-Data cells and tax law, and writes the
-    # mechanical state the static pass injects. The wealth bathtub's forcing
-    # excludes the wealth tax, so it takes its own pass with behavior on and the
-    # haircut off; the conventional pass then applies the haircut, running kg
-    # behavior on the eroded frame when both channels are active.
+    # mechanical state the static pass injects. Each wealth bathtub's forcing
+    # excludes the wealth tax, so it takes its own pass with the haircut off; the
+    # rung it serves then applies the haircut. The mechanical rung measures its
+    # forcing with behavior off, so its drawdown compounds the static tax change.
 
     if (uses_kg) {
       run_frozen_pass(scenario_info, tax_law,
@@ -90,6 +96,46 @@ do_scenario = function(ID, baseline_mtrs) {
                           vat_price_offset     = vat_price_offset,
                           pass_type            = 'static')
 
+    # The behavior modules price against the rung below them. Where the mechanical
+    # rung runs, that is its frame, under reform law on one side and baseline law
+    # on the other. Where it does not, the mechanical frame is the static frame and
+    # the two conventions coincide, so the static pass's rates and the baseline
+    # scenario's stand in unchanged.
+    conv_static_mtrs   = static_mtrs
+    conv_baseline_mtrs = baseline_mtrs
+
+    if (uses_mech) {
+      if (uses_wealth) {
+        run_sim(scenario_info        = scenario_info,
+                tax_law              = tax_law,
+                baseline_mtrs        = baseline_mtrs,
+                indexes              = indexes,
+                vat_price_offset     = vat_price_offset,
+                pass_type            = 'mechanical_no_wealth')
+
+        run_wealth_bathtub_pass(scenario_info, tax_law,
+                                vat_price_offset = vat_price_offset,
+                                leg              = 'mechanical')
+      }
+
+      # static_mtrs_all is not read by any behavior module here -- the mechanical
+      # rung runs none -- but the crossing diagnostic differences against it
+      mech_mtrs = run_sim(scenario_info        = scenario_info,
+                          tax_law              = tax_law,
+                          baseline_mtrs        = baseline_mtrs,
+                          indexes              = indexes,
+                          vat_price_offset     = vat_price_offset,
+                          pass_type            = 'mechanical',
+                          static_mtrs_all      = static_mtrs,
+                          tax_law_baseline     = build_baseline_tax_law(
+                                                   scenario_info, indexes))
+
+      if (!is.null(scenario_info$mtr_vars)) {
+        conv_static_mtrs   = mech_mtrs$mtrs
+        conv_baseline_mtrs = mech_mtrs$mtrs_baseline_law
+      }
+    }
+
     if (uses_kg) {
       run_bathtub_pass(scenario_info, tax_law,
                        vat_price_offset = vat_price_offset)
@@ -100,23 +146,24 @@ do_scenario = function(ID, baseline_mtrs) {
       # conventional base before any erosion
       run_sim(scenario_info        = scenario_info,
               tax_law              = tax_law,
-              baseline_mtrs        = baseline_mtrs,
+              baseline_mtrs        = conv_baseline_mtrs,
               indexes              = indexes,
               vat_price_offset     = vat_price_offset,
               pass_type            = 'conventional_no_wealth',
-              static_mtrs_all      = static_mtrs)
+              static_mtrs_all      = conv_static_mtrs)
 
       run_wealth_bathtub_pass(scenario_info, tax_law,
-                              vat_price_offset = vat_price_offset)
+                              vat_price_offset = vat_price_offset,
+                              leg              = 'conventional')
     }
 
     run_sim(scenario_info        = scenario_info,
             tax_law              = tax_law,
-            baseline_mtrs        = baseline_mtrs,
+            baseline_mtrs        = conv_baseline_mtrs,
             indexes              = indexes,
             vat_price_offset     = vat_price_offset,
             pass_type            = 'conventional',
-            static_mtrs_all      = static_mtrs)
+            static_mtrs_all      = conv_static_mtrs)
 
   } else {
 
@@ -166,9 +213,31 @@ do_scenario = function(ID, baseline_mtrs) {
 
 
 
+scenario_runs_mechanical = function(scenario_info) {
+
+  #----------------------------------------------------------------------------
+  # Reports whether the mechanical rung differs from the static one for a
+  # scenario, which is so where any transmission channel is live: corporate
+  # incidence, a wealth financing profile with a nonzero saving share, or a reform
+  # changing employer-side payroll law.
+  #
+  # Parameters:
+  #   - scenario_info (list) : output of get_scenario_info()
+  #
+  # Returns: TRUE if the mechanical pass runs for this scenario (bool).
+  #----------------------------------------------------------------------------
+
+  scenario_info$ID != 'baseline' &&
+    (scenario_uses_wealth_dynamics(scenario_info) ||
+     scenario_uses_corp_incidence(scenario_info) ||
+     scenario_uses_er_payroll_reform(scenario_info))
+}
+
+
+
 write_pass_outputs = function(output, root, totals_slot,
                               vat_price_offset,
-                              scenario_info) {
+                              scenario_info, leg = NULL) {
 
   #----------------------------------------------------------------------------
   # Writes one pass's supplemental offsets, totals CSVs, and receipts for a
@@ -176,11 +245,16 @@ write_pass_outputs = function(output, root, totals_slot,
   # assemble output to the same shape.
   #
   # Parameters:
-  #   - output (list)             : per-year results; each element carries
-  #                                 $static_totals and/or $conventional_totals
-  #   - root (str)                : pass output root (…/static or …/conventional)
-  #   - totals_slot (str)         : which per-year totals list to aggregate,
-  #                                 'static_totals' or 'conventional_totals'
+  #   - output (list)             : per-year results; each element carries the
+  #                                 totals slots the passes it ran filled
+  #   - root (str)                : pass output root (…/static, …/mechanical or
+  #                                 …/conventional)
+  #   - totals_slot (str)         : which per-year totals list to aggregate, one of
+  #                                 'static_totals', 'mechanical_totals' or
+  #                                 'conventional_totals'
+  #   - leg (str)                 : leg calc_receipts books; defaults to the
+  #                                 totals_slot's stem. Given explicitly where a
+  #                                 rung reports the totals of the rung below
   #   - vat_price_offset (df)     : VAT price offset series, written to supplemental
   #   - scenario_info (list)      : scenario info (interface paths)
   #
@@ -225,7 +299,7 @@ write_pass_outputs = function(output, root, totals_slot,
       other_root            = scenario_info$interface_paths$`Macro-Projections`,
       cost_recovery_root    = scenario_info$interface_paths$`Cost-Recovery-Simulator`,
       off_model_root        = scenario_info$interface_paths$`Off-Model-Estimates`,
-      static                = (totals_slot == 'static_totals')
+      leg                   = leg %||% str_remove(totals_slot, '_totals$')
     )
 
   invisible(NULL)
@@ -245,13 +319,97 @@ write_pass_outputs = function(output, root, totals_slot,
 DETAIL_COLS_OPTIONAL_STATIC = c('kg_lockin', 'kg_deemed', 'liab_deemed',
                                 'estate_income_tax_ded')
 
+# Rate difference below which the two frames are treated as agreeing. The rates
+# come out of a one-dollar perturbation, so they carry that much numerical noise.
+MTR_CROSSING_EPS = 1e-9
+
 DETAIL_COLS_OPTIONAL_CONV = c(DETAIL_COLS_OPTIONAL_STATIC,
                               'estate_concealed_frac',
                               'economic_gross', 'cap_bundle_F',
                               'net_worth_raw', 'nw_pctile', 'D_alloc',
                               'wealth_haircut',
                               'corp_dY_exog', 'corp_markdown',
-                              'corp_flow_factor')
+                              'corp_flow_factor', 'pr_dY_exog')
+
+
+
+#-------------------------------------------------------------------------------
+# Specifications for the counterfactual passes run_one_year() executes after the
+# static one. All of them run the same body and differ only in their inputs and
+# in where their output goes:
+#
+#   root            : output subfolder under the scenario's output path
+#   alias_from      : rungs this pass copies when it cannot differ from the one
+#                     below, in order of preference
+#   config_pass     : label recorded by config_set_pass, read by the economy
+#                     leg's role gate
+#   behavior        : run the behavior modules
+#   haircut         : apply the wealth haircut where the channel is active
+#   state_pass      : leg whose cohort state the haircut reads
+#   measurement     : compute the columns the wealth pre-pass reads
+#   mtrs            : run the MTR block
+#   mtrs_baseline_law : also price the frame under baseline law, giving the
+#                     behavior modules both sides of their marginal rate change
+#   totals_slot     : totals list this pass fills, NA for an intermediate pass
+#   corp_diag       : write the corporate conservation diagnostic
+#   detail_optional : channel columns written to detail when present
+#-------------------------------------------------------------------------------
+
+PASS_SPECS = list(
+
+  mechanical_no_wealth = list(
+    root            = 'mechanical_no_wealth',
+    alias_from      = 'static',
+    config_pass     = 'mechanical',
+    behavior        = FALSE,
+    haircut         = FALSE,
+    state_pass      = 'mechanical',
+    measurement     = TRUE,
+    mtrs            = FALSE,
+    totals_slot     = NA_character_,
+    corp_diag       = FALSE,
+    detail_optional = DETAIL_COLS_OPTIONAL_CONV),
+
+  mechanical = list(
+    root            = 'mechanical',
+    alias_from      = 'static',
+    config_pass     = 'mechanical',
+    behavior        = FALSE,
+    haircut         = TRUE,
+    state_pass      = 'mechanical',
+    measurement     = FALSE,
+    mtrs            = TRUE,
+    mtrs_baseline_law = TRUE,
+    totals_slot     = 'mechanical_totals',
+    corp_diag       = TRUE,
+    detail_optional = DETAIL_COLS_OPTIONAL_CONV),
+
+  conventional_no_wealth = list(
+    root            = 'conventional_no_wealth',
+    alias_from      = c('mechanical', 'static'),
+    config_pass     = 'conventional',
+    behavior        = TRUE,
+    haircut         = FALSE,
+    state_pass      = 'conventional',
+    measurement     = TRUE,
+    mtrs            = FALSE,
+    totals_slot     = NA_character_,
+    corp_diag       = FALSE,
+    detail_optional = DETAIL_COLS_OPTIONAL_CONV),
+
+  conventional = list(
+    root            = 'conventional',
+    alias_from      = c('mechanical', 'static'),
+    config_pass     = 'conventional',
+    behavior        = TRUE,
+    haircut         = TRUE,
+    state_pass      = 'conventional',
+    measurement     = FALSE,
+    mtrs            = TRUE,
+    totals_slot     = 'conventional_totals',
+    corp_diag       = TRUE,
+    detail_optional = DETAIL_COLS_OPTIONAL_CONV)
+)
 
 
 
@@ -502,6 +660,145 @@ run_mtr_block = function(taxed, scenario_info, year, baseline_pr_er) {
 
 
 
+write_mtr_crossing_diag = function(reform_mtrs, baseline_mtrs, static_mtrs,
+                                   weight, scenario_info, year, root) {
+
+  #----------------------------------------------------------------------------
+  # Reports how far the mechanical frame moves the marginal rates the behavior
+  # modules read. Both conventions difference a reform rate against a baseline
+  # rate; they differ in the records the rates are measured on, so they part
+  # company only where a mechanical income change moves a record's marginal rate.
+  # Counts and weights those records per MTR variable.
+  #
+  # Parameters:
+  #   - reform_mtrs (df)   : reform-law rates on the mechanical frame
+  #   - baseline_mtrs (df) : baseline-law rates on the mechanical frame
+  #   - static_mtrs (df)   : reform-law rates on the static frame, or NULL where
+  #                          this pass did not receive them
+  #   - weight (dbl[])     : record weights, in the frame's row order
+  #   - scenario_info (list) : the scenario
+  #   - year (int)         : simulation year
+  #   - root (str)         : pass output root
+  #
+  # Returns: invisible NULL (writes one CSV per year).
+  #----------------------------------------------------------------------------
+
+  if (is.null(static_mtrs)) return(invisible(NULL))
+
+  vars = intersect(names(reform_mtrs), names(static_mtrs)) %>%
+    keep(.p = ~ startsWith(.x, 'mtr_'))
+
+  rows = vars %>%
+    map(.f = function(v) {
+      mech   = reform_mtrs[[v]]
+      stat   = static_mtrs[[v]][match(reform_mtrs$id, static_mtrs$id)]
+      base   = baseline_mtrs[[v]]
+      moved  = !is.na(mech) & !is.na(stat) & abs(mech - stat) > MTR_CROSSING_EPS
+      tibble(year          = year,
+             mtr_var       = v,
+             n_records     = sum(moved),
+             weight_moved  = sum(weight[moved], na.rm = TRUE),
+             weight_total  = sum(weight, na.rm = TRUE),
+             max_abs_shift = if (any(moved)) max(abs(mech - stat)[moved]) else 0,
+             # The rate change each convention hands a behavior module
+             mean_delta_mechanical = weighted.mean(mech - base, weight,
+                                                   na.rm = TRUE),
+             mean_delta_static     = weighted.mean(stat - base, weight,
+                                                   na.rm = TRUE))
+    }) %>%
+    bind_rows()
+
+  dir.create(file.path(root, 'supplemental'), recursive = TRUE,
+             showWarnings = FALSE)
+  rows %>%
+    write_csv(file.path(root, 'supplemental',
+                        paste0('mtr_crossing_diag_', year, '.csv')))
+
+  invisible(NULL)
+}
+
+
+
+add_kg_bathtub_mtrs = function(taxed, pre_injection, scenario_info, tax_law,
+                               baseline_pr_er, vars_1040) {
+
+  #----------------------------------------------------------------------------
+  # Adds the marginal rates the capital gains bathtub reads off a rung's detail,
+  # where the runscript did not register them. The bathtub reads four:
+  #
+  #   mtr_kg_lt          registered by every kg scenario, so never supplied here
+  #   mtr_kg_lt_lawonly  the gains rate before the frozen-realization injection
+  #   mtr_net_worth      the cost of deferring under a wealth tax
+  #   mtr_estate_ded     the estate exposure of the death value
+  #
+  # mtr_kg_lt_lawonly is measured on the frame before the injection, and read only
+  # by the planned-timing wedge. The injection adds carryover realizations to
+  # heirs' gains, which moves their bracket and phaseout positions and drifts the
+  # cell average rate by a few basis points; the planned-timing wedge takes an
+  # argmin over years and would retime part of the pool against that drift. The
+  # Bellman keeps the post-injection rate, where the income effect is signal.
+  #
+  # Parameters:
+  #   - taxed (df)          : post-do_taxes frame for this rung, with its MTRs
+  #                           already joined on
+  #   - pre_injection (df)  : the same rung's pre-tax frame without the
+  #                           frozen-realization injection
+  #   - scenario_info (list): supplies mtr_vars
+  #   - tax_law (df)        : joined tax law, read for whether wealth law is active
+  #   - baseline_pr_er (df) : baseline employer payroll for this rung
+  #   - vars_1040 (str[])   : 1040 return vars for do_taxes()
+  #
+  # Returns: the frame with the missing bathtub rates attached (df).
+  #----------------------------------------------------------------------------
+
+  # Read the actuals off this frame. The MTR join adds only mtr_ columns, so
+  # liabilities are unchanged
+  actuals = mtr_actuals(taxed)
+
+  taxed_pre = pre_injection %>%
+    do_taxes(baseline_pr_er   = baseline_pr_er,
+             vars_1040        = vars_1040,
+             vars_payroll     = return_vars$calc_pr,
+             calc_estate_flag = FALSE,   # only liab_iit_net and liab_pr are read
+             calc_wealth_flag = FALSE)
+  stopifnot(identical(taxed_pre$id, taxed$id))
+
+  # This frame has been through do_taxes, so pass no employer payroll table
+  taxed$mtr_kg_lt_lawonly = calc_one_mtr(
+    frame   = strip_calc_vars(taxed_pre),
+    actuals = mtr_actuals(taxed_pre),
+    var     = 'kg_lt')
+
+  # The gate on wealth law being active in any year keeps the detail schema stable
+  # across phase-in years
+  if (kg_dyn_wealth_law_active(tax_law) &&
+      !('net_worth' %in% scenario_info$mtr_vars)) {
+    # drop_mtrs recovers the frame the MTR block ran on, so this column matches a
+    # registered mtr_net_worth
+    taxed$mtr_net_worth = calc_one_mtr(
+      frame   = strip_calc_vars(taxed, drop_mtrs = TRUE),
+      actuals = actuals,
+      var     = 'net_worth')
+  }
+
+  # There is no law gate on the estate rate: estate law is always active. The
+  # fallback runs on a scenario rung only, since a baseline pass cannot know a kg
+  # scenario will read its detail, so baseline rows of a kg runscript have to
+  # register estate in mtr_vars.
+  if (!('estate' %in% scenario_info$mtr_vars)) {
+    taxed$mtr_estate = calc_one_mtr(
+      frame   = strip_calc_vars(taxed, drop_mtrs = TRUE),
+      actuals = actuals,
+      var     = 'estate')
+    taxed %<>%
+      mutate(mtr_estate_ded = estate.income_tax_ded * mtr_estate)
+  }
+
+  taxed
+}
+
+
+
 collect_totals = function(taxed, year) {
 
   #----------------------------------------------------------------------------
@@ -581,9 +878,11 @@ fold_deemed = function(taxed, liab_deemed = NULL) {
 
 run_sim = function(scenario_info, tax_law, baseline_mtrs,
                    indexes, vat_price_offset,
-                   pass_type = c('both', 'static', 'conventional',
+                   pass_type = c('both', 'static', 'mechanical',
+                                 'mechanical_no_wealth', 'conventional',
                                  'conventional_no_wealth'),
-                   static_mtrs_all = NULL) {
+                   static_mtrs_all = NULL,
+                   tax_law_baseline = NULL) {
 
   #----------------------------------------------------------------------------
   # Runs simulation for all years of a scenario, in one of the pass types
@@ -593,6 +892,8 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
   #                    totals files. Returns the combined static MTRs.
   #   'static'       : static across all years, writing static totals and
   #                    receipts. Returns the combined static MTRs.
+  #   'mechanical'   : mechanical across all years, writing mechanical totals and
+  #                    receipts.
   #   'conventional' : conventional across all years, writing conventional totals
   #                    and receipts. Takes static_mtrs_all from an earlier static
   #                    run and filters it by year.
@@ -607,8 +908,9 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
   #                                 indexes ; see generate_indexes()
   #   - vat_price_offset (df)     : series of price level adjustment factors to
   #                                 reflect introduction of a VAT
-  #   - pass_type (str)           : 'both' (default), 'static', 'conventional',
-  #                                 or 'conventional_no_wealth'
+  #   - pass_type (str)           : 'both' (default), 'static', 'mechanical',
+  #                                 'mechanical_no_wealth', 'conventional', or
+  #                                 'conventional_no_wealth'
   #   - static_mtrs_all (df)      : combined static MTRs across years, required on
   #                                 a conventional pass whose behavior modules
   #                                 read them
@@ -631,7 +933,8 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
                  indexes              = indexes,
                  vat_price_offset     = vat_price_offset,
                  pass_type            = pass_type,
-                 static_mtrs_year     = smy)
+                 static_mtrs_year     = smy,
+                 tax_law_baseline     = tax_law_baseline)
   }
 
   # Run simulation for all years (parallel or sequential depending on settings)
@@ -656,6 +959,34 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
     )
   }
 
+  # Where no transmission channel is live the mechanical rung equals the static
+  # one. Report it from the static totals anyway, so every counterfactual carries
+  # all three rungs and the reporting layer needs no special case
+  if (pass_type %in% c('both', 'static') &&
+      scenario_info$ID != 'baseline' &&
+      !scenario_runs_mechanical(scenario_info)) {
+    write_pass_outputs(
+      output               = output,
+      root                 = file.path(scenario_info$output_path, 'mechanical'),
+      totals_slot          = 'static_totals',
+      vat_price_offset     = vat_price_offset,
+      scenario_info        = scenario_info,
+      leg                  = 'mechanical'
+    )
+  }
+
+  # Write mechanical outputs, if this call ran the mechanical pass. Baseline has
+  # none
+  if (pass_type == 'mechanical' && scenario_info$ID != 'baseline') {
+    write_pass_outputs(
+      output               = output,
+      root                 = file.path(scenario_info$output_path, 'mechanical'),
+      totals_slot          = 'mechanical_totals',
+      vat_price_offset     = vat_price_offset,
+      scenario_info        = scenario_info
+    )
+  }
+
   # Write conventional outputs, if this call ran the conventional pass. Baseline
   # has none
   if (pass_type %in% c('both', 'conventional') && scenario_info$ID != 'baseline') {
@@ -671,6 +1002,16 @@ run_sim = function(scenario_info, tax_law, baseline_mtrs,
   # Return combined MTRs, if this call ran the static pass
   if (pass_type %in% c('both', 'static')) {
     return(output %>% map(.f = ~ .x$mtrs) %>% bind_rows())
+  }
+
+  # The mechanical pass returns both sets: reform law and baseline law, on its own
+  # frame. The conventional pass reads them in place of the static pass's rates and
+  # the baseline scenario's.
+  if (pass_type == 'mechanical') {
+    return(list(
+      mtrs              = output %>% map(.f = ~ .x$pass_mtrs)         %>% bind_rows(),
+      mtrs_baseline_law = output %>% map(.f = ~ .x$mtrs_baseline_law) %>% bind_rows()
+    ))
   }
   invisible(NULL)
 }
@@ -754,17 +1095,25 @@ kg_dyn_recompute_deemed_tax = function(taxed, input, baseline_pr_er,
 
 run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                         indexes, vat_price_offset,
-                        pass_type = c('both', 'static', 'conventional',
+                        pass_type = c('both', 'static', 'mechanical',
+                                      'mechanical_no_wealth', 'conventional',
                                       'conventional_no_wealth'),
-                        static_mtrs_year = NULL) {
+                        static_mtrs_year = NULL,
+                        tax_law_baseline = NULL) {
 
   #----------------------------------------------------------------------------
-  # Runs a single year of tax simulation, in one of four pass types:
+  # Runs a single year of tax simulation, in one of six pass types:
   #
   #   'both'         : static and conventional in one process, writing both
   #                    detail files. Returns the MTRs and both sets of totals.
   #   'static'       : the static pass, including MTRs. Returns the MTRs and the
   #                    static totals.
+  #   'mechanical'   : the static pass plus the transmission channels -- corporate
+  #                    incidence, the wealth haircut and the employer payroll wage
+  #                    adjustment -- and no behavior. Returns the mechanical
+  #                    totals.
+  #   'mechanical_no_wealth' : as mechanical, with the wealth haircut off. Writes
+  #                    detail only, for the mechanical wealth pre-pass to read.
   #   'conventional' : the conventional pass, taking static_mtrs_year so the
   #                    behavior modules see this scenario's static MTRs. Returns
   #                    the conventional totals.
@@ -782,13 +1131,19 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   #                                 indexes ; see generate_indexes()
   #   - vat_price_offset (df)     : series of price level adjustment factors to
   #                                 reflect introduction of a VAT
-  #   - pass_type (str)           : 'both' (default), 'static', 'conventional',
-  #                                 or 'conventional_no_wealth'
-  #   - static_mtrs_year (df)     : static MTRs for this year, required on a
-  #                                 conventional pass with behavior modules
+  #   - pass_type (str)           : 'both' (default), 'static', 'mechanical',
+  #                                 'mechanical_no_wealth', 'conventional', or
+  #                                 'conventional_no_wealth'
+  #   - static_mtrs_year (df)     : MTRs under reform law for this year, from the
+  #                                 rung below, required on a conventional pass
+  #                                 with behavior modules
+  #   - tax_law_baseline (df)     : baseline law over this scenario's years,
+  #                                 required on the mechanical pass, which prices
+  #                                 the frame under it a second time
   #
-  # Returns: list holding some of mtrs, static_totals and conventional_totals,
-  #          depending on the pass type.
+  # Returns: list holding some of mtrs, pass_mtrs, mtrs_baseline_law,
+  #          static_totals, mechanical_totals and conventional_totals, depending
+  #          on the pass type.
   #----------------------------------------------------------------------------
 
   pass_type = match.arg(pass_type)
@@ -797,6 +1152,14 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   # leg's role gate reads. A single tag here would mislabel one of the two blocks
   # a 'both' run executes. Clear the tag on exit so no label leaks across years.
   on.exit(config_set_pass(NA), add = TRUE)
+
+  # Name the counterfactual pass this call runs after the static one. A 'both' run
+  # pairs the static pass with the conventional one; every other pass type names
+  # its own pass, and the static pass alone runs no second body.
+  pass_name = switch(pass_type,
+                     'both'   = 'conventional',
+                     'static' = NA_character_,
+                     pass_type)
 
   if (globals$multicore != 'year') {
     print(paste0('Running ', year, ' (', pass_type, ') for scenario ',
@@ -872,9 +1235,10 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   # Do taxes
   #----------
 
-  # Read baseline payroll taxes
+  # Read baseline payroll taxes, for the wage adjustment on the passes that apply
+  # it. A static-only run does not, and skips a 150MB read per year.
   baseline_pr_er = NULL
-  if (scenario_info$ID != 'baseline') {
+  if (scenario_info$ID != 'baseline' && !is.na(pass_name)) {
     # Read 3 columns of about 98. Detail files run to 150MB and every pass reads
     # this once per year
     baseline_pr_er = globals$baseline_root %>%
@@ -903,9 +1267,20 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                      scenario_uses_wealth_dynamics(scenario_info)
   uses_corp        = scenario_info$ID != 'baseline' &&
                      scenario_uses_corp_incidence(scenario_info)
+  # The employer payroll wage adjustment runs on this pass and not on the static
+  # one, so a reform touching employer payroll law makes the two rungs differ even
+  # with no other channel live
+  uses_er_payroll  = scenario_uses_er_payroll_reform(scenario_info)
   if (pass_type %in% c('both', 'static')) {
 
     config_set_pass('static')
+
+    # The employer payroll wage adjustment holds total employer cost fixed and
+    # lets wages absorb the employer tax change, which moves the income tax base
+    # in response to a payroll provision. It runs on the mechanical and
+    # conventional passes, so this pass hands do_taxes no baseline employer
+    # payroll table. See src/sim/payroll.R.
+    static_pr_er = NULL
 
     # Inject the frozen-realization carryover and deemed quantities into records
     # before tax calculation, so that the policy's mechanical content lands in
@@ -919,7 +1294,7 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     }
 
     tax_units_static = static_input %>%
-      do_taxes(baseline_pr_er = baseline_pr_er,
+      do_taxes(baseline_pr_er = static_pr_er,
                vars_1040      = vars_1040,
                vars_payroll   = return_vars$calc_pr)
 
@@ -933,7 +1308,7 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
         tax_units_static = kg_dyn_recompute_deemed_tax(
           taxed          = tax_units_static,
           input          = static_input,
-          baseline_pr_er = baseline_pr_er,
+          baseline_pr_er = static_pr_er,
           vars_1040      = vars_1040,
           vars_payroll   = return_vars$calc_pr,
           estate_params  = globals$estate_params)
@@ -944,9 +1319,8 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
     static_mtrs_year = NULL
     if (!is.null(scenario_info$mtr_vars)) {
 
-      # Pass baseline_pr_er = NULL rather than the pass-level value: this frame
-      # has been through do_taxes, so its wages already carry the employer
-      # payroll rescale. See calc_mtrs.
+      # This pass applies no employer payroll wage rescale, and the frame has
+      # been through do_taxes in any case, so pass NULL. See calc_mtrs.
       static_mtr_out   = run_mtr_block(taxed          = tax_units_static,
                                        scenario_info  = scenario_info,
                                        year           = year,
@@ -954,62 +1328,16 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       tax_units_static = static_mtr_out$taxed
       static_mtrs_year = static_mtr_out$mtrs
 
-      # Read the actuals off this frame, for the fallback columns below. The MTR
-      # join adds only mtr_ columns, so liabilities are unchanged
-      static_actuals = mtr_actuals(tax_units_static)
-
-      # Calculate the kg_lt MTR under reform law on the frame before the
-      # mechanical injection, read only by the planned-timing wedge. The
-      # injection adds carryover realizations to heirs' kg_lt, which moves their
-      # bracket and phaseout positions and drifts the cell average rate by a few
-      # basis points; kg_dyn_build_planned_timing takes an argmin over years and
-      # would retime a few percent of the bucket against that drift. The Bellman
-      # keeps the post-injection rate, where the income effect is signal.
+      # Supply the rates the capital gains bathtub reads off this detail where the
+      # runscript did not register them
       if (uses_kg_mech) {
-        tax_units_raw = tax_units %>%
-          do_taxes(baseline_pr_er   = baseline_pr_er,
-                   vars_1040        = vars_1040,
-                   vars_payroll     = return_vars$calc_pr,
-                   calc_estate_flag = FALSE,    # only liab_iit_net and liab_pr are read
-                   calc_wealth_flag = FALSE)
-        stopifnot(identical(tax_units_raw$id, tax_units_static$id))
-        # This frame has been through do_taxes, so baseline_pr_er is NULL
-        tax_units_static$mtr_kg_lt_lawonly = calc_one_mtr(
-          frame   = strip_calc_vars(tax_units_raw),
-          actuals = mtr_actuals(tax_units_raw),
-          var     = 'kg_lt')
-      }
-
-      # Supply mtr_net_worth when the scenario's wealth law is active and the
-      # runscript did not register it. kg_dyn_aggregate_cell_carry prices
-      # deferral off the product of mtr_net_worth and mtr_kg_lt read from this
-      # static detail. The gate on wealth law being active in any year keeps the
-      # detail schema stable across phase-in years.
-      if (uses_kg_mech && kg_dyn_wealth_law_active(tax_law) &&
-          !('net_worth' %in% scenario_info$mtr_vars)) {
-        # drop_mtrs recovers the frame the loop above ran on, so this column
-        # matches a registered mtr_net_worth. The frame has been through
-        # do_taxes, so baseline_pr_er is NULL -- unlike the conv-no-wealth block
-        # below, which measures on a frame that has not and threads it.
-        tax_units_static$mtr_net_worth = calc_one_mtr(
-          frame   = strip_calc_vars(tax_units_static, drop_mtrs = TRUE),
-          actuals = static_actuals,
-          var     = 'net_worth')
-      }
-
-      # Supply mtr_estate and mtr_estate_ded when the runscript did not register
-      # them. kg_dyn_aggregate_cell_estate prices the death value's estate offset
-      # off mtr_estate_ded read from this static detail. There is no law gate:
-      # estate law is always active. The fallback runs on the scenario leg only,
-      # since a baseline pass cannot know a kg scenario will read its detail, so
-      # baseline rows of a kg runscript have to register estate in mtr_vars.
-      if (uses_kg_mech && !('estate' %in% scenario_info$mtr_vars)) {
-        tax_units_static$mtr_estate = calc_one_mtr(
-          frame   = strip_calc_vars(tax_units_static, drop_mtrs = TRUE),
-          actuals = static_actuals,
-          var     = 'estate')
-        tax_units_static %<>%
-          mutate(mtr_estate_ded = estate.income_tax_ded * mtr_estate)
+        tax_units_static = add_kg_bathtub_mtrs(
+          taxed          = tax_units_static,
+          pre_injection  = tax_units,
+          scenario_info  = scenario_info,
+          tax_law        = tax_law,
+          baseline_pr_er = static_pr_er,
+          vars_1040      = vars_1040)
       }
     }
 
@@ -1026,44 +1354,69 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
   }
 
 
-  #-------------------
-  # Conventional pass
-  #-------------------
+  #----------------------------------------------
+  # Counterfactual passes after the static one
+  #----------------------------------------------
 
-  has_behavior        = length(scenario_info$behavior_modules) > 0
-  conventional_totals = NULL
+  has_behavior = length(scenario_info$behavior_modules) > 0
 
-  if (pass_type %in% c('both', 'conventional', 'conventional_no_wealth')) {
+  # Totals by slot, filled by whichever pass runs below. An absent slot reads
+  # NULL, which is what a pass that writes no totals returns.
+  pass_totals = list()
 
-    # The conv-no-wealth pass is a conventional-side pass, with behavior on
-    config_set_pass('conventional')
+  # This pass's marginal rates, and the same records priced under baseline law.
+  # The mechanical pass fills both, and the conventional pass reads them in place
+  # of the static pass's rates and the baseline scenario's.
+  pass_mtrs         = NULL
+  mtrs_baseline_law = NULL
 
-    is_convnw     = pass_type == 'conventional_no_wealth'
-    # Only the final conventional pass applies the wealth haircut. The
-    # conv-no-wealth pass measures the forcing on the base before erosion, which
-    # is the frame that does not depend on the deficit.
-    apply_haircut = uses_wealth && !is_convnw
-    conv_root     = if (is_convnw) {
-                      file.path(scenario_info$output_path, 'conventional_no_wealth')
-                    } else {
-                      file.path(scenario_info$output_path, 'conventional')
-                    }
+  if (!is.na(pass_name)) {
+
+    spec = PASS_SPECS[[pass_name]]
+
+    if (isTRUE(spec$mtrs_baseline_law) && !is.null(scenario_info$mtr_vars) &&
+        is.null(tax_law_baseline)) {
+      stop('The mechanical pass prices marginal rates under baseline law as well ',
+           'as reform law, and was given no baseline law table. Pass ',
+           'tax_law_baseline; see build_baseline_tax_law.')
+    }
+
+    config_set_pass(spec$config_pass)
+
+    # Only a pass that applies the haircut reads the deficit state. The no-wealth
+    # passes measure the forcing on the base before erosion, which is the frame
+    # that does not depend on the deficit.
+    apply_haircut    = uses_wealth && spec$haircut
+    conv_root        = file.path(scenario_info$output_path, spec$root)
     conv_detail_path = file.path(conv_root, 'detail', paste0(year, '.csv'))
 
-    # Run the calculator whenever there is a behavior module or either mechanical
-    # channel is active. A scenario with none of the three copies its static
-    # detail instead.
-    if (has_behavior || uses_wealth || uses_corp) {
+    # Run the calculator whenever this pass can differ from the rung below it:
+    # behavior on a pass that takes it, either cross-base channel active, or the
+    # employer payroll wage adjustment this pass applies and the static pass does
+    # not. A scenario with none of them copies the rung below instead.
+    if ((spec$behavior && has_behavior) || uses_wealth || uses_corp ||
+        uses_er_payroll) {
 
-      # Apply corporate incidence at the head of every conventional-side pass,
-      # before the wealth haircut and the behavior modules, so that the gains and
-      # wealth machinery runs on the shocked frame. The step scales the external
-      # income lines, accumulating the corp_dY_exog the wealth forcing reads,
-      # marks down exposed asset stocks and recomputes net worth, and adjusts
-      # gains flows on runs without the gains bathtub. See src/sim/corp/.
+      # Inject the frozen-realization carryover and deemed quantities, as the
+      # static pass does. The mechanical rung is the static one plus the
+      # transmission channels, and the frozen realizations are law arithmetic
+      # rather than transmission. The conventional-side passes take the full
+      # bathtub state through their behavior module instead.
       conv_base = tax_units
+      pre_injection = NULL
+      if (spec$config_pass == 'mechanical' && uses_kg_mech) {
+        conv_base = kg_dyn_apply_mech_to_records(conv_base, scenario_info, year)
+      }
+
+      # Apply corporate incidence at the head of the pass, before the wealth
+      # haircut and the behavior modules, so that the gains and wealth machinery
+      # runs on the shocked frame. The step scales the external income lines,
+      # accumulating the corp_dY_exog the wealth forcing reads, marks down exposed
+      # asset stocks and recomputes net worth, and adjusts gains flows on runs
+      # without the gains bathtub. See src/sim/corp/.
       if (uses_corp) {
         corp_check_run_compat(scenario_info, vat_price_offset)
+        pre_corp  = conv_base
         conv_base = corp_apply_to_records(
           tax_units          = conv_base,
           paths              = corp_get_paths(scenario_info),
@@ -1072,9 +1425,9 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
 
         # Report the conservation diagnostic, comparing the analytic paths
         # against what the applier realized by differencing the two frames
-        if (!is_convnw) {
+        if (spec$corp_diag) {
           corp_write_conservation_diag(
-            pre = tax_units, post = conv_base,
+            pre = pre_corp, post = conv_base,
             paths = corp_get_paths(scenario_info),
             year = year, conv_root = conv_root)
         }
@@ -1087,14 +1440,33 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       # are ranked on net worth before the corporate markdown, which is what the
       # pre-pass computed its cutoffs on.
       if (apply_haircut) {
-        wealth_state = read_cohort_state(scenario_info, 'wealth_dynamics_state', year)
+        wealth_state = read_cohort_state(scenario_info, 'wealth_dynamics_state',
+                                         year, pass = spec$state_pass)
         conv_base    = wealth_dyn_apply_to_records(conv_base, wealth_state,
                                                    rank_value = tax_units$net_worth)
       }
 
+      # The bathtub's law-only gains rate is measured on this rung's frame without
+      # the frozen-realization injection. The channels above are applied to it too,
+      # so the two frames differ in the injection alone.
+      if (isTRUE(spec$mtrs_baseline_law) && uses_kg_mech) {
+        pre_injection = tax_units
+        if (uses_corp) {
+          pre_injection = corp_apply_to_records(
+            tax_units          = pre_injection,
+            paths              = corp_get_paths(scenario_info),
+            year               = year,
+            kg_dynamics_active = uses_kg_mech)
+        }
+        if (apply_haircut) {
+          pre_injection = wealth_dyn_apply_to_records(
+            pre_injection, wealth_state, rank_value = tax_units$net_worth)
+        }
+      }
+
       # Run behavioral feedback. With both channels active, the gains modules see
       # the frame after the haircut
-      if (has_behavior) {
+      if (spec$behavior && has_behavior) {
         conv_input = conv_base %>%
           do_behavioral_feedback(behavior_modules = scenario_info$behavior_modules,
                                  baseline_mtrs    = baseline_mtrs,
@@ -1119,6 +1491,14 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
                  vars_1040      = vars_1040,
                  vars_payroll   = return_vars$calc_pr)
 
+      # Record the wage change the employer payroll adjustment produced, which the
+      # wealth forcing reads as a change in income from outside the tax system,
+      # alongside the corporate channel's dividend cut. do_taxes rescales wages in
+      # place, so the change is the difference against the frame it was handed.
+      # Cash wages only: the fringe share of the adjustment is in kind and the
+      # forcing is a cash flow.
+      tax_units_conv$pr_dY_exog = tax_units_conv$wages - conv_input$wages
+
       # Calculate expected tax on deemed death gains, as on the static pass, and
       # fold it into liability after the MTR block below
       conv_liab_deemed = NULL
@@ -1139,7 +1519,7 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       # and gross assets. All are read off this un-eroded frame, before the deemed
       # fold, so the rate prices the inter-vivos margin alone. The wealth pre-pass
       # reads them from this pass's detail.
-      if (is_convnw) {
+      if (spec$measurement) {
         bundle = calc_cap_bundle_mtr(
           tax_units       = conv_input,
           actual_liab_iit = tax_units_conv$liab_iit_net,
@@ -1165,56 +1545,114 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
           baseline_pr_er = baseline_pr_er)
       }
 
-      # Calculate conventional marginal tax rates. The conv-no-wealth pass needs
-      # none: the wealth pre-pass reads only the two MTRs measured above
-      if (!is.null(scenario_info$mtr_vars) && !is_convnw) {
+      # Calculate this pass's marginal tax rates. The no-wealth passes need none:
+      # the wealth pre-pass reads only the two MTRs measured above
+      if (!is.null(scenario_info$mtr_vars) && spec$mtrs) {
 
         # This frame has been through do_taxes and its wages are already rescaled,
         # so pass baseline_pr_er = NULL rather than the pass-level value
-        tax_units_conv = run_mtr_block(taxed          = tax_units_conv,
+        mtr_out        = run_mtr_block(taxed          = tax_units_conv,
                                        scenario_info  = scenario_info,
                                        year           = year,
-                                       baseline_pr_er = NULL)$taxed
+                                       baseline_pr_er = NULL)
+        tax_units_conv = mtr_out$taxed
+        pass_mtrs      = mtr_out$mtrs
+      }
+
+      # Supply the rates the capital gains bathtub reads off this rung's detail
+      # where the runscript did not register them
+      if (isTRUE(spec$mtrs_baseline_law) && uses_kg_mech &&
+          !is.null(scenario_info$mtr_vars)) {
+        tax_units_conv = add_kg_bathtub_mtrs(
+          taxed          = tax_units_conv,
+          pre_injection  = pre_injection,
+          scenario_info  = scenario_info,
+          tax_law        = tax_law,
+          baseline_pr_er = baseline_pr_er,
+          vars_1040      = vars_1040)
+      }
+
+      # Price the same records a second time under baseline law. The marginal rate
+      # change a behavior module reads is then the price change from the law, both
+      # sides measured at the circumstances the taxpayer has after everything
+      # outside his control has happened to him. The two sides differ from the old
+      # convention only for a record a mechanical income change moves across a
+      # bracket, which the crossing diagnostic counts.
+      if (isTRUE(spec$mtrs_baseline_law) && !is.null(scenario_info$mtr_vars)) {
+
+        taxed_baseline_law = conv_input %>%
+          swap_tax_law(tax_law_baseline) %>%
+          do_taxes(baseline_pr_er = baseline_pr_er,
+                   vars_1040      = vars_1040,
+                   vars_payroll   = return_vars$calc_pr)
+        stopifnot(identical(taxed_baseline_law$id, tax_units_conv$id))
+
+        mtrs_baseline_law = run_mtr_block(taxed          = taxed_baseline_law,
+                                          scenario_info  = scenario_info,
+                                          year           = year,
+                                          baseline_pr_er = NULL)$mtrs
+
+        write_mtr_crossing_diag(
+          reform_mtrs   = pass_mtrs,
+          baseline_mtrs = mtrs_baseline_law,
+          static_mtrs   = static_mtrs_year,
+          weight        = tax_units_conv$weight,
+          scenario_info = scenario_info,
+          year          = year,
+          root          = conv_root)
       }
 
       if (!is.null(conv_liab_deemed)) {
         tax_units_conv = fold_deemed(tax_units_conv, conv_liab_deemed)
       }
 
-      # Write detail. The conv-no-wealth pass has its own output tree, so it never
-      # overwrites the final conventional detail
+      # Write detail. Each pass has its own output tree, so an intermediate pass
+      # never overwrites the final conventional detail
       write_detail(tax_units_conv, conv_detail_path,
-                   optional = DETAIL_COLS_OPTIONAL_CONV)
+                   optional = spec$detail_optional)
 
-      # Collect totals. The conv-no-wealth pass is intermediate and has none
-      if (!is_convnw) {
-        conventional_totals = collect_totals(tax_units_conv, year)
+      # Collect totals. An intermediate pass has none
+      if (!is.na(spec$totals_slot)) {
+        pass_totals[[spec$totals_slot]] = collect_totals(tax_units_conv, year)
       }
 
     } else if (scenario_info$ID != 'baseline') {
 
-      # With no behavior and neither channel active, copy the static detail to the
-      # conventional output. A 'both' pass has the frame in memory; a conventional
-      # pass copies the CSV the static pass already wrote.
+      # With no behavior and no channel active, this pass equals the rung below,
+      # so copy that rung's detail. A 'both' pass has the static frame in memory;
+      # a single-pass run copies the CSV an earlier phase wrote, taking the
+      # nearest rung below that was actually computed.
       conv_path = conv_detail_path
       if (!is.null(tax_units_static)) {
         write_detail(tax_units_static, conv_path)
       } else {
-        static_path = file.path(scenario_info$output_path, 'static', 'detail',
-                                paste0(year, '.csv'))
-        file.copy(static_path, conv_path, overwrite = TRUE)
+        below = spec$alias_from %>%
+          map_chr(.f = ~ file.path(scenario_info$output_path, .x, 'detail',
+                                   paste0(year, '.csv'))) %>%
+          keep(.p = file.exists)
+        if (length(below) == 0) {
+          stop('Pass "', pass_name, '" for scenario "', scenario_info$ID,
+               '", year ', year, ' is an alias of the rung below, but none of ',
+               paste(spec$alias_from, collapse = ', '), ' has detail to copy.')
+        }
+        file.copy(below[1], conv_path, overwrite = TRUE)
       }
 
-      # On a 'both' pass the static totals are in scope. On a conventional pass
-      # they are NULL, and the caller substitutes the ones Phase 2A wrote.
-      conventional_totals = static_totals
+      # On a 'both' pass the static totals are in scope. On a single-pass run they
+      # are NULL, and the caller substitutes the ones the static phase wrote.
+      if (!is.na(spec$totals_slot)) {
+        pass_totals[[spec$totals_slot]] = static_totals
+      }
     }
   }
 
   # Return required data
   return(list(mtrs                = static_mtrs_year,
+              pass_mtrs           = pass_mtrs,
+              mtrs_baseline_law   = mtrs_baseline_law,
               static_totals       = static_totals,
-              conventional_totals = conventional_totals))
+              mechanical_totals   = pass_totals$mechanical_totals,
+              conventional_totals = pass_totals$conventional_totals))
 }
 
 

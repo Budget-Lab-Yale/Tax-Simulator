@@ -274,9 +274,9 @@ as an individual-tax offset to the corporate revenue gain. Each record's
 exposure depends on its portfolio: directly held equity, funds, and retirement
 accounts. The constants governing these exposures are provisional placeholders
 pending direct measurement, and we present corporate-rate results as such.
-Both this and the financing channel affect only the behavioral estimate; the
-static score&mdash;taxes under the new law with behavior held fixed&mdash;remains
-a clean statement of the law.</p>
+Both this and the financing channel enter the mechanical and conventional
+estimates only; the static score&mdash;taxes under the new law with every base
+held at its baseline value&mdash;remains a clean statement of the law.</p>
 
 <h2><span class="no">3.</span>How each piece is parameterized</h2>
 
@@ -294,6 +294,59 @@ substantive economic changes like labor supply or savings rate changes are
 excluded from the behavioral adjustment margins. (The financing channel is a
 mechanical description of how taxes are paid rather than a model of how saving
 responds to rates of return.)</p>
+
+<h3>Three reportable estimates</h3>
+
+<p>The model reports each policy on three rungs, each one a superset of the one
+below it, so that the mechanical interactions in Figure 1 can be read separately
+from the behavioral responses.</p>
+
+<p>The <strong>static</strong> estimate is the new law priced on baseline
+behavior and baseline bases, with no base moving in response to another. The
+<strong>mechanical</strong> estimate adds every mechanical interaction:
+corporate incidence, the tax-driven dissaving channel, and the employer payroll
+wage adjustment. The <strong>conventional</strong> estimate adds the behavioral
+responses.</p>
+
+<p>The wedge between static and conventional therefore decomposes as
+(mechanical &minus; static) plus (conventional &minus; mechanical), with one
+fixed ordering: the mechanical interactions first, and behavior priced on the
+transmitted bases. That is already the order in which the modules run, so the
+decomposition introduces no new order-dependence. A policy with no mechanical
+interaction live reports the same number on the first two rungs.</p>
+
+<p>The employer payroll wage adjustment belongs on the mechanical rung for the
+same reason the others do, and it used to sit inside the static pass. Holding
+total employer cost fixed, a change in the employer payroll tax is absorbed by
+wages, which moves the income tax base &mdash; an interaction between two bases,
+not a statement of the law. Moving it makes the treatment of the three
+mechanical channels consistent.</p>
+
+<p>A behavioral response is priced against the mechanical bases. The rate change
+feeding an elasticity is the marginal rate under the new law less the rate under
+current law, both evaluated on the household's mechanical-rung circumstances:
+the price change from the law, at the position the household occupies after
+everything outside its control has happened to it. The two evaluations differ
+only for a household that a mechanical income change moves across a bracket.</p>
+
+<h3>What the distribution tables carry</h3>
+
+<p>Distribution tables are built from the static bases, with the mechanical
+channels added as explicit per-record overlays rather than folded into the
+frame.</p>
+
+<p>The corporate overlay distributes the corporate revenue change by the rules
+in Section A.8. A payroll overlay carries each worker's income tax offset from
+his own wage adjustment; with total employer cost fixed, the worker's
+compensation loss equals the employer tax change, so attributing that tax to his
+record and measuring his income loss net of tax offsets are the same number,
+provided the income tax change is computed on adjusted wages.</p>
+
+<p>Tax-driven dissaving gets no overlay. Its later-year income decline is the
+echo of taxes already counted as burden in the years they were paid, so counting
+the decline again would double-count in present value. It is reported through
+revenue, where the interaction is the point, and not through burden. Behavioral
+changes in income are excluded as they always have been.</p>
 
 <div class="tblwrap"><table>
 <caption>Table 1 &middot; Parameters, by module</caption>

@@ -8,6 +8,15 @@
 # universe, allocates estate tax to heirs, and attaches the capital stock
 # allocation bases and the income definition cores. Corporate incidence is
 # allocated on stocks, with no phase-in; see corp_alloc.R.
+#
+# These tables are built from the static frame, with a per-channel overlay added
+# on top: the corporate revenue delta, and the employer payroll wage adjustment's
+# income tax offset (see resolve_payroll_overlay_leg).
+#
+# The wealth drawdown gets no overlay. Its later-year income dip is the echo of
+# taxes already counted as burden in the years they were paid, so counting it
+# again double-counts in present value. Behavioral income changes are excluded on
+# the same grounds they always have been.
 #----------------------------------------------------------------------------
 
 
@@ -235,7 +244,22 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
     reform_detail$liab_wealth = 0
   }
 
-  # The two legs must share the same record universe. A baseline id missing from
+  # The employer payroll wage adjustment lives on the mechanical rung, so a table
+  # built from static numerators is missing the income tax offset from the worker's
+  # own wage change. Read that offset off the mechanical rung as an overlay, on the
+  # pattern of the corporate one, so the offset is a labeled column rather than
+  # baked into the frame. See resolve_payroll_overlay_leg for what the rung
+  # difference contains.
+  overlay_leg    = resolve_payroll_overlay_leg(id, reform_leg)
+  overlay_detail = NULL
+  if (!is.null(overlay_leg)) {
+    overlay_detail = read_static_detail(id, yr, leg = overlay_leg)
+    if (!('liab_deemed' %in% names(overlay_detail))) {
+      overlay_detail$liab_deemed = 0
+    }
+  }
+
+  # The legs must share the same record universe. A baseline id missing from
   # the reform detail would flow NA through the liability delta into every group
   # aggregate, and a reform-only id would be dropped by the join. A mismatch means
   # the legs come from incompatible vintages.
@@ -250,6 +274,17 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
          'The legs come from incompatible vintages; re-run against a ',
          'consistent baseline.')
   }
+  if (!is.null(overlay_detail)) {
+    overlay_ids = overlay_detail$id[overlay_detail$dep_status == 0]
+    if (length(setdiff(base_ids, overlay_ids)) > 0 |
+        length(setdiff(overlay_ids, base_ids)) > 0) {
+      stop('distribution: the ', overlay_leg, ' rung\'s ', yr, ' detail file ',
+           'does not share the baseline record universe (',
+           length(setdiff(base_ids, overlay_ids)), ' baseline-only ids, ',
+           length(setdiff(overlay_ids, base_ids)), ' rung-only ids). ',
+           'The rungs come from incompatible vintages; re-run the scenario.')
+    }
+  }
 
   microdata %<>%
     left_join(
@@ -263,6 +298,24 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
                liab_iit_pr_reform),
       by = 'id'
     )
+
+  # The overlay is the during-life tax difference between the two rungs, which for
+  # a payroll reform is the income tax offset from the worker's own wage change.
+  # Unlike the corporate overlay it is income and payroll tax, so it belongs in
+  # every tax-inclusion tier.
+  if (is.null(overlay_detail)) {
+    microdata$liab_pr_overlay = 0
+  } else {
+    microdata %<>%
+      left_join(
+        overlay_detail %>%
+          transmute(id,
+                    liab_iit_pr_overlay = liab_iit_net + liab_pr - liab_deemed),
+        by = 'id'
+      ) %>%
+      mutate(liab_pr_overlay = liab_iit_pr_overlay - liab_iit_pr_reform) %>%
+      select(-liab_iit_pr_overlay)
+  }
 
   # Allocate estate tax to heirs. The heir structure comes from the baseline
   # Estate-Tax-Distribution interface, and liability from the rank-matching
@@ -398,12 +451,63 @@ build_distribution_microdata = function(id, baseline_id, yr, other_taxes,
     mutate(
 
       # Express counterfactual reform variables in baseline dollars to account
-      # for VAT (all reform tax amounts and inheritance are deflated together)
-      income_reform = income,
-      across(.cols = ends_with('_reform'), .fns  = ~ . / vat_price_offset)
+      # for VAT (all reform tax amounts and inheritance are deflated together).
+      # The payroll overlay is a reform-side tax amount and is deflated with them;
+      # its name does not end in _reform, so the sweep does not reach it.
+      income_reform   = income,
+      across(.cols = ends_with('_reform'), .fns  = ~ . / vat_price_offset),
+      liab_pr_overlay = liab_pr_overlay / vat_price_offset
     )
 
   return(microdata)
+}
+
+
+
+resolve_payroll_overlay_leg = function(id, reform_leg) {
+
+  #----------------------------------------------------------------------------
+  # Names the rung the payroll overlay differences against the reform leg, or NULL
+  # where no overlay is due.
+  #
+  # An overlay is due only where the reform changes employer-side payroll law and
+  # the reform numerators come from the static rung. A table built from the
+  # mechanical or conventional rung already carries the wage adjustment.
+  #
+  # Which rung supplies the difference matters, because the difference carries
+  # every channel live on it, not the payroll adjustment alone:
+  #
+  #   the wealth haircut  : excluded, by reading the rung's no-wealth tree. The
+  #                         later-year income dip is the echo of taxes already
+  #                         counted as burden in the years they were paid, and
+  #                         counting it again double-counts in present value.
+  #   corporate incidence : cannot be separated here, and the corporate overlay
+  #                         already carries it. A scenario with both channels gets
+  #                         no payroll overlay, and says so.
+  #
+  # Parameters:
+  #   - id         (str) : scenario ID
+  #   - reform_leg (str) : rung supplying the reform numerators
+  #
+  # Returns: rung name (str), or NULL.
+  #----------------------------------------------------------------------------
+
+  if (!identical(reform_leg, 'static')) return(NULL)
+
+  scenario_info = get_scenario_info(id)
+  if (!scenario_uses_er_payroll_reform(scenario_info)) return(NULL)
+
+  if (scenario_uses_corp_incidence(scenario_info)) {
+    warning('distribution: scenario ', id, ' changes employer payroll law and ',
+            'runs the corporate incidence channel. The two cannot be separated ',
+            'in the rung difference, and the corporate overlay already carries ',
+            'the corporate piece, so no payroll overlay is added: these tables ',
+            'omit the income tax offset from the wage adjustment.')
+    return(NULL)
+  }
+
+  if (scenario_uses_wealth_dynamics(scenario_info)) 'mechanical_no_wealth'
+  else                                              'mechanical'
 }
 
 
@@ -481,9 +585,9 @@ process_for_distribution = function(id, baseline_id, yr, other_taxes) {
         taxes_included == 'iit_pr_death_cit_vat_wealth' ~ liab_iit_pr + liab_wealth + liab_estate + liab_deemed_heir
       ),
       liab_reform = case_when(
-        taxes_included == 'iit_pr_wealth'               ~ liab_iit_pr_reform + liab_wealth_reform,
-        taxes_included == 'iit_pr_death_wealth'         ~ liab_iit_pr_reform + liab_wealth_reform + liab_estate_reform + liab_deemed_heir_reform,
-        taxes_included == 'iit_pr_death_cit_vat_wealth' ~ liab_iit_pr_reform + liab_wealth_reform + liab_estate_reform + liab_deemed_heir_reform + liab_corp + liab_vat
+        taxes_included == 'iit_pr_wealth'               ~ liab_iit_pr_reform + liab_wealth_reform + liab_pr_overlay,
+        taxes_included == 'iit_pr_death_wealth'         ~ liab_iit_pr_reform + liab_wealth_reform + liab_pr_overlay + liab_estate_reform + liab_deemed_heir_reform,
+        taxes_included == 'iit_pr_death_cit_vat_wealth' ~ liab_iit_pr_reform + liab_wealth_reform + liab_pr_overlay + liab_estate_reform + liab_deemed_heir_reform + liab_corp + liab_vat
       ),
 
       # Calculate change in tax liability
@@ -564,6 +668,11 @@ calc_dist_metrics = function(grouped_microdata) {
 
       # Income group's total dollar amount tax change
       net_change = sum(round(liab_delta) * weight) / 1e9,
+
+      # The employer payroll wage adjustment's income tax offset, carried as an
+      # overlay so that it reads as its own term rather than sitting inside the
+      # reform frame. Zero for a scenario not changing employer payroll law
+      net_change_pr_overlay = sum(round(liab_pr_overlay) * weight) / 1e9,
 
       .groups = 'drop_last'
     ) %>%

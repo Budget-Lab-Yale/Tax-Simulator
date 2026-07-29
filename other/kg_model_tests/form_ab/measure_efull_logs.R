@@ -193,7 +193,11 @@ calib_write_entry(
                        'src/sim/kg/bellman.R',
                        'src/sim/kg/recurrence.R',
                        'src/sim/kg/timing.R',
-                       'src/sim/kg/apply.R'),
+                       'src/sim/kg/apply.R',
+                       # Decides which rung's detail the reform-side cell rates are
+                       # read from, which feeds the measured elasticity as directly
+                       # as the Bellman does
+                       'src/sim/kg/inputs.R'),
     conditioned_on = list(settings.kg.applier_allocation = '0.5',
                           settings.kg.timing_ref_wedge   = 0.05,
                           settings.kg.timing_window      = 1),

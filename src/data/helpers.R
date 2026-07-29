@@ -12,14 +12,15 @@ read_static_detail = function(id, yr, leg = 'static') {
 
   #----------------------------------------------------------------------------
   # Reads a scenario's tax unit detail file for a given year. Defaults to the
-  # static leg (the historical behavior and name); pass leg = 'conventional'
-  # to read the behavioral-feedback leg (used by the realized-ETR variant of
-  # the distribution_etrs supplemental).
+  # static leg (the historical behavior and name); pass another rung's name to
+  # read that rung, as the realized-ETR variant of the distribution_etrs
+  # supplemental and the payroll overlay do.
   #
   # Parameters:
   #   - id  (str) : scenario ID ('baseline' resolves to the baseline root)
   #   - yr  (int) : year of detail file
-  #   - leg (str) : run type subfolder, 'static' (default) or 'conventional'
+  #   - leg (str) : run type subfolder: 'static' (default), 'mechanical',
+  #                 'conventional', or one of the intermediate no-wealth trees
   #
   # Returns: tibble of tax unit detail (df).
   #----------------------------------------------------------------------------

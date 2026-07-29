@@ -168,6 +168,8 @@ expect_error('transmission read refused on static pass',
              economy_param('corp', 'sigma_n'), 'STATIC')
 check('state entry readable on static pass',
       identical(economy_param('corp', 'mixed'), 1L) || identical(economy_param('corp', 'mixed'), 1))
+config_set_pass('mechanical')
+check('transmission readable on mechanical', identical(economy_param('corp', 'sigma_n'), 0.375))
 config_set_pass('conventional')
 check('transmission readable on conventional', identical(economy_param('corp', 'sigma_n'), 0.375))
 config_set_pass(NA)

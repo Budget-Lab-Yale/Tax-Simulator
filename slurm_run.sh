@@ -15,6 +15,16 @@
 #              workers inject; no-op for non-kg_dynamics scenarios
 #   Phase 2A — CF static-only (SLURM array): 1 job per scenario×year
 #              (pass_type='static'; produces static MTRs + static_totals)
+#   Phase 2MN— CF mech-no-wealth (SLURM array): 1 job per scenario×year, only
+#              for s>0 wealth scenarios that also run the mechanical rung
+#              (pass_type='mechanical_no_wealth'; measures the mechanical rung's
+#              drawdown forcing on the un-eroded base)
+#   Phase 2MW— CF mechanical wealth bathtub (SLURM array): 1 job per such
+#              scenario, runs the deficit recurrence sequentially across years
+#   Phase 2M — CF mechanical (SLURM array): 1 job per scenario×year, only for
+#              scenarios with a transmission channel live (corporate incidence,
+#              a nonzero wealth financing profile, or an employer-payroll
+#              reform). pass_type='mechanical'
 #   Phase 2B — CF bathtub (SLURM array): 1 job per scenario, runs the
 #              kg_dynamics recurrence sequentially across years; no-op
 #              for non-kg_dynamics scenarios
@@ -89,6 +99,9 @@ echo "  Staging dir: ${STAGING_DIR}"
 echo "  Baseline year-tasks (Phase 1): ${N_PHASE1}"
 echo "  CF frozen mechanical jobs (Phase 1B): ${N_PHASE1B}"
 echo "  CF static-only year-tasks (Phase 2A): ${N_PHASE2A}"
+echo "  CF mech-no-wealth year-tasks (Phase 2MN): ${N_PHASE2MN}"
+echo "  CF mechanical wealth bathtub jobs (Phase 2MW): ${N_PHASE2MW}"
+echo "  CF mechanical year-tasks (Phase 2M): ${N_PHASE2M}"
 echo "  CF bathtub jobs (Phase 2B): ${N_PHASE2B}"
 echo "  CF conv-no-wealth year-tasks (Phase 2N): ${N_PHASE2N}"
 echo "  CF wealth bathtub jobs (Phase 2W): ${N_PHASE2W}"
@@ -167,7 +180,7 @@ fi
 # scenario. Submit one dependency chain per scenario so a fast scenario can
 # reach aggregation and post-processing without waiting for unrelated work:
 #
-#   1B -> 2A -> 2B -> [2N -> 2W] -> 2C -> 3a -> 3b
+#   1B -> 2A -> [2MN -> 2MW] -> [2M] -> 2B -> [2N -> 2W] -> 2C -> 3a -> 3b
 #
 # Phase 1 and baseline aggregation remain shared prerequisites where required.
 #-------------------------------------------
@@ -198,6 +211,8 @@ if [ "$SUBMIT_MODE" == "batch" ]; then
   R1B=$(plan_range 2 2);  R2A=$(plan_range 3 4);  R2B=$(plan_range 5 5)
   R2N=$(plan_range 6 7);  R2W=$(plan_range 8 8);  R2C=$(plan_range 9 10)
   R3A=$(plan_range 11 11); R3B=$(plan_range 12 12)
+  # Appended plan columns, so the indices above stay put
+  R2MN=$(plan_range 13 14); R2MW=$(plan_range 15 15); R2M=$(plan_range 16 17)
 
   echo "Batch mode: submitting one array per phase..."
 
@@ -218,7 +233,40 @@ if [ "$SUBMIT_MODE" == "batch" ]; then
             Rscript src/slurm/worker.R ${STAGING_DIR} 2A")
   echo "  Phase 2A job ID: ${P2A} (tasks ${R2A})"
 
-  set_afterok "$P2A"
+  P2MW=""
+  if [ -n "$R2MN" ]; then
+    set_afterok "$P2A"
+    P2MN=$(sbatch --parsable --array=${R2MN} "${AFTEROK[@]}" \
+      ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+      --job-name=taxsim-cf-mechnw \
+      --output="${STAGING_DIR}/logs/p2mn_%A_%a.log" \
+      --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+              Rscript src/slurm/worker.R ${STAGING_DIR} 2MN")
+    echo "  Phase 2MN job ID: ${P2MN} (tasks ${R2MN})"
+
+    set_afterok "$P2MN" "$P1"
+    P2MW=$(sbatch --parsable --array=${R2MW} "${AFTEROK[@]}" \
+      ${SBATCH_COMMON} --time=0:15:00 --mem=8G \
+      --job-name=taxsim-mech-wealth \
+      --output="${STAGING_DIR}/logs/p2mw_%A_%a.log" \
+      --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+              Rscript src/slurm/mech_wealth.R ${STAGING_DIR}")
+    echo "  Phase 2MW job ID: ${P2MW} (tasks ${R2MW})"
+  fi
+
+  P2M=""
+  if [ -n "$R2M" ]; then
+    set_afterok "$P2A" "$P2MW"
+    P2M=$(sbatch --parsable --array=${R2M} "${AFTEROK[@]}" \
+      ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+      --job-name=taxsim-cf-mech \
+      --output="${STAGING_DIR}/logs/p2m_%A_%a.log" \
+      --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+              Rscript src/slurm/worker.R ${STAGING_DIR} 2M")
+    echo "  Phase 2M job ID: ${P2M} (tasks ${R2M})"
+  fi
+
+  set_afterok "$P2A" "$P2M"
   P2B=$(sbatch --parsable --array=${R2B} "${AFTEROK[@]}" \
     ${SBATCH_COMMON} --time=0:30:00 --mem=8G \
     --job-name=taxsim-bathtub \
@@ -284,7 +332,8 @@ else
   while IFS=$'\t' read -r \
       SCENARIO P1B_TASK P2A_FIRST P2A_LAST P2B_TASK \
       P2N_FIRST P2N_LAST P2W_TASK P2C_FIRST P2C_LAST \
-      P3A_TASK P3B_TASK; do
+      P3A_TASK P3B_TASK \
+      P2MN_FIRST P2MN_LAST P2MW_TASK P2M_FIRST P2M_LAST; do
 
     if [ -z "$SCENARIO" ]; then
       continue
@@ -312,8 +361,44 @@ else
               Rscript src/slurm/worker.R ${STAGING_DIR} 2A")
     echo "  Phase 2A job ID: ${P2A}"
 
-    # The sequential kg recurrence needs every static year for this scenario.
-    set_afterok "$P2A"
+    # The mechanical rung's own drawdown forcing, where the wealth channel is on.
+    P2MW=""
+    if [ "$P2MN_FIRST" != "NA" ]; then
+      set_afterok "$P2A"
+      P2MN=$(sbatch --parsable --array=${P2MN_FIRST}-${P2MN_LAST} "${AFTEROK[@]}" \
+        ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+        --job-name=taxsim-cf-mechnw \
+        --output="${STAGING_DIR}/logs/p2mn_%A_%a.log" \
+        --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+                Rscript src/slurm/worker.R ${STAGING_DIR} 2MN")
+      echo "  Phase 2MN job ID: ${P2MN}"
+
+      set_afterok "$P2MN" "$P1"
+      P2MW=$(sbatch --parsable --array=${P2MW_TASK}-${P2MW_TASK} "${AFTEROK[@]}" \
+        ${SBATCH_COMMON} --time=0:15:00 --mem=8G \
+        --job-name=taxsim-mech-wealth \
+        --output="${STAGING_DIR}/logs/p2mw_%A_%a.log" \
+        --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+                Rscript src/slurm/mech_wealth.R ${STAGING_DIR}")
+      echo "  Phase 2MW job ID: ${P2MW}"
+    fi
+
+    # The mechanical rung, where a transmission channel is live.
+    P2M=""
+    if [ "$P2M_FIRST" != "NA" ]; then
+      set_afterok "$P2A" "$P2MW"
+      P2M=$(sbatch --parsable --array=${P2M_FIRST}-${P2M_LAST} "${AFTEROK[@]}" \
+        ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+        --job-name=taxsim-cf-mech \
+        --output="${STAGING_DIR}/logs/p2m_%A_%a.log" \
+        --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
+                Rscript src/slurm/worker.R ${STAGING_DIR} 2M")
+      echo "  Phase 2M job ID: ${P2M}"
+    fi
+
+    # The sequential kg recurrence needs every static year for this scenario, and
+    # after the MTR relocation it reads the mechanical frame.
+    set_afterok "$P2A" "$P2M"
     P2B=$(sbatch --parsable --array=${P2B_TASK}-${P2B_TASK} "${AFTEROK[@]}" \
       ${SBATCH_COMMON} --time=0:30:00 --mem=8G \
       --job-name=taxsim-bathtub \
