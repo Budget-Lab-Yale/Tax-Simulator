@@ -11,10 +11,9 @@ Design (retune GRID below and re-run; it is pure file I/O, safe on login node):
     run 2026:2057 per scenario yields BOTH the 10y (FY27-36) and 30y revmax
     for free (revenue totals are written every sim year; dist_years is kept
     minimal because revmax is a revenue concept, not a distribution one).
-  - full behavioral stack (author call 2026-07-08): the pinned order
-    kg_dynamics -> conversion/sigma -> entity_shifting -> evasion is REQUIRED
-    (sigma hard-stops without kg; sigma=0.08 is only valid with the full
-    {sigma,entity,evasion,charity} set present). charity appended last.
+  - full behavioral stack (author call 2026-07-08): the behavior leg names
+    the top_tax_full folder, the same stack the dials batch runs; the loader
+    orders the modules itself.
   - wealth bathtub ON via the calibrated default profile (leave s /
     wealth_financing unset). corp channel is fail-closed OFF here (no
     corporate provision -> zero wedge -> clean skip), so no OME columns.
@@ -34,11 +33,11 @@ RUNSCRIPT = os.path.join(REPO, "config/runscripts/tests/revmax_cg.csv")
 ENACT = 2027
 BASE_PREF = [0.0, 0.15, 0.20]          # baseline top-bracket schedule
 REGIMES = {"stepup": None, "carryover": 1, "deemed": 2}  # 0=step-up baseline
-PP_POINTS = [0, 5, 10, 15, 20, 25]     # coarse ladder; refine near the peak later
+PP_POINTS = [0, 5, 10, 15, 20, 25, 30]  # to 50%; the net-of-tax peaks sit inside
 
-BEHAVIOR = ("kg_dynamics/turnover conversion/sigma "
-            "entity_shifting/pearce_prisinzano evasion/debacker charity/50")
-MTR_VARS = "wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent char_cash"
+BEHAVIOR = "top_tax_full"              # the behavior-leg folder the dials use
+MTR_VARS = ("wages1 wages2 part_active sole_prop1 scorp_active kg_lt rent "
+            "char_cash net_worth estate")
 MTR_TYPES = " ".join(["nextdollar"] * len(MTR_VARS.split()))
 YEARS = "2026:2057"
 DIST_YEARS = "2036"                    # minimal; revmax needs revenue, not dist tables
@@ -56,12 +55,19 @@ def pref_yaml(pp, regime_code):
             "  value:",
             f"    '2014': [0.0, 0.15, 0.20]",
             f"    '{ENACT}': [0.0, 0.15, {top}]",
+            # Lift the Schedule-D gains-no-more-than-ordinary ceiling so a CG
+            # rate above the 37% ordinary top rate actually binds
+            "no_ord_cap:",
+            "  value: 1",
         ]
     else:
         lines += ["# CG rate unchanged (regime-only anchor of the schedule)"]
     if regime_code is not None:
         for k in REGIME_KEYS:
-            lines += [f"kg_death_regime_{k}:", f"  value: {regime_code}"]
+            lines += [f"kg_death_regime_{k}:",
+                      "  value:",
+                      "    '2014': 0",
+                      f"    '{ENACT}': {regime_code}"]
     return "\n".join(lines) + "\n"
 
 
@@ -69,7 +75,8 @@ def main():
     os.makedirs(TAXLAW_DIR, exist_ok=True)
     os.makedirs(os.path.dirname(RUNSCRIPT), exist_ok=True)
 
-    rows = [["baseline", "baseline", "", YEARS, "", MTR_VARS, MTR_TYPES]]
+    rows = [["baseline", "default", "default", "default",
+             YEARS, "", MTR_VARS, MTR_TYPES]]
     n_dirs = 0
     for regime, code in REGIMES.items():
         for pp in PP_POINTS:
@@ -81,13 +88,13 @@ def main():
             with open(os.path.join(d, "pref.yaml"), "w") as f:
                 f.write(pref_yaml(pp, code))
             n_dirs += 1
-            rows.append([sid, f"tests/revmax/{sid}", BEHAVIOR,
+            rows.append([sid, f"tests/revmax/{sid}", "default", BEHAVIOR,
                          YEARS, DIST_YEARS, MTR_VARS, MTR_TYPES])
 
     with open(RUNSCRIPT, "w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["ID", "tax_law", "behavior", "years", "dist_years",
-                    "mtr_vars", "mtr_types"])
+        w.writerow(["ID", "tax_law", "economy", "behavior", "years",
+                    "dist_years", "mtr_vars", "mtr_types"])
         w.writerows(rows)
 
     print(f"wrote {n_dirs} reform dirs under {TAXLAW_DIR}")
