@@ -362,13 +362,13 @@ of return.)
 \textbf{Parameter} & \textbf{Value} & \textbf{Basis} & \textbf{Epistemic status} \\
 \midrule
 \tblgroup{Capital gains realization}
-Long-run response ($\eta$)\pform{realizations scale by $\exp(-\eta\times{}$change in the tax cost of realizing now versus deferring$)$} & 2.48 & Calibrated on the full model to our preferred realization elasticity of $-0.6$ & High \\
+Long-run response ($\eta$)\pform{realizations scale by the net-of-tax share of the deferral wedge raised to this power} & 1.66 & Calibrated on the full model to our preferred realization elasticity of $-0.6$ & High \\
 \addlinespace[0.55em]
 Share of realizations that can retime $\pm 1$ year\pform{the fraction of each year's realizations free to shift one year toward the lower-rate year} & 0.25 & Calibrated to short-run elasticity of $-1.2$ & High \\
 \addlinespace[0.55em]
 Valuation/compliance discount under deemed realization at death\pform{gains deemed realized at death are scaled down by this fraction before tax} & 25\% & Calibrated to JCT score & Low \\
 \tblgroup{Income reporting and form}
-Income conversion ($\sigma$)\pform{percent of the eligible compensation pool converted per point of change in the ordinary-versus-deferred-gain wedge} & 0.16 & Residual: set so the total top ETI is 0.25 (Saez, Slemrod, and Giertz 2012) & Low \\
+Income conversion ($\sigma$)\pform{percent of the eligible compensation pool converted per point of change in the ordinary-versus-deferred-gain wedge} & 0.20 & Residual: set so the total top ETI is 0.25 (Saez, Slemrod, and Giertz 2012) & Low \\
 \addlinespace[0.55em]
 Entity-shifting semi-elasticity\pform{percent of pass-through business income changing form per point of change in the all-in rate differential} & 0.63 & Prisinzano and Pearce (2018) & High \\
 \addlinespace[0.55em]
@@ -381,6 +381,9 @@ Reported-wealth semi-elasticity: marketable / closely held\pform{reported wealth
 Concealment share of the avoidance response: marketable / closely held\pform{the concealed share exits the income and estate bases too; the valuation share exits reported wealth only} & 100\% / 50\% & Marketable assets have observable prices; private ones do not & Medium \\
 \addlinespace[0.55em]
 Reported-estate net-of-tax elasticity\pform{the reported estate retains the net-of-tax ratio raised to this power} & 0.16 & Kopczuk and Slemrod (2001); range 0.10--0.22 & Medium \\
+\tblgroup{Corporate revenue}
+Corporate taxable-income elasticity (statutory, avoidance-only)\pform{the corporate base scales by the net-of-tax statutory ratio raised to this power} & 0.367 & Coles, Patel, Seegert, and Smith (2022) & Medium \\
+\addlinespace[0.55em]
 \tblgroup{Mechanical interactions}
 Share of new tax paid out of saving, by wealth rank\pform{the share of each new tax dollar paid out of saving; the forgone wealth compounds thereafter} & 0.04 $\rightarrow$ 0.80 & Consumption responses by wealth (Straub 2019 and related) & Medium \\
 \addlinespace[0.55em]
@@ -457,15 +460,18 @@ C'(r) = \frac{1}{\eta}\,\ln\!\left(\frac{r}{r_B}\right),
 \end{equation*}
 where $r_B$ is the cohort's baseline realization rate and $\eta$ governs
 response strength. The cost is zero at the margin under baseline policy,
-$C'(r_B) = 0$, so baseline behavior is reproduced exactly. Setting the
-marginal non-tax benefit equal to the marginal cost gives a closed form for
-the scenario realization rate:
+$C'(r_B) = 0$, so baseline behavior is reproduced exactly. The wedge enters
+in log net-of-tax units: setting the marginal cost equal to
+$\ln(1 - MC_t) - \ln(1 - MC_{B,t})$ gives a closed form for the scenario
+realization rate,
 \begin{equation*}
-r \;=\; r_B \,\exp\!\big(-\eta\,(MC_t - MC_{B,t})\big), \qquad \text{capped at } 1,
+r \;=\; r_B \left(\frac{1 - MC_t}{1 - MC_{B,t}}\right)^{\!\eta}, \qquad \text{capped at } 1,
 \end{equation*}
 where $MC_{B,t}$ is the marginal cost under baseline law. The response is a
-constant semi-elasticity in the full deferral wedge rather than in the current-year
-rate alone.
+constant elasticity in the net-of-tax share of the full deferral wedge rather
+than in the current-year rate alone, the same functional form the empirical
+realization literature estimates, and it is undefined as the wedge approaches
+one, where the model stops rather than extrapolate.
 
 \paragraph{What enters the deferral wedge.}
 Expected future rates enter through $W_{t+1}$, which is solved by
@@ -514,14 +520,16 @@ isolation, so that the target elasticity is hit after mortality, death
 treatment, discounting, and the allocation to tax units are all accounted for.
 We run the simulator under a permanent capital-gains rate increase, measure
 the proportional realization response at a thirty-year horizon per unit change
-in the rate, and repeat across a small grid of $\eta$ values. The measured
-response is linear in $\eta$ through the origin, so the calibration is an
-inversion of a fitted line. The target is our preferred permanent realization
-elasticity of $-0.6$, expressed as a semi-elasticity by dividing by the
-baseline top rate of about $0.238$; with a fitted slope of $1.0155$ this gives
-$\eta = 2.4825$, which we quote as $2.48$. The timeable fraction, $0.25$, is
-calibrated the same way to a short-run realization elasticity of $-1.2$ around
-an announced rate change. The deemed-realization discount of 25 percent is set
+in the rate, and repeat across a small grid of $\eta$ values. The target is
+our preferred permanent realization elasticity of $-0.6$, the same local
+moment under either functional form; under the net-of-tax form the measured
+response is not linear in $\eta$, so the pin interpolates the grid piecewise
+rather than inverting a line through the origin. This gives $\eta = 1.6625$,
+which we quote as $1.66$; at the shipped value the model's implied long-run
+semi-elasticity at the current top rate is $-2.24$. The timeable fraction,
+$0.245$, is calibrated to a short-run realization elasticity of $-1.2$ around
+an announced rate change, measured in the year before a pre-announced increase
+takes effect, where law is unchanged and any movement is retiming alone. The deemed-realization discount of 25 percent is set
 so that the model's ten-year revenue from taxing gains at death matches the
 JCT score of that policy.
 
@@ -590,13 +598,13 @@ the other reporting margins already generate most of that response. With
 evasion, entity shifting, and charitable giving turned on and conversion
 turned off, a five-point increase in the top ordinary rate produces a measured
 elasticity of top-bracket taxable income (excluding net capital gains) of
-about 0.20. Adding an independently estimated conversion elasticity on top
+about 0.18. Adding an independently estimated conversion elasticity on top
 would count the same behavior twice, since those estimates are themselves
 drawn from total-response evidence. We therefore run the full model with every
 other margin on and solve for the $\sigma$ that brings the total to 0.25.
-Because the converted amount is linear in $\sigma$, two runs pin the answer
-at $\sigma = 0.16$, meaning 0.16 percent of the pool converts per percentage
-point of wedge change; a full run at that value confirms it. The calibration
+A three-point grid over $\sigma$ pins the answer by interpolation
+at $\sigma = 0.20$, meaning 0.20 percent of the pool converts per percentage
+point of wedge change. The calibration
 disciplines the product of $\sigma$ and the pool definition, so a narrower
 pool would simply imply a proportionally larger $\sigma$ with the same
 aggregate response. The value is conditional on the rest of the stack and is
@@ -801,7 +809,13 @@ under step-up the gain escapes income tax; under carryover it passes to heirs
 and resurfaces in their later sales; under deemed realization it is taxed on
 the decedent's final return, less a 25 percent valuation and compliance
 discount calibrated to the JCT score, with the resulting tax deductible
-against the estate. The regime feeds back into during-life realization
+against the estate. A reform may also carry a per-decedent exclusion under
+which the first X dollars of gain keep step-up, applied pro rata across the
+asset classes whose regime routes gains, after the primary-residence
+exclusion; married amounts apply when the second spouse dies, and single
+decedents blend an own-amount branch with a survivor-election branch by a
+widowhood probability estimated from the 2022 SCF by age and sex. The regime
+feeds back into during-life realization
 behavior through the deferral model of Section A.1. The value of holding a
 gain until death is the income tax escaped, $\tau(1-e)$, where $e$ is the
 marginal estate rate, since income tax paid at death would have shrunk the
@@ -819,8 +833,10 @@ wrong for a tax with a high threshold. Nearly all estates owe nothing, and a
 proportional rule would assign tax to small inheritances that come from exempt
 estates. The identifying assumption is that larger inheritances come from
 larger estates. Inheritance amounts are gross of estate tax, so they do not
-vary with policy; only the tax borne does. Deemed-realization tax at death,
-which has no threshold, is allocated in proportion to inheritance instead.
+vary with policy; only the tax borne does. Deemed-realization tax at death
+goes through the same rank match, with zero-tax estates kept on the decedent
+ladder, so each heir bears the average deemed-tax rate of estates near their
+inheritance's size; Appendix~C.4 gives the reasoning.
 
 Estate tax on calendar-year-$t$ decedents is due nine months after
 death, so revenue is booked in fiscal year $t+1$.
@@ -893,8 +909,15 @@ under the new law with behavior held fixed, is never touched.
 \subsection*{A.8 Corporate tax incidence}
 
 The module is organized around a single shock. The input is the gross change
-in corporate receipts, before any individual-tax
-offset. Holding aggregate
+in corporate receipts, before any individual-tax offset. For a statutory-rate
+change that input is computed on the revenue side of the model itself: the CBO
+corporate receipts baseline implies the taxed base at the current rate, and
+the base erodes with an avoidance-only elasticity of corporate taxable income
+with respect to the statutory net-of-tax rate of 0.367 (Coles, Patel, Seegert,
+and Smith 2022) --- deliberately not their larger effective-rate or total
+figures, since the policy lever is the statutory rate and the entity-form
+margin is modeled separately in Section~A.3. Other corporate provisions arrive
+as off-model estimates. Holding aggregate
 pre-tax income fixed, a corporate tax increase reduces after-tax profits
 dollar for dollar, so $w_t$ --- read directly from the scored receipts
 change --- corresponds conceptually to $\Delta\tau_t\,\Pi_t$ for pre-tax
@@ -973,37 +996,45 @@ pinned values are given here; Table 1 rounds them.
 
 \medskip\noindent\textbf{\small CAPITAL GAINS REALIZATION}
 
-\textbf{Long-run response ($\eta$).} The pinned value is 2.4825; Table 1
-rounds to 2.48. $\eta$ is the semi-elasticity in the realization rule---each
-cell's discretionary realization rate scales by
-$\exp(-\eta \times \text{change in the marginal tax cost of realizing})$---and
-because the whole gain pool responds, it is also the model's aggregate
-long-run semi-elasticity. It is calibrated so that the full model reproduces
+\textbf{Long-run response ($\eta$).} The pinned value is 1.6625; Table 1
+rounds to 1.66. $\eta$ is the elasticity in the realization rule---each
+cell's discretionary realization rate scales by the net-of-tax share of the
+deferral wedge raised to the power $\eta$---and because the whole gain pool
+responds, it carries the model's aggregate long-run response; the implied
+long-run semi-elasticity at the shipped value and the current top rate is
+$-2.24$. It is calibrated so that the full model reproduces
 our preferred permanent realization elasticity of $-0.6$, which sits inside
 the empirical range: Dowd, McClelland, and Muthitacharoen (2015) estimate a
 persistent elasticity of $-0.72$ (with a within-year elasticity of $-1.2$) on
 a large panel of returns, Agersnap and Zidar (2021) find ten-year revenue
 elasticities of $-0.3$ to $-0.5$ with revenue-maximizing rates of 38 to 47
 percent, and the JCT and CBO scoring conventions sit in the same neighborhood.
-For the calibration (July 2026), we ran a permanent increase in the top statutory
-rate on gains to 25 percent through the full model at several trial values of
-$\eta$, measured the realized long-run response at simulation year 30, and
-found the measured response linear in $\eta$; inverting the fitted line at the
-target semi-elasticity of $-0.6/0.238 = -2.52$ (the elasticity converted at
-the 23.8 percent top federal rate on long-term gains) gives 2.4825. The fitted
-line's coefficients are kept in the calibration records so that future
-re-derivations are arithmetic.
+For the calibration (July 2026), we ran a permanent increase in the top
+statutory rate on gains through the full model at several trial values of
+$\eta$ and measured the realized long-run response at simulation year 30.
+Under this functional form the measured response is not linear in $\eta$, so
+the pin interpolates the measured grid piecewise onto the target moment
+($-0.6$, converted at the 23.8 percent top federal rate on long-term gains)
+rather than inverting a line through the origin. The grid and fit are kept in
+the calibration records so that future re-derivations are arithmetic. An
+earlier specification expressed the same rule as a constant semi-elasticity in
+the wedge itself, calibrated to the same moment at $\eta = 2.48$; the two
+forms agree near current rates and part ways at high ones, where the
+net-of-tax form implies stronger deferral and a lower revenue-maximizing rate
+under step-up.
 
-\textbf{Share of realizations that can retime $\pm 1$ year.} Pinned at 0.2542;
+\textbf{Share of realizations that can retime $\pm 1$ year.} Pinned at 0.2452;
 Table 1 rounds to 0.25. This is the fraction of baseline realizations free to
 shift across adjacent years toward the lower-rate year, and it carries the
 model's short-run announcement response. It is calibrated (July 2026) to our
 preferred short-run elasticity of $-1.2$, which is the within-year estimate in
 Dowd, McClelland, and Muthitacharoen (2015). Because the retiming margin nets
 to zero under a uniform permanent rate change, $\eta$ is pinned first and
-independently; given $\eta$, the timing share is then found by a direct
-root-finding search on the full model against the short-run moment (target
-semi-elasticity $1.2/0.238 = 5.04$).
+independently; given $\eta$, the timing share is then measured in the year
+before a pre-announced rate increase takes effect---law is unchanged that
+year, so any movement is retiming alone---and a monotone grid over the share
+is interpolated onto the short-run moment (target semi-elasticity
+$1.2/0.238 = 5.04$).
 
 \textbf{Valuation and compliance discount under deemed realization at death.}
 This is a measurement parameter rather than a behavioral response: it scales
@@ -1020,19 +1051,21 @@ factors.
 
 \medskip\noindent\textbf{\small INCOME REPORTING AND FORM}
 
-\textbf{Income conversion ($\sigma$).} $\sigma = 0.16$ governs how much
+\textbf{Income conversion ($\sigma$).} $\sigma = 0.20$ governs how much
 top-bracket labor-type compensation is restructured into unrealized equity
 gains when the wedge between the ordinary rate and the equity path's expected
-present-value tax rate widens: 0.16 percent of the eligible compensation pool
+present-value tax rate widens: 0.20 percent of the eligible compensation pool
 converts per percentage point of wedge. It is the model's one residual
 parameter. With every other reporting margin active (realization, entity
 shifting, underreporting, charity), we run a five-point top-rate increase
 through the full model, measure the total elasticity of top taxable ordinary
 income, and set $\sigma$ so that this lands on 0.25---the central reading of
 Saez, Slemrod, and Giertz (2012), whose survey puts the best available
-estimates between 0.12 and 0.40. The value was re-derived in July 2026 after
-revisions to the entity-shifting and underreporting modules, yielding 0.157,
-shipped as 0.16; a confirmation run measures the total top ETI at 0.2508.
+estimates between 0.12 and 0.40. The value was re-derived in July 2026 under the production charitable
+elasticity of $-0.5$: with conversion off, the other margins produce an ETI of
+0.1820, and a three-point grid over $\sigma$ (0, 0.16, 0.30, measuring 0.1820,
+0.2363, 0.2840) interpolates onto the target at $\sigma = 0.2002$, shipped as
+0.20.
 Because $\sigma$ is residual, it is re-derived whenever any other margin in
 the stack changes; a standing check in the calibration records enforces this.
 
@@ -1459,10 +1492,22 @@ match separately on the baseline and reform estate-tax calculations.
 Thus the same heir can bear a different tax when estate law changes
 without our pretending to know which modeled decedent left her the
 money. We treat inheritance as gross of estate tax, so only the
-liability changes across scenarios. Deemed realization is different.
-Because it applies to transfers below the estate-tax exemption too, its
-burden is spread in proportion to inheritance rather than through the
-threshold-driven rank match. The valuation bridge, deductions, gifts,
+liability changes across scenarios.
+
+Tax on gains deemed realized at death goes through the same rank match, as a
+second call with its own ladder, with one difference: estates owing no deemed
+tax stay on the decedent ladder. An estate without unrealized gains can be of
+any size---even among estates above \$22 million, about one in twenty owes no
+deemed tax---so removing them would shift the taxed bequest dollars onto
+larger heirs and charge the smaller ones nothing. Keeping them in place, each
+heir bears the average deemed-tax rate of estates near their inheritance's
+size: small but positive toward the bottom when every gain is taxed at death,
+and falling to zero at the bottom under a per-decedent exclusion, because
+small estates then genuinely owe nothing. The estate-tax ladder is unchanged,
+its zero-tax region being set by the exemption. An earlier version spread the
+deemed burden in proportion to all inheritances, which understated its
+concentration; distribution tables produced under that rule are not comparable
+to current ones. The valuation bridge, deductions, gifts,
 portability, and estate-law calculation on the decedent side are
 described in Section A.6.
 
@@ -1498,6 +1543,10 @@ Switzerland.'' \emph{American Economic Journal: Economic Policy} 14 (4):
 Scuderi, Nicholas Turner, Augustin Bergeron, and David Cutler. 2016. ``The
 Association Between Income and Life Expectancy in the United States,
 2001--2014.'' \emph{JAMA} 315 (16): 1750--1766.
+
+\bibentry Coles, Jeffrey L., Elena Patel, Nathan Seegert, and Matthew Smith.
+2022. ``How Do Firms Respond to Corporate Taxes?'' \emph{Journal of
+Accounting Research} 60 (3): 965--1006.
 
 \bibentry Cronin, Julie Anne, Emily Y. Lin, Laura Power, and Michael Cooper.
 2013. ``Distributing the Corporate Income Tax: Revised U.S. Treasury
