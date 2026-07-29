@@ -6,9 +6,11 @@
 # to .rds files for downstream SLURM array jobs. Runs synchronously on
 # the login node.
 #
-# CLI args: same as main.R except multicore (parsed by parse_cli_args)
+# CLI args: same as main.R except multicore (parsed by parse_cli_args), plus a
+# trailing years-per-task batch size supplied by slurm_run.sh
 #   Rscript src/slurm/setup.R <runscript> <scenario_id> <local> <vintage>
 #           <pct_sample> <stacked> <baseline_vintage> <delete_detail>
+#           [years_per_task]
 #-----------------------------------------------------------------------
 
 
@@ -41,7 +43,15 @@ list.files('./src', recursive = T) %>%
 #------------------------
 
 args = commandArgs(trailingOnly = T)
-cli  = parse_cli_args(args, context = 'slurm_setup')
+cli  = parse_cli_args(head(args, 8), context = 'slurm_setup')
+
+# How many consecutive years one array task of a per-year phase runs. Scheduling
+# plumbing rather than a modelling choice, so it stays out of the vintage
+# manifest, which records what the run assumed.
+years_per_task = if (length(args) >= 9) suppressWarnings(as.integer(args[9])) else 1L
+if (is.na(years_per_task) || years_per_task < 1) {
+  stop('years_per_task must be a positive integer, got "', args[9], '"')
+}
 
 runscript_name  = cli$runscript_names
 if (grepl('____', runscript_name, fixed = TRUE)) {
@@ -190,8 +200,28 @@ if (!has_baseline) {
 # Build manifest
 #------------------
 
+year_batches = function(years, size) {
+
+  #----------------------------------------------------------------------------
+  # Groups a scenario's years into consecutive batches of at most `size`, one
+  # manifest row each. At size 1 this is one batch per year, which is what the
+  # pipeline has always emitted.
+  #
+  # Parameters:
+  #   - years (int[]) : the scenario's simulation years, ascending
+  #   - size (int)    : years per array task
+  #
+  # Returns: list of integer vectors (list).
+  #----------------------------------------------------------------------------
+
+  split(years, ceiling(seq_along(years) / size)) %>% unname()
+}
+
+
 # The phases, in dependency order. A parallel array runs one task per scenario
-# and year; a pre-pass runs one job per scenario, sequentially within the job.
+# and batch of years; a pre-pass runs one job per scenario, sequentially within
+# the job. Each row carries its years as a list element, so a pre-pass row holds
+# a single NA.
 #
 #   '1'   baseline years, static, parallel array
 #   '1B'  frozen mechanical pre-pass, before 2A, whose workers inject its state
@@ -206,7 +236,7 @@ if (!has_baseline) {
 #   '2W'  wealth bathtub pre-pass. Reads the 2N and baseline detail and writes
 #         the per-year deficit state 2C applies
 #   '2C'  counterfactual years, conventional, parallel array
-manifest = tibble(phase = character(), scenario = character(), year = integer())
+manifest = tibble(phase = character(), scenario = character(), years = list())
 
 # Phase 1: baseline year tasks, skipped when a baseline vintage was supplied
 if (has_baseline) {
@@ -215,11 +245,11 @@ if (has_baseline) {
     bind_rows(tibble(
       phase    = '1',
       scenario = 'baseline',
-      year     = baseline_info$years
+      years    = year_batches(baseline_info$years, years_per_task)
     ))
 }
 
-# Phases 2A and 2C: one task per counterfactual scenario and year
+# Phases 2A and 2C: one task per counterfactual scenario and batch of years
 # Phases 1B and 2B: one task per counterfactual scenario
 for (sid in counterfactual_ids) {
   si = get_scenario_info(sid)
@@ -233,22 +263,22 @@ for (sid in counterfactual_ids) {
     bind_rows(tibble(
       phase    = '1B',
       scenario = sid,
-      year     = NA_integer_
+      years    = list(NA_integer_)
     )) %>%
     bind_rows(tibble(
       phase    = '2A',
       scenario = sid,
-      year     = si$years
+      years    = year_batches(si$years, years_per_task)
     )) %>%
     bind_rows(tibble(
       phase    = '2B',
       scenario = sid,
-      year     = NA_integer_
+      years    = list(NA_integer_)
     )) %>%
     bind_rows(tibble(
       phase    = '2C',
       scenario = sid,
-      year     = si$years
+      years    = year_batches(si$years, years_per_task)
     ))
 
   # Emit the mechanical rung only for scenarios with a transmission channel live.
@@ -260,7 +290,7 @@ for (sid in counterfactual_ids) {
       bind_rows(tibble(
         phase    = '2M',
         scenario = sid,
-        year     = si$years
+        years    = year_batches(si$years, years_per_task)
       ))
 
     # The mechanical rung's own drawdown forcing, on the same pattern as the
@@ -270,12 +300,12 @@ for (sid in counterfactual_ids) {
         bind_rows(tibble(
           phase    = '2MN',
           scenario = sid,
-          year     = si$years
+          years    = year_batches(si$years, years_per_task)
         )) %>%
         bind_rows(tibble(
           phase    = '2MW',
           scenario = sid,
-          year     = NA_integer_
+          years    = list(NA_integer_)
         ))
     }
   }
@@ -287,12 +317,12 @@ for (sid in counterfactual_ids) {
       bind_rows(tibble(
         phase    = '2N',
         scenario = sid,
-        year     = si$years
+        years    = year_batches(si$years, years_per_task)
       )) %>%
       bind_rows(tibble(
         phase    = '2W',
         scenario = sid,
-        year     = NA_integer_
+        years    = list(NA_integer_)
       ))
   }
 }

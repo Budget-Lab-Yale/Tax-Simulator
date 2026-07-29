@@ -66,22 +66,29 @@ get_vector = function(df, name) {
 
 
 purge_detail = function() {
-  
+
   #----------------------------------------------------------------------------
-  # Deletes all output stored in /detail, which contains tax unit microdata 
+  # Deletes all output stored in /detail, which contains tax unit microdata
   # detail files.
-  # 
+  #
+  # Every pass writes a detail tree, so the passes are read from PASS_SPECS
+  # rather than listed here: a run that leaves the no-wealth or mechanical trees
+  # behind keeps most of its detail on disk, which is what this is called to
+  # reclaim.
+  #
   # Parameters: none
   #
   # Returns: void
   #----------------------------------------------------------------------------
-  
+
+  passes = c('static', map_chr(PASS_SPECS, 'root'))
+
   for (scenario_id in globals$runscript$ID) {
-    for (behavior in c("static", "conventional")) {
+    for (pass in passes) {
       unlink(
         file.path(globals$output_root,
                   scenario_id,
-                  behavior,
+                  pass,
                   "detail/*"
         )
       )

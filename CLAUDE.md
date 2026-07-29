@@ -769,9 +769,11 @@ Use the `/policy-config` skill to create reform configurations. It contains deta
 
 **Usage:**
 ```bash
-bash slurm_run.sh <runscript> <scenario_id> <local> <vintage> <pct_sample> <stacked> <baseline_vintage> <delete_detail> [submit_mode]
+bash slurm_run.sh <runscript> <scenario_id> <local> <vintage> <pct_sample> <stacked> <baseline_vintage> <delete_detail> [submit_mode] [years_per_task]
 ```
 Arguments are the same as `main.R` except `multicore` is omitted (SLURM handles parallelism). The optional `submit_mode` is `chains` (default: one dependency chain per scenario, up to eleven sbatch calls each — the cluster refuses submissions beyond 200/hour, so this caps out near 18 scenarios) or `batch` (one array per phase spanning all scenarios with a barrier between phases, about ten sbatch calls total — use for large homogeneous batches).
+
+The optional `years_per_task` (default 1) is how many consecutive years one array task of a per-year phase (`1`, `2A`, `2MN`, `2M`, `2N`, `2C`) runs. Each task is its own R process and pays a fixed startup toll — sourcing `src/`, loading packages — before any calculation, and on a 31-year grid that toll is most of a task's runtime. Batching pays it once per task instead of once per year, at the cost of a longer critical path if the partition ever grants full concurrency. It is a scheduling choice and does not change results, so it stays out of the vintage manifest. The pre-passes (`1B`, `2B`, `2MW`, `2W`) already run every year in one job. The year phases ask for `30 min × years_per_task` of walltime; memory is unchanged, since the worker frees each year's frames before reading the next.
 
 **Pipeline phases:**
 1. Phase 0 (login node): `src/slurm/setup.R` — parses globals, builds configs, serializes to `.rds`
@@ -802,6 +804,7 @@ The SLURM pipeline duplicates orchestration logic from `main.R`, `run_sim()`, an
 | A new SLURM driver script                           | must call `config_activate(economy = scenario_info$resolved_economy, behavior = scenario_info$resolved_behavior)` after loading `config.rds` |
 | New global free variables used by post-processing   | `src/slurm/common.R` `reconstitute_environment()` |
 | `run_one_year()` signature                          | `src/slurm/worker.R` |
+| The unit of work an array task covers | all three together: `src/slurm/setup.R` (the manifest's `years` list-column), `src/slurm/common.R` (`get_task`), `src/slurm/worker.R` (the year loop, and what hoists above it) |
 | The `src/` startup source-walk predicate            | all three copies together: `src/main.R`, `src/slurm/setup.R`, `src/slurm/common.R` (they skip `main.R`, `slurm/`, `tests/` and `behavior/`) |
 
 Safe changes that need NO SLURM updates: anything inside `run_one_year()`, tax calculation functions, behavioral modules, YAML configs, runscripts. The corporate-incidence channel (`src/sim/corp/`) is in this category by construction: its applier lives inside `run_one_year()`, its kg glue inside `run_bathtub_pass()`/`kg_dyn_run_bathtub_pass()`, its paths are analytic (recomputed per worker, no serialized state), and `reconstitute_environment()` sources `src/` recursively — no manifest, phase, or worker changes. (That walk skips `src/behavior/`: behavior modules are loaded by path at scenario time, so adding one still needs no SLURM change, but CHANGING the walk predicate does — see the table row above.)

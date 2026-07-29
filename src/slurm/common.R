@@ -67,14 +67,16 @@ get_task = function(staging_dir, phase) {
 
   #--------------------------------------------------------------------------
   # Maps the current SLURM_ARRAY_TASK_ID to a work unit based on the manifest
-  # built in Phase 0. Per-year phases have a year; the pre-pass phases 1B, 2B
-  # and 2W have year = NA, one job per scenario running all years in sequence.
+  # built in Phase 0. A per-year phase carries the consecutive years its task
+  # runs, one or several depending on the batch size Phase 0 was given. The
+  # pre-pass phases 1B, 2B, 2MW and 2W carry a single NA, one job per scenario
+  # running all years in sequence.
   #
   # Parameters:
   #   - staging_dir (str) : path to _slurm_staging directory
   #   - phase (str)       : pipeline phase, e.g. '1', '2A', '2B'
   #
-  # Returns: list with $scenario (str) and $year (int or NA)
+  # Returns: list with $scenario (str) and $years (int[], or a single NA)
   #--------------------------------------------------------------------------
 
   task_id  = as.integer(Sys.getenv('SLURM_ARRAY_TASK_ID'))
@@ -91,5 +93,5 @@ get_task = function(staging_dir, phase) {
   }
 
   row = phase_tasks[task_id, ]
-  return(list(scenario = row$scenario, year = row$year))
+  return(list(scenario = row$scenario, years = row$years[[1]]))
 }

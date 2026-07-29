@@ -44,7 +44,7 @@
 # Usage:
 #   bash slurm_run.sh <runscript> <scenario_id> <local> <vintage>
 #                     <pct_sample> <stacked> <baseline_vintage>
-#                     <delete_detail> [submit_mode]
+#                     <delete_detail> [submit_mode] [years_per_task]
 #
 # Arguments are identical to main.R except multicore is omitted
 # (parallelization is handled by SLURM). The user_id argument was retired
@@ -59,21 +59,32 @@
 #                      barrier between phases. About ten sbatch calls for the
 #                      whole runscript regardless of size. Use for large
 #                      homogeneous batches; the barriers cost little there.
+#
+# years_per_task is how many consecutive years one array task of a per-year
+# phase runs, defaulting to 1. Each task is its own R process and pays a fixed
+# startup toll before any calculation, so batching years amortizes that toll
+# over several years. It is a scheduling choice and does not change results.
+# The pre-passes (1B, 2B, 2MW, 2W) already run all years in one job.
 #-----------------------------------------------------------------------
 
 set -euo pipefail
 
 # Validate arguments
-if [ "$#" -eq 9 ] && [ "$9" != "chains" ] && [ "$9" != "batch" ]; then
-  echo "Got 9 args -- the user_id argument was retired 2026-07-25; remove it (old position 3)."
-  echo "(A ninth argument is read only as submit_mode: 'chains' or 'batch'.)"
+if [ "$#" -ge 9 ] && [ "$9" != "chains" ] && [ "$9" != "batch" ]; then
+  echo "Got a ninth argument that is not a submit_mode -- the user_id argument was retired 2026-07-25; remove it (old position 3)."
+  echo "(The ninth argument is read only as submit_mode: 'chains' or 'batch'.)"
   exit 1
 fi
-if [ "$#" -lt 8 ]; then
-  echo "Usage: bash slurm_run.sh <runscript> <scenario_id> <local> <vintage> <pct_sample> <stacked> <baseline_vintage> <delete_detail> [chains|batch]"
+if [ "$#" -lt 8 ] || [ "$#" -gt 10 ]; then
+  echo "Usage: bash slurm_run.sh <runscript> <scenario_id> <local> <vintage> <pct_sample> <stacked> <baseline_vintage> <delete_detail> [chains|batch] [years_per_task]"
   exit 1
 fi
 SUBMIT_MODE="${9:-chains}"
+YEARS_PER_TASK="${10:-1}"
+if ! [[ "$YEARS_PER_TASK" =~ ^[1-9][0-9]*$ ]]; then
+  echo "years_per_task must be a positive integer, got '${YEARS_PER_TASK}'."
+  exit 1
+fi
 
 module load R/4.4.1-foss-2022b
 
@@ -91,11 +102,13 @@ echo ""
 #-------------------------------------------
 
 echo "Phase 0: Running setup..."
-# Setup takes the eight model arguments; submit_mode is this script's alone.
-METADATA=$(cd "$REPO_DIR" && Rscript src/slurm/setup.R "${@:1:8}")
+# Setup takes the eight model arguments plus the batch size; submit_mode is this
+# script's alone.
+METADATA=$(cd "$REPO_DIR" && Rscript src/slurm/setup.R "${@:1:8}" "$YEARS_PER_TASK")
 eval "$METADATA"
 
 echo "  Staging dir: ${STAGING_DIR}"
+echo "  Years per task: ${YEARS_PER_TASK}"
 echo "  Baseline year-tasks (Phase 1): ${N_PHASE1}"
 echo "  CF frozen mechanical jobs (Phase 1B): ${N_PHASE1B}"
 echo "  CF static-only year-tasks (Phase 2A): ${N_PHASE2A}"
@@ -114,6 +127,12 @@ echo ""
 # recomputes; sequential pre/post-processing jobs remain single-core.
 SBATCH_COMMON="--partition=day -c 1"
 SBATCH_YEAR="--partition=day -c 2"
+
+# A batched year-task does the same per-year work several times over, so the
+# per-year phases ask for the walltime multiplied by the batch size. At a batch
+# size of one this is the half hour it has always been.
+YEAR_MINUTES=$(( 30 * YEARS_PER_TASK ))
+YEAR_TIME=$(printf '%d:%02d:00' $(( YEAR_MINUTES / 60 )) $(( YEAR_MINUTES % 60 )))
 
 # Populate AFTEROK with either one dependency argument or no arguments. Keeping
 # this as an array avoids word-splitting bugs when a phase has no prerequisites.
@@ -144,7 +163,7 @@ P1=""
 if [ "$N_PHASE1" -gt 0 ]; then
   echo "Phase 1: Submitting ${N_PHASE1} baseline year jobs..."
   P1=$(sbatch --parsable --array=1-${N_PHASE1} \
-    ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+    ${SBATCH_YEAR} --time=${YEAR_TIME} --mem=24G \
     --job-name=taxsim-baseline \
     --output="${STAGING_DIR}/logs/p1_%A_%a.log" \
     --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
@@ -226,7 +245,7 @@ if [ "$SUBMIT_MODE" == "batch" ]; then
 
   set_afterok "$P1" "$P1B"
   P2A=$(sbatch --parsable --array=${R2A} "${AFTEROK[@]}" \
-    ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+    ${SBATCH_YEAR} --time=${YEAR_TIME} --mem=24G \
     --job-name=taxsim-cf-static \
     --output="${STAGING_DIR}/logs/p2a_%A_%a.log" \
     --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
@@ -237,7 +256,7 @@ if [ "$SUBMIT_MODE" == "batch" ]; then
   if [ -n "$R2MN" ]; then
     set_afterok "$P2A"
     P2MN=$(sbatch --parsable --array=${R2MN} "${AFTEROK[@]}" \
-      ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+      ${SBATCH_YEAR} --time=${YEAR_TIME} --mem=24G \
       --job-name=taxsim-cf-mechnw \
       --output="${STAGING_DIR}/logs/p2mn_%A_%a.log" \
       --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
@@ -258,7 +277,7 @@ if [ "$SUBMIT_MODE" == "batch" ]; then
   if [ -n "$R2M" ]; then
     set_afterok "$P2A" "$P2MW"
     P2M=$(sbatch --parsable --array=${R2M} "${AFTEROK[@]}" \
-      ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+      ${SBATCH_YEAR} --time=${YEAR_TIME} --mem=24G \
       --job-name=taxsim-cf-mech \
       --output="${STAGING_DIR}/logs/p2m_%A_%a.log" \
       --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
@@ -279,7 +298,7 @@ if [ "$SUBMIT_MODE" == "batch" ]; then
   if [ -n "$R2N" ]; then
     set_afterok "$P2B"
     P2N=$(sbatch --parsable --array=${R2N} "${AFTEROK[@]}" \
-      ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+      ${SBATCH_YEAR} --time=${YEAR_TIME} --mem=24G \
       --job-name=taxsim-cf-convnw \
       --output="${STAGING_DIR}/logs/p2n_%A_%a.log" \
       --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
@@ -298,7 +317,7 @@ if [ "$SUBMIT_MODE" == "batch" ]; then
 
   set_afterok "$P2B" "$P2W"
   P2C=$(sbatch --parsable --array=${R2C} "${AFTEROK[@]}" \
-    ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+    ${SBATCH_YEAR} --time=${YEAR_TIME} --mem=24G \
     --job-name=taxsim-cf-conv \
     --output="${STAGING_DIR}/logs/p2c_%A_%a.log" \
     --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
@@ -354,7 +373,7 @@ else
     # frozen mechanical state.
     set_afterok "$P1" "$P1B"
     P2A=$(sbatch --parsable --array=${P2A_FIRST}-${P2A_LAST} "${AFTEROK[@]}" \
-      ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+      ${SBATCH_YEAR} --time=${YEAR_TIME} --mem=24G \
       --job-name=taxsim-cf-static \
       --output="${STAGING_DIR}/logs/p2a_%A_%a.log" \
       --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
@@ -366,7 +385,7 @@ else
     if [ "$P2MN_FIRST" != "NA" ]; then
       set_afterok "$P2A"
       P2MN=$(sbatch --parsable --array=${P2MN_FIRST}-${P2MN_LAST} "${AFTEROK[@]}" \
-        ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+        ${SBATCH_YEAR} --time=${YEAR_TIME} --mem=24G \
         --job-name=taxsim-cf-mechnw \
         --output="${STAGING_DIR}/logs/p2mn_%A_%a.log" \
         --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
@@ -388,7 +407,7 @@ else
     if [ "$P2M_FIRST" != "NA" ]; then
       set_afterok "$P2A" "$P2MW"
       P2M=$(sbatch --parsable --array=${P2M_FIRST}-${P2M_LAST} "${AFTEROK[@]}" \
-        ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+        ${SBATCH_YEAR} --time=${YEAR_TIME} --mem=24G \
         --job-name=taxsim-cf-mech \
         --output="${STAGING_DIR}/logs/p2m_%A_%a.log" \
         --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
@@ -411,7 +430,7 @@ else
     if [ "$P2N_FIRST" != "NA" ]; then
       set_afterok "$P2B"
       P2N=$(sbatch --parsable --array=${P2N_FIRST}-${P2N_LAST} "${AFTEROK[@]}" \
-        ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+        ${SBATCH_YEAR} --time=${YEAR_TIME} --mem=24G \
         --job-name=taxsim-cf-convnw \
         --output="${STAGING_DIR}/logs/p2n_%A_%a.log" \
         --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \
@@ -431,7 +450,7 @@ else
 
     set_afterok "$P2B" "$P2W"
     P2C=$(sbatch --parsable --array=${P2C_FIRST}-${P2C_LAST} "${AFTEROK[@]}" \
-      ${SBATCH_YEAR} --time=0:30:00 --mem=24G \
+      ${SBATCH_YEAR} --time=${YEAR_TIME} --mem=24G \
       --job-name=taxsim-cf-conv \
       --output="${STAGING_DIR}/logs/p2c_%A_%a.log" \
       --wrap="cd ${REPO_DIR} && module load R/4.4.1-foss-2022b && \

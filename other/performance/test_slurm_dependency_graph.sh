@@ -83,7 +83,7 @@ assert_no_log () {
 run_launcher () {
   BASH_ENV="$MOCK_BASH_ENV" PATH="${MOCK_BIN}:${PATH}" \
     bash "${REPO_DIR}/slurm_run.sh" tests/mock NULL 1 mock_vintage \
-      1 "$MOCK_STACKED" "$1" "$2" ${3:+"$3"}
+      1 "$MOCK_STACKED" "$1" "$2" ${3:+"$3"} ${4:+"$4"}
 }
 
 # Mixed run: an ordinary scenario with no transmission channel, one with the
@@ -269,5 +269,53 @@ run_launcher NULL 1
 
 assert_log "3002 --parsable --array=1-1 --dependency=afterok:3001"
 assert_log "3003 --parsable --dependency=afterok:3002"
+
+# Years per task. The array ranges come from the manifest, which Phase 0 builds
+# and this test mocks, so what is checked here is the walltime the year phases
+# ask for and that the batch size reaches Phase 0. The pre-passes keep their own.
+MOCK_STAGING_DIR="${TEST_ROOT}/ypt_staging"
+MOCK_SUBMISSION_PLAN="${TEST_ROOT}/ypt_plan.tsv"
+MOCK_COUNTER="${TEST_ROOT}/ypt_counter"
+MOCK_SBATCH_LOG="${TEST_ROOT}/ypt_sbatch.log"
+MOCK_N_PHASE1=1
+MOCK_N_PHASE1B=1
+MOCK_N_PHASE2A=1
+MOCK_N_PHASE2MN=0
+MOCK_N_PHASE2MW=0
+MOCK_N_PHASE2M=0
+MOCK_N_PHASE2B=1
+MOCK_N_PHASE2N=0
+MOCK_N_PHASE2W=0
+MOCK_N_PHASE2C=1
+MOCK_N_SCENARIOS=1
+MOCK_STACKED=0
+export MOCK_STAGING_DIR MOCK_SUBMISSION_PLAN MOCK_COUNTER MOCK_SBATCH_LOG
+export MOCK_N_PHASE1 MOCK_N_PHASE1B MOCK_N_PHASE2A MOCK_N_PHASE2B
+export MOCK_N_PHASE2N MOCK_N_PHASE2W MOCK_N_PHASE2C MOCK_N_SCENARIOS
+export MOCK_N_PHASE2MN MOCK_N_PHASE2MW MOCK_N_PHASE2M
+export MOCK_STACKED
+
+{
+  echo "$PLAN_HEADER"
+  printf 'ordinary\t1\t1\t1\t1\tNA\tNA\tNA\t1\t1\t2\t1\tNA\tNA\tNA\tNA\tNA\n'
+} > "$MOCK_SUBMISSION_PLAN"
+echo 5000 > "$MOCK_COUNTER"
+touch "$MOCK_SBATCH_LOG"
+run_launcher NULL 0 chains 4
+
+# Four years to a task, so a year phase asks for two hours and the frozen
+# pre-pass still asks for half an hour.
+assert_log "--partition=day -c 2 --time=2:00:00 --mem=24G"
+assert_no_log "--partition=day -c 2 --time=0:30:00 --mem=24G"
+assert_log "--job-name=taxsim-frozen"
+grep -F -- "--partition=day -c 1 --time=0:30:00 --mem=16G" "$MOCK_SBATCH_LOG" > /dev/null
+
+# A stray tenth argument that is not a positive integer is refused.
+if BASH_ENV="$MOCK_BASH_ENV" PATH="${MOCK_BIN}:${PATH}" \
+     bash "${REPO_DIR}/slurm_run.sh" tests/mock NULL 1 mock_vintage \
+       1 0 NULL 0 chains 0 >/dev/null 2>&1; then
+  echo "years_per_task=0 was accepted" >&2
+  exit 1
+fi
 
 echo "SLURM dependency graph checks passed."
