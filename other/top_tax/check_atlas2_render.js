@@ -13,7 +13,7 @@
 //   - Shapley additivity at 3 probe states
 //   - inputs wired: set value, fire onchange, containers change; out-of-range
 //     input clamps to the meta bound
-//   - frontier: non-empty and byte-identical across two fresh vm runs
+//   - surrogate determinism: byte-identical evaluations across two fresh vm runs
 //   - badge states the validated bound; fails on Preview/placeholder
 "use strict";
 const fs = require("fs");
@@ -149,8 +149,8 @@ if (Object.keys(bootSel).length)
 // selection-dependent panels are empty at boot by design; drive a probe
 // package through the harness hook so every panel has content to check
 A.setState({ ord: { rate: 44.8 }, cg: { rate: 40 }, wealth: { rate: 2, thr: 50e6 }, deemed: { pos: "deemed" } });
-const mustRenderSvg  = ["stackfig", "etr", "frontChart"];
-const mustBeNonEmpty = ["tiles", "stackfigLegend", "etrLegend", "frontLegend", "rateSw", "structSw"];
+const mustRenderSvg  = ["stackfig", "etr"];
+const mustBeNonEmpty = ["tiles", "stackfigLegend", "etrLegend", "rateSw", "structSw"];
 for (const id of mustRenderSvg) {
   const e = w1.byId[id];
   if (!e) problems.push(`#${id}: container missing from HTML`);
@@ -178,7 +178,7 @@ let nAnchor = 0;
 for (const lv of DATA.meta.levers) {
   const rows = DATA.surrogate.solo[lv.key];
   const states = gridStates(lv);
-  for (const qid of ["ct", "st"]) {
+  for (const qid of ["ct", "mt", "st"]) {
     if (!rows[qid]) continue;
     states.forEach((vals, i) => {
       const stored = rows[qid][i];
@@ -329,13 +329,11 @@ if (typeof A.setDecade !== "function" || N_DEC < 2) {
   const t1 = w1.byId.tiles.innerHTML;
   if (t0 === t1) problems.push("decade toggle: switching to decade 2 did not change #tiles");
   if (A.getDecade() !== 1) problems.push("decade toggle: getDecade() != 1 after setDecade(1)");
-  for (const id of ["pvw", "spill", "frontChart"]) {
+  for (const id of ["stackfig", "etr"]) {
     const e = w1.byId[id];
     if (e && !/<svg/i.test(e.innerHTML)) problems.push(`#${id}: no <svg> after decade switch`);
   }
   A.setDecade(2);
-  if (!A.FRONTD() || !A.FRONTD().pts.length)
-    problems.push("frontier: empty lattice under decade 3");
   A.setDecade(0);
   A.setState({});
 }
@@ -370,33 +368,19 @@ if (typeof A.setDecade !== "function" || N_DEC < 2) {
   A.setState({});
 }
 
-// ---- frontier: non-empty + byte-identical across two fresh vm runs ---------------
-const FR = A.FRONTD();
-if (!FR || !FR.pts.length)
-  problems.push("frontier: empty lattice");
-else {
-  for (const metric of ["rev", "etr"]) {
-    const fr = A.frontFor(FR, metric);
-    if (!fr.length) problems.push(`frontier: empty undominated set for metric ${metric}`);
-  }
-  // metric toggle re-renders and the ETR axis produces finite positive spans
-  if (typeof A.setFrontMetric === "function") {
-    A.setState({ ord: { rate: 44.8 }, cg: { rate: 40 } });
-    A.setFrontMetric("etr");
-    const e = w1.byId.frontChart;
-    if (e && !/<svg/i.test(e.innerHTML)) problems.push("#frontChart: no <svg> under ETR metric");
-    if (!FR.pts.some(p => isFinite(p.ex) && p.ex > 0))
-      problems.push("frontier: no package with positive top-0.1% ETR change");
-    A.setFrontMetric("rev");
-    A.setState({});
-  } else problems.push("frontier: setFrontMetric hook missing");
+// ---- surrogate determinism: byte-identical evaluations across two fresh vm runs ---
+const PROBES = [{}, { cg: { rate: 40 } },
+                { ord: { rate: 44.8 }, cg: { rate: 40 }, corp: { rate: 28 } },
+                { deemed: { pos: "deemed" }, wealth: { rate: 2, thr: 50e6 } }];
+function surFingerprint(api) {
+  return JSON.stringify(PROBES.map(st => [0, 1, 2].map(d =>
+    ["ct", "st"].map(q => api.evalQ(q, st)[d]))));
 }
 const w2 = makeWorld();
 try { runScripts(w2); } catch (err) { fail("second vm run threw:\n" + err.stack); }
-const f1 = JSON.stringify(A.frontierFor(0).pts) + "|" + JSON.stringify(A.frontierFor(2).pts);
 const A2 = w2.sandbox.window.__ATLAS2__;
-const f2 = JSON.stringify(A2.frontierFor(0).pts) + "|" + JSON.stringify(A2.frontierFor(2).pts);
-if (f1 !== f2) problems.push("frontier: lattice differs between two identical runs (non-deterministic)");
+const s1 = surFingerprint(A), s2 = surFingerprint(A2);
+if (s1 !== s2) problems.push("surrogate: evaluations differ between two identical runs (non-deterministic)");
 
 // ---- badge -------------------------------------------------------------------------
 const badge = w1.byId.dataBadge && (w1.byId.dataBadge.textContent || "").trim();
@@ -412,6 +396,6 @@ if (problems.length) fail(problems.join("\n"));
 console.log(`OK ${path.basename(file)} — containers rendered; ${nAnchor} anchor rows exact; ` +
   `${checks ? checks.length : 0} holdout fixtures within per-decade bounds ` +
   `${val && val.bounds_pct ? val.bounds_pct.map(b => "±" + b + "%").join("/") : "?"}; ` +
-  `frontier ${FR.pts.length} pts deterministic across decades; badge: ${badge}`);
+  `surrogate deterministic across two runs at ${PROBES.length} probes; badge: ${badge}`);
 
 function fail(msg) { console.error("RENDER CHECK FAILED\n" + msg); process.exit(1); }

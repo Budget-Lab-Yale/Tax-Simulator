@@ -246,3 +246,37 @@ Expect, per scenario: `static`, `mechanical`, `conventional` each with `totals`
 and `supplemental`, plus `mechanical_no_wealth` and `conventional_no_wealth` with
 neither, being measurement passes. Then the chart work: figures 3 and 4 and the
 interactive gain a third bar, read from the mechanical rung's receipts.
+
+## What happened on 2026-07-30
+
+The grid ran to completion. All 225 counterfactuals carry all three rungs'
+receipts, plus the distribution, ETR-levels, revenue, horizontal and time-burden
+tables. The vintage is `top_tax_dials_30y_v6`.
+
+One phase failed and was recovered. The eager transient purge deleted the
+mechanical no-wealth detail as soon as the mechanical wealth recurrence had read
+it, but the distribution table reads that same tree afterward as the payroll
+overlay, for any reform that changes employer payroll law. Thirty-seven of the
+225 scenarios do. `run_wealth_bathtub_pass()` now keeps that tree for those
+scenarios, and the comment in `resolve_detail_purge()` that claimed nothing
+downstream reads the no-wealth trees is corrected. The 37 scenarios had their
+mechanical no-wealth detail regenerated and their post-processing re-run.
+
+Downstream state:
+
+- The surrogate carries the mechanical rung as its own quantities, `mt`, `my`
+  and `mh`, alongside the static and conventional ones. Exactness on the anchor
+  runs is unchanged at three decimal places, and the deep-stack holdout bound is
+  the same as v5: conv ±3.7% / ±4.5% / ±4.9% by decade.
+- Figures 3 and 4 gain the mechanical rung as a middle bar, and the atlas stack
+  card does too.
+- The baseline income distribution is byte-identical to v5, so Figures 1 and 2
+  need no change.
+- Conventional capital-gains yields rose with the conversion fix, by 2% at a
+  25% top rate and 21% at 50%. The static estimate for an employer payroll
+  reform rose separately, because the wage adjustment moved off the static pass
+  when the mechanical rung was built: the taxable-max repeal now scores $3,071B
+  static over ten years against $2,520B in v5.
+- Figure 5's Laffer curves are direct runs on `kg_v5_revmax`, which predates the
+  conversion fix, and the fix moves exactly the high-rate points the curves peak
+  at. The grid is being re-run as `kg_v6_revmax`.
