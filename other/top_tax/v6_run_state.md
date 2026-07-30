@@ -65,6 +65,26 @@ by `other/kg_model_tests/mtr_range_impact.R`, output kept alongside it as
 This was the baseline leg, so v5's shipped gains numbers carry the same
 contamination. It is small in aggregate and concentrated in a few thin cells.
 
+**The same defect in the wealth bathtub, found by looking for it.** The
+drawdown kernel's capital-income rate is the same kind of object: a
+one-percent bump on a record's capital income, divided into the change in tax,
+averaged over a cell. There the cells are age by within-age net worth
+percentile rather than age alone, so they are far thinner, and the exposure is
+correspondingly worse. On the Warren dial 1,047 records a year measure above
+one, reaching 400. About fifty cells a year of 6,300 carry a rate wrong by more
+than twenty points and around 450 by more than one point; the worst reads 5.73
+against 0.11 without the offending record. Measurement in
+`other/wealth_dynamics/bundle_range_impact.txt`, fix in `77c0cc79f`, same rule.
+
+Two things follow. The saving surface does not depend on this rate -- it comes
+from the persistent-flow bridge formula in `write_profiles.py` -- so
+regenerating the profiles reproduces `s.csv` and `M.csv` unchanged and the
+`financing_profile` entry takes a re-pinned hash rather than a re-derivation.
+And a survey of the rest of the model found no third case: these are the only
+two places a raw marginal rate is averaged over a cell. Everywhere else
+differences the same record's rates across two laws, where a step appears on
+both sides.
+
 **Consequences for the calibration.** Editing `apply.R`, `inputs.R` and
 `constants.R` makes `eta_logs` stale, correctly: the cell rates its derivation
 ran on have moved. It is being re-derived on the three-point grid
@@ -97,11 +117,12 @@ this.
 - `25ba91a02` adds `years_per_task` and fixes `purge_detail`, which listed the
   static and conventional trees only and so left the no-wealth and mechanical
   detail on disk.
-
-Uncommitted: the tranche driver's success check. It matched `^taxsim` against
-`sacct` output, which right-pads the job name, so the guard never fired and the
-driver twice walked past a failed tranche onto the next. Now matches unanchored,
-and verified to report 227 bad jobs on the window it previously scored as clean.
+- `90b663ca3` fixes the tranche driver's success check. It matched `^taxsim`
+  against `sacct` output, which right-pads the job name, so the guard never fired
+  and the driver twice walked past a failed tranche onto the next. Now matches
+  unanchored, and reports 227 bad jobs on the window it previously scored clean.
+- `9487f5eb2` and `77c0cc79f` are the out-of-range rate fixes above, in the gains
+  bathtub and the wealth bathtub.
 
 ## Verified good
 
@@ -138,19 +159,23 @@ The runscripts are generated, 225 counterfactuals over
 
 Preconditions:
 
-- The bathtub problem above is resolved, or the affected dials are knowingly
-  excluded.
+- `eta_logs` carries a re-derived value and no acknowledgement block, so that no
+  shipped estimate rests on a rate rule its calibration did not see.
+- The two dials under `config/runscripts/tests/mtr_range_capfix.csv` reach
+  conventional output.
 - `df -h /nfs/roberts/scratch/pi_nrs36` shows enough headroom: about 5.5T for one
   submission of everything, or 0.75T per tranche of thirty.
 - Nothing of yours is in the queue: `squeue -u $USER`.
+- Nothing under `src/` changes once the grid is submitted. Each array task
+  sources `src/` when it starts, so an edit mid-run leaves the vintage straddling
+  two versions of the code.
 
 ### One submission, if the quota allows
 
-Concatenate the tranches into one runscript, keeping a single baseline row, and
-launch through an sbatch wrapper. Phase 0 parses globals and reads Tax-Data in
-process, so it must not run on a login node.
+`config/runscripts/top_tax/v6/all.csv` is the concatenation of the tranches with
+a single baseline row, 225 counterfactuals, and it is in the repository. To
+rebuild it after editing the tranches:
 
-    # from the repository root
     python3 - <<'EOF'
     import csv, glob
     out, seen, hdr, base = [], set(), None, None
@@ -166,6 +191,9 @@ process, so it must not run on a login node.
         for r in out: w.writerow(r)
     print(len(out), 'counterfactuals')
     EOF
+
+Launch through an sbatch wrapper: Phase 0 parses globals and reads Tax-Data in
+process, so it must not run on a login node.
 
     sbatch --partition=week --time=2-00:00:00 -c 2 --mem=32G \
       --job-name=v6-all --output=other/top_tax/logs/v6_all_%j.log \
