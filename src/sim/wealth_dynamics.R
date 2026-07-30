@@ -668,7 +668,8 @@ wealth_dyn_convnw_detail_path = function(scenario_info, year,
 
 run_wealth_bathtub_pass = function(scenario_info, tax_law,
                                    vat_price_offset = NULL,
-                                   leg = c('conventional', 'mechanical')) {
+                                   leg = c('conventional', 'mechanical'),
+                                   purge_transient = FALSE) {
 
   #----------------------------------------------------------------------------
   # Runs the wealth shortfall recurrence for one scenario, one year at a time.
@@ -713,6 +714,12 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
   #                             (default) or 'mechanical'. The mechanical rung
   #                             measures the forcing with behavior off, so its
   #                             drawdown compounds the static tax change.
+  #   - purge_transient (bool): delete the leg's no-wealth detail once this pass
+  #                             has read it. Nothing downstream of here reads it,
+  #                             so this is what keeps peak disk at three detail
+  #                             trees a scenario rather than five. Off by default:
+  #                             the gains elasticity harness reads a scenario's
+  #                             conventional_no_wealth detail after the run
   #
   # Returns: invisibly NULL.
   #----------------------------------------------------------------------------
@@ -883,6 +890,15 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
       subdir        = 'wealth_dynamics_state',
       year          = t,
       pass          = leg)
+  }
+
+  # The forcing has been read for every year and written into the state files, so
+  # the leg's no-wealth detail has no remaining reader
+  if (isTRUE(purge_transient)) {
+    root = paste0(leg, '_no_wealth')
+    purge_detail(passes = root)
+    message(sprintf('wealth_dynamics: purged %s detail for %s, read in full.',
+                    root, scenario_info$ID))
   }
 
   invisible(NULL)

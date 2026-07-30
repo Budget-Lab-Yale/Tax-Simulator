@@ -115,7 +115,8 @@ do_scenario = function(ID, baseline_mtrs) {
 
         run_wealth_bathtub_pass(scenario_info, tax_law,
                                 vat_price_offset = vat_price_offset,
-                                leg              = 'mechanical')
+                                leg              = 'mechanical',
+                                purge_transient  = detail_purge$eager)
       }
 
       # static_mtrs_all is not read by any behavior module here -- the mechanical
@@ -162,7 +163,8 @@ do_scenario = function(ID, baseline_mtrs) {
 
       run_wealth_bathtub_pass(scenario_info, tax_law,
                               vat_price_offset = vat_price_offset,
-                              leg              = 'conventional')
+                              leg              = 'conventional',
+                              purge_transient  = detail_purge$eager)
     }
 
     run_sim(scenario_info        = scenario_info,

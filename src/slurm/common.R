@@ -95,3 +95,57 @@ get_task = function(staging_dir, phase) {
   row = phase_tasks[task_id, ]
   return(list(scenario = row$scenario, years = row$years[[1]]))
 }
+
+
+
+report_driver_error = function(e, where, staging_dir = NULL) {
+
+  #--------------------------------------------------------------------------
+  # Reports a driver failure and stops with a nonzero status.
+  #
+  # The message goes to three places, because twice on 2026-07-30 a phase exited
+  # nonzero with nothing in its log: an empty condition message from an rlang
+  # error, and then a message that never reached the log at all, the array log
+  # ending mid-stream. A phase that fails without saying why costs hours. So the
+  # text is flushed to both streams and, where a staging directory is known,
+  # written to its own small file under logs/errors/, which survives a truncated
+  # write to the shared array log.
+  #
+  # Parameters:
+  #   - e (condition)     : the caught error
+  #   - where (str)       : which driver and phase failed
+  #   - staging_dir (str) : staging directory, for the sidecar file
+  #
+  # Returns: never; quits with status 1.
+  #--------------------------------------------------------------------------
+
+  task_id = Sys.getenv('SLURM_ARRAY_TASK_ID', 'NA')
+  header  = paste0('ERROR in ', where, ' (task ', task_id, '): ',
+                   conditionMessage(e))
+
+  # The failing call and the condition's class, not a traceback: by the time a
+  # tryCatch handler runs the stack has unwound, so traceback() would show this
+  # function rather than the code that failed. The class matters because an rlang
+  # or vctrs condition often carries the only clue to which layer threw.
+  call_txt = if (is.null(conditionCall(e))) '(no call recorded)' else
+               paste(deparse(conditionCall(e)), collapse = ' ')
+  body = paste0(header, '\n',
+                '  failing call : ', call_txt, '\n',
+                '  condition    : ', paste(class(e), collapse = ', '), '\n')
+
+  message(body)
+  cat(body)
+  flush(stderr())
+  flush(stdout())
+
+  if (!is.null(staging_dir)) {
+    dir.create(file.path(staging_dir, 'logs', 'errors'),
+               recursive = TRUE, showWarnings = FALSE)
+    writeLines(body,
+               file.path(staging_dir, 'logs', 'errors',
+                         paste0(gsub('[^A-Za-z0-9]+', '_', where), '_',
+                                task_id, '.txt')))
+  }
+
+  quit(status = 1)
+}

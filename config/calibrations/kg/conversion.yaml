@@ -24,17 +24,17 @@ _channel:
 conv:
   value: 0.2002
   kind: calibrated
-  set: '2026-07-26'
+  set: '2026-07-30'
   target: >
-    An elasticity of taxable income of 0.25 for the top subset, the central
-    Saez, Slemrod and Giertz estimate, on taxable income after deductions and
-    excluding net capital gains, holding top-bracket membership at baseline.
-    Measured over 2025:2035 on a five point increase in the top ordinary rate with
-    the whole behavior stack running. sigma is the residual conversion margin: at
-    zero, entity shifting and evasion alone produce an elasticity of 0.1820, and
-    sigma closes the gap. The grid 0 0.16 0.3 gave 0.1820 0.2363 0.2840, and the pin
-    interpolates piecewise-linearly onto the target without forcing the origin,
-    since the intercept is the point.
+    Top-subset ordinary-income ETI of 0.25 (Saez-Slemrod-Giertz central;
+    taxable income EXCLUDING net capital gains, after deductions,
+    top-bracket membership fixed at baseline) measured on the +5pp
+    top-ordinary leg (topord_plus5, 2025:2035) with the full behavior stack
+    running. sigma is the RESIDUAL conversion margin: at sigma = 0 entity
+    shifting and evasion alone produce an ETI of 0.1820, so sigma closes the
+    remaining gap. Grid sigma 0 0.16 0.3 gave ETI 0.1820 0.2363 0.2840; the
+    pin is the piecewise-linear interpolation onto the target, which does
+    NOT force the origin because the intercept is the point.
   derived_under:
     tax_data: '2026070814'
     macro_projections: '2026022522'
@@ -44,30 +44,23 @@ conv:
     - src/behavior/charity/50.R
     - src/sim/sigma_conversion.R
   invalidated_by_hashes:
-    src/behavior/entity_shifting/pearce_prisinzano.R: 417bd83d700004da61178cf1fbeb21d4
+    src/behavior/entity_shifting/pearce_prisinzano.R: '417bd83d700004da61178cf1fbeb21d4'
     src/behavior/evasion/debacker.R: '30fcf7b063f9aeeb487402a862ba8334'
     src/behavior/charity/50.R: dede5ce971690cdc05465114730ec080
-    src/sim/sigma_conversion.R: 'd9b9a24106fbcb5c271a02883cb31dc1'
+    src/sim/sigma_conversion.R: fb43de9bc62443e5c70f0b23e390944b
   rederive: other/top_tax/sigma_calib/measure_sigma.R
-  acknowledged:
-    date: '2026-07-30'
-    reason: >
-      Pinned before the conversion wedge moved onto the mechanical rung's rates and
-      before the module began applying the pre-pass's per-record conversions rather
-      than working them out again. Both change the measured conversion, so this
-      value owes a re-derivation and is not merely re-hashed. Being re-derived now;
-      this block goes when the new value lands, and no shipped estimate is built
-      under it.
   note: >
-    Derived under src/behavior/charity/50.R, the charitable elasticity of -0.5 that
-    production runs use. Method and measured legs:
-    other/top_tax/sigma_explainer.md. This is the re-derivation the waiver on this
-    entry was waiting for, so the waiver should be removed rather than re-dated.
-
-    The capital gains Bellman calibration is orthogonal to this one, on a disjoint
-    base, since ordinary income excludes realizations, unless the pool ever starts
-    taxing gains. Measured from vintages sigma_calib_50_conv_00
-    sigma_calib_50_conv_16 sigma_calib_50_conv_30, with per-year elasticities in
+    History 0.08 -> 0.157 -> 0.16. The 2026-07-12 move was driven by
+    entity-shifting tau_eq repricing plus the evasion cross-base fix, not by
+    the estate build. Method and measured legs:
+    other/top_tax/sigma_explainer.md. Derived under charity/50 (elasticity
+    -0.5), the elasticity product runs actually use. This is the
+    re-derivation the waiver was waiting for; if the value moved, the waiver
+    on this entry should now be removed rather than re-dated. The kg Bellman
+    calibration is orthogonal (disjoint base: ordinary income excludes
+    realizations) unless the pool ever starts taxing gains. Measured from
+    vintages: sigma_calib_50_conv_00_v2 sigma_calib_50_conv_16_v2
+    sigma_calib_50_conv_30_v2. Per-year ETIs:
     other/top_tax/sigma_calib/sigma_eti_charity50.csv.
 
 pt_labor_share:

@@ -50,6 +50,13 @@
 # (parallelization is handled by SLURM). The user_id argument was retired
 # 2026-07-25 (it was never read); remove it from old invocations.
 #
+# delete_detail takes none (or 0), all (or 1), transient, or a comma-separated
+# combination. transient deletes each no-wealth measurement tree as soon as the
+# wealth recurrence has read it, which takes peak disk from five detail trees a
+# scenario to three; all deletes everything after post-processing. A calibration
+# run needs none, since the gains elasticity harness reads a scenario's
+# conventional_no_wealth detail after the run.
+#
 # submit_mode chooses the submission shape:
 #   chains (default) : one dependency chain per scenario, so a fast scenario
 #                      reaches post-processing without waiting for unrelated
@@ -490,8 +497,15 @@ fi
 # This is deliberately the one all-scenario success barrier. A failed scenario
 # does not stop unrelated post-processing, but stacked output and destructive
 # detail cleanup must not run on a partial vintage.
+# Phase 4 is only needed for stacked output and for the end-of-run purge. The
+# eager purge of the measurement trees happens inside Phases 2MW and 2W, so
+# delete_detail=transient on its own does not require this phase.
 DELETE_DETAIL="${8}"
-if [ "$STACKED" == "1" ] || [ "$DELETE_DETAIL" == "1" ]; then
+case ",${DELETE_DETAIL}," in
+  *,1,*|*,all,*) NEEDS_FINAL_PURGE=1 ;;
+  *)             NEEDS_FINAL_PURGE=0 ;;
+esac
+if [ "$STACKED" == "1" ] || [ "$NEEDS_FINAL_PURGE" == "1" ]; then
   if [ "${#P3B_IDS[@]}" -gt 0 ]; then
     set_afterok "${P3B_IDS[@]}"
   else

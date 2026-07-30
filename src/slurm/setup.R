@@ -66,6 +66,10 @@ stacked          = cli$stacked
 baseline_vintage = cli$baseline_vintage
 delete_detail    = cli$delete_detail
 
+# Check the keyword before anything is submitted, so a typo fails on the login
+# node rather than in Phase 2W on a compute node hours later
+invisible(resolve_detail_purge(delete_detail))
+
 
 #--------------------------------------
 # Parse globals and build scenario data

@@ -63,7 +63,7 @@ parse_cli_args = function(args, context = c('main', 'slurm_setup')) {
     pct_sample       = as.numeric(args[5]),
     stacked          = as.integer(args[6]),
     baseline_vintage = parse_null(args[7]),
-    delete_detail    = as.integer(args[8]),
+    delete_detail    = args[8],
     multicore        = if (context == 'main') args[9] else 'none'
   )
 }

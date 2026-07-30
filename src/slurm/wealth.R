@@ -57,12 +57,13 @@ tryCatch({
 
   # Run the wealth bathtub pre-pass (defined in src/sim/wealth_dynamics.R)
   run_wealth_bathtub_pass(scenario_info, config$tax_law,
-                          vat_price_offset = config$vat_price_offset)
+                          vat_price_offset = config$vat_price_offset,
+                          purge_transient  = resolve_detail_purge(
+                                               runtime_args$delete_detail)$eager)
 
   cat(paste0('Phase 2W: completed wealth bathtub pass for scenario=',
              task$scenario, '\n'))
 
 }, error = function(e) {
-  message(paste0('ERROR in wealth worker: ', conditionMessage(e)))
-  quit(status = 1)
+  report_driver_error(e, 'wealth phase 2W', staging_dir)
 })

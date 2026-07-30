@@ -193,6 +193,5 @@ tryCatch({
   }
 
 }, error = function(e) {
-  message(paste0('ERROR in worker (phase=', phase, '): ', conditionMessage(e)))
-  quit(status = 1)
+  report_driver_error(e, paste0('worker phase ', phase), staging_dir)
 })

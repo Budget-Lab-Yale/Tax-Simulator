@@ -89,6 +89,5 @@ tryCatch({
   cat(paste0('Phase 2B: completed bathtub for scenario=', task$scenario, '\n'))
 
 }, error = function(e) {
-  message(paste0('ERROR in bathtub worker: ', conditionMessage(e)))
-  quit(status = 1)
+  report_driver_error(e, 'bathtub phase 2B', staging_dir)
 })

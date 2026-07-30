@@ -63,6 +63,5 @@ tryCatch({
              task$scenario, '\n'))
 
 }, error = function(e) {
-  message(paste0('ERROR in frozen worker: ', conditionMessage(e)))
-  quit(status = 1)
+  report_driver_error(e, 'frozen phase 1B', staging_dir)
 })

@@ -45,7 +45,7 @@ financing_profile:
   invalidated_by_hashes:
     config/calibrations/wealth_profiles/default/s.csv: 05e353bfd1a82c9135a4af1b07ebac8f
     config/calibrations/wealth_profiles/default/M.csv: f69080edc998607de4a401f01cecc732
-    src/sim/wealth_dynamics.R: b292a5bc068807f5baf32974fa75d9d1
+    src/sim/wealth_dynamics.R: e0e38ac2b47e6aff4f4fe081d59ee98a
     other/wealth_dynamics/write_profiles.py: 32852e31eaa6009612c6de2f867f1a18
   rederive: other/wealth_dynamics/write_profiles.py
   # The hashes above watch the default profile's tables, which is what this entry

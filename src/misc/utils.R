@@ -65,23 +65,80 @@ get_vector = function(df, name) {
 
 
 
-purge_detail = function() {
+resolve_detail_purge = function(x) {
 
   #----------------------------------------------------------------------------
-  # Deletes all output stored in /detail, which contains tax unit microdata
-  # detail files.
+  # Reads the delete_detail argument into what it asks for, and when.
   #
-  # Every pass writes a detail tree, so the passes are read from PASS_SPECS
+  # Peak disk is set in the middle of a run, not at the end, so purging only at
+  # the end cannot lower it. The two no-wealth trees are measurement passes: each
+  # is read by the wealth recurrence that follows it and by nothing afterward,
+  # carries no totals, and is not the source of any distribution table. Purging
+  # them the moment their recurrence has read them takes a scenario from five
+  # detail trees on disk to three.
+  #
+  # Accepts 'none' (or 0), 'all' (or 1), 'transient', or a comma-separated
+  # combination, so 'transient,all' gives the lowest peak and the lowest final.
+  #
+  # Note that the eager purge is opt-in for a reason. The gains elasticity
+  # harness reads a scenario's conventional_no_wealth detail after the run has
+  # finished, so a calibration run has to keep it.
+  #
+  # Parameters:
+  #   - x (str) : the delete_detail argument
+  #
+  # Returns: list of eager (purge each measurement tree once consumed) and final
+  #          (purge every tree after post-processing).
+  #----------------------------------------------------------------------------
+
+  parts = x %>%
+    as.character() %>%
+    strsplit(',', fixed = TRUE) %>%
+    unlist() %>%
+    trimws()
+  parts = parts[nzchar(parts)]
+
+  parts[parts == '0'] = 'none'
+  parts[parts == '1'] = 'all'
+
+  known = c('none', 'all', 'transient')
+  bad   = setdiff(parts, known)
+  if (length(parts) == 0 || length(bad) > 0) {
+    stop('delete_detail must be one of ', paste(known, collapse = ', '),
+         ' (0 for none and 1 for all are also accepted), or a comma-separated ',
+         'combination such as "transient,all". Got "', x, '".')
+  }
+  if ('none' %in% parts && length(parts) > 1) {
+    stop('delete_detail "none" cannot be combined with ',
+         paste(setdiff(parts, 'none'), collapse = ', '), '.')
+  }
+
+  list(eager = 'transient' %in% parts,
+       final = 'all'       %in% parts)
+}
+
+
+
+purge_detail = function(passes = NULL) {
+
+  #----------------------------------------------------------------------------
+  # Deletes output stored in /detail, which contains tax unit microdata detail
+  # files.
+  #
+  # Every pass writes a detail tree, so the default set is read from PASS_SPECS
   # rather than listed here: a run that leaves the no-wealth or mechanical trees
   # behind keeps most of its detail on disk, which is what this is called to
   # reclaim.
   #
-  # Parameters: none
+  # Parameters:
+  #   - passes (str[]) : pass roots to purge, defaulting to every one
   #
   # Returns: void
   #----------------------------------------------------------------------------
 
-  passes = c('static', map_chr(PASS_SPECS, 'root'))
+  if (is.null(passes)) {
+    passes = c('static', map_chr(PASS_SPECS, 'root'))
+  }
 
   for (scenario_id in globals$runscript$ID) {
     for (pass in passes) {

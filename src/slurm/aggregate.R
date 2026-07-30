@@ -206,7 +206,7 @@ tryCatch({
       calc_stacked_rev_est(counterfactual_ids)
     }
 
-    if (runtime_args$delete_detail == 1) {
+    if (resolve_detail_purge(runtime_args$delete_detail)$final) {
       purge_detail()
     }
 
@@ -214,6 +214,5 @@ tryCatch({
   }
 
 }, error = function(e) {
-  message(paste0('ERROR in aggregate (phase=', phase, '): ', conditionMessage(e)))
-  quit(status = 1)
+  report_driver_error(e, paste0('aggregate phase ', phase), staging_dir)
 })

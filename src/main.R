@@ -56,6 +56,10 @@ if (length(args) > 0) {
   multicore        = cli$multicore
 }
 
+# What detail gets deleted, and when. Resolved once here so the value is checked
+# before the run starts rather than in Phase 4 after it.
+detail_purge = resolve_detail_purge(delete_detail)
+
 
 #----------------------
 # Runscript-level loop
@@ -128,7 +132,7 @@ for (runscript_name in str_split_1(runscript_names, '____')) {
   }
   
   # Delete microdata files
-  if (delete_detail == 1) {
+  if (detail_purge$final) {
     purge_detail()
   }
 }
