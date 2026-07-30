@@ -1581,7 +1581,7 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
       if (isTRUE(spec$mtrs_baseline_law) && !is.null(scenario_info$mtr_vars)) {
 
         taxed_baseline_law = conv_input %>%
-          swap_tax_law(tax_law_baseline) %>%
+          swap_tax_law(tax_law_baseline, outgoing_law = tax_law) %>%
           do_taxes(baseline_pr_er = baseline_pr_er,
                    vars_1040      = vars_1040,
                    vars_payroll   = return_vars$calc_pr)

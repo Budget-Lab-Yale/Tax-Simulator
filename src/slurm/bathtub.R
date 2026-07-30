@@ -61,6 +61,6 @@ tryCatch({
   cat(paste0('Phase 2B: completed bathtub for scenario=', task$scenario, '\n'))
 
 }, error = function(e) {
-  message(paste0('ERROR in bathtub worker: ', e$message))
+  message(paste0('ERROR in bathtub worker: ', conditionMessage(e)))
   quit(status = 1)
 })

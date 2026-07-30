@@ -66,6 +66,6 @@ tryCatch({
              task$scenario, '\n'))
 
 }, error = function(e) {
-  message(paste0('ERROR in mechanical wealth worker: ', e$message))
+  message(paste0('ERROR in mechanical wealth worker: ', conditionMessage(e)))
   quit(status = 1)
 })

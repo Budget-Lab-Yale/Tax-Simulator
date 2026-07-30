@@ -193,6 +193,6 @@ tryCatch({
   }
 
 }, error = function(e) {
-  message(paste0('ERROR in worker (phase=', phase, '): ', e$message))
+  message(paste0('ERROR in worker (phase=', phase, '): ', conditionMessage(e)))
   quit(status = 1)
 })

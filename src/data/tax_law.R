@@ -274,7 +274,7 @@ TAX_LAW_KEYS = c('year', 'filing_status')
 
 
 
-swap_tax_law = function(tax_units, tax_law) {
+swap_tax_law = function(tax_units, tax_law, outgoing_law) {
 
   #----------------------------------------------------------------------------
   # Replaces a frame's tax law columns with another law's, holding every
@@ -287,14 +287,24 @@ swap_tax_law = function(tax_units, tax_law) {
   # it when the data are loaded, and that recoding is part of the frame, not of the
   # law being priced.
   #
+  # Both laws' columns are dropped before the join, not just the incoming law's.
+  # A subparameter whose value is a vector becomes one column per element, named
+  # with the element's index, and the two laws need not supply the same number of
+  # elements: a wealth tax of two brackets against a baseline of one gives
+  # wealth.rates1 and wealth.rates2 on one side and wealth.rates on the other.
+  # Dropping only the incoming names would leave the outgoing law's extra columns
+  # in place and price a schedule belonging to neither law.
+  #
   # Parameters:
-  #   - tax_units (df) : pre-tax frame carrying joined tax law columns
-  #   - tax_law (df)   : law to join, long in year and filing status
+  #   - tax_units (df)    : pre-tax frame carrying joined tax law columns
+  #   - tax_law (df)      : law to join, long in year and filing status
+  #   - outgoing_law (df) : the law whose columns the frame currently carries
   #
   # Returns: the frame with the other law's parameter columns (df).
   #----------------------------------------------------------------------------
 
-  law_cols = setdiff(names(tax_law), TAX_LAW_KEYS)
+  law_cols = union(setdiff(names(tax_law),      TAX_LAW_KEYS),
+                   setdiff(names(outgoing_law), TAX_LAW_KEYS))
 
   tax_units %>%
     select(-any_of(law_cols)) %>%

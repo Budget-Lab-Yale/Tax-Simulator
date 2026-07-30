@@ -63,6 +63,6 @@ tryCatch({
              task$scenario, '\n'))
 
 }, error = function(e) {
-  message(paste0('ERROR in frozen worker: ', e$message))
+  message(paste0('ERROR in frozen worker: ', conditionMessage(e)))
   quit(status = 1)
 })

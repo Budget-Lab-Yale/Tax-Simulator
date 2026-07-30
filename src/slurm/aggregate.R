@@ -214,6 +214,6 @@ tryCatch({
   }
 
 }, error = function(e) {
-  message(paste0('ERROR in aggregate (phase=', phase, '): ', e$message))
+  message(paste0('ERROR in aggregate (phase=', phase, '): ', conditionMessage(e)))
   quit(status = 1)
 })
