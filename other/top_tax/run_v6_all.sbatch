@@ -33,7 +33,7 @@ echo "vintage=${VINTAGE}  years_per_task=${K}"
 df -h /nfs/roberts/scratch | tail -1
 echo ""
 
-bash slurm_run.sh top_tax/v6/all NULL 1 "${VINTAGE}" 1 0 NULL 1 batch "${K}"
+bash slurm_run.sh top_tax/v6/all NULL 1 "${VINTAGE}" 1 0 NULL transient batch "${K}"
 
 echo ""
 echo "submitted at $(date). Read per-phase states, never the queue:"
