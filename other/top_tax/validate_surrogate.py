@@ -57,8 +57,9 @@ HARD_PCT = 3.0            # quiz / corner / stack bar on conv DECADE-1 total, pe
                           # taxmax+wealth) at -2.84% d1; next-worst holdout -1.73%.
                           # Maximal-corner extrapolation; measured+disclosed in atlas.
 ETR_PP = 0.1              # secondary: per-ETR-cell bound, percentage points
-EXACT_TOL = {"ct": 2e-3, "cy": 2e-3, "ch": 2e-3, "st": 2e-3, "sy": 2e-3,
-             "sh": 2e-3, "etr": 6e-3, "etrc": 6e-3}  # 3dp + etr omission floor
+EXACT_TOL = {"ct": 2e-3, "cy": 2e-3, "ch": 2e-3, "mt": 2e-3, "my": 2e-3,
+             "mh": 2e-3, "st": 2e-3, "sy": 2e-3, "sh": 2e-3,
+             "etr": 6e-3, "etrc": 6e-3}  # 3dp + etr omission floor
 N_DEC = len(F.DECADES)    # 3 decade windows; hard bar applies to decade 1 only,
                           # decades 2/3 get measured-and-disclosed bounds
 
@@ -82,8 +83,8 @@ def main():
 
     base_totals = os.path.join(root, "baseline", "static", "totals")
     bh, bcg = X.receipts_heads(base_totals), X.cg_carve(base_totals)
-    base_heads = {"static": bh, "conventional": bh}
-    base_cg = {"static": bcg, "conventional": bcg}
+    base_heads = {"static": bh, "conventional": bh, "mechanical": bh}
+    base_cg = {"static": bcg, "conventional": bcg, "mechanical": bcg}
     groups = data["meta"]["etr_groups"]
     etr_base_flat = F.flatten_etr(data["etr_base"], groups)
 

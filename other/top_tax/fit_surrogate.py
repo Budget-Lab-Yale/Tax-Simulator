@@ -66,7 +66,7 @@ DECADES = X.DECADES                    # [(2027,2036), (2037,2046), (2047,2056)]
 SPAN = list(range(DECADES[0][0], DECADES[-1][1] + 1))   # 2027..2056
 ETR_YEAR = 2027                        # atlas2 ships the impact year only
 HEADS_ORDER = ["iit", "cg", "pay", "corp", "est", "wealth", "other"]
-MONEY_QIDS = ["ct", "cy", "ch", "st", "sy", "sh"]
+MONEY_QIDS = ["ct", "cy", "ch", "mt", "my", "mh", "st", "sy", "sh"]
 # etr  = static-numerator (welfare) ETR deltas; etrc = conventional-numerator
 # (realized) ETR deltas — same denominators/groups/comps, numerator-only swap
 QIDS = MONEY_QIDS + ["etr", "etrc"]
@@ -359,12 +359,22 @@ def read_scenario(root, scen_id, base_heads, base_cg, etr_base_flat, groups, wan
     scen_dir = os.path.join(root, scen_id)
     static, _ = X.leg_deltas_windows(scen_dir, base_heads, base_cg, "static", DECADES)
     conv, _ = X.leg_deltas_windows(scen_dir, base_heads, base_cg, "conventional", DECADES)
+    # The mechanical rung is written only where a transmission channel is live.
+    # Where it is absent the rung below stands in, which is what the reporting
+    # layer does, and the mechanical bar then coincides with the static one.
+    if os.path.isdir(os.path.join(scen_dir, "mechanical", "totals")):
+        mech, _ = X.leg_deltas_windows(scen_dir, base_heads, base_cg,
+                                       "mechanical", DECADES)
+    else:
+        mech = static
 
     def flat_heads(res):
         return [res["heads"][d][h] for d in range(len(DECADES)) for h in HEADS_ORDER]
     out = {
         "ct": list(conv["totals"]), "cy": conv["byyear"],
         "ch": flat_heads(conv),
+        "mt": list(mech["totals"]), "my": mech["byyear"],
+        "mh": flat_heads(mech),
         "st": list(static["totals"]), "sy": static["byyear"],
         "sh": flat_heads(static),
     }
@@ -425,8 +435,8 @@ def fit(root, out_path):
 
     base_totals = os.path.join(root, "baseline", "static", "totals")
     bh, bcg = X.receipts_heads(base_totals), X.cg_carve(base_totals)
-    base_heads = {"static": bh, "conventional": bh}
-    base_cg = {"static": bcg, "conventional": bcg}
+    base_heads = {"static": bh, "conventional": bh, "mechanical": bh}
+    base_cg = {"static": bcg, "conventional": bcg, "mechanical": bcg}
 
     # ETR base pack + group order from the first solo run that has rows
     first_dir = os.path.join(root, by_kind["solo"][0][0])
@@ -450,6 +460,7 @@ def fit(root, out_path):
 
     m_etr = len(X.ETR_INCOME_DEFS) * len(groups) * len(X.ETR_COMPS)
     m_of = {"ct": len(DECADES), "cy": len(SPAN), "ch": len(DECADES) * len(HEADS_ORDER),
+            "mt": len(DECADES), "my": len(SPAN), "mh": len(DECADES) * len(HEADS_ORDER),
             "st": len(DECADES), "sy": len(SPAN), "sh": len(DECADES) * len(HEADS_ORDER),
             "etr": m_etr, "etrc": m_etr}
 

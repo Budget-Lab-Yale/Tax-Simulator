@@ -94,10 +94,6 @@
   .seg button { flex:1; font:600 11px/1.2 ui-monospace,monospace; padding:7px 4px; background:transparent; color:var(--ink-2); border:0; cursor:pointer; transition:.12s; }
   .seg button + button { border-left:1px solid var(--rule); }
   .seg button[aria-pressed="true"] { background:var(--accent); color:#fff; }
-  /* capital-gains surface section */
-  .surfrow { display:flex; align-items:center; gap:12px; margin-bottom:8px; flex-wrap:wrap; }
-  .surfrow .surflab { font:600 11px/1 ui-monospace,monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
-  .surfrow .surfseg { flex:0 1 430px; margin:0; }
   /* draggable stacking chart ("how policies stack") */
   #stackfig { display:flex; flex-direction:column; gap:1px; margin-top:2px; touch-action:pan-y; }
   .mrow { display:flex; align-items:center; gap:10px; padding:5px 4px; border-radius:8px; }
@@ -117,10 +113,12 @@
   .mbar svg.maxis { display:block; width:100%; height:16px; overflow:visible; }
   .mnum { flex:0 0 92px; text-align:right; font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums; line-height:1.25; }
   .mnum .ms { font-size:9.5px; color:var(--muted); }
+  .mnum .mm { font-size:9.5px; color:var(--muted); }
   .mnum .mc { font-size:12.5px; font-weight:600; color:var(--ink); }
   .mrow.total .mnum .mc { font-weight:800; }
   .mnum .md { font-size:9.5px; }
-  .legend .sw2.slim { opacity:.5; }
+  .legend .sw2.slim { opacity:.42; }
+  .legend .sw2.mid { opacity:.72; }
   .btnrow { display:flex; gap:8px; margin-top:14px; }
   .btnrow button { flex:1; font:600 11.5px/1 ui-monospace,monospace; letter-spacing:.02em; padding:8px 8px; border:1px solid var(--rule); border-radius:8px; background:var(--surface-2); color:var(--ink-2); cursor:pointer; transition:.12s; }
   .btnrow button:hover { border-color:var(--accent); color:var(--accent); }
@@ -239,7 +237,7 @@
       <div class="card">
         <div class="step">How policies stack</div>
         <h3>Static estimate and collected revenue, one policy at a time</h3>
-        <div class="cap">Each row adds one policy on top of the rows above it. The slim bar is the static estimate; the full bar is what the package collects once behavior responds. Both are split by the tax base where the revenue is collected. The final row is the whole package. Its total does not change when you reorder the rows: reordering changes only how the shared interaction is attributed across policies, not the total. Drag a row by its handle to change the order.</div>
+        <div class="cap">Each row adds one policy on top of the rows above it, and appears three times. The slim bar is the static estimate. The middle bar adds the cross-base spillovers that follow mechanically from the policy, with behavior still held fixed. The full bar is what the package collects once behavior responds. All three are split by the tax base where the revenue is collected. The final row is the whole package. Its total does not change when you reorder the rows: reordering changes only how the shared interaction is attributed across policies, not the total. Drag a row by its handle to change the order.</div>
         <figure><div id="stackfig"></div></figure>
         <div class="legend" id="stackfigLegend"></div>
       </div>
@@ -247,24 +245,6 @@
     </div>
   </div>
 </div></section>
-
-<section id="frontierSec"><div class="wrap">
-  <h2>The revenue frontier</h2>
-  <p class="sec-sub">Each point is one package from the lattice of settings. Its horizontal position is the revenue the package collects over the selected decade, as a share of that decade's GDP. Toggling the axis replaces this with the increase in the top 0.1 percent's realized effective tax rate on accrual income in 2027. Its vertical position is the difference between collected and static revenue, in cents per dollar collected: positive when behavior raises revenue, negative when it reduces it. A package is dominated when another package collects more with a smaller behavioral loss; the packages that nothing dominates form the frontier. Points above the zero line collect more than their static estimate, which happens when taxing gains at death removes the incentive to defer realizations. Your current selection is marked. The effective-tax-rate axis is measured in the impact year (2027) and does not change with the decade toggle; the vertical axis does.</p>
-  <div class="card">
-    <div class="surfrow">
-      <span class="surflab">Horizontal axis</span>
-      <div class="seg surfseg" id="frontMetricSeg">
-        <button type="button" data-fm="rev" aria-pressed="true">Revenue (share of GDP)</button>
-        <button type="button" data-fm="etr" aria-pressed="false">Top 0.1% ETR change</button>
-      </div>
-    </div>
-    <figure><div id="frontChart"></div></figure>
-    <div class="legend" id="frontLegend"></div>
-  </div>
-</div></section>
-
-
 
 <footer><div class="wrap">
   <div class="margins">
@@ -308,7 +288,6 @@ var DATA=/*__ATLAS_DATA__*/null;
   var ETRYEAR=String(DATA.meta.dist_years[0]);
   var INCDEF='expanded';
   var DIST_VIEW='context';    // distribution card view: 'context' | 'new' | 'etr'
-  function decLabel(d){ return DECADES[d][0]+'–'+String(DECADES[d][1]).slice(2); }
   var pg=function(b){ return (b/GDPD[DEC]*100).toFixed(2)+"%"; };
   function usd(b){ var v=Math.abs(b),sg=b<0?"−":"";
     return v>=1000 ? sg+"$"+(v/1000).toFixed(2)+"T" : sg+"$"+Math.round(v)+"B"; }
@@ -691,7 +670,7 @@ var DATA=/*__ATLAS_DATA__*/null;
       totTop.conv+=etr.conv[k][iTop];});
     return {s:s,keys:ordKeys,actual:actual,comboStatic:comboStatic,parts:parts,
       staticParts:staticParts,convParts:convParts,phi:phi,etr:etr,etrMax:etrMax,
-      totTop:totTop,etrTop:etrcDelta?etrcTopSum(etrcDelta):0};
+      totTop:totTop};
   }
 
   // ---- charts (segBars/spill/etr reused from atlas v1) ------------------------ //
@@ -867,269 +846,6 @@ var DATA=/*__ATLAS_DATA__*/null;
     return s+'</svg>';
   }
 
-  // ---- frontier: deterministic lattice over the dial space ------------------- //
-  // Options per lever (off + a few deterministic settings); per-option
-  // {fct, fst, g} precomputed once, so the lattice sweep is pure arithmetic.
-  function latticeOptions(){
-    var opts={};
-    LEVERS.forEach(function(l){
-      var list=[null];                            // null = off
-      if(l.interp==='linear1d'){
-        var p=l.params[0],vals=[];
-        if(p.knots.length<=2){ vals=[p.max]; }    // single-anchor dial: off/on
-        else { [1/3,2/3,1].forEach(function(f){vals.push(+(p.min+f*(p.max-p.min)).toFixed(2));}); }
-        vals.forEach(function(v){var o={};o[p.key]=v;list.push(o);});
-      } else if(l.interp==='bilinear'){
-        var p1=l.params[0],p2=l.params[1];
-        var r1=[2/3,1].map(function(f){return +(p1.min+f*(p1.max-p1.min)).toFixed(2);});
-        var r2;
-        if(l.key==='wealth'){ r2=[p2.min,p2.max]; }
-        else { r2=[1/3,1].map(function(f){return +(p2.off-f*(p2.off-p2.min)).toFixed(0);}); }
-        r1.forEach(function(a){r2.forEach(function(b){
-          var o={};o[p1.key]=a;o[p2.key]=b;list.push(o);});});
-      } else if(l.interp==='ladder'){
-        l.params[0].positions.forEach(function(pos){
-          if(pos==='off')return;
-          var o={};o[l.params[0].key]=pos;list.push(o);});
-      } else if(l.interp==='ladder_x'){
-        // each non-off position at no exclusion and at the max exclusion
-        var px=l.params[1];
-        l.params[0].positions.forEach(function(pos){
-          if(pos==='off')return;
-          [px.off,px.max].forEach(function(e){
-            var o={};o[l.params[0].key]=pos;o[px.key]=e;list.push(o);});});
-      } else { var o2={};o2[l.params[0].key]=1;list.push(o2); }
-      opts[l.key]=list;
-    });
-    return opts;
-  }
-  var FRONTD=null,FRONTSVG='';
-  var FRONTCACHE={};       // decade index -> {d: frontier data, svg: {metric: SVG}}
-  var FMETRIC='rev';       // frontier x metric: 'rev' ($ / share of GDP) | 'etr' (Δ top 0.1% ETR)
-  // Top-0.1% realized-ETR slice of an etrc vector: accrual (HS) definition,
-  // summed across tax components — the frontier's distributional x metric.
-  var EDI=DATA.meta.etr_income_defs.indexOf('hs'),
-      EGI=DATA.meta.etr_groups.indexOf('Top 0.1%'),
-      NGRP=DATA.meta.etr_groups.length, NCMP=DATA.meta.etr_comps.length;
-  function etrcTopSum(vec){
-    if(!vec)return 0;
-    var off=(EDI*NGRP+EGI)*NCMP,s=0;
-    for(var c=0;c<NCMP;c++)s+=vec[off+c];
-    return s;
-  }
-  // compact "lever + its dial settings" label for frontier tooltips,
-  // e.g. "cg 40%", "wealth 3.33% >$50M", "estate 53.3% $8.5M exem", "carryover"
-  function optLabel(l,vals){
-    if(!vals)return l.key;
-    if(l.interp==='ladder')return String(vals[l.params[0].key]);
-    if(l.interp==='ladder_x'){
-      var ex=vals[l.params[1].key]||0;
-      return String(vals[l.params[0].key])+(ex?' $'+(ex/1e6).toFixed(1).replace(/\.0$/,'')+'M excl':'');
-    }
-    if(l.interp==='binary')return l.key;
-    return l.key+' '+l.params.map(function(p){
-      var v=vals[p.key];
-      if(p.fmt==='pct')return (+v).toFixed(2).replace(/\.?0+$/,'')+'%';
-      if(p.fmt==='usd')return (p.key==='thr'?'>':'')+'$'+(v>=1e9?(v/1e9).toFixed(1).replace(/\.0$/,'')+'B':(v/1e6).toFixed(1).replace(/\.0$/,'')+'M')+(p.key==='exem'?' exem':'');
-      return String(v);
-    }).join(' ');
-  }
-  function frontierData(dec){
-    var opts=latticeOptions();
-    var tabs=LEVERS.map(function(l){
-      return opts[l.key].map(function(o){
-        if(o===null)return {fct:0,fst:0,fe:0,g:0,g0:0,r:1,r0:1,on:false,vals:null};
-        var st1={}; st1[l.key]=o;
-        var cell={fct:evalQ('ct',st1)[dec],fst:evalQ('st',st1)[dec],
-                fe:etrcTopSum(evalQ('etrc',st1)),      // Δ top 0.1% ETR (impact-year)
-                g:gOf(l.key,o)[dec],g0:gOf(l.key,o)[0],// money g at dec; etr g at d1
-                r:1,r0:1,on:true,vals:o};
-        if(l.interp==='ladder_x'){
-          // within-position exclusion ratio for the byPos terms below
-          var v0={},k; for(k in o)v0[k]=o[k]; v0[l.params[1].key]=0;
-          var gx=gOf(l.key,o),g0v=gOf(l.key,v0);
-          cell.r =Math.abs(g0v[dec])>1e-9?gx[dec]/g0v[dec]:0;
-          cell.r0=Math.abs(g0v[0])>1e-9?gx[0]/g0v[0]:0;
-        }
-        return cell;
-      });
-    });
-    // pair/triple lookup tables keyed by lever index (money at dec; etr at d1)
-    var K=LEVERS.length,pairCT=[],pairST=[],pairE=[],i,j;
-    for(i=0;i<K;i++){pairCT.push([]);pairST.push([]);pairE.push([]);
-      for(j=0;j<K;j++){pairCT[i].push(0);pairST[i].push(0);pairE[i].push(0);}}
-    for(i=0;i<K;i++)for(j=i+1;j<K;j++){
-      var pe=SUR.pairs[LEVERS[i].key+'|'+LEVERS[j].key];
-      if(pe){ pairCT[i][j]=pe.ct?pe.ct[dec]:0; pairST[i][j]=pe.st?pe.st[dec]:0;
-              pairE[i][j]=etrcTopSum(pe.etrc); }
-    }
-    var IDX={}; LEVERS.forEach(function(l,z){IDX[l.key]=z;});
-    // byPos pairs leave the generic g*g tables and get position-keyed terms
-    var DIDX=IDX.deemed,bpp=[];
-    Object.keys(SUR.pairs).forEach(function(pk){
-      var pe=SUR.pairs[pk]; if(!pe.byPos||DIDX===undefined)return;
-      var ks=pk.split('|'); if(ks[0]!=='deemed'&&ks[1]!=='deemed')return;
-      var o=IDX[ks[0]==='deemed'?ks[1]:ks[0]];
-      var tab={};
-      Object.keys(pe.byPos).forEach(function(pos){
-        var v=pe.byPos[pos];
-        tab[pos]={ct:v.ct?v.ct[dec]:0,st:v.st?v.st[dec]:0,e:etrcTopSum(v.etrc)};
-      });
-      bpp.push({o:o,tab:tab});
-      var lo=Math.min(o,DIDX),hi=Math.max(o,DIDX);
-      pairCT[lo][hi]=0; pairST[lo][hi]=0; pairE[lo][hi]=0;
-    });
-    var trips=Object.keys(SUR.triples).map(function(tk){
-      var ks=tk.split('|'),e=SUR.triples[tk];
-      var t={a:IDX[ks[0]],b:IDX[ks[1]],c:IDX[ks[2]],
-        ct:e.ct?e.ct[dec]:0, st:e.st?e.st[dec]:0, e:etrcTopSum(e.etrc),
-        others:null, byPos:null};
-      if(e.byPos&&ks.indexOf('deemed')>=0){
-        t.byPos={};
-        Object.keys(e.byPos).forEach(function(pos){
-          t.byPos[pos]={ct:e.byPos[pos].ct?e.byPos[pos].ct[dec]:0,
-                        st:e.byPos[pos].st?e.byPos[pos].st[dec]:0,
-                        e:etrcTopSum(e.byPos[pos].etrc)};
-        });
-        t.others=ks.filter(function(k){return k!=='deemed';}).map(function(k){return IDX[k];});
-      }
-      return t;
-    });
-    var pts=[];
-    var counts=tabs.map(function(t){return t.length;});
-    var idx=[]; for(i=0;i<K;i++)idx.push(0);
-    for(;;){
-      var ct=0,st=0,ex=0,gv=[],gv0=[],nOn=0;
-      for(i=0;i<K;i++){ var cell=tabs[i][idx[i]];
-        ct+=cell.fct; st+=cell.fst; ex+=cell.fe;
-        gv.push(cell.g); gv0.push(cell.g0); if(cell.on)nOn++; }
-      if(nOn>0){
-        for(i=0;i<K;i++){
-          for(j=i+1;j<K;j++){
-            if(gv[i]&&gv[j]){ var w=gv[i]*gv[j]; ct+=pairCT[i][j]*w; st+=pairST[i][j]*w; }
-            if(gv0[i]&&gv0[j]){ ex+=pairE[i][j]*gv0[i]*gv0[j]; } } }
-        if(DIDX!==undefined&&tabs[DIDX][idx[DIDX]].on){
-          var dcell=tabs[DIDX][idx[DIDX]];
-          var dpos=dcell.vals[LEVERS[DIDX].params[0].key];
-          bpp.forEach(function(e){
-            var v=e.tab[dpos];
-            if(v){ var go=gv[e.o]*dcell.r,go0=gv0[e.o]*dcell.r0;
-              if(go){ ct+=v.ct*go; st+=v.st*go; }
-              if(go0){ ex+=v.e*go0; } }
-          });
-        }
-        trips.forEach(function(t){
-          if(t.byPos&&DIDX!==undefined&&tabs[DIDX][idx[DIDX]].on){
-            var dc=tabs[DIDX][idx[DIDX]];
-            var tpos=dc.vals[LEVERS[DIDX].params[0].key];
-            if(t.byPos[tpos]){
-              var wo=gv[t.others[0]]*gv[t.others[1]]*dc.r;
-              var wo0=gv0[t.others[0]]*gv0[t.others[1]]*dc.r0;
-              if(wo){ ct+=t.byPos[tpos].ct*wo; st+=t.byPos[tpos].st*wo; }
-              if(wo0){ ex+=t.byPos[tpos].e*wo0; }
-              return;
-            }
-          }
-          var w3=gv[t.a]*gv[t.b]*gv[t.c];
-          if(w3){ ct+=t.ct*w3; st+=t.st*w3; }
-          var w30=gv0[t.a]*gv0[t.b]*gv0[t.c];
-          if(w30){ ex+=t.e*w30; }
-        });
-        if(ct>0){
-          var name=[];
-          for(i=0;i<K;i++)if(tabs[i][idx[i]].on)name.push(optLabel(LEVERS[i],tabs[i][idx[i]].vals));
-          pts.push({cv:ct,st:st,ex:ex,lk:100*(ct-st)/ct,name:name.join(' + ')});
-        }
-      }
-      var d=K-1;
-      while(d>=0){ idx[d]++; if(idx[d]<counts[d])break; idx[d]=0; d--; }
-      if(d<0)break;
-    }
-    return {pts:pts,n:pts.length};
-  }
-  // undominated set for the chosen x metric (max leakage per x, swept descending)
-  function frontFor(fd,metric){
-    var xf=metric==='etr'?function(p){return p.ex;}:function(p){return p.cv;};
-    var front=[],best=-Infinity;
-    fd.pts.slice().sort(function(a,b){return xf(b)-xf(a)||b.lk-a.lk;}).forEach(function(p){
-      if(p.lk>best+1e-9){front.push(p);best=p.lk;}});
-    front.reverse();
-    return front;
-  }
-  var DOTFILL='color-mix(in srgb,var(--accent) 45%,var(--surface-2))';
-  function frontierBase(w){
-    var YMIN=-62,YMAX=65,h=460,pad={l:64,r:26,t:26,b:54},iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
-    var isETR=FMETRIC==='etr';
-    var xf=isETR?function(p){return p.ex;}:function(p){return p.cv;};
-    var front=frontFor(FRONTD,FMETRIC);
-    var xmax=0; FRONTD.pts.forEach(function(p){xmax=Math.max(xmax,xf(p));}); xmax*=1.05;
-    var X=function(v){return pad.l+v/xmax*iw;},
-        Y=function(v){return pad.t+(YMAX-Math.max(YMIN,Math.min(YMAX,v)))/(YMAX-YMIN)*ih;};
-    FRONTD.geom={X:X,Y:Y,YMIN:YMIN,YMAX:YMAX,pad:pad,h:h,w:w,metric:FMETRIC};
-    var s=svg(w,h);
-    s+='<rect x="'+pad.l+'" y="'+pad.t+'" width="'+iw+'" height="'+(Y(0)-pad.t).toFixed(1)+'" fill="var(--good)" opacity="0.05"/>';
-    var GDP=GDPD[DEC];
-    if(isETR){
-      // x gridlines in percentage points of top-0.1% realized ETR (2027)
-      var estep=xmax>12?5:xmax>5?2:1;
-      for(var ge=0;ge<=xmax;ge+=estep){var xe=X(ge).toFixed(1);
-        s+='<line x1="'+xe+'" x2="'+xe+'" y1="'+pad.t+'" y2="'+(h-pad.b)+'" stroke="var(--grid)"/>';
-        s+='<text x="'+xe+'" y="'+(h-pad.b+16)+'" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="ui-monospace,monospace">'+(ge?('+'+ge+'pp'):'0')+'</text>';}
-    } else {
-      // x gridlines in share-of-GDP units (the decade's cumulative FY GDP);
-      // points remain keyed by $ internally so the geometry is unchanged
-      var xmaxPct=xmax/GDP*100;
-      var pstep=xmaxPct>4?1:0.5;
-      for(var gp=0;gp<=xmaxPct;gp+=pstep){var xx=X(gp/100*GDP).toFixed(1);
-        s+='<line x1="'+xx+'" x2="'+xx+'" y1="'+pad.t+'" y2="'+(h-pad.b)+'" stroke="var(--grid)"/>';
-        s+='<text x="'+xx+'" y="'+(h-pad.b+16)+'" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="ui-monospace,monospace">'+(gp?(gp+'%'):'0')+'</text>';}
-    }
-    for(var gy=-60;gy<=60;gy+=20){var yy=Y(gy).toFixed(1);
-      s+='<line x1="'+pad.l+'" x2="'+(w-pad.r)+'" y1="'+yy+'" y2="'+yy+'" stroke="'+(gy===0?'var(--rule)':'var(--grid)')+'" stroke-width="'+(gy===0?1.5:1)+'"/>';
-      s+='<text x="'+(pad.l-8)+'" y="'+(+yy+3.5)+'" text-anchor="end" font-size="10" fill="var(--muted)" font-family="ui-monospace,monospace">'+(gy>0?'+':'')+gy+'¢</text>';}
-    s+='<text x="'+pad.l+'" y="'+(pad.t-10)+'" font-size="10.5" fill="var(--ink-2)" font-family="ui-monospace,monospace">behavioral gain (+) or loss (−), ¢ per $ collected · above $0 = collects more than the static estimate</text>';
-    s+='<text x="'+(w-pad.r)+'" y="'+(h-12)+'" text-anchor="end" font-size="10.5" fill="var(--ink-2)" font-family="ui-monospace,monospace">'
-      +(isETR?'change in top 0.1% realized effective rate, accrual income, 2027 →'
-             :'conventional revenue over the decade, share of GDP →')+'</text>';
-    // dominated cloud: binned density (the lattice is thousands of points)
-    var NBX=64,NBY=40,bins={},offCount=0;
-    FRONTD.pts.forEach(function(p){
-      if(front.indexOf(p)>=0)return;
-      if(p.lk<YMIN){offCount++;return;}
-      var bx=Math.min(NBX-1,Math.max(0,Math.floor((X(xf(p))-pad.l)/iw*NBX)));
-      var by=Math.min(NBY-1,Math.max(0,Math.floor((Y(p.lk)-pad.t)/ih*NBY)));
-      var k=bx+'|'+by; bins[k]=(bins[k]||0)+1;
-    });
-    var maxc=1; Object.keys(bins).forEach(function(k){maxc=Math.max(maxc,bins[k]);});
-    Object.keys(bins).sort().forEach(function(k){
-      var xy=k.split('|'),bx=+xy[0],by=+xy[1];
-      var op=(0.10+0.45*Math.log(1+bins[k])/Math.log(1+maxc)).toFixed(3);
-      s+='<circle cx="'+(pad.l+(bx+0.5)/NBX*iw).toFixed(1)+'" cy="'+(pad.t+(by+0.5)/NBY*ih).toFixed(1)+'" r="2.6" fill="'+DOTFILL+'" opacity="'+op+'"/>';
-    });
-    if(offCount)s+='<text x="'+(pad.l+8)+'" y="'+(h-pad.b-8)+'" font-size="9.5" fill="var(--muted)" font-family="ui-monospace,monospace">▼ '+offCount+' high-loss packages off scale</text>';
-    s+='<path d="'+front.map(function(p,i){return (i?'L':'M')+X(xf(p)).toFixed(1)+' '+Y(p.lk).toFixed(1);}).join(' ')+'" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0.75"/>';
-    front.forEach(function(p){
-      s+='<circle cx="'+X(xf(p)).toFixed(1)+'" cy="'+Y(p.lk).toFixed(1)+'" r="5" fill="'+DOTFILL+'" stroke="var(--accent)" stroke-width="2" '+tipAttr({
-        accent:'var(--accent)', eyebrow:'Package on the frontier',
-        amount:usd(p.cv), amountColor:'var(--accent)', sub:'· '+(p.cv/GDP*100).toFixed(2)+'% of GDP',
-        rows:[{color:'var(--accent)',label:'Top 0.1% ETR',value:'+'+p.ex.toFixed(1)+' pp'},
-              {color:(p.lk>=0?'var(--good)':'var(--warn)'),label:'Leakage',value:(p.lk>0?'+':'')+Math.round(p.lk)+'¢'}],
-        chips:p.name.split(' + ')
-      })+'/>';
-    });
-    return s+'</svg>';
-  }
-  function frontierWithMarker(d){
-    if(!FRONTSVG)return '';
-    if(!d.keys.length||!(d.actual>0))return FRONTSVG;
-    var g=FRONTD.geom,lk=100*(d.actual-d.comboStatic)/d.actual;
-    var xv=g.metric==='etr'?d.etrTop:d.actual;
-    var cx=g.X(xv),cy=lk<g.YMIN?g.h-g.pad.b-12:g.Y(lk);
-    var mk='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="10" fill="none" stroke="var(--warn)" stroke-width="2.5"/>'
-      +'<text x="'+(cx+14).toFixed(1)+'" y="'+(cy-11).toFixed(1)+'" font-size="10.5" font-weight="600" fill="var(--warn)" font-family="ui-monospace,monospace">your selection</text>';
-    return FRONTSVG.replace('</svg>',mk+'</svg>');
-  }
-
   // ---- render ----------------------------------------------------------------- //
   function widthOf(id){var e=$('#'+id);return Math.max(300,e?e.clientWidth:660);}
   function tile(k,v,alt,s2,accent){return '<div class="tile'+(accent?' accent':'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div>'+(alt?'<div class="alt">'+alt+'</div>':'')+'<div class="s">'+s2+'</div></div>';}
@@ -1151,8 +867,9 @@ var DATA=/*__ATLAS_DATA__*/null;
   // ---- "how policies stack": draggable ordered marginals -------------------- //
   // Each active policy is added on top of the rows above it, in a user-orderable
   // sequence. A row's revenue is the running-package total for the rows so far
-  // minus the total for the rows above it, split by the base where it lands, for
-  // both the static estimate ('sh') and the collected total ('ch'). The rows
+  // minus the total for the rows above it, split by the base where it lands, on
+  // each of the three rungs: the static estimate ('sh'), the estimate after the
+  // cross-base spillovers ('mh'), and the collected total ('ch'). The rows
   // telescope to the whole-package total for any order — reordering only moves
   // the shared interaction between rows, never the total.
   var NHEAD=HEADS_ORDER.length;
@@ -1186,20 +903,20 @@ var DATA=/*__ATLAS_DATA__*/null;
     function pos(v){ var t=0; HEADS_ORDER.forEach(function(hk){ if((v[hk]||0)>0)t+=v[hk]; }); return t; }
     function neg(v){ var t=0; HEADS_ORDER.forEach(function(hk){ if((v[hk]||0)<0)t-=v[hk]; }); return t; }
     function net(v){ var t=0; HEADS_ORDER.forEach(function(hk){ t+=(v[hk]||0); }); return t; }
-    var rows=[],prevC={},prevS={};
+    var rows=[],prevC={},prevM={},prevS={};
     order.forEach(function(k,i){
-      var pref=order.slice(0,i+1),curC=hv('ch',pref),curS=hv('sh',pref);
-      rows.push({key:k,conv:sub(curC,prevC),stat:sub(curS,prevS)});
-      prevC=curC; prevS=curS;
+      var pref=order.slice(0,i+1),curC=hv('ch',pref),curM=hv('mh',pref),curS=hv('sh',pref);
+      rows.push({key:k,conv:sub(curC,prevC),mech:sub(curM,prevM),stat:sub(curS,prevS)});
+      prevC=curC; prevM=curM; prevS=curS;
     });
-    var pkg={key:null,isPkg:true,conv:prevC,stat:prevS};
+    var pkg={key:null,isPkg:true,conv:prevC,mech:prevM,stat:prevS};
     var posMax=0,negMax=0;
     rows.concat([pkg]).forEach(function(r){
-      posMax=Math.max(posMax,pos(r.conv),pos(r.stat));
-      negMax=Math.max(negMax,neg(r.conv),neg(r.stat));
+      posMax=Math.max(posMax,pos(r.conv),pos(r.mech),pos(r.stat));
+      negMax=Math.max(negMax,neg(r.conv),neg(r.mech),neg(r.stat));
     });
     var W=widthOf('stackfig'), bw=Math.max(140, W-168-92-18-40);
-    var span=(posMax+negMax)||1, sc=bw/span, xz=negMax*sc, HH=40;
+    var span=(posMax+negMax)||1, sc=bw/span, xz=negMax*sc, HH=54;
     function niceStep(x){ if(!(x>0))return 1; var p=Math.pow(10,Math.floor(Math.log(x)/Math.LN10));
       var n=x/p, m=n<1.5?1:(n<3?2:(n<7?5:10)); return m*p; }
     var step=niceStep(span/4), ticks=[];
@@ -1210,11 +927,14 @@ var DATA=/*__ATLAS_DATA__*/null;
         +(zero?'':' stroke-dasharray="2 3"')+'/>'; }).join(''); }
     function barCfg(hk,v,r,kind){ var drain=v<0;
       return { accent:headColor(hk),
-        eyebrow:(kind==='stat'?'Static estimate':'Collected')+' · '+HSHORT[hk]+' base',
+        eyebrow:(kind==='stat'?'Static estimate':(kind==='mech'?'After cross-base spillovers':'Collected'))
+                +' · '+HSHORT[hk]+' base',
         glyph:(drain?'▾':'▴'), glyphColor:(drain?'var(--warn)':'var(--good)'),
         amount:usd(v), amountColor:'var(--ink)',
         sub:(r.isPkg?'whole package':BYKEY[r.key].label),
-        body:(drain?('Revenue drained from the '+HSHORT[hk]+' base as behavior responds to this policy.')
+        body:(drain?('Revenue drained from the '+HSHORT[hk]+' base '
+                     +(kind==='mech'?'as the policy moves other bases mechanically.'
+                                    :'as behavior responds to this policy.'))
                    :('Revenue collected in the '+HSHORT[hk]+' base.')) }; }
     function bar(seg,y,hh,op,r,kind){ var xp=xz,xn=xz,out='';
       HEADS_ORDER.forEach(function(hk){ var v=seg[hk]||0; if(v>0){ var w=v*sc;
@@ -1224,16 +944,19 @@ var DATA=/*__ATLAS_DATA__*/null;
         out+='<rect x="'+xn.toFixed(1)+'" y="'+y+'" width="'+Math.max(0.5,w-1).toFixed(1)+'" height="'+hh
           +'" rx="2" fill="'+headColor(hk)+'" opacity="'+(op<1?(op*0.85).toFixed(2):'0.8')+'" '+tipAttr(barCfg(hk,v,r,kind))+'/>'; } });
       return out; }
-    function rowHtml(r){ var isP=!!r.isPkg, nc=net(r.conv), ns=net(r.stat), d=nc-ns, below=d<-1e-9;
+    function rowHtml(r){ var isP=!!r.isPkg, nc=net(r.conv), nm=net(r.mech), ns=net(r.stat),
+        d=nc-ns, below=d<-1e-9;
       var svg='<svg viewBox="0 0 '+bw.toFixed(1)+' '+HH+'" preserveAspectRatio="none" class="mbarsvg">'
-        +grid(HH)+bar(r.stat,3,8,0.5,r,'stat')+bar(r.conv,14,22,1,r,'conv')+'</svg>';
+        +grid(HH)+bar(r.stat,2,7,0.42,r,'stat')+bar(r.mech,12,11,0.72,r,'mech')
+        +bar(r.conv,26,22,1,r,'conv')+'</svg>';
       var label=isP?'Whole package':BYKEY[r.key].label;
       var subl=isP?(order.length+' policies together'):dialSummary(BYKEY[r.key]);
       var grip=isP?'<span class="mgrip ghost"></span>':'<span class="mgrip" title="Drag to reorder" aria-hidden="true">⠿</span>';
       return '<div class="mrow'+(isP?' total':'')+'"'+(isP?'':' data-key="'+r.key+'"')+'>'
         +grip+'<div class="mlab"><div class="mname">'+label+'</div><div class="msub">'+subl+'</div></div>'
         +'<div class="mbar">'+svg+'</div>'
-        +'<div class="mnum"><div class="ms">'+usd(ns)+'</div><div class="mc">'+usd(nc)+'</div>'
+        +'<div class="mnum"><div class="ms">'+usd(ns)+'</div><div class="mm">'+usd(nm)+'</div>'
+        +'<div class="mc">'+usd(nc)+'</div>'
         +'<div class="md" style="color:'+(below?'var(--warn)':'var(--good)')+'">'
         +(below?'▾ ':'▴ ')+usd(Math.abs(d))+'</div></div></div>'; }
     var axis='<div class="mrow axis"><span class="mgrip ghost"></span><div class="mlab"></div>'
@@ -1246,7 +969,7 @@ var DATA=/*__ATLAS_DATA__*/null;
     if(leg){ leg.innerHTML=HEADS.filter(function(hh){
         return rows.concat([pkg]).some(function(r){return Math.abs(r.conv[hh.k]||0)>=0.5||Math.abs(r.stat[hh.k]||0)>=0.5;});
       }).map(function(hh){return '<span class="it"><span class="sw2" style="background:'+hh.c+'"></span>'+hh.label+'</span>';}).join('')
-      +'<span class="it mono" style="color:var(--muted)">slim bar = static estimate · full bar = collected · ▴/▾ = collected minus static · left of $0 = revenue drained from a base</span>'; }
+      +'<span class="it mono" style="color:var(--muted)">slim bar = static estimate · middle bar = after cross-base spillovers · full bar = collected · ▴/▾ = collected minus static · left of $0 = revenue drained from a base</span>'; }
   }
   function wireStackDrag(){
     var host=$('#stackfig'); if(!host||host.__wired)return; host.__wired=true;
@@ -1296,7 +1019,6 @@ var DATA=/*__ATLAS_DATA__*/null;
     ].join('');
     renderMarginals();
     paintDist(d);
-    $('#frontChart').innerHTML=frontierWithMarker(d);
   }
 
   // distribution card: chart + legend + caption switch by DIST_VIEW
@@ -1353,31 +1075,6 @@ var DATA=/*__ATLAS_DATA__*/null;
       +pctList(val.bounds_pct)+' by decade (static '+pctList(val.static_bounds_pct)+')';
 
   // ---- decade toggle -------------------------------------------------------------- //
-  function ensureFrontier(){
-    if(!FRONTCACHE[DEC])FRONTCACHE[DEC]={d:frontierData(DEC),svg:{}};
-    FRONTD=FRONTCACHE[DEC].d;
-    if(!FRONTCACHE[DEC].svg[FMETRIC]){
-      FRONTSVG='';
-      FRONTCACHE[DEC].svg[FMETRIC]=frontierBase(widthOf('frontChart'));
-    }
-    FRONTSVG=FRONTCACHE[DEC].svg[FMETRIC];
-    $('#frontLegend').innerHTML=
-      '<span class="it"><span class="sw2" style="background:transparent;border:2px solid var(--accent);border-radius:50%"></span>on the frontier</span>'+
-      '<span class="it mono" style="color:var(--muted)">'+FRONTD.n+' lattice packages · '
-      +(FMETRIC==='etr'?'x = Δ top 0.1% realized ETR (2027)':decLabel(DEC))
-      +' · shading = package density · hover frontier points for composition</span>';
-  }
-  function setFrontMetric(m){
-    if(m===FMETRIC)return;
-    FMETRIC=m;
-    Array.prototype.forEach.call(document.querySelectorAll('#frontMetricSeg button'),function(x){
-      x.setAttribute('aria-pressed',x.dataset.fm===FMETRIC?'true':'false');});
-    ensureFrontier();
-    renderAll();
-  }
-  Array.prototype.forEach.call(document.querySelectorAll('#frontMetricSeg button'),function(b){
-    b.onclick=function(){ setFrontMetric(b.dataset.fm); };
-  });
   function renderDecTog(){
     var host=$('#decTog'); host.innerHTML='';
     var names=['First decade','Second decade','Third decade'];
@@ -1394,7 +1091,6 @@ var DATA=/*__ATLAS_DATA__*/null;
     DEC=i;
     Array.prototype.forEach.call(document.querySelectorAll('#decTog button'),function(x){
       x.setAttribute('aria-pressed',+x.dataset.dec===DEC?'true':'false');});
-    ensureFrontier();
     renderAll();
   }
 
@@ -1402,7 +1098,6 @@ var DATA=/*__ATLAS_DATA__*/null;
   initState();
   renderControls();
   renderDecTog();
-  ensureFrontier();
   // default view: current law — everything off, dials at their law values
   syncInputs();
   renderAll();
@@ -1426,9 +1121,6 @@ var DATA=/*__ATLAS_DATA__*/null;
   window.__ATLAS2__={evalQ:evalQ,shapley:shapley,gOf:gOf,evalGrid:evalGrid,
     setState:setState,renderNow:renderAll,surState:surState,
     setDecade:setDecade,getDecade:function(){return DEC;},
-    setFrontMetric:setFrontMetric,getFrontMetric:function(){return FMETRIC;},
-    frontFor:frontFor,etrcTopSum:etrcTopSum,
-    frontierFor:function(d){ if(!FRONTCACHE[d])FRONTCACHE[d]={d:frontierData(d),svg:{}}; return FRONTCACHE[d].d; },
-    FRONTD:function(){return FRONTD;},DATA:DATA,state:state,LEVERS:LEVERS};
+    DATA:DATA,state:state,LEVERS:LEVERS};
 })();
 </script>
