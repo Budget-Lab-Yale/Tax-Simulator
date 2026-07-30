@@ -119,7 +119,7 @@ resolve_detail_purge = function(x) {
 
 
 
-purge_detail = function(passes = NULL) {
+purge_detail = function(passes = NULL, scenarios = NULL) {
 
   #----------------------------------------------------------------------------
   # Deletes output stored in /detail, which contains tax unit microdata detail
@@ -130,8 +130,15 @@ purge_detail = function(passes = NULL) {
   # behind keeps most of its detail on disk, which is what this is called to
   # reclaim.
   #
+  # Scope the scenarios whenever the caller is one scenario's pass rather than
+  # the end of the run. The default is every scenario in the runscript, which is
+  # right for the end-of-run purge and wrong for anything running concurrently:
+  # an unscoped call from inside a per-scenario phase deletes the detail that the
+  # other scenarios' tasks are still reading.
+  #
   # Parameters:
-  #   - passes (str[]) : pass roots to purge, defaulting to every one
+  #   - passes (str[])    : pass roots to purge, defaulting to every one
+  #   - scenarios (str[]) : scenario IDs to purge, defaulting to all of them
   #
   # Returns: void
   #----------------------------------------------------------------------------
@@ -139,8 +146,11 @@ purge_detail = function(passes = NULL) {
   if (is.null(passes)) {
     passes = c('static', map_chr(PASS_SPECS, 'root'))
   }
+  if (is.null(scenarios)) {
+    scenarios = globals$runscript$ID
+  }
 
-  for (scenario_id in globals$runscript$ID) {
+  for (scenario_id in scenarios) {
     for (pass in passes) {
       unlink(
         file.path(globals$output_root,

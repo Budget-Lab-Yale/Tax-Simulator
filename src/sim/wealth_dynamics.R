@@ -894,9 +894,11 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
 
   # The forcing has been read for every year and written into the state files, so
   # the leg's no-wealth detail has no remaining reader
+  # This scenario only. Every other scenario's task is reading its own copy of
+  # the same tree at the same time.
   if (isTRUE(purge_transient)) {
     root = paste0(leg, '_no_wealth')
-    purge_detail(passes = root)
+    purge_detail(passes = root, scenarios = scenario_info$ID)
     message(sprintf('wealth_dynamics: purged %s detail for %s, read in full.',
                     root, scenario_info$ID))
   }
