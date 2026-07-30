@@ -24,10 +24,12 @@
 # (0.2542) likewise just travels in the sweep file, unchanged from the shipped
 # value, because the long-run moment is timeable-share invariant.
 #
-# Full sample; delete_detail=1 keeps the conventional_no_wealth leg (the E_full
-# numerator R_shock). measure_efull_logs.R pulls the form-INVARIANT base R and the
-# shared-law dtau from the levels central vintage eta_dial_c_v2 (kept with full
-# detail), so no logs-side baseline/conventional detail is needed here.
+# Full sample, delete_detail=0. The measurement reads this vintage's own
+# conventional_no_wealth detail for the E_full numerator R_shock, and the purge
+# now covers every rung's detail rather than the static and conventional trees
+# alone, so a purged run leaves nothing to measure. measure_efull_logs.R pulls
+# the form-invariant base R and the shared-law dtau from the levels central
+# vintage eta_dial_c_v2, so no logs-side baseline detail is needed here.
 #
 # After all three finish (Phase 2N/3b), measure + invert:
 #   sbatch other/kg_model_tests/form_ab/measure_efull_logs.sbatch
@@ -89,7 +91,7 @@ for tag in "${TAGS[@]}"; do
   fi
 
   echo "launching logs eta-dial: tag ${tag} -> runscript ${runscript}, vintage ${vintage}"
-  bash slurm_run.sh "$runscript" NULL 1 "$vintage" 1 0 NULL 1
+  bash slurm_run.sh "$runscript" NULL 1 "$vintage" 1 0 NULL 0
 done
 
 echo ""
