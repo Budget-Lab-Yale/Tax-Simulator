@@ -43,6 +43,19 @@ WEALTH_DYN_F_FLOOR = 1e-4
 # can otherwise push this far above a plausible yearly return.
 WEALTH_DYN_Y_MAX = 1.0
 
+# A record's bundle rate is measured by bumping its capital income 1% and
+# dividing the change in tax by the change in income. The statute has discrete
+# steps in it: the child credit phases out in $1,000 blocks at 5%, so a record
+# whose bump carries it across a block boundary pays $50 on a bump that may be a
+# dollar wide, and reports a rate in the tens. The floor above does not catch
+# this, since the record can have real capital income and still straddle a step.
+#
+# A marginal rate on capital income lies in the unit interval. Records measuring
+# outside it are dropped from the cell average, numerator and denominator
+# together, rather than averaged in: the cells are thin enough at the top that
+# one such record sets the rate for the whole cell.
+WEALTH_DYN_MTR_RANGE = c(0, 1)
+
 # Floor for the growth factor G. Tax feedback damps growth but cannot turn it
 # negative. Binds only in the sparse cells described above.
 WEALTH_DYN_G_FLOOR = 1e-6
@@ -774,12 +787,17 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
     # worth).
     cells = scen %>%
       filter(!is.na(bin)) %>%
+      mutate(bundle_is_rate = !is.na(mtr_cap_bundle) &
+                              mtr_cap_bundle >= WEALTH_DYN_MTR_RANGE[1] &
+                              mtr_cap_bundle <= WEALTH_DYN_MTR_RANGE[2]) %>%
       group_by(age_cohort, bin) %>%
       summarise(
         dT0_cell = sum(dT0,                                     na.rm = TRUE),
         F_signed = sum(weight * cap_bundle_F,                   na.rm = TRUE),
-        F_pos    = sum(weight * pmax(cap_bundle_F, 0),          na.rm = TRUE),
-        Fmtr_pos = sum(weight * pmax(cap_bundle_F, 0) * mtr_cap_bundle, na.rm = TRUE),
+        F_pos    = sum(weight * pmax(cap_bundle_F, 0) * bundle_is_rate,
+                       na.rm = TRUE),
+        Fmtr_pos = sum(weight * pmax(cap_bundle_F, 0) * bundle_is_rate *
+                         mtr_cap_bundle, na.rm = TRUE),
         gross    = sum(weight * economic_gross,                 na.rm = TRUE),
         nw_pos   = sum(weight * pmax(net_worth_raw, 0),         na.rm = TRUE),
         nwmtr    = sum(weight * pmax(net_worth_raw, 0) * mtr_net_worth, na.rm = TRUE),
