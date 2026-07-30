@@ -88,6 +88,36 @@ kg_dyn_response_form = function() {
 # is broken. The levels form has no such limit.
 KG_DYN_LOGS_MC_CAP      = 0.98
 
+# A record's marginal rate on gains is a one-dollar right derivative of a statute
+# that has discrete steps in it. The child credit phases out in $1,000 blocks at
+# 5%, so the dollar of gains that carries a record across a block boundary costs
+# $50, and the measured rate for that record is 50 plus the preferred rate plus
+# the NIIT. The derivative is right and the rate is not: a realization decision
+# is made in thousands of dollars, not in the dollar that straddles a step.
+#
+# A marginal rate on realized gains lies in the unit interval. Records measuring
+# outside it are dropped from the cell averages, numerator and denominator
+# together, rather than averaged in.
+KG_DYN_MTR_RANGE        = c(0, 1)
+
+# Report a cell whose dropped records were this large a share of its weighted
+# realizations, since past that the cell's rate is being set by rather little of
+# the cell.
+KG_DYN_MTR_RANGE_WARN_SHARE = 0.01
+
+kg_dyn_mtr_is_rate = function(x) {
+  #----------------------------------------------------------------------------
+  # Flags records whose measured marginal rate on gains can be read as a rate.
+  #
+  # Parameters:
+  #   - x (dbl[]) : vector of measured marginal rates
+  #
+  # Returns: logical vector, FALSE where the rate is missing or out of range.
+  #----------------------------------------------------------------------------
+
+  !is.na(x) & x >= KG_DYN_MTR_RANGE[1] & x <= KG_DYN_MTR_RANGE[2]
+}
+
 # The model has two margins. On the permanent margin, all gains respond through
 # the choice of realization rate, so eta is the long-run elasticity directly. On
 # the short-run margin, a calibrated share of all baseline realizations retimes

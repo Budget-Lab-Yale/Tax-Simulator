@@ -759,6 +759,30 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
       }
     }
 
+    # Report the records the cell average drops for measuring outside the unit
+    # interval, per KG_DYN_MTR_RANGE. Their share of a cell's weighted gains is
+    # what says whether that cell's rate is now being set by the rest of the cell
+    # or by very little of it, so report on the cell that loses the most.
+    check_mtr_range = function(joined, side, year) {
+      shares = joined %>%
+        mutate(kg_pos  = pmax(kg_lt, 0),
+               dropped = !kg_dyn_mtr_is_rate(mtr_kg_lt)) %>%
+        group_by(age_cohort) %>%
+        summarise(share = sum(weight * kg_pos * dropped, na.rm = TRUE) /
+                          pmax(sum(weight * kg_pos, na.rm = TRUE), 1e-9),
+                  .groups = 'drop')
+      worst = shares %>% slice_max(share, n = 1, with_ties = FALSE)
+      if (nrow(worst) > 0 && worst$share > KG_DYN_MTR_RANGE_WARN_SHARE) {
+        warning(sprintf(
+          paste0('kg_dynamics: in %s detail for year %d, out-of-range ',
+                 'marginal rates on gains account for %.1f%% of weighted ',
+                 'realizations in the age %s cell, which are dropped from ',
+                 'its average rate.'),
+          side, year, 100 * worst$share, as.character(worst$age_cohort)),
+          call. = FALSE)
+      }
+    }
+
     # Same check for the estate rate: a missing value would pull the offset toward
     # zero, which is the model without the offset at all.
     check_estate_coverage = function(joined, side, year) {
@@ -779,6 +803,7 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
                                    'detail')),
                 by = 'id')
     check_mtr_coverage(baseline_joined, 'baseline', t)
+    check_mtr_range(baseline_joined, 'baseline', t)
     check_estate_coverage(baseline_joined, 'baseline', t)
     baseline_tau[[as.character(t)]] =
       kg_dyn_aggregate_cell_mtr(baseline_joined, ages)
@@ -793,6 +818,7 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
                          cols = reform_cols),
                 by = 'id')
     check_mtr_coverage(reform_joined, 'reform', t)
+    check_mtr_range(reform_joined, 'reform', t)
     check_estate_coverage(reform_joined, 'reform', t)
     reform_tau[[as.character(t)]] =
       kg_dyn_aggregate_cell_mtr(reform_joined, ages)
@@ -837,6 +863,7 @@ kg_dyn_load_bathtub_inputs = function(scenario_info, tax_law, baseline_root,
     lawonly_joined = reform_joined %>%
       mutate(mtr_kg_lt = mtr_kg_lt_lawonly)
     check_mtr_coverage(lawonly_joined, 'reform (law-only)', t)
+    check_mtr_range(lawonly_joined, 'reform (law-only)', t)
     reform_tau_timing[[as.character(t)]] =
       kg_dyn_aggregate_cell_mtr(lawonly_joined, ages)
   }

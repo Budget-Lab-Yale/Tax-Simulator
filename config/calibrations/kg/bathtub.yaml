@@ -119,6 +119,13 @@ eta_logs:
     settings.kg.timing_ref_wedge: 0.05
     settings.kg.timing_window: 1
   rederive: other/kg_model_tests/form_ab/measure_efull_logs.R
+  acknowledged:
+    date: '2026-07-29'
+    reason: >
+      Pinned before the cell averages began dropping records whose measured
+      marginal rate on gains falls outside the unit interval. Being re-derived
+      under that rule now; this block goes when the new value lands, and no
+      shipped estimate is built under it.
   active_when:
     kg.response_form: logs
   note: >

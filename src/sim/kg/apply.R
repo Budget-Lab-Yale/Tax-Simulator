@@ -237,15 +237,20 @@ kg_dyn_aggregate_cell_mtr = function(records_with_attrs,
   # holdings in cells that realize nothing, such as young heirs under carryover,
   # and to zero where a cell has neither.
   #
+  # Records whose measured rate falls outside the unit interval leave both sums,
+  # for the reason given at KG_DYN_MTR_RANGE. They are a handful in a hundred
+  # thousand, but a thin cell can be carried by one of them.
+  #
   # Returns: named numeric vector of rates by age.
 
   agg = records_with_attrs %>%
-    mutate(kg_pos = pmax(kg_lt, 0)) %>%
+    mutate(kg_pos = pmax(kg_lt, 0),
+           is_rate = kg_dyn_mtr_is_rate(mtr_kg_lt)) %>%
     group_by(age_cohort) %>%
-    summarise(num_R = sum(weight * kg_pos * mtr_kg_lt, na.rm = TRUE),
-              den_R = sum(weight * kg_pos,             na.rm = TRUE),
-              num_G = sum(weight * G_unit * mtr_kg_lt, na.rm = TRUE),
-              den_G = sum(weight * G_unit,             na.rm = TRUE),
+    summarise(num_R = sum(weight * kg_pos * mtr_kg_lt * is_rate, na.rm = TRUE),
+              den_R = sum(weight * kg_pos * is_rate,             na.rm = TRUE),
+              num_G = sum(weight * G_unit * mtr_kg_lt * is_rate, na.rm = TRUE),
+              den_G = sum(weight * G_unit * is_rate,             na.rm = TRUE),
               .groups = 'drop') %>%
     rename(age = age_cohort)
 
@@ -282,13 +287,15 @@ kg_dyn_aggregate_cell_carry = function(records_with_attrs,
   # Returns: list of the carrying cost and the average wealth rate, by age.
 
   agg = records_with_attrs %>%
+    mutate(is_rate = kg_dyn_mtr_is_rate(mtr_kg_lt)) %>%
     group_by(age_cohort) %>%
-    summarise(num_h = sum(weight * G_unit *
+    summarise(num_h = sum(weight * G_unit * is_rate *
                             coalesce(mtr_net_worth, 0) *
                             coalesce(mtr_kg_lt, 0), na.rm = TRUE),
-              num_w = sum(weight * G_unit * coalesce(mtr_net_worth, 0),
+              num_w = sum(weight * G_unit * is_rate *
+                            coalesce(mtr_net_worth, 0),
                           na.rm = TRUE),
-              den   = sum(weight * G_unit, na.rm = TRUE),
+              den   = sum(weight * G_unit * is_rate, na.rm = TRUE),
               .groups = 'drop') %>%
     rename(age = age_cohort)
 
