@@ -15,7 +15,7 @@
 #SBATCH --job-name=v6-all
 #SBATCH --partition=week
 #SBATCH -c 2
-#SBATCH --time=1-00:00:00
+#SBATCH --time=2-00:00:00
 #SBATCH --mem=32G
 #SBATCH --output=/nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator/other/top_tax/logs/v6_all_%j.log
 
