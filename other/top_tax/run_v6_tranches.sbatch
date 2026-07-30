@@ -37,7 +37,11 @@ echo ""
 
 ME=$(whoami)
 
-for t in 1 2 3 4 5 6; do
+TRANCHES=$(ls config/runscripts/top_tax/v6/tranche*.csv | sed 's/.*tranche\([0-9]*\)\.csv/\1/' | sort -n)
+echo "tranches: $(echo $TRANCHES | tr '\n' ' ')"
+echo ""
+
+for t in $TRANCHES; do
   RUNSCRIPT="top_tax/v6/tranche${t}"
   STARTED=$(date +%Y-%m-%dT%H:%M:%S)
 
