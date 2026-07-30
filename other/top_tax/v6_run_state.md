@@ -85,6 +85,12 @@ two places a raw marginal rate is averaged over a cell. Everywhere else
 differences the same record's rates across two laws, where a step appears on
 both sides.
 
+What this does to the wealth channel's revenue is not measured, since no
+pre-fix wealth dial survives to difference against. The levels it produces are
+sound: on the 1% wealth tax at a $150M threshold the tax runs 139.2 static
+against 138.8 mechanical in 2027, widening to 0.8% by 2029 as the drawdown
+compounds, and 116.5 conventional once avoidance enters.
+
 **Consequences for the calibration.** Editing `apply.R`, `inputs.R` and
 `constants.R` makes `eta_logs` stale, correctly: the cell rates its derivation
 ran on have moved. It is being re-derived on the three-point grid
