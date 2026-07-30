@@ -7,15 +7,21 @@
 #
 # Phase 0 parses globals and reads Tax-Data in process, which is why the
 # grid is launched from a compute node rather than the login node. The
-# dependent array jobs outlive this wrapper.
+# dependent array jobs outlive this wrapper, and run on the day partition
+# themselves.
+#
+# The day partition, because this job does about ten minutes of work. Asking
+# for the week partition costs a place in a queue that ran to nearly six hours
+# on 2026-07-29 -- more than twice the grid's own compute time -- since that
+# partition will not take a job shorter than a day.
 #
 # Usage:
 #   sbatch other/top_tax/run_v6_all.sbatch [vintage] [years_per_task]
 #-----------------------------------------------------------------------
 #SBATCH --job-name=v6-all
-#SBATCH --partition=week
+#SBATCH --partition=day
 #SBATCH -c 2
-#SBATCH --time=2-00:00:00
+#SBATCH --time=4:00:00
 #SBATCH --mem=32G
 #SBATCH --output=/nfs/roberts/project/pi_nrs36/jar335/Repositories/Tax-Simulator/other/top_tax/logs/v6_all_%j.log
 
