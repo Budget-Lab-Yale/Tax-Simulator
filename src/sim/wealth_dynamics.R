@@ -715,11 +715,12 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
   #                             measures the forcing with behavior off, so its
   #                             drawdown compounds the static tax change.
   #   - purge_transient (bool): delete the leg's no-wealth detail once this pass
-  #                             has read it. Nothing downstream of here reads it,
-  #                             so this is what keeps peak disk at three detail
+  #                             has read it, which keeps peak disk at three detail
   #                             trees a scenario rather than five. Off by default:
   #                             the gains elasticity harness reads a scenario's
-  #                             conventional_no_wealth detail after the run
+  #                             conventional_no_wealth detail after the run, and a
+  #                             reform changing employer payroll law keeps its
+  #                             mechanical no-wealth detail regardless
   #
   # Returns: invisibly NULL.
   #----------------------------------------------------------------------------
@@ -892,11 +893,16 @@ run_wealth_bathtub_pass = function(scenario_info, tax_law,
       pass          = leg)
   }
 
-  # The forcing has been read for every year and written into the state files, so
-  # the leg's no-wealth detail has no remaining reader
-  # This scenario only. Every other scenario's task is reading its own copy of
-  # the same tree at the same time.
-  if (isTRUE(purge_transient)) {
+  # The forcing has been read for every year and written into the state files.
+  # Scope the purge to this scenario: every other scenario's task is reading its
+  # own copy of the same tree at the same time.
+  #
+  # A reform changing employer payroll law keeps its mechanical no-wealth detail,
+  # which the distribution table reads afterward as the payroll overlay. See
+  # distribution_payroll_overlay_leg().
+  keep_for_payroll = leg == 'mechanical' &&
+                     scenario_uses_er_payroll_reform(scenario_info)
+  if (isTRUE(purge_transient) && !keep_for_payroll) {
     root = paste0(leg, '_no_wealth')
     purge_detail(passes = root, scenarios = scenario_info$ID)
     message(sprintf('wealth_dynamics: purged %s detail for %s, read in full.',

@@ -72,10 +72,11 @@ resolve_detail_purge = function(x) {
   #
   # Peak disk is set in the middle of a run, not at the end, so purging only at
   # the end cannot lower it. The two no-wealth trees are measurement passes: each
-  # is read by the wealth recurrence that follows it and by nothing afterward,
-  # carries no totals, and is not the source of any distribution table. Purging
-  # them the moment their recurrence has read them takes a scenario from five
-  # detail trees on disk to three.
+  # is read by the wealth recurrence that follows it, carries no totals, and is
+  # the source of no distribution table except the payroll overlay a reform
+  # changing employer payroll law takes off the mechanical one. Purging them the
+  # moment their recurrence has read them takes a scenario from five detail trees
+  # on disk to three.
   #
   # Accepts 'none' (or 0), 'all' (or 1), 'transient', or a comma-separated
   # combination, so 'transient,all' gives the lowest peak and the lowest final.
