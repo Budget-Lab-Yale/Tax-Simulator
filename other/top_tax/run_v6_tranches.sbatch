@@ -62,8 +62,10 @@ for t in $TRANCHES; do
   # failed phase leaves its dependents cancelled. Read the outcome rather than
   # the queue, and stop: a later tranche cannot repair an earlier one, and
   # running on would overwrite the evidence.
+  # sacct right-pads JobName, so the lines start with spaces and an anchored
+  # pattern matches nothing. Match unanchored, and count only the taxsim rows.
   BAD=$(sacct -u "$ME" -S "$STARTED" -X -n --format=JobName%20,State \
-        | grep '^taxsim' | grep -cvE 'COMPLETED|RUNNING|PENDING' || true)
+        | grep taxsim | grep -cvE 'COMPLETED|RUNNING|PENDING' || true)
   if [ "$BAD" -gt 0 ]; then
     echo "TRANCHE ${t} FAILED: ${BAD} job(s) did not complete. Stopping."
     sacct -u "$ME" -S "$STARTED" -X -n --format=JobID%16,JobName%20,State%14 \
