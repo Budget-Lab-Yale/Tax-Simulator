@@ -5,10 +5,9 @@
 The v6 grid re-runs the top-tax dials on the three-rung model, so that every dial
 carries a mechanical rung of its own rather than an inferred one. Two attempts
 have been made and both stopped. The plumbing faults behind the first are fixed
-and committed; one modelling fault remains open, and the run cannot finish until
-it is resolved or consciously worked around.
+and committed, and so is the modelling fault behind the second.
 
-## The open problem: a marginal tax rate above one
+## The problem: a marginal tax rate of fifty
 
 The gains bathtub stopped on two of the thirty scenarios in the first tranche:
 
@@ -19,65 +18,69 @@ The gains bathtub stopped on two of the thirty scenarios in the first tranche:
 
 The net-of-tax response form is `(1 - MC) ^ eta`, undefined as the marginal cost
 reaches one, and `src/sim/kg/bellman.R` stops rather than clamp. That refusal is
-deliberate and correct; it is how the problem surfaced at all.
+what surfaced the problem, and it is worth keeping.
 
 In the Bellman the cost of realizing is
 
     MC = tau + beta (1 - m) (W_next - h) + beta m F
 
-**The measured cause.** In the mechanical detail for `s_wealth_r1_t150` in 2045,
-`mtr_kg_lt` runs from -0.0774 to **50.1880**, with four records above one and
-thirty-two negative. A marginal rate on gains cannot exceed one. `tau` is the
-gain-weighted cell average of that column, so a single poisoned record carries
-into the cell and straight into the marginal cost. The other inputs were checked
-on the same file and are sound: `mtr_net_worth` runs 0 to 0.01 with no negatives,
-`mtr_estate` 0 to 0.4.
+`tau` is the gain-weighted average, within an age cohort, of each record's
+`mtr_kg_lt`. In the mechanical detail for `s_wealth_r1_t150` in 2045 that column
+runs from -0.0774 to 50.1880, four records above one and thirty-two negative.
 
-The likely mechanism is the numerical derivative behind an MTR: liability is
-recomputed with gains bumped by a dollar and the difference divided by the bump,
-so a record whose liability moves for a threshold reason while its own gains are
-negligible returns an enormous ratio. This is a hypothesis about the mechanism.
-The rate being out of range is a measurement.
+**The cause.** A marginal rate is measured by recomputing liability with the
+variable bumped a dollar. The child credit phases out in $1,000 blocks at 5%, so
+the dollar of gains that carries a record across a block boundary costs $50, and
+the measured rate is 50 plus the preferred rate plus the NIIT -- 50.188 exactly.
+Two blocks at once give 100.18, and the value of 60.0 comes from a different
+step. The derivative is right and the rate is not: a realization decision is made
+in thousands of dollars, not in the dollar that straddles a step.
 
-**The two failures are different in kind.** 1.0141 on the top ordinary rate dial
-is a boundary: push rates high enough and this response form genuinely runs out
-of room. 41.16 on a wealth dial is a handful of poisoned records. A fix for the
-second does not settle the first.
+**The fix** (`9487f5eb2`) drops records measuring outside the unit interval from
+the cell averages, numerator and denominator together, in the three aggregators
+in `src/sim/kg/apply.R` that read the column. A marginal rate on realized gains
+lies in the unit interval; a number outside it is a measurement of a step rather
+than of a rate. A cell that loses more than a hundredth of its weighted
+realizations that way is now reported.
 
-**Hypotheses already eliminated**, so that nobody spends the time again:
+The alternative of bounding each record's rate at 1 was rejected: it pins the
+same record at a 100% tax on gains, which is no more a price than 50 is. Widening
+the probe past a dollar would have worked too, but the dollar bump is the
+model-wide MTR convention and `mtr_kg_lt` has other consumers.
 
-- Not the wealth carrying cost. `h` is the gain-weighted average of the wealth
-  rate times the gains rate, bounded near 0.004 at a 1% wealth tax and scaled by
-  `kg.wealth_carry_scale`, which is 1. It also enters with a minus sign, so it
-  lowers the cost, as its comment says.
-- Not `mtr_net_worth` being pathological. Checked; clean.
-- Not the marginal-rate convention flip on its own. The crossing diagnostic for
-  both failing scenarios shows the two conventions agreeing to five decimals,
-  with shifts of exactly the statutory rate. But note the diagnostic compares
-  reform-against-baseline differences while the Bellman consumes levels, so the
-  flip is not fully exonerated as the thing that tipped these dials over.
+**How much it moves**, measured on `kg_v5_revmax` baseline detail over 2027-2055
+by `other/kg_model_tests/mtr_range_impact.R`, output kept alongside it as
+`mtr_range_impact.txt`:
 
-**Both dials completed in v5**, with full conventional output, under the same
-response form. So something in this branch moved them across the cap. The
-candidates are the marginal rates now being read off the mechanical frame rather
-than the static one, and the gains elasticity re-pin from 1.6625 to 1.6692.
+- One record, occasionally two or four, per affected cell-year.
+- Out-of-range records are 3 in 100,000 of weighted realizations, which is why
+  this went unseen.
+- In the cells they touch they are decisive. The worst is age 42 in 2041, where
+  the cell rate reads 0.3365 against 0.2173 without them -- twelve points, from a
+  record holding 0.24% of the cell's realizations. Age 44 in 2032 moves nine
+  points, age 53 in 2028 four.
+- Most cell-years move under 5e-4, and dropping the negative records moves a rate
+  up by about that much.
 
-**Suggested next steps**, cheapest first:
+This was the baseline leg, so v5's shipped gains numbers carry the same
+contamination. It is small in aggregate and concentrated in a few thin cells.
 
-1. Find the four records with `mtr_kg_lt > 1` and read their gains, liability and
-   bump. That says whether the cause is the threshold-crossing derivative or
-   something else.
-2. Decide what an out-of-range MTR should do. Options: reject at source in
-   `calc_mtrs`, exclude such records from the cell average, or bound the reported
-   rate. Each has a different meaning and the choice belongs to the author, not
-   to a patch.
-3. Only then consider the boundary case. If a 44.8% top rate legitimately drives
-   the marginal cost to one, that is a statement about the response form's range
-   of validity and belongs in the methodology memo rather than in a clamp.
+**Consequences for the calibration.** Editing `apply.R`, `inputs.R` and
+`constants.R` makes `eta_logs` stale, correctly: the cell rates its derivation
+ran on have moved. It is being re-derived on the three-point grid
+(`other/kg_model_tests/form_ab/launch_eta_dial_logs.sbatch`, vintage suffix
+`_range`), and carries a dated acknowledgement in the meantime so that the
+verification runs can proceed. The measurement protocol in
+`measure_efull_logs.R` was deliberately left alone: its `dtau` is a difference of
+realization-weighted rates across a 5pp shock, in which a stepped record's $50
+appears on both sides and cancels, and the protocol is shared with the levels pin.
 
-Do not clamp the marginal cost to make the run finish. If the cell rates are
-contaminated, the twenty-eight scenarios that stayed under the cap are wrong too,
-quietly.
+**The ordinary-rate dial at 1.0141** is 1.4% over the cap, so removing the
+contaminated records from its cells may well clear it. If it does not, that is a
+statement about where the net-of-tax response form runs out of range at a 44.8%
+top rate, and belongs in the methodology memo rather than in a clamp. The
+two-dial run under `config/runscripts/tests/mtr_range_capfix.csv` is what decides
+this.
 
 ## What is fixed and committed
 
