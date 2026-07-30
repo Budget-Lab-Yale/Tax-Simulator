@@ -18,6 +18,12 @@
 # The response is to the current year's change in the advantage, with no phase-in,
 # the same convention entity shifting and evasion use.
 #
+# The bathtub pre-pass is where the conversion is worked out, because the stock of
+# gains has to carry the inflow for every year before any single year is simulated.
+# This module applies what the pre-pass computed rather than computing it again, so
+# the dollars entering the stock and the dollars leaving the records are the same
+# dollars. The marginal rate frames this module is handed go unread for that reason.
+#
 # The response parameter is calibrated as a residual, since entity shifting and
 # evasion supply most of the target on their own. The value and its provenance are in
 # config/calibrations/kg/conversion.yaml, and the method is described in
@@ -35,16 +41,13 @@ do_conversion = function(tax_units, baseline_mtrs, static_mtrs,
                          scenario_info, indexes) {
 
   #----------------------------------------------------------------------------
-  # Applies the conversion response. The record-level conversions are recomputed here
-  # through the same function the pre-pass used, since only the cell totals were
-  # written out, and then checked against those totals.
+  # Applies the conversion response, taking the per-record conversions the pre-pass
+  # wrote into the year's state file.
   #
   # Parameters:
   #   - tax_units (df)       : tibble of tax units with calculated variables
-  #   - baseline_mtrs (df)   : year-id indexed MTRs under baseline; must
-  #                            carry mtr_wages1/2, mtr_part_active,
-  #                            mtr_sole_prop1, mtr_scorp_active
-  #   - static_mtrs (df)     : same columns under the static counterfactual
+  #   - baseline_mtrs (df)   : year-id indexed MTRs under baseline, unread here
+  #   - static_mtrs (df)     : same columns under the counterfactual, unread here
   #   - scenario_info (list) : get_scenario_info() object
   #   - indexes (df)         : generate_indexes() object (unused here)
   #
@@ -54,25 +57,11 @@ do_conversion = function(tax_units, baseline_mtrs, static_mtrs,
 
   year = tax_units$year[1]
 
-  # This module used to open with two guards: that kg_dynamics was present, and
-  # that the families ran in the pinned order. Both are now settled before the
-  # run starts -- the loader sorts the stack and behavior_validate_spec()
-  # refuses a conversion module without the bathtub (src/sim/behavior.R). The
-  # input guards below stay, because they are about this scenario's MTRs rather
-  # than the shape of the stack.
-
-  # --- Guard: required MTRs registered and present in both frames.
-  required = SIGMA_REQUIRED_MTRS
-  missing  = if (is.null(static_mtrs) || is.null(baseline_mtrs)) required else
-             setdiff(required, intersect(names(static_mtrs),
-                                         names(baseline_mtrs)))
-  if (length(missing) > 0) {
-    stop('do_conversion(): the sigma module requires registered MTRs for ',
-         'wages1, wages2, part_active, sole_prop1, and scorp_active ',
-         '(mtr_vars = "wages1 wages2 part_active sole_prop1 scorp_active ',
-         'kg_lt ..."). The runscript for scenario "', scenario_info$ID,
-         '" is missing: ', paste(missing, collapse = ', '), '.')
-  }
+  # This module used to open with three guards: that kg_dynamics was present, that
+  # the families ran in the pinned order, and that this scenario registered the
+  # marginal rates the wedge is measured from. The first two are settled before the
+  # run starts, by the loader and by behavior_validate_spec() (src/sim/behavior.R).
+  # The third belongs to the pre-pass, which is where the rates are now read.
 
   # --- Guard: the year's kg state file with the sigma tracker.
   state_path = kg_dyn_state_path(scenario_info, year)
@@ -87,10 +76,8 @@ do_conversion = function(tax_units, baseline_mtrs, static_mtrs,
   message('do_conversion(): applying sigma income conversion (',
           SIGMA_CONV_VERSION, '; sigma = ', kg_conversion('conv'), ')')
 
-  conv = sigma_module_recompute(
+  conv = sigma_module_conversions(
     tax_units     = tax_units,
-    baseline_mtrs = baseline_mtrs,
-    static_mtrs   = static_mtrs,
     scenario_info = scenario_info,
     state         = state,
     year          = year

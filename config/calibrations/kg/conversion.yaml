@@ -11,12 +11,12 @@
 #              target -- other/top_tax/tests/compute_top_eti.R
 # Read by    : the behavior leg, through the `conversion` piece of kg_dynamics.
 #
-# This file ships with a waiver because sigma is a residual. Entity shifting and
-# evasion supply about 0.22 of the 0.25 top-income elasticity target on their own,
-# so sigma is whatever closes the gap, which makes it conditional on the rest of
-# the stack in a way a directly estimated parameter would not be. It was also
-# derived with a charitable elasticity of -1.0 where production runs use -0.5.
-# Until it is re-derived, capital gains runs print a waiver banner.
+# sigma is a residual. Entity shifting and evasion supply about 0.18 of the 0.25
+# top-income elasticity target on their own, so sigma is whatever closes the gap,
+# which makes it conditional on the rest of the stack in a way a directly estimated
+# parameter would not be. That is why the whole stack appears in its dependency
+# list, and why a change to any part of it costs a re-derivation rather than a
+# re-hash.
 
 _channel:
   role: state
@@ -49,6 +49,15 @@ conv:
     src/behavior/charity/50.R: dede5ce971690cdc05465114730ec080
     src/sim/sigma_conversion.R: 'd9b9a24106fbcb5c271a02883cb31dc1'
   rederive: other/top_tax/sigma_calib/measure_sigma.R
+  acknowledged:
+    date: '2026-07-30'
+    reason: >
+      Pinned before the conversion wedge moved onto the mechanical rung's rates and
+      before the module began applying the pre-pass's per-record conversions rather
+      than working them out again. Both change the measured conversion, so this
+      value owes a re-derivation and is not merely re-hashed. Being re-derived now;
+      this block goes when the new value lands, and no shipped estimate is built
+      under it.
   note: >
     Derived under src/behavior/charity/50.R, the charitable elasticity of -0.5 that
     production runs use. Method and measured legs:

@@ -137,8 +137,16 @@ do_scenario = function(ID, baseline_mtrs) {
     }
 
     if (uses_kg) {
+      # The conversion wedge is measured on the same two frames the behavior
+      # modules read, which is what keeps the dollars entering the stock of gains
+      # equal to the dollars leaving the records
       run_bathtub_pass(scenario_info, tax_law,
-                       vat_price_offset = vat_price_offset)
+                       vat_price_offset = vat_price_offset,
+                       mech_mtrs        = if (uses_mech &&
+                                              !is.null(scenario_info$mtr_vars))
+                                            list(reform   = conv_static_mtrs,
+                                                 baseline = conv_baseline_mtrs)
+                                          else NULL)
     }
 
     if (uses_wealth) {
@@ -1658,12 +1666,13 @@ run_one_year = function(year, scenario_info, tax_law, baseline_mtrs,
 
 
 run_bathtub_pass = function(scenario_info, tax_law,
-                            vat_price_offset = NULL) {
+                            vat_price_offset = NULL,
+                            mech_mtrs = NULL) {
 
   #----------------------------------------------------------------------------
   # Runs the capital gains bathtub pre-pass for one scenario. Aggregates baseline
   # cells from Tax-Data, builds gain-stock-weighted cell rates from the baseline
-  # and reform static detail, and runs the year-by-year recurrence. Writes
+  # and reform detail, and runs the year-by-year recurrence. Writes
   # per-year state files under the scenario's
   # conventional/supplemental/kg_dynamics_state/, which the behavior module reads
   # on the conventional pass.
@@ -1673,6 +1682,10 @@ run_bathtub_pass = function(scenario_info, tax_law,
   #   - tax_law (df)                : joined tax law tibble; see build_tax_law()
   #   - vat_price_offset (df)       : VAT price offset tibble, read only to refuse
   #                                   the run when a VAT is active
+  #   - mech_mtrs (list)            : the mechanical rung's two rate frames, named
+  #                                   reform and baseline, both priced on that
+  #                                   rung. The conversion wedge is measured from
+  #                                   them. NULL where the rung does not run
   #
   # Returns: invisible NULL (writes files as a side effect).
   #----------------------------------------------------------------------------
@@ -1695,9 +1708,10 @@ run_bathtub_pass = function(scenario_info, tax_law,
 
   # Build the income-conversion context. The bathtub pass computes per-record
   # conversions each year, injects the cell inflow into the recurrence, and writes
-  # the cell tracker into the state files. Pool legs come from raw Tax-Data, and
-  # taxable income and the per-leg MTRs from the baseline and scenario static
-  # detail.
+  # both the cell tracker and the per-record conversions into the state files,
+  # which is where the behavior module reads them. Pool legs come from raw
+  # Tax-Data, taxable income from the scenario's static detail, and the per-leg
+  # rates from the mechanical rung where it runs.
   sigma_ctx = NULL
   if (scenario_uses_sigma(scenario_info)) {
     sigma_ctx = sigma_build_ctx(
@@ -1705,7 +1719,8 @@ run_bathtub_pass = function(scenario_info, tax_law,
       tax_law       = tax_law,
       baseline_root = globals$baseline_root,
       sample_ids    = globals$sample_ids,
-      pct_sample    = globals$pct_sample
+      pct_sample    = globals$pct_sample,
+      mech_mtrs     = mech_mtrs
     )
   }
 

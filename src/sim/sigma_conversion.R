@@ -85,19 +85,13 @@ SIGMA_TD_COLS = c('id', 'weight', 'filing_status', 'age1', 'age2',
                   'wages1', 'wages2', 'part_active', 'scorp_active',
                   'sole_prop')
 
-# How far the module's recomputed total may sit from what the pre-pass wrote.
-# Loose enough to absorb the small drift in pass-through legs when the wealth
-# haircut or the corporate step ran before the behavior modules, since both scale
-# those legs. That drift compounds over the horizon, so a tolerance tight enough
-# for the first decade fails in the out-years. The errors this guard exists to
-# catch diverge by half or more, not a few percent.
-SIGMA_CONSERVE_RTOL = 0.05
-
-# The check fails only if the divergence exceeds this as well as the relative bar.
-# The total is a net flow that can sit near zero, when a package moves rates in
-# opposite directions, and then a trivial dollar difference reads as a large
-# relative one. A real error here is in the billions.
-SIGMA_CONSERVE_ATOL = 2.5e8
+# A conversion that the live frame's own leg cannot cover is reported once the
+# clamped share of the year's flow passes this. The pre-pass prices the decision on
+# the mechanical frame and the module applies that answer to a frame the wealth
+# drawdown has since eroded, so a record's leg can come in under the conversion the
+# pre-pass gave it. The clamp keeps income from going negative; this bar decides
+# when the gap is large enough to say so.
+SIGMA_CLAMP_WARN_SHARE = 0.01
 
 
 scenario_uses_sigma = function(scenario_info) {
@@ -171,12 +165,21 @@ sigma_check_mtr_registration = function(scenario_info) {
 
 sigma_build_ctx = function(scenario_info, tax_law, baseline_root,
                            sample_ids, pct_sample,
-                           sigma = kg_conversion('conv')) {
+                           sigma = kg_conversion('conv'),
+                           mech_mtrs = NULL) {
 
   #----------------------------------------------------------------------------
   # Assembles what the pre-pass needs to compute conversions. Checks the parameters
   # and the registered marginal rates, and resolves the thresholds by year. Each
   # year's own inputs are read when that year comes up.
+  #
+  # mech_mtrs carries the mechanical rung's two rate frames, reform law and
+  # baseline law, both priced on the mechanical frame. Supplied wherever that rung
+  # runs, and the wedge is measured from them: a response reads the price change
+  # from the law, both sides at the circumstances the taxpayer has after everything
+  # outside his control has happened to him. Left NULL where the rung does not run,
+  # and then the mechanical frame is the static frame and the static detail stands
+  # in unchanged.
   #----------------------------------------------------------------------------
 
   if (!is.finite(sigma) || sigma < 0 || sigma > 5) {
@@ -185,13 +188,28 @@ sigma_build_ctx = function(scenario_info, tax_law, baseline_root,
   }
   sigma_check_mtr_registration(scenario_info)
 
+  if (!is.null(mech_mtrs)) {
+    for (side in c('reform', 'baseline')) {
+      frame = mech_mtrs[[side]]
+      if (is.null(frame) || !all(c('id', 'year') %in% names(frame))) {
+        stop('sigma_conversion: mech_mtrs$', side, ' must carry id and year.')
+      }
+      missing_cols = setdiff(SIGMA_REQUIRED_MTRS, names(frame))
+      if (length(missing_cols) > 0) {
+        stop('sigma_conversion: mech_mtrs$', side, ' lacks ',
+             paste(missing_cols, collapse = ', '), '.')
+      }
+    }
+  }
+
   list(
     scenario_info = scenario_info,
     baseline_root = baseline_root,
     sample_ids    = sample_ids,
     pct_sample    = pct_sample,
     thresholds    = sigma_top_thresholds(tax_law, scenario_info$years),
-    sigma         = sigma
+    sigma         = sigma,
+    mech_mtrs     = mech_mtrs
   )
 }
 
@@ -202,8 +220,10 @@ sigma_load_year_inputs = function(ctx, year) {
   #----------------------------------------------------------------------------
   # Assembles one year's pool. The income legs and demographics come from raw
   # Tax-Data, which is the right unit system since these channels refuse a VAT
-  # scenario. Taxable income and the marginal rates come from the two legs' static
-  # detail.
+  # scenario. Taxable income comes from the scenario's static detail.
+  #
+  # The marginal rates come from the mechanical rung's two frames where that rung
+  # runs, and from the two legs' static detail where it does not.
   #----------------------------------------------------------------------------
 
   scenario_info = ctx$scenario_info
@@ -229,13 +249,36 @@ sigma_load_year_inputs = function(ctx, year) {
     fread(f, select = cols, showProgress = FALSE) %>% as_tibble()
   }
 
-  static_det = read_detail(
-    file.path(scenario_info$output_path, 'static', 'detail'),
-    c('id', 'txbl_inc', SIGMA_REQUIRED_MTRS))
-  baseline_det = read_detail(
-    file.path(ctx$baseline_root, 'baseline', 'static', 'detail'),
-    c('id', SIGMA_REQUIRED_MTRS)) %>%
-    rename_with(.cols = -id, .fn = ~ paste0(., '_baseline'))
+  if (is.null(ctx$mech_mtrs)) {
+    static_det = read_detail(
+      file.path(scenario_info$output_path, 'static', 'detail'),
+      c('id', 'txbl_inc', SIGMA_REQUIRED_MTRS))
+    baseline_det = read_detail(
+      file.path(ctx$baseline_root, 'baseline', 'static', 'detail'),
+      c('id', SIGMA_REQUIRED_MTRS)) %>%
+      rename_with(.cols = -id, .fn = ~ paste0(., '_baseline'))
+
+  } else {
+    static_det = read_detail(
+      file.path(scenario_info$output_path, 'static', 'detail'),
+      c('id', 'txbl_inc')) %>%
+      left_join(ctx$mech_mtrs$reform %>%
+                  filter(year == !!year) %>%
+                  select(id, all_of(SIGMA_REQUIRED_MTRS)),
+                by = 'id')
+    baseline_det = ctx$mech_mtrs$baseline %>%
+      filter(year == !!year) %>%
+      select(id, all_of(SIGMA_REQUIRED_MTRS)) %>%
+      rename_with(.cols = -id, .fn = ~ paste0(., '_baseline'))
+
+    missing_rate = static_det %>% filter(is.na(.data[[SIGMA_REQUIRED_MTRS[1]]]))
+    if (nrow(missing_rate) > 0) {
+      stop('sigma_conversion: the mechanical rung supplied no marginal rates for ',
+           nrow(missing_rate), ' record(s) in year ', year, '. The rung prices ',
+           'every record it runs, so a gap means the frames come from a ',
+           'different year or a different sample.')
+    }
+  }
 
   td %>%
     mutate(age_cohort = sigma_age_cohort(filing_status, age1, age2)) %>%
@@ -365,9 +408,15 @@ sigma_aggregate_inflow = function(conv,
 sigma_make_tracker = function(conv, conv_inflow, sigma, thresholds_t, year) {
 
   #----------------------------------------------------------------------------
-  # What gets written into the state file: the cell totals, the size and composition
-  # of the pool, the average wedges, the thresholds, and the response parameter,
-  # which the behavior module checks against its own.
+  # What gets written into the state file: the per-record conversions, the cell
+  # totals, the size and composition of the pool, the average wedges, the
+  # thresholds, and the response parameter, which the behavior module checks
+  # against its own.
+  #
+  # The per-record conversions travel because the module applies them rather than
+  # working them out again. The dollars entering the stock of gains and the dollars
+  # leaving the records are then the same dollars, by construction, rather than two
+  # answers to the same question that have to be checked against each other.
   #----------------------------------------------------------------------------
 
   gated = conv %>% filter(gate)
@@ -384,6 +433,10 @@ sigma_make_tracker = function(conv, conv_inflow, sigma, thresholds_t, year) {
   list(
     version           = SIGMA_CONV_VERSION,
     year              = year,
+    conv_records      = conv %>%
+                          filter(conv_total != 0) %>%
+                          select(id, conv_w1, conv_w2, conv_part, conv_scorp,
+                                 conv_sole, conv_total),
     sigma             = sigma,
     conv_inflow       = conv_inflow,
     conv_total        = sum(conv_inflow),
@@ -459,20 +512,28 @@ sigma_compute_year = function(ctx, year, tau_eq_B_col, tau_eq_S_col,
 # Helpers for the behavior module
 #-------------------------------------------------------------------------------
 
-sigma_module_recompute = function(tax_units, baseline_mtrs, static_mtrs,
-                                  scenario_info, state, year) {
+sigma_module_conversions = function(tax_units, scenario_info, state, year) {
 
   #----------------------------------------------------------------------------
-  # Recomputes the conversions inside the behavior module, from the same inputs the
-  # pre-pass used: the live frame's income legs, the year's marginal rates, and the
-  # priced gain and thresholds the pre-pass wrote out. Checks the total against what
-  # the pre-pass wrote.
+  # Reads the conversions the pre-pass computed for this year and lines them up
+  # with the live frame, clamping each leg to what that leg can cover.
+  #
+  # The pre-pass is the only place the conversion is worked out. It prices the
+  # decision on the mechanical rung, which is settled before any year is
+  # simulated, so nothing later in the year pass can change the answer. Applying
+  # its numbers rather than recomputing them is what makes the dollars entering
+  # the stock of gains and the dollars leaving the records the same dollars.
+  #
+  # The clamp is the one place the live frame still gets a say. Conversion cannot
+  # exceed the leg it comes out of, and the wealth drawdown erodes the
+  # pass-through legs at the head of the pass, so a record can arrive with less
+  # income than the pre-pass gave it to convert. Clamping keeps income from going
+  # negative and the clamped share of the flow is reported.
   #
   # Returns: the conv frame (one row per tax_units row, original order).
   #----------------------------------------------------------------------------
 
-  tracker    = state$sigma
-  cell_table = state$cell_table
+  tracker = state$sigma
 
   if (is.null(tracker)) {
     stop('sigma_conversion: kg state file for year ', year, ' carries no ',
@@ -481,6 +542,12 @@ sigma_module_recompute = function(tax_units, baseline_mtrs, static_mtrs,
          '(it computes conversions and injects the gain-state inflow); ',
          're-run the pipeline with the current runscript.')
   }
+  if (is.null(tracker$conv_records)) {
+    stop('sigma_conversion: the sigma tracker for year ', year, ' carries no ',
+         'per-record conversions. The state file was written by a pre-pass that ',
+         'expected the module to work them out again; re-run the bathtub pass ',
+         'with the current code.')
+  }
   if (!isTRUE(all.equal(tracker$sigma, kg_conversion('conv')))) {
     stop('sigma_conversion: sigma.conv drift between the pre-pass (',
          tracker$sigma, ') and the behavior module (',
@@ -488,62 +555,47 @@ sigma_module_recompute = function(tax_units, baseline_mtrs, static_mtrs,
          'identical across pipeline phases.')
   }
 
-  tau_eq_B_col = setNames(cell_table$tau_eq_B, as.character(cell_table$age))
-  tau_eq_S_col = setNames(cell_table$tau_eq_S, as.character(cell_table$age))
+  # Every converting record has to be on the live frame. A gap means the two
+  # phases drew different samples, which would silently drop conversions the
+  # stock of gains has already been credited with.
+  absent = setdiff(tracker$conv_records$id, tax_units$id)
+  if (length(absent) > 0) {
+    stop('sigma_conversion: ', length(absent), ' record(s) with conversions in ',
+         'year ', year, ' are not on the live frame. The pre-pass and the ',
+         'conventional pass must run over the same sample.')
+  }
 
-  # Taxable income comes from the static detail, as it does in the pre-pass. The
-  # live frame has none before do_taxes() has run.
-  static_txbl = file.path(scenario_info$output_path, 'static', 'detail',
-                          paste0(year, '.csv')) %>%
-    fread(select = c('id', 'txbl_inc'), showProgress = FALSE) %>%
-    as_tibble()
+  zero_cols = c('conv_w1', 'conv_w2', 'conv_part', 'conv_scorp', 'conv_sole',
+                'conv_total')
 
-  mtr_b = baseline_mtrs %>%
-    filter(year == !!year) %>%
-    select(id, all_of(SIGMA_REQUIRED_MTRS)) %>%
-    rename_with(.cols = -id, .fn = ~ paste0(., '_baseline'))
-  mtr_s = static_mtrs %>%
-    filter(year == !!year) %>%
-    select(id, all_of(SIGMA_REQUIRED_MTRS))
+  conv = tibble(id = tax_units$id, weight = tax_units$weight) %>%
+    left_join(tracker$conv_records, by = 'id') %>%
+    mutate(across(all_of(zero_cols), ~ coalesce(., 0)))
 
-  pool = tax_units %>%
-    select(id, weight, filing_status, age1, age2,
-           wages1, wages2, part_active, scorp_active, sole_prop) %>%
-    mutate(age_cohort = sigma_age_cohort(filing_status, age1, age2)) %>%
-    left_join(static_txbl, by = 'id') %>%
-    left_join(mtr_b, by = 'id') %>%
-    left_join(mtr_s, by = 'id')
+  # Clamp each leg to the live frame, each to its own source column
+  leg_for = c(conv_w1    = 'wages1',
+              conv_w2    = 'wages2',
+              conv_part  = 'part_active',
+              conv_scorp = 'scorp_active',
+              conv_sole  = 'sole_prop')
 
-  conv = sigma_compute_conversions(
-    pool         = pool,
-    thresholds_t = tracker$thresholds,
-    tau_eq_B_col = tau_eq_B_col,
-    tau_eq_S_col = tau_eq_S_col,
-    sigma        = kg_conversion('conv')
-  )
+  asked = sum(conv$weight * conv$conv_total)
+  for (nm in names(leg_for)) {
+    leg = replace_na(as.numeric(tax_units[[leg_for[[nm]]]]), 0)
+    conv[[nm]] = pmin(pmax(conv[[nm]], -abs(leg)), abs(leg))
+  }
+  conv$conv_total = with(conv, conv_w1 + conv_w2 + conv_part + conv_scorp +
+                                 conv_sole)
+  given = sum(conv$weight * conv$conv_total)
 
-  # The recomputed conversions must match what the pre-pass added to the stock of
-  # gains. Exact where the live frame's legs still equal raw Tax-Data; the tolerance
-  # absorbs the small scaling the wealth and corporate steps apply ahead of this.
-  module_total = sum(conv$weight * conv$conv_total)
-  prepass_total = tracker$conv_total
-  denom = max(abs(prepass_total), 1e6)
-  rel   = abs(module_total - prepass_total) / denom
-  message(sprintf(
-    paste0('sigma_conversion: year %d conservation check: module $%.4fB vs ',
-           'pre-pass $%.4fB (rel diff %.2e).'),
-    year, module_total / 1e9, prepass_total / 1e9, rel))
-  if (rel > SIGMA_CONSERVE_RTOL &&
-      abs(module_total - prepass_total) > SIGMA_CONSERVE_ATOL) {
-    stop(sprintf(
-      paste0('sigma_conversion: conservation failure in year %d: module ',
-             'recompute (%.6g) vs persisted cell inflow (%.6g), rel diff ',
-             '%.3e > %.1e and abs diff $%.3fB > $%.3fB. Records applied and ',
-             'dollars injected into the gain state have diverged; check that ',
-             'pre-pass and module see the same MTR frames, thresholds, and ',
-             'pool legs.'),
-      year, module_total, prepass_total, rel, SIGMA_CONSERVE_RTOL,
-      abs(module_total - prepass_total) / 1e9, SIGMA_CONSERVE_ATOL / 1e9))
+  clamped_share = if (abs(asked) > 1e6) abs(given - asked) / abs(asked) else 0
+  if (clamped_share > SIGMA_CLAMP_WARN_SHARE) {
+    warning(sprintf(
+      paste0('sigma_conversion: in year %d the live frame could cover only ',
+             '$%.3fB of the $%.3fB the pre-pass converted, a shortfall of ',
+             '%.1f%%. The stock of gains carries the pre-pass figure, so that ',
+             'much of the year\'s inflow has no matching income reduction.'),
+      year, given / 1e9, asked / 1e9, 100 * clamped_share), call. = FALSE)
   }
 
   conv
