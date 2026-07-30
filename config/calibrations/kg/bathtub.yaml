@@ -20,12 +20,13 @@
 # the file that points here.
 #
 # The reform-side rates these calibrations read come from the mechanical rung
-# rather than the static one. eta_logs was re-derived under that convention on
-# 2026-07-29, moving from 1.6625 to 1.6692. The two levels-form entries are
-# dormant under the shipped configuration and were not re-derived, so a run that
-# flips response_form stops until they are. timeable_share_logs is still pinned to
-# inputs.R as it was before the change and reports stale. Notes at
-# other/mechanical_pass/DESIGN.md.
+# rather than the static one, and the cell averages now drop records whose
+# measured marginal rate on gains falls outside the unit interval. eta_logs is
+# derived under both. The two levels-form entries are dormant under the shipped
+# configuration and were derived under neither, so a run that flips response_form
+# stops until they are re-derived. timeable_share_logs is pinned as it was before
+# both changes and reports stale. Notes at other/mechanical_pass/DESIGN.md and
+# other/top_tax/v6_run_state.md.
 #
 # inputs.R is a dependency because it decides which rung's detail the cell rates
 # are read from, which feeds the measured elasticity as directly as the Bellman
@@ -87,7 +88,7 @@ eta:
     eta_dial_e20_v2 eta_dial_c_v2 eta_dial_e30_v2.
 
 eta_logs:
-  value: 1.6692
+  value: 1.6342
   kind: calibrated
   set: '2026-07-29'
   target: >
@@ -96,7 +97,7 @@ eta_logs:
     the +5pp gains shock across the trial grid (1.5 1.9 2.3), inverted
     piecewise for the eta_tilde that hits E_full = -2.5210 (= -0.6/0.238,
     the author-locked top-rate divisor). Measured E_full at each grid point:
-    -2.2730 -2.8594 -3.4508.
+    -2.3240 -2.9113 -3.5036.
   derived_under:
     tax_data: '2026070814'
     macro_projections: '2026022522'
@@ -108,31 +109,24 @@ eta_logs:
     - src/sim/kg/apply.R
     - src/sim/kg/inputs.R
   invalidated_by_hashes:
-    src/sim/kg/constants.R: '54f11bfc9f9d613373cd39e453f09168'
+    src/sim/kg/constants.R: '1d1f2f5e56cfe5221acd2747aef238bf'
     src/sim/kg/bellman.R: '1aa6776c70f4d508eec34de176318dd7'
     src/sim/kg/recurrence.R: '996464e2be1f5ba854712d6463c3a785'
     src/sim/kg/timing.R: cda95c0c59a0f210ae6dc1d606c3b82e
-    src/sim/kg/apply.R: '7c492eed46072763e8de8b2994f0de10'
-    src/sim/kg/inputs.R: '901fcdd1491a8ab680b1d900f7e5980c'
+    src/sim/kg/apply.R: ad6c6cb405f4f8614f87362e6f4d4927
+    src/sim/kg/inputs.R: de62007711ce0746aec13022df0bc3cb
   conditioned_on:
     settings.kg.applier_allocation: '0.5'
     settings.kg.timing_ref_wedge: 0.05
     settings.kg.timing_window: 1
   rederive: other/kg_model_tests/form_ab/measure_efull_logs.R
-  acknowledged:
-    date: '2026-07-29'
-    reason: >
-      Pinned before the cell averages began dropping records whose measured
-      marginal rate on gains falls outside the unit interval. Being re-derived
-      under that rule now; this block goes when the new value lands, and no
-      shipped estimate is built under it.
   active_when:
     kg.response_form: logs
   note: >
     LIVE by default (response_form = 'logs' since 2026-07-22). Lower than
     the levels eta because the net-of-tax full-sim slope is steeper, so the
     same E_full needs a smaller eta_tilde. Through-origin inversion for
-    comparison: 1.6753 (residuals +0.0157 +0.0002 -0.0104) -- the shipped
+    comparison: 1.6461 (residuals +0.0268 +0.0015 -0.0188) -- the shipped
     value is the piecewise one. Grid + fit:
     other/kg_model_tests/form_ab/eta_tilde_fit.csv, and the trial values
     themselves are config/calibrations/kg/sweeps/eta_logs_*/bathtub.yaml.
@@ -208,13 +202,15 @@ timeable_share_logs:
   acknowledged:
     date: '2026-07-29'
     reason: >
-      Pinned to inputs.R before the reform-side cell rates moved to the mechanical
-      rung, and not re-derived. eta_logs was re-derived under the new convention on
-      the same day and moved 0.40 percent, from 1.6625 to 1.6692, so this share's
-      own drift is expected to be of that order. The long-run moment eta is measured
-      from does not depend on the share, which was checked across the grid, so the
-      shipped eta does not inherit the staleness. Re-deriving means three
-      full-sample vintages through measure_timeable.R.
+      Pinned before the reform-side cell rates moved to the mechanical rung and
+      before the cell averages began dropping records whose measured marginal rate
+      on gains falls outside the unit interval, and not re-derived under either.
+      eta_logs was re-derived under both and moved 1.7 percent in total, from
+      1.6625 to 1.6342, so this share's own drift is expected to be of that order.
+      The long-run moment eta is measured from does not depend on the share, which
+      was checked across the grid, so the shipped eta does not inherit the
+      staleness. Re-deriving means three full-sample vintages through
+      measure_timeable.R.
   conditioned_on:
     settings.kg.timing_window: 1
     settings.kg.timing_ref_wedge: 0.05
