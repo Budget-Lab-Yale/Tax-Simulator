@@ -1,4 +1,4 @@
-<title>Figure 5 — capital-gains Laffer curves by treatment of gains at death</title>
+<title>Figure 4 — capital-gains Laffer curves by treatment of gains at death</title>
 <style>
   :root {
     --paper:#f9fafb; --ink:#1c2733; --ink2:#3c4a59; --muted:#5a6b7d; --line:#dce3ea; --grid:#e8edf2;
@@ -32,9 +32,6 @@
   h1 { font-size:1.6rem; margin:0 0 .35rem; line-height:1.2; }
   .standfirst { color:var(--muted); font-style:italic; margin:0; max-width:52rem; }
 
-  .readme { display:flex; flex-wrap:wrap; gap:.5rem 1.3rem; font-family:system-ui,sans-serif; font-size:.76rem;
-    color:var(--ink2); background:var(--card); border:1px solid var(--line); border-radius:7px; padding:.6rem .9rem; margin:1rem 0 0; }
-  .readme b { color:var(--ink); }
 
   .fig { background:var(--card); border:1px solid var(--line); border-radius:8px;
     padding:1.3rem 1.4rem 1.05rem; margin:1.4rem 0; }
@@ -56,45 +53,26 @@
 
 <div class="wrap">
 <header>
-  <p class="eyebrow">Figure 5 · capital-gains Laffer curves by treatment of gains at death · dials-v6, % of GDP</p>
-  <h1>How much a higher capital-gains rate can raise depends on what happens at death</h1>
-  <p class="standfirst">Third-decade revenue (FY2047–56, as a share of GDP) from raising the top rate on capital
-  gains and dividends, traced out under three treatments of unrealized gains at death. Under current-law step-up
-  the curve peaks near a 43.8% rate at about 0.13% of GDP and then falls; replacing step-up lifts both the starting
-  level and how far the rate can climb before it stops paying.</p>
+  <p class="eyebrow">The Budget Lab · Tax-Simulator</p>
+  <h1>Capital gains rates and what happens at death</h1>
 </header>
 
-<div class="readme">
-  <span><b>How to read:</b> horizontal axis = the top capital-gains &amp; dividend rate, including the 3.8% net investment income tax.</span>
-  <span>Vertical axis = conventional revenue as a share of GDP, third projection decade (FY2047–56), all federal sources.</span>
-  <span>One line per treatment of gains at death; the left end (23.8%) is the current rate.</span>
-</div>
+
 
 <div class="fig">
-  <p class="opt">Figure 5 · revenue vs. the top rate, three death regimes</p>
-  <h2>Step-up caps the capital-gains rate as a revenue tool; reforming it raises the ceiling</h2>
-  <p class="sub">Conventional revenue as % of GDP, third decade (FY2047–56) · behavioral responses included · shared scale</p>
+  <p class="opt">Figure 4</p>
+  <h2>Revenue from the top capital-gains rate, under three treatments of gains at death</h2>
+  <p class="sub">Third decade, FY2047–56 · percent of GDP · conventional</p>
   <svg id="fig5" role="img" aria-label="Three revenue curves rising with the top capital-gains rate. The deemed-realization curve is far above the carryover curve, which is far above the flat, low current-law step-up curve."></svg>
   <div class="legend">
     <span class="key"><span class="sw" style="background:var(--b-est)"></span>Deemed realization at death</span>
     <span class="key"><span class="sw" style="background:var(--b-iit)"></span>Carryover basis</span>
     <span class="key"><span class="sw" style="background:var(--b-cg)"></span>Current law — step-up in basis</span>
   </div>
-  <p class="cap"><b>Under step-up, the capital-gains rate stops paying around 43.8%.</b>
-  Revenue peaks near a 43.8% rate at about <b>0.13% of GDP</b> and then <b>declines</b> — extra rate loses
-  money, because it pushes more gains to be held until death and escape tax entirely under step-up. (The
-  turnover is behavioral: the old mechanical ceiling at the ordinary top rate has been removed, so the
-  rate is free to bite higher until deferral bends the curve back down.)
-  Reforming step-up changes the picture two ways. It <b>raises the starting level</b>: at today's 23.8% rate,
-  taxing gains at death already collects ~<b>0.17% of GDP</b> (carryover ~0.08%) with no rate change at all.
-  And it <b>keeps the rate productive</b>: with deferral closed, the same rate increases keep pulling in
-  revenue, reaching ~<b>0.59% of GDP</b> at 53.8% — roughly <b>4× the step-up curve</b> at its own peak.
-  Carryover sits between the two, peaking near 48.8%. Rates on the axis are statutory capital-gains rates
-  plus the 3.8% net investment income tax, which the model holds at current law throughout. Source: Tax-Simulator, revmax grid on the dials-v6
-  physics (net-of-tax realization form, uncapped capital-gains rate); values are total conventional revenue
-  over the third projection decade (FY2047–56) as a share of cumulative GDP over that decade. All three
-  curves are direct model runs at every plotted point — no surrogate composition. Curves are total revenue, so they include the death regime's own yield; the shape, not any
-  single number, is the point.</p>
+  <p class="cap">Total federal revenue, all sources, so each curve includes the
+  yield of its own death regime. Rates on the axis are statutory plus the 3.8% net investment income
+  tax, which is held at current law. Every plotted point is a direct model run. Source: Tax-Simulator,
+  revmax grid on dials-v6.</p>
 </div>
 </div>
 

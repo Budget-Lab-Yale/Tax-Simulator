@@ -1,4 +1,4 @@
-<title>Figures 3 and 4 — the same rate increases, with and without taxing gains at death</title>
+<title>Figures 2 and 3 — the same rate increases, with and without taxing gains at death</title>
 <style>
   :root {
     --paper:#f9fafb; --ink:#1c2733; --muted:#5a6b7d; --line:#dce3ea; --grid:#e8edf2;
@@ -43,8 +43,8 @@
             font-size:.75rem; color:var(--muted); margin:0 0 .5rem; }
   .key { display:inline-flex; align-items:center; gap:.4rem; }
   .sw { width:11px; height:11px; border-radius:2px; display:inline-block; }
-  .sw.stat { opacity:.42; }
-  .sw.mid { opacity:.72; }
+  .sw.stat { opacity:.26; }
+  .sw.mid { opacity:.58; }
   .defs { font-family:system-ui,sans-serif; font-size:.73rem; color:var(--muted);
           margin:0 0 .7rem; padding:.5rem .7rem; background:var(--paper);
           border:1px solid var(--grid); border-radius:6px; line-height:1.5; }
@@ -56,70 +56,40 @@
 
 <div class="wrap">
 <header>
-  <p class="eyebrow">Figures 3 &amp; 4 · third decade (FY2047–56) · % of GDP · dials-v6 surrogate</p>
-  <h1>Figures 3 and 4</h1>
-  <p class="standfirst">The same corporate and capital-gains rate increases, added one policy at a
-  time — first under current law, then on a base that also taxes gains at death. Each policy appears
-  three times, first-order, mechanical and conventional, as a share of GDP and colored by the tax base
-  where the revenue lands. Shown for the third decade, once the long-run realization response has
-  largely played out.</p>
+  <p class="eyebrow">The Budget Lab · Tax-Simulator</p>
+  <h1>Figures 2 and 3</h1>
 </header>
 
 <div class="fig">
-  <p class="opt">Figure 3</p>
-  <h2>Revenue from a corporate and capital-gains rate increase, first-order, mechanical and conventional, 2047–56</h2>
-  <p class="sub">Third decade (FY2047–56), % of GDP · each policy shown first-order, mechanical and conventional · ▲ / ▼ = conventional minus first-order</p>
+  <p class="opt">Figure 2</p>
+  <h2>Revenue from a capital-gains and a corporate rate increase</h2>
+  <p class="sub">Third decade, FY2047–56 · percent of GDP</p>
   <div class="legend">
     <span class="key"><span class="sw" style="background:var(--b-cg)"></span>Capital gains</span>
     <span class="key"><span class="sw" style="background:var(--b-corp)"></span>Corporate</span>
     <span class="key"><span class="sw" style="background:var(--b-iit)"></span>Ordinary income</span>
     <span class="key"><span class="sw" style="background:var(--b-est)"></span>Estate</span>
-    <span class="key"><span class="sw stat" style="background:var(--ink)"></span>first-order</span>
-    <span class="key"><span class="sw mid" style="background:var(--ink)"></span>mechanical</span>
-    <span class="key"><span class="sw" style="background:var(--ink)"></span>conventional</span>
   </div>
-  <p class="defs"><b>First-order</b> — the tax change itself, accounting for neither mechanical
-  tax-base interactions nor behavioral feedback. <b>Mechanical</b> — adds the mechanical interactions
-  between tax bases. <b>Conventional</b> — adds behavioral feedback as well, and is the revenue
-  actually collected.</p>
-  <svg id="fig3" role="img" aria-label="Capital gains then corporate, each shown first-order, mechanical and conventional, broken out by tax base"></svg>
-  <p class="cap">The distance from the first bar to the second is what one tax costs the others
-  mechanically; the distance from the second to the third is what behavior costs. In the third decade
-  the capital-gains rate increase is 0.14% of GDP first-order, 0.12% mechanical and 0.06% conventional:
-  most of the gap is deferral of realizations under step-up in basis. The corporate rate increase is
-  0.24% of GDP first-order, 0.21% mechanical and 0.18% conventional, as C-corporate income is
-  recharacterized as pass-through, draining corporate revenue and lifting ordinary-income revenue. The
-  package collects 64 cents of every first-order dollar. Both policies also reduce estate revenue
-  slightly (shown left of zero). A payroll head of at most 0.002% of GDP is omitted.
-  Source: The Budget Lab Tax-Simulator, dials-v6 surrogate.</p>
+  <svg id="fig3" role="img" aria-label="Capital gains then corporate, each shown as the first-order tax change and after mechanical and behavioral effects, broken out by tax base"></svg>
+  <p class="cap">Each policy is added on top of the one above it. The first-order tax change is the
+  rate change alone; mechanical effects are the interactions between tax bases; behavioral effects are
+  the taxpayer response. ▼ and ▲ give the step from the bar above. Segments left of zero are revenue lost from a
+  base. A payroll head of at most 0.002% of GDP is omitted. Source: Tax-Simulator, dials-v6.</p>
 </div>
 
 <div class="fig">
-  <p class="opt">Figure 4</p>
-  <h2>Revenue from the same increases with gains taxed at death, first-order, mechanical and conventional, 2047–56</h2>
-  <p class="sub">Third decade (FY2047–56), % of GDP · each policy shown first-order, mechanical and conventional · ▲ / ▼ = conventional minus first-order · shared scale with Figure 3</p>
+  <p class="opt">Figure 3</p>
+  <h2>The same increases, with gains taxed at death</h2>
+  <p class="sub">Third decade, FY2047–56 · percent of GDP</p>
   <div class="legend">
     <span class="key"><span class="sw" style="background:var(--b-cg)"></span>Capital gains</span>
     <span class="key"><span class="sw" style="background:var(--b-corp)"></span>Corporate</span>
     <span class="key"><span class="sw" style="background:var(--b-iit)"></span>Ordinary income</span>
     <span class="key"><span class="sw" style="background:var(--b-est)"></span>Estate</span>
-    <span class="key"><span class="sw stat" style="background:var(--ink)"></span>first-order</span>
-    <span class="key"><span class="sw mid" style="background:var(--ink)"></span>mechanical</span>
-    <span class="key"><span class="sw" style="background:var(--ink)"></span>conventional</span>
   </div>
-  <p class="defs"><b>First-order</b> — the tax change itself, accounting for neither mechanical
-  tax-base interactions nor behavioral feedback. <b>Mechanical</b> — adds the mechanical interactions
-  between tax bases. <b>Conventional</b> — adds behavioral feedback as well, and is the revenue
-  actually collected.</p>
-  <svg id="fig4" role="img" aria-label="Taxation at death first, then the same capital-gains and corporate increases, each shown first-order, mechanical and conventional, by tax base"></svg>
-  <p class="cap">When gains are taxed at death, the same capital-gains rate increase collects 0.11% of
-  GDP against 0.06% under step-up, and the package as a whole collects 95 cents of every first-order dollar
-  — where the rate-only version in Figure 3 collects 64. Taxing gains at death is the one row whose
-  mechanical bar sits on its first-order bar: it moves no other base mechanically, and its whole
-  difference from the first-order estimate is behavioral, since closing the deferral raises realizations during life as well
-  as at death. Revenue from gains taxed at death is folded into the capital-gains base. The corporate
-  increase behaves as in Figure 3, shifting income into the pass-through (ordinary) base.
-  Source: The Budget Lab Tax-Simulator, dials-v6 surrogate.</p>
+  <svg id="fig4" role="img" aria-label="Taxation at death first, then the same capital-gains and corporate increases, each shown as the first-order tax change and after mechanical and behavioral effects, by tax base"></svg>
+  <p class="cap">Revenue from gains taxed at death is folded into the capital-gains
+  base. Definitions as in Figure 2. Source: Tax-Simulator, dials-v6.</p>
 </div>
 </div>
 
@@ -130,19 +100,35 @@
   function usd(v){ return (v<0?'−':'')+Math.abs(v).toFixed(2)+'%'; }   // values are % of GDP
   var BCOL={iit:'--b-iit',cg:'--b-cg',corp:'--b-corp',est:'--b-est'};
   var ORDER=['cg','iit','corp','est'];   // fixed stacking order within a bar
-  var XPOS=0.52, XNEG=0.04;                // shared domain across both figures (% of GDP)
+  // Each figure is scaled to its own data. They are read in different parts of
+  // the report, so nothing is gained by sharing an axis across them.
+  function domainOf(all){
+    var p=0,n=0;
+    all.forEach(function(r){ ['stat','mech','conv'].forEach(function(k){
+      var sp=0,sn=0;
+      ORDER.forEach(function(b){ var v=r[k][b]||0; if(v>0)sp+=v; else sn-=v; });
+      p=Math.max(p,sp); n=Math.max(n,sn); }); });
+    var ceilTo=function(x,s){ return Math.ceil(x/s-1e-9)*s; };
+    return {pos:ceilTo(p*1.02,0.05), neg:n>0?ceilTo(n*1.15,0.01):0};
+  }
+  function ticksOf(d){
+    var step=(d.pos<=0.25)?0.05:((d.pos<=0.6)?0.1:0.2), t=[];
+    for(var g=-Math.floor(d.neg/step)*step; g<=d.pos+1e-9; g+=step) t.push(Math.round(g*100)/100);
+    return t;
+  }
 
   function polFig(id, rows, total){
-    var W=860, mL=250, mR=92, rowH=70, padT=14, padB=28, sepGap=16, totH=74;
+    var W=860, mL=250, mR=116, rowH=70, padT=14, padB=28, sepGap=16, totH=74;
     var H=padT+rows.length*rowH+sepGap+totH+padB;
-    var iw=W-mL-mR, span=XPOS+XNEG, sc=iw/span, xz=mL+XNEG*sc;
+    var dom=domainOf(total?rows.concat([total]):rows);
+    var iw=W-mL-mR, span=dom.pos+dom.neg, sc=iw/span, xz=mL+dom.neg*sc;
     function X(v){ return xz+v*sc; }
     function fillOf(b){ return cv(BCOL[b]); }
     var o=[];
 
-    [0,0.1,0.2,0.3,0.4].forEach(function(g){ var x=X(g);
+    ticksOf(dom).forEach(function(g){ var x=X(g);
       o.push('<line x1="'+x.toFixed(1)+'" y1="'+padT+'" x2="'+x.toFixed(1)+'" y2="'+(H-padB+2)+'" stroke="'+(g===0?cv('--axis'):cv('--grid'))+'" stroke-width="'+(g===0?1.5:1)+'"'+(g===0?'':' stroke-dasharray="2 3"')+'/>');
-      o.push('<text x="'+x.toFixed(1)+'" y="'+(H-padB+17)+'" font-size="10" text-anchor="middle" fill="'+cv('--muted')+'">'+(g===0?'0':(g.toFixed(1)+'%'))+'</text>');
+      o.push('<text x="'+x.toFixed(1)+'" y="'+(H-padB+17)+'" font-size="10" text-anchor="middle" fill="'+cv('--muted')+'">'+(g===0?'0':(g<0?'−':'')+Math.abs(g).toFixed(2)+'%')+'</text>');
     });
 
     function drawBar(seg, yy, hh, op){
@@ -153,30 +139,43 @@
     }
     function net(seg){ var t=0; ORDER.forEach(function(b){t+=seg[b]||0;}); return t; }
 
+    // The three rungs are the same thickness, so bar length alone carries the
+    // revenue; the rung is read off the opacity and the weight of the tag and
+    // the number beside it. Numbers sit in a fixed column at the right: each
+    // rung's own level, and on the lower two the step down from the rung above.
+    var RUNGS=[{k:'stat',tag:'first-order tax change',dy:8,op:0.26},
+               {k:'mech',tag:'+ mechanical effects',dy:26,op:0.58},
+               {k:'conv',tag:'+ behavioral effects',dy:44,op:1}];
+    var BARH=13;
     function rowBlock(r, yTop, bold){
-      var sY=yTop+6, mY=yTop+18, cY=yTop+34, sH=8, mH=13, cH=24;
-      var xLab=mL-84, xTag=mL-10;
-      o.push('<text x="'+xLab+'" y="'+(mY+8).toFixed(1)+'" font-size="12.5" font-weight="'+(bold?800:600)+'" text-anchor="end" fill="'+cv('--ink')+'">'+r.label+'</text>');
-      if(r.sub) o.push('<text x="'+xLab+'" y="'+(mY+20).toFixed(1)+'" font-size="9" text-anchor="end" fill="'+cv('--muted')+'">'+r.sub+'</text>');
-      // One tag per rung, aligned with the bar it names
-      [[sY+sH/2+3,'first-order'],[mY+mH/2+3,'mechanical'],[cY+cH/2+3,'conventional']]
-        .forEach(function(t){
-          o.push('<text x="'+xTag+'" y="'+t[0].toFixed(1)+'" font-size="8.5" text-anchor="end" fill="'+cv('--muted')+'" letter-spacing="0.02em">'+t[1]+'</text>');
-        });
-      o.push(drawBar(r.stat, sY, sH, 0.42));
-      o.push(drawBar(r.mech, mY, mH, 0.72));
-      o.push(drawBar(r.conv, cY, cH, 1));
-      var r2=function(v){ return Math.round(v*100)/100; };   // tie the shown delta to the shown %s
-      var nc=net(r.conv), nm=net(r.mech), ns=net(r.stat), d=r2(nc)-r2(ns), below=d<0;
-      function posEnd(seg){ var ps=0; ORDER.forEach(function(b){ var v=seg[b]||0; if(v>0) ps+=v; }); return xz+ps*sc; }
-      // Every number is a ROW TOTAL placed just past the right end of its own bar -- never inside a
-      // segment -- so a total never reads as one base's contribution. Static and spillover muted
-      // above; collected (ink) with its collected-minus-static delta beneath.
-      var sR=posEnd(r.stat), mR2=posEnd(r.mech), cR=posEnd(r.conv), fs=(bold?11:10);
-      o.push('<text x="'+(sR+6).toFixed(1)+'" y="'+(sY+sH/2+3).toFixed(1)+'" font-size="9" font-weight="500" text-anchor="start" fill="'+cv('--muted')+'" font-variant-numeric="tabular-nums">'+usd(ns)+'</text>');
-      o.push('<text x="'+(mR2+6).toFixed(1)+'" y="'+(mY+mH/2+3).toFixed(1)+'" font-size="9" font-weight="500" text-anchor="start" fill="'+cv('--muted')+'" font-variant-numeric="tabular-nums">'+usd(nm)+'</text>');
-      o.push('<text x="'+(cR+6).toFixed(1)+'" y="'+(cY+9).toFixed(1)+'" font-size="'+fs+'" font-weight="500" text-anchor="start" fill="'+cv('--ink')+'" font-variant-numeric="tabular-nums">'+usd(nc)+'</text>');
-      o.push('<text x="'+(cR+6).toFixed(1)+'" y="'+(cY+20).toFixed(1)+'" font-size="9" font-weight="500" text-anchor="start" fill="'+cv(below?'--down':'--up')+'" font-variant-numeric="tabular-nums">'+(below?'▼ ':'▲ ')+usd(Math.abs(d))+'</text>');
+      var xLab=mL-128, xTag=mL-10, x1=W-mR, xLvl=x1+100, xDel=x1+46;
+      var mid=function(u){ return yTop+u.dy+BARH/2+3.5; };
+      o.push('<text x="'+xLab+'" y="'+(mid(RUNGS[1])+2).toFixed(1)+'" font-size="12.5" font-weight="'+(bold?800:600)+'" text-anchor="end" fill="'+cv('--ink')+'">'+r.label+'</text>');
+      if(r.sub) o.push('<text x="'+xLab+'" y="'+(mid(RUNGS[1])+14).toFixed(1)+'" font-size="9" text-anchor="end" fill="'+cv('--muted')+'">'+r.sub+'</text>');
+      // Round exactly as usd() prints, so a step always equals the difference
+      // of the two levels shown above it
+      var r2=function(v){ return (v<0?-1:1)*parseFloat(Math.abs(v).toFixed(2)); };
+      var ns=net(r.stat), nm=net(r.mech), nc=net(r.conv);
+      var steps={stat:null, mech:r2(nm)-r2(ns), conv:r2(nc)-r2(nm)},
+          lvl={stat:ns, mech:nm, conv:nc};
+      RUNGS.forEach(function(u,z){
+        o.push(drawBar(r[u.k], yTop+u.dy, BARH, u.op));
+        // tag, at its own bar's height, weighted like the bar
+        o.push('<text x="'+xTag+'" y="'+mid(u).toFixed(1)+'" font-size="8.5" text-anchor="end" fill="'
+          +cv(z===2?'--ink':'--muted')+'"'+(z===2?' font-weight="600"':'')+(z===0?' opacity="0.7"':'')
+          +' letter-spacing="0.02em">'+u.tag+'</text>');
+        // level, right-aligned in its own column
+        o.push('<text x="'+xLvl+'" y="'+mid(u).toFixed(1)+'" font-size="'+(z===2?(bold?12:11):9.5)
+          +'" font-weight="'+(z===2?(bold?700:600):500)+'" text-anchor="end" fill="'
+          +cv(z===2?'--ink':'--muted')+'"'+(z===0?' opacity="0.7"':'')
+          +' font-variant-numeric="tabular-nums">'+usd(lvl[u.k])+'</text>');
+        // step against the rung above
+        var d=steps[u.k];
+        if(d!==null&&Math.abs(d)>=0.005)
+          o.push('<text x="'+xDel+'" y="'+mid(u).toFixed(1)+'" font-size="8.5" font-weight="500" text-anchor="end" fill="'
+            +cv(d<0?'--down':'--up')+'" font-variant-numeric="tabular-nums">'
+            +(d<0?'▼':'▲')+usd(Math.abs(d))+'</text>');
+      });
     }
 
     rows.forEach(function(r,i){ rowBlock(r, padT+i*rowH, false); });
@@ -192,7 +191,7 @@
 
   // ---- REAL surrogate numbers, third decade (FY2047-56), % of GDP; ordered marginals; ---------
   // gains at death folded into capital gains. Evaluated from atlas2_data.json v6 (decade index 2)
-  // via report_prep/figdata_34.py: deemed portion of the iit head carved into the cg base, divided
+  // via report_prep/figdata_23.py: deemed portion of the iit head carved into the cg base, divided
   // by gdp_fy_decades[2]. Three rungs per row: sh static, mh after the cross-base spillovers, ch
   // collected. The corporate row leaks to pass-through, corp down and ordinary up.
   // FIG 3 (step-up): capital gains, then corporate added last. No death layer.
@@ -213,7 +212,7 @@
 
   // FIG 4 (deemed): death first, then the same capital-gains and corporate increases on top.
   polFig('fig4',[
-    {label:'Gains at death', sub:'deferral closed',
+    {label:'Gains at death', sub:'deemed realization',
      stat:{cg:0.106,est:-0.011},
      mech:{cg:0.106,est:-0.011},
      conv:{cg:0.196,corp:-0.013,est:-0.012}},

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Emit Figs 3&4 by-head, third-decade (FY2047-56), % of GDP numbers from an
+"""Emit Figs 2&3 by-head, third-decade (FY2047-56), % of GDP numbers from an
 atlas2_data.json surrogate, on all three rungs: static, mechanical, conventional. Ordered marginal decomposition, deemed folded into
 the cg head via the standard CY pref-rate carve already baked into ch/sh.
 
-Usage: python3 figdata_34.py <atlas2_data.json>
+Usage: python3 figdata_23.py <atlas2_data.json>
 Validate by running against the v2 backup and diffing vs the hardcoded
-figures_3_4.html numbers before trusting v3 output.
+figures_2_3.html numbers before trusting v3 output.
 """
 import json, os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -67,11 +67,11 @@ def main(path):
             print(f"  {tag:16} {name}={nonzero(out[name])}")
 
     print(f"### {os.path.basename(path)}  (decade-3 FY2047-56, % of GDP)")
-    print("FIG 3 (step-up):")
+    print("FIG 2 (step-up):")
     show("Capital gains", cg25)
     show("+ Corporate", cg25corp25, minus=cg25)
     show("Package", cg25corp25)
-    print("FIG 4 (deemed):")
+    print("FIG 3 (deemed):")
     show("Gains at death", dm)
     show("+ Capital gains", dm_cg, minus=dm)
     show("+ Corporate", dm_cg_corp, minus=dm_cg)

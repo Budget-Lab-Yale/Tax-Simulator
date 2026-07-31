@@ -1,0 +1,133 @@
+<title>Figures 1 & 2 — income and effective rates at the top</title>
+<style>
+  :root {
+    --paper:#f9fafb; --ink:#1c2733; --muted:#5a6b7d; --line:#dce3ea; --grid:#e8edf2;
+    --axis:#b9c4ce; --card:#ffffff; --accent:#1a5b9e;
+    --c-cash:#2a78d6; --c-hs:#eb6834; --c-ann:#4a3aa7; --deficit:#a8433a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper:#131a22; --ink:#d9e1ea; --muted:#8da0b3; --line:#2b3947; --grid:#223040;
+            --axis:#45566a; --card:#18212b; --accent:#7db0e0;
+            --c-cash:#3987e5; --c-hs:#d95926; --c-ann:#9085e9; --deficit:#e08e85; }
+  }
+  :root[data-theme="dark"] { --paper:#131a22; --ink:#d9e1ea; --muted:#8da0b3; --line:#2b3947;
+    --grid:#223040; --axis:#45566a; --card:#18212b; --accent:#7db0e0;
+    --c-cash:#3987e5; --c-hs:#d95926; --c-ann:#9085e9; --deficit:#e08e85; }
+  :root[data-theme="light"] { --paper:#f9fafb; --ink:#1c2733; --muted:#5a6b7d; --line:#dce3ea;
+    --grid:#e8edf2; --axis:#b9c4ce; --card:#ffffff; --accent:#1a5b9e;
+    --c-cash:#2a78d6; --c-hs:#eb6834; --c-ann:#4a3aa7; --deficit:#a8433a; }
+
+  * { box-sizing: border-box; }
+  html { background: var(--paper); }
+  body { margin:0; background:var(--paper); color:var(--ink);
+         font-family: Charter, "Bitstream Charter", Cambria, Georgia, serif;
+         font-size:16px; line-height:1.55; }
+  .wrap { max-width: 54rem; margin:0 auto; padding:2.2rem 1.25rem 4rem; }
+  header { border-bottom:2px solid var(--ink); padding-bottom:1rem; margin-bottom:1.6rem; }
+  .eyebrow { font-family:system-ui,sans-serif; font-size:.7rem; font-weight:600;
+             letter-spacing:.13em; text-transform:uppercase; color:var(--accent); margin:0 0 .5rem; }
+  h1 { font-size:1.7rem; margin:0 0 .4rem; line-height:1.2; }
+  .standfirst { color:var(--muted); font-style:italic; margin:0; }
+  .fig { background:var(--card); border:1px solid var(--line); border-radius:8px;
+         padding:1.3rem 1.4rem 1rem; margin:1.6rem 0; }
+  .opt { font-family:system-ui,sans-serif; font-size:.68rem; font-weight:700;
+         letter-spacing:.1em; text-transform:uppercase; color:var(--accent); margin:0 0 .4rem; }
+  .fig h2 { font-family:system-ui,"Segoe UI",Roboto,sans-serif; font-size:1.06rem;
+            font-weight:700; margin:0 0 .15rem; line-height:1.35; text-wrap:balance; }
+  .fig .sub { font-family:system-ui,sans-serif; font-size:.8rem; color:var(--muted); margin:0 0 .8rem; }
+  .legend { display:flex; flex-wrap:wrap; gap:.3rem 1.2rem; font-family:system-ui,sans-serif;
+            font-size:.75rem; color:var(--muted); margin:0 0 .5rem; }
+  .key { display:inline-flex; align-items:center; gap:.4rem; }
+  .sw { width:10px; height:10px; border-radius:50%; display:inline-block; }
+  .sw.bar { border-radius:2px; width:11px; height:11px; }
+  svg { width:100%; height:auto; display:block; }
+  svg text { font-family:system-ui,"Segoe UI",Roboto,sans-serif; }
+  .cap { font-family:system-ui,sans-serif; font-size:.72rem; color:var(--muted);
+         border-top:1px solid var(--grid); margin-top:.7rem; padding-top:.55rem; line-height:1.5; }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">The Budget Lab · 2027 current-law baseline · self-ranked</p>
+  <h1>Figures 1 and 2</h1>
+  <p class="standfirst">The 2027 current-law baseline; every group is ranked by the measure shown
+  (self-ranked). Baseline income and rates are unchanged by the report's reforms.</p>
+</header>
+
+<div class="fig">
+  <p class="opt">Figure 1</p>
+  <h2>Effective federal tax rates on top groups, cash and accrual income bases, 2027</h2>
+  <p class="sub">Includes income, payroll, estate, and corporate taxes · each group ranked by the measure shown</p>
+  <div class="legend">
+    <span class="key"><span class="sw" style="background:var(--c-cash)"></span>Rate on cash (realized) income</span>
+    <span class="key"><span class="sw" style="background:var(--c-hs)"></span>Rate on accrual income</span>
+  </div>
+  <svg id="f2a" viewBox="0 0 760 300" role="img" aria-label="Dumbbell chart of effective tax rates on cash versus accrual income by top group"></svg>
+  <p class="cap">Tax dollars are nearly identical under either ranking; the flattening comes
+  from the larger accrual denominator, which grows fastest exactly where cash rates rise.
+  Federal taxes only; state and local taxes would raise levels and are generally less
+  progressive. Source: The Budget Lab Tax-Simulator, 2027 current-law baseline.</p>
+</div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var G = ["Top 10%","Top 5%","Top 1%","Top 0.1%","Top 0.01%"];
+  var cashShare=[51.3,39.9,23.2,11.2,5.3], hsShare=[58.2,46.8,27.0,12.0,5.3];
+  var cashLvl=[11.5,9.0,5.2,2.5,1.2], hsLvl=[18.8,15.1,8.7,3.9,1.7];
+  var cashETR=[24.0,24.6,26.2,29.2,30.0], hsETR=[14.3,14.0,14.9,16.6,15.2];
+  var floors=["≥ $232k · 18.6M units","≥ $345k · 9.3M","≥ $911k · 1.9M",
+              "≥ $4.2M · 186k","≥ $21.4M · 19k"];
+
+  function cvar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function paren(s){ return s==null ? '' : '<tspan font-size="9.5" fill="'+cvar('--muted')+'"> ('+s.toFixed(1)+'%)</tspan>'; }
+
+  function dumbbell(id, series, xmax, unit, opts) {
+    // series: [{vals, colorVar, shares}] ordered left-to-right along the axis
+    var W=760, mL=110, mR=(opts.mR||30), mT=14, rowH=42, H=mT+rowH*G.length+34;
+    function X(v){ return mL+(v/xmax)*(W-mL-mR); }
+    var o=[];
+    for (var gx=0; gx<=xmax; gx+=opts.tick) {
+      o.push('<line x1="'+X(gx)+'" y1="'+mT+'" x2="'+X(gx)+'" y2="'+(mT+rowH*G.length)+'" stroke="'+cvar('--grid')+'" stroke-width="1"/>');
+      o.push('<text x="'+X(gx)+'" y="'+(mT+rowH*G.length+18)+'" font-size="11" text-anchor="middle" fill="'+cvar('--muted')+'">'+gx+unit+'</text>');
+    }
+    G.forEach(function(g,i){
+      var y=mT+rowH*i+rowH/2;
+      o.push('<text x="'+(mL-10)+'" y="'+(y+4)+'" font-size="12.5" font-weight="600" text-anchor="end" fill="'+cvar('--ink')+'">'+g+'</text>');
+      var lo=Math.min.apply(null,series.map(function(s){return s.vals[i];}));
+      var hi=Math.max.apply(null,series.map(function(s){return s.vals[i];}));
+      o.push('<line x1="'+X(lo)+'" y1="'+y+'" x2="'+X(hi)+'" y2="'+y+'" stroke="'+cvar('--axis')+'" stroke-width="1.6"/>');
+      series.forEach(function(s){
+        o.push('<circle cx="'+X(s.vals[i])+'" cy="'+y+'" r="6" fill="'+cvar(s.colorVar)+'" stroke="'+cvar('--card')+'" stroke-width="1.5"/>');
+      });
+      // labels: leftmost below-left, rightmost above-right to avoid collisions
+      var sorted=series.map(function(s){return {v:s.vals[i], s:(s.shares?s.shares[i]:null)};}).sort(function(a,b){return a.v-b.v;});
+      sorted.forEach(function(d,k){
+        var anchor, dx, dy;
+        if (k===0){ anchor='end'; dx=-10; dy=4; }
+        else if (k===sorted.length-1){ anchor='start'; dx=10; dy=4; }
+        else { anchor='middle'; dx=0; dy=-10; }
+        o.push('<text x="'+(X(d.v)+dx)+'" y="'+(y+dy)+'" font-size="11.5" font-weight="600" text-anchor="'+anchor+'" fill="'+cvar('--ink')+'" font-variant-numeric="tabular-nums">'+d.v.toFixed(1)+unit+paren(d.s)+'</text>');
+      });
+    });
+    var svg=document.getElementById(id);
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    svg.innerHTML=o.join('');
+  }
+
+  function render(){
+  dumbbell('f2a', [
+    { vals: hsETR,   colorVar:'--c-hs'   },
+    { vals: cashETR, colorVar:'--c-cash' }
+  ], 35, '%', { tick: 5, mR: 70 });
+
+  }
+  render();
+
+  var mq=window.matchMedia('(prefers-color-scheme: dark)');
+  function rerender(){ render(); }
+  if (mq.addEventListener) mq.addEventListener('change', rerender);
+  new MutationObserver(rerender).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+})();
+</script>
