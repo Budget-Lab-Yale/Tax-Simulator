@@ -56,7 +56,7 @@
 
 <div class="wrap">
 <header>
-  <p class="eyebrow">Figure 5 · capital-gains Laffer curves by treatment of gains at death · dials-v5, % of GDP</p>
+  <p class="eyebrow">Figure 5 · capital-gains Laffer curves by treatment of gains at death · dials-v6, % of GDP</p>
   <h1>How much a higher capital-gains rate can raise depends on what happens at death</h1>
   <p class="standfirst">Third-decade revenue (FY2047–56, as a share of GDP) from raising the top rate on capital
   gains and dividends, traced out under three treatments of unrealized gains at death. Under current-law step-up
@@ -86,11 +86,11 @@
   turnover is behavioral: the old mechanical ceiling at the ordinary top rate has been removed, so the
   rate is free to bite higher until deferral bends the curve back down.)
   Reforming step-up changes the picture two ways. It <b>raises the starting level</b>: at today's 23.8% rate,
-  taxing gains at death already collects ~<b>0.18% of GDP</b> (carryover ~0.08%) with no rate change at all.
+  taxing gains at death already collects ~<b>0.17% of GDP</b> (carryover ~0.08%) with no rate change at all.
   And it <b>keeps the rate productive</b>: with deferral closed, the same rate increases keep pulling in
   revenue, reaching ~<b>0.59% of GDP</b> at 53.8% — roughly <b>4× the step-up curve</b> at its own peak.
   Carryover sits between the two, peaking near 48.8%. Rates on the axis are statutory capital-gains rates
-  plus the 3.8% net investment income tax, which the model holds at current law throughout. Source: Tax-Simulator, revmax grid on the dials-v5
+  plus the 3.8% net investment income tax, which the model holds at current law throughout. Source: Tax-Simulator, revmax grid on the dials-v6
   physics (net-of-tax realization form, uncapped capital-gains rate); values are total conventional revenue
   over the third projection decade (FY2047–56) as a share of cumulative GDP over that decade. All three
   curves are direct model runs at every plotted point — no surrogate composition. Curves are total revenue, so they include the death regime's own yield; the shape, not any
@@ -112,9 +112,9 @@
   function rLbl(r){ return (r+NIIT).toFixed(1)+'%'; }
   // values = third-decade (FY2047-56) conventional revenue as % of cumulative FY GDP
   var SERIES=[
-    {key:'deemed', name:'Deemed realization', col:'--b-est', v:[0.172,0.279,0.369,0.445,0.505,0.552,0.586]},
-    {key:'carry',  name:'Carryover basis',    col:'--b-iit', v:[0.079,0.157,0.216,0.255,0.277,0.282,0.272]},
-    {key:'stepup', name:'Current law (step-up)', col:'--b-cg', v:[0.000,0.061,0.102,0.123,0.126,0.112,0.083]}
+    {key:'deemed', name:'Deemed realization', col:'--b-est', v:[0.171,0.278,0.37,0.446,0.508,0.557,0.592]},
+    {key:'carry',  name:'Carryover basis',    col:'--b-iit', v:[0.077,0.156,0.216,0.257,0.281,0.289,0.28]},
+    {key:'stepup', name:'Current law (step-up)', col:'--b-cg', v:[0.000,0.063,0.105,0.129,0.134,0.123,0.098]}
   ];
 
   function draw(){

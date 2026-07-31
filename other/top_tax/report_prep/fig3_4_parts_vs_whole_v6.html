@@ -45,6 +45,10 @@
   .sw { width:11px; height:11px; border-radius:2px; display:inline-block; }
   .sw.stat { opacity:.42; }
   .sw.mid { opacity:.72; }
+  .defs { font-family:system-ui,sans-serif; font-size:.73rem; color:var(--muted);
+          margin:0 0 .7rem; padding:.5rem .7rem; background:var(--paper);
+          border:1px solid var(--grid); border-radius:6px; line-height:1.5; }
+  .defs b { color:var(--ink); font-weight:600; }
   .cap { font-family:system-ui,sans-serif; font-size:.72rem; color:var(--muted);
          border-top:1px solid var(--grid); margin-top:.7rem; padding-top:.55rem; line-height:1.5; }
   .cap b { color:var(--ink); }
@@ -52,59 +56,67 @@
 
 <div class="wrap">
 <header>
-  <p class="eyebrow">Figures 3 &amp; 4 · third decade (FY2047–56) · % of GDP · dials-v5 surrogate</p>
+  <p class="eyebrow">Figures 3 &amp; 4 · third decade (FY2047–56) · % of GDP · dials-v6 surrogate</p>
   <h1>Figures 3 and 4</h1>
   <p class="standfirst">The same corporate and capital-gains rate increases, added one policy at a
-  time — first under current law, then on a base that also taxes gains at death. Bars show each policy's
-  static and collected revenue as a share of GDP, colored by the tax base where the revenue is collected.
-  Shown for the third decade, once the long-run realization response has largely played out.</p>
+  time — first under current law, then on a base that also taxes gains at death. Each policy appears
+  three times, first-order, mechanical and conventional, as a share of GDP and colored by the tax base
+  where the revenue lands. Shown for the third decade, once the long-run realization response has
+  largely played out.</p>
 </header>
 
 <div class="fig">
   <p class="opt">Figure 3</p>
-  <h2>Revenue from a corporate and capital-gains rate increase, static, after spillovers, and collected, 2047–56</h2>
-  <p class="sub">Third decade (FY2047–56), % of GDP · slim bar = static estimate, middle bar = after cross-base spillovers, full bar = collected · ▲ / ▼ = collected minus static</p>
+  <h2>Revenue from a corporate and capital-gains rate increase, first-order, mechanical and conventional, 2047–56</h2>
+  <p class="sub">Third decade (FY2047–56), % of GDP · each policy shown first-order, mechanical and conventional · ▲ / ▼ = conventional minus first-order</p>
   <div class="legend">
     <span class="key"><span class="sw" style="background:var(--b-cg)"></span>Capital gains</span>
     <span class="key"><span class="sw" style="background:var(--b-corp)"></span>Corporate</span>
     <span class="key"><span class="sw" style="background:var(--b-iit)"></span>Ordinary income</span>
     <span class="key"><span class="sw" style="background:var(--b-est)"></span>Estate</span>
-    <span class="key"><span class="sw stat" style="background:var(--ink)"></span>slim bar = static estimate</span>
-    <span class="key"><span class="sw mid" style="background:var(--ink)"></span>middle bar = after cross-base spillovers</span>
+    <span class="key"><span class="sw stat" style="background:var(--ink)"></span>first-order</span>
+    <span class="key"><span class="sw mid" style="background:var(--ink)"></span>mechanical</span>
+    <span class="key"><span class="sw" style="background:var(--ink)"></span>conventional</span>
   </div>
-  <svg id="fig3" role="img" aria-label="Capital gains then corporate, each shown as a static estimate, an estimate after cross-base spillovers, and collected revenue, broken out by tax base"></svg>
-  <p class="cap">Each policy is shown three times. The slim bar is the static estimate, the
-  first-order tax increase with every base held fixed. The middle bar adds the cross-base spillovers
-  that follow mechanically from the policy — corporate income repricing equity and pass-through
-  earnings, and tax paid out of wealth draining the estate base — with taxpayer behavior still held
-  fixed. The full bar adds the behavioral response, and is the revenue actually collected. In the third
-  decade the capital-gains rate increase has a static estimate of 0.14% of GDP, 0.12% after spillovers
-  and 0.06% collected: most of the gap is deferral of realizations under step-up in basis. The corporate
-  rate increase asks 0.24% of GDP, holds 0.21% after spillovers and collects 0.18%, as C-corporate
-  income is recharacterized as pass-through, draining corporate revenue and lifting ordinary-income
-  revenue. The package collects 64 cents of every static dollar. Both policies also reduce estate
-  revenue slightly (shown left of zero). A payroll head of at most 0.002% of GDP is omitted.
+  <p class="defs"><b>First-order</b> — the tax change itself, accounting for neither mechanical
+  tax-base interactions nor behavioral feedback. <b>Mechanical</b> — adds the mechanical interactions
+  between tax bases. <b>Conventional</b> — adds behavioral feedback as well, and is the revenue
+  actually collected.</p>
+  <svg id="fig3" role="img" aria-label="Capital gains then corporate, each shown first-order, mechanical and conventional, broken out by tax base"></svg>
+  <p class="cap">The distance from the first bar to the second is what one tax costs the others
+  mechanically; the distance from the second to the third is what behavior costs. In the third decade
+  the capital-gains rate increase is 0.14% of GDP first-order, 0.12% mechanical and 0.06% conventional:
+  most of the gap is deferral of realizations under step-up in basis. The corporate rate increase is
+  0.24% of GDP first-order, 0.21% mechanical and 0.18% conventional, as C-corporate income is
+  recharacterized as pass-through, draining corporate revenue and lifting ordinary-income revenue. The
+  package collects 64 cents of every first-order dollar. Both policies also reduce estate revenue
+  slightly (shown left of zero). A payroll head of at most 0.002% of GDP is omitted.
   Source: The Budget Lab Tax-Simulator, dials-v6 surrogate.</p>
 </div>
 
 <div class="fig">
   <p class="opt">Figure 4</p>
-  <h2>Revenue from the same increases with gains taxed at death, static, after spillovers, and collected, 2047–56</h2>
-  <p class="sub">Third decade (FY2047–56), % of GDP · slim bar = static estimate, middle bar = after cross-base spillovers, full bar = collected · ▲ / ▼ = collected minus static · shared scale with Figure 3</p>
+  <h2>Revenue from the same increases with gains taxed at death, first-order, mechanical and conventional, 2047–56</h2>
+  <p class="sub">Third decade (FY2047–56), % of GDP · each policy shown first-order, mechanical and conventional · ▲ / ▼ = conventional minus first-order · shared scale with Figure 3</p>
   <div class="legend">
     <span class="key"><span class="sw" style="background:var(--b-cg)"></span>Capital gains</span>
     <span class="key"><span class="sw" style="background:var(--b-corp)"></span>Corporate</span>
     <span class="key"><span class="sw" style="background:var(--b-iit)"></span>Ordinary income</span>
     <span class="key"><span class="sw" style="background:var(--b-est)"></span>Estate</span>
-    <span class="key"><span class="sw stat" style="background:var(--ink)"></span>slim bar = static estimate</span>
-    <span class="key"><span class="sw mid" style="background:var(--ink)"></span>middle bar = after cross-base spillovers</span>
+    <span class="key"><span class="sw stat" style="background:var(--ink)"></span>first-order</span>
+    <span class="key"><span class="sw mid" style="background:var(--ink)"></span>mechanical</span>
+    <span class="key"><span class="sw" style="background:var(--ink)"></span>conventional</span>
   </div>
-  <svg id="fig4" role="img" aria-label="Taxation at death first, then the same capital-gains and corporate increases, each shown as a static estimate, an estimate after cross-base spillovers, and collected revenue by tax base"></svg>
+  <p class="defs"><b>First-order</b> — the tax change itself, accounting for neither mechanical
+  tax-base interactions nor behavioral feedback. <b>Mechanical</b> — adds the mechanical interactions
+  between tax bases. <b>Conventional</b> — adds behavioral feedback as well, and is the revenue
+  actually collected.</p>
+  <svg id="fig4" role="img" aria-label="Taxation at death first, then the same capital-gains and corporate increases, each shown first-order, mechanical and conventional, by tax base"></svg>
   <p class="cap">When gains are taxed at death, the same capital-gains rate increase collects 0.11% of
-  GDP against 0.06% under step-up, and the package as a whole collects 95 cents of every static dollar
-  — where the rate-only version in Figure 3 collects 64. Taxing gains at death is the one row where the
-  middle bar sits on the slim one: it moves no other base mechanically, and its whole difference from
-  the static estimate is behavioral, since closing the deferral raises realizations during life as well
+  GDP against 0.06% under step-up, and the package as a whole collects 95 cents of every first-order dollar
+  — where the rate-only version in Figure 3 collects 64. Taxing gains at death is the one row whose
+  mechanical bar sits on its first-order bar: it moves no other base mechanically, and its whole
+  difference from the first-order estimate is behavioral, since closing the deferral raises realizations during life as well
   as at death. Revenue from gains taxed at death is folded into the capital-gains base. The corporate
   increase behaves as in Figure 3, shifting income into the pass-through (ordinary) base.
   Source: The Budget Lab Tax-Simulator, dials-v6 surrogate.</p>
@@ -121,7 +133,7 @@
   var XPOS=0.52, XNEG=0.04;                // shared domain across both figures (% of GDP)
 
   function polFig(id, rows, total){
-    var W=760, mL=150, mR=92, rowH=70, padT=14, padB=28, sepGap=16, totH=74;
+    var W=860, mL=250, mR=92, rowH=70, padT=14, padB=28, sepGap=16, totH=74;
     var H=padT+rows.length*rowH+sepGap+totH+padB;
     var iw=W-mL-mR, span=XPOS+XNEG, sc=iw/span, xz=mL+XNEG*sc;
     function X(v){ return xz+v*sc; }
@@ -143,8 +155,14 @@
 
     function rowBlock(r, yTop, bold){
       var sY=yTop+6, mY=yTop+18, cY=yTop+34, sH=8, mH=13, cH=24;
-      o.push('<text x="'+(mL-12)+'" y="'+(mY+8).toFixed(1)+'" font-size="12.5" font-weight="'+(bold?800:600)+'" text-anchor="end" fill="'+cv('--ink')+'">'+r.label+'</text>');
-      if(r.sub) o.push('<text x="'+(mL-12)+'" y="'+(mY+20).toFixed(1)+'" font-size="9" text-anchor="end" fill="'+cv('--muted')+'">'+r.sub+'</text>');
+      var xLab=mL-84, xTag=mL-10;
+      o.push('<text x="'+xLab+'" y="'+(mY+8).toFixed(1)+'" font-size="12.5" font-weight="'+(bold?800:600)+'" text-anchor="end" fill="'+cv('--ink')+'">'+r.label+'</text>');
+      if(r.sub) o.push('<text x="'+xLab+'" y="'+(mY+20).toFixed(1)+'" font-size="9" text-anchor="end" fill="'+cv('--muted')+'">'+r.sub+'</text>');
+      // One tag per rung, aligned with the bar it names
+      [[sY+sH/2+3,'first-order'],[mY+mH/2+3,'mechanical'],[cY+cH/2+3,'conventional']]
+        .forEach(function(t){
+          o.push('<text x="'+xTag+'" y="'+t[0].toFixed(1)+'" font-size="8.5" text-anchor="end" fill="'+cv('--muted')+'" letter-spacing="0.02em">'+t[1]+'</text>');
+        });
       o.push(drawBar(r.stat, sY, sH, 0.42));
       o.push(drawBar(r.mech, mY, mH, 0.72));
       o.push(drawBar(r.conv, cY, cH, 1));

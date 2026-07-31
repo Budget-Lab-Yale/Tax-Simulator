@@ -278,5 +278,9 @@ Downstream state:
   when the mechanical rung was built: the taxable-max repeal now scores $3,071B
   static over ten years against $2,520B in v5.
 - Figure 5's Laffer curves are direct runs on `kg_v5_revmax`, which predates the
-  conversion fix, and the fix moves exactly the high-rate points the curves peak
-  at. The grid is being re-run as `kg_v6_revmax`.
+  conversion fix, so the grid was re-run as `kg_v6_revmax`: 20 scenarios over
+  2026:2057, complete with no failures. The curves shift up and their shape does
+  not change. Step-up still peaks at a 43.8% combined rate, at 0.134% of GDP in
+  the third decade against 0.126% on v5; carryover still peaks at 48.8%; deemed
+  realization is still climbing at 53.8%, reaching 0.592% against 0.586%. Every
+  claim in the report's Figure 5 paragraph survives unchanged.

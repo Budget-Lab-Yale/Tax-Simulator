@@ -1,0 +1,22 @@
+=============== hundred_pct_ceiling.py (100% ceiling framing) ===============
+FY2027 GDP $33.3T | deficit $1.9T = 5.7% of GDP
+100% TOTAL federal marginal rate (incl. current law) on income above each group's threshold; revenue raised over current law, as % of GDP.
+
+        Group       Cash thr    Ord base $B    Ord cur mtr       Ord %GDP    AGI base $B    AGI cur mtr       AGI %GDP
+      Top 10%          $232k          3,308            35%           6.4%          5,404            32%          11.1%
+       Top 5%          $345k          2,560            37%           4.9%          4,260            32%           8.6%
+       Top 1%          $911k          1,468            37%           2.8%          2,675            32%           5.5%
+     Top 0.1%         $4.24M            614            36%           1.2%          1,416            30%           3.0%
+    Top 0.01%        $21.39M            181            37%           0.3%            646            28%           1.4%
+
+Yardstick: FY2027 deficit = 5.7% of GDP.
+
+=============== mtr_table_data.py (rate-needed framing) ===============
+FY2027 deficit $1.9T  | new bracket at each group's cash threshold, income above it only
+
+       Group      Cash thr       CashETR       NeedETR   NeedMTR-ord   NeedMTR-AGI
+     Top 10%         $232k         24.0%           40%           93%           67%
+      Top 5%         $345k         24.6%           46%          111%           77%
+      Top 1%         $911k         26.2%           63%          166%          103%
+    Top 0.1%        $4.24M         29.2%          105%          346%          164%
+   Top 0.01%       $21.39M         30.0%          189%         1086%          322%

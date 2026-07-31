@@ -1,0 +1,291 @@
+<title>Figure 2, two ranking conventions</title>
+<style>
+  :root {
+    --paper:#f9fafb; --ink:#1c2733; --ink2:#3c4a59; --muted:#5a6b7d; --line:#dce3ea; --grid:#e8edf2;
+    --axis:#b9c4ce; --card:#ffffff; --accent:#1a5b9e;
+    --c-cash:#2a78d6; --c-hs:#eb6834;
+    --flag:#a8433a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper:#131a22; --ink:#d9e1ea; --ink2:#c3ccd6; --muted:#8da0b3; --line:#2b3947; --grid:#223040;
+      --axis:#45566a; --card:#18212b; --accent:#7db0e0;
+      --c-cash:#3987e5; --c-hs:#d95926; --flag:#e08e85; }
+  }
+  :root[data-theme="dark"] { --paper:#131a22; --ink:#d9e1ea; --ink2:#c3ccd6; --muted:#8da0b3; --line:#2b3947;
+    --grid:#223040; --axis:#45566a; --card:#18212b; --accent:#7db0e0;
+    --c-cash:#3987e5; --c-hs:#d95926; --flag:#e08e85; }
+  :root[data-theme="light"] { --paper:#f9fafb; --ink:#1c2733; --ink2:#3c4a59; --muted:#5a6b7d; --line:#dce3ea;
+    --grid:#e8edf2; --axis:#b9c4ce; --card:#ffffff; --accent:#1a5b9e;
+    --c-cash:#2a78d6; --c-hs:#eb6834; --flag:#a8433a; }
+
+  * { box-sizing:border-box; }
+  html { background:var(--paper); }
+  body { margin:0; background:var(--paper); color:var(--ink);
+    font-family:Charter,"Bitstream Charter",Cambria,Georgia,serif; font-size:16px; line-height:1.55; }
+  .wrap { max-width:70rem; margin:0 auto; padding:2rem 1.25rem 4rem;
+    display:flex; flex-direction:column; gap:1.4rem; }
+  header { border-bottom:2px solid var(--ink); padding-bottom:.9rem;
+    display:flex; flex-direction:column; gap:.4rem; }
+  .eyebrow { font-family:system-ui,sans-serif; font-size:.7rem; font-weight:600; letter-spacing:.13em;
+    text-transform:uppercase; color:var(--accent); margin:0; }
+  h1 { font-size:1.55rem; margin:0; line-height:1.2; text-wrap:balance; }
+  .standfirst { color:var(--muted); font-style:italic; margin:0; max-width:54rem; }
+
+  .legend { display:flex; flex-wrap:wrap; gap:.35rem 1.2rem; font-family:system-ui,sans-serif;
+    font-size:.76rem; color:var(--muted); align-items:center; }
+  .key { display:inline-flex; align-items:center; gap:.4rem; }
+  .dot { width:11px; height:11px; border-radius:50%; display:inline-block; }
+
+  .panels { display:grid; grid-template-columns:repeat(auto-fit,minmax(28rem,1fr)); gap:1.1rem; }
+  .fig { background:var(--card); border:1px solid var(--line); border-radius:8px;
+    padding:1.1rem 1.15rem .95rem; display:flex; flex-direction:column; gap:.15rem; }
+  .fig h2 { font-family:system-ui,"Segoe UI",sans-serif; font-size:.98rem; font-weight:700;
+    margin:0; line-height:1.35; }
+  .fig .sub { font-family:system-ui,sans-serif; font-size:.75rem; color:var(--muted); margin:0 0 .45rem; }
+  .fig .verdict { font-family:system-ui,sans-serif; font-size:.75rem; color:var(--ink2); margin:.5rem 0 0;
+    border-top:1px solid var(--grid); padding-top:.5rem; }
+  .fig .verdict b { color:var(--ink); }
+  svg { width:100%; height:auto; display:block; }
+  svg text { font-family:system-ui,"Segoe UI",sans-serif; }
+
+  .tblwrap { background:var(--card); border:1px solid var(--line); border-radius:8px;
+    padding:1.1rem 1.15rem 1rem; overflow-x:auto; }
+  .tblwrap h2 { font-family:system-ui,"Segoe UI",sans-serif; font-size:.98rem; font-weight:700;
+    margin:0 0 .1rem; }
+  .tblwrap .sub { font-family:system-ui,sans-serif; font-size:.75rem; color:var(--muted); margin:0 0 .7rem; }
+  table { border-collapse:collapse; font-family:system-ui,sans-serif; font-size:.76rem;
+    font-variant-numeric:tabular-nums; min-width:44rem; }
+  th, td { padding:.36rem .62rem; text-align:right; border-bottom:1px solid var(--grid); }
+  th:first-child, td:first-child { text-align:left; }
+  thead th { font-size:.68rem; letter-spacing:.05em; text-transform:uppercase; color:var(--muted);
+    font-weight:600; border-bottom:1px solid var(--line); }
+  tbody tr.sep td { border-top:1px solid var(--line); }
+  td.dim { color:var(--muted); }
+  td.same { color:var(--muted); font-style:italic; }
+  .cap { font-family:system-ui,sans-serif; font-size:.72rem; color:var(--muted);
+    line-height:1.5; margin:.7rem 0 0; }
+  .cap b { color:var(--ink); }
+
+  #tip { position:fixed; pointer-events:none; opacity:0; transition:opacity .1s;
+    background:var(--card); border:1px solid var(--line); border-radius:6px;
+    padding:.45rem .6rem; font-family:system-ui,sans-serif; font-size:.72rem; color:var(--ink);
+    box-shadow:0 4px 14px rgba(0,0,0,.16); z-index:9; font-variant-numeric:tabular-nums;
+    max-width:16rem; }
+  #tip .th { font-weight:700; margin-bottom:.2rem; }
+  #tip .rw { color:var(--muted); }
+  #tip .rw b { color:var(--ink); font-weight:600; }
+  @media (prefers-reduced-motion:reduce) { #tip { transition:none; } }
+  circle:focus { outline:2px solid var(--accent); outline-offset:2px; }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">Diagnostic · top_tax_dials_30y_v5 · 2027 baseline</p>
+  <h1>The cash-versus-accrual rate gap depends on which ranking you use, and the two tell opposite stories about the tail</h1>
+  <p class="standfirst">Effective federal tax rates on top groups under both income measures, computed two ways.
+  On the left, groups are fixed by cash income and only the denominator changes. On the right, each group is
+  re-ranked on the measure being used, so the accrual groups contain different households. Both series are in
+  the v5 model output; the report's Figure 2 currently uses the right-hand panel and the interactive uses the
+  left.</p>
+</header>
+
+<div class="legend">
+  <span class="key"><span class="dot" style="background:var(--c-cash)"></span>Rate on cash income</span>
+  <span class="key"><span class="dot" style="background:var(--c-hs)"></span>Rate on accrual income</span>
+  <span class="key" style="color:var(--muted)">Taxes: income, payroll, estate, corporate, wealth, VAT · corporate borne by capital income</span>
+</div>
+
+<div class="panels">
+  <div class="fig">
+    <h2>Groups fixed by cash income</h2>
+    <p class="sub">Same households in both series; only the income measure changes · <code>ranking = fixed</code></p>
+    <svg id="pFixed" role="img" aria-label="Dumbbell chart of cash and accrual effective tax rates for five top groups, groups fixed by cash income. The gap between the two rates narrows for the narrowest groups, from 8.5 points at the top 10 percent to 6.3 points at the top 0.01 percent."></svg>
+    <p class="verdict">The gap <b>narrows</b> toward the tail: 8.5 points at the top 10% down to <b>6.3 points</b> at the top 0.01%.</p>
+  </div>
+
+  <div class="fig">
+    <h2>Groups re-ranked on each measure</h2>
+    <p class="sub">Accrual groups are different households, selected on accrual income · <code>ranking = self</code></p>
+    <svg id="pSelf" role="img" aria-label="Dumbbell chart of cash and accrual effective tax rates for five top groups, each group re-ranked on the measure being used. The gap between the two rates widens for the narrowest groups, from 9.7 points at the top 10 percent to 14.8 points at the top 0.01 percent."></svg>
+    <p class="verdict">The gap <b>widens</b> toward the tail: 9.7 points at the top 10% up to <b>14.8 points</b> at the top 0.01%.</p>
+  </div>
+</div>
+
+<div class="tblwrap">
+  <h2>Why they differ</h2>
+  <p class="sub">Re-ranking moves the group floor and swaps in households with more unrealized income and less tax</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Group</th>
+        <th colspan="2">Accrual income $B</th>
+        <th colspan="2">Tax $B</th>
+        <th colspan="2">Accrual ETR</th>
+        <th colspan="2">Group floor $M</th>
+      </tr>
+      <tr>
+        <th></th>
+        <th>fixed</th><th>self</th>
+        <th>fixed</th><th>self</th>
+        <th>fixed</th><th>self</th>
+        <th>fixed</th><th>self</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <p class="cap"><b>The tax column is the mechanism.</b> Under fixed ranking the accrual series has the same
+  numerator as the cash series — it is the same households, so only the denominator grows. Under self-ranking
+  the numerator falls as well, because the accrual-richest households pay less tax than the cash-richest ones:
+  at the top 0.01% the tax drops from $358B to $260B while accrual income rises from $1,512B to $1,714B, and
+  both movements push the rate down. The group floor shows how far the selection moves — the top 1% line sits
+  at $0.91M of cash income but $1.64M of accrual income. Cash-basis rates are identical under both conventions,
+  so the two panels differ only in the accrual series. Source: Tax-Simulator, <code>distribution_etrs.csv</code>,
+  2027 baseline columns.</p>
+</div>
+</div>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+  var G = ["Top 10%", "Top 5%", "Top 1%", "Top 0.1%", "Top 0.01%"];
+
+  // 2027 baseline, wealth_cit_vat taxes, capital_income corp convention.
+  // Cash (expanded) income and tax are identical under both rankings.
+  var CASH = {
+    inc: [11531.3, 8960.4, 5211.8, 2520.3, 1193.9],
+    tax: [2762.3, 2204.1, 1366.2, 736.2, 358.4],
+    etr: [23.95, 24.60, 26.21, 29.21, 30.02],
+    cut: [0.23, 0.35, 0.91, 4.24, 21.39]
+  };
+  var HS = {
+    fixed: {
+      inc: [17881.1, 13982.9, 7751.3, 3425.9, 1511.5],
+      tax: [2762.3, 2204.1, 1366.2, 736.2, 358.4],
+      etr: [15.45, 15.76, 17.63, 21.49, 23.71],
+      cut: [0.23, 0.35, 0.91, 4.24, 21.39]
+    },
+    self: {
+      inc: [18818.6, 15133.0, 8728.6, 3861.9, 1713.9],
+      tax: [2687.1, 2125.0, 1298.2, 641.8, 260.3],
+      etr: [14.28, 14.04, 14.87, 16.62, 15.19],
+      cut: [0.31, 0.52, 1.64, 7.61, 29.04]
+    }
+  };
+
+  function cvar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+  // Dumbbell panel: one row per group, accrual dot left of cash dot, gap in the right margin.
+  function dumbbell(id, rank) {
+    var hs = HS[rank];
+    var W = 470, mL = 92, mR = 68, mT = 16, rowH = 44, xmax = 35, tick = 5;
+    var H = mT + rowH * G.length + 32;
+    function X(v) { return mL + (v / xmax) * (W - mL - mR); }
+    var o = [];
+
+    for (var gx = 0; gx <= xmax; gx += tick) {
+      o.push('<line x1="' + X(gx).toFixed(1) + '" y1="' + mT + '" x2="' + X(gx).toFixed(1) +
+        '" y2="' + (mT + rowH * G.length) + '" stroke="' + cvar("--grid") + '" stroke-width="1"/>');
+      o.push('<text x="' + X(gx).toFixed(1) + '" y="' + (mT + rowH * G.length + 17) +
+        '" font-size="10.5" text-anchor="middle" fill="' + cvar("--muted") + '">' + gx + '%</text>');
+    }
+
+    G.forEach(function (g, i) {
+      var y = mT + rowH * i + rowH / 2;
+      var a = hs.etr[i], c = CASH.etr[i], gap = c - a;
+
+      o.push('<text x="' + (mL - 10) + '" y="' + (y + 4) + '" font-size="12" font-weight="600" ' +
+        'text-anchor="end" fill="' + cvar("--ink") + '">' + g + '</text>');
+      o.push('<line x1="' + X(a).toFixed(1) + '" y1="' + y + '" x2="' + X(c).toFixed(1) + '" y2="' + y +
+        '" stroke="' + cvar("--axis") + '" stroke-width="1.6"/>');
+
+      // accrual label sits left of its dot, cash label right of its dot
+      o.push('<text x="' + (X(a) - 11).toFixed(1) + '" y="' + (y + 4) + '" font-size="11" font-weight="600" ' +
+        'text-anchor="end" fill="' + cvar("--ink") + '" font-variant-numeric="tabular-nums">' +
+        a.toFixed(1) + '%</text>');
+      o.push('<text x="' + (X(c) + 11).toFixed(1) + '" y="' + (y + 4) + '" font-size="11" font-weight="600" ' +
+        'text-anchor="start" fill="' + cvar("--ink") + '" font-variant-numeric="tabular-nums">' +
+        c.toFixed(1) + '%</text>');
+      o.push('<text x="' + (W - 4) + '" y="' + (y + 4) + '" font-size="10.5" text-anchor="end" fill="' +
+        cvar("--muted") + '" font-variant-numeric="tabular-nums">' + gap.toFixed(1) + 'pp</text>');
+
+      // 2px surface ring keeps the dots legible where they nearly touch
+      [["hs", a, "--c-hs"], ["cash", c, "--c-cash"]].forEach(function (d) {
+        var which = d[0], v = d[1];
+        var src = which === "cash" ? CASH : hs;
+        o.push('<circle cx="' + X(v).toFixed(1) + '" cy="' + y + '" r="6.5" fill="' + cvar(d[2]) +
+          '" stroke="' + cvar("--card") + '" stroke-width="2" tabindex="0" role="img"' +
+          ' data-t="' + esc(g + " · " + (which === "cash" ? "cash" : "accrual") + " basis") +
+          '" data-r="' + esc(rank === "fixed" ? "groups fixed by cash income" : "groups re-ranked on this measure") +
+          '" data-e="' + v.toFixed(2) + '" data-i="' + src.inc[i].toLocaleString() +
+          '" data-x="' + src.tax[i].toLocaleString() + '" data-c="' + src.cut[i] + '"/>');
+      });
+    });
+
+    var svg = document.getElementById(id);
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    svg.innerHTML = o.join("");
+  }
+
+  function table() {
+    var o = [];
+    G.forEach(function (g, i) {
+      o.push("<tr>" +
+        "<td>" + g + "</td>" +
+        "<td>" + HS.fixed.inc[i].toLocaleString() + "</td>" +
+        "<td>" + HS.self.inc[i].toLocaleString() + "</td>" +
+        '<td class="same">' + HS.fixed.tax[i].toLocaleString() + "</td>" +
+        "<td>" + HS.self.tax[i].toLocaleString() + "</td>" +
+        "<td>" + HS.fixed.etr[i].toFixed(1) + "%</td>" +
+        "<td>" + HS.self.etr[i].toFixed(1) + "%</td>" +
+        '<td class="dim">' + HS.fixed.cut[i].toFixed(2) + "</td>" +
+        "<td>" + HS.self.cut[i].toFixed(2) + "</td>" +
+        "</tr>");
+    });
+    document.getElementById("tbody").innerHTML = o.join("");
+  }
+
+  // hover / focus tooltip on every dot
+  var tip = document.getElementById("tip");
+  function show(el, x, y) {
+    tip.innerHTML = '<div class="th">' + el.dataset.t + "</div>" +
+      '<div class="rw">Effective rate <b>' + el.dataset.e + "%</b></div>" +
+      '<div class="rw">Income <b>$' + el.dataset.i + "B</b></div>" +
+      '<div class="rw">Tax <b>$' + el.dataset.x + "B</b></div>" +
+      '<div class="rw">Group floor <b>$' + el.dataset.c + "M</b></div>" +
+      '<div class="rw" style="margin-top:.2rem">' + el.dataset.r + "</div>";
+    tip.style.opacity = "1";
+    var w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = Math.min(window.innerWidth - w - 8, Math.max(8, x + 14)) + "px";
+    tip.style.top = Math.max(8, y - h - 12) + "px";
+  }
+  function hide() { tip.style.opacity = "0"; }
+  document.addEventListener("mouseover", function (e) {
+    if (e.target.tagName === "circle") show(e.target, e.clientX, e.clientY);
+  });
+  document.addEventListener("mousemove", function (e) {
+    if (e.target.tagName === "circle") show(e.target, e.clientX, e.clientY);
+  });
+  document.addEventListener("mouseout", function (e) {
+    if (e.target.tagName === "circle") hide();
+  });
+  document.addEventListener("focusin", function (e) {
+    if (e.target.tagName === "circle") {
+      var b = e.target.getBoundingClientRect();
+      show(e.target, b.left + b.width / 2, b.top + b.height / 2);
+    }
+  });
+  document.addEventListener("focusout", hide);
+
+  function render() { dumbbell("pFixed", "fixed"); dumbbell("pSelf", "self"); }
+  render();
+  table();
+
+  var mq = window.matchMedia("(prefers-color-scheme: dark)");
+  if (mq.addEventListener) mq.addEventListener("change", render);
+  new MutationObserver(render).observe(document.documentElement,
+    { attributes: true, attributeFilter: ["data-theme"] });
+})();
+</script>

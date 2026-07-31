@@ -25,8 +25,8 @@ Pure stdlib, reads the baseline static detail directly (as mtr_table_data.py doe
 """
 import csv, json, os
 
-V3        = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/top_tax_dials_30y_v3"
-DETAIL    = f"{V3}/baseline/static/detail/2027.csv"
+V5        = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/top_tax_dials_30y_v5"
+DETAIL    = f"{V5}/baseline/static/detail/2027.csv"
 GDP_FY_B  = 33315.19   # FY2027 nominal GDP, Macro-Projections v3 2026022522 (gdp_fy)
 DEFICIT_B = 1900.0     # FY2027 deficit, CBO Feb 2026
 

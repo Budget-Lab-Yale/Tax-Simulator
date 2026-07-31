@@ -10,7 +10,7 @@ Required top rate = current income-weighted marginal on the above-T slice
 """
 import csv, json, os
 
-V3 = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/top_tax_dials_30y_v3"
+V5 = "/nfs/roberts/scratch/pi_nrs36/jar335/model_data/Tax-Simulator/v1/top_tax_dials_30y_v5"
 DEFICIT_B = 1900.0  # FY2027
 
 # cash-income group floors + self-ranked cash ETRs + 2027 cash income $B
@@ -23,7 +23,7 @@ GROUPS = [
     ("Top 0.01%", 21391035.0, 30.0,  1194.0),
 ]
 
-f = f"{V3}/baseline/static/detail/2027.csv"
+f = f"{V5}/baseline/static/detail/2027.csv"
 h = next(csv.reader(open(f))); ix = {n: i for i, n in enumerate(h)}
 C = lambda n: ix[n]
 recs = []

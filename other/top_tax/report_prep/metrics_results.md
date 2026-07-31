@@ -1,6 +1,6 @@
 # Metrics for the top-tax report
 
-*Source vintages: dials `top_tax_dials_30y_v6` (current physics, run 2026-07-28: net-of-tax realization form eta_tilde=1.6625, sigma=0.16, on-model corporate rate to 35, uncapped CG rate, estate-avoidance fix, death-gain exclusion dial; deemed heir attribution is the full-ladder rank match, not comparable to the v3 smear), revmax grid `kg_v5_revmax` (same physics, direct death-regime grid to +30pp). All $ figures $B unless noted; windows FY2027-2036 and FY2027-2056.*
+*Source vintages: dials `top_tax_dials_30y_v6` (current physics, run 2026-07-30: net-of-tax realization form eta_tilde=1.6625, sigma=0.16, on-model corporate rate to 35, uncapped CG rate, estate-avoidance fix, death-gain exclusion dial, income conversion computed once in the pre-pass; deemed heir attribution is the full-ladder rank match, not comparable to the v3 smear), revmax grid `kg_v6_revmax` (same physics, direct death-regime grid to +30pp). All $ figures $B unless noted; windows FY2027-2036 and FY2027-2056.*
 
 ## 1. Income at the top, 2027 (baseline)
 
@@ -143,10 +143,10 @@
   - Sum of standalone static:       $838B   (cg25 547 + deemed 291)
   - Sum of standalone conventional: $924B   (cg25 245 + deemed 679)
   - Package conventional estimate:  **$1,123B** (interaction 199.1)
-- Direct runs (kg_v5_revmax, current physics), 10y:
+- Direct runs (kg_v6_revmax, current physics), 10y:
   - Parts static:  cg+5pp 547 + deemed 291 = $838B
-  - Parts conv:    cg+5pp 175 + deemed 677 = $851B
-  - Package static $882B; package conv **$1,030B**
+  - Parts conv:    cg+5pp 180 + deemed 670 = $851B
+  - Package static $882B; package conv **$1,027B**
 
 ## 8. Capital-gains Laffer curves by death regime
 
@@ -163,21 +163,21 @@
 
 *Conditional columns = the CG-rate increase's own 10y conventional yield when the death regime is already in place (solo cg + g-scaled cg|deemed interaction residual; the regime's own revenue is NOT included). Surrogate-composed -- +/- a few percent.*
 
-### 8b. Direct grid (kg_v5_revmax, current physics): total 10y conventional by cell
+### 8b. Direct grid (kg_v6_revmax, current physics): total 10y conventional by cell
 
 | Top CG rate | Step-up | Carryover | Deemed | Step-up static | Deemed static |
 |---|---|---|---|---|---|
-| 20% | 0 | 242 | 677 | 0 | 291 |
-| 25% | 175 | 484 | 1,030 | 547 | 882 |
-| 30% | 294 | 677 | 1,342 | 1,095 | 1,474 |
-| 35% | 354 | 814 | 1,608 | 1,642 | 2,066 |
-| 40% | 336 | 877 | 1,809 | 2,190 | 2,658 |
-| 45% | 250 | 872 | 1,948 | 2,738 | 3,251 |
+| 20% | 0 | 234 | 670 | 0 | 291 |
+| 25% | 180 | 481 | 1,027 | 547 | 882 |
+| 30% | 306 | 678 | 1,343 | 1,095 | 1,474 |
+| 35% | 374 | 821 | 1,615 | 1,642 | 2,066 |
+| 40% | 366 | 893 | 1,822 | 2,190 | 2,658 |
+| 45% | 290 | 896 | 1,967 | 2,738 | 3,251 |
 
 Leakage sign check (static minus conventional, 10y): positive = behavior loses revenue.
-- cg+5pp under step-up: static 547, conv 175, leakage 372
-- deemed alone: static 291, conv 677, leakage -386
-- cg+5pp + deemed package: static 882, conv 1,030, leakage -148
+- cg+5pp under step-up: static 547, conv 180, leakage 367
+- deemed alone: static 291, conv 670, leakage -379
+- cg+5pp + deemed package: static 882, conv 1,027, leakage -144
 
 ## 9. 'Ask' vs 'collected' ETRs under the full reference stack (stack_ref, 2027)
 

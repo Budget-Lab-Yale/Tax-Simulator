@@ -3,11 +3,17 @@
 *Computed 2026-07-18 for the top-tax report (Table 1 + the AGI-above-$1M envelope).
 Source: `top_tax_dials_30y_v3` baseline, FY2027, static. All rates are federal.*
 
-> **REFRAME (2026-07-22).** The preferred framing for the report is now the dual
-> in the **"100% rate ceiling"** section below: rather than solving for the rate
-> that closes the deficit (which yields impossible >100% rates), impose a 100%
-> total federal rate and ask what share of GDP it raises. Same point, cleaner.
-> The rate-needed tables below are retained as the companion / derivation.
+> **REFRAME (2026-07-30).** Table 1 in the report is now the calculator-measured
+> version in the **"Taking all income above a threshold"** section below. Both
+> framings above it are superseded: they rest on a composition-weighted marginal
+> rate blended by hand from two MTR columns, and the new version measures the
+> same quantity with two passes of the calculator instead. The rate-needed and
+> 100%-ceiling tables are retained as the derivation, and their base columns
+> agree with the new ones.
+>
+> **REFRAME (2026-07-22).** Rather than solving for the rate that closes the
+> deficit (which yields impossible >100% rates), impose a 100% total federal rate
+> and ask what share of GDP it raises. Same point, cleaner.
 
 ## The question
 
@@ -95,6 +101,98 @@ baseline static detail (`baseline/static/detail/2027.csv`) exactly as
 `mtr_table_data.py` does. GDP from Macro-Projections v3 `2026022522` (`gdp_fy`,
 2027).
 
+## Taking all income above a threshold (TABLE 1, 2026-07-30)
+
+The exercise the report now runs. The government takes every dollar of income
+above a threshold and leaves tax on income below it exactly as current law sets
+it. A unit's tax becomes
+
+    tax_policy = tax(income capped at T) + (income - T)+
+
+so revenue over current law is
+
+    revenue = sum w * (income - T)+  +  sum w * tax(capped) - sum w * tax(current)
+
+No rate is assumed anywhere. The tax currently collected on the above-threshold
+slice is the difference between the two calculator passes, which is what the two
+framings above approximate with a blended marginal rate. Federal individual
+income tax plus payroll tax, FY2027, bases held fixed.
+
+Four income concepts, each entering only through who is above the threshold and
+how many dollars are above it:
+
+| concept | definition |
+|---|---|
+| taxable income | AGI less deductions: what the rate schedule applies to |
+| ordinary income | AGI less capital gains and qualified dividends |
+| AGI | the broadest measure the current system counts |
+| accrual income | expanded income with realized gains replaced by accruals, less the defined-contribution double count |
+
+### Round thresholds
+
+Revenue over current law, $B and % of FY2027 GDP ($33.3T). The FY2027 deficit is
+$1.9T, 5.7% of GDP.
+
+| Concept | $1M | | $5M | | $10M | |
+|---|---|---|---|---|---|---|
+| | $B | %GDP | $B | %GDP | $B | %GDP |
+| Taxable income | 1,563 | 4.7% | 820 | 2.5% | 595 | 1.8% |
+| Ordinary income | 939 | 2.8% | 358 | 1.1% | 206 | 0.6% |
+| AGI | 1,779 | 5.3% | 930 | 2.8% | 668 | 2.0% |
+| Accrual income | 5,800 | 17.4% | 2,419 | 7.3% | 1,626 | 4.9% |
+
+Share of filers above each threshold, which is what "roughly the top X%" means
+for each measure:
+
+| Threshold | Taxable | Ordinary | AGI | Accrual | Cash |
+|---|---|---|---|---|---|
+| $1M | 0.51% | 0.45% | 0.59% | 1.93% | 0.75% |
+| $5M | 0.063% | 0.045% | 0.070% | 0.165% | 0.076% |
+| $10M | 0.021% | 0.014% | 0.023% | 0.062% | 0.025% |
+
+A $1M threshold is roughly the top half-percent on every realized measure and
+roughly the top two percent on accrual income.
+
+### Each measure's own top shares
+
+| Group | Taxable | Ordinary | AGI | Accrual |
+|---|---|---|---|---|
+| Top 10% | 11.2% | 8.9% | 12.2% | 31.3% |
+| Top 5% | 8.9% | 6.7% | 9.7% | 24.8% |
+| Top 1% | 5.6% | 3.8% | 6.2% | 13.7% |
+| Top 0.1% | 3.0% | 1.6% | 3.3% | 5.8% |
+| Top 0.01% | 1.4% | 0.5% | 1.5% | 3.0% |
+
+Reading: on AGI, taking everything above the top-1% line raises 6.2% of GDP,
+just over one year's deficit; on ordinary income the same line raises 3.8%. The
+accrual column is two to three times the AGI column, and the implied current rate
+on the slice is about 15% against AGI's 30%, because most of the appreciation the
+accrual measure counts carries no current-year tax.
+
+### Method notes
+
+- Truncation scales each above-threshold record's positive income flows until
+  that record's income sits on the threshold, holding composition fixed, and
+  reprices the record under current law. Only positive flows scale: shrinking a
+  loss would raise the concept rather than lower it, and the policy takes income
+  away rather than handing out deductions. Solved by bisection, converged to
+  within 0.13% on the worst single record and 1e-5 or better on most cases.
+- Ordinary income subtracts every gain and qualified-dividend flow that enters
+  AGI, not only the preferentially rated slice. Subtracting only the rated slice
+  leaves the depreciation-recapture and collectibles gains inside the concept
+  while holding them fixed, and then a fifth of the base at a $10M threshold
+  cannot be truncated at all.
+- On the accrual measure, replacing realized gains with accruals adds realized
+  losses back, and losses do not scale. Between 0.5% and 2.6% of the accrual base
+  therefore sits in records that cannot be brought down to the threshold; those
+  records are held at every positive flow removed. The `unreachable_share` column
+  reports it per case.
+- Reproduce: `hundred_pct_bracket.R` (via `run_hundred_pct_bracket.sbatch`) ->
+  `hundred_pct_bracket.csv` + `hundred_pct_bracket_placement.csv`;
+  `build_hundred_pct_table.py` -> `hundred_pct_table.html`. Reads the
+  `top_tax_dials_30y_v6` baseline through `reconstitute_environment`, so it runs
+  the shipped calculator rather than a reimplementation of it.
+
 ## The AGI-above-$1M envelope (report intuition paragraph)
 
 - ~1.12M tax units have AGI > $1M; combined AGI ≈ **$3.68T**.
@@ -165,6 +263,16 @@ carryover/deemed are not reliably estimable at a 5-pp step — the muted volunta
 is below the noise floor and the sign flips. Scenarios: `s_cg_r40` (step-up),
 `prco_cg_deemed` (carryover at cg40), `pr_cg_deemed` (deemed at cg40). Compute:
 `report_prep/` ad-hoc (voluntary semi-elast formula above).
+
+## Vintage check on v5
+
+Both framings were re-run against the `top_tax_dials_30y_v5` baseline on
+2026-07-29 (`hundred_pct_ceiling.py` and `mtr_table_data.py` now read that
+vintage). Every figure is identical to the v3 numbers above to three decimal
+places: the 2027 baseline income distribution, the bases above each threshold
+and the current-law marginal rates on those slices did not move between the two
+vintages. The kg form change bears on behavioral response, which the table does
+not use.
 
 ## Published artifacts
 
