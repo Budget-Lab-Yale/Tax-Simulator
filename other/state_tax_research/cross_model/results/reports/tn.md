@@ -1,6 +1,6 @@
 # Cross-model validation: TN
 
-Class: narrow | Generated: 2026-07-19 | Verdict: **PASS**
+Class: narrow | Generated: 2026-08-11 | Verdict: **PASS**
 
 Acceptance: match@$100 >= 95% in every canonical-window cell
 (2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where

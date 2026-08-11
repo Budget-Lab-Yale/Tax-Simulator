@@ -1,6 +1,6 @@
 # Cross-model validation: PA
 
-Class: broad | Generated: 2026-07-23 | Verdict: **NEEDS REVIEW**
+Class: broad | Generated: 2026-08-11 | Verdict: **NEEDS REVIEW**
 
 Acceptance: match@$100 >= 95% in every canonical-window cell
 (2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where
@@ -42,31 +42,13 @@ defined (federally aligned records; see README).
 
 ## Known differences applied
 
-|state |model  | year_min| year_max|category       |action   |description                                                                                                                                                                                                                         |
-|:-----|:------|--------:|--------:|:--------------|:--------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|ALL   |taxsim |     2017|     2024|structural     |annotate |TAXSIM optimizes federal itemization using its own computed state income tax (SALT circularity) and iterates federal-state 3 rounds; our pass is one-way federal-to-state until Phase 7                                             |
-|ALL   |taxsim |     2017|     2024|structural     |annotate |TAXSIM imputes the sales-tax deduction from IRS Pub. 600 regressions; we use as-reported salt_inc_sales                                                                                                                             |
-|ALL   |taxsim |     2021|     2024|vintage        |annotate |TAXSIM state law 2021+ is inflated ~2020 law, not enacted law; cells in this window are non-canonical (PolicyEngine is the tie-breaker)                                                                                             |
-|ALL   |taxsim |     2017|     2024|input-coverage |annotate |TAXSIM-35 has no tax-exempt interest input, so it can never apply state exempt-interest addbacks (or count exempt_int in the federal EITC investment-income test); records with exempt_int > 0 are outside the clean-subset metrics |
-|ALL   |taxsim |     2017|     2024|input-coverage |annotate |TAXSIM-35 has no state-refund input, so state-mode crosswalk omits state_ref entirely (states subtract their own refunds); TAXSIM federal AGI runs low by state_ref, handled inside the fed_aligned flag                            |
-|ALL   |taxsim |     2017|     2024|federal-side   |annotate |State EITCs piggyback on federal EITC; TAXSIM's own federal EITC (amount and eligibility) can differ from ours, propagating scaled differences into state EITC; clean-subset metrics condition on federal EITC agreement            |
+|state |model  | year_min| year_max|category       |action   |description                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+|:-----|:------|--------:|--------:|:--------------|:--------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|ALL   |taxsim |     2017|     2024|structural     |annotate |TAXSIM optimizes federal itemization using its own computed state income tax (SALT circularity) and iterates federal-state 3 rounds; our pass is one-way federal-to-state until Phase 7                                                                                                                                                                                                                                                             |
+|ALL   |taxsim |     2017|     2024|structural     |annotate |TAXSIM imputes the sales-tax deduction from IRS Pub. 600 regressions; we use as-reported salt_inc_sales                                                                                                                                                                                                                                                                                                                                             |
+|ALL   |taxsim |     2021|     2024|vintage        |annotate |TAXSIM state law 2021+ is inflated ~2020 law, not enacted law; cells in this window are non-canonical (PolicyEngine is the tie-breaker)                                                                                                                                                                                                                                                                                                             |
+|ALL   |taxsim |     2017|     2024|input-coverage |annotate |TAXSIM-35 has no tax-exempt interest input, so it can never apply state exempt-interest addbacks (or count exempt_int in the federal EITC investment-income test); records with exempt_int > 0 are outside the clean-subset metrics                                                                                                                                                                                                                 |
+|ALL   |taxsim |     2017|     2024|input-coverage |annotate |TAXSIM-35 has no state-refund input, so state-mode crosswalk omits state_ref entirely (states subtract their own refunds); TAXSIM federal AGI runs low by state_ref, handled inside the fed_aligned flag                                                                                                                                                                                                                                            |
+|ALL   |taxsim |     2017|     2024|federal-side   |annotate |State EITCs piggyback on federal EITC; TAXSIM's own federal EITC (amount and eligibility) can differ from ours, propagating scaled differences into state EITC; clean-subset metrics condition on federal EITC agreement                                                                                                                                                                                                                            |
+|PA    |taxsim |     2017|     2020|state-law      |annotate |TAXSIM's PA base appears to net losses across income classes (median our st_agi minus v32 = +$10k among mismatches; 84% of mismatches positive, mean +$7.8k) where PA law bars cross-class and spousal offsets, flooring each class at zero; our within-unit class netting is itself a documented approximation. Note TAXSIM DOES model Tax Forgiveness (verified: 86% of forgiveness records match raw; back-adding the credit drops match to 14%) |
 
-
-## Triage notes (2026-07-23, initial run)
-
-- **TAXSIM models Tax Forgiveness** — hypothesis that it didn't is REFUTED:
-  86% of forgiveness records match raw within $15; back-adding the credit
-  drops the match to 14%. No forgiveness exclusion needed.
-- **Dominant TAXSIM wedge = class-loss netting**: median `st_agi - v32` is
-  +$10,062 among mismatches and 84% of mismatches are positive (ours
-  higher, mean +$7.8k). PA law floors each class at zero (no cross-class or
-  spousal offsets); TAXSIM appears to net losses. Candidate upstream issue
-  after deeper verification (isolate records whose only wedge is a
-  negative class). Our own within-unit class netting (vs per-spouse,
-  per-activity) is the counterpart known-difference.
-- **PolicyEngine window is already close** (81-88% clean@$100): no
-  point-mass structure, no forgiveness correlation in residuals; punch
-  list is the scattered tail (start with the largest 2023 records).
-- Shared annotations apply: no tax-exempt-interest input in TAXSIM (PA
-  taxes other-state munis; exempt_int > 0 records sit outside the clean
-  subset), 401(k)-deferral wage base shared by all PUF-based models.
