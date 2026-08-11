@@ -333,6 +333,26 @@ test_state_calc = function() {
                          liab_st_iit = 49000 * 0.03 - 100),
            label = 'IN-1 exemptions and refundable EITC')
 
+  # IN-2: dependent-child exemption stack (IC 6-3-1-3.5(a)): $1,000 per
+  # exemption (2 taxpayers + 2 dependents) + $1,500 additional per
+  # dependent child = 7,000. 2019 MFJ AGI 100,000 ->
+  # (100,000 - 7,000) x 3.23% = 3,003.90. TAXSIM agrees exactly
+  run_case('IN', 2019,
+           list(agi = 100000, filing_status = 2, age2 = 40,
+                wages1 = 60000, wages2 = 40000, ei1 = 60000, ei2 = 40000,
+                n_dep = 2, dep_age1 = 8, dep_age2 = 10),
+           expect = list(st_exempt = 7000,
+                         liab_st_iit = 93000 * 0.0323),
+           label = 'IN-2 dependent-child exemption stack')
+
+  # IN-3: the $1,000 65+ exemption is universal (only the extra $500
+  # under $40,000 AGI is income-tested and remains omitted): 2019 single
+  # 70, AGI 50,000 -> (50,000 - 2,000) x 3.23% = 1,550.40. TAXSIM agrees
+  run_case('IN', 2019, list(agi = 50000, age1 = 70),
+           expect = list(st_exempt = 2000,
+                         liab_st_iit = 48000 * 0.0323),
+           label = 'IN-3 universal aged exemption')
+
   # KY-1: 2025 single at MGI $16,000 is in the 90% family-size-credit band.
   # Tax is ($16,000 - $3,270) x 4% = $509.20; the credit is $458.28.
   run_case('KY', 2025, list(agi = 16000),

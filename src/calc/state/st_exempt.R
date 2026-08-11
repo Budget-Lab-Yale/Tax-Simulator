@@ -36,6 +36,9 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
     'filing_status',  # (int)  filing status (1 single, 2 MFJ, 3 MFS, 4 HoH)
     'dep_status',     # (bool) whether filer is a dependent
     'n_dep',          # (int)  number of dependents
+    'dep_age1',       # (int)  tracked dependent ages (child add-on)
+    'dep_age2',       # (int)
+    'dep_age3',       # (int)
     'age1',           # (int)  age of primary filer
     'age2',           # (int)  age of secondary filer (NA if none)
     'blind1',         # (bool) whether primary filer is blind
@@ -45,6 +48,8 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
     'st_exempt.personal_amount', # (dbl) exemption per taxpayer (or per return)
     'st_exempt.personal_per_return', # (int) personal_amount is per RETURN (CT)
     'st_exempt.dep_amount',      # (dbl) exemption per dependent
+    'st_exempt.dep_child_addl',  # (dbl) additional exemption per dependent CHILD (IN)
+    'st_exempt.dep_child_max_age', # (dbl) max tracked age for the child add-on
     'st_exempt.aged_addl',       # (dbl) additional exemption per person 65+
     'st_exempt.blind_addl',      # (dbl) additional exemption per blind person
     'st_exempt.aged_blind_addl_excl_eitc', # (int) add-ons forgone with EITC/CLI (VA)
@@ -63,6 +68,14 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
 
   # Phase-out income base per the uniform enum (st_income_base)
   po_income_v = st_income_base(tax_unit, tax_unit$st_exempt.po_agi_base)
+
+  # Dependent-CHILD additional exemption (IN IT-40 Schedule 3 line 2, IC
+  # 6-3-1-3.5(a): $1,500 on top of the $1,000 dependent exemption for a
+  # child under 19 or a full-time student under 24). Tracked dependents
+  # at or below the max age count; 19-23 PUF dependents are
+  # student-dominated by the federal qualifying-child rules, so the age
+  # bound proxies the student test (documented approximation)
+  n_dep_child_v = st_n_dep_in(tax_unit, 0, tax_unit$st_exempt.dep_child_max_age)
 
   # Income-tiered per-exemption amount (OH 5747.025): where the tier family
   # is encoded, one amount applies to taxpayer, spouse, and each dependent,
@@ -107,6 +120,7 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
 
       st_exempt_gross = (n_taxpayers * st_personal_v * dep_filer_factor +
                          n_dep       * st_dep_v +
+                         n_dep_child_v * st_exempt.dep_child_addl +
                          n_aged      * st_exempt.aged_addl * addl_factor +
                          n_blind     * st_exempt.blind_addl * addl_factor),
 
