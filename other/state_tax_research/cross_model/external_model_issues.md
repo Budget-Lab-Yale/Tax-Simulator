@@ -124,6 +124,32 @@ of 133 federally aligned OH mismatches carry BID income (95 with
 PolicyEngine higher, as expected). Flagging because the BID is central to
 any Ohio pass-through analysis.
 
+### P5. One-time rebates netted into eligibility-year `state_income_tax`
+(NY, VA, GA, AZ — generalizing P2)
+
+The P2 pattern is systematic across states (all verified in 1.775.7 package
+source plus record-level point masses in our 2021–2024 samples):
+
+- **NY 2023**: `ny_inflation_refund_credit` books the 2025 inflation refund
+  checks (S.3009-C; $200 single/$400 joint, tiered by NY AGI) into tax year
+  2023 — the source comments the choice ("the tax effect belongs to the
+  eligibility year"). Every low/mid-AGI 2023 record shifts; our NY 2023
+  clean match collapses to 0.160 vs 0.833 (2022)/0.797 (2024).
+- **VA 2021, 2023, 2024**: `va_rebate` books the fall-2022 rebate
+  ($250/$500) into 2021 and the HB6001 2023 rebate ($200/$400) into 2023
+  AND, via the HB 1600 reauthorization, 2024.
+- **GA 2021**: `ga_surplus_tax_rebate` (HB 1302, $250/$375/$500) enters the
+  2021-only nonrefundable-credit list (liability-capped via max(0, ·)).
+- **AZ 2021**: `az_families_tax_rebate` (SB 1734, paid fall 2023; $250 per
+  dependent under 17, max three) books into tax year 2021.
+
+Whether eligibility-year booking is right is a concept choice (the checks
+arrive one to two calendar years later), but as with P1/P2 it makes
+`state_income_tax` diverge from the recurring-liability concept most
+revenue analysis uses, and it does so retroactively for years that were
+already final. A uniform pre-rebate liability output would resolve the
+whole class.
+
 ## Corroboration worth passing along
 
 Where concepts align, agreement is excellent: IL matches TAXSIM at 100%

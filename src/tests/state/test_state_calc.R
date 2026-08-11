@@ -291,6 +291,14 @@ test_state_calc = function() {
            expect = list(st_exempt = 7400, liab_st_iit = 4744.50),
            label = 'GA-4 $7,400 joint exemption')
 
+  # GA-5: the HB 593 standard deduction increase (4,600 -> 5,400 single) is
+  # effective for taxable years beginning on or after 1/1/2022 -- TY2021
+  # keeps the 2018 amounts. Taxable 50,000 - 4,600 - 2,700 = 42,700 ->
+  # 230 + 5.75% x 35,700 = 2,282.75. PE 1.775.7 agrees on the 2021 vintage.
+  run_case('GA', 2021, list(agi = 50000),
+           expect = list(st_std_ded = 4600, liab_st_iit = 2282.75),
+           label = 'GA-5 2021 pre-HB593 standard deduction')
+
   # NC-1: at exactly $30,000 AGI in 2025, two qualifying children receive the
   # $2,500 table amount each. TI = 30,000 - 12,750 - 5,000 = 12,250.
   run_case('NC', 2025, list(agi = 30000, n_dep_ctc = 2),
@@ -1881,9 +1889,11 @@ test_state_calc = function() {
   })
   sweep_allow = c(
     IL = 175,   # exemption disallowance cliff at $250k (2,775 x 4.95% + step)
-    NY = 350,   # recapture segment entry at the 215,400 bracket (+327
-                #   observed 2024) -- flagged for verification against the
-                #   IT-201 worksheet (open item, tracker note 2026-08-11)
+    NY = 350,   # recapture segment entry at the 215,400 bracket: +327.45
+                #   verified worksheet-true 2026-08-11 (supplemental-tax
+                #   incremental benefit 1,830.90 x 0.162 phase + rate step;
+                #   our endpoints match the IT-201 computation exactly and
+                #   PE 1.775.7 concurs within cents)
     KY = 160,   # Table C family-size band edges at low MGI
     CT = 200,   # Table A exemption steps + Table D stepped recapture
                 #   ($122.50/segment observed, pinned by CT-8)

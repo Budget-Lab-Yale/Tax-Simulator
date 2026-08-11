@@ -79,6 +79,16 @@ OUTPUT_VARS = {
     "pe_state_income_tax": ["state_income_tax"],
     "pe_wa_ltcg_excise": ["wa_capital_gains_tax"],
     "pe_wa_wftc": ["wa_working_families_tax_credit"],
+    # Diagnostic for the ID exclude KD row: PE prorates the grocery credit
+    # by qualified months (zeroing imputed-SNAP months), so the netted
+    # amount is partial and household-specific.
+    "pe_id_grocery_credit": ["id_grocery_credit"],
+    # One-time state rebates PE nets into eligibility-year state_income_tax
+    # (KD exclude predicates key on these columns being positive).
+    "pe_ny_inflation_refund": ["ny_inflation_refund_credit"],
+    "pe_va_rebate": ["va_rebate"],
+    "pe_ga_surplus_rebate": ["ga_surplus_tax_rebate"],
+    "pe_az_families_rebate": ["az_families_tax_rebate"],
     # PE's own federal results, used by the harness's clean-subset metrics
     "pe_fed_agi": ["adjusted_gross_income"],
     "pe_fed_taxable": ["taxable_income"],

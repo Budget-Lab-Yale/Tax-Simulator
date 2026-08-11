@@ -14,23 +14,23 @@ std_single:
   value:
     '2017': 2300
     '2018': 4600
-    '2021': 5400
+    '2022': 5400
     '2024': 12000
-  reference: 'Georgia Form 500 standard deduction instructions, 2017-2025'
+  reference: 'Georgia Form 500 standard deduction instructions, 2017-2025; HB 593 of 2021 increase effective for taxable years beginning on or after 2022-01-01'
 std_joint:
   value:
     '2017': 3000
     '2018': 6000
-    '2021': 7100
+    '2022': 7100
     '2024': 24000
-  reference: 'Georgia Form 500 standard deduction instructions, 2017-2025'
+  reference: 'Georgia Form 500 standard deduction instructions, 2017-2025; HB 593 of 2021 increase effective for taxable years beginning on or after 2022-01-01'
 std_mfs:
   value:
     '2017': 1500
     '2018': 3000
-    '2021': 3550
+    '2022': 3550
     '2024': 12000
-  reference: 'Georgia Form 500 standard deduction instructions, 2017-2025'
+  reference: 'Georgia Form 500 standard deduction instructions, 2017-2025; HB 593 of 2021 increase effective for taxable years beginning on or after 2022-01-01'
 std_aged_addl:
   value:
     '2017': 1300
