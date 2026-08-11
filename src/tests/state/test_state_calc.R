@@ -29,6 +29,20 @@ test_state_calc = function() {
   )
   credit_tables = attr(law, 'credit_tables')
 
+  # Credit-family output columns for the worksheet-coverage layer (code
+  # review 2026-07-17 item #9a): run_case records which of these each
+  # state's hand-computed cases actually move
+  coverage_outputs = c(
+    'st_hh_credit', 'st_eitc', 'st_ctc', 'st_dep_credit', 'st_cdctc',
+    'st_family_credit', 'st_exempt_credit', 'st_earned_credit', 'st_yctc',
+    'st_pct_credit', 'st_cli', 'st_ded_credit', 'st_age_credit',
+    'st_retire_credit', 'st_senior_credit', 'st_jfc', 'st_forgive_credit',
+    'st_percap_credit', 'st_marriage_credit', 'st_twoearner_credit',
+    'st_item_credit'
+  )
+  case_exercised = new.env()
+  case_exercised$sets = list()
+
   run_case = function(st, yr, unit_overrides, expect, tol = 0.01, label = '') {
 
     unit = st_test_unit(unit_overrides)
@@ -43,6 +57,10 @@ test_state_calc = function() {
       do_state_taxes(
         credit_tables = state_credit_tables_for_year(credit_tables, st, yr)
       )
+
+    nz = coverage_outputs[map_lgl(coverage_outputs,
+                                  ~ isTRUE(abs(result[[.x]][1]) > 1e-9))]
+    case_exercised$sets[[st]] = union(case_exercised$sets[[st]], nz)
 
     for (v in names(expect)) {
       got = result[[v]][1]
@@ -89,6 +107,14 @@ test_state_calc = function() {
            list(agi = 300000, salt_prop = 8000),
            expect = list(st_exempt = 0, liab_st_iit = 14850),
            label = 'IL-4 high-income cliffs')
+
+  # IL-5: 2025 child tax credit (P.A. 103-0592): 40% of the IL EITC with a
+  # qualifying child under 12. Federal EITC 3,000 -> IL EITC 20% = 600 ->
+  # IL CTC 0.40 x 600 = 240
+  run_case('IL', 2025,
+           list(agi = 20000, n_dep = 1, dep_age1 = 5, eitc = 3000),
+           expect = list(st_eitc = 600, st_ctc = 240),
+           label = 'IL-5 child credit as share of EITC')
 
   #--------------------------------------------------------------------------
   # New York (IT-201)
@@ -143,6 +169,15 @@ test_state_calc = function() {
                 dep_age1 = 2, dep_age2 = 6),
            expect = list(st_ctc = 1500 - 16.5 * 3),
            label = 'NY-4 2026 decoupled ESCC')
+
+  # NY-5: 2024 dependent-care credit (IT-216 Worksheet 1 share table): at
+  # NYAGI 45,000 the share segment [40,000, 50,000) is flat at 1.00, so the
+  # NY credit equals the federal credit (500)
+  run_case('NY', 2024,
+           list(agi = 45000, n_dep = 1, dep_age1 = 4, cdctc_nonref = 500,
+                care_exp = 2500),
+           expect = list(st_cdctc = 500),
+           label = 'NY-5 dependent-care share table')
 
   #--------------------------------------------------------------------------
   # Colorado (DR 0104)
@@ -1643,6 +1678,14 @@ test_state_calc = function() {
            expect = list(st_agi = 9000, liab_st_iit = 0),
            label = 'WI-7 retirement exclusion cliff')
 
+  # WI-8: 2022 dependent-care credit (2021 Act 58): 50% of the federal
+  # CDCTC, nonrefundable. Federal credit 600 -> WI 300
+  run_case('WI', 2022,
+           list(agi = 40000, wages1 = 40000, ei1 = 40000, n_dep = 1,
+                dep_age1 = 4, cdctc_nonref = 600, care_exp = 3000),
+           expect = list(st_cdctc = 300),
+           label = 'WI-8 dependent-care 50% match')
+
   #--------------------------------------------------------------------------
   # Structural smoke test: a coarse grid of units through every broad-IIT
   # baseline state and several years must produce finite, non-NA results
@@ -1670,12 +1713,28 @@ test_state_calc = function() {
         item_ded_ex_limits = if (agi_level >= 250000) 50000 else 0,
         salt_item_ded = if (agi_level >= 250000) 10000 else 0,
         char_item_ded = if (agi_level >= 250000) 20000 else 0,
+        # Earner split and care expenses so two-earner machinery (JFC,
+        # marriage/two-earner credits, combined_sep) and CDCTC families
+        # activate in the coverage layer below
+        wages1 = pmax(0, agi_level) * if (filing_status == 2) 0.6 else 1,
+        wages2 = pmax(0, agi_level) * if (filing_status == 2) 0.4 else 0,
+        ei1    = pmax(0, agi_level) * if (filing_status == 2) 0.6 else 1,
+        ei2    = pmax(0, agi_level) * if (filing_status == 2) 0.4 else 0,
+        cdctc_nonref = if (n_dep > 0 & agi_level > 0) 400 else 0,
+        care_exp     = if (n_dep > 0 & agi_level > 0) 3000 else 0,
         std_ded = 14600
       ))
     })
 
-  for (st in c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI', 'CA', 'ND',
-               'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID', 'MN', 'MD', 'WI')) {
+  # NH/TN (narrow investment taxes) and WA (LTCG excise + WFTC) are swept
+  # with everyone else; their structural assertion runs on the net
+  # individual liability, which routes through their special programs
+  smoke_states = c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI',
+                   'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
+                   'MN', 'MD', 'WI', 'NH', 'TN', 'WA')
+  smoke_active = list()
+  for (st in smoke_states) {
+    active = character()
     for (yr in c(2017, 2021, 2024, 2026, 2030)) {
       law_slice = law %>%
         filter(state == st, year == yr) %>%
@@ -1686,11 +1745,96 @@ test_state_calc = function() {
       stopifnot(
         'smoke: NA liability'  = !anyNA(out$liab_st_iit),
         'smoke: infinite liab' = all(is.finite(out$liab_st_iit)),
+        'smoke: NA net liab'   = !anyNA(out$liab_st_individual_net),
+        'smoke: infinite net'  = all(is.finite(out$liab_st_individual_net)),
         'smoke: NA filer flag' = !anyNA(out$st_filer)
       )
+      active = union(active, coverage_outputs[
+        map_lgl(coverage_outputs, ~ any(abs(out[[.x]]) > 1e-9, na.rm = T))
+      ])
+    }
+    smoke_active[[st]] = active
+  }
+  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x ',
+          length(smoke_states), ' states x 5 years)')
+
+  #--------------------------------------------------------------------------
+  # Worksheet coverage (review item #9a): any credit family the smoke grid
+  # activates for a state must also be exercised (nonzero) by at least one
+  # of that state's hand-computed worksheet cases. Waivers name pairs where
+  # the family is pinned some other way or synthetic inputs cannot reach
+  # it; each carries a reason and the list should shrink over time.
+  #--------------------------------------------------------------------------
+  coverage_waivers = list()
+  coverage_gaps = character()
+  for (st in smoke_states) {
+    exercised = c(case_exercised$sets[[st]], coverage_waivers[[st]])
+    missing = setdiff(smoke_active[[st]], exercised)
+    if (length(missing) > 0) {
+      coverage_gaps = c(coverage_gaps,
+                        paste0(st, ': ', paste(missing, collapse = ' ')))
     }
   }
-  message('test_state_calc smoke grid: PASSED (', nrow(grid), ' units x 21 states x 5 years)')
+  if (length(coverage_gaps) > 0) {
+    stop('worksheet coverage gaps (smoke-active credit families with no ',
+         'exercising hand-computed case):\n  ',
+         paste(coverage_gaps, collapse = '\n  '))
+  }
+  message('test_state_calc worksheet coverage: PASSED')
+
+  #--------------------------------------------------------------------------
+  # Continuity sweep (review item #9b): pre-refundable-transfer liability
+  # for a single wage-only filer must move by no more than a per-state
+  # jump allowance per $500 of AGI. The default allowance covers the
+  # steepest legitimate combined slope (bracket rate + credit phase-out,
+  # e.g. MN's 5.35% + 9% childless WFC phase-out); states with published
+  # discontinuities carry documented allowances. Anything larger is a
+  # mis-encoded bracket bound, band edge, or cliff.
+  #--------------------------------------------------------------------------
+  sweep_step = 500
+  sweep_agis = seq(0, 300000, by = sweep_step)
+  sweep_grid = map_dfr(sweep_agis, function(x) {
+    st_test_unit(list(agi = x, txbl_inc = pmax(0, x - 14600),
+                      age1 = 30, wages1 = x, ei1 = x, std_ded = 14600))
+  })
+  sweep_allow = c(
+    IL = 175,   # exemption disallowance cliff at $250k (2,775 x 4.95% + step)
+    NY = 350,   # recapture segment entry at the 215,400 bracket (+327
+                #   observed 2024) -- flagged for verification against the
+                #   IT-201 worksheet (open item, tracker note 2026-08-11)
+    KY = 160,   # Table C family-size band edges at low MGI
+    CT = 200,   # Table A exemption steps + Table D stepped recapture
+                #   ($122.50/segment observed, pinned by CT-8)
+    VA = 320,   # no-tax-below cliff (full tax owed at the VAGI threshold)
+    OH = 400,   # zero-bracket base-amount cliff (statutory; tax owed on
+                #   the first taxed dollar from 2019, OH-3)
+    MD = 130    # banded exemption steps at $100k/$125k/$150k
+  )
+  sweep_default = sweep_step * 0.20 + 5
+  for (st in smoke_states) {
+    allow = max(sweep_default, sweep_allow[st], na.rm = T)
+    for (yr in c(2017, 2024)) {
+      law_slice = law %>%
+        filter(state == st, year == yr) %>%
+        select(-state, -year)
+      out = sweep_grid %>%
+        left_join(law_slice, by = 'filing_status') %>%
+        do_state_taxes(
+          credit_tables = state_credit_tables_for_year(credit_tables, st, yr)
+        )
+      liab = out$liab_st_iit + out$liab_st_narrow_iit + out$liab_st_ltcg_excise
+      jumps = abs(diff(liab))
+      if (any(jumps > allow)) {
+        b = which.max(jumps)
+        stop(sprintf(
+          'continuity: %s %s jumps %.2f (> allowance %.0f) at AGI %d -> %d',
+          st, yr, jumps[b], allow, sweep_agis[b], sweep_agis[b + 1]))
+      }
+    }
+  }
+  message('test_state_calc continuity sweep: PASSED (',
+          length(sweep_agis), ' points x ', length(smoke_states),
+          ' states x 2 years)')
 
   # Subset-states regression: a law table built WITHOUT a given state lacks
   # that state's feature columns entirely (not just NA cells); the calculator

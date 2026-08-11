@@ -143,6 +143,20 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    credit) were missing. Tests KY-1..KY-11 (from 1); two TAXSIM bugs
    probe-verified and pre-registered (2017 double std ded per spouse;
    unconditional 2x std for one-earner couples); harness rerun pending.
+   **Review item #9 CLOSED 2026-08-11** (the last open 2026-07-17 code
+   review item): (a) worksheet-coverage layer — any credit family the
+   smoke grid activates for a state must be exercised by a hand-computed
+   case (self-maintaining, no param-name map); found and filled three
+   gaps (IL child credit, NY + WI dependent-care) as IL-5/NY-5/WI-8.
+   (b) continuity sweep — single wage-only filer, $500 AGI steps to
+   $300k, all 24 states x 2017/2024, per-state jump allowances each
+   citing its published cliff (IL exemption cliff, VA no-tax-below, OH
+   base amounts, CT Tables A/D, KY Table C, MD exemption bands). The
+   probe surfaced two live items: MN's 31.5-35k slope is exactly 5.35% +
+   the UNVERIFIED 9% childless WFC phase-out (flagged in mn.md), and NY
+   shows a +$327 jump at the 215,400 bracket entry in the recapture zone
+   (tracker note; verify vs the IT-201 worksheet). (c) NH/TN/WA now in
+   the smoke grid (24 states), asserting on net individual liability.
    Remaining: per-state mismatch triage
    (ours vs TAXSIM's error), aggregate benchmarks vs HT2 total tax
    (weights-blocked), and revenue-agency comparisons.

@@ -1,7 +1,7 @@
 state,source_packet,yaml_dir,worksheet_tests,cross_model,aggregate,notes
 IL,done,done,done,done,blocked_weights,Source packet normalized; IL/IN/MI rolling-federal-AGI flat-tax validation cohort; nonresident allocation and data-limited credits remain documented
 CO,done,done,done,in_progress,blocked_weights,Source packet normalized; CO/ND/SC federal-taxable-income cohort; child-care credits and trigger-dependent future credits remain documented
-NY,done,done,done,in_progress,blocked_weights,Source packet normalized; NY/CT graduated-federal-AGI recapture cohort; NYC/Yonkers/MCTMT and specialized credits remain documented
+NY,done,done,done,in_progress,blocked_weights,"Source packet normalized; NY/CT graduated-federal-AGI recapture cohort; NYC/Yonkers/MCTMT and specialized credits remain documented. OPEN 2026-08-11: continuity sweep shows a +$327 (2024) / +$103 (2017) liability jump at the single-filer 215,400-bracket entry inside the recapture zone — verify against the IT-201 supplemental-tax worksheet (worksheet-true discontinuity vs recap_RB implementation artifact); also the undiagnosed PE-2023 collapse (0.160 clean)"
 AK,done,done,done,done,blocked_weights,No broad IIT; zero-tax stub encoded
 AL,todo,todo,todo,todo,todo,Not started. Preliminary class: own-base + FULL federal-tax deductibility (constitutional); R6 batch fed-ded (STATE_ENCODING_REVIEW_2026_08_11.md §2.1)
 AR,todo,todo,todo,todo,todo,Not started. Preliminary class: own-base graduated; low-income alternative tax tables → credit_tables.csv; R6 batch own-base (review §2.1)
