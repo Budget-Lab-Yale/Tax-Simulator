@@ -2,7 +2,14 @@
 
 State: `GA`  
 Status: `baseline encoded; record-level worksheet tests complete`  
-Last updated: `2026-07-13`
+Last updated: `2026-08-11` (married-filing-joint personal exemption
+corrected: $7,400 TOTAL per O.C.G.A. 48-7-26 / HB 386 of 2012, had been
+transcribed as a $3,700 joint total — $212.75 at 5.75% on every married
+return 2018-2023, the dominant GA cross-model wedge; a TAXSIM WASM probe
+matches our corrected law EXACTLY on the joint case and on four other
+structural cases: wage baseline, 65+ earned-cap exclusion + aged std
+deduction, broad unearned exclusion, and the 2017 graduated schedule.
+Test GA-4 pins the $7,400.)
 
 ## Scope
 

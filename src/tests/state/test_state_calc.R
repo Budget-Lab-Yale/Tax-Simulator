@@ -281,6 +281,16 @@ test_state_calc = function() {
                          liab_st_iit = 2087.25),
            label = 'GA-3 2023 age and blind standard deduction')
 
+  # GA-4: the married-filing-joint personal exemption is $7,400 TOTAL
+  # (O.C.G.A. 48-7-26, HB 386 of 2012, through the 2024 elimination).
+  # 2019 MFJ wages 60,000/40,000: taxable 100,000 - 6,000 - 7,400 =
+  # 86,600 -> 340 + 5.75% x 76,600 = 4,744.50. TAXSIM agrees exactly
+  run_case('GA', 2019,
+           list(agi = 100000, filing_status = 2, age2 = 40,
+                wages1 = 60000, wages2 = 40000, ei1 = 60000, ei2 = 40000),
+           expect = list(st_exempt = 7400, liab_st_iit = 4744.50),
+           label = 'GA-4 $7,400 joint exemption')
+
   # NC-1: at exactly $30,000 AGI in 2025, two qualifying children receive the
   # $2,500 table amount each. TI = 30,000 - 12,750 - 5,000 = 12,250.
   run_case('NC', 2025, list(agi = 30000, n_dep_ctc = 2),
