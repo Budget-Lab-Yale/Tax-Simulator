@@ -1,5 +1,15 @@
 # Harness-machine batch — reruns + diagnostics queued 2026-08-11
 
+> **EXECUTED 2026-08-11** on the harness machine (commits `b7491e11b`
+> through the final rerun commit). Deviations from the plan below: the
+> reruns used `--states ALL` (raw files are whole-file overwrites keyed
+> model+year — the 5-state commands would have destroyed the MD/WI raw),
+> and the MI ±$386 mass turned out to be TAXSIM's home-heating credit on
+> a $1.01 household-income base, NOT the Tier-2 KD row (see the MI KD
+> exclude row + issues-doc T6). All section-C digs resolved to PE's
+> one-time-rebate netting (issues-doc P5) plus one GA encoding fix on our
+> side (HB 593 std-deduction vintage). Do not re-run as written.
+
 The R1 triage sessions of 2026-08-11 fixed or cleared seven states using
 local TAXSIM (usincometaxes WASM) probes, but this machine has neither
 the federal pre-pass caches, the PolicyEngine venv, nor `results/raw/`.
