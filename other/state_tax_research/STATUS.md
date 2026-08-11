@@ -157,9 +157,17 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    shows a +$327 jump at the 215,400 bracket entry in the recapture zone
    (tracker note; verify vs the IT-201 worksheet). (c) NH/TN/WA now in
    the smoke grid (24 states), asserting on net individual liability.
-   Remaining: per-state mismatch triage
-   (ours vs TAXSIM's error), aggregate benchmarks vs HT2 total tax
-   (weights-blocked), and revenue-agency comparisons.
+   **R1 triage sweep completed locally 2026-08-11** (probe-driven, via
+   the local TAXSIM WASM): KY/GA/SC/IN/MN fixed (see tracker rows and
+   dated commits), CO/MI cleared with negative-result or
+   external-model-bug KD rows. Everything that needs the harness
+   machine (confirmation reruns for the five fixed states, the MI $386
+   point mass, the NY-2023/VA-2023-24 PE collapses, the AZ 2021
+   outlier, the ID grocery-credit exclusion decision) is queued with
+   commands and expected outcomes in
+   `cross_model/HARNESS_RERUN_2026_08_11.md`.
+   Remaining: the harness-machine batch above, aggregate benchmarks vs
+   HT2 total tax (weights-blocked), and revenue-agency comparisons.
 4. **Phase 6 — 50-state rollout** by structural family (no-tax stubs → flat
    fed-AGI → graduated fed-AGI → fed-taxable → own-base → federal-
    deductibility), CA first (CalEITC as the credit-schema acceptance test;
