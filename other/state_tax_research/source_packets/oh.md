@@ -1,8 +1,8 @@
 # Ohio State Source Packet
 
 State: `OH`
-Status: `source packet complete; encoding pending`
-Last updated: `2026-07-18`
+Status: `baseline encoded; record-level worksheet tests complete`
+Last updated: `2026-08-11`
 
 ## Scope
 

@@ -2,7 +2,7 @@ state,source_packet,yaml_dir,worksheet_tests,cross_model,aggregate,notes
 IL,done,done,done,done,blocked_weights,Source packet normalized; IL/IN/MI rolling-federal-AGI flat-tax validation cohort; nonresident allocation and data-limited credits remain documented
 CO,done,done,done,in_progress,blocked_weights,Source packet normalized; CO/ND/SC federal-taxable-income cohort; child-care credits and trigger-dependent future credits remain documented
 NY,done,done,done,in_progress,blocked_weights,Source packet normalized; NY/CT graduated-federal-AGI recapture cohort; NYC/Yonkers/MCTMT and specialized credits remain documented
-AK,in_progress,done,done,done,blocked_weights,No broad IIT; zero-tax stub encoded
+AK,done,done,done,done,blocked_weights,No broad IIT; zero-tax stub encoded
 AL,todo,todo,todo,todo,todo,NA
 AR,todo,todo,todo,todo,todo,NA
 AZ,done,done,done,in_progress,blocked_weights,"Resident Form 140 baseline through TY2025; dependent credit, charitable standard add-on, and historical schedules covered; see source packet for PUF and itemized-deduction limits"
@@ -10,7 +10,7 @@ CA,done,in_progress,in_progress,in_progress,blocked_weights,"Regular-tax scalar 
 CT,done,done,done,in_progress,blocked_weights,"CT-1040 baseline through TY2025; NY/CT recapture cohort (stepped Tables C-D), Table A/E phase-outs, SS/pension/IRA subtractions incl. 2024 phase-out table, EITC match + 2025 child bonus, property tax credit covered; TRS/military pension split and gross-income filing test remain documented"
 DC,todo,todo,todo,todo,todo,NA
 DE,todo,todo,todo,todo,todo,NA
-FL,in_progress,done,done,done,blocked_weights,No broad IIT; zero-tax stub encoded
+FL,done,done,done,done,blocked_weights,No broad IIT; zero-tax stub encoded
 GA,done,done,done,in_progress,blocked_weights,"Form 500 baseline through TY2025; generic retirement exclusion and CDCTC match covered; see source packet for retirement ownership, state-tax itemization, and other IND-CR credits"
 HI,todo,todo,todo,todo,todo,NA
 IA,todo,todo,todo,todo,todo,NA
@@ -33,20 +33,20 @@ NE,todo,todo,todo,todo,todo,NA
 NH,done,done,done,done,blocked_weights,Narrow investment-income profile encoded through 2024 repeal; PUF base omits some NH taxable distributions and federally exempt interest
 NJ,todo,todo,todo,todo,todo,NA
 NM,todo,todo,todo,todo,todo,NA
-NV,in_progress,done,done,done,blocked_weights,No broad IIT; zero-tax stub encoded
+NV,done,done,done,done,blocked_weights,No broad IIT; zero-tax stub encoded
 OH,done,done,done,in_progress,blocked_weights,"IT 1040 baseline TY2017-2025 + enacted 2026 flat 2.75% (HB 96); base-amount rate schedules w/ published cliffs (zero-bracket base owed on first taxed dollar 2019+, 2025 $18.69 jump at 100k); FAGI base, full SS subtraction, NO deductions; income-tiered exemptions (MAGI base 2019+, HB 96 750k/500k denial); BID modeled (250k/125k carve-out + flat 3% + MAGI addback gating all means tests); ordered credit stack per 5747.98 (retirement table, senior $50, CDCTC 100%/25%, $20/exemption cliff, JFC 20/15/10/5% capped 650, EITC 10%->30% w/ 2017-18 50%-of-tax limitation). Known-differences: school-district/municipal taxes Phase 7, uniformed-services retirement omitted, JFC qualifying income = earned proxy, BID excludes rents, senior-credit filing prong unmodeled"
 OK,todo,todo,todo,todo,todo,NA
 OR,todo,todo,todo,todo,todo,NA
 PA,done,done,done,in_progress,blocked_weights,"PA-40 baseline TY2017-2025; FIRST OWN-BASE state (start_point 0, new generic class-share machinery): eight income classes w/ class-level loss floors (no cross-class/spousal offsets), flat 3.07% all years, no deductions/exemptions; other-state muni interest taxable; retirement/SS/UI/alimony exempt; Tax Forgiveness via new generic poverty-forgiveness credit (6,500/13,000 + 9,500/dep, 10pp per $250 step-down, joint income for MFS); CDCTC enhancement 30% (2022) -> 100% (2023+) refundable; TY2025 Working Pennsylvanians Tax Credit 10% of federal EITC refundable. Known-differences: 401k-deferral wage base, early-distribution basis, Schedule O deductions, eligibility-income unobservables (overstates forgiveness), CDCTC uses limited (not tentative) federal credit, local EIT/Philadelphia out of scope"
 RI,todo,todo,todo,todo,todo,NA
 SC,done,done,done,in_progress,blocked_weights,"SC1040 baseline TY2017-2025; federal-taxable-income start; FIXED-DATE conformity (group 3, ready=false -> excluded from states=all and guarded for federal reforms, like CA); one rate schedule all statuses, 2022 reform 6.5%->6.0% floor (reform-year boundary calibrated to exact published constant C); 44% net-capital-gain deduction (shared param); full SS exemption; $3k/$10k retirement deduction; per-dependent exemption 2018+; nonrefundable SC EITC phasing to 125%. Known-differences: $15k age-65 deduction w/ retirement offset, under-6 dependent doubling, two-wage-earner/child-care(7% of expenses)/tuition credits, 65+ filing threshold, TY2026 H.4216 structural reform (AGI start + SCIAD) NOT encoded"
-SD,in_progress,done,done,done,blocked_weights,No broad IIT; zero-tax stub encoded
+SD,done,done,done,done,blocked_weights,No broad IIT; zero-tax stub encoded
 TN,done,done,done,done,blocked_weights,Narrow Hall-tax profile encoded for 2017-2020 and repeal from 2021; senior/blind tests use PUF proxies
-TX,in_progress,done,done,done,blocked_weights,No broad IIT; zero-tax stub encoded
+TX,done,done,done,done,blocked_weights,No broad IIT; zero-tax stub encoded
 UT,done,done,done,in_progress,blocked_weights,"TC-40 baseline TY2017-2025 + enacted 2026 (SB 60 rate 4.45%, HB 290 CTC thresholds); flat rate, FAGI base with NO base deductions/exemptions; taxpayer tax credit (new generic ded_credit: 6% of fed ded + UT exemption, 1.3%/$ phase-out, SALT-income removal capped 10k from 2018, 2017 75%-of-federal-exemption regime, newborn double-count 2023+); retirement $450 frozen-1952-cohort vs SS credit (rate x taxable SS) return-level exclusive, both 2.5%/$ phase-outs; nonref EITC 15%/20% w/ W-2 wage cap 2023+ (SE-only get zero); nonref CTC $1,000 ages 1-3 (2024) -> 0-5 (2025). Known-differences: MAGI = FAGI+additions proxy, qualified-exempt line 21 floor unmodeled, my529/at-home-parent/military credits omitted"
 VA,done,done,done,in_progress,blocked_weights,"Form 760 baseline TY2017-2025 (booklet-verified research packets in raw/); single rate schedule all statuses + Spouse Tax Adjustment ($259 cap, new sta_max param); std ded through statutory TY2030 reversion; coupled itemization w/ SALT addback + VA's own Pease TY2019+ (federal-status thresholds); age deduction ($12k, joint-AFAGI phase-out, pre-1939 grandfather via year-keyed age) mutually exclusive w/ CLI/EITC (new exclusivity machinery); full SS/UI subtractions; CDCTC expense deduction ($3k/$6k all years incl. 2021); CLI ($300/exemption, poverty table) vs 20% nonref vs 15%/20% refundable EITC choice; VAGI no-tax cliff ($11,950/$23,900). Known-differences: military subs (code 60 ramp to $40k), disability, 529, sales-tax electors, TY2018 SALT-cap flow-through, MFS combined-AFAGI"
 VT,todo,todo,todo,todo,todo,NA
 WA,done,done,done,in_progress,blocked_weights,Capital-gains excise and WFTC profiles encoded; capital-gains base and WFTC eligibility retain documented PUF limitations
 WI,done,done,done,in_progress,blocked_weights,"Form 1 baseline TY2017-2025; verified rate history incl. 2019-only 3.86/5.04 (Act 9 + Wayfair Act 10) and TY2025 bracket-2 expansion; SLIDING std deduction (new std_po machinery, fixed 12/19.778/22.515% rates, HoH floored at single via second pair); 700/250 exemptions; 30% LTCG exclusion; full SS sub; $5k retirement excl 65+ w/ 15k/30k FAGI cliffs; 5% itemized-deduction CREDIT; married couple credit 3%/$480; EITC 4/11/34/0 by kids (new by-kids family); school prop tax credit 12%/$300; care subtraction->credit history. Tests WI-1..7. Known-diffs: homestead credit (PE includes -- one-sided), military/pre-1964 pensions, $500 loss limit 2017-22, UI partial exclusion, 2019/17/20 10% medical floor, 2025 Act 15 retirement election deferred. Initial run: TAXSIM clean 76% (2017-18) rising to 92.1/92.3% (2019/2020, near the 95% bar); PE clean 72-78% (homestead credit one-sided as predicted)"
 WV,todo,todo,todo,todo,todo,NA
-WY,in_progress,done,done,done,blocked_weights,No broad IIT; zero-tax stub encoded
+WY,done,done,done,done,blocked_weights,No broad IIT; zero-tax stub encoded

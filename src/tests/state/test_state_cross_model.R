@@ -23,8 +23,9 @@
 # States by structural class (baseline configs under tax_law_state/baseline/)
 cross_model_states = function() {
   list(
-    broad  = c('AZ', 'CA', 'CO', 'CT', 'GA', 'ID', 'IL', 'IN', 'KY', 'MI',
-               'NC', 'ND', 'NY', 'OH', 'PA', 'SC', 'UT', 'VA'),
+    broad  = c('AZ', 'CA', 'CO', 'CT', 'GA', 'ID', 'IL', 'IN', 'KY', 'MD',
+               'MI', 'MN', 'NC', 'ND', 'NY', 'OH', 'PA', 'SC', 'UT', 'VA',
+               'WI'),
     narrow = c('NH', 'TN'),           # interest/dividend (Hall-type) taxes
     excise = c('WA'),                 # LTCG excise + WFTC; not in TAXSIM
     stub   = c('AK', 'FL', 'NV', 'SD', 'TX', 'WY')  # no individual income tax
@@ -624,6 +625,14 @@ cross_model_report = function(out_dir, known_diffs_path = NULL) {
             summarise(n = sum(n), .groups = 'drop') %>%
             arrange(year, desc(fed_aligned), stage)
         ),
+        '')
+    } else if (is.null(stages)) {
+      lines = c(lines,
+        '## Mismatch stage diagnosis',
+        '',
+        'Not available: results/raw/*_stages.csv not present on this machine',
+        '(raw per-record output is not committed; regenerate with a full',
+        'harness run).',
         '')
     }
 

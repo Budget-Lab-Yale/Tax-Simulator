@@ -1,7 +1,12 @@
 # State income tax workstream — status
 
-**As of 2026-07-13** (branch `state-tax`). Companion docs in this directory:
+**As of 2026-08-11** (branch `state-tax`). Current counts: **30 jurisdictions
+encoded** (18 broad-IIT + NH/TN narrow + WA excise + 6 zero-tax stubs), **27
+enabled** for `states=all` (CA/SC/VA conformity-gated); 21 jurisdictions not
+started. Companion docs in this directory:
 `state_tax_implementation_plan.md` (the design of record, amended in place),
+`STATE_ENCODING_REVIEW_2026_08_11.md` (coded-states review: holes,
+archetypes, completion roadmap),
 `state_weights_ml_alternative.md` (the A/B bake-off spec),
 `state_weights_fit_issues.md` (the engine root-cause record),
 `state_tax_model_research_notes.md` (original evidence base).
@@ -120,9 +125,14 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    computed state tax instead of the Form 40 line 14 capped
    property-first formula; 2017: the reverse, cor −0.745 with the SALT
    income component). QBID-omission hypothesis refuted; TAXSIM
-   care-deduction cap (> the form's 3k/6k) is a candidate upstream issue. Remaining: per-state mismatch triage (ours vs TAXSIM's
-   error), aggregate benchmarks vs HT2 total tax (weights-blocked), and
-   revenue-agency comparisons.
+   care-deduction cap (> the form's 3k/6k) is a candidate upstream issue.
+   2026-08-11: `cross_model_states()` had omitted MD/MN/WI from every
+   class, so their triage reports were silently never generated — fixed,
+   and `results/reports/{md,mn,wi}.md` emitted from the committed
+   summary.csv (their stage-diagnosis tables need a full harness rerun;
+   `results/raw/` is not committed). Remaining: per-state mismatch triage
+   (ours vs TAXSIM's error), aggregate benchmarks vs HT2 total tax
+   (weights-blocked), and revenue-agency comparisons.
 4. **Phase 6 — 50-state rollout** by structural family (no-tax stubs → flat
    fed-AGI → graduated fed-AGI → fed-taxable → own-base → federal-
    deductibility), CA first (CalEITC as the credit-schema acceptance test;
@@ -154,6 +164,26 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    Credit, 10% federal match, refundable) and a TY2025 student-loan
    deduction; ID's CTC sunsets after TY2025. Worksheet tests PA-1..7b,
    ID-1..7 pass; cross-model triage started (see rollout tracker rows).
+   **MD + WI encoded 2026-07-24** (29th and 30th jurisdictions). MD is
+   STATE-level only (the county piggyback, 2.25-3.3%, is deferred to the
+   locality phase): graduated schedules incl. the TY2025 BRFA brackets and
+   2% capital-gains surtax, 15%-of-AGI standard deduction, dual EITC
+   election, CTC, senior credit; the PE harness leg now requests
+   `md_income_tax` (state-only) because PE's generic `state_income_tax`
+   bundles county tax. WI: sliding standard deduction, 30% LTCG exclusion,
+   itemized-deduction-as-credit, married couple credit, child-count-keyed
+   EITC (4/11/34/0%), school property tax credit; homestead credit omitted
+   (PE includes it — a one-sided low-income divergence). Initial
+   cross-model: MD TAXSIM 58-70% clean (2019/2020 TAXSIM std-ded values are
+   pre-registered TAXSIM bugs), PE 84-89%; WI TAXSIM 76-92% (2019/20 near
+   the bar), PE 72-78%. Worksheet tests MD-1..9, WI-1..7 pass.
+   Horizon note (2026-08-11): NC and IN encode enacted law through TY2026
+   while other states stop at TY2025 and carry forward — both are
+   deliberate (NC/IN have enacted future rate steps) but the convention
+   should be picked explicitly at the next rollout batch: either encode
+   every state's enacted 2026 law (SC's H.4216 restructure and ND's
+   published 2026 schedule are the known gaps) or document the two
+   exceptions per state.
 5. **Data extensions/imputations** — scoped 2026-07-24 in
    `state_data_imputation_plan.md`: tenure/rent/property-tax (homestead
    family incl. the MN 2024+ on-form renter credit), pension source
