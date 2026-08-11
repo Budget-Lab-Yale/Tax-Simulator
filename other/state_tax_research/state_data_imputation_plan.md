@@ -13,6 +13,33 @@ hold or can mirror (the IPUMS ACS extracts and IRS-GEO are wired in),
 off (a flag) so the record-level cross-model harness can keep comparing
 law-only calculations.
 
+**Maintenance convention (added 2026-08-11):** this file is the single
+registry of encoding-blocked-on-data cases. When a packet documents a
+feature as unencodable because the PUF lacks an input, add or extend the
+matching item here (and its rollup row below) in the same commit — the
+per-state packets hold the law detail; this file holds the cross-state
+picture.
+
+## Rollup — one line per imputation, states and stakes
+
+Counts as of 2026-08-11 (30 encoded jurisdictions; "R6 joiners" are
+un-started states whose preliminary classification in
+`STATE_ENCODING_REVIEW_2026_08_11.md` §2.1 adds them to the item).
+
+| # | Imputation | Tier | Encoded states affected | R6 joiners | Materiality and direction |
+|---|---|---|---|---|---|
+| 1 | Tenure / rent / property tax | 1 | 6 — WI MI MN (homestead/renter credits) + IL CT (credit inputs) + MD (ded base) | NJ ME NE (+NY DC circuit breakers later) | **HIGH.** Includes the module's one structural on-form gap (MN renter credit 2024+); one-sided against low-income renters/owners |
+| 2 | Pension source split (public/military/RR) | 1 | 12 — MI MD NC ID KY CT AZ OH MN WI + NY (govt full sub) SC (military) — VA's military-benefits ramp and UT's military credit ride the same flag | HI (employer-funded share) MO (public) | **HIGH.** Uniformly overtaxes affected retirees; the military flag alone unlocks most of the list |
+| 3 | Household-resources income (SSI/TANF/VA/child support) | 1 | 4 — PA (forgiveness income; currently UNDERTAXES via overstated forgiveness) MD VA (poverty credits) ID (SNAP proration) | ME (PTFC income concept) | MEDIUM-HIGH; both directions (PA down, MD/VA credits up) |
+| 4 | Elective deferrals (401k/403b/457) | 2 | 1 — PA (largest single PA base gap; shared by TAXSIM/PE so invisible to cross-model) | NJ (taxes 403(b)/457 but NOT 401(k) — different sign per plan type) | MEDIUM; concentrated, one-sided (understates the PA base) |
+| 5 | Dependent detail (>3 slots, student 19-23, disabled, tenure) | 2 | 3 — MN (CTC no child limit; M1CWFC older children) MD (disabled/65+ deps) IN (first-year dep) | — | LOW-MEDIUM; recurring machinery friction |
+| 6 | Filer disability status | 2 | 2+ — MD (under-65 disabled pension excl) MN (M1R) + homestead disabled doors with #1 | — | LOW |
+| 7 | Interest composition (US-obligation / own-state muni shares) | 2 | ALL broad-IIT states (sub_us_int flagged everywhere, subtracted nowhere; 75% own-state muni convention) | all | LOW per record, universal; current treatment overtaxes (no US-int sub) |
+| 8 | Business-side detail (bonus dep/179 stacks, NOLs, SSTB) | 3 | MN ID WI MD OH | MT IA (conformity-era addbacks) | Document-permanently unless triage forces it |
+| 9 | Expense niches (K-12, 529/HSA/MSA/ABLE, LTC, student loans) | 3 | 9+ — MN IL WI PA ID MD UT CT VA ND IN | many | Small aggregates; document |
+| 10 | Election features (WI Act 15 retirement; sales-tax electors) | 3 | WI VA | — | Needs a min-liability election pass, not data |
+| 11 | Credit take-up (all state credits assume 100%) | 3 | all credit states | all | Belongs with behavioral modules, not data imputation |
+
 ---
 
 ## Tier 1 — big, broad-based, buildable from assets we already hold
