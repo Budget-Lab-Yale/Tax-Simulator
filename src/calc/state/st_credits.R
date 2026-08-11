@@ -185,8 +185,13 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   senior = st_credits_senior(tax_unit)
 
   # Percentage-of-tax credits and aggregation
+  # The family-size percentage applies to tax net of the personal tax
+  # credits (KY Form 740: line 17 Section B/Schedule ITC credits subtract
+  # before the line 21 family-size multiplication)
   st_family_credit = if_else(tax_unit$st_credits.family_credit_style == 1,
-                             tax_unit$st_tax_pre_credit * hh$family_credit_rate,
+                             pmax(0, tax_unit$st_tax_pre_credit -
+                                     hh$st_exempt_credit) *
+                               hh$family_credit_rate,
                              0)
   st_pct_credit = hh$pct_credit_rate * pmax(0, tax_unit$st_tax_pre_credit)
 

@@ -7,14 +7,16 @@ filing_status_mapper:
     '4': std_regular
 std_regular:
   value:
-    '2017': 2530
-    '2019': 2650
-    '2020': 2690
-    '2021': 2770
+    '2017': 2480
+    '2018': 2530
+    '2019': 2590
+    '2020': 2650
+    '2021': 2690
+    '2022': 2770
     '2023': 2980
     '2024': 3160
     '2025': 3270
-  reference: 'Kentucky Form 740 standard deduction, 2017-2025; TY2025 Form 740 packet'
+  reference: 'Kentucky Form 740 standard deduction: 2017 packet ($2,480); KY DOR annual adjustment announcements 2018-2022 ($2,530/$2,590/$2,650/$2,690/$2,770); 2023-2025 Form 740 packets. Filing status 2 (combined return) takes one amount PER SPOUSE via st_ord.combined_sep; the mapped per-return value here is the single/joint amount'
 item_allowed:
   value: 1
   reference: 'Kentucky Form 740 Schedule A, standard or itemized deduction election, 2017-2025'

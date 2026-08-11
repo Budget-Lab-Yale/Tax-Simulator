@@ -11,6 +11,33 @@
 family_credit_style:
   value: 1
   reference: 'KRS 141.066; Kentucky Schedule ITC, Section C, 2017-2025'
+
+# Personal tax credits (Form 740 line 17; 2017 Form 740 Section B, then
+# Schedule ITC Section B from 2018). 2017: $10 per credit box — one regular
+# box each for taxpayer/spouse/dependents, four additional boxes ($40) for
+# 65+, four for blind. HB 366 repealed the regular/dependent credits for
+# TY2018+ but kept 65+/blind at the same $40. The $20 Kentucky National
+# Guard credit is unobservable in the PUF and omitted (see packet).
+# Applied BEFORE the family-size credit per the Form 740 line ordering.
+exempt_credit_style:
+  value: 1
+  reference: '2017 Form 740 Section B personal tax credits; 2018-2025 Schedule ITC Section B'
+exempt_credit_personal:
+  value:
+    '2017': 10
+    '2018': 0
+  reference: '2017 Form 740 Section B line 4: $10 per regular credit (taxpayer, spouse); repealed for TY2018+ by HB 366'
+exempt_credit_dep:
+  value:
+    '2017': 10
+    '2018': 0
+  reference: '2017 Form 740 Section B line 2: $10 per dependent credit; repealed for TY2018+ by HB 366'
+exempt_credit_aged:
+  value: 40
+  reference: '2017 Form 740 Section B: four additional $10 boxes if 65 or over; 2018-2025 Schedule ITC Section B: $40 if 65 or over'
+exempt_credit_blind:
+  value: 40
+  reference: '2017 Form 740 Section B: four additional $10 boxes if blind; 2018-2025 Schedule ITC Section B: $40 if blind'
 cdctc_match:
   value: 0.20
   reference: 'Kentucky Form 740, line 24; Kentucky child and dependent care credit, 2017-2025'

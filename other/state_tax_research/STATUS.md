@@ -130,7 +130,20 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    class, so their triage reports were silently never generated — fixed,
    and `results/reports/{md,mn,wi}.md` emitted from the committed
    summary.csv (their stage-diagnosis tables need a full harness rerun;
-   `results/raw/` is not committed). Remaining: per-state mismatch triage
+   `results/raw/` is not committed).
+   **KY triage 2026-08-11 (worst state, 0.273-0.476 TAXSIM clean): root
+   causes were OURS and are fixed** — 2017 was encoded flat 5.8% instead
+   of the graduated 2/3/4/5/5.8/6% schedule; married units got one
+   standard deduction where KY combined returns give one PER SPOUSE (new
+   generic `st_ord.combined_sep` machinery: per-column schedule + own
+   std/income-share itemized, floored at zero, lower-of joint/combined —
+   reusable for other combined-filing states); std vintages 2017-2021
+   were shifted one year; and the Form 740 personal tax credits ($10
+   regular 2017, $40 aged/blind all years, applied before the family-size
+   credit) were missing. Tests KY-1..KY-11 (from 1); two TAXSIM bugs
+   probe-verified and pre-registered (2017 double std ded per spouse;
+   unconditional 2x std for one-earner couples); harness rerun pending.
+   Remaining: per-state mismatch triage
    (ours vs TAXSIM's error), aggregate benchmarks vs HT2 total tax
    (weights-blocked), and revenue-agency comparisons.
 4. **Phase 6 — 50-state rollout** by structural family (no-tax stubs → flat

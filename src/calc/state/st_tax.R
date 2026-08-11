@@ -60,7 +60,11 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     'st_ord.recapture_agi_start', # (dbl) recapture trigger (Inf = none)
     'st_ord.recapture_width',    # (dbl) recapture phase-in width
     'st_ord.sta_max',            # (dbl) spouse tax adjustment cap (VA; 0 = none)
+    'st_ord.combined_sep',       # (int) combined-return separate filing (KY)
     'st_ord.bus_rate',           # (dbl) flat rate on carve-out excess (OH 3%)
+    'st_itemizing',              # (bool) state itemization election (calc_st_ded)
+    'st_ded',                    # (dbl) state deduction taken (calc_st_ded)
+    'st_std_ded',                # (dbl) state standard deduction (calc_st_ded)
     'st_exempt.personal_amount', # (dbl) per-taxpayer exemption (STA feeder)
     'st_exempt.aged_addl',       # (dbl) aged exemption add-on (STA feeder)
     'st_exempt.blind_addl'       # (dbl) blind exemption add-on (STA feeder)
@@ -191,7 +195,31 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
       ) + step_recap - st_sta +
 
         # Flat tax on business income above the carve-out cap (OH 3%)
-        st_ord.bus_rate * st_txbl_bus
+        st_ord.bus_rate * st_txbl_bus,
+
+      # Married filing separately on a combined return (KY Form 740 filing
+      # status 2): each spouse's column applies the schedule to own income
+      # less own deduction and exemptions, floored at zero per column, and
+      # the couple takes the lower of joint and combined tax. Column income
+      # is own wages plus half of non-wage state AGI (asset ownership
+      # unobserved; VA STA precedent, documented approximation). Itemized
+      # deductions divide by each spouse's income share (Form 740 Schedule
+      # A: "based on the percentage of each spouse's income to total
+      # income"); the standard deduction is one full amount per column.
+      # Assumes no recapture, base-amount, or business carve-out machinery
+      # in combined_sep states (see params_schema.yaml)
+      cs_share1 = wages1 + sta_other,
+      cs_share2 = wages2 + sta_other,
+      cs_item_shr1 = if_else(st_agi > 0, pmax(0, pmin(1, cs_share1 / st_agi)), 0.5),
+      cs_ded1 = if_else(st_itemizing, st_ded * cs_item_shr1,        st_std_ded),
+      cs_ded2 = if_else(st_itemizing, st_ded * (1 - cs_item_shr1),  st_std_ded),
+      cs_tax  = sched_tax_at(pmax(0, cs_share1 - cs_ded1 - sta_pe1)) +
+                sched_tax_at(pmax(0, cs_share2 - cs_ded2 - sta_pe2)),
+      st_tax_pre_credit = if_else(
+        st_ord.combined_sep == 1 & filing_status == 2,
+        pmin(st_tax_pre_credit, cs_tax),
+        st_tax_pre_credit
+      )
     ) %>%
     select(all_of(return_vars$calc_st_tax)) %>%
     return()

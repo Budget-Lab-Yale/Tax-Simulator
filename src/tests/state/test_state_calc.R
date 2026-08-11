@@ -295,6 +295,91 @@ test_state_calc = function() {
                          liab_st_iit = 509.2 * 0.1),
            label = 'KY-1 family-size percentage-of-tax credit')
 
+  # KY-2: 2017 graduated schedule (2/3/4/5/5.8/6%), single, AGI 50,000.
+  # Std ded 2,480 -> taxable 47,520 -> $280 + 5.8% x 39,520 = 2,572.16;
+  # less the $10 Section B personal credit. TAXSIM-35 reproduces this
+  # exactly (siitax 2,562.16)
+  run_case('KY', 2017, list(agi = 50000),
+           expect = list(st_exempt_credit = 10,
+                         liab_st_iit = 2572.16 - 10),
+           label = 'KY-2 2017 graduated schedule')
+
+  # KY-3: 2017 top bracket: single, AGI 100,000 -> taxable 97,520 ->
+  # $4,166 + 6% x 22,520 = 5,517.20, less $10
+  run_case('KY', 2017, list(agi = 100000),
+           expect = list(liab_st_iit = 5517.2 - 10),
+           label = 'KY-3 2017 6% top bracket')
+
+  # KY-4: 2017 married filing separately on a combined return: wages
+  # 40,000/30,000. Each column takes its own 2,480 std ded on the
+  # graduated schedule: tax(37,520) + tax(27,520) = 1,992.16 + 1,412.16 =
+  # 3,404.32 < joint tax(67,520) = 3,732.16. Less 2 x $10 credits.
+  # (TAXSIM shows 3,096.64 here: it deducts twice the 2017 std ded per
+  # spouse -- a pre-registered TAXSIM difference, not our target)
+  run_case('KY', 2017,
+           list(filing_status = 2, age2 = 40, agi = 70000,
+                wages1 = 40000, wages2 = 30000),
+           expect = list(st_exempt_credit = 20,
+                         liab_st_iit = 3404.32 - 20),
+           label = 'KY-4 2017 combined-return split')
+
+  # KY-5: 2019 standard deduction vintage (2,590, DOR announcement):
+  # single, AGI 30,000 -> (30,000 - 2,590) x 5% = 1,370.50
+  run_case('KY', 2019, list(agi = 30000),
+           expect = list(st_std_ded = 2590, liab_st_iit = 1370.50),
+           label = 'KY-5 2019 std deduction vintage')
+
+  # KY-6: 2020 combined return, flat rate: wages 30,000/20,000, std
+  # 2,650 per column: (27,350 + 17,350) x 5% = 2,235.00 < joint
+  # (50,000 - 2,650) x 5% = 2,367.50. TAXSIM agrees (2 x std)
+  run_case('KY', 2020,
+           list(filing_status = 2, age2 = 40, agi = 50000,
+                wages1 = 30000, wages2 = 20000),
+           expect = list(liab_st_iit = 2235.00),
+           label = 'KY-6 combined return two-earner 2x std')
+
+  # KY-7: 2021 one-earner couple: the zero-income spouse's column floors
+  # at zero, so the second std ded (2,690) is wasted and combined equals
+  # joint: (50,000 - 2,690) x 5% = 2,365.50. (TAXSIM gives the couple
+  # both std deductions unconditionally -- pre-registered difference)
+  run_case('KY', 2021,
+           list(filing_status = 2, age2 = 40, agi = 50000, wages1 = 50000),
+           expect = list(liab_st_iit = 2365.50),
+           label = 'KY-7 one-earner column floor')
+
+  # KY-8: 2018 pension exclusion: single, AGI 60,000 incl. 40,000
+  # pension capped at 31,110 -> state AGI 28,890; (28,890 - 2,530) x 5%
+  run_case('KY', 2018, list(agi = 60000, txbl_pens_dist = 40000),
+           expect = list(st_agi = 28890,
+                         liab_st_iit = (28890 - 2530) * 0.05),
+           label = 'KY-8 pension exclusion cap')
+
+  # KY-9: 2023 aged credit ($40, Schedule ITC Section B, unchanged from
+  # the 2017 four-box system): single 70, AGI 30,000 ->
+  # (30,000 - 2,980) x 4.5% = 1,215.90 - 40
+  run_case('KY', 2023, list(agi = 30000, age1 = 70),
+           expect = list(st_exempt_credit = 40,
+                         liab_st_iit = 1215.90 - 40),
+           label = 'KY-9 aged $40 credit')
+
+  # KY-10: 2024 CDCTC match: single, AGI 40,000, federal credit 600 ->
+  # (40,000 - 3,160) x 4% = 1,473.60 less 20% x 600 = 120
+  run_case('KY', 2024, list(agi = 40000, cdctc_nonref = 600),
+           expect = list(st_cdctc = 120, liab_st_iit = 1473.60 - 120),
+           label = 'KY-10 CDCTC 20% match')
+
+  # KY-11: 2017 combined-return itemizers: wages 60,000/40,000, federal
+  # itemized 20,000 divided by income share (Schedule A rule): columns
+  # (60,000 - 12,000) and (40,000 - 8,000) -> 2,600 + 1,672 = 4,272 <
+  # joint tax(80,000) = 4,466. Less 2 x $10 credits
+  run_case('KY', 2017,
+           list(filing_status = 2, age2 = 40, agi = 100000,
+                wages1 = 60000, wages2 = 40000, itemizing = 1,
+                item_ded = 20000, item_ded_ex_limits = 20000),
+           expect = list(st_ded = 20000,
+                         liab_st_iit = 4272 - 20),
+           label = 'KY-11 combined-return itemized split')
+
   # MI-1: 2025 single with a $5,800 personal exemption and $1,000 federal
   # EITC. Michigan's refundable EITC is 30% of the federal amount.
   run_case('MI', 2025, list(agi = 50000, eitc = 1000),

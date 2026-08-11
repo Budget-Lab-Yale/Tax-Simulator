@@ -1,12 +1,17 @@
 ---
 rates:
   value:
-    '2017': [0.058, 0.058, 0.058, 0.058, 0.058, 0.058, 0.058, 0.058, 0.058, 0.058]
+    '2017': [0.02, 0.03, 0.04, 0.05, 0.058, 0.06, 0.06, 0.06, 0.06, 0.06]
     '2018': [0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05]
     '2023': [0.045, 0.045, 0.045, 0.045, 0.045, 0.045, 0.045, 0.045, 0.045, 0.045]
     '2024': [0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04]
     '2026': [0.035, 0.035, 0.035, 0.035, 0.035, 0.035, 0.035, 0.035, 0.035, 0.035]
-  reference: 'KRS 141.020; Kentucky Form 740 packets 2017-2025; enacted individual-income-tax rate reductions'
+  reference: 'KRS 141.020; 2017 Form 740 packet tax rate schedule (2%/3%/4%/5%/5.8%/6%, "$4,166 plus 6% of amount over $75,000"); HB 366 (2018) flat 5% from TY2018; enacted rate reductions 2023-2026'
 brackets:
-  value: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-  reference: 'Kentucky individual income tax is a flat-rate tax for TY2018 onward; TY2017 simplification uses the top statutory rate'
+  value:
+    '2017': [0.0, 3000.0, 4000.0, 5000.0, 8000.0, 75000.0, 75000.0, 75000.0, 75000.0, 75000.0]
+    '2018': [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  reference: '2017 Form 740 packet tax rate schedule bracket bounds; flat-rate tax (single zero bracket) for TY2018 onward per HB 366'
+combined_sep:
+  value: 1
+  reference: '2017-2025 Form 740 filing status 2, married filing separately on a combined return: each spouse computes tax on own column income less own deduction (2017 packet: "Married taxpayers filing separately on a combined return may use the tax table or the tax rate schedule"); couples take the lower of joint and combined'

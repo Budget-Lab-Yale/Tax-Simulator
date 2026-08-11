@@ -214,6 +214,7 @@ scalars:
   st_ord.recapture_width: 50000
   st_ord.sta_max: {default: 0, units: per_return}
   st_ord.bus_rate: 0   # flat rate on business income above the carve-out cap (OH 3%)
+  st_ord.combined_sep: 0   # married-filing-separately-on-a-combined-return option (KY): per-spouse columns, lower of joint and combined; assumes no recapture/base-amount/business carve-out in the same state
 
   # surtax.yaml (post-nonrefundable-credit taxable-income surtax)
   st_surtax.taxable_income_threshold: .inf
