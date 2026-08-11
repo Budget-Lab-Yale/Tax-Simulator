@@ -64,7 +64,7 @@ jfc_income_base:
   reference: 'Ohio income tax base (line 5) 2017-18; MAGI less exemptions from 2019 (HB 166)'
 jfc_magi_limit:
   value:
-    '2017': 999999999999
+    '2017': 999999999999.0
     '2025': 750000
     '2026': 500000
   reference: 'HB 96 (2025): JFC denied at MAGI >= $750,000 (2025 booklet top tier "$75,001-$749,999"); $500,000 from 2026 (LSC HB 96; boundary semantics TBD)'
@@ -131,7 +131,7 @@ eitc_refundable:
 eitc_liab_cap_thresh:
   value:
     '2017': 20000
-    '2019': 999999999999
+    '2019': 999999999999.0
   reference: '2017-18: if Ohio income tax base > $20,000, credit limited to 50% of tax after credits preceding the JFC (2018 worksheet); limitation repealed 2019'
 eitc_liab_cap_share:
   value: 0.5

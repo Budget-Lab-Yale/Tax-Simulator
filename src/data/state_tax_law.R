@@ -186,8 +186,15 @@ state_credit_tables_for_year = function(credit_tables, state_code, tax_year) {
     return(credit_tables)
   }
 
-  credit_tables %>%
-    filter(state == toupper(state_code), year <= tax_year) %>%
+  # Guard the empty case (state has no published tables) so the grouped
+  # max(year) below never runs on zero rows
+  state_tables = credit_tables %>%
+    filter(state == toupper(state_code), year <= tax_year)
+  if (nrow(state_tables) == 0) {
+    return(state_tables)
+  }
+
+  state_tables %>%
     group_by(credit_id) %>%
     filter(year == max(year)) %>%
     ungroup()

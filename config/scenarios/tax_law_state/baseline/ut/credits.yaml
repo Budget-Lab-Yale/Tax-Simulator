@@ -49,7 +49,7 @@ ded_credit_po_base:
   reference: 'UC 59-10-1018(4)(a): phase-out on state taxable income (TC-40 line 9), equal to the modeled state AGI (Utah has no base deductions)'
 ded_credit_salt_cap:
   value:
-    '2017': 999999999999
+    '2017': 999999999999.0
     '2018': 10000
   reference: 'UC 59-10-1018(1)(e) as enacted by HB 293 (2018): state/local income tax addback capped at $10,000; uncapped in 2017 (2017 TC-40 instr. line 14)'
 ded_credit_exempt_taxpayer:
@@ -198,7 +198,7 @@ ss_age_credit_exclusive:
   reference: 'UC 59-10-1042(5)/59-10-1019(4): a return may not claim both the SS/military credit and the retirement credit; booklets apply at return level'
 ss_thresh_single:
   value:
-    '2017': 999999999999
+    '2017': 999999999999.0
     '2021': 30000
     '2022': 37000
     '2023': 45000
@@ -206,7 +206,7 @@ ss_thresh_single:
   reference: 'UC 59-10-1042(3)(a); HB 86 (2021), SB 59 (2022), HB 54 (2023), SB 71 (2025); pre-2021 sentinel (credit rate is zero)'
 ss_thresh_joint:
   value:
-    '2017': 999999999999
+    '2017': 999999999999.0
     '2021': 50000
     '2022': 62000
     '2023': 75000
@@ -214,7 +214,7 @@ ss_thresh_joint:
   reference: 'UC 59-10-1042(3)(a): MFJ, QSS, and HoH threshold'
 ss_thresh_mfs:
   value:
-    '2017': 999999999999
+    '2017': 999999999999.0
     '2021': 25000
     '2022': 31000
     '2023': 37500
@@ -280,19 +280,19 @@ ctc_refundable:
   reference: 'UC 59-10-1047(4): nonrefundable, no carryforward'
 ctc_thresh_single:
   value:
-    '2017': 999999999999
+    '2017': 999999999999.0
     '2024': 43000
     '2026': 49000
   reference: 'UC 59-10-1047(3)(a): single and HoH; HB 290 (2026) raised thresholds; pre-2024 sentinel (style inactive)'
 ctc_thresh_joint:
   value:
-    '2017': 999999999999
+    '2017': 999999999999.0
     '2024': 54000
     '2026': 61000
   reference: 'UC 59-10-1047(3)(a): MFJ and QSS'
 ctc_thresh_mfs:
   value:
-    '2017': 999999999999
+    '2017': 999999999999.0
     '2024': 27000
     '2026': 30500
   reference: 'UC 59-10-1047(3)(a)'
