@@ -58,6 +58,22 @@ resulting overstatement is large for pass-through owners (median $4.5k on
 affected records, unbounded in the tail). Given the BID's size (Ohio's
 largest income-tax expenditure), a coverage note would help users.
 
+### T6. Michigan: home-heating credit granted on a collapsed household-income base
+
+For ~370–410 MI records per year (2017–2020), `v30_state_household_income`
+returns exactly $1.01 and TAXSIM nets a flat refundable credit into
+`siitax` — the MI-1040CR-7 home heating credit standard-allowance ladder at
+90% of the allowance ($349/$351/$386/$418 for one exemption in 2017–2020,
+larger-household steps above). The $1.01 base looks like a sentinel or
+underflow: it appears on records with multi-million-dollar AGI, which then
+receive the full credit, and zero-income records return a −$386 "liability."
+Two distinct concerns: (a) the household-income computation is wrong on
+these records, and (b) the home heating credit is an energy-assistance
+transfer paid outside MI-1040 liability, so netting it into `siitax` mixes
+concepts (same class as P1/P2 below). Stage decomposition confirms AGI,
+exemptions, and taxable income agree exactly on affected records; the
+entire wedge is the credit.
+
 Input limitations we worked around (not errors, but they bound what state
 validation TAXSIM can support): no tax-exempt interest input (state
 exempt-interest addbacks and the federal EITC investment-income test can
