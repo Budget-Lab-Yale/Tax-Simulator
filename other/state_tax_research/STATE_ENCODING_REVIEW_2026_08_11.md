@@ -1,7 +1,9 @@
 # State encoding review: holes, archetypes, and the path to completion
 
 **Date:** 2026-08-11
-**Scope:** the 30 coded jurisdictions, as of `ab45a6661` (state-tax branch)
+**Scope:** the 30 coded jurisdictions, as of `ab45a6661` (state-tax branch);
+§2.1 and R6 (added 2026-08-11) map the 21 remaining jurisdictions into the
+same class structure and sequence their rollout
 **Sources:** STATUS.md, state_parameter_rollout.csv, state_parameter_workflow.md,
 state_data_imputation_plan.md, elderly_retirement_provisions.md,
 CODE_REVIEW_2026_07_17.md, jurisdictions.yaml, conformity_groups.yaml, all 30
@@ -217,10 +219,58 @@ Notes per family:
 into `st_utils.R` / `credit_tables.csv` / the schema (band/step primitives,
 income-base enum, election machinery, dense-table lookups), and the marginal
 state now mostly reuses them — evidenced by PA/ID/MN/MD/WI landing in a
-single collaborator pass in July. Of the 21 remaining states, none obviously
-requires an eighth family (NJ is own-base like PA; MA is close to
-flat-with-classes; most others are C/D/E), though several will stretch
-existing machinery.
+single collaborator pass in July.
+
+### 2.1 The remaining 21 jurisdictions, mapped (preliminary)
+
+Classifications below are for sequencing only — from secondary knowledge
+(reform-pivotal cases spot-verified 2026-08-11: IA federal-deduction
+flow-through from TY2023 + flat 3.8% from TY2025 per SF 2442; MT federal
+taxable-income start + two brackets from TY2024 per SB 399; LA flat 3% from
+TY2025). Every state still gets its primary-source packet before encoding;
+the form remains the operational truth. Fast-moving items to re-verify at
+packet time are flagged ⚑.
+
+One genuinely new mechanism appears: **federal income-tax deductibility**
+(deducting federal liability from the state base) — full in AL
+(constitutional), capped/AGI-phased in MO and OR, and in the pre-reform
+years of IA (through 2022), LA (through 2021), and MT (through 2023). It is
+a feature overlaying families rather than an eighth family, and one generic
+component (`fed_tax_ded` with cap + phase-out params) covers all six. It is
+mechanically clean for us — federal liability is already computed upstream.
+
+| St | Family (prelim) | Structure and encoding notes |
+|---|---|---|
+| NJ | F own-base | Gross income tax: income classes (no cross-class netting, no carryovers) + graduated to 10.75%; reuses PA `ob_*` but with a rate schedule. Pension exclusion to $100k with the income cliff (banded machinery exists); property-tax deduction/credit election (renters 18%-of-rent — Tier 1 data); NJ EITC 40%. ⚑ NJ taxes 403(b)/457 employee deferrals but not 401(k) — a different deferral wrinkle from PA's |
+| MA | F own-base (schedular) | Part A/B/C classes at different rates: 5% wages/interest, short-term gains at their own rate, LTCG 5%; 4% millionaire surtax on taxable > $1M from 2023 (CA/MD/MN surtax machinery reuses); no-tax status + limited income credit (VA `no_tax_below` precedent). Extends PA `ob_*` to per-class rates |
+| AL | F own-base + full fed-tax ded | Own income concept, graduated 2/4/5%, FULL federal income-tax deductibility (constitutional); sliding standard deduction and dependent exemption by AGI tier |
+| AR | F own-base | Own income concept, graduated (top cut repeatedly, 3.9% by 2024 ⚑); low-income alternative tax tables → credit_tables.csv dense-lookup |
+| MS | F own-base (flat) | Simple own base; 4% bracket phased out; 4.7% (2024) → 4.4% (2025) → 4.0% (2026); ⚑ 2025 legislation sets a trigger path toward elimination — encode enacted rates, triggers document-only (NC precedent) |
+| IA | E (2023+) / own-base + full fed ded (2017–22) | Multi-regime: pre-2023 own AGI with full federal deductibility and own deductions; 2023+ federal standard/itemized flow through (taxable-income conformity); flat 3.8% from 2025. Retirement income fully excluded 55+/disabled from 2023. MN's year-keyed `start_point` precedent |
+| MT | E (2024+) / own-base + capped fed ded (2017–23) | SB 399: federal taxable-income start, two brackets (4.7/5.9%) from TY2024, state filing status must match federal (convenient — PUF units are federal); pre-2024 seven brackets + $5k/$10k capped federal deduction + own std. 65+ $5,500 subtraction 2024+ |
+| LA | C (2025+) / D (2022–24) / +fed ded (2017–21) | Federal-AGI start throughout; full federal deductibility through 2021 (constitutional; repealed with the 2022 reform ⚑ verify mechanics), graduated 1.85/3.5/4.25% 2022–24, flat 3% + $12.5k/$25k std from 2025; excess-federal-itemized deduction pre-2022 |
+| MO | D + capped fed ded | Micro-bracket schedule, top ~4.7% 2025 (SB 3 cuts + triggers ⚑); federal deduction capped $5k/$10k and AGI-phased; public-pension exemption income-capped; MO std = federal |
+| OR | D + capped fed ded | Federal-AGI start, graduated 4.75–9.9%; federal-tax subtraction capped (~$8k) and phased out at high AGI; own std; EITC 9/12% by child age. ⚑ Kicker credit is a % of PRIOR-year liability (44.28% in 2024) — prior-year liability is unobservable per-record: likely document-only known difference in kicker years (material!) |
+| DC | D | Graduated to 10.75%; EITC match stepping 70% → 100% by 2026 incl. childless ⚑ (schedule); federal-coupled std/itemized |
+| DE | D | To 6.6%; pension exclusion; EITC election: 20% nonrefundable vs 4.5% refundable — VA's `eitc_match_alt` greater-of machinery is exactly this |
+| HI | D | Twelve brackets to 11%; ⚑ 2024 Act 46 standard-deduction ramp through 2031; employer-funded pension exclusion (funding source unobservable — share proxy, joins the §1.4 list); refundable EITC 20% (2023+); food/excise credit |
+| KS | D | Two brackets from TY2024 (was three); ⚑ TY2017 hazard: SB 30 raised rates RETROACTIVELY mid-2017 and repealed the pass-through exemption — encode final enacted 2017 law |
+| ME | D | 5.8/6.75/7.15%; itemized cap with phase-out; large pension deduction (growing schedule ⚑); property tax fairness + sales tax fairness credits are refundable and rent/property-linked → Tier 1 imputation |
+| NE | D | Top rate ramp to 3.99% by 2027 (LB 754); SS exemption ramp to 100% by 2025; refundable EITC 10%; ⚑ school-district property-tax income-tax credits (LB 34) are property-linked → Tier 1 or document |
+| NM | D | 2025 bracket restructure (HB 252) to six brackets 1.5–5.9% ⚑; refundable WFTC 25%; SS exemption income-capped 2022+; tiered refundable child credit (banded machinery exists) |
+| OK | D | Micro-brackets top 4.75%; ⚑ 2025 act cuts to 4.5% top from TY2026 + trigger path; ⚑ OK's refundable EITC is computed on FROZEN ~2020 federal EITC law — a mini fixed-conformity case; candidate reuse of the group reference-law machinery rather than a one-off |
+| RI | D | Three brackets to 5.99%; std/exemption phase-out at high AGI; EITC 15% refundable; SS/pension exclusions income-capped |
+| VT | D (2018+) / E (2017) | Switched from federal taxable-income start to AGI start in TY2018 (Act 11) — year-keyed `start_point`, MN precedent; own std/exemptions post-2018; EITC 38%; capital-gains exclusion (flat or 40%, capped — ND/SC/WI machinery) |
+| WV | D | Five brackets; 2023 HB 2526 −21.25% + annual trigger cuts ⚑ (verify each year's certified rates); SS exemption phase-in; low-income earned-income exclusion; family tax credit |
+
+Machinery inventory for the remainder, in build order of value: (1) the
+`fed_tax_ded` component (unlocks AL/MO/OR + the IA/LA/MT pre-reform years);
+(2) per-class rates on the PA `ob_*` base (MA, and NJ's schedule-on-classes);
+(3) nothing else new — every other feature maps to an existing component,
+and four more states (ME, NE, NJ renters, WV) queue behind the Tier-1
+homestead-family imputation for one credit each. The OR kicker and the OK
+frozen-EITC are the two oddities to decide deliberately rather than
+discover mid-encoding.
 
 ---
 
@@ -309,9 +359,30 @@ that need it: elective deferrals (PA base), dependent detail (MN CTC/M1CWFC,
 MD), disability status, interest-composition shares. Every imputation stays
 switchable-off so the cross-model harness keeps comparing law-only.
 
-**Out of scope here:** the 21 un-started jurisdictions (largest: NJ, MA, MO,
-OR, IA, LA, DC, HI). R3–R5 are shared prerequisites for them too; NJ should
-follow PA's own-base pattern and is named in the deferral imputation.
+### R6 — Remaining-state rollout (sequenced batches; see §2.1 for the map)
+
+Weights-independent like R1/R2; batches ordered so each new component is
+built once and immediately reused, largest revenue first within a batch:
+
+1. **Batch C-transcription (no new machinery):** the eleven plain
+   graduated-federal-AGI states — DC, DE, HI, KS, ME, NE, NM, OK, RI, VT,
+   WV. Pure packet-and-parameter work; VT needs only the year-keyed
+   `start_point` for its 2017 taxable-income year. Decide the OK
+   frozen-federal-EITC treatment (group machinery vs one-off) before OK.
+   ME/NE property-linked credits: encode the rest, document the credits as
+   Tier-1-blocked (WI/MI homestead precedent).
+2. **Batch fed-ded (build `fed_tax_ded` once):** MO and OR (capped/phased
+   variants), then AL (full deductibility, own-base). Decide the OR kicker
+   treatment (document-only vs same-year approximation) up front.
+3. **Batch own-base (reuse PA `ob_*`):** NJ first (largest un-started IIT;
+   needs per-class rate support), then MA (schedular + millionaire surtax),
+   then AR and MS (simple own-base).
+4. **Batch multi-regime:** IA, LA, MT — each spans a structural reform
+   inside the 2017+ window and consumes both the `fed_tax_ded` component
+   (pre-reform years) and the year-keyed `start_point` (MN/VT precedent).
+
+R3–R5 remain shared prerequisites for meaningful aggregates in all of them;
+none of this batch order depends on weights.
 
 ---
 

@@ -136,7 +136,14 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
 4. **Phase 6 — 50-state rollout** by structural family (no-tax stubs → flat
    fed-AGI → graduated fed-AGI → fed-taxable → own-base → federal-
    deductibility), CA first (CalEITC as the credit-schema acceptance test;
-   CA CPI indexation series).
+   CA CPI indexation series). 2026-08-11: the 21 remaining jurisdictions
+   are now classified and batch-sequenced in
+   `STATE_ENCODING_REVIEW_2026_08_11.md` §2.1/R6 (preliminary classes also
+   in each tracker row): eleven plain graduated-fed-AGI transcription
+   states; MO/OR/AL behind one new `fed_tax_ded` component; NJ/MA/AR/MS on
+   the PA own-base machinery (NJ largest, first); IA/LA/MT as multi-regime
+   restructure states. Only genuinely new machinery for the remainder:
+   federal-tax deductibility and per-class rates on `ob_*`.
    **MN encoded 2026-07-23** (28th jurisdiction, ~$15bn IIT — largest since
    the pilots): eight new generic components (two-tier deduction
    limitation incl. the standard deduction, share-based exemption
