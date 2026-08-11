@@ -1572,6 +1572,16 @@ test_state_calc = function() {
                          liab_st_iit = 32750 * 0.0535 - 660.5),
            label = 'MN-11 dependent care cap')
 
+  # MN-12: M1CWFC childless phase-out at the GENERAL 12% rate (2024 form
+  # line 13: 9% only with older children and no young children --
+  # verified from the published schedule 2026-08-11). Single, wages
+  # 33,000: WFC 4% x 9,220 = 368.80 less 12% x (33,000 - 31,090) =
+  # 229.20 -> 139.60
+  run_case('MN', 2024,
+           list(agi = 33000, txbl_inc = 18400, wages1 = 33000, ei1 = 33000),
+           expect = list(st_ctc = 139.60),
+           label = 'MN-12 childless M1CWFC 12% phase-out')
+
   #--------------------------------------------------------------------------
   # Maryland (Form 502, state lines only) -- 15%-of-AGI std deduction,
   # banded exemptions, pension exclusion less gross SS, EITC options,

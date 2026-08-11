@@ -2,7 +2,8 @@
 
 State: `MN`
 Status: `baseline encoded; record-level worksheet tests complete`
-Last updated: `2026-07-23`
+Last updated: `2026-08-11` (TAXSIM triage: clean, 11 exact probe cases;
+childless M1CWFC phase-out corrected to the general 12% per the 2024 form)
 
 Full research notes with per-year tables and citations:
 [raw/mn_research_core.md](../raw/mn_research_core.md) (Form M1 booklets and
@@ -70,8 +71,11 @@ credit (2022); NIIT + flat-80% limitation (2024); dependent-care cap
 - **WFC eligibility:** the 2017-18 federal-EIC gate approximated by age
   alone; the childless upper age limit (64) unmodeled; M1CWFC older
   children proxied by dependents aged 18-23 (students/disabled
-  unobserved), childless phase-out rate (9%) UNVERIFIED; dependent slots
-  cap tracked children at three (the credit has no child limit).
+  unobserved); dependent slots cap tracked children at three (the credit
+  has no child limit). *(Resolved 2026-08-11: the childless M1CWFC
+  phase-out is the GENERAL 12%, not 9% — 2024 form line 13 gives 9% only
+  to older-child-only units; we had applied 9% to childless units.
+  Fixed in st_credits_child.R; test MN-12.)*
 - **Marriage credit:** lesser earner's share uses earned income only (the
   M1MA lines 1-5 pension/SS elements unobserved); the printed lookup
   table's midpoint rounding ignored.
@@ -90,9 +94,13 @@ credit (2022); NIIT + flat-80% limitation (2024); dependent-care cap
 
 ## Cross-model validation notes
 
-- TAXSIM 2017-2020: MN fidelity unverified; expect triage around the 2018
-  nonconformity stack, the deduction limitation above ~$195k, SS
-  worksheet edges, and marriage-credit table midpoints.
+- TAXSIM 2017-2020: **triage 2026-08-11 — eleven probe cases match TAXSIM
+  to the cent (or ~$1 indexed rounding) across all three regimes,
+  dependents, the sliding SS subtraction, the marriage credit, and the
+  WFC at phase-in/phase-out/childless/2-child edges.** No MN encoding
+  defects on definable shapes; the clean-match residual concentrates in
+  itemizers (M1SA components + TAXSIM SALT circularity) and the
+  documented 2017 M1M addbacks (KD row).
 - PolicyEngine 2021+: models everything we encode PLUS the MN AMT,
   renter's credit (2024+), and QPEN — three expected one-sided divergence
   sources.

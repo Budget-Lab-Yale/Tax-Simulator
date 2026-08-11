@@ -9,7 +9,8 @@
 #     unmodeled [known-difference].
 #   - 2023+ (HF1938, Schedule M1CWFC): combined CTC ($1,750 per child
 #     under 18) + WFC (4% of capped earned income + fixed older-child
-#     amounts) with ONE 12% joint phase-out (9% when no under-18 children)
+#     amounts) with ONE 12% joint phase-out (9% ONLY for older-child-only
+#     units, M1CWFC line 13; childless = 12%)
 #     on max(earned income, AGI) -- the new cwfc machinery. Refundable;
 #     older children proxied by dependents aged 18-23; advance-payment/
 #     minimum-credit timing ignored [documented].
@@ -223,7 +224,7 @@ cwfc_po_rate_older_only:
   value:
     '2017': 0
     '2023': 0.09
-  reference: 'Same provision: 9% where there are no under-18 qualifying children (applied to older-only and childless units [childless rate UNVERIFIED])'
+  reference: '2024 Schedule M1CWFC line 13: 9% only with an amount on line 5 (older children) and NOT line 8 (young children); childless units take the general 12% [verified from the form 2026-08-11 -- had been applied to childless units too]'
 
 cwfc_po_thresh_mfj:
   value:

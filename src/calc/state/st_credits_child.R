@@ -190,9 +190,12 @@ st_credits_child = function(tax_unit, st_eitc) {
       tax_unit$st_credits.cwfc_wfc_rate *
         pmin(cwfc_earned, tax_unit$st_credits.cwfc_wfc_earned_cap) +
       cwfc_older_amt
-    cwfc_po_rate = if_else(n_cwfc_young > 0,
-                           tax_unit$st_credits.cwfc_po_rate,
-                           tax_unit$st_credits.cwfc_po_rate_older_only)
+    # M1CWFC line 13 (verified against the 2024 form): the reduced rate
+    # applies only with an older-child amount (line 5) and NO young-child
+    # amount (line 8); childless units take the general rate
+    cwfc_po_rate = if_else(n_cwfc_young == 0 & n_cwfc_older > 0,
+                           tax_unit$st_credits.cwfc_po_rate_older_only,
+                           tax_unit$st_credits.cwfc_po_rate)
     cwfc = if_else(
       tax_unit$st_credits.cwfc_style == 1 & tax_unit$dep_status != 1 &
         tax_unit$filing_status != 3,
