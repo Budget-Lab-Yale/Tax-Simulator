@@ -72,10 +72,8 @@ cap_gains_excl_share:
 
 # Retirement income deduction per taxpayer (SC1040 line p; 12-6-1170(A)):
 # $3,000 under 65, $10,000 at 65+, on qualified pension/IRA income. Applies at
-# any age. NOTE: the SEPARATE age-65 deduction ($15,000/person, reduced by this
-# retirement deduction; 12-6-1170(B)) and the military-retirement deduction are
-# NOT modeled here -- documented known-differences (needs the p/q offset logic
-# and military-retirement identification).
+# any age. The military-retirement deduction (12-6-1171) is NOT modeled
+# (military-retirement identification unobserved; known-difference).
 pension_excl_under65:
   value: 3000
   reference: 'S.C. Code 12-6-1170(A); SC1040 line p (under 65 retirement deduction)'
@@ -88,3 +86,20 @@ pension_excl_min_age:
 pension_cap_incl_ss:
   value: 0
   reference: 'SC Social Security is separately fully exempt (line o); not counted within the retirement cap'
+
+# Age-65 deduction (SC1040 lines q-1/q-2; 12-6-1170(B)): $15,000 per
+# taxpayer 65+, against ANY income, reduced dollar-for-dollar by amounts
+# claimed under the 12-6-1170(A) retirement deduction. Encoded 2026-08-11
+# (was a documented known-difference; elderly survey recommendation #3).
+# The offset applies at the unit level -- exact for singles and both-65+
+# couples; over-offsets by up to $3,000 when only an under-65 spouse
+# claims (A) (documented approximation).
+age_ded_amount:
+  value: 15000
+  reference: 'S.C. Code 12-6-1170(B); SC1040 lines q-1/q-2 (age 65 and older deduction), 2017-2025'
+age_ded_min_age:
+  value: 65
+  reference: 'S.C. Code 12-6-1170(B): resident individuals 65 or older'
+age_ded_less_pension_sub:
+  value: 1
+  reference: 'S.C. Code 12-6-1170(B)(1): reduced by amounts deducted under 12-6-1170(A)'

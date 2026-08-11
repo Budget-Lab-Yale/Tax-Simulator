@@ -142,6 +142,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.age_ded_no_test_min_age', # (dbl) age at/above which no income test applies
     'st_agi.age_ded_po_thresh',     # (dbl) income threshold for $1-per-$1 reduction
     'st_agi.age_ded_po_base',       # (int) reduction income base (st_income_base enum)
+    'st_agi.age_ded_less_pension_sub', # (int) aged deduction reduced by the pension/retirement subtraction taken (SC)
     'st_agi.retire_sub_factor_income_base', # (int) factor-table income base (enum)
     'st_agi.age_excl_eitc',         # (int) age package and EITC/CLI mutually exclusive (VA)
     'st_agi.sub_ui_share',          # (dbl) share of unemployment benefits subtracted
@@ -477,6 +478,15 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                                 (st_age_q2 & !st_age_gf2)) -
                                pmax(0, st_age_po_income -
                                        st_agi.age_ded_po_thresh)),
+
+      # SC 12-6-1170(B): the aged deduction is reduced by amounts deducted
+      # under the retirement deduction (12-6-1170(A)). Applied at the unit
+      # level against the whole pension subtraction -- exact for single
+      # filers and both-65+ couples (the (A) cap is below the aged amount);
+      # a couple where only the under-65 spouse claims (A) is over-offset
+      # by up to that spouse's (A) amount (documented approximation)
+      st_sub_age_pot = pmax(0, st_sub_age_pot -
+                               st_agi.age_ded_less_pension_sub * st_sub_pens),
 
       # Age-package vs EITC/CLI mutual exclusivity (VA Form 760 Line 4 /
       # Schedule ADJ Line 17 rules): a return claiming the aged deduction or

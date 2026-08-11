@@ -804,18 +804,24 @@ test_state_calc = function() {
            expect = list(st_agi = 51200, liab_st_iit = 2515.4),
            label = 'SC-3 44% net capital gain deduction')
 
-  # SC-4: SS fully exempt. TY2024, $40,000 base incl. $10,000 taxable SS ->
-  # base 30,000: 6.2% x 30,000 - 659 = 1,201.
+  # SC-4: SS fully exempt. TY2024, $40,000 base incl. $10,000 taxable SS,
+  # filer 67: SS subtraction 10,000 + age-65 deduction 15,000 (no
+  # retirement deduction claimed, so no (A) offset) -> base 15,000, now in
+  # the 3% middle bracket: 3% x (15,000 - 3,460) = 346.20. (Updated
+  # 2026-08-11 when the 12-6-1170(B) aged deduction was encoded; the SS
+  # subtraction itself is unchanged)
   run_case('SC', 2024,
            list(agi = 40000, txbl_inc = 40000, txbl_ss = 10000, age1 = 67),
-           expect = list(st_agi = 30000, liab_st_iit = 1201.0),
+           expect = list(st_agi = 15000, liab_st_iit = 346.20),
            label = 'SC-4 full Social Security exemption')
 
-  # SC-5: retirement-income deduction. Age 67 gets the $10,000 cap; $8,000 of
-  # pension is fully deducted -> base 32,000: 6.2% x 32,000 - 659 = 1,325.
+  # SC-5: retirement-income deduction. Age 67: $8,000 pension fully
+  # deducted under the $10,000 (A) cap, plus the aged deduction (B) =
+  # 15,000 - 8,000 = 7,000 -> base 25,000: 6.2% x 25,000 - 659 = 891.
+  # (Updated 2026-08-11 with the 12-6-1170(B) encoding)
   run_case('SC', 2024,
            list(agi = 40000, txbl_inc = 40000, txbl_pens_dist = 8000, age1 = 67),
-           expect = list(st_agi = 32000, liab_st_iit = 1325.0),
+           expect = list(st_agi = 25000, liab_st_iit = 891.0),
            label = 'SC-5 age-65 retirement deduction ($10k cap)')
 
   # SC-5b: under-65 filer gets only the $3,000 retirement cap -> base 37,000.
@@ -829,6 +835,42 @@ test_state_calc = function() {
   run_case('SC', 2023, list(agi = 60000, txbl_inc = 60000, eitc = 1000),
            expect = list(st_eitc = 1250, liab_st_iit = 1920.0),
            label = 'SC-6 nonrefundable SC EITC (125% of federal)')
+
+  # SC-8: age-65 deduction (12-6-1170(B)): single 70, wages 20,000 +
+  # pension 20,000, federal taxable 26,150. Retirement deduction (A) =
+  # min(20,000, 10,000 cap); aged deduction (B) = 15,000 - 10,000 = 5,000;
+  # SC income 26,150 - 15,000 = 11,150. TAXSIM within $3.20 on this case
+  run_case('SC', 2019,
+           list(age1 = 70, agi = 40000, txbl_inc = 26150, wages1 = 20000,
+                ei1 = 20000, txbl_pens_dist = 20000),
+           expect = list(st_agi = 11150),
+           label = 'SC-8 age-65 deduction net of retirement deduction')
+
+  # SC-9: both-65+ couple: pensions 40,000, (A) = 2 x 10,000; (B) =
+  # 2 x 15,000 - 20,000 = 10,000 -> subtractions 30,000
+  run_case('SC', 2019,
+           list(filing_status = 2, age1 = 70, age2 = 70, agi = 60000,
+                txbl_inc = 50000, txbl_pens_dist = 40000),
+           expect = list(st_agi = 20000),
+           label = 'SC-9 joint age-65 deductions with (A) offset')
+
+  # SC-10: Two Wage Earner Credit (12-6-3330, Act 266 phase-in): 2019 cap
+  # 36,667 -> credit 0.7% x 36,667 = 256.67 (lower earner 40,000 exceeds
+  # the cap). TAXSIM produces exactly this value
+  run_case('SC', 2019,
+           list(filing_status = 2, age2 = 40, agi = 100000,
+                txbl_inc = 75600, wages1 = 60000, wages2 = 40000,
+                ei1 = 60000, ei2 = 40000),
+           expect = list(st_twoearner_credit = 256.67),
+           label = 'SC-10 two wage earner credit at the 2019 cap')
+
+  # SC-11: TWEC below the cap: 2024 lower earner 20,000 -> 0.7% x 20,000
+  run_case('SC', 2024,
+           list(filing_status = 2, age2 = 40, agi = 80000,
+                txbl_inc = 50000, wages1 = 60000, wages2 = 20000,
+                ei1 = 60000, ei2 = 20000),
+           expect = list(st_twoearner_credit = 140),
+           label = 'SC-11 two wage earner credit below the cap')
 
   #--------------------------------------------------------------------------
   # Connecticut (CT-1040) -- federal-AGI start, graduated rates with stepped

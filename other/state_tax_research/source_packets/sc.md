@@ -2,7 +2,9 @@
 
 State: `SC`
 Status: `yaml_dir done; worksheet_tests done; cross_model todo; aggregate blocked_weights`
-Last updated: `2026-07-16`
+Last updated: `2026-08-11` (age-65 deduction 12-6-1170(B) and the Two Wage
+Earner Credit encoded — the two largest SC cross-model wedges; 5-case TAXSIM
+probe now agrees within $10 everywhere, incl. retirees at $0)
 
 ## Scope
 
@@ -54,8 +56,11 @@ Last updated: `2026-07-16`
   reference-law overlay is built (same treatment as CA). Baseline-law runs use
   current-law federal values (SC's ~1-year conformity lag is a known-difference).
 - **Age-65 deduction** ($15,000/person, reduced by the retirement deduction;
-  12-6-1170(B)) NOT modeled — only the $3k/$10k retirement-income deduction is
-  taken. Understates subtractions for 65+ filers. Requires the p/q offset logic.
+  12-6-1170(B)): **ENCODED 2026-08-11** via the generic aged-deduction
+  machinery + a new `age_ded_less_pension_sub` offset flag (elderly survey
+  recommendation #3). Unit-level offset — exact for singles and both-65+
+  couples; over-offsets by up to $3,000 when only an under-65 spouse claims
+  (A). Tests SC-8/SC-9; TAXSIM matches retiree probe cases within $3.20.
 - **Military-retirement deduction** (fully deductible 2022+) not separately
   identified; **44% cap-gain deduction** needs net LT gain over net ST loss
   (PUF has it at return level).
@@ -64,10 +69,15 @@ Last updated: `2026-07-16`
   a known-difference vs the CO form.
 - **US-obligation subtraction**: flag only, not modeled (PUF share unobserved;
   Fannie/Freddie/Ginnie do not qualify).
-- **Credits not modeled**: Two Wage Earner Credit; Child & Dependent Care (7% of
-  federal Sec.21 EXPENSES, a different base than the model's cdctc match, so
-  omitted rather than mis-encoded); Tuition (refundable, needs student data);
-  nursing-home, motor-fuel (2018-2022), excess-premium.
+- **Two Wage Earner Credit** (12-6-3330): **ENCODED 2026-08-11** on the WI
+  married-couple-credit machinery (0.7% of the lesser earner's earned income,
+  cap phased $30k→$50k in six Act-266 steps, max $210→$350). TAXSIM's 2019
+  value matches exactly (256.67). Tests SC-10/SC-11. SC-source qualified
+  earned income proxied by total earned income (known-difference).
+- **Credits not modeled**: Child & Dependent Care (7% of federal Sec.21
+  EXPENSES, a different base than the model's cdctc match, so omitted rather
+  than mis-encoded); Tuition (refundable, needs student data); nursing-home,
+  motor-fuel (2018-2022), excess-premium.
 - **65+ filing threshold** (federal threshold + $15k/$30k) not modeled (federal-
   filer trigger used).
 - **TY2026 H.4216 reform** not encoded (forms unpublished); simulations of 2026
