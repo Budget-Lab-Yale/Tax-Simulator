@@ -1,0 +1,24 @@
+---
+# West Virginia: filing requirement (IT-140 booklet "WHO MUST FILE", identical
+# text 2017-2025). A resident who must file federally must file an IT-140; a
+# resident NOT required to file federally must nevertheless file if WV adjusted
+# gross income exceeds the exemption allowance.
+
+# 1 = state base above the exemption allowance -- WV's own test, verbatim
+req_type:
+  value: 1
+  reference: '"You are required to file a West Virginia return even if you are not required to file a federal return if: Your West Virginia adjusted gross income is greater than your allowable deduction for personal exemptions ($2,000 per exemption, or $500 if you claim zero exemptions)." Verified in the 2017, 2019 and 2025 booklets; st_filing.req_type 1 compares st_agi against st_exempt, which is exactly this rule'
+req_income_thresh:
+  value: 0
+  reference: 'n/a for WV: the threshold IS the exemption allowance, supplied by req_type 1'
+req_if_fed_filer:
+  value: 1
+  reference: 'IT-140 "WHO MUST FILE": every WV resident for the entire (or part of the) taxable year files, and the exemption-allowance test is framed as the ADDITIONAL requirement for non-federal-filers'
+
+documented_not_modeled:
+  dependent_filer_threshold_500:
+    reference: 'For a zero-exemption filer WV''s test is WV AGI above $500, but req_type 1 compares against st_exempt, which dep_filer_zero sets to 0 -- so we treat a dependent filer with any positive WV AGI as required to file. Filer counts only; no liability effect (their $500 allowance is carried by st_ded.std_dependent)'
+  credit_claim_filing_requirement:
+    reference: '"You are claiming a SCTC or HEPTC credit" independently requires a return. Neither credit is modeled (credits.yaml), so those filers are not counted'
+  aged_nonfiler_carveout:
+    reference: '"You are not required to file ... if you and your spouse are 65 or older and your total income is less than your exemption allowance plus the senior citizen modification." Already reproduced: the $8,000-per-person aged deduction reduces st_agi before req_type 1 compares it to the exemptions'

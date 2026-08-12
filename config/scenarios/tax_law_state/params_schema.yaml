@@ -57,6 +57,7 @@ scalars:
   # earned income up to the cap
   st_agi.twoearner_sub_max: {default: 0, units: per_return}
   st_agi.age_ded_less_pension_sub: 0   # aged deduction reduced by the pension subtraction taken (SC 12-6-1170(B))
+  st_agi.age_ded_less_ss_sub: 0   # aged deduction reduced by the Social Security subtraction taken (WV 11-21-12(c)(9), Schedule M line 47 box (d))
   st_agi.retirement_excl_style: 0
   st_agi.retirement_excl_min_age: .inf
   st_agi.retirement_excl_under65: {default: 0, units: per_person}

@@ -145,6 +145,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.age_ded_po_thresh',     # (dbl) income threshold for $1-per-$1 reduction
     'st_agi.age_ded_po_base',       # (int) reduction income base (st_income_base enum)
     'st_agi.age_ded_less_pension_sub', # (int) aged deduction reduced by the pension/retirement subtraction taken (SC)
+    'st_agi.age_ded_less_ss_sub',    # (int) aged deduction reduced by the Social Security subtraction taken (WV)
     'st_agi.retire_sub_factor_income_base', # (int) factor-table income base (enum)
     'st_agi.age_excl_eitc',         # (int) age package and EITC/CLI mutually exclusive (VA)
     'st_agi.sub_ui_share',          # (dbl) share of unemployment benefits subtracted
@@ -495,14 +496,20 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                                pmax(0, st_age_po_income -
                                        st_agi.age_ded_po_thresh)),
 
-      # SC 12-6-1170(B): the aged deduction is reduced by amounts deducted
-      # under the retirement deduction (12-6-1170(A)). Applied at the unit
-      # level against the whole pension subtraction -- exact for single
-      # filers and both-65+ couples (the (A) cap is below the aged amount);
-      # a couple where only the under-65 spouse claims (A) is over-offset
-      # by up to that spouse's (A) amount (documented approximation)
+      # Aged-deduction offsets, where the state reduces the aged amount by
+      # other retirement-related subtractions already claimed:
+      #   SC 12-6-1170(B): reduced by the retirement deduction (12-6-1170(A))
+      #   WV 11-21-12(c)(9): Schedule M line 47 box (d) reduces each person's
+      #     $8,000 by that person's lines 29-34, which include the SOCIAL
+      #     SECURITY subtraction
+      # Both are applied at the unit level against the whole subtraction --
+      # exact for single filers and both-qualifying couples (each cap sits
+      # below the aged amount); a couple where only the non-qualifying spouse
+      # claims the offset subtraction is over-offset by up to that spouse's
+      # amount (documented approximation)
       st_sub_age_pot = pmax(0, st_sub_age_pot -
-                               st_agi.age_ded_less_pension_sub * st_sub_pens),
+                               st_agi.age_ded_less_pension_sub * st_sub_pens -
+                               st_agi.age_ded_less_ss_sub * st_sub_ss),
 
       # Age-package vs EITC/CLI mutual exclusivity (VA Form 760 Line 4 /
       # Schedule ADJ Line 17 rules): a return claiming the aged deduction or

@@ -1,0 +1,38 @@
+---
+# West Virginia: exemptions (IT-140 line 6; W. Va. Code 11-21-16). A flat
+# $2,000 per exemption in every year 2017-2025, unindexed. The count is box (a)
+# yourself + box (b) spouse (MFJ ONLY) + box (c) dependents + box (d) the
+# surviving-spouse additional exemption. Because box (b) is MFJ-only, an MFS
+# filer claims ONE exemption -- which is what the calculator's per-taxpayer
+# count already gives.
+#
+# W. Va. Code 11-21-9(f) is what keeps this alive after TCJA: for taxable years
+# beginning on and after 1/1/2018 the statutory phrase "each exemption for
+# which he or she is entitled to a deduction ... for federal income tax
+# purposes" means the exemption the person WOULD have been allowed had the
+# federal exemption not been repealed. The booklet says the same plainly: "You
+# can no longer claim personal exemptions on your federal income tax return.
+# West Virginia has retained personal exemptions under the same rules
+# applicable under federal law in prior years."
+#
+# There is no exemption phase-out of any kind and no aged or blind add-on. The
+# $500 allowance for a zero-exemption filer lives in ded.yaml (std_dependent).
+
+personal_amount:
+  value: 2000
+  reference: 'IT-140 line 6 ("Total Exemptions ... x $2,000") and the EXEMPTIONS paragraph ("$2,000 per allowable exemption"), verified in the 2017, 2019, 2020, 2021, 2022, 2023, 2024 and 2025 booklets; W. Va. Code 11-21-16 (and 11-21-9(f) for the post-TCJA continuation). Per taxpayer: box (a) plus box (b), where box (b) is claimed "only if your filing status is married filing jointly", so MFS correctly receives one'
+dep_amount:
+  value: 2000
+  reference: 'Exemption box (c): "Enter the number of eligible dependents", at the same $2,000 per exemption, all years'
+dep_filer_zero:
+  value: 1
+  reference: 'Exemption box (a) is claimed "for yourself if you cannot be claimed as a dependent on another person''s return"; the child-filer paragraph requires a dependent to "claim zero exemptions on the state return". The $500 substitute allowance is carried by st_ded.std_dependent (ded.yaml)'
+
+documented_not_modeled:
+  surviving_spouse_additional_exemption:
+    value: 2000
+    reference: 'Exemption box (d): one ADDITIONAL exemption for the two taxable years following a spouse''s death, provided the survivor has not remarried. For a federal qualifying-surviving-spouse unit this is coincidentally reproduced -- the model maps QSS to MFJ, giving 2 taxpayer exemptions where WV gives box (a) + box (d) = 2 -- so the only unmodeled case is a widow(er) WITHOUT a dependent child, who files single on the IT-140 and still claims box (d). Understates the allowance by $2,000 (up to $130 of tax) for those units'
+  wv_dependent_definition:
+    reference: 'The WV dependent test admits a person who "were a part of your household for the entire year" as well as relatives, and requires living with the taxpayer for more than half the year. n_dep (the federal count) is the proxy; direction indeterminate'
+  no_exemption_phaseout:
+    reference: 'WV has no high-income exemption phase-out or disallowance in any year 2017-2025 (verified on all nine line 6 instructions); po_thresh is deliberately left at its .inf default'

@@ -1,0 +1,138 @@
+---
+# West Virginia: base and modifications (IT-140 lines 1-4; Schedule M;
+# W. Va. Code 11-21-12). WV AGI (line 4) = federal AGI + increasing
+# modifications - decreasing modifications. Taxable income (line 7) then
+# subtracts the low-income earned income exclusion (line 5) and the exemption
+# allowance (line 6), floored at zero.
+#
+# SENIOR CITIZEN MODIFICATION, and why age_ded_less_ss_sub exists: on the form
+# (line 47) each qualifying person enters, in box (c), his or her own income
+# not already subtracted, capped at $8,000, and in box (d) the sum of that
+# person's lines 29-34 subtractions -- which INCLUDE the Social Security
+# subtraction (line 34). The deduction is (c) - (d), floored at zero. Without
+# the offset the encoding would understate liability by up to $520/person; on
+# a 2023 MFJ couple both 68 with $20,000 of taxable SS the gap was $546.90,
+# roughly half the true liability. The new generic st_agi.age_ded_less_ss_sub
+# nets st_sub_ss out of the aged pot, reproducing the form at unit level for
+# single filers and both-65+ couples.
+
+filing_status_mapper:
+  ss_allages_agi_limit:
+    '1': ss_agi_limit_other
+    '2': ss_agi_limit_joint
+    '3': ss_agi_limit_other
+    '4': ss_agi_limit_other
+
+start_point:
+  value: 1
+  reference: 'IT-140 line 1 (federal adjusted gross income); W. Va. Code 11-21-12(a)'
+
+conformity_group:
+  value: 0
+  reference: 'Annual fixed-date conformity treated as rolling -> reference-law group 0. W. Va. Code 11-21-9(a) gives effect to federal amendments made after 12/31/2024 but before 1/1/2026 for TY2025, and the date is re-enacted every session; the one-session lag on late federal changes is a documented approximation, matching the ID treatment'
+
+# Increasing modification: interest on state/local obligations OTHER than West
+# Virginia. WV's own obligations stay exempt; own-state share unobserved
+add_exempt_int:
+  value: 1
+  reference: 'Schedule M "INTEREST OR DIVIDEND ON STATE OR LOCAL BONDS (OTHER THAN WEST VIRGINIA)", verified 2017-2025; W. Va. Code 11-21-12(b)(1)'
+own_state_exempt:
+  value: 1
+  reference: 'WV and its political subdivisions carved out of 11-21-12(b)(1); own-state share unobserved, model convention [known-difference]'
+
+# Decreasing modification: interest or dividends on US obligations. Flag only;
+# the US-obligation share of taxable interest is unobserved in the PUF
+sub_us_int:
+  value: 1
+  reference: 'Schedule M "INTEREST OR DIVIDENDS ON U.S. OBLIGATIONS", verified 2017-2025; W. Va. Code 11-21-12(c)(1). PUF share unobserved [known-difference]'
+
+# Decreasing modification: state and local income tax refunds in federal AGI,
+# present in every year even though WV allows no itemized deduction
+sub_state_ref:
+  value: 1
+  reference: 'Schedule M "REFUNDS OF STATE AND LOCAL INCOME TAXES - Enter the amount reported on your federal return only", verified 2017-2025'
+
+# ----------------------------------------------------------------------------
+# Social Security (11-21-12(c)(8)). TWO TRACKS, both booklet-verified:
+#   Track 1 (phase-in, gated on federal AGI <= 50,000 / 100,000 MFJ):
+#     TY2020 35%, TY2021 65%, TY2022+ 100%.
+#   Track 2 (HB 4880 of 2024 -- taxpayers ABOVE the same AGI limits):
+#     TY2024 35%, TY2025 65%, TY2026 100%.
+# TY2022+ is exact: ss_full_sub_allages 1 with the AGI cliff gives 100% below
+# the limit, and the flat ss_sub_share supplies the above-limit track
+# (calc_st_agi takes pmax of the two, so 100% wins below the limit).
+# TY2020-2021 are an APPROXIMATION: the all-ages path is all-or-nothing, so a
+# 35%/65% share gated on an AGI limit is not expressible. The flat share alone
+# is correct below the limit and wrongly extends to above-limit units in those
+# two years only [known-difference, documented below].
+# ----------------------------------------------------------------------------
+ss_full_sub_allages:
+  value:
+    '2017': 0
+    '2022': 1
+  reference: 'No SS modification 2017-2019 (the 2019 booklet: "You cannot modify your federal adjusted gross income by removing any included social security income on this tax return"). Full 100% subtraction below the AGI limits from TY2022 ("For taxable years beginning on and after January 1, 2022, 100 percent"). TY2020-2021 ride on ss_sub_share instead -- see the header note'
+ss_sub_share:
+  value:
+    '2017': 0
+    '2020': 0.35
+    '2021': 0.65
+    '2022': 0
+    '2024': 0.35
+    '2025': 0.65
+  reference: '2020 booklet: "For taxable years beginning on and after January 1, 2020, 35 percent"; 2021 booklet: "65 percent"; 2024 booklet line 34: "Additionally, for taxable year 2024, 35% of social security benefits ... may be claimed when the federal adjusted gross income ... exceeds $100,000 [joint] or $50,000 [other]"; 2025 booklet: the same sentence with 65%. W. Va. Code 11-21-12(c)(8)(A)-(C)'
+ss_agi_limit_other:
+  value: 50000
+  reference: 'Schedule M SS line, every year TY2020-2025: "$50,000 in the case of a single, Head of Household, Widow(er), individual or a married individual filing a separate return" -- MFS gets the FULL $50,000, not half; 11-21-12(c)(8)(D). Do not "fix" this to $25,000'
+ss_agi_limit_joint:
+  value: 100000
+  reference: 'Schedule M SS line, TY2020-2025: "does not exceed $100,000" for a married couple filing jointly; 11-21-12(c)(8)(D)'
+
+# ----------------------------------------------------------------------------
+# Senior citizen / disability modification (11-21-12(c)(9)): $8,000 per
+# qualifying person, age 65 or older OR medically certified permanently and
+# totally disabled, tested on that spouse's OWN income ("ONLY THE INCOME OF
+# THE SPOUSE WHO MEETS THE ELIGIBILITY REQUIREMENTS QUALIFIES"), which is the
+# calculator's per-spouse age test. Constant $8,000 and age 65 in all years.
+# age_ded_less_pension_sub stays 0 and is a no-op: we do not encode the $2,000
+# public-pension subtraction (an unobservable subset of pension income), so
+# st_sub_pens is zero for WV. The live half of the box (d) offset is Social
+# Security, carried by age_ded_less_ss_sub.
+# ----------------------------------------------------------------------------
+age_ded_amount:
+  value: 8000
+  reference: 'Schedule M line 47 box (c) "NOT TO EXCEED $8000", verified in the 2017, 2019, 2020, 2021, 2022, 2023, 2024 and 2025 booklets; W. Va. Code 11-21-12(c)(9). Per person'
+age_ded_min_age:
+  value: 65
+  reference: 'Line 47: "Taxpayers MUST be at least age 65 OR certified as permanently and totally disabled"; the under-65 disability route is unobservable [known-difference: understates the modification for disabled filers under 65]'
+age_ded_less_ss_sub:
+  value: 1
+  reference: 'Schedule M line 47 box (d) reduces each person''s $8,000 by that person''s lines 29-34, which INCLUDE the Social Security subtraction (line 34); the deduction is box (c) less box (d), floored at zero. W. Va. Code 11-21-12(c)(9)'
+
+documented_not_modeled:
+  ss_partial_share_below_limit_2020_2021:
+    reference: 'The TY2020 35% and TY2021 65% subtractions are GATED on federal AGI <= 50,000/100,000. Encoded as a flat share (see the header note), which wrongly extends them to above-limit units in those two years. Direction: understates WV liability; bound 6.5% x share x taxable SS. Closing it needs a share for the all-ages subtraction in place of the hard 1'
+  public_pension_sub_2000:
+    value: 2000
+    reference: 'Schedule M: taxable retirement income from the WV Teachers'' Retirement System, WV Public Employees'' Retirement System and Federal Retirement, capped at $2,000 COMBINED regardless of age (11-21-12(c)(5)). The eligible plans are an unobservable subset of txbl_pens_dist; omitted rather than applied to all pension income [overstates WV tax by up to the marginal rate x $2,000]. NOTE this partly OFFSETS the senior-modification treatment: these amounts also belong in box (d)'
+  wv_police_fire_and_federal_law_enforcement:
+    reference: 'Schedule M: taxable retirement income from any WV state or local police, deputy sheriffs'' or firemen''s retirement system, and from federal law enforcement/firefighter retirement -- both UNLIMITED and regardless of age. Unobservable subsets of pension income'
+  military_retirement_sub:
+    reference: 'Schedule M: military retirement income including survivorship annuities, unlimited. Unobservable subset of txbl_pens_dist'
+  railroad_retirement_sub:
+    reference: 'Schedule M: US Railroad Retirement Board income (incl. UI, disability, sick pay) fully exempt. Not separable in the PUF; the instruction explicitly EXCLUDES taxable Social Security from this line'
+  active_duty_military_pay_sub:
+    reference: 'Schedule M: OCO active-duty pay and post-separation active-duty pay. Unobservable'
+  surviving_spouse_deduction:
+    value: 8000
+    reference: 'Schedule M line 48: a one-time subtraction up to $8,000 in the year following a 65+/disabled spouse''s death, reduced by lines 29-34 and capped so lines 47+48 do not exceed $8,000. Year-of-death timing is not observable at tax-unit level'
+  gambling_losses_sub:
+    reference: 'Schedule M, TY2023 onward ONLY -- the 2019-2022 booklets state flatly that federal gambling losses "cannot be deducted on the West Virginia tax return". Capped at winnings and conditional on federal itemizing; winnings/losses are not separable in the PUF. W. Va. Code 11-21-12n'
+  savings_plan_and_misc_subs:
+    reference: 'Schedule M: WV Prepaid Tuition/SMART529 contributions (unlimited), ABLE contributions, WV Jumpstart deposits (max $25,000), long-term care insurance premiums, the PBGC shortfall modification, and IRC 1341 repayments over $3,000. Contributions and premiums unobserved; the corresponding non-qualified-withdrawal ADDITIONS are likewise omitted, in offsetting directions'
+  additions_omitted:
+    reference: 'Schedule M increasing modifications: interest on federal authority/commission obligations exempt federally but taxable by WV, interest on money borrowed to carry WV-exempt bonds, 402(e) lump-sum distributions taxed on federal Form 4972, and other income excluded from federal AGI but subject to WV tax. All unobservable; net effect UNDERSTATES WV AGI'
+  senior_modification_own_income_cap:
+    reference: 'Line 47 box (c) caps the modification at the person''s OWN income not already subtracted; we grant the flat $8,000. Immaterial: any unit for which the cap binds already has zero taxable income after the exemption allowance'
+  conformity_year:
+    value: 0
+    reference: 'W. Va. Code 11-21-9(a): the conformity date is re-enacted each session. Modeled as rolling (group 0), which is also the only shippable choice today since the fixed_date_annual group is ready: false'

@@ -22,7 +22,7 @@ test_state_calc = function() {
   law = build_state_tax_law(
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
-                'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI'),
+                'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -2033,6 +2033,132 @@ test_state_calc = function() {
            label = 'RI-5 2024 25% nonrefundable care credit')
 
   #--------------------------------------------------------------------------
+  # West Virginia (IT-140) -- NO standard deduction and NO itemized deduction,
+  # flat $2,000 exemptions, five brackets with an exact half-bracket MFS
+  # mirror, two-track SS phase-in, $8,000 senior modification NETTED by the SS
+  # subtraction, and an FPG-keyed percentage-of-tax Family Tax Credit
+  #--------------------------------------------------------------------------
+
+  # WV-1: 2019 five-bracket schedule, exemptions only, no deduction of any
+  # kind. MFJ 2 dependents -> 4 exemptions x 2,000 = 8,000. Taxable
+  # 120,000 - 8,000 = 112,000, top band: 2,775 + 6.5% x 52,000 = 6,155
+  run_case('WV', 2019,
+           list(filing_status = 2, age2 = 40, agi = 120000, n_dep = 2,
+                dep_age1 = 8, dep_age2 = 10, wages1 = 120000, ei1 = 120000),
+           expect = list(st_agi = 120000, st_ded = 0, st_exempt = 8000,
+                         st_txbl_inc = 112000, liab_st_iit = 6155.00),
+           label = 'WV-1 2019 five-bracket schedule, exemptions only')
+
+  # WV-1b: Rate Schedule II. 2019 MFS -> ONE exemption (box (b) is MFJ-only).
+  # Taxable 40,000 - 2,000 = 38,000 on the halved ladder:
+  # 1,387.50 + 6.5% x 8,000 = 1,907.50
+  run_case('WV', 2019,
+           list(filing_status = 3, agi = 40000, wages1 = 40000, ei1 = 40000),
+           expect = list(st_exempt = 2000, st_txbl_inc = 38000,
+                         liab_st_iit = 1907.50),
+           label = 'WV-1b 2019 MFS half-bracket schedule, single exemption')
+
+  # WV-2: 2023 HB 2526 rates (a 21.25% cut) with the 100% SS subtraction below
+  # the AGI limit. Single age 63 (no senior modification), FAGI 45,000 =
+  # wages 20,000 + pension 12,000 + taxable SS 13,000. 45,000 <= 50,000 ->
+  # subtract all 13,000; st_agi 32,000 - 2,000 = 30,000 taxable ->
+  # 708.50 + 3.54% x 5,000 = 885.50
+  run_case('WV', 2023,
+           list(agi = 45000, age1 = 63, wages1 = 20000, ei1 = 20000,
+                txbl_pens_dist = 12000, txbl_ss = 13000, gross_ss = 15000),
+           expect = list(st_agi = 32000, st_txbl_inc = 30000,
+                         liab_st_iit = 885.50),
+           label = 'WV-2 2023 HB 2526 rates + 100% SS below the limit')
+
+  # WV-2b: the $50,000 cliff. Same unit at FAGI 52,000 -> no subtraction in
+  # 2023 (the above-limit track starts TY2024). Taxable 50,000 ->
+  # 1,239.50 + 4.72% x 10,000 = 1,711.50
+  run_case('WV', 2023,
+           list(agi = 52000, age1 = 63, wages1 = 27000, ei1 = 27000,
+                txbl_pens_dist = 12000, txbl_ss = 13000, gross_ss = 15000),
+           expect = list(st_agi = 52000, st_txbl_inc = 50000,
+                         liab_st_iit = 1711.50),
+           label = 'WV-2b SS subtraction denied above $50,000 (cliff)')
+
+  # WV-3: TY2025 SB 2033 rates (a further 6% cut, LEGISLATED not certified)
+  # plus the HB 4880 second SS track. MFJ ages 62/60, FAGI 130,000 = wages
+  # 100,000 + taxable SS 30,000. Above the $100,000 limit, so the 2025
+  # above-limit share applies: 65% x 30,000 = 19,500. st_agi 110,500 - 4,000
+  # = 106,500 taxable -> 2,053.50 + 4.82% x 46,500 = 4,294.80
+  run_case('WV', 2025,
+           list(filing_status = 2, age1 = 62, age2 = 60, agi = 130000,
+                wages1 = 100000, ei1 = 100000, txbl_ss = 30000,
+                gross_ss = 34000),
+           expect = list(st_agi = 110500, st_txbl_inc = 106500,
+                         liab_st_iit = 4294.80),
+           label = 'WV-3 2025 SB 2033 rates + 65% above-limit SS track')
+
+  # WV-4: the Family Tax Credit. 2024 HoH, 2 dependents -> family size 3,
+  # whose 2024 guideline is 15,060 + 2 x 5,380 = 25,820. Modified AGI 26,500
+  # is 680 above -> ceiling(680/300) = 3 steps -> 70% (the published table row
+  # 26,420-26,720 reads 70%). Taxable 26,500 - 6,000 = 20,500 ->
+  # 236 + 3.15% x 10,500 = 566.75; credit 70% x 566.75 = 396.725
+  run_case('WV', 2024,
+           list(filing_status = 4, agi = 26500, wages1 = 26500, ei1 = 26500,
+                n_dep = 2, dep_age1 = 8, dep_age2 = 10),
+           expect = list(st_exempt = 6000, st_txbl_inc = 20500,
+                         st_forgive_credit = 396.725,
+                         liab_st_iit = 170.025),
+           label = 'WV-4 2024 Family Tax Credit at 70% (3 steps above FPG)')
+
+  # WV-5: the $8,000 senior citizen modification in a year with NO Social
+  # Security subtraction, so the offset is inert and the case is exact.
+  # 2019 MFJ ages 70/68, FAGI 60,000 = pension 30,000 + IRA 20,000 +
+  # interest 10,000 -> modification 8,000 x 2 = 16,000, st_agi 44,000;
+  # taxable 44,000 - 4,000 = 40,000 -> 1,575.00 at the band boundary
+  run_case('WV', 2019,
+           list(filing_status = 2, age1 = 70, age2 = 68, agi = 60000,
+                txbl_pens_dist = 30000, txbl_ira_dist = 20000,
+                txbl_int = 10000),
+           expect = list(st_agi = 44000, st_txbl_inc = 40000,
+                         liab_st_iit = 1575.00),
+           label = 'WV-5 2019 senior citizen modification, 8,000 x 2')
+
+  # WV-5b: the SS NETTING that age_ded_less_ss_sub exists for. Same couple in
+  # 2023 with taxable SS 20,000. Schedule M line 47 box (d) nets each spouse's
+  # SS subtraction out of that spouse's $8,000, so the modification is ZERO
+  # here: st_agi = 60,000 - 20,000 (SS) - 0 = 40,000; taxable 36,000 ->
+  # 708.50 + 3.54% x 11,000 = 1,097.90. Without the offset the model returned
+  # 551.00 -- a $546.90 error, roughly half the true liability
+  run_case('WV', 2023,
+           list(filing_status = 2, age1 = 68, age2 = 68, agi = 60000,
+                txbl_pens_dist = 20000, txbl_ira_dist = 10000,
+                txbl_int = 10000, txbl_ss = 20000, gross_ss = 23000),
+           expect = list(st_agi = 40000, st_txbl_inc = 36000,
+                         liab_st_iit = 1097.90),
+           label = 'WV-5b senior modification netted by the SS subtraction')
+
+  # WV-6: dependent filer -- the $500 allowance in place of exemptions, and
+  # the Family Tax Credit barred ("Individuals who file their income tax
+  # return with zero exemptions cannot claim the credit"). 2023 wages 12,000,
+  # above the $10,000 low-income-exclusion cliff so the case is exact.
+  # Taxable 12,000 - 500 = 11,500 -> 236 + 3.15% x 1,500 = 283.25
+  run_case('WV', 2023,
+           list(agi = 12000, dep_status = 1, wages1 = 12000, ei1 = 12000),
+           expect = list(st_ded = 500, st_exempt = 0, st_txbl_inc = 11500,
+                         st_forgive_credit = 0, liab_st_iit = 283.25),
+           label = 'WV-6 2023 dependent filer: $500 allowance, credit barred')
+
+  # WV-7: the 50% child and dependent care credit, which FIRST APPEARS in
+  # TY2024 (no care line exists in the 2017-2023 booklets). MFJ, 2 dependents,
+  # AGI 80,000, federal care credit 1,200 -> WV 600, nonrefundable. Taxable
+  # 80,000 - 8,000 = 72,000 -> 2,183.50 + 5.12% x 12,000 = 2,797.90; the
+  # Family Tax Credit is zero at this income
+  run_case('WV', 2024,
+           list(filing_status = 2, age2 = 40, agi = 80000, wages1 = 50000,
+                wages2 = 30000, ei1 = 50000, ei2 = 30000, n_dep = 2,
+                dep_age1 = 4, dep_age2 = 7, care_exp = 6000,
+                cdctc_nonref = 1200),
+           expect = list(st_cdctc = 600, st_txbl_inc = 72000,
+                         liab_st_iit = 2797.90 - 600),
+           label = 'WV-7 2024 50% care credit (first year it exists)')
+
+  #--------------------------------------------------------------------------
   # Structural smoke test: a coarse grid of units through every broad-IIT
   # baseline state and several years must produce finite, non-NA results
   #--------------------------------------------------------------------------
@@ -2077,7 +2203,8 @@ test_state_calc = function() {
   # individual liability, which routes through their special programs
   smoke_states = c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI',
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
-                   'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI')
+                   'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI',
+                   'WV')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()
