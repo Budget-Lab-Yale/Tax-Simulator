@@ -207,3 +207,25 @@ item_limit_max_nonprotected_share:
     '2017': 0
     '2025': 1
   reference: 'No protected components; reduction may exhaust the deduction (floor at zero assumed -- UNVERIFIED beyond worksheet arithmetic)'
+
+# Child and dependent care expenses SUBTRACTION (Form 502 line 9 / Tax-Gen
+# 10-208(e)): the expenses on which the federal CDCTC is based, up to
+# $3,000 one / $6,000 two-plus qualifying dependents. Encoded via the VA
+# care_exp_ded machinery (deductions stage); the true provision is a
+# Form 502 subtraction BEFORE Maryland AGI, so the 15%-of-AGI standard
+# deduction base is overstated by the expense amount for records between
+# the std min and max (<= 15% x 6,000 x rate ~ $43; documented, records at
+# the bounds unaffected). Found via cross-model triage: the MD 2017 +$142
+# clean-mismatch mass = 3,000 x 4.75% with care_exp > 0 on 89% of records
+care_exp_ded:
+  value: 1
+  reference: 'Form 502 instructions line 9 (2017-2025); Md. Tax-Gen 10-208(e); TAXSIM applies it (probe- and record-verified 2026-08-11)'
+care_exp_ded_per_dep_cap:
+  value: 3000
+  reference: 'IRC 21(c) limits incorporated by 10-208(e): $3,000 one / $6,000 two or more qualifying individuals'
+care_exp_ded_dep_limit:
+  value: 2
+  reference: '$6,000 maximum = two qualifying individuals'
+care_exp_ded_age_limit:
+  value: 12
+  reference: 'IRC 21 qualifying-person definition (under age 13); disabled dependents/spouses unobserved [known-difference]'

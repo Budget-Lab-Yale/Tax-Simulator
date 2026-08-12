@@ -6,3 +6,60 @@
 eitc_match:
   value: 0
   reference: 'North Carolina individual EITC repealed before the modeled period; Form D-400 instructions 2017-2025'
+
+# TY2017 credit for children (G.S. 105-153.10, repealed by S.L. 2017-57
+# for TY2018+ in favor of the child deduction): $100 per federal-CTC
+# qualifying child for AGI at or below $100,000 MFJ / $80,000 HoH /
+# $50,000 single-MFS, plus $25 (to $125) at or below $40,000 / $32,000 /
+# $20,000. Encoded via the CO flat-tier machinery (style 2), zeroed from
+# TY2018. Found via cross-model triage 2026-08-11 (969 clean-mismatch
+# records at exactly the per-child amounts; TAXSIM grants it -- though
+# TAXSIM omits the upper AGI cutoff, see the NC KD row)
+filing_status_mapper:
+  ctc_tier1_bound:
+    '1': ctc_tier1_single
+    '2': ctc_tier1_joint
+    '3': ctc_tier1_single
+    '4': ctc_tier1_head
+  ctc_tier2_bound:
+    '1': ctc_tier2_single
+    '2': ctc_tier2_joint
+    '3': ctc_tier2_single
+    '4': ctc_tier2_head
+  ctc_tier3_bound:
+    '1': ctc_tier2_single
+    '2': ctc_tier2_joint
+    '3': ctc_tier2_single
+    '4': ctc_tier2_head
+
+ctc_style:
+  value:
+    '2017': 2
+    '2018': 0
+  reference: 'G.S. 105-153.10 (2017); repealed for TY2018+ by S.L. 2017-57 sec. 38.1 (child deduction replaces it)'
+ctc_max_child_age:
+  value: 16
+  reference: 'G.S. 105-153.10(a): child for whom the federal child tax credit is allowed'
+ctc_tier_amounts:
+  value:
+    '2017': [125, 100, 0]
+    '2018': [0, 0, 0]
+  reference: 'G.S. 105-153.10(a)-(a1): $100 base plus $25 additional in the lower AGI band'
+ctc_tier1_single:
+  value: 20000
+  reference: 'G.S. 105-153.10(a1) AGI bound for the additional $25 (single/MFS)'
+ctc_tier1_joint:
+  value: 40000
+  reference: 'G.S. 105-153.10(a1) AGI bound for the additional $25 (MFJ/QSS)'
+ctc_tier1_head:
+  value: 32000
+  reference: 'G.S. 105-153.10(a1) AGI bound for the additional $25 (HoH)'
+ctc_tier2_single:
+  value: 50000
+  reference: 'G.S. 105-153.10(a) AGI cutoff (single/MFS)'
+ctc_tier2_joint:
+  value: 100000
+  reference: 'G.S. 105-153.10(a) AGI cutoff (MFJ/QSS)'
+ctc_tier2_head:
+  value: 80000
+  reference: 'G.S. 105-153.10(a) AGI cutoff (HoH)'

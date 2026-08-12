@@ -135,6 +135,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.sub_char_nonitem_floor', # (dbl) floor for non-itemizer charitable sub
     'st_agi.sub_char_nonitem_share', # (dbl) share of the excess subtracted (MN 0.5)
     'st_agi.add_overtime_ded',      # (int) whether the federal OT deduction is added back
+    'st_agi.cap_loss_limit',        # (dbl) state per-year net capital loss limit (WI $500)
     'st_agi.cap_gains_excl_share',  # (dbl) share of net LT capital gain excluded
     'st_agi.div_excl_share',        # (dbl) share of qualified dividends excluded
     'st_agi.age_ded_amount',        # (dbl) per-person aged deduction (VA-style)
@@ -157,6 +158,10 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   # Assumed share of tax-exempt interest from own-state bonds for states that
   # exempt them (unobserved in the PUF; known-difference)
   OWN_STATE_MUNI_SHARE = 0.75
+
+  # Federal per-year net capital loss limit (IRC 1211(b)), the ceiling on
+  # the state cap-loss add-back computed from capped inputs
+  FED_KG_LOSS_LIMIT = 3000
 
   tax_unit %<>%
     parse_calc_fn_input(req_vars, fill_missings)
@@ -289,7 +294,16 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       st_add_muni = st_agi.add_exempt_int * exempt_int *
                     if_else(st_agi.own_state_exempt == 1, 1 - OWN_STATE_MUNI_SHARE, 1),
       st_add_ot   = st_agi.add_overtime_ded * ot_ded,
-      st_additions = st_add_muni + st_add_ot,
+
+      # Addition: federally-allowed net capital loss beyond the state's own
+      # per-year limit (WI $500 through 2022). The federal $3,000 cap makes
+      # the add-back exact from capped inputs even though gross losses are
+      # larger; diverging state loss carryforwards are not modeled
+      # (documented in the state's yaml). MFS federal cap ($1,500) proxied
+      # by the joint cap [known-difference, immaterial at PUF frequencies]
+      st_add_cap_loss = pmax(0, pmin(pmax(0, -(kg_lt + kg_st)), FED_KG_LOSS_LIMIT) -
+                               st_agi.cap_loss_limit),
+      st_additions = st_add_muni + st_add_ot + st_add_cap_loss,
 
       # Subtraction: state refunds included in the federal base
       st_sub_ref = st_agi.sub_state_ref * state_ref,

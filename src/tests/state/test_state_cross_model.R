@@ -715,11 +715,13 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                                state_law, credit_tables)
 
     # Re-attach stratum labels and federal-alignment variables for breakdowns
-    # and the clean-subset metrics
+    # and the clean-subset metrics, plus exposure covariates (age, SS,
+    # dependents) so known-difference predicates can key on who a documented
+    # external-model bug hits rather than on the outcome it produces
     ours = ours %>%
       left_join(sampled %>%
                   select(id, filing_status, agi_stratum, agi, txbl_inc, eitc,
-                         exempt_int, state_ref),
+                         exempt_int, state_ref, age1, age2, gross_ss, n_dep),
                 by = 'id')
 
     for (model in yr_models) {

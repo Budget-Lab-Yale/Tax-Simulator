@@ -17,9 +17,9 @@ documented_not_modeled:
   ui_partial_exclusion:
     value: 0
     reference: 'WI 71.05(6)(b)8: pre-1987-federal-style partial UI exclusion (50% over a base); worksheet-dependent, small at PUF incomes; omitted [known-difference]'
-  capital_loss_limit:
+  capital_loss_carryforward:
     value: 0
-    reference: 'WI net capital loss limit $500/year through 2022 ($3,000/$1,500 from 2023, 71.05(10)(c)); the PUF gain concept embeds the federal $3,000 limit; not separable [known-difference 2017-2022]'
+    reference: 'WI loss carryforwards diverge from federal once the $500/$3,000 limits differ (71.05(10)(c)); carryforward stock unobserved [known-difference]. The current-year add-back itself IS modeled (cap_loss_limit below, 2026-08-11): the federal $3,000 cap makes it exact from capped inputs'
   military_and_exempt_pensions:
     value: 0
     reference: 'Military retirement fully exempt ALL years (71.05(1)(a)), plus pre-1964 federal/WI government pensions; pension source unobservable [known-difference, one-sided]'
@@ -38,6 +38,16 @@ own_state_exempt:
 sub_us_int:
   value: 1
   reference: 'US-obligation interest subtraction; PUF share unobserved [known-difference]'
+
+# Net capital loss limited to $500/year through 2022 (federal $3,000 from
+# 2023); the excess of the federally-deducted loss over the WI limit is a
+# Schedule I / Form 1 addition. TAXSIM applies the same add-back
+# (probe-verified 2026-08-11)
+cap_loss_limit:
+  value:
+    '2017': 500
+    '2023': 3000
+  reference: 'Wis. Stat. 71.05(10)(c); 2021 Act 58 sec. 1057d conformed the limit to the federal $3,000 ($1,500 MFS, proxied by the joint cap) for taxable years beginning after 2022-12-31'
 
 sub_state_ref:
   value: 1

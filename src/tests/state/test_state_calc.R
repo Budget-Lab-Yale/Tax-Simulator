@@ -330,6 +330,24 @@ test_state_calc = function() {
            expect = list(st_agi = 30000, liab_st_iit = 17250 * 0.045),
            label = 'NC-4 Social Security deduction')
 
+  # NC-5: TY2017 credit for children (105-153.10, repealed TY2018+): MFJ
+  # AGI 50,000 (above the $40k additional-credit band, below the $100k
+  # cutoff) with two CTC-qualifying children -> $100 x 2. Taxable
+  # 50,000 - 17,500 = 32,500 x 5.499% = 1,787.175 - 200
+  run_case('NC', 2017,
+           list(agi = 50000, filing_status = 2, age2 = 40, n_dep = 2,
+                dep_age1 = 5, dep_age2 = 8, std_ded = 12700),
+           expect = list(st_ctc = 200, liab_st_iit = 1587.175),
+           label = 'NC-5 2017 child credit tiers')
+
+  # NC-5b: the 2018+ standard deduction stays at the 2017 amounts (the
+  # S.L. 2018-5 increase is effective TY2019). MFJ 2018: std 17,500
+  run_case('NC', 2018,
+           list(agi = 50000, filing_status = 2, age2 = 40, std_ded = 24000),
+           expect = list(st_std_ded = 17500,
+                         liab_st_iit = (50000 - 17500) * 0.05499),
+           label = 'NC-5b 2018 pre-SB99 standard deduction')
+
   #--------------------------------------------------------------------------
   # Second broad-IIT rollout states
   #--------------------------------------------------------------------------
@@ -808,6 +826,18 @@ test_state_calc = function() {
   run_case('ND', 2020, list(filing_status = 2, agi = 100000, txbl_inc = 100000),
            expect = list(liab_st_iit = 1409.73),
            label = 'ND-7 2020 MFJ schedule')
+
+  # ND-8: HB 1515 resident tax relief credit ($350/taxpayer, TY2021-22
+  # only). Single, taxable 60,000: 1.10% x 40,525 + 2.04% x 19,475 =
+  # 843.06 - 350 = 493.06. Nonrefundable: at taxable 17,450 the 191.95
+  # of tax floors at zero. Absent in 2020 and 2023 (ND-7 pins 2020)
+  run_case('ND', 2021, list(agi = 60000, txbl_inc = 60000),
+           expect = list(st_exempt_credit = 350,
+                         liab_st_iit = 0.011 * 40525 + 0.0204 * 19475 - 350),
+           label = 'ND-8 2021 relief credit')
+  run_case('ND', 2022, list(agi = 20000, txbl_inc = 17450),
+           expect = list(liab_st_iit = 0),
+           label = 'ND-8b relief credit nonrefundable floor')
 
   #--------------------------------------------------------------------------
   # South Carolina (SC1040) -- federal-taxable-income start, one schedule for
@@ -1688,6 +1718,21 @@ test_state_calc = function() {
                          liab_st_iit = 90 + 0.0475 * 69400),
            label = 'MD-9 two-income subtraction + itemized')
 
+  # MD-10: dependent-care expense subtraction (Form 502 line 9, encoded
+  # via the VA care_exp_ded machinery): MFJ 30k/30k wages, 2 qualifying
+  # deps (3, 6), 4,000 of care expenses -> full 4,000 allowed (cap 6,000).
+  # MD AGI = 60,000 - 1,200 two-income sub = 58,800; std = 15% capped at
+  # 4,550; exemptions 3,200 x 4; taxable 58,800 - 4,550 - 4,000 - 12,800
+  # = 37,450 -> 90 + 4.75% x 34,450
+  run_case('MD', 2019,
+           list(agi = 60000, filing_status = 2, age2 = 40, wages1 = 30000,
+                wages2 = 30000, ei1 = 30000, ei2 = 30000, n_dep = 2,
+                dep_age1 = 3, dep_age2 = 6, care_exp = 4000,
+                std_ded = 24400),
+           expect = list(st_agi = 58800, st_ded = 8550,
+                         liab_st_iit = 90 + 0.0475 * 34450),
+           label = 'MD-10 dependent-care expense subtraction')
+
   #--------------------------------------------------------------------------
   # Wisconsin (Form 1) -- sliding standard deduction (HoH single-floor),
   # 30% LTCG exclusion, itemized-deduction credit, married couple credit,
@@ -1775,6 +1820,17 @@ test_state_calc = function() {
                 dep_age1 = 4, cdctc_nonref = 600, care_exp = 3000),
            expect = list(st_cdctc = 300),
            label = 'WI-8 dependent-care 50% match')
+
+  # WI-9: net capital loss addback (71.05(10)(c)): the federal return
+  # deducts the full $3,000 net loss; WI allows $500/year through 2022,
+  # so $2,500 is added back on Schedule I. Single, wages 55,000,
+  # kg_lt -3,000 -> FAGI 52,000, WI income 54,500. TAXSIM applies the
+  # same add-back (probe-verified 2026-08-11)
+  run_case('WI', 2019,
+           list(agi = 52000, age1 = 30, wages1 = 55000, ei1 = 55000,
+                kg_lt = -3000),
+           expect = list(st_additions = 2500, st_agi = 54500),
+           label = 'WI-9 $500 capital loss limit addback')
 
   #--------------------------------------------------------------------------
   # Structural smoke test: a coarse grid of units through every broad-IIT

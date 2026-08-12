@@ -19,24 +19,24 @@ filing_status_mapper:
 std_single:
   value:
     '2017': 8750
-    '2018': 10000
+    '2019': 10000
     '2020': 10750
     '2022': 12750
-  reference: 'North Carolina Form D-400 standard deduction table, 2017-2025; G.S. 105-153.5(a)(2)'
+  reference: 'North Carolina Form D-400 standard deduction table, 2017-2025; G.S. 105-153.5(a)(2); the S.L. 2018-5 (SB 99) increase is effective for taxable years beginning on or after 2019-01-01 (TY2018 keeps 8,750)'
 std_joint:
   value:
     '2017': 17500
-    '2018': 20000
+    '2019': 20000
     '2020': 21500
     '2022': 25500
-  reference: 'North Carolina Form D-400 standard deduction table, 2017-2025; G.S. 105-153.5(a)(2)'
+  reference: 'North Carolina Form D-400 standard deduction table, 2017-2025; G.S. 105-153.5(a)(2); S.L. 2018-5 increase effective TY2019'
 std_head:
   value:
     '2017': 14000
-    '2018': 15000
+    '2019': 15000
     '2020': 16125
     '2022': 19125
-  reference: 'North Carolina Form D-400 standard deduction table, 2017-2025; G.S. 105-153.5(a)(2)'
+  reference: 'North Carolina Form D-400 standard deduction table, 2017-2025; G.S. 105-153.5(a)(2); S.L. 2018-5 increase effective TY2019'
 item_allowed:
   value: 1
   reference: 'North Carolina Form D-400, choice of standard deduction or North Carolina itemized deductions, 2017-2025'

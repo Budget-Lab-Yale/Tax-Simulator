@@ -124,6 +124,48 @@ of 133 federally aligned OH mismatches carry BID income (95 with
 PolicyEngine higher, as expected). Flagging because the BID is central to
 any Ohio pass-through analysis.
 
+### T7. Utah retirement credit paid to any Social Security recipient,
+unphased and un-gated
+
+TAXSIM grants Utah's retirement tax credit (Utah Code 59-10-1019, born
+before 1953, phased out at 2.5¢/$ of MAGI above the threshold) to any
+record with Social Security income: a 40-year-old with $2M of wages and
+any positive `gssi` receives a flat $288 (= 6% × $4,800; $576 per couple;
+$271 under the 2017 vintage constant), verified across seven probe cases.
+The credit should be zero for anyone born after 1952 and for any filer at
+that income. In our 2017–2020 samples this is the dominant UT wedge
+(point masses of ~200–260 records per year at exactly +$288/+$576).
+
+Related input-representation note: TAXSIM derives head-of-household
+treatment from the presence of dependents and ignores `mstat` (single+deps
+and HoH+deps return identical results to the cent; HoH without mapped
+dependents computes as single). Any state credit keyed to the federal
+standard deduction or a filing-status threshold — Utah's taxpayer tax
+credit is the clean example — inherits symmetric errors on returns whose
+actual filing status differs from the dependents-derived one (±$464 UT
+masses in 2019).
+
+### T8. Maryland 2019 standard deduction: the minimum is applied where the
+maximum belongs
+
+For tax year 2019 only, TAXSIM returns the MD standard-deduction *minimum*
+($1,550 single / $3,100 joint) for filers whose 15%-of-AGI computation
+should cap at the maximum ($2,250 / $4,550): probe-verified
+`v34_state_std_deduction_amount` = 1,550 at $100k single wages. 2018 and
+2020 probe correctly (2020 uses the 2019 maxima — one indexing step stale,
+~$2–5 of tax). Effect: flat +$33/+$69/+$83 overstatement of MD tax on
+every 2019 standard-deduction return (~3,900 records in our sample).
+
+### T9. Wisconsin 2017–2018 bracket thresholds stale
+
+TAXSIM's WI 2017 and 2018 rate schedules use thresholds ~3% below the
+published DOR tables (empirical top-bracket entry ≈ $320,250 MFJ vs the
+published $329,810 for 2017), and the 2018 schedule returns tax
+byte-identical to 2017 despite different published thresholds. Effect:
+flat overtaxation of ~$12.8 for 6.27%-bracket records and ~$143.6 for
+top-bracket records in both years (~1,190 records/yr in our sample).
+The 2019–2020 vintages are correct.
+
 ### P5. One-time rebates netted into eligibility-year `state_income_tax`
 (NY, VA, GA, AZ — generalizing P2)
 

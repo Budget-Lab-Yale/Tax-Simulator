@@ -7,11 +7,27 @@
 #     for an elderly/disabled family member, cap $2,000/member, $4,000/return.
 #   - Credit for tax paid to another state; Renaissance zone; planned-gift;
 #     seed/angel investment; etc.
-# The 2021-2022 $350/$700 residency relief credit (HB1515) was a one-time
-# non-earnings-based credit, expired after TY2022.
 # See source_packets/nd.md for the known-differences rationale.
 
 # Explicit no-op: ND has no earned-income credit (documents the absence)
 eitc_match:
   value: 0
   reference: 'ND has no state EITC (no ND-1/ND-1TC EITC line, any year)'
+
+# Resident tax relief credit (HB 1515, 2021 special session; N.D.C.C.
+# 57-38-30.3 note): a nonrefundable $350 per taxpayer/spouse ($700 MFJ)
+# credit against TY2021 and TY2022 tax, claimed on Form ND-1 — an
+# on-return liability credit, NOT a mailed rebate, so it belongs in our
+# liability concept. Originally documented-not-modeled as "one-time";
+# reversed 2026-08-11 after cross-model triage showed it as the entire
+# PE 2021-22 wedge (flat +350/700 masses; PE models it; clean 0.46-0.48
+# vs 0.86-0.87 in 2023-24). Encoded via the KY exempt_credit machinery
+exempt_credit_style:
+  value: 1
+  reference: 'HB 1515 (2021); Form ND-1 (2021/2022) tax relief credit line'
+exempt_credit_personal:
+  value:
+    '2017': 0
+    '2021': 350
+    '2023': 0
+  reference: 'HB 1515: $350 per taxpayer and spouse (MFJ $700), nonrefundable, residents, TY2021-2022 only'

@@ -89,6 +89,10 @@ OUTPUT_VARS = {
     "pe_va_rebate": ["va_rebate"],
     "pe_ga_surplus_rebate": ["ga_surplus_tax_rebate"],
     "pe_az_families_rebate": ["az_families_tax_rebate"],
+    # WI nets the homestead credit (rent/property-tax based, one-sided for
+    # us -- no rent data) into wi_income_tax; exported for the KD predicate.
+    "pe_wi_homestead": ["wi_homestead_credit"],
+    "pe_ct_rebate": ["ct_child_tax_rebate"],
     # PE's own federal results, used by the harness's clean-subset metrics
     "pe_fed_agi": ["adjusted_gross_income"],
     "pe_fed_taxable": ["taxable_income"],
