@@ -1,0 +1,44 @@
+---
+# Delaware: tax rate schedule (30 Del. C. 1102(a)(14); PIT-RES tax table and
+# "STATE INCOME TAX SCHEDULE"). ONE schedule applies to every filing status --
+# there is no separate married or head-of-household column, which is why
+# Delaware offers filing statuses 3 and 4 instead. The schedule has been
+# unchanged since TY2014 and is verified identical in the TY2017, TY2019, and
+# TY2024/2025 documents. Rates apply to DE taxable income (PIT-RES Line 23).
+# 10-element uniform schedule, padded by repeating the top rate/threshold.
+#
+# The published base amounts (0 / 0 / 66 / 261 / 741 / 1,001 / 2,943.50) are
+# exactly reproduced by the marginal schedule below, so no base_amounts
+# family is needed.
+
+rates:
+  value: [0.0, 0.022, 0.039, 0.048, 0.052, 0.0555, 0.066, 0.066, 0.066, 0.066]
+  reference: '30 Del. C. 1102(a)(14); DE DOR "Tax Rate Changes" page (schedule "for tax years 2014 and later"); TY2017 tax-table booklet and TY2017 amended instructions rate schedule (2.2/3.9/4.8/5.2/5.55% and "$2,943.50 plus 6.60% of amount over $60,000"); identical in the TY2019 tax table and the TY2024/2025 PIT-RES instructions'
+brackets:
+  value: [0, 2000, 5000, 10000, 20000, 25000, 60000, 60000, 60000, 60000]
+  reference: 'Same sources: bracket bounds $0/$2,000/$5,000/$10,000/$20,000/$25,000/$60,000, constant 2014-2025; published base amounts $0/$0/$66/$261/$741/$1,001/$2,943.50 reproduce exactly from these rates'
+
+# Married filing COMBINED SEPARATE (Delaware filing status 4): two separate
+# returns combined on one form. Each spouse applies the schedule to own income
+# less own $3,250 standard deduction (or own income-share of itemized
+# deductions, per the PIT-RES Line 13 proration rule), and the couple takes
+# whichever is lower. This is materially valuable in Delaware -- one schedule
+# for all statuses means a two-earner couple at $60,000 each saves ~$948 by
+# splitting -- so it must be modeled.
+#
+# combined_sep_std_share = 0.5 because DE's JOINT standard deduction ($6,500)
+# is twice the per-column amount ($3,250); KY's std is per person, so its
+# share stays at the default of 1. The share also halves the aged/blind
+# add-ons that st_std_ded accumulates for both spouses: the TOTAL deduction
+# across the two columns is right, but its split between them is an
+# approximation where only one spouse is 65+/blind [known-difference]
+combined_sep:
+  value: 1
+  reference: 'PIT-RES Filing Status 4 instructions: "If you use Filing Status 4, you are in fact filing two separate returns which have been combined on the same form for convenience"; itemized deductions prorated "based on the ratio of each spouse''s separate income to the total joint income" (PIT-RES Line 13)'
+combined_sep_std_share:
+  value: 0.5
+  reference: 'PIT-RES Line 20a table: standard deduction "$3,250 for each spouse - filing status 4" against the $6,500 joint amount (TY2017 amended instructions Line 2 carries the same pair)'
+
+# No tax-benefit recapture, spouse tax adjustment, or business carve-out in
+# Delaware: recapture_agi_start, sta_max and bus_rate are omitted and default
+# to Inf / 0 / 0 via ensure_st_params.

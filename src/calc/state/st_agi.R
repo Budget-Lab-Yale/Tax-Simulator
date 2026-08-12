@@ -102,6 +102,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.ss_allages_agi_limit',  # (dbl) AGI limit for the all-ages SS subtraction
     'st_agi.ss_allages_po_step',    # (dbl) stepped phase-out step above the limit (MN)
     'st_agi.ss_allages_po_share',   # (dbl) share lost per step (MN 0.10)
+    'st_agi.ss_allages_min_age',    # (dbl) minimum age where the AGI-capped subtraction is also age-gated (RI full retirement age; -.inf = no gate)
     'st_agi.ss_partial_max',        # (dbl) sliding partial SS subtraction maximum (MN)
     'st_agi.ss_partial_thresh',     # (dbl) provisional-income threshold (MN)
     'st_agi.ss_partial_rate',       # (dbl) phase-out rate on provisional income (MN 0.20)
@@ -319,6 +320,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                        agi <= st_agi.ss_5564_agi_limit),
       ss_allages_share = case_when(
         st_agi.ss_full_sub_allages != 1           ~ 0,
+        age1 < st_agi.ss_allages_min_age          ~ 0,
         agi <= st_agi.ss_allages_agi_limit        ~ 1,
         is.finite(st_agi.ss_allages_po_step)      ~
           pmax(0, 1 - st_agi.ss_allages_po_share *

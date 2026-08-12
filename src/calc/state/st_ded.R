@@ -107,6 +107,8 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.std_po_base',     # (int) phase-out income base (st_income_base enum)
     'st_ded.std_amount2',     # (dbl) second sliding pair maximum (WI HoH floor)
     'st_ded.std_po_rate2',    # (dbl) second sliding pair rate
+    'st_ded.std_po_step',     # (dbl) stepped phase-out increment (RI; .inf = sliding)
+    'st_ded.std_po_share_per_step', # (dbl) share of the std lost per step (RI 0.20)
     'st_ded.std_pct_rate',    # (dbl) percent-of-income standard deduction rate (MD)
     'st_ded.std_pct_min',     # (dbl) minimum (filing-status mapped)
     'st_ded.std_pct_max',     # (dbl) maximum (filing-status mapped)
@@ -206,16 +208,31 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
         st_std_ded
       ),
 
-      # Sliding standard deduction (WI 71.05(22)): reduced std_po_rate per
-      # dollar of the enum income base above the threshold, to zero (the
-      # threshold and rate are filing-status mapped in YAML). Where a
-      # second (max, rate) pair is encoded, the deduction is the larger of
-      # the two slides (WI HoH floors at the single-filer schedule)
-      st_std_ded = pmax(
-        pmax(0, st_std_ded - st_ded.std_po_rate *
-                pmax(0, std_po_income_v - st_ded.std_po_thresh)),
-        pmax(0, st_ded.std_amount2 - st_ded.std_po_rate2 *
-                pmax(0, std_po_income_v - st_ded.std_po_thresh))
+      # Standard-deduction phase-out above the enum income base threshold,
+      # in two mutually exclusive shapes selected by whether a step is
+      # encoded:
+      #   STEPPED (RI-1040 Standard Deduction Worksheet): share_per_step of
+      #     the deduction is removed per increment, or fraction thereof, of
+      #     income over the threshold -- so the applicable share falls
+      #     0.8/0.6/0.4/0.2 and reaches zero once the excess passes
+      #     1/share_per_step steps. Same construction as st_exempt's
+      #     po_share_per_step (CT/MN), including the ceiling() rounding
+      #   SLIDING (WI 71.05(22)): reduced std_po_rate per dollar over the
+      #     threshold, to zero. Where a second (max, rate) pair is encoded
+      #     the deduction is the larger of the two slides (WI HoH floors at
+      #     the single-filer schedule)
+      st_std_ded = if_else(
+        is.finite(st_ded.std_po_step),
+        pmax(0, st_std_ded * (1 - pmin(1, st_step_reduction(
+          std_po_income_v, st_ded.std_po_thresh, st_ded.std_po_step,
+          st_ded.std_po_share_per_step
+        )))),
+        pmax(
+          pmax(0, st_std_ded - st_ded.std_po_rate *
+                  pmax(0, std_po_income_v - st_ded.std_po_thresh)),
+          pmax(0, st_ded.std_amount2 - st_ded.std_po_rate2 *
+                  pmax(0, std_po_income_v - st_ded.std_po_thresh))
+        )
       ),
 
       # State itemized base: pre-limitation federal itemized, SALT component

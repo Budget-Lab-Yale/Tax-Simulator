@@ -86,6 +86,10 @@ scalars:
   # 10% per $4,000 over the AGI limit); .inf step = cliff (CT/ND behavior)
   st_agi.ss_allages_po_step: .inf
   st_agi.ss_allages_po_share: 0
+  # Minimum age for the all-ages full SS subtraction, where the state gates
+  # it on BOTH age and an AGI limit (RI full-retirement-age + AGI cliff);
+  # -.inf = no age gate, preserving the pure AGI-cliff behavior
+  st_agi.ss_allages_min_age: -.inf
   st_agi.add_overtime_ded: 0
   # State per-year net-capital-loss limit; addback = federal loss used
   # (capped at $3,000) minus this. Default = the federal limit (no addback).
@@ -161,6 +165,12 @@ scalars:
   st_ded.std_po_base: 2   # st_income_base enum (WI: state AGI)
   st_ded.std_amount2: 0   # second sliding pair; deduction = max of the two (WI HoH floor)
   st_ded.std_po_rate2: 0
+  # STEPPED standard-deduction phase-out (RI-1040 Standard Deduction
+  # Worksheet: share_per_step of the deduction removed per increment, or
+  # fraction thereof, of the income base over std_po_thresh). Mirrors the
+  # st_exempt.po_share_per_step machinery; .inf step = use the linear slide
+  st_ded.std_po_step: .inf
+  st_ded.std_po_share_per_step: 0
   # Percent-of-income standard deduction (MD 15% of state AGI, bounded)
   st_ded.std_pct_rate: 0
   st_ded.std_pct_min: {default: 0, units: per_return}
@@ -219,6 +229,7 @@ scalars:
   st_ord.sta_max: {default: 0, units: per_return}
   st_ord.bus_rate: 0   # flat rate on business income above the carve-out cap (OH 3%)
   st_ord.combined_sep: 0   # married-filing-separately-on-a-combined-return option (KY): per-spouse columns, lower of joint and combined; assumes no recapture/base-amount/business carve-out in the same state
+  st_ord.combined_sep_std_share: 1   # share of the mapped standard deduction each combined-separate column receives: 1 where the std is per-person (KY), 0.5 where the joint amount is twice the per-column amount (DE)
   st_exempt.dep_child_addl: {default: 0, units: per_dependent}   # additional exemption per dependent child (IN $1,500)
   st_exempt.dep_child_max_age: 0   # max tracked dependent age for the child add-on (IN: 23, proxying under-19-or-student-under-24)
 

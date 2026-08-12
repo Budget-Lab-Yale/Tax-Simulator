@@ -22,7 +22,7 @@ test_state_calc = function() {
   law = build_state_tax_law(
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
-                'PA', 'ID', 'MN', 'MD', 'WI', 'KS'),
+                'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -1897,6 +1897,142 @@ test_state_calc = function() {
            label = 'KS-5 2018 itemized component phase-in')
 
   #--------------------------------------------------------------------------
+  # Delaware (PIT-RES) -- one schedule for every filing status, $110
+  # per-exemption CREDIT, two-tier age-60 retirement exclusion, combined
+  # separate filing, 20%-nonrefundable/4.5%-refundable EITC election
+  #--------------------------------------------------------------------------
+
+  # DE-1: 2024 single, AGI 50,000, two dependents. Std 3,250 -> taxable
+  # 46,750 in the 5.55% band: 1,001 + 5.55% x 21,750 = 2,208.125; less
+  # three $110 personal credits
+  run_case('DE', 2024, list(agi = 50000, n_dep = 2, dep_age1 = 8,
+                            dep_age2 = 10),
+           expect = list(st_agi = 50000, st_std_ded = 3250,
+                         st_exempt_credit = 330, liab_st_iit = 1878.125),
+           label = 'DE-1 graduated schedule and $110 personal credits')
+
+  # DE-2: 2024 single age 67, AGI 35,000 = pension 30,000 + interest 4,000 +
+  # dividends 1,000. The age-60 exclusion covers pension PLUS eligible
+  # retirement income, capped 12,500 -> st_agi 22,500; std 3,250 + 2,500
+  # (65+) = 5,750; taxable 16,750 -> 261 + 4.8% x 6,750 = 585; less $110
+  # personal + $110 age-60 credits
+  run_case('DE', 2024,
+           list(agi = 35000, age1 = 67, txbl_pens_dist = 30000,
+                txbl_int = 4000, div_ord = 1000),
+           expect = list(st_retirement_excl = 12500, st_agi = 22500,
+                         st_std_ded = 5750, st_exempt_credit = 110,
+                         st_age_credit = 110, liab_st_iit = 365),
+           label = 'DE-2 age-60 retirement exclusion and 65+ standard deduction')
+
+  # DE-3: 2024 single, one child, wages 6,000, federal EITC 2,040. Taxable
+  # 2,750 -> 2.2% x 750 = 16.50 of tax. The 20% nonrefundable option is
+  # worth min(408, 16.50) = 16.50; the 4.5% refundable option is 91.80 and
+  # wins. Personal credits (220) exhaust the tax
+  run_case('DE', 2024,
+           list(agi = 6000, wages1 = 6000, ei1 = 6000, n_dep = 1,
+                dep_age1 = 5, eitc = 2040),
+           expect = list(st_eitc = 91.80, st_exempt_credit = 220,
+                         liab_st_iit = -91.80),
+           label = 'DE-3 EITC election: 4.5% refundable beats 20% nonrefundable')
+
+  # DE-4: 2024 two-earner MFJ, wages 60,000 each. Joint: taxable 113,500 ->
+  # 2,943.50 + 6.6% x 53,500 = 6,474.50. Combined separate (one schedule for
+  # all statuses makes this valuable): each column 60,000 - 3,250 = 56,750 ->
+  # 1,001 + 5.55% x 31,750 = 2,763.125, x2 = 5,526.25, which is lower; less
+  # $220 of personal credits. Pins combined_sep_std_share = 0.5
+  run_case('DE', 2024,
+           list(filing_status = 2, age2 = 40, agi = 120000,
+                wages1 = 60000, wages2 = 60000, ei1 = 60000, ei2 = 60000),
+           expect = list(liab_st_iit = 5306.25),
+           label = 'DE-4 married filing combined separate (per-column std)')
+
+  # DE-5: 2024 single, one dependent, AGI 40,000, federal care credit 1,000.
+  # DE child care credit = 50% x 1,000 = 500, nonrefundable. Taxable
+  # 36,750 -> 1,001 + 5.55% x 11,750 = 1,653.125; less 500 care credit and
+  # two $110 personal credits
+  run_case('DE', 2024,
+           list(agi = 40000, n_dep = 1, dep_age1 = 4, care_exp = 3000,
+                cdctc_nonref = 1000),
+           expect = list(st_cdctc = 500, st_exempt_credit = 220,
+                         liab_st_iit = 933.125),
+           label = 'DE-5 50% child and dependent care credit')
+
+  #--------------------------------------------------------------------------
+  # Rhode Island (RI-1040) -- one schedule for every filing status, own
+  # indexed std/exemption BOTH phased out on a stepped 20%-per-increment
+  # schedule, full-retirement-age + AGI-capped SS and pension modifications
+  #--------------------------------------------------------------------------
+
+  # RI-1: 2024 single, wages 90,000. Std 10,550 + exemption 4,950 ->
+  # taxable 74,500, inside the first bracket: 3.75% x 74,500
+  run_case('RI', 2024, list(agi = 90000, wages1 = 90000, ei1 = 90000),
+           expect = list(st_std_ded = 10550, st_exempt = 4950,
+                         st_txbl_inc = 74500, liab_st_iit = 74500 * 0.0375),
+           label = 'RI-1 2024 single: schedule, own std and exemption')
+
+  # RI-2: the stepped phase-out of BOTH the std deduction and the exemptions.
+  # 2024 MFJ, 2 dependents (4 exemptions), AGI 260,000. Excess over 246,450
+  # = 13,550; 13,550/7,050 = 1.922 -> ceil = 2 steps -> share 0.60.
+  # Std 21,150 x 0.6 = 12,690; exemptions 19,800 x 0.6 = 11,880; taxable
+  # 235,430 -> 7,587.88 + 5.99% x 59,380 = 11,144.74
+  run_case('RI', 2024,
+           list(filing_status = 2, age2 = 40, agi = 260000, n_dep = 2,
+                dep_age1 = 8, dep_age2 = 12, wages1 = 260000, ei1 = 260000),
+           expect = list(st_std_ded = 12690, st_exempt = 11880,
+                         st_txbl_inc = 235430, liab_st_iit = 11144.74),
+           label = 'RI-2 2024 stepped std and exemption phase-out (2 steps)')
+
+  # RI-2b: past the cliff. AGI 275,000 -> excess 28,550 > 4 x 7,050 = 28,200
+  # -> ceil(4.05) = 5 steps -> share 0; BOTH amounts zero out, so taxable
+  # income is the whole 275,000. Expectation written as the continuous
+  # schedule rather than the published "Pay" constants, which are rounded to
+  # the cent (7,587.88 for 7,587.875) and so differ by half a cent
+  run_case('RI', 2024,
+           list(filing_status = 2, age2 = 40, agi = 275000, n_dep = 2,
+                dep_age1 = 8, dep_age2 = 12, wages1 = 275000, ei1 = 275000),
+           expect = list(st_std_ded = 0, st_exempt = 0,
+                         liab_st_iit = 0.0375 * 77450 +
+                                       0.0475 * (176050 - 77450) +
+                                       0.0599 * (275000 - 176050)),
+           label = 'RI-2b phase-out cliff: std and exemptions both zero')
+
+  # RI-3: 2024 single age 70, AGI 60,000 = pension 22,000 + IRA 18,000 +
+  # taxable SS 12,000 + wages 8,000. SS modification: age 70 >= 66 and AGI
+  # 60,000 <= 104,200 -> subtract all 12,000. Pension modification: cap
+  # 20,000 on pensions ONLY (IRA excluded) -> min(22,000, 20,000) = 20,000.
+  # st_agi 28,000; std 10,550; exemption 4,950; taxable 12,500 -> 3.75%
+  run_case('RI', 2024,
+           list(agi = 60000, age1 = 70, txbl_pens_dist = 22000,
+                txbl_ira_dist = 18000, txbl_ss = 12000, gross_ss = 14000,
+                wages1 = 8000, ei1 = 8000),
+           expect = list(st_agi = 28000, st_txbl_inc = 12500,
+                         liab_st_iit = 12500 * 0.0375),
+           label = 'RI-3 2024 SS + pension modifications (IRA excluded)')
+
+  # RI-4: 16% refundable EITC (the rate rose from 15% in TY2024). 2024 HoH,
+  # two dependents, wages 30,000, federal EITC 4,000. Std 15,850 +
+  # exemptions 3 x 4,950 = 14,850 exceed income -> zero tax; the credit
+  # pays out in full
+  run_case('RI', 2024,
+           list(filing_status = 4, agi = 30000, wages1 = 30000, ei1 = 30000,
+                n_dep = 2, dep_age1 = 8, dep_age2 = 12, eitc = 4000),
+           expect = list(st_txbl_inc = 0, st_eitc = 640,
+                         liab_st_iit = -640),
+           label = 'RI-4 2024 16% refundable EITC')
+
+  # RI-5: 25% nonrefundable child and dependent care credit. 2024 MFJ, two
+  # dependents, AGI 80,000, federal care credit 1,200 -> RI 300. Taxable
+  # 80,000 - 21,150 - 19,800 = 39,050 -> 3.75% x 39,050 = 1,464.375
+  run_case('RI', 2024,
+           list(filing_status = 2, age2 = 40, agi = 80000, wages1 = 50000,
+                wages2 = 30000, ei1 = 50000, ei2 = 30000, n_dep = 2,
+                dep_age1 = 4, dep_age2 = 7, care_exp = 6000,
+                cdctc_nonref = 1200),
+           expect = list(st_cdctc = 300, st_txbl_inc = 39050,
+                         liab_st_iit = 39050 * 0.0375 - 300),
+           label = 'RI-5 2024 25% nonrefundable care credit')
+
+  #--------------------------------------------------------------------------
   # Structural smoke test: a coarse grid of units through every broad-IIT
   # baseline state and several years must produce finite, non-NA results
   #--------------------------------------------------------------------------
@@ -1941,7 +2077,7 @@ test_state_calc = function() {
   # individual liability, which routes through their special programs
   smoke_states = c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI',
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
-                   'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS')
+                   'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()
@@ -2018,6 +2154,12 @@ test_state_calc = function() {
     CT = 200,   # Table A exemption steps + Table D stepped recapture
                 #   ($122.50/segment observed, pinned by CT-8)
     VA = 320,   # no-tax-below cliff (full tax owed at the VAGI threshold)
+    RI = 225,   # stepped std-deduction AND exemption phase-out (R.I.G.L.
+                #   44-30-2.6: 20% of each per increment of modified AGI over
+                #   one shared threshold, so both drop together at every
+                #   boundary): 0.20 x (10,550 + 4,950) = 3,100 of base at
+                #   5.99% = 185.69 in 2024, plus the marginal step; four such
+                #   boundaries plus the zero-out cliff. Pinned by RI-2/RI-2b
     KS = 175,   # statutory low-income zero-tax cliff through 2023 (K.S.A.
                 #   79-32,110: "not over $X: 0%", next band taxes the FULL
                 #   amount; single $145 at TI 5,000 in 2017, $77.50 at

@@ -23,9 +23,9 @@
 # States by structural class (baseline configs under tax_law_state/baseline/)
 cross_model_states = function() {
   list(
-    broad  = c('AZ', 'CA', 'CO', 'CT', 'GA', 'ID', 'IL', 'IN', 'KY', 'MD',
-               'MI', 'MN', 'NC', 'ND', 'NY', 'OH', 'PA', 'SC', 'UT', 'VA',
-               'WI'),
+    broad  = c('AZ', 'CA', 'CO', 'CT', 'GA', 'ID', 'IL', 'IN', 'KS', 'KY',
+               'MD', 'MI', 'MN', 'NC', 'ND', 'NY', 'OH', 'PA', 'SC', 'UT',
+               'VA', 'WI'),
     narrow = c('NH', 'TN'),           # interest/dividend (Hall-type) taxes
     excise = c('WA'),                 # LTCG excise + WFTC; not in TAXSIM
     stub   = c('AK', 'FL', 'NV', 'SD', 'TX', 'WY')  # no individual income tax

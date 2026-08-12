@@ -61,6 +61,7 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     'st_ord.recapture_width',    # (dbl) recapture phase-in width
     'st_ord.sta_max',            # (dbl) spouse tax adjustment cap (VA; 0 = none)
     'st_ord.combined_sep',       # (int) combined-return separate filing (KY)
+    'st_ord.combined_sep_std_share', # (dbl) share of the mapped std deduction per column (1 = per-person std, KY; 0.5 = joint is twice the column amount, DE)
     'st_ord.bus_rate',           # (dbl) flat rate on carve-out excess (OH 3%)
     'st_itemizing',              # (bool) state itemization election (calc_st_ded)
     'st_ded',                    # (dbl) state deduction taken (calc_st_ded)
@@ -205,14 +206,20 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
       # unobserved; VA STA precedent, documented approximation). Itemized
       # deductions divide by each spouse's income share (Form 740 Schedule
       # A: "based on the percentage of each spouse's income to total
-      # income"); the standard deduction is one full amount per column.
+      # income"); each column takes combined_sep_std_share of the mapped
+      # standard deduction -- the whole amount where the state's std is per
+      # person (KY), half where the joint amount is twice the per-column
+      # amount (DE). Where only one spouse is aged/blind the split of the
+      # add-ons between columns is approximate, though their total is right.
       # Assumes no recapture, base-amount, or business carve-out machinery
       # in combined_sep states (see params_schema.yaml)
       cs_share1 = wages1 + sta_other,
       cs_share2 = wages2 + sta_other,
       cs_item_shr1 = if_else(st_agi > 0, pmax(0, pmin(1, cs_share1 / st_agi)), 0.5),
-      cs_ded1 = if_else(st_itemizing, st_ded * cs_item_shr1,        st_std_ded),
-      cs_ded2 = if_else(st_itemizing, st_ded * (1 - cs_item_shr1),  st_std_ded),
+      cs_ded1 = if_else(st_itemizing, st_ded * cs_item_shr1,
+                        st_std_ded * st_ord.combined_sep_std_share),
+      cs_ded2 = if_else(st_itemizing, st_ded * (1 - cs_item_shr1),
+                        st_std_ded * st_ord.combined_sep_std_share),
       cs_tax  = sched_tax_at(pmax(0, cs_share1 - cs_ded1 - sta_pe1)) +
                 sched_tax_at(pmax(0, cs_share2 - cs_ded2 - sta_pe2)),
       st_tax_pre_credit = if_else(

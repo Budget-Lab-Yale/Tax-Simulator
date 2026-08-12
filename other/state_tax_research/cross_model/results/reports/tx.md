@@ -1,6 +1,6 @@
 # Cross-model validation: TX
 
-Class: stub | Generated: 2026-08-11 | Verdict: **PASS**
+Class: stub | Generated: 2026-08-12 | Verdict: **PASS**
 
 Acceptance: match@$100 >= 95% in every canonical-window cell
 (2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where
