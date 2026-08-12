@@ -161,13 +161,47 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    the local TAXSIM WASM): KY/GA/SC/IN/MN fixed (see tracker rows and
    dated commits), CO/MI cleared with negative-result or
    external-model-bug KD rows. Everything that needs the harness
-   machine (confirmation reruns for the five fixed states, the MI $386
-   point mass, the NY-2023/VA-2023-24 PE collapses, the AZ 2021
-   outlier, the ID grocery-credit exclusion decision) is queued with
-   commands and expected outcomes in
-   `cross_model/HARNESS_RERUN_2026_08_11.md`.
-   Remaining: the harness-machine batch above, aggregate benchmarks vs
-   HT2 total tax (weights-blocked), and revenue-agency comparisons.
+   machine was queued in `cross_model/HARNESS_RERUN_2026_08_11.md`.
+   **Harness-machine batch EXECUTED 2026-08-11** (runbook stamped; see
+   its header for deviations): ALL-states reruns both windows confirmed
+   the R1 fixes directionally (KY 2017 clean 0.27→0.64, IN 0.84/0.94,
+   GA exemptions stage cleared) — no cell reaches 95%, no tracker
+   flips. MI's $386 mass was NOT the Tier-2 row: TAXSIM nets the
+   MI-1040CR-7 home-heating credit on a collapsed $1.01 household
+   income (issues-doc T6, exclude KD). Every PE-window dig resolved to
+   one class — one-time rebates booked into eligibility-year
+   `state_income_tax` (issues-doc P5): NY 2023 (2025 inflation refund),
+   VA 2021/2023/2024, GA 2021, AZ 2021, and CT 2022 (child tax rebate),
+   each excluded via a `pe_*` rebate export predicate; ID's PE window
+   promoted to whole-window exclude (SNAP-prorated grocery credit + $10
+   PBF omission verified in package source). GA's PE dig also exposed
+   OUR HB 593 std-deduction anchor a year early (fixed, GA-5). The NY
+   +$327 recapture jump verified WORKSHEET-TRUE (IT-201 hand
+   computation exact; PE concurs within cents).
+   **R1 validation close-out 2026-08-11 (`58fd1211c`): all 18 broad-IIT
+   states now carry full residual attribution** — every clean-mismatch
+   cluster maps to a KD row (50 rows, 19 excludes), a filed issue
+   (T1–T9/P1–P5), or an encoding fix. Close-out rerun: **WI clears the
+   95% bar across its whole TAXSIM window (0.952–0.972) — the first
+   broad state since IL**; ND's PE window jumps to 0.948/0.927 (2021/22)
+   on the HB 1515 encoding; NC 2018 0.535→0.741 on the SB 99 vintage
+   fix; UT TAXSIM 0.93 (2018–20) post-exclusion with its PE window
+   passing outright. Lesson pinned in the MD KD row: exclusion
+   predicates must key on where the bug EXCEEDS the match tolerance —
+   sub-$100 bugs get annotate rows (an over-broad MD exclude briefly
+   depressed the 2019 cell by removing passing records). The close-out sweep of the seven
+   previously-unattributed states (UT/MD/WI/NC/CT/ND/PA) found four
+   more OUR-side bugs (NC SB 99 std vintage + missing TY2017 child
+   credit; ND HB 1515 relief credit wrongly documented-not-modeled; WI
+   $500 capital-loss addback wrongly called not-separable; MD missing
+   dependent-care subtraction) and four more probe-verified TAXSIM bugs
+   (UT retirement credit to any SS recipient unphased; MD 2019
+   std-minimum-everywhere; WI stale 2017-18 brackets; CT Table C
+   recapture overshooting its cap), plus the mstat/dependents HoH
+   conflation (UT ±$464). Harness records now carry
+   age1/age2/gross_ss/n_dep so KD predicates key on exposure sets.
+   Remaining: aggregate benchmarks vs HT2 total tax (weights-blocked),
+   revenue-agency comparisons, and sending T1–T9/P1–P5 upstream.
 4. **Phase 6 — 50-state rollout** by structural family (no-tax stubs → flat
    fed-AGI → graduated fed-AGI → fed-taxable → own-base → federal-
    deductibility), CA first (CalEITC as the credit-schema acceptance test;
