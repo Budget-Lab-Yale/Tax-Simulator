@@ -22,7 +22,7 @@ test_state_calc = function() {
   law = build_state_tax_law(
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
-                'PA', 'ID', 'MN', 'MD', 'WI'),
+                'PA', 'ID', 'MN', 'MD', 'WI', 'KS'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -1833,6 +1833,70 @@ test_state_calc = function() {
            label = 'WI-9 $500 capital loss limit addback')
 
   #--------------------------------------------------------------------------
+  # Kansas (K-40) -- SB 30 2017 retroactive schedule, low-income zero-tax
+  # cliff via base_amounts, SB 1 2024 restructure, SS $75k cliff, 17% EITC
+  #--------------------------------------------------------------------------
+
+  # KS-1: 2017 SB 30 retroactive schedule, single top bracket. TI =
+  # 40,000 - 3,000 - 2,250 = 34,750 -> 1,170 + 5.2% x 4,750 = 1,417
+  # (2017 worksheet: 5.2% x 34,750 - 390 = 1,417)
+  run_case('KS', 2017, list(agi = 40000),
+           expect = list(st_agi = 40000, st_txbl_inc = 34750,
+                         liab_st_iit = 1417.00),
+           label = 'KS-1 2017 SB 30 retroactive schedule')
+
+  # KS-2/KS-2b: the 2017 MFJ zero-tax cliff at $12,500 taxable -- the
+  # booklet table gives 0 through 12,500, then taxes the FULL amount
+  # (362.50 + 2.9% x 100 = 2.9% x 12,600)
+  run_case('KS', 2017, list(filing_status = 2, age2 = 40, agi = 24400),
+           expect = list(st_txbl_inc = 12400, liab_st_iit = 0),
+           label = 'KS-2 2017 MFJ below the $12,500 zero-tax cliff')
+  run_case('KS', 2017, list(filing_status = 2, age2 = 40, agi = 24600),
+           expect = list(st_txbl_inc = 12600, liab_st_iit = 365.40),
+           label = 'KS-2b 2017 MFJ cliff: full-amount tax at $12,600')
+
+  # KS-3: 2024 SB 1: two brackets + new std/exemptions + 50% CDCTC. TI =
+  # 100,000 - 8,240 - (18,320 + 2 x 2,320) = 68,800 -> 2,392 + 5.58% x
+  # 22,800 = 3,664.24; less 50% x 1,200 care credit
+  run_case('KS', 2024,
+           list(filing_status = 2, age1 = 40, age2 = 38, agi = 100000,
+                n_dep = 2, dep_age1 = 8, dep_age2 = 10, cdctc_nonref = 1200),
+           expect = list(st_txbl_inc = 68800, st_cdctc = 600,
+                         liab_st_iit = 3064.24),
+           label = 'KS-3 2024 SB 1 two-bracket + new std/exemptions + 50% CDCTC')
+
+  # KS-4/KS-4b: 2021 HoH SS $75k cliff pair + 17% refundable EITC.
+  # Under: AGI 25,000 -> subtract taxable SS 5,000; TI = 20,000 - 6,000 -
+  # (4,500 HoH base+addl + 2 x 2,250) = 5,000 -> 77.50 + 3.1% x 2,500 =
+  # 155; EITC 17% x 5,000 = 850 refundable -> -695.
+  # Over: AGI 76,000 -> no subtraction; TI = 61,000 -> 1,252.50 + 5.7% x
+  # 31,000 = 3,019.50
+  run_case('KS', 2021,
+           list(filing_status = 4, agi = 25000, txbl_ss = 5000,
+                gross_ss = 6000, n_dep = 2, dep_age1 = 8, dep_age2 = 10,
+                ei1 = 20000, wages1 = 20000, eitc = 5000),
+           expect = list(st_agi = 20000, st_txbl_inc = 5000, st_eitc = 850,
+                         liab_st_iit = -695.00),
+           label = 'KS-4 2021 HoH: SS subtraction under the cliff + 17% EITC')
+  run_case('KS', 2021,
+           list(filing_status = 4, agi = 76000, txbl_ss = 5000,
+                gross_ss = 6000, n_dep = 2, dep_age1 = 8, dep_age2 = 10),
+           expect = list(st_agi = 76000, liab_st_iit = 3019.50),
+           label = 'KS-4b SS subtraction denied above $75,000 (cliff)')
+
+  # KS-5: 2018 SB 30 itemized phase-in shares: federal itemizer with
+  # mortgage 10,000 / property tax 4,000 / charity 2,000 -> KS itemized =
+  # 0.5 x 10,000 + 0.5 x 4,000 + 2,000 = 9,000 (beats std 3,000). TI =
+  # 60,000 - 9,000 - 2,250 = 48,750 -> 1,252.50 + 5.7% x 18,750 = 2,321.25
+  run_case('KS', 2018,
+           list(agi = 60000, itemizing = 1, item_ded = 26000,
+                item_ded_ex_limits = 26000, mort_int_item_ded = 10000,
+                salt_prop = 4000, char_item_ded = 2000, salt_item_ded = 10000,
+                salt_inc_sales = 6000, std_ded = 12000),
+           expect = list(st_ded = 9000, liab_st_iit = 2321.25),
+           label = 'KS-5 2018 itemized component phase-in')
+
+  #--------------------------------------------------------------------------
   # Structural smoke test: a coarse grid of units through every broad-IIT
   # baseline state and several years must produce finite, non-NA results
   #--------------------------------------------------------------------------
@@ -1877,7 +1941,7 @@ test_state_calc = function() {
   # individual liability, which routes through their special programs
   smoke_states = c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI',
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
-                   'MN', 'MD', 'WI', 'NH', 'TN', 'WA')
+                   'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()
@@ -1954,6 +2018,10 @@ test_state_calc = function() {
     CT = 200,   # Table A exemption steps + Table D stepped recapture
                 #   ($122.50/segment observed, pinned by CT-8)
     VA = 320,   # no-tax-below cliff (full tax owed at the VAGI threshold)
+    KS = 175,   # statutory low-income zero-tax cliff through 2023 (K.S.A.
+                #   79-32,110: "not over $X: 0%", next band taxes the FULL
+                #   amount; single $145 at TI 5,000 in 2017, $77.50 at
+                #   2,500 in 2018-23; booklet-table-verified; KS-2/2b)
     OH = 400,   # zero-bracket base-amount cliff (statutory; tax owed on
                 #   the first taxed dollar from 2019, OH-3)
     MD = 130    # banded exemption steps at $100k/$125k/$150k

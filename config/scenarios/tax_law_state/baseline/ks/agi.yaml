@@ -1,0 +1,68 @@
+---
+# Kansas: base and modifications (Form K-40 line 1 = federal AGI; Schedule S
+# Part A; K.S.A. 79-32,117). Rolling IRC conformity (79-32,109: the code "as
+# it exists and is effective for the applicable tax year"). SB 30 (2017)
+# retroactively repealed the 2012 pass-through ("LLC loophole") subtraction
+# for TY2017, so no business-income carve-out is encoded in any year.
+
+# Starting point: 1 = federal AGI (K-40 line 1)
+start_point:
+  value: 1
+  reference: 'Form K-40 line 1 federal adjusted gross income, 2017-2025 booklets'
+
+conformity_group:
+  value: 0
+  reference: 'K.S.A. 79-32,109 (IRC as in effect for the tax year; rolling) -> reference-law group 0'
+
+# Non-Kansas municipal interest addback (Schedule S line A1); post-1987
+# Kansas obligations stay exempt (own-state carve-out). Pre-1988 KS bonds
+# are taxable but unobservable (immaterial).
+add_exempt_int:
+  value: 1
+  reference: 'Schedule S line A1, 2017-2025 booklets; K.S.A. 79-32,117(b)(i)'
+own_state_exempt:
+  value: 1
+  reference: 'Schedule S A1: Kansas obligations issued after 12/31/87 excluded from the addback'
+
+# US-obligation interest subtraction (Schedule S A11 in 2024; A9 in 2017).
+# Flag only; the US-obligation share of taxable interest is unobserved in
+# the PUF (model-wide known-difference, same as CO/ND)
+sub_us_int:
+  value: 1
+  reference: 'Schedule S line A11 (2024) / A9 (2017); K.S.A. 79-32,117(c)(i) [known-difference: not subtracted]'
+
+# State/local income tax refund subtraction (in federal AGI for federal
+# itemizers; K-40 starts from federal AGI so the subtraction applies)
+sub_state_ref:
+  value: 1
+  reference: 'Schedule S line A12 (2024) / A10 (2017): state or local income tax refund included in federal AGI'
+
+# Social Security subtraction (K.S.A. 79-32,117(c)(xviii)): TAXABLE benefits
+# subtracted in full, ALL ages, if federal AGI <= $75,000 (CLIFF, no
+# phase-out), 2017-2023. SB 1 (2024 special session) sec. 18 removes the
+# limit for TY2024+ (subtraction regardless of AGI).
+ss_sub_share:
+  value:
+    '2017': 0
+    '2024': 1
+  reference: 'SB 1 (2024 s.s.) sec. 18; Notice 24-08; 2024 booklet Schedule S line A9 (no AGI condition); K.S.A. 79-32,117(c)(xviii)'
+ss_full_sub_allages:
+  value:
+    '2017': 1
+    '2024': 0
+  reference: '2017 booklet Sch S line A7 / 2021 line A8 / 2023 line A9: subtraction only "If the amount on Line 1 of Form K-40 is $75,000 or less"; superseded by the unconditional subtraction TY2024'
+ss_allages_agi_limit:
+  value: 75000
+  reference: 'Federal-AGI cliff $75,000, all filing statuses, TY2017-2023 (79-32,117(c)(xviii); Notice 24-08 recites the prior rule); no phase-out step (cliff)'
+
+# KS has NO capital-gains or dividend preference and no private pension
+# exclusion; nothing to encode (neutral defaults).
+
+# Documented-not-modeled subtractions/additions (Schedule S; PUF-unobservable):
+#   - KPERS retirement benefits subtraction (A13) and KPERS employee
+#     contribution ADDBACK (A2) -- public-pension source and contributions
+#     unobserved; omitted in offsetting directions [known-difference]
+#   - Learning Quest / 529 contribution subtraction, $3,000/$6,000 MFJ per
+#     beneficiary (A15)
+#   - military compensation/retirement, National Guard bonuses (A14/A16),
+#     GILTI (A17), 163(j) carryforward (A5), first-time homebuyer accounts

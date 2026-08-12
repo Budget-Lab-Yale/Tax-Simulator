@@ -1,0 +1,50 @@
+---
+# Kansas filing requirement (K-40 booklet "Who Must File a Return",
+# 2017-2025): a full-year resident must file if (1) required to file a
+# federal return, OR (2) Kansas AGI exceeds the standard deduction plus
+# exemption allowance. Encoded as req_type 2 with the booklet's published
+# under-65 gross-income thresholds (= std ded + exemptions for a
+# no-dependent unit) by filing status and year, plus the federal-filer
+# trigger. Aged/blind threshold add-ons and per-dependent variation are not
+# modeled (nonzero-liability units are flagged as filers regardless).
+
+filing_status_mapper:
+  req_income_thresh:
+    '1': req_thresh_single
+    '2': req_thresh_married
+    '3': req_thresh_mfs
+    '4': req_thresh_head
+
+req_type:
+  value: 2
+  reference: 'K-40 booklets 2017-2025, minimum filing requirements table (fixed thresholds on Kansas AGI)'
+req_if_fed_filer:
+  value: 1
+  reference: 'K-40 booklets: must file if "required to file a federal income tax return"'
+req_thresh_single:
+  value:
+    '2017': 5250
+    '2021': 5750
+    '2024': 12765
+  reference: 'Booklet tables, single under 65: 2017/2019 $5,250; 2021 $5,750; 2024 $12,765'
+req_thresh_married:
+  value:
+    '2017': 12000
+    '2021': 12500
+    '2024': 26560
+  reference: 'Booklet tables, MFJ both under 65: 2017/2019 $12,000; 2021 $12,500; 2024 $26,560'
+req_thresh_mfs:
+  value:
+    '2017': 6000
+    '2021': 6250
+    '2024': 13280
+  reference: 'Booklet tables, MFS under 65: 2017/2019 $6,000; 2021 $6,250; 2024 $13,280'
+req_thresh_head:
+  value:
+    '2017': 10000
+    '2021': 10500
+    '2024': 17660
+  reference: 'Booklet tables, HoH under 65: 2017/2019 $10,000; 2021 $10,500; 2024 $17,660'
+# req_income_thresh_dep omitted (defaults to Inf): dependents are required
+# to file only with positive taxable income (2017 booklet, minor
+# dependents), captured by the nonzero-liability st_filer trigger.
