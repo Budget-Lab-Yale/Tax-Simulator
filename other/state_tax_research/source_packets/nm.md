@@ -155,13 +155,19 @@ line 12** − dependent deduction − LMI exemption − PIT-ADJ subtractions
 `$4,000` x (total dependents − 1), TY2019+, MFJ/HoH only. `st_exempt.dep_amount`
 already carries the $2,500 LMI exemption and applies to EVERY dependent;
 `st_child_ded` is the only other per-dependent slot and has **no count offset**.
-Every config-only mapping is wrong by a full $4,000 of base per eligible return
-in the same direction — larger than the provision's own average value — so zero
-plus documentation is the smaller error. Minimal fix: one parameter,
-`st_child_ded.count_offset` (default 0, NM 1), applied as
-`pmax(0, n_qual - count_offset)`. Cost of omitting: NM tax OVERSTATED by
-`$4,000 x (dependents - 1)`, ~$196 per extra dependent at 4.9% ($128 in test
-NM-2).
+Every config-only mapping was wrong by a full $4,000 of base per eligible
+return in the same direction — larger than the provision's own average value —
+so zero plus documentation was the smaller error at the time.
+
+**RESOLVED 2026-08-12: `st_child_ded.count_offset` (default 0, NM 1) was added
+and tested (test MACH-5), applied as `pmax(0, n_qual - count_offset)`.** Encode
+the provision live via `child_ded.yaml` with `style` 1 from TY2019,
+`amounts` 4,000, `agi_bounds` Inf, and `count_offset` 1 — the "encode ZERO and
+document" decision below is superseded, and the ~$196-per-extra-dependent
+overstatement ($128 in test NM-2) no longer applies. The one remaining caveat
+is that `st_child_ded` has no filing-status gate, so NM's MFJ/HoH-only
+restriction still needs a documented note (single and MFS filers would receive
+the deduction they are denied).
 
 ### 3. Child credit — 3 tiers encodable, 7 published
 

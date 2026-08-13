@@ -43,7 +43,14 @@ test_state_calc = function() {
   case_exercised = new.env()
   case_exercised$sets = list()
 
-  run_case = function(st, yr, unit_overrides, expect, tol = 0.01, label = '') {
+  # law_overrides sets named law parameters on top of the state's own row. It
+  # exists to exercise GENERIC machinery that no encoded state uses yet: a new
+  # parameter is only proved neutral by the rest of the suite, and proving it
+  # WORKS otherwise has to wait for the first state that consumes it. Every
+  # overridden name must already exist in the law row, so a typo or a renamed
+  # parameter fails loudly rather than silently testing nothing.
+  run_case = function(st, yr, unit_overrides, expect, tol = 0.01, label = '',
+                      law_overrides = list()) {
 
     unit = st_test_unit(unit_overrides)
     law_row = law %>%
@@ -51,6 +58,21 @@ test_state_calc = function() {
              filing_status == unit$filing_status) %>%
       select(-state, -year, -filing_status)
     stopifnot('law row missing' = nrow(law_row) == 1)
+
+    if (length(law_overrides) > 0) {
+      # Validate against the schema registry rather than the law row: a
+      # parameter no state encodes yet is legitimately absent from the row
+      # (ensure_st_params supplies it downstream), but a name that is not in
+      # the registry at all is a typo or a rename and must fail loudly
+      unknown = setdiff(names(law_overrides), names(st_param_defaults()))
+      if (length(unknown) > 0) {
+        stop(sprintf('%s: law_overrides names not in params_schema: %s',
+                     label, paste(unknown, collapse = ' ')))
+      }
+      for (p in names(law_overrides)) {
+        law_row[[p]] = law_overrides[[p]]
+      }
+    }
 
     result = unit %>%
       bind_cols(law_row) %>%
@@ -2157,6 +2179,114 @@ test_state_calc = function() {
            expect = list(st_cdctc = 600, st_txbl_inc = 72000,
                          liab_st_iit = 2797.90 - 600),
            label = 'WV-7 2024 50% care credit (first year it exists)')
+
+  # WV-8/WV-8b: the AGI-GATED PARTIAL Social Security share (TY2021 = 65% at
+  # or below $100,000 joint, nothing above). MFJ 68/66 with taxable SS 20,000.
+  # Below the limit: SS subtraction 0.65 x 20,000 = 13,000, and the senior
+  # modification is 8,000 x 2 less that 13,000 = 3,000, so st_agi = 80,000 -
+  # 13,000 - 3,000 = 64,000; taxable 60,000 -> 2,775 exactly at the top band.
+  # Above the limit: no SS subtraction in 2021 (the above-limit track starts
+  # TY2024), so the senior modification is the full 16,000 -> st_agi 104,000,
+  # taxable 100,000 -> 2,775 + 6.5% x 40,000 = 5,375. Together these pin
+  # ss_allages_sub_share AND its interaction with age_ded_less_ss_sub
+  run_case('WV', 2021,
+           list(filing_status = 2, age1 = 68, age2 = 66, agi = 80000,
+                wages1 = 60000, ei1 = 60000, txbl_ss = 20000,
+                gross_ss = 23000),
+           expect = list(st_agi = 64000, st_txbl_inc = 60000,
+                         liab_st_iit = 2775.00),
+           label = 'WV-8 2021 gated 65% SS share below the AGI limit')
+  run_case('WV', 2021,
+           list(filing_status = 2, age1 = 68, age2 = 66, agi = 120000,
+                wages1 = 100000, ei1 = 100000, txbl_ss = 20000,
+                gross_ss = 23000),
+           expect = list(st_agi = 104000, st_txbl_inc = 100000,
+                         liab_st_iit = 5375.00),
+           label = 'WV-8b 2021 no SS subtraction above the AGI limit')
+
+  #--------------------------------------------------------------------------
+  # GENERIC MACHINERY CASES
+  #
+  # These prove parameters that no encoded state consumes yet. Each was added
+  # for a batch-C state whose research showed no existing parameter could
+  # express its provision, and each is exercised here by overriding the named
+  # parameter on a HOST state's law row (see run_case's law_overrides). The
+  # rest of the suite proves the additions are neutral at their defaults;
+  # these prove they actually work, so the first state to use one is not also
+  # the first test of it. Retire a case once its own state's tests cover it.
+  #--------------------------------------------------------------------------
+
+  # MACH-1: flat-dollar capital gains exclusion, capped at the eligible gain
+  # (VT 32 V.S.A. 5811(21)(B)(ii): a flat $5,000). Host IL 2024, whose own
+  # subtractions are zero for this unit, so the exclusion is isolated:
+  # min(5,000, gain 3,000) = 3,000
+  run_case('IL', 2024, list(agi = 60000, kg_lt = 3000, txbl_inc = 50000),
+           expect = list(st_subtractions = 3000),
+           law_overrides = list(st_agi.cap_gains_excl_flat = 5000),
+           label = 'MACH-1 flat capital-gains exclusion, capped at the gain')
+
+  # MACH-2: the GREATER of the flat amount and the share, then the
+  # federal-taxable-income CEILING (VT IN-153 Part III: 40% of federal
+  # taxable income). Gain 20,000 -> max(40% x 20,000 = 8,000,
+  # min(5,000, 20,000) = 5,000) = 8,000, then capped at 40% x 15,000 = 6,000
+  run_case('IL', 2024, list(agi = 60000, kg_lt = 20000, txbl_inc = 15000),
+           expect = list(st_subtractions = 6000),
+           law_overrides = list(st_agi.cap_gains_excl_flat = 5000,
+                                st_agi.cap_gains_excl_share = 0.40,
+                                st_agi.cap_gains_excl_txbl_share = 0.40),
+           label = 'MACH-2 greater-of exclusion under the taxable-income ceiling')
+
+  # MACH-3: charitable contribution CREDIT on capped contributions, available
+  # without itemizing (VT 5822(d)(3): 5% of the first $20,000, max $1,000).
+  # 30,000 of contributions -> 5% x 20,000 = 1,000
+  run_case('IL', 2024, list(agi = 60000, char_cash = 30000),
+           expect = list(st_char_credit = 1000),
+           law_overrides = list(st_credits.char_credit_rate = 0.05,
+                                st_credits.char_credit_base_cap = 20000),
+           label = 'MACH-3 charitable credit on capped contributions')
+
+  # MACH-4/MACH-4b: flat-dollar itemized cap with exempt components
+  # (OK 68 O.S. 2358(E)(3)(b): $17,000, charity and medical exempt). Host
+  # MD 2019, whose itemized total for this unit is medical 10,000 + mortgage
+  # 20,000 + charity 30,000 + property min(15,000, 10,000) = 70,000.
+  # With medical and charity exempt: exempt 40,000, remainder 30,000 capped to
+  # 17,000 -> 57,000. With nothing exempt: min(17,000, 70,000) = 17,000
+  md_item_unit = list(agi = 200000, itemizing = 1, item_ded = 70000,
+                      item_ded_ex_limits = 70000, med_item_ded = 10000,
+                      mort_int_item_ded = 20000, char_item_ded = 30000,
+                      salt_item_ded = 10000, salt_inc_sales = 25000,
+                      salt_prop = 15000, std_ded = 24400)
+  run_case('MD', 2019, md_item_unit,
+           expect = list(st_item_ded = 57000),
+           law_overrides = list(st_ded.item_flat_cap = 17000,
+                                st_ded.item_flat_cap_excl_medical = 1,
+                                st_ded.item_flat_cap_excl_charity = 1),
+           label = 'MACH-4 flat itemized cap with medical and charity exempt')
+  run_case('MD', 2019, md_item_unit,
+           expect = list(st_item_ded = 17000),
+           law_overrides = list(st_ded.item_flat_cap = 17000),
+           label = 'MACH-4b flat itemized cap with nothing exempt')
+
+  # MACH-5: per-dependent deduction excluding the FIRST dependent
+  # (NM 7-2-39: "Subtract 1 from total dependents"). Host NC 2024, whose
+  # table gives 2,500 per child at 50,000 of joint AGI: 3 dependents pay
+  # 7,500 without the offset and 5,000 with it
+  run_case('NC', 2024,
+           list(filing_status = 2, age2 = 40, agi = 50000, n_dep = 3,
+                n_dep_ctc = 3, dep_age1 = 4, dep_age2 = 8, dep_age3 = 10),
+           expect = list(st_child_ded = 5000),
+           law_overrides = list(st_child_ded.count_offset = 1),
+           label = 'MACH-5 child deduction excluding the first dependent')
+
+  # MACH-6: upper age bound on the childless earned-income credit (DC's
+  # worksheet: "at least age 25, but not age 65"). Host CA 2024, where a
+  # childless 70-year-old with 10,000 of wages otherwise receives $202 of
+  # CalEITC; the ceiling makes them ineligible
+  run_case('CA', 2024, list(agi = 10000, age1 = 70, wages1 = 10000,
+                            ei1 = 10000),
+           expect = list(st_earned_credit = 0),
+           law_overrides = list(st_credits.earned_credit_age_max = 64),
+           label = 'MACH-6 childless earned-credit age ceiling')
 
   #--------------------------------------------------------------------------
   # Structural smoke test: a coarse grid of units through every broad-IIT

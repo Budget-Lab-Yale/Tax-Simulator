@@ -58,28 +58,34 @@ sub_state_ref:
 #     TY2020 35%, TY2021 65%, TY2022+ 100%.
 #   Track 2 (HB 4880 of 2024 -- taxpayers ABOVE the same AGI limits):
 #     TY2024 35%, TY2025 65%, TY2026 100%.
-# TY2022+ is exact: ss_full_sub_allages 1 with the AGI cliff gives 100% below
-# the limit, and the flat ss_sub_share supplies the above-limit track
-# (calc_st_agi takes pmax of the two, so 100% wins below the limit).
-# TY2020-2021 are an APPROXIMATION: the all-ages path is all-or-nothing, so a
-# 35%/65% share gated on an AGI limit is not expressible. The flat share alone
-# is correct below the limit and wrongly extends to above-limit units in those
-# two years only [known-difference, documented below].
+# BOTH tracks are now exact. The AGI-gated track uses ss_full_sub_allages with
+# the AGI cliff and ss_allages_sub_share, which carries the PARTIAL share
+# granted below the limit (0.35 in TY2020, 0.65 in TY2021, 1.00 from TY2022).
+# The above-limit track rides on the flat ss_sub_share, and calc_st_agi takes
+# the pmax of the two, so the gated share wins below the limit and the flat
+# share applies above it.
+# (Before st_agi.ss_allages_sub_share existed, the all-ages path was
+# all-or-nothing and TY2020-2021 had to be approximated by the flat share
+# alone, which wrongly extended the 35%/65% subtraction to above-limit units.)
 # ----------------------------------------------------------------------------
 ss_full_sub_allages:
   value:
     '2017': 0
+    '2020': 1
+  reference: 'No SS modification 2017-2019 (the 2019 booklet: "You cannot modify your federal adjusted gross income by removing any included social security income on this tax return"). The AGI-gated subtraction runs from TY2020, at the share in ss_allages_sub_share below'
+ss_allages_sub_share:
+  value:
+    '2017': 1
+    '2020': 0.35
+    '2021': 0.65
     '2022': 1
-  reference: 'No SS modification 2017-2019 (the 2019 booklet: "You cannot modify your federal adjusted gross income by removing any included social security income on this tax return"). Full 100% subtraction below the AGI limits from TY2022 ("For taxable years beginning on and after January 1, 2022, 100 percent"). TY2020-2021 ride on ss_sub_share instead -- see the header note'
+  reference: 'Share subtracted BELOW the AGI limits: 2020 booklet "For taxable years beginning on and after January 1, 2020, 35 percent"; 2021 booklet "65 percent"; 2022-2025 booklets "For taxable years beginning on and after January 1, 2022, 100 percent". W. Va. Code 11-21-12(c)(8)(A)-(C). Inert in 2017-2019 where ss_full_sub_allages is 0'
 ss_sub_share:
   value:
     '2017': 0
-    '2020': 0.35
-    '2021': 0.65
-    '2022': 0
     '2024': 0.35
     '2025': 0.65
-  reference: '2020 booklet: "For taxable years beginning on and after January 1, 2020, 35 percent"; 2021 booklet: "65 percent"; 2024 booklet line 34: "Additionally, for taxable year 2024, 35% of social security benefits ... may be claimed when the federal adjusted gross income ... exceeds $100,000 [joint] or $50,000 [other]"; 2025 booklet: the same sentence with 65%. W. Va. Code 11-21-12(c)(8)(A)-(C)'
+  reference: 'The ABOVE-limit second track only (HB 4880 of 2024). 2024 booklet line 34: "Additionally, for taxable year 2024, 35% of social security benefits ... may be claimed when the federal adjusted gross income ... exceeds $100,000 [joint] or $50,000 [other]"; 2025 booklet: the same sentence with 65%. Applies unconditionally, so calc_st_agi''s pmax lets the gated 100% win below the limit'
 ss_agi_limit_other:
   value: 50000
   reference: 'Schedule M SS line, every year TY2020-2025: "$50,000 in the case of a single, Head of Household, Widow(er), individual or a married individual filing a separate return" -- MFS gets the FULL $50,000, not half; 11-21-12(c)(8)(D). Do not "fix" this to $25,000'
@@ -109,8 +115,6 @@ age_ded_less_ss_sub:
   reference: 'Schedule M line 47 box (d) reduces each person''s $8,000 by that person''s lines 29-34, which INCLUDE the Social Security subtraction (line 34); the deduction is box (c) less box (d), floored at zero. W. Va. Code 11-21-12(c)(9)'
 
 documented_not_modeled:
-  ss_partial_share_below_limit_2020_2021:
-    reference: 'The TY2020 35% and TY2021 65% subtractions are GATED on federal AGI <= 50,000/100,000. Encoded as a flat share (see the header note), which wrongly extends them to above-limit units in those two years. Direction: understates WV liability; bound 6.5% x share x taxable SS. Closing it needs a share for the all-ages subtraction in place of the hard 1'
   public_pension_sub_2000:
     value: 2000
     reference: 'Schedule M: taxable retirement income from the WV Teachers'' Retirement System, WV Public Employees'' Retirement System and Federal Retirement, capped at $2,000 COMBINED regardless of age (11-21-12(c)(5)). The eligible plans are an unobservable subset of txbl_pens_dist; omitted rather than applied to all pension income [overstates WV tax by up to the marginal rate x $2,000]. NOTE this partly OFFSETS the senior-modification treatment: these amounts also belong in box (d)'

@@ -4,7 +4,8 @@ State: `OK`
 Status: `research COMPLETE and primary-verified; NOT yet encoded (YAML drafted, tests drafted)`
 Last updated: `2026-08-12`
 
-> Two machinery gaps need a decision before encoding (§Machinery gaps). The
+> The $17,000 itemized-cap gap is RESOLVED (st_ded.item_flat_cap landed
+> 2026-08-12); the credit-proration gap remains open (§Machinery gaps). The
 > rate-schedule recovery below is the load-bearing research: **no Form 511
 > packet prints a bracket schedule in any year 2017-2025.**
 
@@ -135,14 +136,15 @@ number, the fifth increment, from $2,400 to $4,600. Note the married column is
 
 ## Machinery gaps (no representable parameter)
 
-1. **$17,000 itemized cap (TY2018+), charity and medical exempt.** No flat
-   dollar cap exists: `item_limit_style` 1 is income-based,
+1. ~~**$17,000 itemized cap (TY2018+), charity and medical exempt.**~~
+   **RESOLVED 2026-08-12.** `st_ded.item_flat_cap` (default `.inf`) plus
+   `item_flat_cap_excl_medical` / `_excl_charity` were added and tested (tests
+   MACH-4 / MACH-4b), applied as `min(cap, base - exempt) + exempt` after the
+   existing limitations and before the itemize election. OK's cap is now
+   encodable exactly, so the ~$10-20M/yr omission below no longer applies.
+   (Why nothing existing worked: `item_limit_style` 1 is income-based,
    `item_limit_protect_*` has no CHARITY flag, and `addback_cap` measures the
-   federal deduction including income/sales taxes and charity. Minimal generic:
-   `st_ded.item_flat_cap` (default `.inf`) plus `item_flat_cap_excl_medical` /
-   `_excl_charity`, applied as `min(cap, base - excluded) + excluded` after the
-   existing limitations. **OK is the strongest case for it in the rollout** (a
-   hard, unindexed, materially binding cap).
+   federal deduction including income/sales taxes and charity.)
 2. **OK AGI / federal AGI proration of the EITC and child credit** (Schedules
    511-F and 511-G). Applies to FULL-YEAR residents whenever OK AGI is below
    federal AGI -- i.e. anyone with an SS, retirement, military, tribal, 529 or

@@ -11,7 +11,7 @@ return_vars$calc_st_credits = c('st_hh_credit', 'st_eitc', 'st_ctc',
                                 'st_senior_credit', 'st_jfc',
                                 'st_forgive_credit', 'st_percap_credit',
                                 'st_marriage_credit', 'st_twoearner_credit',
-                                'st_item_credit',
+                                'st_item_credit', 'st_char_credit',
                                 'st_credits_nonref', 'st_credits_ref')
 
 
@@ -82,6 +82,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   #   - st_marriage_credit (dbl): two-earner marriage credit (MN)
   #   - st_twoearner_credit (dbl): married couple credit (WI)
   #   - st_item_credit (dbl)    : itemized-deduction credit (WI)
+  #   - st_char_credit (dbl)    : charitable contribution credit (VT)
   #   - st_credits_nonref (dbl) : total nonrefundable credits
   #   - st_credits_ref (dbl)    : total refundable credits
   #----------------------------------------------------------------------------
@@ -161,6 +162,10 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.twoearner_rate',
     'st_credits.twoearner_max',
     'st_credits.item_credit_rate',
+    'st_credits.char_credit_rate',     # (dbl) rate on capped charitable contributions (VT 0.05)
+    'st_credits.char_credit_base_cap', # (dbl) contribution base cap (VT $20,000)
+    'char_cash',         # (dbl) cash charitable contributions (char credit base)
+    'char_noncash',      # (dbl) non-cash charitable contributions
     'st_credits.item_credit_incl_medical',
     'st_credits.item_credit_incl_mortgage',
     'st_credits.item_credit_incl_investment',
@@ -292,6 +297,16 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       tax_unit$st_std_ded
   )
 
+  # Charitable contribution CREDIT (VT 32 V.S.A. 5822(d)(3)): a rate on the
+  # first char_credit_base_cap of contributions, available to EVERY filer
+  # "regardless of whether they elect to itemize at the federal level" -- which
+  # is why the base is the contribution amount rather than char_item_ded (the
+  # itemizer-only deduction component) and why this is separate from the WI
+  # item_credit above. In Vermont this credit REPLACED itemization outright
+  st_char_credit = tax_unit$st_credits.char_credit_rate *
+    pmin(pmax(0, tax_unit$char_cash + tax_unit$char_noncash),
+         tax_unit$st_credits.char_credit_base_cap)
+
   # EITC liability-share limitation (OH 2017-18: above the income threshold,
   # the credit cannot exceed eitc_liab_cap_share of remaining pre-JFC tax)
   eitc_liab_income = st_income_base(tax_unit,
@@ -326,6 +341,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     st_marriage_credit = st_marriage_credit,
     st_twoearner_credit = st_twoearner_credit,
     st_item_credit    = st_item_credit,
+    st_char_credit    = st_char_credit,
 
     st_credits_nonref = hh$st_hh_credit + hh$prop_credit + child$st_dep_credit +
                         st_family_credit + hh$st_exempt_credit + st_pct_credit +
@@ -333,6 +349,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                         senior$st_retire_credit + senior$st_senior_credit +
                         st_jfc + earn$st_forgive_credit + st_marriage_credit +
                         st_twoearner_credit + st_item_credit +
+                        st_char_credit +
                         hh$st_percap_credit *
                           (1 - tax_unit$st_credits.percap_refundable) +
                         st_eitc * (1 - earn$st_eitc_ref_share) +

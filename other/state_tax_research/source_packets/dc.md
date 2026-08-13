@@ -139,8 +139,8 @@ every 2017-2025 booklet). **The real risk in DC is entirely on our side.**
    when both sit in the same region but **overstating** (by up to the full
    maximum, <= $649) for units whose earned income is still phasing in while
    AGI is past the phase-out start. Compounded by the absent investment-income
-   disqualifier and the absent age-65 ceiling, both of which also overstate
-   eligibility.
+   disqualifier, which also overstates eligibility. (The age-65 ceiling was a
+   third such gap; `earned_credit_age_max` closed it on 2026-08-12.)
 7. **CDCC base**: DC allows 32% "regardless of the amount actually used to
    offset federal tax liability"; we apply 32% to the post-limitation federal
    credit, understating for units whose federal tax cannot absorb it.
@@ -219,13 +219,15 @@ every 2017-2025 booklet). **The real risk in DC is entirely on our side.**
    F's structure (it subtracts Schedule A Line 7 and adds back only Lines 5b
    and 6), not from an explicit disallowance. Form governs; small magnitude
    (DC has no individual vehicle personal property tax).
-9. The childless-EITC eligibility gate is only partially encodable: we enforce
-   dependency status, MFS ineligibility, the age minimum and DC's income
-   limits, but **not** the age-65 ceiling, the investment-income limit, or the
-   Schedule E / Form 4797 exclusions. Every omission overstates eligibility.
-   Consider an age-maximum parameter for the `earned_credit` family -- MN's
-   packet flags the same 64-year ceiling as unmodeled, so there is a second
-   use case.
+9. The childless-EITC eligibility gate is now MOSTLY encodable. **The age-65
+   ceiling was resolved 2026-08-12**: `st_credits.earned_credit_age_max`
+   (default `.inf`) was added and tested (test MACH-6), and it applies only to
+   filers without qualifying children, matching the federal rule -- so encode
+   DC with `earned_credit_age_max` 64 alongside the age-25 minimum (and 18 in
+   TY2021, where DC followed the ARPA relaxation). MN's packet flags the same
+   ceiling, so it is the second consumer. Still NOT encodable and still
+   overstating eligibility: the investment-income limit and the Schedule E /
+   Form 4797 exclusions.
 10. 2017-2020 rate schedules rest on the booklets alone (PE starts at 2021).
     All four were read and print the identical (a)(10) schedule, and the
     statute confirms (a)(10) governs "taxable years beginning after December

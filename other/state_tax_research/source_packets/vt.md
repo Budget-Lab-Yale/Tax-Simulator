@@ -4,9 +4,10 @@ State: `VT`
 Status: `research COMPLETE and primary-verified; NOT yet encoded (YAML drafted, tests drafted)`
 Last updated: `2026-08-12`
 
-> **Recommendation before encoding: land four small scalars first** (see
-> §Machinery gaps). Without them VT carries two large, one-signed omissions
-> that will dominate its first cross-model run.
+> **The four scalars this packet asked for LANDED on 2026-08-12** (see
+> §Machinery gaps), so VT is now encodable exactly on both its
+> capital-gains exclusion and its charitable credit. The two large
+> one-signed omissions this packet warned about no longer apply.
 
 ## Scope
 
@@ -104,10 +105,18 @@ qualifying children are ages 0-5 through TY2024, 0-6 in TY2025 (the 2019
 birth-year floor was not advanced). CDCC: 24% nonrefundable (2017-2021) → **72%
 refundable** from TY2022.
 
-## Machinery gaps — four scalars recommended before encoding
+## Machinery gaps — RESOLVED 2026-08-12, all four scalars landed
 
-VT's two largest provisions have no representable parameter, and both are
-one-signed, so encoding without them guarantees a large residual:
+**Both provisions are now encodable.** The four parameters recommended below
+were added and tested on 2026-08-12 (tests MACH-1 through MACH-3):
+`st_agi.cap_gains_excl_flat`, `st_agi.cap_gains_excl_txbl_share`,
+`st_credits.char_credit_rate` and `st_credits.char_credit_base_cap`. VT can now
+be encoded exactly on both, so the two large one-signed residuals described
+here will NOT appear. The analysis is kept because it records why a share
+parameter alone was the wrong answer.
+
+VT's two largest provisions had no representable parameter, and both are
+one-signed, so encoding without them would have guaranteed a large residual:
 
 1. **Capital-gains exclusion.** IN-153 computes `min(40% x federal taxable
    income, max(flat: min(adjusted net capital gain ex-QD, $5,000), percentage:

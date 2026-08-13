@@ -21,6 +21,7 @@ st_credits_earned_req_vars = c(
   'st_credits.eitc_cli_excl_age_package',
   'st_credits.earned_credit_style',
   'st_credits.earned_credit_age_min',
+  'st_credits.earned_credit_age_max',
   'st_credits.earned_credit_agi_limit',
   'st_credits.earned_credit_earned_limit',
   'st_credits.earned_credit_round',
@@ -95,10 +96,20 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   }
   earned_credit_earned = earned_credit_curve(earned_income)
   earned_credit_agi    = earned_credit_curve(pmax(0, agi))
+  # The age test applies only to filers WITHOUT qualifying children, mirroring
+  # the federal childless-EITC rule. States may gate on a band rather than a
+  # floor (DC's worksheet: "at least age 25, but not age 65 at the end of the
+  # year"; MN's packet flags the same ceiling); earned_credit_age_max defaults
+  # to Inf, so states gating only on a minimum are unaffected
+  earned_credit_in_age_band = function(age) {
+    !is.na(age) &
+      age >= tax_unit$st_credits.earned_credit_age_min &
+      age <= tax_unit$st_credits.earned_credit_age_max
+  }
   earned_credit_age_ok = tax_unit$n_dep_eitc > 0 |
-                         tax_unit$age1 >= tax_unit$st_credits.earned_credit_age_min |
-                         (tax_unit$filing_status == 2 & !is.na(tax_unit$age2) &
-                          tax_unit$age2 >= tax_unit$st_credits.earned_credit_age_min)
+                         earned_credit_in_age_band(tax_unit$age1) |
+                         (tax_unit$filing_status == 2 &
+                          earned_credit_in_age_band(tax_unit$age2))
   # Dependents of another taxpayer are ineligible for the independent
   # earned-income credit, mirroring the federal EITC (eitc.R) and the state
   # exempt/household/WFTC credits; ei1/ei2 are never dependent-zeroed upstream.

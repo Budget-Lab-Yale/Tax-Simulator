@@ -103,6 +103,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.ss_allages_po_step',    # (dbl) stepped phase-out step above the limit (MN)
     'st_agi.ss_allages_po_share',   # (dbl) share lost per step (MN 0.10)
     'st_agi.ss_allages_min_age',    # (dbl) minimum age where the AGI-capped subtraction is also age-gated (RI full retirement age; -.inf = no gate)
+    'st_agi.ss_allages_sub_share',  # (dbl) share subtracted below the AGI limit (WV 0.35/0.65 in 2020/2021; 1 = full)
     'st_agi.ss_partial_max',        # (dbl) sliding partial SS subtraction maximum (MN)
     'st_agi.ss_partial_thresh',     # (dbl) provisional-income threshold (MN)
     'st_agi.ss_partial_rate',       # (dbl) phase-out rate on provisional income (MN 0.20)
@@ -138,6 +139,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.add_overtime_ded',      # (int) whether the federal OT deduction is added back
     'st_agi.cap_loss_limit',        # (dbl) state per-year net capital loss limit (WI $500)
     'st_agi.cap_gains_excl_share',  # (dbl) share of net LT capital gain excluded
+    'st_agi.cap_gains_excl_flat',   # (dbl) flat-dollar alternative, greater-of (VT $5,000)
+    'st_agi.cap_gains_excl_txbl_share', # (dbl) ceiling as a share of federal taxable income (VT 0.40; Inf = none)
     'st_agi.div_excl_share',        # (dbl) share of qualified dividends excluded
     'st_agi.age_ded_amount',        # (dbl) per-person aged deduction (VA-style)
     'st_agi.age_ded_min_age',       # (dbl) minimum age for the aged deduction
@@ -319,14 +322,19 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       ss_age_full   = (st_agi.ss_full_sub_65plus == 1 & age1 >= 65) |
                       (st_agi.ss_full_sub_5564 == 1 & age1 >= 55 & age1 < 65 &
                        agi <= st_agi.ss_5564_agi_limit),
+      # ss_allages_sub_share is the share granted BELOW the AGI limit, so a
+      # state can gate a PARTIAL subtraction on income (WV 11-21-12(c)(8): 35%
+      # in TY2020 and 65% in TY2021, both only where federal AGI is at or below
+      # $50,000/$100,000). It defaults to 1, the full-subtraction behavior
       ss_allages_share = case_when(
         st_agi.ss_full_sub_allages != 1           ~ 0,
         age1 < st_agi.ss_allages_min_age          ~ 0,
-        agi <= st_agi.ss_allages_agi_limit        ~ 1,
+        agi <= st_agi.ss_allages_agi_limit        ~ st_agi.ss_allages_sub_share,
         is.finite(st_agi.ss_allages_po_step)      ~
-          pmax(0, 1 - st_agi.ss_allages_po_share *
-                      ceiling((agi - st_agi.ss_allages_agi_limit) /
-                                st_agi.ss_allages_po_step)),
+          st_agi.ss_allages_sub_share *
+            pmax(0, 1 - st_agi.ss_allages_po_share *
+                        ceiling((agi - st_agi.ss_allages_agi_limit) /
+                                  st_agi.ss_allages_po_step)),
         TRUE                                      ~ 0
       ),
       ss_full_share = pmax(st_agi.ss_sub_share, as.integer(ss_age_full),
@@ -567,8 +575,26 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       # in excess of net ST loss (the smaller of net LT gain and net LT gain
       # less net ST loss), matching the ND/SC worksheets.
       st_cap_gain_base = pmax(0, kg_lt + pmin(0, kg_st)),
-      st_sub_capgain = st_agi.cap_gains_excl_share * st_cap_gain_base +
-                       st_agi.div_excl_share * pmax(0, div_pref),
+
+      # The gain exclusion is the GREATER of a share of the eligible base and
+      # a flat dollar amount capped at that base (VT 32 V.S.A. 5811(21)(B)(ii)
+      # takes the greater of a flat $5,000 and 40% of eligible gain), and the
+      # whole exclusion may then be capped at a share of federal taxable
+      # income (VT IN-153 Part III line 20: 40% of federal taxable income).
+      # Both extras default off -- flat 0 and ceiling Inf -- so share-only
+      # states (ND/SC/WI) are unaffected
+      # (the ceiling is guarded on is.finite: the default Inf share times a
+      # zero taxable income would otherwise be NaN, not Inf)
+      st_sub_capgain_uncapped =
+        pmax(st_agi.cap_gains_excl_share * st_cap_gain_base,
+             pmin(st_agi.cap_gains_excl_flat, st_cap_gain_base)) +
+        st_agi.div_excl_share * pmax(0, div_pref),
+      st_sub_capgain = if_else(
+        is.finite(st_agi.cap_gains_excl_txbl_share),
+        pmin(st_sub_capgain_uncapped,
+             st_agi.cap_gains_excl_txbl_share * pmax(0, txbl_inc)),
+        st_sub_capgain_uncapped
+      ),
 
       # Business income carve-out (OH IT BUS, ORC 5747.01(A)(28)): the first
       # bus_ded_cap of positive business income is deducted; the excess stays

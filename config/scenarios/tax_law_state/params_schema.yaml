@@ -91,11 +91,21 @@ scalars:
   # it on BOTH age and an AGI limit (RI full-retirement-age + AGI cliff);
   # -.inf = no age gate, preserving the pure AGI-cliff behavior
   st_agi.ss_allages_min_age: -.inf
+  # Share of taxable SS subtracted BELOW the AGI limit, for states that gate a
+  # PARTIAL subtraction on income (WV 35% in TY2020, 65% in TY2021, both only
+  # at or below $50,000/$100,000 of federal AGI); 1 = full subtraction
+  st_agi.ss_allages_sub_share: 1
   st_agi.add_overtime_ded: 0
   # State per-year net-capital-loss limit; addback = federal loss used
   # (capped at $3,000) minus this. Default = the federal limit (no addback).
   st_agi.cap_loss_limit: 3000
   st_agi.cap_gains_excl_share: 0
+  # Flat-dollar alternative to the share, taken as the GREATER of the two and
+  # capped at the eligible gain (VT 32 V.S.A. 5811(21)(B)(ii): $5,000)
+  st_agi.cap_gains_excl_flat: 0
+  # Ceiling on the whole gain/dividend exclusion, as a share of FEDERAL
+  # taxable income (VT IN-153 Part III line 20: 40%); .inf = no ceiling
+  st_agi.cap_gains_excl_txbl_share: .inf
   st_agi.div_excl_share: 0
   st_agi.ss_taxable_gross_cap_share: .inf
   st_agi.pension_sub_share: 0
@@ -172,6 +182,12 @@ scalars:
   # st_exempt.po_share_per_step machinery; .inf step = use the linear slide
   st_ded.std_po_step: .inf
   st_ded.std_po_share_per_step: 0
+  # FLAT-DOLLAR itemized cap (OK 68 O.S. 2358(E)(3)(b): $17,000 from TY2018,
+  # with charity and medical exempt). Distinct from item_limit_* (income-based)
+  # and from the NY share-based tiers; .inf = no cap
+  st_ded.item_flat_cap: .inf
+  st_ded.item_flat_cap_excl_medical: 0
+  st_ded.item_flat_cap_excl_charity: 0
   # Percent-of-income standard deduction (MD 15% of state AGI, bounded)
   st_ded.std_pct_rate: 0
   st_ded.std_pct_min: {default: 0, units: per_return}
@@ -221,6 +237,10 @@ scalars:
 
   # child_ded.yaml (AGI-tabled deductions, e.g. North Carolina)
   st_child_ded.style: 0
+  # Number of qualifying children excluded from the count, for states whose
+  # per-dependent deduction reaches only the SECOND and later dependents
+  # (NM 7-2-39: "Subtract 1 from total dependents")
+  st_child_ded.count_offset: 0
 
   # ord.yaml (recapture, spouse tax adjustment)
   st_ord.rates1: 0
@@ -266,6 +286,12 @@ scalars:
   st_credits.item_credit_incl_investment: 0
   st_credits.item_credit_incl_charity: 0
   st_credits.item_credit_incl_casualty: 0
+  # Charitable contribution CREDIT (VT 5822(d)(3)): rate on the first
+  # char_credit_base_cap of contributions, available to ALL filers whether or
+  # not they itemize -- distinct from the WI item_credit above, whose base is
+  # the excess of itemized components over the state standard deduction
+  st_credits.char_credit_rate: 0
+  st_credits.char_credit_base_cap: 0
   st_credits.eitc_match_alt: 0
   st_credits.eitc_refundable_alt: 0
   st_credits.eitc_wage_cap: 0   # cap the match at W-2 wages (UT 2023+)
@@ -368,6 +394,9 @@ scalars:
   st_credits.cdctc_share_income_base: 2   # st_income_base enum (NY tables use state AGI)
   st_credits.earned_credit_style: 0
   st_credits.earned_credit_age_min: .inf
+  # Upper age bound on the childless earned-income credit (DC 25-64; MN flags
+  # the same ceiling). .inf = floor only, no ceiling
+  st_credits.earned_credit_age_max: .inf
   st_credits.earned_credit_agi_limit: .inf
   st_credits.earned_credit_earned_limit: .inf
   st_credits.earned_credit_round: 0

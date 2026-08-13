@@ -109,6 +109,9 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.std_po_rate2',    # (dbl) second sliding pair rate
     'st_ded.std_po_step',     # (dbl) stepped phase-out increment (RI; .inf = sliding)
     'st_ded.std_po_share_per_step', # (dbl) share of the std lost per step (RI 0.20)
+    'st_ded.item_flat_cap',   # (dbl) flat-dollar itemized cap (OK $17,000; .inf = none)
+    'st_ded.item_flat_cap_excl_medical', # (int) medical exempt from the flat cap (OK)
+    'st_ded.item_flat_cap_excl_charity', # (int) charity exempt from the flat cap (OK)
     'st_ded.std_pct_rate',    # (dbl) percent-of-income standard deduction rate (MD)
     'st_ded.std_pct_min',     # (dbl) minimum (filing-status mapped)
     'st_ded.std_pct_max',     # (dbl) maximum (filing-status mapped)
@@ -312,6 +315,28 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
         st_agi > st_ded.char_only_thresh2 ~ st_ded.char_only_share2 * char_item_ded,
         st_agi > st_ded.char_only_thresh1 ~ st_ded.char_only_share1 * char_item_ded,
         TRUE                              ~ st_item_lim
+      ),
+
+      # FLAT-DOLLAR cap on the itemized deduction (OK 68 O.S. 2358(E)(3)(b):
+      # "Oklahoma itemized deductions are limited to, and may not exceed,
+      # $17,000. Charitable contributions and medical expenses are not subject
+      # to the $17,000 limit"). Applied AFTER the income-based and share-based
+      # limitations above and BEFORE the election, since the cap can change
+      # which deduction wins. The exempt components are held out, the
+      # remainder is capped, and the two are recombined -- so the result never
+      # exceeds the pre-cap total. Default .inf = no cap
+      item_flat_cap_exempt = pmin(
+        st_ded.item_flat_cap_excl_medical *
+          st_ded.item_include_medical * med_item_ded +
+        st_ded.item_flat_cap_excl_charity *
+          st_ded.item_include_charity * char_item_ded,
+        st_item_ded
+      ),
+      st_item_ded = if_else(
+        is.finite(st_ded.item_flat_cap),
+        pmin(st_ded.item_flat_cap,
+             pmax(0, st_item_ded - item_flat_cap_exempt)) + item_flat_cap_exempt,
+        st_item_ded
       ),
 
       # Election: independent choice takes the larger; coupled follows the
