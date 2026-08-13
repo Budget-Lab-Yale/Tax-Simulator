@@ -24,6 +24,11 @@ CO:
 CT:
   profile: broad_iit
   enabled: true
+# DE is rolling conformity (30 Del. C. 1101/1105 reference federal AGI under
+# the IRC with no fixed date), so group 0 with no reference-law bridge needed
+DE:
+  profile: broad_iit
+  enabled: true
 FL:
   profile: zero
   enabled: true
@@ -43,6 +48,11 @@ IL:
   profile: broad_iit
   enabled: true
 IN:
+  profile: broad_iit
+  enabled: true
+# KS conforms to the IRC as in effect for the tax year (K.S.A. 79-32,109),
+# i.e. rolling (group 0)
+KS:
   profile: broad_iit
   enabled: true
 KY:
@@ -93,6 +103,11 @@ OH:
 PA:
   profile: broad_iit
   enabled: true
+# RI starts from federal AGI as defined in the IRC with no fixed date
+# (R.I.G.L. 44-30-12(a)), so rolling conformity (group 0)
+RI:
+  profile: broad_iit
+  enabled: true
 # SC uses fixed-date IRC conformity (updated annually; conformity_group 3,
 # ready=false). Like CA, its reference-law bridge is not built, so it is
 # excluded from states=all and blocked for federal-reform runs until the
@@ -132,6 +147,13 @@ VA:
   enabled: false
 WA:
   profile: capital_gains_and_transfer
+  enabled: true
+# WV re-enacts its conformity date every session (W. Va. Code 11-21-9(a)),
+# never lagging current law at filing time, so it is modeled as rolling
+# (group 0) with the one-session enactment lag documented in
+# baseline/wv/agi.yaml -- the ID treatment
+WV:
+  profile: broad_iit
   enabled: true
 WY:
   profile: zero
