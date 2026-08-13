@@ -153,6 +153,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.eitc_liab_cap_share',
     'st_credits.eitc_liab_cap_base',
     'st_credits.ctc_refundable',
+    'st_credits.ctc_cdctc_greater_of', # (0/1) child and care credits are alternatives
     'st_credits.percap_refundable',
     'st_credits.mc_style',
     'st_credits.mc_min_lesser_income',
@@ -188,6 +189,18 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   child  = st_credits_child(tax_unit, earn$st_eitc)
   care   = st_credits_care(tax_unit)
   senior = st_credits_senior(tax_unit)
+
+  # Where the child credit and the care credit are alternatives rather than
+  # both claimable (OK 68 O.S. 2357.43: the greater of 20% of the federal CDCC
+  # and 5% of the federal CTC), zero the smaller leg. Done here, before either
+  # feeds the OH credit ordering or the refundable/nonrefundable split, so the
+  # reported st_ctc and st_cdctc are the amounts actually claimed and every
+  # downstream aggregation reconciles without knowing about the election
+  greater_of = tax_unit$st_credits.ctc_cdctc_greater_of == 1
+  ctc_wins   = greater_of & child$st_ctc >= care$st_cdctc
+  cdctc_wins = greater_of & care$st_cdctc >  child$st_ctc
+  child$st_ctc[cdctc_wins] = 0
+  care$st_cdctc[ctc_wins]  = 0
 
   # Percentage-of-tax credits and aggregation
   # The family-size percentage applies to tax net of the personal tax

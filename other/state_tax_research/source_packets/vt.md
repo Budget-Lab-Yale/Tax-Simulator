@@ -115,6 +115,14 @@ be encoded exactly on both, so the two large one-signed residuals described
 here will NOT appear. The analysis is kept because it records why a share
 parameter alone was the wrong answer.
 
+A third gap — the **CTC phase-out applied to the aggregate credit rather than
+per child**, which would have overstated the credit by (n-1) x $20 x
+ceil(excess/1,000) for 2+ children at AGI $125-175k — closed on 2026-08-13 with
+`st_credits.ctc_po_per_child` plus `st_credits.ctc_po_round_up` for the "or
+fraction thereof" step (tests MACH-8 through MACH-8d). Encode VT's CTC as style
+2 with BOTH flags set; the rounding one is separate because NY 2025, the other
+style-2 state, rounds the excess down.
+
 VT's two largest provisions had no representable parameter, and both are
 one-signed, so encoding without them would have guaranteed a large residual:
 
@@ -167,9 +175,7 @@ one-signed, so encoding without them would have guaranteed a large residual:
 tax-FLOOR machinery exists — VT liability LOW where it binds; PE models it as
 `vt_amt`, so expect a PE-high tail); **medical-expense subtraction** (TY2019+,
 federal Schedule A medical less the VT deduction stack — both inputs available
-but no parameter; PE models it); **CTC phase-out applied once, not per child**
-(overstates the credit by (n-1) x $20 x ceil(excess/1,000), up to (n-1) x
-$1,000, for 2+ children at AGI $125-175k); **renter credit** (2022+) /
+but no parameter; PE models it); **renter credit** (2022+) /
 Renter Rebate (structural, PE models it); **retirement exemption non-SS
 branch** (up to $10,000 of non-SS-covered government/military/CSRS pension,
 electable in lieu of the SS exemption, TY2022+; PE imputes it); **2017 IN-155

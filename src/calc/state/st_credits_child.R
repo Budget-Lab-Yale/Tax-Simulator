@@ -24,6 +24,8 @@ st_credits_child_req_vars = c(
   'st_credits.ctc_po_thresh',
   'st_credits.ctc_po_rate',
   'st_credits.ctc_po_base',
+  'st_credits.ctc_po_per_child',  # (0/1) phase out each child's amount separately
+  'st_credits.ctc_po_round_up',   # (0/1) style-2 stepped excess: whole partial steps
   'st_credits.ctc_pct_of_eitc',
   'st_credits.fatc_young_amount',
   'st_credits.fatc_old_amount',
@@ -161,7 +163,10 @@ st_credits_child = function(tax_unit, st_eitc) {
   # the pre-TCJA federal CTC replica ($/child base, $50-per-$1,000
   # phase-out with excess rounded UP), with the per-child minimum when
   # income is under the threshold. Style 2 (2025+): flat per-child
-  # amounts phased at ctc_po_rate per $1,000 (excess rounded DOWN).
+  # amounts phased at ctc_po_rate per $1,000 (excess rounded DOWN), the
+  # reduction taken against the aggregate credit or -- under
+  # ctc_po_per_child -- against each child's amount separately, which
+  # floors at zero per child instead of once for the return.
   # Style 3 (UT 59-10-1047): flat per-child amount for children in the
   # [min_child_age, max_child_age] band, phased CONTINUOUSLY at
   # ctc_po_rate per dollar of the enum income base over the threshold
@@ -182,6 +187,10 @@ st_credits_child = function(tax_unit, st_eitc) {
                                   round_up = FALSE)
   ctc_po_cont = tax_unit$st_credits.ctc_po_rate *
                 pmax(0, ctc_po_income - tax_unit$st_credits.ctc_po_thresh)
+  # NY 2025 rounds the style-2 excess down; VT's "or fraction thereof" counts a
+  # partial step whole. Independent of ctc_po_per_child -- VT needs both
+  ctc_po_step = if_else(tax_unit$st_credits.ctc_po_round_up == 1,
+                        ctc_po_up, ctc_po_down)
   ctc_ny = case_when(
     ny_gate & tax_unit$st_credits.ctc_style == 1 ~
       pmax(tax_unit$st_credits.ctc_match_share *
@@ -189,9 +198,13 @@ st_credits_child = function(tax_unit, st_eitc) {
                      ctc_po_up),
            tax_unit$st_credits.ctc_min_per_child * n_qual *
              (ctc_po_income <= tax_unit$st_credits.ctc_po_thresh)),
+    ny_gate & tax_unit$st_credits.ctc_style == 2 &
+      tax_unit$st_credits.ctc_po_per_child == 1 ~
+      n_young * pmax(0, tax_unit$st_credits.ctc_young_amount - ctc_po_step) +
+      n_old   * pmax(0, tax_unit$st_credits.ctc_old_amount   - ctc_po_step),
     ny_gate & tax_unit$st_credits.ctc_style == 2 ~
       pmax(0, tax_unit$st_credits.ctc_young_amount * n_young +
-              tax_unit$st_credits.ctc_old_amount   * n_old - ctc_po_down),
+              tax_unit$st_credits.ctc_old_amount   * n_old - ctc_po_step),
     ny_gate & tax_unit$st_credits.ctc_style == 3 ~
       pmax(0, tax_unit$st_credits.ctc_young_amount * n_qual - ctc_po_cont),
     TRUE ~ 0

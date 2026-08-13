@@ -320,10 +320,25 @@ scalars:
   st_credits.ctc_po_thresh: .inf
   st_credits.ctc_po_rate: 0
   st_credits.ctc_po_base: 1   # st_income_base enum (UT style 3 uses 3 = MAGI proxy)
+  # 0/1: reduce the PER-CHILD amount by the phase-out and then multiply by the
+  # child count (VT's published CTC table works that way -- see source_packets/
+  # vt.md), rather than reducing the aggregate credit once. Only differs once
+  # the reduction exceeds one child's amount, where per-child floors at zero
+  # per child
+  st_credits.ctc_po_per_child: 0
+  # 0/1: count a partial step as a whole one in the style-2 stepped phase-out
+  # ("or fraction thereof" -- VT). NY 2025, the encoded style-2 state, rounds
+  # the excess DOWN, so 0 keeps that
+  st_credits.ctc_po_round_up: 0
   st_credits.ctc_refundable: 1   # UT CTC is nonrefundable
   st_credits.ctc_pct_of_eitc: 0
   st_credits.ctc_max_age: 16
   st_credits.cdctc_match: 0
+  # 0/1: the child credit and the child/dependent care credit are ALTERNATIVES,
+  # the taxpayer claiming whichever is larger (OK 68 O.S. 2357.43 grants the
+  # greater of its two federal matches), not both. The losing leg is zeroed so
+  # st_ctc and st_cdctc still report what was actually claimed
+  st_credits.ctc_cdctc_greater_of: 0
   st_credits.cdctc_refundable: 1
   st_credits.cdctc_style: 0
   st_credits.cdctc_rate_max: 0

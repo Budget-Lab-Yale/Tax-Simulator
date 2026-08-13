@@ -47,8 +47,9 @@ test_state_calc = function() {
   # exists to exercise GENERIC machinery that no encoded state uses yet: a new
   # parameter is only proved neutral by the rest of the suite, and proving it
   # WORKS otherwise has to wait for the first state that consumes it. Every
-  # overridden name must already exist in the law row, so a typo or a renamed
-  # parameter fails loudly rather than silently testing nothing.
+  # overridden name must be a legal parameter name (scalar or vector-family
+  # member), so a typo or a renamed parameter fails loudly rather than
+  # silently testing nothing.
   run_case = function(st, yr, unit_overrides, expect, tol = 0.01, label = '',
                       law_overrides = list()) {
 
@@ -2345,6 +2346,83 @@ test_state_calc = function() {
                                 st_credits.ctc_tier_amounts2 = 400,
                                 st_credits.ctc_tier_amounts3 = 200),
            label = 'MACH-7c three declared tiers stay ineligible above the top')
+
+  # MACH-8: per-child phase-out (VT's CTC pays $1,000 per child age 5 or under,
+  # reduced by $20 per $1,000 of AGI over $125,000, the reduction applied to
+  # EACH child's amount -- source_packets/vt.md). Host NY 2025, the style-2
+  # state, with VT's table substituted. MFJ, two children aged 2 and 4, AGI
+  # $145,000: excess 20,000 -> 20 steps x $20 = $400 reduction, so per-child
+  # gives 2 x (1000 - 400) = 1,200 where reducing the aggregate once gives
+  # 2,000 - 400 = 1,600
+  vt_ctc = list(st_credits.ctc_style = 2,
+                st_credits.ctc_tier1_bound = NA_real_,
+                st_credits.ctc_young_age_limit = 5,
+                st_credits.ctc_young_amount = 1000,
+                st_credits.ctc_old_amount = 0,
+                st_credits.ctc_max_child_age = 16,
+                st_credits.ctc_po_thresh = 125000,
+                st_credits.ctc_po_rate = 0.02,
+                st_credits.ctc_po_base = 1,
+                st_credits.ctc_po_per_child = 1)
+  vt_unit = function(agi) {
+    list(filing_status = 2, age2 = 40, agi = agi, wages1 = agi, ei1 = agi,
+         n_dep = 2, n_dep_ctc = 2, dep_age1 = 2, dep_age2 = 4)
+  }
+  run_case('NY', 2025, vt_unit(145000),
+           expect = list(st_ctc = 1200),
+           law_overrides = vt_ctc,
+           label = 'MACH-8 per-child phase-out reduces each child separately')
+
+  # MACH-8b: the floor is what makes the distinction matter. At AGI $185,000 the
+  # reduction is 60 x $20 = $1,200, exceeding one child's $1,000, so per-child
+  # zeroes the credit -- matching the statute's full phase-out at $175,000.
+  # Reducing the aggregate would still pay 2,000 - 1,200 = $800 to a filer VT
+  # has phased out entirely
+  run_case('NY', 2025, vt_unit(185000),
+           expect = list(st_ctc = 0),
+           law_overrides = vt_ctc,
+           label = 'MACH-8b per-child phase-out floors at zero per child')
+
+  # MACH-8c: VT reduces "$20 for each $1,000, OR FRACTION THEREOF" while NY 2025
+  # rounds the style-2 excess down, so the two need separate control. AGI
+  # $145,500 is a partial 21st step: rounding up gives 21 x $20 = $420 and
+  # 2 x (1000 - 420) = 1,160; MACH-8's exact-multiple case cannot see the
+  # difference, which is why this one uses a fraction
+  run_case('NY', 2025, vt_unit(145500),
+           expect = list(st_ctc = 1160),
+           law_overrides = c(vt_ctc, list(st_credits.ctc_po_round_up = 1)),
+           label = 'MACH-8c stepped phase-out counts a partial step whole')
+
+  # MACH-8d: the same return with the default rounding stays on 20 whole steps
+  # ($400), so the flag is shown changing the answer rather than merely parsing
+  run_case('NY', 2025, vt_unit(145500),
+           expect = list(st_ctc = 1200),
+           law_overrides = vt_ctc,
+           label = 'MACH-8d default rounding drops the partial step')
+
+  # MACH-9: child and care credits as ALTERNATIVES (OK 68 O.S. 2357.43 grants
+  # the greater of 20% of the federal CDCC and 5% of the federal CTC). Same unit
+  # in both directions, so the election is shown choosing each leg in turn.
+  # NY 2025's style-2 CTC pays 1,330 against a 1,200 care credit, so the care
+  # leg is zeroed
+  greater_of_unit = list(filing_status = 2, age2 = 40, agi = 40000,
+                         wages1 = 25000, ei1 = 25000, wages2 = 15000,
+                         ei2 = 15000, n_dep = 2, n_dep_ctc = 2, dep_age1 = 2,
+                         dep_age2 = 4, care_exp = 6000, cdctc_nonref = 1200,
+                         cdctc_ref = 0, ctc_nonref = 4000, ctc_ref = 0)
+  run_case('NY', 2025, greater_of_unit,
+           expect = list(st_ctc = 1330, st_cdctc = 0),
+           law_overrides = list(st_credits.ctc_cdctc_greater_of = 1),
+           label = 'MACH-9 greater-of keeps the larger child credit')
+
+  # MACH-9b: the same unit under NY 2017, whose style-1 CTC pays only 330, so
+  # the election runs the other way and the child leg is zeroed. Both legs stay
+  # reported as claimed, which is what lets the downstream refundable /
+  # nonrefundable split stay ignorant of the election
+  run_case('NY', 2017, greater_of_unit,
+           expect = list(st_ctc = 0, st_cdctc = 1200),
+           law_overrides = list(st_credits.ctc_cdctc_greater_of = 1),
+           label = 'MACH-9b greater-of keeps the larger care credit')
 
   #--------------------------------------------------------------------------
   # Structural smoke test: a coarse grid of units through every broad-IIT

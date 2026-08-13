@@ -2,10 +2,12 @@
 
 State: `OK`
 Status: `research COMPLETE and primary-verified; NOT yet encoded (YAML drafted, tests drafted)`
-Last updated: `2026-08-12`
+Last updated: `2026-08-13`
 
 > The $17,000 itemized-cap gap is RESOLVED (st_ded.item_flat_cap landed
-> 2026-08-12); the credit-proration gap remains open (§Machinery gaps). The
+> 2026-08-12) and the child-credit greater-of is now encodable
+> (st_credits.ctc_cdctc_greater_of, 2026-08-13 — see §Explicit encoding
+> decisions #2); the credit-proration gap remains open (§Machinery gaps). The
 > rate-schedule recovery below is the load-bearing research: **no Form 511
 > packet prints a bracket schedule in any year 2017-2025.**
 
@@ -102,14 +104,18 @@ number, the fifth increment, from $2,400 to $4,600. Note the married column is
    cliff, bounded error $47.50/person. Consequence: the $1,000 lands in
    `st_subtractions`, so reported `st_agi` runs $1,000-$2,000 below Form 511
    line 7 for these units -- nothing else in the OK encoding reads state AGI.
-2. **Child credit: encode the 5%-of-federal-CTC leg only.** No greater-of
-   machinery exists and `st_cdctc` and `st_ctc` are SUMMED, so encoding both
-   would overstate by `min(20%CDCC, 5%CTC)` for every care-expense unit;
-   encoding the CDCC leg alone would zero the credit for the far larger
-   population of families with children and no care expenses (~$40M/yr). The
-   CTC leg is exact for that majority and understates only care-expense units
-   by `max(0, 20%CDCC - 5%CTC)`: <= $40 for a two-child family 2018-2025,
-   <= ~$140 in TY2017 when the federal CTC was $1,000.
+2. ~~**Child credit: encode the 5%-of-federal-CTC leg only.**~~
+   **SUPERSEDED 2026-08-13 — encode BOTH legs with
+   `st_credits.ctc_cdctc_greater_of = 1`.** The original decision existed only
+   because no greater-of machinery did: `st_cdctc` and `st_ctc` are SUMMED, so
+   encoding both would have overstated by `min(20%CDCC, 5%CTC)` for every
+   care-expense unit, while the CDCC leg alone would have zeroed the credit for
+   the far larger population of families with children and no care expenses
+   (~$40M/yr). The CTC-only fallback was exact for that majority and understated
+   care-expense units by `max(0, 20%CDCC - 5%CTC)` (<= $40 for a two-child
+   family 2018-2025, <= ~$140 in TY2017 when the federal CTC was $1,000). The
+   flag now zeroes the smaller leg, so both `st_ctc` and `st_cdctc` report what
+   was claimed and no residual remains (tests MACH-9 / MACH-9b).
 3. **Sales tax relief credit: documented, not modeled.** Three blockers.
    (a) `st_credits.percap_*` has no income test at all. (b) The measure is
    gross HOUSEHOLD income -- "the total amount of gross income received by ALL
