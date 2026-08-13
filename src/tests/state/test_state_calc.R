@@ -64,7 +64,10 @@ test_state_calc = function() {
       # parameter no state encodes yet is legitimately absent from the row
       # (ensure_st_params supplies it downstream), but a name that is not in
       # the registry at all is a typo or a rename and must fail loudly
-      unknown = setdiff(names(law_overrides), names(st_param_defaults()))
+      registry = st_param_name_registry()
+      unknown  = keep(names(law_overrides),
+                      ~ !(.x %in% registry$scalars) &&
+                        !any(str_detect(.x, registry$families)))
       if (length(unknown) > 0) {
         stop(sprintf('%s: law_overrides names not in params_schema: %s',
                      label, paste(unknown, collapse = ' ')))
@@ -2287,6 +2290,61 @@ test_state_calc = function() {
            expect = list(st_earned_credit = 0),
            law_overrides = list(st_credits.earned_credit_age_max = 64),
            label = 'MACH-6 childless earned-credit age ceiling')
+
+  # MACH-7: a SEVEN-tier AGI-tiered child credit (NM 7-2-18.34 publishes seven
+  # bands where the calculator used to hard-code three). Host NC 2017, whose
+  # own ladder is replaced here by NM's TY2023 table. AGI 120,000 lands in the
+  # fifth band (100,001-200,000) at $75 per child, x 2 children = 150.
+  # Before the n-tier generalization a fourth bound was accepted by the
+  # parameter-name validator and then silently ignored, so this unit would
+  # have received 0
+  nm_tiers = list(st_credits.ctc_tier1_bound = 25000,
+                  st_credits.ctc_tier2_bound = 50000,
+                  st_credits.ctc_tier3_bound = 75000,
+                  st_credits.ctc_tier4_bound = 100000,
+                  st_credits.ctc_tier5_bound = 200000,
+                  st_credits.ctc_tier6_bound = 350000,
+                  st_credits.ctc_tier7_bound = Inf,
+                  st_credits.ctc_tier_amounts1 = 600,
+                  st_credits.ctc_tier_amounts2 = 400,
+                  st_credits.ctc_tier_amounts3 = 200,
+                  st_credits.ctc_tier_amounts4 = 100,
+                  st_credits.ctc_tier_amounts5 = 75,
+                  st_credits.ctc_tier_amounts6 = 50,
+                  st_credits.ctc_tier_amounts7 = 25)
+  run_case('NC', 2017,
+           list(filing_status = 2, age2 = 40, agi = 120000, n_dep = 2,
+                n_dep_ctc = 2, dep_age1 = 5, dep_age2 = 8, std_ded = 12700),
+           expect = list(st_ctc = 150),
+           law_overrides = nm_tiers,
+           label = 'MACH-7 seven-tier child credit selects the fifth band')
+
+  # MACH-7b: the top tier is unbounded (NM's seventh band is "over $350,000"),
+  # so a $2,000,000 unit still receives $25 per child rather than dropping to
+  # zero the way a state with a finite top bound does. This is the semantic
+  # that stops st_band_index_upper from being usable here: CO must fall to
+  # zero above its last bound, NM must not
+  run_case('NC', 2017,
+           list(filing_status = 2, age2 = 40, agi = 2000000, n_dep = 2,
+                n_dep_ctc = 2, dep_age1 = 5, dep_age2 = 8, std_ded = 12700),
+           expect = list(st_ctc = 50),
+           law_overrides = nm_tiers,
+           label = 'MACH-7b unbounded top tier stays eligible')
+
+  # MACH-7c: the same host with only THREE tiers declared must still fall to
+  # zero above its third bound -- the case that a naive tier count would break
+  # by selecting a fourth tier out of a frame widened by another state
+  run_case('NC', 2017,
+           list(filing_status = 2, age2 = 40, agi = 120000, n_dep = 2,
+                n_dep_ctc = 2, dep_age1 = 5, dep_age2 = 8, std_ded = 12700),
+           expect = list(st_ctc = 0),
+           law_overrides = list(st_credits.ctc_tier1_bound = 25000,
+                                st_credits.ctc_tier2_bound = 50000,
+                                st_credits.ctc_tier3_bound = 75000,
+                                st_credits.ctc_tier_amounts1 = 600,
+                                st_credits.ctc_tier_amounts2 = 400,
+                                st_credits.ctc_tier_amounts3 = 200),
+           label = 'MACH-7c three declared tiers stay ineligible above the top')
 
   #--------------------------------------------------------------------------
   # Structural smoke test: a coarse grid of units through every broad-IIT

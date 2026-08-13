@@ -63,29 +63,94 @@ st_credits_child = function(tax_unit, st_eitc) {
   n   = nrow(tax_unit)
   agi = tax_unit$agi
 
+  # AGI-tiered per-child credit (CO DR 0104CN; NC 2017 G.S. 105-153.10; and
+  # the NM/NJ tables). The bound family is ctc_tier{n}_bound -- the index sits
+  # MID-name, so st_family_matrix (which appends the index) cannot discover it
+  # and the columns are found by regex here instead. The tier COUNT comes from
+  # the columns present, so a state may declare as many tiers as its table has
+  # (CO 3, NC 3, NM 7, NJ 6).
+  #
+  # Semantics, preserved exactly from the original three-branch case_when:
+  # tier j is the first whose bound is at or above AGI (closed upper), and AGI
+  # above the LAST bound means INELIGIBLE (tier 0) rather than "clamp into the
+  # top tier". st_band_index_upper is deliberately NOT used here -- it clamps,
+  # which is right for KY's family-size table and would silently hand every
+  # high-income CO filer the bottom-tier amount. A state whose table has no
+  # eligibility ceiling says so by setting its last bound to Inf (NM's seventh
+  # tier is "over $350,000").
+  #
+  # The per-row non-NA bound count matters: law slices bound across states pad
+  # absent tiers with NA, so a 3-tier state sitting in a frame widened to 7
+  # columns by another state must still be ineligible above ITS third bound,
+  # not selected into a nonexistent fourth tier.
   co_tier = rep(0L, n)
-  if ('st_credits.ctc_tier1_bound' %in% colnames(tax_unit) &&
+  tier_bound_cols = str_subset(colnames(tax_unit),
+                               '^st_credits\\.ctc_tier[0-9]+_bound$')
+  if (length(tier_bound_cols) > 0 &&
       any(!is.na(tax_unit$st_credits.ctc_tier1_bound))) {
-    co_tier = case_when(
-      agi <= tax_unit$st_credits.ctc_tier1_bound ~ 1L,
-      agi <= tax_unit$st_credits.ctc_tier2_bound ~ 2L,
-      agi <= tax_unit$st_credits.ctc_tier3_bound ~ 3L,
-      TRUE                                       ~ 0L
-    )
+    n_tiers   = max(as.integer(str_extract(tier_bound_cols, '[0-9]+')))
+    want_cols = paste0('st_credits.ctc_tier', 1:n_tiers, '_bound')
+    if (!all(want_cols %in% colnames(tax_unit))) {
+      stop('ctc_tier bounds are not contiguous: expected ',
+           paste(want_cols, collapse = ' '))
+    }
+    bounds = as.matrix(tax_unit[want_cols])
+
+    # A gap inside a state's own ladder (tier1 and tier3 declared, tier2 not)
+    # would shift every tier above the gap onto the wrong amount, so fail
+    # loudly rather than compute a plausible wrong number
+    col_used = colSums(!is.na(bounds)) > 0
+    if (any(diff(as.integer(col_used)) > 0)) {
+      stop('ctc_tier bounds have an interior gap: ',
+           paste(want_cols[!col_used], collapse = ' '), ' unset while a ',
+           'higher tier is set')
+    }
+
+    n_bounds = rowSums(!is.na(bounds))
+    passed   = rowSums(bounds < agi, na.rm = TRUE)
+    co_tier  = if_else(n_bounds == 0 | passed >= n_bounds,
+                       0L, as.integer(passed) + 1L)
     co_tier[is.na(co_tier)] = 0L
   }
 
-  # case_when() evaluates all branches eagerly, so this must return zeros
-  # (not error) when the tier columns are absent from this state's law slice
+  # Must return zeros (not error) where the tier columns are absent from this
+  # state's law slice: case_when() below evaluates all branches eagerly, and
+  # the shares/amounts families are alternatives -- a state on ctc_style 2
+  # legitimately leaves shares entirely NA (and vice versa), so neither an
+  # absent family nor one shorter than the selected tier can raise here.
+  # `found` carries whether a value was actually located, which the style-aware
+  # check below turns into the loud failure.
   pick_tier = function(prefix) {
-    m   = st_family_matrix(tax_unit, prefix, 1:3, require_sentinel = FALSE)
+    m   = st_family_matrix(tax_unit, prefix, NULL, require_sentinel = FALSE)
     out = rep(0, n)
     if (is.null(m)) {
-      return(out)
+      return(structure(out, found = rep(FALSE, n)))
     }
-    ok = co_tier > 0
-    out[ok] = m[cbind(which(ok), co_tier[ok])]
-    out
+    ok  = co_tier > 0 & co_tier <= ncol(m)
+    idx = cbind(which(ok), co_tier[ok])
+    out[ok] = coalesce(m[idx], 0)
+    structure(out, found = replace(rep(FALSE, n), which(ok), !is.na(m[idx])))
+  }
+
+  tier_shares  = pick_tier('st_credits.ctc_tier_shares')
+  tier_amounts = pick_tier('st_credits.ctc_tier_amounts')
+
+  # A state that declares a bound for tier t but no value for tier t in the
+  # family its own ctc_style reads would silently credit zero -- the exact
+  # mismatch the parameter-name validator cannot see, since both names are
+  # legal members of their families. Fail on it instead
+  tier_value_missing = co_tier > 0 & (
+    (tax_unit$st_credits.ctc_style == 1 & !attr(tier_shares,  'found')) |
+    (tax_unit$st_credits.ctc_style == 2 & !attr(tier_amounts, 'found'))
+  )
+  if (any(tier_value_missing)) {
+    stop(sprintf(paste('tiered CTC selects tier %s but the ctc_tier value',
+                       'family for ctc_style %s has no value there'),
+                 paste(sort(unique(co_tier[tier_value_missing])),
+                       collapse = '/'),
+                 paste(sort(unique(
+                   tax_unit$st_credits.ctc_style[tier_value_missing])),
+                   collapse = '/')))
   }
 
   # IL: percent of the state EITC when any child is under 12
@@ -139,10 +204,10 @@ st_credits_child = function(tax_unit, st_eitc) {
   n_u17 = st_n_dep_in(tax_unit, 0, 16)
   ctc_co = case_when(
     co_tier > 0 & tax_unit$st_credits.ctc_style == 1 ~
-      pick_tier('st_credits.ctc_tier_shares') *
+      as.numeric(tier_shares) *
       (tax_unit$ctc_nonref + tax_unit$ctc_ref) * n_u6 / pmax(1, n_u17),
     co_tier > 0 & tax_unit$st_credits.ctc_style == 2 ~
-      pick_tier('st_credits.ctc_tier_amounts') * n_u6,
+      as.numeric(tier_amounts) * n_u6,
     TRUE ~ 0
   )
 
