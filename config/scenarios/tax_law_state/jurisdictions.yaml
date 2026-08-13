@@ -79,6 +79,13 @@ MN:
 NH:
   profile: narrow_investment_iit
   enabled: true
+# NM defines base income by reference to the IRC with no fixed date
+# (NMSA 7-2-2), so rolling conformity (group 0). Note its base subtracts the
+# federal deduction ON THE RETURN from 2018, so federal standard-deduction
+# reforms do not reach NM -- see baseline/nm/ded.yaml
+NM:
+  profile: broad_iit
+  enabled: true
 NV:
   profile: zero
   enabled: true

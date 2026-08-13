@@ -26,6 +26,7 @@ test_state_tax_law = function() {
 
   test_reference_key_tolerance()
   test_state_registry()
+  test_nm_std_mirrors_federal()
   test_state_yaml_conventions()
   test_state_param_validation()
   test_state_rollout_tracker()
@@ -328,6 +329,71 @@ test_state_registry = function() {
   )
 
   message('test_state_registry: PASSED')
+  invisible(TRUE)
+}
+
+
+
+test_nm_std_mirrors_federal = function() {
+
+  #----------------------------------------------------------------------------
+  # New Mexico's PIT-1 line 12 subtracts the federal standard or itemized
+  # deduction ON THE RETURN, so baseline/nm/ded.yaml duplicates the federal
+  # std.yaml rather than inheriting it through a federal-taxable-income start
+  # (which would also hand NM the QBI and OBBBA below-the-line deductions --
+  # $304 of tax on test NM-3 alone). A duplicate silently drifts, so this test
+  # holds the two together: every year from 2018 and every filing status, NM's
+  # standard-deduction parameters must equal the federal ones under the SAME
+  # index. 2017 is excluded by design -- NM starts from federal taxable income
+  # that year, so its state deduction is deliberately zero.
+  #
+  # If this fails after a federal standard-deduction change, the fix is to
+  # update baseline/nm/ded.yaml, not to relax the test.
+  #
+  # Returns: TRUE invisibly if the mirror holds (throws otherwise).
+  #----------------------------------------------------------------------------
+
+  years   = 2017:2030
+  indexes = expand_grid(series = c('cpi', 'chained_cpi'), year = 2015:2036) %>%
+            mutate(growth = 0.025)
+
+  nm = build_state_tax_law(states = 'NM', years = years, indexes = indexes) %>%
+    filter(year >= 2018) %>%
+    select(year, filing_status,
+           std_amount = st_ded.std_amount,
+           aged       = st_ded.std_aged_addl,
+           blind      = st_ded.std_blind_addl,
+           dep_floor  = st_ded.std_dependent_floor,
+           dep_earned = st_ded.std_dependent_earned_add)
+
+  fed = build_tax_law_from_id('baseline', years, indexes) %>%
+    filter(year >= 2018) %>%
+    select(year, filing_status,
+           fed_std_amount = std.value,
+           fed_aged       = std.bonus,
+           fed_blind      = std.bonus,
+           fed_dep_floor  = std.dep_floor,
+           fed_dep_earned = std.dep_earned_bonus)
+
+  joined = nm %>% inner_join(fed, by = c('year', 'filing_status'))
+  stopifnot('NM/federal std comparison lost rows' =
+              nrow(joined) == nrow(nm) && nrow(nm) > 0)
+
+  mismatched = joined %>%
+    filter(std_amount != fed_std_amount | aged != fed_aged |
+           blind != fed_blind | dep_floor != fed_dep_floor |
+           dep_earned != fed_dep_earned)
+
+  if (nrow(mismatched) > 0) {
+    stop('baseline/nm/ded.yaml has drifted from the federal std.yaml in ',
+         nrow(mismatched), ' year-status cells, first at ',
+         mismatched$year[1], ' status ', mismatched$filing_status[1],
+         ': NM std ', mismatched$std_amount[1], ' vs federal ',
+         mismatched$fed_std_amount[1])
+  }
+
+  message('test_nm_std_mirrors_federal: PASSED (', nrow(joined),
+          ' year-status cells)')
   invisible(TRUE)
 }
 

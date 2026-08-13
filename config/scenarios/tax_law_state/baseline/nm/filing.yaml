@@ -1,0 +1,21 @@
+---
+# New Mexico: filing requirement (NMSA 7-1-13 / 7-2-12; PIT-1 instructions
+# "Who Must File", identical in substance 2017-2025). A resident must file if
+# required to file a federal return, or if New Mexico tax is due -- there is no
+# standalone state dollar threshold, so the federal requirement plus the
+# liability branch of st_filer covers it. Same shape as Rhode Island.
+
+# 3 = no separate state income test
+req_type:
+  value: 3
+  reference: 'PIT-1 instructions "Who Must File", TY2017-2025: an individual must file if required to file a federal return or if they have New Mexico tax liability; NMSA 7-2-12'
+req_income_thresh:
+  value: 0
+  reference: 'n/a for New Mexico -- no standalone dollar threshold is published'
+req_if_fed_filer:
+  value: 1
+  reference: 'PIT-1 instructions: "every individual who is required to file a federal income tax return" and is a New Mexico resident must file'
+
+documented_not_modeled:
+  refund_only_filers:
+    reference: 'New Mexico also invites a return from residents owing no tax who are eligible for the Low Income Comprehensive Tax Rebate or the refundable Working Families Tax Credit. LICTR is not modeled at all (see agi.yaml), and the WFTC branch is already captured because a refundable credit makes liab_st_iit nonzero, which flags the unit as a filer'

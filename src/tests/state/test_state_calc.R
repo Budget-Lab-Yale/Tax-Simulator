@@ -22,7 +22,7 @@ test_state_calc = function() {
   law = build_state_tax_law(
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
-                'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV'),
+                'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV', 'NM'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -2209,6 +2209,183 @@ test_state_calc = function() {
            label = 'WV-8b 2021 no SS subtraction above the AGI limit')
 
   #--------------------------------------------------------------------------
+  # NEW MEXICO (PIT-1, PIT-ADJ, PIT-RC)
+  #
+  # Every case pins st_ded.std_amount (and the aged add-on where it bites) to
+  # the REAL federal standard deduction for that year. NM's ded.yaml mirrors
+  # the federal std.yaml including its indexation, and this suite's synthetic
+  # 2.5% index leaves indexed federal parameters at their anchor values, so the
+  # harness would otherwise compute against $12,000 where TY2019 was $12,200.
+  # Pinning keeps the arithmetic form-true; test_nm_std_mirrors_federal() in
+  # test_state_tax_law.R is what guarantees the mirror itself tracks federal.
+  #--------------------------------------------------------------------------
+
+  # NM-1 TY2019 single, FAGI 28,000, no dependents. Low- and middle-income
+  # exemption on the slope: 2,500 - 0.15 x (28,000 - 20,000) = 1,300 for the
+  # one exemption. Taxable 28,000 - 12,200 - 1,300 = 14,500, on the four-bracket
+  # 2017-2020 schedule: 5,500 x 1.7% = 93.50, 5,500 x 3.2% = 176.00,
+  # 3,500 x 4.7% = 164.50
+  run_case('NM', 2019,
+           list(agi = 28000, wages1 = 28000, ei1 = 28000, std_ded = 12200),
+           expect = list(st_exempt = 1300, st_txbl_inc = 14500,
+                         liab_st_iit = 434.00),
+           law_overrides = list(st_ded.std_amount = 12200),
+           label = 'NM-1 2019 four-bracket schedule + LMI exemption slope')
+
+  # NM-1b the LMI exemption reaches exactly zero at the published single-filer
+  # limit of $36,667 (0.15 x 16,667 = 2,500.05), which is why the limit needs
+  # no separate parameter. Taxable 36,667 - 12,200 = 24,467
+  run_case('NM', 2019,
+           list(agi = 36667, wages1 = 36667, ei1 = 36667, std_ded = 12200),
+           expect = list(st_exempt = 0),
+           law_overrides = list(st_ded.std_amount = 12200),
+           label = 'NM-1b LMI exemption zero at the published AGI limit')
+
+  # NM-2 TY2023 MFJ, two children aged 5 and 8, FAGI 45,000, federal EITC
+  # 3,049.08. Four exemptions x 2,500 = 10,000 gross LMI, reduced
+  # 0.10 x (45,000 - 30,000) = 1,500 per exemption -> 4,000 left. Dependent
+  # deduction 4,000 x (2 - 1) = 4,000 (the count_offset). Taxable
+  # 45,000 - 27,700 - 4,000 - 4,000 = 9,300 -> 8,000 x 1.7% + 1,300 x 3.2%
+  # = 177.60. Child credit at tier 2 (25,001-50,000): 400 x 2 = 800.
+  # WFTC 25% x 3,049.08 = 762.27. Both refundable, so
+  # 177.60 - 800 - 762.27 = -1,384.67
+  run_case('NM', 2023,
+           list(filing_status = 2, age2 = 38, agi = 45000, wages1 = 30000,
+                ei1 = 30000, wages2 = 15000, ei2 = 15000, n_dep = 2,
+                n_dep_ctc = 2, n_dep_eitc = 2, dep_age1 = 5, dep_age2 = 8,
+                eitc = 3049.08, std_ded = 27700),
+           expect = list(st_exempt = 4000, st_child_ded = 4000,
+                         st_txbl_inc = 9300, st_ctc = 800, st_eitc = 762.27,
+                         liab_st_iit = -1384.67),
+           law_overrides = list(st_ded.std_amount = 27700),
+           label = 'NM-2 2023 dependent deduction, tier-2 child credit, WFTC')
+
+  # NM-2b the same return with a THIRD child, which is where count_offset
+  # earns its keep: the deduction is 4,000 x (3 - 1) = 8,000, not 12,000.
+  # Taxable 45,000 - 27,700 - 4,000 (LMI is now 5 x 2,500 = 12,500 gross less
+  # 1,500 x 5 = 7,500, so 5,000) - 8,000 = 4,300; the child credit reaches
+  # only three children because three dependent age slots are tracked
+  run_case('NM', 2023,
+           list(filing_status = 2, age2 = 38, agi = 45000, wages1 = 30000,
+                ei1 = 30000, wages2 = 15000, ei2 = 15000, n_dep = 3,
+                n_dep_ctc = 3, n_dep_eitc = 3, dep_age1 = 5, dep_age2 = 8,
+                dep_age3 = 11, eitc = 3049.08, std_ded = 27700),
+           expect = list(st_exempt = 5000, st_child_ded = 8000,
+                         st_txbl_inc = 4300, st_ctc = 1200),
+           law_overrides = list(st_ded.std_amount = 27700),
+           label = 'NM-2b count_offset excludes only the FIRST dependent')
+
+  # NM-2c a single filer with the same two children gets NO dependent
+  # deduction: 7-2-39 is limited to joint, surviving-spouse and head-of-
+  # household returns, encoded through the amounts mapper
+  run_case('NM', 2023,
+           list(agi = 45000, wages1 = 45000, ei1 = 45000, n_dep = 2,
+                n_dep_ctc = 2, dep_age1 = 5, dep_age2 = 8, std_ded = 13850),
+           expect = list(st_child_ded = 0),
+           law_overrides = list(st_ded.std_amount = 13850),
+           label = 'NM-2c dependent deduction denied to single filers')
+
+  # NM-3 TY2025 MFJ both aged 70, FAGI 72,000 including 22,000 of federally
+  # taxable Social Security. THE CASE THAT JUSTIFIES start_point 1. The SS
+  # exemption is a cliff and 72,000 <= 150,000, so all 22,000 comes out ->
+  # st_agi 50,000. The aged $8,000-per-person exemption is already exhausted
+  # (16,000 - (72,000 - 35,000) < 0). LMI is zero (0.10 x 42,000 > 2,500).
+  # Federal deduction 31,500 + 2 x 1,600 aged = 34,700, so taxable 15,300 on
+  # the HB 252 six-bracket schedule: 8,000 x 1.5% + 7,300 x 3.2% = 353.60.
+  # txbl_inc is supplied as 25,300 -- federal taxable income AFTER the OBBBA
+  # senior deduction of 2 x 6,000 -- to show it is not read.
+  nm3_unit = list(filing_status = 2, age1 = 70, age2 = 70, agi = 72000,
+                  txbl_inc = 25300, wages1 = 50000, ei1 = 50000,
+                  txbl_ss = 22000, gross_ss = 26000, std_ded = 34700)
+  run_case('NM', 2025, nm3_unit,
+           expect = list(st_agi = 50000, st_exempt = 0, st_txbl_inc = 15300,
+                         liab_st_iit = 353.60),
+           law_overrides = list(st_ded.std_amount = 31500,
+                                st_ded.std_aged_addl = 1600),
+           label = 'NM-3 2025 six-bracket schedule, SS cliff, aged exhausted')
+
+  # NM-3b the same return read from federal TAXABLE income instead, which is
+  # what a start_point 2 encoding would do: 25,300 - 22,000 = 3,300 of NM
+  # taxable income and 49.50 of tax. That is a $304 (86%) understatement on one
+  # return, and it is the OBBBA senior deduction plus QBI leaking in. This case
+  # exists so the decision cannot be silently reversed
+  run_case('NM', 2025, nm3_unit,
+           expect = list(st_agi = 3300, st_txbl_inc = 3300,
+                         liab_st_iit = 49.50),
+           law_overrides = list(st_agi.start_point = 2,
+                                st_ded.std_amount = 0,
+                                st_ded.std_aged_addl = 0,
+                                st_ded.item_allowed = 0),
+           label = 'NM-3b start_point 2 would leak the OBBBA senior deduction')
+
+  # NM-4 TY2018 single with a 50,000 long-term gain and 100,000 of wages: the
+  # net capital gains deduction is the GREATER of 50% of the gain (25,000) and
+  # the flat 1,000, so 25,000. st_agi 150,000 - 25,000 = 125,000; LMI zero;
+  # taxable 125,000 - 12,000 = 113,000 on the four-bracket schedule, whose top
+  # rate is 4.9% (the 5.9% bracket does NOT exist before 2021 -- PolicyEngine
+  # applies it from 2008 and overstates NM tax here):
+  # 93.50 + 176.00 + 235.00 + 0.049 x (113,000 - 16,000) = 5,257.50
+  run_case('NM', 2018,
+           list(agi = 150000, wages1 = 100000, ei1 = 100000, kg_lt = 50000,
+                txbl_kg = 50000, std_ded = 12000),
+           expect = list(st_agi = 125000, st_txbl_inc = 113000,
+                         liab_st_iit = 5257.50),
+           law_overrides = list(st_ded.std_amount = 12000),
+           label = 'NM-4 2018 50% capital gains deduction, pre-2021 top rate')
+
+  # NM-4b TY2025 the percentage leg is gone (it survives only for sales of a
+  # New Mexico business, unobservable) and the flat floor is 2,500, so a
+  # 50,000 gain now yields a 2,500 deduction rather than 20,000
+  run_case('NM', 2025,
+           list(agi = 150000, wages1 = 100000, ei1 = 100000, kg_lt = 50000,
+                txbl_kg = 50000, std_ded = 15000),
+           expect = list(st_agi = 147500),
+           law_overrides = list(st_ded.std_amount = 15000),
+           label = 'NM-4b 2025 flat $2,500 capital gains floor replaces the share')
+
+  # NM-5 TY2022 single aged 68, FAGI 24,000 with 6,000 of taxable SS. Both
+  # senior provisions bite at once: the SS cliff exempts all 6,000, and the
+  # aged deduction pays 8,000 - (24,000 - 20,500) = 4,500. st_agi
+  # 24,000 - 6,000 - 4,500 = 13,500. LMI 2,500 - 0.15 x 4,000 = 1,900.
+  # Taxable 13,500 - 12,950 - 1,900 floors at zero
+  run_case('NM', 2022,
+           list(age1 = 68, agi = 24000, wages1 = 18000, ei1 = 18000,
+                txbl_ss = 6000, gross_ss = 7000, std_ded = 12950),
+           expect = list(st_agi = 13500, st_exempt = 1900, st_txbl_inc = 0,
+                         liab_st_iit = 0),
+           law_overrides = list(st_ded.std_amount = 12950),
+           label = 'NM-5 2022 SS cliff and aged deduction ramp together')
+
+  # NM-6 TY2024 MFJ, FAGI 260,000, two children: the SIXTH tier of the child
+  # credit (200,001-350,000) pays 51 per child, which the pre-generalization
+  # three-tier selector would have paid as zero. The LMI exemption is long gone
+  # at this income but the dependent deduction is not income-tested, so taxable
+  # is 260,000 - 29,200 - 4,000 = 226,800 -- below the 5.9% bracket that begins
+  # at 315,000, so the top of the schedule here is 4.9%:
+  # 136.00 + 256.00 + 376.00 + 0.049 x (226,800 - 24,000) = 10,705.20,
+  # less 102 of child credit
+  run_case('NM', 2024,
+           list(filing_status = 2, age2 = 40, agi = 260000, wages1 = 260000,
+                ei1 = 260000, n_dep = 2, n_dep_ctc = 2, dep_age1 = 5,
+                dep_age2 = 8, std_ded = 29200),
+           expect = list(st_exempt = 0, st_child_ded = 4000,
+                         st_txbl_inc = 226800, st_ctc = 102,
+                         liab_st_iit = 10603.20),
+           law_overrides = list(st_ded.std_amount = 29200),
+           label = 'NM-6 2024 sixth child-credit tier (was zero at 3 tiers)')
+
+  # NM-6b the seventh tier is UNBOUNDED ("over $350,000"), so a 400,000 return
+  # still collects 25 per child. This is the semantic that separates NM from
+  # Colorado, whose credit ends above its last bound
+  run_case('NM', 2024,
+           list(filing_status = 2, age2 = 40, agi = 400000, wages1 = 400000,
+                ei1 = 400000, n_dep = 2, n_dep_ctc = 2, dep_age1 = 5,
+                dep_age2 = 8, std_ded = 29200),
+           expect = list(st_ctc = 50),
+           law_overrides = list(st_ded.std_amount = 29200),
+           label = 'NM-6b seventh child-credit tier stays open above 350,000')
+
+  #--------------------------------------------------------------------------
   # GENERIC MACHINERY CASES
   #
   # These prove parameters that no encoded state consumes yet. Each was added
@@ -2470,7 +2647,7 @@ test_state_calc = function() {
   smoke_states = c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI',
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
                    'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI',
-                   'WV')
+                   'WV', 'NM')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()

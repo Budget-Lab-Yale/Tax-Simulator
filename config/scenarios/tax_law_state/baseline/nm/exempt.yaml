@@ -1,0 +1,80 @@
+---
+# New Mexico: low- and middle-income exemption (NMSA 7-2-5.8; PIT-1 line 15,
+# "Deduction for low- and middle-income taxpayers"). $2,500 per exemption --
+# taxpayer, spouse, and each dependent -- reduced as federal AGI rises:
+#
+#   amount per exemption = $2,500 - rate x max(0, federal AGI - threshold)
+#
+#   | status            | rate | threshold | zero at |
+#   |-------------------|------|-----------|---------|
+#   | single            | 0.15 | 20,000    | 36,667  |
+#   | MFJ / QSS / HoH   | 0.10 | 30,000    | 55,000  |
+#   | MFS               | 0.20 | 15,000    | 27,500  |
+#
+# The eligibility LIMIT needs no encoding: the slope reaches zero exactly at
+# the published limit in every status (0.15 x 16,667 = 2,500.05;
+# 0.10 x 25,000 = 2,500; 0.20 x 12,500 = 2,500), and the calculator's
+# share-per-step reduction is capped at the full exemption.
+#
+# WHY A SHARE AND NOT A FLAT REDUCTION: po_reduction_per_step is a per-RETURN
+# dollar amount, but 7-2-5.8 reduces EACH exemption by rate x excess. The
+# share form multiplies the gross exemption (2,500 x n) by
+# ceil(excess) x rate/2,500, which is exactly n x rate x excess.
+# CONSEQUENCE: the three constants below are rate / 2,500. IF THE $2,500
+# AMOUNT EVER CHANGES, ALL THREE MUST BE RECOMPUTED.
+#
+# This is New Mexico's only exemption. There is no state personal exemption:
+# the federal one is inside the 2017 taxable-income base and was repealed
+# federally from 2018. The aged $8,000 exemption is a subtraction in agi.yaml
+# (it has an income test the exemption machinery cannot express), so
+# aged_addl/blind_addl stay at zero here and cannot contaminate the gross
+# amount this phase-out scales.
+
+filing_status_mapper:
+  po_thresh:
+    '1': lmi_thresh_single
+    '2': lmi_thresh_joint
+    '3': lmi_thresh_mfs
+    '4': lmi_thresh_joint
+  po_share_per_step:
+    '1': lmi_share_single
+    '2': lmi_share_joint
+    '3': lmi_share_mfs
+    '4': lmi_share_joint
+
+personal_amount:
+  value: 2500
+  reference: 'NMSA 7-2-5.8(A); PIT-1 instructions, Low- and Middle-Income Taxpayer Exemption worksheet ($2,500 per exemption). Numerically identical in the 2016, 2018, 2019 and 2025 booklets; the section is unindexed and unamended'
+dep_amount:
+  value: 2500
+  reference: 'NMSA 7-2-5.8(A): the exemption is per federal exemption claimed, which includes each dependent. Same $2,500'
+
+po_type:
+  value: 1
+  reference: 'Stepped reduction rather than a cliff -- 7-2-5.8 phases the exemption down continuously and the AGI limit is where the slope reaches zero'
+po_step:
+  value: 1
+  reference: 'The statutory reduction is per DOLLAR of AGI over the threshold, not per bracket of dollars'
+po_agi_base:
+  value: 1
+  reference: 'NMSA 7-2-5.8(A) is keyed to federal adjusted gross income'
+
+lmi_thresh_single:
+  value: 20000
+  reference: 'NMSA 7-2-5.8(A)(1); worksheet line "if single, enter $20,000"'
+lmi_thresh_joint:
+  value: 30000
+  reference: 'NMSA 7-2-5.8(A)(3); married filing jointly, surviving spouse, and head of household'
+lmi_thresh_mfs:
+  value: 15000
+  reference: 'NMSA 7-2-5.8(A)(2); married filing separately'
+
+lmi_share_single:
+  value: 0.00006
+  reference: '0.15 / 2,500 -- the single-filer statutory reduction of $0.15 per dollar of AGI over $20,000, expressed as a share of the $2,500 per-exemption amount (see the header note)'
+lmi_share_joint:
+  value: 0.00004
+  reference: '0.10 / 2,500 -- MFJ / surviving spouse / head of household'
+lmi_share_mfs:
+  value: 0.00008
+  reference: '0.20 / 2,500 -- married filing separately'
