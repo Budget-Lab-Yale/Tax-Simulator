@@ -93,6 +93,7 @@ OUTPUT_VARS = {
     # us -- no rent data) into wi_income_tax; exported for the KD predicate.
     "pe_wi_homestead": ["wi_homestead_credit"],
     "pe_ct_rebate": ["ct_child_tax_rebate"],
+    "pe_ri_child_rebate": ["ri_child_tax_rebate"],
     # PE's own federal results, used by the harness's clean-subset metrics
     "pe_fed_agi": ["adjusted_gross_income"],
     "pe_fed_taxable": ["taxable_income"],
