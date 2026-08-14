@@ -1,8 +1,8 @@
 # District of Columbia Source Packet
 
 State: `DC`
-Status: `research COMPLETE and primary-verified; NOT yet encoded (YAML drafted, tests drafted)`
-Last updated: `2026-08-12`
+Status: `ENCODED 2026-08-13 (baseline/dc/, tests DC-1..DC-9); cross-model not yet run`
+Last updated: `2026-08-13`
 
 > Read §Uncertainties before encoding: the TY2025 dependent-filer standard
 > deduction and the TY2025 CDCC rate are both open calls, and the TY2023
@@ -171,6 +171,19 @@ every 2017-2025 booklet). **The real risk in DC is entirely on our side.**
     confirms the CTC is "repealed for 2025".
 
 ## Uncertainties (in priority order)
+
+> **Items 1-3 were CLOSED at encoding (2026-08-13) against primaries pulled
+> from the NBER mirror.** (1) The TY2025 dependent-filer standard deduction is
+> a flat **$15,000**: the TY2025 booklet's standard-deduction text reads
+> "$15,000 for single filers, **dependent filers** and married ... filing
+> separately", the filing chart lists "Dependent filer $15,000", and
+> Calculation G-1 contains no dependent worksheet -- against the TY2024
+> booklet's "a standard deduction in an amount based on a formula ... use the
+> worksheet on page 20". The decoupling is real; tests DC-6/DC-6b pin both
+> regimes. (2) The TY2025 CDCC rate is **32%**: the TY2025 D-40 line 21 prints
+> `X .32`. (3) The font-mangled TY2023 standard deductions are corroborated by
+> the TY2024 booklet's "increasing from $13,850 to $14,600 / $20,800 to
+> $21,900 / $27,700 to $29,200", read from a clean source.
 
 1. **TY2025 dependent-filer standard deduction is inferred from ABSENCE, and
    is the highest-magnitude open call.** The TY2025 Calculation G-1 contains no

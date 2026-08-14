@@ -1,8 +1,8 @@
 # New Mexico State Source Packet
 
 State: `NM`
-Status: `research COMPLETE and primary-verified; NOT yet encoded (YAML drafted, tests drafted)`
-Last updated: `2026-08-12`
+Status: `ENCODED 2026-08-13 (baseline/nm/, tests NM-1..NM-6b); cross-model not yet run`
+Last updated: `2026-08-13`
 
 > Two design decisions in this state are load-bearing and were resolved with
 > worked evidence (§Decisions). One found a trap that would have cost **$304 of

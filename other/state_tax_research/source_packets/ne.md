@@ -1,8 +1,8 @@
 # Nebraska State Source Packet
 
 State: `NE`
-Status: `research COMPLETE and primary-verified; NOT yet encoded (YAML drafted, tests drafted)`
-Last updated: `2026-08-12`
+Status: `ENCODED 2026-08-13 (baseline/ne/, tests NE-1..NE-6b); cross-model not yet run`
+Last updated: `2026-08-13`
 
 > Encoding is mechanical from the tables below — every value is
 > primary-transcribed. Two modeling decisions (§CDCC) need a call before the
@@ -130,7 +130,18 @@ Encode via `recapture_agi_start` / `recapture_width` (filing-status mapped,
 `.inf` from 2018); the published three-segment interior phase-in is
 linearized (both endpoints exact, interior deviation ~$100-250, TY2017 only).
 
-## Decisions still open (make before encoding)
+## Decisions RESOLVED at encoding (2026-08-13)
+
+**D2 was called REFUNDABLE; D1 remains unfixable.** Making the flag
+nonrefundable would have zeroed the low-income credit for exactly the
+population it exists to serve -- the per-exemption credit already drives NE tax
+to zero up to roughly $30-45k of AGI -- so refundable is the smaller error by
+far, at a cost of understating liability by up to ~$525 for units above $29,000
+whose NE tax falls below 25% of the federal credit. D1 needs a pre-limitation
+federal CDCTC that the module does not expose; if one ever lands, **NE should
+be revisited first among all states**. Both costs are recorded with their
+directions in `baseline/ne/credits.yaml`. The analysis below is kept because it
+records why neither is fixable with existing parameters.
 
 **The CDCC needs a call.** A single share table can span both AGI regimes
 (bands 1-5 carrying the refundable state decimals, the open top band carrying

@@ -1,7 +1,7 @@
 # Oklahoma State Source Packet
 
 State: `OK`
-Status: `research COMPLETE and primary-verified; NOT yet encoded (YAML drafted, tests drafted)`
+Status: `ENCODED 2026-08-13 (baseline/ok/, tests OK-1..OK-9); cross-model not yet run`
 Last updated: `2026-08-13`
 
 > The $17,000 itemized-cap gap is RESOLVED (st_ded.item_flat_cap landed

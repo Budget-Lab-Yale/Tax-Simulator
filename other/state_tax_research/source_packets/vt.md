@@ -1,8 +1,8 @@
 # Vermont State Source Packet
 
 State: `VT`
-Status: `research COMPLETE and primary-verified; NOT yet encoded (YAML drafted, tests drafted)`
-Last updated: `2026-08-12`
+Status: `ENCODED 2026-08-13 (baseline/vt/, tests VT-1..VT-6b); cross-model not yet run`
+Last updated: `2026-08-13`
 
 > **The four scalars this packet asked for LANDED on 2026-08-12** (see
 > §Machinery gaps), so VT is now encodable exactly on both its
