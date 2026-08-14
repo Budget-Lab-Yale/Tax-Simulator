@@ -152,6 +152,13 @@ WI:
 VA:
   profile: broad_iit
   enabled: false
+# VT conformity is FIXED-DATE (32 V.S.A. 5824, re-set nearly every session),
+# modeled as rolling (group 0): Vermont conformed explicitly to CARES and to
+# the ARPA unemployment exclusion, so it has not sat out a PUF-material
+# federal change in this window -- the ID/WI/MN treatment
+VT:
+  profile: broad_iit
+  enabled: true
 WA:
   profile: capital_gains_and_transfer
   enabled: true

@@ -22,7 +22,8 @@ test_state_calc = function() {
   law = build_state_tax_law(
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
-                'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV', 'NM'),
+                'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV', 'NM',
+                'VT'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -2386,6 +2387,163 @@ test_state_calc = function() {
            label = 'NM-6b seventh child-credit tier stays open above 350,000')
 
   #--------------------------------------------------------------------------
+  # VERMONT (Form IN-111, Schedules IN-112 / IN-153)
+  #
+  # Vermont publishes its own standard deduction and personal exemption from
+  # TY2018, so unlike New Mexico these cases need no federal pinning -- except
+  # in 2017, whose base is federal taxable income and whose IN-155 addback is
+  # measured against the federal standard deduction.
+  #--------------------------------------------------------------------------
+
+  # VT-1 TY2017 single, FAGI 120,000, itemized 21,000 of which 6,000 is state
+  # income tax, 1,000 of out-of-state municipal interest. Federal taxable income
+  # 120,000 - 21,000 - 4,050 exemption = 94,950 is the base. Additions: the muni
+  # addback at the model's 25% out-of-state convention = 250, and the IN-155
+  # first term = min(6,000 state income tax, 21,000 - 6,350 federal standard)
+  # = 6,000. VT taxable 101,200 on the 2017 FIVE-bracket schedule:
+  # 37,900 x 3.55% = 1,345.45, 53,950 x 6.80% = 3,668.60,
+  # 9,350 x 7.80% = 729.30 -> 5,743.35. The printed 2017 Schedule X gives
+  # 5,743.30; the $0.05 is the schedule's whole-dollar base rounding
+  run_case('VT', 2017,
+           list(agi = 120000, txbl_inc = 94950, wages1 = 120000, ei1 = 120000,
+                itemizing = 1, exempt_int = 1000, item_ded = 21000,
+                item_ded_ex_limits = 21000, salt_item_ded = 6000,
+                salt_inc_sales = 6000, std_ded = 6350),
+           expect = list(st_txbl_inc = 101200, liab_st_iit = 5743.35),
+           label = 'VT-1 2017 taxable-income base + IN-155 SALT addback')
+
+  # VT-2 TY2019 MFJ aged 67 and 64, one dependent, FAGI 58,000 including 8,000
+  # of federally taxable Social Security. AGI is under the 60,000 joint
+  # threshold so the SS exemption is FULL -> st_agi 50,000. Standard deduction
+  # 12,300 plus ONE aged box (only the 67-year-old qualifies) = 13,300;
+  # exemptions 3 x 4,250 = 12,750. Taxable 23,950 x 3.35% = 802.33
+  run_case('VT', 2019,
+           list(filing_status = 2, age1 = 67, age2 = 64, agi = 58000,
+                wages1 = 50000, ei1 = 50000, txbl_ss = 8000, gross_ss = 9000,
+                n_dep = 1, dep_age1 = 10),
+           expect = list(st_agi = 50000, st_ded = 13300, st_exempt = 12750,
+                         st_txbl_inc = 23950, liab_st_iit = 802.33),
+           label = 'VT-2 2019 full SS exemption below the joint threshold')
+
+  # VT-2b the phase-out band: TY2023 single aged 68, AGI 52,000 with 10,000 of
+  # taxable SS. The single threshold is 50,000, so the excess is 2,000 = 20
+  # whole $100 steps, leaving an exempt share of 1 - 0.20 = 0.80 -> 8,000
+  # subtracted. st_agi 44,000; deduction 7,000 + 1,150 aged = 8,150; exemption
+  # 4,850. Taxable 31,000 x 3.35% = 1,038.50
+  run_case('VT', 2023,
+           list(age1 = 68, agi = 52000, wages1 = 42000, ei1 = 42000,
+                txbl_ss = 10000, gross_ss = 11500),
+           expect = list(st_agi = 44000, st_txbl_inc = 31000,
+                         liab_st_iit = 1038.50),
+           label = 'VT-2b 2023 SS exemption at 80% inside the phase-out band')
+
+  # VT-2c above the band the exemption is gone entirely: the same return at AGI
+  # 62,000 is more than 10,000 over the 50,000 threshold, so no Social Security
+  # comes out and st_agi equals AGI
+  run_case('VT', 2023,
+           list(age1 = 68, agi = 62000, wages1 = 52000, ei1 = 52000,
+                txbl_ss = 10000, gross_ss = 11500),
+           expect = list(st_agi = 62000),
+           label = 'VT-2c SS exemption exhausted 10,000 above the threshold')
+
+  # VT-3 TY2023 head of household, two dependents aged 8 and 10, wages 24,000
+  # plus an 8,000 long-term gain, federal EITC 4,200, charitable contributions
+  # 2,000. THE ARCHETYPAL VERMONT CASE: both provisions that had no parameter
+  # until 2026-08-12 bind here.
+  #   capital gains: max(share 0, min(flat 5,000, gain 8,000)) = 5,000, then
+  #     capped at 40% of federal taxable income (32,000 - 20,800 = 11,200), so
+  #     4,480 -- the CEILING binds, which is why a flat parameter alone was not
+  #     enough
+  #   st_agi 32,000 - 4,480 = 27,520; deduction 10,550; exemptions 3 x 4,850
+  #     = 14,550 -> taxable 2,420 x 3.35% = 81.07 of tax
+  #   charitable credit 5% x 2,000 = 100, nonrefundable, so it absorbs the
+  #     81.07 and no more
+  #   EITC 38% x 4,200 = 1,596, refundable
+  # Total -1,596.00. The dependents are too old for Vermont's child credit
+  # (age 5 or under in 2023), which is what leaves the EITC alone on the line
+  run_case('VT', 2023,
+           list(filing_status = 4, agi = 32000, txbl_inc = 11200,
+                wages1 = 24000, ei1 = 24000, kg_lt = 8000, txbl_kg = 8000,
+                n_dep = 2, n_dep_eitc = 2, dep_age1 = 8, dep_age2 = 10,
+                eitc = 4200, char_cash = 2000, std_ded = 20800),
+           expect = list(st_agi = 27520, st_txbl_inc = 2420,
+                         st_char_credit = 100, st_eitc = 1596,
+                         liab_st_iit = -1596.00),
+           label = 'VT-3 2023 capital gains ceiling + charitable credit')
+
+  # VT-4 TY2023 MFJ, two children aged 3 and 4, AGI 145,000: the child credit
+  # with its PER-CHILD phase-out. The reduction is 20 whole $1,000 steps x $20
+  # = 400 against EACH child's 1,000, so 2 x 600 = 1,200 -- not the 1,600 that
+  # reducing the aggregate credit once would give
+  run_case('VT', 2023,
+           list(filing_status = 2, age2 = 40, agi = 145000, wages1 = 145000,
+                ei1 = 145000, n_dep = 2, n_dep_ctc = 2, dep_age1 = 3,
+                dep_age2 = 4),
+           expect = list(st_ctc = 1200),
+           label = 'VT-4 2023 child credit phased out per child')
+
+  # VT-4b at AGI 185,000 the reduction is 1,200, more than one child's 1,000,
+  # so the per-child floor zeroes the credit -- matching the statute's full
+  # phase-out at 175,000. Reducing the aggregate would still pay 800
+  run_case('VT', 2023,
+           list(filing_status = 2, age2 = 40, agi = 185000, wages1 = 185000,
+                ei1 = 185000, n_dep = 2, n_dep_ctc = 2, dep_age1 = 3,
+                dep_age2 = 4),
+           expect = list(st_ctc = 0),
+           label = 'VT-4b child credit fully phased out at 175,000')
+
+  # VT-4c "or fraction thereof": AGI 145,500 is a partial 21st step, counted
+  # whole, so the reduction is 420 and each child keeps 580
+  run_case('VT', 2023,
+           list(filing_status = 2, age2 = 40, agi = 145500, wages1 = 145500,
+                ei1 = 145500, n_dep = 2, n_dep_ctc = 2, dep_age1 = 3,
+                dep_age2 = 4),
+           expect = list(st_ctc = 1160),
+           label = 'VT-4c child credit counts a partial step whole')
+
+  # VT-5 TY2025 the childless EITC match becomes 100% of the federal credit
+  # (Act 71) while filers with children stay at 38%. Same 4,200 federal credit,
+  # no qualifying children -> 4,200 rather than 1,596
+  run_case('VT', 2025,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, eitc = 4200),
+           expect = list(st_eitc = 4200),
+           label = 'VT-5 2025 childless EITC match at 100%')
+
+  # VT-5b a filer WITH children stays on the 38% match in the same year, which
+  # is what the child-count-keyed family is for
+  run_case('VT', 2025,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, n_dep = 1,
+                n_dep_eitc = 1, dep_age1 = 10, eitc = 4200),
+           expect = list(st_eitc = 1596),
+           label = 'VT-5b 2025 match stays 38% with a qualifying child')
+
+  # VT-6 TY2019 the care credit is 24% of the federal credit and NONREFUNDABLE;
+  # TY2022 turns the same credit into 72% refundable. Single with one dependent
+  # and 20,000 of AGI: deduction 6,150, exemptions 2 x 4,250 = 8,500 (the
+  # dependent counts), so taxable 5,350 and tax 179.23. The 144 credit is
+  # nonrefundable and can only offset, leaving 35.23
+  run_case('VT', 2019,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, n_dep = 1,
+                dep_age1 = 4, care_exp = 3000, cdctc_nonref = 600),
+           expect = list(st_cdctc = 144, st_exempt = 8500,
+                         st_txbl_inc = 5350, liab_st_iit = 35.23),
+           label = 'VT-6 2019 care credit at 24% nonrefundable')
+
+  # VT-6b the same return in TY2022: 72% of 600 = 432, REFUNDABLE. Deduction
+  # 6,500 and exemptions 2 x 4,500 = 9,000 leave 4,500 taxable and 150.75 of
+  # tax. TY2022 is also the first year of the child credit and this dependent is
+  # 4, so a further 1,000 lands unphased at this income:
+  # 150.75 - 432 - 1,000 = -1,281.25. Act 138 turned both credits at once,
+  # which is why the pair of them shows up together
+  run_case('VT', 2022,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, n_dep = 1,
+                n_dep_ctc = 1, dep_age1 = 4, care_exp = 3000,
+                cdctc_nonref = 600),
+           expect = list(st_cdctc = 432, st_ctc = 1000, st_txbl_inc = 4500,
+                         liab_st_iit = -1281.25),
+           label = 'VT-6b 2022 care credit at 72% refundable, plus the new CTC')
+
+  #--------------------------------------------------------------------------
   # GENERIC MACHINERY CASES
   #
   # These prove parameters that no encoded state consumes yet. Each was added
@@ -2647,7 +2805,7 @@ test_state_calc = function() {
   smoke_states = c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI',
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
                    'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI',
-                   'WV', 'NM')
+                   'WV', 'NM', 'VT')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()
