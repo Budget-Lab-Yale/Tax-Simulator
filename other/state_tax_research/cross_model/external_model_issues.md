@@ -167,7 +167,7 @@ top-bracket records in both years (~1,190 records/yr in our sample).
 The 2019–2020 vintages are correct.
 
 ### P5. One-time rebates netted into eligibility-year `state_income_tax`
-(NY, VA, GA, AZ — generalizing P2)
+(NY, VA, GA, AZ, NM — generalizing P2)
 
 The P2 pattern is systematic across states (all verified in 1.775.7 package
 source plus record-level point masses in our 2021–2024 samples):
@@ -184,6 +184,20 @@ source plus record-level point masses in our 2021–2024 samples):
   2021-only nonrefundable-credit list (liability-capped via max(0, ·)).
 - **AZ 2021**: `az_families_tax_rebate` (SB 1734, paid fall 2023; $250 per
   dependent under 17, max three) books into tax year 2021.
+- **NM 2021**: THREE rebates at once —
+  `nm_2021_income_rebate` ($250), `nm_additional_2021_income_rebate` ($500)
+  and `nm_supplemental_2021_income_rebate` ($500), all mailed checks under
+  Laws 2021 ch.4 and the 2021 special session rather than credits claimed on
+  the PIT-1. Doubled for joint filers this is a flat $2,500, which is
+  precisely the MEDIAN difference in our NM 2021 cell — the clean match rate
+  there is 0.000, the most complete collapse this class has produced.
+  Worth noting for the upstream report: unlike the other four, the NM rebate
+  variables keep computing nonzero values in 2022–2024 but are NOT included
+  in `nm_refundable_credits` those years (verified 2026-08-13 by direct
+  probe: `nm_refundable_credits` equals LICTR alone from 2022). So the
+  netting is genuinely 2021-only even though the variables are not, and any
+  exclusion keyed on those columns must be year-scoped or it will wrongly
+  drop 2022–2024 records.
 
 Whether eligibility-year booking is right is a concept choice (the checks
 arrive one to two calendar years later), but as with P1/P2 it makes

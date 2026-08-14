@@ -94,6 +94,14 @@ OUTPUT_VARS = {
     "pe_wi_homestead": ["wi_homestead_credit"],
     "pe_ct_rebate": ["ct_child_tax_rebate"],
     "pe_ri_child_rebate": ["ri_child_tax_rebate"],
+    # New Mexico ran THREE one-time 2021 rebates and PE nets all three into
+    # state_income_tax for TY2021 only. The variables still compute nonzero
+    # values in 2022-2024 but are NOT in nm_refundable_credits those years
+    # (verified 2026-08-13: PE's nm_refundable_credits equals LICTR alone from
+    # 2022), so the KD predicate that uses these columns is scoped to 2021.
+    "pe_nm_2021_rebate": ["nm_2021_income_rebate"],
+    "pe_nm_2021_addl_rebate": ["nm_additional_2021_income_rebate"],
+    "pe_nm_2021_suppl_rebate": ["nm_supplemental_2021_income_rebate"],
     # PE's own federal results, used by the harness's clean-subset metrics
     "pe_fed_agi": ["adjusted_gross_income"],
     "pe_fed_taxable": ["taxable_income"],
