@@ -271,6 +271,31 @@ state AGI and the deduction to agree gives **0.953**, which is the acceptance
 bar — so the DE schedule, credits and combined-separate handling are sound and
 the whole residual lives in these two stages.
 
+### T13. Oklahoma $17,000 itemized cap applied without the statutory charity
+and medical exemptions
+
+68 O.S. 2358(D)(1) caps Oklahoma itemized deductions at $17,000 from TY2018 but
+EXEMPTS charitable contributions and medical expenses from the cap, so the
+allowed amount is `min(17,000, base − charity − medical) + charity + medical`.
+TAXSIM applies a flat $17,000: `v35_state_itemized_deduction` equals exactly
+17,000 on **91%** of Oklahoma itemizer records in every cap year, and
+
+    our itemized  =  TAXSIM's 17,000  +  charity  +  medical
+
+holds **exactly, to the dollar, on 69%** of them (median residual 0). Worked
+records (TY2019): ours 17,132.07 against 17,000 with charity 132.07; ours
+17,996.30 with charity 996.30; ours 18,133.05 with charity 1,133.05; ours
+59,684.66 with charity 42,684.66.
+
+TY2017 is the control and it behaves: the cap did not exist that year, TAXSIM
+never sits at 17,000, and the identity has no hits at all.
+
+Effect: TAXSIM's deduction is too small, so its Oklahoma tax runs HIGH.
+Excluding the affected records — TAXSIM pinned at the flat cap while ours
+exceeds it, which identifies exactly the failure — lifts our OK match@$100 from
+**0.727/0.719/0.720 to 0.872/0.869/0.873** in TY2018/2019/2020. This is the
+single largest attribution any one item has produced in this project.
+
 ### P5. One-time rebates netted into eligibility-year `state_income_tax`
 (NY, VA, GA, AZ, NM — generalizing P2)
 
