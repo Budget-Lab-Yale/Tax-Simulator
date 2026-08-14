@@ -166,6 +166,67 @@ flat overtaxation of ~$12.8 for 6.27%-bracket records and ~$143.6 for
 top-bracket records in both years (~1,190 records/yr in our sample).
 The 2019–2020 vintages are correct.
 
+### T10. Delaware itemized deduction granted to filers with none, at the
+SALT cap
+
+TAXSIM reports a positive DE itemized deduction (`v35_state_itemized_deduction`)
+for filers whose federal itemized deductions are **entirely zero** — no
+mortgage interest, no charity, no property tax, no state income tax, and
+`itemizing` false on the federal return — and then uses it, since it exceeds
+Delaware's small standard deduction. `v34_state_std_deduction_amount` is
+correct throughout ($3,250 single / $6,500 joint, matching 30 Del. C. 1108(a)),
+so the standard deduction is not the issue; the itemized figure is fabricated.
+
+The amount is the SALT cap: `v35` = **$10,000**, and **$5,000** for married
+filing separately, on the affected records. Worked example (TY2019, single,
+AGI $1,733,137, every federal itemized component zero): `v34` = 3,250,
+`v35` = 10,000, and `v36_state_taxable_income` = state AGI − 10,000, so the
+$10,000 is what was used. Our deduction is the $3,250 standard, which is what
+Delaware's PIT-RES Line 20a allows.
+
+There is a **discontinuity at 2019**: the share of our sampled DE records with
+`v35` > 0 is 54.6% (2017) and 54.3% (2018) but **97.0%** in both 2019 and 2020,
+which suggests a vintage change rather than a long-standing modelling choice.
+
+Effect: TAXSIM's DE tax runs LOW by the marginal rate on the excess deduction —
+a flat $445.50 for single filers in the 6.6% top bracket (a $6,750 base gap)
+and $231.00 for joint filers ($3,500), which are the two largest point masses
+in our DE comparison at 3.2% and 1.3% of federally aligned records. Restricting
+to records where TAXSIM did not use a fabricated itemized deduction lifts our
+TY2019 DE match@$100 from 0.633 to 0.711.
+
+Checked and NOT an issue, recorded so it is not re-investigated: TAXSIM does
+grant Delaware's additional $110 personal credit for filers aged 60 or over
+(30 Del. C. 1110(b)(2)) — `v40_state_total_credits` is 220 for 60+ single
+filers with no dependents against 110 for younger ones, and those records agree
+with us to the cent at the median.
+
+### T11. Delaware itemized deduction omits the Schedule A "other" class
+
+The companion to T10, and opposite-signed. For DE filers who DO itemize on both
+sides, TAXSIM's `v35_state_itemized_deduction` equals our Delaware itemized
+deduction MINUS the federal Schedule A "other itemized deductions" class
+(`other_item_ded`) — **exactly, to the dollar, on 44.9% of the affected records**
+(2,504 records with a nonzero other class, TY2019). Delaware's PIT-RSA carries
+that class on its own Line 16, and Delaware's itemized deduction is the federal
+Schedule A total less state and local income taxes, so the class belongs in the
+base and we include it.
+
+Effect: TAXSIM's deduction is smaller, so its DE tax runs HIGH — the reverse of
+T10, which is why DE's mean signed difference flips sign across years. The
+magnitudes reach the extreme tail (one TY2019 return carries $16.9M of Schedule
+A "other", where TAXSIM's `v35` of $66,649 equals our $16,997,406 less that
+class to the cent). Setting these records aside would lift TY2019 DE from 0.711
+to 0.820 and TY2017 from 0.597 to 0.764.
+
+NOT generalized beyond Delaware, deliberately. The same test on CA, DC, MD, MN,
+NM and VA gives exact-identity shares of 2-20% with residuals of both signs, so
+the arithmetic does not isolate a single component in states whose itemized base
+carries more of its own modifications. Whether TAXSIM omits the class for those
+states too is open, and it matters because MD and MN have already been through
+residual attribution — which is why this is annotated rather than excluded
+rather than being made to move their scores as a side effect.
+
 ### P5. One-time rebates netted into eligibility-year `state_income_tax`
 (NY, VA, GA, AZ, NM — generalizing P2)
 
