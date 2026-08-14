@@ -227,6 +227,50 @@ states too is open, and it matters because MD and MN have already been through
 residual attribution — which is why this is annotated rather than excluded
 rather than being made to move their scores as a side effect.
 
+### T12. Delaware pension exclusion granted where Delaware disqualifies it,
+and to filers with no retirement income at all
+
+The third and last identified driver of the DE residual, in the state-AGI stage.
+Delaware allows up to $2,000 of pension for filers under 60 and $12,500 of
+pension plus eligible retirement income at 60 or over (30 Del. C. 1106(b)(3);
+PIT-RES Line 6). The gaps between our state AGI and TAXSIM's `v32_state_agi` are
+exact multiples of those amounts — +2,000 (529 records, TY2019), +4,000 (310),
+−12,500 (225), −10,500 (94), ±25,000 — so both sides are applying the same
+provision and disagreeing about eligibility, not about the amounts.
+
+Two TAXSIM behaviours account for the `+` direction, where TAXSIM excludes more
+than we do:
+
+- **Early IRA distributions.** Records at +2,000 with retirement income are
+  under-60 filers (ages 32, 43, 48, 59 in the sampled cases) whose only
+  retirement income is an IRA distribution. PIT-RES Line 6 states that "an early
+  distribution from an IRA or pension fund ... does not qualify for the pension
+  exclusion", and every distribution to a filer under 59½ is early, so we
+  correctly grant nothing. TAXSIM grants the $2,000.
+- **Filers with no retirement income, driving state AGI NEGATIVE.** The rest of
+  the +2,000 mass is filers with zero pension, zero IRA and, in the clearest
+  cases, zero total income — two sampled age-80 records have AGI 0 and our state
+  AGI 0, while TAXSIM reports `v32_state_agi` = **−1,999.99**. There is nothing
+  to exclude. **619–642 DE records per year** have TAXSIM state AGI below zero
+  where ours is at or above zero.
+
+The `−` direction is ours and is the one place in this investigation where we
+could be over-granting: at 60+ we apply the $12,500 to pension PLUS eligible
+retirement income, and the −12,500 group is 86% interest, 64% dividends and 56%
+capital gains with only 32% holding a pension. Our base follows the PIT-RES
+Line 6 worksheet as transcribed across seven booklet years in the DE packet
+("$12,500 per person of pension plus eligible retirement income"). If Delaware's
+definition of eligible retirement income is narrower than that reading, we
+over-exclude up to $12,500 of base (about $825 of tax) for 60+ investment-income
+holders — **a booklet re-read of the Line 6 worksheet would settle it**, and it
+is the one DE item still capable of being an our-side error.
+
+Sizing: ~26–27% of DE records carry a state-AGI disagreement. Restricting to
+records where state AGI agrees lifts TY2019 from 0.711 to 0.773; requiring both
+state AGI and the deduction to agree gives **0.953**, which is the acceptance
+bar — so the DE schedule, credits and combined-separate handling are sound and
+the whole residual lives in these two stages.
+
 ### P5. One-time rebates netted into eligibility-year `state_income_tax`
 (NY, VA, GA, AZ, NM — generalizing P2)
 
