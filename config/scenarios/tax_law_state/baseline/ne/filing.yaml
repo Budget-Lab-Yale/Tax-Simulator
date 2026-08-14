@@ -1,0 +1,21 @@
+---
+# Nebraska: filing requirement (Neb. Rev. Stat. 77-2768; Form 1040N booklet
+# "Who Must File"). A resident must file if required to file a federal return,
+# or if they have any Nebraska tax due -- both branches are covered by the
+# federal-filer trigger and the liability branch of st_filer.
+
+# 3 = no separate state income test
+req_type:
+  value: 3
+  reference: 'Form 1040N booklet "Who Must File a Nebraska Individual Income Tax Return", TY2017-2025: a resident required to file federally must file, as must anyone with Nebraska tax due'
+req_income_thresh:
+  value: 0
+  reference: 'n/a for Nebraska -- no standalone dollar threshold is published'
+req_if_fed_filer:
+  value: 1
+  reference: 'Form 1040N booklet: the requirement keys on the federal filing obligation'
+
+documented_not_modeled:
+  nebraska_adjustments_alternative_test:
+    value: 5000
+    reference: 'The booklet adds an alternative test: a resident not otherwise required to file must do so with $5,000 or more of net NEBRASKA adjustments (Schedule I additions less subtractions). No parameter tests the adjustment total rather than income, so this branch is not representable [affects filer counts only, never liability]'

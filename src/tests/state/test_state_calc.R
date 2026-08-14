@@ -23,7 +23,7 @@ test_state_calc = function() {
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
                 'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV', 'NM',
-                'VT', 'OK', 'DC'),
+                'VT', 'OK', 'DC', 'NE'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -2850,6 +2850,111 @@ test_state_calc = function() {
            label = 'DC-9 2019 care credit at 32%, nonrefundable')
 
   #--------------------------------------------------------------------------
+  # NEBRASKA (Form 1040N, Schedules I/II, Form 2441N)
+  #--------------------------------------------------------------------------
+
+  # NE-1 TY2017 single, AGI 50,000. Standard deduction 6,350 leaves 43,650 of
+  # taxable income on the four-bracket schedule, less the $132 per-exemption
+  # CREDIT (Nebraska's answer to a personal exemption is a credit, not an
+  # allowance). Independently validated against the printed 2017 tax table: the
+  # 43,860-43,960 row reads $2,147 and this schedule gives $2,147.45 at the
+  # 43,910 midpoint
+  run_case('NE', 2017,
+           list(agi = 50000, wages1 = 50000, ei1 = 50000),
+           expect = list(st_exempt = 0, st_txbl_inc = 43650,
+                         st_percap_credit = 132, liab_st_iit = 1997.68),
+           label = 'NE-1 2017 four-bracket schedule + per-exemption credit')
+
+  # NE-2 THE 2017-ONLY ADDITIONAL TAX, a graduated-rate-benefit recapture keyed
+  # to federal AGI. Above full phase-in the whole return is taxed at the top
+  # rate, so the recapture is the constant 6.84% x B - T(B) for any taxable
+  # income in the top bracket -- the published maximum of $855.99 for a single
+  # filer. The pair isolates it: the same return with the trigger disabled pays
+  # exactly that much less (the cent is floating-point, against a published
+  # figure that is itself rounded)
+  ne_high = list(agi = 600000, wages1 = 600000, ei1 = 600000)
+  run_case('NE', 2017, ne_high,
+           expect = list(st_txbl_inc = 593650, liab_st_iit = 40473.66),
+           label = 'NE-2 2017 Additional Tax fully phased in')
+  run_case('NE', 2017, ne_high,
+           expect = list(liab_st_iit = 39617.68),
+           law_overrides = list(st_ord.recapture_agi_start = Inf),
+           label = 'NE-2b same return without the recapture: 855.98 less')
+
+  # NE-3 TY2024 MFJ both aged 68, 28,000 of taxable Social Security and 120,000
+  # of pension. The SS ramp reached 100% in TY2024 (LB 754), so all 28,000 comes
+  # out; the standard deduction is 16,700 plus two aged boxes at 1,600 = 19,900,
+  # matching the printed chart; and the top rate is 5.84%
+  ne_retired = list(filing_status = 2, age1 = 68, age2 = 68, agi = 148000,
+                    txbl_ss = 28000, gross_ss = 32000, txbl_pens_dist = 120000)
+  run_case('NE', 2024, ne_retired,
+           expect = list(st_agi = 120000, st_ded = 19900, st_txbl_inc = 100100,
+                         liab_st_iit = 4105.32),
+           label = 'NE-3 2024 full SS exclusion, two aged boxes, 5.84% top rate')
+
+  # NE-3b the same couple under TY2022 law, where the percentage rule was only
+  # 40% and the top rate still 6.84%: 11,200 of Social Security comes out,
+  # taxable 119,300, tax 6,255.85 less two $146 credits
+  run_case('NE', 2022, ne_retired,
+           expect = list(st_agi = 136800, st_txbl_inc = 119300,
+                         liab_st_iit = 5963.85),
+           label = 'NE-3b 2022 SS at 40% and the pre-LB 754 top rate')
+
+  # NE-4 THE SOCIAL SECURITY GREATER-OF, and the genuine cliff it creates. The
+  # statute grants the better of a percentage rule and a full exclusion at or
+  # below an AGI threshold ($61,760 joint in TY2022). At AGI 61,000 the
+  # threshold rule wins and ALL 20,000 of benefits come out; at 65,000 only the
+  # 40% percentage survives. A $4,000 increase in AGI raises Nebraska tax by
+  # $561.60 -- that is the law, not an artifact
+  run_case('NE', 2022,
+           list(filing_status = 2, age1 = 68, age2 = 66, agi = 61000,
+                wages1 = 41000, ei1 = 41000, txbl_ss = 20000, gross_ss = 23000),
+           expect = list(st_agi = 41000, liab_st_iit = 460.82),
+           label = 'NE-4 2022 SS threshold rule wins below the limit')
+  run_case('NE', 2022,
+           list(filing_status = 2, age1 = 68, age2 = 66, agi = 65000,
+                wages1 = 45000, ei1 = 45000, txbl_ss = 20000, gross_ss = 23000),
+           expect = list(st_agi = 57000, liab_st_iit = 1022.42),
+           label = 'NE-4b 2022 only the 40% rule survives above the limit')
+
+  # NE-5 the care credit spans two regimes on one share table: a decimal that
+  # runs 1.00 at or below 22,000 down to 0.30 at 29,000, then the flat 25%
+  # match above. The middle band is LINEARIZED (the form steps 10 points per
+  # $1,000), so 25,500 gives 0.65 where the form gives 0.70 -- at most half a
+  # step, which is the documented cost of fitting eight steps into the six-slot
+  # share family
+  ne_care = function(agi) {
+    list(agi = agi, wages1 = agi, ei1 = agi, n_dep = 1, dep_age1 = 4,
+         care_exp = 3000, cdctc_nonref = 1000)
+  }
+  run_case('NE', 2019, ne_care(20000),
+           expect = list(st_cdctc = 1000),
+           label = 'NE-5 care credit at 100% below 22,000')
+  run_case('NE', 2019, ne_care(35000),
+           expect = list(st_cdctc = 250),
+           label = 'NE-5b care credit at the 25% match above 29,000')
+
+  # NE-6 the per-exemption credit is NONREFUNDABLE. A single filer at AGI
+  # 13,000 in TY2024 has 4,650 of taxable income and 122.27 of tax, which the
+  # $166 credit can only zero -- not turn negative
+  run_case('NE', 2024,
+           list(agi = 13000, wages1 = 13000, ei1 = 13000),
+           expect = list(st_txbl_inc = 4650, st_percap_credit = 166,
+                         liab_st_iit = 0),
+           label = 'NE-6 per-exemption credit stops at zero, not below')
+
+  # NE-6b the same filer with a dependent and a federal EITC: the two credits
+  # behave differently on the same return. Two $166 exemption credits absorb the
+  # 192.47 of tax and stop there, while the 10% EITC match is REFUNDABLE and
+  # takes the return to -300
+  run_case('NE', 2024,
+           list(agi = 15000, wages1 = 15000, ei1 = 15000, n_dep = 1,
+                n_dep_eitc = 1, dep_age1 = 6, eitc = 3000),
+           expect = list(st_percap_credit = 332, st_eitc = 300,
+                         liab_st_iit = -300),
+           label = 'NE-6b 10% EITC refundable against a nonrefundable credit')
+
+  #--------------------------------------------------------------------------
   # GENERIC MACHINERY CASES
   #
   # These prove parameters that no encoded state consumes yet. Each was added
@@ -3111,7 +3216,7 @@ test_state_calc = function() {
   smoke_states = c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI',
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
                    'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI',
-                   'WV', 'NM', 'VT', 'OK', 'DC')
+                   'WV', 'NM', 'VT', 'OK', 'DC', 'NE')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()

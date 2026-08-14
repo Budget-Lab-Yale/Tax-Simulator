@@ -83,6 +83,11 @@ MI:
 MN:
   profile: broad_iit
   enabled: true
+# NE adopts the IRC as amended with no fixed date (Neb. Rev. Stat. 77-2714),
+# so rolling conformity (group 0)
+NE:
+  profile: broad_iit
+  enabled: true
 NH:
   profile: narrow_investment_iit
   enabled: true
