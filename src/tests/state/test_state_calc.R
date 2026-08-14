@@ -23,7 +23,7 @@ test_state_calc = function() {
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
                 'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV', 'NM',
-                'VT'),
+                'VT', 'OK'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -2544,6 +2544,169 @@ test_state_calc = function() {
            label = 'VT-6b 2022 care credit at 72% refundable, plus the new CTC')
 
   #--------------------------------------------------------------------------
+  # OKLAHOMA (Form 511, Schedules 511-A/B/D/F/G)
+  #
+  # No Form 511 packet prints a bracket schedule in any year, so the schedule
+  # in ord.yaml was RECOVERED from the $50-range tax table and the printed
+  # "over $100,000" constants. OK-1 and OK-2 are the acceptance test for that
+  # recovery: they put taxable income at exactly $100,000 and check the
+  # cumulative tax against the printed constant, for every vintage and both
+  # rate columns.
+  #--------------------------------------------------------------------------
+
+  # OK-1 the single column across all three vintages. AGI 107,350 less the
+  # frozen 6,350 standard deduction and one 1,000 exemption is exactly 100,000
+  # of taxable income, where the printed constants are $4,812 (2017-2021),
+  # $4,562 (2022-2025) and -- for the not-yet-published 2026 schedule -- an
+  # expected $4,285
+  ok_single_100k = list(agi = 107350, wages1 = 107350, ei1 = 107350)
+  run_case('OK', 2017, ok_single_100k,
+           expect = list(st_txbl_inc = 100000, liab_st_iit = 4811.50),
+           label = 'OK-1 2017 single schedule reproduces the $4,812 constant')
+  run_case('OK', 2022, ok_single_100k,
+           expect = list(liab_st_iit = 4561.50),
+           label = 'OK-1b 2022 rate cut reproduces the $4,562 constant')
+  run_case('OK', 2026, ok_single_100k,
+           expect = list(liab_st_iit = 4285.25),
+           label = 'OK-1c 2026 HB 2764 schedule hits the expected $4,285')
+
+  # OK-2 the married column, which is where the risk is. AGI 114,700 less the
+  # 12,700 deduction and two exemptions is 100,000 of taxable income. TY2024
+  # must differ from TY2023 by $22 -- HB 1040X moved the married top-bracket
+  # start from 12,200 to 14,400 by changing ONE number, with no rate change and
+  # nothing visible in the single column. This pair is what stops that vintage
+  # from being simplified away
+  ok_mfj_100k = list(filing_status = 2, age2 = 40, agi = 114700,
+                     wages1 = 114700, ei1 = 114700)
+  run_case('OK', 2017, ok_mfj_100k,
+           expect = list(st_txbl_inc = 100000, liab_st_iit = 4645.00),
+           label = 'OK-2 2017 married schedule reproduces the $4,645 constant')
+  run_case('OK', 2023, ok_mfj_100k,
+           expect = list(liab_st_iit = 4395.00),
+           label = 'OK-2b 2023 married constant $4,395 (top bracket 12,200)')
+  run_case('OK', 2024, ok_mfj_100k,
+           expect = list(liab_st_iit = 4373.00),
+           label = 'OK-2c 2024 HB 1040X moves the married top bracket to 14,400')
+
+  # OK-3 head of household takes the MARRIED rate column while keeping only one
+  # personal exemption. AGI 110,350 less the 9,350 HoH deduction, one personal
+  # and one dependent exemption leaves 99,000, taxed on the married schedule:
+  # 307.00 cumulative at 14,400 plus 4.75% of 84,600 = 4,325.50
+  run_case('OK', 2024,
+           list(filing_status = 4, agi = 110350, wages1 = 110350,
+                ei1 = 110350, n_dep = 1, dep_age1 = 10),
+           expect = list(st_exempt = 2000, st_txbl_inc = 99000,
+                         liab_st_iit = 4325.50),
+           label = 'OK-3 head of household on the married rate column')
+
+  # OK-4 the age-65 special exemption, encoded as a subtraction because it
+  # carries a hard federal-AGI cliff no exemption add-on can express. A single
+  # 66-year-old at AGI 14,000 is under the 15,000 limit, so the full 1,000
+  # comes out: st_agi 13,000, taxable 13,000 - 6,350 - 1,000 = 5,650
+  run_case('OK', 2024,
+           list(age1 = 66, agi = 14000, wages1 = 14000, ei1 = 14000),
+           expect = list(st_agi = 13000, st_txbl_inc = 5650),
+           label = 'OK-4 age-65 exemption allowed under the AGI limit')
+
+  # OK-4b at AGI 16,000 the statute allows nothing at all. The calculator ramps
+  # the 1,000 down dollar for dollar above the limit rather than cliffing, so it
+  # reaches zero exactly here and is form-exact outside a 1,000-wide AGI band
+  run_case('OK', 2024,
+           list(age1 = 66, agi = 16000, wages1 = 16000, ei1 = 16000),
+           expect = list(st_agi = 16000),
+           label = 'OK-4b age-65 exemption gone 1,000 above the limit')
+
+  # OK-5 THE GREATER-OF. Oklahoma grants the larger of 20% of the federal child
+  # care credit and 5% of the federal child tax credit, never both. MFJ at AGI
+  # 60,000 with a 4,000 federal CTC and a 1,200 federal CDCC: the care leg
+  # (240) beats the child leg (200), so the child leg is zeroed
+  run_case('OK', 2019,
+           list(filing_status = 2, age2 = 38, agi = 60000, wages1 = 40000,
+                ei1 = 40000, wages2 = 20000, ei2 = 20000, n_dep = 2,
+                n_dep_ctc = 2, dep_age1 = 5, dep_age2 = 8, care_exp = 6000,
+                ctc_nonref = 4000, cdctc_nonref = 1200),
+           expect = list(st_ctc = 0, st_cdctc = 240),
+           label = 'OK-5 greater-of picks the 20% care credit')
+
+  # OK-5b the same family with no care expenses: the child leg is all there is,
+  # and it survives at 200. Encoding only the care leg -- the fallback before
+  # the greater-of machinery existed -- would have paid this family nothing
+  run_case('OK', 2019,
+           list(filing_status = 2, age2 = 38, agi = 60000, wages1 = 40000,
+                ei1 = 40000, wages2 = 20000, ei2 = 20000, n_dep = 2,
+                n_dep_ctc = 2, dep_age1 = 5, dep_age2 = 8, ctc_nonref = 4000),
+           expect = list(st_ctc = 200, st_cdctc = 0),
+           label = 'OK-5b greater-of keeps the 5% child credit alone')
+
+  # OK-5c above 100,000 of federal AGI the whole credit is denied -- a cliff,
+  # not a phase-out. Both legs must go to zero, which is why the child leg uses
+  # a single-tier ladder and the care leg a zero cap above the threshold
+  run_case('OK', 2019,
+           list(filing_status = 2, age2 = 38, agi = 120000, wages1 = 120000,
+                ei1 = 120000, n_dep = 2, n_dep_ctc = 2, dep_age1 = 5,
+                dep_age2 = 8, care_exp = 6000, ctc_nonref = 4000,
+                cdctc_nonref = 1200),
+           expect = list(st_ctc = 0, st_cdctc = 0),
+           label = 'OK-5c both credit legs denied above the 100,000 cliff')
+
+  # OK-6 the $17,000 itemized cap with charity and medical EXEMPT from it.
+  # Components: 3,000 medical, 20,000 mortgage, 5,000 charity, 6,000 property
+  # tax and 4,000 income tax, with the federal SALT deduction capped at 10,000.
+  # Oklahoma's base replaces capped SALT with uncapped property tax and drops
+  # the income-tax component: 38,000 - 10,000 + 6,000 = 34,000. The cap then
+  # applies to everything except the 8,000 of charity and medical:
+  # min(17,000, 34,000 - 8,000) + 8,000 = 25,000. Taxable 80,000 - 25,000
+  # - 1,000 = 54,000, taxed 171.50 + 5% x 46,800 = 2,511.50
+  ok_itemizer = list(agi = 80000, wages1 = 80000, ei1 = 80000, itemizing = 1,
+                     item_ded = 38000, item_ded_ex_limits = 38000,
+                     salt_item_ded = 10000, salt_prop = 6000,
+                     salt_inc_sales = 4000, med_item_ded = 3000,
+                     char_item_ded = 5000, mort_int_item_ded = 20000,
+                     std_ded = 12200)
+  run_case('OK', 2019, ok_itemizer,
+           expect = list(st_ded = 25000, st_txbl_inc = 54000,
+                         liab_st_iit = 2511.50),
+           label = 'OK-6 $17,000 itemized cap, charity and medical exempt')
+
+  # OK-6b TY2017 had no cap, so the same return deducts the full 34,000 and is
+  # exact: taxable 45,000, tax 171.50 + 5% x 37,800 = 2,061.50
+  run_case('OK', 2017, ok_itemizer,
+           expect = list(st_ded = 34000, st_txbl_inc = 45000,
+                         liab_st_iit = 2061.50),
+           label = 'OK-6b no itemized cap existed in 2017')
+
+  # OK-7 the EITC changes character in 2022. A single filer at AGI 7,000 owes
+  # nothing (7,000 - 6,350 - 1,000 floors at zero), so the 5% of a 500 federal
+  # credit is worth nothing in 2019 and pays out in 2022
+  ok_eitc_unit = list(agi = 7000, wages1 = 7000, ei1 = 7000, eitc = 500)
+  run_case('OK', 2019, ok_eitc_unit,
+           expect = list(st_eitc = 25, st_txbl_inc = 0, liab_st_iit = 0),
+           label = 'OK-7 2019 EITC nonrefundable, worth nothing at zero tax')
+  run_case('OK', 2022, ok_eitc_unit,
+           expect = list(st_eitc = 25, liab_st_iit = -25),
+           label = 'OK-7b 2022 HB 2962 restored refundability')
+
+  # OK-8 Social Security comes out in full, with no age or income test. A
+  # single 70-year-old at AGI 40,000 including 15,000 of taxable benefits keeps
+  # 25,000 of base; the age-65 exemption is long gone at this income
+  run_case('OK', 2024,
+           list(age1 = 70, agi = 40000, wages1 = 25000, ei1 = 25000,
+                txbl_ss = 15000, gross_ss = 17000),
+           expect = list(st_agi = 25000, st_txbl_inc = 17650),
+           label = 'OK-8 full Social Security subtraction, unconditional')
+
+  # OK-9 the retirement exclusion is $10,000 PER PERSON, and the calculator
+  # pools the two caps at unit level. A couple where one spouse holds all
+  # 30,000 of pension income therefore excludes 20,000 where Oklahoma allows
+  # 10,000 -- the documented over-exclusion, pinned here so it cannot drift
+  # silently
+  run_case('OK', 2024,
+           list(filing_status = 2, age1 = 70, age2 = 68, agi = 80000,
+                wages1 = 50000, ei1 = 50000, txbl_pens_dist = 30000),
+           expect = list(st_agi = 60000),
+           label = 'OK-9 retirement exclusion caps pooled across spouses')
+
+  #--------------------------------------------------------------------------
   # GENERIC MACHINERY CASES
   #
   # These prove parameters that no encoded state consumes yet. Each was added
@@ -2805,7 +2968,7 @@ test_state_calc = function() {
   smoke_states = c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI',
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
                    'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI',
-                   'WV', 'NM', 'VT')
+                   'WV', 'NM', 'VT', 'OK')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()

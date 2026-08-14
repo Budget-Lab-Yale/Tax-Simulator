@@ -104,6 +104,11 @@ ND:
 OH:
   profile: broad_iit
   enabled: true
+# OK conforms to the IRC with no fixed date (68 O.S. 2353), so rolling
+# conformity (group 0)
+OK:
+  profile: broad_iit
+  enabled: true
 # PA is an own-base state (start_point 0): its eight income classes have no
 # IRC linkage at all, so conformity is moot (group 0 trivially). Federal
 # credits feeding the PA CDCTC/WPTC matches are scenario outputs by design

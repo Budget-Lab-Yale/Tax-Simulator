@@ -1,0 +1,34 @@
+---
+# Oklahoma: personal exemptions (Form 511 line 11; 68 O.S. 2358(C)).
+# $1,000 flat per exemption -- taxpayer, spouse and each dependent -- with a
+# $1,000 add-on per blind person and no income test on either.
+#
+# The AGE-65 add-on is NOT here: it carries a hard federal-AGI cliff that this
+# family cannot express, so it is encoded as a subtraction in agi.yaml. See the
+# long note there for why.
+#
+# Head of household takes the MARRIED rate column (see ord.yaml) but only ONE
+# personal exemption -- the two are independent, verified on the table column
+# header and 2358(C)(2) in all three vintages, and the filing-status mapper
+# handles it automatically since personal_amount is per taxpayer.
+
+personal_amount:
+  value: 1000
+  reference: '68 O.S. 2358(C); Form 511 line 11 instructions, $1,000 per exemption, unchanged 2017-2025 and unindexed'
+dep_amount:
+  value: 1000
+  reference: '68 O.S. 2358(C): the same $1,000 for each dependent claimed on the federal return'
+blind_addl:
+  value: 1000
+  reference: '68 O.S. 2358(C); Form 511 "Blind" exemption box, $1,000 per blind taxpayer or spouse, no income test (unlike the age-65 box)'
+
+# Dependent filers get no exemption at all: Form 511 Chart B sets the
+# dependent filing threshold at $6,350 -- the standard deduction ALONE --
+# against Chart A's $7,350, which is the deduction plus one exemption.
+dep_filer_zero:
+  value: 1
+  reference: 'Form 511 Chart B ($6,350 dependent threshold = standard deduction with no exemption) against Chart A ($7,350 = deduction plus one $1,000 exemption), all years. NOTE PolicyEngine does NOT zero it (ok_count_exemptions counts the head unconditionally), so expect a $1,000-of-base PE wedge on dependent filers'
+
+documented_not_modeled:
+  surviving_spouse_single_exemption:
+    reference: '68 O.S. 2358(C): a qualifying surviving spouse files with the MARRIED standard deduction but claims only ONE $1,000 personal exemption. The model maps surviving spouse to filing status 2 and therefore grants two [overstates their allowance by $1,000 of base, about $47.50 of tax]'

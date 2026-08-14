@@ -1,0 +1,38 @@
+---
+# Oklahoma: filing requirement (68 O.S. 2368(C); Form 511 Charts A and B).
+#
+# Unlike most states there is NO federal-filer trigger: 2368(C), which governs
+# from TY2017, states a pure Oklahoma gross-income test, and the federal-filer
+# trigger in 2368(A) covers only "tax years ending before January 1, 2017".
+#
+# Two approximations, both affecting filer counts only and not liability:
+#   - the test reads st_agi where the statute reads GROSS income
+#   - the head-of-household threshold is the published $10,350 (standard
+#     deduction plus one exemption), which omits the dependent exemption a head
+#     of household necessarily has; the true figure is $11,350
+
+filing_status_mapper:
+  req_income_thresh:
+    '1': req_thresh_single
+    '2': req_thresh_married
+    '3': req_thresh_single
+    '4': req_thresh_head
+
+req_type:
+  value: 2
+  reference: '68 O.S. 2368(C); Form 511 Chart A, a fixed dollar threshold on Oklahoma income by filing status'
+req_if_fed_filer:
+  value: 0
+  reference: '68 O.S. 2368(C) states a pure Oklahoma gross-income test for tax years beginning in 2017 and after; the federal-filer trigger of 2368(A) applies only to tax years ending before January 1, 2017'
+req_thresh_single:
+  value: 7350
+  reference: 'Form 511 Chart A, single and married filing separately: the $6,350 standard deduction plus one $1,000 exemption'
+req_thresh_married:
+  value: 14700
+  reference: 'Form 511 Chart A, married filing jointly: the $12,700 standard deduction plus two $1,000 exemptions'
+req_thresh_head:
+  value: 10350
+  reference: 'Form 511 Chart A, head of household: the $9,350 standard deduction plus one $1,000 exemption. As published -- it omits the dependent exemption a head of household necessarily has, which would make the true figure $11,350'
+req_income_thresh_dep:
+  value: 6350
+  reference: 'Form 511 Chart B, dependent filers: the standard deduction alone, with no exemption -- the same evidence that supports dep_filer_zero in exempt.yaml'
