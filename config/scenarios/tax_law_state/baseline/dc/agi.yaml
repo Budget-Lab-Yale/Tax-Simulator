@@ -1,0 +1,44 @@
+---
+# District of Columbia: income base (D-40 line 3; Schedule I additions and
+# subtractions).
+#
+# DC is barred from taxing nonresident wages, so a resident-only encoding is
+# nearly complete coverage of the DC individual income tax.
+
+start_point:
+  value: 1
+  reference: 'D-40 line 3 "Federal adjusted gross income"; D.C. Code 47-1803.02'
+
+conformity_group:
+  value: 0
+  reference: 'D.C. Code 47-1801.04(28) defines the Internal Revenue Code with no fixed date, and DC deconforms by NAMED provision (TY2018 section 199A, TY2025 OBBBA items) rather than by vintage -- so rolling conformity, group 0. None of the named carve-outs affects a federal-AGI start: section 199A is below the line and DC starts from AGI, so the TY2018 QBI denial needs no adjustment at all. Recorded so the non-issue is not rediscovered'
+
+# Out-of-state municipal interest is added back; DC's own obligations stay
+# exempt (Schedule I line 1)
+add_exempt_int:
+  value: 1
+  reference: 'D-40 Schedule I, Calculation A line 1 "Income from non-DC state and local bonds"; D.C. Code 47-1803.02(a)(1)'
+own_state_exempt:
+  value: 1
+  reference: 'Schedule I: obligations of the District itself remain exempt. The own-state share of exempt_int is unobserved, so the model adds back the uniform 25% out-of-state complement'
+sub_us_int:
+  value: 1
+  reference: 'Schedule I, Calculation B: interest on U.S. obligations is subtracted. The U.S.-obligation share of txbl_int is unobservable, so the flag is carried and no subtraction is taken [overstates DC tax for Treasury holders]'
+
+# Social Security and tier-1 Railroad Retirement come out IN FULL at every
+# age, with no income test -- and DC has NO pension exclusion of any kind, so
+# nothing else in the retirement space applies here.
+ss_sub_share:
+  value: 1
+  reference: 'D-40 Schedule I, Calculation B: "Taxable social security and tier I railroad retirement included in federal gross income". No age test, no income test, all years 2017-2025'
+
+documented_not_modeled:
+  unincorporated_business_carveout_d30:
+    value: 12000
+    reference: 'D.C. Code 47-1808.01 et seq.: a DC resident with more than $12,000 of DC gross income from an unincorporated business -- INCLUDING rents and royalties -- files Form D-30 and EXCLUDES that income from the D-40. We tax sole proprietorship, partnership and rental income on the individual schedule instead. THE LARGEST SINGLE ITEM in this state, and the direction is AMBIGUOUS: D-30 is a flat 8.25% with a $5,000 salary allowance and a 30% exemption, against individual rates of 4-10.75%, so it overstates for high-bracket owners and understates for low-bracket ones. Affects a large share of DC Schedule C/E filers. Paired with the omitted greater-than-$12,000 pass-through-loss addback, which PolicyEngine does model'
+  government_annuitant_survivor_benefits:
+    reference: 'Schedule I, Calculation B: survivor benefits of government annuitants aged 62 or over are subtracted. Annuitant status is not observable [overstates DC AGI for a population materially over-represented in the District]'
+  qhtc_capital_gains_rate:
+    reference: 'D.C. Code 47-1817.06 (TY2019+): a 3% rate on capital gains from qualified high technology company investments. The qualifying subset is unobservable'
+  health_care_shared_responsibility:
+    reference: 'D.C. Code 47-5101 et seq. (TY2019+): the District''s individual mandate payment sits inside "Total tax" on the D-40. Coverage status is not observable, and st_surtax.per_return_amount is unconditional and would misstate it [understates DC total tax for uninsured units]'

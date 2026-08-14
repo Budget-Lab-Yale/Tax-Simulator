@@ -1,0 +1,107 @@
+---
+# District of Columbia: credits (D-40 lines 21-27; D.C. Code 47-1806.04).
+#
+# THE STRUCTURAL POINT FOR THIS STATE: DC runs TWO earned-income credits that
+# are mutually exclusive by child count -- a percentage MATCH of the federal
+# credit for filers WITH qualifying children, and a completely independent DC
+# formula for CHILDLESS workers. calc_st_credits SUMS st_eitc and
+# st_earned_credit, so the match is loaded through the child-count-keyed family
+# with SLOT 1 (zero qualifying children) SET TO ZERO, and the independent
+# credit's vectors carry the DC formula in slot 1 only. Encoding the match as a
+# scalar eitc_match would double-count every childless recipient.
+
+# Match for filers WITH qualifying children: 40% -> 70% -> 100%. There is no
+# 85% step in this window: 47-1806.04(f)(1)(B-3) is [Repealed], the FY2025 BSA
+# having collapsed the original 85%/100% steps into a single 100% step.
+eitc_match_by_kids:
+  value:
+    '2017': [0.0, 0.40, 0.40, 0.40]
+    '2022': [0.0, 0.70, 0.70, 0.70]
+    '2025': [0.0, 1.00, 1.00, 1.00]
+  reference: 'D.C. Code 47-1806.04(f)(1)(B)/(B-1)/(B-2), with (B-3) [Repealed]; D-40 booklets. TY2024 prints ".70" and the TY2025 booklet states "The District EITC is now 100% of the federal EITC" and "Multiply the calculated federal EIC amount x 1.00". Slots are 0/1/2/3+ federal qualifying children, and slot 1 is ZERO because childless filers take the independent credit below instead'
+eitc_refundable:
+  value: 1
+  reference: 'D.C. Code 47-1806.04(f)(2): the credit is refundable'
+
+# Independent childless-worker credit (47-1806.04(f)(1)(C)) -- a DC FORMULA,
+# not a match: a phase-in rate on earned income up to a maximum, reduced by
+# 8.48% of the excess of max(AGI, earned income) over an indexed threshold.
+# Slot 1 (childless) carries the schedule; slots 2-4 are zero so that filers
+# with children take the match and nothing here.
+#
+# TY2021 is the outlier in every parameter: DC followed the ARPA relaxation,
+# raising the maximum to $1,502, the phase-in to 15.3% and lowering the age
+# floor to 19.
+earned_credit_style:
+  value: 1
+  reference: 'D.C. Code 47-1806.04(f)(1)(C); D-40 Schedule H-equivalent childless-EITC worksheet. Style 1 is the triangular phase-in / plateau / phase-out schedule'
+earned_credit_refundable:
+  value: 1
+  reference: 'D.C. Code 47-1806.04(f)(2): refundable, like the match'
+earned_credit_phasein_rate:
+  value:
+    '2017': [0.0765, 0.0, 0.0, 0.0]
+    '2021': [0.153, 0.0, 0.0, 0.0]
+    '2022': [0.0765, 0.0, 0.0, 0.0]
+  reference: 'The federal childless phase-in rate DC adopts: 7.65% in every year except TY2021, where DC followed the ARPA relaxation to 15.3%'
+earned_credit_phaseout_rate:
+  value: [0.0848, 0.0, 0.0, 0.0]
+  reference: 'D.C. Code 47-1806.04(f)(1)(C): the tentative credit is reduced by 8.48% of the excess over the phase-out threshold, in every year'
+earned_credit_max:
+  value:
+    '2017': [510, 0, 0, 0]
+    '2018': [519, 0, 0, 0]
+    '2019': [529, 0, 0, 0]
+    '2020': [538, 0, 0, 0]
+    '2021': [1502, 0, 0, 0]
+    '2022': [560, 0, 0, 0]
+    '2023': [600, 0, 0, 0]
+    '2024': [632, 0, 0, 0]
+    '2025': [649, 0, 0, 0]
+  reference: 'D-40 childless-EITC worksheets 2017-2025. The TY2025 booklet states "the maximum credit amount has increased from $632 to $649" and its worksheet prints "Otherwise enter $649"; TY2023 ($600) came from the font-decoded booklet and is corroborated by the TY2024 "increasing from" line'
+earned_credit_phaseout_start:
+  value:
+    '2017': [18622, 0, 0, 0]
+    '2018': [18862, 0, 0, 0]
+    '2019': [19239, 0, 0, 0]
+    '2020': [19489, 0, 0, 0]
+    '2021': [19743, 0, 0, 0]
+    '2022': [20532, 0, 0, 0]
+    '2023': [21888, 0, 0, 0]
+    '2024': [22566, 0, 0, 0]
+    '2025': [23288, 0, 0, 0]
+  reference: 'D-40 childless-EITC worksheets 2017-2025; indexed annually. The TY2025 worksheet reads "If Line 4 is less than $23,288 ... If Line 4 is between $23,288 and $30,941", which pins both this and the zero-out'
+earned_credit_age_min:
+  value:
+    '2017': 25
+    '2021': 19
+    '2022': 25
+  reference: 'The federal childless age floor DC adopts: 25 in every year except TY2021, where DC followed the ARPA relaxation to 19'
+earned_credit_age_max:
+  value: 64
+  reference: 'The federal childless age ceiling (under 65), which applies only to filers WITHOUT qualifying children -- matching the federal rule. Closed by st_credits.earned_credit_age_max on 2026-08-12; before that the ceiling was simply missing and the credit was granted to filers over 64'
+
+# Child and dependent care credit: 32% of the federal section 21 credit,
+# nonrefundable.
+cdctc_match:
+  value: 0.32
+  reference: 'D.C. Code 47-1806.04(c); D-40 line 21 prints "X .32" in every year through TY2025. NOTE 47-1806.04(c)(1)(A) covers years "before January 1, 2025" and (c)(1)(B) years "after December 31, 2025", leaving TY2025 covered by NEITHER -- the TY2025 D-40 line 21 resolves the gap at .32, and PolicyEngine agrees'
+cdctc_refundable:
+  value: 0
+  reference: 'D.C. Code 47-1806.04(c): nonrefundable'
+
+documented_not_modeled:
+  low_income_credit_2017:
+    reference: 'D.C. Code 47-1806.04(e), repealed after TY2017: a nonrefundable table-driven credit of $119-$1,311 capped at remaining tax, MUTUALLY EXCLUSIVE with the DC EITC -- so it reaches non-EITC low-income filers, especially seniors. Not modeled [understates DC credits in TY2017 only. TAXSIM models it, so pre-register a 2017 wedge]'
+  keep_child_care_affordable_credit:
+    reference: 'D.C. Code 47-1806.15 (TY2018+): refundable, up to $1,000 (2018-2019) rising to $1,200 (2025) per dependent under 4, capped by DC taxable income. Requires expenses paid to a LICENSED DC facility -- a strict subset of federal section 21 expenses -- and disqualifies subsidy recipients [understates DC refunds for families with young children; PolicyEngine models it]'
+  schedule_h_property_tax_credit:
+    reference: 'D.C. Code 47-1806.06: refundable, up to $1,025 (2017) rising to $1,425 (2025), based on rent paid and HOUSEHOLD income. Tier-1 blocked -- neither rent nor household income is a tax-unit concept [understates DC refunds for low-income renters and owners; PolicyEngine models it]'
+  childless_eitc_phaseout_measure:
+    reference: 'DC reduces the tentative childless credit by 8.48% of the excess of MAX(earned income, federal AGI) over the threshold. earned_credit_style 1 computes min(curve(earned), curve(AGI)) instead, which is exact when both sit in the same region of the schedule but OVERSTATES -- by up to the full maximum, at most $649 -- for units whose earned income is still phasing in while AGI is already past the phase-out start. Compounded by the absent investment-income disqualifier and the Schedule E / Form 4797 exclusions, which also overstate eligibility'
+  cdctc_base_is_post_limitation:
+    reference: 'DC allows 32% of the federal credit "regardless of the amount actually used to offset federal tax liability"; we apply 32% to the POST-limitation federal credit [understates the DC credit for units whose federal tax cannot absorb the section 21 credit]'
+  itin_and_non_custodial_parent_eitc:
+    reference: '47-1806.04(f)(1)(D) extends the DC EITC to ITIN filers from TY2023, but our federal eitc is zero for those units so nothing flows through [understates DC refunds for ITIN filers]. The non-custodial parent EITC (Schedule N, 47-1806.04(g)), the credit for tax paid to another state, and the Schedule U credit menu are likewise not modeled'
+  ty2026_child_tax_credit:
+    reference: 'D.C. Code 47-1806.17 creates a $1,000-per-child credit for children under 18 beginning TY2026, and the CDCC drops to 24.25% in the same year. Both are outside the encoded window; the TY2025 booklet confirms the child credit is "repealed for 2025"'

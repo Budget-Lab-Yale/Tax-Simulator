@@ -1,0 +1,218 @@
+---
+# District of Columbia: deductions (D-40 line 16; Schedule S Calculations F,
+# G-1 and J).
+#
+# THREE DEDUCTION REGIMES:
+#   2017      DC's own amounts, with NO aged or blind add-on at all
+#   2018-2024 conformity to the FEDERAL standard deduction and the federal
+#             additional amounts
+#   2025      DC decouples again and REFUSES the OBBBA increase, publishing its
+#             own $15,000 / $30,000 / $22,500 with $1,600/$2,000 add-ons
+#
+# The TY2025 dependent-filer treatment was the packet's highest-magnitude open
+# call and is now CLOSED from the booklet: the TY2025 D-40 standard-deduction
+# text reads "$15,000 for single filers, DEPENDENT FILERS and married ...
+# filing separately", and the filing chart lists "Dependent filer $15,000",
+# with no dependent worksheet anywhere in Calculation G-1. The TY2024 booklet
+# by contrast says dependent filers get "a standard deduction in an amount
+# based on a formula ... use the worksheet on page 20". So the decoupling is
+# real: the federal min/max worksheet through 2024, a flat $15,000 in 2025.
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_joint
+    '3': std_single
+    '4': std_head
+  std_aged_addl:
+    '1': std_addl_unmarried
+    '2': std_addl_married
+    '3': std_addl_married
+    '4': std_addl_unmarried
+  std_blind_addl:
+    '1': std_addl_unmarried
+    '2': std_addl_married
+    '3': std_addl_married
+    '4': std_addl_unmarried
+
+std_single:
+  value:
+    '2017': 5650
+    '2018': 12000
+    '2019': 12200
+    '2020': 12400
+    '2021': 12550
+    '2022': 12950
+    '2023': 13850
+    '2024': 14600
+    '2025': 15000
+  reference: 'D.C. Code 47-1801.04(44). TY2017 is the District''s own amount (D-40 booklet); TY2018-2024 conform to the federal standard deduction; TY2025 the District decouples and sets its own $15,000, refusing the OBBBA increase (2025 D-40 booklet, "The District has established its own basic standard deduction amounts"). The TY2023 figure is corroborated by the TY2024 booklet''s "increasing from $13,850 to $14,600" line'
+std_joint:
+  value:
+    '2017': 10275
+    '2018': 24000
+    '2019': 24400
+    '2020': 24800
+    '2021': 25100
+    '2022': 25900
+    '2023': 27700
+    '2024': 29200
+    '2025': 30000
+  reference: 'Same source; married filing jointly and qualifying widow(er). TY2023 corroborated by the TY2024 booklet''s "increasing from $27,700 to $29,200"'
+std_head:
+  value:
+    '2017': 7800
+    '2018': 18000
+    '2019': 18350
+    '2020': 18650
+    '2021': 18800
+    '2022': 19400
+    '2023': 20800
+    '2024': 21900
+    '2025': 22500
+  reference: 'Same source; head of household. TY2023 corroborated by the TY2024 booklet''s "increasing from $20,800 to $21,900"'
+
+# Additional standard deduction PER BOX (aged 65+ or blind). DC had none at all
+# in 2017; from 2018 it follows the federal per-instance amounts, which are
+# larger for unmarried filers.
+std_addl_married:
+  value:
+    '2017': 0
+    '2018': 1300
+    '2021': 1350
+    '2022': 1400
+    '2023': 1500
+    '2024': 1550
+    '2025': 1600
+  reference: 'D-40 Schedule S Calculation G-1, married/registered domestic partner amounts. TY2024 read directly ("$1,550 ($1,950 if single or head of household)"); TY2025 read directly ("$1,600 ($2000 if single, head of household, or dependent claimed by someone else)")'
+std_addl_unmarried:
+  value:
+    '2017': 0
+    '2018': 1600
+    '2019': 1650
+    '2021': 1700
+    '2022': 1750
+    '2023': 1850
+    '2024': 1950
+    '2025': 2000
+  reference: 'D-40 Schedule S Calculation G-1, single and head-of-household amounts. Note 2018 is $1,600 and 2019-2020 $1,650 -- the two differ'
+
+# Dependent filers: the federal min/max worksheet through 2024, then a flat
+# amount in 2025 (see the header note)
+std_dependent_style:
+  value:
+    '2017': 1
+    '2025': 0
+  reference: 'D-40 Schedule S dependent worksheet, TY2018-2024 (and the same construction in TY2017). The TY2025 booklet has no dependent worksheet and states the flat $15,000 directly'
+std_dependent:
+  value:
+    '2017': 0
+    '2025': 15000
+  reference: '2025 D-40 booklet: "Single individuals, dependents and married/registered domestic partner filers filing separately are allowed a standard deduction amount of $15,000", corroborated by the filing chart entry "Dependent filer $15,000". Used only where std_dependent_style is 0'
+std_dependent_floor:
+  value:
+    '2017': 1050
+    '2019': 1100
+    '2022': 1150
+    '2023': 1250
+    '2024': 1300
+  reference: 'The federal IRC 63(c)(5)(A) minimum DC conforms to by 47-1801.04(44), TY2018-2024. TY2018/2019/2022/2024 were read directly from the booklet worksheets and match federal exactly; TY2020/2021/2023 pages are font-mangled and take the federal amounts by statute'
+std_dependent_earned_add:
+  value:
+    '2017': 350
+    '2022': 400
+    '2024': 450
+  reference: 'The federal IRC 63(c)(5)(B) earned-income addition DC conforms to, TY2018-2024'
+
+# Itemized deductions: coupled to the federal election, with state and local
+# INCOME taxes stripped and real property taxes left UNCAPPED. Components are
+# selected rather than taking the federal total, because personal property tax
+# leaves the base in 2018.
+item_allowed:
+  value: 1
+  reference: 'D-40 Schedule S Calculation F "DC itemized deductions"; D.C. Code 47-1803.04(b)'
+item_coupling:
+  value: 1
+  reference: 'D.C. Code 47-1803.04(b): the District election follows the federal one'
+item_component_style:
+  value: 1
+  reference: 'Calculation F subtracts Schedule A line 7 and adds back only lines 5b and 6, so the DC base is a selected set of components rather than the federal total'
+salt_addback:
+  value: 1
+  reference: 'Calculation F removes state and local income taxes from the itemized total'
+item_include_medical:
+  value: 1
+  reference: 'Federal Schedule A line 4, carried into Calculation F'
+item_include_mortgage:
+  value: 1
+  reference: 'Federal Schedule A line 10'
+item_include_investment:
+  value: 1
+  reference: 'Federal Schedule A line 9'
+item_include_charity:
+  value: 1
+  reference: 'Federal Schedule A line 14'
+item_include_casualty:
+  value: 1
+  reference: 'Federal Schedule A line 15'
+item_include_misc:
+  value: 1
+  reference: 'Federal Schedule A miscellaneous deductions (pre-TCJA 2%-floor class is data-limited model-wide)'
+item_include_other:
+  value: 1
+  reference: 'Federal Schedule A line 16'
+item_include_prop_tax:
+  value: 1
+  reference: 'Calculation F adds back Schedule A line 5b REAL property taxes, and does so UNCAPPED -- the federal SALT cap does not carry into the DC base, which is why item_prop_tax_cap stays at its infinite default'
+item_include_pers_tax:
+  value:
+    '2017': 1
+    '2018': 0
+  reference: 'Calculation F adds back only lines 5b and 6 from 2018, dropping Schedule A line 5c personal property taxes. Derived from the form''s STRUCTURE rather than an explicit disallowance; the form governs and the magnitude is small (the District levies no individual vehicle personal property tax)'
+item_include_income_sales_tax:
+  value: 0
+  reference: 'Calculation F strips state and local income taxes; the sales-tax election is likewise excluded'
+
+# DC-specific limitation (47-1803.03(b-4), in force since 2011): the
+# non-protected itemized components are reduced by 5% of AGI over $200,000.
+# PolicyEngine appears to start this in 2021, which is a coverage artifact --
+# the rule is printed in every 2017-2025 booklet.
+item_limit_style:
+  value: 1
+  reference: 'D.C. Code 47-1803.03(b-4); D-40 Schedule S Calculation F, all years 2017-2025'
+item_limit_thresh:
+  value: 200000
+  reference: 'D.C. Code 47-1803.03(b-4): the reduction applies to income over $200,000. Not indexed'
+item_limit_rate:
+  value: 0.05
+  reference: 'D.C. Code 47-1803.03(b-4): five percent of the excess'
+item_limit_max_nonprotected_share:
+  value: 1
+  reference: 'The reduction cannot exceed the non-protected components themselves'
+item_limit_protect_medical:
+  value: 1
+  reference: 'Calculation F protects medical expenses from the 5% reduction, following the federal Pease protected set'
+item_limit_protect_investment:
+  value: 1
+  reference: 'Investment interest is protected, following the federal Pease protected set'
+item_limit_protect_casualty:
+  value: 1
+  reference: 'Casualty and theft losses are protected, following the federal Pease protected set'
+
+# Pre-TCJA Pease, TY2017 only
+pease:
+  value:
+    '2017': 1
+    '2018': 0
+  reference: 'The federal limitation DC conformed to in TY2017, suspended federally by TCJA from TY2018'
+pease_thresh:
+  value:
+    '2017': 261500
+    '2018': .inf
+  reference: 'IRC 68(b) TY2017 threshold. DC applies ONE schedule to every filing status, so the single-filer threshold is used throughout -- consistent with 47-1806.03(e) treating each separate filer as a single person'
+
+documented_not_modeled:
+  combined_separate_allocation_not_optimised:
+    reference: 'Calculation J permits any allocation of the joint deduction between the two columns. We split the standard deduction 50/50 and the itemized deduction by income share [overstates tax for unequal-income electors, since an optimal allocation would put more deduction against the higher-rate column]. In TY2017 the combined columns also receive no dependent exemptions and no exemption phase-out, which only makes the pmin(joint, combined) election LESS attractive -- conservative, never over-crediting'
+  pease_prorating_2017:
+    reference: 'DC pro-rates the income-tax subtraction by the post-limitation allowed share; we apply Pease to the DC component base instead [understates the deduction by roughly R x I / T -- about $1,250 of deduction, some $106 of tax, on total itemized 100,000 with 25,000 of income tax and a 5,000 Pease reduction]. TY2017 only'

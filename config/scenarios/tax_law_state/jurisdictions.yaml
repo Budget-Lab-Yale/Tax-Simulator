@@ -24,6 +24,13 @@ CO:
 CT:
   profile: broad_iit
   enabled: true
+# DC defines the IRC without a fixed date (47-1801.04(28)) and deconforms by
+# NAMED provision rather than by vintage, so rolling conformity (group 0).
+# None of the named carve-outs (TY2018 QBI, TY2025 OBBBA items) affects a
+# federal-AGI start
+DC:
+  profile: broad_iit
+  enabled: true
 # DE is rolling conformity (30 Del. C. 1101/1105 reference federal AGI under
 # the IRC with no fixed date), so group 0 with no reference-law bridge needed
 DE:

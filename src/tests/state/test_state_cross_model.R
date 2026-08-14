@@ -23,7 +23,7 @@
 # States by structural class (baseline configs under tax_law_state/baseline/)
 cross_model_states = function() {
   list(
-    broad  = c('AZ', 'CA', 'CO', 'CT', 'DE', 'GA', 'ID', 'IL', 'IN', 'KS',
+    broad  = c('AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'GA', 'ID', 'IL', 'IN', 'KS',
                'KY', 'MD', 'MI', 'MN', 'NC', 'ND', 'NM', 'NY', 'OH', 'OK',
                'PA', 'RI', 'SC', 'UT', 'VA', 'VT', 'WI', 'WV'),
     narrow = c('NH', 'TN'),           # interest/dividend (Hall-type) taxes

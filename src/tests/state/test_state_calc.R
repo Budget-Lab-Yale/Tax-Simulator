@@ -23,7 +23,7 @@ test_state_calc = function() {
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
                 'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV', 'NM',
-                'VT', 'OK'),
+                'VT', 'OK', 'DC'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -2707,6 +2707,149 @@ test_state_calc = function() {
            label = 'OK-9 retirement exclusion caps pooled across spouses')
 
   #--------------------------------------------------------------------------
+  # DISTRICT OF COLUMBIA (D-40, Schedule S Calculations F / G / G-1 / J)
+  #
+  # DC runs ONE graduated schedule for every filing status, so the acceptance
+  # test for the rate encoding is the published BASE AMOUNT at each bracket
+  # knot: 28,150 at 350,000 under the 2017-2021 schedule and 42,775 at 500,000
+  # under the 2022 restructure. Both reproduce exactly from the marginal rates,
+  # which is why DC needs no base_amounts family.
+  #--------------------------------------------------------------------------
+
+  # DC-1 TY2019 single, AGI 60,000, standard deduction 12,200 (federal
+  # conformity years), no exemptions after TCJA. Taxable 47,800:
+  # 10,000 x 4% + 30,000 x 6% + 7,800 x 6.5% = 400 + 1,800 + 507 = 2,707
+  run_case('DC', 2019,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000),
+           expect = list(st_exempt = 0, st_txbl_inc = 47800,
+                         liab_st_iit = 2707.00),
+           label = 'DC-1 2019 single, federal-conformity standard deduction')
+
+  # DC-2 the published base amount at the top knot of the 2022 schedule. AGI
+  # 512,950 less the 12,950 deduction is exactly 500,000 of taxable income,
+  # where the booklet prints a base of 42,775
+  run_case('DC', 2022,
+           list(agi = 512950, wages1 = 512950, ei1 = 512950),
+           expect = list(st_txbl_inc = 500000, liab_st_iit = 42775.00),
+           label = 'DC-2 2022 schedule reproduces the published 42,775 base')
+
+  # DC-2b the same check on the 2017-2021 schedule, whose top knot is 350,000
+  # with a published base of 28,150. The two schedules share their four lowest
+  # bands; only the top end was restructured
+  run_case('DC', 2021,
+           list(agi = 362550, wages1 = 362550, ei1 = 362550),
+           expect = list(st_txbl_inc = 350000, liab_st_iit = 28150.00),
+           label = 'DC-2b 2021 schedule reproduces the published 28,150 base')
+
+  # DC-3 the TY2017 exemption and its stepped phase-out: 2% of the allowance
+  # per $2,500 (or fraction) of federal AGI over 150,000. At AGI 200,000 the
+  # excess is 20 whole steps, so 40% is removed and 1,775 x 0.6 = 1,065 remains
+  run_case('DC', 2017,
+           list(agi = 200000, wages1 = 200000, ei1 = 200000),
+           expect = list(st_exempt = 1065),
+           label = 'DC-3 2017 exemption phased 40% at AGI 200,000')
+
+  # DC-3b at 275,000 the 50 steps remove 100%, which is why the published
+  # eligibility limit needs no separate parameter
+  run_case('DC', 2017,
+           list(agi = 275000, wages1 = 275000, ei1 = 275000),
+           expect = list(st_exempt = 0),
+           label = 'DC-3b 2017 exemption zeroes exactly at 275,000')
+
+  # DC-3c a head of household gets an EXTRA exemption in 2017 -- two at 1,775
+  # for the filer plus one for the dependent. Taxable 50,000 - 7,800 - 5,325
+  run_case('DC', 2017,
+           list(filing_status = 4, agi = 50000, wages1 = 50000, ei1 = 50000,
+                n_dep = 1, dep_age1 = 10),
+           expect = list(st_exempt = 5325, st_txbl_inc = 36875),
+           label = 'DC-3c 2017 head-of-household extra exemption')
+
+  # DC-4 THE CHILDLESS-WORKER CREDIT, which is an independent DC formula rather
+  # than a match: 7.65% of earned income up to 649, reduced by 8.48% of the
+  # excess over 23,288. At 25,000 of earned income that is
+  # 649 - 0.0848 x 1,712 = 503.82
+  run_case('DC', 2025,
+           list(age1 = 40, agi = 25000, wages1 = 25000, ei1 = 25000),
+           expect = list(st_earned_credit = 503.82),
+           label = 'DC-4 2025 childless EITC on the DC formula')
+
+  # DC-4b the age ceiling. A 66-year-old childless filer is ineligible for the
+  # federal childless credit and for DC's, which the calculator could not
+  # express until earned_credit_age_max landed
+  run_case('DC', 2025,
+           list(age1 = 66, agi = 8483, wages1 = 8483, ei1 = 8483),
+           expect = list(st_earned_credit = 0),
+           label = 'DC-4b childless credit denied above age 64')
+
+  # DC-5 a filer WITH children takes the match and nothing from the independent
+  # credit. This pair is the reason the match is loaded through the
+  # child-count-keyed family with slot 1 zeroed: calc_st_credits SUMS the two,
+  # so a scalar match would pay both to every childless recipient
+  run_case('DC', 2024,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, n_dep = 2,
+                n_dep_eitc = 2, dep_age1 = 5, dep_age2 = 8, eitc = 5000),
+           expect = list(st_eitc = 3500, st_earned_credit = 0),
+           label = 'DC-5 2024 match at 70% for filers with children')
+
+  # DC-5b TY2025 takes the match to 100% of the federal credit
+  run_case('DC', 2025,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, n_dep = 2,
+                n_dep_eitc = 2, dep_age1 = 5, dep_age2 = 8, eitc = 5000),
+           expect = list(st_eitc = 5000, st_earned_credit = 0),
+           label = 'DC-5b 2025 match at 100%')
+
+  # DC-6 the TY2025 dependent-filer decoupling, which the booklet settles: a
+  # flat 15,000 where the federal worksheet would have given
+  # min(15,000, max(1,300, earned + 450)). A dependent with 20,000 of earned
+  # income keeps 5,000 of taxable income
+  run_case('DC', 2025,
+           list(dep_status = 1, agi = 20000, wages1 = 20000, ei1 = 20000),
+           expect = list(st_ded = 15000, st_txbl_inc = 5000),
+           label = 'DC-6 2025 dependent filer takes the flat 15,000')
+
+  # DC-6b TY2024 still runs the federal worksheet, which caps at that year's
+  # 14,600 standard deduction rather than the earned-income figure
+  run_case('DC', 2024,
+           list(dep_status = 1, agi = 20000, wages1 = 20000, ei1 = 20000),
+           expect = list(st_ded = 14600, st_txbl_inc = 5400),
+           label = 'DC-6b 2024 dependent filer on the federal worksheet')
+
+  # DC-7 Social Security comes out in full at any age with no income test, and
+  # DC has no pension exclusion of any kind
+  run_case('DC', 2024,
+           list(age1 = 70, agi = 50000, wages1 = 30000, ei1 = 30000,
+                txbl_ss = 20000, gross_ss = 23000),
+           expect = list(st_agi = 30000),
+           label = 'DC-7 full Social Security subtraction at any age')
+
+  # DC-8 the DC-specific itemized limitation: non-protected components reduced
+  # by 5% of AGI over 200,000. Components are 5,000 medical + 30,000 mortgage
+  # + 10,000 charity + 12,000 real property = 57,000, with income tax stripped.
+  # Medical is protected, so 52,000 is exposed and the reduction is
+  # 5% x 100,000 = 5,000, leaving 52,000. Taxable 248,000 gives
+  # 400 + 1,800 + 1,300 + 8.5% x 188,000 = 19,480
+  run_case('DC', 2019,
+           list(agi = 300000, wages1 = 300000, ei1 = 300000, itemizing = 1,
+                item_ded = 57000, item_ded_ex_limits = 57000,
+                salt_item_ded = 10000, salt_prop = 12000,
+                salt_inc_sales = 15000, med_item_ded = 5000,
+                char_item_ded = 10000, mort_int_item_ded = 30000,
+                std_ded = 12200),
+           expect = list(st_ded = 52000, st_txbl_inc = 248000,
+                         liab_st_iit = 19480.00),
+           label = 'DC-8 2019 itemized limitation, 5% of AGI over 200,000')
+
+  # DC-9 the care credit is 32% of the federal section 21 credit and
+  # nonrefundable. Single with one young dependent at AGI 40,000: taxable
+  # 27,800 gives 400 + 6% x 17,800 = 1,468 of tax, which absorbs the 192
+  run_case('DC', 2019,
+           list(agi = 40000, wages1 = 40000, ei1 = 40000, n_dep = 1,
+                dep_age1 = 4, care_exp = 3000, cdctc_nonref = 600),
+           expect = list(st_cdctc = 192, st_txbl_inc = 27800,
+                         liab_st_iit = 1276.00),
+           label = 'DC-9 2019 care credit at 32%, nonrefundable')
+
+  #--------------------------------------------------------------------------
   # GENERIC MACHINERY CASES
   #
   # These prove parameters that no encoded state consumes yet. Each was added
@@ -2968,7 +3111,7 @@ test_state_calc = function() {
   smoke_states = c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI',
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
                    'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI',
-                   'WV', 'NM', 'VT', 'OK')
+                   'WV', 'NM', 'VT', 'OK', 'DC')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()
