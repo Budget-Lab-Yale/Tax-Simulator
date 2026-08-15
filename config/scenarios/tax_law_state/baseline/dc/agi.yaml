@@ -25,6 +25,12 @@ sub_us_int:
   value: 1
   reference: 'Schedule I, Calculation B: interest on U.S. obligations is subtracted. The U.S.-obligation share of txbl_int is unobservable, so the flag is carried and no subtraction is taken [overstates DC tax for Treasury holders]'
 
+# State and local income tax refunds taxed federally come out of the DC base
+# on the face of the D-40 itself (not Schedule I)
+sub_state_ref:
+  value: 1
+  reference: 'D-40 "Subtractions from DC Income": "Taxable refunds, credits or offsets of state and local income tax -- Enter the amount from your 1040". Line 8 on the 2017 D-40, Line 9 on the 2020 D-40; present in every booklet year. ADDED 2026-08-15 from cross-model triage: its omission was 76-86% of the fed-aligned state-AGI-stage mismatches in every TAXSIM-window year'
+
 # Social Security and tier-1 Railroad Retirement come out IN FULL at every
 # age, with no income test -- and DC has NO pension exclusion of any kind, so
 # nothing else in the retirement space applies here.

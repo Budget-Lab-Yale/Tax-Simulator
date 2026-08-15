@@ -1,0 +1,12 @@
+TAXSIM-35, Utah, TY2019, single, age 40, wages 2,000,000, gross
+Social Security 20,000.
+
+Expected: no Utah retirement credit. Utah Code 59-10-1019 restricts
+the credit to filers born before 1953 and phases it out at 2.5
+cents per dollar of modified AGI above the threshold, so a
+40-year-old at 2M of income qualifies for nothing. TAXSIM grants a
+flat 288 (= 6% x 4,800; 576 per couple; 271 under the 2017 vintage
+constant) to ANY record with positive gssi, at any age and any
+income -- verified across seven probe shapes. Dominant UT wedge in
+our 2017-2020 validation samples (~200-260 records/yr at exactly
++288/+576).

@@ -1,0 +1,13 @@
+TAXSIM-35, Michigan, TY2019, single, age 40, no income of any kind.
+
+Expected: MI-1040 liability 0. TAXSIM returns siitax = -385.60 --
+v30_state_household_income collapses to 0.01 here (1.01 on
+populated records in our samples) and the MI-1040CR-7
+home heating credit standard allowance (90% x one-exemption
+allowance, 386 in 2019) is netted into siitax. Two concerns:
+(a) the household-income base of 1.01 is wrong (it also appears on
+multi-million-AGI records, which then receive the credit);
+(b) the home heating credit is an energy-assistance transfer paid
+outside MI-1040 liability, so netting it into siitax mixes concepts.
+On our validation sample ~370-410 records/yr are affected 2017-2020
+(flat 349/351/386/418 by year).

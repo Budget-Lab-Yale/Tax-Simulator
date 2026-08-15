@@ -1,8 +1,46 @@
 # District of Columbia Source Packet
 
 State: `DC`
-Status: `ENCODED 2026-08-13 (baseline/dc/, tests DC-1..DC-9); cross-model not yet run`
-Last updated: `2026-08-13`
+Status: `ENCODED 2026-08-13 (baseline/dc/, tests DC-1..DC-10); cross-model TRIAGED 2026-08-15`
+Last updated: `2026-08-15`
+
+> **Cross-model triage 2026-08-15 (closes the 2026-08-14 open items).** One
+> our-side fix and four attributed external/crosswalk classes:
+> 1. **OUR-SIDE FIX: the state-refund subtraction was missing.** The D-40
+>    subtracts "Taxable refunds, credits or offsets of state and local income
+>    tax" on its face (Line 8 in 2017, Line 9 in 2020); `sub_state_ref: 1` is
+>    now encoded (test DC-10). Its omission was 76–86% of the fed-aligned
+>    state-AGI-stage mismatches in every TAXSIM-window year.
+> 2. **TAXSIM subtracts UI from DC AGI in all four window years** — but the
+>    booklets print "All unemployment compensation received in [2017/2020] is
+>    taxable" and Calculation B has no UI line (DC first exempted UI in
+>    TY2021). Probe-verified, including a 2020 double-count with the federal
+>    ARPA exclusion. Issues-doc **T14**, exclude KD on `ui > 0`.
+> 3. **TAXSIM nets the Schedule H property tax credit into `siitax`** for
+>    low/moderate-income homeowners with reported property tax ($1,025–$1,200
+>    point masses; 365–415 fed-aligned records/yr) — our pre-registered
+>    Tier-1 omission (known-difference 4 below). Exclude KD on `v37 > 0`.
+> 4. **The deduction stage was the crosswalk, not either model's DC law**:
+>    TAXSIM's v35 equals EXACTLY (mortgage + otheritem + proptax handed) less
+>    the 5%-over-$200k limitation on 96.2–96.6% of both-itemizing records in
+>    2018–2020 (and 98.1% of 2017 records below the Pease threshold) — so
+>    TAXSIM applies Calculation F correctly to what it sees, but the
+>    crosswalk's `otheritem` carries as-reported income/sales taxes no state
+>    calculation can strip, and investment interest and Schedule A "other"
+>    have no TAXSIM inputs. Exclude KD on the exposure set. The earlier
+>    "TAXSIM falls back to the standard deduction" reading was WRONG:
+>    a bigagi probe shows strict coupling (v34 printed but unused; liability
+>    = wages-only case + rate x std), matching 47-1803.03(c) as quoted in
+>    the booklet.
+> 5. **The 2017-only weakness decomposes into the same classes** plus
+>    TAXSIM's mstat/HoH-derivation (UT structural class): single-with-deps
+>    gets the HoH std (+2,150) and the 2017 HoH EXTRA exemption (probe:
+>    single + 2 deps → v33 = 7,100 = FOUR exemptions); the 2017 stepped
+>    exemption phase-out itself probes EXACT against our formula at six
+>    knots (1,704/1,633/1,065/355/71/0). Exclude KD on the UT-style
+>    fs/n_dep predicate; blind add-ons annotated (no TAXSIM blind input).
+> Post-fix DC 2019 TAXSIM cell: clean match@100 0.619 → **0.897**
+> (match@15 0.546 → 0.852) — see the tracker for the full close-out rerun.
 
 > Read §Uncertainties before encoding: the TY2025 dependent-filer standard
 > deduction and the TY2025 CDCC rate are both open calls, and the TY2023

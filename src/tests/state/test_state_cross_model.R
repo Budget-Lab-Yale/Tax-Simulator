@@ -718,10 +718,17 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
     # and the clean-subset metrics, plus exposure covariates (age, SS,
     # dependents) so known-difference predicates can key on who a documented
     # external-model bug hits rather than on the outcome it produces
+    # xw_unstripped_salt rides to TAXSIM inside otheritem, where no state
+    # calculation can identify it as SALT to strip or cap; xw_unhanded_item
+    # (investment interest + Schedule A "other") has no TAXSIM input at all
     ours = ours %>%
       left_join(sampled %>%
+                  mutate(xw_unstripped_salt = salt_inc_sales + salt_pers,
+                         xw_unhanded_item   = inv_int_item_ded +
+                                              other_item_ded) %>%
                   select(id, filing_status, agi_stratum, agi, txbl_inc, eitc,
-                         exempt_int, state_ref, age1, age2, gross_ss, n_dep),
+                         exempt_int, state_ref, age1, age2, gross_ss, n_dep,
+                         ui, xw_unstripped_salt, xw_unhanded_item),
                 by = 'id')
 
     for (model in yr_models) {

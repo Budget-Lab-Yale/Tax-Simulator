@@ -108,6 +108,12 @@ unpopulated for some states (verified for IL) and is not used.
   handoff for separate analyst review (policy: JI, 2026-07-18).
 - `external_model_issues.md` — potential errors/concept questions in
   TAXSIM-35 and PolicyEngine US, written to be shareable upstream.
+- `taxsim_bug_reports.do` — Stata operationalization of the NBER TAXSIM
+  bug-reporting protocol (`taxsimid = -1`, `idtl = 5`, one-observation
+  exemplars) for the probe-verified TAXSIM issues; writes web-tool inputs,
+  live ado responses, and email-ready statements to `bug_reports/`.
+  Run: `module load Stata/19; stata-mp -b do other/state_tax_research/cross_model/taxsim_bug_reports.do`
+  from the repo root (requires the `taxsim35` ado and internet).
 
 ## Known differences
 

@@ -1,0 +1,14 @@
+TAXSIM-35, District of Columbia, TY2019, single, wages 50,000,
+unemployment compensation 5,000.
+
+Expected: DC state AGI = 55,000. The D-40 starts from federal AGI
+and no line of Schedule I Calculation B (the exhaustive subtraction
+list) subtracts unemployment compensation; the DC instructions say
+so directly -- 2017 booklet: 'All unemployment compensation received
+in 2017 is taxable'; 2020 booklet: 'All unemployment compensation
+received in 2020 is taxable.' The District first exempted UI in
+TY2021. TAXSIM returns v32_state_agi = 50,000 in 2017-2019 (and in
+2020 stacks the subtraction on top of the federal ARPA exclusion it
+also applies: v10 = 50,000 AND v32 = 45,000, removing the same
+5,000 twice). Effect: DC tax runs low by 4-8.95% of UI on every DC
+return with unemployment income in the window.

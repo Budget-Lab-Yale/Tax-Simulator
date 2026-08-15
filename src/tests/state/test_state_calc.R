@@ -2849,6 +2849,17 @@ test_state_calc = function() {
                          liab_st_iit = 1276.00),
            label = 'DC-9 2019 care credit at 32%, nonrefundable')
 
+  # DC-10 state income tax refunds taxed federally come back out of the DC
+  # base ("Taxable refunds, credits or offsets of state and local income
+  # tax", Line 8 of the 2017 D-40, Line 9 of the 2020 D-40). Added 2026-08-15:
+  # the missing subtraction was 76-86% of the fed-aligned state-AGI-stage
+  # cross-model mismatches in every TAXSIM-window year
+  run_case('DC', 2019,
+           list(agi = 61500, wages1 = 60000, ei1 = 60000, state_ref = 1500),
+           expect = list(st_agi = 60000, st_txbl_inc = 47800,
+                         liab_st_iit = 2707.00),
+           label = 'DC-10 2019 state income tax refund subtracted')
+
   #--------------------------------------------------------------------------
   # NEBRASKA (Form 1040N, Schedules I/II, Form 2441N)
   #--------------------------------------------------------------------------

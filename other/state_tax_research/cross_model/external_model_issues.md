@@ -10,6 +10,16 @@ forms/statutes; reproduction details are available from the harness
 Versions tested: TAXSIM-35 as bundled in `usincometaxes` 0.7.1 (local WASM
 build); `policyengine-us` 1.775.7.
 
+**Submitting the TAXSIM items:** `taxsim_bug_reports.do` (this directory)
+operationalizes the NBER bug-reporting protocol (one-observation exemplar,
+`taxsimid = -1`, `idtl = 5`, emailed with a statement of what is wrong) for
+the probe-verified TAXSIM issues T6–T10 and T12–T14. It writes, per issue, a
+web-tool-ready input CSV, TAXSIM's live response via the `taxsim35` ado, and
+the statement text, under `bug_reports/`. Every response was confirmed to
+reproduce its bug on 2026-08-15 (e.g. T8 `v34` = 1,550; T10 `v35` = 10,000;
+T12 `v32` = −1,999.99; T14 `v32` = 50,000 on 55,000 of federal AGI). The
+email itself stays manual: one issue per message to feenberg@nber.org.
+
 ## TAXSIM-35
 
 ### T1. Illinois exemption disallowance above the AGI threshold not modeled
@@ -295,6 +305,29 @@ Excluding the affected records — TAXSIM pinned at the flat cap while ours
 exceeds it, which identifies exactly the failure — lifts our OK match@$100 from
 **0.727/0.719/0.720 to 0.872/0.869/0.873** in TY2018/2019/2020. This is the
 single largest attribution any one item has produced in this project.
+
+### T14. District of Columbia: unemployment compensation subtracted from DC
+AGI in years when DC taxed it
+
+TAXSIM removes unemployment compensation from DC state AGI in every year of
+the 2017–2020 window. Probe (single, $50,000 wages + $5,000 UI): `v10` =
+55,000 and `v32_state_agi` = 50,000 in 2017, 2018 and 2019. In 2020 the
+subtraction stacks on the federal ARPA exclusion TAXSIM also applies (`v10` =
+50,000, `v32` = 45,000 — the same $5,000 comes out twice).
+
+The booklets say the opposite. No line of Schedule I Calculation B (the
+exhaustive subtraction list) mentions unemployment, and the instructions state
+it expressly — 2017: "All unemployment compensation received in 2017 is
+taxable"; 2020: "All unemployment compensation received in 2020 is taxable."
+The District first exempted UI benefits in TY2021 — after the window in which
+TAXSIM's state law is actually coded.
+
+On our DC validation sample, `v32 − our state AGI == −UI` holds exactly on
+76–79% of federally-aligned UI recipients with a state-AGI gap in 2017–2019
+(the remainder carry a second, unrelated wedge).
+
+Effect: TAXSIM's DC AGI is too low by the UI amount, so its DC tax runs LOW
+by 4–8.95% of UI on every DC return with unemployment income in 2017–2020.
 
 ### P5. One-time rebates netted into eligibility-year `state_income_tax`
 (NY, VA, GA, AZ, NM — generalizing P2)
