@@ -1,8 +1,32 @@
 # California State Source Packet
 
 State: `CA`  
-Status: `partial resident regular IIT; 2017-25 CalEITC/YCTC schedules complete, but not production-ready`  
-Last updated: `2026-07-13`
+Status: `resident regular IIT encoded and cross-model TRIAGED 2026-08-15; TAXSIM window clears the bar (0.965-0.981 clean), PE 2021/2023 clear, 2022/2024 at 0.94; P1 production readiness still blocked`  
+Last updated: `2026-08-15`
+
+> **Cross-model triage 2026-08-15** (see `cross_model/results/reports/ca.md`
+> and the CA rows of `known_differences.csv`):
+> 1. The triage surfaced a CROSS-STATE calculator defect: `do_taxes.R` zeroed
+>    all `*_item_ded` components for federal standard-deduction takers, so the
+>    state pass could never itemize state-only. Fixed via as-if-itemizing
+>    `*_item_ded_potential` columns (do_taxes.R preserves; st_ded.R, the WI
+>    credit, and the TAXSIM state-mode crosswalk consume for
+>    independent-election states only). PolicyEngine replays pinned our
+>    Schedule CA component math to the cent once fed the right inputs.
+> 2. Our-side CA fixes: `sub_ui_share` (Schedule CA UI subtraction was
+>    missing), the 2017 CalEITC age band (25-64 pre-AB 1809; was flat 18+),
+>    and year-keyed CalEITC income gates (were pinned at the 2025 value).
+> 3. The old report's "state EITC" stage was 97% a harness artifact (CalEITC
+>    lives in `st_earned_credit`, which matches TAXSIM's v39 on 97.4% of the
+>    full fed-aligned sample); the classifier now counts it.
+> 4. External-model issues filed: T15 (TAXSIM pays 2017 CalEITC to 65+
+>    childless, live-verified at -195.10 for a 68-year-old), P6 (PE pays
+>    CalEITC to MFS unconditionally), P7 (PE models no CA addback of
+>    non-CA municipal interest).
+> 5. Close-out: TAXSIM clean match@100 0.981/0.975/0.970/0.965 (from
+>    0.61-0.73); PE 0.966/0.943/0.957/0.936 -- 2022/2024 miss the bar by
+>    1-5 scattered low-income credit-margin records (CalEITC/YCTC/FYTC
+>    stack; punch list in the report).
 
 ## Scope
 
@@ -75,5 +99,5 @@ See [California parameter analysis](../ca_parameter_analysis.md) and [California
 
 ## Cross-model and aggregate validation
 
-- Cross-model: `todo`; after the P1 blockers close, compare 2017, 2020, and 2025 Form 540 cases, then validate CalEITC at every table transition and test fixed-conformity results against federal-reform cases.
+- Cross-model: TRIAGED 2026-08-15 (see the status blockquote above). TAXSIM window clears the acceptance bar in all four years; PE 2021/2023 clear and 2022/2024 sit at 0.943/0.936 with the residual characterized as scattered low-income credit-margin records. CalEITC validated against TAXSIM's v39 at 97.4% full-sample agreement.
 - Aggregate: blocked until weights land; compare HT2 income/returns/liability and FTB annual statistics, separately reporting omitted refundable credits.

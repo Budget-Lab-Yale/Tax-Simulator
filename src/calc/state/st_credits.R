@@ -173,11 +173,14 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.item_credit_incl_charity',
     'st_credits.item_credit_incl_casualty',
     'st_std_ded',        # (dbl) state standard deduction (WI itemized credit)
-    'med_item_ded',      # (dbl) federal deductible medical (WI itemized credit)
-    'mort_int_item_ded', # (dbl) federal deductible mortgage interest
-    'inv_int_item_ded',  # (dbl) federal deductible investment interest
-    'char_item_ded',     # (dbl) federal deductible charitable
-    'casualty_item_ded'  # (dbl) federal deductible casualty losses
+    # As-if-itemizing amounts (see st_ded.R): WI Schedule 1 computes the
+    # itemized-deduction credit from federal Schedule A amounts whether or
+    # not the unit itemized federally
+    'med_item_ded_potential',      # (dbl) deductible medical (WI itemized credit)
+    'mort_int_item_ded_potential', # (dbl) deductible mortgage interest
+    'inv_int_item_ded_potential',  # (dbl) deductible investment interest
+    'char_item_ded_potential',     # (dbl) deductible charitable
+    'casualty_item_ded_potential'  # (dbl) deductible casualty losses
   )
 
   tax_unit %<>%
@@ -302,11 +305,16 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   # definitions (documented approximation)
   st_item_credit = tax_unit$st_credits.item_credit_rate * pmax(
     0,
-    tax_unit$st_credits.item_credit_incl_medical * tax_unit$med_item_ded +
-      tax_unit$st_credits.item_credit_incl_mortgage * tax_unit$mort_int_item_ded +
-      tax_unit$st_credits.item_credit_incl_investment * tax_unit$inv_int_item_ded +
-      tax_unit$st_credits.item_credit_incl_charity * tax_unit$char_item_ded +
-      tax_unit$st_credits.item_credit_incl_casualty * tax_unit$casualty_item_ded -
+    tax_unit$st_credits.item_credit_incl_medical *
+      tax_unit$med_item_ded_potential +
+      tax_unit$st_credits.item_credit_incl_mortgage *
+        tax_unit$mort_int_item_ded_potential +
+      tax_unit$st_credits.item_credit_incl_investment *
+        tax_unit$inv_int_item_ded_potential +
+      tax_unit$st_credits.item_credit_incl_charity *
+        tax_unit$char_item_ded_potential +
+      tax_unit$st_credits.item_credit_incl_casualty *
+        tax_unit$casualty_item_ded_potential -
       tax_unit$st_std_ded
   )
 

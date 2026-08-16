@@ -329,6 +329,21 @@ On our DC validation sample, `v32 − our state AGI == −UI` holds exactly on
 Effect: TAXSIM's DC AGI is too low by the UI amount, so its DC tax runs LOW
 by 4–8.95% of UI on every DC return with unemployment income in 2017–2020.
 
+### T15. California 2017 CalEITC paid outside the pre-expansion age band
+
+Through TY2017 the CalEITC followed the federal childless age band: a filer
+without qualifying children had to be 25–64 (FTB 3514; AB 1809 expanded
+eligibility to 18–24 and 65+ only from TY2018). TAXSIM pays the 2017 credit
+to childless filers past the ceiling: on our 2017 CA validation sample,
+fed-aligned childless records aged 67–73 with $50–$5,500 of earned income
+are paid `v39_state_eitc` of $60–$157 (e.g. age 68, $4,786 self-employment
+earnings → $156.76; age 73, $5,457 → $116.21). The amounts are small
+(the 2017 childless maximum was $223), so this class annotates rather than
+excludes in our harness.
+
+Effect: TAXSIM grants a small refundable 2017 CalEITC to 65+ childless
+filers the FTB tables exclude.
+
 ### P5. One-time rebates netted into eligibility-year `state_income_tax`
 (NY, VA, GA, AZ, NM — generalizing P2)
 
@@ -368,6 +383,41 @@ arrive one to two calendar years later), but as with P1/P2 it makes
 revenue analysis uses, and it does so retroactively for years that were
 already final. A uniform pre-rebate liability output would resolve the
 whole class.
+
+### P6. California CalEITC paid to married-filing-separately filers
+unconditionally
+
+FTB 3514 bars MFS filers from the CalEITC (and through its qualifying-child
+requirement, the YCTC) unless they meet the ARPA-style conditions adopted
+from TY2021: a qualifying child who lived with the filer for more than half
+the year, and living apart from the spouse for the last six months (or a
+separation decree). PolicyEngine 1.775.7 pays the credit to MFS filers with
+no conditions at all: a synthetic MFS filer, age 40, $8,639 of wages and no
+children — who fails the conditions on their face — is paid `ca_eitc` =
+$203.94 (2023). The conditions are unobservable in most microdata, so some
+default is unavoidable, but the federal `eitc` variable resolves the same
+problem in the restrictive direction; `ca_eitc` granting by default is
+internally inconsistent with it.
+
+Effect: PolicyEngine's CA liability runs LOW by the CalEITC/YCTC amount
+(~$100–$1,200) on low-income MFS records.
+
+### P7. California addback of non-California municipal-bond interest not
+modeled
+
+Interest on non-California municipal bonds is taxable in California
+(Schedule CA, interest additions). PolicyEngine takes a
+`tax_exempt_interest_income` input but applies no CA addback: a synthetic
+single filer with $100,000 of wages and $50,000 of tax-exempt interest shows
+`ca_agi` = $100,000 exactly (2023). The true own-state share of a filer's
+exempt interest is unobservable — our model assumes 75% California / 25%
+addback — but modeling zero addback prices ALL municipal interest as
+California-source, which is the one assumption the form rules out for a
+diversified holder.
+
+Effect: PolicyEngine's CA liability runs LOW by up to 9.3–13.3% of a
+filer's non-California municipal interest; on our high-exempt-interest 2023
+records the gap reached five figures.
 
 ## Corroboration worth passing along
 

@@ -26,6 +26,9 @@ own_state_exempt:
 sub_state_ref:
   value: 1
   reference: 'California Schedule CA (540), state income-tax refund subtraction, 2017-2025'
+sub_ui_share:
+  value: 1
+  reference: 'California Schedule CA (540), unemployment compensation subtraction (Section B line 7 in 2017-2018 numbering, Part I Section B line 7 in 2019-2025 numbering); California R&TC does not conform to IRC 85. ADDED 2026-08-15 from cross-model triage: its omission was ~60% of fed-aligned state-AGI-stage mismatches vs TAXSIM 2017-2019 and 40% of PE-window mismatch records in 2021'
 ss_sub_share:
   value: 1
   reference: 'California Schedule CA (540), taxable Social Security and Tier 1 railroad retirement subtraction, 2017-2025'

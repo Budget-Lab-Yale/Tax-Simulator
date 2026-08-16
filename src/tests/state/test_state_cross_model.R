@@ -204,7 +204,8 @@ cross_model_our_leg = function(sampled, states, year, state_law,
 }
 
 
-cross_model_taxsim_leg = function(sampled, states, year, chunk_size = 10000) {
+cross_model_taxsim_leg = function(sampled, states, year, state_law,
+                                  chunk_size = 10000) {
 
   #----------------------------------------------------------------------------
   # Runs sampled records through NBER TAXSIM-35 (local WASM via
@@ -214,6 +215,8 @@ cross_model_taxsim_leg = function(sampled, states, year, chunk_size = 10000) {
   #   - sampled (df)    : sampled post-federal tax units
   #   - states (str[])  : 2-letter state codes
   #   - year (int)      : tax year
+  #   - state_law (df)  : state law table for the year (build_state_tax_law),
+  #                       read for each state's itemization-election mode
   #   - chunk_size (int): records per taxsim_calculate_taxes() call
   #
   # Returns: long tibble id x state with siitax, staxbc, and v30-v41 state
@@ -221,7 +224,23 @@ cross_model_taxsim_leg = function(sampled, states, year, chunk_size = 10000) {
   #----------------------------------------------------------------------------
 
   map(states, function(st) {
-    xw = taxsim_crosswalk(sampled, state = st)
+    # Election mode from the encoded law: hand as-if-itemizing components
+    # only where the state elects independently of the federal return (or
+    # computes a WI-style itemized credit regardless of election); NA means
+    # the state never sets the parameter (default 0)
+    law_st = state_law %>% filter(state == st) %>% slice(1)
+    grab = function(col) {
+      if (nrow(law_st) == 0 || !col %in% names(law_st)) return(0)
+      v = law_st[[col]][1]
+      if (is.na(v)) 0 else v
+    }
+    independent_item =
+      (grab('st_ded.item_allowed') == 1 &&
+         grab('st_ded.item_coupling') == 0 &&
+         grab('st_ded.item_fed_gate') == 0) ||
+      grab('st_credits.item_credit_rate') > 0
+    xw = taxsim_crosswalk(sampled, state = st,
+                          independent_item = independent_item)
     chunks = split(xw, ceiling(seq_len(nrow(xw)) / chunk_size))
 
     map(chunks, function(chunk) {
@@ -504,7 +523,9 @@ cross_model_stage_diagnosis = function(records) {
         abs(v34_state_std_deduction_amount - st_std_ded) > 5 |
           abs(v35_state_itemized_deduction - st_item_ded) > 5 ~ '3 deductions',
         abs(v36_state_taxable_income - st_txbl_inc) > 5    ~ '4 taxable income',
-        abs(v39_state_eitc - st_eitc) > 5                  ~ '5 state EITC',
+        # st_eitc holds federal-piggyback EITCs; independent earned-income
+        # credits (CalEITC-style) land in st_earned_credit instead
+        abs(v39_state_eitc - (st_eitc + st_earned_credit)) > 5 ~ '5 state EITC',
         abs(v40_state_total_credits -
               (st_credits_nonref + st_credits_ref)) > 5    ~ '6 other credits',
         TRUE                                               ~ '7 rate/rounding'
@@ -720,12 +741,15 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
     # external-model bug hits rather than on the outcome it produces
     # xw_unstripped_salt rides to TAXSIM inside otheritem, where no state
     # calculation can identify it as SALT to strip or cap; xw_unhanded_item
-    # (investment interest + Schedule A "other") has no TAXSIM input at all
+    # (investment interest + Schedule A "other") has no TAXSIM input at all.
+    # The as-if-itemizing (_potential) versions are used because independent-
+    # election states itemize state-side for federal std-takers, whose
+    # as-claimed components are zeroed
     ours = ours %>%
       left_join(sampled %>%
                   mutate(xw_unstripped_salt = salt_inc_sales + salt_pers,
-                         xw_unhanded_item   = inv_int_item_ded +
-                                              other_item_ded) %>%
+                         xw_unhanded_item   = inv_int_item_ded_potential +
+                                              other_item_ded_potential) %>%
                   select(id, filing_status, agi_stratum, agi, txbl_inc, eitc,
                          exempt_int, state_ref, age1, age2, gross_ss, n_dep,
                          ui, xw_unstripped_salt, xw_unhanded_item),
@@ -734,7 +758,7 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
     for (model in yr_models) {
 
       if (model == 'taxsim') {
-        theirs = cross_model_taxsim_leg(sampled, states, yr,
+        theirs = cross_model_taxsim_leg(sampled, states, yr, state_law,
                                         chunk_size = chunk_size) %>%
           rename(ext_liab = siitax)
       } else {

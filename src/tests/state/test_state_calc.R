@@ -693,6 +693,33 @@ test_state_calc = function() {
            expect = list(st_taxable_income_surtax = 42.94),
            label = 'CA-10 Behavioral Health Services Tax')
 
+  # CA-11: California's itemization election is independent of the federal
+  # one, so a federal standard-deduction taker itemizes for CA from the
+  # as-if-itemizing amounts (production shape: as-claimed components zeroed
+  # by do_taxes.R, _potential preserved). 2023 MFJ, AGI 500,000: base
+  # 8,000 mortgage + 4,000 charity + 6,000 uncapped property tax = 18,000;
+  # limitation = lesser of 6% x (500,000 - 474,075) = 1,555.50 and 80% x
+  # 18,000 -> itemized 16,444.50 beats the 10,726 standard deduction.
+  # Schedule Y tax on 483,555.50 = 38,276.3615; exemption credits 2 x 144
+  # phase out by $6 x ceil(25,925/2,500) = 66 each -> 156.
+  run_case('CA', 2023,
+           list(agi = 500000, filing_status = 2, itemizing = 0,
+                mort_int_item_ded_potential = 8000,
+                char_item_ded_potential = 4000, salt_prop = 6000),
+           expect = list(st_item_ded = 16444.50, st_txbl_inc = 483555.50,
+                         liab_st_iit = 38120.36),
+           label = 'CA-11 state-only itemization for a federal std-taker')
+
+  # CA-12: unemployment compensation is not taxable in California (Schedule
+  # CA Section B line 7 subtraction; R&TC does not conform to IRC 85).
+  # 2019 single, AGI 30,000 including 4,000 UI: CA AGI 26,000, standard
+  # deduction 4,537, Schedule X tax on 21,463 = 352.77, exemption credit 122.
+  run_case('CA', 2019,
+           list(agi = 30000, ui = 4000),
+           expect = list(st_agi = 26000, st_txbl_inc = 21463,
+                         liab_st_iit = 230.77),
+           label = 'CA-12 unemployment compensation subtraction')
+
   #--------------------------------------------------------------------------
   # Narrow and partial-IIT jurisdictions
   #--------------------------------------------------------------------------
@@ -3439,6 +3466,18 @@ st_test_unit = function(overrides = list()) {
   )
   for (v in names(overrides)) {
     unit[[v]] = overrides[[v]]
+  }
+  # As-if-itemizing amounts mirror the plain component overrides unless a
+  # case sets the _potential name itself (production: do_taxes.R preserves
+  # these before zeroing the as-claimed columns for non-itemizers)
+  for (v in c('item_ded', 'item_ded_ex_limits', 'salt_item_ded',
+              'med_item_ded', 'mort_int_item_ded', 'inv_int_item_ded',
+              'casualty_item_ded', 'char_item_ded', 'misc_item_ded',
+              'other_item_ded')) {
+    pot = paste0(v, '_potential')
+    if (is.null(unit[[pot]])) {
+      unit[[pot]] = unit[[v]]
+    }
   }
   as_tibble(unit)
 }

@@ -21,46 +21,44 @@ defined (federally aligned records; see README).
 
 ## Mismatch stage diagnosis (TAXSIM |diff| > $15)
 
-| year|fed_aligned |stage            |    n|
-|----:|:-----------|:----------------|----:|
-| 2017|TRUE        |1 state AGI      | 2670|
-| 2017|TRUE        |2 exemptions     |  682|
-| 2017|TRUE        |3 deductions     | 3250|
-| 2017|TRUE        |6 other credits  |   45|
-| 2017|FALSE       |1 state AGI      | 5352|
-| 2017|FALSE       |2 exemptions     |   23|
-| 2017|FALSE       |3 deductions     |  211|
-| 2017|FALSE       |5 state EITC     | 1021|
-| 2017|FALSE       |6 other credits  |   14|
-| 2018|TRUE        |1 state AGI      | 2572|
-| 2018|TRUE        |2 exemptions     |  712|
-| 2018|TRUE        |3 deductions     | 1942|
-| 2018|TRUE        |4 taxable income |    1|
-| 2018|TRUE        |6 other credits  |   38|
-| 2018|FALSE       |1 state AGI      | 5218|
-| 2018|FALSE       |2 exemptions     |   33|
-| 2018|FALSE       |3 deductions     |  180|
-| 2018|FALSE       |4 taxable income |    1|
-| 2018|FALSE       |5 state EITC     | 1026|
-| 2018|FALSE       |6 other credits  |    8|
-| 2019|TRUE        |1 state AGI      | 2591|
-| 2019|TRUE        |2 exemptions     |  721|
-| 2019|TRUE        |3 deductions     | 6589|
-| 2019|TRUE        |6 other credits  |   21|
-| 2019|FALSE       |1 state AGI      | 5399|
-| 2019|FALSE       |2 exemptions     |   36|
-| 2019|FALSE       |3 deductions     |  692|
-| 2019|FALSE       |5 state EITC     |  548|
-| 2019|FALSE       |6 other credits  |    8|
-| 2020|TRUE        |1 state AGI      | 2686|
-| 2020|TRUE        |2 exemptions     |  726|
-| 2020|TRUE        |3 deductions     | 1843|
-| 2020|TRUE        |5 state EITC     |  143|
-| 2020|TRUE        |6 other credits  |   38|
-| 2020|FALSE       |1 state AGI      | 5687|
-| 2020|FALSE       |2 exemptions     |   29|
-| 2020|FALSE       |3 deductions     |  319|
-| 2020|FALSE       |5 state EITC     |  904|
+| year|fed_aligned |stage           |    n|
+|----:|:-----------|:---------------|----:|
+| 2017|TRUE        |1 state AGI     | 2670|
+| 2017|TRUE        |2 exemptions    |  682|
+| 2017|TRUE        |3 deductions    | 3251|
+| 2017|TRUE        |6 other credits |   44|
+| 2017|FALSE       |1 state AGI     | 5352|
+| 2017|FALSE       |2 exemptions    |   23|
+| 2017|FALSE       |3 deductions    |  213|
+| 2017|FALSE       |5 state EITC    | 1019|
+| 2017|FALSE       |6 other credits |   14|
+| 2018|TRUE        |1 state AGI     | 2572|
+| 2018|TRUE        |2 exemptions    |  712|
+| 2018|TRUE        |3 deductions    | 1944|
+| 2018|TRUE        |6 other credits |   37|
+| 2018|FALSE       |1 state AGI     | 5218|
+| 2018|FALSE       |2 exemptions    |   33|
+| 2018|FALSE       |3 deductions    |  188|
+| 2018|FALSE       |5 state EITC    | 1019|
+| 2018|FALSE       |6 other credits |    8|
+| 2019|TRUE        |1 state AGI     | 2591|
+| 2019|TRUE        |2 exemptions    |  721|
+| 2019|TRUE        |3 deductions    | 6590|
+| 2019|TRUE        |6 other credits |   20|
+| 2019|FALSE       |1 state AGI     | 5399|
+| 2019|FALSE       |2 exemptions    |   36|
+| 2019|FALSE       |3 deductions    |  692|
+| 2019|FALSE       |5 state EITC    |  548|
+| 2019|FALSE       |6 other credits |    8|
+| 2020|TRUE        |1 state AGI     | 2686|
+| 2020|TRUE        |2 exemptions    |  726|
+| 2020|TRUE        |3 deductions    | 1844|
+| 2020|TRUE        |5 state EITC    |  143|
+| 2020|TRUE        |6 other credits |   37|
+| 2020|FALSE       |1 state AGI     | 5687|
+| 2020|FALSE       |2 exemptions    |   29|
+| 2020|FALSE       |3 deductions    |  323|
+| 2020|FALSE       |5 state EITC    |  900|
 
 ## Known differences applied
 

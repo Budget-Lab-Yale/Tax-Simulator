@@ -43,19 +43,28 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'filing_status',      # (int)  1 single, 2 MFJ, 3 MFS, 4 HoH
     'itemizing',          # (bool) whether unit itemizes federally
     'dep_status',         # (bool) whether filer is a dependent
-    'item_ded',           # (dbl)  federal itemized deductions post-limitation
-    'item_ded_ex_limits', # (dbl)  federal itemized deductions pre-limitation
-    'mort_int_item_ded',  # (dbl)  federal deductible mortgage interest
-    'salt_item_ded',      # (dbl)  federal SALT deduction (capped)
+    'item_ded',           # (dbl)  federal itemized deductions as claimed (addback base)
+    'salt_item_ded',      # (dbl)  federal SALT deduction as claimed (addback base)
     'salt_inc_sales',     # (dbl)  state/local income-or-sales taxes paid (post-workaround)
     'salt_prop',          # (dbl)  state/local real estate taxes paid
     'salt_pers',          # (dbl)  state/local personal property taxes paid
-    'med_item_ded',       # (dbl)  federal deductible medical expenses
-    'inv_int_item_ded',   # (dbl)  federal deductible investment interest
-    'casualty_item_ded',  # (dbl)  federal deductible casualty losses
-    'char_item_ded',      # (dbl)  federal deductible charitable contributions
-    'misc_item_ded',      # (dbl)  federal miscellaneous itemized deductions
-    'other_item_ded',     # (dbl)  other federal itemized deductions
+
+    # As-if-itemizing Schedule A amounts (preserved by do_taxes.R before its
+    # non-itemizer zeroing): the state itemized base must use what the unit
+    # COULD claim, because independent-election states (CA/AZ/NY 2018+/...)
+    # let federal standard-deduction takers itemize on the state return.
+    # Coupled and federal-gated states are unaffected -- their election
+    # requires federal itemizing, where potential == as-claimed
+    'item_ded_potential',           # (dbl) federal itemized, post-limitation
+    'item_ded_ex_limits_potential', # (dbl) federal itemized, pre-limitation
+    'salt_item_ded_potential',      # (dbl) federal SALT deduction (capped)
+    'med_item_ded_potential',       # (dbl) deductible medical expenses
+    'mort_int_item_ded_potential',  # (dbl) deductible mortgage interest
+    'inv_int_item_ded_potential',   # (dbl) deductible investment interest
+    'casualty_item_ded_potential',  # (dbl) deductible casualty losses
+    'char_item_ded_potential',      # (dbl) deductible charitable contributions
+    'misc_item_ded_potential',      # (dbl) miscellaneous itemized deductions
+    'other_item_ded_potential',     # (dbl) other federal itemized deductions
     'char_cash',          # (dbl)  cash charitable contributions
     'char_noncash',       # (dbl)  non-cash charitable contributions
     'age1',               # (int)  age of primary filer
@@ -242,16 +251,17 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # replaced by uncapped property taxes (income/sales excluded where
       # added back)
       st_item_default =
-        item_ded_ex_limits - salt_item_ded + salt_prop + salt_pers +
+        item_ded_ex_limits_potential - salt_item_ded_potential +
+        salt_prop + salt_pers +
         if_else(st_ded.salt_addback == 1, 0, salt_inc_sales),
       st_item_components =
-        st_ded.item_include_medical * med_item_ded +
-        st_ded.item_include_mortgage * mort_int_item_ded +
-        st_ded.item_include_investment * inv_int_item_ded +
-        st_ded.item_include_charity * char_item_ded +
-        st_ded.item_include_casualty * casualty_item_ded +
-        st_ded.item_include_misc * misc_item_ded +
-        st_ded.item_include_other * other_item_ded +
+        st_ded.item_include_medical * med_item_ded_potential +
+        st_ded.item_include_mortgage * mort_int_item_ded_potential +
+        st_ded.item_include_investment * inv_int_item_ded_potential +
+        st_ded.item_include_charity * char_item_ded_potential +
+        st_ded.item_include_casualty * casualty_item_ded_potential +
+        st_ded.item_include_misc * misc_item_ded_potential +
+        st_ded.item_include_other * other_item_ded_potential +
         st_ded.item_include_prop_tax * pmin(salt_prop, st_ded.item_prop_tax_cap) +
         st_ded.item_include_pers_tax * salt_pers +
         st_ded.item_include_income_sales_tax * salt_inc_sales,
@@ -259,7 +269,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
         st_ded.item_allowed == 1,
         case_when(
           st_ded.item_component_style == 1 ~ st_item_components,
-          st_ded.item_component_style == 2 ~ item_ded,
+          st_ded.item_component_style == 2 ~ item_ded_potential,
           TRUE ~ st_item_default
         ),
         0
@@ -268,8 +278,9 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # Pre-TCJA Pease limitation (state-indexed thresholds; medical,
       # investment interest, and casualty are protected), extended with the
       # MN 2023+ second tier and flat-80% override via pease_income_red
-      pease_nonprot = pmax(0, st_item_base - med_item_ded - inv_int_item_ded -
-                              casualty_item_ded),
+      pease_nonprot = pmax(0, st_item_base - med_item_ded_potential -
+                              inv_int_item_ded_potential -
+                              casualty_item_ded_potential),
       pease_red     = if_else(st_ded.pease == 1,
                               if_else(agi > st_ded.pease_flat_thresh,
                                       0.80 * pease_nonprot,
@@ -283,13 +294,13 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       item_limit_agi = item_limit_agi_v,
       item_limit_protected =
         st_ded.item_limit_protect_medical *
-          st_ded.item_include_medical * med_item_ded +
+          st_ded.item_include_medical * med_item_ded_potential +
         st_ded.item_limit_protect_investment *
-          st_ded.item_include_investment * inv_int_item_ded +
+          st_ded.item_include_investment * inv_int_item_ded_potential +
         st_ded.item_limit_protect_casualty *
-          st_ded.item_include_casualty * casualty_item_ded +
+          st_ded.item_include_casualty * casualty_item_ded_potential +
         st_ded.item_limit_protect_other *
-          st_ded.item_include_other * other_item_ded,
+          st_ded.item_include_other * other_item_ded_potential,
       item_limit_nonprotected = pmax(0, st_item_lim - item_limit_protected),
       item_limit_red = if_else(
         st_ded.item_limit_style == 1,
@@ -312,8 +323,10 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # Charitable-only tiers (NY 615(g)): above the thresholds the deduction
       # is a share of charitable contributions only
       st_item_ded = case_when(
-        st_agi > st_ded.char_only_thresh2 ~ st_ded.char_only_share2 * char_item_ded,
-        st_agi > st_ded.char_only_thresh1 ~ st_ded.char_only_share1 * char_item_ded,
+        st_agi > st_ded.char_only_thresh2 ~
+          st_ded.char_only_share2 * char_item_ded_potential,
+        st_agi > st_ded.char_only_thresh1 ~
+          st_ded.char_only_share1 * char_item_ded_potential,
         TRUE                              ~ st_item_lim
       ),
 
@@ -327,9 +340,9 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # exceeds the pre-cap total. Default .inf = no cap
       item_flat_cap_exempt = pmin(
         st_ded.item_flat_cap_excl_medical *
-          st_ded.item_include_medical * med_item_ded +
+          st_ded.item_include_medical * med_item_ded_potential +
         st_ded.item_flat_cap_excl_charity *
-          st_ded.item_include_charity * char_item_ded,
+          st_ded.item_include_charity * char_item_ded_potential,
         st_item_ded
       ),
       st_item_ded = if_else(

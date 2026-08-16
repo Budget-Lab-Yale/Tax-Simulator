@@ -2,7 +2,7 @@
 * taxsim_bug_reports.do
 *
 * Operationalizes NBER TAXSIM-35 bug reporting for the probe-verified TAXSIM
-* issues documented in external_model_issues.md (T6-T14). The TAXSIM-35 page
+* issues documented in external_model_issues.md (T6-T15). The TAXSIM-35 page
 * (taxsim.nber.org/taxsim35, "Bug Reporting") asks that a suspected error be
 * reported as:
 *
@@ -329,6 +329,33 @@ stmt, line("2020 stacks the subtraction on top of the federal ARPA exclusion it"
 stmt, line("also applies: v10 = 50,000 AND v32 = 45,000, removing the same")
 stmt, line("5,000 twice). Effect: DC tax runs low by 4-8.95% of UI on every DC")
 stmt, line("return with unemployment income in the window.")
+close_statement
+
+*==============================================================================
+* T15. California 2017 CalEITC paid to childless filers past the
+*      pre-expansion 25-64 age band
+*==============================================================================
+clear
+set obs 1
+gen year   = 2017
+gen state  = 5
+gen mstat  = 1
+gen page   = 68
+gen pwages = 3000
+submit_case, tag(t15_ca_caleitc_age) out_dir("`out_dir'")
+
+open_statement, tag(t15_ca_caleitc_age) out_dir("`out_dir'")
+stmt, line("TAXSIM-35, California, TY2017, single, age 68, wages 3,000, no")
+stmt, line("dependents.")
+stmt, line("")
+stmt, line("Expected: state EITC = 0. Through TY2017 the CalEITC followed the")
+stmt, line("federal childless age band -- a filer without qualifying children")
+stmt, line("had to be 25-64 at year end (FTB 3514 instructions). AB 1809")
+stmt, line("expanded eligibility to ages 18-24 and 65+ only beginning TY2018.")
+stmt, line("TAXSIM pays a 2017 credit to this 68-year-old (v39 > 0; on our")
+stmt, line("validation sample, childless filers aged 67-73 are paid $60-$157).")
+stmt, line("Amounts are small (the 2017 childless maximum was $223) but the")
+stmt, line("age gate is categorical.")
 close_statement
 
 display as result "Bug-report artifacts written to `out_dir'/"

@@ -154,6 +154,25 @@ Income Deduction (excluded via `st_bid > 0` predicate — with it, OH passes
 the PE window at 96.6–98.7% and sits at ~91% clean vs TAXSIM, residuals
 documented as JFC-proxy and retirement-credit annotate rows).
 
+Update 2026-08-15 (CA close-out): the CA triage surfaced a cross-state
+calculator defect — `do_taxes.R` zeroes the `*_item_ded` components for
+federal standard-deduction takers, so independent-election states could
+never itemize state-only. The fix preserves as-if-itemizing
+`*_item_ded_potential` columns for the state pass, and the TAXSIM
+crosswalk hands them in state mode ONLY for independent-election states
+(handing them to coupled/fed-gated states lets TAXSIM unpin its election
+from the federal one — verified regression, VA 2019). Effects: CA's
+TAXSIM window cleared the bar at 0.965–0.981 clean (from 0.61–0.73) with
+the UI-subtraction fix, CalEITC age-band/gate repairs, and seven CA KD
+rows; DE/NY/MN/NC gained 20–33 points (DE 0.90–0.91, NY 0.84, MN
+0.78–0.88, NC 0.91–0.97, crossing the bar 2018–2020) under the standard
+crosswalk-exposure exclude rows added for each; WI strengthened to
+0.97–0.99. CA's PE window sits at 0.936–0.966 (2021/2023 clear;
+2022/2024 miss by 1–5 scattered low-income credit-margin records).
+Coupled and fed-gated states are unchanged. The stage classifier now
+counts `st_earned_credit` in the state-EITC stage (CalEITC-style credits
+live there, not in `st_eitc`).
+
 Heavy runs should go through `sbatch` — the login node's memory cgroup
 kills the federal pre-pass (~8 GB peak). A 48G/one-task script matching
 `slurm_run.sh` conventions is sufficient; the full TAXSIM window for all

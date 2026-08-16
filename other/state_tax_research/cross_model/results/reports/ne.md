@@ -24,36 +24,36 @@ defined (federally aligned records; see README).
 | year|fed_aligned |stage           |    n|
 |----:|:-----------|:---------------|----:|
 | 2017|TRUE        |1 state AGI     | 2799|
-| 2017|TRUE        |3 deductions    | 3546|
+| 2017|TRUE        |3 deductions    | 3548|
 | 2017|TRUE        |6 other credits |   29|
-| 2017|TRUE        |7 rate/rounding |   39|
+| 2017|TRUE        |7 rate/rounding |   37|
 | 2017|FALSE       |1 state AGI     | 5291|
-| 2017|FALSE       |3 deductions    |  249|
-| 2017|FALSE       |5 state EITC    |  960|
+| 2017|FALSE       |3 deductions    |  251|
+| 2017|FALSE       |5 state EITC    |  958|
 | 2018|TRUE        |1 state AGI     | 2542|
-| 2018|TRUE        |3 deductions    | 2019|
-| 2018|TRUE        |6 other credits |   95|
-| 2018|TRUE        |7 rate/rounding |   47|
+| 2018|TRUE        |3 deductions    | 2030|
+| 2018|TRUE        |6 other credits |   88|
+| 2018|TRUE        |7 rate/rounding |   43|
 | 2018|FALSE       |1 state AGI     | 5126|
-| 2018|FALSE       |3 deductions    |  204|
-| 2018|FALSE       |5 state EITC    |  921|
+| 2018|FALSE       |3 deductions    |  209|
+| 2018|FALSE       |5 state EITC    |  916|
 | 2018|FALSE       |6 other credits |    3|
 | 2018|FALSE       |7 rate/rounding |    1|
 | 2019|TRUE        |1 state AGI     | 2463|
-| 2019|TRUE        |3 deductions    | 2061|
-| 2019|TRUE        |6 other credits |  109|
-| 2019|TRUE        |7 rate/rounding |   49|
+| 2019|TRUE        |3 deductions    | 2066|
+| 2019|TRUE        |6 other credits |  105|
+| 2019|TRUE        |7 rate/rounding |   48|
 | 2019|FALSE       |1 state AGI     | 5197|
-| 2019|FALSE       |3 deductions    |  206|
-| 2019|FALSE       |5 state EITC    |  972|
+| 2019|FALSE       |3 deductions    |  212|
+| 2019|FALSE       |5 state EITC    |  966|
 | 2019|FALSE       |6 other credits |    2|
 | 2020|TRUE        |1 state AGI     | 2507|
-| 2020|TRUE        |3 deductions    | 1931|
-| 2020|TRUE        |6 other credits |   94|
-| 2020|TRUE        |7 rate/rounding |   45|
+| 2020|TRUE        |3 deductions    | 1935|
+| 2020|TRUE        |6 other credits |   92|
+| 2020|TRUE        |7 rate/rounding |   43|
 | 2020|FALSE       |1 state AGI     | 5651|
-| 2020|FALSE       |3 deductions    |  181|
-| 2020|FALSE       |5 state EITC    |  923|
+| 2020|FALSE       |3 deductions    |  185|
+| 2020|FALSE       |5 state EITC    |  919|
 | 2020|FALSE       |7 rate/rounding |    3|
 
 ## Known differences applied

@@ -116,14 +116,33 @@ earned_credit_style:
   value: 2
   reference: 'California FTB 3514 instructions/booklets, California Earned Income Tax Credit tables, 2017-2025'
 earned_credit_age_min:
-  value: 18
-  reference: 'California FTB 3514, childless filer age requirement, 2025'
+  value:
+    '2017': 25
+    '2018': 18
+  reference: 'California FTB 3514: through TY2017 the CalEITC followed the federal childless age band (25-64); AB 1809 expanded eligibility to 18-24 and 65+ beginning TY2018'
+earned_credit_age_max:
+  value:
+    '2017': 64
+    '2018': .inf
+  reference: 'California FTB 3514: federal under-65 childless ceiling applied through TY2017; removed by the TY2018 expansion'
 earned_credit_agi_limit:
-  value: 32901
-  reference: 'California FTB 3514, federal AGI eligibility limit, 2025'
+  value:
+    '2017': 22323
+    '2018': 24951
+    '2019': 30001
+    '2023': 30951
+    '2024': 31951
+    '2025': 32901
+  reference: 'California FTB 3514, federal AGI eligibility limit (strictly-below gate, one dollar above each year''s table maximum), 2017-2025'
 earned_credit_earned_limit:
-  value: 32901
-  reference: 'California FTB 3514, California earned-income eligibility limit, 2025'
+  value:
+    '2017': 22323
+    '2018': 24951
+    '2019': 30001
+    '2023': 30951
+    '2024': 31951
+    '2025': 32901
+  reference: 'California FTB 3514, California earned-income eligibility limit (strictly-below gate, one dollar above each year''s table maximum), 2017-2025'
 earned_credit_round:
   value: 1
   reference: 'California FTB 3514 EITC table reports whole-dollar credits'

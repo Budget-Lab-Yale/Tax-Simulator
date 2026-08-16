@@ -28,35 +28,35 @@ defined (federally aligned records; see README).
 | 2017|FALSE       |1 state AGI      | 6814|
 | 2018|TRUE        |1 state AGI      | 3447|
 | 2018|TRUE        |2 exemptions     |   84|
-| 2018|TRUE        |3 deductions     | 1771|
+| 2018|TRUE        |3 deductions     | 1781|
 | 2018|TRUE        |4 taxable income |   17|
-| 2018|TRUE        |6 other credits  | 1593|
+| 2018|TRUE        |6 other credits  | 1583|
 | 2018|FALSE       |1 state AGI      | 5253|
 | 2018|FALSE       |2 exemptions     |   40|
-| 2018|FALSE       |3 deductions     |  140|
-| 2018|FALSE       |5 state EITC     | 1044|
+| 2018|FALSE       |3 deductions     |  146|
+| 2018|FALSE       |5 state EITC     | 1038|
 | 2018|FALSE       |6 other credits  |   78|
 | 2019|TRUE        |1 state AGI      | 3399|
 | 2019|TRUE        |2 exemptions     |   74|
-| 2019|TRUE        |3 deductions     | 2392|
-| 2019|TRUE        |4 taxable income |  156|
-| 2019|TRUE        |6 other credits  | 1185|
+| 2019|TRUE        |3 deductions     | 2420|
+| 2019|TRUE        |4 taxable income |  141|
+| 2019|TRUE        |6 other credits  | 1172|
 | 2019|FALSE       |1 state AGI      | 5374|
 | 2019|FALSE       |2 exemptions     |   42|
-| 2019|FALSE       |3 deductions     |  440|
+| 2019|FALSE       |3 deductions     |  444|
 | 2019|FALSE       |4 taxable income |   16|
-| 2019|FALSE       |5 state EITC     |  822|
+| 2019|FALSE       |5 state EITC     |  818|
 | 2019|FALSE       |6 other credits  |   31|
 | 2020|TRUE        |1 state AGI      | 3368|
 | 2020|TRUE        |2 exemptions     |   85|
-| 2020|TRUE        |3 deductions     | 2208|
-| 2020|TRUE        |4 taxable income |  120|
-| 2020|TRUE        |6 other credits  | 1139|
+| 2020|TRUE        |3 deductions     | 2218|
+| 2020|TRUE        |4 taxable income |  115|
+| 2020|TRUE        |6 other credits  | 1134|
 | 2020|FALSE       |1 state AGI      | 5831|
 | 2020|FALSE       |2 exemptions     |   41|
-| 2020|FALSE       |3 deductions     |  419|
+| 2020|FALSE       |3 deductions     |  423|
 | 2020|FALSE       |4 taxable income |   12|
-| 2020|FALSE       |5 state EITC     |  757|
+| 2020|FALSE       |5 state EITC     |  753|
 | 2020|FALSE       |6 other credits  |   30|
 
 ## Known differences applied

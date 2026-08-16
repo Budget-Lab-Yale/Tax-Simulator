@@ -52,7 +52,8 @@ taxsim_check = function(tax_units) {
       return()
 }
 
-taxsim_crosswalk = function(tax_units, state = 'No state') {
+taxsim_crosswalk = function(tax_units, state = 'No state',
+                            independent_item = FALSE) {
 
   #----------------------------------------------------------------------------
   # Converts YBL Tax Simulator inputs and outputs into NBER Taxsim readable
@@ -62,6 +63,11 @@ taxsim_crosswalk = function(tax_units, state = 'No state') {
   #   - tax_units (df) : dataframe of tax units after passing through calculator
   #   - state (str)    : two-letter postal code for TAXSIM's state calculation,
   #                      or 'No state' to disable it (default; federal-only)
+  #   - independent_item (bool) : whether this state's itemization election is
+  #                      independent of the federal one (or it computes an
+  #                      itemized credit regardless of election, WI-style).
+  #                      Must mirror the state's encoded law -- see
+  #                      cross_model_taxsim_leg()
   #
   # Returns: dataframe populated with the variables converted to Taxsim input
   #----------------------------------------------------------------------------
@@ -70,6 +76,23 @@ taxsim_crosswalk = function(tax_units, state = 'No state') {
   if (!'taxsimid' %in% names(tax_units)) {
     tax_units$taxsimid = if ('id' %in% names(tax_units)) tax_units$id
                          else seq_len(nrow(tax_units))
+  }
+
+  # Independent-election state mode hands the as-if-itemizing Schedule A
+  # amounts, because those states let federal standard-deduction takers
+  # itemize on the state return and both our calculator and TAXSIM's state
+  # logic elect independently. Coupled and federal-gated states keep the
+  # zeroed as-claimed components: handing expenses there lets TAXSIM
+  # itemize the state return where the law pins the election to the federal
+  # standard deduction (verified regression: VA 2019, 805 records flipped).
+  # Federal-only mode also keeps as-claimed amounts (established baseline)
+  if (state != 'No state' && independent_item) {
+    tax_units = tax_units %>%
+      mutate(med_item_ded      = med_item_ded_potential,
+             misc_item_ded     = misc_item_ded_potential,
+             mort_int_item_ded = mort_int_item_ded_potential,
+             char_item_ded     = char_item_ded_potential,
+             casualty_item_ded = casualty_item_ded_potential)
   }
 
   tax_units %>%

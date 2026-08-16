@@ -10,60 +10,74 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       | 20513|   13092|   0.4488|    0.5142|         0.5521|          0.6101|          0.1859|         75.8599|   14042.168|
-| 2018|taxsim       | 20515|   13144|   0.5330|    0.6019|         0.6764|          0.7250|          0.1746|          3.6627|   -9939.249|
-| 2019|taxsim       | 20514|   13088|   0.5279|    0.5923|         0.6812|          0.7267|          0.1576|          4.0100|  -10447.170|
-| 2020|taxsim       | 20513|   12682|   0.5168|    0.5819|         0.6859|          0.7281|          0.1539|          8.2900|  -11412.316|
-| 2021|policyengine |  1536|     271|   0.2949|    0.3991|         0.8303|          0.9077|          0.1302|        313.6970|  -20774.897|
-| 2022|policyengine |  1530|     317|   0.3203|    0.3948|         0.7729|          0.8644|          0.1281|        332.3340|    5728.297|
-| 2023|policyengine |  1533|     359|   0.3249|    0.4012|         0.8078|          0.8607|          0.1363|        316.3700|   38751.847|
-| 2024|policyengine |  1531|     364|   0.3201|    0.3965|         0.7692|          0.8434|          0.1378|        372.1663|   -4735.039|
+| 2017|taxsim       |  9155|    6843|   0.8561|    0.9378|         0.9491|          0.9807|          0.3400|          0.0551|     76.8571|
+| 2017|taxsim       | 11358|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2018|taxsim       | 10540|    7583|   0.8412|    0.9055|         0.9516|          0.9747|          0.2868|          0.1502|   -103.1863|
+| 2018|taxsim       |  9975|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2019|taxsim       | 10560|    7628|   0.8277|    0.8868|         0.9452|          0.9696|          0.2575|          0.1900|   -264.4492|
+| 2019|taxsim       |  9954|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2020|taxsim       | 10747|    7375|   0.8086|    0.8774|         0.9384|          0.9649|          0.2580|          0.0512|   -312.4426|
+| 2020|taxsim       |  9766|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2021|policyengine |  1075|     233|   0.3916|    0.5153|         0.9270|          0.9657|          0.1665|         78.2250|   5097.3089|
+| 2021|policyengine |   461|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2022|policyengine |  1060|     265|   0.4132|    0.5151|         0.8340|          0.9434|          0.1387|         83.6100|    -20.2332|
+| 2022|policyengine |   470|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2023|policyengine |  1094|     303|   0.4150|    0.5073|         0.8944|          0.9571|          0.1463|         91.8889|   1063.8431|
+| 2023|policyengine |   439|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2024|policyengine |  1077|     314|   0.4150|    0.4968|         0.8662|          0.9363|          0.1541|        104.7609|    -28.9184|
+| 2024|policyengine |   454|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 
 ## Mismatch stage diagnosis (TAXSIM |diff| > $15)
 
 | year|fed_aligned |stage           |    n|
 |----:|:-----------|:---------------|----:|
-| 2017|TRUE        |1 state AGI     |  512|
-| 2017|TRUE        |3 deductions    | 5113|
-| 2017|TRUE        |5 state EITC    |  109|
-| 2017|TRUE        |6 other credits |  130|
-| 2017|FALSE       |1 state AGI     | 4994|
-| 2017|FALSE       |3 deductions    |  250|
-| 2017|FALSE       |5 state EITC    |  178|
-| 2017|FALSE       |6 other credits |   21|
-| 2018|TRUE        |1 state AGI     |  470|
-| 2018|TRUE        |3 deductions    | 3511|
-| 2018|TRUE        |5 state EITC    |  161|
-| 2018|TRUE        |6 other credits |  111|
-| 2018|FALSE       |1 state AGI     | 4932|
-| 2018|FALSE       |3 deductions    |  188|
-| 2018|FALSE       |5 state EITC    |  197|
-| 2018|FALSE       |6 other credits |   11|
-| 2019|TRUE        |1 state AGI     |  463|
-| 2019|TRUE        |3 deductions    | 3375|
-| 2019|TRUE        |5 state EITC    |  196|
-| 2019|TRUE        |6 other credits |  138|
-| 2019|FALSE       |1 state AGI     | 4980|
-| 2019|FALSE       |3 deductions    |  222|
-| 2019|FALSE       |5 state EITC    |  303|
-| 2019|FALSE       |6 other credits |    7|
-| 2020|TRUE        |1 state AGI     |  223|
-| 2020|TRUE        |3 deductions    | 3397|
-| 2020|TRUE        |5 state EITC    |  241|
-| 2020|TRUE        |6 other credits |  123|
-| 2020|FALSE       |1 state AGI     | 5429|
-| 2020|FALSE       |3 deductions    |  201|
-| 2020|FALSE       |5 state EITC    |  292|
-| 2020|FALSE       |6 other credits |    5|
+| 2017|TRUE        |1 state AGI     |  237|
+| 2017|TRUE        |3 deductions    | 5308|
+| 2017|TRUE        |5 state EITC    |  182|
+| 2017|TRUE        |6 other credits |  112|
+| 2017|FALSE       |1 state AGI     | 4997|
+| 2017|FALSE       |3 deductions    |  255|
+| 2017|FALSE       |5 state EITC    |  445|
+| 2017|FALSE       |6 other credits |    2|
+| 2018|TRUE        |1 state AGI     |  205|
+| 2018|TRUE        |3 deductions    | 4704|
+| 2018|TRUE        |5 state EITC    |  186|
+| 2018|TRUE        |6 other credits |   84|
+| 2018|FALSE       |1 state AGI     | 4963|
+| 2018|FALSE       |3 deductions    |  204|
+| 2018|FALSE       |5 state EITC    |  217|
+| 2019|TRUE        |1 state AGI     |  210|
+| 2019|TRUE        |3 deductions    | 4594|
+| 2019|TRUE        |5 state EITC    |  182|
+| 2019|TRUE        |6 other credits |  146|
+| 2019|FALSE       |1 state AGI     | 5019|
+| 2019|FALSE       |3 deductions    |  242|
+| 2019|FALSE       |5 state EITC    |  295|
+| 2019|FALSE       |6 other credits |   20|
+| 2020|TRUE        |1 state AGI     |  184|
+| 2020|TRUE        |3 deductions    | 4354|
+| 2020|TRUE        |5 state EITC    |  227|
+| 2020|TRUE        |6 other credits |  132|
+| 2020|FALSE       |1 state AGI     | 5035|
+| 2020|FALSE       |3 deductions    |  302|
+| 2020|FALSE       |5 state EITC    |  313|
+| 2020|FALSE       |6 other credits |   16|
 
 ## Known differences applied
 
-|state |model  | year_min| year_max|category       |action   |description                                                                                                                                                                                                                         |
-|:-----|:------|--------:|--------:|:--------------|:--------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|ALL   |taxsim |     2017|     2024|structural     |annotate |TAXSIM optimizes federal itemization using its own computed state income tax (SALT circularity) and iterates federal-state 3 rounds; our pass is one-way federal-to-state until Phase 7                                             |
-|ALL   |taxsim |     2017|     2024|structural     |annotate |TAXSIM imputes the sales-tax deduction from IRS Pub. 600 regressions; we use as-reported salt_inc_sales                                                                                                                             |
-|ALL   |taxsim |     2021|     2024|vintage        |annotate |TAXSIM state law 2021+ is inflated ~2020 law, not enacted law; cells in this window are non-canonical (PolicyEngine is the tie-breaker)                                                                                             |
-|ALL   |taxsim |     2017|     2024|input-coverage |annotate |TAXSIM-35 has no tax-exempt interest input, so it can never apply state exempt-interest addbacks (or count exempt_int in the federal EITC investment-income test); records with exempt_int > 0 are outside the clean-subset metrics |
-|ALL   |taxsim |     2017|     2024|input-coverage |annotate |TAXSIM-35 has no state-refund input, so state-mode crosswalk omits state_ref entirely (states subtract their own refunds); TAXSIM federal AGI runs low by state_ref, handled inside the fed_aligned flag                            |
-|ALL   |taxsim |     2017|     2024|federal-side   |annotate |State EITCs piggyback on federal EITC; TAXSIM's own federal EITC (amount and eligibility) can differ from ours, propagating scaled differences into state EITC; clean-subset metrics condition on federal EITC agreement            |
+|state |model        | year_min| year_max|category                     |action   |description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+|:-----|:------------|--------:|--------:|:----------------------------|:--------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|ALL   |taxsim       |     2017|     2024|structural                   |annotate |TAXSIM optimizes federal itemization using its own computed state income tax (SALT circularity) and iterates federal-state 3 rounds; our pass is one-way federal-to-state until Phase 7                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+|ALL   |taxsim       |     2017|     2024|structural                   |annotate |TAXSIM imputes the sales-tax deduction from IRS Pub. 600 regressions; we use as-reported salt_inc_sales                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+|ALL   |taxsim       |     2021|     2024|vintage                      |annotate |TAXSIM state law 2021+ is inflated ~2020 law, not enacted law; cells in this window are non-canonical (PolicyEngine is the tie-breaker)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+|ALL   |taxsim       |     2017|     2024|input-coverage               |annotate |TAXSIM-35 has no tax-exempt interest input, so it can never apply state exempt-interest addbacks (or count exempt_int in the federal EITC investment-income test); records with exempt_int > 0 are outside the clean-subset metrics                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+|ALL   |taxsim       |     2017|     2024|input-coverage               |annotate |TAXSIM-35 has no state-refund input, so state-mode crosswalk omits state_ref entirely (states subtract their own refunds); TAXSIM federal AGI runs low by state_ref, handled inside the fed_aligned flag                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+|ALL   |taxsim       |     2017|     2024|federal-side                 |annotate |State EITCs piggyback on federal EITC; TAXSIM's own federal EITC (amount and eligibility) can differ from ours, propagating scaled differences into state EITC; clean-subset metrics condition on federal EITC agreement                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+|CA    |taxsim       |     2017|     2020|input-coverage               |exclude  |The dominant CA deduction-stage wedge is crosswalk representation, not either model's CA law: Schedule CA strips state/local income and sales taxes and uncaps property tax, but the crosswalk hands TAXSIM as-reported salt_inc_sales + salt_pers inside otheritem, where no state calculation can identify them as SALT to strip (TAXSIM strips its OWN iterated CA tax instead -- the SALT circularity), and investment interest and Schedule A "other" have no TAXSIM inputs at all. Median itemized gap -6.9k in 2017 (pre-TCJA, uncapped SALT rides in whole) and +10.2k in 2019 (we uncap property tax; TAXSIM works from fed-capped concepts). Exposure covers 98-99% of AGI-clean deduction-stage mismatches. Excluded via the same exposure predicate as DC |
+|CA    |taxsim       |     2017|     2020|structural                   |exclude  |TAXSIM's mstat/HoH derivation (the UT structural class): a single filer with dependents computes as HoH and an HoH filer without crosswalk-mappable dependents computes as single. CA prices filing status into the standard deduction (HoH takes the joint amount: +/-4,401 masses in 2018, +/-4,537 in 2019, +/-4,601 in 2020 on AGI-agreeing non-itemizers) and the exemption-credit stack. Excluded via the same exposure predicate as UT/DC                                                                                                                                                                                                                                                                                                                      |
+|CA    |taxsim       |     2017|     2020|external-model-approximation |annotate |TAXSIM's CalEITC differs from the FTB 3514 $50-bin tables by small amounts in both directions (median -$13, bulk within +/-$90; our st_earned_credit matches v39 within $5 on 97.4% of the full fed-aligned 2019 sample). In 2017 TAXSIM also pays childless CalEITC to filers outside the pre-expansion 25-64 federal age band (probe rows: ages 67-73 paid $60-157). Sub-$100 class: annotated, not excluded                                                                                                                                                                                                                                                                                                                                                        |
+|CA    |taxsim       |     2019|     2020|omitted-credit               |annotate |TAXSIM does not model the Young Child Tax Credit (refundable, introduced TY2019, up to $1,000 per return with a CalEITC- qualifying child under six). Records where we pay the YCTC carry it as an our-side-higher-credit wedge inside the total-credits stage; most such records also sit in other exposure classes                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+|CA    |policyengine |     2021|     2024|structural                   |exclude  |Non-California municipal-bond interest is taxable on Schedule CA, but the true own-state share of exempt_int is unobservable: we add back (1 - OWN_STATE_MUNI_SHARE) = 25% of exempt_int; PolicyEngine adds back nothing (probe: single, 100k wages + 50k tax-exempt interest -> ca_agi = federal AGI exactly). Both are assumptions; the divergence is the assumption, not either encoding. Excluded on the exposure set                                                                                                                                                                                                                                                                                                                                             |
+|CA    |policyengine |     2021|     2024|external-model-concept       |exclude  |PolicyEngine pays CalEITC (and through it the YCTC) to married-filing-separately filers unconditionally (probe: MFS, 40, 8,639 wages -> ca_eitc = 203.94). FTB 3514 bars MFS filers unless they meet ARPA-style conditions (qualifying child, lived apart from the spouse for the last six months) that are unobservable in both models; we bar MFS entirely, matching the federal EITC treatment. Excluded on MFS filers in the CalEITC income range                                                                                                                                                                                                                                                                                                                 |
+|CA    |policyengine |     2021|     2024|structural                   |annotate |The FTB 3514 zero-earned-income YCTC (TY2022+) requires current-year total net losses of $33,497 or less (2023); we proxy the loss test with available components and deny large-loss records, while PolicyEngine pays the credit (one 2023 MFS record with -288k AGI was paid the full $1,117). A handful of records per year                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 

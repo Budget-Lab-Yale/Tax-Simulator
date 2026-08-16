@@ -10,14 +10,14 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       |  9179|    6759|   0.6563|    0.7177|         0.7685|          0.8137|          0.1973|          0.0035|     86.7788|
-| 2017|taxsim       | 11334|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       | 11883|    8770|   0.7256|    0.8137|         0.8651|          0.9165|          0.1673|          0.0036|    137.1862|
+| 2017|taxsim       |  9176|    6758|   0.6565|    0.7179|         0.7686|          0.8139|          0.1974|          0.0035|     86.9420|
+| 2017|taxsim       | 11337|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2018|taxsim       | 11883|    8771|   0.7256|    0.8137|         0.8650|          0.9164|          0.1673|          0.0036|    133.9900|
 | 2018|taxsim       |  8632|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       | 11773|    8658|   0.7233|    0.8049|         0.8690|          0.9140|          0.1693|          0.0035|    112.7716|
-| 2019|taxsim       |  8741|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       | 11970|    8746|   0.7185|    0.8034|         0.8651|          0.9117|          0.1645|          0.0035|    159.7252|
-| 2020|taxsim       |  8543|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2019|taxsim       | 11769|    8657|   0.7235|    0.8052|         0.8691|          0.9141|          0.1693|          0.0035|    111.9376|
+| 2019|taxsim       |  8745|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2020|taxsim       | 11967|    8743|   0.7186|    0.8036|         0.8654|          0.9120|          0.1645|          0.0035|    157.9534|
+| 2020|taxsim       |  8546|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2021|policyengine |  1536|     269|   0.2220|    0.3242|         0.6803|          0.7509|          0.0723|        531.2500| -15563.6522|
 | 2022|policyengine |  1530|     316|   0.2843|    0.3523|         0.7880|          0.8323|          0.0843|        516.2197|    805.4161|
 | 2023|policyengine |  1533|     358|   0.2753|    0.3359|         0.7709|          0.8073|          0.0841|        540.7101|  27291.0493|
@@ -29,52 +29,52 @@ defined (federally aligned records; see README).
 |----:|:-----------|:----------------|----:|
 | 2017|TRUE        |1 state AGI      |  635|
 | 2017|TRUE        |2 exemptions     | 1509|
-| 2017|TRUE        |3 deductions     | 3868|
-| 2017|TRUE        |4 taxable income |  401|
-| 2017|TRUE        |5 state EITC     |  236|
-| 2017|TRUE        |6 other credits  |  105|
-| 2017|TRUE        |7 rate/rounding  |  827|
+| 2017|TRUE        |3 deductions     | 3874|
+| 2017|TRUE        |4 taxable income |  399|
+| 2017|TRUE        |5 state EITC     |  244|
+| 2017|TRUE        |6 other credits  |   96|
+| 2017|TRUE        |7 rate/rounding  |  824|
 | 2017|FALSE       |1 state AGI      | 5334|
 | 2017|FALSE       |2 exemptions     |  126|
-| 2017|FALSE       |3 deductions     |  210|
+| 2017|FALSE       |3 deductions     |  212|
 | 2017|FALSE       |4 taxable income |   16|
-| 2017|FALSE       |5 state EITC     |  807|
+| 2017|FALSE       |5 state EITC     |  805|
 | 2017|FALSE       |6 other credits  |    1|
 | 2017|FALSE       |7 rate/rounding  |   16|
 | 2018|TRUE        |1 state AGI      |  557|
-| 2018|TRUE        |3 deductions     | 3809|
+| 2018|TRUE        |3 deductions     | 3875|
 | 2018|TRUE        |4 taxable income |   16|
-| 2018|TRUE        |5 state EITC     |  227|
-| 2018|TRUE        |6 other credits  |   84|
-| 2018|TRUE        |7 rate/rounding  |  592|
+| 2018|TRUE        |5 state EITC     |  236|
+| 2018|TRUE        |6 other credits  |   68|
+| 2018|TRUE        |7 rate/rounding  |  533|
 | 2018|FALSE       |1 state AGI      | 5184|
-| 2018|FALSE       |3 deductions     |  278|
+| 2018|FALSE       |3 deductions     |  283|
 | 2018|FALSE       |4 taxable income |    1|
-| 2018|FALSE       |5 state EITC     |  781|
+| 2018|FALSE       |5 state EITC     |  777|
 | 2018|FALSE       |6 other credits  |    1|
-| 2018|FALSE       |7 rate/rounding  |   18|
+| 2018|FALSE       |7 rate/rounding  |   17|
 | 2019|TRUE        |1 state AGI      |  570|
-| 2019|TRUE        |3 deductions     | 3822|
-| 2019|TRUE        |4 taxable income |   22|
-| 2019|TRUE        |5 state EITC     |  230|
-| 2019|TRUE        |6 other credits  |   80|
-| 2019|TRUE        |7 rate/rounding  |  585|
+| 2019|TRUE        |3 deductions     | 3886|
+| 2019|TRUE        |4 taxable income |   20|
+| 2019|TRUE        |5 state EITC     |  240|
+| 2019|TRUE        |6 other credits  |   64|
+| 2019|TRUE        |7 rate/rounding  |  529|
 | 2019|FALSE       |1 state AGI      | 5256|
-| 2019|FALSE       |3 deductions     |  301|
+| 2019|FALSE       |3 deductions     |  312|
 | 2019|FALSE       |4 taxable income |    2|
-| 2019|FALSE       |5 state EITC     |  780|
+| 2019|FALSE       |5 state EITC     |  770|
 | 2019|FALSE       |6 other credits  |    1|
-| 2019|FALSE       |7 rate/rounding  |   18|
+| 2019|FALSE       |7 rate/rounding  |   17|
 | 2020|TRUE        |1 state AGI      |  254|
-| 2020|TRUE        |3 deductions     | 3684|
-| 2020|TRUE        |4 taxable income |   27|
-| 2020|TRUE        |5 state EITC     |  246|
-| 2020|TRUE        |6 other credits  |   73|
-| 2020|TRUE        |7 rate/rounding  |  625|
+| 2020|TRUE        |3 deductions     | 3749|
+| 2020|TRUE        |4 taxable income |   22|
+| 2020|TRUE        |5 state EITC     |  260|
+| 2020|TRUE        |6 other credits  |   54|
+| 2020|TRUE        |7 rate/rounding  |  570|
 | 2020|FALSE       |1 state AGI      | 5670|
-| 2020|FALSE       |3 deductions     |  278|
+| 2020|FALSE       |3 deductions     |  284|
 | 2020|FALSE       |4 taxable income |    2|
-| 2020|FALSE       |5 state EITC     |  753|
+| 2020|FALSE       |5 state EITC     |  747|
 | 2020|FALSE       |7 rate/rounding  |   18|
 
 ## Known differences applied

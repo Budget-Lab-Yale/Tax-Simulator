@@ -30,23 +30,23 @@ defined (federally aligned records; see README).
 | 2017|FALSE       |3 deductions    |  240|
 | 2017|FALSE       |6 other credits |  147|
 | 2018|TRUE        |1 state AGI     | 3143|
-| 2018|TRUE        |3 deductions    | 2413|
-| 2018|TRUE        |6 other credits |  263|
+| 2018|TRUE        |3 deductions    | 2421|
+| 2018|TRUE        |6 other credits |  255|
 | 2018|FALSE       |1 state AGI     | 5097|
-| 2018|FALSE       |3 deductions    |  171|
-| 2018|FALSE       |6 other credits |  231|
+| 2018|FALSE       |3 deductions    |  174|
+| 2018|FALSE       |6 other credits |  228|
 | 2019|TRUE        |1 state AGI     | 3043|
-| 2019|TRUE        |3 deductions    | 2491|
-| 2019|TRUE        |6 other credits |  309|
+| 2019|TRUE        |3 deductions    | 2509|
+| 2019|TRUE        |6 other credits |  291|
 | 2019|FALSE       |1 state AGI     | 5156|
-| 2019|FALSE       |3 deductions    |  189|
-| 2019|FALSE       |6 other credits |  282|
+| 2019|FALSE       |3 deductions    |  194|
+| 2019|FALSE       |6 other credits |  277|
 | 2020|TRUE        |1 state AGI     | 3076|
-| 2020|TRUE        |3 deductions    | 2306|
-| 2020|TRUE        |6 other credits |  330|
+| 2020|TRUE        |3 deductions    | 2321|
+| 2020|TRUE        |6 other credits |  315|
 | 2020|FALSE       |1 state AGI     | 5267|
-| 2020|FALSE       |3 deductions    |  201|
-| 2020|FALSE       |6 other credits |  329|
+| 2020|FALSE       |3 deductions    |  207|
+| 2020|FALSE       |6 other credits |  323|
 
 ## Known differences applied
 

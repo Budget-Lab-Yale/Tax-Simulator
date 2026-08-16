@@ -10,57 +10,54 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       | 19611|   12612|   0.4248|    0.5036|         0.5316|          0.5971|          0.2253|         95.2295|   8692.9502|
-| 2017|taxsim       |   902|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       | 18794|   11922|   0.4476|    0.5113|         0.5797|          0.6266|          0.2229|         77.5999|  12965.1134|
-| 2018|taxsim       |  1721|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       | 17839|   11052|   0.4745|    0.5945|         0.6202|          0.7113|          0.2318|         27.7041|   -266.0169|
-| 2019|taxsim       |  2675|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       | 17654|   10691|   0.4695|    0.5845|         0.6220|          0.7091|          0.2283|         30.3751|   -551.1685|
-| 2020|taxsim       |  2859|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2021|policyengine |  1536|     269|   0.3001|    0.4245|         0.7435|          0.7918|          0.1120|        180.3716| -11884.7797|
-| 2022|policyengine |  1530|     317|   0.3288|    0.4235|         0.7855|          0.8233|          0.1144|        180.3705|   1340.6952|
-| 2023|policyengine |  1533|     357|   0.3216|    0.4188|         0.7479|          0.7843|          0.1174|        181.7152|  17583.4104|
-| 2024|policyengine |  1531|     363|   0.3155|    0.4095|         0.7548|          0.7961|          0.1104|        214.5021|  -3701.7592|
+| 2017|taxsim       |  9495|    7057|   0.7938|    0.8697|         0.8750|          0.9078|          0.4107|          0.0014|     22.1740|
+| 2017|taxsim       | 11018|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2018|taxsim       |  9529|    7156|   0.7879|    0.8637|         0.8674|          0.9001|          0.4015|          0.0016|     19.7800|
+| 2018|taxsim       | 10986|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2019|taxsim       |  8551|    6431|   0.8062|    0.8809|         0.8818|          0.9111|          0.4401|          0.0010|      7.5363|
+| 2019|taxsim       | 11963|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2020|taxsim       |  8385|    6114|   0.7932|    0.8645|         0.8870|          0.9120|          0.4336|          0.0011|    -34.5556|
+| 2020|taxsim       | 12128|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2021|policyengine |  1536|     269|   0.3086|    0.4427|         0.7509|          0.8104|          0.1126|        162.8100| -11909.4784|
+| 2022|policyengine |  1530|     317|   0.3412|    0.4542|         0.8044|          0.8486|          0.1157|        144.6220|   1293.4048|
+| 2023|policyengine |  1533|     357|   0.3372|    0.4488|         0.7619|          0.8179|          0.1194|        157.3856|  17540.4586|
+| 2024|policyengine |  1531|     363|   0.3338|    0.4487|         0.7879|          0.8512|          0.1123|        172.4530|  -3758.7159|
 
 ## Mismatch stage diagnosis (TAXSIM |diff| > $15)
 
 | year|fed_aligned |stage           |    n|
 |----:|:-----------|:---------------|----:|
-| 2017|TRUE        |1 state AGI     | 2031|
-| 2017|TRUE        |3 deductions    | 3970|
-| 2017|TRUE        |6 other credits |  216|
-| 2017|TRUE        |7 rate/rounding |  166|
-| 2017|FALSE       |1 state AGI     | 5094|
-| 2017|FALSE       |3 deductions    |  148|
+| 2017|TRUE        |1 state AGI     | 2033|
+| 2017|TRUE        |3 deductions    | 4034|
+| 2017|TRUE        |6 other credits |  212|
+| 2017|TRUE        |7 rate/rounding |  165|
+| 2017|FALSE       |1 state AGI     | 5101|
+| 2017|FALSE       |3 deductions    |  150|
 | 2017|FALSE       |5 state EITC    |  510|
-| 2017|FALSE       |6 other credits |    4|
+| 2017|FALSE       |6 other credits |    3|
 | 2017|FALSE       |7 rate/rounding |    3|
-| 2018|TRUE        |1 state AGI     | 2097|
-| 2018|TRUE        |3 deductions    | 3668|
-| 2018|TRUE        |6 other credits |  229|
-| 2018|TRUE        |7 rate/rounding |  187|
-| 2018|FALSE       |1 state AGI     | 5140|
-| 2018|FALSE       |3 deductions    |  126|
-| 2018|FALSE       |5 state EITC    |  541|
+| 2018|TRUE        |1 state AGI     | 2110|
+| 2018|TRUE        |3 deductions    | 4006|
+| 2018|TRUE        |6 other credits |  219|
+| 2018|TRUE        |7 rate/rounding |  183|
+| 2018|FALSE       |1 state AGI     | 5149|
+| 2018|FALSE       |3 deductions    |  124|
+| 2018|FALSE       |5 state EITC    |  540|
 | 2018|FALSE       |6 other credits |    1|
 | 2018|FALSE       |7 rate/rounding |    4|
-| 2019|TRUE        |1 state AGI     | 2036|
-| 2019|TRUE        |3 deductions    | 4084|
-| 2019|TRUE        |6 other credits |   23|
-| 2019|TRUE        |7 rate/rounding |   16|
-| 2019|FALSE       |1 state AGI     | 5068|
-| 2019|FALSE       |3 deductions    |  530|
-| 2019|FALSE       |5 state EITC    |  165|
-| 2019|FALSE       |6 other credits |    1|
-| 2020|TRUE        |1 state AGI     | 2061|
-| 2020|TRUE        |3 deductions    | 3865|
-| 2020|TRUE        |6 other credits |   23|
-| 2020|TRUE        |7 rate/rounding |   11|
-| 2020|FALSE       |1 state AGI     | 5488|
-| 2020|FALSE       |3 deductions    |  524|
+| 2019|TRUE        |1 state AGI     | 2054|
+| 2019|TRUE        |3 deductions    | 4383|
+| 2019|TRUE        |6 other credits |    6|
+| 2019|TRUE        |7 rate/rounding |    1|
+| 2019|FALSE       |1 state AGI     | 5076|
+| 2019|FALSE       |3 deductions    |  534|
+| 2019|FALSE       |5 state EITC    |  162|
+| 2020|TRUE        |1 state AGI     | 2070|
+| 2020|TRUE        |3 deductions    | 4152|
+| 2020|TRUE        |6 other credits |    6|
+| 2020|FALSE       |1 state AGI     | 5505|
+| 2020|FALSE       |3 deductions    |  523|
 | 2020|FALSE       |5 state EITC    |  135|
-| 2020|FALSE       |6 other credits |    2|
 
 ## Known differences applied
 
@@ -76,4 +73,5 @@ defined (federally aligned records; see README).
 |DE    |taxsim |     2017|     2020|external-deduction-artifact |annotate |Companion to the T10 row, opposite-signed. For DE filers itemizing on both sides, TAXSIM's v35_state_itemized_deduction equals OUR Delaware itemized deduction MINUS the federal Schedule A "other itemized deductions" class, exactly to the dollar on 44.9% of affected records (2,504 records with a nonzero other class in TY2019). Delaware's PIT-RSA carries that class on its own Line 16 and the DE base is the federal Schedule A total less state income taxes, so it belongs and we include it -- TAXSIM runs HIGH here, the reverse of T10. ANNOTATED, NOT EXCLUDED, for two reasons: the affected population is 21-30% of DE records and the identity is only demonstrable on 45% of them; and the same test on CA/DC/MD/MN/NM/VA gives 2-20% identity shares with residuals of both signs, so whether TAXSIM omits the class for those states is OPEN -- MD and MN have already been through attribution and their scores should not move as a side effect of a DE investigation. Sizing: setting these records aside would lift TY2019 DE from 0.711 to 0.820 and TY2017 from 0.597 to 0.764. See T11 |
 |DE    |taxsim |     2017|     2020|external-agi-artifact       |annotate |TAXSIM grants Delaware's pension exclusion where Delaware disqualifies it. State-AGI gaps are exact multiples of the statutory $2,000 (under 60) and $12,500 (60+) amounts, so both sides apply the same provision and disagree on eligibility. TAXSIM (a) grants the $2,000 against EARLY IRA distributions -- PIT-RES Line 6 says an early distribution "does not qualify" and every distribution under age 59.5 is early -- and (b) grants it to filers with no retirement income at all, driving state AGI NEGATIVE: 619-642 DE records per year have v32_state_agi < 0 where ours is >= 0, including age-80 records with zero total income where TAXSIM reports -1,999.99. Annotated because the cause columns (txbl_ira_dist, and age relative to 59.5) are not in the harness record frame. See T12                                                                                                                                                                                                                                                                                                           |
 |DE    |taxsim |     2017|     2020|base-definition             |annotate |OUR-SIDE ITEM, the one DE finding still capable of being our error. At 60+ we apply the $12,500 to pension PLUS eligible retirement income, and the -12,500 gap group is 86% interest, 64% dividends, 56% capital gains with only 32% holding a pension. The base follows the PIT-RES Line 6 worksheet as transcribed across seven booklet years in the DE packet. If Delaware's eligible-retirement-income definition is narrower than that reading we over-exclude up to $12,500 of base (about $825 of tax) for 60+ investment-income holders. A booklet re-read of the Line 6 worksheet would settle it. See T12                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+|DE    |taxsim |     2017|     2020|input-coverage              |exclude  |Crosswalk representation of the state itemized base (the DC/CA class): the crosswalk hands TAXSIM as-reported salt_inc_sales + salt_pers inside otheritem, where no state calculation can identify them as SALT to strip (TAXSIM strips its own iterated state tax instead), and investment interest and Schedule A "other" have no TAXSIM inputs at all. The 2026-08-15 state-only-itemization fix extends the exposed population to federal standard-deduction takers, who under this state's independent election now itemize state-side in both models. Excluded via the standard exposure predicate                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 

@@ -294,12 +294,24 @@ do_1040 = function(tax_units, return_vars, force_char = F, char_above = F) {
     bind_cols(calc_txbl_inc(.)) %>%
     mutate(item_ded = item_ded_limited) %>%  # Update value of itemized deductions to reflect any tax value limitation 
     
+    # Preserve as-if-itemizing Schedule A amounts before non-itemizer zeroing:
+    # states with an independent itemization election (e.g. CA Schedule CA,
+    # AZ Form 140 Schedule A, NY IT-196) let federal standard-deduction takers
+    # itemize on the state return, so the state calculator needs the amounts
+    # the unit COULD have claimed, not the zeroed as-claimed values
+    mutate(across(.cols = c('med_item_ded', 'salt_item_ded', 'mort_int_item_ded',
+                            'inv_int_item_ded', 'char_item_ded',
+                            'casualty_item_ded', 'misc_item_ded',
+                            'other_item_ded', 'item_ded_ex_limits', 'item_ded'),
+                  .fns   = ~ .,
+                  .names = '{.col}_potential')) %>%
+
     # Set itemized deduction variables to 0 for nonitemizers
-    mutate(across(.cols = c('med_item_ded', 'salt_item_ded', 'mort_int_item_ded', 
-                            'inv_int_item_ded', 'int_item_ded', 'char_item_ded', 
-                            'casualty_item_ded', 'misc_item_ded', 'other_item_ded', 
-                            'item_ded_ex_limits', 'item_ded'), 
-                  .fns  = ~ if_else(itemizing, ., 0))) %>% 
+    mutate(across(.cols = c('med_item_ded', 'salt_item_ded', 'mort_int_item_ded',
+                            'inv_int_item_ded', 'int_item_ded', 'char_item_ded',
+                            'casualty_item_ded', 'misc_item_ded', 'other_item_ded',
+                            'item_ded_ex_limits', 'item_ded'),
+                  .fns  = ~ if_else(itemizing, ., 0))) %>%
     
     # Set standard deduction to 0 for itemizers
     mutate(std_ded = if_else(itemizing, 0, std_ded)) %>% 
