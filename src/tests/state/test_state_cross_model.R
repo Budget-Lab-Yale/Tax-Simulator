@@ -745,14 +745,26 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
     # The as-if-itemizing (_potential) versions are used because independent-
     # election states itemize state-side for federal std-takers, whose
     # as-claimed components are zeroed
+    # xw_pe_unhanded_item is the PolicyEngine analogue: the PE crosswalk
+    # hands only property tax, mortgage, charity, and childcare, so medical,
+    # investment interest, casualty, misc, "other", and personal property
+    # tax are all invisible to PE (absolute values: negative "other" shrinks
+    # our base relative to PE's just as surely)
     ours = ours %>%
       left_join(sampled %>%
                   mutate(xw_unstripped_salt = salt_inc_sales + salt_pers,
                          xw_unhanded_item   = inv_int_item_ded_potential +
-                                              other_item_ded_potential) %>%
+                                              other_item_ded_potential,
+                         xw_pe_unhanded_item =
+                           abs(med_item_ded_potential) +
+                           abs(inv_int_item_ded_potential) +
+                           abs(casualty_item_ded_potential) +
+                           abs(misc_item_ded_potential) +
+                           abs(other_item_ded_potential) + salt_pers) %>%
                   select(id, filing_status, agi_stratum, agi, txbl_inc, eitc,
                          exempt_int, state_ref, age1, age2, gross_ss, n_dep,
-                         ui, txbl_int, xw_unstripped_salt, xw_unhanded_item),
+                         ui, txbl_int, xw_unstripped_salt, xw_unhanded_item,
+                         xw_pe_unhanded_item),
                 by = 'id')
 
     for (model in yr_models) {

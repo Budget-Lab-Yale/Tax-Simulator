@@ -178,7 +178,11 @@ equivalent input, so an ALL-states/both-models KD row excludes records
 with txbl_int > 5,000 where the assumed subtraction can break the
 tolerance) — 182 cells improved ≥0.3pp under the new exclusion, 8 moved
 down ≤1pp on denominator composition, and every previously-cleared state
-held its bar.
+held its bar. The same day's credit-stack close encoded California's
+CDCTC (FTB 3506 stepped tiers, found via the PE residual to the dollar)
+and added the PE itemizer-exposure KD row (`xw_pe_unhanded_item`) —
+**CA is now `done`**: all eight cells clear the bar (TAXSIM 0.969–0.985,
+PE 0.965–0.995), the first broad state to clear both windows since IL.
 Coupled and fed-gated states are unchanged. The stage classifier now
 counts `st_earned_credit` in the state-EITC stage (CalEITC-style credits
 live there, not in `st_eitc`).

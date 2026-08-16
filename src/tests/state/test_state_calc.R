@@ -758,6 +758,30 @@ test_state_calc = function() {
            expect = list(st_earned_credit = 0),
            label = 'CA-16 CalEITC investment-income ceiling')
 
+  # CA-17: FTB 3506 child/dependent care credit: 43% of the federal CDCTC
+  # in the $40,001-70,000 federal-AGI tier, nonrefundable. 2023 single,
+  # AGI 67,868, federal credit 600: st_cdctc = 258. Schedule X tax on
+  # 62,505 (std 5,363) = 2,541.80, less exemption credits (144 personal +
+  # 446 dependent) and the 258 care credit.
+  run_case('CA', 2023,
+           list(agi = 67868, n_dep = 1, dep_age1 = 6, care_exp = 5000,
+                cdctc_nonref = 600),
+           expect = list(st_cdctc = 258, liab_st_iit = 1693.80),
+           label = 'CA-17 CDCTC 43% tier, nonrefundable')
+
+  # CA-17b: tier edges -- 34% through exactly $100,000 of federal AGI,
+  # zero above.
+  run_case('CA', 2023,
+           list(agi = 100000, n_dep = 1, dep_age1 = 6, care_exp = 5000,
+                cdctc_nonref = 600),
+           expect = list(st_cdctc = 204),
+           label = 'CA-17b CDCTC 34% tier upper edge')
+  run_case('CA', 2023,
+           list(agi = 100001, n_dep = 1, dep_age1 = 6, care_exp = 5000,
+                cdctc_nonref = 600),
+           expect = list(st_cdctc = 0),
+           label = 'CA-17c CDCTC zero above $100,000')
+
   #--------------------------------------------------------------------------
   # Narrow and partial-IIT jurisdictions
   #--------------------------------------------------------------------------

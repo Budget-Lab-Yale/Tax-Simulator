@@ -109,6 +109,31 @@ exempt_credit_po_per_step:
   value: 6
   reference: 'California Form 540 AGI Limitation Worksheet, $6 credit reduction per rounded-up phaseout step, 2017-2025'
 
+# Child and Dependent Care Expenses Credit (FTB 3506): a stepped share of
+# the federal CDCTC by federal AGI tier, nonrefundable since 2011. The
+# stepped tiers are encoded as constant-share bands of the generic NY-style
+# share table (start == end within each band; zero above $100,000).
+# ADDED 2026-08-16 from cross-model triage: its omission matched the PE
+# residual to the dollar (43%/34% x federal credit) on five records
+cdctc_style:
+  value: 1
+  reference: 'California FTB 3506, share-of-federal-credit computation, 2017-2025'
+cdctc_share_income_base:
+  value: 1
+  reference: 'FTB 3506 keys the applicable percentage to federal AGI'
+cdctc_share_agi_bounds:
+  value: [0, 40001, 70001, 100001]
+  reference: 'FTB 3506 applicable percentage table: AGI $40,000 or less / $40,001-$70,000 / $70,001-$100,000 / over $100,000, unchanged 2017-2025'
+cdctc_share_start:
+  value: [0.50, 0.43, 0.34, 0.0]
+  reference: 'FTB 3506 applicable percentages 50%/43%/34%/0%, unchanged 2017-2025'
+cdctc_share_end:
+  value: [0.50, 0.43, 0.34, 0.0]
+  reference: 'FTB 3506 percentages are flat within each AGI tier (no interpolation)'
+cdctc_refundable:
+  value: 0
+  reference: 'FTB 3506: nonrefundable for taxable years beginning on or after January 1, 2011 (R&TC 17052.6)'
+
 # The California EITC is its own earned-income schedule rather than a match
 # of federal EITC. Style 2 selects the annual $50 FTB 3514 tables from
 # credit_tables.csv, including the FTB safe-harbor rule for a second AGI lookup.

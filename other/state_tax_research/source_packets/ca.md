@@ -1,7 +1,7 @@
 # California State Source Packet
 
 State: `CA`  
-Status: `resident regular IIT encoded and cross-model TRIAGED 2026-08-15/16; TAXSIM window clears the bar (0.966-0.982 clean), PE 2021/2023 clear, 2022/2024 at 0.94-0.95; P1 production readiness still blocked`  
+Status: `resident regular IIT encoded; cross-model DONE 2026-08-16 -- all eight canonical-window cells clear the 95% bar (TAXSIM 0.969-0.985, PE 0.965-0.995); P1 production readiness still blocked`  
 Last updated: `2026-08-16`
 
 > **Cross-model triage 2026-08-15** (see `cross_model/results/reports/ca.md`
@@ -34,10 +34,20 @@ Last updated: `2026-08-16`
 >    model-wide US-obligation interest subtraction (`sub_us_int` x 15%
 >    share assumption; ALL-states KD exclude on txbl_int > 5,000 since
 >    neither external model takes the subtraction). Tests CA-14/15/16.
-> 7. Close-out: TAXSIM clean match@100 0.980/0.974/0.968/0.965 (from
->    0.61-0.73); PE 0.965/0.950/0.969/0.944 -- 2022/2024 miss the bar by
->    roughly one and two low-income credit-margin records respectively
->    (YCTC/credit-stack margins; punch list in the report).
+> 7. 2026-08-16 credit-stack close: the PE residual dig found California's
+>    CDCTC (FTB 3506, stepped 50/43/34% of the federal credit by federal-AGI
+>    tier, nonrefundable) missing from our encoding -- verified to the
+>    dollar on five records -- now encoded via the generic share-band
+>    machinery (tests CA-17/17b/17c). PE itemizer-exposure KD row added
+>    (the PE crosswalk hands only property tax/mortgage/charity/childcare);
+>    P8 filed (PE skips the FTB 3514 earned-vs-AGI second lookup,
+>    table-exact on two records).
+> 8. CROSS-MODEL DONE: all eight canonical-window cells clear the 95% bar
+>    -- TAXSIM 0.985/0.977/0.972/0.969 (from 0.61-0.73 at the start of
+>    triage), PE 0.995/0.965/0.984/0.967. One unexplained recurring PE
+>    record (154685, ~-2.5k/yr, zero crosswalk exposure) documented in the
+>    report. Misc itemized + CA AMT follow-up planned in
+>    ca_misc_amt_plan.md.
 
 ## Scope
 

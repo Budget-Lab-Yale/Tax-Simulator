@@ -1,6 +1,6 @@
 # Cross-model validation: CA
 
-Class: broad | Generated: 2026-08-16 | Verdict: **NEEDS REVIEW**
+Class: broad | Generated: 2026-08-16 | Verdict: **PASS**
 
 Acceptance: match@$100 >= 95% in every canonical-window cell
 (2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where
@@ -10,58 +10,58 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       |  8678|    6646|   0.8556|    0.9484|         0.9305|          0.9804|          0.3436|          0.0552|     19.0855|
+| 2017|taxsim       |  8678|    6646|   0.8614|    0.9522|         0.9380|          0.9854|          0.3455|          0.0549|     17.6830|
 | 2017|taxsim       | 11835|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       |  9583|    7180|   0.8445|    0.9286|         0.9167|          0.9740|          0.3000|          0.1458|     34.4972|
+| 2018|taxsim       |  9583|    7180|   0.8485|    0.9311|         0.9220|          0.9773|          0.3012|          0.1454|     33.5347|
 | 2018|taxsim       | 10932|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       |  9538|    7181|   0.8325|    0.9125|         0.9092|          0.9678|          0.2708|          0.2358|      8.4816|
+| 2019|taxsim       |  9538|    7181|   0.8369|    0.9157|         0.9148|          0.9721|          0.2720|          0.2241|      7.5173|
 | 2019|taxsim       | 10976|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       |  9668|    6940|   0.8170|    0.9063|         0.9030|          0.9651|          0.2748|          0.2964|    -10.1481|
+| 2020|taxsim       |  9668|    6940|   0.8206|    0.9093|         0.9078|          0.9690|          0.2760|          0.2598|    -11.1327|
 | 2020|taxsim       | 10845|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2021|policyengine |   970|     229|   0.4144|    0.5392|         0.9127|          0.9651|          0.1835|         59.4837|    967.6929|
-| 2021|policyengine |   566|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2022|policyengine |   930|     258|   0.4312|    0.5538|         0.8217|          0.9496|          0.1548|         44.6197|   1637.2059|
-| 2022|policyengine |   600|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2023|policyengine |   975|     288|   0.4338|    0.5385|         0.8889|          0.9688|          0.1600|         54.5266|   1616.5653|
-| 2023|policyengine |   558|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2024|policyengine |   964|     305|   0.4346|    0.5311|         0.8459|          0.9443|          0.1680|         54.5824|    155.7130|
-| 2024|policyengine |   567|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2021|policyengine |   665|     216|   0.5429|    0.6376|         0.9583|          0.9954|          0.2451|          4.8614|    264.2427|
+| 2021|policyengine |   871|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2022|policyengine |   647|     229|   0.5533|    0.6399|         0.8821|          0.9651|          0.1947|          4.2900|   -412.1228|
+| 2022|policyengine |   883|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2023|policyengine |   646|     249|   0.5681|    0.6347|         0.9438|          0.9839|          0.2012|          2.5642|    145.3727|
+| 2023|policyengine |   887|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2024|policyengine |   646|     270|   0.5820|    0.6502|         0.9074|          0.9667|          0.2198|          4.2369|    -70.5673|
+| 2024|policyengine |   885|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 
 ## Mismatch stage diagnosis (TAXSIM |diff| > $15)
 
 | year|fed_aligned |stage           |    n|
 |----:|:-----------|:---------------|----:|
-| 2017|TRUE        |1 state AGI     | 3537|
-| 2017|TRUE        |3 deductions    | 2379|
+| 2017|TRUE        |1 state AGI     | 3535|
+| 2017|TRUE        |3 deductions    | 2376|
 | 2017|TRUE        |5 state EITC    |  139|
-| 2017|TRUE        |6 other credits |   90|
+| 2017|TRUE        |6 other credits |   41|
 | 2017|FALSE       |1 state AGI     | 5184|
-| 2017|FALSE       |3 deductions    |  104|
+| 2017|FALSE       |3 deductions    |  103|
 | 2017|FALSE       |5 state EITC    |  429|
 | 2017|FALSE       |6 other credits |    3|
-| 2018|TRUE        |1 state AGI     | 3455|
-| 2018|TRUE        |3 deductions    | 2069|
+| 2018|TRUE        |1 state AGI     | 3451|
+| 2018|TRUE        |3 deductions    | 2062|
 | 2018|TRUE        |5 state EITC    |  153|
-| 2018|TRUE        |6 other credits |   67|
+| 2018|TRUE        |6 other credits |   33|
 | 2018|FALSE       |1 state AGI     | 5117|
 | 2018|FALSE       |3 deductions    |  104|
 | 2018|FALSE       |5 state EITC    |  198|
-| 2019|TRUE        |1 state AGI     | 3565|
-| 2019|TRUE        |3 deductions    | 1912|
+| 2019|TRUE        |1 state AGI     | 3563|
+| 2019|TRUE        |3 deductions    | 1903|
 | 2019|TRUE        |5 state EITC    |  102|
-| 2019|TRUE        |6 other credits |  129|
-| 2019|FALSE       |1 state AGI     | 5182|
+| 2019|TRUE        |6 other credits |   91|
+| 2019|FALSE       |1 state AGI     | 5180|
 | 2019|FALSE       |3 deductions    |  120|
 | 2019|FALSE       |5 state EITC    |  275|
 | 2019|FALSE       |6 other credits |   20|
-| 2020|TRUE        |1 state AGI     | 3413|
-| 2020|TRUE        |3 deductions    | 1789|
+| 2020|TRUE        |1 state AGI     | 3409|
+| 2020|TRUE        |3 deductions    | 1781|
 | 2020|TRUE        |5 state EITC    |  153|
-| 2020|TRUE        |6 other credits |  123|
-| 2020|FALSE       |1 state AGI     | 5239|
-| 2020|FALSE       |3 deductions    |  168|
+| 2020|TRUE        |6 other credits |   92|
+| 2020|FALSE       |1 state AGI     | 5238|
+| 2020|FALSE       |3 deductions    |  167|
 | 2020|FALSE       |5 state EITC    |  296|
-| 2020|FALSE       |6 other credits |   15|
+| 2020|FALSE       |6 other credits |   14|
 
 ## Known differences applied
 
@@ -79,6 +79,8 @@ defined (federally aligned records; see README).
 |CA    |taxsim       |     2019|     2020|omitted-credit               |annotate |TAXSIM does not model the Young Child Tax Credit (refundable, introduced TY2019, up to $1,000 per return with a CalEITC- qualifying child under six). Records where we pay the YCTC carry it as an our-side-higher-credit wedge inside the total-credits stage; most such records also sit in other exposure classes                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 |CA    |policyengine |     2021|     2024|structural                   |exclude  |Non-California municipal-bond interest is taxable on Schedule CA, but the true own-state share of exempt_int is unobservable: we add back (1 - OWN_STATE_MUNI_SHARE) = 25% of exempt_int; PolicyEngine adds back nothing (probe: single, 100k wages + 50k tax-exempt interest -> ca_agi = federal AGI exactly). Both are assumptions; the divergence is the assumption, not either encoding. Excluded on the exposure set                                                                                                                                                                                                                                                                                                                                             |
 |CA    |policyengine |     2021|     2024|external-model-concept       |exclude  |PolicyEngine pays CalEITC (and through it the YCTC) to married-filing-separately filers unconditionally (probe: MFS, 40, 8,639 wages -> ca_eitc = 203.94). FTB 3514 bars MFS filers unless they meet ARPA-style conditions (qualifying child, lived apart from the spouse for the last six months) that are unobservable in both models; we bar MFS entirely, matching the federal EITC treatment. Excluded on MFS filers in the CalEITC income range                                                                                                                                                                                                                                                                                                                 |
-|CA    |policyengine |     2021|     2024|structural                   |annotate |The FTB 3514 zero-earned-income YCTC (TY2022+) requires current-year total net losses of $33,497 or less (2023); we proxy the loss test with available components and deny large-loss records, while PolicyEngine pays the credit (one 2023 MFS record with -288k AGI was paid the full $1,117). A handful of records per year                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+|CA    |policyengine |     2021|     2024|structural                   |annotate |The FTB 3514 zero-earned-income YCTC (TY2022+) requires current-year total net losses of $33,497 or less (2023); we proxy the loss test with available components and deny large-loss records, while PolicyEngine pays the credit (one 2023 MFS record with -288k AGI was paid the full $1,117). A handful of records per year ALSO (2026-08-16): PE derives a CalEITC-qualifying child where our PUF n_dep_eitc = 0 and pays the full YCTC ($1,083-$1,154 point masses on zero-earned-income records; three in the 2024 window) -- a qualifying-child data-derivation difference, same annotate class                                                                                                                                                                |
 |ALL   |both         |     2017|     2024|structural                   |exclude  |US-obligation interest is exempt from state tax in every state (31 U.S.C. 3124); the model subtracts an assumed US_OBLIGATION_INT_SHARE (15%) of taxable interest for states encoding sub_us_int, because the source split is unobserved in the PUF. Neither TAXSIM (no input) nor PolicyEngine (us_govt_interest input not handed; split equally unobservable) takes the subtraction, so records where the assumed subtraction is large enough to break the match tolerance (above roughly $5,000 of taxable interest at top state rates) cannot agree with either external model. The divergence is the assumption, not either encoding                                                                                                                             |
+|CA    |policyengine |     2021|     2024|input-coverage               |exclude  |The PE crosswalk hands only real-estate tax, mortgage interest, charitable contributions, and childcare expenses; medical, investment interest, casualty, miscellaneous, Schedule A other (which can be negative), and personal property tax never reach PolicyEngine, so both models itemized bases diverge on records carrying those components (the PE analogue of the TAXSIM deduction-stage exposure class). Excluded on state-side itemizers with any invisible component                                                                                                                                                                                                                                                                                       |
+|CA    |policyengine |     2021|     2024|external-model-concept       |annotate |PolicyEngine skips the FTB 3514 earned-vs-AGI second lookup: where federal AGI exceeds the safe-harbor threshold the form requires the SMALLER of the credit at CA earned income and at federal AGI, but PE pays on earned income alone. Verified exactly against the FTB tables on 2022 records 7271 (PE 763 = table(earned) 761; ours 390 = table(AGI), form-true) and 217836 (PE 320 = table(earned) 319; ours 64 = table(AGI)). TAXSIM skips the same rule (CA taxsim annotate row). Annotated, not excluded: the affected cells clear the bar regardless                                                                                                                                                                                                         |
 

@@ -419,6 +419,23 @@ Effect: PolicyEngine's CA liability runs LOW by up to 9.3–13.3% of a
 filer's non-California municipal interest; on our high-exempt-interest 2023
 records the gap reached five figures.
 
+### P8. California CalEITC: the FTB 3514 earned-vs-AGI second lookup is
+skipped
+
+FTB 3514 (Step 6 / Worksheet instructions) requires that when federal AGI
+is at or above the safe-harbor threshold, the CalEITC is the SMALLER of
+the table amount at California earned income and the table amount at
+federal AGI. PolicyEngine 1.775.7 pays on earned income alone. Verified
+exactly against the published 2022 tables on our sample: a one-child
+filer with earned income $10,118 and federal AGI $17,016 is paid $763 by
+PE (the earned-income table row is $761) where the form pays $390 (the
+AGI row, the smaller); a second record matches the same way ($320 vs the
+form's $64). TAXSIM-35 skips the same rule (see the CA annotate row in
+`known_differences.csv`).
+
+Effect: PolicyEngine's CA liability runs LOW by $100–400 on low-income
+records whose AGI exceeds earned income above the safe harbor.
+
 ## Corroboration worth passing along
 
 Where concepts align, agreement is excellent: IL matches TAXSIM at 100%
