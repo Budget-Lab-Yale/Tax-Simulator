@@ -167,8 +167,11 @@ the UI-subtraction fix, CalEITC age-band/gate repairs, and seven CA KD
 rows; DE/NY/MN/NC gained 20–33 points (DE 0.90–0.91, NY 0.84, MN
 0.78–0.88, NC 0.91–0.97, crossing the bar 2018–2020) under the standard
 crosswalk-exposure exclude rows added for each; WI strengthened to
-0.97–0.99. CA's PE window sits at 0.936–0.966 (2021/2023 clear;
-2022/2024 miss by 1–5 scattered low-income credit-margin records).
+0.97–0.99. A 2026-08-16 CalEITC residual dig also fixed a table-lookup
+rounding bug (fractional incomes fell between whole-dollar FTB bins and
+got $0), lifting CA to TAXSIM 0.966–0.982 and PE 0.943–0.967 (2021/2023
+clear; 2022/2024 miss by roughly two low-income credit-margin records
+each).
 Coupled and fed-gated states are unchanged. The stage classifier now
 counts `st_earned_credit` in the state-EITC stage (CalEITC-style credits
 live there, not in `st_eitc`).

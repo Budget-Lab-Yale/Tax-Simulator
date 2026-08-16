@@ -121,12 +121,16 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
     earned_income > 0 &
     earned_income < tax_unit$st_credits.earned_credit_earned_limit &
     agi < tax_unit$st_credits.earned_credit_agi_limit & earned_credit_age_ok
+  # Income rounded to whole dollars per the form before the lookup (the
+  # FTB 3514 table bins are whole-dollar ranges; an unrounded fractional
+  # income falls in the one-dollar crack between bins and wrongly returns
+  # zero -- 2026-08-15 CA triage, ~20-45 records/yr)
   earned_credit_table_earned = lookup_state_credit_table(
-    earned_income, tax_unit$n_dep_eitc, credit_tables,
+    floor(earned_income + 0.5), tax_unit$n_dep_eitc, credit_tables,
     'independent_earned_income'
   )
   earned_credit_table_agi = lookup_state_credit_table(
-    pmax(0, agi), tax_unit$n_dep_eitc, credit_tables,
+    floor(pmax(0, agi) + 0.5), tax_unit$n_dep_eitc, credit_tables,
     'independent_earned_income'
   )
   earned_credit_table = if_else(

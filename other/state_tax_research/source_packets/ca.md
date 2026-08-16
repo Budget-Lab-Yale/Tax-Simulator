@@ -1,8 +1,8 @@
 # California State Source Packet
 
 State: `CA`  
-Status: `resident regular IIT encoded and cross-model TRIAGED 2026-08-15; TAXSIM window clears the bar (0.965-0.981 clean), PE 2021/2023 clear, 2022/2024 at 0.94; P1 production readiness still blocked`  
-Last updated: `2026-08-15`
+Status: `resident regular IIT encoded and cross-model TRIAGED 2026-08-15/16; TAXSIM window clears the bar (0.966-0.982 clean), PE 2021/2023 clear, 2022/2024 at 0.94-0.95; P1 production readiness still blocked`  
+Last updated: `2026-08-16`
 
 > **Cross-model triage 2026-08-15** (see `cross_model/results/reports/ca.md`
 > and the CA rows of `known_differences.csv`):
@@ -23,10 +23,14 @@ Last updated: `2026-08-15`
 >    childless, live-verified at -195.10 for a 68-year-old), P6 (PE pays
 >    CalEITC to MFS unconditionally), P7 (PE models no CA addback of
 >    non-CA municipal interest).
-> 5. Close-out: TAXSIM clean match@100 0.981/0.975/0.970/0.965 (from
->    0.61-0.73); PE 0.966/0.943/0.957/0.936 -- 2022/2024 miss the bar by
->    1-5 scattered low-income credit-margin records (CalEITC/YCTC/FYTC
->    stack; punch list in the report).
+> 5. 2026-08-16 follow-up: the CalEITC residual dig found a table-lookup
+>    rounding bug (fractional incomes fell in the one-dollar crack between
+>    whole-dollar FTB bins and got $0, ~20-45 records/yr); fixed with
+>    floor(x + 0.5) per the sibling KY/CT callers (test CA-13).
+> 6. Close-out: TAXSIM clean match@100 0.982/0.976/0.972/0.966 (from
+>    0.61-0.73); PE 0.966/0.943/0.967/0.946 -- 2022/2024 miss the bar by
+>    roughly two scattered low-income credit-margin records each
+>    (YCTC/credit-stack margins; punch list in the report).
 
 ## Scope
 

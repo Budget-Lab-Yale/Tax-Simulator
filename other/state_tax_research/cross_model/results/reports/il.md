@@ -1,6 +1,6 @@
 # Cross-model validation: IL
 
-Class: broad | Generated: 2026-08-15 | Verdict: **PASS**
+Class: broad | Generated: 2026-08-16 | Verdict: **PASS**
 
 Acceptance: match@$100 >= 95% in every canonical-window cell
 (2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where

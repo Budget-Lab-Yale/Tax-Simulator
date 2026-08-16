@@ -720,6 +720,15 @@ test_state_calc = function() {
                          liab_st_iit = 230.77),
            label = 'CA-12 unemployment compensation subtraction')
 
+  # CA-13: fractional income at a table-bin edge. FTB 3514 amounts are
+  # entered in whole dollars, so 18,350.63 rounds to 18,351 and lands in
+  # the childless 18,351-18,400 bin ($90); the unrounded value falls in the
+  # one-dollar crack between bins and wrongly returned zero (2026-08-15).
+  run_case('CA', 2019,
+           list(agi = 18350.63, wages1 = 18350.63, ei1 = 18350.63),
+           expect = list(st_earned_credit = 90),
+           label = 'CA-13 CalEITC table lookup rounds income to the bin')
+
   #--------------------------------------------------------------------------
   # Narrow and partial-IIT jurisdictions
   #--------------------------------------------------------------------------
