@@ -198,21 +198,37 @@ For each HT2 year (2014, 2016-2022; 2017 and 2022 first):
    `single = n_single + n_hoh`; `dependents = n_indiv − (n_returns +
    n_joint)`. TY2022 coverage: married 85.6% of ACS married adults, single
    77.6%, children 109.2%.
-2. **Population** = Census PEP resident state × age — no GQ subtraction,
+2. **National filing structure from Pub 1304** (IRS-Ind
+   `national/by_size/`, already in the shared store, TY2011-2023): Table
+   1.6 (`returns_marital_age_{year}.xls`) tabulates returns by AGI class ×
+   **marital status × age of taxpayer** — an age dimension HT2 lacks
+   entirely — giving national filing adults by age band directly rather
+   than inferred. Table 1.7 (`dependent_returns_{year}.xls`) counts
+   dependent filers, directly measuring both the dependent-filer
+   double-count caveat in the identities above and the §3.0
+   adult-dependent netting. The by-size tables also carry fine AGI classes
+   to $10M+ and a no-AGI class where HT2 stops at $1M+. Principle:
+   **national levels come from Pub 1304; HT2 supplies only the state
+   shares** — the same share-normalization discipline the filer targets
+   already use.
+3. **Population** = Census PEP resident state × age — no GQ subtraction,
    per §3.0. (GQ composition by type × state is still tabulated from the
    on-disk IPUMS extract, with a national cross-check against ACS table
    B26001 — but as the T7 diagnostic and the dorm-student dependent share,
    not as a subtraction.)
-3. **Residual non-filing adults by state** = (2) − (1), net of the
-   adult-dependent adjustment in §3.0. An anchor with an explicit
-   tolerance, not an exact count (return-state vs residence and
-   facility-state vs tax-residence wedges, status-mapping wedges, vintage
-   differences — income memo fn. 8).
-4. **Age shape**: 65+ anchored by SSA OASDI beneficiaries by state; working
-   ages shaped by the covered-worker margin (SSA persons-with-wages minus
-   HT2 returns-with-wages; nationally ~75% ± 9pp across states); remainder
-   smoothed by the upgraded ACS non-filer age shape.
-5. **Cross-checks, never targets**: QCEW state wage totals on the dollar
+4. **Residual non-filing adults** = (3) − (1) by state, with the national
+   age × marital structure of the filing side taken from (2) and netted of
+   the adult-dependent adjustment in §3.0 (now directly estimable from
+   Table 1.7). An anchor with an explicit tolerance, not an exact count
+   (return-state vs residence and facility-state vs tax-residence wedges,
+   status-mapping wedges, vintage differences — income memo fn. 8).
+5. **State age shape**: the *national* non-filer age shape is now anchored
+   by construction (PEP age minus Table 1.6 filing adults by age); OASDI
+   beneficiaries by state discipline its *state variation* at 65+, the
+   covered-worker margin (SSA persons-with-wages minus HT2
+   returns-with-wages; nationally ~75% ± 9pp across states) the working
+   ages, with the upgraded ACS non-filer age shape smoothing the rest.
+6. **Cross-checks, never targets**: QCEW state wage totals on the dollar
    side; the QWI/LODES fetchers already in `state_weights.R` stay
    diagnostics.
 
@@ -294,6 +310,7 @@ existing store layout (each with a manifest):
 | OASDI beneficiaries by state (65+ rows) | SSA statcomps `oasdi_sc/{year}` | `raw_data/SSA-OASDI-SC` |
 | Covered workers: persons and wage dollars by state | SSA statcomps `eedata_sc/{year}` | `raw_data/SSA-EEDATA-SC` |
 | QCEW state annual wage totals | BLS CEW annual singlefile | `raw_data/BLS-QCEW` |
+| Pub 1304 by-size tables (1.6 returns × marital × age; 1.7 dependent filers; 1.1 income sources) | **already in the shared store** — `raw_data/IRS-Ind/national/by_size/`, TY2011-2023, maintained by the IRS-Ind downloader | no fetcher needed; reader only |
 | Pub 5785 above-threshold composition | hand-transcribed CSV with page citations | repo: `nonfiler_residual/resources/pub5785_hazard.csv` |
 | Cilke (1998) probit coefficients | hand-transcribed CSV (9 group equations) | repo: `nonfiler_residual/resources/cilke_coefs.csv` |
 
@@ -308,7 +325,10 @@ First refactor, then compute: promote the identities out of
 returning `(state, married_filing_adults, single_filing_adults,
 dependents)` — one definition per computation; the diagnostic, the target
 builder, and (per the income memo) Affordability-Index all call the same
-function. Then compute §3.1 steps 2-4 and emit the cross-repo artifacts:
+function, and add a reader for the Pub 1304 by-size `.xls` tables (Tables
+1.6/1.7 first; multi-row headers and disclosure footnotes per
+IRS-Ind `notes/national_bysize.md`, TCJA-2018 IRA/pension combining
+caveat). Then compute §3.1 steps 3-5 and emit the cross-repo artifacts:
 
 - `residual_anchors_{year}.csv` — `(state, age_band, nonfiling_adults,
   tolerance)` plus a national row;
@@ -323,8 +343,8 @@ style of `state_weights_phase1_summary.md`:
 
 | Table | Question it answers |
 |---|---|
-| **T1 National level** | PSZ non-filer adults (Σ w·(1+married)) and units vs the residual anchor vs Pub 5785's above-threshold 10.6M + implied below-threshold mass, TY2017/2022 |
-| **T2 Age composition** | non-filer adult shares by the 7 `age_band()` bands: PSZ (flat within 3 DINA bands) vs the OASDI-anchored shape; 65+ share vs OASDI directly |
+| **T1 National level** | PSZ non-filer adults (Σ w·(1+married)) and units vs the residual anchor (PEP − Pub 1304 T1.6 filing adults, T1.7-netted) vs Pub 5785's above-threshold 10.6M + implied below-threshold mass, TY2017/2022 |
+| **T2 Age composition** | non-filer adult shares by the 7 `age_band()` bands: PSZ (flat within 3 DINA bands) vs the anchor shape (PEP age minus T1.6 filing adults by age); 65+ share vs OASDI directly |
 | **T3 Income composition** | share of non-filer units with wages/interest/dividends/gains > 0 (the latter three identically zero today) and the `income_tier()` distribution under current zeros vs a repaired proxy |
 | **T4 Aging path** | 2017-2035 non-filer mass from the weight ledger vs an anchor-implied path (projected adults × held filing rates) vs projected return counts — quantifies the drift |
 | **T5 State margins** | per state: PEP adults, GQ, filing adults, residual, v0 ACS non-filer units, v0 with GQ excluded; the −7% filer check by state; correlation of the v0-vs-residual gap with EITC take-up (reuse `EITC_TAKEUP` from `sweep_state_weights.R`) |
@@ -359,7 +379,11 @@ needed: the PSZ record set stays; values and weights change.
   `fiint`/`fidiv`/`fikgi` (DINA carries NI interest/dividend/equity
   returns). Option A: scale those to per-unit amounts. Option B (fallback):
   hot-deck from stub-1/2 PUF filers conditioned on age band × has-wages.
-  Either beats identical zeros.
+  Either beats identical zeros. Discipline for both: Pub 1304 Table 1.1
+  (`income_sources_{year}.xls`, in the IRS-Ind store) gives return counts
+  *with* each income type in the bottom AGI classes (including the no-AGI
+  class HT2 lacks) — the receipt rates the repaired non-filers should sit
+  at or below.
 - **Age detail**: replace the flat `runif` draw
   (`impute_nonfilers.R:92-96`) with a within-band distribution from the
   national anchor age shape (committed as
@@ -522,11 +546,15 @@ or anchor file must carry an explicit universe tag (`resident` vs
 
 ### 7.4 Housekeeping
 
-Settle the HT2 store duplication before adding new store families:
-`raw_data/IRS-GEO` and `raw_data/IRS-Ind` hold byte-identical HT2 files;
-the IRS-GEO NOTES.md says IRS-Ind is the maintained mirror, and the income
-memo names IRS-Ind as the single source. Either repoint `ht2_path()`
-(one line) or record IRS-GEO as canonical — but decide once.
+The HT2 store question is settled (confirmed 2026-08-16): the mirror was
+renamed IRS-GEO → IRS-Ind — `raw_data/IRS-GEO` is now a symlink to
+`raw_data/IRS-Ind`, and the maintained repo is
+github.com/johniselin-budget-lab/IRS-Ind (relabel commit `2dba645`; the
+rename accompanied the addition of the national Pub 1304 by-size family
+this memo now leans on). `ht2_path()` keeps working through the symlink;
+repoint it to `IRS-Ind` the next time `state_weights.R` is touched, and
+land the new store families (§4.1) beside it under the same manifest
+conventions.
 
 ## 8. Open questions
 
