@@ -134,6 +134,11 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'sole_prop',         # (dbl)  Schedule C income/loss
     'sch_e',             # (dbl)  Schedule E income/loss
     'farm',              # (dbl)  Schedule F income/loss
+    'txbl_int',          # (dbl)  taxable interest (earned-credit investment test)
+    'div_ord',           # (dbl)  ordinary dividends (earned-credit investment test)
+    'div_pref',          # (dbl)  qualified dividends (earned-credit investment test)
+    'txbl_kg',           # (dbl)  taxable net capital gain (earned-credit investment test)
+    'part_scorp',        # (dbl)  partnership/S-corp share of Schedule E (earned-credit investment test)
 
     # State tax law (scalar; vector table params accessed by column name),
     # declared per credit-family module

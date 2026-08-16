@@ -24,6 +24,7 @@ st_credits_earned_req_vars = c(
   'st_credits.earned_credit_age_max',
   'st_credits.earned_credit_agi_limit',
   'st_credits.earned_credit_earned_limit',
+  'st_credits.earned_credit_inv_inc_limit',
   'st_credits.earned_credit_round',
   'st_credits.earned_credit_refundable',
   'st_credits.young_child_credit_style',
@@ -115,12 +116,20 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   # exempt/household/WFTC credits; ei1/ei2 are never dependent-zeroed upstream.
   # MFS filers are barred unless the state opts them in (earned_credit_mfs_
   # eligible == 1), mirroring the federal EITC's MFS treatment.
+  # Disqualifying investment income, mirroring the federal EITC composition
+  # (eitc.R) -- states with their own ceiling (FTB 3514) set the limit;
+  # default .inf imposes no state-side test
+  earned_credit_inv_inc = tax_unit$txbl_int + tax_unit$exempt_int +
+    tax_unit$div_ord + tax_unit$div_pref + pmax(0, tax_unit$txbl_kg) +
+    pmax(0, tax_unit$sch_e - tax_unit$part_scorp)
   earned_credit_eligible = tax_unit$dep_status != 1 &
     (tax_unit$filing_status != 3 |
        tax_unit$st_credits.earned_credit_mfs_eligible == 1) &
     earned_income > 0 &
     earned_income < tax_unit$st_credits.earned_credit_earned_limit &
-    agi < tax_unit$st_credits.earned_credit_agi_limit & earned_credit_age_ok
+    agi < tax_unit$st_credits.earned_credit_agi_limit &
+    earned_credit_inv_inc <= tax_unit$st_credits.earned_credit_inv_inc_limit &
+    earned_credit_age_ok
   # Income rounded to whole dollars per the form before the lookup (the
   # FTB 3514 table bins are whole-dollar ranges; an unrounded fractional
   # income falls in the one-dollar crack between bins and wrongly returns

@@ -27,9 +27,16 @@ Last updated: `2026-08-16`
 >    rounding bug (fractional incomes fell in the one-dollar crack between
 >    whole-dollar FTB bins and got $0, ~20-45 records/yr); fixed with
 >    floor(x + 0.5) per the sibling KY/CT callers (test CA-13).
-> 6. Close-out: TAXSIM clean match@100 0.982/0.976/0.972/0.966 (from
->    0.61-0.73); PE 0.966/0.943/0.967/0.946 -- 2022/2024 miss the bar by
->    roughly two scattered low-income credit-margin records each
+> 6. 2026-08-16 batch (post-close-out hardening): HSA-deduction addback
+>    (`add_hsa`; IRC 223 nonconformity), the CalEITC investment-income
+>    ceiling (`earned_credit_inv_inc_limit`; FTB 3514 Worksheet 1 limits
+>    read from each year's instructions, $3,561-$4,814), and the
+>    model-wide US-obligation interest subtraction (`sub_us_int` x 15%
+>    share assumption; ALL-states KD exclude on txbl_int > 5,000 since
+>    neither external model takes the subtraction). Tests CA-14/15/16.
+> 7. Close-out: TAXSIM clean match@100 0.980/0.974/0.968/0.965 (from
+>    0.61-0.73); PE 0.965/0.950/0.969/0.944 -- 2022/2024 miss the bar by
+>    roughly one and two low-income credit-margin records respectively
 >    (YCTC/credit-stack margins; punch list in the report).
 
 ## Scope
@@ -49,7 +56,7 @@ Last updated: `2026-08-16`
 
 ## Parameter inventory
 
-- `agi.yaml`: federal AGI start, fixed-date conformity metadata, municipal-interest adjustment, and Social Security/state-refund subtractions. U.S.-obligation interest requires a generic source field and remains unimplemented.
+- `agi.yaml`: federal AGI start, fixed-date conformity metadata, municipal-interest adjustment, Social Security/state-refund/unemployment subtractions, the HSA-deduction addback (IRC 223 nonconformity; account earnings remain unobserved), and the U.S.-obligation interest subtraction (15% model-wide share assumption of taxable interest; source split unobserved).
 - `ded.yaml`: full 2017-25 standard-deduction history, dependent-filer worksheet, and generic component-based California itemization without the federal SALT cap. It includes Schedule CA's high-income limitation for observed protected components.
 - `ord.yaml`: 1 to 12.3 percent rates and full 2017-25 Schedule X/Y/Z bracket series.
 - `credits.yaml`: full 2017-25 exemption-credit and phaseout series, annual CalEITC AGI-lookup safe harbors, and the 2019-25 YCTC formula and zero-income thresholds.

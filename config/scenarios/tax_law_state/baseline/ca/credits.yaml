@@ -143,6 +143,18 @@ earned_credit_earned_limit:
     '2024': 31951
     '2025': 32901
   reference: 'California FTB 3514, California earned-income eligibility limit (strictly-below gate, one dollar above each year''s table maximum), 2017-2025'
+earned_credit_inv_inc_limit:
+  value:
+    '2017': 3561
+    '2018': 3699
+    '2019': 3828
+    '2020': 3882
+    '2021': 4053
+    '2022': 4389
+    '2023': 4525
+    '2024': 4674
+    '2025': 4814
+  reference: 'California FTB 3514 instructions, Worksheet 1 Investment Income ("Is the amount on line 12 more than $X? Yes: Stop here, you cannot take the credit"), read from the published instructions for each year 2017-2025. ADDED 2026-08-16: California applies its own disqualifying-investment-income ceiling, distinct from the federal EITC limit'
 earned_credit_round:
   value: 1
   reference: 'California FTB 3514 EITC table reports whole-dollar credits'

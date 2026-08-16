@@ -10,10 +10,14 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       | 20513|   13092|   0.4375|    0.4958|         0.5409|          0.5896|               0|        108.4625|   12022.838|
-| 2018|taxsim       | 20515|   13144|   0.5188|    0.5848|         0.6531|          0.7080|               0|         10.0000|   -9180.538|
-| 2019|taxsim       | 20514|   13088|   0.5197|    0.5856|         0.6566|          0.7084|               0|         10.0000|   -9282.338|
-| 2020|taxsim       | 20513|   12682|   0.5146|    0.5804|         0.6486|          0.6989|               0|         10.0000|  -10551.209|
+| 2017|taxsim       | 16848|   12092|   0.5066|    0.5786|         0.5561|          0.6178|               0|         11.8846|    1530.863|
+| 2017|taxsim       |  3665|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2018|taxsim       | 16697|   12037|   0.6006|    0.6846|         0.6728|          0.7449|               0|          9.9724|   -1052.725|
+| 2018|taxsim       |  3818|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2019|taxsim       | 16513|   11930|   0.6090|    0.6907|         0.6775|          0.7457|               0|          7.7462|   -1107.595|
+| 2019|taxsim       |  4001|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2020|taxsim       | 16529|   11502|   0.6018|    0.6840|         0.6721|          0.7394|               0|          5.5692|   -1158.006|
+| 2020|taxsim       |  3984|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2021|policyengine |  1536|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2022|policyengine |  1530|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2023|policyengine |  1533|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
@@ -23,14 +27,14 @@ defined (federally aligned records; see README).
 
 | year|fed_aligned |stage       |    n|
 |----:|:-----------|:-----------|----:|
-| 2017|TRUE        |1 state AGI | 6010|
-| 2017|FALSE       |1 state AGI | 5528|
-| 2018|TRUE        |1 state AGI | 4559|
-| 2018|FALSE       |1 state AGI | 5313|
-| 2019|TRUE        |1 state AGI | 4495|
-| 2019|FALSE       |1 state AGI | 5358|
-| 2020|TRUE        |1 state AGI | 4456|
-| 2020|FALSE       |1 state AGI | 5500|
+| 2017|TRUE        |1 state AGI | 6289|
+| 2017|FALSE       |1 state AGI | 5519|
+| 2018|TRUE        |1 state AGI | 4954|
+| 2018|FALSE       |1 state AGI | 5330|
+| 2019|TRUE        |1 state AGI | 4899|
+| 2019|FALSE       |1 state AGI | 5350|
+| 2020|TRUE        |1 state AGI | 4856|
+| 2020|FALSE       |1 state AGI | 5506|
 
 ## Known differences applied
 
@@ -49,4 +53,5 @@ defined (federally aligned records; see README).
 |ID    |taxsim       |     2018|     2020|state-law        |annotate |QBID subset: ~10% of QBID non-itemizers show taxable wedge exactly -qbi_ded (TAXSIM QBID = 0 where ours > 0; suspected wage/SSTB-limit divergence). TAXSIM otherwise includes QBID (median QBID non-itemizer wedge/qbid ratio 0.035) -- the earlier omits-QBID hypothesis is refuted                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 |ID    |taxsim       |     2017|     2020|state-law        |annotate |Dependent-care deduction cap: care-expense records are 3.6x over-represented among residual non-itemizer mismatches with median wedge +$1.8k (ours higher = we deduct less); TAXSIM appears to allow more than the Form 39R worksheet caps ($3,000/$6,000, all years) -- possibly the statutory-$12,000 reading of 63-3022D that appears on no published worksheet (see id_research_core.md sec 5)                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 |ID    |policyengine |     2021|     2024|transfer-netting |exclude  |PE nets the refundable grocery credit into state_income_tax but PRORATED by qualified months: id_grocery_credit_qualifying_month zeroes any month the SPM unit has imputed SNAP or an incarcerated member (verified in package source 1.775.7), so the netted amount is partial and household-specific — matching the observed partial-credit bins (-120 at 120, -430 at 480, -590 at 600 in 2023). PE also omits the $10 permanent building fund tax from state_income_tax (id_income_tax adds id_pbf; the generic state variable does not). Our concept nets the full statutory credit and levies the PBF. Every ID resident return carries the credit, so the whole PE window is scored against a structurally different benchmark: whole-window exclusion (CO/TABOR precedent); pe_id_grocery_credit exported as a diagnostic column |
+|ALL   |both         |     2017|     2024|structural       |exclude  |US-obligation interest is exempt from state tax in every state (31 U.S.C. 3124); the model subtracts an assumed US_OBLIGATION_INT_SHARE (15%) of taxable interest for states encoding sub_us_int, because the source split is unobserved in the PUF. Neither TAXSIM (no input) nor PolicyEngine (us_govt_interest input not handed; split equally unobservable) takes the subtraction, so records where the assumed subtraction is large enough to break the match tolerance (above roughly $5,000 of taxable interest at top state rates) cannot agree with either external model. The divergence is the assumption, not either encoding                                                                                                                                                                                                |
 

@@ -18,8 +18,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   # Documented v1 approximations (plan known-differences):
   #  - own-state share of tax-exempt interest is unobserved; states exempting
   #    own-state bonds add back (1 - OWN_STATE_MUNI_SHARE) of exempt_int
-  #  - US-obligation share of taxable interest is unobserved; sub_us_int is
-  #    carried as a flag but no subtraction is taken (share unknown)
+  #  - US-obligation share of taxable interest is unobserved; sub_us_int
+  #    subtracts US_OBLIGATION_INT_SHARE of txbl_int (assumed constant)
   #  - SS/pension age tests use unit-level approximation: primary age for SS
   #    flags, per-spouse caps summed for the pension exclusion
   #  - government vs private pension split unobserved; all pensions treated
@@ -59,6 +59,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'scorp',          # (dbl)  S-corporation income or loss
     'farm',           # (dbl)  farm income or loss
     'txbl_int',       # (dbl)  taxable interest income
+    'hsa_contr',      # (dbl)  deductible HSA contributions (federal above-the-line)
     'div_ord',        # (dbl)  ordinary dividends
     'div_pref',       # (dbl)  qualified dividends
     'kg_lt',          # (dbl)  long-term capital gains
@@ -137,6 +138,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.sub_char_nonitem_floor', # (dbl) floor for non-itemizer charitable sub
     'st_agi.sub_char_nonitem_share', # (dbl) share of the excess subtracted (MN 0.5)
     'st_agi.add_overtime_ded',      # (int) whether the federal OT deduction is added back
+    'st_agi.add_hsa',               # (int) whether the federal HSA deduction is added back (CA)
     'st_agi.cap_loss_limit',        # (dbl) state per-year net capital loss limit (WI $500)
     'st_agi.cap_gains_excl_share',  # (dbl) share of net LT capital gain excluded
     'st_agi.cap_gains_excl_flat',   # (dbl) flat-dollar alternative, greater-of (VT $5,000)
@@ -163,6 +165,16 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   # Assumed share of tax-exempt interest from own-state bonds for states that
   # exempt them (unobserved in the PUF; known-difference)
   OWN_STATE_MUNI_SHARE = 0.75
+
+  # Assumed share of taxable interest from US obligations (Treasuries,
+  # savings bonds, qualifying government-fund distributions), exempt from
+  # state tax under 31 U.S.C. 3124 in every state. Unobserved in the PUF;
+  # conservative constant anchored on household Treasury/government-MMF
+  # holdings relative to total interest-bearing assets (Financial Accounts
+  # of the US, ICI) -- the true share is rate-environment dependent (higher
+  # 2023+). Known-difference: neither TAXSIM nor PolicyEngine takes an
+  # equivalent input, so the subtraction is cross-model unverifiable
+  US_OBLIGATION_INT_SHARE = 0.15
 
   # Federal per-year net capital loss limit (IRC 1211(b)), the ceiling on
   # the state cap-loss add-back computed from capped inputs
@@ -308,10 +320,21 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       # by the joint cap [known-difference, immaterial at PUF frequencies]
       st_add_cap_loss = pmax(0, pmin(pmax(0, -(kg_lt + kg_st)), FED_KG_LOSS_LIMIT) -
                                st_agi.cap_loss_limit),
-      st_additions = st_add_muni + st_add_ot + st_add_cap_loss,
+
+      # Addition: federal above-the-line HSA deduction reversed where the
+      # state does not conform to IRC 223 (CA; HSA account earnings are
+      # unobserved and stay untaxed -- documented known-difference)
+      st_add_hsa = st_agi.add_hsa * hsa_contr,
+
+      st_additions = st_add_muni + st_add_ot + st_add_cap_loss + st_add_hsa,
 
       # Subtraction: state refunds included in the federal base
       st_sub_ref = st_agi.sub_state_ref * state_ref,
+
+      # Subtraction: US-obligation interest (31 U.S.C. 3124), as an assumed
+      # share of taxable interest -- the source split is unobserved
+      st_sub_us_int = st_agi.sub_us_int * US_OBLIGATION_INT_SHARE *
+                      pmax(0, txbl_int),
 
       # Subtraction: Social Security. Full-subtraction share is the greater
       # of the flat share (IL/NY = 1), the CO-style age-conditional full
@@ -609,8 +632,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       st_bus_excess = st_agi.bus_carveout *
                       pmax(0, st_bus_inc - st_agi.bus_ded_cap),
 
-      st_subtractions = st_sub_ref + st_sub_ss + st_sub_pens + st_sub_char +
-                        st_retirement_excl + st_sub_capgain +
+      st_subtractions = st_sub_ref + st_sub_us_int + st_sub_ss + st_sub_pens +
+                        st_sub_char + st_retirement_excl + st_sub_capgain +
                         st_sub_retire_share + st_sub_age + st_sub_ui +
                         st_sub_senior_inv + st_sub_twoearner + st_bid,
 

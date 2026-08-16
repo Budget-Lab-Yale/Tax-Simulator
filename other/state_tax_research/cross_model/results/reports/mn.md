@@ -10,56 +10,60 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       |  9522|    7072|   0.7052|    0.7825|         0.8220|          0.8586|          0.1879|          0.0049|  -2143.0996|
-| 2017|taxsim       | 10991|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       |  9526|    7154|   0.7440|    0.8125|         0.8513|          0.8829|          0.2023|          0.0048|   -115.5457|
-| 2018|taxsim       | 10989|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       |  9522|    7115|   0.6569|    0.7265|         0.7293|          0.7830|          0.1936|          0.0035|     88.7487|
-| 2019|taxsim       | 10992|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       |  9549|    6800|   0.6427|    0.7111|         0.7268|          0.7800|          0.1886|          0.0069|    -38.9612|
-| 2020|taxsim       | 10964|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2021|policyengine |  1536|     269|   0.2285|    0.3431|         0.7658|          0.8216|          0.0840|        474.7383| -16551.3197|
-| 2022|policyengine |  1530|     317|   0.2876|    0.3451|         0.7697|          0.8139|          0.0882|        503.5872|   3258.9421|
-| 2023|policyengine |  1533|     358|   0.2740|    0.3392|         0.7430|          0.7682|          0.0600|        475.4755|  23730.3031|
-| 2024|policyengine |  1531|     363|   0.2554|    0.3220|         0.6915|          0.7548|          0.0555|        604.2394|  -3972.8533|
+| 2017|taxsim       |  9033|    6873|   0.7179|    0.8033|         0.8206|          0.8670|          0.1894|          0.0370|   -495.3304|
+| 2017|taxsim       | 11480|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2018|taxsim       |  8988|    6886|   0.7432|    0.8247|         0.8419|          0.8883|          0.1951|          0.0791|     51.2984|
+| 2018|taxsim       | 11527|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2019|taxsim       |  8934|    6839|   0.6726|    0.7483|         0.7352|          0.7954|          0.1882|          0.0041|    144.5582|
+| 2019|taxsim       | 11580|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2020|taxsim       |  8963|    6535|   0.6597|    0.7339|         0.7344|          0.7945|          0.1846|          0.0338|    140.9480|
+| 2020|taxsim       | 11550|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2021|policyengine |  1172|     261|   0.2756|    0.4078|         0.7625|          0.8314|          0.1041|        232.3064|    213.5257|
+| 2021|policyengine |   364|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2022|policyengine |  1141|     301|   0.3401|    0.4172|         0.7542|          0.8206|          0.1043|        262.3194|    608.1011|
+| 2022|policyengine |   389|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2023|policyengine |  1157|     337|   0.3276|    0.4131|         0.7418|          0.7745|          0.0752|        263.0558|    905.6039|
+| 2023|policyengine |   376|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2024|policyengine |  1150|     345|   0.3191|    0.4000|         0.7101|          0.7797|          0.0704|        332.1486|     -0.8801|
+| 2024|policyengine |   381|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 
 ## Mismatch stage diagnosis (TAXSIM |diff| > $15)
 
 | year|fed_aligned |stage           |    n|
 |----:|:-----------|:---------------|----:|
-| 2017|TRUE        |1 state AGI     | 7081|
+| 2017|TRUE        |1 state AGI     | 7207|
 | 2017|TRUE        |2 exemptions    |    1|
-| 2017|FALSE       |1 state AGI     | 6478|
-| 2018|TRUE        |1 state AGI     | 2004|
-| 2018|TRUE        |2 exemptions    |  341|
-| 2018|TRUE        |3 deductions    | 3493|
-| 2018|TRUE        |5 state EITC    |    8|
-| 2018|TRUE        |6 other credits |   24|
-| 2018|FALSE       |1 state AGI     | 5248|
-| 2018|FALSE       |2 exemptions    |    6|
-| 2018|FALSE       |3 deductions    |  862|
-| 2018|FALSE       |5 state EITC    |   22|
-| 2019|TRUE        |1 state AGI     | 2027|
-| 2019|TRUE        |2 exemptions    |  203|
-| 2019|TRUE        |3 deductions    | 4962|
-| 2019|TRUE        |5 state EITC    |   40|
-| 2019|TRUE        |6 other credits |   12|
-| 2019|FALSE       |1 state AGI     | 5430|
-| 2019|FALSE       |2 exemptions    |    5|
-| 2019|FALSE       |3 deductions    |  806|
-| 2019|FALSE       |5 state EITC    |   29|
-| 2020|TRUE        |1 state AGI     | 2208|
-| 2020|TRUE        |2 exemptions    |  203|
-| 2020|TRUE        |3 deductions    | 4528|
-| 2020|TRUE        |5 state EITC    |  305|
-| 2020|TRUE        |6 other credits |  137|
-| 2020|TRUE        |7 rate/rounding |   20|
-| 2020|FALSE       |1 state AGI     | 5582|
-| 2020|FALSE       |2 exemptions    |   10|
-| 2020|FALSE       |3 deductions    |  584|
-| 2020|FALSE       |5 state EITC    |  362|
+| 2017|FALSE       |1 state AGI     | 6463|
+| 2018|TRUE        |1 state AGI     | 4469|
+| 2018|TRUE        |2 exemptions    |  136|
+| 2018|TRUE        |3 deductions    | 1695|
+| 2018|TRUE        |5 state EITC    |    5|
+| 2018|TRUE        |6 other credits |    8|
+| 2018|FALSE       |1 state AGI     | 5399|
+| 2018|FALSE       |2 exemptions    |    2|
+| 2018|FALSE       |3 deductions    |  766|
+| 2018|FALSE       |5 state EITC    |   18|
+| 2019|TRUE        |1 state AGI     | 4886|
+| 2019|TRUE        |2 exemptions    |  100|
+| 2019|TRUE        |3 deductions    | 2348|
+| 2019|TRUE        |5 state EITC    |   16|
+| 2019|TRUE        |6 other credits |    3|
+| 2019|FALSE       |1 state AGI     | 5559|
+| 2019|FALSE       |2 exemptions    |    1|
+| 2019|FALSE       |3 deductions    |  679|
+| 2019|FALSE       |5 state EITC    |   23|
+| 2020|TRUE        |1 state AGI     | 5022|
+| 2020|TRUE        |2 exemptions    |   97|
+| 2020|TRUE        |3 deductions    | 2004|
+| 2020|TRUE        |5 state EITC    |  257|
+| 2020|TRUE        |6 other credits |   90|
+| 2020|TRUE        |7 rate/rounding |   17|
+| 2020|FALSE       |1 state AGI     | 5754|
+| 2020|FALSE       |2 exemptions    |    5|
+| 2020|FALSE       |3 deductions    |  441|
+| 2020|FALSE       |5 state EITC    |  339|
 | 2020|FALSE       |6 other credits |   10|
-| 2020|FALSE       |7 rate/rounding |   14|
+| 2020|FALSE       |7 rate/rounding |   13|
 
 ## Known differences applied
 
@@ -73,4 +77,5 @@ defined (federally aligned records; see README).
 |ALL   |taxsim |     2017|     2024|federal-side   |annotate |State EITCs piggyback on federal EITC; TAXSIM's own federal EITC (amount and eligibility) can differ from ours, propagating scaled differences into state EITC; clean-subset metrics condition on federal EITC agreement                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 |MN    |taxsim |     2017|     2020|structural     |annotate |Triage verified NO MN encoding defects on definable shapes: eleven probe cases match TAXSIM to the cent or within ~$1 indexed-constant rounding across ALL THREE regimes (2017 fed-taxable start; the 2018 rebuilt pre-TCJA stack; 2019-20 fed-AGI + MN's own deduction/exemption stack), including dependent exemptions, the sliding SS subtraction on a 67-year-old with SS+pension+wages, the marriage credit (implicit in the exact MFJ 60/40 case), and the Working Family Credit at phase-in/phase-out/childless/2-child edges (exact incl. refundable negatives). Residual clean-match gap concentrates in itemizers (M1SA component differences + the pre-registered SALT-circularity rebuild) and the packet-documented 2017 M1M Pease/exemption addbacks ($186-314k itemizers) |
 |MN    |taxsim |     2017|     2020|input-coverage |exclude  |Crosswalk representation of the state itemized base (the DC/CA class): the crosswalk hands TAXSIM as-reported salt_inc_sales + salt_pers inside otheritem, where no state calculation can identify them as SALT to strip (TAXSIM strips its own iterated state tax instead), and investment interest and Schedule A "other" have no TAXSIM inputs at all. The 2026-08-15 state-only-itemization fix extends the exposed population to federal standard-deduction takers, who under this state's independent election now itemize state-side in both models. Excluded via the standard exposure predicate                                                                                                                                                                                 |
+|ALL   |both   |     2017|     2024|structural     |exclude  |US-obligation interest is exempt from state tax in every state (31 U.S.C. 3124); the model subtracts an assumed US_OBLIGATION_INT_SHARE (15%) of taxable interest for states encoding sub_us_int, because the source split is unobserved in the PUF. Neither TAXSIM (no input) nor PolicyEngine (us_govt_interest input not handed; split equally unobservable) takes the subtraction, so records where the assumed subtraction is large enough to break the match tolerance (above roughly $5,000 of taxable interest at top state rates) cannot agree with either external model. The divergence is the assumption, not either encoding                                                                                                                                                |
 

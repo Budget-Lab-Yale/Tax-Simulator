@@ -507,13 +507,14 @@ test_state_calc = function() {
 
   # MI-2: 2019 Tier 1 (born before 1946 = age 74+): single 75, pension
   # 60,000 capped at the Form 4884 maximum 52,808; senior investment cap
-  # (11,771) fully absorbed by the retirement subtraction. AGI 65,000 ->
-  # MI base 12,192; exemption 4,400 -> tax 4.25% x 7,792
+  # (11,771) fully absorbed by the retirement subtraction. AGI 65,000 less
+  # the cap and the 15% US-obligation share of 5,000 interest (750);
+  # exemption 4,400
   run_case('MI', 2019,
            list(agi = 65000, age1 = 75, txbl_pens_dist = 60000,
                 txbl_int = 5000),
-           expect = list(st_agi = 65000 - 52808,
-                         liab_st_iit = (65000 - 52808 - 4400) * 0.0425),
+           expect = list(st_agi = 65000 - 52808 - 750,
+                         liab_st_iit = (65000 - 52808 - 750 - 4400) * 0.0425),
            label = 'MI-2 Tier 1 pension cap')
 
   # MI-3: 2019 Tier 2 (born 1946-1952 = ages 67-73): single 68, pension
@@ -548,12 +549,13 @@ test_state_calc = function() {
   # MI-7: 2024 senior investment income subtraction (born before 1946 =
   # age 79+): MFJ 80/78, pension 20,000 (fully subtracted, Tier 1 joint
   # cap 128,080), investment income 10,000 int + 8,000 div + 20,000 LTCG;
-  # cap 28,548 less the 20,000 retirement subtraction -> 8,548
+  # cap 28,548 less the 20,000 retirement subtraction -> 8,548 (still
+  # binding). The 15% US-obligation share of interest (1,500) also comes out
   run_case('MI', 2024,
            list(agi = 60000, filing_status = 2, age1 = 80, age2 = 78,
                 wages1 = 2000, txbl_pens_dist = 20000, txbl_int = 10000,
                 div_ord = 8000, kg_lt = 20000),
-           expect = list(st_agi = 60000 - 20000 - 8548),
+           expect = list(st_agi = 60000 - 20000 - 8548 - 1500),
            label = 'MI-7 senior investment income subtraction')
 
   # MI-8: Tier 2 Michigan Standard Deduction against ALL income: 2019
@@ -728,6 +730,33 @@ test_state_calc = function() {
            list(agi = 18350.63, wages1 = 18350.63, ei1 = 18350.63),
            expect = list(st_earned_credit = 90),
            label = 'CA-13 CalEITC table lookup rounds income to the bin')
+
+  # CA-14: California does not conform to IRC 223, so the federal HSA
+  # deduction is reversed on Schedule CA (column C addition). 2019 single,
+  # AGI 50,000 + 3,000 HSA: CA AGI 53,000, std 4,537, Schedule X tax on
+  # 48,463 = 1,797.03, exemption credit 122.
+  run_case('CA', 2019,
+           list(agi = 50000, hsa_contr = 3000),
+           expect = list(st_agi = 53000, liab_st_iit = 1675.03),
+           label = 'CA-14 HSA deduction added back')
+
+  # CA-15: US-obligation interest is exempt (31 U.S.C. 3124); the model
+  # subtracts US_OBLIGATION_INT_SHARE (0.15) of taxable interest. 2019
+  # single, AGI 50,000 including 10,000 taxable interest: subtraction
+  # 1,500, CA AGI 48,500, Schedule X tax on 43,963 = 1,472.83, credit 122.
+  run_case('CA', 2019,
+           list(agi = 50000, txbl_int = 10000),
+           expect = list(st_agi = 48500, liab_st_iit = 1350.83),
+           label = 'CA-15 US-obligation interest share subtracted')
+
+  # CA-16: FTB 3514 Worksheet 1 bars the CalEITC when investment income
+  # exceeds the year ceiling ($3,828 in 2019). One-child filer, earned
+  # 10,000, ordinary dividends 4,000: credit denied.
+  run_case('CA', 2019,
+           list(agi = 14000, wages1 = 10000, ei1 = 10000, n_dep = 1,
+                n_dep_eitc = 1, div_ord = 4000),
+           expect = list(st_earned_credit = 0),
+           label = 'CA-16 CalEITC investment-income ceiling')
 
   #--------------------------------------------------------------------------
   # Narrow and partial-IIT jurisdictions
@@ -1030,18 +1059,19 @@ test_state_calc = function() {
   # gross) + pensions 40,000 + IRA 20,000 + interest 30,000. Above the SS
   # limit: sub = 20,000 - 25% x 30,000 = 12,500. Phase-out factor at
   # 110,000 (MFJ band 110,000-114,999) = 0.55: pension 40,000 x 1.0 + IRA
-  # 20,000 x 0.75 = 55,000 x 0.55 = 30,250. CT AGI = 67,250; exemption
-  # 24,000 - 20 x 1,000 = 4,000; TI 63,250. Tax = 400 + 4.5% x 43,250 =
-  # 2,346.25. Table E: 67,250 in (52,000, 96,000] -> 10% -> 234.625.
-  # Property tax credit: min(6,000, 300) x 1.0 (67,250 < 70,500) = 300.
-  # Liab = 2,346.25 - 234.625 - 300 = 1,811.625
+  # 20,000 x 0.75 = 55,000 x 0.55 = 30,250. US-obligation share of interest
+  # (15% x 30,000 = 4,500) also comes out. CT AGI = 62,750; exemption
+  # 24,000 - 15 x 1,000 = 9,000; TI 53,750. Tax = 400 + 4.5% x 33,750 =
+  # 1,918.75. Table E: 62,750 in (52,000, 96,000] -> 10% -> 191.875.
+  # Property tax credit: min(6,000, 300) x 1.0 (62,750 < 70,500) = 300.
+  # Liab = 1,918.75 - 191.875 - 300 = 1,426.875
   run_case('CT', 2025,
            list(agi = 110000, filing_status = 2, age1 = 68, age2 = 66,
                 gross_ss = 30000, txbl_ss = 20000, txbl_pens_dist = 40000,
                 txbl_ira_dist = 20000, txbl_int = 30000, salt_prop = 6000),
-           expect = list(st_agi = 67250, st_exempt = 4000,
-                         st_tax_pre_credit = 2346.25,
-                         liab_st_iit = 1811.625),
+           expect = list(st_agi = 62750, st_exempt = 9000,
+                         st_tax_pre_credit = 1918.75,
+                         liab_st_iit = 1426.875),
            label = 'CT-4 SS cap + pension/IRA phase-out + property tax credit')
 
   # CT-5: 2023 MFJ, AGI 26,000, 2 kids, federal EITC 6,000. Full exemption
@@ -1651,13 +1681,15 @@ test_state_calc = function() {
            label = 'MN-9 marriage credit')
 
   # MN-10: 2024 NIIT + flat 80% deduction cut: single, AGI 2.1M (NII =
-  # 1.65M -> 1% x 650,000 = 6,500); AGI > 1,053,750 -> std = 20% x 14,575
+  # 1.65M -> 1% x 650,000 = 6,500); AGI > 1,053,750 -> std = 20% x 14,575.
+  # The 15% US-obligation share of 50,000 interest (7,500) comes off the
+  # base, shrinking the top-bracket slice
   run_case('MN', 2024,
            list(agi = 2100000, wages1 = 450000, ei1 = 450000,
                 kg_lt = 1500000, div_ord = 100000, txbl_int = 50000),
            expect = list(st_ded = 0.20 * 14575,
                          liab_st_iit = 31690 * 0.0535 + 72400 * 0.068 +
-                                       89150 * 0.0785 + 1903845 * 0.0985 +
+                                       89150 * 0.0785 + 1896345 * 0.0985 +
                                        6500),
            label = 'MN-10 NIIT + flat 80% limitation')
 
@@ -1976,15 +2008,16 @@ test_state_calc = function() {
 
   # DE-2: 2024 single age 67, AGI 35,000 = pension 30,000 + interest 4,000 +
   # dividends 1,000. The age-60 exclusion covers pension PLUS eligible
-  # retirement income, capped 12,500 -> st_agi 22,500; std 3,250 + 2,500
-  # (65+) = 5,750; taxable 16,750 -> 261 + 4.8% x 6,750 = 585; less $110
+  # retirement income, capped 12,500; the 15% US-obligation share of
+  # interest (600) also comes out -> st_agi 21,900; std 3,250 + 2,500
+  # (65+) = 5,750; taxable 16,150 -> 261 + 4.8% x 6,150 = 556.20; less $110
   # personal + $110 age-60 credits
   run_case('DE', 2024,
            list(agi = 35000, age1 = 67, txbl_pens_dist = 30000,
                 txbl_int = 4000, div_ord = 1000),
-           expect = list(st_retirement_excl = 12500, st_agi = 22500,
+           expect = list(st_retirement_excl = 12500, st_agi = 21900,
                          st_std_ded = 5750, st_exempt_credit = 110,
-                         st_age_credit = 110, liab_st_iit = 365),
+                         st_age_credit = 110, liab_st_iit = 336.20),
            label = 'DE-2 age-60 retirement exclusion and 65+ standard deduction')
 
   # DE-3: 2024 single, one child, wages 6,000, federal EITC 2,040. Taxable
@@ -2170,30 +2203,31 @@ test_state_calc = function() {
            label = 'WV-4 2024 Family Tax Credit at 70% (3 steps above FPG)')
 
   # WV-5: the $8,000 senior citizen modification in a year with NO Social
-  # Security subtraction, so the offset is inert and the case is exact.
-  # 2019 MFJ ages 70/68, FAGI 60,000 = pension 30,000 + IRA 20,000 +
-  # interest 10,000 -> modification 8,000 x 2 = 16,000, st_agi 44,000;
-  # taxable 44,000 - 4,000 = 40,000 -> 1,575.00 at the band boundary
+  # Security subtraction, so the offset is inert. 2019 MFJ ages 70/68,
+  # FAGI 60,000 = pension 30,000 + IRA 20,000 + interest 10,000 ->
+  # modification 8,000 x 2 = 16,000 plus the 15% US-obligation share of
+  # interest (1,500): st_agi 42,500; taxable 38,500 -> 900 + 4.5% x 13,500
   run_case('WV', 2019,
            list(filing_status = 2, age1 = 70, age2 = 68, agi = 60000,
                 txbl_pens_dist = 30000, txbl_ira_dist = 20000,
                 txbl_int = 10000),
-           expect = list(st_agi = 44000, st_txbl_inc = 40000,
-                         liab_st_iit = 1575.00),
+           expect = list(st_agi = 42500, st_txbl_inc = 38500,
+                         liab_st_iit = 1507.50),
            label = 'WV-5 2019 senior citizen modification, 8,000 x 2')
 
   # WV-5b: the SS NETTING that age_ded_less_ss_sub exists for. Same couple in
   # 2023 with taxable SS 20,000. Schedule M line 47 box (d) nets each spouse's
   # SS subtraction out of that spouse's $8,000, so the modification is ZERO
-  # here: st_agi = 60,000 - 20,000 (SS) - 0 = 40,000; taxable 36,000 ->
-  # 708.50 + 3.54% x 11,000 = 1,097.90. Without the offset the model returned
-  # 551.00 -- a $546.90 error, roughly half the true liability
+  # here: st_agi = 60,000 - 20,000 (SS) - 0 - 1,500 (15% US-obligation share
+  # of interest) = 38,500; taxable 34,500 -> 708.50 + 3.54% x 9,500 =
+  # 1,044.80. Without the SS offset the model once returned roughly half
+  # the true liability
   run_case('WV', 2023,
            list(filing_status = 2, age1 = 68, age2 = 68, agi = 60000,
                 txbl_pens_dist = 20000, txbl_ira_dist = 10000,
                 txbl_int = 10000, txbl_ss = 20000, gross_ss = 23000),
-           expect = list(st_agi = 40000, st_txbl_inc = 36000,
-                         liab_st_iit = 1097.90),
+           expect = list(st_agi = 38500, st_txbl_inc = 34500,
+                         liab_st_iit = 1044.80),
            label = 'WV-5b senior modification netted by the SS subtraction')
 
   # WV-6: dependent filer -- the $500 allowance in place of exemptions, and
@@ -3464,7 +3498,8 @@ st_test_unit = function(overrides = list()) {
     alimony = 0, other_inc = 0,
     sch_e = 0, part_scorp = 0, ei1 = 0, ei2 = 0, n_dep_eitc = 0,
     txbl_pens_dist = 0,
-    txbl_ira_dist = 0, ot_ded = 0, char_cash = 0, char_noncash = 0,
+    txbl_ira_dist = 0, ot_ded = 0, hsa_contr = 0,
+    char_cash = 0, char_noncash = 0,
     item_ded = 0, item_ded_ex_limits = 0, salt_item_ded = 0,
     salt_inc_sales = 0, salt_prop = 0, salt_pers = 0,
     med_item_ded = 0, mort_int_item_ded = 0, inv_int_item_ded = 0,

@@ -96,6 +96,9 @@ scalars:
   # at or below $50,000/$100,000 of federal AGI); 1 = full subtraction
   st_agi.ss_allages_sub_share: 1
   st_agi.add_overtime_ded: 0
+  # Federal above-the-line HSA deduction reversed (state does not conform
+  # to IRC 223; CA)
+  st_agi.add_hsa: 0
   # State per-year net-capital-loss limit; addback = federal loss used
   # (capped at $3,000) minus this. Default = the federal limit (no addback).
   st_agi.cap_loss_limit: 3000
@@ -414,6 +417,10 @@ scalars:
   st_credits.earned_credit_age_max: .inf
   st_credits.earned_credit_agi_limit: .inf
   st_credits.earned_credit_earned_limit: .inf
+  # Disqualifying investment-income ceiling for the independent earned-income
+  # credit (FTB 3514 has its own limit, distinct from the federal EITC's).
+  # .inf = no state-side test
+  st_credits.earned_credit_inv_inc_limit: .inf
   st_credits.earned_credit_round: 0
   st_credits.earned_credit_refundable: 0
   st_credits.earned_credit_mfs_eligible: 0

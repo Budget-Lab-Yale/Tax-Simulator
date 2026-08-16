@@ -29,6 +29,12 @@ sub_state_ref:
 sub_ui_share:
   value: 1
   reference: 'California Schedule CA (540), unemployment compensation subtraction (Section B line 7 in 2017-2018 numbering, Part I Section B line 7 in 2019-2025 numbering); California R&TC does not conform to IRC 85. ADDED 2026-08-15 from cross-model triage: its omission was ~60% of fed-aligned state-AGI-stage mismatches vs TAXSIM 2017-2019 and 40% of PE-window mismatch records in 2021'
+sub_us_int:
+  value: 1
+  reference: 'California Schedule CA (540), US-obligation interest subtraction (31 U.S.C. 3124; R&TC 17133); the share of taxable interest treated as US-obligation is the model-wide US_OBLIGATION_INT_SHARE assumption (source split unobserved in the PUF). ADDED 2026-08-16'
+add_hsa:
+  value: 1
+  reference: 'California Schedule CA (540), HSA deduction reversal (federal Schedule 1 HSA deduction entered as a column C addition; 2019+ Part I Section C line 13, earlier-year line numbering varies); California R&TC does not conform to IRC 223. HSA account earnings remain untaxed here (unobserved) -- documented known-difference. ADDED 2026-08-16'
 ss_sub_share:
   value: 1
   reference: 'California Schedule CA (540), taxable Social Security and Tier 1 railroad retirement subtraction, 2017-2025'

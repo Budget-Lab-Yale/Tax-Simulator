@@ -171,7 +171,14 @@ crosswalk-exposure exclude rows added for each; WI strengthened to
 rounding bug (fractional incomes fell between whole-dollar FTB bins and
 got $0), lifting CA to TAXSIM 0.966–0.982 and PE 0.943–0.967 (2021/2023
 clear; 2022/2024 miss by roughly two low-income credit-margin records
-each).
+each). A 2026-08-16 hardening batch added the CA HSA addback, the CalEITC
+investment-income ceiling, and the model-wide US-obligation interest
+subtraction (15% share assumption; neither external model takes an
+equivalent input, so an ALL-states/both-models KD row excludes records
+with txbl_int > 5,000 where the assumed subtraction can break the
+tolerance) — 182 cells improved ≥0.3pp under the new exclusion, 8 moved
+down ≤1pp on denominator composition, and every previously-cleared state
+held its bar.
 Coupled and fed-gated states are unchanged. The stage classifier now
 counts `st_earned_credit` in the state-EITC stage (CalEITC-style credits
 live there, not in `st_eitc`).

@@ -752,7 +752,7 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                                               other_item_ded_potential) %>%
                   select(id, filing_status, agi_stratum, agi, txbl_inc, eitc,
                          exempt_int, state_ref, age1, age2, gross_ss, n_dep,
-                         ui, xw_unstripped_salt, xw_unhanded_item),
+                         ui, txbl_int, xw_unstripped_salt, xw_unhanded_item),
                 by = 'id')
 
     for (model in yr_models) {

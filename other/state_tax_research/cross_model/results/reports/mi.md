@@ -10,48 +10,52 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       | 19380|   12396|   0.4112|    0.5510|         0.5562|          0.6832|          0.0415|         59.3851|    1124.088|
-| 2017|taxsim       |  1133|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       | 19389|   12430|   0.4050|    0.5473|         0.5496|          0.6801|          0.0414|         61.9389|    1141.577|
-| 2018|taxsim       |  1126|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       | 19386|   12377|   0.4075|    0.5426|         0.5613|          0.6788|          0.0415|         61.4760|    1206.849|
-| 2019|taxsim       |  1128|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       | 19410|   12013|   0.3865|    0.5218|         0.5488|          0.6749|          0.0417|         78.6446|    1332.932|
-| 2020|taxsim       |  1103|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2021|policyengine |  1536|     269|   0.3132|    0.4447|         0.5762|          0.6357|          0.0189|        163.3524|   -2873.965|
-| 2022|policyengine |  1530|     318|   0.3144|    0.4157|         0.5126|          0.5629|          0.0255|        258.8256|    2170.980|
-| 2023|policyengine |  1533|     358|   0.3138|    0.4331|         0.5866|          0.6844|          0.0248|        186.6595|   11700.697|
-| 2024|policyengine |  1531|     365|   0.3142|    0.4141|         0.5890|          0.6548|          0.0209|        260.7598|   -1557.431|
+| 2017|taxsim       | 15863|   11447|   0.4543|    0.6223|         0.5550|          0.7039|          0.0501|         28.4023|    127.1964|
+| 2017|taxsim       |  4650|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2018|taxsim       | 15770|   11400|   0.4519|    0.6171|         0.5522|          0.6987|          0.0504|         29.4362|    147.6903|
+| 2018|taxsim       |  4745|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2019|taxsim       | 15586|   11307|   0.4616|    0.6166|         0.5679|          0.7010|          0.0509|         25.8445|    147.2499|
+| 2019|taxsim       |  4928|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2020|taxsim       | 15606|   10905|   0.4357|    0.5893|         0.5554|          0.6954|          0.0508|         37.9010|    154.9893|
+| 2020|taxsim       |  4907|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2021|policyengine |  1172|     261|   0.3626|    0.5324|         0.5632|          0.6360|          0.0239|         70.3452|    798.8774|
+| 2021|policyengine |   364|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2022|policyengine |  1141|     302|   0.3865|    0.5048|         0.5166|          0.5728|          0.0316|         92.0441|    290.2740|
+| 2022|policyengine |   389|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2023|policyengine |  1157|     337|   0.3812|    0.5272|         0.5757|          0.6795|          0.0303|         83.8435|    327.8837|
+| 2023|policyengine |   376|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2024|policyengine |  1150|     347|   0.3757|    0.5017|         0.5908|          0.6628|          0.0252|         95.6788|    -16.5505|
+| 2024|policyengine |   381|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 
 ## Mismatch stage diagnosis (TAXSIM |diff| > $15)
 
 | year|fed_aligned |stage           |    n|
 |----:|:-----------|:---------------|----:|
-| 2017|TRUE        |1 state AGI     | 4509|
-| 2017|TRUE        |2 exemptions    | 1688|
-| 2017|FALSE       |1 state AGI     | 5209|
-| 2017|FALSE       |2 exemptions    | 1138|
-| 2018|TRUE        |1 state AGI     | 4629|
-| 2018|TRUE        |3 deductions    |  353|
-| 2018|TRUE        |6 other credits | 1331|
-| 2018|FALSE       |1 state AGI     | 5249|
-| 2018|FALSE       |3 deductions    |   56|
-| 2018|FALSE       |5 state EITC    |  795|
-| 2018|FALSE       |6 other credits |  250|
-| 2019|TRUE        |1 state AGI     | 4433|
-| 2019|TRUE        |3 deductions    |  405|
-| 2019|TRUE        |6 other credits | 1303|
-| 2019|FALSE       |1 state AGI     | 5272|
-| 2019|FALSE       |3 deductions    |   63|
-| 2019|FALSE       |5 state EITC    |  898|
-| 2019|FALSE       |6 other credits |  241|
-| 2020|TRUE        |1 state AGI     | 4420|
-| 2020|TRUE        |3 deductions    |  420|
-| 2020|TRUE        |6 other credits | 1249|
-| 2020|FALSE       |1 state AGI     | 5823|
-| 2020|FALSE       |3 deductions    |   51|
-| 2020|FALSE       |5 state EITC    |  826|
-| 2020|FALSE       |6 other credits |  222|
+| 2017|TRUE        |1 state AGI     | 5219|
+| 2017|TRUE        |2 exemptions    | 1492|
+| 2017|FALSE       |1 state AGI     | 5521|
+| 2017|FALSE       |2 exemptions    | 1005|
+| 2018|TRUE        |1 state AGI     | 5350|
+| 2018|TRUE        |3 deductions    |  274|
+| 2018|TRUE        |6 other credits | 1206|
+| 2018|FALSE       |1 state AGI     | 5531|
+| 2018|FALSE       |3 deductions    |   38|
+| 2018|FALSE       |5 state EITC    |  777|
+| 2018|FALSE       |6 other credits |  158|
+| 2019|TRUE        |1 state AGI     | 5220|
+| 2019|TRUE        |3 deductions    |  289|
+| 2019|TRUE        |6 other credits | 1135|
+| 2019|FALSE       |1 state AGI     | 5545|
+| 2019|FALSE       |3 deductions    |   39|
+| 2019|FALSE       |5 state EITC    |  872|
+| 2019|FALSE       |6 other credits |  140|
+| 2020|TRUE        |1 state AGI     | 5185|
+| 2020|TRUE        |3 deductions    |  285|
+| 2020|TRUE        |6 other credits | 1119|
+| 2020|FALSE       |1 state AGI     | 6076|
+| 2020|FALSE       |3 deductions    |   26|
+| 2020|FALSE       |5 state EITC    |  806|
+| 2020|FALSE       |6 other credits |  131|
 
 ## Known differences applied
 
@@ -65,4 +69,5 @@ defined (federally aligned records; see README).
 |ALL   |taxsim |     2017|     2024|federal-side       |annotate |State EITCs piggyback on federal EITC; TAXSIM's own federal EITC (amount and eligibility) can differ from ours, propagating scaled differences into state EITC; clean-subset metrics condition on federal EITC agreement                                                                                                                                                                                                                                                                                                                                                                                                                     |
 |MI    |taxsim |     2017|     2020|external-model-bug |annotate |TAXSIM applies the Tier-2 Michigan Standard Deduction amount ($20,000/$40,000) to ALL filers 67+, ignoring the birth-cohort tiers: a Tier-1 (born before 1946) pensioner is capped at 20,000 instead of the Form 4884 private-pension maximum (52,808 single 2019; probe: 74-year-old with 60k pension -> TAXSIM 1,513.00 vs form-true 118.66), and a Tier-1 filer with wages+interest receives the flat 20,000 the form does not give that cohort (probe: 76-year-old -> TAXSIM 25.50). Non-senior and Tier-2 shapes match to the cent (5 probe cases)                                                                                      |
 |MI    |taxsim |     2017|     2020|transfer-netting   |exclude  |TAXSIM nets a flat refundable credit into MI liability wherever its computed household income (v30) collapses to $1.01: the MI-1040CR-7 home heating credit standard-allowance ladder (~370-410 records/yr at 90% of the one-exemption allowance: $349 2017 / $351 2018 / $386 2019 / $418 2020; larger-household steps $469-715). The $1.01 base is itself wrong on many records (multi-million-AGI filers receive the credit; zero-income records show a -$386 refund vs our $0). The home heating credit is an energy-assistance transfer paid outside MI-1040 liability and deliberately outside our IIT concept; excluded via predicate |
+|ALL   |both   |     2017|     2024|structural         |exclude  |US-obligation interest is exempt from state tax in every state (31 U.S.C. 3124); the model subtracts an assumed US_OBLIGATION_INT_SHARE (15%) of taxable interest for states encoding sub_us_int, because the source split is unobserved in the PUF. Neither TAXSIM (no input) nor PolicyEngine (us_govt_interest input not handed; split equally unobservable) takes the subtraction, so records where the assumed subtraction is large enough to break the match tolerance (above roughly $5,000 of taxable interest at top state rates) cannot agree with either external model. The divergence is the assumption, not either encoding    |
 
