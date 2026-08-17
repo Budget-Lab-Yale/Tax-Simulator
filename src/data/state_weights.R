@@ -52,8 +52,10 @@ NONTAX_BUCKETS <- c("PR","OA")          # carried, no state income tax calc
 # Shared raw-data stores. Derived from the production output root in
 # config/interfaces/output_roots.yaml (raw_data is its sibling directory), so
 # no additional machine paths are hardcoded here.
-#   IRS-GEO: SOI by-geography mirror (github.com/johniselin-budget-lab/IRS-GEO;
-#            see NOTES.md at the store root for data caveats)
+#   IRS-Ind: SOI individual income tax mirror -- by-geography (HT2 here) plus
+#            national Pub 1304 by-size tables (github.com/johniselin-budget-lab/
+#            IRS-Ind, renamed from IRS-GEO 2026-08; see NOTES.md at the store
+#            root for data caveats)
 #   ACS:     IPUMS USA 1-year fixed-width extracts, us{year}a/ vintages
 # -----------------------------------------------------------------------------
 raw_data_root <- function() {
@@ -61,7 +63,7 @@ raw_data_root <- function() {
             "raw_data")
 }
 ht2_path <- function(year) {
-  file.path(raw_data_root(), "IRS-GEO/state/HT2", sprintf("ht2_%d.csv.gz", year))
+  file.path(raw_data_root(), "IRS-Ind/state/HT2", sprintf("ht2_%d.csv.gz", year))
 }
 acs_extract_dir <- function(acs_year) {
   file.path(raw_data_root(), "ACS/acs_common", sprintf("us%da", acs_year))
@@ -164,7 +166,8 @@ read_ht2 <- function(path, year) {
 #   - Children (AGE < 19, parent pointer present, not married) are dependents.
 #   - All other adults head their own unit (single, or HoH if they have dependents).
 #   - Qualifying-relative dependency NOT modeled (minor); student ages 19–24 not
-#     separable (extract lacks SCHOOL).
+#     separated (SCHOOL is in the common extract; wiring it is a v1 upgrade --
+#     see other/state_tax_research/nonfiler_residual_design.md §3.2).
 #   - Filer if unit gross income ≥ the filing threshold (standard-deduction proxy by
 #     filing status, year-specific); else non-filer. Ignores the $400 SE rule,
 #     dependents' own filing, and elderly/blind bumps (approximation).
@@ -238,7 +241,8 @@ read_acs_extract <- function(acs_year,
 #' @param acs data.table from read_acs_extract() (or any source with the same
 #'        columns); `year` is the TAX year the margins will target
 #' @return list(nonfiler_margins = dt[state, age_band, income_tier, n_units],
-#'              state_pop        = dt[state, pop])   both weighted to population.
+#'              filer_units      = dt[state, n_units],
+#'              state_pop        = dt[state, pop])   all weighted to population.
 build_acs_margins <- function(acs, year, acs_year = NULL) {
 
   a <- as.data.table(acs)
@@ -301,15 +305,46 @@ build_acs_margins <- function(acs, year, acs_year = NULL) {
   nonfiler_margins <- units[is_filer == FALSE,
                             .(n_units = sum(weight)),
                             by = .(state, age_band, income_tier)][order(state, age_band, income_tier)]
+  filer_units <- units[is_filer == TRUE,
+                       .(n_units = sum(weight)), by = state][order(state)]
   state_pop <- a[, .(pop = sum(PERWT)), by = state][order(state)]
 
   list(nonfiler_margins = nonfiler_margins[, year := year],
+       filer_units      = filer_units[, year := year],
        state_pop        = state_pop[, year := year],
        unit_summary     = units[, .(n_units = sum(weight, na.rm = TRUE),
                                      n_filers = sum(weight * is_filer, na.rm = TRUE),
                                      n_nonfilers = sum(weight * !is_filer, na.rm = TRUE),
                                      n_units_na_wt = sum(is.na(weight)))],
        acs_year         = acs_year)
+}
+
+# -----------------------------------------------------------------------------
+# HT2 filing-status identities: convert return counts into counts of PEOPLE on
+# filed returns, by state. One definition per computation -- the reconciliation
+# diagnostic below, the residual non-filer anchors (nonfiler_residual_design.md
+# §3.1), and any external consumer all call this.
+#
+# Identities and documented approximations:
+#   married filing adults = 2 * MARS2 + (N1 - MARS1 - MARS2 - MARS4)
+#                           [residual is MFS-dominated; QSS (~1M unmarried
+#                            returns) is misclassified as married]
+#   single filing adults  = MARS1 + MARS4
+#   dependents            = N2 - (N1 + MARS2)
+#                           [includes adult dependents; a dependent who files
+#                            their own return is double-counted (own return +
+#                            parent's N2); N2 = exemptions pre-2018]
+# PR/OA are excluded to match ACS/PEP coverage.
+# -----------------------------------------------------------------------------
+ht2_filing_persons <- function(ht2) {
+  irs <- dcast(as.data.table(ht2)[!(state %in% NONTAX_BUCKETS) &
+                                  variable %in% c("n_returns","n_single","n_joint","n_hoh","n_indiv"),
+                                  .(value = sum(value)), by = .(state, variable)],
+               state ~ variable, value.var = "value")
+  irs[, .(state,
+          married_filing_adults = 2 * n_joint + (n_returns - n_single - n_joint - n_hoh),
+          single_filing_adults  = n_single + n_hoh,
+          dependents            = n_indiv - (n_returns + n_joint))]
 }
 
 # -----------------------------------------------------------------------------
@@ -323,15 +358,7 @@ build_acs_margins <- function(acs, year, acs_year = NULL) {
 # non-filer population by group and state.
 #
 # Construction and documented approximations:
-#   IRS (HT2, stubs summed; PR/OA excluded to match ACS coverage):
-#     married adults = 2 * MARS2 + (N1 - MARS1 - MARS2 - MARS4)
-#                      [residual is MFS-dominated; QSS (~1M unmarried
-#                       returns) is misclassified as married]
-#     single adults  = MARS1 + MARS4
-#     dependents     = N2 - (N1 + MARS2)
-#                      [includes adult dependents; a dependent who files
-#                       their own return is double-counted (own return +
-#                       parent's N2); N2 = exemptions pre-2018]
+#   IRS side: ht2_filing_persons() above (identities + caveats documented there)
 #   ACS (person-level PERWT sums):
 #     married adults = AGE >= 18 & MARST in (1,2)   [separated -> single,
 #                      matching filing rules]
@@ -342,14 +369,9 @@ build_acs_margins <- function(acs, year, acs_year = NULL) {
 # -----------------------------------------------------------------------------
 compare_individuals_acs_irs <- function(ht2, acs) {
 
-  irs <- dcast(as.data.table(ht2)[!(state %in% NONTAX_BUCKETS) &
-                                  variable %in% c("n_returns","n_single","n_joint","n_hoh","n_indiv"),
-                                  .(value = sum(value)), by = .(state, variable)],
-               state ~ variable, value.var = "value")
-  irs <- irs[, .(state,
-                 irs_married_adults = 2 * n_joint + (n_returns - n_single - n_joint - n_hoh),
-                 irs_single_adults  = n_single + n_hoh,
-                 irs_children       = n_indiv - (n_returns + n_joint))]
+  irs <- ht2_filing_persons(ht2)
+  setnames(irs, c("married_filing_adults","single_filing_adults","dependents"),
+                c("irs_married_adults","irs_single_adults","irs_children"))
 
   a <- as.data.table(acs)
   a[, state := FIPS_TO_STATE[as.character(STATEFIP)]]
