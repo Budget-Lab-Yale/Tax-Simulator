@@ -1,0 +1,100 @@
+---
+# Hawaii rate schedule (HRS 235-51; N-11 line 27 via the Tax Table under
+# $100,000 of taxable income and the Tax Rate Schedules at or above it) and
+# the 7.25% alternative tax on net capital gain (HRS 235-51(f)).
+#
+# NOT inflation-indexed in any era: the 2018-2024 booklets print identical
+# schedules dollar-for-dollar (row-by-row comparison of all 36 rows across
+# the seven booklets), and 235-51 states fixed dollar tables.
+#
+# Eras: TY2017 has nine brackets (top 8.25%). Act 107 SLH 2017 reinstated
+# the 9/10/11% brackets from TY2018 (twelve brackets). Act 46 SLH 2024
+# (HB2404 CD1; DOTAX booklets cite it as "Act 45") widens the brackets in
+# three enacted steps -- TY2025, TY2027, TY2029 -- with no rate change; the
+# TY2025 step is cross-verified digit-for-digit against the printed 2025
+# Tax Rate Schedules. NOTE the first Act 46 bracket step is TY2025, not
+# TY2027 as the batch survey assumed.
+#
+# Twelve-element uniform schedules; the 2017 nine-bracket regime repeats
+# its top bound so the 8.25% top rate runs to infinity. MFS uses the single
+# schedule ("Schedule I: single taxpayers and married filing separate
+# returns"); qualifying surviving spouses use the married schedule.
+#
+# The printed Tax Table (mandatory under $100,000) evaluates the schedule
+# at the midpoint of $50-wide bands, rounded to whole dollars -- a
+# documented rounding difference of at most ~$3 versus this continuous
+# schedule (2017 booklet p.42 example verified).
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_joint
+    '3': brackets_single
+    '4': brackets_head
+  kg_alt_floor:
+    '1': kg_floor_single
+    '2': kg_floor_joint
+    '3': kg_floor_single
+    '4': kg_floor_head
+
+rates:
+  value:
+    '2017': [0.014, 0.032, 0.055, 0.064, 0.068, 0.072, 0.076, 0.079, 0.0825, 0.0825, 0.0825, 0.0825]
+    '2018': [0.014, 0.032, 0.055, 0.064, 0.068, 0.072, 0.076, 0.079, 0.0825, 0.09, 0.10, 0.11]
+  reference: 'HRS 235-51; 2017 Tax Rate Schedules (2017 booklet p.54, nine brackets to 8.25%); Act 107 SLH 2017 sec. 2 reinstates 9/10/11% from TY2018 (2018 booklet p.54); the rate ladder is unchanged by Act 46 (2025 booklet p.50 prints the same twelve rates)'
+
+brackets_single:
+  value:
+    '2017': [0, 2400, 4800, 9600, 14400, 19200, 24000, 36000, 48000, 48000, 48000, 48000]
+    '2018': [0, 2400, 4800, 9600, 14400, 19200, 24000, 36000, 48000, 150000, 175000, 200000]
+    '2025': [0, 9600, 14400, 19200, 24000, 36000, 48000, 125000, 175000, 225000, 275000, 325000]
+    '2027': [0, 14400, 19200, 24000, 36000, 48000, 125000, 175000, 225000, 275000, 325000, 400000]
+    '2029': [0, 19200, 24000, 36000, 48000, 125000, 175000, 225000, 275000, 325000, 400000, 475000]
+  reference: 'Schedule I (single and MFS): 2017 booklet p.54; 2018-2024 booklets (identical, e.g. 2018 p.54, 2024 p.48); TY2025 from Act 46 sec. 2, verified against the printed 2025 booklet p.50; TY2027 and TY2029 from Act 46 sec. 2 ("after December 31, 2026"/"after December 31, 2028") -- enacted future law, final step'
+brackets_joint:
+  value:
+    '2017': [0, 4800, 9600, 19200, 28800, 38400, 48000, 72000, 96000, 96000, 96000, 96000]
+    '2018': [0, 4800, 9600, 19200, 28800, 38400, 48000, 72000, 96000, 300000, 350000, 400000]
+    '2025': [0, 19200, 28800, 38400, 48000, 72000, 96000, 250000, 350000, 450000, 550000, 650000]
+    '2027': [0, 28800, 38400, 48000, 72000, 96000, 250000, 350000, 450000, 550000, 650000, 800000]
+    '2029': [0, 38400, 48000, 72000, 96000, 250000, 350000, 450000, 550000, 650000, 800000, 950000]
+  reference: 'Schedule II (married filing jointly and qualifying surviving spouses): same sources as brackets_single'
+brackets_head:
+  value:
+    '2017': [0, 3600, 7200, 14400, 21600, 28800, 36000, 54000, 72000, 72000, 72000, 72000]
+    '2018': [0, 3600, 7200, 14400, 21600, 28800, 36000, 54000, 72000, 225000, 262500, 300000]
+    '2025': [0, 14400, 21600, 28800, 36000, 54000, 72000, 187500, 262500, 337500, 412500, 487500]
+    '2027': [0, 21600, 28800, 36000, 54000, 72000, 187500, 262500, 337500, 412500, 487500, 600000]
+    '2029': [0, 28800, 36000, 54000, 72000, 187500, 262500, 337500, 412500, 487500, 600000, 712500]
+  reference: 'Schedule III (heads of household): same sources as brackets_single'
+
+# Alternative tax on capital gains (HRS 235-51(f); Tax on Capital Gains
+# Worksheet, identical 2017-2025 apart from federal line references):
+# ordinary-taxed income is the GREATER of (taxable income less Hawaii net
+# capital gain) and the filing-status floor; the remainder is taxed at
+# 7.25%, and the taxpayer pays the SMALLER of that total and the regular
+# schedule tax. "Net capital gain" is the worksheet's smaller-of Hawaii net
+# LTCG and Hawaii net capital gain (so short-term losses offset) --
+# qualified dividends are NOT included (full-text-verified in the 2017,
+# 2024 and 2025 booklets), which is exactly kg_pref. The worksheet's
+# N-158 investment-interest offset (line 9) is unobservable and skipped
+# (documented below). The floors were NOT changed by Act 46 (still printed
+# in the 2025 booklet p.34)
+kg_alt_rate:
+  value: 0.0725
+  reference: 'Tax on Capital Gains Worksheet line 16 "Multiply line 14 by 7.25%" (2017 booklet p.39; 2024 booklet p.33; 2025 booklet p.34); HRS 235-51(f)'
+kg_floor_single:
+  value: 24000
+  reference: 'Worksheet line 12: $24,000 for single and married filing separately (all years 2017-2025)'
+kg_floor_joint:
+  value: 48000
+  reference: 'Worksheet line 12: $48,000 for married filing jointly and qualifying surviving spouses (all years)'
+kg_floor_head:
+  value: 36000
+  reference: 'Worksheet line 12: $36,000 for heads of household (all years)'
+
+documented_not_modeled:
+  kg_worksheet_n158_offset:
+    reference: 'Worksheet line 9 subtracts the Form N-158 line 4e amount (net capital gain elected as investment income for the investment-interest deduction) from the alternative-rate base. The election is unobservable [overstates the alternative-rate benefit for electing filers; rare]'
+  tax_table_midpoint_rounding:
+    reference: 'Taxable income under $100,000 must use the printed Tax Table ($50 bands, schedule tax at the band midpoint rounded to whole dollars). The continuous schedule differs by at most ~$3 (2017 booklet p.42 example: MFJ $23,275 -> table $1,010 vs continuous $1,009.80)'

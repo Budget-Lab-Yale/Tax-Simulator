@@ -23,7 +23,7 @@ test_state_calc = function() {
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
                 'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV', 'NM',
-                'VT', 'OK', 'DC', 'NE'),
+                'VT', 'OK', 'DC', 'NE', 'HI', 'ME'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -39,7 +39,7 @@ test_state_calc = function() {
     'st_pct_credit', 'st_cli', 'st_ded_credit', 'st_age_credit',
     'st_retire_credit', 'st_senior_credit', 'st_jfc', 'st_forgive_credit',
     'st_percap_credit', 'st_marriage_credit', 'st_twoearner_credit',
-    'st_item_credit'
+    'st_item_credit', 'st_stfc'
   )
   case_exercised = new.env()
   case_exercised$sets = list()
@@ -3060,6 +3060,253 @@ test_state_calc = function() {
            label = 'NE-6b 10% EITC refundable against a nonrefundable credit')
 
   #--------------------------------------------------------------------------
+  # Hawaii (N-11)
+  #--------------------------------------------------------------------------
+
+  # HI-1: 2018 single, wages 60,000, standard deduction. TI = 60,000 - 2,200
+  # - 1,144 = 56,656 -> 3,213.60 + 8.25% x 8,656 = 3,927.72 (continuous
+  # schedule; the printed base rounds to 3,214). Food credit denied
+  # (single gate $30,000)
+  run_case('HI', 2018, list(agi = 60000, wages1 = 60000, ei1 = 60000),
+           expect = list(st_agi = 60000, liab_st_iit = 3927.72),
+           label = 'HI-1 2018 twelve-bracket schedule, standard deduction')
+
+  # HI-2: 2017 nine-bracket year, MFJ 66/64, wages 40,000 + pension 30,000 +
+  # taxable SS 10,000 (FAGI 80,000). Pension and SS fully subtracted -> HI
+  # AGI 40,000. Exemptions 2 x 1,144 + one aged extra = 3,432; std 4,400;
+  # TI = 32,168 -> 1,363.20 + 6.8% x 3,368 = 1,592.22 (continuous). Food
+  # credit: FAGI
+  # 80,000 over the $50,000 gate -> 0
+  run_case('HI', 2017,
+           list(agi = 80000, filing_status = 2, age1 = 66, age2 = 64,
+                wages1 = 24000, wages2 = 16000, ei1 = 24000, ei2 = 16000,
+                txbl_pens_dist = 30000, txbl_ss = 10000, gross_ss = 12000),
+           expect = list(st_agi = 40000, st_exempt = 3432,
+                         liab_st_iit = 1592.22),
+           label = 'HI-2 2017 schedule, pension/SS exclusions, aged exemption')
+
+  # HI-3: 2024 single, wages 100,000 + net LTCG 100,000, standard deduction.
+  # TI = 194,456. Regular tax 13,878.60 + 10% x 19,456 = 15,824.20. Alternative
+  # (Tax on Capital Gains Worksheet): ordinary part max(TI - 100,000,
+  # 24,000) = 94,456 -> 3,213.60 + 8.25% x 46,456 = 7,046.22; plus 7.25% x
+  # 100,000 = 7,250 -> 14,296.22, the smaller -> tax (continuous schedule)
+  run_case('HI', 2024,
+           list(agi = 200000, wages1 = 100000, ei1 = 100000, kg_lt = 100000,
+                kg_pref = 100000, txbl_kg = 100000),
+           expect = list(st_tax_pre_credit = 14296.22,
+                         liab_st_iit = 14296.22),
+           label = 'HI-3 7.25% alternative capital-gains tax')
+
+  # HI-3b: the worksheet's filing-status floor binds. 2024 single, wages
+  # 20,000 + gain 30,000: TI = 44,456; ordinary part floored at 24,000
+  # (schedule tax 1,353.60), alternative-rate part = 20,456 x 7.25% =
+  # 1,483.06 -> 2,836.66 versus regular 2,933.62 (continuous)
+  run_case('HI', 2024,
+           list(agi = 50000, wages1 = 20000, ei1 = 20000, kg_lt = 30000,
+                kg_pref = 30000, txbl_kg = 30000),
+           expect = list(liab_st_iit = 2836.66),
+           label = 'HI-3b alternative tax with the $24,000 ordinary floor')
+
+  # HI-4: 2023 single, one dependent, wages 18,000, federal EITC 3,000. TI
+  # = 18,000 - 2,200 - 2,288 = 13,512 -> 374.40 + 6.4% x 3,912 = 624.77
+  # (continuous). HI
+  # EITC 40% x 3,000 = 1,200 REFUNDABLE (Act 114/163); food credit: FAGI
+  # 18,000 in the 15,000-19,999 band of the doubled 2023 table -> $200 x 2
+  # persons = 400. Liability 624.77 - 1,600 = -975.23
+  run_case('HI', 2023,
+           list(agi = 18000, wages1 = 18000, ei1 = 18000, n_dep = 1,
+                n_dep_eitc = 1, dep_age1 = 4, eitc = 3000),
+           expect = list(st_eitc = 1200, st_percap_credit = 400,
+                         liab_st_iit = -975.23),
+           label = 'HI-4 refundable 40% EITC + doubled food credit')
+
+  # HI-4b: the same unit in 2019 -- the 20% NONREFUNDABLE vintage and the
+  # original food table. EITC 600 can only offset; food credit $70 x 2 =
+  # 140 stays refundable. Tax 624.77 - 600 = 24.77, less 140 -> -115.23
+  run_case('HI', 2019,
+           list(agi = 18000, wages1 = 18000, ei1 = 18000, n_dep = 1,
+                n_dep_eitc = 1, dep_age1 = 4, eitc = 3000),
+           expect = list(st_eitc = 600, st_percap_credit = 140,
+                         liab_st_iit = -115.23),
+           label = 'HI-4b nonrefundable 20% EITC vintage')
+
+  # HI-5: 2023 MFJ, two care-age dependents, wages 60,000/30,000, care
+  # expenses 12,000. Rate floor 15% (HI AGI over 50,000); Act 163 cap
+  # 20,000 for two, earned-income cap 30,000 -> credit 15% x 12,000 =
+  # 1,800 refundable. TI = 90,000 - 4,400 - 4,576 = 81,024 -> 4,531.20 +
+  # 7.9% x 9,024 = 5,244.10 (continuous); liability 3,444.10
+  run_case('HI', 2023,
+           list(agi = 90000, filing_status = 2, age2 = 40, wages1 = 60000,
+                wages2 = 30000, ei1 = 60000, ei2 = 30000, n_dep = 2,
+                dep_age1 = 3, dep_age2 = 5, care_exp = 12000),
+           expect = list(st_cdctc = 1800, liab_st_iit = 3444.10),
+           label = 'HI-5 refundable care credit at the 15% floor, Act 163 caps')
+
+  # HI-5b: the sliding rate one band in. 2019 single, HI AGI 27,500 -> rate
+  # 25% - 1 x 1% = 24%; cap 2,400 (one qualifying person) -> credit 576.
+  # TI = 23,012 -> 1,008 + 7.2% x 3,812 = 1,282.46; food credit 55 x 2 =
+  # 110; liability 1,282.46 - 576 - 110 = 596.46
+  run_case('HI', 2019,
+           list(agi = 27500, wages1 = 27500, ei1 = 27500, n_dep = 1,
+                dep_age1 = 2, care_exp = 3000),
+           expect = list(st_cdctc = 576, st_percap_credit = 110,
+                         liab_st_iit = 596.46),
+           label = 'HI-5b care-credit rate slide, pre-2023 expense cap')
+
+  # HI-6: 2024 MFJ itemizer at FAGI 250,000: the state-income-tax deduction
+  # is DENIED (over the $200,000 Worksheet A-2 threshold) and the overall
+  # limitation bites. Base = 45,000 - 10,000 SALT + 8,000 property =
+  # 43,000; reduction min(3% x (250,000 - 166,800), 80% x 43,000) = 2,496
+  # -> 40,504. TI = 250,000 - 40,504 - 2,288 = 207,208 -> 6,427.20 + 8.25%
+  # x 111,208 = 15,601.86 (continuous)
+  run_case('HI', 2024,
+           list(agi = 250000, filing_status = 2, age2 = 40, wages1 = 150000,
+                wages2 = 100000, ei1 = 150000, ei2 = 100000, itemizing = 1,
+                item_ded = 45000, item_ded_ex_limits = 45000,
+                salt_item_ded = 10000, salt_inc_sales = 20000,
+                salt_prop = 8000, mort_int_item_ded = 25000,
+                char_item_ded = 10000, char_cash = 10000),
+           expect = list(st_item_ded = 40504, liab_st_iit = 15601.86),
+           label = 'HI-6 SALT disallowance over $200k + overall limitation')
+
+  # HI-6b: the same deductions at FAGI 150,000 -- BELOW both the SALT
+  # threshold and the $166,800 limitation, so income taxes stay deductible:
+  # 43,000 + 20,000 = 63,000. TI = 84,712 -> 4,531.20 + 7.9% x 12,712 =
+  # 5,535.45 (continuous)
+  run_case('HI', 2024,
+           list(agi = 150000, filing_status = 2, age2 = 40, wages1 = 90000,
+                wages2 = 60000, ei1 = 90000, ei2 = 60000, itemizing = 1,
+                item_ded = 45000, item_ded_ex_limits = 45000,
+                salt_item_ded = 10000, salt_inc_sales = 20000,
+                salt_prop = 8000, mort_int_item_ded = 25000,
+                char_item_ded = 10000, char_cash = 10000),
+           expect = list(st_item_ded = 63000, liab_st_iit = 5535.45),
+           label = 'HI-6b state income tax deductible under the threshold')
+
+  # HI-7: 2025 -- the FIRST Act 46 bracket step (printed in the 2025
+  # booklet) with the 2024 standard deduction. Single wages 80,000: TI =
+  # 74,456 -> 2,539.20 + 7.6% x 26,456 = 4,549.86 (continuous)
+  run_case('HI', 2025, list(agi = 80000, wages1 = 80000, ei1 = 80000),
+           expect = list(liab_st_iit = 4549.86),
+           label = 'HI-7 Act 46 TY2025 bracket step')
+
+  # HI-8: 2027 -- the second Act 46 bracket step plus the TY2026 standard-
+  # deduction step ($8,000 single). TI = 80,000 - 8,000 - 1,144 = 70,856
+  # -> 2,203.20 + 7.2% x 22,856 = 3,848.83 (continuous; enacted future law)
+  run_case('HI', 2027, list(agi = 80000, wages1 = 80000, ei1 = 80000),
+           expect = list(liab_st_iit = 3848.83),
+           label = 'HI-8 Act 46 TY2027 schedule + TY2026 standard deduction')
+
+  #--------------------------------------------------------------------------
+  # Maine (1040ME)
+  #--------------------------------------------------------------------------
+
+  # ME-1: 2024 single, wages 50,000, standard deduction (= federal 14,600),
+  # exemption 5,000. TI = 30,400 -> 1,510.90 + 6.75% x 4,350 = 1,804.53
+  # (continuous schedule; the printed base rounds to 1,511)
+  run_case('ME', 2024, list(agi = 50000, wages1 = 50000, ei1 = 50000),
+           expect = list(st_agi = 50000, liab_st_iit = 1804.53),
+           label = 'ME-1 2024 basic single')
+
+  # ME-2: 2017 regime -- the exemption is the FEDERAL amount including
+  # dependents (4 x 4,050 = 16,200) and the std is Maine's own 23,200. MFJ
+  # wages 100,000, two dependents: TI = 60,600 -> 2,450.50 + 6.75% x
+  # 18,350 = 3,689.13 (continuous; no DETC in 2017; STFC zero here)
+  run_case('ME', 2017,
+           list(agi = 100000, filing_status = 2, age2 = 40, wages1 = 60000,
+                wages2 = 40000, ei1 = 60000, ei2 = 40000, n_dep = 2,
+                dep_age1 = 5, dep_age2 = 9),
+           expect = list(st_exempt = 16200, liab_st_iit = 3689.13),
+           label = 'ME-2 2017 federal-style exemptions incl. dependents')
+
+  # ME-3: the deduction phase-out. 2024 single, wages 120,000: excess over
+  # 97,150 = 22,850 -> ratio 0.304667 -> std 14,600 x 0.695333 = 10,151.87.
+  # TI = 104,848.13 -> 3,910.53 + 7.15% x 43,248.13 = 7,002.77 (continuous)
+  run_case('ME', 2024, list(agi = 120000, wages1 = 120000, ei1 = 120000),
+           expect = list(st_std_ded = 10151.87, liab_st_iit = 7002.77),
+           label = 'ME-3 linear deduction phase-out on the standard deduction')
+
+  # ME-4: itemized cap + phase-out interaction, in the worksheet's order
+  # (cap FIRST, then the whole-deduction phase-out). 2024 MFJ, FAGI
+  # 250,000, federal itemized 52,000 of which medical 4,000 / SALT 10,000
+  # capped (income 15,000, property 12,000) / mortgage 30,000 / charity
+  # 8,000. Maine base = 52,000 - 10,000 + 12,000 = 54,000; cap 35,250 with
+  # medical exempt -> 39,250; phase-out (250,000 - 194,300)/150,000 =
+  # 0.371333 -> 24,675.17 (the phased standard, 18,357.07, loses the
+  # best-of election). TI = 215,324.83 -> 7,824.43 + 7.15% x 92,074.83 =
+  # 14,407.78 (continuous)
+  run_case('ME', 2024,
+           list(agi = 250000, filing_status = 2, age2 = 40, wages1 = 150000,
+                wages2 = 100000, ei1 = 150000, ei2 = 100000, itemizing = 1,
+                item_ded = 52000, item_ded_ex_limits = 52000,
+                salt_item_ded = 10000, salt_inc_sales = 15000,
+                salt_prop = 12000, med_item_ded = 4000,
+                mort_int_item_ded = 30000, char_item_ded = 8000,
+                char_cash = 8000),
+           expect = list(st_item_ded = 24675.17, liab_st_iit = 14407.78),
+           label = 'ME-4 itemized cap (medical exempt) then phase-out')
+
+  # ME-5: 2024 pension deduction under the NEW $45,864 per-person cap (the
+  # maximum-SS-benefit rule -- NOT the superseded $35,000), reduced by
+  # GROSS SS received. MFJ both 68: pensions 60,000 + IRA 10,000 (IRAs
+  # eligible) + taxable SS 20,000 of 30,000 gross. Caps 91,728 - 30,000 =
+  # 61,728 -> deduction 61,728; SS fully subtracted -> ME AGI 8,272; std
+  # 29,200 + 2 x 1,550 aged = 32,300 -> TI 0. STFC income = FAGI + nontax
+  # SS = 100,000 -> 0
+  run_case('ME', 2024,
+           list(agi = 90000, filing_status = 2, age1 = 68, age2 = 68,
+                txbl_pens_dist = 60000, txbl_ira_dist = 10000,
+                gross_ss = 30000, txbl_ss = 20000),
+           expect = list(st_agi = 8272, liab_st_iit = 0),
+           label = 'ME-5 SS-max pension cap less gross SS, aged std add-ons')
+
+  # ME-6: the TY2025 pension-deduction phase-out (P.L. 2025 c. 388 Pt. H).
+  # Single 70, pension 60,000 + wages 100,000: capped deduction 48,216 x
+  # (1 - 35,000/100,000) = 31,340.40 -> ME AGI 128,659.60. Deduction
+  # phase-out: excess 28,659.60/75,000 -> std 17,000 x 0.617867 =
+  # 10,503.73; exemption 5,150. TI = 113,005.87 -> 4,028.28 + 7.15% x
+  # 49,555.87 = 7,571.52 (continuous)
+  run_case('ME', 2025,
+           list(agi = 160000, age1 = 70, wages1 = 100000, ei1 = 100000,
+                txbl_pens_dist = 60000),
+           expect = list(st_agi = 128659.60, liab_st_iit = 7571.52),
+           label = 'ME-6 2025 pension phase-out + phased aged std deduction')
+
+  # ME-7: the 2022 credit stack. HoH, two children (4/8), wages 25,000,
+  # federal EITC 5,000, care credit base 800. TI = 25,000 - 19,400 - 4,450
+  # = 1,150 -> tax 66.70. ME EITC 25% (2+ kids) = 1,250 refundable; DETC
+  # 300 x 2 = 600 NONREFUNDABLE (zeroes the tax); care credit 25% x 800 =
+  # 200, within the $500 refundable cap; STFC HoH/2 deps at income 25,000
+  # = 210 (table). Liability = 0 - 1,250 - 200 - 210 = -1,660
+  run_case('ME', 2022,
+           list(agi = 25000, filing_status = 4, wages1 = 25000, ei1 = 25000,
+                n_dep = 2, n_dep_eitc = 2, n_dep_ctc = 2, dep_age1 = 4,
+                dep_age2 = 8, eitc = 5000, cdctc_nonref = 800,
+                care_exp = 3000),
+           expect = list(st_eitc = 1250, st_ctc = 600, st_cdctc = 200,
+                         st_stfc = 210, liab_st_iit = -1660),
+           label = 'ME-7 EITC/DETC/care/STFC stack, 2022 vintages')
+
+  # ME-8: the TY2025 DETC restructure -- $610 under-6 + $305 for 6+, with
+  # the new $20-per-$500 phase-out over $150,000 (MFJ). Children 3 and 9,
+  # wages 160,000: credit 915 - 20 x 20 steps = 515, refundable. TI =
+  # 160,000 - 30,000 - 10,300 = 119,700 -> 3,108.80 + 6.75% x 66,100 =
+  # 7,570.55 (continuous); liability 7,055.55
+  run_case('ME', 2025,
+           list(agi = 160000, filing_status = 2, age2 = 40, wages1 = 100000,
+                wages2 = 60000, ei1 = 100000, ei2 = 60000, n_dep = 2,
+                n_dep_ctc = 2, dep_age1 = 3, dep_age2 = 9),
+           expect = list(st_ctc = 515, liab_st_iit = 7055.55),
+           label = 'ME-8 2025 DETC: doubled under-6 amount, $500-step phase-out')
+
+  # ME-9: STFC alone on a childless single, 2024 -- income 26,000 sits in
+  # the 25,751-26,250 band ($10-per-$500 decrements from the $150 base) =
+  # 120, refundable. TI = 6,400 -> tax 371.20; liability 251.20
+  run_case('ME', 2024, list(agi = 26000, wages1 = 26000, ei1 = 26000),
+           expect = list(st_stfc = 120, liab_st_iit = 251.20),
+           label = 'ME-9 sales tax fairness credit, childless single')
+
+  #--------------------------------------------------------------------------
   # GENERIC MACHINERY CASES
   #
   # These prove parameters that no encoded state consumes yet. Each was added
@@ -3321,7 +3568,7 @@ test_state_calc = function() {
   smoke_states = c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI',
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
                    'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI',
-                   'WV', 'NM', 'VT', 'OK', 'DC', 'NE')
+                   'WV', 'NM', 'VT', 'OK', 'DC', 'NE', 'HI', 'ME')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()
@@ -3410,7 +3657,11 @@ test_state_calc = function() {
                 #   2,500 in 2018-23; booklet-table-verified; KS-2/2b)
     OH = 400,   # zero-bracket base-amount cliff (statutory; tax owed on
                 #   the first taxed dollar from 2019, OH-3)
-    MD = 130    # banded exemption steps at $100k/$125k/$150k
+    MD = 130,   # banded exemption steps at $100k/$125k/$150k
+    HI = 160    # N-311 food-credit band edges (published cliffs: the single
+                #   table ends at $40,000 in the 2023-2027 vintage, dropping
+                #   $110 for the one-person sweep unit, plus the bracket
+                #   slope; the 2017 vintage's largest edge is $55 at $30,000)
   )
   sweep_default = sweep_step * 0.20 + 5
   for (st in smoke_states) {
@@ -3517,7 +3768,7 @@ st_test_unit = function(overrides = list()) {
     agi = 0, txbl_inc = 0, itemizing = 0,
     exempt_int = 0, state_ref = 0, gross_ss = 0, txbl_ss = 0,
     txbl_int = 0, div_ord = 0, div_pref = 0, kg_lt = 0, kg_st = 0,
-    txbl_kg = 0, wages1 = 0, wages2 = 0, sole_prop = 0, part_active = 0,
+    txbl_kg = 0, kg_pref = 0, wages1 = 0, wages2 = 0, sole_prop = 0, part_active = 0,
     part_passive = 0, scorp = 0, farm = 0, rent = 0, other_gains = 0,
     alimony = 0, other_inc = 0,
     sch_e = 0, part_scorp = 0, ei1 = 0, ei2 = 0, n_dep_eitc = 0,

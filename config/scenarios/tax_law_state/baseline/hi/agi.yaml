@@ -1,0 +1,73 @@
+---
+# Hawaii: income base (Form N-11 lines 7-20). Federal AGI start (line 7),
+# plus Hawaii additions (lines 8-10: COLA/ERS wage differences, out-of-state
+# municipal interest, other), minus Hawaii subtractions (lines 13-18:
+# employer-funded pensions, Social Security, military reserve pay, individual
+# housing accounts, other) = Hawaii AGI (line 20).
+#
+# Sources: N-11 forms and instruction booklets 2017-2025 (NBER mirror +
+# files.hawaii.gov), transcribed 2026-08-16; see
+# other/state_tax_research/source_packets/hi.md for the retrieval log.
+
+start_point:
+  value: 1
+  reference: 'N-11 line 7 "Federal adjusted gross income" (2017-2025 forms); HRS 235-2.3 operates on the IRC as adopted'
+
+conformity_group:
+  value: 0
+  reference: 'HRS 235-2.3: Hawaii conforms to the IRC as of a date updated by an annual conformity act (Dec 31 2023 by Act 75 SLH 2024; Dec 31 2024 by Act 123 SLH 2025), with a standing list of decoupled provisions that Hawaii re-enacts each year. Modeled as rolling (group 0), the ID/WV treatment: the update has passed every session in the window and the standing decouplings (own standard deduction/exemptions/itemized rules, no QBI) are below the federal-AGI start or carried by Hawaii-side parameters. The retained federal moving-expense deduction is the one above-the-line decoupling and is documented below'
+
+# Out-of-state municipal bond interest is added back (N-11 line 9); Hawaii's
+# own obligations stay exempt. The own-state share of exempt_int is
+# unobserved, so the model adds back the uniform 25% out-of-state complement
+add_exempt_int:
+  value: 1
+  reference: 'N-11 line 9 "Interest on out-of-state bonds (including municipal bonds)", 2017-2025 forms; HRS 235-7(b)'
+own_state_exempt:
+  value: 1
+  reference: 'Only obligations of states other than Hawaii are added back (N-11 line 9 instructions)'
+sub_us_int:
+  value: 1
+  reference: 'U.S.-obligation interest is exempt (31 U.S.C. 3124; N-11 line 18 subtraction via the "other subtractions" worksheet). The U.S.-obligation share of txbl_int is unobservable, so the flag is carried and no subtraction is taken [overstates HI tax for Treasury holders]'
+
+# Social Security and first-tier Railroad Retirement benefits are fully
+# exempt: the federally-taxed amount is subtracted on N-11 line 14
+ss_sub_share:
+  value: 1
+  reference: 'N-11 line 14 "Social security benefits taxed on federal return"; instructions: "Hawaii does not tax Social Security or first tier Railroad Retirement Act benefits" (2017 booklet p.15; identical 2018-2025, e.g. 2024 booklet p.13)'
+
+# Employer-funded pension exclusion (N-11 line 13, HRS 235-7(a)(2)-(3)):
+# Hawaii does not tax qualifying distributions from an employer-funded
+# pension plan (public retirement systems, non-contributory private plans,
+# and age-70.5 mandatory-payout distributions). The employee-contribution-
+# funded portion of a contributory plan IS taxable (Schedule J), as are
+# elective deferrals (401(k)/457/TSP), early distributions subject to the
+# federal 10% penalty, self-funded annuities and IRAs.
+#
+# DOCUMENTED APPROXIMATION (the pension-source split, imputation plan Tier
+# 1): txbl_pens_dist pools employer-funded DB benefits with elective-
+# deferral DC distributions and employee-contribution portions, which are
+# not separable in the PUF. The full pool is subtracted [overstates the
+# exclusion -- i.e., understates HI tax -- for 401(k)-type distributions
+# and contributory-plan employee shares; TAXSIM and PolicyEngine face the
+# same input and make the same call, so cross-model comparisons are clean].
+# IRA distributions stay taxable (no ira_sub_share)
+pension_sub_share:
+  value: 1
+  reference: 'N-11 line 13 "Pensions taxed federally but not taxed by Hawaii"; instructions (2017 booklet p.14, same section every year through the 2025 booklet p.13): public and non-contributory employer plan distributions "by reason of retirement, disability, or death" are excluded; rollovers keep the source plan''s character'
+
+documented_not_modeled:
+  cola_ers_wage_differences:
+    reference: 'N-11 line 8: differences in state/federal wages from federal COLA payments and Employees'' Retirement System contributions (an addition). Federal-employee COLA status and ERS pick-ups are unobservable [one-sided: understates HI AGI for the affected federal/state employees]'
+  moving_expense_deduction:
+    reference: 'Hawaii did not adopt the TCJA suspension of the moving-expense deduction/exclusion (N-11 line 18 subtraction via Form N-139, 2018-2025 booklets "Act 27, SLH 2018" notes). Moving expenses are not a PUF variable [overstates HI tax for movers; small]'
+  military_reserve_pay_exclusion:
+    reference: 'N-11 line 15: first ~$6,410 (2017) to $8,636 (2025) of military reserve or Hawaii National Guard duty pay is subtracted (Act 197 SLH 2004, E-5-over-8 formula; each booklet p.2). Reserve status is unobservable'
+  individual_housing_account:
+    reference: 'N-11 line 16: payments into a Hawaii individual housing account are subtracted (HRS 235-5.5). Contributions are unobservable'
+  exceptional_trees_deduction:
+    reference: 'N-11 line 17: up to $3,000 per exceptional tree for qualified maintenance (HRS 235-19). Unobservable and tiny'
+  contributory_pension_schedule_j:
+    reference: 'Schedule J apportions contributory private-plan distributions between the excluded employer-funded share and the taxable employee-funded share. Covered by the pension_sub_share approximation above'
+  irc_529_k12_addback:
+    reference: 'Hawaii treats K-12 tuition paid from a 529 plan as a nonqualified distribution (earnings taxable). Distribution purpose is unobservable'

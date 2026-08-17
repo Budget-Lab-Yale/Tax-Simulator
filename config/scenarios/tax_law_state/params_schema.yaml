@@ -51,6 +51,10 @@ scalars:
   st_agi.pension_cap_incl_ss: 0
   st_agi.pension_excl_incl_ira: 1   # 0 = IRA distributions ineligible (MD)
   st_agi.pension_excl_agi_limit: .inf   # AGI cliff for the exclusion (WI $5k at 65+)
+  # Linear phase-out of the pension exclusion on federal AGI (ME 5122(2)(M-3)
+  # TY2025+: reduced by (FAGI - threshold)/width to zero); .inf = none
+  st_agi.pension_excl_po_thresh: .inf
+  st_agi.pension_excl_po_width: 1
   st_agi.pension_cap_less_gross_ss: 0   # cap reduced by GROSS SS received (MD)
   st_agi.sub_ui_agi_limit: .inf   # AGI cliff for the UI subtraction (MD RELIEF)
   # Two-income married couple subtraction (MD): the lesser earner's
@@ -154,6 +158,11 @@ scalars:
   st_ded.item_coupling: 0
   st_ded.item_fed_gate: 0   # itemizing allowed ONLY for federal itemizers, best-of election (MD)
   st_ded.salt_addback: 0
+  # Federal-AGI threshold at/above which the salt_addback exclusion of
+  # income/sales taxes applies (HI Worksheet A-2: the state-income-tax
+  # deduction is denied only at FAGI >= 100k/150k/200k). -.inf = the
+  # exclusion is unconditional, preserving every other salt_addback state
+  st_ded.salt_addback_agi_thresh: -.inf
   st_ded.item_component_style: 0
   st_ded.item_include_medical: 0
   st_ded.item_include_mortgage: 0
@@ -172,6 +181,7 @@ scalars:
   st_ded.pease_rate2: 0        # second tier rate (MN 0.10)
   st_ded.pease_flat_thresh: .inf   # above: flat 80% reduction (MN $1M-indexed)
   st_ded.pease_incl_std: 0     # limitation also reduces the standard deduction (MN)
+  st_ded.pease_agi_base: 1     # limitation income base, st_income_base enum (HI: 2 = state AGI)
   # Sliding standard deduction (WI 71.05(22)): reduced std_po_rate per
   # dollar of the enum income base above the threshold, to zero
   st_ded.std_po_thresh: .inf
@@ -257,6 +267,15 @@ scalars:
   st_exempt.dep_child_addl: {default: 0, units: per_dependent}   # additional exemption per dependent child (IN $1,500)
   st_exempt.dep_child_max_age: 0   # max tracked dependent age for the child add-on (IN: 23, proxying under-19-or-student-under-24)
 
+  # Alternative maximum rate on net capital gain (HI 235-51(f): the Tax on
+  # Capital Gains Worksheet taxes gain above a filing-status floor at 7.25%
+  # when that beats the schedule). The base is kg_pref (the IRC 1222 net
+  # capital gain -- qualified dividends excluded, matching the HI worksheet).
+  # .inf = no alternative rate. Assumes no recapture, base-amount, or
+  # combined-separate machinery in the same state (like combined_sep)
+  st_ord.kg_alt_rate: .inf
+  st_ord.kg_alt_floor: {default: 0, units: per_return}
+
   # surtax.yaml (post-nonrefundable-credit taxable-income surtax)
   st_surtax.taxable_income_threshold: .inf
   st_surtax.taxable_income_rate: 0
@@ -323,6 +342,10 @@ scalars:
   st_credits.ctc_po_thresh: .inf
   st_credits.ctc_po_rate: 0
   st_credits.ctc_po_base: 1   # st_income_base enum (UT style 3 uses 3 = MAGI proxy)
+  # Step size for the style-1/2 stepped phase-out; the per-step reduction is
+  # ctc_po_rate x ctc_po_step (ME 2025 DETC: $20 per $500 -> rate 0.04, step
+  # 500; NY/VT/ME-2018 use the default $1,000)
+  st_credits.ctc_po_step: 1000
   # 0/1: reduce the PER-CHILD amount by the phase-out and then multiply by the
   # child count (VT's published CTC table works that way -- see source_packets/
   # vt.md), rather than reducing the aggregate credit once. Only differs once
@@ -337,6 +360,10 @@ scalars:
   st_credits.ctc_pct_of_eitc: 0
   st_credits.ctc_max_age: 16
   st_credits.cdctc_match: 0
+  # Cap on the REFUNDABLE portion of the care credit (ME 5218: "refundable
+  # up to $500", remainder nonrefundable). .inf with cdctc_refundable = 1
+  # keeps a fully refundable credit; irrelevant when cdctc_refundable = 0
+  st_credits.cdctc_ref_cap: .inf
   # 0/1: the child credit and the child/dependent care credit are ALTERNATIVES,
   # the taxpayer claiming whichever is larger (OK 68 O.S. 2357.43 grants the
   # greater of its two federal matches), not both. The losing leg is zeroed so
@@ -348,6 +375,14 @@ scalars:
   st_credits.cdctc_rate_floor: 0
   st_credits.cdctc_rate_po_per_1k: 0
   st_credits.cdctc_rate_po_start: .inf
+  # Stepped own-rate reduction (HI Schedule X: the rate falls 0.01 per
+  # $5,000 band of Hawaii AGI over $25,000, floored at 15%). When finite,
+  # cdctc_rate_po_per_1k is read as the PER-STEP decrement instead of a
+  # per-$1,000 slope; .inf keeps the continuous slide (NY style 2)
+  st_credits.cdctc_rate_po_step: .inf
+  # 0/1: cap style-2 expenses at each spouse's earned income (the federal
+  # 2441 rule, which HI Schedule X carries; NY 2026 is encoded without it)
+  st_credits.cdctc_expense_ei_limit: 0
   st_credits.prop_tax_credit_rate: 0
   st_credits.prop_tax_credit_rate_cap: .inf   # cap on the rate-style credit (WI $300)
   st_credits.credit_agi_limit: .inf
@@ -450,6 +485,24 @@ scalars:
   st_credits.percap_amount: {default: 0, units: per_person}
   st_credits.percap_aged_addl: {default: 0, units: per_instance}
   st_credits.percap_refundable: 1
+  # Household base credit from a dense published table (ME sales tax
+  # fairness credit, 5213-A): a per-return refundable amount keyed by
+  # filing status and capped dependent count, with the stepped income
+  # phase-out baked into the table rows (credit_tables.csv, credit_id
+  # stfc). MFS ineligibility is encoded by omitting filing-status-3 rows.
+  # The income concept is the enum base plus optional add-backs for
+  # nontaxable Social Security and exempt interest (ME's broad "total
+  # income"; loss add-backs are a documented approximation)
+  st_credits.stfc_income_base: 1
+  st_credits.stfc_add_nontax_ss: 0
+  st_credits.stfc_add_exempt_int: 0
+  st_credits.stfc_refundable: 1
+  # Income base for the BANDED per-person amount published as a dense table
+  # (HI Form N-311 food/excise credit: per-exemption amount by federal-AGI
+  # band, in the state's credit_tables.csv under credit_id percap_credit).
+  # The table amount adds to the flat percap_amount; a state without table
+  # rows gets zero from the lookup
+  st_credits.percap_table_income_base: 1
   # Combined child + working-family credit (MN M1CWFC, 2023+): CTC per
   # young child + a small earned-income component + fixed older-child
   # amounts, with ONE joint phase-out on max(earned income, AGI)

@@ -93,6 +93,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.item_coupling',   # (int) 0 independent, 1 must match federal
     'st_ded.item_fed_gate',   # (int) federal itemizers only, best-of election (MD)
     'st_ded.salt_addback',    # (int) whether state income tax is excluded/added back
+    'st_ded.salt_addback_agi_thresh', # (dbl) FAGI at/above which the exclusion applies (HI; -Inf = always)
     'st_ded.item_component_style', # (int) 1 = select components; 2 = federal amount
     'st_ded.item_include_medical',
     'st_ded.item_include_mortgage',
@@ -111,6 +112,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.pease_rate2',     # (dbl) second-tier rate (MN 0.10)
     'st_ded.pease_flat_thresh', # (dbl) AGI above which the flat 80% cut applies
     'st_ded.pease_incl_std',  # (int) limitation also reduces the standard deduction
+    'st_ded.pease_agi_base',  # (int) limitation income base (st_income_base enum; HI = state AGI)
     'st_ded.std_po_thresh',   # (dbl) sliding std deduction phase-out start (WI)
     'st_ded.std_po_rate',     # (dbl) reduction per dollar above the threshold
     'st_ded.std_po_base',     # (int) phase-out income base (st_income_base enum)
@@ -162,6 +164,10 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
   # Sliding standard deduction phase-out income base (WI: state AGI)
   std_po_income_v = st_income_base(tax_unit, tax_unit$st_ded.std_po_base)
 
+  # Pease-style limitation income base (default federal AGI; HI computes its
+  # worksheet on Hawaii AGI)
+  pease_income_v = st_income_base(tax_unit, tax_unit$st_ded.pease_agi_base)
+
   tax_unit %>%
     mutate(
 
@@ -170,12 +176,15 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       #------------------------------------------------
 
       # Income-based limitation amount shared by the itemized and (where
-      # flagged) standard deductions: 3% of AGI above the threshold, plus a
-      # second-tier rate above thresh2 (MN 2023+ two-tier structure); the
-      # 80% cap and the flat-80% override are applied at each use
-      pease_income_red = 0.03 * pmax(0, pmin(agi, st_ded.pease_thresh2) -
+      # flagged) standard deductions: 3% of the enum income base above the
+      # threshold, plus a second-tier rate above thresh2 (MN 2023+ two-tier
+      # structure); the 80% cap and the flat-80% override are applied at
+      # each use. The base defaults to federal AGI (MN); HI computes its
+      # worksheet on Hawaii AGI (pease_agi_base = 2)
+      pease_income = pease_income_v,
+      pease_income_red = 0.03 * pmax(0, pmin(pease_income, st_ded.pease_thresh2) -
                                         st_ded.pease_thresh) +
-                         st_ded.pease_rate2 * pmax(0, agi - st_ded.pease_thresh2),
+                         st_ded.pease_rate2 * pmax(0, pease_income - st_ded.pease_thresh2),
 
       n_std_aged = (age1 >= 65) + (filing_status == 2 & !is.na(age2) & age2 >= 65),
       n_std_blind = coalesce(blind1, 0) +
@@ -214,7 +223,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # 80% maximum reduction, flat 80% above the flat threshold)
       st_std_ded = if_else(
         st_ded.pease == 1 & st_ded.pease_incl_std == 1,
-        if_else(agi > st_ded.pease_flat_thresh,
+        if_else(pease_income > st_ded.pease_flat_thresh,
                 0.20 * st_std_ded,
                 pmax(0.20 * st_std_ded, st_std_ded - pease_income_red)),
         st_std_ded
@@ -249,11 +258,14 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
 
       # State itemized base: pre-limitation federal itemized, SALT component
       # replaced by uncapped property taxes (income/sales excluded where
-      # added back)
+      # added back). The exclusion is unconditional by default; a state
+      # that denies the income/sales-tax deduction only above an income
+      # threshold (HI Worksheet A-2, federal AGI) encodes the threshold
       st_item_default =
         item_ded_ex_limits_potential - salt_item_ded_potential +
         salt_prop + salt_pers +
-        if_else(st_ded.salt_addback == 1, 0, salt_inc_sales),
+        if_else(st_ded.salt_addback == 1 &
+                  agi >= st_ded.salt_addback_agi_thresh, 0, salt_inc_sales),
       st_item_components =
         st_ded.item_include_medical * med_item_ded_potential +
         st_ded.item_include_mortgage * mort_int_item_ded_potential +
@@ -282,7 +294,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
                               inv_int_item_ded_potential -
                               casualty_item_ded_potential),
       pease_red     = if_else(st_ded.pease == 1,
-                              if_else(agi > st_ded.pease_flat_thresh,
+                              if_else(pease_income > st_ded.pease_flat_thresh,
                                       0.80 * pease_nonprot,
                                       pmin(pease_income_red,
                                            0.80 * pease_nonprot)),
@@ -311,8 +323,34 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       ),
       st_item_lim = pmax(0, st_item_lim - item_limit_red),
 
-      # High-income itemized limitation (NY 615(f)): first-tier share phased
-      # over the width above the threshold, second tier likewise
+      # FLAT-DOLLAR cap on the itemized deduction (OK 68 O.S. 2358(E)(3)(b):
+      # "Oklahoma itemized deductions are limited to, and may not exceed,
+      # $17,000. Charitable contributions and medical expenses are not subject
+      # to the $17,000 limit"; ME Schedule 2 line 5, medical exempt). Applied
+      # BEFORE the share-based phase-out below because that is the ME
+      # worksheet order (the cap sits at Schedule 2 line 5; the line-17
+      # phase-out then reduces the capped total) -- behavior-preserving for
+      # OK (no share-based phase-out) and NY (no flat cap). The exempt
+      # components are held out, the remainder is capped, and the two are
+      # recombined -- so the result never exceeds the pre-cap total.
+      # Default .inf = no cap
+      item_flat_cap_exempt = pmin(
+        st_ded.item_flat_cap_excl_medical *
+          st_ded.item_include_medical * med_item_ded_potential +
+        st_ded.item_flat_cap_excl_charity *
+          st_ded.item_include_charity * char_item_ded_potential,
+        st_item_lim
+      ),
+      st_item_lim = if_else(
+        is.finite(st_ded.item_flat_cap),
+        pmin(st_ded.item_flat_cap,
+             pmax(0, st_item_lim - item_flat_cap_exempt)) + item_flat_cap_exempt,
+        st_item_lim
+      ),
+
+      # High-income itemized limitation (NY 615(f); ME's whole-deduction
+      # phase-out with share1 = 1): first-tier share phased over the width
+      # above the threshold, second tier likewise
       lim_phi1 = pmin(1, pmax(0, (st_agi - st_ded.item_limit_po_thresh) /
                                   st_ded.item_limit_po_width)),
       lim_phi2 = pmin(1, pmax(0, (st_agi - st_ded.item_limit_tier2_thresh) /
@@ -328,28 +366,6 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
         st_agi > st_ded.char_only_thresh1 ~
           st_ded.char_only_share1 * char_item_ded_potential,
         TRUE                              ~ st_item_lim
-      ),
-
-      # FLAT-DOLLAR cap on the itemized deduction (OK 68 O.S. 2358(E)(3)(b):
-      # "Oklahoma itemized deductions are limited to, and may not exceed,
-      # $17,000. Charitable contributions and medical expenses are not subject
-      # to the $17,000 limit"). Applied AFTER the income-based and share-based
-      # limitations above and BEFORE the election, since the cap can change
-      # which deduction wins. The exempt components are held out, the
-      # remainder is capped, and the two are recombined -- so the result never
-      # exceeds the pre-cap total. Default .inf = no cap
-      item_flat_cap_exempt = pmin(
-        st_ded.item_flat_cap_excl_medical *
-          st_ded.item_include_medical * med_item_ded_potential +
-        st_ded.item_flat_cap_excl_charity *
-          st_ded.item_include_charity * char_item_ded_potential,
-        st_item_ded
-      ),
-      st_item_ded = if_else(
-        is.finite(st_ded.item_flat_cap),
-        pmin(st_ded.item_flat_cap,
-             pmax(0, st_item_ded - item_flat_cap_exempt)) + item_flat_cap_exempt,
-        st_item_ded
       ),
 
       # Election: independent choice takes the larger; coupled follows the

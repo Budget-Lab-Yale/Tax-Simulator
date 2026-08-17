@@ -35,7 +35,11 @@ st_credits_household_req_vars = c(
   'st_credits.prop_tax_credit_po_rate',
   'st_credits.prop_tax_credit_restrict_aged_dep',
   'st_credits.percap_amount',
-  'st_credits.percap_aged_addl'
+  'st_credits.percap_aged_addl',
+  'st_credits.percap_table_income_base',
+  'st_credits.stfc_income_base',
+  'st_credits.stfc_add_nontax_ss',
+  'st_credits.stfc_add_exempt_int'
 )
 
 
@@ -213,10 +217,49 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
   # filer. Dependent filers are ineligible (their amount is claimed on the
   # claiming return via n_dep). Part-year residence and the SNAP-months
   # proration are unobserved (documented known-differences); refundability
-  # is split in calc_st_credits via percap_refundable
+  # is split in calc_st_credits via percap_refundable.
+  #
+  # A state whose per-person amount is a published income-banded table
+  # (HI Form N-311 food/excise credit: per-exemption amount by federal-AGI
+  # band, filing-status keyed) carries it in credit_tables.csv under
+  # credit_id percap_credit; the lookup returns zero outside the bands
+  # (which encodes the eligibility ceiling) and zero for states without
+  # rows. The banded amount counts PERSONS -- self, spouse, dependents --
+  # so the aged add-on does not multiply it (HI counts people, not
+  # exemptions; the flat percap_aged_addl remains ID-only)
+  percap_table_income = st_income_base(
+    tax_unit, tax_unit$st_credits.percap_table_income_base
+  )
+  percap_table_amt = lookup_state_credit_table(
+    floor(percap_table_income + 0.5), rep(0L, n), credit_tables,
+    'percap_credit', filing_status = tax_unit$filing_status
+  )
   st_percap_credit = (tax_unit$dep_status != 1) * (
-    tax_unit$st_credits.percap_amount * (n_taxpayers + tax_unit$n_dep) +
+    (tax_unit$st_credits.percap_amount + percap_table_amt) *
+      (n_taxpayers + tax_unit$n_dep) +
     tax_unit$st_credits.percap_aged_addl * n_aged
+  )
+
+  #--------------------------------------------------------------------
+  # Household base credit from a dense table (ME sales tax fairness
+  # credit, 36 M.R.S. 5213-A)
+  #--------------------------------------------------------------------
+
+  # Per-return amount keyed by filing status and capped dependent count,
+  # with the stepped phase-out transcribed into the table's income bands
+  # (credit_tables.csv, credit_id stfc). MFS ineligibility is encoded by
+  # omitting filing-status-3 rows; dependent filers are ineligible. The
+  # income concept is the enum base plus optional add-backs for
+  # NONTAXABLE Social Security and exempt interest, approximating ME's
+  # broad "total income" (loss and above-the-line add-backs are
+  # documented approximations)
+  stfc_income = st_income_base(tax_unit, tax_unit$st_credits.stfc_income_base) +
+    tax_unit$st_credits.stfc_add_nontax_ss *
+      pmax(0, tax_unit$gross_ss - tax_unit$txbl_ss) +
+    tax_unit$st_credits.stfc_add_exempt_int * tax_unit$exempt_int
+  st_stfc = (tax_unit$dep_status != 1) * lookup_state_credit_table(
+    floor(stfc_income + 0.5), pmin(tax_unit$n_dep, 3L), credit_tables,
+    'stfc', filing_status = tax_unit$filing_status
   )
 
   list(
@@ -226,6 +269,7 @@ st_credits_household = function(tax_unit, credit_tables = NULL) {
     family_credit_rate = family_credit_rate,
     pct_credit_rate    = pct_credit_rate,
     prop_credit        = prop_credit,
-    st_percap_credit   = st_percap_credit
+    st_percap_credit   = st_percap_credit,
+    st_stfc            = st_stfc
   )
 }

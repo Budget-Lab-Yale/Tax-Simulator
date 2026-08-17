@@ -11,7 +11,7 @@ return_vars$calc_st_credits = c('st_hh_credit', 'st_eitc', 'st_ctc',
                                 'st_senior_credit', 'st_jfc',
                                 'st_forgive_credit', 'st_percap_credit',
                                 'st_marriage_credit', 'st_twoearner_credit',
-                                'st_item_credit', 'st_char_credit',
+                                'st_item_credit', 'st_char_credit', 'st_stfc',
                                 'st_credits_nonref', 'st_credits_ref')
 
 
@@ -112,6 +112,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'item_ded',          # (dbl)  federal itemized deductions post-limitation
     'std_ded',           # (dbl)  federal standard deduction (UT ded credit)
     'itemizing',         # (bool) whether unit itemizes federally
+    'gross_ss',          # (dbl)  gross Social Security benefits (ME STFC income)
     'txbl_ss',           # (dbl)  taxable Social Security benefits (UT SS credit)
     'txbl_pens_dist',    # (dbl)  taxable pension distributions (OH retirement credit)
     'txbl_ira_dist',     # (dbl)  taxable IRA distributions (OH retirement credit)
@@ -159,7 +160,9 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.eitc_liab_cap_base',
     'st_credits.ctc_refundable',
     'st_credits.ctc_cdctc_greater_of', # (0/1) child and care credits are alternatives
+    'st_credits.cdctc_ref_cap',        # (dbl) cap on the refundable care-credit portion (ME $500)
     'st_credits.percap_refundable',
+    'st_credits.stfc_refundable',
     'st_credits.mc_style',
     'st_credits.mc_min_lesser_income',
     'st_credits.mc_min_joint_txbl',
@@ -221,10 +224,15 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                              0)
   st_pct_credit = hh$pct_credit_rate * pmax(0, tax_unit$st_tax_pre_credit)
 
+  # Refundable/nonrefundable split of the care credit: the refundable
+  # portion is capped at cdctc_ref_cap (ME 5218 "refundable up to $500"),
+  # remainder nonrefundable; .inf keeps the all-or-nothing split
+  cdctc_ref_part = tax_unit$st_credits.cdctc_refundable *
+                   pmin(care$st_cdctc, tax_unit$st_credits.cdctc_ref_cap)
+
   # Remaining tax after the credits that precede the JFC/EITC in the OH
   # ordering (5747.98: retirement -> senior -> CDCTC -> exemption credit)
-  cdctc_nonref_part = care$st_cdctc *
-                      (1 - tax_unit$st_credits.cdctc_refundable)
+  cdctc_nonref_part = care$st_cdctc - cdctc_ref_part
   remaining_pre_jfc = pmax(
     0,
     tax_unit$st_tax_pre_credit - senior$st_retire_credit -
@@ -368,6 +376,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     st_twoearner_credit = st_twoearner_credit,
     st_item_credit    = st_item_credit,
     st_char_credit    = st_char_credit,
+    st_stfc           = hh$st_stfc,
 
     st_credits_nonref = hh$st_hh_credit + hh$prop_credit + child$st_dep_credit +
                         st_family_credit + hh$st_exempt_credit + st_pct_credit +
@@ -378,21 +387,23 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                         st_char_credit +
                         hh$st_percap_credit *
                           (1 - tax_unit$st_credits.percap_refundable) +
+                        hh$st_stfc *
+                          (1 - tax_unit$st_credits.stfc_refundable) +
                         st_eitc * (1 - earn$st_eitc_ref_share) +
                         child$st_ctc *
                           (1 - tax_unit$st_credits.ctc_refundable) +
                         earn$st_earned_credit *
                           (1 - tax_unit$st_credits.earned_credit_refundable) +
-                        care$st_cdctc *
-                          (1 - tax_unit$st_credits.cdctc_refundable),
+                        cdctc_nonref_part,
     st_credits_ref    = st_eitc * earn$st_eitc_ref_share +
                         child$st_ctc * tax_unit$st_credits.ctc_refundable +
                         earn$st_earned_credit *
                           tax_unit$st_credits.earned_credit_refundable +
                         earn$st_yctc +
-                        care$st_cdctc * tax_unit$st_credits.cdctc_refundable +
+                        cdctc_ref_part +
                         hh$st_percap_credit *
-                          tax_unit$st_credits.percap_refundable
+                          tax_unit$st_credits.percap_refundable +
+                        hh$st_stfc * tax_unit$st_credits.stfc_refundable
   ) %>%
     select(all_of(return_vars$calc_st_credits)) %>%
     return()

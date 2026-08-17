@@ -13,6 +13,8 @@ st_credits_care_req_vars = c(
   'st_credits.cdctc_rate_floor',
   'st_credits.cdctc_rate_po_per_1k',
   'st_credits.cdctc_rate_po_start',
+  'st_credits.cdctc_rate_po_step',
+  'st_credits.cdctc_expense_ei_limit',
   'st_credits.cdctc_share_income_base',
   'st_credits.cdctc_cap_amount',
   'st_credits.cdctc_cap_thresh',
@@ -60,16 +62,36 @@ st_credits_care = function(tax_unit) {
     )
   }
 
+  # Own-rate slide: continuous per-$1,000 (NY) or, where a step is encoded,
+  # a stepped reduction of cdctc_rate_po_per_1k per step or fraction thereof
+  # (HI Schedule X: 0.01 per $5,000 band of Hawaii AGI over $25,000)
+  cdctc_rate_red = if_else(
+    is.finite(tax_unit$st_credits.cdctc_rate_po_step),
+    st_step_reduction(tax_unit$st_agi,
+                      tax_unit$st_credits.cdctc_rate_po_start,
+                      tax_unit$st_credits.cdctc_rate_po_step,
+                      tax_unit$st_credits.cdctc_rate_po_per_1k),
+    tax_unit$st_credits.cdctc_rate_po_per_1k *
+      pmax(0, tax_unit$st_agi -
+              tax_unit$st_credits.cdctc_rate_po_start) / 1000
+  )
   cdctc_rate2 = pmax(tax_unit$st_credits.cdctc_rate_floor,
-                     tax_unit$st_credits.cdctc_rate_max -
-                     tax_unit$st_credits.cdctc_rate_po_per_1k *
-                     pmax(0, tax_unit$st_agi -
-                             tax_unit$st_credits.cdctc_rate_po_start) / 1000)
+                     tax_unit$st_credits.cdctc_rate_max - cdctc_rate_red)
+
+  # Style-2 expenses capped at each spouse's earned income where flagged
+  # (the federal 2441 rule, carried by HI Schedule X; NY 2026 encoded
+  # without it, so the default leaves it off)
+  cdctc_ei_cap = if_else(
+    tax_unit$st_credits.cdctc_expense_ei_limit == 1,
+    pmax(0, if_else(tax_unit$filing_status == 2,
+                    pmin(tax_unit$ei1, tax_unit$ei2), tax_unit$ei1)),
+    Inf
+  )
   cdctc_ny = case_when(
     tax_unit$st_credits.cdctc_style == 1 ~
       cdctc_ny_share * (tax_unit$cdctc_nonref + tax_unit$cdctc_ref),
     tax_unit$st_credits.cdctc_style == 2 & n_care_v > 0 ~
-      cdctc_rate2 * pmin(tax_unit$care_exp, cdctc_cap_vec),
+      cdctc_rate2 * pmin(tax_unit$care_exp, cdctc_cap_vec, cdctc_ei_cap),
     TRUE ~ 0
   )
   st_cdctc = tax_unit$st_credits.cdctc_match *

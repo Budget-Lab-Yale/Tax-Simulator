@@ -1,9 +1,19 @@
 # State income tax workstream — status
 
-**As of 2026-08-11** (branch `state-tax`). Current counts: **30 jurisdictions
-encoded** (18 broad-IIT + NH/TN narrow + WA excise + 6 zero-tax stubs), **27
-enabled** for `states=all` (CA/SC/VA conformity-gated); 21 jurisdictions not
-started. Companion docs in this directory:
+**As of 2026-08-17** (branch `state-tax`). Current counts: **41 jurisdictions
+encoded** (29 broad-IIT + NH/TN narrow + WA excise + 6 zero-tax stubs), **38
+enabled** for `states=all` (CA/SC/VA conformity-gated); 10 jurisdictions not
+started (MO/OR/AL behind the fed_tax_ded component; NJ/MA/AR/MS own-base;
+IA/LA/MT multi-regime). **The R6 batch-C transcription set is COMPLETE**:
+KS/DE/RI/WV/NM/VT/OK/DC/NE (2026-08-13/-16) and HI/ME (2026-08-17, closing
+the batch — HI added the 7.25% alternative capital-gains machinery, the
+threshold-gated SALT disallowance, the banded per-person credit table and
+the Act 46/163 enacted future schedules; ME added the pension phase-out,
+CDCC refundable-cap and ctc_po_step generics, the reordered cap-then-
+phase-out itemized flow, and the sales tax fairness credit as a dense
+table — see source_packets/hi.md and me.md; both corrected review-§2.1
+assumptions, notably that ME's EITC has been refundable since 2016 and its
+STFC is income-keyed, not Tier-1-blocked). Companion docs in this directory:
 `state_tax_implementation_plan.md` (the design of record, amended in place),
 `STATE_ENCODING_REVIEW_2026_08_11.md` (coded-states review: holes,
 archetypes, completion roadmap),

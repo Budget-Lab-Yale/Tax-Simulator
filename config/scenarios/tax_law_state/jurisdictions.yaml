@@ -42,6 +42,15 @@ FL:
 GA:
   profile: broad_iit
   enabled: true
+# HI conforms to the IRC as of a date updated by an annual conformity act
+# (HRS 235-2.3; Dec 31 2024 by Act 123 SLH 2025), with standing decouplings
+# that sit below the federal-AGI start or are carried by Hawaii-side
+# parameters (own standard deduction/exemptions/itemized rules, no QBI).
+# Modeled as rolling (group 0), the ID/WV treatment; the retained federal
+# moving-expense deduction is documented in baseline/hi/agi.yaml
+HI:
+  profile: broad_iit
+  enabled: true
 # ID re-enacts IRC conformity every session, retroactively to Jan 1 of (or
 # following) the tax year -- verified in every packet 2017-2025, incl. TY2025
 # conforming to the Jan 1, 2026 IRC (capturing OBBBA). Unlike SC's frozen
@@ -70,6 +79,15 @@ KY:
 # tax (probe-verified); PolicyEngine's state_income_tax INCLUDES it, so the
 # harness requests PE's state-only md_income_tax (pe_state_tax.py)
 MD:
+  profile: broad_iit
+  enabled: true
+# ME is fixed-date conformity advanced by act (36 M.R.S. 111(1-A); Dec 31
+# 2024 for TY2025 -- OBBBA not conformed, pending the Jan 2026 session).
+# Modeled as rolling (group 0), the MN/VT treatment: the unconformed items
+# are below the federal-AGI start or business-side, Maine let the ARPA
+# TY2020 UI exclusion flow through, and the federally-pegged standard
+# deduction is carried as transcribed values (baseline/me/ded.yaml)
+ME:
   profile: broad_iit
   enabled: true
 MI:

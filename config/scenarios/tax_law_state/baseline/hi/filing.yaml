@@ -1,0 +1,53 @@
+---
+# Hawaii: filing requirement (N-11 instructions "Who Must File", p.4 of each
+# booklet). A resident must file when gross income exceeds a threshold equal
+# to the standard deduction plus the exemption amounts for the status --
+# published as fixed dollar amounts that stepped with the Act 46 standard-
+# deduction increase in TY2024 and will step again with the later ramp
+# years. Encoded as the under-65 published amounts against the state income
+# base (the aged add-on to the threshold is not representable; the refund/
+# liability branch of st_filer catches aged filers with any liability).
+
+filing_status_mapper:
+  req_income_thresh:
+    '1': req_single
+    '2': req_joint
+    '3': req_single
+    '4': req_head
+
+req_type:
+  value: 2
+  reference: 'N-11 "Who Must File" dollar thresholds (2017 booklet p.4; 2024/2025 booklets p.4)'
+req_single:
+  value:
+    '2017': 3344
+    '2024': 5544
+    '2026': 9144
+    '2028': 10144
+    '2030': 11144
+    '2031': 13144
+  reference: 'Single and MFS under 65: $3,344 (2017-2023), $5,544 (2024-2025, printed). The thresholds equal the standard deduction plus $1,144 per exemption, so the 2026+ values are DERIVED from the enacted Act 46 standard-deduction ramp, not yet printed'
+req_joint:
+  value:
+    '2017': 6688
+    '2024': 11088
+    '2026': 18288
+    '2028': 20288
+    '2030': 22288
+    '2031': 26288
+  reference: 'MFJ both under 65: $6,688 (2017-2023), $11,088 (2024-2025, printed); 2026+ derived as std + 2 x 1,144'
+req_head:
+  value:
+    '2017': 4356
+    '2024': 7568
+    '2026': 13144
+    '2028': 14644
+    '2030': 16144
+    '2031': 19144
+  reference: 'Head of household under 65: $4,356 (2017-2023), $7,568 (2024-2025, printed); 2026+ derived as std + 1,144'
+req_income_thresh_dep:
+  value: 500
+  reference: 'Dependents: the filing threshold is the dependent''s standard deduction (the $500 floor at zero earned income)'
+req_if_fed_filer:
+  value: 0
+  reference: 'Hawaii''s requirement is its own income test -- a federal filer under the Hawaii thresholds need not file an N-11 (booklet p.4); anyone doing business in Hawaii must file regardless of income (not modeled)'

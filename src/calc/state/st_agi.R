@@ -127,6 +127,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.pension_cap_incl_ss',   # (int) whether taxable SS counts within the cap
     'st_agi.pension_excl_incl_ira', # (int) whether IRA distributions are eligible (MD 0)
     'st_agi.pension_excl_agi_limit', # (dbl) AGI cliff for the exclusion (WI)
+    'st_agi.pension_excl_po_thresh', # (dbl) linear phase-out FAGI threshold (ME 2025+; Inf = none)
+    'st_agi.pension_excl_po_width',  # (dbl) linear phase-out width (ME $100k/$50k MFS)
     'st_agi.pension_cap_less_gross_ss', # (int) cap reduced by GROSS SS received (MD)
     'st_agi.sub_ui_agi_limit',      # (dbl) AGI cliff for the UI subtraction (MD RELIEF)
     'st_agi.twoearner_sub_max',     # (dbl) two-income couple subtraction cap (MD)
@@ -414,6 +416,15 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                               pmin(txbl_ss * (1 - ss_full_share), pens_cap),
                               0),
       st_sub_pens_raw = pmin(pens_inc, pmax(0, pens_cap - st_sub_ss_cap)),
+
+      # Linear phase-out of the pension exclusion above a federal-AGI
+      # threshold (ME 36 M.R.S. 5122(2)(M-3), TY2025+: the non-military
+      # deduction is reduced by (FAGI - threshold) / width, to zero; the
+      # worksheet's 4-decimal ratio rounding is a documented approximation).
+      # .inf threshold = no phase-out
+      st_sub_pens_raw = st_sub_pens_raw *
+        pmin(1, pmax(0, 1 - (agi - st_agi.pension_excl_po_thresh) /
+                           st_agi.pension_excl_po_width)),
 
       # Senior standard deduction against ALL income (MI Tier 2/3 Michigan
       # Standard Deduction, MCL 206.30(9)(b)/(e)): a per-return amount

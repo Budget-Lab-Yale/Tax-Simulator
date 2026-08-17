@@ -1,0 +1,151 @@
+---
+# Maine: income base (Form 1040ME lines 14-16). Federal AGI start plus
+# Schedule 1A additions (non-Maine municipal interest, MainePERS pick-ups,
+# bonus-depreciation add-back) minus Schedule 1S subtractions (Social
+# Security/Railroad Retirement, the pension income deduction, U.S. bond
+# interest, state refunds, military items) = Maine adjusted gross income.
+#
+# Sources: 1040ME booklets/instructions and Schedules 1/1A/1S 2017-2025
+# (NBER mirror + maine.gov), 36 M.R.S. 5122; transcribed 2026-08-16; see
+# other/state_tax_research/source_packets/me.md.
+
+start_point:
+  value: 1
+  reference: '1040ME line 14 "Federal adjusted gross income", 2017-2025 forms; 36 M.R.S. 5121-5122'
+
+conformity_group:
+  value: 0
+  reference: '36 M.R.S. 111(1-A): fixed-date IRC conformity advanced by act (as of December 31, 2024 for TY2025; OBBBA not conformed, pending the January 2026 session). Modeled as rolling (group 0): the marquee unconformed OBBBA items sit below the federal-AGI start (deductions) or on the business side (the Schedule 1A line 10 R&E add-back), and Maine let the ARPA TY2020 unemployment exclusion flow through (no 2020 Schedule 1A add-back line). The standard deduction pegs to the federal amounts as of the conformity date and is carried here as transcribed values (see ded.yaml)'
+
+# Non-Maine municipal bond interest is added back (Schedule 1A); Maine's own
+# obligations stay exempt. The own-state share of exempt_int is unobserved,
+# so the model adds back the uniform 25% out-of-state complement
+add_exempt_int:
+  value: 1
+  reference: 'Schedule 1A income-addition modifications: interest from state and local securities other than Maine; 36 M.R.S. 5122(1)(A)'
+own_state_exempt:
+  value: 1
+  reference: 'Only non-Maine obligations are added back'
+sub_us_int:
+  value: 1
+  reference: 'Schedule 1S: interest from U.S. government obligations is subtracted (36 M.R.S. 5122(2)(A)). The U.S.-obligation share of txbl_int is unobservable, so the flag is carried and no subtraction is taken [overstates ME tax for Treasury holders]'
+sub_state_ref:
+  value: 1
+  reference: 'Schedule 1S: state income tax refunds included in federal AGI are subtracted (36 M.R.S. 5122(2)(B))'
+
+# Social Security and Railroad Retirement benefits: the federally-taxable
+# portion is fully subtracted (Schedule 1S line 3; earlier Schedule 1 line
+# 2c/2d)
+ss_sub_share:
+  value: 1
+  reference: '36 M.R.S. 5122(2)(C); Schedule 1S line 3 "Social Security and Railroad Retirement Benefits included in federal adjusted gross income", all years'
+
+# Pension income deduction (36 M.R.S. 5122(2)(M-2)/(M-3); Schedule 1S line
+# 4 worksheet). Per-person cap on eligible non-military retirement income
+# (employer plans under IRC 401(a)/403/457(b) INCLUDING 401(k), IRAs incl.
+# SEP/SIMPLE/Roth, government pensions), REDUCED by gross Social Security
+# and Railroad Retirement benefits received (worksheet line P3, "whether
+# taxable or not"). From TY2024 the cap floats at the maximum annual Social
+# Security benefit at full retirement age as of January 1 of the tax year
+# (statute (iv)) -- $45,864 printed for 2024, $48,216 for 2025 -- NOT the
+# $35,000 the superseded P.L. 2021 c. 635 schedule implied.
+#
+# DOCUMENTED APPROXIMATIONS: (1) the worksheet nets each person's own SS
+# against their own cap in separate columns; per-spouse pension/SS
+# attribution is unobserved, so the unit's combined cap nets total gross
+# benefits (the MD Worksheet 13A convention -- interior-equivalent, differs
+# at corners); (2) the spouse column applies only where the spouse
+# separately earned an eligible pension, which is unobservable -- MFJ units
+# always get both caps [overstates the deduction for one-pensioner
+# couples]; (3) pre-age-55 non-periodic distributions are excluded by
+# statute but unobservable
+pension_excl_min_age:
+  value: 0
+  reference: 'No age gate on the pension deduction (the pre-55 non-SEPP carve-out is documented, not modeled)'
+pension_excl_under65:
+  value:
+    '2017': 10000
+    '2022': 25000
+    '2023': 30000
+    '2024': 45864
+    '2025': 48216
+  i_measure:
+    '2017': .na
+    '2025': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2025
+  i_direction: 0
+  i_increment: 1
+  reference: '36 M.R.S. 5122(2)(M-2)(2)(d): $10,000 (2017-2021, printed on the 2017-2020 worksheets; 2021 by statute), $25,000 (2022, printed), $30,000 (2023), $45,864 (2024, printed on Schedule 1S line P2) and $48,216 (2025, printed) under the maximum-SS-benefit rule. CPI indexation from 2025 approximates the wage-indexed SS maximum [slightly understates the cap''s growth]'
+pension_excl_65plus:
+  value:
+    '2017': 10000
+    '2022': 25000
+    '2023': 30000
+    '2024': 45864
+    '2025': 48216
+  i_measure:
+    '2017': .na
+    '2025': cpi
+  i_base_year:
+    '2017': .na
+    '2025': 2025
+  i_direction: 0
+  i_increment: 1
+  reference: 'Same cap at every age (no aged tier)'
+pension_cap_less_gross_ss:
+  value: 1
+  reference: 'Worksheet line P3: total Social Security and Railroad Retirement benefits received, whether taxable or not, reduce the cap (line P4 = max(0, P2 - P3))'
+
+filing_status_mapper:
+  pension_excl_po_thresh:
+    '1': pens_po_thresh_single
+    '2': pens_po_thresh_joint
+    '3': pens_po_thresh_single
+    '4': pens_po_thresh_head
+  pension_excl_po_width:
+    '1': pens_po_width_full
+    '2': pens_po_width_full
+    '3': pens_po_width_half
+    '4': pens_po_width_full
+
+pens_po_thresh_single:
+  value:
+    '2017': .inf
+    '2025': 125000
+  reference: '36 M.R.S. 5122(2)(M-3) (P.L. 2025 c. 388 Pt. H), TY2025+: the non-military deduction phases out when federal AGI exceeds $125,000 single/MFS; Schedule 1S "Worksheet for Phaseout of Non-Military Pension Income Deduction". Thresholds indexed after 2025 (5403(11)) -- carried flat pending published values [overstates the phase-out slightly in out-years]'
+pens_po_thresh_joint:
+  value:
+    '2017': .inf
+    '2025': 250000
+  reference: 'Same worksheet: $250,000 married filing jointly and surviving spouses'
+pens_po_thresh_head:
+  value:
+    '2017': .inf
+    '2025': 187500
+  reference: 'Same worksheet: $187,500 heads of household'
+pens_po_width_full:
+  value:
+    '2017': 1
+    '2025': 100000
+  reference: '4-decimal ratio over a $100,000 band (linear to zero)'
+pens_po_width_half:
+  value:
+    '2017': 1
+    '2025': 50000
+  reference: '$50,000 band for married filing separately'
+
+documented_not_modeled:
+  military_retirement_full_exemption:
+    reference: '36 M.R.S. 5122(2)(M-2)(1)(b): military retirement pay is fully exempt with no cap, no SS offset and no 2025 phase-out (worksheet lines P6-P7); survivor-benefit annuities likewise (5122(2)(HH)). The military share of txbl_pens_dist is unobservable (imputation plan Tier 1) [overstates ME tax for military retirees -- their pensions get only the capped, SS-offset, phased general deduction]'
+  pre55_distribution_carveout:
+    reference: 'Distributions before age 55 that are not substantially-equal periodic payments are ineligible (tightened 9/24/2025 by P.L. 2025 c. 271 Pt. C). Early-distribution status is unobservable [understates ME tax for young-distribution units, bounded by the cap]'
+  mainepers_pickup_addback:
+    reference: 'Schedule 1A adds back MainePERS pick-up contributions (with the corresponding Schedule 1S retirement-benefit recapture). State-employee pick-ups are unobservable'
+  bonus_depreciation_addback:
+    reference: 'Maine decoupled from IRC 168(k) throughout 2017-2025 (Schedule 1A add-back + capital investment credit). The MACRS-versus-bonus difference is not tracked at tax-unit level (model-wide limitation)'
+  sub_529_contributions:
+    reference: '36 M.R.S. 5122(2)(YY), TY2023+: up to $1,000 per beneficiary of 529 contributions subtracted, AGI-gated ($100,000 single/MFS, $200,000 MFJ/HoH). Contributions are unobservable'
+  cares_business_decouplings_2020:
+    reference: 'Excess-business-loss and 163(j) 50%-ATI add-backs (2020 Schedule 1A) -- business-side, out of PUF scope'

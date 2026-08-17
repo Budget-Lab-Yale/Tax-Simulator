@@ -48,6 +48,7 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     'st_agi',                    # (dbl) state income base
     'st_txbl_inc',               # (dbl) state taxable income
     'st_bus_excess',             # (dbl) business income above the carve-out cap
+    'kg_pref',                   # (dbl) net capital gain (alternative-rate base)
     'wages1',                    # (dbl) primary wages (spouse tax adjustment)
     'wages2',                    # (dbl) secondary wages (spouse tax adjustment)
     'filing_status',             # (int) 1 single, 2 MFJ, 3 MFS, 4 HoH
@@ -57,6 +58,8 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     'blind2',                    # (bool) whether secondary filer is blind
     'st_ord.rates[]',            # (dbl) state marginal rates
     'st_ord.brackets[]',         # (dbl) state bracket lower bounds
+    'st_ord.kg_alt_rate',        # (dbl) alternative max rate on net capital gain (HI; Inf = none)
+    'st_ord.kg_alt_floor',       # (dbl) ordinary-income floor for the alternative rate (mapped)
     'st_ord.recapture_agi_start', # (dbl) recapture trigger (Inf = none)
     'st_ord.recapture_width',    # (dbl) recapture phase-in width
     'st_ord.sta_max',            # (dbl) spouse tax adjustment cap (VA; 0 = none)
@@ -147,6 +150,24 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     sched_published = st_pick_slot(base_amt, j) + m * (ti - B)
     tax_unit$st_tax_sched = if_else(is.na(sched_published),
                                     tax_unit$st_tax_sched, sched_published)
+  }
+
+  # Alternative maximum rate on net capital gain (HI 235-51(f), Tax on
+  # Capital Gains Worksheet): ordinary-taxed income is the GREATER of
+  # (TI - net capital gain) and the filing-status floor; the remainder is
+  # taxed at kg_alt_rate, and the unit pays the smaller of that and the
+  # regular schedule tax. kg_pref is the IRC 1222 net capital gain
+  # (qualified dividends excluded), matching the worksheet's smaller-of
+  # LTCG/total-gain construction. Assumes no recapture/base-amount/
+  # combined-separate machinery in the same state (params_schema.yaml)
+  if (any(is.finite(tax_unit$st_ord.kg_alt_rate))) {
+    kg_alt_ord = pmin(ti, pmax(ti - pmax(0, tax_unit$kg_pref),
+                               tax_unit$st_ord.kg_alt_floor))
+    kg_alt_tax = sched_tax_at(kg_alt_ord) +
+                 tax_unit$st_ord.kg_alt_rate * (ti - kg_alt_ord)
+    tax_unit$st_tax_sched = if_else(is.finite(tax_unit$st_ord.kg_alt_rate),
+                                    pmin(tax_unit$st_tax_sched, kg_alt_tax),
+                                    tax_unit$st_tax_sched)
   }
 
   tax_unit %>%

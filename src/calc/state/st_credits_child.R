@@ -24,6 +24,7 @@ st_credits_child_req_vars = c(
   'st_credits.ctc_po_thresh',
   'st_credits.ctc_po_rate',
   'st_credits.ctc_po_base',
+  'st_credits.ctc_po_step',    # (dbl) stepped phase-out increment (ME 2025: 500)
   'st_credits.ctc_po_per_child',  # (0/1) phase out each child's amount separately
   'st_credits.ctc_po_round_up',   # (0/1) style-2 stepped excess: whole partial steps
   'st_credits.ctc_pct_of_eitc',
@@ -179,11 +180,15 @@ st_credits_child = function(tax_unit, st_eitc) {
                          tax_unit$st_credits.ctc_max_child_age)
   ctc_po_income = st_income_base(tax_unit, tax_unit$st_credits.ctc_po_base)
   ctc_po_up   = st_step_reduction(ctc_po_income,
-                                  tax_unit$st_credits.ctc_po_thresh, 1000,
-                                  tax_unit$st_credits.ctc_po_rate * 1000)
+                                  tax_unit$st_credits.ctc_po_thresh,
+                                  tax_unit$st_credits.ctc_po_step,
+                                  tax_unit$st_credits.ctc_po_rate *
+                                    tax_unit$st_credits.ctc_po_step)
   ctc_po_down = st_step_reduction(ctc_po_income,
-                                  tax_unit$st_credits.ctc_po_thresh, 1000,
-                                  tax_unit$st_credits.ctc_po_rate * 1000,
+                                  tax_unit$st_credits.ctc_po_thresh,
+                                  tax_unit$st_credits.ctc_po_step,
+                                  tax_unit$st_credits.ctc_po_rate *
+                                    tax_unit$st_credits.ctc_po_step,
                                   round_up = FALSE)
   ctc_po_cont = tax_unit$st_credits.ctc_po_rate *
                 pmax(0, ctc_po_income - tax_unit$st_credits.ctc_po_thresh)
