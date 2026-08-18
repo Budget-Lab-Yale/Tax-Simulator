@@ -24,8 +24,8 @@
 cross_model_states = function() {
   list(
     broad  = c('AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'GA', 'HI', 'ID', 'IL', 'IN',
-               'KS', 'KY', 'MD', 'ME', 'MI', 'MN', 'NC', 'ND', 'NE', 'NM', 'NY',
-               'OH', 'OK', 'PA', 'RI', 'SC', 'UT', 'VA', 'VT', 'WI', 'WV'),
+               'KS', 'KY', 'MD', 'ME', 'MI', 'MN', 'MO', 'NC', 'ND', 'NE', 'NM',
+               'NY', 'OH', 'OK', 'PA', 'RI', 'SC', 'UT', 'VA', 'VT', 'WI', 'WV'),
     narrow = c('NH', 'TN'),           # interest/dividend (Hall-type) taxes
     excise = c('WA'),                 # LTCG excise + WFTC; not in TAXSIM
     stub   = c('AK', 'FL', 'NV', 'SD', 'TX', 'WY')  # no individual income tax
@@ -98,9 +98,12 @@ cross_model_prepare_year = function(year, cache_dir, force = FALSE) {
     do_excess_growth(scenario_info, excess_growth_offset) %>%
     calc_kg_cpi_ratio(indexes, year) %>%
 
-    # Federal calculation (baseline: no employer-side payroll adjustment)
+    # Federal calculation (baseline: no employer-side payroll adjustment).
+    # Payroll variables are kept because the state calculator reads the
+    # employee payroll and self-employment tax (MO adds both to its itemized
+    # base); they do not enter any federal result compared here
     do_taxes(baseline_pr_er = NULL,
-             vars_1040      = fed_calc_vars(incl_payroll = F),
+             vars_1040      = fed_calc_vars(incl_payroll = T),
              vars_payroll   = return_vars$calc_pr)
 
   out = list(tax_units = tax_units, indexes = indexes)

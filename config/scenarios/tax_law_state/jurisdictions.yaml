@@ -101,6 +101,14 @@ MI:
 MN:
   profile: broad_iit
   enabled: true
+# MO gives every undefined term "the same meaning as when used in a
+# comparable context in the laws of the United States relating to federal
+# income taxes" (RSMo 143.091), with no fixed date, so rolling conformity
+# (group 0). Missouri's own modifications sit in RSMo 143.121 and are
+# carried by Missouri-side parameters
+MO:
+  profile: broad_iit
+  enabled: true
 # NE adopts the IRC as amended with no fixed date (Neb. Rev. Stat. 77-2714),
 # so rolling conformity (group 0)
 NE:

@@ -1,0 +1,95 @@
+---
+# Missouri: rate schedule (MO-1040 line 30; the "Tax Rate Chart", Section A
+# of the tax chart page in each booklet).
+#
+# THREE THINGS MAKE THIS SCHEDULE UNUSUAL.
+#
+# (1) It is a PUBLISHED BASE-AMOUNT schedule, not a smooth marginal one.
+# Section B of the chart page ("Tax Calculation Worksheet") has the taxpayer
+# take the bracket's printed base amount and add the rate times the excess
+# over the bracket floor -- and the printed bases are NOT always the
+# continuous cumulative tax. TY2023 prints $180 at $7,242 where integrating
+# the rates gives $181.05, and $234 at $8,449 where integration gives
+# $235.37. Encoding this as a smooth schedule would be wrong by up to about
+# $1.40 for every Missourian above the second-to-top bracket, so the
+# base_amounts family (Ohio precedent) carries the printed values.
+#
+# (2) Through TY2022 the second band taxes the WHOLE taxable income at 1.5%,
+# not the excess: "At least $101 but not over $1,008 ... 1.5% of the
+# Missouri taxable income". The base amount for that band is therefore the
+# tax at its own first dollar (1.5% x 101 = 1.515), which makes
+# base + rate x (TI - 101) identically equal to 1.5% x TI. From TY2023 the
+# first bracket is a true zero bracket and the 1.5% rung is gone.
+#
+# (3) Brackets are equal-width and indexed annually (RSMo 143.011.2), so
+# every value below is transcribed from that year's own chart rather than
+# indexed by the model.
+#
+# The rate ladder shortened over the window -- eleven bands (incl. the zero
+# band) in 2017-2018, ten in 2019-2022 after HB 2540 deleted the 5.5% rung,
+# eight from TY2023 after SB 3. Shorter years are padded by repeating the
+# top band, the KY convention: the padded entries can never be selected
+# because their bracket floor equals the top band's.
+
+# Bracket floors. Band 2's floor is the first taxable dollar (chart: "At
+# least $101"), which pairs with the derived base amount described above.
+brackets:
+  value:
+    '2017': [0.0, 101.0, 1008.0, 2016.0, 3024.0, 4032.0, 5040.0, 6048.0, 7056.0, 8064.0, 9072.0]
+    '2018': [0.0, 103.0, 1028.0, 2056.0, 3084.0, 4113.0, 5141.0, 6169.0, 7197.0, 8225.0, 9253.0]
+    '2019': [0.0, 105.0, 1053.0, 2106.0, 3159.0, 4212.0, 5265.0, 6318.0, 7371.0, 8424.0, 8424.0]
+    '2020': [0.0, 107.0, 1073.0, 2146.0, 3219.0, 4292.0, 5365.0, 6438.0, 7511.0, 8584.0, 8584.0]
+    '2021': [0.0, 109.0, 1088.0, 2176.0, 3264.0, 4352.0, 5440.0, 6528.0, 7616.0, 8704.0, 8704.0]
+    '2022': [0.0, 112.0, 1121.0, 2242.0, 3363.0, 4484.0, 5605.0, 6726.0, 7847.0, 8968.0, 8968.0]
+    '2023': [0.0, 1207.0, 2414.0, 3621.0, 4828.0, 6035.0, 7242.0, 8449.0, 8449.0, 8449.0, 8449.0]
+    '2024': [0.0, 1273.0, 2546.0, 3819.0, 5092.0, 6365.0, 7638.0, 8911.0, 8911.0, 8911.0, 8911.0]
+    '2025': [0.0, 1313.0, 2626.0, 3939.0, 5252.0, 6565.0, 7878.0, 9191.0, 9191.0, 9191.0, 9191.0]
+    '2026': [0.0, 1348.0, 2696.0, 4044.0, 5392.0, 6740.0, 8088.0, 9436.0, 9436.0, 9436.0, 9436.0]
+  reference: 'Tax Rate Chart, Section A of each MO-1040 instruction booklet: 2017 p.20, 2018 p.20, 2019 p.22, 2020 p.22, 2021 p.26, 2022 p.26, 2023 p.26, 2024 p.26, 2025 p.21. Widths are indexed annually under RSMo 143.011.2. TY2026 from the DOR 2026 Missouri Withholding Tax Formula pp.12-13 (annual bracket table) -- the TY2026 MO-1040 chart is not published yet; the 2025 withholding formula matched the 2025 MO-1040 chart exactly, which is the basis for using it'
+
+rates:
+  value:
+    '2017': [0.0, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.055, 0.06]
+    '2018': [0.0, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.055, 0.059]
+    '2019': [0.0, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.054, 0.054]
+    '2022': [0.0, 0.015, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.05, 0.053, 0.053]
+    '2023': [0.0, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.0495, 0.0495, 0.0495, 0.0495]
+    '2024': [0.0, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.048, 0.048, 0.048, 0.048]
+    '2025': [0.0, 0.02, 0.025, 0.03, 0.035, 0.04, 0.045, 0.047, 0.047, 0.047, 0.047]
+  reference: 'Tax Rate Chart, Section A, each booklet as cited under brackets. Top-rate path 6.0% (2017) -> 5.9% (2018, SB 509 trigger) -> 5.4% (2019, HB 2540, which also deleted the 5.5% rung) -> 5.3% (2022, SB 509 trigger) -> 4.95% (2023, SB 3 of the 2022 special session) -> 4.8% (2024, SB 3 subsec. 3 trigger) -> 4.7% (2025, first SB 3 subsec. 4 trigger, carried into 2026 by the DOR withholding formula). RSMo 143.011.4 allows two further -0.1pp reductions to 4.6% and 4.5%, each contingent on revenue triggers; they are NOT enacted-certain and are not projected here (the NC/MS trigger precedent)'
+
+# Printed base amounts, transcribed exactly as they appear on the chart --
+# see note (1) above on why the published values rather than the integrated
+# ones. Band 2's value for 2017-2022 is the derived 1.5% x (first taxable
+# dollar) described in note (2); every other entry is as printed.
+base_amounts:
+  value:
+    '2017': [0.0, 1.515, 15.0, 35.0, 60.0, 90.0, 125.0, 165.0, 210.0, 260.0, 315.0]
+    '2018': [0.0, 1.545, 15.0, 36.0, 62.0, 93.0, 129.0, 170.0, 216.0, 267.0, 324.0]
+    '2019': [0.0, 1.575, 16.0, 37.0, 63.0, 95.0, 132.0, 174.0, 221.0, 274.0, 274.0]
+    '2020': [0.0, 1.605, 16.0, 37.0, 64.0, 96.0, 134.0, 177.0, 225.0, 279.0, 279.0]
+    '2021': [0.0, 1.635, 16.0, 38.0, 65.0, 98.0, 136.0, 180.0, 229.0, 283.0, 283.0]
+    '2022': [0.0, 1.68, 17.0, 39.0, 67.0, 101.0, 140.0, 185.0, 235.0, 291.0, 291.0]
+    '2023': [0.0, 0.0, 24.0, 54.0, 90.0, 132.0, 180.0, 234.0, 234.0, 234.0, 234.0]
+    '2024': [0.0, 0.0, 25.0, 57.0, 95.0, 140.0, 191.0, 248.0, 248.0, 248.0, 248.0]
+    '2025': [0.0, 0.0, 26.0, 59.0, 98.0, 144.0, 197.0, 256.0, 256.0, 256.0, 256.0]
+    '2026': [0.0, 0.0, 27.0, 61.0, 101.0, 148.0, 202.0, 263.0, 263.0, 263.0, 263.0]
+  reference: 'Tax Rate Chart, Section A, each booklet as cited under brackets ("$X plus Y% of excess over $Z"), and Section B line 6 "Enter the tax from your tax bracket - before applying the percent". Band 2 for 2017-2022 is 1.5% times that year''s first taxable dollar (2017: 1.5% x $101 = 1.515), which reproduces the chart''s "1.5% of the Missouri taxable income" exactly. TY2026 IS PROJECTED, not transcribed: the chart is unpublished, so the bases are the cumulative tax integrated over the 2026 withholding-formula brackets and rounded to whole dollars. Missouri''s own printed bases do not always round that way (TY2023 prints $180 at $7,242 against $181.05 integrated), so expect sub-$2 deviations for TY2026 until the booklet appears'
+
+# Married filing combined: deductions are pooled at the return level, the
+# remainder is split between spouses by their shares of Missouri AGI, and
+# the schedule is run on each share. See st_tax.R for the construction.
+combined_split:
+  value: 1
+  reference: 'MO-1040 lines 7Y/7S (income percentages), 26 (subtotal after total deductions), 27Y/27S (Line 26 x the percentages), 29Y/29S (taxable income) and 30Y/30S; the tax chart page states "A separate tax must be computed for you and your spouse" in every booklet 2017-2025. RSMo 143.031 requires a combined return for spouses filing jointly for federal purposes, so this is mandatory rather than an election'
+combined_split_round:
+  value: 0.01
+  reference: 'MO-1040 instructions, "Line 7 - Income Percentages": "The total entered on Line 7 must equal 100 percent - round to the nearest percentage. For example, 84.3 percent would be shown as 84 percent and 97.5 percent would be shown as 98 percent" (2024 booklet p.7, identical wording each year)'
+
+documented_not_modeled:
+  lump_sum_distribution_tax:
+    reference: 'MO-1040 line 34 adds a tax of 10% of the federal Form 4972 tax on a lump sum distribution, because that income never entered Missouri AGI (2024 booklet p.10). Form 4972 elections are not modeled'
+  low_income_housing_recapture:
+    reference: 'MO-1040 line 34 also carries recapture of the Missouri low income housing credit. Certificated credit histories are not modeled'
+  trigger_rate_reductions:
+    reference: 'RSMo 143.011.4 permits two further top-rate reductions of 0.1pp each (to 4.6% and then 4.5%) once net general revenue exceeds both the highest of the three preceding fiscal years by $200 million and the fifth preceding year adjusted for inflation. Enacted rates only are encoded, per the North Carolina and Mississippi trigger precedent'

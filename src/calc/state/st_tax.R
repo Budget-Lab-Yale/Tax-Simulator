@@ -65,6 +65,8 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     'st_ord.sta_max',            # (dbl) spouse tax adjustment cap (VA; 0 = none)
     'st_ord.combined_sep',       # (int) combined-return separate filing (KY)
     'st_ord.combined_sep_std_share', # (dbl) share of the mapped std deduction per column (1 = per-person std, KY; 0.5 = joint is twice the column amount, DE)
+    'st_ord.combined_split',     # (int) pooled deductions, taxable income split by income share (MO)
+    'st_ord.combined_split_round', # (dbl) rounding increment for the income shares (MO 0.01)
     'st_ord.bus_rate',           # (dbl) flat rate on carve-out excess (OH 3%)
     'st_itemizing',              # (bool) state itemization election (calc_st_ded)
     'st_ded',                    # (dbl) state deduction taken (calc_st_ded)
@@ -108,14 +110,33 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
                         require_sentinel = FALSE)
   n_br = ncol(br)
 
+  # Published base-amount schedule (OH 5747.02; MO-1040 tax chart), where
+  # encoded: tax = base_j + rate_j x (y - bracket_j) with the statutory base
+  # amounts transcribed as published. This preserves form discontinuities
+  # that a smooth marginal schedule cannot represent -- OH's zero-bracket
+  # cliff and 2025 $100,000 jump, and the MO chart's whole-dollar base
+  # amounts (2023: $180 at $7,242 where continuous integration gives
+  # $181.05)
+  base_amt = st_family_matrix(tax_unit, 'st_ord.base_amounts')
+
   # Schedule tax at an arbitrary income vector. A state with fewer brackets
   # than the widest state in the law slice carries trailing NA bracket
   # columns; the NA upper bound would silently drop the top bracket's tax,
-  # so treat it as Inf (the NA brackets' own terms still drop via na.rm)
+  # so treat it as Inf (the NA brackets' own terms still drop via na.rm).
+  # Rows of a base-amount state take the published schedule; every other row
+  # (including every row of a mixed law slice whose state has no base-amount
+  # family) keeps the smooth integration unchanged
   sched_tax_at = function(y) {
     upper = cbind(br[, -1, drop = F], Inf)
     upper[is.na(upper)] = Inf
-    rowSums(rt * pmax(0, pmin(y, upper) - br), na.rm = T)
+    smooth = rowSums(rt * pmax(0, pmin(y, upper) - br), na.rm = T)
+    if (is.null(base_amt)) {
+      return(smooth)
+    }
+    jy = st_band_index_lower(y, br)
+    published = st_pick_slot(base_amt, jy) +
+                st_pick_slot(rt, jy) * (y - st_pick_slot(br, jy))
+    if_else(is.na(published), smooth, published)
   }
 
   # Stepped recapture segments (CT-style), zero when not encoded: for each
@@ -140,12 +161,10 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
   B      = st_pick_slot(br, j)
   m_prev = st_pick_slot(rt, pmax(1, j - 1))
 
-  # Published base-amount schedule (OH 5747.02): where the base_amounts
-  # family is encoded, tax = base_j + rate_j x (TI - bracket_j) with the
-  # statutory base amounts transcribed as published. This preserves the
-  # form's discontinuities (the zero-bracket cliff and the 2025 $100,000
-  # jump) that a smooth marginal schedule cannot represent
-  base_amt = st_family_matrix(tax_unit, 'st_ord.base_amounts')
+  # Apply the published base-amount schedule to taxable income itself. Kept
+  # as an explicit override of the integrate_rates_brackets result (rather
+  # than a sched_tax_at call) so that rows of a mixed law slice whose state
+  # has no base-amount family keep that function's value untouched
   if (!is.null(base_amt)) {
     sched_published = st_pick_slot(base_amt, j) + m * (ti - B)
     tax_unit$st_tax_sched = if_else(is.na(sched_published),
@@ -246,6 +265,41 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
       st_tax_pre_credit = if_else(
         st_ord.combined_sep == 1 & filing_status == 2,
         pmin(st_tax_pre_credit, cs_tax),
+        st_tax_pre_credit
+      ),
+
+      # Married filing COMBINED (MO-1040 filing status 2), a different
+      # construction from KY's combined-separate columns above: Missouri
+      # pools every deduction at the return level (Line 25), subtracts them
+      # from combined Missouri AGI (Line 26), then splits the resulting
+      # TAXABLE income between spouses by their shares of Missouri AGI
+      # (Lines 7Y/7S x Line 26 = Lines 27Y/27S) and runs the same schedule on
+      # each share (Lines 30Y/30S, "A separate tax must be computed for you
+      # and your spouse"). There is no better-of election -- the combined
+      # return is mandatory for couples filing jointly federally.
+      #
+      # Each spouse's Missouri AGI is own wages plus half of non-wage state
+      # AGI (asset ownership unobserved; the VA STA / KY combined-separate
+      # convention). The form rounds the shares to whole percent and requires
+      # them to sum to 100%, so share2 is the complement of the rounded
+      # share1; where one spouse's income is negative and the other's is
+      # positive the form assigns 0%/100%, which the clamp reproduces
+      csp_share1 = if_else(st_agi > 0,
+                           pmin(1, pmax(0, cs_share1 / st_agi)),
+                           0.5),
+      # Rounded with floor(x + 0.5), NOT R's round(): the form rounds a half
+      # UP ("97.5 percent would be shown as 98 percent") while round() would
+      # send it to the even neighbour, 98 here but 96 at 96.5
+      csp_share1 = if_else(is.finite(st_ord.combined_split_round) &
+                             st_ord.combined_split_round > 0,
+                           floor(csp_share1 / st_ord.combined_split_round + 0.5) *
+                             st_ord.combined_split_round,
+                           csp_share1),
+      csp_tax = sched_tax_at(st_txbl_inc * csp_share1) +
+                sched_tax_at(st_txbl_inc * (1 - csp_share1)),
+      st_tax_pre_credit = if_else(
+        st_ord.combined_split == 1 & filing_status == 2,
+        csp_tax,
         st_tax_pre_credit
       )
     ) %>%

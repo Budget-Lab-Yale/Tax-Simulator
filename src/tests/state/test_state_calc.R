@@ -23,7 +23,7 @@ test_state_calc = function() {
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
                 'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV', 'NM',
-                'VT', 'OK', 'DC', 'NE', 'HI', 'ME'),
+                'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -3198,6 +3198,212 @@ test_state_calc = function() {
            label = 'HI-8 Act 46 TY2027 schedule + TY2026 standard deduction')
 
   #--------------------------------------------------------------------------
+  # Missouri (MO-1040)
+  #
+  # Every case supplies the federal liability inputs the Missouri federal
+  # income tax deduction reads: liab_bc is federal tax before credits
+  # (including AMT and excess advance premium tax credit) and nonref the
+  # nonrefundable credits used, so liab_bc - nonref is 1040 line 22, the
+  # worksheet's starting figure. std_ded is supplied because Missouri adopts
+  # the federal standard deduction outright.
+  #--------------------------------------------------------------------------
+
+  # MO-1: 2024 single, wages 50,000, federal tax after nonrefundable credits
+  # 4,016. Missouri AGI 50,000 falls in the "$25,001 to $50,000" band -> 25%,
+  # so the federal deduction is 0.25 x 4,016 = 1,004 (under the $5,000 cap).
+  # TI = 50,000 - 14,600 - 1,004 = 34,396. Chart: 248 + 4.8% x (34,396 -
+  # 8,911) = 248 + 1,223.28 = 1,471.28
+  run_case('MO', 2024,
+           list(agi = 50000, wages1 = 50000, ei1 = 50000, std_ded = 14600,
+                liab_bc = 4016),
+           expect = list(st_agi = 50000, st_fed_tax_ded = 1004,
+                         st_std_ded = 14600, liab_st_iit = 1471.28),
+           label = 'MO-1 2024 single, federal tax deduction at 25%')
+
+  # MO-2: the band is a cliff, not a phase-out. Same unit as MO-1 but one
+  # dollar of Missouri AGI higher, into the "$50,001 to $100,000" band ->
+  # 15%: deduction 602.40, TI = 50,001 - 14,600 - 602.40 = 34,798.60, tax =
+  # 248 + 4.8% x 25,887.60 = 1,490.60. A $401.60 jump in the deduction and a
+  # $19.28 jump in tax off a single dollar of income
+  run_case('MO', 2024,
+           list(agi = 50001, wages1 = 50001, ei1 = 50001, std_ded = 14600,
+                liab_bc = 4016),
+           expect = list(st_fed_tax_ded = 602.40, liab_st_iit = 1490.60),
+           label = 'MO-2 2024 federal-deduction band cliff at $50,000')
+
+  # MO-3: the $10,000 combined cap, which can only bind before the TY2019
+  # percentage existed. 2018 MFJ, one earner, wages 150,000, federal tax
+  # 24,000: deduction = min(10,000, 100% x 24,000) = 10,000. TI = 150,000 -
+  # 24,000 - 10,000 = 116,000. The combined split gives the earning spouse
+  # 100% of it, so tax = 324 + 5.9% x (116,000 - 9,253) = 6,622.07
+  run_case('MO', 2018,
+           list(agi = 150000, filing_status = 2, age2 = 40, wages1 = 150000,
+                ei1 = 150000, std_ded = 24000, liab_bc = 24000),
+           expect = list(st_fed_tax_ded = 10000, liab_st_iit = 6622.07),
+           label = 'MO-3 2018 combined cap binds (no percentage pre-2019)')
+
+  # MO-4: married filing combined splits TAXABLE income by each spouse's
+  # share of Missouri AGI and runs the schedule twice. 2024 MFJ, wages
+  # 60,000 + 40,000, federal tax 8,000. Missouri AGI 100,000 -> 15% band ->
+  # deduction 1,200. TI = 100,000 - 29,200 - 1,200 = 69,600, split 60/40 into
+  # 41,760 and 27,840. Tax = (248 + 4.8% x 32,849) + (248 + 4.8% x 18,929) =
+  # 1,824.75 + 1,156.59 = 2,981.34. Taxing the 69,600 on one schedule would
+  # give 3,161.07, so the split is worth $179.73 here
+  run_case('MO', 2024,
+           list(agi = 100000, filing_status = 2, age2 = 40, wages1 = 60000,
+                wages2 = 40000, ei1 = 60000, ei2 = 40000, std_ded = 29200,
+                liab_bc = 8000),
+           expect = list(st_fed_tax_ded = 1200, liab_st_iit = 2981.34),
+           label = 'MO-4 2024 combined return splits taxable income 60/40')
+
+  # MO-5: the income percentages round to whole percent and must sum to 100
+  # ("97.5 percent would be shown as 98 percent" -- half rounds UP, which is
+  # not R's round()). Wages 60,500 + 39,500 on Missouri AGI 100,000 give a
+  # 60.5% share, rounded to 61%. TI = 69,600 splits 42,456 / 27,144: tax =
+  # (248 + 4.8% x 33,545) + (248 + 4.8% x 18,233) = 1,858.16 + 1,123.18 =
+  # 2,981.34... but at the rounded 61/39 split it is 2,981.34 only if the
+  # schedule were linear; the top band is flat here so both shares sit in it
+  # and the total is unchanged from MO-4. The case pins the ROUNDING itself
+  # against a banker's-rounding regression via the share-sensitive low-income
+  # case below
+  run_case('MO', 2024,
+           list(agi = 100000, filing_status = 2, age2 = 40, wages1 = 60500,
+                wages2 = 39500, ei1 = 60500, ei2 = 39500, std_ded = 29200,
+                liab_bc = 8000),
+           expect = list(liab_st_iit = 2981.34),
+           label = 'MO-5 2024 whole-percent income shares')
+
+  # MO-6: the pre-2023 schedule's second band taxes the WHOLE taxable income
+  # at 1.5%, not the excess ("At least $101 but not over $1,008 ... 1.5% of
+  # the Missouri taxable income"). 2017 single, Missouri AGI 8,600, standard
+  # deduction 6,350, personal exemption 2,100, no federal tax: TI = 150 and
+  # the chart gives 1.5% x 150 = 2.25 -- which the encoded base amount
+  # (1.5% x $101 = 1.515) reproduces exactly: 1.515 + 1.5% x (150 - 101)
+  run_case('MO', 2017,
+           list(agi = 8600, wages1 = 8600, ei1 = 8600, std_ded = 6350),
+           expect = list(st_exempt = 2100, st_txbl_inc = 150,
+                         liab_st_iit = 2.25),
+           label = 'MO-6 2017 whole-income 1.5% band')
+
+  # MO-7: TY2017 exemptions in full -- $2,100 per taxpayer and $1,200 per
+  # dependent. Single with two dependents: 2,100 + 2 x 1,200 = 4,500.
+  # Missouri AGI 40,000, federal tax 3,000 (deducted in full, no percentage
+  # in 2017). TI = 40,000 - 6,350 - 3,000 - 4,500 = 26,150, tax = 315 + 6% x
+  # (26,150 - 9,072) = 315 + 1,024.68 = 1,339.68
+  run_case('MO', 2017,
+           list(agi = 40000, wages1 = 40000, ei1 = 40000, std_ded = 6350,
+                n_dep = 2, dep_age1 = 7, dep_age2 = 11, liab_bc = 3000),
+           expect = list(st_exempt = 4500, st_fed_tax_ded = 3000,
+                         liab_st_iit = 1339.68),
+           label = 'MO-7 2017 personal and dependent exemptions')
+
+  # MO-8: the retirement exemption is a DEDUCTION struck after Missouri AGI,
+  # and each piece falls dollar-for-dollar with income above its own limit.
+  # 2023 single aged 70, Social Security 10,000 taxable, pension 20,000,
+  # Missouri AGI 90,000. The limit income is 90,000 - 10,000 = 80,000: under
+  # the $85,000 Social Security limit, so all 10,000 is exempt; but $55,000
+  # over the $25,000 private pension limit, which wipes out the $6,000
+  # pension exemption entirely. Federal deduction = 15% x 10,000 = 1,500.
+  # TI = 90,000 - 13,850 - 1,500 - 10,000 = 64,650, tax = 234 + 4.95% x
+  # 56,201 = 3,015.95
+  run_case('MO', 2023,
+           list(agi = 90000, age1 = 70, wages1 = 60000, ei1 = 60000,
+                txbl_ss = 10000, txbl_pens_dist = 20000, std_ded = 13850,
+                liab_bc = 10000),
+           expect = list(st_agi = 90000, st_retire_exempt = 10000,
+                         st_fed_tax_ded = 1500, liab_st_iit = 3015.95),
+           label = 'MO-8 2023 Social Security exempt, pension exemption phased out')
+
+  # MO-9: the private pension exemption partially surviving. 2023 single
+  # aged 70, pension 20,000 and no Social Security, Missouri AGI 28,000. The
+  # limit income is 28,000, which is $3,000 over the $25,000 limit, so the
+  # $6,000 exemption is cut to 3,000. Federal deduction = 25% x 1,500 = 375.
+  # TI = 28,000 - 15,700 - 375 - 3,000 = 8,925, tax = 234 + 4.95% x 476 =
+  # 257.56
+  run_case('MO', 2023,
+           list(agi = 28000, age1 = 70, txbl_pens_dist = 20000,
+                std_ded = 15700, liab_bc = 1500),
+           expect = list(st_retire_exempt = 3000, st_fed_tax_ded = 375,
+                         liab_st_iit = 257.56),
+           label = 'MO-9 2023 private pension exemption partially reduced')
+
+  # MO-10a / MO-10b: SB 190 removed the income limit on the Social Security
+  # exemption from TY2024 -- and ONLY on that one. The same unit is run
+  # either side of the change: single aged 70, Missouri AGI 120,000 with
+  # 15,000 of taxable Social Security, so the limit income is 105,000.
+  # Under TY2023 law that is $20,000 past the $85,000 limit, which wipes out
+  # the whole 15,000 exemption; under TY2024 law there is no limit and all
+  # 15,000 survives. Federal deduction is 5% x 20,000 = 1,000 in both years.
+  #   2023: TI = 120,000 - 15,700 - 1,000 - 0 = 103,300 -> 234 + 4.95% x
+  #         94,851 = 4,929.12
+  #   2024: TI = 120,000 - 16,550 - 1,000 - 15,000 = 87,450 -> 248 + 4.8% x
+  #         78,539 = 4,017.87
+  run_case('MO', 2023,
+           list(agi = 120000, age1 = 70, wages1 = 80000, ei1 = 80000,
+                txbl_ss = 15000, std_ded = 15700, liab_bc = 20000),
+           expect = list(st_retire_exempt = 0, liab_st_iit = 4929.12),
+           label = 'MO-10a 2023 Social Security exemption killed by the income limit')
+
+  run_case('MO', 2024,
+           list(agi = 120000, age1 = 70, wages1 = 80000, ei1 = 80000,
+                txbl_ss = 15000, std_ded = 16550, liab_bc = 20000),
+           expect = list(st_retire_exempt = 15000, liab_st_iit = 4017.87),
+           label = 'MO-10b 2024 SB 190 removes that limit (private limit stays)')
+
+  # MO-11: the Working Family Tax Credit, and the refundable credits that
+  # reduce the deductible federal tax base. 2024 single, wages 20,000,
+  # federal tax before credits 600 with a 500 earned income credit: the
+  # deductible base is 600 - 500 = 100, so the deduction is 35% x 100 = 35.
+  # TI = 20,000 - 14,600 - 35 = 5,365, tax = 95 + 3.5% x 273 = 104.56. The
+  # credit is 20% x 500 = 100, nonrefundable, leaving 4.56
+  run_case('MO', 2024,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, std_ded = 14600,
+                liab_bc = 600, eitc = 500),
+           expect = list(st_fed_tax_ded = 35, st_eitc = 100,
+                         liab_st_iit = 4.56),
+           label = 'MO-11 2024 Working Family Tax Credit, EIC nets the fed base')
+
+  # MO-12: Missouri itemizers add their own payroll and self-employment
+  # taxes to the federal itemized total and subtract state income tax.
+  # 2024 single, wages 100,000, federal itemized 20,000 of which 10,000 is
+  # capped SALT (6,000 income tax, 4,000 property) and 10,000 mortgage
+  # interest; employee FICA 7,650. State base = 20,000 - 10,000 + 4,000 +
+  # 7,650 = 21,650. Federal deduction = 15% x 15,000 = 2,250. TI = 100,000 -
+  # 21,650 - 2,250 = 76,100, tax = 248 + 4.8% x 67,189 = 3,473.07
+  run_case('MO', 2024,
+           list(agi = 100000, wages1 = 100000, ei1 = 100000, itemizing = 1,
+                item_ded = 20000, item_ded_ex_limits = 20000,
+                salt_item_ded = 10000, salt_inc_sales = 6000,
+                salt_prop = 4000, mort_int_item_ded = 10000,
+                std_ded = 14600, liab_bc = 15000, liab_pr_ee = 7650),
+           expect = list(st_item_ded = 21650, st_itemizing = TRUE,
+                         liab_st_iit = 3473.07),
+           label = 'MO-12 2024 itemized: payroll add-on and state tax removal')
+
+  # MO-13: the business income deduction, 20% of Schedule C/E-part-2/F
+  # profit from TY2023. Single sole proprietor with 50,000 of profit:
+  # Missouri AGI = 50,000 - 10,000 = 40,000, which also drops the federal
+  # deduction into the 25% band -> 0.25 x 4,000 = 1,000. TI = 40,000 -
+  # 14,600 - 1,000 = 24,400, tax = 248 + 4.8% x 15,489 = 991.47
+  run_case('MO', 2024,
+           list(agi = 50000, sole_prop = 50000, ei1 = 50000, std_ded = 14600,
+                liab_bc = 4000),
+           expect = list(st_agi = 40000, st_fed_tax_ded = 1000,
+                         liab_st_iit = 991.47),
+           label = 'MO-13 2024 business income deduction at 20%')
+
+  # MO-14: TY2025 subtracts 100% of federally reported capital gains
+  # (HB 594). Single with 40,000 of wages and 30,000 of long-term gain:
+  # Missouri AGI = 70,000 - 30,000 = 40,000 -> 25% band -> deduction 0.25 x
+  # 6,000 = 1,500. TI = 40,000 - 15,750 - 1,500 = 22,750, tax = 256 + 4.7% x
+  # (22,750 - 9,191) = 256 + 637.27 = 893.27
+  run_case('MO', 2025,
+           list(agi = 70000, wages1 = 40000, ei1 = 40000, kg_lt = 30000,
+                std_ded = 15750, liab_bc = 6000),
+           expect = list(st_agi = 40000, liab_st_iit = 893.27),
+           label = 'MO-14 2025 full capital gains subtraction')
+
+  #--------------------------------------------------------------------------
   # Maine (1040ME)
   #--------------------------------------------------------------------------
 
@@ -3568,7 +3774,7 @@ test_state_calc = function() {
   smoke_states = c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI',
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
                    'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI',
-                   'WV', 'NM', 'VT', 'OK', 'DC', 'NE', 'HI', 'ME')
+                   'WV', 'NM', 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()
@@ -3781,7 +3987,9 @@ st_test_unit = function(overrides = list()) {
     casualty_item_ded = 0, char_item_ded = 0, misc_item_ded = 0,
     other_item_ded = 0, std_ded = 0,
     eitc = 0, ctc_nonref = 0, ctc_ref = 0, cdctc_nonref = 0,
-    cdctc_ref = 0, care_exp = 0, ui = 0
+    cdctc_ref = 0, care_exp = 0, ui = 0,
+    liab_bc = 0, nonref = 0, ed_ref = 0, net_ptc = 0,
+    liab_pr_ee = 0, liab_seca = 0
   )
   for (v in names(overrides)) {
     unit[[v]] = overrides[[v]]

@@ -127,6 +127,9 @@ scalars:
   st_agi.sub_ui_share: 0
   st_agi.bus_carveout: 0
   st_agi.bus_ded_cap: .inf
+  # Flat share of (zero-floored) business income subtracted, as against the
+  # Ohio cap-and-carve-out above (MO 143.022 business income deduction)
+  st_agi.bus_excl_share: 0
   # Own-base income classes (start_point 0 states: PA; later NJ/AL/AR/MS).
   # Class shares multiply PUF income concepts; ob_class_floor = 1 floors
   # each class at zero after the share (no cross-class loss offsets -- the
@@ -145,6 +148,10 @@ scalars:
   st_agi.ob_other_share: 0
 
   # ded.yaml
+  # Adopt the federal standard deduction by reference (MO RSMo 143.131.2):
+  # takes the unit's own federal std_ded, aged/blind add-ons and
+  # dependent-filer limitation included, instead of a transcribed copy
+  st_ded.std_equals_federal: 0
   st_ded.std_amount: 0
   st_ded.std_dependent: null   # NA: falls back to std_amount
   st_ded.std_dependent_style: 0
@@ -195,6 +202,11 @@ scalars:
   # st_exempt.po_share_per_step machinery; .inf step = use the linear slide
   st_ded.std_po_step: .inf
   st_ded.std_po_share_per_step: 0
+  # Dollar decrement per step with a floor (AL Form 40 standard deduction
+  # chart), as against RI's share-per-step. A positive amount_per_step
+  # selects the dollar shape
+  st_ded.std_po_amount_per_step: 0
+  st_ded.std_po_floor: 0
   # FLAT-DOLLAR itemized cap (OK 68 O.S. 2358(E)(3)(b): $17,000 from TY2018,
   # with charity and medical exempt). Distinct from item_limit_* (income-based)
   # and from the NY share-based tiers; .inf = no cap
@@ -231,6 +243,40 @@ scalars:
   st_ded.care_exp_ded_per_dep_cap: 0
   st_ded.care_exp_ded_dep_limit: 0
   st_ded.care_exp_ded_age_limit: -1
+  # Employee payroll and self-employment taxes added to the state itemized
+  # base (MO-A Part 2 lines 2-7)
+  st_ded.item_add_payroll: 0
+  # Retirement exemption taken as a DEDUCTION rather than an AGI subtraction
+  # (MO-1040 line 8): the state's AGI is struck before the exemption, so a
+  # feature keyed on state AGI (MO's federal-tax-deduction bands) sees the
+  # pre-exemption figure. Both pieces fall $1-for-$1 with income above their
+  # own limit
+  st_ded.retire_exempt_ss: 0
+  st_ded.retire_exempt_ss_min_age: .inf
+  st_ded.retire_exempt_ss_limit: {default: .inf, units: per_return}
+  st_ded.retire_exempt_priv_cap: {default: 0, units: per_person}
+  st_ded.retire_exempt_priv_limit: {default: .inf, units: per_return}
+  st_ded.retire_exempt_less_ss: 0
+  # Federal income tax deduction (MO/OR/AL). The deductible base is federal
+  # tax after nonrefundable credits but before other taxes (1040 line 22 =
+  # liab_bc - nonref), so AMT and excess APTC repayment are IN and
+  # self-employment/household-employment taxes are OUT. Add-back items some
+  # forms carry (retirement-plan penalty taxes, recapture, MO's foreign tax
+  # credit line) are not modeled -- document per state
+  st_ded.fed_tax_ded: 0
+  # The net investment income tax rides Schedule 2 Part II and so is NOT in
+  # 1040 line 22; a state whose worksheet adds it back sets this (AL)
+  st_ded.fed_tax_ded_add_niit: 0
+  # Refundable credits come off the base, floored at zero -- one flag each,
+  # because the states' lists genuinely differ. MO subtracts EITC, refundable
+  # AOC and net PTC but not the ACTC; AL subtracts EITC, ACTC and refundable
+  # AOC but not net PTC
+  st_ded.fed_tax_ded_less_eitc: 0
+  st_ded.fed_tax_ded_less_ctc_ref: 0
+  st_ded.fed_tax_ded_less_ed_ref: 0
+  st_ded.fed_tax_ded_less_ptc: 0
+  st_ded.fed_tax_ded_cap: {default: .inf, units: per_return}
+  st_ded.fed_tax_ded_band_base: 2   # st_income_base enum (MO: state AGI, Line 6)
 
   # exempt.yaml
   st_exempt.personal_amount: {default: 0, units: per_taxpayer unless personal_per_return}
@@ -246,6 +292,10 @@ scalars:
   st_exempt.po_share_per_step: 0   # share of the gross exemption per step (MN 2%)
   st_exempt.po_agi_base: 1
   st_exempt.tier_income_base: 2   # st_income_base enum (OH: 2 then 7 from 2019)
+  # Income-tiered DEPENDENT exemption (AL Form 40 dependent chart), as
+  # against tier_bounds/tier_amounts above, which set one amount for
+  # taxpayer, spouse and dependents alike
+  st_exempt.dep_tier_income_base: 2   # st_income_base enum (AL: Alabama AGI)
   st_exempt.dep_filer_zero: 0
 
   # child_ded.yaml (AGI-tabled deductions, e.g. North Carolina)
@@ -264,6 +314,12 @@ scalars:
   st_ord.bus_rate: 0   # flat rate on business income above the carve-out cap (OH 3%)
   st_ord.combined_sep: 0   # married-filing-separately-on-a-combined-return option (KY): per-spouse columns, lower of joint and combined; assumes no recapture/base-amount/business carve-out in the same state
   st_ord.combined_sep_std_share: 1   # share of the mapped standard deduction each combined-separate column receives: 1 where the std is per-person (KY), 0.5 where the joint amount is twice the per-column amount (DE)
+  # Married filing combined (MO): deductions pooled at the return level, then
+  # TAXABLE income split by each spouse's share of state AGI and the schedule
+  # run on each share. Mandatory for federal-joint couples, so unlike
+  # combined_sep there is no better-of election
+  st_ord.combined_split: 0
+  st_ord.combined_split_round: .inf   # rounding increment for the shares (MO: 0.01, whole percent); .inf = unrounded
   st_exempt.dep_child_addl: {default: 0, units: per_dependent}   # additional exemption per dependent child (IN $1,500)
   st_exempt.dep_child_max_age: 0   # max tracked dependent age for the child add-on (IN: 23, proxying under-19-or-student-under-24)
 
@@ -600,8 +656,10 @@ sentinels:
   - st_ord.step_recap_start1
   - st_ord.base_amounts1
   - st_exempt.tier_bounds1
+  - st_exempt.dep_tier_bounds1
   - st_credits.jfc_bounds1
   - st_credits.retire_credit_bounds1
+  - st_ded.fed_tax_ded_band_upper1
 
 # Vector-family name patterns (element count varies by state). The \d*
 # suffix is optional because a single-element vector parses to a
@@ -618,6 +676,10 @@ families:
     consumer: st_tax.R   # CT-style stepped recapture segments
   - pattern: '^st_exempt\.tier_(bounds|amounts)\d*$'
     consumer: st_exempt.R   # OH-style income-tiered per-exemption amounts
+  - pattern: '^st_exempt\.dep_tier_(bounds|amounts)\d*$'
+    consumer: st_exempt.R   # AL income-tiered dependent exemption
+  - pattern: '^st_ded\.fed_tax_ded_band_(upper|share)\d*$'
+    consumer: st_ded.R   # MO AGI-tiered percentage of the federal tax deduction
   - pattern: '^st_credits\.jfc_(bounds|rates)\d*$'
     consumer: st_credits.R   # OH joint filing credit rate bands
   - pattern: '^st_credits\.retire_credit_(bounds|amounts)\d*$'

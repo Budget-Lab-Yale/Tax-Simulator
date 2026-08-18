@@ -60,6 +60,7 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
     'st_exempt.po_share_per_step', # (dbl) share of the gross exemption per step (MN 2%)
     'st_exempt.po_agi_base',     # (int) phase-out income base (st_income_base enum)
     'st_exempt.tier_income_base', # (int) tiered-amount income base (enum)
+    'st_exempt.dep_tier_income_base', # (int) dependent-tier income base (enum; AL state AGI)
     'st_exempt.dep_filer_zero'   # (int) dependent filers get zero exemption (OH)
   )
 
@@ -91,6 +92,20 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
     tier_amount_v = st_band_value(tier_income, tier_ub, tier_amt)
   }
 
+  # Income-tiered DEPENDENT exemption (AL Form 40 dependent chart: $1,000,
+  # $500 or $300 per dependent by Alabama AGI), as against the tier family
+  # above, which sets one amount for taxpayer, spouse and dependents alike.
+  # Cliffs, not phase-outs -- a dollar over a bound costs the whole step
+  dep_tier_amount_v = NULL
+  dep_ub = st_family_matrix(tax_unit, 'st_exempt.dep_tier_bounds')
+  if (!is.null(dep_ub)) {
+    dep_amt = st_family_matrix(tax_unit, 'st_exempt.dep_tier_amounts',
+                               1:ncol(dep_ub), require_sentinel = FALSE)
+    dep_income = st_income_base(tax_unit,
+                                tax_unit$st_exempt.dep_tier_income_base)
+    dep_tier_amount_v = st_band_value(dep_income, dep_ub, dep_amt)
+  }
+
   tax_unit %>%
     mutate(
 
@@ -113,7 +128,8 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
       # dependent filers get zero where flagged (OH 5747.025(B))
       st_personal_v = if (is.null(tier_amount_v)) st_exempt.personal_amount
                       else tier_amount_v,
-      st_dep_v      = if (is.null(tier_amount_v)) st_exempt.dep_amount
+      st_dep_v      = if (!is.null(dep_tier_amount_v)) dep_tier_amount_v
+                      else if (is.null(tier_amount_v)) st_exempt.dep_amount
                       else tier_amount_v,
       dep_filer_factor = if_else(st_exempt.dep_filer_zero == 1 & dep_status == 1,
                                  0, 1),

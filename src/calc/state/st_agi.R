@@ -158,6 +158,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.sub_ui_share',          # (dbl) share of unemployment benefits subtracted
     'st_agi.bus_carveout',          # (int) OH-style business income carve-out active
     'st_agi.bus_ded_cap',           # (dbl) business income deduction cap (mapped)
+    'st_agi.bus_excl_share',        # (dbl) flat share of business income subtracted (MO)
     'st_exempt.aged_addl',          # (dbl) aged exemption add-on (exclusivity choice)
     'st_exempt.blind_addl',         # (dbl) blind exemption add-on (exclusivity choice)
     'st_credits.eitc_match',        # (dbl) state EITC match (exclusivity choice)
@@ -290,7 +291,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                                            part_passive + scorp + farm)) +
     ob_floor(st_agi.ob_gains_share      * (kg_lt + kg_st + other_gains)) +
     ob_floor(st_agi.ob_rent_share       * rent) +
-    ob_floor(st_agi.ob_retirement_share * (txbl_pens_dist + txbl_ira_dist)) +
+    ob_floor(st_agi.ob_retirement_share * txbl_pens_dist) +
+    ob_floor(st_agi.ob_ira_share        * txbl_ira_dist) +
     ob_floor(st_agi.ob_ss_share         * txbl_ss) +
     ob_floor(st_agi.ob_ui_share         * ui) +
     ob_floor(st_agi.ob_alimony_share    * alimony) +
@@ -643,10 +645,20 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       st_bus_excess = st_agi.bus_carveout *
                       pmax(0, st_bus_inc - st_agi.bus_ded_cap),
 
+      # Flat SHARE of business income subtracted (MO 143.022 business income
+      # deduction), as against Ohio's cap-and-carve-out above. The worksheet
+      # base is the same Schedule C / Schedule E Part 2 / Schedule F pool
+      # floored at zero ("amount cannot be less than zero"); Missouri's own
+      # worksheet floors the Schedule C line separately before combining,
+      # which differs only for a unit with a Schedule C loss against
+      # pass-through profit (documented in the state's yaml)
+      st_sub_bus_excl = st_agi.bus_excl_share * st_bus_inc,
+
       st_subtractions = st_sub_ref + st_sub_us_int + st_sub_ss + st_sub_pens +
                         st_sub_char + st_retirement_excl + st_sub_capgain +
                         st_sub_retire_share + st_sub_age + st_sub_ui +
-                        st_sub_senior_inv + st_sub_twoearner + st_bid,
+                        st_sub_senior_inv + st_sub_twoearner + st_bid +
+                        st_sub_bus_excl,
 
       # State income base
       st_agi = st_start + st_additions - st_subtractions

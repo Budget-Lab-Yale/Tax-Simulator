@@ -4,7 +4,8 @@
 
 # Set return variables for function
 return_vars$calc_st_ded = c('st_item_ded', 'st_std_ded', 'st_std_char_add',
-                            'st_itemizing', 'st_ded', 'st_addback')
+                            'st_itemizing', 'st_ded', 'st_addback',
+                            'st_fed_tax_ded', 'st_retire_exempt')
 
 
 calc_st_ded = function(tax_unit, fill_missings = F) {
@@ -43,6 +44,23 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'filing_status',      # (int)  1 single, 2 MFJ, 3 MFS, 4 HoH
     'itemizing',          # (bool) whether unit itemizes federally
     'dep_status',         # (bool) whether filer is a dependent
+
+    # Federal liability inputs for the federal income tax deduction
+    'liab_bc',            # (dbl)  federal tax before credits, incl. AMT and excess APTC
+    'nonref',             # (dbl)  federal nonrefundable credits (limited to liab_bc)
+    'eitc',               # (dbl)  federal earned income credit
+    'ed_ref',             # (dbl)  refundable education credit (AOC)
+    'net_ptc',            # (dbl)  net premium tax credit
+    'ctc_ref',            # (dbl)  additional (refundable) child tax credit
+    'liab_niit',          # (dbl)  net investment income tax
+    'liab_pr_ee',         # (dbl)  employee share of payroll taxes (MO itemized add-on)
+    'liab_seca',          # (dbl)  self-employment tax (MO itemized add-on)
+
+    # Retirement exemption inputs (states taking it as a deduction, not an
+    # AGI subtraction)
+    'txbl_ss',            # (dbl)  federally taxable Social Security benefits
+    'txbl_pens_dist',     # (dbl)  taxable pension distributions
+    'txbl_ira_dist',      # (dbl)  taxable IRA distributions
     'item_ded',           # (dbl)  federal itemized deductions as claimed (addback base)
     'salt_item_ded',      # (dbl)  federal SALT deduction as claimed (addback base)
     'salt_inc_sales',     # (dbl)  state/local income-or-sales taxes paid (post-workaround)
@@ -80,6 +98,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'care_exp',           # (dbl)  eligible dependent care expenses
 
     # State tax law
+    'st_ded.std_equals_federal', # (int) adopt the federal standard deduction outright (MO)
     'st_ded.std_amount',      # (dbl) state standard deduction (filing-status mapped)
     'st_ded.std_dependent',   # (dbl) standard deduction for dependent filers
     'st_ded.std_dependent_style', # (int) 1 = floor/earned-income/cap worksheet
@@ -118,8 +137,10 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.std_po_base',     # (int) phase-out income base (st_income_base enum)
     'st_ded.std_amount2',     # (dbl) second sliding pair maximum (WI HoH floor)
     'st_ded.std_po_rate2',    # (dbl) second sliding pair rate
-    'st_ded.std_po_step',     # (dbl) stepped phase-out increment (RI; .inf = sliding)
+    'st_ded.std_po_step',     # (dbl) stepped phase-out increment (RI/AL; .inf = sliding)
     'st_ded.std_po_share_per_step', # (dbl) share of the std lost per step (RI 0.20)
+    'st_ded.std_po_amount_per_step', # (dbl) DOLLARS of std lost per step (AL)
+    'st_ded.std_po_floor',    # (dbl) minimum the stepped deduction falls to (AL)
     'st_ded.item_flat_cap',   # (dbl) flat-dollar itemized cap (OK $17,000; .inf = none)
     'st_ded.item_flat_cap_excl_medical', # (int) medical exempt from the flat cap (OK)
     'st_ded.item_flat_cap_excl_charity', # (int) charity exempt from the flat cap (OK)
@@ -151,7 +172,22 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.care_exp_ded',           # (int) whether care expenses are deductible (VA)
     'st_ded.care_exp_ded_per_dep_cap', # (dbl) per-qualifying-dependent expense cap
     'st_ded.care_exp_ded_dep_limit', # (int) maximum number of qualifying dependents
-    'st_ded.care_exp_ded_age_limit'  # (int) maximum dependent age to qualify
+    'st_ded.care_exp_ded_age_limit', # (int) maximum dependent age to qualify
+    'st_ded.item_add_payroll',       # (int) payroll/SE taxes added to the state itemized base (MO)
+    'st_ded.retire_exempt_ss',       # (int) taxable Social Security exempt as a DEDUCTION (MO)
+    'st_ded.retire_exempt_ss_min_age', # (int) minimum age for the SS exemption (MO 62)
+    'st_ded.retire_exempt_ss_limit', # (dbl) income limit, reduced $1-for-$1 above (mapped)
+    'st_ded.retire_exempt_priv_cap', # (dbl) per-person private pension exemption (MO $6,000)
+    'st_ded.retire_exempt_priv_limit', # (dbl) private pension income limit (mapped)
+    'st_ded.retire_exempt_less_ss',  # (int) the limit income measure nets taxable SS (MO)
+    'st_ded.fed_tax_ded',            # (int) whether federal income tax is deductible (MO/OR/AL)
+    'st_ded.fed_tax_ded_add_niit',   # (int) net investment income tax added to the base (AL)
+    'st_ded.fed_tax_ded_less_eitc',  # (int) earned income credit reduces the base (MO/AL)
+    'st_ded.fed_tax_ded_less_ctc_ref', # (int) additional child tax credit reduces the base (AL, NOT MO)
+    'st_ded.fed_tax_ded_less_ed_ref', # (int) refundable education credit reduces the base (MO/AL)
+    'st_ded.fed_tax_ded_less_ptc',   # (int) net premium tax credit reduces the base (MO, NOT AL)
+    'st_ded.fed_tax_ded_cap',        # (dbl) cap on the deduction (filing-status mapped)
+    'st_ded.fed_tax_ded_band_base'   # (int) share-band income base (st_income_base enum)
   )
 
   tax_unit %<>%
@@ -167,6 +203,25 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
   # Pease-style limitation income base (default federal AGI; HI computes its
   # worksheet on Hawaii AGI)
   pease_income_v = st_income_base(tax_unit, tax_unit$st_ded.pease_agi_base)
+
+  # Federal income tax deduction: income-banded SHARE of the deductible base
+  # (MO's AGI-tiered percentage). Absent the family the share is 1, leaving
+  # states with an uncapped-by-income deduction (AL) or a flat cap alone
+  # unaffected. Bands are (lower, upper] on the enum income base; the top
+  # band's own value carries the zero tail explicitly rather than relying on
+  # st_band_value's outside-the-table zero, so a band table that stops short
+  # of infinity is a transcription error rather than a silent zero
+  fed_tax_share_v = rep(1, nrow(tax_unit))
+  ftd_ub = st_family_matrix(tax_unit, 'st_ded.fed_tax_ded_band_upper')
+  if (!is.null(ftd_ub)) {
+    ftd_share = st_family_matrix(tax_unit, 'st_ded.fed_tax_ded_band_share',
+                                 1:ncol(ftd_ub), require_sentinel = FALSE)
+    ftd_income = st_income_base(tax_unit, tax_unit$st_ded.fed_tax_ded_band_base)
+    has_ftd_band = !is.na(ftd_ub[, 1])
+    fed_tax_share_v = if_else(has_ftd_band,
+                              st_band_value(ftd_income, ftd_ub, ftd_share),
+                              fed_tax_share_v)
+  }
 
   tax_unit %>%
     mutate(
@@ -186,6 +241,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
                                         st_ded.pease_thresh) +
                          st_ded.pease_rate2 * pmax(0, pease_income - st_ded.pease_thresh2),
 
+      n_taxpayers_ded = 1 + (filing_status == 2),
       n_std_aged = (age1 >= 65) + (filing_status == 2 & !is.na(age2) & age2 >= 65),
       n_std_blind = coalesce(blind1, 0) +
                     (filing_status == 2 & coalesce(blind2, 0)),
@@ -232,18 +288,34 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # Standard-deduction phase-out above the enum income base threshold,
       # in two mutually exclusive shapes selected by whether a step is
       # encoded:
-      #   STEPPED (RI-1040 Standard Deduction Worksheet): share_per_step of
-      #     the deduction is removed per increment, or fraction thereof, of
-      #     income over the threshold -- so the applicable share falls
-      #     0.8/0.6/0.4/0.2 and reaches zero once the excess passes
-      #     1/share_per_step steps. Same construction as st_exempt's
-      #     po_share_per_step (CT/MN), including the ceiling() rounding
+      #   STEPPED, SHARE (RI-1040 Standard Deduction Worksheet):
+      #     share_per_step of the deduction is removed per increment, or
+      #     fraction thereof, of income over the threshold -- so the
+      #     applicable share falls 0.8/0.6/0.4/0.2 and reaches zero once the
+      #     excess passes 1/share_per_step steps. Same construction as
+      #     st_exempt's po_share_per_step (CT/MN), including the ceiling()
+      #     rounding
+      #   STEPPED, DOLLARS (AL Form 40 standard deduction chart): a fixed
+      #     amount_per_step comes off per step of income over the threshold,
+      #     down to a FLOOR the deduction never falls below. Alabama's chart
+      #     is 21 rows -- one flat maximum, nineteen steps, and a floor row
+      #     -- and the threshold is encoded as the last flat dollar so that
+      #     the first step lands on the chart's first stepped row
       #   SLIDING (WI 71.05(22)): reduced std_po_rate per dollar over the
       #     threshold, to zero. Where a second (max, rate) pair is encoded
       #     the deduction is the larger of the two slides (WI HoH floors at
       #     the single-filer schedule)
       st_std_ded = if_else(
-        is.finite(st_ded.std_po_step),
+        is.finite(st_ded.std_po_step) & st_ded.std_po_amount_per_step > 0,
+        pmax(st_ded.std_po_floor,
+             st_std_ded - st_step_reduction(
+               std_po_income_v, st_ded.std_po_thresh, st_ded.std_po_step,
+               st_ded.std_po_amount_per_step
+             )),
+        st_std_ded
+      ),
+      st_std_ded = if_else(
+        is.finite(st_ded.std_po_step) & st_ded.std_po_amount_per_step == 0,
         pmax(0, st_std_ded * (1 - pmin(1, st_step_reduction(
           std_po_income_v, st_ded.std_po_thresh, st_ded.std_po_step,
           st_ded.std_po_share_per_step
@@ -255,6 +327,15 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
                   pmax(0, std_po_income_v - st_ded.std_po_thresh))
         )
       ),
+
+      # States that adopt the FEDERAL standard deduction by reference rather
+      # than publishing their own (MO: RSMo 143.131.2, MO-1040 line 14 "enter
+      # the standard deduction amount for your filing status"). Taking the
+      # unit's own federal amount carries the aged and blind add-ons and the
+      # dependent-filer limitation automatically, and cannot drift from
+      # federal law the way a transcribed copy would. Applied last, so it
+      # replaces rather than stacks with the amounts above
+      st_std_ded = if_else(st_ded.std_equals_federal == 1, std_ded, st_std_ded),
 
       # State itemized base: pre-limitation federal itemized, SALT component
       # replaced by uncapped property taxes (income/sales excluded where
@@ -286,6 +367,16 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
         ),
         0
       ),
+
+      # Employee payroll and self-employment taxes added to the itemized
+      # base (MO-A Part 2 lines 2-7: Social Security tax withheld -- capped
+      # on the form at the year's OASDI maximum, which liab_pr_ee already
+      # respects -- plus Medicare tax, railroad retirement Tier I/II, and
+      # self-employment tax, entered per spouse). Railroad retirement
+      # contributions are not modeled separately and fall in with wage FICA
+      st_item_base = st_item_base +
+                     st_ded.item_add_payroll * (liab_pr_ee + liab_seca) *
+                     (st_ded.item_allowed == 1),
 
       # Pre-TCJA Pease limitation (state-indexed thresholds; medical,
       # investment interest, and casualty are protected), extended with the
@@ -398,8 +489,81 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
              st_care_n_qual * st_ded.care_exp_ded_per_dep_cap,
              st_care_ei_limit),
 
+      # Federal income tax deduction (MO-1040 lines 9-13; OR-40 federal tax
+      # liability subtraction; AL Form 40 full deductibility). The deductible
+      # base is federal tax after nonrefundable credits but before other
+      # taxes -- 1040 line 22, which is liab_bc (tax plus AMT plus excess
+      # APTC repayment) less the nonrefundable credits actually used. AMT is
+      # therefore IN the base, matching MO (subtracted on the "tax from
+      # federal return" line, added back on "other federal tax") and OR
+      # (worksheet line 1 is 1040 line 22 outright). Self-employment,
+      # household-employment, and tips FICA taxes are excluded by both
+      # states, and none of them enter liab_bc.
+      #
+      # Each state names its OWN list of refundable credits that reduce the
+      # base, and the lists genuinely differ -- so each is a separate flag
+      # rather than one blanket switch. Missouri subtracts the earned income
+      # credit, refundable education credit and net premium tax credit but
+      # NOT the additional child tax credit; Alabama subtracts the earned
+      # income credit, the additional child tax credit and the refundable
+      # education credit but NOT the net premium tax credit. Both omissions
+      # are deliberate: neither appears anywhere in that state's worksheet.
+      # Alabama also adds the net investment income tax back, because it
+      # rides Schedule 2 Part II and so never reached 1040 line 22.
+      #
+      # Other add-backs some forms carry (retirement-plan penalty taxes,
+      # recapture taxes, Form 2439 credits, the foreign tax credit line
+      # Missouri adds as if a tax) are not modeled; see each state's
+      # known differences
+      st_fed_tax_base = pmax(0,
+        liab_bc - nonref +
+          st_ded.fed_tax_ded_add_niit * liab_niit -
+          st_ded.fed_tax_ded_less_eitc    * eitc -
+          st_ded.fed_tax_ded_less_ctc_ref * ctc_ref -
+          st_ded.fed_tax_ded_less_ed_ref  * ed_ref -
+          st_ded.fed_tax_ded_less_ptc     * net_ptc),
+      st_fed_tax_ded = st_ded.fed_tax_ded *
+                       pmin(st_ded.fed_tax_ded_cap,
+                            fed_tax_share_v * st_fed_tax_base),
+
+      # Retirement exemption taken as a DEDUCTION rather than an AGI
+      # subtraction (MO-1040 line 8, from MO-A Part 3). Placement matters:
+      # Missouri AGI (line 6) is struck BEFORE this exemption, and line 6 is
+      # what the federal-tax-deduction percentage bands key on, so running
+      # it through calc_st_agi would feed the bands the wrong income.
+      #
+      # Both pieces are reduced DOLLAR-FOR-DOLLAR by income above their own
+      # limit (MO-A Part 3 sections A-C: "subtract line 5 from line 8; if
+      # line 5 is greater, enter $0"), where the limit income is Missouri
+      # AGI less taxable Social Security
+      retire_limit_income = st_agi - st_ded.retire_exempt_less_ss * txbl_ss,
+
+      # Social Security / SS disability: 100% of federally taxable benefits,
+      # for filers at or above the minimum age. Benefits are allocated
+      # between spouses on the form by each spouse's share of benefits
+      # received, which is unobserved, so the share of the couple's taxable
+      # benefits that qualifies is prorated by how many spouses meet the age
+      # test. SSDI carries no age requirement but disability status is
+      # unobserved [understates the exemption for under-62 SSDI recipients]
+      n_retire_age = (age1 >= st_ded.retire_exempt_ss_min_age) +
+                     (filing_status == 2 & !is.na(age2) &
+                        age2 >= st_ded.retire_exempt_ss_min_age),
+      st_retire_ss_exempt = st_ded.retire_exempt_ss *
+        pmax(0, pmax(0, txbl_ss) * (n_retire_age / pmax(1, n_taxpayers_ded)) -
+                pmax(0, retire_limit_income - st_ded.retire_exempt_ss_limit)),
+
+      # Private pension/annuity/IRA exemption, per person, against the
+      # observable taxable pension and IRA distribution pool
+      st_retire_priv_exempt = pmax(
+        0,
+        pmin(pmax(0, txbl_pens_dist + txbl_ira_dist),
+             n_taxpayers_ded * st_ded.retire_exempt_priv_cap) -
+          pmax(0, retire_limit_income - st_ded.retire_exempt_priv_limit)
+      ),
+      st_retire_exempt = st_retire_ss_exempt + st_retire_priv_exempt,
+
       st_ded = if_else(st_itemizing, st_item_ded, st_std_ded) +
-               st_care_exp_ded,
+               st_care_exp_ded + st_fed_tax_ded + st_retire_exempt,
 
       #--------------------------------------------------------
       # Deduction addbacks (taxable-income-start states: CO...)
