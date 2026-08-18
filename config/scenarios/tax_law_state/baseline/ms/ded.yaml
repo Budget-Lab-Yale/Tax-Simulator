@@ -1,0 +1,43 @@
+---
+# Mississippi: deductions (Form 80-105 line 14; Mississippi Schedule A).
+#
+# The standard deduction is small, fixed, and unchanged in every year
+# TY2017-TY2025 -- nothing in Mississippi is indexed. The exemptions in
+# exempt.yaml do the heavy lifting instead.
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_married
+    '3': std_single
+    '4': std_head
+
+std_single:
+  value: 2300
+  reference: 'Booklet "Filing Status / Exemption / Standard Deduction" table, every year TY2017-TY2025: $2,300 for single and for each spouse filing separately. Not indexed'
+std_married:
+  value: 4600
+  reference: 'Same table: $4,600 for married filing joint or combined, and for a spouse who died in the tax year. Exactly twice the single amount'
+std_head:
+  value: 3400
+  reference: 'Same table: $3,400 for head of family'
+
+item_allowed:
+  value: 1
+  reference: 'Mississippi Schedule A'
+item_coupling:
+  value: 0
+  reference: 'The federal election does not bind Mississippi: "If you filed your federal return using the standard deduction and wish to itemize deductions for Mississippi purposes, please use the Federal Form 1040 Schedule A as a worksheet" (2025 booklet). A free election on whichever gives the greater benefit'
+salt_addback:
+  value: 1
+  reference: 'Mississippi Schedule A removes state income taxes from the deductible taxes -- stated in three separate places in every booklet'
+
+documented_not_modeled:
+  gaming_loss_addback:
+    reference: 'Mississippi Schedule A also removes Mississippi gaming losses from itemized deductions, the counterpart of excluding gaming winnings from income. Gambling losses are not separable in the model'
+  medical_floor:
+    reference: 'The Mississippi medical deduction uses a 7.5%-of-FEDERAL-AGI floor, one of only two places federal AGI appears on the return. The model carries the federal post-floor amount, which uses the same 7.5% floor, so this happens to line up'
+  ty2017_itemized_limitation:
+    reference: 'TY2017 ALONE carried a Pease-style Mississippi itemized limitation with its own worksheet, which removed only the surviving proportionate share of the state-tax deduction, plus the 2%-of-AGI miscellaneous tier. Both vanish from TY2018 and the Schedule A line numbers shift. Not encoded [overstates TY2017 itemized deductions for high-income filers]'
+  mfs_election_coupling:
+    reference: 'Spouses filing separately must make the same election -- one may itemize only if the other does -- and neither may use the other unused standard deduction. Separate returns are not modeled'

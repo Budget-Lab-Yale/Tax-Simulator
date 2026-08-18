@@ -116,6 +116,12 @@ MI:
 MN:
   profile: broad_iit
   enabled: true
+# MS rebuilds income line by line and never takes a federal AGI figure, so
+# IRC conformity is moot (group 0 trivially). Federal AGI appears on the
+# return in only two places: the medical floor and the child care credit cliff
+MS:
+  profile: broad_iit
+  enabled: true
 # MO gives every undefined term "the same meaning as when used in a
 # comparable context in the laws of the United States relating to federal
 # income taxes" (RSMo 143.091), with no fixed date, so rolling conformity

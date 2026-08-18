@@ -24,7 +24,7 @@ test_state_calc = function() {
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
                 'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV', 'NM',
                 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR', 'MA', 'NJ',
-                'AR'),
+                'AR', 'MS'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -3199,6 +3199,98 @@ test_state_calc = function() {
            label = 'HI-8 Act 46 TY2027 schedule + TY2026 standard deduction')
 
   #--------------------------------------------------------------------------
+  # Mississippi (Form 80-105)
+  #
+  # An own-base state that never takes a federal AGI figure. Its brackets are
+  # the same for every filing status, and the only things that move across the
+  # window are the zero-bracket ceiling and the top rate -- the $10,000
+  # top-bracket threshold never moves at all. Retirement income is exempt in
+  # total, which is the largest single feature.
+  #--------------------------------------------------------------------------
+
+  # MS-1: 2024 single, wages 40,000. The $6,000 exemption and $2,300 standard
+  # deduction leave taxable income of 31,700; the first $10,000 is untaxed and
+  # the rest is at 4.7% = 1,019.90
+  run_case('MS', 2024,
+           list(agi = 40000, wages1 = 40000, ei1 = 40000),
+           expect = list(st_agi = 40000, st_exempt = 6000, st_ded = 2300,
+                         st_txbl_inc = 31700, liab_st_iit = 1019.90),
+           label = 'MS-1 2024 single, $10,000 zero bracket at 4.7%')
+
+  # MS-2a / MS-2b: the zero bracket grew from nothing into the 3% band rather
+  # than the 3% RATE being cut, which is what the phase-out actually was. The
+  # same unit in TY2017 has no zero bracket and pays 3% on the first $5,000,
+  # 4% on the next $5,000 and 5% above -- 1,435.00. By TY2020 the first $3,000
+  # is untaxed and the bill falls to 1,345.00, with every rate unchanged.
+  run_case('MS', 2017,
+           list(agi = 40000, wages1 = 40000, ei1 = 40000),
+           expect = list(st_txbl_inc = 31700, liab_st_iit = 1435.00),
+           label = 'MS-2a 2017 no zero bracket, 3/4/5% schedule')
+
+  run_case('MS', 2020,
+           list(agi = 40000, wages1 = 40000, ei1 = 40000),
+           expect = list(st_txbl_inc = 31700, liab_st_iit = 1345.00),
+           label = 'MS-2b 2020 the zero bracket has eaten $3,000 of the 3% band')
+
+  # MS-3: retirement income is exempt IN TOTAL -- Social Security, and
+  # pensions and IRA distributions from federal, state and private systems
+  # alike. 2024 single aged 70 with 20,000 of wages, 30,000 of pension and
+  # 15,000 of taxable Social Security: the Mississippi base is 20,000, not
+  # 65,000. Exemptions are 6,000 plus the 1,500 age amount, standard deduction
+  # 2,300, so taxable income is 10,200 -- only $200 of it above the zero
+  # bracket -- and tax just $9.40
+  run_case('MS', 2024,
+           list(agi = 65000, age1 = 70, wages1 = 20000, ei1 = 20000,
+                txbl_pens_dist = 30000, txbl_ss = 15000, gross_ss = 17000),
+           expect = list(st_agi = 20000, st_exempt = 7500,
+                         st_txbl_inc = 10200, liab_st_iit = 9.40),
+           label = 'MS-3 2024 retirement income exempt in total')
+
+  # MS-4: exemptions do the work Mississippi's small standard deduction does
+  # not. 2024 joint with two dependents and 80,000 of wages: 12,000 of
+  # exemption plus 2 x 1,500 for the dependents, then a 4,600 standard
+  # deduction, leaves 60,400, of which 50,400 sits above the zero bracket
+  # and is taxed at 4.7% -> 2,368.80
+  run_case('MS', 2024,
+           list(agi = 80000, filing_status = 2, age2 = 40, wages1 = 50000,
+                wages2 = 30000, ei1 = 50000, ei2 = 30000, n_dep = 2,
+                dep_age1 = 6, dep_age2 = 10),
+           expect = list(st_exempt = 15000, st_ded = 4600,
+                         st_txbl_inc = 60400, liab_st_iit = 2368.80),
+           label = 'MS-4 2024 joint exemption and dependent amounts')
+
+  # MS-5: the enacted rate path. The MS-1 unit a year later pays 4.4% rather
+  # than 4.7% -- 954.80. Rates are enacted through TY2030; the further
+  # reductions HB 1 provides for from TY2031 are trigger-contingent and are
+  # deliberately not encoded
+  run_case('MS', 2025,
+           list(agi = 40000, wages1 = 40000, ei1 = 40000),
+           expect = list(liab_st_iit = 954.80),
+           label = 'MS-5 2025 top rate steps to 4.4%')
+
+  # MS-6: Mississippi has no earned income credit at all -- a verified
+  # negative across all nine booklets, not an unfound one
+  run_case('MS', 2024,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, eitc = 3000),
+           expect = list(st_eitc = 0),
+           label = 'MS-6 2024 no state earned income credit')
+
+  # MS-7a / MS-7b: the child care credit at 25% of the federal credit, which
+  # did NOT exist before TY2023 -- the earlier "Business Child/Dependent Care
+  # Credit" is an employer credit, and the TY2017 booklet warns in bold that
+  # it is not the federal one. The same unit gets 150 in TY2024 and nothing in
+  # TY2022.
+  run_case('MS', 2024,
+           list(agi = 40000, wages1 = 40000, ei1 = 40000, cdctc_nonref = 600),
+           expect = list(st_cdctc = 150, liab_st_iit = 1019.90 - 150),
+           label = 'MS-7a 2024 child care credit at 25% of federal')
+
+  run_case('MS', 2022,
+           list(agi = 40000, wages1 = 40000, ei1 = 40000, cdctc_nonref = 600),
+           expect = list(st_cdctc = 0),
+           label = 'MS-7b 2022 no child care credit existed yet')
+
+  #--------------------------------------------------------------------------
   # Arkansas (AR1000F)
   #
   # An own-base state whose published schedule is a `rate x income - minus
@@ -4350,7 +4442,7 @@ test_state_calc = function() {
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
                    'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI',
                    'WV', 'NM', 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR',
-                   'MA', 'NJ', 'AR')
+                   'MA', 'NJ', 'AR', 'MS')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()
