@@ -1,0 +1,56 @@
+---
+# Arkansas: credits (Form AR1000F lines 7 and 34; Form AR1000TC).
+#
+# Arkansas grants PERSONAL TAX CREDITS in place of exemptions: a flat amount
+# per taxpayer, one more for each of several conditions, and one per
+# dependent. There is NO state earned income credit -- a verified negative
+# across all nine booklets, not merely something unfound.
+
+exempt_credit_style:
+  value: 1
+  reference: 'Form AR1000F lines 7A and 7B: a flat credit per person applied against tax rather than an allowance against income'
+exempt_credit_personal:
+  value:
+    '2017': 26
+    '2020': 29
+  reference: 'Booklet LINE 7A and the AR1000F form face, which reads "X $26 =" through TY2019 and "X $29 =" from TY2020. The $26 figure secondary sources quote is right only through TY2019. The credit is CONDITIONALLY indexed: Ark. Code Ann. 26-51-501(d)-(f) indexes a CY2001 base of $20 but only in years a general-revenue growth trigger fires, which is why it stepped once and then held. Encoded as the observed per-year series rather than as a CPI formula'
+exempt_credit_dep:
+  value:
+    '2017': 26
+    '2020': 29
+  reference: 'Line 7B, the same amount for each dependent'
+exempt_credit_aged:
+  value:
+    '2017': 26
+    '2020': 29
+  reference: 'Line 7A allows an additional credit where the taxpayer or spouse was age 65 or over on January 1 following the tax year. The statute sets the add-on at a flat $20, but the form applies the same per-person amount to every box'
+exempt_credit_blind:
+  value:
+    '2017': 26
+    '2020': 29
+  reference: 'Line 7A allows an additional credit for blindness, and another for deafness, on the same terms. Only the blindness box is modeled -- deafness is not a model input'
+
+cdctc_match:
+  value: 0.20
+  reference: 'Form AR2441: the Arkansas child care credit is 20% of the federal child and dependent care credit in all nine years. From TY2021 Arkansas computes it on a PRE-ARPA recomputation of the federal credit rather than the credit as claimed -- see documented_not_modeled'
+cdctc_refundable:
+  value: 0
+  reference: 'The Arkansas child care credit is nonrefundable'
+
+eitc_match:
+  value: 0
+  reference: 'Arkansas has NO state earned income credit: zero hits across all nine booklets and no line on Form AR1000TC. Stated explicitly to record the verified negative'
+
+documented_not_modeled:
+  deaf_and_head_of_household_credits:
+    reference: 'Line 7A grants an additional personal credit for deafness, and another where the filing status is head of household or surviving spouse. Deafness is not a model input, and the head-of-household add-on has no place in the per-taxpayer/aged/blind/dependent structure the machinery carries [understates credits by $29 per affected return]'
+  cdctc_arpa_decoupling:
+    reference: 'From TY2021 Arkansas recomputes the federal child and dependent care credit under PRE-ARPA rules on Form AR2441 and takes 20% of that, rather than 20% of the enlarged federal credit actually claimed. The model matches the federal credit as computed [overstates the Arkansas credit for TY2021, when the federal credit was temporarily much larger]'
+  developmental_disabilities_credit:
+    reference: 'Ark. Code Ann. 26-51-503 grants a $500 credit per child with developmental disabilities in all years. Disability status is not a model input'
+  inflationary_relief_credit:
+    reference: 'A one-off Inflationary Relief Income Tax Credit existed for TY2022 and TY2023 only, on a published income-keyed table, worth up to $150 per filer. Not encoded [understates relief in those two years for low and middle income filers]'
+  qualified_individuals_credit:
+    reference: 'From TY2022 an Additional Tax Credit for Qualified Individuals smooths the bottom of the schedule -- a $60 plateau falling $5 per $100 of income. It is the device that replaced the old low/middle table notch. Not encoded, and it is looked up PER SPOUSE on a status-4 return [understates credits for low-income filers from TY2022]'
+  certificated_credits:
+    reference: 'Form AR1000TC carries the credit for taxes paid to other states plus a long tail of certificated business credits. None is a broad income-conditioned credit reconstructible from the microdata'

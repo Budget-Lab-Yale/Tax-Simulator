@@ -23,7 +23,8 @@ test_state_calc = function() {
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
                 'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV', 'NM',
-                'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR', 'MA', 'NJ'),
+                'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR', 'MA', 'NJ',
+                'AR'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -3198,6 +3199,91 @@ test_state_calc = function() {
            label = 'HI-8 Act 46 TY2027 schedule + TY2026 standard deduction')
 
   #--------------------------------------------------------------------------
+  # Arkansas (AR1000F)
+  #
+  # An own-base state whose published schedule is a `rate x income - minus
+  # adjustment` memo rather than a marginal ladder. It is encoded through the
+  # base-amount family because two features need the discontinuities kept: a
+  # genuine NOTCH at the top of the fourth bracket through TY2021, and a
+  # recapture tail at the top. Arkansas grants personal CREDITS rather than
+  # exemptions, so nothing but the standard deduction comes out of the base.
+  #--------------------------------------------------------------------------
+
+  # AR-1: 2024 single, wages 52,410. The standard deduction is 2,410 (indexed
+  # from 2,200 since TY2022), so net taxable income is 50,000. Tax = 592.44 +
+  # 3.9% x 24,300 = 1,540.14, less the $29 personal credit = 1,511.14
+  run_case('AR', 2024,
+           list(agi = 52410, wages1 = 52410, ei1 = 52410),
+           expect = list(st_agi = 52410, st_ded = 2410, st_txbl_inc = 50000,
+                         st_exempt_credit = 29, liab_st_iit = 1511.14),
+           label = 'AR-1 2024 single, indexed standard deduction')
+
+  # AR-2a / AR-2b: the NOTCH. Through TY2021 the statute ran three whole-income
+  # tables selected by income level, so crossing the boundary re-taxed the
+  # entire income on a higher table. In TY2020 net taxable income of $22,899
+  # owes $537.00 and $22,900 owes $717.29 -- a $180 jump on one dollar of
+  # income. A smooth marginal schedule cannot express it, which is why the
+  # published base amounts are encoded rather than integrated rates.
+  run_case('AR', 2020,
+           list(agi = 25099, wages1 = 25099, ei1 = 25099),
+           expect = list(st_txbl_inc = 22899, liab_st_iit = 537.00 - 29),
+           label = 'AR-2a 2020 just below the whole-income table notch')
+
+  run_case('AR', 2020,
+           list(agi = 25100, wages1 = 25100, ei1 = 25100),
+           expect = list(st_txbl_inc = 22900, liab_st_iit = 717.29 - 29),
+           label = 'AR-2b 2020 one dollar above it, $180 more tax')
+
+  # AR-3: half of net long-term capital gain is excluded, while short-term
+  # gain stays fully taxable. 2024 single with 40,000 of wages and 20,000 of
+  # long-term gain: 10,000 comes out, so Arkansas AGI is 50,000 and taxable
+  # income 47,590 -> 1,446.15, less the credit = 1,417.15
+  run_case('AR', 2024,
+           list(agi = 60000, wages1 = 40000, ei1 = 40000, kg_lt = 20000),
+           expect = list(st_agi = 50000, st_txbl_inc = 47590,
+                         liab_st_iit = 1446.15 - 29),
+           label = 'AR-3 2024 fifty percent long-term capital gain exclusion')
+
+  # AR-4: Social Security is wholly outside the base and the $6,000 retirement
+  # exemption applies at ANY age on the employer-plan branch. 2024 single aged
+  # 70 with 20,000 of wages, 15,000 of pension and 12,000 of taxable Social
+  # Security: the base is 20,000 + 15,000 - 6,000 = 29,000, taxable income
+  # 26,590, tax 627.15, less the personal AND age-65 credits (2 x 29) = 569.15
+  run_case('AR', 2024,
+           list(agi = 47000, age1 = 70, wages1 = 20000, ei1 = 20000,
+                txbl_pens_dist = 15000, txbl_ss = 12000, gross_ss = 14000),
+           expect = list(st_agi = 29000, st_txbl_inc = 26590,
+                         st_exempt_credit = 58, liab_st_iit = 569.15),
+           label = 'AR-4 2024 Social Security exempt, $6,000 retirement exemption')
+
+  # AR-5: above the recapture tail the published final adjustment governs.
+  # 2024 single with net taxable income of exactly 100,000: the encoded bands
+  # give 3,812.60, which is precisely 3.9% x 100,000 - the published $87.40
+  # final adjustment
+  run_case('AR', 2024,
+           list(agi = 102410, wages1 = 102410, ei1 = 102410),
+           expect = list(st_txbl_inc = 100000, liab_st_iit = 3812.60 - 29),
+           label = 'AR-5 2024 above the recapture tail')
+
+  # AR-6: Arkansas has NO state earned income credit -- a verified negative
+  # rather than an unfound one. The same unit that would collect a match in a
+  # neighbouring state collects nothing here.
+  run_case('AR', 2024,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, eitc = 3000),
+           expect = list(st_txbl_inc = 17590, st_eitc = 0,
+                         liab_st_iit = 316.69 - 29),
+           label = 'AR-6 2024 no state earned income credit')
+
+  # AR-7: the child care credit is 20% of the federal credit, nonrefundable.
+  # 2024 single, wages 40,000, federal credit 600 -> 120 of Arkansas credit on
+  # top of the $29 personal credit
+  run_case('AR', 2024,
+           list(agi = 40000, wages1 = 40000, ei1 = 40000, cdctc_nonref = 600),
+           expect = list(st_txbl_inc = 37590, st_cdctc = 120,
+                         liab_st_iit = 1056.15 - 149),
+           label = 'AR-7 2024 child care credit at 20% of federal')
+
+  #--------------------------------------------------------------------------
   # New Jersey (NJ-1040)
   #
   # The strictest own-base state in the set: enumerated categories of gross
@@ -4264,7 +4350,7 @@ test_state_calc = function() {
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
                    'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI',
                    'WV', 'NM', 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR',
-                   'MA', 'NJ')
+                   'MA', 'NJ', 'AR')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()
@@ -4358,6 +4444,13 @@ test_state_calc = function() {
                 #   table ends at $40,000 in the 2023-2027 vintage, dropping
                 #   $110 for the one-person sweep unit, plus the bracket
                 #   slope; the 2017 vintage's largest edge is $55 at $30,000)
+    AR = 150,   # recapture-tail cliffs: through TY2021 the DFA bracket memo's
+                #   minus adjustment drops $100 at each tail-row boundary, so a
+                #   $500 sweep step spanning one boundary jumps $100 plus
+                #   6.9% x 500 = $134.50. Published law, not a modelling
+                #   artefact -- pinned by AR-5. (The larger whole-income table
+                #   NOTCH, about $180 in TY2020, falls in a year the sweep does
+                #   not visit; it is pinned by AR-2a/AR-2b instead)
     OR = 300    # exemption credit CLIFF at $100,000 of federal AGI (ORS
                 #   316.085: the credit "isn't allowed" above the threshold,
                 #   with no taper), so the whole per-exemption credit vanishes

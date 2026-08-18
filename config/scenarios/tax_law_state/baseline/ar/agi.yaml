@@ -1,0 +1,94 @@
+---
+# Arkansas: income (Form AR1000F lines 8-25).
+#
+# Arkansas is a full own-base state: it rebuilds income line by line rather
+# than starting from federal AGI, and applies its own above-the-line
+# adjustments to reach Arkansas AGI at line 25.
+#
+# Two features are distinctive. Half of net long-term capital gain is
+# excluded, and gain above $10,000,000 is exempt outright. And unemployment
+# compensation flips taxable status THREE times across this window, which is
+# easy to miss.
+
+start_point:
+  value: 0
+  reference: 'Form AR1000F lines 8-24 build Arkansas income from its own components and line 25 is Arkansas adjusted gross income. There is no federal-AGI line'
+
+ob_class_floor:
+  value: 0
+  reference: 'Arkansas has no gross-income-class loss ring-fence of the Pennsylvania or New Jersey kind; losses net across the return subject to the federal capital-loss limitation'
+
+ob_comp_share:
+  value: 1
+  reference: 'AR1000F line 8, wages, salaries, tips'
+ob_int_share:
+  value: 1
+  reference: 'AR1000F line 9, taxable interest'
+ob_div_share:
+  value: 1
+  reference: 'AR1000F line 10, dividends'
+ob_bus_share:
+  value: 1
+  reference: 'AR1000F lines 15-17, business, farm and partnership/S-corporation income'
+ob_gains_share:
+  value: 1
+  reference: 'AR1000F line 13 carries capital gains into income in full; the 50% long-term exclusion is applied separately by cap_gains_excl_share below, which lets short-term gains stay fully taxable'
+ob_st_gains_share:
+  value: 1
+  reference: 'Short-term capital gains are 100% taxable in Arkansas -- the exclusion reaches only net LONG-TERM gain'
+ob_rent_share:
+  value: 1
+  reference: 'AR1000F line 16, rents, royalties, partnerships, estates and trusts'
+ob_retirement_share:
+  value: 1
+  reference: 'AR1000F line 17, pensions and annuities, before the $6,000 exemption below'
+ob_ira_share:
+  value: 1
+  reference: 'IRA distributions are taxable, subject to the same $6,000 exemption'
+ob_ss_share:
+  value: 0
+  reference: 'Social Security benefits are on the Arkansas exempt-income list and never enter income'
+ob_ui_share:
+  value:
+    '2017': 0
+    '2018': 1
+    '2020': 0
+    '2022': 1
+  reference: 'Unemployment compensation flips taxable status three times in this window: exempt in TY2017, taxable TY2018-TY2019, exempt again TY2020-TY2021 (the pandemic relief acts), and taxable from TY2022. Each year read from that year own booklet'
+ob_alimony_share:
+  value: 1
+  reference: 'AR1000F line 19, alimony received'
+ob_other_share:
+  value: 1
+  reference: 'AR1000F line 20, other income'
+
+cap_gains_excl_share:
+  value: 0.5
+  reference: 'Form AR1000D: 50% of net long-term capital gain is excluded, verified directly off the form in all nine years. Same machinery as the North Dakota, South Carolina and Wisconsin exclusions'
+
+pension_excl_under65:
+  value: 6000
+  reference: 'The $6,000 retirement and pension exemption, PER TAXPAYER across all plans, flat and never indexed in any year 2017-2025. Ark. Code Ann. 26-51-307'
+pension_excl_65plus:
+  value: 6000
+  reference: 'The same $6,000 -- there is no larger amount at 65, and no age test at all on the employer-plan branch'
+pension_excl_min_age:
+  value: 0
+  reference: 'The employer-plan branch carries NO age test, so the exemption is available at any age. The IRA branch does require age 59 and a half, which this cannot express -- see documented_not_modeled.ira_age_test'
+pension_excl_incl_ira:
+  value: 1
+  reference: 'IRA distributions qualify, subject to the 59-and-a-half test noted above'
+
+documented_not_modeled:
+  low_income_tax_tables:
+    reference: 'See ord.yaml. Arkansas five Low Income Tax Tables are a taxpayer ELECTION used instead of the schedule and instead of any deduction, and they zero out tax below their thresholds. Not modeled, and the largest Arkansas known difference [overstates tax for low-income filers]'
+  ira_age_test:
+    reference: 'The $6,000 exemption applies to employer-plan distributions at any age but to IRA distributions only from age 59 and a half. The machinery carries one minimum age for both branches and it is set to zero, so a young IRA recipient receives the exemption here [understates Arkansas tax for early IRA withdrawals -- a small population, since early withdrawals are rare and usually small]'
+  military_retirement_exemption:
+    reference: 'Military retirement benefits are fully exempt from TY2018 (Act 141 of 2017), and the exemption is mutually exclusive with the $6,000 retirement exemption under 26-51-307(f). Military retiree status is not a model input [overstates Arkansas tax for military retirees]'
+  ten_million_capital_gain_exemption:
+    reference: 'Net long-term capital gain above $10,000,000 is exempt outright rather than 50% excluded. The threshold is far above anything the microdata carries with meaningful frequency, and encoding it would need a second exclusion tier [immaterial at PUF frequencies]'
+  own_above_the_line_adjustments:
+    reference: 'Form AR1000ADJ carries Arkansas own adjustments, which differ from the federal set. The own-base build does not apply the federal above-the-line deductions, and the Arkansas ones are not model inputs'
+  tcja_nonconformity_on_itemized:
+    reference: 'Arkansas did not conform to the TCJA itemized-deduction changes: it still allows 2%-floor miscellaneous deductions and casualty losses, applies no SALT cap, uses a 10% medical floor and still allows moving expenses. The model carries federal post-TCJA itemized components, so Arkansas itemizers are understated [see ded.yaml]'

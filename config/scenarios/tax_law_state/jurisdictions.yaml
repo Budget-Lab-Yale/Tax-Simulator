@@ -7,6 +7,12 @@ AK:
 AL:
   profile: broad_iit
   enabled: true
+# AR is a full own-base state: it rebuilds income line by line rather than
+# starting from federal AGI, so IRC conformity is moot (group 0 trivially).
+# Note it did NOT conform to the TCJA itemized changes -- see baseline/ar/ded.yaml
+AR:
+  profile: broad_iit
+  enabled: true
 AZ:
   profile: broad_iit
   enabled: true

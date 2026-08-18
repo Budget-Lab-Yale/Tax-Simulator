@@ -23,7 +23,7 @@
 # States by structural class (baseline configs under tax_law_state/baseline/)
 cross_model_states = function() {
   list(
-    broad  = c('AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'GA', 'HI', 'ID', 'IL', 'IN',
+    broad  = c('AR', 'AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'GA', 'HI', 'ID', 'IL', 'IN',
                'KS', 'KY', 'MA', 'MD', 'ME', 'MI', 'MN', 'MO', 'NC', 'ND', 'NE',
                'NM',
                'NJ', 'NY', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'UT', 'VA', 'VT',
