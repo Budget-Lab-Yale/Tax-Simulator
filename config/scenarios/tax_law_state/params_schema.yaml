@@ -144,6 +144,10 @@ scalars:
   # Pension/annuity distributions and IRA distributions carry SEPARATE shares:
   # Alabama exempts defined benefit plans (IRC 414(j)) but taxes IRAs, which
   # by definition cannot be defined benefit
+  # Long-term and other gains take ob_gains_share; SHORT-TERM gains take
+  # their own share, because Massachusetts holds them out of the ordinary
+  # base and taxes them at a different rate (st_ord.st_gains_rate)
+  st_agi.ob_st_gains_share: 0
   st_agi.ob_retirement_share: 0
   st_agi.ob_ira_share: 0
   st_agi.ob_ss_share: 0
@@ -250,6 +254,9 @@ scalars:
   # Employee payroll and self-employment taxes added to the state itemized
   # base (MO-A Part 2 lines 2-7)
   st_ded.item_add_payroll: 0
+  # Per-person deduction of the filer's own payroll and government-retirement
+  # contributions (MA Form 1 lines 11a/11b, $2,000 each spouse)
+  st_ded.payroll_ded_cap: {default: 0, units: per_person}
   # Retirement exemption taken as a DEDUCTION rather than an AGI subtraction
   # (MO-1040 line 8): the state's AGI is struck before the exemption, so a
   # feature keyed on state AGI (MO's federal-tax-deduction bands) sees the
@@ -305,6 +312,9 @@ scalars:
   # taxpayer, spouse and dependents alike
   st_exempt.dep_tier_income_base: 2   # st_income_base enum (AL: Alabama AGI)
   st_exempt.dep_filer_zero: 0
+  # Federal Schedule A medical/dental deduction allowed as a state EXEMPTION,
+  # itemizer or not (MA Form 1 line 2e)
+  st_exempt.medical_exempt: 0
 
   # child_ded.yaml (AGI-tabled deductions, e.g. North Carolina)
   st_child_ded.style: 0
@@ -320,6 +330,9 @@ scalars:
   st_ord.recapture_width: 50000
   st_ord.sta_max: {default: 0, units: per_return}
   st_ord.bus_rate: 0   # flat rate on business income above the carve-out cap (OH 3%)
+  # Separate rate on short-term capital gains, which ob_st_gains_share holds
+  # out of the ordinary base (MA Part A: 12% to TY2022, 8.5% from TY2023)
+  st_ord.st_gains_rate: 0
   st_ord.combined_sep: 0   # married-filing-separately-on-a-combined-return option (KY): per-spouse columns, lower of joint and combined; assumes no recapture/base-amount/business carve-out in the same state
   st_ord.combined_sep_std_share: 1   # share of the mapped standard deduction each combined-separate column receives: 1 where the std is per-person (KY), 0.5 where the joint amount is twice the per-column amount (DE)
   # Married filing combined (MO): deductions pooled at the return level, then
@@ -354,6 +367,14 @@ scalars:
   st_surtax.kg_agi_thresh: .inf
 
   # credits.yaml
+  # Limited income credit / no-tax status (MA Form 1 lines 27 and 29): the
+  # credit reduces total tax to lic_rate of the excess of the enum income
+  # base over lic_thresh (+ lic_per_dep per dependent). A filer at or below
+  # the threshold owes nothing, which is how No Tax Status is expressed
+  st_credits.lic_rate: 0
+  st_credits.lic_thresh: {default: 0, units: per_return}
+  st_credits.lic_per_dep: {default: 0, units: per_dependent}
+  st_credits.lic_income_base: 2   # st_income_base enum (MA: state AGI)
   st_credits.eitc_match: 0
   # Higher match where a dependent is under a stated age (OR 12% vs 9% for a
   # dependent younger than 3), as against the child-COUNT-keyed

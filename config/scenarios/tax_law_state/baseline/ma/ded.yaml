@@ -1,0 +1,35 @@
+---
+# Massachusetts: deductions (Form 1 lines 11-15; Schedule Y).
+#
+# Massachusetts has NO STANDARD DEDUCTION and no itemized deduction: Form 1
+# goes straight from Part B gross income to a fixed list of enumerated
+# deductions, then to the exemptions in exempt.yaml. There is no line for a
+# standard or itemized deduction anywhere on Form 1 in any year 2017-2025.
+#
+# Of that enumerated list, only one item is reconstructible from the
+# microdata: the deduction for the filer's own payroll and public-retirement
+# contributions, capped at $2,000 per person. The rental deduction is
+# rent-based and so waits on the Tier 1 imputation, and the rest are
+# unobserved behavioural amounts.
+
+payroll_ded_cap:
+  value: 2000
+  reference: '2024 booklet p.10 (Line 11): "If you have paid into any of the retirement systems listed above during 2024, you may deduct those contributions, up to a maximum of $2,000. Enter in lines 11a and 11b the amount you, and your spouse if filing jointly, paid to Social Security (FICA), Medicare or Railroad Retirement and the U.S. or Massachusetts [public retirement systems]." Form 1 line 11 reads "Not more than $2,000" in 2017 and in 2025 alike -- the cap is per person, non-transferable between spouses, and unchanged across the window'
+
+documented_not_modeled:
+  public_retirement_contributions:
+    reference: 'The line 11 base includes contributions to U.S. and Massachusetts public retirement systems as well as payroll taxes. Those contributions are not a model input, so only the payroll-tax component is reached [understates the deduction for state, municipal and federal employees, who often reach the $2,000 cap on retirement contributions alone. It also compounds the Massachusetts public-employee wage addback documented in agi.yaml]'
+  per_spouse_payroll_split:
+    reference: 'The cap is per person but the model carries employee payroll tax and self-employment tax at the return level, so the base is split between spouses by earned-income shares before each half meets the cap. Exact for a one-earner couple and for an evenly split one, approximate in between'
+  excluded_from_the_payroll_base:
+    reference: 'Medicare PREMIUMS withheld from Social Security or retirement payments are not deductible, and neither are payments to IRA, Keogh, SEP or SIMPLE plans (2024 booklet p.10). Premiums are not a model input; the deduction base here is payroll tax only, so neither exclusion is at risk of being violated'
+  rental_deduction:
+    reference: 'Form 1 line 14 deducts 50% of rent paid on a Massachusetts principal residence, capped at $3,000 per return ($1,500 married filing separately) through TY2022 and $4,000 ($2,000) from TY2023 (2023 booklet p.3: "the maximum amount of the rental deduction is $4,000 ... Previously ... $3,000"). Rent paid is a Tier 1 imputation target [understates deductions for the roughly one-third of Massachusetts filers who rent -- worth up to $200 of tax at the 5% rate. The largest data-blocked Massachusetts item after the circuit breaker]'
+  commuter_deduction:
+    reference: 'Schedule Y deducts tolls and transit passes above a $150 floor, capped at $750 ($1,500 married filing jointly), constant across the window. Commuting expenditure is not a model input'
+  dependent_care_deduction_2017_2020:
+    reference: 'THIS CHANGED REGIME TWICE and secondary sources describe only the last step. For TY2017-TY2020 dependent care and household dependents were DEDUCTIONS worth up to $4,800 for one qualifying individual and $9,600 for two or more, and $3,600 per dependent (two maximum) respectively. For TY2021-TY2022 they became small refundable CREDITS ($240/$480 and $180/$360). From TY2023 both were replaced by the Child and Family Tax Credit in credits.yaml. The TY2017-2022 regimes are not modeled [materially understates deductions and credits for families with young or dependent-care-eligible members in those six years -- the single largest year-specific gap in the Massachusetts encoding]'
+  other_schedule_y_deductions:
+    reference: 'Schedule Y also carries the college tuition deduction (amounts above 25% of Massachusetts AGI), the undergraduate student loan interest deduction, employee business expenses, the self-employed health insurance deduction, moving expenses, alimony paid, and a deduction for contributory pension income from a reciprocal state. None is separable from federal amounts in the microdata, and several have Massachusetts-specific bases'
+  no_itemized_deduction:
+    reference: 'Massachusetts allows no itemized deduction at all -- there is nothing corresponding to federal Schedule A except the medical/dental amount, which arrives as an exemption (see exempt.yaml). Filers with large mortgage interest or charitable giving get no Massachusetts relief for it'

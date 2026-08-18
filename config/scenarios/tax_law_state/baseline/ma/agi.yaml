@@ -1,0 +1,91 @@
+---
+# Massachusetts: income base (Form 1 lines 3-10, plus Schedules B and D).
+#
+# Massachusetts is a SCHEDULAR own-base state: statutory classes of income are
+# taxed at different rates. Over this window the classes collapse to two rates
+# for microsimulation purposes:
+#
+#   Part B (wages, pensions, business, rents, unemployment, alimony, other) AND
+#   Part A interest and ordinary dividends AND Part C long-term capital gains
+#     -- all taxed at the SAME headline rate (5.1% to 5.0%), because Part C
+#     tracks Part B in every year 2017-2025
+#   Part A SHORT-TERM capital gains -- taxed at 12% through TY2022 and 8.5%
+#     from TY2023
+#
+# So the base here carries everything except short-term gains, which
+# ob_st_gains_share holds out for st_ord.st_gains_rate to tax separately.
+# Collectibles gains (12% after a 50% deduction) are not separable in the
+# microdata and are documented below.
+#
+# Conformity: Massachusetts ties to the IRC as of a date advanced by act, but
+# it defines its own income classes below the federal AGI line and takes no
+# federal AGI figure at all, so conformity is moot in the same way it is for
+# Pennsylvania (group 0 trivially).
+
+start_point:
+  value: 0
+  reference: 'Form 1 lines 3-10 build Massachusetts Part B gross income from its own components (wages, taxable pensions, Massachusetts bank interest, Schedule C business, Schedule F farm, rents/royalties/partnership/S-corporation/trust, unemployment, Massachusetts lottery, Schedule X other income); Schedules B and D carry Part A and Part C. There is no federal-AGI line on Form 1'
+
+ob_class_floor:
+  value: 0
+  reference: 'Massachusetts does net losses across classes to a degree -- a Part A short-term loss reaches interest and dividends (capped) and then long-term gains, and a long-term loss reaches short-term gains -- so it has nothing like the Pennsylvania class ring-fence. The exact netting order is a documented known difference below'
+
+ob_comp_share:
+  value: 1
+  reference: 'Form 1 line 3, wages, salaries, tips and other employee compensation'
+ob_int_share:
+  value: 1
+  reference: 'Schedule B line 1 starts from federal 1040 lines 2a AND 2b, so both taxable and tax-exempt interest enter, and line 6a then removes U.S.-obligation and Massachusetts municipal interest. Taxable interest is carried here in full; the two exclusions and the taxable out-of-state municipal interest are documented below'
+ob_div_share:
+  value: 1
+  reference: 'Schedule B line 2 takes TOTAL ordinary dividends from federal 1040 line 3b. Massachusetts has no preferential rate for qualified dividends, so both ordinary and qualified dividends are taxed at the headline rate'
+ob_bus_share:
+  value: 1
+  reference: 'Form 1 lines 6-8: Schedule C business or profession, Schedule F farm, and rents/royalties/partnership/S-corporation/trust income from Schedule E'
+ob_rent_share:
+  value: 1
+  reference: 'Form 1 line 8, rents, royalties and REMIC income (Schedule E)'
+ob_gains_share:
+  value: 1
+  reference: 'Schedule D long-term capital gains are Part C, taxed at the SAME rate as Part B in every year 2017-2025 (5.1% / 5.05% / 5.0%), so they can sit in the ordinary base rather than needing a separate rate. Capital gain distributions from federal 1040 line 7 are picked up as long-term gains on Schedule D line 6'
+ob_st_gains_share:
+  value: 0
+  reference: 'Short-term capital gains are Part A and taxed at their OWN rate (Schedule B lines 10 and 16; 12% through TY2022, 8.5% from TY2023 per the 2023 booklet p.3), so they are held out of the ordinary base and taxed by st_ord.st_gains_rate'
+ob_retirement_share:
+  value: 1
+  reference: 'Form 1 line 4, taxable pensions and annuities, and line 4 also carries taxable IRA, Keogh and Roth distributions. Contributory pensions of the U.S. government and of Massachusetts and its political subdivisions are EXEMPT and are not separable in the microdata -- see documented_not_modeled'
+ob_ira_share:
+  value: 1
+  reference: 'Taxable IRA and Keogh distributions are Part B income (Massachusetts AGI worksheet, 2024 booklet p.12: "taxable IRA/Keogh and Roth IRA distributions")'
+ob_ss_share:
+  value: 0
+  reference: '2025 booklet p.5 excludes "U.S. Social Security" from Massachusetts gross income outright. There is no provisional-income formula and no partial inclusion -- the whole federally taxable amount comes out'
+ob_ui_share:
+  value: 1
+  reference: 'Form 1 line 9, unemployment compensation, is fully taxable in Massachusetts (and appears in the Massachusetts AGI worksheet list, 2024 booklet p.12)'
+ob_alimony_share:
+  value: 1
+  reference: 'Taxable alimony is Part B income (Massachusetts AGI worksheet, 2024 booklet p.12: "taxable alimony and other 5.0% income")'
+ob_other_share:
+  value: 1
+  reference: 'Form 1 line 9 Massachusetts lottery winnings and Schedule X other income'
+
+documented_not_modeled:
+  government_contributory_pension_exclusion:
+    reference: 'Pension income from a CONTRIBUTORY annuity, pension, endowment or retirement fund of the U.S. government or of the Commonwealth of Massachusetts and its political subdivisions is entirely EXCLUDED from Massachusetts gross income (2025 booklet p.5), while another state''s public pension is INCLUDED at gross. Federal 1040 line 4b/5b does not identify the payer, so the whole pool is taxed [overstates Massachusetts tax for federal and Massachusetts public retirees, who are numerous. The same PUF limit that leaves the New York government-pension exclusion, the Missouri public pension exemption and the Alabama defined-benefit exclusion unmodeled; clears with the Tier 1 pension-source imputation]'
+  own_capital_loss_regime:
+    reference: 'Massachusetts runs its own netting across Schedule B and Schedule D: short-term gains, collectibles gains and business-property gains net first, a remaining short-term loss offsets up to $2,000 of interest and dividends and then long-term gains, a long-term loss offsets short-term gains and then interest and dividends against the SAME shared $2,000 cap, and any leftover short-term loss carries forward INDEFINITELY with no annual usage cap. The model carries the federally capped net gain figures and tracks no state carryforward [misstates tax for filers with realized losses in either direction; the carryforward is the larger gap because it is a stock the model cannot see]'
+  collectibles_gains:
+    reference: 'Long-term gains on collectibles are taxed at 12% after a 50% deduction, and that deduction is itself reduced by 50% of any excess short-term or carryover losses (2025 booklet p.25 worksheet). Collectibles are not separable from other long-term gains in the microdata, so they are taxed at the ordinary rate instead [understates tax on the affected gains]'
+  us_obligation_and_muni_interest:
+    reference: 'Schedule B line 6a removes interest on U.S. and U.S.-territory obligations and on Massachusetts and Massachusetts-local obligations, while line 3 ADDS interest on other states'' obligations, which federal AGI excludes. Neither the U.S.-obligation share of taxable interest nor the own-state share of exempt interest is observable, so no adjustment is made in either direction [overstates tax for Treasury and in-state municipal holders, understates it for out-of-state municipal holders]'
+  massachusetts_bank_interest_exemption:
+    reference: 'Form 1 line 5 exempts the first $100 ($200 married filing jointly) of interest from Massachusetts banks. Bank location is not a model input [overstates tax by at most $5 or $10 per return]'
+  ric_and_reit_dividends:
+    reference: 'Dividends from regulated investment companies and real estate investment trusts stay fully taxable Part A income (2025 booklet p.23), which the flat dividend treatment here already reproduces'
+  massachusetts_public_employee_wage_addback:
+    reference: 'Contributions to Massachusetts state and municipal contributory retirement systems are pre-tax federally but taxable in Massachusetts, so a public employee''s Massachusetts wages exceed their federal wages. The difference is invisible on a federal record [understates Massachusetts wages for state and municipal employees]'
+  foreign_employment_and_gilti:
+    reference: 'Massachusetts gross income also includes income earned by a resident from foreign employment and GILTI to the extent it reaches federal Schedule 1 (2025 booklet pp.4-5, Schedule B line 3). Neither is separately identified in the microdata'
+  optional_585_rate_election:
+    reference: 'Every year a taxpayer may elect to pay Part B and Part C tax at 5.85% instead of the statutory rate (M.G.L. c. 62 s.4(a)). The election is essentially never taken and is not modeled'

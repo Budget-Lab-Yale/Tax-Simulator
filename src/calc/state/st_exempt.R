@@ -61,7 +61,9 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
     'st_exempt.po_agi_base',     # (int) phase-out income base (st_income_base enum)
     'st_exempt.tier_income_base', # (int) tiered-amount income base (enum)
     'st_exempt.dep_tier_income_base', # (int) dependent-tier income base (enum; AL state AGI)
-    'st_exempt.dep_filer_zero'   # (int) dependent filers get zero exemption (OH)
+    'st_exempt.dep_filer_zero',   # (int) dependent filers get zero exemption (OH)
+    'st_exempt.medical_exempt',   # (int) federal Schedule A medical deduction allowed as an exemption (MA)
+    'med_item_ded_potential'      # (dbl) deductible medical expenses (MA medical exemption)
   )
 
   tax_unit %<>%
@@ -134,7 +136,14 @@ calc_st_exempt = function(tax_unit, fill_missings = F) {
       dep_filer_factor = if_else(st_exempt.dep_filer_zero == 1 & dep_status == 1,
                                  0, 1),
 
-      st_exempt_gross = (n_taxpayers * st_personal_v * dep_filer_factor +
+      # Medical and dental expenses allowed as an EXEMPTION rather than a
+      # deduction (MA Form 1 line 2e, "from U.S. Schedule A, line 4"), and
+      # available whether or not the filer itemizes federally -- hence the
+      # as-if-itemizing amount
+      st_medical_exempt = st_exempt.medical_exempt * pmax(0, med_item_ded_potential),
+
+      st_exempt_gross = (st_medical_exempt +
+                         n_taxpayers * st_personal_v * dep_filer_factor +
                          n_dep       * st_dep_v +
                          n_dep_child_v * st_exempt.dep_child_addl +
                          n_aged      * st_exempt.aged_addl * addl_factor +

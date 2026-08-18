@@ -1,0 +1,100 @@
+---
+# Massachusetts: credits (Form 1 lines 27-31, 43, 44, 46).
+#
+# Three broad credits are encoded. The most structurally interesting is the
+# pair of No Tax Status and the Limited Income Credit, which the calculator
+# expresses as ONE mechanism: the credit reduces tax to 10% of the excess of
+# Massachusetts AGI over a dependent-scaled threshold, so a filer below the
+# threshold owes nothing (that is No Tax Status) and one inside the band pays
+# the phase-in. The published band ceiling of 1.75 times the threshold needs
+# no separate encoding, because above it the 10% cap already exceeds the tax
+# and the credit falls to zero on its own.
+
+filing_status_mapper:
+  lic_thresh:
+    '1': lic_single
+    '2': lic_joint
+    '3': lic_mfs
+    '4': lic_head
+
+#-----------------------------------------------------------------------
+# No Tax Status and the Limited Income Credit (Form 1 lines 27 and 29).
+# Constant and unindexed across all nine years.
+#-----------------------------------------------------------------------
+
+lic_rate:
+  value: 0.10
+  reference: '2024 booklet p.13, Line 29 worksheet: step 5 is "Line 3 x 10% (.10)" and step 6 gives the credit as the tax less that amount, so effective tax is 10% of Massachusetts AGI above the No Tax Status threshold. Verified identical in all nine booklets (the string "Multiply line 3 by 10%" appears in every one)'
+lic_single:
+  value: 8000
+  reference: '2024 booklet p.12: No Tax Status if Massachusetts AGI is "$8,000 or less if single", and the Limited Income Credit band runs from $8,000 to $14,000 -- exactly 1.75 times the threshold. Unchanged 2017-2025'
+lic_joint:
+  value: 16400
+  reference: '2024 booklet p.12: "$16,400 or less plus $1,000 [per dependent] if married filing a joint return"; the credit band runs to "$28,700 plus $1,750 per dependent", again 1.75x. Unchanged 2017-2025'
+lic_head:
+  value: 14400
+  reference: '2024 booklet p.12: "$14,400 or less plus $1,000 per dependent if head of household"; credit band to "$25,200 plus $1,750 per dependent". Unchanged 2017-2025'
+lic_mfs:
+  value: 0
+  reference: '2024 booklet p.13: "Note: If married filing separately, you do not qualify for No Tax Status", and the Limited Income Credit is likewise unavailable. A zero threshold reproduces that exactly rather than needing a gate: the cap becomes 10% of Massachusetts AGI, which for a flat 5% tax on a base already net of exemptions can never be smaller than the tax, so the credit is identically zero for every separate filer'
+lic_per_dep:
+  value: 1000
+  reference: '2017 booklet p.13 No Tax Status / Limited Income Credit chart: $1,000 per dependent added to the No Tax Status column (and $1,750 to the credit column, which is the same figure scaled by 1.75). "If the number of dependents is more than 6, add $1,000 per dependent" -- the chart is NOT capped at six, so the add-on continues linearly'
+lic_income_base:
+  value: 2
+  reference: 'The test is on Massachusetts AGI (the Form 1 line 27 worksheet), which is Part B gross income less a subset of Schedule Y deductions, plus Schedule B and Schedule D income -- so it sits BEFORE the payroll deduction, the rental deduction and the exemptions. The model''s state income base is the closest available measure'
+
+#-----------------------------------------------------------------------
+# Earned income credit (Form 1 line 43), refundable.
+#-----------------------------------------------------------------------
+
+eitc_match:
+  value:
+    '2017': 0.23
+    '2019': 0.30
+    '2023': 0.40
+  reference: '2017 booklet p.16 and 2018 booklet p.16 ("a refundable credit equal to 23% of the federal amount ... Multiply this amount by .23"); 2019 booklet p.3 and p.17 ("30% of the federal credit"), carried through 2022; 2023 booklet p.3 ("Increase in the Massachusetts Earned Income Tax Credit ... 40% of the computed federal credit") and p.15, carried through 2025. A pure percentage of the federal dollar amount -- Massachusetts does not re-derive earned income or the phase-out (Form 1 line 43b is "Amount from U.S. return")'
+eitc_refundable:
+  value: 1
+  reference: '2024 booklet p.15: "If the credit due the taxpayer exceeds the amount of the total income tax payable for the year by the taxpayer, the excess amount of the credit will be refunded to the taxpayer without interest"'
+
+#-----------------------------------------------------------------------
+# Child and Family Tax Credit (Form 1 line 46), TY2023+, refundable.
+#-----------------------------------------------------------------------
+
+ctc_style:
+  value: 3
+  reference: 'A flat amount per qualifying individual with an age band and no phase-out'
+ctc_young_amount:
+  value:
+    '2017': 0
+    '2023': 310
+    '2024': 440
+  reference: '2023 booklet p.4: "the amount of the CFTC is equal to $310 for each such individual. The CFTC will be increased to $440 for each such individual beginning with tax years beginning on or after January 1, 2024"; 2024 booklet p.15 ("multiply that amount by $440"). The credit did not exist before TY2023 -- it replaced the dependent care and household dependent credits, which had themselves replaced deductions (see ded.yaml)'
+ctc_min_child_age:
+  value: 0
+  reference: '2023 booklet p.4: a qualifying individual includes one "under the age of 13 and who qualifies for exemption as a dependent under IRC s.151"'
+ctc_max_child_age:
+  value: 12
+  reference: 'Under 13, i.e. age 12 or younger'
+ctc_refundable:
+  value: 1
+  reference: '2023 booklet p.4: "individuals ... may claim a refundable, non-transferable child and family tax credit". Form 1 line 46 sits in the refundable block'
+
+documented_not_modeled:
+  cftc_disabled_and_elderly_dependents:
+    reference: 'The Child and Family Tax Credit reaches three kinds of qualifying individual, and only the first is modeled: a dependent under 13; a qualifying individual under IRC s.21, which includes a dependent OR THE SPOUSE who is physically or mentally incapable of self-care; and a dependent aged 65 or over or disabled (2023 booklet p.4). From TY2024 a noncustodial parent may also claim it for a child aged 13 or older who is incapable of self-care. Disability status is not a model input and dependent ages above the tracked slots are limited [understates the credit for households with a disabled member or an elderly dependent -- at $440 per individual with no cap, this is not a small omission]'
+  cftc_and_eitc_mfs_exclusion:
+    reference: 'Both credits are barred to married filing separately (2024 booklet p.15 for the CFTC, Form 1 line 43 note for the earned income credit). Neither is gated here. A separate filer rarely holds a federal earned income credit to match, but one with a young dependent would receive the CFTC in the model [overstates credits for separate filers with young children]'
+  dependent_care_credits_2021_2022:
+    reference: 'For TY2021 and TY2022 Massachusetts had small refundable dependent care ($240 for one qualifying individual, $480 for two or more) and household dependent ($180 per dependent, $360 maximum) credits, which the Child and Family Tax Credit replaced from TY2023. Neither is encoded [understates credits for those two years; the TY2017-2020 predecessor DEDUCTIONS, which were far larger, are documented in ded.yaml]'
+  senior_circuit_breaker:
+    reference: 'Form 1 line 44 and Schedule CB give filers aged 65 or over a REFUNDABLE credit equal to the amount by which property tax paid -- or 25% of rent for a renter -- exceeds 10% of total income, capped at an indexed maximum that MORE THAN DOUBLED in TY2023 (about $1,200 to $2,590) by a statutory base doubling rather than indexation. Blocked on assessed value, property tax paid and rent, all Tier 1 imputation targets [understates Massachusetts refunds for elderly homeowners and renters -- the largest data-blocked item in the state]'
+  limited_income_credit_ordering:
+    reference: 'The Line 29 worksheet takes the tax from Form 1 line 28, which includes the 4% surtax; the model applies the credit to tax before the surtax. No filer in the credit band has surtax income, so the difference cannot bind'
+  no_tax_status_survivals:
+    reference: 'No Tax Status zeroes Part A, B and C tax and the surtax, but does NOT wipe out credit recapture or additional tax on installment sales, and refundable credits remain claimable (2024 booklet p.12). Neither recapture nor installment-sale tax is modeled, and refundable credits are applied independently here, so the behaviour matches'
+  solar_and_wind_credit:
+    reference: 'Massachusetts has a nonrefundable residential solar and wind energy credit (Schedule EC, credit code SLRWND, M.G.L. c. 62 s.6(d)), but NO dollar cap or percentage appears in any 2017-2025 booklet and Schedule EC itself was not retrievable [UNVERIFIED as to amount; not encoded]'
+  other_credits:
+    reference: 'Form 1 lines 30-31 and 47 carry the credit for taxes paid to other jurisdictions (Schedule OJC), a long tail of nonrefundable credits on Schedule CMS, the septic and lead paint credits, and the refundable film and life-sciences credits. None is a broad income-conditioned credit reconstructible from the microdata'

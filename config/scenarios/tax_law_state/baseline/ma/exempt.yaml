@@ -1,0 +1,50 @@
+---
+# Massachusetts: exemptions (Form 1 lines 2a-2f).
+#
+# Every amount here is CONSTANT and UNINDEXED across all nine years
+# 2017-2025 -- verified booklet by booklet. Massachusetts has no standard
+# deduction, so these exemptions plus the enumerated deductions in ded.yaml
+# are the whole allowance.
+#
+# EXTRACTION TRAP: the age-65 amount on line 2c is $700. Every year's Form 1
+# PDF text layer extracts the multiplier as "x $1,700"; rendering the same
+# region as an image shows the printed figure is $700, which is also what the
+# line instructions say in words. Do not transcribe the extracted number.
+
+filing_status_mapper:
+  personal_amount:
+    '1': personal_single
+    '2': personal_single
+    '3': personal_single
+    '4': personal_head
+
+# Per TAXPAYER, so the $8,800 joint amount is encoded as $4,400 and doubled by
+# the calculator.
+personal_single:
+  value: 4400
+  reference: '2025 booklet p.11 (Line 2a): "If you are single or married filing a separate return, enter $4,400 ... married filing a joint return, enter $8,800" -- exactly twice the single figure. Identical in every booklet 2017-2025 and on Form 1 line 2a; not indexed'
+personal_head:
+  value: 6800
+  reference: '2025 booklet p.11 (Line 2a): "head of household, enter $6,800". A single taxpayer, so encoded per taxpayer at the full amount. Note Massachusetts has NO qualifying widow(er) status'
+
+dep_amount:
+  value: 1000
+  reference: '2025 booklet p.11 (Line 2b): "You may claim a $1,000 exemption for each of your dependents if you claimed them on your U.S. return"; Form 1 line 2b "x $1,000". Unchanged 2017-2025'
+aged_addl:
+  value: 700
+  reference: '2024 booklet p.11 (Line 2c): "You are allowed an additional $700 exemption if you were age 65 or over before January 1, 2025 ... you may also claim a $700 exemption for your spouse." Unchanged 2017-2025. See the extraction-trap note above -- the form PDF text layer misreports this as $1,700'
+blind_addl:
+  value: 2200
+  reference: '2024 booklet p.11 (Line 2d): "You are allowed an additional $2,200 exemption if you are legally blind", each spouse if both; Form 1 line 2d "x $2,200". Unchanged 2017-2025'
+
+medical_exempt:
+  value: 1
+  reference: 'Form 1 line 2e "Medical/dental (from U.S. Schedule A, line 4)" -- Massachusetts allows the federal medical and dental deduction as an EXEMPTION, and it is available whether or not the filer itemizes federally, so the calculator uses the as-if-itemizing amount'
+
+documented_not_modeled:
+  excess_exemption_cascade:
+    reference: 'Where exemptions exceed Part B income after deductions, the excess is applied against interest and dividends, then Schedule B 8.5%/12% income, then Schedule D long-term gains, in that order (the "Excess Exemptions Applied Against ..." worksheet, 2025 booklet pp.9-10). The model pools interest, dividends and long-term gains into one base with short-term gains held out, so an excess exemption reaches long-term gains but never the 8.5%/12% income that the form would have reached first [affects only a filer whose exemptions exceed all Part B and interest/dividend income AND who has short-term gains -- rare, and the direction is to overstate tax on those gains]'
+  adoption_exemption:
+    reference: 'Form 1 line 2f exempts adoption agency fees paid during the year. Not a model input'
+  no_qualifying_widower_status:
+    reference: 'Massachusetts has only single, married filing jointly, married filing separately and head of household -- there is no qualifying widow(er) status on Form 1 line 1 in any year. The model folds that federal status into married filing jointly, which here means the $8,800 joint exemption rather than a surviving-spouse amount that does not exist'

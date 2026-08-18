@@ -77,6 +77,12 @@ KS:
 KY:
   profile: broad_iit
   enabled: true
+# MA defines its own schedular income classes below the federal AGI line and
+# takes no federal AGI figure at all, so IRC conformity is moot in the same way
+# it is for PA (group 0 trivially)
+MA:
+  profile: broad_iit
+  enabled: true
 # MD state-level tax only; the county piggyback (2.25-3.3%) is deferred to
 # the locality phase. Cross-model: TAXSIM's MD siitax EXCLUDES the county
 # tax (probe-verified); PolicyEngine's state_income_tax INCLUDES it, so the

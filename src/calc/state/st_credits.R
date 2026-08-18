@@ -7,6 +7,7 @@ return_vars$calc_st_credits = c('st_hh_credit', 'st_eitc', 'st_ctc',
                                 'st_dep_credit', 'st_cdctc', 'st_family_credit',
                                 'st_exempt_credit', 'st_earned_credit', 'st_yctc',
                                 'st_pct_credit', 'st_cli', 'st_ded_credit',
+                                'st_lic',
                                 'st_age_credit', 'st_retire_credit',
                                 'st_senior_credit', 'st_jfc',
                                 'st_forgive_credit', 'st_percap_credit',
@@ -150,6 +151,11 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     st_credits_senior_req_vars,
 
     # Ordered-credit parameters read here (JFC and the EITC liability cap)
+    # Limited income credit / no-tax status (MA)
+    'st_credits.lic_rate',
+    'st_credits.lic_thresh',
+    'st_credits.lic_per_dep',
+    'st_credits.lic_income_base',
     'st_credits.jfc_cap',
     'st_credits.jfc_min_each_income',
     'st_credits.jfc_income_base',
@@ -353,6 +359,30 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     earn$st_eitc
   )
 
+  # Limited income credit / no-tax status (MA Form 1 lines 27 and 29). One
+  # formula covers both: the credit claws total tax down to lic_rate of the
+  # excess of the state's own AGI measure over a dependent-scaled threshold,
+  #     credit = max(0, tax - rate x max(0, income - threshold))
+  # so a filer at or below the threshold has the whole tax removed -- that is
+  # No Tax Status, the degenerate case -- and one inside the band pays the
+  # 10% phase-in. Above the band the cap exceeds the tax and the credit falls
+  # to zero on its own, which is why the published 1.75x ceiling needs no
+  # separate encoding.
+  #
+  # Married-filing-separately ineligibility also falls out rather than being
+  # gated: with the threshold left at zero the cap is rate x income, and for a
+  # flat-rate state whose lic_rate exceeds its tax rate that always exceeds
+  # the tax, so the credit is identically zero.
+  lic_income = st_income_base(tax_unit, tax_unit$st_credits.lic_income_base)
+  lic_thresh = tax_unit$st_credits.lic_thresh +
+               tax_unit$st_credits.lic_per_dep * coalesce(tax_unit$n_dep, 0L)
+  st_lic = if_else(
+    tax_unit$st_credits.lic_rate > 0,
+    pmax(0, pmax(0, tax_unit$st_tax_pre_credit) -
+            tax_unit$st_credits.lic_rate * pmax(0, lic_income - lic_thresh)),
+    0
+  )
+
   tibble(
     st_hh_credit     = hh$st_hh_credit,
     st_eitc          = st_eitc,
@@ -377,6 +407,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     st_item_credit    = st_item_credit,
     st_char_credit    = st_char_credit,
     st_stfc           = hh$st_stfc,
+    st_lic            = st_lic,
 
     st_credits_nonref = hh$st_hh_credit + hh$prop_credit + child$st_dep_credit +
                         st_family_credit + hh$st_exempt_credit + st_pct_credit +
@@ -384,7 +415,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                         senior$st_retire_credit + senior$st_senior_credit +
                         st_jfc + earn$st_forgive_credit + st_marriage_credit +
                         st_twoearner_credit + st_item_credit +
-                        st_char_credit +
+                        st_char_credit + st_lic +
                         hh$st_percap_credit *
                           (1 - tax_unit$st_credits.percap_refundable) +
                         hh$st_stfc *

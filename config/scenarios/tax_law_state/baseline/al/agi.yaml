@@ -40,6 +40,9 @@ ob_bus_share:
 ob_gains_share:
   value: 1
   reference: 'Form 40 Schedule D: capital gains are ordinary income taxed at 2/4/5%, with no preferential rate and no separate computation'
+ob_st_gains_share:
+  value: 1
+  reference: 'Alabama draws no distinction by holding period -- "the entire gain is taxable" at the ordinary rates (Schedule D instructions), so short-term gains carry the same share as long-term. Stated explicitly because the two shares were split apart when Massachusetts was encoded'
 ob_rent_share:
   value: 1
   reference: 'Form 40 page 2 Part I via Schedule E, rents and royalties'

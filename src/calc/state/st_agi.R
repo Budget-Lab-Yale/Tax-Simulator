@@ -85,7 +85,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.ob_int_share',          # (dbl) own-base share: taxable interest
     'st_agi.ob_div_share',          # (dbl) own-base share: dividends
     'st_agi.ob_bus_share',          # (dbl) own-base share: business/pass-through
-    'st_agi.ob_gains_share',        # (dbl) own-base share: capital/other gains
+    'st_agi.ob_gains_share',        # (dbl) own-base share: long-term/other gains
+    'st_agi.ob_st_gains_share',     # (dbl) own-base share: SHORT-TERM gains (MA taxes these at their own rate)
     'st_agi.ob_rent_share',         # (dbl) own-base share: rents/royalties
     'st_agi.ob_retirement_share',   # (dbl) own-base share: pension/IRA distributions
     'st_agi.ob_ss_share',           # (dbl) own-base share: taxable Social Security
@@ -289,7 +290,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     ob_floor(st_agi.ob_div_share        * (div_ord + div_pref)) +
     ob_floor(st_agi.ob_bus_share        * (sole_prop + part_active +
                                            part_passive + scorp + farm)) +
-    ob_floor(st_agi.ob_gains_share      * (kg_lt + kg_st + other_gains)) +
+    ob_floor(st_agi.ob_gains_share      * (kg_lt + other_gains)) +
+    ob_floor(st_agi.ob_st_gains_share   * kg_st) +
     ob_floor(st_agi.ob_rent_share       * rent) +
     ob_floor(st_agi.ob_retirement_share * txbl_pens_dist) +
     ob_floor(st_agi.ob_ira_share        * txbl_ira_dist) +

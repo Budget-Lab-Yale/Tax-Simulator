@@ -48,6 +48,9 @@ ob_bus_share:
 ob_gains_share:
   value: 1
   reference: 'PA-40 line 5 net gain from disposition of property (Schedule D); 72 P.S. 7303(a)(3.1). PA principal-residence exclusion (2-of-5 test, no dollar cap) is largely embedded in the federal gain concept [known-difference]'
+ob_st_gains_share:
+  value: 1
+  reference: 'PA does not distinguish holding periods -- net gain from disposition of property is one class taxed at the flat rate, so short-term gains carry the same share as long-term. Stated explicitly because the two shares were split apart when Massachusetts, which taxes short-term gains at a different rate, was encoded'
 
 ob_rent_share:
   value: 1

@@ -23,7 +23,7 @@ test_state_calc = function() {
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
                 'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV', 'NM',
-                'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR'),
+                'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR', 'MA'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -39,7 +39,7 @@ test_state_calc = function() {
     'st_pct_credit', 'st_cli', 'st_ded_credit', 'st_age_credit',
     'st_retire_credit', 'st_senior_credit', 'st_jfc', 'st_forgive_credit',
     'st_percap_credit', 'st_marriage_credit', 'st_twoearner_credit',
-    'st_item_credit', 'st_stfc'
+    'st_item_credit', 'st_stfc', 'st_lic'
   )
   case_exercised = new.env()
   case_exercised$sets = list()
@@ -3198,6 +3198,119 @@ test_state_calc = function() {
            label = 'HI-8 Act 46 TY2027 schedule + TY2026 standard deduction')
 
   #--------------------------------------------------------------------------
+  # Massachusetts (Form 1)
+  #
+  # A SCHEDULAR own-base state. Over this window the classes collapse to two
+  # rates: the headline rate covers Part B, Part A interest and dividends, and
+  # Part C long-term gains alike, while Part A SHORT-TERM gains carry their
+  # own (12% to TY2022, 8.5% from TY2023). No standard deduction and no
+  # itemized deduction -- just the payroll-contribution deduction and the
+  # exemptions. Cases supply liab_pr_ee for the payroll deduction.
+  #--------------------------------------------------------------------------
+
+  # MA-1: 2024 single, wages 60,000 with 4,590 of employee payroll tax. The
+  # payroll deduction is capped at 2,000, the personal exemption is 4,400, so
+  # taxable income is 53,600 and tax is 5% x 53,600 = 2,680
+  run_case('MA', 2024,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, liab_pr_ee = 4590),
+           expect = list(st_agi = 60000, st_ded = 2000, st_exempt = 4400,
+                         st_txbl_inc = 53600, liab_st_iit = 2680.00),
+           label = 'MA-1 2024 single, payroll deduction at its cap')
+
+  # MA-2: the same unit on the TY2017 rate of 5.1% -> 2,733.60. The rate path
+  # is 5.1% (2017-2018), 5.05% (2019), 5.0% (2020 onward)
+  run_case('MA', 2017,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, liab_pr_ee = 4590),
+           expect = list(liab_st_iit = 2733.60),
+           label = 'MA-2 2017 headline rate of 5.1%')
+
+  # MA-3a / MA-3b: short-term capital gains are a separate class at their own
+  # rate, and they are NOT reduced by deductions or exemptions. 2022 single,
+  # wages 50,000 plus 10,000 of short-term gains: taxable Part B income is
+  # 43,600, so tax = 5% x 43,600 + 12% x 10,000 = 2,180 + 1,200 = 3,380. The
+  # same unit in 2023 pays 8.5% on the gains instead: 2,180 + 850 = 3,030
+  run_case('MA', 2022,
+           list(agi = 60000, wages1 = 50000, ei1 = 50000, kg_st = 10000,
+                liab_pr_ee = 3825),
+           expect = list(st_agi = 50000, st_txbl_inc = 43600,
+                         liab_st_iit = 3380.00),
+           label = 'MA-3a 2022 short-term gains at 12%')
+
+  run_case('MA', 2023,
+           list(agi = 60000, wages1 = 50000, ei1 = 50000, kg_st = 10000,
+                liab_pr_ee = 3825),
+           expect = list(liab_st_iit = 3030.00),
+           label = 'MA-3b 2023 short-term gains at 8.5%')
+
+  # MA-4: No Tax Status. 2024 single with Massachusetts income of 7,500, at or
+  # below the $8,000 threshold, owes nothing at all -- the limited income
+  # credit machinery removes the whole tax because the 10% cap on the excess
+  # over the threshold is zero
+  run_case('MA', 2024,
+           list(agi = 7500, wages1 = 7500, ei1 = 7500, liab_pr_ee = 574),
+           expect = list(st_lic = 126.30, liab_st_iit = 0),
+           label = 'MA-4 2024 No Tax Status below $8,000')
+
+  # MA-5: the Limited Income Credit binding. 2024 single with 10,000 of
+  # interest income (no earned income, so no payroll deduction): taxable
+  # income is 5,600 and tax 280, but the credit caps liability at 10% of the
+  # 2,000 excess over the $8,000 threshold, so the credit is 80 and the filer
+  # pays exactly 200
+  run_case('MA', 2024,
+           list(agi = 10000, txbl_int = 10000),
+           expect = list(st_txbl_inc = 5600, st_lic = 80.00,
+                         liab_st_iit = 200.00),
+           label = 'MA-5 2024 Limited Income Credit caps tax at 10% of excess')
+
+  # MA-6: exemptions and the Child and Family Tax Credit. 2024 joint, wages
+  # 50,000 + 40,000, two dependents aged 4 and 8. Each spouse's payroll
+  # deduction caps at 2,000 (4,000 total); exemptions are 8,800 + 2 x 1,000 =
+  # 10,800; taxable income 75,200 and tax 3,760. The credit pays $440 per
+  # dependent under 13 = 880, refundable, leaving 2,880
+  run_case('MA', 2024,
+           list(agi = 90000, filing_status = 2, age2 = 40, wages1 = 50000,
+                wages2 = 40000, ei1 = 50000, ei2 = 40000, liab_pr_ee = 6885,
+                n_dep = 2, dep_age1 = 4, dep_age2 = 8),
+           expect = list(st_ded = 4000, st_exempt = 10800,
+                         st_txbl_inc = 75200, st_ctc = 880,
+                         liab_st_iit = 2880.00),
+           label = 'MA-6 2024 exemptions and the Child and Family Tax Credit')
+
+  # MA-7: the 4% surtax, TY2024, whose $1,053,750 threshold is the same for
+  # every filing status -- there is no doubling for joint filers. Joint wages
+  # of 1,200,000 with 30,000 of payroll tax: taxable income 1,189,200, so tax
+  # is 5% x 1,189,200 = 59,460 plus 4% x 135,450 = 5,418, i.e. 64,878
+  run_case('MA', 2024,
+           list(agi = 1200000, filing_status = 2, age2 = 40, wages1 = 1200000,
+                ei1 = 1200000, liab_pr_ee = 30000),
+           expect = list(st_txbl_inc = 1189200, liab_st_iit = 64878.00),
+           label = 'MA-7 2024 surtax threshold does not double for joint filers')
+
+  # MA-8: Social Security is wholly outside the Massachusetts base while
+  # long-term gains sit inside it at the headline rate. 2024 single aged 70
+  # with 40,000 of wages, 20,000 of taxable Social Security and 15,000 of
+  # long-term gains: the base is 55,000, not 75,000. Exemptions are 4,400 plus
+  # the $700 age-65 amount, taxable income 47,900, tax 2,395
+  run_case('MA', 2024,
+           list(agi = 75000, age1 = 70, wages1 = 40000, ei1 = 40000,
+                txbl_ss = 20000, gross_ss = 23000, kg_lt = 15000,
+                liab_pr_ee = 3060),
+           expect = list(st_agi = 55000, st_exempt = 5100,
+                         st_txbl_inc = 47900, liab_st_iit = 2395.00),
+           label = 'MA-8 2024 Social Security excluded, long-term gains included')
+
+  # MA-9: the earned income credit at 40% of the federal credit (2017-2018
+  # were 23%, 2019-2022 30%), refundable, alongside the Child and Family Tax
+  # Credit. 2024 single, wages 20,000, one dependent aged 5, federal earned
+  # income credit 3,000: Massachusetts pays 1,200 of earned income credit and
+  # 440 of family credit against 653.50 of tax
+  run_case('MA', 2024,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, liab_pr_ee = 1530,
+                n_dep = 1, dep_age1 = 5, eitc = 3000),
+           expect = list(st_txbl_inc = 13070, st_eitc = 1200, st_ctc = 440),
+           label = 'MA-9 2024 earned income credit at 40% and the family credit')
+
+  #--------------------------------------------------------------------------
   # Oregon (Form OR-40)
   #
   # The federal tax liability subtraction sits at line 10 among Oregon's
@@ -4011,7 +4124,8 @@ test_state_calc = function() {
   smoke_states = c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI',
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
                    'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI',
-                   'WV', 'NM', 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR')
+                   'WV', 'NM', 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR',
+                   'MA')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()

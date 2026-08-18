@@ -1,0 +1,27 @@
+---
+# Massachusetts: the 4% surtax (Form 1 line 28b; Schedule 4% Surtax).
+#
+# A constitutional amendment (Art. XLIV) effective for tax years beginning on
+# or after January 1, 2023. Two things about it are easy to get wrong: the
+# threshold is the SAME for every filing status -- there is no doubling for
+# joint filers, so it is a sharp marriage penalty -- and the base is total
+# TAXABLE income across all three classes, not any one class and not AGI.
+
+taxable_income_rate:
+  value:
+    '2017': 0.0
+    '2023': 0.04
+  reference: '2023 booklet p.3: "For tax years beginning on or after January 1, 2023, MGL ch 62 taxpayers must pay an additional 4% (4% surtax) on taxable income over a certain threshold." Schedule 4% Surtax line 7 multiplies the excess by .04, which lands on Form 1 line 28b'
+taxable_income_threshold:
+  value:
+    '2017': 999999999999.0
+    '2023': 1000000
+    '2024': 1053750
+    '2025': 1083150
+  reference: '2023 booklet p.3 ("In 2023, this threshold is $1,000,000. The threshold is subject to an annual inflation adjustment"); 2024 booklet pp.3 and 13 ($1,053,750); 2025 booklet p.3 ($1,083,150). The threshold does NOT vary by filing status -- a single filer and a joint filer face the same figure, confirmed by the absence of any status-specific amount in the 2023, 2024 and 2025 booklets. It is one of the very few indexed Massachusetts parameters'
+
+documented_not_modeled:
+  surtax_base_construction:
+    reference: 'Schedule 4% Surtax builds its base as Form 1 line 19 (Part B income after exemptions) plus Schedule B line 37 (interest, dividends, short-term and collectibles gains after excess exemptions) plus Schedule D line 21 (taxable long-term gains), each floored at zero SEPARATELY, so a loss in one class cannot shrink another class''s contribution. The model pools the classes into one taxable-income figure before applying the threshold, which differs only for a filer above $1,000,000 who has a loss in one class and a gain in another [rare, and the direction is to understate the surtax]'
+  surtax_and_the_limited_income_credit:
+    reference: 'The Limited Income Credit worksheet pulls Form 1 line 28, which includes the surtax, so the credit nominally sits on top of total tax. No filer in the credit band has surtax income, so the ordering is immaterial; the model applies the credit to tax before the surtax'

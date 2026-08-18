@@ -175,6 +175,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.care_exp_ded_dep_limit', # (int) maximum number of qualifying dependents
     'st_ded.care_exp_ded_age_limit', # (int) maximum dependent age to qualify
     'st_ded.item_add_payroll',       # (int) payroll/SE taxes added to the state itemized base (MO)
+    'st_ded.payroll_ded_cap',        # (dbl) per-person deduction of payroll/retirement contributions (MA $2,000)
     'st_ded.retire_exempt_ss',       # (int) taxable Social Security exempt as a DEDUCTION (MO)
     'st_ded.retire_exempt_ss_min_age', # (int) minimum age for the SS exemption (MO 62)
     'st_ded.retire_exempt_ss_limit', # (dbl) income limit, reduced $1-for-$1 above (mapped)
@@ -584,8 +585,34 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       ),
       st_retire_exempt = st_retire_ss_exempt + st_retire_priv_exempt,
 
+      # Deduction of the filer's own payroll and government-retirement
+      # contributions, capped PER PERSON (MA Form 1 lines 11a/11b: Social
+      # Security, Medicare, railroad retirement, and U.S. or Massachusetts
+      # public retirement contributions, "not more than $2,000" each spouse).
+      # The employee payroll and self-employment tax the model carries are
+      # return-level, so they are split between spouses by earned-income
+      # shares before each half meets the cap -- exact for a one-earner
+      # couple and for an evenly split one, approximate in between. State and
+      # municipal retirement contributions are not a model input, so only the
+      # payroll-tax component is reached [understates the deduction for public
+      # employees, who often hit the cap on contributions alone]
+      payroll_ded_base = pmax(0, liab_pr_ee) + pmax(0, liab_seca),
+      payroll_ei_total = pmax(0, ei1) + pmax(0, ei2),
+      payroll_share1   = if_else(payroll_ei_total > 0,
+                                 pmax(0, ei1) / payroll_ei_total, 1),
+      st_payroll_ded = if_else(
+        st_ded.payroll_ded_cap > 0,
+        pmin(st_ded.payroll_ded_cap, payroll_ded_base * payroll_share1) +
+          if_else(filing_status == 2,
+                  pmin(st_ded.payroll_ded_cap,
+                       payroll_ded_base * (1 - payroll_share1)),
+                  0),
+        0
+      ),
+
       st_ded = if_else(st_itemizing, st_item_ded, st_std_ded) +
-               st_care_exp_ded + st_fed_tax_ded + st_retire_exempt,
+               st_care_exp_ded + st_fed_tax_ded + st_retire_exempt +
+               st_payroll_ded,
 
       #--------------------------------------------------------
       # Deduction addbacks (taxable-income-start states: CO...)

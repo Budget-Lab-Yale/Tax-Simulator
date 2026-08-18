@@ -49,6 +49,7 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     'st_txbl_inc',               # (dbl) state taxable income
     'st_bus_excess',             # (dbl) business income above the carve-out cap
     'kg_pref',                   # (dbl) net capital gain (alternative-rate base)
+    'kg_st',                     # (dbl) short-term capital gains (separate-rate base)
     'wages1',                    # (dbl) primary wages (spouse tax adjustment)
     'wages2',                    # (dbl) secondary wages (spouse tax adjustment)
     'filing_status',             # (int) 1 single, 2 MFJ, 3 MFS, 4 HoH
@@ -68,6 +69,7 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     'st_ord.combined_split',     # (int) pooled deductions, taxable income split by income share (MO)
     'st_ord.combined_split_round', # (dbl) rounding increment for the income shares (MO 0.01)
     'st_ord.bus_rate',           # (dbl) flat rate on carve-out excess (OH 3%)
+    'st_ord.st_gains_rate',      # (dbl) separate rate on short-term capital gains (MA)
     'st_itemizing',              # (bool) state itemization election (calc_st_ded)
     'st_ded',                    # (dbl) state deduction taken (calc_st_ded)
     'st_std_ded',                # (dbl) state standard deduction (calc_st_ded)
@@ -236,7 +238,14 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
       ) + step_recap - st_sta +
 
         # Flat tax on business income above the carve-out cap (OH 3%)
-        st_ord.bus_rate * st_txbl_bus,
+        st_ord.bus_rate * st_txbl_bus +
+
+        # Separate rate on SHORT-TERM capital gains (MA Part A: 12% through
+        # TY2022, 8.5% from TY2023). Those gains are held out of the ordinary
+        # base by st_agi.ob_st_gains_share, so this is the whole tax on them,
+        # not a supplement. Losses give no relief here -- Massachusetts nets
+        # them under its own regime, which is a documented known difference
+        st_ord.st_gains_rate * pmax(0, kg_st),
 
       # Married filing separately on a combined return (KY Form 740 filing
       # status 2): each spouse's column applies the schedule to own income
