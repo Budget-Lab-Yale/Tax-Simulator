@@ -116,6 +116,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.pension_excl_65plus',   # (dbl) per-person pension exclusion cap, 65+
     'st_agi.pension_excl_min_age',  # (dbl) minimum age for the pension exclusion
     'st_agi.pension_excl_band_per_return', # (int) banded caps per return, older-spouse age
+    'st_agi.pension_excl_tier_min_age', # (dbl) minimum age for the income-banded exclusion (NJ 62)
     'st_agi.senior_inv_cap',        # (dbl) senior investment income cap (MI)
     'st_agi.senior_inv_min_age',    # (dbl) minimum (older-spouse) age for the cap
     'st_agi.senior_std_amount',     # (dbl) senior all-income standard deduction (MI)
@@ -301,8 +302,56 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     ob_floor(st_agi.ob_other_share      * other_inc)
   )
 
+  # Starting point, computed ahead of the mutate as well because the
+  # income-banded pension exclusion below tests TOTAL income -- the figure
+  # BEFORE that exclusion, before every other subtraction, and before
+  # exemptions and deductions (NJ-1040 line 27). Testing anything downstream
+  # would be circular and would understate the exclusion
+  st_start_v = case_when(
+    tax_unit$st_agi.start_point == 0 ~ st_own_base_v,
+    tax_unit$st_agi.start_point == 2 ~ tax_unit$txbl_inc,
+    TRUE                             ~ tax_unit$agi
+  )
+
+  # Income-banded pension/retirement exclusion (NJ-1040 line 28a). In each
+  # band the exclusion is the smaller of a flat cap and a share of eligible
+  # pension income, which covers both shapes New Jersey has used: a single
+  # band with a flat filing-status maximum and a hard cliff above it
+  # (TY2017-2020), and the three-tier step-down that replaced it from TY2021,
+  # where the middle bands allow a SHARE of pension income with no cap.
+  #
+  # Only a qualifying spouse's own pension income counts ("If only one spouse
+  # is 62 or older or disabled, enter only the pension income of that
+  # spouse"), so the pooled pension figure is prorated by how many spouses
+  # meet the age test. Disability status is unobserved, so the age test alone
+  # gates eligibility
+  pens_tier_v = rep(0, nrow(tax_unit))
+  pt_ub = st_family_matrix(tax_unit, 'st_agi.pension_excl_tier_bounds')
+  if (!is.null(pt_ub)) {
+    pt_cap = st_family_matrix(tax_unit, 'st_agi.pension_excl_tier_caps',
+                              1:ncol(pt_ub), require_sentinel = FALSE)
+    pt_shr = st_family_matrix(tax_unit, 'st_agi.pension_excl_tier_shares',
+                              1:ncol(pt_ub), require_sentinel = FALSE)
+    pt_min_age = tax_unit$st_agi.pension_excl_tier_min_age
+    n_pt_qual  = (tax_unit$age1 >= pt_min_age) +
+                 (tax_unit$filing_status == 2 & !is.na(tax_unit$age2) &
+                    tax_unit$age2 >= pt_min_age)
+    n_pt_tp    = 1 + (tax_unit$filing_status == 2)
+    pt_elig    = pmax(0, tax_unit$txbl_pens_dist + tax_unit$txbl_ira_dist) *
+                 (n_pt_qual / pmax(1, n_pt_tp))
+    pens_tier_v = if_else(
+      !is.na(pt_ub[, 1]) & n_pt_qual > 0,
+      pmin(st_band_value(st_start_v, pt_ub, pt_cap),
+           st_band_value(st_start_v, pt_ub, pt_shr) * pt_elig),
+      0
+    )
+  }
+
   tax_unit %>%
     mutate(
+
+      # Income-banded pension exclusion (NJ), computed above
+      st_sub_pens_tier = pens_tier_v,
 
       # Starting point
       st_start = case_when(
@@ -660,7 +709,7 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                         st_sub_char + st_retirement_excl + st_sub_capgain +
                         st_sub_retire_share + st_sub_age + st_sub_ui +
                         st_sub_senior_inv + st_sub_twoearner + st_bid +
-                        st_sub_bus_excl,
+                        st_sub_bus_excl + st_sub_pens_tier,
 
       # State income base
       st_agi = st_start + st_additions - st_subtractions

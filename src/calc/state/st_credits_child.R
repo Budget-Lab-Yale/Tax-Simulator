@@ -24,6 +24,7 @@ st_credits_child_req_vars = c(
   'st_credits.ctc_po_thresh',
   'st_credits.ctc_po_rate',
   'st_credits.ctc_po_base',
+  'st_credits.ctc_tier_income_base',
   'st_credits.ctc_po_step',    # (dbl) stepped phase-out increment (ME 2025: 500)
   'st_credits.ctc_po_per_child',  # (0/1) phase out each child's amount separately
   'st_credits.ctc_po_round_up',   # (0/1) style-2 stepped excess: whole partial steps
@@ -109,8 +110,12 @@ st_credits_child = function(tax_unit, st_eitc) {
            'higher tier is set')
     }
 
+    # The tier is selected on the enum income base: Colorado and New Mexico
+    # test federal AGI (the default), New Jersey its own TAXABLE income
+    tier_income = st_income_base(tax_unit,
+                                 tax_unit$st_credits.ctc_tier_income_base)
     n_bounds = rowSums(!is.na(bounds))
-    passed   = rowSums(bounds < agi, na.rm = TRUE)
+    passed   = rowSums(bounds < tier_income, na.rm = TRUE)
     co_tier  = if_else(n_bounds == 0 | passed >= n_bounds,
                        0L, as.integer(passed) + 1L)
     co_tier[is.na(co_tier)] = 0L

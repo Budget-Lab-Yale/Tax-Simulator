@@ -126,6 +126,11 @@ NE:
 NH:
   profile: narrow_investment_iit
   enabled: true
+# NJ defines its own gross-income categories with no IRC linkage at all, so
+# conformity is moot in the same way it is for PA and MA (group 0 trivially)
+NJ:
+  profile: broad_iit
+  enabled: true
 # NM defines base income by reference to the IRC with no fixed date
 # (NMSA 7-2-2), so rolling conformity (group 0). Note its base subtracts the
 # federal deduction ON THE RETURN from 2018, so federal standard-deduction

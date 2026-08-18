@@ -26,7 +26,8 @@ cross_model_states = function() {
     broad  = c('AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'GA', 'HI', 'ID', 'IL', 'IN',
                'KS', 'KY', 'MA', 'MD', 'ME', 'MI', 'MN', 'MO', 'NC', 'ND', 'NE',
                'NM',
-               'NY', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'UT', 'VA', 'VT', 'WI',
+               'NJ', 'NY', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'UT', 'VA', 'VT',
+               'WI',
                'WV'),
     narrow = c('NH', 'TN'),           # interest/dividend (Hall-type) taxes
     excise = c('WA'),                 # LTCG excise + WFTC; not in TAXSIM

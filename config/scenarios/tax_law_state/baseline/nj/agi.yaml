@@ -1,0 +1,189 @@
+---
+# New Jersey: gross income (NJ-1040 lines 15-27) and the retirement exclusions
+# (lines 28a-28c).
+#
+# New Jersey is an OWN-BASE state and the strictest one in the set: it taxes
+# enumerated CATEGORIES of gross income, a loss in one category may not offset
+# income in another, and there are no loss carryovers at all. That is what
+# ob_class_floor = 1 encodes -- the same Pennsylvania rule.
+#
+# The distinctive wrinkle is elective deferrals: New Jersey excludes 401(k)
+# employee contributions from wages but TAXES contributions to 403(b), 457,
+# federal Thrift Savings, SEP and every other plan type. The booklet says so
+# in both directions, and it is why a New Jersey W-2 box 16 routinely exceeds
+# box 1.
+#
+# Conformity: New Jersey defines its own categories with no IRC linkage, so
+# conformity is moot in the same way it is for Pennsylvania (group 0
+# trivially).
+
+start_point:
+  value: 0
+  reference: 'NJ-1040 lines 15-26 enumerate the categories of gross income (wages; taxable interest; dividends; net profits from business; net gains from disposition of property; rents, royalties, patents and copyrights; net gambling winnings; pensions, annuities and IRA withdrawals; distributive share of partnership income; net pro rata share of S corporation income; alimony; other) and line 27 totals them. There is no federal-AGI line on the NJ-1040'
+
+ob_class_floor:
+  value: 1
+  reference: 'The gross-income-category rule: a loss in one category may not offset income in another, and there are no carryforwards or carrybacks. Same construction as Pennsylvania, whose ob_class_floor this shares'
+
+ob_comp_share:
+  value: 1
+  reference: 'NJ-1040 line 15, wages, salaries, tips and other employee compensation, taken from W-2 box 16 (State wages) rather than box 1'
+ob_int_share:
+  value: 1
+  reference: 'NJ-1040 line 16a, taxable interest'
+ob_div_share:
+  value: 1
+  reference: 'NJ-1040 line 17, dividends. New Jersey has no preferential rate for qualified dividends'
+ob_bus_share:
+  value: 1
+  reference: 'NJ-1040 lines 18 (net profits from business), 21 (distributive share of partnership income) and 22 (net pro rata share of S corporation income)'
+ob_gains_share:
+  value: 1
+  reference: 'NJ-1040 line 19, net gains or income from disposition of property. New Jersey draws no distinction by holding period'
+ob_st_gains_share:
+  value: 1
+  reference: 'Short-term gains sit in the same category as long-term ones and take the same rate; stated explicitly because the two shares were split apart when Massachusetts, which taxes them differently, was encoded'
+ob_rent_share:
+  value: 1
+  reference: 'NJ-1040 line 20, net gains or income from rents, royalties, patents and copyrights'
+ob_retirement_share:
+  value: 1
+  reference: 'NJ-1040 line 20a, pensions, annuities and IRA withdrawals, before the exclusions below'
+ob_ira_share:
+  value: 1
+  reference: 'IRA withdrawals share line 20a with pensions and annuities'
+ob_ss_share:
+  value: 0
+  reference: 'Social Security benefits are on the New Jersey exempt-income list and never enter gross income'
+ob_ui_share:
+  value: 0
+  reference: 'Unemployment compensation is exempt from New Jersey gross income -- fully taxable federally, fully exempt here'
+ob_alimony_share:
+  value: 1
+  reference: 'NJ-1040 line 24, alimony and separate maintenance payments received'
+ob_other_share:
+  value: 1
+  reference: 'NJ-1040 line 25 "Other" income, and line 23 net gambling winnings (New Jersey Lottery winnings of $10,000 or less are exempt)'
+
+#-----------------------------------------------------------------------
+# Pension/retirement exclusion (NJ-1040 line 28a).
+#
+# Two regimes. Through TY2020 a flat filing-status maximum with a HARD CLIFF
+# at $100,000 of total income. From TY2021 a three-tier step-down with the
+# cliff moved to $150,000, where the middle tiers allow a SHARE of pension
+# income rather than a capped amount. The test is on TOTAL income -- the
+# figure before this exclusion and before exemptions and deductions.
+#-----------------------------------------------------------------------
+
+filing_status_mapper:
+  pension_excl_tier_caps1:
+    '1': pens_cap_single
+    '2': pens_cap_joint
+    '3': pens_cap_mfs
+    '4': pens_cap_single
+  pension_excl_tier_shares2:
+    '1': pens_share2_single
+    '2': pens_share2_joint
+    '3': pens_share2_mfs
+    '4': pens_share2_single
+  pension_excl_tier_shares3:
+    '1': pens_share3_single
+    '2': pens_share3_joint
+    '3': pens_share3_mfs
+    '4': pens_share3_single
+
+pension_excl_tier_min_age:
+  value: 62
+  reference: '2025 booklet p.20: "You (and/or your spouse if filing jointly) were age 62 or older or blind/disabled as defined by Social Security guidelines on the last day of the tax year." Note 62, not 65, and disjunctive with disability -- the TY2017 wording says "62 or older or disabled" and TY2018 onward adds "blind/". Disability status is unobserved, so the age test alone gates eligibility here'
+
+# Bounds are upper bounds on TOTAL income (NJ-1040 line 27), the figure before
+# this exclusion and before exemptions and deductions. The final band carries
+# the ineligibility cliff.
+pension_excl_tier_bounds:
+  value:
+    '2017': [100000.0, 999999999999.0, 999999999999.0, 999999999999.0]
+    '2021': [100000.0, 125000.0, 150000.0, 999999999999.0]
+  reference: 'TY2017-2020: a single eligibility band with a hard cliff -- 2017 booklet p.26, "If the amount on Line 26 is more than $100,000, you are not eligible for the pension exclusion." TY2021-2025: the three-tier chart printed identically at line 28a in all five booklets, with bands $0-$100,000, $100,001-$125,000, $125,001-$150,000 and over $150,000. The first tiered year is TY2021, not TY2020 -- the TY2020 booklet still prints the flat "$100,000 or less" test'
+
+# Band 1 is a flat filing-status maximum; the middle bands are pure shares of
+# pension income with no cap, so they hold the finite sentinel.
+pens_cap_joint:
+  value:
+    '2017': 40000
+    '2018': 60000
+    '2019': 80000
+    '2020': 100000
+  reference: 'Married/CU couple filing jointly, from each year''s "Maximum Retirement/Pension Exclusion" chart at line 28a (line 27a in 2017). A four-year statutory phase-in landing at $100,000 in TY2020, unchanged since'
+pens_cap_single:
+  value:
+    '2017': 30000
+    '2018': 45000
+    '2019': 60000
+    '2020': 75000
+  reference: 'Single, head of household and qualifying widow(er)/surviving spouse, same charts. Lands at $75,000 in TY2020'
+pens_cap_mfs:
+  value:
+    '2017': 20000
+    '2018': 30000
+    '2019': 40000
+    '2020': 50000
+  reference: 'Married/CU partner filing separately, same charts. Lands at $50,000 in TY2020'
+
+pension_excl_tier_caps2:
+  value: 999999999999.0
+  reference: 'The second tier allows a share of pension income with no separate cap'
+pension_excl_tier_caps3:
+  value: 999999999999.0
+  reference: 'The third tier likewise'
+pension_excl_tier_caps4:
+  value: 999999999999.0
+  reference: 'Above $150,000 the share is zero, so the cap never binds'
+
+pension_excl_tier_shares1:
+  value: 1.0
+  reference: 'Within the first band the whole capped amount is available, so the share is unrestricted and the cap governs'
+pens_share2_joint:
+  value:
+    '2017': 0.0
+    '2021': 0.5
+  reference: '2021-2025 booklets, line 28a chart: total income $100,001-$125,000 allows "50% of line 20a" for a married/CU couple filing jointly. Zero through TY2020, when the $100,000 cliff made the band ineligible'
+pens_share2_single:
+  value:
+    '2017': 0.0
+    '2021': 0.375
+  reference: 'Same chart: 37.5% of line 20a for single, head of household and surviving spouse'
+pens_share2_mfs:
+  value:
+    '2017': 0.0
+    '2021': 0.25
+  reference: 'Same chart: 25% of line 20a for married/CU partner filing separately'
+pens_share3_joint:
+  value:
+    '2017': 0.0
+    '2021': 0.25
+  reference: 'Same chart: total income $125,001-$150,000 allows 25% of line 20a for a joint filer -- exactly half the second-tier share'
+pens_share3_single:
+  value:
+    '2017': 0.0
+    '2021': 0.1875
+  reference: 'Same chart: 18.75% for single, head of household and surviving spouse'
+pens_share3_mfs:
+  value:
+    '2017': 0.0
+    '2021': 0.125
+  reference: 'Same chart: 12.5% for married/CU partner filing separately'
+pension_excl_tier_shares4:
+  value: 0.0
+  reference: 'Over $150,000 of total income the exclusion is zero -- the cliff survived the TY2021 restructure, it just moved up from $100,000'
+
+documented_not_modeled:
+  other_retirement_income_exclusion:
+    reference: 'NJ-1040 line 28b gives a further exclusion to filers with $3,000 or less of earned income: up to $6,000 (joint, head of household, surviving spouse) or $3,000 (single, separate), plus a component equal to the unclaimed part of the pension exclusion. NOT ENCODED. The special-exclusion part is straightforward, but the unclaimed-pension component turns on an ambiguity the booklets do not resolve -- Worksheet D takes a percentage of line 27 while line 28a takes a percentage of line 20a, which determines whether that component is structurally dead above $100,000 of total income. Left out entirely rather than half-encoded [understates the exclusion for low-earned-income retirees; the special-exclusion part is worth up to $6,000 of base]'
+  qualifying_spouse_pension_split:
+    reference: 'Where only one spouse meets the age test the form allows only THAT spouse pension income into the exclusion. The model carries pension and IRA income at the return level, so the pooled figure is prorated by how many spouses qualify -- exact where both qualify or neither does, approximate where exactly one does'
+  elective_deferrals:
+    reference: 'New Jersey excludes 401(k) employee AND employer contributions up to the federal limit, but TAXES contributions to 403(b), 457, federal Thrift Savings, SEP and every other plan type (the exempt and taxable lists in every booklet 2017-2025 state both sides explicitly). That is why New Jersey W-2 box 16 exceeds box 1 for those savers. Deferral amounts by plan type are not in the microdata, so New Jersey wages here are federal wages [understates New Jersey wages for 403(b), 457 and TSP participants -- teachers, public employees and non-profit staff, a large and identifiable population. A Tier 2 imputation target already on the plan list]'
+  section_125_cafeteria_plans:
+    reference: 'Some Section 125 cafeteria plan amounts are taxable in New Jersey though excluded federally, and the booklet instructs filers to add them back into state wages. Not separable in the microdata'
+  exempt_income_list:
+    reference: 'New Jersey also exempts Social Security, unemployment (both encoded above), temporary disability received from the state, workers compensation, gifts and inheritances, most municipal bond interest of New Jersey and its subdivisions, federal obligation interest, and New Jersey Lottery winnings of $10,000 or less. The own-base build reaches the first two; the interest exclusions are unobservable in the same way they are elsewhere'

@@ -1,0 +1,28 @@
+---
+# New Jersey: exemptions (NJ-1040 lines 6-12).
+#
+# New Jersey has NO standard deduction, so exemptions plus the enumerated
+# deductions in ded.yaml are the whole allowance. Nothing here is indexed --
+# every amount below is identical in all nine booklets except the veteran
+# exemption, which doubled for TY2019.
+
+personal_amount:
+  value: 1000
+  reference: 'NJ-1040 line 6, $1,000 per taxpayer; a married/CU couple filing jointly claims $2,000, exactly twice the single amount. Unchanged 2017-2025 and not indexed'
+dep_amount:
+  value: 1500
+  reference: 'NJ-1040 line 8, $1,500 for each dependent child and each other dependent. Unchanged 2017-2025'
+aged_addl:
+  value: 1000
+  reference: 'NJ-1040 line 7, an additional $1,000 for each taxpayer age 65 or older at the end of the tax year. Unchanged 2017-2025'
+blind_addl:
+  value: 1000
+  reference: 'NJ-1040 line 7, an additional $1,000 for each taxpayer who is blind or disabled. Unchanged 2017-2025'
+
+documented_not_modeled:
+  veteran_exemption:
+    reference: 'NJ-1040 line 9 gives an additional exemption to each honourably discharged veteran -- $3,000 for TY2017-TY2018 and $6,000 from TY2019. Veteran status is not a model input [understates exemptions for veteran households, worth up to $6,000 of base each]'
+  college_dependent_exemption:
+    reference: 'NJ-1040 line 10 gives a further $1,000 for each dependent under 22 attending an accredited college full time, on top of the $1,500 dependent exemption. Enrolment is not a model input'
+  domestic_partners_and_civil_unions:
+    reference: 'New Jersey extends every exemption to civil union partners and, for some purposes, domestic partners. The model carries federal filing status only'

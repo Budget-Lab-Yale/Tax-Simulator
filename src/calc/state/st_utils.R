@@ -261,6 +261,8 @@ st_income_base = function(tax_unit, code) {
   #   7 = state AGI plus the business carve-out deduction addback (OH MAGI,
   #       ORC 5747.01(JJ))
   #   8 = modified state AGI (7) less exemptions (OH 2019+ means tests)
+  #   9 = state TAXABLE income (only available downstream of calc_st_txbl;
+  #       NJ keys its child credit tiers on it)
   # An unavailable base (e.g. state AGI requested inside calc_st_agi) or an
   # unknown code resolves to NA, which downstream comparisons surface.
   #
@@ -284,6 +286,7 @@ st_income_base = function(tax_unit, code) {
     code == 6 ~ col_or_na('st_agi') - col_or_na('st_exempt'),
     code == 7 ~ col_or_na('st_agi') + col_or_na('st_bid'),
     code == 8 ~ col_or_na('st_agi') + col_or_na('st_bid') - col_or_na('st_exempt'),
+    code == 9 ~ col_or_na('st_txbl_inc'),
     TRUE      ~ NA_real_
   )
 }

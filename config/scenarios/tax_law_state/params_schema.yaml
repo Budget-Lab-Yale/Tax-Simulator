@@ -68,6 +68,10 @@ scalars:
   st_agi.retirement_excl_65plus: {default: 0, units: per_person}
   st_agi.retirement_excl_earned_cap: {default: 0, units: per_person}
   st_agi.pension_excl_band_per_return: 0   # band amounts per return, older-spouse age (MI)
+  # Income-banded pension exclusion (NJ-1040 line 28a): in each band the
+  # exclusion is min(cap, share x eligible pension income), tested on TOTAL
+  # income before the exclusion itself
+  st_agi.pension_excl_tier_min_age: .inf
   st_agi.senior_inv_cap: {default: 0, units: per_return}
   st_agi.senior_inv_min_age: .inf
   # Senior standard deduction against ALL income (MI Tier 2/3 Michigan
@@ -257,6 +261,9 @@ scalars:
   # Per-person deduction of the filer's own payroll and government-retirement
   # contributions (MA Form 1 lines 11a/11b, $2,000 each spouse)
   st_ded.payroll_ded_cap: {default: 0, units: per_person}
+  # Capped deduction for property taxes paid on a principal residence
+  # (NJ-1040 line 41). Zero means the state has no such deduction
+  st_ded.prop_tax_ded_cap: {default: 0, units: per_return}
   # Retirement exemption taken as a DEDUCTION rather than an AGI subtraction
   # (MO-1040 line 8): the state's AGI is struck before the exemption, so a
   # feature keyed on state AGI (MO's federal-tax-deduction bands) sees the
@@ -432,6 +439,9 @@ scalars:
   st_credits.ctc_po_thresh: .inf
   st_credits.ctc_po_rate: 0
   st_credits.ctc_po_base: 1   # st_income_base enum (UT style 3 uses 3 = MAGI proxy)
+  # Income base the TIERED (Colorado-style) child credit selects its tier on:
+  # CO and NM test federal AGI, NJ its own taxable income (enum 9)
+  st_credits.ctc_tier_income_base: 1
   # Step size for the style-1/2 stepped phase-out; the per-step reduction is
   # ctc_po_rate x ctc_po_step (ME 2025 DETC: $20 per $500 -> rate 0.04, step
   # 500; NY/VT/ME-2018 use the default $1,000)
@@ -682,6 +692,7 @@ extra_scalars:
 # family entirely, so calculators can test any(!is.na(col1))
 sentinels:
   - st_agi.pension_excl_band_ages1
+  - st_agi.pension_excl_tier_bounds1
   - st_credits.eitc_match_by_kids1
   - st_credits.hh_agi_bounds_single1
   - st_credits.hh_agi_bounds_other1
@@ -700,6 +711,8 @@ sentinels:
 # suffix-less column. `consumer` names the calculator file that reads the
 # family (documentation only)
 families:
+  - pattern: '^st_agi\.pension_excl_tier_(bounds|caps|shares)\d*$'
+    consumer: st_agi.R   # NJ income-banded pension exclusion
   - pattern: '^st_agi\.pension_excl_band_(ages|amounts)\d*$'
     consumer: st_agi.R   # age-banded per-person retirement exclusion (MI tiers)
   - pattern: '^st_ord\.(rates|brackets)\d*$'

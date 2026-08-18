@@ -23,7 +23,7 @@ test_state_calc = function() {
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
                 'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV', 'NM',
-                'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR', 'MA'),
+                'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR', 'MA', 'NJ'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -3198,6 +3198,115 @@ test_state_calc = function() {
            label = 'HI-8 Act 46 TY2027 schedule + TY2026 standard deduction')
 
   #--------------------------------------------------------------------------
+  # New Jersey (NJ-1040)
+  #
+  # The strictest own-base state in the set: enumerated categories of gross
+  # income, no cross-category loss offsets, no carryovers, no standard
+  # deduction. The pension exclusion is the intricate part -- a flat
+  # filing-status maximum behind a hard cliff through TY2020, then a
+  # three-tier step-down from TY2021, both tested on TOTAL income, which is
+  # the figure before the exclusion itself.
+  #--------------------------------------------------------------------------
+
+  # NJ-1: 2024 single, wages 60,000. The only allowance is the $1,000 personal
+  # exemption, so taxable income is 59,000 and tax is 5.525% x 59,000 -
+  # 1,492.50 = 1,767.25 (the form's subtract-a-constant schedule and the
+  # marginal ladder agree exactly)
+  run_case('NJ', 2024,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000),
+           expect = list(st_agi = 60000, st_exempt = 1000,
+                         st_txbl_inc = 59000, liab_st_iit = 1767.25),
+           label = 'NJ-1 2024 single, personal exemption only')
+
+  # NJ-2: the property tax deduction, which for a homeowner is the property
+  # tax actually paid. Same unit with 8,000 of property tax: taxable income
+  # 51,000, tax 1,325.25
+  run_case('NJ', 2024,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, salt_prop = 8000),
+           expect = list(st_ded = 8000, st_txbl_inc = 51000,
+                         liab_st_iit = 1325.25),
+           label = 'NJ-2 2024 property tax deduction')
+
+  # NJ-3a / NJ-3b: the deduction cap, and the fact that it ROSE from $10,000
+  # to $15,000 for TY2018. With 20,000 of property tax the cap binds in both
+  # years, so the same unit deducts 15,000 in 2024 and only 10,000 in 2017.
+  run_case('NJ', 2024,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, salt_prop = 20000),
+           expect = list(st_ded = 15000, st_txbl_inc = 44000,
+                         liab_st_iit = 938.50),
+           label = 'NJ-3a 2024 property tax deduction capped at 15,000')
+
+  run_case('NJ', 2017,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, salt_prop = 20000),
+           expect = list(st_ded = 10000, st_txbl_inc = 49000,
+                         liab_st_iit = 1214.75),
+           label = 'NJ-3b 2017 the cap was 10,000')
+
+  # NJ-4: the pension exclusion inside the eligibility band. 2020 single aged
+  # 65 with 60,000 of wages and 30,000 of pension income: total income is
+  # 90,000, under the $100,000 limit, so the whole 30,000 is excluded (the
+  # single maximum that year is 75,000). Exemptions are 1,000 personal plus
+  # 1,000 for age 65, so taxable income is 58,000 and tax 1,712.00
+  run_case('NJ', 2020,
+           list(agi = 90000, age1 = 65, wages1 = 60000, ei1 = 60000,
+                txbl_pens_dist = 30000),
+           expect = list(st_agi = 60000, st_exempt = 2000,
+                         st_txbl_inc = 58000, liab_st_iit = 1712.00),
+           label = 'NJ-4 2020 pension exclusion within the band')
+
+  # NJ-5a / NJ-5b: the same filer with 20,000 more of wages, either side of
+  # the TY2021 restructure. Under TY2020 law total income of 110,000 breaks
+  # the $100,000 cliff and the ENTIRE exclusion is lost. Under TY2021 law the
+  # cliff has moved to $150,000 and the $100,001-$125,000 tier allows 37.5% of
+  # pension income for a single filer -- 11,250 -- so the base falls to
+  # 98,750 and tax from 4,753.35 to 4,036.73.
+  run_case('NJ', 2020,
+           list(agi = 110000, age1 = 65, wages1 = 80000, ei1 = 80000,
+                txbl_pens_dist = 30000),
+           expect = list(st_agi = 110000, st_txbl_inc = 108000,
+                         liab_st_iit = 4753.35),
+           label = 'NJ-5a 2020 the $100,000 cliff wipes out the exclusion')
+
+  run_case('NJ', 2021,
+           list(agi = 110000, age1 = 65, wages1 = 80000, ei1 = 80000,
+                txbl_pens_dist = 30000),
+           expect = list(st_agi = 98750, st_txbl_inc = 96750,
+                         liab_st_iit = 4036.73),
+           label = 'NJ-5b 2021 the tier allows 37.5% of pension income')
+
+  # NJ-6: no cross-category loss offset. 2024 single with 50,000 of wages and
+  # a 20,000 business loss: the business category floors at zero rather than
+  # reducing wages, so the base stays 50,000 and taxable income is 49,000.
+  # A state without the category rule would tax 29,000
+  run_case('NJ', 2024,
+           list(agi = 30000, wages1 = 50000, ei1 = 50000, sole_prop = -20000),
+           expect = list(st_agi = 50000, st_txbl_inc = 49000,
+                         liab_st_iit = 1214.75),
+           label = 'NJ-6 2024 a business loss cannot offset wages')
+
+  # NJ-7: the Child Tax Credit, refundable and tiered on New Jersey TAXABLE
+  # income. 2024 joint, wages 45,000, two children aged 3 and 7 -- only the
+  # three-year-old qualifies, since the credit reaches children aged 5 and
+  # under. Exemptions are 2 x 1,000 plus 2 x 1,500 = 5,000, so taxable income
+  # is 40,000, which sits in the "over $30,000, not over $40,000" tier at
+  # $800 per child
+  run_case('NJ', 2024,
+           list(agi = 45000, filing_status = 2, age2 = 40, wages1 = 45000,
+                ei1 = 45000, n_dep = 2, dep_age1 = 3, dep_age2 = 7),
+           expect = list(st_exempt = 5000, st_txbl_inc = 40000,
+                         st_ctc = 800, liab_st_iit = 630.00 - 800),
+           label = 'NJ-7 2024 Child Tax Credit tier on taxable income')
+
+  # NJ-8: the earned income credit at 40% of the federal credit (it stepped
+  # 35% / 37% / 39% / 40% over TY2017-TY2020), refundable. 2024 single, wages
+  # 20,000, federal credit 3,000 -> 1,200 against 266 of tax
+  run_case('NJ', 2024,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, eitc = 3000),
+           expect = list(st_txbl_inc = 19000, st_eitc = 1200,
+                         liab_st_iit = 266.00 - 1200),
+           label = 'NJ-8 2024 earned income credit at 40%')
+
+  #--------------------------------------------------------------------------
   # Massachusetts (Form 1)
   #
   # A SCHEDULAR own-base state. Over this window the classes collapse to two
@@ -4125,7 +4234,7 @@ test_state_calc = function() {
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
                    'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI',
                    'WV', 'NM', 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR',
-                   'MA')
+                   'MA', 'NJ')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()

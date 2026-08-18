@@ -1,0 +1,58 @@
+---
+# New Jersey rate schedule (NJ-1040 line 43; the "New Jersey Tax Rate
+# Schedules" page on the inside back cover of each booklet).
+#
+# Two schedules only: Table A for single and married/CU partner filing
+# separately, Table B for married/CU couple filing jointly, head of household
+# and qualifying widow(er)/surviving CU partner.
+#
+# The form prints a subtract-this-amount worksheet (tax = taxable income x
+# rate - a printed constant) rather than a marginal ladder, but the two are
+# arithmetically identical: the printed constants are exactly the ladder's
+# cumulative-difference terms. Checked at the top bracket -- Table A TY2025,
+# 10.75% x $1,000,000 - $32,926.25 = $74,573.75, which is precisely the
+# cumulative tax the ladder below gives at $1,000,000.
+#
+# Nothing is indexed. Every lower bracket bound is byte-identical across all
+# nine booklets; only the top end moved, twice.
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_joint
+    '3': brackets_single
+    '4': brackets_joint
+  rates:
+    '1': rates_single
+    '2': rates_joint
+    '3': rates_single
+    '4': rates_joint
+
+rates_single:
+  value:
+    '2017': [0.014, 0.0175, 0.035, 0.05525, 0.0637, 0.0897, 0.0897, 0.0897]
+    '2018': [0.014, 0.0175, 0.035, 0.05525, 0.0637, 0.0897, 0.1075, 0.1075]
+  reference: 'Table A, "New Jersey Tax Rate Schedules", printed p.61 (pdf 63) for TY2017-TY2022 and p.63 (pdf 65) for TY2023-TY2025. The 10.75% bracket was created for TY2018; before that the 8.97% bracket was open-ended above $500,000, which the padded repetition of 8.97% reproduces'
+brackets_single:
+  value:
+    '2017': [0.0, 20000.0, 35000.0, 40000.0, 75000.0, 500000.0, 500000.0, 500000.0]
+    '2018': [0.0, 20000.0, 35000.0, 40000.0, 75000.0, 500000.0, 5000000.0, 5000000.0]
+    '2020': [0.0, 20000.0, 35000.0, 40000.0, 75000.0, 500000.0, 1000000.0, 1000000.0]
+  reference: 'Table A bracket floors, same pages. Two changes inside the window and no others: TY2018 created the 10.75% bracket at $5,000,000 (splitting the previously open-ended 8.97% band), and TY2020 dropped that threshold to $1,000,000. The five lower bounds ($0/$20k/$35k/$40k/$75k) are identical in all nine booklets. Padded to eight elements by repeating the top bound'
+rates_joint:
+  value:
+    '2017': [0.014, 0.0175, 0.0245, 0.035, 0.05525, 0.0637, 0.0897, 0.0897]
+    '2018': [0.014, 0.0175, 0.0245, 0.035, 0.05525, 0.0637, 0.0897, 0.1075]
+  reference: 'Table B, same pages. Table B has one more low bracket than Table A (the 2.45% band), so its eight elements are all real from TY2018'
+brackets_joint:
+  value:
+    '2017': [0.0, 20000.0, 50000.0, 70000.0, 80000.0, 150000.0, 500000.0, 500000.0]
+    '2018': [0.0, 20000.0, 50000.0, 70000.0, 80000.0, 150000.0, 500000.0, 5000000.0]
+    '2020': [0.0, 20000.0, 50000.0, 70000.0, 80000.0, 150000.0, 500000.0, 1000000.0]
+  reference: 'Table B bracket floors, same pages. The six lower bounds ($0/$20k/$50k/$70k/$80k/$150k) are identical in all nine booklets; only the top bracket moved, on the same TY2018 and TY2020 schedule as Table A'
+
+documented_not_modeled:
+  tax_table_versus_rate_schedule:
+    reference: 'For taxable income under $100,000 the booklet directs filers to a Tax Table rather than the rate schedule, and the two differ by the table''s bracketing. The research pass compared all 10,015 table rows against the schedule and found the printed schedule carries a $0.50 defect relative to the table at the band boundaries. The continuous schedule is encoded [sub-dollar differences per return under $100,000]'
+  estates_and_trusts:
+    reference: 'The NJ-1040 booklet does not address estates and trusts, which file Form NJ-1041. Treating them as Table A is the standard reading but was not verified from a primary source. Immaterial to a household microsimulation'

@@ -176,6 +176,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.care_exp_ded_age_limit', # (int) maximum dependent age to qualify
     'st_ded.item_add_payroll',       # (int) payroll/SE taxes added to the state itemized base (MO)
     'st_ded.payroll_ded_cap',        # (dbl) per-person deduction of payroll/retirement contributions (MA $2,000)
+    'st_ded.prop_tax_ded_cap',       # (dbl) capped property tax deduction (NJ $10,000 then $15,000)
     'st_ded.retire_exempt_ss',       # (int) taxable Social Security exempt as a DEDUCTION (MO)
     'st_ded.retire_exempt_ss_min_age', # (int) minimum age for the SS exemption (MO 62)
     'st_ded.retire_exempt_ss_limit', # (dbl) income limit, reduced $1-for-$1 above (mapped)
@@ -610,9 +611,14 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
         0
       ),
 
+      # Capped property tax deduction (NJ-1040 line 41): property taxes paid
+      # on a New Jersey principal residence, up to the cap. Renters may treat
+      # 18% of rent as property taxes, which is rent-blocked and documented
+      st_prop_tax_ded = pmin(st_ded.prop_tax_ded_cap, pmax(0, salt_prop)),
+
       st_ded = if_else(st_itemizing, st_item_ded, st_std_ded) +
                st_care_exp_ded + st_fed_tax_ded + st_retire_exempt +
-               st_payroll_ded,
+               st_payroll_ded + st_prop_tax_ded,
 
       #--------------------------------------------------------
       # Deduction addbacks (taxable-income-start states: CO...)
