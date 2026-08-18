@@ -3297,6 +3297,36 @@ test_state_calc = function() {
                          st_ctc = 800, liab_st_iit = 630.00 - 800),
            label = 'NJ-7 2024 Child Tax Credit tier on taxable income')
 
+  # NJ-7b: the UNCLAIMED-exclusion component (line 28b Part I), whose ceiling
+  # runs on the same tier bands but against TOTAL income rather than pension
+  # income. 2024 joint, both aged 65, with 114,000 of interest and 6,000 of
+  # pension and no earned income at all. Total income 120,000 sits in the
+  # $100,001-$125,000 tier, so the pension exclusion itself is only 50% x
+  # 6,000 = 3,000 -- but the unclaimed ceiling is 50% x 120,000 = 60,000, so
+  # a further 57,000 comes out and the base falls to 60,000, not 117,000.
+  # This is Tax Topic Bulletin GIT-1 & 2's own worked example in miniature;
+  # reusing one ceiling for both would silently zero the component. Exemptions
+  # are 2 x 1,000 plus 2 x 1,000 for age, so taxable income is 56,000 and tax
+  # 2.45% x 56,000 - 420 = 952.00
+  run_case('NJ', 2024,
+           list(agi = 120000, filing_status = 2, age1 = 65, age2 = 65,
+                txbl_int = 114000, txbl_pens_dist = 6000),
+           expect = list(st_agi = 60000, st_exempt = 4000,
+                         st_txbl_inc = 56000, liab_st_iit = 952.00),
+           label = 'NJ-7b 2024 unclaimed exclusion runs on TOTAL income')
+
+  # NJ-7c: the same unit with 4,000 of wages breaks the $3,000 earned-income
+  # cliff, so ONLY the 3,000 pension exclusion survives. Total income is
+  # 124,000 (still inside the same tier), the base is 121,000, exemptions
+  # 4,000 and taxable income 117,000 -> 5.525% x 117,000 - 2,775 = 3,689.25
+  run_case('NJ', 2024,
+           list(agi = 124000, filing_status = 2, age1 = 65, age2 = 65,
+                txbl_int = 114000, txbl_pens_dist = 6000, wages1 = 4000,
+                ei1 = 4000),
+           expect = list(st_agi = 121000, st_txbl_inc = 117000,
+                         liab_st_iit = 3689.25),
+           label = 'NJ-7c 2024 the $3,000 earned-income cliff kills it')
+
   # NJ-8: the earned income credit at 40% of the federal credit (it stepped
   # 35% / 37% / 39% / 40% over TY2017-TY2020), refundable. 2024 single, wages
   # 20,000, federal credit 3,000 -> 1,200 against 266 of tax

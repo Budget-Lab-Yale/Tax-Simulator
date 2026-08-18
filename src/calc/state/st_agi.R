@@ -117,6 +117,8 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.pension_excl_min_age',  # (dbl) minimum age for the pension exclusion
     'st_agi.pension_excl_band_per_return', # (int) banded caps per return, older-spouse age
     'st_agi.pension_excl_tier_min_age', # (dbl) minimum age for the income-banded exclusion (NJ 62)
+    'st_agi.pension_excl_orie',      # (int) unclaimed-exclusion component allowed (NJ line 28b Part I)
+    'st_agi.pension_excl_orie_earned_max', # (dbl) earned-income ceiling for it (NJ $3,000)
     'st_agi.senior_inv_cap',        # (dbl) senior investment income cap (MI)
     'st_agi.senior_inv_min_age',    # (dbl) minimum (older-spouse) age for the cap
     'st_agi.senior_std_amount',     # (dbl) senior all-income standard deduction (MI)
@@ -343,6 +345,37 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       !is.na(pt_ub[, 1]) & n_pt_qual > 0,
       pmin(st_band_value(st_start_v, pt_ub, pt_cap),
            st_band_value(st_start_v, pt_ub, pt_shr) * pt_elig),
+      0
+    )
+
+    # UNCLAIMED portion of the exclusion (NJ-1040 line 28b Part I, Worksheet
+    # D). A filer who qualifies on age and total income but has $3,000 or less
+    # of EARNED income may also exclude whatever is left of a ceiling that
+    # runs on the same bands -- but against TOTAL income rather than pension
+    # income.
+    #
+    # That difference is the whole provision and it is easy to get wrong. The
+    # statutes use different nouns in otherwise identical sentences: N.J.S.A.
+    # 54A:6-10(b)(1) allows a percentage of "payments" (line 20a, pension
+    # income) for the exclusion above, while 54A:6-15(a)(1) allows the same
+    # percentage of "income" (line 27, total income) here. Reusing one ceiling
+    # for both fails SILENTLY -- it makes the unclaimed amount identically
+    # zero for every tiered filer, which reads as "exclusion already fully
+    # used" rather than as a bug.
+    #
+    # The $3,000 test counts only the four earned/active categories -- wages,
+    # business, partnership and S corporation -- and excludes interest,
+    # dividends, property dispositions, rents, gambling and alimony.
+    orie_earned = pmax(0, tax_unit$wages1) + pmax(0, tax_unit$wages2) +
+                  tax_unit$sole_prop + tax_unit$part_active +
+                  tax_unit$part_passive + tax_unit$scorp + tax_unit$farm
+    orie_ceiling = pmin(st_band_value(st_start_v, pt_ub, pt_cap),
+                        st_band_value(st_start_v, pt_ub, pt_shr) * st_start_v)
+    pens_tier_v = pens_tier_v + if_else(
+      !is.na(pt_ub[, 1]) & n_pt_qual > 0 &
+        tax_unit$st_agi.pension_excl_orie == 1 &
+        orie_earned <= tax_unit$st_agi.pension_excl_orie_earned_max,
+      pmax(0, orie_ceiling - pens_tier_v),
       0
     )
   }

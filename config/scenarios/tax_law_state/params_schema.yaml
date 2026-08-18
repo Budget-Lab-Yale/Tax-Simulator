@@ -72,6 +72,12 @@ scalars:
   # exclusion is min(cap, share x eligible pension income), tested on TOTAL
   # income before the exclusion itself
   st_agi.pension_excl_tier_min_age: .inf
+  # Unclaimed portion of the banded exclusion (NJ-1040 line 28b Part I): the
+  # same bands measured against TOTAL income rather than pension income,
+  # less whatever the pension exclusion already used, for filers at or below
+  # an EARNED-income ceiling
+  st_agi.pension_excl_orie: 0
+  st_agi.pension_excl_orie_earned_max: 0
   st_agi.senior_inv_cap: {default: 0, units: per_return}
   st_agi.senior_inv_min_age: .inf
   # Senior standard deduction against ALL income (MI Tier 2/3 Michigan

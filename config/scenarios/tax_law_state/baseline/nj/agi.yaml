@@ -176,9 +176,17 @@ pension_excl_tier_shares4:
   value: 0.0
   reference: 'Over $150,000 of total income the exclusion is zero -- the cliff survived the TY2021 restructure, it just moved up from $100,000'
 
+# Unclaimed portion of the exclusion (NJ-1040 line 28b Part I, Worksheet D).
+pension_excl_orie:
+  value: 1
+  reference: 'NJ-1040 line 28b, Worksheet D Part I: a filer who meets the age and total-income tests but has $3,000 or less of earned income may also exclude the unused part of a ceiling running on the same bands. CRITICALLY, that ceiling is measured against TOTAL income (line 27), not pension income (line 20a) -- N.J.S.A. 54A:6-15(a)(1) allows a percentage of "income" where 54A:6-10(b)(1) allows a percentage of "payments". Confirmed by Tax Topic Bulletin GIT-1 & 2 (rev. 1/2026) p.25, which prints both bases side by side for a $114,000 joint filer with $6,200 of taxable pension: a $3,100 maximum pension exclusion (50% of the pension) against a $57,000 maximum exclusion (50% of total income). Encoding one ceiling for both would zero this component for every tiered filer and look like a plausible "already fully used" result'
+pension_excl_orie_earned_max:
+  value: 3000
+  reference: 'Worksheet D lines 4-8 sum exactly four NJ-1040 lines -- wages, net profits from business, distributive share of partnership income and net pro rata share of S corporation income -- and ask "Is the amount on line 8 MORE than $3,000? Yes: you are not eligible to use the unclaimed portion of your maximum exclusion." A hard cliff, and the test deliberately EXCLUDES interest, dividends, property dispositions, rents, gambling and alimony'
+
 documented_not_modeled:
-  other_retirement_income_exclusion:
-    reference: 'NJ-1040 line 28b gives a further exclusion to filers with $3,000 or less of earned income: up to $6,000 (joint, head of household, surviving spouse) or $3,000 (single, separate), plus a component equal to the unclaimed part of the pension exclusion. NOT ENCODED. The special-exclusion part is straightforward, but the unclaimed-pension component turns on an ambiguity the booklets do not resolve -- Worksheet D takes a percentage of line 27 while line 28a takes a percentage of line 20a, which determines whether that component is structurally dead above $100,000 of total income. Left out entirely rather than half-encoded [understates the exclusion for low-earned-income retirees; the special-exclusion part is worth up to $6,000 of base]'
+  other_retirement_special_exclusion:
+    reference: 'NJ-1040 line 28b Part II adds a flat Special Exclusion of $6,000 (joint, head of household, surviving spouse) or $3,000 (single, separate) for a filer who can NEVER receive Social Security or Railroad Retirement benefits -- Worksheet D items 9a/9b require answering "No" to whether the filer is now receiving them. That status is not a model input, so Part II is not encoded [understates the exclusion for the small population of never-covered retirees, chiefly some public employees]. Part I, the unclaimed-exclusion component, IS encoded above'
   qualifying_spouse_pension_split:
     reference: 'Where only one spouse meets the age test the form allows only THAT spouse pension income into the exclusion. The model carries pension and IRA income at the return level, so the pooled figure is prorated by how many spouses qualify -- exact where both qualify or neither does, approximate where exactly one does'
   elective_deferrals:
