@@ -141,7 +141,11 @@ scalars:
   st_agi.ob_bus_share: 0
   st_agi.ob_gains_share: 0
   st_agi.ob_rent_share: 0
+  # Pension/annuity distributions and IRA distributions carry SEPARATE shares:
+  # Alabama exempts defined benefit plans (IRC 414(j)) but taxes IRAs, which
+  # by definition cannot be defined benefit
   st_agi.ob_retirement_share: 0
+  st_agi.ob_ira_share: 0
   st_agi.ob_ss_share: 0
   st_agi.ob_ui_share: 0
   st_agi.ob_alimony_share: 0
@@ -275,6 +279,10 @@ scalars:
   st_ded.fed_tax_ded_less_ctc_ref: 0
   st_ded.fed_tax_ded_less_ed_ref: 0
   st_ded.fed_tax_ded_less_ptc: 0
+  # Excess advance premium tax credit repayment stripped back out of the
+  # base: it reaches 1040 line 22 via Schedule 2 Part I, but Oregon's
+  # subtraction is limited to income tax (MO and AL both leave it in)
+  st_ded.fed_tax_ded_less_excess_ptc: 0
   st_ded.fed_tax_ded_cap: {default: .inf, units: per_return}
   st_ded.fed_tax_ded_band_base: 2   # st_income_base enum (MO: state AGI, Line 6)
 
@@ -678,8 +686,8 @@ families:
     consumer: st_exempt.R   # OH-style income-tiered per-exemption amounts
   - pattern: '^st_exempt\.dep_tier_(bounds|amounts)\d*$'
     consumer: st_exempt.R   # AL income-tiered dependent exemption
-  - pattern: '^st_ded\.fed_tax_ded_band_(upper|share)\d*$'
-    consumer: st_ded.R   # MO AGI-tiered percentage of the federal tax deduction
+  - pattern: '^st_ded\.fed_tax_ded_band_(upper|share|cap)\d*$'
+    consumer: st_ded.R   # MO AGI-tiered percentage / OR AGI-banded cap on the federal tax deduction
   - pattern: '^st_credits\.jfc_(bounds|rates)\d*$'
     consumer: st_credits.R   # OH joint filing credit rate bands
   - pattern: '^st_credits\.retire_credit_(bounds|amounts)\d*$'

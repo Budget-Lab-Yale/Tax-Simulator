@@ -1,0 +1,52 @@
+---
+# Alabama filing requirement (Form 40 booklet p.5, "You Must File A Return
+# If...").
+#
+# The threshold is on Alabama GROSS income, and the exempt-income catalogue in
+# agi.yaml is explicitly excluded from the test: "Do not include these amounts
+# when deciding if you must file a return." So Social Security, unemployment
+# compensation and defined-benefit pension income never count toward it.
+#
+# In every year the threshold equals exactly the maximum standard deduction
+# plus the personal exemption, which is what pins the head-of-family personal
+# exemption at $3,000 (see exempt.yaml). Thresholds moved once, with Act
+# 2022-292, and nothing is indexed.
+
+filing_status_mapper:
+  req_income_thresh:
+    '1': req_thresh_single
+    '2': req_thresh_married
+    '3': req_thresh_mfs
+    '4': req_thresh_head
+
+req_type:
+  value: 2
+  reference: 'Form 40 booklets 2017-2025 p.5: fixed gross-income thresholds by filing status, not a federal-filing trigger'
+req_thresh_single:
+  value:
+    '2017': 4000
+    '2022': 4500
+  reference: 'Booklet p.5 filing requirement table, single: $4,000 through TY2021, $4,500 from TY2022. Equals the maximum standard deduction plus the $1,500 personal exemption in both vintages'
+req_thresh_married:
+  value:
+    '2017': 10500
+    '2022': 11500
+  reference: 'Booklet p.5, married filing joint: $10,500 through TY2021, $11,500 from TY2022 (= $7,500 + $3,000, then $8,500 + $3,000)'
+req_thresh_mfs:
+  value:
+    '2017': 5250
+    '2022': 5750
+  reference: 'Booklet p.5, married filing separate: $5,250 through TY2021, $5,750 from TY2022 (= $3,750 + $1,500, then $4,250 + $1,500)'
+req_thresh_head:
+  value:
+    '2017': 7700
+    '2022': 8200
+  reference: 'Booklet p.5, head of family: $7,700 through TY2021, $8,200 from TY2022 (= $4,700 + $3,000, then $5,200 + $3,000)'
+
+documented_not_modeled:
+  gross_income_test_basis:
+    reference: 'The statutory test is on Alabama GROSS income before deductions, while the calculator applies the threshold to the Alabama income base it computes. The two coincide for wage filers; they diverge for a filer whose above-the-line adjustments are large [marginal effect on the filer flag only, not on liability]'
+  no_surviving_spouse_status:
+    reference: 'Alabama has only four filing statuses -- single, married filing joint, married filing separate and head of family. There is no qualifying widow(er) status, and head of family is narrower than federal head of household: the taxpayer must be unmarried at the close of the year, not a surviving spouse, and the qualifying dependent must not be a foster child. Status is set on the last day of the tax year'
+  nonresident_and_part_year:
+    reference: 'Nonresidents have no dollar threshold ("Over the allowable prorated exemption") and file Form 40NR; part-year residents use the resident amounts measured while an Alabama resident. The model assigns each record wholly to one state'

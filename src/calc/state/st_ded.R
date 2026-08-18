@@ -53,6 +53,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'net_ptc',            # (dbl)  net premium tax credit
     'ctc_ref',            # (dbl)  additional (refundable) child tax credit
     'liab_niit',          # (dbl)  net investment income tax
+    'excess_ptc',         # (dbl)  excess advance premium tax credit repayment
     'liab_pr_ee',         # (dbl)  employee share of payroll taxes (MO itemized add-on)
     'liab_seca',          # (dbl)  self-employment tax (MO itemized add-on)
 
@@ -186,6 +187,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.fed_tax_ded_less_ctc_ref', # (int) additional child tax credit reduces the base (AL, NOT MO)
     'st_ded.fed_tax_ded_less_ed_ref', # (int) refundable education credit reduces the base (MO/AL)
     'st_ded.fed_tax_ded_less_ptc',   # (int) net premium tax credit reduces the base (MO, NOT AL)
+    'st_ded.fed_tax_ded_less_excess_ptc', # (int) excess APTC repayment stripped from the base (OR)
     'st_ded.fed_tax_ded_cap',        # (dbl) cap on the deduction (filing-status mapped)
     'st_ded.fed_tax_ded_band_base'   # (int) share-band income base (st_income_base enum)
   )
@@ -211,16 +213,31 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
   # band's own value carries the zero tail explicitly rather than relying on
   # st_band_value's outside-the-table zero, so a band table that stops short
   # of infinity is a transcription error rather than a silent zero
+  # A state bands EITHER a share of the deductible base (MO's AGI-tiered
+  # percentage) OR the allowable cap itself (OR's Table 4, which cuts the
+  # maximum subtraction in five steps), so both families hang off the same
+  # bound table and each is optional.
   fed_tax_share_v = rep(1, nrow(tax_unit))
+  fed_tax_cap_v   = tax_unit$st_ded.fed_tax_ded_cap
   ftd_ub = st_family_matrix(tax_unit, 'st_ded.fed_tax_ded_band_upper')
   if (!is.null(ftd_ub)) {
+    ftd_income   = st_income_base(tax_unit, tax_unit$st_ded.fed_tax_ded_band_base)
+    has_ftd_band = !is.na(ftd_ub[, 1])
     ftd_share = st_family_matrix(tax_unit, 'st_ded.fed_tax_ded_band_share',
                                  1:ncol(ftd_ub), require_sentinel = FALSE)
-    ftd_income = st_income_base(tax_unit, tax_unit$st_ded.fed_tax_ded_band_base)
-    has_ftd_band = !is.na(ftd_ub[, 1])
-    fed_tax_share_v = if_else(has_ftd_band,
-                              st_band_value(ftd_income, ftd_ub, ftd_share),
-                              fed_tax_share_v)
+    if (!is.null(ftd_share)) {
+      fed_tax_share_v = if_else(has_ftd_band & !is.na(ftd_share[, 1]),
+                                st_band_value(ftd_income, ftd_ub, ftd_share),
+                                fed_tax_share_v)
+    }
+    ftd_cap = st_family_matrix(tax_unit, 'st_ded.fed_tax_ded_band_cap',
+                               1:ncol(ftd_ub), require_sentinel = FALSE)
+    if (!is.null(ftd_cap)) {
+      fed_tax_cap_v = if_else(has_ftd_band & !is.na(ftd_cap[, 1]),
+                              pmin(fed_tax_cap_v,
+                                   st_band_value(ftd_income, ftd_ub, ftd_cap)),
+                              fed_tax_cap_v)
+    }
   }
 
   tax_unit %>%
@@ -515,15 +532,20 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # recapture taxes, Form 2439 credits, the foreign tax credit line
       # Missouri adds as if a tax) are not modeled; see each state's
       # known differences
+      # Oregon also strips the excess advance premium tax credit repayment
+      # back out: it reaches 1040 line 22 through Schedule 2 Part I, but
+      # Oregon's subtraction is "limited to income tax" and its worksheet
+      # removes the repayment on line 2. Missouri and Alabama both leave it in
       st_fed_tax_base = pmax(0,
         liab_bc - nonref +
           st_ded.fed_tax_ded_add_niit * liab_niit -
+          st_ded.fed_tax_ded_less_excess_ptc * excess_ptc -
           st_ded.fed_tax_ded_less_eitc    * eitc -
           st_ded.fed_tax_ded_less_ctc_ref * ctc_ref -
           st_ded.fed_tax_ded_less_ed_ref  * ed_ref -
           st_ded.fed_tax_ded_less_ptc     * net_ptc),
       st_fed_tax_ded = st_ded.fed_tax_ded *
-                       pmin(st_ded.fed_tax_ded_cap,
+                       pmin(fed_tax_cap_v,
                             fed_tax_share_v * st_fed_tax_base),
 
       # Retirement exemption taken as a DEDUCTION rather than an AGI

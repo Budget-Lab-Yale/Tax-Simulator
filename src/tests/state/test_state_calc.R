@@ -23,7 +23,7 @@ test_state_calc = function() {
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
                 'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV', 'NM',
-                'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO'),
+                'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -3198,6 +3198,147 @@ test_state_calc = function() {
            label = 'HI-8 Act 46 TY2027 schedule + TY2026 standard deduction')
 
   #--------------------------------------------------------------------------
+  # Alabama (Form 40)
+  #
+  # An own-base state: Alabama builds its own income concept rather than
+  # starting from federal AGI, so cases supply income components directly.
+  # Social Security and unemployment compensation are fully exempt, the
+  # standard deduction slides down with Alabama AGI in fixed dollar steps,
+  # the dependent exemption is AGI-tiered with hard cliffs, and the federal
+  # income tax deduction is full and uncapped.
+  #--------------------------------------------------------------------------
+
+  # AL-1: 2024 single, wages 50,000, federal tax after nonrefundable credits
+  # 4,016. Alabama AGI 50,000 is past the standard deduction floor, so the
+  # deduction is the $2,500 minimum. TI = 50,000 - 2,500 - 4,016 - 1,500 =
+  # 41,984. Tax = 2% x 500 + 4% x 2,500 + 5% x 38,984 = 10 + 100 + 1,949.20
+  run_case('AL', 2024,
+           list(agi = 50000, wages1 = 50000, ei1 = 50000, liab_bc = 4016),
+           expect = list(st_agi = 50000, st_std_ded = 2500,
+                         st_fed_tax_ded = 4016, st_exempt = 1500,
+                         st_txbl_inc = 41984, liab_st_iit = 2059.20),
+           label = 'AL-1 2024 single, full federal tax deduction')
+
+  # AL-2: the TY2019 vintage moved the thresholds only. Same unit in 2019
+  # with federal tax 4,300: the standard deduction floor is $2,000 (it did
+  # not rise to $2,500 until TY2022), so TI = 50,000 - 2,000 - 4,300 - 1,500
+  # = 42,200 and tax = 10 + 100 + 5% x 39,200 = 2,070.00
+  run_case('AL', 2019,
+           list(agi = 50000, wages1 = 50000, ei1 = 50000, liab_bc = 4300),
+           expect = list(st_std_ded = 2000, liab_st_iit = 2070.00),
+           label = 'AL-2 2019 standard deduction vintage')
+
+  # AL-3: the standard deduction slide in its stepped region. 2024 single
+  # with Alabama AGI 30,000: the flat $3,000 runs through $25,999, then $25
+  # comes off per $500 step, and 30,000 is on the ninth step -> 3,000 - 225 =
+  # 2,775. TI = 30,000 - 2,775 - 1,800 - 1,500 = 23,925, tax = 1,156.25
+  run_case('AL', 2024,
+           list(agi = 30000, wages1 = 30000, ei1 = 30000, liab_bc = 1800),
+           expect = list(st_std_ded = 2775, liab_st_iit = 1156.25),
+           label = 'AL-3 2024 standard deduction slide, ninth step')
+
+  # AL-4: below the slide the deduction is flat at its maximum. Same year,
+  # Alabama AGI 25,000 -> the full $3,000
+  run_case('AL', 2024,
+           list(agi = 25000, wages1 = 25000, ei1 = 25000, liab_bc = 1200),
+           expect = list(st_std_ded = 3000, liab_st_iit = 925.00),
+           label = 'AL-4 2024 standard deduction flat maximum')
+
+  # AL-5a / AL-5b: the dependent exemption CLIFF. 2024 married filing joint
+  # with two dependents and federal tax 8,000. At Alabama AGI of exactly
+  # $100,000 each dependent is worth $500; one dollar more and each is worth
+  # $300, so the couple loses $400 of exemptions on a single dollar of
+  # income.
+  #   at 100,000: TI = 100,000 - 5,000 - 8,000 - 3,000 - 1,000 = 83,000 ->
+  #               20 + 200 + 5% x 77,000 = 4,070.00
+  #   at 100,001: TI = 83,401 -> 20 + 200 + 5% x 77,401 = 4,090.05
+  run_case('AL', 2024,
+           list(agi = 100000, filing_status = 2, age2 = 40, wages1 = 60000,
+                wages2 = 40000, ei1 = 60000, ei2 = 40000, n_dep = 2,
+                dep_age1 = 6, dep_age2 = 10, liab_bc = 8000),
+           expect = list(st_exempt = 4000, liab_st_iit = 4070.00),
+           label = 'AL-5a 2024 dependent exemption at the $100,000 bound')
+
+  run_case('AL', 2024,
+           list(agi = 100001, filing_status = 2, age2 = 40, wages1 = 60001,
+                wages2 = 40000, ei1 = 60001, ei2 = 40000, n_dep = 2,
+                dep_age1 = 6, dep_age2 = 10, liab_bc = 8000),
+           expect = list(st_exempt = 3600, liab_st_iit = 4090.05),
+           label = 'AL-5b 2024 one dollar past it')
+
+  # AL-6a / AL-6b: claiming the federal earned income credit RAISES Alabama
+  # tax, because it comes off the deductible federal tax. 2024 single with
+  # Alabama AGI 24,000 and federal tax before credits 1,000: with no earned
+  # income credit the deduction is 1,000 and TI = 18,500 (tax 885.00); with
+  # an 800 credit the deduction falls to 200 and TI = 19,300 (tax 925.00).
+  run_case('AL', 2024,
+           list(agi = 24000, wages1 = 24000, ei1 = 24000, liab_bc = 1000),
+           expect = list(st_fed_tax_ded = 1000, liab_st_iit = 885.00),
+           label = 'AL-6a 2024 no earned income credit')
+
+  run_case('AL', 2024,
+           list(agi = 24000, wages1 = 24000, ei1 = 24000, liab_bc = 1000,
+                eitc = 800),
+           expect = list(st_fed_tax_ded = 200, liab_st_iit = 925.00),
+           label = 'AL-6b 2024 federal EIC reduces the federal deduction')
+
+  # AL-7: Alabama's own Schedule A, including the employee FICA that the
+  # federal schedule has no line for. 2024 single, wages 60,000, mortgage
+  # interest 12,000 and employee payroll tax 4,590: the state itemized total
+  # is 16,590, which beats the $2,500 standard deduction even though this
+  # unit takes the federal standard deduction -- Alabama's election is
+  # independent. TI = 60,000 - 16,590 - 6,000 - 1,500 = 35,910, tax =
+  # 1,755.50
+  run_case('AL', 2024,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000,
+                mort_int_item_ded = 12000, liab_bc = 6000, liab_pr_ee = 4590),
+           expect = list(st_item_ded = 16590, st_itemizing = TRUE,
+                         liab_st_iit = 1755.50),
+           label = 'AL-7 2024 Schedule A with the FICA deduction')
+
+  # AL-8a / AL-8b: Act 2022-294's age-65 retirement exclusion, effective
+  # TY2023. Single aged 70 with 40,000 of wages and 20,000 of pension
+  # income, federal tax 3,000. In TY2022 the whole pension is taxed:
+  # Alabama AGI 60,000, TI = 60,000 - 2,500 - 3,000 - 1,500 = 53,000, tax =
+  # 2,610.00. In TY2023 the first 6,000 is excluded: Alabama AGI 54,000,
+  # TI = 47,000, tax = 2,310.00.
+  run_case('AL', 2022,
+           list(agi = 60000, age1 = 70, wages1 = 40000, ei1 = 40000,
+                txbl_pens_dist = 20000, liab_bc = 3000),
+           expect = list(st_agi = 60000, liab_st_iit = 2610.00),
+           label = 'AL-8a 2022 pension fully taxed')
+
+  run_case('AL', 2023,
+           list(agi = 60000, age1 = 70, wages1 = 40000, ei1 = 40000,
+                txbl_pens_dist = 20000, liab_bc = 3000),
+           expect = list(st_agi = 54000, liab_st_iit = 2310.00),
+           label = 'AL-8b 2023 Act 2022-294 excludes the first 6,000')
+
+  # AL-9: Social Security and unemployment compensation are wholly outside
+  # the Alabama base -- no provisional-income test, no partial inclusion.
+  # 2024 single with 30,000 of wages, 20,000 of federally taxable Social
+  # Security and 5,000 of unemployment: Alabama AGI is 30,000, not 55,000.
+  # Standard deduction 2,775, TI = 30,000 - 2,775 - 2,000 - 1,500 = 23,725,
+  # tax = 1,146.25
+  run_case('AL', 2024,
+           list(agi = 55000, age1 = 70, wages1 = 30000, ei1 = 30000,
+                txbl_ss = 20000, gross_ss = 24000, ui = 5000, liab_bc = 2000),
+           expect = list(st_agi = 30000, liab_st_iit = 1146.25),
+           label = 'AL-9 2024 Social Security and unemployment fully exempt')
+
+  # AL-10: the net investment income tax is added BACK to the deductible
+  # federal tax, because it rides Schedule 2 Part II and never reaches 1040
+  # line 22. 2024 joint, wages 200,000, federal tax 35,000 plus 1,900 of net
+  # investment income tax: the deduction is 36,900, not 35,000. TI =
+  # 200,000 - 5,000 - 36,900 - 3,000 = 155,100, tax = 7,675.00
+  run_case('AL', 2024,
+           list(agi = 200000, filing_status = 2, age2 = 40, wages1 = 120000,
+                wages2 = 80000, ei1 = 120000, ei2 = 80000, liab_bc = 35000,
+                liab_niit = 1900),
+           expect = list(st_fed_tax_ded = 36900, liab_st_iit = 7675.00),
+           label = 'AL-10 2024 net investment income tax added back')
+
+  #--------------------------------------------------------------------------
   # Missouri (MO-1040)
   #
   # Every case supplies the federal liability inputs the Missouri federal
@@ -3774,7 +3915,7 @@ test_state_calc = function() {
   smoke_states = c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI',
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
                    'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI',
-                   'WV', 'NM', 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO')
+                   'WV', 'NM', 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()
@@ -3989,7 +4130,7 @@ st_test_unit = function(overrides = list()) {
     eitc = 0, ctc_nonref = 0, ctc_ref = 0, cdctc_nonref = 0,
     cdctc_ref = 0, care_exp = 0, ui = 0,
     liab_bc = 0, nonref = 0, ed_ref = 0, net_ptc = 0,
-    liab_pr_ee = 0, liab_seca = 0
+    liab_pr_ee = 0, liab_seca = 0, liab_niit = 0
   )
   for (v in names(overrides)) {
     unit[[v]] = overrides[[v]]
