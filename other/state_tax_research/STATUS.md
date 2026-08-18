@@ -1,9 +1,42 @@
 # State income tax workstream — status
 
-**As of 2026-08-18** (branch `state-tax`). Current counts: **44 jurisdictions
-encoded** (32 broad-IIT + NH/TN narrow + WA excise + 6 zero-tax stubs), **41
-enabled** for `states=all` (CA/SC/VA conformity-gated); 7 jurisdictions not
-started (NJ/MA/AR/MS own-base; IA/LA/MT multi-regime).
+**As of 2026-08-18** (branch `state-tax`). Current counts: **48 jurisdictions
+encoded** (36 broad-IIT + NH/TN narrow + WA excise + 6 zero-tax stubs), **45
+enabled** for `states=all` (CA/SC/VA conformity-gated); **3 jurisdictions not
+started -- IA, LA and MT, the multi-regime batch.**
+
+**The R6 own-base batch is COMPLETE: MA, NJ, AR and MS encoded 2026-08-18**,
+following MO/AL/OR the same day. (The Mississippi commit message says 47/44;
+the correct figures are 48/45 -- counted from the registry after the fact.)
+Each of the four brought machinery the set did not have. MA is the first
+SCHEDULAR state, though over this window its classes collapse to two rates,
+so only short-term gains needed carving out (`ob_st_gains_share` +
+`st_ord.st_gains_rate`); its No Tax Status and Limited Income Credit turned
+out to be ONE mechanism (`st_credits.lic_*`), with the published 1.75x band
+ceiling and the separate-filer exclusion both falling out of the arithmetic.
+NJ needed an income-banded pension exclusion (`pension_excl_tier_*`) tested
+on TOTAL income before the exclusion itself, plus `pension_excl_orie` for the
+unclaimed component -- whose ceiling runs on total income where the exclusion
+proper runs on pension income, a distinction that fails SILENTLY if collapsed.
+AR's published schedule is a `rate x income - minus adjustment` memo rather
+than a ladder, converted programmatically to base amounts and verified back
+at eight published points; it needs the base-amount shape for a genuine
+whole-income-table NOTCH (about $180 in TY2020) and for its recapture-tail
+cliffs. MS needed no new machinery but one careful reading: its "3% bracket
+phase-out" was a ZERO BRACKET growing from below, not a rate cut.
+
+**Three states now wait on the same missing piece** -- the generic
+minimum-liability election pass already queued for the WI Act 15 retirement
+election: AL separate returns, AR's Low Income Tax Tables (a taxpayer
+election used instead of the schedule AND instead of any deduction, and AR's
+largest known difference), and MS/AR per-spouse column returns. Building it
+once would close the largest remaining gap in four states at a stroke.
+
+**The pension-source PUF limit now binds in five states**: the NY
+government-pension exclusion, MO's public pension exemption, AL's IRC 414(j)
+defined-benefit exclusion, MA's US/MA public contributory pension exclusion,
+and (differently) NJ's 403(b)/457 deferral treatment. All clear with the
+Tier 1 imputation.
 
 **The R6 fed-ded batch is COMPLETE: MO, AL and OR encoded 2026-08-18.** The
 shared `st_ded.fed_tax_ded` component carries all three, with the base set at
@@ -55,9 +88,17 @@ STFC is income-keyed, not Tier-1-blocked). Companion docs in this directory:
 `state_tax_implementation_plan.md` (the design of record, amended in place),
 `STATE_ENCODING_REVIEW_2026_08_11.md` (coded-states review: holes,
 archetypes, completion roadmap),
-`state_weights_ml_alternative.md` (the A/B bake-off spec),
 `state_weights_fit_issues.md` (the engine root-cause record),
-`state_tax_model_research_notes.md` (original evidence base).
+`state_tax_model_research_notes.md` (original evidence base),
+`nonfiler_residual_design_jii.docx` (the narrative case for the residual
+non-filer methodology, JI Aug 2026 — renamed 2026-08-18 from
+`Non-Filer Proposal.docx`; note it is a *different document* from the `.md`
+below, despite the similar name), `nonfiler_residual_design.md` (its
+implementation-level companion, amended in place) and
+`nonfiler_residual/04_findings.md` (the Stage D diagnostic record).
+Superseded docs live in `archive/` with a README explaining each — including
+`state_weights_ml_alternative.md`, whose A/B-bake-off premise the Phase 1
+sweep reframed into prior-only-vs-joint-fit.
 
 ---
 
@@ -141,6 +182,85 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    projection-year carry-forward, and the dispatcher swap off
    `placeholder`. The prior-only vs joint-fit comparison IS the reframed
    A/B decision.
+   **⚠ SEQUENCING (JI, 2026-08-16): the non-filer rework lands BEFORE this
+   swap-in** — see item 1b — so the swap-in fit happens once, on upgraded
+   margins, rather than fit-on-v0-then-re-fit. Do not close Phase 1 first.
+
+1b. **Non-filer residual rework** (NEW section, added 2026-08-18). The
+   non-filer population is the one input to the weights fit that is anchored
+   to nothing: Tax-Data appends ~27.6M (TY2022) units from PSZ/DINA at DINA's
+   own uncalibrated weights, and the state fit places them using ACS margins
+   built from a v0 filing rule that over-assigns filers ~7% nationally with a
+   20pp state spread. **Stage D is DONE and committed** (`4783dc3e9`,
+   2026-08-16): residual anchors built for TY2017/2022, diagnostic tables
+   T1–T7 run, decisions D1–D6 resolved, findings in
+   `nonfiler_residual/04_findings.md`. What it found, in one line each —
+   F1 the non-filer mass is ~15–25% short (32.4M adults vs a defensible
+   38–41M); **F2 the age composition is inverted** (8.9% of non-filer adults
+   at 18–25 vs the anchor's 24.2%; 42.9% at 65+ vs 25.1%) and this is the
+   single most consequential defect for the weights, whose non-filer cells key
+   on age band; F3 investment income is identically zero (0.0% with interest,
+   dividends or gains, vs Pub 5785's 14/9/4%); F4 the aging path drifts with
+   no return-count discipline after 2019; F5 the v0 non-filer margins run
+   0.78× (DC) to 1.51× (SD) of the anchor and the current fit reproduces them
+   *exactly*; F6 group quarters are untreated and are 17% of the national
+   residual but 42% in SD; F7 above-threshold non-filers are 10.6–11.9M units
+   and SE-shaped.
+
+   Remaining work, in order: **pre-flight** (resolve the Tax-Data vintage
+   discrepancy in the design memo §2.1 vs `interface_versions.yaml`; settle
+   the `age_band()`-vs-`a16_band()` reconciliation) → **research pass A**
+   (ASEC unit/income construction — still open) → **GQ treatment**
+   in `build_acs_margins()` (decision-independent, ships first) → **filing
+   model on the CPS ASEC**, transferred to the ACS → **Tax-Data rework**
+   (composition, national calibration, aging) as V1/V2/V3 vintages →
+   **federal validation battery** → **state-weights margins/targets + re-fit**
+   → swap-in per item 1.
+
+   Two decisions worth carrying here. **The filing model is estimated on the
+   CPS ASEC, not the ACS** — Cilke estimated on the ASEC, so it is the native
+   environment and the ACS is the destination; the recalibration burden moves
+   to an explicit, measurable transfer step. **ASEC data comes through the
+   shared extract machinery** — check `raw_data` for a registered CPS/ASEC
+   family first, and if absent add one through the same common IPUMS download
+   machinery that maintains `ACS/acs_common`, so Affordability-Index draws on
+   the same file.
+
+   **Research pass B is DONE (2026-08-18), and it changes a design choice**
+   (`nonfiler_residual/05_filing_model_literature.md`, refs in
+   `nonfiler_residual/resources/filing_model_refs.bib`). **Cilke (1998) should be
+   replaced, not re-calibrated:** **Mok (2017), CBO WP 2017-06, Table 14** gives 14
+   group filing probits with coefficients and standard errors, on the 2007 CPS ASEC
+   linked to the IRS Individual Master File (TY2006) — same design as Cilke, 16 years
+   newer, with per-cell filing rates as ready-made calibration targets. Fit Mok; keep
+   Cilke as the comparison. **Pub 5785 stands** (no successor edition), but Treasury's
+   Jan-2025 special study (50.343M TY2022 non-filers) and OTA TP-12 are newer official
+   reference points. **Context worth knowing:** Treasury/IRS/JCT have all *abandoned*
+   the survey-probit approach rather than update it, and published the error it carries
+   — a reweighted ASEC reaches 42.0M against a 50.7M administrative target, ~17% short.
+   We have no administrative microdata, so a survey model is still our only route, but
+   that error direction belongs in the anchor tolerances. Also: TCJA did **not**
+   sharply cut filing requirements for the main statuses (thresholds rose only ~15%
+   for single/MFJ, since zeroed exemptions offset the bigger standard deduction) —
+   but the **dependent** threshold nearly doubled and **MFS** collapsed, which is an
+   argument for revisiting the v1 decision to leave both out of scope.
+
+   **Two blockers, one on JI.** (a) ssa.gov 403-blocks the cluster egress IP,
+   so `raw_data/SSA-OASDI-SC` and `SSA-EEDATA-SC` exist but are empty — the
+   OASDI and covered-worker state margins need a manual download on a
+   workstation (each store carries a `README_MANUAL_DOWNLOAD.md`; then re-run
+   scripts 01→02→03). They gate the state age layering (D6) and the wage
+   margin. (b) `resources/cilke_coefs.csv` is not transcribed, and should not
+   be until the currency check above finishes.
+
+   **Two model-side gaps the rework cannot fix by itself**, recorded so they
+   are not discovered late: there is no `become_filer_eitc` (only CTC and
+   rebate have one), and `become_filer_ctc` requires `qual_ei == 0` exactly —
+   so the earnings-bearing non-filers this work creates still cannot claim
+   EITC, and their credits are multiplied out of every total by the `* filer`
+   gate. An EITC reform will score identically across vintages. Also note
+   `get_pr_totals()` has **no** filer gate, so raking non-filer weights up
+   raises baseline payroll receipts, which nothing currently benchmarks.
 2. **CO child-care expenses credit** (DR 0347) — researched and encoded
    (TODO carried in `co/credits.yaml`); CO 2026 rate revisit after the
    TABOR certification (~Sept 2026).
