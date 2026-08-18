@@ -1,10 +1,48 @@
 # State income tax workstream — status
 
-**As of 2026-08-17** (branch `state-tax`). Current counts: **41 jurisdictions
-encoded** (29 broad-IIT + NH/TN narrow + WA excise + 6 zero-tax stubs), **38
-enabled** for `states=all` (CA/SC/VA conformity-gated); 10 jurisdictions not
-started (MO/OR/AL behind the fed_tax_ded component; NJ/MA/AR/MS own-base;
-IA/LA/MT multi-regime). **The R6 batch-C transcription set is COMPLETE**:
+**As of 2026-08-18** (branch `state-tax`). Current counts: **44 jurisdictions
+encoded** (32 broad-IIT + NH/TN narrow + WA excise + 6 zero-tax stubs), **41
+enabled** for `states=all` (CA/SC/VA conformity-gated); 7 jurisdictions not
+started (NJ/MA/AR/MS own-base; IA/LA/MT multi-regime).
+
+**The R6 fed-ded batch is COMPLETE: MO, AL and OR encoded 2026-08-18.** The
+shared `st_ded.fed_tax_ded` component carries all three, with the base set at
+1040 line 22 (`liab_bc - nonref`) so the alternative minimum tax is in and
+self-employment tax is out. The three states' worksheets name genuinely
+different refundable-credit lists, so each credit is its own flag: MO
+subtracts the earned income credit, refundable AOC and net premium tax credit
+but NOT the additional child tax credit; AL subtracts the earned income
+credit, ACTC and refundable AOC but NOT the net premium tax credit, and adds
+the net investment income tax back; OR subtracts the AOC and premium tax
+credit, strips the excess advance premium tax credit repayment out, and is
+the only one of the three that does NOT subtract the earned income credit.
+(In Alabama the federal earned income credit therefore RAISES state tax.)
+The ceiling is a flat filing-status-mapped cap in MO ($5k/$10k), uncapped in
+AL, and in OR an indexed cap cut in five frozen AGI bands. Other new
+generics: `st_ord.combined_split` (MO pools deductions then splits taxable
+income by each spouse's share of state AGI, rounded half UP to whole percent,
+and runs the schedule per spouse — distinct from KY's `combined_sep`),
+`st_ded.std_equals_federal`, `st_ded.item_add_payroll` (MO and AL both let
+employee FICA into the itemized base), `st_ded.retire_exempt_*` (MO takes its
+retirement exemption as a deduction AFTER state AGI, which is load-bearing
+because state AGI is what MO's federal-deduction bands read),
+`st_agi.bus_excl_share`, `st_ded.std_po_amount_per_step`/`_floor` (AL's
+dollar-stepped standard deduction slide), `st_exempt.dep_tier_*` (AL's
+AGI-tiered dependent exemption), `st_agi.ob_ira_share` (AL taxes IRAs but
+exempts defined-benefit pensions), and
+`st_credits.eitc_match_young`/`_max_age` (OR's higher rate for a child under
+three). `sched_tax_at()` is now base-amount aware so MO's combined split uses
+the published chart. **Three known differences are material and share one
+root cause:** MO's public pension exemption and AL's IRC 414(j)
+defined-benefit exclusion are both unmodellable because the pension-source
+split is unobserved in the PUF (the NY government-pension precedent), and
+both clear with the Tier 1 imputation. **OR's kicker is not modeled at all** —
+it is a percentage of PRIOR-year liability, unobservable in a cross-sectional
+model, and it recurs every other year. AL's overtime exemption is a second
+OR-sized hole: it appears in no Form 40 booklet because it runs through
+withholding and Schedule W-2. See source_packets/mo.md, al.md and or.md.
+
+**The R6 batch-C transcription set is COMPLETE**:
 KS/DE/RI/WV/NM/VT/OK/DC/NE (2026-08-13/-16) and HI/ME (2026-08-17, closing
 the batch — HI added the 7.25% alternative capital-gains machinery, the
 threshold-gated SALT disallowance, the banded per-person credit table and

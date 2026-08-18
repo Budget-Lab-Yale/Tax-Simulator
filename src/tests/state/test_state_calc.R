@@ -23,7 +23,7 @@ test_state_calc = function() {
     states  = c('IL', 'CO', 'NY', 'NH', 'TN', 'WA', 'AZ', 'GA', 'NC',
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
                 'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV', 'NM',
-                'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL'),
+                'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -3198,6 +3198,102 @@ test_state_calc = function() {
            label = 'HI-8 Act 46 TY2027 schedule + TY2026 standard deduction')
 
   #--------------------------------------------------------------------------
+  # Oregon (Form OR-40)
+  #
+  # The federal tax liability subtraction sits at line 10 among Oregon's
+  # subtractions rather than its deductions, but it reaches taxable income by
+  # the same route and is carried by the shared fed_tax_ded component, so
+  # these cases read it out of st_fed_tax_ded. Oregon's ceiling is a dollar
+  # cap cut in five steps by federal AGI, and the federal earned income
+  # credit is the one refundable credit that does NOT reduce it.
+  #--------------------------------------------------------------------------
+
+  # OR-1: 2024 single, wages 60,000, federal tax after nonrefundable credits
+  # 6,000. AGI is under $125,000 so the full $8,250 cap applies and the whole
+  # 6,000 is subtracted. TI = 60,000 - 6,000 - 2,745 = 51,255. Tax = 4.75% x
+  # 4,300 + 6.75% x 6,450 + 8.75% x 40,505 = 204.25 + 435.38 + 3,544.19 =
+  # 4,183.81, less the $249 exemption credit = 3,934.81
+  run_case('OR', 2024,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, liab_bc = 6000),
+           expect = list(st_agi = 60000, st_fed_tax_ded = 6000,
+                         st_std_ded = 2745, st_txbl_inc = 51255,
+                         st_exempt_credit = 249, liab_st_iit = 3934.81),
+           label = 'OR-1 2024 single, full federal tax subtraction')
+
+  # OR-2: the AGI-banded CAP. Same year, AGI 132,000 lands in the third band
+  # ($130,000-$135,000), where the allowance is $4,950 rather than $8,250 --
+  # so only 4,950 of a 25,000 federal liability is subtracted. TI = 132,000 -
+  # 4,950 - 2,745 = 124,305, tax = 639.63 + 8.75% x 113,555 = 10,575.69, and
+  # the exemption credit is gone (AGI over $100,000)
+  run_case('OR', 2024,
+           list(agi = 132000, wages1 = 132000, ei1 = 132000, liab_bc = 25000),
+           expect = list(st_fed_tax_ded = 4950, st_exempt_credit = 0,
+                         liab_st_iit = 10575.69),
+           label = 'OR-2 2024 federal subtraction cut by the third AGI band')
+
+  # OR-3a / OR-3b: the exemption credit is a HARD CLIFF, not a taper. At
+  # exactly $100,000 of federal AGI a single filer keeps the whole $249; one
+  # dollar more and it is zero. The tax base moves by a dollar, the credit by
+  # $249.
+  run_case('OR', 2024,
+           list(agi = 100000, wages1 = 100000, ei1 = 100000, liab_bc = 15000),
+           expect = list(st_fed_tax_ded = 8250, st_exempt_credit = 249,
+                         liab_st_iit = 7237.94),
+           label = 'OR-3a 2024 exemption credit at the AGI cliff')
+
+  run_case('OR', 2024,
+           list(agi = 100001, wages1 = 100001, ei1 = 100001, liab_bc = 15000),
+           expect = list(st_exempt_credit = 0, liab_st_iit = 7487.03),
+           label = 'OR-3b 2024 one dollar past the cliff')
+
+  # OR-4: the earned income credit pays a HIGHER rate where a dependent is
+  # under 3 -- 12% rather than 9% -- and the Oregon Kids Credit pays $1,000
+  # per dependent under 6 below the phase-out threshold. 2024 single with
+  # wages 20,000, a federal earned income credit of 3,000 and a one-year-old:
+  # Oregon EIC = 12% x 3,000 = 360, Kids Credit = 1,000, exemption credit =
+  # 2 x 249 = 498 (taxpayer plus dependent).
+  run_case('OR', 2024,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, n_dep = 1,
+                n_dep_eitc = 1, dep_age1 = 1, eitc = 3000),
+           expect = list(st_eitc = 360, st_ctc = 1000, st_exempt_credit = 498),
+           label = 'OR-4 2024 young-child EIC rate and Kids Credit')
+
+  # OR-5: the Kids Credit phase-out is proportional over a $5,000 range. 2024
+  # single with two dependents under 6 and Oregon income of 28,250 -- halfway
+  # through the range above the $25,750 threshold -- keeps half of the
+  # 2 x $1,000, so $1,000.
+  run_case('OR', 2024,
+           list(agi = 28250, wages1 = 28250, ei1 = 28250, n_dep = 2,
+                dep_age1 = 2, dep_age2 = 4),
+           expect = list(st_ctc = 1000),
+           label = 'OR-5 2024 Kids Credit half phased out')
+
+  # OR-6: the pre-2020 regime -- 5/7/9/9.9% rates and an 8% earned income
+  # credit. 2017 single, wages 40,000, federal tax 4,000, federal earned
+  # income credit 500 (no dependent under 3): subtraction 4,000 (cap 6,550),
+  # standard deduction 2,175, TI = 33,825. Tax = 170 + 357 + 9% x 25,325 =
+  # 2,806.25, less the $197 exemption credit and 8% x 500 = 40 of Oregon EIC
+  # = 2,569.25
+  run_case('OR', 2017,
+           list(agi = 40000, wages1 = 40000, ei1 = 40000, liab_bc = 4000,
+                eitc = 500),
+           expect = list(st_std_ded = 2175, st_eitc = 40,
+                         st_exempt_credit = 197, liab_st_iit = 2569.25),
+           label = 'OR-6 2017 pre-cut rates and the 8% earned income credit')
+
+  # OR-7: the AGI bands DOUBLE for joint filers, and head of household uses
+  # the joint set too. 2024 joint with AGI 260,000 sits in the joint second
+  # band ($250,000-$260,000) at a $6,600 allowance -- a single filer at that
+  # income would get nothing. TI = 260,000 - 6,600 - 5,495 = 247,905, tax =
+  # 408.50 + 870.75 + 8.75% x 226,405 = 21,089.69, no exemption credit
+  run_case('OR', 2024,
+           list(agi = 260000, filing_status = 2, age2 = 40, wages1 = 160000,
+                wages2 = 100000, ei1 = 160000, ei2 = 100000, liab_bc = 50000),
+           expect = list(st_fed_tax_ded = 6600, st_std_ded = 5495,
+                         st_exempt_credit = 0, liab_st_iit = 21089.69),
+           label = 'OR-7 2024 joint AGI bands are double the single ones')
+
+  #--------------------------------------------------------------------------
   # Alabama (Form 40)
   #
   # An own-base state: Alabama builds its own income concept rather than
@@ -3915,7 +4011,7 @@ test_state_calc = function() {
   smoke_states = c('IL', 'CO', 'NY', 'AZ', 'GA', 'NC', 'IN', 'KY', 'MI',
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
                    'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI',
-                   'WV', 'NM', 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL')
+                   'WV', 'NM', 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()
@@ -4005,10 +4101,16 @@ test_state_calc = function() {
     OH = 400,   # zero-bracket base-amount cliff (statutory; tax owed on
                 #   the first taxed dollar from 2019, OH-3)
     MD = 130,   # banded exemption steps at $100k/$125k/$150k
-    HI = 160    # N-311 food-credit band edges (published cliffs: the single
+    HI = 160,   # N-311 food-credit band edges (published cliffs: the single
                 #   table ends at $40,000 in the 2023-2027 vintage, dropping
                 #   $110 for the one-person sweep unit, plus the bracket
                 #   slope; the 2017 vintage's largest edge is $55 at $30,000)
+    OR = 300    # exemption credit CLIFF at $100,000 of federal AGI (ORS
+                #   316.085: the credit "isn't allowed" above the threshold,
+                #   with no taper), so the whole per-exemption credit vanishes
+                #   in one step -- $197 in 2017 rising to $249 in 2024 for the
+                #   one-exemption sweep unit, plus the within-step bracket
+                #   slope. Pinned exactly by OR-3a/OR-3b
   )
   sweep_default = sweep_step * 0.20 + 5
   for (st in smoke_states) {
@@ -4130,7 +4232,7 @@ st_test_unit = function(overrides = list()) {
     eitc = 0, ctc_nonref = 0, ctc_ref = 0, cdctc_nonref = 0,
     cdctc_ref = 0, care_exp = 0, ui = 0,
     liab_bc = 0, nonref = 0, ed_ref = 0, net_ptc = 0,
-    liab_pr_ee = 0, liab_seca = 0, liab_niit = 0
+    liab_pr_ee = 0, liab_seca = 0, liab_niit = 0, excess_ptc = 0
   )
   for (v in names(overrides)) {
     unit[[v]] = overrides[[v]]

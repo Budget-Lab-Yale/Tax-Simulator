@@ -1,0 +1,10 @@
+---
+# Oregon: exemptions.
+#
+# Oregon has no exemption DEDUCTION -- its personal exemptions are delivered
+# entirely as a CREDIT (ORS 316.085), which lives in credits.yaml. Stated
+# explicitly here so the zero is a recorded finding rather than an omission.
+
+personal_amount:
+  value: 0
+  reference: 'Form OR-40 has no exemption deduction line in any year 2017-2025: taxable income at line 19 is Oregon income after subtractions less the standard or itemized deduction, full stop. Oregon''s personal exemptions are a credit against tax instead (ORS 316.085; see credits.yaml exempt_credit_*), which is why they survived the TCJA zeroing of the federal personal exemption untouched'

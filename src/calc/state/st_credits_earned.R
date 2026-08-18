@@ -10,6 +10,8 @@
 # Law parameters this family reads (assembled into calc_st_credits req_vars)
 st_credits_earned_req_vars = c(
   'st_credits.eitc_match',
+  'st_credits.eitc_match_young',
+  'st_credits.eitc_match_young_max_age',
   'st_credits.eitc_refundable',
   'st_credits.eitc_match_alt',
   'st_credits.eitc_refundable_alt',
@@ -210,6 +212,18 @@ st_credits_earned = function(tax_unit, st_hh_credit, credit_tables = NULL) {
   # match): where the by-kids family is encoded, it overrides the scalar
   # match per row; slots are 0/1/2/3+ federal qualifying children
   eitc_match_v = tax_unit$st_credits.eitc_match
+
+  # Higher match where a dependent is under a stated age (OR: 12% rather than
+  # 9% "if you have a qualifying dependent who was younger than 3 years old at
+  # the end of the tax year"). A rate switch keyed on the YOUNGEST tracked
+  # dependent, distinct from the child-COUNT-keyed family below
+  eitc_match_v = if_else(
+    tax_unit$st_credits.eitc_match_young > 0 &
+      st_n_dep_in(tax_unit, 0, tax_unit$st_credits.eitc_match_young_max_age) > 0,
+    tax_unit$st_credits.eitc_match_young,
+    eitc_match_v
+  )
+
   match_kids = st_family_matrix(tax_unit, 'st_credits.eitc_match_by_kids')
   if (!is.null(match_kids)) {
     kid_slot = pmin(4L, 1L + coalesce(tax_unit$n_dep_eitc, 0L))

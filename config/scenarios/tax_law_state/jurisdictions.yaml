@@ -150,6 +150,12 @@ OH:
 OK:
   profile: broad_iit
   enabled: true
+# OR ties to the IRC as amended, updated by a connection bill each session
+# (ORS 316.012), and its own subtractions sit below the federal-AGI start, so
+# rolling conformity (group 0)
+OR:
+  profile: broad_iit
+  enabled: true
 # PA is an own-base state (start_point 0): its eight income classes have no
 # IRC linkage at all, so conformity is moot (group 0 trivially). Federal
 # credits feeding the PA CDCTC/WPTC matches are scenario outputs by design

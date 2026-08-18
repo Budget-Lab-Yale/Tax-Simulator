@@ -1,0 +1,370 @@
+---
+# Oregon: deductions (Form OR-40 lines 10, 16-18; Schedule OR-A).
+#
+# Oregon's standard deduction is small and INDEXED, and its itemize election
+# is fully INDEPENDENT of the federal one: "You can claim Oregon itemized
+# deductions even if you're claiming the standard deduction on your federal
+# return" (OR-17 2025 p.94). Oregon's own schedule removes state and local
+# income tax, which is why so many Oregon filers itemize for Oregon only.
+#
+# The FEDERAL TAX LIABILITY SUBTRACTION sits at line 10, among the
+# subtractions rather than the deductions, but it reaches taxable income by
+# the same route and is carried here through the shared fed_tax_ded
+# component. Two things make Oregon's version distinct from Missouri's and
+# Alabama's: the ceiling is a dollar cap that is itself CUT IN FIVE STEPS by
+# federal AGI, and the federal EARNED INCOME CREDIT is the one refundable
+# credit that does NOT reduce it.
+
+filing_status_mapper:
+  std_amount:
+    '1': std_single
+    '2': std_joint
+    '3': std_single
+    '4': std_head
+  std_aged_addl:
+    '1': aged_single
+    '2': aged_other
+    '3': aged_other
+    '4': aged_single
+  std_blind_addl:
+    '1': aged_single
+    '2': aged_other
+    '3': aged_other
+    '4': aged_single
+  fed_tax_ded_band_upper1:
+    '1': ftd_b1_single
+    '2': ftd_b1_joint
+    '3': ftd_b1_single
+    '4': ftd_b1_joint
+  fed_tax_ded_band_upper2:
+    '1': ftd_b2_single
+    '2': ftd_b2_joint
+    '3': ftd_b2_single
+    '4': ftd_b2_joint
+  fed_tax_ded_band_upper3:
+    '1': ftd_b3_single
+    '2': ftd_b3_joint
+    '3': ftd_b3_single
+    '4': ftd_b3_joint
+  fed_tax_ded_band_upper4:
+    '1': ftd_b4_single
+    '2': ftd_b4_joint
+    '3': ftd_b4_single
+    '4': ftd_b4_joint
+  fed_tax_ded_band_upper5:
+    '1': ftd_b5_single
+    '2': ftd_b5_joint
+    '3': ftd_b5_single
+    '4': ftd_b5_joint
+  fed_tax_ded_band_cap1:
+    '1': ftd_cap_full
+    '2': ftd_cap_full
+    '3': ftd_cap_mfs
+    '4': ftd_cap_full
+  fed_tax_ded_band_cap2:
+    '1': ftd_cap2_full
+    '2': ftd_cap2_full
+    '3': ftd_cap2_mfs
+    '4': ftd_cap2_full
+  fed_tax_ded_band_cap3:
+    '1': ftd_cap3_full
+    '2': ftd_cap3_full
+    '3': ftd_cap3_mfs
+    '4': ftd_cap3_full
+  fed_tax_ded_band_cap4:
+    '1': ftd_cap4_full
+    '2': ftd_cap4_full
+    '3': ftd_cap4_mfs
+    '4': ftd_cap4_full
+  fed_tax_ded_band_cap5:
+    '1': ftd_cap5_full
+    '2': ftd_cap5_full
+    '3': ftd_cap5_mfs
+    '4': ftd_cap5_full
+
+#-----------------------------------------------------------------------
+# Standard deduction (ORS 316.695), indexed annually.
+#-----------------------------------------------------------------------
+
+std_single:
+  value:
+    '2017': 2175
+    '2018': 2215
+    '2019': 2270
+    '2020': 2315
+    '2021': 2350
+    '2022': 2420
+    '2023': 2605
+    '2024': 2745
+    '2025': 2835
+    '2026': 2900
+  reference: 'Form OR-40 instructions standard deduction table (unnumbered 2017-2018, Table 6 in 2019-2022, Table 5 in 2023-2025), at line 19 in 2017 and line 17 from 2018. Married filing separately takes the same amount. TY2026 from OR-ESTIMATE 2026 preliminary indexed figures'
+std_joint:
+  value:
+    '2017': 4350
+    '2018': 4435
+    '2019': 4545
+    '2020': 4630
+    '2021': 4700
+    '2022': 4840
+    '2023': 5210
+    '2024': 5495
+    '2025': 5670
+    '2026': 5800
+  reference: 'Same tables; married filing jointly and qualifying surviving spouse take this amount'
+std_head:
+  value:
+    '2017': 3500
+    '2018': 3570
+    '2019': 3655
+    '2020': 3725
+    '2021': 3780
+    '2022': 3895
+    '2023': 4195
+    '2024': 4420
+    '2025': 4560
+    '2026': 4650
+  reference: 'Same tables; head of household. Note this is the one place head of household differs from joint treatment -- the rate schedule gives it the joint widths but the standard deduction is its own amount'
+
+aged_single:
+  value: 1200
+  reference: 'OR-40 instructions, "Standard deduction -- Age 65 or older, or blind": "multiply the number of boxes checked by $1,200 if single or head of household filing status". Unchanged 2017-2025. The age test is turning 65 by January 1 of the following year, i.e. age 65 on December 31'
+aged_other:
+  value: 1000
+  reference: 'Same note: "$1,000 for all other filers". Unchanged 2017-2025. A filer who is both 65+ and blind checks two boxes, and a joint return can reach four; the calculator counts aged and blind separately, reproducing that'
+
+std_dependent_style:
+  value: 1
+  reference: 'OR-40 instructions, "Standard deduction -- Dependents who can be claimed on another taxpayer''s return": the larger of earned income plus the add-on (capped at the filing-status maximum) or the floor'
+std_dependent_floor:
+  value:
+    '2017': 1050
+    '2019': 1100
+    '2022': 1150
+    '2023': 1250
+    '2024': 1300
+    '2025': 1350
+  reference: 'OR-40 instructions dependent standard deduction note, each year'
+std_dependent_earned_add:
+  value:
+    '2017': 350
+    '2022': 400
+    '2024': 450
+  reference: 'OR-40 instructions dependent standard deduction note, each year'
+
+#-----------------------------------------------------------------------
+# Itemized deductions (Schedule OR-A).
+#-----------------------------------------------------------------------
+
+item_allowed:
+  value: 1
+  reference: 'Schedule OR-A "Oregon Itemized Deductions" (Form OR-40 line 16); before TY2018 the same amounts were reported on a federal Schedule A completed for Oregon purposes'
+item_coupling:
+  value: 0
+  reference: 'OR-17 2025 p.94: "You may claim either Oregon itemized deductions or Oregon''s standard deduction, whichever is larger... You can claim Oregon itemized deductions even if you''re claiming the standard deduction on your federal return." OR-40 Instr. 2017 p.14 says the same thing pre-Schedule OR-A. A genuinely independent, better-of election'
+salt_addback:
+  value: 1
+  reference: 'Schedule OR-A removes state and local INCOME tax from the itemized total, because Oregon''s federal-tax-liability subtraction already accounts for income taxes paid; sales tax is likewise not deductible. Property taxes remain'
+
+#-----------------------------------------------------------------------
+# Federal tax liability subtraction (Form OR-40 line 10; ORS 316.680,
+# 316.685, 316.695).
+#-----------------------------------------------------------------------
+
+fed_tax_ded:
+  value: 1
+  reference: 'ORS 316.680/316.685/316.695; OR-17 2025 p.71: "Oregon allows a subtraction for your current year''s federal income tax liability after credits... The subtraction is limited to income tax. This includes alternative minimum tax, tax on an IRA, and recapture taxes. You can''t include self-employment tax or Social Security (FICA) tax." The worksheet''s line 1 is Form 1040 line 22 -- "your federal tax liability after nonrefundable credits but before other taxes" -- so alternative minimum tax is IN and self-employment, tips FICA and household employment taxes are OUT. Accrual basis: the liability shown on the original return, regardless of when paid'
+fed_tax_ded_less_excess_ptc:
+  value: 1
+  reference: 'Federal tax worksheet line 2 removes any advance premium tax credit repayment. It reaches 1040 line 22 through Schedule 2 Part I, but Oregon''s subtraction is "limited to income tax", so it comes back out -- unlike Missouri and Alabama, which both leave it in'
+fed_tax_ded_less_ed_ref:
+  value: 1
+  reference: 'Federal tax worksheet lines 6-9 reduce the subtraction by refundable credits: OR-17 2025 p.71, "Federal income tax credits, except for the EITC, reduce your federal tax subtraction." The refundable American Opportunity credit is among them'
+fed_tax_ded_less_ptc:
+  value: 1
+  reference: 'Same worksheet lines; the net premium tax credit (Form 8962 line 24) reduces the subtraction'
+# fed_tax_ded_less_eitc is deliberately NOT set. The federal earned income
+# credit is the single named EXCEPTION to the rule that federal credits reduce
+# the subtraction (OR-17 2025 p.71). Missouri and Alabama both subtract it, so
+# this is the one place Oregon's base is more generous than theirs.
+# fed_tax_ded_less_ctc_ref is likewise not set for the ordinary years; the
+# refundable child credit only reduced the subtraction in TY2021, when it was
+# refundable federally, and that one year is documented rather than encoded.
+
+fed_tax_ded_band_base:
+  value: 1
+  reference: 'OR-17 2025 p.71 and the booklets'' Table 4/5: the further limitation is "based on your AGI", federal AGI from Form OR-40 line 7'
+
+# Band bounds are FROZEN -- they have never been indexed. Single and married
+# filing separately share one set; joint, head of household and qualifying
+# surviving spouse share the doubled set.
+ftd_b1_single:
+  value: 125000
+  reference: 'Booklet federal tax liability subtraction table, single/MFS first band "0 - $125,000". Frozen in every year 2017-2025'
+ftd_b2_single:
+  value: 130000
+  reference: 'Same table, second band upper bound'
+ftd_b3_single:
+  value: 135000
+  reference: 'Same table, third band upper bound'
+ftd_b4_single:
+  value: 140000
+  reference: 'Same table, fourth band upper bound'
+ftd_b5_single:
+  value: 145000
+  reference: 'Same table, fifth band upper bound; at or above this the subtraction is zero'
+ftd_b1_joint:
+  value: 250000
+  reference: 'Same table, joint/HoH/QSS first band "0 - $250,000". Frozen in every year'
+ftd_b2_joint:
+  value: 260000
+  reference: 'Same table, joint second band upper bound'
+ftd_b3_joint:
+  value: 270000
+  reference: 'Same table, joint third band upper bound'
+ftd_b4_joint:
+  value: 280000
+  reference: 'Same table, joint fourth band upper bound'
+ftd_b5_joint:
+  value: 290000
+  reference: 'Same table, joint fifth band upper bound; at or above this the subtraction is zero'
+
+# Band caps. The first band's cap is the headline annual limit; the next four
+# are the published step-downs. From TY2024 they are exactly 80/60/40/20% of
+# the cap, but earlier years round inconsistently (TY2018 rounds 80% of 6,650
+# DOWN to 5,300 and 60% UP to 4,000), so the tables are transcribed literally
+# rather than computed.
+ftd_cap_full:
+  value:
+    '2017': 6550
+    '2018': 6650
+    '2019': 6800
+    '2020': 6950
+    '2021': 7050
+    '2022': 7250
+    '2023': 7800
+    '2024': 8250
+    '2025': 8500
+    '2026': 8750
+  reference: 'The annual limit, stated in each booklet''s "New information" and at line 10, and in OR-17 (2025 p.71: "The subtraction for 2025 is limited to $8,500"). TY2026 is PRELIMINARY, from OR-ESTIMATE 2026'
+ftd_cap2_full:
+  value:
+    '2017': 5200
+    '2018': 5300
+    '2019': 5450
+    '2020': 5550
+    '2021': 5650
+    '2022': 5800
+    '2023': 6250
+    '2024': 6600
+    '2025': 6800
+  reference: 'Second band of the published table. TY2026 not published; TY2025 carries forward'
+ftd_cap3_full:
+  value:
+    '2017': 3900
+    '2018': 4000
+    '2019': 4100
+    '2020': 4150
+    '2021': 4200
+    '2022': 4350
+    '2023': 4700
+    '2024': 4950
+    '2025': 5100
+  reference: 'Third band of the published table'
+ftd_cap4_full:
+  value:
+    '2017': 2600
+    '2018': 2650
+    '2019': 2700
+    '2020': 2750
+    '2021': 2800
+    '2022': 2900
+    '2023': 3100
+    '2024': 3300
+    '2025': 3400
+  reference: 'Fourth band of the published table'
+ftd_cap5_full:
+  value:
+    '2017': 1300
+    '2018': 1300
+    '2019': 1350
+    '2020': 1350
+    '2021': 1400
+    '2022': 1450
+    '2023': 1550
+    '2024': 1650
+    '2025': 1700
+  reference: 'Fifth band of the published table. Above the fifth bound the allowance is zero, which st_band_value supplies as the outside-the-table value'
+ftd_cap_mfs:
+  value:
+    '2017': 3275
+    '2018': 3325
+    '2019': 3400
+    '2020': 3475
+    '2021': 3525
+    '2022': 3625
+    '2023': 3900
+    '2024': 4125
+    '2025': 4250
+    '2026': 4375
+  reference: 'Married filing separately: exactly half the full cap in every published year. The TY2026 figure is UNVERIFIED -- OR-ESTIMATE 2026 states only the full cap, and the half is inferred from the invariant relationship in the nine published years'
+ftd_cap2_mfs:
+  value:
+    '2017': 2600
+    '2018': 2650
+    '2019': 2725
+    '2020': 2775
+    '2021': 2825
+    '2022': 2900
+    '2023': 3125
+    '2024': 3300
+    '2025': 3400
+  reference: 'Married filing separately column, second band, transcribed from the published table (exactly half the full column in every cell)'
+ftd_cap3_mfs:
+  value:
+    '2017': 1950
+    '2018': 2000
+    '2019': 2050
+    '2020': 2075
+    '2021': 2100
+    '2022': 2175
+    '2023': 2350
+    '2024': 2475
+    '2025': 2550
+  reference: 'Married filing separately column, third band'
+ftd_cap4_mfs:
+  value:
+    '2017': 1300
+    '2018': 1325
+    '2019': 1350
+    '2020': 1375
+    '2021': 1400
+    '2022': 1450
+    '2023': 1550
+    '2024': 1650
+    '2025': 1700
+  reference: 'Married filing separately column, fourth band'
+ftd_cap5_mfs:
+  value:
+    '2017': 650
+    '2018': 650
+    '2019': 675
+    '2020': 675
+    '2021': 700
+    '2022': 725
+    '2023': 775
+    '2024': 825
+    '2025': 850
+  reference: 'Married filing separately column, fifth band'
+
+documented_not_modeled:
+  ty2021_refundable_credit_offsets:
+    reference: 'In TY2021 the federally-refundable child tax credit and child and dependent care credit reduced the Oregon subtraction, as did the recovery rebate credits in TY2020 and TY2021. Those are one- and two-year items tied to temporary federal refundability and are not encoded [overstates the Oregon subtraction, so understates Oregon tax, for families with large 2021 credits]'
+  accrual_and_amended_returns:
+    reference: 'The subtraction is on the accrual basis and uses the liability shown on the ORIGINAL federal return; a later federal audit or amendment changes the Oregon subtraction for the year the additional tax is PAID, via a separate OR-17 worksheet. A cross-sectional model cannot see amendment history'
+  special_oregon_medical_and_itemizing:
+    reference: 'The special Oregon medical subtraction (ORS 316.693) interacts with itemizing, and Schedule OR-A''s medical line uses Oregon''s own floor. Only the federal post-floor medical amount is available [see agi.yaml]'
+  mfs_itemizing_coupling:
+    reference: 'A married-filing-separately filer whose spouse itemizes gets a $0 standard deduction, "even if the standard deduction is more than your itemized deductions". The spouse''s election is not observable, so the ordinary standard deduction is allowed [understates Oregon tax for the affected separate filers]'
+  zero_standard_deduction_cases:
+    reference: 'The standard deduction is $0 for non-citizens without permanent resident status (who may still itemize) and for short-period returns. Neither status is a model input'

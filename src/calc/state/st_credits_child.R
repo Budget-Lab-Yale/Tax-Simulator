@@ -210,6 +210,15 @@ st_credits_child = function(tax_unit, st_eitc) {
     ny_gate & tax_unit$st_credits.ctc_style == 2 ~
       pmax(0, tax_unit$st_credits.ctc_young_amount * n_young +
               tax_unit$st_credits.ctc_old_amount   * n_old - ctc_po_step),
+    # Style 3 with a PER-CHILD reduction (OR Kids Credit): the worksheet
+    # multiplies the whole credit by the fraction of a fixed income range
+    # already used, which is proportional -- and a per-child linear reduction
+    # at amount/range reproduces it exactly, because every child's amount then
+    # reaches zero at the same income. Applying the same rate to the aggregate
+    # instead would stretch the range with each additional child
+    ny_gate & tax_unit$st_credits.ctc_style == 3 &
+      tax_unit$st_credits.ctc_po_per_child == 1 ~
+      n_qual * pmax(0, tax_unit$st_credits.ctc_young_amount - ctc_po_cont),
     ny_gate & tax_unit$st_credits.ctc_style == 3 ~
       pmax(0, tax_unit$st_credits.ctc_young_amount * n_qual - ctc_po_cont),
     TRUE ~ 0

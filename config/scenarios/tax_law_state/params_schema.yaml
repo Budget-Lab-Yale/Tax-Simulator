@@ -355,6 +355,11 @@ scalars:
 
   # credits.yaml
   st_credits.eitc_match: 0
+  # Higher match where a dependent is under a stated age (OR 12% vs 9% for a
+  # dependent younger than 3), as against the child-COUNT-keyed
+  # eitc_match_by_kids family
+  st_credits.eitc_match_young: 0
+  st_credits.eitc_match_young_max_age: -1
   st_credits.eitc_refundable: 1
   # Childless-filer EITC override (MD 2021+: 100% of the federal EIC,
   # capped, refundable, replacing both regular options)
