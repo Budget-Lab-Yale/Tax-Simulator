@@ -38,8 +38,23 @@ Tax-Simulator/
 │   │   └── behavior.R               # Behavioral helper functions (e.g., apply_mtr_elasticity)
 │   └── misc/
 │       └── config_parser.R          # Runscript parser (parse_globals, get_scenario_info)
+├── docs/                            # Shipped model documentation
+│   └── model_documentation.md       # The deep reference: data → calculator → outputs
+├── research/                        # State-tax research corpus
+│   ├── README.md                    # START HERE for the state workstreams
+│   ├── STATUS.md                    # What is true today
+│   ├── decisions_log.md             # Settled arguments (S-series)
+│   ├── CONVENTIONS.md               # Doc naming, front matter, releases
+│   ├── state_tax/                   # Workstream: per-state law encoding
+│   └── state_weights/               # Workstream: split weights + non-filers
 └── other/                           # Utility scripts and analysis tools
 ```
+
+**`src/` is sourced recursively.** `main.R` (and `slurm/setup.R`, `slurm/common.R`)
+walk `src/` and `source()` every `.R` file except `main.R` itself and `slurm/`.
+Two consequences: a script that *executes* rather than defining functions must not
+live under `src/`, and non-R assets are skipped by the `.R` filter but should still
+be rare there.
 
 ## Core Concepts
 
@@ -61,7 +76,7 @@ Note: if you want to run a policy change starting in t, always start the simulat
 **Optional Columns:**
 - `dep.{MODEL_NAME}.vintage`: Override dependent model vintage
 - `dep.{MODEL_NAME}.ID`: Override dependent model scenario ID
-- `states`: State income tax mode — space-delimited 2-letter codes (e.g. "IL CO NY") or "all" (every state with a config under `config/scenarios/tax_law_state/baseline/`). Empty/absent = federal-only (bit-identical to pre-state behavior). If any counterfactual sets `states`, the baseline row must set a superset (validated in `parse_globals()`). Adds `totals/state.csv` and (for counterfactuals) `supplemental/state_rev_est.csv` outputs. NOTE: state weights are currently a uniform PLACEHOLDER split — state totals are not meaningful until the Phase 1 weights land; federal results are unaffected either way.
+- `states`: State income tax mode — space-delimited 2-letter codes (e.g. "IL CO NY") or "all" (the ENABLED entries in `config/scenarios/tax_law_state/jurisdictions.yaml` -- adding a baseline directory alone does not change a run). Empty/absent = federal-only (bit-identical to pre-state behavior). If any counterfactual sets `states`, the baseline row must set a superset (validated in `parse_globals()`). Adds `totals/state.csv` and (for counterfactuals) `supplemental/state_rev_est.csv` outputs. NOTE: state weights are currently a uniform PLACEHOLDER split — state totals are not meaningful until the Phase 1 weights land; federal results are unaffected either way.
 - `state_tax_law`: State tax law reform directory under `config/scenarios/tax_law_state/` (default `baseline`); overlay semantics identical to federal, per state
 - `state_detail`: 0/1 (default 0). When 1 (and `states` is set), writes ONE compact per-year state detail matrix at `detail/state/{year}.csv` (`id` + one liability column per state) per run type — not 51 full detail files. Purged by `delete_detail` like other detail output. Stacked runs (`stacked=1`) with state mode also produce `stacked_state_rev_est_{static,conventional}.csv` at the vintage root (incremental state deltas in runscript order)
 - Custom columns can be added if you modify `get_scenario_info()` in `src/misc/config_parser.R`
@@ -291,6 +306,49 @@ Use the `/policy-config` skill to create reform configurations. It contains deta
 2. Add YAML files that override only the subparameters you're changing
 3. Reforms OVERWRITE baseline subparameters — include full time series and all indexation fields
 4. Create a runscript CSV referencing the reform's `tax_law` path
+
+## State-Tax Development Protocol
+
+Use this protocol for every state-law research, configuration, or calculator task.
+
+1. Start by reading `config/scenarios/tax_law_state/README.md`,
+   `config/scenarios/tax_law_state/jurisdictions.yaml`,
+   `research/state_tax/state_parameter_rollout.csv`, and the relevant
+   `research/source_packets/{state}.md`. Also read the state
+   implementation plan when a design decision is involved.
+2. Treat each source packet as a living research record. As state-specific facts
+   are discovered, update it in the same change with primary sources, exact
+   effective dates and parameter values, worksheet cases, data limitations,
+   unresolved questions, and validation results. Update the rollout tracker at
+   the same time; do not leave completed YAML or tests recorded as `todo`.
+3. Use official state forms, instructions, statutes, and agency guidance as the
+   source of truth. Every YAML subparameter needs a `reference:` field. Record
+   projections, revenue-triggered provisions, and unobservable eligibility or
+   tax-base assumptions explicitly rather than presenting them as enacted law.
+4. Prefer general, parameterized state calculators and reusable program
+   components over state-specific code paths. Extend a generic tool when a rule
+   is shared or plausibly reusable across states (for example, tiered child
+   deductions, dependent credits, retirement exclusions, or state itemization).
+   Introduce a special program profile only for a genuinely distinct tax or
+   transfer base, and make that module reusable by program type rather than by
+   state name. Do not add `state == ...` branches without documenting why a
+   parameterized design is inadequate and adding focused regression tests.
+   For fixed or selective federal conformity, use the numeric group contract in
+   `config/scenarios/tax_law_state/conformity_groups.yaml`; build and validate a
+   shared reference-law overlay before setting a group to `ready: true`.
+5. Add a jurisdiction to the enabled registry only after its YAML profile,
+   source packet, worksheet tests, and parser/convention tests are complete.
+   State aggregate validation remains blocked until production state weights
+   are available; do not interpret placeholder-weight totals as estimates.
+
+**Where the research lives.** `research/README.md` is the index: two workstreams
+(`state_tax/` for encoding, `state_weights/` for split weights and the non-filer
+rework), each with **exactly one `plan.md`** that is the entry point. Read the
+plan before starting, `research/decisions_log.md` before re-arguing anything, and
+`research/CONVENTIONS.md` before adding a document. Per-state status is one row of
+`research/state_tax/state_parameter_rollout.csv` and nowhere else — do not restate
+it in a source packet. `research/STATUS.md` is the narrative status; documents
+carrying `true_as_of:` describe an older tree, not today's.
 
 ## Common Tasks
 

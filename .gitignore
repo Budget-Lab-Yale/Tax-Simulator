@@ -76,7 +76,8 @@ research/**/*.html
 research/**/*.log
 research/**/*.tex
 research/**/*.docx
-# ...except the three places a .docx is a first-class committed artifact:
+# ...except where a .docx is a first-class committed artifact:
 !research/releases/*.docx
+!research/tools/reference.docx
 !research/docx_sources/*.docx
 !research/archive/*.docx
