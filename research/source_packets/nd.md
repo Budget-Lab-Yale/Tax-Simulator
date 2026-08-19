@@ -1,7 +1,7 @@
 # State Source Packet: North Dakota
 
 State: `ND`
-Status: `yaml_dir done; worksheet_tests done; cross_model todo; aggregate blocked_weights`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-07-16`
 
 ## Scope

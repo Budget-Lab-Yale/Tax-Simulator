@@ -1,3 +1,14 @@
+---
+title: "State Individual Income Tax Module — Implementation Plan"
+role: plan
+workstream: state_tax
+status: current
+updated: 2026-08-19
+sot: self
+supersedes: []
+superseded_by: null
+---
+
 # State Individual Income Tax Module — Implementation Plan
 
 **Date:** 2026-07-08

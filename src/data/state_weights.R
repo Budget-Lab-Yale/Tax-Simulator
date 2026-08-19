@@ -115,7 +115,7 @@ HT2_TARGET_MAP <- c(
 
 read_ht2 <- function(path, year) {
 
-  # Files in the IRS-GEO mirror are gzipped; quoted comma-formatted numbers
+  # Files in the IRS-Ind mirror are gzipped; quoted comma-formatted numbers
   # are handled by fread + the comma-stripping parse below
   d <- if (grepl("\\.gz$", path)) {
     fread(cmd = paste("zcat", shQuote(path)), colClasses = "character")

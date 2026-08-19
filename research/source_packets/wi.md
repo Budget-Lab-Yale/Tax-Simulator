@@ -1,8 +1,11 @@
 # Wisconsin State Source Packet
 
 State: `WI`
-Status: `baseline encoded; record-level worksheet tests complete`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-07-24`
+
+> **Status note (as of 2026-07-24), kept from the packet's former Status line:**
+> baseline encoded; record-level worksheet tests complete
 
 Full research notes: [research/raw/wi_research_core.md](research/raw/wi_research_core.md)
 (Form 1 booklets/Schedules 2017-2025, DOR rate pages, LFB Informational

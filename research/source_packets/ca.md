@@ -1,8 +1,11 @@
 # California State Source Packet
 
 State: `CA`  
-Status: `resident regular IIT encoded; cross-model DONE 2026-08-16 -- all eight canonical-window cells clear the 95% bar (TAXSIM 0.969-0.985, PE 0.965-0.995); P1 production readiness still blocked`  
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-08-16`
+
+> **Status note (as of 2026-08-16), kept from the packet's former Status line:**
+> resident regular IIT encoded; cross-model DONE 2026-08-16 -- all eight canonical-window cells clear the 95% bar (TAXSIM 0.969-0.985, PE 0.965-0.995); P1 production readiness still blocked
 
 > **Cross-model triage 2026-08-15** (see `cross_model/results/reports/ca.md`
 > and the CA rows of `src/tests/state/cross_model/known_differences.csv`):

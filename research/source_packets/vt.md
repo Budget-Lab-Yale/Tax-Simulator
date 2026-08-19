@@ -1,8 +1,11 @@
 # Vermont State Source Packet
 
 State: `VT`
-Status: `ENCODED 2026-08-13 (baseline/vt/, tests VT-1..VT-6b); cross-model not yet run`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-08-13`
+
+> **Status note (as of 2026-08-13), kept from the packet's former Status line:**
+> ENCODED 2026-08-13 (baseline/vt/, tests VT-1..VT-6b); cross-model not yet run
 
 > **The four scalars this packet asked for LANDED on 2026-08-12** (see
 > §Machinery gaps), so VT is now encodable exactly on both its

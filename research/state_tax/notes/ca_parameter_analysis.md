@@ -1,3 +1,15 @@
+---
+title: "California Individual Income Tax Parameter Analysis"
+role: notes
+workstream: state_tax
+status: current
+updated: 2026-08-19
+true_as_of: 2026-07-13
+sot: research/source_packets/ca.md
+supersedes: []
+superseded_by: null
+---
+
 # California Individual Income Tax Parameter Analysis
 
 State: CA

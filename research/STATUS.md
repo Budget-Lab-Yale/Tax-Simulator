@@ -1,3 +1,14 @@
+---
+title: "State income tax workstream — status"
+role: status
+workstream: cross-cutting
+status: current
+updated: 2026-08-19
+sot: self
+supersedes: []
+superseded_by: null
+---
+
 # State income tax workstream — status
 
 **As of 2026-08-19** (branch `state-tax`). Current counts: **ALL 51
@@ -203,22 +214,26 @@ CDCC refundable-cap and ctc_po_step generics, the reordered cap-then-
 phase-out itemized flow, and the sales tax fairness credit as a dense
 table — see research/source_packets/hi.md and me.md; both corrected review-§2.1
 assumptions, notably that ME's EITC has been refundable since 2016 and its
-STFC is income-keyed, not Tier-1-blocked). Companion docs in this directory:
-`research/state_tax/plan.md` (the design of record, amended in place),
-`research/state_tax/STATE_ENCODING_REVIEW_2026_08_11.md` (coded-states review: holes,
-archetypes, completion roadmap),
-`research/state_weights/notes/state_weights_fit_issues.md` (the engine root-cause record),
-`research/state_tax/notes/state_tax_model_research_notes.md` (original evidence base),
-`research/docx_sources/nonfiler_proposal_jii.docx` (the narrative case for the residual
-non-filer methodology, JI Aug 2026 — renamed 2026-08-18 from
-`Non-Filer Proposal.docx`; note it is a *different document* from the `.md`
-of similar name) and, for the non-filer workstream, the three documents
-§1b names: **`research/state_weights/plan.md` (the plan — start here)**,
-`research/state_weights/nonfiler_residual_design.md` (the method) and
-`research/state_weights/nonfiler_residual/04_findings.md` (the evidence).
-Superseded docs live in `research/archive/` with a README explaining each — including
-`research/archive/state_weights_ml_alternative.md`, whose A/B-bake-off premise the Phase 1
-sweep reframed into prior-only-vs-joint-fit.
+STFC is income-keyed, not Tier-1-blocked).
+
+**Companion documents: see `research/README.md`,** which holds the role table for
+both workstreams — one `plan` each, plus the methods, procedures, evidence and
+reviews around them. The rule the non-filer workstream adopted (**one job per
+document**; a plan is the entry point, a method holds the *why*, evidence is
+frozen) now covers the encoding workstream too, and the index states it rather
+than this document restating it. Settled arguments are in
+`research/decisions_log.md`; conventions and the drift checks are in
+`research/CONVENTIONS.md`; superseded documents are in `research/archive/` with a
+README explaining each.
+
+Two pointers worth keeping here because the names mislead:
+`research/docx_sources/nonfiler_proposal_jii.docx` is the *narrative* case for the
+residual non-filer methodology (JI, Aug 2026) and is a **different document** from
+`research/state_weights/nonfiler_residual_design.md`, the implementation memo. And
+`research/archive/state_weights_ml_alternative.md` is cited as the origin spec of
+the Phase 1 §4 harness, but its A/B-bake-off premise was reframed by the sweep into
+prior-only-vs-joint-fit — the built harness is
+`research/state_weights/scripts/{sweep,validate}_state_weights.R` (S3).
 
 ---
 
@@ -262,9 +277,9 @@ uniform placeholder weights until Phase 1 lands (state levels not yet
 meaningful; all contracts real).
 
 **Phase 1 — state weights (engines and data done; harness remains).**
-- Data: shared stores built and wired — IRS-GEO mirror (HT2 2012–2022,
+- Data: shared stores built and wired — IRS-Ind mirror (HT2 2012–2022,
   percentile, county, ZIP + SOI docguides + per-family change notes;
-  public repo johniselin-budget-lab/IRS-GEO, data on the cluster share) and
+  public repo johniselin-budget-lab/IRS-Ind, data on the cluster share) and
   the IPUMS ACS extracts. `read_ht2()` ingests the full 24-series target
   map; `read_acs_extract()` handles the fixed-width format, implied
   decimals, and the INCTOT sentinel (`5d92e5763`, `c27cb1c99`).
@@ -293,7 +308,13 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
 
 ## Left to do
 
-1. **Phase 1 close-out** — the §4 comparison harness: tune the joint fit to
+1. **Phase 1 close-out** — the §4 comparison harness **is built**: it is
+   `research/state_weights/scripts/sweep_state_weights.R` (part 1, the
+   hyperparameter sweep) and `validate_state_weights.R` (part 2, the
+   decision-relevant validation battery), which say so in their own headers. The
+   *spec* is `research/archive/state_weights_ml_alternative.md` §4 — cited as the
+   origin, not as an instruction, since the data refuted its A/B premise
+   (`research/decisions_log.md` S3). What remains is to run it: tune the joint fit to
    the ≥99%-within-2% bar (steps/lr schedule/per-series λ; SALT and
    EITC/AGI families carry the residual), β sweep, untargeted validation on
    the QWI/ACS demographic cells, downstream IL/CO/NY liability under
@@ -306,6 +327,7 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    swap-in** — see item 1b — so the swap-in fit happens once, on upgraded
    margins, rather than fit-on-v0-then-re-fit. Do not close Phase 1 first.
 
+<!-- release:begin nonfiler-status -->
 1b. **Non-filer residual rework.** The non-filer population is the one input to
    the weights fit anchored to nothing: Tax-Data appends ~27.6M (TY2022) units
    from PSZ/DINA at DINA's own uncalibrated weights, and the state fit places them
@@ -329,11 +351,18 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    > - **`research/state_weights/nonfiler_residual/04_findings.md` — the evidence.** Stage D's F1-F7 and
    >   decisions D1-D6, frozen.
    >
+   > - **`research/state_weights/nonfiler_federal_validation.md` — the procedure.**
+   >   The runbook for the federal validation battery (task group E), whose 4a
+   >   table is the acceptance gate.
+   >
    > Supporting: `research/state_weights/nonfiler_residual/05_filing_model_literature.md` (literature
    > pass), `raw_data/SSA-{OASDI,EEDATA}-SC/NOTES.md` (what the SSA margins mean),
-   > `research/docx_sources/nonfiler_proposal_jii.docx` (JI's narrative case). Earlier summaries
-   > of this workstream that used to live in this section have been removed rather
-   > than left to drift.
+   > `research/docx_sources/nonfiler_proposal_jii.docx` (JI's narrative case, with
+   > `research/state_weights/notes/nonfiler_proposal_rewrite_plan.md` as its open
+   > rewrite task). Earlier summaries of this workstream that used to live in this
+   > section have been removed rather than left to drift.
+
+<!-- release:end nonfiler-status -->
 
 2. **CO child-care expenses credit** (DR 0347) — researched and encoded
    (TODO carried in `co/credits.yaml`); CO 2026 rate revisit after the

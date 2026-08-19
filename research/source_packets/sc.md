@@ -1,7 +1,7 @@
 # State Source Packet: South Carolina
 
 State: `SC`
-Status: `yaml_dir done; worksheet_tests done; cross_model todo; aggregate blocked_weights`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-08-11` (age-65 deduction 12-6-1170(B) and the Two Wage
 Earner Credit encoded — the two largest SC cross-model wedges; 5-case TAXSIM
 probe now agrees within $10 everywhere, incl. retirees at $0)

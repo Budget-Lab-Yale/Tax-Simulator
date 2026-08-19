@@ -1,46 +1,14 @@
----
-title: "A state-weight-inclusive model with an updated non-filer pull — the plan"
-role: plan
-workstream: state_weights
-status: current
-updated: 2026-08-19
-sot: self
-supersedes: []
-superseded_by: null
----
+# Non-Filer + State Weights — Plan Review and Implementation To-Do
 
-# A state-weight-inclusive model with an updated non-filer pull — the plan
-
-**The plan of record for this workstream. Start here.** What is decided, what is
-next, what is blocked, and the critical path, through to the production
-state-weights swap-in.
-
+**Date:** 2026-08-19
+**Reviews:** `research/state_weights/nonfiler_residual_design.md` (as amended 2026-08-18),
+`research/state_weights/nonfiler_residual/04_findings.md`, `research/archive/07_ssa_inputs_plan_2026-08-19_executed.md`,
+`research/STATUS.md` §1/§1b, `research/state_tax/plan.md` §2.1 (as amended),
+`research/state_weights/state_weights_phase1_summary.md` §5/§7.
 **Scope:** everything between here and the production state-weights swap-in.
-Weights and non-filers are one workstream because the non-filer rework lands
-*before* the Phase 1 swap-in, so the fit happens once on upgraded margins rather
-than fit-then-refit.
-
 **Method:** every claim below was checked against the code and the shared store
 on 2026-08-19, not read off the memos. Where a memo and the tree disagree, the
 tree wins and the discrepancy is called out.
-
-**Companions** — one job each (`research/README.md` holds the role table):
-`nonfiler_residual_design.md` is the **method** of record (the *why*, and each
-decision with its evidence); `nonfiler_residual/04_findings.md` is the
-**evidence** (Stage D, F1–F7, frozen); `nonfiler_federal_validation.md` is the
-**procedure** for task group E; `research/decisions_log.md` records settled
-arguments. Also read against: `research/STATUS.md`, `research/state_tax/plan.md`
-§2.1, `state_weights_phase1_summary.md` §5/§7,
-`research/archive/07_ssa_inputs_plan_2026-08-19_executed.md`.
-
-**Merged 2026-08-19** from two same-scope documents: the 2026-08-19 to-do that
-had been checked line-by-line against the tree, and a fuller 2026-08-18 plan
-that had been living outside version control. The to-do won on every fact; the
-imported plan contributed its risk register (§1.4), its effort table (Part 3),
-its ops notes (§P) and its Step 4, which became the federal-validation
-procedure. Both predecessors are in `research/archive/`
-(`nonfiler_state_weights_todo_2026-08-19_pre-merge.md`,
-`nonfiler_unified_plan_2026-08-18_imported.md`). Revision history at the end.
 
 ---
 
@@ -181,26 +149,6 @@ three of which contradict it.
    headline population — earnings-bearing non-filers — remains unscoreable for
    any EITC reform. Both need an owner and a slot.
 
-#### The full register
-
-Carried in from the 2026-08-18 plan. The three above are the ones this review
-judged under-weighted; these are the standing risks, each with its mitigation.
-
-| Risk | Why it matters | Mitigation |
-|---|---|---|
-| **The comparable-universe anchor is mis-set** | Calibrating to 46.5M instead of 38–41M would inflate non-filer mass by ~15%; calibrating to 32.4M would entrench the current shortfall. The 18–19-year-old and adult-dependent wedges overlap heavily and only a lower bound (5.48M) is estimated | Plumb Table 1.7 into T1 — it is read in script 02 but never reaches the diagnostic (`03:154` hardcodes `dependent_filer_returns = NA_real_`). Estimate the overlap directly rather than carrying it in the tolerance |
-| **ASEC and ACS disagree on national filing rates** | Would invalidate the transfer step and, with it, decision 2's whole premise | Make the comparison a gate in step 1.6, not a footnote. Fallback is the memo's ACS-only route, which is already fully specified |
-| **SSA files never arrive** | Gates D6 state age layering and the covered-wage margin | State weights v1 can ship on PEP + HT2 residual anchors alone with the ACS shape smoothing all ages; the SSA margins become a v1.1 refinement. Note this degrades the 65+ state split, which is where non-filer mass concentrates |
-| **Age-band reconciliation done implicitly** | The anchors exist to discipline age; a silent mismatch at 25/26 and 65+ would quietly undo F2's fix | P2 is a blocking decision with a written record, not an implementation detail |
-| **NY liability does not improve** | NY was 63.55 vs 41.17 benchmark and is where candidate weight sets differ most; if the non-filer rework does not move it, the cause is filer-side top-income placement, which this plan explicitly does not fix | Pre-register NY as diagnostic, not acceptance. Report it either way rather than reframing after the fact |
-| **Two Tax-Data changes interact** | The calibration rake and the aging fix both touch non-filer weights; a compensating pair of errors would look clean in aggregate | Stage them as separate vintages and A/B each independently (step 3d / step 4c) |
-| **Row order changes and silently rerandomizes every filer** | `bind_cols(globals$random_numbers)` pairs draws by **position** (`run.R:348-357`); a sort inside `calibrate_nonfilers.R` would move filer-side aggregates for reasons unrelated to non-filers and make the whole battery uninterpretable | The ordered-id gate in 4b, the in-pipeline `identical(ids_in, ids_out)` assertion, and the permanent regression test in 4i. Highest-probability silent failure in the plan |
-| **Payroll revenue moves and nothing benchmarks it** | `get_pr_totals()` is not filer-gated, so raking non-filer weights up 15–25% changes baseline payroll receipts with no tax-law change — and `cbo_comparison.R` is IIT-detail only, so no check exists | Predict the magnitude before running (4a/4d item 2). **Answer the upstream question first: do Tax-Data's aggregate wage control totals already include non-filer records?** If they do, raking non-filers up without renormalizing filers — which §5.2 explicitly declines to do — breaks the national wage reconciliation. Check total `gross_wages` against the Macro-Projections/NIPA wage series and SSA covered wages |
-| **The rework cannot improve EITC scoring** | There is no `become_filer_eitc`, and `become_filer_ctc` requires `qual_ei == 0` exactly, so the newly-created earnings-bearing non-filers' refundable credits are computed and then multiplied out of every total | Measure the dropped credit mass (4d item 5); raise both conditions as explicit design decisions before shipping (4f-bis). Do not let the vintage ship behind a claim it improves refundable-credit analysis generally |
-| **Published distribution tables move at swap-in** | The distribution universe is all `dep_status == 0` units *including* non-filers, so quintile boundaries and age cuts shift under identical law — and the A/B's own `distribution.csv` will not reveal it, because `process_for_distribution()` reads everything from the baseline arm | Size it with the purpose-built script in 4g *before* the swap-in, and tell whoever owns the published tables ahead of time rather than after someone asks why last quarter's numbers changed |
-| **Two post-processing routines mislead under a vintage A/B** | `horizontal.csv` produces NA-contaminated top-quintile IQRs; `distribution.csv` is blind to reweighting | Fix `build_horizontal_table()`'s ranking join (a latent bug regardless), and use the 4g replacement script rather than reading the shipped tables as if they worked |
-
-
 ---
 
 ## Part 1.5 — Decisions taken 2026-08-19, and what was implemented
@@ -255,19 +203,6 @@ gain a W-2 family section recording the return-based universe.
 
 Ordered by dependency. **P** = pre-flight, **A**–**G** = the sequence.
 Effort estimates follow the memo's own where it gives them.
-
-**Ops constraints that apply to every task below.**
-
-- All fits and the ACS/ASEC tabulations run under `sbatch`. The login node
-  OOM-kills at ~7–8 GB and **piping masks the kill** — a pipeline's exit status is
-  `tail`'s, so a killed job looks like a clean one. Existing pattern:
-  `research/state_weights/nonfiler_residual/run_acs_tabulation.sbatch`
-  (`--mem=48G`, `--time=02:00:00`, `module load R/4.4.2-gfbf-2024a`); scratch at
-  `/nfs/roberts/scratch/pi_nrs36/ji252/state_weights_tmp/`.
-- `src/data/state_weights.R:121` uses `fread(cmd = 'zcat ...')` — POSIX only.
-  Anything touching HT2 is cluster-only, not Windows.
-- On the HPC, R is not on `PATH` by default: load the module in the **same** shell
-  command that calls `Rscript`.
 
 ### P — Pre-flight (~2 days, login node, blocks everything)
 
@@ -507,13 +442,6 @@ independently, and in this priority order: *age detail > national level + aging
 
 ### E — Federal validation battery (~1 week, mostly diff-reading)
 
-> **The runbook is `research/state_weights/nonfiler_federal_validation.md`** — the
-> predicted signature, the pre-flight vintage gate, the V1/V2/V3 staging, the A/B
-> runs, the CBO null test, the reform scenarios, the distributional checks, the
-> external triangulation and the regression guard, with its 4a table as the
-> acceptance gate. That document owns *how*; the four items here own *whether and
-> when*, and E4's early-run instruction overrides its ordering.
-
 - [ ] **E1. Exact-equality tests.** V1 must leave `n_tax_units`, `n_returns` and
       payroll totals untouched; V3 must be **bit-identical to V2 in 2017**.
 - [ ] **E2. The tripwire.** Every 1040 dollar aggregate is summed as
@@ -665,60 +593,3 @@ the exact dimension the anchors discipline.
    D6, §6.2 and the Tax-Data age draw if left implicit.
 3. **Ship B (the GQ fix) immediately.** It is decision-independent, F6 has
    already sized it, and it is 42% of the residual in South Dakota.
-
-### Per-task effort, and what the cluster actually costs
-
-The table below is the 2026-08-18 breakdown, kept because it prices each task
-separately. **Where it disagrees with the 8-11 weeks above, the figure above
-governs** -- it is the later estimate and it accounts for the ASEC step. Task
-letters here are the imported plan's step numbers; the mapping to P/A-H is
-one-to-one in order.
-
-Stage D is done, so the critical path starts at P1–P3. The design memo's §7.1 estimates
-are carried forward, with the ASEC step added by decision 2.
-
-| # | Work | Depends on | Effort |
-|---|---|---|---|
-| P1–P2 | Vintage reconciliation, age-band decision | — | ~1 day, login node |
-| P3 | SSA downloads (JI) | — | ~1 day, parallel |
-| 1.0 | Locate/register the ASEC shared store | cluster access | ~1–2 days |
-| ~~1.2~~ | ~~Cilke & Pub 5785 currency~~ — **DONE 2026-08-18**: replace Cilke with Mok (2017) | — | complete |
-| 1.1 | Research pass A: ASEC unit/income construction | — | ~3–5 days, parallelizable |
-| 2 | GQ treatment in `build_acs_margins()` | P2 | ~2–3 days |
-| 1.3 | Filing models, joint calibration, ACS transfer | 1.0–1.2, P3, P4 | **~2–3 weeks** (the long pole) |
-| 3 | Tax-Data rework + V1/V2/V3 vintages | P1, step 1.3 age shape | ~1–2 weeks + cluster runs |
-| 4 | Federal validation battery | step 3 | ~1 week, mostly human diff-reading |
-| 5 | State-weights margins/targets + re-fit | steps 1, 2, 3, P3 | ~2–3 weeks |
-| 6 | Production swap-in | steps 4, 5 | ~1 week |
-| 7 | Interfaces + documentation | ongoing | folded in |
-
-Three things can start immediately and in parallel: the GQ fix (step 2), research pass A
-(1.1), and the SSA downloads. **Research pass B (1.2) is already done** — and it paid for
-itself: the answer was "yes, updated coefficients exist," so transcribing Cilke's 1998
-values as the primary model would have been wasted work. What to transcribe now is **Mok
-(2017) Table 14** — the PDF is in hand and verified; transcribe from a rendered image,
-watching Panel E's reversed column order.
-Step 1.3 is the long pole and the only piece whose scope is genuinely uncertain.
-
-**Cluster compute is not the binding constraint on step 4.** The whole battery is a few
-hundred core-minutes: run 1 is ~16 short jobs (30 min / 16GB each), the CBO run ~10, the full
-window ~30, the paired reform runscripts ~24. The real costs are disk (`delete_detail = 0`
-across four vintages: budget 10–20GB on scratch), the Phase-3b blowout if `dist_years` is left
-blank, and human diff-reading — which the V1/V2/V3 staging minimizes by turning two of three
-comparisons into exact-equality tests.
-
-
-## Revision history
-
-- **2026-08-19** -- Merged with the 2026-08-18 out-of-repo unified plan and
-  renamed to `plan.md` as the one plan of record for this workstream. Added the
-  full risk register (§1.4), the per-task effort table and cluster-cost note
-  (Part 3), and the ops constraints (Part 2 preamble). Task group E now points at
-  `nonfiler_federal_validation.md`, which is the imported plan's Step 4 extracted
-  whole. Corrected on the way in: the proposal's filename (renamed 2026-08-18),
-  Cilke 1998 as the below-threshold model (replaced by Mok 2017), and the design
-  memo's length. Predecessors archived as
-  `nonfiler_state_weights_todo_2026-08-19_pre-merge.md` and
-  `nonfiler_unified_plan_2026-08-18_imported.md`.
-- **2026-08-19** -- Original: the plan review and implementation to-do, checked
-  line-by-line against the tree and the shared store.

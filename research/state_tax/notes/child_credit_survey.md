@@ -1,3 +1,15 @@
+---
+title: "State child credit survey — which structures the calculator can express"
+role: notes
+workstream: state_tax
+status: current
+updated: 2026-08-19
+true_as_of: 2026-08-13
+sot: research/state_tax/state_parameter_rollout.csv
+supersedes: []
+superseded_by: null
+---
+
 # State child credit survey — which structures the calculator can express
 
 Last updated: `2026-08-13`

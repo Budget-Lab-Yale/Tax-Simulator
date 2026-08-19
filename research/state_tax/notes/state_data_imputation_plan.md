@@ -1,3 +1,14 @@
+---
+title: "State-tax data extensions and imputations — scoped plan"
+role: notes
+workstream: state_tax
+status: open
+updated: 2026-08-19
+sot: research/state_tax/plan.md
+supersedes: []
+superseded_by: null
+---
+
 # State-tax data extensions and imputations — scoped plan
 
 Drafted 2026-07-24, from the known-differences accumulated across the 30
@@ -8,7 +19,7 @@ organized as buildable workstreams. Companion to the Phase 7 list in
 from the locality-weights and coupled-iteration machinery items.
 
 Guiding rule: each imputation should be (a) driven by data we already
-hold or can mirror (the IPUMS ACS extracts and IRS-GEO are wired in),
+hold or can mirror (the IPUMS ACS extracts and IRS-Ind are wired in),
 (b) calibrated to a published administrative aggregate, and (c) switchable
 off (a flag) so the record-level cross-model harness can keep comparing
 law-only calculations.

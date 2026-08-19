@@ -1,8 +1,11 @@
 # Kansas State Source Packet
 
 State: `KS`
-Status: `baseline encoded; worksheet tests KS-1..KS-5 pass`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-08-12`
+
+> **Status note (as of 2026-08-12), kept from the packet's former Status line:**
+> baseline encoded; worksheet tests KS-1..KS-5 pass
 
 ## Scope
 

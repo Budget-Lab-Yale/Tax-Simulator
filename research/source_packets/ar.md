@@ -1,7 +1,7 @@
 # State Source Packet: Arkansas
 
 State: `AR`
-Status: `done`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-08-18`
 
 ## Scope

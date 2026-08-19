@@ -1,3 +1,14 @@
+---
+title: "State weights — alternative approaches (brainstorm, 2026-07-13)"
+role: notes
+workstream: state_weights
+status: deferred
+updated: 2026-08-19
+sot: research/state_weights/plan.md
+supersedes: []
+superseded_by: null
+---
+
 # State weights — alternative approaches (brainstorm, 2026-07-13)
 
 Prompted by JI: (1) we want to capture negative values (capital losses,

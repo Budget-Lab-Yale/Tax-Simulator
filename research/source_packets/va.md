@@ -1,8 +1,11 @@
 # Virginia — Source Packet
 
-**Status:** encoded (baseline TY2017–2025, projected through the statutory
-TY2030 standard-deduction reversion) | worksheet tests VA-1..VA-13 pass |
-cross-model todo | aggregate blocked on weights.
+State: `VA`
+Status: see `../state_tax/state_parameter_rollout.csv`
+Last updated: `2026-07-18`
+
+> **Status note, kept from the packet's former Status line:**
+> encoded (baseline TY2017–2025, projected through the statutory TY2030 standard-deduction reversion) | worksheet tests VA-1..VA-13 pass | cross-model todo | aggregate blocked on weights.
 
 **Primary sources:** Virginia Form 760 instruction booklets, TY2017–2025
 (all nine downloaded from tax.virginia.gov and transcribed per year);

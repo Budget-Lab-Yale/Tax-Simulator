@@ -1,7 +1,7 @@
 # South Dakota Source Packet
 
 State: `SD`
-Status: `initial_stub_encoded`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-07-13`
 
 ## Scope

@@ -1,8 +1,11 @@
 # Kentucky State Source Packet
 
 State: `KY`  
-Status: `baseline encoded; record-level worksheet tests complete`  
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-08-11` (2017 graduated schedule, combined-return
+
+> **Status note (as of 2026-08-11), kept from the packet's former Status line:**
+> baseline encoded; record-level worksheet tests complete
 filing, standard-deduction vintages, and personal tax credits corrected
 from the 2017 Form 740 packet + DOR announcements; see below)
 

@@ -1,3 +1,15 @@
+---
+title: "Elderly and retirement-income provisions across modeled states"
+role: notes
+workstream: state_tax
+status: current
+updated: 2026-08-19
+true_as_of: 2026-07-23
+sot: research/state_tax/state_parameter_rollout.csv
+supersedes: []
+superseded_by: null
+---
+
 # Elderly and retirement-income provisions across modeled states
 
 Survey date: 2026-07-23. Scope: the 21 encoded jurisdictions with an

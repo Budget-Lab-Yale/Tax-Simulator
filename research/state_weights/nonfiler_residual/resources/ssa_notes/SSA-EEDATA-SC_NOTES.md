@@ -1,3 +1,14 @@
+---
+title: "SSA-EEDATA-SC: Notes on the data"
+role: notes
+workstream: state_weights
+status: current
+updated: 2026-08-19
+sot: research/state_weights/nonfiler_residual_design.md
+supersedes: []
+superseded_by: null
+---
+
 # SSA-EEDATA-SC: Notes on the data
 
 What is in this store, what each table means, and the traps that would

@@ -1,3 +1,14 @@
+---
+title: "Source documents and hand-transcribed resources"
+role: index
+workstream: state_weights
+status: current
+updated: 2026-08-19
+sot: research/state_weights/nonfiler_residual_design.md
+supersedes: []
+superseded_by: null
+---
+
 # Source documents and hand-transcribed resources
 
 This folder holds three kinds of thing: **hand-transcribed tables** (the CSVs

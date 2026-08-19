@@ -1,8 +1,11 @@
 # Delaware State Source Packet
 
 State: `DE`
-Status: `baseline encoded; worksheet tests DE-1..DE-5 pass`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-08-12`
+
+> **Status note (as of 2026-08-12), kept from the packet's former Status line:**
+> baseline encoded; worksheet tests DE-1..DE-5 pass
 
 ## Scope
 

@@ -1,4 +1,24 @@
+---
+title: "State encoding review: holes, archetypes, and the path to completion"
+role: review
+workstream: state_tax
+status: frozen
+updated: 2026-08-19
+true_as_of: 2026-08-11
+sot: research/state_tax/plan.md
+supersedes: []
+superseded_by: null
+---
+
 # State encoding review: holes, archetypes, and the path to completion
+
+> **Point-in-time review, `true_as_of: 2026-08-11` (S5).** Written at 30 coded
+> jurisdictions. **Encoding is now complete at 51/51** — so §2.1's R6 rollout
+> sequencing describes work that has since been done, and this document's
+> "no state is complete" verdict is about the 2026-08-11 tree, not today's.
+> Current per-state status is `research/state_tax/state_parameter_rollout.csv`;
+> current narrative status is `research/STATUS.md`. Kept unedited: a review is a
+> record of a moment, and dating it is the fix, not rewriting it.
 
 **Date:** 2026-08-11
 **Scope:** the 30 coded jurisdictions, as of `ab45a6661` (state-tax branch);

@@ -1,8 +1,17 @@
 # State Source Packet Template
 
 State: `XX`
-Status: `todo`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `YYYY-MM-DD`
+
+> **Do not restate status here.** The packet is the primary-source evidence record
+> for one jurisdiction; per-state status is one row of
+> `../state_tax/state_parameter_rollout.csv`, whose vocabulary is defined in
+> `../state_tax/state_parameter_workflow.md` §Validation gates. Copy the two lines
+> above verbatim and keep `Last updated:` current. A finding that happens to be
+> about progress — "cross-model triage closed, all eight cells clear the bar" —
+> belongs in the sections below or in the tracker's `notes` column, not in a
+> `Status:` line that will drift.
 
 ## Scope
 

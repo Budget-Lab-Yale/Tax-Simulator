@@ -1,8 +1,11 @@
 # Maine State Source Packet
 
 State: `ME`
-Status: `ENCODED 2026-08-17 (baseline/me/, tests ME-1..ME-9); cross-model not yet run`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-08-17`
+
+> **Status note (as of 2026-08-17), kept from the packet's former Status line:**
+> ENCODED 2026-08-17 (baseline/me/, tests ME-1..ME-9); cross-model not yet run
 
 ## Scope
 

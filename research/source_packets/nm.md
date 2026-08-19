@@ -1,8 +1,11 @@
 # New Mexico State Source Packet
 
 State: `NM`
-Status: `ENCODED 2026-08-13 (baseline/nm/, tests NM-1..NM-6b); cross-model not yet run`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-08-13`
+
+> **Status note (as of 2026-08-13), kept from the packet's former Status line:**
+> ENCODED 2026-08-13 (baseline/nm/, tests NM-1..NM-6b); cross-model not yet run
 
 > Two design decisions in this state are load-bearing and were resolved with
 > worked evidence (§Decisions). One found a trap that would have cost **$304 of

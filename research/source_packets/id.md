@@ -1,8 +1,11 @@
 # Idaho State Source Packet
 
 State: `ID`
-Status: `baseline encoded; record-level worksheet tests complete`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-07-23`
+
+> **Status note (as of 2026-07-23), kept from the packet's former Status line:**
+> baseline encoded; record-level worksheet tests complete
 
 Full research notes with per-year citations and complete bracket tables:
 [research/raw/id_research_core.md](research/raw/id_research_core.md) (all schedules extracted

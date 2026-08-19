@@ -1,3 +1,14 @@
+---
+title: "State Split Weights — Phase 1 Bake-off Summary"
+role: method
+workstream: state_weights
+status: current
+updated: 2026-08-19
+sot: research/state_weights/plan.md
+supersedes: []
+superseded_by: null
+---
+
 # State Split Weights — Phase 1 Bake-off Summary
 
 **Date:** 2026-07-19
@@ -42,7 +53,7 @@ asserted at write time).
 | Input | Source | Role |
 |---|---|---|
 | Tax units, TY2022 (220,897 records) | Tax-Data (production vintage), plus `agi`/`eitc` from a full-sample Tax-Simulator baseline run (`weights_2022` local vintage) | Records to be split; x-vectors for targets |
-| SOI Historic Table 2 (HT2), TY2022 | IRS-GEO mirror (`shared/raw_data/IRS-GEO`, github.com/johniselin-budget-lab/IRS-GEO) | Filer-partition targets: state × AGI-stub cells |
+| SOI Historic Table 2 (HT2), TY2022 | IRS-Ind mirror (`shared/raw_data/IRS-Ind`, github.com/johniselin-budget-lab/IRS-Ind) | Filer-partition targets: state × AGI-stub cells |
 | ACS 2022 (IPUMS extract) | `shared/raw_data/ACS/acs_common` | Non-filer partition targets (state × age band × income tier); individual-level IRS/ACS reconciliation |
 | IRS EITC participation rates, TY2022 | irs.gov EITC Central (ACS–Census linkage) | Untargeted-geography covariate (see §5.3) |
 | Census QWI / LODES | Census APIs (fetchers in `state_weights.R`) | Candidate demographic targets and untargeted checks (documented, not yet targeted) |
@@ -261,6 +272,15 @@ Remaining before the production swap-in: prune/report the 239-cell
 structural core (§5.1) the way assembly already reports unfittable targets,
 wire `build_split_weights(method = "gradient")` to these hyperparameters,
 and write the `state_weights_{year}.csv` interface output for all years.
+
+> **Amended 2026-08-19 (S2) — this checklist predates the sequencing decision.**
+> Three documents cite the paragraph above by line number, and it was written
+> 2026-07-19, before **JI's 2026-08-16 call that the non-filer rework lands
+> BEFORE the Phase 1 swap-in** so the fit happens once on upgraded margins. The
+> items above are still the right items; they are **not** the next work. Read
+> `research/state_weights/plan.md` first — the swap-in is its task group G, gated
+> on D (Tax-Data rework), E (federal validation) and F (re-fit on the new
+> margins). See `research/decisions_log.md` S2.
 
 ## 7. Paths to a better fit (proposed alternatives)
 

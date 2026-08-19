@@ -1,3 +1,14 @@
+---
+title: "State Parameter Workflow"
+role: procedure
+workstream: state_tax
+status: current
+updated: 2026-08-19
+sot: research/state_tax/plan.md
+supersedes: []
+superseded_by: null
+---
+
 # State Parameter Workflow
 
 Purpose: keep state-parameter research, documentation, and record-level validation

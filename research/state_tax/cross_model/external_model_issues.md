@@ -1,3 +1,14 @@
+---
+title: "Potential issues in TAXSIM-35 and PolicyEngine US"
+role: evidence
+workstream: state_tax
+status: current
+updated: 2026-08-19
+sot: research/state_tax/state_parameter_rollout.csv
+supersedes: []
+superseded_by: null
+---
+
 # Potential issues in TAXSIM-35 and PolicyEngine US
 
 Findings from the Tax-Simulator state cross-model validation harness

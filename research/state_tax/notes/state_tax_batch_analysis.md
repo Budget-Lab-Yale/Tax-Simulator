@@ -1,3 +1,15 @@
+---
+title: "State Tax Batch Analysis"
+role: notes
+workstream: state_tax
+status: historical
+updated: 2026-08-19
+true_as_of: 2026-07-13
+sot: research/state_tax/plan.md
+supersedes: []
+superseded_by: null
+---
+
 # State Tax Batch Analysis
 
 Last updated: `2026-07-13`

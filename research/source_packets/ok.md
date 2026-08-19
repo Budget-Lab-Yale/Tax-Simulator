@@ -1,8 +1,11 @@
 # Oklahoma State Source Packet
 
 State: `OK`
-Status: `ENCODED 2026-08-13 (baseline/ok/, tests OK-1..OK-9); cross-model not yet run`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-08-13`
+
+> **Status note (as of 2026-08-13), kept from the packet's former Status line:**
+> ENCODED 2026-08-13 (baseline/ok/, tests OK-1..OK-9); cross-model not yet run
 
 > The $17,000 itemized-cap gap is RESOLVED (st_ded.item_flat_cap landed
 > 2026-08-12) and the child-credit greater-of is now encodable

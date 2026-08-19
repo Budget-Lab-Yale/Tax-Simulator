@@ -1,8 +1,20 @@
+---
+title: "State weights — issues from the first full-scale fit (2026-07-13)"
+role: notes
+workstream: state_weights
+status: current
+updated: 2026-08-19
+true_as_of: 2026-07-13
+sot: research/state_weights/plan.md
+supersedes: []
+superseded_by: null
+---
+
 # State weights — issues from the first full-scale fit (2026-07-13)
 
 Status notes from the first end-to-end run of the Phase 1 pipeline on real
 data: 2022 PUF (220,897 records; agi/eitc joined from a full-sample baseline
-run) + IRS-GEO HT2 + ACS 2022, assembled by `build_weight_inputs()` and
+run) + IRS-Ind HT2 + ACS 2022, assembled by `build_weight_inputs()` and
 fitted with `fit_calibration()` via
 `research/state_weights/scripts/build_state_weights.R`. Commit under test:
 `55ee03ec2`.
@@ -94,6 +106,13 @@ national weight under the prior rather than losing mass.
   the documented construction gap); state coverage spreads 74.5–95.3%
   (married) and 64.5–86.3% (single) — a strong geographic gradient
   confirming non-filer geography needs its own targeting.
+
+  > **The same number has a second, live role (S1, 2026-08-19).** Retired as the
+  > *reconciliation basis*, it stands as an *acceptance metric* for the non-filer
+  > rework: the −7% national bias and its 20pp state spread should collapse to
+  > within the anchor tolerance. **The acceptance definition of record is
+  > `research/state_weights/plan.md` §C8** — do not restate it here or in the
+  > design memo. See `research/decisions_log.md` S1.
 - `fit_gradient()` has not yet been run at full scale; its per-target loop
   (10.8k targets × 500 steps) will need vectorization (group targets by
   stub into matrix ops) before the A/B bake-off is practical.
@@ -171,3 +190,9 @@ Full 2022 joint fit — counts-backbone IPF prior → 300 Adam steps
 Status: engines DONE. Next: the §4 comparison harness (β/lr sweep,
 untargeted validation incl. the QWI/ACS demographic cells, downstream
 pilot-state liability), then the weights writer swap-in.
+
+> **Both parts of that harness were subsequently built** (S3): the sweep is
+> `research/state_weights/scripts/sweep_state_weights.R`, the validation battery
+> `validate_state_weights.R`, and its results are
+> `research/state_weights/state_weights_phase1_summary.md`. The swap-in now waits
+> on the non-filer rework (S2) — see `research/state_weights/plan.md`.

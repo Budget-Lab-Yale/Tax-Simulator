@@ -1,8 +1,11 @@
 # Connecticut State Source Packet
 
 State: `CT`
-Status: `baseline encoded; worksheet tests complete`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-07-17`
+
+> **Status note (as of 2026-07-17), kept from the packet's former Status line:**
+> baseline encoded; worksheet tests complete
 
 ## Scope
 

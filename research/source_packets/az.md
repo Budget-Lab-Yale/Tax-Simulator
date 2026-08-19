@@ -1,8 +1,11 @@
 # Arizona State Source Packet
 
 State: `AZ`  
-Status: `baseline encoded; record-level worksheet tests complete`  
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-07-13`
+
+> **Status note (as of 2026-07-13), kept from the packet's former Status line:**
+> baseline encoded; record-level worksheet tests complete
 
 ## Scope
 

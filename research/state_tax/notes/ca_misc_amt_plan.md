@@ -1,3 +1,14 @@
+---
+title: "CA follow-up plan: miscellaneous itemized deductions + CA AMT"
+role: notes
+workstream: state_tax
+status: open
+updated: 2026-08-19
+sot: research/state_tax/plan.md
+supersedes: []
+superseded_by: null
+---
+
 # CA follow-up plan: miscellaneous itemized deductions + CA AMT
 
 Drafted 2026-08-16 at the close of the CA cross-model triage (see

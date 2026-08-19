@@ -1,7 +1,7 @@
 # Washington Source Packet
 
 State: `WA`
-Status: `encoded_initial_validation`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-07-13`
 
 ## Scope

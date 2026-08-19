@@ -3,7 +3,7 @@
 # research/state_weights/scripts/build_state_weights.R
 #
 # Standalone Phase 1 prototype driver: assembles PUF-side targets from the
-# shared IRS-GEO (HT2) and ACS stores, fits split state weights with the
+# shared IRS-Ind (HT2) and ACS stores, fits split state weights with the
 # chosen engine, runs diagnostics, and writes state_weights_{year}.csv in the
 # final Tax-Data interface format (plan §2.1, §5.2).
 #

@@ -1,8 +1,11 @@
 # Nebraska State Source Packet
 
 State: `NE`
-Status: `ENCODED 2026-08-13 (baseline/ne/, tests NE-1..NE-6b); cross-model not yet run`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-08-13`
+
+> **Status note (as of 2026-08-13), kept from the packet's former Status line:**
+> ENCODED 2026-08-13 (baseline/ne/, tests NE-1..NE-6b); cross-model not yet run
 
 > Encoding is mechanical from the tables below — every value is
 > primary-transcribed. Two modeling decisions (§CDCC) need a call before the

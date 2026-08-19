@@ -1,4 +1,23 @@
+---
+title: "State-Tax Module Architecture Review — 2026-07-17"
+role: review
+workstream: state_tax
+status: frozen
+updated: 2026-08-19
+true_as_of: 2026-07-17
+sot: research/state_tax/plan.md
+supersedes: []
+superseded_by: null
+---
+
 # State-Tax Module Architecture Review — 2026-07-17
+
+> **Point-in-time review, `true_as_of: 2026-07-17` (S5).** Written at 22 states
+> encoded, before the R6 batches. All numbered items have since been resolved
+> except #9 (the coverage/continuity test layers and the cross-model harness) —
+> §7's triage table records the dispositions. Encoding is now complete at 51/51.
+> Current status: `research/state_tax/state_parameter_rollout.csv` and
+> `research/STATUS.md`.
 
 Critical review of the state tax parameter files (`config/scenarios/tax_law_state/`)
 and calculators (`src/calc/state/`), conducted immediately after the Connecticut

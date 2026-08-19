@@ -1,8 +1,11 @@
 # Minnesota State Source Packet
 
 State: `MN`
-Status: `baseline encoded; record-level worksheet tests complete`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-08-11` (TAXSIM triage: clean, 11 exact probe cases;
+
+> **Status note (as of 2026-08-11), kept from the packet's former Status line:**
+> baseline encoded; record-level worksheet tests complete
 childless M1CWFC phase-out corrected to the general 12% per the 2024 form)
 
 Full research notes with per-year tables and citations:

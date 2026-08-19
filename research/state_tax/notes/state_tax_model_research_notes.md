@@ -1,3 +1,15 @@
+---
+title: "State Individual Income Tax Modeling — Research Notes"
+role: notes
+workstream: state_tax
+status: historical
+updated: 2026-08-19
+true_as_of: 2026-07-08
+sot: research/state_tax/plan.md
+supersedes: []
+superseded_by: null
+---
+
 # State Individual Income Tax Modeling — Research Notes
 
 **Date:** 2026-07-07/08

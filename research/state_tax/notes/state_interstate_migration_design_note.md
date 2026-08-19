@@ -1,3 +1,14 @@
+---
+title: "Interstate Migration Module - Design Note"
+role: notes
+workstream: state_tax
+status: deferred
+updated: 2026-08-19
+sot: research/state_tax/plan.md
+supersedes: []
+superseded_by: null
+---
+
 # Interstate Migration Module - Design Note
 
 **Date:** 2026-07-13

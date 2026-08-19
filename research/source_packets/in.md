@@ -1,8 +1,11 @@
 # Indiana State Source Packet
 
 State: `IN`  
-Status: `baseline encoded; record-level worksheet tests complete`  
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-08-11` (exemption structure corrected from IC
+
+> **Status note (as of 2026-08-11), kept from the packet's former Status line:**
+> baseline encoded; record-level worksheet tests complete
 6-3-1-3.5 + TAXSIM probe: dependent = $1,000 base + $1,500 dependent-CHILD
 add-on, not a flat $1,500; the $1,000 65+/blind exemptions are universal
 and now encoded — only the extra income-tested $500 remains omitted)

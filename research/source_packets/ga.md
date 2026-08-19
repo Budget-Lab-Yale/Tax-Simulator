@@ -1,8 +1,11 @@
 # Georgia State Source Packet
 
 State: `GA`  
-Status: `baseline encoded; record-level worksheet tests complete`  
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-08-11` (married-filing-joint personal exemption
+
+> **Status note (as of 2026-08-11), kept from the packet's former Status line:**
+> baseline encoded; record-level worksheet tests complete
 corrected: $7,400 TOTAL per O.C.G.A. 48-7-26 / HB 386 of 2012, had been
 transcribed as a $3,700 joint total — $212.75 at 5.75% on every married
 return 2018-2023, the dominant GA cross-model wedge; a TAXSIM WASM probe

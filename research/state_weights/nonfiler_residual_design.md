@@ -1,8 +1,14 @@
 ---
-output:
-  word_document: default
-  html_document: default
+title: "Non-Filer Estimation — Residual-Methodology Redesign (Design Memo)"
+role: method
+workstream: state_weights
+status: current
+updated: 2026-08-19
+sot: research/state_weights/plan.md
+supersedes: []
+superseded_by: null
 ---
+
 # Non-Filer Estimation — Residual-Methodology Redesign (Design Memo)
 
 **Date:** 2026-08-16. Consolidated 2026-08-19 — amendments folded into the body,
@@ -29,11 +35,13 @@ evidence.
 blocked, see **`research/state_weights/plan.md`**, which is the single
 operational entry point for this workstream.
 
-**Prompted by:** the Affordability-Project income memo (`docs/Income.docx`,
-"Filing status", "Calibration A — the universe mismatch", and "Aligning the
-code" sections), which specifies a residual non-filer methodology and
-explicitly asks that its upgraded filing model replace the v0 rule the state
-weights currently rest on.
+**Prompted by:** the Affordability-Index income memo
+(`research/docx_sources/income_memo_affordability.docx`, "Filing status",
+"Calibration A — the universe mismatch", and "Aligning the code" sections), which
+specifies a residual non-filer methodology and explicitly asks that its upgraded
+filing model replace the v0 rule the state weights currently rest on. That file is
+a **copy taken into this repo as an input**, not the canonical document — the
+Affordability-Index repo owns it; this copy exists so the citation resolves.
 
 **Companions:** `research/state_weights/plan.md` (the plan),
 `research/state_weights/nonfiler_residual/04_findings.md` (Stage D evidence),

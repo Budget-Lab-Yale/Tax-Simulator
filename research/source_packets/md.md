@@ -1,8 +1,11 @@
 # Maryland State Source Packet
 
 State: `MD`
-Status: `baseline encoded (state-level); record-level worksheet tests complete`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-07-24`
+
+> **Status note (as of 2026-07-24), kept from the packet's former Status line:**
+> baseline encoded (state-level); record-level worksheet tests complete
 
 Full research notes: [research/raw/md_research_core.md](research/raw/md_research_core.md)
 (Resident Booklets 2017-2025 via the NBER mirror; TAXSIM facts probe-

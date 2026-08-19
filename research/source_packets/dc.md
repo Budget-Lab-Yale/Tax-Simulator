@@ -1,8 +1,11 @@
 # District of Columbia Source Packet
 
 State: `DC`
-Status: `ENCODED 2026-08-13 (baseline/dc/, tests DC-1..DC-10); cross-model TRIAGED 2026-08-15`
+Status: see `../state_tax/state_parameter_rollout.csv`
 Last updated: `2026-08-15`
+
+> **Status note (as of 2026-08-15), kept from the packet's former Status line:**
+> ENCODED 2026-08-13 (baseline/dc/, tests DC-1..DC-10); cross-model TRIAGED 2026-08-15
 
 > **Cross-model triage 2026-08-15 (closes the 2026-08-14 open items).** One
 > our-side fix and four attributed external/crosswalk classes:

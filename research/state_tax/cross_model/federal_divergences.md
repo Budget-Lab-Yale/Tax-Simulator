@@ -1,3 +1,14 @@
+---
+title: "Federal-side divergences (for separate review)"
+role: evidence
+workstream: state_tax
+status: current
+updated: 2026-08-19
+sot: research/state_tax/plan.md
+supersedes: []
+superseded_by: null
+---
+
 # Federal-side divergences (for separate review)
 
 **Policy (JI, 2026-07-18):** the state cross-model harness documents federal
