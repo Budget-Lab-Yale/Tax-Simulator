@@ -1,0 +1,35 @@
+---
+# Iowa filing requirement (Iowa Code 422.13(1)).
+#
+# The threshold is the low-income exemption threshold, and both are flat
+# statutory amounts that have not moved in nine years -- verified identical in
+# the 2017 and 2026 Code editions.
+
+filing_status_mapper:
+  req_income_thresh:
+    '1': req_single
+    '2': req_joint
+    '3': req_single
+    '4': req_joint
+
+req_type:
+  value: 2
+  reference: 'Iowa Code 422.13(1) keys the resident filing requirement to the 422.5 low-income exemption thresholds: fixed net-income amounts by filing status'
+req_single:
+  value: 9000
+  reference: 'Iowa Code 422.5(3) then 422.5(2): net income over $9,000 for single filers and, per the TY2025 instructions, married filing separately. Never indexed; printed as $9,000 in both the TY2021 and TY2025 Expanded Instructions'
+req_joint:
+  value: 13500
+  reference: 'Same sections: net income over $13,500 for married filing jointly, head of household and qualifying surviving spouse, and pre-2023 also married filing separately on a combined return'
+
+documented_not_modeled:
+  elderly_thresholds:
+    reference: 'A taxpayer 65 or older on December 31 files only above $24,000 (single) or $32,000 (joint, head of household, surviving spouse), and the joint amount applies even where only one spouse has reached 65. Only the under-65 column is carried, since the threshold governs the filer flag alone and any unit with positive liability is flagged regardless [flags some elderly units as filers who were not required to file]'
+  net_income_addbacks:
+    reference: 'The filing test is on net income with several add-backs: pre-2023 the pension exclusion, the reportable Social Security amount, lump-sum distributions taxed federally on Form 4972 and any NOL carryforward; from TY2023 Iowa taxable income plus the federal standard or itemized deduction, the federal personal exemption deduction, the QBI deduction, lump-sum distributions and the NOL carryover. The model applies the threshold to its ordinary income measure'
+  dependent_and_nonresident_thresholds:
+    reference: 'A person claimed as a dependent on another Iowa return files at $5,000 of net or taxable income, and a nonresident at $1,000 of Iowa-source net income. A dependent may not use the low-income exemption at all if the person claiming them exceeds the applicable threshold. The model runs residents and does not carry the dependent threshold'
+  file_regardless_cases:
+    reference: 'A filer subject to the Iowa lump-sum tax must file regardless of income, as must one subject to the Iowa AMT through TY2022. Neither is encoded'
+  combined_income_test:
+    reference: 'For married couples the incomes of BOTH spouses count toward the threshold "and it is immaterial whether they file a joint return or separate returns", so the test is at the couple level even under the pre-2023 combined return'

@@ -24,7 +24,7 @@ test_state_calc = function() {
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
                 'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV', 'NM',
                 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR', 'MA', 'NJ',
-                'AR', 'MS', 'MT', 'LA'),
+                'AR', 'MS', 'MT', 'LA', 'IA'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -80,10 +80,23 @@ test_state_calc = function() {
       }
     }
 
+    # Married-separate row for the split election (st_split.R). Supplied for
+    # every case, not just electing states, so the harness never silently
+    # exercises the election on joint-resolved parameters
+    law_mfs = law %>%
+      filter(state == st, year == yr, filing_status == 3) %>%
+      select(-state, -year, -filing_status)
+    if (length(law_overrides) > 0) {
+      for (p in names(law_overrides)) {
+        law_mfs[[p]] = law_overrides[[p]]
+      }
+    }
+
     result = unit %>%
       bind_cols(law_row) %>%
       do_state_taxes(
-        credit_tables = state_credit_tables_for_year(credit_tables, st, yr)
+        credit_tables = state_credit_tables_for_year(credit_tables, st, yr),
+        law_mfs       = law_mfs
       )
 
     nz = coverage_outputs[map_lgl(coverage_outputs,
@@ -3535,6 +3548,46 @@ test_state_calc = function() {
            expect = list(st_eitc = 300),
            label = 'MT-11b 2024 earned income credit at 10% of federal')
 
+  # MT-12a / MT-12b / MT-13: filing status 2a, married filing SEPARATELY ON
+  # THE SAME FORM, the first per-spouse election the module actually computes
+  # rather than documents. Because the pre-2024 ladder does not vary by filing
+  # status, running it twice is worth real money to a two-earner couple.
+  #
+  # MT-12a: 2023, wages of 60,000 and 40,000. Filing jointly, the 11,080
+  # deduction cap and 5,920 of exemptions leave 83,000 and a bill of 4,946.50.
+  # Split, each column takes the SINGLE cap of 5,540 -- 11,080 between them,
+  # the same total -- so taxable income is identical and the entire saving
+  # comes from running the ladder twice: 2,820.25 + 1,470.25 = 4,290.50
+  run_case('MT', 2023,
+           list(agi = 100000, filing_status = 2, age2 = 40, wages1 = 60000,
+                wages2 = 40000, ei1 = 60000, ei2 = 40000),
+           expect = list(st_txbl_inc = 83000, liab_st_iit = 4290.50),
+           label = 'MT-12a 2023 status 2a splits the status-invariant ladder')
+
+  # MT-12b: the case that needs the WHOLE pipeline rerun, not just the ladder.
+  # At 30,000 and 20,000 of wages the joint deduction is 20% of 50,000 =
+  # 10,000, with neither bound binding. Split, column one's 20% of 30,000
+  # exceeds the single cap so it takes 5,540, while column two's 20% of
+  # 20,000 is 4,000 -- so the columns share LESS deduction than the joint
+  # return (9,540 against 10,000) and taxable income RISES to 34,540. The
+  # split still wins on the ladder: 796.00 + 326.00 = 1,122.00 against
+  # 1,644.40. A schedule-only rerun would get the deductions wrong here
+  run_case('MT', 2023,
+           list(agi = 50000, filing_status = 2, age2 = 40, wages1 = 30000,
+                wages2 = 20000, ei1 = 30000, ei2 = 20000),
+           expect = list(st_txbl_inc = 34540, liab_st_iit = 1122.00),
+           label = 'MT-12b 2023 status 2a recomputes each spouse deduction')
+
+  # MT-13: the election is a better-of, so it must also DECLINE. A one-earner
+  # couple with the same 100,000 gains nothing by splitting -- the second
+  # column has no income to shelter, so its deduction and exemption are
+  # wasted and the pair would owe 5,520.25. The joint 4,946.50 stands
+  run_case('MT', 2023,
+           list(agi = 100000, filing_status = 2, age2 = 40, wages1 = 100000,
+                ei1 = 100000),
+           expect = list(st_txbl_inc = 83000, liab_st_iit = 4946.50),
+           label = 'MT-13 2023 a one-earner couple declines the election')
+
   #--------------------------------------------------------------------------
   # Louisiana (IT-540)
   #
@@ -3707,6 +3760,161 @@ test_state_calc = function() {
                 cdctc_nonref = 1200),
            expect = list(st_cdctc = 25),
            label = 'LA-11b 2024 the $25 backstop above 60,000')
+
+  #--------------------------------------------------------------------------
+  # Iowa (IA 1040)
+  #
+  # Three regimes and four bracket counts in nine years. Through TY2022 a
+  # nine-bracket ladder that DOES NOT VARY BY FILING STATUS, a small indexed
+  # standard deduction, and a full uncapped federal income tax deduction that
+  # -- unlike every other federal-deduction state in this set -- reached
+  # STANDARD-deduction filers too. What Iowa gave married couples instead of a
+  # joint schedule was a combined return: two columns of one form, each
+  # running the same ladder against one spouse's income. From TY2023 the base
+  # is federal taxable income, the Iowa deduction and the combined return are
+  # gone, and the ladder collapses to four brackets, then three, then a flat
+  # 3.8%. Exemptions are CREDITS throughout, and the alternate tax caps the
+  # bill for every status except single.
+  #--------------------------------------------------------------------------
+
+  # IA-1: the pre-2023 baseline. 2022 single, wages 60,000, standard
+  # deduction 2,210, so taxable income is 57,790. The ladder charges
+  # 2,654.24 through the top of the seventh band (52,290) and 7.44% on the
+  # 5,500 above it, then the $40 personal credit comes off tax
+  run_case('IA', 2022,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000),
+           expect = list(st_agi = 60000, st_ded = 2210, st_txbl_inc = 57790,
+                         st_exempt_credit = 40, liab_st_iit = 3023.44),
+           label = 'IA-1 2022 single, nine-bracket ladder')
+
+  # IA-2: the federal income tax deduction, uncapped, and reaching a filer
+  # who takes the STANDARD deduction -- the feature that separates Iowa from
+  # Missouri, Alabama, Oregon and Montana, where it is available only to
+  # itemizers or capped or both. The same unit with 6,000 of federal tax
+  # deducts 2,210 plus 6,000, so taxable income is 51,790
+  run_case('IA', 2022,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, liab_bc = 6000),
+           expect = list(st_fed_tax_ded = 6000, st_ded = 8210,
+                         st_txbl_inc = 51790, liab_st_iit = 2582.99),
+           label = 'IA-2 2022 uncapped federal tax deduction for a std-deduction filer')
+
+  # IA-3: the combined return, and why a two-earner Iowa couple always used
+  # it. 2022 joint, 60,000 and 40,000 of wages. Filing jointly runs the whole
+  # 94,550 up one status-invariant ladder for 5,974.04; splitting into two
+  # columns with a 2,210 deduction each gives 3,063.44 plus 1,747.99 =
+  # 4,811.43, a saving of 1,162.61. Two $40 credits then come off
+  run_case('IA', 2022,
+           list(agi = 100000, filing_status = 2, age2 = 40, wages1 = 60000,
+                wages2 = 40000, ei1 = 60000, ei2 = 40000),
+           expect = list(st_txbl_inc = 94550, st_exempt_credit = 80,
+                         liab_st_iit = 4731.43),
+           label = 'IA-3 2022 combined return beats joint filing')
+
+  # IA-4: the TY2023 regime. The base is federal TAXABLE income, so the
+  # federal standard deduction is embedded and Iowa allows nothing further;
+  # the ladder is four brackets. Single with 100,000 of AGI and 13,850 of
+  # federal standard deduction: 86,150 of Iowa taxable income, 3,985.80
+  # through the 75,000 boundary plus 6% on the rest
+  run_case('IA', 2023,
+           list(agi = 100000, txbl_inc = 86150, wages1 = 100000,
+                ei1 = 100000, std_ded = 13850),
+           expect = list(st_agi = 86150, st_ded = 0, st_txbl_inc = 86150,
+                         liab_st_iit = 4614.80),
+           label = 'IA-4 2023 federal taxable income base, four brackets')
+
+  # IA-5: the flat rate. SF 2442 replaced the ladder with 3.8% for TY2025 and
+  # repealed bracket indexation outright
+  run_case('IA', 2025,
+           list(agi = 100000, txbl_inc = 85000, wages1 = 100000,
+                ei1 = 100000, std_ded = 15000),
+           expect = list(st_txbl_inc = 85000, liab_st_iit = 3190.00),
+           label = 'IA-5 2025 flat 3.8%')
+
+  # IA-6: the ALTERNATE TAX binding. It caps tax at the top marginal rate
+  # times income above 13,500, which helps a couple just above that line
+  # because the ordinary schedule's average rate there is far below the top
+  # one. 2022 joint with 16,000 of wages: the regular tax on 10,550 is
+  # 243.99, the ceiling is 8.53% x 2,500 = 213.25, so 30.74 of relief comes
+  # off before the two 40 credits
+  run_case('IA', 2022,
+           list(agi = 16000, filing_status = 2, age2 = 40, wages1 = 16000,
+                ei1 = 16000),
+           expect = list(st_txbl_inc = 10550, st_lic = 30.7442,
+                         liab_st_iit = 133.25),
+           label = 'IA-6 2022 alternate tax caps a joint filer near the threshold')
+
+  # IA-7: single filers may NOT use the alternate tax, and the encoding gets
+  # there without a gate. With the single threshold left at zero the ceiling
+  # becomes the alternate rate times all of income, and since that rate is
+  # Iowa's own top marginal rate the ceiling always clears the tax. The same
+  # 16,000 of wages filed single owes the full schedule amount
+  run_case('IA', 2022,
+           list(agi = 16000, wages1 = 16000, ei1 = 16000),
+           expect = list(st_txbl_inc = 13790, st_lic = 0,
+                         liab_st_iit = 338.13),
+           label = 'IA-7 2022 the alternate tax self-nullifies for single filers')
+
+  # IA-8 / IA-9: retirement, where HF 2317 simply removed the cap. The age
+  # test is 55, not 65. A single filer aged 60 with 20,000 of wages and
+  # 30,000 of pension excludes 6,000 in TY2022, leaving an Iowa base of
+  # 44,000.
+  run_case('IA', 2022,
+           list(agi = 50000, age1 = 60, wages1 = 20000, ei1 = 20000,
+                txbl_pens_dist = 30000),
+           expect = list(st_agi = 44000, st_txbl_inc = 41790,
+                         liab_st_iit = 1957.99),
+           label = 'IA-8 2022 retirement exclusion capped at 6,000')
+
+  # In TY2023 the same filer excludes the whole 30,000, and does so from a
+  # base that is already federal taxable income -- so an Iowa base of 6,150
+  # against 36,150 of federal taxable income
+  run_case('IA', 2023,
+           list(agi = 50000, txbl_inc = 36150, age1 = 60, wages1 = 20000,
+                ei1 = 20000, txbl_pens_dist = 30000, std_ded = 13850),
+           expect = list(st_agi = 6150, st_txbl_inc = 6150,
+                         liab_st_iit = 231.23),
+           label = 'IA-9 2023 retirement income exempt without limit')
+
+  # IA-10: the exemption credits, where head of household gets the DOUBLED
+  # $80 personal amount, the same as a married couple. 2022 head of household
+  # with two dependants: 80 plus 2 x 40 = 160 of credit, and the joint
+  # standard deduction of 5,450
+  run_case('IA', 2022,
+           list(agi = 50000, filing_status = 4, wages1 = 50000, ei1 = 50000,
+                n_dep = 2, dep_age1 = 8, dep_age2 = 12),
+           expect = list(st_ded = 5450, st_txbl_inc = 44550,
+                         st_exempt_credit = 160, liab_st_iit = 2010.49),
+           label = 'IA-10 2022 head of household takes the doubled credit')
+
+  # IA-11: the earned income credit, 15% of the federal credit and fully
+  # refundable -- unchanged in every year 2017 through 2026, one of the
+  # steadiest parameters in the fifty-state set
+  run_case('IA', 2022,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, eitc = 3000),
+           expect = list(st_eitc = 450),
+           label = 'IA-11 2022 earned income credit at 15% of federal')
+
+  # IA-12: the child and dependent care credit, refundable, at 50% of the
+  # federal credit for a filer in the 25,000-34,999 band
+  run_case('IA', 2022,
+           list(agi = 30000, wages1 = 30000, ei1 = 30000, n_dep = 1,
+                dep_age1 = 5, care_exp = 3000, cdctc_nonref = 600),
+           expect = list(st_cdctc = 300),
+           label = 'IA-12 2022 care credit at 50% of federal')
+
+  # IA-13a / IA-13b: the top tier of that credit was extended from a 45,000
+  # cutoff to 90,000 by 2021 Acts ch 177, retroactively to TY2021. The same
+  # filer at 50,000 of income gets nothing in TY2020 and 30% of the federal
+  # credit from TY2021
+  cdc_unit = list(agi = 50000, wages1 = 50000, ei1 = 50000, n_dep = 1,
+                  dep_age1 = 5, care_exp = 3000, cdctc_nonref = 600)
+  run_case('IA', 2020, cdc_unit,
+           expect = list(st_cdctc = 0),
+           label = 'IA-13a 2020 care credit cut off above 45,000')
+
+  run_case('IA', 2021, cdc_unit,
+           expect = list(st_cdctc = 180),
+           label = 'IA-13b 2021 the cutoff moves to 90,000')
 
   #--------------------------------------------------------------------------
   # New Jersey (NJ-1040)
@@ -4775,7 +4983,7 @@ test_state_calc = function() {
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
                    'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI',
                    'WV', 'NM', 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR',
-                   'MA', 'NJ', 'AR', 'MS', 'MT', 'LA')
+                   'MA', 'NJ', 'AR', 'MS', 'MT', 'LA', 'IA')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()
@@ -4785,7 +4993,9 @@ test_state_calc = function() {
         select(-state, -year)
       out = grid %>%
         left_join(law_slice, by = 'filing_status') %>%
-        do_state_taxes()
+        do_state_taxes(law_mfs = law_slice %>%
+                                   filter(filing_status == 3) %>%
+                                   select(-filing_status))
       stopifnot(
         'smoke: NA liability'  = !anyNA(out$liab_st_iit),
         'smoke: infinite liab' = all(is.finite(out$liab_st_iit)),
@@ -4926,7 +5136,9 @@ test_state_calc = function() {
                     filter(state == st) %>%
                     select(-state, -year),
                   by = 'filing_status') %>%
-        do_state_taxes()
+        do_state_taxes(law_mfs = law_sub %>%
+                                   filter(state == st, filing_status == 3) %>%
+                                   select(-state, -year, -filing_status))
       stopifnot('subset-states: NA liability' = !anyNA(out$liab_st_iit))
     }
   }
@@ -4950,7 +5162,10 @@ test_state_calc = function() {
                     filter(state == st, year == yr) %>%
                     select(-state, -year),
                   by = 'filing_status') %>%
-        do_state_taxes()
+        do_state_taxes(law_mfs = law_zero %>%
+                                   filter(state == st, year == yr,
+                                          filing_status == 3) %>%
+                                   select(-state, -year, -filing_status))
       stopifnot(
         'no-broad-IIT stub: nonzero liability' = all(out$liab_st_iit == 0),
         'no-broad-IIT stub: state filer flagged' = !any(out$st_filer)

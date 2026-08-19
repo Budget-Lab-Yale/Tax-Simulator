@@ -334,7 +334,11 @@ get_state_totals = function(tax_units_calc, state_tax_law, state_weights, yr,
                     select(-state),
                   by = c('year', 'filing_status')) %>%
         do_state_taxes(
-          credit_tables = state_credit_tables_for_year(credit_tables, st, yr)
+          credit_tables = state_credit_tables_for_year(credit_tables, st, yr),
+          # Married-separate law row, for states offering the split election
+          law_mfs = law_yr %>%
+                      filter(state == st, filing_status == 3) %>%
+                      select(-state, -year, -filing_status)
         ) %>%
         mutate(id = state_tax_context$id) %>%
         left_join(state_weights %>%

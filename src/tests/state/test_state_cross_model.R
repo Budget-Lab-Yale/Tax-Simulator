@@ -24,7 +24,7 @@
 cross_model_states = function() {
   list(
     broad  = c('AR', 'AZ', 'CA', 'CO', 'CT', 'DC', 'DE', 'GA', 'HI', 'ID', 'IL', 'IN',
-               'KS', 'KY', 'LA', 'MA', 'MD', 'ME', 'MI', 'MN', 'MO', 'MS', 'MT', 'NC', 'ND', 'NE',
+               'IA', 'KS', 'KY', 'LA', 'MA', 'MD', 'ME', 'MI', 'MN', 'MO', 'MS', 'MT', 'NC', 'ND', 'NE',
                'NM',
                'NJ', 'NY', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'UT', 'VA', 'VT',
                'WI',
@@ -199,7 +199,11 @@ cross_model_our_leg = function(sampled, states, year, state_law,
     sampled %>%
       left_join(law_slice, by = 'filing_status') %>%
       do_state_taxes(
-        credit_tables = state_credit_tables_for_year(credit_tables, st, year)
+        credit_tables = state_credit_tables_for_year(credit_tables, st, year),
+        # Married-separate law row, for states offering the split election
+        law_mfs = law_slice %>%
+                    filter(filing_status == 3) %>%
+                    select(-filing_status)
       ) %>%
       bind_cols(sampled %>% select(id), .) %>%
       mutate(state = st, year = .env$year, .after = id) %>%

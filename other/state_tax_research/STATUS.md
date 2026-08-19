@@ -1,9 +1,128 @@
 # State income tax workstream — status
 
-**As of 2026-08-18** (branch `state-tax`). Current counts: **48 jurisdictions
-encoded** (36 broad-IIT + NH/TN narrow + WA excise + 6 zero-tax stubs), **45
-enabled** for `states=all` (CA/SC/VA conformity-gated); **3 jurisdictions not
-started -- IA, LA and MT, the multi-regime batch.**
+**As of 2026-08-19** (branch `state-tax`). Current counts: **ALL 51
+jurisdictions encoded** (39 broad-IIT + NH/TN narrow + WA excise + 6 zero-tax
+stubs + DC), **48 enabled** for `states=all` (CA/SC/VA conformity-gated, not
+encoding-gated). **Encoding coverage is complete. Nothing is unstarted.**
+
+**The R6 multi-regime batch is COMPLETE: MT, LA and IA encoded 2026-08-19**,
+closing the encoding programme. All three are two- or three-regime states,
+and each turned on one structural reading that a plain transcription would
+have got wrong.
+
+MONTANA pivots on SB 399 (2021), effective TY2024, and almost nothing
+survives. Its pre-2024 bracket bounds DO NOT VARY BY FILING STATUS, which is
+what made filing status 2a (separate on the same form) near-universally
+better for two-earner couples. Its federal income tax deduction lived INSIDE
+the itemized schedule (`st_ded.fed_tax_ded_in_itemized`), so a
+standard-deduction taker forwent it entirely and the state election cannot be
+inherited from the federal one. Two provisions were enacted and repealed
+before ever applying: SB 399's 6.5% top rate (cut to 5.9% by SB 121) and its
+30% LTCG subtraction (replaced by HB 221's 3.0%/4.1% preferential schedule,
+`st_ord.kg_pref_*`). Head of household is grouped with SINGLE for the
+$5,000 federal-tax cap and with JOINT for the doubled standard-deduction
+bounds -- the two groupings run in opposite directions.
+
+LOUISIANA's dominant feature is where the exemption comes off. R.S.
+47:32(A)(1)/294/295(B) relieve it at the LOWEST brackets with the bracket
+bounds anchored to UNREDUCED income, so `tax = sched(TTI) - sched(E)`, not
+`sched(TTI - E)` (`st_ord.exempt_from_bottom`). All 43,008 cells of the
+published TY2017-TY2024 tables reproduce exactly under the first form and not
+the second; a TY2021 single filer with one exemption and $27,625 of tax table
+income owes $765 where the naive form gives $675. **The biggest correction to
+the secondary literature on Louisiana: Act 395 did NOT repeal the excess
+federal itemized deduction. It narrowed it to medical and dental only, and
+that version is still on the TY2025 return** (`st_ded.item_less_fed_std`).
+Head of household is a hybrid -- joint exemption base, single brackets -- and
+from TY2025 Louisiana has NO dependant allowance of any kind.
+
+IOWA has three regimes and four bracket counts in nine years. Two features
+are unique in the set: its federal income tax deduction reached
+STANDARD-deduction filers and was uncapped, where MO/AL/OR/MT all cap it or
+confine it to itemizers or both; and because its pre-2023 nine-bracket ladder
+is status-invariant, it gave married couples a two-column COMBINED RETURN
+instead of a joint schedule, worth $1,162.61 on a 60k/40k couple in TY2022.
+That election reuses the KY/DE `combined_sep` machinery plus one new
+parameter for the per-column standard deduction, which is NOT a clean
+fraction of the joint one. Its ALTERNATE TAX is a ceiling on tax, so it drops
+straight into the MA no-tax-status formula -- and the single-filer exclusion
+falls out of the arithmetic rather than needing a gate, because a zero single
+threshold makes the ceiling the alternate rate times all of income and that
+rate is at or above Iowa's top marginal rate in every year. Note an ERRATUM
+in a primary source: IDR's own 2023 Statistical Report Table 1 prints the
+third TY2023 bracket as "$31,050", which is the TY2024 figure -- the
+statute, the report's own Figure 1 and the press release all say $30,000.
+
+**The MARRIED-SEPARATE ELECTION PASS IS BUILT (2026-08-19), and MONTANA is
+its first consumer.** `src/calc/state/st_split.R` reruns the WHOLE state
+pipeline on each spouse's half-unit and gives the couple whichever total is
+lower, gated on the new `st_ord.split_election`. This is what the four
+blocked states needed and what `st_ord.combined_sep` (KY/DE/IA) could not
+give them: combined_sep reruns the RATE SCHEDULE only, which suffices where
+the sole per-spouse quantity is the standard deduction, but not where a state
+computes the deduction, exemption or federal-tax deduction on each spouse's
+OWN income -- MT's percentage-of-own-AGI standard deduction and its pension
+phase-out on own federal AGI, AL's deduction slide and dependent tiers on own
+AL AGI. The stage sequence was factored out of `do_state_taxes()` into
+`st_pipeline()` so it can be called three times.
+
+**One design trap, found by a numeric test and worth recording because it
+would have shipped silently.** The `filing_status_mapper` is resolved when
+the law is JOINED to the unit (`by = c('year', 'filing_status')`), before the
+calculator runs. So a half-unit built by relabelling `filing_status = 3`
+still carries every mapped parameter at its JOINT value -- MT-12a came back
+with taxable income 75,000 against 83,000, a gap of exactly 8,000, which is
+each column claiming the joint standard-deduction cap of 11,080 plus 8,000
+instead of the single 5,540 twice. Every electing couple would have taken two
+joint-size deductions. The fix threads a `law_mfs` argument -- one row of the
+state-year law resolved at filing status 3 -- through `do_state_taxes()` to
+the split, which swaps the law columns wholesale and then RE-BACKFILLS via
+`ensure_st_params()`, because law_mfs is the raw row and its unencoded
+parameters are NA (that second bug threw an explicit "missing value where
+TRUE/FALSE needed" out of a feature gate rather than going quiet). It fails
+LOUDLY if an electing state is calculated without law_mfs, and all seven call
+sites now pass it: the production path in `summary_stats.R`, the cross-model
+harness, and five in the test file.
+
+Split convention follows the VA spouse-tax-adjustment / KY precedent -- own
+wages plus half of jointly-held amounts -- but applied at the INPUT level
+rather than to state AGI, which is the point: each column's own means tests
+have to see that spouse's own income. Federal AGI and taxable income are
+rebuilt wage-anchored rather than halved, since halving hands half of one
+spouse's earnings to the other. Dollar outputs come from the winning basis;
+logical and INTEGER outputs stay joint-basis (the selection is on
+`is.double()`, not `is.numeric()`, so the 0/1 flags
+`st_age_package_taken`/`_forgone` are not summed into a meaningless 2). The
+extra passes run on the electing-married ROW SUBSET, not the frame, because a
+mixed law slice carries every state at once.
+
+MT tests 12a/12b/13: at 60k/40k in TY2023 splitting saves $656.00 with
+taxable income unchanged (all of it from running the status-invariant ladder
+twice); at 30k/20k it saves $522.40 and taxable income RISES to 34,540
+because each column recomputes its own percentage deduction -- the case a
+schedule-only rerun gets wrong; and a one-earner couple correctly DECLINES,
+since the second column's deduction and exemption would be wasted. Full
+suite green, all 45 broad states.
+
+**Still to wire: AL separate returns, AR filing status 4, MS combined
+returns.** Each needs its own `split_election: 1` plus a worksheet case; AR
+additionally prorates pooled itemized deductions by AGI share where the
+generic pass halves them, so it needs that as a per-state option. **A SECOND,
+DIFFERENT mechanism remains unbuilt**: an ALTERNATIVE COMPUTATION replacing
+the schedule rather than splitting the unit, which is what AR's five Low
+Income Tax Tables (used instead of the schedule AND instead of any deduction)
+and the WI Act 15 retirement election need. Do not conflate the two.
+
+**Two known differences are large enough to name here.** The IOWA AMT
+(6.7%/6.4% through TY2022, not an election) is unencoded because it needs an
+Iowa AMTI base built from federal AMTI plus nonconformity adjustments, and
+the model has no plumbing for it -- pre-2023 tax is understated for
+high-income filers with large preference items. And LOUISIANA's Schedule E
+codes 02E-05E exempt 100% of LASERS, Teachers' Retirement, federal
+retirement and a long list of other named systems; in a state where public
+employment is a large share of the retiree population that is the single
+largest Louisiana gap, and none of the systems is separable from pension
+income.
 
 **The R6 own-base batch is COMPLETE: MA, NJ, AR and MS encoded 2026-08-18**,
 following MO/AL/OR the same day. (The Mississippi commit message says 47/44;
