@@ -300,8 +300,10 @@ Effort estimates follow the memo's own where it gives them.
       from the T1.6-vs-HT2 disagreement; +/-0.5% PEP vintage from the
       SSA-published vs our-vintage population spread) through the amplification,
       in quadrature:
-      - **National: +/-3.5% (+/-1.68M)** on a 46.5M residual.
-      - **State: +/-2.2% (MS) to +/-6.3% (SD)** — a flat tolerance is wrong by
+      - **National: +/-3.5%** — +/-1.68M on 2022's 46.5M residual, +/-1.63M on
+        2017's 47.3M.
+      - **State: +/-2.2% (MS) to +/-6.3% (SD)** in 2022, +/-2.2% (DC) to
+        +/-6.7% (SD) in 2017 — a flat tolerance is wrong by
         ~2.6x across states, and it is **inverted from intuition**: the states
         with the *smallest* non-filer share need the *widest* tolerance. Those
         states (SD, MN, NH, UT, NE, WY) are also where EEDATA's 1% sampling error
@@ -313,8 +315,13 @@ Effort estimates follow the memo's own where it gives them.
         only its estimation error belongs here. EEDATA sampling error touches the
         covered-worker margin only; the ~17% ASEC understatement touches the
         filing model, not the anchor.
-      - **Remaining:** emit as `residual_tolerance_{year}.csv` from A1 so the fit
-        reads the tolerance rather than re-deriving it.
+      - **CLOSED 2026-08-19 (with A1).** `residual_tolerance_{year}.csv` is
+        emitted per year and the fit reads it rather than re-deriving it. The
+        script had been reading `T5_state_margins.csv` — the v0-vs-anchor
+        diagnostic, which exists for 2022 only — through a **silent fallback**,
+        so the 2017 file carried 2022's tolerances under a 2017 name. It now
+        reads `residual_anchors_{year}.csv` and **stops** if the year is
+        missing, which is what surfaced the substitution in the first place.
 
 ### A — Close out the SSA inputs and research pass A (~1 week + 3–5 days, parallel)
 
@@ -325,18 +332,29 @@ Effort estimates follow the memo's own where it gives them.
       the workbooks: 59 areas × 11 measures × 2 years), both families registered,
       `NOTES.md` written and placed, Chrome confirmed absent from the cluster,
       three bugs fixed in `01_fetch_residual_inputs.R`.
-- [ ] **A1. Write the two SSA readers** and replace the
-      `ssa_covered_persons = NA_real_` stub at
-      `02_build_residual_anchors.R:197`. Follow the `read_pub1304_t16()` pattern.
-      Requirements from `NOTES.md`, all of which are easy to get wrong:
-      **sum the 51 jurisdictions, never `All areas`**; read the flat series and
-      **assert against the workbook** so the agreement stays enforced; handle the
-      missing **2010** and the pre-2007 `Virgin Islands` label; for EEDATA read
-      **Table 4 (HI), not Table 1 (OASDI)** per P4, taking
-      **`Number → Wage and salary`**, not `Total` (`Total` ≠ wage + SE — a worker
-      with both is in both components); and pull the **state × age** margin from
-      **Table 5**, which the design did not know existed. Stamp the universe tag
-      `covered_worker_hi` on the output.
+- [x] **A1. The two SSA readers — DONE 2026-08-19.**
+      `read_ssa_oasdi_65p()` and `read_ssa_eedata_hi()` in
+      `src/data/state_weights.R`; the `ssa_covered_persons = NA_real_` stub is
+      gone. Every requirement is **encoded as an assertion, not a comment**: the
+      51-jurisdiction sum (never `All areas`); the flat series checked against
+      the same year's workbook (51 states x the 65+ measures, exact, both years);
+      a named error for the missing **2010** and normalization of the pre-2007
+      `Virgin Islands` label; EEDATA **Table 4 (HI)** `Number → Wage and salary`
+      for the level and **Table 5** for state x age; published column layouts
+      asserted **by name**, so an edition that moves a column fails loudly
+      instead of silently misreading; universe tags `covered_worker_hi` /
+      `beneficiary` stamped on every output.
+      `02_build_residual_anchors.R` re-run clean on both anchor years: the wage
+      margin gains covered persons and dollars, the state anchors gain the 65+
+      beneficiary count and its PEP coverage ratio, and
+      `ssa_age_margin_{year}.csv` is new.
+      **Two findings** (`04_findings.md` F8-F9): the returns-per-covered-person
+      wedge lands at **0.760/0.743**, confirming the memo's ~75% ±9pp, and HT2
+      wages are 93.5%/90.6% of SSA HI wages against 94.1%/91.7% of QCEW — the
+      two frames agree to ~1pp. And **Table 5's age detail is on the TOTAL
+      covered universe, not wage-and-salary** (its all-ages column is exactly
+      Table 4's `Number Total`), a universe switch between the two sheets that
+      the design had not noted; memo §5 amended.
 - [ ] **A2. Research pass A — ASEC tax-unit and income construction** (§8, ~3–5
       days). **The longest-lead item on the plan, and the gate on phase C.**
       Survey PolicyEngine's Enhanced CPS, Census SPM units, TAXSIM's CPS

@@ -1,8 +1,9 @@
 # Stage D Findings — Residual Non-Filer Diagnostics
 
 **Date:** 2026-08-16 (provenance note added 2026-08-18)
-**Status:** Stage D executed (design memo §4), with two inputs still blocked
-(§5 below). All numbers below are reproducible from the scripts in this
+**Status:** Stage D executed (design memo §4). The SSA inputs that were
+blocked are placed, documented and read (§5.1); F8-F9 are the first findings
+off them. All numbers below are reproducible from the scripts in this
 directory; result CSVs in `results/`.
 
 > **Vintage provenance — RESOLVED 2026-08-19. F1-F4 stand.** These tables were
@@ -42,17 +43,24 @@ job 22410622; `--tables` login node).
   2010-2020 + vintage-2024 state × single-year-age × sex files),
   `raw_data/BLS-QCEW` (state total covered employment/wages, 2017 and 2022,
   from the CEW API). `raw_data/SSA-OASDI-SC` and `raw_data/SSA-EEDATA-SC`
-  are created but **empty**: ssa.gov 403-blocks the cluster egress IP
-  (verified with browser user-agents) — each carries a
-  README_MANUAL_DOWNLOAD.md; re-running script 01 after placing files
-  registers them.
+  were created empty (ssa.gov 403-blocks the cluster egress IP on TLS
+  fingerprint) and were **filled by hand on 2026-08-19**: OASDI 2017-2025
+  plus the 1999-2025 flat series, EEDATA 2017-2023, each with a `NOTES.md`.
 - **`ht2_filing_persons()`** promoted out of `compare_individuals_acs_irs()`
   in `src/data/state_weights.R` (one definition per computation);
   `ht2_path()` repointed IRS-GEO → IRS-Ind; `build_acs_margins()` now also
   returns v0 filer units by state (diagnostic need).
 - **Residual anchors** for TY2017 and TY2022
-  (`results/{national_anchor,residual_anchors,nonfiler_wage_margin}_{year}.csv`):
+  (`results/{national_anchor,residual_anchors,nonfiler_wage_margin,ssa_age_margin}_{year}.csv`):
   national by Pub 1304 T1.6 age bands, state totals by the HT2 identities.
+- **`read_ssa_oasdi_65p()` and `read_ssa_eedata_hi()`** in
+  `src/data/state_weights.R` (task A1, 2026-08-19). The OASDI reader takes the
+  flat series as source of record and **asserts it against the same year's
+  workbook**, so the documented agreement stays enforced; the EEDATA reader
+  takes HI Table 4 for persons and dollars and Table 5 for state × age, and
+  asserts the published column layout by name rather than by position. Both
+  sum the 51 jurisdictions and stamp a universe tag (`beneficiary`,
+  `covered_worker_hi`).
 - **Pub 5785 transcribed** (`resources/`): Table 1 (potential non-filers,
   person level) and Table 3 (above-threshold not-filer units) — the hazard's
   level anchor and the receipt-rate discipline.
@@ -132,6 +140,33 @@ married, and ~45% with net business/farm income — the self-employment
 signature that motivates an SE dimension in the eventual hazard (D3
 stays: national scalar for v1, SE-aware cells as the upgrade path).
 
+**F8 — The SSA covered-worker margin lands where the design predicted, and
+the two wage frames now agree (A1, 2026-08-19).** HT2 returns-with-wages per
+SSA HI-covered wage-and-salary person is **0.760 (2017) / 0.743 (2022)**
+nationally, state range **0.637-0.816** — the memo's "~75% ±9pp" returns-vs-
+persons wedge, confirmed rather than assumed. On dollars, HT2 wages are
+**93.5% / 90.6%** of SSA HI taxable wage-and-salary earnings and **94.1% /
+91.7%** of QCEW total wages: the two independent covered-wage frames put the
+same number on HT2's shortfall to within 0.6-1.1pp of each other, which is
+what makes either usable as the aggregate wage constraint of §5.4.1.
+
+**F9 — Table 5's age detail is published on the TOTAL covered universe, not
+on wage-and-salary (A1).** Its `Total, all ages` column equals Table 4's
+`Number Total` for every state in both years — an exact identity, now asserted
+in the reader — so the state × age counts include the self-employed, who are
+**not** in the Table 4 wage-and-salary margin. The design memo §5 reads Table 5
+as supplying "a residence-based, age-bounded 20-64 count per state"; that count
+is on the wider universe, and the two must not be differenced. It is a shape,
+not a level, so this does not weaken the layer — but a reader who assumed one
+universe across the two sheets would be off by the ~20M self-employed.
+
+The OASDI 65+ margin is **not**, on its own, a strong predictor of state
+residual variation: `cor(residual share, 65+ beneficiaries / PEP 65+)` is
+**−0.31 (2017)** and **−0.11 (2022)**. The extremes are suggestive — DC has
+both the lowest coverage (0.73/0.75) and the highest residual share, SD the
+highest coverage (0.97) and the lowest — but the middle of the distribution is
+noise. Use it as the 65+ age layer it is, not as a state-level residual signal.
+
 ## 4. Decision points (design memo §4.4), resolved where the evidence is in
 
 | # | Decision | Status |
@@ -165,10 +200,14 @@ stays: national scalar for v1, SE-aware cells as the upgrade path).
    - **EEDATA is a 1% sample** (Continuous Work History Sample), unlike
      OASDI-SC's 100% data — small-state margins carry real sampling error and
      must not become hard constraints.
-   Still to do (task A1 in `../../nonfiler_state_weights_todo.md`): write the two readers,
-   replace the `ssa_covered_persons = NA_real_` stub at
-   `02_build_residual_anchors.R:197`, and re-run 01 → 02 → 03 so D6 moves from
-   partially resolved to resolved.
+   **The readers are written (A1, 2026-08-19)** and all three points above are
+   encoded in them, not merely documented: `read_ssa_oasdi_65p()` and
+   `read_ssa_eedata_hi()` in `src/data/state_weights.R`. The
+   `ssa_covered_persons = NA_real_` stub is gone; `02_build_residual_anchors.R`
+   now carries the covered-worker persons and dollars on the wage margin, the
+   65+ beneficiary count and its PEP coverage ratio on the state anchors, and
+   writes `ssa_age_margin_{year}.csv`. **Remaining (A6): re-run 01 → 03** so D6
+   moves from partially resolved to resolved.
 2. **Cilke (1998) coefficient transcription** (`resources/cilke_coefs.csv`)
    — needed for v1b implementation, not for these diagnostics.
    **Superseded 2026-08-18 by `05_filing_model_literature.md`:** the currency check

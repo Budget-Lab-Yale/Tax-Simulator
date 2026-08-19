@@ -280,6 +280,15 @@ For each HT2 year (2014, 2016-2022; 2017 and 2022 first):
    the age bound and the geography are both observed. The upgraded ACS non-filer age
    shape smooths within it.
 
+   **And note the universe switch between the two sheets** (measured 2026-08-19,
+   task A1): Table 5's age detail is published on the **total** covered universe,
+   not on wage-and-salary. Its `Total, all ages` column equals Table 4's `Number
+   Total` exactly, for every state in both anchor years — so the state x age counts
+   include the ~20M self-employed that Table 4's wage-and-salary margin excludes.
+   The age layer is a shape, so this does not weaken it; but the two sheets must
+   never be differenced, and the reader asserts the identity so the distinction
+   cannot be lost silently.
+
    **⚠ Sum the 51 jurisdictions, never the published `All areas` row.** Both SSA
    publications carry `All areas`, which includes beneficiaries and workers in the
    **territories and abroad** — neither of which is in the residual's universe.
