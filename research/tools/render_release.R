@@ -64,9 +64,10 @@ git_out <- function(...) {
 sha      <- git_out('rev-parse', '--short', 'HEAD')
 branch   <- git_out('rev-parse', '--abbrev-ref', 'HEAD')
 # Sources only: releases/ is this script's own output, so including it would make
-# every render report a dirty tree.
-dirty <- length(git_out('status', '--porcelain', '--',
-                        'research', ':(exclude)research/releases')) > 0
+# every render report a dirty tree. Test with any(nzchar()), not length(): git_out
+# returns '' rather than character(0) when a command prints nothing.
+dirty <- any(nzchar(git_out('status', '--porcelain', '--',
+                           'research', ':(exclude)research/releases')))
 
 front_matter_field <- function(path, field) {
   ln <- readLines(path, warn = FALSE, n = 40)
