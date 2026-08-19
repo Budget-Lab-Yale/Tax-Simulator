@@ -73,3 +73,21 @@ mis-assigns coefficients.
   Note the house convention is that PDFs consolidate in the `references` repo.
   This copy is here deliberately, as provenance for the transcription that has
   not happened yet; move or de-duplicate it if `references` takes it on.
+
+## Staged data awaiting placement in the shared store
+
+**`ssa_flatseries/oasdi_sc_flatseries_table2_beneficiaries.json`** (1,520 rows)
+and **`..._table1_population_shares.json`** (1,404 rows) — the OASDI-SC
+*flattened time series*, 1999-12 through 2025-12, retrieved 2026-08-19. Table 2
+carries `persons_oasdi_65_older_men` / `_women`, which summed **are the D6 age
+margin**; Table 1 carries state population with the share receiving benefits.
+
+These are raw data and **belong in the shared store, not in git** — they are
+staged here only because ssa.gov cannot be reached from the cluster (its block is
+on TLS fingerprint, so curl, .NET and hosted fetchers all get 403; only a real
+browser engine works). Committing them is the transfer mechanism. **Move them to
+`raw_data/SSA-OASDI-SC/` and re-run `01_fetch_residual_inputs.R` to register
+them, then delete this directory** — see `../07_ssa_inputs_plan.md` task 2.
+
+Verified against the per-year workbooks: both sources give 65+ beneficiaries of
+45,808,776 (2017) and 52,052,807 (2022).
