@@ -338,19 +338,25 @@ Effort estimates follow the memo's own where it gives them.
       **Table 5**, which the design did not know existed. Stamp the universe tag
       `covered_worker_hi` on the output.
 - [ ] **A2. Research pass A — ASEC tax-unit and income construction** (§8, ~3–5
-      days). Survey PolicyEngine's Enhanced CPS, Census SPM units, TAXSIM's CPS
-      conventions, Urban/TPC. **Start from the existing store**: `CPS-ASEC/`
-      already carries `FILESTAT` (IPUMS's own filer recode), `DEPSTAT`,
-      `ADJGINC` and `FAMUNIT` — establish what that recode does before building
-      a unit builder that may duplicate it. Deliverable: a design note in
-      `nonfiler_residual/`.
-- [ ] **A3. Extend the shared CPS-ASEC extract request** with the Mok covariates
-      the current 21-variable extract lacks — income-component presence
-      indicators (wages / interest / dividends / self-employment / rent /
-      retirement / Social Security), `EDUC`, `RACE`, `HISPAN`, `INCWELFR`,
-      `INCSUPP`. Extend the shared request; do **not** fork a project extract
-      (`state_data_imputation_plan.md`, 2026-08-18 note). Coordinate with the
-      family's owner.
+      days). **The longest-lead item on the plan, and the gate on phase C.**
+      Survey PolicyEngine's Enhanced CPS, Census SPM units, TAXSIM's CPS
+      conventions, Urban/TPC; record where they agree and diverge and choose
+      deliberately. **Start from what the extract already carries**:
+      `CPS-ASEC/cps_asec_common` holds IPUMS's own `FILESTAT` filer recode,
+      `DEPSTAT`, `ADJGINC`, `TAXINC` and `FAMUNIT` — establish what those already
+      do before building a unit builder that duplicates them. Dependents and MFS
+      are in scope from the start (P3), so the builder must form and retain both.
+      Deliverable: a design note in `nonfiler_residual/`.
+- [x] **A3. Shared CPS-ASEC extract — DONE 2026-08-19.** Pulled through
+      `common_ipums_download` (`config/parameters.cps.yaml`, committed) into
+      **`raw_data/CPS-ASEC/cps_asec_common/`**: ASEC **2015–2025**, i.e. income
+      years **2014–2024**, covering both anchor years and every back year. 72
+      variables, all validated against the IPUMS API before pulling; 92 returned
+      and common to all 11 years; no case selection, so group quarters are
+      retained. **All 16 Mok covariates are present** (verified against the DDI).
+      Required one fix to the shared downloader, since it parsed only one of
+      IPUMS's two data-quality-flag error phrasings and hard-failed on CPS.
+      Add variables to this request rather than forking an extract.
 - [ ] **A4. Transcribe Mok (2017) Table 14** → `resources/mok_coefs.csv`, 14
       group equations with SEs and per-cell filing rates. **Transcribe from a
       rendered image, not a text dump**: Panel E's columns run "Age 65 or Older"
