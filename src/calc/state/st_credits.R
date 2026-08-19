@@ -158,6 +158,8 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.lic_thresh',
     'st_credits.lic_per_dep',
     'st_credits.lic_income_base',
+    'st_credits.lic_thresh_aged',      # (dbl) higher threshold where either filer meets the age test (IA)
+    'st_credits.lic_aged_min_age',     # (dbl) that age test (IA 65)
     'st_credits.kg_credit_rate',       # (dbl) nonrefundable credit as a share of net capital gain (MT 0.02)
     'st_credits.jfc_cap',
     'st_credits.jfc_min_each_income',
@@ -381,7 +383,17 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
   # flat-rate state whose lic_rate exceeds its tax rate that always exceeds
   # the tax, so the credit is identically zero.
   lic_income = st_income_base(tax_unit, tax_unit$st_credits.lic_income_base)
-  lic_thresh = tax_unit$st_credits.lic_thresh +
+  # A separate, higher threshold where either filer meets an age test (IA's
+  # elderly variant of the alternate tax and low-income exemption: $32,000
+  # and $24,000 against the ordinary $13,500 and $9,000, and the statute
+  # applies it "even though one spouse has not attained the age of sixty-five,
+  # if the other spouse is at least sixty-five at the end of the tax year")
+  lic_aged = pmax(tax_unit$age1,
+                  if_else(tax_unit$filing_status == 2 & !is.na(tax_unit$age2),
+                          tax_unit$age2, tax_unit$age1)) >=
+             tax_unit$st_credits.lic_aged_min_age
+  lic_thresh = if_else(lic_aged, tax_unit$st_credits.lic_thresh_aged,
+                       tax_unit$st_credits.lic_thresh) +
                tax_unit$st_credits.lic_per_dep * coalesce(tax_unit$n_dep, 0L)
   st_lic = if_else(
     tax_unit$st_credits.lic_rate > 0,

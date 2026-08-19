@@ -1,0 +1,97 @@
+---
+# Iowa rate schedule (IA 1040; Iowa Code 422.5, 422.5A).
+#
+# THREE REGIMES and four bracket counts in nine years, all driven by two
+# acts. SF 2417 (2018 Acts ch 1161) cut the nine rates for TY2019 and, in the
+# same bill, moved the base to federal taxable income and repealed the
+# federal income tax deduction from TY2023. HF 2317 (2022 Acts ch 1002) then
+# rewrote the TY2023+ ladder as a four-then-three bracket phase-down, and
+# SF 2442 (2024 Acts ch 1094) replaced the whole thing with a flat 3.8% from
+# TY2025 and repealed bracket indexation outright.
+#
+# THROUGH TY2022 THE NINE-BRACKET LADDER APPLIES TO EVERY FILING STATUS.
+# There is no married rate schedule at all. What Iowa offered married couples
+# instead was a COMBINED RETURN -- two columns of one return, each running
+# the same ladder against one spouse's income with its own standard deduction
+# -- which is why a two-earner couple almost always split. That election is
+# encoded through the combined-separate machinery below; it was abolished
+# with the rest of the pre-2023 apparatus.
+#
+# Also encoded here: the ALTERNATE TAX, which is not really a rate schedule
+# but a ceiling. It caps tax at a stated rate times income above $13,500
+# ($32,000 where a filer is 65 or older) for every status except single. Its
+# rate tracked the top marginal rate through TY2024 and was then hard-coded
+# at 4.3% -- ABOVE the 3.8% flat rate -- so from TY2025 it helps only
+# taxpayers near the thresholds. It is encoded through the no-tax-status
+# formula in credits.yaml, where the single filer's zero threshold makes the
+# ceiling exceed the tax and the whole thing fall away on its own.
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_other
+    '2': brackets_joint
+    '3': brackets_other
+    '4': brackets_other
+
+rates:
+  value:
+    '2017': [0.0036, 0.0072, 0.0243, 0.0450, 0.0612, 0.0648, 0.0680, 0.0792, 0.0898]
+    '2019': [0.0033, 0.0067, 0.0225, 0.0414, 0.0563, 0.0596, 0.0625, 0.0744, 0.0853]
+    '2023': [0.0440, 0.0482, 0.0570, 0.0600, 0.0600, 0.0600, 0.0600, 0.0600, 0.0600]
+    '2024': [0.0440, 0.0482, 0.0570, 0.0570, 0.0570, 0.0570, 0.0570, 0.0570, 0.0570]
+    '2025': [0.038, 0.038, 0.038, 0.038, 0.038, 0.038, 0.038, 0.038, 0.038]
+  reference: 'Iowa Code 2017 ed. 422.5(1)(a)-(i) for the 0.36-8.98% ladder and 2019 ed. 422.5A for 0.33-8.53%, the TY2019 cut being 2018 Acts ch 1161 (SF 2417) section 73. HF 2317 (2022 Acts ch 1002) section 15 wrote the TY2023 four-bracket 4.40/4.82/5.70/6.00 ladder and the TY2024 three-bracket 4.40/4.82/5.70 one. SF 2442 (2024 Acts ch 1094) section 2 set the flat 3.8% for TY2025 onward and sections 15-17 repealed 422.5A and bracket indexation; IDR''s 2024-10-16 release: "Iowa law provides for a flat tax rate of 3.8 percent for all levels of taxable individual income beginning with tax year 2025. There will be no income tax brackets in 2025", with the 2025-10-21 release confirming 3.8% for TY2026. Rate vectors are padded to nine bands by repeating the top rate (the KY/IL convention); under the flat rate every band carries the same rate so the padding is exact'
+brackets_other:
+  value:
+    '2017': [0.0, 1573.0, 3146.0, 6292.0, 14157.0, 23595.0, 31460.0, 47190.0, 70785.0]
+    '2018': [0.0, 1598.0, 3196.0, 6392.0, 14382.0, 23970.0, 31960.0, 47940.0, 71910.0]
+    '2019': [0.0, 1638.0, 3276.0, 6552.0, 14742.0, 24570.0, 32760.0, 49140.0, 73710.0]
+    '2020': [0.0, 1666.0, 3332.0, 6664.0, 14994.0, 24990.0, 33320.0, 49980.0, 74970.0]
+    '2021': [0.0, 1676.0, 3352.0, 6704.0, 15084.0, 25140.0, 33520.0, 50280.0, 75420.0]
+    '2022': [0.0, 1743.0, 3486.0, 6972.0, 15687.0, 26145.0, 34860.0, 52290.0, 78435.0]
+    '2023': [0.0, 6000.0, 30000.0, 75000.0, 75000.0, 75000.0, 75000.0, 75000.0, 75000.0]
+    '2024': [0.0, 6210.0, 31050.0, 31050.0, 31050.0, 31050.0, 31050.0, 31050.0, 31050.0]
+    '2025': [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  reference: 'IDR Iowa Individual Income Tax Annual Statistical Report, Table 1 "Iowa {YEAR} Tax Rate Schedule", for each year TY2017-TY2022, corroborated bracket by bracket by the IDR annual bracket press releases. The statutory unindexed breakpoints are $1,000/2,000/4,000/9,000/15,000/20,000/30,000/45,000 (422.5(1) then 422.5A), multiplied by the cumulative inflation factor and rounded to the nearest dollar under 422.5(6). THROUGH TY2022 THESE BOUNDS APPLY TO EVERY FILING STATUS, which is why the joint series repeats them. For TY2023 the statutory $6,000/$30,000/$75,000 were used AS WRITTEN, not indexed -- note that IDR''s own 2023 Statistical Report Table 1 misprints the third bracket as $31,050, which is the TY2024 figure; the same report''s Figure 1, the narrative, the 2022-11-21 press release and the statute all say $30,000. TY2024 applies a 1.035 factor. Padded to nine bands by repeating the top bound, which leaves the repeated bands zero-width and inert; the TY2025 all-zero vector puts the entire flat-rate base in the top band'
+brackets_joint:
+  value:
+    '2017': [0.0, 1573.0, 3146.0, 6292.0, 14157.0, 23595.0, 31460.0, 47190.0, 70785.0]
+    '2018': [0.0, 1598.0, 3196.0, 6392.0, 14382.0, 23970.0, 31960.0, 47940.0, 71910.0]
+    '2019': [0.0, 1638.0, 3276.0, 6552.0, 14742.0, 24570.0, 32760.0, 49140.0, 73710.0]
+    '2020': [0.0, 1666.0, 3332.0, 6664.0, 14994.0, 24990.0, 33320.0, 49980.0, 74970.0]
+    '2021': [0.0, 1676.0, 3352.0, 6704.0, 15084.0, 25140.0, 33520.0, 50280.0, 75420.0]
+    '2022': [0.0, 1743.0, 3486.0, 6972.0, 15687.0, 26145.0, 34860.0, 52290.0, 78435.0]
+    '2023': [0.0, 12000.0, 60000.0, 150000.0, 150000.0, 150000.0, 150000.0, 150000.0, 150000.0]
+    '2024': [0.0, 12420.0, 62100.0, 62100.0, 62100.0, 62100.0, 62100.0, 62100.0, 62100.0]
+    '2025': [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  reference: 'Identical to the other-status ladder through TY2022 -- Iowa had no married schedule, and this repetition encodes that fact. From TY2023 the joint bounds are exactly double, per Iowa Code 2023 422.5A(1)(a)(1) and the IDR 2022-11-21 press release, whose verbatim joint table reads $0.00 + 4.40%, $528.00 + 4.82%, $2,841.60 + 5.70%, $7,971.60 + 6.00%. Bracket variation by filing status begins in TY2023 and ends with the flat rate in TY2025'
+
+combined_sep:
+  value:
+    '2017': 1
+    '2023': 0
+  reference: 'Iowa filing status 3, married filing separately ON A COMBINED RETURN: two columns of one return, the same nine-bracket ladder applied to each spouse''s income with a per-spouse standard deduction and per-spouse exemption credits, federal-tax items prorated between the columns. Since the ladder does not vary by status, this was near-universally better than filing jointly for a two-earner couple. HF 2317 abolished it -- Iowa Code 422.5(11) from TY2023 requires the state status to match the federal one, and the status codes were renumbered in the same change'
+combined_sep_std_amount:
+  value:
+    '2017': 2000
+    '2018': 2030
+    '2019': 2080
+    '2020': 2110
+    '2021': 2130
+    '2022': 2210
+    '2023': 0
+  reference: 'IA 1040 Expanded Instructions, each year: the married-separate standard deduction is a per-spouse amount, and it is NOT half the joint figure -- $2,210 each against $5,450 joint in TY2022 -- so the column amount is stated outright rather than derived as a share. Corroborated by the IDR annual press releases, which print the amounts per status'
+
+documented_not_modeled:
+  iowa_alternative_minimum_tax:
+    reference: 'Iowa ran its own AMT through TY2022 at 6.7% (TY2017-18) and 6.4% (TY2019-22), read directly off Form IA 6251, with exemptions of $26,000 for single/HoH/QW, $35,000 joint and $17,500 for the separate statuses, phased out at 25% above $112,500/$150,000/$75,000. It was NOT an election. Repealed effective TY2023 by SF 2417, along with the 422.11B minimum tax credit which died 1/1/2023 and was usable on the TY2023 return only. Encoding it would need an Iowa AMTI base built from federal AMTI plus Iowa nonconformity adjustments, which the model has no plumbing for [understates Iowa tax through TY2022 for high-income filers with large preference items, and misses the minimum tax credit for those who paid it]'
+  alternate_tax_married_separate_proration:
+    reference: 'Under the combined return the alternate tax is computed on the couple''s combined income and then prorated between spouses in the ratio of each spouse''s adjusted Iowa taxable income to the total. The model applies the ceiling at the return level, which reaches the same total'
+  alternate_tax_addbacks:
+    reference: 'The alternate tax base (form 41-145) is Iowa taxable income plus the federal itemized or standard deduction, the federal personal exemption deduction, the QBI deduction, the pre-2023 NOL carryover and lump-sum distributions from federal Form 4972. Pre-2023 it was Iowa net income plus the pension exclusion and reportable Social Security. The model uses federal AGI as the single stand-in for both constructions, which agrees on the large items and misses the NOL and lump-sum add-backs'
+  lump_sum_tax:
+    reference: 'Iowa levies a separate tax on lump-sum distributions taxed federally on Form 4972, in every year, and a filer subject to it must file regardless of income. Lump-sum elections are not a model input'
+  school_district_and_ems_surtaxes:
+    reference: 'Iowa school districts and emergency medical services districts levy a surtax as a percentage of state income tax, varying by district and year. Deferred to the locality phase, like the Maryland county piggyback'
+  nol_disqualifiers:
+    reference: 'A spouse electing an NOL carryback or carryforward disqualifies the other from the low-income exemption unless the loss spouse waives it, and likewise disqualifies the alternate tax. NOL elections are not a model input'

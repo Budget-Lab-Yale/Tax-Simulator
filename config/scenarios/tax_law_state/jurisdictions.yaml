@@ -69,6 +69,14 @@ HI:
 ID:
   profile: broad_iit
   enabled: true
+# IA adopts the IRC as amended (Iowa Code 422.3(5)), so rolling conformity
+# (group 0). SF 2417 moved the base from Iowa's own net income to FEDERAL
+# TAXABLE INCOME from TY2023, which tightens the coupling considerably: from
+# that year the federal standard or itemized deduction, the QBI deduction and
+# the federal NOL all flow straight into Iowa taxable income
+IA:
+  profile: broad_iit
+  enabled: true
 IL:
   profile: broad_iit
   enabled: true

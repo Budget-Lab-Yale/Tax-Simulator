@@ -1,9 +1,75 @@
 # State income tax workstream — status
 
-**As of 2026-08-18** (branch `state-tax`). Current counts: **48 jurisdictions
-encoded** (36 broad-IIT + NH/TN narrow + WA excise + 6 zero-tax stubs), **45
-enabled** for `states=all` (CA/SC/VA conformity-gated); **3 jurisdictions not
-started -- IA, LA and MT, the multi-regime batch.**
+**As of 2026-08-19** (branch `state-tax`). Current counts: **ALL 51
+jurisdictions encoded** (39 broad-IIT + NH/TN narrow + WA excise + 6 zero-tax
+stubs + DC), **48 enabled** for `states=all` (CA/SC/VA conformity-gated, not
+encoding-gated). **Encoding coverage is complete. Nothing is unstarted.**
+
+**The R6 multi-regime batch is COMPLETE: MT, LA and IA encoded 2026-08-19**,
+closing the encoding programme. All three are two- or three-regime states,
+and each turned on one structural reading that a plain transcription would
+have got wrong.
+
+MONTANA pivots on SB 399 (2021), effective TY2024, and almost nothing
+survives. Its pre-2024 bracket bounds DO NOT VARY BY FILING STATUS, which is
+what made filing status 2a (separate on the same form) near-universally
+better for two-earner couples. Its federal income tax deduction lived INSIDE
+the itemized schedule (`st_ded.fed_tax_ded_in_itemized`), so a
+standard-deduction taker forwent it entirely and the state election cannot be
+inherited from the federal one. Two provisions were enacted and repealed
+before ever applying: SB 399's 6.5% top rate (cut to 5.9% by SB 121) and its
+30% LTCG subtraction (replaced by HB 221's 3.0%/4.1% preferential schedule,
+`st_ord.kg_pref_*`). Head of household is grouped with SINGLE for the
+$5,000 federal-tax cap and with JOINT for the doubled standard-deduction
+bounds -- the two groupings run in opposite directions.
+
+LOUISIANA's dominant feature is where the exemption comes off. R.S.
+47:32(A)(1)/294/295(B) relieve it at the LOWEST brackets with the bracket
+bounds anchored to UNREDUCED income, so `tax = sched(TTI) - sched(E)`, not
+`sched(TTI - E)` (`st_ord.exempt_from_bottom`). All 43,008 cells of the
+published TY2017-TY2024 tables reproduce exactly under the first form and not
+the second; a TY2021 single filer with one exemption and $27,625 of tax table
+income owes $765 where the naive form gives $675. **The biggest correction to
+the secondary literature on Louisiana: Act 395 did NOT repeal the excess
+federal itemized deduction. It narrowed it to medical and dental only, and
+that version is still on the TY2025 return** (`st_ded.item_less_fed_std`).
+Head of household is a hybrid -- joint exemption base, single brackets -- and
+from TY2025 Louisiana has NO dependant allowance of any kind.
+
+IOWA has three regimes and four bracket counts in nine years. Two features
+are unique in the set: its federal income tax deduction reached
+STANDARD-deduction filers and was uncapped, where MO/AL/OR/MT all cap it or
+confine it to itemizers or both; and because its pre-2023 nine-bracket ladder
+is status-invariant, it gave married couples a two-column COMBINED RETURN
+instead of a joint schedule, worth $1,162.61 on a 60k/40k couple in TY2022.
+That election reuses the KY/DE `combined_sep` machinery plus one new
+parameter for the per-column standard deduction, which is NOT a clean
+fraction of the joint one. Its ALTERNATE TAX is a ceiling on tax, so it drops
+straight into the MA no-tax-status formula -- and the single-filer exclusion
+falls out of the arithmetic rather than needing a gate, because a zero single
+threshold makes the ceiling the alternate rate times all of income and that
+rate is at or above Iowa's top marginal rate in every year. Note an ERRATUM
+in a primary source: IDR's own 2023 Statistical Report Table 1 prints the
+third TY2023 bracket as "$31,050", which is the TY2024 figure -- the
+statute, the report's own Figure 1 and the press release all say $30,000.
+
+**Four states now wait on the same missing piece**, the generic
+minimum-liability election pass: AL separate returns, AR's Low Income Tax
+Tables, MS/AR per-spouse column returns, and MT's filing status 2a. Iowa's
+combined return is the same shape and IS now encoded, which means the
+machinery to close the other four is largely built -- `st_ord.combined_sep`
+plus a per-column deduction is most of what AL, AR, MS and MT need.
+
+**Two known differences are large enough to name here.** The IOWA AMT
+(6.7%/6.4% through TY2022, not an election) is unencoded because it needs an
+Iowa AMTI base built from federal AMTI plus nonconformity adjustments, and
+the model has no plumbing for it -- pre-2023 tax is understated for
+high-income filers with large preference items. And LOUISIANA's Schedule E
+codes 02E-05E exempt 100% of LASERS, Teachers' Retirement, federal
+retirement and a long list of other named systems; in a state where public
+employment is a large share of the retiree population that is the single
+largest Louisiana gap, and none of the systems is separable from pension
+income.
 
 **The R6 own-base batch is COMPLETE: MA, NJ, AR and MS encoded 2026-08-18**,
 following MO/AL/OR the same day. (The Mississippi commit message says 47/44;

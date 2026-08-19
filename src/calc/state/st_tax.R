@@ -66,6 +66,7 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     'st_ord.sta_max',            # (dbl) spouse tax adjustment cap (VA; 0 = none)
     'st_ord.combined_sep',       # (int) combined-return separate filing (KY)
     'st_ord.combined_sep_std_share', # (dbl) share of the mapped std deduction per column (1 = per-person std, KY; 0.5 = joint is twice the column amount, DE)
+    'st_ord.combined_sep_std_amount', # (dbl) per-column std stated outright (IA); 0 = use the share
     'st_ord.combined_split',     # (int) pooled deductions, taxable income split by income share (MO)
     'st_ord.combined_split_round', # (dbl) rounding increment for the income shares (MO 0.01)
     'st_ord.bus_rate',           # (dbl) flat rate on carve-out excess (OH 3%)
@@ -76,6 +77,7 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     'kg_lt',                     # (dbl) net long-term capital gain (preferential base)
     'st_itemizing',              # (bool) state itemization election (calc_st_ded)
     'st_ded',                    # (dbl) state deduction taken (calc_st_ded)
+    'st_item_ded',                # (dbl) state itemized deduction (calc_st_ded)
     'st_std_ded',                # (dbl) state standard deduction (calc_st_ded)
     'st_exempt',                 # (dbl) state exemption allowance (calc_st_exempt)
     'st_ord.exempt_from_bottom', # (int) exemption relieved at the LOWEST brackets (LA)
@@ -318,10 +320,22 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
       cs_share1 = wages1 + sta_other,
       cs_share2 = wages2 + sta_other,
       cs_item_shr1 = if_else(st_agi > 0, pmax(0, pmin(1, cs_share1 / st_agi)), 0.5),
-      cs_ded1 = if_else(st_itemizing, st_ded * cs_item_shr1,
-                        st_std_ded * st_ord.combined_sep_std_share),
-      cs_ded2 = if_else(st_itemizing, st_ded * (1 - cs_item_shr1),
-                        st_std_ded * st_ord.combined_sep_std_share),
+      # Per-column standard deduction. Where the state prints a separate
+      # amount for its married-separate filers that is not a clean fraction
+      # of the joint one (IA: $2,210 each against a $5,450 joint figure in
+      # TY2022), that amount is stated outright; 0 falls back to the share
+      cs_std_col = if_else(st_ord.combined_sep_std_amount > 0,
+                           st_ord.combined_sep_std_amount,
+                           st_std_ded * st_ord.combined_sep_std_share),
+      # Deductions BEYOND the standard or itemized amount -- Iowa's federal
+      # income tax deduction above all, which the form prorates between the
+      # columns by income share. Zero for a state whose st_ded is just the
+      # standard or itemized amount (KY, DE)
+      cs_extra = pmax(0, st_ded - if_else(st_itemizing, st_item_ded, st_std_ded)),
+      cs_ded1 = if_else(st_itemizing, st_item_ded * cs_item_shr1, cs_std_col) +
+                cs_extra * cs_item_shr1,
+      cs_ded2 = if_else(st_itemizing, st_item_ded * (1 - cs_item_shr1), cs_std_col) +
+                cs_extra * (1 - cs_item_shr1),
       cs_tax  = sched_tax_at(pmax(0, cs_share1 - cs_ded1 - sta_pe1)) +
                 sched_tax_at(pmax(0, cs_share2 - cs_ded2 - sta_pe2)),
       st_tax_pre_credit = if_else(

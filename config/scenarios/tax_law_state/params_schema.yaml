@@ -369,6 +369,10 @@ scalars:
   st_ord.kg_pref_thresh: {default: 0, units: per_return}
   st_ord.combined_sep: 0   # married-filing-separately-on-a-combined-return option (KY): per-spouse columns, lower of joint and combined; assumes no recapture/base-amount/business carve-out in the same state
   st_ord.combined_sep_std_share: 1   # share of the mapped standard deduction each combined-separate column receives: 1 where the std is per-person (KY), 0.5 where the joint amount is twice the per-column amount (DE)
+  # Per-column standard deduction stated outright, for a state whose
+  # married-separate amount is not a clean fraction of its joint one
+  # (IA $2,210 each against $5,450 joint); 0 = use the share above
+  st_ord.combined_sep_std_amount: {default: 0, units: per_person}
   # Married filing combined (MO): deductions pooled at the return level, then
   # TAXABLE income split by each spouse's share of state AGI and the schedule
   # run on each share. Mandatory for federal-joint couples, so unlike
@@ -413,6 +417,10 @@ scalars:
   st_credits.lic_thresh: {default: 0, units: per_return}
   st_credits.lic_per_dep: {default: 0, units: per_dependent}
   st_credits.lic_income_base: 2   # st_income_base enum (MA: state AGI)
+  # Higher threshold where either filer meets an age test (IA's elderly
+  # alternate tax: $32,000/$24,000 against the ordinary $13,500/$9,000)
+  st_credits.lic_thresh_aged: {default: 0, units: per_return}
+  st_credits.lic_aged_min_age: .inf
   # Nonrefundable credit as a share of net capital gain (MT 2% through TY2023)
   st_credits.kg_credit_rate: 0
   st_credits.eitc_match: 0

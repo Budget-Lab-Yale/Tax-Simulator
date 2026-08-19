@@ -1,0 +1,143 @@
+---
+# Iowa credits (IA 1040 Steps 6 and 8; Iowa Code 422.12, 422.12B, 422.12C).
+#
+# Iowa's personal exemptions are CREDITS -- flat dollar amounts against tax,
+# never indexed, and unchanged across the whole window. Head of household
+# gets the doubled $80 amount, the same as a joint couple.
+#
+# The earned income credit is 15% of the federal credit and fully refundable
+# in every year, one of the steadiest parameters in the whole fifty-state
+# set. The child and dependent care credit is also REFUNDABLE and generous at
+# the bottom -- 75% of the federal credit under $10,000 of income -- and its
+# top tier was extended from a $45,000 cutoff to $90,000 retroactively for
+# TY2021.
+#
+# The ALTERNATE TAX is encoded here rather than in ord.yaml because it is a
+# ceiling on tax, which is exactly what the no-tax-status formula computes:
+#     credit = max(0, tax - rate x max(0, income - threshold))
+# so tax after credit is min(tax, rate x (income - threshold)). Every filing
+# status EXCEPT single may use it, and that exclusion falls out of the
+# arithmetic rather than needing a gate: with the single threshold left at
+# zero the ceiling is the alternate rate times the whole of income, and since
+# that rate is at or above Iowa's top marginal rate in every year, the
+# ceiling always exceeds the tax and the credit is identically zero.
+
+filing_status_mapper:
+  exempt_credit_personal:
+    '1': personal_credit_single
+    '2': personal_credit_single
+    '3': personal_credit_single
+    '4': personal_credit_head
+  lic_thresh:
+    '1': alt_thresh_single
+    '2': alt_thresh_joint
+    '3': alt_thresh_joint
+    '4': alt_thresh_joint
+  lic_thresh_aged:
+    '1': alt_thresh_aged_single
+    '2': alt_thresh_aged_joint
+    '3': alt_thresh_aged_joint
+    '4': alt_thresh_aged_joint
+
+exempt_credit_style:
+  value: 1
+  reference: 'Iowa Code 422.12(2): "There shall be deducted from but not to exceed the tax" -- flat per-person credits, nonrefundable, with no phase-out in any year'
+personal_credit_single:
+  value: 40
+  reference: 'Iowa Code 422.12(2)(a)(1): $40 for single, married-separate, estate and trust filers, and per the instructions qualifying widow/surviving spouse. Never indexed, unchanged TY2017-TY2026. A joint couple reaches $80 as two taxpayers'
+personal_credit_head:
+  value: 80
+  reference: 'Iowa Code 422.12(2)(a)(2): head of household enters 2, so $80 -- the SAME doubled credit as a married couple filing jointly, which is unusual and instruction-verified (Expanded Instructions Step 3, both TY2021 and TY2023)'
+exempt_credit_dep:
+  value: 40
+  reference: 'Iowa Code 422.12(2)(a)(3): $40 for each dependent. From TY2023 the instructions add "you must report the same dependents you claimed on your federal income tax return"'
+exempt_credit_aged:
+  value: 20
+  reference: 'Iowa Code 422.12(2)(a)(4): an additional $20 per taxpayer 65 or older, with the age tested "on or before January 1" of the following year'
+exempt_credit_blind:
+  value: 20
+  reference: 'Iowa Code 422.12(2)(a)(5): an additional $20 per blind taxpayer, blindness tested on December 31 and statutorily defined as central visual acuity not exceeding 0.22 in the better eye with correcting lenses, or a field subtending 20 degrees or less'
+
+eitc_match:
+  value: 0.15
+  reference: 'Iowa Code 422.12B(1)(2): "For tax years beginning on or after January 1, 2014, fifteen percent". Verified unchanged in Code editions 2017, 2020, 2025 and 2026; IA 1040 Expanded Instructions TY2025, "multiply your federal EITC by 15% (.15)"'
+eitc_refundable:
+  value: 1
+  reference: 'Iowa Code 422.12B(1)(b): "Any credit in excess of the tax liability is refundable". A taxpayer who qualifies for the low-income exemption may file SOLELY to claim it'
+
+cdctc_style:
+  value: 1
+  reference: 'Iowa Code 422.12C(1): a percentage of the federal section 21 credit, banded by income'
+cdctc_refundable:
+  value: 1
+  reference: 'Iowa Code 422.12C(3): "Any credit in excess of the tax liability shall be refunded"'
+cdctc_share_income_base:
+  value:
+    '2017': 2
+    '2023': 9
+  reference: 'The tier test moved with the base. The TY2021 worksheet reads "If total of line 26 of the IA 1040, columns A and B" -- combined Iowa NET income of both spouses; the TY2025 worksheet reads "If IA 1040, line 4 is" -- Iowa TAXABLE income, again combined for joint filers. Encoded as state AGI through TY2022 and state taxable income from TY2023'
+cdctc_share_agi_bounds:
+  value: [0.0, 10000.0, 20000.0, 25000.0, 35000.0, 40000.0]
+  reference: 'Iowa Code 422.12C(1) tier boundaries: under $10,000, $10,000-19,999, $20,000-24,999, $25,000-34,999, $35,000-39,999, then $40,000 and above. The published $40,000-44,999 and $45,000-89,999 tiers are merged because both carry 30% from TY2021; the pre-TY2021 zero above $45,000 and the zero above $90,000 in every year are applied through the cap below, since the family carries six bands and the schedule needs seven'
+cdctc_share_start:
+  value: [0.75, 0.65, 0.55, 0.50, 0.40, 0.30]
+  reference: 'Same statute: 75%, 65%, 55%, 50%, 40% and 30% of the federal credit. Unchanged in every year -- what changed in TY2021 was only where the schedule cuts off'
+cdctc_share_end:
+  value: [0.75, 0.65, 0.55, 0.50, 0.40, 0.30]
+  reference: 'The tiers are steps, not ramps, so each band''s share is constant'
+cdctc_cap_thresh:
+  value:
+    '2017': 44999
+    '2021': 89999
+  reference: 'The cutoff above which the credit is zero. Iowa Code editions 2017-2020 read "forty-five thousand dollars or more, zero percent"; editions 2022, 2023 and 2025 read "ninety thousand dollars or more, zero percent". The extension was made by 2021 Acts ch 177 sections 1-4, which "apply retroactively to tax years beginning on or after January 1, 2021". Set one dollar below the statutory figure because the cap engages strictly above the threshold, so a filer AT $45,000 or $90,000 is correctly zeroed'
+cdctc_cap_amount:
+  value: 0.0
+  reference: 'Above the cutoff the credit is nothing at all, not a reduced amount'
+cdctc_cap_per_return:
+  value: 1
+  reference: 'The zero applies to the return, so it must not be multiplied by the number of qualifying children'
+
+lic_rate:
+  value:
+    '2017': 0.0898
+    '2019': 0.0853
+    '2023': 0.060
+    '2024': 0.057
+    '2025': 0.043
+  reference: 'The ALTERNATE TAX rate. Through TY2024 the statute defined it as "the maximum state individual income tax rate", so it tracked the top bracket: 8.98% for TY2017-18 and 8.53% for TY2019-22 per the note to Table 1 in the IDR statistical reports, 6% per the TY2023 worksheet line 4 and 5.7% per the TY2024 one. SF 2442 then hard-coded a standalone rate: Iowa Code 422.5(2)(b) and (3)(b) (2026 ed.), "the alternate state individual income tax rate of four and three-tenths percent". Note 4.3% is ABOVE the 3.8% flat rate, so from TY2025 the alternate tax only ever helps taxpayers near the thresholds'
+lic_income_base:
+  value: 1
+  reference: 'Federal AGI, as the single stand-in for two different statutory constructions of "net income". Pre-2023 the test added the pension exclusion and reportable Social Security back to Iowa net income; from TY2023 it adds back the federal standard or itemized deduction, the federal personal exemption deduction and the QBI deduction to Iowa taxable income. Both land close to federal AGI'
+alt_thresh_single:
+  value: 0
+  reference: 'Single filers may NOT use the alternate tax -- "All filing statuses except filing status 1, Single, may qualify" (Expanded Instructions TY2023 and TY2025). Encoded as a zero threshold rather than a gate: the ceiling then becomes the alternate rate times all of income, and since that rate is at or above Iowa''s top marginal rate in every year the ceiling always exceeds the tax and the credit falls to zero on its own'
+alt_thresh_joint:
+  value: 13500
+  reference: 'Iowa Code 422.5(3)(b) pre-2023 and 422.5(2)(b) from TY2023: $13,500 for married persons filing jointly, married filing separately on a combined return, heads of household and surviving spouses. A flat statutory amount, never indexed -- identical text verified in the 2017 and 2026 Code editions'
+alt_thresh_aged_single:
+  value: 0
+  reference: 'Zero for the same reason as the ordinary single threshold'
+alt_thresh_aged_joint:
+  value: 32000
+  reference: 'Iowa Code 422.5(3B) pre-2023 and 422.5(3) from TY2023: the elderly variant raises the threshold to $32,000, and "applies even though one spouse has not attained the age of sixty-five, if the other spouse is at least sixty-five at the end of the tax year". Also never indexed'
+lic_aged_min_age:
+  value: 65
+  reference: 'Same subsections: "at least sixty-five years old on December 31" of the tax year'
+
+documented_not_modeled:
+  low_income_exemption_for_single_filers:
+    reference: 'Separately from the alternate tax, Iowa imposes no tax at all where net income is at or below $13,500 ($9,000 for other filers, $32,000 and $24,000 at 65 or older) and reduces tax so the taxpayer retains that much where it would otherwise dip below -- an automatic exemption, not an election, implemented for single filers on form 41-146. For every status that may use the alternate tax the alternate ceiling is far tighter and governs, so only the single-filer version is unencoded. It binds in a narrow band just above the threshold, and from TY2023 barely at all, since the embedded federal standard deduction leaves a filer at those income levels with little or no Iowa taxable income [understates the exemption for single filers within a few hundred dollars of the threshold]'
+  dependent_filers_keep_the_personal_credit:
+    reference: 'Iowa lets a dependent filing their own return claim the $40 personal credit even though they are claimed on someone else''s Iowa return. The generic exemption-credit machinery zeroes the taxpayer credit for dependent filers [understates the credit by $40 for dependent filers]'
+  gross_versus_limited_federal_care_credit:
+    reference: 'Iowa Code 422.12C(1) computes its percentage off the federal credit "without regard to whether or not the federal credit was limited by the taxpayer''s federal tax liability" -- the GROSS section 21 credit from Form 2441 line 9c. The model uses the federal credit as claimed, which for a filer with little federal tax is smaller [understates the Iowa credit for low-liability filers, the very group the 75% and 65% tiers target]'
+  early_childhood_development_credit:
+    reference: 'Iowa Code 422.12C(2): 25% of the first $1,000 paid per dependent aged 3 through 5 for early childhood development expenses, refundable, and MUTUALLY EXCLUSIVE with the child and dependent care credit -- the taxpayer takes whichever is better. Preschool and instructional-material spending is not a model input'
+  tuition_and_textbook_credit:
+    reference: 'Iowa Code 422.12(2)(b): 25% of the first $1,000 per K-12 dependent, raised to the first $2,000 from TY2021. Nonrefundable. Tuition, book and activity spending is not a model input'
+  volunteer_firefighter_and_reserve_officer_credit:
+    reference: '$100 per qualifying volunteer firefighter, EMS provider or reserve peace officer, raised to $250 from TY2021. Occupation-specific and not a model input'
+  married_separate_credit_mechanics:
+    reference: 'Under the combined return each spouse claims their own credits, unused credits are NOT transferable between the columns, and dependents may be split between spouses but not divided. The model applies the credits at the return level'
+  minimum_tax_credit:
+    reference: 'Iowa Code 422.11B gave a carryforward credit for Iowa AMT paid in an earlier year. Repealed 1/1/2023 and usable on the TY2023 return only. The Iowa AMT itself is unencoded (see ord.yaml), so there is nothing to carry forward'
