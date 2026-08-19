@@ -199,7 +199,11 @@ cross_model_our_leg = function(sampled, states, year, state_law,
     sampled %>%
       left_join(law_slice, by = 'filing_status') %>%
       do_state_taxes(
-        credit_tables = state_credit_tables_for_year(credit_tables, st, year)
+        credit_tables = state_credit_tables_for_year(credit_tables, st, year),
+        # Married-separate law row, for states offering the split election
+        law_mfs = law_slice %>%
+                    filter(filing_status == 3) %>%
+                    select(-filing_status)
       ) %>%
       bind_cols(sampled %>% select(id), .) %>%
       mutate(state = st, year = .env$year, .after = id) %>%

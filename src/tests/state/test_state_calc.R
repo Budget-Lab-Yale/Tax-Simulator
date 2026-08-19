@@ -80,10 +80,23 @@ test_state_calc = function() {
       }
     }
 
+    # Married-separate row for the split election (st_split.R). Supplied for
+    # every case, not just electing states, so the harness never silently
+    # exercises the election on joint-resolved parameters
+    law_mfs = law %>%
+      filter(state == st, year == yr, filing_status == 3) %>%
+      select(-state, -year, -filing_status)
+    if (length(law_overrides) > 0) {
+      for (p in names(law_overrides)) {
+        law_mfs[[p]] = law_overrides[[p]]
+      }
+    }
+
     result = unit %>%
       bind_cols(law_row) %>%
       do_state_taxes(
-        credit_tables = state_credit_tables_for_year(credit_tables, st, yr)
+        credit_tables = state_credit_tables_for_year(credit_tables, st, yr),
+        law_mfs       = law_mfs
       )
 
     nz = coverage_outputs[map_lgl(coverage_outputs,
@@ -3535,6 +3548,46 @@ test_state_calc = function() {
            expect = list(st_eitc = 300),
            label = 'MT-11b 2024 earned income credit at 10% of federal')
 
+  # MT-12a / MT-12b / MT-13: filing status 2a, married filing SEPARATELY ON
+  # THE SAME FORM, the first per-spouse election the module actually computes
+  # rather than documents. Because the pre-2024 ladder does not vary by filing
+  # status, running it twice is worth real money to a two-earner couple.
+  #
+  # MT-12a: 2023, wages of 60,000 and 40,000. Filing jointly, the 11,080
+  # deduction cap and 5,920 of exemptions leave 83,000 and a bill of 4,946.50.
+  # Split, each column takes the SINGLE cap of 5,540 -- 11,080 between them,
+  # the same total -- so taxable income is identical and the entire saving
+  # comes from running the ladder twice: 2,820.25 + 1,470.25 = 4,290.50
+  run_case('MT', 2023,
+           list(agi = 100000, filing_status = 2, age2 = 40, wages1 = 60000,
+                wages2 = 40000, ei1 = 60000, ei2 = 40000),
+           expect = list(st_txbl_inc = 83000, liab_st_iit = 4290.50),
+           label = 'MT-12a 2023 status 2a splits the status-invariant ladder')
+
+  # MT-12b: the case that needs the WHOLE pipeline rerun, not just the ladder.
+  # At 30,000 and 20,000 of wages the joint deduction is 20% of 50,000 =
+  # 10,000, with neither bound binding. Split, column one's 20% of 30,000
+  # exceeds the single cap so it takes 5,540, while column two's 20% of
+  # 20,000 is 4,000 -- so the columns share LESS deduction than the joint
+  # return (9,540 against 10,000) and taxable income RISES to 34,540. The
+  # split still wins on the ladder: 796.00 + 326.00 = 1,122.00 against
+  # 1,644.40. A schedule-only rerun would get the deductions wrong here
+  run_case('MT', 2023,
+           list(agi = 50000, filing_status = 2, age2 = 40, wages1 = 30000,
+                wages2 = 20000, ei1 = 30000, ei2 = 20000),
+           expect = list(st_txbl_inc = 34540, liab_st_iit = 1122.00),
+           label = 'MT-12b 2023 status 2a recomputes each spouse deduction')
+
+  # MT-13: the election is a better-of, so it must also DECLINE. A one-earner
+  # couple with the same 100,000 gains nothing by splitting -- the second
+  # column has no income to shelter, so its deduction and exemption are
+  # wasted and the pair would owe 5,520.25. The joint 4,946.50 stands
+  run_case('MT', 2023,
+           list(agi = 100000, filing_status = 2, age2 = 40, wages1 = 100000,
+                ei1 = 100000),
+           expect = list(st_txbl_inc = 83000, liab_st_iit = 4946.50),
+           label = 'MT-13 2023 a one-earner couple declines the election')
+
   #--------------------------------------------------------------------------
   # Louisiana (IT-540)
   #
@@ -4940,7 +4993,9 @@ test_state_calc = function() {
         select(-state, -year)
       out = grid %>%
         left_join(law_slice, by = 'filing_status') %>%
-        do_state_taxes()
+        do_state_taxes(law_mfs = law_slice %>%
+                                   filter(filing_status == 3) %>%
+                                   select(-filing_status))
       stopifnot(
         'smoke: NA liability'  = !anyNA(out$liab_st_iit),
         'smoke: infinite liab' = all(is.finite(out$liab_st_iit)),
@@ -5081,7 +5136,9 @@ test_state_calc = function() {
                     filter(state == st) %>%
                     select(-state, -year),
                   by = 'filing_status') %>%
-        do_state_taxes()
+        do_state_taxes(law_mfs = law_sub %>%
+                                   filter(state == st, filing_status == 3) %>%
+                                   select(-state, -year, -filing_status))
       stopifnot('subset-states: NA liability' = !anyNA(out$liab_st_iit))
     }
   }
@@ -5105,7 +5162,10 @@ test_state_calc = function() {
                     filter(state == st, year == yr) %>%
                     select(-state, -year),
                   by = 'filing_status') %>%
-        do_state_taxes()
+        do_state_taxes(law_mfs = law_zero %>%
+                                   filter(state == st, year == yr,
+                                          filing_status == 3) %>%
+                                   select(-state, -year, -filing_status))
       stopifnot(
         'no-broad-IIT stub: nonzero liability' = all(out$liab_st_iit == 0),
         'no-broad-IIT stub: state filer flagged' = !any(out$st_filer)

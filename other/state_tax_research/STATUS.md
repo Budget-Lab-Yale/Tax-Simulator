@@ -53,12 +53,65 @@ in a primary source: IDR's own 2023 Statistical Report Table 1 prints the
 third TY2023 bracket as "$31,050", which is the TY2024 figure -- the
 statute, the report's own Figure 1 and the press release all say $30,000.
 
-**Four states now wait on the same missing piece**, the generic
-minimum-liability election pass: AL separate returns, AR's Low Income Tax
-Tables, MS/AR per-spouse column returns, and MT's filing status 2a. Iowa's
-combined return is the same shape and IS now encoded, which means the
-machinery to close the other four is largely built -- `st_ord.combined_sep`
-plus a per-column deduction is most of what AL, AR, MS and MT need.
+**The MARRIED-SEPARATE ELECTION PASS IS BUILT (2026-08-19), and MONTANA is
+its first consumer.** `src/calc/state/st_split.R` reruns the WHOLE state
+pipeline on each spouse's half-unit and gives the couple whichever total is
+lower, gated on the new `st_ord.split_election`. This is what the four
+blocked states needed and what `st_ord.combined_sep` (KY/DE/IA) could not
+give them: combined_sep reruns the RATE SCHEDULE only, which suffices where
+the sole per-spouse quantity is the standard deduction, but not where a state
+computes the deduction, exemption or federal-tax deduction on each spouse's
+OWN income -- MT's percentage-of-own-AGI standard deduction and its pension
+phase-out on own federal AGI, AL's deduction slide and dependent tiers on own
+AL AGI. The stage sequence was factored out of `do_state_taxes()` into
+`st_pipeline()` so it can be called three times.
+
+**One design trap, found by a numeric test and worth recording because it
+would have shipped silently.** The `filing_status_mapper` is resolved when
+the law is JOINED to the unit (`by = c('year', 'filing_status')`), before the
+calculator runs. So a half-unit built by relabelling `filing_status = 3`
+still carries every mapped parameter at its JOINT value -- MT-12a came back
+with taxable income 75,000 against 83,000, a gap of exactly 8,000, which is
+each column claiming the joint standard-deduction cap of 11,080 plus 8,000
+instead of the single 5,540 twice. Every electing couple would have taken two
+joint-size deductions. The fix threads a `law_mfs` argument -- one row of the
+state-year law resolved at filing status 3 -- through `do_state_taxes()` to
+the split, which swaps the law columns wholesale and then RE-BACKFILLS via
+`ensure_st_params()`, because law_mfs is the raw row and its unencoded
+parameters are NA (that second bug threw an explicit "missing value where
+TRUE/FALSE needed" out of a feature gate rather than going quiet). It fails
+LOUDLY if an electing state is calculated without law_mfs, and all seven call
+sites now pass it: the production path in `summary_stats.R`, the cross-model
+harness, and five in the test file.
+
+Split convention follows the VA spouse-tax-adjustment / KY precedent -- own
+wages plus half of jointly-held amounts -- but applied at the INPUT level
+rather than to state AGI, which is the point: each column's own means tests
+have to see that spouse's own income. Federal AGI and taxable income are
+rebuilt wage-anchored rather than halved, since halving hands half of one
+spouse's earnings to the other. Dollar outputs come from the winning basis;
+logical and INTEGER outputs stay joint-basis (the selection is on
+`is.double()`, not `is.numeric()`, so the 0/1 flags
+`st_age_package_taken`/`_forgone` are not summed into a meaningless 2). The
+extra passes run on the electing-married ROW SUBSET, not the frame, because a
+mixed law slice carries every state at once.
+
+MT tests 12a/12b/13: at 60k/40k in TY2023 splitting saves $656.00 with
+taxable income unchanged (all of it from running the status-invariant ladder
+twice); at 30k/20k it saves $522.40 and taxable income RISES to 34,540
+because each column recomputes its own percentage deduction -- the case a
+schedule-only rerun gets wrong; and a one-earner couple correctly DECLINES,
+since the second column's deduction and exemption would be wasted. Full
+suite green, all 45 broad states.
+
+**Still to wire: AL separate returns, AR filing status 4, MS combined
+returns.** Each needs its own `split_election: 1` plus a worksheet case; AR
+additionally prorates pooled itemized deductions by AGI share where the
+generic pass halves them, so it needs that as a per-state option. **A SECOND,
+DIFFERENT mechanism remains unbuilt**: an ALTERNATIVE COMPUTATION replacing
+the schedule rather than splitting the unit, which is what AR's five Low
+Income Tax Tables (used instead of the schedule AND instead of any deduction)
+and the WI Act 15 retirement election need. Do not conflate the two.
 
 **Two known differences are large enough to name here.** The IOWA AMT
 (6.7%/6.4% through TY2022, not an election) is unencoded because it needs an

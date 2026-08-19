@@ -73,6 +73,13 @@ brackets_head:
     '2025': [0.0, 31700.0, 31700.0, 31700.0, 31700.0, 31700.0, 31700.0]
   reference: 'Identical to the single ladder through TY2023. From TY2024 head of household is exactly 1.5x the single bracket: $30,750, indexed to $31,700'
 
+# Married filing SEPARATELY ON THE SAME FORM, Montana filing status 2a.
+split_election:
+  value:
+    '2017': 1
+    '2024': 0
+  reference: 'Through TY2023 a married couple could compute Montana tax in two columns of one return, each with its own standard deduction (the percentage worksheet run on that spouse''s own Montana AGI, taking the single floor and cap), its own pension exemption with the phase-out on that spouse''s own federal AGI, and its own $5,000 federal-tax deduction cap -- "If you are married filing separately on the same form or on separate forms, you EACH are limited to the $5,000 federal tax deduction" (inst_2017). Because the bracket ladder above does not vary by filing status, splitting was near-universally better for a two-earner couple. Abolished from TY2024, when Montana status must match the federal one'
+
 # Preferential schedule on net long-term capital gains, from TY2024.
 kg_pref_rate_low:
   value:
