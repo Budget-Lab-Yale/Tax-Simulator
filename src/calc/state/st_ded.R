@@ -142,6 +142,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.std_po_share_per_step', # (dbl) share of the std lost per step (RI 0.20)
     'st_ded.std_po_amount_per_step', # (dbl) DOLLARS of std lost per step (AL)
     'st_ded.std_po_floor',    # (dbl) minimum the stepped deduction falls to (AL)
+    'st_ded.item_less_fed_std', # (int) only the EXCESS over the federal standard deduction (LA)
     'st_ded.item_flat_cap',   # (dbl) flat-dollar itemized cap (OK $17,000; .inf = none)
     'st_ded.item_flat_cap_excl_medical', # (int) medical exempt from the flat cap (OK)
     'st_ded.item_flat_cap_excl_charity', # (int) charity exempt from the flat cap (OK)
@@ -522,6 +523,16 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
           st_ded.char_only_share1 * char_item_ded_potential,
         TRUE                              ~ st_item_lim
       ),
+
+      # EXCESS federal itemized deductions (LA IT-540 lines 8A-8D; R.S.
+      # 47:293(3)): only the amount by which the selected components exceed
+      # the FEDERAL standard deduction is deductible, floored at zero, and
+      # there is no state standard deduction to elect against -- the excess
+      # is simply subtracted. Louisiana narrowed the base from all itemized
+      # deductions to medical and dental only from TY2022 (widely reported as
+      # a repeal, which it was not), which the component flags carry
+      st_item_ded = if_else(st_ded.item_less_fed_std == 1,
+                            pmax(0, st_item_ded - std_ded), st_item_ded),
 
       # Election: independent choice takes the larger; coupled follows the
       # federal election

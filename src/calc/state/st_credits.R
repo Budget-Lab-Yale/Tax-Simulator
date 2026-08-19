@@ -170,6 +170,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.ctc_refundable',
     'st_credits.ctc_cdctc_greater_of', # (0/1) child and care credits are alternatives
     'st_credits.cdctc_ref_cap',        # (dbl) cap on the refundable care-credit portion (ME $500)
+    'st_credits.cdctc_ref_agi_limit',  # (dbl) federal AGI at or below which it is refundable (LA $25,000)
     'st_credits.percap_refundable',
     'st_credits.stfc_refundable',
     'st_credits.mc_style',
@@ -235,8 +236,11 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
 
   # Refundable/nonrefundable split of the care credit: the refundable
   # portion is capped at cdctc_ref_cap (ME 5218 "refundable up to $500"),
-  # remainder nonrefundable; .inf keeps the all-or-nothing split
+  # remainder nonrefundable; .inf keeps the all-or-nothing split. Louisiana
+  # instead makes refundability turn on income -- the credit is refundable at
+  # or below $25,000 of federal AGI and nonrefundable above it (R.S. 47:297.4)
   cdctc_ref_part = tax_unit$st_credits.cdctc_refundable *
+                   (tax_unit$agi <= tax_unit$st_credits.cdctc_ref_agi_limit) *
                    pmin(care$st_cdctc, tax_unit$st_credits.cdctc_ref_cap)
 
   # Remaining tax after the credits that precede the JFC/EITC in the OH

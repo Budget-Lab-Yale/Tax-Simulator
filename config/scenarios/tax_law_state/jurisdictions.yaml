@@ -83,6 +83,14 @@ KS:
 KY:
   profile: broad_iit
   enabled: true
+# LA adopts the IRC as amended for the definition of federal adjusted gross
+# income (R.S. 47:293(10)), so rolling conformity (group 0). Note the
+# excess-federal-itemized deduction points at the FEDERAL standard deduction
+# rather than printing its own amounts, so federal standard-deduction reforms
+# reach Louisiana through that line -- see baseline/la/ded.yaml
+LA:
+  profile: broad_iit
+  enabled: true
 # MA defines its own schedular income classes below the federal AGI line and
 # takes no federal AGI figure at all, so IRC conformity is moot in the same way
 # it is for PA (group 0 trivially)

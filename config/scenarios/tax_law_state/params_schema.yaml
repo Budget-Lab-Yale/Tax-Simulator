@@ -235,6 +235,9 @@ scalars:
   # FLAT-DOLLAR itemized cap (OK 68 O.S. 2358(E)(3)(b): $17,000 from TY2018,
   # with charity and medical exempt). Distinct from item_limit_* (income-based)
   # and from the NY share-based tiers; .inf = no cap
+  # Only the EXCESS of the selected itemized components over the FEDERAL
+  # standard deduction is deductible, floored at zero (LA IT-540 lines 8A-8D)
+  st_ded.item_less_fed_std: 0
   st_ded.item_flat_cap: .inf
   st_ded.item_flat_cap_excl_medical: 0
   st_ded.item_flat_cap_excl_charity: 0
@@ -372,6 +375,10 @@ scalars:
   # combined_sep there is no better-of election
   st_ord.combined_split: 0
   st_ord.combined_split_round: .inf   # rounding increment for the shares (MO: 0.01, whole percent); .inf = unrounded
+  # The exemption is relieved at the LOWEST brackets rather than subtracted
+  # before the schedule: tax = sched(income) - sched(exemption), with the
+  # bracket bounds anchored to unreduced income (LA R.S. 47:32(A)(1)/294/295(B))
+  st_ord.exempt_from_bottom: 0
   st_exempt.dep_child_addl: {default: 0, units: per_dependent}   # additional exemption per dependent child (IN $1,500)
   st_exempt.dep_child_max_age: 0   # max tracked dependent age for the child add-on (IN: 23, proxying under-19-or-student-under-24)
 
@@ -490,6 +497,9 @@ scalars:
   # up to $500", remainder nonrefundable). .inf with cdctc_refundable = 1
   # keeps a fully refundable credit; irrelevant when cdctc_refundable = 0
   st_credits.cdctc_ref_cap: .inf
+  # Federal AGI at or below which the care credit is refundable (LA $25,000);
+  # above it the credit is nonrefundable
+  st_credits.cdctc_ref_agi_limit: .inf
   # 0/1: the child credit and the child/dependent care credit are ALTERNATIVES,
   # the taxpayer claiming whichever is larger (OK 68 O.S. 2357.43 grants the
   # greater of its two federal matches), not both. The losing leg is zeroed so
@@ -654,6 +664,10 @@ scalars:
   st_credits.cdctc_cap_amount: .inf
   st_credits.cdctc_cap_thresh: .inf
   st_credits.cdctc_cap_po_rate: 0
+  st_credits.cdctc_cap_per_return: 0   # the cap is per RETURN, not per child (LA $25)
+  # Above this federal AGI the credit switches to style 1, a share of the
+  # federal credit, whatever style is otherwise in force (LA $25,000)
+  st_credits.cdctc_style_switch_agi: .inf
 
   # filing.yaml
   st_filing.req_type: 0

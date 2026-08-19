@@ -24,7 +24,7 @@ test_state_calc = function() {
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
                 'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV', 'NM',
                 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR', 'MA', 'NJ',
-                'AR', 'MS', 'MT'),
+                'AR', 'MS', 'MT', 'LA'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -3536,6 +3536,179 @@ test_state_calc = function() {
            label = 'MT-11b 2024 earned income credit at 10% of federal')
 
   #--------------------------------------------------------------------------
+  # Louisiana (IT-540)
+  #
+  # The structural feature is where the exemption comes off. Louisiana does
+  # not subtract its combined personal exemption-standard deduction before
+  # applying the brackets: the statute relieves it at the LOWEST brackets
+  # while the bracket bounds stay anchored to unreduced income, so
+  #     tax = sched(tax table income) - sched(exemption)
+  # which is not sched(income - exemption) whenever more than one rate is in
+  # play. Three rate regimes: 2/4/6% through TY2021 alongside an uncapped
+  # federal income tax deduction, 1.85/3.50/4.25% for TY2022-24 with that
+  # deduction repealed, and a flat 3% from TY2025 on a restructured
+  # exemption with no dependant allowance at all.
+  #--------------------------------------------------------------------------
+
+  # LA-1: the bottom-up exemption rule, which is the whole reason this state
+  # needs its own mechanic. 2024 single, wages 60,000, one exemption of
+  # 4,500. Tax table income is 60,000, so tax = sched(60,000) - sched(4,500)
+  # = 1,968.75 - 83.25 = 1,885.50. Subtracting the exemption first would give
+  # sched(55,500) = 1,777.50, understating by 108
+  run_case('LA', 2024,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000),
+           expect = list(st_agi = 60000, st_exempt = 4500,
+                         st_txbl_inc = 55500, liab_st_iit = 1885.50),
+           label = 'LA-1 2024 single, exemption relieved at the bottom brackets')
+
+  # LA-2: the uncapped federal income tax deduction, constitutionally
+  # mandated until the November 2021 amendment and repealed by Act 395 from
+  # TY2022. Same unit in TY2021 with 6,000 of federal tax: all 6,000 comes
+  # off, tax table income is 54,000, and at the old 2/4/6% rates the tax is
+  # sched(54,000) - sched(4,500) = 1,990 - 90 = 1,900
+  run_case('LA', 2021,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, liab_bc = 6000),
+           expect = list(st_fed_tax_ded = 6000, st_ded = 6000,
+                         st_txbl_inc = 49500, liab_st_iit = 1900.00),
+           label = 'LA-2 2021 uncapped federal income tax deduction')
+
+  # LA-3: the per-exemption add-on. 2024 joint with two dependants and
+  # 100,000 of wages: 9,000 of base plus 1,000 for each dependant is 11,000,
+  # and the joint brackets are exactly double the single ones, so tax =
+  # sched(100,000) - sched(11,000) = 3,087.50 - 203.50 = 2,884.00
+  run_case('LA', 2024,
+           list(agi = 100000, filing_status = 2, age2 = 40, wages1 = 60000,
+                wages2 = 40000, ei1 = 60000, ei2 = 40000, n_dep = 2,
+                dep_age1 = 6, dep_age2 = 10),
+           expect = list(st_exempt = 11000, st_txbl_inc = 89000,
+                         liab_st_iit = 2884.00),
+           label = 'LA-3 2024 joint base plus per-dependant add-ons')
+
+  # LA-4: head of household is a hybrid, and both halves show here. It takes
+  # the JOINT exemption base of 9,000 -- plus 1,000 for its dependant -- but
+  # the SINGLE brackets. 2024 head of household, wages 60,000: tax =
+  # sched(60,000) - sched(10,000) = 1,968.75 - 185 = 1,783.75
+  run_case('LA', 2024,
+           list(agi = 60000, filing_status = 4, wages1 = 60000, ei1 = 60000,
+                n_dep = 1, dep_age1 = 10),
+           expect = list(st_exempt = 10000, st_txbl_inc = 50000,
+                         liab_st_iit = 1783.75),
+           label = 'LA-4 2024 head of household: joint exemption, single brackets')
+
+  # LA-5: the TY2025 restructure. The exemption nearly triples to 12,500 but
+  # every add-on is repealed, so a single filer with two dependants gets
+  # 12,500 flat -- Louisiana has no dependant allowance of any kind from
+  # TY2025. At the flat 3% the tax is 3% x 47,500 = 1,425.00, and under a
+  # flat rate the bottom-up rule collapses to the ordinary one
+  run_case('LA', 2025,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, n_dep = 2,
+                dep_age1 = 6, dep_age2 = 10),
+           expect = list(st_exempt = 12500, st_txbl_inc = 47500,
+                         liab_st_iit = 1425.00),
+           label = 'LA-5 2025 flat 3% and no dependant allowance')
+
+  # LA-6a / LA-6b: retirement, where Louisiana is generous twice over --
+  # Social Security is 100% exempt in every year, and every taxpayer 65 or
+  # older gets a per-person exclusion against pension and IRA income that
+  # Act 11 doubled to 12,000 for TY2025.
+  #
+  # A joint couple both aged 70 with 20,000 of wages, 80,000 of pension and
+  # 20,000 of taxable Social Security: in TY2024 the 20,000 of benefits and
+  # 2 x 6,000 of pension come out, leaving 88,000, against an exemption of
+  # 9,000 plus 2,000 for age. Tax = sched(88,000) - sched(11,000) = 2,464.00
+  retiree_unit = list(agi = 120000, filing_status = 2, age1 = 70, age2 = 70,
+                      wages1 = 20000, ei1 = 20000, txbl_pens_dist = 80000,
+                      txbl_ss = 20000, gross_ss = 24000)
+  run_case('LA', 2024, retiree_unit,
+           expect = list(st_agi = 88000, st_exempt = 11000,
+                         st_txbl_inc = 77000, liab_st_iit = 2464.00),
+           label = 'LA-6a 2024 Social Security exempt, 6,000 per 65+ taxpayer')
+
+  # In TY2025 the exclusion is 2 x 12,000, leaving 76,000, and the exemption
+  # is a flat 25,000 with no age add-on. Tax = 3% x 51,000 = 1,530.00
+  run_case('LA', 2025, retiree_unit,
+           expect = list(st_agi = 76000, st_exempt = 25000,
+                         st_txbl_inc = 51000, liab_st_iit = 1530.00),
+           label = 'LA-6b 2025 the retirement exclusion doubles')
+
+  # LA-7a / LA-7b: the earned income credit, refundable, which stepped from
+  # 3.5% to 5% for TY2019 under Act 6 of the 2018 Second Extraordinary
+  # Session. The same 3,000 federal credit yields 105 and then 150
+  run_case('LA', 2018,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, eitc = 3000),
+           expect = list(st_eitc = 105),
+           label = 'LA-7a 2018 earned income credit at 3.5% of federal')
+
+  run_case('LA', 2019,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, eitc = 3000),
+           expect = list(st_eitc = 150),
+           label = 'LA-7b 2019 earned income credit at 5% of federal')
+
+  # LA-8a / LA-8b: the excess federal itemized deduction was NARROWED, not
+  # repealed -- the correction that matters most about Act 395. A TY2021
+  # single itemizer with 20,000 of federal itemized deductions against a
+  # 12,550 federal standard deduction deducts the 7,450 excess, so tax =
+  # sched(52,550) - sched(4,500) = 1,903 - 90 = 1,813.00.
+  run_case('LA', 2021,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, itemizing = 1,
+                item_ded = 20000, med_item_ded = 5000, std_ded = 12550),
+           expect = list(st_ded = 7450, st_txbl_inc = 48050,
+                         liab_st_iit = 1813.00),
+           label = 'LA-8a 2021 excess over the federal standard deduction')
+
+  # From TY2022 the base is MEDICAL AND DENTAL ONLY, so the same filer's
+  # 5,000 of medical falls far short of the 12,950 federal standard
+  # deduction and the deduction is nothing at all. Line 8A, the itemized
+  # total, is still collected on the form but no longer enters the
+  # arithmetic
+  run_case('LA', 2022,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, itemizing = 1,
+                item_ded = 20000, med_item_ded = 5000, std_ded = 12950),
+           expect = list(st_ded = 0, st_txbl_inc = 55500,
+                         liab_st_iit = 1885.50),
+           label = 'LA-8b 2022 narrowed to medical and dental only')
+
+  # LA-9: the refundable branch of the child care credit, which Louisiana
+  # computes from its own worksheet rather than as a share of the federal
+  # credit. 2024 single, AGI 20,000, one child, 3,000 of expenses: the AGI
+  # decimal at 20,000 is .32, halved by the worksheet's own 0.50 multiplier
+  # to .16, so the credit is 480
+  care_unit = list(agi = 20000, wages1 = 20000, ei1 = 20000, n_dep = 1,
+                   dep_age1 = 5, care_exp = 3000, cdctc_nonref = 600)
+  run_case('LA', 2024, care_unit,
+           expect = list(st_exempt = 5500, st_txbl_inc = 14500,
+                         st_cdctc = 480),
+           label = 'LA-9 2024 refundable child care credit off the state worksheet')
+
+  # LA-10: TY2021 ONLY, the decimal table collapses to a single .50 row,
+  # tracking the one-year ARPA expansion of the federal credit. The same
+  # unit gets .25 after the multiplier, so 750 rather than 480. Hard-coding
+  # the sliding scale understates the TY2021 credit by a third
+  run_case('LA', 2021, care_unit,
+           expect = list(st_cdctc = 750),
+           label = 'LA-10 2021 the flat .50 decimal table')
+
+  # LA-11a / LA-11b: above 25,000 of federal AGI the same credit becomes a
+  # share of the FEDERAL credit and stops being refundable -- 30% from
+  # 25,001 to 35,000, then 10%. On a 600 federal credit that is 180 at an
+  # AGI of 30,000.
+  run_case('LA', 2024,
+           list(agi = 30000, wages1 = 30000, ei1 = 30000, n_dep = 1,
+                dep_age1 = 5, care_exp = 3000, cdctc_nonref = 600),
+           expect = list(st_cdctc = 180),
+           label = 'LA-11a 2024 nonrefundable share of the federal credit')
+
+  # Above 60,000 a $25 backstop applies -- the lesser of $25 or 10% of the
+  # federal credit -- and in practice the $25 always binds. It is per RETURN
+  # however many children there are
+  run_case('LA', 2024,
+           list(agi = 80000, wages1 = 80000, ei1 = 80000, n_dep = 2,
+                dep_age1 = 5, dep_age2 = 8, care_exp = 6000,
+                cdctc_nonref = 1200),
+           expect = list(st_cdctc = 25),
+           label = 'LA-11b 2024 the $25 backstop above 60,000')
+
+  #--------------------------------------------------------------------------
   # New Jersey (NJ-1040)
   #
   # The strictest own-base state in the set: enumerated categories of gross
@@ -4602,7 +4775,7 @@ test_state_calc = function() {
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
                    'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI',
                    'WV', 'NM', 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR',
-                   'MA', 'NJ', 'AR', 'MS', 'MT')
+                   'MA', 'NJ', 'AR', 'MS', 'MT', 'LA')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()

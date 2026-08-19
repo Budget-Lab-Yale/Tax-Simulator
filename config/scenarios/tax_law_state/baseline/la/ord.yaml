@@ -1,0 +1,53 @@
+---
+# Louisiana rate schedule (IT-540; La. R.S. 47:32).
+#
+# THE ENCODING SUBTLETY THAT MATTERS MOST is not the rates -- it is where the
+# exemption comes off. Louisiana does NOT subtract the combined personal
+# exemption-standard deduction before applying the brackets. R.S. 47:32(A)(1),
+# 47:294 and 47:295(B), as LDR states them in RIB 21-032 footnote 5, require
+# it to be "deducted from the lowest tax bracket first and then the remaining
+# brackets in increasing order" -- that is,
+#     tax = sched(tax table income) - sched(exemption)
+# with the bracket boundaries anchored to UNREDUCED income. All 43,008 cells
+# of the published TY2017-TY2024 tax tables reproduce exactly under that rule
+# and not under the naive one. A TY2021 single filer with one exemption and
+# $27,625 of tax table income owes $765; sched(income - exemption) gives
+# $675. See exempt_from_bottom below.
+#
+# Three rate regimes: 2/4/6% through TY2021, 1.85/3.50/4.25% for TY2022-24
+# (Act 395 of 2021, traded for the repeal of the federal income tax
+# deduction), and a flat 3% from TY2025 (Act 11 of the 2024 Third
+# Extraordinary Session). The bracket thresholds themselves never moved in
+# any year and were never indexed.
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_joint
+    '3': brackets_single
+    '4': brackets_single
+
+exempt_from_bottom:
+  value: 1
+  reference: 'R.S. 47:32(A)(1), 47:294 and 47:295(B), quoted in RIB 21-032 fn.5 and RIB 25-012 fnn.1-2: the combined personal exemption, standard deduction and other exemption deductions "must be deducted from the lowest tax bracket first and then the remaining brackets in increasing order". Verified numerically against every cell of the published tax tables for TY2017-TY2024 -- 43,008 cells, zero mismatches. Note the consequence when the exemption exceeds the first bracket, which only happens for joint and head-of-household filers with several exemptions: the excess is relieved at the SECOND bracket rate'
+
+rates:
+  value:
+    '2017': [0.02, 0.04, 0.06]
+    '2022': [0.0185, 0.0350, 0.0425]
+    '2025': [0.03, 0.03, 0.03]
+  reference: 'IT-540 tax computation, each year. Act 395 of the 2021 Regular Session (HB 278) cut the rates to 1.85/3.50/4.25% for TY2022 in exchange for repealing the federal income tax deduction, contingent on the constitutional amendment ratified as Amendment No. 2 on November 13, 2021 (223,269 to 189,973). Act 11 of the 2024 Third Extraordinary Session (HB 10) replaced the ladder with a flat 3% applying to periods beginning on or after January 1, 2025, verified from R.S. 47:32(A) and IT-540 line 11, "Multiply Line 10 by .03" -- no tax table exists for TY2025. The three flat entries carry the same rate so the schedule shape is unchanged; under a flat rate the bottom-up exemption rule above collapses to the ordinary one identically'
+brackets_single:
+  value: [0.0, 12500.0, 50000.0]
+  reference: 'R.S. 47:32(A), unchanged TY2017-TY2024 and never indexed: the first $12,500 and then to $50,000, for single, married filing separately AND head of household. Head of household takes the SINGLE brackets, which is the opposite of its exemption treatment -- see exempt.yaml'
+brackets_joint:
+  value: [0.0, 25000.0, 100000.0]
+  reference: 'Same statute: exactly double the single figures, for married filing jointly and qualifying surviving spouse'
+
+documented_not_modeled:
+  tax_table_band_midpoints:
+    reference: 'LDR publishes $250-wide tax table bands and computes tax at the band midpoint. The model applies the closed-form schedule to exact income, so a given filer can differ from the printed table by up to a few dollars either way'
+  no_contingent_future_rate_cut:
+    reference: 'Act 11 repealed the R.S. 47:32.1 automatic rate-reduction triggers, so unlike Mississippi or North Carolina there is no contingent future rate path to consider. The 3% flat rate is the enacted end state'
+  la_const_art_vii_sec_4:
+    reference: 'The constitutional amendment made the federal income tax deduction PERMISSIVE rather than eliminating it, and set a 4.75% ceiling on the individual income tax rate. The elimination was statutory, by Act 395. The constitutional text itself was not retrieved'

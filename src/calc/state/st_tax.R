@@ -77,6 +77,8 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     'st_itemizing',              # (bool) state itemization election (calc_st_ded)
     'st_ded',                    # (dbl) state deduction taken (calc_st_ded)
     'st_std_ded',                # (dbl) state standard deduction (calc_st_ded)
+    'st_exempt',                 # (dbl) state exemption allowance (calc_st_exempt)
+    'st_ord.exempt_from_bottom', # (int) exemption relieved at the LOWEST brackets (LA)
     'st_exempt.personal_amount', # (dbl) per-taxpayer exemption (STA feeder)
     'st_exempt.aged_addl',       # (dbl) aged exemption add-on (STA feeder)
     'st_exempt.blind_addl'       # (dbl) blind exemption add-on (STA feeder)
@@ -175,6 +177,25 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     sched_published = st_pick_slot(base_amt, j) + m * (ti - B)
     tax_unit$st_tax_sched = if_else(is.na(sched_published),
                                     tax_unit$st_tax_sched, sched_published)
+  }
+
+  # Exemption relieved at the BOTTOM of the schedule rather than subtracted
+  # before it (LA R.S. 47:32(A)(1), 47:294, 47:295(B), as LDR states them in
+  # RIB 21-032 fn.5: the combined personal exemption and standard deduction
+  # "must be deducted from the lowest tax bracket first and then the
+  # remaining brackets in increasing order"). That rule is exactly
+  #     tax = sched(tax table income) - sched(exemption)
+  # with the bracket boundaries anchored to UNREDUCED income, which differs
+  # from sched(income - exemption) whenever more than one rate is in play --
+  # a TY2021 Louisiana single filer with one exemption and $27,625 of tax
+  # table income owes $765, not the $675 the naive form gives. It matters
+  # only for a graduated schedule: under Louisiana's TY2025 flat rate the
+  # two forms coincide identically
+  if (any(tax_unit$st_ord.exempt_from_bottom == 1)) {
+    exempt_bottom = pmax(0, sched_tax_at(ti + pmax(0, tax_unit$st_exempt)) -
+                            sched_tax_at(pmax(0, tax_unit$st_exempt)))
+    tax_unit$st_tax_sched = if_else(tax_unit$st_ord.exempt_from_bottom == 1,
+                                    exempt_bottom, tax_unit$st_tax_sched)
   }
 
   # Preferential rate schedule on net LONG-TERM capital gain, STACKED on top

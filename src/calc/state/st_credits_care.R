@@ -18,7 +18,9 @@ st_credits_care_req_vars = c(
   'st_credits.cdctc_share_income_base',
   'st_credits.cdctc_cap_amount',
   'st_credits.cdctc_cap_thresh',
-  'st_credits.cdctc_cap_po_rate'
+  'st_credits.cdctc_cap_po_rate',
+  'st_credits.cdctc_cap_per_return',      # (int) the cap is per return, not per child (LA $25)
+  'st_credits.cdctc_style_switch_agi'     # (dbl) above this federal AGI, use style 1 (LA $25,000)
 )
 
 
@@ -87,10 +89,22 @@ st_credits_care = function(tax_unit) {
                     pmin(tax_unit$ei1, tax_unit$ei2), tax_unit$ei1)),
     Inf
   )
+  # Louisiana runs BOTH computations in one credit, split at a federal-AGI
+  # line (R.S. 47:297.4): at or below $25,000 the state computes the credit
+  # from its own worksheet -- expenses, the earned-income limit and a sliding
+  # decimal, halved -- and refunds it; above the line the credit is a share
+  # of the FEDERAL credit and is nonrefundable. Encoded as a switch on the
+  # style already in force rather than a third style, since both
+  # computations are here. .inf = no switch
+  cdctc_style_v = if_else(
+    is.finite(tax_unit$st_credits.cdctc_style_switch_agi) &
+      tax_unit$agi > tax_unit$st_credits.cdctc_style_switch_agi,
+    1, tax_unit$st_credits.cdctc_style
+  )
   cdctc_ny = case_when(
-    tax_unit$st_credits.cdctc_style == 1 ~
+    cdctc_style_v == 1 ~
       cdctc_ny_share * (tax_unit$cdctc_nonref + tax_unit$cdctc_ref),
-    tax_unit$st_credits.cdctc_style == 2 & n_care_v > 0 ~
+    cdctc_style_v == 2 & n_care_v > 0 ~
       cdctc_rate2 * pmin(tax_unit$care_exp, cdctc_cap_vec, cdctc_ei_cap),
     TRUE ~ 0
   )
@@ -99,12 +113,16 @@ st_credits_care = function(tax_unit) {
 
   # Income-capped variant (MN M1CD): above the threshold, the credit is
   # limited to cap_amount per qualifying person (up to two) less po_rate
-  # times the excess AGI (a cliff at the threshold, as the form computes)
+  # times the excess AGI (a cliff at the threshold, as the form computes).
+  # Louisiana's version of the same cap is a flat $25 per RETURN however many
+  # children there are, hence the per-return flag
+  cdctc_cap_units = if_else(tax_unit$st_credits.cdctc_cap_per_return == 1,
+                            1, pmin(2, n_care_v))
   st_cdctc = if_else(
     is.finite(tax_unit$st_credits.cdctc_cap_thresh) &
       tax_unit$agi > tax_unit$st_credits.cdctc_cap_thresh,
     pmin(st_cdctc,
-         pmax(0, tax_unit$st_credits.cdctc_cap_amount * pmin(2, n_care_v) -
+         pmax(0, tax_unit$st_credits.cdctc_cap_amount * cdctc_cap_units -
                  tax_unit$st_credits.cdctc_cap_po_rate *
                    (tax_unit$agi - tax_unit$st_credits.cdctc_cap_thresh))),
     st_cdctc
