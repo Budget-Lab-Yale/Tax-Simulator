@@ -774,7 +774,7 @@ anything. Full battery in the implementation plan; the load-bearing facts:
 
   | Aggregate | Universe | TY2022 | vs PUF combined | Verdict |
   |---|---|---|---|---|
-  | **SSA HI wage-and-salary** (EEDATA Table 4, 51 juris) | every person with covered wages, **filing or not** | $10,634.7B | +8.2% | **primary constraint** |
+  | **SSA HI wage-and-salary** (EEDATA Table 4, 51 juris) | every person with covered wages, **filing or not** | $10,634.7B | +8.2% (raw gap, **not** the wedge — see below) | **primary constraint** |
   | QCEW total annual wages | covered employment, establishment-based | $10,499.7B | +7.0% | cross-check (already §3.1 step 6) |
   | NIPA `gdp_wages` (Macro-Projections) | all wage employment, incl. imputed | — | broadest | already used as a **growth** factor (`project_puf.R:90`), not a level |
 
@@ -899,10 +899,11 @@ Two clarifications the original text got wrong or left implicit:
   share-normalized like every other target (PUF non-filer national adult
   total × residual state share within age band), with the adult x-vector
   per D5.
-- **Additional margins**: OASDI beneficiary counts as targets on the
+- **Additional margins** — ⚠ **SUPERSEDED as drafted; read the amendment below
+  before implementing this bullet.** ~~OASDI beneficiary counts as targets on the
   65-74/75+ bands; the covered-worker wage margin as a `has_wages` count
   target on the non-filer partition (with a documented tolerance for the
-  returns-vs-persons concept gap). QCEW stays a diagnostic, never a target.
+  returns-vs-persons concept gap).~~ QCEW stays a diagnostic, never a target.
 
   > **Amended 2026-08-19 — this bullet as drafted is not implementable, on two
   > counts.** **(a) OASDI publishes no age detail within 65+** (65+ by sex only),
