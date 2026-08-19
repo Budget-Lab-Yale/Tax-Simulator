@@ -25,11 +25,15 @@ inside our own sample window.
 This note does three things, in order: it **measures** what the extract already
 carries, it **surveys** how the established models answer the question, and it
 **chooses**. Every number quoted comes from a CSV written by
-`09_asec_tax_unit_diagnostics.R`; nothing here is asserted from memory.
+`research/state_weights/nonfiler_residual/09_asec_tax_unit_diagnostics.R`;
+nothing here is asserted from memory.
 
-**Companions.** `../nonfiler_residual_design.md` §3.2 (the filing model this
-feeds), `05_filing_model_literature.md` (which model, and why Mok), `04_findings.md`
-(the residual anchors this must reconcile against).
+**Companions.** `research/state_weights/nonfiler_residual_design.md` §3.2 (the
+filing model this feeds),
+`research/state_weights/nonfiler_residual/05_filing_model_literature.md` (which
+model, and why Mok),
+`research/state_weights/nonfiler_residual/04_findings.md` (the residual anchors
+this must reconcile against).
 
 ---
 
@@ -572,8 +576,9 @@ case.
 - Daniel Lin, *Methods and Assumptions of the CPS ASEC Tax Model*, U.S. Census
   Bureau SEHSD Working Paper FY-2022-18 (November 2022) —
   [census.gov](https://www.census.gov/library/working-papers/2022/demo/SEHSD-wp2022-18.html)
-- Shannon Mok, *Estimating the Characteristics of Filers and Nonfilers*, CBO
-  Working Paper 2017-06 — local copy at `resources/mok2017_cbo_wp2017-06.pdf`
+- Shannon Mok, CBO Working Paper 2017-06 — Table 14 transcribed to
+  `research/state_weights/nonfiler_residual/resources/mok_coefs.csv` (A4); local copy at
+  `research/state_weights/nonfiler_residual/resources/mok2017_cbo_wp2017-06.pdf`
 - TRIM3 federal income tax module documentation, Urban Institute —
   [boreas.urban.org](https://boreas.urban.org/documentation/federaltax/main.php)
 - PolicyEngine US Data methodology —

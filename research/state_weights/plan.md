@@ -463,15 +463,40 @@ Effort estimates follow the memo's own where it gives them.
       Required one fix to the shared downloader, since it parsed only one of
       IPUMS's two data-quality-flag error phrasings and hard-failed on CPS.
       Add variables to this request rather than forking an extract.
-- [ ] **A4. Transcribe Mok (2017) Table 14** → `resources/mok_coefs.csv`, 14
-      group equations with SEs and per-cell filing rates. **Transcribe from a
-      rendered image, not a text dump**: Panel E's columns run "Age 65 or Older"
-      **first** (sample sizes 909 vs 62,438 disambiguate), and Panel E has `.`
-      rather than a coefficient for self-employment in the 65+ column.
-- [ ] **A5. Optionally transcribe Cilke** → `resources/cilke_coefs.csv` as the
-      comparison fit only. **Extract with PyMuPDF word positions**, not
-      `pdftotext -layout`, which silently mis-assigns coefficients. Skip if time
-      is short — the memo says if only one is fit, fit Mok.
+- [x] **A4. Mok (2017) Table 14 — DONE 2026-08-19.**
+      `research/state_weights/nonfiler_residual/resources/mok_coefs.csv`,
+      **14 groups x 17 terms = 238 rows** with SEs, significance stars, group Ns
+      and weighted filing rates. Transcribed from rendered page images as
+      instructed. Both documented Panel E traps confirmed (columns run **65+
+      first**, Ns 909 vs 62,438; `.` for self-employment in the 65+ column) —
+      plus **a third this plan did not have: Panel E has no "Retirement income"
+      row at all**, so its equations carry 15 covariates where every other panel
+      carries 16. Placeholder cells are stored blank with a `note`, never as zero.
+- [x] **A5. Cilke (1998) Table 3 — DONE 2026-08-19** (not skipped).
+      `research/state_weights/nonfiler_residual/resources/cilke_coefs.csv`,
+      **9 groups x 24 terms = 216 rows**, plus the WP-78 PDF committed as
+      `research/state_weights/nonfiler_residual/resources/cilke1998_ota_wp78.pdf`
+      (treasury.gov serves it to automated retrieval, unlike cbo.gov). **14 cells
+      are published as `0.0000/0.0000` = not estimated** for that group; stored
+      blank, and the count is asserted so a later edit cannot turn one into a real
+      zero. Each group's equation spans two PDF pages, so the CSV carries
+      `pdf_page` per row.
+- [x] **A4/A5 verification.**
+      `research/state_weights/nonfiler_residual/11_verify_coef_transcriptions.py`
+      recomputes each PDF page's multiset of numeric tokens and checks every value
+      the CSVs claim from that page — **454 values across 7 pages, all present**.
+      It catches typos and dropped digits, not a same-page cell swap; that is what
+      reading the images is for.
+      **⚠ The two tables have OPPOSITE dependent variables: Mok predicts
+      P(files), Cilke predicts P(does not file).** Mixing the conventions inverts
+      a model while producing plausible probabilities. Checkable anchor: *no
+      earned income* is positive in all nine Cilke columns (0.5069 … 0.9598),
+      against Mok's positive wage-presence terms (0.552 … 0.9).
+      **Open before scoring Mok:** her footnote calls the omitted group
+      "non-Hispanic white with more than a college education", which sits oddly
+      with a two-dummy education scheme whose natural omitted group is
+      high-school-to-some-college. It decides which population the intercept
+      describes.
 - [ ] **A6. Re-run 01 → 02 → 03** once A1 lands; move **D6 from partially
       resolved to resolved**; update `04_findings.md` with the T5 state margins
       the OASDI and covered-wage columns were specified with.

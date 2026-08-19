@@ -47,7 +47,7 @@ extraction; money amounts in $ billions, counts in millions.
 ## Transcribed coefficients (Stage D, todo A4/A5)
 
 Both tables were transcribed **from rendered page images**, 2026-08-19, and both
-are checked by `../11_verify_coef_transcriptions.py`, which recomputes each PDF
+are checked by `research/state_weights/nonfiler_residual/11_verify_coef_transcriptions.py`, which recomputes each PDF
 page's multiset of numeric tokens and confirms every value the CSV claims from
 that page is present. That catches typos and dropped digits; it cannot catch a
 swap of two cells on the same page, which is why the images were read rather
@@ -55,7 +55,7 @@ than the text dump. Run it after any edit:
 
 ```
 module load poppler/25.07.0-GCC-13.3.0
-python3 other/state_tax_research/nonfiler_residual/11_verify_coef_transcriptions.py
+python3 research/state_weights/nonfiler_residual/11_verify_coef_transcriptions.py
 ```
 
 ### ⚠ The two tables have OPPOSITE dependent variables
