@@ -1,0 +1,7 @@
+measure,persons_M,pct_of_dependents
+dependents (DEPSTAT > 0),86.95130249,100
+adult dependents (age 18+),13.21322189,15.196117265201
+pointer resolves to no PERNUM,0.17731047,0.203919280013536
+  ...in a household with a LINENO gap,0.17731047,0.203919280013536
+pointer lands on a modelled NON-FILER,9.04726907,10.4049839518396
+pointer lands on a person under 18,1.78456159,2.05236901448973
