@@ -33,30 +33,89 @@ extraction; money amounts in $ billions, counts in millions.
   self-employment signature motivating a SE dimension in the hazard, memo
   D3).
 
-## Coefficients still to transcribe
+## Transcribed coefficients (Stage D, todo A4/A5)
 
-**`mok_coefs.csv` — the primary below-threshold model, not yet transcribed.**
-Mok (2017) Table 14, pp. 48–50 of `mok2017_cbo_wp2017-06.pdf` (below): 14 group
-probits with coefficients and standard errors. This **replaces** Cilke as the
-model of record — see `../05_filing_model_literature.md` and design memo §3.2.2.
-Two warnings before transcribing:
+Both tables were transcribed **from rendered page images**, 2026-08-19, and both
+are checked by `../11_verify_coef_transcriptions.py`, which recomputes each PDF
+page's multiset of numeric tokens and confirms every value the CSV claims from
+that page is present. That catches typos and dropped digits; it cannot catch a
+swap of two cells on the same page, which is why the images were read rather
+than the text dump. Run it after any edit:
+
+```
+module load poppler/25.07.0-GCC-13.3.0
+python3 other/state_tax_research/nonfiler_residual/11_verify_coef_transcriptions.py
+```
+
+### ⚠ The two tables have OPPOSITE dependent variables
+
+**Mok's `mok_coefs.csv` predicts P(FILES). Cilke's `cilke_coefs.csv` predicts
+P(DOES NOT FILE).** A positive Mok coefficient means *more likely to file*; a
+positive Cilke coefficient means *more likely to be a non-filer*. Scoring one
+set through the other's convention inverts the entire model while producing
+perfectly plausible probabilities. Convert deliberately, and never pool them.
+
+The shared anchor that makes this checkable: *no earned income* raises
+non-filing. It is **positive in all nine Cilke columns** (0.5069 … 0.9598).
+Mok has no such term, but her wage-presence coefficients are **positive**
+(0.552 … 0.9), i.e. having wages raises *filing* — the same fact, opposite sign.
+
+### `mok_coefs.csv` — the model of record
+
+Mok (2017) Table 14, pp. 48–50 of `mok2017_cbo_wp2017-06.pdf`; **14 groups × 17
+terms = 238 rows**, coefficients, standard errors, significance stars, group
+sample sizes and weighted filing rates. Estimated on the 2007 CPS ASEC linked to
+the IRS Individual Master File, TY2006. This **replaces** Cilke as the model of
+record (`../05_filing_model_literature.md`, design memo §3.2.2).
+
+Three irregularities in the published table, all encoded rather than smoothed:
 
 - **Panel E's columns run "Age 65 or Older" FIRST, then "Under Age 65"** — the
-  reverse of the intuitive order, and automated text extraction returns the two
-  headers in the wrong sequence, which would silently swap the 0.23 and 0.10
-  filing rates. Sample sizes (909 vs 62,438) disambiguate. **Transcribe from a
-  rendered image, not a text dump.** Panel E also has `.` rather than a
-  coefficient for self-employment income in the 65+ column.
-- Mok's CPS frame **excludes the institutionalized and military-barracks
-  populations**, so these coefficients do not cover the group-quarters records
-  the PUF universe includes.
+  reverse of the intuitive order, and text extraction returns the headers
+  swapped, which would silently exchange the 0.23 and 0.10 filing rates. Sample
+  sizes (909 vs 62,438) disambiguate.
+- **Panel E has `.` rather than a coefficient for self-employment income in the
+  65+ column.** Stored blank with a `note`, never as zero.
+- **Panel E has no "Retirement income" row at all** — it is the only panel
+  missing one, so Panel E's equations carry 15 covariates where the others carry
+  16. Stored blank with a `note` for both Panel E groups.
 
-**`cilke_coefs.csv` — retained as the comparison fit only, not yet transcribed.**
-Cilke (1998), https://home.treasury.gov/system/files/131/WP-78.pdf, Table 3
-(pp. 26–29), 9 group probits. Table 3 predicts P(non-filer) despite a
-contradictory appendix coding. **Extract with PyMuPDF word positions, not
-`pdftotext -layout`**, which scrambles the row-label alignment and silently
-mis-assigns coefficients.
+Reading the equations (from the table's own footnote): the dependent variable is
+1 if the primary taxpayer has a 1040; **gross income is total income NET OF
+taxable Social Security**; the income-source variables are **presence
+indicators**, not amounts; `n_medicaid` is a **count**, not an indicator;
+means-tested transfers means TANF, SNAP, LIHEAP and housing assistance; stars
+are *** p<0.01, ** p<0.05, * p<0.1. The omitted category is described as
+"non-Hispanic white with more than a college education" — which sits oddly with
+a two-dummy education scheme (`educ_less_than_hs`, `educ_college`) whose natural
+omitted group is high-school-to-some-college. **Resolve this against Mok before
+scoring**; it decides which population the intercept describes.
+
+Mok's frame **excludes the institutionalized and military-barracks populations**,
+so these coefficients do not cover the group-quarters records the PUF universe
+includes (design memo C7).
+
+### `cilke_coefs.csv` — the comparison fit only
+
+Cilke (1998) OTA WP-78 Table 3, pp. 26–29 of `cilke1998_ota_wp78.pdf`; **9 groups
+× 24 terms = 216 rows**, probit estimates, standard errors and group sample
+sizes (8,469 / 3,544 / 4,379 / 462 / 2,590 / 940 / 233 / 2,413 / 692; total
+23,722). Estimated on the March 1991 CPS, TY1990.
+
+- **14 cells are published as `0.0000 / 0.0000`** — not estimated for that group
+  (gender in the four married groups, household head in six groups, AFDC in
+  four). Stored blank with a `note`. A zero coefficient and an unestimated one
+  are different things and the verifier asserts the count of them.
+- Each group's equation is printed across **two pages** — variables through
+  `no_public_housing` on the first, the remaining six plus the sample size on
+  the second. The CSV carries `pdf_page` per row so provenance survives.
+- **Two groups are too thin to support 24 parameters** (n=462 and n=233); treat
+  their coefficients as indicative at best.
+- The paper's own appendix codes `INON: 0 = NON-FILER, 1 = FILER`, contradicting
+  the table. **The table is right** — see the sign check above.
+
+Use it only to ask whether Mok's fit is doing something Cilke's did not. If only
+one model is fit, the memo says fit Mok.
 
 ## Source PDFs
 
@@ -73,6 +132,15 @@ mis-assigns coefficients.
   Note the house convention is that PDFs consolidate in the `references` repo.
   This copy is here deliberately, as provenance for the transcription that has
   not happened yet; move or de-duplicate it if `references` takes it on.
+
+- **`cilke1998_ota_wp78.pdf`** — James Cilke, "A Profile of Non-Filers,"
+  U.S. Treasury Office of Tax Analysis Working Paper 78, July 1998 (38pp).
+  Retrieved 2026-08-19 from https://home.treasury.gov/system/files/131/WP-78.pdf
+  (which does *not* block automated retrieval, unlike cbo.gov); md5
+  `647d7a6a2af6a04f6bad1343feb613ee`. A US government work, so public domain.
+  Committed as provenance for `cilke_coefs.csv`, which the verifier checks
+  against it page by page — the transcription and its source should not be
+  separable.
 
 ## SSA store documentation (`ssa_notes/`)
 

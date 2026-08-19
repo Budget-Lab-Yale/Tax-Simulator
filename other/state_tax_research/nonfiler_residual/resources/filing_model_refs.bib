@@ -21,6 +21,10 @@
                  eb649ef0c5918ad0571b2005dc1d2437) because cbo.gov returns 403 to
                  automated retrieval; also in the Affordability literature folder at
                  Literature/Reweighting/53125-nonfilers.pdf.
+                 TRANSCRIBED 2026-08-19 to mok_coefs.csv (14 groups x 17 terms),
+                 verified page by page by ../11_verify_coef_transcriptions.py. A THIRD
+                 irregularity the warnings below missed: Panel E has NO "Retirement
+                 income" row at all, so its equations carry 15 covariates, not 16.
                  TRANSCRIPTION WARNINGS: Panel E columns run
                  "Age 65 or Older" FIRST then "Under Age 65" (reverse of the intuitive
                  order, and text extraction returns the headers reversed) -- transcribe
@@ -39,9 +43,16 @@
   month       = {jul},
   url         = {https://home.treasury.gov/system/files/131/WP-78.pdf},
   note        = {Table 3 = 9 group probits (pp. 26--29). Table 3 predicts
-                 P(non-filer) despite the contradictory appendix coding. Extract with
-                 PyMuPDF word positions, NOT pdftotext -layout, which scrambles the
-                 row-label alignment}
+                 P(non-filer) despite the contradictory appendix coding -- the OPPOSITE
+                 of Mok, who predicts P(files); never pool the two without converting.
+                 TRANSCRIBED 2026-08-19 to cilke_coefs.csv (9 groups x 24 terms) from
+                 rendered page images, and verified page by page against the PDF by
+                 ../11_verify_coef_transcriptions.py. 14 cells publish as 0.0000/0.0000
+                 = not estimated for that group, stored blank rather than as zeros.
+                 PDF COMMITTED BESIDE THIS FILE as cilke1998_ota_wp78.pdf (md5
+                 647d7a6a2af6a04f6bad1343feb613ee); treasury.gov serves it to automated
+                 retrieval, unlike cbo.gov, but the transcription and its source should
+                 not be separable}
 }
 
 @inproceedings{mortenson2009attaching,
