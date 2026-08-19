@@ -495,7 +495,7 @@ scalars:
   # 500; NY/VT/ME-2018 use the default $1,000)
   st_credits.ctc_po_step: 1000
   # 0/1: reduce the PER-CHILD amount by the phase-out and then multiply by the
-  # child count (VT's published CTC table works that way -- see source_packets/
+  # child count (VT's published CTC table works that way -- see research/source_packets/
   # vt.md), rather than reducing the aggregate credit once. Only differs once
   # the reduction exceeds one child's amount, where per-child floors at zero
   # per child

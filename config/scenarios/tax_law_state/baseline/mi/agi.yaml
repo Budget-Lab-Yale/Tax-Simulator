@@ -29,7 +29,7 @@ ss_sub_share:
 # t). Bands are lower age bounds; a return takes the amount of the highest
 # band its older-spouse age reaches; band 1 is age 0/amount 0 by convention.
 #
-# Structure per year (full derivation in raw/mi_retirement_research.md):
+# Structure per year (full derivation in research/raw/mi_retirement_research.md):
 #   2017-2022: [Tier 3 under-67: 0][Tier 2 (born 1946-52): 20,000/40,000]
 #              [Tier 1 (born <1946): indexed cap, e.g. 50,509/101,019 in
 #              2017]. Tier-2 67+ filers' $20k/$40k Michigan Standard

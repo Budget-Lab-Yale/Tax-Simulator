@@ -7,7 +7,8 @@ outputs, validation — plus the state income tax module and its current status.
 **Related:** `README.md` (quick start), `CLAUDE.md` (operational reference for
 agents/automation), `docs/website/` (the older R Markdown site this document
 supersedes in coverage), `.claude/skills/policy-config/SKILL.md` (reform YAML
-details), `other/state_tax_research/` (state workstream design docs).
+details), `research/README.md` (the state-tax research corpus: plans, methods,
+evidence).
 
 ---
 
@@ -282,7 +283,7 @@ workbooks) land at the vintage root, above the scenario folders.
   WASM). The crosswalk was substantially repaired in July 2026 (a dozen
   latent input bugs; QBI inputs now mapped). Known remaining federal-side
   divergences are cataloged with a review policy in
-  `other/state_tax_research/cross_model/federal_divergences.md` —
+  `research/state_tax/cross_model/federal_divergences.md` —
   notably un-root-caused EITC amount disagreements and a p99 federal-AGI
   tail vs. TAXSIM.
 - **Unit tests**: `src/tests/` — tax law parsing regressions, state
@@ -293,9 +294,9 @@ workbooks) land at the vintage root, above the scenario folders.
 ## 10. The state income tax module
 
 *Status date: 2026-07-19, branch `state-tax`. Design of record:
-`other/state_tax_research/state_tax_implementation_plan.md` (seven phases);
-running status: `other/state_tax_research/STATUS.md` and
-`state_weights_phase1_summary.md`.*
+`research/state_tax/plan.md` (seven phases);
+running status: `research/STATUS.md` and
+`research/state_weights/state_weights_phase1_summary.md`.*
 
 ### 10.1 Architecture
 
@@ -355,14 +356,14 @@ SD TX WY). Encodings run 2017-forward from forms and statutes, including structu
 features like NY's tax-benefit recapture, CO's TABOR rate history, OH's
 Business Income Deduction and ordered credit stack, and UT's taxpayer tax
 credit. Each state's known modeling gaps are documented in
-`other/state_tax_research/state_parameter_rollout.csv` (the tracker).
+`research/state_tax/state_parameter_rollout.csv` (the tracker).
 
 ### 10.3 State weights (Phase 1) — decided, not yet in production
 
 The production dispatcher **still returns a uniform placeholder split**, so
 state-level *totals are not yet meaningful*; all plumbing and contracts are
 real. The bake-off concluded 2026-07-19
-(`state_weights_phase1_summary.md` has methods, results, and the TPC/OTA
+(`research/state_weights/state_weights_phase1_summary.md` has methods, results, and the TPC/OTA
 comparison):
 
 - Targets: 22 SOI Historic Table 2 series × AGI stub × state for filers
@@ -382,7 +383,7 @@ comparison):
 
 ### 10.4 Cross-model validation (Phase 5) — running, triage open
 
-A record-level harness (`other/state_tax_research/cross_model/`) validates
+A record-level harness (`research/state_tax/cross_model/`) validates
 each state's calculator against **TAXSIM-35 (2017–2020)** and **PolicyEngine
 US (2021–2024)** on stratified PUF samples, with a federal-alignment "clean
 subset" filter, a machine-readable known-differences list (with predicate-
@@ -452,8 +453,8 @@ for both external models are drafted in
 - [ ] The cross-model harness's raw per-year files hold only the most recent
   run's state set — partial reruns silently strip other states' stage
   diagnostics from regenerated reports (manual merge required today).
-- [ ] `STATUS.md` in the state research directory trails the running log;
-  the tracker CSV (`state_parameter_rollout.csv`) is the current source of
+- [ ] `research/STATUS.md` trails the running log; the tracker CSV
+  (`research/state_tax/state_parameter_rollout.csv`) is the current source of
   truth for per-state status.
 - [ ] Send the drafted TAXSIM/PolicyEngine issue reports upstream.
 
@@ -465,7 +466,7 @@ for both external models are drafted in
   disagreements with TAXSIM are not root-caused; the federal AGI p99 tail
   (~+$14k vs TAXSIM) has untraced candidates (taxable SS, capital-loss
   limitation interplay). See
-  `other/state_tax_research/cross_model/federal_divergences.md` — policy
+  `research/state_tax/cross_model/federal_divergences.md` — policy
   is document-then-condition-away for state validation, but someone should
   confirm none indicates a bug in our federal calculator.
 - **PUF vintage**: the 2015 base is aged nine-plus years; distributional

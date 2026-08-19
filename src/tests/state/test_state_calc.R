@@ -4861,7 +4861,7 @@ test_state_calc = function() {
 
   # MACH-8: per-child phase-out (VT's CTC pays $1,000 per child age 5 or under,
   # reduced by $20 per $1,000 of AGI over $125,000, the reduction applied to
-  # EACH child's amount -- source_packets/vt.md). Host NY 2025, the style-2
+  # EACH child's amount -- research/source_packets/vt.md). Host NY 2025, the style-2
   # state, with VT's table substituted. MFJ, two children aged 2 and 4, AGI
   # $145,000: excess 20,000 -> 20 steps x $20 = $400 reduction, so per-child
   # gives 2 x (1000 - 400) = 1,200 where reducing the aggregate once gives

@@ -20,7 +20,7 @@ AZ:
 # conformity groups (1, 2) have no reference-law bridge yet
 # (conformity_groups.yaml: ready=false), so validate_state_federal_conformity()
 # hard-stops any federal-reform run that requests CA. Excluded from `states=all`
-# until the reference overlays land, per ca_p1_readiness_analysis.md. Direct
+# until the reference overlays land, per research/state_tax/notes/ca_p1_readiness_analysis.md. Direct
 # `states=CA` selection still works for baseline-law runs.
 CA:
   profile: broad_iit
@@ -108,7 +108,7 @@ MA:
 # MD state-level tax only; the county piggyback (2.25-3.3%) is deferred to
 # the locality phase. Cross-model: TAXSIM's MD siitax EXCLUDES the county
 # tax (probe-verified); PolicyEngine's state_income_tax INCLUDES it, so the
-# harness requests PE's state-only md_income_tax (pe_state_tax.py)
+# harness requests PE's state-only md_income_tax (src/tests/state/cross_model/pe_state_tax.py)
 MD:
   profile: broad_iit
   enabled: true

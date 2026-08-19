@@ -4,20 +4,30 @@
 # Cross-model validation harness for the state income tax calculator:
 # per-record comparison against NBER TAXSIM-35 (via usincometaxes, local
 # WASM) and PolicyEngine US (via a python driver, see
-# other/state_tax_research/cross_model/pe_state_tax.py).
+# src/tests/state/cross_model/pe_state_tax.py).
 #
 # Design: record x state x year. Sampled PUF records are run counterfactually
 # through EACH state's calculator and through the external model with that
 # state code. State weights are NOT used -- this validates tax law encoding,
 # not geography. Aggregate validation remains weights-blocked (plan §4).
 #
-# Year split (design of record, state_tax_implementation_plan.md Phase 5):
+# Year split (design of record, research/state_tax/plan.md Phase 5):
 #   2017-2020 vs TAXSIM (its state law is actually coded through ~2020)
 #   2021+     vs PolicyEngine (TAXSIM 2021+ params are inflated prior law)
 #
 # Defines functions only (sourced by main.R's recursive walk). Run via
-# other/state_tax_research/cross_model/run_cross_model.R
+# research/state_tax/cross_model/run_cross_model.R
 #-----------------------------------------------------------------------------
+
+
+# Harness assets that live with this test rather than in research/. They are
+# executable dependencies and machine-read fixtures, so their paths must be
+# stable under the archiving and reorganizing that research/ exists to do.
+cross_model_harness_dir = function() './src/tests/state/cross_model'
+
+cross_model_known_diffs_path = function() {
+  file.path(cross_model_harness_dir(), 'known_differences.csv')
+}
 
 
 # States by structural class (baseline configs under tax_law_state/baseline/)
@@ -275,7 +285,7 @@ cross_model_pe_leg = function(sampled, states, year, venv_python, cache_dir) {
 
   #----------------------------------------------------------------------------
   # Runs sampled records through PolicyEngine US via the python driver
-  # (other/state_tax_research/cross_model/pe_state_tax.py). Inputs use the
+  # (src/tests/state/cross_model/pe_state_tax.py). Inputs use the
   # same concept set as the TAXSIM crosswalk so both external models see
   # identical records. MFS records are modeled as single filers in PE
   # (documented simplification).
@@ -293,9 +303,9 @@ cross_model_pe_leg = function(sampled, states, year, venv_python, cache_dir) {
 
   if (is.null(venv_python)) {
     stop('PolicyEngine leg requires --pe-python (path to the venv python); ',
-         'see other/state_tax_research/cross_model/README.md')
+         'see src/tests/state/cross_model/README.md')
   }
-  driver = './other/state_tax_research/cross_model/pe_state_tax.py'
+  driver = file.path(cross_model_harness_dir(), 'pe_state_tax.py')
 
   pe_input = map(states, function(st) {
     sampled %>%
@@ -385,7 +395,7 @@ cross_model_compare = function(ours, theirs, model, known_diffs = NULL,
   #   - theirs (df)      : output of cross_model_taxsim_leg() or _pe_leg(),
   #                        with external liability in column `ext_liab`
   #   - model (str)      : 'taxsim' or 'policyengine'
-  #   - known_diffs (df) : known_differences.csv rows (NULL = none)
+  #   - known_diffs (df) : src/tests/state/cross_model/known_differences.csv rows (NULL = none)
   #   - tolerances (dbl[]) : dollar tolerances for match rates
   #
   # Returns: list of
@@ -553,7 +563,7 @@ cross_model_load_known_diffs = function(path) {
   # right schema if the file does not exist yet.
   #
   # Parameters:
-  #   - path (str) : path to known_differences.csv
+  #   - path (str) : path to src/tests/state/cross_model/known_differences.csv
   #
   # Returns: tibble of known differences (df)
   #----------------------------------------------------------------------------
@@ -576,20 +586,20 @@ cross_model_report = function(out_dir, known_diffs_path = NULL) {
 
   #----------------------------------------------------------------------------
   # Writes per-state markdown reports from persisted harness output
-  # (results/summary.csv, results/raw/*_stages.csv, known_differences.csv).
+  # (results/summary.csv, results/raw/*_stages.csv, src/tests/state/cross_model/known_differences.csv).
   # These reports are the documentation artifact behind flipping a state's
   # cross_model tracker column to done.
   #
   # Parameters:
   #   - out_dir (str)          : results directory
-  #   - known_diffs_path (str) : known_differences.csv path (default: sibling
+  #   - known_diffs_path (str) : src/tests/state/cross_model/known_differences.csv path (default: sibling
   #                              of out_dir)
   #
   # Returns: vector of report paths written (str[])
   #----------------------------------------------------------------------------
 
   if (is.null(known_diffs_path)) {
-    known_diffs_path = file.path(dirname(out_dir), 'known_differences.csv')
+    known_diffs_path = cross_model_known_diffs_path()
   }
   known_diffs = cross_model_load_known_diffs(known_diffs_path)
   summary_df  = read_csv(file.path(out_dir, 'summary.csv'), show_col_types = F)
@@ -711,9 +721,7 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
   #----------------------------------------------------------------------------
 
   dir.create(file.path(out_dir, 'raw'), recursive = T, showWarnings = F)
-  known_diffs = cross_model_load_known_diffs(
-    file.path(dirname(out_dir), 'known_differences.csv')
-  )
+  known_diffs = cross_model_load_known_diffs(cross_model_known_diffs_path())
 
   all_cells = list()
 

@@ -10,7 +10,7 @@
 #     suppressPackageStartupMessages(invisible(capture.output(
 #       lapply(readLines('./requirements.txt'), library, character.only = T))));
 #     return_vars = list();
-#     list.files('./src', recursive = T) %>%
+#     list.files('./src', recursive = T, pattern = '\\.[Rr]$') %>%
 #       walk(~ if (. != 'main.R' && !startsWith(., 'slurm/')) source(file.path('./src/', .)));
 #     test_state_tax_law()"
 #---------------------------------------------------------------
@@ -923,7 +923,7 @@ test_state_rollout_tracker = function() {
   # Returns: TRUE invisibly if test passes (throws otherwise).
   #----------------------------------------------------------------------------
 
-  tracker = read_csv('./other/state_tax_research/state_parameter_rollout.csv',
+  tracker = read_csv('./research/state_tax/state_parameter_rollout.csv',
                      show_col_types = FALSE)
   allowed = c('todo', 'in_progress', 'done', 'blocked_weights', 'n/a')
   status_cols = c('source_packet', 'yaml_dir', 'worksheet_tests',

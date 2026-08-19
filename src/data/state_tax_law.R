@@ -5,7 +5,7 @@
 # files (config/scenarios/tax_law_state/). Reuses the federal parsing
 # machinery in tax_law.R (load_tax_law_input, parse_param) per state,
 # prefixing parameter names with "st_" and adding a state join key.
-# Design: other/state_tax_research/state_tax_implementation_plan.md §2.2
+# Design: research/state_tax/plan.md §2.2
 #------------------------------------------------------------------
 
 

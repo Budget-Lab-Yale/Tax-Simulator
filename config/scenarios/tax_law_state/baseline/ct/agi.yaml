@@ -3,7 +3,7 @@
 # Schedule 1 Lines 31-50; CGS 12-701(a)(20)). CT AGI = federal AGI + CT
 # additions - CT subtractions. Rolling IRC conformity (no group declared).
 # Values transcribed from the 2017-2025 CT-1040 instruction booklets; see
-# other/state_tax_research/source_packets/ct.md for the full research record.
+# research/source_packets/ct.md for the full research record.
 
 filing_status_mapper:
   ss_allages_agi_limit:

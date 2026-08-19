@@ -1,0 +1,26 @@
+# Release manifest: the state-weights + non-filer plan, with current status, as a
+# single Word document for outside review.
+#
+#   Rscript research/tools/render_release.R state_weights_plan
+#
+# Sections are concatenated in order. Headings in each source are demoted one
+# level so they nest under `heading:`. `fence:` extracts only the region between
+# <!-- release:begin NAME --> and <!-- release:end NAME --> in that source.
+
+title: "A state-weight-inclusive tax model with an updated non-filer pull"
+subtitle: "Implementation plan and current status"
+reference_doc: research/tools/reference.docx
+
+sections:
+  - heading: "Where the work stands"
+    source: research/STATUS.md
+    fence: nonfiler-status
+
+  - heading: "The plan"
+    source: research/state_weights/plan.md
+
+  - heading: "Method of record — the non-filer residual design"
+    source: research/state_weights/nonfiler_residual_design.md
+
+  - heading: "Procedure — federal validation of a reworked non-filer population"
+    source: research/state_weights/nonfiler_federal_validation.md
