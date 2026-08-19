@@ -49,19 +49,24 @@ E_PEP <- 0.005
 #-----------------------------------------------------------------------------
 
 for (yr in ANCHOR_YEARS) {
-  f <- file.path(RESULTS, sprintf('T5_state_margins_%d.csv', yr))
-  if (!file.exists(f)) f <- file.path(RESULTS, 'T5_state_margins.csv')
-  if (!file.exists(f)) { message('skipping TY', yr, ': no T5 state margins'); next }
-  t5 <- fread(f)
+  # The anchors themselves, one file per year (script 02). NOT T5, which is the
+  # v0-vs-anchor diagnostic and exists only for 2022 -- reading it for both years
+  # silently stamped 2022's tolerances on the 2017 file (fixed 2026-08-19).
+  f <- file.path(RESULTS, sprintf('residual_anchors_%d.csv', yr))
+  if (!file.exists(f)) {
+    stop('TY', yr, ': no ', basename(f), '. Run 02_build_residual_anchors.R first.')
+  }
+  anchors <- fread(f)
 
   stopifnot(all(c('state', 'pep_adults_18p', 'filing_adults',
-                  'residual_nonfiling_adults') %in% names(t5)))
+                  'residual_nonfiling_adults') %in% names(anchors)),
+            nrow(anchors) == 51)
   # A non-positive residual would make the amplification meaningless rather than
   # merely large; fail loudly instead of emitting a nonsense tolerance.
-  stopifnot(all(t5$residual_nonfiling_adults > 0))
+  stopifnot(all(anchors$residual_nonfiling_adults > 0))
 
-  out <- t5[, .(state,
-                pep_adults_18p, filing_adults, residual_nonfiling_adults)]
+  out <- anchors[, .(state,
+                     pep_adults_18p, filing_adults, residual_nonfiling_adults)]
   # Amplification: the factor by which a proportional input error becomes a
   # proportional residual error. d(resid)/resid = (input/resid) * d(input)/input.
   out[, amp_pep     := pep_adults_18p / residual_nonfiling_adults]
@@ -72,9 +77,9 @@ for (yr in ANCHOR_YEARS) {
 
   national <- data.table(
     state                     = 'US',
-    pep_adults_18p            = sum(t5$pep_adults_18p),
-    filing_adults             = sum(t5$filing_adults),
-    residual_nonfiling_adults = sum(t5$residual_nonfiling_adults))
+    pep_adults_18p            = sum(anchors$pep_adults_18p),
+    filing_adults             = sum(anchors$filing_adults),
+    residual_nonfiling_adults = sum(anchors$residual_nonfiling_adults))
   national[, amp_pep    := pep_adults_18p / residual_nonfiling_adults]
   national[, amp_filing := filing_adults  / residual_nonfiling_adults]
   national[, tolerance_pct := 100 * sqrt((amp_pep * E_PEP)^2 +

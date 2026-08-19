@@ -12,15 +12,22 @@
 #                                  filing adults (HT2 identities via
 #                                  ht2_filing_persons()), residual}
 #   nonfiler_wage_margin_{year}.csv state wage margin: HT2 returns-with-wages
-#                                  and wage dollars vs QCEW covered employment
-#                                  and wages (dollar cross-check; the
-#                                  persons-with-wages side awaits the blocked
-#                                  SSA eedata_sc pull -- columns NA for now)
+#                                  and wage dollars against two covered-worker
+#                                  frames -- QCEW (jobs and payroll) and SSA
+#                                  EEDATA Table 4 (persons and taxable
+#                                  earnings, HI/Medicare coverage)
+#   ssa_age_margin_{year}.csv      state x SSA age band covered-worker counts
+#                                  (EEDATA Table 5), the input to the state x
+#                                  age allocation of the residual (D6)
 #
 # Universe (design memo §3.0): PEP RESIDENT population, no group-quarters
 # subtraction -- the PUF/DINA universe includes GQ residents. Age bands follow
-# Table 1.6 (18-25, 26-34, 35-44, 45-54, 55-64, 65+), not age_band(); the
-# state x age allocation of the residual awaits the SSA OASDI margin.
+# Table 1.6 (18-25, 26-34, 35-44, 45-54, 55-64, 65+), not age_band().
+#
+# Universe tags travel with the SSA margins (memo §7.3): EEDATA is
+# `covered_worker_hi`, OASDI is `beneficiary`. Neither is `resident` -- both
+# are administrative person-level universes -- so they enter as SHAPES over
+# the PEP-based residual, never as levels.
 #
 # Known wedges carried, not resolved (memo §3.1/fn.8): return-state vs
 # residence; MFS/QSS residual in the identities; adult dependents claimed on
@@ -181,6 +188,20 @@ for (yr in years) {
   st[, filing_adults := married_filing_adults + single_filing_adults]
   st[, residual_nonfiling_adults := pep_adults_18p - filing_adults]
   st[, residual_share_of_adults := residual_nonfiling_adults / pep_adults_18p]
+
+  # SSA OASDI beneficiaries aged 65+ (December stock) -- the state x age input
+  # for the elderly end of D6, where Table 1.6 stops at a single 65+ band. A
+  # SHAPE, not a level: it is a beneficiary universe and a point-in-time stock
+  # against the residual's annual resident flow.
+  st <- merge(st, read_ssa_oasdi_65p(yr)[, .(state, beneficiaries_65p)],
+              by = 'state')
+  pep65 <- pep[AGE >= 65, .(pep_65p = sum(pop)), by = state]
+  st <- merge(st, pep65, by = 'state')
+  st[, ssa_65p_coverage := beneficiaries_65p / pep_65p]
+  message(sprintf('  OASDI 65+ beneficiaries: %.1fM = %.1f%% of PEP 65+ (state range %.1f%%-%.1f%%)',
+                  st[, sum(beneficiaries_65p)] / 1e6,
+                  100 * st[, sum(beneficiaries_65p) / sum(pep_65p)],
+                  100 * min(st$ssa_65p_coverage), 100 * max(st$ssa_65p_coverage)))
   message(sprintf('  state residual shares: %.1f%% (min %s) to %.1f%% (max %s)',
                   100 * min(st$residual_share_of_adults), st[which.min(residual_share_of_adults), state],
                   100 * max(st$residual_share_of_adults), st[which.max(residual_share_of_adults), state]))
@@ -194,11 +215,29 @@ for (yr in years) {
                           sprintf('qcew_state_totals_%d.csv', yr)))[state != 'US']
   wm <- merge(ht2_w, qcew[, .(state, qcew_avg_emplvl = annual_avg_emplvl,
                               qcew_wages = total_annual_wages)], by = 'state')
-  wm[, `:=`(ssa_covered_persons = NA_real_,   # blocked: SSA-EEDATA-SC manual step
-            ht2_wages_per_qcew_wages = wages_amt / qcew_wages)]
+  # SSA EEDATA Table 4: persons with HI-covered wage-and-salary earnings, and
+  # those earnings. Persons, unlike QCEW's average monthly employment level,
+  # are the right denominator for HT2's returns-with-wages -- the remaining
+  # wedge is returns vs persons (joint returns, multiple earners), not jobs vs
+  # persons. Earnings are uncapped under HI, so the dollar ratio is meaningful.
+  ee <- read_ssa_eedata_hi(yr)
+  wm <- merge(wm, ee$persons[, .(state,
+                                 ssa_covered_persons = hi_persons_wage_salary,
+                                 ssa_covered_wages   = hi_wage_salary_earnings)],
+              by = 'state')
+  wm[, `:=`(ht2_returns_per_ssa_person = n_wages / ssa_covered_persons,
+            ht2_wages_per_ssa_wages    = wages_amt / ssa_covered_wages,
+            ht2_wages_per_qcew_wages   = wages_amt / qcew_wages)]
+  message(sprintf('  SSA HI-covered wage earners: %.1fM, $%.3fT | HT2 returns-with-wages per covered person %.3f (range %.3f-%.3f)',
+                  wm[, sum(ssa_covered_persons)] / 1e6,
+                  wm[, sum(ssa_covered_wages)] / 1e12,
+                  wm[, sum(n_wages) / sum(ssa_covered_persons)],
+                  wm[, min(ht2_returns_per_ssa_person)],
+                  wm[, max(ht2_returns_per_ssa_person)]))
 
   fwrite(nat, file.path(res_dir, sprintf('national_anchor_%d.csv', yr)))
   fwrite(st[order(state)], file.path(res_dir, sprintf('residual_anchors_%d.csv', yr)))
   fwrite(wm[order(state)], file.path(res_dir, sprintf('nonfiler_wage_margin_%d.csv', yr)))
-  message('  wrote national_anchor / residual_anchors / nonfiler_wage_margin CSVs')
+  fwrite(ee$age, file.path(res_dir, sprintf('ssa_age_margin_%d.csv', yr)))
+  message('  wrote national_anchor / residual_anchors / nonfiler_wage_margin / ssa_age_margin CSVs')
 }

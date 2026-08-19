@@ -1,0 +1,460 @@
+state,ssa_age_band,hi_persons_total,universe
+AK,Under 20,25216,covered_worker_hi
+AK,20–29,95259,covered_worker_hi
+AK,30–39,96876,covered_worker_hi
+AK,40–49,70480,covered_worker_hi
+AK,50–59,78330,covered_worker_hi
+AK,60–61,16032,covered_worker_hi
+AK,62–64,15346,covered_worker_hi
+AK,65–69,14631,covered_worker_hi
+AK,70 or older,7986,covered_worker_hi
+AL,Under 20,131579,covered_worker_hi
+AL,20–29,546998,covered_worker_hi
+AL,30–39,509177,covered_worker_hi
+AL,40–49,473462,covered_worker_hi
+AL,50–59,459280,covered_worker_hi
+AL,60–61,74204,covered_worker_hi
+AL,62–64,93336,covered_worker_hi
+AL,65–69,85223,covered_worker_hi
+AL,70 or older,72638,covered_worker_hi
+AR,Under 20,82639,covered_worker_hi
+AR,20–29,336267,covered_worker_hi
+AR,30–39,319207,covered_worker_hi
+AR,40–49,291428,covered_worker_hi
+AR,50–59,274247,covered_worker_hi
+AR,60–61,49489,covered_worker_hi
+AR,62–64,56265,covered_worker_hi
+AR,65–69,54682,covered_worker_hi
+AR,70 or older,45740,covered_worker_hi
+AZ,Under 20,200970,covered_worker_hi
+AZ,20–29,799401,covered_worker_hi
+AZ,30–39,709528,covered_worker_hi
+AZ,40–49,657329,covered_worker_hi
+AZ,50–59,635580,covered_worker_hi
+AZ,60–61,105124,covered_worker_hi
+AZ,62–64,125952,covered_worker_hi
+AZ,65–69,130129,covered_worker_hi
+AZ,70 or older,102711,covered_worker_hi
+CA,Under 20,887497,covered_worker_hi
+CA,20–29,4779504,covered_worker_hi
+CA,30–39,4399964,covered_worker_hi
+CA,40–49,3845957,covered_worker_hi
+CA,50–59,3799277,covered_worker_hi
+CA,60–61,627504,covered_worker_hi
+CA,62–64,760950,covered_worker_hi
+CA,65–69,745028,covered_worker_hi
+CA,70 or older,533095,covered_worker_hi
+CO,Under 20,186361,covered_worker_hi
+CO,20–29,729639,covered_worker_hi
+CO,30–39,713654,covered_worker_hi
+CO,40–49,603560,covered_worker_hi
+CO,50–59,568060,covered_worker_hi
+CO,60–61,94992,covered_worker_hi
+CO,62–64,121440,covered_worker_hi
+CO,65–69,119085,covered_worker_hi
+CO,70 or older,78291,covered_worker_hi
+CT,Under 20,108529,covered_worker_hi
+CT,20–29,411817,covered_worker_hi
+CT,30–39,378424,covered_worker_hi
+CT,40–49,370486,covered_worker_hi
+CT,50–59,446623,covered_worker_hi
+CT,60–61,77111,covered_worker_hi
+CT,62–64,95641,covered_worker_hi
+CT,65–69,96937,covered_worker_hi
+CT,70 or older,73921,covered_worker_hi
+DC,Under 20,18157,covered_worker_hi
+DC,20–29,119760,covered_worker_hi
+DC,30–39,121893,covered_worker_hi
+DC,40–49,68449,covered_worker_hi
+DC,50–59,56370,covered_worker_hi
+DC,60–61,9509,covered_worker_hi
+DC,62–64,12154,covered_worker_hi
+DC,65–69,13207,covered_worker_hi
+DC,70 or older,10500,covered_worker_hi
+DE,Under 20,30804,covered_worker_hi
+DE,20–29,110861,covered_worker_hi
+DE,30–39,103052,covered_worker_hi
+DE,40–49,104423,covered_worker_hi
+DE,50–59,101815,covered_worker_hi
+DE,60–61,20527,covered_worker_hi
+DE,62–64,21933,covered_worker_hi
+DE,65–69,21776,covered_worker_hi
+DE,70 or older,18524,covered_worker_hi
+FL,Under 20,482607,covered_worker_hi
+FL,20–29,2225806,covered_worker_hi
+FL,30–39,2195198,covered_worker_hi
+FL,40–49,2124115,covered_worker_hi
+FL,50–59,2151119,covered_worker_hi
+FL,60–61,349484,covered_worker_hi
+FL,62–64,428763,covered_worker_hi
+FL,65–69,441166,covered_worker_hi
+FL,70 or older,359541,covered_worker_hi
+GA,Under 20,312237,covered_worker_hi
+GA,20–29,1215586,covered_worker_hi
+GA,30–39,1157388,covered_worker_hi
+GA,40–49,1120529,covered_worker_hi
+GA,50–59,1014243,covered_worker_hi
+GA,60–61,153411,covered_worker_hi
+GA,62–64,192381,covered_worker_hi
+GA,65–69,182435,covered_worker_hi
+GA,70 or older,135751,covered_worker_hi
+HI,Under 20,35922,covered_worker_hi
+HI,20–29,170637,covered_worker_hi
+HI,30–39,161086,covered_worker_hi
+HI,40–49,156884,covered_worker_hi
+HI,50–59,144016,covered_worker_hi
+HI,60–61,27768,covered_worker_hi
+HI,62–64,35122,covered_worker_hi
+HI,65–69,42328,covered_worker_hi
+HI,70 or older,28766,covered_worker_hi
+IA,Under 20,130151,covered_worker_hi
+IA,20–29,372936,covered_worker_hi
+IA,30–39,365596,covered_worker_hi
+IA,40–49,321001,covered_worker_hi
+IA,50–59,338619,covered_worker_hi
+IA,60–61,63131,covered_worker_hi
+IA,62–64,81076,covered_worker_hi
+IA,65–69,76245,covered_worker_hi
+IA,70 or older,64812,covered_worker_hi
+ID,Under 20,73972,covered_worker_hi
+ID,20–29,201123,covered_worker_hi
+ID,30–39,191358,covered_worker_hi
+ID,40–49,168338,covered_worker_hi
+ID,50–59,156980,covered_worker_hi
+ID,60–61,27380,covered_worker_hi
+ID,62–64,35513,covered_worker_hi
+ID,65–69,34304,covered_worker_hi
+ID,70 or older,26646,covered_worker_hi
+IL,Under 20,404791,covered_worker_hi
+IL,20–29,1524107,covered_worker_hi
+IL,30–39,1443975,covered_worker_hi
+IL,40–49,1328768,covered_worker_hi
+IL,50–59,1365701,covered_worker_hi
+IL,60–61,233293,covered_worker_hi
+IL,62–64,283202,covered_worker_hi
+IL,65–69,273885,covered_worker_hi
+IL,70 or older,212685,covered_worker_hi
+IN,Under 20,247299,covered_worker_hi
+IN,20–29,837015,covered_worker_hi
+IN,30–39,747822,covered_worker_hi
+IN,40–49,695811,covered_worker_hi
+IN,50–59,688079,covered_worker_hi
+IN,60–61,124929,covered_worker_hi
+IN,62–64,149208,covered_worker_hi
+IN,65–69,145256,covered_worker_hi
+IN,70 or older,107217,covered_worker_hi
+KS,Under 20,108248,covered_worker_hi
+KS,20–29,354045,covered_worker_hi
+KS,30–39,328793,covered_worker_hi
+KS,40–49,282994,covered_worker_hi
+KS,50–59,300545,covered_worker_hi
+KS,60–61,55625,covered_worker_hi
+KS,62–64,64206,covered_worker_hi
+KS,65–69,71056,covered_worker_hi
+KS,70 or older,55148,covered_worker_hi
+KY,Under 20,138941,covered_worker_hi
+KY,20–29,510996,covered_worker_hi
+KY,30–39,480104,covered_worker_hi
+KY,40–49,458864,covered_worker_hi
+KY,50–59,431106,covered_worker_hi
+KY,60–61,73940,covered_worker_hi
+KY,62–64,87014,covered_worker_hi
+KY,65–69,83318,covered_worker_hi
+KY,70 or older,64359,covered_worker_hi
+LA,Under 20,114359,covered_worker_hi
+LA,20–29,536209,covered_worker_hi
+LA,30–39,536298,covered_worker_hi
+LA,40–49,448002,covered_worker_hi
+LA,50–59,424202,covered_worker_hi
+LA,60–61,70504,covered_worker_hi
+LA,62–64,92916,covered_worker_hi
+LA,65–69,90487,covered_worker_hi
+LA,70 or older,70977,covered_worker_hi
+MA,Under 20,236469,covered_worker_hi
+MA,20–29,856429,covered_worker_hi
+MA,30–39,801875,covered_worker_hi
+MA,40–49,718755,covered_worker_hi
+MA,50–59,805839,covered_worker_hi
+MA,60–61,134205,covered_worker_hi
+MA,62–64,169319,covered_worker_hi
+MA,65–69,178769,covered_worker_hi
+MA,70 or older,127694,covered_worker_hi
+MD,Under 20,178150,covered_worker_hi
+MD,20–29,698049,covered_worker_hi
+MD,30–39,701189,covered_worker_hi
+MD,40–49,651894,covered_worker_hi
+MD,50–59,701830,covered_worker_hi
+MD,60–61,117647,covered_worker_hi
+MD,62–64,141915,covered_worker_hi
+MD,65–69,138107,covered_worker_hi
+MD,70 or older,97630,covered_worker_hi
+ME,Under 20,46209,covered_worker_hi
+ME,20–29,144474,covered_worker_hi
+ME,30–39,143201,covered_worker_hi
+ME,40–49,136606,covered_worker_hi
+ME,50–59,162720,covered_worker_hi
+ME,60–61,29914,covered_worker_hi
+ME,62–64,36474,covered_worker_hi
+ME,65–69,39107,covered_worker_hi
+ME,70 or older,32201,covered_worker_hi
+MI,Under 20,325852,covered_worker_hi
+MI,20–29,1176220,covered_worker_hi
+MI,30–39,1034441,covered_worker_hi
+MI,40–49,995532,covered_worker_hi
+MI,50–59,1055395,covered_worker_hi
+MI,60–61,191792,covered_worker_hi
+MI,62–64,231325,covered_worker_hi
+MI,65–69,199999,covered_worker_hi
+MI,70 or older,146124,covered_worker_hi
+MN,Under 20,229739,covered_worker_hi
+MN,20–29,682356,covered_worker_hi
+MN,30–39,704105,covered_worker_hi
+MN,40–49,601043,covered_worker_hi
+MN,50–59,642829,covered_worker_hi
+MN,60–61,118447,covered_worker_hi
+MN,62–64,136456,covered_worker_hi
+MN,65–69,132025,covered_worker_hi
+MN,70 or older,95279,covered_worker_hi
+MO,Under 20,214479,covered_worker_hi
+MO,20–29,708874,covered_worker_hi
+MO,30–39,696961,covered_worker_hi
+MO,40–49,601781,covered_worker_hi
+MO,50–59,625017,covered_worker_hi
+MO,60–61,116021,covered_worker_hi
+MO,62–64,127550,covered_worker_hi
+MO,65–69,125464,covered_worker_hi
+MO,70 or older,99063,covered_worker_hi
+MS,Under 20,75907,covered_worker_hi
+MS,20–29,337699,covered_worker_hi
+MS,30–39,310970,covered_worker_hi
+MS,40–49,291363,covered_worker_hi
+MS,50–59,262051,covered_worker_hi
+MS,60–61,45961,covered_worker_hi
+MS,62–64,54718,covered_worker_hi
+MS,65–69,51629,covered_worker_hi
+MS,70 or older,38810,covered_worker_hi
+MT,Under 20,44893,covered_worker_hi
+MT,20–29,142111,covered_worker_hi
+MT,30–39,138787,covered_worker_hi
+MT,40–49,106581,covered_worker_hi
+MT,50–59,116061,covered_worker_hi
+MT,60–61,23920,covered_worker_hi
+MT,62–64,29045,covered_worker_hi
+MT,65–69,30635,covered_worker_hi
+MT,70 or older,23234,covered_worker_hi
+NC,Under 20,301991,covered_worker_hi
+NC,20–29,1178626,covered_worker_hi
+NC,30–39,1088540,covered_worker_hi
+NC,40–49,1081934,covered_worker_hi
+NC,50–59,1018552,covered_worker_hi
+NC,60–61,168602,covered_worker_hi
+NC,62–64,200222,covered_worker_hi
+NC,65–69,197574,covered_worker_hi
+NC,70 or older,148733,covered_worker_hi
+ND,Under 20,28660,covered_worker_hi
+ND,20–29,109402,covered_worker_hi
+ND,30–39,101181,covered_worker_hi
+ND,40–49,70146,covered_worker_hi
+ND,50–59,80842,covered_worker_hi
+ND,60–61,17884,covered_worker_hi
+ND,62–64,20542,covered_worker_hi
+ND,65–69,19631,covered_worker_hi
+ND,70 or older,15177,covered_worker_hi
+NE,Under 20,87330,covered_worker_hi
+NE,20–29,245136,covered_worker_hi
+NE,30–39,234819,covered_worker_hi
+NE,40–49,202282,covered_worker_hi
+NE,50–59,208380,covered_worker_hi
+NE,60–61,37261,covered_worker_hi
+NE,62–64,49436,covered_worker_hi
+NE,65–69,53815,covered_worker_hi
+NE,70 or older,41773,covered_worker_hi
+NH,Under 20,49168,covered_worker_hi
+NH,20–29,152787,covered_worker_hi
+NH,30–39,149962,covered_worker_hi
+NH,40–49,152963,covered_worker_hi
+NH,50–59,182204,covered_worker_hi
+NH,60–61,34155,covered_worker_hi
+NH,62–64,38989,covered_worker_hi
+NH,65–69,43722,covered_worker_hi
+NH,70 or older,30905,covered_worker_hi
+NJ,Under 20,264637,covered_worker_hi
+NJ,20–29,1008854,covered_worker_hi
+NJ,30–39,984895,covered_worker_hi
+NJ,40–49,984973,covered_worker_hi
+NJ,50–59,1063126,covered_worker_hi
+NJ,60–61,182191,covered_worker_hi
+NJ,62–64,213235,covered_worker_hi
+NJ,65–69,213371,covered_worker_hi
+NJ,70 or older,163842,covered_worker_hi
+NM,Under 20,61924,covered_worker_hi
+NM,20–29,216228,covered_worker_hi
+NM,30–39,211846,covered_worker_hi
+NM,40–49,179733,covered_worker_hi
+NM,50–59,184121,covered_worker_hi
+NM,60–61,33362,covered_worker_hi
+NM,62–64,41027,covered_worker_hi
+NM,65–69,45580,covered_worker_hi
+NM,70 or older,32421,covered_worker_hi
+NV,Under 20,78332,covered_worker_hi
+NV,20–29,343018,covered_worker_hi
+NV,30–39,325390,covered_worker_hi
+NV,40–49,297973,covered_worker_hi
+NV,50–59,280103,covered_worker_hi
+NV,60–61,46066,covered_worker_hi
+NV,62–64,53459,covered_worker_hi
+NV,65–69,55497,covered_worker_hi
+NV,70 or older,41343,covered_worker_hi
+NY,Under 20,531338,covered_worker_hi
+NY,20–29,2398244,covered_worker_hi
+NY,30–39,2272655,covered_worker_hi
+NY,40–49,2006267,covered_worker_hi
+NY,50–59,2112125,covered_worker_hi
+NY,60–61,365167,covered_worker_hi
+NY,62–64,433380,covered_worker_hi
+NY,65–69,432443,covered_worker_hi
+NY,70 or older,341178,covered_worker_hi
+OH,Under 20,413868,covered_worker_hi
+OH,20–29,1391862,covered_worker_hi
+OH,30–39,1280155,covered_worker_hi
+OH,40–49,1213892,covered_worker_hi
+OH,50–59,1234706,covered_worker_hi
+OH,60–61,230844,covered_worker_hi
+OH,62–64,275271,covered_worker_hi
+OH,65–69,256649,covered_worker_hi
+OH,70 or older,184872,covered_worker_hi
+OK,Under 20,127744,covered_worker_hi
+OK,20–29,448671,covered_worker_hi
+OK,30–39,431946,covered_worker_hi
+OK,40–49,369026,covered_worker_hi
+OK,50–59,353854,covered_worker_hi
+OK,60–61,63033,covered_worker_hi
+OK,62–64,79262,covered_worker_hi
+OK,65–69,77675,covered_worker_hi
+OK,70 or older,65214,covered_worker_hi
+OR,Under 20,125578,covered_worker_hi
+OR,20–29,473011,covered_worker_hi
+OR,30–39,486311,covered_worker_hi
+OR,40–49,430596,covered_worker_hi
+OR,50–59,385743,covered_worker_hi
+OR,60–61,72553,covered_worker_hi
+OR,62–64,90386,covered_worker_hi
+OR,65–69,92678,covered_worker_hi
+OR,70 or older,63014,covered_worker_hi
+PA,Under 20,394335,covered_worker_hi
+PA,20–29,1442152,covered_worker_hi
+PA,30–39,1364122,covered_worker_hi
+PA,40–49,1311871,covered_worker_hi
+PA,50–59,1432551,covered_worker_hi
+PA,60–61,268654,covered_worker_hi
+PA,62–64,317930,covered_worker_hi
+PA,65–69,309753,covered_worker_hi
+PA,70 or older,226623,covered_worker_hi
+RI,Under 20,34468,covered_worker_hi
+RI,20–29,130826,covered_worker_hi
+RI,30–39,117093,covered_worker_hi
+RI,40–49,108294,covered_worker_hi
+RI,50–59,127370,covered_worker_hi
+RI,60–61,21134,covered_worker_hi
+RI,62–64,28280,covered_worker_hi
+RI,65–69,30677,covered_worker_hi
+RI,70 or older,21028,covered_worker_hi
+SC,Under 20,156798,covered_worker_hi
+SC,20–29,552748,covered_worker_hi
+SC,30–39,539326,covered_worker_hi
+SC,40–49,507144,covered_worker_hi
+SC,50–59,476931,covered_worker_hi
+SC,60–61,77096,covered_worker_hi
+SC,62–64,103821,covered_worker_hi
+SC,65–69,109216,covered_worker_hi
+SC,70 or older,84198,covered_worker_hi
+SD,Under 20,44773,covered_worker_hi
+SD,20–29,119622,covered_worker_hi
+SD,30–39,118337,covered_worker_hi
+SD,40–49,94640,covered_worker_hi
+SD,50–59,111148,covered_worker_hi
+SD,60–61,17981,covered_worker_hi
+SD,62–64,26481,covered_worker_hi
+SD,65–69,26268,covered_worker_hi
+SD,70 or older,22334,covered_worker_hi
+TN,Under 20,205875,covered_worker_hi
+TN,20–29,787519,covered_worker_hi
+TN,30–39,729379,covered_worker_hi
+TN,40–49,703562,covered_worker_hi
+TN,50–59,670302,covered_worker_hi
+TN,60–61,111819,covered_worker_hi
+TN,62–64,138643,covered_worker_hi
+TN,65–69,138641,covered_worker_hi
+TN,70 or older,112966,covered_worker_hi
+TX,Under 20,836770,covered_worker_hi
+TX,20–29,3353023,covered_worker_hi
+TX,30–39,3158175,covered_worker_hi
+TX,40–49,2842937,covered_worker_hi
+TX,50–59,2570373,covered_worker_hi
+TX,60–61,421581,covered_worker_hi
+TX,62–64,522036,covered_worker_hi
+TX,65–69,494569,covered_worker_hi
+TX,70 or older,371646,covered_worker_hi
+UT,Under 20,149779,covered_worker_hi
+UT,20–29,426876,covered_worker_hi
+UT,30–39,382613,covered_worker_hi
+UT,40–49,301893,covered_worker_hi
+UT,50–59,239855,covered_worker_hi
+UT,60–61,42336,covered_worker_hi
+UT,62–64,52757,covered_worker_hi
+UT,65–69,46555,covered_worker_hi
+UT,70 or older,34063,covered_worker_hi
+VA,Under 20,243260,covered_worker_hi
+VA,20–29,984685,covered_worker_hi
+VA,30–39,969534,covered_worker_hi
+VA,40–49,918931,covered_worker_hi
+VA,50–59,924799,covered_worker_hi
+VA,60–61,154904,covered_worker_hi
+VA,62–64,190995,covered_worker_hi
+VA,65–69,189140,covered_worker_hi
+VA,70 or older,145096,covered_worker_hi
+VT,Under 20,22037,covered_worker_hi
+VT,20–29,73507,covered_worker_hi
+VT,30–39,72127,covered_worker_hi
+VT,40–49,66729,covered_worker_hi
+VT,50–59,80975,covered_worker_hi
+VT,60–61,15215,covered_worker_hi
+VT,62–64,17585,covered_worker_hi
+VT,65–69,22855,covered_worker_hi
+VT,70 or older,17822,covered_worker_hi
+WA,Under 20,198742,covered_worker_hi
+WA,20–29,910522,covered_worker_hi
+WA,30–39,904254,covered_worker_hi
+WA,40–49,771792,covered_worker_hi
+WA,50–59,733927,covered_worker_hi
+WA,60–61,135167,covered_worker_hi
+WA,62–64,164088,covered_worker_hi
+WA,65–69,151368,covered_worker_hi
+WA,70 or older,98756,covered_worker_hi
+WI,Under 20,237997,covered_worker_hi
+WI,20–29,676835,covered_worker_hi
+WI,30–39,671027,covered_worker_hi
+WI,40–49,610940,covered_worker_hi
+WI,50–59,687653,covered_worker_hi
+WI,60–61,121312,covered_worker_hi
+WI,62–64,143508,covered_worker_hi
+WI,65–69,126079,covered_worker_hi
+WI,70 or older,90775,covered_worker_hi
+WV,Under 20,39794,covered_worker_hi
+WV,20–29,177789,covered_worker_hi
+WV,30–39,169805,covered_worker_hi
+WV,40–49,174992,covered_worker_hi
+WV,50–59,172632,covered_worker_hi
+WV,60–61,30431,covered_worker_hi
+WV,62–64,34254,covered_worker_hi
+WV,65–69,36302,covered_worker_hi
+WV,70 or older,25356,covered_worker_hi
+WY,Under 20,21730,covered_worker_hi
+WY,20–29,65132,covered_worker_hi
+WY,30–39,71322,covered_worker_hi
+WY,40–49,55243,covered_worker_hi
+WY,50–59,62963,covered_worker_hi
+WY,60–61,10944,covered_worker_hi
+WY,62–64,14411,covered_worker_hi
+WY,65–69,16302,covered_worker_hi
+WY,70 or older,13145,covered_worker_hi

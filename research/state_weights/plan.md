@@ -365,8 +365,10 @@ Effort estimates follow the memo's own where it gives them.
       from the T1.6-vs-HT2 disagreement; +/-0.5% PEP vintage from the
       SSA-published vs our-vintage population spread) through the amplification,
       in quadrature:
-      - **National: +/-3.5% (+/-1.68M)** on a 46.5M residual.
-      - **State: +/-2.2% (MS) to +/-6.3% (SD)** — a flat tolerance is wrong by
+      - **National: +/-3.5%** — +/-1.68M on 2022's 46.5M residual, +/-1.63M on
+        2017's 47.3M.
+      - **State: +/-2.2% (MS) to +/-6.3% (SD)** in 2022, +/-2.2% (DC) to
+        +/-6.7% (SD) in 2017 — a flat tolerance is wrong by
         ~2.6x across states, and it is **inverted from intuition**: the states
         with the *smallest* non-filer share need the *widest* tolerance. Those
         states (SD, MN, NH, UT, NE, WY) are also where EEDATA's 1% sampling error
@@ -378,8 +380,13 @@ Effort estimates follow the memo's own where it gives them.
         only its estimation error belongs here. EEDATA sampling error touches the
         covered-worker margin only; the ~17% ASEC understatement touches the
         filing model, not the anchor.
-      - **Remaining:** emit as `residual_tolerance_{year}.csv` from A1 so the fit
-        reads the tolerance rather than re-deriving it.
+      - **CLOSED 2026-08-19 (with A1).** `residual_tolerance_{year}.csv` is
+        emitted per year and the fit reads it rather than re-deriving it. The
+        script had been reading `T5_state_margins.csv` — the v0-vs-anchor
+        diagnostic, which exists for 2022 only — through a **silent fallback**,
+        so the 2017 file carried 2022's tolerances under a 2017 name. It now
+        reads `residual_anchors_{year}.csv` and **stops** if the year is
+        missing, which is what surfaced the substitution in the first place.
 
 ### A — Close out the SSA inputs and research pass A (~1 week + 3–5 days, parallel)
 
@@ -390,28 +397,62 @@ Effort estimates follow the memo's own where it gives them.
       the workbooks: 59 areas × 11 measures × 2 years), both families registered,
       `NOTES.md` written and placed, Chrome confirmed absent from the cluster,
       three bugs fixed in `01_fetch_residual_inputs.R`.
-- [ ] **A1. Write the two SSA readers** and replace the
-      `ssa_covered_persons = NA_real_` stub at
-      `02_build_residual_anchors.R:197`. Follow the `read_pub1304_t16()` pattern.
-      Requirements from `NOTES.md`, all of which are easy to get wrong:
-      **sum the 51 jurisdictions, never `All areas`**; read the flat series and
-      **assert against the workbook** so the agreement stays enforced; handle the
-      missing **2010** and the pre-2007 `Virgin Islands` label; for EEDATA read
-      **Table 4 (HI), not Table 1 (OASDI)** per P4, taking
-      **`Number → Wage and salary`**, not `Total` (`Total` ≠ wage + SE — a worker
-      with both is in both components); and pull the **state × age** margin from
-      **Table 5**, which the design did not know existed. Stamp the universe tag
-      `covered_worker_hi` on the output.
-- [ ] **A2. Research pass A — ASEC tax-unit and income construction** (§8, ~3–5
-      days). **The longest-lead item on the plan, and the gate on phase C.**
-      Survey PolicyEngine's Enhanced CPS, Census SPM units, TAXSIM's CPS
-      conventions, Urban/TPC; record where they agree and diverge and choose
-      deliberately. **Start from what the extract already carries**:
-      `CPS-ASEC/cps_asec_common` holds IPUMS's own `FILESTAT` filer recode,
-      `DEPSTAT`, `ADJGINC`, `TAXINC` and `FAMUNIT` — establish what those already
-      do before building a unit builder that duplicates them. Dependents and MFS
-      are in scope from the start (P3), so the builder must form and retain both.
-      Deliverable: a design note in `research/state_weights/nonfiler_residual/`.
+- [x] **A1. The two SSA readers — DONE 2026-08-19.**
+      `read_ssa_oasdi_65p()` and `read_ssa_eedata_hi()` in
+      `src/data/state_weights.R`; the `ssa_covered_persons = NA_real_` stub is
+      gone. Every requirement is **encoded as an assertion, not a comment**: the
+      51-jurisdiction sum (never `All areas`); the flat series checked against
+      the same year's workbook (51 states x the 65+ measures, exact, both years);
+      a named error for the missing **2010** and normalization of the pre-2007
+      `Virgin Islands` label; EEDATA **Table 4 (HI)** `Number → Wage and salary`
+      for the level and **Table 5** for state x age; published column layouts
+      asserted **by name**, so an edition that moves a column fails loudly
+      instead of silently misreading; universe tags `covered_worker_hi` /
+      `beneficiary` stamped on every output.
+      `02_build_residual_anchors.R` re-run clean on both anchor years: the wage
+      margin gains covered persons and dollars, the state anchors gain the 65+
+      beneficiary count and its PEP coverage ratio, and
+      `ssa_age_margin_{year}.csv` is new.
+      **Two findings** (`04_findings.md` F8-F9): the returns-per-covered-person
+      wedge lands at **0.760/0.743**, confirming the memo's ~75% ±9pp, and HT2
+      wages are 93.5%/90.6% of SSA HI wages against 94.1%/91.7% of QCEW — the
+      two frames agree to ~1pp. And **Table 5's age detail is on the TOTAL
+      covered universe, not wage-and-salary** (its all-ages column is exactly
+      Table 4's `Number Total`), a universe switch between the two sheets that
+      the design had not noted; memo §5 amended.
+- [x] **A2. Research pass A — ASEC tax-unit and income construction — DONE
+      2026-08-19.** Deliverable: **`research/state_weights/nonfiler_residual/10_asec_tax_unit_design.md`**,
+      with every number reproducible from
+      **`research/state_weights/nonfiler_residual/09_asec_tax_unit_diagnostics.R`** (tables `asec_A1..A6`).
+      **Decision: build our own units on Mok's conventions; do not build on the
+      Census recodes.** `FILESTAT`'s filer *count* is calibrated to
+      administrative totals (O'Hara's $2,000 floor exists for that purpose), so
+      adopting it would make the C6 gate vacuous — and its *mix* is wrong
+      anyway: head-of-household is **41.5% short** in TY2022 and MFS does not
+      exist. `ADJGINC`/`TAXINC` are statistically matched to the **SOI PUF**, the
+      same file we are correcting, so they are circular. `DEPSTAT` has **10.8%**
+      of dependents pointing at someone the same model codes as a non-filer.
+      Seven decisions **D-A1–D-A7**, including **MFS as a calibrated post-step**
+      so Mok's coefficients stay valid, and dependents constructed/retained/tagged
+      per P3.
+      **Four findings worth carrying:** (i) `FILESTAT` is **broken in TY2020–21**
+      (non-filing adults 42.9M → 11.7M → 11.5M → 44.0M) and `DEPSTAT` in
+      **TY2014**; (ii) our extract **silently loses pension and annuity income
+      from TY2018** — the ASEC 2019 redesign moved them to
+      `INCPEN1`/`INCPEN2`/`INCRANN`, which we do not pull, and our two anchor
+      years straddle the break; (iii) the ASEC wage aggregate is **sound**
+      (1.011× SSA HI covered wages in TY2022) while dividends are at 0.449 of
+      SOI; (iv) the ASEC–anchor non-filer gap **is** the group-quarters universe
+      difference — the identity closes to 0.03M in both anchor years, which the
+      C6 gate must not read as transfer failure.
+- [ ] **A2b. Extract additions from A2 §5**, then re-pull all eleven ASEC years.
+      `INCPEN1`/`INCPEN2`/`INCRANN` (+`SRCPEN1/2`, `INCRET1/2`) — **blocking for
+      C5**; `LINENO` — **blocking for C2**, and it accounts for 100% of today's
+      unresolved `DEPSTAT` pointers; `CAPGAIN`/`CAPLOSS`; `FAMREL`/`FTYPE`/`FAMID`
+      (IPUMS CPS has **no** `SUBFAM`/`SFTYPE`/`SFRELATE` — those are IPUMS USA,
+      which is itself a transfer risk since the ACS side has them natively);
+      `INCALIM`. **Validate every name against the IPUMS API across all eleven
+      samples before pulling**, per A3's standard.
 - [x] **A3. Shared CPS-ASEC extract — DONE 2026-08-19.** Pulled through
       `common_ipums_download` (`config/parameters.cps.yaml`, committed) into
       **`raw_data/CPS-ASEC/cps_asec_common/`**: ASEC **2015–2025**, i.e. income
@@ -637,9 +678,9 @@ affect, so they should be decided before G, not discovered after.
 ## Part 3 — Critical path and honest dates
 
 ```
-P (2d) ─┬─> A2/A3 research + extract (3-5d) ─> A4 (1d) ─> C (1-2w) ─┐
-        ├─> A1 SSA readers (2-3d) ─> A6 re-run (1d) ───────────────┤
-        └─> B GQ fix (2-3d) ────────────────────────────────────────┤
+P ✓ ────┬─> A2 ✓ ─> A2b extract re-pull (1-2d) ─> A4 (1d) ─> C (1-2w) ─┐
+        ├─> A1 ✓ ─> A6 re-run (1d) ─────────────────────────────────────┤
+        └─> B GQ fix (2-3d) ────────────────────────────────────────────┤
                                                                     v
                                     D Tax-Data V1/V2/V3 (1-2w + cluster)
                                                     │
@@ -651,6 +692,9 @@ P (2d) ─┬─> A2/A3 research + extract (3-5d) ─> A4 (1d) ─> C (1-2w) ─
 ```
 
 **Roughly 8–11 weeks end to end**, of which only P, A1, A2/A3 and B parallelize.
+**A2b is now the gate on phase C**, not A2: the design note is written, and what
+C2 and C5 wait on is the re-pulled extract (`LINENO`, and the pension/annuity
+variables the ASEC 2019 redesign split out from under us).
 The Tax-Data age fix (D1) is the true bottleneck: §6.2 makes it a hard
 prerequisite, because until it lands `age_band(tu_n$age1)` stays smeared across
 the exact dimension the anchors discipline.
