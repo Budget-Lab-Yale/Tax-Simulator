@@ -56,6 +56,6 @@ directly. Pre-registered TAXSIM issues: TY2019 std-deduction maxima bug
 pension exclusion missing the SS offset (single-probe; corroborate).
 PolicyEngine (2021-24): state_income_tax INCLUDES the county tax
 (defaults to Allegany ~3% with no county input) - the harness now
-requests the state-only md_income_tax (pe_state_tax.py
+requests the state-only md_income_tax (src/tests/state/cross_model/pe_state_tax.py
 STATE_ONLY_LIAB_VARS). PE's md_montgomery_eitc is harmless under the
 default county.

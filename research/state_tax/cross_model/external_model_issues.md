@@ -5,12 +5,12 @@ Findings from the Tax-Simulator state cross-model validation harness
 either genuine errors, or intended behavior worth a documentation
 clarification. Each item was verified at the record level against state
 forms/statutes; reproduction details are available from the harness
-(`other/state_tax_research/cross_model/`, per-record output on request).
+(`research/state_tax/cross_model/`, per-record output on request).
 
 Versions tested: TAXSIM-35 as bundled in `usincometaxes` 0.7.1 (local WASM
 build); `policyengine-us` 1.775.7.
 
-**Submitting the TAXSIM items:** `taxsim_bug_reports.do` (this directory)
+**Submitting the TAXSIM items:** `research/state_tax/cross_model/taxsim_bug_reports.do` (this directory)
 operationalizes the NBER bug-reporting protocol (one-observation exemplar,
 `taxsimid = -1`, `idtl = 5`, emailed with a statement of what is wrong) for
 the probe-verified TAXSIM issues T6–T10 and T12–T14. It writes, per issue, a
@@ -431,7 +431,7 @@ filer with earned income $10,118 and federal AGI $17,016 is paid $763 by
 PE (the earned-income table row is $761) where the form pays $390 (the
 AGI row, the smaller); a second record matches the same way ($320 vs the
 form's $64). TAXSIM-35 skips the same rule (see the CA annotate row in
-`known_differences.csv`).
+`src/tests/state/cross_model/known_differences.csv`).
 
 Effect: PolicyEngine's CA liability runs LOW by $100–400 on low-income
 records whose AGI exceeds earned income above the safe harbor.

@@ -1,7 +1,7 @@
 # State-tax data extensions and imputations — scoped plan
 
 Drafted 2026-07-24, from the known-differences accumulated across the 30
-encoded jurisdictions (source packets + `known_differences.csv`). This is
+encoded jurisdictions (source packets + `src/tests/state/cross_model/known_differences.csv`). This is
 the inventory of everything the PUF cannot see that state law needs,
 organized as buildable workstreams. Companion to the Phase 7 list in
 `research/state_tax/plan.md`; items here are DATA work, distinct

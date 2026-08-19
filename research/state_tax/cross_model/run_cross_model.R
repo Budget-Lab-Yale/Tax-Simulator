@@ -5,7 +5,7 @@
 # (src/tests/state/test_state_cross_model.R). Run from the repo root:
 #
 #   module load R/4.4.2-gfbf-2024a
-#   Rscript other/state_tax_research/cross_model/run_cross_model.R \
+#   Rscript research/state_tax/cross_model/run_cross_model.R \
 #     --states IL --years 2019 --models taxsim [--n 20000] [--n-pe 1500] \
 #     [--chunk-size 10000] [--force-prepare] \
 #     [--pe-python /path/to/venv/bin/python]
@@ -28,7 +28,7 @@ suppressPackageStartupMessages(
   ))
 )
 return_vars = list()
-list.files('./src', recursive = T) %>%
+list.files('./src', recursive = T, pattern = '\\.[Rr]$') %>%
   walk(.f = ~ if (.x != 'main.R' && !startsWith(.x, 'slurm/')) source(file.path('./src/', .x)))
 
 
@@ -51,10 +51,17 @@ get_arg = function(flag, default = NULL) {
   return(vals)
 }
 
+# Where the harness keeps its two kinds of thing. Code and the machine-read
+# known-differences fixture live with the test (cross_model_harness_dir(),
+# src/tests/state/cross_model), so their paths are stable under the archiving
+# and reorganizing that research/ exists to do. Everything the harness WRITES --
+# results, per-state reports, the federal pre-pass cache -- is research evidence
+# and lands here, where it gets read, cited and archived from.
+records_dir = './research/state_tax/cross_model'
+
 # Regenerate per-state reports from persisted results and exit
 if (isTRUE(get_arg('--report-only', FALSE))) {
-  harness_dir = './other/state_tax_research/cross_model'
-  paths = cross_model_report(file.path(harness_dir, 'results'))
+  paths = cross_model_report(file.path(records_dir, 'results'))
   message('Wrote ', length(paths), ' state reports')
   quit(save = 'no', status = 0)
 }
@@ -84,9 +91,8 @@ chunk_size    = as.integer(get_arg('--chunk-size', '10000'))
 force_prepare = isTRUE(get_arg('--force-prepare', FALSE))
 venv_python   = get_arg('--pe-python')
 
-harness_dir = './other/state_tax_research/cross_model'
-out_dir     = get_arg('--out', file.path(harness_dir, 'results'))
-cache_dir   = get_arg('--cache', file.path(harness_dir, 'cache'))
+out_dir     = get_arg('--out',   file.path(records_dir, 'results'))
+cache_dir   = get_arg('--cache', file.path(records_dir, 'cache'))
 
 stopifnot(all(models %in% c('taxsim', 'policyengine')))
 if (any(years < 2017 | years > 2024)) {

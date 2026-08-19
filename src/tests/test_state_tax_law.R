@@ -10,7 +10,7 @@
 #     suppressPackageStartupMessages(invisible(capture.output(
 #       lapply(readLines('./requirements.txt'), library, character.only = T))));
 #     return_vars = list();
-#     list.files('./src', recursive = T) %>%
+#     list.files('./src', recursive = T, pattern = '\\.[Rr]$') %>%
 #       walk(~ if (. != 'main.R' && !startsWith(., 'slurm/')) source(file.path('./src/', .)));
 #     test_state_tax_law()"
 #---------------------------------------------------------------

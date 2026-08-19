@@ -2,7 +2,7 @@
 """Compute per-record state income tax with PolicyEngine US.
 
 Usage:
-    python pe_state_tax.py <in.csv> <out.csv> <year>
+    python src/tests/state/cross_model/pe_state_tax.py <in.csv> <out.csv> <year>
 
 Input CSV (one row per record x state; written by cross_model_pe_leg() in
 src/tests/state/test_state_cross_model.R):
@@ -124,7 +124,7 @@ def resolve(candidates, required=True):
             return name, system.variables[name].entity.key
     if required:
         sys.exit(f"ERROR: none of {candidates} exist in policyengine-us "
-                 f"{PE_VERSION}; update the mapping in pe_state_tax.py")
+                 f"{PE_VERSION}; update the mapping in src/tests/state/cross_model/pe_state_tax.py")
     return None, None
 
 

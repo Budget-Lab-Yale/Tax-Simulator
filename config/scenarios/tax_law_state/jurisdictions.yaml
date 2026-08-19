@@ -108,7 +108,7 @@ MA:
 # MD state-level tax only; the county piggyback (2.25-3.3%) is deferred to
 # the locality phase. Cross-model: TAXSIM's MD siitax EXCLUDES the county
 # tax (probe-verified); PolicyEngine's state_income_tax INCLUDES it, so the
-# harness requests PE's state-only md_income_tax (pe_state_tax.py)
+# harness requests PE's state-only md_income_tax (src/tests/state/cross_model/pe_state_tax.py)
 MD:
   profile: broad_iit
   enabled: true

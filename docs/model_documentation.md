@@ -283,7 +283,7 @@ workbooks) land at the vintage root, above the scenario folders.
   WASM). The crosswalk was substantially repaired in July 2026 (a dozen
   latent input bugs; QBI inputs now mapped). Known remaining federal-side
   divergences are cataloged with a review policy in
-  `other/state_tax_research/cross_model/federal_divergences.md` —
+  `research/state_tax/cross_model/federal_divergences.md` —
   notably un-root-caused EITC amount disagreements and a p99 federal-AGI
   tail vs. TAXSIM.
 - **Unit tests**: `src/tests/` — tax law parsing regressions, state
@@ -383,7 +383,7 @@ comparison):
 
 ### 10.4 Cross-model validation (Phase 5) — running, triage open
 
-A record-level harness (`other/state_tax_research/cross_model/`) validates
+A record-level harness (`research/state_tax/cross_model/`) validates
 each state's calculator against **TAXSIM-35 (2017–2020)** and **PolicyEngine
 US (2021–2024)** on stratified PUF samples, with a federal-alignment "clean
 subset" filter, a machine-readable known-differences list (with predicate-
@@ -466,7 +466,7 @@ for both external models are drafted in
   disagreements with TAXSIM are not root-caused; the federal AGI p99 tail
   (~+$14k vs TAXSIM) has untraced candidates (taxable SS, capital-loss
   limitation interplay). See
-  `other/state_tax_research/cross_model/federal_divergences.md` — policy
+  `research/state_tax/cross_model/federal_divergences.md` — policy
   is document-then-condition-away for state validation, but someone should
   confirm none indicates a bug in our federal calculator.
 - **PUF vintage**: the 2015 base is aged nine-plus years; distributional

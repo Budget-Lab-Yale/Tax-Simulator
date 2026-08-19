@@ -204,12 +204,12 @@ if (identical(mode, '--untargeted')) {
 # --pilot: IL/CO/NY liability under candidate weights
 #----------------------------------------------------------
 if (identical(mode, '--pilot')) {
-  # Full model stack for the state calculator (mirrors run_cross_model.R)
+  # Full model stack for the state calculator (mirrors research/state_tax/cross_model/run_cross_model.R)
   return_vars <- list()
   invisible(capture.output(suppressPackageStartupMessages(
     lapply(readLines('./requirements.txt'), library, character.only = TRUE)
   )))
-  list.files('./src', recursive = TRUE) %>%
+  list.files('./src', recursive = TRUE, pattern = '\\.[Rr]$') %>%
     purrr::walk(~ if (.x != 'main.R' && !startsWith(.x, 'slurm/')) source(file.path('./src/', .x)))
 
   PILOTS <- c('IL', 'CO', 'NY')
@@ -217,7 +217,7 @@ if (identical(mode, '--pilot')) {
   jur    <- inputs$jurisdictions
 
   # Post-federal 2022 tax units + indexes from the cross-model cache
-  prep <- readRDS('./other/state_tax_research/cross_model/cache/fed_calc_2022.rds')
+  prep <- readRDS('./research/state_tax/cross_model/cache/fed_calc_2022.rds')
   state_law <- build_state_tax_law(states = PILOTS, years = 2022L,
                                    indexes = prep$indexes)
   credit_tables <- attr(state_law, 'credit_tables')

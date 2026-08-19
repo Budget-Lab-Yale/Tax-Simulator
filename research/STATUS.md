@@ -340,7 +340,7 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    TABOR certification (~Sept 2026).
 3. **Phase 5 — cross-model validation harness (record level: BUILT
    2026-07-18; per-state triage remains).** Harness at
-   `other/state_tax_research/cross_model/` (see its README):
+   `research/state_tax/cross_model/` (see its README):
    record × state × year design on unweighted PUF samples, TAXSIM-35
    (usincometaxes WASM, 2017–2020) + PolicyEngine US (pinned venv, 2021+),
    $15/$100 match rates plus a federally-aligned "clean" metric, stage

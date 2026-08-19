@@ -6,6 +6,29 @@ against **NBER TAXSIM-35** and **PolicyEngine US** — code-review item #9
 layer that catches *research* errors (wrong parameter values from the state
 forms) rather than encoding errors.
 
+## Where things live
+
+The harness spans two directories, and the split follows one rule: **what the
+test itself reaches for lives here; everything else lives in `research/`.**
+
+- **`src/tests/state/cross_model/`** (here) — the assets
+  `test_state_cross_model.R` resolves at runtime, through
+  `cross_model_harness_dir()`: the PolicyEngine driver `pe_state_tax.py`, its
+  pinned `pe_requirements.txt`, and the machine-read accept-list
+  `known_differences.csv`. A `src/` test may not depend on a path under
+  `research/`, because `research/` is a tree whose documents get archived and
+  moved; these paths have to survive that.
+- **`research/state_tax/cross_model/`** — the CLI driver `run_cross_model.R`,
+  everything the harness writes (`results/`, the per-state reports, `cache/`,
+  `bug_reports/`), and the companion records below.
+
+**Nothing executable in R may live in this directory.** `src/main.R` sources
+every `.R` file under `src/` recursively, so an R script placed here would run
+on every model start — and `run_cross_model.R`, which does its own recursive
+source of `src/`, would recurse infinitely. That is why the driver sits in
+`research/` while the driver's *inputs* sit here. The walk is filtered to `.R`
+so the non-R assets above are skipped.
+
 ## Design
 
 **Record × state × year, unweighted.** Stratified samples of PUF records
@@ -31,7 +54,7 @@ PolicyEngine is the tie-breaker for 2021+ disagreements.
   has the Hall tax coded correctly for 2017–2020 (verified)
 - No-tax stubs (AK FL NV SD TX WY): assert both models return 0
 - WA (LTCG excise + WFTC): PolicyEngine only; TAXSIM does not model either
-  (excluded via `known_differences.csv`)
+  (excluded via `src/tests/state/cross_model/known_differences.csv`)
 
 Dependent filers (`dep_status == 1`) are excluded from samples in v1 (TAXSIM
 mstat-8 semantics differ enough to swamp state signal).
@@ -44,15 +67,15 @@ From the repo root:
 module load R/4.4.2-gfbf-2024a
 
 # One cell
-Rscript other/state_tax_research/cross_model/run_cross_model.R \
+Rscript research/state_tax/cross_model/run_cross_model.R \
   --states IL --years 2019 --models taxsim
 
 # Full TAXSIM window
-Rscript other/state_tax_research/cross_model/run_cross_model.R \
+Rscript research/state_tax/cross_model/run_cross_model.R \
   --states ALL --years 2017:2020 --models taxsim
 
 # PolicyEngine window (needs the venv below; consider sbatch)
-Rscript other/state_tax_research/cross_model/run_cross_model.R \
+Rscript research/state_tax/cross_model/run_cross_model.R \
   --states ALL --years 2021:2024 --models policyengine \
   --pe-python /nfs/roberts/project/pi_nrs36/ji252/venvs/policyengine/bin/python
 ```
@@ -62,7 +85,7 @@ default 1500), `--chunk-size` (WASM rows/call, default 10000),
 `--force-prepare` (recompute the federal pre-pass cache).
 
 The first run per year executes the full federal calculator on ~220k records
-(minutes) and caches to `cache/fed_calc_{year}.rds`; subsequent runs reuse it.
+(minutes) and caches to `research/state_tax/cross_model/cache/fed_calc_{year}.rds`; subsequent runs reuse it.
 
 ## PolicyEngine venv (one-time)
 
@@ -70,13 +93,15 @@ The first run per year executes the full federal calculator on ~220k records
 module load Python/3.12.3-GCCcore-13.3.0
 python -m venv /nfs/roberts/project/pi_nrs36/ji252/venvs/policyengine
 /nfs/roberts/project/pi_nrs36/ji252/venvs/policyengine/bin/pip install \
-  -r other/state_tax_research/cross_model/pe_requirements.txt
+  -r src/tests/state/cross_model/pe_requirements.txt
 ```
 
 The venv is repo-external and not committed; the exact package version is
-pinned in `pe_requirements.txt` and recorded per output row.
+pinned in `src/tests/state/cross_model/pe_requirements.txt` and recorded per output row.
 
 ## Outputs
+
+All output lands under `research/state_tax/cross_model/`:
 
 ```
 results/summary.csv     committed — one row per state × year × model:
@@ -103,21 +128,21 @@ unpopulated for some states (verified for IL) and is not used.
 
 ## Companion documents
 
-- `federal_divergences.md` — federal-side divergences: **documented here,
+- `research/state_tax/cross_model/federal_divergences.md` — federal-side divergences: **documented here,
   then ignored by the state validation** (the clean-subset filter). Standing
   handoff for separate analyst review (policy: JI, 2026-07-18).
-- `external_model_issues.md` — potential errors/concept questions in
+- `research/state_tax/cross_model/external_model_issues.md` — potential errors/concept questions in
   TAXSIM-35 and PolicyEngine US, written to be shareable upstream.
-- `taxsim_bug_reports.do` — Stata operationalization of the NBER TAXSIM
+- `research/state_tax/cross_model/taxsim_bug_reports.do` — Stata operationalization of the NBER TAXSIM
   bug-reporting protocol (`taxsimid = -1`, `idtl = 5`, one-observation
   exemplars) for the probe-verified TAXSIM issues; writes web-tool inputs,
-  live ado responses, and email-ready statements to `bug_reports/`.
-  Run: `module load Stata/19; stata-mp -b do other/state_tax_research/cross_model/taxsim_bug_reports.do`
+  live ado responses, and email-ready statements to `research/state_tax/cross_model/bug_reports/`.
+  Run: `module load Stata/19; stata-mp -b do research/state_tax/cross_model/taxsim_bug_reports.do`
   from the repo root (requires the `taxsim35` ado and internet).
 
 ## Known differences
 
-`known_differences.csv` is the machine-readable list of expected
+`src/tests/state/cross_model/known_differences.csv` is the machine-readable list of expected
 discrepancies. `action = exclude` removes a state-model-window from the match
 denominator (reported separately); `action = annotate` documents an expected
 divergence pattern without exclusion. Structural sources: TAXSIM's SALT
@@ -139,53 +164,13 @@ A state's tracker row (`research/state_tax/state_parameter_rollout.csv`) flips t
 
 States failing the bar stay `in_progress` with the report as the punch list.
 
-Status as of 2026-07-19: **done** for AK FL NV SD TX WY (stubs), TN, NH,
-and IL (TAXSIM window 100% clean; PE 2022–2024 at 99.2–99.5% clean; two
-residual IL records are exactly 5% of property tax — the Schedule ICR
-property-tax credit is a candidate encoding gap to research).
-**in_progress** (harness run, triage open) for the other 16 encoded states
-(OH and UT added 2026-07-19); dominant divergence stages per state are in
-the reports. Notable since the 2026-07-18 baseline: the QBI crosswalk
-repair (TAXSIM now computes QBID from mapped inputs) lifted the
-federal-taxable-start states CO/ND/SC by 3–5 points in 2018–2020; CO's PE
-window is now fully excluded (TABOR netting), so its verdict rests on the
-TAXSIM window; and neither TAXSIM nor PolicyEngine models the OH Business
-Income Deduction (excluded via `st_bid > 0` predicate — with it, OH passes
-the PE window at 96.6–98.7% and sits at ~91% clean vs TAXSIM, residuals
-documented as JFC-proxy and retirement-credit annotate rows).
-
-Update 2026-08-15 (CA close-out): the CA triage surfaced a cross-state
-calculator defect — `do_taxes.R` zeroes the `*_item_ded` components for
-federal standard-deduction takers, so independent-election states could
-never itemize state-only. The fix preserves as-if-itemizing
-`*_item_ded_potential` columns for the state pass, and the TAXSIM
-crosswalk hands them in state mode ONLY for independent-election states
-(handing them to coupled/fed-gated states lets TAXSIM unpin its election
-from the federal one — verified regression, VA 2019). Effects: CA's
-TAXSIM window cleared the bar at 0.965–0.981 clean (from 0.61–0.73) with
-the UI-subtraction fix, CalEITC age-band/gate repairs, and seven CA KD
-rows; DE/NY/MN/NC gained 20–33 points (DE 0.90–0.91, NY 0.84, MN
-0.78–0.88, NC 0.91–0.97, crossing the bar 2018–2020) under the standard
-crosswalk-exposure exclude rows added for each; WI strengthened to
-0.97–0.99. A 2026-08-16 CalEITC residual dig also fixed a table-lookup
-rounding bug (fractional incomes fell between whole-dollar FTB bins and
-got $0), lifting CA to TAXSIM 0.966–0.982 and PE 0.943–0.967 (2021/2023
-clear; 2022/2024 miss by roughly two low-income credit-margin records
-each). A 2026-08-16 hardening batch added the CA HSA addback, the CalEITC
-investment-income ceiling, and the model-wide US-obligation interest
-subtraction (15% share assumption; neither external model takes an
-equivalent input, so an ALL-states/both-models KD row excludes records
-with txbl_int > 5,000 where the assumed subtraction can break the
-tolerance) — 182 cells improved ≥0.3pp under the new exclusion, 8 moved
-down ≤1pp on denominator composition, and every previously-cleared state
-held its bar. The same day's credit-stack close encoded California's
-CDCTC (FTB 3506 stepped tiers, found via the PE residual to the dollar)
-and added the PE itemizer-exposure KD row (`xw_pe_unhanded_item`) —
-**CA is now `done`**: all eight cells clear the bar (TAXSIM 0.969–0.985,
-PE 0.965–0.995), the first broad state to clear both windows since IL.
-Coupled and fed-gated states are unchanged. The stage classifier now
-counts `st_earned_credit` in the state-EITC stage (CalEITC-style credits
-live there, not in `st_eitc`).
+**Per-state status is not recorded here.** It is one column of
+`research/state_tax/state_parameter_rollout.csv`, which is the single status
+surface; a done-list maintained in this README went a month stale before anyone
+noticed. The two triage narratives that used to sit here — the defects they
+surfaced, the known-difference rows they added, and what each fix moved — are
+kept as a dated record at
+`research/state_tax/cross_model/triage_history.md`.
 
 Heavy runs should go through `sbatch` — the login node's memory cgroup
 kills the federal pre-pass (~8 GB peak). A 48G/one-task script matching

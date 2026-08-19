@@ -22,12 +22,12 @@ for `--pe-python`; pull `state-tax` (fixes through `21dcbc7e1`).
 ## A. Confirmation reruns for the five fixed states
 
 ```
-Rscript other/state_tax_research/cross_model/run_cross_model.R \
+Rscript research/state_tax/cross_model/run_cross_model.R \
   --states KY GA SC IN MN --years 2017:2020 --models taxsim
-Rscript other/state_tax_research/cross_model/run_cross_model.R \
+Rscript research/state_tax/cross_model/run_cross_model.R \
   --states KY GA SC IN MN --years 2021:2024 --models policyengine \
   --pe-python <venv>/bin/python
-Rscript other/state_tax_research/cross_model/run_cross_model.R --report-only
+Rscript research/state_tax/cross_model/run_cross_model.R --report-only
 ```
 
 What changed and what to expect (all fixes probe-verified locally; KD
@@ -71,7 +71,7 @@ the candidates.
 5. **ID grocery credit**: verify PE's variable structure in package
    source, then promote the ID/policyengine KD row from `annotate` to a
    whole-window `exclude` (CO/TABOR precedent) or net the credit inside
-   `pe_state_tax.py`. ID's 0.43-0.58 PE window is currently scored
+   `src/tests/state/cross_model/pe_state_tax.py`. ID's 0.43-0.58 PE window is currently scored
    against a known-bad benchmark.
 
 ## Housekeeping already done on the branch (no action)

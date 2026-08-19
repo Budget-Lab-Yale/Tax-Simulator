@@ -1,8 +1,8 @@
 *------------------------------------------------------------------------------
-* taxsim_bug_reports.do
+* research/state_tax/cross_model/taxsim_bug_reports.do
 *
 * Operationalizes NBER TAXSIM-35 bug reporting for the probe-verified TAXSIM
-* issues documented in external_model_issues.md (T6-T15). The TAXSIM-35 page
+* issues documented in research/state_tax/cross_model/external_model_issues.md (T6-T15). The TAXSIM-35 page
 * (taxsim.nber.org/taxsim35, "Bug Reporting") asks that a suspected error be
 * reported as:
 *
@@ -27,7 +27,7 @@
 * Usage (Yale HPC):
 *   module load Stata/19
 *   cd <repo root>
-*   stata-mp -b do other/state_tax_research/cross_model/taxsim_bug_reports.do
+*   stata-mp -b do research/state_tax/cross_model/taxsim_bug_reports.do
 *   (batch mode returns 0 even on error -- check the .log)
 *
 * The ado submits data to the NBER server. Nothing here is confidential:
@@ -43,7 +43,7 @@
 clear all
 set more off
 
-local out_dir "other/state_tax_research/cross_model/bug_reports"
+local out_dir "research/state_tax/cross_model/bug_reports"
 capture mkdir "`out_dir'"
 
 * TAXSIM SOI state codes used below (taxsim.nber.org/statesoi.html):

@@ -49,5 +49,5 @@ from the 2017 Form 740 packet + DOR announcements; see below)
 ## Cross-model and aggregate validation
 
 - Pre-fix (2026-07-19 run): TAXSIM clean match@100 was 0.273 (2017) / 0.458-0.476 (2018-20), the worst in the module. Root causes were OURS: the flat-5.8% 2017 simplification, one-per-return standard deduction for married filers (KY combined returns give one per spouse), the shifted 2017-2021 std vintages, and the missing personal credits. All fixed 2026-08-11; a harness rerun is pending.
-- TAXSIM differences pre-registered from a direct WASM probe (known_differences.csv, 2026-08-11): TAXSIM doubles each spouse's 2017 std ded (~$287.68/couple), and grants both std deductions to one-earner couples where the form's per-column zero floor wastes one (~$130).
+- TAXSIM differences pre-registered from a direct WASM probe (src/tests/state/cross_model/known_differences.csv, 2026-08-11): TAXSIM doubles each spouse's 2017 std ded (~$287.68/couple), and grants both std deductions to one-earner couples where the form's per-column zero floor wastes one (~$130).
 - Aggregate: blocked until weights land; compare HT2 income/returns and Department of Revenue annual net individual income tax collections.

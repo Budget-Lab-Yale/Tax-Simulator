@@ -10,7 +10,7 @@ research/state_tax/CODE_REVIEW_2026_07_17.md, jurisdictions.yaml, conformity_gro
 source packets, all `documented_not_modeled:` YAML blocks,
 src/tests/state/test_state_calc.R (160 worksheet cases),
 test_state_cross_model.R, and cross_model/results (summary.csv, 27 triage
-reports, known_differences.csv).
+reports, src/tests/state/cross_model/known_differences.csv).
 
 **The bar we set for ourselves** (research/state_tax/state_parameter_workflow.md): a state is not
 production-ready "merely because its directory parses" — it must clear source
@@ -50,7 +50,7 @@ Only IL among the 18 broad-IIT states has cleared the record-level gate
 SC 0.476–0.556, MN 0.491–0.673 (TAXSIM window). Beyond the raw rates:
 
 - **18 of 24 broad/narrow states have zero state-specific rows in
-  known_differences.csv** (AZ CA CT GA IN KY MD MI MN NC ND NH NY SC TN UT VA
+  src/tests/state/cross_model/known_differences.csv** (AZ CA CT GA IN KY MD MI MN NC ND NH NY SC TN UT VA
   WI). The acceptance criterion requires every residual cluster mapped to a
   KD row or a filed bug, so these states *cannot* pass as documented even
   where their rates are good.
@@ -294,7 +294,7 @@ parallel with R3.
 ### R1 — Validation close-out (the bulk of remaining effort)
 
 1. **Per-state triage to the acceptance bar** for the 13 below-bar broad
-   states: every residual cluster becomes a known_differences.csv row
+   states: every residual cluster becomes a src/tests/state/cross_model/known_differences.csv row
    (`exclude`/`annotate`) or a filed bug. Suggested order (worst-first,
    weakest tests first): **KY** (write worksheet cases before triaging — the
    dominant mismatch is the deductions stage and KY has one test), GA, SC,
@@ -302,7 +302,7 @@ parallel with R3.
 2. Diagnose the discrete PE breaks: NY 2023 (0.160), VA 2023–24
    (0.345/0.349), GA 2021 (0.448); triage the AZ 2021 $819k outlier records.
 3. Promote ID's grocery-credit KD row from `annotate` to a PE-window
-   `exclude` (or net the credit out in `pe_state_tax.py`).
+   `exclude` (or net the credit out in `src/tests/state/cross_model/pe_state_tax.py`).
 4. **Review item #9:** the parameter-family coverage assertion (every family
    in the registry exercised by ≥1 worksheet case — KY/IN fail it today) and
    per-state continuity sweeps (monotonicity except declared cliffs; the
@@ -390,7 +390,7 @@ none of this batch order depends on weights.
 
 Worksheet = hand-computed cases in test_state_calc.R. TAXSIM = clean
 match@$100 range 2017–2020; PE = clean match@$100 range 2021–2024 (small
-samples, ~270–365/cell). KD = state-specific known_differences.csv rows.
+samples, ~270–365/cell). KD = state-specific src/tests/state/cross_model/known_differences.csv rows.
 
 | St | Family | Tests | TAXSIM | PE | Report | KD | Top open items |
 |---|---|---|---|---|---|---|---|

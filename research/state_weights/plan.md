@@ -557,7 +557,7 @@ affect, so they should be decided before G, not discovered after.
       total. Measure the silently-dropped credit mass, which grows with the
       rework, and raise the condition explicitly.
 - [ ] **H3. Send the cross-model issue docs upstream** (T1–T9 / P1–P5,
-      `taxsim_bug_reports.do` built but not sent) — unrelated to this workstream
+      `research/state_tax/cross_model/taxsim_bug_reports.do` built but not sent) — unrelated to this workstream
       but the longest-standing open item in `research/STATUS.md`.
 
 ---

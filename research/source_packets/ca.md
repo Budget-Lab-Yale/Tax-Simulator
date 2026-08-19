@@ -5,7 +5,7 @@ Status: `resident regular IIT encoded; cross-model DONE 2026-08-16 -- all eight 
 Last updated: `2026-08-16`
 
 > **Cross-model triage 2026-08-15** (see `cross_model/results/reports/ca.md`
-> and the CA rows of `known_differences.csv`):
+> and the CA rows of `src/tests/state/cross_model/known_differences.csv`):
 > 1. The triage surfaced a CROSS-STATE calculator defect: `do_taxes.R` zeroed
 >    all `*_item_ded` components for federal standard-deduction takers, so the
 >    state pass could never itemize state-only. Fixed via as-if-itemizing

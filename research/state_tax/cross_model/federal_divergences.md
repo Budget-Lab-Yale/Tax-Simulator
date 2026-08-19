@@ -72,7 +72,7 @@ never federally aligned — benign for state validation (AK liability is
 ## Operational notes for the reviewer
 
 - Per-record raw files are overwritten per year by the most recent run's
-  state set — regenerate with `run_cross_model.R` if a state you need is
+  state set — regenerate with `research/state_tax/cross_model/run_cross_model.R` if a state you need is
   missing from `results/raw/`.
 - Federal pre-pass caches: `cache/fed_calc_{year}.rds` (sample seed 76,
   dependent filers excluded — TAXSIM mstat-8 semantics differ).

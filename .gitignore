@@ -64,8 +64,8 @@ config/interfaces/output_roots.yaml
 # Per-user Claude Code settings
 .claude/settings.local.json
 # Cross-model validation harness: caches and per-record raw output
-other/state_tax_research/cross_model/cache/
-other/state_tax_research/cross_model/results/raw/
+research/state_tax/cross_model/cache/
+research/state_tax/cross_model/results/raw/
 
 # Generated document renders. Markdown/Rmd is the source of truth in every case.
 # Already-tracked files are unaffected; this stops new ones being swept in.
