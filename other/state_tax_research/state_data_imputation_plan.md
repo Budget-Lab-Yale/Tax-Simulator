@@ -13,6 +13,16 @@ hold or can mirror (the IPUMS ACS extracts and IRS-GEO are wired in),
 off (a flag) so the record-level cross-model harness can keep comparing
 law-only calculations.
 
+**CPS ASEC note (added 2026-08-18).** Several items below name CPS ASEC data
+(the pension source split; the nontaxable-income/household-resources vector).
+The non-filer residual workstream is registering an ASEC family in the shared
+extract store — checking `raw_data` first, and otherwise adding one through the
+same common IPUMS download machinery that maintains `ACS/acs_common`. **Consume
+that family rather than pulling a project-specific extract**, and add any
+variables these items need to the shared request instead of forking it. Same
+rule as IRS-GEO/IRS-Ind: one store, one manifest, several consumers. Status and
+naming: `nonfiler_residual_design.md` §4.1.
+
 **Maintenance convention (added 2026-08-11):** this file is the single
 registry of encoding-blocked-on-data cases. When a packet documents a
 feature as unencodable because the PUF lacks an input, add or extend the

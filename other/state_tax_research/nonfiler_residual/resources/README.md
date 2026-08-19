@@ -1,4 +1,11 @@
-# Hand-transcribed resources (Stage D)
+# Source documents and hand-transcribed resources
+
+This folder holds three kinds of thing: **hand-transcribed tables** (the CSVs
+below), the **bibliography** for the filing-model literature
+(`filing_model_refs.bib`), and **source PDFs** we could not rely on retrieving
+again (see "Source PDFs" at the end).
+
+## Hand-transcribed tables (Stage D)
 
 Transcribed 2026-08-16 from IRS Publication 5785, "The Individual Income Tax
 and Self-Employment Tax Nonfiling Tax Gaps for Tax Years 2014-2016" (Hertz,
@@ -26,6 +33,43 @@ extraction; money amounts in $ billions, counts in millions.
   self-employment signature motivating a SE dimension in the hazard, memo
   D3).
 
-Cilke (1998) probit coefficients (`cilke_coefs.csv`) are NOT yet
-transcribed — needed for v1b implementation, not for Stage D diagnostics.
-Source: https://home.treasury.gov/system/files/131/WP-78.pdf.
+## Coefficients still to transcribe
+
+**`mok_coefs.csv` — the primary below-threshold model, not yet transcribed.**
+Mok (2017) Table 14, pp. 48–50 of `mok2017_cbo_wp2017-06.pdf` (below): 14 group
+probits with coefficients and standard errors. This **replaces** Cilke as the
+model of record — see `../05_filing_model_literature.md` and design memo §3.2.2.
+Two warnings before transcribing:
+
+- **Panel E's columns run "Age 65 or Older" FIRST, then "Under Age 65"** — the
+  reverse of the intuitive order, and automated text extraction returns the two
+  headers in the wrong sequence, which would silently swap the 0.23 and 0.10
+  filing rates. Sample sizes (909 vs 62,438) disambiguate. **Transcribe from a
+  rendered image, not a text dump.** Panel E also has `.` rather than a
+  coefficient for self-employment income in the 65+ column.
+- Mok's CPS frame **excludes the institutionalized and military-barracks
+  populations**, so these coefficients do not cover the group-quarters records
+  the PUF universe includes.
+
+**`cilke_coefs.csv` — retained as the comparison fit only, not yet transcribed.**
+Cilke (1998), https://home.treasury.gov/system/files/131/WP-78.pdf, Table 3
+(pp. 26–29), 9 group probits. Table 3 predicts P(non-filer) despite a
+contradictory appendix coding. **Extract with PyMuPDF word positions, not
+`pdftotext -layout`**, which scrambles the row-label alignment and silently
+mis-assigns coefficients.
+
+## Source PDFs
+
+- **`mok2017_cbo_wp2017-06.pdf`** — Shannon Mok, "An Evaluation of Using Linked
+  Survey and Administrative Data to Impute Nonfilers to the Population of Tax
+  Return Filers," CBO Working Paper 2017-06, September 2017 (60pp). Original
+  filename `53125-nonfilers.pdf`; md5 `eb649ef0c5918ad0571b2005dc1d2437`.
+  **Committed because cbo.gov returns 403 to automated retrieval**, which cost a
+  round of unverified citations — the coefficients this project depends on should
+  not sit behind a bot block. A US government work, so public domain. Verified
+  line by line on 2026-08-18; see `../05_filing_model_literature.md` §7 for what
+  was checked and the one claim that verification corrected.
+
+  Note the house convention is that PDFs consolidate in the `references` repo.
+  This copy is here deliberately, as provenance for the transcription that has
+  not happened yet; move or de-duplicate it if `references` takes it on.

@@ -50,7 +50,7 @@ downstream joins in the per-state loop are `filter(state == st) %>% left_join(by
 ML reweighting). Both honor `Σ_st w_{i,st} = w_i` and emit the identical file format,
 so they are swappable behind `build_state_weights(method = c("calibration","gradient"))`.
 Approach B and the A/B comparison harness are specified in
-`state_weights_ml_alternative.md`. Approach A (the baseline):
+`archive/state_weights_ml_alternative.md`. Approach A (the baseline):
 1. Ingest SOI Historic Table 2 CSVs (latest published year, currently ~2022):
    per-state × AGI-class return counts — total (N1) AND by filing status
    (single MARS1, joint MARS2, HoH MARS4) — the number of individuals (N2;
@@ -87,6 +87,17 @@ then concatenate:
   model-native variables — broad age band (`age1`/`age2`, catches elderly SS-only),
   an income tier, and dependent presence (`n_dep`). Minimum target: non-filing count
   by state; preferred: state × age × income-tier.
+
+  > **Amended 2026-08-18 — superseded in part by the non-filer residual rework.**
+  > As implemented, this design gave the non-filer partition *count-only* targets on
+  > single-membership `state × age_band × income_tier` cells, which the calibration
+  > reproduces exactly in one pass — so the "fit" is pure reproduction of the ACS
+  > margin, errors included. Stage D measured those errors: the v0 margins run 0.78×
+  > (DC) to 1.51× (SD) of a population-minus-filers residual anchor. The replacement
+  > targets the **residual anchors** directly (state × age band, adult-counted), keeps
+  > the income tier in the prior rather than as a target, and adds SSA OASDI and
+  > covered-worker margins. See `nonfiler_residual_design.md` §6.2 and
+  > `nonfiler_residual/04_findings.md`.
 The per-record split constraint holds automatically (each record is in exactly one
 partition), so federal totals stay invariant. **Reconciliation is at the
 INDIVIDUAL level, by group** (amended JI 2026-07-13, replacing the filing-unit
@@ -171,6 +182,18 @@ Open sub-decision: non-filer cell granularity (state-total vs state×age×income
 tune in Phase 1 against the reconciliation and downstream refundable-credit results.
 This matters most for the EITC and the `rebate` (stimulus/UBI) module, where
 non-filers are the population of interest.
+
+> **Amended 2026-08-18.** The granularity sub-decision is **closed**: state × age band
+> is feasible (Stage D T6 — the smallest state residuals are WY 56k, SD 73k, VT 74k, far
+> above thin-cell territory), and the anchors are adult counts, so the target x-vector
+> becomes `1 + (filing_status == 2)` rather than `1`. Two caveats on the sentence above,
+> both worth knowing before relying on it: the `filer`-flag-is-authority claim still
+> holds, but that flag is itself unanchored upstream and is being recalibrated in
+> Tax-Data; and the EITC case does **not** in fact respond to non-filer geography the way
+> this implies — there is no `become_filer_eitc` in the calculator (only CTC and rebate
+> have one), so non-filers' EITC is multiplied out of every total by the `* filer` gate.
+> The `rebate` module is the one that genuinely depends on this. See
+> `nonfiler_residual_design.md` §8.
 
 **Home:** prototype as `src/data/state_weights.R` + a build script under `other/`;
 **production home is upstream Tax-Data** (new interface file alongside
@@ -385,7 +408,7 @@ state module conventions. Decision sign-off on §5 open items.
 **Phase 1 — State weights prototype + A/B bake-off (2–3 weeks)**
 HT2 ingestion → build BOTH Approach A (classical calibration) and Approach B
 (differentiable reweighting) behind `build_state_weights(method=)` → run the shared
-comparison harness (`state_weights_ml_alternative.md` §4) → `state_weights_{year}.csv`
+comparison harness (`archive/state_weights_ml_alternative.md` §4) → `state_weights_{year}.csv`
 + OTA-style diagnostics for each. Acceptance: chosen method hits targeted variables
 within 2% for ≥99% of state×stratum targets (TPC benchmark), with untargeted-variable
 MARD and downstream pilot-state liability reported honestly for both methods.

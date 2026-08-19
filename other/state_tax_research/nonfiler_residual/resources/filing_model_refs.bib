@@ -1,0 +1,320 @@
+% Filing-model and non-filer literature.
+% Assembled 2026-08-18 by the research pass recorded in ../05_filing_model_literature.md.
+% Entries marked UNVERIFIED could not be retrieved in full during that pass — check
+% before citing. See §7 of the note for what was and was not verified.
+
+@techreport{mok2017nonfilers,
+  author      = {Mok, Shannon},
+  title       = {An Evaluation of Using Linked Survey and Administrative Data to
+                 Impute Nonfilers to the Population of Tax Return Filers},
+  institution = {Congressional Budget Office},
+  type        = {Working Paper},
+  number      = {2017-06},
+  year        = {2017},
+  month       = {sep},
+  url         = {https://www.cbo.gov/publication/53125},
+  note        = {RECOMMENDED REPLACEMENT for Cilke (1998). Table 14 (pp. 48-50) gives
+                 14 group-specific filing probits with coefficients and standard errors,
+                 estimated on the 2007 CPS ASEC linked to the IRS Individual Master
+                 File for TY2006. VERIFIED against the PDF 2026-08-18. PDF COMMITTED
+                 BESIDE THIS FILE as mok2017_cbo_wp2017-06.pdf (md5
+                 eb649ef0c5918ad0571b2005dc1d2437) because cbo.gov returns 403 to
+                 automated retrieval; also in the Affordability literature folder at
+                 Literature/Reweighting/53125-nonfilers.pdf.
+                 TRANSCRIPTION WARNINGS: Panel E columns run
+                 "Age 65 or Older" FIRST then "Under Age 65" (reverse of the intuitive
+                 order, and text extraction returns the headers reversed) -- transcribe
+                 from a rendered image. Her CPS frame EXCLUDES the institutionalized and
+                 military-barracks populations, so the coefficients do not cover the
+                 group-quarters records our PUF universe includes}
+}
+
+@techreport{cilke1998profile,
+  author      = {Cilke, James},
+  title       = {A Profile of Non-Filers},
+  institution = {U.S. Department of the Treasury, Office of Tax Analysis},
+  type        = {OTA Working Paper},
+  number      = {78},
+  year        = {1998},
+  month       = {jul},
+  url         = {https://home.treasury.gov/system/files/131/WP-78.pdf},
+  note        = {Table 3 = 9 group probits (pp. 26--29). Table 3 predicts
+                 P(non-filer) despite the contradictory appendix coding. Extract with
+                 PyMuPDF word positions, NOT pdftotext -layout, which scrambles the
+                 row-label alignment}
+}
+
+@inproceedings{mortenson2009attaching,
+  author    = {Mortenson, Jacob A. and Cilke, James and Udell, Michael and Zytnick, Jonathon},
+  title     = {Attaching the Left Tail: A New Profile of Income for Persons Who Do Not
+               Appear on Federal Income Tax Returns},
+  booktitle = {Proceedings of the 102nd Annual Conference on Taxation},
+  publisher = {National Tax Association},
+  year      = {2009},
+  pages     = {88--98},
+  url       = {https://ntanet.org/wp-content/uploads/proceedings/2009/011-mortenson-attaching-left-tail-2009-nta-proceedings.pdf},
+  note      = {Title verified as "Attaching", not "Attacking"}
+}
+
+@inproceedings{cilke2014missing,
+  author    = {Cilke, James},
+  title     = {The Case of the Missing Strangers: What We Know and Don't Know About Non-Filers},
+  booktitle = {Proceedings of the 107th Annual Conference on Taxation},
+  publisher = {National Tax Association},
+  year      = {2014},
+  url       = {https://ntanet.org/wp-content/uploads/proceedings/2014/029-cilke-case-missing-strangers-know-don.pdf},
+  note      = {Cilke's own move away from the WP-78 probit method; contains no probit}
+}
+
+@techreport{bradybass2023imagine,
+  author      = {Brady, Peter J. and Bass, Steven},
+  title       = {Imagine All the People: Using Tax Data to Build a Representative
+                 Sample of the {US} Population},
+  institution = {Internal Revenue Service, Statistics of Income Joint Statistical
+                 Research Program},
+  year        = {2023},
+  month       = {apr},
+  url         = {https://www.irs.gov/pub/irs-soi/23rprepresentativesampleuspopulation.pdf},
+  note        = {Appendix reconciles tax-data vs Census population estimates --- read
+                 before finalizing anchor tolerances}
+}
+
+@article{erard2020flying,
+  author  = {Erard, Brian and Langetieg, Patrick and Payne, Mark and Plumley, Alan},
+  title   = {Flying under the Radar: Ghosts and the Income Tax},
+  journal = {CESifo Economic Studies},
+  volume  = {66},
+  number  = {3},
+  pages   = {185--197},
+  year    = {2020},
+  doi     = {10.1093/cesifo/ifz021},
+  note    = {Free author PDF at
+             brianerard.com/wp-content/uploads/2019/12/Flying-under-the-radar-final-version.pdf.
+             See the MARRIED sign instability across vintages}
+}
+
+@techreport{erard2020ghosts,
+  author      = {Erard, Brian and Langetieg, Patrick and Payne, Mark and Plumley, Alan},
+  title       = {Ghosts in the Income Tax Machinery},
+  institution = {Munich Personal RePEc Archive},
+  number      = {100036},
+  year        = {2020},
+  month       = {may},
+  url         = {https://mpra.ub.uni-muenchen.de/100036/},
+  note        = {Longer pooled version of erard2020flying; Table 5 = timely-filing
+                 probit, 3 models, TY2001--2013}
+}
+
+@incollection{erard2016drives,
+  author    = {Erard, Brian and Guyton, John and Langetieg, Patrick and Payne, Mark and Plumley, Alan},
+  title     = {What Drives Income Tax Filing Compliance?},
+  booktitle = {The IRS Research Bulletin},
+  publisher = {Internal Revenue Service},
+  year      = {2016},
+  pages     = {33--38},
+  url       = {https://www.irs.gov/pub/irs-soi/16rescon.pdf},
+  note      = {Third vintage of the calibrated probit; disagrees in sign with the 2020
+               vintages on MARRIED}
+}
+
+@inproceedings{erard2014missing,
+  author    = {Erard, Brian and Langetieg, Patrick and Payne, Mark and Plumley, Alan},
+  title     = {Missing Returns vs. Missing Income: Estimating the Extent of Individual
+               Income Tax Filing Noncompliance From {IRS} and Census Data},
+  booktitle = {Proceedings of the 107th Annual Conference on Taxation},
+  publisher = {National Tax Association},
+  year      = {2014},
+  url       = {https://ntanet.org/wp-content/uploads/proceedings/2014/030-erard-langetieg-payne-plumley-missing-returns-vs-missing-income.pdf},
+  note      = {Bivariate probit for CPS-ASEC under-reporting of Social Security and
+               pension income --- needed if tax units are built on the ASEC}
+}
+
+@article{erardho2001ghosts,
+  author  = {Erard, Brian and Ho, Chih-Chin},
+  title   = {Searching for Ghosts: Who Are the Nonfilers and How Much Tax Do They Owe?},
+  journal = {Journal of Public Economics},
+  volume  = {81},
+  number  = {1},
+  pages   = {25--50},
+  year    = {2001},
+  note    = {UNVERIFIED --- paywalled, not retrieved. Citation from RePEc; table
+             numbers and covariate lists unconfirmed. Get through Yale}
+}
+
+@techreport{hertz2022pub5785,
+  author      = {Hertz, Thomas N. and Langetieg, Patrick T. and Payne, J. Mark and Plumley, Alan H.},
+  title       = {The Individual Income Tax and Self-Employment Tax Nonfiling Tax Gaps
+                 for Tax Years 2014--2016},
+  institution = {Internal Revenue Service, Research, Applied Analytics and Statistics},
+  type        = {Technical Paper},
+  number      = {Publication 5785},
+  year        = {2022},
+  month       = {oct},
+  url         = {https://www.irs.gov/pub/irs-pdf/p5785.pdf},
+  note        = {Transcribed into resources/pub5785_table1_*.csv and _table3_*.csv.
+                 No successor edition exists as of 2026-08}
+}
+
+@incollection{hertz2021extent,
+  author    = {Hertz, Thomas and Langetieg, Patrick and Payne, Mark and Plumley, Alan and Jones, Maggie R.},
+  title     = {Estimating the Extent of Individual Income Tax Nonfiling},
+  booktitle = {The IRS Research Bulletin},
+  publisher = {Internal Revenue Service},
+  series    = {Publication 1500},
+  year      = {2022},
+  pages     = {93--124},
+  url       = {https://www.irs.gov/pub/irs-prior/p1500--2022.pdf},
+  note      = {TY2010 predecessor to Pub 5785 under eight method/weight variants.
+               Source of the finding that the reweighted ASEC reaches only 42.0M
+               against a 50.7M administrative target}
+}
+
+@incollection{langetieg2017counting,
+  author    = {Langetieg, Patrick and Payne, Mark and Plumley, Alan},
+  title     = {Counting Elusive Nonfilers Using {IRS} Rather Than Census Data},
+  booktitle = {The IRS Research Bulletin},
+  publisher = {Internal Revenue Service},
+  year      = {2017},
+  pages     = {197--222},
+  url       = {https://www.irs.gov/pub/irs-soi/17resconpayne.pdf},
+  note      = {Tables 3--5 = transcribable self-employment imputation models}
+}
+
+@incollection{lawrence2011position,
+  author    = {Lawrence, Joshua and Udell, Michael and Young, Tiffany},
+  title     = {The Income Tax Position of Persons Not Filing Returns for Tax Year 2005},
+  booktitle = {The IRS Research Bulletin},
+  publisher = {Internal Revenue Service},
+  year      = {2011},
+  pages     = {143--155},
+  url       = {https://www.irs.gov/pub/irs-soi/11rescontaxposition.pdf},
+  note      = {Closest existing template: builds simulated returns from March CPS
+               family structure}
+}
+
+@techreport{gillette2023itm,
+  author      = {Gillette, Robert and Anantham, Siva and Boning, Will and Cooper, Michael
+                 and Costello, Rachel and Cronin, Julie-Anne and DeFilippes, Portia
+                 and Eiler, John and Gee, Geoff and Lippold, Kye and Lurie, Ithai and Patel, Ankur},
+  title       = {U.S. Treasury Individual Income Tax Model},
+  institution = {U.S. Department of the Treasury, Office of Tax Analysis},
+  type        = {OTA Technical Paper},
+  number      = {12},
+  year        = {2023},
+  month       = {may},
+  url         = {https://home.treasury.gov/system/files/131/TP-12.pdf},
+  note        = {Treasury's current non-filer construction recipe; Table A1 = 31.5M
+                 non-filer units, TY2016}
+}
+
+@misc{ota2025nonfiler,
+  author       = {{U.S. Department of the Treasury, Office of Tax Analysis}},
+  title        = {Income Tax Withholding Among 2022 Non-filers},
+  howpublished = {Special Studies in Tax Analysis},
+  year         = {2025},
+  month        = {jan},
+  url          = {https://home.treasury.gov/system/files/131/Nonfiler-Withholding-01162025.pdf},
+  note         = {Newest official non-filer counts: 50.343M for TY2022, with
+                  persistence data. Easy to miss --- a Special Study, not in the
+                  WP or TP series}
+}
+
+@techreport{irs2024taxgap,
+  author      = {{Internal Revenue Service}},
+  title       = {Federal Tax Compliance Research: Tax Gap Projections for Tax Year 2022},
+  institution = {Internal Revenue Service},
+  number      = {Publication 5869 (Rev. 10-2024)},
+  year        = {2024},
+  month       = {oct},
+  url         = {https://www.irs.gov/pub/irs-pdf/p5869.pdf},
+  note        = {TY2022 nonfiling gap $63B. A 2024 methodology change cut the TY2021
+                 projection by $20B --- do not cite the Oct-2023 figures}
+}
+
+@techreport{rohaly2005tpc,
+  author      = {Rohaly, Jeffrey and Carasso, Adam and Saleem, Mohammed Adeel},
+  title       = {The Urban-Brookings Tax Policy Center Microsimulation Model:
+                 Documentation and Methodology for Version 0304},
+  institution = {Urban-Brookings Tax Policy Center},
+  year        = {2005},
+  month       = {jan},
+  url         = {https://www.urban.org/sites/default/files/publication/42911/411136-the-urban-brookings-tax-policy-center-microsimulation-model.pdf},
+  note        = {pp. 12--13 document TPC's use of the Cilke probits. Whether TPC still
+                 uses them in 2026 is UNCONFIRMED (taxpolicycenter.org returns 403)}
+}
+
+@techreport{lin2022census,
+  author      = {Lin, Daniel C.},
+  title       = {Methods and Assumptions of the {CPS ASEC} Tax Model},
+  institution = {U.S. Census Bureau},
+  type        = {SEHSD Working Paper},
+  number      = {FY-2022-18},
+  year        = {2022},
+  month       = {nov},
+  url         = {https://www.census.gov/content/dam/Census/library/working-papers/2022/demo/sehsd-wp2022-18.pdf},
+  note        = {First official documentation of the Census ASEC tax-unit algorithm in
+                 ~40 years --- read for research pass A}
+}
+
+@techreport{bee2023ctc,
+  author      = {Bee, Adam and Hokayem, Charles and Lin, Daniel},
+  title       = {Modeling the 2021 Child Tax Credit in the {CPS ASEC}},
+  institution = {U.S. Census Bureau},
+  type        = {SEHSD Working Paper},
+  number      = {FY-2022-17},
+  year        = {2023},
+  url         = {https://www.census.gov/content/dam/Census/library/working-papers/2022/demo/sehsd-wp2022-17.pdf},
+  note        = {Only 48.4% of ASEC units with children agree with the linked 1040 on
+                 the number of qualifying children --- the realistic accuracy ceiling}
+}
+
+@article{larrimore2021household,
+  author  = {Larrimore, Jeff and Mortenson, Jacob and Splinter, David},
+  title   = {Household Incomes in Tax Data: Using Addresses to Move from Tax Unit
+             to Household Income Distributions},
+  journal = {Journal of Human Resources},
+  volume  = {56},
+  number  = {2},
+  pages   = {600--631},
+  year    = {2021}
+}
+
+@article{lurie2021health,
+  author  = {Lurie, Ithai Z. and Pearce, James},
+  title   = {Health Insurance Coverage in Tax and Survey Data},
+  journal = {American Journal of Health Economics},
+  volume  = {7},
+  number  = {2},
+  pages   = {164--184},
+  year    = {2021},
+  doi     = {10.1086/712213},
+  note    = {UNVERIFIED --- paywalled. Cited as the source of the Form 1095 method}
+}
+
+@techreport{sailer1998population,
+  author      = {Sailer, Peter and Weber, Michael},
+  title       = {The {IRS} Population Count: An Update},
+  institution = {Internal Revenue Service, Statistics of Income Division},
+  year        = {1998},
+  url         = {https://www.irs.gov/pub/irs-soi/indpopct.pdf}
+}
+
+@techreport{saez2016tabulations,
+  author      = {Saez, Emmanuel},
+  title       = {Statistics of Income Tabulations: High Incomes, Gender, Age,
+                 Earnings Split, and Non-filers},
+  institution = {Internal Revenue Service, Statistics of Income},
+  year        = {2016},
+  month       = {dec},
+  url         = {https://www.irs.gov/pub/irs-soi/16rpsaeztabulations.pdf}
+}
+
+@misc{shantz2025params,
+  author       = {Shantz, Kathryn},
+  title        = {Federal and State Tax Parameter Workbook, Tax Year 2024},
+  howpublished = {U.S. Census Bureau working paper materials},
+  year         = {2025},
+  url          = {https://www2.census.gov/library/working-papers/2025/demo/Federal_and_State_Tax_Parameter_Workbook_TY2024.xlsx},
+  note         = {Census's filing rule as named published parameters, including the
+                  admitted FED105 = $2,000 fudge factor}
+}

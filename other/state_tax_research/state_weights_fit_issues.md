@@ -105,7 +105,7 @@ national weight under the prior rather than losing mass.
 2. Engine hardening per Issue 1; re-run; require: exact invariant, filer
    hit rate reported per series, runtime.
 3. Vectorize `fit_gradient()` and run the A/B comparison harness
-   (`state_weights_ml_alternative.md` §4) once A is stable.
+   (`archive/state_weights_ml_alternative.md` §4) once A is stable.
 
 ---
 

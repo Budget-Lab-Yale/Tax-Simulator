@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-19
 **Companions:** `state_tax_implementation_plan.md` §2.1 (design),
-`state_weights_ml_alternative.md` (bake-off spec and §4 harness),
+`archive/state_weights_ml_alternative.md` (bake-off spec and §4 harness),
 `state_weights_fit_issues.md` (first-fit diagnosis and engine hardening),
 `state_weights_alternatives.md` (alternatives brainstorm).
 **Code:** `src/data/state_weights.R` (ingestion, assembly, engines),

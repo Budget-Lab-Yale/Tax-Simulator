@@ -1,9 +1,20 @@
 # Stage D Findings — Residual Non-Filer Diagnostics
 
-**Date:** 2026-08-16
+**Date:** 2026-08-16 (provenance note added 2026-08-18)
 **Status:** Stage D executed (design memo §4), with two inputs still blocked
 (§5 below). All numbers below are reproducible from the scripts in this
 directory; result CSVs in `results/`.
+
+> **Vintage provenance — verify before building on F1-F4.** `tax_data_path()`
+> (`03_diagnose_current_nonfilers.R:48-53`) resolves the input from the
+> `Tax-Data: default_vintage` in `config/interfaces/interface_versions.yaml`,
+> which was **`2026030513`** at this commit (`git show
+> 4783dc3e9:config/interfaces/interface_versions.yaml`). The design memo §2.1
+> states its production figures were verified against **`2026070814`**. The two
+> disagree, so either the memo's citation is wrong or these tables were computed
+> on a superseded file. Re-run `03_... --tables` against the current production
+> vintage and diff T1-T4 before the Tax-Data rework calibrates to these numbers;
+> the script needs a `--vintage` argument to make that possible.
 **Companions:** `../nonfiler_residual_design.md` (the design this executes),
 `../state_weights_phase1_summary.md` (weights bake-off the rework feeds).
 **Scripts:** `01_fetch_residual_inputs.R` (login node),
@@ -132,6 +143,16 @@ stays: national scalar for v1, SE-aware cells as the upgrade path).
    covered-worker earnings shape.
 2. **Cilke (1998) coefficient transcription** (`resources/cilke_coefs.csv`)
    — needed for v1b implementation, not for these diagnostics.
+   **Superseded 2026-08-18 by `05_filing_model_literature.md`:** the currency check
+   ran, and a re-estimate *does* exist — **Mok (2017), CBO WP 2017-06, Table 14**,
+   fourteen group filing probits on the 2007 CPS ASEC linked to the IRS Individual
+   Master File (TY2006), with published per-cell filing rates. Transcribe **Mok**;
+   keep Cilke only as the comparison fit. **Pub 5785 stands** — no successor edition
+   — so F3's receipt ceilings and F7's above-threshold level are unchanged, though
+   Treasury's Jan-2025 special study (50.343M TY2022 non-filers) and OTA TP-12
+   (31.5M non-filer *units*, TY2016) are newer official reference points. Note those
+   counts are **different estimands** and must never be differenced against each
+   other or against the 38-41M anchor in F1; the note's §5 lists which is which.
 3. Optional: `--acs 2017` run for a TY2017 T5/T7 (the 2022 versions carry
    the decisions).
 
