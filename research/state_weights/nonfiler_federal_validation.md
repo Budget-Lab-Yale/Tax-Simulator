@@ -26,6 +26,12 @@ drafted 2026-08-18, which is archived whole at
 apart from this header and the closing verification section, which was that document's
 `## Verification` block.
 
+**Step numbers in the body are that document's**, not the plan's task letters. The
+mapping is one-to-one: step 1 → **C** (filing model on the ASEC), step 2 → **B**
+(group quarters), step 3 → **D** (Tax-Data rework, so "step 3a" is D1, the age fix),
+step 4 → **E** (this document), step 5 → **F** (state-weights margins and re-fit),
+step 6 → **G** (swap-in).
+
 ---
 
 The key insight that makes this testable cheaply: **the model's post-processing is sharply
@@ -501,15 +507,10 @@ runs where the restricted data is absent.
 
 ---
 
----
-
 ## End-to-end verification
 
-The federal battery above is the acceptance gate. These are the state-side and
-end-to-end checks that follow it.
-
-The federal battery is step 4 (its 4a table is the acceptance gate). State-side and
-end-to-end checks:
+The federal battery above is the acceptance gate — its 4a table is the bar. These
+are the state-side and end-to-end checks that follow it.
 
 - **Anchors:** the two independent constructions of national filing adults must continue
   to agree within ~0.5% (205.5 vs 206.1M in 2017; 214.1 vs 213.1M in 2022), and the T1.6
