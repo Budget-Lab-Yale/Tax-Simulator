@@ -60,12 +60,12 @@ anchored to anything:
   nationally, with a 20pp state spread.
 
 The income memo's residual methodology gives both systems the anchor they
-lack: non-filing adults by state and age = Census PEP population (net of
-group quarters) minus filing adults derived from HT2 by filing-status
-identities, age-shaped by OASDI beneficiary counts and earnings-shaped by
-SSA covered-worker tables. This memo translates that method into these two
-codebases. Scope: design and diagnostics specification only. No code
-changes, no data fetched, no fits re-run.
+lack: non-filing adults by state and age = Census PEP resident population
+minus filing adults derived from HT2 by filing-status identities, age-shaped
+by OASDI beneficiary counts and earnings-shaped by SSA covered-worker tables.
+(The income memo subtracts group quarters at this step; **we do not** — §3.0
+explains why the PUF universe makes that subtraction wrong here.) This memo
+translates the method into these two codebases.
 
 ## 2. Current state
 
@@ -131,14 +131,14 @@ base"). No limitation is documented anywhere.
 ### 2.2 Tax-Simulator: the v0 non-filer treatment in the state weights
 
 The split-weights fit partitions records on the Tax-Data `filer` flag
-(`src/data/state_weights.R:639` filers, `:698` non-filers). The filer
-partition targets 22 HT2 series × 10 stubs × 52 areas (10,229 share-
-normalized targets). The non-filer partition gets **count-only** targets on
-1,390 `state × age_band(7) × income_tier(5)` cells (`:696-736`, x ≡ 1 at
-`:723`), with priors and cell totals from `build_acs_margins()` (`:242-313`)
-— the **v0 filing rule**: pointer-built tax units, filer iff unit
+(`src/data/state_weights.R:704` filers, `:763` non-filers; line numbers as of
+2026-08-19). The filer partition targets 22 HT2 series × 10 stubs × 52 areas
+(10,229 share-normalized targets). The non-filer partition gets **count-only**
+targets on 1,390 `state × age_band(7) × income_tier(5)` cells (`:763-806`,
+x ≡ 1 at `:788`), with priors and cell totals from `build_acs_margins()`
+(`:289`) — the **v0 filing rule**: pointer-built tax units, filer iff unit
 `sum(pmax(INCTOT, 0)) ≥` a hardcoded standard-deduction table
-(`filing_threshold()`, `:182-192`). Because each non-filer cell has single
+(`filing_threshold()`, `:185`). Because each non-filer cell has single
 membership and count-only targets, the calibration engine reproduces the
 ACS margin *exactly* in one pass (`state_weights_phase1_summary.md` §2) —
 the non-filer "fit" is pure prior reproduction of the v0 margin, errors
@@ -217,10 +217,9 @@ students. Three consequences:
 
 For each HT2 year (2014, 2016-2022; 2017 and 2022 first):
 
-1. **Filing adults by state** from HT2 filing-status identities — already
-   implemented in `compare_individuals_acs_irs()`
-   (`state_weights.R:349-352`), with the QSS/MFS and adult-dependent
-   caveats documented at `:325-341`:
+1. **Filing adults by state** from HT2 filing-status identities, implemented as
+   `ht2_filing_persons()` (`state_weights.R:382`), with the QSS/MFS and
+   adult-dependent caveats documented alongside it:
    `married = 2·n_joint + (n_returns − n_single − n_joint − n_hoh)`;
    `single = n_single + n_hoh`; `dependents = n_indiv − (n_returns +
    n_joint)`. TY2022 coverage: married 85.6% of ACS married adults, single
@@ -268,13 +267,18 @@ For each HT2 year (2014, 2016-2022; 2017 and 2022 first):
    taxable-maximum-capped earnings run ~17% low. Read **Table 4** for persons and
    dollars and **Table 5** for state x age; tag every margin `covered_worker_hi`.
 
-   Table 5 supersedes the national persons-vs-returns ratio the original design
-   would have inferred the working-age layer from — covered workers are published
-   by state x age directly. Keep the ratio as a cross-check only. Note the bands
-   are cut around Social Security eligibility (`<20/20-29/.../60-61/62-64/65-69/
-   70+`) and align with the anchor bands at exactly one point, `65-69`+`70+` =
-   `65+`, so EEDATA enters as a coarse **20-64 working-age margin per state**,
-   not band-by-band. The upgraded ACS non-filer age shape smooths the rest.
+   Table 5 replaces the national persons-vs-returns ratio the design would
+   otherwise have inferred the working-age layer from: covered workers are published
+   **by state × age**, so the layer is measured rather than imputed from a national
+   figure. Keep the ratio as a cross-check only.
+
+   But note what that buys and what it does not. The bands are cut around Social
+   Security eligibility (`<20/20-29/…/60-61/62-64/65-69/70+`) and align with the
+   anchor bands at exactly one point, `65-69`+`70+` = `65+`. So Table 5 cannot supply
+   a band-by-band target; what it supplies is a **residence-based, age-bounded 20-64
+   count per state**, which is still a real improvement on a national ratio because
+   the age bound and the geography are both observed. The upgraded ACS non-filer age
+   shape smooths within it.
 
    **⚠ Sum the 51 jurisdictions, never the published `All areas` row.** Both SSA
    publications carry `All areas`, which includes beneficiaries and workers in the
@@ -300,9 +304,8 @@ For each HT2 year (2014, 2016-2022; 2017 and 2022 first):
 
 ### 3.2 The filing model
 
-*Rewritten 2026-08-18, incorporating the literature pass
-(`nonfiler_residual/05_filing_model_literature.md`). This section supersedes the
-original v1a/v1b sketch rather than amending it.*
+This section is the authority on the filing model. It rests on the literature pass
+recorded in `nonfiler_residual/05_filing_model_literature.md`.
 
 #### 3.2.0 Why a survey filing model at all — the honest framing
 
@@ -336,12 +339,12 @@ elective-filing module; PSL taxdata effectively trusts the CPS recode. **The des
 below is at or above the state of the art for anyone without admin microdata**, and
 the abandonment finding is not a reason to change course.
 
-There is, however, a third option that neither the original draft nor the peer models
-exploit, and it is the most important thing this section adds — see §3.2.2.
+There is, however, a third option none of the peer models exploit, and it is the most
+important thing this section adds — see §3.2.2.
 
 #### 3.2.1 v1a — deterministic upgrades to `build_acs_margins()`
 
-Unchanged from the original design. **Differentiated GQ treatment** in place of the v0
+**Differentiated GQ treatment** in place of the v0
 non-treatment: keep institutional residents (`GQ == 3`) as own-state non-filer units
 unless income makes them filers; reclassify college-age dorm residents (`GQ == 4`, in
 school, age < 24) as dependents rather than unit heads (they are claimed on parents'
@@ -416,7 +419,7 @@ two statistical-match ranking rules: **predicted income** (CBO's production meth
 **predicted probability of filing**. Under the latter, units are ranked within group by
 predicted filing probability and the lowest-probability units are cut to match the
 group's observed non-filer share — rank-and-cut, rather than intercept calibration plus
-a uniform draw, which is what the original draft assumed. Her verdict is measured: *"The
+a uniform draw, which is the natural default. Her verdict is measured: *"The
 share of constructed tax units that is correctly simulated … is similar under both
 methods."* What the probability method buys is that the demographic composition of
 simulated filers matches the linked data **by construction**, and that simulated
@@ -453,8 +456,8 @@ before the state fit rests on it.
 
 #### 3.2.4 The bias we inherit, and what to do about it
 
-The reason the IRS dropped the Census Method transfers to us regardless of which
-coefficients we use, and it is the most consequential thing in this rewrite. Hertz et
+The reason the IRS dropped the Census Method applies to us regardless of which
+coefficients we use, and it is the most consequential caveat in this section. Hertz et
 al. state the IRS *"abandoned the Census Method because even with the income
 imputations, the income reported on the CPS-ASEC by nonfilers still fell short of the
 income reported to the IRS by third parties"* — and quantify it: against a **50.7M**
@@ -476,8 +479,11 @@ Three mitigations, now load-bearing rather than optional:
   Security receipt is right.
 - **Pub 5785's receipt rates as ceilings** (already in the design, §5.1) discipline the
   imputation in the direction the survey errs.
-- **Carry the ~17% figure in the anchor tolerances** (§8, P4). It is a published
-  magnitude for a bias we would otherwise be guessing at.
+- **Carry the ~17% figure explicitly where it bites — the filing model, not the
+  anchor.** The anchor tolerance is computed from population and filing-adult
+  wedges alone (`08_residual_tolerance.R`); this bias enters through the ASEC
+  threshold test, so it belongs in the filing model's own error budget. It is a
+  published magnitude for a bias we would otherwise be guessing at.
 
 A second diagnostic from Mok, worth stating because it sets expectations: her
 predicted-income match reproduces filing behavior for 83% of units — **94% of filers but
@@ -533,10 +539,10 @@ Four consequences, because this is not a free decision:
 
 #### 3.2.6 Acceptance metric
 
-Unchanged: v1 ACS filer units vs HT2 `n_returns` by state. The −7% national bias and its
-20pp state spread should collapse to within the stated tolerance. Stated on the ACS side
-because that is where the margins are consumed. Add one metric the original lacked:
-**the ASEC and ACS implied national filing rates, reported side by side**, per §3.2.3.
+v1 ACS filer units vs HT2 `n_returns` by state: the −7% national bias and its 20pp
+state spread should collapse to within the anchor tolerance. Stated on the ACS side
+because that is where the margins are consumed. Plus one more, per §3.2.3: **the ASEC
+and ACS implied national filing rates, reported side by side.**
 
 ### 3.3 "Impose it jointly" — what that means here
 
@@ -557,12 +563,13 @@ requirement translates accordingly:
    a biased margin exactly. Fix: compute the non-filer state targets as the
    arithmetic residual of the *same HT2 vintage* the filer partition is fit
    to (§6.2). Then, if both partitions hit their targets, fitted state
-   adult populations reproduce PEP−GQ **by construction** — the population
+   adult populations reproduce PEP resident adults **by construction** — the population
    identity is enforced through target self-consistency, not through a
    stacked optimization.
 3. **A population-identity diagnostic** in `validate_state_weights.R`:
    fitted filer adults + fitted non-filer adults per state (× age band
-   where supported) vs PEP−GQ, with the anchor tolerance. If soft-target
+   where supported) vs PEP resident adults (no GQ subtraction, §3.0), with the
+   tolerance from `residual_tolerance_{year}.csv`. If soft-target
    trade-offs push this beyond tolerance, the escalation path is a single
    stacked fit — `fit_gradient()` already accepts arbitrary row sets, so
    concatenating `(w, P0)` across partitions and adding identity targets
@@ -579,7 +586,7 @@ were placed and verified 2026-08-19. The ACS tabulation steps run under
 
 ### 4.1 `01_fetch_residual_inputs.R` — data acquisition
 
-Fetchers follow the `fetch_qwi()` pattern (`state_weights.R:429`): small
+Fetchers follow the `fetch_qwi()` pattern (`state_weights.R:494`): small
 functions, source caveats in comments, paths derived from
 `raw_data_root()`, never hardcoded. New shared-store families mirror the
 existing store layout (each with a manifest):
@@ -589,30 +596,29 @@ existing store layout (each with a manifest):
 | PEP state × single-year-age × sex, 2020-2024 vintage | census.gov popest `sc-est2024-syasex.csv` (verify filename at fetch time; civilian variant as sensitivity) | `raw_data/Census-PEP` |
 | PEP intercensal 2010-2020 (back-year anchors) | census.gov popest intercensal state files | same |
 | Group quarters by state × age | tabulated from the on-disk IPUMS extract, `GQ ∈ {3,4}` × `STATEFIP` × age band; national check vs ACS B26001 via the Census API | derived (script output), not a raw store |
-| OASDI beneficiaries by state (65+ rows) | SSA statcomps `oasdi_sc/{year}` | `raw_data/SSA-OASDI-SC` |
-| Covered workers: persons and wage dollars by state | SSA statcomps `eedata_sc/{year}` | `raw_data/SSA-EEDATA-SC` |
+| OASDI beneficiaries by state (65+ rows) | SSA statcomps `oasdi_sc` — **placed and verified 2026-08-19**, TY2017-2025 plus the 1999-2025 flat series. ssa.gov 403s automated retrieval on TLS fingerprint and no browser engine exists on the cluster, so placement is manual | `raw_data/SSA-OASDI-SC` (with `NOTES.md`) |
+| Covered workers: persons and wage dollars by state | SSA statcomps `eedata_sc` — **placed and verified 2026-08-19**, TY2017-**2023** (the series ends there, which bounds forward extension). Read **Tables 4/5 (HI)**, not 1/2 (OASDI) | `raw_data/SSA-EEDATA-SC` (with `NOTES.md`) |
 | QCEW state annual wage totals | BLS CEW annual singlefile | `raw_data/BLS-QCEW` |
 | Pub 1304 by-size tables (1.6 returns × marital × age; 1.7 dependent filers; 1.1 income sources) | **already in the shared store** — `raw_data/IRS-Ind/national/by_size/`, TY2011-2023, maintained by the IRS-Ind downloader | no fetcher needed; reader only |
 | **SOI IRA study Table 4** (added 2026-08-19) — *Taxpayers with IRA Plans, by Age of Taxpayer*. **Column (1) is the find: `Number of taxpayers who filed Form 1040` by five-year age band to 80+**, i.e. filers by age at a resolution Table 1.6 does not publish. `65 under 70` + `70 under 75` and `75 under 80` + `80 and over` aggregate **exactly** to the 65_74 / 75p split. TY2000-2023 (no 2003), so both anchor years and every back year | **already in the shared store** — `raw_data/IRS-Ind/national/ira/ira_t04_{year}.xlsx` | reader only |
-| **SOI Form W-2 study Tables 1.A / 2.A** (added 2026-08-19) — 1.A *Taxpayers with Wage Income, by Age and Sex* on a **box-1** concept, with bands `Under 26 / 26-35 / 35-45 / 45-55 / 55-60 / 60-65 / 65-75 / 75+` that align with the anchor bands and carry the 65-75/75+ split; 2.A *Taxpayers with Elective Retirement Contributions*, whose **contributions** column is a population total ($379.2B, TY2020) and a component of the box-1/box-5 wedge. **Only TY2019-2020 are in the store**, so neither serves the anchor years directly | `raw_data/IRS-Ind/national/w2/` | reader only; see the gap below |
-| **SOI Form W-2 study Table 5.A — NOT IN THE STORE, worth pulling.** Table 2.A's footnote [1] names it as the comparison of *"Medicare wages and tips"* (box 5) to *"Wages, tips, other compensation"* (box 1) — i.e. **the published box-1/box-5 reconciliation**, which is exactly the wedge §5.4's combined-universe wage constraint needs and currently has to estimate | irs.gov SOI Form W-2 study page | **extend the IRS-Ind downloader** (`w2_t5_{year}`) |
+| **SOI Form W-2 study** (added 2026-08-19). Universe is W-2 income on **filed returns**, which is what makes it differenceable against SSA (§5.4.1). **Table 5.A** is the published **box-1/box-5 reconciliation** — the wedge the wage constraint needs — and ships inside the all-tables workbook `{yy}inallw2.xls`, a different naming lineage from the per-table `{yy}in{NN}w2all.xlsx` files, which is why it was missed. **TY2014/2016/2017/2018 exist and are placed; 2015 and everything after 2018 do not.** Tables 1.A-4.A for TY2019-2020 are separately in the store | **placed 2026-08-19** — `raw_data/IRS-Ind/national/w2/w2_all_{year}.xls`, registered in the IRS-Ind manifest | reader only. **The IRS-Ind downloader should learn the `{yy}inallw2.xls` lineage**, and its `NOTES.md` gain a W-2 family section |
 | Pub 5785 above-threshold composition | hand-transcribed CSV with page citations | repo: `nonfiler_residual/resources/pub5785_hazard.csv` |
 | **Mok (2017) Table 14 probit coefficients** — the primary below-threshold model (§3.2.2) | hand-transcribed CSV, 14 group equations with SEs and per-cell filing rates. **PDF in hand and verified** (JI's copy, Affordability `Literature/Reweighting/53125-nonfilers.pdf`; cbo.gov 403s automated retrieval). Transcribe from a rendered image and mind Panel E's reversed column order (§3.2.2) | repo: `nonfiler_residual/resources/mok_coefs.csv` |
 | Cilke (1998) probit coefficients — retained as the **comparison** fit only (§3.2.2) | hand-transcribed CSV (9 group equations). **Extract with PyMuPDF word positions, not `pdftotext -layout`**, which silently mis-assigns the coefficients | repo: `nonfiler_residual/resources/cilke_coefs.csv` |
-| **CPS ASEC** (added 2026-08-18) — filing-model estimation sample, anchor years 2017 and 2022 | **Shared extract store first.** Check `{production}/raw_data` for a registered CPS/ASEC family; if absent, add one through the same common IPUMS download machinery that maintains `ACS/acs_common` (`.dat.gz` + DDI + `variables.csv` + `manifest.csv`), so Affordability-Index consumes the same file. A project-local pull is the last resort and still lands in the common convention | `raw_data/CPS/cps_common` (or the family name the common machinery already uses) |
+| **CPS ASEC** — filing-model estimation sample (§3.2.3) | **Pulled 2026-08-19** through the shared `common_ipums_download` machinery: ASEC **2015-2025** (income years 2014-2024, so both anchor years and every back year), 72 variables validated against the IPUMS API before pulling, 92 common to all years, no case selection. Carries IPUMS's own `FILESTAT` filer recode, `DEPSTAT`, `ADJGINC` and `TAXINC` — establish what those already do before building a unit builder that duplicates them (§8). **Add variables to the shared request; do not fork an extract** | **`raw_data/CPS-ASEC/cps_asec_common/`** (the family predates this work; the earlier proposed path `CPS/cps_common` was wrong) |
 
 Note: `raw_data/SSA-Demographic/v3` was checked and holds only national
-series — not usable for the state margins. Also settle the HT2 store
-duplication first (§7.4) so the new families land under one convention.
+series — not usable for the state margins. The HT2 store duplication is
+settled (§7.4), so the new families land under one convention.
 
 ### 4.2 `02_build_residual_anchors.R` — the anchor computation
 
-First refactor, then compute: promote the identities out of
+The refactor it required is **done**: the identities were promoted out of
 `compare_individuals_acs_irs()` into an exported `ht2_filing_persons(ht2)`
-returning `(state, married_filing_adults, single_filing_adults,
-dependents)` — one definition per computation; the diagnostic, the target
-builder, and (per the income memo) Affordability-Index all call the same
-function, and add a reader for the Pub 1304 by-size `.xls` tables (Tables
+(`state_weights.R:382`) returning `(state, married_filing_adults,
+single_filing_adults, dependents)` — one definition per computation, called by
+the diagnostic, the target builder, and (per the income memo)
+Affordability-Index. Still to add: a reader for the Pub 1304 by-size `.xls` tables (Tables
 1.6/1.7 first; multi-row headers and disclosure footnotes per
 IRS-Ind `notes/national_bysize.md`, TCJA-2018 IRA/pension combining
 caveat). Then compute §3.1 steps 3-5 and emit the cross-repo artifacts:
@@ -633,7 +639,7 @@ path, **T5** state margins, **T6** cell support, **T7** GQ composition.
 **F2 the age composition is inverted** and is the single most consequential defect
 for the weights, F3 investment income is identically zero, F4 the aging path
 drifts, F5 the v0 margins run 0.78x-1.51x of the anchor and are reproduced
-*exactly*, F6 group quarters are 17% of the national residual but 42% in SD, F7
+*exactly*, F6 group quarters are 16.8% of the national residual but 42% in SD, F7
 above-threshold non-filers are 10.6-11.9M and SE-shaped — and how each fed the
 decisions **D1-D6**, is the subject of **`nonfiler_residual/04_findings.md`**. It
 is the evidence record and is not restated here.
@@ -672,17 +678,12 @@ needed: the PSZ record set stays; values and weights change.
   non-filer state cells key on `age_band(age1)`.
 - **Assertions**: set `filer = 0` explicitly; `stopifnot` on it and on
   `dep_status == 0` rather than relying on the zero-fill.
-- **Scope of the v1 omissions — reopened 2026-08-18, see §3.2.5.** An in-Tax-Data
-  filing model stays out of scope on the original reasoning: filing belongs where it
-  is modeled on survey records (the ACS margins here; later Affordability-Index), and
-  Tax-Data's DINA units arrive with a filer flag. **But dependent non-filers and MFS
-  are no longer a clean deferral.** Post-TCJA the dependent filing threshold rose 89%
-  and MFS collapsed from $4,050 to $5; dependents are Cilke's largest group (36.4% of
-  his non-filers) and Mok estimates a dependent equation directly, with a published
-  filing rate of 0.10 under 65. The coefficients exist and the population is large.
-  **DECIDED 2026-08-19: both are IN SCOPE** — see §3.2.5 for the decision and its
-  consequences, including that this repoints the `dep_status == 0` assertion below
-  from an invariant to a reconciliation question.
+- **Scope.** An in-Tax-Data filing model stays out: filing belongs where it is
+  modelled on survey records (the ACS margins here; later Affordability-Index), and
+  Tax-Data's DINA units arrive with a filer flag. **Dependent non-filers and MFS,
+  however, are in scope as of 2026-08-19** (§3.2.5) — which is why the
+  `dep_status == 0` assertion above is a reconciliation question rather than an
+  invariant to enforce.
 
 ### 5.2 New `src/calibrate_nonfilers.R` (Phase 1)
 
@@ -839,25 +840,22 @@ how it lands in the ACS-side code.
 
 Extend `read_acs_extract()`'s default `cols` with `GQ, SCHOOL, EMPSTAT, SEX, EDUC,
 INCWAGE, INCBUS00, INCSS, INCSUPP, INCWELFR, FOODSTMP, INCRETIR` (all present in the
-common extract; fix the stale `:166` comment claiming `SCHOOL` is absent). Apply the
-v1a deterministic upgrades (§3.2.1) unconditionally; put the probabilistic layer behind
-the `filing_model = c("v1a", "mok", "cilke")` argument (§3.2.2).
-
-Two clarifications the original text got wrong or left implicit:
+common extract). Apply the v1a deterministic upgrades (§3.2.1) unconditionally; put the
+probabilistic layer behind the `filing_model = c("v1a", "mok", "cilke")` argument
+(§3.2.2). Two things to be precise about:
 
 - **The estimation happens on the ASEC, not here** (§3.2.3). What runs on the ACS side
   is the *transfer*: re-calibrating the group constants against `ht2_filing_persons()`
-  totals by state × dependent status. Calling that "the joint filing-model/count step"
-  was misleading — the joint calibration of group constants and the above-threshold
-  scalar happens once, on the ASEC, against the population/filer/SSA margins; the ACS
-  step re-fits constants only.
+  totals by state × dependent status. The joint calibration of group constants and the
+  above-threshold scalar happens once, on the ASEC, against the population/filer/SSA
+  margins; the ACS step re-fits constants only.
 - **Mok's covariates must survive the transfer.** Her regressors are CPS-native but not
   all are ACS-native — the means-tested-transfer and Medicaid-count terms map to
   `INCWELFR`/`INCSUPP`/`FOODSTMP` and `HINSCAID`, and education and race map to
   `EDUC`/`RACE`/`HISPAN`. Check the mapping explicitly before fitting; any covariate
   that cannot be reproduced on the ACS is a covariate the transfer silently drops.
 
-### 6.2 Non-filer targets in `build_weight_inputs()` (`:694-736`)
+### 6.2 Non-filer targets in `build_weight_inputs()` (`state_weights.R:763-806`)
 
 - **Primary targets**: the residual anchors `(state × age_band)`,
   share-normalized like every other target (PUF non-filer national adult
@@ -876,8 +874,8 @@ Two clarifications the original text got wrong or left implicit:
     `residual_tolerance_{year}.csv`.
   - **QCEW** stays a diagnostic, never a target.
 
-  The two SSA margins are **not of equal authority**, and the original draft of
-  this bullet treated them as if they were.
+  The two SSA margins are **not of equal authority** — OASDI-SC is 100% data,
+  EEDATA is a 1% sample — and must not be given the same status.
 
 - **Income tiers move to the prior**: keep `income_tier` in the prior
   (upgraded v1 ACS shares) and demote the current 1,390 count-only cells
@@ -893,7 +891,8 @@ Two clarifications the original text got wrong or left implicit:
 ### 6.3 Validation additions
 
 - The population-identity check of §3.3 (fitted filer + non-filer adults vs
-  PEP−GQ per state) in `validate_state_weights.R`, with tolerance.
+  PEP **resident** adults per state — no GQ subtraction, §3.0) in
+  `validate_state_weights.R`, against `residual_tolerance_{year}.csv`.
 - Re-run the EITC take-up correlation (postmortem §5.3); the −0.61 should
   attenuate.
 - A new held-out metric where gains *are* expected: state adults by age
@@ -920,16 +919,16 @@ argues for: the differentiated GQ treatment (D4) is decision-independent
 and should ship ahead of the rest, sized by T7 first.
 
 1. ~~**Stage D — diagnostics**~~ — **DONE** (`4783dc3e9`, 2026-08-16): fetchers,
-   anchors, tables T1-T7, findings memo, decisions D1-D6. One item remains open
-   inside it (`04_findings.md` §5): the **SSA manual downloads**. The coefficient
-   transcription is no longer blocked, but its target changed — transcribe **Mok
-   Table 14** (§3.2.2), with Cilke as the comparison fit.
+   anchors, tables T1-T7, findings memo, decisions D1-D6. Its one open item, the
+   **SSA manual downloads**, closed 2026-08-19. The coefficient transcription
+   remains outstanding, with its target changed — transcribe **Mok Table 14**
+   (§3.2.2), with Cilke as the comparison fit.
 2. ~~**Pre-flight**~~ — **DONE 2026-08-19.** Vintage advanced to `2026070814`
    (F1-F4 verified to stand); age bands settled and implemented as
    `age_band()`/`target_age_band()`/`a16_band()` in `state_weights.R`; anchor
    tolerance computed (`08_residual_tolerance.R`); dependents/MFS and the
    covered-worker universe decided. Details in `../nonfiler_state_weights_todo.md`.
-3. **Research pass A** (added 2026-08-18, ~3-5 days, parallel with everything): ASEC
+3. **Research pass A** (~3-5 days, parallel with everything): ASEC
    tax-unit and income construction. §8. *(Pass B — parameter currency — is closed;
    its findings are in §3.2.)*
 4. **GQ treatment fix** in `build_acs_margins()` (D4: dorm-student
@@ -938,7 +937,7 @@ and should ship ahead of the rest, sized by T7 first.
 5. **Tax-Data rework** (§5): composition fixes, national calibration,
    aging fix; full pipeline re-run. **Build V1/V2/V3 as separate vintages**
    (§5.4) so each change can be A/B'd independently. ~1-2 weeks + cluster run.
-6. **Federal validation battery** (§5.4, added 2026-08-18) on those vintages,
+6. **Federal validation battery** (§5.4) on those vintages,
    before any state work depends on them. ~1 week, mostly diff-reading.
 7. **State-weights rework** (§6) on the new Tax-Data vintage: margins v1,
    residual targets, re-fit (config-7 hyperparameters unless the sweep says
@@ -956,7 +955,7 @@ and should ship ahead of the rest, sized by T7 first.
 ### 7.2 Interfaces (one definition per computation)
 
 - **`ht2_filing_persons()`**: single home in Tax-Simulator. Recommend
-  splitting `state_weights.R` (1,003 lines) into `src/data/ht2.R` (reader,
+  splitting `state_weights.R` (~1,070 lines) into `src/data/ht2.R` (reader,
   `HT2_TARGET_MAP`, stub logic, identities) and `src/data/filing_model.R`
   (thresholds, Cilke, hazard, `build_acs_margins`), leaving engines and
   assembly in place — this is what makes the income memo's "source the
@@ -996,10 +995,9 @@ renamed IRS-GEO → IRS-Ind — `raw_data/IRS-GEO` is now a symlink to
 `raw_data/IRS-Ind`, and the maintained repo is
 github.com/johniselin-budget-lab/IRS-Ind (relabel commit `2dba645`; the
 rename accompanied the addition of the national Pub 1304 by-size family
-this memo now leans on). `ht2_path()` keeps working through the symlink;
-repoint it to `IRS-Ind` the next time `state_weights.R` is touched, and
-land the new store families (§4.1) beside it under the same manifest
-conventions.
+this memo now leans on). `ht2_path()` has since been repointed to `IRS-Ind`
+directly (`state_weights.R:65`), and the new store families (§4.1) sit beside it
+under the same manifest conventions.
 
 ## 8. Open questions
 
@@ -1043,7 +1041,7 @@ bugs, because both change published refundable-credit scores:
   dropped from every total. The rework grows that population, so the
   silently-dropped credit mass grows with it. Measure it before changing either.
 
-**Carried from the original draft:**
+**Carried forward:**
 
 - **DINA national-income variables**: availability and quality of the NI
   counterparts to `fiint`/`fidiv`/`fikgi` for non-filers — inspect the `.dta` at
