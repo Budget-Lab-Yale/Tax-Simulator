@@ -1,0 +1,112 @@
+---
+# Montana rate schedule (Form 2; MCA 15-30-2103).
+#
+# TWO REGIMES, with SB 399 (2021) as the pivot, effective TY2024.
+#
+# Through TY2023: a seven-bracket ladder from 1% to 6.9% (6.75% from TY2022
+# under SB 159), whose bracket bounds were THE SAME FOR EVERY FILING STATUS.
+# That single fact is what made "married filing separately on the same
+# return" near-universally better for two-earner couples -- see filing.yaml.
+#
+# From TY2024: two brackets, 4.7% and 5.9%, with bounds that DO vary by
+# status (head of household exactly 1.5x single, joint exactly 2x). SB 399
+# set the top rate at 6.5% and SB 121 (2023) cut it to 5.9% before it ever
+# took effect, so 6.5% never applied to anyone.
+#
+# And from TY2024 net LONG-TERM CAPITAL GAINS get their own 3.0% / 4.1%
+# schedule stacked on top of ordinary income (HB 221 of 2023), replacing the
+# 2% capital gains credit. A two-bracket encoding without it would overstate
+# tax for anyone with realised long-term gains.
+
+filing_status_mapper:
+  brackets:
+    '1': brackets_single
+    '2': brackets_joint
+    '3': brackets_single
+    '4': brackets_head
+  kg_pref_thresh:
+    '1': kg_thresh_single
+    '2': kg_thresh_joint
+    '3': kg_thresh_single
+    '4': kg_thresh_head
+
+rates:
+  value:
+    '2017': [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.069]
+    '2022': [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.0675]
+    '2024': [0.047, 0.059, 0.059, 0.059, 0.059, 0.059, 0.059]
+  reference: 'DOR rate sheets and Form 2 instructions. The seven-bracket ladder ran 1% to 6.9% through TY2021; SB 159 (2021) cut the top to 6.75% for TY2022-TY2023; SB 399 (2021) replaced the ladder with two brackets from TY2024 at 4.7% and a top rate SB 121 (2023) then reduced from 6.5% to 5.9% before it applied. HB 337 (2025) enacts 5.65% for TY2026 and 5.4% for TY2027 -- not encoded here pending the published TY2026 tables'
+brackets_single:
+  value:
+    '2017': [0.0, 2900.0, 5200.0, 7900.0, 10600.0, 13600.0, 17600.0]
+    '2018': [0.0, 3000.0, 5200.0, 8000.0, 10800.0, 13900.0, 17900.0]
+    '2019': [0.0, 3100.0, 5400.0, 8200.0, 11100.0, 14300.0, 18400.0]
+    '2020': [0.0, 3100.0, 5500.0, 8400.0, 11300.0, 14500.0, 18700.0]
+    '2021': [0.0, 3100.0, 5500.0, 8400.0, 11400.0, 14600.0, 18800.0]
+    '2022': [0.0, 3300.0, 5800.0, 8900.0, 12000.0, 15400.0, 19800.0]
+    '2023': [0.0, 3600.0, 6300.0, 9700.0, 13000.0, 16800.0, 21600.0]
+    '2024': [0.0, 20500.0, 20500.0, 20500.0, 20500.0, 20500.0, 20500.0]
+    '2025': [0.0, 21100.0, 21100.0, 21100.0, 21100.0, 21100.0, 21100.0]
+  reference: 'DOR rate sheets, one per year. Through TY2023 these bounds applied to EVERY filing status, which is why the joint and head-of-household series below repeat them. Indexed annually from a statutory base and rounded to the nearest $100 (MCA 15-30-2103). From TY2024 the single and married-filing-separately bracket is $20,500, indexed to $21,100 for TY2025 (Form 2 page 2 line 5; 2025 rate sheet)'
+brackets_joint:
+  value:
+    '2017': [0.0, 2900.0, 5200.0, 7900.0, 10600.0, 13600.0, 17600.0]
+    '2018': [0.0, 3000.0, 5200.0, 8000.0, 10800.0, 13900.0, 17900.0]
+    '2019': [0.0, 3100.0, 5400.0, 8200.0, 11100.0, 14300.0, 18400.0]
+    '2020': [0.0, 3100.0, 5500.0, 8400.0, 11300.0, 14500.0, 18700.0]
+    '2021': [0.0, 3100.0, 5500.0, 8400.0, 11400.0, 14600.0, 18800.0]
+    '2022': [0.0, 3300.0, 5800.0, 8900.0, 12000.0, 15400.0, 19800.0]
+    '2023': [0.0, 3600.0, 6300.0, 9700.0, 13000.0, 16800.0, 21600.0]
+    '2024': [0.0, 41000.0, 41000.0, 41000.0, 41000.0, 41000.0, 41000.0]
+    '2025': [0.0, 42200.0, 42200.0, 42200.0, 42200.0, 42200.0, 42200.0]
+  reference: 'Identical to the single ladder through TY2023 -- Montana had no separate joint schedule at all, and this repetition is the encoding of that fact rather than an oversight. From TY2024 the joint bracket is exactly twice the single one: $41,000, indexed to $42,200'
+brackets_head:
+  value:
+    '2017': [0.0, 2900.0, 5200.0, 7900.0, 10600.0, 13600.0, 17600.0]
+    '2018': [0.0, 3000.0, 5200.0, 8000.0, 10800.0, 13900.0, 17900.0]
+    '2019': [0.0, 3100.0, 5400.0, 8200.0, 11100.0, 14300.0, 18400.0]
+    '2020': [0.0, 3100.0, 5500.0, 8400.0, 11300.0, 14500.0, 18700.0]
+    '2021': [0.0, 3100.0, 5500.0, 8400.0, 11400.0, 14600.0, 18800.0]
+    '2022': [0.0, 3300.0, 5800.0, 8900.0, 12000.0, 15400.0, 19800.0]
+    '2023': [0.0, 3600.0, 6300.0, 9700.0, 13000.0, 16800.0, 21600.0]
+    '2024': [0.0, 30750.0, 30750.0, 30750.0, 30750.0, 30750.0, 30750.0]
+    '2025': [0.0, 31700.0, 31700.0, 31700.0, 31700.0, 31700.0, 31700.0]
+  reference: 'Identical to the single ladder through TY2023. From TY2024 head of household is exactly 1.5x the single bracket: $30,750, indexed to $31,700'
+
+# Preferential schedule on net long-term capital gains, from TY2024.
+kg_pref_rate_low:
+  value:
+    '2017': 0.0
+    '2024': 0.030
+  reference: 'HB 221 (2023), from TY2024: "net long-term capital gains are now taxed at lower rates than Montana ordinary income" (2024 booklet p.i). Form 2 page 2 lines 1-13 give the algorithm -- ordinary income fills the low bracket first, long-term gain takes whatever room remains at 3.0%, and the excess is taxed at 4.1%. The old 2% capital gains CREDIT was repealed in the same act'
+kg_pref_rate_high:
+  value:
+    '2017': 0.0
+    '2024': 0.041
+  reference: 'Same source; the rate on long-term gain stacked above the bracket threshold'
+kg_thresh_single:
+  value:
+    '2017': 0.0
+    '2024': 20500
+    '2025': 21100
+  reference: 'Form 2 page 2 line 5: the stacking threshold is the taxpayer''s own ordinary-income bracket bound, so it equals brackets_single above. Stated separately here rather than inferred from the ladder'
+kg_thresh_joint:
+  value:
+    '2017': 0.0
+    '2024': 41000
+    '2025': 42200
+  reference: 'Same line, married filing jointly and qualifying surviving spouse'
+kg_thresh_head:
+  value:
+    '2017': 0.0
+    '2024': 30750
+    '2025': 31700
+  reference: 'Same line, head of household'
+
+documented_not_modeled:
+  ty2026_and_ty2027_rates:
+    reference: 'HB 337 (2025) enacts a 5.65% top rate for TY2026 and 5.4% for TY2027, with the low bracket widening to $47,500/$71,250/$95,000 and then $65,000/$97,500/$130,000. Not encoded pending the published TY2026 tables -- note that 5.65% is a TY2026 figure, NOT a TY2024 or TY2025 one, which secondary summaries have got wrong'
+  ty2017_pease_limitation:
+    reference: 'TY2017 alone carried a Pease-style limitation on Montana itemized deductions. Not encoded [overstates TY2017 itemized deductions for high-income filers]'
+  collectibles_and_other_gain_types:
+    reference: 'The preferential schedule reaches net long-term capital gain as reported on federal Schedule D line 15. Any federal-side distinctions below that line are not separable in the model'

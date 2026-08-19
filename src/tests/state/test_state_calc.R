@@ -24,7 +24,7 @@ test_state_calc = function() {
                 'IN', 'KY', 'MI', 'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH',
                 'PA', 'ID', 'MN', 'MD', 'WI', 'KS', 'DE', 'RI', 'WV', 'NM',
                 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR', 'MA', 'NJ',
-                'AR', 'MS'),
+                'AR', 'MS', 'MT'),
     years   = 2017:2035,
     indexes = expand_grid(series = 'cpi', year = 2015:2036) %>%
               mutate(growth = 0.025)
@@ -40,7 +40,7 @@ test_state_calc = function() {
     'st_pct_credit', 'st_cli', 'st_ded_credit', 'st_age_credit',
     'st_retire_credit', 'st_senior_credit', 'st_jfc', 'st_forgive_credit',
     'st_percap_credit', 'st_marriage_credit', 'st_twoearner_credit',
-    'st_item_credit', 'st_stfc', 'st_lic'
+    'st_item_credit', 'st_stfc', 'st_lic', 'st_kg_credit'
   )
   case_exercised = new.env()
   case_exercised$sets = list()
@@ -3376,6 +3376,166 @@ test_state_calc = function() {
            label = 'AR-7 2024 child care credit at 20% of federal')
 
   #--------------------------------------------------------------------------
+  # Montana (Form 2)
+  #
+  # Two regimes either side of SB 399 (2021), effective TY2024, and almost
+  # nothing survives the transition. Through TY2023: a seven-bracket ladder
+  # whose bounds do not vary by filing status, a standard deduction that is
+  # 20% of Montana AGI between an indexed floor and cap, per-exemption
+  # amounts, and -- the feature that shapes everything else -- a federal
+  # income tax deduction that lives INSIDE the itemized schedule, so a
+  # standard-deduction taker forgoes it entirely. From TY2024: two brackets,
+  # the federal standard deduction, no exemptions, a preferential capital
+  # gains schedule and a single age-65 subtraction.
+  #--------------------------------------------------------------------------
+
+  # MT-1: the pre-2024 baseline. 2023 single, wages 60,000, nothing to
+  # itemize. The standard deduction is 20% x 60,000 = 12,000 capped at 5,540,
+  # the exemption is 2,960, so taxable income is 51,500. The ladder charges
+  # 802.00 through the top of the sixth band ($21,600) and 6.75% on the
+  # 29,900 above it -> 2,820.25
+  run_case('MT', 2023,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000),
+           expect = list(st_agi = 60000, st_ded = 5540, st_exempt = 2960,
+                         st_txbl_inc = 51500, liab_st_iit = 2820.25),
+           label = 'MT-1 2023 single, capped percentage standard deduction')
+
+  # MT-2: the federal income tax deduction, and why it has to sit inside the
+  # itemized schedule. The same unit with 8,000 of federal tax, 2,000 of
+  # property tax and 1,500 of charity itemizes: 3,500 of ordinary components
+  # plus the federal tax deduction capped at 5,000 gives 8,500, which beats
+  # the 5,540 standard deduction. Taxable income 48,540, tax 2,620.45.
+  # Encoded as a free-standing deduction it would have reached the standard
+  # deduction taker in MT-1 as well, which Montana never allowed
+  run_case('MT', 2023,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, liab_bc = 8000,
+                salt_prop = 2000, char_item_ded_potential = 1500),
+           expect = list(st_fed_tax_ded = 5000, st_ded = 8500,
+                         st_txbl_inc = 48540, liab_st_iit = 2620.45),
+           label = 'MT-2 2023 federal tax deduction inside the itemized schedule')
+
+  # MT-3: the two filing-status groupings run in OPPOSITE directions, and a
+  # head-of-household filer is where that shows. The federal tax deduction
+  # cap groups head of household with single at 5,000, while the standard
+  # deduction bounds group it with joint at 4,920/11,080. 2023 head of
+  # household with one dependent, AGI 120,000, federal tax 20,000, 6,000 of
+  # property tax and 4,000 of charity: itemized 15,000 beats the 11,080
+  # standard deduction, exemptions are 2 x 2,960, taxable income 99,080 and
+  # tax 6,031.90
+  run_case('MT', 2023,
+           list(agi = 120000, filing_status = 4, wages1 = 120000,
+                ei1 = 120000, n_dep = 1, dep_age1 = 10, liab_bc = 20000,
+                salt_prop = 6000, char_item_ded_potential = 4000),
+           expect = list(st_fed_tax_ded = 5000, st_ded = 15000,
+                         st_exempt = 5920, st_txbl_inc = 99080,
+                         liab_st_iit = 6031.90),
+           label = 'MT-3 2023 head of household takes the SINGLE federal tax cap')
+
+  # MT-4: the partial pension exemption and its $2-for-$1 phase-out. 2023
+  # single aged 66 with 44,000 of AGI including 24,000 of pension income.
+  # The exemption starts at the 5,060 per-taxpayer maximum and loses two
+  # dollars for every dollar of federal AGI above 42,140 -- 2 x 1,860 =
+  # 3,720 -- leaving 1,340. Montana AGI 42,660, standard deduction 5,540,
+  # exemptions 2,960 personal plus 2,960 for age, taxable income 31,200,
+  # tax 1,450.00
+  run_case('MT', 2023,
+           list(agi = 44000, age1 = 66, wages1 = 20000, ei1 = 20000,
+                txbl_pens_dist = 24000),
+           expect = list(st_agi = 42660, st_exempt = 5920,
+                         st_txbl_inc = 31200, liab_st_iit = 1450.00),
+           label = 'MT-4 2023 pension exemption loses $2 per $1 of AGI')
+
+  # MT-5: the 65-and-older interest exemption, $800 single and never
+  # indexed. 2023 single aged 70 with 25,000 of wages and 5,000 of interest.
+  # The assumed US-obligation share takes 750 of that interest first and the
+  # Montana exemption another 800, leaving Montana AGI of 28,450; the
+  # standard deduction is 5,540 and exemptions 5,920, so taxable income is
+  # 16,990 and tax 525.40
+  run_case('MT', 2023,
+           list(agi = 30000, age1 = 70, wages1 = 25000, ei1 = 25000,
+                txbl_int = 5000),
+           expect = list(st_agi = 28450, st_txbl_inc = 16990,
+                         liab_st_iit = 525.40),
+           label = 'MT-5 2023 senior interest exemption')
+
+  # MT-6: the standard deduction FLOOR, which is what most low-income
+  # Montanans actually got. 2023 single with 10,000 of wages: 20% is 2,000,
+  # below the 2,460 floor, so the floor governs. Taxable income 4,580, tax
+  # 55.60
+  run_case('MT', 2023,
+           list(agi = 10000, wages1 = 10000, ei1 = 10000),
+           expect = list(st_ded = 2460, st_txbl_inc = 4580,
+                         liab_st_iit = 55.60),
+           label = 'MT-6 2023 the percentage standard deduction floor binds')
+
+  # MT-7: the 2% capital gains credit, the pre-2024 counterpart of the
+  # preferential rate schedule. The MT-1 unit with 10,000 of its income as
+  # long-term gain owes the same 2,820.25 and takes a 200 credit
+  run_case('MT', 2023,
+           list(agi = 60000, wages1 = 50000, ei1 = 50000, kg_lt = 10000),
+           expect = list(st_txbl_inc = 51500, st_kg_credit = 200,
+                         liab_st_iit = 2620.25),
+           label = 'MT-7 2023 capital gains credit at 2%')
+
+  # MT-8: the TY2024 regime. Federal standard deduction, no exemption, two
+  # brackets. Single with 100,000 of AGI: taxable income 85,400, taxed at
+  # 4.7% to 20,500 and 5.9% above -> 4,792.60
+  run_case('MT', 2024,
+           list(agi = 100000, wages1 = 100000, ei1 = 100000, std_ded = 14600),
+           expect = list(st_ded = 14600, st_exempt = 0,
+                         st_txbl_inc = 85400, liab_st_iit = 4792.60),
+           label = 'MT-8 2024 federal standard deduction, two brackets')
+
+  # MT-9a / MT-9b: the preferential long-term capital gains schedule, which
+  # HB 221 (2023) put in the capital gains credit's place. It stacks
+  # federal-style: ordinary income fills the low bracket first and the gain
+  # takes whatever room is left at 3.0%, with the excess at 4.1%.
+  #
+  # In MT-9a the ordinary income (45,400) already exceeds the 20,500
+  # threshold, so no room remains and the whole 40,000 gain pays 4.1% --
+  # 2,432.60 of ordinary tax plus 1,640 = 4,072.60, against the 4,792.60 the
+  # same taxable income would owe as ordinary income in MT-8.
+  run_case('MT', 2024,
+           list(agi = 100000, wages1 = 60000, ei1 = 60000, kg_lt = 40000,
+                std_ded = 14600),
+           expect = list(st_txbl_inc = 85400, liab_st_iit = 4072.60),
+           label = 'MT-9a 2024 long-term gain stacked above the threshold')
+
+  # In MT-9b there is no ordinary income at all, so the first 20,500 of the
+  # gain pays 3.0% and only the remaining 4,900 pays 4.1% -> 815.90
+  run_case('MT', 2024,
+           list(agi = 40000, wages1 = 10000, ei1 = 10000, kg_lt = 30000,
+                std_ded = 14600),
+           expect = list(st_txbl_inc = 25400, liab_st_iit = 815.90),
+           label = 'MT-9b 2024 the gain fills the low bracket first')
+
+  # MT-10: the age-65 subtraction that replaced the exemption, the pension
+  # exemption, the interest exemption and Montana's own Social Security
+  # schedule all at once. 2024 single aged 70 with 60,000 of AGI: 16,550 of
+  # federal standard deduction (including the age addition) and the 5,500
+  # subtraction leave 37,950, tax 1,993.05
+  run_case('MT', 2024,
+           list(agi = 60000, age1 = 70, wages1 = 30000, ei1 = 30000,
+                txbl_pens_dist = 30000, std_ded = 16550),
+           expect = list(st_exempt = 5500, st_txbl_inc = 37950,
+                         liab_st_iit = 1993.05),
+           label = 'MT-10 2024 the age-65 subtraction')
+
+  # MT-11a / MT-11b: the earned income credit, refundable, which arrived in
+  # TY2019 at 3% of the federal credit and tripled to 10% for TY2024 under
+  # SB 121. The same 3,000 federal credit yields 90 and then 300
+  run_case('MT', 2023,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, eitc = 3000),
+           expect = list(st_eitc = 90),
+           label = 'MT-11a 2023 earned income credit at 3% of federal')
+
+  run_case('MT', 2024,
+           list(agi = 20000, wages1 = 20000, ei1 = 20000, eitc = 3000,
+                std_ded = 14600),
+           expect = list(st_eitc = 300),
+           label = 'MT-11b 2024 earned income credit at 10% of federal')
+
+  #--------------------------------------------------------------------------
   # New Jersey (NJ-1040)
   #
   # The strictest own-base state in the set: enumerated categories of gross
@@ -4442,7 +4602,7 @@ test_state_calc = function() {
                    'CA', 'ND', 'SC', 'CT', 'VA', 'UT', 'OH', 'PA', 'ID',
                    'MN', 'MD', 'WI', 'NH', 'TN', 'WA', 'KS', 'DE', 'RI',
                    'WV', 'NM', 'VT', 'OK', 'DC', 'NE', 'HI', 'ME', 'MO', 'AL', 'OR',
-                   'MA', 'NJ', 'AR', 'MS')
+                   'MA', 'NJ', 'AR', 'MS', 'MT')
   smoke_active = list()
   for (st in smoke_states) {
     active = character()

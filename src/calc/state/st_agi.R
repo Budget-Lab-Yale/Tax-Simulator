@@ -133,6 +133,9 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_agi.pension_excl_agi_limit', # (dbl) AGI cliff for the exclusion (WI)
     'st_agi.pension_excl_po_thresh', # (dbl) linear phase-out FAGI threshold (ME 2025+; Inf = none)
     'st_agi.pension_excl_po_width',  # (dbl) linear phase-out width (ME $100k/$50k MFS)
+    'st_agi.pension_excl_po_rate',   # (dbl) DOLLARS of exclusion lost per dollar above it (MT 2)
+    'st_agi.int_excl_senior',        # (dbl) senior interest exemption, per return (MT $800/$1,600)
+    'st_agi.int_excl_min_age',       # (dbl) minimum age for it (MT 65, either spouse)
     'st_agi.pension_cap_less_gross_ss', # (int) cap reduced by GROSS SS received (MD)
     'st_agi.sub_ui_agi_limit',      # (dbl) AGI cliff for the UI subtraction (MD RELIEF)
     'st_agi.twoearner_sub_max',     # (dbl) two-income couple subtraction cap (MD)
@@ -503,14 +506,24 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                               0),
       st_sub_pens_raw = pmin(pens_inc, pmax(0, pens_cap - st_sub_ss_cap)),
 
-      # Linear phase-out of the pension exclusion above a federal-AGI
-      # threshold (ME 36 M.R.S. 5122(2)(M-3), TY2025+: the non-military
+      # Phase-out of the pension exclusion above a federal-AGI threshold,
+      # in one of two forms. Where a rate is set the reduction is in
+      # DOLLARS per dollar of income above the threshold (MT: "your
+      # retirement exemption is reduced $2 for every $1 that your federal
+      # adjusted gross income is over $34,260", inst_2017 p.19, applied
+      # once to the combined per-spouse exclusion). Otherwise it is
+      # proportional (ME 36 M.R.S. 5122(2)(M-3), TY2025+: the non-military
       # deduction is reduced by (FAGI - threshold) / width, to zero; the
       # worksheet's 4-decimal ratio rounding is a documented approximation).
       # .inf threshold = no phase-out
-      st_sub_pens_raw = st_sub_pens_raw *
-        pmin(1, pmax(0, 1 - (agi - st_agi.pension_excl_po_thresh) /
-                           st_agi.pension_excl_po_width)),
+      st_sub_pens_raw = if_else(
+        st_agi.pension_excl_po_rate > 0,
+        pmax(0, st_sub_pens_raw - st_agi.pension_excl_po_rate *
+                pmax(0, agi - st_agi.pension_excl_po_thresh)),
+        st_sub_pens_raw *
+          pmin(1, pmax(0, 1 - (agi - st_agi.pension_excl_po_thresh) /
+                             st_agi.pension_excl_po_width))
+      ),
 
       # Senior standard deduction against ALL income (MI Tier 2/3 Michigan
       # Standard Deduction, MCL 206.30(9)(b)/(e)): a per-return amount
@@ -738,11 +751,27 @@ calc_st_agi = function(tax_unit, fill_missings = F, credit_tables = NULL) {
       # pass-through profit (documented in the state's yaml)
       st_sub_bus_excl = st_agi.bus_excl_share * st_bus_inc,
 
+      # Senior INTEREST exemption, a per-return dollar amount available
+      # where either spouse meets the age test (MT: "If you are single and
+      # age 65 or older ... you can exempt up to $800 of the interest
+      # income ... if you are married and are filing a joint return with
+      # your spouse and at least one of you is age 65 or older ... up to
+      # $1,600", inst_2023). Distinct from the senior INVESTMENT cap above,
+      # which reaches dividends and gains as well and nets the retirement
+      # subtraction
+      st_sub_senior_int = if_else(
+        pmax(age1, if_else(filing_status == 2 & !is.na(age2), age2, age1)) >=
+          st_agi.int_excl_min_age,
+        pmin(pmax(0, txbl_int), st_agi.int_excl_senior),
+        0
+      ),
+
       st_subtractions = st_sub_ref + st_sub_us_int + st_sub_ss + st_sub_pens +
                         st_sub_char + st_retirement_excl + st_sub_capgain +
                         st_sub_retire_share + st_sub_age + st_sub_ui +
                         st_sub_senior_inv + st_sub_twoearner + st_bid +
-                        st_sub_bus_excl + st_sub_pens_tier,
+                        st_sub_bus_excl + st_sub_pens_tier +
+                        st_sub_senior_int,
 
       # State income base
       st_agi = st_start + st_additions - st_subtractions

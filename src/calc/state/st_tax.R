@@ -70,6 +70,10 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     'st_ord.combined_split_round', # (dbl) rounding increment for the income shares (MO 0.01)
     'st_ord.bus_rate',           # (dbl) flat rate on carve-out excess (OH 3%)
     'st_ord.st_gains_rate',      # (dbl) separate rate on short-term capital gains (MA)
+    'st_ord.kg_pref_rate_low',   # (dbl) preferential LTCG rate below the threshold (MT 3.0%)
+    'st_ord.kg_pref_rate_high',  # (dbl) preferential LTCG rate above it (MT 4.1%)
+    'st_ord.kg_pref_thresh',     # (dbl) stacking threshold (mapped; MT = its own low-bracket top)
+    'kg_lt',                     # (dbl) net long-term capital gain (preferential base)
     'st_itemizing',              # (bool) state itemization election (calc_st_ded)
     'st_ded',                    # (dbl) state deduction taken (calc_st_ded)
     'st_std_ded',                # (dbl) state standard deduction (calc_st_ded)
@@ -171,6 +175,34 @@ calc_st_tax = function(tax_unit, fill_missings = F) {
     sched_published = st_pick_slot(base_amt, j) + m * (ti - B)
     tax_unit$st_tax_sched = if_else(is.na(sched_published),
                                     tax_unit$st_tax_sched, sched_published)
+  }
+
+  # Preferential rate schedule on net LONG-TERM capital gain, STACKED on top
+  # of ordinary income (MT Form 2 page 2, HB 221 of 2023, from TY2024). The
+  # construction mirrors the federal 0/15/20% pattern: ordinary income fills
+  # the low bracket first, long-term gain occupies whatever room is left at
+  # the low preferential rate, and the excess takes the high one. The gain is
+  # first capped at taxable income, because a gain larger than the base cannot
+  # all be in the base.
+  #
+  # Where this is active the schedule tax is recomputed on ORDINARY income
+  # alone -- the whole point is that the gain leaves the ordinary ladder.
+  # Assumes no recapture, base-amount or combined-separate machinery in the
+  # same state, like the kg_alt_rate feature below
+  if (any(tax_unit$st_ord.kg_pref_rate_low > 0)) {
+    kg_pref_on  = tax_unit$st_ord.kg_pref_rate_low > 0
+    kg_in_base  = pmin(pmax(0, ti), pmax(0, tax_unit$kg_lt))
+    kg_ordinary = ti - kg_in_base
+    kg_room     = pmax(0, tax_unit$st_ord.kg_pref_thresh - kg_ordinary)
+    kg_low      = pmin(kg_in_base, kg_room)
+    kg_high     = pmax(0, kg_in_base - kg_room)
+    tax_unit$st_tax_sched = if_else(
+      kg_pref_on,
+      sched_tax_at(kg_ordinary) +
+        tax_unit$st_ord.kg_pref_rate_low  * kg_low +
+        tax_unit$st_ord.kg_pref_rate_high * kg_high,
+      tax_unit$st_tax_sched
+    )
   }
 
   # Alternative maximum rate on net capital gain (HI 235-51(f), Tax on

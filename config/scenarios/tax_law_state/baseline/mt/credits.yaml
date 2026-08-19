@@ -1,0 +1,42 @@
+---
+# Montana credits (Form 2 Nonrefundable and Refundable Credits Schedules;
+# Schedule 3 from TY2024).
+#
+# Two credits are modeled. The earned income credit is a straight percentage
+# of the federal credit, fully refundable, and it steps three times across
+# the period. The capital gains credit is the pre-2024 counterpart of the
+# TY2024+ preferential rate schedule in ord.yaml -- the two never coexist,
+# and HB 221 (2023) swapped one for the other in a single act.
+
+eitc_match:
+  value:
+    '2017': 0.0
+    '2019': 0.03
+    '2024': 0.10
+    '2026': 0.20
+  reference: 'HB 391 (2017 session) created the credit at 3% of the federal credit but the DOR booklet dates its first effective year: "Beginning with Tax Year 2019, Montana has enacted a state version of the Earned Income Tax Credit (EITC). The Montana EITC is offered at 3 percent of the federal credit and is fully refundable" (inst_2019 p.i) -- there is no EITC line on the TY2017 or TY2018 return. SB 121 (2023) raised it to 10% for TY2024 (form2_2024 p.1 line 15, "Multiply Federal EIC by 10% (0.10)"), and HB 337 (2025) to 20% for TY2026 (inst_2025 p.i)'
+eitc_refundable:
+  value: 1
+  reference: 'inst_2019 p.i and every later booklet: "fully refundable"'
+
+kg_credit_rate:
+  value:
+    '2017': 0.02
+    '2024': 0.0
+  reference: 'Nonrefundable Credits Schedule line 1, Form 2 p.9: "Resident capital gains credit. 2% of capital gain entered on page 1, line 7", with the instruction TIP "If you are a resident, reporting capital gains on this line entitles you to a tax credit of 2 percent of the amount reported". The rate sheets list "Capital Gains Tax Credit: 2%" for TY2017 through TY2021. The base is the net capital gain reported, long- and short-term alike, not just long-term. Repealed for TY2024 by HB 221 (2023), which put the preferential rate schedule in its place -- inst_2023 p.ii: "The capital gains tax rate will replace 2% capital gains tax credit set to expire in Tax Year 2024 and the 30% net long-term capital gains subtraction that would have been effective in Tax Year 2024"'
+
+documented_not_modeled:
+  elderly_homeowner_renter_credit:
+    reference: 'A refundable credit, claimable even by filers with no filing requirement, that survived SB 399 unchanged (Schedule 2EC from TY2024). Eligibility is age 62 by December 31, gross household income of ALL household members below $45,000, nine months of Montana residence and six months occupying a Montana residence; the computation runs off a $12,600 standard exclusion and a $1,150 cap through two multiplier tables, none of it indexed. Rent paid, household-member income and months of occupancy are not model inputs [understates refundable credits for low-income Montanans aged 62 and over]'
+  eitc_reduction_worksheet:
+    reference: 'Nonresidents and married taxpayers filing separately ON SEPARATE FORMS do not qualify for the Montana EITC at all, and part-year residents, enrolled tribal members living on their tribe''s reservation and members of IRC 501(d) agricultural organizations get the credit scaled by Montana earned income over total earned income (inst_2024 pp.8-9). The model runs residents only, so the scaling never applies; the separate-forms exclusion is part of the filing-status gap recorded in agi.yaml'
+  adoption_credit:
+    reference: 'HB 225 (2023), refundable, $7,500 for a child adopted from Montana foster care and $5,000 otherwise. Adoption is not a model input'
+  pass_through_entity_tax_credit:
+    reference: 'SB 554 (2023), refundable, 6.75% of the owner''s Montana source income for TY2023 falling to 5.9% for TY2024. The entity-level election is not modeled'
+  credit_for_tax_paid_to_another_state:
+    reference: 'Nonrefundable, both regimes. Out-of-state income is not separable in the model'
+  business_and_contribution_credits:
+    reference: 'The qualified endowment, recycle (Form RCYL), apprenticeship, trades education and training (Form TETC), innovative educational program, student scholarship organization, contractor''s gross receipts, historic property preservation, infrastructure users fee, media, jobs growth incentive and unlocking public lands credits are all real and none is derivable from a household survey'
+  child_and_dependent_care:
+    reference: 'Montana had no child and dependent care CREDIT in this period -- what it had was an itemized DEDUCTION, recorded in ded.yaml. Encoding a credit here would be a double count on top of a feature that is separately documented'

@@ -7,7 +7,7 @@ return_vars$calc_st_credits = c('st_hh_credit', 'st_eitc', 'st_ctc',
                                 'st_dep_credit', 'st_cdctc', 'st_family_credit',
                                 'st_exempt_credit', 'st_earned_credit', 'st_yctc',
                                 'st_pct_credit', 'st_cli', 'st_ded_credit',
-                                'st_lic',
+                                'st_lic', 'st_kg_credit',
                                 'st_age_credit', 'st_retire_credit',
                                 'st_senior_credit', 'st_jfc',
                                 'st_forgive_credit', 'st_percap_credit',
@@ -107,6 +107,8 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'cdctc_nonref',      # (dbl)  federal CDCTC, nonrefundable portion
     'cdctc_ref',         # (dbl)  federal CDCTC, refundable portion
     'care_exp',          # (dbl)  eligible dependent care expenses
+    'kg_lt',             # (dbl)  net long-term capital gain (MT capital gains credit)
+    'kg_st',             # (dbl)  net short-term capital gain (MT capital gains credit)
     'salt_prop',         # (dbl)  state/local real estate taxes paid
     'salt_pers',         # (dbl)  state/local personal property taxes paid
     'salt_item_ded',     # (dbl)  federal SALT deduction, capped (UT ded credit)
@@ -156,6 +158,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     'st_credits.lic_thresh',
     'st_credits.lic_per_dep',
     'st_credits.lic_income_base',
+    'st_credits.kg_credit_rate',       # (dbl) nonrefundable credit as a share of net capital gain (MT 0.02)
     'st_credits.jfc_cap',
     'st_credits.jfc_min_each_income',
     'st_credits.jfc_income_base',
@@ -383,6 +386,16 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     0
   )
 
+  # Capital gains credit (MT Nonrefundable Credits Schedule line 1, through
+  # TY2023: "2% of capital gain entered on page 1, line 7"). The base is the
+  # net capital gain actually carried into the state's income, so it is the
+  # federal net figure floored at zero -- a net loss earns no credit, and the
+  # capital loss limitation has already been applied upstream. Repealed and
+  # replaced by the preferential rate schedule from TY2024, so the rate goes
+  # to zero rather than the parameter disappearing
+  st_kg_credit = tax_unit$st_credits.kg_credit_rate *
+                 pmax(0, tax_unit$kg_lt + tax_unit$kg_st)
+
   tibble(
     st_hh_credit     = hh$st_hh_credit,
     st_eitc          = st_eitc,
@@ -408,6 +421,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
     st_char_credit    = st_char_credit,
     st_stfc           = hh$st_stfc,
     st_lic            = st_lic,
+    st_kg_credit      = st_kg_credit,
 
     st_credits_nonref = hh$st_hh_credit + hh$prop_credit + child$st_dep_credit +
                         st_family_credit + hh$st_exempt_credit + st_pct_credit +
@@ -415,7 +429,7 @@ calc_st_credits = function(tax_unit, fill_missings = F, credit_tables = NULL) {
                         senior$st_retire_credit + senior$st_senior_credit +
                         st_jfc + earn$st_forgive_credit + st_marriage_credit +
                         st_twoearner_credit + st_item_credit +
-                        st_char_credit + st_lic +
+                        st_char_credit + st_lic + st_kg_credit +
                         hh$st_percap_credit *
                           (1 - tax_unit$st_credits.percap_refundable) +
                         hh$st_stfc *

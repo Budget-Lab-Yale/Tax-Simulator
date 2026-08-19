@@ -130,6 +130,14 @@ MS:
 MO:
   profile: broad_iit
   enabled: true
+# MT adopts the IRC as amended (MCA 15-30-2101(20)), so rolling conformity
+# (group 0). SB 399 (2021) moved the base from federal AGI plus Montana's
+# own deductions to federal AGI less the FEDERAL deduction from TY2024,
+# which tightens the coupling considerably: from that year a federal
+# standard-deduction reform flows straight into Montana taxable income
+MT:
+  profile: broad_iit
+  enabled: true
 # NE adopts the IRC as amended with no fixed date (Neb. Rev. Stat. 77-2714),
 # so rolling conformity (group 0)
 NE:

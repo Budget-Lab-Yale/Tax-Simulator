@@ -55,6 +55,9 @@ scalars:
   # TY2025+: reduced by (FAGI - threshold)/width to zero); .inf = none
   st_agi.pension_excl_po_thresh: .inf
   st_agi.pension_excl_po_width: 1
+  # Where a rate is set the phase-out is in DOLLARS per dollar above the
+  # threshold instead (MT: $2 of exemption per $1 of federal AGI)
+  st_agi.pension_excl_po_rate: 0
   st_agi.pension_cap_less_gross_ss: 0   # cap reduced by GROSS SS received (MD)
   st_agi.sub_ui_agi_limit: .inf   # AGI cliff for the UI subtraction (MD RELIEF)
   # Two-income married couple subtraction (MD): the lesser earner's
@@ -80,6 +83,10 @@ scalars:
   st_agi.pension_excl_orie_earned_max: 0
   st_agi.senior_inv_cap: {default: 0, units: per_return}
   st_agi.senior_inv_min_age: .inf
+  # Senior INTEREST exemption, a per-return amount on interest alone
+  # (MT $800 single / $1,600 joint with either spouse 65+)
+  st_agi.int_excl_senior: {default: 0, units: per_return}
+  st_agi.int_excl_min_age: 0
   # Senior standard deduction against ALL income (MI Tier 2/3 Michigan
   # Standard Deduction), mutually exclusive with the pension subtraction
   # (the unit takes the better); ages test the OLDER spouse
@@ -305,6 +312,10 @@ scalars:
   st_ded.fed_tax_ded_less_excess_ptc: 0
   st_ded.fed_tax_ded_cap: {default: .inf, units: per_return}
   st_ded.fed_tax_ded_band_base: 2   # st_income_base enum (MO: state AGI, Line 6)
+  # The federal tax deduction sits INSIDE the itemized schedule rather than
+  # alongside it (MT pre-2024), so it reaches only itemizers and feeds the
+  # itemize-versus-standard election
+  st_ded.fed_tax_ded_in_itemized: 0
 
   # exempt.yaml
   st_exempt.personal_amount: {default: 0, units: per_taxpayer unless personal_per_return}
@@ -346,6 +357,13 @@ scalars:
   # Separate rate on short-term capital gains, which ob_st_gains_share holds
   # out of the ordinary base (MA Part A: 12% to TY2022, 8.5% from TY2023)
   st_ord.st_gains_rate: 0
+  # Preferential rate schedule on net LONG-TERM capital gain, stacked on top
+  # of ordinary income like the federal 0/15/20% pattern (MT HB 221 from
+  # TY2024: 3.0% below the state's own low-bracket top, 4.1% above it).
+  # A zero low rate switches the feature off
+  st_ord.kg_pref_rate_low: 0
+  st_ord.kg_pref_rate_high: 0
+  st_ord.kg_pref_thresh: {default: 0, units: per_return}
   st_ord.combined_sep: 0   # married-filing-separately-on-a-combined-return option (KY): per-spouse columns, lower of joint and combined; assumes no recapture/base-amount/business carve-out in the same state
   st_ord.combined_sep_std_share: 1   # share of the mapped standard deduction each combined-separate column receives: 1 where the std is per-person (KY), 0.5 where the joint amount is twice the per-column amount (DE)
   # Married filing combined (MO): deductions pooled at the return level, then
@@ -388,6 +406,8 @@ scalars:
   st_credits.lic_thresh: {default: 0, units: per_return}
   st_credits.lic_per_dep: {default: 0, units: per_dependent}
   st_credits.lic_income_base: 2   # st_income_base enum (MA: state AGI)
+  # Nonrefundable credit as a share of net capital gain (MT 2% through TY2023)
+  st_credits.kg_credit_rate: 0
   st_credits.eitc_match: 0
   # Higher match where a dependent is under a stated age (OR 12% vs 9% for a
   # dependent younger than 3), as against the child-COUNT-keyed

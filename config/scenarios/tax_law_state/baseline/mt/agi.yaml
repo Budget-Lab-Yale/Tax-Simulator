@@ -1,0 +1,117 @@
+---
+# Montana income base (Form 2; MCA 15-30-2110, 15-30-2120).
+#
+# Both regimes start from FEDERAL ADJUSTED GROSS INCOME. What changes at
+# TY2024 is everything that happens afterwards: SB 399 (2021) swept away the
+# partial pension exemption, the 65-and-older interest exemption and
+# Montana's own Social Security schedule, and put a single age-65
+# subtraction in their place (encoded in exempt.yaml, since it sits below
+# the deduction on the TY2024 form).
+#
+# Note what does NOT need encoding here. The federal qualified business
+# income deduction never enters, because Montana's TY2024+ starting figure
+# is federal AGI less the federal standard or itemized deduction only --
+# Section 199A sits outside both. The booklet's "plus 199A" language
+# describes conformity to federal TAXABLE income, which we do not take as
+# the start point.
+
+filing_status_mapper:
+  int_excl_senior:
+    '1': int_excl_single
+    '2': int_excl_joint
+    '3': int_excl_single
+    '4': int_excl_single
+
+start_point:
+  value: 1
+  reference: 'Form 2 line 1 in every year 2017-2025 is federal adjusted gross income. The TY2024 redesign changed the deduction, not the starting figure'
+
+# --- Retirement, through TY2023 -------------------------------------------
+#
+# A per-taxpayer exclusion against pension, annuity and IRA income, reduced
+# by TWO DOLLARS for every dollar of federal AGI above a threshold.
+pension_excl_under65:
+  value:
+    '2017': 4110
+    '2018': 4180
+    '2019': 4300
+    '2020': 4370
+    '2021': 4400
+    '2022': 4640
+    '2023': 5060
+    '2024': 0
+  reference: 'Rate sheets 2017-2021 p.1 and the Form 2 partial pension schedules for 2022-2023 (line 1). There is NO age test on this exemption, so the under-65 and 65-plus caps are the same figure. Repealed from TY2024: "Repealed deductions ... Partial pension, annuity, and IRA deduction" (inst_2024 p.i)'
+pension_excl_65plus:
+  value:
+    '2017': 4110
+    '2018': 4180
+    '2019': 4300
+    '2020': 4370
+    '2021': 4400
+    '2022': 4640
+    '2023': 5060
+    '2024': 0
+  reference: 'Same amounts as the under-65 cap -- Montana gated this exemption on income, never on age'
+pension_excl_min_age:
+  value: 0
+  reference: 'No age requirement in any year 2017-2023 (the booklets condition only on federal AGI)'
+pension_excl_incl_ira:
+  value: 1
+  reference: 'The form heading became "Partial Pension, Annuity, and IRA Income Exemption" from TY2020, and the TY2017-2019 schedules already computed the base as Form 2 line 4b plus line 5b, which is IRA plus pension. Treated as covering IRA distributions throughout'
+pension_excl_po_thresh:
+  value:
+    '2017': 34260
+    '2018': 34820
+    '2019': 35800
+    '2020': 36420
+    '2021': 36700
+    '2022': 38660
+    '2023': 42140
+    '2024': .inf
+  reference: 'Rate sheets 2017-2021 p.1; Form 2 partial pension schedules 2022-2023 (line 5). The threshold is federal AGI'
+pension_excl_po_rate:
+  value:
+    '2017': 2.0
+    '2024': 0.0
+  reference: 'inst_2017 p.19: "your retirement exemption is reduced $2 for every $1 that your federal adjusted gross income is over $34,260", with the booklet''s own worked example ($4,110 less $2,000 leaves $2,110 at an AGI $1,000 over). The reduction runs once against the COMBINED per-spouse exclusion (inst_2023 p.28 line 3b: joint filers combine both columns, then complete lines 4-7 in Column A only)'
+
+# --- Senior interest exemption, through TY2023 ----------------------------
+int_excl_single:
+  value:
+    '2017': 800
+    '2024': 0
+  reference: 'inst_2023: "If you are single and age 65 or older at the end of 2023, you can exempt up to $800 of the interest income that you reported in your Montana Adjusted Gross Income." Identical figures in inst_2017. Never indexed. Repealed from TY2024'
+int_excl_joint:
+  value:
+    '2017': 1600
+    '2024': 0
+  reference: 'Same instruction: "If you are married and are filing a joint return with your spouse and at least one of you is age 65 or older at the end of 2023, you can exempt up to $1,600." Married filing separately gets $800, which the single mapping supplies'
+int_excl_min_age:
+  value: 65
+  reference: 'Both branches of the instruction condition on age 65 by year end; for joint filers EITHER spouse qualifying opens the full $1,600'
+
+# --- Both regimes ---------------------------------------------------------
+sub_us_int:
+  value: 1
+  reference: 'Federal bond and obligation interest is a subtraction in both regimes -- Montana Subtractions Schedule pre-2024 and Schedule I Part I line 11 from TY2024'
+sub_state_ref:
+  value: 1
+  reference: 'Schedule I Part I line 10, "state income tax refunds on federal Schedule 1 line 1", and its pre-2024 equivalent'
+
+documented_not_modeled:
+  montana_own_social_security_schedule:
+    reference: 'Through TY2023 Montana ran its OWN IRC 86-style computation (Taxable Social Security Benefits Schedule, Form 2 p.6) on a MONTANA modified-income base built from Montana additions and subtractions -- so the partial pension exemption fed back into it -- and set the married-filing-separately base amount at $16,000 and second tier at $6,000 in BOTH columns, where the federal rule zeroes the base for separate spouses who lived together. Single and head of household got $25,000/$9,000 and joint $32,000/$12,000. The model carries the federal taxable amount instead [direction of bias varies: understates Montana tax for units whose pension exemption lowers the Montana base below the federal one, overstates it for separate filers who lived together]'
+  filing_status_2a_per_spouse_computation:
+    reference: 'Through TY2023 Montana let a married couple file SEPARATELY ON THE SAME FORM (status 2a), running two columns with a per-spouse standard deduction, a per-spouse pension exemption and -- decisively -- the SAME status-invariant bracket ladder in each column. For a two-earner couple this was near-universally better than joint filing, and it was also the only route to the household and dependent care deduction for a married non-joint filer. Not modeled; it joins the generic minimum-liability election pass queued for Wisconsin Act 15, Alabama separate returns and the Arkansas Low Income Tax Tables [overstates Montana tax for two-earner married couples through TY2023]'
+  per_spouse_pension_exclusion_ceiling:
+    reference: 'The pension exclusion is capped at each spouse''s OWN pension income before the columns are combined, so a couple with all the pension income on one spouse gets one cap, not two. The model pools income against the summed cap [overstates the exemption for single-pension couples]'
+  tier_i_and_ii_railroad_retirement:
+    reference: 'Both tiers are Montana subtractions in both regimes (Schedule I Part I lines 24 and 25 from TY2024). Railroad retirement is not separable from pension income in the model'
+  military_and_tribal_subtractions:
+    reference: 'Active-duty military salary, the SB 104 (2023) working-military-retiree and survivor-benefit subtraction, and exempt tribal income (Form ETM) are all real Montana subtractions and none is observable'
+  msa_529_and_able_subtractions:
+    reference: 'Montana medical savings account deposits and earnings, first-time homebuyer accounts, 529 deposits and ABLE deposits are subtractions in both regimes; contributions are not model inputs'
+  ty2024_transition_adjustment:
+    reference: 'Schedule I carries a one-off TY2024 transition addition and subtraction bridging the two regimes, plus a recovery of federal income tax deducted in 2023. Neither is derivable from a cross-section'
+  out_of_state_municipal_interest:
+    reference: 'An addition in both regimes; the in-state share of tax-exempt interest is not observable'

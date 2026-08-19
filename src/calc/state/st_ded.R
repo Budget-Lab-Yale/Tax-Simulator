@@ -191,7 +191,8 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.fed_tax_ded_less_ptc',   # (int) net premium tax credit reduces the base (MO, NOT AL)
     'st_ded.fed_tax_ded_less_excess_ptc', # (int) excess APTC repayment stripped from the base (OR)
     'st_ded.fed_tax_ded_cap',        # (dbl) cap on the deduction (filing-status mapped)
-    'st_ded.fed_tax_ded_band_base'   # (int) share-band income base (st_income_base enum)
+    'st_ded.fed_tax_ded_band_base',  # (int) share-band income base (st_income_base enum)
+    'st_ded.fed_tax_ded_in_itemized' # (int) the deduction sits INSIDE itemized deductions (MT)
   )
 
   tax_unit %<>%
@@ -356,6 +357,48 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # replaces rather than stacks with the amounts above
       st_std_ded = if_else(st_ded.std_equals_federal == 1, std_ded, st_std_ded),
 
+      # Federal income tax deduction (MO-1040 lines 9-13; OR-40 federal tax
+      # liability subtraction; AL Form 40 full deductibility). The deductible
+      # base is federal tax after nonrefundable credits but before other
+      # taxes -- 1040 line 22, which is liab_bc (tax plus AMT plus excess
+      # APTC repayment) less the nonrefundable credits actually used. AMT is
+      # therefore IN the base, matching MO (subtracted on the "tax from
+      # federal return" line, added back on "other federal tax") and OR
+      # (worksheet line 1 is 1040 line 22 outright). Self-employment,
+      # household-employment, and tips FICA taxes are excluded by both
+      # states, and none of them enter liab_bc.
+      #
+      # Each state names its OWN list of refundable credits that reduce the
+      # base, and the lists genuinely differ -- so each is a separate flag
+      # rather than one blanket switch. Missouri subtracts the earned income
+      # credit, refundable education credit and net premium tax credit but
+      # NOT the additional child tax credit; Alabama subtracts the earned
+      # income credit, the additional child tax credit and the refundable
+      # education credit but NOT the net premium tax credit. Both omissions
+      # are deliberate: neither appears anywhere in that state's worksheet.
+      # Alabama also adds the net investment income tax back, because it
+      # rides Schedule 2 Part II and so never reached 1040 line 22.
+      #
+      # Other add-backs some forms carry (retirement-plan penalty taxes,
+      # recapture taxes, Form 2439 credits, the foreign tax credit line
+      # Missouri adds as if a tax) are not modeled; see each state's
+      # known differences
+      # Oregon also strips the excess advance premium tax credit repayment
+      # back out: it reaches 1040 line 22 through Schedule 2 Part I, but
+      # Oregon's subtraction is "limited to income tax" and its worksheet
+      # removes the repayment on line 2. Missouri and Alabama both leave it in
+      st_fed_tax_base = pmax(0,
+        liab_bc - nonref +
+          st_ded.fed_tax_ded_add_niit * liab_niit -
+          st_ded.fed_tax_ded_less_excess_ptc * excess_ptc -
+          st_ded.fed_tax_ded_less_eitc    * eitc -
+          st_ded.fed_tax_ded_less_ctc_ref * ctc_ref -
+          st_ded.fed_tax_ded_less_ed_ref  * ed_ref -
+          st_ded.fed_tax_ded_less_ptc     * net_ptc),
+      st_fed_tax_ded = st_ded.fed_tax_ded *
+                       pmin(fed_tax_cap_v,
+                            fed_tax_share_v * st_fed_tax_base),
+
       # State itemized base: pre-limitation federal itemized, SALT component
       # replaced by uncapped property taxes (income/sales excluded where
       # added back). The exclusion is unconditional by default; a state
@@ -395,6 +438,8 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # contributions are not modeled separately and fall in with wage FICA
       st_item_base = st_item_base +
                      st_ded.item_add_payroll * (liab_pr_ee + liab_seca) *
+                     (st_ded.item_allowed == 1) +
+                     st_ded.fed_tax_ded_in_itemized * st_fed_tax_ded *
                      (st_ded.item_allowed == 1),
 
       # Pre-TCJA Pease limitation (state-indexed thresholds; medical,
@@ -508,48 +553,6 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
              st_care_n_qual * st_ded.care_exp_ded_per_dep_cap,
              st_care_ei_limit),
 
-      # Federal income tax deduction (MO-1040 lines 9-13; OR-40 federal tax
-      # liability subtraction; AL Form 40 full deductibility). The deductible
-      # base is federal tax after nonrefundable credits but before other
-      # taxes -- 1040 line 22, which is liab_bc (tax plus AMT plus excess
-      # APTC repayment) less the nonrefundable credits actually used. AMT is
-      # therefore IN the base, matching MO (subtracted on the "tax from
-      # federal return" line, added back on "other federal tax") and OR
-      # (worksheet line 1 is 1040 line 22 outright). Self-employment,
-      # household-employment, and tips FICA taxes are excluded by both
-      # states, and none of them enter liab_bc.
-      #
-      # Each state names its OWN list of refundable credits that reduce the
-      # base, and the lists genuinely differ -- so each is a separate flag
-      # rather than one blanket switch. Missouri subtracts the earned income
-      # credit, refundable education credit and net premium tax credit but
-      # NOT the additional child tax credit; Alabama subtracts the earned
-      # income credit, the additional child tax credit and the refundable
-      # education credit but NOT the net premium tax credit. Both omissions
-      # are deliberate: neither appears anywhere in that state's worksheet.
-      # Alabama also adds the net investment income tax back, because it
-      # rides Schedule 2 Part II and so never reached 1040 line 22.
-      #
-      # Other add-backs some forms carry (retirement-plan penalty taxes,
-      # recapture taxes, Form 2439 credits, the foreign tax credit line
-      # Missouri adds as if a tax) are not modeled; see each state's
-      # known differences
-      # Oregon also strips the excess advance premium tax credit repayment
-      # back out: it reaches 1040 line 22 through Schedule 2 Part I, but
-      # Oregon's subtraction is "limited to income tax" and its worksheet
-      # removes the repayment on line 2. Missouri and Alabama both leave it in
-      st_fed_tax_base = pmax(0,
-        liab_bc - nonref +
-          st_ded.fed_tax_ded_add_niit * liab_niit -
-          st_ded.fed_tax_ded_less_excess_ptc * excess_ptc -
-          st_ded.fed_tax_ded_less_eitc    * eitc -
-          st_ded.fed_tax_ded_less_ctc_ref * ctc_ref -
-          st_ded.fed_tax_ded_less_ed_ref  * ed_ref -
-          st_ded.fed_tax_ded_less_ptc     * net_ptc),
-      st_fed_tax_ded = st_ded.fed_tax_ded *
-                       pmin(fed_tax_cap_v,
-                            fed_tax_share_v * st_fed_tax_base),
-
       # Retirement exemption taken as a DEDUCTION rather than an AGI
       # subtraction (MO-1040 line 8, from MO-A Part 3). Placement matters:
       # Missouri AGI (line 6) is struck BEFORE this exemption, and line 6 is
@@ -616,9 +619,16 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       # 18% of rent as property taxes, which is rent-blocked and documented
       st_prop_tax_ded = pmin(st_ded.prop_tax_ded_cap, pmax(0, salt_prop)),
 
+      # Where the federal tax deduction sits INSIDE the itemized schedule
+      # rather than alongside it (MT pre-2024), it reaches only itemizers --
+      # and it is itself part of what makes itemizing worthwhile, so it must
+      # be inside st_item_ded before the election is decided. That is handled
+      # by adding it to the itemized total above; here it is simply excluded
+      # from the additive term so it is not counted twice
       st_ded = if_else(st_itemizing, st_item_ded, st_std_ded) +
-               st_care_exp_ded + st_fed_tax_ded + st_retire_exempt +
-               st_payroll_ded + st_prop_tax_ded,
+               st_care_exp_ded + st_retire_exempt +
+               st_payroll_ded + st_prop_tax_ded +
+               if_else(st_ded.fed_tax_ded_in_itemized == 1, 0, st_fed_tax_ded),
 
       #--------------------------------------------------------
       # Deduction addbacks (taxable-income-start states: CO...)
