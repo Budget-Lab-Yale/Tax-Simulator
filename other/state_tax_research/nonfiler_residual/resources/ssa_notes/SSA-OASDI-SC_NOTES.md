@@ -164,7 +164,7 @@ is a **file-identity** check; it is not the anchor value.
   The underlying Table 2 state data are unaffected and *are* comparable: the
   consistent ratio sits at 0.877 ± 0.01 across 2017–2024.
 
-  This also disposes of a sanity check in `07_ssa_inputs_plan.md` task 1, which
+  This also disposes of a sanity check in the (now archived) SSA inputs plan, which
   read the ~0.90 all-areas ratio as agreeing with the publication's own coverage
   percentage. The agreement was real for 2017 and coincidental: both sides were
   making the same mismatched comparison. The right ratio is ~0.878.

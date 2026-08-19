@@ -212,9 +212,10 @@ archetypes, completion roadmap),
 `nonfiler_residual_design_jii.docx` (the narrative case for the residual
 non-filer methodology, JI Aug 2026 — renamed 2026-08-18 from
 `Non-Filer Proposal.docx`; note it is a *different document* from the `.md`
-below, despite the similar name), `nonfiler_residual_design.md` (its
-implementation-level companion, amended in place) and
-`nonfiler_residual/04_findings.md` (the Stage D diagnostic record).
+of similar name) and, for the non-filer workstream, the three documents
+§1b names: **`nonfiler_state_weights_todo.md` (the plan — start here)**,
+`nonfiler_residual_design.md` (the method) and
+`nonfiler_residual/04_findings.md` (the evidence).
 Superseded docs live in `archive/` with a README explaining each — including
 `state_weights_ml_alternative.md`, whose A/B-bake-off premise the Phase 1
 sweep reframed into prior-only-vs-joint-fit.
@@ -305,123 +306,35 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    swap-in** — see item 1b — so the swap-in fit happens once, on upgraded
    margins, rather than fit-on-v0-then-re-fit. Do not close Phase 1 first.
 
-1b. **Non-filer residual rework** (NEW section, added 2026-08-18). The
-   non-filer population is the one input to the weights fit that is anchored
-   to nothing: Tax-Data appends ~27.6M (TY2022) units from PSZ/DINA at DINA's
-   own uncalibrated weights, and the state fit places them using ACS margins
-   built from a v0 filing rule that over-assigns filers ~7% nationally with a
-   20pp state spread. **Stage D is DONE and committed** (`4783dc3e9`,
-   2026-08-16): residual anchors built for TY2017/2022, diagnostic tables
-   T1–T7 run, decisions D1–D6 resolved, findings in
-   `nonfiler_residual/04_findings.md`. What it found, in one line each —
-   F1 the non-filer mass is ~15–25% short (32.4M adults vs a defensible
-   38–41M); **F2 the age composition is inverted** (8.9% of non-filer adults
-   at 18–25 vs the anchor's 24.2%; 42.9% at 65+ vs 25.1%) and this is the
-   single most consequential defect for the weights, whose non-filer cells key
-   on age band; F3 investment income is identically zero (0.0% with interest,
-   dividends or gains, vs Pub 5785's 14/9/4%); F4 the aging path drifts with
-   no return-count discipline after 2019; F5 the v0 non-filer margins run
-   0.78× (DC) to 1.51× (SD) of the anchor and the current fit reproduces them
-   *exactly*; F6 group quarters are untreated and are 17% of the national
-   residual but 42% in SD; F7 above-threshold non-filers are 10.6–11.9M units
-   and SE-shaped.
+1b. **Non-filer residual rework.** The non-filer population is the one input to
+   the weights fit anchored to nothing: Tax-Data appends ~27.6M (TY2022) units
+   from PSZ/DINA at DINA's own uncalibrated weights, and the state fit places them
+   using ACS margins from a v0 filing rule that over-assigns filers ~7%
+   nationally with a 20pp state spread. **This rework lands BEFORE the Phase 1
+   swap-in** (JI, 2026-08-16) so the swap-in fit happens once, on upgraded margins.
 
-   Remaining work, in order: **pre-flight** (resolve the Tax-Data vintage
-   discrepancy in the design memo §2.1 vs `interface_versions.yaml`; settle
-   the `age_band()`-vs-`a16_band()` reconciliation) → **research pass A**
-   (ASEC unit/income construction — still open) → **GQ treatment**
-   in `build_acs_margins()` (decision-independent, ships first) → **filing
-   model on the CPS ASEC**, transferred to the ACS → **Tax-Data rework**
-   (composition, national calibration, aging) as V1/V2/V3 vintages →
-   **federal validation battery** → **state-weights margins/targets + re-fit**
-   → swap-in per item 1.
+   **Stage D is done** (`4783dc3e9`) and **pre-flight is closed** (2026-08-19):
+   SSA inputs placed, verified and documented; dependents/MFS in scope; HI as the
+   covered-worker universe; Tax-Data vintage advanced to `2026070814`; age bands
+   settled and implemented; anchor tolerance computed; and the combined-universe
+   wage constraint sourced, which found the PUF carries only **~21% of the
+   non-filer wage mass** two administrative sources jointly imply.
 
-   Two decisions worth carrying here. **The filing model is estimated on the
-   CPS ASEC, not the ACS** — Cilke estimated on the ASEC, so it is the native
-   environment and the ACS is the destination; the recalibration burden moves
-   to an explicit, measurable transfer step. **ASEC data comes through the
-   shared extract machinery** — check `raw_data` for a registered CPS/ASEC
-   family first, and if absent add one through the same common IPUMS download
-   machinery that maintains `ACS/acs_common`, so Affordability-Index draws on
-   the same file.
+   > **This entry is deliberately a pointer, not a summary.** Three documents own
+   > this workstream and each has one job:
+   > - **`nonfiler_state_weights_todo.md` — the plan.** What is decided, what is
+   >   next, what is blocked, and the critical path. **Start here.**
+   > - **`nonfiler_residual_design.md` — the method.** The design of record and
+   >   the reasoning behind each decision.
+   > - **`nonfiler_residual/04_findings.md` — the evidence.** Stage D's F1-F7 and
+   >   decisions D1-D6, frozen.
+   >
+   > Supporting: `nonfiler_residual/05_filing_model_literature.md` (literature
+   > pass), `raw_data/SSA-{OASDI,EEDATA}-SC/NOTES.md` (what the SSA margins mean),
+   > `nonfiler_residual_design_jii.docx` (JI's narrative case). Earlier summaries
+   > of this workstream that used to live in this section have been removed rather
+   > than left to drift.
 
-   **Research pass B is DONE (2026-08-18), and `nonfiler_residual_design.md` §3.2 was
-   REWRITTEN around it** — that section is now the authority on the filing model; the
-   evidence is in `nonfiler_residual/05_filing_model_literature.md`, references in
-   `nonfiler_residual/resources/filing_model_refs.bib`. Four changes:
-   (a) **Cilke (1998) is replaced by Mok (2017), CBO WP 2017-06, Table 14** — 14 group
-   filing probits with coefficients and SEs, estimated on the 2007 CPS ASEC linked to
-   the IRS Individual Master File (TY2006), same design as Cilke but 16 years newer,
-   with per-cell filing rates as ready-made calibration targets. Fit Mok, keep Cilke as
-   the comparison, and test Mok's rank-and-cut-within-cell assignment against
-   intercept-calibration-plus-uniform-draw (correct-classification is *similar* under
-   both — do not expect a large gain). **Table 14 VERIFIED against the PDF 2026-08-18**
-   (JI's copy in the Affordability literature folder): all 14 equations, cell Ns and
-   filing rates check out exactly. Two transcription warnings: **Panel E's columns run
-   "Age 65 or Older" FIRST**, reverse of the intuitive order and reverse of what text
-   extraction returns — transcribe from a rendered image; and **Mok's CPS frame excludes
-   the institutionalized and military-barracks populations**, so her coefficients do not
-   cover the GQ records our PUF universe includes (score them under a stated assumption
-   and report GQ separately — same caveat applies to Cilke).
-   (b) **Why a survey model is still right for us, stated explicitly.** Treasury/IRS/JCT
-   all *abandoned* survey filing models, but their replacements are information-return
-   microdata — a data-access story, not a verdict on the method. The distinction that
-   matters: admin *microdata* is closed to us, admin *published tabulations* are what our
-   anchors already run on. And Mok's regressors are all CPS-native, so the linkage bought
-   the identification while scoring needs only survey variables — we get the benefit of
-   the linkage without the linkage. No peer model without admin microdata (TPC,
-   PolicyEngine, Census, PWBM) has anything structurally better.
-   (c) **A bias we inherit regardless of coefficients:** ASEC non-filer income falls short
-   of third-party-reported income — reweighted, the ASEC reaches 42.0M against a 50.7M
-   admin target, **~17% short**. It enters through the threshold test (a function of
-   reported income), biases toward **too few** non-filers — the same direction as F1 — and
-   its mitigations (Erard et al. 2014 on ASEC SS/pension under-reporting; Pub 5785 receipt
-   ceilings; carrying the 17% in the tolerances) are now load-bearing.
-   (d) **The dependent/MFS deferral is reopened.** TCJA did *not* sharply cut filing
-   requirements for single/MFJ (+15%, since zeroed exemptions offset the bigger standard
-   deduction), but the **dependent** threshold rose 89% and **MFS** collapsed to $5.
-   Dependents are Cilke's largest group (36.4% of his non-filers) and Mok estimates a
-   dependent equation directly. Decide explicitly; record the reason either way.
-   **Pub 5785 stands** (no successor edition), with Treasury's Jan-2025 special study
-   (50.343M TY2022 non-filers) and OTA TP-12 as newer official reference points.
-
-   **Blocker (a) is CLOSED 2026-08-19.** JI placed the SSA workbooks by hand;
-   `06_verify_ssa_inputs.R` passes all four year × family cells, both families
-   are registered, and each carries a `NOTES.md`. The store holds more than the
-   anchors need — **OASDI 2017–2025** (9 workbooks + a 1999–2025 flat series,
-   which matches the workbooks exactly: 59 areas × 11 measures × 2 years) and
-   **EEDATA 2017–2023**. Reading the publications properly changed three things
-   the design memo does not yet know: the anchor is the **51-jurisdiction sum,
-   not `All areas`** (2.5–2.6% overstatement); **OASDI cannot support §6.2's
-   65-74/75+ split** (it publishes 65+ by sex only) while **EEDATA Tables 2/5
-   supply state × age directly**, which the design did not expect to have; and
-   **EEDATA is a 1% sample**, so its margin cannot be a hard target. EEDATA
-   also **ends at data year 2023**, bounding forward extension. Details in
-   `nonfiler_residual/07_ssa_inputs_plan.md` and the two store `NOTES.md`.
-   **Blocker (b):** transcribe **Mok Table 14**, not Cilke — the currency check
-   is finished (see above); Cilke is the comparison fit only.
-
-   **Review and full implementation to-do: `nonfiler_state_weights_todo.md`
-   (2026-08-19)** — plan review against the tree, then a dependency-ordered
-   task list P/A–H with the critical path. Two findings there worth carrying:
-   a **CPS-ASEC family already exists** in the shared store (2.4 GB, ~2010–2024,
-   carrying `FILESTAT`/`DEPSTAT`/`ADJGINC`), so the ASEC work is a **variable
-   extension to an existing request**, not a new family — and the proposed path
-   `raw_data/CPS/cps_common` is wrong, it is `CPS-ASEC/`. And the **Tax-Data
-   vintage question is CLOSED 2026-08-19**: the pin is advanced from
-   `2026030513` to **`2026070814`**, the newest complete vintage — the four
-   August vintages (`2026081212`-`16`) carry ledgers only, no `tax_units_*`.
-   The schema change is purely additive and the non-filer object is materially
-   unchanged, so **Stage D's F1-F4 stand as computed**.
-
-   **Two model-side gaps the rework cannot fix by itself**, recorded so they
-   are not discovered late: there is no `become_filer_eitc` (only CTC and
-   rebate have one), and `become_filer_ctc` requires `qual_ei == 0` exactly —
-   so the earnings-bearing non-filers this work creates still cannot claim
-   EITC, and their credits are multiplied out of every total by the `* filer`
-   gate. An EITC reform will score identically across vintages. Also note
-   `get_pr_totals()` has **no** filer gate, so raking non-filer weights up
-   raises baseline payroll receipts, which nothing currently benchmarks.
 2. **CO child-care expenses credit** (DR 0347) — researched and encoded
    (TODO carried in `co/credits.yaml`); CO 2026 rate revisit after the
    TABOR certification (~Sept 2026).

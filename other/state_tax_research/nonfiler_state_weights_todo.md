@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-19
 **Reviews:** `nonfiler_residual_design.md` (as amended 2026-08-18),
-`nonfiler_residual/04_findings.md`, `nonfiler_residual/07_ssa_inputs_plan.md`,
+`nonfiler_residual/04_findings.md`, `archive/07_ssa_inputs_plan_2026-08-19_executed.md`,
 `STATUS.md` §1/§1b, `state_tax_implementation_plan.md` §2.1 (as amended),
 `state_weights_phase1_summary.md` §5/§7.
 **Scope:** everything between here and the production state-weights swap-in.
@@ -319,7 +319,8 @@ Effort estimates follow the memo's own where it gives them.
 ### A — Close out the SSA inputs and research pass A (~1 week + 3–5 days, parallel)
 
 - [x] **A0. SSA acquisition, verification, registration and documentation.**
-      *Done 2026-08-19* — see `07_ssa_inputs_plan.md`. Workbooks verified
+      *Done 2026-08-19* — record in `archive/07_ssa_inputs_plan_2026-08-19_executed.md`.
+      Workbooks verified
       (4/4 cells PASS), flat series adopted as source of record (exact against
       the workbooks: 59 areas × 11 measures × 2 years), both families registered,
       `NOTES.md` written and placed, Chrome confirmed absent from the cluster,

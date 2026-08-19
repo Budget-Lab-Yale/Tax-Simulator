@@ -165,7 +165,7 @@ stays: national scalar for v1, SE-aware cells as the upgrade path).
    - **EEDATA is a 1% sample** (Continuous Work History Sample), unlike
      OASDI-SC's 100% data — small-state margins carry real sampling error and
      must not become hard constraints.
-   Still to do (`07_ssa_inputs_plan.md` task 4): write the two readers,
+   Still to do (task A1 in `../../nonfiler_state_weights_todo.md`): write the two readers,
    replace the `ssa_covered_persons = NA_real_` stub at
    `02_build_residual_anchors.R:197`, and re-run 01 → 02 → 03 so D6 moves from
    partially resolved to resolved.

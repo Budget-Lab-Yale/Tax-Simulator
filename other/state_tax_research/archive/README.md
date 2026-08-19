@@ -10,6 +10,25 @@ residual rework and the ACS → CPS ASEC switch.
 
 ---
 
+## Executed plans
+
+**`07_ssa_inputs_plan_2026-08-19_executed.md`** (2026-08-19) — the plan to close
+the last Stage D blocker: verify the manually-downloaded SSA statcomps files,
+register them, and document the two families.
+
+*Fully executed the day it was written*, and moved here 2026-08-19 because a
+plan whose tasks are all done is a record, not an instruction. Its substance now
+lives in three current places: the store notes
+(`raw_data/SSA-{OASDI,EEDATA}-SC/NOTES.md`) say what the data mean; the verification
+record is `nonfiler_residual/results/ssa_input_verification.csv`; and the three
+findings that changed the design — the anchor is the **51-jurisdiction sum** not
+`All areas`, **OASDI cannot support a state 65_74/75p split**, and **EEDATA is a 1%
+sample** — are folded into `nonfiler_residual_design.md` §3.1 and
+`nonfiler_state_weights_todo.md`. The one task it left open, writing the two
+readers, is task A1 in the to-do.
+
+---
+
 ## Superseded designs
 
 **`state_weights_ml_alternative.md`** (2026-07-08) — the A/B bake-off spec:
