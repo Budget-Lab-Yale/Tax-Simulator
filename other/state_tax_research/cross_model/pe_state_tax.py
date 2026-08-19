@@ -70,7 +70,7 @@ PRIMARY_VARS = {
 # states. For MD, with no county input, PE defaults the county to
 # first-in-state (Allegany, ~3%), silently adding a county tax to every
 # record - so the MD comparison must use PE's state-only variable
-# (verified empirically 2026-07-24, see raw/md_research_core.md §11).
+# (verified empirically 2026-07-24, see research/raw/md_research_core.md §11).
 STATE_ONLY_LIAB_VARS = {
     "MD": "md_income_tax",
 }

@@ -4,7 +4,7 @@
 # Orchestrator for state individual income tax calculation, mirroring
 # do_1040(). Operates on tax units AFTER the federal pass, with one state's
 # st_-prefixed tax law columns already joined (per-state loop in Phase 4).
-# Design: other/state_tax_research/state_tax_implementation_plan.md §2.3
+# Design: research/state_tax/plan.md §2.3
 #---------------------------------------------------------------------------
 
 

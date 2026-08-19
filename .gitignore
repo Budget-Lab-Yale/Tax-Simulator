@@ -66,3 +66,17 @@ config/interfaces/output_roots.yaml
 # Cross-model validation harness: caches and per-record raw output
 other/state_tax_research/cross_model/cache/
 other/state_tax_research/cross_model/results/raw/
+
+# Generated document renders. Markdown/Rmd is the source of truth in every case.
+# Already-tracked files are unaffected; this stops new ones being swept in.
+docs/*.docx
+docs/*.log
+docs/*.tex
+research/**/*.html
+research/**/*.log
+research/**/*.tex
+research/**/*.docx
+# ...except the three places a .docx is a first-class committed artifact:
+!research/releases/*.docx
+!research/docx_sources/*.docx
+!research/archive/*.docx

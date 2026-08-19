@@ -7,7 +7,7 @@
 #     for an elderly/disabled family member, cap $2,000/member, $4,000/return.
 #   - Credit for tax paid to another state; Renaissance zone; planned-gift;
 #     seed/angel investment; etc.
-# See source_packets/nd.md for the known-differences rationale.
+# See research/source_packets/nd.md for the known-differences rationale.
 
 # Explicit no-op: ND has no earned-income credit (documents the absence)
 eitc_match:

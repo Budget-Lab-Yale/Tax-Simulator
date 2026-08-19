@@ -11,7 +11,7 @@
 # state code. State weights are NOT used -- this validates tax law encoding,
 # not geography. Aggregate validation remains weights-blocked (plan §4).
 #
-# Year split (design of record, state_tax_implementation_plan.md Phase 5):
+# Year split (design of record, research/state_tax/plan.md Phase 5):
 #   2017-2020 vs TAXSIM (its state law is actually coded through ~2020)
 #   2021+     vs PolicyEngine (TAXSIM 2021+ params are inflated prior law)
 #

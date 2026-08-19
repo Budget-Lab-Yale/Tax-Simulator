@@ -71,7 +71,7 @@ Use this protocol for every state-law research, configuration, or calculator tas
 1. Start by reading `config/scenarios/tax_law_state/README.md`,
    `config/scenarios/tax_law_state/jurisdictions.yaml`,
    `other/state_tax_research/state_parameter_rollout.csv`, and the relevant
-   `other/state_tax_research/source_packets/{state}.md`. Also read the state
+   `research/source_packets/{state}.md`. Also read the state
    implementation plan when a design decision is involved.
 2. Treat each source packet as a living research record. As state-specific facts
    are discovered, update it in the same change with primary sources, exact

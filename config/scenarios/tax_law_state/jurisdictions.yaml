@@ -20,7 +20,7 @@ AZ:
 # conformity groups (1, 2) have no reference-law bridge yet
 # (conformity_groups.yaml: ready=false), so validate_state_federal_conformity()
 # hard-stops any federal-reform run that requests CA. Excluded from `states=all`
-# until the reference overlays land, per ca_p1_readiness_analysis.md. Direct
+# until the reference overlays land, per research/state_tax/notes/ca_p1_readiness_analysis.md. Direct
 # `states=CA` selection still works for baseline-law runs.
 CA:
   profile: broad_iit

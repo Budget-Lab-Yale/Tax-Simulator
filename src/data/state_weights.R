@@ -23,11 +23,11 @@
 #   filers     → IRS SOI Historic Table 2 (state × AGI-class), FILERS ONLY.
 #   non-filers → ACS/Census state × age × income population margins.
 # Both partitions share the per-record split constraint, so their union preserves
-# every national total. See other/state_tax_research/state_tax_implementation_plan.md
+# every national total. See research/state_tax/plan.md
 # §2.1 "Filers vs non-filers".
 #
-# Design + rationale: other/state_tax_research/state_tax_implementation_plan.md,
-#                     other/state_tax_research/state_weights_ml_alternative.md
+# Design + rationale: research/state_tax/plan.md,
+#                     research/archive/state_weights_ml_alternative.md
 # =============================================================================
 
 suppressPackageStartupMessages({
@@ -167,7 +167,7 @@ read_ht2 <- function(path, year) {
 #   - All other adults head their own unit (single, or HoH if they have dependents).
 #   - Qualifying-relative dependency NOT modeled (minor); student ages 19–24 not
 #     separated (SCHOOL is in the common extract; wiring it is a v1 upgrade --
-#     see other/state_tax_research/nonfiler_residual_design.md §3.2).
+#     see research/state_weights/nonfiler_residual_design.md §3.2).
 #   - Filer if unit gross income ≥ the filing threshold (standard-deduction proxy by
 #     filing status, year-specific); else non-filer. Ignores the $400 SE rule,
 #     dependents' own filing, and elderly/blind bumps (approximation).
@@ -195,7 +195,7 @@ filing_threshold <- function(year) {
 }
 
 # Age bands. ONE definition, three consumers: the ACS non-filer margins, the PUF
-# non-filer cell assignment, and the residual anchors (nonfiler_residual/02, /03).
+# non-filer cell assignment, and the residual anchors (research/state_weights/nonfiler_residual/02, /03).
 #
 # The boundaries are Pub 1304 Table 1.6's, not our own choosing, and the reason is
 # that T1.6 is the ONLY published source of filing adults by age -- so it sets the
@@ -365,7 +365,7 @@ build_acs_margins <- function(acs, year, acs_year = NULL) {
 # -----------------------------------------------------------------------------
 # HT2 filing-status identities: convert return counts into counts of PEOPLE on
 # filed returns, by state. One definition per computation -- the reconciliation
-# diagnostic below, the residual non-filer anchors (nonfiler_residual_design.md
+# diagnostic below, the residual non-filer anchors (research/state_weights/nonfiler_residual_design.md
 # §3.1), and any external consumer all call this.
 #
 # Identities and documented approximations:
@@ -851,7 +851,7 @@ build_split_weights <- function(tax_units, year,
 
 # --- Approach B: differentiable reweighting (matrix analytic-gradient) --------
 # torch is not installed on the cluster; this is a dependency-free implementation
-# of the identical softmax objective (state_weights_ml_alternative.md §2). Logits
+# of the identical softmax objective (research/archive/state_weights_ml_alternative.md §2). Logits
 # theta (N×S); P = softmax(theta); loss = Σ_t lambda_t ((That_t-T_t)/T_t)^2 +
 # beta * Σ_i KL(P[i,]||P0[i,]). Adam on theta.
 #

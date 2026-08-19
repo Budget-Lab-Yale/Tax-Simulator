@@ -7,7 +7,8 @@ outputs, validation — plus the state income tax module and its current status.
 **Related:** `README.md` (quick start), `CLAUDE.md` (operational reference for
 agents/automation), `docs/website/` (the older R Markdown site this document
 supersedes in coverage), `.claude/skills/policy-config/SKILL.md` (reform YAML
-details), `other/state_tax_research/` (state workstream design docs).
+details), `research/README.md` (the state-tax research corpus: plans, methods,
+evidence).
 
 ---
 
@@ -293,9 +294,9 @@ workbooks) land at the vintage root, above the scenario folders.
 ## 10. The state income tax module
 
 *Status date: 2026-07-19, branch `state-tax`. Design of record:
-`other/state_tax_research/state_tax_implementation_plan.md` (seven phases);
-running status: `other/state_tax_research/STATUS.md` and
-`state_weights_phase1_summary.md`.*
+`research/state_tax/plan.md` (seven phases);
+running status: `research/STATUS.md` and
+`research/state_weights/state_weights_phase1_summary.md`.*
 
 ### 10.1 Architecture
 
@@ -362,7 +363,7 @@ credit. Each state's known modeling gaps are documented in
 The production dispatcher **still returns a uniform placeholder split**, so
 state-level *totals are not yet meaningful*; all plumbing and contracts are
 real. The bake-off concluded 2026-07-19
-(`state_weights_phase1_summary.md` has methods, results, and the TPC/OTA
+(`research/state_weights/state_weights_phase1_summary.md` has methods, results, and the TPC/OTA
 comparison):
 
 - Targets: 22 SOI Historic Table 2 series × AGI stub × state for filers
@@ -452,7 +453,7 @@ for both external models are drafted in
 - [ ] The cross-model harness's raw per-year files hold only the most recent
   run's state set — partial reruns silently strip other states' stage
   diagnostics from regenerated reports (manual merge required today).
-- [ ] `STATUS.md` in the state research directory trails the running log;
+- [ ] `research/STATUS.md` in the state research directory trails the running log;
   the tracker CSV (`state_parameter_rollout.csv`) is the current source of
   truth for per-state status.
 - [ ] Send the drafted TAXSIM/PolicyEngine issue reports upstream.

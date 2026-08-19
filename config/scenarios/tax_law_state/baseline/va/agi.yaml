@@ -3,8 +3,8 @@
 # ADJ; Va. Code 58.1-322.01/.02/.03). VAGI = federal AGI + additions - age
 # deduction - taxable SS - state refund - other subtractions. Values
 # transcribed from the 2017-2025 Form 760 instruction booklets; see
-# other/state_tax_research/raw/va_research_{core,mods_credits}.md and
-# source_packets/va.md for the research record.
+# research/raw/va_research_{core,mods_credits}.md and
+# research/source_packets/va.md for the research record.
 
 filing_status_mapper:
   age_ded_po_thresh:
