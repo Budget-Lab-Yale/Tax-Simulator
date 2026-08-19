@@ -50,7 +50,10 @@ manifest_row <- function(path, url, year) {
 
 write_manifest <- function(family_dir, rows) {
   mf <- file.path(family_dir, 'manifest.csv')
-  old <- if (file.exists(mf)) fread(mf) else NULL
+  # `retrieved` must be read back as character: fread parses the ISO date as
+  # IDate, and rbindlist then coerces the incoming character date to integer,
+  # silently blanking the retrieval date of every already-registered file.
+  old <- if (file.exists(mf)) fread(mf, colClasses = c(retrieved = 'character')) else NULL
   out <- rbindlist(list(old, rows), use.names = TRUE, fill = TRUE)
   out <- unique(out, by = 'path', fromLast = TRUE)
   fwrite(out[order(path)], mf)
@@ -131,6 +134,13 @@ if (length(qcew_rows)) write_manifest(qcew_dir, rbindlist(qcew_rows))
 #    register any manually-placed files)
 #---------------------------------------
 
+# SSA names its per-year workbooks with a two-digit DATA year (oasdi_sc22.xlsx
+# = data year 2022). The flat-series JSONs span 1999-2025 and have no year.
+ssa_data_year <- function(path) {
+  yr2 <- sub('^[a-z]+_sc([0-9]{2})\\.xlsx?$', '\\1', basename(path))
+  if (yr2 == basename(path)) NA_integer_ else 2000L + as.integer(yr2)
+}
+
 ssa_families <- list(
   `SSA-OASDI-SC` = list(
     what = 'OASDI Beneficiaries by State and County',
@@ -168,11 +178,12 @@ for (fam in names(ssa_families)) {
     'Then re-run 01_fetch_residual_inputs.R to register the files in',
     'manifest.csv. Consumed by: Tax-Simulator',
     'other/state_tax_research/nonfiler_residual/ (Stage D anchors).'), readme)
+  # NOTES.md documents the family (IRS-Ind convention); it is not data
   placed <- setdiff(list.files(fdir, full.names = TRUE),
-                    c(readme, file.path(fdir, 'manifest.csv')))
+                    file.path(fdir, c(basename(readme), 'manifest.csv', 'NOTES.md')))
   if (length(placed)) {
     write_manifest(fdir, rbindlist(lapply(placed, function(p)
-      manifest_row(p, paste0(info$url, ' (manual)'), NA_integer_))))
+      manifest_row(p, paste0(info$url, ' (manual)'), ssa_data_year(p)))))
     message('  registered ', length(placed), ' manually-placed file(s)')
   } else {
     message('  BLOCKED (ssa.gov 403) -- wrote README_MANUAL_DOWNLOAD.md, no files yet')

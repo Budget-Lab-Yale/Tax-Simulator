@@ -44,11 +44,11 @@ res_dir <- 'other/state_tax_research/nonfiler_residual/results'
 dir.create(res_dir, recursive = TRUE, showWarnings = FALSE)
 
 # Anchor age bands = Pub 1304 Table 1.6 bands (adults 18+)
-A16_BANDS <- c('18_25', '26_34', '35_44', '45_54', '55_64', '65p')
-a16_band <- function(age) {
-  cut(age, breaks = c(18, 26, 35, 45, 55, 65, Inf),
-      labels = A16_BANDS, right = FALSE)
-}
+# a16_band()/TARGET_AGE_BANDS now live in src/data/state_weights.R (sourced
+# above) -- one definition, shared with age_band()/target_age_band() so the
+# anchor bands and the fit's cell bands cannot drift apart again. Verified
+# identical to the local copy this replaces (2026-08-19).
+A16_BANDS <- TARGET_AGE_BANDS
 
 #---------------------------------------------------------------
 # Pub 1304 Table 1.6: returns by filing status block x age band

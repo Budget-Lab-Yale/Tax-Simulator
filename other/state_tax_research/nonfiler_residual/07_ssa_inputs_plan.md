@@ -1,8 +1,10 @@
 # SSA Inputs — Plan to Close the Last Stage D Blocker
 
 **Date:** 2026-08-19
-**Status:** Plan. Nothing here has been run **on the server**; the verification
-script has been tested only against locally-downloaded copies.
+**Status:** **Tasks 1-3 EXECUTED on the server 2026-08-19**, plus the Chrome
+check from task 4. Results are recorded inline below under each task; task 4's
+readers remain the open work. Originally written as a plan, before anything had
+been run on the server.
 **Blocker this closes:** `04_findings.md` §5 item 1 — the two SSA statcomps
 families were created empty because ssa.gov refuses automated retrieval. They
 gate the state × age allocation of the residual (decision **D6**) and the
@@ -66,11 +68,26 @@ non-zero on any mismatch, and writes
 | OASDI beneficiaries aged 65+ | 45,808,776 | 52,052,807 |
 | Persons with covered wage-and-salary earnings | 161,986,000 | 168,525,999 |
 
-**Acceptance:** all four year × family cells PASS. A sanity cross-check that is
-not in the script: 52.05M against the national anchor's `65p` PEP population of
-57,505,037 implies ~90% coverage, which matches the publication's own Table 1
-coverage percentage. If that ratio comes out far from 0.90, something is wrong
-with the pairing, not with the arithmetic.
+**RESULT (2026-08-19): PASS, all four cells.** JI placed **more than the plan
+asked for** — OASDI 2017-2025 (9 workbooks) and EEDATA 2017-2023 (7), which
+covers the back years design memo §8 wants. Both headline margins matched
+exactly: 65+ beneficiaries 45,808,776 / 52,052,807, covered wage-and-salary
+persons 161,986,000 / 168,525,999. Record at
+`results/ssa_input_verification.csv`.
+
+**Acceptance:** all four year × family cells PASS. ~~A sanity cross-check that
+is not in the script: 52.05M against the national anchor's `65p` PEP population
+of 57,505,037 implies ~90% coverage, which matches the publication's own Table 1
+coverage percentage.~~ **That cross-check was wrong and is withdrawn.** It
+compares `All areas` beneficiaries — which include people residing abroad and in
+the territories — against a **US-resident** population. On a consistent
+51-jurisdiction basis the ratio is **0.878**, stable across 2017-2024. It only
+appeared to agree with the publication's own Table 1 percentage because through
+the 2018 edition SSA published that percentage on the same mismatched basis;
+from the 2019 edition it is the consistent 0.878-style ratio. The corrected
+check: **51-jurisdiction 65+ beneficiaries over the PEP 65+ population should
+land near 0.878**, and a result near 0.90 means `All areas` has been picked up
+by mistake. See `SSA-OASDI-SC/NOTES.md` §5.
 
 **On failure:** do not build anchors on the files. The script prints which
 control totals differ, which usually identifies the problem immediately (all
@@ -113,6 +130,24 @@ Re-running 01 registers them in `SSA-OASDI-SC/manifest.csv` with size, md5 and
 date, and should now print `registered N manually-placed file(s)` for both
 families instead of `BLOCKED (ssa.gov 403)`.
 
+**RESULT (2026-08-19): DONE** — `registered 11` (OASDI, incl. both JSONs) and
+`registered 7` (EEDATA). The staged copies have been deleted from git, as
+`resources/README.md` directed. Three fixes to `01_fetch_residual_inputs.R`
+were needed along the way:
+- **`retrieved` was silently blanked on every re-run.** `fread` parses the ISO
+  date back as `IDate`, so `rbindlist` coerced the incoming character date to
+  integer and wiped the dates of every already-registered file. Census-PEP and
+  BLS-QCEW had already lost theirs; restored from file mtimes (2026-08-16).
+- Manually-placed files registered with `year = NA`. Now parsed from SSA's
+  two-digit filename suffix; the flat series correctly stays `NA` (multi-year).
+- `NOTES.md` would have been registered as a data file; now excluded.
+
+**Source-of-record decision: the flat series, workbooks as the cross-check.**
+The cross-check has been run and is exact — **59 areas × 11 measures × 2 anchor
+years, zero mismatches**. Quirks the reader must handle are in
+`SSA-OASDI-SC/NOTES.md` §2: **2010 is missing** from the series, and the U.S.
+Virgin Islands is labelled `Virgin Islands` before 2007.
+
 **A decision to make explicitly, not by default:** whether the flat series or the
 per-year workbooks is the *source of record* for the OASDI margin. Recommendation
 is the flat series, with the workbooks retained as the cross-check that has
@@ -132,8 +167,37 @@ does not record what the files *mean*, which is what the next person needs. Writ
 a companion note per the convention the design memo §4.1 points at for the IRS-Ind
 store (`notes/national_bysize.md`), covering both families in one document:
 
-**Home:** `raw_data/SSA-OASDI-SC/notes.md` and `raw_data/SSA-EEDATA-SC/notes.md`
-in the store (mirroring IRS-Ind), with the substance drafted here so it is
+**RESULT (2026-08-19): DONE.** Drafted in the repo at
+`resources/ssa_notes/SSA-{OASDI,EEDATA}-SC_NOTES.md` and placed in the store as
+`NOTES.md` in each family (matching IRS-Ind's uppercase filename, one
+consolidated file per family). All six points below are covered, and every
+number in them was computed from the files rather than copied from a summary.
+Findings worth reading before writing the readers:
+
+- **Use the 51-jurisdiction sum, not `All areas`** — the anchor values are
+  44,635,968 (2017) and 50,766,317 (2022), 2.5-2.6% below the `All areas` rows.
+- **EEDATA publishes two universes**: Tables 1/2 are OASDI-covered, Tables 4/5
+  are HI (Medicare)-covered — broader by ~4.1M persons, and **uncapped** in
+  dollars. **The QCEW dollar cross-check must use Table 4**: HI wage-and-salary
+  earnings match QCEW to ~1% (1.007× in 2017, 1.013× in 2022) while OASDI's
+  capped earnings sit ~17% low.
+- **EEDATA is a 1% sample** (Continuous Work History Sample); OASDI-SC is 100%
+  data. Small-state EEDATA margins carry real sampling error.
+- **EEDATA Tables 2/5 carry state × age**, in SS-eligibility bands (…, 60-61,
+  62-64, 65-69, 70+), which do not nest inside `age_band()` without a decision.
+- **Point 4 answered, not deferred:** the 2017 and 2022 editions are on the
+  same geographic basis in both families (identical source and residence notes,
+  identical layouts, exact geography partitions, stable 51-juris coverage ratio
+  0.873-0.881 across 2017-2024). The two discontinuities found are documented:
+  Table 1's **national percentage basis changed with the 2019 edition**, and the
+  Virgin Islands label changed in 2007.
+- **Point 6 (vintage pairing) answered:** SSA Table 1's population is the Census
+  vintage current at publication, ~0.5% above the later PEP vintages in
+  `Census-PEP/`. Rule recorded: **counts from SSA, denominators from PEP**,
+  never an SSA-published share against a PEP denominator.
+
+**Home:** `raw_data/SSA-OASDI-SC/NOTES.md` and `raw_data/SSA-EEDATA-SC/NOTES.md`
+in the store (mirroring IRS-Ind), with the substance drafted in the repo so it is
 reviewable in git before it is placed.
 
 **Contents, per family:**
@@ -181,10 +245,12 @@ reviewable in git before it is placed.
 
 ## Task 4 — Follow-on, once tasks 1–3 pass
 
-1. **Check for Chrome on the cluster** (`which google-chrome chromium
-   chromium-browser`). If present, add a headless-Chrome fallback to
-   `fetch_file()` in `01_fetch_residual_inputs.R` and the manual step disappears
-   for good. If absent, record that in the store notes so nobody re-litigates it.
+1. ~~**Check for Chrome on the cluster.**~~ **DONE 2026-08-19: absent.**
+   `google-chrome`, `chromium` and `chromium-browser` are all off `PATH`, and no
+   Lmod module provides a browser engine. **The manual step stands**; recorded in
+   both store `NOTES.md` files so nobody re-litigates it. Node 24 is available, so
+   a Puppeteer-managed Chromium is the only route if this is ever worth
+   automating — not attempted.
 2. **Write the readers** — the real remaining work.
    `02_build_residual_anchors.R:197` still hardcodes `ssa_covered_persons =
    NA_real_`, and nothing parses either publication. One reader per family,
@@ -201,10 +267,14 @@ reviewable in git before it is placed.
 
 ## Acceptance for this plan as a whole
 
-- `06_verify_ssa_inputs.R` exits 0 on the server, with
+- [x] `06_verify_ssa_inputs.R` exits 0 on the server, with
   `results/ssa_input_verification.csv` committed as the record.
-- Both SSA families' `manifest.csv` list their files; `01_fetch_residual_inputs.R`
-  prints `registered` rather than `BLOCKED` for both.
-- A `notes.md` exists in each family covering the six points in task 3, with the
-  geography-continuity question answered rather than deferred.
-- `04_findings.md` §5 item 1 is struck.
+- [x] Both SSA families' `manifest.csv` list their files;
+  `01_fetch_residual_inputs.R` prints `registered` rather than `BLOCKED` for both.
+- [x] A `NOTES.md` exists in each family covering the six points in task 3, with
+  the geography-continuity question answered rather than deferred.
+- [x] `04_findings.md` §5 item 1 is struck.
+
+**All acceptance criteria met 2026-08-19.** What remains is task 4's readers,
+which were always follow-on work and are now the only thing between here and a
+resolved D6.

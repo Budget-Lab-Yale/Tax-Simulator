@@ -74,20 +74,27 @@ mis-assigns coefficients.
   This copy is here deliberately, as provenance for the transcription that has
   not happened yet; move or de-duplicate it if `references` takes it on.
 
-## Staged data awaiting placement in the shared store
+## SSA store documentation (`ssa_notes/`)
 
-**`ssa_flatseries/oasdi_sc_flatseries_table2_beneficiaries.json`** (1,520 rows)
-and **`..._table1_population_shares.json`** (1,404 rows) — the OASDI-SC
-*flattened time series*, 1999-12 through 2025-12, retrieved 2026-08-19. Table 2
-carries `persons_oasdi_65_older_men` / `_women`, which summed **are the D6 age
-margin**; Table 1 carries state population with the share receiving benefits.
+Drafts of the `NOTES.md` files that document the two SSA statcomps families,
+kept here so they are reviewable in git; the placed copies live in the store at
+`raw_data/SSA-OASDI-SC/NOTES.md` and `raw_data/SSA-EEDATA-SC/NOTES.md`
+(IRS-Ind convention). Written 2026-08-19, with every figure computed from the
+files rather than copied from a summary. Edit here and re-copy; the downloader
+never touches them.
 
-These are raw data and **belong in the shared store, not in git** — they are
-staged here only because ssa.gov cannot be reached from the cluster (its block is
-on TLS fingerprint, so curl, .NET and hosted fetchers all get 403; only a real
-browser engine works). Committing them is the transfer mechanism. **Move them to
-`raw_data/SSA-OASDI-SC/` and re-run `01_fetch_residual_inputs.R` to register
-them, then delete this directory** — see `../07_ssa_inputs_plan.md` task 2.
+The three findings in them that change what a consumer must do: use the
+**51-jurisdiction sum, not `All areas`** (2.5-2.6% overstatement); use EEDATA
+**Table 4 (HI, uncapped)** for any QCEW dollar cross-check, not Table 1 (OASDI,
+capped ~17% low); and remember **EEDATA is a 1% sample** while OASDI-SC is 100%
+data.
 
-Verified against the per-year workbooks: both sources give 65+ beneficiaries of
-45,808,776 (2017) and 52,052,807 (2022).
+## Staged data — placed and removed
+
+`ssa_flatseries/` held the two OASDI-SC flattened time-series JSONs
+(1999-12 – 2025-12) as a transfer mechanism, because ssa.gov cannot be reached
+from the cluster. **Placed in `raw_data/SSA-OASDI-SC/` and deleted from git on
+2026-08-19** (md5-verified before removal, then registered by
+`01_fetch_residual_inputs.R`). They agree with the per-year workbooks exactly —
+59 areas × 11 measures × 2 anchor years, zero mismatches — and are the **source
+of record** for the 65+ margin, with the workbooks as the standing cross-check.

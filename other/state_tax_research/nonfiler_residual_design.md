@@ -283,6 +283,24 @@ For each HT2 year (2014, 2016-2022; 2017 and 2022 first):
    covered-worker margin (SSA persons-with-wages minus HT2
    returns-with-wages; nationally ~75% ± 9pp across states) the working
    ages, with the upgraded ACS non-filer age shape smoothing the rest.
+
+   > **Amended 2026-08-19, after the SSA files were read.** Two corrections.
+   > **(a) The covered-worker universe is HI (Medicare), not OASDI** — decided
+   > by JI 2026-08-19. EEDATA publishes both: Tables 1/2 are OASDI-covered,
+   > Tables 4/5 are HI-covered and broader by ~4.1M persons (2.4-2.6%), because
+   > HI picks up state and local government employment outside OASDI coverage.
+   > HI is the closer analogue to the W-2 universe this margin is meant to
+   > represent, and on the dollar side it is not close: HI earnings are
+   > **uncapped** and match QCEW to ~1% (1.007x in 2017, 1.013x in 2022), where
+   > OASDI's taxable-maximum-capped earnings sit ~17% low. Use **Table 4** for
+   > persons and dollars and **Table 5** for the age detail.
+   > **(b) The working-age layer no longer has to be inferred.** EEDATA Table 5
+   > publishes covered workers by **state x age band** directly (Under 20,
+   > 20-29, 30-39, 40-49, 50-59, 60-61, 62-64, 65-69, 70+). The
+   > national-ratio construction above is superseded by a direct margin; keep
+   > the ratio only as a cross-check. Note the bands are cut around Social
+   > Security eligibility and do not nest inside `age_band()` — see the
+   > pre-flight band decision (§7.1 item 2).
 6. **Cross-checks, never targets**: QCEW state wage totals on the dollar
    side; the QWI/LODES fetchers already in `state_weights.R` stay
    diagnostics.
@@ -495,7 +513,31 @@ Dependents are **Cilke's largest group** — 31.1% of his below-threshold popula
 published filing rate of **0.10** for dependents under 65. So the coefficients we need
 exist, the population is large, and the threshold governing it nearly doubled inside our
 window. Deferring dependents is a bigger approximation than the original draft treats it
-as. Decide explicitly, and if they stay out of scope, record why.
+as.
+
+> **DECIDED (JI, 2026-08-19): dependents and MFS are BOTH IN SCOPE.** The evidence
+> above is the reason — the two groups deferred as minor are the two the window
+> actually moved, the coefficients exist for one of them, and dependents are the
+> single largest below-threshold group in the literature. Consequences to carry
+> forward, because this is not a free decision:
+>
+> - **The ASEC unit builder must form and retain dependent filing units and MFS
+>   units from the start** (§3.2.3 step 1, research pass A). Retrofitting either
+>   later means rebuilding the file, which is why this was decided before pass A
+>   rather than after.
+> - **Mok's Panel E (dependent filers) is now load-bearing**, not optional — with
+>   it, the reversed column order trap (65+ first) becomes a correctness risk, not
+>   a transcription nicety.
+> - **MFS has no borrowed coefficients.** Neither Mok nor Cilke estimates an MFS
+>   equation. MFS enters through the *threshold* rule (the $5 filing floor from
+>   TY2018), not through a probit — a deterministic v1a treatment, with the
+>   voluntary-filing layer left to the married equations. State that limitation
+>   where the model is documented rather than implying MFS is modeled to the same
+>   standard as the other statuses.
+> - **`impute_nonfilers.R`'s `dep_status == 0` assertion (§5.1) is now a
+>   constraint to revisit, not an invariant to enforce.** Tax-Data currently
+>   guarantees no non-filer is a dependent; with dependents in scope on the ACS
+>   side, the two universes disagree unless that is deliberately reconciled.
 
 #### 3.2.6 Acceptance metric
 
@@ -558,6 +600,9 @@ existing store layout (each with a manifest):
 | Covered workers: persons and wage dollars by state | SSA statcomps `eedata_sc/{year}` | `raw_data/SSA-EEDATA-SC` |
 | QCEW state annual wage totals | BLS CEW annual singlefile | `raw_data/BLS-QCEW` |
 | Pub 1304 by-size tables (1.6 returns × marital × age; 1.7 dependent filers; 1.1 income sources) | **already in the shared store** — `raw_data/IRS-Ind/national/by_size/`, TY2011-2023, maintained by the IRS-Ind downloader | no fetcher needed; reader only |
+| **SOI IRA study Table 4** (added 2026-08-19) — *Taxpayers with IRA Plans, by Age of Taxpayer*. **Column (1) is the find: `Number of taxpayers who filed Form 1040` by five-year age band to 80+**, i.e. filers by age at a resolution Table 1.6 does not publish. `65 under 70` + `70 under 75` and `75 under 80` + `80 and over` aggregate **exactly** to the 65_74 / 75p split. TY2000-2023 (no 2003), so both anchor years and every back year | **already in the shared store** — `raw_data/IRS-Ind/national/ira/ira_t04_{year}.xlsx` | reader only |
+| **SOI Form W-2 study Tables 1.A / 2.A** (added 2026-08-19) — 1.A *Taxpayers with Wage Income, by Age and Sex* on a **box-1** concept, with bands `Under 26 / 26-35 / 35-45 / 45-55 / 55-60 / 60-65 / 65-75 / 75+` that align with the anchor bands and carry the 65-75/75+ split; 2.A *Taxpayers with Elective Retirement Contributions*, whose **contributions** column is a population total ($379.2B, TY2020) and a component of the box-1/box-5 wedge. **Only TY2019-2020 are in the store**, so neither serves the anchor years directly | `raw_data/IRS-Ind/national/w2/` | reader only; see the gap below |
+| **SOI Form W-2 study Table 5.A — NOT IN THE STORE, worth pulling.** Table 2.A's footnote [1] names it as the comparison of *"Medicare wages and tips"* (box 5) to *"Wages, tips, other compensation"* (box 1) — i.e. **the published box-1/box-5 reconciliation**, which is exactly the wedge §5.4's combined-universe wage constraint needs and currently has to estimate | irs.gov SOI Form W-2 study page | **extend the IRS-Ind downloader** (`w2_t5_{year}`) |
 | Pub 5785 above-threshold composition | hand-transcribed CSV with page citations | repo: `nonfiler_residual/resources/pub5785_hazard.csv` |
 | **Mok (2017) Table 14 probit coefficients** — the primary below-threshold model (§3.2.2) | hand-transcribed CSV, 14 group equations with SEs and per-cell filing rates. **PDF in hand and verified** (JI's copy, Affordability `Literature/Reweighting/53125-nonfilers.pdf`; cbo.gov 403s automated retrieval). Transcribe from a rendered image and mind Panel E's reversed column order (§3.2.2) | repo: `nonfiler_residual/resources/mok_coefs.csv` |
 | Cilke (1998) probit coefficients — retained as the **comparison** fit only (§3.2.2) | hand-transcribed CSV (9 group equations). **Extract with PyMuPDF word positions, not `pdftotext -layout`**, which silently mis-assigns the coefficients | repo: `nonfiler_residual/resources/cilke_coefs.csv` |
@@ -649,8 +694,9 @@ needed: the PSZ record set stays; values and weights change.
   and MFS collapsed from $4,050 to $5; dependents are Cilke's largest group (36.4% of
   his non-filers) and Mok estimates a dependent equation directly, with a published
   filing rate of 0.10 under 65. The coefficients exist and the population is large.
-  Decide explicitly rather than carrying these as TODOs, and if they stay out, record
-  the reason.
+  **DECIDED 2026-08-19: both are IN SCOPE** — see §3.2.5 for the decision and its
+  consequences, including that this repoints the `dep_status == 0` assertion below
+  from an invariant to a reconciliation question.
 
 ### 5.2 New `src/calibrate_nonfilers.R` (Phase 1)
 
@@ -701,10 +747,112 @@ anything. Full battery in the implementation plan; the load-bearing facts:
 - **What must move, and is easy to mistake for a bug.** `get_pr_totals()`
   (`summary_stats.R:214-278`) has **no filer gate**, so raking non-filer weights
   up 15-25% raises baseline payroll receipts. Non-filers already carry $147.3B of
-  wages (2022). Predict the magnitude first, and settle the upstream question:
-  **do Tax-Data's aggregate wage control totals already include non-filer
-  records?** If they do, raking non-filers without renormalizing filers — which
-  §5.2 explicitly declines to do — breaks the national wage reconciliation.
+  wages (2022).
+
+  > **The upstream question is ANSWERED (2026-08-19): no, Tax-Data's control
+  > totals do not include non-filer records.** Every target in
+  > `config/target_info/baseline.csv` comes from `process_targets.R`'s
+  > Compiled-SOI-Tables (1.4, 1.6, 2.1, 2.3, 3.3, line items) — returns filed,
+  > so filers by construction — and the LP is solved on the filer file
+  > (`create_2017_puf.R:54`, `reweight_lp(puf_2017, ...)`) **before**
+  > `impute_nonfilers.R` appends non-filers with `bind_rows`. So §5.2's choice not
+  > to renormalize filers cannot break a national wage reconciliation: there is no
+  > reconciliation spanning both universes to break.
+  >
+  > **The real exposure is the opposite one — nothing constrains the combined
+  > total at all.** TY2022: filer wages $9,615.8B + non-filer $147.3B = $9,763.1B,
+  > with non-filers 1.51% of the total. Raking non-filer weights +15/+25% adds
+  > $22.1B/$36.8B of wages and roughly **+$3.4B/+$5.6B of baseline payroll
+  > receipts** (~0.2-0.35% of payroll), benchmarked by nothing. Predict it, then
+  > institute the constraint below.
+
+- **A combined-universe wage constraint (added 2026-08-19).** The file needs one
+  aggregate that binds **filers + non-filers together**, since the SOI targets
+  bind only filers. The candidates are not interchangeable, because the PUF's
+  `wages` is **E00200 = 1040 line 1 = W-2 box 1** (verified in
+  `variable_guide.csv`; the PUF carries **no elective-deferral variable**):
+
+  | Aggregate | Universe | TY2022 | vs PUF combined | Verdict |
+  |---|---|---|---|---|
+  | **SSA HI wage-and-salary** (EEDATA Table 4, 51 juris) | every person with covered wages, **filing or not** | $10,634.7B | +8.2% | **primary constraint** |
+  | QCEW total annual wages | covered employment, establishment-based | $10,499.7B | +7.0% | cross-check (already §3.1 step 6) |
+  | NIPA `gdp_wages` (Macro-Projections) | all wage employment, incl. imputed | — | broadest | already used as a **growth** factor (`project_puf.R:90`), not a level |
+
+  **Use SSA HI.** It is the only candidate whose universe is exactly the object
+  in question — persons with wages irrespective of filing — where QCEW counts
+  establishments and NIPA is a macro aggregate. It is already the chosen universe
+  for the persons margin (`covered_worker_hi`), so one source, one tag, one
+  reader. And **the 1% sampling objection does not bite here**: sampling error on
+  a national total is negligible, and it is only small-state cells that suffer, so
+  the same source can be a firm national constraint and a soft state margin.
+
+  **Two published handles on the wedge, one of them a trap.** SOI's Form W-2
+  study Table 2.A gives **elective retirement contributions of $379.2B (TY2020)**
+  — and that figure *is* a population total, because taxpayers without elective
+  contributions contribute zero by definition. **But Table 2.A's universe is only
+  taxpayers WITH such contributions — 62.6M of the 146.2M with wage income
+  (42.8%), confirmed against Table 3.A's total row — so its `Medicare wages`
+  column ($5,629.3B) is NOT an aggregate** and must never be read as one. The
+  population-complete route is **Table 5.A**, which Table 2.A's footnote names as
+  the box-5-to-box-1 comparison; it is not in the store and should be pulled
+  (§4.1).
+
+  **The box-1 / box-5 wedge is now MEASURED, and it overturns the first reading
+  of this gap.** SOI's Form W-2 study **Table 5.A** publishes box 1 and box 5 side
+  by side on one universe — placed in the store 2026-08-19 as
+  `IRS-Ind/national/w2/w2_all_{2014,2016,2017,2018}.xls`:
+
+  | TY | box 1 | box 5 | wedge | wedge % |
+  |---|---|---|---|---|
+  | 2014 | $6,516.3B | $6,745.0B | $228.7B | 3.51% |
+  | 2016 | $6,950.5B | $7,216.6B | $266.0B | 3.83% |
+  | **2017** | **$7,277.1B** | **$7,541.0B** | **$263.9B** | **3.63%** |
+  | 2018 | $7,525.4B | $7,841.7B | $316.2B | 4.20% |
+
+  **The wedge is 3.5-4.2%, not the ~8% first inferred.** It is also *only*
+  elective deferrals: Section 125 cafeteria contributions are excluded from box 1
+  **and** box 5 (pre-tax for income tax and FICA alike), so they never appear in
+  this difference — and they are likewise absent from SSA's HI taxable earnings.
+
+  **Consequence: the earlier reading was wrong.** The $871.6B PUF-vs-SSA gap in
+  TY2022 was provisionally attributed to deferrals plus cafeteria plans, implying
+  the PUF's combined total was roughly right. Scaling the measured wedge to 2022
+  accounts for only about **$400B of it**, leaving **~$450B (4.3%) of genuinely
+  missing wage mass**. The constraint would **not** be satisfied today. Treat it
+  as a **bound** only because the wedge must be extrapolated past 2018 (see
+  coverage below), not because the gap is explained.
+
+  **A third source turns the gap into a direct measurement of non-filer wages.**
+  The IRS W-2 study's universe is **W-2 income attached to FILED RETURNS** — the
+  tables are "by Return and Earner Type", carry `Number of returns` columns, and
+  footnotes [1]-[4] enumerate filing statuses. SSA's EEDATA counts **all** covered
+  workers. The two are the same concept (box 5) on different universes, so
+  differencing them isolates wage earners who never appear on a return:
+
+  | TY | SSA HI (all workers) | IRS W-2 (filed returns) | residual | persons | PUF non-filer wages |
+  |---|---|---|---|---|---|
+  | 2017 | $8,021.6B | $7,541.0B | **$480.6B** | 20.3M | $116.2B (**24%**) |
+  | 2018 | $8,431.9B | $7,841.7B | **$590.3B** | 23.6M | $121.3B (**21%**) |
+
+  **The PUF carries about a fifth of the non-filer wage mass two administrative
+  sources jointly imply.** This is the first dollar-denominated read on the F1
+  shortfall, and it agrees with F2: the PUF's non-filers are not merely too few
+  but the wrong *kind* — disproportionately elderly and wageless, where the
+  missing mass is working-age earners.
+
+  **Read the residual as an upper bound.** It also contains wage-earning
+  **dependents**, who are outside the IRS study's taxpayer count but ride filer
+  records in the PUF rather than forming non-filer units — which is one more
+  reason the §3.2.5 decision to bring dependents into scope matters. The implied
+  average of ~$25,000 is high for a below-threshold population, which is itself
+  evidence that dependents and F7's above-threshold non-filers make up a real
+  share of it.
+
+  **Coverage is the binding limitation.** Table 5.A exists for **2014, 2016, 2017
+  and 2018 only** — the 2019/2020 releases publish Tables 1-4 without it, and
+  nothing is published after 2020 (probed 2026-08-19). TY2017 is covered, TY2022
+  is not, so any 2022 constraint rests on extrapolating a wedge that is visibly
+  trending up (3.51% -> 4.20% across 2014-2018) as deferral participation rises.
 - **The one real external check.** The current-law baseline already pays
   refundable credits to non-filers in 2020-2021 (`baseline/rebate.yaml` sets
   $1,800/$1,400; `ctc.yaml` sets `min_refund_young/old` 3600/3000 in 2021). So a
@@ -755,6 +903,21 @@ Two clarifications the original text got wrong or left implicit:
   65-74/75+ bands; the covered-worker wage margin as a `has_wages` count
   target on the non-filer partition (with a documented tolerance for the
   returns-vs-persons concept gap). QCEW stays a diagnostic, never a target.
+
+  > **Amended 2026-08-19 — this bullet as drafted is not implementable, on two
+  > counts.** **(a) OASDI publishes no age detail within 65+** (65+ by sex only),
+  > so a 65-74/75+ **state** target cannot be sourced from it at all. Nationally
+  > the split IS available — **SOI's IRA study Table 4, column (1)** gives
+  > *taxpayers who filed Form 1040* by five-year age band to 80+, TY2000-2023 —
+  > so the **national** age shape keeps 65_74/75p while **state** targets collapse
+  > to 65p. That is why `state_weights.R` now carries two functions, `age_band()`
+  > (cells, 7 bands) and `target_age_band()` (targets, 6 bands). **(b) The
+  > covered-worker margin is a 1% sample** (EEDATA is drawn from the Continuous
+  > Work History Sample), unlike OASDI-SC's 100% data — so it must enter as a
+  > **soft target or prior, never a hard constraint**, and small states need an
+  > explicit tolerance. The two SSA margins are not of equal authority and this
+  > bullet treated them as if they were. The universe is **HI**, per §3.1 step 5.
+  > Sources: `raw_data/SSA-{OASDI,EEDATA}-SC/NOTES.md`.
 - **Income tiers move to the prior**: keep `income_tier` in the prior
   (upgraded v1 ACS shares) and demote the current 1,390 count-only cells
   from exact targets to prior-only or soft targets. The anchors own the
@@ -800,14 +963,20 @@ and should ship ahead of the rest, sized by T7 first.
    inside it (`04_findings.md` §5): the **SSA manual downloads**. The coefficient
    transcription is no longer blocked, but its target changed — transcribe **Mok
    Table 14** (§3.2.2), with Cilke as the comparison fit.
-2. **Pre-flight** (added 2026-08-18, ~1 day, login node): resolve the vintage
-   discrepancy in §2.1 (this memo cites `2026070814`, but
-   `interface_versions.yaml` pinned `2026030513` at the Stage D commit and
-   `03_diagnose_current_nonfilers.R` reads the vintage from that yaml — so
-   T1-T4 were computed against the older file); and settle the **age-band
+2. **Pre-flight** (added 2026-08-18, ~1 day, login node). ~~Resolve the vintage
+   discrepancy in §2.1.~~ **DONE 2026-08-19:** `interface_versions.yaml` is
+   advanced from `2026030513` to **`2026070814`**, the newest *complete* vintage
+   — the four August vintages hold ledgers only, with no `tax_units_*` files.
+   The schema change is purely additive (52 wealth/consumption/Forbes columns)
+   and the non-filer object is materially unchanged (TY2022 units 27.63M →
+   27.62M; F2's age inversion intact on both), so **F1-F4 stand as computed**.
+   See `04_findings.md`. What remains in pre-flight: settle the **age-band
    reconciliation** between `age_band()` (u25/…/65_74/75p) and the anchors'
-   Pub 1304 `a16_band()` (18_25/…/65p). Both are cheap and both invalidate
-   downstream work if left implicit.
+   Pub 1304 `a16_band()` (18_25/…/65p) — now further constrained by what SSA
+   actually publishes, since **OASDI carries no age detail within 65+** and so
+   cannot support the 65-74/75+ target §6.2 specifies, while EEDATA Tables 2/5
+   supply state × age on SS-eligibility bands (…/60-61/62-64/65-69/70+). Cheap,
+   and it invalidates downstream work if left implicit.
 3. **Research pass A** (added 2026-08-18, ~3-5 days, parallel with everything): ASEC
    tax-unit and income construction. §8. *(Pass B — parameter currency — is closed;
    its findings are in §3.2.)*

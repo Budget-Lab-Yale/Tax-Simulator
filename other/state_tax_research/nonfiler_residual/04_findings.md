@@ -5,16 +5,28 @@
 (§5 below). All numbers below are reproducible from the scripts in this
 directory; result CSVs in `results/`.
 
-> **Vintage provenance — verify before building on F1-F4.** `tax_data_path()`
-> (`03_diagnose_current_nonfilers.R:48-53`) resolves the input from the
-> `Tax-Data: default_vintage` in `config/interfaces/interface_versions.yaml`,
-> which was **`2026030513`** at this commit (`git show
-> 4783dc3e9:config/interfaces/interface_versions.yaml`). The design memo §2.1
-> states its production figures were verified against **`2026070814`**. The two
-> disagree, so either the memo's citation is wrong or these tables were computed
-> on a superseded file. Re-run `03_... --tables` against the current production
-> vintage and diff T1-T4 before the Tax-Data rework calibrates to these numbers;
-> the script needs a `--vintage` argument to make that possible.
+> **Vintage provenance — RESOLVED 2026-08-19. F1-F4 stand.** These tables were
+> computed on **`2026030513`**, the `Tax-Data: default_vintage` pinned in
+> `config/interfaces/interface_versions.yaml` at this commit; the design memo
+> §2.1 cites **`2026070814`**. Both were checked directly:
+>
+> - **`2026070814` is the newest COMPLETE vintage** and the pin has been
+>   advanced to it. The four August vintages (`2026081212`–`2026081216`) contain
+>   only `factor_ledger.rds` / `weight_ledger.rds` — **no `tax_units_*` files at
+>   all** — and `2026080610` is empty. They are partial runs, not candidates.
+> - **The schema change is purely additive**: 52 new columns (wealth `accruals.*`
+>   / `basis.*`, consumption `c_*`, `forbes_*`), nothing removed, so nothing
+>   downstream breaks.
+> - **The non-filer object is materially unchanged.** TY2022 non-filer units
+>   27.63M → 27.62M, non-filer adults 32.38M → 32.36M (0.04%). TY2017 age
+>   composition moves ≤1.2pp per band and **F2's inversion is intact on both**
+>   (18-25 at 9.0% / 10.1% against the anchor's 24.2%; 65+ at 43.9% / 42.7%
+>   against 25.1%).
+>
+> So the memo's citation was right about the figures and these tables were
+> computed on a superseded but near-identical file. F1-F4 do not need re-running
+> before the Tax-Data rework calibrates to them. `03_...` should still gain a
+> `--vintage` argument so this is checkable rather than re-derived.
 **Companions:** `../nonfiler_residual_design.md` (the design this executes),
 `../state_weights_phase1_summary.md` (weights bake-off the rework feeds).
 **Scripts:** `01_fetch_residual_inputs.R` (login node),
@@ -133,14 +145,30 @@ stays: national scalar for v1, SE-aware cells as the upgrade path).
 
 ## 5. Blocked / remaining before Stage D fully closes
 
-1. **SSA manual downloads** (ssa.gov blocks the cluster): OASDI
-   Beneficiaries by State and County (`oasdi_sc`, 2017 & 2022) and Earnings
-   and Employment Data by State and County (`eedata_sc`, 2017 & 2022) —
-   download on a workstation into `raw_data/SSA-OASDI-SC` /
-   `raw_data/SSA-EEDATA-SC` per each store's README, then re-run scripts
-   01 → 02 → 03 to fill the OASDI age margins (D6), the
-   persons-with-wages column of `nonfiler_wage_margin_{year}.csv`, and the
-   covered-worker earnings shape.
+1. ~~**SSA manual downloads** (ssa.gov blocks the cluster).~~ **CLOSED
+   2026-08-19.** JI placed the workbooks by hand; `06_verify_ssa_inputs.R`
+   passes all four year × family cells; `01_fetch_residual_inputs.R` now
+   registers both families instead of reporting BLOCKED. The store holds
+   **more years than the anchors need** — OASDI 2017–2025 (9 workbooks plus the
+   1999–2025 flat series) and EEDATA 2017–2023 — which covers the back years
+   design memo §8 wants for back-year weights. Each family has a `NOTES.md`
+   (drafted in `resources/ssa_notes/`). Three findings from that documentation
+   pass change what the readers must do, and are **not yet reflected in
+   `02_build_residual_anchors.R`**:
+   - **Use the 51-jurisdiction sum, not `All areas`.** `All areas` includes
+     beneficiaries abroad and in the territories and overstates the US-resident
+     65+ margin by 2.5–2.6% (2017: 44,635,968 not 45,808,776; 2022: 50,766,317
+     not 52,052,807).
+   - **For the QCEW dollar cross-check use EEDATA Table 4 (HI), not Table 1
+     (OASDI).** Table 1's earnings are capped at the taxable maximum and run
+     ~17% below QCEW in both years; Table 4 agrees with QCEW to ~1%.
+   - **EEDATA is a 1% sample** (Continuous Work History Sample), unlike
+     OASDI-SC's 100% data — small-state margins carry real sampling error and
+     must not become hard constraints.
+   Still to do (`07_ssa_inputs_plan.md` task 4): write the two readers,
+   replace the `ssa_covered_persons = NA_real_` stub at
+   `02_build_residual_anchors.R:197`, and re-run 01 → 02 → 03 so D6 moves from
+   partially resolved to resolved.
 2. **Cilke (1998) coefficient transcription** (`resources/cilke_coefs.csv`)
    — needed for v1b implementation, not for these diagnostics.
    **Superseded 2026-08-18 by `05_filing_model_literature.md`:** the currency check

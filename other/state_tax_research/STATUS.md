@@ -266,13 +266,34 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    **Pub 5785 stands** (no successor edition), with Treasury's Jan-2025 special study
    (50.343M TY2022 non-filers) and OTA TP-12 as newer official reference points.
 
-   **Two blockers, one on JI.** (a) ssa.gov 403-blocks the cluster egress IP,
-   so `raw_data/SSA-OASDI-SC` and `SSA-EEDATA-SC` exist but are empty — the
-   OASDI and covered-worker state margins need a manual download on a
-   workstation (each store carries a `README_MANUAL_DOWNLOAD.md`; then re-run
-   scripts 01→02→03). They gate the state age layering (D6) and the wage
-   margin. (b) `resources/cilke_coefs.csv` is not transcribed, and should not
-   be until the currency check above finishes.
+   **Blocker (a) is CLOSED 2026-08-19.** JI placed the SSA workbooks by hand;
+   `06_verify_ssa_inputs.R` passes all four year × family cells, both families
+   are registered, and each carries a `NOTES.md`. The store holds more than the
+   anchors need — **OASDI 2017–2025** (9 workbooks + a 1999–2025 flat series,
+   which matches the workbooks exactly: 59 areas × 11 measures × 2 years) and
+   **EEDATA 2017–2023**. Reading the publications properly changed three things
+   the design memo does not yet know: the anchor is the **51-jurisdiction sum,
+   not `All areas`** (2.5–2.6% overstatement); **OASDI cannot support §6.2's
+   65-74/75+ split** (it publishes 65+ by sex only) while **EEDATA Tables 2/5
+   supply state × age directly**, which the design did not expect to have; and
+   **EEDATA is a 1% sample**, so its margin cannot be a hard target. EEDATA
+   also **ends at data year 2023**, bounding forward extension. Details in
+   `nonfiler_residual/07_ssa_inputs_plan.md` and the two store `NOTES.md`.
+   **Blocker (b):** transcribe **Mok Table 14**, not Cilke — the currency check
+   is finished (see above); Cilke is the comparison fit only.
+
+   **Review and full implementation to-do: `nonfiler_state_weights_todo.md`
+   (2026-08-19)** — plan review against the tree, then a dependency-ordered
+   task list P/A–H with the critical path. Two findings there worth carrying:
+   a **CPS-ASEC family already exists** in the shared store (2.4 GB, ~2010–2024,
+   carrying `FILESTAT`/`DEPSTAT`/`ADJGINC`), so the ASEC work is a **variable
+   extension to an existing request**, not a new family — and the proposed path
+   `raw_data/CPS/cps_common` is wrong, it is `CPS-ASEC/`. And the **Tax-Data
+   vintage question is CLOSED 2026-08-19**: the pin is advanced from
+   `2026030513` to **`2026070814`**, the newest complete vintage — the four
+   August vintages (`2026081212`-`16`) carry ledgers only, no `tax_units_*`.
+   The schema change is purely additive and the non-filer object is materially
+   unchanged, so **Stage D's F1-F4 stand as computed**.
 
    **Two model-side gaps the rework cannot fix by itself**, recorded so they
    are not discovered late: there is no `become_filer_eitc` (only CTC and

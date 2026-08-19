@@ -194,9 +194,52 @@ filing_threshold <- function(year) {
   tbl[[as.character(year)]]
 }
 
+# Age bands. ONE definition, three consumers: the ACS non-filer margins, the PUF
+# non-filer cell assignment, and the residual anchors (nonfiler_residual/02, /03).
+#
+# The boundaries are Pub 1304 Table 1.6's, not our own choosing, and the reason is
+# that T1.6 is the ONLY published source of filing adults by age -- so it sets the
+# resolution of the residual (PEP adults - filing adults), no matter how much age
+# detail PEP or the ACS carry. Two consequences, both decided 2026-08-19:
+#
+#   * The bottom cut is 26, NOT 25. The pre-2026-08-19 age_band() cut at 25 while
+#     the anchors cut at 26, so the 4.33M people aged exactly 25 sat in a different
+#     cell on the target side than on the record side -- more than the entire
+#     non-filer residual of all but the largest states, and silent.
+#   * 65_74 / 75p survive as CELLS but not as state TARGETS. T1.6 stops at "65 and
+#     over" and SSA OASDI-SC publishes 65+ by sex only, so no state-level source can
+#     split it. Nationally it IS splittable -- SOI's IRA study Table 4 column (1)
+#     gives Form 1040 filers by 5-year age band to 80+ -- so the national age shape
+#     (which is what the Tax-Data age draw needs) keeps the split, while state
+#     targets collapse to 65p. Hence two functions.
+#
+# age_band()        -- the CELL space: full resolution, what records are keyed on
+#                      and what the ACS prior shapes.
+# target_age_band() -- the TARGET space: collapsed to what the anchors can source.
+#
+# Same discipline as the income tiers: the anchors own the level, the ACS owns the
+# within-cell shape.
+
+AGE_BANDS        <- c("18_25","26_34","35_44","45_54","55_64","65_74","75p")
+TARGET_AGE_BANDS <- c("18_25","26_34","35_44","45_54","55_64","65p")
+
 age_band <- function(age) {
-  cut(age, breaks = c(-Inf, 25, 35, 45, 55, 65, 75, Inf),
-      labels = c("u25","25_34","35_44","45_54","55_64","65_74","75p"), right = FALSE)
+  cut(age, breaks = c(-Inf, 26, 35, 45, 55, 65, 75, Inf),
+      labels = AGE_BANDS, right = FALSE)
+}
+
+# Collapse the cell space onto the anchor's target space.
+target_age_band <- function(band) {
+  b <- as.character(band)
+  factor(fifelse(b %in% c("65_74", "75p"), "65p", b), levels = TARGET_AGE_BANDS)
+}
+
+# The anchors' band function, on PERSON age, adults only (18+). Identical
+# boundaries to target_age_band(); kept separate because it takes an age, not a
+# band, and because it is undefined below 18 where the anchors have no universe.
+a16_band <- function(age) {
+  cut(age, breaks = c(18, 26, 35, 45, 55, 65, Inf),
+      labels = TARGET_AGE_BANDS, right = FALSE)
 }
 income_tier <- function(inc) {
   cut(pmax(inc, 0), breaks = c(-Inf, 1, 10e3, 25e3, 50e3, Inf),
