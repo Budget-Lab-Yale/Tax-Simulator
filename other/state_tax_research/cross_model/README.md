@@ -127,7 +127,7 @@ circularity and 3-round federal↔state iteration (we are one-way until Phase
 
 ## Acceptance (`cross_model = done`)
 
-A state's tracker row (`state_parameter_rollout.csv`) flips to `done` when:
+A state's tracker row (`research/state_tax/state_parameter_rollout.csv`) flips to `done` when:
 
 1. **match@$100 ≥ 95%** in every canonical-window cell, on the clean
    (federally aligned) subset where defined, after known-difference

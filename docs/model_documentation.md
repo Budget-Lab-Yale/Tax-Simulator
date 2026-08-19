@@ -356,7 +356,7 @@ SD TX WY). Encodings run 2017-forward from forms and statutes, including structu
 features like NY's tax-benefit recapture, CO's TABOR rate history, OH's
 Business Income Deduction and ordered credit stack, and UT's taxpayer tax
 credit. Each state's known modeling gaps are documented in
-`other/state_tax_research/state_parameter_rollout.csv` (the tracker).
+`research/state_tax/state_parameter_rollout.csv` (the tracker).
 
 ### 10.3 State weights (Phase 1) — decided, not yet in production
 
@@ -453,8 +453,8 @@ for both external models are drafted in
 - [ ] The cross-model harness's raw per-year files hold only the most recent
   run's state set — partial reruns silently strip other states' stage
   diagnostics from regenerated reports (manual merge required today).
-- [ ] `research/STATUS.md` in the state research directory trails the running log;
-  the tracker CSV (`state_parameter_rollout.csv`) is the current source of
+- [ ] `research/STATUS.md` trails the running log; the tracker CSV
+  (`research/state_tax/state_parameter_rollout.csv`) is the current source of
   truth for per-state status.
 - [ ] Send the drafted TAXSIM/PolicyEngine issue reports upstream.
 

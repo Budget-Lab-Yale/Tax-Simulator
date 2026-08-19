@@ -78,7 +78,7 @@ filer/claimant flag used for the state `returns` total.
 Use the companion workflow and tracker in `research/` (start at `research/README.md`):
 
 - `research/state_tax/state_parameter_workflow.md`
-- `other/state_tax_research/state_parameter_rollout.csv`
+- `research/state_tax/state_parameter_rollout.csv`
 - `research/source_packets/TEMPLATE.md`
 
 These files exist so parameter research can proceed in parallel with the state-weights

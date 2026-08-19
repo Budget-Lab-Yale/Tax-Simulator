@@ -436,7 +436,7 @@ can proceed immediately and in parallel with Phases 1–5: source-packet assembl
 baseline YAML drafting, `reference` cleanup, worksheet-style unit tests,
 known-differences notes, and TAXSIM / PolicyEngine spot checks. Only aggregate
 validation remains weights-blocked. Track the queue in
-`other/state_tax_research/state_parameter_rollout.csv` and use
+`research/state_tax/state_parameter_rollout.csv` and use
 `research/source_packets/TEMPLATE.md` for per-state documentation.
 
 **Phase 3 — State calculator (2–3 weeks)**

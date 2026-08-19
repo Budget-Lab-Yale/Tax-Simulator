@@ -4,7 +4,7 @@
 **Scope:** the 30 coded jurisdictions, as of `ab45a6661` (state-tax branch);
 §2.1 and R6 (added 2026-08-11) map the 21 remaining jurisdictions into the
 same class structure and sequence their rollout
-**Sources:** research/STATUS.md, state_parameter_rollout.csv, research/state_tax/state_parameter_workflow.md,
+**Sources:** research/STATUS.md, research/state_tax/state_parameter_rollout.csv, research/state_tax/state_parameter_workflow.md,
 research/state_tax/notes/state_data_imputation_plan.md, research/state_tax/notes/elderly_retirement_provisions.md,
 research/state_tax/CODE_REVIEW_2026_07_17.md, jurisdictions.yaml, conformity_groups.yaml, all 30
 source packets, all `documented_not_modeled:` YAML blocks,
