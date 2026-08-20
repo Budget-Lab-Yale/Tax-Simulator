@@ -114,6 +114,14 @@ does not exist yet. Those go in `research/tools/known_external_paths.csv` with a
 `kind` and a reason, so an unresolvable citation is always a reviewed decision
 rather than a silent unknown.
 
+**It runs itself.** `.claude/settings.json` carries a `Stop` hook that runs the
+checker at the end of every Claude Code session, so an agent cannot leave the
+tree in a state it would flag. The hook is written to degrade rather than
+mislead: it loads the R module only if `Rscript` is not already on `PATH`, and
+exits silently if there is still no R, so it is inert off the cluster rather
+than noisy. A finding surfaces as a non-blocking error — the session ends and
+you see it. Review or disable it with `/hooks`.
+
 **What it does not do:** it never reads prose for meaning. Whether `STATUS.md`
 agrees with a plan is what `sot:` is for; a checker that tried would produce
 noise, and noise is how a check gets ignored.
