@@ -3,7 +3,7 @@ title: "State Individual Income Tax Module — Implementation Plan"
 role: plan
 workstream: state_tax
 status: current
-updated: 2026-08-19
+updated: 2026-08-20
 sot: self
 supersedes: []
 superseded_by: null

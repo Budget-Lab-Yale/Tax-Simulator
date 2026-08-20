@@ -3,7 +3,7 @@ title: "A state-weight-inclusive model with an updated non-filer pull — the pl
 role: plan
 workstream: state_weights
 status: current
-updated: 2026-08-19
+updated: 2026-08-20
 sot: self
 supersedes: []
 superseded_by: null

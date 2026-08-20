@@ -1,0 +1,26 @@
+# Paths cited in research/ that are not files in this repo, and why.
+#
+# check_conventions.R check 6 flags every citation that does not resolve. A
+# citation can fail to resolve for three reasons and only one is a bug: the file
+# MOVED (a bug, and the reason the check exists -- it is what found
+# pub5785_hazard.csv), it lives in ANOTHER REPO, or it does not exist YET. The
+# last two belong here, which turns a silent unknown into a reviewed decision.
+#
+# kind = cross-repo  the file is real, in a sibling repo
+# kind = planned     this repo will create it; the plan says who and when.
+#                    A `planned` entry whose file now exists is itself an error
+#                    -- remove it, or it masks a later move of that file.
+path,kind,reason
+src/impute_nonfilers.R,cross-repo,"Tax-Data. The PSZ non-filer append the residual method replaces (design memo 2.1)."
+src/project_puf.R,cross-repo,"Tax-Data. Projection stage discussed alongside the append."
+src/imputations/helpers.R,cross-repo,"Tax-Data. compute_broad_income(), which mis-places non-filers in the wealth stack."
+src/calibrate_nonfilers.R,planned,"Tax-Data, phase D. The national calibration the rework adds."
+config/target_info/baseline.csv,cross-repo,"Tax-Data. Output target schema."
+config/variable_guide/baseline.csv,cross-repo,"Tax-Data. Output column schema; cited for div_ord/div_pref."
+config/parameters.cps.yaml,cross-repo,"common_ipums_download. The shared CPS ASEC extract request (task A3)."
+docs/decisions_log.md,cross-repo,"Affordability-Index. Named as the format this decisions log matches."
+src/data/ht2.R,planned,"This repo, task F4: the HT2 half of the state_weights.R split."
+src/data/filing_model.R,planned,"This repo, task F4/C2: the filing model extracted from state_weights.R."
+src/tests/test_nonfilers.R,planned,"This repo, task E: the federal non-filer validation battery."
+config/runscripts/tests/nonfiler_ab.csv,planned,"This repo, task E: the A/B runscript the validation procedure specifies."
+config/runscripts/tests/nonfiler_cbo.csv,planned,"This repo, task E: the CBO-comparison runscript."

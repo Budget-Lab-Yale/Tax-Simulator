@@ -3,7 +3,7 @@ title: "Research corpus index"
 role: index
 workstream: cross-cutting
 status: current
-updated: 2026-08-19
+updated: 2026-08-20
 sot: self
 supersedes: []
 superseded_by: null
@@ -83,30 +83,37 @@ Rscript research/tools/render_release.R state_weights_plan
 
 ## Drift checks
 
-These four commands are the whole enforcement mechanism — there is no validator and
-no CI gate. Run them before pushing documentation changes.
+One command, ten checks. Run it before pushing documentation changes.
 
 ```bash
-# 1. exactly one plan per workstream (must print 1 for each)
-for w in state_tax state_weights; do
-  printf '%s: ' "$w"; grep -rl '^role: plan$' research/$w --include='*.md' | wc -l
-done
-
-# 2. no dangling supersedes/superseded_by target
-grep -rhoE '^(supersedes|superseded_by): *[^][]*\.(md|docx)' research --include='*.md' \
-  | sed -E 's/^[a-z_]+: *//' | sort -u \
-  | while read -r p; do [ -e "$p" ] || echo "DANGLING: $p"; done
-
-# 3. front-matter `updated:` behind the file's own last commit date
-git ls-files 'research/*.md' 'research/**/*.md' | while read -r f; do
-  fm=$(sed -n '2,20p' "$f" | grep -m1 '^updated:' | tr -d ' ' | cut -d: -f2)
-  gd=$(git log -1 --format=%ad --date=short -- "$f")
-  [ -n "$fm" ] && [ "$fm" \< "$gd" ] && echo "STALE updated: $f ($fm < $gd)"
-done
-
-# 4. nothing points at the pre-2026-08-19 locations
-git grep -n 'other/state_tax_research'   # only archived snapshots may match
-git grep -n 'docs/Income.docx'           # must be empty
+Rscript research/tools/check_conventions.R          # exits 1 on any finding
+Rscript research/tools/check_conventions.R -v       # also say what each check covered
+Rscript research/tools/check_conventions.R --check 6 # just one check
+Rscript research/tools/check_conventions.R --report-only   # print, always exit 0
 ```
 
-Check 3 catches the real failure mode: a document edited without its header bumped.
+| # | Check |
+|---|---|
+| 1 | exactly one `role: plan` per workstream |
+| 2 | front matter present on every document (artifact directories exempt) |
+| 3 | `role` / `status` / `workstream` drawn from the closed vocabularies |
+| 4 | front-matter `updated:` not behind the file's own last commit date |
+| 5 | a note with `status: open` is cited from its workstream's plan |
+| 6 | cited paths resolve |
+| 7 | `sot:` and `supersedes:` targets exist |
+| 8 | nothing outside `archive/` cites the pre-2026-08-19 locations |
+| 9 | archive names match the convention and each has an `archive/README.md` entry |
+| 10 | no living document declares itself superseded |
+
+Check 4 catches the commonest real failure: a document edited without its header
+bumped. Check 5 is the one that matters most, because an open note no plan cites
+is how outstanding work goes missing — the failure this whole tree exists to fix.
+
+Check 6 needs a way to tell a moved file from one that lives in another repo or
+does not exist yet. Those go in `research/tools/known_external_paths.csv` with a
+`kind` and a reason, so an unresolvable citation is always a reviewed decision
+rather than a silent unknown.
+
+**What it does not do:** it never reads prose for meaning. Whether `STATUS.md`
+agrees with a plan is what `sot:` is for; a checker that tried would produce
+noise, and noise is how a check gets ignored.

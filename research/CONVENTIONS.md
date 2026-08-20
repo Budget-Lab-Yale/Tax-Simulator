@@ -3,7 +3,7 @@ title: "Research documentation conventions"
 role: procedure
 workstream: cross-cutting
 status: current
-updated: 2026-08-19
+updated: 2026-08-20
 sot: self
 supersedes: []
 superseded_by: null
@@ -149,6 +149,25 @@ longer produces Word from these documents. That is deliberate: an undated render
 sitting beside its source is exactly how
 `state_weights_phase1_summary.docx` and `state_tax_implementation_plan.html` went
 stale unnoticed. Use `render_release.R`.
+
+## Enforcing all of this
+
+```bash
+Rscript research/tools/check_conventions.R
+```
+
+Ten checks over the whole tree, exiting 1 on any finding: the vocabularies above,
+one plan per workstream, front matter present on documents, `updated:` not behind
+the file's last commit, open notes cited from their plan, cited paths resolving,
+`sot`/`supersedes` targets existing, no pre-reorganization citations, archive
+naming and `archive/README.md` coverage, and no living document declaring itself
+superseded. `research/README.md` lists them; `--report-only`, `--check N` and `-v`
+are the flags.
+
+Two things it cannot do, by design. It never reads prose for meaning — that is
+what `sot:` is for. And it cannot tell a moved file from one in another repo or
+one that does not exist yet, so those are declared in
+`research/tools/known_external_paths.csv` with a kind and a reason.
 
 ## Glossary of renamed upstream things
 
