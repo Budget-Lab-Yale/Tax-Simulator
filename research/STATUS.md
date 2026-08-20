@@ -3,7 +3,7 @@ title: "State income tax workstream — status"
 role: status
 workstream: cross-cutting
 status: current
-updated: 2026-08-19
+updated: 2026-08-20
 sot: self
 supersedes: []
 superseded_by: null
@@ -230,7 +230,7 @@ Two pointers worth keeping here because the names mislead:
 `research/docx_sources/nonfiler_proposal_jii.docx` is the *narrative* case for the
 residual non-filer methodology (JI, Aug 2026) and is a **different document** from
 `research/state_weights/nonfiler_residual_design.md`, the implementation memo. And
-`research/archive/state_weights_ml_alternative.md` is cited as the origin spec of
+`research/archive/state_weights_ml_alternative_2026-07-08_superseded.md` is cited as the origin spec of
 the Phase 1 §4 harness, but its A/B-bake-off premise was reframed by the sweep into
 prior-only-vs-joint-fit — the built harness is
 `research/state_weights/scripts/{sweep,validate}_state_weights.R` (S3).
@@ -312,7 +312,7 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    `research/state_weights/scripts/sweep_state_weights.R` (part 1, the
    hyperparameter sweep) and `validate_state_weights.R` (part 2, the
    decision-relevant validation battery), which say so in their own headers. The
-   *spec* is `research/archive/state_weights_ml_alternative.md` §4 — cited as the
+   *spec* is `research/archive/state_weights_ml_alternative_2026-07-08_superseded.md` §4 — cited as the
    origin, not as an instruction, since the data refuted its A/B premise
    (`research/decisions_log.md` S3). What remains is to run it: tune the joint fit to
    the ≥99%-within-2% bar (steps/lr schedule/per-series λ; SALT and

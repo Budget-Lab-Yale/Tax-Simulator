@@ -17,7 +17,7 @@
 # Inputs (scratch): hardened_fit_2022.rds  (build_weight_inputs() output;
 # see research/state_weights/notes/state_weights_fit_issues.md). Outputs land in {SCRATCH}/sweep/.
 #
-# Metrics per config (spec: research/archive/state_weights_ml_alternative.md §4):
+# Metrics per config (spec: research/archive/state_weights_ml_alternative_2026-07-08_superseded.md §4):
 #   1 target fidelity  - within-2% share and MARD, overall and per series
 #   3 weight quality   - Kish ESS by state (min/median across states),
 #                        near-degenerate rows (max share > 0.99), share of

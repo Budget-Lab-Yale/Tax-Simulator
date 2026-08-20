@@ -3,7 +3,7 @@ title: "State Split Weights — Phase 1 Bake-off Summary"
 role: method
 workstream: state_weights
 status: current
-updated: 2026-08-19
+updated: 2026-08-20
 sot: research/state_weights/plan.md
 supersedes: []
 superseded_by: null
@@ -13,7 +13,7 @@ superseded_by: null
 
 **Date:** 2026-07-19
 **Companions:** `research/state_tax/plan.md` §2.1 (design),
-`research/archive/state_weights_ml_alternative.md` (bake-off spec and §4 harness),
+`research/archive/state_weights_ml_alternative_2026-07-08_superseded.md` (bake-off spec and §4 harness),
 `research/state_weights/notes/state_weights_fit_issues.md` (first-fit diagnosis and engine hardening),
 `research/state_weights/notes/state_weights_alternatives.md` (alternatives brainstorm).
 **Code:** `src/data/state_weights.R` (ingestion, assembly, engines),

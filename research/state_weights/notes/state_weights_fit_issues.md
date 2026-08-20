@@ -3,7 +3,7 @@ title: "State weights — issues from the first full-scale fit (2026-07-13)"
 role: notes
 workstream: state_weights
 status: current
-updated: 2026-08-19
+updated: 2026-08-20
 true_as_of: 2026-07-13
 sot: research/state_weights/plan.md
 supersedes: []
@@ -124,7 +124,7 @@ national weight under the prior rather than losing mass.
 2. Engine hardening per Issue 1; re-run; require: exact invariant, filer
    hit rate reported per series, runtime.
 3. Vectorize `fit_gradient()` and run the A/B comparison harness
-   (`research/archive/state_weights_ml_alternative.md` §4) once A is stable.
+   (`research/archive/state_weights_ml_alternative_2026-07-08_superseded.md` §4) once A is stable.
 
 ---
 

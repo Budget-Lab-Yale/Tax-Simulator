@@ -27,7 +27,7 @@
 # §2.1 "Filers vs non-filers".
 #
 # Design + rationale: research/state_tax/plan.md,
-#                     research/archive/state_weights_ml_alternative.md
+#                     research/archive/state_weights_ml_alternative_2026-07-08_superseded.md
 # =============================================================================
 
 suppressPackageStartupMessages({
@@ -1061,7 +1061,7 @@ build_split_weights <- function(tax_units, year,
 
 # --- Approach B: differentiable reweighting (matrix analytic-gradient) --------
 # torch is not installed on the cluster; this is a dependency-free implementation
-# of the identical softmax objective (research/archive/state_weights_ml_alternative.md §2). Logits
+# of the identical softmax objective (research/archive/state_weights_ml_alternative_2026-07-08_superseded.md §2). Logits
 # theta (N×S); P = softmax(theta); loss = Σ_t lambda_t ((That_t-T_t)/T_t)^2 +
 # beta * Σ_i KL(P[i,]||P0[i,]). Adam on theta.
 #

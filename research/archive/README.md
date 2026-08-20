@@ -52,7 +52,7 @@ readers, is task A1 in the to-do.
 
 ## Superseded designs
 
-**`research/archive/state_weights_ml_alternative.md`** (2026-07-08) — the A/B bake-off spec:
+**`research/archive/state_weights_ml_alternative_2026-07-08_superseded.md`** (2026-07-08) — the A/B bake-off spec:
 "define a second, ML-based method for constructing the split state weights so
 Phase 1 is a bake-off between two approaches rather than a bet on one."
 
@@ -63,6 +63,8 @@ merely worse, so "Approach A vs Approach B" collapsed into "prior-only vs
 joint-fit." The summary records the reframing, the 13-config sweep, and the
 adoption of config 7 (counts-IPF prior → gradient, β=1e-4, 95.3% within 2%,
 MARD 0.43%).
+
+*Renamed 2026-08-20* from `state_weights_ml_alternative.md` to match the `{basename}_{YYYY-MM-DD}_{reason}` convention, which postdated it by six weeks. The eleven citations across eight files were updated with it; `STATUS_2026-08-18_pre-nonfiler.md` still names the old file, which is correct — an archived snapshot records the tree as it was.
 
 *Still useful for:* the shared-invariant statement (§0) and the derivation of the
 exponential-tilting objective, both of which the production engine still

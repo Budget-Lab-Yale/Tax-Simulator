@@ -61,7 +61,7 @@ downstream joins in the per-state loop are `filter(state == st) %>% left_join(by
 ML reweighting). Both honor `Σ_st w_{i,st} = w_i` and emit the identical file format,
 so they are swappable behind `build_state_weights(method = c("calibration","gradient"))`.
 Approach B and the A/B comparison harness are specified in
-`research/archive/state_weights_ml_alternative.md`. Approach A (the baseline):
+`research/archive/state_weights_ml_alternative_2026-07-08_superseded.md`. Approach A (the baseline):
 1. Ingest SOI Historic Table 2 CSVs (latest published year, currently ~2022):
    per-state × AGI-class return counts — total (N1) AND by filing status
    (single MARS1, joint MARS2, HoH MARS4) — the number of individuals (N2;
@@ -419,7 +419,7 @@ state module conventions. Decision sign-off on §5 open items.
 **Phase 1 — State weights prototype + A/B bake-off (2–3 weeks)**
 HT2 ingestion → build BOTH Approach A (classical calibration) and Approach B
 (differentiable reweighting) behind `build_state_weights(method=)` → run the shared
-comparison harness (`research/archive/state_weights_ml_alternative.md` §4) → `state_weights_{year}.csv`
+comparison harness (`research/archive/state_weights_ml_alternative_2026-07-08_superseded.md` §4) → `state_weights_{year}.csv`
 + OTA-style diagnostics for each. Acceptance: chosen method hits targeted variables
 within 2% for ≥99% of state×stratum targets (TPC benchmark), with untargeted-variable
 MARD and downstream pilot-state liability reported honestly for both methods.
