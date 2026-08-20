@@ -66,8 +66,16 @@ branch   <- git_out('rev-parse', '--abbrev-ref', 'HEAD')
 # Sources only: releases/ is this script's own output, so including it would make
 # every render report a dirty tree. Test with any(nzchar()), not length(): git_out
 # returns '' rather than character(0) when a command prints nothing.
+#
+# shQuote() is load-bearing, not decoration. system2() joins its arguments into
+# one string and hands it to sh, so the parentheses in the :(exclude) pathspec
+# are shell metacharacters: unquoted, git is never reached, sh prints a syntax
+# error to stderr (which is discarded here), git_out returns '' and `dirty` is
+# FALSE no matter how dirty the tree is. That silently disarms the one guard
+# standing between a release and the stale-render problem this tool exists to
+# prevent. Verified 2026-08-19 by dirtying research/ and re-running.
 dirty <- any(nzchar(git_out('status', '--porcelain', '--',
-                           'research', ':(exclude)research/releases')))
+                            'research', shQuote(':(exclude)research/releases'))))
 
 front_matter_field <- function(path, field) {
   ln <- readLines(path, warn = FALSE, n = 40)
