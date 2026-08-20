@@ -700,6 +700,21 @@ affect, so they should be decided before G, not discovered after.
 
 ---
 
+## Part 2.5 — Open notes this plan owns
+
+`research/CONVENTIONS.md` requires a note with `status: open` to be cited from
+its workstream's plan. This section is that citation.
+
+| Note | Status | What it owns, and how it relates to Part 2 |
+|---|---|---|
+| `research/state_weights/notes/nonfiler_proposal_rewrite_plan.md` | **open** | Rewriting `research/docx_sources/nonfiler_proposal_jii.docx` as a co-author-facing methodology proposal. A **communication** deliverable, not a modelling task, so it does not sit on the critical path — but it depends on the record being settled, and its own §"Discrepancies between the proposal and the implementation record" is the list of places the proposal and this plan disagree. Best cut **after A6 closes D6**, when the residual method stops moving. |
+| `research/state_weights/notes/state_weights_alternatives.md` | **deferred** | Alternative weight constructions. Superseded in practice by the Phase 1 bake-off; kept for the reasoning. |
+
+`state_weights_fit_issues.md` is `status: current` — an issues log cited from
+where its findings are used, not a task list — so it is not listed here.
+
+---
+
 ## Part 3 — Critical path and honest dates
 
 ```

@@ -584,3 +584,24 @@ are implemented.
 - **Maintenance load** — 41 income-tax states × annual updates is the real long-run
   cost; the `reference` discipline and per-state test suites are what keep it
   tractable (PolicyEngine's experience).
+
+---
+
+## 7. Open and deferred notes this plan owns
+
+`research/CONVENTIONS.md` requires a note with `status: open` to be cited from
+its workstream's plan — an open note no plan points at is how outstanding work
+goes missing, which is the failure the 2026-08-19 reorganization was fixing.
+This section is that citation, and the place to look for work that is real but
+not on the phase track above.
+
+| Note | Status | What it owns, and what unblocks it |
+|---|---|---|
+| `research/state_tax/notes/state_data_imputation_plan.md` | **open** | The 11 data extensions the state calculators need, tiered by materiality. **Tier 1 is the live one**: tenure/rent/property tax (6 encoded states + the module's one structural on-form gap, MN's 2024+ renter credit), the pension source split (12 states; the military flag alone unlocks most of the list), and household-resources income (4 states). All three are one-sided biases, not noise. §6's `salt_inc_sales` risk is the same work seen from the coupled-mode side. Unblocked by nothing — it is scoped and ready. |
+| `research/state_tax/notes/ca_misc_amt_plan.md` | **deferred** (was `open`; changed 2026-08-19 to match the note's own §Sequencing) | CA miscellaneous itemized deductions and CA AMT, in that order — implementing misc without AMT overstates deductions for exactly the high-income itemizers most likely to be in AMT. **Trigger: when top-of-distribution CA output matters** (P1 production use, or CA distributional tables). Not needed for the cross-model bar, which CA already clears. |
+| `research/state_tax/notes/state_interstate_migration_design_note.md` | **deferred** | Interstate migration. No trigger set. |
+
+Notes with `status: current` (`ca_p1_readiness_analysis`, `ca_parameter_analysis`,
+`child_credit_survey`, `elderly_retirement_provisions`) are surveys cited from
+where they are used; `status: historical` notes are records. Neither kind carries
+outstanding work, so neither is listed here.

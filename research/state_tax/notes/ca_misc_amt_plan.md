@@ -2,7 +2,7 @@
 title: "CA follow-up plan: miscellaneous itemized deductions + CA AMT"
 role: notes
 workstream: state_tax
-status: open
+status: deferred
 updated: 2026-08-19
 sot: research/state_tax/plan.md
 supersedes: []
