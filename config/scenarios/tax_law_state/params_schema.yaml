@@ -271,6 +271,11 @@ scalars:
   st_ded.care_exp_ded_per_dep_cap: 0
   st_ded.care_exp_ded_dep_limit: 0
   st_ded.care_exp_ded_age_limit: -1
+  # Flat per-qualifying-member alternative to the care-expense deduction,
+  # taken instead of it when larger (MA Form 1 line 13)
+  st_ded.care_hh_member_amt: 0
+  st_ded.care_hh_member_age_limit: -1
+  st_ded.care_ded_mfs_ineligible: 0
   # Employee payroll and self-employment taxes added to the state itemized
   # base (MO-A Part 2 lines 2-7)
   st_ded.item_add_payroll: 0
@@ -313,6 +318,9 @@ scalars:
   # base: it reaches 1040 line 22 via Schedule 2 Part I, but Oregon's
   # subtraction is limited to income tax (MO and AL both leave it in)
   st_ded.fed_tax_ded_less_excess_ptc: 0
+  # Recovery rebate / economic stimulus payments reduce the deductible federal
+  # tax base (OR Form OR-40 line 10 worksheet, TY2020-TY2021)
+  st_ded.fed_tax_ded_less_rebate: 0
   st_ded.fed_tax_ded_cap: {default: .inf, units: per_return}
   st_ded.fed_tax_ded_band_base: 2   # st_income_base enum (MO: state AGI, Line 6)
   # The federal tax deduction sits INSIDE the itemized schedule rather than

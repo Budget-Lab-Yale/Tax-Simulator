@@ -177,6 +177,12 @@ fed_tax_ded:
 fed_tax_ded_less_excess_ptc:
   value: 1
   reference: 'Federal tax worksheet line 2 removes any advance premium tax credit repayment. It reaches 1040 line 22 through Schedule 2 Part I, but Oregon''s subtraction is "limited to income tax", so it comes back out -- unlike Missouri and Alabama, which both leave it in'
+fed_tax_ded_less_rebate:
+  value:
+    '2017': 0
+    '2020': 1
+    '2022': 0
+  reference: '2020 Form OR-40 instructions, line 10 worksheet step 8: "Enter any 2020 federal economic stimulus payments you received in 2020 or 2021, plus your recovery rebate credit, if any (Form 1040 or 1040-SR, line 30)", added into the total that reduces the deductible federal tax at step 9. The 2021 booklet carries the same line for the third payment ("Enter any 2021 federal economic stimulus payments you received in 2021 plus your recovery rebate credit ... Refer to your IRS Notice 1444-C"), and the 2020 booklet summary at p.5 states it plainly: "Your federal income tax subtraction may be reduced by any 2020 federal economic stimulus payments you received in 2020 or 2021." NOTE the base is the full ENTITLEMENT -- advance payments received PLUS any rebate credit still claimed on line 30 -- not just the line 30 credit, which is why the model reads it off the calculated `rebate` rather than a return line. Set only for TY2020-TY2021, the two years the worksheet carries the line; no economic stimulus existed in the other window years, and whether ORS 316.680 would reach a FUTURE rebate as a general refundable-credit offset is not something the booklets settle'
 fed_tax_ded_less_ed_ref:
   value: 1
   reference: 'Federal tax worksheet lines 6-9 reduce the subtraction by refundable credits: OR-17 2025 p.71, "Federal income tax credits, except for the EITC, reduce your federal tax subtraction." The refundable American Opportunity credit is among them'

@@ -1,0 +1,32 @@
+TAXSIM-35, Massachusetts, TY2018, married filing jointly, both
+spouses age 40, wages 60,000 each (120,000 total), no dependents.
+
+Expected: siitax = 5,467.20. Each spouse pays 4,590 of FICA
+(7.65% x 60,000), so each reaches the separate $2,000 cap on the
+Form 1 line 11 deduction, giving 4,000. Massachusetts AGI 120,000
+less 4,000 of deductions less the 8,800 joint personal exemption
+is 107,200, at 5.1% = 5,467.20.
+
+TAXSIM returns siitax = 5,569.20, which is 107,200 + 2,000 taxed at
+5.1% -- an implied deduction of 2,000, i.e. the cap applied once per
+return. The 2018 Form 1 has SEPARATE lines 11a and 11b and the
+booklet (p.10) reads: 'Enter in lines 11a and 11b the amount you,
+and your spouse if filing jointly, paid to Social Security (FICA),
+Medicare or Railroad Retirement ... you may deduct those
+contributions, up to a maximum of $2,000.' Each line carries its own
+'Not more than $2,000' instruction, so the cap is per person and
+non-transferable between spouses.
+
+Probed across four joint shapes, all TY2018 Massachusetts, showing
+the implied deduction pinned at 2,000 regardless of the second
+earner's own contributions:
+  60,000 / 0      -> implied 2,000 (correct, one earner)
+  60,000 / 60,000 -> implied 2,000, expected 4,000  (+102.00)
+  60,000 / 30,000 -> implied 2,000, expected 4,000  (+102.00)
+  60,000 / 10,000 -> implied 2,000, expected 2,765  ( +39.02)
+A single filer at 60,000 returns the correct 2,000, so the single
+case is unaffected.
+
+On our TY2018 validation sample this affects 741 records, 96.4% of
+them joint returns with median AGI 136,874, each understated by
+about 102 dollars of deduction value.

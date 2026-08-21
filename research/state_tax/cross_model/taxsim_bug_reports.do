@@ -358,6 +358,124 @@ stmt, line("Amounts are small (the 2017 childless maximum was $223) but the")
 stmt, line("age gate is categorical.")
 close_statement
 
+*==============================================================================
+* T16. Massachusetts: the Form 1 line 11 payroll/retirement-contribution
+*      deduction capped at $2,000 per RETURN rather than per person
+*==============================================================================
+clear
+set obs 1
+gen year   = 2018
+gen state  = 22
+gen mstat  = 2
+gen page   = 40
+gen sage   = 40
+gen pwages = 60000
+gen swages = 60000
+submit_case, tag(t16_ma_payroll_percap) out_dir("`out_dir'")
+
+open_statement, tag(t16_ma_payroll_percap) out_dir("`out_dir'")
+stmt, line("TAXSIM-35, Massachusetts, TY2018, married filing jointly, both")
+stmt, line("spouses age 40, wages 60,000 each (120,000 total), no dependents.")
+stmt, line("")
+stmt, line("Expected: siitax = 5,467.20. Each spouse pays 4,590 of FICA")
+stmt, line("(7.65% x 60,000), so each reaches the separate $2,000 cap on the")
+stmt, line("Form 1 line 11 deduction, giving 4,000. Massachusetts AGI 120,000")
+stmt, line("less 4,000 of deductions less the 8,800 joint personal exemption")
+stmt, line("is 107,200, at 5.1% = 5,467.20.")
+stmt, line("")
+stmt, line("TAXSIM returns siitax = 5,569.20, which is 107,200 + 2,000 taxed at")
+stmt, line("5.1% -- an implied deduction of 2,000, i.e. the cap applied once per")
+stmt, line("return. The 2018 Form 1 has SEPARATE lines 11a and 11b and the")
+stmt, line("booklet (p.10) reads: 'Enter in lines 11a and 11b the amount you,")
+stmt, line("and your spouse if filing jointly, paid to Social Security (FICA),")
+stmt, line("Medicare or Railroad Retirement ... you may deduct those")
+stmt, line("contributions, up to a maximum of $2,000.' Each line carries its own")
+stmt, line("'Not more than $2,000' instruction, so the cap is per person and")
+stmt, line("non-transferable between spouses.")
+stmt, line("")
+stmt, line("Probed across four joint shapes, all TY2018 Massachusetts, showing")
+stmt, line("the implied deduction pinned at 2,000 regardless of the second")
+stmt, line("earner's own contributions:")
+stmt, line("  60,000 / 0      -> implied 2,000 (correct, one earner)")
+stmt, line("  60,000 / 60,000 -> implied 2,000, expected 4,000  (+102.00)")
+stmt, line("  60,000 / 30,000 -> implied 2,000, expected 4,000  (+102.00)")
+stmt, line("  60,000 / 10,000 -> implied 2,000, expected 2,765  ( +39.02)")
+stmt, line("A single filer at 60,000 returns the correct 2,000, so the single")
+stmt, line("case is unaffected.")
+stmt, line("")
+stmt, line("On our TY2018 validation sample this affects 741 records, 96.4% of")
+stmt, line("them joint returns with median AGI 136,874, each understated by")
+stmt, line("about 102 dollars of deduction value.")
+close_statement
+
+*==============================================================================
+* T17. Massachusetts: a flat $2,000 line 11 payroll deduction granted to ANY
+*      return with positive gross Social Security
+*==============================================================================
+clear
+set obs 1
+gen year     = 2018
+gen state    = 22
+gen mstat    = 1
+gen page     = 70
+gen pensions = 40000
+gen gssi     = 20000
+submit_case, tag(t17_ma_payroll_no_earnings) out_dir("`out_dir'")
+
+open_statement, tag(t17_ma_payroll_no_earnings) out_dir("`out_dir'")
+stmt, line("TAXSIM-35, Massachusetts, TY2018, single, age 70, taxable pension")
+stmt, line("40,000, gross Social Security 20,000, NO wages and no")
+stmt, line("self-employment income.")
+stmt, line("")
+stmt, line("Expected: siitax = 1,779.90. This filer paid no FICA, Medicare or")
+stmt, line("Railroad Retirement contributions during the year and made no")
+stmt, line("contribution to a U.S. or Massachusetts public retirement system,")
+stmt, line("so the Form 1 line 11 deduction is zero. Massachusetts excludes")
+stmt, line("Social Security from its base entirely, leaving 40,000 less the")
+stmt, line("4,400 personal exemption and the 700 age-65 exemption = 34,900, at")
+stmt, line("5.1% = 1,779.90.")
+stmt, line("")
+stmt, line("TAXSIM returns siitax = 1,677.90 -- an implied line 11 deduction of")
+stmt, line("exactly 2,000 on a return with no earnings at all.")
+stmt, line("")
+stmt, line("The trigger is positive gross Social Security. It is a FLAT 2,000,")
+stmt, line("not a computed contribution: holding the return otherwise identical")
+stmt, line("and varying gssi alone, TY2018 Massachusetts,")
+stmt, line("  gssi      0 -> implied deduction     0 (correct)")
+stmt, line("  gssi  5,000 -> implied deduction 2,000  (7.65% of gssi = 383)")
+stmt, line("  gssi 10,000 -> implied deduction 2,000  (7.65% of gssi = 765)")
+stmt, line("  gssi 20,000 -> implied deduction 2,000  (7.65% of gssi = 1,530)")
+stmt, line("  gssi 30,000 -> implied deduction 2,000")
+stmt, line("  gssi 60,000 -> implied deduction 2,000")
+stmt, line("so it is not FICA computed on the Social Security amount either --")
+stmt, line("5,000 of Social Security draws the full 2,000.")
+stmt, line("")
+stmt, line("It is ADDITIVE on top of a legitimate wage-based deduction, so it")
+stmt, line("also hits working filers, not only retirees:")
+stmt, line("  age 70, wages 40,000, no gssi     -> implied 2,000 (correct)")
+stmt, line("  age 70, wages 40,000, gssi 20,000 -> implied 4,000 (-102.00)")
+stmt, line("  age 70, pension 40,000, no gssi   -> implied     0 (correct)")
+stmt, line("  age 70, pension 40,000, gssi 20k  -> implied 2,000 (-102.00)")
+stmt, line("  age 40, pension 40,000, no gssi   -> implied     0 (correct)")
+stmt, line("Age is irrelevant; the presence of gssi is what produces it.")
+stmt, line("")
+stmt, line("The likely source is Medicare premiums withheld from Social")
+stmt, line("Security, which Massachusetts expressly disallows: the 2018 booklet")
+stmt, line("(p.10) states that Medicare PREMIUMS withheld from Social Security")
+stmt, line("or retirement payments are not deductible, in contrast to the")
+stmt, line("Medicare tax withheld from wages, which is. If that is the source,")
+stmt, line("the amount should in any case be the premiums actually withheld")
+stmt, line("rather than the statutory cap.")
+stmt, line("")
+stmt, line("This is the same shape as the Utah retirement-credit issue reported")
+stmt, line("separately: a flat state amount keyed to positive gssi alone.")
+stmt, line("")
+stmt, line("On our TY2018 validation sample the ours-high side of this affects")
+stmt, line("496 records, 89.1% of them Social Security recipients and 71.8%")
+stmt, line("aged 65 or over, median age 69, each overstated by about 102")
+stmt, line("dollars of deduction value.")
+close_statement
+
 display as result "Bug-report artifacts written to `out_dir'/"
 display as result "For each issue: email <tag>_statement.txt + the web-tool"
 display as result "text response (from <tag>_webtool_input.csv, taxsimid = -1,"

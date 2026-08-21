@@ -2,7 +2,7 @@
 
 State: `HI`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-17`
+Last updated: `2026-08-21`
 
 > **Status note (as of 2026-08-17), kept from the packet's former Status line:**
 > ENCODED 2026-08-17 (baseline/hi/, tests HI-1..HI-8); cross-model not yet run
@@ -163,6 +163,77 @@ carried, VT convention); N-158 election; child passenger restraint $25.
 - The alternative capital-gains tax matters above ~$200k single with
   gains -- check TAXSIM models it (its HI schedule includes the alt rate?
   probe if the high-gain cells diverge at exactly 7.25% vs 11%).
+
+### Triage 2026-08-21 (first cross-model pass)
+
+Clean-subset match@$100 was 0.470-0.491 across the TAXSIM window, and the
+mismatches carry a **sign flip at TCJA**: 2017 runs high (70% positive), while
+2018, 2019 and 2020 all run low (72% negative, median -$566, p25 about
+-$2,000). A break exactly at TY2018 with no drift afterwards points at the
+itemized base, which is where Hawaii de-conforms.
+
+**The standard crosswalk-exposure exclusion is the single biggest lever**,
+taking the four cells from 0.491/0.475/0.476/0.470 to
+**0.778/0.703/0.698/0.694**. Hawaii computes its own itemized deductions on
+Hawaii AGI under an independent election, applies the $100k/$150k/$200k
+SALT-income disallowance and the fixed overall limitation, and keeps the
+misc-2% deduction after TCJA -- none of which TAXSIM can reproduce from a
+crosswalk that hands SALT inside `otheritem`. Exposed records are the ones
+that flip sign at 2018 (median +$409 in 2017, -$622 to -$646 after), which is
+consistent with de-conformity TAXSIM does not model.
+
+### Residual decomposition, 2026-08-21
+
+The residual after the exposure exclusion is ~0.70. Decomposing the 2,159
+TY2019 mismatches by where our Hawaii AGI stands against TAXSIM's `v32`:
+
+| class | n | share | median diff | has SS | what it is |
+|---|---|---|---|---|---|
+| **A** we subtract something TAXSIM does not | 579 | 26.8% | -$248 | 13% | partly identified |
+| **B** AGI gap, we subtract nothing | 60 | 2.8% | +$202 | 0% | small, unexamined |
+| **C** AGI gap, both subtract, different amounts | 689 | 31.9% | -$1,044 | 84% | the pension source split |
+| **D** AGI agrees | 831 | 38.5% | +$115 | 1% | below the AGI stage |
+
+**Class C is the documented pension source-split limitation** and is the
+largest single class. We subtract a median of $30,574 where TAXSIM subtracts
+$10,447; the difference is not gross Social Security nor 85% of it, so TAXSIM
+is applying its own partial pension exclusion rather than a Social Security
+rule. This is `pension_sub_share = 1` over-excluding the
+401(k)/employee-contribution portion, exactly as recorded in `agi.yaml`. It is
+a Tier 1 data limitation, not an encoding error, and it clears when the
+pension source split lands
+(`research/state_tax/notes/state_data_imputation_plan.md`).
+
+**Class A is partly the model-wide US-obligation interest assumption.** Of the
+579, 209 have a subtraction equal to exactly 15% of taxable interest -- the
+`sub_us_int` share assumption introduced in the CA work. The existing
+ALL-states exclusion only reaches records with `txbl_int > 5,000`, so these
+sit under that bar and still break the $100 tolerance. The other ~64% of class
+A is not yet identified.
+
+**Class D is not yet attributed and the credit comparison cannot settle it.**
+AGI agrees, the standard deduction agrees on 85%, and the median difference is
+only +$115. The credit totals disagree on 53% -- but the sign is wrong for a
+credit story: we appear to grant *more* credits (median gap +$594) while
+simultaneously computing *higher* tax, which cannot both be true. `v40` looks
+not to carry Hawaii's full credit set, the same way `v36` does not carry
+Massachusetts's payroll deduction. **Class D needs a synthetic TAXSIM probe,
+not more residual arithmetic** -- the approach that resolved the Massachusetts
+payroll classes.
+
+Two corrections to earlier readings, recorded so they are not repeated:
+
+- `st_retirement_excl` and `st_retire_exempt` are indeed zero for Hawaii, but
+  that is not a puzzle: the pension exclusion reaches Hawaii AGI through
+  `st_subtractions` (nonzero on 35% of residual records), which is where
+  `pension_sub_share` lands.
+- A `v35 > 0` reading of TAXSIM's itemized amount does **not** mean TAXSIM
+  elected to itemize. On 85.7% of the residual `v35 > 0` while our
+  `st_item_ded` is zero, which looks alarming until you notice `v35`'s median
+  there is $981 against a $2,200 standard deduction -- TAXSIM computed an
+  itemized amount and then, correctly, did not use it. The `(st_itemizing |
+  v35 > 0)` form in the known-difference predicates is a deliberately broad
+  *exposure* test, not an election claim.
 
 ## Aggregate validation notes
 

@@ -54,6 +54,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'ctc_ref',            # (dbl)  additional (refundable) child tax credit
     'liab_niit',          # (dbl)  net investment income tax
     'excess_ptc',         # (dbl)  excess advance premium tax credit repayment
+    'rebate',             # (dbl)  recovery rebate / economic stimulus entitlement
     'liab_pr_ee',         # (dbl)  employee share of payroll taxes (MO itemized add-on)
     'liab_seca',          # (dbl)  self-employment tax (MO itemized add-on)
 
@@ -175,6 +176,9 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.care_exp_ded_per_dep_cap', # (dbl) per-qualifying-dependent expense cap
     'st_ded.care_exp_ded_dep_limit', # (int) maximum number of qualifying dependents
     'st_ded.care_exp_ded_age_limit', # (int) maximum dependent age to qualify
+    'st_ded.care_hh_member_amt',     # (dbl) flat per-qualifying-member alternative to the expense deduction (MA $3,600)
+    'st_ded.care_hh_member_age_limit', # (int) maximum dependent age for the flat alternative (MA 11)
+    'st_ded.care_ded_mfs_ineligible', # (int) both care deductions barred to married filing separately (MA)
     'st_ded.item_add_payroll',       # (int) payroll/SE taxes added to the state itemized base (MO)
     'st_ded.payroll_ded_cap',        # (dbl) per-person deduction of payroll/retirement contributions (MA $2,000)
     'st_ded.prop_tax_ded_cap',       # (dbl) capped property tax deduction (NJ $10,000 then $15,000)
@@ -191,6 +195,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
     'st_ded.fed_tax_ded_less_ed_ref', # (int) refundable education credit reduces the base (MO/AL)
     'st_ded.fed_tax_ded_less_ptc',   # (int) net premium tax credit reduces the base (MO, NOT AL)
     'st_ded.fed_tax_ded_less_excess_ptc', # (int) excess APTC repayment stripped from the base (OR)
+    'st_ded.fed_tax_ded_less_rebate', # (int) recovery rebate / stimulus reduces the base (OR 2020-2021)
     'st_ded.fed_tax_ded_cap',        # (dbl) cap on the deduction (filing-status mapped)
     'st_ded.fed_tax_ded_band_base',  # (int) share-band income base (st_income_base enum)
     'st_ded.fed_tax_ded_in_itemized' # (int) the deduction sits INSIDE itemized deductions (MT)
@@ -392,6 +397,7 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
         liab_bc - nonref +
           st_ded.fed_tax_ded_add_niit * liab_niit -
           st_ded.fed_tax_ded_less_excess_ptc * excess_ptc -
+          st_ded.fed_tax_ded_less_rebate  * rebate -
           st_ded.fed_tax_ded_less_eitc    * eitc -
           st_ded.fed_tax_ded_less_ctc_ref * ctc_ref -
           st_ded.fed_tax_ded_less_ed_ref  * ed_ref -
@@ -559,10 +565,27 @@ calc_st_ded = function(tax_unit, fill_missings = F) {
       ),
       st_care_ei_limit = pmax(0, if_else(filing_status == 2,
                                          pmin(ei1, ei2), ei1)),
-      st_care_exp_ded = st_ded.care_exp_ded *
-        pmin(care_exp,
-             st_care_n_qual * st_ded.care_exp_ded_per_dep_cap,
-             st_care_ei_limit),
+
+      # Flat per-qualifying-member alternative to the expense deduction
+      # (MA Form 1 line 13, $3,600 each for at most two household members
+      # under 12): no expenses required and no earned-income limit, its own
+      # age test, and mutually exclusive with the expense branch -- "you may
+      # claim an amount in line 13 only if there is no entry in line 12", so
+      # a filer takes whichever is larger. Members qualifying by age 65-plus
+      # or disability are not counted (unobserved; known-difference)
+      st_care_hh_n_qual = pmin(
+        (!is.na(dep_age1) & dep_age1 <= st_ded.care_hh_member_age_limit) +
+        (!is.na(dep_age2) & dep_age2 <= st_ded.care_hh_member_age_limit) +
+        (!is.na(dep_age3) & dep_age3 <= st_ded.care_hh_member_age_limit),
+        st_ded.care_exp_ded_dep_limit
+      ),
+      st_care_exp_ded = pmax(
+        st_ded.care_exp_ded *
+          pmin(care_exp,
+               st_care_n_qual * st_ded.care_exp_ded_per_dep_cap,
+               st_care_ei_limit),
+        st_care_hh_n_qual * st_ded.care_hh_member_amt
+      ) * (1 - st_ded.care_ded_mfs_ineligible * (filing_status == 3)),
 
       # Retirement exemption taken as a DEDUCTION rather than an AGI
       # subtraction (MO-1040 line 8, from MO-A Part 3). Placement matters:

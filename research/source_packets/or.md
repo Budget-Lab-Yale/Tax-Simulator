@@ -2,7 +2,7 @@
 
 State: `OR`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-18`
+Last updated: `2026-08-21`
 
 ## Scope
 
@@ -177,13 +177,123 @@ Last updated: `2026-08-18`
 ## Cross-model validation notes
 
 - TAXSIM years to compare: 2017-2020; PolicyEngine 2021-2024
-- Expected mismatch reasons: the kicker will dominate any TY2018, TY2020, TY2022
-  or TY2024 cell where the external model includes it and we do not -- check
-  first whether TAXSIM and PolicyEngine model it at all, because if they do the
-  Oregon cells cannot clear without a lagged-liability approximation. Beyond
-  that, the WFHDC and retirement income credits, the unmodelled special medical
-  subtraction, and the federal pension subtraction will show in older and
-  lower-income cells respectively.
+- Expected mismatch reasons: the kicker, then the WFHDC and retirement income
+  credits, the unmodelled special medical subtraction, and the federal pension
+  subtraction in older and lower-income cells.
+
+### Triage 2026-08-21 (first cross-model pass)
+
+Two causes, and they separate cleanly.
+
+**1. The kicker lands on the TY2019 return, not the even years.** The advance
+note above guessed TY2018/2020/2022/2024; that is wrong, and the mechanism is
+why: the kicker is credited on the *return* whose biennium produced the
+surplus, computed from the PRIOR year's liability -- 17.171% of TY2018
+liability appears on the TY2019 return. Among non-itemizers with liability
+above $500, `diff / st_tax_pre_credit` has a mode at exactly **0.172
+(n = 3,124)**, and the same ratio is exactly **0.000 in 2017, 2018 and 2020**.
+So TAXSIM models the kicker only in 2019 within this window -- including *not*
+modelling it for TY2017, when Oregon in fact paid a kicker. Excluding the
+affected records takes the 2019 cell from 0.268 to **0.999**, which attributes
+the whole of that year's gap to this one provision.
+
+The kicker is excluded in the harness (`known_differences.csv`, OR/taxsim
+2019) rather than treated as permanent: Tax-Simulator runs years in sequence
+over the same tax units, so prior-year Oregon liability *is* available in a
+production run even though a cross-sectional harness cell cannot see it. A
+plan item tracks modelling it.
+
+**2. Itemizers are the standard crosswalk-exposure class.** In kicker-free
+2018, non-itemizers match at **0.910** and itemizers at **0.128**. Among
+records both models itemize, the state itemized-deduction gap correlates with
+`xw_unhanded_item` at **r = 0.975**, and only 0.2% of those records agree on
+the deduction at all (gap p10 -5,610, p90 +17,152). Oregon elects
+independently of the federal return and Schedule OR-A strips state income tax,
+so the exposed population includes federal standard-deduction takers -- the
+same shape as DC, CA, DE, NY, MN and NC. Excluded via the standard exposure
+predicate.
+
+**After both exclusions: 2017 0.891, 2018 0.904, 2019 0.999, 2020 0.640.**
+
+### TY2020: the economic stimulus reduces the federal tax subtraction (2026-08-21)
+
+2020 was the weak cell after the two exclusions above, and the cause is a
+third, unrelated one -- an encoding gap of **ours**.
+
+Backing TAXSIM's implied federal tax subtraction out of its own intermediates
+(`v32 - v36 - max(v34, v35) - v33`; Oregon's `v33` is 0 in every year, its
+exemptions being a credit) and comparing it with our `st_fed_tax_ded`:
+
+| year | we agree | median gap (ours - theirs) |
+|---|---|---|
+| 2017 | 66.2% | 0 |
+| 2018 | 65.4% | 0 |
+| 2020 | **35.2%** | **+1,030** |
+
+Among the 2020 mismatches only 12.7% agree and the median gap is **+1,800**,
+and that gap times the 8.75% bracket rate **explains 92.9% of the liability
+difference**. We were subtracting too much federal tax.
+
+$1,800 is the TY2020 recovery rebate for a single filer ($1,200 EIP1 + $600
+EIP2), and the per-cell medians confirm it -- single filers with no
+dependents, the largest cell at n = 1,134, sit at a median gap of exactly
+1,800. The remaining cells run below their nominal entitlements, which is what
+the rebate's own AGI phase-outs produce.
+
+**Oregon requires this and we were not doing it.** The 2020 Form OR-40
+instructions, line 10 worksheet step 8: *"Enter any 2020 federal economic
+stimulus payments you received in 2020 or 2021, plus your recovery rebate
+credit, if any (Form 1040 or 1040-SR, line 30)"*, added at step 9 into the
+total that reduces the deductible federal tax; the booklet summary states it
+plainly at p.5. The 2021 booklet carries the same line for the third payment,
+citing IRS Notice 1444-C.
+
+Encoded as a new generic `st_ded.fed_tax_ded_less_rebate`, on for TY2020-2021
+only, reading the model's existing `rebate` variable -- the federal baseline
+already computes it at $1,800 per adult plus $1,100 per dependent for 2020 and
+$1,400 for 2021, with the statutory phase-outs, so no new input was needed.
+Tests OR-8 (2020 offset), OR-9 (2019 unaffected), OR-10 (2021 offset).
+
+#### Result (re-run 2026-08-21, job 22984034)
+
+| cell | before | after |
+|---|---|---|
+| 2020 TAXSIM | 0.640 | **0.918** |
+| 2021 PolicyEngine | 0.712 | **0.877** |
+
+**The 2021 PolicyEngine cell is the strongest evidence the fix is right.** It
+was not the cell the fix was diagnosed on, it is a different tax year, and it
+is checked against a *different external model* -- yet encoding Oregon's rule
+moved it 16.5 points. Two independent models both apply the stimulus offset
+and we now agree with both.
+
+Oregon's TAXSIM window now reads 0.891 / 0.904 / 0.999 / 0.918 and the
+PolicyEngine window 0.877 / 0.805 / 0.837 / 0.832. Still short of the bar in
+every cell but one, but no longer with a known unencoded provision in it.
+
+Caveat on the 2019 cell: its 0.999 rests on `n_clean` = 1,360 rather than the
+~6,900 of the other years, because the kicker exclusion removes every record
+with liability. It is a real result on a small residual population, not a
+whole-year clearance.
+
+Note the base is the full **entitlement** -- advance payments received *plus*
+any rebate credit still claimed on line 30 -- not just the line 30 credit,
+which is why the parameter reads the calculated `rebate` rather than a return
+line. For most filers the payments were advanced and line 30 is zero.
+
+Two false starts worth recording so they are not repeated. The taxable-income
+gaps first looked like round multiples of 500, which was an artifact of
+binning at 500 (only 25 records sit exactly on -2,000; the distribution is
+continuous). And a first pass at the rebate hypothesis was wrongly dismissed
+because it was tested on medians over *all* records, where the affected subset
+is diluted; the signature only appears once the test is restricted to the
+mismatches.
+
+**Other states with a federal tax deduction.** Missouri's 2020 MO-1040
+instructions contain no mention of stimulus, economic impact payments or the
+recovery rebate credit, so its flag correctly stays off. Alabama's 2020
+booklet is not in the NBER archive and Alabama's treatment is **unverified**;
+its flag is off by default, which should be checked when Alabama is triaged.
 
 ## Aggregate validation notes
 

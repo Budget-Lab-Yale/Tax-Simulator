@@ -67,6 +67,15 @@ config/interfaces/output_roots.yaml
 research/state_tax/cross_model/cache/
 research/state_tax/cross_model/results/raw/
 
+# taxsim_bug_reports.do writes its Stata working files to the working
+# directory, and the protocol says to run it from the repo root. The
+# email-ready artifacts it produces under cross_model/bug_reports/ ARE
+# committed; these four are byproducts of the ado round-trip.
+/taxsim_bug_reports.log
+/taxsim_out.dta
+/txpydata.raw
+/results.raw
+
 # Generated document renders. Markdown/Rmd is the source of truth in every case.
 # Already-tracked files are unaffected; this stops new ones being swept in.
 docs/*.docx

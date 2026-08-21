@@ -6,15 +6,59 @@
 # deductions, then to the exemptions in exempt.yaml. There is no line for a
 # standard or itemized deduction anywhere on Form 1 in any year 2017-2025.
 #
-# Of that enumerated list, only one item is reconstructible from the
-# microdata: the deduction for the filer's own payroll and public-retirement
-# contributions, capped at $2,000 per person. The rental deduction is
-# rent-based and so waits on the Tier 1 imputation, and the rest are
-# unobserved behavioural amounts.
+# Of that enumerated list, two items are reconstructible from the microdata:
+# the deduction for the filer's own payroll and public-retirement
+# contributions, capped at $2,000 per person (line 11), and the TY2017-TY2020
+# dependent-care regime (lines 12 and 13). The rental deduction is rent-based
+# and so waits on the Tier 1 imputation, and the rest are unobserved
+# behavioural amounts.
 
 payroll_ded_cap:
   value: 2000
   reference: '2024 booklet p.10 (Line 11): "If you have paid into any of the retirement systems listed above during 2024, you may deduct those contributions, up to a maximum of $2,000. Enter in lines 11a and 11b the amount you, and your spouse if filing jointly, paid to Social Security (FICA), Medicare or Railroad Retirement and the U.S. or Massachusetts [public retirement systems]." Form 1 line 11 reads "Not more than $2,000" in 2017 and in 2025 alike -- the cap is per person, non-transferable between spouses, and unchanged across the window'
+
+# Form 1 lines 12 and 13: the TY2017-TY2020 dependent-care regime. The two
+# lines are alternatives -- "You may claim an amount in line 13 only if there
+# is no entry in line 12" -- so the filer takes whichever is larger, which is
+# how the generic care-deduction component treats them. Both were replaced by
+# small refundable credits for TY2021-TY2022 and then by the Child and Family
+# Tax Credit from TY2023, so every parameter here goes to zero in 2021.
+
+care_exp_ded:
+  value:
+    '2017': 1
+    '2021': 0
+  reference: '2018 booklet p.13 (Line 12, "Child Under Age 13, or Disabled Dependent/Spouse Care Expenses"): "Massachusetts allows taxpayers to exceed the federal limit on employment-related expenses for the care of a qualified child under the age of 13, a disabled dependent or a disabled spouse." Line 12 disappears from the booklet for TY2021, when the deduction became the refundable credit in credits.yaml'
+care_exp_ded_per_dep_cap:
+  value:
+    '2017': 4800
+    '2021': 0
+  reference: '2018 booklet p.13 (Line 12): "The maximum deduction is $4,800 for one qualifying individual, and $9,600 for two or more qualifying individuals." Verified verbatim in the TY2017, TY2018, TY2019 and TY2020 booklets -- the amounts are unindexed and identical in all four years'
+care_exp_ded_dep_limit:
+  value:
+    '2017': 2
+    '2021': 0
+  reference: '2018 booklet p.13 (Line 12 worksheet step 6, "Not to exceed more than $4,800 for one qualifying person or $9,600 for two or more persons") and p.13 (Line 13a, "Enter the number of qualified dependents in line 13a, not to exceed two"). Both lines cap the count at two, so the one parameter serves both branches'
+care_exp_ded_age_limit:
+  value:
+    '2017': 12
+    '2021': 0
+  reference: 'IRC 21 qualifying-person definition (under age 13), adopted by the line 12 heading "Child Under Age 13". Distinct from the line 13 age test below -- the two lines do NOT share a cutoff'
+care_hh_member_amt:
+  value:
+    '2017': 3600
+    '2021': 0
+  reference: '2018 booklet p.13 (Line 13): "You may deduct $3,600 for a dependent member of household, or $7,200 for two or more dependents, under age 12, or dependent age 65 or over (not you or your spouse) as of December 31, 2018, or disabled dependent." Verified verbatim in the TY2017, TY2018, TY2019 and TY2020 booklets. Unlike line 12 this requires no expenditure at all, which is why it is the binding branch for most filers'
+care_hh_member_age_limit:
+  value:
+    '2017': 11
+    '2021': 0
+  reference: '2018 booklet p.13 (Line 13 heading): "Dependent Member(s) of Household Under Age 12". UNDER 12, i.e. age <= 11 -- one year younger than the line 12 test, and a common transcription error'
+care_ded_mfs_ineligible:
+  value:
+    '2017': 1
+    '2021': 0
+  reference: '2018 booklet p.13: line 12 "You cannot claim this deduction if married filing a separate U.S. Form 1040"; line 13 "Only if single, head of household or married filing jointly. You cannot claim this deduction if married filing a separate return." The bar applies to both branches'
 
 documented_not_modeled:
   public_retirement_contributions:
@@ -27,8 +71,10 @@ documented_not_modeled:
     reference: 'Form 1 line 14 deducts 50% of rent paid on a Massachusetts principal residence, capped at $3,000 per return ($1,500 married filing separately) through TY2022 and $4,000 ($2,000) from TY2023 (2023 booklet p.3: "the maximum amount of the rental deduction is $4,000 ... Previously ... $3,000"). Rent paid is a Tier 1 imputation target [understates deductions for the roughly one-third of Massachusetts filers who rent -- worth up to $200 of tax at the 5% rate. The largest data-blocked Massachusetts item after the circuit breaker]'
   commuter_deduction:
     reference: 'Schedule Y deducts tolls and transit passes above a $150 floor, capped at $750 ($1,500 married filing jointly), constant across the window. Commuting expenditure is not a model input'
-  dependent_care_deduction_2017_2020:
-    reference: 'THIS CHANGED REGIME TWICE and secondary sources describe only the last step. For TY2017-TY2020 dependent care and household dependents were DEDUCTIONS worth up to $4,800 for one qualifying individual and $9,600 for two or more, and $3,600 per dependent (two maximum) respectively. For TY2021-TY2022 they became small refundable CREDITS ($240/$480 and $180/$360). From TY2023 both were replaced by the Child and Family Tax Credit in credits.yaml. The TY2017-2022 regimes are not modeled [materially understates deductions and credits for families with young or dependent-care-eligible members in those six years -- the single largest year-specific gap in the Massachusetts encoding]'
+  dependent_care_qualifiers_by_age_65_or_disability:
+    reference: 'Line 13 counts a "dependent age 65 or over (not you or your spouse) ... or disabled dependent" alongside the under-12 members, and line 12 counts a disabled dependent or disabled spouse. Neither disability nor a dependent parent is a model input, so only the under-12 (line 13) and under-13 (line 12) members are counted [understates the deduction for filers supporting an elderly or disabled dependent. The same unobserved-qualifier limitation the VA care-expense deduction carries]'
+  dependent_care_credits_2021_2022:
+    reference: 'THIS REGIME CHANGED TWICE and secondary sources describe only the last step. The TY2017-TY2020 DEDUCTIONS above are now encoded. For TY2021-TY2022 they became small refundable CREDITS ($240 for one qualifying individual / $480 for two or more, and $180 / $360 respectively); from TY2023 both were replaced by the Child and Family Tax Credit in credits.yaml. Only the two-year TY2021-TY2022 credit step is still unmodeled [worth at most $480 a return, an order of magnitude smaller than the deductions it replaced]'
   other_schedule_y_deductions:
     reference: 'Schedule Y also carries the college tuition deduction (amounts above 25% of Massachusetts AGI), the undergraduate student loan interest deduction, employee business expenses, the self-employed health insurance deduction, moving expenses, alimony paid, and a deduction for contributory pension income from a reciprocal state. None is separable from federal amounts in the microdata, and several have Massachusetts-specific bases'
   no_itemized_deduction:

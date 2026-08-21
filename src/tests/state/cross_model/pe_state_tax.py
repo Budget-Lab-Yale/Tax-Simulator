@@ -6,7 +6,7 @@ Usage:
 
 Input CSV (one row per record x state; written by cross_model_pe_leg() in
 src/tests/state/test_state_cross_model.R):
-    rec_id, state, joint, page, sage, n_dep, dep_ages ("5;8" or ""),
+    rec_id, state, joint, mfs, page, sage, n_dep, dep_ages ("5;8" or ""),
     pwages, swages, psemp, ssemp,
     taxable_interest, tax_exempt_interest,
     qualified_dividends, ordinary_dividends, stcg, ltcg,
@@ -179,9 +179,24 @@ def build_situation(rows, year):
             else:
                 group_values.setdefault(entity, {})[var] = {yr: val}
 
-        # Group entities: one instance of each per record
+        # Group entities: one instance of each per record.
+        #
+        # filing_status is normally derived by PolicyEngine from the marital
+        # unit and dependents, which recovers JOINT and HEAD_OF_HOUSEHOLD on
+        # its own. It cannot recover married-filing-separately: an MFS record
+        # is a one-person tax unit and nothing in the situation distinguishes
+        # it from a single filer, so PE's formula defaults it to SINGLE. That
+        # is only harmless where a state taxes MFS exactly as single.
+        # Wisconsin does not -- its standard deduction schedule for MFS has a
+        # lower maximum, a much lower phase-out start and a steeper rate, so
+        # the default silently gave MFS filers the single schedule and left
+        # the WI PolicyEngine cells at ~0.80 with an MFS mismatch rate of
+        # ~0.71 against ~0.05 for every other status. Set it explicitly.
+        tax_unit_values = dict(group_values.get("tax_unit", {}))
+        if int(float(row.get("mfs", 0))) == 1:
+            tax_unit_values["filing_status"] = {yr: "SEPARATE"}
         situation["tax_units"][f"t{rid}"] = {
-            "members": members, **group_values.get("tax_unit", {})}
+            "members": members, **tax_unit_values}
         situation["households"][f"h{rid}"] = {
             "members": members,
             "state_name": {yr: row["state"].upper()},

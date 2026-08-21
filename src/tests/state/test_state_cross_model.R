@@ -287,8 +287,10 @@ cross_model_pe_leg = function(sampled, states, year, venv_python, cache_dir) {
   # Runs sampled records through PolicyEngine US via the python driver
   # (src/tests/state/cross_model/pe_state_tax.py). Inputs use the
   # same concept set as the TAXSIM crosswalk so both external models see
-  # identical records. MFS records are modeled as single filers in PE
-  # (documented simplification).
+  # identical records. Married-filing-separately records are passed through
+  # explicitly (`mfs`) and set as SEPARATE in the driver: PE derives JOINT and
+  # HEAD_OF_HOUSEHOLD from the situation but cannot derive MFS, and defaulting
+  # it to SINGLE is wrong wherever a state's MFS schedule differs (WI).
   #
   # Parameters:
   #   - sampled (df)     : sampled post-federal tax units
@@ -313,6 +315,13 @@ cross_model_pe_leg = function(sampled, states, year, venv_python, cache_dir) {
         rec_id = id,
         state  = st,
         joint  = as.integer(filing_status == 2),
+        # PE derives JOINT and HEAD_OF_HOUSEHOLD from the situation, but it
+        # cannot derive married-filing-separately: an MFS record is a
+        # one-person tax unit indistinguishable from a single filer, so PE
+        # defaults it to SINGLE. Harmless only where a state taxes MFS as
+        # single; Wisconsin does not. Passed through and set explicitly in
+        # pe_state_tax.py
+        mfs    = as.integer(filing_status == 3),
         page   = age1,
         sage   = age2,
         dep_ages = pmap_chr(
@@ -349,7 +358,7 @@ cross_model_pe_leg = function(sampled, states, year, venv_python, cache_dir) {
         charitable_noncash = char_noncash,
         childcare_expenses = care_exp
       ) %>%
-      select(rec_id, state, joint, page, sage, n_dep, dep_ages,
+      select(rec_id, state, joint, mfs, page, sage, n_dep, dep_ages,
              pwages, swages, psemp, ssemp,
              taxable_interest, tax_exempt_interest,
              qualified_dividends, ordinary_dividends, stcg, ltcg,
@@ -755,8 +764,11 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
 
     # Re-attach stratum labels and federal-alignment variables for breakdowns
     # and the clean-subset metrics, plus exposure covariates (age, SS,
-    # dependents) so known-difference predicates can key on who a documented
-    # external-model bug hits rather than on the outcome it produces
+    # dependents, per-spouse earned income) so known-difference predicates can
+    # key on who a documented external-model bug hits rather than on the
+    # outcome it produces. ei1/ei2 are here for the Massachusetts line 11
+    # per-person payroll cap, whose affected population is two-earner joint
+    # returns and cannot be identified from filing status alone
     # xw_unstripped_salt rides to TAXSIM inside otheritem, where no state
     # calculation can identify it as SALT to strip or cap; xw_unhanded_item
     # (investment interest + Schedule A "other") has no TAXSIM input at all.
@@ -781,7 +793,8 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                            abs(other_item_ded_potential) + salt_pers) %>%
                   select(id, filing_status, agi_stratum, agi, txbl_inc, eitc,
                          exempt_int, state_ref, age1, age2, gross_ss, n_dep,
-                         ui, txbl_int, xw_unstripped_salt, xw_unhanded_item,
+                         ui, txbl_int, ei1, ei2,
+                         xw_unstripped_salt, xw_unhanded_item,
                          xw_pe_unhanded_item),
                 by = 'id')
 

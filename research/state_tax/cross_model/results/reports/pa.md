@@ -1,6 +1,6 @@
 # Cross-model validation: PA
 
-Class: broad | Generated: 2026-08-16 | Verdict: **NEEDS REVIEW**
+Class: broad | Generated: 2026-08-21 | Verdict: **NEEDS REVIEW**
 
 Acceptance: match@$100 >= 95% in every canonical-window cell
 (2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where
@@ -10,42 +10,42 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       | 16848|   12092|   0.4612|    0.6100|         0.5084|          0.6635|          0.1981|         26.2362|   1043.2954|
+| 2017|taxsim       | 16848|   12092|   0.4494|    0.5928|         0.4974|          0.6526|          0.1976|         32.2319|   1311.0588|
 | 2017|taxsim       |  3665|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       | 16697|   12037|   0.4560|    0.6055|         0.5020|          0.6567|          0.1940|         28.9838|    970.8726|
+| 2018|taxsim       | 16697|   12037|   0.4452|    0.5889|         0.4911|          0.6453|          0.1931|         35.1055|   1137.9914|
 | 2018|taxsim       |  3818|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       | 16513|   11930|   0.4641|    0.6137|         0.5095|          0.6636|          0.1975|         25.8149|    938.6653|
+| 2019|taxsim       | 16513|   11930|   0.4527|    0.5969|         0.4975|          0.6521|          0.1967|         31.9536|   1102.4157|
 | 2019|taxsim       |  4001|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       | 16529|   11502|   0.4366|    0.5937|         0.4816|          0.6445|          0.1905|         33.8560|   1036.4810|
+| 2020|taxsim       | 16529|   11502|   0.4284|    0.5795|         0.4734|          0.6343|          0.1897|         40.6253|   1221.6010|
 | 2020|taxsim       |  3984|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2021|policyengine |  1172|     261|   0.6920|    0.7381|         0.8774|          0.8927|          0.1519|          0.0035|    602.5665|
+| 2021|policyengine |  1172|     261|   0.6655|    0.7056|         0.8697|          0.8889|          0.1502|          0.0036|    946.9337|
 | 2021|policyengine |   364|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2022|policyengine |  1141|     300|   0.7020|    0.7520|         0.8567|          0.8867|          0.1560|          0.0035|    612.8422|
+| 2022|policyengine |  1141|     300|   0.6801|    0.7248|         0.8467|          0.8767|          0.1543|          0.0037|    926.7743|
 | 2022|policyengine |   389|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2023|policyengine |  1157|     336|   0.7001|    0.7398|         0.8006|          0.8274|          0.1435|          0.0033|    159.1025|
+| 2023|policyengine |  1157|     336|   0.6819|    0.7208|         0.7857|          0.8125|          0.1417|          0.0034|    317.4994|
 | 2023|policyengine |   376|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2024|policyengine |  1150|     347|   0.6757|    0.7226|         0.8329|          0.8646|          0.1209|          0.0036|    314.1410|
+| 2024|policyengine |  1150|     347|   0.6557|    0.6991|         0.8184|          0.8530|          0.1191|          0.0037|    680.1664|
 | 2024|policyengine |   381|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 
 ## Mismatch stage diagnosis (TAXSIM |diff| > $15)
 
 | year|fed_aligned |stage           |    n|
 |----:|:-----------|:---------------|----:|
-| 2017|TRUE        |1 state AGI     | 6775|
+| 2017|TRUE        |1 state AGI     | 6926|
 | 2017|TRUE        |6 other credits |   60|
-| 2017|FALSE       |1 state AGI     | 5674|
+| 2017|FALSE       |1 state AGI     | 5758|
 | 2017|FALSE       |6 other credits |   78|
-| 2018|TRUE        |1 state AGI     | 6914|
+| 2018|TRUE        |1 state AGI     | 7077|
 | 2018|TRUE        |6 other credits |   45|
-| 2018|FALSE       |1 state AGI     | 5710|
+| 2018|FALSE       |1 state AGI     | 5772|
 | 2018|FALSE       |6 other credits |   56|
-| 2019|TRUE        |1 state AGI     | 6816|
+| 2019|TRUE        |1 state AGI     | 6980|
 | 2019|TRUE        |6 other credits |   46|
-| 2019|FALSE       |1 state AGI     | 5742|
+| 2019|FALSE       |1 state AGI     | 5799|
 | 2019|FALSE       |6 other credits |   64|
-| 2020|TRUE        |1 state AGI     | 6974|
+| 2020|TRUE        |1 state AGI     | 7085|
 | 2020|TRUE        |6 other credits |   52|
-| 2020|FALSE       |1 state AGI     | 6049|
+| 2020|FALSE       |1 state AGI     | 6102|
 | 2020|FALSE       |6 other credits |   71|
 
 ## Known differences applied

@@ -4168,6 +4168,53 @@ test_state_calc = function() {
            expect = list(st_txbl_inc = 13070, st_eitc = 1200, st_ctc = 440),
            label = 'MA-9 2024 earned income credit at 40% and the family credit')
 
+  # MA-10: the TY2017-2020 household-member deduction (Form 1 line 13), the
+  # branch that needs no expenditure at all. 2018 single, wages 50,000 with
+  # 3,825 of employee payroll tax and one dependent aged 5: deductions are the
+  # 2,000 payroll cap plus 3,600 for the one under-12 member, exemptions are
+  # 4,400 plus 1,000 for the dependent, so taxable income is 50,000 - 5,600 -
+  # 5,400 = 39,000 and tax is 5.1% x 39,000 = 1,989
+  run_case('MA', 2018,
+           list(agi = 50000, wages1 = 50000, ei1 = 50000, liab_pr_ee = 3825,
+                n_dep = 1, dep_age1 = 5),
+           expect = list(st_ded = 5600, st_exempt = 5400,
+                         st_txbl_inc = 39000, liab_st_iit = 1989.00),
+           label = 'MA-10 2018 household-member deduction of $3,600')
+
+  # MA-11: line 12 beats line 13, and the count cap binds at two. 2019 joint,
+  # wages 60,000 and 40,000, 7,650 of employee payroll tax, two dependents
+  # aged 4 and 8 and 12,000 of care expenses. Line 12 allows 2 x 4,800 =
+  # 9,600 (under the 40,000 lesser-earner limit and under the 12,000 spent),
+  # line 13 would allow only 2 x 3,600 = 7,200, so the larger 9,600 is taken.
+  # The payroll deduction reaches its 2,000 cap on each spouse's share of the
+  # 7,650, so deductions are 4,000 + 9,600 = 13,600, exemptions 8,800 + 2,000,
+  # taxable income 75,600 and tax 5.05% x 75,600 = 3,817.80
+  run_case('MA', 2019,
+           list(agi = 100000, filing_status = 2, wages1 = 60000,
+                wages2 = 40000, ei1 = 60000, ei2 = 40000, liab_pr_ee = 7650,
+                n_dep = 2, dep_age1 = 4, dep_age2 = 8, care_exp = 12000),
+           expect = list(st_ded = 13600, st_exempt = 10800,
+                         st_txbl_inc = 75600, liab_st_iit = 3817.80),
+           label = 'MA-11 2019 care-expense branch taken over the flat one')
+
+  # MA-12: both branches are barred to married filing separately ("Only if
+  # single, head of household or married filing jointly"). The same dependent
+  # and expenses as MA-11 buy nothing, leaving the 2,000 payroll deduction
+  run_case('MA', 2019,
+           list(agi = 50000, filing_status = 3, wages1 = 50000, ei1 = 50000,
+                liab_pr_ee = 3825, n_dep = 1, dep_age1 = 5, care_exp = 5000),
+           expect = list(st_ded = 2000),
+           label = 'MA-12 2019 care deductions barred to married filing separately')
+
+  # MA-13: the regime ends after TY2020 -- from TY2021 both lines are gone
+  # from Form 1, replaced by small refundable credits and then by the Child
+  # and Family Tax Credit. The same unit as MA-10 keeps only the payroll cap
+  run_case('MA', 2021,
+           list(agi = 50000, wages1 = 50000, ei1 = 50000, liab_pr_ee = 3825,
+                n_dep = 1, dep_age1 = 5, care_exp = 5000),
+           expect = list(st_ded = 2000),
+           label = 'MA-13 2021 care deductions no longer exist')
+
   #--------------------------------------------------------------------------
   # Oregon (Form OR-40)
   #
@@ -4263,6 +4310,34 @@ test_state_calc = function() {
            expect = list(st_fed_tax_ded = 6600, st_std_ded = 5495,
                          st_exempt_credit = 0, liab_st_iit = 21089.69),
            label = 'OR-7 2024 joint AGI bands are double the single ones')
+
+  # OR-8: TY2020 economic stimulus reduces the deductible federal tax. Single,
+  # wages 60,000, federal tax after nonrefundable credits 6,000, and the full
+  # 1,800 TY2020 rebate entitlement (EIP1 1,200 + EIP2 600). The line 10
+  # worksheet strips the rebate from the base, so the subtraction is 6,000 -
+  # 1,800 = 4,200, well under the $6,950 cap that applies below $125,000
+  run_case('OR', 2020,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, liab_bc = 6000,
+                rebate = 1800),
+           expect = list(st_fed_tax_ded = 4200),
+           label = 'OR-8 2020 stimulus reduces the federal tax subtraction')
+
+  # OR-9: the same unit in TY2019 keeps the whole 6,000. The rule is scoped to
+  # the two years the worksheet carries the line, so a rebate amount present
+  # on the record must NOT reduce the subtraction in any other year
+  run_case('OR', 2019,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, liab_bc = 6000,
+                rebate = 1800),
+           expect = list(st_fed_tax_ded = 6000),
+           label = 'OR-9 2019 has no stimulus offset')
+
+  # OR-10: TY2021 carries the same line for the third payment (1,400 per
+  # adult), against that year's $7,050 cap: 6,000 - 1,400 = 4,600
+  run_case('OR', 2021,
+           list(agi = 60000, wages1 = 60000, ei1 = 60000, liab_bc = 6000,
+                rebate = 1400),
+           expect = list(st_fed_tax_ded = 4600),
+           label = 'OR-10 2021 stimulus offset continues')
 
   #--------------------------------------------------------------------------
   # Alabama (Form 40)
@@ -5218,7 +5293,8 @@ st_test_unit = function(overrides = list()) {
     eitc = 0, ctc_nonref = 0, ctc_ref = 0, cdctc_nonref = 0,
     cdctc_ref = 0, care_exp = 0, ui = 0,
     liab_bc = 0, nonref = 0, ed_ref = 0, net_ptc = 0,
-    liab_pr_ee = 0, liab_seca = 0, liab_niit = 0, excess_ptc = 0
+    liab_pr_ee = 0, liab_seca = 0, liab_niit = 0, excess_ptc = 0,
+    rebate = 0
   )
   for (v in names(overrides)) {
     unit[[v]] = overrides[[v]]
