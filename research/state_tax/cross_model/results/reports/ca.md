@@ -1,6 +1,6 @@
 # Cross-model validation: CA
 
-Class: broad | Generated: 2026-08-21 | Verdict: **PASS**
+Class: broad | Generated: 2026-08-21 | Verdict: **NEEDS REVIEW**
 
 Acceptance: match@$100 >= 95% in every canonical-window cell
 (2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where
@@ -18,13 +18,13 @@ defined (federally aligned records; see README).
 | 2019|taxsim       | 10976|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2020|taxsim       |  9668|    6940|   0.8206|    0.9093|         0.9078|          0.9690|          0.2760|          0.2598|    -11.1327|
 | 2020|taxsim       | 10845|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2021|policyengine |   665|     216|   0.5429|    0.6376|         0.9583|          0.9954|          0.2451|          4.8614|    264.2427|
+| 2021|policyengine |   665|     309|   0.6662|    0.8090|         0.9029|          0.9417|          0.2376|          0.4300|   -223.0513|
 | 2021|policyengine |   871|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2022|policyengine |   647|     229|   0.5533|    0.6399|         0.8821|          0.9651|          0.1947|          4.2900|   -412.1228|
+| 2022|policyengine |   647|     331|   0.7110|    0.7929|         0.8610|          0.9154|          0.1932|          0.2271|   -848.2093|
 | 2022|policyengine |   883|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2023|policyengine |   646|     249|   0.5681|    0.6347|         0.9438|          0.9839|          0.2012|          2.5642|    145.3727|
+| 2023|policyengine |   646|     360|   0.7043|    0.7724|         0.8889|          0.9306|          0.1966|          0.5800|   -308.7971|
 | 2023|policyengine |   887|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2024|policyengine |   646|     270|   0.5820|    0.6502|         0.9074|          0.9667|          0.2198|          4.2369|    -70.5673|
+| 2024|policyengine |   646|     356|   0.7183|    0.8003|         0.8933|          0.9438|          0.2152|          0.3721|   -603.9404|
 | 2024|policyengine |   885|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 
 ## Mismatch stage diagnosis (TAXSIM |diff| > $15)

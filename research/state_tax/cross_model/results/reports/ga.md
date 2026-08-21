@@ -19,11 +19,11 @@ defined (federally aligned records; see README).
 | 2020|taxsim       | 16529|   11502|   0.5637|    0.6769|         0.6196|          0.7206|          0.1988|          6.4602|   -679.0051|
 | 2020|taxsim       |  3984|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2021|policyengine |  1536|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2022|policyengine |  1141|     299|   0.3672|    0.5337|         0.7625|          0.8194|          0.1823|         67.6599|    139.9990|
+| 2022|policyengine |  1141|     423|   0.5337|    0.6582|         0.8534|          0.8865|          0.1823|          8.8143|     54.2384|
 | 2022|policyengine |   389|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2023|policyengine |  1157|     336|   0.3483|    0.5238|         0.7530|          0.8125|          0.1720|         74.1123|    180.9958|
+| 2023|policyengine |  1157|     468|   0.5177|    0.6292|         0.8483|          0.8718|          0.1703|         11.1120|     88.5690|
 | 2023|policyengine |   376|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2024|policyengine |  1150|     346|   0.5000|    0.5626|         0.9104|          0.9249|          0.1983|         15.5973|   -220.9937|
+| 2024|policyengine |  1150|     460|   0.5087|    0.5878|         0.8522|          0.8739|          0.1965|         12.4776|   -326.7671|
 | 2024|policyengine |   381|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 
 ## Mismatch stage diagnosis (TAXSIM |diff| > $15)

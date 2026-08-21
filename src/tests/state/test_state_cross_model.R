@@ -287,10 +287,10 @@ cross_model_pe_leg = function(sampled, states, year, venv_python, cache_dir) {
   # Runs sampled records through PolicyEngine US via the python driver
   # (src/tests/state/cross_model/pe_state_tax.py). Inputs use the
   # same concept set as the TAXSIM crosswalk so both external models see
-  # identical records. Married-filing-separately records are passed through
-  # explicitly (`mfs`) and set as SEPARATE in the driver: PE derives JOINT and
-  # HEAD_OF_HOUSEHOLD from the situation but cannot derive MFS, and defaulting
-  # it to SINGLE is wrong wherever a state's MFS schedule differs (WI).
+  # identical records. Filing status is passed through and set on every tax
+  # unit in the driver: PE derives JOINT and HEAD_OF_HOUSEHOLD from the
+  # situation but cannot derive MFS, and a partial assignment silently
+  # defaults every unassigned unit to SINGLE.
   #
   # Parameters:
   #   - sampled (df)     : sampled post-federal tax units
@@ -315,13 +315,13 @@ cross_model_pe_leg = function(sampled, states, year, venv_python, cache_dir) {
         rec_id = id,
         state  = st,
         joint  = as.integer(filing_status == 2),
-        # PE derives JOINT and HEAD_OF_HOUSEHOLD from the situation, but it
-        # cannot derive married-filing-separately: an MFS record is a
-        # one-person tax unit indistinguishable from a single filer, so PE
-        # defaults it to SINGLE. Harmless only where a state taxes MFS as
-        # single; Wisconsin does not. Passed through and set explicitly in
-        # pe_state_tax.py
-        mfs    = as.integer(filing_status == 3),
+        # Filing status is passed through and set on EVERY tax unit in
+        # pe_state_tax.py. PE derives JOINT and HEAD_OF_HOUSEHOLD from the
+        # situation but cannot derive married-filing-separately, and setting
+        # it for MFS rows alone corrupts the rest of the batch -- see the note
+        # in the driver. `joint` is retained because the driver also uses it
+        # to decide household composition (whether to build a spouse)
+        pe_filing_status = filing_status,
         page   = age1,
         sage   = age2,
         dep_ages = pmap_chr(
@@ -358,7 +358,8 @@ cross_model_pe_leg = function(sampled, states, year, venv_python, cache_dir) {
         charitable_noncash = char_noncash,
         childcare_expenses = care_exp
       ) %>%
-      select(rec_id, state, joint, mfs, page, sage, n_dep, dep_ages,
+      select(rec_id, state, joint, filing_status = pe_filing_status,
+             page, sage, n_dep, dep_ages,
              pwages, swages, psemp, ssemp,
              taxable_interest, tax_exempt_interest,
              qualified_dividends, ordinary_dividends, stcg, ltcg,

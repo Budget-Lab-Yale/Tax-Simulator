@@ -14,13 +14,13 @@ defined (federally aligned records; see README).
 | 2018|taxsim       | 20515|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2019|taxsim       | 20514|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2020|taxsim       | 20513|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2021|policyengine |  1172|     260|   0.8413|    0.8422|         0.8077|          0.8077|          0.8413|               0|     99.2197|
+| 2021|policyengine |  1172|     363|   0.8464|    0.8481|         0.8044|          0.8044|          0.8464|               0|     97.2279|
 | 2021|policyengine |   364|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2022|policyengine |  1141|     299|   0.8370|    0.8370|         0.7993|          0.7993|          0.7932|               0|    103.5102|
+| 2022|policyengine |  1141|     420|   0.8414|    0.8414|         0.8286|          0.8286|          0.7975|               0|    102.2673|
 | 2022|policyengine |   389|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2023|policyengine |  1157|     335|   0.8539|    0.8548|         0.8478|          0.8478|          0.8116|               0|    100.5358|
+| 2023|policyengine |  1157|     464|   0.8591|    0.8600|         0.8621|          0.8621|          0.8168|               0|     98.2586|
 | 2023|policyengine |   376|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2024|policyengine |  1150|     339|   0.8687|    0.8696|         0.8555|          0.8555|          0.8287|               0|     84.6671|
+| 2024|policyengine |  1150|     451|   0.8730|    0.8739|         0.8625|          0.8625|          0.8330|               0|     83.3977|
 | 2024|policyengine |   381|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 
 ## Known differences applied

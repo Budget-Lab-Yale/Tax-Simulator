@@ -1,6 +1,6 @@
 # Cross-model validation: IL
 
-Class: broad | Generated: 2026-08-21 | Verdict: **PASS**
+Class: broad | Generated: 2026-08-21 | Verdict: **NEEDS REVIEW**
 
 Acceptance: match@$100 >= 95% in every canonical-window cell
 (2017-2020 TAXSIM, 2021+ PolicyEngine), on the clean subset where
@@ -19,11 +19,11 @@ defined (federally aligned records; see README).
 | 2020|taxsim       | 13341|    9834|   0.7880|    0.8975|         0.9779|          1.0000|          0.1798|          0.0046|     52.0460|
 | 2020|taxsim       |  7172|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2021|policyengine |  1536|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2022|policyengine |  1141|     301|   0.6652|    0.7809|         0.9502|          0.9934|          0.1174|          0.4194|    271.3525|
+| 2022|policyengine |  1141|     424|   0.6477|    0.7467|         0.8986|          0.9316|          0.1166|          0.6230|    236.6387|
 | 2022|policyengine |   389|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2023|policyengine |  1157|     336|   0.6672|    0.7761|         0.9524|          0.9911|          0.1296|          0.4519|    310.8536|
+| 2023|policyengine |  1157|     468|   0.6508|    0.7468|         0.8910|          0.9252|          0.1288|          0.6096|    263.3751|
 | 2023|policyengine |   376|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2024|policyengine |  1150|     346|   0.6548|    0.7574|         0.9538|          0.9942|          0.1200|          0.4335|    -89.0450|
+| 2024|policyengine |  1150|     460|   0.6417|    0.7322|         0.8978|          0.9370|          0.1191|          0.5187|   -145.6252|
 | 2024|policyengine |   381|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 
 ## Mismatch stage diagnosis (TAXSIM |diff| > $15)

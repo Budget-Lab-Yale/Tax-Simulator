@@ -6,7 +6,8 @@ Usage:
 
 Input CSV (one row per record x state; written by cross_model_pe_leg() in
 src/tests/state/test_state_cross_model.R):
-    rec_id, state, joint, mfs, page, sage, n_dep, dep_ages ("5;8" or ""),
+    rec_id, state, joint, filing_status (1/2/3/4), page, sage, n_dep,
+    dep_ages ("5;8" or ""),
     pwages, swages, psemp, ssemp,
     taxable_interest, tax_exempt_interest,
     qualified_dividends, ordinary_dividends, stcg, ltcg,
@@ -37,6 +38,16 @@ except Exception:
     PE_VERSION = "unknown"
 
 BATCH_SIZE = 500
+
+# Our filing-status codes -> PolicyEngine's FilingStatus enum. Every tax unit
+# gets one; see the note in build_situation() for why partial assignment is
+# unsafe.
+FILING_STATUS = {
+    1: "SINGLE",
+    2: "JOINT",
+    3: "SEPARATE",
+    4: "HEAD_OF_HOUSEHOLD",
+}
 
 # input column -> candidate PolicyEngine variable names (first match wins).
 # Person-money columns are placed on the relevant person; group-entity
@@ -181,20 +192,30 @@ def build_situation(rows, year):
 
         # Group entities: one instance of each per record.
         #
-        # filing_status is normally derived by PolicyEngine from the marital
-        # unit and dependents, which recovers JOINT and HEAD_OF_HOUSEHOLD on
-        # its own. It cannot recover married-filing-separately: an MFS record
-        # is a one-person tax unit and nothing in the situation distinguishes
-        # it from a single filer, so PE's formula defaults it to SINGLE. That
-        # is only harmless where a state taxes MFS exactly as single.
-        # Wisconsin does not -- its standard deduction schedule for MFS has a
-        # lower maximum, a much lower phase-out start and a steeper rate, so
-        # the default silently gave MFS filers the single schedule and left
-        # the WI PolicyEngine cells at ~0.80 with an MFS mismatch rate of
-        # ~0.71 against ~0.05 for every other status. Set it explicitly.
+        # filing_status is set EXPLICITLY ON EVERY TAX UNIT, and it must stay
+        # that way. PolicyEngine normally derives it from the marital unit and
+        # dependents, which recovers JOINT and HEAD_OF_HOUSEHOLD but cannot
+        # recover married-filing-separately: an MFS record is a one-person tax
+        # unit indistinguishable from a single filer, so the formula defaults
+        # it to SINGLE. That is only harmless where a state taxes MFS as
+        # single, and Wisconsin does not -- its MFS standard deduction has a
+        # lower maximum, a much lower phase-out start and a steeper rate.
+        #
+        # Setting it for the MFS rows ALONE is not a valid fix and was tried:
+        # once any tax unit in a Simulation supplies filing_status as an
+        # input, PolicyEngine treats the whole vector as input and every unit
+        # that did NOT supply one falls back to the default (SINGLE) instead
+        # of running the formula. A batch containing one MFS row therefore
+        # silently converted its joint and head-of-household rows to single
+        # filers -- verified directly: a joint couple in the same batch went
+        # from filing_status JOINT, federal taxable 92,300, WI tax 5,036 to
+        # SINGLE, 106,150 and 5,883. Supplying every unit's status is what
+        # makes the vector well-defined.
         tax_unit_values = dict(group_values.get("tax_unit", {}))
-        if int(float(row.get("mfs", 0))) == 1:
-            tax_unit_values["filing_status"] = {yr: "SEPARATE"}
+        # int(float(...)) so "3" and "3.0" both resolve; an unmapped code is
+        # a crosswalk error and must fail loudly rather than default
+        tax_unit_values["filing_status"] = {
+            yr: FILING_STATUS[int(float(row["filing_status"]))]}
         situation["tax_units"][f"t{rid}"] = {
             "members": members, **tax_unit_values}
         situation["households"][f"h{rid}"] = {

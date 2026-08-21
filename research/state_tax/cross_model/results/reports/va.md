@@ -19,7 +19,7 @@ defined (federally aligned records; see README).
 | 2020|taxsim       | 16529|   11502|   0.5994|    0.6737|         0.6834|          0.7371|          0.2505|          0.3074|   2011.7238|
 | 2020|taxsim       |  3984|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2021|policyengine |  1536|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2022|policyengine |  1141|     300|   0.4777|    0.6135|         0.9067|          0.9500|          0.1288|         22.6310|    154.3702|
+| 2022|policyengine |  1141|     423|   0.5381|    0.6836|         0.9291|          0.9598|          0.1306|          5.4954|     90.6535|
 | 2022|policyengine |   389|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2023|policyengine |  1533|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2024|policyengine |  1531|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|

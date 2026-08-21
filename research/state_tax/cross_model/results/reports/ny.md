@@ -18,13 +18,13 @@ defined (federally aligned records; see README).
 | 2019|taxsim       | 11577|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2020|taxsim       |  8925|    6520|   0.6565|    0.7647|         0.8090|          0.8483|          0.1714|          0.8546|   1582.6938|
 | 2020|taxsim       | 11588|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2021|policyengine |  1172|     261|   0.2159|    0.3532|         0.5862|          0.6973|          0.0776|        277.1808|   2289.9348|
+| 2021|policyengine |  1172|     364|   0.2688|    0.4983|         0.5082|          0.6923|          0.0776|        100.4648|   1497.5305|
 | 2021|policyengine |   364|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2022|policyengine |  1141|     301|   0.3348|    0.4531|         0.7774|          0.8605|          0.0850|        163.2182|   1236.9259|
+| 2022|policyengine |  1141|     424|   0.4338|    0.6266|         0.7311|          0.8915|          0.0850|         35.6186|    262.4856|
 | 2022|policyengine |   389|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2023|policyengine |   360|      48|   0.1917|    0.3417|         0.5625|          0.7083|          0.0000|        352.4336|   3517.9260|
-| 2023|policyengine |  1173|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2024|policyengine |  1150|     346|   0.3200|    0.4252|         0.7572|          0.8295|          0.0704|        196.7342|    124.4797|
+| 2023|policyengine |   380|      75|   0.2789|    0.4763|         0.5600|          0.7733|          0.0000|        126.8669|   1635.4357|
+| 2023|policyengine |  1153|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
+| 2024|policyengine |  1150|     460|   0.4157|    0.5957|         0.7130|          0.8522|          0.0704|         48.8260|   -606.2045|
 | 2024|policyengine |   381|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 
 ## Mismatch stage diagnosis (TAXSIM |diff| > $15)

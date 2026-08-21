@@ -24,7 +24,7 @@ defined (federally aligned records; see README).
 | 2022|policyengine |   389|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2023|policyengine |  1157|       0|        1|         1|             NA|              NA|               1|               0|           0|
 | 2023|policyengine |   376|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2024|policyengine |  1150|       1|        1|         1|              1|               1|               1|               0|           0|
+| 2024|policyengine |  1150|       0|        1|         1|             NA|              NA|               1|               0|           0|
 | 2024|policyengine |   381|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 
 ## Known differences applied

@@ -90,3 +90,6 @@ research/**/*.docx
 !research/tools/reference.docx
 !research/docx_sources/*.docx
 !research/archive/*.docx
+
+# Agent/analysis working directory: sbatch scripts, probe backups, caches
+/output/
