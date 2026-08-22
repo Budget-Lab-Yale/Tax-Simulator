@@ -2,7 +2,7 @@
 
 State: `VA`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-07-18`
+Last updated: `2026-08-22`
 
 > **Status note, kept from the packet's former Status line:**
 > encoded (baseline TY2017–2025, projected through the statutory TY2030 standard-deduction reversion) | worksheet tests VA-1..VA-13 pass | cross-model todo | aggregate blocked on weights.
@@ -76,6 +76,58 @@ pease_thresh maps HoH separately.
 - **Conformity:** group 3 (fixed-date annual) 2017–2022; group 0 (rolling)
   2023–2025; group 4 (fixed Dec 31, 2025 + extenders; new group) 2026+.
   enabled:false in jurisdictions.yaml (no reference-law bridge), like SC/CA.
+
+## Triage 2026-08-22 — closed; two TAXSIM-side causes
+
+Virginia entered triage with the widest split of any state: PolicyEngine 0.960
+against TAXSIM 0.628 / 0.747 / 0.738 / 0.737. A near-clear window on one model
+is strong evidence the encoding is right, so both causes were expected to be
+TAXSIM-side, and both are. **Our encoding was not changed.**
+
+### 1. The DC/CA crosswalk-exposure class
+
+Virginia couples the election to the federal return -- "you must claim the same
+type of deductions as you claimed on your federal return" -- and the data bears
+that out exactly: `st_itemizing` equals federal `itemizing` on all 47,561 clean
+records. Virginia Schedule A then removes state income tax from the federal
+itemized total, but the crosswalk hands TAXSIM as-reported
+`salt_inc_sales + salt_pers` inside `otheritem`, where no state calculation can
+identify them as SALT to strip; TAXSIM strips its own iterated state tax
+instead. The split is decisive: federal itemizers match at 0.11-0.19 against
+0.92-0.96 for non-itemizers. Standard class predicate, no variant needed.
+
+### 2. TAXSIM ignores the IRC 21(d) earned-income limit on the care deduction
+
+The exposure exclusion alone leaves 2018-2020 at 0.939-0.945, so a second cause
+had to exist, and it sits in the non-itemizers. The 2019 non-itemizer miss
+modes are **+172.50** and **+345.00** -- $3,000 and $6,000 at Virginia's 5.75%
+rate, which are the one- and two-dependent federal caps under IRC 21. State
+AGI, the standard deduction and the personal exemption all agree with TAXSIM to
+the dollar on these records, so the gap is a deduction TAXSIM takes and we do
+not.
+
+Schedule ADJ code 101 deducts "the amount on which the federal child and
+dependent care credit is based", and IRC 21(d)(1)(B) caps that base for a
+married couple at the **lesser of the two spouses' earned income**. On 26 of 28
+and 25 of 35 of the mode records `min(ei1, ei2)` is zero, so the correct base
+is zero and our `st_care_ei_limit` produces exactly that. TAXSIM applies the
+dollar cap and skips the limitation -- probe-confirmed: a joint return with a
+non-earning spouse and $6,000 of care expenses still gets the full $6,000, and
+one with a spouse earning $2,000, which caps the base at $2,000, also gets
+$6,000. It disappears only when care expenses are zero, which rules out the
+deduction being something else.
+
+Non-itemizers with care expenses match at 0.718 against 0.951 without. Filed as
+T18 in
+[`cross_model/external_model_issues.md`](../state_tax/cross_model/external_model_issues.md).
+Idaho and Maryland encode the same deduction off the same federal base and are
+both far below the bar on the TAXSIM side (0.618 and 0.625), so this is worth
+checking there, but only Virginia is verified.
+
+**Result.** 0.6275 / 0.7467 / 0.7384 / 0.7371 -> 0.9743 / 0.9641 / 0.9648 /
+0.9641, reproducing the offline estimate to four decimals and moving no other
+state's cells. All eight cells clear, worst 0.9598 (PolicyEngine 2022 -- the
+other three PE cells are fully excluded by the Virginia rebate rows).
 
 ## Known differences (documented, not modeled)
 

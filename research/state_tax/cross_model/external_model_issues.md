@@ -496,6 +496,42 @@ samples that is 47-59% of such returns in IL and the dominant residual in
 all three states; excluding the class moves IL to 0.993-0.995, CA to
 0.979-0.988 and UT to 0.970-0.988 on the clean subset.
 
+### T18. Virginia child and dependent care deduction granted without the IRC 21(d) earned-income limit
+
+Virginia's Schedule ADJ code 101 deducts "the amount on which the federal
+child and dependent care credit is based" (Va. Code 58.1-322.03(4)). That base
+is limited by IRC 21(d)(1)(B) to the **lesser of the two spouses' earned
+income** for a married couple, so a couple with one non-earning spouse has a
+base of zero. TAXSIM-35 applies the federal dollar cap ($3,000 for one
+qualifying person, $6,000 for two or more) and skips the limitation.
+
+Probed on VA 2019 joint returns, two dependents, $6,000 of `childcare`, with
+the deduction read off as `v32 - v33 - v34 - v36`:
+
+| case | implied extra deduction | correct under 21(d)(1) |
+|---|---|---|
+| both spouses earn (80k / 40k) | 6,000 | 6,000 |
+| **spouse earns nothing** | **6,000** | **0** |
+| spouse earns nothing, no care expenses | 0 | 0 |
+| **spouse earns $2,000** | **6,000** | **2,000** |
+
+The third row rules out the deduction being something else: it disappears when
+`childcare` is zero.
+
+The residual on real records matches exactly. Among Virginia non-itemizers the
+2019 miss modes are +172.50 and +345.00 -- $3,000 and $6,000 at Virginia's
+5.75% rate, the one- and two-dependent caps -- and `min(ei1, ei2)` is zero on
+26 of 28 and 25 of 35 of those records. Non-itemizers with care expenses match
+at 0.718 against 0.951 without. TAXSIM also grants it where the dependents are
+over 12 and so are not qualifying persons under IRC 21(b)(1)(A).
+
+Effect: TAXSIM's Virginia liability runs LOW by up to $345 a return on
+single-earner couples claiming care expenses. Likely to affect the other
+states whose care deduction keys on the same federal base -- Idaho and
+Maryland encode one (both currently far below the acceptance bar on the TAXSIM
+side, 0.618 and 0.625), and Massachusetts did before 2021 -- though only
+Virginia has been verified.
+
 ## Corroboration worth passing along
 
 Where concepts align, agreement is excellent: IL matches TAXSIM at 100%

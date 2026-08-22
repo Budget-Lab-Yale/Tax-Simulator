@@ -782,6 +782,10 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
     # tax-unit level with no per-spouse split, so who holds them is
     # unobservable. Predicates need them to identify the population where our
     # earned-income proxy and an external model's attribution can disagree
+    # care_exp is the child and dependent care expense input. States deduct or
+    # credit it off the federal IRC 21 base, which is limited to the lesser of
+    # the two spouses' earned income -- a limitation TAXSIM does not apply, so
+    # predicates need to see who claimed such expenses at all
     # n_dep_ge18 counts dependents aged 18 or over. PolicyEngine and we differ
     # on whether such a dependent earns a state per-dependent benefit keyed to
     # IRC 24: PE stops at 17, we (and TAXSIM) include the section 24(h)(4)
@@ -821,7 +825,7 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                          exempt_int, state_ref, age1, age2, gross_ss, n_dep,
                          ui, txbl_int, ei1, ei2,
                          txbl_pens_dist, txbl_ira_dist, other_inc, alimony,
-                         itemizing, n_dep_ge18,
+                         itemizing, n_dep_ge18, care_exp,
                          xw_unstripped_salt, xw_unhanded_item,
                          xw_pe_unhanded_item),
                 by = 'id')
