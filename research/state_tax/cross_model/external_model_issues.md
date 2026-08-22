@@ -496,7 +496,7 @@ samples that is 47-59% of such returns in IL and the dominant residual in
 all three states; excluding the class moves IL to 0.993-0.995, CA to
 0.979-0.988 and UT to 0.970-0.988 on the clean subset.
 
-### T18. Virginia child and dependent care deduction granted without the IRC 21(d) earned-income limit
+### T18. Virginia and Idaho child/dependent care deduction granted without the IRC 21(d) earned-income limit
 
 Virginia's Schedule ADJ code 101 deducts "the amount on which the federal
 child and dependent care credit is based" (Va. Code 58.1-322.03(4)). That base
@@ -526,11 +526,22 @@ at 0.718 against 0.951 without. TAXSIM also grants it where the dependents are
 over 12 and so are not qualifying persons under IRC 21(b)(1)(A).
 
 Effect: TAXSIM's Virginia liability runs LOW by up to $345 a return on
-single-earner couples claiming care expenses. Likely to affect the other
-states whose care deduction keys on the same federal base -- Idaho and
-Maryland encode one (both currently far below the acceptance bar on the TAXSIM
-side, 0.618 and 0.625), and Massachusetts did before 2021 -- though only
-Virginia has been verified.
+single-earner couples claiming care expenses.
+
+**Idaho behaves the same way; Maryland does not.** Both were probed on
+2026-08-22 rather than assumed. For Idaho (Idaho Code 63-3022(o)) siitax is
+identical at 4,873.16 whether the spouse earns $40,000, nothing, or $2,000, and
+rises to 5,288.66 only when care expenses are removed -- a flat $415.50 =
+$6,000 x Idaho's 6.925%, taken regardless of the limitation. Idaho records with
+care expenses match at 0.440 against 0.741 without.
+
+Maryland is the counter-example and is NOT part of this issue: its care effect
+varies correctly with the spouse's earnings (siitax 4,446.25 with both spouses
+earning, 4,607.25 with a non-earning spouse, 4,572.58 with a spouse earning
+$2,000), so TAXSIM applies the limitation there. Maryland's own care residual
+is real but has a different, still-undiagnosed cause. So the bug is per-state
+in TAXSIM rather than a single shared code path, and Massachusetts (which had
+such a deduction before 2021) has not been checked.
 
 ## Corroboration worth passing along
 

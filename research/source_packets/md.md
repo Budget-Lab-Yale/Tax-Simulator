@@ -2,7 +2,7 @@
 
 State: `MD`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-07-24`
+Last updated: `2026-08-22`
 
 > **Status note (as of 2026-07-24), kept from the packet's former Status line:**
 > baseline encoded (state-level); record-level worksheet tests complete
@@ -39,6 +39,41 @@ under-6 from 2023 (cliff, then the 2025 phase-out); senior credit 2022+
 with the one-65+ joint tier (new senior_credit_one65_amount).
 
 ## Worksheet tests: MD-1..MD-9
+
+## Triage 2026-08-22 — exposure class landed; NOT closed
+
+**Landed.** The DC/CA crosswalk-exposure class: Maryland builds its itemized
+deduction from federal Schedule A less state income tax, and the crosswalk
+hands TAXSIM as-reported `salt_inc_sales + salt_pers` inside `otheritem` where
+nothing can identify them as SALT to strip. Federal itemizers match at 0.179
+against 0.921 for non-itemizers, pooled 2017-2020. Cells 0.6246 / 0.7528 /
+0.7387 / 0.7294 -> 0.9529 / 0.9274 / 0.9105 / 0.8962, matching the offline
+estimate to four decimals.
+
+**T18 was tested for Maryland and does NOT apply.** Maryland encodes the same
+care deduction off the same IRC 21 base as Virginia and Idaho, and Maryland
+records with care expenses do match far worse (0.447 against 0.740). It would
+have been easy to carry the Virginia finding across. Probing it shows the
+opposite: Maryland's care effect varies correctly with the spouse's earnings
+(siitax 4,446.25 with both spouses earning, 4,607.25 with a non-earning spouse,
+4,572.58 with a spouse earning $2,000), so TAXSIM applies the earned-income
+limitation for Maryland. No care exclusion was added; **the Maryland care
+residual is real but undiagnosed.**
+
+**What is left.** After the exposure exclusion the residual is concentrated in
+joint returns (2019: 0.883 against 0.972 for single). Two known leads, both
+already annotated and neither sufficient on its own: the standard-deduction
+minimum bug and the two-income-couple subtraction attribution. Note the
+standard-deduction row is deliberately `annotate` -- a previous exclude on its
+signature removed match@$100 passes and pushed the 2019 cell down to 0.488, and
+that decision should not be re-litigated without new evidence. The one part of
+it that does breach the $100 bar is head-of-household filers, where TAXSIM
+applies the $1,550 single minimum against a correct $4,550, a $3,000 gap worth
+$142.50 at 4.75%; excluding just that moves 2019 only 0.9291 -> 0.9336, because
+545 of the 624 records it sweeps already matched.
+
+The PolicyEngine window is also short (0.8702 / 0.9382 / 0.9208 / 0.9389) and
+has not been triaged at all.
 
 ## Known differences
 

@@ -2,7 +2,7 @@
 
 State: `ID`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-07-23`
+Last updated: `2026-08-22`
 
 > **Status note (as of 2026-07-23), kept from the packet's former Status line:**
 > baseline encoded; record-level worksheet tests complete
@@ -76,6 +76,39 @@ STC published rate schedules, and Idaho Code Title 63 ch. 30).
   married schedule; 2024 SALT addback + flat tax; 2023 care deduction + CTC +
   family grocery; 2025 5.3% + $155 flat grocery; refundable grocery with the
   blind PBF exemption (net refund); 2021 HoH on the married schedule.
+
+## Triage 2026-08-22 — two classes landed; 2018-2020 NOT closed
+
+2017 clears; 2018-2020 do not. What was verified and what remains:
+
+**Landed (both supersede earlier annotate rows for the same divergences).**
+
+1. *DC/CA crosswalk-exposure class.* Idaho starts from federal taxable income,
+   so the federal itemized deduction enters the Idaho base directly and the
+   crosswalk's unstripped SALT inside `otheritem` is in play. Federal itemizers
+   match at 0.162 against 0.928 for non-itemizers, pooled 2017-2020.
+2. *T18, the Idaho instance.* TAXSIM grants the care deduction (Idaho Code
+   63-3022(o), keyed to the IRC 21 base) at the full federal cap without the
+   IRC 21(d)(1) earned-income limitation. **Probed for Idaho specifically
+   rather than carried over from Virginia**: siitax is identical at 4,873.16
+   whether the spouse earns $40,000, nothing, or $2,000, and rises to 5,288.66
+   only when care expenses are removed -- a flat $415.50 = $6,000 x 6.925%.
+   Records with care expenses match at 0.440 against 0.741 without. This
+   sharpens the earlier annotate row, which had attributed the same
+   over-representation to the cap rather than the earned-income limit.
+
+**Result.** 0.6178 / 0.7449 / 0.7457 / 0.7394 -> 0.9766 / 0.8666 / 0.8671 /
+0.8595, matching the offline estimate to four decimals and moving no other
+state's cells.
+
+**What is left, and the strongest lead.** 2017 clears at 0.977 while 2018-2020
+sit at ~0.86, so the remaining cause is post-TCJA. The existing QBID annotate
+row is the obvious candidate and fits the timing exactly: Idaho's base is
+federal taxable income, which is net of the section 199A deduction, so any
+difference between TAXSIM's QBID and ours lands directly in the Idaho base, and
+199A only exists from 2018. That row records roughly 10% of QBID non-itemizers
+showing a taxable wedge of exactly -qbi_ded. Testing that is the next step; it
+was not done here.
 
 ## Known differences
 
