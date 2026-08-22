@@ -3,7 +3,7 @@ title: "State Individual Income Tax Module — Implementation Plan"
 role: plan
 workstream: state_tax
 status: current
-updated: 2026-08-20
+updated: 2026-08-21
 sot: self
 supersedes: []
 superseded_by: null
@@ -528,6 +528,15 @@ are implemented.
 | Aggregate | weighted totals | SOI HT2 state × AGI class |
 | Aggregate | revenue estimates | state revenue-agency estimates (pilot states) |
 | Invariant | federal unchanged | with-state vs without-state byte-diff |
+
+Federal-side disagreements are logged to
+[`cross_model/federal_divergences.md`](cross_model/federal_divergences.md) and
+conditioned out of the state metrics, per the 2026-07-18 policy. **One of them
+is now a confirmed defect on our side and is owned by the federal model, not
+this plan:** section 5 of that file, married-filing-separately drawing the
+unmarried aged/blind standard-deduction bonus (IRC 63(f)(3)). One-line fix,
+deliberately not applied inside state triage because it moves federal taxable
+income in every year.
 
 ---
 
