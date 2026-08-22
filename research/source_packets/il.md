@@ -2,7 +2,7 @@
 
 State: `IL`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-07-13`
+Last updated: `2026-08-22`
 
 > **Status note (as of 2026-07-13), kept from the packet's former Status line:**
 > baseline encoded; source packet normalized; record-level worksheet tests complete
@@ -62,6 +62,43 @@ Last updated: `2026-07-13`
   calculator support.
 - The expanded EITC's ITIN and age eligibility cannot be fully replicated from
   available data.
+
+## Triage 2026-08-22 — the PolicyEngine dependent-age cliff
+
+Illinois matches TAXSIM at **1.0000** in all four years on about 10,000
+federally aligned records each, while the PolicyEngine window sat at
+0.9316 / 0.9252 / 0.9370. A state whose law is that thoroughly confirmed
+against one external model is not the likely source of a disagreement with
+the other.
+
+The residual is a single point mass. The miss mode is exactly **-120** in 2022 and 2023 and **-137** in 2024, on
+27 of 29, 30 of 35 and 19 of 29 misses. Illinois is a flat tax, so those are
+one personal exemption to the cent: $2,425 x 4.95% = $120.04 and
+$2,775 x 4.95% = $137.36. The misses are single, head-of-household and
+married-filing-separately returns, not joint -- a second exemption on a
+one-adult return is a dependent.
+
+**PolicyEngine gates the benefit on the dependent being under 18; Illinois
+does not.** Probed against policyengine-us 1.775.7 on single Illinois filers
+differing only in one dependent's age, 2023: the exemption is granted at ages 5, 10, 16 and 17 (state tax 2,234.93
+against 2,354.96 with no dependent) and denied from 18 on. The cliff sits at 18,
+not at federal child-tax-credit eligibility -- a 17-year-old is too old for
+the federal CTC but still earns the benefit in PolicyEngine, so a predicate
+keyed on `n_dep - n_dep_ctc` would over-exclude.
+
+35 ILCS 5/204 allows an exemption for each person claimed as a dependent on
+the taxpayer's federal return, with no age condition; IL-1040 simply carries
+the federal dependent count. On the real records the split is decisive: the
+miss rate is 0.5-0.7% for returns with no dependent aged 18+ against 47-59%
+for returns with one.
+
+Excluded as a PolicyEngine-side difference, with the predicate also requiring
+a live exemption since the difference cannot arise when it is zero. Cells
+move to 0.9949 / 0.9928 / 0.9951, and all eight now clear. This is the class recorded as P9 in
+[`cross_model/external_model_issues.md`](../state_tax/cross_model/external_model_issues.md);
+a sweep of all 48 enabled jurisdictions finds an age effect in 23, though most
+of the others are unchecked against their own statutes and some genuinely do
+restrict by age.
 
 ## Batch role and validation
 

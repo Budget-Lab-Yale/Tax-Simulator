@@ -3,7 +3,7 @@ title: "Potential issues in TAXSIM-35 and PolicyEngine US"
 role: evidence
 workstream: state_tax
 status: current
-updated: 2026-08-19
+updated: 2026-08-22
 sot: research/state_tax/state_parameter_rollout.csv
 supersedes: []
 superseded_by: null
@@ -446,6 +446,55 @@ form's $64). TAXSIM-35 skips the same rule (see the CA annotate row in
 
 Effect: PolicyEngine's CA liability runs LOW by $100–400 on low-income
 records whose AGI exceeds earned income above the safe harbor.
+
+### P9. State per-dependent benefits denied for dependents aged 18 and over
+
+**The broadest PolicyEngine finding so far, and the one most worth
+reporting.** PolicyEngine 1.775.7 appears to gate state per-dependent
+benefits on a dependent being under 18, in states whose own law has no age
+condition. Confirmed in three states, with an age cliff that is identical
+in each: the benefit is paid at dependent ages 5, 10, 16 and 17 and
+disappears at 18.
+
+Probed on single filers at 2023 law differing only in one dependent's age
+(inputs in `output/probe/{il,ca,ut}_pe_ages.csv`):
+
+| state | benefit | no dependent | dep aged 17 | dep aged 18 |
+|---|---|---|---|---|
+| IL | personal exemption, 35 ILCS 5/204 | 2,354.96 | 2,234.93 | 2,354.96 |
+| CA | dependent exemption credit, R&TC 17054(d) | 1,768.36 | 1,322.36 | 1,768.36 |
+| UT | personal exemption, UC 59-10-1018(1) | 2,521.35 | 2,404.89 | 2,521.35 |
+
+Each gap is exactly the statutory amount: $120.03 = the $2,425 Illinois
+exemption at 4.95%; $446 = the California dependent credit; $116.46 =
+the $1,941 Utah exemption at 6%.
+
+None of the three states restricts by age. Illinois allows an exemption for
+each person claimed as a dependent on the federal return and IL-1040 simply
+carries the federal count. California defines a dependent by IRC 152.
+Utah's qualifying dependent is one for whom a credit is allowed under IRC
+24, which since TCJA houses the $500 other-dependents credit at 24(h)(4) --
+so an 18-year-old or an adult dependent still qualifies.
+
+TAXSIM-35 does not share the behaviour, which is what makes this a
+PolicyEngine-side finding rather than an open question. Illinois is the
+sharpest control: our IL cells match TAXSIM at 1.0000 in all four years on
+roughly 10,000 federally aligned records each.
+
+Scale: sweeping all 48 enabled jurisdictions at dependent ages 10 and 20
+(2023) finds an age effect in 23 of them -- IL, UT, CA plus NY, NM, MA, MN,
+ME, OK, ID, GA, VT, KS, AZ, NJ, MS, NC, IN, IA, LA, and in the other
+direction MO, AL, AR, OR, where the older dependent is treated more
+favourably. We have NOT checked the other twenty against their own statutes,
+and several are cases where the state genuinely does restrict by age (a
+child credit limited to children under 17, for instance), so the count of 23
+is an upper bound on the problem, not a claim. The three above are verified.
+
+Effect where it bites: PolicyEngine's state liability runs HIGH by the
+per-dependent amount on returns claiming a dependent aged 18 or over. On our
+samples that is 47-59% of such returns in IL and the dominant residual in
+all three states; excluding the class moves IL to 0.993-0.995, CA to
+0.979-0.988 and UT to 0.970-0.988 on the clean subset.
 
 ## Corroboration worth passing along
 

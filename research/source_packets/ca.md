@@ -2,7 +2,7 @@
 
 State: `CA`  
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-16`
+Last updated: `2026-08-22`
 
 > **Status note (as of 2026-08-16), kept from the packet's former Status line:**
 > resident regular IIT encoded; cross-model DONE 2026-08-16 -- all eight canonical-window cells clear the 95% bar (TAXSIM 0.969-0.985, PE 0.965-0.995); P1 production readiness still blocked
@@ -110,6 +110,39 @@ The generic implementation now stores row data keyed by state, tax year, inclusi
 ## P1 readiness
 
 See [California parameter analysis](research/state_tax/notes/ca_parameter_analysis.md) and [California P1 readiness analysis](research/state_tax/notes/ca_p1_readiness_analysis.md). A generic conformity gate now prevents invalid federal-reform results, but the required reference-law mechanism, material Schedule CA adjustments, and CalEITC/YCTC eligibility inputs remain release blockers. California should not be included in a production `states = all` run until those blockers are closed or a generic release gate excludes it.
+
+## Triage 2026-08-22 — the PolicyEngine dependent-age cliff
+
+California's TAXSIM cells were already 0.969-0.985, but the PolicyEngine
+window sat at 0.9417 / 0.9154 / 0.9306 / 0.9438 with a median absolute
+difference of only $0.2-0.6 -- a small tail on an otherwise exact match.
+
+The residual is a single point mass. The miss mode is **-433** in 2022 and **-446** in 2023, which is exactly the
+dependent exemption credit in each year, and `st_exempt_credit` on the miss
+group is the personal plus dependent credit (573 = 140 + 433 in 2022,
+590 = 144 + 446 in 2023). The misses are head-of-household and single
+returns.
+
+**PolicyEngine gates the benefit on the dependent being under 18; California
+does not.** Probed against policyengine-us 1.775.7 on single California filers
+differing only in one dependent's age, 2023: the credit is granted at ages 5, 10, 16 and 17 (state tax 1,322.36 against
+1,768.36 with no dependent, a gap of exactly $446) and denied from 18 on. The cliff sits at 18,
+not at federal child-tax-credit eligibility -- a 17-year-old is too old for
+the federal CTC but still earns the benefit in PolicyEngine, so a predicate
+keyed on `n_dep - n_dep_ctc` would over-exclude.
+
+R&TC 17054(d) allows the credit for each dependent as defined by IRC 152,
+with no age condition. TAXSIM does not share the behaviour: its CA miss rate
+on returns with a dependent aged 18+ is 2.9-7.1% against 1.3-2.7% without,
+nothing like the PolicyEngine pattern.
+
+Excluded as a PolicyEngine-side difference, with the predicate also requiring
+a live exemption credit since the difference cannot arise when it is zero. Cells
+move to 0.9858 / 0.9835 / 0.9877 / 0.9786, and all eight now clear. This is the class recorded as P9 in
+[`cross_model/external_model_issues.md`](../state_tax/cross_model/external_model_issues.md);
+a sweep of all 48 enabled jurisdictions finds an age effect in 23, though most
+of the others are unchecked against their own statutes and some genuinely do
+restrict by age.
 
 ## Known differences
 
