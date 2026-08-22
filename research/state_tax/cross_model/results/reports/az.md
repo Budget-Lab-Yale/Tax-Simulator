@@ -10,13 +10,13 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       | 16848|    9927|   0.1936|    0.5500|         0.2803|          0.6718|          0.0061|         81.5189|    709.6990|
+| 2017|taxsim       | 16848|    6639|   0.1936|    0.5500|         0.4109|          0.9160|          0.0061|         81.5189|    709.6990|
 | 2017|taxsim       |  3665|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       | 16697|    9859|   0.2515|    0.7190|         0.3275|          0.7902|          0.0046|         53.8988|      6.3792|
+| 2018|taxsim       | 16697|    8823|   0.2515|    0.7190|         0.3605|          0.8414|          0.0046|         53.8988|      6.3792|
 | 2018|taxsim       |  3818|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       | 16513|    9907|   0.3664|    0.8214|         0.4484|          0.8784|          0.0108|         25.0000|   -213.3335|
+| 2019|taxsim       | 16513|    8746|   0.3664|    0.8214|         0.5117|          0.9369|          0.0108|         25.0000|   -213.3335|
 | 2019|taxsim       |  4001|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       | 16529|    9470|   0.3499|    0.7957|         0.4454|          0.8784|          0.0112|         25.0000|    -91.3309|
+| 2020|taxsim       | 16529|    8481|   0.3499|    0.7957|         0.5001|          0.9392|          0.0112|         25.0000|    -91.3309|
 | 2020|taxsim       |  3984|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2021|policyengine |   761|     244|   0.2116|    0.6675|         0.3607|          0.8934|          0.0000|         50.0000|  46831.7388|
 | 2021|policyengine |   775|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
@@ -31,37 +31,37 @@ defined (federally aligned records; see README).
 
 | year|fed_aligned |stage           |    n|
 |----:|:-----------|:---------------|----:|
-| 2017|TRUE        |1 state AGI     | 2864|
-| 2017|TRUE        |2 exemptions    | 3433|
-| 2017|TRUE        |3 deductions    | 1074|
-| 2017|TRUE        |6 other credits |  366|
-| 2017|FALSE       |1 state AGI     | 7283|
-| 2017|FALSE       |2 exemptions    | 1249|
-| 2017|FALSE       |3 deductions    |  922|
-| 2017|FALSE       |6 other credits |   18|
-| 2018|TRUE        |1 state AGI     | 2783|
-| 2018|TRUE        |2 exemptions    | 3233|
-| 2018|TRUE        |3 deductions    |  920|
+| 2017|TRUE        |1 state AGI     |  837|
+| 2017|TRUE        |2 exemptions    | 2291|
+| 2017|TRUE        |3 deductions    |  531|
+| 2017|TRUE        |6 other credits |  367|
+| 2017|FALSE       |1 state AGI     | 9310|
+| 2017|FALSE       |2 exemptions    | 2391|
+| 2017|FALSE       |3 deductions    | 1465|
+| 2017|FALSE       |6 other credits |   17|
+| 2018|TRUE        |1 state AGI     | 1917|
+| 2018|TRUE        |2 exemptions    | 2906|
+| 2018|TRUE        |3 deductions    |  802|
 | 2018|TRUE        |6 other credits |  374|
-| 2018|FALSE       |1 state AGI     | 6874|
-| 2018|FALSE       |2 exemptions    | 1215|
-| 2018|FALSE       |3 deductions    |  790|
+| 2018|FALSE       |1 state AGI     | 7740|
+| 2018|FALSE       |2 exemptions    | 1542|
+| 2018|FALSE       |3 deductions    |  908|
 | 2018|FALSE       |6 other credits |   13|
-| 2019|TRUE        |1 state AGI     | 2653|
-| 2019|TRUE        |2 exemptions    | 1294|
-| 2019|TRUE        |3 deductions    | 1804|
-| 2019|TRUE        |6 other credits |  412|
-| 2019|FALSE       |1 state AGI     | 6613|
-| 2019|FALSE       |2 exemptions    |  199|
-| 2019|FALSE       |3 deductions    | 1360|
-| 2019|FALSE       |6 other credits |   24|
-| 2020|TRUE        |1 state AGI     | 2513|
-| 2020|TRUE        |2 exemptions    | 1313|
-| 2020|TRUE        |3 deductions    | 1717|
+| 2019|TRUE        |1 state AGI     | 1681|
+| 2019|TRUE        |2 exemptions    | 1198|
+| 2019|TRUE        |3 deductions    | 1369|
+| 2019|TRUE        |6 other credits |  415|
+| 2019|FALSE       |1 state AGI     | 7585|
+| 2019|FALSE       |2 exemptions    |  295|
+| 2019|FALSE       |3 deductions    | 1795|
+| 2019|FALSE       |6 other credits |   21|
+| 2020|TRUE        |1 state AGI     | 1654|
+| 2020|TRUE        |2 exemptions    | 1194|
+| 2020|TRUE        |3 deductions    | 1357|
 | 2020|TRUE        |6 other credits |  424|
-| 2020|FALSE       |1 state AGI     | 7175|
-| 2020|FALSE       |2 exemptions    |  207|
-| 2020|FALSE       |3 deductions    | 1294|
+| 2020|FALSE       |1 state AGI     | 8034|
+| 2020|FALSE       |2 exemptions    |  326|
+| 2020|FALSE       |3 deductions    | 1654|
 | 2020|FALSE       |6 other credits |   19|
 
 ## Known differences applied

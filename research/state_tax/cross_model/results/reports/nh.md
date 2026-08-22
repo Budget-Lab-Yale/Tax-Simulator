@@ -10,13 +10,13 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       | 16848|    9927|   0.9992|    1.0000|         0.9999|          1.0000|          0.8343|               0|     -0.0456|
+| 2017|taxsim       | 16848|    8164|   0.9992|    1.0000|         0.9999|          1.0000|          0.8343|               0|     -0.0456|
 | 2017|taxsim       |  3665|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       | 16697|    9859|   0.9990|    1.0000|         0.9994|          1.0000|          0.8341|               0|     -0.0611|
+| 2018|taxsim       | 16697|    9008|   0.9990|    1.0000|         0.9999|          1.0000|          0.8341|               0|     -0.0611|
 | 2018|taxsim       |  3818|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       | 16513|    9907|   0.9985|    1.0000|         0.9992|          1.0000|          0.8315|               0|     -0.0821|
+| 2019|taxsim       | 16513|    8956|   0.9985|    1.0000|         0.9998|          1.0000|          0.8315|               0|     -0.0821|
 | 2019|taxsim       |  4001|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       | 16529|    9470|   0.9992|    1.0000|         0.9996|          1.0000|          0.8353|               0|     -0.0464|
+| 2020|taxsim       | 16529|    8623|   0.9992|    1.0000|         0.9999|          1.0000|          0.8353|               0|     -0.0464|
 | 2020|taxsim       |  3984|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2021|policyengine |  1172|     368|   0.9241|    0.9480|         0.9728|          0.9837|          0.8242|               0|   -183.4022|
 | 2021|policyengine |   364|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
@@ -31,14 +31,14 @@ defined (federally aligned records; see README).
 
 | year|fed_aligned |stage       |  n|
 |----:|:-----------|:-----------|--:|
-| 2017|TRUE        |1 state AGI |  3|
-| 2017|FALSE       |1 state AGI | 35|
-| 2018|TRUE        |1 state AGI | 11|
-| 2018|FALSE       |1 state AGI | 26|
-| 2019|TRUE        |1 state AGI |  9|
-| 2019|FALSE       |1 state AGI | 37|
-| 2020|TRUE        |1 state AGI |  9|
-| 2020|FALSE       |1 state AGI | 32|
+| 2017|TRUE        |1 state AGI |  1|
+| 2017|FALSE       |1 state AGI | 37|
+| 2018|TRUE        |1 state AGI |  3|
+| 2018|FALSE       |1 state AGI | 34|
+| 2019|TRUE        |1 state AGI |  2|
+| 2019|FALSE       |1 state AGI | 44|
+| 2020|TRUE        |1 state AGI |  1|
+| 2020|FALSE       |1 state AGI | 40|
 
 ## Known differences applied
 

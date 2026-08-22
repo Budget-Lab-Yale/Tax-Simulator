@@ -10,13 +10,13 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       | 16848|    9927|   0.4604|    0.5980|         0.5674|          0.6958|          0.1976|         28.5534|   1291.5780|
+| 2017|taxsim       | 16848|    6801|   0.4604|    0.5980|         0.7306|          0.8197|          0.1976|         28.5534|   1291.5780|
 | 2017|taxsim       |  3665|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       | 16697|    9859|   0.4562|    0.5939|         0.5585|          0.6878|          0.1931|         31.0760|   1114.6931|
+| 2018|taxsim       | 16697|    8911|   0.4562|    0.5939|         0.6081|          0.7455|          0.1931|         31.0760|   1114.6931|
 | 2018|taxsim       |  3818|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       | 16513|    9907|   0.4636|    0.6015|         0.5598|          0.6904|          0.1966|         29.0404|   1086.3215|
+| 2019|taxsim       | 16513|    8837|   0.4636|    0.6015|         0.6166|          0.7521|          0.1966|         29.0404|   1086.3215|
 | 2019|taxsim       |  4001|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       | 16529|    9470|   0.4420|    0.5848|         0.5449|          0.6785|          0.1897|         36.2839|   1203.5976|
+| 2020|taxsim       | 16529|    8514|   0.4420|    0.5848|         0.5911|          0.7354|          0.1897|         36.2839|   1203.5976|
 | 2020|taxsim       |  3984|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2021|policyengine |  1172|     364|   0.6741|    0.7125|         0.8352|          0.8571|          0.1570|          0.0036|    949.7289|
 | 2021|policyengine |   364|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
@@ -29,24 +29,24 @@ defined (federally aligned records; see README).
 
 ## Mismatch stage diagnosis (TAXSIM |diff| > $15)
 
-| year|fed_aligned |stage           |    n|
-|----:|:-----------|:---------------|----:|
-| 2017|TRUE        |1 state AGI     | 4771|
-| 2017|TRUE        |6 other credits |   60|
-| 2017|FALSE       |1 state AGI     | 7714|
-| 2017|FALSE       |6 other credits |   79|
-| 2018|TRUE        |1 state AGI     | 4937|
-| 2018|TRUE        |6 other credits |   45|
-| 2018|FALSE       |1 state AGI     | 7711|
-| 2018|FALSE       |6 other credits |   57|
-| 2019|TRUE        |1 state AGI     | 4945|
-| 2019|TRUE        |6 other credits |   46|
-| 2019|FALSE       |1 state AGI     | 7634|
-| 2019|FALSE       |6 other credits |   66|
-| 2020|TRUE        |1 state AGI     | 4919|
-| 2020|TRUE        |6 other credits |   52|
-| 2020|FALSE       |1 state AGI     | 8020|
-| 2020|FALSE       |6 other credits |   72|
+| year|fed_aligned |stage           |     n|
+|----:|:-----------|:---------------|-----:|
+| 2017|TRUE        |1 state AGI     |  1920|
+| 2017|TRUE        |6 other credits |    51|
+| 2017|FALSE       |1 state AGI     | 10565|
+| 2017|FALSE       |6 other credits |    88|
+| 2018|TRUE        |1 state AGI     |  3768|
+| 2018|TRUE        |6 other credits |    43|
+| 2018|FALSE       |1 state AGI     |  8880|
+| 2018|FALSE       |6 other credits |    59|
+| 2019|TRUE        |1 state AGI     |  3687|
+| 2019|TRUE        |6 other credits |    40|
+| 2019|FALSE       |1 state AGI     |  8892|
+| 2019|FALSE       |6 other credits |    72|
+| 2020|TRUE        |1 state AGI     |  3761|
+| 2020|TRUE        |6 other credits |    51|
+| 2020|FALSE       |1 state AGI     |  9178|
+| 2020|FALSE       |6 other credits |    73|
 
 ## Known differences applied
 

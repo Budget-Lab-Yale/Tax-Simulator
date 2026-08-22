@@ -23,9 +23,21 @@ statute cite and a one-line fix. It is not a "which model is right" question
 like the rest of this file.
 
 How the filter works: a record is "federally aligned" when the external
-model's federal AGI is within $100 of ours (net of `state_ref`, which TAXSIM
-never sees), federal taxable income within $100 (PolicyEngine leg only),
-federal EITC within $15, and (TAXSIM only) `exempt_int == 0`. Flags are set
+model's federal AGI is within $100 of ours, federal taxable income within
+$100, federal EITC within $15, and (TAXSIM only) `exempt_int == 0`.
+
+**Two corrections on 2026-08-22.** Federal taxable income is now compared on
+the TAXSIM leg too; it had been PolicyEngine-only, and
+`v18_federal_taxable_income` was available from TAXSIM all along but dropped by
+the leg's `select`. That hole mattered most for states whose base IS federal
+taxable income, which inherit every federal difference below the AGI line:
+Idaho records carrying a section 199A deduction matched at 0.60 against 0.91
+without, with the state taxable-income gap equal to -qbi_ded (median ratio
+-1.0006). Correcting it lifted 160 of 200 TAXSIM cells. Separately, the
+`state_ref` offset on the AGI comparison is now conditional on whether the
+crosswalk actually withheld the refund -- it is handed to states that do not
+subtract their own, and applying the offset there had been failing almost every
+RI and ND record carrying a refund (fed_aligned 0.037 against 0.674). Flags are set
 in `cross_model_compare()` (`src/tests/state/test_state_cross_model.R`); the
 `fed_aligned` column is on every per-record file in `results/raw/`.
 
@@ -63,7 +75,7 @@ on 2019 data. Untraced candidates: taxable-SS computation differences
 mixed wage/SE records. Raw material: any `results/raw/taxsim_{year}.csv`,
 records with `fed_aligned == FALSE` and `exempt_int == 0`.
 
-## 3. QBI in the TAXSIM crosswalk — CLOSED 2026-07-19
+## 3. QBI in the TAXSIM crosswalk — CLOSED 2026-07-19 (but see the note below)
 
 `taxsim_crosswalk()` now maps QBI inputs (SE income to `pbusinc`/`pprofinc`
 by SSTB share, non-SE QBI income to `scorp`, totals preserved; see
@@ -72,6 +84,18 @@ federal-taxable-start states' clean match rates by +3 to +5 points in
 2018–2020 (2017 unchanged, as expected pre-TCJA). Remaining approximation:
 TAXSIM assumes a sufficient wage bill, so its QBID can exceed ours above
 the phase-out for low-wage-bill businesses.
+
+**2026-08-22 addendum.** The residual QBI divergence is larger than "remaining
+approximation" suggested, and it was invisible because the TAXSIM leg did not
+compare federal taxable income. On Idaho, whose base is federal taxable income,
+records with a QBI deduction matched at 0.60 against 0.91 without, and the
+state taxable-income gap equalled -qbi_ded almost exactly (median ratio
+-1.0006) -- i.e. for the mismatching subset TAXSIM takes no QBID where we take
+one. These records are now conditioned out by the corrected filter rather than
+polluting state cells, but the underlying federal difference is unexplained and
+belongs on this list. Reviewing it means asking why TAXSIM's QBID is zero for
+that subset -- the wage/SSTB limit is the obvious candidate, and the direction
+is opposite to the wage-bill approximation noted above.
 
 ## 4. PolicyEngine's federal return
 

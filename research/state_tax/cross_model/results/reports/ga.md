@@ -10,13 +10,13 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       | 16848|    9927|   0.5918|    0.8019|         0.7079|          0.8608|          0.2002|          6.9417|   -276.1675|
+| 2017|taxsim       | 16848|    6600|   0.5918|    0.8019|         0.8918|          0.9447|          0.2002|          6.9417|   -276.1675|
 | 2017|taxsim       |  3665|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       | 16697|    9859|   0.6003|    0.6817|         0.7274|          0.7920|          0.2057|          2.4785|   -726.5144|
+| 2018|taxsim       | 16697|    8892|   0.6003|    0.6817|         0.8410|          0.8834|          0.2057|          2.4785|   -726.5144|
 | 2018|taxsim       |  3818|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       | 16513|    9907|   0.6080|    0.6875|         0.7291|          0.7887|          0.2069|          2.0540|   -873.0800|
+| 2019|taxsim       | 16513|    8803|   0.6080|    0.6875|         0.8460|          0.8866|          0.2069|          2.0540|   -873.0800|
 | 2019|taxsim       |  4001|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       | 16529|    9470|   0.6068|    0.6907|         0.7295|          0.7924|          0.1988|          1.9167|   -759.7266|
+| 2020|taxsim       | 16529|    8481|   0.6068|    0.6907|         0.8462|          0.8892|          0.1988|          1.9167|   -759.7266|
 | 2020|taxsim       |  3984|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2021|policyengine |  1536|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2022|policyengine |  1141|     423|   0.5337|    0.6582|         0.8534|          0.8865|          0.1823|          8.8143|     54.2384|
@@ -30,38 +30,34 @@ defined (federally aligned records; see README).
 
 | year|fed_aligned |stage           |    n|
 |----:|:-----------|:---------------|----:|
-| 2017|TRUE        |1 state AGI     | 2275|
-| 2017|TRUE        |3 deductions    |  715|
-| 2017|TRUE        |6 other credits |  337|
-| 2017|TRUE        |7 rate/rounding |   81|
-| 2017|FALSE       |1 state AGI     | 5961|
-| 2017|FALSE       |3 deductions    |  545|
-| 2017|FALSE       |6 other credits |  355|
-| 2017|FALSE       |7 rate/rounding |   28|
-| 2018|TRUE        |1 state AGI     | 2438|
-| 2018|TRUE        |3 deductions    |  548|
-| 2018|TRUE        |6 other credits |  203|
-| 2018|TRUE        |7 rate/rounding |   99|
-| 2018|FALSE       |1 state AGI     | 6272|
-| 2018|FALSE       |3 deductions    |  481|
-| 2018|FALSE       |6 other credits |  152|
-| 2018|FALSE       |7 rate/rounding |   32|
-| 2019|TRUE        |1 state AGI     | 2466|
-| 2019|TRUE        |3 deductions    |  520|
-| 2019|TRUE        |6 other credits |  207|
-| 2019|TRUE        |7 rate/rounding |   80|
-| 2019|FALSE       |1 state AGI     | 6305|
-| 2019|FALSE       |3 deductions    |  414|
-| 2019|FALSE       |6 other credits |  171|
-| 2019|FALSE       |7 rate/rounding |   32|
-| 2020|TRUE        |1 state AGI     | 2409|
-| 2020|TRUE        |3 deductions    |  486|
-| 2020|TRUE        |6 other credits |  191|
-| 2020|TRUE        |7 rate/rounding |   93|
-| 2020|FALSE       |1 state AGI     | 6422|
-| 2020|FALSE       |3 deductions    |  392|
-| 2020|FALSE       |6 other credits |  176|
-| 2020|FALSE       |7 rate/rounding |   59|
+| 2017|TRUE        |1 state AGI     |  464|
+| 2017|TRUE        |3 deductions    |   21|
+| 2017|TRUE        |6 other credits |  272|
+| 2017|FALSE       |1 state AGI     | 7772|
+| 2017|FALSE       |3 deductions    | 1239|
+| 2017|FALSE       |6 other credits |  420|
+| 2017|FALSE       |7 rate/rounding |  109|
+| 2018|TRUE        |1 state AGI     | 1399|
+| 2018|TRUE        |3 deductions    |  135|
+| 2018|TRUE        |6 other credits |  160|
+| 2018|FALSE       |1 state AGI     | 7311|
+| 2018|FALSE       |3 deductions    |  894|
+| 2018|FALSE       |6 other credits |  195|
+| 2018|FALSE       |7 rate/rounding |  131|
+| 2019|TRUE        |1 state AGI     | 1371|
+| 2019|TRUE        |3 deductions    |  127|
+| 2019|TRUE        |6 other credits |  145|
+| 2019|FALSE       |1 state AGI     | 7400|
+| 2019|FALSE       |3 deductions    |  807|
+| 2019|FALSE       |6 other credits |  233|
+| 2019|FALSE       |7 rate/rounding |  112|
+| 2020|TRUE        |1 state AGI     | 1363|
+| 2020|TRUE        |3 deductions    |   97|
+| 2020|TRUE        |6 other credits |  137|
+| 2020|FALSE       |1 state AGI     | 7468|
+| 2020|FALSE       |3 deductions    |  781|
+| 2020|FALSE       |6 other credits |  230|
+| 2020|FALSE       |7 rate/rounding |  152|
 
 ## Known differences applied
 

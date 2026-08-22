@@ -10,13 +10,13 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       | 13733|   10498|   0.8290|    0.9380|         0.9824|          1.0000|          0.1802|          0.0040|     32.3694|
+| 2017|taxsim       | 13733|    6510|   0.8290|    0.9380|         0.9934|          1.0000|          0.1802|          0.0040|     32.3694|
 | 2017|taxsim       |  6780|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       | 13515|   10392|   0.8235|    0.9321|         0.9816|          1.0000|          0.1803|          0.0046|     27.8432|
+| 2018|taxsim       | 13515|    7471|   0.8235|    0.9321|         0.9893|          1.0000|          0.1803|          0.0046|     27.8432|
 | 2018|taxsim       |  7000|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       | 13446|   10309|   0.8193|    0.9284|         0.9809|          1.0000|          0.1819|          0.0045|     35.6152|
+| 2019|taxsim       | 13446|    7514|   0.8193|    0.9284|         0.9888|          1.0000|          0.1819|          0.0045|     35.6152|
 | 2019|taxsim       |  7068|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       | 13341|    9834|   0.7880|    0.8975|         0.9779|          1.0000|          0.1798|          0.0046|     52.0460|
+| 2020|taxsim       | 13341|    7191|   0.7880|    0.8975|         0.9866|          1.0000|          0.1798|          0.0046|     52.0460|
 | 2020|taxsim       |  7172|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2021|policyengine |  1536|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2022|policyengine |   998|     389|   0.7154|    0.7976|         0.9640|          0.9949|          0.1202|          0.2203|    298.5102|
@@ -30,25 +30,25 @@ defined (federally aligned records; see README).
 
 | year|fed_aligned |stage        |    n|
 |----:|:-----------|:------------|----:|
-| 2017|TRUE        |1 state AGI  | 2247|
-| 2017|TRUE        |2 exemptions |  439|
-| 2017|FALSE       |1 state AGI  | 5043|
-| 2017|FALSE       |2 exemptions |   14|
+| 2017|TRUE        |1 state AGI  |  115|
+| 2017|TRUE        |2 exemptions |   13|
+| 2017|FALSE       |1 state AGI  | 7175|
+| 2017|FALSE       |2 exemptions |  440|
 | 2017|FALSE       |5 state EITC | 1133|
-| 2018|TRUE        |1 state AGI  | 2398|
-| 2018|TRUE        |2 exemptions |  433|
-| 2018|FALSE       |1 state AGI  | 5104|
-| 2018|FALSE       |2 exemptions |   25|
+| 2018|TRUE        |1 state AGI  |  557|
+| 2018|TRUE        |2 exemptions |  102|
+| 2018|FALSE       |1 state AGI  | 6945|
+| 2018|FALSE       |2 exemptions |  356|
 | 2018|FALSE       |5 state EITC | 1148|
-| 2019|TRUE        |1 state AGI  | 2469|
-| 2019|TRUE        |2 exemptions |  389|
-| 2019|FALSE       |1 state AGI  | 5144|
-| 2019|FALSE       |2 exemptions |   18|
+| 2019|TRUE        |1 state AGI  |  563|
+| 2019|TRUE        |2 exemptions |  108|
+| 2019|FALSE       |1 state AGI  | 7050|
+| 2019|FALSE       |2 exemptions |  299|
 | 2019|FALSE       |5 state EITC | 1209|
-| 2020|TRUE        |1 state AGI  | 2518|
-| 2020|TRUE        |2 exemptions |  446|
-| 2020|FALSE       |1 state AGI  | 5660|
-| 2020|FALSE       |2 exemptions |   15|
+| 2020|TRUE        |1 state AGI  |  539|
+| 2020|TRUE        |2 exemptions |  101|
+| 2020|FALSE       |1 state AGI  | 7639|
+| 2020|FALSE       |2 exemptions |  360|
 | 2020|FALSE       |5 state EITC | 1111|
 
 ## Known differences applied

@@ -73,7 +73,13 @@ $142.50 at 4.75%; excluding just that moves 2019 only 0.9291 -> 0.9336, because
 545 of the 624 records it sweeps already matched.
 
 The PolicyEngine window is also short (0.8702 / 0.9382 / 0.9208 / 0.9389) and
-has not been triaged at all.
+has not been triaged at all -- and it is now what binds Maryland, at 0.8702.
+
+**Update, same day.** The federal-taxable-income correction to `fed_aligned`
+(see the Idaho packet) lifted the Maryland TAXSIM cells to 0.9655 / 0.9542 /
+0.9448 / 0.9255. 2017 and 2018 now clear; 2019 and 2020 do not, and neither
+does any PolicyEngine cell. Maryland's care residual remains undiagnosed and
+T18 remains refuted for Maryland.
 
 ## Known differences
 

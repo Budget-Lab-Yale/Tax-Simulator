@@ -77,38 +77,40 @@ STC published rate schedules, and Idaho Code Title 63 ch. 30).
   family grocery; 2025 5.3% + $155 flat grocery; refundable grocery with the
   blind PBF exemption (net refund); 2021 HoH on the married schedule.
 
-## Triage 2026-08-22 — two classes landed; 2018-2020 NOT closed
+## Triage 2026-08-22 — closed; the QBI lead was right, and it was a harness gap
 
-2017 clears; 2018-2020 do not. What was verified and what remains:
+All four cells clear: 0.9997 / 0.9827 / 0.9842 / 0.9833. Our encoding was not
+changed.
 
-**Landed (both supersede earlier annotate rows for the same divergences).**
+**Landed first, both superseding earlier annotate rows.** The DC/CA
+crosswalk-exposure class (Idaho starts from federal taxable income, so the
+federal itemized deduction enters the base directly; federal itemizers matched
+at 0.162 against 0.928). And the Idaho instance of T18, probed for Idaho rather
+than carried over from Virginia: TAXSIM grants the care deduction at the full
+federal cap without the IRC 21(d)(1) earned-income limit -- siitax identical at
+4,873.16 whether the spouse earns $40,000, nothing or $2,000, a flat $415.50 =
+$6,000 x 6.925%. Those two took 2017 to 0.977 but left 2018-2020 at ~0.86.
 
-1. *DC/CA crosswalk-exposure class.* Idaho starts from federal taxable income,
-   so the federal itemized deduction enters the Idaho base directly and the
-   crosswalk's unstripped SALT inside `otheritem` is in play. Federal itemizers
-   match at 0.162 against 0.928 for non-itemizers, pooled 2017-2020.
-2. *T18, the Idaho instance.* TAXSIM grants the care deduction (Idaho Code
-   63-3022(o), keyed to the IRC 21 base) at the full federal cap without the
-   IRC 21(d)(1) earned-income limitation. **Probed for Idaho specifically
-   rather than carried over from Virginia**: siitax is identical at 4,873.16
-   whether the spouse earns $40,000, nothing, or $2,000, and rises to 5,288.66
-   only when care expenses are removed -- a flat $415.50 = $6,000 x 6.925%.
-   Records with care expenses match at 0.440 against 0.741 without. This
-   sharpens the earlier annotate row, which had attributed the same
-   over-representation to the cap rather than the earned-income limit.
+**The remainder was section 199A, and the cause was in the harness.** The
+residual was entirely post-TCJA, which pointed at QBI, and the measurement is
+unambiguous: records with a QBI deduction matched at **0.60 against 0.91**
+without, the state taxable-income gap equals **-qbi_ded** (median ratio
+-1.0006), and diff divided by that gap is 0.0692, Idaho's rate. So a federal
+section 199A difference was landing whole in the Idaho cell.
 
-**Result.** 0.6178 / 0.7449 / 0.7457 / 0.7394 -> 0.9766 / 0.8666 / 0.8671 /
-0.8595, matching the offline estimate to four decimals and moving no other
-state's cells.
+It should never have reached the cell. `fed_aligned` exists to condition away
+federal disagreements, and the PolicyEngine branch has always compared federal
+taxable income "for fed-taxable-start states" -- but the TAXSIM branch compared
+only federal AGI, EITC and tax-exempt interest. Idaho's base *is* federal
+taxable income, so every federal difference below the AGI line passed straight
+through. `v18_federal_taxable_income` was available from TAXSIM all along and
+was simply dropped by the leg's `select`. Adding it makes the two branches
+symmetric.
 
-**What is left, and the strongest lead.** 2017 clears at 0.977 while 2018-2020
-sit at ~0.86, so the remaining cause is post-TCJA. The existing QBID annotate
-row is the obvious candidate and fits the timing exactly: Idaho's base is
-federal taxable income, which is net of the section 199A deduction, so any
-difference between TAXSIM's QBID and ours lands directly in the Idaho base, and
-199A only exists from 2018. That row records roughly 10% of QBID non-itemizers
-showing a taxable wedge of exactly -qbi_ded. Testing that is the next step; it
-was not done here.
+This is why excluding QBI records outright would have been the wrong fix: it
+treats a symptom, and the same hole was letting every other sub-AGI federal
+difference through for every federal-taxable-income-base state. The corrected
+filter lifted 160 of 200 TAXSIM cells across all states.
 
 ## Known differences
 

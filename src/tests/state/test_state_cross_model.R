@@ -263,15 +263,17 @@ cross_model_taxsim_leg = function(sampled, states, year, state_law,
     # decides whether TAXSIM should be handed state_ref at all -- see the
     # note in taxsim_crosswalk(). grab() returns the schema default 0 when
     # the state never sets it, which is the non-subtracting case
+    subtracts_ref = grab('st_agi.sub_state_ref') == 1
     xw = taxsim_crosswalk(sampled, state = st,
                           independent_item = independent_item,
-                          state_subtracts_ref = grab('st_agi.sub_state_ref') == 1)
+                          state_subtracts_ref = subtracts_ref)
     chunks = split(xw, ceiling(seq_len(nrow(xw)) / chunk_size))
 
     map(chunks, function(chunk) {
       taxsim_calculate_taxes(chunk, return_all_information = T) %>%
         select(taxsimid, siitax, staxbc,
-               any_of(c('v10_federal_agi', 'v25_eitc')),
+               any_of(c('v10_federal_agi', 'v18_federal_taxable_income',
+                        'v25_eitc')),
                starts_with('v3'), any_of('v40_state_total_credits'),
                any_of('v41_state_bracket_rate')) %>%
         return()
@@ -279,6 +281,9 @@ cross_model_taxsim_leg = function(sampled, states, year, state_law,
       bind_rows() %>%
       rename(id = taxsimid) %>%
       mutate(state = st, year = .env$year, .after = id) %>%
+      # Whether the crosswalk WITHHELD state_ref from this state's TAXSIM
+      # input, which decides whether fed_aligned must offset for it
+      mutate(xw_ref_withheld = as.integer(subtracts_ref)) %>%
       return()
   }) %>%
     bind_rows() %>%
@@ -442,12 +447,30 @@ cross_model_compare = function(ours, theirs, model, known_diffs = NULL,
   if (model == 'taxsim' &&
       all(c('v10_federal_agi', 'v25_eitc', 'agi', 'eitc', 'exempt_int',
             'state_ref') %in% names(records))) {
-    # state_ref is deliberately omitted from TAXSIM state-mode input
-    # (see taxsim_crosswalk), so TAXSIM's federal AGI runs low by state_ref
+    # state_ref is omitted from TAXSIM state-mode input ONLY for states that
+    # subtract their own refund (see taxsim_crosswalk); for those TAXSIM's
+    # federal AGI runs low by state_ref and the offset below corrects for it.
+    # Where the refund WAS handed over, TAXSIM's federal AGI already matches
+    # ours and applying the offset would fail almost every record carrying a
+    # refund -- xw_ref_withheld carries which case the state is in.
+    #
+    # Federal taxable income is compared as well, mirroring the PolicyEngine
+    # branch. It matters for the same reason: a state whose base is federal
+    # taxable income inherits any federal difference below the AGI line
+    # directly, and section 199A is the live example -- Idaho records with a
+    # QBI deduction matched at 0.60 against 0.91 without, with the state
+    # taxable-income gap equal to -qbi_ded (median ratio -1.0006). Those are
+    # federal divergences and belong in federal_divergences.md, not in a
+    # state's cell
     records = records %>%
-      mutate(fed_aligned = abs(v10_federal_agi - (agi - state_ref)) <= 100 &
+      mutate(ref_off = if ('xw_ref_withheld' %in% names(.))
+                         state_ref * xw_ref_withheld else state_ref,
+             fed_aligned = abs(v10_federal_agi - (agi - ref_off)) <= 100 &
                            abs(v25_eitc - eitc) <= 15 &
-                           exempt_int == 0)
+                           exempt_int == 0 &
+                           (if ('v18_federal_taxable_income' %in% names(.))
+                              abs(v18_federal_taxable_income - txbl_inc) <= 100
+                            else TRUE))
   } else if (model == 'policyengine' &&
              all(c('pe_fed_agi', 'pe_fed_taxable', 'pe_fed_eitc', 'agi',
                    'txbl_inc', 'eitc', 'state_ref') %in% names(records))) {
