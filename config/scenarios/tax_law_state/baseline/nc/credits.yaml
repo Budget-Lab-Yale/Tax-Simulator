@@ -40,6 +40,9 @@ ctc_style:
 ctc_max_child_age:
   value: 16
   reference: 'G.S. 105-153.10(a): child for whom the federal child tax credit is allowed'
+ctc_refundable:
+  value: 0
+  reference: 'G.S. 105-153.10(a) allows "a credit against the tax imposed by this Part" and nowhere declares the credit refundable, unlike the repealed NC EITC (G.S. 105-151.31, "This credit is refundable"); D-400TC Part 3 carries total credits to D-400 line 17, which cannot reduce line 18 below zero. The params_schema default is 1, so this override is required -- without it the credit is paid out to zero-tax filers'
 ctc_tier_amounts:
   value:
     '2017': [125, 100, 0]

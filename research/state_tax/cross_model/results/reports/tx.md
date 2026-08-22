@@ -10,13 +10,13 @@ defined (federally aligned records; see README).
 
 | year|model        |     n| n_clean| match_15| match_100| match_15_clean| match_100_clean| share_both_zero| median_abs_diff| mean_signed|
 |----:|:------------|-----:|-------:|--------:|---------:|--------------:|---------------:|---------------:|---------------:|-----------:|
-| 2017|taxsim       | 16848|   12092|        1|         1|              1|               1|               1|               0|           0|
+| 2017|taxsim       | 16848|    9927|        1|         1|              1|               1|               1|               0|           0|
 | 2017|taxsim       |  3665|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2018|taxsim       | 16697|   12037|        1|         1|              1|               1|               1|               0|           0|
+| 2018|taxsim       | 16697|    9859|        1|         1|              1|               1|               1|               0|           0|
 | 2018|taxsim       |  3818|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2019|taxsim       | 16513|   11930|        1|         1|              1|               1|               1|               0|           0|
+| 2019|taxsim       | 16513|    9907|        1|         1|              1|               1|               1|               0|           0|
 | 2019|taxsim       |  4001|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
-| 2020|taxsim       | 16529|   11502|        1|         1|              1|               1|               1|               0|           0|
+| 2020|taxsim       | 16529|    9470|        1|         1|              1|               1|               1|               0|           0|
 | 2020|taxsim       |  3984|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|
 | 2021|policyengine |  1172|     365|        1|         1|              1|               1|               1|               0|           0|
 | 2021|policyengine |   364|      NA|       NA|        NA|             NA|              NA|              NA|              NA|          NA|

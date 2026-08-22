@@ -2,7 +2,7 @@
 
 State: `UT`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-11`
+Last updated: `2026-08-22`
 
 > **Status note (as of 2026-08-11), kept from the packet's former Status line:**
 > baseline encoded; record-level worksheet tests complete
@@ -164,6 +164,64 @@ values; 2026+ index from the 2025 anchor with the model's CPI series
 - my529, at-home parent, health, military retirement, solar credits omitted.
 - 2017 PEP-reduced federal exemption interaction ignored (phase-out zeroes the
   credit below PEP range).
+
+## Triage 2026-08-22 — localized to the taxpayer tax credit on federal itemizers; NOT closed
+
+UT was not fixed in this round. What is now known, so the next attempt does not
+repeat the search:
+
+**The whole difference is the taxpayer tax credit.** State AGI and state
+taxable income agree with TAXSIM to the dollar (median `st_agi - v32` = 0.0,
+median `st_txbl_inc - v36` = 0.0) in both the miss and match groups. Our
+`st_ded_credit` is lower than TAXSIM's `v40` by a median $280 in 2017 and $330
+in 2018, and `diff == -(our credit - their credit)` on 1,296 of 1,633 misses.
+We zero the credit on 468 records where TAXSIM does not; TAXSIM zeroes it on 41.
+
+**It is entirely federal itemizers.** Splitting the 2017 clean subset:
+
+| federal `itemizing` | n | credit gap > $1 | match@$100 miss rate |
+|---|---|---|---|
+| FALSE | 4,995 | 263 | **0.04%** |
+| TRUE | 4,165 | 2,172 | **39.2%** |
+
+Non-itemizers are essentially perfect. That is the shape to expect, because
+UC 59-10-1018(1) builds the credit base from the **federal** deduction --
+itemized less the state/local income-tax addback, or the standard deduction --
+so anything that moves TAXSIM's federal itemized deduction moves the Utah
+credit even though Utah itself has no state itemization.
+
+**The formula is confirmed correct on both sides for non-itemizers.** Probed
+against TAXSIM on hand-computable cases (`output/probe/ut_credit_probe.R`):
+single $50k/0 dep gives credit 94.96 and tax 2,405.04, reconciling exactly with
+6% x (6,350 + 0.75 x 4,050) - 1.3% x (50,000 - 13,978). Cases with dependents
+and joint filers reconcile too, confirming the $13,978 / $20,968 / $27,956 base
+amounts and that exemptions count taxpayer, spouse and dependents at 75% of
+$4,050.
+
+**Two candidate mechanisms, NOT separated.**
+1. TAXSIM's federal itemized deduction differs from ours by construction --
+   SALT circularity (it iterates federal-state three rounds using its own
+   computed state income tax) and the Pub. 600 sales-tax imputation, both
+   already ALL-state `annotate` rows. Either changes the credit base.
+2. Our own addback may be too wide. UC 59-10-1018(1)(e) adds back state or
+   local **income** tax; `st_credits_household.R` strips
+   `salt_item_ded - salt_prop - salt_pers`, which is the PUF's combined
+   income-or-sales field. For a filer who elected the sales-tax deduction,
+   Utah requires no addback and we over-strip, shrinking the base and the
+   credit -- the right sign, since 1,545 of 1,633 misses are positive.
+
+Inverting the credit formula on real records gives an implied base gap of 0.92
+/ 1.19 / 1.42 / 1.64 exemption-equivalents at 0-3 dependents -- smoothly
+growing, so **not** a missing exemption count, which was the first hypothesis
+and is wrong.
+
+**Deliberately not excluded.** The exposed population is every federal
+itemizer, 45% of the clean subset, and 61% of them match anyway. Excluding all
+of them would clear the cell while hiding an unresolved question about our own
+addback, which is the wrong trade. Next step is to separate mechanism 2 from
+mechanism 1 -- compare our `ded_credit_salt` against the state income tax
+TAXSIM actually deducted, on records where the two federal itemized deductions
+otherwise agree.
 
 ## Cross-model validation notes
 

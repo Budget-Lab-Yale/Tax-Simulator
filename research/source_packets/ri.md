@@ -2,7 +2,7 @@
 
 State: `RI`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-12`
+Last updated: `2026-08-22`
 
 > **Status note (as of 2026-08-12), kept from the packet's former Status line:**
 > baseline encoded; worksheet tests RI-1..RI-5 pass
@@ -155,6 +155,55 @@ additionally books two items we deliberately exclude (see Known differences).
 6. The status-invariant rate schedule is genuine (verified on the "FOR ALL
    FILING STATUS TYPES" header in all nine years). If a harness flags RI's
    marriage penalty as anomalous, it is correct behavior.
+
+## Triage 2026-08-22 — the state-refund crosswalk, and RI-1040H
+
+RI was flat and low across the whole TAXSIM window (0.8913 / 0.8927 / 0.8987 /
+0.8933), the signature of one structural cause rather than a year effect. Two
+were found.
+
+### 1. TAXSIM never saw the state income-tax refund (the large one)
+
+The miss rate rose monotonically with income -- 3.4% below $50k to 23.4% above
+$215k -- and in the top band our state taxable income exceeded TAXSIM's by a
+median $5,661, which at RI's 5.99% top rate is $339, matching the observed
+median difference of $339 to the dollar. The residual against `state_ref`
+itself is -$29.5, our US-obligation subtraction, which TAXSIM also does not
+take. So the whole gap is: `st_agi - v32 = state_ref - our US-obligation
+subtraction`.
+
+`taxsim_crosswalk()` deliberately withheld `state_ref` whenever a state was
+requested, reasoning that TAXSIM cannot identify the refund inside `nonprop`
+and so cannot apply the state's own-refund subtraction. That is right for the
+22 states with `st_agi.sub_state_ref = 1`, and **wrong for RI**, which does not
+subtract it: `ri/agi.yaml` sets `sub_state_ref: 0` because RI allows no
+itemized deduction, so no state-tax deduction was taken and RI Schedule M has
+no refund line. Our encoding was correct; TAXSIM's state base was simply low by
+`state_ref`.
+
+Fixed by making the omission conditional -- `taxsim_crosswalk()` now takes
+`state_subtracts_ref` and hands the refund over for non-subtracting states. The
+federal-only path is unaffected by construction (`state == 'No state'` already
+short-circuits). This is a validation-harness fix, not a model change.
+
+### 2. RI-1040H property-tax relief credit (the small one)
+
+TAXSIM grants it and we structurally cannot: rent is not in the PUF and the
+RI-1040H household-income concept is not reconstructible, so `ri/credits.yaml`
+leaves it unmodelled. On the clean subset the signed difference equals TAXSIM's
+own `v37_state_property_tax_credit` to the dollar on 84 of 85 records in 2017
+and 62 of 64 in 2020, at the statutory maximum ($350 in 2017, $400 in 2020).
+Now an `exclude` row rather than a YAML comment only.
+
+**Result.** 0.8913 -> 0.9637, 0.8927 -> 0.9624, 0.8987 -> 0.9646, 0.8933 ->
+0.9628. All four TAXSIM cells clear. The crosswalk fix also lifted 79 TAXSIM
+cells across other states (best +0.107 at NE 2017; HI, VT and MA all gained
+1-2.5 points), with four cells moving by at most -0.0005 and none dropping
+below the bar -- the schema default for `sub_state_ref` is 0, so most states
+were exposed to the same omission.
+
+**Still open.** PolicyEngine 2023 sits at 0.9487, one record above the 23
+misses that would clear on n_clean = 468. Not chased.
 
 ## Cross-model and aggregate validation
 

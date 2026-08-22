@@ -259,8 +259,13 @@ cross_model_taxsim_leg = function(sampled, states, year, state_law,
          grab('st_ded.item_coupling') == 0 &&
          grab('st_ded.item_fed_gate') == 0) ||
       grab('st_credits.item_credit_rate') > 0
+    # Whether the state subtracts its own income-tax refund from federal AGI
+    # decides whether TAXSIM should be handed state_ref at all -- see the
+    # note in taxsim_crosswalk(). grab() returns the schema default 0 when
+    # the state never sets it, which is the non-subtracting case
     xw = taxsim_crosswalk(sampled, state = st,
-                          independent_item = independent_item)
+                          independent_item = independent_item,
+                          state_subtracts_ref = grab('st_agi.sub_state_ref') == 1)
     chunks = split(xw, ceiling(seq_len(nrow(xw)) / chunk_size))
 
     map(chunks, function(chunk) {

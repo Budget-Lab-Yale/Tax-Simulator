@@ -381,6 +381,20 @@ test_state_calc = function() {
            expect = list(st_ctc = 200, liab_st_iit = 1587.175),
            label = 'NC-5 2017 child credit tiers')
 
+  # NC-5c: the 2017 child credit is NONREFUNDABLE. G.S. 105-153.10(a)
+  # allows "a credit against the tax imposed by this Part" and, unlike the
+  # repealed NC EITC (105-151.31, "This credit is refundable"), never
+  # declares it refundable; TAXSIM agrees, reporting the credit in v40 while
+  # holding siitax at zero. The params_schema default is refundable, so
+  # without nc/credits.yaml ctc_refundable = 0 this filer is paid $125.
+  # MFJ AGI 10,000, one child: 10,000 - 17,500 -> zero taxable, zero tax,
+  # and the credit cannot take liability below it
+  run_case('NC', 2017,
+           list(agi = 10000, filing_status = 2, age2 = 40, n_dep = 1,
+                dep_age1 = 5, std_ded = 12700),
+           expect = list(st_ctc = 125, liab_st_iit = 0),
+           label = 'NC-5c 2017 child credit is nonrefundable')
+
   # NC-5b: the 2018+ standard deduction stays at the 2017 amounts (the
   # S.L. 2018-5 increase is effective TY2019). MFJ 2018: std 17,500
   run_case('NC', 2018,

@@ -2,7 +2,7 @@
 
 State: `NC`  
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-07-13`
+Last updated: `2026-08-22`
 
 > **Status note (as of 2026-07-13), kept from the packet's former Status line:**
 > baseline encoded; record-level worksheet tests complete
@@ -44,6 +44,46 @@ Last updated: `2026-07-13`
 - The generic itemizer uses federal deductible component inputs; some North Carolina-specific qualification/limitation details still need cross-model review.
 - Filing thresholds are based on gross income and differ for dependents and older taxpayers. `st_filer` is a documented AGI proxy, not an official returns estimate.
 - The 2027+ rate-reduction triggers depend on annual revenue certifications and are deliberately not assumed in the baseline.
+
+## Triage 2026-08-22 — the 2017 child credit was being refunded
+
+NC 2017 sat at 0.9090 on the clean subset while 2018-2020 were all above 0.96.
+The 2017-only shape pointed at the credit for children (G.S. 105-153.10), which
+`ctc_style` correctly switches off from TY2018 when the child deduction
+replaces it.
+
+Of 635 clean misses, 330 sat on exact multiples of the credit: **-125** (196
+records), **-250** (84), **-375** (29), plus the $100 upper-AGI tier. The
+cross-tab against `n_dep` is exact -- diff = -(125 x children) -- and `st_ctc`
+is 125 on every record in the -125 group. Negative means our liability is lower,
+i.e. we were paying the credit out.
+
+**Cause: refundability.** `params_schema.yaml` defaults
+`st_credits.ctc_refundable` to 1 and `nc/credits.yaml` never overrode it, so a
+zero-tax filer received the credit as a refund. Median state AGI in the -125
+group is about $8,100 -- below NC's standard deduction, so no tax to offset.
+
+G.S. 105-153.10(a) allows "a credit against the tax imposed by this Part" and
+nowhere declares it refundable; the repealed NC EITC (G.S. 105-151.31) said
+"This credit is refundable" in terms, and its absence here is dispositive.
+TAXSIM agrees: probed on a single filer with $5,000 of wages and one child, it
+reports the credit in `v40` and holds `siitax` at 0.00.
+
+Fixed by `ctc_refundable: 0` in `nc/credits.yaml`; worksheet case NC-5c locks
+it. Only CO, NC and NY relied on the schema default, and Colorado's and New
+York's child credits are genuinely refundable, so NC was the only state
+affected.
+
+**Result.** 2017 0.9090 -> 0.9702. The other three years also improved (0.9637
+-> 0.9697, 0.9689 -> 0.9738, 0.9618 -> 0.9711) from the separate state-refund
+crosswalk fix described in the RI packet -- NC does not subtract its own refund
+either. All four TAXSIM cells now clear.
+
+**Still open.** PolicyEngine 2024 sits at 0.9457, two records above the 23
+misses that would clear on n_clean = 460. The misses are high-income scatter
+(median state AGI $930k) with no point mass; not chased, because moving two
+records out of a 460-record cell is fitting the metric rather than finding a
+cause.
 
 ## Cross-model and aggregate validation
 

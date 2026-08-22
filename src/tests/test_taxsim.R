@@ -53,7 +53,8 @@ taxsim_check = function(tax_units) {
 }
 
 taxsim_crosswalk = function(tax_units, state = 'No state',
-                            independent_item = FALSE) {
+                            independent_item = FALSE,
+                            state_subtracts_ref = TRUE) {
 
   #----------------------------------------------------------------------------
   # Converts YBL Tax Simulator inputs and outputs into NBER Taxsim readable
@@ -210,13 +211,22 @@ taxsim_crosswalk = function(tax_units, state = 'No state',
       # calc_agi(). Notes: nols is NOT in our AGI (AMT only); alimony is
       # gated on pre-repeal divorces; TAXSIM computes its own 1/2 SECA
       # deduction from psemp/ssemp so liab_seca_er is not subtracted here.
-      # State refunds are included only for federal-only runs: when a state
-      # is requested, TAXSIM cannot see the refund inside nonprop and so
-      # cannot apply the state's own-refund subtraction -- omitting it keeps
-      # the state calculation right at the cost of a small federal AGI gap
+      # State refunds: TAXSIM has no state-refund input, so a refund handed
+      # inside nonprop is invisible to it as a refund. Which way that cuts
+      # depends on the state. Where the state SUBTRACTS its own refund from
+      # federal AGI (st_agi.sub_state_ref = 1, 22 of the 24 states that set
+      # it), TAXSIM could not apply the subtraction and would over-tax, so
+      # omitting the refund keeps the state calculation right at the cost of
+      # a small federal AGI gap. Where the state does NOT subtract it (RI and
+      # ND, and the schema default), the refund belongs in the state base and
+      # omitting it makes TAXSIM's state AGI low by exactly state_ref --
+      # which is a state-tax difference, not just a federal one, and at RI's
+      # 5.99% top rate it broke the $100 tolerance on the whole top of the
+      # income distribution. Hand it over in that case
       alimony_qualifies = !is.na(divorce_year) &
         (divorce_year < agi.alimony_repeal_year),
-      nonprop = state_ref * (.env$state == 'No state') +
+      nonprop = state_ref * (.env$state == 'No state' ||
+                             !.env$state_subtracts_ref) +
         alimony * alimony_qualifies + other_inc -
         char_above_ded - other_above_ded - ed_exp - hsa_contr - keogh_contr -
         se_health - early_penalty - alimony_exp * alimony_qualifies -
