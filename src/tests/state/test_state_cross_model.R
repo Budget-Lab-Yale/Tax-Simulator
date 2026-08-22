@@ -782,6 +782,16 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
     # tax-unit level with no per-spouse split, so who holds them is
     # unobservable. Predicates need them to identify the population where our
     # earned-income proxy and an external model's attribution can disagree
+    # n_dep_ge18 counts dependents aged 18 or over. PolicyEngine and we differ
+    # on whether such a dependent earns a state per-dependent benefit keyed to
+    # IRC 24: PE stops at 17, we (and TAXSIM) include the section 24(h)(4)
+    # other-dependents cases. Utah's personal exemption is the live instance
+    # `itemizing` is the FEDERAL election. It is needed because a state can be
+    # exposed to the crosswalk-SALT problem without itemizing at state level at
+    # all: Utah has no state itemized deduction, but UC 59-10-1018 builds its
+    # taxpayer tax credit from the federal deduction less state income tax, so
+    # the same unstripped SALT lands in a credit base instead of a deduction
+    # and the st_itemizing-keyed predicate never sees it
     # xw_unstripped_salt rides to TAXSIM inside otheritem, where no state
     # calculation can identify it as SALT to strip or cap; xw_unhanded_item
     # (investment interest + Schedule A "other") has no TAXSIM input at all.
@@ -795,7 +805,10 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
     # our base relative to PE's just as surely)
     ours = ours %>%
       left_join(sampled %>%
-                  mutate(xw_unstripped_salt = salt_inc_sales + salt_pers,
+                  mutate(n_dep_ge18 = (!is.na(dep_age1) & dep_age1 >= 18) +
+                                      (!is.na(dep_age2) & dep_age2 >= 18) +
+                                      (!is.na(dep_age3) & dep_age3 >= 18),
+                         xw_unstripped_salt = salt_inc_sales + salt_pers,
                          xw_unhanded_item   = inv_int_item_ded_potential +
                                               other_item_ded_potential,
                          xw_pe_unhanded_item =
@@ -808,6 +821,7 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                          exempt_int, state_ref, age1, age2, gross_ss, n_dep,
                          ui, txbl_int, ei1, ei2,
                          txbl_pens_dist, txbl_ira_dist, other_inc, alimony,
+                         itemizing, n_dep_ge18,
                          xw_unstripped_salt, xw_unhanded_item,
                          xw_pe_unhanded_item),
                 by = 'id')

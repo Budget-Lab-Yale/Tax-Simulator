@@ -165,63 +165,91 @@ values; 2026+ index from the 2025 anchor with the model's CPI series
 - 2017 PEP-reduced federal exemption interaction ignored (phase-out zeroes the
   credit below PEP range).
 
-## Triage 2026-08-22 — localized to the taxpayer tax credit on federal itemizers; NOT closed
+## Triage 2026-08-22 — closed; two separate causes, one per model window
 
-UT was not fixed in this round. What is now known, so the next attempt does not
-repeat the search:
+UT entered triage at 0.8217 / 0.9284 / 0.9268 / 0.9316 (TAXSIM) and 0.9559 /
+0.9409 / 0.9274 / 0.9543 (PolicyEngine). All eight cells now clear, worst
+0.9696. **Our encoding was not changed** -- both causes are harness
+representation, and in each case the external model is the one that departs
+from the sourced reading.
 
-**The whole difference is the taxpayer tax credit.** State AGI and state
-taxable income agree with TAXSIM to the dollar (median `st_agi - v32` = 0.0,
-median `st_txbl_inc - v36` = 0.0) in both the miss and match groups. Our
-`st_ded_credit` is lower than TAXSIM's `v40` by a median $280 in 2017 and $330
-in 2018, and `diff == -(our credit - their credit)` on 1,296 of 1,633 misses.
-We zero the credit on 468 records where TAXSIM does not; TAXSIM zeroes it on 41.
+### Where the difference is not
 
-**It is entirely federal itemizers.** Splitting the 2017 clean subset:
+State AGI and state taxable income agree with TAXSIM to the dollar (median
+`st_agi - v32` and `st_txbl_inc - v36` both 0.0, in the miss group as well as
+the match group). The entire difference is the taxpayer tax credit,
+`st_ded_credit` against `v40`. The formula itself is confirmed correct on both
+sides: probed on hand-computable cases, single $50k/0 dep gives credit 94.96
+and tax 2,405.04, reconciling exactly with 6% x (6,350 + 0.75 x 4,050) - 1.3% x
+(50,000 - 13,978); HoH and joint cases with dependents reconcile too, which
+also confirms the 13,978 / 20,968 / 27,956 base amounts.
 
-| federal `itemizing` | n | credit gap > $1 | match@$100 miss rate |
-|---|---|---|---|
-| FALSE | 4,995 | 263 | **0.04%** |
-| TRUE | 4,165 | 2,172 | **39.2%** |
+The first hypothesis -- a missing exemption in the credit base -- is **wrong**,
+and was tested rather than assumed: inverting the credit on real records gives
+an implied base gap of 0.92 / 1.19 / 1.42 / 1.64 exemption-equivalents across
+0-3 dependents, growing smoothly rather than in steps.
 
-Non-itemizers are essentially perfect. That is the shape to expect, because
-UC 59-10-1018(1) builds the credit base from the **federal** deduction --
-itemized less the state/local income-tax addback, or the standard deduction --
-so anything that moves TAXSIM's federal itemized deduction moves the Utah
-credit even though Utah itself has no state itemization.
+### TAXSIM window: the crosswalk-exposure class, in a credit base
 
-**The formula is confirmed correct on both sides for non-itemizers.** Probed
-against TAXSIM on hand-computable cases (`output/probe/ut_credit_probe.R`):
-single $50k/0 dep gives credit 94.96 and tax 2,405.04, reconciling exactly with
-6% x (6,350 + 0.75 x 4,050) - 1.3% x (50,000 - 13,978). Cases with dependents
-and joint filers reconcile too, confirming the $13,978 / $20,968 / $27,956 base
-amounts and that exemptions count taxpayer, spouse and dependents at 75% of
-$4,050.
+The gap is confined to **federal itemizers** -- 2017 miss rates 0.04% for
+non-itemizers against 39.2% for itemizers. UC 59-10-1018(1) builds the credit
+base from the federal deduction less the state income tax deducted on Schedule
+A, so Utah is exposed to the DC/CA crosswalk-SALT problem even though it has no
+state itemized deduction, which is exactly why the `st_itemizing`-keyed
+predicate the other nine class states share never reached it.
 
-**Two candidate mechanisms, NOT separated.**
-1. TAXSIM's federal itemized deduction differs from ours by construction --
-   SALT circularity (it iterates federal-state three rounds using its own
-   computed state income tax) and the Pub. 600 sales-tax imputation, both
-   already ALL-state `annotate` rows. Either changes the credit base.
-2. Our own addback may be too wide. UC 59-10-1018(1)(e) adds back state or
-   local **income** tax; `st_credits_household.R` strips
-   `salt_item_ded - salt_prop - salt_pers`, which is the PUF's combined
-   income-or-sales field. For a filer who elected the sales-tax deduction,
-   Utah requires no addback and we over-strip, shrinking the base and the
-   credit -- the right sign, since 1,545 of 1,633 misses are positive.
+`taxsim_crosswalk()` hands as-reported `salt_inc_sales + salt_pers` inside
+`otheritem`, where no state calculation can identify it as state income tax to
+add back. TAXSIM adds and then strips *its own* iterated state tax, leaving our
+SALT inside its Utah credit base. Inverting both credits on real records, the
+implied base gap tracks `salt_inc_sales` at a median ratio of **0.962**. A
+controlled probe confirms TAXSIM does apply the addback for SALT it can see:
+given only mortgage 12,000 and proptax 4,000, its implied base is 15,999.94
+against the 16,000 supplied.
 
-Inverting the credit formula on real records gives an implied base gap of 0.92
-/ 1.19 / 1.42 / 1.64 exemption-equivalents at 0-3 dependents -- smoothly
-growing, so **not** a missing exemption count, which was the first hypothesis
-and is wrong.
+Excluded with a materiality bound the state-itemizing rows do not need -- the
+credit is 6% of the base, so exposure below about $1,667 cannot move liability
+by the $100 tolerance. Without it a federal-itemizing predicate would exclude
+61% of federally-aligned records, more than any state in the class (median
+47.6%, max 50.2%). Result: 0.9880 / 0.9917 / 0.9921 / 0.9929.
 
-**Deliberately not excluded.** The exposed population is every federal
-itemizer, 45% of the clean subset, and 61% of them match anyway. Excluding all
-of them would clear the cell while hiding an unresolved question about our own
-addback, which is the wrong trade. Next step is to separate mechanism 2 from
-mechanism 1 -- compare our `ded_credit_salt` against the state income tax
-TAXSIM actually deducted, on records where the two federal itemized deductions
-otherwise agree.
+### PolicyEngine window: the dependent age cutoff
+
+Different cause entirely. PE restricts the Utah personal exemption to
+dependents **under 18**; we and TAXSIM also allow it for IRC 24(h)(4)
+other-dependents. Probed on single UT filers differing only in one dependent's
+age, 2023:
+
+| dependent age | PE Utah tax | vs no dependent |
+|---|---|---|
+| none | 2,521.35 | — |
+| 5, 10, 16, 17 | 2,404.89 | **-116.46** = 1,941 x 6% |
+| 18, 19, 21, 25, 40 | 2,521.35 | 0.00 |
+
+TAXSIM agrees with us: the median `st_ded_credit` vs `v40` gap is 0.00 in
+2018-2020 whether or not the return carries non-CTC dependents. Our reading is
+the sourced one -- this packet already recorded the exemption as IRC-24-eligible
+including other-dependents, and 59-10-1018 defines a qualifying dependent by
+entitlement to a credit under section 24, which since TCJA houses the $500
+other-dependents credit at 24(h)(4).
+
+Note the age cutoff is 18, not CTC eligibility: a 17-year-old is too old for the
+federal CTC but PE still grants the Utah exemption. A predicate keyed on
+`n_dep - n_dep_ctc` would therefore over-exclude, which an earlier pass here got
+wrong before the age sweep was run. The predicate also requires a live credit,
+since the 1.3% phase-out zeroes it for many filers and the exemption cannot then
+move liability. Result: 0.9882 / 0.9873 / 0.9696 / 0.9833.
+
+### Still open (does not affect the cells)
+
+Our addback may be slightly too wide. UC 59-10-1018(1)(e) adds back state or
+local **income** tax; `st_credits_household.R` strips
+`salt_item_ded - salt_prop - salt_pers`, which is the PUF's combined
+income-or-sales field, so a filer who elected the sales-tax deduction has no
+addback due under the statute and we take one anyway. This is now known *not*
+to be the driver of the cross-model gap -- that is fully accounted for by the
+crosswalk -- but it is an independent question about our own encoding, and the
+PUF does not distinguish the two elections.
 
 ## Cross-model validation notes
 
