@@ -770,6 +770,13 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
     # outcome it produces. ei1/ei2 are here for the Massachusetts line 11
     # per-person payroll cap, whose affected population is two-earner joint
     # returns and cannot be identified from filing status alone
+    # txbl_pens_dist/txbl_ira_dist/other_inc/alimony are the non-earned
+    # components of a state "qualifying income" test. Ohio's joint filing
+    # credit (and Minnesota's marriage credit) ask whether EACH spouse
+    # cleared a floor of qualifying income, but these sources are carried at
+    # tax-unit level with no per-spouse split, so who holds them is
+    # unobservable. Predicates need them to identify the population where our
+    # earned-income proxy and an external model's attribution can disagree
     # xw_unstripped_salt rides to TAXSIM inside otheritem, where no state
     # calculation can identify it as SALT to strip or cap; xw_unhanded_item
     # (investment interest + Schedule A "other") has no TAXSIM input at all.
@@ -795,6 +802,7 @@ cross_model_run = function(states, years, models, n = 20000, n_pe = 1500,
                   select(id, filing_status, agi_stratum, agi, txbl_inc, eitc,
                          exempt_int, state_ref, age1, age2, gross_ss, n_dep,
                          ui, txbl_int, ei1, ei2,
+                         txbl_pens_dist, txbl_ira_dist, other_inc, alimony,
                          xw_unstripped_salt, xw_unhanded_item,
                          xw_pe_unhanded_item),
                 by = 'id')

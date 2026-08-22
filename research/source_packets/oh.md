@@ -2,7 +2,7 @@
 
 State: `OH`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-08-11`
+Last updated: `2026-08-22`
 
 > **Status note (as of 2026-08-11), kept from the packet's former Status line:**
 > baseline encoded; record-level worksheet tests complete
@@ -156,7 +156,9 @@ Business income: taxable business income taxed at FLAT 3% all years (ORC
   ≥20%-owner compensation reclassification and the 2020+ law/lobbying exclusion
   unobservable.
 - JFC qualifying-income test proxied by each spouse's earned income (wages +
-  self-employment net of the BID-deducted share is imperfect).
+  self-employment net of the BID-deducted share is imperfect). **This is the
+  single largest source of OH cross-model disagreement** -- see the 2026-08-22
+  triage below.
 - 2020 ARPA UI exclusion flows through FAGI (Ohio conformed via SB 18 2021);
   no separate Ohio UI subtraction exists (Ohio taxes UI).
 - 2026 values from ORC/LSC (no forms yet); $500,000 boundary semantics TBD.
@@ -168,6 +170,83 @@ Business income: taxable business income taxed at FLAT 3% all years (ORC
 - TAXSIM years: 2018 (8-bracket), 2019 (post-HB 166), 2021 (post-HB 110), 2023,
   2025. Expect differences on BID (TAXSIM handling differs) and JFC ordering.
 - PolicyEngine spot checks 2021+.
+
+### Triage 2026-08-22 — the joint filing credit dominates the residual
+
+Entering triage OH was flat and low across the whole TAXSIM window
+(match@$100 on the clean subset 0.9144 / 0.9101 / 0.9122 / 0.9152 for
+2017-2020) while the PolicyEngine window was nearly clear (0.968-0.975). A
+deficit that does not move across four years of changing law is one
+structural cause, not a year effect.
+
+**It is the joint filing credit, and it is ~4x larger than recorded.** On the
+2017 clean subset, 782 of 9,131 records miss at $100. Of those, 553 are joint
+returns where we grant no JFC:
+
+| evidence | value |
+|---|---|
+| filing status of the 447 uncapped misses | 446 joint, 1 MFS |
+| `diff / st_tax_pre_credit`, median | **0.05000** (quartiles 0.0499-0.0500) |
+| ratio modes | 5% (328), 10% (31), 15% (14) — the JFC rate schedule |
+| max positive diff | $639, i.e. under the $650 cap |
+| one spouse below the $500 earned-income floor | 553 of 553 |
+
+The previously recorded "+$650 point-mass cluster (~150/yr)" is only the
+capped tail. The uncapped remainder is ~450 records a year sitting exactly on
+the statutory rate schedule.
+
+**Root cause: an unobservable, approximated in opposite directions.** ORC
+5747.05(E) requires each spouse to have $500+ of *qualifying income* — Ohio
+AGI less interest, dividends, capital gains, rents and royalties — so
+pensions, IRA distributions, unemployment and other income all count. Those
+sources are carried at tax-unit level with no per-spouse split, in our data
+and in TAXSIM's inputs alike, so neither model can evaluate the statutory
+test. Each substitutes an assumption:
+
+- **ours**: earned income only (`ei1`/`ei2`) — the low-earning spouse has no
+  qualifying income, so deny;
+- **TAXSIM**: unit-level pension / nonprop / UI satisfies the low-earning
+  spouse, so grant.
+
+Probe-confirmed against TAXSIM-35 on synthetic OH joint returns, total income
+held fixed (`output/probe/oh_jfc_source.R`, `oh_jfc_source2.R`):
+
+| spouse has | credit |
+|---|---|
+| nothing | off |
+| $400 wages | off |
+| $600 wages | **on** — so TAXSIM does apply a $500 wage test |
+| unit `pensions`, `nonprop`, or UI, spouse still at $0 | **on** |
+| unit dividends / interest / `otherprop` | off (correctly — excluded by statute) |
+| Social Security | off (Ohio exempts it) |
+
+Matching against the real records: 326 of the 553 carry pension/IRA income and
+224 of the remaining 227 carry `other_inc` (median $3,515) — the two sources
+the probe shows flip TAXSIM's test.
+
+**Action: excluded, not annotated.** Neither encoding can be validated against
+the other where the discriminating fact is unobserved, so this joins the
+US-obligation-interest class. The predicate keys on the population, never the
+outcome: `filing_status == 2 & pmin(ei1, ei2) < 500 &
+(txbl_pens_dist + txbl_ira_dist + ui + other_inc + alimony) >= 500`. It sweeps
+~1,130/yr, of which roughly half already matched — a structural predicate, not
+one fitted to the residual. Cells move to 0.973 / 0.972 / 0.976 / 0.975,
+clearing the bar.
+
+**Open modelling question for JI, not settled here.** Our proxy denies the JFC
+to every joint return whose second spouse has no earnings but does have
+pension or other qualifying income — the ordinary retired couple, who under
+Ohio law would generally qualify. That is a systematic denial of a credit
+worth up to $650, i.e. an overstatement of Ohio liability, on ~12% of clean
+records. Changing it means adopting an attribution assumption for unobservable
+per-spouse income and would move OH revenue, so it is left as an explicit
+decision rather than folded into triage. Note also that TAXSIM's own treatment
+of *spouse business income* flips only above roughly $2-5k
+(`output/probe/oh_jfc_sweep.R`), matching neither the statute nor the $500
+floor, so TAXSIM is not a reference implementation here either.
+
+**Not addressed.** The -$200 retirement-income-credit cluster (~133/yr) stays
+annotated and survives the exclusion; it is not what was holding OH back.
 
 ## Aggregate validation notes
 
