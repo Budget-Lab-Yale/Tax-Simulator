@@ -543,6 +543,39 @@ is real but has a different, still-undiagnosed cause. So the bug is per-state
 in TAXSIM rather than a single shared code path, and Massachusetts (which had
 such a deduction before 2021) has not been checked.
 
+### T19. Colorado pension/annuity subtraction: the 55-64 tier is not modeled
+
+C.R.S. 39-22-104(4)(f) subtracts pension and annuity income included in federal
+taxable income, up to **$24,000** for a taxpayer 65 or older and up to
+**$20,000** for one aged **55 to 64**. TAXSIM-35 models only the 65-plus tier.
+
+Probed on CO 2019 single filers with $20,000 of wages and $30,000 of pension
+income, varying only age (CO is TAXSIM state 6):
+
+| age | siitax | subtraction implied |
+|---|---|---|
+| 50 | 1,701.00 | none |
+| 57 | 1,701.00 | none |
+| 60 | 1,701.00 | **none — should be $20,000** |
+| 64 | 1,701.00 | **none — should be $20,000** |
+| 65 | 546.75 | applied |
+| 70 | 546.75 | applied |
+
+The identical figure at 50 and at 64 is the finding: nothing happens anywhere
+in the 55-64 band.
+
+The records agree to the cent. Miss modes are -926 and -1,852 in 2017 and -900
+and -1,800 in 2019 -- $20,000 and $40,000 (one and two qualifying people) at
+Colorado's 4.63% and 4.50% rates. The mode group is 73 of 76 aged 55-64, with
+median retirement income of $44,402 and a $20,013 subtraction on our side. By
+age band the clean subset matches at 0.693 for 55-64 against 0.922 for 65-plus
+and 0.921 for under-55; among 55-64 filers with retirement income it is 0.221.
+
+Effect: TAXSIM's Colorado liability runs HIGH by up to $900 per qualifying
+person (up to $1,800 on a joint return where both spouses are in the band).
+Colorado is a federal-taxable-income-start state, so this lands directly and
+undiluted in state liability.
+
 ## Corroboration worth passing along
 
 Where concepts align, agreement is excellent: IL matches TAXSIM at 100%
