@@ -652,6 +652,79 @@ person (up to $1,800 on a joint return where both spouses are in the band).
 Colorado is a federal-taxable-income-start state, so this lands directly and
 undiluted in state liability.
 
+### P10. Hawaii: the state's OWN income tax deducted on the Hawaii return, and the Worksheet A-2 disallowance not applied
+
+**The largest PolicyEngine finding in this set by revenue effect**, because it
+understates Hawaii's top marginal rate by 0.88 points for every high-income
+filer, in every year tested.
+
+PolicyEngine 1.775.7 grants Hawaii an itemized deduction to a pure-wage filer
+with no deductible items of any kind. Its own intermediates, single filer,
+$501,000 of wages, 2022:
+
+| variable | value |
+|---|---|
+| `hi_salt_deduction` | 49,246.60 |
+| `hi_withheld_income_tax` | 49,246.60 |
+| `hi_itemized_deductions` | 39,220.60 |
+| `hi_standard_deduction` | 2,200.00 |
+
+The SALT deduction equals PE's own computed Hawaii withholding to the cent.
+Two problems compound:
+
+1. **Hawaii disallows the deduction above income thresholds and PE does not
+   apply them.** State, local and foreign income taxes are deductible only where
+   federal AGI is under $100,000 (single or married filing separately),
+   $150,000 (head of household) or $200,000 (joint) -- Worksheet A-2 note,
+   permanent for taxable years beginning after December 31, 2010. PE's
+   deduction runs smoothly through the cliff: 6,909.60 at 95,000, 7,239.60 at
+   99,000, 7,404.60 at 101,000, 7,734.60 at 105,000. There is no
+   discontinuity anywhere.
+2. **The deducted amount is Hawaii's own tax**, which makes the base circular.
+
+**The arithmetic closes exactly, which is what confirms the mechanism.** Each
+additional $1,000 of wages raises PE's withholding, which raises the deduction,
+so Hawaii taxable income rises by only $920. And 0.92 x the statutory 11% top
+rate = 0.1012 -- precisely the effective marginal rate we measure at $500,000,
+$600,000 and $1,001,000, in both 2019 and 2022. PE's rate PARAMETERS are the
+correct HRS 235-51 ladder (verified in its own `rates/single.yaml`); the base is
+what is wrong, so the error grows without bound in income.
+
+Effect on our comparison: above the statutory thresholds Hawaii matches at
+0.021-0.034 with a median difference of +$2,964 to +$3,384, while **below them
+the median difference is exactly zero**. Excluded on the above-threshold
+population only.
+
+Hawaii-specific: probing the same filer in ten states, MT and NY report a zero
+`salt_deduction`, and ME/MA/SC/CA/VT/AR/IA do not expose the variable.
+
+### P5 (continued). Five more one-time rebates netted into TY2021
+
+The 2026-08-22 PE-window pass asked why 2021 is systematically the weakest
+PolicyEngine year (median clean match 0.887 against 0.923-0.934 for 2022-2024,
+five cells below 0.60 against nought or one elsewhere) and found five further
+instances of the P5 class. Probed at $80,000 single:
+
+| state | TY2021 amount | rebate |
+|---|---|---|
+| HI | 300.00 refundable | Act 115 (2022) constitutional tax refund |
+| ME | 850.00 refundable | $850 relief payment, LD 1995 (2022) |
+| MA | 516.35 refundable | Chapter 62F taxpayer refund -- **proportional**, 14.0312% of TY2021 liability |
+| MT | 1,250.00 nonrefundable | HB 192 (2023) income tax rebate |
+| SC | 800.00 nonrefundable | 2022 income tax rebate, capped at 800 |
+
+Each shows the same behaviour as the New Mexico trio: the variable computes a
+nonzero value in **every** year but is inside that state's credit total only in
+2021, so a predicate keyed on the column alone would over-exclude 2022-2024.
+
+**A note on our own treatment, recorded because it bears on how the numbers
+read:** these rebates reached nearly every filer, so excluding them removes most
+of the 2021 cell (95.6% in HI, 83.8% in ME, 68.3% in MT, 65.7% in MA, 52.1% in
+SC). Those cells are DROPPED rather than passed. And in Montana the exclusion
+moved the cell DOWN (0.300 -> 0.287), so its 2021 residual is dominated by
+something else we have not yet identified -- the rebate divergence is real, but
+it is not Montana's main 2021 problem.
+
 ## Corroboration worth passing along
 
 Where concepts align, agreement is excellent: IL matches TAXSIM at 100%

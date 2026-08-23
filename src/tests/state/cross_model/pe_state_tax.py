@@ -113,6 +113,20 @@ OUTPUT_VARS = {
     "pe_nm_2021_rebate": ["nm_2021_income_rebate"],
     "pe_nm_2021_addl_rebate": ["nm_additional_2021_income_rebate"],
     "pe_nm_2021_suppl_rebate": ["nm_supplemental_2021_income_rebate"],
+    # Five more one-time rebates PE nets into TY2021, found by the 2026-08-22
+    # PE-2021 sweep. Each behaves exactly like the NM trio: the variable
+    # computes a nonzero value in EVERY year, but is only inside that state's
+    # credit total for 2021 (verified 2026-08-22 at 80k single -- HI 300, ME
+    # 850, MA 516.35, MT 1,250, SC 800 in 2021 against a zero credit total in
+    # 2022-2024), so the KD predicates using these columns are scoped to 2021.
+    # MA's is proportional (62F, 14.0312% of TY2021 liability), the rest flat
+    # or capped.
+    "pe_hi_act115_rebate": ["hi_act_115_rebate"],
+    "pe_me_relief_rebate": ["me_relief_rebate"],
+    "pe_ma_62f_rebate": ["ma_taxpayer_refund_rebate"],
+    "pe_mt_income_rebate": ["mt_income_tax_rebate"],
+    "pe_mt_property_rebate": ["mt_property_tax_rebate"],
+    "pe_sc_2022_rebate": ["sc_2022_rebate"],
     # PE's own federal results, used by the harness's clean-subset metrics
     "pe_fed_agi": ["adjusted_gross_income"],
     "pe_fed_taxable": ["taxable_income"],
