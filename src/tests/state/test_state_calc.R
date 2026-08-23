@@ -983,6 +983,60 @@ test_state_calc = function() {
            expect = list(liab_st_iit = 0),
            label = 'ND-8b relief credit nonrefundable floor')
 
+  # ND-9: marriage penalty credit (N.D.C.C. 57-38-01.28, Form ND-1 line 22),
+  # TY2019 worksheet. Encoded on the generic mc_* family (same mechanism as
+  # MN Schedule M1MA). Gates: ND taxable income over 66,006 and the lesser
+  # qualified income over 38,756; line 5 allowance 12,200; maximum 195.
+  #
+  # Below the cap. ei 60,000/45,000, ND taxable income 100,000:
+  #   line 6  45,000 - 12,200                                     = 32,800
+  #   line 7  single tax on 32,800: 1.10% x 32,800                 = 360.80
+  #   line 8  100,000 - 32,800                                     = 67,200
+  #   line 9  1.10% x 39,450 + 2.04% x 27,750                     = 1,000.05
+  #   line 10 MFJ tax: 1.10% x 65,900 + 2.04% x 34,100            = 1,420.54
+  #   line 12 1,420.54 - 1,360.85                                  =   59.69
+  # Credit is under the 195 maximum, so liability collapses to lines 7 + 9.
+  run_case('ND', 2019,
+           list(filing_status = 2, agi = 100000, txbl_inc = 100000,
+                ei1 = 60000, ei2 = 45000),
+           expect = list(st_marriage_credit = 59.69,
+                         liab_st_iit = 1360.85),
+           label = 'ND-9 2019 marriage penalty credit below the cap')
+
+  # ND-9b: at the cap. ei 200,000/200,000, ND taxable income 400,000:
+  #   line 6  187,800; line 7  = 3,672.58
+  #   line 8  212,200; line 9  = 4,274.375
+  #   line 10 = 8,676.945; line 12 = 729.99 -> capped at 195
+  run_case('ND', 2019,
+           list(filing_status = 2, agi = 400000, txbl_inc = 400000,
+                ei1 = 200000, ei2 = 200000),
+           expect = list(st_marriage_credit = 195,
+                         liab_st_iit = 8676.945 - 195),
+           label = 'ND-9b 2019 marriage penalty credit at the maximum')
+
+  # ND-9c: a ONE-earner couple gets nothing -- the lesser qualified income of
+  # zero fails the line 5 gate. This is the case that makes the credit a
+  # marriage-PENALTY credit rather than a joint-filer rebate.
+  run_case('ND', 2019,
+           list(filing_status = 2, agi = 100000, txbl_inc = 100000,
+                ei1 = 100000, ei2 = 0),
+           expect = list(st_marriage_credit = 0, liab_st_iit = 1420.54),
+           label = 'ND-9c 2019 one-earner couple declines')
+
+  # ND-9d: the line 2 gate in isolation -- two equal earners clear the lesser
+  # income gate (40,000 > 38,756) but ND taxable income of 60,000 is below
+  # 66,006, so no credit. 1.10% x 60,000.
+  run_case('ND', 2019,
+           list(filing_status = 2, agi = 60000, txbl_inc = 60000,
+                ei1 = 40000, ei2 = 40000),
+           expect = list(st_marriage_credit = 0, liab_st_iit = 660),
+           label = 'ND-9d 2019 below the taxable-income gate')
+
+  # ND-9e: single filers never qualify (the worksheet stops at line 1).
+  run_case('ND', 2019, list(agi = 100000, txbl_inc = 100000, ei1 = 100000),
+           expect = list(st_marriage_credit = 0),
+           label = 'ND-9e 2019 single filer ineligible')
+
   #--------------------------------------------------------------------------
   # South Carolina (SC1040) -- federal-taxable-income start, one schedule for
   # all filing statuses

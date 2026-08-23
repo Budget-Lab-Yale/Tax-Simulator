@@ -2,7 +2,7 @@
 
 State: `ND`
 Status: see `../state_tax/state_parameter_rollout.csv`
-Last updated: `2026-07-16`
+Last updated: `2026-08-22`
 
 ## Scope
 
@@ -48,11 +48,29 @@ Last updated: `2026-07-16`
 - **2019-2020 SS AGI cap** ($50k/$100k) applies to ALL ages; modeled with the
   new `ss_full_sub_allages` param. The exact 2019 enacting bill number was not
   primary-source confirmed (session/effective-year verified).
-- **Credits not modeled**: ND Marriage Penalty Credit (57-38-01.28; NOT repealed
-  — HB1388 repeal failed 2025), Family Member Care Credit (57-38-01.20, elderly/
+- **Credits not modeled**: Family Member Care Credit (57-38-01.20, elderly/
   disabled care), credit for tax paid to another state, and various investment
-  credits — all nonrefundable and not PUF-representable. The 2021-2022 $350/$700
-  residency relief credit (HB1515) was one-time, non-earnings-based, expired.
+  credits — all nonrefundable and not PUF-representable.
+- **MARRIAGE PENALTY CREDIT (57-38-01.28) — ENCODED 2026-08-22; the earlier
+  "not PUF-representable" call was wrong and is retracted.** Form ND-1 line 22;
+  NOT repealed (HB1388 repeal failed 2025). Its worksheet keys on each spouse's
+  statutory "qualified income", of which the wage and self-employment components
+  are observable per spouse (`ei1`/`ei2`) — and TAXSIM receives no more
+  per-spouse detail than we do, which is what made it representable at all.
+  It was **the ENTIRE residual of ND's three failing cross-model cells**:
+  98.4-98.7% of misses were two-earner joint returns, matching at 0.556-0.583.
+  Encoded on the generic `mc_*` family (the MN Schedule M1MA mechanism) with no
+  new calculator code; all eight ND cells now clear, worst 0.9857. Parameters
+  for 2017-2025, the primary sources and the measured result are in
+  `research/state_tax/cross_model/nd_marriage_credit_probe.md`. Still genuinely
+  not representable, and carried as a `data-proxy` annotate row: the taxable
+  Social Security and IRA/pension/annuity components of qualified income, held
+  only at unit level.
+- **HB 1515 resident tax relief credit** ($350/taxpayer, $700 MFJ, TY2021-2022):
+  also originally recorded as not modeled — an on-return Form ND-1 credit, so
+  inside the liability concept, and that call was reversed on 2026-08-11 when
+  triage showed it as the entire PE 2021-22 wedge. Encoded via the KY
+  `exempt_credit` machinery.
 - **Military pay/retirement, College SAVE, peace-officer retirement** subtractions:
   not identifiable in the PUF; omitted.
 - **TY2026** schedule (ND-1ES only) not encoded; simulations of 2026 will project

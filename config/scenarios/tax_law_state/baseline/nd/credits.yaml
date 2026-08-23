@@ -1,13 +1,17 @@
 ---
 # North Dakota: credits. ND has NO state EITC and NO state CTC (never enacted).
-# Its individual credits are all nonrefundable and NOT representable in a PUF:
-#   - Marriage Penalty Credit (57-38-01.28): worksheet (MFJ tax vs two singles),
-#     indexed max (~$303 in TY2024). NOT repealed (HB1388 repeal failed 2025).
+# Its individual credits are all nonrefundable. Two are encoded -- the HB 1515
+# resident tax relief credit and the MARRIAGE PENALTY CREDIT (both below) -- and
+# the rest are not representable in a PUF:
 #   - Family Member Care Credit (57-38-01.20): 20-30% of qualified care expense
 #     for an elderly/disabled family member, cap $2,000/member, $4,000/return.
 #   - Credit for tax paid to another state; Renaissance zone; planned-gift;
 #     seed/angel investment; etc.
-# See research/source_packets/nd.md for the known-differences rationale.
+# See research/source_packets/nd.md for the known-differences rationale. Both
+# encoded credits were originally recorded here as not representable and both
+# calls were reversed after cross-model triage showed each to be the dominant
+# residual of a failing window -- HB 1515 on 2026-08-11, the marriage penalty
+# credit on 2026-08-22.
 
 # Explicit no-op: ND has no earned-income credit (documents the absence)
 eitc_match:
@@ -31,3 +35,105 @@ exempt_credit_personal:
     '2021': 350
     '2023': 0
   reference: 'HB 1515: $350 per taxpayer and spouse (MFJ $700), nonrefundable, residents, TY2021-2022 only'
+
+# ---- Marriage penalty credit (N.D.C.C. 57-38-01.28, Form ND-1 line 22) ----
+#
+# Encoded 2026-08-22, reversing the "not PUF-representable" call. The Marriage
+# Penalty Credit Worksheet in the Form ND-1 instructions is arithmetically the
+# SAME mechanism as Minnesota's Schedule M1MA credit, so it reuses the generic
+# mc_* family with no new calculator code:
+#
+#   line  1  ND taxable income                       -> st_txbl_inc
+#   line  2  gate: line 1 more than T1               -> mc_min_joint_txbl
+#   line  4  smaller of the two qualified incomes    -> pmin(ei1, ei2)
+#   line  5  gate: line 4 more than T2               -> mc_min_lesser_income
+#   line  6  line 4 less the single allowance        -> mc_share_offset
+#   lines 7+9  SINGLE-schedule tax on each share     -> mc_single_brackets
+#   line 10  MFJ-schedule tax on line 1              -> the unit's own brackets
+#   line 12  line 10 less lines 7+9
+#   line 13  maximum credit                          -> mc_max
+#
+# ND's ordinary rates do NOT vary by filing status in any year 2017-2025
+# (verified against build_state_tax_law), which is the precondition for the
+# shared-rates generic: only the brackets differ between the two schedules.
+#
+# Two documented deviations from the worksheet, both shared with Minnesota:
+#   - The eligibility gates are applied INCLUSIVELY (>=) by the generic where
+#     the worksheet says "more than" (>). It binds only on a unit landing
+#     exactly on a whole-dollar threshold.
+#   - Statutory "qualified income" is per-spouse wages and net self-employment
+#     income PLUS the taxable portions of Social Security and IRA/pension/
+#     annuity distributions. Only the first two are observable per spouse, so
+#     ei1/ei2 proxies the concept and the credit is understated for couples
+#     whose qualified income is substantially retirement income. TAXSIM-35 has
+#     the same limitation (its crosswalk receives per-spouse WAGES only), which
+#     is what made the credit representable at all. See
+#     research/state_tax/cross_model/nd_marriage_credit_probe.md
+mc_style:
+  value: 1
+  reference: 'N.D.C.C. 57-38-01.28; Marriage Penalty Credit Worksheet, Form ND-1 instructions, all years 2017-2025. NOT repealed (HB 1388 repeal failed 2025)'
+
+mc_min_joint_txbl:
+  value:
+    '2017': 63505
+    '2018': 64755
+    '2019': 66006
+    '2020': 67312
+    '2021': 67812
+    '2022': 69812
+    '2023': 74862
+    '2024': 78836
+    '2025': 81036
+  reference: 'Marriage Penalty Credit Worksheet line 2 ("Is the amount on line 1 more than $X?"), Form ND-1 instructions, per year'
+
+mc_min_lesser_income:
+  value:
+    '2017': 35955
+    '2018': 38055
+    '2019': 38756
+    '2020': 39430
+    '2021': 39830
+    '2022': 40979
+    '2023': 43980
+    '2024': 46275
+    '2025': 47550
+  reference: 'Marriage Penalty Credit Worksheet line 5 ("Is the amount on line 4 more than $X?"), Form ND-1 instructions, per year'
+
+mc_share_offset:
+  value:
+    '2017': 10400
+    '2018': 12000
+    '2019': 12200
+    '2020': 12400
+    '2021': 12550
+    '2022': 12950
+    '2023': 13850
+    '2024': 14600
+    '2025': 15750
+  reference: 'Marriage Penalty Credit Worksheet line 5 printed constant, Form ND-1 instructions, per year. It is the SINGLE filer''s zero-tax allowance: the federal single standard deduction from 2018 onward, and in 2017 that deduction PLUS the personal exemption (6,350 + 4,050 = 10,400)'
+
+mc_max:
+  value:
+    '2017': 188
+    '2018': 192
+    '2019': 195
+    '2020': 198
+    '2021': 201
+    '2022': 208
+    '2023': 287
+    '2024': 303
+    '2025': 312
+  reference: 'Marriage Penalty Credit Worksheet line 13 ("Maximum credit"), Form ND-1 instructions, per year. The 208 -> 287 jump at TY2023 is the HB 1158 three-tier rate restructure. All four values in the TAXSIM validation window (188/192/195/198) were independently confirmed against TAXSIM-35, which implements this worksheet'
+
+mc_single_brackets:
+  value:
+    '2017': [0, 37950, 91900, 191650, 416700]
+    '2018': [0, 38700, 93700, 195450, 424950]
+    '2019': [0, 39450, 95500, 199250, 433200]
+    '2020': [0, 40125, 97150, 202650, 440600]
+    '2021': [0, 40525, 98100, 204675, 445000]
+    '2022': [0, 41775, 101050, 210825, 458350]
+    '2023': [0, 44725, 225975, 225975, 225975]
+    '2024': [0, 47150, 238200, 238200, 238200]
+    '2025': [0, 48475, 244825, 244825, 244825]
+  reference: 'Single rate-schedule brackets (ord.yaml, filing status 1), used for the worksheet lines 7 and 9 single-schedule tax on each spouse''s imputed share. From TY2023 the HB 1158 schedule has three tiers, carried in the five-slot array by repeating the top bound'

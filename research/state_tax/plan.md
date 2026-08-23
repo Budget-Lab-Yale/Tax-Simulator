@@ -538,6 +538,18 @@ unmarried aged/blind standard-deduction bonus (IRC 63(f)(3)). One-line fix,
 deliberately not applied inside state triage because it moves federal taxable
 income in every year.
 
+**Divergence classes are swept across states, not re-derived per state.** Where
+a class has been verified in one state, the sweep asks every state's *resolved*
+law whether the class has a route there, measures whether it bites, and tests
+the measurement against the states whose encoding gives it no route at all. The
+2026-08-22 pass is recorded in
+[`cross_model/class_sweep_2026_08_22.md`](cross_model/class_sweep_2026_08_22.md):
+22 rows added across two classes, 11 candidates measured and rejected. The
+control is the load-bearing part — it is what separated a mechanism-specific
+predicate (state-itemizing, which fires on no record in any of the ten no-route
+states) from one that merely tracks record complexity (federal-itemizing, which
+depresses match rates in states with no route at all).
+
 ---
 
 ## 5. Open decisions (need sign-off before/during Phase 0)

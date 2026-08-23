@@ -3,7 +3,7 @@ title: "State income tax workstream — status"
 role: status
 workstream: cross-cutting
 status: current
-updated: 2026-08-20
+updated: 2026-08-22
 sot: self
 supersedes: []
 superseded_by: null
@@ -11,10 +11,94 @@ superseded_by: null
 
 # State income tax workstream — status
 
-**As of 2026-08-19** (branch `state-tax`). Current counts: **ALL 51
+**As of 2026-08-22** (branch `state-tax`). Current counts: **ALL 51
 jurisdictions encoded** (39 broad-IIT + NH/TN narrow + WA excise + 6 zero-tax
 stubs + DC), **48 enabled** for `states=all` (CA/SC/VA conformity-gated, not
 encoding-gated). **Encoding coverage is complete. Nothing is unstarted.**
+
+**THE TRIAGE LOOP CHANGED SHAPE ON 2026-08-22: divergence classes are now
+SWEPT across states rather than re-derived per state.** Per-state triage had
+found the same crosswalk-exposure class seven separate times, and a single
+harness gap (federal taxable income never compared on the TAXSIM leg) had just
+moved 160 of 200 TAXSIM cells at once. The first sweep asked three verified
+classes of every state's *resolved* law, measured where each bites, and tested
+each measurement against the states whose encoding gives the class no route.
+Result: **13 crosswalk-exposure exclusions + 4 P9 exclusions + 5 P9
+annotations**, and eleven candidates measured and REJECTED rather than
+assumed. All 13 exposure states gained, largest first: AL +19pp, MS +13pp,
+MT +13pp, IA +11pp, AR +12pp; no cell outside the 13 moved. Full record and
+method in `research/state_tax/cross_model/class_sweep_2026_08_22.md`.
+
+Three results from that pass are worth carrying:
+
+1. **The control is what makes a sweep legitimate.** A decisive
+   itemizer/non-itemizer split is NOT evidence of this mechanism — federal
+   itemizers are complex records and unrelated divergences concentrate there.
+   The state-itemizing predicate fires on ZERO records in the ten states with
+   no route (CT IL IN MA MI NJ OH PA RI WV); the federal-itemizing predicate
+   fires everywhere and still depresses match rates there (MA 0.393, PA 0.444,
+   NJ 0.466). So ND/SC/VT got no swept row despite splits of 0.79/0.53/0.27 —
+   those sit inside the range the control reaches WITHOUT the mechanism, and
+   each needs the CO/UT treatment instead.
+2. **A class must also clear the tolerance the harness measures at, and that
+   is checkable from the parameter value before any run.** Five of nine P9
+   rows were wrong as exclusions: AZ's benefit is \$25, LA's \$18.50, MA's
+   \$50, NY's \$55, MS's \$75, all below the \$100 tolerance, so one
+   dependent aged 18+ cannot produce a mismatch and the exclusion removed
+   MATCHING records. AZ's cells moved DOWN 0.3–0.5pp, which is how it was
+   caught. Demoted to `annotate`, per the 2026-08-11 sub-\$100 standard.
+3. **T18 does not generalize.** Five states encode a care deduction off the
+   IRC 21 base; it holds in VA and ID and in none of MD, MA or WI. WI is the
+   clean negative (TAXSIM's care effect goes to exactly \$0.00 when the spouse
+   earns nothing — the 21(d)(1) limit working). MA is the reverse: TAXSIM's
+   Massachusetts liability is invariant to care expenses entirely, so Form 1
+   line 12 appears unmodelled.
+
+**One finding independently corroborates our own encoding.** PolicyEngine's
+Louisiana liability rises \$18.50 when a dependent turns 18 — the \$1,000
+exemption at 1.85%, Louisiana's BOTTOM bracket, where a \$60,000 filer's
+marginal rate is 4.25%. That is `st_ord.exempt_from_bottom`
+(R.S. 47:32(A)(1)/294/295(B)) reproduced from outside, by a different model, on
+a quantity nobody was testing for.
+
+**No state crossed the 0.95 bar in the sweep itself**, and eleven moved
+`todo` -> `in_progress` on a landed, verified cause (AL AR IA LA ME MO MS MT NE
+NM VT), leaving only NJ and WV never triaged.
+
+**ND then CLOSED the same day, and it is the sweep's best argument.** The sweep
+had REFUSED North Dakota a swept row because its federal-itemizer split failed
+the control; the probe that refusal queued
+(`research/state_tax/cross_model/nd_marriage_credit_probe.md`) found that the
+exposure class has no route into ND at all — TAXSIM never populates `v35` there,
+and federal itemizers are 1.3-1.5% of the clean subset, so excluding every one
+of them moves 2019 from 0.929 only to 0.937. The real cause was **entirely
+ours**: the marriage penalty credit (N.D.C.C. 57-38-01.28, Form ND-1 line 22),
+recorded in the packet as "not PUF-representable". It is not. 98.4-98.7% of ND
+misses were two-earner joint returns.
+
+**Encoding it needed NO new calculator code.** The worksheet is arithmetically
+the same mechanism as MN Schedule M1MA, so it reuses the generic `mc_*` family —
+six subparameters x nine years, primary-sourced from the Form ND-1 booklets,
+each citing its worksheet line. All four TAXSIM-observed ceilings (188/192/195/
+198) matched the published maxima exactly, so TAXSIM implements the worksheet and
+none of this was an external-model issue. Result: **all eight ND cells clear,
+worst 0.9857** (TAXSIM 0.925-0.981 -> 0.9986-0.9989, PE 0.969-0.995 ->
+0.9857-1.0000), matching the probe's prediction to four decimals, with no cell
+outside ND moved. **`done` count 14 -> 15.**
+
+Three things from that probe worth carrying:
+
+- **Had the sweep trusted the split, it would have banked a 0.8pp exclusion and
+  hidden a 7pp encoding gap behind it.** That is the concrete value of the
+  control, measured.
+- **Check the external model BEFORE the rerun when a fix reaches a passing
+  window.** The credit also runs 2021-2024, where ND was already clear; had
+  PolicyEngine omitted it, encoding would have broken four passing cells to fix
+  three failing ones. PE models it (286.66 against 287.00).
+- **"Not representable" deserves re-examination whenever the reason is a
+  per-spouse split.** TAXSIM receives per-spouse WAGES only, so any credit it
+  computes is reachable from inputs we already hold. That is a general test, and
+  ND is now the second reversal of such a call in the same state after HB 1515.
 
 **The R6 multi-regime batch is COMPLETE: MT, LA and IA encoded 2026-08-19**,
 closing the encoding programme. All three are two- or three-regime states,

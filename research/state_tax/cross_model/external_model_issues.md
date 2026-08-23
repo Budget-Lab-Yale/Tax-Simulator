@@ -485,16 +485,92 @@ Scale: sweeping all 48 enabled jurisdictions at dependent ages 10 and 20
 (2023) finds an age effect in 23 of them -- IL, UT, CA plus NY, NM, MA, MN,
 ME, OK, ID, GA, VT, KS, AZ, NJ, MS, NC, IN, IA, LA, and in the other
 direction MO, AL, AR, OR, where the older dependent is treated more
-favourably. We have NOT checked the other twenty against their own statutes,
-and several are cases where the state genuinely does restrict by age (a
-child credit limited to children under 17, for instance), so the count of 23
-is an upper bound on the problem, not a claim. The three above are verified.
+favourably. Several of those are cases where the state genuinely does
+restrict by age (a child credit limited to children under 17, for instance),
+so the count of 23 was an upper bound on the problem, not a claim.
+
+**That check is now done for nine more states (2026-08-22 sweep).** Each was
+probed on 2023 head-of-household returns with one dependent, identical but
+for the dependent's age, at two income levels; a state is counted only where
+the PE rise resolves EXACTLY to the encoded per-dependent amount times a
+published state rate at that income.
+
+| state | benefit and cite | PE rise at $60k | = amount x rate |
+|---|---|---|---|
+| SC | dependent exemption, S.C. Code 12-6-1140 | 295.04 | 4,610 x 6.40% (top rate) |
+| GA | dependent exemption, Form 500 instructions | 172.50 | 3,000 x 5.75% (flat) |
+| VT | dependent exemption, 32 V.S.A. 5811(21)(C) | 162.48 | 4,850 x 3.35% (first bracket) |
+| KS | per-exemption amount, K.S.A. 79-32,121 | 128.25 | 2,250 x 5.70% (top rate) |
+| MS | dependent exemption, Form 80-105 line 10 | 75.00 | 1,500 x 5.00% (flat) |
+| NY | dependent exemption, Tax Law 616 | 55.00 | 1,000 x 5.50% |
+| MA | dependent exemption, Form 1 line 2b | 50.00 | 1,000 x 5.00% (flat) |
+| LA | per-exemption add-on, R.S. 47:294 | 18.50 | 1,000 x 1.85% (BOTTOM bracket) |
+| AZ | $25 other-dependent credit, Form 140 worksheet | 25.00 | the credit itself |
+
+None of the nine restricts by age. Arizona is the sharpest of them for
+reporting purposes, because its worksheet grants the $25 tier expressly to a
+dependent aged 17 or over -- the very case PolicyEngine denies.
+
+**Five of the nine are below the harness's $100 tolerance per dependent** (MS
+75.00, NY 55.00, MA 50.00, AZ 25.00, LA 18.50) and are therefore annotated
+rather than excluded, per the sub-$100 standard: a single dependent aged 18 or
+over cannot produce a $100 mismatch there, so an exclusion would remove
+matching records -- which the 2026-08-22 rerun demonstrated, Arizona's cells
+moving DOWN by 0.3-0.5pp while a tenth of its subset was dropped. They still
+bite on returns with two or more such dependents. The four above the tolerance
+(SC 295.04, GA 172.50, VT 162.48, KS 128.25) carry exclusions, and are where
+the measured movement is: GA +5.7 to +8.4pp, KS +6.5 to +7.7pp, VT +5.8 to
++8.1pp, SC +2.7 to +7.1pp on the clean subset.
+
+Being below a validation tolerance is not being unimportant: the amounts are
+per dependent per year and scale with the dependent count, and for a
+distributional or revenue estimate they do not net out.
+
+Louisiana deserves a note of its own. A $60,000 Louisiana filer's marginal
+rate is 4.25%, so the exemption is worth $42.50 if relieved at the margin.
+The measured rise is $18.50, the exemption at the bottom bracket -- which is
+the R.S. 47:32(A)(1)/294/295(B) bottom-bracket relief mechanic reproduced
+from outside, by a different model, on a quantity nobody was testing for.
+
+**Two things the sweep did NOT resolve, recorded so the next pass does not
+re-run them.** First, the $30,000 income level is not usable as the test: a
+dependent turning 18 also stops being an EITC/CTC qualifying child under IRC
+32(c)(3)/24, which cascades into state piggyback credits and is correct law,
+so the deltas there are large and irregular (MA 1,108.52, NJ 1,084.77, MN
+2,006.80). Second, seven states show a rise that does NOT resolve to their
+encoded per-dependent amount at any published rate, and are left open: MN
+(implies 6.012%, and its child credit is phasing out at that income), NM
+(8.00% against a 5.9% top rate), OK (7.25% against 4.75%), NJ (2.45%), IN
+(resolves to the $1,500 child add-on, which Indiana itself age-gates), and
+ME and IA, whose benefit is not the per-dependent exemption at all. The
+opposite-direction states (MO, OR, AR) remain unexamined.
+
+Full record: `research/state_tax/cross_model/class_sweep_2026_08_22.md`.
 
 Effect where it bites: PolicyEngine's state liability runs HIGH by the
 per-dependent amount on returns claiming a dependent aged 18 or over. On our
 samples that is 47-59% of such returns in IL and the dominant residual in
 all three states; excluding the class moves IL to 0.993-0.995, CA to
 0.979-0.988 and UT to 0.970-0.988 on the clean subset.
+
+### T18 scope: probed and REJECTED for MD, MA and WI
+
+T18 does not generalize to every state encoding a care deduction off the
+federal IRC 21 base. Five states encode one; all five have now been probed.
+
+- **MD** — probed 2026-08-22 and rejected: the Maryland care effect varies
+  correctly with spouse earnings, so TAXSIM applies the 21(d) limit there.
+- **WI** — probed 2026-08-22 and rejected. On 2019 joint returns with two
+  dependents and $6,000 of care expenses, the care effect is $930.60 when both
+  spouses earn, **$0.00 when the spouse earns nothing**, and $210.20 when the
+  spouse earns $2,000. That is the limitation working.
+- **MA** — a different finding, in the opposite direction. TAXSIM's
+  Massachusetts liability is invariant to care expenses entirely: siitax is
+  5,050.00 and the implied deduction 22,000 in all four probe cases, including
+  the case with no care expenses at all. The Form 1 line 12 deduction appears
+  not to be modelled, so TAXSIM runs HIGH relative to us on Massachusetts
+  returns claiming care expenses. Recorded rather than filed: the record-level
+  confirmation has not been done.
 
 ### T18. Virginia and Idaho child/dependent care deduction granted without the IRC 21(d) earned-income limit
 
