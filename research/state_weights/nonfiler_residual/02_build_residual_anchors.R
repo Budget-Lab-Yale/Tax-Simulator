@@ -10,7 +10,20 @@
 #                                  status x age), the age dimension HT2 lacks
 #   residual_anchors_{year}.csv    state x {pep_adults_18p, married/single
 #                                  filing adults (HT2 identities via
-#                                  ht2_filing_persons()), residual}
+#                                  ht2_filing_persons()), residual, AND the
+#                                  dorm-netted residual -- two universes, two
+#                                  columns, because consumers differ:
+#                                    residual_nonfiling_adults
+#                                      raw: PEP adults - filing adults, so it
+#                                      still contains adult dependents
+#                                    residual_nonfiling_adults_net_dorm
+#                                      less the dormitory students that
+#                                      build_acs_margins() removes from the
+#                                      non-filer margin (B1) -- the universe
+#                                      that matches the margin and the PUF
+#                                      non-filer partition. NA unless script
+#                                      03 --acs has been run; see ORDERING at
+#                                      the netting block below.
 #   nonfiler_wage_margin_{year}.csv state wage margin: HT2 returns-with-wages
 #                                  and wage dollars against two covered-worker
 #                                  frames -- QCEW (jobs and payroll) and SSA
@@ -188,6 +201,64 @@ for (yr in years) {
   st[, filing_adults := married_filing_adults + single_filing_adults]
   st[, residual_nonfiling_adults := pep_adults_18p - filing_adults]
   st[, residual_share_of_adults := residual_nonfiling_adults / pep_adults_18p]
+
+  # --- dorm-student netting (D1's "net of claimed adult dependents") ---------
+  # PEP places a dormitory student in the INSTITUTION state and they are not a
+  # filing adult, so they survive `pep_adults_18p - filing_adults` and sit
+  # inside the raw residual. `build_acs_margins()` (task B1) removes exactly
+  # those people from the non-filer MARGIN, on the ground that they are
+  # dependents on a parent's return. Left alone, the two objects then measure
+  # different universes -- the margin excludes them, the anchor keeps them --
+  # and every comparison between the two inherits the gap. It is 14-20% of the
+  # anchor in VT/RI/DC/MA/ND/CT.
+  #
+  # So the netted column exists, as a SECOND column rather than a replacement:
+  # `residual_tolerance_*`, T5 and the F5 population identity all read the
+  # anchor as a level, and they do not all want the same universe. Consumers
+  # name the one they mean.
+  #
+  # This is the DORM subtraction only, and deliberately not the full
+  # adult-dependent pool. The full pool via `dependents - PEP under-18` lands
+  # at 5.58M nationally (11.7% of the residual, reproducing the design memo's
+  # ~5.5M/12%), but its STATE distribution assumes every under-18 is claimed,
+  # which is wrong exactly where non-filing parents are common; measured
+  # 2026-08-24 it degrades every metric and moves DC opposite to the
+  # dorm-specific netting. It needs a real state child-claiming estimate.
+  #
+  # ORDERING: this reads script 03's --acs output, which does NOT read the
+  # anchors, so there is no cycle -- but it does mean the full sequence is
+  # 01 -> 03 --acs -> 02 -> 03 --tables. Absent that file the column is NA and
+  # says so, rather than silently reporting the raw residual as netted.
+  gq_f <- file.path(res_dir, sprintf('acs_gq_reclassified_%d.csv', yr))
+  if (file.exists(gq_f)) {
+    gq <- fread(gq_f)
+    stopifnot('state' %in% names(gq), 'persons' %in% names(gq))
+    st <- merge(st, gq[, .(state, dorm_dependents = persons)], by = 'state',
+                all.x = TRUE)
+    st[is.na(dorm_dependents), dorm_dependents := 0]
+    st[, residual_nonfiling_adults_net_dorm :=
+         residual_nonfiling_adults - dorm_dependents]
+    # A netted residual that went non-positive would mean the ACS assigned a
+    # state more dorm students than it has non-filing adults: impossible, and a
+    # sign the two sides were built on different years or universes.
+    stopifnot(all(st$residual_nonfiling_adults_net_dorm > 0),
+              all(st$dorm_dependents >= 0))
+    message(sprintf(paste('  dorm-student netting: %.2fM of %.2fM (%.1f%%);',
+                          'state range %.1f%% (%s) to %.1f%% (%s)'),
+                    st[, sum(dorm_dependents)] / 1e6,
+                    st[, sum(residual_nonfiling_adults)] / 1e6,
+                    100 * st[, sum(dorm_dependents) / sum(residual_nonfiling_adults)],
+                    100 * min(st$dorm_dependents / st$residual_nonfiling_adults),
+                    st[which.min(dorm_dependents / residual_nonfiling_adults), state],
+                    100 * max(st$dorm_dependents / st$residual_nonfiling_adults),
+                    st[which.max(dorm_dependents / residual_nonfiling_adults), state]))
+  } else {
+    st[, `:=`(dorm_dependents = NA_real_,
+              residual_nonfiling_adults_net_dorm = NA_real_)]
+    message('  dorm-student netting: SKIPPED -- no ', basename(gq_f),
+            ' (run 03_diagnose_current_nonfilers.R --acs ', yr,
+            ' then re-run this script)')
+  }
 
   # SSA OASDI beneficiaries aged 65+ (December stock) -- the state x age input
   # for the elderly end of D6, where Table 1.6 stops at a single 65+ band. A

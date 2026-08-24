@@ -75,6 +75,42 @@ for (yr in ANCHOR_YEARS) {
                                     (amp_filing * E_FILING_ADULTS)^2)]
   out[, tolerance_adults := residual_nonfiling_adults * tolerance_pct / 100]
 
+  # The netted anchor needs its OWN tolerance, and it is WIDER, not the same.
+  # Amplification is input/residual, so shrinking the residual by the dorm
+  # students raises it -- 5.3% nationally, up to 19.8% in Vermont. Emitting one
+  # tolerance for two anchors is exactly the silent substitution this script
+  # already got caught by once (it used to read T5_state_margins.csv through a
+  # fallback and served 2022's tolerances under a 2017 name), so the netted
+  # columns are emitted beside the raw ones and named for their universe.
+  # NA in, NA out: absent script 03's --acs run there is no netted anchor.
+  has_net <- 'residual_nonfiling_adults_net_dorm' %in% names(anchors) &&
+             !all(is.na(anchors$residual_nonfiling_adults_net_dorm))
+  if (has_net) {
+    stopifnot(all(anchors$residual_nonfiling_adults_net_dorm > 0))
+    out[, residual_net_dorm := anchors$residual_nonfiling_adults_net_dorm[
+          match(out$state, anchors$state)]]
+    out[, amp_pep_net    := pep_adults_18p / residual_net_dorm]
+    out[, amp_filing_net := filing_adults  / residual_net_dorm]
+    out[, tolerance_pct_net := 100 * sqrt((amp_pep_net * E_PEP)^2 +
+                                          (amp_filing_net * E_FILING_ADULTS)^2)]
+    out[, tolerance_adults_net := residual_net_dorm * tolerance_pct_net / 100]
+    message(sprintf(paste('  netted tolerance: national %.2f%% vs raw %.2f%%;',
+                          'widest %s at %.2f%% (raw %.2f%%)'),
+                    100 * sqrt((sum(anchors$pep_adults_18p) /
+                                sum(anchors$residual_nonfiling_adults_net_dorm) * E_PEP)^2 +
+                               (sum(anchors$filing_adults) /
+                                sum(anchors$residual_nonfiling_adults_net_dorm) * E_FILING_ADULTS)^2),
+                    100 * sqrt((sum(anchors$pep_adults_18p) /
+                                sum(anchors$residual_nonfiling_adults) * E_PEP)^2 +
+                               (sum(anchors$filing_adults) /
+                                sum(anchors$residual_nonfiling_adults) * E_FILING_ADULTS)^2),
+                    out[which.max(tolerance_pct_net), state],
+                    max(out$tolerance_pct_net), out[which.max(tolerance_pct_net), tolerance_pct]))
+  } else {
+    message('  netted tolerance: SKIPPED -- anchors carry no ',
+            'residual_nonfiling_adults_net_dorm (run 03 --acs, then 02)')
+  }
+
   national <- data.table(
     state                     = 'US',
     pep_adults_18p            = sum(anchors$pep_adults_18p),
@@ -85,6 +121,14 @@ for (yr in ANCHOR_YEARS) {
   national[, tolerance_pct := 100 * sqrt((amp_pep * E_PEP)^2 +
                                          (amp_filing * E_FILING_ADULTS)^2)]
   national[, tolerance_adults := residual_nonfiling_adults * tolerance_pct / 100]
+  if (has_net) {
+    national[, residual_net_dorm := sum(anchors$residual_nonfiling_adults_net_dorm)]
+    national[, amp_pep_net    := pep_adults_18p / residual_net_dorm]
+    national[, amp_filing_net := filing_adults  / residual_net_dorm]
+    national[, tolerance_pct_net := 100 * sqrt((amp_pep_net * E_PEP)^2 +
+                                               (amp_filing_net * E_FILING_ADULTS)^2)]
+    national[, tolerance_adults_net := residual_net_dorm * tolerance_pct_net / 100]
+  }
 
   out <- rbind(national, out[order(state)])
   dest <- file.path(RESULTS, sprintf('residual_tolerance_%d.csv', yr))
@@ -102,6 +146,14 @@ for (yr in ANCHOR_YEARS) {
 message('\nNOT in this budget, deliberately:')
 message('  - adult-dependent netting (~5.5M, 12% of the residual) is a BIAS to')
 message('    remove in the estimate; only its estimation error belongs here.')
+message('    PARTLY DONE 2026-08-24: the DORM share of it (2.52M, 5.3% in')
+message('    TY2022) is now removed in script 02 and carried as')
+message('    residual_nonfiling_adults_net_dorm, with the wider tolerance')
+message('    reported above. The REMAINDER -- non-student adult dependents --')
+message('    is still a bias sitting in BOTH anchors and still not budgeted:')
+message('    the `dependents - PEP under-18` route is right nationally')
+message('    (5.58M) and wrong by state, so it needs a real child-claiming')
+message('    estimate before it can be removed rather than bounded.')
 message('  - EEDATA 1% sampling error touches the covered-worker margin only.')
 message('  - the ~17% ASEC income understatement touches the filing model, not')
 message('    the anchor.')

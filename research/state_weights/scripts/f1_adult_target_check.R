@@ -56,24 +56,41 @@ cat(sprintf('\nfit: %d iters, max|rel err| %.3e, %d unfittable\n',
 stopifnot(all(fit$P >= 0), max(abs(rowSums(fit$P) - 1)) < 1e-8)
 
 x <- puf_series_x(tu[pn$idx], 'n_adults')
+anc <- fread(file.path(d, sprintf('residual_anchors_%d.csv', year)))
 z <- merge(data.table(state = inp$jurisdictions,
                       adults = as.vector(crossprod(pn$w * x, fit$P))),
-           fread(file.path(d, sprintf('residual_anchors_%d.csv', year)))[
-             , .(state, anchor = residual_nonfiling_adults)],
+           anc[, .(state, raw = residual_nonfiling_adults,
+                   net_dorm = residual_nonfiling_adults_net_dorm)],
            by = 'state')
-z[, `:=`(sh_fit = adults/sum(adults), sh_anc = anchor/sum(anchor))]
-z[, ratio := sh_fit/sh_anc]
+z[, sh_fit := adults/sum(adults)]
 
-cat(sprintf('\nfitted non-filer adults %.3fM | anchor %.3fM (level gap is F1b/D1, not this)\n',
-            sum(z$adults)/1e6, sum(z$anchor)/1e6))
-cat(sprintf('SHARE vs anchor: MARD %.2f%%  sd %.4f  min %.3f (%s)  max %.3f (%s)\n',
-    100*mean(abs(z$ratio-1)), sd(z$ratio), min(z$ratio), z$state[which.min(z$ratio)],
-    max(z$ratio), z$state[which.max(z$ratio)]))
-cat(sprintf('within 5%%: %d/%d | within 10%%: %d/%d\n',
-    z[abs(ratio-1)<.05,.N], nrow(z), z[abs(ratio-1)<.10,.N], nrow(z)))
-cat('\nworst 8 by share error:\n')
-print(head(z[order(-abs(ratio-1)),
-             .(state, sh_fit = round(100*sh_fit,3), sh_anc = round(100*sh_anc,3),
-               ratio = round(ratio,3))], 8))
+# Both anchor universes, side by side. `net_dorm` is the one that matches this
+# partition -- build_acs_margins() removed the dorm students from the margin and
+# the PUF non-filer partition carries no dependents at all (0 of 13,204 records
+# with dep_status == 1), so the netted anchor is the like-for-like comparison
+# and `raw` is kept only to show what the netting bought.
+COLLEGE <- c('DC','VT','RI','MA','CT','ND','NH','DE')
+panel <- rbindlist(lapply(c('raw','net_dorm'), function(v) {
+  if (all(is.na(z[[v]]))) return(NULL)
+  r <- z$sh_fit / (z[[v]]/sum(z[[v]])); e <- abs(r - 1)
+  data.table(anchor = v, MARD = round(100*mean(e), 2),
+             median = round(100*median(e), 2), sd = round(sd(r), 4),
+             w5 = sum(e < .05), w10 = sum(e < .10), w20 = sum(e < .20),
+             worst_pct = round(100*max(e), 1),
+             college8 = round(100*mean(e[z$state %in% COLLEGE]), 2),
+             other43  = round(100*mean(e[!z$state %in% COLLEGE]), 2))
+}))
+
+cat(sprintf('\nfitted non-filer adults %.3fM | anchor raw %.3fM, net of dorm %.3fM\n',
+            sum(z$adults)/1e6, sum(z$raw)/1e6, sum(z$net_dorm)/1e6))
+cat('(levels are NOT compared -- the gap is what F1b and the D1 rake close)\n\n')
+cat('=== fitted adult SHARES vs anchor SHARES ===\n'); print(panel)
+
+if (!all(is.na(z$net_dorm))) {
+  z[, `:=`(r_raw = sh_fit/(raw/sum(raw)), r_net = sh_fit/(net_dorm/sum(net_dorm)))]
+  cat('\n=== the states the netting is for ===\n')
+  print(z[state %in% COLLEGE, .(state, r_raw = round(r_raw,3),
+          r_net = round(r_net,3))][order(r_raw)])
+}
 f <- file.path(out, sprintf('f1_nonfiler_share_check_%d.csv', year))
 fwrite(z, f); cat('\nWrote', f, '\n')

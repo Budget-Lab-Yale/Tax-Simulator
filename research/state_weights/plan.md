@@ -879,6 +879,48 @@ independently, and in this priority order: *age detail > national level + aging
       differing −0.465%: P5's amplification factor of 4.6x, reproduced exactly,
       so this is the documented tolerance and not a new defect.
 
+      **F1c — dorm-student netting of the anchor: SHIPPED 2026-08-24, on the
+      universe argument ALONE.** `02_build_residual_anchors.R` now emits
+      `residual_nonfiling_adults_net_dorm` beside the raw column (two universes,
+      two columns, because `residual_tolerance_*`, T5 and the F5 population
+      identity read the anchor as a level and do not all want the same one), and
+      `08_residual_tolerance.R` emits the matching wider tolerance —
+      **national 3.74% against the raw 3.54%, SD 7.08% against 6.33%** — because
+      amplification is `input/residual` and netting shrinks the residual.
+      Ordering is `01 -> 03 --acs -> 02 -> 03 --tables`; there is no cycle
+      because `03 --acs` never reads the anchors, and absent that file the column
+      is NA and says so. TY2017 **2.44M of 46.70M (5.2%)**, TY2022 **2.52M of
+      47.53M (5.3%)**, state range 0.8-1.0% (NV) to 19.8-22.6% (VT).
+
+      **Why it is justified:** PEP places a dorm student in the institution
+      state and they are not a filing adult, so they survive
+      `pep_adults_18p - filing_adults` and sit inside the raw residual — while
+      B1 removed exactly those people from the non-filer margin, and the PUF
+      non-filer partition carries **no dependents at all (0 of 13,204 records
+      with `dep_status == 1`, verified)**. Raw anchor and margin therefore
+      measure different universes. That is the whole case, and it is enough.
+
+      **⚠ Why the case is NOT empirical, correcting a claim made on 2026-08-24
+      before TY2017 was run.** The 2022 result — college-8 MARD 15.78% -> 12.49%
+      — **does not replicate**. On TY2017 the same states go 16.23% -> **17.35%**,
+      worse, and the worst single state error goes 45.9% -> **61.1%**. The
+      mechanism is now understood and it is arithmetic, not noise: netting raises
+      `fit/anchor` for a state whose dorm share exceeds the national 5.3% and
+      lowers it for every state below, so it helps only where high-dorm states
+      happen to sit *below* 1 and low-dorm states *above*. In 2022 six of the
+      college-8 sat below 1; in 2017 only five, with VT at 1.078 and NH at 1.072,
+      so netting pushed them out (VT to 1.320). Netting moves **20 of 51 states
+      toward 1 in 2022 and 22 of 51 in 2017** — fewer than half in both years.
+
+      **Consequences to carry.** Do not switch a consumer to the netted column
+      expecting the fit to improve; switch it because it is the right universe.
+      And **SD/MN/WY sit at 1.25-1.48 of their anchor share under either
+      anchor**, worsening under netting — those are precisely the small
+      high-amplification states P5 flagged (3.6x-9.4x, widest tolerance), so
+      that residual is most likely anchor-side noise rather than misplacement,
+      which is what `residual_tolerance_*` exists to say. Nothing consumes the
+      netted column yet; F1b is where the choice becomes load-bearing.
+
       **F1b — anchors as the primary targets: still blocked.** §6.2 makes the
       Tax-Data age fix (D1) a hard prerequisite, because until it lands
       `age_band(tu_n$age1)` is smeared across the very dimension the anchors
@@ -1201,6 +1243,11 @@ comparisons into exact-equality tests.
 
 ## Revision history
 
+- **2026-08-24** — F1c: dorm-student netting shipped as an opt-in second anchor
+  column with its own wider tolerance, justified on universe consistency only.
+  The 2022 fit-improvement claim was retracted the same day when TY2017 failed
+  to replicate; the mechanism (netting helps only where dorm share and error
+  sign happen to line up) is recorded so it is not re-argued.
 - **2026-08-24** — F1a (the D5 adult x-vector) landed: non-filer targets now
   count adults on both sides. Retired the units-vs-adults MARD the tree had
   been quoting, including B1's table, and recorded the first honest placement

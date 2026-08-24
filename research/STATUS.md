@@ -523,6 +523,30 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
      above the national anchor with PEP agreeing to 0.000% — P5's 4.6x
      amplification reproduced exactly, i.e. the documented tolerance.
 
+   **The anchor now carries a dorm-netted universe too (F1c, 2026-08-24)** —
+   `residual_nonfiling_adults_net_dorm` beside the raw column, with a matching
+   wider tolerance in `08_residual_tolerance.R` (national 3.74% against 3.54%;
+   SD 7.08% against 6.33%), because amplification is `input/residual` and netting
+   shrinks the residual. TY2017 2.44M (5.2%), TY2022 2.52M (5.3%), ranging from
+   0.8% in NV to 22.6% in VT. It exists because PEP puts a dorm student in the
+   institution state and they are not a filing adult, so they survive into the
+   raw residual — while B1 removed exactly those people from the margin and the
+   PUF non-filer partition carries **no dependents at all** (0 of 13,204 records
+   with `dep_status == 1`). Raw anchor and margin measure different universes.
+
+   **⚠ That is the entire case, and an earlier empirical claim for it has been
+   retracted.** The TY2022 result (college-state MARD 15.78% → 12.49%) **does not
+   replicate on TY2017**, where the same states go 16.23% → 17.35% and the worst
+   single-state error goes 45.9% → 61.1%. The mechanism is arithmetic: netting
+   raises `fit/anchor` where a state's dorm share exceeds the national 5.3% and
+   lowers it everywhere below, so it helps only where the dorm share and the
+   error sign happen to line up. It moves 20 of 51 states toward 1 in 2022 and 22
+   of 51 in 2017 — fewer than half in both. **Net because it is the right
+   universe, not because it improves a metric**; nothing consumes the column yet.
+   A related read: SD/MN/WY sit at 1.25–1.48 of their anchor share under either
+   anchor and worsen under netting, and those are exactly P5's small
+   high-amplification states, so that residual is likely anchor-side noise.
+
    **F1b (anchors as the primary targets) stays blocked on D1**, the Tax-Data age
    fix, per design memo §6.2: until it lands, `age_band(tu_n$age1)` is smeared
    across the dimension the anchors discipline.
