@@ -3,7 +3,7 @@ title: "Potential issues in TAXSIM-35 and PolicyEngine US"
 role: evidence
 workstream: state_tax
 status: current
-updated: 2026-08-22
+updated: 2026-08-23
 sot: research/state_tax/state_parameter_rollout.csv
 supersedes: []
 superseded_by: null
@@ -515,7 +515,7 @@ dependent aged 17 or over -- the very case PolicyEngine denies.
 75.00, NY 55.00, MA 50.00, AZ 25.00, LA 18.50) and are therefore annotated
 rather than excluded, per the sub-$100 standard: a single dependent aged 18 or
 over cannot produce a $100 mismatch there, so an exclusion would remove
-matching records -- which the 2026-08-22 rerun demonstrated, Arizona's cells
+matching records -- which the 2026-08-23 rerun demonstrated, Arizona's cells
 moving DOWN by 0.3-0.5pp while a tenth of its subset was dropped. They still
 bite on returns with two or more such dependents. The four above the tolerance
 (SC 295.04, GA 172.50, VT 162.48, KS 128.25) carry exclusions, and are where
@@ -700,7 +700,7 @@ Hawaii-specific: probing the same filer in ten states, MT and NY report a zero
 
 ### P5 (continued). Five more one-time rebates netted into TY2021
 
-The 2026-08-22 PE-window pass asked why 2021 is systematically the weakest
+The 2026-08-23 PE-window pass asked why 2021 is systematically the weakest
 PolicyEngine year (median clean match 0.887 against 0.923-0.934 for 2022-2024,
 five cells below 0.60 against nought or one elsewhere) and found five further
 instances of the P5 class. Probed at $80,000 single:

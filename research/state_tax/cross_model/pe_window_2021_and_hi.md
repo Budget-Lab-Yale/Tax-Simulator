@@ -3,13 +3,13 @@ title: "PolicyEngine window — the 2021 class and the Hawaii SALT defect"
 role: evidence
 workstream: state_tax
 status: current
-updated: 2026-08-22
+updated: 2026-08-23
 sot: research/state_tax/state_parameter_rollout.csv
 supersedes: []
 superseded_by: null
 ---
 
-# The PolicyEngine window, 2026-08-22
+# The PolicyEngine window, 2026-08-23
 
 Entered from the board rather than from a state: almost every catastrophic cell
 in the set was a **PolicyEngine 2021** cell (HI 0.058, ME 0.143, MA 0.168,
@@ -148,7 +148,7 @@ too (0.634 / 0.810 / 0.835). **Open.**
 
 ## Revision history
 
-- **2026-08-22** — written. Two causes diagnosed and landed: the Hawaii circular
+- **2026-08-23** — written. Two causes diagnosed and landed: the Hawaii circular
   SALT deduction (PE-side, whole window, above-threshold population) and five
   unfiled P5 rebate instances (TY2021). MT and MA 2021 remain open with a second
   cause each; no state closed.

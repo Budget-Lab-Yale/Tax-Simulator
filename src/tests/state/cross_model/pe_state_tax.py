@@ -127,6 +127,15 @@ OUTPUT_VARS = {
     "pe_mt_income_rebate": ["mt_income_tax_rebate"],
     "pe_mt_property_rebate": ["mt_property_tax_rebate"],
     "pe_sc_2022_rebate": ["sc_2022_rebate"],
+    # MA's COVID-19 Essential Employee Premium Pay Program: a 2022 one-time
+    # $500 payment to low-income essential workers that PE nets into TY2021
+    # state_income_tax. Found 2026-08-22 as the second half of the MA 2021
+    # residual (the 62F refund was the first).
+    "pe_ma_covid_premium_pay": ["ma_covid_19_essential_employee_premium_pay_program"],
+    # RI Form RI-1040H property-tax relief credit. Already excluded on the
+    # TAXSIM leg as a Tier-1-blocked class (no rent in the PUF); PE models it
+    # too and had no equivalent row until 2026-08-22.
+    "pe_ri_property_tax_credit": ["ri_property_tax_credit"],
     # PE's own federal results, used by the harness's clean-subset metrics
     "pe_fed_agi": ["adjusted_gross_income"],
     "pe_fed_taxable": ["taxable_income"],
@@ -265,6 +274,15 @@ def main():
         if k != "pe_state_income_tax"
     }
     liab_var = resolve(OUTPUT_VARS["pe_state_income_tax"])[0]
+    # Entity of each extra, so PERSON-level variables are summed to the tax unit
+    # instead of being read by tax-unit position. Indexing a person-indexed
+    # array by tax-unit position silently misaligns as soon as any joint record
+    # appears earlier in the batch -- it produced a wrong MT rebate column on
+    # 2026-08-22 and, through it, a wrong exclusion.
+    extra_entities = {
+        col: (system.variables[var].entity.key if var else "tax_unit")
+        for col, var in extra_vars.items()
+    }
 
     with open(in_csv, newline="") as f:
         rows = list(csv.DictReader(f))
@@ -284,7 +302,13 @@ def main():
                 state_only[st_code] = sim.calculate(var, year)
         extras = {}
         for out_col, var in extra_vars.items():
-            extras[out_col] = sim.calculate(var, year) if var else [0.0] * len(batch)
+            if not var:
+                extras[out_col] = [0.0] * len(batch)
+            elif extra_entities[out_col] == "person":
+                # sum the person values into their tax unit
+                extras[out_col] = sim.calculate(var, year, map_to="tax_unit")
+            else:
+                extras[out_col] = sim.calculate(var, year)
 
         # tax_units insertion order == batch row order
         for i, row in enumerate(batch):
