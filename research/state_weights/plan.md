@@ -3,7 +3,7 @@ title: "A state-weight-inclusive model with an updated non-filer pull — the pl
 role: plan
 workstream: state_weights
 status: current
-updated: 2026-08-20
+updated: 2026-08-23
 sot: self
 supersedes: []
 superseded_by: null
@@ -15,10 +15,14 @@ superseded_by: null
 next, what is blocked, and the critical path, through to the production
 state-weights swap-in.
 
-**Scope:** everything between here and the production state-weights swap-in.
+**Scope:** everything between here and the production state-weights swap-in
+(groups P–H), plus a **second phase added 2026-08-23** covering the national
+tenure / rent / property-tax imputation and its per-state use (groups I–J).
 Weights and non-filers are one workstream because the non-filer rework lands
 *before* the Phase 1 swap-in, so the fit happens once on upgraded margins rather
-than fit-then-refit.
+than fit-then-refit. Tenure and rent joined it for the same reason in reverse:
+they need the ACS cells and the fit machinery that groups A–F build, and the
+cross-model triage keeps terminating in their absence.
 
 **Method:** every claim below was checked against the code and the shared store
 on 2026-08-19, not read off the memos. Where a memo and the tree disagree, the
@@ -445,7 +449,90 @@ Effort estimates follow the memo's own where it gives them.
       SOI; (iv) the ASEC–anchor non-filer gap **is** the group-quarters universe
       difference — the identity closes to 0.03M in both anchor years, which the
       C6 gate must not read as transfer failure.
-- [ ] **A2b. Extract additions from A2 §5**, then re-pull all eleven ASEC years.
+- [~] **A2b. Extract additions from A2 §5 — CONFIGURED AND VALIDATED
+      2026-08-23; the re-pull is running.** Twelve variables added to
+      `config/parameters.cps.yaml` (84 total): `INCPEN1` `INCPEN2` `INCRANN`
+      `SRCPEN1` `SRCPEN2` `INCRET1` `INCRET2` `LINENO` `FAMREL` `FTYPE` `FAMID`
+      `INCCAPG`.
+      **Validation found three of A2 §5's names do not exist in IPUMS CPS.**
+      `get_metadata()` in ipumsr 0.10.0 covers NHGIS datasets, not microdata
+      variable availability, so the check was done the way the API itself does
+      it — submit a probe extract and read the rejection. Results: `CAPGAIN`/
+      `CAPLOSS` are the **wrong names** and the real variable is **`INCCAPG`**;
+      and **`INCALIM` is genuinely unavailable** — neither it nor `INCALOTH`
+      exists in any of the eleven samples, so alimony has no separate IPUMS CPS
+      variable for these years and sits inside `INCASIST`/`INCOTHER`. That is a
+      documented limitation against Mok's AGI list, not an oversight.
+      **⚠ CORRECTION to how that probe should be read.** A pooled probe over all
+      eleven samples does NOT establish per-sample availability. IPUMS rejects
+      only a variable available in **none** of the selected samples — its own
+      wording, *"not available in any of the samples currently selected"* — so
+      the probe proved existence in **at least one** year, which is a weaker
+      claim than this task asked for ("validate every name across all eleven
+      samples"). The per-sample truth comes from the pull itself, which submits
+      one sample at a time and logs what it drops: for ASEC 2016 it dropped
+      `INCPEN1` `INCPEN2` `INCRANN` `SRCPEN1` `SRCPEN2` `INCRET1` `INCRET2`
+      `INCCAPG` — **eight of the twelve additions.**
+      **This is expected, not a failure.** The pension variables are the
+      *post-redesign* ones: the ASEC 2019 restructure is what created them, so
+      they exist from TY2018 on and cannot exist before, which is exactly why A2
+      wanted them ("restores pension and annuity income **from TY2018 on**").
+      The pre-TY2018 years keep `INCRETIR`, already pulled. The consequence to
+      carry forward is that **the retirement-income covariate is built from
+      different variables either side of TY2018**, so C5 must construct it as a
+      spliced series and check continuity across the break rather than assume
+      one definition spans the window.
+
+      **⚠ C5 INPUT — the splice is NOT a sum, and the measure is unresolved.**
+      Measured on the new extract 2026-08-23 (weighted by ASECWT, \$bn):
+
+      | measure | TY2017 | TY2018 | TY2022 |
+      |---|---|---|---|
+      | `INCRETIR` alone | **570.6** | 178.7 | 221.5 |
+      | `INCPEN1+INCPEN2+INCRANN` | absent | 453.8 | 505.7 |
+      | naive sum of all | — | 632.5 | **727.1** |
+      | union, per-person `max` | — | — | 677.7 |
+
+      `INCRETIR` **falls 69%** across the redesign (570.6 → 178.7): that is the
+      break. The tempting reading — splice by summing `INCRETIR` and the
+      components from TY2018 — is **wrong**, because they **overlap at the
+      person level**. In TY2022, **1,985 persons hold both**, carrying \$94.3bn
+      of `INCRETIR` and \$128.9bn of components between them, so a naive sum
+      double-counts. That is also why the summed series looked reassuringly
+      continuous with TY2017 — the continuity was partly the double-count.
+
+      The three candidate TY2022 measures — 221.5 (INCRETIR only), 505.7
+      (components only), 727.1 (naive sum) — **straddle** TY2017's 570.6, so the
+      data cannot settle which is right. **C5 must read the IPUMS CPS definition
+      of post-redesign `INCRETIR`** (harmonized aggregate, or residual "other
+      retirement income"?) before choosing, since that determines whether the
+      correct TY2018+ measure is the components alone, the components plus a
+      genuinely-residual `INCRETIR`, or a per-person union. Do not pick by
+      whichever number looks smoothest against TY2017.
+      **Why the probe was not optional:** `download_ipums.R` prunes unavailable
+      variables from the API error and continues. For an optional variable that
+      is correct; for `INCPEN1` and `LINENO` it would have produced an extract
+      that looked complete and could not do the job.
+      *A first validation attempt reported all fourteen variables as
+      non-existent. That was a bad `get_metadata()` call, caught by testing a
+      known-good variable (`INCWAGE`) as a control — which is why the control
+      was run.*
+      **⚠ The re-pull needs `--overwrite`, and without it it is a silent
+      no-op.** The first pull exited **0**, printed `SBATCH_DONE_OK`, and had
+      done nothing: `download_ipums.R` skips any sample whose folder already
+      contains a DDI, so all eleven were skipped and the log's real verdict was
+      the last line, **`Pulled 0 of 11 samples`**. Every new variable would have
+      been absent from a store that looked freshly built. This is the
+      cluster-notes rule exactly — a completed job is not a successful one, and
+      the exit code is not the check. The store was backed up to
+      `/nfs/roberts/scratch/pi_nrs36/ji252/cps_asec_common_backup_20260823`
+      (86 MB) before the overwrite, since `--overwrite` replaces eleven years of
+      a shared extract.
+      **Acceptance for this task is not "the job finished":** it is `Pulled 11
+      of 11 samples`, the twelve new names present in every year's DDI, and the
+      TY2018+ pension variables non-empty — which is the whole point of the
+      re-pull.
+      Original text of this task, for reference:
       `INCPEN1`/`INCPEN2`/`INCRANN` (+`SRCPEN1/2`, `INCRET1/2`) — **blocking for
       C5**; `LINENO` — **blocking for C2**, and it accounts for 100% of today's
       unresolved `DEPSTAT` pointers; `CAPGAIN`/`CAPLOSS`; `FAMREL`/`FTYPE`/`FAMID`
@@ -497,9 +584,27 @@ Effort estimates follow the memo's own where it gives them.
       with a two-dummy education scheme whose natural omitted group is
       high-school-to-some-college. It decides which population the intercept
       describes.
-- [ ] **A6. Re-run 01 → 02 → 03** once A1 lands; move **D6 from partially
-      resolved to resolved**; update `04_findings.md` with the T5 state margins
-      the OASDI and covered-wage columns were specified with.
+- [x] **A6. Re-run 01 → 02 → 03 — DONE 2026-08-23.** The anchors came back
+      **byte-identical** on both years, so A1's readers were already reflected
+      and the pipeline reproduces from a clean run: wedge 0.760/0.743, OASDI 65+
+      44.6M/50.8M (87.5%/88.3% of PEP), residual 47.3M/46.5M. Only T1–T4 moved,
+      because they read production Tax-Data and the vintage pin advanced in P2 —
+      small changes, and **the age inversion is undisturbed**: Tax-Data puts
+      41.4%/43.4% of non-filing adults at 65+ against a residual-implied
+      25.1%/25.0%, and 9.96%/9.46% at 18–25 against 24.2%/22.2%.
+      **The substantive part was that the SSA margins existed in the anchor files
+      but never reached T5** — `03`'s assembly selected four columns from the
+      anchors and dropped the rest. T5 now joins `beneficiaries_65p`, `pep_65p`,
+      `ssa_65p_coverage`, `ssa_covered_persons`, `ssa_covered_wages` and
+      `ht2_returns_per_ssa_person`. **D6 is resolved** (appended, not rewritten —
+      `04_findings.md` is a frozen evidence document); new finding **F10** records
+      the re-run.
+      One trap worth carrying: the first T5 summary divided *all* HT2 returns by
+      covered persons and printed 0.928 next to a state range of 0.638–0.783 —
+      **outside the range of its own components**, which is impossible for a
+      weighted mean and is the tell that two different quantities were being
+      compared (the state column's numerator is returns *with wages*). Fixed, and
+      the message now names the numerator.
 
 ### B — GQ treatment (~2–3 days, ships independently)
 
@@ -678,6 +783,150 @@ independently, and in this priority order: *age detail > national level + aging
       pilot-state liability re-check, and a pointer from the income memo's
       "Aligning the code" section to this workstream.
 
+### I — National tenure / rent / property-tax imputation (~3–4 weeks)
+
+**Scope note: this extends the workstream past the swap-in.** Groups P–H end at
+production state weights. Groups I and J are a second phase, added 2026-08-23,
+because the cross-model triage keeps terminating in the same missing variables
+and because the federal side needs the same imputation for a different reason.
+
+**Why it is here rather than in `state_tax/`.** It is a *data* task on the same
+ACS/ASEC assets groups A–C build, and its calibration cells are the ones the
+weights fit already uses. Doing it inside this workstream reuses that
+infrastructure; doing it separately would rebuild it.
+
+**What is actually missing today** (measured on the 2019 file, 2026-08-23):
+
+| variable | source | coverage |
+|---|---|---|
+| `salt_prop` | PUF E18500, a **Schedule A** field | itemizers |
+| `first_mort_int` / `second_mort_int` | imputed, labelled "for itemizers" | itemizers |
+| rent paid | **does not exist** | nobody |
+| tenure (own/rent) | **does not exist** | nobody |
+
+97.2% of itemizers carry a property-tax or mortgage signal against **23.9% of
+non-itemizers** — roughly **0.4x** the coverage a ~65% homeownership rate
+implies. Renters are wholly unobserved. Note `rent` in Tax-Data is rental and
+royalty INCOME (Schedule E), not rent paid; it is an easy variable to misread.
+
+- [ ] **I1. Choose the donor survey: CPS ASEC or ACS.** They are not
+      interchangeable here and the choice is not obvious.
+      - **ASEC** is what group A/C already pulls (`raw_data/CPS-ASEC/`, 2015–2025,
+        72 variables), carries the tax-unit and filing-model machinery this
+        workstream is building, and is the base the filing probits are scored on
+        — so a tenure/rent imputation off ASEC inherits all of that for free.
+      - **ACS** has vastly larger samples (so state x income x age x
+        household-size cells are actually populated), carries `TENURE`, gross
+        rent and **property-tax amounts** directly, and is already registered at
+        `shared/raw_data/ACS/acs_common`.
+      - **Correction (2026-08-23):** an earlier draft of this task said property
+        tax was the decisive advantage because "ASEC does not collect it". That
+        is wrong — API probing during A2b found **`PROPTAX` in IPUMS CPS,
+        available in all eleven samples**. Two caveats keep ACS ahead on this
+        variable anyway: `PROPTAX` is a Census **tax-model** item, so under S12
+        it is verification-only and cannot feed an imputation; and ASEC's sample
+        will not populate state x income x age x household-size cells the way
+        ACS does. The advantage is real but it is about sample size and S12, not
+        about whether the variable exists.
+      - Likely answer is **both, at different jobs**: ACS for the tenure/rent/
+        property-tax joint distribution and its state detail, ASEC where the
+        imputation must line up with the filing model. State the split
+        explicitly rather than picking one and living with the gap.
+- [ ] **I2. Method: follow the TPC / OTA / CBO precedent, which is
+      statistical matching.** None of the reference models impute this inside the
+      calculator: TPC, OTA and CBO all constrained-statistically-match the PUF to
+      a household survey; PolicyEngine sidesteps it by running on a survey base
+      where tenure and rent are native; TAXSIM and Bakija both take rent and
+      property tax as *inputs* (Bakija converts rent to a property-tax
+      equivalent with a `cbrenteq` rate). So the method is settled by precedent:
+      donor imputation / constrained match within cells, not a behavioural model.
+      **S12 binds here:** Census tax-model outputs (ASEC `PROPTAX`, `TAXINC`,
+      `ADJGINC`, …) may benchmark the result and may not be an input to it.
+      Two calibrations worth copying from Bakija's experience: he **smooths**
+      step-function circuit-breaker phase-ins, and he declines homestead
+      exemptions entirely. That is a sane accuracy ceiling, not a shortcut.
+- [ ] **I3. ⭐ Exploit the PRE-TCJA itemizer population — the idea that makes
+      this tractable.** Post-TCJA roughly a tenth of filers itemize; pre-TCJA it
+      was about three in ten. So the 2017-and-earlier PUF observes Schedule A
+      property tax and mortgage interest on a **much larger and far less
+      selected** slice of the population than the current file does. Use it to
+      estimate the relationship between *observable tax variables* (AGI, filing
+      status, dependants, wages, age proxies, state) and (property tax, mortgage
+      interest) on that broader base, then apply the fitted relationship forward
+      to the post-TCJA non-itemizing population.
+      The load-bearing question is **how much of that relationship transfers**.
+      Itemizing is still selective pre-TCJA, so the estimates are conditional on
+      a selected sample — just much less so. Quantify the residual selection by
+      re-fitting on the post-TCJA itemizers alone and comparing coefficients;
+      the divergence between the two fits is the honest error bar on the
+      transfer. Decide from that whether to use the pre-TCJA fit directly, use
+      it only as a prior for the survey match, or discard it.
+- [ ] **I4. Calibration targets, and the tension between them.** The federal
+      side wants mortgage interest reconciling to the **SOI Schedule A
+      aggregate** so published revenue estimates hold. The state side wants
+      property tax and rent reconciling to **ACS distributions** and to each
+      state's published program statistics (WI DOR Schedule H claims by income
+      range, MN DOR renter-credit totals, MI homestead reports). Those anchors
+      can pull the same imputation in opposite directions. Fit once against both
+      sets of margins; do not fit twice and discover they disagree.
+- [ ] **I5. GATE — decide the blast radius before writing anything.** Two
+      options, and they are not equivalent:
+      (a) impute **tenure and rent only**, leaving `salt_prop` and the mortgage
+      fields as they are — self-contained, unlocks the renter credits, leaves
+      the federal MID problem untouched; or
+      (b) **re-impute property tax and mortgage interest for the whole
+      population** — fixes the federal problem too, but overwrites Tax-Data
+      fields that existing federal estimates reconcile against, so it needs
+      sign-off beyond this workstream.
+      **Recommendation: (a) first, with (b) specified but gated**, because (a)
+      cannot invalidate a published federal number and (b) can.
+
+**Why (b) matters, stated once so it is not lost:** mortgage interest is imputed
+*conditional on itemizing*, and itemizing is **endogenous to policy**. That is
+harmless for current law and harmful for exactly the reforms most likely to be
+asked about — change the standard deduction, the SALT cap or the mortgage
+interest cap and the newly-itemizing population's Schedule A amounts are
+under-imputed by around 60%. The `*_item_ded_potential` columns added 2026-08-15
+inherit this precisely: they preserve as-if-itemizing amounts computed *before*
+`do_1040()` zeroes them, but "as-if" can only recover what was imputed, so for a
+non-itemizing homeowner with no imputed mortgage interest the as-if amount is
+zero. Every independent-election state (CA OR HI DE AR MS MT AL …) therefore
+understates state itemized deductions for the population its credits target.
+
+### J — Put tenure and rent to work per state (~2–3 weeks)
+
+The choice here is genuinely open and should be made on evidence from group I,
+not now.
+
+- [ ] **J1. Decide: targets in the fit, or a post-fit imputation.**
+      - **(a) Second stage of the weights fit.** Add owner/renter counts — and
+        ideally a rent or property-tax amount — to the state margin set, so the
+        fitted weights reproduce each state's tenure composition by construction.
+        Cheapest path (the fit machinery and the ACS cells already exist) and it
+        makes tenure consistent with every other state margin. Limitation: it
+        gets the state *composition* right without giving any individual record a
+        credible rent amount, so amount-based credits stay approximate.
+      - **(b) Per-state imputation after weighting.** Assign each record a
+        tenure and a rent/property-tax amount conditioned on its state. More
+        useful for the credits, which are amount-based and sharply
+        income-tested, but it can fight the weights unless the same margins
+        discipline both.
+      - These are not exclusive: (a) makes the geography right, (b) makes the
+        record right. If both, (a) must come first so (b) calibrates inside a
+        consistent state distribution.
+- [ ] **J2. Acceptance.** State-level owner/renter shares within tolerance of
+      ACS; imputed rent and property-tax distributions matching ACS by state and
+      income band; and — the real test — **program-statistic reconciliation** on
+      the states whose credits this unlocks (WI Schedule H claims by income
+      range, MN renter-credit totals, MI homestead reports).
+- [ ] **J3. Retire the exclusion rows this makes unnecessary.** The
+      Tier-1-blocked property/rent class is currently handled by exclusion on
+      both legs, and the list is now long enough to be its own acceptance test:
+      RI-1040H (TAXSIM 2017-2020 and, from 2026-08-23, PolicyEngine 2021-2024),
+      MT's property rebate, VT and MN renter credits, WI's homestead credit, and
+      the IL/CT property-tax credit inputs. Each row retired is a real
+      validation gain rather than a bookkeeping change.
+
 ### H — Model-side gaps to decide, not defer
 
 These do not block the sequence, but the rework grows the population they
@@ -729,7 +978,20 @@ P ✓ ────┬─> A2 ✓ ─> A2b extract re-pull (1-2d) ─> A4 (1d) �
                                     F state margins + re-fit (2-3w)
                                                     │
                                     G swap-in + close-out (1-2w)
+                                                    │
+                        ┌───────────────────────────┴──────────┐
+                        │ SECOND PHASE (added 2026-08-23)      │
+                        │ I national tenure/rent/proptax (3-4w)│
+                        │        │  I5 is a GATE               │
+                        │ J per-state use (2-3w)               │
+                        └──────────────────────────────────────┘
 ```
+
+**Groups I and J add roughly 5–7 weeks** and sit after G, with one exception
+worth noting: **I1 (choose the donor survey) and I3 (the pre-TCJA itemizer fit)
+depend on nothing** and can be settled during the long pole at C. Doing so is
+cheap and de-risks the phase, because I3's answer determines whether the
+imputation needs a full survey match or can lean on the pre-TCJA relationship.
 
 **Roughly 8–11 weeks end to end**, of which only P, A1, A2/A3 and B parallelize.
 **A2b is now the gate on phase C**, not A2: the design note is written, and what

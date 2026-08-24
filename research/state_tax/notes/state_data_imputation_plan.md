@@ -3,7 +3,7 @@ title: "State-tax data extensions and imputations — scoped plan"
 role: notes
 workstream: state_tax
 status: open
-updated: 2026-08-19
+updated: 2026-08-23
 sot: research/state_tax/plan.md
 supersedes: []
 superseded_by: null
@@ -66,6 +66,14 @@ un-started states whose preliminary classification in
 ## Tier 1 — big, broad-based, buildable from assets we already hold
 
 ### 1. Tenure / rent / property-tax imputation (the homestead family)
+
+> **Owned by `research/state_weights/plan.md` groups I–J as of 2026-08-23.**
+> This entry stays as the state-side statement of what the imputation unlocks;
+> the *method*, the donor-survey choice, the pre-TCJA itemizer strategy, the
+> calibration-target tension with the federal side, and the per-state
+> application now live in that plan's second phase. Do not scope the work from
+> here.
+
 
 - **Unlocks:** WI homestead credit; MI homestead credit; **MN renter
   credit (2024+, ON the M1 — a structural liability gap, not a side

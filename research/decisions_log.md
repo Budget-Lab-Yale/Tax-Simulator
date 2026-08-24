@@ -3,7 +3,7 @@ title: "State-tax research decisions log"
 role: status
 workstream: cross-cutting
 status: current
-updated: 2026-08-20
+updated: 2026-08-23
 sot: self
 supersedes: []
 superseded_by: null
@@ -42,6 +42,12 @@ before the move to `research/`. Each is now stated once, in one place.
 | ID | Decision | Status | Rationale / notes |
 |----|----------|--------|-------------------|
 | S6 | **`research/state_tax/state_parameter_rollout.csv` is the single per-state status surface.** Source packets carry `Status: see ../state_parameter_rollout.csv` and a `Last updated:` date; the harness README carries no done-list; reviews carry `true_as_of:`. | set | Five surfaces were tracking per-state status in five incompatible vocabularies: the CSV, the 51 packets' free-text `Status:` lines (five formats, including `nd.md` and `sc.md` transcribing the CSV's own four columns inline), the 39 cross-model report verdicts, the harness README's embedded "Status as of 2026-07-19" done-list, and a review appendix. The CSV wins because `src/tests/test_state_tax_law.R` already validates the code against it, and `state_parameter_workflow.md` §Validation gates already defines its vocabulary. The reports keep their per-state verdicts — they are the *evidence* a row is `done`, which is a different thing from the row. |
+
+## Survey data and imputation
+
+| ID | Decision | Status | Rationale / notes |
+|----|----------|--------|-------------------|
+| S12 | **Census-derived tax variables are used to VERIFY our work, never to produce it.** (JI, 2026-08-23.) On the CPS ASEC that means `FILESTAT`, `ADJGINC`, `TAXINC`, `FEDTAX`, `STATETAX`, `EITCRED`, `FICA` and the rest of the Census tax model's outputs, and `DEPSTAT` where it is used as a filing-unit pointer rather than a relationship. They may appear in a diagnostic, a comparison table or an acceptance check. They may not enter a tax unit's construction, an income concept, a model's covariates, a calibration target, or any imputation. The same rule applies to ACS equivalents. | set | Research pass A (A2) found three independent disqualifications, each sufficient on its own. **Circularity:** `ADJGINC`/`TAXINC` are statistically matched to the SOI PUF — the same file this workstream exists to correct — so using them would fit the file to itself. **A vacuous gate:** `FILESTAT`'s filer *count* is calibrated to administrative filing totals (O'Hara's $2,000 floor exists for that purpose), so adopting it would make the C6 acceptance test — does our filing model reproduce administrative filing rates — pass by construction and measure nothing. **It is wrong where it is not circular:** head-of-household is 41.5% short in TY2022, MFS does not exist at all, `FILESTAT` is broken outright in TY2020–21 (non-filing adults 42.9M → 11.7M → 11.5M → 44.0M), `DEPSTAT` is broken in TY2014, and 10.8% of its dependents point at someone the same model codes as a non-filer. The constructive half of the rule is that these variables are *excellent* verification: an independent estimate we did not fit to is exactly what an acceptance gate needs, and A2's fourth finding — that the ASEC-versus-anchor non-filer gap **is** the group-quarters universe difference, closing to 0.03M in both anchor years — was found precisely by using them that way. |
 
 ## Documentation scheme
 

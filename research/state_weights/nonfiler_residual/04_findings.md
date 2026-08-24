@@ -3,8 +3,8 @@ title: "Stage D Findings — Residual Non-Filer Diagnostics"
 role: evidence
 workstream: state_weights
 status: frozen
-updated: 2026-08-19
-true_as_of: 2026-08-19
+updated: 2026-08-23
+true_as_of: 2026-08-23
 sot: research/state_weights/nonfiler_residual_design.md
 supersedes: []
 superseded_by: null
@@ -179,6 +179,54 @@ both the lowest coverage (0.73/0.75) and the highest residual share, SD the
 highest coverage (0.97) and the lowest — but the middle of the distribution is
 noise. Use it as the 65+ age layer it is, not as a state-level residual signal.
 
+### F10. A6 re-run: the anchors are reproducible, and the SSA margins now reach the diagnostics
+
+**Re-ran 01 → 02 → 03 on 2026-08-23** (task A6), after A1 replaced the
+`ssa_covered_persons = NA_real_` stub with the two real readers.
+
+**The anchors came back byte-identical.** `national_anchor_*`,
+`residual_anchors_*`, `nonfiler_wage_margin_*` and `ssa_age_margin_*` are
+unchanged for both anchor years, which confirms A1's readers were already
+reflected in the committed results and that the pipeline is reproducible from a
+clean run. Script 02 reproduces every headline figure: the returns-with-wages
+per covered person wedge at **0.760 / 0.743**, OASDI 65+ beneficiaries at
+**44.6M / 50.8M** (87.5% / 88.3% of PEP 65+), and the national residual at
+**47.3M / 46.5M** adults.
+
+**What did move: T1–T4**, because they read the *production Tax-Data* non-filer
+records and the vintage pin was advanced in P2. The changes are small and the
+findings they support are unchanged in substance:
+
+| | before | after |
+|---|---|---|
+| Tax-Data non-filer adults, TY2022 | 32.378M | 32.360M |
+| ratio to residual anchor | 0.70 | 0.70 |
+| Tax-Data 65+ share of non-filers, TY2017 | 0.4290 | 0.4136 |
+| Tax-Data 18–25 share, TY2017 | 0.0887 | 0.0996 |
+
+**The age inversion is undisturbed and remains the headline defect.** Tax-Data
+puts **41.4% (2017) / 43.4% (2022)** of non-filing adults at 65+ where the
+residual implies **25.1% / 25.0%**, and **9.96% / 9.46%** at 18–25 where the
+residual implies **24.2% / 22.2%**. The file is old where the residual is young,
+by roughly 17 percentage points at each end.
+
+**T5 now carries the SSA margins.** They existed in the anchor files from A1 but
+never reached the diagnostic table, because `03`'s T5 assembly selected only
+four columns from the anchors. It now joins `beneficiaries_65p`, `pep_65p`,
+`ssa_65p_coverage`, `ssa_covered_persons`, `ssa_covered_wages` and
+`ht2_returns_per_ssa_person`. National: SSA 65+ coverage of PEP **0.883**
+(state range 0.746–0.968); returns-with-wages per covered person **0.743**
+(range 0.638–0.783).
+
+> **One trap found while wiring it, recorded because it is the kind that
+> survives review.** The first version of the T5 summary divided *all* HT2
+> returns by covered persons and reported 0.928 — a figure that sits **outside**
+> the state range it was printed next to, which is arithmetically impossible for
+> a weighted mean of those state ratios. The state column's numerator is returns
+> **with wages**, not all returns. Fixed to use the same numerator, and the
+> message now names it. Whenever a national aggregate falls outside the range of
+> its own components, the two are not the same quantity.
+
 ## 4. Decision points (design memo §4.4), resolved where the evidence is in
 
 | # | Decision | Status |
@@ -189,6 +237,14 @@ noise. Use it as the 65+ age layer it is, not as a state-level residual signal.
 | D4 | GQ handling | **Differentiated treatment confirmed** (F6): exclusion overshoots; dorm-student reclassification + institutional retention, sized per state by T7 |
 | D5 | Target adults not units | **Adopted** in the anchors (T1.6 side counts adults; x-vector `1 + (filing_status==2)` at fit time) |
 | D6 | Age allocation layering | **Partially resolved**: the national age shape is now anchored by construction (PEP − T1.6). The state-level 65+/working-age layering awaits the SSA margins (§5) |
+
+> **D6 amended 2026-08-23 (A6), appended rather than rewritten** per the
+> evidence-document rule: the state-level 65+ layer now HAS its margin, so D6 is
+> **resolved**. `ssa_age_margin_{year}.csv` (EEDATA Table 5, 459 state × band
+> rows) supplies the layer, and `residual_anchors_{year}.csv` carries the 65+
+> beneficiary count with its PEP coverage ratio; both now reach T5. Read F10
+> before using the coverage ratio as anything but the 65+ layer — it is a weak
+> state-level residual signal (F9: cor −0.31 / −0.11).
 
 ## 5. Blocked / remaining before Stage D fully closes
 

@@ -268,12 +268,26 @@ if (!is.null(m_v0)) {
                                             .(value = sum(value)), by = state],
                    state ~ ., value.var = 'value')
   setnames(ht2_ret, '.', 'ht2_returns')
-  t5 <- Reduce(function(a, b) merge(a, b, by = 'state', all.x = TRUE), list(
-    stanch$`2022`[, .(state, pep_adults_18p, filing_adults, residual_nonfiling_adults)],
+  # A6 (2026-08-23): carry the SSA columns A1 added through to T5, so the state
+  # margins can be read against the administrative margins they will be fitted
+  # to rather than only against the ACS. The anchors gained the 65+ beneficiary
+  # count and its PEP coverage ratio; the wage margin gained covered persons,
+  # covered wages and the returns-per-covered-person wedge. Without this join
+  # they existed in the anchor files but never reached the diagnostic table.
+  wmarg <- maybe_read(file.path(res_dir, sprintf('nonfiler_wage_margin_%d.csv', y)))
+  ssa_cols <- if (is.null(wmarg)) NULL else
+    wmarg[, .(state, ssa_covered_persons, ssa_covered_wages,
+              ht2_returns_per_ssa_person)]
+
+  t5_parts <- list(
+    stanch$`2022`[, .(state, pep_adults_18p, filing_adults, residual_nonfiling_adults,
+                      beneficiaries_65p, pep_65p, ssa_65p_coverage)],
     m_v0[, .(acs_v0_nonfiler_units = sum(n_units)), by = state],
     m_gq[, .(acs_gqexcl_nonfiler_units = sum(n_units)), by = state],
     f_ac[variant == 'v0', .(state, acs_v0_filer_units = n_units)],
-    ht2_ret))
+    ht2_ret)
+  if (!is.null(ssa_cols)) t5_parts <- c(t5_parts, list(ssa_cols))
+  t5 <- Reduce(function(a, b) merge(a, b, by = 'state', all.x = TRUE), t5_parts)
   t5[, `:=`(v0_filer_vs_ht2      = acs_v0_filer_units / ht2_returns,
             v0_nonfiler_vs_resid = acs_v0_nonfiler_units / residual_nonfiling_adults,
             gqexcl_nonfiler_vs_resid = acs_gqexcl_nonfiler_units / residual_nonfiling_adults)]
@@ -284,6 +298,14 @@ if (!is.null(m_v0)) {
                   t5c[, sum(acs_v0_filer_units) / sum(ht2_returns)],
                   min(t5c$v0_filer_vs_ht2), max(t5c$v0_filer_vs_ht2),
                   t5c[, cor(v0_nonfiler_vs_resid, takeup, use = 'complete.obs')]))
+  if ('ssa_65p_coverage' %in% names(t5)) {
+    message(sprintf('T5: SSA 65+ coverage of PEP %.3f (range %.3f-%.3f); returns-WITH-WAGES per covered person %.3f (range %.3f-%.3f)',
+                    t5[, sum(beneficiaries_65p) / sum(pep_65p)],
+                    min(t5$ssa_65p_coverage), max(t5$ssa_65p_coverage),
+                    wmarg[, sum(n_wages) / sum(ssa_covered_persons)],
+                    min(t5$ht2_returns_per_ssa_person, na.rm = TRUE),
+                    max(t5$ht2_returns_per_ssa_person, na.rm = TRUE)))
+  }
 } else {
   message('T5: skipped (run --acs mode under sbatch first)')
 }
