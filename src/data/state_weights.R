@@ -170,12 +170,21 @@ read_ht2 <- function(path, year) {
 #   - Couples (MARST==1 & SPLOC>0) file jointly, head = lower PERNUM.
 #   - Children (AGE < 19, parent pointer present, not married) are dependents.
 #   - All other adults head their own unit (single, or HoH if they have dependents).
-#   - Qualifying-relative dependency NOT modeled (minor); student ages 19–24 not
-#     separated (SCHOOL is in the common extract; wiring it is a v1 upgrade --
-#     see research/state_weights/nonfiler_residual_design.md §3.2).
+#   - Qualifying-relative dependency NOT modeled (minor); HOUSEHOLD students aged
+#     19-24 not separated (SCHOOL is wired below for dormitory residents only --
+#     keeping household students dependent is task C1, design memo §3.2.1).
 #   - Filer if unit gross income ≥ the filing threshold (standard-deduction proxy by
 #     filing status, year-specific); else non-filer. Ignores the $400 SE rule,
 #     dependents' own filing, and elderly/blind bumps (approximation).
+#
+# Group quarters ARE differentiated (task B1, decision D4). The v0 non-treatment
+# put the ~8M group-quarters persons into the unit builder as income-less
+# single-person units, which is right in principle -- the PUF/DINA universe
+# INCLUDES group-quarters residents, so a blanket exclusion would rake genuine
+# non-filer mass out of exactly the prison/college/nursing-home states (design
+# memo §3.0, and F6 measured the overshoot: AZ falls to 0.77x its anchor under
+# exclusion) -- but wrong in composition, because dorm students are dependents
+# on a parent's return, generally in another state. See build_acs_margins().
 # -----------------------------------------------------------------------------
 FIPS_TO_STATE <- c(
   "1"="AL","2"="AK","4"="AZ","5"="AR","6"="CA","8"="CO","9"="CT","10"="DE",
@@ -251,6 +260,28 @@ income_tier <- function(inc) {
       labels = c("neg_zero","1_10k","10_25k","25_50k","50k_plus"), right = FALSE)
 }
 
+# Group-quarters classification (IPUMS USA `GQ`). Household codes are 1/2/5;
+# 3 is institutions (correctional facilities, nursing homes, psychiatric
+# hospitals); 4 is "other group quarters" -- college dormitories, military
+# barracks, shelters, group homes, bundled together because the extract carries
+# no dormitory or barracks flag and EMPSTAT cannot separate them cleanly.
+#
+# College residence is therefore identified as GQ==4 & in school & aged 18-24.
+# That predicate is Stage D's (research/state_weights/nonfiler_residual/03,
+# which produced the T7 composition table and F6's sizing); it lives here so the
+# production margins and the diagnostic cannot drift apart -- the same rule as
+# age_band()/a16_band().
+GQ_HOUSEHOLD      <- c(1L, 2L, 5L)
+GQ_INSTITUTIONAL  <- 3L
+GQ_OTHER          <- 4L
+DORM_STUDENT_AGES <- 18:24
+
+classify_gq <- function(GQ, SCHOOL, AGE) {
+  fifelse(GQ == GQ_INSTITUTIONAL, "institutional",
+  fifelse(GQ == GQ_OTHER & SCHOOL == 2 & AGE %in% DORM_STUDENT_AGES, "dorm_student",
+  fifelse(GQ == GQ_OTHER, "other_noninstitutional", "household")))
+}
+
 #' Read the needed variables from a shared IPUMS USA fixed-width extract
 #' (us{year}a/: usa_{year}a.dat.gz + variables.csv giving column positions).
 #' Applies implied-decimal scaling (PERWT carries 2) and recodes the IPUMS
@@ -258,7 +289,8 @@ income_tier <- function(inc) {
 #' child inflates unit income by ~$10M and everyone looks like a filer.
 read_acs_extract <- function(acs_year,
                              cols = c("YEAR","STATEFIP","PERWT","PERNUM","SERIAL","SAMPLE",
-                                      "AGE","MARST","SPLOC","MOMLOC","POPLOC","INCTOT")) {
+                                      "AGE","MARST","SPLOC","MOMLOC","POPLOC","INCTOT",
+                                      "GQ","SCHOOL")) {
 
   dir <- acs_extract_dir(acs_year)
   v   <- fread(file.path(dir, "variables.csv"))
@@ -288,11 +320,18 @@ read_acs_extract <- function(acs_year,
 #' Build ACS non-filer margins + state population totals from an IPUMS extract.
 #' @param acs data.table from read_acs_extract() (or any source with the same
 #'        columns); `year` is the TAX year the margins will target
+#' @param gq_treatment "differentiated" (D4, the production rule -- see the GQ
+#'        block below) or "v0" for the pre-B1 non-treatment, kept ONLY so the
+#'        Stage D diagnostic can still reproduce its frozen v0 row.
 #' @return list(nonfiler_margins = dt[state, age_band, income_tier, n_units],
 #'              filer_units      = dt[state, n_units],
-#'              state_pop        = dt[state, pop])   all weighted to population.
-build_acs_margins <- function(acs, year, acs_year = NULL) {
+#'              state_pop        = dt[state, pop],
+#'              gq_composition   = dt[state, gq_type, band, persons],
+#'              gq_reclassified  = dt[state, persons])  all weighted to population.
+build_acs_margins <- function(acs, year, acs_year = NULL,
+                              gq_treatment = c("differentiated", "v0")) {
 
+  gq_treatment <- match.arg(gq_treatment)
   a <- as.data.table(acs)
   # De-pool: the extract may stack multiple ACS 1-year samples (summing PERWT across
   # them double-counts population). Keep exactly one survey YEAR.
@@ -307,6 +346,100 @@ build_acs_margins <- function(acs, year, acs_year = NULL) {
   a[, state := FIPS_TO_STATE[as.character(STATEFIP)]]
   a <- a[!is.na(state)]                                       # drop PR/other non-mapped
   a[, hh_id := paste(SAMPLE, SERIAL, sep = "-")]
+
+  # --- state population, BEFORE any group-quarters reclassification ---------
+  # Load-bearing ordering. The anchors are PEP RESIDENT adults with no group-
+  # quarters subtraction (design memo §3.0), so the population margin must count
+  # every resident regardless of how the unit builder treats them. Reclassifying
+  # a dorm student changes who heads a tax unit; it must not change how many
+  # people live in the state.
+  state_pop <- a[, .(pop = sum(PERWT)), by = state][order(state)]
+
+  # --- differentiated group quarters (D4 / task B1) --------------------------
+  # Three types, three treatments:
+  #   institutional (GQ==3) -- retained as own-state non-filer units unless
+  #     income makes them filers. No code needed: they carry no family pointers,
+  #     so they head their own unit and the income test below decides. Verified
+  #     rather than assumed (the role check after unit construction).
+  #   dorm students (GQ==4, in school, 18-24) -- NOT unit heads. They are
+  #     dependents on a parent's return, generally in another state, and HT2
+  #     already counts them in N2, so a dorm student heading an income-less
+  #     non-filer unit in the college's state is double-counted mass in the
+  #     wrong place.
+  #   other GQ (GQ==4, everyone else: military barracks, shelters, group homes)
+  #     -- left to the income test, which classifies most barracks residents as
+  #     filers because they have wages.
+  #
+  # SCOPE BOUNDARY (2026-08-23): this stops at the removal. The ACS has no
+  # cross-household parent link, so a reclassified student cannot be placed in
+  # the parent's state, and it is not yet decided that they should be -- the PEP
+  # anchor puts them in the institution state while the HT2 dependents identity
+  # puts the slot in the parent's state, so §3.0's universe invariant breaks
+  # whichever way a reallocation goes. notes/student_cross_state_linkage.md owns
+  # that question. Do not widen this block to chase it; report the mass instead.
+  gq_composition <- gq_reclassified <- NULL
+  if (gq_treatment == "differentiated") {
+
+    miss <- setdiff(c("GQ", "SCHOOL"), names(a))
+    if (length(miss))
+      stop("build_acs_margins(gq_treatment = 'differentiated') needs ",
+           paste(miss, collapse = ", "),
+           " -- add them to read_acs_extract()'s `cols`")
+    unknown <- setdiff(unique(a$GQ), c(GQ_HOUSEHOLD, GQ_INSTITUTIONAL, GQ_OTHER))
+    if (length(unknown))
+      stop("unexpected IPUMS GQ code(s): ", paste(sort(unknown), collapse = ", "),
+           " -- classify_gq() covers 1/2/5 (household), 3, 4")
+
+    a[, gq_type := classify_gq(GQ, SCHOOL, AGE)]
+
+    # Composition report, by state x type x age band, on the FULL frame. Band
+    # convention is the anchors' (a16_band), with under-18 called out, so this
+    # is directly comparable to the Stage D T7 table.
+    gq_composition <- a[gq_type != "household",
+                        .(persons = sum(PERWT)),
+                        by = .(state, gq_type,
+                               band = fifelse(AGE < 18, "u18",
+                                              as.character(a16_band(AGE))))
+                       ][order(state, gq_type, band)]
+
+    # A dorm student whose OWN income clears the single filing threshold is left
+    # alone: the income test then makes them a filer. Same "unless income makes
+    # them filers" rule the institutional population gets, and it keeps the
+    # support test honest -- someone earning above the standard deduction is not
+    # a plausible dependent. INCTOT NA is read as zero, matching the unit-income
+    # convention below (`na.rm = TRUE`).
+    thr_single <- filing_threshold(year)[["single"]]
+    a[, own_inc := fifelse(is.na(INCTOT), 0, pmax(INCTOT, 0))]
+    a[, dorm_dependent := gq_type == "dorm_student" & own_inc < thr_single &
+                          MOMLOC == 0 & POPLOC == 0 & SPLOC == 0]
+
+    # IPUMS zeroes family pointers inside group quarters, so the pointer clause
+    # above should never bind. Report it rather than trust it; a nonzero count
+    # means the extract's pointer convention changed and these records fall
+    # through to the ordinary unit logic.
+    n_ptr <- a[gq_type == "dorm_student" &
+               (MOMLOC > 0 | POPLOC > 0 | SPLOC > 0), .N]
+    if (n_ptr > 0)
+      message("  ", n_ptr, " dorm-student records carry a family pointer; ",
+              "left to the ordinary unit logic")
+
+    gq_reclassified <- a[dorm_dependent == TRUE,
+                         .(persons = sum(PERWT)), by = state][order(state)]
+    message(sprintf(paste("  GQ persons %.2fM (institutional %.2fM, dorm students",
+                          "%.2fM, other %.2fM); %.2fM students reclassified as",
+                          "dependents"),
+                    gq_composition[, sum(persons)] / 1e6,
+                    gq_composition[gq_type == "institutional", sum(persons)] / 1e6,
+                    gq_composition[gq_type == "dorm_student", sum(persons)] / 1e6,
+                    gq_composition[gq_type == "other_noninstitutional",
+                                   sum(persons)] / 1e6,
+                    sum(gq_reclassified$persons) / 1e6))
+
+    # Nobody points at a reclassified student (pointers are zeroed in GQ and a
+    # household child is a different SERIAL), so dropping them here orphans no
+    # dependent.
+    a <- a[dorm_dependent == FALSE]
+  }
 
   # --- v0 tax units from pointers -------------------------------------------
   a[, married_present := MARST == 1 & SPLOC > 0]
@@ -323,6 +456,17 @@ build_acs_margins <- function(acs, year, acs_year = NULL) {
   a[, tu_id := paste(hh_id, head_pernum, sep = "-")]
   a[, role := fifelse(head_pernum == PERNUM, "head",
               fifelse(married_present & SPLOC == head_pernum, "spouse", "dependent"))]
+
+  # The institutional treatment is "retain as own-state units": check it rather
+  # than assume it. Anything other than "head" here means group quarters carry
+  # family pointers after all, and the income test is being applied to a pooled
+  # unit instead of the resident.
+  if (gq_treatment == "differentiated") {
+    n_inst_nonhead <- a[gq_type == "institutional" & role != "head", .N]
+    if (n_inst_nonhead > 0)
+      message("  ", n_inst_nonhead, " institutional records are not unit heads ",
+              "(family pointers inside group quarters)")
+  }
 
   # --- unit-level: income, filing status, filer flag ------------------------
   units <- a[, .(
@@ -355,7 +499,7 @@ build_acs_margins <- function(acs, year, acs_year = NULL) {
                             by = .(state, age_band, income_tier)][order(state, age_band, income_tier)]
   filer_units <- units[is_filer == TRUE,
                        .(n_units = sum(weight)), by = state][order(state)]
-  state_pop <- a[, .(pop = sum(PERWT)), by = state][order(state)]
+  # state_pop was computed above, before the GQ reclassification, deliberately.
 
   list(nonfiler_margins = nonfiler_margins[, year := year],
        filer_units      = filer_units[, year := year],
@@ -364,6 +508,11 @@ build_acs_margins <- function(acs, year, acs_year = NULL) {
                                      n_filers = sum(weight * is_filer, na.rm = TRUE),
                                      n_nonfilers = sum(weight * !is_filer, na.rm = TRUE),
                                      n_units_na_wt = sum(is.na(weight)))],
+       gq_composition   = if (is.null(gq_composition)) NULL
+                          else gq_composition[, year := year],
+       gq_reclassified  = if (is.null(gq_reclassified)) NULL
+                          else gq_reclassified[, year := year],
+       gq_treatment     = gq_treatment,
        acs_year         = acs_year)
 }
 

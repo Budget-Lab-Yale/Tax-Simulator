@@ -3,7 +3,7 @@ title: "A state-weight-inclusive model with an updated non-filer pull — the pl
 role: plan
 workstream: state_weights
 status: current
-updated: 2026-08-23
+updated: 2026-08-24
 sot: self
 supersedes: []
 superseded_by: null
@@ -611,24 +611,94 @@ Effort estimates follow the memo's own where it gives them.
       compared (the state column's numerator is returns *with wages*). Fixed, and
       the message now names the numerator.
 
-### B — GQ treatment (~2–3 days, ships independently)
+### B — GQ treatment (~2–3 days, ships independently) — **DONE 2026-08-24**
 
-- [ ] **B1. Differentiated GQ in `build_acs_margins()`** (D4, sized by F6:
-      8.15M GQ persons = 16.8% of the national residual but **42% in SD**, 34%
-      AK, 33% VT). Keep institutional residents (`GQ == 3`) as own-state
-      non-filer units unless income makes them filers; reclassify college-age
-      dorm residents (`GQ == 4`, in school, age < 24) as dependents rather than
-      unit heads; leave military barracks to the income test; report GQ weight by
-      type and state. Add `GQ`/`SCHOOL` to `read_acs_extract()`'s default `cols`.
-      *Decision-independent — do not hold this behind anything else.*
-      **Scope boundary (2026-08-23):** reclassifying dorm students removes them
-      from their institution state's margin but cannot place them in the parent's
-      state — the ACS has no cross-household parent link. B1 stops at the
-      reclassification and the per-type reporting. Where they should land, and
-      whether they should land anywhere at all, is
+- [x] **B1. Differentiated GQ in `build_acs_margins()` — DONE 2026-08-24.**
+      `classify_gq()` + a `gq_treatment` argument in `src/data/state_weights.R`;
+      `GQ`/`SCHOOL` added to `read_acs_extract()`'s default `cols` (checked
+      present in **all 19** ACS vintages, us2006a–us2024a, so no year breaks);
+      regression test `src/tests/test_state_weights.R`; verified on the real
+      extract under sbatch (job 23444930, 3m39s, MaxRSS 3.8G).
+
+      **The classification reproduces F6 exactly**, which is what makes the move
+      safe: 8.15M GQ persons, 3.61M institutional / 2.81M dorm students / 1.74M
+      other. Script 03 now reads the composition off the production builder
+      instead of re-deriving it, and the regenerated T7 input is identical to the
+      committed one **cell for cell** — 763 cells, zero differences, same
+      8.1529M total. The predicate had been written twice; it is now written
+      once.
+
+      **Two things the design memo did not pin down, both settled** (memo §3.2.1
+      amended): the age range is **18–24 inclusive**, not the memo's looser
+      `age < 24` — Stage D's definition, because F6's sizing was measured with
+      it; and *"unless income makes them filers"* applies to **dorm students
+      too**, so of the 2.81M, **2.52M are reclassified** and the 0.29M clearing
+      the $12,950 single threshold stay filer units. A $30k earner is not a
+      plausible dependent under any support test.
+
+      **The `state_pop` invariant is now ordered and asserted, not assumed.**
+      Population is computed *before* the reclassification, because the anchors
+      take PEP resident adults with no GQ subtraction (§3.0). Asserted in script
+      03 (`all.equal(m_v0$state_pop, m_diff$state_pop)`) and in the test.
+
+      **Measured against the residual anchor, on the production builder:**
+
+      | variant | MARD vs anchor | min | max |
+      |---|---|---|---|
+      | v0 (pre-B1) | 10.28% | 0.779 (DC) | 1.511 (SD) |
+      | **differentiated** | **8.79%** | 0.637 (DC) | 1.405 (SD) |
+      | blanket exclusion | 11.12% | 0.562 (DC) | 1.232 (SD) |
+
+      Two readings, and the second is the one to carry. **The v0 row reproduces
+      F5's 0.78×–1.51× exactly**, which is why `gq_treatment = 'v0'` was kept —
+      the frozen evidence still reproduces. And **blanket exclusion is worse than
+      doing nothing** on MARD despite having the tightest spread, which is F6's
+      rejection of exclusion re-measured rather than re-asserted.
+
+      **⚠ But the college states get WORSE, and that is the scope boundary
+      biting.** DC moves 0.779 → **0.637**; VT −17.7%, RI −14.1%, MA −12.6%,
+      ND −11.9%, CT −11.7%. Students leave the institution state and are placed
+      nowhere, so a state already *below* its anchor falls further. DC is now the
+      concrete case for `notes/student_cross_state_linkage.md` rather than a
+      hypothetical one — it is not an argument against the reclassification (the
+      dorm student genuinely is not a DC filing unit) but it is an argument that
+      the linkage question cannot stay open indefinitely.
+
+      **What actually reaches the fit is narrower than the table above.**
+      `build_weight_inputs()` share-normalizes the non-filer margins to PUF cell
+      totals (`state_weights.R`, non-filer partition), so B1 changes the
+      **geography** of the young/low-income cells and **cannot** change national
+      non-filer mass. Do not read the 49.83M → 47.31M unit drop as a level
+      change in the model.
+
+      **Scope boundary (2026-08-23), honored:** B1 stops at the reclassification
+      and the per-type reporting. Where the students should land, and whether
+      they should land anywhere at all, is
       `notes/student_cross_state_linkage.md`, which turns on a definitional
-      question (residence vs claiming return) that no data source settles. Do not
-      widen B1 to chase it.
+      question (residence vs claiming return) that no data source settles.
+
+      **⚠ Caught on the way through: the committed ACS margin artifacts had been
+      stale since P1.** `results/acs_margins_{v0,gqexcl}_2022.csv` were last
+      written by `1e98e9f1c` (the tree move, 2026-08-19) and carried the
+      **pre-P1 age bands** — `u25` / `25_34` — while `age_band()` was re-cut to
+      `18_25` / `26_34` the same day in `bf7a78b4a`. So the code and its
+      artifacts disagreed for five days about the boundary P1 exists to fix. The
+      re-run regenerates them on the current bands (1390 -> 1391 cells; the extra
+      cell is a band-shift, not new mass).
+
+      **A6's "byte-identical" claim was true and did not cover this**: A6 re-ran
+      01 -> 02 -> 03 in `--tables` mode, and the `--acs` outputs are a separate
+      artifact behind an sbatch. **State-level conclusions are unaffected** —
+      F5's ratios sum over bands, which is why the v0 pin reproduced 0.779/1.511
+      to three decimals — but any cell-level use of those two files between
+      2026-08-19 and today was reading the old boundary. **The general lesson:
+      an `--acs`-mode artifact does not follow a change to the functions it was
+      built from, and nothing in the tree said so.** Worth a staleness check
+      before F reads these files as inputs.
+
+      This is also the concrete argument for having kept `gq_treatment = 'v0'`:
+      without a pinned pre-B1 path there would have been no way to separate the
+      band re-cut from the GQ change in the same diff.
 
 ### C — Filing model on the ASEC, transferred to the ACS (~1–2 weeks)
 
@@ -983,7 +1053,7 @@ where its findings are used, not a task list — so it is not listed here.
 ```
 P ✓ ────┬─> A2 ✓ ─> A2b extract re-pull (1-2d) ─> A4 (1d) ─> C (1-2w) ─┐
         ├─> A1 ✓ ─> A6 re-run (1d) ─────────────────────────────────────┤
-        └─> B GQ fix (2-3d) ────────────────────────────────────────────┤
+        └─> B GQ fix ✓ ─────────────────────────────────────────────────┤
                                                                     v
                                     D Tax-Data V1/V2/V3 (1-2w + cluster)
                                                     │
@@ -1023,8 +1093,11 @@ the exact dimension the anchors discipline.
 2. **Settle P1 (the age bands) before anything else.** It is cheap, it is now
    constrained by what SSA actually publishes, and it silently invalidates D2,
    D6, §6.2 and the Tax-Data age draw if left implicit.
-3. **Ship B (the GQ fix) immediately.** It is decision-independent, F6 has
-   already sized it, and it is 42% of the residual in South Dakota.
+3. ~~**Ship B (the GQ fix) immediately.**~~ **DONE 2026-08-24.** It improved
+   MARD against the anchor from 10.28% to 8.79% and re-measured blanket
+   exclusion as *worse* than doing nothing (11.12%). It also turned the
+   cross-state student question from a hypothetical into DC at 0.637 of its
+   anchor — see B1.
 
 ### Per-task effort, and what the cluster actually costs
 
@@ -1044,7 +1117,7 @@ are carried forward, with the ASEC step added by decision 2.
 | 1.0 | Locate/register the ASEC shared store | cluster access | ~1–2 days |
 | ~~1.2~~ | ~~Cilke & Pub 5785 currency~~ — **DONE 2026-08-18**: replace Cilke with Mok (2017) | — | complete |
 | 1.1 | Research pass A: ASEC unit/income construction | — | ~3–5 days, parallelizable |
-| 2 | GQ treatment in `build_acs_margins()` | P2 | ~2–3 days |
+| ~~2~~ | ~~GQ treatment in `build_acs_margins()`~~ — **DONE 2026-08-24** | P2 | complete |
 | 1.3 | Filing models, joint calibration, ACS transfer | 1.0–1.2, P3, P4 | **~2–3 weeks** (the long pole) |
 | 3 | Tax-Data rework + V1/V2/V3 vintages | P1, step 1.3 age shape | ~1–2 weeks + cluster runs |
 | 4 | Federal validation battery | step 3 | ~1 week, mostly human diff-reading |
@@ -1069,6 +1142,12 @@ comparisons into exact-equality tests.
 
 
 ## Revision history
+
+- **2026-08-24** — B1 (differentiated group quarters) implemented and
+  verified on the extract; group B closed. Recorded the two design
+  specifics the memo left open (the 18–24 range, the dorm-student income
+  test), the measured MARD improvement, exclusion re-measured as worse than
+  no treatment, and DC as the concrete cross-state-student case.
 
 - **2026-08-19** -- Merged with the 2026-08-18 out-of-repo unified plan and
   renamed to `plan.md` as the one plan of record for this workstream. Added the

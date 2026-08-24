@@ -7,6 +7,10 @@
 #------------------------------------------------------------------------------
 # Stage D --acs tabulation (research/state_weights/nonfiler_residual_design.md §4.3). The IPUMS
 # extract read OOMs the login node; everything else in Stage D is login-safe.
+# 48G is generous: the three-variant version (B1) peaks at a sampled MaxRSS of
+# 3.8G in 3m39s (job 23444930, 2026-08-24). Kept at 48G rather than cut to the
+# measurement because sacct samples RSS and the read spikes transiently -- which
+# is what puts it over the ~5G interactive cap in the first place.
 # Submit from the repo root:
 #   sbatch --output=$HOME/slurm-logs/%x-%j.out \
 #     research/state_weights/nonfiler_residual/run_acs_tabulation.sbatch [year]

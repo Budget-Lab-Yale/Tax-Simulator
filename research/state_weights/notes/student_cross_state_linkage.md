@@ -3,7 +3,7 @@ title: "Cross-state student linkage — the IPEDS option, and the question it do
 role: notes
 workstream: state_weights
 status: open
-updated: 2026-08-23
+updated: 2026-08-24
 sot: research/state_weights/plan.md
 supersedes: []
 superseded_by: null
@@ -17,6 +17,43 @@ them from their institution state's non-filer margin but does not put them
 anywhere, because the ACS gives no cross-household parent link. This note holds
 the candidate data sources and — more importantly — the definitional question
 that has to be settled before any of them is useful.
+
+## 0. What B1 actually did, and the size of the hole it leaves
+
+**Updated 2026-08-24, when B1 shipped.** This section exists because the note was
+written a day before the measurement, and the measurement changes how urgent §4
+is.
+
+B1 reclassified **2.52M dorm students** (of 2.81M identified; the other 0.29M
+clear the single filing threshold on their own income and stay filer units) out
+of their institution state's non-filer margin, and — as designed — placed them
+nowhere. Measured against the residual anchors on the TY2022 extract, the
+treatment improves the national mean absolute relative difference from **10.28%
+to 8.79%**, and it confirms that blanket exclusion is *worse* than no treatment
+at all (**11.12%**).
+
+**But the college states move the wrong way, and DC is the exhibit.** DC's
+non-filer margin was already **0.779×** its anchor — the lowest of the 51 — and
+the reclassification takes it to **0.637×**. The other large movers are the same
+kind of place: VT −17.7%, RI −14.1%, MA −12.6%, ND −11.9%, CT −11.7%. The
+students are gone from the denominator state and absent from every other one.
+
+Two things follow, and they pull in opposite directions:
+
+- **This is not an argument against the reclassification.** A dorm student with
+  no income is genuinely not a DC filing unit, and HT2 already counts them in
+  N2 on a parent's return. Leaving them as DC heads was the error; removing them
+  is the fix.
+- **It is an argument that §4 cannot stay open indefinitely.** The residual
+  method's discipline comes from the anchors, and in the college states the
+  margin is now further from its anchor than before. That is tolerable while the
+  margins only supply *within-cell geography* to a fit whose levels come from the
+  PUF (which is the case today), and it stops being tolerable the moment anything
+  reads the non-filer margin as a level.
+
+Note the direction of the bias is now known and one-sided: **college states are
+short, and no state is long as a result.** Whatever §4 decides, it can be
+sanity-checked against that.
 
 ## 1. Why the obvious approach fails
 
@@ -142,6 +179,10 @@ coarse two-way age proxy available at state level through HT2's credit columns.
 
 ## Revision history
 
+- **2026-08-24** — §0 added when B1 shipped: 2.52M students reclassified, the
+  measured MARD improvement, and DC at 0.637× its anchor. The cross-state
+  question is no longer hypothetical, and the residual bias is now known to be
+  one-sided (college states short, nothing long).
 - **2026-08-23** — written. `MIGPLAC1` rejected; IPEDS multi-year linkage
   recorded as the candidate approach with its limitations; the
   residence-versus-claiming-return convention identified as the prior question;

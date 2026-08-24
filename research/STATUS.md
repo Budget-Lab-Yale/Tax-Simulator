@@ -3,7 +3,7 @@ title: "State income tax workstream — status"
 role: status
 workstream: cross-cutting
 status: current
-updated: 2026-08-22
+updated: 2026-08-24
 sot: self
 supersedes: []
 superseded_by: null
@@ -11,7 +11,7 @@ superseded_by: null
 
 # State income tax workstream — status
 
-**As of 2026-08-22** (branch `state-tax`). Current counts: **ALL 51
+**As of 2026-08-24** (branch `state-tax`). Current counts: **ALL 51
 jurisdictions encoded** (39 broad-IIT + NH/TN narrow + WA excise + 6 zero-tax
 stubs + DC), **48 enabled** for `states=all` (CA/SC/VA conformity-gated, not
 encoding-gated). **Encoding coverage is complete. Nothing is unstarted.**
@@ -99,6 +99,53 @@ Three things from that probe worth carrying:
   per-spouse split.** TAXSIM receives per-spouse WAGES only, so any credit it
   computes is reachable from inputs we already hold. That is a general test, and
   ND is now the second reversal of such a call in the same state after HB 1515.
+
+**Then 2026-08-23 worked the PolicyEngine window as a window, and RI closed —
+`done` count 15 -> 16.** Entering from the board rather than a state was the
+right call: nearly every catastrophic cell in the set was a PE **2021** cell
+(median clean match 0.887 against 0.923-0.934 for 2022-2024), and two unrelated
+causes came out of one pass.
+
+- **P10, the largest PE finding so far by revenue effect: PolicyEngine deducts
+  Hawaii's own income tax on the Hawaii return** and never applies the
+  Worksheet A-2 disallowance. `hi_salt_deduction` equals `hi_withheld_income_tax`
+  to the cent, and the arithmetic closes exactly — each extra $1,000 of wages
+  adds only $920 of HI taxable income, and 0.92 x the statutory 11% top rate is
+  the 0.1012 effective marginal rate measured at 500k/600k/1,001k in both 2019
+  and 2022. PE's rate *parameters* are the correct HRS 235-51 ladder; the *base*
+  is wrong, so the error grows without bound in income. Cells
+  0.648/0.625/0.699 -> 0.786/0.767/0.878, landing on the predicted
+  below-threshold rates.
+- **Five more P5 rebate instances**, all TY2021 and all year-scoped: HI Act 115
+  $300, ME LD 1995 $850, MA Chapter 62F (proportional at 14.0312% of TY2021
+  liability, *not* flat), MT HB 192 $1,250, SC 2022 $800.
+- **RI CLOSES, all eight cells, worst 0.957, and its lesson generalizes.** The
+  one failing cell was not scatter: RI-1040H, the property-tax relief credit, was
+  excluded on the TAXSIM leg as a Tier-1-blocked class (no rent in the PUF) but
+  the PE window never got the twin row, **though PE models it** — three records
+  carried a difference of exactly $650.00, the RI-1040H maximum. **A
+  Tier-1-blocked class excluded on one leg needs the twin row on the other
+  whenever the second model also implements the credit.** Worth sweeping for.
+- **One bug was ours, and it had already produced a wrong finding.**
+  `mt_income_tax_rebate` is a **person**-entity PolicyEngine variable while the
+  harness driver indexed `sim.calculate()` output by **tax-unit** position, so the
+  arrays misalign as soon as a joint record appears earlier in a batch. That is
+  what made the earlier "excluding the MT rebate moved the cell DOWN" reading
+  look like a second cause. Fixed generally (`map_to='tax_unit'`), and the same
+  fix was needed twice in one session because MA's COVID premium-pay variable is
+  person-entity too.
+
+**VT is the sharpest asymmetry left, and it is already localized.** Its PE window
+agrees with us to a two-dollar median (0.939-0.970) while its TAXSIM window sits
+flat at 0.531-0.558 — so the encoding is corroborated and the TAXSIM leg is the
+entire problem. Taxable income agrees (median gap 0, 87% within $100); the whole
+wedge is credits, and the dominant diff mode is **+$111 on 1,671 of 3,866
+misses**. TAXSIM carries it in v40 with v37/v38/v39 all zero, so it is
+unallocated to any reported component, and a synthetic probe pins the shape: an
+income-tested flat $111 that switches off between $20k and $30k of wages, with or
+without dependents. A flat low-income credit with no Vermont statutory analogue
+is a candidate TAXSIM artifact — which would make this a known-difference row
+rather than an encoding change. Four cells turn on the answer.
 
 **The R6 multi-regime batch is COMPLETE: MT, LA and IA encoded 2026-08-19**,
 closing the encoding programme. All three are two- or three-regime states,
@@ -425,6 +472,45 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    settled and implemented; anchor tolerance computed; and the combined-universe
    wage constraint sourced, which found the PUF carries only **~21% of the
    non-filer wage mass** two administrative sources jointly imply.
+
+   **Task group A closed 2026-08-23** (SSA readers, the ASEC tax-unit design note,
+   the 11-of-11 extract re-pull, the Mok/Cilke transcriptions with their
+   token-level verification, and an 01→02→03 re-run that came back
+   byte-identical on both anchor years).
+
+   **Task group B closed 2026-08-24 — differentiated group quarters is in
+   production.** `classify_gq()` and a `gq_treatment` argument in
+   `src/data/state_weights.R`; institutional residents retained as own-state
+   non-filer units, dorm students reclassified out of them, military barracks
+   left to the income test. Three results worth carrying:
+
+   - **The classification reproduces F6 exactly** — 8.15M GQ persons, 3.61M
+     institutional / 2.81M dorm / 1.74M other — and the regenerated T7
+     composition input is identical to the committed one cell for cell (763
+     cells, zero differences). The predicate had been written twice, in the
+     production builder and the diagnostic; it is now written once.
+   - **Blanket exclusion is measurably worse than doing nothing.** Against the
+     residual anchors: v0 10.28% MARD, differentiated **8.79%**, exclusion
+     **11.12%**. That is F6's design call re-measured on the production builder
+     rather than re-asserted — and the retained `gq_treatment = 'v0'` path
+     reproduces F5's 0.78×–1.51× spread exactly, so the frozen evidence still
+     reproduces.
+   - **⚠ The college states move the wrong way, and that is the open question,
+     not a defect.** DC goes from 0.779× its anchor to **0.637×** (VT −17.7%,
+     RI −14.1%, MA −12.6%, ND −11.9%, CT −11.7%): students leave the institution
+     state and are placed in no other, because the ACS has no cross-household
+     parent link and it is not settled that they *should* be placed — the PEP
+     anchor puts them in the institution state while the HT2 dependents identity
+     puts the slot in the parent's state. The bias is now known to be one-sided
+     (college states short, nothing long), which is a check on whatever
+     `notes/student_cross_state_linkage.md` §4 decides. Tolerable today because
+     the margins supply only within-cell geography to a fit whose levels come
+     from the PUF; not tolerable the moment anything reads the non-filer margin
+     as a level.
+
+   **Next on the critical path is group C** — the filing model on the ASEC,
+   transferred to the ACS, at 1–2 weeks the long pole; D1's Tax-Data age fix is
+   the true bottleneck behind it.
 
    > **This entry is deliberately a pointer, not a summary.** Three documents own
    > this workstream and each has one job:

@@ -7,13 +7,17 @@
 #   --acs [year]   HEAVY (run under sbatch: run_acs_tabulation.sbatch; the
 #                  extract read OOMs the login node). Reads the IPUMS extract
 #                  once and writes the ACS-side inputs to results/:
-#                    acs_margins_v0_{year}.csv       v0 non-filer margins (as
-#                                                    production, GQ untreated)
+#                    acs_margins_v0_{year}.csv       pre-B1 non-filer margins,
+#                                                    GQ untreated (gq_treatment='v0')
 #                    acs_margins_gqexcl_{year}.csv   GQ in {3,4} excluded first
-#                    acs_filer_units_{year}.csv      v0 filer units by state,
-#                                                    both variants
+#                    acs_margins_gqdiff_{year}.csv   PRODUCTION: differentiated
+#                                                    GQ treatment (B1 / D4)
+#                    acs_filer_units_{year}.csv      filer units by state, all
+#                                                    three variants
 #                    acs_gq_composition_{year}.csv   T7: GQ persons by type x
 #                                                    state x age band
+#                    acs_gq_reclassified_{year}.csv  dorm students removed from
+#                                                    the unit builder, by state
 #                    acs_irs_person_compare_{year}.csv  person-level ACS vs IRS
 #
 #   --tables       (default; login node OK) Assembles the T1-T7 diagnostic
@@ -67,37 +71,34 @@ if (mode == 'acs') {
                                    'GQ','SCHOOL','EMPSTAT','SEX','INCWAGE'))
   message('  extract rows: ', nrow(acs))
 
-  # v0 margins exactly as production (GQ untreated), then the exclusion variant
-  m_v0 <- build_acs_margins(acs, year)
-  m_gq <- build_acs_margins(acs[!(GQ %in% c(3, 4))], year)
+  # Three GQ variants. v0 is the pre-B1 non-treatment, pinned by
+  # gq_treatment='v0' so this row keeps meaning what F6 measured now that
+  # production has moved on; gqexcl is the blanket-exclusion variant F6 rejected;
+  # gqdiff is the production rule from B1 (D4).
+  m_v0   <- build_acs_margins(acs, year, gq_treatment = 'v0')
+  m_gq   <- build_acs_margins(acs[!(GQ %in% c(3, 4))], year, gq_treatment = 'v0')
+  m_diff <- build_acs_margins(acs, year, gq_treatment = 'differentiated')
 
-  fwrite(m_v0$nonfiler_margins, file.path(res_dir, sprintf('acs_margins_v0_%d.csv', year)))
-  fwrite(m_gq$nonfiler_margins, file.path(res_dir, sprintf('acs_margins_gqexcl_%d.csv', year)))
+  fwrite(m_v0$nonfiler_margins,   file.path(res_dir, sprintf('acs_margins_v0_%d.csv', year)))
+  fwrite(m_gq$nonfiler_margins,   file.path(res_dir, sprintf('acs_margins_gqexcl_%d.csv', year)))
+  fwrite(m_diff$nonfiler_margins, file.path(res_dir, sprintf('acs_margins_gqdiff_%d.csv', year)))
   fwrite(rbind(m_v0$filer_units[, variant := 'v0'],
-               m_gq$filer_units[, variant := 'gq_excluded']),
+               m_gq$filer_units[, variant := 'gq_excluded'],
+               m_diff$filer_units[, variant := 'gq_differentiated']),
          file.path(res_dir, sprintf('acs_filer_units_%d.csv', year)))
+  fwrite(m_diff$gq_reclassified,
+         file.path(res_dir, sprintf('acs_gq_reclassified_%d.csv', year)))
 
-  # T7 input: GQ persons by type x state x age band. Dorm students are the
-  # dependents-claimed-elsewhere population (design memo §3.2); institutional
-  # residents are genuine own-state non-filers; GQ==4 non-students bundle
-  # military barracks with other non-institutional GQ (extract lacks a
-  # military-quarters flag; EMPSTAT cannot separate it cleanly).
-  gq <- as.data.table(acs)[GQ %in% c(3, 4)]
-  gq <- gq[YEAR == max(YEAR)]
-  gq[, state := FIPS_TO_STATE[as.character(STATEFIP)]]
-  gq <- gq[!is.na(state)]
-  gq[, gq_type := fifelse(GQ == 3, 'institutional',
-                  fifelse(SCHOOL == 2 & AGE %in% 18:24, 'dorm_student',
-                          'other_noninstitutional'))]
-  gq[, band := fifelse(AGE < 18, 'u18', as.character(a16_band(AGE)))]
-  gq_comp <- gq[, .(persons = sum(PERWT)), by = .(state, gq_type, band)]
-  fwrite(gq_comp[order(state, gq_type, band)],
+  # The population margin must be untouched by the reclassification (design
+  # memo §3.0: the anchors are PEP resident adults with no GQ subtraction).
+  stopifnot(all.equal(m_v0$state_pop, m_diff$state_pop))
+
+  # T7 input: GQ persons by type x state x age band. Comes off the production
+  # margin builder now rather than being tabulated again here -- B1 moved the
+  # classification into classify_gq(), and a second copy of the predicate is
+  # exactly how this table and the margins would drift apart.
+  fwrite(m_diff$gq_composition,
          file.path(res_dir, sprintf('acs_gq_composition_%d.csv', year)))
-  message(sprintf('  GQ persons: %.2fM (institutional %.2fM, dorm students %.2fM, other %.2fM)',
-                  gq_comp[, sum(persons)] / 1e6,
-                  gq_comp[gq_type == 'institutional', sum(persons)] / 1e6,
-                  gq_comp[gq_type == 'dorm_student', sum(persons)] / 1e6,
-                  gq_comp[gq_type == 'other_noninstitutional', sum(persons)] / 1e6))
 
   # Person-level ACS vs IRS reconciliation (model-free)
   ht2 <- read_ht2(ht2_path(year), year)

@@ -3,7 +3,7 @@ title: "Non-Filer Estimation — Residual-Methodology Redesign (Design Memo)"
 role: method
 workstream: state_weights
 status: current
-updated: 2026-08-19
+updated: 2026-08-24
 sot: research/state_weights/plan.md
 supersedes: []
 superseded_by: null
@@ -371,6 +371,39 @@ GQ weight by type and state. Then extend `filing_threshold()` to add the age-65
 additional standard deduction; add the $400 SE rule via `INCBUS00`; let dependents with
 own income above the dependent filing floor form filing units; use `SCHOOL` to keep
 19-24 household students dependent.
+
+**Amended 2026-08-24, on implementing the GQ half (task B1).** The GQ treatment is
+built; the rest of the paragraph above is still task C1. Three specifics this
+paragraph did not pin down, each settled in `classify_gq()` /
+`build_acs_margins()`:
+
+- **The dorm-student age range is 18-24 inclusive, not `age < 24`.** The looser
+  text above would sweep in under-18 group-quarters residents and drop
+  24-year-olds. The operative definition is Stage D's, because F6's sizing was
+  measured with it: on the TY2022 extract `GQ == 4 & SCHOOL == 2 & AGE %in%
+  18:24` reproduces F6's split exactly — 3.61M institutional, 2.81M dorm
+  students, 1.74M other, 8.15M total. The predicate now lives in one place
+  (`classify_gq()`) and script 03 reads the composition off the production
+  builder rather than re-deriving it.
+- **"Unless income makes them filers" applies to dorm students too.** A student
+  whose OWN income clears the single filing threshold is left as a unit head, so
+  the income test makes them a filer; only below-threshold students are
+  reclassified. Applying the rule to institutional residents but not to students
+  would have made a $30,000 earner a dependent on someone's return, which no
+  support test permits.
+- **The population margin is computed before the reclassification.** `state_pop`
+  must count every resident whatever the unit builder does with them, because the
+  anchors take PEP resident adults with no GQ subtraction (§3.0). This is the
+  invariant the differentiated treatment could most easily break, so it is
+  ordered explicitly in the code and asserted in both script 03 and
+  `src/tests/test_state_weights.R`.
+
+**Scope boundary.** Reclassification removes a dorm student from the institution
+state's non-filer margin and does not place them anywhere else — the ACS carries
+no cross-household parent link, and it is not yet decided that they *should* be
+placed, since the PEP anchor puts them in the institution state while the HT2
+dependents identity puts the slot in the parent's state. See
+`notes/student_cross_state_linkage.md`.
 
 #### 3.2.2 v1b — the probabilistic layer, on borrowed coefficients
 
