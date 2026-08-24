@@ -709,7 +709,39 @@ Effort estimates follow the memo's own where it gives them.
       without a pinned pre-B1 path there would have been no way to separate the
       band re-cut from the GQ change in the same diff.
 
-### C — Filing model on the ASEC, transferred to the ACS (~1–2 weeks)
+### C — **REWRITTEN 2026-08-24 (S13): build the non-filer POPULATION, not just the margins**
+
+> C's scope changed when group D was dropped. It no longer merely supplies a
+> filing model for the ACS margins — it **produces the national non-filer
+> population** that replaces the DINA append. The items below are the original
+> ones and remain broadly right, with four changes:
+>
+> 1. **The model is estimated AND applied on the ASEC.** The
+>    `INCINT`/`INCDIVID`/`INCRENT` covariates Mok needs exist there natively.
+>    They do **not** exist on the ACS, which carries only the combined
+>    `INCINVST` — so a per-record ASEC→ACS transfer of Mok's coefficients was
+>    never possible, and C5 as written names only the easy mappings and misses
+>    this one. The ACS reverts to doing **geography only**, which needs no Mok
+>    covariates.
+> 2. **C4 calibrates to the residual anchors** — 47.3M (2017) / 46.5M (2022)
+>    non-filing adults, shaped by `resources/nonfiler_age_shape_{year}.csv`.
+> 3. **A new step: GQ backfill from the ACS.** The ASEC has 0.27M
+>    group-quarters persons against a PUF universe that includes them (8.15M,
+>    16.8% of the residual, **42% in SD**). Household non-filers from the ASEC,
+>    GQ non-filers from the ACS via `classify_gq()`. §3.0's universe invariant
+>    must be asserted, or this silently undoes B1.
+> 4. **A new step: emit in the PUF schema** (189 variables per Tax-Data's
+>    `config/variable_guide/baseline.csv`) and publish to the shared
+>    `model_data` store, so Tax-Data swaps one upstream interface for another
+>    rather than absorbing a new model.
+>
+> **C8's acceptance no longer applies as written.** It tests ACS filer units
+> against HT2 `n_returns` — a *level* test — and after F1 the level comes from
+> the anchors. The pool's acceptance is the four-dimension comparison against
+> DINA: age composition vs D0's shape, wage mass vs SSA HI, SS receipt vs
+> OASDI, investment income vs F3's Pub 5785 ceilings.
+
+### C (original items) — Filing model on the ASEC, transferred to the ACS (~1–2 weeks)
 
 - [ ] **C1. v1a deterministic upgrades to `filing_threshold()`** (§3.2.1): the
       age-65 additional standard deduction, the $400 SE rule via `INCBUS00`,
@@ -739,7 +771,26 @@ Effort estimates follow the memo's own where it gives them.
       −7% national bias and its 20pp state spread collapse to within P5's
       tolerance.
 
-### D — Tax-Data rework, as three vintages (~1–2 weeks + cluster time)
+### D — ~~Tax-Data rework, as three vintages~~ **SUPERSEDED 2026-08-24 (S13)**
+
+> **⚠ D1, D2 and D3 are DROPPED. Do not build them.** The DINA non-filer append
+> is being **replaced** by an ASEC-constructed pool, not patched — see the
+> rewritten group C and `research/decisions_log.md` S13. Measured 2026-08-24:
+> DINA carries 65% of the anchor's adult mass with 77% of the shortfall in
+> 18-44; `fiint`/`fidiv`/`fikgi` are exactly zero for every non-filer; wages are
+> 24% of the administratively implied total; and `ageprim` is three values for
+> everyone, substantially an income-pattern proxy (bucket 65 is 89.5% SS
+> recipients, 0.0% wage earners). The composition cannot be reassigned either —
+> 11.71M of bucket 65's 13.09M hold old-age Social Security against an anchor of
+> 11.87M at 65+, so only 26% of the required movement is coherent.
+>
+> **What survives:** **D0** (the anchor age shape) becomes a *validation target*
+> for the constructed pool rather than an input to a draw; **D4**'s id-order
+> assertion still applies, because a new builder has the same positional
+> random-number hazard as a rake.
+>
+> The original items are kept below, struck through, because the measurements
+> that killed them are recorded against them.
 
 Build **V1 / V2 / V3 as separate vintages** (§5.4) so each change A/Bs
 independently, and in this priority order: *age detail > national level + aging
@@ -806,7 +857,7 @@ independently, and in this priority order: *age detail > national level + aging
       is the obvious candidate — but choosing it is a D2 design decision, not an
       implementation detail. Do not let the rake inherit the filer mix by
       default.
-- [ ] **D1. V1 — composition fixes at fixed weights** (`impute_nonfilers.R`):
+- [~] ~~**D1. V1 — composition fixes at fixed weights** (`impute_nonfilers.R`):
       route `fidiv` to `div_ord`/`div_pref` (the `qual_div` column is silently
       discarded today); replace the flat `runif` age draw (`:92-96`) with the
       anchor age shape (`resources/nonfiler_age_shape.csv`) — **the single
@@ -816,12 +867,12 @@ independently, and in this priority order: *age detail > national level + aging
       DINA national-income counterparts first, hot-deck as fallback), disciplined
       by F3's Pub 5785 receipt ceilings (14% interest / 9% dividends / 4% gains);
       set `filer = 0` explicitly with `stopifnot`.
-- [ ] **D2. V2 — `src/calibrate_nonfilers.R`**, a post-append rake of non-filer
+- [~] ~~**D2. V2 — `src/calibrate_nonfilers.R`**, a post-append rake of non-filer
       weights only to the national residual anchors by age × marital status
       (≤14 cells, closed-form; do **not** touch `reweight.R`'s filer LP). Targets
       from a committed snapshot with a provenance header, so Tax-Data gains no
       HT2/PEP readers and no server paths.
-- [ ] **D3. V3 — aging fix in `project_puf.R`** `compute_weights_for_year()`:
+- [~] ~~**D3. V3 — aging fix in `project_puf.R`** `compute_weights_for_year()`:
       make the non-filer path residual-by-construction. One new factor table
       alongside `population_factors_2020plus`, applied `if_else(filer == 0, …)`.
 - [ ] **D4. ⚠ Assert id-order stability across the rework.** `run.R:348-357`
@@ -1216,7 +1267,7 @@ P ✓ ────┬─> A2 ✓ ─> A2b extract re-pull (1-2d) ─> A4 (1d) �
         ├─> A1 ✓ ─> A6 re-run (1d) ─────────────────────────────────────┤
         └─> B GQ fix ✓ ─────────────────────────────────────────────────┤
                                                                     v
-                                    D Tax-Data V1/V2/V3 (1-2w + cluster)
+                        C now BUILDS the non-filer pool (S13); D is dropped
                                                     │
                                     E federal validation (1w)  ← E4 runs on V2, early
                                                     │
@@ -1304,6 +1355,14 @@ comparisons into exact-equality tests.
 
 ## Revision history
 
+- **2026-08-24** — **S13/S14: group D dropped.** The DINA non-filer append is
+  replaced by an ASEC-constructed pool rather than patched, on measurements that
+  showed it unpatchable (65% of the anchor's mass, zero investment income,
+  `ageprim` an income proxy, and OASI coherence blocking 74% of the age
+  reassignment). Group C rewritten to build the population. The DINA sex split
+  goes too: the `employed = 0` cells are 0.68% of unmarried units and need no
+  source, but `has_kids` is a 19.3pp swing that no admin table crosses with sex,
+  so W-2 Table 1 anchors the marginal and the ASEC supplies the split.
 - **2026-08-24** — D0: the anchor age shape emitted (P1's IRA-Table-4 split
   implemented at last), pricing D1 at a 20.2pp reallocation of non-filer adult
   mass. Recorded that D2's marital dimension is unsourced and that the memo's

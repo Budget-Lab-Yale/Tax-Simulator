@@ -547,9 +547,49 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    anchor and worsen under netting, and those are exactly P5's small
    high-amplification states, so that residual is likely anchor-side noise.
 
-   **F1b (anchors as the primary targets) stays blocked on D1**, the Tax-Data age
-   fix, per design memo §6.2: until it lands, `age_band(tu_n$age1)` is smeared
-   across the dimension the anchors discipline.
+   **⚠ F1b's blocker changed 2026-08-24: group D is DROPPED (decisions_log S13).**
+   F1b was blocked on D1, the Tax-Data age fix. There is no longer a D1. **The
+   DINA non-filer append is being replaced, not patched** — the national
+   non-filer population will be built from the CPS ASEC and calibrated to the
+   residual anchors, which is now group C's job.
+
+   The measurements that killed the patch, all 2026-08-24: DINA carries **65%**
+   of the anchor's non-filer adult mass with **77%** of the shortfall in 18–44
+   alone; `fiint`, `fidiv` and `fikgi` are **exactly zero** for every non-filer;
+   wages are **24%** of what SSA and the SOI W-2 study jointly imply; and
+   `ageprim` is **three values for everyone**, substantially an income-pattern
+   proxy rather than an age (bucket 65 is 89.5% SS recipients and **0.0%** wage
+   earners). Nor can the composition be reassigned: **11.71M of bucket 65's
+   13.09M hold old-age Social Security** against an anchor of 11.87M at 65+, so
+   only 26% of the required movement is coherent. Three vintages of patching
+   could not fix a file wrong in that way. ASEC beats DINA on income on every
+   measure — wages 1.011× SSA HI, dividends 0.449 of SOI, interest 2.624,
+   against 24% / 0.000 / 0.000.
+
+   **Recorded rather than hidden:** Treasury, the IRS and JCT all abandoned
+   survey-based non-filer construction; the IRS because ASEC non-filer income
+   *"still fell short of the income reported to the IRS by third parties"*
+   (~17% undercount). That is a *count* problem and the count is calibrated to
+   the anchor — and DINA is worse on income than the method they rejected.
+
+   **The gap that has to be designed in:** the ASEC has 0.27M group-quarters
+   persons against a PUF universe that includes them (8.15M, 16.8% of the
+   residual, **42% in SD**). GQ non-filers come from the ACS via `classify_gq()`,
+   and §3.0's universe invariant must be asserted or this silently undoes B1.
+
+   **D0 and D4 survive**: the anchor age shape becomes a validation target rather
+   than an input, and the id-order assertion still applies because a new builder
+   has the same positional random-number hazard as a rake.
+
+   **The DINA sex split goes too (S14), retiring the interface entirely.**
+   `demographics.R` targets DINA male shares in 8 cells. Measured: `p_male` runs
+   **0.2476–0.6454**, so the cells matter — but not where assumed. The
+   `employed = 0` filer cells are **0.68%** of unmarried units and need no source
+   of their own; the dominant dimension is **`has_kids`, a 19.3pp swing** among
+   employed filers (single parents ~70% female) covering 81% of unmarried units.
+   All 51 sheets of the SOI W-2 workbook were checked and **no admin table
+   crosses sex with children** — so W-2 Table 1 anchors the marginal male share
+   and the ASEC build supplies the kids split.
 
    **D0 closed 2026-08-24 — D1's missing input now exists.** `resources/
    nonfiler_age_shape_{2017,2022}.csv`, built from a new
