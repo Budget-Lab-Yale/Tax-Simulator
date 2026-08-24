@@ -550,6 +550,32 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    **F1b (anchors as the primary targets) stays blocked on D1**, the Tax-Data age
    fix, per design memo §6.2: until it lands, `age_band(tu_n$age1)` is smeared
    across the dimension the anchors discipline.
+
+   **D0 closed 2026-08-24 — D1's missing input now exists.** `resources/
+   nonfiler_age_shape_{2017,2022}.csv`, built from a new
+   `read_soi_ira_age_split()` reading SOI IRA study Table 4 column (1), the only
+   published split inside 65+. **P1 specified this in full and nothing had
+   implemented it**, so its 65_74/75p figures were hand-computed from a source no
+   script read; the files are `ira_t04_{year}.xlsx`, and a `.xls` glob misses
+   them, which is likely why they read as absent. Used as a share of T1.6's
+   level, never a level. It reproduces every documented figure — 65_74 non-filing
+   rate 17.9%, 75p 23.6%, 18_25 22.2%/24.2%, 65+ 25.0%/25.1% — and the residual
+   splits 52/48 across 65_74/75p against a population splitting 59/41.
+
+   **It also prices D1: a 20.2pp reallocation of non-filer adult mass.** Against
+   the current `runif` draw the anchor puts 18_25 at 22.2% where Tax-Data has
+   9.6% (ratio 0.43), and 65_74 at 13.1% where Tax-Data has 26.9% (2.06x), 75p
+   1.50x. The 7-band resolution earns itself: at six bands you would know 65+ is
+   twice over-weighted but not that it concentrates in the *younger* elderly.
+   **D1 is not blocked on group C** — nothing in it consumes the filing model —
+   so it is the next move, and it is what unblocks F1b.
+
+   **One gap found in D2's spec:** §5.2 wants ≤14 age x marital rake cells; the
+   age half is now emitted, the marital half is unsourced (PEP carries no marital
+   status), and §3.1 step 4's wording would hand the residual the FILERS' marital
+   mix — wrong by about a factor of two, since 17.2% of non-filer units are joint
+   against ~40% of filers. The ACS has `MARST x AGE` natively and is already
+   read; picking it is a D2 design decision, not a detail.
    - **⚠ The college states move the wrong way, and that is the open question,
      not a defect.** DC goes from 0.779× its anchor to **0.637×** (VT −17.7%,
      RI −14.1%, MA −12.6%, ND −11.9%, CT −11.7%): students leave the institution

@@ -194,6 +194,67 @@ for (yr in years) {
                   nat[band == 'total_18p', residual_nonfiling_adults] / 1e6,
                   100 * nat[band == 'total_18p', residual_nonfiling_adults / pep_adults]))
 
+  # --- the 7-band CELL-space age shape (D1's input) -------------------------
+  # `nat` above is the 6-band TARGET space, and it stays that way: script 03's
+  # T1/T2 read national_anchor_{year}.csv and the state targets can be no finer
+  # than T1.6's "65 and over". This is the separate, finer object -- emitted as
+  # its own artifact rather than by restructuring `nat` -- because the CELL
+  # space is 7 bands and the Tax-Data non-filer age draw needs the split.
+  #
+  # 65+ is splittable NATIONALLY and only nationally: SOI's IRA study Table 4
+  # gives filers by five-year band, so `65 under 70`+`70 under 75` and
+  # `75 under 80`+`80 and over` aggregate exactly onto 65_74/75p. Used as a
+  # SHARE of T1.6's level, never as a level -- see read_soi_ira_age_split().
+  #
+  # WHY THIS FILE EXISTS: Tax-Data draws the non-filer age group from
+  # `floor(runif(...))` over the DINA ageprim buckets
+  # (Tax-Data src/impute_nonfilers.R:92-96), which puts 41-43% of non-filing
+  # adults at 65+ against this anchor's ~25% and 9-10% at 18-25 against ~22-24%
+  # (finding F2). The age composition is not blurred, it is INVERTED, and this
+  # is the shape that replaces the draw.
+  #
+  # ⚠ CONVENTION WEDGE, carried not resolved (same one the anchor already has):
+  # PEP counts each person at their OWN age; T1.6 assigns a joint return's two
+  # filing adults to the PRIMARY's band (its own footnote). So the residual by
+  # band mixes conventions, and the Tax-Data draw it feeds assigns the PRIMARY's
+  # age. That is exact for the single/HoH majority and approximate for the ~17%
+  # of non-filer units that are joint. Do not read `share` as a distribution of
+  # non-filing adults over their own ages.
+  ira <- read_soi_ira_age_split(yr)
+  fa_65p <- fa[band == '65p', filing_adults]
+  shape <- data.table(
+    band       = c('18_25','26_34','35_44','45_54','55_64','65_74','75p'),
+    age_group  = c(1L, 2L, 3L, 4L, 5L, 6L, 6L),   # Tax-Data's own coding
+    pep_adults = c(nat[band %in% A16_BANDS[1:5]][match(A16_BANDS[1:5], band), pep_adults],
+                   pep[AGE >= 65 & AGE < 75, sum(pop)],
+                   pep[AGE >= 75, sum(pop)]),
+    filing_adults = c(fa[match(A16_BANDS[1:5], band), filing_adults],
+                      fa_65p * ira$share_65_74,
+                      fa_65p * ira$share_75p))
+  shape[, residual_nonfiling_adults := pep_adults - filing_adults]
+  shape[, share := residual_nonfiling_adults / sum(residual_nonfiling_adults)]
+  # within-age_group share, so D1 can draw the coarse group then split 65+
+  shape[, share_within_age_group := share / sum(share), by = age_group]
+  shape[, `:=`(year = yr, ira_share_65_74 = ira$share_65_74)]
+
+  # The 7-band object must reconcile to the 6-band one it refines, exactly:
+  # only the 65p row is being split, so everything else must be untouched.
+  stopifnot(
+    all(shape$residual_nonfiling_adults > 0),
+    isTRUE(all.equal(sum(shape$pep_adults), nat[band == 'total_18p', pep_adults])),
+    isTRUE(all.equal(sum(shape$filing_adults), nat[band == 'total_18p', filing_adults])),
+    isTRUE(all.equal(shape[age_group == 6, sum(pep_adults)],
+                     nat[band == '65p', pep_adults])),
+    isTRUE(all.equal(shape[age_group == 6, sum(filing_adults)], fa_65p)),
+    isTRUE(all.equal(sum(shape$share), 1)))
+  message(sprintf(paste('  age shape (7-band): 18_25 %.1f%% | 65_74 %.1f%% | 75p %.1f%%;',
+                        'IRA 65_74 share %.4f, non-filing rate %.1f%% vs %.1f%%'),
+                  100 * shape[band == '18_25', share],
+                  100 * shape[band == '65_74', share],
+                  100 * shape[band == '75p', share], ira$share_65_74,
+                  100 * shape[band == '65_74', residual_nonfiling_adults / pep_adults],
+                  100 * shape[band == '75p', residual_nonfiling_adults / pep_adults]))
+
   # State anchor: PEP 18+ minus HT2-identity filing adults (state shares of the
   # T1.6-consistent national level come later, with the OASDI age allocation)
   st <- merge(pep[AGE >= 18, .(pep_adults_18p = sum(pop)), by = state],
@@ -307,6 +368,13 @@ for (yr in years) {
                   wm[, max(ht2_returns_per_ssa_person)]))
 
   fwrite(nat, file.path(res_dir, sprintf('national_anchor_%d.csv', yr)))
+  # The age shape goes to resources/, not results/: it is a committed INPUT to
+  # the Tax-Data rework (D1), not a regenerable diagnostic.
+  shape_dir <- 'research/state_weights/nonfiler_residual/resources'
+  fwrite(shape[, .(year, band, age_group, pep_adults, filing_adults,
+                   residual_nonfiling_adults, share, share_within_age_group,
+                   ira_share_65_74)],
+         file.path(shape_dir, sprintf('nonfiler_age_shape_%d.csv', yr)))
   fwrite(st[order(state)], file.path(res_dir, sprintf('residual_anchors_%d.csv', yr)))
   fwrite(wm[order(state)], file.path(res_dir, sprintf('nonfiler_wage_margin_%d.csv', yr)))
   fwrite(ee$age, file.path(res_dir, sprintf('ssa_age_margin_%d.csv', yr)))

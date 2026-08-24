@@ -3,7 +3,7 @@ title: "Source documents and hand-transcribed resources"
 role: index
 workstream: state_weights
 status: current
-updated: 2026-08-19
+updated: 2026-08-24
 sot: research/state_weights/nonfiler_residual_design.md
 supersedes: []
 superseded_by: null
@@ -11,10 +11,51 @@ superseded_by: null
 
 # Source documents and hand-transcribed resources
 
-This folder holds three kinds of thing: **hand-transcribed tables** (the CSVs
-below), the **bibliography** for the filing-model literature
-(`filing_model_refs.bib`), and **source PDFs** we could not rely on retrieving
-again (see "Source PDFs" at the end).
+This folder holds four kinds of thing: **hand-transcribed tables** (the CSVs
+below), **generated inputs** to the Tax-Data rework (see the next section), the
+**bibliography** for the filing-model literature (`filing_model_refs.bib`), and
+**source PDFs** we could not rely on retrieving again (see "Source PDFs" at the
+end).
+
+## Generated inputs (not transcriptions)
+
+### `nonfiler_age_shape_{year}.csv` — D1's age draw
+
+**Written by `02_build_residual_anchors.R`, so do not hand-edit it**; it lives
+here rather than in `results/` because it is a committed *input* to the Tax-Data
+rework, not a regenerable diagnostic.
+
+| column | meaning |
+|---|---|
+| `band` | the 7-band CELL space: `18_25 … 55_64`, then `65_74` / `75p` |
+| `age_group` | **Tax-Data's own 1-6 coding** (`project_puf.R:324-330`), so D1 can join directly. `65_74` and `75p` both carry 6 |
+| `residual_nonfiling_adults` | PEP adults in band − T1.6 filing adults in band |
+| `share` | share of the national residual; sums to 1 |
+| `share_within_age_group` | for splitting Tax-Data's `age_group == 6` into `65_74` / `75p` |
+| `ira_share_65_74` | the SOI IRA Table 4 share used for the 65+ split, carried for provenance |
+
+**Why the 65+ split needs a second source.** Pub 1304 Table 1.6 stops at "65 and
+over" and SSA OASDI-SC publishes 65+ by sex only, so nothing in the anchor's own
+inputs divides it. SOI's IRA study **Table 4, column (1)** publishes Form 1040
+filers by five-year band, and `65 under 70`+`70 under 75` /
+`75 under 80`+`80 and over` aggregate exactly onto our two. Read by
+`read_soi_ira_age_split()`.
+
+**It supplies the SHARE, never the level.** Its own 65+ total runs ~4.5% below
+T1.6's, consistently, because it assigns each taxpayer *their own* age where
+T1.6 assigns a joint return the *primary's*. Applying its share to T1.6's level
+keeps T1.6's convention and borrows only the shape.
+
+**⚠ Convention wedge, carried not resolved.** PEP counts each person at their own
+age; T1.6 assigns a joint return's two filing adults to the primary's band. So
+the residual by band mixes conventions, and the Tax-Data draw it feeds sets the
+*primary's* age — exact for the single/HoH majority, approximate for the ~17% of
+non-filer units that are joint. Do not read `share` as a distribution of
+non-filing adults over their own ages.
+
+**Files:** `ira_t04_{year}.xlsx` in `raw_data/IRS-Ind/national/ira/`, TY2000–2023
+with **2003 not published**. Note the extension: a `.xls` glob silently misses
+this whole family.
 
 ## Hand-transcribed tables (Stage D)
 

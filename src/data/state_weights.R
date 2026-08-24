@@ -806,6 +806,61 @@ SSA_SEX_LABELS <- c("Men", "Women")
 #' assertion, so the agreement documented in NOTES.md §2 stays enforced rather
 #' than assumed. Universe is `beneficiary`: a person-level administrative
 #' universe that is neither `resident` nor `household` (design memo §7.3).
+#' SOI IRA study Table 4, column (1): Form 1040 filers by five-year age band.
+#'
+#' The ONLY published source that splits filers inside 65+, which Pub 1304
+#' Table 1.6 cannot (its top band is "65 and over") and no state-level source
+#' can either (SSA OASDI-SC publishes 65+ by sex only). So this supplies the
+#' `65_74` / `75p` SHARE and never a level: its own 65+ total runs 4.5-5.7%
+#' below T1.6's, consistently across years, because it assigns each taxpayer
+#' THEIR OWN age where T1.6 assigns a joint return the PRIMARY's. Applying the
+#' share to T1.6's level keeps T1.6's convention and borrows only the shape.
+#'
+#' @return list(share_65_74, share_75p, filers_65_74, filers_75p) -- shares of
+#'         the 65+ total, summing to 1.
+read_soi_ira_age_split <- function(year) {
+
+  f <- file.path(raw_data_root(), "IRS-Ind/national/ira",
+                 sprintf("ira_t04_%d.xlsx", year))
+  if (!file.exists(f))
+    stop("SOI IRA study Table 4 not found for ", year, ": ", f,
+         if (year == 2003) "  (TY2003 is not published)" else "")
+
+  raw <- readxl::read_excel(f, sheet = 1, col_names = FALSE,
+                            .name_repair = "minimal")
+  lab <- trimws(as.character(raw[[1]]))
+
+  # Column (1) is "Number of taxpayers who filed Form 1040". Locate it by the
+  # published column-number row rather than by position, so an edition that
+  # inserts a column fails loudly instead of silently reading contributions.
+  hdr <- which(vapply(seq_len(nrow(raw)),
+                      function(i) identical(trimws(as.character(raw[i, 2])), "(1)"),
+                      logical(1)))
+  stopifnot(length(hdr) == 1)
+  col1 <- suppressWarnings(as.numeric(raw[[2]]))
+
+  # The five-year bands aggregate exactly onto our two: 65-70 + 70-75 = 65_74,
+  # 75-80 + 80+ = 75p. Matched on the published row labels, asserted present.
+  want <- c("65 under 70", "70 under 75", "75 under 80", "80 and over")
+  idx  <- match(want, lab)
+  if (anyNA(idx))
+    stop("SOI IRA Table 4 ", year, ": missing age row(s) ",
+         paste(want[is.na(idx)], collapse = ", "))
+  v <- col1[idx]
+  stopifnot(!anyNA(v), all(v > 0))
+
+  f_65_74 <- v[1] + v[2]
+  f_75p   <- v[3] + v[4]
+  tot     <- f_65_74 + f_75p
+
+  # Sanity: the two bands must be a real split of a plausible 65+ filer count.
+  # 20-60M brackets every published year in the 2000-2023 series generously.
+  stopifnot(tot > 20e6, tot < 60e6, f_65_74 > f_75p)
+
+  list(share_65_74 = f_65_74 / tot, share_75p = f_75p / tot,
+       filers_65_74 = f_65_74, filers_75p = f_75p)
+}
+
 read_ssa_oasdi_65p <- function(year) {
   fs <- file.path(raw_data_root(), "SSA-OASDI-SC",
                   "oasdi_sc_flatseries_table2_beneficiaries.json")

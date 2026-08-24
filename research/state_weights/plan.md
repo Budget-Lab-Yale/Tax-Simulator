@@ -745,6 +745,67 @@ Build **V1 / V2 / V3 as separate vintages** (§5.4) so each change A/Bs
 independently, and in this priority order: *age detail > national level + aging
 > investment income > the dividends bug (trivial, always).*
 
+- [x] **D0. The anchor age shape — DONE 2026-08-24. D1's missing input.**
+      `resources/nonfiler_age_shape_{2017,2022}.csv` now exists; it did not
+      before, and D1 was specified to read it. Two pieces had to land:
+
+      - **`read_soi_ira_age_split()`** in `src/data/state_weights.R` reads SOI
+        IRA study Table 4 column (1) — the only published split inside 65+, since
+        T1.6 stops at "65 and over" and OASDI-SC publishes 65+ by sex only.
+        **P1 specified this in full and nothing implemented it**, so the 65_74 /
+        75p numbers in P1 were hand-computed from a source no script read. The
+        files are `ira_t04_{year}.xlsx` (**not** `.xls` — a `.xls` glob misses
+        them, which is likely why this read as absent), TY2000-2023 with **2003
+        missing**, exactly P1's documented signature. Used as a SHARE of T1.6's
+        level, never a level: its own 65+ total runs 4.5% below T1.6's because it
+        assigns each taxpayer their own age where T1.6 assigns a joint return the
+        primary's. Column located by the published `(1)` row and bands matched by
+        label, so an edition that moves a column fails loudly.
+      - **Script 02 emits the 7-band shape** as its own artifact rather than
+        restructuring `national_anchor_{year}.csv`, which stays 6-band because
+        script 03's T1/T2 read it and no state target can be finer than T1.6.
+        Five reconciliation identities are asserted, not commented.
+
+      **It reproduces every previously documented figure**: 65_74 non-filing rate
+      **17.9%** and 75p **23.6%** (P1's hand computation), 18_25 share **22.2%**
+      (2022) and **24.2%** (2017), 65+ **25.0%** / **25.1%** (A6). The residual
+      splits **52/48** across 65_74/75p against a population splitting 59/41 —
+      the gradient P1 warned collapsing to `65p` would hide.
+
+      **And it prices D1.** Against the current `runif` draw, TY2022:
+
+      | band | Tax-Data | anchor | ratio |
+      |---|---|---|---|
+      | 18_25 | 9.6% | 22.2% | **0.43** |
+      | 26_34 | 9.4% | 12.6% | 0.75 |
+      | 35_44 | 10.3% | 12.1% | 0.86 |
+      | 45_54 | 12.9% | 12.4% | 1.04 |
+      | 55_64 | 13.0% | 15.7% | 0.83 |
+      | 65_74 | 26.9% | 13.1% | **2.06** |
+      | 75p | 17.9% | 11.9% | **1.50** |
+
+      **D1 reallocates 20.2pp of non-filer adult mass.** The 7-band resolution
+      earns itself here: at 6 bands you would know 65+ is 2x over-weighted but
+      not that the over-weighting concentrates in the *younger* elderly.
+
+      **⚠ CONVENTION WEDGE, carried not resolved** (recorded in the script):
+      PEP counts each person at their own age; T1.6 assigns a joint return's two
+      filing adults to the primary's band. The residual by band therefore mixes
+      conventions, and the Tax-Data draw it feeds sets the PRIMARY's age. Exact
+      for the single/HoH majority, approximate for the ~17% of non-filer units
+      that are joint.
+
+      **⚠ D2's marital dimension is NOT sourced, and §3.1 step 4's wording would
+      get it wrong.** §5.2 wants ≤14 cells of age x marital; the age half is now
+      emitted, the marital half is not. PEP carries no marital status, so the
+      residual cannot be split that way from the anchor's own inputs — and §3.1
+      step 4's "age x marital structure of the filing side taken from (2)" would
+      apply the FILERS' marital mix to non-filers, which is wrong by roughly a
+      factor of two: **17.2% of non-filer units are joint against ~40% of
+      filers**. The ACS carries `MARST x AGE` natively and is already read, so it
+      is the obvious candidate — but choosing it is a D2 design decision, not an
+      implementation detail. Do not let the rake inherit the filer mix by
+      default.
 - [ ] **D1. V1 — composition fixes at fixed weights** (`impute_nonfilers.R`):
       route `fidiv` to `div_ord`/`div_pref` (the `qual_div` column is silently
       discarded today); replace the flat `runif` age draw (`:92-96`) with the
@@ -1243,6 +1304,10 @@ comparisons into exact-equality tests.
 
 ## Revision history
 
+- **2026-08-24** — D0: the anchor age shape emitted (P1's IRA-Table-4 split
+  implemented at last), pricing D1 at a 20.2pp reallocation of non-filer adult
+  mass. Recorded that D2's marital dimension is unsourced and that the memo's
+  wording would wrongly hand it the filers' marital mix.
 - **2026-08-24** — F1c: dorm-student netting shipped as an opt-in second anchor
   column with its own wider tolerance, justified on universe consistency only.
   The 2022 fit-improvement claim was retracted the same day when TY2017 failed
