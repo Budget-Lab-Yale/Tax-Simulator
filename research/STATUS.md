@@ -459,199 +459,44 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    margins, rather than fit-on-v0-then-re-fit. Do not close Phase 1 first.
 
 <!-- release:begin nonfiler-status -->
-1b. **Non-filer residual rework.** The non-filer population is the one input to
-   the weights fit anchored to nothing: Tax-Data appends ~27.6M (TY2022) units
-   from PSZ/DINA at DINA's own uncalibrated weights, and the state fit places them
-   using ACS margins from a v0 filing rule that over-assigns filers ~7%
-   nationally with a 20pp state spread. **This rework lands BEFORE the Phase 1
-   swap-in** (JI, 2026-08-16) so the swap-in fit happens once, on upgraded margins.
+1b. **Non-filer rebuild.** The non-filer population is the one input to the
+   weights fit anchored to nothing. **As of 2026-08-24 it is being REBUILT, not
+   repaired** (`decisions_log.md` S13/S14): the DINA append is replaced by a
+   national pool constructed from the CPS ASEC and calibrated to the residual
+   anchors, and the DINA sex split goes with it, retiring the interface from
+   Tax-Data entirely.
 
-   **Stage D is done** (`4783dc3e9`) and **pre-flight is closed** (2026-08-19):
-   SSA inputs placed, verified and documented; dependents/MFS in scope; HI as the
-   covered-worker universe; Tax-Data vintage advanced to `2026070814`; age bands
-   settled and implemented; anchor tolerance computed; and the combined-universe
-   wage constraint sourced, which found the PUF carries only **~21% of the
-   non-filer wage mass** two administrative sources jointly imply.
+   Why, in one line each — DINA carries **65%** of the anchor's adult mass with
+   77% of the shortfall in 18–44; `fiint`/`fidiv`/`fikgi` are **exactly zero**
+   for every non-filer; wages are **24%** of the administratively implied total;
+   `ageprim` is **three values for everyone** and is largely an income-pattern
+   proxy; and the age composition cannot be reassigned, because 11.71M of the
+   13.09M in DINA's 65+ bucket hold old-age Social Security against an anchor of
+   11.87M. Three vintages of patching could not fix a file wrong in that way.
 
-   **Task group A closed 2026-08-23** (SSA readers, the ASEC tax-unit design note,
-   the 11-of-11 extract re-pull, the Mok/Cilke transcriptions with their
-   token-level verification, and an 01→02→03 re-run that came back
-   byte-identical on both anchor years).
+   Landed the same day and still current: **B1** (differentiated group quarters),
+   **D0** (the 7-band anchor age shape, now a validation target), **F1a** (targets
+   count adults, not tax units — which retired the units-vs-adults MARD the tree
+   had been quoting), and **F1c** (dorm-student netting, shipped on universe
+   consistency alone and explicitly *not* on a fit improvement).
 
-   **Task group B closed 2026-08-24 — differentiated group quarters is in
-   production.** `classify_gq()` and a `gq_treatment` argument in
-   `src/data/state_weights.R`; institutional residents retained as own-state
-   non-filer units, dorm students reclassified out of them, military barracks
-   left to the income test. Three results worth carrying:
-
-   - **The classification reproduces F6 exactly** — 8.15M GQ persons, 3.61M
-     institutional / 2.81M dorm / 1.74M other — and the regenerated T7
-     composition input is identical to the committed one cell for cell (763
-     cells, zero differences). The predicate had been written twice, in the
-     production builder and the diagnostic; it is now written once.
-   - **Blanket exclusion is measurably worse than doing nothing.** Against the
-     residual anchors: v0 10.28% MARD, differentiated 8.79%, exclusion
-     **11.12%**. That is F6's design call re-measured on the production builder
-     rather than re-asserted — and the retained `gq_treatment = 'v0'` path
-     reproduces F5's 0.78×–1.51× spread exactly, so the frozen evidence still
-     reproduces. **⚠ Those three levels are superseded** — see F1a below; they
-     divide unit-denominated margins by an adult-denominated anchor. The
-     *ordering* stands (all three share the error); the levels do not.
-
-   **Task group F1a closed 2026-08-24 — the non-filer partition now targets
-   ADULTS.** `puf_series_x()` gains `n_adults = 1 + (filing_status == 2)` (D5),
-   distinct from `n_indiv`, which is HT2's concept and adds dependents;
-   `build_acs_margins()` emits `n_adults` beside `n_units`; both sides of the
-   non-filer target are now adult-denominated. Three consequences:
-
-   - **It retires a number this file was quoting.** 17.2% of non-filer units are
-     joint, so adults/units is **1.1717** on the PUF and **1.0989** on the ACS —
-     they differ because the v0 filing model's married mix differs, which is
-     itself work for group C. Every earlier margin-vs-anchor MARD compared units
-     against adults and sat near 1.0 by coincidence. Like-for-like, the margin
-     runs **11.90%**, and it runs *above* the anchor in most states (SD 1.544,
-     MN 1.383) — the v0 −7% filer bias with the right sign at last.
-   - **The first honest placement metric.** Fitted non-filer adult SHARES against
-     the anchors' shares: **MARD 10.54%, 15 of 51 states within 5%, 29 within
-     10%**, worst DC 0.499 and SD 1.392
-     (`research/state_weights/scripts/f1_adult_target_check.R`). Levels are
-     deliberately not compared — the 32.4M-vs-47.5M gap is what F1b and D1 exist
-     to close.
-   - **Two confirmations, no surprises.** The non-filer fit still converges in
-     two iterations to 4.4e-16, so F2 is still required to make this a real
-     calibration rather than prior reproduction. And the state anchors sum 2.14%
-     above the national anchor with PEP agreeing to 0.000% — P5's 4.6x
-     amplification reproduced exactly, i.e. the documented tolerance.
-
-   **The anchor now carries a dorm-netted universe too (F1c, 2026-08-24)** —
-   `residual_nonfiling_adults_net_dorm` beside the raw column, with a matching
-   wider tolerance in `08_residual_tolerance.R` (national 3.74% against 3.54%;
-   SD 7.08% against 6.33%), because amplification is `input/residual` and netting
-   shrinks the residual. TY2017 2.44M (5.2%), TY2022 2.52M (5.3%), ranging from
-   0.8% in NV to 22.6% in VT. It exists because PEP puts a dorm student in the
-   institution state and they are not a filing adult, so they survive into the
-   raw residual — while B1 removed exactly those people from the margin and the
-   PUF non-filer partition carries **no dependents at all** (0 of 13,204 records
-   with `dep_status == 1`). Raw anchor and margin measure different universes.
-
-   **⚠ That is the entire case, and an earlier empirical claim for it has been
-   retracted.** The TY2022 result (college-state MARD 15.78% → 12.49%) **does not
-   replicate on TY2017**, where the same states go 16.23% → 17.35% and the worst
-   single-state error goes 45.9% → 61.1%. The mechanism is arithmetic: netting
-   raises `fit/anchor` where a state's dorm share exceeds the national 5.3% and
-   lowers it everywhere below, so it helps only where the dorm share and the
-   error sign happen to line up. It moves 20 of 51 states toward 1 in 2022 and 22
-   of 51 in 2017 — fewer than half in both. **Net because it is the right
-   universe, not because it improves a metric**; nothing consumes the column yet.
-   A related read: SD/MN/WY sit at 1.25–1.48 of their anchor share under either
-   anchor and worsen under netting, and those are exactly P5's small
-   high-amplification states, so that residual is likely anchor-side noise.
-
-   **⚠ F1b's blocker changed 2026-08-24: group D is DROPPED (decisions_log S13).**
-   F1b was blocked on D1, the Tax-Data age fix. There is no longer a D1. **The
-   DINA non-filer append is being replaced, not patched** — the national
-   non-filer population will be built from the CPS ASEC and calibrated to the
-   residual anchors, which is now group C's job.
-
-   The measurements that killed the patch, all 2026-08-24: DINA carries **65%**
-   of the anchor's non-filer adult mass with **77%** of the shortfall in 18–44
-   alone; `fiint`, `fidiv` and `fikgi` are **exactly zero** for every non-filer;
-   wages are **24%** of what SSA and the SOI W-2 study jointly imply; and
-   `ageprim` is **three values for everyone**, substantially an income-pattern
-   proxy rather than an age (bucket 65 is 89.5% SS recipients and **0.0%** wage
-   earners). Nor can the composition be reassigned: **11.71M of bucket 65's
-   13.09M hold old-age Social Security** against an anchor of 11.87M at 65+, so
-   only 26% of the required movement is coherent. Three vintages of patching
-   could not fix a file wrong in that way. ASEC beats DINA on income on every
-   measure — wages 1.011× SSA HI, dividends 0.449 of SOI, interest 2.624,
-   against 24% / 0.000 / 0.000.
-
-   **Recorded rather than hidden:** Treasury, the IRS and JCT all abandoned
-   survey-based non-filer construction; the IRS because ASEC non-filer income
-   *"still fell short of the income reported to the IRS by third parties"*
-   (~17% undercount). That is a *count* problem and the count is calibrated to
-   the anchor — and DINA is worse on income than the method they rejected.
-
-   **The gap that has to be designed in:** the ASEC has 0.27M group-quarters
-   persons against a PUF universe that includes them (8.15M, 16.8% of the
-   residual, **42% in SD**). GQ non-filers come from the ACS via `classify_gq()`,
-   and §3.0's universe invariant must be asserted or this silently undoes B1.
-
-   **D0 and D4 survive**: the anchor age shape becomes a validation target rather
-   than an input, and the id-order assertion still applies because a new builder
-   has the same positional random-number hazard as a rake.
-
-   **The DINA sex split goes too (S14), retiring the interface entirely.**
-   `demographics.R` targets DINA male shares in 8 cells. Measured: `p_male` runs
-   **0.2476–0.6454**, so the cells matter — but not where assumed. The
-   `employed = 0` filer cells are **0.68%** of unmarried units and need no source
-   of their own; the dominant dimension is **`has_kids`, a 19.3pp swing** among
-   employed filers (single parents ~70% female) covering 81% of unmarried units.
-   All 51 sheets of the SOI W-2 workbook were checked and **no admin table
-   crosses sex with children** — so W-2 Table 1 anchors the marginal male share
-   and the ASEC build supplies the kids split.
-
-   **D0 closed 2026-08-24 — D1's missing input now exists.** `resources/
-   nonfiler_age_shape_{2017,2022}.csv`, built from a new
-   `read_soi_ira_age_split()` reading SOI IRA study Table 4 column (1), the only
-   published split inside 65+. **P1 specified this in full and nothing had
-   implemented it**, so its 65_74/75p figures were hand-computed from a source no
-   script read; the files are `ira_t04_{year}.xlsx`, and a `.xls` glob misses
-   them, which is likely why they read as absent. Used as a share of T1.6's
-   level, never a level. It reproduces every documented figure — 65_74 non-filing
-   rate 17.9%, 75p 23.6%, 18_25 22.2%/24.2%, 65+ 25.0%/25.1% — and the residual
-   splits 52/48 across 65_74/75p against a population splitting 59/41.
-
-   **It also prices D1: a 20.2pp reallocation of non-filer adult mass.** Against
-   the current `runif` draw the anchor puts 18_25 at 22.2% where Tax-Data has
-   9.6% (ratio 0.43), and 65_74 at 13.1% where Tax-Data has 26.9% (2.06x), 75p
-   1.50x. The 7-band resolution earns itself: at six bands you would know 65+ is
-   twice over-weighted but not that it concentrates in the *younger* elderly.
-   **D1 is not blocked on group C** — nothing in it consumes the filing model —
-   so it is the next move, and it is what unblocks F1b.
-
-   **One gap found in D2's spec:** §5.2 wants ≤14 age x marital rake cells; the
-   age half is now emitted, the marital half is unsourced (PEP carries no marital
-   status), and §3.1 step 4's wording would hand the residual the FILERS' marital
-   mix — wrong by about a factor of two, since 17.2% of non-filer units are joint
-   against ~40% of filers. The ACS has `MARST x AGE` natively and is already
-   read; picking it is a D2 design decision, not a detail.
-   - **⚠ The college states move the wrong way, and that is the open question,
-     not a defect.** DC goes from 0.779× its anchor to **0.637×** (VT −17.7%,
-     RI −14.1%, MA −12.6%, ND −11.9%, CT −11.7%): students leave the institution
-     state and are placed in no other, because the ACS has no cross-household
-     parent link and it is not settled that they *should* be placed — the PEP
-     anchor puts them in the institution state while the HT2 dependents identity
-     puts the slot in the parent's state. The bias is now known to be one-sided
-     (college states short, nothing long), which is a check on whatever
-     `notes/student_cross_state_linkage.md` §4 decides. Tolerable today because
-     the margins supply only within-cell geography to a fit whose levels come
-     from the PUF; not tolerable the moment anything reads the non-filer margin
-     as a level.
-
-   **Next on the critical path is group C** — the filing model on the ASEC,
-   transferred to the ACS, at 1–2 weeks the long pole; D1's Tax-Data age fix is
-   the true bottleneck behind it.
-
-   > **This entry is deliberately a pointer, not a summary.** Three documents own
+   > **This entry is deliberately a pointer, not a summary.** Five documents own
    > this workstream and each has one job:
-   > - **`research/state_weights/plan.md` — the plan.** What is decided, what is
-   >   next, what is blocked, and the critical path. **Start here.**
-   > - **`research/state_weights/nonfiler_residual_design.md` — the method.** The design of record and
-   >   the reasoning behind each decision.
-   > - **`research/state_weights/nonfiler_residual/04_findings.md` — the evidence.** Stage D's F1-F7 and
-   >   decisions D1-D6, frozen.
+   > - **`research/state_weights/plan.md`** — the **plan**. Where things stand,
+   >   what is next, the five open decisions. **Start here.**
+   > - **`research/state_weights/nonfiler_residual_design.md`** — the **method**.
+   > - **`research/state_weights/nonfiler_residual/10_asec_tax_unit_design.md`** —
+   >   the **ASEC unit design** (D-A1…D-A7), which group C implements.
+   > - **`research/state_weights/nonfiler_residual/04_findings.md`** — the frozen
+   >   **evidence**, F1–F10.
+   > - **`research/state_weights/nonfiler_federal_validation.md`** — the
+   >   **procedure** for the federal battery, whose 4a table is the acceptance gate.
    >
-   > - **`research/state_weights/nonfiler_federal_validation.md` — the procedure.**
-   >   The runbook for the federal validation battery (task group E), whose 4a
-   >   table is the acceptance gate.
-   >
-   > Supporting: `research/state_weights/nonfiler_residual/05_filing_model_literature.md` (literature
-   > pass), `raw_data/SSA-{OASDI,EEDATA}-SC/NOTES.md` (what the SSA margins mean),
-   > `research/docx_sources/nonfiler_proposal_jii.docx` (JI's narrative case, with
-   > `research/state_weights/notes/nonfiler_proposal_rewrite_plan.md` as its open
-   > rewrite task). Earlier summaries of this workstream that used to live in this
-   > section have been removed rather than left to drift.
+   > Supporting: `nonfiler_residual/05_filing_model_literature.md`,
+   > `raw_data/SSA-{OASDI,EEDATA}-SC/NOTES.md`,
+   > `research/docx_sources/nonfiler_proposal_jii.docx` (JI's narrative case).
+   > Detail that used to sit in this section has moved to the plan rather than
+   > being duplicated here.
 
 <!-- release:end nonfiler-status -->
 

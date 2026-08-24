@@ -3,7 +3,7 @@ title: "Archive — superseded documents"
 role: index
 workstream: cross-cutting
 status: current
-updated: 2026-08-19
+updated: 2026-08-24
 sot: research/README.md
 supersedes: []
 superseded_by: null
@@ -190,6 +190,23 @@ it calls the design memo 579 lines (1,079 now). Its `## Discrepancies between th
 proposal and the implementation record` section is carried live into
 `research/state_weights/notes/nonfiler_proposal_rewrite_plan.md`, since those are
 corrections to make in the **proposal**, not in the method of record.
+
+### `state_weights_plan_2026-08-24_pre-asec-rewrite.md`
+
+**Replaced by** `research/state_weights/plan.md`, rewritten the same day.
+
+The 1,397-line predecessor. It had become a palimpsest: the 2026-08-19 merged plan
+plus a day of amendments layered on top — B1's superseded MARD table, F1a's
+retraction of it, F1c's netting entry, group D struck through, group C's preamble
+rewriting its own scope. Every layer was individually correct and the document as a
+whole was no longer readable end to end, which is the failure the rewrite trigger in
+`decisions_log.md` S9 exists for ("a whole section being rewritten rather than
+amended").
+
+Kept because the struck-through group D carries the measurements that killed it, and
+because the B1 and F1a entries record a retraction chain — the units-vs-adults MARD
+error and its correction — that is worth being able to read in the order it happened.
+The successor states the conclusions; this states how they were reached.
 
 ### Renamed, not archived
 
