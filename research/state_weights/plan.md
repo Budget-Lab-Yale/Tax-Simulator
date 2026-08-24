@@ -449,8 +449,13 @@ Effort estimates follow the memo's own where it gives them.
       SOI; (iv) the ASEC–anchor non-filer gap **is** the group-quarters universe
       difference — the identity closes to 0.03M in both anchor years, which the
       C6 gate must not read as transfer failure.
-- [~] **A2b. Extract additions from A2 §5 — CONFIGURED AND VALIDATED
-      2026-08-23; the re-pull is running.** Twelve variables added to
+- [x] **A2b. Extract additions from A2 §5 — DONE 2026-08-23.** Re-pulled
+      **11 of 11 samples**; the twelve new names are present in every year's DDI
+      per the availability matrix below, and the TY2018+ pension variables carry
+      real data (`INCPEN1` 7,532 persons at a \$16,800 median in TY2022, once the
+      IPUMS NIU sentinels 9999999 / 99999999 are screened — a first check counted
+      `> 0` and reported all 146,133 records as non-empty, which was the
+      sentinel, not data). Twelve variables added to
       `config/parameters.cps.yaml` (84 total): `INCPEN1` `INCPEN2` `INCRANN`
       `SRCPEN1` `SRCPEN2` `INCRET1` `INCRET2` `LINENO` `FAMREL` `FTYPE` `FAMID`
       `INCCAPG`.
