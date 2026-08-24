@@ -641,9 +641,18 @@ Effort estimates follow the memo's own where it gives them.
       take PEP resident adults with no GQ subtraction (§3.0). Asserted in script
       03 (`all.equal(m_v0$state_pop, m_diff$state_pop)`) and in the test.
 
+      **⚠ SUPERSEDED 2026-08-24 by F1a — read that entry before using this
+      table.** Every row divides a UNIT-denominated margin by an
+      ADULT-denominated anchor, so the ratios are near 1.0 by coincidence and
+      the ordering between them is not evidence about state placement. The
+      like-for-like figure for the differentiated margin is **11.90%**, not
+      8.79%. The rows are kept because the *relative* comparison between the
+      three GQ treatments is still informative — all three share the same
+      denomination error — but the levels are not.
+
       **Measured against the residual anchor, on the production builder:**
 
-      | variant | MARD vs anchor | min | max |
+      | variant | MARD vs anchor (units/adults — see above) | min | max |
       |---|---|---|---|
       | v0 (pre-B1) | 10.28% | 0.779 (DC) | 1.511 (SD) |
       | **differentiated** | **8.79%** | 0.637 (DC) | 1.405 (SD) |
@@ -821,10 +830,59 @@ independently, and in this priority order: *age detail > national level + aging
 
 ### F — State-weights margins, targets and re-fit (~2–3 weeks)
 
-- [ ] **F1. Residual anchors as the primary non-filer targets** (§6.2),
+- [~] **F1. Residual anchors as the primary non-filer targets** (§6.2),
       share-normalized like every other target, with the **adult x-vector
-      `1 + (filing_status == 2)`** replacing the current `rep(1, ...)`
-      (`state_weights.R:745`) per D5.
+      `1 + (filing_status == 2)`** replacing the current `rep(1, ...)` per D5.
+
+      **F1a — the adult x-vector: DONE 2026-08-24.** `puf_series_x()` gains
+      `n_adults = 1 + (filing_status == 2)` (deliberately distinct from
+      `n_indiv`, which is HT2's concept and adds dependents);
+      `build_acs_margins()` emits `n_adults` alongside `n_units`; the non-filer
+      target series is now `n_adults`, denominated in adults on **both** sides.
+      Tests `test_adult_x_vector` / `test_nonfiler_targets_count_adults` in
+      `src/tests/test_state_weights.R`; the second is built so a
+      unit-denominated target would fail it (adult shares split a 300-adult
+      cell 225/75 where unit shares would split it 180/120).
+
+      **Prior stays unit-denominated, and that is deliberate**, not a
+      half-conversion: a PUF non-filer record *is* a tax unit, so "where does
+      this record live" is a question about where non-filer UNITS live; the
+      *constraint* is a count of adults. Both are documented at the call site.
+
+      **⚠ This retires a number the tree had been quoting, including in this
+      plan and in `research/STATUS.md`.** 17.2% of non-filer units are joint, so
+      adults/units = **1.1717** on the PUF side and **1.0989** on the ACS side —
+      the two differ because the ACS v0 filing model produces a different
+      married mix, which is itself worth chasing in C. Every earlier
+      margin-vs-anchor MARD compared a **unit**-denominated margin against an
+      **adult**-denominated anchor and sat near 1.0 by coincidence, because
+      non-filers are mostly single. On the like-for-like comparison the ACS
+      margin runs **11.90%** MARD, not the 8.79% recorded for B1 — and it runs
+      *above* the anchor in most states (SD 1.544, MN 1.383, WY 1.319), which is
+      the v0 −7% filer bias showing up with the right sign. **The B1 entry's
+      MARD table is superseded by this; the GQ conclusions it supported are
+      not** (the composition reproduction, the exclusion-is-worse result and the
+      one-sided college-state bias are all independent of denomination).
+
+      **The first honest placement metric.** With both sides in adults,
+      `research/state_weights/scripts/f1_adult_target_check.R` compares FITTED
+      non-filer adult SHARES to the anchors' shares (shares, because the level
+      gap is F1b's and D1's to close): **MARD 10.54%, 15 of 51 states within 5%,
+      29 within 10%**, worst DC 0.499 and SD 1.392. That is the baseline every
+      later change to this partition should be measured against.
+
+      **Two things the run confirmed rather than discovered.** The non-filer fit
+      still converges in **2 iterations to 4.4e-16** — F2's "pure reproduction"
+      observation survives the denomination change, so F2 is still needed to
+      make this a genuine calibration. And the state anchors sum **2.14%** above
+      the national anchor, with PEP agreeing to 0.000% and filing adults
+      differing −0.465%: P5's amplification factor of 4.6x, reproduced exactly,
+      so this is the documented tolerance and not a new defect.
+
+      **F1b — anchors as the primary targets: still blocked.** §6.2 makes the
+      Tax-Data age fix (D1) a hard prerequisite, because until it lands
+      `age_band(tu_n$age1)` is smeared across the very dimension the anchors
+      discipline. Do not land F1b before group D.
 - [ ] **F2. Demote the income tiers to the prior.** Today the 1,390 count-only
       single-membership cells are reproduced exactly in one pass — the non-filer
       "fit" is pure reproduction of a biased margin (F5: 0.78× DC to 1.51× SD).
@@ -1143,6 +1201,11 @@ comparisons into exact-equality tests.
 
 ## Revision history
 
+- **2026-08-24** — F1a (the D5 adult x-vector) landed: non-filer targets now
+  count adults on both sides. Retired the units-vs-adults MARD the tree had
+  been quoting, including B1's table, and recorded the first honest placement
+  metric (fitted adult shares vs anchor shares, MARD 10.54%). F1b stays blocked
+  on D1.
 - **2026-08-24** — B1 (differentiated group quarters) implemented and
   verified on the extract; group B closed. Recorded the two design
   specifics the memo left open (the 18–24 range, the dorm-student income

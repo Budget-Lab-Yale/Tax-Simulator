@@ -323,7 +323,7 @@ read_acs_extract <- function(acs_year,
 #' @param gq_treatment "differentiated" (D4, the production rule -- see the GQ
 #'        block below) or "v0" for the pre-B1 non-treatment, kept ONLY so the
 #'        Stage D diagnostic can still reproduce its frozen v0 row.
-#' @return list(nonfiler_margins = dt[state, age_band, income_tier, n_units],
+#' @return list(nonfiler_margins = dt[state, age_band, income_tier, n_units, n_adults],
 #'              filer_units      = dt[state, n_units],
 #'              state_pop        = dt[state, pop],
 #'              gq_composition   = dt[state, gq_type, band, persons],
@@ -494,8 +494,16 @@ build_acs_margins <- function(acs, year, acs_year = NULL,
 
   units[, `:=`(age_band = age_band(head_age), income_tier = income_tier(gross_inc))]
 
+  # Both denominations are emitted. `n_units` counts tax units (one per head);
+  # `n_adults` counts ADULTS, matching the residual anchors and the PUF-side
+  # `n_adults` x-vector (D5). The ACS adult concept is 1 + has_spouse, which is
+  # the same rule as the PUF's 1 + (filing_status == 2) -- a joint unit is two
+  # adults on both sides. Keep them side by side rather than replacing: the
+  # unit count is what places a RECORD (a record is a unit), the adult count is
+  # what the target constrains.
   nonfiler_margins <- units[is_filer == FALSE,
-                            .(n_units = sum(weight)),
+                            .(n_units  = sum(weight),
+                              n_adults = sum(weight * (1 + has_spouse))),
                             by = .(state, age_band, income_tier)][order(state, age_band, income_tier)]
   filer_units <- units[is_filer == TRUE,
                        .(n_units = sum(weight)), by = state][order(state)]
@@ -984,6 +992,12 @@ puf_series_x <- function(tu, series) {
     n_single   = as.numeric(tu$filing_status == 1),
     n_joint    = as.numeric(tu$filing_status == 2),
     n_hoh      = as.numeric(tu$filing_status == 4),
+    # ADULTS on the return: the D5 concept. Distinct from n_indiv, which is
+    # HT2's "individuals" and counts dependents too. The non-filer partition
+    # targets adults because its anchors do (PEP adults - HT2 filing adults),
+    # and a unit-denominated target compared against an adult-denominated
+    # anchor is a units-vs-persons mismatch, not a fit.
+    n_adults   = 1 + (tu$filing_status == 2),
     n_indiv    = 1 + (tu$filing_status == 2) + tu$n_dep,
     agi_amt    = if (has("agi")) tu$agi,
     n_wages    = if (has("wages")) as.numeric(tu$wages != 0),
@@ -1125,13 +1139,25 @@ build_weight_inputs <- function(tax_units, year, ht2 = NULL, acs_margins = NULL,
   cell_n <- paste(age_band(tu_n$age1), income_tier(puf_gross_income(tu_n)), sep = "|")
   nm[, cell := paste(age_band, income_tier, sep = "|")]
 
-  # Prior: ACS state shares within cell; fallback to overall non-filer shares
+  # PRIOR is unit-denominated, TARGET is adult-denominated. Not an oversight:
+  # a PUF non-filer record IS a tax unit, so the question "where does this
+  # record live" is answered by where non-filer UNITS live; the constraint the
+  # fit must satisfy is a count of ADULTS, because that is what the residual
+  # anchors measure (PEP adults - HT2 filing adults). Mixing the two was the
+  # latent problem D5 names -- before this, a unit-denominated target was being
+  # compared against an adult-denominated anchor, and the resulting ratio sat
+  # near 1.0 by coincidence (non-filers are mostly single) rather than by
+  # construction. 17.2% of non-filer units are joint, so adults/units = 1.17
+  # nationally and varies by state with the married mix.
   overall <- nm[, .(n = sum(n_units)), by = state]
   overall_shares <- setNames(rep(0, S), jurisdictions)
   overall_shares[overall$state] <- overall$n / sum(overall$n)
 
+  x_adults <- puf_series_x(tu_n, "n_adults")   # 1 + (filing_status == 2), D5
+
   P0_n <- matrix(0, nrow(tu_n), S)
   targets_n <- list()
+  n_dropped_nonpos_n <- 0
   for (cl in sort(unique(cell_n))) {
     rows <- which(cell_n == cl)
     m_cl <- nm[cell == cl]
@@ -1143,20 +1169,27 @@ build_weight_inputs <- function(tax_units, year, ht2 = NULL, acs_margins = NULL,
     shares[m_cl$state] <- m_cl$n_units / sum(m_cl$n_units)
     P0_n[rows, ] <- matrix(shares, length(rows), S, byrow = TRUE)
 
-    puf_total <- sum(tu_n$weight[rows])
-    x <- rep(1, length(rows))
+    x <- x_adults[rows]
+    puf_total <- sum(tu_n$weight[rows] * x)      # PUF ADULTS in this cell
+    denom <- sum(m_cl$n_adults)                  # ACS ADULTS in this cell
+    if (denom <= 0 || puf_total == 0) next
     for (k in seq_len(nrow(m_cl))) {
-      tgt <- puf_total * m_cl$n_units[k] / sum(m_cl$n_units)
-      if (tgt <= 0) next
+      tgt <- puf_total * m_cl$n_adults[k] / denom
+      if (!is.finite(tgt)) next
+      if (tgt <= 0) { n_dropped_nonpos_n <- n_dropped_nonpos_n + 1; next }
       targets_n[[length(targets_n) + 1]] <- list(
         rows = rows, state = st_idx[[m_cl$state[k]]], x = x,
         target = tgt, lambda = 1,
-        series = "n_units", cell = cl, state_code = m_cl$state[k])
+        series = "n_adults", cell = cl, state_code = m_cl$state[k])
     }
   }
   if (verbose) {
-    message(sprintf("  non-filer targets: %d (%d records, %d cells)",
-                    length(targets_n), nrow(tu_n), length(unique(cell_n))))
+    message(sprintf(paste("  non-filer targets: %d (%d records, %d cells;",
+                          "series n_adults, %.3fM adults from %.3fM units%s)"),
+                    length(targets_n), nrow(tu_n), length(unique(cell_n)),
+                    sum(tu_n$weight * x_adults) / 1e6, sum(tu_n$weight) / 1e6,
+                    if (n_dropped_nonpos_n) sprintf("; %d non-positive dropped",
+                                                    n_dropped_nonpos_n) else ""))
   }
 
   list(jurisdictions = jurisdictions,

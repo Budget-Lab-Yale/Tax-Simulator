@@ -490,11 +490,42 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
      cells, zero differences). The predicate had been written twice, in the
      production builder and the diagnostic; it is now written once.
    - **Blanket exclusion is measurably worse than doing nothing.** Against the
-     residual anchors: v0 10.28% MARD, differentiated **8.79%**, exclusion
+     residual anchors: v0 10.28% MARD, differentiated 8.79%, exclusion
      **11.12%**. That is F6's design call re-measured on the production builder
      rather than re-asserted — and the retained `gq_treatment = 'v0'` path
      reproduces F5's 0.78×–1.51× spread exactly, so the frozen evidence still
-     reproduces.
+     reproduces. **⚠ Those three levels are superseded** — see F1a below; they
+     divide unit-denominated margins by an adult-denominated anchor. The
+     *ordering* stands (all three share the error); the levels do not.
+
+   **Task group F1a closed 2026-08-24 — the non-filer partition now targets
+   ADULTS.** `puf_series_x()` gains `n_adults = 1 + (filing_status == 2)` (D5),
+   distinct from `n_indiv`, which is HT2's concept and adds dependents;
+   `build_acs_margins()` emits `n_adults` beside `n_units`; both sides of the
+   non-filer target are now adult-denominated. Three consequences:
+
+   - **It retires a number this file was quoting.** 17.2% of non-filer units are
+     joint, so adults/units is **1.1717** on the PUF and **1.0989** on the ACS —
+     they differ because the v0 filing model's married mix differs, which is
+     itself work for group C. Every earlier margin-vs-anchor MARD compared units
+     against adults and sat near 1.0 by coincidence. Like-for-like, the margin
+     runs **11.90%**, and it runs *above* the anchor in most states (SD 1.544,
+     MN 1.383) — the v0 −7% filer bias with the right sign at last.
+   - **The first honest placement metric.** Fitted non-filer adult SHARES against
+     the anchors' shares: **MARD 10.54%, 15 of 51 states within 5%, 29 within
+     10%**, worst DC 0.499 and SD 1.392
+     (`research/state_weights/scripts/f1_adult_target_check.R`). Levels are
+     deliberately not compared — the 32.4M-vs-47.5M gap is what F1b and D1 exist
+     to close.
+   - **Two confirmations, no surprises.** The non-filer fit still converges in
+     two iterations to 4.4e-16, so F2 is still required to make this a real
+     calibration rather than prior reproduction. And the state anchors sum 2.14%
+     above the national anchor with PEP agreeing to 0.000% — P5's 4.6x
+     amplification reproduced exactly, i.e. the documented tolerance.
+
+   **F1b (anchors as the primary targets) stays blocked on D1**, the Tax-Data age
+   fix, per design memo §6.2: until it lands, `age_band(tu_n$age1)` is smeared
+   across the dimension the anchors discipline.
    - **⚠ The college states move the wrong way, and that is the open question,
      not a defect.** DC goes from 0.779× its anchor to **0.637×** (VT −17.7%,
      RI −14.1%, MA −12.6%, ND −11.9%, CT −11.7%): students leave the institution

@@ -31,6 +31,8 @@ test_state_weights = function() {
   test_gq_classification()
   test_gq_differentiation()
   test_gq_guards()
+  test_adult_x_vector()
+  test_nonfiler_targets_count_adults()
   message('test_state_weights: ALL TESTS PASSED')
   invisible(TRUE)
 }
@@ -179,4 +181,88 @@ test_gq_guards = function() {
             grepl('unexpected IPUMS GQ code', unknown_gq))
 
   message('  test_gq_guards: PASSED')
+}
+
+
+test_adult_x_vector = function() {
+
+  #----------------------------------------------------------------------------
+  # The D5 adult x-vector: 1 + (filing_status == 2).
+  #
+  # Kept distinct from n_indiv, which is HT2's "individuals" concept and adds
+  # dependents. Confusing the two would silently inflate every non-filer target
+  # by the dependent count, so the test asserts they differ where dependents
+  # exist.
+  #----------------------------------------------------------------------------
+
+  tu = data.table::data.table(
+    filing_status = c(1L, 2L, 4L, 2L, 1L),
+    n_dep         = c(0L, 0L, 2L, 3L, 1L))
+
+  adults = puf_series_x(tu, 'n_adults')
+  indiv  = puf_series_x(tu, 'n_indiv')
+
+  stopifnot(
+    # single/HoH count one adult, joint counts two -- dependents never counted
+    identical(as.numeric(adults), c(1, 2, 1, 2, 1)),
+    # n_indiv adds dependents, so the two agree ONLY with no dependents
+    identical(as.numeric(indiv), c(1, 2, 3, 5, 2)),
+    all(adults == indiv | tu$n_dep > 0),
+    # MFS (status 3) is one adult, like single
+    puf_series_x(data.table::data.table(filing_status = 3L, n_dep = 0L),
+                 'n_adults') == 1)
+
+  message('  test_adult_x_vector: PASSED')
+}
+
+
+test_nonfiler_targets_count_adults = function() {
+
+  #----------------------------------------------------------------------------
+  # build_weight_inputs() must target ADULTS on the non-filer partition, and
+  # the identity that matters is that each cell's targets sum to the PUF's
+  # ADULT total for that cell -- not its unit total. Before D5 landed these
+  # were the same number, which is exactly why the mismatch was invisible.
+  #
+  # Runs on synthetic PUF records and synthetic margins, so no HT2 or ACS read.
+  #----------------------------------------------------------------------------
+
+  # Two non-filer records in one cell: one single, one joint => 3 adults, 2 units
+  tu = data.table::data.table(
+    id = 1:3, weight = c(100, 100, 100), filer = c(0L, 0L, 1L),
+    filing_status = c(1L, 2L, 1L), n_dep = 0L, age1 = c(30L, 30L, 40L),
+    agi = c(0, 0, 50000),
+    wages = c(0,0,50000), txbl_int = 0, exempt_int = 0, div_ord = 0, div_pref = 0,
+    kg_st = 0, kg_lt = 0, txbl_pens_dist = 0, txbl_ira_dist = 0, gross_ss = 0,
+    sole_prop = 0, eitc = 0)
+
+  # Margins put the cell 60/40 across two states, in ADULT terms
+  margins = list(nonfiler_margins = data.table::data.table(
+    state       = c('CA', 'NY'),
+    age_band    = factor('26_34', levels = AGE_BANDS),
+    income_tier = factor('neg_zero',
+                    levels = c('neg_zero','1_10k','10_25k','25_50k','50k_plus')),
+    n_units     = c(60, 40),
+    n_adults    = c(120, 40)))     # CA all-joint, NY all-single: NOT 60/40
+
+  ht2 = data.table::data.table(
+    state = rep(c('CA','NY'), each = 10), agi_stub = rep(1:10, 2),
+    variable = 'n_returns', value = 1000, year = 2022L)
+
+  inp = build_weight_inputs(tu, 2022, ht2 = ht2, acs_margins = margins,
+                            verbose = FALSE)
+  tn = inp$nonfilers$targets
+  stopifnot(length(tn) == 2, all(vapply(tn, `[[`, character(1), 'series') == 'n_adults'))
+
+  # the x-vector reached the target, per record
+  stopifnot(identical(as.numeric(tn[[1]]$x), c(1, 2)))
+
+  # PUF adults in the cell = 100*1 + 100*2 = 300, split by the ADULT shares
+  # 120/160 and 40/160 -> 225 / 75.  A unit-denominated target would have
+  # split 300 by 60/100 and 40/100 -> 180 / 120, so this distinguishes them.
+  got = sort(vapply(tn, `[[`, numeric(1), 'target'))
+  stopifnot(isTRUE(all.equal(got, c(75, 225))),
+            isTRUE(all.equal(sum(got), 300)))
+
+  message('  test_nonfiler_targets_count_adults: PASSED')
 }
