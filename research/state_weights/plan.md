@@ -621,6 +621,14 @@ Effort estimates follow the memo's own where it gives them.
       unit heads; leave military barracks to the income test; report GQ weight by
       type and state. Add `GQ`/`SCHOOL` to `read_acs_extract()`'s default `cols`.
       *Decision-independent — do not hold this behind anything else.*
+      **Scope boundary (2026-08-23):** reclassifying dorm students removes them
+      from their institution state's margin but cannot place them in the parent's
+      state — the ACS has no cross-household parent link. B1 stops at the
+      reclassification and the per-type reporting. Where they should land, and
+      whether they should land anywhere at all, is
+      `notes/student_cross_state_linkage.md`, which turns on a definitional
+      question (residence vs claiming return) that no data source settles. Do not
+      widen B1 to chase it.
 
 ### C — Filing model on the ASEC, transferred to the ACS (~1–2 weeks)
 
@@ -962,6 +970,7 @@ its workstream's plan. This section is that citation.
 | Note | Status | What it owns, and how it relates to Part 2 |
 |---|---|---|
 | `research/state_weights/notes/nonfiler_proposal_rewrite_plan.md` | **open** | Rewriting `research/docx_sources/nonfiler_proposal_jii.docx` as a co-author-facing methodology proposal. A **communication** deliverable, not a modelling task, so it does not sit on the critical path — but it depends on the record being settled, and its own §"Discrepancies between the proposal and the implementation record" is the list of places the proposal and this plan disagree. Best cut **after A6 closes D6**, when the residual method stops moving. |
+| `research/state_weights/notes/student_cross_state_linkage.md` | **open** | Cross-state student linkage, out of B1 step 4. Records `MIGPLAC1` as **rejected** (it identifies movers, so sophomores onward report the dorm state and it silently becomes freshman-only), IPEDS Residence-and-Migration with multi-year linkage as the candidate, and the IRS search for dependents-by-state-by-age as **closed with a negative result**. **Its point is the prior question, not the data:** the PEP anchor places a dorm student in the INSTITUTION state and the HT2 dependents identity places the slot in the PARENT's state, so §3.0's universe invariant breaks whichever way a reallocation goes. Decide what the non-filer partition counts — residence or claiming return — before sourcing any flow data. Recommends validation-only use first, since that survives either answer. Also notes the §3.0 unassigned-dependent pool is worth building regardless. |
 | `research/state_weights/notes/state_weights_alternatives.md` | **deferred** | Alternative weight constructions. Superseded in practice by the Phase 1 bake-off; kept for the reasoning. |
 
 `state_weights_fit_issues.md` is `status: current` — an issues log cited from
