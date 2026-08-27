@@ -167,11 +167,11 @@ Recommendations below; none is signed off.
 
 | # | Question | Recommendation |
 |---|---|---|
-| **1** | **Mok's omitted group.** Her footnote says "non-Hispanic white with more than a college education", which sits oddly with a two-dummy scheme. | **Settled 2026-08-24 from the coefficients.** `educ_less_than_hs` is negative in 14/14 groups (mean −0.414); `educ_college` is **positive in 10/14** (mean +0.158). If the omitted group were the top category both would be negative. Omitted = **HS to some college**; the footnote is loose. The four negative cells are −0.010 to −0.073, noise. |
-| **2** | **Adult-dependent count.** `DEPSTAT` 13.80M, HT2 identity 5.58M, Mok's linked data +11M. | **Do not reconcile — they measure different things.** The anchor needs *return-claimed* adult dependents = the HT2 identity; Mok's +11M is why that is a **floor**. `DEPSTAT` is the survey benchmark and carries IPUMS's own warning, a TY2014→15 break (6.37M → 13.36M), and **10.8% of pointers landing on a modelled non-filer**. Report all three; average none. **Reinforced 2026-08-27**: the HT2 identity is not a stable series either — `N2` changes concept at TCJA, so the dependent sum breaks **84.171M (2017) → 78.883M (2022)**, and `NUMDEP` is absent from HT2 2022 entirely. No published table gives dependents by age; see `notes/anchor_basis_comparison.md`. |
-| **3** | **Support test.** Mok's is not operationally defined. | Adopt **TRIM3's** (household spending split equally, compared to own income) and record it as the one place D-A2's "follow Mok" cannot be followed. Report how many adult dependents flip under alternative thresholds. |
-| **4** | **ACS subfamily fidelity.** `SUBFAM`/`SFTYPE`/`SFRELATE` are absent from our ACS extract, and IPUMS's definition differs from Census's. | **Stakes dropped under S13** — the ACS now builds only the prior. Write the rule **once** as a shared helper taking the survey as an argument; test both sides on a common case; extend the extract only if that test shows material disagreement. Exposure for scale: **89.0M people, 26.9%** live in a household containing a relationship the conventions treat differently. |
-| **5** | **MFS state target.** The HT2 residual absorbs qualifying surviving spouses. | **Measured 2026-08-27 and largely answered** (`notes/anchor_basis_comparison.md` Part C). HT2 carries no MFS series at all, so the residual `N1 − MARS1 − MARS2 − MARS4` is MFS + QSS — but netting T1.6's published MFS off it puts QSS at **0.084M (2017) / 0.056M (2022) returns, 1.4–2.2% of the residual**. So the residual **can** carry the state distribution with a named 2% contamination, and the national level comes from T1.2/T1.6 (3.993M TY2022). Second finding: T1.6 folds QSS into its joint block and therefore counts a surviving spouse as **two** adults, overstating `filing_adults` by 0.03–0.04% — a bias, not noise. |
+| **1** | **Mok's omitted group.** Her footnote says "non-Hispanic white with more than a college education", which sits oddly with a two-dummy scheme. | **Settled 2026-08-24 from the coefficients.** `educ_less_than_hs` is negative in 14/14 groups (mean −0.414); `educ_college` is **positive in 10/14** (mean +0.158). If the omitted group were the top category both would be negative. Omitted = **HS to some college**; the footnote is loose. The four negative cells are −0.010 to −0.073, noise. **Approved for implementation 2026-08-27 (JI), with one carried item: JI to read Mok's Table 14 and its footnote directly and confirm the inference, since it contradicts the published wording.** Calibration re-fits the group constants, so a wrong intercept is partly absorbed — but the education *gradient* is not, and no level adjustment repairs that. |
+| **2** | **Adult-dependent count.** `DEPSTAT` 13.80M, HT2 identity 5.58M, Mok's linked data +11M. | **Do not reconcile — they measure different things.** The anchor needs *return-claimed* adult dependents = the HT2 identity; Mok's +11M is why that is a **floor**. `DEPSTAT` is the survey benchmark and carries IPUMS's own warning, a TY2014→15 break (6.37M → 13.36M), and **10.8% of pointers landing on a modelled non-filer**. Report all three; average none. **Reframed 2026-08-27 by the SOI sweep JI asked for, and the three figures now reconcile.** Pub 1304 **Table 2.3** splits dependent exemptions by *relationship* — children at home / away from home / parents / other — published through TY2017 only (TCJA repealed exemptions), so it covers one anchor year. TY2017: parents 3.370M + children away 0.422M = **3.792M all-adult floor**; adding mixed "other dependents" 7.755M gives a **11.547M ceiling** on the non-home categories. The HT2 identity's 5.58M sits inside that and is corroborated as a floor; `DEPSTAT`'s 13.80M becomes plausible once adult children at home are added; Mok's +11M is the same gap. **They were never three estimates of one thing.** Five pre-TCJA years are now in the store as `national/by_size/exemptions_{year}.xls`. TY2022 has no analogue in the store — the nearest is the credit for other dependents in Pub 1304's credit table, which needs a fetch. Still unmeasured anywhere: dependent AGE, hence the adult share of the 83.161M children-at-home exemptions. |
+| **3** | **Support test.** Mok's is not operationally defined. | Adopt **TRIM3's** (household spending split equally, compared to own income) and record it as the one place D-A2's "follow Mok" cannot be followed. Report how many adult dependents flip under alternative thresholds. **Approved 2026-08-27 (JI).** |
+| **4** | **ACS subfamily fidelity.** `SUBFAM`/`SFTYPE`/`SFRELATE` are absent from our ACS extract, and IPUMS's definition differs from Census's. | **Stakes dropped under S13** — the ACS now builds only the prior. Write the rule **once** as a shared helper taking the survey as an argument; test both sides on a common case; extend the extract only if that test shows material disagreement. Exposure for scale: **89.0M people, 26.9%** live in a household containing a relationship the conventions treat differently. **Approved 2026-08-27 (JI).** |
+| **5** | **MFS state target.** The HT2 residual absorbs qualifying surviving spouses. | **Measured 2026-08-27 and largely answered** (`notes/anchor_basis_comparison.md` Part C). HT2 carries no MFS series at all, so the residual `N1 − MARS1 − MARS2 − MARS4` is MFS + QSS — but netting T1.6's published MFS off it puts QSS at **0.084M (2017) / 0.056M (2022) returns, 1.4–2.2% of the residual**. So the residual **can** carry the state distribution with a named 2% contamination, and the national level comes from T1.2/T1.6 (3.993M TY2022). Second finding: T1.6 folds QSS into its joint block and therefore counts a surviving spouse as **two** adults, overstating `filing_adults` by 0.03–0.04% — a bias, not noise, and one F1d must correct because it adopts T1.6 as the level. **JI asked whether the PUF can impute a correction: it cannot identify QSS** — `filing_status` comes straight from `MARS` and takes four values, folding QSS into joint exactly as SOI does — **but it supplies an independent second MFS level** (3.186M / 3.768M against the published 3.213M / 3.993M), which brackets QSS at **0.06–0.28M, 1.4–7.0% of the residual**. Report the range, not the point. |
 
 ---
 
@@ -207,14 +207,30 @@ important because the whole population is being swapped:
   and the **state shares** from HT2 forces them to agree by construction, gives
   the level T1.6's adults-only universe (which the HT2 basis cannot have, having
   no age), and moves **no state outside its own tolerance in either year**. It is
-  a consistency fix, not a change of answer. Two things the same pass opened:
-  the 0.3–0.5% "two SOI routes disagree" constant behind
-  `E_FILING_ADULTS = 0.005` **does not decompose** — naming the two identifiable
-  universe differences leaves a remainder of 0.9% in 2022 with the sign flipped,
-  so the tolerances are understated on that component; and whether HT2's
-  out-of-state buckets should be *removed* from the level or *reallocated* into
-  the states is a substantive ~1.0–1.2M question (43 of 51 states outside
-  tolerance in 2017) that turns on reading the HT2 docguide.
+  a consistency fix, not a change of answer. **Approved 2026-08-27 (JI).**
+
+  **And the level is the out-of-state-corrected one.** SOI's Other Areas
+  footnote — *"returns filed from Army Post Office and Fleet Post Office
+  addresses by members of the armed forces stationed overseas; and returns filed
+  by other U.S. citizens abroad"* — puts those filers outside the Census
+  resident population, so they must come out of the level rather than be
+  reallocated. That is basis **B2**: `(T1.6 level − out-of-state) × HT2 share`.
+  It is a real ~1.0–1.2M change (43 of 51 states outside tolerance in TY2017),
+  which is now evidence the correction matters rather than an argument against
+  it. Consistent with the filer side, which already carries 53 jurisdictions.
+
+  **Fold in the QSS correction at the same time**, because B2 makes T1.6 the
+  level source and T1.6 counts a surviving spouse as two adults: 0.06–0.28M.
+  The two universe corrections compound, raising the anchor **+2.4% (2017) to
+  +3.2% (2022)**.
+
+  **One thing the same pass opened and did not close:** the 0.3–0.5% "two SOI
+  routes disagree" constant behind `E_FILING_ADULTS = 0.005` **does not
+  decompose** — naming the identifiable universe differences leaves a remainder
+  of 0.9% in 2022 with the sign flipped, so the tolerances are understated on
+  that component. The sweep localized it: a third construction from Pub 1304
+  Table 2.3 agrees with T1.6 to **−0.057%** against HT2's −0.370%, so the
+  remainder is an HT2-versus-Pub-1304 family difference, not Table 1.6.
 - **F2** — demote the income tiers to the prior. The non-filer fit still
   converges in **2 iterations to 4.4e-16**, i.e. it is still pure prior
   reproduction; F2 is what makes it a calibration.
