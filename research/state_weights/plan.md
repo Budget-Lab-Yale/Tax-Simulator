@@ -112,10 +112,26 @@ and the 7-band age shape.
    spouse via `SPLOC`, children via `MOMLOC`/`POPLOC`, subfamilies from
    `FAMREL`/`FTYPE`/`FAMID`. Dependents constructed, retained and tagged (P3).
    MFS is a calibrated post-step, never in the estimation frame (D-A3).
+   **`SCHLCOLL` added to the extract 2026-08-27** — the qualifying-child test
+   needs full-time enrollment for 19–24-year-olds and the extract carried no
+   enrollment variable at all (`EDUC` is attainment). It was the only genuine
+   remaining gap; the pull re-runs all eleven years.
 2. **Income concepts** — from ASEC components, not `ADJGINC`, which is matched
    to the PUF and therefore circular (S12). Two measures per D-A5: excluding
    capital gains (what the coefficients score on) and including them (what is
    reported). Never mixed.
+
+   **Two 2019-redesign asymmetries, both settled 2026-08-27 (S16).**
+   *Retirement income* is harmonised by IPUMS's own mapping —
+   `INCRETIR` for TY2014–17, and `INCRET1+INCRET2+INCPEN1+INCPEN2+INCRANN` for
+   TY2018–24. Verified: `INCRETIR` alone breaks **−61% / −51%** between the two
+   anchor years while the harmonised series runs **+6.3%/yr nominal with
+   recipients in step**. Never use `INCRETIR` alone across 2018.
+   *Capital gains* (`INCCAPG`) exist only from TY2018, so the including-gains
+   measure can be built for TY2022 and not TY2017 — build it where it exists.
+   The excluding-gains measure, which is what the coefficients are scored on,
+   exists in both years, so **the filing model is unaffected; the asymmetry hits
+   the benchmark.** Neither needed an extract change beyond A2b's.
 3. **Filing model** — Mok's 14 group probits below threshold
    (`resources/mok_coefs.csv`); above threshold a hazard calibrated to Pub 5785's
    **11.19M** units, national scalar for v1 (D3).

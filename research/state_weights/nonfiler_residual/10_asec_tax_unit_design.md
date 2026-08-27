@@ -3,7 +3,7 @@ title: "Building tax units and income concepts on the CPS ASEC"
 role: method
 workstream: state_weights
 status: current
-updated: 2026-08-19
+updated: 2026-08-27
 sot: research/state_weights/plan.md
 supersedes: []
 superseded_by: null
@@ -220,8 +220,33 @@ still in the survey and only our decomposition of it is short.
 
 This bites directly. Mok's covariates include the **presence of retirement
 income**, and **our two anchor years sit on opposite sides of the break** —
-TY2017 pre, TY2022 post. Fixed by the extract change in §5; until then, no
-retirement-income covariate is comparable across the two anchors.
+TY2017 pre, TY2022 post.
+
+> **RESOLVED 2026-08-27 (JI), and it needed no further extract change.** A2b
+> pulled the components on 2026-08-23; what was missing was the bridge, which
+> IPUMS's own comparability note defines. Pre-2019 `INCRETIR` is retirement
+> accounts **plus** pensions **plus** annuities at ages 15+; post-2019 it is
+> retirement accounts only at ages 58+, with pensions in `INCPEN1`/`INCPEN2`,
+> annuities in `INCRANN`, and retirement accounts for 15+ in
+> `INCRET1`/`INCRET2`. So the comparable series is
+>
+> ```
+> retirement_income = INCRETIR                                          # TY2014-2017
+>                   = INCRET1 + INCRET2 + INCPEN1 + INCPEN2 + INCRANN   # TY2018-2024
+> ```
+>
+> **Verified against the data rather than assumed** (adults 15+, ASECWT, NIU
+> codes read from each year's DDI):
+>
+> | | TY2017 | TY2022 | change |
+> |---|---:|---:|---|
+> | `INCRETIR` alone | \$570.6B / 22.89M | \$221.5B / 11.12M | **−61% / −51%** — the break |
+> | harmonised as above | \$570.6B / 22.89M | \$773.4B / 28.77M | **+35.5% / +25.7%**, i.e. +6.3%/yr nominal |
+>
+> Dollars and recipients move **together** under the bridge, which is what a
+> population-and-asset trend looks like; `INCRETIR` alone moves them in opposite
+> proportions, which is what a definitional break looks like. Use the harmonised
+> measure for anything crossing 2018, and never `INCRETIR` alone.
 
 ### 2.8 Universe: the ASEC has almost no group quarters
 
@@ -509,11 +534,12 @@ some years. Validate first, then pull; the pull re-runs all eleven years.
 
 | Variable(s) | Why | Priority |
 |---|---|---|
-| `INCPEN1`, `INCPEN2`, `INCRANN` (with `SRCPEN1`/`SRCPEN2`, `INCRET1`/`INCRET2`) | Restores pension and annuity income from TY2018 on. Without them the retirement-income covariate is not comparable across our two anchor years (§2.7). | **blocking for C5** |
+| ~~`INCPEN1`, `INCPEN2`, `INCRANN` (with `SRCPEN1`/`SRCPEN2`, `INCRET1`/`INCRET2`)~~ | Restores pension and annuity income from TY2018 on. **PULLED 2026-08-23 (A2b), and the bridge that makes the series comparable is defined in §2.7 as of 2026-08-27.** No longer blocking. | ✅ done |
 | `LINENO` | Resolves `DEPSTAT` exactly. Accounts for **100%** of today's unresolved pointers (§2.4). | **blocking for C2** |
-| `CAPGAIN`, `CAPLOSS` | The Census tax model's capital-gains items, survey-collected since 2014. Needed for the reported AGI measure of D-A5. | high |
+| ~~`CAPGAIN`, `CAPLOSS`~~ → **`INCCAPG`** | This row was wrong twice over, and the correction is worth keeping: `CAPGAIN`/`CAPLOSS` exist only for **1992–2008** and were Census **tax-model output**, so S12 would bar them even in range. The real variable is **`INCCAPG`**, survey-collected, **pulled 2026-08-23 (A2b)** — but available only from ASEC 2019, i.e. **income year 2018 on**, so TY2017 has no capital-gains item at all. TY2022: \$170.5B, 12.03M recipients, 1.2% of adult `INCTOT`. **Decided 2026-08-27:** build D-A5's including-gains measure where it exists and record TY2017's absence. The excluding-gains measure — the one Mok's coefficients are scored on — exists in both anchor years, so the filing model is unaffected; the asymmetry hits the *benchmark*, not the model. | ✅ done |
+| **`SCHLCOLL`** | **Added 2026-08-27.** School/college enrollment, full- versus part-time, universe ages 16–54. The qualifying-child test treats a 19–24-year-old as a dependent only if enrolled **full time**, and the extract carried **no enrollment variable at all** — `EDUC` is attainment and cannot answer it. Note the CPS spelling: `SCHOOL` is the IPUMS USA name and does not exist here. | **was blocking dependent construction; pulled** |
 | `FAMREL`, `FTYPE`, `FAMID` | Census subfamily identification. **IPUMS CPS has no `SUBFAM`/`SFTYPE`/`SFRELATE`** — those are IPUMS USA variables — so subfamilies must come from `MOMLOC`/`POPLOC`/`SPLOC` plus these. Required by D-A2 rule 3. | high |
-| `INCALIM` | Alimony, on Mok's AGI list; separated from `INCALOTH` into its own variable in 1988. Not currently pulled. | medium |
+| ~~`INCALIM`~~ | **Not available and not obtainable.** Neither `INCALIM` nor `INCALOTH` exists in any of the eleven samples: alimony was folded into `INCOTHER` from 2014, covering our whole window. `INCASIST` and `INCOTHER` are both already pulled, so the income is present but not separable. A documented limitation against Mok's AGI list, not an oversight. | n/a |
 
 **The subfamily asymmetry is a transfer risk, not just an extract gap.** The ACS
 side has `SUBFAM` natively; the ASEC side must reconstruct it. The same rule will
@@ -590,3 +616,13 @@ case.
   [`INCALOTH`](https://cps.ipums.org/cps-action/variables/INCALOTH),
   [ASEC 2019 changes](https://cps.ipums.org/cps/asec_2019_changes.shtml)
 - NBER TAXSIM CPS preparation code — [taxsim.nber.org](https://taxsim.nber.org/to-taxsim/)
+
+## Revision history
+
+- **2026-08-27** — Amended in place (S9). §2.7's retirement-income break is
+  **resolved**: the bridge is defined and verified against both anchor years, and
+  it needed no extract change beyond A2b's. §5's table is corrected — the
+  `CAPGAIN`/`CAPLOSS` row was wrong on both the years and the provenance, the
+  `INCALIM` row is a documented dead end, and `SCHLCOLL` is added as the one
+  genuine remaining gap. No change to §4's conventions.
+- **2026-08-19** — Written (research pass A, task A2).
