@@ -541,15 +541,28 @@ build_acs_margins <- function(acs, year, acs_year = NULL,
 #                            parent's N2); N2 = exemptions pre-2018]
 # PR/OA are excluded to match ACS/PEP coverage.
 # -----------------------------------------------------------------------------
-ht2_filing_persons <- function(ht2) {
-  irs <- dcast(as.data.table(ht2)[!(state %in% NONTAX_BUCKETS) &
+#' @param states jurisdictions to tabulate. Defaults to the 51 modeled ones.
+#'        Pass NONTAX_BUCKETS to measure the out-of-state buckets (OA, and PR
+#'        from 2018) that the default drops -- those returns ARE in Pub 1304's
+#'        national totals, so the two universes differ by exactly this amount
+#'        and 12_anchor_basis_comparison.R needs it named rather than implied.
+ht2_filing_persons <- function(ht2, states = NULL) {
+  ht2 <- as.data.table(ht2)
+  if (is.null(states)) states <- setdiff(unique(ht2$state), NONTAX_BUCKETS)
+  irs <- dcast(ht2[state %in% states &
                                   variable %in% c("n_returns","n_single","n_joint","n_hoh","n_indiv"),
                                   .(value = sum(value)), by = .(state, variable)],
                state ~ variable, value.var = "value")
   irs[, .(state,
           married_filing_adults = 2 * n_joint + (n_returns - n_single - n_joint - n_hoh),
           single_filing_adults  = n_single + n_hoh,
-          dependents            = n_indiv - (n_returns + n_joint))]
+          dependents            = n_indiv - (n_returns + n_joint),
+          # HT2 publishes no MFS series, so the status residual is MFS PLUS
+          # qualifying surviving spouse -- 1 adult either way, which is why the
+          # adult identity above is unaffected by the mix. Named here because a
+          # filing-STATUS target is not: 12_anchor_basis_comparison.R nets the
+          # nationally published MFS count off it to estimate QSS.
+          mfs_qss_returns       = n_returns - n_single - n_joint - n_hoh)]
 }
 
 # -----------------------------------------------------------------------------
@@ -574,7 +587,8 @@ ht2_filing_persons <- function(ht2) {
 # -----------------------------------------------------------------------------
 compare_individuals_acs_irs <- function(ht2, acs) {
 
-  irs <- ht2_filing_persons(ht2)
+  irs <- ht2_filing_persons(ht2)[
+    , .(state, married_filing_adults, single_filing_adults, dependents)]
   setnames(irs, c("married_filing_adults","single_filing_adults","dependents"),
                 c("irs_married_adults","irs_single_adults","irs_children"))
 
@@ -893,6 +907,77 @@ read_ssa_oasdi_65p <- function(year) {
   }
   out[, universe := "beneficiary"][order(state)]
 }
+
+# -----------------------------------------------------------------------------
+# Pub 1304 national by-size tables (IRS-Ind/national/by_size).
+#
+# HT2 is state x AGI stub and carries NO age and NO married-filing-separately
+# series, so the national quantities those would define come from the Pub 1304
+# by-size tables instead. The division of labour is deliberate and is the rule
+# for this pair of sources: Pub 1304 owns national LEVELS, HT2 owns state
+# SHARES, and the two are never differenced (they are different estimands --
+# Pub 1304 is a sample-based national estimate, HT2 is population-based
+# administrative tabulation).
+#
+# Promoted out of nonfiler_residual/02_build_residual_anchors.R on 2026-08-27
+# (one definition per computation) so that 12_anchor_basis_comparison.R reads
+# the same national level the anchors are built on.
+# -----------------------------------------------------------------------------
+#---------------------------------------------------------------
+# Pub 1304 Table 1.6: returns by filing status block x age band
+#---------------------------------------------------------------
+
+# Row-label -> (block | age band) parse of the published sheet. Blocks carry
+# 1 or 2 adults per return; MFJ ages are the PRIMARY taxpayer's (documented
+# approximation). "Under 26" rows in status blocks are treated as 18-25 --
+# under-18 married/HoH filers are negligible; the single block's "Under 18"
+# row (dependent-age filers) is excluded from the adult bands and reported.
+read_pub1304_t16 <- function(year) {
+  f <- file.path(raw_data_root(), 'IRS-Ind/national/by_size',
+                 sprintf('returns_marital_age_%d.xls', year))
+  x <- suppressMessages(read_excel(f, sheet = 1, col_names = FALSE))
+  lab <- str_squish(as.character(x[[1]]))
+  n   <- suppressWarnings(as.numeric(gsub('[^0-9.-]', '', as.character(x[[2]]))))
+
+  block_map <- c('^All returns, total'                        = 'all',
+                 'married persons filing jointly'             = 'mfj',
+                 'married persons filing separately'          = 'mfs',
+                 'heads of household'                         = 'hoh',
+                 'surviving spouse'                           = 'qss',
+                 'single persons'                             = 'single')
+  age_map <- c('^Under 18$' = 'u18', '^Under 26$' = '18_25',
+               '^18 under 26$' = '18_25', '^26 under 35$' = '26_34',
+               '^35 under 45$' = '35_44', '^45 under 55$' = '45_54',
+               '^55 under 65$' = '55_64', '^65 and over$'  = '65p')
+
+  cur_block <- NA_character_
+  out <- list()
+  for (i in seq_along(lab)) {
+    if (is.na(lab[i]) || lab[i] == '') next
+    b <- block_map[str_detect(lab[i], regex(names(block_map), ignore_case = TRUE))]
+    b <- b[!is.na(b)]
+    if (length(b)) { cur_block <- b[1]; next }
+    a <- age_map[str_detect(lab[i], regex(names(age_map), ignore_case = TRUE))]
+    a <- a[!is.na(a)]
+    if (length(a) && !is.na(cur_block) && !is.na(n[i])) {
+      out[[length(out) + 1]] <- data.table(block = cur_block, band = a[1],
+                                           n_returns = n[i])
+    }
+  }
+  t16 <- rbindlist(out)
+  # Duplicate (block, band) rows would mean the label parse broke on a vintage
+  stopifnot(nrow(t16) == uniqueN(t16[, .(block, band)]))
+  t16
+}
+
+read_pub1304_t17_total <- function(year) {
+  f <- file.path(raw_data_root(), 'IRS-Ind/national/by_size',
+                 sprintf('dependent_returns_%d.xls', year))
+  x <- suppressMessages(read_excel(f, sheet = 1, col_names = FALSE))
+  i <- which(str_squish(as.character(x[[1]])) == 'All returns')[1]
+  as.numeric(gsub('[^0-9.-]', '', as.character(x[[2]][i])))
+}
+
 
 #' HI (Medicare)-covered workers by state, `year`: level from Table 4, age
 #' shape from Table 5.

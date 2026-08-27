@@ -168,10 +168,10 @@ Recommendations below; none is signed off.
 | # | Question | Recommendation |
 |---|---|---|
 | **1** | **Mok's omitted group.** Her footnote says "non-Hispanic white with more than a college education", which sits oddly with a two-dummy scheme. | **Settled 2026-08-24 from the coefficients.** `educ_less_than_hs` is negative in 14/14 groups (mean −0.414); `educ_college` is **positive in 10/14** (mean +0.158). If the omitted group were the top category both would be negative. Omitted = **HS to some college**; the footnote is loose. The four negative cells are −0.010 to −0.073, noise. |
-| **2** | **Adult-dependent count.** `DEPSTAT` 13.80M, HT2 identity 5.58M, Mok's linked data +11M. | **Do not reconcile — they measure different things.** The anchor needs *return-claimed* adult dependents = the HT2 identity; Mok's +11M is why that is a **floor**. `DEPSTAT` is the survey benchmark and carries IPUMS's own warning, a TY2014→15 break (6.37M → 13.36M), and **10.8% of pointers landing on a modelled non-filer**. Report all three; average none. |
+| **2** | **Adult-dependent count.** `DEPSTAT` 13.80M, HT2 identity 5.58M, Mok's linked data +11M. | **Do not reconcile — they measure different things.** The anchor needs *return-claimed* adult dependents = the HT2 identity; Mok's +11M is why that is a **floor**. `DEPSTAT` is the survey benchmark and carries IPUMS's own warning, a TY2014→15 break (6.37M → 13.36M), and **10.8% of pointers landing on a modelled non-filer**. Report all three; average none. **Reinforced 2026-08-27**: the HT2 identity is not a stable series either — `N2` changes concept at TCJA, so the dependent sum breaks **84.171M (2017) → 78.883M (2022)**, and `NUMDEP` is absent from HT2 2022 entirely. No published table gives dependents by age; see `notes/anchor_basis_comparison.md`. |
 | **3** | **Support test.** Mok's is not operationally defined. | Adopt **TRIM3's** (household spending split equally, compared to own income) and record it as the one place D-A2's "follow Mok" cannot be followed. Report how many adult dependents flip under alternative thresholds. |
 | **4** | **ACS subfamily fidelity.** `SUBFAM`/`SFTYPE`/`SFRELATE` are absent from our ACS extract, and IPUMS's definition differs from Census's. | **Stakes dropped under S13** — the ACS now builds only the prior. Write the rule **once** as a shared helper taking the survey as an argument; test both sides on a common case; extend the extract only if that test shows material disagreement. Exposure for scale: **89.0M people, 26.9%** live in a household containing a relationship the conventions treat differently. |
-| **5** | **MFS state target.** The HT2 residual absorbs qualifying surviving spouses. | **National share for v1.** The residual carries ~1M misclassified unmarried returns — proportionally worse in small states — and MFS is ~2.5% of returns (3.99M TY2022). Revisit only if the state fit shows MFS-sensitive error. |
+| **5** | **MFS state target.** The HT2 residual absorbs qualifying surviving spouses. | **Measured 2026-08-27 and largely answered** (`notes/anchor_basis_comparison.md` Part C). HT2 carries no MFS series at all, so the residual `N1 − MARS1 − MARS2 − MARS4` is MFS + QSS — but netting T1.6's published MFS off it puts QSS at **0.084M (2017) / 0.056M (2022) returns, 1.4–2.2% of the residual**. So the residual **can** carry the state distribution with a named 2% contamination, and the national level comes from T1.2/T1.6 (3.993M TY2022). Second finding: T1.6 folds QSS into its joint block and therefore counts a surviving spouse as **two** adults, overstating `filing_adults` by 0.03–0.04% — a bias, not noise. |
 
 ---
 
@@ -198,6 +198,23 @@ important because the whole population is being swapped:
 
 - **F1b** — residual anchors as the primary non-filer targets. Was blocked on
   D1; now waits on C's pool.
+- **F1d (new, 2026-08-27)** — **fix the anchor basis before F1b uses it.** The
+  national anchor takes filing adults from Pub 1304 T1.6 and the *state* anchors
+  take them from the HT2 identities, so the 51 states do not sum to the national
+  figure: **−1.36% (2017) / +2.14% (2022), sign flipping between the anchor
+  years.** The fit targets the state file; this plan quotes the national one.
+  Measured in `notes/anchor_basis_comparison.md`: taking the **level** from T1.6
+  and the **state shares** from HT2 forces them to agree by construction, gives
+  the level T1.6's adults-only universe (which the HT2 basis cannot have, having
+  no age), and moves **no state outside its own tolerance in either year**. It is
+  a consistency fix, not a change of answer. Two things the same pass opened:
+  the 0.3–0.5% "two SOI routes disagree" constant behind
+  `E_FILING_ADULTS = 0.005` **does not decompose** — naming the two identifiable
+  universe differences leaves a remainder of 0.9% in 2022 with the sign flipped,
+  so the tolerances are understated on that component; and whether HT2's
+  out-of-state buckets should be *removed* from the level or *reallocated* into
+  the states is a substantive ~1.0–1.2M question (43 of 51 states outside
+  tolerance in 2017) that turns on reading the HT2 docguide.
 - **F2** — demote the income tiers to the prior. The non-filer fit still
   converges in **2 iterations to 4.4e-16**, i.e. it is still pure prior
   reproduction; F2 is what makes it a calibration.
@@ -285,6 +302,7 @@ reading uses `fread(cmd = 'zcat …')` and is POSIX-only. Load the R module in t
 | Note | Status | What it owns |
 |---|---|---|
 | `notes/student_cross_state_linkage.md` | **open** | Cross-state student linkage, out of B1. IPEDS exists and was measured 2026-08-24 — but reallocation *degrades* the fit under the current anchor (MARD 8.79% → 10.04%) because the PEP anchor already places students in the institution state. `MIGPLAC1` rejected. **The prior question is definitional** — residence or claiming return — and no data source settles it. Validation-only use survives either answer. |
+| `notes/anchor_basis_comparison.md` | **open** | Which source sets the level. Recommends F1d's basis change (safe: 0 of 51 states move outside tolerance) and largely answers decision #5 (QSS is 1.4–2.2% of the HT2 status residual). Leaves open the out-of-state bucket question and records why return-claimed adult dependents cannot be sourced better than the current bound — `NUMDEP` is **absent from HT2 2022**, and `N2` breaks 6.3% at TCJA. |
 | `notes/nonfiler_proposal_rewrite_plan.md` | **open** | Rewriting the narrative proposal as a co-author-facing methodology document. Communication, not modelling; best cut once the record stops moving. |
 | `notes/state_weights_alternatives.md` | **deferred** | Alternative weight constructions; superseded in practice by the Phase 1 bake-off, kept for the reasoning. |
 

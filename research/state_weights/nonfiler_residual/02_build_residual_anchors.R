@@ -10,7 +10,12 @@
 #                                  status x age), the age dimension HT2 lacks
 #   residual_anchors_{year}.csv    state x {pep_adults_18p, married/single
 #                                  filing adults (HT2 identities via
-#                                  ht2_filing_persons()), residual, AND the
+#                                  ht2_filing_persons()), mfs_qss_returns (the
+#                                  HT2 status residual -- MFS plus qualifying
+#                                  surviving spouse, since HT2 publishes no MFS
+#                                  series; added 2026-08-27 for decision #5,
+#                                  see notes/anchor_basis_comparison.md Part C),
+#                                  residual, AND the
 #                                  dorm-netted residual -- two universes, two
 #                                  columns, because consumers differ:
 #                                    residual_nonfiling_adults
@@ -70,60 +75,10 @@ dir.create(res_dir, recursive = TRUE, showWarnings = FALSE)
 # identical to the local copy this replaces (2026-08-19).
 A16_BANDS <- TARGET_AGE_BANDS
 
-#---------------------------------------------------------------
-# Pub 1304 Table 1.6: returns by filing status block x age band
-#---------------------------------------------------------------
-
-# Row-label -> (block | age band) parse of the published sheet. Blocks carry
-# 1 or 2 adults per return; MFJ ages are the PRIMARY taxpayer's (documented
-# approximation). "Under 26" rows in status blocks are treated as 18-25 --
-# under-18 married/HoH filers are negligible; the single block's "Under 18"
-# row (dependent-age filers) is excluded from the adult bands and reported.
-read_pub1304_t16 <- function(year) {
-  f <- file.path(raw_data_root(), 'IRS-Ind/national/by_size',
-                 sprintf('returns_marital_age_%d.xls', year))
-  x <- suppressMessages(read_excel(f, sheet = 1, col_names = FALSE))
-  lab <- str_squish(as.character(x[[1]]))
-  n   <- suppressWarnings(as.numeric(gsub('[^0-9.-]', '', as.character(x[[2]]))))
-
-  block_map <- c('^All returns, total'                        = 'all',
-                 'married persons filing jointly'             = 'mfj',
-                 'married persons filing separately'          = 'mfs',
-                 'heads of household'                         = 'hoh',
-                 'surviving spouse'                           = 'qss',
-                 'single persons'                             = 'single')
-  age_map <- c('^Under 18$' = 'u18', '^Under 26$' = '18_25',
-               '^18 under 26$' = '18_25', '^26 under 35$' = '26_34',
-               '^35 under 45$' = '35_44', '^45 under 55$' = '45_54',
-               '^55 under 65$' = '55_64', '^65 and over$'  = '65p')
-
-  cur_block <- NA_character_
-  out <- list()
-  for (i in seq_along(lab)) {
-    if (is.na(lab[i]) || lab[i] == '') next
-    b <- block_map[str_detect(lab[i], regex(names(block_map), ignore_case = TRUE))]
-    b <- b[!is.na(b)]
-    if (length(b)) { cur_block <- b[1]; next }
-    a <- age_map[str_detect(lab[i], regex(names(age_map), ignore_case = TRUE))]
-    a <- a[!is.na(a)]
-    if (length(a) && !is.na(cur_block) && !is.na(n[i])) {
-      out[[length(out) + 1]] <- data.table(block = cur_block, band = a[1],
-                                           n_returns = n[i])
-    }
-  }
-  t16 <- rbindlist(out)
-  # Duplicate (block, band) rows would mean the label parse broke on a vintage
-  stopifnot(nrow(t16) == uniqueN(t16[, .(block, band)]))
-  t16
-}
-
-read_pub1304_t17_total <- function(year) {
-  f <- file.path(raw_data_root(), 'IRS-Ind/national/by_size',
-                 sprintf('dependent_returns_%d.xls', year))
-  x <- suppressMessages(read_excel(f, sheet = 1, col_names = FALSE))
-  i <- which(str_squish(as.character(x[[1]])) == 'All returns')[1]
-  as.numeric(gsub('[^0-9.-]', '', as.character(x[[2]][i])))
-}
+# Pub 1304 Table 1.6 (returns by filing-status block x age band) and Table 1.7
+# (dependent returns) are read by read_pub1304_t16() / read_pub1304_t17_total()
+# in src/data/state_weights.R -- promoted there 2026-08-27 so script 12's
+# basis comparison reads the same national level this script anchors on.
 
 #---------------------------------------------------------------
 # Census PEP: resident population by state x single year of age
