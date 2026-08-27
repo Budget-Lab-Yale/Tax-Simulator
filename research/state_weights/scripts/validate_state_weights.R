@@ -146,10 +146,12 @@ if (identical(mode, '--untargeted')) {
     kg_amt_pos  = list(code = 'A01000', x = pmax(tu_f$kg_st + tu_f$kg_lt, 0))
   )
 
-  # Raw HT2 held-out cells (state x stub), same reader conventions as read_ht2
-  ht2_path <- file.path(read_yaml('./config/interfaces/output_roots.yaml')$production,
-                        'raw_data/IRS-GEO/state/HT2', sprintf('ht2_%d.csv.gz', YEAR))
-  d <- fread(cmd = paste('zcat', shQuote(ht2_path)), colClasses = 'character')
+  # Raw HT2 held-out cells (state x stub), same reader conventions as read_ht2.
+  # Path comes from state_weights.R's ht2_path() rather than being rebuilt here:
+  # the local copy still said IRS-GEO, the pre-2026-08 store name, and shadowed
+  # the sourced helper (decisions_log S4).
+  ht2_file <- ht2_path(YEAR)
+  d <- fread(cmd = paste('zcat', shQuote(ht2_file)), colClasses = 'character')
   setnames(d, toupper(names(d)))
   parse_num <- function(x) as.numeric(str_replace_all(x, ',', ''))
   codes <- unique(vapply(HELD_OUT, `[[`, '', 'code'))

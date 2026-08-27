@@ -1133,6 +1133,19 @@ build_weight_inputs <- function(tax_units, year, ht2 = NULL, acs_margins = NULL,
   tu_f  <- tu[idx_f]
   stub  <- assign_ht2_stub(tu_f$agi, year)
 
+  # `agi` is baseline-CALCULATED, not carried on the raw Tax-Data file, so a
+  # standalone caller that forgets the detail join gets an empty stub vector,
+  # zero filer targets, and an all-zero P0 -- which only surfaces later, as an
+  # invariant assertion inside build_split_weights(). Say so here instead.
+  # This is a warning and not a stop because the non-filer-only callers
+  # (scripts/f1_adult_target_check.R) rely on the empty filer partition.
+  if (nrow(tu_f) > 0 && (length(stub) != nrow(tu_f) || all(is.na(stub)))) {
+    warning("build_weight_inputs(): no usable `agi` on the filer partition, so ",
+            "it will emit ZERO targets and an all-zero prior. Join `agi`/`eitc` ",
+            "from a baseline static detail file (see @param tax_units).",
+            call. = FALSE, immediate. = TRUE)
+  }
+
   # Prior: HT2 return shares within stub
   ht2_ret <- dcast(ht2[variable == "n_returns"], agi_stub ~ state, value.var = "value")
   P0_f <- matrix(0, nrow(tu_f), S)

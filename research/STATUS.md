@@ -3,7 +3,7 @@ title: "State income tax workstream — status"
 role: status
 workstream: cross-cutting
 status: current
-updated: 2026-08-24
+updated: 2026-08-27
 sot: self
 supersedes: []
 superseded_by: null
@@ -450,7 +450,9 @@ exit = tail's); run under `sbatch` with inputs staged on NFS scratch
    EITC/AGI families carry the residual), β sweep, untargeted validation on
    the QWI/ACS demographic cells, downstream IL/CO/NY liability under
    candidate weights; then the `state_weights_{year}.csv` writer for
-   2014/2016–2022 (2013/2015 HT2 gaps: interpolate or skip, decide),
+   2014–2022 (2013 is the only HT2 gap on the store: interpolate or skip,
+   decide — verified 2026-08-27, `ht2_2015.csv.gz` is present with the full
+   series header),
    projection-year carry-forward, and the dispatcher swap off
    `placeholder`. The prior-only vs joint-fit comparison IS the reframed
    A/B decision.

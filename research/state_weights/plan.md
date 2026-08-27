@@ -3,7 +3,7 @@ title: "State weights and the non-filer rebuild — the plan"
 role: plan
 workstream: state_weights
 status: current
-updated: 2026-08-24
+updated: 2026-08-27
 sot: self
 supersedes: []
 superseded_by: null
@@ -213,9 +213,29 @@ important because the whole population is being swapped:
   *filer*-target problem.
 
 **G — swap-in.** Tune to the ≥99%-within-2% bar, write
-`state_weights_{year}.csv` for 2014/2016–2022 (decide the 2013/2015 HT2 gaps),
+`state_weights_{year}.csv` for 2014–2022 (**2013 is the only HT2 gap** — the
+store carries 2012 and 2014–2022, verified 2026-08-27; earlier drafts said
+"2013/2015" and `ht2_2015.csv.gz` is in fact present),
 carry forward to projection years, vintage-tag the files, and flip the
 dispatcher off `placeholder` at `src/sim/run.R:433`.
+
+Two G items live only in `state_weights_phase1_summary.md` §6 and are easy to
+lose, because the *decision* reads as if it had been implemented: **config 7 is
+not wired.** `build_split_weights()` forwards hyperparameters through `...` and
+nothing supplies them, so `fit_gradient()` still defaults to β=1e-3, constant
+lr, 500 steps — the adopted β=1e-4 / cosine / 3,000 exists in prose only. And
+the **239-cell structural core** is neither pruned nor reported at assembly;
+since scratch was reclaimed (§9 of the summary), that now needs the prior and a
+candidate fit regenerated first.
+
+**The filer half is finished as a method and parked by S2, not blocked.** Its
+one substantive gap is the summary's §7.1 and it is not something C can fix:
+held-out geography is weak exactly where the target set carries no structure
+(pensions 17.0, taxable SS 17.1, Sched C amount 30.8, capital gains 61.0 MARD),
+which is what F6 warns against expecting from the non-filer rebuild.
+Demographic target expansion — QWI sex×age residence-corrected via LODES RAC,
+ACS marital×age — is scoped, its fetchers are built (`fetch_qwi()`,
+`fetch_lodes_rac()`, `fetch_lodes_od_matrix()`), and it is unstarted.
 
 ---
 

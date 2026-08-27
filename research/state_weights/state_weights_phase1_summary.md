@@ -3,7 +3,7 @@ title: "State Split Weights — Phase 1 Bake-off Summary"
 role: method
 workstream: state_weights
 status: current
-updated: 2026-08-20
+updated: 2026-08-27
 sot: research/state_weights/plan.md
 supersedes: []
 superseded_by: null
@@ -181,7 +181,8 @@ distribution (stubs 8–9: 156 cells) plus the negative/low-AGI stubs 1–2
 (56); by state, led by CA/FL/TX. Pattern: thin PUF support against extreme
 HT2 shares — a **target-consistency problem, not an optimization problem**
 (no configuration can fit them; several likely conflict with other series in
-the same cell). Full list: `sweep/validation/persistent_misses.csv`.
+the same cell). Full list was `sweep/validation/persistent_misses.csv` —
+**purged from scratch, see §9.**
 
 ### 5.2 Untargeted held-out HT2 series — the decision metric
 
@@ -369,8 +370,19 @@ series, take-up covariate, pilot liability) run before adoption.
 
 ## 9. Reproduction
 
-All artifacts under `/nfs/roberts/scratch/pi_nrs36/ji252/state_weights_tmp/`
-(`sweep/` for fits and metrics, `sweep/validation/` for the battery).
+All artifacts were written to
+`/nfs/roberts/scratch/pi_nrs36/ji252/state_weights_tmp/` (`sweep/` for fits
+and metrics, `sweep/validation/` for the battery).
+
+> **⚠ Verified 2026-08-27: `sweep/` is empty (0 bytes).** Scratch has been
+> reclaimed, so the config-7 fit, the 13 per-config metric files and
+> `validation/persistent_misses.csv` no longer exist. The *numbers* in this
+> document are the surviving record; the fits are not reproducible without
+> re-running the commands below. Consequence for the close-out checklist in
+> §6: pruning the 239-cell structural core needs the prior + a candidate fit
+> regenerated first (`--prior`, then config 7, then `--misses`), roughly 80
+> minutes of sbatch, not a read of a saved CSV. Nothing else in the checklist
+> depends on a scratch artifact.
 
 ```bash
 # from the repo root, each under sbatch (login node OOM-kills at ~7-8 GB)
@@ -386,3 +398,12 @@ External benchmarks: Census STC FY2023 flat file (T40 row); NY DTF
 Personal Income Tax Filers Summary Dataset 1 (Socrata `73iw-kuxv`,
 tax_year 2022, `place_of_residence = 'All Places'`); IRS EITC Central
 participation table (TY2022).
+
+## Revision history
+
+- **2026-08-27** — Amended in place (S9). §5.1 and §9: the scratch sweep
+  artifacts have been reclaimed, so `persistent_misses.csv` and the saved fits
+  no longer resolve; recorded what that costs the §6 checklist. No result in
+  this document changes.
+- **2026-08-19** — §6 gained the S2 sequencing note: the close-out checklist
+  predates JI's 2026-08-16 call that the non-filer rework lands first.
