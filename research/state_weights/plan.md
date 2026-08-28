@@ -70,7 +70,7 @@ interest 2.624, against DINA's 24% / 0.000 / 0.000.
 | **D0** | the anchor age shape (7-band) | ✅ 2026-08-24 — **role changed**: now a validation target, not an input |
 | **F1a** | non-filer targets count **adults**, not tax units | ✅ 2026-08-24 |
 | **F1c** | dorm-student netting as a second anchor universe | ✅ 2026-08-24 |
-| **C** | **build the national non-filer population** | **in progress** — C0–C3 built and gated 2026-08-28 (`nonfiler_pool/01`–`02`: units, thresholds, Mok + Pub 5785 scoring, both anchor years); C4 calibration next |
+| **C** | **build the national non-filer population** | **in progress** — C0–C5 built and gated 2026-08-28 (`nonfiler_pool/01`–`04`: units, thresholds, Mok + Pub 5785 scoring, ACS GQ backfill, joint calibration closing the anchor identity exactly in both years); C6 MFS + C7 emit next |
 | **E** | federal validation of the new pool | after C |
 | **F** | state margins, targets and the re-fit | F1b onward, after C |
 | **G** | production swap-in | after F |

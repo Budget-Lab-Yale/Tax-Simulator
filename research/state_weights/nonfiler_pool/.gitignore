@@ -2,3 +2,4 @@
 # regenerable from the numbered scripts and too large to track; the small
 # gate CSVs ARE tracked, as the bundle's committed evidence.
 results/*.rds
+results/gq_persons_*.csv.gz
