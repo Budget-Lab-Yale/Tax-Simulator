@@ -1,0 +1,4 @@
+# Intermediate microdata (units_{year}.rds and later stage outputs) are
+# regenerable from the numbered scripts and too large to track; the small
+# gate CSVs ARE tracked, as the bundle's committed evidence.
+results/*.rds

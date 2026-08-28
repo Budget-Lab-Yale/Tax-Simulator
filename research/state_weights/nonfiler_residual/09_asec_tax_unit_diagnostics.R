@@ -34,43 +34,15 @@ suppressPackageStartupMessages({
   library(stringr); library(dplyr); library(readr); library(yaml)
 })
 source('src/data/state_weights.R')
+source('src/data/asec_tax_units.R')   # read_asec/strip_labels/niu_code live there now
 
 ANCHOR_YEARS <- c(2017L, 2022L)
 RESULTS <- 'research/state_weights/nonfiler_residual/results'
 dir.create(RESULTS, recursive = TRUE, showWarnings = FALSE)
 
-asec_dir <- function() file.path(raw_data_root(), 'CPS-ASEC/cps_asec_common')
-
-# ASEC year Y asks about income in calendar year Y-1.
-asec_sample_dir <- function(tax_year) {
-  file.path(asec_dir(), sprintf('cps%d_03s', tax_year + 1L))
-}
-
-# IPUMS strips value labels onto haven attributes; drop them so data.table
-# arithmetic and comparisons behave like plain numerics.
-strip_labels <- function(dt) dt[, lapply(.SD, function(v) { attributes(v) <- NULL; v })]
-
-read_asec <- function(tax_year, cols = NULL) {
-  dd  <- asec_sample_dir(tax_year)
-  ddi <- read_ipums_ddi(list.files(dd, '\\.xml$', full.names = TRUE))
-  x   <- as.data.table(read_ipums_micro(ddi, verbose = FALSE))
-  if (!is.null(cols)) x <- x[, ..cols]
-  x <- strip_labels(x)
-  x[, tax_year := tax_year]
-  setattr(x, 'ddi', ddi)
-  x[]
-}
-
-# NIU codes differ per variable (INCSS 999999, INCINT 9999999, INCWAGE
-# 99999999, EITCRED 9999, ...). Read them off the DDI rather than hardcoding,
-# and assert the code is the variable's maximum -- if it is not, the label and
-# the data disagree and every aggregate below would be silently wrong.
-niu_code <- function(ddi, var, x) {
-  vl <- ipums_val_labels(ddi, all_of(var))
-  hit <- vl$val[str_detect(vl$lbl, regex('N\\.?I\\.?U', ignore_case = TRUE))]
-  stopifnot(length(hit) == 1, max(x[[var]]) == hit)
-  hit
-}
+# The reader trio (asec_dir / asec_sample_dir / strip_labels / read_asec /
+# niu_code) was PROMOTED to src/data/asec_tax_units.R on 2026-08-28 (group C
+# stage C0; one definition per computation) -- sourced above, not redefined.
 
 #-----------------------------------------------------------------------------
 # A1. Continuity: do the Census recodes behave the same way in every year?
