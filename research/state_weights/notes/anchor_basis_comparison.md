@@ -14,8 +14,10 @@ superseded_by: null
 **JI, 2026-08-27.** Measured by
 `research/state_weights/nonfiler_residual/12_anchor_basis_comparison.R`;
 per-state output in `nonfiler_residual/results/anchor_basis_comparison_{year}.csv`.
-**Open**: it recommends a change to the state anchors and a resolution of plan
-decision #5, neither signed off.
+**Status**: the basis change is **approved and implemented** (S15, 2026-08-27);
+the out-of-state question that gated it is resolved. What remains open is the
+tolerance constant, which does not decompose, and the TY2022 adult-dependent
+reading, which needs a table fetch.
 
 ## The question
 
@@ -106,6 +108,23 @@ sum to the national anchor by construction, it inherits T1.6's adults-only
 universe (which basis A cannot, having no age), and it moves **no state beyond
 the tolerance the anchors already claim**, in either year. Recommended.
 
+> **IMPLEMENTED 2026-08-27** in `02_build_residual_anchors.R`, as B2 once the
+> out-of-state question resolved. `level_51 = T1.6 − out_of_state − qss`, and
+> `residual_st = pep_st − level_51 × ht2_share_st`. The identity is asserted at
+> build time. TY2017 48.470M, TY2022 47.803M; both bases retained as columns
+> (`filing_adults_ht2`, `residual_nonfiling_adults_ht2basis`). Script 12 now
+> asserts that its own arithmetic reproduces what the builder writes, so the two
+> cannot drift apart silently.
+>
+> **The pro-rata age allocation is an assumption, and it is the one to suspect
+> first** if the constructed pool's age validation disagrees at the young end.
+> HT2's out-of-state bucket carries no age; the footnote covers overseas forces
+> (18–34-skewed) and the much larger "citizens abroad" (not), and the bucket is
+> a mailing-address artifact rather than a residency determination, so nothing
+> in the data supports concentrating it. The choice moves the 18_25 band's
+> residual by **+1.3% (pro rata) to +11.7% (all of it in 18_25)** and leaves the
+> total unchanged either way.
+
 **B2 is a substantive level change — and it is now the recommended one.**
 Removing the out-of-state filers is right in principle, because PEP counts
 residents of the 51 states, and the open question was whether `OA` is *citizens
@@ -132,6 +151,40 @@ resident population that never contained them.
 `state_docguide_*.doc` files in our store (all searched). It is Pub 1304's
 state-table footnote, supplied by JI; cite it there rather than to the HT2
 documentation guide.
+
+### What the basis change did not do, measured after implementing it
+
+Re-running the placement check — fitted non-filer adult **shares** against
+anchor shares — the metric is essentially unchanged:
+
+| TY2022 | before | after |
+|---|---:|---:|
+| MARD, raw anchor | 10.54% | **10.44%** |
+| states within 5% | 15 of 51 | **15 of 51** |
+
+**This was predictable from Part B and should have been predicted.** A and B
+differ by a *uniform* scale factor on the subtrahend — 0.9987 in TY2022, 0.9914
+in TY2017 — so if the change sits inside every state's tolerance, as Part B
+measured, it cannot materially move a share-placement metric either. The two
+statements are the same fact. The basis change earns its place on **consistency
+and universe correctness**, exactly as the dorm netting does, and not on fit;
+anyone expecting the placement metric to improve has mistaken what it fixes.
+What closes the placement gap is F1b plus phase C's calibration.
+
+One genuinely new reading did come out of the re-run, and it refines F1c.
+Dorm netting is **not** uniformly worse than the raw anchor — it is worse on the
+*mean* and better on everything the netting was for:
+
+| TY2022, netted vs raw | raw | net of dorm |
+|---|---:|---:|
+| MARD (mean) | 10.44% | 10.69% |
+| median error | 9.10% | **8.11%** |
+| states within 5% | 15 | **18** |
+| the eight college states | 15.75% | **12.39%** |
+
+So netting helps the states it exists for and pays for it in the tail. "It does
+not improve the fit" was too blunt; the mean is the only metric on which that is
+true.
 
 ## Part C — MFS is published, QSS is derivable and tiny
 

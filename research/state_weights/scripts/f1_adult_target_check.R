@@ -83,7 +83,9 @@ panel <- rbindlist(lapply(c('raw','net_dorm'), function(v) {
 
 cat(sprintf('\nfitted non-filer adults %.3fM | anchor raw %.3fM, net of dorm %.3fM\n',
             sum(z$adults)/1e6, sum(z$raw)/1e6, sum(z$net_dorm)/1e6))
-cat('(levels are NOT compared -- the gap is what F1b and the D1 rake close)\n\n')
+cat(paste('(levels are NOT compared -- the gap is what F1b and phase C\'s joint',
+          'calibration close.\n D1\'s rake was the old answer and is dropped',
+          'under S13.)\n\n'))
 cat('=== fitted adult SHARES vs anchor SHARES ===\n'); print(panel)
 
 if (!all(is.na(z$net_dorm))) {

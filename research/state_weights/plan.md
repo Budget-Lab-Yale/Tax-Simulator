@@ -88,9 +88,12 @@ interest 2.624, against DINA's 24% / 0.000 / 0.000.
   (`scripts/f1_adult_target_check.R`).
 - **F1c ships on universe consistency alone.** Netting dorm students out of the
   anchor is right because B1 removed them from the margin and the PUF non-filer
-  partition holds no dependents (0 of 13,204 records). It does **not** improve
-  the fit — the TY2022 gain did not replicate on TY2017, and it moves only
-  ~20 of 51 states toward 1 in either year.
+  partition holds no dependents (0 of 13,204 records). **Refined 2026-08-27:**
+  "does not improve the fit" was too blunt — it is worse on the *mean* (MARD
+  10.69% vs 10.44%) and better on everything the netting exists for: median
+  error 8.11% vs 9.10%, **18 of 51 states within 5% against 15**, and the eight
+  college states 12.39% vs 15.75%. It helps the states it is for and pays for it
+  in the tail.
 
 ---
 
@@ -214,7 +217,7 @@ important because the whole population is being swapped:
 
 - **F1b** — residual anchors as the primary non-filer targets. Was blocked on
   D1; now waits on C's pool.
-- **F1d (new, 2026-08-27)** — **fix the anchor basis before F1b uses it.** The
+- **F1d — DONE 2026-08-27. The anchor basis is fixed.** The
   national anchor takes filing adults from Pub 1304 T1.6 and the *state* anchors
   take them from the HT2 identities, so the 51 states do not sum to the national
   figure: **−1.36% (2017) / +2.14% (2022), sign flipping between the anchor
@@ -237,8 +240,23 @@ important because the whole population is being swapped:
 
   **Fold in the QSS correction at the same time**, because B2 makes T1.6 the
   level source and T1.6 counts a surviving spouse as two adults: 0.06–0.28M.
-  The two universe corrections compound, raising the anchor **+2.4% (2017) to
-  +3.2% (2022)**.
+
+  **Implemented in `02_build_residual_anchors.R`.** `level_51 = T1.6 −
+  out_of_state − qss`, distributed by HT2 filing-adult shares, with the
+  state-sums-to-national identity **asserted at build time**. Anchors are now
+  **48.470M (2017) / 47.803M (2022)**, up 3.80% / 0.57% on the historical basis.
+  Both bases kept as columns. The out-of-state removal is spread **pro rata**
+  across age bands — an assumption, since the bucket carries no age; it moves the
+  18_25 band by +1.3% against +11.7% if concentrated there, and it is the first
+  thing to suspect if C's age validation disagrees at the young end.
+
+  **It did not move the placement metric, and could not have.** Fitted adult
+  shares against anchor shares run MARD **10.44%** against 10.54% before, with
+  15 of 51 states inside 5% either way. A and B differ by a uniform scale factor
+  on the subtrahend, so "inside every state's tolerance" and "cannot move a
+  share metric" are the same fact. This fix buys consistency and universe
+  correctness, like the dorm netting; **F1b and C's calibration are what close
+  the placement gap.**
 
   **One thing the same pass opened and did not close:** the 0.3–0.5% "two SOI
   routes disagree" constant behind `E_FILING_ADULTS = 0.005` **does not
