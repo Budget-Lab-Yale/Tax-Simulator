@@ -130,21 +130,97 @@ for (yr in years) {
   u18_filers <- t16[block == 'all' & band == 'u18', sum(n_returns)]
   fa[band == '18_25', filing_adults := filing_adults - u18_filers]
 
-  # National anchor: PEP adults by band minus filing adults by band
-  pep_nat <- pep[AGE >= 18, .(pep_adults = sum(pop)), by = .(band = as.character(a16_band(AGE)))]
-  nat <- merge(pep_nat, fa, by = 'band', all = TRUE)
-  nat <- nat[match(A16_BANDS, band)]
-  nat[, residual_nonfiling_adults := pep_adults - filing_adults]
-  nat <- rbind(nat, data.table(band = 'total_18p', t(colSums(nat[, -1]))))
-
-  # HT2 identities by state; national consistency check vs the T1.6 build
+  # HT2 identities by state. Read BEFORE the national anchor because the two
+  # universe corrections below are measured off HT2 and applied to T1.6's level.
   ht2 <- read_ht2(ht2_path(yr), yr)
   fp  <- ht2_filing_persons(ht2)
   ht2_filing_adults <- fp[, sum(married_filing_adults + single_filing_adults)]
-  message(sprintf('  filing adults 18+: T1.6 %.1fM (excl. %.2fM under-18 filers) vs HT2 identities %.1fM (gap %.2f%%)',
-                  nat[band == 'total_18p', filing_adults] / 1e6, u18_filers / 1e6,
+
+  #--------------------------------------------------------------------------
+  # THE ANCHOR BASIS (S15, JI 2026-08-27). Pub 1304 owns the LEVEL, HT2 owns
+  # the STATE SHARES, and two universe corrections come off the level first.
+  #
+  # This closes what the state-anchor comment below had deferred as "state
+  # shares of the T1.6-consistent national level come later". Before it, the
+  # national anchor used T1.6 and the state anchors used the HT2 identities, so
+  # the 51 states summed to -1.36% (2017) / +2.14% (2022) of the national
+  # figure with the sign FLIPPING between the anchor years -- and the fit
+  # targets the state file while every document quoted the national one.
+  # Measured in notes/anchor_basis_comparison.md.
+  #
+  #   (a) OUT-OF-STATE FILERS come out of the level. SOI's Other Areas footnote:
+  #       "returns filed from Army Post Office and Fleet Post Office addresses
+  #       by members of the armed forces stationed overseas; and returns filed
+  #       by other U.S. citizens abroad". Both sit OUTSIDE the Census resident
+  #       population -- which excludes overseas forces and citizens abroad --
+  #       so subtracting them from PEP was subtracting people the denominator
+  #       never contained. Removed, not reallocated. ~1.0-1.2M.
+  #
+  #   (b) THE QSS DOUBLE-COUNT comes out too. T1.6 has four status blocks and
+  #       folds qualifying surviving spouses into the joint one ("Returns of
+  #       married persons filing jointly AND RETURNS OF SURVIVING SPOUSES"), so
+  #       the 2-adults-per-joint-return rule above gives a surviving spouse who
+  #       filed ALONE two adults. QSS is published nowhere, so it is derived:
+  #       HT2's status residual (MFS + QSS, since HT2 has no MFS series) less
+  #       T1.6's published MFS, on a matched universe. 0.06-0.08M.
+  #
+  # Both corrections RAISE the residual, and together by 2.2-2.6%.
+  #
+  # ⚠ ASSUMPTION, not a finding (JI 2026-08-27): the out-of-state removal is
+  # spread PRO RATA across age bands, because HT2's bucket carries no age. The
+  # footnote covers two populations with opposite age profiles -- overseas
+  # forces, who skew 18-34, and the far larger "other U.S. citizens abroad",
+  # who do not -- and the bucket is a mailing-address artifact rather than a
+  # residency determination, so nothing in the data supports concentrating it.
+  # The choice moves the 18_25 band's residual by +1.3% (pro rata) to +11.7%
+  # (all of it in 18_25); the total is unaffected either way. It matters because
+  # nonfiler_age_shape_{year}.csv is a validation target for the constructed
+  # pool, so if that validation later disagrees at the young end, look here
+  # first. The QSS correction is spread the same way and is immaterial at its
+  # magnitude.
+  #--------------------------------------------------------------------------
+  fa_oos      <- {
+    o <- ht2_filing_persons(ht2, states = NONTAX_BUCKETS)
+    if (nrow(o)) o[, sum(married_filing_adults + single_filing_adults)] else 0
+  }
+  mfs_qss     <- fp[, sum(mfs_qss_returns)] +
+                 { o <- ht2_filing_persons(ht2, states = NONTAX_BUCKETS)
+                   if (nrow(o)) o[, sum(mfs_qss_returns)] else 0 }
+  qss_implied <- mfs_qss - t16[block == 'mfs', sum(n_returns)]
+  # A negative implied QSS would mean T1.6's published MFS exceeds the whole
+  # HT2 status residual, which is impossible on a matched universe and is how
+  # the missing out-of-state buckets were found in the first place.
+  stopifnot(qss_implied >= 0)
+
+  fa[, filing_adults_t16_published := filing_adults]
+  level_correction <- fa_oos + qss_implied
+  fa[, filing_adults := filing_adults -
+       level_correction * filing_adults_t16_published /
+       sum(filing_adults_t16_published)]
+  level_51 <- fa[, sum(filing_adults)]
+
+  message(sprintf(paste('  anchor basis (S15): T1.6 %.3fM - out-of-state %.3fM',
+                        '- QSS double-count %.3fM = level %.3fM (%+.2f%%)'),
+                  fa[, sum(filing_adults_t16_published)] / 1e6, fa_oos / 1e6,
+                  qss_implied / 1e6, level_51 / 1e6,
+                  -100 * level_correction / fa[, sum(filing_adults_t16_published)]))
+
+  # National anchor: PEP adults by band minus the corrected filing adults
+  pep_nat <- pep[AGE >= 18, .(pep_adults = sum(pop)), by = .(band = as.character(a16_band(AGE)))]
+  nat <- merge(pep_nat, fa[, .(band, filing_adults)], by = 'band', all = TRUE)
+  nat <- nat[match(A16_BANDS, band)]
+  nat[, residual_nonfiling_adults := pep_adults - filing_adults]
+  nat <- rbind(nat, data.table(band = 'total_18p', t(colSums(nat[, -1]))))
+  # The published-vs-HT2 gap, kept as a diagnostic on the two SOURCE FAMILIES.
+  # It is NOT the corrected level (reported above) -- labelling it T1.6 after
+  # the correction would misname the quantity. The gap does not decompose into
+  # named universe differences; notes/anchor_basis_comparison.md Part A.
+  message(sprintf(paste('  source families, filing adults 18+: T1.6 as published',
+                        '%.1fM (excl. %.2fM under-18 filers) vs HT2 identities',
+                        '%.1fM (gap %+.2f%%)'),
+                  fa[, sum(filing_adults_t16_published)] / 1e6, u18_filers / 1e6,
                   ht2_filing_adults / 1e6,
-                  100 * (nat[band == 'total_18p', filing_adults] / ht2_filing_adults - 1)))
+                  100 * (fa[, sum(filing_adults_t16_published)] / ht2_filing_adults - 1)))
   message(sprintf('  national residual non-filing adults 18+: %.1fM (%.1f%% of PEP adults)',
                   nat[band == 'total_18p', residual_nonfiling_adults] / 1e6,
                   100 * nat[band == 'total_18p', residual_nonfiling_adults / pep_adults]))
@@ -210,13 +286,46 @@ for (yr in years) {
                   100 * shape[band == '65_74', residual_nonfiling_adults / pep_adults],
                   100 * shape[band == '75p', residual_nonfiling_adults / pep_adults]))
 
-  # State anchor: PEP 18+ minus HT2-identity filing adults (state shares of the
-  # T1.6-consistent national level come later, with the OASDI age allocation)
+  # State anchor: PEP 18+ minus the T1.6-consistent level distributed by HT2
+  # state shares (S15, implemented 2026-08-27 -- this is the "come later" the
+  # previous version of this comment deferred).
+  #
+  # BOTH BASES ARE KEPT, as columns, the way the dorm netting below is: the
+  # primary columns are the corrected basis and are what consumers get by
+  # default, and the `_ht2basis` pair is retained so the comparison stays
+  # readable rather than only living in a note.
   st <- merge(pep[AGE >= 18, .(pep_adults_18p = sum(pop)), by = state],
               fp, by = 'state')
-  st[, filing_adults := married_filing_adults + single_filing_adults]
+  st[, filing_adults_ht2 := married_filing_adults + single_filing_adults]
+  st[, residual_nonfiling_adults_ht2basis := pep_adults_18p - filing_adults_ht2]
+
+  st[, ht2_filing_share := filing_adults_ht2 / sum(filing_adults_ht2)]
+  st[, filing_adults := level_51 * ht2_filing_share]
   st[, residual_nonfiling_adults := pep_adults_18p - filing_adults]
   st[, residual_share_of_adults := residual_nonfiling_adults / pep_adults_18p]
+
+  # The whole point of the basis change: the 51 states now sum to the national
+  # anchor BY CONSTRUCTION, because PEP's state counts sum to PEP's national
+  # count and the shares sum to one. If this ever fails the two files have
+  # drifted apart again, which is the defect S15 exists to close.
+  stopifnot(
+    isTRUE(all.equal(st[, sum(residual_nonfiling_adults)],
+                     nat[band == 'total_18p', residual_nonfiling_adults],
+                     tolerance = 1e-6)),
+    all(st$residual_nonfiling_adults > 0),
+    all(st$filing_adults > 0))
+
+  message(sprintf(paste('  state anchors: %.3fM (corrected basis) vs %.3fM (HT2',
+                        'basis) = %+.2f%%; sums to the national anchor exactly'),
+                  st[, sum(residual_nonfiling_adults)] / 1e6,
+                  st[, sum(residual_nonfiling_adults_ht2basis)] / 1e6,
+                  100 * (st[, sum(residual_nonfiling_adults)] /
+                         st[, sum(residual_nonfiling_adults_ht2basis)] - 1)))
+  message(sprintf('    per-state change: %+.2f%% (%s) to %+.2f%% (%s)',
+                  100 * min(st$residual_nonfiling_adults / st$residual_nonfiling_adults_ht2basis - 1),
+                  st[which.min(residual_nonfiling_adults / residual_nonfiling_adults_ht2basis), state],
+                  100 * max(st$residual_nonfiling_adults / st$residual_nonfiling_adults_ht2basis - 1),
+                  st[which.max(residual_nonfiling_adults / residual_nonfiling_adults_ht2basis), state]))
 
   # --- dorm-student netting (D1's "net of claimed adult dependents") ---------
   # PEP places a dormitory student in the INSTITUTION state and they are not a

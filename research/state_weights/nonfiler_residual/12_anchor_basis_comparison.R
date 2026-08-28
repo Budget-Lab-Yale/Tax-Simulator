@@ -95,7 +95,7 @@ for (yr in ANCHOR_YEARS) {
 
   # The state anchors must be the same HT2 tabulation script 02 wrote, or the
   # comparison is against a different file than the one the fit targets.
-  chk <- merge(anchors[, .(state, fa_file = filing_adults)], fa_states, by = 'state')
+  chk <- merge(anchors[, .(state, fa_file = filing_adults_ht2)], fa_states, by = 'state')
   stopifnot(nrow(chk) == 51, max(abs(chk$fa_file - chk$fa)) < 1)
 
   A  <- fa_states[, sum(fa)]          # HT2 identity, 51 states
@@ -119,17 +119,24 @@ for (yr in ANCHOR_YEARS) {
   message(sprintf('    raw gap before decomposition                   %+.3f%%',
                   100 * (D / A - 1)))
 
+  # Hoisted from Part C: the QSS double-count is part of the level B2 uses, so
+  # it has to be known before Part B can reproduce what script 02 implements.
+  mfs_qss_51  <- fa_states_full[, sum(mfs_qss_returns)]
+  mfs_qss_oos <- if (nrow(oos)) oos[, sum(mfs_qss_returns)] else 0
+  qss_implied <- (mfs_qss_51 + mfs_qss_oos) - t16$mfs_returns
+
   #-------------------------------------------------------------------------
   # PART B -- the three bases
   #-------------------------------------------------------------------------
-  st <- merge(anchors[, .(state, pep_adults_18p, fa_ht2 = filing_adults,
-                          residual_A = residual_nonfiling_adults)],
+  st <- merge(anchors[, .(state, pep_adults_18p, fa_ht2 = filing_adults_ht2,
+                          residual_A = residual_nonfiling_adults_ht2basis,
+                          residual_implemented = residual_nonfiling_adults)],
               tol[state != 'US', .(state, tolerance_pct)], by = 'state')
   stopifnot(nrow(st) == 51)
 
   st[, share_ht2 := fa_ht2 / A]
   st[, `:=`(fa_B1 = D * share_ht2,
-            fa_B2 = (D - fa_oos) * share_ht2)]
+            fa_B2 = (D - fa_oos - qss_implied) * share_ht2)]
   st[, `:=`(residual_B1 = pep_adults_18p - fa_B1,
             residual_B2 = pep_adults_18p - fa_B2)]
 
@@ -137,7 +144,13 @@ for (yr in ANCHOR_YEARS) {
   # construction. B1 to (PEP - T1.6); B2 to (PEP - T1.6 + out-of-state).
   pep_51 <- st[, sum(pep_adults_18p)]
   stopifnot(abs(st[, sum(residual_B1)] - (pep_51 - D)) < 1,
-            abs(st[, sum(residual_B2)] - (pep_51 - (D - fa_oos))) < 1)
+            abs(st[, sum(residual_B2)] - (pep_51 - (D - fa_oos - qss_implied))) < 1)
+
+  # B2 is what script 02 now implements (S15), so this script has become a
+  # standing regression check on the builder rather than a one-off comparison:
+  # if 02 and this arithmetic ever disagree, one of them has drifted.
+  stopifnot(isTRUE(all.equal(st$residual_B2, st$residual_implemented,
+                             tolerance = 1e-6)))
 
   st[, `:=`(diff_B1_pct = 100 * (residual_B1 / residual_A - 1),
             diff_B2_pct = 100 * (residual_B2 / residual_A - 1))]
@@ -145,13 +158,18 @@ for (yr in ANCHOR_YEARS) {
             B2_within_tol = abs(diff_B2_pct) <= tolerance_pct)]
 
   message(sprintf('  PART B  state anchors, three bases (TY%d)', yr))
-  message(sprintf('    total  A %8.3fM   B1 %8.3fM   B2 %8.3fM   national anchor %8.3fM',
+  message(sprintf(paste('    total  A %8.3fM (historical)   B1 %8.3fM   B2 %8.3fM',
+                        '<- IMPLEMENTED, and what national_anchor now carries'),
                   st[, sum(residual_A)] / 1e6, st[, sum(residual_B1)] / 1e6,
-                  st[, sum(residual_B2)] / 1e6, (pep_51 - D) / 1e6))
+                  st[, sum(residual_B2)] / 1e6))
+  # NOTE on reading the tolerance column now that B2 is implemented: the
+  # tolerance file is regenerated ON the new residual, so "outside own
+  # tolerance" measures how far the HISTORICAL basis sits from the current one.
+  # It is a record of the size of the change, not a live warning.
   for (v in c('B1', 'B2')) {
     d <- st[[paste0('diff_', v, '_pct')]]
     w <- st[[paste0(v, '_within_tol')]]
-    message(sprintf('    %s vs A: mean %+.2f%%  range %+.2f%% (%s) to %+.2f%% (%s)  |  %d of 51 outside own tolerance',
+    message(sprintf('    %s vs A: mean %+.2f%%  range %+.2f%% (%s) to %+.2f%% (%s)  |  %d of 51 beyond the current tolerance',
                     v, mean(d), min(d), st$state[which.min(d)],
                     max(d), st$state[which.max(d)], sum(!w)))
   }
@@ -173,10 +191,6 @@ for (yr in ANCHOR_YEARS) {
   # The netting only works on a MATCHED universe, which is Part A's lesson
   # applied: T1.6 counts every filed return, so the HT2 side must include the
   # out-of-state buckets or the difference is contaminated by them.
-  mfs_qss_51  <- fa_states_full[, sum(mfs_qss_returns)]
-  mfs_qss_oos <- if (nrow(oos)) oos[, sum(mfs_qss_returns)] else 0
-  qss_implied <- (mfs_qss_51 + mfs_qss_oos) - t16$mfs_returns
-
   message(sprintf('  PART C  MFS/QSS, TY%d', yr))
   message(sprintf('    HT2 status residual (MFS+QSS), 51 states   %8.3fM returns', mfs_qss_51 / 1e6))
   message(sprintf('    + out-of-state buckets                     %8.3fM returns', mfs_qss_oos / 1e6))
