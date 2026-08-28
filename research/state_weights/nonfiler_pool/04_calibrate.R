@@ -15,12 +15,36 @@
 #     underdetermined, seven band deltas is exactly determined (one monotone
 #     1-D root per band, no optimizer).
 #   * the hazard scalar is held at its Pub 5785 solution (11.19M above-
-#     threshold non-filing units) -- the anchor cannot separately identify the
-#     above-threshold share, so the external level is the identifying
-#     restriction, exactly as D3 intended.
-#   * dependent-headed units keep their raw Mok scores: they enter the
-#     accounting as NETTING (claimed dependents are not pool units), so
-#     calibrating them would move both sides of the same equation.
+#     threshold non-filing units) -- the residual count cannot separately
+#     identify the above-threshold share, so the external level is the
+#     identifying restriction, exactly as D3 intended.
+#   * ONE global adjustment to the wage-presence coefficient, gamma, added
+#     2026-08-28. The seven band deltas fix HOW MANY non-filing adults sit in
+#     each age band; nothing fixed WHICH ones, and within a band the model
+#     takes the lowest predicted filing probabilities. Wage presence is one of
+#     the strongest positive predictors of filing in Mok's equations, so the
+#     income-less were selected first and wage-earners last: measured against
+#     Pub 5785 Table 1, the emitted records carried 8.17M people with wages
+#     where 15.96M (scaled to our universe) was implied -- half as many
+#     earners, each earning 2.2x as much. Mok reports the same bias in her own
+#     results: "simulated filers are slightly more likely to report wage and
+#     salary income than are filers."
+#
+#     gamma shifts the probit index by gamma * 1(has wages) for below-
+#     threshold units. One parameter against one constraint, solved OUTSIDE
+#     the band loop because the two interact -- every trial gamma re-solves
+#     all seven deltas, so the band counts hold exactly at the solution.
+#   * dependent-headed units are calibrated to MOK'S OWN PUBLISHED RATES
+#     (0.10 under 65, 0.23 at 65+), added 2026-08-28. They were previously left
+#     at raw scores on the reasoning that they are the netting, so calibrating
+#     them would move both sides of the same equation. That reasoning was
+#     wrong: their filing status decides not only how many adults net out but
+#     WHOSE INCOME appears in the emitted records, and the transplanted probit
+#     scored them at 0.216 against Mok's published 0.10 -- more than double,
+#     which put 3.18M working claimed dependents on the filer side. The target
+#     is external to the residual count (it is Mok's own tabulation for exactly
+#     the group her coefficients score), so it is solved FIRST and the netting
+#     is computed from the calibrated probabilities.
 #
 # The accounting identity, per band b (all quantities adults 18+):
 #
@@ -74,6 +98,28 @@ SHAPE <- 'research/state_weights/nonfiler_residual/resources'
 DEP_BRACKET <- list(`2017` = c(ht2_floor = 5.58e6, depstat = 13.80e6),
                     `2022` = c(ht2_floor = 5.58e6, depstat = 13.80e6))
 
+# Pub 5785 Table 1, TY2014-16 average: persons identified from information
+# returns with no 1040, and how many of them have wages. The wage CONSTRAINT
+# uses the count rather than the dollars deliberately -- the two administrative
+# measurements of non-filer wage DOLLARS disagree by 2x ($480.6B from SSA
+# covered wages less the W-2 study's filers, against Pub 5785's own $242.5B)
+# and that disagreement is unresolved, while the person count is a direct
+# tabulation both would recognise. Scaled to our universe, since Pub 5785's
+# frame is people WITH an information return and ours is every non-filing
+# adult.
+PUB5785_PERSONS <- 50.49e6
+PUB5785_WAGE_EARNERS <- 15.96e6
+
+# gamma is FLOORED, and the floor is the point. Mok's wage-presence
+# coefficients run about +0.60 to +0.72 across the large groups, and the
+# relationship is not an artefact: wage earners have withholding to reclaim and
+# EITC eligibility, so they file. gamma = -0.7 NEUTRALISES wage presence as a
+# predictor; anything beyond it INVERTS the sign, which no story supports.
+# Unfloored, the solver runs to -3.0 and still falls short of the Pub 5785
+# count -- which is evidence about the TARGET, not licence to keep going. The
+# residual gap at the floor is reported as a finding.
+GAMMA_FLOOR <- -0.7
+
 #' Solve the seven band deltas for one netting scenario.
 #'
 #' Feasibility: the below-threshold arm must be able to supply
@@ -88,12 +134,13 @@ DEP_BRACKET <- list(`2017` = c(ht2_floor = 5.58e6, depstat = 13.80e6),
 #' @param below  below-threshold nondependent units: band, w_adults, xb
 #' @param fixed  data.table band, fixed_nonfiling (hazard + GQ contributions)
 #' @param target data.table band, target (netted anchor)
-solve_band_deltas <- function(below, fixed, target, strict = TRUE) {
+solve_band_deltas <- function(below, fixed, target, strict = TRUE, gamma = 0) {
   out <- merge(fixed, target, by = 'band')
   out[, `:=`(delta = NA_real_, achieved = NA_real_, below_mass = NA_real_,
              shortfall = 0)]
+  parts <- split(below, below$band)
   for (b in out$band) {
-    sub  <- below[band == b]
+    sub  <- parts[[b]]
     mass <- sub[, sum(w_adults)]
     need <- out[band == b, target - fixed_nonfiling]
     out[band == b, below_mass := mass]
@@ -107,17 +154,27 @@ solve_band_deltas <- function(below, fixed, target, strict = TRUE) {
       if (strict) stop(msg)
       message('    INFEASIBLE EDGE, pinned: ', msg)
       pinned <- max(0, min(need, mass))
-      out[band == b, `:=`(delta = fifelse(need > mass, -8, 8),
+      out[band == b, `:=`(delta = fifelse(need > mass, -8, 8),   # gamma-invariant
                           achieved = pinned + fixed_nonfiling,
                           shortfall = need - pinned)]
       next
     }
-    f <- function(d) sub[, sum(w_adults * (1 - pnorm(xb + d)))] - need
+    f <- function(d) sub[, sum(w_adults * (1 - pnorm(xb + gamma * src_wages + d)))] - need
     r <- uniroot(f, lower = -8, upper = 8, tol = 1e-10)
     out[band == b, `:=`(delta = r$root,
                         achieved = need + fixed_nonfiling)]
   }
   out[]
+}
+
+#' Person-level wage-earners among the emitted records, at a given gamma and
+#' its solved band deltas. Counts PEOPLE with wages, not adults in a unit that
+#' has wages -- a one-earner couple contributes one, which is what Pub 5785
+#' counts.
+emitted_wage_earners <- function(below, sol, gamma, fixed_earners) {
+  d <- setNames(sol$delta, sol$band)
+  fixed_earners +
+    below[, sum(w_earners * (1 - pnorm(xb + gamma * src_wages + d[band])))]
 }
 
 for (yr in YEARS) {
@@ -139,9 +196,23 @@ for (yr in YEARS) {
   nd[, n_adults := fifelse(filing_status == 'joint', 2, 1)]
   nd[, w_adults := weight * n_adults]
 
-  below <- nd[must_file == FALSE, .(band, w_adults, xb = qnorm(p_file_mok))]
+  # person-level wage-earners per unit: how many of head/spouse have wages
+  earners <- st$persons[role %in% c('primary', 'spouse'),
+                        .(n_earners = sum(INCWAGE > 0)), by = unit_id]
+  nd <- merge(nd, earners, by = 'unit_id', all.x = TRUE)
+  nd[is.na(n_earners), n_earners := 0L]
+  nd[, w_earners := weight * n_earners]
+
+  below <- nd[must_file == FALSE,
+              .(band, w_adults, w_earners, src_wages, xb = qnorm(p_file_mok))]
   above <- nd[must_file == TRUE,
               .(hh_above = sum(w_adults * p_nonfile_hazard)), by = band]
+
+  # wage-earners the calibration cannot move: above-threshold units (the hazard
+  # is held) and the ACS group-quarters records (scored on a different frame)
+  fixed_earners <- nd[must_file == TRUE, sum(w_earners * p_nonfile_hazard)] +
+    { g <- fread(file.path(RES, sprintf('gq_persons_%d.csv.gz', yr)))
+      g[!is.na(p_file) & AGE >= 18, sum(PERWT * (1 - p_file) * (INCWAGE > 0))] }
 
   gq_b <- gq[band != 'u18',
              .(gq_nonfiling = sum(nonfiling_adults)), by = band]
@@ -162,16 +233,80 @@ for (yr in YEARS) {
   # Our claimed-adult-dependent netting, non-filing portion, by the
   # dependent's OWN band: join each 18+ dependent to their scoring unit.
   deps <- st$persons[is_dependent == TRUE & AGE >= 18,
-                     .(SERIAL, PERNUM, AGE, ASECWT,
+                     .(SERIAL, PERNUM, AGE, ASECWT, INCWAGE,
                        unit_id = as.numeric(SERIAL) * 100 + PERNUM + 1e9)]
   deps <- merge(deps, u[unit_type == 'dependent', .(unit_id, p_file)],
                 by = 'unit_id', all.x = TRUE)
   stopifnot(!anyNA(deps$p_file))
   deps[, band := as.character(age_band(AGE))]
   dep_claimed_total <- deps[, sum(ASECWT)]
-  dep_net <- deps[, .(dep_nonfiling = sum(ASECWT * (1 - p_file))), by = band]
 
   anchor <- shape[, .(band, anchor = residual_nonfiling_adults)]
+
+  # --- calibrate the dependent-headed units to Mok's published rates ---------
+  # (needs `anchor`, `fixed` and `below`, all built above, for the cap)
+  # One intercept shift per age side, each solved against the rate Mok
+  # publishes for that panel. Applied to ALL dependent scoring units (the rate
+  # is a property of the panel), then the netting is recomputed from the
+  # calibrated probabilities.
+  mok_rates <- read_mok_coefs()$filing_rates
+  dep_u <- u[unit_type == 'dependent']
+  dep_u[, side := fifelse(age_head >= 65, '65p', 'u65')]
+  dep_shift <- c(u65 = NA_real_, `65p` = NA_real_)
+  for (sd in names(dep_shift)) {
+    sub <- dep_u[side == sd]
+    tgt <- mok_rates[[paste0('dependent_', sd)]]
+    f <- function(d) sub[, sum(weight * pnorm(qnorm(p_file_mok) + d))] /
+                     sub[, sum(weight)] - tgt
+    dep_shift[[sd]] <- uniroot(f, lower = -5, upper = 5, tol = 1e-10)$root
+    message(sprintf(paste('  dependent units %-3s: scored %.3f -> Mok published',
+                          '%.2f at shift %+.3f (%.2fM units)'),
+                    sd, sub[, sum(weight * p_file_mok)] / sub[, sum(weight)],
+                    tgt, dep_shift[[sd]], sub[, sum(weight)] / 1e6))
+  }
+  # FEASIBILITY CAP on the under-65 shift, and the cap is itself a result.
+  # Mok's 0.10 puts so many young claimed dependents into non-filing that they
+  # plus the above-threshold hazard would consume the ENTIRE 18-25 residual
+  # count -- TY2022 asks for -1.03M non-filing adults from that band, which is
+  # impossible. The three inputs (the residual count by band, Mok's published
+  # dependent rate, the hazard level) are mutually inconsistent at the young
+  # end, and Mok's rate is the one to give: it is published for HER TY2006
+  # constructed population, whose dependent definition is not ours. So move as
+  # far toward 0.10 as the band can absorb, and report where it stopped.
+  apply_shift <- function(sh) {
+    q <- copy(deps)
+    d2 <- dep_u[, .(unit_id, p2 = pnorm(qnorm(p_file_mok) +
+                                        sh[fifelse(age_head >= 65, '65p', 'u65')]))]
+    q <- merge(q, d2, by = 'unit_id', all.x = TRUE)
+    q[!is.na(p2), p_file := p2]
+    q[, .(dep_nonfiling = sum(ASECWT * (1 - p_file))), by = band]
+  }
+  headroom <- function(sh) {
+    dn <- merge(anchor, apply_shift(sh), by = 'band', all.x = TRUE)
+    dn[is.na(dep_nonfiling), dep_nonfiling := 0]
+    dn <- merge(dn, fixed[, .(band, fixed_nonfiling)], by = 'band')
+    dn <- merge(dn, below[, .(mass = sum(w_adults)), by = band], by = 'band')
+    dn[, min((anchor - dep_nonfiling - fixed_nonfiling) / mass)]
+  }
+  MARGIN <- 0.02          # keep 2% of each band's below-threshold mass in play
+  if (headroom(dep_shift) < MARGIN) {
+    cap <- uniroot(function(z) headroom(c(u65 = z, `65p` = dep_shift[['65p']])) - MARGIN,
+                   lower = dep_shift[['u65']], upper = 0, tol = 1e-8)$root
+    sub <- dep_u[side == 'u65']
+    message(sprintf(paste('  dependent u65 shift CAPPED at %+.3f (rate %.3f) --',
+                          'Mok\'s %+.3f / 0.10 would leave the 18-25 band with',
+                          'no room at all. The residual count refuses it.'),
+                    cap, sub[, sum(weight * pnorm(qnorm(p_file_mok) + cap))] /
+                         sub[, sum(weight)], dep_shift[['u65']]))
+    dep_shift[['u65']] <- cap
+  }
+
+  dep_u[, p_file_dep := pnorm(qnorm(p_file_mok) + dep_shift[side])]
+  deps <- merge(deps, dep_u[, .(unit_id, p_file_dep)], by = 'unit_id', all.x = TRUE)
+  deps[!is.na(p_file_dep), p_file := p_file_dep]
+
+  dep_net <- deps[, .(dep_nonfiling = sum(ASECWT * (1 - p_file))), by = band]
+
 
   #---------------------------------------------------------------------------
   # Solve, central netting + the two bracket edges
@@ -180,24 +315,67 @@ for (yr in YEARS) {
                  ht2_floor = DEP_BRACKET[[cy]]['ht2_floor'] / dep_claimed_total,
                  depstat   = DEP_BRACKET[[cy]]['depstat']   / dep_claimed_total)
 
-  sens <- list(); cal <- NULL
+  # The wage-earner target: Pub 5785's count scaled to our universe, less the
+  # earners among claimed dependents (whom the calibration does not control).
+  universe   <- anchor[, sum(anchor)]
+  dep_earner <- deps[INCWAGE > 0, sum(ASECWT * (1 - p_file))]
+  wage_target <- PUB5785_WAGE_EARNERS * universe / PUB5785_PERSONS - dep_earner
+
+  sens <- list(); cal <- NULL; gam <- NULL
   for (s in names(scenarios)) {
     k <- scenarios[[s]]
     tgt <- merge(anchor, dep_net, by = 'band', all.x = TRUE)
     tgt[is.na(dep_nonfiling), dep_nonfiling := 0]
     tgt[, target := anchor - k * dep_nonfiling]
-    sol <- solve_band_deltas(below, fixed, tgt[, .(band, target)],
-                             strict = (s == 'central'))
+    tgtb <- tgt[, .(band, target)]
+
+    solve_at <- function(g) solve_band_deltas(below, fixed, tgtb,
+                                              strict = (s == 'central'), gamma = g)
+    # Outer solve on gamma: every trial re-solves the seven deltas, so the band
+    # counts hold exactly whatever gamma turns out to be. Only the central
+    # scenario is constrained on wages -- the bracket edges exist to show what
+    # the netting alone does, and adding a second moving part would confound
+    # them.
+    if (s == 'central') {
+      f <- function(g) emitted_wage_earners(below, solve_at(g), g, fixed_earners) -
+                       wage_target
+      lo <- f(GAMMA_FLOOR); hi <- f(0)
+      if (lo * hi > 0) {
+        gamma <- if (abs(lo) < abs(hi)) GAMMA_FLOOR else 0
+        got <- emitted_wage_earners(below, solve_at(gamma), gamma, fixed_earners)
+        message(sprintf(paste('    wage target NOT reachable with a credible',
+                              'coefficient: want %.2fM earners, %.2fM at the',
+                              'gamma floor %.2f -- pinned. Closing the rest',
+                              'would need the wage coefficient to change sign,',
+                              'so the remaining %.2fM is a question about the',
+                              'TARGET, not the model. See the header.'),
+                        wage_target / 1e6, got / 1e6, gamma,
+                        (wage_target - got) / 1e6))
+      } else {
+        gamma <- uniroot(f, lower = GAMMA_FLOOR, upper = 0, tol = 1e-8)$root
+      }
+      gam <- gamma
+    } else {
+      gamma <- 0
+    }
+
+    sol <- solve_at(gamma)
     sol <- merge(sol, tgt[, .(band, anchor, dep_nonfiling)], by = 'band')
-    sol[, `:=`(scenario = s, netting_scale = k, tax_year = yr)]
+    sol[, `:=`(scenario = s, netting_scale = k, tax_year = yr, gamma = gamma)]
     sens[[s]] <- sol
     if (s == 'central') cal <- sol
     message(sprintf(paste('  %-9s netting %.2fM (scale %.2f): pool non-filing',
-                          'adults %.2fM; deltas %s'),
+                          'adults %.2fM; gamma %+.3f; deltas %s'),
                     s, k * dep_claimed_total / 1e6, k,
-                    sol[, sum(achieved)] / 1e6,
+                    sol[, sum(achieved)] / 1e6, gamma,
                     sol[, paste(sprintf('%s %+.2f', band, delta), collapse = ' ')]))
   }
+  message(sprintf(paste('  wage constraint: %.2fM person-earners targeted',
+                        '(Pub 5785 %.2fM scaled by %.2fM/%.2fM, less %.2fM among',
+                        'claimed dependents); achieved %.2fM at gamma %+.3f'),
+                  wage_target / 1e6, PUB5785_WAGE_EARNERS / 1e6,
+                  universe / 1e6, PUB5785_PERSONS / 1e6, dep_earner / 1e6,
+                  emitted_wage_earners(below, cal, gam, fixed_earners) / 1e6, gam))
   sens <- rbindlist(sens)
   fwrite(sens, file.path(RES, sprintf('netting_sensitivity_%d.csv', yr)))
 
@@ -208,7 +386,10 @@ for (yr in YEARS) {
   u[, band := as.character(age_band(age_head))]
   u[, p_file_cal := p_file]
   u[unit_type == 'nondependent' & age_head >= 18 & must_file == FALSE,
-    p_file_cal := pnorm(qnorm(p_file_mok) + band_map[band])]
+    p_file_cal := pnorm(qnorm(p_file_mok) + gam * src_wages + band_map[band])]
+  u[unit_type == 'dependent',
+    p_file_cal := pnorm(qnorm(p_file_mok) +
+                        dep_shift[fifelse(age_head >= 65, '65p', 'u65')])]
   stopifnot(!anyNA(u$p_file_cal), all(u$p_file_cal >= 0 & u$p_file_cal <= 1))
 
   # Gate 1: the identity closes exactly, band by band
