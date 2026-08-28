@@ -268,7 +268,14 @@ assign_subfamily <- function(persons, survey = c("asec", "acs")) {
 #' @param support_mult TRIM3 multiplier (default 0.5; drivers sweep 0.4/0.6)
 #' @return list(persons, units): persons gains unit_id/role/is_dependent;
 #'         units is one row per unit incl. dependent-headed scoring units
-build_asec_tax_units <- function(x, tax_year, support_mult = TRIM3_SUPPORT_MULT) {
+#' @param support_unit whether the support test divides resources across the
+#'        HOUSEHOLD (TRIM3's phrasing, the default) or the FAMILY. In a
+#'        multi-family household -- exactly where subfamilies live -- the
+#'        family is arguably the truer support unit, and nobody had tested
+#'        which matters. Measured 2026-08-28: it does not (see the note).
+build_asec_tax_units <- function(x, tax_year, support_mult = TRIM3_SUPPORT_MULT,
+                                 support_unit = c("household", "family")) {
+  support_unit <- match.arg(support_unit)
 
   need <- c("SERIAL", "PERNUM", "AGE", "RELATE", "MARST", "SPLOC", "MOMLOC",
             "POPLOC", "FTYPE", "FAMID", "SCHLCOLL", "ASECWT",
@@ -287,7 +294,12 @@ build_asec_tax_units <- function(x, tax_year, support_mult = TRIM3_SUPPORT_MULT)
   # look resourceless -- the TY2017 build tagged 19.2M adult dependents against
   # a 13.8M survey benchmark before this was caught (2026-08-28). The tax
   # concept keeps its two jobs: the QR income limit and the filing threshold.
-  p[, `:=`(hh_income = sum(total_income), hh_size = .N), by = SERIAL]
+  if (support_unit == "household") {
+    p[, `:=`(hh_income = sum(total_income), hh_size = .N), by = SERIAL]
+  } else {
+    stopifnot("FAMUNIT" %in% names(p))
+    p[, `:=`(hh_income = sum(total_income), hh_size = .N), by = .(SERIAL, FAMUNIT)]
+  }
   p[, self_supporting := total_income > support_mult * (hh_income / hh_size)]
 
   p[, subfam_id := assign_subfamily(p, "asec")]

@@ -1,0 +1,19 @@
+side,rel,persons_M,median_age,with_wages_M
+only ours,child,4.18422754,25,0.89516627
+only ours,parent,1.01336238,71,0.02697442
+only ours,other relative,0.9424029,55,0.07971947
+only ours,sibling,0.61455922,34,0.09625922
+only ours,grandchild,0.42076855,22,0.10239029
+only ours,housemate,0.00503994,22,0
+only ours,other nonrelative,0.00284649,19,0
+only survey,child,3.29559682,21,2.08749936
+only survey,householder,0.55300484,27,0.2614449
+only survey,sibling,0.12803382,22,0.083231
+only survey,grandchild,0.04307609,20,0.03669287
+only survey,other nonrelative,0.04210749,20,0.01619317
+only survey,other relative,0.02176032,21,0.02034394
+only survey,foster child,0.0180467,18,0
+only survey,housemate,0.0166132,18,0.00192674
+only survey,unmarried partner,0.00515105,18,0
+only survey,roomer/boarder,0.00303863,22,0
+only survey,parent,0.00242925,52,0
