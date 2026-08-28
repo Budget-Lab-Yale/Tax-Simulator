@@ -3,3 +3,4 @@
 # gate CSVs ARE tracked, as the bundle's committed evidence.
 results/*.rds
 results/gq_persons_*.csv.gz
+results/nonfiler_pool_*.csv.gz
