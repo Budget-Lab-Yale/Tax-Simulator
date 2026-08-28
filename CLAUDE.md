@@ -350,6 +350,48 @@ plan before starting, `research/decisions_log.md` before re-arguing anything, an
 it in a source packet. `research/STATUS.md` is the narrative status; documents
 carrying `true_as_of:` describe an older tree, not today's.
 
+## Writing about this workstream: name the thing, not the shorthand
+
+This workstream has coined a set of short abstract nouns — *the anchor*, *the
+pool*, *the margin*, *the netting*, *the residual*, *the frame*, *the split*.
+They are fine as index terms in a table heading. **In prose, do not use them as
+the subject of a sentence: write the thing they stand for.** A reader coming
+back after a week, or a co-author who never sat in the session where the term
+was coined, cannot resolve them — and glossing on first use is not enough when
+the bare noun then carries three more sentences.
+
+Do not write:
+
+> The anchor counts every non-filing adult. The pool cannot: adults claimed as
+> someone's dependent already occupy a slot on that filer's return.
+
+Write:
+
+> The residual count of non-filing adults includes everyone. The records we
+> emit cannot: adults claimed as someone's dependent already occupy a slot on
+> that filer's return.
+
+**`residual` is the worst offender, because it genuinely means two things
+here** and the collision is silent: the count of non-filing adults
+(`PEP adults − filing adults`), and the HT2 filing-status residual
+(`N1 − MARS1 − MARS2 − MARS4`, which is MFS plus qualifying surviving spouse).
+Never write it bare — say "the residual count of non-filing adults" or "the
+HT2 status residual".
+
+The rest, with what to write instead:
+
+| Shorthand | Say |
+|---|---|
+| the anchor | the residual count of non-filing adults / the target count |
+| the pool | the constructed non-filer records, the records we emit |
+| the margin | the state distribution of non-filers built from the ACS |
+| the netting | the adults excluded because a filer claims them as a dependent |
+| the frame | the survey's universe (and name the survey) |
+| the split | the separate-filer split, or the split state weights — never bare |
+| the identity | name it: state anchors summing to the national one, etc. |
+
+This is prose only. Variable and file names keep the short forms.
+
 ## Common Tasks
 
 ### Running a Simulation
