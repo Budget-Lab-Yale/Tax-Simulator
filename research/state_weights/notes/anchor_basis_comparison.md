@@ -363,3 +363,70 @@ Both are one-definition-per-computation moves, not behaviour changes:
   dropped, and a `mfs_qss_returns` column so the status residual is a named
   quantity. `compare_individuals_acs_irs()` now selects its three columns
   explicitly, leaving its output unchanged.
+
+## The wage benchmarks disagree by 2x, and it is not the wage concept (2026-08-28)
+
+Raised while asking why the constructed non-filer records carry half the
+wage-earners the administrative data implies. Two measurements of the same
+quantity -- wages held by people who file no return, TY2017:
+
+| source | figure |
+|---|---:|
+| SSA HI covered wages less the W-2 study's Box 5 for filers | **$480.6B** |
+| Pub 5785 Table 1, measured directly | **$242.5B** |
+
+**The plan's $480.6B is right and reproducible**, and an earlier suggestion in
+this session that it was inflated by elective deferrals was wrong. From SOI
+W-2 study Table 5.A, TY2017 taxpayers on filed returns: Box 1 wages $7,277.1B,
+Box 5 Medicare wages $7,541.0B — a wedge of $263.9B against $311.0B of
+elective retirement contributions (Table 7.A), which is the same order and
+confirms the mechanism exists. But $8,021.6B of SSA HI covered wages less
+$7,541.0B of Box 5 for filers gives $480.6B **exactly**. The competing
+$521.2B subtracted HT2's Box 1 from an SSA Box 5 total and so mixed the two
+concepts.
+
+So the concept difference is now measured, and it does **not** explain the 2x.
+Both figures purport to measure the same population's wages and differ by
+$238B. Candidate explanations not yet tested: Pub 5785's population may
+exclude late filers or decedents; the W-2 study is sample-based and its match
+rate is not 100%; SSA's covered-worker count (164.6M) exceeds the W-2 study's
+taxpayer count (145.8M) by 18.8M, and what those people are matters.
+
+**Consequence, already acted on:** the wage constraint added to the
+calibration targets a PERSON COUNT (Pub 5785's 15.96M wage-earners) rather
+than dollars, because the count is a direct tabulation both sources would
+recognise and the dollars are in dispute.
+
+## Adult dependency: the count comparison was hiding the disagreement (2026-08-28)
+
+`nonfiler_pool/08_dependency_validation.R` compares our dependency assignment
+against the Census recode person by person — verification only, per S12.
+
+Our 16.26M adult dependents against the recode's 13.21M reads as a 3.05M
+difference. Underneath sit **11.31M of disagreement, 70% of the larger
+count**; of everyone either side calls a dependent, both agree on 44.5%.
+TY2022 is the same shape.
+
+It is bidirectional and concentrated in adult children:
+
+| | count | median age | with wages |
+|---|---:|---:|---:|
+| only ours | 4.18M | 25 | 0.90M |
+| only the recode | 3.30M | 21 | **2.09M** |
+
+Different populations, which is why no threshold reconciles them — and the
+working 21-year-olds are where the wage-earner shortfall lives.
+
+**Three unit-rule alternatives were measured and none is a lever:**
+
+| change | effect |
+|---|---|
+| test unrelated household members for dependency | 0.07M — negligible |
+| support threshold 0.50 → 1.25 | agreement 95.5% → 95.7%, count 16.3M → 19.7M |
+| support unit household → family | 16.26M → 16.25M, agreement identical |
+
+The threshold result is the instructive one: raising it trades one error type
+for the other almost exactly, so total disagreement falls 0.5M over a 2.5×
+range while the count moves 3.4M away from every benchmark. **The
+adult-dependent count will not be settled by rule tuning.** It needs an
+external target for the composition, not another target for the count.
