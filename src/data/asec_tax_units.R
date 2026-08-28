@@ -272,7 +272,7 @@ build_asec_tax_units <- function(x, tax_year, support_mult = TRIM3_SUPPORT_MULT)
 
   need <- c("SERIAL", "PERNUM", "AGE", "RELATE", "MARST", "SPLOC", "MOMLOC",
             "POPLOC", "FTYPE", "FAMID", "SCHLCOLL", "ASECWT",
-            "gross_income", "earned_income")
+            "gross_income", "earned_income", "total_income")
   stopifnot(all(need %in% names(x)))
   p <- copy(x)
   qr_limit <- qualifying_relative_income_limit(tax_year)
@@ -280,9 +280,15 @@ build_asec_tax_units <- function(x, tax_year, support_mult = TRIM3_SUPPORT_MULT)
   # --- household aggregates for the support test -----------------------------
   # Household income per capita proxies per-capita spending (TRIM3). Household,
   # not family: the design note's phrase is "household spending divided
-  # equally". gross_income is already NIU-cleaned so plain sums are safe.
-  p[, `:=`(hh_income = sum(gross_income), hh_size = .N), by = SERIAL]
-  p[, self_supporting := gross_income > support_mult * (hh_income / hh_size)]
+  # equally". The test runs on TOTAL income (the survey's INCTOT concept,
+  # Social Security and transfers included), NOT the tax gross-income concept:
+  # support is paid from all resources, and running it on Mok's ex-SS measure
+  # made every co-resident elderly person living on their own Social Security
+  # look resourceless -- the TY2017 build tagged 19.2M adult dependents against
+  # a 13.8M survey benchmark before this was caught (2026-08-28). The tax
+  # concept keeps its two jobs: the QR income limit and the filing threshold.
+  p[, `:=`(hh_income = sum(total_income), hh_size = .N), by = SERIAL]
+  p[, self_supporting := total_income > support_mult * (hh_income / hh_size)]
 
   p[, subfam_id := assign_subfamily(p, "asec")]
 

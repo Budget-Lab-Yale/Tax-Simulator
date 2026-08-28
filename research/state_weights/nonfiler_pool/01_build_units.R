@@ -70,6 +70,14 @@ for (yr in YEARS) {
   x[, INCSS := clean_asec_income(x, ddi, 'INCSS')]
   x <- add_asec_income_concepts(x, ddi)
 
+  # C3's covariate inputs, cleaned HERE because NIU handling never happens
+  # downstream of the C0 driver (add_mok_covariates() asserts these exist):
+  # welfare income (TANF/public assistance), SNAP amount, Medicaid coverage.
+  x[, welfare_income   := clean_asec_income(x, ddi, 'INCWELFR')]
+  x[, total_income     := clean_asec_income(x, ddi, 'INCTOT')]   # the support test's concept
+  x[, foodstamp_amount := as.numeric(FOODSTAMP)]     # unlabeled amount, 0 = none
+  x[, on_medicaid      := HIMCAIDLY == 2L]           # DDI: 1 No, 2 Yes, 9 NIU
+
   # The ASEC frame is household population; GQ==2 persons are out of the
   # estimation frame by design (D-A7) and handled by the ACS backfill (C5).
   gq_n <- x[GQ == 2, sum(ASECWT)]

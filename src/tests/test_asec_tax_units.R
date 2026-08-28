@@ -31,6 +31,7 @@
     investment_income = interest,
     retirement_income = retirement,
     gross_income = wages + se + interest + retirement,
+    total_income = wages + se + interest + retirement + ss,
     gross_income_inc_kg = NA_real_)
 }
 

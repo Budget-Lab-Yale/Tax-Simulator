@@ -20,7 +20,6 @@ config/variable_guide/baseline.csv,cross-repo,"Tax-Data. Output column schema; c
 config/parameters.cps.yaml,cross-repo,"common_ipums_download. The shared CPS ASEC extract request (task A3)."
 docs/decisions_log.md,cross-repo,"Affordability-Index. Named as the format this decisions log matches."
 src/data/ht2.R,planned,"This repo, task F4: the HT2 half of the state_weights.R split."
-src/data/filing_model.R,planned,"This repo, task F4/C2: the filing model extracted from state_weights.R."
 src/tests/test_nonfilers.R,planned,"This repo, task E: the federal non-filer validation battery."
 config/runscripts/tests/nonfiler_ab.csv,planned,"This repo, task E: the A/B runscript the validation procedure specifies."
 config/runscripts/tests/nonfiler_cbo.csv,planned,"This repo, task E: the CBO-comparison runscript."
