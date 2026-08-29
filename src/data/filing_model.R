@@ -189,24 +189,49 @@ PUB5785_TARGET_UNITS <- 11.19e6   # above-threshold non-filing units, TY2014-16
                                   # average -- the v1 STARTING level (D3);
                                   # C4 re-chooses the scalar jointly
 
-#' Non-filing probability for units ABOVE the filing threshold: a national
-#' level allocated by Pub 5785 Table 3's relative risks.
+# Table 3 total income $409.4B over 11.19M units, TY2014-16 average. The
+# eighth calibration constraint -- see the concept caveat in pub5785_hazard().
+PUB5785_TARGET_MEAN_INCOME <- 409.4e9 / 11.19e6   # $36,586
+
+#' Non-filing probability for units ABOVE the filing threshold: Pub 5785
+#' Table 3's published composition, imposed by raking.
 #'
-#' For each characteristic c (married, wages, self-employment, interest,
-#' dividends, pensions, UI), the tilt is
-#'     share of above-threshold NON-FILERS with c   (Table 3)
-#'   / share of above-threshold UNITS with c        (our data)
-#' composed multiplicatively -- a naive-Bayes approximation, adopted
-#' deliberately for v1 (the design names Erard et al. (2020) as the upgrade
-#' path, and warns its MARRIED coefficient flips sign across vintages, so no
-#' single published model is treated as settled). The scalar then solves
-#' sum(w * p_nonfile) = target on the above-threshold subset, with
-#' probabilities capped at 0.95 -- the cap re-solved iteratively so the
-#' target still holds.
+#' v1 composed per-characteristic relative risks MULTIPLICATIVELY (naive
+#' Bayes) and solved one scalar. That form does not reproduce the marginals it
+#' is built from -- measured 2026-08-29, it achieved wages 55.2% against a
+#' 61.7% target, self-employment 39.2% against 44.6%, and dividends 4.8%
+#' against 11.0%, because the seven characteristics are strongly dependent in
+#' our data and the independence approximation compounds the error. Raking
+#' (iterative proportional fitting) imposes each marginal in turn and repeats
+#' to a fixed point, which is the standard remedy and lands every one inside
+#' `RAKE_TOL`.
 #'
-#' @param units scored unit table (needs must_file and the src_* covariates)
+#' Eight constraints, not seven. The categorical marginals control WHO has
+#' each income source but say nothing about HOW MUCH, and reweighting on
+#' presence indicators left the emitted units at $44,207 of wages per
+#' wage-earning unit against a published $33,638. Table 3 also publishes total
+#' income for the group, so the mean is imposed as an eighth constraint via an
+#' exponential tilt -- the entropy-calibration form for a continuous margin,
+#' solved by bisection inside each sweep.
+#'
+#' CONCEPT CAVEAT: Table 3's total income is the 1040 concept; `gross_income`
+#' here is the model's own gross-income measure, which excludes Social
+#' Security. Table 3's taxable Social Security is $9.3B of $409.4B (2.3%), so
+#' the mean target is understated by roughly that much rather than exactly
+#' comparable. Recorded rather than adjusted.
+#'
+#' @param units scored unit table (needs must_file, gross_income, src_*)
 #' @param target_units national above-threshold non-filing units
+#' @param target_mean_income mean total income per non-filing unit; NULL skips
+#'   the eighth constraint and rakes on the seven categorical margins only
+PUB5785_CAP      <- 0.95   # no unit is more than 95% likely to be a non-filer
+RAKE_SWEEPS      <- 50L
+RAKE_TOL         <- 1e-3   # 0.1pp on every margin; the cap makes
+                           # exactness unattainable, so this is the
+                           # practical floor rather than a slack choice
+
 pub5785_hazard <- function(units, target_units = PUB5785_TARGET_UNITS,
+                           target_mean_income = NULL,
                            path = PUB5785_PATH) {
   # counts only: Table 3 carries a count row AND an amount row under the same
   # measure name for wages etc., so the concept filter is load-bearing
@@ -237,27 +262,90 @@ pub5785_hazard <- function(units, target_units = PUB5785_TARGET_UNITS,
   share_pop <- vapply(names(share_nf),
                       function(c_) ab[has[[c_]], sum(weight)] / W, numeric(1))
 
-  # relative risk per characteristic; a unit WITHOUT c gets the complementary
-  # tilt (1 - share_nf) / (1 - share_pop) so the factors stay probability-
-  # consistent rather than only up-weighting
+  # Start from the v1 relative-risk product. Raking converges from any
+  # positive start; starting here keeps the naive-Bayes tilt as the prior and
+  # lets the sweeps correct only where the independence assumption failed.
   risk <- rep(1, nrow(ab))
   for (c_ in names(share_nf)) {
     rr_yes <- share_nf[[c_]] / share_pop[[c_]]
     rr_no  <- (1 - share_nf[[c_]]) / (1 - share_pop[[c_]])
     risk <- risk * fifelse(has[[c_]], rr_yes, rr_no)
   }
+  w <- ab$weight
+  p <- pmin(risk * target_units / sum(w * risk), PUB5785_CAP)
 
-  # solve the scalar with the cap enforced (a handful of extreme-risk units
-  # would otherwise take p > 1 and silently under-deliver the target)
-  p <- rep(0, nrow(ab)); s <- target_units / sum(ab$weight * risk)
-  for (i in 1:20) {
-    p <- pmin(s * risk, 0.95)
-    gap <- target_units - sum(ab$weight * p)
-    if (abs(gap) < 1) break
-    uncapped <- p < 0.95
-    stopifnot(any(uncapped))
-    s <- s + gap / sum(ab$weight[uncapped] * risk[uncapped])
+  y <- ab$gross_income
+  if (!is.null(target_mean_income)) {
+    stopifnot(min(y) < target_mean_income, max(y) > target_mean_income)
   }
+
+  #' One exponential tilt on income, solved so the p-weighted mean hits m.
+  #' Monotone in lambda, so bisection is safe; the bracket widens until it
+  #' straddles rather than assuming a scale.
+  tilt_to_mean <- function(p, m) {
+    f <- function(lam) {
+      q <- p * exp(lam * (y - m) / sd(y))
+      sum(w * q * (y - m)) / sum(w * q)
+    }
+    lo <- -1; hi <- 1
+    for (k in 1:40) { if (f(lo) < 0) break; lo <- lo * 2 }
+    for (k in 1:40) { if (f(hi) > 0) break; hi <- hi * 2 }
+    if (f(lo) >= 0 || f(hi) <= 0) return(p)   # unreachable: leave untilted
+    for (k in 1:60) {
+      mid <- (lo + hi) / 2
+      if (f(mid) > 0) hi <- mid else lo <- mid
+    }
+    p * exp(((lo + hi) / 2) * (y - m) / sd(y))
+  }
+
+  #' Scale to the target COUNT without breaking the cap: capped units cannot
+  #' absorb more, so the adjustment goes proportionally to those still free.
+  #' A plain rescale-then-clip silently loses the mass it clips.
+  solve_level <- function(p, target) {
+    for (k in 1:50) {
+      gap <- target - sum(w * p)
+      if (abs(gap) < 1) break
+      unc <- p < PUB5785_CAP
+      if (!any(unc)) break
+      p[unc] <- pmin(p[unc] * (1 + gap / sum(w[unc] * p[unc])), PUB5785_CAP)
+    }
+    p
+  }
+
+  worst <- NA_real_
+  for (sweep in seq_len(RAKE_SWEEPS)) {
+    for (c_ in names(share_nf)) {
+      cur <- sum(w[has[[c_]]] * p[has[[c_]]]) / sum(w * p)
+      p <- p * fifelse(has[[c_]], share_nf[[c_]] / cur,
+                       (1 - share_nf[[c_]]) / (1 - cur))
+      p <- pmin(p, PUB5785_CAP)
+    }
+    if (!is.null(target_mean_income)) {
+      p <- pmin(tilt_to_mean(p, target_mean_income), PUB5785_CAP)
+    }
+    # level last, so the count holds at the point the sweep is judged
+    p <- solve_level(p, target_units)
+
+    achieved <- vapply(names(share_nf),
+                       function(c_) sum(w[has[[c_]]] * p[has[[c_]]]) / sum(w * p),
+                       numeric(1))
+    worst <- max(abs(achieved - share_nf))
+    if (worst < RAKE_TOL && abs(sum(w * p) - target_units) < 1e3) break
+  }
+
+  # The cap can make a margin unreachable. That is a finding about the target
+  # against our population, never something to pass over in silence.
+  if (worst >= RAKE_TOL) {
+    warning(sprintf(paste("pub5785_hazard: raking stopped at %.2fpp on the",
+                          "worst margin after %d sweeps (%.1f%% of weight at",
+                          "the %.2f cap)"),
+                    100 * worst, RAKE_SWEEPS,
+                    100 * sum(w[p >= PUB5785_CAP]) / sum(w), PUB5785_CAP),
+            call. = FALSE)
+  }
+
+  p <- solve_level(p, target_units)   # the count is the one exact constraint
+  stopifnot(abs(sum(w * p) - target_units) < 1e3, all(p >= 0), all(p <= PUB5785_CAP))
 
   units[, p_nonfile_hazard := NA_real_]
   units[must_file == TRUE, p_nonfile_hazard := p]
@@ -272,10 +360,12 @@ pub5785_hazard <- function(units, target_units = PUB5785_TARGET_UNITS,
 #' P(files) for every unit: Mok's probit below the filing threshold, one minus
 #' the Pub 5785 hazard above it.
 score_filing_model <- function(units, coefs,
-                               target_above = PUB5785_TARGET_UNITS) {
+                               target_above = PUB5785_TARGET_UNITS,
+                               target_mean_income = PUB5785_TARGET_MEAN_INCOME) {
   units <- assign_mok_group(units)
   units <- score_mok(units, coefs)
-  units <- pub5785_hazard(units, target_units = target_above)
+  units <- pub5785_hazard(units, target_units = target_above,
+                          target_mean_income = target_mean_income)
   units[, p_file := fifelse(must_file, 1 - p_nonfile_hazard, p_file_mok)]
   stopifnot(!anyNA(units$p_file), all(units$p_file >= 0 & units$p_file <= 1))
   units[]

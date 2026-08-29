@@ -254,11 +254,28 @@ for (yr in YEARS) {
   # --- calibrate the dependent-headed units to Mok's published rates ---------
   # (needs `anchor`, `fixed` and `below`, all built above, for the cap)
   # One intercept shift per age side, each solved against the rate Mok
-  # publishes for that panel. Applied to ALL dependent scoring units (the rate
-  # is a property of the panel), then the netting is recomputed from the
+  # publishes for that panel, then the netting is recomputed from the
   # calibrated probabilities.
+  #
+  # BELOW-THRESHOLD DEPENDENT UNITS ONLY (changed 2026-08-29). v1 applied the
+  # shift to every dependent scoring unit on the reasoning that the rate is a
+  # property of the panel. That silently overwrote the hazard on the 1.66M
+  # dependent-headed units ABOVE the threshold, where filing is required and
+  # Mok's rate has no standing -- and it broke a target asserted one script
+  # earlier, pushing above-threshold non-filing to 11.79M against the 11.19M
+  # `02_filing_model.R:78` had just checked exactly.
+  #
+  # ASSUMPTION, since Mok does not report whether her dependent panel is
+  # restricted to units below the filing requirement: her published 0.10 /
+  # 0.23 describe OPTIONAL filing, so they are imposed on the units whose
+  # filing is optional, and obligated dependent units keep the hazard. The
+  # alternative reading -- treat 0.10 as panel-wide and solve the below-
+  # threshold shift so the blended rate hits it -- would drive below-threshold
+  # dependents to about 0.056 and tighten the 18-25 feasibility problem
+  # further. The panel-wide rate this choice implies is reported below.
   mok_rates <- read_mok_coefs()$filing_rates
-  dep_u <- u[unit_type == 'dependent']
+  dep_u <- u[unit_type == 'dependent' & must_file == FALSE]
+  stopifnot(nrow(dep_u) > 0)
   dep_u[, side := fifelse(age_head >= 65, '65p', 'u65')]
   dep_shift <- c(u65 = NA_real_, `65p` = NA_real_)
   for (sd in names(dep_shift)) {
@@ -312,6 +329,20 @@ for (yr in YEARS) {
   dep_u[, p_file_dep := pnorm(qnorm(p_file_mok) + dep_shift[side])]
   deps <- merge(deps, dep_u[, .(unit_id, p_file_dep)], by = 'unit_id', all.x = TRUE)
   deps[!is.na(p_file_dep), p_file := p_file_dep]
+
+  # what the choice above implies panel-wide, obligated dependent units included
+  all_dep <- u[unit_type == 'dependent']
+  panel <- merge(all_dep[, .(unit_id, weight, must_file, p_file)],
+                 dep_u[, .(unit_id, p_file_dep)], by = 'unit_id', all.x = TRUE)
+  panel[!is.na(p_file_dep), p_file := p_file_dep]
+  message(sprintf(paste('  dependent panel-wide filing rate %.3f (Mok publishes',
+                        '%.2f u65 / %.2f 65p for the panel); %.2fM of %.2fM',
+                        'dependent units are above the threshold and keep the',
+                        'hazard'),
+                  panel[, sum(weight * p_file) / sum(weight)],
+                  mok_rates[['dependent_u65']], mok_rates[['dependent_65p']],
+                  panel[must_file == TRUE, sum(weight)] / 1e6,
+                  panel[, sum(weight)] / 1e6))
 
   dep_net <- deps[, .(dep_nonfiling = sum(ASECWT * (1 - p_file))), by = band]
 
@@ -395,10 +426,16 @@ for (yr in YEARS) {
   u[, p_file_cal := p_file]
   u[unit_type == 'nondependent' & age_head >= 18 & must_file == FALSE,
     p_file_cal := pnorm(qnorm(p_file_mok) + gam * src_wages + band_map[band])]
-  u[unit_type == 'dependent',
+  u[unit_type == 'dependent' & must_file == FALSE,
     p_file_cal := pnorm(qnorm(p_file_mok) +
                         dep_shift[fifelse(age_head >= 65, '65p', 'u65')])]
   stopifnot(!anyNA(u$p_file_cal), all(u$p_file_cal >= 0 & u$p_file_cal <= 1))
+
+  # The hazard's target must SURVIVE calibration. It did not before
+  # 2026-08-29: the dependent shift reached above-threshold units and nothing
+  # re-checked the level afterwards. Assert it here, where it can break.
+  above_after <- u[must_file == TRUE, sum(weight * (1 - p_file_cal))]
+  stopifnot(abs(above_after - PUB5785_TARGET_UNITS) < 1e4)
 
   # Gate 1: the identity closes exactly, band by band
   chk <- u[unit_type == 'nondependent' & age_head >= 18,

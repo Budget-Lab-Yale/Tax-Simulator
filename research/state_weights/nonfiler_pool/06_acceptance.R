@@ -155,8 +155,10 @@ for (yr in YEARS) {
 
   message(sprintf(paste('  [INDEPENDENT] wage mass, TWO benchmarks:',
                         'RESIDUAL $%.1fB (SSA covered $%.1fB less HT2 on-return',
-                        '$%.1fB; recorded $%.1fB) = an upper bound |',
-                        'IDENTIFIED (Pub 5785 projected to TY2017) $%.0f-%.0fB'),
+                        '$%.1fB; recorded $%.1fB for TY2017) = an upper bound |',
+                        'IDENTIFIED (Pub 5785 TY2014-16, projected to TY2017)',
+                        '$%.0f-%.0fB -- the SAME BASIS the hazard is calibrated',
+                        'on is the TY2014-16 average $242.5B'),
                   implied / 1e9, ssa_wages / 1e9, ht2_wages / 1e9,
                   RESIDUAL_IMPLIED_WAGES_2017 / 1e9,
                   PUB5785_IMPLIED_WAGES_2017[['low']] / 1e9,
