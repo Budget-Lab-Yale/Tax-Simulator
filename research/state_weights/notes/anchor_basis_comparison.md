@@ -386,16 +386,130 @@ $521.2B subtracted HT2's Box 1 from an SSA Box 5 total and so mixed the two
 concepts.
 
 So the concept difference is now measured, and it does **not** explain the 2x.
-Both figures purport to measure the same population's wages and differ by
-$238B. Candidate explanations not yet tested: Pub 5785's population may
-exclude late filers or decedents; the W-2 study is sample-based and its match
-rate is not 100%; SSA's covered-worker count (164.6M) exceeds the W-2 study's
-taxpayer count (145.8M) by 18.8M, and what those people are matters.
 
-**Consequence, already acted on:** the wage constraint added to the
-calibration targets a PERSON COUNT (Pub 5785's 15.96M wage-earners) rather
-than dollars, because the count is a direct tabulation both sources would
-recognise and the dollars are in dispute.
+### Resolved, mostly: it was never a 2x, and they never measured the same thing (2026-08-29)
+
+Raised by JI asking whether the gap could be an above-/below-filing-threshold
+universe difference. It is not that -- but the question was the right shape,
+and chasing it found two things.
+
+**First, roughly 40% of the gap is a YEAR MISMATCH that this note created.**
+$242.5B is the **TY2014-16 average** of Pub 5785 Table 1; $480.6B is TY2017.
+The series is rising fast, because both the non-filing population and its
+wage-earners were growing:
+
+| Pub 5785 Table 1, wages | TY2014 | TY2015 | TY2016 |
+|---|---:|---:|---:|
+| $B | 215.3 | 242.5 | 269.8 |
+| persons with wages, M | 15.08 | 15.77 | 17.04 |
+
+11.9%/yr on the dollars. Projected to TY2017: **$295B** at nominal wage growth
+(4.5%/yr), **$338B** at the series' own trend. The like-year gap is
+**$143-186B, not $238B**.
+
+**Second, the two are not competing measurements of one quantity.** $480.6B is
+a *residual*: covered wages minus filers' wages, a 6% sliver of two ~$8T
+aggregates, so it necessarily absorbs every wage dollar not tied to a filed
+return -- W-2s not linkable to a taxpayer record, SSN/ITIN mismatches,
+decedents, and any filer wages the W-2 study failed to match. Pub 5785 counts
+only wages belonging to people the IRS positively **identified** as non-filers
+and built a record for. An identified population is necessarily smaller than
+an unallocated remainder; the SSA covered-worker count exceeding the W-2
+study's taxpayer count by 18.8M is the same fact seen from the other side.
+**Pub 5785 is the right target for a file of constructible records**; the
+residual is an upper bound on what could exist.
+
+**JI's threshold hypothesis, tested and rejected as the explanation.** Table 3
+(above-threshold only) against Table 1 (all potential non-filers), wages $B:
+199.4/215.3, 230.0/242.5, 266.8/269.8 -- **92.6%, 94.8%, 98.9%**. Almost all
+non-filer wages are above-threshold wages; the below-threshold remainder
+carries ~$3B and is overwhelmingly Social Security. Our own file reproduces
+this independently at **94.6%** ($268.7B above, $15.2B below), which is a
+fourth validation dimension nobody had checked.
+
+**Consequence, acted on:** the wage constraint targets a PERSON COUNT (Pub
+5785's wage-earners scaled to our universe) rather than dollars. That choice
+survives -- but see the gamma re-examination below, which finds the constraint
+is attached to the wrong arm of the model.
+
+## The wage constraint is on the wrong arm (2026-08-29)
+
+Asked to re-examine whether gamma should target a like-year Pub 5785
+wage-earner count instead of the TY2014-16 average. **It should not, and
+re-targeting it would make the reporting worse rather than the file better.**
+
+Gamma shifts the probit index for **below-threshold** units only. Decomposing
+the emitted TY2017 wage-earners (household side, non-dependent units):
+
+| | earners | wages | per earner |
+|---|---:|---:|---:|
+| below threshold (gamma's reach) | 1.46M | $10.3B | $7,029 |
+| above threshold (the hazard's) | 6.41M | $263.9B | $41,182 |
+
+Gamma controls 19% of the earners and 4% of the dollars, and it is already
+pinned at its `GAMMA_FLOOR = -0.7`. Raising its target raises a shortfall it
+cannot close. The apparent dollar agreement -- our $274.2B against a like-year
+$295-338B -- is two compensating errors: **less than half the wage-earners,
+each with more than twice the wages** ($34,832 average against Pub 5785
+TY2016's $15,833).
+
+**The defect is in the hazard, and there are two of them.**
+
+*(a) The one-shot likelihood-ratio product does not reproduce its own
+targets.* `pub5785_hazard()` multiplies per-characteristic relative risks
+assuming independence, then solves one scalar. Achieved vs Table 3 target,
+TY2017 above-threshold non-dependent units:
+
+| | target | achieved |
+|---|---:|---:|
+| wages | 61.7% | 55.2% |
+| self-employment | 44.6% | 39.2% |
+| dividends | 11.0% | **4.8%** |
+| pensions | 18.6% | 15.6% |
+| unemployment comp. | 5.7% | 3.8% |
+| interest | 14.4% | 18.4% |
+| married | 19.7% | 20.0% |
+| units | 11.19M | 10.87M |
+
+Prototyped fix: **raking (iterative proportional fitting)** over the seven
+marginals with the 0.95 cap enforced each sweep, 30 sweeps. Every marginal
+lands within 0.1pp and the count hits 11.18M. This is a contained change
+inside `pub5785_hazard()`.
+
+*(b) Raking does not fix the dollars, and cannot.* Post-raking wages rise to
+$293.3B against Table 3's $232.1B, and per wage-unit stays at $42,610 against
+$33,638. Reweighting on **presence** indicators has no control over
+**amounts**. Pub 5785's obligated non-filers cluster near the filing
+threshold; our reweighting spreads across the whole filer income range,
+because the above-threshold population *is* the whole constructed filer
+population (124.5M units) reweighted -- nothing selects the near-threshold
+ones. Fixing this needs an income-level constraint, and Table 3 publishes one:
+total income $409.4B over 11.19M units = **$36,586 per unit**.
+
+**Recommended, not yet done** (each changes downstream numbers and needs a
+04-09 re-run plus an artifact rebuild): rake the hazard; add total income per
+unit as an eighth constraint; and stop the dependent-unit shift from
+overwriting the hazard on above-threshold units (see below).
+
+## The dependent shift silently overwrites the hazard (2026-08-29)
+
+`02_filing_model.R:78` asserts the hazard hits Pub 5785's 11.19M exactly, and
+it does. `04_calibrate.R:390` then applies the dependent-group shift to **all**
+`unit_type == 'dependent'` units, including the 1.66M that are above the
+filing threshold -- where the hazard, not Mok's optional-filing rate, is the
+operative model. Nothing re-asserts the target afterwards.
+
+| TY2017 | |
+|---|---:|
+| hazard would give, dependent-headed above-threshold | 0.32M |
+| the dependent shift gives instead | 0.92M |
+| **total above-threshold non-filing** | **11.79M vs 11.19M (+5.3%)** |
+
+TY2022 is milder (11.37M, +1.6%) only because its dependent shift is capped by
+the feasibility constraint. Mok's 0.10 published rate describes **optional**
+filing and should not govern units that are legally obligated to file. Fix:
+exclude `must_file == TRUE` from the dependent shift, and re-assert the 11.19M
+target after calibration so this cannot recur silently.
 
 ## Adult dependency: the count comparison was hiding the disagreement (2026-08-28)
 

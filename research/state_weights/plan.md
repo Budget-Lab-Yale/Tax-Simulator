@@ -203,9 +203,11 @@ important because the whole population is being swapped:
 - **E2, the tripwire.** Every 1040 dollar aggregate is summed `* weight * filer`,
   so `totals/1040.csv` and `supplemental/cbo_comparison.csv` must be
   **identical** under current law. Any movement falsifies "non-filer only".
-- **E3, the combined-universe wage constraint.** SSA HI wage-and-salary as the
-  constraint; the admin-implied non-filer total is **$480.6B (2017)** against the
-  PUF's $116.2B.
+- **E3, the combined-universe wage constraint.** Two benchmarks, and they are
+  not the same quantity: the **residual** (SSA HI covered wages less the W-2
+  study's filers) is **$480.6B (2017)**, an upper bound absorbing every wage
+  dollar not tied to a return; the **identified** population (Pub 5785,
+  projected to TY2017) is **$295–338B**. The PUF's $116.2B sits against both.
 - **E4, early.** The 2021 baseline pays EIP3 (~$402–411B) and advance CTC
   (~$93B) to non-filers against published actuals. The **only** external check on
   the non-filer level.
@@ -327,7 +329,7 @@ ACS marital×age — is scoped, its fetchers are built (`fetch_qwi()`,
 | dimension | benchmark | DINA today |
 |---|---|---|
 | age composition | `nonfiler_age_shape_{year}.csv` | 0.42 / 0.63 / 1.10 across 18–44 / 45–64 / 65+ |
-| wage mass | SSA HI covered wages | $116.2B = 24% of the $480.6B implied |
+| wage mass | Pub 5785 identified population, TY2017 projected $295–338B (the SSA residual's $480.6B is an upper bound, not a like-for-like target) | $116.2B = 35–39% of the identified figure, 24% of the residual |
 | SS receipt | OASDI-SC beneficiaries | 11.71M with old-age SS |
 | investment income | Pub 5785 receipt ceilings — 14% interest, 9% dividends, 4% gains | **0.000** on all three |
 

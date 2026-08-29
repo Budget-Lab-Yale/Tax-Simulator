@@ -56,10 +56,21 @@ SHAPE <- 'research/state_weights/nonfiler_residual/resources'
 PUB5785_T1 <- file.path(ANCH, '..', 'resources',
                         'pub5785_table1_potential_nonfilers.csv')
 
-# Recorded in the plan as the TY2017 administratively implied non-filer wage
-# total; recomputed below from the committed wage margin and reported beside
-# it, because a quoted constant and a reproducible one should agree in public.
-PLAN_IMPLIED_WAGES_2017 <- 480.6e9
+# Two TY2017 wage benchmarks, and they are NOT the same quantity -- see
+# notes/anchor_basis_comparison.md, "Resolved, mostly" (2026-08-29).
+#   * The RESIDUAL: SSA covered wages less the W-2 study's filers. A 6% sliver
+#     of two ~$8T aggregates, so it absorbs every wage dollar not tied to a
+#     filed return -- unlinkable W-2s, SSN/ITIN mismatches, decedents. An upper
+#     bound on what could exist, not a count of anyone.
+#   * The IDENTIFIED population: Pub 5785 Table 1, people the IRS matched to an
+#     information return and no 1040. This is the right target for a file of
+#     constructible records. Pub 5785 has no TY2017, and the series rises
+#     ~11.9%/yr (215.3 / 242.5 / 269.8 for TY2014-16), so TY2017 is projected:
+#     $295B at nominal wage growth, $338B at the series' own trend. Quoting the
+#     TY2014-16 average of $242.5B against a TY2017 figure -- as this file and
+#     the plan both did -- manufactured about 40% of an apparent 2x gap.
+RESIDUAL_IMPLIED_WAGES_2017   <- 480.6e9
+PUB5785_IMPLIED_WAGES_2017    <- c(low = 295e9, high = 338e9)
 
 verdicts <- list()
 
@@ -142,16 +153,23 @@ for (yr in YEARS) {
   # the concept wedge: claimed dependents work and are not pool units
   dep_wages <- st$persons[is_dependent == TRUE, sum(ASECWT * INCWAGE)]
 
-  message(sprintf(paste('  [INDEPENDENT] wage mass: implied non-filer $%.1fB',
-                        '(SSA covered $%.1fB less HT2 on-return $%.1fB;',
-                        'plan records $%.1fB for TY2017)'),
+  message(sprintf(paste('  [INDEPENDENT] wage mass, TWO benchmarks:',
+                        'RESIDUAL $%.1fB (SSA covered $%.1fB less HT2 on-return',
+                        '$%.1fB; recorded $%.1fB) = an upper bound |',
+                        'IDENTIFIED (Pub 5785 projected to TY2017) $%.0f-%.0fB'),
                   implied / 1e9, ssa_wages / 1e9, ht2_wages / 1e9,
-                  PLAN_IMPLIED_WAGES_2017 / 1e9))
-  message(sprintf(paste('    pool $%.1fB = %.2f of implied | + claimed-dependent',
-                        'wages $%.1fB = %.2f | replaced file $%.1fB = %.2f'),
-                  pool_wages / 1e9, pool_wages / implied, dep_wages / 1e9,
+                  RESIDUAL_IMPLIED_WAGES_2017 / 1e9,
+                  PUB5785_IMPLIED_WAGES_2017[['low']] / 1e9,
+                  PUB5785_IMPLIED_WAGES_2017[['high']] / 1e9))
+  pub_mid <- mean(PUB5785_IMPLIED_WAGES_2017)
+  message(sprintf(paste('    pool $%.1fB = %.2f of the residual, %.2f of the',
+                        'identified midpoint | + claimed-dependent wages $%.1fB',
+                        '= %.2f / %.2f | replaced file $%.1fB = %.2f / %.2f'),
+                  pool_wages / 1e9, pool_wages / implied, pool_wages / pub_mid,
+                  dep_wages / 1e9,
                   (pool_wages + dep_wages) / implied,
-                  dina_wages / 1e9, dina_wages / implied))
+                  (pool_wages + dep_wages) / pub_mid,
+                  dina_wages / 1e9, dina_wages / implied, dina_wages / pub_mid))
 
   #---------------------------------------------------------------------------
   # INDEPENDENT 2+3 -- receipt rates against Pub 5785 Table 1

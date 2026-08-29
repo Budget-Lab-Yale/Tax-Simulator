@@ -100,13 +100,21 @@ DEP_BRACKET <- list(`2017` = c(ht2_floor = 5.58e6, depstat = 13.80e6),
 
 # Pub 5785 Table 1, TY2014-16 average: persons identified from information
 # returns with no 1040, and how many of them have wages. The wage CONSTRAINT
-# uses the count rather than the dollars deliberately -- the two administrative
-# measurements of non-filer wage DOLLARS disagree by 2x ($480.6B from SSA
-# covered wages less the W-2 study's filers, against Pub 5785's own $242.5B)
-# and that disagreement is unresolved, while the person count is a direct
-# tabulation both would recognise. Scaled to our universe, since Pub 5785's
-# frame is people WITH an information return and ours is every non-filing
-# adult.
+# uses the count rather than the dollars deliberately: the dollar figures are
+# not two measurements of one quantity. $480.6B (SSA covered wages less the
+# W-2 study's filers) is an unallocated RESIDUAL; Pub 5785's is the IDENTIFIED
+# population, and its TY2014-16 average must not be quoted against a TY2017
+# residual -- the series rises ~11.9%/yr. See notes/anchor_basis_comparison.md
+# (2026-08-29). The person count is a direct tabulation, scaled to our
+# universe, since Pub 5785's frame is people WITH an information return and
+# ours is every non-filing adult.
+#
+# KNOWN DEFECT, not yet fixed: gamma reaches only the BELOW-threshold arm --
+# 1.46M of 7.87M emitted earners and $10.3B of $274.2B -- and is already at its
+# floor. The binding problem is the hazard, which misses its own Table 3
+# marginals (wages 55.2% vs 61.7%, dividends 4.8% vs 11.0%) and has no control
+# over wage AMOUNTS. Raking fixes the marginals; the amounts need an
+# income-level constraint. Same note, "The wage constraint is on the wrong arm".
 PUB5785_PERSONS <- 50.49e6
 PUB5785_WAGE_EARNERS <- 15.96e6
 
