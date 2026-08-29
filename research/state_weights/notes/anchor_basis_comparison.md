@@ -486,10 +486,23 @@ population (124.5M units) reweighted -- nothing selects the near-threshold
 ones. Fixing this needs an income-level constraint, and Table 3 publishes one:
 total income $409.4B over 11.19M units = **$36,586 per unit**.
 
-**Recommended, not yet done** (each changes downstream numbers and needs a
-04-09 re-run plus an artifact rebuild): rake the hazard; add total income per
-unit as an eighth constraint; and stop the dependent-unit shift from
-overwriting the hazard on above-threshold units (see below).
+**DONE 2026-08-29**, all three, with the 04-09 pipeline re-run for both years.
+Raking lands every TY2017 margin within 0.1pp and the income constraint brings
+wages per wage-earning unit to $32,538 against $33,638. Emitted non-filing
+adults 34.86M -> 35.70M, receipt-rate mean absolute gap 4.7pp -> 4.1pp,
+emitted wages $276.2B -> $231.2B = 0.95 of Pub 5785 Table 1 on the same
+TY2014-16 basis the hazard is calibrated to.
+
+**New problem created by the fix, flagged not fixed.** Both hazard targets --
+11.19M units and the $36,586 mean -- are TY2014-16 averages applied to TY2017
+and TY2022, and adding the income constraint doubled the exposure. This is the
+same stale-basis error corrected above, committed while correcting it.
+Re-basing is ONE decision affecting both constants: TY2017 would be ~12.3M
+units and ~$40,074. Left alone deliberately, because re-basing the mean
+without the count replaces one inconsistency with another.
+
+Gamma is unchanged by this work and remains on the wrong arm: 1.73M of 8.68M
+emitted earners, still pinned at the floor, 9.17M achieved against 13.45M.
 
 ## The dependent shift silently overwrites the hazard (2026-08-29)
 
