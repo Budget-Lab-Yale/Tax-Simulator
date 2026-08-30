@@ -546,6 +546,54 @@ build_acs_margins <- function(acs, year, acs_year = NULL,
 #'        from 2018) that the default drops -- those returns ARE in Pub 1304's
 #'        national totals, so the two universes differ by exactly this amount
 #'        and 12_anchor_basis_comparison.R needs it named rather than implied.
+#' Pub 1304 Table 1.6 return counts by marital status, for one tax year.
+#'
+#' Lived in 09_asec_tax_unit_diagnostics.R and was duplicated as hardcoded
+#' constants in 01_build_units.R (`SOI_RETURNS`, `SOI_HOH`, 2017 and 2022
+#' only). Reading the published table instead means every build year works
+#' without a new literal, which is what group D needs -- 2014-2016 to
+#' calibrate on the Pub 5785 years, 2018 and 2021 to test the aging.
+#'
+#' The published "married filing jointly" block also carries surviving
+#' spouses, and the four blocks partition all returns -- exactly from TY2015
+#' on, but the TY2014 table is short by 75,255 (0.05%), which is the IRS's
+#' arithmetic and is reported rather than corrected.
+#'
+#' @return list(returns = data.table(filing_status, soi_returns), total)
+soi_filing_status <- function(year) {
+  f <- file.path(raw_data_root(), "IRS-Ind/national/by_size",
+                 sprintf("returns_marital_age_%d.xls", year))
+  if (!file.exists(f)) {
+    stop(sprintf("soi_filing_status(): no Pub 1304 T1.6 workbook for %d (%s)",
+                 year, basename(f)), call. = FALSE)
+  }
+  x   <- suppressMessages(readxl::read_excel(f, sheet = 1, col_names = FALSE))
+  lab <- str_squish(as.character(x[[1]]))
+  n   <- suppressWarnings(as.numeric(gsub("[^0-9.-]", "", as.character(x[[2]]))))
+  pick <- function(pat) n[which(str_detect(lab, regex(pat, ignore_case = TRUE)))[1]]
+
+  out <- data.table(
+    filing_status = c("joint_and_qss", "married_separate",
+                      "head_of_household", "single"),
+    soi_returns   = c(pick("married persons filing jointly"),
+                      pick("married persons filing separately"),
+                      pick("heads of household"),
+                      pick("single persons")))
+  total <- pick("^All returns, total")
+  stopifnot(!anyNA(out$soi_returns), !is.na(total))
+
+  gap <- sum(out$soi_returns) - total
+  if (abs(gap) > 1000) {
+    message(sprintf(paste("  NOTE: Pub 1304 T1.6 TY%d marital blocks miss the",
+                          "published total by %s returns (%.3f%%) -- a defect",
+                          "in the source table, carried not corrected"),
+                    year, format(gap, big.mark = ","), 100 * gap / total))
+  }
+  stopifnot(abs(gap) < 0.001 * total)
+  list(returns = out, total = total)
+}
+
+
 ht2_filing_persons <- function(ht2, states = NULL) {
   ht2 <- as.data.table(ht2)
   if (is.null(states)) states <- setdiff(unique(ht2$state), NONTAX_BUCKETS)
@@ -834,10 +882,15 @@ SSA_SEX_LABELS <- c("Men", "Women")
 #'         the 65+ total, summing to 1.
 read_soi_ira_age_split <- function(year) {
 
-  f <- file.path(raw_data_root(), "IRS-Ind/national/ira",
-                 sprintf("ira_t04_%d.xlsx", year))
-  if (!file.exists(f))
-    stop("SOI IRA study Table 4 not found for ", year, ": ", f,
+  # SOI switched this workbook from .xls to .xlsx at TY2017; both are on disk
+  # (the series runs 2000-2023), so try each rather than assuming the newer
+  # one and failing on every pre-2017 year.
+  dir <- file.path(raw_data_root(), "IRS-Ind/national/ira")
+  cand <- file.path(dir, sprintf("ira_t04_%d.%s", year, c("xlsx", "xls")))
+  f <- cand[file.exists(cand)][1]
+  if (is.na(f))
+    stop("SOI IRA study Table 4 not found for ", year, ": tried ",
+         paste(basename(cand), collapse = " and "),
          if (year == 2003) "  (TY2003 is not published)" else "")
 
   raw <- readxl::read_excel(f, sheet = 1, col_names = FALSE,

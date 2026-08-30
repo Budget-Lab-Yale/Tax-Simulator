@@ -1,6 +1,6 @@
 tax_year,dimension,kind,pool,replaced,benchmark,pool_better
-2022,level,construction,34.93M (+12.88M netting = anchor),32.36M = 0.93 of target,47.80M anchor,TRUE
-2022,age composition,construction,MARD 0.00%,MARD 30.85%,netted band target,TRUE
-2022,wage mass,INDEPENDENT,$234.3B = 0.23 implied (0.27 with dependents),$147.3B = 0.15 implied,$1002.9B implied,TRUE
-2022,investment receipt,INDEPENDENT,int 21.9% div 6.3% kg 1.8%,int 0.0% div 0.0% kg 0.0%,int 13.5% div 8.8% kg 4.1%,TRUE
-2022,SS receipt,INDEPENDENT,50.4%,66.1%,47.6%,TRUE
+2022,level,construction,35.05M (+12.75M netting = anchor),32.36M = 0.92 of target,47.80M anchor,TRUE
+2022,age composition,construction,MARD 0.00%,MARD 30.24%,netted band target,TRUE
+2022,wage mass,INDEPENDENT,$345.1B = 0.34 implied (0.38 with dependents),$147.3B = 0.15 implied,$1002.9B implied,TRUE
+2022,investment receipt,INDEPENDENT,int 21.4% div 7.1% kg 2.3%,int 0.0% div 0.0% kg 0.0%,int 13.5% div 8.8% kg 4.1%,TRUE
+2022,SS receipt,INDEPENDENT,48.4%,66.1%,47.6%,TRUE

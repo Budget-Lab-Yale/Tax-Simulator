@@ -538,12 +538,40 @@ build_asec_unit_table <- function(p, tax_year) {
 #' is the $400 self-employment rule. Values from the year's Form 1040
 #' instructions. Extend the table when a new build year is added -- the
 #' stopifnot makes an unlisted year fail loudly rather than borrow a neighbor.
+#' Through 2017 a Chart A threshold is the standard deduction plus the personal
+#' exemption(s); from 2018 TCJA repealed the exemption and it is the standard
+#' deduction alone. The age-65 rows add that year's ADDITIONAL standard
+#' deduction, once per qualifying spouse. `check_filing_requirement_params()`
+#' below re-derives every entry from those components, so a transcription slip
+#' fails at source time rather than silently shifting the above/below split.
 filing_requirement_params <- function(tax_year) {
   tbl <- list(
+    # -- pre-TCJA: standard deduction + personal exemption ---------------------
+    `2014` = list(single = 10150, single_65 = 11700,
+                  joint = 20300, joint_one65 = 21500, joint_both65 = 22700,
+                  hoh = 13050, hoh_65 = 14600,
+                  dep_unearned = 1000, dep_earned = 6200, dep_increment = 350),
+    `2015` = list(single = 10300, single_65 = 11850,
+                  joint = 20600, joint_one65 = 21850, joint_both65 = 23100,
+                  hoh = 13250, hoh_65 = 14800,
+                  dep_unearned = 1050, dep_earned = 6300, dep_increment = 350),
+    `2016` = list(single = 10350, single_65 = 11900,
+                  joint = 20700, joint_one65 = 21950, joint_both65 = 23200,
+                  hoh = 13350, hoh_65 = 14900,
+                  dep_unearned = 1050, dep_earned = 6300, dep_increment = 350),
     `2017` = list(single = 10400, single_65 = 11950,
                   joint = 20800, joint_one65 = 22050, joint_both65 = 23300,
                   hoh = 13400, hoh_65 = 14950,
                   dep_unearned = 1050, dep_earned = 6350, dep_increment = 350),
+    # -- TCJA: standard deduction only, no personal exemption ------------------
+    `2018` = list(single = 12000, single_65 = 13600,
+                  joint = 24000, joint_one65 = 25300, joint_both65 = 26600,
+                  hoh = 18000, hoh_65 = 19600,
+                  dep_unearned = 1050, dep_earned = 12000, dep_increment = 350),
+    `2021` = list(single = 12550, single_65 = 14250,
+                  joint = 25100, joint_one65 = 26450, joint_both65 = 27800,
+                  hoh = 18800, hoh_65 = 20500,
+                  dep_unearned = 1100, dep_earned = 12550, dep_increment = 350),
     `2022` = list(single = 12950, single_65 = 14700,
                   joint = 25900, joint_one65 = 27300, joint_both65 = 28700,
                   hoh = 19400, hoh_65 = 21150,
@@ -553,6 +581,55 @@ filing_requirement_params <- function(tax_year) {
   stopifnot(!is.null(out))
   out
 }
+
+#' The components each Chart A threshold is built from: standard deduction by
+#' status, personal exemption (0 from 2018), and the additional standard
+#' deduction for age 65. Kept separate from the table above so the two can be
+#' checked against each other.
+FILING_THRESHOLD_COMPONENTS <- list(
+  #             sd_single sd_joint sd_hoh    pe  add_single add_married
+  `2014` = c( 6200, 12400,  9100, 3950, 1550, 1200),
+  `2015` = c( 6300, 12600,  9250, 4000, 1550, 1250),
+  `2016` = c( 6300, 12600,  9300, 4050, 1550, 1250),
+  `2017` = c( 6350, 12700,  9350, 4050, 1550, 1250),
+  `2018` = c(12000, 24000, 18000,    0, 1600, 1300),
+  `2021` = c(12550, 25100, 18800,    0, 1700, 1350),
+  `2022` = c(12950, 25900, 19400,    0, 1750, 1400)
+)
+
+#' Re-derive every Chart A threshold from its components and stop on any
+#' mismatch. Called at source time: these constants decide which units are
+#' obligated to file, so a wrong digit moves the above/below partition and
+#' every downstream target with it.
+check_filing_requirement_params <- function() {
+  for (y in names(FILING_THRESHOLD_COMPONENTS)) {
+    k  <- FILING_THRESHOLD_COMPONENTS[[y]]
+    sd_single <- k[1]; sd_joint <- k[2]; sd_hoh <- k[3]
+    pe <- k[4]; add_s <- k[5]; add_m <- k[6]
+    fp <- filing_requirement_params(as.integer(y))
+    expected <- list(
+      single       = sd_single + pe,
+      single_65    = sd_single + pe + add_s,
+      joint        = sd_joint  + 2 * pe,
+      joint_one65  = sd_joint  + 2 * pe + add_m,
+      joint_both65 = sd_joint  + 2 * pe + 2 * add_m,
+      hoh          = sd_hoh    + pe,
+      hoh_65       = sd_hoh    + pe + add_s
+    )
+    for (nm in names(expected)) {
+      if (!isTRUE(all.equal(fp[[nm]], expected[[nm]]))) {
+        stop(sprintf(paste("filing_requirement_params(%s)$%s = %s but its",
+                           "components imply %s"),
+                     y, nm, fp[[nm]], expected[[nm]]), call. = FALSE)
+      }
+    }
+    # Chart B: the dependent earned-income floor IS the single standard
+    # deduction in every year the IRS has published.
+    stopifnot(fp$dep_earned == sd_single)
+  }
+  invisible(TRUE)
+}
+check_filing_requirement_params()
 
 SE_FILING_FLOOR <- 400   # Chart C: net self-employment earnings of $400+
 

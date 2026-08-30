@@ -315,15 +315,36 @@ for (yr in YEARS) {
   }
   MARGIN <- 0.02          # keep 2% of each band's below-threshold mass in play
   if (headroom(dep_shift) < MARGIN) {
-    cap <- uniroot(function(z) headroom(c(u65 = z, `65p` = dep_shift[['65p']])) - MARGIN,
-                   lower = dep_shift[['u65']], upper = 0, tol = 1e-8)$root
-    sub <- dep_u[side == 'u65']
-    message(sprintf(paste('  dependent u65 shift CAPPED at %+.3f (rate %.3f) --',
-                          'Mok\'s %+.3f / 0.10 would leave the 18-25 band with',
-                          'no room at all. The residual count refuses it.'),
-                    cap, sub[, sum(weight * pnorm(qnorm(p_file_mok) + cap))] /
-                         sub[, sum(weight)], dep_shift[['u65']]))
-    dep_shift[['u65']] <- cap
+    # Relieve the band by shrinking the dependent shift toward zero. There may
+    # be NO root: once the above-threshold hazard alone over-subscribes a band,
+    # setting the dependent shift to zero does not buy the room back, and
+    # uniroot fails with "values at end points not of opposite sign". That
+    # first happened when the projected TY2022 target raised obligated
+    # non-filers from 11.19M to 13.65M. It is a FINDING about the target
+    # against the residual count, not a solver problem, so it is named and the
+    # shift is pinned at zero rather than crashing the year.
+    no_shift <- headroom(c(u65 = 0, `65p` = dep_shift[['65p']]))
+    if (no_shift < MARGIN) {
+      message(sprintf(paste('  INFEASIBLE: even with NO dependent shift the',
+                            'tightest band keeps only %.1f%% of its',
+                            'below-threshold mass in play (want %.0f%%). The',
+                            'above-threshold hazard alone over-subscribes it --',
+                            'the projected target and the residual count',
+                            'disagree at the young end. Pinning the shift at 0',
+                            'and reporting.'),
+                      100 * no_shift, 100 * MARGIN))
+      dep_shift[['u65']] <- 0
+    } else {
+      cap <- uniroot(function(z) headroom(c(u65 = z, `65p` = dep_shift[['65p']])) - MARGIN,
+                     lower = dep_shift[['u65']], upper = 0, tol = 1e-8)$root
+      sub <- dep_u[side == 'u65']
+      message(sprintf(paste('  dependent u65 shift CAPPED at %+.3f (rate %.3f) --',
+                            'Mok\'s %+.3f / 0.10 would leave the 18-25 band with',
+                            'no room at all. The residual count refuses it.'),
+                      cap, sub[, sum(weight * pnorm(qnorm(p_file_mok) + cap))] /
+                           sub[, sum(weight)], dep_shift[['u65']]))
+      dep_shift[['u65']] <- cap
+    }
   }
 
   dep_u[, p_file_dep := pnorm(qnorm(p_file_mok) + dep_shift[side])]
@@ -435,7 +456,7 @@ for (yr in YEARS) {
   # 2026-08-29: the dependent shift reached above-threshold units and nothing
   # re-checked the level afterwards. Assert it here, where it can break.
   above_after <- u[must_file == TRUE, sum(weight * (1 - p_file_cal))]
-  stopifnot(abs(above_after - PUB5785_TARGET_UNITS) < 1e4)
+  stopifnot(abs(above_after - pub5785_targets_for_year(yr)$units) < 1e4)
 
   # Gate 1: the identity closes exactly, band by band
   chk <- u[unit_type == 'nondependent' & age_head >= 18,

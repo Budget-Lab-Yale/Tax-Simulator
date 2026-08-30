@@ -404,11 +404,30 @@ for (yr in years) {
 
   # Wage margin: HT2 returns-with-wages / wage dollars vs QCEW; SSA
   # persons-with-wages pending (store blocked; see 01_fetch README)
+  #
+  # STATE-LEVEL products only, and their two inputs are short series: QCEW is
+  # on disk for 2017 and 2022, SSA EEDATA-SC for 2017-2023 (both manual
+  # downloads -- the cluster is 403-blocked). The NATIONAL anchor and the age
+  # shape need neither, and group D builds years those series do not reach, so
+  # a missing input skips these two products with a message instead of killing
+  # the year. Nothing here is silently defaulted: the CSVs are simply absent.
+  qcew_f <- file.path(raw_data_root(), 'BLS-QCEW',
+                      sprintf('qcew_state_totals_%d.csv', yr))
+  ee <- tryCatch(read_ssa_eedata_hi(yr), error = function(e) NULL)
+  do_wage_margin <- file.exists(qcew_f) && !is.null(ee)
+  if (!do_wage_margin) {
+    message(sprintf(paste('  SKIP state wage margin and SSA age margin for TY%d:',
+                          '%s. The national anchor and age shape are unaffected.'),
+                    yr, paste(c(if (!file.exists(qcew_f)) 'no QCEW state totals',
+                                if (is.null(ee)) 'no SSA EEDATA workbook'),
+                              collapse = ' and ')))
+  }
+  wm <- NULL
+  if (do_wage_margin) {
   ht2_w <- dcast(ht2[variable %in% c('n_wages', 'wages_amt') & !(state %in% NONTAX_BUCKETS),
                      .(value = sum(value)), by = .(state, variable)],
                  state ~ variable, value.var = 'value')
-  qcew <- fread(file.path(raw_data_root(), 'BLS-QCEW',
-                          sprintf('qcew_state_totals_%d.csv', yr)))[state != 'US']
+  qcew <- fread(qcew_f)[state != 'US']
   wm <- merge(ht2_w, qcew[, .(state, qcew_avg_emplvl = annual_avg_emplvl,
                               qcew_wages = total_annual_wages)], by = 'state')
   # SSA EEDATA Table 4: persons with HI-covered wage-and-salary earnings, and
@@ -416,7 +435,6 @@ for (yr in years) {
   # are the right denominator for HT2's returns-with-wages -- the remaining
   # wedge is returns vs persons (joint returns, multiple earners), not jobs vs
   # persons. Earnings are uncapped under HI, so the dollar ratio is meaningful.
-  ee <- read_ssa_eedata_hi(yr)
   wm <- merge(wm, ee$persons[, .(state,
                                  ssa_covered_persons = hi_persons_wage_salary,
                                  ssa_covered_wages   = hi_wage_salary_earnings)],
@@ -430,6 +448,7 @@ for (yr in years) {
                   wm[, sum(n_wages) / sum(ssa_covered_persons)],
                   wm[, min(ht2_returns_per_ssa_person)],
                   wm[, max(ht2_returns_per_ssa_person)]))
+  }
 
   fwrite(nat, file.path(res_dir, sprintf('national_anchor_%d.csv', yr)))
   # The age shape goes to resources/, not results/: it is a committed INPUT to
@@ -440,7 +459,11 @@ for (yr in years) {
                    ira_share_65_74)],
          file.path(shape_dir, sprintf('nonfiler_age_shape_%d.csv', yr)))
   fwrite(st[order(state)], file.path(res_dir, sprintf('residual_anchors_%d.csv', yr)))
-  fwrite(wm[order(state)], file.path(res_dir, sprintf('nonfiler_wage_margin_%d.csv', yr)))
-  fwrite(ee$age, file.path(res_dir, sprintf('ssa_age_margin_%d.csv', yr)))
-  message('  wrote national_anchor / residual_anchors / nonfiler_wage_margin / ssa_age_margin CSVs')
+  if (do_wage_margin) {
+    fwrite(wm[order(state)], file.path(res_dir, sprintf('nonfiler_wage_margin_%d.csv', yr)))
+    fwrite(ee$age, file.path(res_dir, sprintf('ssa_age_margin_%d.csv', yr)))
+  }
+  message(sprintf('  wrote national_anchor / residual_anchors%s CSVs',
+                  if (do_wage_margin)
+                    ' / nonfiler_wage_margin / ssa_age_margin' else ''))
 }

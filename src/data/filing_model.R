@@ -186,12 +186,120 @@ score_mok <- function(units, coefs) {
 
 PUB5785_PATH <- "research/state_weights/nonfiler_residual/resources/pub5785_table3_notfiler_units.csv"
 PUB5785_TARGET_UNITS <- 11.19e6   # above-threshold non-filing units, TY2014-16
-                                  # average -- the v1 STARTING level (D3);
-                                  # C4 re-chooses the scalar jointly
+                                  # average. RETAINED as the fallback for years
+                                  # Pub 5785 does not cover; prefer
+                                  # pub5785_targets(year), which reads that
+                                  # year's own column.
 
 # Table 3 total income $409.4B over 11.19M units, TY2014-16 average. The
 # eighth calibration constraint -- see the concept caveat in pub5785_hazard().
 PUB5785_TARGET_MEAN_INCOME <- 409.4e9 / 11.19e6   # $36,586
+
+# Publication 5785 covers these tax years and no others.
+PUB5785_YEARS <- 2014:2016
+
+# Targets for years the publication does not reach, produced by
+# nonfiler_pool/10_project_targets.R as rates against our own above-threshold
+# population. Absent until that script runs, in which case
+# pub5785_targets_for_year() falls back to the average and says so.
+PUB5785_PROJECTED_PATH <- file.path("research/state_weights/nonfiler_pool",
+                                    "results/pub5785_projected_targets.csv")
+
+#' Pub 5785 Table 3 targets for ONE tax year.
+#'
+#' The averages above were applied to TY2017 and TY2022 without re-basing --
+#' the same stale-basis error this branch found in the wage benchmark, and the
+#' income constraint doubled what rides on it. The publication reports each
+#' year separately and the series moves fast (10.57M / 11.09M / 11.90M units;
+#' $34,730 / $36,664 / $38,202 mean income), so an average is not a stand-in
+#' for any of them.
+#'
+#' @param tax_year a year in PUB5785_YEARS, or NULL for the 3-year average
+#' @return list(units, mean_income, shares, basis) -- `basis` names the column
+#'   used, and travels with the result so downstream reporting can state it
+pub5785_targets <- function(tax_year = NULL, path = PUB5785_PATH) {
+  col <- if (is.null(tax_year)) {
+    "avg_2014_2016"
+  } else {
+    if (!(tax_year %in% PUB5785_YEARS)) {
+      stop(sprintf(paste("Pub 5785 covers %d-%d; TY%d has no published column.",
+                         "Project the targets rather than silently borrowing",
+                         "the average -- see plan.md group D stage B."),
+                   min(PUB5785_YEARS), max(PUB5785_YEARS), tax_year),
+           call. = FALSE)
+    }
+    sprintf("ty%d", tax_year)
+  }
+
+  t3 <- fread(path)
+  stopifnot(col %in% names(t3))
+  cnt <- t3[concept == "count_millions"]
+  amt <- t3[concept == "amount_billions"]
+  stopifnot(uniqueN(cnt$measure) == nrow(cnt))
+
+  n_total <- cnt[measure == "tax_units", get(col)]
+  shares <- c(
+    married   = cnt[measure == "mfj_tax_units",     get(col)],
+    wages     = cnt[measure == "wages",             get(col)],
+    se        = cnt[measure == "net_business_farm", get(col)],
+    interest  = cnt[measure == "interest",          get(col)],
+    dividends = cnt[measure == "dividends",         get(col)],
+    pensions  = cnt[measure == "pensions",          get(col)],
+    ui        = cnt[measure == "unemployment_compensation", get(col)]) / n_total
+  stopifnot(length(shares) == 7, !anyNA(shares), all(shares > 0), all(shares < 1))
+
+  units <- n_total * 1e6
+  list(units       = units,
+       mean_income = amt[measure == "total_income", get(col)] * 1e9 / units,
+       shares      = shares,
+       basis       = col)
+}
+
+#' The targets to use for a build year, published or otherwise.
+#'
+#' Within PUB5785_YEARS this is the year's own column. Outside it there is no
+#' published figure, and the honest options are a projection (stage B) or the
+#' TY2014-16 average carried over unchanged. The average is what the build did
+#' silently until 2026-08-29; it is still the fallback, but it now announces
+#' itself and stamps `basis` so every downstream report can say which footing
+#' it stands on.
+pub5785_targets_for_year <- function(tax_year,
+                                     projected_path = PUB5785_PROJECTED_PATH) {
+  if (tax_year %in% PUB5785_YEARS) return(pub5785_targets(tax_year))
+
+  if (file.exists(projected_path)) {
+    yr_ <- tax_year          # distinct name: `tax_year` is also a column here
+    pr  <- fread(projected_path)[tax_year == yr_]
+    if (nrow(pr)) {
+      get1 <- function(cmp) {
+        v <- pr[component == cmp, value]
+        stopifnot(length(v) == 1, is.finite(v))
+        v
+      }
+      shares <- vapply(c("married", "wages", "se", "interest", "dividends",
+                         "pensions", "ui"),
+                       function(c_) get1(paste0("share_", c_)), numeric(1))
+      stopifnot(all(shares > 0), all(shares < 1))
+      return(list(units       = get1("units"),
+                  mean_income = get1("mean_income"),
+                  shares      = shares,
+                  basis       = sprintf("projected_from_%d-%d",
+                                        min(PUB5785_YEARS), max(PUB5785_YEARS))))
+    }
+  }
+
+  out <- pub5785_targets(NULL)
+  out$basis <- sprintf("avg_2014_2016 (NOT re-based to TY%d)", tax_year)
+  message(sprintf(paste("  Pub 5785 has no TY%d column and no projection row:",
+                        "using the TY2014-16 average unchanged (%.2fM units,",
+                        "$%s mean income). The series ran 10.57/11.09/11.90M,",
+                        "so this is a stale basis, not a neutral one. Run",
+                        "nonfiler_pool/10_project_targets.R %d."),
+                  tax_year, out$units / 1e6,
+                  format(round(out$mean_income), big.mark = ","), tax_year))
+  out
+}
+
 
 #' Non-filing probability for units ABOVE the filing threshold: Pub 5785
 #' Table 3's published composition, imposed by raking.
@@ -221,31 +329,21 @@ PUB5785_TARGET_MEAN_INCOME <- 409.4e9 / 11.19e6   # $36,586
 #' comparable. Recorded rather than adjusted.
 #'
 #' @param units scored unit table (needs must_file, gross_income, src_*)
-#' @param target_units national above-threshold non-filing units
-#' @param target_mean_income mean total income per non-filing unit; NULL skips
-#'   the eighth constraint and rakes on the seven categorical margins only
+#' @param targets a `pub5785_targets()` list: units, mean_income, shares, basis
+#' @param use_mean_income FALSE rakes on the seven categorical margins only,
+#'   dropping the eighth constraint -- for isolating its effect, not production
 PUB5785_CAP      <- 0.95   # no unit is more than 95% likely to be a non-filer
 RAKE_SWEEPS      <- 50L
 RAKE_TOL         <- 1e-3   # 0.1pp on every margin; the cap makes
                            # exactness unattainable, so this is the
                            # practical floor rather than a slack choice
 
-pub5785_hazard <- function(units, target_units = PUB5785_TARGET_UNITS,
-                           target_mean_income = NULL,
-                           path = PUB5785_PATH) {
-  # counts only: Table 3 carries a count row AND an amount row under the same
-  # measure name for wages etc., so the concept filter is load-bearing
-  t3 <- fread(path)[concept == "count_millions"]
-  stopifnot(uniqueN(t3$measure) == nrow(t3))
-  n_total <- t3[measure == "tax_units", avg_2014_2016]
-  share_nf <- c(
-    married  = t3[measure == "mfj_tax_units",     avg_2014_2016] / n_total,
-    wages    = t3[measure == "wages",             avg_2014_2016] / n_total,
-    se       = t3[measure == "net_business_farm", avg_2014_2016] / n_total,
-    interest = t3[measure == "interest",          avg_2014_2016] / n_total,
-    dividends = t3[measure == "dividends",        avg_2014_2016] / n_total,
-    pensions = t3[measure == "pensions",          avg_2014_2016] / n_total,
-    ui       = t3[measure == "unemployment_compensation", avg_2014_2016] / n_total)
+pub5785_hazard <- function(units, targets, use_mean_income = TRUE) {
+  stopifnot(is.list(targets),
+            all(c("units", "mean_income", "shares", "basis") %in% names(targets)))
+  target_units <- targets$units
+  share_nf     <- targets$shares
+  target_mean_income <- if (use_mean_income) targets$mean_income else NULL
   stopifnot(length(share_nf) == 7, !anyNA(share_nf))
 
   ab <- units[must_file == TRUE]
@@ -336,10 +434,21 @@ pub5785_hazard <- function(units, target_units = PUB5785_TARGET_UNITS,
   # The cap can make a margin unreachable. That is a finding about the target
   # against our population, never something to pass over in silence.
   if (worst >= RAKE_TOL) {
-    warning(sprintf(paste("pub5785_hazard: raking stopped at %.2fpp on the",
-                          "worst margin after %d sweeps (%.1f%% of weight at",
-                          "the %.2f cap)"),
-                    100 * worst, RAKE_SWEEPS,
+    # Name the margin. A bare "worst margin" number invites the assumption
+    # that more sweeps or a looser cap would fix it; for the self-employment
+    # margin neither does, and the reason is in the DATA, not the solver --
+    # Pub 5785's non-filers are ~45% self-employed while the ASEC's
+    # above-threshold population is under 10%, and its wages and
+    # self-employment marginals together require an overlap the survey's joint
+    # distribution does not contain. Measured 2026-08-29: sweeps 50 -> 1000
+    # moves it 3.38pp -> 3.08pp, and the cap 0.95 -> 0.999 moves it to 2.23pp.
+    off <- achieved - share_nf
+    nm  <- names(off)[which.max(abs(off))]
+    warning(sprintf(paste("pub5785_hazard: raking left %s at %+.2fpp after %d",
+                          "sweeps (worst of seven; %.1f%% of weight at the",
+                          "%.2f cap). Reweighting cannot create a joint",
+                          "distribution the source data lacks."),
+                    nm, 100 * off[[nm]], RAKE_SWEEPS,
                     100 * sum(w[p >= PUB5785_CAP]) / sum(w), PUB5785_CAP),
             call. = FALSE)
   }
@@ -359,13 +468,10 @@ pub5785_hazard <- function(units, target_units = PUB5785_TARGET_UNITS,
 
 #' P(files) for every unit: Mok's probit below the filing threshold, one minus
 #' the Pub 5785 hazard above it.
-score_filing_model <- function(units, coefs,
-                               target_above = PUB5785_TARGET_UNITS,
-                               target_mean_income = PUB5785_TARGET_MEAN_INCOME) {
+score_filing_model <- function(units, coefs, targets) {
   units <- assign_mok_group(units)
   units <- score_mok(units, coefs)
-  units <- pub5785_hazard(units, target_units = target_above,
-                          target_mean_income = target_mean_income)
+  units <- pub5785_hazard(units, targets = targets)
   units[, p_file := fifelse(must_file, 1 - p_nonfile_hazard, p_file_mok)]
   stopifnot(!anyNA(units$p_file), all(units$p_file >= 0 & units$p_file <= 1))
   units[]

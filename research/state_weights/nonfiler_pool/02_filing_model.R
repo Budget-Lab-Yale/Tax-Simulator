@@ -46,7 +46,8 @@ for (yr in YEARS) {
   message('=== TY', yr)
   st <- readRDS(file.path(RES, sprintf('units_%d.rds', yr)))
   u <- add_mok_covariates(st$units, st$persons)
-  u <- score_filing_model(u, mok$coefs)
+  tg <- pub5785_targets_for_year(yr)
+  u <- score_filing_model(u, mok$coefs, tg)
 
   #---------------------------------------------------------------------------
   # Gate 1: group rates beside Mok's published TY2006 rates
@@ -75,10 +76,10 @@ for (yr in YEARS) {
   # Gate 2: the hazard delivered its target
   #---------------------------------------------------------------------------
   above_nonfile <- u[must_file == TRUE, sum(weight * p_nonfile_hazard)]
-  stopifnot(abs(above_nonfile - PUB5785_TARGET_UNITS) < 1e3)
+  stopifnot(abs(above_nonfile - tg$units) < 1e3)
   message(sprintf(paste('  hazard: %.2fM above-threshold non-filing units',
-                        '(target %.2fM, solved); max p_nonfile %.3f'),
-                  above_nonfile / 1e6, PUB5785_TARGET_UNITS / 1e6,
+                        '(target %.2fM on basis %s, solved); max p_nonfile %.3f'),
+                  above_nonfile / 1e6, tg$units / 1e6, tg$basis,
                   u[must_file == TRUE, max(p_nonfile_hazard)]))
 
   #---------------------------------------------------------------------------

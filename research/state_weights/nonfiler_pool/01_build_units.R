@@ -45,15 +45,9 @@ BUILD_COLS <- c('SERIAL', 'PERNUM', 'AGE', 'SEX', 'RELATE', 'MARST', 'SPLOC',
                 'FOODSTAMP', 'INCWELFR', 'INCSSI',
                 'FILESTAT', 'DEPSTAT')
 
-# SOI return counts (Pub 1304 T1.6 all-returns; the T1.2/T1.6 status splits
-# quoted in the gates below were verified 2026-08-27)
-SOI_RETURNS <- list(
-  `2017` = list(total = 152.9e6, hoh = 21.2e6 * 22.113 / 21.912),  # see note
-  `2022` = list(total = 161.3e6, hoh = 21.27e6)
-)
-# note: TY2017 HoH published count is 21.7M (Pub 1304 T1.2, TY2017); the gate
-# uses the T1.6-family figure -- refined when the exact cell is transcribed.
-SOI_HOH <- c(`2017` = 21.7e6, `2022` = 21.27e6)
+# SOI return counts come from soi_filing_status() (src/data/state_weights.R),
+# which reads Pub 1304 Table 1.6 directly. They used to be hardcoded here for
+# 2017 and 2022 only, which is why any other build year died at the C1 gate.
 
 for (yr in YEARS) {
   message('=== TY', yr)
@@ -133,14 +127,15 @@ for (yr in YEARS) {
   fs_returns <- p[FILESTAT %in% 1:3, sum(ASECWT)] / 2 +
                 p[FILESTAT %in% 4:5, sum(ASECWT)]
   ours <- base[, sum(weight)]
+  soi  <- soi_filing_status(yr)
   message(sprintf(paste('  C1 gate: %.1fM nondependent units vs FILESTAT %.1fM',
                         'simulated returns (%.3fx) | SOI all returns %.1fM'),
                   ours / 1e6, fs_returns / 1e6, ours / fs_returns,
-                  SOI_RETURNS[[as.character(yr)]]$total / 1e6))
+                  soi$total / 1e6))
 
   # status mix, with the D-A6 HoH shortfall stated against SOI
   mix <- base[, .(units_M = sum(weight) / 1e6), keyby = filing_status]
-  hoh_soi <- SOI_HOH[[as.character(yr)]]
+  hoh_soi <- soi$returns[filing_status == 'head_of_household', soi_returns]
   message(sprintf('  status mix: %s | HoH vs SOI %.1fM -> ratio %.3f (D-A6 expects ~0.54-0.59 pre-reallocation)',
                   mix[, paste(sprintf('%s %.1fM', filing_status, units_M), collapse = ', ')],
                   hoh_soi / 1e6, mix[filing_status == 'hoh', units_M] * 1e6 / hoh_soi))

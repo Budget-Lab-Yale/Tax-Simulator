@@ -36,7 +36,11 @@ suppressPackageStartupMessages({
 source('src/data/state_weights.R')
 source('src/data/asec_tax_units.R')   # read_asec/strip_labels/niu_code live there now
 
-ANCHOR_YEARS <- c(2017L, 2022L)
+# The two anchor years by default; group D builds more (2014-2016 to calibrate
+# the hazard on the years Pub 5785 actually covers, 2018/2021 to test aging
+# across a threshold change and a filing surge). Pass years as arguments.
+.args <- commandArgs(trailingOnly = TRUE)
+ANCHOR_YEARS <- if (length(.args)) as.integer(.args) else c(2017L, 2022L)
 RESULTS <- 'research/state_weights/nonfiler_residual/results'
 dir.create(RESULTS, recursive = TRUE, showWarnings = FALSE)
 
@@ -137,25 +141,8 @@ message(sprintf('  INCRETIR falls %.0f%% between TY2017 and TY2018 ($%.0fB -> $%
 # is where the model's structural assumptions show.
 #-----------------------------------------------------------------------------
 
-# Pub 1304 T1.6 block totals. The published "married filing jointly" block also
-# carries surviving spouses; the four blocks partition all returns exactly.
-soi_filing_status <- function(year) {
-  f <- file.path(raw_data_root(), 'IRS-Ind/national/by_size',
-                 sprintf('returns_marital_age_%d.xls', year))
-  x <- suppressMessages(read_excel(f, sheet = 1, col_names = FALSE))
-  lab <- str_squish(as.character(x[[1]]))
-  n   <- suppressWarnings(as.numeric(gsub('[^0-9.-]', '', as.character(x[[2]]))))
-  pick <- function(pat) n[which(str_detect(lab, regex(pat, ignore_case = TRUE)))[1]]
-  out <- data.table(
-    filing_status = c('joint_and_qss', 'married_separate', 'head_of_household', 'single'),
-    soi_returns   = c(pick('married persons filing jointly'),
-                      pick('married persons filing separately'),
-                      pick('heads of household'),
-                      pick('single persons')))
-  total <- pick('^All returns, total')
-  stopifnot(abs(sum(out$soi_returns) - total) < 1000)   # the blocks must partition
-  out
-}
+# soi_filing_status() now lives in src/data/state_weights.R -- 01_build_units.R
+# needs the same numbers, and two copies of a published-table parser drift.
 
 for (ty in ANCHOR_YEARS) {
   message('\n=== A2. Filing-status mix, TY', ty)
@@ -166,7 +153,7 @@ for (ty in ANCHOR_YEARS) {
                       0,                       # the Census model does not produce MFS
                       a[FILESTAT == 4, sum(ASECWT)],
                       a[FILESTAT == 5, sum(ASECWT)]))
-  a2 <- merge(soi_filing_status(ty), asec, by = 'filing_status', sort = FALSE)
+  a2 <- merge(soi_filing_status(ty)$returns, asec, by = 'filing_status', sort = FALSE)
   a2[, `:=`(diff_M = (asec_returns - soi_returns) / 1e6,
             ratio  = asec_returns / soi_returns)]
   a2 <- rbind(a2, data.table(filing_status = 'total',
@@ -238,7 +225,18 @@ for (ty in ANCHOR_YEARS) {
   ht2  <- as.data.table(read_ht2(ht2_path(ty), ty))[
     !(state %in% NONTAX_BUCKETS), .(v = sum(value)), by = variable]
   setkey(ht2, variable)
-  ssa <- read_ssa_eedata_hi(ty)$persons
+  # SSA EEDATA-SC is manually downloaded (the cluster is 403-blocked) and the
+  # local series starts at 2017, so the like-for-like covered-wage benchmark
+  # does not exist for the Pub 5785 years. Carry NA and SAY SO rather than
+  # letting the year die here -- the ASEC side of this table is what the unit
+  # builder's C0 gate reads, and it is unaffected.
+  ssa <- tryCatch(read_ssa_eedata_hi(ty)$persons, error = function(e) {
+    message(sprintf(paste('  NOTE: no SSA EEDATA workbook for TY%d (series runs',
+                          '2017-2023) -- the covered-wage benchmark column is',
+                          'NA for this year. %s'),
+                    ty, 'ASEC and HT2 comparisons are unaffected.'))
+    NULL
+  })
 
   agg <- rbindlist(lapply(INCOME_VARS, function(v) {
     niu <- niu_code(ddi, v, full)
@@ -256,8 +254,11 @@ for (ty in ANCHOR_YEARS) {
   agg[, asec_over_soi := asec_amount / soi_amount]
   # SSA HI covered wage-and-salary earnings: the only truly like-for-like
   # comparator, because it too covers workers regardless of filing.
-  agg[variable == 'INCWAGE',
-      asec_over_ssa_wages := asec_amount / ssa[, sum(hi_wage_salary_earnings)]]
+  agg[, asec_over_ssa_wages := NA_real_]
+  if (!is.null(ssa)) {
+    agg[variable == 'INCWAGE',
+        asec_over_ssa_wages := asec_amount / ssa[, sum(hi_wage_salary_earnings)]]
+  }
   fwrite(agg, file.path(RESULTS, sprintf('asec_A4_income_%d.csv', ty)))
   setcolorder(agg, c('variable', 'soi_variable'))
   print(agg[, .(variable, asec_B = round(asec_amount / 1e9),
