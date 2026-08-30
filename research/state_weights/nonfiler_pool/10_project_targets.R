@@ -215,8 +215,26 @@ out <- rbindlist(lapply(TARGET_YEARS, function(y) {
   )
 }))
 
-fwrite(out, file.path(RES, 'pub5785_projected_targets.csv'))
-message('  wrote pub5785_projected_targets.csv (', nrow(out), ' rows)')
+# MERGE, do not overwrite. Running this for a subset of years used to drop
+# every other year's rows, and pub5785_targets_for_year() then fell back to the
+# TY2014-16 average for them WITHOUT the build failing -- exactly the silent
+# stale-basis regression this script exists to prevent. Found 2026-08-30 when
+# a 2018-2021 run quietly reverted 2017 and 2022.
+tgt_path <- file.path(RES, 'pub5785_projected_targets.csv')
+if (file.exists(tgt_path)) {
+  prev <- fread(tgt_path)
+  kept <- prev[!(tax_year %in% TARGET_YEARS)]
+  if (nrow(kept)) {
+    message('  keeping projections for ',
+            paste(sort(unique(kept$tax_year)), collapse = ', '),
+            ' (not requested this run)')
+  }
+  out <- rbind(kept, out, fill = TRUE)
+}
+setorder(out, tax_year, component)
+fwrite(out, tgt_path)
+message('  wrote pub5785_projected_targets.csv (', nrow(out), ' rows, years ',
+        paste(sort(unique(out$tax_year)), collapse = ', '), ')')
 
 #-------------------------------------------------------------------------------
 # What changed against the average that was being used
