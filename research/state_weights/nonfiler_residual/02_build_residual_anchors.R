@@ -460,6 +460,9 @@ for (yr in years) {
                   wm[, max(ht2_returns_per_ssa_person)]))
   }
 
+  # NOTE for consumers: this file carries a `total_18p` row ALONGSIDE the six
+  # age bands, so `sum(pep_adults)` double-counts. Filter to band == 'total_18p'
+  # for a level, or exclude it for a band decomposition.
   fwrite(nat, file.path(res_dir, sprintf('national_anchor_%d.csv', yr)))
   # The age shape goes to resources/, not results/: it is a committed INPUT to
   # the Tax-Data rework (D1), not a regenerable diagnostic.
