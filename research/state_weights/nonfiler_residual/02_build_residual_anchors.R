@@ -417,7 +417,13 @@ for (yr in years) {
   # the year. Nothing here is silently defaulted: the CSVs are simply absent.
   qcew_f <- file.path(raw_data_root(), 'BLS-QCEW',
                       sprintf('qcew_state_totals_%d.csv', yr))
-  ee <- tryCatch(read_ssa_eedata_hi(yr), error = function(e) NULL)
+  ssa_f  <- ssa_workbook('SSA-EEDATA-SC', yr)
+  # ABSENT and CORRUPT are different, and only the first is a skip. ssa.gov
+  # 403s land an HTML error page under an .xlsx name (which is why
+  # 13_verify_ssa_backfill.R exists), and a blanket tryCatch would report that
+  # file as missing and silently drop the state products. A parse failure on a
+  # file that IS there propagates.
+  ee <- if (file.exists(ssa_f)) read_ssa_eedata_hi(yr) else NULL
   do_wage_margin <- file.exists(qcew_f) && !is.null(ee)
   if (!do_wage_margin) {
     message(sprintf(paste('  SKIP state wage margin and SSA age margin for TY%d:',

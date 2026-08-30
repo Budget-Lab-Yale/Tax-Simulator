@@ -128,13 +128,10 @@ for (yr in YEARS) {
   #---------------------------------------------------------------------------
   ab <- u[must_file == TRUE]
   aw <- ab$weight; ap <- ab$p_nonfile_hazard
-  has_c <- list(married  = ab$filing_status == 'joint',
-                wages    = ab$src_wages == 1,
-                se       = ab$src_self_employment == 1,
-                interest = ab$src_interest == 1,
-                dividends = ab$src_dividends == 1,
-                pensions = ab$src_retirement == 1,
-                ui       = ab$INCUNEMP > 0)
+  # From filing_model.R, not a local copy: this gate exists to catch margin
+  # drift, and a private copy of the predicates would keep measuring the old
+  # definition after a change and report a pass.
+  has_c <- pub5785_characteristics(ab)
   marg <- rbindlist(lapply(names(tg$shares), function(c_) {
     data.table(tax_year        = yr,
                characteristic  = c_,

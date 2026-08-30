@@ -62,6 +62,31 @@ raw_data_root <- function() {
   file.path(yaml::read_yaml("./config/interfaces/output_roots.yaml")$production,
             "raw_data")
 }
+#' Root of the shared model_data store, the sibling of raw_data_root().
+#'
+#' Added 2026-08-30: group D's diagnostics read Tax-Data's ledgers and the
+#' Macro-Projections series, and had the absolute server path plus a pinned
+#' vintage typed into the tracked script. No server path belongs in a tracked
+#' file, and a collaborator on another machine could not have run them.
+#' Vintages stay explicit -- they pin what a result was computed against -- but
+#' as arguments, not as embedded paths.
+model_data_root <- function() {
+  file.path(yaml::read_yaml("./config/interfaces/output_roots.yaml")$production,
+            "model_data")
+}
+
+#' Path into one model's published vintage, e.g.
+#' model_data_path("Tax-Data", "v1", "2026081216", "baseline").
+model_data_path <- function(model, version, vintage, ...) {
+  p <- file.path(model_data_root(), model, version, vintage, ...)
+  if (!dir.exists(p) && !file.exists(p)) {
+    stop(sprintf("model_data_path(): %s not found. Vintages are pinned on ",
+                 p), "purpose -- check the interface version before editing.",
+         call. = FALSE)
+  }
+  p
+}
+
 ht2_path <- function(year) {
   file.path(raw_data_root(), "IRS-Ind/state/HT2", sprintf("ht2_%d.csv.gz", year))
 }
@@ -524,28 +549,6 @@ build_acs_margins <- function(acs, year, acs_year = NULL,
        acs_year         = acs_year)
 }
 
-# -----------------------------------------------------------------------------
-# HT2 filing-status identities: convert return counts into counts of PEOPLE on
-# filed returns, by state. One definition per computation -- the reconciliation
-# diagnostic below, the residual non-filer anchors (research/state_weights/nonfiler_residual_design.md
-# §3.1), and any external consumer all call this.
-#
-# Identities and documented approximations:
-#   married filing adults = 2 * MARS2 + (N1 - MARS1 - MARS2 - MARS4)
-#                           [residual is MFS-dominated; QSS (~1M unmarried
-#                            returns) is misclassified as married]
-#   single filing adults  = MARS1 + MARS4
-#   dependents            = N2 - (N1 + MARS2)
-#                           [includes adult dependents; a dependent who files
-#                            their own return is double-counted (own return +
-#                            parent's N2); N2 = exemptions pre-2018]
-# PR/OA are excluded to match ACS/PEP coverage.
-# -----------------------------------------------------------------------------
-#' @param states jurisdictions to tabulate. Defaults to the 51 modeled ones.
-#'        Pass NONTAX_BUCKETS to measure the out-of-state buckets (OA, and PR
-#'        from 2018) that the default drops -- those returns ARE in Pub 1304's
-#'        national totals, so the two universes differ by exactly this amount
-#'        and 12_anchor_basis_comparison.R needs it named rather than implied.
 #' Pub 1304 Table 1.6 return counts by marital status, for one tax year.
 #'
 #' Lived in 09_asec_tax_unit_diagnostics.R and was duplicated as hardcoded
@@ -592,6 +595,30 @@ soi_filing_status <- function(year) {
   stopifnot(abs(gap) < 0.001 * total)
   list(returns = out, total = total)
 }
+
+
+# -----------------------------------------------------------------------------
+# HT2 filing-status identities: convert return counts into counts of PEOPLE on
+# filed returns, by state. One definition per computation -- the reconciliation
+# diagnostic below, the residual non-filer anchors (research/state_weights/nonfiler_residual_design.md
+# §3.1), and any external consumer all call this.
+#
+# Identities and documented approximations:
+#   married filing adults = 2 * MARS2 + (N1 - MARS1 - MARS2 - MARS4)
+#                           [residual is MFS-dominated; QSS (~1M unmarried
+#                            returns) is misclassified as married]
+#   single filing adults  = MARS1 + MARS4
+#   dependents            = N2 - (N1 + MARS2)
+#                           [includes adult dependents; a dependent who files
+#                            their own return is double-counted (own return +
+#                            parent's N2); N2 = exemptions pre-2018]
+# PR/OA are excluded to match ACS/PEP coverage.
+# -----------------------------------------------------------------------------
+#' @param states jurisdictions to tabulate. Defaults to the 51 modeled ones.
+#'        Pass NONTAX_BUCKETS to measure the out-of-state buckets (OA, and PR
+#'        from 2018) that the default drops -- those returns ARE in Pub 1304's
+#'        national totals, so the two universes differ by exactly this amount
+#'        and 12_anchor_basis_comparison.R needs it named rather than implied.
 
 
 ht2_filing_persons <- function(ht2, states = NULL) {

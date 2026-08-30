@@ -39,13 +39,19 @@
 #------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({
-  library(data.table); library(readr)
+  library(data.table); library(readr); library(yaml)
 })
+source('src/data/state_weights.R')
 
 RES     <- 'research/state_weights/nonfiler_pool/results'
-TAXDATA <- '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1/2026081216/baseline'
-SOI     <- paste0('/nfs/roberts/project/pi_nrs36/shared/model_data/Compiled-SOI-Tables',
-                  '/v3/20250319/historical/table_1_4.csv')
+# Vintages are pinned deliberately: these numbers describe THIS Tax-Data
+# build. Paths come from output_roots.yaml, never typed in.
+TAXDATA_VINTAGE <- c(model = 'Tax-Data',            version = 'v1', vintage = '2026081216')
+SOI_VINTAGE     <- c(model = 'Compiled-SOI-Tables', version = 'v3', vintage = '20250319')
+TAXDATA <- model_data_path(TAXDATA_VINTAGE[['model']], TAXDATA_VINTAGE[['version']],
+                           TAXDATA_VINTAGE[['vintage']], 'baseline')
+SOI     <- model_data_path(SOI_VINTAGE[['model']], SOI_VINTAGE[['version']],
+                           SOI_VINTAGE[['vintage']], 'historical', 'table_1_4.csv')
 REPORT_YEARS <- c(2020L, 2025L, 2035L, 2055L)
 
 # id >= 1e6 is the appended non-filer convention (impute_nonfilers.R)

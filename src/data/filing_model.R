@@ -185,15 +185,11 @@ score_mok <- function(units, coefs) {
 # -----------------------------------------------------------------------------
 
 PUB5785_PATH <- "research/state_weights/nonfiler_residual/resources/pub5785_table3_notfiler_units.csv"
-PUB5785_TARGET_UNITS <- 11.19e6   # above-threshold non-filing units, TY2014-16
-                                  # average. RETAINED as the fallback for years
-                                  # Pub 5785 does not cover; prefer
-                                  # pub5785_targets(year), which reads that
-                                  # year's own column.
-
-# Table 3 total income $409.4B over 11.19M units, TY2014-16 average. The
-# eighth calibration constraint -- see the concept caveat in pub5785_hazard().
-PUB5785_TARGET_MEAN_INCOME <- 409.4e9 / 11.19e6   # $36,586
+# NOTE: the TY2014-16 averages (11.19M units, $36,586 mean income) used to
+# live here as constants. They are gone -- everything now goes through
+# pub5785_targets(), which reads the year's own column from the CSV and
+# derives the average from the same source when asked for it. Two copies of a
+# published figure, one of them hand-typed, is how a basis goes stale.
 
 # Publication 5785 covers these tax years and no others.
 PUB5785_YEARS <- 2014:2016
@@ -204,6 +200,35 @@ PUB5785_YEARS <- 2014:2016
 # pub5785_targets_for_year() falls back to the average and says so.
 PUB5785_PROJECTED_PATH <- file.path("research/state_weights/nonfiler_pool",
                                     "results/pub5785_projected_targets.csv")
+
+#' The seven Table 3 characteristics, as predicates over a unit table.
+#'
+#' Defined ONCE. `pub5785_hazard()` rakes to these and `02_filing_model.R`'s
+#' margin gate measures against them; when the gate kept its own copy, a change
+#' to a mapping here would have left the gate silently checking the old
+#' definition and reporting a pass. The non-obvious ones are `pensions`, which
+#' is retirement income rather than a pension-specific item, and `ui`, which
+#' reads the raw ASEC variable because there is no src_ flag for it.
+#'
+#' @param units a unit table carrying filing_status, the src_* flags, INCUNEMP
+#' @return named list of logical vectors, in Table 3's own order
+pub5785_characteristics <- function(units) {
+  need <- c("filing_status", "src_wages", "src_self_employment", "src_interest",
+            "src_dividends", "src_retirement", "INCUNEMP")
+  missing <- setdiff(need, names(units))
+  if (length(missing)) {
+    stop("pub5785_characteristics(): missing ", paste(missing, collapse = ", "),
+         call. = FALSE)
+  }
+  list(married   = units$filing_status == "joint",
+       wages     = units$src_wages == 1,
+       se        = units$src_self_employment == 1,
+       interest  = units$src_interest == 1,
+       dividends = units$src_dividends == 1,
+       pensions  = units$src_retirement == 1,
+       ui        = units$INCUNEMP > 0)
+}
+
 
 #' Pub 5785 Table 3 targets for ONE tax year.
 #'
@@ -349,14 +374,8 @@ pub5785_hazard <- function(units, targets, use_mean_income = TRUE) {
   ab <- units[must_file == TRUE]
   stopifnot(nrow(ab) > 0)
   W <- ab[, sum(weight)]
-  has <- data.table(
-    married  = ab$filing_status == "joint",
-    wages    = ab$src_wages == 1,
-    se       = ab$src_self_employment == 1,
-    interest = ab$src_interest == 1,
-    dividends = ab$src_dividends == 1,
-    pensions = ab$src_retirement == 1,
-    ui       = ab$INCUNEMP > 0)
+  has <- pub5785_characteristics(ab)
+  stopifnot(identical(names(has), names(share_nf)))
   share_pop <- vapply(names(share_nf),
                       function(c_) ab[has[[c_]], sum(weight)] / W, numeric(1))
 
@@ -376,36 +395,64 @@ pub5785_hazard <- function(units, targets, use_mean_income = TRUE) {
   if (!is.null(target_mean_income)) {
     stopifnot(min(y) < target_mean_income, max(y) > target_mean_income)
   }
+  sd_y <- stats::sd(y)
+  stopifnot(is.finite(sd_y), sd_y > 0)
 
   #' One exponential tilt on income, solved so the p-weighted mean hits m.
   #' Monotone in lambda, so bisection is safe; the bracket widens until it
   #' straddles rather than assuming a scale.
   tilt_to_mean <- function(p, m) {
+    # z is fixed across every evaluation; sd() and the centring used to be
+    # recomputed inside f(), which runs up to 140 times per sweep and 50 sweeps
+    # per year over a ~200k-row table.
+    z   <- (y - m) / sd_y
+    dev <- y - m
     f <- function(lam) {
-      q <- p * exp(lam * (y - m) / sd(y))
-      sum(w * q * (y - m)) / sum(w * q)
+      q <- p * exp(lam * z)
+      s <- sum(w * q)
+      if (!is.finite(s) || s <= 0) return(NA_real_)   # over/underflowed
+      sum(w * q * dev) / s
     }
+    # Widen until the root is bracketed. isTRUE() matters: far enough out,
+    # exp(lam * z) underflows to 0 or overflows to Inf for every unit and f()
+    # is NaN -- a bare `if (f(lo) < 0)` then throws "missing value where
+    # TRUE/FALSE needed" instead of falling through to the guard below, which
+    # is the behaviour actually wanted.
     lo <- -1; hi <- 1
-    for (k in 1:40) { if (f(lo) < 0) break; lo <- lo * 2 }
-    for (k in 1:40) { if (f(hi) > 0) break; hi <- hi * 2 }
-    if (f(lo) >= 0 || f(hi) <= 0) return(p)   # unreachable: leave untilted
+    for (k in 1:40) { if (isTRUE(f(lo) < 0)) break; lo <- lo * 2 }
+    for (k in 1:40) { if (isTRUE(f(hi) > 0)) break; hi <- hi * 2 }
+    if (!isTRUE(f(lo) < 0) || !isTRUE(f(hi) > 0)) return(p)   # leave untilted
     for (k in 1:60) {
       mid <- (lo + hi) / 2
-      if (f(mid) > 0) hi <- mid else lo <- mid
+      if (isTRUE(f(mid) > 0)) hi <- mid else lo <- mid
     }
-    p * exp(((lo + hi) / 2) * (y - m) / sd(y))
+    p * exp(((lo + hi) / 2) * z)
   }
 
   #' Scale to the target COUNT without breaking the cap: capped units cannot
   #' absorb more, so the adjustment goes proportionally to those still free.
   #' A plain rescale-then-clip silently loses the mass it clips.
   solve_level <- function(p, target) {
+    # The capped mass alone can exceed the target. Then no reduction of the
+    # free units reaches it, the multiplier below goes negative, and without
+    # the pmax() the next iteration divides by a negative denominator and the
+    # run dies later at an opaque `all(p >= 0)`. Diagnose it here instead.
+    capped_mass <- sum(w[p >= PUB5785_CAP] * PUB5785_CAP)
+    if (capped_mass > target) {
+      stop(sprintf(paste("pub5785_hazard(): units already at the %.2f cap carry",
+                         "%.2fM of the %.2fM target on their own. The target is",
+                         "unreachable from this population without raising the",
+                         "cap -- a finding about the target, not a solver",
+                         "setting."),
+                   PUB5785_CAP, capped_mass / 1e6, target / 1e6), call. = FALSE)
+    }
     for (k in 1:50) {
       gap <- target - sum(w * p)
       if (abs(gap) < 1) break
       unc <- p < PUB5785_CAP
       if (!any(unc)) break
-      p[unc] <- pmin(p[unc] * (1 + gap / sum(w[unc] * p[unc])), PUB5785_CAP)
+      p[unc] <- pmax(pmin(p[unc] * (1 + gap / sum(w[unc] * p[unc])),
+                          PUB5785_CAP), 0)
     }
     p
   }

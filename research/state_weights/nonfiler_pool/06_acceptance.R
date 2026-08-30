@@ -82,7 +82,12 @@ for (yr in YEARS) {
   st   <- readRDS(file.path(RES, sprintf('units_%d.rds', yr)))
   cal  <- fread(file.path(RES, sprintf('calibration_%d.csv', yr)))
   shp  <- fread(file.path(SHAPE, sprintf('nonfiler_age_shape_%d.csv', yr)))
-  wm   <- fread(file.path(ANCH, sprintf('nonfiler_wage_margin_%d.csv', yr)))
+  # OPTIONAL since 2026-08-30: 02_build_residual_anchors.R skips this product
+  # for years without QCEW state totals or an SSA EEDATA-SC workbook, which is
+  # every year except 2017 and 2022 today. A bare fread() killed the whole
+  # acceptance run for those years.
+  wm_path <- file.path(ANCH, sprintf('nonfiler_wage_margin_%d.csv', yr))
+  wm <- if (file.exists(wm_path)) fread(wm_path) else NULL
 
   # person-weight: adults represented by each pool record
   pool[, n_adults := 1 + (filing_status == 2)]
@@ -144,34 +149,51 @@ for (yr in YEARS) {
   #---------------------------------------------------------------------------
   # INDEPENDENT 1 -- wage mass
   #---------------------------------------------------------------------------
-  ssa_wages <- wm[, sum(ssa_covered_wages)]
-  ht2_wages <- wm[, sum(wages_amt)]
-  implied   <- ssa_wages - ht2_wages
+  # BOTH benchmarks below are TY2017 figures. They are only meaningful against
+  # the TY2017 pool, so the whole block is gated on the year rather than
+  # quietly dividing another year's wages by a 2017 denominator -- which is the
+  # same stale-basis error this work exists to remove.
+  # NA rather than absent, so the verdict table keeps five rows in every year
+  # and a reader can see that the dimension was not comparable rather than
+  # wondering why it vanished.
+  pool_wages <- dina_wages <- dep_wages <- implied <- NA_real_
+  wage_comparable <- !is.null(wm) && yr == 2017L
+  if (wage_comparable) {
+    ssa_wages <- wm[, sum(ssa_covered_wages)]
+    ht2_wages <- wm[, sum(wages_amt)]
+    implied   <- ssa_wages - ht2_wages
 
-  pool_wages <- pool[, sum(weight * wages)]
-  dina_wages <- dina[, sum(weight * wages)]
-  # the concept wedge: claimed dependents work and are not pool units
-  dep_wages <- st$persons[is_dependent == TRUE, sum(ASECWT * INCWAGE)]
+    pool_wages <- pool[, sum(weight * wages)]
+    dina_wages <- dina[, sum(weight * wages)]
+    # the concept wedge: claimed dependents work and are not pool units
+    dep_wages <- st$persons[is_dependent == TRUE, sum(ASECWT * INCWAGE)]
 
-  message(sprintf(paste('  [INDEPENDENT] wage mass, TWO benchmarks:',
-                        'RESIDUAL $%.1fB (SSA covered $%.1fB less HT2 on-return',
-                        '$%.1fB; recorded $%.1fB for TY2017) = an upper bound |',
-                        'IDENTIFIED (Pub 5785 TY2014-16, projected to TY2017)',
-                        '$%.0f-%.0fB -- the SAME BASIS the hazard is calibrated',
-                        'on is the TY2014-16 average $242.5B'),
-                  implied / 1e9, ssa_wages / 1e9, ht2_wages / 1e9,
-                  RESIDUAL_IMPLIED_WAGES_2017 / 1e9,
-                  PUB5785_IMPLIED_WAGES_2017[['low']] / 1e9,
-                  PUB5785_IMPLIED_WAGES_2017[['high']] / 1e9))
-  pub_mid <- mean(PUB5785_IMPLIED_WAGES_2017)
-  message(sprintf(paste('    pool $%.1fB = %.2f of the residual, %.2f of the',
-                        'identified midpoint | + claimed-dependent wages $%.1fB',
-                        '= %.2f / %.2f | replaced file $%.1fB = %.2f / %.2f'),
-                  pool_wages / 1e9, pool_wages / implied, pool_wages / pub_mid,
-                  dep_wages / 1e9,
-                  (pool_wages + dep_wages) / implied,
-                  (pool_wages + dep_wages) / pub_mid,
-                  dina_wages / 1e9, dina_wages / implied, dina_wages / pub_mid))
+    message(sprintf(paste('  [INDEPENDENT] wage mass, TWO benchmarks:',
+                          'RESIDUAL $%.1fB (SSA covered $%.1fB less HT2 on-return',
+                          '$%.1fB; recorded $%.1fB for TY2017) = an upper bound |',
+                          'IDENTIFIED (Pub 5785 TY2014-16, projected to TY2017)',
+                          '$%.0f-%.0fB -- the SAME BASIS the hazard is calibrated',
+                          'on is the TY2014-16 average $242.5B'),
+                    implied / 1e9, ssa_wages / 1e9, ht2_wages / 1e9,
+                    RESIDUAL_IMPLIED_WAGES_2017 / 1e9,
+                    PUB5785_IMPLIED_WAGES_2017[['low']] / 1e9,
+                    PUB5785_IMPLIED_WAGES_2017[['high']] / 1e9))
+    pub_mid <- mean(PUB5785_IMPLIED_WAGES_2017)
+    message(sprintf(paste('    pool $%.1fB = %.2f of the residual, %.2f of the',
+                          'identified midpoint | + claimed-dependent wages $%.1fB',
+                          '= %.2f / %.2f | replaced file $%.1fB = %.2f / %.2f'),
+                    pool_wages / 1e9, pool_wages / implied, pool_wages / pub_mid,
+                    dep_wages / 1e9,
+                    (pool_wages + dep_wages) / implied,
+                    (pool_wages + dep_wages) / pub_mid,
+                    dina_wages / 1e9, dina_wages / implied, dina_wages / pub_mid))
+  } else {
+    message(sprintf(paste('  [INDEPENDENT] wage mass SKIPPED for TY%d: %s. Both',
+                          'benchmarks are TY2017 levels and a ratio against',
+                          'them would not be on-basis.'),
+                    yr, if (is.null(wm)) 'no state wage margin for this year'
+                        else 'benchmarks are TY2017-only'))
+  }
 
   #---------------------------------------------------------------------------
   # INDEPENDENT 2+3 -- receipt rates against Pub 5785 Table 1
@@ -265,9 +287,12 @@ for (yr in YEARS) {
              'INDEPENDENT', 'INDEPENDENT'),
     pool = c(sprintf('%.2fM (+%.2fM netting = anchor)', pool_adults / 1e6, netting / 1e6),
              sprintf('MARD %.2f%%', age_mard_pool),
-             sprintf('$%.1fB = %.2f implied (%.2f with dependents)',
-                     pool_wages / 1e9, pool_wages / implied,
-                     (pool_wages + dep_wages) / implied),
+             if (wage_comparable)
+               sprintf('$%.1fB = %.2f implied (%.2f with dependents)',
+                       pool_wages / 1e9, pool_wages / implied,
+                       (pool_wages + dep_wages) / implied)
+             else sprintf('$%.1fB (no on-basis benchmark for TY%d)',
+                          pool[, sum(weight * wages)] / 1e9, yr),
              sprintf('int %.1f%% div %.1f%% kg %.1f%%',
                      100 * rec[source == 'interest', pool_i],
                      100 * rec[source == 'dividends', pool_i],
@@ -276,8 +301,10 @@ for (yr in YEARS) {
     replaced = c(sprintf('%.2fM = %.2f of target', dina_adults / 1e6,
                          dina_adults / (anchor_total - netting)),
                  sprintf('MARD %.2f%%', age_mard_dina),
-                 sprintf('$%.1fB = %.2f implied', dina_wages / 1e9,
-                         dina_wages / implied),
+                 if (wage_comparable)
+                   sprintf('$%.1fB = %.2f implied', dina_wages / 1e9,
+                           dina_wages / implied)
+                 else sprintf('$%.1fB', dina[, sum(weight * wages)] / 1e9),
                  sprintf('int %.1f%% div %.1f%% kg %.1f%%',
                          100 * rec[source == 'interest', repl_i],
                          100 * rec[source == 'dividends', repl_i],
@@ -285,13 +312,16 @@ for (yr in YEARS) {
                  sprintf('%.1f%%', 100 * rec[source == 'social_security', repl_i])),
     benchmark = c(sprintf('%.2fM anchor', anchor_total / 1e6),
                   'netted band target',
-                  sprintf('$%.1fB implied', implied / 1e9),
+                  if (wage_comparable) sprintf('$%.1fB implied', implied / 1e9)
+                  else 'TY2017-only; not compared',
                   sprintf('int %.1f%% div %.1f%% kg %.1f%%',
                           100 * bench[['interest']], 100 * bench[['dividends']],
                           100 * bench[['capital_gains']]),
                   sprintf('%.1f%%', 100 * bench[['social_security']])),
     pool_better = c(TRUE, age_mard_pool < age_mard_dina,
-                    abs(pool_wages - implied) < abs(dina_wages - implied),
+                    if (wage_comparable)
+                      abs(pool_wages - implied) < abs(dina_wages - implied)
+                    else NA,
                     rec[source %in% c('interest','dividends','capital_gains'),
                         mean(pool_gap) < mean(repl_gap)],
                     rec[source == 'social_security', pool_gap < repl_gap]))

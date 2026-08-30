@@ -1,0 +1,6 @@
+tax_year,dimension,kind,pool,replaced,benchmark,pool_better
+2019,level,construction,33.79M (+13.78M netting = anchor),31.02M = 0.92 of target,47.57M anchor,TRUE
+2019,age composition,construction,MARD 0.00%,MARD 23.96%,netted band target,TRUE
+2019,wage mass,INDEPENDENT,$297.3B (no on-basis benchmark for TY2019),$124.7B,TY2017-only; not compared,
+2019,investment receipt,INDEPENDENT,int 20.5% div 6.9% kg 2.8%,int 0.0% div 0.0% kg 0.0%,int 13.5% div 8.8% kg 4.1%,TRUE
+2019,SS receipt,INDEPENDENT,52.1%,64.9%,47.6%,TRUE

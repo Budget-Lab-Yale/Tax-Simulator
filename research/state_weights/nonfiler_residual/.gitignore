@@ -1,0 +1,6 @@
+# Mirrors nonfiler_pool/.gitignore. The small diagnostic and margin CSVs in
+# results/ ARE tracked -- they are this bundle's committed evidence, and a
+# reader needs to see the numbers a document cites without re-running an ACS
+# job. Anything large or intermediate is regenerable and stays out.
+results/*.rds
+results/*.csv.gz

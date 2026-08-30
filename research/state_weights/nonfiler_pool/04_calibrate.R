@@ -313,6 +313,16 @@ for (yr in YEARS) {
     dn <- merge(dn, below[, .(mass = sum(w_adults)), by = band], by = 'band')
     dn[, min((anchor - dep_nonfiling - fixed_nonfiling) / mass)]
   }
+  #' Which band is the binding one, so the diagnosis names it instead of
+  #' assuming 18-25. It usually IS 18-25, but "usually" printed as fact is how
+  #' a reader is sent to the wrong end of the distribution.
+  tightest_band <- function(sh) {
+    dn <- merge(anchor, apply_shift(sh), by = 'band', all.x = TRUE)
+    dn[is.na(dep_nonfiling), dep_nonfiling := 0]
+    dn <- merge(dn, fixed[, .(band, fixed_nonfiling)], by = 'band')
+    dn <- merge(dn, below[, .(mass = sum(w_adults)), by = band], by = 'band')
+    dn[which.min((anchor - dep_nonfiling - fixed_nonfiling) / mass), band]
+  }
   MARGIN <- 0.02          # keep 2% of each band's below-threshold mass in play
   if (headroom(dep_shift) < MARGIN) {
     # Relieve the band by shrinking the dependent shift toward zero. There may
@@ -325,24 +335,28 @@ for (yr in YEARS) {
     # shift is pinned at zero rather than crashing the year.
     no_shift <- headroom(c(u65 = 0, `65p` = dep_shift[['65p']]))
     if (no_shift < MARGIN) {
+      tb <- tightest_band(c(u65 = 0, `65p` = dep_shift[['65p']]))
+      # Both shifts are pinned, not just u65: if the 65+ band is the binding
+      # one, zeroing the under-65 shift does nothing to it.
       message(sprintf(paste('  INFEASIBLE: even with NO dependent shift the',
-                            'tightest band keeps only %.1f%% of its',
+                            'tightest band (%s) keeps only %.1f%% of its',
                             'below-threshold mass in play (want %.0f%%). The',
                             'above-threshold hazard alone over-subscribes it --',
                             'the projected target and the residual count',
-                            'disagree at the young end. Pinning the shift at 0',
+                            'disagree there. Pinning BOTH dependent shifts at 0',
                             'and reporting.'),
-                      100 * no_shift, 100 * MARGIN))
-      dep_shift[['u65']] <- 0
+                      tb, 100 * no_shift, 100 * MARGIN))
+      dep_shift[] <- 0
     } else {
       cap <- uniroot(function(z) headroom(c(u65 = z, `65p` = dep_shift[['65p']])) - MARGIN,
                      lower = dep_shift[['u65']], upper = 0, tol = 1e-8)$root
       sub <- dep_u[side == 'u65']
       message(sprintf(paste('  dependent u65 shift CAPPED at %+.3f (rate %.3f) --',
-                            'Mok\'s %+.3f / 0.10 would leave the 18-25 band with',
+                            'Mok\'s %+.3f / 0.10 would leave the %s band with',
                             'no room at all. The residual count refuses it.'),
                       cap, sub[, sum(weight * pnorm(qnorm(p_file_mok) + cap))] /
-                           sub[, sum(weight)], dep_shift[['u65']]))
+                           sub[, sum(weight)], dep_shift[['u65']],
+                      tightest_band(c(u65 = cap, `65p` = dep_shift[['65p']]))))
       dep_shift[['u65']] <- cap
     }
   }

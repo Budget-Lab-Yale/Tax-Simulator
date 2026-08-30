@@ -199,8 +199,12 @@ test_filing_requirement <- function() {
   z <- f(13500, earned = 11000)   # 2,500 investment income
   stopifnot(z$must_file == TRUE, z$must_file_ex_investment == FALSE)
 
-  # unlisted year fails loudly rather than borrowing a neighbor's constants
-  err <- tryCatch({ add_filing_requirement(mk(10000), 2019); FALSE },
+  # An unlisted year fails loudly rather than borrowing a neighbour's
+  # constants. The year is DERIVED from the table, not written in: this test
+  # named 2019, and adding 2019 to support the group D builds turned a real
+  # assertion into a failing one. Anything outside the covered range works.
+  unlisted <- max(as.integer(names(FILING_THRESHOLD_COMPONENTS))) + 1L
+  err <- tryCatch({ add_filing_requirement(mk(10000), unlisted); FALSE },
                   error = function(e) TRUE)
   stopifnot(err)
 
@@ -259,7 +263,23 @@ test_qr_income_limit <- function() {
   invisible(TRUE)
 }
 
+#' Every Chart A threshold re-derived from standard deduction + personal
+#' exemption + the age-65 addition. Lives here rather than executing at source
+#' time in asec_tax_units.R, because main.R sources src/ recursively on every
+#' production run and files there must define, not run.
+test_threshold_tables <- function() {
+  check_filing_requirement_params()
+  yrs <- names(FILING_THRESHOLD_COMPONENTS)
+  stopifnot(length(yrs) >= 7)
+  # every year the builder can be asked for is covered by the check
+  for (y in yrs) stopifnot(!is.null(filing_requirement_params(as.integer(y))))
+  message(sprintf("  test_threshold_tables: %d years internally consistent (%s)",
+                  length(yrs), paste(yrs, collapse = ", ")))
+  invisible(TRUE)
+}
+
 test_asec_tax_units <- function() {
+  test_threshold_tables()
   test_unit_rules()
   test_support_test()
   test_filing_requirement()

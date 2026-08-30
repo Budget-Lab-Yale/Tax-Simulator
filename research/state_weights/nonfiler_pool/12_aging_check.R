@@ -51,9 +51,14 @@ RES       <- 'research/state_weights/nonfiler_pool/results'
 BASE_YEAR <- 2017L
 MAX_AGE   <- 85L        # project_puf caps the demographic join here
 
-TAXDATA <- '/nfs/roberts/project/pi_nrs36/shared/model_data/Tax-Data/v1/2026081216/baseline'
-MACRO   <- paste0('/nfs/roberts/project/pi_nrs36/shared/model_data/Macro-Projections',
-                  '/v3/2026071916/baseline')
+# Vintages pinned on purpose -- the drift measured here is against THIS
+# Tax-Data build's ledgers. Paths resolve through output_roots.yaml.
+TAXDATA_VINTAGE <- c(model = 'Tax-Data',          version = 'v1', vintage = '2026081216')
+MACRO_VINTAGE   <- c(model = 'Macro-Projections', version = 'v3', vintage = '2026071916')
+TAXDATA <- model_data_path(TAXDATA_VINTAGE[['model']], TAXDATA_VINTAGE[['version']],
+                           TAXDATA_VINTAGE[['vintage']], 'baseline')
+MACRO   <- model_data_path(MACRO_VINTAGE[['model']], MACRO_VINTAGE[['version']],
+                           MACRO_VINTAGE[['vintage']], 'baseline')
 
 #-------------------------------------------------------------------------------
 # Demographic population factors, rebuilt as project_puf.R builds them
@@ -112,14 +117,33 @@ age_pool <- function(target_year) {
     f19 <- pf_1819[year == 2019L, .(married, pf19 = population_factor)]
     p   <- merge(p, f19, by = 'married', all.x = TRUE)
     p[, w2019 := weight * pf19]
-    # married x age, averaged over the unit's persons (heads and spouses carry
-    # the unit's marital status; dependants are always in the unmarried cells)
+    # married x age, averaged over the unit's persons. Tax-Data selects
+    #   select(id, married_flag, age1, age2, starts_with('dep_age'))
+    # and takes mean(weight) over ALL of those slots, so the DEPENDENT slots
+    # are in the average too and the divisor is up to five, not two. Leaving
+    # them out changes w_aged for every unit that has a dependent -- 16.1% of
+    # the emitted weight -- which is why they are here.
+    #
+    # REPLICATED QUIRK, deliberately. `dep_age_group1-3` hold GROUP CODES 1-4,
+    # not ages: impute_nonfilers.R samples them from c(1,2,3,4). Tax-Data
+    # pivots them into the same `age` column it then joins to
+    # population_factors_2020plus on, so a dependent is matched to the
+    # population factor for age 1, 2, 3 or 4 and picks up the under-18 0.99
+    # factor. That is what production does, and this script exists to measure
+    # production, so it is copied rather than corrected. Flagged for the
+    # Tax-Data branch review; see NONFILER_BRANCH_NOTES.md.
     fy <- pf_2020[year == target_year, .(married, age, population_factor)]
-    ppl <- melt(p[, .(id, married, w2019, age1, age2)],
+    dep_cols <- grep('^dep_age', names(p), value = TRUE)
+    stopifnot(length(dep_cols) == 3L)
+    ppl <- melt(p[, c('id', 'married', 'w2019', 'age1', 'age2', dep_cols),
+                  with = FALSE],
                 id.vars = c('id', 'married', 'w2019'),
-                measure.vars = c('age1', 'age2'),
+                measure.vars = c('age1', 'age2', dep_cols),
                 variable.name = 'slot', value.name = 'age', na.rm = TRUE)
     ppl <- ppl[age > 0]
+    # heads and spouses carry the unit's marital status; dependants sit in the
+    # unmarried cells, exactly as project_puf assigns them
+    ppl[, married := fifelse(slot %in% c('age1', 'age2'), married, 0L)]
     ppl[, age := pmin(MAX_AGE, as.integer(age))]
     ppl <- merge(ppl, fy, by = c('married', 'age'), all.x = TRUE)
     ppl[is.na(population_factor), population_factor := 1]

@@ -649,7 +649,13 @@ check_filing_requirement_params <- function() {
   }
   invisible(TRUE)
 }
-check_filing_requirement_params()
+# NOT called at source time. main.R sources src/ recursively for every
+# production run, and a file under src/ must define rather than execute. The
+# call lives in src/tests/test_asec_tax_units.R.
+#
+# What this checks and what it does NOT: it verifies the two tables agree with
+# each other. A figure entered wrongly but CONSISTENTLY in both would pass, so
+# it catches transcription slips, not a misread of the Form 1040 chart.
 
 SE_FILING_FLOOR <- 400   # Chart C: net self-employment earnings of $400+
 
