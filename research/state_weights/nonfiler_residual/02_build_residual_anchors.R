@@ -136,9 +136,24 @@ for (yr in years) {
 
   # HT2 identities by state. Read BEFORE the national anchor because the two
   # universe corrections below are measured off HT2 and applied to T1.6's level.
-  ht2 <- read_ht2(ht2_path(yr), yr)
-  fp  <- ht2_filing_persons(ht2)
-  ht2_filing_adults <- fp[, sum(married_filing_adults + single_filing_adults)]
+  #
+  # HT2 ends at TY2022. A later year (TY2023: T1.6 and PEP exist, HT2 does
+  # not) can still get its NATIONAL anchor and age shape -- the two level
+  # corrections just cannot be MEASURED that year, so they are CARRIED from
+  # the latest HT2 year as a fraction of the published level -- 0.549% (2017)
+  # and 0.591% (2022) of it, i.e. the 2.2-2.6% they add to the RESIDUAL. The
+  # stability across years is what makes carrying a fraction defensible.
+  # Every state product is skipped for such a year.
+  have_ht2 <- file.exists(ht2_path(yr))
+  if (have_ht2) {
+    ht2 <- read_ht2(ht2_path(yr), yr)
+    fp  <- ht2_filing_persons(ht2)
+    ht2_filing_adults <- fp[, sum(married_filing_adults + single_filing_adults)]
+  } else {
+    message(sprintf(paste('  NO HT2 for TY%d (series ends 2022): national',
+                          'anchor and age shape only; corrections carried;',
+                          'state products skipped.'), yr))
+  }
 
   #--------------------------------------------------------------------------
   # THE ANCHOR BASIS (S15, JI 2026-08-27). Pub 1304 owns the LEVEL, HT2 owns
@@ -183,30 +198,59 @@ for (yr in years) {
   # first. The QSS correction is spread the same way and is immaterial at its
   # magnitude.
   #--------------------------------------------------------------------------
-  fa_oos      <- {
-    o <- ht2_filing_persons(ht2, states = NONTAX_BUCKETS)
-    if (nrow(o)) o[, sum(married_filing_adults + single_filing_adults)] else 0
-  }
-  mfs_qss     <- fp[, sum(mfs_qss_returns)] +
-                 { o <- ht2_filing_persons(ht2, states = NONTAX_BUCKETS)
-                   if (nrow(o)) o[, sum(mfs_qss_returns)] else 0 }
-  qss_implied <- mfs_qss - t16[block == 'mfs', sum(n_returns)]
-  # A negative implied QSS would mean T1.6's published MFS exceeds the whole
-  # HT2 status residual, which is impossible on a matched universe and is how
-  # the missing out-of-state buckets were found in the first place.
-  stopifnot(qss_implied >= 0)
+  if (have_ht2) {
+    fa_oos      <- {
+      o <- ht2_filing_persons(ht2, states = NONTAX_BUCKETS)
+      if (nrow(o)) o[, sum(married_filing_adults + single_filing_adults)] else 0
+    }
+    mfs_qss     <- fp[, sum(mfs_qss_returns)] +
+                   { o <- ht2_filing_persons(ht2, states = NONTAX_BUCKETS)
+                     if (nrow(o)) o[, sum(mfs_qss_returns)] else 0 }
+    qss_implied <- mfs_qss - t16[block == 'mfs', sum(n_returns)]
+    # A negative implied QSS would mean T1.6's published MFS exceeds the whole
+    # HT2 status residual, which is impossible on a matched universe and is how
+    # the missing out-of-state buckets were found in the first place.
+    stopifnot(qss_implied >= 0)
 
-  fa[, filing_adults_t16_published := filing_adults]
-  level_correction <- fa_oos + qss_implied
+    fa[, filing_adults_t16_published := filing_adults]
+    level_correction <- fa_oos + qss_implied
+  } else {
+    # Carry the correction FRACTION from the latest measured year: re-derive
+    # that year's published filing adults from its own T1.6 (same three lines
+    # as `fa` above) and take 1 - corrected/published from its committed
+    # anchor. The bounds bracket the measured values (0.549% in 2017, 0.591%
+    # in 2022) with margin -- outside them means the reference file changed.
+    HT2_REF_YEAR <- 2022L
+    ref_anchor <- fread(file.path(res_dir,
+                                  sprintf('national_anchor_%d.csv', HT2_REF_YEAR)))
+    t16_ref <- read_pub1304_t16(HT2_REF_YEAR)
+    fa_ref <- t16_ref[block != 'all' & band != 'u18',
+                      .(filing_adults = sum(n_returns * fifelse(block == 'mfj', 2, 1))),
+                      by = band]
+    fa_ref[band == '18_25', filing_adults := filing_adults -
+             t16_ref[block == 'all' & band == 'u18', sum(n_returns)]]
+    f_ref <- 1 - ref_anchor[band != 'total_18p', sum(filing_adults)] /
+                 fa_ref[, sum(filing_adults)]
+    stopifnot(f_ref > 0.004, f_ref < 0.009)
+    fa[, filing_adults_t16_published := filing_adults]
+    level_correction <- f_ref * fa[, sum(filing_adults_t16_published)]
+    fa_oos <- NA_real_; qss_implied <- NA_real_
+    message(sprintf(paste('  level correction CARRIED from TY%d: %.2f%% of the',
+                          'published level = %.3fM (out-of-state and QSS not',
+                          'separately measurable without HT2)'),
+                    HT2_REF_YEAR, 100 * f_ref, level_correction / 1e6))
+  }
   fa[, filing_adults := filing_adults -
        level_correction * filing_adults_t16_published /
        sum(filing_adults_t16_published)]
   level_51 <- fa[, sum(filing_adults)]
 
-  message(sprintf(paste('  anchor basis (S15): T1.6 %.3fM - out-of-state %.3fM',
-                        '- QSS double-count %.3fM = level %.3fM (%+.2f%%)'),
-                  fa[, sum(filing_adults_t16_published)] / 1e6, fa_oos / 1e6,
-                  qss_implied / 1e6, level_51 / 1e6,
+  message(sprintf(paste('  anchor basis (S15): T1.6 %.3fM - out-of-state %s',
+                        '- QSS double-count %s = level %.3fM (%+.2f%%)'),
+                  fa[, sum(filing_adults_t16_published)] / 1e6,
+                  if (is.na(fa_oos)) '(carried)' else sprintf('%.3fM', fa_oos / 1e6),
+                  if (is.na(qss_implied)) '(carried)' else sprintf('%.3fM', qss_implied / 1e6),
+                  level_51 / 1e6,
                   -100 * level_correction / fa[, sum(filing_adults_t16_published)]))
 
   # National anchor: PEP adults by band minus the corrected filing adults
@@ -219,12 +263,14 @@ for (yr in years) {
   # It is NOT the corrected level (reported above) -- labelling it T1.6 after
   # the correction would misname the quantity. The gap does not decompose into
   # named universe differences; notes/anchor_basis_comparison.md Part A.
-  message(sprintf(paste('  source families, filing adults 18+: T1.6 as published',
-                        '%.1fM (excl. %.2fM under-18 filers) vs HT2 identities',
-                        '%.1fM (gap %+.2f%%)'),
-                  fa[, sum(filing_adults_t16_published)] / 1e6, u18_filers / 1e6,
-                  ht2_filing_adults / 1e6,
-                  100 * (fa[, sum(filing_adults_t16_published)] / ht2_filing_adults - 1)))
+  if (have_ht2) {
+    message(sprintf(paste('  source families, filing adults 18+: T1.6 as published',
+                          '%.1fM (excl. %.2fM under-18 filers) vs HT2 identities',
+                          '%.1fM (gap %+.2f%%)'),
+                    fa[, sum(filing_adults_t16_published)] / 1e6, u18_filers / 1e6,
+                    ht2_filing_adults / 1e6,
+                    100 * (fa[, sum(filing_adults_t16_published)] / ht2_filing_adults - 1)))
+  }
   message(sprintf('  national residual non-filing adults 18+: %.1fM (%.1f%% of PEP adults)',
                   nat[band == 'total_18p', residual_nonfiling_adults] / 1e6,
                   100 * nat[band == 'total_18p', residual_nonfiling_adults / pep_adults]))
@@ -290,6 +336,11 @@ for (yr in years) {
                   100 * shape[band == '65_74', residual_nonfiling_adults / pep_adults],
                   100 * shape[band == '75p', residual_nonfiling_adults / pep_adults]))
 
+  # Everything from here to the writes is STATE-level and needs HT2 shares;
+  # a year without HT2 (2023+) ends with the national products alone.
+  do_wage_margin <- FALSE
+  st <- NULL
+  if (have_ht2) {
   # State anchor: PEP 18+ minus the T1.6-consistent level distributed by HT2
   # state shares (S15, implemented 2026-08-27 -- this is the "come later" the
   # previous version of this comment deferred).
@@ -463,6 +514,8 @@ for (yr in years) {
   # NOTE for consumers: this file carries a `total_18p` row ALONGSIDE the six
   # age bands, so `sum(pep_adults)` double-counts. Filter to band == 'total_18p'
   # for a level, or exclude it for a band decomposition.
+  }  # end of the HT2-dependent state block
+
   fwrite(nat, file.path(res_dir, sprintf('national_anchor_%d.csv', yr)))
   # The age shape goes to resources/, not results/: it is a committed INPUT to
   # the Tax-Data rework (D1), not a regenerable diagnostic.
@@ -471,12 +524,16 @@ for (yr in years) {
                    residual_nonfiling_adults, share, share_within_age_group,
                    ira_share_65_74)],
          file.path(shape_dir, sprintf('nonfiler_age_shape_%d.csv', yr)))
-  fwrite(st[order(state)], file.path(res_dir, sprintf('residual_anchors_%d.csv', yr)))
+  if (have_ht2) {
+    fwrite(st[order(state)],
+           file.path(res_dir, sprintf('residual_anchors_%d.csv', yr)))
+  }
   if (do_wage_margin) {
     fwrite(wm[order(state)], file.path(res_dir, sprintf('nonfiler_wage_margin_%d.csv', yr)))
     fwrite(ee$age, file.path(res_dir, sprintf('ssa_age_margin_%d.csv', yr)))
   }
-  message(sprintf('  wrote national_anchor / residual_anchors%s CSVs',
+  message(sprintf('  wrote national_anchor%s%s CSVs',
+                  if (have_ht2) ' / residual_anchors' else ' (national only)',
                   if (do_wage_margin)
                     ' / nonfiler_wage_margin / ssa_age_margin' else ''))
 }

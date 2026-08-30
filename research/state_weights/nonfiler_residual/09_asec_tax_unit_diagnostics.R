@@ -222,9 +222,18 @@ for (ty in ANCHOR_YEARS) {
   message('\n=== A4. Income aggregates, TY', ty)
   full <- read_asec(ty)
   ddi  <- attr(full, 'ddi')
-  ht2  <- as.data.table(read_ht2(ht2_path(ty), ty))[
-    !(state %in% NONTAX_BUCKETS), .(v = sum(value)), by = variable]
-  setkey(ht2, variable)
+  # HT2 ends at 2022; for a later year the SOI columns are NA and only the
+  # ASEC side of this table -- which is what 01_build_units.R's C0 gate reads
+  # -- is populated.
+  ht2 <- if (file.exists(ht2_path(ty))) {
+    h <- as.data.table(read_ht2(ht2_path(ty), ty))[
+      !(state %in% NONTAX_BUCKETS), .(v = sum(value)), by = variable]
+    setkey(h, variable)
+    h
+  } else {
+    message(sprintf('  NOTE: no HT2 for TY%d (series ends 2022) -- SOI columns are NA.', ty))
+    data.table(variable = character(), v = numeric(), key = 'variable')
+  }
   # SSA EEDATA-SC is manually downloaded (the cluster is 403-blocked) and the
   # local series starts at 2017, so the like-for-like covered-wage benchmark
   # does not exist for the Pub 5785 years. Carry NA and SAY SO rather than

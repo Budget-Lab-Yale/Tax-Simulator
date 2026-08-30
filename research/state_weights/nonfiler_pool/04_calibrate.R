@@ -193,7 +193,10 @@ for (yr in YEARS) {
   st <- readRDS(file.path(RES, sprintf('units_%d.rds', yr)))
   gq <- fread(file.path(RES, sprintf('gq_backfill_summary_%d.csv', yr)))
   shape <- fread(file.path(SHAPE, sprintf('nonfiler_age_shape_%d.csv', yr)))
-  ranch <- fread(file.path(ANCH, sprintf('residual_anchors_%d.csv', yr)))
+  # State anchors need HT2, which ends at 2022; a later year has none and the
+  # dorm tripwire below (its only consumer here) is skipped with a message.
+  ranch_path <- file.path(ANCH, sprintf('residual_anchors_%d.csv', yr))
+  ranch <- if (file.exists(ranch_path)) fread(ranch_path) else NULL
 
   #---------------------------------------------------------------------------
   # Assemble the identity's pieces, all in the 7-band space
@@ -234,9 +237,15 @@ for (yr in YEARS) {
   # differ ~2.4% because the threshold tests differ deliberately (03 uses the
   # pool's own concept: INCTOT - INCSS, 65+ variant, $400 SE rule); 5% is
   # enough to catch a drifted classify_gq() or a wrong ACS year.
-  dorm_03 <- gq[band != 'u18', sum(dorm_dependents)]
-  dorm_anch <- ranch[, sum(dorm_dependents)]
-  stopifnot(abs(dorm_03 / dorm_anch - 1) < 0.05)
+  if (!is.null(ranch)) {
+    dorm_03 <- gq[band != 'u18', sum(dorm_dependents)]
+    dorm_anch <- ranch[, sum(dorm_dependents)]
+    stopifnot(abs(dorm_03 / dorm_anch - 1) < 0.05)
+  } else {
+    message(sprintf(paste('  dorm tripwire SKIPPED for TY%d: no state anchor',
+                          'file (HT2 ends 2022). Informational only -- dorm',
+                          'students are not a term in the identity.'), yr))
+  }
 
   # Our claimed-adult-dependent netting, non-filing portion, by the
   # dependent's OWN band: join each 18+ dependent to their scoring unit.

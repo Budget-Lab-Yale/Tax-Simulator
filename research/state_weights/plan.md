@@ -357,6 +357,8 @@ reading uses `fread(cmd = 'zcat …')` and is POSIX-only. Load the R module in t
 | `notes/anchor_basis_comparison.md` | **open** | Which source sets the level. Recommends F1d's basis change (safe: 0 of 51 states move outside tolerance) and largely answers decision #5 (QSS is 1.4–2.2% of the HT2 status residual). Leaves open the out-of-state bucket question and records why return-claimed adult dependents cannot be sourced better than the current bound — `NUMDEP` is **absent from HT2 2022**, and `N2` breaks 6.3% at TCJA. |
 | `notes/nonfiler_proposal_rewrite_plan.md` | **open** | Rewriting the narrative proposal as a co-author-facing methodology document. Communication, not modelling; best cut once the record stops moving. |
 | `notes/state_weights_alternatives.md` | **deferred** | Alternative weight constructions; superseded in practice by the Phase 1 bake-off, kept for the reasoning. |
+| `handoff.md` | **open** | The collaborator-facing map of the non-filer replacement, four parts: this plan's group C evidence, the Tax-Data branch's three commits, the ceilings and splits a reader must carry, and the mortality write-up. Rendered per S8 for review. |
+| `notes/state_work_proposal.md` | **open** | Part (d) of the handoff: the state work that follows — the group F re-fit on the new pool, the 2014–16 state margins (blocked on three SSA workbooks), what HT2's 2022 ceiling caps, rollout resumption. |
 
 ---
 
