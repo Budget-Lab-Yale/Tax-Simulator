@@ -3,7 +3,7 @@ title: "State weights and the non-filer rebuild — the plan"
 role: plan
 workstream: state_weights
 status: current
-updated: 2026-08-28
+updated: 2026-08-30
 sot: self
 supersedes: []
 superseded_by: null

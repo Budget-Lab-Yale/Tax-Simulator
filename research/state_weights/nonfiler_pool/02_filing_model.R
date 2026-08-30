@@ -115,6 +115,44 @@ for (yr in YEARS) {
     anchor_raw_M = target_raw / 1e6,
     own_adult_deps_M = own_adult_deps / 1e6)
   fwrite(gates, file.path(RES, sprintf('filing_model_gates_%d.csv', yr)))
+
+  #---------------------------------------------------------------------------
+  # Gate 4: what the raking ACHIEVED against what it targeted (S17)
+  #
+  # The self-employment margin cannot be hit, and the reason is the ASEC's
+  # joint distribution rather than the solver -- settled as S17, not a standing
+  # question. Recording the residual per year per characteristic makes the size
+  # of the accepted gap a committed number that moves with the data, instead of
+  # a warning in a log nobody keeps. Every characteristic is written, not just
+  # the failing one, so a NEW margin starting to drift is visible.
+  #---------------------------------------------------------------------------
+  ab <- u[must_file == TRUE]
+  aw <- ab$weight; ap <- ab$p_nonfile_hazard
+  has_c <- list(married  = ab$filing_status == 'joint',
+                wages    = ab$src_wages == 1,
+                se       = ab$src_self_employment == 1,
+                interest = ab$src_interest == 1,
+                dividends = ab$src_dividends == 1,
+                pensions = ab$src_retirement == 1,
+                ui       = ab$INCUNEMP > 0)
+  marg <- rbindlist(lapply(names(tg$shares), function(c_) {
+    data.table(tax_year        = yr,
+               characteristic  = c_,
+               target_share    = tg$shares[[c_]],
+               achieved_share  = sum(aw[has_c[[c_]]] * ap[has_c[[c_]]]) / sum(aw * ap),
+               own_pop_share   = sum(aw[has_c[[c_]]]) / sum(aw),
+               basis           = tg$basis)
+  }))
+  marg[, residual_pp := 100 * (achieved_share - target_share)]
+  fwrite(marg, file.path(RES, sprintf('hazard_margins_%d.csv', yr)))
+  worst <- marg[which.max(abs(residual_pp))]
+  message(sprintf(paste('  margins: worst %s %+.2fpp (target %.1f%%, achieved',
+                        '%.1f%%, our population %.1f%%); the rest within %.2fpp'),
+                  worst$characteristic, worst$residual_pp,
+                  100 * worst$target_share, 100 * worst$achieved_share,
+                  100 * worst$own_pop_share,
+                  marg[characteristic != worst$characteristic,
+                       max(abs(residual_pp))]))
   saveRDS(u, file.path(RES, sprintf('scored_units_%d.rds', yr)))
   message('  wrote scored_units_', yr, '.rds, filing_model_gates_', yr, '.csv')
 }

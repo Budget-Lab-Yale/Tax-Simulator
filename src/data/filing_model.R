@@ -435,13 +435,18 @@ pub5785_hazard <- function(units, targets, use_mean_income = TRUE) {
   # against our population, never something to pass over in silence.
   if (worst >= RAKE_TOL) {
     # Name the margin. A bare "worst margin" number invites the assumption
-    # that more sweeps or a looser cap would fix it; for the self-employment
-    # margin neither does, and the reason is in the DATA, not the solver --
-    # Pub 5785's non-filers are ~45% self-employed while the ASEC's
-    # above-threshold population is under 10%, and its wages and
-    # self-employment marginals together require an overlap the survey's joint
-    # distribution does not contain. Measured 2026-08-29: sweeps 50 -> 1000
-    # moves it 3.38pp -> 3.08pp, and the cap 0.95 -> 0.999 moves it to 2.23pp.
+    # that more sweeps or a looser cap would fix it; for self-employment
+    # neither does. Solver sensitivity measured 2026-08-29 on TY2022: sweeps
+    # 50 -> 1000 moved the miss only 3.38pp -> 3.08pp, and the cap
+    # 0.95 -> 0.999 only to 2.23pp. The constraint is the ASEC's joint
+    # distribution -- see S17 in research/decisions_log.md, and
+    # results/hazard_margins_{year}.csv for the accepted residual per year.
+    #
+    # The miss scales with the TARGET LEVEL, which is the part worth knowing:
+    # in the three years Pub 5785 publishes, the margin is hit to within
+    # 0.20pp. It only opens once the level is projected above what those years
+    # demanded. So part of the gap belongs to the projection, not to the
+    # survey.
     off <- achieved - share_nf
     nm  <- names(off)[which.max(abs(off))]
     warning(sprintf(paste("pub5785_hazard: raking left %s at %+.2fpp after %d",
