@@ -568,6 +568,14 @@ filing_requirement_params <- function(tax_year) {
                   joint = 24000, joint_one65 = 25300, joint_both65 = 26600,
                   hoh = 18000, hoh_65 = 19600,
                   dep_unearned = 1050, dep_earned = 12000, dep_increment = 350),
+    `2019` = list(single = 12200, single_65 = 13850,
+                  joint = 24400, joint_one65 = 25700, joint_both65 = 27000,
+                  hoh = 18350, hoh_65 = 20000,
+                  dep_unearned = 1100, dep_earned = 12200, dep_increment = 350),
+    `2020` = list(single = 12400, single_65 = 14050,
+                  joint = 24800, joint_one65 = 26100, joint_both65 = 27400,
+                  hoh = 18650, hoh_65 = 20300,
+                  dep_unearned = 1100, dep_earned = 12400, dep_increment = 350),
     `2021` = list(single = 12550, single_65 = 14250,
                   joint = 25100, joint_one65 = 26450, joint_both65 = 27800,
                   hoh = 18800, hoh_65 = 20500,
@@ -575,7 +583,15 @@ filing_requirement_params <- function(tax_year) {
     `2022` = list(single = 12950, single_65 = 14700,
                   joint = 25900, joint_one65 = 27300, joint_both65 = 28700,
                   hoh = 19400, hoh_65 = 21150,
-                  dep_unearned = 1150, dep_earned = 12950, dep_increment = 400)
+                  dep_unearned = 1150, dep_earned = 12950, dep_increment = 400),
+    `2023` = list(single = 13850, single_65 = 15700,
+                  joint = 27700, joint_one65 = 29200, joint_both65 = 30700,
+                  hoh = 20800, hoh_65 = 22650,
+                  dep_unearned = 1250, dep_earned = 13850, dep_increment = 400),
+    `2024` = list(single = 14600, single_65 = 16550,
+                  joint = 29200, joint_one65 = 30750, joint_both65 = 32300,
+                  hoh = 21900, hoh_65 = 23850,
+                  dep_unearned = 1300, dep_earned = 14600, dep_increment = 450)
   )
   out <- tbl[[as.character(tax_year)]]
   stopifnot(!is.null(out))
@@ -593,8 +609,12 @@ FILING_THRESHOLD_COMPONENTS <- list(
   `2016` = c( 6300, 12600,  9300, 4050, 1550, 1250),
   `2017` = c( 6350, 12700,  9350, 4050, 1550, 1250),
   `2018` = c(12000, 24000, 18000,    0, 1600, 1300),
+  `2019` = c(12200, 24400, 18350,    0, 1650, 1300),
+  `2020` = c(12400, 24800, 18650,    0, 1650, 1300),
   `2021` = c(12550, 25100, 18800,    0, 1700, 1350),
-  `2022` = c(12950, 25900, 19400,    0, 1750, 1400)
+  `2022` = c(12950, 25900, 19400,    0, 1750, 1400),
+  `2023` = c(13850, 27700, 20800,    0, 1850, 1500),
+  `2024` = c(14600, 29200, 21900,    0, 1950, 1550)
 )
 
 #' Re-derive every Chart A threshold from its components and stop on any
