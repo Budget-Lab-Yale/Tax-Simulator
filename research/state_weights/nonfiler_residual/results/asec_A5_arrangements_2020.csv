@@ -1,0 +1,10 @@
+arrangement,persons_M,pct_of_population
+total population,328.0594800567,100
+unmarried partners (RELATE 1113/1114/1116/1117),9.2994043692,2.83467021516731
+persons in households containing an unmarried partner,26.7194838455,8.14470712472078
+children under 18 in those households,5.8858987251,1.79415596344989
+persons in multi-family households (any FAMUNIT > 1),19.1433597335,5.83533197400403
+other relatives of the householder (RELATE 501/701/901/1001),23.1475045394,7.05588649210787
+non-relatives other than partners (RELATE 1241/1260),3.4655648253,1.05638307562428
+group-quarters residents,0.1303919938,0.0397464489602507
+UNION: persons in any household above (excl. GQ),89.3475355096,27.2351634204132

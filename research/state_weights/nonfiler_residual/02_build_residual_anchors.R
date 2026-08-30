@@ -86,7 +86,11 @@ A16_BANDS <- TARGET_AGE_BANDS
 
 read_pep <- function(year) {
   f <- file.path(raw_data_root(), 'Census-PEP',
-                 if (year <= 2020) 'sc-est2020int-alldata6.csv' else
+                 # The intercensal file is the REVISED 2010-2019 series and
+                 # stops at POPESTIMATE2019; the 2024 vintage starts at 2020.
+                 # The boundary was <= 2020, which only ever failed on a TY2020
+                 # build -- 2017 and 2022 both land on the right side of it.
+                 if (year <= 2019) 'sc-est2020int-alldata6.csv' else
                                    'sc-est2024-alldata6.csv')
   pep <- fread(f, showProgress = FALSE)
   pop_col <- sprintf('POPESTIMATE%d', year)
