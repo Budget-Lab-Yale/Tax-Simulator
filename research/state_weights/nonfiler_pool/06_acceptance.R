@@ -89,6 +89,31 @@ for (yr in YEARS) {
   wm_path <- file.path(ANCH, sprintf('nonfiler_wage_margin_%d.csv', yr))
   wm <- if (file.exists(wm_path)) fread(wm_path) else NULL
 
+  # The handoff year's EMITTED file carries the S19 per-band ssArea scale
+  # (05_emit_pool.R), but every benchmark here is on the PEP anchor basis --
+  # the scale is a deliberate basis change, not model content, so it is
+  # divided back out before comparing. Which state the file is in is DETECTED
+  # against the emit audit, not assumed: band adults matching post_adults
+  # means scaled (de-scale), matching pre_adults means unscaled (leave), and
+  # anything else is a stale-audit stop.
+  audit_path <- file.path(RES, sprintf('ssarea_scale_audit_%d.csv', yr))
+  if (file.exists(audit_path)) {
+    audit <- fread(audit_path)[band != 'total']
+    bands <- c('18_25', '26_34', '35_44', '45_54', '55_64', '65p')
+    pool[, band := bands[age_group]]
+    band_adults <- pool[, .(adults = sum(weight * (1 + (filing_status == 2)))),
+                        by = band][audit, on = 'band']
+    if (band_adults[, all(abs(adults - post_adults) < 1)]) {
+      pool[audit, on = 'band', weight := weight / i.scale_to_ssarea]
+      message('  S19: emitted file is ssArea-scaled; scale divided out for ',
+              'the PEP-basis comparisons below')
+    } else if (!band_adults[, all(abs(adults - pre_adults) < 1)]) {
+      stop('pool band adults match neither side of ', audit_path,
+           ' -- re-run 05_emit_pool.R so the audit matches the file')
+    }
+    pool[, band := NULL]
+  }
+
   # person-weight: adults represented by each pool record
   pool[, n_adults := 1 + (filing_status == 2)]
   pool[, w_adults := weight * n_adults]
@@ -216,7 +241,7 @@ for (yr in YEARS) {
   # rates across the two universes understates every receipt rate we compute.
   # So both are reported: the whole pool, and the Pub-5785-comparable subset
   # with any information-return income.
-  pool[, any_info_return := wages > 0 | txbl_int > 0 | qual_div > 0 |
+  pool[, any_info_return := wages > 0 | txbl_int > 0 | div_pref > 0 |
                             kg_lt > 0 | txbl_pens_dist > 0 | gross_ss > 0 |
                             ui > 0 | sole_prop != 0]
   dina[, any_info_return := wages > 0 | txbl_int > 0 |
@@ -243,7 +268,7 @@ for (yr in YEARS) {
                   bench[['capital_gains']], bench[['pensions']],
                   bench[['social_security']]),
     pool = c(rate_pool(quote(wages > 0)), rate_pool(quote(txbl_int > 0)),
-             rate_pool(quote(qual_div > 0)), rate_pool(quote(kg_lt > 0)),
+             rate_pool(quote(div_pref > 0)), rate_pool(quote(kg_lt > 0)),
              rate_pool(quote(txbl_pens_dist > 0)), rate_pool(quote(gross_ss > 0))),
     replaced = c(rate_dina(quote(wages > 0)), rate_dina(quote(txbl_int > 0)),
                  rate_dina(quote(div_ord + div_pref > 0)),
@@ -251,7 +276,7 @@ for (yr in YEARS) {
                  rate_dina(quote(txbl_pens_dist > 0)),
                  rate_dina(quote(gross_ss > 0))),
     pool_i = c(rate_pool_i(quote(wages > 0)), rate_pool_i(quote(txbl_int > 0)),
-               rate_pool_i(quote(qual_div > 0)), rate_pool_i(quote(kg_lt > 0)),
+               rate_pool_i(quote(div_pref > 0)), rate_pool_i(quote(kg_lt > 0)),
                rate_pool_i(quote(txbl_pens_dist > 0)),
                rate_pool_i(quote(gross_ss > 0))),
     repl_i = c(rate_dina_i(quote(wages > 0)), rate_dina_i(quote(txbl_int > 0)),

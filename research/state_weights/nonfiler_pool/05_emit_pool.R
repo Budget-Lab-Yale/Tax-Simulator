@@ -34,6 +34,13 @@
 # overwrite every record -- so observed exact age reaches the model only
 # through `age_group`, whose cut points match ages.R (<26/<35/<45/<55/<65/65+).
 # Band membership is observed; position within band is redrawn from the CPS.
+# The reader ALSO DROPS wages1/wages2 and sole_prop1/sole_prop2 (found by the
+# first real main.R run, 2026-08-31): imputations/earnings_split.R recomputes
+# every record's split from `wages`/`sole_prop` -- which this file DOES supply
+# -- times an EARNSPLIT-gated draw, and this file ships EARNSPLIT = NA. The
+# observed splits still gate the emit totals here; only the downstream copy is
+# redrawn. Future option, owner's call: code EARNSPLIT from the observed split
+# where it lands on a category (1 primary-all, 2 even, 3 secondary-all).
 #
 # Zero-filling the REMAINING mid-pipeline columns stays in the READER (C9),
 # exactly as impute_nonfilers.R does today -- only Tax-Data knows its live
@@ -45,9 +52,17 @@
 # produced, so the consumed vintage loses nothing while the asymmetry stays
 # recorded.
 #
+# S19, HANDOFF YEAR ONLY (2023): the emitted weights are scaled per age band
+# onto CBO's Social Security area universe -- the basis every weight is carried
+# forward on -- using the factors 15_ssarea_alignment.R derives (1.061-1.134).
+# Applied here, exactly once, gated pre and post against the alignment table;
+# the audit is results/ssarea_scale_audit_2023.csv. All other years stay on
+# the Census PEP anchor basis (S15).
+#
 # Writes: results/nonfiler_pool_{year}.csv.gz for each year given, and (with
 # --publish) copies them plus manifest.csv and a README to the shared
-# model_data store under ASEC-Nonfilers/v1/{vintage}/{scenario}. Without
+# model_data store under ASEC-Nonfilers/v1/{vintage}/{scenario} -- the handoff
+# year additionally ships its S19 alignment and audit tables. Without
 # --publish the store is untouched.
 #
 # The year list defaults to 2017 and 2022 -- the two anchor years the build was
@@ -105,6 +120,16 @@ dep_age_group <- function(age) {
 }
 CTC_AGE_LIMIT  <- 17L   # qualifying child for the CTC: under 17
 EITC_AGE_LIMIT <- 19L   # EITC qualifying child: under 19, or under 24 full-time
+
+# S19: the handoff-year emit is scaled per age band onto CBO's Social Security
+# area universe -- the universe Macro-Projections' cells carry every weight
+# forward on -- so that filing adults + non-filer target + claimed-dependent
+# netting = ssArea adults holds band by band at T and self-preserves under
+# aging (cells scale by N_b(y)/N_b(T)). The factors (1.061-1.134) come from
+# 15_ssarea_alignment.R; every other year stays on the Census PEP anchor basis.
+HANDOFF_YEAR <- 2023L
+SSAREA_TOL   <- 1       # adults, per band -- same precision as the gates below
+SSAREA_BANDS <- c('18_25', '26_34', '35_44', '45_54', '55_64', '65p')
 
 emit_totals <- list()
 
@@ -260,6 +285,57 @@ for (yr in YEARS) {
                   emitted_hh_adults / 1e6, emitted_gq_adults / 1e6,
                   (emitted_hh_adults + emitted_gq_adults) / 1e6,
                   cal_total / 1e6))
+
+  #---------------------------------------------------------------------------
+  # S19 ssArea alignment -- HANDOFF YEAR ONLY. Applied here, upstream, because
+  # the emit is the one place that runs exactly once per published file; a
+  # downstream merge step cannot guarantee that.
+  #
+  # Exactly-once is asserted structurally, not by flag: the pre-scale band
+  # adults must equal the alignment table's own pre-scale `emitted` column
+  # (within SSAREA_TOL), which a pool already carrying the scale cannot do --
+  # and which also catches a recalibration that left the alignment file stale.
+  # Post-scale band adults must equal `nonfiler_target`, the ssArea partition's
+  # non-filer slot.
+  #---------------------------------------------------------------------------
+  if (yr == HANDOFF_YEAR) {
+    align <- fread(file.path(RES, sprintf('ssarea_alignment_%d.csv', yr)))
+    stopifnot(setequal(align$band, SSAREA_BANDS))
+
+    pool[, band := SSAREA_BANDS[age_group]]
+    audit <- merge(
+      pool[, .(pre_adults = sum(weight * (1 + (filing_status == 2)))), by = band],
+      align[, .(band, emitted, scale_to_ssarea, target = nonfiler_target)],
+      by = 'band')
+    stopifnot(nrow(audit) == length(SSAREA_BANDS),
+              all(abs(audit$pre_adults - audit$emitted) < SSAREA_TOL))
+
+    pool[audit, on = 'band', weight := weight * i.scale_to_ssarea]
+
+    audit <- merge(
+      audit,
+      pool[, .(post_adults = sum(weight * (1 + (filing_status == 2)))), by = band],
+      by = 'band')
+    audit[, residual := post_adults - target]
+    stopifnot(all(abs(audit$residual) < SSAREA_TOL))
+
+    audit <- rbind(
+      audit[order(band),
+            .(band, pre_adults, scale_to_ssarea, post_adults, target, residual)],
+      audit[, .(band = 'total', pre_adults = sum(pre_adults),
+                scale_to_ssarea = sum(post_adults) / sum(pre_adults),
+                post_adults = sum(post_adults), target = sum(target),
+                residual = sum(post_adults) - sum(target))])
+    fwrite(audit, file.path(RES, sprintf('ssarea_scale_audit_%d.csv', yr)))
+    pool[, band := NULL]
+
+    message(sprintf(paste('  S19: scaled to the ssArea universe, %.2fM ->',
+                          '%.2fM adults (per-band factors %.3f-%.3f);',
+                          'audit written'),
+                    audit[band == 'total', pre_adults] / 1e6,
+                    audit[band == 'total', post_adults] / 1e6,
+                    min(align$scale_to_ssarea), max(align$scale_to_ssarea)))
+  }
   message(sprintf(paste('  income mass: wages $%.1fB | interest $%.1fB |',
                         'dividends $%.1fB | pensions $%.1fB | SS $%.1fB',
                         '(DINA: $116.2B / 0 / 0 / small / large)'),
@@ -289,6 +365,29 @@ if (PUBLISH) {
                         overwrite = TRUE))
   }
 
+  # The handoff year travels with its S19 evidence: the ssArea partition the
+  # scale closes on (filing adults + non-filer target + netting = ssArea
+  # adults, per band) and the pre/post audit of the scale itself. Tax-Data's
+  # eventual identity assertion (Block E) reads the partition from here.
+  if (HANDOFF_YEAR %in% YEARS) {
+    for (f in sprintf(c('ssarea_alignment_%d.csv', 'ssarea_scale_audit_%d.csv'),
+                      HANDOFF_YEAR)) {
+      stopifnot(file.copy(file.path(RES, f), file.path(dest, f),
+                          overwrite = TRUE))
+    }
+  }
+
+  # Years built under the S20 pandemic deflation ship its evidence too: the
+  # per-band deflators, the excess-filing measurement, and the sensitivity
+  # bracket, so a consumer can see what the 2020-21 hazard level rests on.
+  s20_years <- YEARS[file.exists(file.path(
+    RES, sprintf('pandemic_filing_adjustment_%d.csv', YEARS)))]
+  for (yr in s20_years) {
+    f <- sprintf('pandemic_filing_adjustment_%d.csv', yr)
+    stopifnot(file.copy(file.path(RES, f), file.path(dest, f),
+                        overwrite = TRUE))
+  }
+
   # Machine-readable manifest. The consumer's contract was a setdiff() against
   # a runtime dataframe, so a renamed column was indistinguishable from an
   # intentionally-absent one. This states what was published, for which years,
@@ -314,9 +413,12 @@ if (PUBLISH) {
     '',
     sprintf('Vintage %s, built from Tax-Simulator branch state-tax by', VINTAGE),
     'research/state_weights/nonfiler_pool/ scripts 01-05. Replaces the DINA',
-    'non-filer append (decision S13). TY2017 is the vintage Tax-Data consumes',
-    '(the append happens at the 2017 base year); TY2022 is the validation',
-    'artifact against the second anchor year.',
+    'non-filer append (decision S13). One file per tax year (S18(c): rebuilt',
+    sprintf('annually through the observed ceiling); this vintage carries %s.',
+            paste(sort(YEARS), collapse = ', ')),
+    'Tax-Data appends the 2017 file at its base year; the 2023 file is the',
+    'projection handoff base and carries the S19 per-band ssArea scale',
+    '(see ssarea_alignment_2023.csv and ssarea_scale_audit_2023.csv here).',
     '',
     'Method of record: research/state_weights/plan.md section 3 and',
     'research/state_weights/nonfiler_residual/10_asec_tax_unit_design.md.',
@@ -329,7 +431,15 @@ if (PUBLISH) {
     'Known asymmetry (S16): TY2017 kg_lt is zero -- the ASEC has no survey',
     'capital-gains item before income year 2018. The anchor identity:',
     'pool adults + claimed-dependent netting = residual anchor, exactly, by',
-    'construction (48.470M TY2017 / 47.803M TY2022, S15 corrected basis).'),
+    'construction (48.470M TY2017 / 47.803M TY2022, S15 corrected basis).',
+    'Anchor basis: Census PEP resident population through 2022; the 2023 file',
+    'alone closes on the CBO ssArea universe after the S19 scale.',
+    if (length(s20_years)) sprintf(paste(
+      'S20: for %s the above-threshold hazard level is deflated per age band',
+      'by observed pandemic excess filing (stimulus-induced) -- see',
+      'pandemic_filing_adjustment_{year}.csv here for the deflators, the',
+      'measurement, and the sensitivity bracket.'),
+      paste(s20_years, collapse = '/'))),
     readme)
   message('published vintage ', VINTAGE, ' to ', dest)
 }

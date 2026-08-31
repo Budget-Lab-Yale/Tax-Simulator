@@ -94,7 +94,7 @@ pool <- fread(file.path(RES, 'nonfiler_pool_2017.csv.gz'))
 
 vars <- list(
   interest  = list(soi = 'count__txbl_int',        pool = 'txbl_int',        dina = FALSE),
-  dividends = list(soi = 'count__div',             pool = 'qual_div',        dina = FALSE),
+  dividends = list(soi = 'count__div',             pool = 'div_pref',        dina = FALSE),
   wages     = list(soi = 'count__wages',           pool = 'wages',           dina = TRUE),
   pensions  = list(soi = 'count__gross_pens_dist', pool = 'txbl_pens_dist',  dina = TRUE)
 )

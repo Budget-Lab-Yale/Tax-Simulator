@@ -154,7 +154,7 @@ age_pool <- function(target_year) {
   }
 
   # --- values ----------------------------------------------------------------
-  money <- c('wages', 'txbl_int', 'qual_div', 'txbl_pens_dist', 'gross_ss',
+  money <- c('wages', 'txbl_int', 'div_pref', 'txbl_pens_dist', 'gross_ss',
              'sole_prop', 'kg_lt', 'ui')
   money <- intersect(money, names(p))
   ungrown <- character(0)
