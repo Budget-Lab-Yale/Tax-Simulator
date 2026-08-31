@@ -16,28 +16,47 @@
 #     Dorm dependents (p_file NA) are claimed on parents' returns and are
 #     never emitted.
 #
-# SCHEMA CONTRACT. The file carries every column impute_nonfilers.R constructs
-# today (same names, same conventions -- txbl_int "assume all taxable",
-# qual_div "assume all qualified", capped 3 dependent slots) plus what the
-# replacement OBSERVES rather than imputes: GENDER from ASEC/ACS sex (1 male,
-# 2 female -- the PUF coding), male1/male2, real ages, wages2, sole_prop2,
-# rent sign-split, other_inc, and dependent ages mapped to the PUF AGEDP
-# coding. Zero-filling the REMAINING mid-pipeline columns stays in the READER
-# (C9), exactly as impute_nonfilers.R does today -- only Tax-Data knows its
-# live mid-pipeline column set, so the writer must not guess it. `filer = 0`
-# is explicit here where the DINA append relied on the zero-fill to supply it.
+# SCHEMA CONTRACT. Column names are the CONSUMER's, taken from Tax-Data's
+# config/variable_guide/baseline.csv -- not the old script's. The predecessor
+# DINA builder wrote `qual_div`, which is not a Tax-Data name (the live one is
+# `div_pref`, PUF E00650) and reached the file only because the old reader did
+# a bare bind_rows() with no schema check. Matching that name would have
+# published dividends into a column nothing reads. Conventions are unchanged:
+# txbl_int "assume all taxable", div_pref "assume all qualified", 3 dep slots.
+#
+# Beyond those, the file carries what the replacement OBSERVES rather than
+# imputes: GENDER from ASEC/ACS sex (1 male, 2 female -- the PUF coding),
+# male1/male2, real ages, wages2, sole_prop2, rent sign-split, other_inc, and
+# dependent ages mapped to the PUF AGEDP coding.
+#
+# NOTE on age1/male1: the reader DROPS these. imputations/ages.R and
+# imputations/demographics.R own those columns, run after the append, and
+# overwrite every record -- so observed exact age reaches the model only
+# through `age_group`, whose cut points match ages.R (<26/<35/<45/<55/<65/65+).
+# Band membership is observed; position within band is redrawn from the CPS.
+#
+# Zero-filling the REMAINING mid-pipeline columns stays in the READER (C9),
+# exactly as impute_nonfilers.R does today -- only Tax-Data knows its live
+# mid-pipeline column set, so the writer must not guess it. `filer = 0` is
+# explicit here where the DINA append relied on the zero-fill to supply it.
 #
 # Capital gains: kg_lt = INCCAPG for TY2022; TY2017 has NO survey capital-
 # gains item (S16) and emits zero -- the same value DINA's all-zero fikgi
 # produced, so the consumed vintage loses nothing while the asymmetry stays
 # recorded.
 #
-# Writes: results/nonfiler_pool_{year}.csv.gz, and publishes both years plus a
-# README to the shared model_data store under ASEC-Nonfilers/v1/{vintage}
-# (pass --publish; without it the store is untouched).
+# Writes: results/nonfiler_pool_{year}.csv.gz for each year given, and (with
+# --publish) copies them plus manifest.csv and a README to the shared
+# model_data store under ASEC-Nonfilers/v1/{vintage}/{scenario}. Without
+# --publish the store is untouched.
+#
+# The year list defaults to 2017 and 2022 -- the two anchor years the build was
+# developed against. S18(c) rebuilds every year through the observed ceiling,
+# so a publish intended for Tax-Data must name them explicitly.
 #
 # Login-node safe.
-#   Rscript research/state_weights/nonfiler_pool/05_emit_pool.R [--publish] [year ...]
+#   Rscript research/state_weights/nonfiler_pool/05_emit_pool.R \
+#     [--publish] [--vintage=YYYYMMDDNN] [year ...]
 #------------------------------------------------------------------------------
 
 suppressPackageStartupMessages({
@@ -49,10 +68,32 @@ source('src/data/filing_model.R')
 
 args    <- commandArgs(trailingOnly = TRUE)
 PUBLISH <- '--publish' %in% args
-YEARS   <- suppressWarnings(as.integer(setdiff(args, '--publish')))
+flags   <- grepl('^--', args)
+YEARS   <- suppressWarnings(as.integer(args[!flags]))
 if (!length(YEARS)) YEARS <- c(2017L, 2022L)
 RES     <- 'research/state_weights/nonfiler_pool/results'
-VINTAGE <- format(Sys.time(), '%Y%m%d01')
+
+# The vintage is DELIBERATE, not a timestamp. Tax-Data pins this exact string
+# in config/runscripts/baseline.yaml, so a wall-clock vintage meant every
+# republish minted an identifier no runscript could name and nothing could be
+# pinned to. Pass --vintage=YYYYMMDDNN to stamp a rebuild; the default is the
+# date with sequence 01, which is what the previous format produced, so an
+# unattended re-run of the same day is still idempotent.
+vintage_arg <- grep('^--vintage=', args, value = TRUE)
+VINTAGE <- if (length(vintage_arg)) {
+  sub('^--vintage=', '', vintage_arg[1])
+} else {
+  format(Sys.Date(), '%Y%m%d01')
+}
+stopifnot(grepl('^[0-9]{10}$', VINTAGE))
+
+# Tax-Data resolves every interface as
+#   {root}/{type}/{name}/v{version}/{vintage}/{scenario}
+# (src/configure.R). Publishing to .../v1/{vintage} with no scenario level put
+# the file one directory above where the consumer looks, so the interface could
+# not have resolved even once it was registered. The pool is observed-year
+# historical data, matching IRS-PUF / CPS-ASEC / Compiled-SOI-Tables.
+SCENARIO <- 'historical'
 
 # PUF AGEDP dependent-age coding (PUF codebook; process_puf.R renames
 # AGEDP1-3 -> dep_age_group1-3): 1 under 5, 2 = 5-12, 3 = 13-16, 4 = 17-18,
@@ -137,7 +178,7 @@ for (yr in YEARS) {
     wages1   = INCWAGE_primary,
     wages2   = INCWAGE_spouse,
     txbl_int = INCINT,                          # assume all taxable
-    qual_div = INCDIVID,                        # assume all qualified
+    div_pref = INCDIVID,                        # assume all qualified (PUF E00650)
     sole_prop  = se_income,
     sole_prop1 = se_income_primary,
     sole_prop2 = se_income_spouse,
@@ -175,7 +216,7 @@ for (yr in YEARS) {
     dep_age_group3 = NA_integer_, n_dep_ctc = 0L, n_dep_eitc = 0L,
     wages = INCWAGE, wages1 = INCWAGE, wages2 = 0,
     txbl_int = INCINVST,   # ACS fuses interest/dividends/rent; assigned whole
-    qual_div = 0,          # to interest -- documented coarseness of the ACS side
+    div_pref = 0,          # to interest -- documented coarseness of the ACS side
     sole_prop = INCBUS00, sole_prop1 = INCBUS00, sole_prop2 = 0,
     kg_lt = 0,
     gross_pens_dist = INCRETIR, txbl_pens_dist = INCRETIR,
@@ -224,7 +265,7 @@ for (yr in YEARS) {
                         '(DINA: $116.2B / 0 / 0 / small / large)'),
                   pool[, sum(weight * wages)] / 1e9,
                   pool[, sum(weight * txbl_int)] / 1e9,
-                  pool[, sum(weight * qual_div)] / 1e9,
+                  pool[, sum(weight * div_pref)] / 1e9,
                   pool[, sum(weight * txbl_pens_dist)] / 1e9,
                   pool[, sum(weight * gross_ss)] / 1e9))
 
@@ -240,13 +281,33 @@ for (yr in YEARS) {
 #-----------------------------------------------------------------------------
 if (PUBLISH) {
   root <- read_yaml('./config/interfaces/output_roots.yaml')$production
-  dest <- file.path(root, 'model_data/ASEC-Nonfilers/v1', VINTAGE)
+  dest <- file.path(root, 'model_data/ASEC-Nonfilers/v1', VINTAGE, SCENARIO)
   dir.create(dest, recursive = TRUE, showWarnings = FALSE)
   for (yr in YEARS) {
     stopifnot(file.copy(file.path(RES, sprintf('nonfiler_pool_%d.csv.gz', yr)),
                         file.path(dest, sprintf('nonfiler_pool_%d.csv.gz', yr)),
                         overwrite = TRUE))
   }
+
+  # Machine-readable manifest. The consumer's contract was a setdiff() against
+  # a runtime dataframe, so a renamed column was indistinguishable from an
+  # intentionally-absent one. This states what was published, for which years,
+  # and from what.
+  fwrite(data.table(
+    interface   = 'ASEC-Nonfilers',
+    version     = 1L,
+    vintage     = VINTAGE,
+    scenario    = SCENARIO,
+    tax_year    = YEARS,
+    file        = sprintf('nonfiler_pool_%d.csv.gz', YEARS),
+    n_rows      = vapply(as.character(YEARS),
+                         function(y) emit_totals[[y]]$rows, numeric(1)),
+    adults      = vapply(as.character(YEARS),
+                         function(y) emit_totals[[y]]$adults, numeric(1)),
+    built_from  = 'Tax-Simulator research/state_weights/nonfiler_pool/01-05',
+    built_on    = format(Sys.time(), '%Y-%m-%dT%H:%M:%S')
+  ), file.path(dest, 'manifest.csv'))
+
   readme <- file.path(dest, 'README.md')
   writeLines(c(
     '# ASEC-Nonfilers -- the constructed non-filer pool',
