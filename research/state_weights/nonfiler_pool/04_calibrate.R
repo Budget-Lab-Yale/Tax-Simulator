@@ -67,6 +67,12 @@
 # backfill. The state-margin pipeline's dorm netting (B1/F1c) is a different
 # object -- it corrects the MARGIN -- and is untouched by this.
 #
+# S20 (2020-21): the scored hazard this script holds fixed arrives already
+# DEFLATED by observed pandemic excess filing (16_pandemic_filing_adjustment.R
+# -> 02), which is what makes those years feasible at all. Nothing here
+# changes except the preservation assertion, which checks the EFFECTIVE level
+# (pub5785_effective_units) rather than the trend level.
+#
 # Inputs: scored_units_{year}.rds (02), units_{year}.rds (01, for persons),
 #         gq_backfill_summary_{year}.csv (03),
 #         nonfiler_residual/resources/nonfiler_age_shape_{year}.csv,
@@ -478,8 +484,10 @@ for (yr in YEARS) {
   # The hazard's target must SURVIVE calibration. It did not before
   # 2026-08-29: the dependent shift reached above-threshold units and nothing
   # re-checked the level afterwards. Assert it here, where it can break.
+  # The EFFECTIVE level: trend, deflated by the S20 pandemic adjustment where
+  # one exists (2020-21) -- the same single source 02's gate 2 reads.
   above_after <- u[must_file == TRUE, sum(weight * (1 - p_file_cal))]
-  stopifnot(abs(above_after - pub5785_targets_for_year(yr)$units) < 1e4)
+  stopifnot(abs(above_after - pub5785_effective_units(yr)) < 1e4)
 
   # Gate 1: the identity closes exactly, band by band
   chk <- u[unit_type == 'nondependent' & age_head >= 18,

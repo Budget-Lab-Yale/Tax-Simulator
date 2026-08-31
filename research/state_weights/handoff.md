@@ -72,7 +72,13 @@ script per stage, gates printed and committed. The method reference is the
 - **Known bounds.** The self-employment margin misses by 1.1–2.4pp in
   projected years — the ASEC's joint distribution cannot supply Pub 5785's
   wages×self-employment overlap (S17, accepted and recorded per year in
-  `hazard_margins_{year}.csv`). Aging-vs-rebuild drift:
+  `hazard_margins_{year}.csv`). For 2020–21 the hazard level itself is an
+  S20 construction — the projected level deflated by observed pandemic
+  excess filing — resting on two stated assumptions (the 2019→2023 rate
+  counterfactual and the above-threshold attribution share θ), bracketed by
+  report-only sensitivity columns in `pandemic_filing_adjustment_{y}.csv`;
+  the post-deflation margin drift (married +4.2pp worst) is committed the
+  same S17 way. Aging-vs-rebuild drift:
   `aging_check_summary.csv` — one year costs +1.2%, five cost ~5% on the
   level with the age composition swinging sign, and 2020–21 refuse a
   projection outright; hence S18(c), rebuild through the ceiling.
@@ -81,13 +87,15 @@ script per stage, gates printed and committed. The method reference is the
   band on CBO's ssArea universe — the universe that carries every weight
   forward — and stays exact under aging because cells scale by
   `N_b(y)/N_b(T)`. The PEP↔ssArea wedge is published, not absorbed: ~1.5% on
-  adults, amplified to **5.6–11.7% in the residual** because the residual is
-  a small difference of large numbers (`ssarea_alignment_2023.csv`,
-  `ssarea_wedge_2023.csv`). The band×married split is deliberately NOT
-  asserted: T1.6's primary-band convention makes it unidentifiable, and the
-  unmarried 35_44 cell proves it by arithmetic.
-- **The pool's per-band ssArea scale** (1.061–1.134) is what the 2023 file
-  takes at merge time to close on the projection universe.
+  adults, amplified to **2.6–11.7% in the residual** (2.6% in 18_25; the five
+  bands 26_34–65p span 5.6–11.7%) because the residual is a small difference
+  of large numbers (`ssarea_alignment_2023.csv`, `ssarea_wedge_2023.csv`).
+  The band×married split is deliberately NOT asserted: T1.6's primary-band
+  convention makes it unidentifiable, and the unmarried 35_44 cell proves it
+  by arithmetic.
+- **The pool's per-band ssArea scale** (1.061–1.134) is applied at the 2023
+  emit, in `05_emit_pool.R` — upstream, exactly once, gated pre and post
+  against the alignment table (audit: `ssarea_scale_audit_2023.csv`).
 
 ## (d) The state work that follows
 
@@ -101,7 +109,7 @@ per-state rollout resumption.
 
 | fact | value |
 |---|---|
-| non-filer file rebuildable through | **2023** national, 2022 with state products |
+| non-filer file rebuildable through | **2023** national, 2022 with state products. 2020–21 build under **S20**: the held Pub 5785 hazard level is infeasible there (band 18_25 over-subscribed by the stimulus filing spike), so it is deflated per band by observed excess filing — level 12.39M → 8.89M units in 2020, 12.49M → 10.89M in 2021 (`16_pandemic_filing_adjustment.R`) |
 | filer weight targets observed through | **2023** (then CBO demography) |
 | income growth factors observed through | 2022, with a 2020–21 gap (upstream) |
 | projection universe | CBO ssArea ≡ Macro-Projections cells (verified to the person) |

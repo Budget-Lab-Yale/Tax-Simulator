@@ -47,7 +47,21 @@ for (yr in YEARS) {
   st <- readRDS(file.path(RES, sprintf('units_%d.rds', yr)))
   u <- add_mok_covariates(st$units, st$persons)
   tg <- pub5785_targets_for_year(yr)
-  u <- score_filing_model(u, mok$coefs, tg)
+
+  # S20 (2020-21 only): deflate the hazard per band by observed pandemic
+  # excess filing. NULL for every other year -- scoring is then bit-identical
+  # to the pre-S20 code path.
+  adj <- pandemic_filing_adjustment(yr)
+  if (!is.null(adj)) {
+    tg$basis <- paste0(tg$basis, adj$basis_suffix)
+    message(sprintf(paste('  S20 pandemic deflation: level %.2fM -> %.2fM;',
+                          'm by band %s'),
+                    tg$units / 1e6,
+                    adj$units_deflated / 1e6,
+                    paste(sprintf('%s %.3f', names(adj$m), adj$m),
+                          collapse = ' ')))
+  }
+  u <- score_filing_model(u, mok$coefs, tg, band_deflators = adj)
 
   #---------------------------------------------------------------------------
   # Gate 1: group rates beside Mok's published TY2006 rates
@@ -76,10 +90,11 @@ for (yr in YEARS) {
   # Gate 2: the hazard delivered its target
   #---------------------------------------------------------------------------
   above_nonfile <- u[must_file == TRUE, sum(weight * p_nonfile_hazard)]
-  stopifnot(abs(above_nonfile - tg$units) < 1e3)
+  eff_units <- pub5785_effective_units(yr)   # = tg$units unless S20 deflates
+  stopifnot(abs(above_nonfile - eff_units) < 1e3)
   message(sprintf(paste('  hazard: %.2fM above-threshold non-filing units',
                         '(target %.2fM on basis %s, solved); max p_nonfile %.3f'),
-                  above_nonfile / 1e6, tg$units / 1e6, tg$basis,
+                  above_nonfile / 1e6, eff_units / 1e6, tg$basis,
                   u[must_file == TRUE, max(p_nonfile_hazard)]))
 
   #---------------------------------------------------------------------------
